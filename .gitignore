@@ -1,0 +1,8 @@
+__pycache__/
+*.py[cod]
+
+.tox/
+.pytest_cache/
+
+.coverage-nmstate-py27
+htmlcov-nmstate-py27/
