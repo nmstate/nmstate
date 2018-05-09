@@ -4,5 +4,13 @@ __pycache__/
 .tox/
 .pytest_cache/
 
-.coverage-nmstate-py27
-htmlcov-nmstate-py27/
+*.egg-info/
+.eggs/
+dist/
+
+.coverage
+htmlcov-py27/
+htmlcov-py36/
+
+AUTHORS
+ChangeLog
