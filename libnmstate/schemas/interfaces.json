@@ -1,0 +1,30 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+
+    "title": "Interfaces tree",
+    "type": "object",
+    "properties": {
+        "interfaces": {
+            "title": "Interfaces",
+            "type": "array",
+            "items": {
+                "title": "Interface",
+                "type": "object",
+                "properties": {
+                    "name": { "type": "string" },
+                    "description": { "type": "string" },
+                    "type": {
+                        "type": "string",
+                        "enum": ["ethernet", "bond", "vlan"]
+                    },
+                    "state": {
+                        "type": "string",
+                        "enum": ["absent", "up", "down", "unknown"]
+                    }
+                },
+                "required": ["name"]
+            }
+        }
+    },
+    "required": ["interfaces"]
+}
