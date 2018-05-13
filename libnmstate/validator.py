@@ -19,5 +19,10 @@
 #
 from __future__ import absolute_import
 
-from . import validator
-validator
+import jsonschema as js
+
+from . import schema
+
+
+def verify(data, validation_schema=schema.ifaces_schema):
+    js.validate(data, validation_schema)

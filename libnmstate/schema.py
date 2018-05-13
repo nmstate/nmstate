@@ -19,5 +19,13 @@
 #
 from __future__ import absolute_import
 
-from . import validator
-validator
+import json
+import pkgutil
+
+
+def load(schema_name):
+    return json.loads(
+        pkgutil.get_data('libnmstate', 'schemas/' + schema_name + '.json'))
+
+
+ifaces_schema = load('interfaces')

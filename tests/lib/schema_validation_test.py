@@ -19,5 +19,40 @@
 #
 from __future__ import absolute_import
 
-from . import validator
-validator
+import pytest
+
+import jsonschema as js
+
+import libnmstate
+
+
+def test_valid_basic_instance():
+    data = {
+        'interfaces': [
+            {
+                'name': 'lo',
+                'description': 'Loopback Interface',
+                'type': 'ethernet',
+                'state': 'down'
+            }
+        ]
+    }
+
+    libnmstate.validator.verify(data)
+
+
+def test_invalid_basic_instance():
+    data = {
+        'interfaces': [
+            {
+                'name': 'lo',
+                'description': 'Loopback Interface',
+                'type': 'ethernet',
+                'state': 'bad-state'
+            }
+        ]
+    }
+
+    with pytest.raises(js.ValidationError) as err:
+        libnmstate.validator.verify(data)
+        assert 'bad-state' in err.value.args[0]
