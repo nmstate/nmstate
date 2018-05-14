@@ -10,21 +10,102 @@
             "items": {
                 "title": "Interface",
                 "type": "object",
-                "properties": {
-                    "name": { "type": "string" },
-                    "description": { "type": "string" },
-                    "type": {
-                        "type": "string",
-                        "enum": ["ethernet", "bond", "vlan"]
-                    },
-                    "state": {
-                        "type": "string",
-                        "enum": ["absent", "up", "down", "unknown"]
+                "oneOf": [
+                    {
+                        "allOf": [
+                            {
+                                "properties": {
+                                    "type": {
+                                        "type": "string",
+                                        "enum": ["ethernet", "bond", "vlan"]
+                                    }
+                                }
+                            },
+                            { "$ref": "#/definitions/interface-rw" },
+                            { "$ref": "#/definitions/interface-ro" }
+                        ]
                     }
-                },
+                ],
                 "required": ["name"]
             }
         }
     },
-    "required": ["interfaces"]
+    "required": ["interfaces"],
+
+    "definitions": {
+        "interface-rw": {
+            "properties": {
+                "name": { "type": "string" },
+                "description": { "type": "string" },
+                "state": {
+                    "type": "string",
+                    "enum": ["absent", "up", "down", "unknown"]
+                },
+                "link-speed": {
+                    "title": "Speed in Mbps",
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "mac-address": { "$ref": "#/definitions/values/mac-address" },
+                "mtu": {
+                    "title": "Maximum transmit unit",
+                    "type": "integer",
+                    "minimum": 0
+                }
+            }
+        },
+        "interface-ro": {
+            "properties": {
+                "if-index": { "type": "integer", "minimum": 0, "readOnly": true },
+                "admin-status": { "allOf": [ { "$ref": "#/definitions/values/status" }, { "readOnly": true } ] },
+                "link-status": { "allOf": [ { "$ref": "#/definitions/values/status" }, { "readOnly": true } ] },
+                "phys-address": { "allOf": [ { "$ref": "#/definitions/values/mac-address" }, { "readOnly": true } ] },
+                "higher-layer-if": { "type": "string", "readOnly": true },
+                "lower-layer-if": { "type": "string", "readOnly": true },
+                "statistics": {
+                    "title": "Interface statistics",
+                    "type": "object",
+                    "properties": {
+                        "in-broadcast-pkts": { "type": "integer", "minimum": 0 },
+                        "in-discards": { "type": "integer", "minimum": 0 },
+                        "in-errors": { "type": "integer", "minimum": 0 },
+                        "in-multicast-pkts": { "type": "integer", "minimum": 0 },
+                        "in-octets": { "type": "integer", "minimum": 0 },
+                        "in-unicast-pkts": { "type": "integer", "minimum": 0 },
+                        "out-broadcast-pkts": { "type": "integer", "minimum": 0 },
+                        "out-discards": { "type": "integer", "minimum": 0 },
+                        "out-errors": { "type": "integer", "minimum": 0 },
+                        "out-multicast-pkts": { "type": "integer", "minimum": 0 },
+                        "out-octets": { "type": "integer", "minimum": 0 },
+                        "out-unicast-pkts": { "type": "integer", "minimum": 0 }
+                    },
+                    "readOnly": true,
+                    "required": [
+                        "in-broadcast-pkts",
+                        "in-discards",
+                        "in-errors",
+                        "in-multicast-pkts",
+                        "in-octets",
+                        "in-unicast-pkts",
+                        "out-broadcast-pkts",
+                        "out-discards",
+                        "out-errors",
+                        "out-multicast-pkts",
+                        "out-octets",
+                        "out-unicast-pkts"
+                    ]
+                }
+            }
+        },
+        "values": {
+            "status": {
+                "type": "string",
+                "enum": ["up", "down"]
+            },
+            "mac-address": {
+                "type": "string",
+                "pattern": "^([a-fA-F0-9]{2}:){5}[a-fA-F0-9]{2}$"
+            }
+        }
+    }
 }

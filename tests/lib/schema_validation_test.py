@@ -19,6 +19,8 @@
 #
 from __future__ import absolute_import
 
+import copy
+
 import pytest
 
 import jsonschema as js
@@ -26,32 +28,51 @@ import jsonschema as js
 import libnmstate
 
 
-def test_valid_basic_instance():
-    data = {
-        'interfaces': [
-            {
-                'name': 'lo',
-                'description': 'Loopback Interface',
-                'type': 'ethernet',
-                'state': 'down'
+DEFAULT_DATA = {
+    'interfaces': [
+        {
+            'name': 'lo',
+            'description': 'Loopback Interface',
+            'type': 'ethernet',
+            'state': 'down',
+            'link-speed': 1000,
+            'mac-address': '12:34:56:78:90:ab',
+            'mtu': 1500,
+            # Read Only entries
+            'if-index': 0,
+            'admin-status': 'up',
+            'link-status': 'down',
+            'phys-address': '12:34:56:78:90:ab',
+            'higher-layer-if': '',
+            'lower-layer-if': '',
+            'statistics': {
+                'in-octets': 0,
+                'in-unicast-pkts': 0,
+                'in-broadcast-pkts': 0,
+                'in-multicast-pkts': 0,
+                'in-discards': 0,
+                'in-errors': 0,
+                'out-octets': 0,
+                'out-unicast-pkts': 0,
+                'out-broadcast-pkts': 0,
+                'out-multicast-pkts': 0,
+                'out-discards': 0,
+                'out-errors': 0,
             }
-        ]
-    }
+        }
+    ]
+}
+
+
+def test_valid_basic_instance():
+    data = copy.deepcopy(DEFAULT_DATA)
 
     libnmstate.validator.verify(data)
 
 
 def test_invalid_basic_instance():
-    data = {
-        'interfaces': [
-            {
-                'name': 'lo',
-                'description': 'Loopback Interface',
-                'type': 'ethernet',
-                'state': 'bad-state'
-            }
-        ]
-    }
+    data = copy.deepcopy(DEFAULT_DATA)
+    data['interfaces'][0]['state'] = 'bad-state'
 
     with pytest.raises(js.ValidationError) as err:
         libnmstate.validator.verify(data)
