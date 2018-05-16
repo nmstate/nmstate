@@ -28,12 +28,12 @@ import jsonschema as js
 import libnmstate
 
 
-DEFAULT_DATA = {
+COMMON_IFACE_DATA = {
     'interfaces': [
         {
             'name': 'lo',
             'description': 'Loopback Interface',
-            'type': 'ethernet',
+            'type': 'unknown',
             'state': 'down',
             'link-speed': 1000,
             'mac-address': '12:34:56:78:90:ab',
@@ -45,6 +45,7 @@ DEFAULT_DATA = {
             'phys-address': '12:34:56:78:90:ab',
             'higher-layer-if': '',
             'lower-layer-if': '',
+            'low-control': True,
             'statistics': {
                 'in-octets': 0,
                 'in-unicast-pkts': 0,
@@ -64,16 +65,51 @@ DEFAULT_DATA = {
 }
 
 
-def test_valid_basic_instance():
-    data = copy.deepcopy(DEFAULT_DATA)
+@pytest.fixture
+def default_data():
+    return copy.deepcopy(COMMON_IFACE_DATA)
 
-    libnmstate.validator.verify(data)
+
+class TestIfaceCommon(object):
+
+    def test_valid_instance(self, default_data):
+        libnmstate.validator.verify(default_data)
+
+    def test_invalid_instance(self, default_data):
+        default_data['interfaces'][0]['state'] = 'bad-state'
+
+        with pytest.raises(js.ValidationError) as err:
+            libnmstate.validator.verify(default_data)
+            assert 'bad-state' in err.value.args[0]
 
 
-def test_invalid_basic_instance():
-    data = copy.deepcopy(DEFAULT_DATA)
-    data['interfaces'][0]['state'] = 'bad-state'
+class TestIfaceTypeEthernet(object):
 
-    with pytest.raises(js.ValidationError) as err:
-        libnmstate.validator.verify(data)
-        assert 'bad-state' in err.value.args[0]
+    def test_valid_ethernet_with_auto_neg(self, default_data):
+        default_data['interfaces'][0].update({
+            'type': 'ethernet',
+            'auto-negotiation': True,
+        })
+        libnmstate.validator.verify(default_data)
+
+    def test_valid_ethernet_without_auto_neg(self, default_data):
+        default_data['interfaces'][0].update({
+            'auto-negotiation': False,
+            'link-speed': 1000,
+            'duplex': 'full',
+        })
+        libnmstate.validator.verify(default_data)
+
+    def test_valid_without_auto_neg_and_missing_speed(self, default_data):
+        """
+        Defining autonegotiation as false and not specifying the link-speed is
+        not a valid configuration, however, this is not handled by the schema
+        at the moment, deferring the handling to the application code.
+        """
+        default_data['interfaces'][0].update({
+            'type': 'ethernet',
+            'auto-negotiation': False,
+        })
+        del default_data['interfaces'][0]['link-speed']
+
+        libnmstate.validator.verify(default_data)
