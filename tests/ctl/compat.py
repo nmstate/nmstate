@@ -13,25 +13,15 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 #
 # Refer to the README and COPYING files for full details of the license
 #
 from __future__ import absolute_import
+from __future__ import division
 
-import subprocess
-
-from .compat import mock
-
-from nmstatectl import nmstatectl
-
-
-@mock.patch('sys.argv', ['nmstatectl', 'show'])
-@mock.patch.object(nmstatectl.netinfo, 'show', lambda: {})
-def test_run_ctl_directly():
-    nmstatectl.main()
-
-
-def test_run_ctl_executable():
-    rc = subprocess.call(['nmstatectl', '--help'])
-    assert rc == 0
+try:
+    from unittest import mock
+except ImportError:  # py2
+    import mock
+mock

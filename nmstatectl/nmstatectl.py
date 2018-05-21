@@ -19,6 +19,26 @@
 #
 from __future__ import absolute_import
 
+import argparse
+import json
+
+from libnmstate import netinfo
+
 
 def main():
-    print('Hello World!')
+    parser = argparse.ArgumentParser()
+
+    setup_subcommand_show(parser)
+
+    args = parser.parse_args()
+    args.func()
+
+
+def setup_subcommand_show(parser):
+    subparsers = parser.add_subparsers(help='Show network state')
+    parser_show = subparsers.add_parser('show')
+    parser_show.set_defaults(func=show)
+
+
+def show():
+    print(json.dumps(netinfo.show()))
