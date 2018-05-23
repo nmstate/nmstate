@@ -22,24 +22,40 @@ from __future__ import absolute_import
 import argparse
 import json
 
+from libnmstate import netapplier
 from libnmstate import netinfo
 
 
 def main():
     parser = argparse.ArgumentParser()
 
-    setup_subcommand_show(parser)
+    subparsers = parser.add_subparsers()
+    setup_subcommand_show(subparsers)
+    setup_subcommand_set(subparsers)
 
     args = parser.parse_args()
-    args.func()
+    args.func(args)
 
 
-def setup_subcommand_show(parser):
-    subparsers = parser.add_subparsers(help='Show network state')
-    parser_show = subparsers.add_parser('show')
+def setup_subcommand_show(subparsers):
+    parser_show = subparsers.add_parser('show', help='Show network state')
     parser_show.set_defaults(func=show)
 
 
-def show():
+def setup_subcommand_set(subparsers):
+    parser_set = subparsers.add_parser('set', help='Set network state')
+    parser_set.add_argument('-f', '--file',
+                            help='File containing desired state')
+    parser_set.set_defaults(func=apply)
+
+
+def show(args):
     print(json.dumps(netinfo.show(), indent=4, sort_keys=True,
                      separators=(',', ': ')))
+
+
+def apply(args):
+    with open(args.file) as f:
+        state = json.load(f)
+        netapplier.apply(state)
+    print('Desired state applied: ', state)

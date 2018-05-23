@@ -28,6 +28,8 @@ from nmstatectl import nmstatectl
 
 @mock.patch('sys.argv', ['nmstatectl', 'show'])
 @mock.patch.object(nmstatectl.netinfo, 'show', lambda: {})
+@mock.patch('sys.argv', ['nmstatectl', 'set', '-f', 'mystate.json'])
+@mock.patch.object(nmstatectl.netapplier, 'apply', lambda state: None)
 def test_run_ctl_directly():
     nmstatectl.main()
 
