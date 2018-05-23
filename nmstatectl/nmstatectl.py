@@ -41,4 +41,5 @@ def setup_subcommand_show(parser):
 
 
 def show():
-    print(json.dumps(netinfo.show()))
+    print(json.dumps(netinfo.show(), indent=4, sort_keys=True,
+                     separators=(',', ': ')))
