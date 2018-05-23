@@ -63,7 +63,7 @@ def devices():
 def resolve_nm_dev_state(nm_state):
     if nm_state == nmclient.NM.DeviceState.ACTIVATED:
         return 'up'
-    return 'unknown'
+    return 'down'
 
 
 def resolve_nm_dev_type(nm_type):
