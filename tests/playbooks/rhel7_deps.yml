@@ -1,0 +1,16 @@
+---
+- name: Install RHEL 7 deps for nmstate tests
+  hosts: all
+  vars:
+    - rpmdependencies:
+      - git
+      - python2-pip
+  tasks:
+   - name: enable extras and optional
+     command: subscription-manager repos --enable "rhel-*-optional-rpms" --enable "rhel-*-extras-rpms"
+   - name: install EPEL
+     shell: rpm -q epel-release || yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+   - name: install rpm dependencies
+     package:
+       state: present
+       name: "{{ rpmdependencies }}"

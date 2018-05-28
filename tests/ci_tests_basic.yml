@@ -1,0 +1,88 @@
+---
+- name: empty play to gather facts
+  hosts: all
+
+- import_playbook: playbooks/rhel7_deps.yml
+  when:
+    - ansible_distribution == "RedHat"
+    - ansible_distribution_major_version == '7'
+
+- import_playbook: playbooks/centos7_deps.yml
+  when:
+    - ansible_distribution == "CentOS"
+    - ansible_distribution_major_version == '7'
+
+- name: Run tox tests and nmstatectl show
+  hosts: all
+  vars:
+    - nmstatedir: /tmp/nmstate-git-checkout
+  tasks:
+    - service:
+        state: started
+        enabled: yes
+        name: NetworkManager
+
+    - file:
+        state: directory
+        path: "{{ nmstatedir }}"
+
+    # TODO: using tar and copying the file is a workaround for the synchronize
+    # module being broken in Fedora 28 at the moment
+    #
+    - shell: 'tar -cvf ../nmstate.tar --exclude "*.pyc" --exclude "__pycache__" --exclude nmstate.tar ../'
+      delegate_to: localhost
+
+    - copy:
+        src: ../nmstate.tar
+        dest: "{{ nmstatedir }}"
+
+    - command: tar xf nmstate.tar
+      args:
+        chdir: "{{ nmstatedir }}"
+    # END workaround
+
+    - synchronize:
+        src: ../../
+        dest: "{{ nmstatedir }}"
+        recursive: yes
+        delete: yes
+        # tox reqires it to be a .git directory, so cannot exclude .git
+        rsync_opts:
+          - "--exclude=.pyc"
+          - "--exclude=__pycache__"
+    # TODO: Enable this when the module works again and remove the tar workaround
+      when: false
+
+    - command: git clean -fX
+      args:
+        chdir: "{{ nmstatedir }}"
+
+    - pip:
+        name: tox
+        extra_args: --user
+
+    - command: ~/.local/bin/tox
+      args:
+        chdir: "{{ nmstatedir }}"
+
+    # TODO: this needs https://github.com/ansible/ansible/pull/40793 to be
+    # merged, therefore we run pip via the command module
+    - pip:
+        name: .
+        extra_args: --user --upgrade
+        chdir: "{{ nmstatedir }}"
+      when: false
+
+    # TODO: This is a workaround for the broken pip module
+    - command: pip install --user --upgrade .
+      args:
+        chdir: "{{ nmstatedir }}"
+
+    - command: ~/.local/bin/nmstatectl show
+      register: nmstatectl_show
+
+    - debug:
+        var: nmstatectl_show.stdout_lines
+
+    - assert:
+        that: '''"name": "lo"'' in nmstatectl_show.stdout'
