@@ -51,7 +51,7 @@ def devices():
         {
             'name': dev.get_iface(),
             'type_id': dev.get_device_type(),
-            'type': reslove_nm_dev_type(dev.get_type_description()),
+            'type': resolve_nm_dev_type(dev.get_type_description()),
             'state': resolve_nm_dev_state(dev.get_state()),
         }
         for dev in devs
@@ -66,7 +66,7 @@ def resolve_nm_dev_state(nm_state):
     return 'unknown'
 
 
-def reslove_nm_dev_type(nm_type):
+def resolve_nm_dev_type(nm_type):
     if nm_type != 'ethernet':
         return 'unknown'
     return nm_type
