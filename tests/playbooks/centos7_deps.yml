@@ -1,0 +1,18 @@
+---
+- name: Install CentOS 7 deps for nmstate tests
+  hosts: all
+  vars:
+    - rpmdependencies:
+      - git
+      - python2-pip
+      - NetworkManager
+  tasks:
+   - name: install EPEL
+     package:
+       name: epel-release
+       state: present
+   - name: install rpm dependencies
+     package:
+       state: present
+       name: "{{ rpmdependencies }}"
+

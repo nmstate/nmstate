@@ -1,0 +1,12 @@
+---
+# empty playbook to gather facts for import_playbook when clause
+- hosts: all
+
+# workaround for: https://github.com/ansible/ansible/issues/27973
+# There is no way in Ansible to abort a playbook for host that do not run RHEL
+# 7 or CentOS 7 without failing the playbook. Therefore we include the playbook
+# with the tests only if the hosts would support it. There will need to be a
+# way to skip RHEL 6 hosts from running the tests since there is no Network
+# Manager
+- import_playbook: ci_tests_basic.yml
+  when: ansible_distribution_major_version == '7'
