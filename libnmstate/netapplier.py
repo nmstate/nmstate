@@ -28,27 +28,29 @@ def apply(desired_state):
     _apply_ifaces_state(desired_state)
 
 
-def _apply_ifaces_state(state):
+def _apply_ifaces_state(desired_state):
     client = nmclient.client(refresh=True)
 
-    for iface_state in state['interfaces']:
-        nmdev = client.get_device_by_iface(iface_state['name'])
-        if not nmdev:
-            continue
-        if iface_state['state'] == 'up':
-            if nmdev.get_state() == nmclient.NM.DeviceState.ACTIVATED:
-                continue
+    for iface_desired_state in desired_state['interfaces']:
+        nmdev = client.get_device_by_iface(iface_desired_state['name'])
+        if nmdev:
+            _apply_iface_admin_state(client, iface_desired_state, nmdev)
+
+
+def _apply_iface_admin_state(client, iface_state, nmdev):
+    if iface_state['state'] == 'up':
+        if nmdev.get_state() != nmclient.NM.DeviceState.ACTIVATED:
             client.activate_connection_async(device=nmdev)
-        elif iface_state['state'] == 'down':
-            active_connection = nmdev.get_active_connection()
-            if active_connection:
-                client.deactivate_connection_async(active_connection)
-        elif iface_state['state'] == 'absent':
-            connections = nmdev.get_available_connections()
-            for con in connections:
-                con.delete_async()
-        else:
-            raise UnsupportedIfaceStateError(iface_state)
+    elif iface_state['state'] == 'down':
+        active_connection = nmdev.get_active_connection()
+        if active_connection:
+            client.deactivate_connection_async(active_connection)
+    elif iface_state['state'] == 'absent':
+        connections = nmdev.get_available_connections()
+        for con in connections:
+            con.delete_async()
+    else:
+        raise UnsupportedIfaceStateError(iface_state)
 
 
 class UnsupportedIfaceStateError(Exception):

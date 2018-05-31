@@ -39,8 +39,8 @@ def config():
     }
 
 
-@mock.patch.object(netapplier.nmclient, 'NM')
-@mock.patch.object(netapplier.nmclient, 'client')
+@mock.patch('libnmstate.nmclient.NM')
+@mock.patch('libnmstate.nmclient.client')
 class TestDevStateChange(object):
     def test_apply_iface_state_up_to_up(self, mk_client, mk_nm, config):
         mock_get_device_by_iface = mk_client.return_value.get_device_by_iface
