@@ -38,6 +38,11 @@ def test_netinfo_show(mock_client, mock_nm):
     assert 'lo' in iface_names
 
 
+class MockNmConnection(object):
+    def get_ip4_config(self):
+        return None
+
+
 class MockNmDevice(object):
     def get_iface(self):
         return 'lo'
@@ -50,3 +55,6 @@ class MockNmDevice(object):
 
     def get_state(self):
         return NM_DEVICE_STATE_UNKNOWN
+
+    def get_active_connection(self):
+        return MockNmConnection()
