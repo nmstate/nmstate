@@ -25,9 +25,7 @@ from .compat import mock
 
 from libnmstate import netapplier
 
-
-UP = 1
-DOWN = 0
+from tests.lib.mock_nm import MockNmDevice, UP, DOWN
 
 
 @pytest.fixture()
@@ -64,7 +62,8 @@ class TestDevStateChange(object):
 
     def test_apply_iface_state_down_to_down(self, mk_client, mk_nm, config):
         mock_get_device_by_iface = mk_client.return_value.get_device_by_iface
-        mock_get_device_by_iface.return_value = MockNmDevice(devstate=DOWN)
+        mock_get_device_by_iface.return_value = MockNmDevice(
+            devstate=DOWN, active_connection=None)
         mk_nm.DeviceState.ACTIVATED = UP
 
         config['interfaces'][0]['state'] = 'down'
@@ -84,16 +83,3 @@ class TestDevStateChange(object):
 
         mk_client.return_value.activate_connection_async.assert_not_called()
         mk_client.return_value.deactivate_connection_async.assert_called_once()
-
-
-class MockNmDevice(object):
-
-    def __init__(self, devstate, active_connection=None):
-        self._state = devstate
-        self._active_connection = active_connection
-
-    def get_active_connection(self):
-        return self._active_connection
-
-    def get_state(self):
-        return self._state
