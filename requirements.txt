@@ -6,3 +6,4 @@
 #packageD!=0.13.0,<0.14,>=0.12.0
 
 jsonschema
+PyYAML

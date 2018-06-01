@@ -22,6 +22,8 @@ from __future__ import absolute_import
 import argparse
 import json
 
+import yaml
+
 from libnmstate import netapplier
 from libnmstate import netinfo
 
@@ -40,6 +42,8 @@ def main():
 def setup_subcommand_show(subparsers):
     parser_show = subparsers.add_parser('show', help='Show network state')
     parser_show.set_defaults(func=show)
+    parser_show.add_argument('--yaml', help='Output as yaml', default=False,
+                             action='store_true')
 
 
 def setup_subcommand_set(subparsers):
@@ -50,12 +54,20 @@ def setup_subcommand_set(subparsers):
 
 
 def show(args):
-    print(json.dumps(netinfo.show(), indent=4, sort_keys=True,
-                     separators=(',', ': ')))
+    state = netinfo.show()
+    if args.yaml:
+        print(yaml.dump(state, default_flow_style=False))
+    else:
+        print(json.dumps(state, indent=4, sort_keys=True,
+                         separators=(',', ': ')))
 
 
 def apply(args):
     with open(args.file) as f:
-        state = json.load(f)
-        netapplier.apply(state)
+        statedata = f.read()
+    try:
+        state = json.loads(statedata)
+    except ValueError:
+        state = yaml.load(statedata)
+    netapplier.apply(state)
     print('Desired state applied: ', state)
