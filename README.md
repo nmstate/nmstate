@@ -57,7 +57,14 @@ nmstatectl show
 
 Change to desired state:
 ```shell
-nmstatectl set --file <desired-state.json>
+nmstatectl set desired-state.json
+```
+
+`nmstatectl` will also read from stdin when no file is specified:
+
+
+```shell
+nmstatectl set < desired-state.json
 ```
 
 Desired/Current state example:
@@ -81,6 +88,14 @@ Desired/Current state example:
     ]
 }
 ```
+
+The state is also supported as YAML, to get the current state in YAML format:
+
+```shell
+nmstatectl show --yaml
+```
+
+The `set` command accepts both YAML and JSON.
 
 ## Supported Interfaces:
 - bond

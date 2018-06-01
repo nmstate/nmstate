@@ -19,6 +19,8 @@ from __future__ import absolute_import
 import argparse
 import json
 import logging
+import os
+import sys
 
 import yaml
 
@@ -50,8 +52,9 @@ def setup_subcommand_show(subparsers):
 
 def setup_subcommand_set(subparsers):
     parser_set = subparsers.add_parser('set', help='Set network state')
-    parser_set.add_argument('-f', '--file',
-                            help='File containing desired state')
+    parser_set.add_argument('file', help='File containing desired state. '
+                            'stdin is used when no file is specified.',
+                            nargs='?')
     parser_set.set_defaults(func=apply)
 
 
@@ -69,8 +72,15 @@ def show(args):
 
 
 def apply(args):
-    with open(args.file) as statefile:
-        statedata = statefile.read()
+    # read from file when it is not '-' unless '-' actually exists
+    if args.file and (args.file != '-' or os.path.isfile(args.file)):
+        with open(args.file) as statefile:
+            statedata = statefile.read()
+    elif not sys.stdin.isatty() or args.file == '-':
+        statedata = sys.stdin.read()
+    else:
+        sys.stderr.write('ERROR: No state specified\n')
+        return 1
 
     use_yaml = False
     # JSON dictionaries start with a curly brace
