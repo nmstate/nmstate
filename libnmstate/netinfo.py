@@ -39,7 +39,7 @@ def interfaces():
             'state': dev['state'],
         }
         _ifaceinfo_bond(dev, iface_info)
-
+        _ifaceinfo_ip(dev, iface_info)
         info.append(iface_info)
 
     return info
@@ -50,6 +50,7 @@ def devices():
     for dev in nm.device.list_devices():
         devinfo = _devinfo_common(dev)
         devinfo.update(_devinfo_bond(dev, devinfo))
+        devinfo.update(_devinfo_ip(dev, devinfo))
 
         devlist.append(devinfo)
 
@@ -60,6 +61,10 @@ def _ifaceinfo_bond(dev, iface_info):
     # TODO: What about unmanaged devices?
     if iface_info['type'] == 'bond' and 'link-aggregation' in dev:
         iface_info['link-aggregation'] = dev['link-aggregation']
+
+
+def _ifaceinfo_ip(dev, iface_info):
+    iface_info['ip'] = dev['ip']
 
 
 def _devinfo_common(dev):
@@ -91,6 +96,30 @@ def _devinfo_bond(dev, devinfo):
             }
     return {}
 
+def _devinfo_ip(dev, devinfo):
+    ip4info = {}
+    connection = dev.get_active_connection()
+    if connection:
+        ip4config = connection.get_ip4_config()
+        if ip4config:
+            ip4info['enabled'] = True
+            addresslist = []
+
+            addresses = ip4config.get_addresses()
+            for address in addresses:
+                addressinfo = {'ip': address.get_address(),
+                                'prefix-length': address.get_prefix()}
+                addresslist.append(addressinfo)
+            if addresslist:
+                ip4info['addresses'] = addresslist
+        else:
+            ip4info['enabled'] = False
+    else:
+        ip4info['enabled'] = False
+
+    devinfo['ip'] = ip4info
+
+    return devinfo
 
 def resolve_nm_dev_state(nm_state):
     if nm_state == nmclient.NM.DeviceState.ACTIVATED:
