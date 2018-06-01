@@ -75,7 +75,7 @@ class TestDevStateChange(object):
     def test_apply_iface_state_up_to_down(self, mk_client, mk_nm, config):
         mock_get_device_by_iface = mk_client.return_value.get_device_by_iface
         mock_get_device_by_iface.return_value = MockNmDevice(
-            devstate=UP, active_connection='con0')
+            devstate=UP)
         mk_nm.DeviceState.ACTIVATED = UP
 
         config['interfaces'][0]['state'] = 'down'
