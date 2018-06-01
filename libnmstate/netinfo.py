@@ -45,17 +45,15 @@ def interfaces():
 def devices():
     client = nmclient.client()
 
-    devs = client.get_devices()
-
-    devlist = [
-        {
-            'name': dev.get_iface(),
-            'type_id': dev.get_device_type(),
-            'type': resolve_nm_dev_type(dev.get_type_description()),
-            'state': resolve_nm_dev_state(dev.get_state()),
+    devlist = []
+    for device in client.get_devices():
+        devinfo = {
+            'name': device.get_iface(),
+            'type_id': device.get_device_type(),
+            'type': resolve_nm_dev_type(device.get_type_description()),
+            'state': resolve_nm_dev_state(device.get_state()),
         }
-        for dev in devs
-    ]
+        devlist.append(devinfo)
 
     return devlist
 
