@@ -36,6 +36,7 @@ def interfaces():
                 'name': dev['name'],
                 'type': dev['type'],
                 'state': dev['state'],
+                'ip': dev['ip'],
             }
             for dev in devices()
         ]
@@ -47,11 +48,32 @@ def devices():
 
     devlist = []
     for device in client.get_devices():
+        ip4info = {}
+        connection = device.get_active_connection()
+        if connection:
+            ip4config = connection.get_ip4_config()
+            if ip4config:
+                ip4info["enabled"] = True
+                addresslist = []
+
+                addresses = ip4config.get_addresses()
+                for address in addresses:
+                    addressinfo = {"ip": address.get_address(),
+                                   "prefix-length": address.get_prefix()}
+                    addresslist.append(addressinfo)
+                if addresslist:
+                    ip4info["addresses"] = addresslist
+            else:
+                ip4info["enabled"] = False
+        else:
+            ip4info["enabled"] = False
+
         devinfo = {
             'name': device.get_iface(),
             'type_id': device.get_device_type(),
             'type': resolve_nm_dev_type(device.get_type_description()),
             'state': resolve_nm_dev_state(device.get_state()),
+            'ip': ip4info,
         }
         devlist.append(devinfo)
 
