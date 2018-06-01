@@ -39,3 +39,16 @@ def client(refresh=False):
     if _nmclient is None or refresh:
         _nmclient = NM.Client.new(None)
     return _nmclient
+
+
+def connection_ensure_setting(connection, setting_type):
+    """ From network system role: library/network_connections.py
+
+    ensure that connection contains a setting of setting_type
+
+    """
+    setting = connection.get_setting(setting_type)
+    if not setting:
+        setting = setting_type.new()
+        connection.add_setting(setting)
+    return setting
