@@ -18,7 +18,20 @@
 # Refer to the README and COPYING files for full details of the license
 #
 
+import six
+
+from libnmstate import nmclient
+
 from . import connection
+
+
+def create_setting(options):
+    bond_setting = nmclient.NM.SettingBond.new()
+    for option_name, option_value in six.viewitems(options):
+        success = bond_setting.add_option(option_name, option_value)
+        if not success:
+            raise InvalidBondOptionError(option_name, option_value)
+    return bond_setting
 
 
 def get_options(nm_device):
@@ -27,3 +40,7 @@ def get_options(nm_device):
         bond_settings = con.get_setting_bond()
         return bond_settings.props.options
     return {}
+
+
+class InvalidBondOptionError(Exception):
+    pass

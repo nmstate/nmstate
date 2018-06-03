@@ -34,6 +34,13 @@ def nm2api_iface_type(name):
     return _get_nm2api_iface_type_map().get(name, IFACE_TYPE_UNKNOWN)
 
 
+def api2nm_bond_options(bond_conf):
+    # Is the mode a must config parameter?
+    bond_opts = {'mode': bond_conf['mode']}
+    bond_opts.update(bond_conf.get('options', {}))
+    return bond_opts
+
+
 def _swap_dict_keyval(dictionary):
     return {val: key for key, val in six.viewitems(dictionary)}
 

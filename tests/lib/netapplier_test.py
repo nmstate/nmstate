@@ -32,13 +32,16 @@ DOWN = 0
 
 @pytest.fixture()
 def config():
-    return {
-        'interfaces': [
-            {'name': 'foo', 'type': 'unknown', 'state': 'up'}
-        ]
-    }
+    return {'interfaces': create_config()}
 
 
+def create_config():
+    return [
+        {'name': 'foo', 'type': 'unknown', 'state': 'up'}
+    ]
+
+
+@mock.patch('libnmstate.netapplier.netinfo.interfaces', create_config)
 @mock.patch('libnmstate.nmclient.NM')
 @mock.patch('libnmstate.nmclient.client')
 class TestDevStateChange(object):
@@ -84,6 +87,36 @@ class TestDevStateChange(object):
 
         mk_client.return_value.activate_connection_async.assert_not_called()
         mk_client.return_value.deactivate_connection_async.assert_called_once()
+
+
+@mock.patch('libnmstate.netapplier.netinfo.interfaces', create_config)
+@mock.patch('libnmstate.nmclient.NM')
+@mock.patch('libnmstate.nmclient.client')
+class TestBond(object):
+    def test_apply_new_bond(self, mk_client, mk_nm):
+        mock_get_device_by_iface = mk_client.return_value.get_device_by_iface
+        mock_get_device_by_iface.return_value = MockNmDevice(devstate=UP)
+        mk_nm.DeviceState.ACTIVATED = UP
+        mk_nm.SETTING_BOND_SETTING_NAME = 'bond'
+
+        new_bond_config = {
+            'interfaces': [
+                {
+                    'name': 'bond99',
+                    'type': 'bond',
+                    'state': 'up',
+                    'link-aggregation': {
+                        'mode': 'balance-rr',
+                        'options': {
+                            'miimon': 120
+                        }
+                    }
+                 }
+            ]
+        }
+        netapplier.apply(new_bond_config)
+
+        mk_client.return_value.add_connection_async.assert_called_once()
 
 
 class MockNmDevice(object):
