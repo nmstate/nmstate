@@ -19,54 +19,72 @@
 #
 from __future__ import absolute_import
 
+from libnmstate import nm
 from libnmstate import nmclient
 from libnmstate import validator
 
 
 def show():
-    report = interfaces()
+    report = {'interfaces': interfaces()}
     validator.verify(report)
     return report
 
 
 def interfaces():
-    return {
-        'interfaces': [
-            {
-                'name': dev['name'],
-                'type': dev['type'],
-                'state': dev['state'],
-            }
-            for dev in devices()
-        ]
-    }
+    info = []
+    for dev in devices():
+        iface_info = {
+            'name': dev['name'],
+            'type': dev['type'],
+            'state': dev['state'],
+        }
+        _ifaceinfo_bond(dev, iface_info)
+
+        info.append(iface_info)
+
+    return info
 
 
 def devices():
-    client = nmclient.client(refresh=True)
+    devlist = []
+    for dev in nm.device.list_devices():
+        devinfo = _devinfo_common(dev)
+        devinfo.update(_devinfo_bond(dev, devinfo))
 
-    devs = client.get_devices()
-
-    devlist = [
-        {
-            'name': dev.get_iface(),
-            'type_id': dev.get_device_type(),
-            'type': resolve_nm_dev_type(dev.get_type_description()),
-            'state': resolve_nm_dev_state(dev.get_state()),
-        }
-        for dev in devs
-    ]
+        devlist.append(devinfo)
 
     return devlist
+
+
+def _ifaceinfo_bond(dev, iface_info):
+    # TODO: What about unmanaged devices?
+    if iface_info['type'] == 'bond' and 'link-aggregation' in dev:
+        iface_info['link-aggregation'] = dev['link-aggregation']
+
+
+def _devinfo_common(dev):
+    return {
+        'name': dev.get_iface(),
+        'type_id': dev.get_device_type(),
+        'type': nm.translator.nm2api_iface_type(dev.get_type_description()),
+        'state': resolve_nm_dev_state(dev.get_state()),
+    }
+
+
+def _devinfo_bond(dev, devinfo):
+    if devinfo['type_id'] == nmclient.NM.DeviceType.BOND:
+        bond_options = nm.bond.get_options(dev)
+        if bond_options:
+            bond_mode = bond_options['mode']
+            del bond_options['mode']
+            return {
+                'link-aggregation':
+                    {'mode': bond_mode, 'options': bond_options}
+            }
+    return {}
 
 
 def resolve_nm_dev_state(nm_state):
     if nm_state == nmclient.NM.DeviceState.ACTIVATED:
         return 'up'
     return 'down'
-
-
-def resolve_nm_dev_type(nm_type):
-    if nm_type != 'ethernet':
-        return 'unknown'
-    return nm_type

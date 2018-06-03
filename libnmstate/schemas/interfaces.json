@@ -31,6 +31,13 @@
                             { "$ref": "#/definitions/interface-rw" },
                             { "$ref": "#/definitions/interface-ro" }
                         ]
+                    },
+                    {
+                        "allOf": [
+                            { "$ref": "#/definitions-bond/interface" },
+                            { "$ref": "#/definitions/interface-rw" },
+                            { "$ref": "#/definitions/interface-ro" }
+                        ]
                     }
                 ],
                 "required": ["name"]
@@ -123,6 +130,18 @@
                 "duplex": { "type": "string", "enum": ["full", "half"] },
                 "link-speed": { "type": "integer", "minimum": 0 },
                 "flow-control": { "type": "boolean" }
+            }
+        }
+    },
+    "definitions-bond": {
+        "interface": {
+            "properties": {
+                "type": { "type": "string", "enum": ["bond"] },
+                "link-aggregation": {
+                    "properties": {
+                        "mode": { "type": "string" }
+                    }
+                }
             }
         }
     }
