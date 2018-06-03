@@ -19,9 +19,15 @@
 #
 
 from . import bond
+from . import connection
 from . import device
+from . import ipv4
+from . import ipv6
 from . import translator
 
 bond
+connection
 device
+ipv4
+ipv6
 translator

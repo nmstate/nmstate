@@ -18,33 +18,10 @@
 # Refer to the README and COPYING files for full details of the license
 #
 
-import uuid
-
 from libnmstate import nmclient
 
 
-def create_profile(settings):
-    con_profile = nmclient.NM.SimpleConnection.new()
-    for setting in settings:
-        con_profile.add_setting(setting)
-
-    return con_profile
-
-
-def create_setting(con_name, iface_name, iface_type):
-    con_setting = nmclient.NM.SettingConnection.new()
-    con_setting.props.id = con_name
-    con_setting.props.interface_name = iface_name
-    con_setting.props.uuid = str(uuid.uuid4())
-    con_setting.props.type = iface_type
-    con_setting.props.autoconnect = True
-    con_setting.props.autoconnect_slaves = (
-        nmclient.NM.SettingConnectionAutoconnectSlaves.NO)
-    return con_setting
-
-
-def get_device_connection(nm_device):
-    act_connection = nm_device.get_active_connection()
-    if act_connection:
-        return act_connection.props.connection
-    return None
+def create_setting():
+    setting_ipv6 = nmclient.NM.SettingIP6Config.new()
+    setting_ipv6.props.method = nmclient.NM.SETTING_IP6_CONFIG_METHOD_IGNORE
+    return setting_ipv6
