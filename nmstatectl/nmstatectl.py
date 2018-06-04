@@ -63,11 +63,13 @@ def show(args):
 
 
 def apply(args):
-    with open(args.file) as f:
-        statedata = f.read()
-    try:
+    with open(args.file) as statefile:
+        statedata = statefile.read()
+
+    # JSON dictionaries start with a curly brace
+    if statedata[0] == '{':
         state = json.loads(statedata)
-    except ValueError:
+    else:
         state = yaml.load(statedata)
     netapplier.apply(state)
     print('Desired state applied: ', state)
