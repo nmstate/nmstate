@@ -36,7 +36,7 @@ def main():
     setup_subcommand_set(subparsers)
 
     args = parser.parse_args()
-    args.func(args)
+    return args.func(args)
 
 
 def setup_subcommand_show(subparsers):
