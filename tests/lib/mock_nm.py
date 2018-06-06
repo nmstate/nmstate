@@ -17,19 +17,39 @@
 #
 # Refer to the README and COPYING files for full details of the license
 #
-from __future__ import absolute_import
 
-from .compat import mock
+UP = 1
+DOWN = 0
 
-from libnmstate import netinfo
-from tests.lib.mock_nm import MockNmDevice
+NM_DEVICE_TYPE_GENERIC = 14
 
 
-@mock.patch.object(netinfo.nmclient, 'NM')
-@mock.patch.object(netinfo.nmclient, 'client')
-def test_netinfo_show(mock_client, mock_nm):
-    mock_client.return_value.get_devices.return_value = [MockNmDevice()]
+class MockNmConnection(object):
+    def get_ip4_config(self):
+        return None
 
-    report = netinfo.show()
-    iface_names = [iface['name'] for iface in report['interfaces']]
-    assert 'lo' in iface_names
+    def get_connection(self):
+        return MockNmConnection()
+
+
+class MockNmDevice(object):
+    def __init__(self, devstate=DOWN, active_connection=MockNmConnection(),
+                 iface="lo"):
+        self._devstate = devstate
+        self._active_connection = active_connection
+        self._iface = iface
+
+    def get_active_connection(self):
+        return self._active_connection
+
+    def get_device_type(self):
+        return NM_DEVICE_TYPE_GENERIC
+
+    def get_iface(self):
+        return self._iface
+
+    def get_state(self):
+        return self._devstate
+
+    def get_type_description(self):
+        return 'Generic device'

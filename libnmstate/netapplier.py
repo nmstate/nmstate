@@ -18,8 +18,11 @@
 # Refer to the README and COPYING files for full details of the license
 #
 
+import socket
+
 from libnmstate import nmclient
 from libnmstate import validator
+from libnmstate.nmclient import NM
 
 
 def apply(desired_state):
@@ -33,12 +36,31 @@ def _apply_ifaces_state(state):
 
     for iface_state in state['interfaces']:
         nmdev = client.get_device_by_iface(iface_state['name'])
+        active_connection = nmdev.get_active_connection()
+
         if iface_state['state'] == 'up':
-            if nmdev.get_state() == nmclient.NM.DeviceState.ACTIVATED:
-                continue
-            client.activate_connection_async(device=nmdev)
+            ip4state = iface_state.get("ip")
+            if ip4state:
+                connection = active_connection.get_connection()
+                ip4setting = nmclient.connection_ensure_setting(
+                    connection, NM.SettingIP4Config)
+                if not ip4state["enabled"]:
+                    ip4setting.set_property(NM.SETTING_IP_CONFIG_METHOD,
+                                            'disabled')
+                else:
+                    ip4setting.set_property(NM.SETTING_IP_CONFIG_METHOD,
+                                            'manual')
+                    ip4setting.clear_addresses()
+                    for addr in ip4state["addresses"]:
+                        naddr = NM.IPAddress.new(socket.AF_INET, addr["ip"],
+                                                 addr["prefix-length"])
+                        ip4setting.add_address(naddr)
+                if not connection.commit_changes(True):
+                    raise RuntimeError("Could not commit changes")
+
+            if nmdev.get_state() != nmclient.NM.DeviceState.ACTIVATED:
+                client.activate_connection_async(device=nmdev)
         elif iface_state['state'] == 'down':
-            active_connection = nmdev.get_active_connection()
             if active_connection:
                 client.deactivate_connection_async(active_connection)
         else:
