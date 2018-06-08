@@ -18,8 +18,12 @@
 # Refer to the README and COPYING files for full details of the license
 #
 
-from libnmstate import nmclient
 from libnmstate import validator
+
+from network_connections import ArgValidator_ListConnections
+from network_connections import Cmd
+from network_connections import LogLevel
+from network_connections import RunEnvironment
 
 
 def apply(desired_state):
@@ -29,20 +33,43 @@ def apply(desired_state):
 
 
 def _apply_ifaces_state(state):
-    client = nmclient.client()
+    run_env = RunEnvironment()
 
-    for iface_state in state['interfaces']:
-        nmdev = client.get_device_by_iface(iface_state['name'])
-        if iface_state['state'] == 'up':
-            if nmdev.get_state() == nmclient.NM.DeviceState.ACTIVATED:
-                continue
-            client.activate_connection_async(device=nmdev)
-        elif iface_state['state'] == 'down':
-            active_connection = nmdev.get_active_connection()
-            if active_connection:
-                client.deactivate_connection_async(active_connection)
+
+    def fail_log(connections, idx, severity, msg, **kwargs):
+        if severity == LogLevel.ERROR:
+            print(connections[idx])
+            raise RuntimeError(msg)
+
+    def do_nothing(*args, **kwargs):
+        pass
+
+    run_env._check_mode_changed = do_nothing
+    run_env.log = fail_log
+
+    connections = []
+    for interface in  state['interfaces']:
+        if interface["state"] == "down":
+            del interface["type"]
         else:
-            raise UnsupportedIfaceStateError(iface_state)
+            interface["interface_name"] = interface["name"]
+        if "ip" in interface:
+            addrs = []
+            for a in interface["ip"]["addresses"]:
+                addrs.append({"address": a["ip"],
+                              "prefix": a["prefix-length"]})
+            interface["ip"]["address"] = addrs
+
+            del interface["ip"]["addresses"]
+            del interface["ip"]["enabled"]
+
+        connections.append(interface)
+
+    # import json; print(json.dumps(connections, indent=4))
+    cmd = Cmd.create('nm', run_env=run_env,
+                     connections_unvalidated=connections,
+                     connection_validator=ArgValidator_ListConnections())
+    cmd.run()
 
 
 class UnsupportedIfaceStateError(Exception):

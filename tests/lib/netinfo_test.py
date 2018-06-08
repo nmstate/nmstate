@@ -22,10 +22,7 @@ from __future__ import absolute_import
 from .compat import mock
 
 from libnmstate import netinfo
-
-
-NM_DEVICE_STATE_UNKNOWN = 0
-NM_DEVICE_TYPE_GENERIC = 14
+from tests.lib.mock_nm import MockNmDevice
 
 
 @mock.patch.object(netinfo.nmclient, 'NM')
@@ -36,17 +33,3 @@ def test_netinfo_show(mock_client, mock_nm):
     report = netinfo.show()
     iface_names = [iface['name'] for iface in report['interfaces']]
     assert 'lo' in iface_names
-
-
-class MockNmDevice(object):
-    def get_iface(self):
-        return 'lo'
-
-    def get_device_type(self):
-        return NM_DEVICE_TYPE_GENERIC
-
-    def get_type_description(self):
-        return 'Generic device'
-
-    def get_state(self):
-        return NM_DEVICE_STATE_UNKNOWN
