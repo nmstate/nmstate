@@ -32,8 +32,10 @@ except ImportError:
 _nmclient = None
 
 
-def client():
+def client(refresh=False):
     global _nmclient
-    if _nmclient is None:
+    # refresh is a workaround to get the current state when GMainLoop is not
+    # running
+    if _nmclient is None or refresh:
         _nmclient = NM.Client.new(None)
     return _nmclient
