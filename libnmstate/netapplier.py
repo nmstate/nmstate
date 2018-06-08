@@ -29,7 +29,7 @@ def apply(desired_state):
 
 
 def _apply_ifaces_state(state):
-    client = nmclient.client()
+    client = nmclient.client(refresh=True)
 
     for iface_state in state['interfaces']:
         nmdev = client.get_device_by_iface(iface_state['name'])

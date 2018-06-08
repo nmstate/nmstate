@@ -43,7 +43,7 @@ def interfaces():
 
 
 def devices():
-    client = nmclient.client()
+    client = nmclient.client(refresh=True)
 
     devs = client.get_devices()
 
