@@ -33,6 +33,8 @@ def _apply_ifaces_state(state):
 
     for iface_state in state['interfaces']:
         nmdev = client.get_device_by_iface(iface_state['name'])
+        if not nmdev:
+            continue
         if iface_state['state'] == 'up':
             if nmdev.get_state() == nmclient.NM.DeviceState.ACTIVATED:
                 continue
@@ -41,6 +43,10 @@ def _apply_ifaces_state(state):
             active_connection = nmdev.get_active_connection()
             if active_connection:
                 client.deactivate_connection_async(active_connection)
+        elif iface_state['state'] == 'absent':
+            connections = nmdev.get_available_connections()
+            for con in connections:
+                con.delete_async()
         else:
             raise UnsupportedIfaceStateError(iface_state)
 
