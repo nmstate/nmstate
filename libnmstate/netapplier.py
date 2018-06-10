@@ -18,6 +18,8 @@
 # Refer to the README and COPYING files for full details of the license
 #
 
+import collections
+import copy
 import six
 
 from libnmstate import netinfo
@@ -61,7 +63,9 @@ def _add_interfaces(client, ifaces_desired_state, ifaces_current_state):
 
 def _edit_interfaces(client, ifaces_desired_state, ifaces_current_state):
     ifaces2edit = [
-        ifaces_desired_state[name] for name in
+        _canonicalize_desired_state(ifaces_desired_state[name],
+                                    ifaces_current_state[name])
+        for name in
         six.viewkeys(ifaces_desired_state) & six.viewkeys(ifaces_current_state)
     ]
     for iface_desired_state in ifaces2edit:
@@ -84,6 +88,27 @@ def _apply_iface_admin_state(client, iface_state, nmdev):
             con.delete_async()
     else:
         raise UnsupportedIfaceStateError(iface_state)
+
+
+def _canonicalize_desired_state(iface_desired_state, iface_current_state):
+    """
+    Given the desired and current states, complete the desired state by merging
+    the missing parts from the current state.
+    """
+    iface_current_state = copy.deepcopy(iface_current_state)
+    return _dict_update(iface_current_state, iface_desired_state)
+
+
+def _dict_update(origin_data, to_merge_data):
+    """Recursevely performes a dict update (merge)"""
+
+    for key, val in six.viewitems(to_merge_data):
+        if isinstance(val, collections.Mapping):
+            origin_data[key] = _dict_update(origin_data.get(key, {}), val)
+        else:
+            origin_data[key] = val
+
+    return origin_data
 
 
 def _index_by_name(ifaces_state):
