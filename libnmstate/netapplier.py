@@ -68,10 +68,25 @@ def _edit_interfaces(client, ifaces_desired_state, ifaces_current_state):
         for name in
         six.viewkeys(ifaces_desired_state) & six.viewkeys(ifaces_current_state)
     ]
+
     for iface_desired_state in ifaces2edit:
         nmdev = client.get_device_by_iface(iface_desired_state['name'])
         if nmdev:
+            _apply_iface_profile_state(iface_desired_state, nmdev)
             _apply_iface_admin_state(client, iface_desired_state, nmdev)
+
+
+def _apply_iface_profile_state(iface_desired_state, nmdev):
+    cur_con_profile = nm.connection.get_device_connection(nmdev)
+    if cur_con_profile:
+        new_con_profile = _build_connection_profile(
+            iface_desired_state, base_con_profile=cur_con_profile)
+        nm.connection.update_profile(cur_con_profile, new_con_profile)
+        nm.connection.commit_profile(cur_con_profile)
+    else:
+        # Missing connection, attempting to create a new one.
+        new_con_profile = _build_connection_profile(iface_desired_state)
+        nm.connection.add_profile(new_con_profile, save_to_disk=True)
 
 
 def _apply_iface_admin_state(client, iface_state, nmdev):
@@ -115,17 +130,22 @@ def _index_by_name(ifaces_state):
     return {iface['name']: iface for iface in ifaces_state}
 
 
-def _build_connection_profile(iface_desired_state):
+def _build_connection_profile(iface_desired_state, base_con_profile=None):
     iface_type = nm.translator.api2nm_iface_type(iface_desired_state['type'])
     settings = [
-        nm.connection.create_setting(
-            con_name=iface_desired_state['name'],
-            iface_name=iface_desired_state['name'],
-            iface_type=iface_type,
-        ),
         nm.ipv4.create_setting(),
         nm.ipv6.create_setting(),
     ]
+    if base_con_profile:
+        settings.append(nm.connection.duplicate_settings(base_con_profile))
+    else:
+        settings.append(
+            nm.connection.create_setting(
+                con_name=iface_desired_state['name'],
+                iface_name=iface_desired_state['name'],
+                iface_type=iface_type,
+            )
+        )
     if iface_type == 'bond':
         bond_conf = iface_desired_state['link-aggregation']
         bond_opts = nm.translator.api2nm_bond_options(bond_conf)

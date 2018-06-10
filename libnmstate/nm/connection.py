@@ -31,6 +31,19 @@ def create_profile(settings):
     return con_profile
 
 
+def add_profile(connection_profile, save_to_disk=True):
+    client = nmclient.client()
+    client.add_connection_async(connection_profile, save_to_disk)
+
+
+def update_profile(base_profile, new_profile):
+    base_profile.replace_settings_from_connection(new_profile)
+
+
+def commit_profile(connection_profile, save_to_disk=True):
+    connection_profile.commit_changes_async(save_to_disk)
+
+
 def create_setting(con_name, iface_name, iface_type):
     con_setting = nmclient.NM.SettingConnection.new()
     con_setting.props.id = con_name
@@ -41,6 +54,18 @@ def create_setting(con_name, iface_name, iface_type):
     con_setting.props.autoconnect_slaves = (
         nmclient.NM.SettingConnectionAutoconnectSlaves.NO)
     return con_setting
+
+
+def duplicate_settings(base_connection_profile):
+    base = base_connection_profile.get_setting_connection()
+    new = nmclient.NM.SettingConnection.new()
+    new.props.id = base.props.id
+    new.props.interface_name = base.props.interface_name
+    new.props.uuid = base.props.uuid
+    new.props.type = base.props.type
+    new.props.autoconnect = base.props.autoconnect
+    new.props.autoconnect_slaves = base.props.autoconnect_slaves
+    return new
 
 
 def get_device_connection(nm_device):
