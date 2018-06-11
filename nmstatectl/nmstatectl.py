@@ -17,6 +17,7 @@
 from __future__ import absolute_import
 
 import argparse
+import fnmatch
 import json
 import logging
 import os
@@ -48,6 +49,10 @@ def setup_subcommand_show(subparsers):
     parser_show.set_defaults(func=show)
     parser_show.add_argument('--yaml', help='Output as yaml', default=False,
                              action='store_true')
+    parser_show.add_argument(
+        '--only', default='*',
+        help='Show only specified interfaces (comma-separated)'
+    )
 
 
 def setup_subcommand_set(subparsers):
@@ -66,8 +71,27 @@ def print_state(state, use_yaml=False):
                          separators=(',', ': ')))
 
 
+def _filter_interfaces(state, patterns):
+    """
+    return the states for all interfaces from `state` that match at least one
+    of the provided patterns.
+    """
+    showinterfaces = []
+
+    for interface in state['interfaces']:
+        for pattern in patterns:
+            if fnmatch.fnmatch(interface['name'], pattern):
+                showinterfaces.append(interface)
+                break
+    return showinterfaces
+
+
 def show(args):
     state = netinfo.show()
+    if args.only != '*':
+        patterns = [p for p in args.only.split(',')]
+        state['interfaces'] = _filter_interfaces(state, patterns)
+
     print_state(state, use_yaml=args.yaml)
 
 
