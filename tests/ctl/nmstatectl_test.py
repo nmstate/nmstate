@@ -16,19 +16,62 @@
 #
 from __future__ import absolute_import
 
+import json
 import subprocess
+
+import six
 
 from .compat import mock
 
 from nmstatectl import nmstatectl
 
+LO_JSON_STATE = """{
+    "interfaces": [
+        {
+            "name": "lo",
+            "state": "down",
+            "type": "unknown"
+        }
+    ]
+}
+"""
+
+EMPTY_JSON_STATE = """{
+    "interfaces": []
+}
+"""
+
+
+@mock.patch('sys.argv', ['nmstatectl', 'set', 'mystate.json'])
+@mock.patch.object(nmstatectl.netapplier, 'apply', lambda state: None)
+@mock.patch.object(nmstatectl, 'open', mock.mock_open(read_data='{}'),
+                   create=True)
+def test_run_ctl_directly_set():
+    nmstatectl.main()
+
 
 @mock.patch('sys.argv', ['nmstatectl', 'show'])
 @mock.patch.object(nmstatectl.netinfo, 'show', lambda: {})
-@mock.patch('sys.argv', ['nmstatectl', 'set', 'mystate.json'])
-@mock.patch.object(nmstatectl.netapplier, 'apply', lambda state: None)
-def test_run_ctl_directly():
+def test_run_ctl_directly_show_empty():
     nmstatectl.main()
+
+
+@mock.patch('sys.argv', ['nmstatectl', 'show', '--only', 'eth1'])
+@mock.patch.object(
+    nmstatectl.netinfo, 'show', lambda: json.loads(LO_JSON_STATE))
+@mock.patch('nmstatectl.nmstatectl.sys.stdout', new_callable=six.StringIO)
+def test_run_ctl_directly_show_only_empty(mock_stdout):
+    nmstatectl.main()
+    assert mock_stdout.getvalue() == EMPTY_JSON_STATE
+
+
+@mock.patch('sys.argv', ['nmstatectl', 'show', '--only', 'lo'])
+@mock.patch.object(
+    nmstatectl.netinfo, 'show', lambda: json.loads(LO_JSON_STATE))
+@mock.patch('nmstatectl.nmstatectl.sys.stdout', new_callable=six.StringIO)
+def test_run_ctl_directly_show_only(mock_stdout):
+    nmstatectl.main()
+    assert mock_stdout.getvalue() == LO_JSON_STATE
 
 
 def test_run_ctl_executable():
