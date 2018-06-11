@@ -55,6 +55,9 @@ def _add_interfaces(client, ifaces_desired_state, ifaces_current_state):
         ifaces_desired_state[name] for name in
         six.viewkeys(ifaces_desired_state) - six.viewkeys(ifaces_current_state)
     ]
+
+    validator.verify_interfaces_state(ifaces2add, ifaces_desired_state)
+
     new_con_profiles = [_build_connection_profile(iface_desired_state)
                         for iface_desired_state in ifaces2add]
     for connection_profile in new_con_profiles:
@@ -68,6 +71,8 @@ def _edit_interfaces(client, ifaces_desired_state, ifaces_current_state):
         for name in
         six.viewkeys(ifaces_desired_state) & six.viewkeys(ifaces_current_state)
     ]
+
+    validator.verify_interfaces_state(ifaces2edit, ifaces_desired_state)
 
     for iface_desired_state in ifaces2edit:
         nmdev = client.get_device_by_iface(iface_desired_state['name'])
