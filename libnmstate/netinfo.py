@@ -79,7 +79,12 @@ def _devinfo_bond(dev, devinfo):
             del bond_options['mode']
             return {
                 'link-aggregation':
-                    {'mode': bond_mode, 'options': bond_options}
+                    {
+                        'mode': bond_mode,
+                        'slaves': [slave.props.interface
+                                   for slave in nm.bond.get_slaves(dev)],
+                        'options': bond_options
+                    }
             }
     return {}
 

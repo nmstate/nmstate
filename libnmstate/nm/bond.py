@@ -42,5 +42,9 @@ def get_options(nm_device):
     return {}
 
 
+def get_slaves(nm_device):
+    return nm_device.get_slaves()
+
+
 class InvalidBondOptionError(Exception):
     pass
