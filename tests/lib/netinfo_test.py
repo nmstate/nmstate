@@ -64,3 +64,6 @@ class MockNmDevice(object):
 
     def get_active_connection(self):
         return mock.MagicMock()
+
+    def get_slaves(self):
+        return []
