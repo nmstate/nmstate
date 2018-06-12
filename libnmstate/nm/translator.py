@@ -55,6 +55,7 @@ def _get_api2nm_iface_type_map():
         _api2nm_iface_types = {
             'ethernet': nmclient.NM.SETTING_WIRED_SETTING_NAME,
             'bond': nmclient.NM.SETTING_BOND_SETTING_NAME,
+            'dummy': nmclient.NM.SETTING_DUMMY_SETTING_NAME,
         }
     return _api2nm_iface_types
 
