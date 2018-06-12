@@ -46,8 +46,82 @@ def _apply_ifaces_state(interfaces_desired_state, interfaces_current_state):
     ifaces_desired_state = _index_by_name(interfaces_desired_state)
     ifaces_current_state = _index_by_name(interfaces_current_state)
 
+    generate_ifaces_metadata(ifaces_desired_state, ifaces_current_state)
+
     _add_interfaces(client, ifaces_desired_state, ifaces_current_state)
     _edit_interfaces(client, ifaces_desired_state, ifaces_current_state)
+
+
+def generate_ifaces_metadata(ifaces_desired_state, ifaces_current_state):
+    """
+    The described desired state for each interface may include references to
+    other interfaces. As the provider handles the interface setting in an
+    isolated manner, it is sometime necessary to specify a property on an
+    interface based on a property from a different interface.
+    An exmaple of this, is the bond slaves property, which should mark each
+    slave with the setting of it being a slave.
+
+    For such relationships between interfaces or some other potential inputs,
+    metadata is generated on interfaces, usable by the provider when
+    configuring the interface.
+    """
+    _generate_link_aggr_metadata(ifaces_desired_state, ifaces_current_state)
+
+
+def _generate_link_aggr_metadata(ifaces_desired_state, ifaces_current_state):
+    """
+    Given bonds slaves, add to the slave interface the master information.
+
+    Possible scenarios for a given desired and current sate:
+    - The desired state contains both the bonds and their slaves.
+    - The desired state contains the bonds and partially (or not at all)
+      the slaves. Some or all the slaves are in the current state.
+    - Bond is in the current state and some of the slaves are in the desired
+      state.
+    """
+    desired_bonds = [
+        (ifname, ifstate)
+        for ifname, ifstate in six.viewitems(ifaces_desired_state)
+        if ifstate['type'] == 'bond'
+    ]
+    for bond_name, bond_state in desired_bonds:
+        desired_link_aggr = bond_state.get('link-aggregation', {})
+        desired_slaves = desired_link_aggr.get('slaves', [])
+        for slave in desired_slaves:
+            if slave in ifaces_desired_state:
+                ifaces_desired_state[slave]['_master'] = bond_name
+            elif slave in ifaces_current_state:
+                ifaces_desired_state[slave] = {'_master': bond_name}
+
+        desired_slaves = desired_link_aggr.get('slaves')
+        current_bond_state = ifaces_current_state.get(bond_name)
+        if desired_slaves and current_bond_state:
+            current_slaves = current_bond_state['link-aggregation']['slaves']
+            slaves2remove = (set(current_slaves) - set(desired_slaves))
+            for slave in slaves2remove:
+                if slave not in ifaces_desired_state:
+                    ifaces_desired_state[slave] = {}
+
+    current_bonds = (
+        (ifname, ifstate)
+        for ifname, ifstate in six.viewitems(ifaces_current_state)
+        if ifstate['type'] == 'bond'
+    )
+    for bond_name, bond_state in current_bonds:
+        current_link_aggr = bond_state.get('link-aggregation', {})
+        current_slaves = current_link_aggr.get('slaves', [])
+        for slave in current_slaves:
+            if slave in ifaces_desired_state:
+                iface_state = ifaces_desired_state.get(bond_name, {})
+                if not _bond_slaves_defined(iface_state):
+                    ifaces_desired_state[slave]['_master'] = bond_name
+
+
+def _bond_slaves_defined(iface_state):
+    link_aggr = iface_state.get('link-aggregation', {})
+    if 'slaves' in link_aggr:
+        return True
+    return False
 
 
 def _add_interfaces(client, ifaces_desired_state, ifaces_current_state):
@@ -137,20 +211,22 @@ def _index_by_name(ifaces_state):
 
 def _build_connection_profile(iface_desired_state, base_con_profile=None):
     iface_type = nm.translator.api2nm_iface_type(iface_desired_state['type'])
+    master = iface_desired_state.get('_master')
     settings = [
         nm.ipv4.create_setting(),
         nm.ipv6.create_setting(),
     ]
     if base_con_profile:
-        settings.append(nm.connection.duplicate_settings(base_con_profile))
+        con_setting = nm.connection.duplicate_settings(base_con_profile)
     else:
-        settings.append(
-            nm.connection.create_setting(
-                con_name=iface_desired_state['name'],
-                iface_name=iface_desired_state['name'],
-                iface_type=iface_type,
-            )
+        con_setting = nm.connection.create_setting(
+            con_name=iface_desired_state['name'],
+            iface_name=iface_desired_state['name'],
+            iface_type=iface_type,
         )
+    nm.connection.set_master_setting(con_setting, master, 'bond')
+    settings.append(con_setting)
+
     if iface_type == 'bond':
         bond_conf = iface_desired_state['link-aggregation']
         bond_opts = nm.translator.api2nm_bond_options(bond_conf)
