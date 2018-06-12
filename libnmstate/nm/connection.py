@@ -68,6 +68,12 @@ def duplicate_settings(base_connection_profile):
     return new
 
 
+def set_master_setting(con_setting, master, slave_type):
+    if master is not None:
+        con_setting.props.master = master
+        con_setting.props.slave_type = slave_type
+
+
 def get_device_connection(nm_device):
     act_connection = nm_device.get_active_connection()
     if act_connection:

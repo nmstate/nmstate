@@ -19,6 +19,8 @@
 #
 from __future__ import absolute_import
 
+import copy
+
 import pytest
 
 from .compat import mock
@@ -28,6 +30,8 @@ from libnmstate import netapplier
 
 UP = 1
 DOWN = 0
+
+BOND_NAME = 'bond99'
 
 
 @pytest.fixture()
@@ -117,6 +121,192 @@ class TestBond(object):
         netapplier.apply(new_bond_config)
 
         mk_client.return_value.add_connection_async.assert_called_once()
+
+
+class TestDesiredStateMetadata(object):
+    def test_empty_states(self):
+        desired_state = {}
+        current_state = {}
+
+        netapplier.generate_ifaces_metadata(desired_state, current_state)
+
+        assert desired_state == {}
+        assert current_state == {}
+
+    def test_bond_creation_with_new_slaves(self):
+        desired_state = {
+            BOND_NAME: {
+                'name': BOND_NAME,
+                'type': 'bond',
+                'state': 'up',
+                'link-aggregation': {
+                    'mode': 'balance-rr',
+                    'slaves': ['eth0', 'eth1']
+                }
+            },
+            'eth0': {'type': 'unknown'},
+            'eth1': {'type': 'unknown'}
+        }
+        current_state = {}
+        expected_desired_state = copy.deepcopy(desired_state)
+        expected_current_state = copy.deepcopy(current_state)
+        expected_desired_state['eth0']['_master'] = BOND_NAME
+        expected_desired_state['eth1']['_master'] = BOND_NAME
+
+        netapplier.generate_ifaces_metadata(desired_state, current_state)
+
+        assert desired_state == expected_desired_state
+        assert current_state == expected_current_state
+
+    def test_bond_creation_with_existing_slaves(self):
+        desired_state = {
+            BOND_NAME: {
+                'name': BOND_NAME,
+                'type': 'bond',
+                'state': 'up',
+                'link-aggregation': {
+                    'mode': 'balance-rr',
+                    'slaves': ['eth0', 'eth1']
+                }
+            }
+        }
+        current_state = {
+            'eth0': {'type': 'unknown'},
+            'eth1': {'type': 'unknown'}
+        }
+        expected_desired_state = copy.deepcopy(desired_state)
+        expected_current_state = copy.deepcopy(current_state)
+        expected_desired_state['eth0'] = {}
+        expected_desired_state['eth0']['_master'] = BOND_NAME
+        expected_desired_state['eth1'] = {}
+        expected_desired_state['eth1']['_master'] = BOND_NAME
+
+        netapplier.generate_ifaces_metadata(desired_state, current_state)
+
+        assert desired_state == expected_desired_state
+        assert current_state == expected_current_state
+
+    def test_bond_editing_option(self):
+        desired_state = {
+            BOND_NAME: {
+                'name': BOND_NAME,
+                'type': 'bond',
+                'state': 'down'
+            }
+        }
+        current_state = {
+            BOND_NAME: {
+                'name': BOND_NAME,
+                'type': 'bond',
+                'state': 'up',
+                'link-aggregation': {
+                    'mode': 'balance-rr',
+                    'slaves': ['eth0', 'eth1']
+                }
+            },
+            'eth0': {'type': 'unknown'},
+            'eth1': {'type': 'unknown'}
+        }
+        expected_desired_state = copy.deepcopy(desired_state)
+        expected_current_state = copy.deepcopy(current_state)
+
+        netapplier.generate_ifaces_metadata(desired_state, current_state)
+
+        assert desired_state == expected_desired_state
+        assert current_state == expected_current_state
+
+    def test_bond_adding_slaves(self):
+        desired_state = {
+            BOND_NAME: {
+                'name': BOND_NAME,
+                'type': 'bond',
+                'state': 'up',
+                'link-aggregation': {
+                    'mode': 'balance-rr',
+                    'slaves': ['eth0', 'eth1']
+                }
+            },
+            'eth1': {'type': 'unknown'}
+        }
+        current_state = {
+            'eth0': {'type': 'unknown'}
+        }
+        expected_desired_state = copy.deepcopy(desired_state)
+        expected_current_state = copy.deepcopy(current_state)
+        expected_desired_state['eth0'] = {}
+        expected_desired_state['eth0']['_master'] = BOND_NAME
+        expected_desired_state['eth1']['_master'] = BOND_NAME
+
+        netapplier.generate_ifaces_metadata(desired_state, current_state)
+
+        assert desired_state == expected_desired_state
+        assert current_state == expected_current_state
+
+    def test_bond_removing_slaves(self):
+        desired_state = {
+            BOND_NAME: {
+                'name': BOND_NAME,
+                'type': 'bond',
+                'state': 'up',
+                'link-aggregation': {
+                    'mode': 'balance-rr',
+                    'slaves': ['eth0']
+                }
+            }
+        }
+        current_state = {
+            BOND_NAME: {
+                'name': BOND_NAME,
+                'type': 'bond',
+                'state': 'up',
+                'link-aggregation': {
+                    'mode': 'balance-rr',
+                    'slaves': ['eth0', 'eth1']
+                }
+            },
+            'eth0': {'type': 'unknown'},
+            'eth1': {'type': 'unknown'}
+        }
+        expected_desired_state = copy.deepcopy(desired_state)
+        expected_current_state = copy.deepcopy(current_state)
+        expected_desired_state['eth0'] = {}
+        expected_desired_state['eth0']['_master'] = BOND_NAME
+        expected_desired_state['eth1'] = {}
+
+        netapplier.generate_ifaces_metadata(desired_state, current_state)
+
+        assert desired_state == expected_desired_state
+        assert current_state == expected_current_state
+
+    def test_edit_slave(self):
+        desired_state = {
+            'eth0': {
+                'name': 'eth0',
+                'type': 'unknown',
+                'fookey': 'fooval'
+            }
+        }
+        current_state = {
+            BOND_NAME: {
+                'name': BOND_NAME,
+                'type': 'bond',
+                'state': 'up',
+                'link-aggregation': {
+                    'mode': 'balance-rr',
+                    'slaves': ['eth0', 'eth1']
+                }
+            },
+            'eth0': {'type': 'unknown'},
+            'eth1': {'type': 'unknown'}
+        }
+        expected_desired_state = copy.deepcopy(desired_state)
+        expected_current_state = copy.deepcopy(current_state)
+        expected_desired_state['eth0']['_master'] = BOND_NAME
+
+        netapplier.generate_ifaces_metadata(desired_state, current_state)
+
+        assert desired_state == expected_desired_state
+        assert current_state == expected_current_state
 
 
 class MockNmDevice(object):
