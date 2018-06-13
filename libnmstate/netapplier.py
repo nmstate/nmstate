@@ -174,8 +174,7 @@ def _apply_iface_profile_state(iface_desired_state, nmdev):
 
 def _apply_iface_admin_state(client, iface_state, nmdev):
     if iface_state['state'] == 'up':
-        if nmdev.get_state() != nmclient.NM.DeviceState.ACTIVATED:
-            client.activate_connection_async(device=nmdev)
+        client.activate_connection_async(device=nmdev)
     elif iface_state['state'] == 'down':
         active_connection = nmdev.get_active_connection()
         if active_connection:
