@@ -21,6 +21,7 @@
 import collections
 import copy
 import six
+import time
 
 from libnmstate import netinfo
 from libnmstate import nm
@@ -38,6 +39,9 @@ def apply(desired_state):
     interfaces_current_state = netinfo.interfaces()
 
     _apply_ifaces_state(desired_state['interfaces'], interfaces_current_state)
+
+    # FIXME: Remove the sleep when the mainloop is added.
+    time.sleep(1)
 
 
 def _apply_ifaces_state(interfaces_desired_state, interfaces_current_state):
