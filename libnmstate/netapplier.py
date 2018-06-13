@@ -215,8 +215,10 @@ def _index_by_name(ifaces_state):
 def _build_connection_profile(iface_desired_state, base_con_profile=None):
     iface_type = nm.translator.api2nm_iface_type(iface_desired_state['type'])
     master = iface_desired_state.get('_master')
+    ipv4addresses = iface_desired_state.get('ip', {}).get('addresses')
+
     settings = [
-        nm.ipv4.create_setting(),
+        nm.ipv4.create_setting(addresses=ipv4addresses),
         nm.ipv6.create_setting(),
     ]
     if base_con_profile:
