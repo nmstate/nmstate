@@ -75,7 +75,7 @@ def test_iface_admin_state_change(netinfo_nm_mock, netapplier_nm_mock):
     desired_config['interfaces'][0]['state'] = 'down'
     netapplier.apply(desired_config)
 
-    netapplier_nm_mock.applier.set_ifaces_admin_state.assert_called_once_with(
+    netapplier_nm_mock.applier.set_ifaces_admin_state.assert_called_with(
         desired_config['interfaces'])
 
 
@@ -102,10 +102,10 @@ def test_add_new_bond(netinfo_nm_mock, netapplier_nm_mock):
     netapplier.apply(desired_config)
 
     m_prepare = netapplier_nm_mock.applier.prepare_edited_ifaces_configuration
-    m_prepare.assert_called_once_with([])
+    m_prepare.assert_called_with([])
 
     m_prepare = netapplier_nm_mock.applier.prepare_new_ifaces_configuration
-    m_prepare.assert_called_once_with(desired_config['interfaces'])
+    m_prepare.assert_called_with(desired_config['interfaces'])
 
 
 def test_edit_existing_bond(netinfo_nm_mock, netapplier_nm_mock):
@@ -149,10 +149,10 @@ def test_edit_existing_bond(netinfo_nm_mock, netapplier_nm_mock):
     netapplier.apply(desired_config)
 
     m_prepare = netapplier_nm_mock.applier.prepare_edited_ifaces_configuration
-    m_prepare.assert_called_once_with(desired_config['interfaces'])
+    m_prepare.assert_called_with(desired_config['interfaces'])
 
     m_prepare = netapplier_nm_mock.applier.prepare_new_ifaces_configuration
-    m_prepare.assert_called_once_with([])
+    m_prepare.assert_called_with([])
 
 
 class TestDesiredStateMetadata(object):
