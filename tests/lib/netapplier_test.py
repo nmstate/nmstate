@@ -56,7 +56,7 @@ class TestDevStateChange(object):
 
         netapplier.apply(config)
 
-        mk_client.return_value.activate_connection_async.assert_not_called()
+        mk_client.return_value.activate_connection_async.assert_called_once()
         mk_client.return_value.deactivate_connection_async.assert_not_called()
 
     def test_apply_iface_state_down_to_up(self, mk_client, mk_nm, config):
