@@ -63,10 +63,13 @@ def _ifaceinfo_bond(dev, iface_info):
 
 
 def _devinfo_common(dev):
+    type_name = dev.get_type_description()
+    if type_name != 'ethernet':
+        type_name = nm.translator.nm2api_iface_type(type_name)
     return {
         'name': dev.get_iface(),
         'type_id': dev.get_device_type(),
-        'type': nm.translator.nm2api_iface_type(dev.get_type_description()),
+        'type': type_name,
         'state': resolve_nm_dev_state(dev.get_state()),
     }
 
