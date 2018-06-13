@@ -53,23 +53,30 @@ def setup_subcommand_set(subparsers):
     parser_set.set_defaults(func=apply)
 
 
-def show(args):
-    state = netinfo.show()
-    if args.yaml:
+def print_state(state, use_yaml=False):
+    if use_yaml:
         print(yaml.dump(state, default_flow_style=False))
     else:
         print(json.dumps(state, indent=4, sort_keys=True,
                          separators=(',', ': ')))
 
 
+def show(args):
+    state = netinfo.show()
+    print_state(state, use_yaml=args.yaml)
+
+
 def apply(args):
     with open(args.file) as statefile:
         statedata = statefile.read()
 
+    use_yaml = False
     # JSON dictionaries start with a curly brace
     if statedata[0] == '{':
         state = json.loads(statedata)
     else:
         state = yaml.load(statedata)
+        use_yaml = True
     netapplier.apply(state)
-    print('Desired state applied: ', state)
+    print('Desired state applied: ')
+    print_state(state, use_yaml=use_yaml)
