@@ -26,6 +26,17 @@ from libnmstate import nmclient
 IFACE_TYPE_UNKNOWN = 'unknown'
 
 
+class ApiIfaceAdminState(object):
+    DOWN = 'down'
+    UP = 'up'
+
+
+def nm2api_iface_admin_state(state_name):
+    if state_name == nmclient.NM.DeviceState.ACTIVATED:
+        return ApiIfaceAdminState.UP
+    return ApiIfaceAdminState.DOWN
+
+
 def api2nm_iface_type(name):
     return _get_api2nm_iface_type_map().get(name, IFACE_TYPE_UNKNOWN)
 
