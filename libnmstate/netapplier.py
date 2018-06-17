@@ -213,7 +213,8 @@ def _index_by_name(ifaces_state):
 
 
 def _build_connection_profile(iface_desired_state, base_con_profile=None):
-    iface_type = nm.translator.api2nm_iface_type(iface_desired_state['type'])
+    iface_type = nm.translator.Api2Nm.get_iface_type(
+        iface_desired_state['type'])
     master = iface_desired_state.get('_master')
     settings = [
         nm.ipv4.create_setting(),
@@ -232,7 +233,7 @@ def _build_connection_profile(iface_desired_state, base_con_profile=None):
 
     if iface_type == 'bond':
         bond_conf = iface_desired_state['link-aggregation']
-        bond_opts = nm.translator.api2nm_bond_options(bond_conf)
+        bond_opts = nm.translator.Api2Nm.get_bond_options(bond_conf)
 
         settings.append(nm.bond.create_setting(bond_opts))
 
