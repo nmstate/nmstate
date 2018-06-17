@@ -56,7 +56,14 @@ def netinfo_nm_mock():
 def test_iface_admin_state_change(netinfo_nm_mock, netapplier_nm_mock):
     current_config = {
         'interfaces': [
-            {'name': 'foo', 'type': 'unknown', 'state': 'up'}
+            {
+                'name': 'foo',
+                'type': 'unknown',
+                'state': 'up',
+                'ipv4': {
+                    'enabled': False,
+                },
+            }
         ]
     }
     desired_config = copy.deepcopy(current_config)
@@ -65,6 +72,8 @@ def test_iface_admin_state_change(netinfo_nm_mock, netapplier_nm_mock):
     netinfo_nm_mock.translator.Nm2Api.get_common_device_info.return_value = (
         current_config['interfaces'][0])
     netinfo_nm_mock.bond.is_bond_type_id.return_value = False
+    netinfo_nm_mock.ipv4.get_info.return_value = (
+        current_config['interfaces'][0]['ipv4'])
 
     desired_config['interfaces'][0]['state'] = 'down'
     netapplier.apply(desired_config)
@@ -115,7 +124,10 @@ def test_edit_existing_bond(netinfo_nm_mock, netapplier_nm_mock):
                     'options': {
                         'miimon': '100',
                     }
-                }
+                },
+                'ipv4': {
+                    'enabled': False,
+                },
             }
         ]
     }
@@ -130,6 +142,8 @@ def test_edit_existing_bond(netinfo_nm_mock, netapplier_nm_mock):
     netinfo_nm_mock.translator.Nm2Api.get_bond_info.return_value = {
         'link-aggregation': current_config['interfaces'][0]['link-aggregation']
     }
+    netinfo_nm_mock.ipv4.get_info.return_value = (
+        current_config['interfaces'][0]['ipv4'])
 
     desired_config = copy.deepcopy(current_config)
     options = desired_config['interfaces'][0]['link-aggregation']['options']

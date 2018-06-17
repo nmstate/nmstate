@@ -30,3 +30,37 @@ def test_create_setting(NM_mock):
     assert ipv4_setting == NM_mock.SettingIP4Config.new.return_value
     assert (ipv4_setting.props.method ==
             NM_mock.SETTING_IP4_CONFIG_METHOD_DISABLED)
+
+
+def test_get_info_witn_no_connection():
+    info = nm.ipv4.get_info(active_connection=None)
+
+    assert info == {'enabled': False}
+
+
+def test_get_info_with_no_ipv4_config():
+    con_mock = mock.MagicMock()
+    con_mock.get_ip4_config.return_value = None
+
+    info = nm.ipv4.get_info(active_connection=con_mock)
+
+    assert info == {'enabled': False}
+
+
+def test_get_info_with_ipv4_config():
+    act_con_mock = mock.MagicMock()
+    config_mock = act_con_mock.get_ip4_config.return_value
+    address_mock = mock.MagicMock()
+    config_mock.get_addresses.return_value = [address_mock]
+
+    info = nm.ipv4.get_info(active_connection=act_con_mock)
+
+    assert info == {
+        'enabled': True,
+        'addresses': [
+            {
+                'ip': address_mock.get_address.return_value,
+                'prefix-length': address_mock.get_prefix.return_value,
+            }
+        ]
+    }

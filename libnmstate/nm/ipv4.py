@@ -25,3 +25,33 @@ def create_setting():
     setting_ipv4 = nmclient.NM.SettingIP4Config.new()
     setting_ipv4.props.method = nmclient.NM.SETTING_IP4_CONFIG_METHOD_DISABLED
     return setting_ipv4
+
+
+def get_info(active_connection):
+    """
+    Provides the current active values for an active connection.
+    It includes not only the configured values, but the consequences of the
+    configuration (as in the case of ipv4.method=auto, where the address is
+    not explicitly defined).
+    """
+    info = {'enabled': False}
+    if active_connection is None:
+        return info
+
+    ip4config = active_connection.get_ip4_config()
+    if ip4config is None:
+        return info
+
+    addresses = [
+        {
+            'ip': address.get_address(),
+            'prefix-length': address.get_prefix()
+        }
+        for address in ip4config.get_addresses()
+    ]
+    if not addresses:
+        return info
+
+    info['enabled'] = True
+    info['addresses'] = addresses
+    return info
