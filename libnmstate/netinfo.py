@@ -36,6 +36,9 @@ def interfaces():
         type_id = devinfo['type_id']
         iface_info = nm.translator.Nm2Api.get_common_device_info(devinfo)
 
+        act_con = nm.connection.get_device_active_connection(dev)
+        iface_info['ipv4'] = nm.ipv4.get_info(act_con)
+
         if nm.bond.is_bond_type_id(type_id):
             bondinfo = nm.bond.get_bond_info(dev)
             iface_info.update(_ifaceinfo_bond(bondinfo))

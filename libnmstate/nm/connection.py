@@ -75,7 +75,11 @@ def set_master_setting(con_setting, master, slave_type):
 
 
 def get_device_connection(nm_device):
-    act_connection = nm_device.get_active_connection()
+    act_connection = get_device_active_connection(nm_device)
     if act_connection:
         return act_connection.props.connection
     return None
+
+
+def get_device_active_connection(nm_device):
+    return nm_device.get_active_connection()

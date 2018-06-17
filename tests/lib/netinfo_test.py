@@ -33,7 +33,14 @@ def nm_mock():
 def test_netinfo_show_generic_iface(nm_mock):
     current_config = {
         'interfaces': [
-            {'name': 'foo', 'type': 'unknown', 'state': 'up'}
+            {
+                'name': 'foo',
+                'type': 'unknown',
+                'state': 'up',
+                'ipv4': {
+                    'enabled': False,
+                },
+            }
         ]
     }
 
@@ -41,6 +48,8 @@ def test_netinfo_show_generic_iface(nm_mock):
     nm_mock.translator.Nm2Api.get_common_device_info.return_value = (
         current_config['interfaces'][0])
     nm_mock.bond.is_bond_type_id.return_value = False
+    nm_mock.ipv4.get_info.return_value = (
+        current_config['interfaces'][0]['ipv4'])
 
     report = netinfo.show()
 
@@ -60,7 +69,10 @@ def test_netinfo_show_bond_iface(nm_mock):
                     'options': {
                         'miimon': '100',
                     }
-                }
+                },
+                'ipv4': {
+                    'enabled': False,
+                },
             }
         ]
     }
@@ -75,6 +87,8 @@ def test_netinfo_show_bond_iface(nm_mock):
     nm_mock.translator.Nm2Api.get_bond_info.return_value = {
         'link-aggregation': current_config['interfaces'][0]['link-aggregation']
     }
+    nm_mock.ipv4.get_info.return_value = (
+        current_config['interfaces'][0]['ipv4'])
 
     report = netinfo.show()
 
