@@ -70,7 +70,7 @@ def _devinfo_common(dev):
         'name': dev.get_iface(),
         'type_id': dev.get_device_type(),
         'type': type_name,
-        'state': resolve_nm_dev_state(dev.get_state()),
+        'state': nm.translator.nm2api_iface_admin_state(dev.get_state()),
     }
 
 
@@ -90,9 +90,3 @@ def _devinfo_bond(dev, devinfo):
                     }
             }
     return {}
-
-
-def resolve_nm_dev_state(nm_state):
-    if nm_state == nmclient.NM.DeviceState.ACTIVATED:
-        return 'up'
-    return 'down'
