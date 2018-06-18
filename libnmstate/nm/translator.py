@@ -18,6 +18,8 @@
 # Refer to the README and COPYING files for full details of the license
 #
 
+import copy
+
 import six
 
 from libnmstate import nmclient
@@ -58,6 +60,35 @@ class Api2Nm(object):
 
 class Nm2Api(object):
     _iface_types_map = None
+
+    @staticmethod
+    def get_common_device_info(devinfo):
+        type_name = devinfo['type_name']
+        if type_name != 'ethernet':
+            type_name = Nm2Api.get_iface_type(type_name)
+        return {
+            'name': devinfo['name'],
+            'type': type_name,
+            'state': Nm2Api.get_iface_admin_state(devinfo['state']),
+        }
+
+    @staticmethod
+    def get_bond_info(bondinfo):
+        bond_options = copy.deepcopy(bondinfo.get('options'))
+        if not bond_options:
+            return {}
+        bond_slaves = bondinfo['slaves']
+
+        bond_mode = bond_options['mode']
+        del bond_options['mode']
+        return {
+            'link-aggregation':
+                {
+                    'mode': bond_mode,
+                    'slaves': [slave.props.interface for slave in bond_slaves],
+                    'options': bond_options
+                }
+        }
 
     @staticmethod
     def get_iface_type(name):

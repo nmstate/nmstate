@@ -20,7 +20,6 @@
 from __future__ import absolute_import
 
 from libnmstate import nm
-from libnmstate import nmclient
 from libnmstate import validator
 
 
@@ -32,61 +31,23 @@ def show():
 
 def interfaces():
     info = []
-    for dev in devices():
-        iface_info = {
-            'name': dev['name'],
-            'type': dev['type'],
-            'state': dev['state'],
-        }
-        _ifaceinfo_bond(dev, iface_info)
+    for dev in nm.device.list_devices():
+        devinfo = nm.device.get_device_common_info(dev)
+        type_id = devinfo['type_id']
+        iface_info = nm.translator.Nm2Api.get_common_device_info(devinfo)
+
+        if nm.bond.is_bond_type_id(type_id):
+            bondinfo = nm.bond.get_bond_info(dev)
+            iface_info.update(_ifaceinfo_bond(bondinfo))
 
         info.append(iface_info)
 
     return info
 
 
-def devices():
-    devlist = []
-    for dev in nm.device.list_devices():
-        devinfo = _devinfo_common(dev)
-        devinfo.update(_devinfo_bond(dev, devinfo))
-
-        devlist.append(devinfo)
-
-    return devlist
-
-
-def _ifaceinfo_bond(dev, iface_info):
+def _ifaceinfo_bond(devinfo):
     # TODO: What about unmanaged devices?
-    if iface_info['type'] == 'bond' and 'link-aggregation' in dev:
-        iface_info['link-aggregation'] = dev['link-aggregation']
-
-
-def _devinfo_common(dev):
-    type_name = dev.get_type_description()
-    if type_name != 'ethernet':
-        type_name = nm.translator.Nm2Api.get_iface_type(type_name)
-    return {
-        'name': dev.get_iface(),
-        'type_id': dev.get_device_type(),
-        'type': type_name,
-        'state': nm.translator.Nm2Api.get_iface_admin_state(dev.get_state()),
-    }
-
-
-def _devinfo_bond(dev, devinfo):
-    if devinfo['type_id'] == nmclient.NM.DeviceType.BOND:
-        bond_options = nm.bond.get_options(dev)
-        if bond_options:
-            bond_mode = bond_options['mode']
-            del bond_options['mode']
-            return {
-                'link-aggregation':
-                    {
-                        'mode': bond_mode,
-                        'slaves': [slave.props.interface
-                                   for slave in nm.bond.get_slaves(dev)],
-                        'options': bond_options
-                    }
-            }
+    bondinfo = nm.translator.Nm2Api.get_bond_info(devinfo)
+    if 'link-aggregation' in bondinfo:
+        return bondinfo
     return {}
