@@ -21,6 +21,36 @@
 from libnmstate import nmclient
 
 
+def activate(dev):
+    client = nmclient.client()
+    client.activate_connection_async(device=dev)
+
+
+def deactivate(dev):
+    """
+    Deactivating the current active connection,
+    The profile itself is not removed.
+
+    For software devices, deactivation removes the devices from the kernel.
+    """
+    client = nmclient.client()
+    act_connection = dev.get_active_connection()
+    if act_connection:
+        client.deactivate_connection_async(act_connection)
+
+
+def delete(dev):
+    """Removes all device profiles."""
+    connections = dev.get_available_connections()
+    for con in connections:
+        con.delete_async()
+
+
+def get_device_by_name(devname):
+    client = nmclient.client()
+    return client.get_device_by_iface(devname)
+
+
 def list_devices():
     client = nmclient.client(refresh=True)
     return client.get_devices()

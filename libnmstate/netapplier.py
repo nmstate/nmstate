@@ -45,15 +45,16 @@ def apply(desired_state):
 
 
 def _apply_ifaces_state(interfaces_desired_state, interfaces_current_state):
-    client = nmclient.client(refresh=True)
+    # FIXME: Remove workaround when mainloop is integrated in the flow.
+    nmclient.client(refresh=True)
 
     ifaces_desired_state = _index_by_name(interfaces_desired_state)
     ifaces_current_state = _index_by_name(interfaces_current_state)
 
     generate_ifaces_metadata(ifaces_desired_state, ifaces_current_state)
 
-    _add_interfaces(client, ifaces_desired_state, ifaces_current_state)
-    _edit_interfaces(client, ifaces_desired_state, ifaces_current_state)
+    _add_interfaces(ifaces_desired_state, ifaces_current_state)
+    _edit_interfaces(ifaces_desired_state, ifaces_current_state)
 
 
 def generate_ifaces_metadata(ifaces_desired_state, ifaces_current_state):
@@ -128,7 +129,7 @@ def _bond_slaves_defined(iface_state):
     return False
 
 
-def _add_interfaces(client, ifaces_desired_state, ifaces_current_state):
+def _add_interfaces(ifaces_desired_state, ifaces_current_state):
     ifaces2add = [
         ifaces_desired_state[name] for name in
         six.viewkeys(ifaces_desired_state) - six.viewkeys(ifaces_current_state)
@@ -139,10 +140,10 @@ def _add_interfaces(client, ifaces_desired_state, ifaces_current_state):
     new_con_profiles = [_build_connection_profile(iface_desired_state)
                         for iface_desired_state in ifaces2add]
     for connection_profile in new_con_profiles:
-        client.add_connection_async(connection_profile, save_to_disk=True)
+        nm.connection.add_profile(connection_profile, save_to_disk=True)
 
 
-def _edit_interfaces(client, ifaces_desired_state, ifaces_current_state):
+def _edit_interfaces(ifaces_desired_state, ifaces_current_state):
     ifaces2edit = [
         _canonicalize_desired_state(ifaces_desired_state[name],
                                     ifaces_current_state[name])
@@ -153,10 +154,10 @@ def _edit_interfaces(client, ifaces_desired_state, ifaces_current_state):
     validator.verify_interfaces_state(ifaces2edit, ifaces_desired_state)
 
     for iface_desired_state in ifaces2edit:
-        nmdev = client.get_device_by_iface(iface_desired_state['name'])
+        nmdev = nm.device.get_device_by_name(iface_desired_state['name'])
         if nmdev:
             _apply_iface_profile_state(iface_desired_state, nmdev)
-            _apply_iface_admin_state(client, iface_desired_state, nmdev)
+            _apply_iface_admin_state(iface_desired_state, nmdev)
 
 
 def _apply_iface_profile_state(iface_desired_state, nmdev):
@@ -172,17 +173,13 @@ def _apply_iface_profile_state(iface_desired_state, nmdev):
         nm.connection.add_profile(new_con_profile, save_to_disk=True)
 
 
-def _apply_iface_admin_state(client, iface_state, nmdev):
+def _apply_iface_admin_state(iface_state, nmdev):
     if iface_state['state'] == 'up':
-        client.activate_connection_async(device=nmdev)
+        nm.device.activate(nmdev)
     elif iface_state['state'] == 'down':
-        active_connection = nmdev.get_active_connection()
-        if active_connection:
-            client.deactivate_connection_async(active_connection)
+        nm.device.deactivate(nmdev)
     elif iface_state['state'] == 'absent':
-        connections = nmdev.get_available_connections()
-        for con in connections:
-            con.delete_async()
+        nm.device.delete(nmdev)
     else:
         raise UnsupportedIfaceStateError(iface_state)
 
