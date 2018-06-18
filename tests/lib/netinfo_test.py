@@ -29,7 +29,7 @@ NM_DEVICE_TYPE_BOND = 10
 NM_DEVICE_TYPE_GENERIC = 14
 
 
-@mock.patch.object(netinfo.nmclient, 'NM')
+@mock.patch.object(netinfo.nm.translator.nmclient, 'NM')
 @mock.patch.object(netinfo.nm.device.nmclient, 'client')
 def test_netinfo_show(mock_client, mock_nm):
     mock_client.return_value.get_devices.return_value = [

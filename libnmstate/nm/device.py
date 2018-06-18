@@ -24,3 +24,12 @@ from libnmstate import nmclient
 def list_devices():
     client = nmclient.client(refresh=True)
     return client.get_devices()
+
+
+def get_device_common_info(dev):
+    return {
+        'name': dev.get_iface(),
+        'type_id': dev.get_device_type(),
+        'type_name': dev.get_type_description(),
+        'state': dev.get_state(),
+    }

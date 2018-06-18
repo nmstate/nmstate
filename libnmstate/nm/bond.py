@@ -34,6 +34,17 @@ def create_setting(options):
     return bond_setting
 
 
+def is_bond_type_id(type_id):
+    return type_id == nmclient.NM.DeviceType.BOND
+
+
+def get_bond_info(nm_device):
+    return {
+        'slaves': get_slaves(nm_device),
+        'options': get_options(nm_device)
+    }
+
+
 def get_options(nm_device):
     con = connection.get_device_connection(nm_device)
     if con:
