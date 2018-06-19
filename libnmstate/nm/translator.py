@@ -51,10 +51,16 @@ class Api2Nm(object):
         return Api2Nm._iface_types_map
 
     @staticmethod
-    def get_bond_options(bond_conf):
-        # Is the mode a must config parameter?
-        bond_opts = {'mode': bond_conf['mode']}
-        bond_opts.update(bond_conf.get('options', {}))
+    def get_bond_options(iface_desired_state):
+        iface_type = Api2Nm.get_iface_type(iface_desired_state['type'])
+        if iface_type == 'bond':
+            # Is the mode a must config parameter?
+            bond_conf = iface_desired_state['link-aggregation']
+            bond_opts = {'mode': bond_conf['mode']}
+            bond_opts.update(bond_conf.get('options', {}))
+        else:
+            bond_opts = {}
+
         return bond_opts
 
 

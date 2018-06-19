@@ -29,10 +29,6 @@ from libnmstate import nmclient
 from libnmstate import validator
 
 
-class UnsupportedIfaceStateError(Exception):
-    pass
-
-
 def apply(desired_state):
     validator.verify(desired_state)
 
@@ -137,10 +133,8 @@ def _add_interfaces(ifaces_desired_state, ifaces_current_state):
 
     validator.verify_interfaces_state(ifaces2add, ifaces_desired_state)
 
-    new_con_profiles = [_build_connection_profile(iface_desired_state)
-                        for iface_desired_state in ifaces2add]
-    for connection_profile in new_con_profiles:
-        nm.connection.add_profile(connection_profile, save_to_disk=True)
+    ifaces_configs = nm.applier.prepare_new_ifaces_configuration(ifaces2add)
+    nm.applier.create_new_ifaces(ifaces_configs)
 
 
 def _edit_interfaces(ifaces_desired_state, ifaces_current_state):
@@ -153,35 +147,11 @@ def _edit_interfaces(ifaces_desired_state, ifaces_current_state):
 
     validator.verify_interfaces_state(ifaces2edit, ifaces_desired_state)
 
-    for iface_desired_state in ifaces2edit:
-        nmdev = nm.device.get_device_by_name(iface_desired_state['name'])
-        if nmdev:
-            _apply_iface_profile_state(iface_desired_state, nmdev)
-            _apply_iface_admin_state(iface_desired_state, nmdev)
+    ifaces_configs = nm.applier.prepare_edited_ifaces_configuration(
+        ifaces2edit)
+    nm.applier.edit_existing_ifaces(ifaces_configs)
 
-
-def _apply_iface_profile_state(iface_desired_state, nmdev):
-    cur_con_profile = nm.connection.get_device_connection(nmdev)
-    if cur_con_profile:
-        new_con_profile = _build_connection_profile(
-            iface_desired_state, base_con_profile=cur_con_profile)
-        nm.connection.update_profile(cur_con_profile, new_con_profile)
-        nm.connection.commit_profile(cur_con_profile)
-    else:
-        # Missing connection, attempting to create a new one.
-        new_con_profile = _build_connection_profile(iface_desired_state)
-        nm.connection.add_profile(new_con_profile, save_to_disk=True)
-
-
-def _apply_iface_admin_state(iface_state, nmdev):
-    if iface_state['state'] == 'up':
-        nm.device.activate(nmdev)
-    elif iface_state['state'] == 'down':
-        nm.device.deactivate(nmdev)
-    elif iface_state['state'] == 'absent':
-        nm.device.delete(nmdev)
-    else:
-        raise UnsupportedIfaceStateError(iface_state)
+    nm.applier.set_ifaces_admin_state(ifaces2edit)
 
 
 def _canonicalize_desired_state(iface_desired_state, iface_current_state):
@@ -207,31 +177,3 @@ def _dict_update(origin_data, to_merge_data):
 
 def _index_by_name(ifaces_state):
     return {iface['name']: iface for iface in ifaces_state}
-
-
-def _build_connection_profile(iface_desired_state, base_con_profile=None):
-    iface_type = nm.translator.Api2Nm.get_iface_type(
-        iface_desired_state['type'])
-    master = iface_desired_state.get('_master')
-    settings = [
-        nm.ipv4.create_setting(),
-        nm.ipv6.create_setting(),
-    ]
-    if base_con_profile:
-        con_setting = nm.connection.duplicate_settings(base_con_profile)
-    else:
-        con_setting = nm.connection.create_setting(
-            con_name=iface_desired_state['name'],
-            iface_name=iface_desired_state['name'],
-            iface_type=iface_type,
-        )
-    nm.connection.set_master_setting(con_setting, master, 'bond')
-    settings.append(con_setting)
-
-    if iface_type == 'bond':
-        bond_conf = iface_desired_state['link-aggregation']
-        bond_opts = nm.translator.Api2Nm.get_bond_options(bond_conf)
-
-        settings.append(nm.bond.create_setting(bond_opts))
-
-    return nm.connection.create_profile(settings)
