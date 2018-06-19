@@ -18,6 +18,7 @@
 # Refer to the README and COPYING files for full details of the license
 #
 
+from . import applier
 from . import bond
 from . import connection
 from . import device
@@ -25,6 +26,7 @@ from . import ipv4
 from . import ipv6
 from . import translator
 
+applier
 bond
 connection
 device
