@@ -17,8 +17,6 @@
 #
 # Refer to the README and COPYING files for full details of the license
 #
-from __future__ import absolute_import
-
 import copy
 
 import pytest
@@ -28,99 +26,122 @@ from .compat import mock
 from libnmstate import netapplier
 
 
-UP = 1
-DOWN = 0
-
 BOND_NAME = 'bond99'
 
 
-@pytest.fixture()
-def config():
-    return {'interfaces': create_config()}
+@pytest.fixture(scope='module', autouse=True)
+def zero_sleep():
+    with mock.patch.object(netapplier.time, 'sleep'):
+        yield
 
 
-def create_config():
-    return [
-        {'name': 'foo', 'type': 'unknown', 'state': 'up'}
-    ]
+@pytest.fixture(scope='module', autouse=True)
+def nmclient_mock():
+    with mock.patch.object(netapplier.nmclient, 'client'):
+        yield
 
 
-@mock.patch('libnmstate.netapplier.netinfo.interfaces', create_config)
-@mock.patch('libnmstate.nmclient.NM')
-@mock.patch('libnmstate.nmclient.client')
-class TestDevStateChange(object):
-    def test_apply_iface_state_up_to_up(self, mk_client, mk_nm, config):
-        mock_get_device_by_iface = mk_client.return_value.get_device_by_iface
-        mock_get_device_by_iface.return_value = MockNmDevice(devstate=UP)
-        mk_nm.DeviceState.ACTIVATED = UP
-
-        netapplier.apply(config)
-
-        mk_client.return_value.activate_connection_async.assert_called_once()
-        mk_client.return_value.deactivate_connection_async.assert_not_called()
-
-    def test_apply_iface_state_down_to_up(self, mk_client, mk_nm, config):
-        mock_get_device_by_iface = mk_client.return_value.get_device_by_iface
-        mock_get_device_by_iface.return_value = MockNmDevice(devstate=DOWN)
-        mk_nm.DeviceState.ACTIVATED = UP
-
-        netapplier.apply(config)
-
-        mk_client.return_value.activate_connection_async.assert_called_once()
-        mk_client.return_value.deactivate_connection_async.assert_not_called()
-
-    def test_apply_iface_state_down_to_down(self, mk_client, mk_nm, config):
-        mock_get_device_by_iface = mk_client.return_value.get_device_by_iface
-        mock_get_device_by_iface.return_value = MockNmDevice(
-            devstate=DOWN, active_connection=None)
-        mk_nm.DeviceState.ACTIVATED = UP
-
-        config['interfaces'][0]['state'] = 'down'
-        netapplier.apply(config)
-
-        mk_client.return_value.activate_connection_async.assert_not_called()
-        mk_client.return_value.deactivate_connection_async.assert_not_called()
-
-    def test_apply_iface_state_up_to_down(self, mk_client, mk_nm, config):
-        mock_get_device_by_iface = mk_client.return_value.get_device_by_iface
-        mock_get_device_by_iface.return_value = MockNmDevice(devstate=UP)
-        mk_nm.DeviceState.ACTIVATED = UP
-
-        config['interfaces'][0]['state'] = 'down'
-        netapplier.apply(config)
-
-        mk_client.return_value.activate_connection_async.assert_not_called()
-        mk_client.return_value.deactivate_connection_async.assert_called_once()
+@pytest.fixture
+def netapplier_nm_mock():
+    with mock.patch.object(netapplier, 'nm') as m:
+        yield m
 
 
-@mock.patch('libnmstate.netapplier.netinfo.interfaces', create_config)
-@mock.patch('libnmstate.nmclient.NM')
-@mock.patch('libnmstate.nmclient.client')
-class TestBond(object):
-    def test_apply_new_bond(self, mk_client, mk_nm):
-        mock_get_device_by_iface = mk_client.return_value.get_device_by_iface
-        mock_get_device_by_iface.return_value = MockNmDevice(devstate=UP)
-        mk_nm.DeviceState.ACTIVATED = UP
-        mk_nm.SETTING_BOND_SETTING_NAME = 'bond'
+@pytest.fixture
+def netinfo_nm_mock():
+    with mock.patch.object(netapplier.netinfo, 'nm') as m:
+        yield m
 
-        new_bond_config = {
-            'interfaces': [
-                {
-                    'name': 'bond99',
-                    'type': 'bond',
-                    'state': 'up',
-                    'link-aggregation': {
-                        'mode': 'balance-rr',
-                        'options': {
-                            'miimon': 120
-                        }
+
+def test_iface_admin_state_change(netinfo_nm_mock, netapplier_nm_mock):
+    current_config = {
+        'interfaces': [
+            {'name': 'foo', 'type': 'unknown', 'state': 'up'}
+        ]
+    }
+    desired_config = copy.deepcopy(current_config)
+
+    netinfo_nm_mock.device.list_devices.return_value = ['one-item']
+    netinfo_nm_mock.translator.Nm2Api.get_common_device_info.return_value = (
+        current_config['interfaces'][0])
+    netinfo_nm_mock.bond.is_bond_type_id.return_value = False
+
+    desired_config['interfaces'][0]['state'] = 'down'
+    netapplier.apply(desired_config)
+
+    netapplier_nm_mock.applier.set_ifaces_admin_state.assert_called_once_with(
+        desired_config['interfaces'])
+
+
+def test_add_new_bond(netinfo_nm_mock, netapplier_nm_mock):
+    netinfo_nm_mock.device.list_devices.return_value = []
+
+    desired_config = {
+        'interfaces': [
+            {
+                'name': 'bond99',
+                'type': 'bond',
+                'state': 'up',
+                'link-aggregation': {
+                    'mode': 'balance-rr',
+                    'slaves': [],
+                    'options': {
+                        'miimon': 200,
                     }
-                 }
-            ]
-        }
-        netapplier.apply(new_bond_config)
+                }
+            }
+        ]
+    }
 
-        mk_client.return_value.add_connection_async.assert_called_once()
+    netapplier.apply(desired_config)
+
+    m_prepare = netapplier_nm_mock.applier.prepare_edited_ifaces_configuration
+    m_prepare.assert_called_once_with([])
+
+    m_prepare = netapplier_nm_mock.applier.prepare_new_ifaces_configuration
+    m_prepare.assert_called_once_with(desired_config['interfaces'])
+
+
+def test_edit_existing_bond(netinfo_nm_mock, netapplier_nm_mock):
+    current_config = {
+        'interfaces': [
+            {
+                'name': 'bond99',
+                'type': 'bond',
+                'state': 'up',
+                'link-aggregation': {
+                    'mode': 'balance-rr',
+                    'slaves': [],
+                    'options': {
+                        'miimon': '100',
+                    }
+                }
+            }
+        ]
+    }
+
+    netinfo_nm_mock.device.list_devices.return_value = ['one-item']
+    netinfo_nm_mock.translator.Nm2Api.get_common_device_info.return_value = {
+        'name': current_config['interfaces'][0]['name'],
+        'type': current_config['interfaces'][0]['type'],
+        'state': current_config['interfaces'][0]['state'],
+    }
+    netinfo_nm_mock.bond.is_bond_type_id.return_value = True
+    netinfo_nm_mock.translator.Nm2Api.get_bond_info.return_value = {
+        'link-aggregation': current_config['interfaces'][0]['link-aggregation']
+    }
+
+    desired_config = copy.deepcopy(current_config)
+    options = desired_config['interfaces'][0]['link-aggregation']['options']
+    options['miimon'] = 200
+
+    netapplier.apply(desired_config)
+
+    m_prepare = netapplier_nm_mock.applier.prepare_edited_ifaces_configuration
+    m_prepare.assert_called_once_with(desired_config['interfaces'])
+
+    m_prepare = netapplier_nm_mock.applier.prepare_new_ifaces_configuration
+    m_prepare.assert_called_once_with([])
 
 
 class TestDesiredStateMetadata(object):
@@ -307,16 +328,3 @@ class TestDesiredStateMetadata(object):
 
         assert desired_state == expected_desired_state
         assert current_state == expected_current_state
-
-
-class MockNmDevice(object):
-
-    def __init__(self, devstate, active_connection=mock.MagicMock()):
-        self._state = devstate
-        self._active_connection = active_connection
-
-    def get_active_connection(self):
-        return self._active_connection
-
-    def get_state(self):
-        return self._state
