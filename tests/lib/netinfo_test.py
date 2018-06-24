@@ -17,53 +17,65 @@
 #
 # Refer to the README and COPYING files for full details of the license
 #
-from __future__ import absolute_import
+import pytest
 
 from .compat import mock
 
 from libnmstate import netinfo
 
 
-NM_DEVICE_STATE_UNKNOWN = 0
-NM_DEVICE_TYPE_BOND = 10
-NM_DEVICE_TYPE_GENERIC = 14
+@pytest.fixture
+def nm_mock():
+    with mock.patch.object(netinfo, 'nm') as m:
+        yield m
 
 
-@mock.patch.object(netinfo.nm.translator.nmclient, 'NM')
-@mock.patch.object(netinfo.nm.device.nmclient, 'client')
-def test_netinfo_show(mock_client, mock_nm):
-    mock_client.return_value.get_devices.return_value = [
-        MockNmDevice('lo'),
-        MockNmDevice('bond99', type_id=NM_DEVICE_TYPE_BOND)
-    ]
-    mock_nm.DeviceType.BOND = NM_DEVICE_TYPE_BOND
+def test_netinfo_show_generic_iface(nm_mock):
+    current_config = {
+        'interfaces': [
+            {'name': 'foo', 'type': 'unknown', 'state': 'up'}
+        ]
+    }
+
+    nm_mock.device.list_devices.return_value = ['one-item']
+    nm_mock.translator.Nm2Api.get_common_device_info.return_value = (
+        current_config['interfaces'][0])
+    nm_mock.bond.is_bond_type_id.return_value = False
 
     report = netinfo.show()
-    iface_names = [iface['name'] for iface in report['interfaces']]
-    assert 'lo' in iface_names
-    assert 'bond99' in iface_names
+
+    assert current_config == report
 
 
-class MockNmDevice(object):
+def test_netinfo_show_bond_iface(nm_mock):
+    current_config = {
+        'interfaces': [
+            {
+                'name': 'bond99',
+                'type': 'bond',
+                'state': 'up',
+                'link-aggregation': {
+                    'mode': 'balance-rr',
+                    'slaves': [],
+                    'options': {
+                        'miimon': '100',
+                    }
+                }
+            }
+        ]
+    }
 
-    def __init__(self, name, type_id=NM_DEVICE_TYPE_GENERIC):
-        self._name = name
-        self._type_id = type_id
+    nm_mock.device.list_devices.return_value = ['one-item']
+    nm_mock.translator.Nm2Api.get_common_device_info.return_value = {
+        'name': current_config['interfaces'][0]['name'],
+        'type': current_config['interfaces'][0]['type'],
+        'state': current_config['interfaces'][0]['state'],
+    }
+    nm_mock.bond.is_bond_type_id.return_value = True
+    nm_mock.translator.Nm2Api.get_bond_info.return_value = {
+        'link-aggregation': current_config['interfaces'][0]['link-aggregation']
+    }
 
-    def get_iface(self):
-        return self._name
+    report = netinfo.show()
 
-    def get_device_type(self):
-        return self._type_id
-
-    def get_type_description(self):
-        return 'Generic device'
-
-    def get_state(self):
-        return NM_DEVICE_STATE_UNKNOWN
-
-    def get_active_connection(self):
-        return mock.MagicMock()
-
-    def get_slaves(self):
-        return []
+    assert current_config == report
