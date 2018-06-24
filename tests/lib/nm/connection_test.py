@@ -107,7 +107,7 @@ def test_set_master_setting():
     assert con_setting_mock.props.slave_type == 'slave-type'
 
 
-def get_device_connection():
+def test_get_device_connection():
     dev_mock = mock.MagicMock()
 
     con = nm.connection.get_device_connection(dev_mock)
