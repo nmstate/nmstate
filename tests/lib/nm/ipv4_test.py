@@ -116,7 +116,7 @@ def test_get_info_with_ipv4_config():
         'addresses': [
             {
                 'ip': address_mock.get_address.return_value,
-                'prefix-length': address_mock.get_prefix.return_value,
+                'prefix-length': int(address_mock.get_prefix.return_value),
             }
         ]
     }
