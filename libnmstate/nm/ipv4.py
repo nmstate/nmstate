@@ -18,13 +18,29 @@
 # Refer to the README and COPYING files for full details of the license
 #
 
+import socket
+
 from libnmstate import nmclient
 
 
-def create_setting():
+def create_setting(config):
     setting_ipv4 = nmclient.NM.SettingIP4Config.new()
-    setting_ipv4.props.method = nmclient.NM.SETTING_IP4_CONFIG_METHOD_DISABLED
+    if config and config.get('enabled') and config.get('addresses'):
+        setting_ipv4.props.method = (
+            nmclient.NM.SETTING_IP4_CONFIG_METHOD_MANUAL)
+        _add_addresses(setting_ipv4, config['addresses'])
+    else:
+        setting_ipv4.props.method = (
+            nmclient.NM.SETTING_IP4_CONFIG_METHOD_DISABLED)
     return setting_ipv4
+
+
+def _add_addresses(setting_ipv4, addresses):
+    for address in addresses:
+        naddr = nmclient.NM.IPAddress.new(socket.AF_INET,
+                                          address['ip'],
+                                          address['prefix-length'])
+        setting_ipv4.add_address(naddr)
 
 
 def get_info(active_connection):

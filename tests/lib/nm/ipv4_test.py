@@ -18,18 +18,74 @@
 # Refer to the README and COPYING files for full details of the license
 #
 
+import pytest
+
 from lib.compat import mock
 
 from libnmstate import nm
 
 
-@mock.patch.object(nm.ipv4.nmclient, 'NM')
-def test_create_setting(NM_mock):
-    ipv4_setting = nm.ipv4.create_setting()
+@pytest.fixture
+def NM_mock():
+    with mock.patch.object(nm.ipv4.nmclient, 'NM') as m:
+        yield m
+
+
+def test_create_setting_without_config(NM_mock):
+    ipv4_setting = nm.ipv4.create_setting(config=None)
 
     assert ipv4_setting == NM_mock.SettingIP4Config.new.return_value
     assert (ipv4_setting.props.method ==
             NM_mock.SETTING_IP4_CONFIG_METHOD_DISABLED)
+
+
+def test_create_setting_with_ipv4_disabled(NM_mock):
+    ipv4_setting = nm.ipv4.create_setting(config={'enabled': False})
+
+    assert (ipv4_setting.props.method ==
+            NM_mock.SETTING_IP4_CONFIG_METHOD_DISABLED)
+
+
+def test_create_setting_without_addresses(NM_mock):
+    ipv4_setting = nm.ipv4.create_setting(
+        config={
+            'enabled': True,
+            'addresses': [],
+        }
+    )
+
+    assert (ipv4_setting.props.method ==
+            NM_mock.SETTING_IP4_CONFIG_METHOD_DISABLED)
+
+
+def test_create_setting_with_static_addresses(NM_mock):
+    config = {
+        'enabled': True,
+        'addresses': [
+            {'ip': '10.10.10.1', 'prefix-length': 24},
+            {'ip': '10.10.20.1', 'prefix-length': 24},
+        ],
+    }
+    ipv4_setting = nm.ipv4.create_setting(
+        config=config
+    )
+
+    assert (ipv4_setting.props.method ==
+            NM_mock.SETTING_IP4_CONFIG_METHOD_MANUAL)
+    NM_mock.IPAddress.new.assert_has_calls(
+        [
+            mock.call(nm.ipv4.socket.AF_INET,
+                      config['addresses'][0]['ip'],
+                      config['addresses'][0]['prefix-length']),
+            mock.call(nm.ipv4.socket.AF_INET,
+                      config['addresses'][1]['ip'],
+                      config['addresses'][1]['prefix-length'])
+        ]
+    )
+    NM_mock.SettingIP4Config.new.return_value.add_address.assert_has_calls(
+        [mock.call(NM_mock.IPAddress.new.return_value),
+         mock.call(NM_mock.IPAddress.new.return_value)]
+    )
 
 
 def test_get_info_witn_no_connection():
