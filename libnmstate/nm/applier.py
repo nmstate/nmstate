@@ -92,7 +92,7 @@ def _build_connection_profile(iface_desired_state, base_con_profile=None):
     iface_type = translator.Api2Nm.get_iface_type(iface_desired_state['type'])
 
     settings = [
-        ipv4.create_setting(),
+        ipv4.create_setting(iface_desired_state.get('ipv4')),
         ipv6.create_setting(),
     ]
     if base_con_profile:
