@@ -61,7 +61,7 @@ def get_info(active_connection):
     addresses = [
         {
             'ip': address.get_address(),
-            'prefix-length': address.get_prefix()
+            'prefix-length': int(address.get_prefix())
         }
         for address in ip4config.get_addresses()
     ]
