@@ -88,7 +88,7 @@ def test_create_setting_with_static_addresses(NM_mock):
     )
 
 
-def test_get_info_witn_no_connection():
+def test_get_info_with_no_connection():
     info = nm.ipv4.get_info(active_connection=None)
 
     assert info == {'enabled': False}
