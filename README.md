@@ -29,10 +29,24 @@ tox
 
 ## Runtime Environment
 
-Install (from sources):
+Install (from sources) system-wide:
 ```shell
-sudo pip install .
+sudo pip install --upgrade .
 ```
+
+Install just for the local user:
+
+```shell
+pip install --user --upgrade .
+```
+
+Make sure that `~/.local/bin` is in your PATH when installing as a local user.
+The `export` command can be used to add it for the current session:
+
+```shell
+export PATH="${HOME}/.local/bin:${PATH}"
+```
+
 
 ## Basic Operations
 
