@@ -18,6 +18,7 @@ from __future__ import absolute_import
 
 import argparse
 import json
+import logging
 
 import yaml
 
@@ -26,6 +27,10 @@ from libnmstate import netinfo
 
 
 def main():
+    logging.basicConfig(
+        format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
+        level=logging.DEBUG)
+
     parser = argparse.ArgumentParser()
 
     subparsers = parser.add_subparsers()
