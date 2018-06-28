@@ -22,10 +22,10 @@ from . import nmclient
 
 def create_setting(config):
     setting_ipv4 = nmclient.NM.SettingIP4Config.new()
-    if config and config.get('enabled') and config.get('addresses'):
+    if config and config.get('enabled') and config.get('address'):
         setting_ipv4.props.method = (
             nmclient.NM.SETTING_IP4_CONFIG_METHOD_MANUAL)
-        _add_addresses(setting_ipv4, config['addresses'])
+        _add_addresses(setting_ipv4, config['address'])
     else:
         setting_ipv4.props.method = (
             nmclient.NM.SETTING_IP4_CONFIG_METHOD_DISABLED)
@@ -66,5 +66,5 @@ def get_info(active_connection):
         return info
 
     info['enabled'] = True
-    info['addresses'] = addresses
+    info['address'] = addresses
     return info

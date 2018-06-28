@@ -47,7 +47,7 @@ def test_create_setting_without_addresses(NM_mock):
     ipv4_setting = nm.ipv4.create_setting(
         config={
             'enabled': True,
-            'addresses': [],
+            'address': [],
         }
     )
 
@@ -58,7 +58,7 @@ def test_create_setting_without_addresses(NM_mock):
 def test_create_setting_with_static_addresses(NM_mock):
     config = {
         'enabled': True,
-        'addresses': [
+        'address': [
             {'ip': '10.10.10.1', 'prefix-length': 24},
             {'ip': '10.10.20.1', 'prefix-length': 24},
         ],
@@ -72,11 +72,11 @@ def test_create_setting_with_static_addresses(NM_mock):
     NM_mock.IPAddress.new.assert_has_calls(
         [
             mock.call(nm.ipv4.socket.AF_INET,
-                      config['addresses'][0]['ip'],
-                      config['addresses'][0]['prefix-length']),
+                      config['address'][0]['ip'],
+                      config['address'][0]['prefix-length']),
             mock.call(nm.ipv4.socket.AF_INET,
-                      config['addresses'][1]['ip'],
-                      config['addresses'][1]['prefix-length'])
+                      config['address'][1]['ip'],
+                      config['address'][1]['prefix-length'])
         ]
     )
     NM_mock.SettingIP4Config.new.return_value.add_address.assert_has_calls(
@@ -110,7 +110,7 @@ def test_get_info_with_ipv4_config():
 
     assert info == {
         'enabled': True,
-        'addresses': [
+        'address': [
             {
                 'ip': address_mock.get_address.return_value,
                 'prefix-length': int(address_mock.get_prefix.return_value),

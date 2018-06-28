@@ -73,7 +73,7 @@ Desired/Current state example:
     "interfaces": [
         {
             "ipv4": {
-                "addresses": [
+                "address": [
                     {
                         "ip": "192.168.122.1",
                         "prefix-length": 24
