@@ -43,6 +43,9 @@ def test_api2nm_iface_type_map(NM_mock):
         'ethernet': NM_mock.SETTING_WIRED_SETTING_NAME,
         'bond': NM_mock.SETTING_BOND_SETTING_NAME,
         'dummy': NM_mock.SETTING_DUMMY_SETTING_NAME,
+        'ovs-bridge': NM_mock.SETTING_OVS_BRIDGE_SETTING_NAME,
+        'ovs-port': NM_mock.SETTING_OVS_PORT_SETTING_NAME,
+        'ovs-interface': NM_mock.SETTING_OVS_INTERFACE_SETTING_NAME,
     }
 
     assert map == expected_map
