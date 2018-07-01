@@ -21,6 +21,7 @@ from . import connection
 from . import device
 from . import ipv4
 from . import ipv6
+from . import ovs
 from . import translator
 
 applier
@@ -29,4 +30,5 @@ connection
 device
 ipv4
 ipv6
+ovs
 translator

@@ -41,6 +41,20 @@
                     },
                     {
                         "allOf": [
+                            { "$ref": "#/definitions-ovs-bridge/interface" },
+                            { "$ref": "#/definitions/interface-rw" },
+                            { "$ref": "#/definitions/interface-ro" }
+                        ]
+                    },
+                    {
+                        "allOf": [
+                            { "$ref": "#/definitions-ovs-interface/interface" },
+                            { "$ref": "#/definitions/interface-rw" },
+                            { "$ref": "#/definitions/interface-ro" }
+                        ]
+                    },
+                    {
+                        "allOf": [
                             { "$ref": "#/definitions-dummy/interface" },
                             { "$ref": "#/definitions/interface-rw" },
                             { "$ref": "#/definitions/interface-ro" }
@@ -149,6 +163,50 @@
                         "mode": { "type": "string" }
                     }
                 }
+            }
+        }
+    },
+    "definitions-ovs-bridge": {
+        "interface": {
+            "properties": {
+                "type": { "type": "string", "enum": ["ovs-bridge"] },
+                "bridge": {
+                    "title": "Bridge properties",
+                    "type": "object",
+                    "properties": {
+                        "options": {
+                            "title": "Bridge options",
+                            "type": "object",
+                            "properties": {
+                                "stp": { "type": "boolean" },
+                                "rstp": { "type": "boolean" },
+                                "fail-mode": { "type": "string" },
+                                "mcast-snooping-enable": { "type": "boolean" }
+                            }
+                        },
+                        "port": {
+                            "title": "Bridge Port",
+                            "type": "array",
+                            "items": {
+                                "title": "Interface",
+                                "type": "object",
+                                "properties": {
+                                    "name": { "type": "string" },
+                                    "type": { "type": "string" },
+                                    "vlan-mode": { "type": "string" },
+                                    "access-tag": { "type": "string" }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions-ovs-interface": {
+        "interface": {
+            "properties": {
+                "type": { "type": "string", "enum": ["ovs-interface"] }
             }
         }
     },

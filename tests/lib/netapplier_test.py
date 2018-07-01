@@ -69,6 +69,8 @@ def test_iface_admin_state_change(netinfo_nm_mock, netapplier_nm_mock):
     netinfo_nm_mock.translator.Nm2Api.get_common_device_info.return_value = (
         current_config['interfaces'][0])
     netinfo_nm_mock.bond.is_bond_type_id.return_value = False
+    netinfo_nm_mock.ovs.is_ovs_bridge_type_id.return_value = False
+    netinfo_nm_mock.ovs.is_ovs_port_type_id.return_value = False
     netinfo_nm_mock.ipv4.get_info.return_value = (
         current_config['interfaces'][0]['ipv4'])
 

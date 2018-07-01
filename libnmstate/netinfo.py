@@ -28,9 +28,13 @@ def show():
 
 def interfaces():
     info = []
-    for dev in nm.device.list_devices():
-        devinfo = nm.device.get_device_common_info(dev)
+
+    devices_info = [(dev, nm.device.get_device_common_info(dev))
+                    for dev in nm.device.list_devices()]
+
+    for dev, devinfo in devices_info:
         type_id = devinfo['type_id']
+
         iface_info = nm.translator.Nm2Api.get_common_device_info(devinfo)
 
         act_con = nm.connection.get_device_active_connection(dev)
@@ -39,6 +43,10 @@ def interfaces():
         if nm.bond.is_bond_type_id(type_id):
             bondinfo = nm.bond.get_bond_info(dev)
             iface_info.update(_ifaceinfo_bond(bondinfo))
+        elif nm.ovs.is_ovs_bridge_type_id(type_id):
+            iface_info['bridge'] = nm.ovs.get_ovs_info(dev, devices_info)
+        elif nm.ovs.is_ovs_port_type_id(type_id):
+            continue
 
         info.append(iface_info)
 
