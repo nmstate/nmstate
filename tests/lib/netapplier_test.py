@@ -23,6 +23,7 @@ from .compat import mock
 from libnmstate import netapplier
 
 
+BOND_TYPE = 'bond'
 BOND_NAME = 'bond99'
 
 
@@ -88,7 +89,7 @@ def test_add_new_bond(netinfo_nm_mock, netapplier_nm_mock):
         'interfaces': [
             {
                 'name': 'bond99',
-                'type': 'bond',
+                'type': BOND_TYPE,
                 'state': 'up',
                 'link-aggregation': {
                     'mode': 'balance-rr',
@@ -115,7 +116,7 @@ def test_edit_existing_bond(netinfo_nm_mock, netapplier_nm_mock):
         'interfaces': [
             {
                 'name': 'bond99',
-                'type': 'bond',
+                'type': BOND_TYPE,
                 'state': 'up',
                 'link-aggregation': {
                     'mode': 'balance-rr',
@@ -167,11 +168,13 @@ class TestDesiredStateMetadata(object):
         assert desired_state == {}
         assert current_state == {}
 
+
+class TestDesiredStateBondMetadata(object):
     def test_bond_creation_with_new_slaves(self):
         desired_state = {
             BOND_NAME: {
                 'name': BOND_NAME,
-                'type': 'bond',
+                'type': BOND_TYPE,
                 'state': 'up',
                 'link-aggregation': {
                     'mode': 'balance-rr',
@@ -186,6 +189,8 @@ class TestDesiredStateMetadata(object):
         expected_current_state = copy.deepcopy(current_state)
         expected_desired_state['eth0']['_master'] = BOND_NAME
         expected_desired_state['eth1']['_master'] = BOND_NAME
+        expected_desired_state['eth0']['_master_type'] = BOND_TYPE
+        expected_desired_state['eth1']['_master_type'] = BOND_TYPE
 
         netapplier.generate_ifaces_metadata(desired_state, current_state)
 
@@ -196,7 +201,7 @@ class TestDesiredStateMetadata(object):
         desired_state = {
             BOND_NAME: {
                 'name': BOND_NAME,
-                'type': 'bond',
+                'type': BOND_TYPE,
                 'state': 'up',
                 'link-aggregation': {
                     'mode': 'balance-rr',
@@ -212,8 +217,10 @@ class TestDesiredStateMetadata(object):
         expected_current_state = copy.deepcopy(current_state)
         expected_desired_state['eth0'] = {}
         expected_desired_state['eth0']['_master'] = BOND_NAME
+        expected_desired_state['eth0']['_master_type'] = BOND_TYPE
         expected_desired_state['eth1'] = {}
         expected_desired_state['eth1']['_master'] = BOND_NAME
+        expected_desired_state['eth1']['_master_type'] = BOND_TYPE
 
         netapplier.generate_ifaces_metadata(desired_state, current_state)
 
@@ -224,14 +231,14 @@ class TestDesiredStateMetadata(object):
         desired_state = {
             BOND_NAME: {
                 'name': BOND_NAME,
-                'type': 'bond',
+                'type': BOND_TYPE,
                 'state': 'down'
             }
         }
         current_state = {
             BOND_NAME: {
                 'name': BOND_NAME,
-                'type': 'bond',
+                'type': BOND_TYPE,
                 'state': 'up',
                 'link-aggregation': {
                     'mode': 'balance-rr',
@@ -253,7 +260,7 @@ class TestDesiredStateMetadata(object):
         desired_state = {
             BOND_NAME: {
                 'name': BOND_NAME,
-                'type': 'bond',
+                'type': BOND_TYPE,
                 'state': 'up',
                 'link-aggregation': {
                     'mode': 'balance-rr',
@@ -270,6 +277,8 @@ class TestDesiredStateMetadata(object):
         expected_desired_state['eth0'] = {}
         expected_desired_state['eth0']['_master'] = BOND_NAME
         expected_desired_state['eth1']['_master'] = BOND_NAME
+        expected_desired_state['eth0']['_master_type'] = BOND_TYPE
+        expected_desired_state['eth1']['_master_type'] = BOND_TYPE
 
         netapplier.generate_ifaces_metadata(desired_state, current_state)
 
@@ -280,7 +289,7 @@ class TestDesiredStateMetadata(object):
         desired_state = {
             BOND_NAME: {
                 'name': BOND_NAME,
-                'type': 'bond',
+                'type': BOND_TYPE,
                 'state': 'up',
                 'link-aggregation': {
                     'mode': 'balance-rr',
@@ -291,7 +300,7 @@ class TestDesiredStateMetadata(object):
         current_state = {
             BOND_NAME: {
                 'name': BOND_NAME,
-                'type': 'bond',
+                'type': BOND_TYPE,
                 'state': 'up',
                 'link-aggregation': {
                     'mode': 'balance-rr',
@@ -305,6 +314,7 @@ class TestDesiredStateMetadata(object):
         expected_current_state = copy.deepcopy(current_state)
         expected_desired_state['eth0'] = {}
         expected_desired_state['eth0']['_master'] = BOND_NAME
+        expected_desired_state['eth0']['_master_type'] = BOND_TYPE
         expected_desired_state['eth1'] = {}
 
         netapplier.generate_ifaces_metadata(desired_state, current_state)
@@ -323,7 +333,7 @@ class TestDesiredStateMetadata(object):
         current_state = {
             BOND_NAME: {
                 'name': BOND_NAME,
-                'type': 'bond',
+                'type': BOND_TYPE,
                 'state': 'up',
                 'link-aggregation': {
                     'mode': 'balance-rr',
@@ -336,6 +346,7 @@ class TestDesiredStateMetadata(object):
         expected_desired_state = copy.deepcopy(desired_state)
         expected_current_state = copy.deepcopy(current_state)
         expected_desired_state['eth0']['_master'] = BOND_NAME
+        expected_desired_state['eth0']['_master_type'] = BOND_TYPE
 
         netapplier.generate_ifaces_metadata(desired_state, current_state)
 

@@ -76,7 +76,8 @@ def test_prepare_new_ifaces_configuration(nm_bond_mock,
             'name': 'eth0',
             'type': 'ethernet',
             'state': 'up',
-            '_master': 'bond99'
+            '_master': 'bond99',
+            '_master_type': 'bond'
         },
         {
             'name': 'bond99',
@@ -98,8 +99,9 @@ def test_prepare_new_ifaces_configuration(nm_bond_mock,
     nm_connection_mock.set_master_setting.assert_has_calls(
         [
             mock.call(con_setting, 'bond99', 'bond'),
-            mock.call(con_setting, None, 'bond')
-        ]
+            mock.call(con_setting, None, None)
+        ],
+        any_order=True
     )
     nm_connection_mock.create_profile.assert_has_calls(
         [
