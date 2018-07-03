@@ -70,20 +70,29 @@ def generate_ifaces_metadata(ifaces_desired_state, ifaces_current_state):
     metadata is generated on interfaces, usable by the provider when
     configuring the interface.
     """
-    _generate_link_master_metadata(ifaces_desired_state,
-                                   ifaces_current_state,
-                                   master_type='bond',
-                                   get_slaves_func=_get_bond_slaves_from_state)
+    _generate_link_master_metadata(
+        ifaces_desired_state,
+        ifaces_current_state,
+        master_type='bond',
+        get_slaves_func=_get_bond_slaves_from_state,
+        set_metadata_func=_set_common_slaves_metadata
+    )
 
 
 def _get_bond_slaves_from_state(state, default=()):
     return state.get('link-aggregation', {}).get('slaves', default)
 
 
+def _set_common_slaves_metadata(master_state, slave_state):
+    slave_state['_master'] = master_state['name']
+    slave_state['_master_type'] = master_state['type']
+
+
 def _generate_link_master_metadata(ifaces_desired_state,
                                    ifaces_current_state,
                                    master_type,
-                                   get_slaves_func):
+                                   get_slaves_func,
+                                   set_metadata_func):
     """
     Given master's slaves, add to the slave interface the master information.
 
@@ -97,15 +106,16 @@ def _generate_link_master_metadata(ifaces_desired_state,
     desired_masters = [
         (ifname, ifstate)
         for ifname, ifstate in six.viewitems(ifaces_desired_state)
-        if ifstate['type'] == master_type
+        if ifstate.get('type') == master_type
     ]
     for master_name, master_state in desired_masters:
         desired_slaves = get_slaves_func(master_state)
         for slave in desired_slaves:
             if slave in ifaces_desired_state:
-                ifaces_desired_state[slave]['_master'] = master_name
+                set_metadata_func(master_state, ifaces_desired_state[slave])
             elif slave in ifaces_current_state:
-                ifaces_desired_state[slave] = {'_master': master_name}
+                ifaces_desired_state[slave] = {}
+                set_metadata_func(master_state, ifaces_desired_state[slave])
 
         desired_slaves = get_slaves_func(master_state)
         current_master_state = ifaces_current_state.get(master_name)
@@ -119,7 +129,7 @@ def _generate_link_master_metadata(ifaces_desired_state,
     current_masters = (
         (ifname, ifstate)
         for ifname, ifstate in six.viewitems(ifaces_current_state)
-        if ifstate['type'] == master_type
+        if ifstate.get('type') == master_type
     )
     for master_name, master_state in current_masters:
         current_slaves = get_slaves_func(master_state)
@@ -127,7 +137,8 @@ def _generate_link_master_metadata(ifaces_desired_state,
             if slave in ifaces_desired_state:
                 iface_state = ifaces_desired_state.get(master_name, {})
                 if get_slaves_func(iface_state, None) is None:
-                    ifaces_desired_state[slave]['_master'] = master_name
+                    set_metadata_func(
+                        master_state, ifaces_desired_state[slave])
 
 
 def _add_interfaces(ifaces_desired_state, ifaces_current_state):
