@@ -15,10 +15,92 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
+import six
+
 from libnmstate import nmclient
 
 from . import connection
 from . import device
+
+
+BRIDGE_TYPE = 'ovs-bridge'
+INTERNAL_INTERFACE_TYPE = 'ovs-interface'
+PORT_TYPE = 'ovs-port'
+PORT_PROFILE_PREFIX = 'ovs-port-'
+
+
+_BRIDGE_OPTION_NAMES = [
+    'fail-mode',
+    'mcast-snooping-enable',
+    'rstp',
+    'stp'
+]
+
+
+_PORT_OPTION_NAMES = [
+    'tag',
+    'vlan-mode',
+    'bond-mode',
+    'lacp',
+    'bond-updelay',
+    'bond-downdelay'
+]
+
+
+def create_bridge_setting(options):
+    bridge_setting = nmclient.NM.SettingOvsBridge.new()
+    for option_name, option_value in six.viewitems(options):
+        if option_name == 'fail-mode':
+            if option_value:
+                bridge_setting.props.fail_mode = option_value
+        elif option_name == 'mcast-snooping-enable':
+            bridge_setting.props.mcast_snooping_enable = option_value
+        elif option_name == 'rstp':
+            bridge_setting.props.rstp_enable = option_value
+        elif option_name == 'stp':
+            bridge_setting.props.stp_enable = option_value
+        else:
+            raise InvalidOvsBridgeOptionError(option_name, option_value)
+
+    return bridge_setting
+
+
+def create_port_setting(options):
+    port_setting = nmclient.NM.SettingOvsPort.new()
+    for option_name, option_value in six.viewitems(options):
+        if option_name == 'tag':
+            port_setting.props.tag = option_value
+        elif option_name == 'vlan-mode':
+            port_setting.props.vlan_mode = option_value
+        elif option_name == 'bond-mode':
+            port_setting.props.bond_mode = option_value
+        elif option_name == 'lacp':
+            port_setting.props.lacp = option_value
+        elif option_name == 'bond-updelay':
+            port_setting.props.bond_updelay = option_value
+        elif option_name == 'bond-downdelay':
+            port_setting.props.bond_downdelay = option_value
+        else:
+            raise InvalidOvsPortOptionError(option_name, option_value)
+
+    return port_setting
+
+
+def translate_bridge_options(iface_state):
+    br_opts = {}
+    bridge_state = iface_state.get('bridge', {}).get('options', {})
+    for key in six.viewkeys(bridge_state) & set(_BRIDGE_OPTION_NAMES):
+        br_opts[key] = bridge_state[key]
+
+    return br_opts
+
+
+def translate_port_options(port_state):
+    port_opts = {}
+    for key in six.viewkeys(port_state) & set(_PORT_OPTION_NAMES):
+        port_opts[key] = port_state[key]
+
+    return port_opts
 
 
 def is_ovs_bridge_type_id(type_id):
@@ -100,3 +182,11 @@ def _get_slave_profiles(master_device, devices_info):
             if master == master_device:
                 slave_profiles.append(active_con.props.connection)
     return slave_profiles
+
+
+class InvalidOvsBridgeOptionError(Exception):
+    pass
+
+
+class InvalidOvsPortOptionError(Exception):
+    pass

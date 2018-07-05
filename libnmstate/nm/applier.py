@@ -20,10 +20,15 @@ from . import connection
 from . import device
 from . import ipv4
 from . import ipv6
+from . import ovs
 from . import translator
 
 
 class UnsupportedIfaceStateError(Exception):
+    pass
+
+
+class UnsupportedIfaceTypeError(Exception):
     pass
 
 
@@ -33,10 +38,15 @@ def create_new_ifaces(con_profiles):
 
 
 def prepare_new_ifaces_configuration(ifaces_desired_state):
+    new_ifaces_desired_state = _prepare_proxy_ifaces_desired_state(
+        ifaces_desired_state)
+
+    new_ifaces_desired_state += ifaces_desired_state
     new_con_profiles = [
         _build_connection_profile(iface_desired_state)
-        for iface_desired_state in ifaces_desired_state
+        for iface_desired_state in new_ifaces_desired_state
     ]
+
     return new_con_profiles
 
 
@@ -44,29 +54,36 @@ def edit_existing_ifaces(con_profiles):
     for connection_profile in con_profiles:
         devname = connection_profile.get_interface_name()
         nmdev = device.get_device_by_name(devname)
+        cur_con_profile = None
         if nmdev:
             cur_con_profile = connection.get_device_connection(nmdev)
-            if cur_con_profile:
-                connection.commit_profile(connection_profile)
-            else:
-                # Missing connection, attempting to create a new one.
-                connection.add_profile(connection_profile, save_to_disk=True)
+        if cur_con_profile:
+            connection.commit_profile(connection_profile)
+        else:
+            # Missing connection, attempting to create a new one.
+            connection.add_profile(connection_profile, save_to_disk=True)
 
 
 def prepare_edited_ifaces_configuration(ifaces_desired_state):
     con_profiles = []
-    for iface_desired_state in ifaces_desired_state:
+
+    edited_ifaces_desired_state = _prepare_proxy_ifaces_desired_state(
+        ifaces_desired_state)
+    edited_ifaces_desired_state += ifaces_desired_state
+
+    for iface_desired_state in edited_ifaces_desired_state:
         nmdev = device.get_device_by_name(iface_desired_state['name'])
+        cur_con_profile = None
         if nmdev:
             cur_con_profile = connection.get_device_connection(nmdev)
-            new_con_profile = _build_connection_profile(
-                iface_desired_state, base_con_profile=cur_con_profile)
-            if cur_con_profile:
-                connection.update_profile(cur_con_profile, new_con_profile)
-                con_profiles.append(cur_con_profile)
-            else:
-                # Missing connection, attempting to create a new one.
-                con_profiles.append(new_con_profile)
+        new_con_profile = _build_connection_profile(
+            iface_desired_state, base_con_profile=cur_con_profile)
+        if cur_con_profile:
+            connection.update_profile(cur_con_profile, new_con_profile)
+            con_profiles.append(cur_con_profile)
+        else:
+            # Missing connection, attempting to create a new one.
+            con_profiles.append(new_con_profile)
 
     return con_profiles
 
@@ -85,8 +102,51 @@ def set_ifaces_admin_state(ifaces_desired_state):
                 raise UnsupportedIfaceStateError(iface_desired_state)
 
 
+def _prepare_proxy_ifaces_desired_state(ifaces_desired_state):
+    """
+    Prepare the state of the "proxy" interfaces. These are interfaces that
+    exist as NM entities/profiles, but are invisible to the API.
+    These proxy interfaces state is created as a side effect of other ifaces
+    definition.
+    Note: This function modifies the ifaces_desired_state content in addition
+    to returning a new set of states for the proxy interfaces.
+
+    In OVS case, the port profile is the proxy, it is not part of the public
+    state of the system, but internal to the NM provider.
+    """
+    new_ifaces_desired_state = []
+    for iface_desired_state in ifaces_desired_state:
+        port_options_metadata = iface_desired_state.get('_brport_options')
+        if port_options_metadata is None:
+            continue
+        port_options = ovs.translate_port_options(port_options_metadata)
+        port_iface_desired_state = _create_ovs_port_iface_desired_state(
+            iface_desired_state, port_options)
+        new_ifaces_desired_state.append(port_iface_desired_state)
+        # The "visible" slave/interface needs to point to the port profile
+        iface_desired_state['_master'] = port_iface_desired_state['name']
+        iface_desired_state['_master_type'] = ovs.PORT_TYPE
+    return new_ifaces_desired_state
+
+
+def _create_ovs_port_iface_desired_state(iface_desired_state, port_options):
+    return {
+        'name': ovs.PORT_PROFILE_PREFIX + iface_desired_state['name'],
+        'type': ovs.PORT_TYPE,
+        'state': iface_desired_state['state'],
+        '_master': iface_desired_state['_master'],
+        '_master_type': iface_desired_state['_master_type'],
+        'options': port_options,
+    }
+
+
 def _build_connection_profile(iface_desired_state, base_con_profile=None):
     iface_type = translator.Api2Nm.get_iface_type(iface_desired_state['type'])
+
+    # TODO: Support ovs-interface type on setup
+    if iface_type == ovs.INTERNAL_INTERFACE_TYPE:
+        raise UnsupportedIfaceTypeError(iface_type,
+                                        iface_desired_state['name'])
 
     settings = [
         ipv4.create_setting(iface_desired_state.get('ipv4')),
@@ -108,5 +168,12 @@ def _build_connection_profile(iface_desired_state, base_con_profile=None):
     bond_opts = translator.Api2Nm.get_bond_options(iface_desired_state)
     if bond_opts:
         settings.append(bond.create_setting(bond_opts))
+    elif iface_type == ovs.BRIDGE_TYPE:
+        ovs_bridge_options = ovs.translate_bridge_options(iface_desired_state)
+        if ovs_bridge_options:
+            settings.append(ovs.create_bridge_setting(ovs_bridge_options))
+    elif iface_type == ovs.PORT_TYPE:
+        ovs_port_options = iface_desired_state.get('options')
+        settings.append(ovs.create_port_setting(ovs_port_options))
 
     return connection.create_profile(settings)
