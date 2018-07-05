@@ -101,3 +101,4 @@ The `set` command accepts both YAML and JSON.
 - bond
 - dummy
 - ethernet
+- ovs-bridge
