@@ -124,6 +124,41 @@ def test_get_ovs_info_with_ports_with_interfaces(nm_connection_mock,
     assert 'access-tag' in info['port'][0]
 
 
+def test_create_bridge_setting(NM_mock):
+    options = {
+        'fail-mode': 'foo',
+        'mcast-snooping-enable': False,
+        'rstp': False,
+        'stp': False,
+    }
+    bridge_setting = nm.ovs.create_bridge_setting(options)
+
+    assert bridge_setting.props.fail_mode == options['fail-mode']
+    assert bridge_setting.props.mcast_snooping_enable == (
+        options['mcast-snooping-enable'])
+    assert bridge_setting.props.rstp_enable == options['rstp']
+    assert bridge_setting.props.stp_enable == options['stp']
+
+
+def test_create_port_setting(NM_mock):
+    options = {
+        'tag': 101,
+        'vlan-mode': 'voomode',
+        'bond-mode': 'boomode',
+        'lacp': 'yes',
+        'bond-updelay': 0,
+        'bond-downdelay': 0,
+    }
+    port_setting = nm.ovs.create_port_setting(options)
+
+    assert port_setting.props.tag == options['tag']
+    assert port_setting.props.vlan_mode == options['vlan-mode']
+    assert port_setting.props.bond_mode == options['bond-mode']
+    assert port_setting.props.lacp == options['lacp']
+    assert port_setting.props.bond_updelay == options['bond-updelay']
+    assert port_setting.props.bond_downdelay == options['bond-downdelay']
+
+
 def _mock_port_profile(nm_connection_mock):
     connection_profile = nm_connection_mock.get_device_connection.return_value
     bridge_setting = connection_profile.get_setting.return_value

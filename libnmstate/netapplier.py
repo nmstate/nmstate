@@ -77,15 +77,40 @@ def generate_ifaces_metadata(ifaces_desired_state, ifaces_current_state):
         get_slaves_func=_get_bond_slaves_from_state,
         set_metadata_func=_set_common_slaves_metadata
     )
+    _generate_link_master_metadata(
+        ifaces_desired_state,
+        ifaces_current_state,
+        master_type='ovs-bridge',
+        get_slaves_func=_get_ovs_slaves_from_state,
+        set_metadata_func=_set_ovs_bridge_ports_metadata
+    )
 
 
 def _get_bond_slaves_from_state(state, default=()):
     return state.get('link-aggregation', {}).get('slaves', default)
 
 
+def _set_ovs_bridge_ports_metadata(master_state, slave_state):
+    _set_common_slaves_metadata(master_state, slave_state)
+
+    ports = master_state.get('bridge', {}).get('port', [])
+    port = next(
+        six.moves.filter(lambda n: n['name'] == slave_state['name'], ports),
+        {}
+    )
+    slave_state['_brport_options'] = port
+
+
 def _set_common_slaves_metadata(master_state, slave_state):
     slave_state['_master'] = master_state['name']
     slave_state['_master_type'] = master_state['type']
+
+
+def _get_ovs_slaves_from_state(state, default=()):
+    ports = state.get('bridge', {}).get('port')
+    if ports is None:
+        return default
+    return [p['name'] for p in ports]
 
 
 def _generate_link_master_metadata(ifaces_desired_state,
@@ -114,7 +139,7 @@ def _generate_link_master_metadata(ifaces_desired_state,
             if slave in ifaces_desired_state:
                 set_metadata_func(master_state, ifaces_desired_state[slave])
             elif slave in ifaces_current_state:
-                ifaces_desired_state[slave] = {}
+                ifaces_desired_state[slave] = {'name': slave}
                 set_metadata_func(master_state, ifaces_desired_state[slave])
 
         desired_slaves = get_slaves_func(master_state)

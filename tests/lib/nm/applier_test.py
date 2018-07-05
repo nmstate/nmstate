@@ -52,6 +52,12 @@ def nm_ipv6_mock():
         yield m
 
 
+@pytest.fixture
+def nm_ovs_mock():
+    with mock.patch.object(nm.applier, 'ovs') as m:
+        yield m
+
+
 def test_create_new_ifaces(nm_connection_mock):
     con_profiles = ['profile1', 'profile2']
 
@@ -70,7 +76,11 @@ def test_create_new_ifaces(nm_connection_mock):
 def test_prepare_new_ifaces_configuration(nm_bond_mock,
                                           nm_connection_mock,
                                           nm_ipv4_mock,
-                                          nm_ipv6_mock):
+                                          nm_ipv6_mock,
+                                          nm_ovs_mock):
+    nm_ovs_mock.translate_bridge_options.return_value = {}
+    nm_ovs_mock.translate_port_options.return_value = {}
+
     ifaces_desired_state = [
         {
             'name': 'eth0',
@@ -149,7 +159,11 @@ def test_edit_existing_ifaces_without_profile(nm_device_mock,
 def test_prepare_edited_ifaces_configuration(nm_device_mock,
                                              nm_connection_mock,
                                              nm_ipv4_mock,
-                                             nm_ipv6_mock):
+                                             nm_ipv6_mock,
+                                             nm_ovs_mock):
+    nm_ovs_mock.translate_bridge_options.return_value = {}
+    nm_ovs_mock.translate_port_options.return_value = {}
+
     ifaces_desired_state = [
         {
             'name': 'eth0',
