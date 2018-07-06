@@ -97,9 +97,30 @@ def set_ifaces_admin_state(ifaces_desired_state):
             elif iface_desired_state['state'] == 'down':
                 device.deactivate(nmdev)
             elif iface_desired_state['state'] == 'absent':
-                device.delete(nmdev)
+                devs2delete = [nmdev]
+                if iface_desired_state['type'] == ovs.BRIDGE_TYPE:
+                    devs2delete += _get_ovs_bridge_port_devices(
+                        iface_desired_state)
+                for dev in devs2delete:
+                    device.delete(dev)
             else:
                 raise UnsupportedIfaceStateError(iface_desired_state)
+
+
+def _get_ovs_bridge_port_devices(iface_state):
+    """
+    Report a list of all ovs ports and interfaces that are connected to the
+    OVS bridge.
+    """
+    ifaces = [p['name'] for p in iface_state.get('bridge', {}).get('port', [])]
+    ports = [ovs.PORT_PROFILE_PREFIX + iface for iface in ifaces]
+    devnames = ifaces + ports
+    nmdevs = []
+    for devname in devnames:
+        dev = device.get_device_by_name(devname)
+        if dev:
+            nmdevs.append(dev)
+    return nmdevs
 
 
 def _prepare_proxy_ifaces_desired_state(ifaces_desired_state):
