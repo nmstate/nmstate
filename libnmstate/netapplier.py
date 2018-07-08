@@ -170,6 +170,7 @@ def _add_interfaces(ifaces_desired_state, ifaces_current_state):
     ifaces2add = [
         ifaces_desired_state[name] for name in
         six.viewkeys(ifaces_desired_state) - six.viewkeys(ifaces_current_state)
+        if ifaces_desired_state[name].get('state') != 'absent'
     ]
 
     validator.verify_interfaces_state(ifaces2add, ifaces_desired_state)
@@ -188,8 +189,10 @@ def _edit_interfaces(ifaces_desired_state, ifaces_current_state):
 
     validator.verify_interfaces_state(ifaces2edit, ifaces_desired_state)
 
+    iface2prepare = list(
+        filter(lambda state: state.get('state') != 'absent', ifaces2edit))
     ifaces_configs = nm.applier.prepare_edited_ifaces_configuration(
-        ifaces2edit)
+        iface2prepare)
     nm.applier.edit_existing_ifaces(ifaces_configs)
 
     nm.applier.set_ifaces_admin_state(ifaces2edit)
