@@ -30,7 +30,13 @@ def NM_mock():
 
 @pytest.fixture()
 def client_mock():
-    with mock.patch.object(nm.device.nmclient, 'client') as m:
+    with mock.patch.object(nm.connection.nmclient, 'client') as m:
+        yield m.return_value
+
+
+@pytest.fixture()
+def mainloop_mock():
+    with mock.patch.object(nm.connection.nmclient, 'mainloop') as m:
         yield m.return_value
 
 
@@ -45,10 +51,18 @@ def test_create_profile(NM_mock):
     assert con_profile_mock == profile
 
 
-def test_add_profile(client_mock):
-    nm.connection.add_profile('profile', save_to_disk=True)
+def test_add_profile(client_mock, mainloop_mock):
+    save_to_disk = True
+    nm.connection.add_profile('profile', save_to_disk)
 
-    client_mock.add_connection_async.assert_called_once_with('profile', True)
+    mainloop_mock.push_action.assert_called_once_with(
+        client_mock.add_connection_async,
+        'profile',
+        save_to_disk,
+        mainloop_mock.cancellable,
+        nm.connection._add_connection_callback,
+        mainloop_mock,
+    )
 
 
 def test_update_profile():
@@ -59,11 +73,18 @@ def test_update_profile():
     base_profile.replace_settings_from_connection.assert_called_once_with('p')
 
 
-def test_commit_profile():
+def test_commit_profile(mainloop_mock):
     con_profile = mock.MagicMock()
-    nm.connection.commit_profile(con_profile, save_to_disk=True)
+    save_to_disk = True
+    nm.connection.commit_profile(con_profile, save_to_disk)
 
-    con_profile.commit_changes_async.assert_called_once_with(True)
+    mainloop_mock.push_action.assert_called_once_with(
+        con_profile.commit_changes_async,
+        save_to_disk,
+        mainloop_mock.cancellable,
+        nm.connection._commit_changes_callback,
+        mainloop_mock,
+    )
 
 
 def test_create_setting(NM_mock):

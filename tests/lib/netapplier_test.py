@@ -37,7 +37,9 @@ def zero_sleep():
 
 @pytest.fixture(scope='module', autouse=True)
 def nmclient_mock():
-    with mock.patch.object(netapplier.nmclient, 'client'):
+    client_mock = mock.patch.object(netapplier.nmclient, 'client')
+    mainloop_mock = mock.patch.object(netapplier.nmclient, 'mainloop')
+    with client_mock, mainloop_mock:
         yield
 
 

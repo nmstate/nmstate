@@ -15,6 +15,8 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
+from contextlib import contextmanager
+
 import collections
 import copy
 import six
@@ -54,8 +56,18 @@ def _apply_ifaces_state(interfaces_desired_state, interfaces_current_state):
 
     generate_ifaces_metadata(ifaces_desired_state, ifaces_current_state)
 
-    _add_interfaces(ifaces_desired_state, ifaces_current_state)
-    _edit_interfaces(ifaces_desired_state, ifaces_current_state)
+    with _setup_providers():
+        _add_interfaces(ifaces_desired_state, ifaces_current_state)
+        _edit_interfaces(ifaces_desired_state, ifaces_current_state)
+
+
+@contextmanager
+def _setup_providers():
+    mainloop = nmclient.mainloop()
+    yield
+    if mainloop.actions_exists():
+        mainloop.execute_next_action()
+        mainloop.run(timeout=20)
 
 
 def generate_ifaces_metadata(ifaces_desired_state, ifaces_current_state):

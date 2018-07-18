@@ -27,29 +27,56 @@ def client_mock():
         yield m.return_value
 
 
-def test_activate(client_mock):
+@pytest.fixture()
+def mainloop_mock():
+    with mock.patch.object(nm.device.nmclient, 'mainloop') as m:
+        yield m.return_value
+
+
+def test_activate(client_mock, mainloop_mock):
     dev = 'foodev'
     nm.device.activate(dev)
-    client_mock.activate_connection_async.assert_called_once_with(device=dev)
+
+    mainloop_mock.push_action.assert_called_once_with(
+        client_mock.activate_connection_async,
+        None,
+        dev,
+        None,
+        mainloop_mock.cancellable,
+        nm.device._active_connection_callback,
+        mainloop_mock,
+    )
 
 
-def test_deactivate(client_mock):
+def test_deactivate(client_mock, mainloop_mock):
     dev = mock.MagicMock()
     nm.device.deactivate(dev)
 
     dev.get_active_connection.assert_called_once()
-    client_mock.deactivate_connection_async.assert_called_once_with(
-        dev.get_active_connection.return_value)
+
+    mainloop_mock.push_action.assert_called_once_with(
+        client_mock.deactivate_connection_async,
+        dev.get_active_connection.return_value,
+        mainloop_mock.cancellable,
+        nm.device._deactivate_connection_callback,
+        mainloop_mock,
+    )
 
 
-def test_delete():
+def test_delete(mainloop_mock):
     dev = mock.MagicMock()
     dev.get_available_connections.return_value = [mock.MagicMock()]
     nm.device.delete(dev)
 
     dev.get_available_connections.assert_called_once()
     connections = dev.get_available_connections.return_value
-    connections[0].delete_async.assert_called_once()
+
+    mainloop_mock.push_action.assert_called_once_with(
+        connections[0].delete_async,
+        mainloop_mock.cancellable,
+        nm.device._delete_connection_callback,
+        mainloop_mock,
+    )
 
 
 def test_get_device_by_name(client_mock):
