@@ -20,7 +20,6 @@ from contextlib import contextmanager
 import collections
 import copy
 import six
-import time
 
 from libnmstate import netinfo
 from libnmstate import nm
@@ -35,16 +34,6 @@ def apply(desired_state):
     interfaces_current_state = netinfo.interfaces()
 
     _apply_ifaces_state(desired_state['interfaces'], interfaces_current_state)
-
-    # FIXME: Remove the sleep when the mainloop is added.
-    # FIXME: Also revert to use assert_called_once_with() instead of
-    # assert_called_with() in corresponding test cases
-    time.sleep(1)
-
-    interfaces_current_state = netinfo.interfaces()
-    _apply_ifaces_state(desired_state['interfaces'], interfaces_current_state)
-    time.sleep(1)
-    # END FIXME
 
 
 def _apply_ifaces_state(interfaces_desired_state, interfaces_current_state):
