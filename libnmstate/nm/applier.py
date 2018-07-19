@@ -104,8 +104,11 @@ def set_ifaces_admin_state(ifaces_desired_state):
 
 def _set_dev_state(nmdev, iface_state, func_action):
     devs = [nmdev]
-    if iface_state['type'] == ovs.BRIDGE_TYPE:
+    iface_type = iface_state['type']
+    if iface_type == ovs.BRIDGE_TYPE:
         devs += _get_ovs_bridge_port_devices(iface_state)
+    elif iface_type == bond.BOND_TYPE:
+        devs += bond.get_slaves(nmdev)
     for dev in devs:
         func_action(dev)
 

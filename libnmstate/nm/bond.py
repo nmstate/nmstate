@@ -22,6 +22,9 @@ from libnmstate import nmclient
 from . import connection
 
 
+BOND_TYPE = 'bond'
+
+
 def create_setting(options):
     bond_setting = nmclient.NM.SettingBond.new()
     for option_name, option_value in six.viewitems(options):
