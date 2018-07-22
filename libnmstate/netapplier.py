@@ -56,13 +56,24 @@ def _apply_ifaces_state(interfaces_desired_state, interfaces_current_state):
 
 @contextmanager
 def _setup_providers():
-    mainloop = nmclient.mainloop()
+    if nm.checkpoint.has_checkpoint_capability():
+        checkpoint_ctx = nm.checkpoint.CheckPoint()
+    else:
+        checkpoint_ctx = _placeholder_ctx()
+
+    with checkpoint_ctx:
+        mainloop = nmclient.mainloop()
+        yield
+        if mainloop.actions_exists():
+            mainloop.execute_next_action()
+            success = mainloop.run(timeout=20)
+            if not success:
+                raise ApplyError(mainloop.error)
+
+
+@contextmanager
+def _placeholder_ctx():
     yield
-    if mainloop.actions_exists():
-        mainloop.execute_next_action()
-        success = mainloop.run(timeout=20)
-        if not success:
-            raise ApplyError(mainloop.error)
 
 
 def generate_ifaces_metadata(ifaces_desired_state, ifaces_current_state):

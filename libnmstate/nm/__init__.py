@@ -17,6 +17,7 @@
 
 from . import applier
 from . import bond
+from . import checkpoint
 from . import connection
 from . import device
 from . import ipv4
@@ -26,6 +27,7 @@ from . import translator
 
 applier
 bond
+checkpoint
 connection
 device
 ipv4
