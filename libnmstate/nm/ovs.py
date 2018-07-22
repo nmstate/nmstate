@@ -27,6 +27,7 @@ BRIDGE_TYPE = 'ovs-bridge'
 INTERNAL_INTERFACE_TYPE = 'ovs-interface'
 PORT_TYPE = 'ovs-port'
 PORT_PROFILE_PREFIX = 'ovs-port-'
+CAPABILITY = 'openvswitch'
 
 
 _BRIDGE_OPTION_NAMES = [
@@ -45,6 +46,14 @@ _PORT_OPTION_NAMES = [
     'bond-updelay',
     'bond-downdelay'
 ]
+
+
+def has_ovs_capability():
+    try:
+        nmclient.NM.DeviceType.OVS_BRIDGE
+        return True
+    except AttributeError:
+        return False
 
 
 def create_bridge_setting(options):

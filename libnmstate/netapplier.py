@@ -28,6 +28,7 @@ from libnmstate import validator
 
 def apply(desired_state):
     validator.verify(desired_state)
+    validator.verify_capabilities(desired_state, netinfo.capabilities())
 
     interfaces_current_state = netinfo.interfaces()
 
