@@ -355,6 +355,43 @@ class TestDesiredStateBondMetadata(object):
         assert desired_state == expected_desired_state
         assert current_state == expected_current_state
 
+    def test_bond_reusing_slave_used_by_existing_bond(self):
+        BOND2_NAME = 'bond88'
+        desired_state = {
+            BOND2_NAME: {
+                'name': BOND2_NAME,
+                'type': BOND_TYPE,
+                'state': 'up',
+                'link-aggregation': {
+                    'mode': 'balance-rr',
+                    'slaves': ['eth0']
+                }
+            }
+        }
+        current_state = {
+            BOND_NAME: {
+                'name': BOND_NAME,
+                'type': BOND_TYPE,
+                'state': 'up',
+                'link-aggregation': {
+                    'mode': 'balance-rr',
+                    'slaves': ['eth0', 'eth1']
+                }
+            },
+            'eth0': {'name': 'eth0', 'type': 'unknown'},
+            'eth1': {'name': 'eth1', 'type': 'unknown'}
+        }
+        expected_desired_state = copy.deepcopy(desired_state)
+        expected_current_state = copy.deepcopy(current_state)
+        expected_desired_state['eth0'] = {'name': 'eth0'}
+        expected_desired_state['eth0']['_master'] = BOND2_NAME
+        expected_desired_state['eth0']['_master_type'] = BOND_TYPE
+
+        netapplier.generate_ifaces_metadata(desired_state, current_state)
+
+        assert desired_state == expected_desired_state
+        assert current_state == expected_current_state
+
 
 class TestDesiredStateOvsMetadata(object):
     def test_ovs_creation_with_new_ports(self):
@@ -563,6 +600,48 @@ class TestDesiredStateOvsMetadata(object):
         expected_desired_state['eth0']['_master_type'] = OVS_BR_TYPE
         expected_desired_state['eth0']['_brport_options'] = (
             current_state[OVS_NAME]['bridge']['port'][0])
+
+        netapplier.generate_ifaces_metadata(desired_state, current_state)
+
+        assert desired_state == expected_desired_state
+        assert current_state == expected_current_state
+
+    def test_ovs_reusing_slave_used_by_existing_bridge(self):
+        OVS2_NAME = 'ovs-br88'
+        desired_state = {
+            OVS2_NAME: {
+                'name': OVS2_NAME,
+                'type': OVS_BR_TYPE,
+                'state': 'up',
+                'bridge': {
+                    'port': [
+                        {'name': 'eth0', 'type': 'system'}
+                    ]
+                }
+            }
+        }
+        current_state = {
+            OVS_NAME: {
+                'name': OVS_NAME,
+                'type': OVS_BR_TYPE,
+                'state': 'up',
+                'bridge': {
+                    'port': [
+                        {'name': 'eth0', 'type': 'system'},
+                        {'name': 'eth1', 'type': 'system'}
+                    ]
+                }
+            },
+            'eth0': {'name': 'eth0', 'type': 'unknown'},
+            'eth1': {'name': 'eth1', 'type': 'unknown'}
+        }
+        expected_desired_state = copy.deepcopy(desired_state)
+        expected_current_state = copy.deepcopy(current_state)
+        expected_desired_state['eth0'] = {'name': 'eth0'}
+        expected_desired_state['eth0']['_master'] = OVS2_NAME
+        expected_desired_state['eth0']['_master_type'] = OVS_BR_TYPE
+        expected_desired_state['eth0']['_brport_options'] = (
+            desired_state[OVS2_NAME]['bridge']['port'][0])
 
         netapplier.generate_ifaces_metadata(desired_state, current_state)
 

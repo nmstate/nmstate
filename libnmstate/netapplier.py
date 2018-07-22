@@ -161,7 +161,12 @@ def _generate_link_master_metadata(ifaces_desired_state,
         for slave in current_slaves:
             if slave in ifaces_desired_state:
                 iface_state = ifaces_desired_state.get(master_name, {})
-                if get_slaves_func(iface_state, None) is None:
+                master_has_no_slaves_specified_in_desired = (
+                    get_slaves_func(iface_state, None) is None)
+                slave_has_no_master_specified_in_desired = (
+                    ifaces_desired_state[slave].get('_master') is None)
+                if (slave_has_no_master_specified_in_desired and
+                        master_has_no_slaves_specified_in_desired):
                     set_metadata_func(
                         master_state, ifaces_desired_state[slave])
 
