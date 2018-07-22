@@ -59,6 +59,7 @@ class _MainLoop(object):
         self._action_queue = deque()
         self._mainloop = GLib.MainLoop()
         self._cancellable = Gio.Cancellable.new()
+        self._error = ''
 
     def execute_next_action(self):
         action = self.pop_action()
@@ -100,9 +101,15 @@ class _MainLoop(object):
 
         if timeout_result:
             self._cancellable.cancel()
+            self._error = 'run timeout'
             return _MainLoop.FAIL
 
         GLib.source_remove(timeout_id)
+
+        if len(self._action_queue):
+            self._error = 'run execution'
+            return _MainLoop.FAIL
+
         return _MainLoop.SUCCESS
 
     @property
@@ -118,6 +125,10 @@ class _MainLoop(object):
         return (isinstance(err, GLib.GError) and
                 err.domain == 'g-io-error-quark' and
                 err.code == Gio.IOErrorEnum.CANCELLED)
+
+    @property
+    def error(self):
+        return self._error
 
     @staticmethod
     def _timeout_cb(data):

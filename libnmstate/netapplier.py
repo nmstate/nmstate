@@ -27,6 +27,10 @@ from libnmstate import nmclient
 from libnmstate import validator
 
 
+class ApplyError(Exception):
+    pass
+
+
 def apply(desired_state):
     validator.verify(desired_state)
     validator.verify_capabilities(desired_state, netinfo.capabilities())
@@ -56,7 +60,9 @@ def _setup_providers():
     yield
     if mainloop.actions_exists():
         mainloop.execute_next_action()
-        mainloop.run(timeout=20)
+        success = mainloop.run(timeout=20)
+        if not success:
+            raise ApplyError(mainloop.error)
 
 
 def generate_ifaces_metadata(ifaces_desired_state, ifaces_current_state):
