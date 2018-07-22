@@ -20,10 +20,31 @@ from libnmstate import nm
 from libnmstate import validator
 
 
-def show():
+def show(include_status_data=False):
+    """
+    Reports configuration and status data on the system.
+    Configuration data is the set of writable data which can change the system
+    state.
+    Status data is the additional data which is not configuration data,
+    including read-only and statistics information.
+    When include_status_data is set, both are reported, otherwise only the
+    configuration data is reported.
+    """
     report = {'interfaces': interfaces()}
+    if include_status_data:
+        report['capabilities'] = capabilities()
+
     validator.verify(report)
     return report
+
+
+def capabilities():
+    caps = set()
+
+    if nm.ovs.has_ovs_capability():
+        caps.add(nm.ovs.CAPABILITY)
+
+    return list(caps)
 
 
 def interfaces():
@@ -43,10 +64,11 @@ def interfaces():
         if nm.bond.is_bond_type_id(type_id):
             bondinfo = nm.bond.get_bond_info(dev)
             iface_info.update(_ifaceinfo_bond(bondinfo))
-        elif nm.ovs.is_ovs_bridge_type_id(type_id):
-            iface_info['bridge'] = nm.ovs.get_ovs_info(dev, devices_info)
-        elif nm.ovs.is_ovs_port_type_id(type_id):
-            continue
+        elif nm.ovs.has_ovs_capability():
+            if nm.ovs.is_ovs_bridge_type_id(type_id):
+                iface_info['bridge'] = nm.ovs.get_ovs_info(dev, devices_info)
+            elif nm.ovs.is_ovs_port_type_id(type_id):
+                continue
 
         info.append(iface_info)
 

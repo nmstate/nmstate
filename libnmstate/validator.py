@@ -18,6 +18,7 @@ from __future__ import absolute_import
 
 import jsonschema as js
 
+from . import nm
 from . import schema
 
 
@@ -29,8 +30,29 @@ class LinkAggregationSlavesReuseError(Exception):
     pass
 
 
+class CapabilityNotSupportedError(Exception):
+    pass
+
+
 def verify(data, validation_schema=schema.ifaces_schema):
     js.validate(data, validation_schema)
+
+
+def verify_capabilities(state, capabilities):
+    verify_interface_capabilities(state['interfaces'], capabilities)
+
+
+def verify_interface_capabilities(ifaces_state, capabilities):
+    ifaces_types = [iface_state['type'] for iface_state in ifaces_state]
+    has_ovs_capability = nm.ovs.CAPABILITY in capabilities
+    for iface_type in ifaces_types:
+        is_ovs_type = iface_type in (
+            nm.ovs.BRIDGE_TYPE,
+            nm.ovs.PORT_TYPE,
+            nm.ovs.INTERNAL_INTERFACE_TYPE
+        )
+        if is_ovs_type and not has_ovs_capability:
+            raise CapabilityNotSupportedError(iface_type)
 
 
 def verify_interfaces_state(ifaces_state, ifaces_desired_state):
