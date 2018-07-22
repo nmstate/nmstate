@@ -93,28 +93,32 @@ def set_ifaces_admin_state(ifaces_desired_state):
         nmdev = device.get_device_by_name(iface_desired_state['name'])
         if nmdev:
             if iface_desired_state['state'] == 'up':
-                device.activate(nmdev)
+                _set_dev_state(nmdev, iface_desired_state, device.activate)
             elif iface_desired_state['state'] == 'down':
-                device.deactivate(nmdev)
+                _set_dev_state(nmdev, iface_desired_state, device.deactivate)
             elif iface_desired_state['state'] == 'absent':
-                devs2delete = [nmdev]
-                if iface_desired_state['type'] == ovs.BRIDGE_TYPE:
-                    devs2delete += _get_ovs_bridge_port_devices(
-                        iface_desired_state)
-                for dev in devs2delete:
-                    device.delete(dev)
+                _set_dev_state(nmdev, iface_desired_state, device.delete)
             else:
                 raise UnsupportedIfaceStateError(iface_desired_state)
+
+
+def _set_dev_state(nmdev, iface_state, func_action):
+    devs = [nmdev]
+    if iface_state['type'] == ovs.BRIDGE_TYPE:
+        devs += _get_ovs_bridge_port_devices(iface_state)
+    for dev in devs:
+        func_action(dev)
 
 
 def _get_ovs_bridge_port_devices(iface_state):
     """
     Report a list of all ovs ports and interfaces that are connected to the
     OVS bridge.
+    Note: Ports must be activated before the ifaces (NM limitation).
     """
     ifaces = [p['name'] for p in iface_state.get('bridge', {}).get('port', [])]
     ports = [ovs.PORT_PROFILE_PREFIX + iface for iface in ifaces]
-    devnames = ifaces + ports
+    devnames = ports + ifaces
     nmdevs = []
     for devname in devnames:
         dev = device.get_device_by_name(devname)
