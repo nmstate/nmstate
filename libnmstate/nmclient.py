@@ -118,6 +118,8 @@ class _MainLoop(object):
 
     def quit(self, reason):
         logging.error('NM main-loop aborted: %s', reason)
+        # In case it was the last action, add a sentinel to fail run.
+        self.push_action(None)
         self._mainloop.quit()
         self._cancellable.cancel()
 
