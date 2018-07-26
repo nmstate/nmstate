@@ -35,40 +35,43 @@ def apply(desired_state):
     validator.verify(desired_state)
     validator.verify_capabilities(desired_state, netinfo.capabilities())
 
-    interfaces_current_state = netinfo.interfaces()
-
-    _apply_ifaces_state(desired_state['interfaces'], interfaces_current_state)
+    _apply_ifaces_state(desired_state['interfaces'])
 
 
-def _apply_ifaces_state(interfaces_desired_state, interfaces_current_state):
-    # FIXME: Remove workaround when mainloop is integrated in the flow.
-    nmclient.client(refresh=True)
-
+def _apply_ifaces_state(interfaces_desired_state):
     ifaces_desired_state = _index_by_name(interfaces_desired_state)
-    ifaces_current_state = _index_by_name(interfaces_current_state)
+    ifaces_current_state = _index_by_name(netinfo.interfaces())
 
     generate_ifaces_metadata(ifaces_desired_state, ifaces_current_state)
 
-    with _setup_providers():
-        _add_interfaces(ifaces_desired_state, ifaces_current_state)
-        _edit_interfaces(ifaces_desired_state, ifaces_current_state)
+    with _transaction():
+        with _setup_providers():
+            _add_interfaces(ifaces_desired_state, ifaces_current_state)
+        with _setup_providers():
+            ifaces_current_state = _index_by_name(netinfo.interfaces())
+            _edit_interfaces(ifaces_desired_state, ifaces_current_state)
 
 
 @contextmanager
-def _setup_providers():
+def _transaction():
     if nm.checkpoint.has_checkpoint_capability():
         checkpoint_ctx = nm.checkpoint.CheckPoint()
     else:
         checkpoint_ctx = _placeholder_ctx()
 
     with checkpoint_ctx:
-        mainloop = nmclient.mainloop()
         yield
-        if mainloop.actions_exists():
-            mainloop.execute_next_action()
-            success = mainloop.run(timeout=20)
-            if not success:
-                raise ApplyError(mainloop.error)
+
+
+@contextmanager
+def _setup_providers():
+    mainloop = nmclient.mainloop()
+    yield
+    if mainloop.actions_exists():
+        mainloop.execute_next_action()
+        success = mainloop.run(timeout=20)
+        if not success:
+            raise ApplyError(mainloop.error)
 
 
 @contextmanager
@@ -199,8 +202,11 @@ def _add_interfaces(ifaces_desired_state, ifaces_current_state):
 
     validator.verify_interfaces_state(ifaces2add, ifaces_desired_state)
 
+    ifaces2add += nm.applier.prepare_proxy_ifaces_desired_state(ifaces2add)
     ifaces_configs = nm.applier.prepare_new_ifaces_configuration(ifaces2add)
     nm.applier.create_new_ifaces(ifaces_configs)
+
+    nm.applier.set_ifaces_admin_state(ifaces2add)
 
 
 def _edit_interfaces(ifaces_desired_state, ifaces_current_state):
@@ -215,8 +221,9 @@ def _edit_interfaces(ifaces_desired_state, ifaces_current_state):
 
     iface2prepare = list(
         filter(lambda state: state.get('state') != 'absent', ifaces2edit))
+    proxy_ifaces = nm.applier.prepare_proxy_ifaces_desired_state(iface2prepare)
     ifaces_configs = nm.applier.prepare_edited_ifaces_configuration(
-        iface2prepare)
+        iface2prepare + proxy_ifaces)
     nm.applier.edit_existing_ifaces(ifaces_configs)
 
     nm.applier.set_ifaces_admin_state(ifaces2edit)
