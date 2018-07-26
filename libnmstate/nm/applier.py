@@ -38,16 +38,10 @@ def create_new_ifaces(con_profiles):
 
 
 def prepare_new_ifaces_configuration(ifaces_desired_state):
-    new_ifaces_desired_state = _prepare_proxy_ifaces_desired_state(
-        ifaces_desired_state)
-
-    new_ifaces_desired_state += ifaces_desired_state
-    new_con_profiles = [
+    return [
         _build_connection_profile(iface_desired_state)
-        for iface_desired_state in new_ifaces_desired_state
+        for iface_desired_state in ifaces_desired_state
     ]
-
-    return new_con_profiles
 
 
 def edit_existing_ifaces(con_profiles):
@@ -67,11 +61,7 @@ def edit_existing_ifaces(con_profiles):
 def prepare_edited_ifaces_configuration(ifaces_desired_state):
     con_profiles = []
 
-    edited_ifaces_desired_state = _prepare_proxy_ifaces_desired_state(
-        ifaces_desired_state)
-    edited_ifaces_desired_state += ifaces_desired_state
-
-    for iface_desired_state in edited_ifaces_desired_state:
+    for iface_desired_state in ifaces_desired_state:
         nmdev = device.get_device_by_name(iface_desired_state['name'])
         cur_con_profile = None
         if nmdev:
@@ -90,27 +80,27 @@ def prepare_edited_ifaces_configuration(ifaces_desired_state):
 
 def set_ifaces_admin_state(ifaces_desired_state):
     for iface_desired_state in ifaces_desired_state:
-        nmdev = device.get_device_by_name(iface_desired_state['name'])
-        if nmdev:
-            if iface_desired_state['state'] == 'up':
-                _set_dev_state(nmdev, iface_desired_state, device.activate)
-            elif iface_desired_state['state'] == 'down':
-                _set_dev_state(nmdev, iface_desired_state, device.deactivate)
-            elif iface_desired_state['state'] == 'absent':
-                _set_dev_state(nmdev, iface_desired_state, device.delete)
-            else:
-                raise UnsupportedIfaceStateError(iface_desired_state)
+        if iface_desired_state['state'] == 'up':
+            _set_dev_state(iface_desired_state, device.activate)
+        elif iface_desired_state['state'] == 'down':
+            _set_dev_state(iface_desired_state, device.deactivate)
+        elif iface_desired_state['state'] == 'absent':
+            _set_dev_state(iface_desired_state, device.delete)
+        else:
+            raise UnsupportedIfaceStateError(iface_desired_state)
 
 
-def _set_dev_state(nmdev, iface_state, func_action):
-    devs = [nmdev]
-    iface_type = iface_state['type']
-    if iface_type == ovs.BRIDGE_TYPE:
-        devs += _get_ovs_bridge_port_devices(iface_state)
-    elif iface_type == bond.BOND_TYPE:
-        devs += bond.get_slaves(nmdev)
-    for dev in devs:
-        func_action(dev)
+def _set_dev_state(iface_state, func_action):
+    nmdev = device.get_device_by_name(iface_state['name'])
+    if nmdev:
+        devs = [nmdev]
+        iface_type = iface_state['type']
+        if iface_type == ovs.BRIDGE_TYPE:
+            devs += _get_ovs_bridge_port_devices(iface_state)
+        elif iface_type == bond.BOND_TYPE:
+            devs += bond.get_slaves(nmdev)
+        for dev in devs:
+            func_action(dev)
 
 
 def _get_ovs_bridge_port_devices(iface_state):
@@ -130,7 +120,7 @@ def _get_ovs_bridge_port_devices(iface_state):
     return nmdevs
 
 
-def _prepare_proxy_ifaces_desired_state(ifaces_desired_state):
+def prepare_proxy_ifaces_desired_state(ifaces_desired_state):
     """
     Prepare the state of the "proxy" interfaces. These are interfaces that
     exist as NM entities/profiles, but are invisible to the API.

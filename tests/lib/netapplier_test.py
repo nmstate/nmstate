@@ -40,6 +40,7 @@ def nmclient_mock():
 @pytest.fixture
 def netapplier_nm_mock():
     with mock.patch.object(netapplier, 'nm') as m:
+        m.applier.prepare_proxy_ifaces_desired_state.return_value = []
         yield m
 
 
@@ -76,8 +77,12 @@ def test_iface_admin_state_change(netinfo_nm_mock, netapplier_nm_mock):
     desired_config['interfaces'][0]['state'] = 'down'
     netapplier.apply(desired_config)
 
-    netapplier_nm_mock.applier.set_ifaces_admin_state.assert_called_once_with(
-        desired_config['interfaces'])
+    netapplier_nm_mock.applier.set_ifaces_admin_state.assert_has_calls(
+        [
+            mock.call([]),
+            mock.call(desired_config['interfaces'])
+        ]
+    )
 
 
 def test_add_new_bond(netinfo_nm_mock, netapplier_nm_mock):
