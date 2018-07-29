@@ -66,16 +66,16 @@ def test_deactivate(client_mock, mainloop_mock):
 def test_delete(mainloop_mock):
     dev = mock.MagicMock()
     dev.get_available_connections.return_value = [mock.MagicMock()]
+    mainloop_mock.push_action = lambda func, dev: func(dev)
     nm.device.delete(dev)
 
     dev.get_available_connections.assert_called_once()
     connections = dev.get_available_connections.return_value
 
-    mainloop_mock.push_action.assert_called_once_with(
-        connections[0].delete_async,
+    connections[0].delete_async.assert_called_once_with(
         mainloop_mock.cancellable,
         nm.device._delete_connection_callback,
-        mainloop_mock,
+        mainloop_mock
     )
 
 

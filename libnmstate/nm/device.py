@@ -96,13 +96,22 @@ def _deactivate_connection_callback(src_object, result, user_data):
 
 
 def delete(dev):
+    mainloop = nmclient.mainloop()
+    mainloop.push_action(_safe_delete_async, dev)
+
+
+def _safe_delete_async(dev):
     """Removes all device profiles."""
     connections = dev.get_available_connections()
     mainloop = nmclient.mainloop()
+    if not connections:
+        # No callback is expected, so we should call the next one.
+        mainloop.execute_next_action()
+        return
+
     user_data = mainloop
     for con in connections:
-        mainloop.push_action(
-            con.delete_async,
+        con.delete_async(
             mainloop.cancellable,
             _delete_connection_callback,
             user_data,
