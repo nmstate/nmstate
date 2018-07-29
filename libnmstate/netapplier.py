@@ -161,7 +161,8 @@ def _generate_link_master_metadata(ifaces_desired_state,
             if slave in ifaces_desired_state:
                 set_metadata_func(master_state, ifaces_desired_state[slave])
             elif slave in ifaces_current_state:
-                ifaces_desired_state[slave] = {'name': slave}
+                ifaces_desired_state[slave] = {'name': slave,
+                                               'state': master_state['state']}
                 set_metadata_func(master_state, ifaces_desired_state[slave])
 
         desired_slaves = get_slaves_func(master_state)
@@ -197,7 +198,7 @@ def _add_interfaces(ifaces_desired_state, ifaces_current_state):
     ifaces2add = [
         ifaces_desired_state[name] for name in
         six.viewkeys(ifaces_desired_state) - six.viewkeys(ifaces_current_state)
-        if ifaces_desired_state[name].get('state') != 'absent'
+        if ifaces_desired_state[name].get('state') not in ('absent', 'down')
     ]
 
     validator.verify_interfaces_state(ifaces2add, ifaces_desired_state)
@@ -220,7 +221,9 @@ def _edit_interfaces(ifaces_desired_state, ifaces_current_state):
     validator.verify_interfaces_state(ifaces2edit, ifaces_desired_state)
 
     iface2prepare = list(
-        filter(lambda state: state.get('state') != 'absent', ifaces2edit))
+        filter(lambda state: state.get('state') not in ('absent', 'down'),
+               ifaces2edit)
+    )
     proxy_ifaces = nm.applier.prepare_proxy_ifaces_desired_state(iface2prepare)
     ifaces_configs = nm.applier.prepare_edited_ifaces_configuration(
         iface2prepare + proxy_ifaces)

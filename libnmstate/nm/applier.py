@@ -83,7 +83,7 @@ def set_ifaces_admin_state(ifaces_desired_state):
         if iface_desired_state['state'] == 'up':
             _set_dev_state(iface_desired_state, device.activate)
         elif iface_desired_state['state'] == 'down':
-            _set_dev_state(iface_desired_state, device.deactivate)
+            _set_dev_state(iface_desired_state, device.delete)
         elif iface_desired_state['state'] == 'absent':
             _set_dev_state(iface_desired_state, device.delete)
         else:

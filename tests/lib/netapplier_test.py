@@ -218,10 +218,10 @@ class TestDesiredStateBondMetadata(object):
         }
         expected_desired_state = copy.deepcopy(desired_state)
         expected_current_state = copy.deepcopy(current_state)
-        expected_desired_state['eth0'] = {'name': 'eth0'}
+        expected_desired_state['eth0'] = {'name': 'eth0', 'state': 'up'}
         expected_desired_state['eth0']['_master'] = BOND_NAME
         expected_desired_state['eth0']['_master_type'] = BOND_TYPE
-        expected_desired_state['eth1'] = {'name': 'eth1'}
+        expected_desired_state['eth1'] = {'name': 'eth1', 'state': 'up'}
         expected_desired_state['eth1']['_master'] = BOND_NAME
         expected_desired_state['eth1']['_master_type'] = BOND_TYPE
 
@@ -270,14 +270,14 @@ class TestDesiredStateBondMetadata(object):
                     'slaves': ['eth0', 'eth1']
                 }
             },
-            'eth1': {'name': 'eth1', 'type': 'unknown'}
+            'eth1': {'name': 'eth1', 'state': 'up', 'type': 'unknown'}
         }
         current_state = {
             'eth0': {'name': 'eth0', 'type': 'unknown'}
         }
         expected_desired_state = copy.deepcopy(desired_state)
         expected_current_state = copy.deepcopy(current_state)
-        expected_desired_state['eth0'] = {'name': 'eth0'}
+        expected_desired_state['eth0'] = {'name': 'eth0', 'state': 'up'}
         expected_desired_state['eth0']['_master'] = BOND_NAME
         expected_desired_state['eth1']['_master'] = BOND_NAME
         expected_desired_state['eth0']['_master_type'] = BOND_TYPE
@@ -310,12 +310,12 @@ class TestDesiredStateBondMetadata(object):
                     'slaves': ['eth0', 'eth1']
                 }
             },
-            'eth0': {'name': 'eth0', 'type': 'unknown'},
-            'eth1': {'name': 'eth1', 'type': 'unknown'}
+            'eth0': {'name': 'eth0', 'state': 'up', 'type': 'unknown'},
+            'eth1': {'name': 'eth1', 'state': 'up', 'type': 'unknown'}
         }
         expected_desired_state = copy.deepcopy(desired_state)
         expected_current_state = copy.deepcopy(current_state)
-        expected_desired_state['eth0'] = {'name': 'eth0'}
+        expected_desired_state['eth0'] = {'name': 'eth0', 'state': 'up'}
         expected_desired_state['eth0']['_master'] = BOND_NAME
         expected_desired_state['eth0']['_master_type'] = BOND_TYPE
         expected_desired_state['eth1'] = {}
@@ -379,12 +379,12 @@ class TestDesiredStateBondMetadata(object):
                     'slaves': ['eth0', 'eth1']
                 }
             },
-            'eth0': {'name': 'eth0', 'type': 'unknown'},
-            'eth1': {'name': 'eth1', 'type': 'unknown'}
+            'eth0': {'name': 'eth0', 'state': 'up', 'type': 'unknown'},
+            'eth1': {'name': 'eth1', 'state': 'up', 'type': 'unknown'}
         }
         expected_desired_state = copy.deepcopy(desired_state)
         expected_current_state = copy.deepcopy(current_state)
-        expected_desired_state['eth0'] = {'name': 'eth0'}
+        expected_desired_state['eth0'] = {'name': 'eth0', 'state': 'up'}
         expected_desired_state['eth0']['_master'] = BOND2_NAME
         expected_desired_state['eth0']['_master_type'] = BOND_TYPE
 
@@ -443,15 +443,15 @@ class TestDesiredStateOvsMetadata(object):
             }
         }
         current_state = {
-            'eth0': {'name': 'eth0', 'type': 'unknown'},
-            'eth1': {'name': 'eth1', 'type': 'unknown'}
+            'eth0': {'name': 'eth0', 'state': 'up', 'type': 'unknown'},
+            'eth1': {'name': 'eth1', 'state': 'up', 'type': 'unknown'}
         }
         expected_desired_state = copy.deepcopy(desired_state)
         expected_current_state = copy.deepcopy(current_state)
-        expected_desired_state['eth0'] = {'name': 'eth0'}
+        expected_desired_state['eth0'] = {'name': 'eth0', 'state': 'up'}
         expected_desired_state['eth0']['_master'] = OVS_NAME
         expected_desired_state['eth0']['_master_type'] = OVS_BR_TYPE
-        expected_desired_state['eth1'] = {'name': 'eth1'}
+        expected_desired_state['eth1'] = {'name': 'eth1', 'state': 'up'}
         expected_desired_state['eth1']['_master'] = OVS_NAME
         expected_desired_state['eth1']['_master_type'] = OVS_BR_TYPE
         expected_desired_state['eth0']['_brport_options'] = (
@@ -508,14 +508,14 @@ class TestDesiredStateOvsMetadata(object):
                     ]
                 }
             },
-            'eth1': {'name': 'eth1', 'type': 'unknown'}
+            'eth1': {'name': 'eth1', 'state': 'up', 'type': 'unknown'}
         }
         current_state = {
-            'eth0': {'name': 'eth0', 'type': 'unknown'}
+            'eth0': {'name': 'eth0', 'state': 'up', 'type': 'unknown'}
         }
         expected_desired_state = copy.deepcopy(desired_state)
         expected_current_state = copy.deepcopy(current_state)
-        expected_desired_state['eth0'] = {'name': 'eth0'}
+        expected_desired_state['eth0'] = {'name': 'eth0', 'state': 'up'}
         expected_desired_state['eth0']['_master'] = OVS_NAME
         expected_desired_state['eth1']['_master'] = OVS_NAME
         expected_desired_state['eth0']['_master_type'] = OVS_BR_TYPE
@@ -555,12 +555,12 @@ class TestDesiredStateOvsMetadata(object):
                     ]
                 }
             },
-            'eth0': {'name': 'eth0', 'type': 'unknown'},
-            'eth1': {'name': 'eth1', 'type': 'unknown'}
+            'eth0': {'name': 'eth0', 'state': 'up', 'type': 'unknown'},
+            'eth1': {'name': 'eth1', 'state': 'up', 'type': 'unknown'}
         }
         expected_desired_state = copy.deepcopy(desired_state)
         expected_current_state = copy.deepcopy(current_state)
-        expected_desired_state['eth0'] = {'name': 'eth0'}
+        expected_desired_state['eth0'] = {'name': 'eth0', 'state': 'up'}
         expected_desired_state['eth0']['_master'] = OVS_NAME
         expected_desired_state['eth0']['_master_type'] = OVS_BR_TYPE
         expected_desired_state['eth1'] = {}
@@ -633,12 +633,12 @@ class TestDesiredStateOvsMetadata(object):
                     ]
                 }
             },
-            'eth0': {'name': 'eth0', 'type': 'unknown'},
-            'eth1': {'name': 'eth1', 'type': 'unknown'}
+            'eth0': {'name': 'eth0', 'state': 'up', 'type': 'unknown'},
+            'eth1': {'name': 'eth1', 'state': 'up', 'type': 'unknown'}
         }
         expected_desired_state = copy.deepcopy(desired_state)
         expected_current_state = copy.deepcopy(current_state)
-        expected_desired_state['eth0'] = {'name': 'eth0'}
+        expected_desired_state['eth0'] = {'name': 'eth0', 'state': 'up'}
         expected_desired_state['eth0']['_master'] = OVS2_NAME
         expected_desired_state['eth0']['_master_type'] = OVS_BR_TYPE
         expected_desired_state['eth0']['_brport_options'] = (
