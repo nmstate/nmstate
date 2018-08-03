@@ -24,6 +24,7 @@ from . import ipv4
 from . import ipv6
 from . import ovs
 from . import translator
+from . import wired
 
 applier
 bond
@@ -34,3 +35,4 @@ ipv4
 ipv6
 ovs
 translator
+wired

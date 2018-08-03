@@ -22,6 +22,7 @@ from . import ipv4
 from . import ipv6
 from . import ovs
 from . import translator
+from . import wired
 
 
 class UnsupportedIfaceStateError(Exception):
@@ -183,6 +184,10 @@ def _build_connection_profile(iface_desired_state, base_con_profile=None):
     connection.set_master_setting(con_setting, master, master_type)
     settings.append(con_setting)
 
+    wired_setting = wired.create_setting(iface_desired_state, base_con_profile)
+    if wired_setting:
+        settings.append(wired_setting)
+
     bond_opts = translator.Api2Nm.get_bond_options(iface_desired_state)
     if bond_opts:
         settings.append(bond.create_setting(bond_opts))
@@ -194,4 +199,5 @@ def _build_connection_profile(iface_desired_state, base_con_profile=None):
         ovs_port_options = iface_desired_state.get('options')
         settings.append(ovs.create_port_setting(ovs_port_options))
 
-    return connection.create_profile(settings)
+    new_profile = connection.create_profile(settings)
+    return new_profile
