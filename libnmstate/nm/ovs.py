@@ -17,10 +17,9 @@
 
 import six
 
-from libnmstate import nmclient
-
 from . import connection
 from . import device
+from . import nmclient
 
 
 BRIDGE_TYPE = 'ovs-bridge'

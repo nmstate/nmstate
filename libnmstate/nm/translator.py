@@ -19,7 +19,7 @@ import copy
 
 import six
 
-from libnmstate import nmclient
+from . import nmclient
 
 
 IFACE_TYPE_UNKNOWN = 'unknown'

@@ -17,7 +17,7 @@
 
 import socket
 
-from libnmstate import nmclient
+from . import nmclient
 
 
 def create_setting(config):

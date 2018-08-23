@@ -18,7 +18,7 @@
 import logging
 import uuid
 
-from libnmstate import nmclient
+from . import nmclient
 
 
 def create_profile(settings):
