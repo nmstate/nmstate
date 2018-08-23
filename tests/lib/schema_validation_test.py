@@ -77,7 +77,14 @@ class TestIfaceCommon(object):
 
         with pytest.raises(js.ValidationError) as err:
             libnmstate.validator.verify(default_data)
-            assert 'bad-state' in err.value.args[0]
+        assert 'bad-state' in err.value.args[0]
+
+    def test_invalid_type(self, default_data):
+        default_data['interfaces'][0]['type'] = 'bad-type'
+
+        with pytest.raises(js.ValidationError) as err:
+            libnmstate.validator.verify(default_data)
+        assert 'bad-type' in err.value.args[0]
 
 
 class TestIfaceTypeEthernet(object):
