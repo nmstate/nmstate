@@ -16,13 +16,13 @@
 #
 from __future__ import absolute_import
 
-import json
 import pkgutil
+import yaml
 
 
 def load(schema_name):
-    return json.loads(
-        pkgutil.get_data('libnmstate', 'schemas/' + schema_name + '.json'))
+    return yaml.load(
+        pkgutil.get_data('libnmstate', 'schemas/' + schema_name + '.yaml'))
 
 
-ifaces_schema = load('interfaces')
+ifaces_schema = load('operational-state')
