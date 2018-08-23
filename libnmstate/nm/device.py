@@ -17,7 +17,7 @@
 
 import logging
 
-from libnmstate import nmclient
+from . import nmclient
 
 
 def activate(dev):

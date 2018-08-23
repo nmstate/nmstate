@@ -23,8 +23,8 @@ import six
 
 from libnmstate import netinfo
 from libnmstate import nm
-from libnmstate import nmclient
 from libnmstate import validator
+from libnmstate.nm import nmclient
 
 
 class ApplyError(Exception):

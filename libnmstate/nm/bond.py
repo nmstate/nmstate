@@ -17,9 +17,8 @@
 
 import six
 
-from libnmstate import nmclient
-
 from . import connection
+from . import nmclient
 
 
 BOND_TYPE = 'bond'
