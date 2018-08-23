@@ -1,0 +1,344 @@
+$schema: http://json-schema.org/draft-04/schema#
+type: object
+properties:
+  capabilities:
+    type: array
+    items:
+      type: string
+  interfaces:
+    type: array
+    items:
+      type: object
+      required:
+        - name
+      allOf:
+        - $ref: "#/definitions/interface-base/rw"
+        - $ref: "#/definitions/interface-base/ro"
+        - $ref: "#/definitions/interface-ip/all"
+        - oneOf:
+            - "$ref": "#/definitions/interface-unknown/rw"
+            - "$ref": "#/definitions/interface-ethernet/rw"
+            - "$ref": "#/definitions/interface-bond/rw"
+            - "$ref": "#/definitions/interface-ovs-bridge/all"
+            - "$ref": "#/definitions/interface-ovs-interface/rw"
+            - "$ref": "#/definitions/interface-dummy/rw"
+
+definitions:
+  types:
+    status:
+      type: string
+      enum:
+        - up
+        - down
+    mac-address:
+      type: string
+      pattern: "^([a-fA-F0-9]{2}:){5}[a-fA-F0-9]{2}$"
+
+  # Interface types
+  interface-base:
+    all:
+      allOf:
+      - $ref: "#/definitions/interface-base/rw"
+      - $ref: "#/definitions/interface-base/ro"
+    rw:
+      properties:
+        description:
+          type: string
+        name:
+          type: string
+        state:
+          type: string
+          enum:
+            - absent
+            - up
+            - down
+            - unknown
+        mac-address:
+          $ref: "#/definitions/types/mac-address"
+        mtu:
+          type: integer
+          minimum: 0
+    ro:
+      properties:
+        if-index:
+          type: integer
+          minimum: 0
+        admin-status:
+          $ref: "#/definitions/types/status"
+        link-status:
+          $ref: "#/definitions/types/status"
+        phys-address:
+          $ref: "#/definitions/types/mac-address"
+        higher-layer-if:
+          type: string
+        lower-layer-if:
+          type: string
+        statistics:
+          properties:
+            in-broadcast-pkts:
+              type: integer
+              minimum: 0
+            in-discards:
+              type: integer
+              minimum: 0
+            in-errors:
+              type: integer
+              minimum: 0
+            in-multicast-pkts:
+              type: integer
+              minimum: 0
+            in-octets:
+              type: integer
+              minimum: 0
+            in-unicast-pkts:
+              type: integer
+              minimum: 0
+            out-broadcast-pkts:
+              type: integer
+              minimum: 0
+            out-discards:
+              type: integer
+              minimum: 0
+            out-errors:
+              type: integer
+              minimum: 0
+            out-multicast-pkts:
+              type: integer
+              minimum: 0
+            out-octets:
+              type: integer
+              minimum: 0
+            out-unicast-pkts:
+              type: integer
+              minimum: 0
+  interface-unknown:
+    rw:
+      properties:
+        type:
+          type: string
+          enum:
+            - unknown
+  interface-ethernet:
+    rw:
+      properties:
+        type:
+          type: string
+          enum:
+          - ethernet
+        auto-negotiation:
+          type: boolean
+        duplex:
+          type: string
+          enum:
+            - full
+            - half
+        link-speed:
+          type: integer
+          minimum: 0
+        flow-control:
+          type: boolean
+  interface-vlan:
+    rw:
+      properties:
+        type:
+          type: string
+          enum:
+            - vlan
+        vlan-id:
+          type: integer
+          minimum: 0
+        vlan-base:
+          type: string
+  interface-bond:
+    rw:
+      properties:
+        type:
+          type: string
+          enum:
+            - bond
+        link-aggregation:
+          type: object
+          properties:
+            mode:
+              type: string
+            slaves:
+              type: array
+              items:
+                type: string
+            options:
+              type: object
+  interface-ovs-bridge:
+    all:
+      allOf:
+        - $ref: "#/definitions/interface-ovs-bridge/rw"
+        - $ref: "#/definitions/interface-ovs-bridge/ro"
+    rw:
+      properties:
+        type:
+          type: string
+          enum:
+          - ovs-bridge
+        bridge:
+          type: object
+          properties:
+            port:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  type:
+                    type: string
+                  vlan-mode:
+                    type: string
+                  access-tag:
+                    type: string
+            options:
+              type: object
+              properties:
+                stp:
+                  type: boolean
+                rstp:
+                  type: boolean
+                fail-mode:
+                  type: string
+                mcast-snooping-enable:
+                  type: boolean
+    ro:
+      properties:
+        bridge:
+          type: object
+          properties:
+            port:
+              type: array
+              items:
+                type: object
+                properties:
+                  learned-mac-address:
+                    type: array
+                    items:
+                      $ref: "#/definitions/types/mac-address"
+  interface-ovs-interface:
+    rw:
+      properties:
+        type:
+          type: string
+          enum:
+          - ovs-interface
+  interface-dummy:
+    rw:
+      properties:
+        type:
+          type: string
+          enum:
+          - dummy
+  interface-ip:
+    all:
+      allOf:
+      - $ref: "#/definitions/interface-ip/rw"
+      - $ref: "#/definitions/interface-ip/ro"
+    rw:
+      properties:
+        ipv4:
+          type: object
+          properties:
+            enabled:
+              type: boolean
+            dhcp:
+              type: boolean
+            address:
+              type: array
+              items:
+                type: object
+                properties:
+                  ip:
+                    type: string
+                  prefix-length:
+                    type: integer
+                  netmask:
+                    type: string
+            neighbor:
+              type: array
+              items:
+                type: object
+                properties:
+                  ip:
+                    type: string
+                  link-layer-address:
+                    type: string
+            forwarding:
+              type: boolean
+        ipv6:
+          type: object
+          properties:
+            enabled:
+              type: boolean
+            autoconf:
+              type: boolean
+            dhcp:
+              type: boolean
+            address:
+              type: array
+              items:
+                type: object
+                properties:
+                  ip:
+                    type: string
+                  prefix-length:
+                    type: integer
+            neighbor:
+              type: array
+              items:
+                type: object
+                properties:
+                  ip:
+                    type: string
+                  link-layer-address:
+                    type: string
+            forwarding:
+              type: boolean
+            dup-addr-detect-transmits:
+              type: integer
+    ro:
+      properties:
+        ipv4:
+          type: object
+          properties:
+            address:
+              type: array
+              items:
+                type: object
+                properties:
+                  origin:
+                    type: string
+            neighbor:
+              type: array
+              items:
+                type: object
+                properties:
+                  origin:
+                    type: string
+        ipv6:
+          type: object
+          properties:
+            address:
+              type: array
+              items:
+                type: object
+                properties:
+                  origin:
+                    type: string
+                  status:
+                    type: string
+            neighbor:
+              type: array
+              items:
+                type: object
+                properties:
+                  origin:
+                    type: string
+                  is-router:
+                    type: boolean
+                  state:
+                    type: string
