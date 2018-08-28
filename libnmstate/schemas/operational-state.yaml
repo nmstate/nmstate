@@ -15,6 +15,8 @@ properties:
         - $ref: "#/definitions/interface-base/rw"
         - $ref: "#/definitions/interface-base/ro"
         - $ref: "#/definitions/interface-ip/all"
+        - $ref: "#/definitions/lldp/rw"
+        - $ref: "#/definitions/lldp/ro"
         - oneOf:
             - "$ref": "#/definitions/interface-unknown/rw"
             - "$ref": "#/definitions/interface-ethernet/rw"
@@ -342,3 +344,198 @@ definitions:
                     type: boolean
                   state:
                     type: string
+  lldp:
+    definitions:
+      common:
+        properties:
+          name:
+            type: string
+      chassis-id:
+        properties:
+          type:
+            type: integer
+            enum: [1]
+          properties:
+            type: object
+            properties:
+              chassis ID:
+                type: string
+              chassis ID subtype:
+                type: string
+      port-id:
+        properties:
+          type:
+            type: integer
+            enum: [2]
+          properties:
+            type: object
+            properties:
+              port ID:
+                type: string
+              port ID subtype:
+                type: string
+      ttl:
+        properties:
+          type:
+            type: integer
+            enum: [3]
+          properties:
+            type: object
+            properties:
+              ttl:
+                type: string
+      port-description:
+        properties:
+          type:
+            type: integer
+            enum: [4]
+          properties:
+            port description:
+              type: string
+      system-name:
+        properties:
+          type:
+            type: integer
+            enum: [5]
+          properties:
+            type: object
+            properties:
+              system name:
+                type: string
+      system-description:
+        properties:
+          type:
+            type: integer
+            enum: [6]
+          properties:
+            type: object
+            properties:
+              system description:
+                type: string
+              build date:
+                type: string
+      system-capabilities:
+        properties:
+          type:
+            type: integer
+            enum: [7]
+          properties:
+            type: object
+            properties:
+              enabled capabilities:
+                type: string
+              system capabilities:
+                type: string
+      management-address:
+        properties:
+          type:
+            type: integer
+            enum: [8]
+          properties:
+            type: object
+            properties:
+              interface numbering:
+                type: string
+              interface numbering subtype:
+                type: string
+              management address:
+                type: string
+              management address subtype:
+                type: string
+              object identifier:
+                type: string
+      port-vlan-id:
+        properties:
+          type:
+            type: integer
+            enum: [127]
+          subtype:
+            type: integer
+            enum: [1]
+          oui:
+            type: integer
+            enum: [32962]
+          properties:
+            Port VLAN ID:
+              type: string
+      vlan-name:
+        properties:
+          type:
+            type: integer
+            enum: [127]
+          subtype:
+            type: integer
+            enum: [3]
+          oui:
+            type: integer
+            enum: [32962]
+          properties:
+            VLAN ID:
+              type: string
+            VLAN Name:
+              type: string
+      mtu:
+        properties:
+          type:
+            type: integer
+            enum: [127]
+          subtype:
+            type: integer
+            enum: [4]
+          oui:
+            type: integer
+            enum: [4623]
+          properties:
+            mtu:
+              type: string
+      link-aggregation:
+        properties:
+          type:
+            type: integer
+            enum: [127]
+          subtype:
+            type: integer
+            enum: [7]
+          oui:
+            type: integer
+            enum: [32962]
+          properties:
+            Aggregated Port ID:
+              type: string
+            Aggregation capable:
+              type: string
+            Currently aggregated:
+              type: string
+    rw:
+      properties:
+        lldp:
+          type: object
+          properties:
+            enabled:
+              type: boolean
+    ro:
+      properties:
+        lldp:
+          type: object
+          properties:
+            type:
+              type: integer
+            name:
+              type: string
+            properties:
+              type: object
+              allOf:
+                - $ref: "#/definitions/lldp/definitions/common"
+                - oneOf:
+                  - $ref: "#/definitions/lldp/definitions/chassis-id"
+                  - $ref: "#/definitions/lldp/definitions/port-id"
+                  - $ref: "#/definitions/lldp/definitions/ttl"
+                  - $ref: "#/definitions/lldp/definitions/port-description"
+                  - $ref: "#/definitions/lldp/definitions/system-name"
+                  - $ref: "#/definitions/lldp/definitions/system-description"
+                  - $ref: "#/definitions/lldp/definitions/system-capabilities"
+                  - $ref: "#/definitions/lldp/definitions/management-address"
+                  - $ref: "#/definitions/lldp/definitions/port-vlan-id"
+                  - $ref: "#/definitions/lldp/definitions/vlan-name"
+                  - $ref: "#/definitions/lldp/definitions/mtu"
+                  - $ref: "#/definitions/lldp/definitions/link-aggregation"
