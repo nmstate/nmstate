@@ -183,43 +183,42 @@ def test_prepare_edited_ifaces_configuration(nm_device_mock,
     )
 
 
-def test_set_ifaces_admin_state_up(nm_device_mock):
-    ifaces_desired_state = [
-        {
-            'name': 'eth0',
-            'type': 'ethernet',
-            'state': 'up',
-        }
-    ]
-    nm.applier.set_ifaces_admin_state(ifaces_desired_state)
+class TestIfaceAdminStateControl(object):
+    def test_set_ifaces_admin_state_up(self, nm_device_mock):
+        ifaces_desired_state = [
+            {
+                'name': 'eth0',
+                'type': 'ethernet',
+                'state': 'up',
+            }
+        ]
+        nm.applier.set_ifaces_admin_state(ifaces_desired_state)
 
-    nm_device_mock.activate.assert_called_once_with(
-        nm_device_mock.get_device_by_name.return_value)
+        nm_device_mock.activate.assert_called_once_with(
+            nm_device_mock.get_device_by_name.return_value)
 
+    def test_set_ifaces_admin_state_down(self, nm_device_mock):
+        ifaces_desired_state = [
+            {
+                'name': 'eth0',
+                'type': 'ethernet',
+                'state': 'down',
+            }
+        ]
+        nm.applier.set_ifaces_admin_state(ifaces_desired_state)
 
-def test_set_ifaces_admin_state_down(nm_device_mock):
-    ifaces_desired_state = [
-        {
-            'name': 'eth0',
-            'type': 'ethernet',
-            'state': 'down',
-        }
-    ]
-    nm.applier.set_ifaces_admin_state(ifaces_desired_state)
+        nm_device_mock.delete.assert_called_once_with(
+            nm_device_mock.get_device_by_name.return_value)
 
-    nm_device_mock.delete.assert_called_once_with(
-        nm_device_mock.get_device_by_name.return_value)
+    def test_set_ifaces_admin_state_absent(self, nm_device_mock):
+        ifaces_desired_state = [
+            {
+                'name': 'eth0',
+                'type': 'ethernet',
+                'state': 'absent',
+            }
+        ]
+        nm.applier.set_ifaces_admin_state(ifaces_desired_state)
 
-
-def test_set_ifaces_admin_state_absent(nm_device_mock):
-    ifaces_desired_state = [
-        {
-            'name': 'eth0',
-            'type': 'ethernet',
-            'state': 'absent',
-        }
-    ]
-    nm.applier.set_ifaces_admin_state(ifaces_desired_state)
-
-    nm_device_mock.delete.assert_called_once_with(
-        nm_device_mock.get_device_by_name.return_value)
+        nm_device_mock.delete.assert_called_once_with(
+            nm_device_mock.get_device_by_name.return_value)
