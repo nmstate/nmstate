@@ -193,7 +193,7 @@ def test_set_ifaces_admin_state_up(nm_device_mock):
     ]
     nm.applier.set_ifaces_admin_state(ifaces_desired_state)
 
-    nm_device_mock.activate.assert_called_with(
+    nm_device_mock.activate.assert_called_once_with(
         nm_device_mock.get_device_by_name.return_value)
 
 
@@ -207,7 +207,7 @@ def test_set_ifaces_admin_state_down(nm_device_mock):
     ]
     nm.applier.set_ifaces_admin_state(ifaces_desired_state)
 
-    nm_device_mock.delete.assert_called_with(
+    nm_device_mock.delete.assert_called_once_with(
         nm_device_mock.get_device_by_name.return_value)
 
 
@@ -221,5 +221,5 @@ def test_set_ifaces_admin_state_absent(nm_device_mock):
     ]
     nm.applier.set_ifaces_admin_state(ifaces_desired_state)
 
-    nm_device_mock.delete.assert_called_with(
+    nm_device_mock.delete.assert_called_once_with(
         nm_device_mock.get_device_by_name.return_value)
