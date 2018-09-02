@@ -222,3 +222,39 @@ class TestIfaceAdminStateControl(object):
 
         nm_device_mock.delete.assert_called_once_with(
             nm_device_mock.get_device_by_name.return_value)
+
+    def test_set_bond_and_its_slaves_admin_state_up(self,
+                                                    nm_device_mock,
+                                                    nm_bond_mock):
+        ifaces_desired_state = [
+            {
+                'name': 'bond0',
+                'type': 'bond',
+                'state': 'up',
+                'link-aggregation': {
+                    'mode': '802.3ad',
+                    'slaves': ['eth0']
+                },
+            },
+            {
+                'name': 'eth0',
+                'type': 'ethernet',
+                'state': 'up',
+            }
+        ]
+
+        nm_device_mock.get_device_by_name = lambda devname: devname
+        bond = ifaces_desired_state[0]['name']
+        slaves = ifaces_desired_state[0]['link-aggregation']['slaves']
+        nm_bond_mock.BOND_TYPE = nm.bond.BOND_TYPE
+        nm_bond_mock.get_slaves.return_value = slaves
+
+        nm.applier.set_ifaces_admin_state(ifaces_desired_state)
+
+        expected_calls = [
+            mock.call(bond),
+            mock.call(slaves[0]),
+            mock.call(slaves[0])
+        ]
+        actual_calls = nm_device_mock.activate.mock_calls
+        assert expected_calls.sort() == actual_calls.sort()
