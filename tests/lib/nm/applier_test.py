@@ -253,7 +253,6 @@ class TestIfaceAdminStateControl(object):
 
         expected_calls = [
             mock.call(bond),
-            mock.call(slaves[0]),
             mock.call(slaves[0])
         ]
         actual_calls = nm_device_mock.activate.mock_calls

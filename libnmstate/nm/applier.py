@@ -15,6 +15,8 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
+import six
+
 from . import bond
 from . import connection
 from . import device
@@ -81,28 +83,31 @@ def prepare_edited_ifaces_configuration(ifaces_desired_state):
 
 
 def set_ifaces_admin_state(ifaces_desired_state):
+    devs_actions = {}
     for iface_desired_state in ifaces_desired_state:
+        devs = _get_affected_devices(iface_desired_state)
         if iface_desired_state['state'] == 'up':
-            _set_dev_state(iface_desired_state, device.activate)
-        elif iface_desired_state['state'] == 'down':
-            _set_dev_state(iface_desired_state, device.delete)
-        elif iface_desired_state['state'] == 'absent':
-            _set_dev_state(iface_desired_state, device.delete)
+            devs_actions.update({dev: device.activate for dev in devs})
+        elif iface_desired_state['state'] in ('down', 'absent'):
+            devs_actions.update({dev: device.delete for dev in devs})
         else:
             raise UnsupportedIfaceStateError(iface_desired_state)
 
+    for dev, action in six.viewitems(devs_actions):
+        action(dev)
 
-def _set_dev_state(iface_state, func_action):
+
+def _get_affected_devices(iface_state):
     nmdev = device.get_device_by_name(iface_state['name'])
+    devs = []
     if nmdev:
-        devs = [nmdev]
+        devs += [nmdev]
         iface_type = iface_state['type']
         if iface_type == ovs.BRIDGE_TYPE:
             devs += _get_ovs_bridge_port_devices(iface_state)
         elif iface_type == bond.BOND_TYPE:
             devs += bond.get_slaves(nmdev)
-        for dev in devs:
-            func_action(dev)
+    return devs
 
 
 def _get_ovs_bridge_port_devices(iface_state):
