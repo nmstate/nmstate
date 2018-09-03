@@ -648,3 +648,56 @@ class TestDesiredStateOvsMetadata(object):
 
         assert desired_state == expected_desired_state
         assert current_state == expected_current_state
+
+
+class TestAssertIfaceState(object):
+
+    def test_desired_is_identical_to_current(self):
+        desired_state = self._base_state
+        current_state = self._base_state
+
+        netapplier.assert_ifaces_state(desired_state, current_state)
+
+    def test_desired_is_partial_to_current(self):
+        desired_state = self._base_state
+        current_state = self._base_state
+        current_state.update({
+            'eth0': {'name': 'eth0', 'state': 'up', 'type': 'unknown'},
+            'eth1': {'name': 'eth1', 'state': 'up', 'type': 'unknown'}
+        })
+
+        netapplier.assert_ifaces_state(desired_state, current_state)
+
+    def test_current_is_partial_to_desired(self):
+        desired_state = self._base_state
+        current_state = self._base_state
+        desired_state.update({
+            'eth0': {'name': 'eth0', 'state': 'up', 'type': 'unknown'},
+            'eth1': {'name': 'eth1', 'state': 'up', 'type': 'unknown'}
+        })
+
+        with pytest.raises(netapplier.DesiredStateIsNotCurrentError):
+            netapplier.assert_ifaces_state(desired_state, current_state)
+
+    def test_desired_is_not_equal_to_current(self):
+        desired_state = self._base_state
+        current_state = self._base_state
+        current_state['foo-name']['state'] = 'down'
+
+        with pytest.raises(netapplier.DesiredStateIsNotCurrentError):
+            netapplier.assert_ifaces_state(desired_state, current_state)
+
+    @property
+    def _base_state(self):
+        return {
+            'foo-name': {
+                'name': 'foo-name',
+                'type': 'foo-type',
+                'state': 'up',
+                'bridge': {
+                    'port': [
+                        {'name': 'eth0', 'type': 'system'}
+                    ]
+                }
+            }
+        }

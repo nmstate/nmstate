@@ -31,14 +31,18 @@ class ApplyError(Exception):
     pass
 
 
-def apply(desired_state):
+class DesiredStateIsNotCurrentError(Exception):
+    pass
+
+
+def apply(desired_state, verify_change=False):
     validator.verify(desired_state)
     validator.verify_capabilities(desired_state, netinfo.capabilities())
 
-    _apply_ifaces_state(desired_state['interfaces'])
+    _apply_ifaces_state(desired_state['interfaces'], verify_change)
 
 
-def _apply_ifaces_state(interfaces_desired_state):
+def _apply_ifaces_state(interfaces_desired_state, verify_change):
     ifaces_desired_state = _index_by_name(interfaces_desired_state)
     ifaces_current_state = _index_by_name(netinfo.interfaces())
 
@@ -50,6 +54,9 @@ def _apply_ifaces_state(interfaces_desired_state):
         with _setup_providers():
             ifaces_current_state = _index_by_name(netinfo.interfaces())
             _edit_interfaces(ifaces_desired_state, ifaces_current_state)
+        if verify_change:
+            ifaces_current_state = _index_by_name(netinfo.interfaces())
+            assert_ifaces_state(ifaces_desired_state, ifaces_current_state)
 
 
 @contextmanager
@@ -255,3 +262,19 @@ def _dict_update(origin_data, to_merge_data):
 
 def _index_by_name(ifaces_state):
     return {iface['name']: iface for iface in ifaces_state}
+
+
+def assert_ifaces_state(ifaces_desired_state, ifaces_current_state):
+
+    if not (set(ifaces_desired_state) <= set(ifaces_current_state)):
+        raise DesiredStateIsNotCurrentError(
+            'desired: {}\ncurrent: {}'.format(
+                ifaces_desired_state, ifaces_current_state))
+
+    for ifname in ifaces_desired_state:
+        iface_cstate = ifaces_current_state[ifname]
+        iface_dstate = _canonicalize_desired_state(
+            ifaces_desired_state[ifname], iface_cstate)
+        if iface_dstate != iface_cstate:
+            raise DesiredStateIsNotCurrentError(
+                'desired: {}\ncurrent: {}'.format(iface_dstate, iface_cstate))
