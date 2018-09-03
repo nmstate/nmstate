@@ -60,6 +60,10 @@ def setup_subcommand_set(subparsers):
     parser_set.add_argument('file', help='File containing desired state. '
                             'stdin is used when no file is specified.',
                             nargs='?')
+    parser_set.add_argument(
+        '--verify', action='store_true',
+        help='Verify that the desired state is now part of the current state.'
+    )
     parser_set.set_defaults(func=apply)
 
 
@@ -113,6 +117,6 @@ def apply(args):
     else:
         state = yaml.load(statedata)
         use_yaml = True
-    netapplier.apply(state)
+    netapplier.apply(state, verify_change=args.verify)
     print('Desired state applied: ')
     print_state(state, use_yaml=use_yaml)
