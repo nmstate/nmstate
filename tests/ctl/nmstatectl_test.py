@@ -43,7 +43,8 @@ EMPTY_JSON_STATE = """{
 
 
 @mock.patch('sys.argv', ['nmstatectl', 'set', 'mystate.json'])
-@mock.patch.object(nmstatectl.netapplier, 'apply', lambda state: None)
+@mock.patch.object(nmstatectl.netapplier, 'apply',
+                   lambda state, verify_change: None)
 @mock.patch.object(nmstatectl, 'open', mock.mock_open(read_data='{}'),
                    create=True)
 def test_run_ctl_directly_set():
