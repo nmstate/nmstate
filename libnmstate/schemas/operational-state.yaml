@@ -132,7 +132,7 @@ definitions:
           enum:
             - full
             - half
-        link-speed:
+        speed:
           type: integer
           minimum: 0
         flow-control:
