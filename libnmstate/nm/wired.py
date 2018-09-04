@@ -63,13 +63,13 @@ def get_info(device):
 
     iface = device.get_iface()
     try:
-        info['mtu'] = device.get_mtu()
+        info['mtu'] = int(device.get_mtu())
     except AttributeError:
         pass
 
     ethernet = {}
     try:
-        ethernet['speed'] = device.get_speed()
+        ethernet['speed'] = int(device.get_speed())
     except AttributeError:
         pass
 
