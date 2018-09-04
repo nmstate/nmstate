@@ -24,6 +24,7 @@ from . import ipv4
 from . import ipv6
 from . import ovs
 from . import translator
+from . import user
 from . import wired
 
 applier
@@ -35,4 +36,5 @@ ipv4
 ipv6
 ovs
 translator
+user
 wired

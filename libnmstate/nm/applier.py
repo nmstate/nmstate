@@ -22,6 +22,7 @@ from . import ipv4
 from . import ipv6
 from . import ovs
 from . import translator
+from . import user
 from . import wired
 
 
@@ -187,6 +188,10 @@ def _build_connection_profile(iface_desired_state, base_con_profile=None):
     wired_setting = wired.create_setting(iface_desired_state, base_con_profile)
     if wired_setting:
         settings.append(wired_setting)
+
+    user_setting = user.create_setting(iface_desired_state, base_con_profile)
+    if user_setting:
+        settings.append(user_setting)
 
     bond_opts = translator.Api2Nm.get_bond_options(iface_desired_state)
     if bond_opts:
