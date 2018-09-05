@@ -256,4 +256,4 @@ class TestIfaceAdminStateControl(object):
             mock.call(slaves[0])
         ]
         actual_calls = nm_device_mock.activate.mock_calls
-        assert expected_calls.sort() == actual_calls.sort()
+        assert sorted(expected_calls) == sorted(actual_calls)
