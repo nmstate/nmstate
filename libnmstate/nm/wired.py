@@ -69,7 +69,9 @@ def get_info(device):
 
     ethernet = {}
     try:
-        ethernet['speed'] = int(device.get_speed())
+        speed = int(device.get_speed())
+        if speed > 0:
+            ethernet['speed'] = speed
     except AttributeError:
         pass
 
