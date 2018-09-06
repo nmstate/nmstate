@@ -48,11 +48,18 @@ def test_create_setting_mtu(NM_mock):
     assert setting.props.mtu == 1500
 
 
-def test_create_setting_auto_negotiation_False(NM_mock):
+@mock.patch.object(nm.wired, 'minimal_ethtool',
+                   return_value={'speed': 1337, 'duplex': 'mocked',
+                                 'auto-negotiation': 'mocked'})
+def test_create_setting_auto_negotiation_False(ethtool_mock, NM_mock):
     setting = nm.wired.create_setting(
-        {'ethernet': {'auto-negotiation': False}}, None)
+        {'name': 'nmstate_test', 'ethernet': {'auto-negotiation': False}},
+        None)
     assert setting == NM_mock.SettingWired.new.return_value
     assert setting.props.auto_negotiate is False
+    assert setting.props.speed == 1337
+    assert setting.props.duplex == 'mocked'
+    assert ethtool_mock.called_with('nmstate_test')
 
 
 def test_create_setting_only_auto_negotiation_True(NM_mock):
