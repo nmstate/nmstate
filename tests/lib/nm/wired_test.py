@@ -45,23 +45,33 @@ def test_create_setting_duplicate(NM_mock):
 def test_create_setting_mtu(NM_mock):
     setting = nm.wired.create_setting({'mtu': 1500}, None)
     assert setting == NM_mock.SettingWired.new.return_value
-    setting.set_property.assert_called_with(NM_mock.SETTING_WIRED_MTU, 1500)
+    assert setting.props.mtu == 1500
 
 
 def test_create_setting_auto_negotiation_False(NM_mock):
     setting = nm.wired.create_setting(
         {'ethernet': {'auto-negotiation': False}}, None)
     assert setting == NM_mock.SettingWired.new.return_value
-    setting.set_property.assert_called_with(
-        NM_mock.SETTING_WIRED_AUTO_NEGOTIATE, False)
+    assert setting.props.auto_negotiate is False
 
 
-def test_create_setting_auto_negotiation_True(NM_mock):
+def test_create_setting_only_auto_negotiation_True(NM_mock):
     setting = nm.wired.create_setting({'ethernet':
                                       {'auto-negotiation': True}}, None)
     assert setting == NM_mock.SettingWired.new.return_value
-    setting.set_property.assert_called_with(
-        NM_mock.SETTING_WIRED_AUTO_NEGOTIATE, True)
+    assert setting.props.auto_negotiate is True
+    assert setting.props.speed == 0
+    assert setting.props.duplex is None
+
+
+def test_create_setting_auto_negotiation_speed_duplex(NM_mock):
+    setting = nm.wired.create_setting({'ethernet': {'auto-negotiation': True,
+                                                    'speed': 1000, 'duplex':
+                                                    'full'}}, None)
+    assert setting == NM_mock.SettingWired.new.return_value
+    assert setting.props.auto_negotiate is True
+    assert setting.props.speed == 1000
+    assert setting.props.duplex == 'full'
 
 
 def test_create_setting_speed_duplex(NM_mock):
@@ -69,7 +79,5 @@ def test_create_setting_speed_duplex(NM_mock):
                                                     'duplex': 'full'}},
                                       None)
     assert setting == NM_mock.SettingWired.new.return_value
-    setting.set_property.assert_has_calls([
-        mock.call(NM_mock.SETTING_WIRED_SPEED, 1000),
-        mock.call(NM_mock.SETTING_WIRED_DUPLEX, 'full')],
-        any_order=True)
+    assert setting.props.speed == 1000
+    assert setting.props.duplex == 'full'

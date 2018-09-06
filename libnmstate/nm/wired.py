@@ -40,17 +40,24 @@ def create_setting(iface_state, base_con_profile):
         wired_setting = nmclient.NM.SettingWired.new()
 
     if mtu:
-        wired_setting.set_property(nmclient.NM.SETTING_WIRED_MTU, mtu)
+        wired_setting.props.mtu = mtu
+
+    if auto_negotiation:
+        wired_setting.props.auto_negotiate = True
+        if not speed:
+            wired_setting.props.speed = 0
+
+        if not duplex:
+            wired_setting.props.duplex = None
+
+    elif auto_negotiation is False:
+        wired_setting.props.auto_negotiate = False
 
     if speed:
-        wired_setting.set_property(nmclient.NM.SETTING_WIRED_SPEED, speed)
+        wired_setting.props.speed = speed
 
     if duplex:
-        wired_setting.set_property(nmclient.NM.SETTING_WIRED_DUPLEX, duplex)
-
-    if auto_negotiation is not None:
-        wired_setting.set_property(nmclient.NM.SETTING_WIRED_AUTO_NEGOTIATE,
-                                   auto_negotiation)
+        wired_setting.props.duplex = duplex
 
     return wired_setting
 
