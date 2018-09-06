@@ -59,6 +59,7 @@ def _apply_ifaces_state(interfaces_desired_state, verify_change):
             # FIXME: Remove this sleep after adding wait for state mechanism.
             time.sleep(2)
             ifaces_current_state = _index_by_name(netinfo.interfaces())
+            ifaces_desired_state = remove_ifaces_metadata(ifaces_desired_state)
             assert_ifaces_state(ifaces_desired_state, ifaces_current_state)
 
 
@@ -116,6 +117,16 @@ def generate_ifaces_metadata(ifaces_desired_state, ifaces_current_state):
         get_slaves_func=_get_ovs_slaves_from_state,
         set_metadata_func=_set_ovs_bridge_ports_metadata
     )
+
+
+def remove_ifaces_metadata(ifaces_state):
+    clean_ifaces_state = copy.deepcopy(ifaces_state)
+    for iface_state in six.viewvalues(clean_ifaces_state):
+        iface_state.pop('_master', None)
+        iface_state.pop('_master_type', None)
+        iface_state.pop('_brport_options', None)
+
+    return clean_ifaces_state
 
 
 def _get_bond_slaves_from_state(state, default=()):
