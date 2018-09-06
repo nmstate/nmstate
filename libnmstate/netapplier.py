@@ -20,6 +20,7 @@ from contextlib import contextmanager
 import collections
 import copy
 import six
+import time
 
 from libnmstate import netinfo
 from libnmstate import nm
@@ -55,6 +56,8 @@ def _apply_ifaces_state(interfaces_desired_state, verify_change):
             ifaces_current_state = _index_by_name(netinfo.interfaces())
             _edit_interfaces(ifaces_desired_state, ifaces_current_state)
         if verify_change:
+            # FIXME: Remove this sleep after adding wait for state mechanism.
+            time.sleep(2)
             ifaces_current_state = _index_by_name(netinfo.interfaces())
             assert_ifaces_state(ifaces_desired_state, ifaces_current_state)
 
