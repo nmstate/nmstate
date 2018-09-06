@@ -47,6 +47,7 @@ def _apply_ifaces_state(interfaces_desired_state, verify_change):
     ifaces_desired_state = _index_by_name(interfaces_desired_state)
     ifaces_current_state = _index_by_name(netinfo.interfaces())
 
+    ifaces_desired_state = sanitize_ethernet_state(ifaces_desired_state)
     generate_ifaces_metadata(ifaces_desired_state, ifaces_current_state)
 
     with _transaction():
@@ -117,6 +118,22 @@ def generate_ifaces_metadata(ifaces_desired_state, ifaces_current_state):
         get_slaves_func=_get_ovs_slaves_from_state,
         set_metadata_func=_set_ovs_bridge_ports_metadata
     )
+
+
+def sanitize_ethernet_state(ifaces_desired_state):
+    """
+    If auto-negotiation, speed and duplex settings are not provided, they need
+    to be set to None to not override them with the values from the current
+    settings since the current settings are read from the device state and not
+    from the actual configuration.  This makes it possible to distiguish
+    whether a user specified these values in the later configuration step.
+    """
+    for iface_state in six.viewvalues(ifaces_desired_state):
+        ethernet = iface_state.setdefault("ethernet", {})
+        ethernet.setdefault("auto-negotiation", None)
+        ethernet.setdefault("speed", None)
+        ethernet.setdefault("duplex", None)
+    return ifaces_desired_state
 
 
 def remove_ifaces_metadata(ifaces_state):

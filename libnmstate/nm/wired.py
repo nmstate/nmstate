@@ -44,14 +44,24 @@ def create_setting(iface_state, base_con_profile):
 
     if auto_negotiation:
         wired_setting.props.auto_negotiate = True
-        if not speed:
+        if not speed and not duplex:
             wired_setting.props.speed = 0
-
-        if not duplex:
             wired_setting.props.duplex = None
+
+        elif not speed:
+            ethtool_results = minimal_ethtool(str(iface_state['name']))
+            speed = ethtool_results['speed']
+        elif not duplex:
+            ethtool_results = minimal_ethtool(str(iface_state['name']))
+            duplex = ethtool_results['duplex']
 
     elif auto_negotiation is False:
         wired_setting.props.auto_negotiate = False
+        ethtool_results = minimal_ethtool(str(iface_state['name']))
+        if not speed:
+            speed = ethtool_results['speed']
+        if not duplex:
+            duplex = ethtool_results['duplex']
 
     if speed:
         wired_setting.props.speed = speed
