@@ -60,6 +60,12 @@ Change to desired state:
 nmstatectl set desired-state.json
 ```
 
+Edit current state of eth3 in a text editor:
+```shell
+nmstatectl edit --only eth3
+```
+
+
 `nmstatectl` will also read from stdin when no file is specified:
 
 
