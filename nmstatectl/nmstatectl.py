@@ -21,8 +21,11 @@ import fnmatch
 import json
 import logging
 import os
+import subprocess
 import sys
+import tempfile
 
+from six.moves import input
 import yaml
 
 from libnmstate import netapplier
@@ -37,11 +40,28 @@ def main():
     parser = argparse.ArgumentParser()
 
     subparsers = parser.add_subparsers()
+    setup_subcommand_edit(subparsers)
     setup_subcommand_show(subparsers)
     setup_subcommand_set(subparsers)
 
     args = parser.parse_args()
     return args.func(args)
+
+
+def setup_subcommand_edit(subparsers):
+    parser_edit = subparsers.add_parser('edit',
+                                        help='Edit network state in EDITOR')
+    parser_edit.set_defaults(func=edit)
+    parser_edit.add_argument('--json', help='Edit as JSON', default=True,
+                             action='store_false', dest='yaml')
+    parser_edit.add_argument(
+        'only', default='*', nargs='?', metavar='interfaces',
+        help='Edit only specified interfaces (comma-separated)'
+    )
+    parser_edit.add_argument(
+        '--no-verify', action='store_false', dest='verify', default=True,
+        help='Verify that the desired state is now part of the current state.'
+    )
 
 
 def setup_subcommand_show(subparsers):
@@ -68,34 +88,28 @@ def setup_subcommand_set(subparsers):
     parser_set.set_defaults(func=apply)
 
 
-def print_state(state, use_yaml=False):
-    if use_yaml:
-        print(yaml.dump(state, default_flow_style=False))
+def edit(args):
+    state = _filter_state(netinfo.show(), args.only)
+
+    if not state['interfaces']:
+        sys.stderr.write('ERROR: No such interface\n')
+        return os.EX_USAGE
+
+    if args.yaml:
+        suffix = '.yaml'
+        txtstate = _make_pretty_yaml(state)
     else:
-        print(json.dumps(state, indent=4, sort_keys=True,
-                         separators=(',', ': ')))
+        suffix = '.json'
+        txtstate = _make_pretty_json(state)
 
+    new_state = _get_edited_state(txtstate, suffix, args.yaml)
+    if not new_state:
+        return os.EX_DATAERR
 
-def _filter_interfaces(state, patterns):
-    """
-    return the states for all interfaces from `state` that match at least one
-    of the provided patterns.
-    """
-    showinterfaces = []
+    print('Applying the following state: ')
+    print_state(new_state, use_yaml=args.yaml)
 
-    for interface in state['interfaces']:
-        for pattern in patterns:
-            if fnmatch.fnmatch(interface['name'], pattern):
-                showinterfaces.append(interface)
-                break
-    return showinterfaces
-
-
-def _filter_state(state, whitelist):
-    if whitelist != '*':
-        patterns = [p for p in whitelist.split(',')]
-        state['interfaces'] = _filter_interfaces(state, patterns)
-    return state
+    netapplier.apply(new_state, verify_change=args.verify)
 
 
 def show(args):
@@ -124,3 +138,113 @@ def apply(args):
     netapplier.apply(state, verify_change=args.verify)
     print('Desired state applied: ')
     print_state(state, use_yaml=use_yaml)
+
+
+def _filter_state(state, whitelist):
+    if whitelist != '*':
+        patterns = [p for p in whitelist.split(',')]
+        state['interfaces'] = _filter_interfaces(state, patterns)
+    return state
+
+
+def _filter_interfaces(state, patterns):
+    """
+    return the states for all interfaces from `state` that match at least one
+    of the provided patterns.
+    """
+    showinterfaces = []
+
+    for interface in state['interfaces']:
+        for pattern in patterns:
+            if fnmatch.fnmatch(interface['name'], pattern):
+                showinterfaces.append(interface)
+                break
+    return showinterfaces
+
+
+def _make_pretty_yaml(state):
+    return yaml.dump(state, default_flow_style=False)
+
+
+def _make_pretty_json(state):
+    return json.dumps(state, indent=4, sort_keys=True, separators=(',', ': '))
+
+
+def _get_edited_state(txtstate, suffix, use_yaml):
+    while True:
+        txtstate = _run_editor(txtstate, suffix)
+
+        if txtstate is None:
+            return None
+
+        new_state, error = _parse_state(txtstate, use_yaml)
+
+        if error:
+            if not _try_edit_again(error):
+                return None
+        else:
+            return new_state
+
+
+def _run_editor(txtstate, suffix):
+    editor = os.environ.get('EDITOR', 'vi')
+    with tempfile.NamedTemporaryFile(suffix=suffix,
+                                     prefix='nmstate-') as statefile:
+        statefile.write(txtstate)
+        statefile.flush()
+
+        try:
+            subprocess.check_call([editor, statefile.name])
+            statefile.seek(0)
+            return statefile.read()
+
+        except subprocess.CalledProcessError:
+            sys.stderr.write('Error running editor, aborting...\n')
+            return None
+
+
+def _parse_state(txtstate, parse_yaml):
+    error = ''
+    state = {}
+    if parse_yaml:
+        try:
+            state = yaml.load(txtstate)
+        except yaml.parser.ParserError as e:
+            error = 'Invalid YAML syntax: %s\n' % e
+        except yaml.parser.ScannerError as e:
+            error = 'Invalid YAML syntax: %s\n' % e
+    else:
+        try:
+            state = json.loads(txtstate)
+        except ValueError as e:
+            error = 'Invalid JSON syntax: %s\n' % e
+
+    if not error and 'interfaces' not in state:
+        error = 'Invalid state: should contain "interfaces" entry.\n'
+
+    return state, error
+
+
+def _try_edit_again(error):
+    """
+    Print error and ask for user feedback. Return True, if the state should be
+    edited again and False otherwise.
+    """
+
+    sys.stderr.write('ERROR: ' + error)
+    response = ''
+    while response not in ('y', 'n'):
+        response = input('Try again? [y,n]:\n'
+                         'y - yes, start editor again\n'
+                         'n - no, throw away my changes\n'
+                         '> ').lower()
+        if response == 'n':
+            return False
+    return True
+
+
+def print_state(state, use_yaml=False):
+    if use_yaml:
+        print(_make_pretty_yaml(state))
+    else:
+        print(_make_pretty_json(state))
