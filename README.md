@@ -72,16 +72,23 @@ Desired/Current state example:
 {
     "interfaces": [
         {
+            "description": "Production Network",
+            "ethernet": {
+                "auto-negotiation": true,
+                "duplex": "full",
+                "speed": 1000
+            },
             "ipv4": {
                 "address": [
                     {
-                        "ip": "192.168.122.1",
+                        "ip": "192.0.2.142",
                         "prefix-length": 24
                     }
                 ],
                 "enabled": true
             },
-            "name": "eth0",
+            "mtu": 1500,
+            "name": "eth3",
             "state": "up",
             "type": "ethernet"
         }
