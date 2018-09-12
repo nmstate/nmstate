@@ -1,0 +1,6 @@
+---
+Architectures:
+  - x86_64:
+      Distributions: ["el7"]
+script:
+    from-file: automation/run-integration-tests.sh
