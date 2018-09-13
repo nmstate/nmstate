@@ -90,12 +90,15 @@ def _filter_interfaces(state, patterns):
     return showinterfaces
 
 
-def show(args):
-    state = netinfo.show()
-    if args.only != '*':
-        patterns = [p for p in args.only.split(',')]
+def _filter_state(state, whitelist):
+    if whitelist != '*':
+        patterns = [p for p in whitelist.split(',')]
         state['interfaces'] = _filter_interfaces(state, patterns)
+    return state
 
+
+def show(args):
+    state = _filter_state(netinfo.show(), args.only)
     print_state(state, use_yaml=args.yaml)
 
 
