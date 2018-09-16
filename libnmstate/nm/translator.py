@@ -44,11 +44,17 @@ class Api2Nm(object):
                 'ethernet': nmclient.NM.SETTING_WIRED_SETTING_NAME,
                 'bond': nmclient.NM.SETTING_BOND_SETTING_NAME,
                 'dummy': nmclient.NM.SETTING_DUMMY_SETTING_NAME,
-                'ovs-bridge': nmclient.NM.SETTING_OVS_BRIDGE_SETTING_NAME,
-                'ovs-port': nmclient.NM.SETTING_OVS_PORT_SETTING_NAME,
-                'ovs-interface': (
-                    nmclient.NM.SETTING_OVS_INTERFACE_SETTING_NAME),
             }
+            try:
+                Api2Nm._iface_types_map.update({
+                    'ovs-bridge': nmclient.NM.SETTING_OVS_BRIDGE_SETTING_NAME,
+                    'ovs-port': nmclient.NM.SETTING_OVS_PORT_SETTING_NAME,
+                    'ovs-interface': (
+                        nmclient.NM.SETTING_OVS_INTERFACE_SETTING_NAME),
+                })
+            except AttributeError:
+                pass
+
         return Api2Nm._iface_types_map
 
     @staticmethod
