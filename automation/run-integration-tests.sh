@@ -2,6 +2,7 @@
 
 EXEC_PATH=$(dirname "$(realpath "$0")")
 PROJECT_PATH="$(dirname $EXEC_PATH)"
+DOCKER_IMAGE="nmstate/centos7-nmstate-dev"
 
 test -t 1 && USE_TTY="-t"
 
@@ -19,9 +20,7 @@ function pyclean {
 
 cd "$EXEC_PATH"
 
-docker build --rm -t local/centos7-nmstate-base .
-
-CONTAINER_ID="$(docker run --privileged -d -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v $PROJECT_PATH:/workspace/nmstate local/centos7-nmstate-base)"
+CONTAINER_ID="$(docker run --privileged -d -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v $PROJECT_PATH:/workspace/nmstate $DOCKER_IMAGE)"
 trap remove_container EXIT
 
 pyclean
