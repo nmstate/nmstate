@@ -60,6 +60,9 @@ def test_iface_admin_state_change(netinfo_nm_mock, netapplier_nm_mock):
                 'ipv4': {
                     'enabled': False,
                 },
+                'ipv6': {
+                    'enabled': False,
+                },
             }
         ]
     }
@@ -73,6 +76,8 @@ def test_iface_admin_state_change(netinfo_nm_mock, netapplier_nm_mock):
     netinfo_nm_mock.ovs.is_ovs_port_type_id.return_value = False
     netinfo_nm_mock.ipv4.get_info.return_value = (
         current_config['interfaces'][0]['ipv4'])
+    netinfo_nm_mock.ipv6.get_info.return_value = (
+        current_config['interfaces'][0]['ipv6'])
 
     desired_config['interfaces'][0]['state'] = 'down'
     netapplier.apply(desired_config)
@@ -131,6 +136,9 @@ def test_edit_existing_bond(netinfo_nm_mock, netapplier_nm_mock):
                 'ipv4': {
                     'enabled': False,
                 },
+                'ipv6': {
+                    'enabled': False,
+                },
             }
         ]
     }
@@ -147,6 +155,8 @@ def test_edit_existing_bond(netinfo_nm_mock, netapplier_nm_mock):
     }
     netinfo_nm_mock.ipv4.get_info.return_value = (
         current_config['interfaces'][0]['ipv4'])
+    netinfo_nm_mock.ipv6.get_info.return_value = (
+        current_config['interfaces'][0]['ipv6'])
 
     desired_config = copy.deepcopy(current_config)
     options = desired_config['interfaces'][0]['link-aggregation']['options']

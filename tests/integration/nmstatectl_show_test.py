@@ -28,6 +28,9 @@ LOOPBACK_JSON_CONFIG = b"""
             "ipv4": {
                 "enabled": false
             },
+            "ipv6": {
+                "enabled": false
+            },
             "mtu": 65536,
             "name": "lo",
             "state": "down",
@@ -36,6 +39,8 @@ LOOPBACK_JSON_CONFIG = b"""
 
 LOOPBACK_YAML_CONFIG = b"""
 - ipv4:
+    enabled: false
+  ipv6:
     enabled: false
   mtu: 65536
   name: lo
