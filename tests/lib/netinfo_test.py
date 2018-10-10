@@ -37,6 +37,9 @@ def test_netinfo_show_generic_iface(nm_mock):
                 'ipv4': {
                     'enabled': False,
                 },
+                'ipv6': {
+                    'enabled': False,
+                },
             }
         ]
     }
@@ -47,6 +50,8 @@ def test_netinfo_show_generic_iface(nm_mock):
     nm_mock.bond.is_bond_type_id.return_value = False
     nm_mock.ipv4.get_info.return_value = (
         current_config['interfaces'][0]['ipv4'])
+    nm_mock.ipv6.get_info.return_value = (
+        current_config['interfaces'][0]['ipv6'])
 
     report = netinfo.show()
 
@@ -70,6 +75,9 @@ def test_netinfo_show_bond_iface(nm_mock):
                 'ipv4': {
                     'enabled': False,
                 },
+                'ipv6': {
+                    'enabled': False,
+                },
             }
         ]
     }
@@ -86,6 +94,8 @@ def test_netinfo_show_bond_iface(nm_mock):
     }
     nm_mock.ipv4.get_info.return_value = (
         current_config['interfaces'][0]['ipv4'])
+    nm_mock.ipv6.get_info.return_value = (
+        current_config['interfaces'][0]['ipv6'])
 
     report = netinfo.show()
 

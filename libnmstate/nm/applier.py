@@ -175,7 +175,7 @@ def _build_connection_profile(iface_desired_state, base_con_profile=None):
 
     settings = [
         ipv4.create_setting(iface_desired_state.get('ipv4')),
-        ipv6.create_setting(),
+        ipv6.create_setting(iface_desired_state.get('ipv6')),
     ]
     if base_con_profile:
         con_setting = connection.duplicate_settings(base_con_profile)

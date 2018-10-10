@@ -15,10 +15,46 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-from . import nmclient
+import socket
+
+from libnmstate.nm import nmclient
 
 
-def create_setting():
-    setting_ipv6 = nmclient.NM.SettingIP6Config.new()
-    setting_ipv6.props.method = nmclient.NM.SETTING_IP6_CONFIG_METHOD_IGNORE
-    return setting_ipv6
+def get_info(active_connection):
+    info = {'enabled': False}
+    if active_connection is None:
+        return info
+
+    ipconfig = active_connection.get_ip6_config()
+    if ipconfig is None:
+        return info
+
+    addresses = [
+        {
+            'ip': address.get_address(),
+            'prefix-length': int(address.get_prefix())
+        }
+        for address in ipconfig.get_addresses()
+    ]
+    if not addresses:
+        return info
+
+    info['enabled'] = True
+    info['address'] = addresses
+    return info
+
+
+def create_setting(config):
+    setting_ip = nmclient.NM.SettingIP6Config.new()
+    if config and config.get('enabled') and config.get('address'):
+        setting_ip.props.method = (
+            nmclient.NM.SETTING_IP6_CONFIG_METHOD_MANUAL)
+        for address in config['address']:
+            naddr = nmclient.NM.IPAddress.new(socket.AF_INET6,
+                                              address['ip'],
+                                              address['prefix-length'])
+            setting_ip.add_address(naddr)
+    else:
+        setting_ip.props.method = (
+            nmclient.NM.SETTING_IP6_CONFIG_METHOD_IGNORE)
+    return setting_ip
