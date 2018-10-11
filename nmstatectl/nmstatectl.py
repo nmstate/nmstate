@@ -61,8 +61,9 @@ def setup_subcommand_set(subparsers):
                             'stdin is used when no file is specified.',
                             nargs='?')
     parser_set.add_argument(
-        '--verify', action='store_true',
-        help='Verify that the desired state is now part of the current state.'
+        '--no-verify', action='store_false', dest='verify', default=True,
+        help='Do not verify that the state was completely set and disable '
+        'rollback to previous state.'
     )
     parser_set.set_defaults(func=apply)
 
