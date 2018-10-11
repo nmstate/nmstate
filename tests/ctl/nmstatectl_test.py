@@ -57,7 +57,7 @@ def test_run_ctl_directly_show_empty():
     nmstatectl.main()
 
 
-@mock.patch('sys.argv', ['nmstatectl', 'show', '--only', 'eth1'])
+@mock.patch('sys.argv', ['nmstatectl', 'show', 'eth1'])
 @mock.patch.object(
     nmstatectl.netinfo, 'show', lambda: json.loads(LO_JSON_STATE))
 @mock.patch('nmstatectl.nmstatectl.sys.stdout', new_callable=six.StringIO)
@@ -66,7 +66,7 @@ def test_run_ctl_directly_show_only_empty(mock_stdout):
     assert mock_stdout.getvalue() == EMPTY_JSON_STATE
 
 
-@mock.patch('sys.argv', ['nmstatectl', 'show', '--only', 'lo'])
+@mock.patch('sys.argv', ['nmstatectl', 'show', 'lo'])
 @mock.patch.object(
     nmstatectl.netinfo, 'show', lambda: json.loads(LO_JSON_STATE))
 @mock.patch('nmstatectl.nmstatectl.sys.stdout', new_callable=six.StringIO)
