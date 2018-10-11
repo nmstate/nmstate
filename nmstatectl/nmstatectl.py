@@ -70,7 +70,7 @@ def setup_subcommand_show(subparsers):
     parser_show.add_argument('--yaml', help='Output as yaml', default=False,
                              action='store_true')
     parser_show.add_argument(
-        '--only', default='*',
+        'only', default='*', nargs='?', metavar='interfaces',
         help='Show only specified interfaces (comma-separated)'
     )
 

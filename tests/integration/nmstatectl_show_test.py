@@ -15,6 +15,9 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
+import json
+
+
 from .testlib import cmd as libcmd
 
 
@@ -64,6 +67,9 @@ def test_show_command_with_no_flags():
     assert_rc(rc, RC_SUCCESS, ret)
     assert LOOPBACK_JSON_CONFIG in out
 
+    state = json.loads(out)
+    assert len(state['interfaces']) > 1
+
 
 def test_show_command_with_yaml_format():
     ret = libcmd.exec_cmd(SHOW_CMD + ['--yaml'])
@@ -71,6 +77,27 @@ def test_show_command_with_yaml_format():
 
     assert_rc(rc, RC_SUCCESS, ret)
     assert LOOPBACK_YAML_CONFIG in out
+
+
+def test_show_command_only_lo():
+    ret = libcmd.exec_cmd(SHOW_CMD + ['lo'])
+    rc, out, err = ret
+
+    assert_rc(rc, RC_SUCCESS, ret)
+
+    state = json.loads(out)
+    assert len(state['interfaces']) == 1
+    assert state['interfaces'][0]['name'] == 'lo'
+
+
+def test_show_command_only_non_existing():
+    ret = libcmd.exec_cmd(SHOW_CMD + ['non_existing_interface'])
+    rc, out, err = ret
+
+    assert_rc(rc, RC_SUCCESS, ret)
+
+    state = json.loads(out)
+    assert len(state['interfaces']) == 0
 
 
 def assert_rc(actual, expected, return_tuple):
