@@ -80,7 +80,7 @@ def test_iface_admin_state_change(netinfo_nm_mock, netapplier_nm_mock):
         current_config['interfaces'][0]['ipv6'])
 
     desired_config['interfaces'][0]['state'] = 'down'
-    netapplier.apply(desired_config)
+    netapplier.apply(desired_config, verify_change=False)
 
     netapplier_nm_mock.applier.set_ifaces_admin_state.assert_has_calls(
         [
@@ -110,7 +110,7 @@ def test_add_new_bond(netinfo_nm_mock, netapplier_nm_mock):
         ]
     }
 
-    netapplier.apply(desired_config)
+    netapplier.apply(desired_config, verify_change=False)
 
     m_prepare = netapplier_nm_mock.applier.prepare_edited_ifaces_configuration
     m_prepare.assert_called_once_with([])
@@ -162,7 +162,7 @@ def test_edit_existing_bond(netinfo_nm_mock, netapplier_nm_mock):
     options = desired_config['interfaces'][0]['link-aggregation']['options']
     options['miimon'] = 200
 
-    netapplier.apply(desired_config)
+    netapplier.apply(desired_config, verify_change=False)
 
     m_prepare = netapplier_nm_mock.applier.prepare_edited_ifaces_configuration
     m_prepare.assert_called_once_with(desired_config['interfaces'])
