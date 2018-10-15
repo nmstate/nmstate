@@ -16,7 +16,10 @@ RUN (cd /lib/systemd/system/sysinit.target.wants/; for i in *; do [ $i == \
 RUN yum -y install iproute NetworkManager epel-release git cairo* && \
     yum -y install python2-pip gcc python-devel gobject-introspection-devel && \
     yum clean all && \
-    pip install -U pip setuptools pbr tox
+    pip install -U pip setuptools pbr tox && \
+    \
+    echo -e "[logging]\nlevel=TRACE\ndomains=ALL\n" > /etc/NetworkManager/conf.d/97-docker-build.conf && \
+    sed -i 's/#RateLimitInterval=30s/RateLimitInterval=0/ ; s/#RateLimitBurst=1000/RateLimitBurst=0/' /etc/systemd/journald.conf
 
 VOLUME [ "/sys/fs/cgroup" ]
 
