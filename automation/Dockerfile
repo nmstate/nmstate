@@ -13,7 +13,7 @@ RUN (cd /lib/systemd/system/sysinit.target.wants/; for i in *; do [ $i == \
     rm -f /lib/systemd/system/basic.target.wants/*;\
     rm -f /lib/systemd/system/anaconda.target.wants/*;
 
-RUN yum -y install NetworkManager epel-release git cairo* && \
+RUN yum -y install iproute NetworkManager epel-release git cairo* && \
     yum -y install python2-pip gcc python-devel gobject-introspection-devel && \
     yum clean all && \
     pip install -U pip setuptools pbr tox
