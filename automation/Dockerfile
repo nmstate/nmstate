@@ -18,6 +18,7 @@ RUN yum -y install iproute NetworkManager epel-release git cairo* && \
     yum clean all && \
     pip install -U pip setuptools pbr tox && \
     \
+    install -o root -g root -d /etc/sysconfig/network-scripts && \
     echo -e "[logging]\nlevel=TRACE\ndomains=ALL\n" > /etc/NetworkManager/conf.d/97-docker-build.conf && \
     sed -i 's/#RateLimitInterval=30s/RateLimitInterval=0/ ; s/#RateLimitBurst=1000/RateLimitBurst=0/' /etc/systemd/journald.conf
 
