@@ -310,6 +310,19 @@ def assert_ifaces_state(ifaces_desired_state, ifaces_current_state):
         iface_cstate = ifaces_current_state[ifname]
         iface_dstate = _canonicalize_desired_state(
             ifaces_desired_state[ifname], iface_cstate)
+
+        _cleanup_iface_ethernet_state_sanitize(iface_dstate, iface_cstate)
+
         if iface_dstate != iface_cstate:
             raise DesiredStateIsNotCurrentError(
                 'desired: {}\ncurrent: {}'.format(iface_dstate, iface_cstate))
+
+
+def _cleanup_iface_ethernet_state_sanitize(desired_state, current_state):
+    ethernet_desired_state = desired_state.get('ethernet')
+    if ethernet_desired_state:
+        ethernet_current_state = current_state.get('ethernet', {})
+        for key in ('auto-negotiation', 'speed', 'duplex'):
+            if ethernet_desired_state.get(key, None) is None:
+                ethernet_desired_state.pop(key, None)
+                ethernet_current_state.pop(key, None)
