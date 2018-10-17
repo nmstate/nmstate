@@ -22,6 +22,7 @@ from libnmstate.schema import Constants
 from .testlib import cmd as libcmd
 
 
+SET_CMD = ['nmstatectl', 'set']
 SHOW_CMD = ['nmstatectl', 'show']
 
 RC_SUCCESS = 0
@@ -48,6 +49,20 @@ LOOPBACK_YAML_CONFIG = b"""- name: lo
   ipv6:
     enabled: false
   mtu: 65536"""
+
+ETH1_YAML_CONFIG = b"""interfaces:
+- name: eth1
+  state: up
+  type: ethernet
+  mtu: 1500
+  ipv4:
+    address:
+    - ip: 192.0.2.250
+      prefix-length: 24
+    enabled: true
+  ipv6:
+    enabled: false
+"""
 
 
 def test_missing_operation():
@@ -97,6 +112,13 @@ def test_show_command_only_non_existing():
 
     state = json.loads(out)
     assert len(state[Constants.INTERFACES]) == 0
+
+
+def test_set_command_with_yaml_format():
+    ret = libcmd.exec_cmd(SET_CMD, stdin=ETH1_YAML_CONFIG)
+    rc, out, err = ret
+
+    assert_rc(rc, RC_SUCCESS, ret)
 
 
 def assert_rc(actual, expected, return_tuple):
