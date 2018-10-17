@@ -84,6 +84,15 @@ def get_info(device):
     except AttributeError:
         pass
 
+    if device.get_device_type() == nmclient.NM.DeviceType.ETHERNET:
+        ethernet = _get_ethernet_info(device, iface)
+        if ethernet:
+            info['ethernet'] = ethernet
+
+    return info
+
+
+def _get_ethernet_info(device, iface):
     ethernet = {}
     try:
         speed = int(device.get_speed())
@@ -91,20 +100,13 @@ def get_info(device):
             ethernet['speed'] = speed
     except AttributeError:
         pass
-
     ethtool_results = minimal_ethtool(iface)
     auto_setting = ethtool_results['auto-negotiation']
-
     if auto_setting is True:
         ethernet['auto-negotiation'] = True
     elif auto_setting is False:
         ethernet['auto-negotiation'] = False
-
     duplex_setting = ethtool_results['duplex']
     if duplex_setting != 'unknown':
         ethernet['duplex'] = duplex_setting
-
-    if ethernet:
-        info['ethernet'] = ethernet
-
-    return info
+    return ethernet
