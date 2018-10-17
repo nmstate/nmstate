@@ -136,7 +136,11 @@ def test_edit_existing_ifaces_with_profile(nm_device_mock, nm_connection_mock):
     nm.applier.edit_existing_ifaces(con_profiles)
 
     nm_connection_mock.commit_profile.assert_has_calls(
-        [mock.call(con_profiles[0]), mock.call(con_profiles[1])])
+        [mock.call(con_profiles[0],
+                   nmdev=nm_device_mock.get_device_by_name.return_value),
+         mock.call(con_profiles[1],
+                   nmdev=nm_device_mock.get_device_by_name.return_value)]
+    )
 
 
 def test_edit_existing_ifaces_without_profile(nm_device_mock,

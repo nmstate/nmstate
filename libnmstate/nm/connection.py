@@ -68,9 +68,9 @@ def update_profile(base_profile, new_profile):
     base_profile.replace_settings_from_connection(new_profile)
 
 
-def commit_profile(connection_profile, save_to_disk=True):
+def commit_profile(connection_profile, save_to_disk=True, nmdev=None):
     mainloop = nmclient.mainloop()
-    user_data = mainloop
+    user_data = mainloop, nmdev
     mainloop.push_action(
         connection_profile.commit_changes_async,
         save_to_disk,
@@ -81,14 +81,16 @@ def commit_profile(connection_profile, save_to_disk=True):
 
 
 def _commit_changes_callback(src_object, result, user_data):
-    mainloop = user_data
+    mainloop, nmdev = user_data
     try:
         success = src_object.commit_changes_finish(result)
     except Exception as e:
         if mainloop.is_action_canceled(e):
             logging.debug('Connection update aborted: error=%s', e)
         else:
-            mainloop.quit('Connection update failed: error={}'.format(e))
+            mainloop.quit(
+                'Connection update failed: error={}, dev={}/{}'.format(
+                    e, nmdev.props.interface, nmdev.props.state))
         return
 
     devname = src_object.get_interface_name()

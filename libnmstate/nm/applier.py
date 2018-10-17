@@ -56,7 +56,7 @@ def edit_existing_ifaces(con_profiles):
         if nmdev:
             cur_con_profile = connection.get_device_connection(nmdev)
         if cur_con_profile:
-            connection.commit_profile(connection_profile)
+            connection.commit_profile(connection_profile, nmdev=nmdev)
         else:
             # Missing connection, attempting to create a new one.
             connection.add_profile(connection_profile, save_to_disk=True)
