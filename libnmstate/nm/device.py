@@ -52,7 +52,8 @@ def _active_connection_callback(src_object, result, user_data):
         mainloop.quit('Connection activation failed: error=unknown')
     else:
         devname = act_con.props.connection.get_interface_name()
-        logging.debug('Connection activation succeeded: dev=%s', devname)
+        logging.debug('Connection activation succeeded: dev=%s, con-state=%s',
+                      devname, act_con.props.state)
         mainloop.execute_next_action()
 
 

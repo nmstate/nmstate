@@ -83,7 +83,7 @@ def test_commit_profile(mainloop_mock):
         save_to_disk,
         mainloop_mock.cancellable,
         nm.connection._commit_changes_callback,
-        mainloop_mock,
+        (mainloop_mock, None),
     )
 
 
