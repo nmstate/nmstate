@@ -20,7 +20,7 @@ import re
 import subprocess
 
 
-def exec_cmd(cmd, env=None):
+def exec_cmd(cmd, env=None, stdin=None):
     """
     Execute cmd in an external process, collect its output and returncode
 
@@ -34,10 +34,15 @@ def exec_cmd(cmd, env=None):
     logging.debug(command_log_line(cmd))
 
     p = subprocess.Popen(
-        cmd, close_fds=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-        env=env)
+        cmd,
+        close_fds=True,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        env=env
+    )
 
-    out, err = p.communicate()
+    out, err = p.communicate(stdin)
 
     logging.debug(_retcode_log_line(p.returncode, err=err))
 
