@@ -26,29 +26,27 @@ SHOW_CMD = ['nmstatectl', 'show']
 RC_SUCCESS = 0
 RC_FAIL2 = 2
 
-LOOPBACK_JSON_CONFIG = b"""
-        {
+LOOPBACK_JSON_CONFIG = b"""        {
             "name": "lo",
+            "type": "unknown",
+            "state": "down",
             "ipv4": {
                 "enabled": false
             },
             "ipv6": {
                 "enabled": false
             },
-            "mtu": 65536,
-            "state": "down",
-            "type": "unknown"
+            "mtu": 65536
         }"""
 
-LOOPBACK_YAML_CONFIG = b"""
-- name: lo
+LOOPBACK_YAML_CONFIG = b"""- name: lo
+  type: unknown
+  state: down
   ipv4:
     enabled: false
   ipv6:
     enabled: false
-  mtu: 65536
-  state: down
-  type: unknown"""
+  mtu: 65536"""
 
 
 def test_missing_operation():

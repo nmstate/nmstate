@@ -29,8 +29,8 @@ LO_JSON_STATE = """{
     "interfaces": [
         {
             "name": "lo",
-            "state": "down",
-            "type": "unknown"
+            "type": "unknown",
+            "state": "down"
         }
     ]
 }

@@ -69,7 +69,11 @@ def order_state(state):
 def order_iface_state(iface_state):
     ordered_state = OrderedDict()
 
-    ordered_state['name'] = iface_state.pop('name')
+    for setting in ('name', 'type', 'state'):
+        try:
+            ordered_state[setting] = iface_state.pop(setting)
+        except KeyError:
+            pass
 
     for key, value in order_dict(iface_state).items():
         ordered_state[key] = value
