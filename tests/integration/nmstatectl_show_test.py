@@ -28,6 +28,7 @@ RC_FAIL2 = 2
 
 LOOPBACK_JSON_CONFIG = b"""
         {
+            "name": "lo",
             "ipv4": {
                 "enabled": false
             },
@@ -35,18 +36,17 @@ LOOPBACK_JSON_CONFIG = b"""
                 "enabled": false
             },
             "mtu": 65536,
-            "name": "lo",
             "state": "down",
             "type": "unknown"
         }"""
 
 LOOPBACK_YAML_CONFIG = b"""
-- ipv4:
+- name: lo
+  ipv4:
     enabled: false
   ipv6:
     enabled: false
   mtu: 65536
-  name: lo
   state: down
   type: unknown"""
 

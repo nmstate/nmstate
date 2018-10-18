@@ -30,6 +30,7 @@ import yaml
 
 from libnmstate import netapplier
 from libnmstate import netinfo
+from nmstatectl.prettystate import PrettyState
 
 
 def main():
@@ -95,12 +96,14 @@ def edit(args):
         sys.stderr.write('ERROR: No such interface\n')
         return os.EX_USAGE
 
+    pretty_state = PrettyState(state)
+
     if args.yaml:
         suffix = '.yaml'
-        txtstate = _make_pretty_yaml(state)
+        txtstate = pretty_state.yaml
     else:
         suffix = '.json'
-        txtstate = _make_pretty_json(state)
+        txtstate = pretty_state.json
 
     new_state = _get_edited_state(txtstate, suffix, args.yaml)
     if not new_state:
@@ -160,14 +163,6 @@ def _filter_interfaces(state, patterns):
                 showinterfaces.append(interface)
                 break
     return showinterfaces
-
-
-def _make_pretty_yaml(state):
-    return yaml.dump(state, default_flow_style=False)
-
-
-def _make_pretty_json(state):
-    return json.dumps(state, indent=4, sort_keys=True, separators=(',', ': '))
 
 
 def _get_edited_state(txtstate, suffix, use_yaml):
@@ -244,7 +239,8 @@ def _try_edit_again(error):
 
 
 def print_state(state, use_yaml=False):
+    state = PrettyState(state)
     if use_yaml:
-        print(_make_pretty_yaml(state))
+        print(state.yaml)
     else:
-        print(_make_pretty_json(state))
+        print(state.json)
