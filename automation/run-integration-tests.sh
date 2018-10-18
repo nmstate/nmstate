@@ -33,6 +33,7 @@ docker network create $NET0 || true
 docker network create $NET1 || true
 docker network connect $NET0 $CONTAINER_ID
 docker network connect $NET1 $CONTAINER_ID
+docker exec $USE_TTY -i $CONTAINER_ID /bin/bash -c 'ip addr flush eth1 && ip addr flush eth2'
 
 pyclean
 docker exec $USE_TTY -i $CONTAINER_ID /bin/bash -c 'cd /workspace/nmstate && tox -e check-integ-py27'
