@@ -27,6 +27,7 @@ cd "$EXEC_PATH"
 
 CONTAINER_ID="$(docker run --privileged -d -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v $PROJECT_PATH:/workspace/nmstate $DOCKER_IMAGE)"
 trap remove_container EXIT
+docker exec $USE_TTY -i $CONTAINER_ID /bin/bash -c 'systemctl start dbus.socket'
 docker exec $USE_TTY -i $CONTAINER_ID /bin/bash -c 'systemctl stop NetworkManager'
 
 docker network create $NET0 || true
