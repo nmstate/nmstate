@@ -24,6 +24,7 @@ function pyclean {
 }
 
 cd "$EXEC_PATH"
+docker --version && cat /etc/resolv.conf && ping -c 1 github.com
 
 CONTAINER_ID="$(docker run --privileged -d -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v $PROJECT_PATH:/workspace/nmstate $DOCKER_IMAGE)"
 trap remove_container EXIT
