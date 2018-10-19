@@ -98,15 +98,23 @@ def _get_ethernet_info(device, iface):
         speed = int(device.get_speed())
         if speed > 0:
             ethernet['speed'] = speed
+        else:
+            return None
     except AttributeError:
-        pass
+        return None
+
     ethtool_results = minimal_ethtool(iface)
     auto_setting = ethtool_results['auto-negotiation']
     if auto_setting is True:
         ethernet['auto-negotiation'] = True
     elif auto_setting is False:
         ethernet['auto-negotiation'] = False
+    else:
+        return None
+
     duplex_setting = ethtool_results['duplex']
-    if duplex_setting != 'unknown':
+    if duplex_setting == 'unknown':
+        return None
+    else:
         ethernet['duplex'] = duplex_setting
     return ethernet
