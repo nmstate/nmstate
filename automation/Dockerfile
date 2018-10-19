@@ -16,7 +16,16 @@ RUN (cd /lib/systemd/system/sysinit.target.wants/; for i in *; do [ $i == \
 RUN yum -y install iproute NetworkManager epel-release git cairo* && \
     yum -y install python2-pip gcc python-devel gobject-introspection-devel && \
     yum clean all && \
-    pip install -U pip setuptools pbr tox && \
+    pip install -U \
+      pip \
+      setuptools \
+      pbr \
+      tox \
+      \
+      pluggy==0.6 \
+      PyGObject \
+      pytest-cov \
+      pytest==3.5.1 && \
     \
     install -o root -g root -d /etc/sysconfig/network-scripts && \
     echo -e "[logging]\nlevel=TRACE\ndomains=ALL\n" > /etc/NetworkManager/conf.d/97-docker-build.conf && \

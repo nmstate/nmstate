@@ -37,4 +37,14 @@ docker exec $USE_TTY -i $CONTAINER_ID /bin/bash -c 'ip addr flush eth1 && ip add
 docker exec $USE_TTY -i $CONTAINER_ID /bin/bash -c 'nmcli dev; nmcli con; ip addr; ip route; cat /etc/resolv.conf; ping -c 3 github.com || true'
 
 pyclean
-docker exec $USE_TTY -i $CONTAINER_ID /bin/bash -c 'cd /workspace/nmstate && tox -e check-integ-py27'
+docker exec $USE_TTY -i $CONTAINER_ID /bin/bash -c '
+  cd /workspace/nmstate &&
+  pip install . &&
+  pytest \
+    --log-level=DEBUG \
+    --durations=5 \
+    --cov=libnmstate \
+    --cov=nmstatectl \
+    --cov-report=html:htmlcov-py27 \
+    tests/integration
+'
