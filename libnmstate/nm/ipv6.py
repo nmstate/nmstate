@@ -17,7 +17,7 @@
 
 import socket
 
-from libnmstate.nm import nmclient
+from libnmstate.nm import nmclient, iplib
 
 
 def get_info(active_connection):
@@ -44,16 +44,29 @@ def get_info(active_connection):
     return info
 
 
+def is_link_local(address):
+    return iplib.is_subnet_of(address, iplib.IPV6_LINK_LOCAL_NETWORK)
+
+
 def create_setting(config):
     setting_ip = nmclient.NM.SettingIP6Config.new()
     if config and config.get('enabled') and config.get('address'):
         setting_ip.props.method = (
             nmclient.NM.SETTING_IP6_CONFIG_METHOD_MANUAL)
+        has_static_addr = False
         for address in config['address']:
+            if is_link_local(str("%s/%d" % (address['ip'],
+                                        address['prefix-length']))):
+                continue
+            has_static_addr = True
             naddr = nmclient.NM.IPAddress.new(socket.AF_INET6,
                                               address['ip'],
                                               address['prefix-length'])
             setting_ip.add_address(naddr)
+
+        if not has_static_addr:
+            setting_ip.props.method = (
+                nmclient.NM.SETTING_IP6_CONFIG_METHOD_IGNORE)
     else:
         setting_ip.props.method = (
             nmclient.NM.SETTING_IP6_CONFIG_METHOD_IGNORE)

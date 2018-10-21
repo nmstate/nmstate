@@ -15,6 +15,7 @@ RUN (cd /lib/systemd/system/sysinit.target.wants/; for i in *; do [ $i == \
 
 RUN yum -y install iproute NetworkManager epel-release git cairo* && \
     yum -y install python2-pip gcc python-devel gobject-introspection-devel && \
+    yum -y isntall python-ipaddress && \
     yum clean all && \
     pip install -U pip setuptools pbr tox && \
     \
