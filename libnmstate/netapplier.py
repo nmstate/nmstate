@@ -26,6 +26,7 @@ from libnmstate import netinfo
 from libnmstate import nm
 from libnmstate import validator
 from libnmstate.nm import nmclient
+from libnmstate.prettystate import format_desired_current_state_diff
 
 
 class ApplyError(Exception):
@@ -303,8 +304,9 @@ def assert_ifaces_state(ifaces_desired_state, ifaces_current_state):
 
     if not (set(ifaces_desired_state) <= set(ifaces_current_state)):
         raise DesiredStateIsNotCurrentError(
-            'desired: {}\ncurrent: {}'.format(
-                ifaces_desired_state, ifaces_current_state))
+            format_desired_current_state_diff(ifaces_desired_state,
+                                              ifaces_current_state)
+        )
 
     for ifname in ifaces_desired_state:
         iface_cstate = ifaces_current_state[ifname]
@@ -315,7 +317,9 @@ def assert_ifaces_state(ifaces_desired_state, ifaces_current_state):
 
         if iface_dstate != iface_cstate:
             raise DesiredStateIsNotCurrentError(
-                'desired: {}\ncurrent: {}'.format(iface_dstate, iface_cstate))
+                format_desired_current_state_diff(iface_dstate,
+                                                  iface_cstate)
+            )
 
 
 def _cleanup_iface_ethernet_state_sanitize(desired_state, current_state):

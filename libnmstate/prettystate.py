@@ -16,6 +16,7 @@
 #
 
 from collections import OrderedDict
+import difflib
 import json
 from operator import itemgetter
 
@@ -23,9 +24,34 @@ from operator import itemgetter
 import yaml
 
 
+def format_desired_current_state_diff(desired_state, current_state):
+    pretty_desired_state = PrettyState(desired_state).yaml
+    pretty_current_state = PrettyState(current_state).yaml
+
+    diff = ''.join(difflib.unified_diff(
+        pretty_desired_state.splitlines(True),
+        pretty_current_state.splitlines(True),
+        fromfile='desired',
+        tofile='current', n=0))
+    return (
+        '\n'
+        'desired\n'
+        '=======\n'
+        '{}\n'
+        'current\n'
+        '=======\n'
+        '{}\n'
+        'difference\n'
+        '==========\n'
+        '{}\n'.format(
+            pretty_desired_state,
+            pretty_current_state,
+            diff)
+    )
+
+
 class PrettyState(object):
     def __init__(self, state):
-
         yaml.add_representer(OrderedDict, represent_ordereddict)
         self.state = order_state(state)
 
@@ -56,12 +82,16 @@ def represent_ordereddict(dumper, data):
 
 
 def order_state(state):
-    iface_states = state.pop('interfaces', [])
-    state['interfaces'] = [
-        order_iface_state(iface_state) for iface_state in sorted(
-            iface_states, key=itemgetter('name')
-        )
-    ]
+    iface_states = state.pop('interfaces', None)
+
+    state = order_iface_state(state)
+
+    if iface_states is not None:
+        state['interfaces'] = [
+            order_iface_state(iface_state) for iface_state in sorted(
+                iface_states, key=itemgetter('name')
+            )
+        ]
 
     return state
 
