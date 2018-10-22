@@ -30,7 +30,7 @@ import yaml
 
 from libnmstate import netapplier
 from libnmstate import netinfo
-from nmstatectl.prettystate import PrettyState
+from libnmstate.prettystate import PrettyState
 
 
 def main():
