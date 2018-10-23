@@ -20,6 +20,7 @@ import jsonschema as js
 
 from . import nm
 from . import schema
+from .schema import Constants
 
 
 class LinkAggregationSlavesMissingError(Exception):
@@ -39,7 +40,7 @@ def verify(data, validation_schema=schema.ifaces_schema):
 
 
 def verify_capabilities(state, capabilities):
-    verify_interface_capabilities(state['interfaces'], capabilities)
+    verify_interface_capabilities(state[Constants.INTERFACES], capabilities)
 
 
 def verify_interface_capabilities(ifaces_state, capabilities):

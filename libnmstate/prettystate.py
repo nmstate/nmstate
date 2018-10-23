@@ -24,6 +24,8 @@ from operator import itemgetter
 
 import yaml
 
+from libnmstate.schema import Constants
+
 
 def format_desired_current_state_diff(desired_state, current_state):
     pretty_desired_state = PrettyState(desired_state).yaml
@@ -83,12 +85,12 @@ def represent_ordereddict(dumper, data):
 
 
 def order_state(state):
-    iface_states = state.pop('interfaces', None)
+    iface_states = state.pop(Constants.INTERFACES, None)
 
     state = order_iface_state(state)
 
     if iface_states is not None:
-        state['interfaces'] = [
+        state[Constants.INTERFACES] = [
             order_iface_state(iface_state) for iface_state in sorted(
                 iface_states, key=itemgetter('name')
             )

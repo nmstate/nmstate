@@ -18,6 +18,7 @@ from __future__ import absolute_import
 
 from libnmstate import nm
 from libnmstate import validator
+from libnmstate.schema import Constants
 
 
 def show(include_status_data=False):
@@ -30,7 +31,7 @@ def show(include_status_data=False):
     When include_status_data is set, both are reported, otherwise only the
     configuration data is reported.
     """
-    report = {'interfaces': interfaces()}
+    report = {Constants.INTERFACES: interfaces()}
     if include_status_data:
         report['capabilities'] = capabilities()
 
