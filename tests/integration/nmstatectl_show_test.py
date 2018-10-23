@@ -17,6 +17,7 @@
 
 import json
 
+from libnmstate.schema import Constants
 
 from .testlib import cmd as libcmd
 
@@ -66,7 +67,7 @@ def test_show_command_with_no_flags():
     assert LOOPBACK_JSON_CONFIG in out
 
     state = json.loads(out)
-    assert len(state['interfaces']) > 1
+    assert len(state[Constants.INTERFACES]) > 1
 
 
 def test_show_command_with_yaml_format():
@@ -84,8 +85,8 @@ def test_show_command_only_lo():
     assert_rc(rc, RC_SUCCESS, ret)
 
     state = json.loads(out)
-    assert len(state['interfaces']) == 1
-    assert state['interfaces'][0]['name'] == 'lo'
+    assert len(state[Constants.INTERFACES]) == 1
+    assert state[Constants.INTERFACES][0]['name'] == 'lo'
 
 
 def test_show_command_only_non_existing():
@@ -95,7 +96,7 @@ def test_show_command_only_non_existing():
     assert_rc(rc, RC_SUCCESS, ret)
 
     state = json.loads(out)
-    assert len(state['interfaces']) == 0
+    assert len(state[Constants.INTERFACES]) == 0
 
 
 def assert_rc(actual, expected, return_tuple):

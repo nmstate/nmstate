@@ -21,8 +21,10 @@ import pytest
 from .compat import mock
 
 from libnmstate import netapplier
+from libnmstate.schema import Constants
 
 
+INTERFACES = Constants.INTERFACES
 BOND_TYPE = 'bond'
 OVS_BR_TYPE = 'ovs-bridge'
 BOND_NAME = 'bond99'
@@ -52,7 +54,7 @@ def netinfo_nm_mock():
 
 def test_iface_admin_state_change(netinfo_nm_mock, netapplier_nm_mock):
     current_config = {
-        'interfaces': [
+        INTERFACES: [
             {
                 'name': 'foo',
                 'type': 'unknown',
@@ -70,22 +72,22 @@ def test_iface_admin_state_change(netinfo_nm_mock, netapplier_nm_mock):
 
     netinfo_nm_mock.device.list_devices.return_value = ['one-item']
     netinfo_nm_mock.translator.Nm2Api.get_common_device_info.return_value = (
-        current_config['interfaces'][0])
+        current_config[INTERFACES][0])
     netinfo_nm_mock.bond.is_bond_type_id.return_value = False
     netinfo_nm_mock.ovs.is_ovs_bridge_type_id.return_value = False
     netinfo_nm_mock.ovs.is_ovs_port_type_id.return_value = False
     netinfo_nm_mock.ipv4.get_info.return_value = (
-        current_config['interfaces'][0]['ipv4'])
+        current_config[INTERFACES][0]['ipv4'])
     netinfo_nm_mock.ipv6.get_info.return_value = (
-        current_config['interfaces'][0]['ipv6'])
+        current_config[INTERFACES][0]['ipv6'])
 
-    desired_config['interfaces'][0]['state'] = 'down'
+    desired_config[INTERFACES][0]['state'] = 'down'
     netapplier.apply(desired_config, verify_change=False)
 
     netapplier_nm_mock.applier.set_ifaces_admin_state.assert_has_calls(
         [
             mock.call([]),
-            mock.call(desired_config['interfaces'])
+            mock.call(desired_config[INTERFACES])
         ]
     )
 
@@ -94,7 +96,7 @@ def test_add_new_bond(netinfo_nm_mock, netapplier_nm_mock):
     netinfo_nm_mock.device.list_devices.return_value = []
 
     desired_config = {
-        'interfaces': [
+        INTERFACES: [
             {
                 'name': 'bond99',
                 'type': BOND_TYPE,
@@ -116,12 +118,12 @@ def test_add_new_bond(netinfo_nm_mock, netapplier_nm_mock):
     m_prepare.assert_called_once_with([])
 
     m_prepare = netapplier_nm_mock.applier.prepare_new_ifaces_configuration
-    m_prepare.assert_called_once_with(desired_config['interfaces'])
+    m_prepare.assert_called_once_with(desired_config[INTERFACES])
 
 
 def test_edit_existing_bond(netinfo_nm_mock, netapplier_nm_mock):
     current_config = {
-        'interfaces': [
+        INTERFACES: [
             {
                 'name': 'bond99',
                 'type': BOND_TYPE,
@@ -145,27 +147,27 @@ def test_edit_existing_bond(netinfo_nm_mock, netapplier_nm_mock):
 
     netinfo_nm_mock.device.list_devices.return_value = ['one-item']
     netinfo_nm_mock.translator.Nm2Api.get_common_device_info.return_value = {
-        'name': current_config['interfaces'][0]['name'],
-        'type': current_config['interfaces'][0]['type'],
-        'state': current_config['interfaces'][0]['state'],
+        'name': current_config[INTERFACES][0]['name'],
+        'type': current_config[INTERFACES][0]['type'],
+        'state': current_config[INTERFACES][0]['state'],
     }
     netinfo_nm_mock.bond.is_bond_type_id.return_value = True
     netinfo_nm_mock.translator.Nm2Api.get_bond_info.return_value = {
-        'link-aggregation': current_config['interfaces'][0]['link-aggregation']
+        'link-aggregation': current_config[INTERFACES][0]['link-aggregation']
     }
     netinfo_nm_mock.ipv4.get_info.return_value = (
-        current_config['interfaces'][0]['ipv4'])
+        current_config[INTERFACES][0]['ipv4'])
     netinfo_nm_mock.ipv6.get_info.return_value = (
-        current_config['interfaces'][0]['ipv6'])
+        current_config[INTERFACES][0]['ipv6'])
 
     desired_config = copy.deepcopy(current_config)
-    options = desired_config['interfaces'][0]['link-aggregation']['options']
+    options = desired_config[INTERFACES][0]['link-aggregation']['options']
     options['miimon'] = 200
 
     netapplier.apply(desired_config, verify_change=False)
 
     m_prepare = netapplier_nm_mock.applier.prepare_edited_ifaces_configuration
-    m_prepare.assert_called_once_with(desired_config['interfaces'])
+    m_prepare.assert_called_once_with(desired_config[INTERFACES])
 
     m_prepare = netapplier_nm_mock.applier.prepare_new_ifaces_configuration
     m_prepare.assert_called_once_with([])

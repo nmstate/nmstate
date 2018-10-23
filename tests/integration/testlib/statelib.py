@@ -16,9 +16,10 @@
 #
 
 from libnmstate import netinfo
+from libnmstate.schema import Constants
 
 
-INTERFACES = 'interfaces'
+INTERFACES = Constants.INTERFACES
 
 
 def show_only(ifnames):

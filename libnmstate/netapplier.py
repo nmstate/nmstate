@@ -27,6 +27,7 @@ from libnmstate import nm
 from libnmstate import validator
 from libnmstate.nm import nmclient
 from libnmstate.prettystate import format_desired_current_state_diff
+from libnmstate.schema import Constants
 
 
 class ApplyError(Exception):
@@ -41,7 +42,7 @@ def apply(desired_state, verify_change=True):
     validator.verify(desired_state)
     validator.verify_capabilities(desired_state, netinfo.capabilities())
 
-    _apply_ifaces_state(desired_state['interfaces'], verify_change)
+    _apply_ifaces_state(desired_state[Constants.INTERFACES], verify_change)
 
 
 def _apply_ifaces_state(interfaces_desired_state, verify_change):

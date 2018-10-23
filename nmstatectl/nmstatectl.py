@@ -31,6 +31,7 @@ import yaml
 from libnmstate import netapplier
 from libnmstate import netinfo
 from libnmstate.prettystate import PrettyState
+from libnmstate.schema import Constants
 
 
 def main():
@@ -56,7 +57,7 @@ def setup_subcommand_edit(subparsers):
     parser_edit.add_argument('--json', help='Edit as JSON', default=True,
                              action='store_false', dest='yaml')
     parser_edit.add_argument(
-        'only', default='*', nargs='?', metavar='interfaces',
+        'only', default='*', nargs='?', metavar=Constants.INTERFACES,
         help='Edit only specified interfaces (comma-separated)'
     )
     parser_edit.add_argument(
@@ -71,7 +72,7 @@ def setup_subcommand_show(subparsers):
     parser_show.add_argument('--yaml', help='Output as yaml', default=False,
                              action='store_true')
     parser_show.add_argument(
-        'only', default='*', nargs='?', metavar='interfaces',
+        'only', default='*', nargs='?', metavar=Constants.INTERFACES,
         help='Show only specified interfaces (comma-separated)'
     )
 
@@ -92,7 +93,7 @@ def setup_subcommand_set(subparsers):
 def edit(args):
     state = _filter_state(netinfo.show(), args.only)
 
-    if not state['interfaces']:
+    if not state[Constants.INTERFACES]:
         sys.stderr.write('ERROR: No such interface\n')
         return os.EX_USAGE
 
@@ -146,7 +147,7 @@ def apply(args):
 def _filter_state(state, whitelist):
     if whitelist != '*':
         patterns = [p for p in whitelist.split(',')]
-        state['interfaces'] = _filter_interfaces(state, patterns)
+        state[Constants.INTERFACES] = _filter_interfaces(state, patterns)
     return state
 
 
@@ -157,7 +158,7 @@ def _filter_interfaces(state, patterns):
     """
     showinterfaces = []
 
-    for interface in state['interfaces']:
+    for interface in state[Constants.INTERFACES]:
         for pattern in patterns:
             if fnmatch.fnmatch(interface['name'], pattern):
                 showinterfaces.append(interface)
@@ -214,7 +215,7 @@ def _parse_state(txtstate, parse_yaml):
         except ValueError as e:
             error = 'Invalid JSON syntax: %s\n' % e
 
-    if not error and 'interfaces' not in state:
+    if not error and Constants.INTERFACES not in state:
         error = 'Invalid state: should contain "interfaces" entry.\n'
 
     return state, error

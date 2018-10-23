@@ -23,10 +23,14 @@ import pytest
 import jsonschema as js
 
 import libnmstate
+from libnmstate.schema import Constants
+
+
+INTERFACES = Constants.INTERFACES
 
 
 COMMON_IFACE_DATA = {
-    'interfaces': [
+    INTERFACES: [
         {
             'name': 'lo',
             'description': 'Loopback Interface',
@@ -73,14 +77,14 @@ class TestIfaceCommon(object):
         libnmstate.validator.verify(default_data)
 
     def test_invalid_instance(self, default_data):
-        default_data['interfaces'][0]['state'] = 'bad-state'
+        default_data[INTERFACES][0]['state'] = 'bad-state'
 
         with pytest.raises(js.ValidationError) as err:
             libnmstate.validator.verify(default_data)
         assert 'bad-state' in err.value.args[0]
 
     def test_invalid_type(self, default_data):
-        default_data['interfaces'][0]['type'] = 'bad-type'
+        default_data[INTERFACES][0]['type'] = 'bad-type'
 
         with pytest.raises(js.ValidationError) as err:
             libnmstate.validator.verify(default_data)
@@ -90,14 +94,14 @@ class TestIfaceCommon(object):
 class TestIfaceTypeEthernet(object):
 
     def test_valid_ethernet_with_auto_neg(self, default_data):
-        default_data['interfaces'][0].update({
+        default_data[INTERFACES][0].update({
             'type': 'ethernet',
             'auto-negotiation': True,
         })
         libnmstate.validator.verify(default_data)
 
     def test_valid_ethernet_without_auto_neg(self, default_data):
-        default_data['interfaces'][0].update({
+        default_data[INTERFACES][0].update({
             'auto-negotiation': False,
             'link-speed': 1000,
             'duplex': 'full',
@@ -110,10 +114,10 @@ class TestIfaceTypeEthernet(object):
         not a valid configuration, however, this is not handled by the schema
         at the moment, deferring the handling to the application code.
         """
-        default_data['interfaces'][0].update({
+        default_data[INTERFACES][0].update({
             'type': 'ethernet',
             'auto-negotiation': False,
         })
-        del default_data['interfaces'][0]['link-speed']
+        del default_data[INTERFACES][0]['link-speed']
 
         libnmstate.validator.verify(default_data)

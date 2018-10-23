@@ -26,3 +26,7 @@ def load(schema_name):
 
 
 ifaces_schema = load('operational-state')
+
+
+class Constants(object):
+    INTERFACES = 'interfaces'
