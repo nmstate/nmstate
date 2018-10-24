@@ -19,9 +19,33 @@ import logging
 
 import pytest
 
+from libnmstate import netapplier
+
+from .testlib import statelib
+from .testlib.statelib import INTERFACES
+
 
 @pytest.fixture(scope='session', autouse=True)
 def logging_setup():
     logging.basicConfig(
         format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
         level=logging.DEBUG)
+
+
+@pytest.fixture(scope='function', autouse=True)
+def cleanup_test_interfaces():
+    ifaces_down_state = {
+        INTERFACES: []
+    }
+    current_state = statelib.show_only(('eth1', 'eth2'))
+    for iface_state in current_state[INTERFACES]:
+        if iface_state['state'] == 'up':
+            ifaces_down_state[INTERFACES].append(
+                {
+                    'name': iface_state['name'],
+                    'type': iface_state['type'],
+                    'state': 'down'
+                }
+            )
+    if ifaces_down_state[INTERFACES]:
+        netapplier.apply(ifaces_down_state)
