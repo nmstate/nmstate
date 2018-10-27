@@ -32,6 +32,11 @@ RUN yum -y install iproute NetworkManager epel-release git cairo* && \
     echo -e "[device]\nmatch-device=*\nmanaged=0\n" >> /etc/NetworkManager/conf.d/97-docker-build.conf && \
     sed -i 's/#RateLimitInterval=30s/RateLimitInterval=0/ ; s/#RateLimitBurst=1000/RateLimitBurst=0/' /etc/systemd/journald.conf
 
+# Patch with NetworkManager fix for BZ#1642625
+RUN yum-config-manager --add-repo https://copr.fedorainfracloud.org/coprs/till/nmstate-NetworkManager/repo/epel-7/till-nmstate-NetworkManager-epel-7.repo && \
+    yum-config-manager --enable till-nmstate-NetworkManager && \
+    yum -y update NetworkManager
+
 VOLUME [ "/sys/fs/cgroup" ]
 
 CMD ["/usr/sbin/init"]
