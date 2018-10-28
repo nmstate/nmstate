@@ -211,6 +211,8 @@ class TestIfaceAdminStateControl(object):
         ]
         nm.applier.set_ifaces_admin_state(ifaces_desired_state)
 
+        nm_device_mock.deactivate.assert_called_once_with(
+            nm_device_mock.get_device_by_name.return_value)
         nm_device_mock.delete.assert_called_once_with(
             nm_device_mock.get_device_by_name.return_value)
 
@@ -224,6 +226,8 @@ class TestIfaceAdminStateControl(object):
         ]
         nm.applier.set_ifaces_admin_state(ifaces_desired_state)
 
+        nm_device_mock.deactivate.assert_called_once_with(
+            nm_device_mock.get_device_by_name.return_value)
         nm_device_mock.delete.assert_called_once_with(
             nm_device_mock.get_device_by_name.return_value)
 

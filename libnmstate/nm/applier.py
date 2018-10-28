@@ -89,7 +89,8 @@ def set_ifaces_admin_state(ifaces_desired_state):
         if iface_desired_state['state'] == 'up':
             devs_actions.update({dev: (device.activate,) for dev in devs})
         elif iface_desired_state['state'] in ('down', 'absent'):
-            devs_actions.update({dev: (device.delete,) for dev in devs})
+            devs_actions.update(
+                {dev: (device.deactivate, device.delete) for dev in devs})
         else:
             raise UnsupportedIfaceStateError(iface_desired_state)
 
