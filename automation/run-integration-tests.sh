@@ -3,6 +3,8 @@
 EXEC_PATH=$(dirname "$(realpath "$0")")
 PROJECT_PATH="$(dirname $EXEC_PATH)"
 DOCKER_IMAGE="nmstate/centos7-nmstate-dev"
+EXPORT_DIR="$PWD/exported-artifacts"
+CONT_EXPORT_DIR="/exported-artifacts"
 
 NET0="nmstate-net0"
 NET1="nmstate-net1"
@@ -71,11 +73,25 @@ function run_tests {
     '
 }
 
+function collect_artifacts {
+    docker_exec "
+      journalctl > "$CONT_EXPORT_DIR/journal.log" && \
+      cd /workspace/nmstate && cp core* "$CONT_EXPORT_DIR/" || true
+    "
+}
+
+function run_exit {
+    collect_artifacts
+    remove_container
+}
+
 cd $EXEC_PATH 
 docker --version && cat /etc/resolv.conf && ping -c 1 github.com
 
-CONTAINER_ID="$(docker run --privileged -d -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v $PROJECT_PATH:/workspace/nmstate $DOCKER_IMAGE)"
-trap remove_container EXIT
+mkdir -p $EXPORT_DIR
+
+CONTAINER_ID="$(docker run --privileged -d -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v $PROJECT_PATH:/workspace/nmstate -v $EXPORT_DIR:$CONT_EXPORT_DIR $DOCKER_IMAGE)"
+trap run_exit EXIT
 docker_exec 'systemctl start dbus.socket'
 pyclean
 
