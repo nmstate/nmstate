@@ -17,11 +17,37 @@
 
 import copy
 
+import pytest
+
 from libnmstate import netapplier
 
 from .testlib import assertlib
 from .testlib import statelib
 from .testlib.statelib import INTERFACES
+
+
+IPV4_ADDRESS1 = '192.0.2.251'
+IPV4_ADDRESS2 = '192.0.2.252'
+
+
+@pytest.fixture
+def setup_eth1_ipv4():
+    desired_state = {
+        INTERFACES: [
+            {
+                'name': 'eth1',
+                'type': 'ethernet',
+                'state': 'up',
+                'ipv4': {
+                    'enabled': True,
+                    'address': [
+                        {'ip': IPV4_ADDRESS1, 'prefix-length': 24}
+                    ]
+                }
+            }
+        ]
+    }
+    netapplier.apply(desired_state)
 
 
 def test_add_static_ipv4_with_full_state():
@@ -54,6 +80,46 @@ def test_add_static_ipv4_with_min_state():
             }
         ]
     }
+    netapplier.apply(copy.deepcopy(desired_state))
+
+    assertlib.assert_state(desired_state)
+
+
+def test_remove_static_ipv4(setup_eth1_ipv4):
+    desired_state = {
+        INTERFACES: [
+            {
+                'name': 'eth1',
+                'type': 'ethernet',
+                'ipv4': {
+                    'enabled': False
+                }
+            }
+        ]
+    }
+
+    netapplier.apply(copy.deepcopy(desired_state))
+
+    assertlib.assert_state(desired_state)
+
+
+def test_edit_static_ipv4_address_and_prefix(setup_eth1_ipv4):
+    desired_state = {
+        INTERFACES: [
+            {
+                'name': 'eth1',
+                'type': 'ethernet',
+                'state': 'up',
+                'ipv4': {
+                    'enabled': True,
+                    'address': [
+                        {'ip': IPV4_ADDRESS2, 'prefix-length': 23}
+                    ]
+                }
+            }
+        ]
+    }
+
     netapplier.apply(copy.deepcopy(desired_state))
 
     assertlib.assert_state(desired_state)
