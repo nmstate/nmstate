@@ -134,7 +134,9 @@ def set_master_setting(con_setting, master, slave_type):
 
 def get_device_connection(nm_device):
     act_connection = get_device_active_connection(nm_device)
-    if act_connection:
+    if (act_connection and
+            act_connection.props.state ==
+            nmclient.NM.ActiveConnectionState.ACTIVATED):
         return act_connection.props.connection
     return None
 

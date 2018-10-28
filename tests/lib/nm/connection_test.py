@@ -125,8 +125,10 @@ def test_set_master_setting():
     assert con_setting_mock.props.slave_type == 'slave-type'
 
 
-def test_get_device_connection():
+def test_get_device_connection(NM_mock):
     dev_mock = mock.MagicMock()
+    NM_mock.ActiveConnectionState.ACTIVATED = (
+        dev_mock.get_active_connection.return_value.props.state)
 
     con = nm.connection.get_device_connection(dev_mock)
 
