@@ -65,6 +65,8 @@ class _MainLoop(object):
         action = self.pop_action()
         if action:
             func, args, kwargs = action
+            logging.debug('Executing NM action: func=%s, args=%s',
+                          func.__name__, args)
             func(*args, **kwargs)
         else:
             logging.debug('NM action queue exhausted, quiting mainloop')
