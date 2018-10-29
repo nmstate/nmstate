@@ -16,6 +16,7 @@
 #
 
 from collections import OrderedDict
+from copy import deepcopy
 import difflib
 import json
 from operator import itemgetter
@@ -53,7 +54,7 @@ def format_desired_current_state_diff(desired_state, current_state):
 class PrettyState(object):
     def __init__(self, state):
         yaml.add_representer(OrderedDict, represent_ordereddict)
-        self.state = order_state(state)
+        self.state = order_state(deepcopy(state))
 
     @property
     def yaml(self):
