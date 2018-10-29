@@ -81,11 +81,9 @@ def _transaction():
 def _setup_providers():
     mainloop = nmclient.mainloop()
     yield
-    if mainloop.actions_exists():
-        mainloop.execute_next_action()
-        success = mainloop.run(timeout=20)
-        if not success:
-            raise ApplyError(mainloop.error)
+    success = mainloop.run(timeout=20)
+    if not success:
+        raise ApplyError(mainloop.error)
 
 
 @contextmanager
