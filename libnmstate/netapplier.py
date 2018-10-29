@@ -313,7 +313,8 @@ def assert_ifaces_state(ifaces_desired_state, ifaces_current_state):
         iface_dstate = _canonicalize_desired_state(
             ifaces_desired_state[ifname], iface_cstate)
 
-        _cleanup_iface_ethernet_state_sanitize(iface_dstate, iface_cstate)
+        iface_dstate, iface_cstate = _cleanup_iface_ethernet_state_sanitize(
+            iface_dstate, iface_cstate)
 
         if iface_dstate != iface_cstate:
             raise DesiredStateIsNotCurrentError(
@@ -333,3 +334,4 @@ def _cleanup_iface_ethernet_state_sanitize(desired_state, current_state):
         if not ethernet_desired_state:
             desired_state.pop('ethernet', None)
             current_state.pop('ethernet', None)
+    return desired_state, current_state
