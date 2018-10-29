@@ -332,3 +332,4 @@ def _cleanup_iface_ethernet_state_sanitize(desired_state, current_state):
                 ethernet_current_state.pop(key, None)
         if not ethernet_desired_state:
             desired_state.pop('ethernet', None)
+            current_state.pop('ethernet', None)
