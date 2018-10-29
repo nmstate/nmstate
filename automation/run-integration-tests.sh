@@ -92,7 +92,7 @@ mkdir -p $EXPORT_DIR
 
 CONTAINER_ID="$(docker run --privileged -d -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v $PROJECT_PATH:/workspace/nmstate -v $EXPORT_DIR:$CONT_EXPORT_DIR $DOCKER_IMAGE)"
 trap run_exit EXIT
-docker_exec 'systemctl start dbus.socket'
+docker_exec 'while ! systemctl is-active dbus; do sleep 1; done'
 pyclean
 
 dump_network_info
