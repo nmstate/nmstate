@@ -96,7 +96,11 @@ class _MainLoop(object):
         if not isinstance(timeout, six.integer_types):
             raise TypeError('timeout is expected to be an integer')
 
+        if not self.actions_exists():
+            return _MainLoop.SUCCESS
+
         with self._idle_timeout(timeout):
+            self._register_first_action()
             self._mainloop.run()
 
         if self._error == _MainLoop.RUN_TIMEOUT_ERROR:
@@ -151,3 +155,10 @@ class _MainLoop(object):
         logging.warning('NM main-loop timed out.')
         mainloop.quit()
         return _MainLoop.FAIL
+
+    def _register_first_action(self):
+        GLib.timeout_add(1, self._execute_action_once, None)
+
+    def _execute_action_once(self, _):
+        self.execute_next_action()
+        return False
