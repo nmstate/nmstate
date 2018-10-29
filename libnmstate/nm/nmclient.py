@@ -17,6 +17,7 @@
 from __future__ import absolute_import
 
 from collections import deque
+from contextlib import contextmanager
 import logging
 
 try:
@@ -54,6 +55,8 @@ def mainloop():
 class _MainLoop(object):
     SUCCESS = True
     FAIL = False
+    RUN_TIMEOUT_ERROR = 'run timeout'
+    RUN_EXECUTION_ERROR = 'run execution'
 
     def __init__(self):
         self._action_queue = deque()
@@ -92,24 +95,14 @@ class _MainLoop(object):
             self._mainloop.run()
             return _MainLoop.SUCCESS
 
-        timeout_result = []
-        data = (self._mainloop, timeout_result)
-        timeout_id = GLib.timeout_add(
-            int(timeout * 1000),
-            _MainLoop._timeout_cb,
-            data
-        )
-        self._mainloop.run()
+        with self._idle_timeout(timeout):
+            self._mainloop.run()
 
-        if timeout_result:
-            self._cancellable.cancel()
-            self._error = 'run timeout'
+        if self._error == _MainLoop.RUN_TIMEOUT_ERROR:
             return _MainLoop.FAIL
 
-        GLib.source_remove(timeout_id)
-
         if len(self._action_queue):
-            self._error = 'run execution'
+            self._error = _MainLoop.RUN_EXECUTION_ERROR
             return _MainLoop.FAIL
 
         return _MainLoop.SUCCESS
@@ -133,6 +126,22 @@ class _MainLoop(object):
     @property
     def error(self):
         return self._error
+
+    @contextmanager
+    def _idle_timeout(self, timeout):
+        timeout_result = []
+        data = (self._mainloop, timeout_result)
+        timeout_id = GLib.timeout_add(
+            int(timeout * 1000),
+            _MainLoop._timeout_cb,
+            data
+        )
+        yield
+        if timeout_result:
+            self._cancellable.cancel()
+            self._error = _MainLoop.RUN_TIMEOUT_ERROR
+        else:
+            GLib.source_remove(timeout_id)
 
     @staticmethod
     def _timeout_cb(data):
