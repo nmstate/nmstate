@@ -20,6 +20,8 @@ from collections import deque
 from contextlib import contextmanager
 import logging
 
+import six
+
 try:
     import gi                           # pylint: disable=import-error
     gi.require_version('NM', '1.0')     # NOQA: F402
@@ -91,9 +93,8 @@ class _MainLoop(object):
         return bool(self._action_queue)
 
     def run(self, timeout):
-        if timeout is None:
-            self._mainloop.run()
-            return _MainLoop.SUCCESS
+        if not isinstance(timeout, six.integer_types):
+            raise TypeError('timeout is expected to be an integer')
 
         with self._idle_timeout(timeout):
             self._mainloop.run()
