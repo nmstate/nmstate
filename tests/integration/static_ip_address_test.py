@@ -115,7 +115,7 @@ def test_edit_static_ipv4_address_and_prefix(setup_eth1_ipv4):
                 'ipv4': {
                     'enabled': True,
                     'address': [
-                        {'ip': IPV4_ADDRESS2, 'prefix-length': 24}
+                        {'ip': IPV4_ADDRESS2, 'prefix-length': 30}
                     ]
                 }
             }
