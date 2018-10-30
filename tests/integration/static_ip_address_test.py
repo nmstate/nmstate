@@ -25,9 +25,11 @@ from .testlib import assertlib
 from .testlib import statelib
 from .testlib.statelib import INTERFACES
 
-
+# TEST-NET addresses: https://tools.ietf.org/html/rfc5737#section-3
 IPV4_ADDRESS1 = '192.0.2.251'
 IPV4_ADDRESS2 = '192.0.2.252'
+IPV4_ADDRESS3 = '198.51.100.249'
+IPV4_ADDRESS4 = '198.51.100.250'
 
 
 @pytest.fixture
@@ -57,7 +59,7 @@ def test_add_static_ipv4_with_full_state():
     eth1_desired_state['state'] = 'up'
     eth1_desired_state['ipv4']['enabled'] = True
     eth1_desired_state['ipv4']['address'] = [
-        {'ip': '192.168.122.250', 'prefix-length': 24}
+        {'ip': IPV4_ADDRESS3, 'prefix-length': 24}
     ]
     netapplier.apply(copy.deepcopy(desired_state))
 
@@ -74,7 +76,7 @@ def test_add_static_ipv4_with_min_state():
                 'ipv4': {
                     'enabled': True,
                     'address': [
-                        {'ip': '192.168.122.251', 'prefix-length': 24}
+                        {'ip': IPV4_ADDRESS4, 'prefix-length': 24}
                     ]
                 }
             }
@@ -113,7 +115,7 @@ def test_edit_static_ipv4_address_and_prefix(setup_eth1_ipv4):
                 'ipv4': {
                     'enabled': True,
                     'address': [
-                        {'ip': IPV4_ADDRESS2, 'prefix-length': 23}
+                        {'ip': IPV4_ADDRESS2, 'prefix-length': 24}
                     ]
                 }
             }
