@@ -95,7 +95,7 @@ def test_create_setting(NM_mock):
     assert con_setting.props.interface_name == 'iface-name'
     assert con_setting.props.uuid
     assert con_setting.props.type == 'iface-type'
-    assert con_setting.props.autoconnect is True
+    assert con_setting.props.autoconnect is False
     assert con_setting.props.autoconnect_slaves == (
         NM_mock.SettingConnectionAutoconnectSlaves.NO)
 
@@ -111,7 +111,7 @@ def test_duplicate_settings(NM_mock):
     assert new_con.props.interface_name == base_con.props.interface_name
     assert new_con.props.uuid == base_con.props.uuid
     assert new_con.props.type == base_con.props.type
-    assert new_con.props.autoconnect == base_con.props.autoconnect
+    assert new_con.props.autoconnect is False
     assert new_con.props.autoconnect_slaves == (
         base_con.props.autoconnect_slaves)
 
