@@ -111,6 +111,7 @@ def create_setting(con_name, iface_name, iface_type):
     con_setting.props.autoconnect = True
     con_setting.props.autoconnect_slaves = (
         nmclient.NM.SettingConnectionAutoconnectSlaves.NO)
+    _logging_connection_info(con_setting, 'create_setting')
     return con_setting
 
 
@@ -123,6 +124,7 @@ def duplicate_settings(base_connection_profile):
     new.props.type = base.props.type
     new.props.autoconnect = base.props.autoconnect
     new.props.autoconnect_slaves = base.props.autoconnect_slaves
+    _logging_connection_info(new, 'duplicate_settings')
     return new
 
 
@@ -141,3 +143,24 @@ def get_device_connection(nm_device):
 
 def get_device_active_connection(nm_device):
     return nm_device.get_active_connection()
+
+
+def _logging_connection_info(con_setting, source):
+    logging.debug(
+        'Connection settings for {source}:\n' +
+        '\n'.join([
+            'id: {}',
+            'iface: {}',
+            'uuid: {}',
+            'type: {}',
+            'autoconnect: {}',
+            'autoconnect_slaves: {}'
+        ]),
+        source,
+        con_setting.props.id,
+        con_setting.props.interface_name,
+        con_setting.props.uuid,
+        con_setting.props.type,
+        con_setting.props.autoconnect,
+        con_setting.props.autoconnect_slaves
+    )
