@@ -108,7 +108,7 @@ def create_setting(con_name, iface_name, iface_type):
     con_setting.props.interface_name = iface_name
     con_setting.props.uuid = str(uuid.uuid4())
     con_setting.props.type = iface_type
-    con_setting.props.autoconnect = True
+    con_setting.props.autoconnect = False
     con_setting.props.autoconnect_slaves = (
         nmclient.NM.SettingConnectionAutoconnectSlaves.NO)
     _logging_connection_info(con_setting, 'create_setting')
