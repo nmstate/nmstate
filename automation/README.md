@@ -35,8 +35,17 @@ just run:
 ## Development
 
 ### Run the tests manually in the container
-For debugging, it is convenient to run the container and then
-connect to it in order to run the tests.
+For debugging, it is convenient to run the container and then connect to it in
+order to run the tests. Setting the environment variable `debug_exit_shell`
+will make the script start a shell instead of exiting the script after an error
+or running the scripts:
+
+`debug_exit_shell=1 ./automation/run-integration-tests.sh`
+
+
+After closing the shell, the container will be removed. Alternatively, the
+following commands start the container manually:
+
 ```
 DOCKER_IMAGE="nmstate/centos7-nmstate-dev"
 NET0="nmstate-net0"

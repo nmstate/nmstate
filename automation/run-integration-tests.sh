@@ -85,13 +85,22 @@ function run_exit {
     remove_container
 }
 
+function open_shell {
+    res=$?
+    [ "$res" -ne 0 ] && echo "*** ERROR: $res"
+    set +o errexit
+    docker_exec 'echo "pytest tests/integration --pdb" >> ~/.bash_history'
+    docker_exec 'cd /workspace/nmstate; exec /bin/bash'
+    run_exit
+}
+
 cd $EXEC_PATH 
 docker --version && cat /etc/resolv.conf && ping -c 1 github.com
 
 mkdir -p $EXPORT_DIR
 
 CONTAINER_ID="$(docker run --privileged -d -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v $PROJECT_PATH:/workspace/nmstate -v $EXPORT_DIR:$CONT_EXPORT_DIR $DOCKER_IMAGE)"
-trap run_exit EXIT
+[ -n "$debug_exit_shell" ] && trap open_shell EXIT || trap run_exit EXIT
 docker_exec 'while ! systemctl is-active dbus; do sleep 1; done'
 pyclean
 
