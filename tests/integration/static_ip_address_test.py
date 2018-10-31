@@ -125,3 +125,57 @@ def test_edit_static_ipv4_address_and_prefix(setup_eth1_ipv4):
     netapplier.apply(copy.deepcopy(desired_state))
 
     assertlib.assert_state(desired_state)
+
+
+def test_add_ifaces_with_same_static_ipv4_address_in_one_transaction():
+    desired_state = {
+        INTERFACES: [
+            {
+                'name': 'eth1',
+                'type': 'ethernet',
+                'state': 'up',
+                'ipv4': {
+                    'enabled': True,
+                    'address': [
+                        {'ip': IPV4_ADDRESS1, 'prefix-length': 24}
+                    ]
+                }
+            },
+            {
+                'name': 'eth2',
+                'type': 'ethernet',
+                'state': 'up',
+                'ipv4': {
+                    'enabled': True,
+                    'address': [
+                        {'ip': IPV4_ADDRESS1, 'prefix-length': 24}
+                    ]
+                }
+            }
+        ]
+    }
+
+    netapplier.apply(copy.deepcopy(desired_state))
+
+    assertlib.assert_state(desired_state)
+
+
+def test_add_iface_with_same_static_ipv4_address_to_existing(setup_eth1_ipv4):
+    desired_state = {
+        INTERFACES: [
+            {
+                'name': 'eth2',
+                'type': 'ethernet',
+                'state': 'up',
+                'ipv4': {
+                    'enabled': True,
+                    'address': [
+                        {'ip': IPV4_ADDRESS1, 'prefix-length': 24}
+                    ]
+                }
+            }
+        ]
+    }
+    netapplier.apply(copy.deepcopy(desired_state))
+
+    assertlib.assert_state(desired_state)
