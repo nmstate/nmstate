@@ -26,8 +26,10 @@ def assert_state(desired_state_data):
     current_state_data = netinfo.show()
     current_state = statelib.State(current_state_data)
     current_state.filter(desired_state_data)
+    current_state.normalize()
 
     full_desired_state = statelib.State(current_state.state)
     full_desired_state.update(desired_state_data)
+    full_desired_state.normalize()
 
     assert full_desired_state.state == current_state.state

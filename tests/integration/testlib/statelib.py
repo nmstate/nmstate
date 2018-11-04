@@ -95,6 +95,13 @@ class State(object):
 
         self._state = other_state
 
+    def normalize(self):
+        self._sort_iface_lag_slaves()
+
+    def _sort_iface_lag_slaves(self):
+        for ifstate in self._state[INTERFACES]:
+            ifstate.get('link-aggregation', {}).get('slaves', []).sort()
+
 
 def _lookup_iface_state_by_name(interfaces_state, ifname):
     for iface_state in interfaces_state:

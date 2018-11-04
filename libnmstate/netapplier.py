@@ -314,6 +314,8 @@ def assert_ifaces_state(ifaces_desired_state, ifaces_current_state):
 
         iface_dstate, iface_cstate = _cleanup_iface_ethernet_state_sanitize(
             iface_dstate, iface_cstate)
+        iface_dstate, iface_cstate = _sort_lag_slaves(
+            iface_dstate, iface_cstate)
 
         if iface_dstate != iface_cstate:
             raise DesiredStateIsNotCurrentError(
@@ -333,4 +335,10 @@ def _cleanup_iface_ethernet_state_sanitize(desired_state, current_state):
         if not ethernet_desired_state:
             desired_state.pop('ethernet', None)
             current_state.pop('ethernet', None)
+    return desired_state, current_state
+
+
+def _sort_lag_slaves(desired_state, current_state):
+    for state in (desired_state, current_state):
+        state.get('link-aggregation', {}).get('slaves', []).sort()
     return desired_state, current_state
