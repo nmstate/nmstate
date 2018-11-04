@@ -147,14 +147,14 @@ def get_device_active_connection(nm_device):
 
 def _logging_connection_info(con_setting, source):
     logging.debug(
-        'Connection settings for {source}:\n' +
+        'Connection settings for %s:\n' +
         '\n'.join([
-            'id: {}',
-            'iface: {}',
-            'uuid: {}',
-            'type: {}',
-            'autoconnect: {}',
-            'autoconnect_slaves: {}'
+            'id: %s',
+            'iface: %s',
+            'uuid: %s',
+            'type: %s',
+            'autoconnect: %s',
+            'autoconnect_slaves: %s'
         ]),
         source,
         con_setting.props.id,
