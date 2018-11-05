@@ -17,6 +17,7 @@
 from __future__ import absolute_import
 
 import jsonschema as js
+import six
 
 from . import nm
 from . import schema
@@ -61,18 +62,22 @@ def verify_interfaces_state(ifaces_state, ifaces_desired_state):
 
 
 def verify_link_aggregation_state(ifaces_state, ifaces_desired_state):
-    available_ifaces = {iface_state['name'] for iface_state in ifaces_state}
+    available_ifaces = {
+        iface_state['name'] for iface_state in ifaces_state
+        if iface_state.get('state') != 'absent'
+    }
     available_ifaces |= {
-        iface_name for iface_name in ifaces_desired_state
-        if ifaces_desired_state[iface_name].get('state') != 'absent'
+        ifname for ifname, ifstate in six.viewitems(ifaces_desired_state)
+        if ifstate.get('state') != 'absent'
     }
     specified_slaves = set()
     for iface_state in ifaces_state:
-        link_aggregation = iface_state.get('link-aggregation')
-        if link_aggregation:
-            slaves = set(link_aggregation.get('slaves', []))
-            if not (slaves <= available_ifaces):
-                raise LinkAggregationSlavesMissingError(iface_state)
-            if slaves & specified_slaves:
-                raise LinkAggregationSlavesReuseError(iface_state)
-            specified_slaves |= slaves
+        if iface_state.get('state') != 'absent':
+            link_aggregation = iface_state.get('link-aggregation')
+            if link_aggregation:
+                slaves = set(link_aggregation.get('slaves', []))
+                if not (slaves <= available_ifaces):
+                    raise LinkAggregationSlavesMissingError(iface_state)
+                if slaves & specified_slaves:
+                    raise LinkAggregationSlavesReuseError(iface_state)
+                specified_slaves |= slaves
