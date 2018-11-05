@@ -72,6 +72,9 @@ def prepare_edited_ifaces_configuration(ifaces_desired_state):
             cur_con_profile = connection.get_device_connection(nmdev)
         new_con_profile = _build_connection_profile(
             iface_desired_state, base_con_profile=cur_con_profile)
+        if not new_con_profile.get_interface_name():
+            set_conn = new_con_profile.get_setting_connection()
+            set_conn.props.interface_name = iface_desired_state['name']
         if cur_con_profile:
             connection.update_profile(cur_con_profile, new_con_profile)
             con_profiles.append(cur_con_profile)
