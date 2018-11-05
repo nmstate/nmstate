@@ -98,6 +98,12 @@ class State(object):
     def normalize(self):
         self._sort_iface_lag_slaves()
 
+    def remove_absent_entries(self):
+        self._state[INTERFACES] = [
+            ifstate for ifstate in self._state[INTERFACES]
+            if ifstate.get('state') != 'absent'
+        ]
+
     def _sort_iface_lag_slaves(self):
         for ifstate in self._state[INTERFACES]:
             ifstate.get('link-aggregation', {}).get('slaves', []).sort()
