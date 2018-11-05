@@ -24,7 +24,7 @@ def activate(dev):
     client = nmclient.client()
     mainloop = nmclient.mainloop()
     connection = specific_object = None
-    user_data = mainloop
+    user_data = mainloop, dev
     mainloop.push_action(
         client.activate_connection_async,
         connection,
@@ -37,19 +37,23 @@ def activate(dev):
 
 
 def _active_connection_callback(src_object, result, user_data):
-    mainloop = user_data
+    mainloop, nmdev = user_data
     try:
         act_con = src_object.activate_connection_finish(result)
     except Exception as e:
         if mainloop.is_action_canceled(e):
             logging.debug(
-                'Connection activation canceled: error=%s', e)
+                'Connection activation canceled on %s: error=%s',
+                nmdev.get_iface(), e)
         else:
-            mainloop.quit('Connection activation failed: error={}'.format(e))
+            mainloop.quit(
+                'Connection activation failed on {}: error={}'.format(
+                    nmdev.get_iface(), e))
         return
 
     if act_con is None:
-        mainloop.quit('Connection activation failed: error=unknown')
+        mainloop.quit('Connection activation failed on %s: error=unknown' %
+                      nmdev.get_iface())
     else:
         devname = act_con.props.connection.get_interface_name()
         logging.debug('Connection activation succeeded: dev=%s, con-state=%s',
@@ -78,7 +82,7 @@ def _safe_deactivate_async(dev):
         mainloop.execute_next_action()
         return
 
-    user_data = mainloop
+    user_data = mainloop, dev
     client = nmclient.client()
     client.deactivate_connection_async(
         act_connection,
@@ -89,21 +93,26 @@ def _safe_deactivate_async(dev):
 
 
 def _deactivate_connection_callback(src_object, result, user_data):
-    mainloop = user_data
+    mainloop, nmdev = user_data
     try:
         success = src_object.deactivate_connection_finish(result)
     except Exception as e:
         if mainloop.is_action_canceled(e):
-            logging.debug('Connection deactivation aborted: error=%s', e)
+            logging.debug('Connection deactivation aborted on %s: error=%s',
+                          nmdev.get_iface(), e)
         else:
-            mainloop.quit('Connection deactivation failed: error={}'.format(e))
+            mainloop.quit(
+                'Connection deactivation failed on {}: error={}'.format(
+                    nmdev.get_iface(), e))
         return
 
     if success:
-        logging.debug('Connection deactivation succeeded')
+        logging.debug(
+            'Connection deactivation succeeded on %s', nmdev.get_iface())
         mainloop.execute_next_action()
     else:
-        mainloop.quit('Connection deactivation failed: error=unknown')
+        mainloop.quit('Connection deactivation failed on %s: error=unknown' %
+                      nmdev.get_iface())
 
 
 def delete(dev):
@@ -120,7 +129,7 @@ def _safe_delete_async(dev):
         mainloop.execute_next_action()
         return
 
-    user_data = mainloop
+    user_data = mainloop, dev
     for con in connections:
         con.delete_async(
             mainloop.cancellable,
@@ -130,14 +139,17 @@ def _safe_delete_async(dev):
 
 
 def _delete_connection_callback(src_object, result, user_data):
-    mainloop = user_data
+    mainloop, nmdev = user_data
     try:
         success = src_object.delete_finish(result)
     except Exception as e:
         if mainloop.is_action_canceled(e):
-            logging.debug('Connection deletion aborted: error=%s', e)
+            logging.debug('Connection deletion aborted on %s: error=%s',
+                          nmdev.get_iface(), e)
         else:
-            mainloop.quit('Connection deletion failed: error={}'.format(e))
+            mainloop.quit(
+                'Connection deletion failed on {}: error={}'.format(
+                    nmdev.get_iface(), e))
         return
 
     devname = src_object.get_interface_name()

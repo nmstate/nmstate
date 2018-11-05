@@ -50,7 +50,7 @@ def test_activate(client_mock, mainloop_mock):
         None,
         mainloop_mock.cancellable,
         nm.device._active_connection_callback,
-        mainloop_mock,
+        (mainloop_mock, dev),
     )
 
 
@@ -66,7 +66,7 @@ def test_deactivate(NM_mock, client_mock, mainloop_mock):
         dev.get_active_connection.return_value,
         mainloop_mock.cancellable,
         nm.device._deactivate_connection_callback,
-        mainloop_mock,
+        (mainloop_mock, dev),
     )
 
 
@@ -82,7 +82,7 @@ def test_delete(mainloop_mock):
     connections[0].delete_async.assert_called_once_with(
         mainloop_mock.cancellable,
         nm.device._delete_connection_callback,
-        mainloop_mock
+        (mainloop_mock, dev)
     )
 
 
