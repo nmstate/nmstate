@@ -66,7 +66,7 @@ def create_setting(iface_state, base_con_profile):
     if speed:
         wired_setting.props.speed = speed
 
-    if duplex:
+    if duplex in ['half', 'full']:
         wired_setting.props.duplex = duplex
 
     return wired_setting
@@ -113,8 +113,8 @@ def _get_ethernet_info(device, iface):
         return None
 
     duplex_setting = ethtool_results['duplex']
-    if duplex_setting == 'unknown':
-        return None
-    else:
+    if duplex_setting in ['half', 'full']:
         ethernet['duplex'] = duplex_setting
+    else:
+        return None
     return ethernet

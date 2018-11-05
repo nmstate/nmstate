@@ -49,7 +49,7 @@ def test_create_setting_mtu(NM_mock):
 
 
 @mock.patch.object(nm.wired, 'minimal_ethtool',
-                   return_value={'speed': 1337, 'duplex': 'mocked',
+                   return_value={'speed': 1337, 'duplex': 'full',
                                  'auto-negotiation': 'mocked'})
 def test_create_setting_auto_negotiation_False(ethtool_mock, NM_mock):
     setting = nm.wired.create_setting(
@@ -58,7 +58,7 @@ def test_create_setting_auto_negotiation_False(ethtool_mock, NM_mock):
     assert setting == NM_mock.SettingWired.new.return_value
     assert setting.props.auto_negotiate is False
     assert setting.props.speed == 1337
-    assert setting.props.duplex == 'mocked'
+    assert setting.props.duplex == 'full'
     assert ethtool_mock.called_with('nmstate_test')
 
 
@@ -88,3 +88,19 @@ def test_create_setting_speed_duplex(NM_mock):
     assert setting == NM_mock.SettingWired.new.return_value
     assert setting.props.speed == 1000
     assert setting.props.duplex == 'full'
+
+
+@mock.patch.object(nm.wired, 'minimal_ethtool',
+                   return_value={'speed': 1500, 'duplex': 'unknown',
+                                 'auto-negotiation': True})
+def test_get_info_with_invalid_duplex(ethtool_mock, NM_mock):
+    dev_mock = mock.MagicMock()
+    dev_mock.get_iface.return_value = 'nmstate_test'
+    dev_mock.get_mtu.return_value = 1500
+    dev_mock.get_device_type.return_value = NM_mock.DeviceType.ETHERNET
+
+    info = nm.wired.get_info(dev_mock)
+
+    assert info == {
+        'mtu': dev_mock.get_mtu.return_value
+    }
