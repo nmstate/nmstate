@@ -63,6 +63,8 @@ def _apply_ifaces_state(interfaces_desired_state, verify_change):
             # FIXME: Remove this sleep after adding wait for state mechanism.
             time.sleep(2)
             ifaces_current_state = _index_by_name(netinfo.interfaces())
+            ifaces_desired_state = _remove_absent_iface_entries(
+                ifaces_desired_state)
             ifaces_desired_state = remove_ifaces_metadata(ifaces_desired_state)
             assert_ifaces_state(ifaces_desired_state, ifaces_current_state)
 
@@ -342,3 +344,9 @@ def _sort_lag_slaves(desired_state, current_state):
     for state in (desired_state, current_state):
         state.get('link-aggregation', {}).get('slaves', []).sort()
     return desired_state, current_state
+
+
+def _remove_absent_iface_entries(ifaces_desired_state):
+    return {ifname: ifstate
+            for ifname, ifstate in six.viewitems(ifaces_desired_state)
+            if ifstate.get('state') != 'absent'}

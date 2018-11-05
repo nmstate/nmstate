@@ -17,6 +17,8 @@
 
 import copy
 
+import pytest
+
 from libnmstate import netapplier
 
 from .testlib import assertlib
@@ -34,6 +36,23 @@ def test_set_a_down_iface_down():
         ]
     }
     assertlib.assert_state(desired_state)
+
+    netapplier.apply(copy.deepcopy(desired_state))
+
+    assertlib.assert_state(desired_state)
+
+
+@pytest.mark.xfail(reason='Some ifaces cannot be removed', strict=True)
+def test_removing_a_non_removable_iface():
+    desired_state = {
+        INTERFACES: [
+            {
+                'name': 'eth1',
+                'type': 'ethernet',
+                'state': 'absent',
+            }
+        ]
+    }
 
     netapplier.apply(copy.deepcopy(desired_state))
 
