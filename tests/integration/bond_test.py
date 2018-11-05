@@ -51,3 +51,21 @@ def test_add_and_remove_bond_with_two_slaves():
 
     state = statelib.show_only((state[INTERFACES][0]['name'],))
     assert not state[INTERFACES]
+
+
+def test_remove_bond_with_minimum_desired_state():
+    state = yaml.load(BOND99_YAML_BASE)
+    netapplier.apply(copy.deepcopy(state))
+
+    remove_bond_state = {
+        INTERFACES: [
+            {
+                'name': 'bond99',
+                'type': 'bond',
+                'state': 'absent'
+            }
+        ]
+    }
+    netapplier.apply(remove_bond_state)
+    state = statelib.show_only((state[INTERFACES][0]['name'],))
+    assert not state[INTERFACES]

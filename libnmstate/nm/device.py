@@ -64,18 +64,28 @@ def deactivate(dev):
 
     For software devices, deactivation removes the devices from the kernel.
     """
-    client = nmclient.client()
+    mainloop = nmclient.mainloop()
+    mainloop.push_action(_safe_deactivate_async, dev)
+
+
+def _safe_deactivate_async(dev):
     act_connection = dev.get_active_connection()
-    if act_connection:
-        mainloop = nmclient.mainloop()
-        user_data = mainloop
-        mainloop.push_action(
-            client.deactivate_connection_async,
-            act_connection,
-            mainloop.cancellable,
-            _deactivate_connection_callback,
-            user_data,
-        )
+    mainloop = nmclient.mainloop()
+    if not act_connection or act_connection.props.state in (
+            nmclient.NM.ActiveConnectionState.DEACTIVATING,
+            nmclient.NM.ActiveConnectionState.DEACTIVATED):
+        # Nothing left to do here, call the next action.
+        mainloop.execute_next_action()
+        return
+
+    user_data = mainloop
+    client = nmclient.client()
+    client.deactivate_connection_async(
+        act_connection,
+        mainloop.cancellable,
+        _deactivate_connection_callback,
+        user_data,
+    )
 
 
 def _deactivate_connection_callback(src_object, result, user_data):

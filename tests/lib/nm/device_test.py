@@ -21,6 +21,12 @@ from lib.compat import mock
 from libnmstate import nm
 
 
+@pytest.fixture
+def NM_mock():
+    with mock.patch.object(nm.device.nmclient, 'NM') as m:
+        yield m
+
+
 @pytest.fixture()
 def client_mock():
     with mock.patch.object(nm.device.nmclient, 'client') as m:
@@ -48,14 +54,15 @@ def test_activate(client_mock, mainloop_mock):
     )
 
 
-def test_deactivate(client_mock, mainloop_mock):
+def test_deactivate(NM_mock, client_mock, mainloop_mock):
     dev = mock.MagicMock()
+    mainloop_mock.push_action = lambda func, dev: func(dev)
+
     nm.device.deactivate(dev)
 
     dev.get_active_connection.assert_called_once()
 
-    mainloop_mock.push_action.assert_called_once_with(
-        client_mock.deactivate_connection_async,
+    client_mock.deactivate_connection_async.assert_called_once_with(
         dev.get_active_connection.return_value,
         mainloop_mock.cancellable,
         nm.device._deactivate_connection_callback,
