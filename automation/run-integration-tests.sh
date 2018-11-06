@@ -36,9 +36,7 @@ function add_extra_networks {
     docker network connect $NET1 $CONTAINER_ID
     docker_exec '
       ip addr flush eth1 && \
-      ip addr flush eth2 && \
-      echo 1 > /proc/sys/net/ipv6/conf/eth1/disable_ipv6 || true \
-      echo 1 > /proc/sys/net/ipv6/conf/eth2/disable_ipv6 || true
+      ip addr flush eth2
     '
 }
 

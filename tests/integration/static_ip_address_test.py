@@ -30,6 +30,12 @@ IPV4_ADDRESS1 = '192.0.2.251'
 IPV4_ADDRESS2 = '192.0.2.252'
 IPV4_ADDRESS3 = '198.51.100.249'
 IPV4_ADDRESS4 = '198.51.100.250'
+# IPv6 Address Prefix Reserved for Documentation:
+# https://tools.ietf.org/html/rfc3849
+IPV6_ADDRESS1 = '2001:db8:1::1'
+IPV6_ADDRESS2 = '2001:db8:2::1'
+IPV6_LINK_LOCAL_ADDRESS1 = 'fe80::1'
+IPV6_LINK_LOCAL_ADDRESS2 = 'fe80::2'
 
 
 @pytest.fixture
@@ -61,6 +67,8 @@ def test_add_static_ipv4_with_full_state():
     eth1_desired_state['ipv4']['address'] = [
         {'ip': IPV4_ADDRESS3, 'prefix-length': 24}
     ]
+    # FIXME: We don't have a way to disable IPv6 in libnmstate yet.
+    eth1_desired_state['ipv6']['enabled'] = True
     netapplier.apply(copy.deepcopy(desired_state))
 
     assertlib.assert_state(desired_state)
@@ -179,3 +187,71 @@ def test_add_iface_with_same_static_ipv4_address_to_existing(setup_eth1_ipv4):
     netapplier.apply(copy.deepcopy(desired_state))
 
     assertlib.assert_state(desired_state)
+
+
+def test_add_static_ipv6_with_full_state():
+    desired_state = statelib.show_only(('eth1',))
+    eth1_desired_state = desired_state[INTERFACES][0]
+    eth1_desired_state['state'] = 'up'
+    eth1_desired_state['ipv6']['enabled'] = True
+    eth1_desired_state['ipv6']['address'] = [
+        {'ip': IPV6_ADDRESS1, 'prefix-length': 64},
+    ]
+    netapplier.apply(copy.deepcopy(desired_state))
+    assertlib.assert_state(desired_state)
+
+
+def test_add_static_ipv6_with_link_local():
+    desired_state = statelib.show_only(('eth1',))
+    eth1_desired_state = desired_state[INTERFACES][0]
+    eth1_desired_state['state'] = 'up'
+    eth1_desired_state['ipv6']['enabled'] = True
+    eth1_desired_state['ipv6']['address'] = [
+        {'ip': IPV6_LINK_LOCAL_ADDRESS1, 'prefix-length': 64},
+        {'ip': IPV6_ADDRESS1, 'prefix-length': 64}
+    ]
+
+    netapplier.apply(copy.deepcopy(desired_state))
+
+    # Make sure only the link local address got ignored.
+    cur_state = statelib.show_only(('eth1',))
+    eth1_cur_state = cur_state[INTERFACES][0]
+    assert (eth1_desired_state['ipv6']['address'][0] not in
+            eth1_cur_state['ipv6']['address'])
+    assert (eth1_desired_state['ipv6']['address'][1] in
+            eth1_cur_state['ipv6']['address'])
+
+
+def test_add_static_ipv6_with_link_local_only():
+    desired_state = statelib.show_only(('eth1',))
+    eth1_desired_state = desired_state[INTERFACES][0]
+    eth1_desired_state['state'] = 'up'
+    eth1_desired_state['ipv6']['enabled'] = True
+    eth1_desired_state['ipv6']['address'] = [
+        {'ip': IPV6_LINK_LOCAL_ADDRESS1, 'prefix-length': 64},
+        {'ip': IPV6_LINK_LOCAL_ADDRESS2, 'prefix-length': 64},
+    ]
+
+    netapplier.apply(copy.deepcopy(desired_state))
+
+    # Make sure the link local address got ignored.
+    cur_state = statelib.show_only(('eth1',))
+    eth1_cur_state = cur_state[INTERFACES][0]
+    assert (eth1_desired_state['ipv6']['address'][0] not in
+            eth1_cur_state['ipv6']['address'])
+    assert (eth1_desired_state['ipv6']['address'][1] not in
+            eth1_cur_state['ipv6']['address'])
+
+
+def test_add_static_ipv6_with_no_address():
+    desired_state = statelib.show_only(('eth1',))
+    eth1_desired_state = desired_state[INTERFACES][0]
+    eth1_desired_state['state'] = 'up'
+    eth1_desired_state['ipv6']['enabled'] = True
+
+    netapplier.apply(copy.deepcopy(desired_state))
+
+    cur_state = statelib.show_only(('eth1',))
+    eth1_cur_state = cur_state[INTERFACES][0]
+    # Should have at least 1 link-local address.
+    assert len(eth1_cur_state['ipv6']['address']) >= 1

@@ -16,8 +16,10 @@
 #
 
 import socket
+import logging
 
 from libnmstate.nm import nmclient
+from libnmstate import iplib
 
 
 def get_info(active_connection):
@@ -50,11 +52,18 @@ def create_setting(config):
         setting_ip.props.method = (
             nmclient.NM.SETTING_IP6_CONFIG_METHOD_MANUAL)
         for address in config['address']:
-            naddr = nmclient.NM.IPAddress.new(socket.AF_INET6,
-                                              address['ip'],
-                                              address['prefix-length'])
-            setting_ip.add_address(naddr)
-    else:
+            if iplib.is_ipv6_link_local_addr(address['ip'],
+                                             address['prefix-length']):
+                logging.warning('IPv6 link local address '
+                                '{a[ip]}/{a[prefix-length]} is ignored when '
+                                'applying desired state'.format(a=address))
+            else:
+                naddr = nmclient.NM.IPAddress.new(socket.AF_INET6,
+                                                  address['ip'],
+                                                  address['prefix-length'])
+                setting_ip.add_address(naddr)
+
+    if not setting_ip.props.addresses:
         setting_ip.props.method = (
             nmclient.NM.SETTING_IP6_CONFIG_METHOD_IGNORE)
     return setting_ip

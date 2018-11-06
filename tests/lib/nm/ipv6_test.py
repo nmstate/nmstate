@@ -21,6 +21,11 @@ from lib.compat import mock
 
 from libnmstate import nm
 
+# IPv6 Address Prefix Reserved for Documentation:
+# https://tools.ietf.org/html/rfc3849
+IPV6_ADDRESS1 = '2001:db8:1::1'
+IPV6_LINK_LOCAL_ADDRESS1 = 'fe80::1'
+
 
 @pytest.fixture
 def NM_mock():
@@ -29,6 +34,8 @@ def NM_mock():
 
 
 def test_create_setting_without_config(NM_mock):
+    NM_mock.SettingIP6Config.new().props.addresses = []
+
     ipv6_setting = nm.ipv6.create_setting(config=None)
 
     assert ipv6_setting == NM_mock.SettingIP6Config.new.return_value
@@ -37,6 +44,8 @@ def test_create_setting_without_config(NM_mock):
 
 
 def test_create_setting_with_ipv6_disabled(NM_mock):
+    NM_mock.SettingIP6Config.new().props.addresses = []
+
     ipv6_setting = nm.ipv6.create_setting(config={'enabled': False})
 
     assert (ipv6_setting.props.method ==
@@ -44,6 +53,8 @@ def test_create_setting_with_ipv6_disabled(NM_mock):
 
 
 def test_create_setting_without_addresses(NM_mock):
+    NM_mock.SettingIP6Config.new().props.addresses = []
+
     ipv6_setting = nm.ipv6.create_setting(
         config={
             'enabled': True,
@@ -117,3 +128,27 @@ def test_get_info_with_ipv6_config():
             }
         ]
     }
+
+
+def test_create_setting_with_link_local_addresses(NM_mock):
+    config = {
+        'enabled': True,
+        'address': [
+            {'ip': IPV6_LINK_LOCAL_ADDRESS1, 'prefix-length': 64},
+            {'ip': IPV6_ADDRESS1, 'prefix-length': 64},
+        ],
+    }
+    ipv6_setting = nm.ipv6.create_setting(config=config)
+
+    assert (ipv6_setting.props.method ==
+            NM_mock.SETTING_IP6_CONFIG_METHOD_MANUAL)
+    NM_mock.IPAddress.new.assert_has_calls(
+        [
+            mock.call(nm.ipv6.socket.AF_INET6,
+                      config['address'][1]['ip'],
+                      config['address'][1]['prefix-length'])
+        ]
+    )
+    NM_mock.SettingIP6Config.new.return_value.add_address.assert_has_calls(
+        [mock.call(NM_mock.IPAddress.new.return_value)]
+    )
