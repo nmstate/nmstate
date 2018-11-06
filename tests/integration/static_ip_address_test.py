@@ -195,6 +195,8 @@ def test_add_static_ipv6_with_full_state():
     eth1_desired_state['state'] = 'up'
     eth1_desired_state['ipv6']['enabled'] = True
     eth1_desired_state['ipv6']['address'] = [
+        {'ip': IPV6_ADDRESS2, 'prefix-length': 64},
+        # This sequence is intentionally made for IP address sorting.
         {'ip': IPV6_ADDRESS1, 'prefix-length': 64},
     ]
     netapplier.apply(copy.deepcopy(desired_state))
