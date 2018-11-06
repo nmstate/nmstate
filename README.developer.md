@@ -14,9 +14,9 @@
   underscore_separated_names.
 - Class names are in CamelCase.
 - Imports should be grouped in the following order:
--- Standard library imports
--- Related third party imports
--- Local application-specific or library-specific imports.
+  - Standard library imports
+  - Related third party imports
+  - Local application-specific or library-specific imports.
 - All indentation is made of the space characters.
   Tabs are evil. In makefiles, however, tabs are obligatory.
   White space between code stanzas are welcome. They help to create breathing
@@ -24,8 +24,28 @@
   However, splitting stanzas into helper functions could be even better.
 - Prefer single quotes (') whenever possible.
 
-Note: This is a modified version of VDSM conding guidelines:
+## Clean Code
+Do your best to follow the clean code guidelines.
+
+- Name classes using a noun.
+- Name functions/methods using a verb.
+- Make them as small as possible.
+- Should do one thing only and do it well.
+  One thing means one level of abstraction.
+  The names and code should reflect that.
+- Methods/functions should be organized per level of abstraction,
+  where callee sits below their caller.
+- Avoid output-arguments (arguments to output data out of a function/method).
+- Don’t use boolean arguments, use 2 functions/methods instead.
+
+  Not both
+
+- Don’t return an error code, throw an exception instead.
+
+
+References:
 https://www.ovirt.org/develop/developer-guide/vdsm/coding-guidelines/
+Book: Clean Code by Robert C. Martin (Uncle Bob)
 
 ## Create debug information for libnm bugs
 
