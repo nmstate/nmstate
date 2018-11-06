@@ -97,6 +97,8 @@ class State(object):
 
     def normalize(self):
         self._sort_iface_lag_slaves()
+        self._ipv6_skeleton_canonicalization()
+        self._ignore_ipv6_link_local()
 
     def remove_absent_entries(self):
         self._state[INTERFACES] = [
@@ -107,6 +109,19 @@ class State(object):
     def _sort_iface_lag_slaves(self):
         for ifstate in self._state[INTERFACES]:
             ifstate.get('link-aggregation', {}).get('slaves', []).sort()
+
+    def _ipv6_skeleton_canonicalization(self):
+        for iface_state in self._state.get(INTERFACES, []):
+            iface_state.setdefault('ipv6', {})
+            iface_state['ipv6'].setdefault('enabled', False)
+            iface_state['ipv6'].setdefault('address', [])
+
+    def _ignore_ipv6_link_local(self):
+        for iface_state in self._state.get(INTERFACES, []):
+            iface_state['ipv6']['address'] = list(
+                addr for addr in iface_state['ipv6']['address']
+                if not _is_ipv6_link_local(addr['ip'],
+                                           addr['prefix-length']))
 
 
 def _lookup_iface_state_by_name(interfaces_state, ifname):
@@ -151,3 +166,10 @@ def filter_current_state(desired_state):
         if ifstate['name'] in desired_iface_names
     ]
     return {INTERFACES: filtered_iface_current_state}
+
+
+def _is_ipv6_link_local(ip, prefix):
+    """
+    The IPv6 link local address range is fe80::/10.
+    """
+    return ip[:3] in ['fe8', 'fe9', 'fea', 'feb'] and prefix >= 10
