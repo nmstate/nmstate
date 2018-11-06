@@ -699,6 +699,64 @@ class TestAssertIfaceState(object):
         with pytest.raises(netapplier.DesiredStateIsNotCurrentError):
             netapplier.assert_ifaces_state(desired_state, current_state)
 
+    def test_sort_multiple_ip(self):
+        desired_state = self._base_state
+        current_state = self._base_state
+        desired_state['foo-name']['ipv4'] = {
+            'address': [
+                {
+                    'ip': '192.168.122.10',
+                    'prefix-length': 24
+                },
+                {
+                    'ip': '192.168.121.10',
+                    'prefix-length': 24
+                },
+            ],
+            'enabled': True
+        }
+        current_state['foo-name']['ipv4'] = {
+            'address': [
+                {
+                    'ip': '192.168.121.10',
+                    'prefix-length': 24
+                },
+                {
+                    'ip': '192.168.122.10',
+                    'prefix-length': 24
+                },
+            ],
+            'enabled': True
+        }
+        desired_state['foo-name']['ipv6'] = {
+            'address': [
+                {
+                    'ip': '2001::2',
+                    'prefix-length': 64
+                },
+                {
+                    'ip': '2001::1',
+                    'prefix-length': 64
+                }
+            ],
+            'enabled': True
+        }
+        current_state['foo-name']['ipv6'] = {
+            'address': [
+                {
+                    'ip': '2001::1',
+                    'prefix-length': 64
+                },
+                {
+                    'ip': '2001::2',
+                    'prefix-length': 64
+                }
+            ],
+            'enabled': True
+        }
+
+        netapplier.assert_ifaces_state(desired_state, current_state)
+
     @property
     def _base_state(self):
         return {

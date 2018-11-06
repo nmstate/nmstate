@@ -17,6 +17,7 @@
 
 import collections
 import copy
+from operator import itemgetter
 import six
 
 from libnmstate import netinfo
@@ -99,6 +100,7 @@ class State(object):
         self._sort_iface_lag_slaves()
         self._ipv6_skeleton_canonicalization()
         self._ignore_ipv6_link_local()
+        self._sort_ip_addresses()
 
     def remove_absent_entries(self):
         self._state[INTERFACES] = [
@@ -122,6 +124,12 @@ class State(object):
                 addr for addr in iface_state['ipv6']['address']
                 if not _is_ipv6_link_local(addr['ip'],
                                            addr['prefix-length']))
+
+    def _sort_ip_addresses(self):
+        for iface_state in self._state.get(INTERFACES, []):
+            for family in ('ipv4', 'ipv6'):
+                iface_state.get(family, {}).get('address', []).sort(
+                    key=itemgetter('ip'))
 
 
 def _lookup_iface_state_by_name(interfaces_state, ifname):
