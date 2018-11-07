@@ -67,8 +67,6 @@ def test_add_static_ipv4_with_full_state():
     eth1_desired_state['ipv4']['address'] = [
         {'ip': IPV4_ADDRESS3, 'prefix-length': 24}
     ]
-    # FIXME: We don't have a way to disable IPv6 in libnmstate yet.
-    eth1_desired_state['ipv6']['enabled'] = True
     netapplier.apply(copy.deepcopy(desired_state))
 
     assertlib.assert_state(desired_state)

@@ -63,7 +63,7 @@ def test_create_setting_without_addresses(NM_mock):
     )
 
     assert (ipv6_setting.props.method ==
-            NM_mock.SETTING_IP6_CONFIG_METHOD_IGNORE)
+            NM_mock.SETTING_IP6_CONFIG_METHOD_LINK_LOCAL)
 
 
 def test_create_setting_with_static_addresses(NM_mock):
