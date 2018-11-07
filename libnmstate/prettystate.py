@@ -35,7 +35,7 @@ def format_desired_current_state_diff(desired_state, current_state):
         pretty_desired_state.splitlines(True),
         pretty_current_state.splitlines(True),
         fromfile='desired',
-        tofile='current', n=0))
+        tofile='current', n=3))
     return (
         '\n'
         'desired\n'
