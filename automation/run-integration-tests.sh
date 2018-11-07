@@ -37,7 +37,7 @@ function add_extra_networks {
     docker_exec '
       ip addr flush eth1 && \
       ip addr flush eth2 && \
-      echo 0 > /proc/sys/net/ipv6/conf/eth1/disable_ipv6 || true \
+      echo 0 > /proc/sys/net/ipv6/conf/eth1/disable_ipv6 || true; \
       echo 0 > /proc/sys/net/ipv6/conf/eth2/disable_ipv6 || true
     '
 }
