@@ -49,6 +49,7 @@ function dump_network_info {
       ip addr; \
       ip route; \
       cat /etc/resolv.conf; \
+      head /proc/sys/net/ipv6/conf/*/disable_ipv6; \
       ping -c 1 github.com || true
     '
 }
@@ -81,6 +82,7 @@ function collect_artifacts {
 }
 
 function run_exit {
+    dump_network_info
     collect_artifacts
     remove_container
 }
