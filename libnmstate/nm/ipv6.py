@@ -48,10 +48,8 @@ def get_info(active_connection):
 
 def create_setting(config):
     setting_ip = nmclient.NM.SettingIP6Config.new()
-    if config and config.get('enabled') and config.get('address'):
-        setting_ip.props.method = (
-            nmclient.NM.SETTING_IP6_CONFIG_METHOD_MANUAL)
-        for address in config['address']:
+    if config and config.get('enabled'):
+        for address in config.get('address', ()):
             if iplib.is_ipv6_link_local_addr(address['ip'],
                                              address['prefix-length']):
                 logging.warning('IPv6 link local address '
@@ -62,8 +60,13 @@ def create_setting(config):
                                                   address['ip'],
                                                   address['prefix-length'])
                 setting_ip.add_address(naddr)
-
-    if not setting_ip.props.addresses:
+        if setting_ip.props.addresses:
+            setting_ip.props.method = (
+                nmclient.NM.SETTING_IP6_CONFIG_METHOD_MANUAL)
+        else:
+            setting_ip.props.method = (
+                nmclient.NM.SETTING_IP6_CONFIG_METHOD_LINK_LOCAL)
+    else:
         setting_ip.props.method = (
             nmclient.NM.SETTING_IP6_CONFIG_METHOD_IGNORE)
     return setting_ip
