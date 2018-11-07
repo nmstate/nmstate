@@ -26,15 +26,12 @@ from .testlib import assertlib
 from .testlib import statelib
 from .testlib.statelib import INTERFACES
 
-# FIXME: Once IPv6 disabling is supported, below IPv6 codes should be removed.
-
 
 def test_increase_iface_mtu():
     desired_state = statelib.show_only(('eth1',))
     eth1_desired_state = desired_state[INTERFACES][0]
     eth1_desired_state['state'] = 'up'
     eth1_desired_state['mtu'] = 1900
-    eth1_desired_state['ipv6']['enabled'] = True
 
     netapplier.apply(copy.deepcopy(desired_state))
 
@@ -57,7 +54,6 @@ def test_upper_limit_jambo_iface_mtu():
     eth1_desired_state = desired_state[INTERFACES][0]
     eth1_desired_state['state'] = 'up'
     eth1_desired_state['mtu'] = 9000
-    eth1_desired_state['ipv6']['enabled'] = True
 
     netapplier.apply(copy.deepcopy(desired_state))
 
@@ -69,7 +65,6 @@ def test_increase_more_than_jambo_iface_mtu():
     eth1_desired_state = desired_state[INTERFACES][0]
     eth1_desired_state['state'] = 'up'
     eth1_desired_state['mtu'] = 10000
-    eth1_desired_state['ipv6']['enabled'] = True
 
     netapplier.apply(copy.deepcopy(desired_state))
 
@@ -82,7 +77,6 @@ def test_decrease_to_zero_iface_mtu():
     eth1_desired_state = desired_state[INTERFACES][0]
     eth1_desired_state['state'] = 'up'
     eth1_desired_state['mtu'] = 0
-    eth1_desired_state['ipv6']['enabled'] = True
 
     with pytest.raises(netapplier.DesiredStateIsNotCurrentError) as err:
         netapplier.apply(copy.deepcopy(desired_state))
@@ -96,7 +90,6 @@ def test_decrease_to_negative_iface_mtu():
     eth1_desired_state = desired_state[INTERFACES][0]
     eth1_desired_state['state'] = 'up'
     eth1_desired_state['mtu'] = -1
-    eth1_desired_state['ipv6']['enabled'] = True
 
     with pytest.raises(js.ValidationError) as err:
         netapplier.apply(copy.deepcopy(desired_state))
@@ -111,7 +104,6 @@ def test_decrease_to_min_ethernet_frame_size_iface_mtu():
     eth1_desired_state['state'] = 'up'
     # the min is 64 - 18 = 46
     eth1_desired_state['mtu'] = 40
-    eth1_desired_state['ipv6']['enabled'] = True
 
     with pytest.raises(netapplier.DesiredStateIsNotCurrentError) as err:
         netapplier.apply(copy.deepcopy(desired_state))
