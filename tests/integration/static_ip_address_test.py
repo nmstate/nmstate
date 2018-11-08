@@ -58,6 +58,26 @@ def setup_eth1_ipv4():
     netapplier.apply(desired_state)
 
 
+@pytest.fixture
+def setup_eth1_ipv6():
+    desired_state = {
+        INTERFACES: [
+            {
+                'name': 'eth1',
+                'type': 'ethernet',
+                'state': 'up',
+                'ipv6': {
+                    'enabled': True,
+                    'address': [
+                        {'ip': IPV6_ADDRESS1, 'prefix-length': 32}
+                    ]
+                }
+            }
+        ]
+    }
+    netapplier.apply(desired_state)
+
+
 def test_add_static_ipv4_with_full_state():
     desired_state = statelib.show_only(('eth1',))
     eth1_desired_state = desired_state[INTERFACES][0]
@@ -95,7 +115,7 @@ def test_add_static_ipv4_with_min_state():
     assertlib.assert_state(desired_state)
 
 
-def test_remove_static_ipv4(setup_eth1_ipv4):
+def test_disable_static_ipv4(setup_eth1_ipv4):
     desired_state = {
         INTERFACES: [
             {
@@ -103,6 +123,42 @@ def test_remove_static_ipv4(setup_eth1_ipv4):
                 'type': 'ethernet',
                 'ipv4': {
                     'enabled': False
+                }
+            }
+        ]
+    }
+
+    netapplier.apply(copy.deepcopy(desired_state))
+
+    assertlib.assert_state(desired_state)
+
+
+def test_remove_static_ipv4(setup_eth1_ipv4):
+    desired_state = {
+        INTERFACES: [
+            {
+                'name': 'eth1',
+                'type': 'ethernet',
+                'ipv4': {
+                    'address': [],
+                }
+            }
+        ]
+    }
+
+    netapplier.apply(copy.deepcopy(desired_state))
+
+    assertlib.assert_state(desired_state)
+
+
+def test_remove_static_ipv6(setup_eth1_ipv6):
+    desired_state = {
+        INTERFACES: [
+            {
+                'name': 'eth1',
+                'type': 'ethernet',
+                'ipv6': {
+                    'address': [],
                 }
             }
         ]

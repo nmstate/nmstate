@@ -320,7 +320,7 @@ def assert_ifaces_state(ifaces_desired_state, ifaces_current_state):
             iface_dstate, iface_cstate)
         iface_dstate, iface_cstate = _sort_lag_slaves(
             iface_dstate, iface_cstate)
-        iface_dstate, iface_cstate = _canonicalize_ipv6_state(
+        iface_dstate, iface_cstate = _canonicalize_ip_state(
             iface_dstate, iface_cstate)
         iface_dstate, iface_cstate = _remove_iface_ipv6_link_local_addr(
             iface_dstate, iface_cstate)
@@ -369,11 +369,12 @@ def _remove_iface_ipv6_link_local_addr(desired_state, current_state):
     return desired_state, current_state
 
 
-def _canonicalize_ipv6_state(desired_state, current_state):
-    desired_state = _dict_update({'ipv6': {'enabled': False, 'address': []}},
-                                 desired_state)
-    current_state = _dict_update({'ipv6': {'enabled': False, 'address': []}},
-                                 current_state)
+def _canonicalize_ip_state(desired_state, current_state):
+    for state in (desired_state, current_state):
+        for family in ('ipv4', 'ipv6'):
+            state.update(
+                _dict_update({family: {'enabled': False, 'address': []}},
+                             state))
     return desired_state, current_state
 
 
