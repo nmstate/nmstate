@@ -17,6 +17,7 @@
 
 import copy
 
+import pytest
 import yaml
 
 from libnmstate import netapplier
@@ -69,3 +70,26 @@ def test_remove_bond_with_minimum_desired_state():
     netapplier.apply(remove_bond_state)
     state = statelib.show_only((state[INTERFACES][0]['name'],))
     assert not state[INTERFACES]
+
+
+@pytest.mark.xfail(reason='https://nmstate.atlassian.net/browse/NMSTATE-72',
+                   strict=True)
+def test_add_bond_without_slaves():
+    desired_bond_state = {
+            INTERFACES: [
+                {
+                    'name': 'bond99',
+                    'type': 'bond',
+                    'state': 'up',
+                    'link-aggregation': {
+                        'mode': 'balance-rr',
+                        'slaves': []
+                    },
+                }
+
+            ]
+        }
+
+    netapplier.apply(copy.deepcopy(desired_bond_state))
+
+    assertlib.assert_state(desired_bond_state)
