@@ -39,6 +39,12 @@ def nmclient_mock():
         yield
 
 
+@pytest.fixture(scope='module', autouse=True)
+def cmd_exec_mock():
+    with mock.patch.object(netapplier.cmd, 'exec_cmd'):
+        yield
+
+
 @pytest.fixture
 def netapplier_nm_mock():
     with mock.patch.object(netapplier, 'nm') as m:

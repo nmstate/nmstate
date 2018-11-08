@@ -17,9 +17,8 @@
 
 import json
 
+from libnmstate import cmd as libcmd
 from libnmstate.schema import Constants
-
-from .testlib import cmd as libcmd
 
 
 SHOW_CMD = ['nmstatectl', 'show']

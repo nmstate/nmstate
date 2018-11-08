@@ -17,8 +17,7 @@
 
 import os
 
-
-from .testlib import cmd as libcmd
+from libnmstate import cmd as libcmd
 
 
 RC_SUCCESS = 0

@@ -23,9 +23,11 @@ import copy
 import six
 import time
 
+from libnmstate import cmd
 from libnmstate import iplib
 from libnmstate import netinfo
 from libnmstate import nm
+from libnmstate import sysctl
 from libnmstate import validator
 from libnmstate.nm import nmclient
 from libnmstate.prettystate import format_desired_current_state_diff
@@ -51,6 +53,8 @@ def _apply_ifaces_state(interfaces_desired_state, verify_change):
     ifaces_desired_state = _index_by_name(interfaces_desired_state)
     netinfo.interfaces()
     ifaces_current_state = _index_by_name(netinfo.interfaces())
+
+    init_nm_interfaces_for_ipv6_support(tuple(ifaces_desired_state))
 
     ifaces_desired_state = sanitize_ethernet_state(ifaces_desired_state,
                                                    ifaces_current_state)
@@ -382,3 +386,24 @@ def _sort_ip_addresses(desired_state, current_state):
         for family in ('ipv4', 'ipv6'):
             state.get(family, {}).get('address', []).sort(key=itemgetter('ip'))
     return desired_state, current_state
+
+
+def init_nm_interfaces_for_ipv6_support(interfaces):
+    """
+    Initialize the interfaces in order to properly operate with existing
+    NetworkManager limitation regarding IPv6 stack.
+    NM is learning the initial IPv6 stack state for an interface when the
+    interfaces is first managed. Therefore, this function makes sure the
+    learned state is IPv6 disabled so NM will return the interfaces to this
+    state when marked with IPv6 method=ignore.
+
+    FIXME: This special handling should be dropped when either NM fixes its
+    behaviour or an explicit disable_ipv6=1 is executed by nmstate.
+    """
+    for ifname in interfaces:
+        is_ipv6_disabled = sysctl.is_ipv6_disabled(ifname)
+        cmd.exec_cmd(('nmcli', 'device', 'set', ifname, 'managed', 'no'))
+        sysctl.disable_ipv6(ifname)
+        cmd.exec_cmd(('nmcli', 'device', 'set', ifname, 'managed', 'yes'))
+        if not is_ipv6_disabled:
+            sysctl.enable_ipv6(ifname)
