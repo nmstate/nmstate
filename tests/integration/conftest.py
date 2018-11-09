@@ -49,3 +49,18 @@ def cleanup_test_interfaces():
             )
     if ifaces_down_state[INTERFACES]:
         netapplier.apply(ifaces_down_state)
+
+    for ifname in ('eth1', 'eth2'):
+        ifaces_up_state = {
+            INTERFACES: [
+                {
+                    'name': ifname,
+                    'type': 'ethernet',
+                    'state': 'up',
+                    'ipv6': {
+                        'enabled': True
+                    }
+                }
+            ]
+        }
+        netapplier.apply(ifaces_up_state)

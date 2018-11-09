@@ -16,6 +16,7 @@
 
 from __future__ import absolute_import
 import copy
+import time
 
 import pytest
 import jsonschema as js
@@ -30,7 +31,6 @@ from .testlib.statelib import INTERFACES
 def test_increase_iface_mtu():
     desired_state = statelib.show_only(('eth1',))
     eth1_desired_state = desired_state[INTERFACES][0]
-    eth1_desired_state['state'] = 'up'
     eth1_desired_state['mtu'] = 1900
 
     netapplier.apply(copy.deepcopy(desired_state))
@@ -41,8 +41,7 @@ def test_increase_iface_mtu():
 def test_decrease_iface_mtu():
     desired_state = statelib.show_only(('eth1',))
     eth1_desired_state = desired_state[INTERFACES][0]
-    eth1_desired_state['state'] = 'up'
-    eth1_desired_state['mtu'] = 1000
+    eth1_desired_state['mtu'] = 1400
 
     netapplier.apply(copy.deepcopy(desired_state))
 
@@ -52,7 +51,6 @@ def test_decrease_iface_mtu():
 def test_upper_limit_jambo_iface_mtu():
     desired_state = statelib.show_only(('eth1',))
     eth1_desired_state = desired_state[INTERFACES][0]
-    eth1_desired_state['state'] = 'up'
     eth1_desired_state['mtu'] = 9000
 
     netapplier.apply(copy.deepcopy(desired_state))
@@ -63,7 +61,6 @@ def test_upper_limit_jambo_iface_mtu():
 def test_increase_more_than_jambo_iface_mtu():
     desired_state = statelib.show_only(('eth1',))
     eth1_desired_state = desired_state[INTERFACES][0]
-    eth1_desired_state['state'] = 'up'
     eth1_desired_state['mtu'] = 10000
 
     netapplier.apply(copy.deepcopy(desired_state))
@@ -75,12 +72,13 @@ def test_decrease_to_zero_iface_mtu():
     desired_state = statelib.show_only(('eth1',))
     origin_desired_state = copy.deepcopy(desired_state)
     eth1_desired_state = desired_state[INTERFACES][0]
-    eth1_desired_state['state'] = 'up'
     eth1_desired_state['mtu'] = 0
 
     with pytest.raises(netapplier.DesiredStateIsNotCurrentError) as err:
         netapplier.apply(copy.deepcopy(desired_state))
     assert '-mtu: 0' in err.value.args[0]
+    # FIXME: Drop the sleep when the waiting logic is implemented.
+    time.sleep(2)
     assertlib.assert_state(origin_desired_state)
 
 
@@ -88,7 +86,6 @@ def test_decrease_to_negative_iface_mtu():
     desired_state = statelib.show_only(('eth1',))
     origin_desired_state = copy.deepcopy(desired_state)
     eth1_desired_state = desired_state[INTERFACES][0]
-    eth1_desired_state['state'] = 'up'
     eth1_desired_state['mtu'] = -1
 
     with pytest.raises(js.ValidationError) as err:
@@ -97,15 +94,11 @@ def test_decrease_to_negative_iface_mtu():
     assertlib.assert_state(origin_desired_state)
 
 
-def test_decrease_to_min_ethernet_frame_size_iface_mtu():
+def test_decrease_to_ipv6_min_ethernet_frame_size_iface_mtu():
     desired_state = statelib.show_only(('eth1',))
-    origin_desired_state = copy.deepcopy(desired_state)
     eth1_desired_state = desired_state[INTERFACES][0]
-    eth1_desired_state['state'] = 'up'
-    # the min is 64 - 18 = 46
-    eth1_desired_state['mtu'] = 40
+    eth1_desired_state['mtu'] = 1280
 
-    with pytest.raises(netapplier.DesiredStateIsNotCurrentError) as err:
-        netapplier.apply(copy.deepcopy(desired_state))
-    assert '-mtu: 40' in err.value.args[0]
-    assertlib.assert_state(origin_desired_state)
+    netapplier.apply(copy.deepcopy(desired_state))
+
+    assertlib.assert_state(desired_state)
