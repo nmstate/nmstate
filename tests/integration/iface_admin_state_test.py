@@ -35,6 +35,7 @@ def test_set_a_down_iface_down():
             }
         ]
     }
+    netapplier.apply(copy.deepcopy(desired_state))
     assertlib.assert_state(desired_state)
 
     netapplier.apply(copy.deepcopy(desired_state))
