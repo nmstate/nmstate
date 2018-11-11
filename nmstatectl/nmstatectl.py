@@ -62,7 +62,8 @@ def setup_subcommand_edit(subparsers):
     )
     parser_edit.add_argument(
         '--no-verify', action='store_false', dest='verify', default=True,
-        help='Verify that the desired state is now part of the current state.'
+        help='Do not verify that the state was completely set and disable '
+        'rollback to previous state.'
     )
 
 
