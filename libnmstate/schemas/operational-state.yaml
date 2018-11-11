@@ -22,6 +22,7 @@ properties:
             - "$ref": "#/definitions/interface-ovs-bridge/all"
             - "$ref": "#/definitions/interface-ovs-interface/rw"
             - "$ref": "#/definitions/interface-dummy/rw"
+            - "$ref": "#/definitions/interface-vlan/rw"
 
 definitions:
   types:
@@ -144,11 +145,18 @@ definitions:
           type: string
           enum:
             - vlan
-        vlan-id:
-          type: integer
-          minimum: 0
-        vlan-base:
-          type: string
+        vlan:
+          type: object
+          properties:
+            id:
+              type: integer
+              minimum: 0
+              maximum: 4095
+            base-iface:
+              type: string
+          required:
+            - id
+            - base-iface
   interface-bond:
     rw:
       properties:
