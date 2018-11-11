@@ -40,6 +40,21 @@ interfaces:
 """
 
 
+@pytest.fixture
+def setup_remove_bond99():
+    yield
+    remove_bond = {
+        INTERFACES: [
+            {
+                'name': 'bond99',
+                'type': 'bond',
+                'state': 'absent'
+            }
+        ]
+    }
+    netapplier.apply(remove_bond)
+
+
 def test_add_and_remove_bond_with_two_slaves():
     state = yaml.load(BOND99_YAML_BASE)
     netapplier.apply(copy.deepcopy(state))
@@ -89,6 +104,34 @@ def test_add_bond_without_slaves():
 
             ]
         }
+
+    netapplier.apply(copy.deepcopy(desired_bond_state))
+
+    assertlib.assert_state(desired_bond_state)
+
+
+def test_add_bond_with_slaves_and_ipv4(setup_remove_bond99):
+    desired_bond_state = {
+                INTERFACES: [
+                    {
+                        'name': 'bond99',
+                        'type': 'bond',
+                        'state': 'up',
+                        'ipv4': {
+                            'enabled': True,
+                            'address': [
+                                {'ip': '192.168.122.250', 'prefix-length': 24}
+                            ]
+                        },
+                        'link-aggregation': {
+                            'mode': 'balance-rr',
+                            'slaves': ['eth1', 'eth2'],
+                            'options':
+                                {'miimon': '140'}
+                        },
+                    }
+                ]
+            }
 
     netapplier.apply(copy.deepcopy(desired_bond_state))
 
