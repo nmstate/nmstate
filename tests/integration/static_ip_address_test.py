@@ -58,6 +58,28 @@ def setup_eth1_ipv4():
     netapplier.apply(desired_state)
 
 
+@pytest.fixture
+def setup_eth1_ipv6():
+    desired_state = {
+        INTERFACES: [
+            {
+                'name': 'eth1',
+                'type': 'ethernet',
+                'state': 'up',
+                'ipv6': {
+                    'enabled': True,
+                    'address': [
+                        {'ip': IPV6_ADDRESS1, 'prefix-length': 64}
+                    ]
+                }
+            }
+        ]
+    }
+    netapplier.apply(desired_state)
+
+    return desired_state
+
+
 def test_add_static_ipv4_with_full_state():
     desired_state = statelib.show_only(('eth1',))
     eth1_desired_state = desired_state[INTERFACES][0]
@@ -255,3 +277,128 @@ def test_add_static_ipv6_with_no_address():
     eth1_cur_state = cur_state[INTERFACES][0]
     # Should have at least 1 link-local address.
     assert len(eth1_cur_state['ipv6']['address']) >= 1
+
+
+def test_add_static_ipv6_with_min_state():
+    desired_state = {
+        INTERFACES: [
+            {
+                'name': 'eth2',
+                'type': 'ethernet',
+                'state': 'up',
+                'ipv6': {
+                    'enabled': True,
+                    'address': [
+                        {'ip': IPV6_ADDRESS1, 'prefix-length': 24}
+                    ]
+                }
+            }
+        ]
+    }
+    netapplier.apply(copy.deepcopy(desired_state))
+
+    assertlib.assert_state(desired_state)
+
+
+@pytest.mark.xfail(reason='Currently ipv6 cannot be disabled')
+def test_disable_static_ipv6(setup_eth1_ipv6):
+    desired_state = {
+        INTERFACES: [
+            {
+                'name': 'eth1',
+                'type': 'ethernet',
+                'ipv6': {
+                    'enabled': False
+                }
+            }
+        ]
+    }
+
+    netapplier.apply(copy.deepcopy(desired_state))
+
+    assertlib.assert_state(desired_state)
+
+
+def test_edit_static_ipv6_address_and_prefix(setup_eth1_ipv6):
+    eth1_setup = setup_eth1_ipv6[INTERFACES][0]
+    desired_state = {
+        INTERFACES: [
+            {
+                'name': 'eth1',
+                'type': 'ethernet',
+                'state': 'up',
+                'ipv6': {
+                    'enabled': True,
+                    'address': [
+                        {'ip': IPV6_ADDRESS2, 'prefix-length': 24}
+                    ]
+                }
+            }
+        ]
+    }
+
+    netapplier.apply(copy.deepcopy(desired_state))
+    eth1_desired_state = desired_state[INTERFACES][0]
+    current_state = statelib.show_only(('eth1',))
+
+    eth1_current_state = current_state[INTERFACES][0]
+
+    assert (eth1_desired_state['ipv6']['address'][0] in
+            eth1_current_state['ipv6']['address'])
+
+    assert (eth1_setup['ipv6']['address'][0] not in
+            eth1_current_state['ipv6']['address'])
+
+
+def test_add_ifaces_with_same_static_ipv6_address_in_one_transaction():
+    desired_state = {
+        INTERFACES: [
+            {
+                'name': 'eth1',
+                'type': 'ethernet',
+                'state': 'up',
+                'ipv6': {
+                    'enabled': True,
+                    'address': [
+                        {'ip': IPV6_ADDRESS1, 'prefix-length': 64}
+                    ]
+                }
+            },
+            {
+                'name': 'eth2',
+                'type': 'ethernet',
+                'state': 'up',
+                'ipv6': {
+                    'enabled': True,
+                    'address': [
+                        {'ip': IPV6_ADDRESS1, 'prefix-length': 64}
+                    ]
+                }
+            }
+        ]
+    }
+
+    netapplier.apply(copy.deepcopy(desired_state))
+
+    assertlib.assert_state(desired_state)
+
+
+def test_add_iface_with_same_static_ipv6_address_to_existing(setup_eth1_ipv6):
+    desired_state = {
+        INTERFACES: [
+            {
+                'name': 'eth2',
+                'type': 'ethernet',
+                'state': 'up',
+                'ipv6': {
+                    'enabled': True,
+                    'address': [
+                        {'ip': IPV6_ADDRESS1, 'prefix-length': 64}
+                    ]
+                }
+            }
+        ]
+    }
+    netapplier.apply(copy.deepcopy(desired_state))
+
+    assertlib.assert_state(desired_state)
