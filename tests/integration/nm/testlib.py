@@ -14,31 +14,14 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
+from contextlib import contextmanager
 
-from . import applier
-from . import bond
-from . import checkpoint
-from . import connection
-from . import device
-from . import ipv4
-from . import ipv6
-from . import nmclient
-from . import ovs
-from . import translator
-from . import user
-from . import vlan
-from . import wired
+from libnmstate import nm
 
-applier
-bond
-checkpoint
-connection
-device
-ipv4
-ipv6
-nmclient
-ovs
-translator
-user
-vlan
-wired
+
+@contextmanager
+def mainloop():
+    mloop = nm.nmclient.mainloop()
+    yield
+    success = mloop.run(timeout=5)
+    assert success, 'Mainloop error: ' + mloop.error

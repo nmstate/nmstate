@@ -20,10 +20,10 @@ import logging
 from . import nmclient
 
 
-def activate(dev):
+def activate(dev, connection=None):
     client = nmclient.client()
     mainloop = nmclient.mainloop()
-    connection = specific_object = None
+    specific_object = None
     user_data = mainloop, dev
     mainloop.push_action(
         client.activate_connection_async,
