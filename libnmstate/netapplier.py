@@ -20,6 +20,7 @@ from operator import itemgetter
 
 import collections
 import copy
+import logging
 import six
 import time
 
@@ -63,13 +64,30 @@ def _apply_ifaces_state(interfaces_desired_state, verify_change):
             ifaces_current_state = _index_by_name(netinfo.interfaces())
             _edit_interfaces(ifaces_desired_state, ifaces_current_state)
         if verify_change:
-            # FIXME: Remove this sleep after adding wait for state mechanism.
-            time.sleep(2)
-            ifaces_current_state = _index_by_name(netinfo.interfaces())
-            ifaces_desired_state = _remove_absent_iface_entries(
-                ifaces_desired_state)
-            ifaces_desired_state = remove_ifaces_metadata(ifaces_desired_state)
-            assert_ifaces_state(ifaces_desired_state, ifaces_current_state)
+            for retry in range(4):
+                try:
+                    _verify_change(ifaces_desired_state)
+                except DesiredStateIsNotCurrentError:
+                    time.sleep(1)
+                else:
+                    break
+            else:
+                _verify_change(ifaces_desired_state)
+                retry += 1
+
+            logging.debug(
+                'State verification passed on attempt #%s', str(retry))
+
+
+def _verify_change(ifaces_desired_state):
+    # FIXME: Remove this sleep after adding wait for state mechanism.
+
+        ifaces_current_state = _index_by_name(netinfo.interfaces())
+        ifaces_desired_state = _remove_absent_iface_entries(
+            ifaces_desired_state)
+        ifaces_desired_state = remove_ifaces_metadata(ifaces_desired_state)
+
+        assert_ifaces_state(ifaces_desired_state, ifaces_current_state)
 
 
 @contextmanager
