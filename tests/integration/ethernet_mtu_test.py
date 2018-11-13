@@ -102,3 +102,17 @@ def test_decrease_to_ipv6_min_ethernet_frame_size_iface_mtu():
     netapplier.apply(copy.deepcopy(desired_state))
 
     assertlib.assert_state(desired_state)
+
+
+def test_decrease_to_lower_than_min_ipv6_iface_mtu():
+    original_state = statelib.show_only(('eth1',))
+    desired_state = copy.deepcopy(original_state)
+    eth1_desired_state = desired_state[INTERFACES][0]
+    eth1_desired_state['mtu'] = 1279
+
+    with pytest.raises(netapplier.DesiredStateIsNotCurrentError) as err:
+        netapplier.apply(copy.deepcopy(desired_state))
+    assert '1279' in err.value.args[0]
+    # FIXME: Drop the sleep when the waiting logic is implemented.
+    time.sleep(2)
+    assertlib.assert_state(original_state)
