@@ -85,8 +85,6 @@ def test_remove_bond_with_minimum_desired_state():
     assert not state[INTERFACES]
 
 
-@pytest.mark.xfail(reason='https://nmstate.atlassian.net/browse/NMSTATE-72',
-                   strict=True)
 def test_add_bond_without_slaves():
     desired_bond_state = {
             INTERFACES: [
