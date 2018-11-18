@@ -20,13 +20,22 @@ import logging
 from . import nmclient
 
 
-def activate(dev, connection=None):
+def activate(dev=None, connection_id=None):
+    """Activate the given device or remote connection profile."""
+    mainloop = nmclient.mainloop()
+    mainloop.push_action(
+        _safe_activate_async, dev, connection_id)
+
+
+def _safe_activate_async(dev, connection_id):
     client = nmclient.client()
     mainloop = nmclient.mainloop()
+    connection = None
+    if connection_id:
+        connection = client.get_connection_by_id(connection_id)
     specific_object = None
     user_data = mainloop, dev
-    mainloop.push_action(
-        client.activate_connection_async,
+    client.activate_connection_async(
         connection,
         dev,
         specific_object,

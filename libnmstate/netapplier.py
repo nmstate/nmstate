@@ -273,7 +273,7 @@ def _add_interfaces(ifaces_desired_state, ifaces_current_state):
     ifaces_configs = nm.applier.prepare_new_ifaces_configuration(ifaces2add)
     nm.applier.create_new_ifaces(ifaces_configs)
 
-    nm.applier.set_ifaces_admin_state(ifaces2add)
+    nm.applier.set_ifaces_admin_state(ifaces2add, con_profiles=ifaces_configs)
 
 
 def _edit_interfaces(ifaces_desired_state, ifaces_current_state):
