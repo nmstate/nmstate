@@ -20,13 +20,28 @@ import logging
 from . import nmclient
 
 
-def activate(dev, connection=None):
+def activate(dev=None, fetch_remote_connection_func=None):
+    """
+    Activate the given device or remote connection profile.
+    For the remote connection profile, a fetcher function is provided which
+    is to be called at the time of activation.
+    (At the time this function is called, the connection may not yet be
+    created)
+    """
+    mainloop = nmclient.mainloop()
+    mainloop.push_action(
+        _safe_activate_async, dev, fetch_remote_connection_func)
+
+
+def _safe_activate_async(dev, fetch_remote_connection_func):
     client = nmclient.client()
     mainloop = nmclient.mainloop()
+    connection = None
+    if fetch_remote_connection_func:
+        connection = fetch_remote_connection_func()
     specific_object = None
     user_data = mainloop, dev
-    mainloop.push_action(
-        client.activate_connection_async,
+    client.activate_connection_async(
         connection,
         dev,
         specific_object,

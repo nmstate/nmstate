@@ -41,10 +41,11 @@ def mainloop_mock():
 
 def test_activate(client_mock, mainloop_mock):
     dev = 'foodev'
+    mainloop_mock.push_action = lambda func, dev, fetch: func(dev, fetch)
+
     nm.device.activate(dev)
 
-    mainloop_mock.push_action.assert_called_once_with(
-        client_mock.activate_connection_async,
+    client_mock.activate_connection_async.assert_called_once_with(
         None,
         dev,
         None,

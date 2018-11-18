@@ -70,9 +70,9 @@ def _create_vlan(vlan_desired_state):
         con_profile = nm.connection.create_profile(
             (con_setting, vlan_setting, ipv4_setting, ipv6_setting))
         nm.connection.add_profile(con_profile, save_to_disk=False)
-    with mainloop():
-        remote_profile = nm.nmclient.client().get_connection_by_id(ifname)
-        nm.device.activate(dev=None, connection=remote_profile)
+        nm.device.activate(
+            fetch_remote_connection_func=(
+                lambda: nm.nmclient.client().get_connection_by_id(ifname)))
 
 
 def _delete_vlan(devname):

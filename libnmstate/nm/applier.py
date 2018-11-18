@@ -22,6 +22,7 @@ from . import connection
 from . import device
 from . import ipv4
 from . import ipv6
+from . import nmclient
 from . import ovs
 from . import translator
 from . import user
@@ -85,21 +86,72 @@ def prepare_edited_ifaces_configuration(ifaces_desired_state):
     return con_profiles
 
 
-def set_ifaces_admin_state(ifaces_desired_state):
+def set_ifaces_admin_state(ifaces_desired_state, con_profiles=()):
+    """
+    Control interface admin state by activating, deactivating and deleting
+    devices connection profiles.
+
+    The `absent` state results in deactivating the device and deleting
+    the connection profile.
+    FIXME: The `down` state is currently handled in the same way.
+
+    For new virtual devices, the `up` state is handled by activating the
+    new connection profile. For existing devices, the device is activated,
+    leaving it to choose the correct profile.
+
+    In order to activate correctly the interfaces, the order is significant:
+    - New interfaces (virtual interfaces).
+    - Master interfaces.
+    - All the rest.
+    """
+    new_ifaces = _get_new_ifaces(con_profiles)
+    new_ifaces_to_activate = set()
+    master_ifaces_to_activate = set()
     devs_actions = {}
+
     for iface_desired_state in ifaces_desired_state:
-        devs = _get_affected_devices(iface_desired_state)
-        if iface_desired_state['state'] == 'up':
-            devs_actions.update({dev: (device.activate,) for dev in devs})
-        elif iface_desired_state['state'] in ('down', 'absent'):
-            devs_actions.update(
-                {dev: (device.deactivate, device.delete) for dev in devs})
+        nmdev = device.get_device_by_name(iface_desired_state['name'])
+        if not nmdev:
+            ifname = iface_desired_state['name']
+            if ifname in new_ifaces and iface_desired_state['state'] == 'up':
+                    new_ifaces_to_activate.add(ifname)
         else:
-            raise UnsupportedIfaceStateError(iface_desired_state)
+            if iface_desired_state['state'] == 'up':
+                master_iface_types = ovs.BRIDGE_TYPE, bond.BOND_TYPE
+                if iface_desired_state['type'] in master_iface_types:
+                    master_ifaces_to_activate.add(nmdev)
+                else:
+                    devs_actions[nmdev] = (device.activate,)
+            elif iface_desired_state['state'] in ('down', 'absent'):
+                nmdevs = _get_affected_devices(iface_desired_state)
+                for nmdev in nmdevs:
+                    devs_actions[nmdev] = (device.deactivate, device.delete)
+            else:
+                raise UnsupportedIfaceStateError(iface_desired_state)
+
+    for ifname in new_ifaces_to_activate:
+        device.activate(
+            dev=None,
+            fetch_remote_connection_func=(
+                lambda: nmclient.client().get_connection_by_id(ifname))
+        )
+
+    for dev in master_ifaces_to_activate:
+        device.activate(dev)
 
     for dev, actions in six.viewitems(devs_actions):
         for action in actions:
             action(dev)
+
+
+def _get_new_ifaces(con_profiles):
+    ifaces_without_device = set()
+    for con_profile in con_profiles:
+        ifname = con_profile.get_interface_name()
+        nmdev = device.get_device_by_name(ifname)
+        if not nmdev:
+            ifaces_without_device.add(ifname)
+    return ifaces_without_device
 
 
 def _get_affected_devices(iface_state):

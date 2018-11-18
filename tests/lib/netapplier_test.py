@@ -84,9 +84,11 @@ def test_iface_admin_state_change(netinfo_nm_mock, netapplier_nm_mock):
     desired_config[INTERFACES][0]['state'] = 'down'
     netapplier.apply(desired_config, verify_change=False)
 
-    netapplier_nm_mock.applier.set_ifaces_admin_state.assert_has_calls(
+    applier_mock = netapplier_nm_mock.applier
+    ifaces_conf = applier_mock.prepare_new_ifaces_configuration.return_value
+    applier_mock.set_ifaces_admin_state.assert_has_calls(
         [
-            mock.call([]),
+            mock.call([], con_profiles=ifaces_conf),
             mock.call(desired_config[INTERFACES])
         ]
     )
