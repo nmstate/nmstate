@@ -25,7 +25,7 @@ from .testlib import mainloop
 ETH1 = 'eth1'
 
 
-def test_create_and_remove_vlan():
+def test_create_and_remove_vlan(eth1_up):
     vlan_desired_state = {'vlan': {'id': 101, 'base-iface': ETH1}}
 
     with _vlan_interface(vlan_desired_state):
