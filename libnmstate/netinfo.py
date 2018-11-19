@@ -64,6 +64,7 @@ def interfaces():
         iface_info['ipv6'] = nm.ipv6.get_info(act_con)
         iface_info.update(nm.wired.get_info(dev))
         iface_info.update(nm.user.get_info(dev))
+        iface_info.update(nm.vlan.get_info(dev))
 
         if nm.bond.is_bond_type_id(type_id):
             bondinfo = nm.bond.get_bond_info(dev)
