@@ -25,6 +25,7 @@ from . import ipv6
 from . import ovs
 from . import translator
 from . import user
+from . import vlan
 from . import wired
 
 
@@ -260,6 +261,10 @@ def _build_connection_profile(iface_desired_state, base_con_profile=None):
     elif iface_type == ovs.PORT_TYPE:
         ovs_port_options = iface_desired_state.get('options')
         settings.append(ovs.create_port_setting(ovs_port_options))
+
+    vlan_setting = vlan.create_setting(iface_desired_state, base_con_profile)
+    if vlan_setting:
+        settings.append(vlan_setting)
 
     new_profile = connection.create_profile(settings)
     return new_profile

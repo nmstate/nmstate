@@ -18,8 +18,11 @@
 from libnmstate.nm import nmclient
 
 
+VLAN_TYPE = 'vlan'
+
+
 def create_setting(iface_state, base_con_profile):
-    vlan = iface_state.get('vlan')
+    vlan = iface_state.get(VLAN_TYPE)
     if not vlan:
         return None
 

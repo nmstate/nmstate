@@ -44,6 +44,7 @@ class Api2Nm(object):
                 'ethernet': nmclient.NM.SETTING_WIRED_SETTING_NAME,
                 'bond': nmclient.NM.SETTING_BOND_SETTING_NAME,
                 'dummy': nmclient.NM.SETTING_DUMMY_SETTING_NAME,
+                'vlan': nmclient.NM.SETTING_VLAN_SETTING_NAME,
             }
             try:
                 Api2Nm._iface_types_map.update({
