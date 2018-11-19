@@ -32,35 +32,34 @@ def logging_setup():
         level=logging.DEBUG)
 
 
-@pytest.fixture(scope='function', autouse=True)
-def cleanup_test_interfaces():
-    ifaces_down_state = {
-        INTERFACES: []
-    }
-    current_state = statelib.show_only(('eth1', 'eth2'))
-    for iface_state in current_state[INTERFACES]:
-        if iface_state['state'] == 'up':
-            ifaces_down_state[INTERFACES].append(
-                {
-                    'name': iface_state['name'],
-                    'type': iface_state['type'],
-                    'state': 'down'
-                }
-            )
-    if ifaces_down_state[INTERFACES]:
-        netapplier.apply(ifaces_down_state)
+@pytest.fixture(scope='function')
+def eth1_down():
+    _set_eth_admin_state('eth1', 'down')
 
-    for ifname in ('eth1', 'eth2'):
-        ifaces_up_state = {
-            INTERFACES: [
-                {
-                    'name': ifname,
-                    'type': 'ethernet',
-                    'state': 'up',
-                    'ipv6': {
-                        'enabled': True
-                    }
-                }
-            ]
-        }
-        netapplier.apply(ifaces_up_state)
+
+@pytest.fixture(scope='function')
+def eth2_down():
+    _set_eth_admin_state('eth2', 'down')
+
+
+@pytest.fixture(scope='function', autouse=True)
+def eth1_up(eth1_down):
+    _set_eth_admin_state('eth1', 'up')
+
+
+@pytest.fixture(scope='function', autouse=True)
+def eth2_up(eth2_down):
+    _set_eth_admin_state('eth2', 'up')
+
+
+def _set_eth_admin_state(ifname, state):
+    current_state = statelib.show_only((ifname,))
+    iface_current_state, = current_state[INTERFACES]
+    if iface_current_state['state'] != state:
+        desired_state = {INTERFACES: [{'name': iface_current_state['name'],
+                                       'type': iface_current_state['type'],
+                                       'state': state}]}
+        # FIXME: On most systems, IPv6 cannot be disabled by NMState/NM.
+        if state == 'up':
+            desired_state[INTERFACES][0].update({'ipv6': {'enabled': True}})
+        netapplier.apply(desired_state)
