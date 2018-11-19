@@ -23,7 +23,7 @@ from .testlib import assertlib
 from .testlib.statelib import INTERFACES
 
 
-def test_set_a_down_iface_down():
+def test_set_a_down_iface_down(eth1_up):
     desired_state = {
         INTERFACES: [
             {
@@ -42,7 +42,7 @@ def test_set_a_down_iface_down():
 
 
 @pytest.mark.xfail(reason='Some ifaces cannot be removed', strict=True)
-def test_removing_a_non_removable_iface():
+def test_removing_a_non_removable_iface(eth1_up):
     desired_state = {
         INTERFACES: [
             {

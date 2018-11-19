@@ -42,12 +42,12 @@ def eth2_down():
     _set_eth_admin_state('eth2', 'down')
 
 
-@pytest.fixture(scope='function', autouse=True)
+@pytest.fixture(scope='function')
 def eth1_up(eth1_down):
     _set_eth_admin_state('eth1', 'up')
 
 
-@pytest.fixture(scope='function', autouse=True)
+@pytest.fixture(scope='function')
 def eth2_up(eth2_down):
     _set_eth_admin_state('eth2', 'up')
 

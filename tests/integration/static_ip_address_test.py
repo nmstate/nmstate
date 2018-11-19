@@ -37,7 +37,7 @@ IPV6_LINK_LOCAL_ADDRESS2 = 'fe80::2'
 
 
 @pytest.fixture
-def setup_eth1_ipv4():
+def setup_eth1_ipv4(eth1_up):
     desired_state = {
         INTERFACES: [
             {
@@ -57,7 +57,7 @@ def setup_eth1_ipv4():
 
 
 @pytest.fixture
-def setup_eth1_ipv6():
+def setup_eth1_ipv6(eth1_up):
     desired_state = {
         INTERFACES: [
             {
@@ -78,7 +78,7 @@ def setup_eth1_ipv6():
     return desired_state
 
 
-def test_add_static_ipv4_with_full_state():
+def test_add_static_ipv4_with_full_state(eth1_up):
     desired_state = statelib.show_only(('eth1',))
     eth1_desired_state = desired_state[INTERFACES][0]
 
@@ -92,7 +92,7 @@ def test_add_static_ipv4_with_full_state():
     assertlib.assert_state(desired_state)
 
 
-def test_add_static_ipv4_with_min_state():
+def test_add_static_ipv4_with_min_state(eth2_up):
     desired_state = {
         INTERFACES: [
             {
@@ -153,7 +153,8 @@ def test_edit_static_ipv4_address_and_prefix(setup_eth1_ipv4):
     assertlib.assert_state(desired_state)
 
 
-def test_add_ifaces_with_same_static_ipv4_address_in_one_transaction():
+def test_add_ifaces_with_same_static_ipv4_address_in_one_transaction(eth1_up,
+                                                                     eth2_up):
     desired_state = {
         INTERFACES: [
             {
@@ -186,7 +187,8 @@ def test_add_ifaces_with_same_static_ipv4_address_in_one_transaction():
     assertlib.assert_state(desired_state)
 
 
-def test_add_iface_with_same_static_ipv4_address_to_existing(setup_eth1_ipv4):
+def test_add_iface_with_same_static_ipv4_address_to_existing(setup_eth1_ipv4,
+                                                             eth2_up):
     desired_state = {
         INTERFACES: [
             {
@@ -207,7 +209,7 @@ def test_add_iface_with_same_static_ipv4_address_to_existing(setup_eth1_ipv4):
     assertlib.assert_state(desired_state)
 
 
-def test_add_static_ipv6_with_full_state():
+def test_add_static_ipv6_with_full_state(eth1_up):
     desired_state = statelib.show_only(('eth1',))
     eth1_desired_state = desired_state[INTERFACES][0]
     eth1_desired_state['state'] = 'up'
@@ -221,7 +223,7 @@ def test_add_static_ipv6_with_full_state():
     assertlib.assert_state(desired_state)
 
 
-def test_add_static_ipv6_with_link_local():
+def test_add_static_ipv6_with_link_local(eth1_up):
     desired_state = statelib.show_only(('eth1',))
     eth1_desired_state = desired_state[INTERFACES][0]
     eth1_desired_state['state'] = 'up'
@@ -242,7 +244,7 @@ def test_add_static_ipv6_with_link_local():
             eth1_cur_state['ipv6']['address'])
 
 
-def test_add_static_ipv6_with_link_local_only():
+def test_add_static_ipv6_with_link_local_only(eth1_up):
     desired_state = statelib.show_only(('eth1',))
     eth1_desired_state = desired_state[INTERFACES][0]
     eth1_desired_state['state'] = 'up'
@@ -263,7 +265,7 @@ def test_add_static_ipv6_with_link_local_only():
             eth1_cur_state['ipv6']['address'])
 
 
-def test_add_static_ipv6_with_no_address():
+def test_add_static_ipv6_with_no_address(eth1_up):
     desired_state = statelib.show_only(('eth1',))
     eth1_desired_state = desired_state[INTERFACES][0]
     eth1_desired_state['state'] = 'up'
@@ -277,7 +279,7 @@ def test_add_static_ipv6_with_no_address():
     assert len(eth1_cur_state['ipv6']['address']) >= 1
 
 
-def test_add_static_ipv6_with_min_state():
+def test_add_static_ipv6_with_min_state(eth2_up):
     desired_state = {
         INTERFACES: [
             {
@@ -348,7 +350,8 @@ def test_edit_static_ipv6_address_and_prefix(setup_eth1_ipv6):
             eth1_current_state['ipv6']['address'])
 
 
-def test_add_ifaces_with_same_static_ipv6_address_in_one_transaction():
+def test_add_ifaces_with_same_static_ipv6_address_in_one_transaction(eth1_up,
+                                                                     eth2_up):
     desired_state = {
         INTERFACES: [
             {
@@ -381,7 +384,8 @@ def test_add_ifaces_with_same_static_ipv6_address_in_one_transaction():
     assertlib.assert_state(desired_state)
 
 
-def test_add_iface_with_same_static_ipv6_address_to_existing(setup_eth1_ipv6):
+def test_add_iface_with_same_static_ipv6_address_to_existing(setup_eth1_ipv6,
+                                                             eth2_up):
     desired_state = {
         INTERFACES: [
             {

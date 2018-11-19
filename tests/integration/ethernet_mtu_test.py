@@ -28,6 +28,11 @@ from .testlib import statelib
 from .testlib.statelib import INTERFACES
 
 
+@pytest.fixture(scope='function', autouse=True)
+def eth1(eth1_up):
+    pass
+
+
 def test_increase_iface_mtu():
     desired_state = statelib.show_only(('eth1',))
     eth1_desired_state = desired_state[INTERFACES][0]
