@@ -20,9 +20,7 @@ from operator import itemgetter
 
 import collections
 import copy
-import logging
 import six
-import time
 
 from libnmstate import iplib
 from libnmstate import netinfo
@@ -65,19 +63,7 @@ def _apply_ifaces_state(interfaces_desired_state, verify_change):
             ifaces_current_state = _index_by_name(netinfo.interfaces())
             _edit_interfaces(ifaces_desired_state, ifaces_current_state)
         if verify_change:
-            for retry in range(4):
-                try:
-                    _verify_change(ifaces_desired_state)
-                except DesiredStateIsNotCurrentError:
-                    time.sleep(1)
-                else:
-                    break
-            else:
-                _verify_change(ifaces_desired_state)
-                retry += 1
-
-            logging.debug(
-                'State verification passed on attempt #%s', str(retry))
+            _verify_change(ifaces_desired_state)
 
 
 def _verify_change(ifaces_desired_state):
