@@ -35,7 +35,7 @@ def test_create_and_remove_vlan():
         assert vlan_desired_state == vlan_current_state
 
     # FIXME: Remove this sleep after adding wait for state mechanism.
-    time.sleep(2)
+    time.sleep(5)
 
     assert not _get_vlan_current_state(vlan_desired_state)
 
