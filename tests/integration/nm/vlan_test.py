@@ -64,8 +64,11 @@ def _create_vlan(vlan_desired_state):
     )
     vlan_setting = nm.vlan.create_setting(vlan_desired_state,
                                           base_con_profile=None)
+    ipv4_setting = nm.ipv4.create_setting({})
+    ipv6_setting = nm.ipv6.create_setting({})
     with mainloop():
-        con_profile = nm.connection.create_profile((con_setting, vlan_setting))
+        con_profile = nm.connection.create_profile(
+            (con_setting, vlan_setting, ipv4_setting, ipv6_setting))
         nm.connection.add_profile(con_profile, save_to_disk=False)
     with mainloop():
         remote_profile = nm.nmclient.client().get_connection_by_id(ifname)
