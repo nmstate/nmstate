@@ -68,8 +68,8 @@ function run_tests {
         --cov=libnmstate \
         --cov=nmstatectl \
         --cov-report=html:htmlcov-py27 \
-        tests/integration
-    '
+        tests/integration \
+    '"${nmstate_pytest_extra_args}"
 }
 
 function collect_artifacts {
