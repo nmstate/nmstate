@@ -163,7 +163,7 @@ def _delete_connection_callback(src_object, result, user_data):
 
 
 def get_device_by_name(devname):
-    client = nmclient.client()
+    client = nmclient.client(refresh=True)
     return client.get_device_by_iface(devname)
 
 
