@@ -16,7 +16,6 @@
 #
 
 from contextlib import contextmanager
-import time
 
 from libnmstate import nm
 
@@ -34,9 +33,6 @@ def test_create_and_remove_vlan():
         vlan_current_state = _get_vlan_current_state(vlan_desired_state)
         assert vlan_desired_state == vlan_current_state
 
-    # FIXME: Remove this sleep after adding wait for state mechanism.
-    time.sleep(5)
-
     assert not _get_vlan_current_state(vlan_desired_state)
 
 
@@ -50,6 +46,7 @@ def _vlan_interface(state):
 
 
 def _get_vlan_current_state(vlan_desired_state):
+    nm.nmclient.client(refresh=True)
     ifname = _get_vlan_ifname(vlan_desired_state)
     nmdev = nm.device.get_device_by_name(ifname)
     return nm.vlan.get_info(nmdev) if nmdev else {}
