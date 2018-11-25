@@ -15,8 +15,6 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-import copy
-
 import pytest
 import yaml
 
@@ -57,13 +55,13 @@ def setup_remove_bond99():
 
 def test_add_and_remove_bond_with_two_slaves():
     state = yaml.load(BOND99_YAML_BASE)
-    netapplier.apply(copy.deepcopy(state))
+    netapplier.apply(state)
 
     assertlib.assert_state(state)
 
     state[INTERFACES][0]['state'] = 'absent'
 
-    netapplier.apply(copy.deepcopy(state))
+    netapplier.apply(state)
 
     state = statelib.show_only((state[INTERFACES][0]['name'],))
     assert not state[INTERFACES]
@@ -71,7 +69,7 @@ def test_add_and_remove_bond_with_two_slaves():
 
 def test_remove_bond_with_minimum_desired_state():
     state = yaml.load(BOND99_YAML_BASE)
-    netapplier.apply(copy.deepcopy(state))
+    netapplier.apply(state)
 
     remove_bond_state = {
         INTERFACES: [
@@ -105,7 +103,7 @@ def test_add_bond_without_slaves():
             ]
         }
 
-    netapplier.apply(copy.deepcopy(desired_bond_state))
+    netapplier.apply(desired_bond_state)
 
     assertlib.assert_state(desired_bond_state)
 
@@ -133,6 +131,6 @@ def test_add_bond_with_slaves_and_ipv4(setup_remove_bond99):
                 ]
             }
 
-    netapplier.apply(copy.deepcopy(desired_bond_state))
+    netapplier.apply(desired_bond_state)
 
     assertlib.assert_state(desired_bond_state)
