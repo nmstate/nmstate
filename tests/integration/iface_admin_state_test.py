@@ -15,8 +15,6 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-import copy
-
 import pytest
 
 from libnmstate import netapplier
@@ -35,10 +33,10 @@ def test_set_a_down_iface_down():
             }
         ]
     }
-    netapplier.apply(copy.deepcopy(desired_state))
+    netapplier.apply(desired_state)
     assertlib.assert_state(desired_state)
 
-    netapplier.apply(copy.deepcopy(desired_state))
+    netapplier.apply(desired_state)
 
     assertlib.assert_state(desired_state)
 
@@ -55,6 +53,6 @@ def test_removing_a_non_removable_iface():
         ]
     }
 
-    netapplier.apply(copy.deepcopy(desired_state))
+    netapplier.apply(desired_state)
 
     assertlib.assert_state(desired_state)

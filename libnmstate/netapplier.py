@@ -42,6 +42,7 @@ class DesiredStateIsNotCurrentError(Exception):
 
 
 def apply(desired_state, verify_change=True):
+    desired_state = copy.deepcopy(desired_state)
     validator.verify(desired_state)
     validator.verify_capabilities(desired_state, netinfo.capabilities())
 
