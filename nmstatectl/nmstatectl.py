@@ -17,6 +17,7 @@
 from __future__ import absolute_import
 
 import argparse
+import errno
 import fnmatch
 import json
 import logging
@@ -46,6 +47,9 @@ def main():
     setup_subcommand_show(subparsers)
     setup_subcommand_set(subparsers)
 
+    if len(sys.argv) == 1:
+        parser.print_usage()
+        return errno.EINVAL
     args = parser.parse_args()
     return args.func(args)
 
@@ -187,7 +191,7 @@ def _run_editor(txtstate, suffix):
     editor = os.environ.get('EDITOR', 'vi')
     with tempfile.NamedTemporaryFile(suffix=suffix,
                                      prefix='nmstate-') as statefile:
-        statefile.write(txtstate)
+        statefile.write(txtstate.encode('utf-8'))
         statefile.flush()
 
         try:

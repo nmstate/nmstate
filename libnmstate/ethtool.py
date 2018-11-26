@@ -51,7 +51,7 @@ def minimal_ethtool(interface):
 
         ecmd = array.array('B', struct.pack('I39s', ETHTOOL_GSET, b'\x00'*39))
 
-        interface = bytes(interface).encode('utf-8')
+        interface = interface.encode('utf-8')
         ifreq = struct.pack('16sP', interface, ecmd.buffer_info()[0])
 
         fcntl.ioctl(sockfd, SIOCETHTOOL, ifreq)
