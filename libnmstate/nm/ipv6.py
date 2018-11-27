@@ -46,8 +46,16 @@ def get_info(active_connection):
     return info
 
 
-def create_setting(config):
-    setting_ip = nmclient.NM.SettingIP6Config.new()
+def create_setting(config, base_con_profile):
+    setting_ip = None
+    if base_con_profile:
+        setting_ip = base_con_profile.get_setting_ip6_config()
+        if setting_ip:
+            setting_ip = setting_ip.duplicate()
+            setting_ip.clear_addresses()
+
+    if not setting_ip:
+        setting_ip = nmclient.NM.SettingIP6Config.new()
     if config and config.get('enabled'):
         for address in config.get('address', ()):
             if iplib.is_ipv6_link_local_addr(address['ip'],
