@@ -43,8 +43,15 @@ or running the scripts:
 `debug_exit_shell=1 ./automation/run-integration-tests.sh`
 
 
-After closing the shell, the container will be removed. Alternatively, the
-following commands start the container manually:
+After closing the shell, the container will be removed.
+
+To specify a different container image for the tests, specify it with the
+`DOCKER_IMAGE` variable:
+
+`DOCKER_IMAGE=local/centos7-nmstate-dev debug_exit_shell=1 ./automation/run-integration-tests.sh`
+
+
+Alternatively, the following commands start the container manually:
 
 ```
 DOCKER_IMAGE="nmstate/centos7-nmstate-dev"
