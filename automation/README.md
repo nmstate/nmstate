@@ -50,6 +50,10 @@ To specify a different container image for the tests, specify it with the
 
 `DOCKER_IMAGE=local/centos7-nmstate-dev debug_exit_shell=1 ./automation/run-integration-tests.sh`
 
+It is also possible to pass extra arguments to PDB using the
+`nmstate_pytest_extra_args` variable, for example:
+`nmstate_pytest_extra_args="--pdb -x" ./automation/run-integration-tests.sh`
+
 
 Alternatively, the following commands start the container manually:
 
