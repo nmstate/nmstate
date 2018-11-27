@@ -20,8 +20,17 @@ import socket
 from . import nmclient
 
 
-def create_setting(config):
-    setting_ipv4 = nmclient.NM.SettingIP4Config.new()
+def create_setting(config, base_con_profile):
+    setting_ipv4 = None
+    if base_con_profile:
+        setting_ipv4 = base_con_profile.get_setting_ip4_config()
+        if setting_ipv4:
+            setting_ipv4 = setting_ipv4.duplicate()
+            setting_ipv4.clear_addresses()
+
+    if not setting_ipv4:
+        setting_ipv4 = nmclient.NM.SettingIP4Config.new()
+
     if config and config.get('enabled') and config.get('address'):
         setting_ipv4.props.method = (
             nmclient.NM.SETTING_IP4_CONFIG_METHOD_MANUAL)

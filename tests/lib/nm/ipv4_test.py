@@ -21,6 +21,8 @@ from lib.compat import mock
 
 from libnmstate import nm
 
+IPV4_ADDRESS1 = '192.0.2.251'
+
 
 @pytest.fixture
 def NM_mock():
@@ -29,7 +31,7 @@ def NM_mock():
 
 
 def test_create_setting_without_config(NM_mock):
-    ipv4_setting = nm.ipv4.create_setting(config=None)
+    ipv4_setting = nm.ipv4.create_setting(config=None, base_con_profile=None)
 
     assert ipv4_setting == NM_mock.SettingIP4Config.new.return_value
     assert (ipv4_setting.props.method ==
@@ -37,7 +39,8 @@ def test_create_setting_without_config(NM_mock):
 
 
 def test_create_setting_with_ipv4_disabled(NM_mock):
-    ipv4_setting = nm.ipv4.create_setting(config={'enabled': False})
+    ipv4_setting = nm.ipv4.create_setting(config={'enabled': False},
+                                          base_con_profile=None)
 
     assert (ipv4_setting.props.method ==
             NM_mock.SETTING_IP4_CONFIG_METHOD_DISABLED)
@@ -48,7 +51,8 @@ def test_create_setting_without_addresses(NM_mock):
         config={
             'enabled': True,
             'address': [],
-        }
+        },
+        base_con_profile=None
     )
 
     assert (ipv4_setting.props.method ==
@@ -63,9 +67,7 @@ def test_create_setting_with_static_addresses(NM_mock):
             {'ip': '10.10.20.1', 'prefix-length': 24},
         ],
     }
-    ipv4_setting = nm.ipv4.create_setting(
-        config=config
-    )
+    ipv4_setting = nm.ipv4.create_setting(config=config, base_con_profile=None)
 
     assert (ipv4_setting.props.method ==
             NM_mock.SETTING_IP4_CONFIG_METHOD_MANUAL)
@@ -117,3 +119,22 @@ def test_get_info_with_ipv4_config():
             }
         ]
     }
+
+
+def test_create_setting_with_base_con_profile(NM_mock):
+    config = {
+        'enabled': True,
+        'address': [
+            {'ip': IPV4_ADDRESS1, 'prefix-length': 24},
+        ],
+    }
+    base_con_profile_mock = mock.MagicMock()
+    config_mock = base_con_profile_mock.get_setting_ip4_config.return_value
+    config_dup_mock = config_mock.duplicate.return_value
+
+    nm.ipv4.create_setting(config=config,
+                           base_con_profile=base_con_profile_mock)
+
+    base_con_profile_mock.get_setting_ip4_config.assert_called_once_with()
+    config_mock.duplicate.assert_called_once_with()
+    config_dup_mock.clear_addresses.assert_called_once_with()
