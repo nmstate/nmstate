@@ -1,7 +1,7 @@
 # This Dockerfile is based on the recommendations provided in the
 # Centos official repository (https://hub.docker.com/_/centos/).
 # It enables systemd to be operational.
-FROM centos:7
+FROM centos:7.5.1804
 ENV container docker
 RUN (cd /lib/systemd/system/sysinit.target.wants/; for i in *; do [ $i == \
      systemd-tmpfiles-setup.service ] || rm -f $i; done); \
