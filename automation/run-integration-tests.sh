@@ -2,7 +2,7 @@
 
 EXEC_PATH=$(dirname "$(realpath "$0")")
 PROJECT_PATH="$(dirname $EXEC_PATH)"
-DOCKER_IMAGE="nmstate/centos7-nmstate-dev"
+: ${DOCKER_IMAGE:=nmstate/centos7-nmstate-dev}
 EXPORT_DIR="$PWD/exported-artifacts"
 CONT_EXPORT_DIR="/exported-artifacts"
 
