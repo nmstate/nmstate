@@ -13,29 +13,21 @@ RUN (cd /lib/systemd/system/sysinit.target.wants/; for i in *; do [ $i == \
     rm -f /lib/systemd/system/basic.target.wants/*;\
     rm -f /lib/systemd/system/anaconda.target.wants/*;
 
-RUN yum -y install iproute NetworkManager epel-release git cairo* && \
-    yum -y install python2-pip gcc python-devel gobject-introspection-devel && \
+# Enable EPEL and centos-release-openstack-rocky repo for new version of pytest.
+RUN yum -y install epel-release centos-release-openstack-rocky
+
+# Enable nmstate test repo for new version of pytest-cov and NetworkManager bug
+# fix of https://bugzilla.redhat.com/show_bug.cgi?id=1642625
+RUN yum-config-manager --add-repo https://copr.fedorainfracloud.org/coprs/nmstate/nmstate-test-env-el/repo/epel-7/nmstate-nmstate-test-env-el-epel-7.repo && \
+    yum-config-manager --enable nmstate-nmstate-test-env-el
+
+RUN yum -y upgrade && \
+    yum -y install iproute git python2-pytest python2-pytest-cov NetworkManager && \
     yum clean all && \
-    pip install -U \
-      pip \
-      setuptools \
-      pbr \
-      tox \
-      \
-      pluggy==0.6 \
-      PyGObject \
-      pytest-cov \
-      pytest==3.5.1 && \
-    \
     install -o root -g root -d /etc/sysconfig/network-scripts && \
     echo -e "[logging]\nlevel=TRACE\ndomains=ALL\n" > /etc/NetworkManager/conf.d/97-docker-build.conf && \
     echo -e "[device]\nmatch-device=*\nmanaged=0\n" >> /etc/NetworkManager/conf.d/97-docker-build.conf && \
     sed -i 's/#RateLimitInterval=30s/RateLimitInterval=0/ ; s/#RateLimitBurst=1000/RateLimitBurst=0/' /etc/systemd/journald.conf
-
-# Patch with NetworkManager fix for BZ#1642625
-RUN yum-config-manager --add-repo https://copr.fedorainfracloud.org/coprs/till/nmstate-NetworkManager/repo/epel-7/till-nmstate-NetworkManager-epel-7.repo && \
-    yum-config-manager --enable till-nmstate-NetworkManager && \
-    yum -y update NetworkManager
 
 VOLUME [ "/sys/fs/cgroup" ]
 
