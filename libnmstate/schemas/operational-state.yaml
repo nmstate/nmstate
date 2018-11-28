@@ -19,6 +19,7 @@ properties:
             - "$ref": "#/definitions/interface-unknown/rw"
             - "$ref": "#/definitions/interface-ethernet/rw"
             - "$ref": "#/definitions/interface-bond/rw"
+            - "$ref": "#/definitions/interface-linux-bridge/rw"
             - "$ref": "#/definitions/interface-ovs-bridge/all"
             - "$ref": "#/definitions/interface-ovs-interface/rw"
             - "$ref": "#/definitions/interface-dummy/rw"
@@ -175,6 +176,51 @@ definitions:
                 type: string
             options:
               type: object
+  interface-linux-bridge:
+    rw:
+      properties:
+        type:
+          type: string
+          enum:
+          - linux-bridge
+        bridge:
+          type: object
+          properties:
+            port:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  stp-priority:
+                    type: integer
+                  stp-path-cost:
+                    type: string
+                  stp-hairpin-mode:
+                    type: string
+            options:
+              type: object
+              properties:
+                mac-ageing-time:
+                  type: integer
+                group-forward-mask:
+                  type: string
+                multicast-snooping:
+                  type: boolean
+                stp:
+                  type: object
+                  properties:
+                    enabled:
+                      type: boolean
+                    priority:
+                      type: integer
+                    forward-delay:
+                      type: integer
+                    hello-time:
+                      type: integer
+                    max-age:
+                      type: integer
   interface-ovs-bridge:
     all:
       allOf:
