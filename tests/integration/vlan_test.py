@@ -27,7 +27,7 @@ from .testlib.statelib import INTERFACES
 VLAN_IFNAME = 'eth1.101'
 
 
-def test_add_and_remove_vlan():
+def test_add_and_remove_vlan(eth1_up):
     with vlan_interface(VLAN_IFNAME, 101) as desired_state:
         assertlib.assert_state(desired_state)
 
