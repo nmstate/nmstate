@@ -23,6 +23,7 @@ setup(
     author="Edward Haas",
     author_email="ehaas@redhat.com",
     long_description=readme(),
+    long_description_content_type='text/markdown',
     url='https://nmstate.github.io/',
     license='GPLv2+',
     packages=find_packages(),
