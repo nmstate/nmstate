@@ -25,6 +25,7 @@ from .testlib.statelib import INTERFACES
 
 
 VLAN_IFNAME = 'eth1.101'
+VLAN2_IFNAME = 'eth1.102'
 
 
 def test_add_and_remove_vlan(eth1_up):
@@ -32,6 +33,15 @@ def test_add_and_remove_vlan(eth1_up):
         assertlib.assert_state(desired_state)
 
     current_state = statelib.show_only((VLAN_IFNAME,))
+    assert not current_state[INTERFACES]
+
+
+def test_add_and_remove_two_vlans_on_same_iface(eth1_up):
+    with two_vlans_on_eth1() as desired_state:
+        assertlib.assert_state(desired_state)
+
+    vlan_interfaces = [i['name'] for i in desired_state[INTERFACES]]
+    current_state = statelib.show_only(vlan_interfaces)
     assert not current_state[INTERFACES]
 
 
@@ -61,6 +71,53 @@ def vlan_interface(ifname, vlan_id):
                         'type': 'vlan',
                         'state': 'absent'
                     }
+                ]
+            }
+        )
+
+
+@contextmanager
+def two_vlans_on_eth1():
+    desired_state = {
+        INTERFACES: [
+            {
+                'name': VLAN_IFNAME,
+                'type': 'vlan',
+                'state': 'up',
+                'vlan': {
+                        'id': 101,
+                        'base-iface': 'eth1'
+                }
+            },
+            {
+
+                'name': VLAN2_IFNAME,
+                'type': 'vlan',
+                'state': 'up',
+                'vlan': {
+                        'id': 102,
+                        'base-iface': 'eth1'
+                        }
+            }
+        ]
+    }
+    netapplier.apply(desired_state)
+    try:
+        yield desired_state
+    finally:
+        netapplier.apply({
+                INTERFACES: [
+                    {
+                        'name': VLAN_IFNAME,
+                        'type': 'vlan',
+                        'state': 'absent'
+                    },
+                    {
+                        'name': VLAN2_IFNAME,
+                        'type': 'vlan',
+                        'state': 'absent'
+                    }
+
                 ]
             }
         )
