@@ -18,6 +18,7 @@
 from libnmstate import netinfo
 
 from . import statelib
+from .statelib import INTERFACES
 
 
 def assert_state(desired_state_data):
@@ -34,3 +35,10 @@ def assert_state(desired_state_data):
     full_desired_state.normalize()
 
     assert full_desired_state.state == current_state.state
+
+
+def assert_absent(*ifnames):
+    """ Assert that a interface is not present in the current state """
+
+    current_state = statelib.show_only(ifnames)
+    assert not current_state[INTERFACES]
