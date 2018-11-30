@@ -1,0 +1,8 @@
+---
+interfaces:
+  - name: eth1.101
+    type: vlan
+    state: down
+    vlan:
+      base-iface: eth1
+      id: 101

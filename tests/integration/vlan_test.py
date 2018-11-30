@@ -16,6 +16,9 @@
 #
 
 from contextlib import contextmanager
+import os.path
+
+import yaml
 
 from libnmstate import netapplier
 
@@ -26,6 +29,8 @@ from .testlib.statelib import INTERFACES
 
 VLAN_IFNAME = 'eth1.101'
 VLAN2_IFNAME = 'eth1.102'
+
+PATH_MAX = 4096
 
 
 def test_add_and_remove_vlan(eth1_up):
@@ -60,6 +65,59 @@ def test_set_vlan_iface_down(eth1_up):
 
         current_state = statelib.show_only((VLAN_IFNAME,))
         assert not current_state[INTERFACES]
+
+
+def test_add_down_remove_vlan(eth1_up):
+    with yaml_state('vlan101_eth1_up.yml',
+                    cleanup='vlan101_eth1_absent.yml') as desired_state:
+        assertlib.assert_state(desired_state)
+        with yaml_state('vlan101_eth1_down.yml') as desired_state:
+            assertlib.assert_absent(VLAN_IFNAME)
+
+    assertlib.assert_absent(VLAN_IFNAME)
+
+
+@contextmanager
+def yaml_state(initial, cleanup=None):
+    desired_state = load_example(initial)
+
+    netapplier.apply(desired_state)
+    try:
+        yield desired_state
+    finally:
+        if cleanup:
+            netapplier.apply(load_example(cleanup))
+
+
+def load_example(name):
+    examples = find_examples_dir()
+
+    with open(os.path.join(examples, name)) as yamlfile:
+        state = yaml.load(yamlfile)
+
+    return state
+
+
+def find_examples_dir():
+    path = ''
+    parent = '../'
+    rootdir = '/'
+    examples = None
+    for _ in range(PATH_MAX / len('x/')):
+        maybe_examples = os.path.abspath(os.path.join(path, 'examples'))
+        if os.path.isdir(maybe_examples):
+            examples = maybe_examples
+            break
+
+        if os.path.abspath(path) == rootdir:
+            break
+
+        path = parent + path
+
+    if examples:
+        return examples
+    else:
+        raise RuntimeError('Cannot find examples directory')
 
 
 @contextmanager
