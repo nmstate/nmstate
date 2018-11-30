@@ -62,6 +62,7 @@ function install_nmstate {
 function run_tests {
     docker_exec '
       cd /workspace/nmstate &&
+      G_DEBUG=fatal-warnings
       pytest \
         --log-level=DEBUG \
         --durations=5 \
