@@ -17,6 +17,7 @@
 
 from . import applier
 from . import bond
+from . import bridge
 from . import checkpoint
 from . import connection
 from . import device
@@ -31,6 +32,7 @@ from . import wired
 
 applier
 bond
+bridge
 checkpoint
 connection
 device
