@@ -44,3 +44,25 @@ class Constants(object):
         OVS_PORT,
         VLAN
     )
+
+
+class LinuxBridge(object):
+    TYPE = 'linux-bridge'
+    CONFIG_SUBTREE = 'bridge'
+
+    MAC_AGEING_TIME = 'mac-ageing-time'
+    GROUP_FORWARD_MASK = 'group-forward-mask'
+    MULTICAST_SNOOPING = 'multicast-snooping'
+
+    STP_SUBTREE = 'stp'
+    STP_ENABLED = 'enabled'
+    STP_PRIORITY = 'priority'
+    STP_FORWARD_DELAY = 'forward-delay'
+    STP_HELLO_TIME = 'hello-time'
+    STP_MAX_AGE = 'max-age'
+
+    PORT_SUBTREE = 'port'
+    PORT_NAME = 'name'
+    PORT_STP_PRIORITY = 'stp-priority'
+    PORT_STP_HAIRPIN_MODE = 'stp-hairpin-mode'
+    PORT_STP_PATH_COST = 'stp-path-cost'
