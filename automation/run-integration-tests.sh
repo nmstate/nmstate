@@ -63,6 +63,7 @@ function run_tests {
     docker_exec '
       cd /workspace/nmstate &&
       pytest \
+        --verbose \
         --log-level=DEBUG \
         --durations=5 \
         --cov=libnmstate \
