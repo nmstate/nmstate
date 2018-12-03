@@ -25,7 +25,7 @@ from .testlib import cmd as libcmd
 from .testlib.statelib import INTERFACES
 
 _IPV4_EXTRA_CONFIG = 'ipv4.dad-timeout'
-_IPV4_EXTRA_VALUE = '1000'
+_IPV4_EXTRA_VALUE = '0'
 _IPV6_EXTRA_CONFIG = 'ipv6.dhcp-hostname'
 _IPV6_EXTRA_VALUE = 'libnmstate.example.com'
 
