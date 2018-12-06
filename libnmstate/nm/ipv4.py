@@ -38,6 +38,7 @@ def create_setting(config, base_con_profile):
     else:
         setting_ipv4.props.method = (
             nmclient.NM.SETTING_IP4_CONFIG_METHOD_DISABLED)
+        setting_ipv4.props.gateway = None
     return setting_ipv4
 
 
