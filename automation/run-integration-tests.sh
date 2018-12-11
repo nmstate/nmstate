@@ -47,7 +47,6 @@ function dump_network_info {
       ip route; \
       cat /etc/resolv.conf; \
       head /proc/sys/net/ipv6/conf/*/disable_ipv6; \
-      ping -c 1 github.com || true
     '
 }
 
@@ -95,7 +94,7 @@ function open_shell {
 }
 
 cd $EXEC_PATH 
-docker --version && cat /etc/resolv.conf && ping -c 1 github.com
+docker --version && cat /etc/resolv.conf
 
 mkdir -p $EXPORT_DIR
 
