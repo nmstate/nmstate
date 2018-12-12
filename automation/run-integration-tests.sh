@@ -17,6 +17,7 @@ function remove_container {
     docker rm $CONTAINER_ID -f
     docker network rm $NET0
     docker network rm $NET1
+    rm -f *nmstate*.rpm
 }
 
 function pyclean {
