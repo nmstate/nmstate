@@ -14,8 +14,7 @@ test -t 1 && USE_TTY="-t"
 function remove_container {
     res=$?
     [ "$res" -ne 0 ] && echo "*** ERROR: $res"
-    docker stop $CONTAINER_ID
-    docker rm $CONTAINER_ID
+    docker rm $CONTAINER_ID -f
     docker network rm $NET0
     docker network rm $NET1
 }
