@@ -16,19 +16,21 @@ trap 'rm -rf "$TMP_DIR"' INT TERM HUP EXIT
 
 cd $SRC_DIR
 
-VERSION=$(python setup.py --version)
+MAIN_VERSION=$(python setup.py --version)
 COMMIT_COUNT=$(git rev-list --count HEAD --)
-VERSION="${VERSION}dev${COMMIT_COUNT}git$(git rev-parse --short HEAD)"
+VERSION="${MAIN_VERSION}dev${COMMIT_COUNT}git$(git rev-parse --short HEAD)"
 
 if [ -n "$(rpm -E %{?fedora} 2>/dev/null)" ] ||
    [ -n "$(rpm -E %{?el8} 2>/dev/null)" ] ;then
     cp packaging/nmstate.py3.spec.in $SPEC_FILE
     sed -i -e "s/@VERSION@/$VERSION/" $SPEC_FILE
+    sed -i -e "s/@SRC_VERSION@/$MAIN_VERSION/" $SPEC_FILE
     $SUDO dnf install -y rpm-build
     $SUDO dnf builddep -y $SPEC_FILE
 elif [ -n "$(rpm -E %{?el7} 2>/dev/null)" ];then
     cp packaging/nmstate.py2.spec.in $SPEC_FILE
     sed -i -e "s/@VERSION@/$VERSION/" $SPEC_FILE
+    sed -i -e "s/@SRC_VERSION@/$MAIN_VERSION/" $SPEC_FILE
     $SUDO yum install -y rpm-build yum-utils
     $SUDO yum-builddep -y $SPEC_FILE
 else
@@ -38,7 +40,8 @@ fi
 
 TAR_FILE="$TMP_DIR/nmstate-$VERSION.tar"
 
-git archive --prefix=nmstate-$VERSION/ --format=tar -o $TAR_FILE HEAD
+python setup.py sdist --format tar --dist-dir $TMP_DIR
+mv $TMP_DIR/nmstate*.tar $TAR_FILE
 tar --append --file=$TAR_FILE $SPEC_FILE 1>/dev/null 2>/dev/null
 
 rpmbuild --define "_rpmdir $TMP_DIR/" --define "_srcrpmdir $TMP_DIR/" \

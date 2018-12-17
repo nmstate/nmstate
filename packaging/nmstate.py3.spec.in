@@ -39,7 +39,7 @@ Requires:       python3-PyYAML
 This package contains the Python 3 library for nmstate.
 
 %prep
-%setup -q -n %{srcname}-%{version}
+%setup -q -n %{srcname}-@SRC_VERSION@
 
 %build
 %py3_build
