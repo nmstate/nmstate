@@ -45,6 +45,23 @@ def test_add_and_remove_two_vlans_on_same_iface(eth1_up):
     assert not current_state[INTERFACES]
 
 
+def test_set_vlan_iface_down(eth1_up):
+    with vlan_interface(VLAN_IFNAME, 101):
+        netapplier.apply({
+                INTERFACES: [
+                    {
+                        'name': VLAN_IFNAME,
+                        'type': 'vlan',
+                        'state': 'down'
+                    }
+                ]
+            }
+        )
+
+        current_state = statelib.show_only((VLAN_IFNAME,))
+        assert not current_state[INTERFACES]
+
+
 @contextmanager
 def vlan_interface(ifname, vlan_id):
     desired_state = {
