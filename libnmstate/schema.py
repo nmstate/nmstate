@@ -30,3 +30,17 @@ ifaces_schema = load('operational-state')
 
 class Constants(object):
     INTERFACES = 'interfaces'
+
+    BOND = 'bond'
+    LINUX_BRIDGE = 'linux-bridge'
+    OVS_BRIDGE = 'ovs-bridge'
+    OVS_PORT = 'ovs-port'
+    VLAN = 'vlan'
+
+    VIRT_IFACE_TYPES = (
+        BOND,
+        LINUX_BRIDGE,
+        OVS_BRIDGE,
+        OVS_PORT,
+        VLAN
+    )

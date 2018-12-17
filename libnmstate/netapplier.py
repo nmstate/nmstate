@@ -69,14 +69,14 @@ def _apply_ifaces_state(interfaces_desired_state, verify_change):
 
 
 def _verify_change(ifaces_desired_state):
-    # FIXME: Remove this sleep after adding wait for state mechanism.
+    ifaces_current_state = _index_by_name(netinfo.interfaces())
+    ifaces_desired_state = _remove_absent_iface_entries(
+        ifaces_desired_state)
+    ifaces_desired_state = _remove_down_virt_iface_entries(
+        ifaces_desired_state)
+    ifaces_desired_state = remove_ifaces_metadata(ifaces_desired_state)
 
-        ifaces_current_state = _index_by_name(netinfo.interfaces())
-        ifaces_desired_state = _remove_absent_iface_entries(
-            ifaces_desired_state)
-        ifaces_desired_state = remove_ifaces_metadata(ifaces_desired_state)
-
-        assert_ifaces_state(ifaces_desired_state, ifaces_current_state)
+    assert_ifaces_state(ifaces_desired_state, ifaces_current_state)
 
 
 @contextmanager
@@ -377,9 +377,24 @@ def _sort_lag_slaves(desired_state, current_state):
 
 
 def _remove_absent_iface_entries(ifaces_desired_state):
-    return {ifname: ifstate
-            for ifname, ifstate in six.viewitems(ifaces_desired_state)
-            if ifstate.get('state') != 'absent'}
+    ifaces = {}
+    for ifname, ifstate in six.viewitems(ifaces_desired_state):
+        is_absent = ifstate.get('state') == 'absent'
+        if not is_absent:
+            ifaces[ifname] = ifstate
+    return ifaces
+
+
+def _remove_down_virt_iface_entries(ifaces_desired_state):
+    ifaces = {}
+    for ifname, ifstate in six.viewitems(ifaces_desired_state):
+        is_virt_down = (
+                ifstate.get('state') == 'down' and
+                ifstate.get('type') in Constants.VIRT_IFACE_TYPES
+        )
+        if not is_virt_down:
+            ifaces[ifname] = ifstate
+    return ifaces
 
 
 def _remove_iface_ipv6_link_local_addr(desired_state, current_state):
