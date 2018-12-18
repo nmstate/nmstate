@@ -127,7 +127,7 @@ def _safe_activate_async(dev, connection_id):
     if connection_id:
         connection = client.get_connection_by_id(connection_id)
     specific_object = None
-    user_data = mainloop, dev, cancellable
+    user_data = mainloop, dev, connection_id, cancellable
     client.activate_connection_async(
         connection,
         dev,
@@ -139,24 +139,30 @@ def _safe_activate_async(dev, connection_id):
 
 
 def _active_connection_callback(src_object, result, user_data):
-    mainloop, nmdev, cancellable = user_data
+    mainloop, nmdev, connection_id, cancellable = user_data
     mainloop.drop_cancellable(cancellable)
+
     try:
         nm_act_con = src_object.activate_connection_finish(result)
     except Exception as e:
+        activation_type, activation_object = _get_activation_metadata(
+            nmdev, connection_id)
+
         if mainloop.is_action_canceled(e):
             logging.debug(
-                'Connection activation canceled on %s: error=%s',
-                nmdev.get_iface(), e)
+                'Connection activation canceled on %s %s: error=%s',
+                activation_type, activation_object, e)
         else:
             mainloop.quit(
-                'Connection activation failed on {}: error={}'.format(
-                    nmdev.get_iface(), e))
+                'Connection activation failed on {} {}: error={}'.format(
+                    activation_type, activation_object, e))
         return
 
     if nm_act_con is None:
-        mainloop.quit('Connection activation failed on %s: error=unknown' %
-                      nmdev.get_iface())
+        activation_type, activation_object = _get_activation_metadata(
+            nmdev, connection_id)
+        mainloop.quit('Connection activation failed on %s %s: error=unknown' %
+                      activation_type, activation_object)
     else:
         devname = nm_act_con.props.connection.get_interface_name()
         logging.debug('Connection activation initiated: dev=%s, con-state=%s',
@@ -171,6 +177,19 @@ def _active_connection_callback(src_object, result, user_data):
             mainloop.quit(
                 'Connection activation failed on {}: reason={}'.format(
                     ac.devname, ac.reason))
+
+
+def _get_activation_metadata(nmdev, connection_id):
+    if nmdev:
+        activation_type = 'device'
+        activation_object = nmdev.get_iface()
+    elif connection_id:
+        activation_type = 'connection_id'
+        activation_object = connection_id
+    else:
+        activation_type = activation_object = 'unknown'
+
+    return activation_type, activation_object
 
 
 def _waitfor_active_connection_async(ac, mainloop):

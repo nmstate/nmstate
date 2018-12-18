@@ -52,7 +52,7 @@ def test_activate(client_mock, mainloop_mock):
         None,
         cancellable,
         nm.device._active_connection_callback,
-        (mainloop_mock, dev, cancellable),
+        (mainloop_mock, dev, None, cancellable),
     )
 
 
