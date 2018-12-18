@@ -48,7 +48,7 @@ def get_info(active_connection):
 
 def create_setting(config, base_con_profile):
     setting_ip = None
-    if base_con_profile:
+    if base_con_profile and config and config.get('enabled'):
         setting_ip = base_con_profile.get_setting_ip6_config()
         if setting_ip:
             setting_ip = setting_ip.duplicate()

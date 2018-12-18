@@ -22,7 +22,7 @@ from . import nmclient
 
 def create_setting(config, base_con_profile):
     setting_ipv4 = None
-    if base_con_profile:
+    if base_con_profile and config and config.get('enabled'):
         setting_ipv4 = base_con_profile.get_setting_ip4_config()
         if setting_ipv4:
             setting_ipv4 = setting_ipv4.duplicate()
