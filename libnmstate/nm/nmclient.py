@@ -65,7 +65,8 @@ class _MainLoop(object):
     def __init__(self):
         self._action_queue = deque()
         self._mainloop = GLib.MainLoop()
-        self._cancellable = Gio.Cancellable.new()
+        self._cancellables = []
+        self.new_cancellable()
         self._error = ''
 
     def execute_next_action(self):
@@ -116,14 +117,29 @@ class _MainLoop(object):
 
     @property
     def cancellable(self):
-        return self._cancellable
+        return self._cancellables[0]
+
+    def new_cancellable(self):
+        c = Gio.Cancellable.new()
+        self._cancellables.append(c)
+        return c
+
+    def drop_cancellable(self, c):
+        idx = self._cancellables.index(c)
+        if idx == 0:
+            raise MainloopCancellableDropError('Cannot drop main cancellable')
+        del self._cancellables[idx]
+
+    def _cancel_cancellables(self):
+        for c in self._cancellables:
+            c.cancel()
 
     def quit(self, reason):
         logging.error('NM main-loop aborted: %s', reason)
         # In case it was the last action, add a sentinel to fail run.
         self.push_action(None)
         self._mainloop.quit()
-        self._cancellable.cancel()
+        self._cancel_cancellables()
 
     def is_action_canceled(self, err):
         return (isinstance(err, GLib.GError) and
@@ -145,7 +161,7 @@ class _MainLoop(object):
         )
         yield
         if timeout_result:
-            self._cancellable.cancel()
+            self._cancel_cancellables()
             self._error = _MainLoop.RUN_TIMEOUT_ERROR
         else:
             GLib.source_remove(timeout_id)
@@ -164,3 +180,7 @@ class _MainLoop(object):
     def _execute_action_once(self, _):
         self.execute_next_action()
         return False
+
+
+class MainloopCancellableDropError(Exception):
+    pass
