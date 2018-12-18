@@ -43,6 +43,7 @@ def apply(desired_state, verify_change=True):
     desired_state = copy.deepcopy(desired_state)
     validator.verify(desired_state)
     validator.verify_capabilities(desired_state, netinfo.capabilities())
+    validator.verify_dhcp(desired_state)
 
     _apply_ifaces_state(desired_state[Constants.INTERFACES], verify_change)
 
@@ -54,6 +55,7 @@ def _apply_ifaces_state(interfaces_desired_state, verify_change):
 
     ifaces_desired_state = sanitize_ethernet_state(ifaces_desired_state,
                                                    ifaces_current_state)
+    ifaces_desired_state = sanitize_dhcp_state(ifaces_desired_state)
     generate_ifaces_metadata(ifaces_desired_state, ifaces_current_state)
 
     with _transaction():
@@ -148,6 +150,20 @@ def sanitize_ethernet_state(ifaces_desired_state, ifaces_current_state):
             ethernet.setdefault('speed', None)
             ethernet.setdefault('duplex', None)
     return ifaces_desired_state
+
+
+def sanitize_dhcp_state(ifaces_state):
+    """
+    If dynamic IP is enabled and IP address is missing, set an empty address
+    list. This assures that the desired state is not complemented by the
+    current state address values.
+    """
+    for iface_state in six.viewvalues(ifaces_state):
+        for family in ('ipv4', 'ipv6'):
+            ip = iface_state.get(family, {})
+            if ip.get('enabled') and (ip.get('dhcp') or ip.get('autoconf')):
+                ip['address'] = []
+    return ifaces_state
 
 
 def remove_ifaces_metadata(ifaces_state):
@@ -329,6 +345,7 @@ def assert_ifaces_state(ifaces_desired_state, ifaces_current_state):
             iface_dstate, iface_cstate)
         iface_dstate, iface_cstate = _remove_iface_ipv6_link_local_addr(
             iface_dstate, iface_cstate)
+        iface_cstate = sanitize_dhcp_state({ifname: iface_cstate})[ifname]
         iface_dstate, iface_cstate = _sort_ip_addresses(
             iface_dstate, iface_cstate)
 

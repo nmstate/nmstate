@@ -25,7 +25,7 @@ RUN yum -y upgrade && \
     yum -y install iproute python2-pytest python2-pytest-cov NetworkManager \
                    rpm-build git python2-devel python2-six \
                    python2-pyyaml python-jsonschema python-setuptools \
-                   python-gobject-base && \
+                   python-gobject-base dnsmasq && \
     yum clean all && \
     install -o root -g root -d /etc/sysconfig/network-scripts && \
     echo -e "[logging]\nlevel=TRACE\ndomains=ALL\n" > /etc/NetworkManager/conf.d/97-docker-build.conf && \

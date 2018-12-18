@@ -17,6 +17,7 @@
 from __future__ import absolute_import
 
 import jsonschema as js
+import logging
 import six
 
 from . import nm
@@ -81,3 +82,13 @@ def verify_link_aggregation_state(ifaces_state, ifaces_desired_state):
                 if slaves & specified_slaves:
                     raise LinkAggregationSlavesReuseError(iface_state)
                 specified_slaves |= slaves
+
+
+def verify_dhcp(state):
+    for iface_state in state[Constants.INTERFACES]:
+        for family in ('ipv4', 'ipv6'):
+            ip = iface_state.get(family, {})
+            if ip.get('enabled') and ip.get('address') and \
+               (ip.get('dhcp') or ip.get('autoconf')):
+                logging.warning('%s addresses are ignored when '
+                                'dynamic IP is enabled', family)

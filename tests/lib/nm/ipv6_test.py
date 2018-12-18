@@ -105,22 +105,31 @@ def test_get_info_with_no_connection():
 def test_get_info_with_no_ipv6_config():
     con_mock = mock.MagicMock()
     con_mock.get_ip6_config.return_value = None
+    con_mock.get_connection.return_value = None
 
     info = nm.ipv6.get_info(active_connection=con_mock)
 
     assert info == {'enabled': False}
 
 
-def test_get_info_with_ipv6_config():
+def test_get_info_with_ipv6_config(NM_mock):
     act_con_mock = mock.MagicMock()
     config_mock = act_con_mock.get_ip6_config.return_value
     address_mock = mock.MagicMock()
     config_mock.get_addresses.return_value = [address_mock]
+    remote_conn_mock = mock.MagicMock()
+    act_con_mock.get_connection().return_value = remote_conn_mock
+    set_ip_conf = mock.MagicMock()
+    remote_conn_mock.get_setting_ip6_config.return_value = set_ip_conf
+    set_ip_conf.get_method.return_value = (
+        NM_mock.SETTING_IP6_CONFIG_METHOD_MANUAL)
 
     info = nm.ipv6.get_info(active_connection=act_con_mock)
 
     assert info == {
         'enabled': True,
+        'autoconf': False,
+        'dhcp': False,
         'address': [
             {
                 'ip': address_mock.get_address.return_value,

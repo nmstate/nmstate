@@ -98,7 +98,9 @@ class State(object):
 
     def normalize(self):
         self._sort_iface_lag_slaves()
+        self._ipv4_skeleton_canonicalization()
         self._ipv6_skeleton_canonicalization()
+        self._ignore_dhcp_manual_addr()
         self._ignore_ipv6_link_local()
         self._sort_ip_addresses()
 
@@ -117,6 +119,15 @@ class State(object):
             iface_state.setdefault('ipv6', {})
             iface_state['ipv6'].setdefault('enabled', False)
             iface_state['ipv6'].setdefault('address', [])
+            iface_state['ipv6'].setdefault('dhcp', False)
+            iface_state['ipv6'].setdefault('autoconf', False)
+
+    def _ipv4_skeleton_canonicalization(self):
+        for iface_state in self._state.get(INTERFACES, []):
+            iface_state.setdefault('ipv4', {})
+            iface_state['ipv4'].setdefault('enabled', False)
+            iface_state['ipv4'].setdefault('address', [])
+            iface_state['ipv4'].setdefault('dhcp', False)
 
     def _ignore_ipv6_link_local(self):
         for iface_state in self._state.get(INTERFACES, []):
@@ -130,6 +141,12 @@ class State(object):
             for family in ('ipv4', 'ipv6'):
                 iface_state.get(family, {}).get('address', []).sort(
                     key=itemgetter('ip'))
+
+    def _ignore_dhcp_manual_addr(self):
+        for iface_state in self._state.get(INTERFACES, []):
+            for family in ('ipv4', 'ipv6'):
+                if iface_state.get(family, {}).get('dhcp'):
+                    iface_state[family]['address'] = []
 
 
 def _lookup_iface_state_by_name(interfaces_state, ifname):

@@ -96,22 +96,30 @@ def test_get_info_with_no_connection():
 def test_get_info_with_no_ipv4_config():
     con_mock = mock.MagicMock()
     con_mock.get_ip4_config.return_value = None
+    con_mock.get_connection.return_value = None
 
     info = nm.ipv4.get_info(active_connection=con_mock)
 
     assert info == {'enabled': False}
 
 
-def test_get_info_with_ipv4_config():
+def test_get_info_with_ipv4_config(NM_mock):
     act_con_mock = mock.MagicMock()
     config_mock = act_con_mock.get_ip4_config.return_value
     address_mock = mock.MagicMock()
     config_mock.get_addresses.return_value = [address_mock]
+    remote_conn_mock = mock.MagicMock()
+    act_con_mock.get_connection().return_value = remote_conn_mock
+    set_ip_conf = mock.MagicMock()
+    remote_conn_mock.get_setting_ip4_config.return_value = set_ip_conf
+    set_ip_conf.get_method.return_value = (
+        NM_mock.SETTING_IP4_CONFIG_METHOD_MANUAL)
 
     info = nm.ipv4.get_info(active_connection=act_con_mock)
 
     assert info == {
         'enabled': True,
+        'dhcp': False,
         'address': [
             {
                 'ip': address_mock.get_address.return_value,
