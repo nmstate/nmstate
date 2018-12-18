@@ -61,8 +61,8 @@ class ActiveConnection(object):
             if unable_to_activate:
                 self._alternative_state = AlternativeACState.FAIL
             # Use the device-state as an alternative to determine if active.
-            elif (self._nmdev <= nmclient.NM.DeviceState.DISCONNECTED or
-                    self._nmdev > nmclient.NM.DeviceState.DEACTIVATING):
+            elif (self.nmdev_state <= nmclient.NM.DeviceState.DISCONNECTED or
+                    self.nmdev_state > nmclient.NM.DeviceState.DEACTIVATING):
                 self._alternative_state = AlternativeACState.FAIL
 
     @property
@@ -74,11 +74,9 @@ class ActiveConnection(object):
                 # master connections qualify as activated once they
                 # reach IP-Config state. That is because they may
                 # wait for slave devices to attach
-                nmdev_state = (self._nmdev.get_state() if self._nmdev
-                               else nmclient.NM.DeviceState.UNKNOWN)
                 return (
                     _is_device_master_type(self._nmdev) and
-                    nmclient.NM.DeviceState.IP_CONFIG <= nmdev_state <=
+                    nmclient.NM.DeviceState.IP_CONFIG <= self.nmdev_state <=
                     nmclient.NM.DeviceState.ACTIVATED
                 )
 
@@ -107,6 +105,11 @@ class ActiveConnection(object):
     @property
     def state(self):
         return self._state
+
+    @property
+    def nmdev_state(self):
+        return (self._nmdev.get_state() if self._nmdev
+                else nmclient.NM.DeviceState.UNKNOWN)
 
 
 def activate(dev=None, connection_id=None):
