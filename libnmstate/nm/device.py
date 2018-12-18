@@ -118,23 +118,25 @@ def activate(dev=None, connection_id=None):
 def _safe_activate_async(dev, connection_id):
     client = nmclient.client()
     mainloop = nmclient.mainloop()
+    cancellable = mainloop.new_cancellable()
     connection = None
     if connection_id:
         connection = client.get_connection_by_id(connection_id)
     specific_object = None
-    user_data = mainloop, dev
+    user_data = mainloop, dev, cancellable
     client.activate_connection_async(
         connection,
         dev,
         specific_object,
-        mainloop.cancellable,
+        cancellable,
         _active_connection_callback,
         user_data,
     )
 
 
 def _active_connection_callback(src_object, result, user_data):
-    mainloop, nmdev = user_data
+    mainloop, nmdev, cancellable = user_data
+    mainloop.drop_cancellable(cancellable)
     try:
         nm_act_con = src_object.activate_connection_finish(result)
     except Exception as e:
