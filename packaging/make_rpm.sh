@@ -14,22 +14,24 @@ cd $SRC_DIR
 MAIN_VERSION=$(python setup.py --version)
 COMMIT_COUNT=$(git rev-list --count HEAD --)
 VERSION="${MAIN_VERSION}dev${COMMIT_COUNT}git$(git rev-parse --short HEAD)"
+TAR_FILE="$TMP_DIR/nmstate-$VERSION.tar"
 
 if [ -n "$(rpm -E %{?fedora} 2>/dev/null)" ] ||
    [ -n "$(rpm -E %{?el8} 2>/dev/null)" ] ;then
-    cp packaging/nmstate.py3.spec.in $SPEC_FILE
-    sed -i -e "s/@VERSION@/$VERSION/" $SPEC_FILE
-    sed -i -e "s/@SRC_VERSION@/$MAIN_VERSION/" $SPEC_FILE
+    pysuffix=.py3
 elif [ -n "$(rpm -E %{?el7} 2>/dev/null)" ];then
-    cp packaging/nmstate.py2.spec.in $SPEC_FILE
-    sed -i -e "s/@VERSION@/$VERSION/" $SPEC_FILE
-    sed -i -e "s/@SRC_VERSION@/$MAIN_VERSION/" $SPEC_FILE
+    pysuffix=.py2
 else
     echo "Not supported"
     exit 1
 fi
 
-TAR_FILE="$TMP_DIR/nmstate-$VERSION.tar"
+sed -n \
+    -e "s/@VERSION@/$VERSION/" \
+    -e "s/@SRC_VERSION@/$MAIN_VERSION/" \
+    -e "w $SPEC_FILE" \
+    "packaging/nmstate${pysuffix}.spec.in"
+
 
 python setup.py sdist --format tar --dist-dir $TMP_DIR
 mv $TMP_DIR/nmstate*.tar $TAR_FILE
