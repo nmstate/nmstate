@@ -31,13 +31,16 @@ def create_setting(config, base_con_profile):
     if not setting_ipv4:
         setting_ipv4 = nmclient.NM.SettingIP4Config.new()
 
-    if config and config.get('enabled') and config.get('address'):
-        setting_ipv4.props.method = (
-            nmclient.NM.SETTING_IP4_CONFIG_METHOD_MANUAL)
-        _add_addresses(setting_ipv4, config['address'])
-    else:
-        setting_ipv4.props.method = (
-            nmclient.NM.SETTING_IP4_CONFIG_METHOD_DISABLED)
+    setting_ipv4.props.method = (
+        nmclient.NM.SETTING_IP4_CONFIG_METHOD_DISABLED)
+    if config and config.get('enabled'):
+        if config.get('dhcp'):
+            setting_ipv4.props.method = (
+                nmclient.NM.SETTING_IP4_CONFIG_METHOD_AUTO)
+        elif config.get('address'):
+            setting_ipv4.props.method = (
+                nmclient.NM.SETTING_IP4_CONFIG_METHOD_MANUAL)
+            _add_addresses(setting_ipv4, config['address'])
     return setting_ipv4
 
 
@@ -60,8 +63,23 @@ def get_info(active_connection):
     if active_connection is None:
         return info
 
+    ip_profile = get_ip_profile(active_connection)
+    if ip_profile:
+        info['dhcp'] = ip_profile.get_method() == (
+            nmclient.NM.SETTING_IP4_CONFIG_METHOD_AUTO)
+    else:
+        info['dhcp'] = False
+
     ip4config = active_connection.get_ip4_config()
     if ip4config is None:
+        # When DHCP is enable, it might be possible, the active_connection does
+        # not got IP address yet. In that case, we still mark
+        # info['enabled'] as True.
+        if info['dhcp']:
+            info['enabled'] = True
+            info['address'] = []
+        else:
+            del info['dhcp']
         return info
 
     addresses = [
@@ -77,3 +95,14 @@ def get_info(active_connection):
     info['enabled'] = True
     info['address'] = addresses
     return info
+
+
+def get_ip_profile(active_connection):
+    """
+    Get NMSettingIP4Config from NMActiveConnection.
+    For any error, return None.
+    """
+    remote_conn = active_connection.get_connection()
+    if remote_conn:
+        return remote_conn.get_setting_ip4_config()
+    return None
