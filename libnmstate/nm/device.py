@@ -48,12 +48,13 @@ class ActiveConnection(object):
         self._alternative_state = AlternativeACState.UNKNOWN
 
         nm_acs = nmclient.NM.ActiveConnectionState
+        nm_acsreason = nmclient.NM.ActiveConnectionStateReason
         if self._state == nm_acs.DEACTIVATED:
             unable_to_activate = (
                     not self._nmdev or
                     (
-                            self._state_reason is not None and
-                            self._state_reason != nm_acs.DEVICE_DISCONNECTED
+                        self._state_reason is not None and
+                        self._state_reason != nm_acsreason.DEVICE_DISCONNECTED
                     ) or
                     self._nmdev.get_active_connection() is not self._act_con
             )
