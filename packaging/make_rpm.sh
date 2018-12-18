@@ -6,11 +6,6 @@ SRC_DIR="$(dirname "$0")/.."
 TMP_DIR=$(mktemp -d)
 SPEC_FILE="$TMP_DIR/nmstate.spec"
 OLD_PWD=$(pwd)
-if [ $EUID -ne 0 ]; then
-    SUDO="sudo"
-else
-    SUDO=""
-fi
 
 trap 'rm -rf "$TMP_DIR"' INT TERM HUP EXIT
 
@@ -25,14 +20,10 @@ if [ -n "$(rpm -E %{?fedora} 2>/dev/null)" ] ||
     cp packaging/nmstate.py3.spec.in $SPEC_FILE
     sed -i -e "s/@VERSION@/$VERSION/" $SPEC_FILE
     sed -i -e "s/@SRC_VERSION@/$MAIN_VERSION/" $SPEC_FILE
-    $SUDO dnf install -y rpm-build
-    $SUDO dnf builddep -y $SPEC_FILE
 elif [ -n "$(rpm -E %{?el7} 2>/dev/null)" ];then
     cp packaging/nmstate.py2.spec.in $SPEC_FILE
     sed -i -e "s/@VERSION@/$VERSION/" $SPEC_FILE
     sed -i -e "s/@SRC_VERSION@/$MAIN_VERSION/" $SPEC_FILE
-    $SUDO yum install -y rpm-build yum-utils
-    $SUDO yum-builddep -y $SPEC_FILE
 else
     echo "Not supported"
     exit 1

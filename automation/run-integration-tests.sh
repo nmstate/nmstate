@@ -54,7 +54,7 @@ function dump_network_info {
 function install_nmstate {
     docker_exec '
       cd /workspace/nmstate &&
-      yum install -y `./packaging/make_rpm.sh|tail -1 || exit 1`
+      rpm -ivh `./packaging/make_rpm.sh|tail -1 || exit 1`
     '
 }
 
