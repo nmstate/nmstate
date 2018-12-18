@@ -42,6 +42,7 @@ def mainloop_mock():
 def test_activate(client_mock, mainloop_mock):
     dev = 'foodev'
     mainloop_mock.push_action = lambda func, dev, con_id: func(dev, con_id)
+    cancellable = mainloop_mock.new_cancellable()
 
     nm.device.activate(dev)
 
@@ -49,9 +50,9 @@ def test_activate(client_mock, mainloop_mock):
         None,
         dev,
         None,
-        mainloop_mock.cancellable,
+        cancellable,
         nm.device._active_connection_callback,
-        (mainloop_mock, dev),
+        (mainloop_mock, dev, cancellable),
     )
 
 
