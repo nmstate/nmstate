@@ -77,19 +77,20 @@ tox -e check-integ-py27
 ### Build a new container image
 
 ```
-sudo docker build --rm -t local/centos7-nmstate-dev .
+sudo docker build --no-cache --rm -t local/centos7-nmstate-dev .
 ```
 
 To test the image, either specify it manually as described above or tag it locally:
 
 ```
-docker tag local/centos7-nmstate-dev nmstate/centos7-nmstate-dev:latest
+sudo docker tag local/centos7-nmstate-dev nmstate/centos7-nmstate-dev:latest
 ```
 
 ### Push local image to the docker hub
 ```
-docker tag local/centos7-nmstate-dev nmstate/centos7-nmstate-dev:<ver>
-docker tag local/centos7-nmstate-dev nmstate/centos7-nmstate-dev:latest
-docker push nmstate/centos7-nmstate-dev:<ver>
-docker push nmstate/centos7-nmstate-dev:latest
+VERSION=<ver>
+sudo docker tag local/centos7-nmstate-dev nmstate/centos7-nmstate-dev:"${VERSION}"
+sudo docker tag local/centos7-nmstate-dev nmstate/centos7-nmstate-dev:latest
+sudo docker push nmstate/centos7-nmstate-dev:"${VERSION}"
+sudo docker push nmstate/centos7-nmstate-dev:latest
 ```
