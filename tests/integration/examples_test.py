@@ -43,6 +43,14 @@ def test_add_down_remove_vlan(eth1_up):
     assertlib.assert_absent(vlan_ifname)
 
 
+def test_add_remove_ovs_bridge(eth1_up):
+    with yaml_state('ovsbrige_eth1_up.yml',
+                    cleanup='ovsbrige_eth1_absent.yml') as desired_state:
+        assertlib.assert_state(desired_state)
+
+    assertlib.assert_absent('ovs-br0')
+
+
 @contextmanager
 def yaml_state(initial, cleanup=None):
     """

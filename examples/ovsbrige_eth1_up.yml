@@ -1,0 +1,17 @@
+---
+interfaces:
+  - name: eth1
+    type: ethernet
+    state: up
+  - name: ovs-br0
+    type: ovs-bridge
+    state: up
+    bridge:
+      options:
+        fail-mode: ''
+        mcast-snooping-enable: false
+        rstp: false
+        stp: true
+      port:
+        - name: eth1
+          type: system
