@@ -18,7 +18,7 @@ def requirements():
 
 setup(
     name='nmstate',
-    version='0.0.3',
+    version='0.0.4',
     description='Declarative network manager API',
     author="Edward Haas",
     author_email="ehaas@redhat.com",
