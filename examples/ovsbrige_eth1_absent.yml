@@ -1,0 +1,5 @@
+---
+interfaces:
+  - name: ovs-br0
+    type: ovs-bridge
+    state: absent
