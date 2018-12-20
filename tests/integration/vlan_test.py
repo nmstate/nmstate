@@ -18,19 +18,44 @@
 from contextlib import contextmanager
 import os.path
 
+import pytest
 import yaml
 
 from libnmstate import netapplier
+from libnmstate import netinfo
 
 from .testlib import assertlib
 from .testlib import statelib
 from .testlib.statelib import INTERFACES
 
-
 VLAN_IFNAME = 'eth1.101'
 VLAN2_IFNAME = 'eth1.102'
 
 PATH_MAX = 4096
+
+TWO_VLANS_STATE = {
+    INTERFACES: [
+        {
+            'name': VLAN_IFNAME,
+            'type': 'vlan',
+            'state': 'up',
+            'vlan': {
+                    'id': 101,
+                    'base-iface': 'eth1'
+            }
+        },
+        {
+
+            'name': VLAN2_IFNAME,
+            'type': 'vlan',
+            'state': 'up',
+            'vlan': {
+                    'id': 102,
+                    'base-iface': 'eth1'
+                    }
+        }
+    ]
+}
 
 
 def test_add_and_remove_vlan(eth1_up):
@@ -48,6 +73,18 @@ def test_add_and_remove_two_vlans_on_same_iface(eth1_up):
     vlan_interfaces = [i['name'] for i in desired_state[INTERFACES]]
     current_state = statelib.show_only(vlan_interfaces)
     assert not current_state[INTERFACES]
+
+
+def test_rollback_for_vlans(eth1_up):
+    current_state = netinfo.show()
+    desired_state = TWO_VLANS_STATE
+
+    desired_state[INTERFACES][1]['invalid_key'] = 'foo'
+    with pytest.raises(netapplier.DesiredStateIsNotCurrentError):
+        netapplier.apply(desired_state)
+
+    current_state_after_apply = netinfo.show()
+    assert current_state == current_state_after_apply
 
 
 def test_set_vlan_iface_down(eth1_up):
@@ -153,29 +190,7 @@ def vlan_interface(ifname, vlan_id):
 
 @contextmanager
 def two_vlans_on_eth1():
-    desired_state = {
-        INTERFACES: [
-            {
-                'name': VLAN_IFNAME,
-                'type': 'vlan',
-                'state': 'up',
-                'vlan': {
-                        'id': 101,
-                        'base-iface': 'eth1'
-                }
-            },
-            {
-
-                'name': VLAN2_IFNAME,
-                'type': 'vlan',
-                'state': 'up',
-                'vlan': {
-                        'id': 102,
-                        'base-iface': 'eth1'
-                        }
-            }
-        ]
-    }
+    desired_state = TWO_VLANS_STATE
     netapplier.apply(desired_state)
     try:
         yield desired_state
