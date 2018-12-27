@@ -88,7 +88,6 @@ class CheckPoint(object):
             self.destroy()
         else:
             self.rollback()
-            raise
 
     def create(self):
         devs = []
