@@ -55,7 +55,7 @@ except NameError:
 
 
 @pytest.fixture(scope='module')
-def dhcp_env(request):
+def dhcp_env():
     try:
         _create_veth_pair()
         _setup_dhcp_nics()
