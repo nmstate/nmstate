@@ -1,0 +1,24 @@
+---
+interfaces:
+  - name: eth1
+    type: ethernet
+    state: up
+  - name: linux-br0
+    type: linux-bridge
+    state: up
+    bridge:
+      options:
+        group-forward-mask: 0
+        mac-ageing-time: 300
+        multicast-snooping: true
+        stp:
+          enabled: true
+          forward-delay: 15
+          hello-time: 2
+          max-age: 20
+          priority: 32768
+      port:
+        - name: eth1
+          stp-hairpin-mode: false
+          stp-path-cost: 100
+          stp-priority: 32

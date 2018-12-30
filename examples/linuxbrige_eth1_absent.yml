@@ -1,0 +1,5 @@
+---
+interfaces:
+  - name: linux-br0
+    type: linux-bridge
+    state: absent
