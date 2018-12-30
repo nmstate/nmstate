@@ -68,6 +68,21 @@ def dhcp_env():
         _clean_up()
 
 
+@pytest.fixture
+def setup_remove_bond99():
+    yield
+    remove_bond = {
+        INTERFACES: [
+            {
+                'name': 'bond99',
+                'type': 'bond',
+                'state': 'absent'
+            }
+        ]
+    }
+    netapplier.apply(remove_bond)
+
+
 def test_ipv4_dhcp(dhcp_env):
     desired_state = statelib.show_only((DHCP_CLI_NIC,))
     dhcp_cli_desired_state = desired_state[INTERFACES][0]
@@ -140,6 +155,42 @@ def test_dhcp_with_addresses(dhcp_env):
                     ]
                 }
             }
+        ]
+    }
+
+    netapplier.apply(desired_state)
+
+    assertlib.assert_state(desired_state)
+
+
+def test_dhcp_for_bond_with_ip_address_and_slave(dhcp_env, setup_remove_bond99):
+
+    desired_state = {
+        INTERFACES: [
+            {
+                'name': 'bond99',
+                'type': 'bond',
+                'state': 'up',
+                'ipv4': {
+                    'enabled': True,
+                    'dhcp': True,
+                    'address': [
+                        {'ip': '192.168.122.250', 'prefix-length': 24}
+                    ]
+                },
+
+                'link-aggregation': {
+                    'mode': 'balance-rr',
+                    'slave': [DHCP_CLI_NIC],
+                    'options':
+                        {'miimon': '140'}
+                }
+
+            },
+            {
+                'name': DHCP_CLI_NIC,
+                'type': 'ethernet',
+                'state': 'up'}
         ]
     }
 
