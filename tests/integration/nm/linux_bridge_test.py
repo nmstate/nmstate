@@ -42,15 +42,17 @@ def bridge_minimum_config():
 def bridge_default_config():
     return {
         LB.CONFIG_SUBTREE: {
-            LB.GROUP_FORWARD_MASK: 0,
-            LB.MAC_AGEING_TIME: 300,
-            LB.MULTICAST_SNOOPING: True,
-            LB.STP_SUBTREE: {
-                LB.STP_ENABLED: True,
-                LB.STP_FORWARD_DELAY: 15,
-                LB.STP_HELLO_TIME: 2,
-                LB.STP_MAX_AGE: 20,
-                LB.STP_PRIORITY: 32768
+            LB.OPTIONS_SUBTREE: {
+                LB.GROUP_FORWARD_MASK: 0,
+                LB.MAC_AGEING_TIME: 300,
+                LB.MULTICAST_SNOOPING: True,
+                LB.STP_SUBTREE: {
+                    LB.STP_ENABLED: True,
+                    LB.STP_FORWARD_DELAY: 15,
+                    LB.STP_HELLO_TIME: 2,
+                    LB.STP_MAX_AGE: 20,
+                    LB.STP_PRIORITY: 32768
+                }
             },
             LB.PORT_SUBTREE: []
         }
@@ -107,7 +109,9 @@ def _get_bridge_current_state():
 
 
 def _create_bridge(bridge_desired_state):
-    iface_bridge_settings = _get_iface_bridge_settings(bridge_desired_state)
+    bridge_config = bridge_desired_state.get(LB.CONFIG_SUBTREE, {})
+    br_options = bridge_config.get(LB.OPTIONS_SUBTREE)
+    iface_bridge_settings = _get_iface_bridge_settings(br_options)
 
     with mainloop():
         _create_bridge_iface(iface_bridge_settings)
@@ -149,13 +153,13 @@ def _delete_iface(devname):
         nm.device.delete(nmdev)
 
 
-def _get_iface_bridge_settings(bridge_desired_state):
+def _get_iface_bridge_settings(bridge_options):
     bridge_con_setting = nm.connection.create_setting(
         con_name=BRIDGE0,
         iface_name=BRIDGE0,
         iface_type=nm.nmclient.NM.SETTING_BRIDGE_SETTING_NAME,
     )
-    bridge_setting = nm.bridge.create_setting(bridge_desired_state,
+    bridge_setting = nm.bridge.create_setting(bridge_options,
                                               base_con_profile=None)
     ipv4_setting = nm.ipv4.create_setting({}, None)
     ipv6_setting = nm.ipv6.create_setting({}, None)

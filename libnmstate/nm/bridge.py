@@ -22,19 +22,16 @@ from libnmstate.nm import nmclient
 from libnmstate.schema import LinuxBridge as LB
 
 
-BRIDGE_TYPE = LB.TYPE
+BRIDGE_TYPE = 'bridge'
 
 
-def create_setting(iface_state, base_con_profile):
-    bridge_conf = iface_state.get(LB.CONFIG_SUBTREE)
-    if not bridge_conf:
-        return None
-
+def create_setting(options, base_con_profile):
     bridge_setting = _get_current_bridge_setting(base_con_profile)
     if not bridge_setting:
         bridge_setting = nmclient.NM.SettingBridge.new()
 
-    _set_bridge_properties(bridge_setting, bridge_conf)
+    if options:
+        _set_bridge_properties(bridge_setting, options)
 
     return bridge_setting
 
@@ -48,8 +45,8 @@ def _get_current_bridge_setting(base_con_profile):
     return bridge_setting
 
 
-def _set_bridge_properties(bridge_setting, bridge_conf):
-    for key, val in six.viewitems(bridge_conf):
+def _set_bridge_properties(bridge_setting, options):
+    for key, val in six.viewitems(options):
         if key == LB.MAC_AGEING_TIME:
             bridge_setting.props.ageing_time = val
         elif key == LB.GROUP_FORWARD_MASK:
@@ -96,24 +93,33 @@ def get_info(nmdev):
     Provides the current active values for a device
     """
     info = {}
-    if nmdev.get_device_type() == nmclient.NM.DeviceType.BRIDGE:
-        bridge_setting = _get_bridge_setting(nmdev)
-        if bridge_setting:
-            port_profiles = _get_slave_profiles(nmdev)
-            info[LB.CONFIG_SUBTREE] = {
-                LB.PORT_SUBTREE: _get_bridge_ports_info(port_profiles),
-                LB.MAC_AGEING_TIME: bridge_setting.props.ageing_time,
-                LB.GROUP_FORWARD_MASK: bridge_setting.props.group_forward_mask,
-                LB.MULTICAST_SNOOPING: bridge_setting.props.multicast_snooping,
-                LB.STP_SUBTREE: {
-                    LB.STP_ENABLED: bridge_setting.props.stp,
-                    LB.STP_PRIORITY: bridge_setting.props.priority,
-                    LB.STP_FORWARD_DELAY: bridge_setting.props.forward_delay,
-                    LB.STP_HELLO_TIME: bridge_setting.props.hello_time,
-                    LB.STP_MAX_AGE: bridge_setting.props.max_age
-                }
+    if nmdev.get_device_type() != nmclient.NM.DeviceType.BRIDGE:
+        return info
+    bridge_setting = _get_bridge_setting(nmdev)
+    if not bridge_setting:
+        return info
+
+    port_profiles = _get_slave_profiles(nmdev)
+    info[LB.CONFIG_SUBTREE] = {
+        LB.PORT_SUBTREE: _get_bridge_ports_info(port_profiles),
+        LB.OPTIONS_SUBTREE: {
+            LB.MAC_AGEING_TIME: bridge_setting.props.ageing_time,
+            LB.GROUP_FORWARD_MASK: bridge_setting.props.group_forward_mask,
+            LB.MULTICAST_SNOOPING: bridge_setting.props.multicast_snooping,
+            LB.STP_SUBTREE: {
+                LB.STP_ENABLED: bridge_setting.props.stp,
+                LB.STP_PRIORITY: bridge_setting.props.priority,
+                LB.STP_FORWARD_DELAY: bridge_setting.props.forward_delay,
+                LB.STP_HELLO_TIME: bridge_setting.props.hello_time,
+                LB.STP_MAX_AGE: bridge_setting.props.max_age
             }
+        }
+    }
     return info
+
+
+def get_slaves(nm_device):
+    return nm_device.get_slaves()
 
 
 def _get_bridge_setting(nmdev):
