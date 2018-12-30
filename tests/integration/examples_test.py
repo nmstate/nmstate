@@ -51,6 +51,14 @@ def test_add_remove_ovs_bridge(eth1_up):
     assertlib.assert_absent('ovs-br0')
 
 
+def test_add_remove_linux_bridge(eth1_up):
+    with yaml_state('linuxbrige_eth1_up.yml',
+                    cleanup='linuxbrige_eth1_absent.yml') as desired_state:
+        assertlib.assert_state(desired_state)
+
+    assertlib.assert_absent('linux-br0')
+
+
 @contextmanager
 def yaml_state(initial, cleanup=None):
     """
