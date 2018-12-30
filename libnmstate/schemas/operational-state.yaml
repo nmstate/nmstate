@@ -196,16 +196,16 @@ definitions:
                   stp-priority:
                     type: integer
                   stp-path-cost:
-                    type: string
+                    type: integer
                   stp-hairpin-mode:
-                    type: string
+                    type: boolean
             options:
               type: object
               properties:
                 mac-ageing-time:
                   type: integer
                 group-forward-mask:
-                  type: string
+                  type: integer
                 multicast-snooping:
                   type: boolean
                 stp:
