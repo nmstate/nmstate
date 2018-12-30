@@ -17,7 +17,10 @@
 
 import six
 
+from libnmstate.schema import LinuxBridge as LB
+
 from . import bond
+from . import bridge
 from . import connection
 from . import device
 from . import ipv4
@@ -117,7 +120,7 @@ def set_ifaces_admin_state(ifaces_desired_state, con_profiles=()):
                     new_ifaces_to_activate.add(ifname)
         else:
             if iface_desired_state['state'] == 'up':
-                master_iface_types = ovs.BRIDGE_TYPE, bond.BOND_TYPE
+                master_iface_types = ovs.BRIDGE_TYPE, bond.BOND_TYPE, LB.TYPE
                 if iface_desired_state['type'] in master_iface_types:
                     master_ifaces_to_activate.add(nmdev)
                 else:
@@ -158,6 +161,8 @@ def _get_affected_devices(iface_state):
         iface_type = iface_state['type']
         if iface_type == ovs.BRIDGE_TYPE:
             devs += _get_ovs_bridge_port_devices(iface_state)
+        elif iface_type == LB.TYPE:
+            devs += bridge.get_slaves(nmdev)
         elif iface_type == bond.BOND_TYPE:
             devs += bond.get_slaves(nmdev)
     return devs
@@ -194,6 +199,9 @@ def prepare_proxy_ifaces_desired_state(ifaces_desired_state):
     """
     new_ifaces_desired_state = []
     for iface_desired_state in ifaces_desired_state:
+        master_type = iface_desired_state.get('_master_type')
+        if master_type != ovs.BRIDGE_TYPE:
+            continue
         port_options_metadata = iface_desired_state.get('_brport_options')
         if port_options_metadata is None:
             continue
@@ -239,6 +247,7 @@ def _build_connection_profile(iface_desired_state, base_con_profile=None):
             iface_type=iface_type,
         )
     master = iface_desired_state.get('_master')
+    _translate_master_type(iface_desired_state)
     master_type = iface_desired_state.get('_master_type')
     connection.set_master_setting(con_setting, master, master_type)
     settings.append(con_setting)
@@ -254,6 +263,12 @@ def _build_connection_profile(iface_desired_state, base_con_profile=None):
     bond_opts = translator.Api2Nm.get_bond_options(iface_desired_state)
     if bond_opts:
         settings.append(bond.create_setting(bond_opts))
+    elif iface_type == bridge.BRIDGE_TYPE:
+        bridge_options = iface_desired_state.get('bridge', {}).get('options')
+        if bridge_options:
+            linux_bridge_setting = bridge.create_setting(bridge_options,
+                                                         base_con_profile)
+            settings.append(linux_bridge_setting)
     elif iface_type == ovs.BRIDGE_TYPE:
         ovs_bridge_options = ovs.translate_bridge_options(iface_desired_state)
         if ovs_bridge_options:
@@ -262,9 +277,25 @@ def _build_connection_profile(iface_desired_state, base_con_profile=None):
         ovs_port_options = iface_desired_state.get('options')
         settings.append(ovs.create_port_setting(ovs_port_options))
 
+    bridge_port_options = iface_desired_state.get('_brport_options')
+    if bridge_port_options and master_type == bridge.BRIDGE_TYPE:
+        settings.append(
+            bridge.create_port_setting(bridge_port_options, base_con_profile)
+        )
+
     vlan_setting = vlan.create_setting(iface_desired_state, base_con_profile)
     if vlan_setting:
         settings.append(vlan_setting)
 
     new_profile = connection.create_profile(settings)
     return new_profile
+
+
+def _translate_master_type(iface_desired_state):
+    """
+    Translates the master type metadata names to their equivalent
+    NM type names.
+    """
+    master_type = iface_desired_state.get('_master_type')
+    if master_type == LB.TYPE:
+        iface_desired_state['_master_type'] = bridge.BRIDGE_TYPE

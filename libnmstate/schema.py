@@ -50,6 +50,7 @@ class LinuxBridge(object):
     TYPE = 'linux-bridge'
     CONFIG_SUBTREE = 'bridge'
 
+    OPTIONS_SUBTREE = 'options'
     MAC_AGEING_TIME = 'mac-ageing-time'
     GROUP_FORWARD_MASK = 'group-forward-mask'
     MULTICAST_SNOOPING = 'multicast-snooping'
