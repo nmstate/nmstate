@@ -26,6 +26,7 @@ from libnmstate import iplib
 from libnmstate import netinfo
 from libnmstate import nm
 from libnmstate import validator
+from libnmstate.appliers import linux_bridge
 from libnmstate.nm import nmclient
 from libnmstate.prettystate import format_desired_current_state_diff
 from libnmstate.schema import Constants
@@ -130,6 +131,13 @@ def generate_ifaces_metadata(ifaces_desired_state, ifaces_current_state):
         master_type='ovs-bridge',
         get_slaves_func=_get_ovs_slaves_from_state,
         set_metadata_func=_set_ovs_bridge_ports_metadata
+    )
+    _generate_link_master_metadata(
+        ifaces_desired_state,
+        ifaces_current_state,
+        master_type='linux-bridge',
+        get_slaves_func=linux_bridge.get_slaves_from_state,
+        set_metadata_func=linux_bridge.set_bridge_ports_metadata
     )
 
 
