@@ -16,9 +16,11 @@
 #
 
 import pytest
+import time
 import yaml
 
 from libnmstate import netapplier
+from libnmstate import netinfo
 
 from .testlib import assertlib
 from .testlib import statelib
@@ -132,3 +134,38 @@ def test_add_bond_with_slaves_and_ipv4(eth1_up, eth2_up, setup_remove_bond99):
     netapplier.apply(desired_bond_state)
 
     assertlib.assert_state(desired_bond_state)
+
+
+def test_rollback_for_bond(eth1_up, eth2_up):
+    current_state = netinfo.show()
+    desired_state = {
+                INTERFACES: [
+                    {
+                        'name': 'bond99',
+                        'type': 'bond',
+                        'state': 'up',
+                        'ipv4': {
+                            'enabled': True,
+                            'address': [
+                                {'ip': '192.168.122.250', 'prefix-length': 24}
+                            ]
+                        },
+                        'link-aggregation': {
+                            'mode': 'balance-rr',
+                            'slaves': ['eth1', 'eth2'],
+                            'options':
+                                {'miimon': '140'}
+                        },
+                    }
+                ]
+            }
+
+    desired_state[INTERFACES][0]['invalid_key'] = 'foo'
+
+    with pytest.raises(netapplier.DesiredStateIsNotCurrentError):
+        netapplier.apply(desired_state)
+
+    time.sleep(2)
+
+    current_state_after_apply = netinfo.show()
+    assert current_state == current_state_after_apply
