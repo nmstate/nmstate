@@ -95,7 +95,6 @@ def create_setting(config, base_con_profile):
     else:
         setting_ip.props.method = (
             nmclient.NM.SETTING_IP6_CONFIG_METHOD_LINK_LOCAL)
-
     return setting_ip
 
 

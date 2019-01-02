@@ -153,6 +153,7 @@ def _filter_state(state, whitelist):
     if whitelist != '*':
         patterns = [p for p in whitelist.split(',')]
         state[Constants.INTERFACES] = _filter_interfaces(state, patterns)
+        state[Constants.ROUTING] = _filter_routing(state, patterns)
     return state
 
 
@@ -169,6 +170,23 @@ def _filter_interfaces(state, patterns):
                 showinterfaces.append(interface)
                 break
     return showinterfaces
+
+
+def _filter_routing(state, patterns):
+    """
+    return the states for all routes from `state` that match at least one
+    of the provided patterns.
+    """
+    routing = {'ipv4': [], 'ipv6': []}
+
+    for family in ('ipv4', 'ipv6'):
+        for route in state.get(Constants.ROUTING, {}).get(family, []):
+            for pattern in patterns:
+                if fnmatch.fnmatch(route['iface'], pattern):
+                    routing[family].append(route)
+    if routing == {'ipv4': [], 'ipv6': []}:
+        return {}
+    return routing
 
 
 def _get_edited_state(txtstate, suffix, use_yaml):

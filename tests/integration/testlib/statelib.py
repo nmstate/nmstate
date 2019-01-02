@@ -25,6 +25,7 @@ from libnmstate.schema import Constants
 
 
 INTERFACES = Constants.INTERFACES
+ROUTING = Constants.ROUTING
 
 
 def show_only(ifnames):
@@ -32,7 +33,7 @@ def show_only(ifnames):
     Report the current state, filtering based on the given interface names.
     """
     base_filter_state = {
-        INTERFACES: [{'name': ifname} for ifname in ifnames]
+        INTERFACES: [{'name': ifname} for ifname in ifnames],
     }
     current_state = State(netinfo.show())
     current_state.filter(base_filter_state)
@@ -77,7 +78,15 @@ class State(object):
             for ifstate in self._state[INTERFACES]
             if ifstate['name'] in base_iface_names
         ]
+        filtered_route_state = {'ipv4': [], 'ipv6': []}
+        for family in ('ipv4', 'ipv6'):
+            for route in self._state.get(ROUTING, {}).get(family, []):
+                if route['iface'] in base_iface_names:
+                    filtered_route_state[family].append(route)
+
         self._state = {INTERFACES: filtered_iface_state}
+        if filtered_route_state != {'ipv4': [], 'ipv6': []}:
+            self._state[ROUTING] = filtered_route_state
 
     def update(self, other_state):
         """
@@ -103,6 +112,9 @@ class State(object):
         self._ignore_dhcp_manual_addr()
         self._ignore_ipv6_link_local()
         self._sort_ip_addresses()
+        self._ignore_auto_route()
+        self._sort_routes()
+        self._remove_empty_route_info()
 
     def remove_absent_entries(self):
         self._state[INTERFACES] = [
@@ -147,6 +159,24 @@ class State(object):
             for family in ('ipv4', 'ipv6'):
                 if iface_state.get(family, {}).get('dhcp'):
                     iface_state[family]['address'] = []
+
+    def _ignore_auto_route(self):
+        for family in ('ipv4', 'ipv6'):
+            routes = self._state.get(ROUTING, {}).get(family, [])
+            if routes:
+                routes = [r for r in routes if r['route-type'] == 'static']
+                self.state[ROUTING][family] = routes
+
+    def _sort_routes(self):
+        for family in ('ipv4', 'ipv6'):
+            self._state.get(ROUTING, {}).get(family, []).sort(
+                key=itemgetter('destination'))
+
+    def _remove_empty_route_info(self):
+        if ROUTING in self.state:
+            if self.state[ROUTING] == {} or \
+               self.state[ROUTING] == {'ipv4': [], 'ipv6': []}:
+                del self.state[ROUTING]
 
 
 def _lookup_iface_state_by_name(interfaces_state, ifname):

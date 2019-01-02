@@ -23,6 +23,7 @@ import six
 from . import nm
 from . import schema
 from .schema import Constants
+from libnmstate.nm import route as nm_route
 
 
 class LinkAggregationSlavesMissingError(Exception):
@@ -34,6 +35,26 @@ class LinkAggregationSlavesReuseError(Exception):
 
 
 class CapabilityNotSupportedError(Exception):
+    pass
+
+
+class MultipleRouteTablesNotSupportedError(Exception):
+    pass
+
+
+class InvalidRouteTableValueError(Exception):
+    pass
+
+
+class StaticRouteOnAutoIPNotSupportedError(Exception):
+    pass
+
+
+class AutoRouteOnStaticIPNotSupportedError(Exception):
+    pass
+
+
+class CannotSetOfflineRouteError(Exception):
     pass
 
 
@@ -92,3 +113,64 @@ def verify_dhcp(state):
                (ip.get('dhcp') or ip.get('autoconf')):
                 logging.warning('%s addresses are ignored when '
                                 'dynamic IP is enabled', family)
+
+
+def verify_ifaces_routing_state(ifaces_routing_state, ifaces_state):
+    for iface_name, iface_routing_state in six.viewitems(ifaces_routing_state):
+        _verify_route_on_offline_iface(ifaces_state[iface_name],
+                                       iface_routing_state)
+        _verify_mixing_auto_static_route(ifaces_state[iface_name],
+                                         iface_routing_state)
+        _verify_route_table_value(iface_routing_state)
+        _verify_mixing_auto_static_route(ifaces_state[iface_name],
+                                         iface_routing_state)
+
+
+def _verify_route_on_offline_iface(iface_state, iface_routing_state):
+    iface_is_disabled = iface_state['state'] != 'up'
+    for family in ('ipv4', 'ipv6'):
+        if iface_routing_state[family] and iface_is_disabled:
+            raise CannotSetOfflineRouteError(
+                'Cannot set {} route when interface {} is down'.format(
+                    family, iface_state['name']))
+        if iface_routing_state[family] and \
+           not iface_state[family]['enabled']:
+            raise CannotSetOfflineRouteError(
+                'Cannot set {} route when {} is disabled on '
+                'interface {}'.format(family, family, iface_state['name']))
+
+
+def _verify_mixing_auto_static_route(iface_state, iface_routing_state):
+    for family in ('ipv4', 'ipv6'):
+        iface_ip_conf = iface_state.get(family, {})
+        flag_auto_ip = iface_ip_conf.get('dhcp') or \
+            iface_ip_conf.get('autoconf')
+        for route in iface_routing_state[family]:
+            if flag_auto_ip and route['route-type'] != 'auto':
+                raise StaticRouteOnAutoIPNotSupportedError(
+                    'Cannot set static route on auto {} interface {}'.format(
+                        family, iface_state['name']))
+            if not flag_auto_ip and route['route-type'] == 'auto':
+                raise AutoRouteOnStaticIPNotSupportedError(
+                    'Cannot set auto route on static {} interface {}'.format(
+                        family, iface_state['name']))
+
+
+def _verify_route_table_value(iface_routing_state):
+    for family in ('ipv4', 'ipv6'):
+        route_tables = set(route['route-table']
+                           for route in iface_routing_state[family])
+        if len(route_tables) == 0:
+            # Will use main route table If empty
+            continue
+        if len(route_tables) > 1:
+            raise MultipleRouteTablesNotSupportedError(
+                'Multiple route tables on one interface is not supported')
+        route_table = route_tables.pop()
+        if route_table == nm_route.MAIN_ROUTE_TABLE:
+            continue
+        try:
+            int(route_table)
+        except ValueError:
+            raise InvalidRouteTableValueError(
+                'Specified route table should be integer or \'main\'')

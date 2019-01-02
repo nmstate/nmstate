@@ -23,6 +23,7 @@ from libnmstate.schema import Constants
 
 
 INTERFACES = Constants.INTERFACES
+ROUTING = Constants.ROUTING
 
 
 @pytest.fixture
@@ -33,6 +34,10 @@ def nm_mock():
 
 def test_netinfo_show_generic_iface(nm_mock):
     current_config = {
+        ROUTING: {
+            'ipv4': [],
+            'ipv6': []
+        },
         INTERFACES: [
             {
                 'name': 'foo',
@@ -56,6 +61,7 @@ def test_netinfo_show_generic_iface(nm_mock):
         current_config[INTERFACES][0]['ipv4'])
     nm_mock.ipv6.get_info.return_value = (
         current_config[INTERFACES][0]['ipv6'])
+    nm_mock.route.get_info.return_value = current_config[ROUTING]
 
     report = netinfo.show()
 
@@ -64,6 +70,10 @@ def test_netinfo_show_generic_iface(nm_mock):
 
 def test_netinfo_show_bond_iface(nm_mock):
     current_config = {
+        ROUTING: {
+            'ipv4': [],
+            'ipv6': []
+        },
         INTERFACES: [
             {
                 'name': 'bond99',
@@ -100,6 +110,7 @@ def test_netinfo_show_bond_iface(nm_mock):
         current_config[INTERFACES][0]['ipv4'])
     nm_mock.ipv6.get_info.return_value = (
         current_config[INTERFACES][0]['ipv6'])
+    nm_mock.route.get_info.return_value = current_config[ROUTING]
 
     report = netinfo.show()
 

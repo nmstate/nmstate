@@ -24,7 +24,7 @@ RUN yum-config-manager --add-repo https://copr.fedorainfracloud.org/coprs/nmstat
 # libibverbs is a dependency for openvswitch that is missing as a dependency in the RPM
 RUN yum -y upgrade && \
     yum -y install iproute python2-pytest python2-pytest-cov NetworkManager \
-                   rpm-build git python2-devel python2-six \
+                   rpm-build git python2-devel python2-six python-ipaddress \
                    python2-pyyaml python-jsonschema python-setuptools \
                    NetworkManager-ovs openvswitch libibverbs \
                    python-gobject-base dnsmasq && \

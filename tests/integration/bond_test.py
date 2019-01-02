@@ -23,6 +23,7 @@ from libnmstate import netapplier
 from .testlib import assertlib
 from .testlib import statelib
 from .testlib.statelib import INTERFACES
+from .testlib.statelib import ROUTING
 
 
 BOND99_YAML_BASE = """

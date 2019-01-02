@@ -23,6 +23,7 @@ from . import device
 from . import ipv4
 from . import ipv6
 from . import ovs
+from . import route
 from . import translator
 from . import user
 from . import vlan
@@ -42,9 +43,12 @@ def create_new_ifaces(con_profiles):
         connection.add_profile(connection_profile, save_to_disk=True)
 
 
-def prepare_new_ifaces_configuration(ifaces_desired_state):
+def prepare_new_ifaces_configuration(ifaces_desired_state,
+                                     ifaces_routing_state):
     return [
-        _build_connection_profile(iface_desired_state)
+        _build_connection_profile(
+            iface_desired_state,
+            ifaces_routing_state.get(iface_desired_state['name'], {}))
         for iface_desired_state in ifaces_desired_state
     ]
 
@@ -63,16 +67,20 @@ def edit_existing_ifaces(con_profiles):
             connection.add_profile(connection_profile, save_to_disk=True)
 
 
-def prepare_edited_ifaces_configuration(ifaces_desired_state):
+def prepare_edited_ifaces_configuration(ifaces_desired_state,
+                                        ifaces_routing_state):
     con_profiles = []
 
     for iface_desired_state in ifaces_desired_state:
+        iface_routing_state = ifaces_routing_state.get(
+            iface_desired_state['name'], {})
         nmdev = device.get_device_by_name(iface_desired_state['name'])
         cur_con_profile = None
         if nmdev:
             cur_con_profile = connection.get_device_connection(nmdev)
         new_con_profile = _build_connection_profile(
-            iface_desired_state, base_con_profile=cur_con_profile)
+            iface_desired_state, iface_routing_state,
+            base_con_profile=cur_con_profile)
         if not new_con_profile.get_interface_name():
             set_conn = new_con_profile.get_setting_connection()
             set_conn.props.interface_name = iface_desired_state['name']
@@ -218,7 +226,8 @@ def _create_ovs_port_iface_desired_state(iface_desired_state, port_options):
     }
 
 
-def _build_connection_profile(iface_desired_state, base_con_profile=None):
+def _build_connection_profile(iface_desired_state, iface_routing_state,
+                              base_con_profile=None):
     iface_type = translator.Api2Nm.get_iface_type(iface_desired_state['type'])
 
     # TODO: Support ovs-interface type on setup
@@ -226,10 +235,13 @@ def _build_connection_profile(iface_desired_state, base_con_profile=None):
         raise UnsupportedIfaceTypeError(iface_type,
                                         iface_desired_state['name'])
 
-    settings = [
-        ipv4.create_setting(iface_desired_state.get('ipv4'), base_con_profile),
-        ipv6.create_setting(iface_desired_state.get('ipv6'), base_con_profile),
-    ]
+    ip4_setting = ipv4.create_setting(iface_desired_state.get('ipv4'),
+                                      base_con_profile)
+    route.set_routes(ip4_setting, iface_routing_state.get('ipv4'))
+    ip6_setting = ipv6.create_setting(iface_desired_state.get('ipv6'),
+                                      base_con_profile)
+    route.set_routes(ip6_setting, iface_routing_state.get('ipv6'))
+    settings = [ip4_setting, ip6_setting]
     if base_con_profile:
         con_setting = connection.duplicate_settings(base_con_profile)
     else:

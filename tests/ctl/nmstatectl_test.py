@@ -26,6 +26,10 @@ from .compat import mock
 from nmstatectl import nmstatectl
 
 LO_JSON_STATE = """{
+    "routing": {
+        "ipv4": [],
+        "ipv6": []
+    },
     "interfaces": [
         {
             "name": "lo",
@@ -37,6 +41,10 @@ LO_JSON_STATE = """{
 """
 
 EMPTY_JSON_STATE = """{
+    "routing": {
+        "ipv4": [],
+        "ipv6": []
+    },
     "interfaces": []
 }
 """

@@ -30,7 +30,6 @@ ifaces_schema = load('operational-state')
 
 class Constants(object):
     INTERFACES = 'interfaces'
-
     BOND = 'bond'
     LINUX_BRIDGE = 'linux-bridge'
     OVS_BRIDGE = 'ovs-bridge'
@@ -44,6 +43,7 @@ class Constants(object):
         OVS_PORT,
         VLAN
     )
+    ROUTING = 'routing'
 
 
 class LinuxBridge(object):

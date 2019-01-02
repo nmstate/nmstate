@@ -15,16 +15,19 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 import os
+import time
 
 import pytest
 
 from libnmstate import netapplier
 from libnmstate import nm
 
+
 from .testlib import assertlib
 from .testlib import cmd as libcmd
 from .testlib import statelib
 from .testlib.statelib import INTERFACES
+from .testlib.statelib import ROUTING
 
 
 IPV4_ADDRESS1 = '192.0.2.251'
@@ -66,6 +69,29 @@ def dhcp_env():
         yield
     finally:
         _clean_up()
+
+
+@pytest.fixture(scope='function', autouse=True)
+def dhcp_cli_nic_up():
+    desired_state = {
+        INTERFACES: [
+            {
+                'name': DHCP_CLI_NIC,
+                'type': 'ethernet',
+                'state': 'up',
+                'ipv4': {
+                    'dhcp': False,
+                    'enabled': False,
+                },
+                'ipv6': {
+                    'enabled': True,
+                    'dhcp': False,
+                    'autoconf': False,
+                },
+            }
+        ]
+    }
+    netapplier.apply(desired_state)
 
 
 def test_ipv4_dhcp(dhcp_env):
@@ -148,6 +174,69 @@ def test_dhcp_with_addresses(dhcp_env):
     assertlib.assert_state(desired_state)
 
 
+def test_ip4_dhcp_route(dhcp_env):
+    desired_state = statelib.show_only((DHCP_CLI_NIC,))
+    dhcp_cli_desired_state = desired_state[INTERFACES][0]
+    dhcp_cli_desired_state['state'] = 'up'
+    dhcp_cli_desired_state['ipv4']['enabled'] = True
+    dhcp_cli_desired_state['ipv4']['dhcp'] = True
+    dhcp_cli_desired_state['ipv6']['enabled'] = True
+
+    netapplier.apply(desired_state)
+    time.sleep(5)
+    # ^ DHCP require some time to setup default gateway.
+    current_state_data = statelib.show_only((DHCP_CLI_NIC,))
+    print(current_state_data)
+    route_state = current_state_data[ROUTING]
+    del route_state['ipv4'][0]['metric']
+    # ^ This might change when not running in docker.
+    print(route_state)
+    assert route_state == {
+        'ipv4': [{
+            'destination': '0.0.0.0/0',
+            'iface': DHCP_CLI_NIC,
+            'next-hop': IPV4_ADDRESS1,
+            'route-table': 'main',
+            'route-type': 'auto',
+        }],
+        'ipv6': []
+    }
+
+
+def test_ip6_dhcp_route(dhcp_env):
+    desired_state = statelib.show_only((DHCP_CLI_NIC,))
+    dhcp_cli_desired_state = desired_state[INTERFACES][0]
+    dhcp_cli_desired_state['state'] = 'up'
+    dhcp_cli_desired_state['ipv4']['enabled'] = False
+    dhcp_cli_desired_state['ipv6']['enabled'] = True
+    dhcp_cli_desired_state['ipv6']['dhcp'] = True
+    dhcp_cli_desired_state['ipv6']['autoconf'] = True
+
+    netapplier.apply(desired_state)
+    time.sleep(5)
+    # ^ DHCP require some time to setup default gateway.
+    current_state_data = statelib.show_only((DHCP_CLI_NIC,))
+    route_state = current_state_data[ROUTING]
+    del route_state['ipv6'][0]
+    # ^ The DHCPv6/RA will assign the IP address as 2001:db8:1::99/128, which
+    #   generate the first route to 2001:db8:1::/64.
+    del route_state['ipv6'][0]['metric']
+    # ^ This might change when not running in docker.
+    del route_state['ipv6'][0]['next-hop']
+    # ^ This will be the link local address.
+    assert route_state == {
+        'ipv6': [
+            {
+                'destination': '::/0',
+                'iface': DHCP_CLI_NIC,
+                'route-table': 'main',
+                'route-type': 'auto',
+            }
+        ],
+        'ipv4': []
+    }
+
+
 def _create_veth_pair():
     assert libcmd.exec_cmd(['ip', 'link', 'add', DHCP_SRV_NIC, 'type', 'veth',
                             'peer', 'name', DHCP_CLI_NIC])[0] == 0
@@ -164,8 +253,8 @@ def _setup_dhcp_nics():
                             DHCP_SRV_NIC])[0] == 0
     with open(SYSFS_DISABLE_IPV6_FILE, 'w') as fd:
         fd.write('0')
-    assert libcmd.exec_cmd(['ip', 'addr', 'add', IPV6_ADDRESS1, 'dev',
-                            DHCP_SRV_NIC])[0] == 0
+    assert libcmd.exec_cmd(['ip', 'addr', 'add', '{}/64'.format(IPV6_ADDRESS1),
+                            'dev', DHCP_SRV_NIC])[0] == 0
 
 
 def _clean_up():

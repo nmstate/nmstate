@@ -29,6 +29,7 @@ from . import translator
 from . import user
 from . import vlan
 from . import wired
+from . import route
 
 applier
 bond
@@ -44,3 +45,4 @@ translator
 user
 vlan
 wired
+route

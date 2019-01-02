@@ -35,6 +35,9 @@ def show(include_status_data=False):
     if include_status_data:
         report['capabilities'] = capabilities()
 
+    rt_info = nm.route.get_info()
+    if rt_info:
+        report[Constants.ROUTING] = rt_info
     validator.verify(report)
     return report
 

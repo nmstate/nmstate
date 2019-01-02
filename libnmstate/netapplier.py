@@ -44,14 +44,20 @@ def apply(desired_state, verify_change=True):
     validator.verify(desired_state)
     validator.verify_capabilities(desired_state, netinfo.capabilities())
     validator.verify_dhcp(desired_state)
+    validator.verify_ifaces_routing_state(
+        _routing_index_by_name(desired_state.get(Constants.ROUTING, {})),
+        _index_by_name(desired_state[Constants.INTERFACES]))
 
-    _apply_ifaces_state(desired_state[Constants.INTERFACES], verify_change)
+    _apply_ifaces_state(desired_state[Constants.INTERFACES],
+                        desired_state.get(Constants.ROUTING, {}),
+                        verify_change)
 
 
-def _apply_ifaces_state(interfaces_desired_state, verify_change):
+def _apply_ifaces_state(interfaces_desired_state, d_rt_state,
+                        verify_change):
     ifaces_desired_state = _index_by_name(interfaces_desired_state)
-    netinfo.interfaces()
     ifaces_current_state = _index_by_name(netinfo.interfaces())
+    ifaces_desired_route_state = _routing_index_by_name(d_rt_state)
 
     ifaces_desired_state = sanitize_ethernet_state(ifaces_desired_state,
                                                    ifaces_current_state)
@@ -60,21 +66,29 @@ def _apply_ifaces_state(interfaces_desired_state, verify_change):
 
     with _transaction():
         with _setup_providers():
-            _add_interfaces(ifaces_desired_state, ifaces_current_state)
+            _add_interfaces(ifaces_desired_state, ifaces_current_state,
+                            ifaces_desired_route_state)
         with _setup_providers():
             ifaces_current_state = _index_by_name(netinfo.interfaces())
-            _edit_interfaces(ifaces_desired_state, ifaces_current_state)
+            _edit_interfaces(ifaces_desired_state, ifaces_current_state,
+                             ifaces_desired_route_state)
         if verify_change:
-            _verify_change(ifaces_desired_state)
+            _verify_change(ifaces_desired_state, ifaces_desired_route_state)
 
 
-def _verify_change(ifaces_desired_state):
+def _verify_change(ifaces_desired_state, ifaces_desired_route_state):
     ifaces_current_state = _index_by_name(netinfo.interfaces())
+    ifaces_current_route_state = _routing_index_by_name(nm.route.get_info())
     ifaces_desired_state = _remove_absent_iface_entries(
         ifaces_desired_state)
     ifaces_desired_state = _remove_down_virt_iface_entries(
         ifaces_desired_state)
     ifaces_desired_state = remove_ifaces_metadata(ifaces_desired_state)
+
+    ifaces_current_state = _merge_route_into_iface(ifaces_current_state,
+                                                   ifaces_current_route_state)
+    ifaces_desired_state = _merge_route_into_iface(ifaces_desired_state,
+                                                   ifaces_desired_route_state)
 
     assert_ifaces_state(ifaces_desired_state, ifaces_current_state)
 
@@ -262,7 +276,8 @@ def _generate_link_master_metadata(ifaces_desired_state,
                         master_state, ifaces_desired_state[slave])
 
 
-def _add_interfaces(ifaces_desired_state, ifaces_current_state):
+def _add_interfaces(ifaces_desired_state, ifaces_current_state,
+                    ifaces_rt_state):
     ifaces2add = [
         ifaces_desired_state[name] for name in
         six.viewkeys(ifaces_desired_state) - six.viewkeys(ifaces_current_state)
@@ -272,13 +287,15 @@ def _add_interfaces(ifaces_desired_state, ifaces_current_state):
     validator.verify_interfaces_state(ifaces2add, ifaces_desired_state)
 
     ifaces2add += nm.applier.prepare_proxy_ifaces_desired_state(ifaces2add)
-    ifaces_configs = nm.applier.prepare_new_ifaces_configuration(ifaces2add)
+    ifaces_configs = nm.applier.prepare_new_ifaces_configuration(
+        ifaces2add, ifaces_rt_state)
     nm.applier.create_new_ifaces(ifaces_configs)
 
     nm.applier.set_ifaces_admin_state(ifaces2add, con_profiles=ifaces_configs)
 
 
-def _edit_interfaces(ifaces_desired_state, ifaces_current_state):
+def _edit_interfaces(ifaces_desired_state, ifaces_current_state,
+                     ifaces_rt_state):
     ifaces2edit = [
         _canonicalize_desired_state(ifaces_desired_state[name],
                                     ifaces_current_state[name])
@@ -294,7 +311,8 @@ def _edit_interfaces(ifaces_desired_state, ifaces_current_state):
     )
     proxy_ifaces = nm.applier.prepare_proxy_ifaces_desired_state(iface2prepare)
     ifaces_configs = nm.applier.prepare_edited_ifaces_configuration(
-        iface2prepare + proxy_ifaces)
+        iface2prepare + proxy_ifaces,
+        ifaces_rt_state)
     nm.applier.edit_existing_ifaces(ifaces_configs)
 
     nm.applier.set_ifaces_admin_state(ifaces2edit)
@@ -323,6 +341,17 @@ def _dict_update(origin_data, to_merge_data):
 
 def _index_by_name(ifaces_state):
     return {iface['name']: iface for iface in ifaces_state}
+
+
+def _routing_index_by_name(rt_state):
+    def new_route_state():
+        return {'ipv4': [], 'ipv6': []}
+
+    ret = collections.defaultdict(new_route_state)
+    for family in ('ipv4', 'ipv6'):
+        for route in rt_state.get(family, []):
+            ret[route['iface']][family].append(route)
+    return ret
 
 
 def assert_ifaces_state(ifaces_desired_state, ifaces_current_state):
@@ -419,3 +448,24 @@ def _sort_ip_addresses(desired_state, current_state):
         for family in ('ipv4', 'ipv6'):
             state.get(family, {}).get('address', []).sort(key=itemgetter('ip'))
     return desired_state, current_state
+
+
+def _merge_route_into_iface(ifaces_state, ifaces_route_state):
+    for iface_name, iface_route in six.viewitems(ifaces_route_state):
+        if ifaces_state.get(iface_name):
+            for family in ('ipv4', 'ipv6'):
+                if not ifaces_state[iface_name].get(family):
+                    continue
+                routes = _remove_auto_route(iface_route[family])
+                if routes:
+                    routes = _sort_routes(routes)
+                    ifaces_state[iface_name][family][Constants.ROUTING] = routes
+    return ifaces_state
+
+
+def _remove_auto_route(routes):
+    return [r for r in routes if r['route-type'] == 'static']
+
+
+def _sort_routes(routes):
+    return routes.sort(key=itemgetter('destination'))

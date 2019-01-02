@@ -24,6 +24,19 @@ properties:
             - "$ref": "#/definitions/interface-ovs-interface/rw"
             - "$ref": "#/definitions/interface-dummy/rw"
             - "$ref": "#/definitions/interface-vlan/rw"
+  routing:
+    type: object
+    properties:
+      ipv4:
+        type: array
+        items:
+          type: object
+          $ref: "#/definitions/route"
+      ipv6:
+        type: array
+        items:
+          type: object
+          $ref: "#/definitions/route"
 
 definitions:
   types:
@@ -396,3 +409,23 @@ definitions:
                     type: boolean
                   state:
                     type: string
+  route:
+    type: object
+    properties:
+      route-type:
+        type: string
+        enum:
+          - static
+          - auto            # DHCP RFC 3442 or IPv6 Neighbor Discovery RFC 4861
+      route-table:
+        anyOf:
+          - type: string
+            enum:
+              - main
+          - type: integer
+      destination:
+        type: string
+      metric:
+        type: integer
+      next-hop:
+        type: string

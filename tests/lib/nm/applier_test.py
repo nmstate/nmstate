@@ -103,7 +103,7 @@ def test_prepare_new_ifaces_configuration(nm_bond_mock,
         }
     ]
 
-    nm.applier.prepare_new_ifaces_configuration(ifaces_desired_state)
+    nm.applier.prepare_new_ifaces_configuration(ifaces_desired_state, {})
 
     con_setting = nm_connection_mock.create_setting.return_value
     nm_connection_mock.set_master_setting.assert_has_calls(
@@ -175,7 +175,8 @@ def test_prepare_edited_ifaces_configuration(nm_device_mock,
             'state': 'up',
         }
     ]
-    cons = nm.applier.prepare_edited_ifaces_configuration(ifaces_desired_state)
+    cons = nm.applier.prepare_edited_ifaces_configuration(ifaces_desired_state,
+                                                          {})
 
     assert len(cons) == 1
 
