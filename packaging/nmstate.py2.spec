@@ -3,7 +3,7 @@
 
 Name:           nmstate
 Version:        @VERSION@
-Release:        1%{?dist}
+Release:        @RELEASE@%{?dist}
 Summary:        Declarative network manager API
 Group:          System Environment/Libraries
 License:        GPLv2+
@@ -38,7 +38,7 @@ Requires:       python2-pyyaml
 This package contains the Python 2 library for nmstate.
 
 %prep
-%setup -q -n %{srcname}-@SRC_VERSION@
+%setup -q
 
 %build
 %py2_build
@@ -57,5 +57,5 @@ This package contains the Python 2 library for nmstate.
 %{python2_sitelib}/%{srcname}-*.egg-info/
 
 %changelog
-* Mon Nov 19 2018 Gris Ge <fge@redhat.com> - 0.0.1-0
-- Initial release.
+@CHANGELOG@
+- snapshot build
