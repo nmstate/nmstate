@@ -81,9 +81,13 @@ def create_port_setting(options, base_con_profile):
     if not port_setting:
         port_setting = nmclient.NM.SettingBridgePort.new()
 
-    port_setting.props.priority = options[LB.PORT_STP_PRIORITY]
-    port_setting.props.hairpin_mode = options[LB.PORT_STP_HAIRPIN_MODE]
-    port_setting.props.path_cost = options[LB.PORT_STP_PATH_COST]
+    for key, val in six.viewitems(options):
+        if key == LB.PORT_STP_PRIORITY:
+            port_setting.props.priority = val
+        elif key == LB.PORT_STP_HAIRPIN_MODE:
+            port_setting.props.hairpin_mode = val
+        elif key == LB.PORT_STP_PATH_COST:
+            port_setting.props.path_cost = val
 
     return port_setting
 
