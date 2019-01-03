@@ -6,6 +6,7 @@ python:
 
 install:
   - pip install tox
+  - sudo apt-get install -qq -y python-gi python3-gi libgirepository1.0-dev
 
 script:
-  - tox -e flake8,pylint,check-py27,check-py36,coveralls
+  - tox --sitepackages -e flake8,pylint,check-py27,check-py36,coveralls

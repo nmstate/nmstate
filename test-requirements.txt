@@ -1,0 +1,4 @@
+jsonschema
+pytest-cov
+PyYAML
+six
