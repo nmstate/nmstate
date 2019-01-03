@@ -1,3 +1,4 @@
+%?python_enable_dependency_generator
 %define srcname nmstate
 %define libname libnmstate
 
@@ -5,17 +6,13 @@ Name:           nmstate
 Version:        @VERSION@
 Release:        @RELEASE@%{?dist}
 Summary:        Declarative network manager API
-Group:          System Environment/Libraries
 License:        GPLv2+
 URL:            https://github.com/%{srcname}/%{srcname}
 Source0:        https://github.com/%{srcname}/%{srcname}/archive/v%{version}/%{srcname}-%{version}.tar
 BuildArch:      noarch
 BuildRequires:  python3-devel
-BuildRequires:  python3-six
-BuildRequires:  python3-jsonschema
-BuildRequires:  python3-PyYAML
 BuildRequires:  python3-setuptools
-Requires:       python3-%{libname}
+Requires:       python3-%{libname} = %{?epoch:%{epoch}:}%{version}-%{release}
 
 %description
 NMState is a library with an accompanying command line tool that manages host
@@ -26,14 +23,9 @@ provider support on the southbound.
 
 %package -n python3-%{libname}
 Summary:        nmstate Python 3 API library
-Group:          System Environment/Libraries
-License:        GPLv2+
 Requires:       NetworkManager-libnm
-Recommends:     NetworkManager
 Requires:       python3-gobject-base
-Requires:       python3-six
-Requires:       python3-jsonschema
-Requires:       python3-PyYAML
+Recommends:     NetworkManager
 
 %description -n python3-%{libname}
 This package contains the Python 3 library for nmstate.
@@ -49,11 +41,11 @@ This package contains the Python 3 library for nmstate.
 
 %files
 %doc README.md
-%license LICENSE
 %{python3_sitelib}/nmstatectl
 %{_bindir}/nmstatectl
 
 %files -n python3-%{libname}
+%license LICENSE
 %{python3_sitelib}/%{libname}
 %{python3_sitelib}/%{srcname}-*.egg-info/
 
