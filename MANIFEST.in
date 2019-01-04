@@ -1,4 +1,4 @@
 include requirements.txt
 include README.md
 include LICENSE
-recursive-include examples
+recursive-include examples *.yml
