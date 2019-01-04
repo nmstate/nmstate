@@ -42,6 +42,7 @@ This package contains the Python 2 library for nmstate.
 
 %files
 %doc README.md
+%doc examples/
 %{python2_sitelib}/nmstatectl
 %{_bindir}/nmstatectl
 
