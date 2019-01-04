@@ -41,6 +41,7 @@ This package contains the Python 3 library for nmstate.
 
 %files
 %doc README.md
+%doc examples/
 %{python3_sitelib}/nmstatectl
 %{_bindir}/nmstatectl
 
