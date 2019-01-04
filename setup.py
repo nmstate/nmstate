@@ -16,9 +16,15 @@ def requirements():
     return req
 
 
+def get_version():
+    with open('VERSION') as f:
+        version = f.read().strip()
+    return version
+
+
 setup(
     name='nmstate',
-    version='0.0.4',
+    version=get_version(),
     description='Declarative network manager API',
     author="Edward Haas",
     author_email="ehaas@redhat.com",
