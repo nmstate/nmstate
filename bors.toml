@@ -1,0 +1,2 @@
+status = ["continuous-integration/travis-ci/push", "DCO", "check-patch.el7.x86_64", "standard-ci"]
+block_labels = ["Work_Ongoing"]
