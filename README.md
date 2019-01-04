@@ -1,4 +1,4 @@
-# We are nmstate!
+# We are Nmstate!
 A declarative network manager API for hosts.
 
 [![Unit Test Status](https://travis-ci.org/nmstate/nmstate.png?branch=master)](https://travis-ci.org/nmstate/nmstate)
@@ -11,18 +11,18 @@ Copr build status:
 * Fedora GIT master: [![Fedora GIT master Copr build status](https://copr.fedorainfracloud.org/coprs/nmstate/nmstate-git-fedora/package/nmstate/status_image/last_build.png)](https://copr.fedorainfracloud.org/coprs/nmstate/nmstate-git-fedora/package/nmstate/)
 
 ## What is it?
-NMState is a library with an accompanying command line tool that manages
+Nmstate is a library with an accompanying command line tool that manages
 host networking settings in a declarative manner.
 The networking state is described by a pre-defined schema.
 Reporting of current state and changes to it (desired state) both conform to
 the schema.
 
-NMState is aimed to satisfy enterprise needs to manage host networking through
+Nmstate is aimed to satisfy enterprise needs to manage host networking through
 a northbound declarative API and multi provider support on the southbound.
 NetworkManager acts as the main (and currently the only) provider supported.
 
 ## Contact
-*nmstate* uses the [NetworkManager mailing
+*Nmstate* uses the [NetworkManager mailing
 list](https://mail.gnome.org/mailman/listinfo/networkmanager-list)
 ([Archives](https://mail.gnome.org/archives/networkmanager-list/)) for
 discussions. Emails about nmstate should be tagged with `[nmstate]` in the
@@ -36,7 +36,7 @@ IRC](https://freenode.net/kb/answer/chat).
 
 ## Development Environment
 
-nmstate uses `tox` to run unit tests and linters. Since nmstate uses the binary
+Nmstate uses `tox` to run unit tests and linters. Since Nmstate uses the binary
 module PyGObject it also requires the build dependencies for it.
 
 ### RHEL 7.6
