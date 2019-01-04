@@ -15,7 +15,7 @@ BuildRequires:  python3-setuptools
 Requires:       python3-%{libname} = %{?epoch:%{epoch}:}%{version}-%{release}
 
 %description
-NMState is a library with an accompanying command line tool that manages host
+Nmstate is a library with an accompanying command line tool that manages host
 networking settings in a declarative manner and aimed to satisfy enterprise
 needs to manage host networking through a northbound declarative API and multi
 provider support on the southbound.
@@ -32,7 +32,7 @@ Suggests:       NetworkManager-ovs
 
 
 %description -n python3-%{libname}
-This package contains the Python 3 library for nmstate.
+This package contains the Python 3 library for Nmstate.
 
 %prep
 %setup -q

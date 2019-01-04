@@ -1,5 +1,5 @@
 # Automation Environment
-The automation env is serving the integration tests of nmstate.
+The automation env is serving the integration tests of Nmstate.
 It may be used both locally and through CI.
 
 ## Components
@@ -9,7 +9,7 @@ It may be used both locally and through CI.
   The image can be found at:
   https://hub.docker.com/r/nmstate/centos7-nmstate-dev/
 
-- Dockerfile.fedora: Defines a Fedora based container image for nmstate test
+- Dockerfile.fedora: Defines a Fedora based container image for Nmstate test
   purpose.
 
   The image can be found at:

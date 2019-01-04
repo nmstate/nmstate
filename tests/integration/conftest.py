@@ -59,7 +59,7 @@ def _set_eth_admin_state(ifname, state):
         desired_state = {INTERFACES: [{'name': iface_current_state['name'],
                                        'type': iface_current_state['type'],
                                        'state': state}]}
-        # FIXME: On most systems, IPv6 cannot be disabled by NMState/NM.
+        # FIXME: On most systems, IPv6 cannot be disabled by Nmstate/NM.
         if state == 'up':
             desired_state[INTERFACES][0].update({'ipv6': {'enabled': True}})
         netapplier.apply(desired_state)

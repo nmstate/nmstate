@@ -15,7 +15,7 @@ Requires:       python2-setuptools
 Requires:       python2-%{libname} = %{?epoch:%{epoch}:}%{version}-%{release}
 
 %description
-NMState is a library with an accompanying command line tool that manages host
+Nmstate is a library with an accompanying command line tool that manages host
 networking settings in a declarative manner and aimed to satisfy enterprise
 needs to manage host networking through a northbound declarative API and multi
 provider support on the southbound.
@@ -30,7 +30,7 @@ Requires:       python-jsonschema
 Requires:       python2-pyyaml
 
 %description -n python2-%{libname}
-This package contains the Python 2 library for nmstate.
+This package contains the Python 2 library for Nmstate.
 
 %prep
 %setup -q

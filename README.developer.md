@@ -1,6 +1,6 @@
-# NMState Coding Guidelines
+# Nmstate Coding Guidelines
 
-- NMState is written primarily in Python, and its coding style should follow
+- Nmstate is written primarily in Python, and its coding style should follow
   the best practices of Python coding unless otherwise declared.
 - PEP8 is holy.
 - Tests are holy.
