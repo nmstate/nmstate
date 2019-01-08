@@ -25,7 +25,12 @@ provider support on the southbound.
 Summary:        nmstate Python 3 API library
 Requires:       NetworkManager-libnm
 Requires:       python3-gobject-base
+# Use Recommends for NetworkManager because only access to NM DBus is required,
+# but NM could be running on a different host
 Recommends:     NetworkManager
+# Use Suggests for NetworkManager-ovs since it is only required for OVS support
+Suggests:       NetworkManager-ovs
+
 
 %description -n python3-%{libname}
 This package contains the Python 3 library for nmstate.
