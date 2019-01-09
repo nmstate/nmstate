@@ -1,0 +1,25 @@
+# This Dockerfile is based on the recommendations provided in the
+# Fedora official repository
+# (https://hub.docker.com/r/fedora/systemd-systemd/).
+# It enables systemd to be operational.
+FROM fedora
+ENV container docker
+COPY docker_enable_systemd.sh docker_sys_config.sh ./
+RUN bash ./docker_enable_systemd.sh
+
+# libibverbs is a dependency for openvswitch that is missing as a dependency in
+# the RPM
+RUN dnf -y install --setopt=install_weak_deps=False \
+                   iproute python3-pytest python3-pytest-cov NetworkManager \
+                   rpm-build git python3-devel python3-dbus python3-coveralls \
+                   python3-pyyaml python3-jsonschema python3-setuptools \
+                   NetworkManager-ovs openvswitch libibverbs \
+                   python3-gobject-base dnsmasq python3-tox python2 && \
+    alternatives --install /usr/bin/python python /usr/bin/python3 1 && \
+    ln -s /usr/bin/pytest-3 /usr/bin/pytest && \
+    dnf clean all && \
+    bash ./docker_sys_config.sh
+
+VOLUME [ "/sys/fs/cgroup" ]
+
+CMD ["/usr/sbin/init"]
