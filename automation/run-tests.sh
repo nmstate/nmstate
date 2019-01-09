@@ -1,11 +1,16 @@
-#!/bin/sh -ex
+#!/bin/bash -ex
 
 EXEC_PATH=$(dirname "$(realpath "$0")")
 PROJECT_PATH="$(dirname $EXEC_PATH)"
 : ${DOCKER_IMAGE:=nmstate/centos7-nmstate-dev}
 EXPORT_DIR="$PWD/exported-artifacts"
 CONT_EXPORT_DIR="/exported-artifacts"
-PYTHON27_PATH="/usr/lib/python2.7/site-packages"
+if [[ $DOCKER_IMAGE == *"fedora"* ]];then
+    PYTHON_SITE_PATH_CMD="rpm -E %{python3_sitelib}"
+else
+    PYTHON_SITE_PATH_CMD="rpm -E %{python_sitelib}"
+fi
+
 
 NET0="nmstate-net0"
 NET1="nmstate-net1"
@@ -27,7 +32,11 @@ function pyclean {
 }
 
 function docker_exec {
-    docker exec $USE_TTY -i $CONTAINER_ID /bin/bash -c "$1"
+    docker exec \
+        -e TRAVIS="$TRAVIS" \
+        -e TRAVIS_JOB_ID="$TRAVIS_JOB_ID" \
+        -e TRAVIS_BRANCH="TRAVIS_BRANCH" \
+        $USE_TTY -i $CONTAINER_ID /bin/bash -c "$1"
 }
 
 function add_extra_networks {
@@ -60,17 +69,23 @@ function install_nmstate {
 }
 
 function run_tests {
+    if [[ $DOCKER_IMAGE == *"fedora"* ]];then
+        docker_exec 'cd /workspace/nmstate && tox'
+    fi
     docker_exec "
       cd /workspace/nmstate &&
       pytest \
         --verbose --verbose \
         --log-level=DEBUG \
         --durations=5 \
-        --cov=$PYTHON27_PATH/libnmstate \
-        --cov=$PYTHON27_PATH/nmstatectl \
-        --cov-report=html:htmlcov-py27 \
+        --cov=\$($PYTHON_SITE_PATH_CMD)/libnmstate \
+        --cov=\$($PYTHON_SITE_PATH_CMD)/nmstatectl \
+        --cov-report=html:htmlcov-integ \
         tests/integration \
     ${nmstate_pytest_extra_args}"
+    if [ -n "$TRAVIS" ];then
+        docker_exec 'cd /workspace/nmstate && coveralls'
+    fi
 }
 
 function collect_artifacts {
