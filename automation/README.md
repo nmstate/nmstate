@@ -67,7 +67,7 @@ After closing the shell, the container will be removed.
 To specify a different container image for the tests, specify it with the
 `DOCKER_IMAGE` variable:
 
-`DOCKER_IMAGE=local/centos7-nmstate-dev debug_exit_shell=1 ./automation/run-tests.sh`
+`DOCKER_IMAGE=local/fedora-nmstate-dev debug_exit_shell=1 ./automation/run-tests.sh`
 
 It is also possible to pass extra arguments to PDB using the
 `nmstate_pytest_extra_args` variable, for example:
@@ -77,7 +77,7 @@ It is also possible to pass extra arguments to PDB using the
 Alternatively, the following commands start the container manually:
 
 ```
-DOCKER_IMAGE="nmstate/centos7-nmstate-dev"
+DOCKER_IMAGE="nmstate/fedora-nmstate-dev"
 NET0="nmstate-net0"
 NET1="nmstate-net1"
 
