@@ -97,6 +97,7 @@ function run_tests {
     fi
     if [ -n "$TRAVIS" ];then
         docker_exec 'cd /workspace/nmstate && coveralls'
+        docker_exec '/workspace/nmstate/automation/upload_test_artifacts.sh'
     fi
 }
 

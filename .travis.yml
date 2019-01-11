@@ -2,8 +2,8 @@ sudo: required
 language: c
 env:
     matrix:
-        - DOCKER_IMAGE=nmstate/centos7-nmstate-dev TEST_TYPE=intg
-        - DOCKER_IMAGE=nmstate/fedora-nmstate-dev TEST_TYPE=intg
+        - DOCKER_IMAGE=nmstate/centos7-nmstate-dev TEST_TYPE=integ
+        - DOCKER_IMAGE=nmstate/fedora-nmstate-dev TEST_TYPE=integ
         - DOCKER_IMAGE=nmstate/fedora-nmstate-dev TEST_TYPE=tox_code_style
         - DOCKER_IMAGE=nmstate/fedora-nmstate-dev TEST_TYPE=tox_py27
         - DOCKER_IMAGE=nmstate/fedora-nmstate-dev TEST_TYPE=tox_py3
