@@ -11,6 +11,8 @@ else
     PYTHON_SITE_PATH_CMD="rpm -E %{python_sitelib}"
 fi
 
+#Valid TEST_TYPE are: all, tox_code_style, tox_py27, tox_py3, integ
+: ${TEST_TYPE:="all"}
 
 NET0="nmstate-net0"
 NET1="nmstate-net1"
@@ -69,20 +71,30 @@ function install_nmstate {
 }
 
 function run_tests {
-    if [[ $DOCKER_IMAGE == *"fedora"* ]];then
-        docker_exec 'cd /workspace/nmstate && tox'
+    if [ $TEST_TYPE == "all" ] || [ $TEST_TYPE == "tox_code_style" ];then
+        docker_exec 'cd /workspace/nmstate && tox -e flake8,pylint'
     fi
-    docker_exec "
-      cd /workspace/nmstate &&
-      pytest \
-        --verbose --verbose \
-        --log-level=DEBUG \
-        --durations=5 \
-        --cov=\$($PYTHON_SITE_PATH_CMD)/libnmstate \
-        --cov=\$($PYTHON_SITE_PATH_CMD)/nmstatectl \
-        --cov-report=html:htmlcov-integ \
-        tests/integration \
-    ${nmstate_pytest_extra_args}"
+
+    if [ $TEST_TYPE == "all" ] || [ $TEST_TYPE == "tox_py27" ];then
+        docker_exec 'cd /workspace/nmstate && tox -e check-py27'
+    fi
+    if [ $TEST_TYPE == "all" ] || [ $TEST_TYPE == "tox_py3" ];then
+        docker_exec 'cd /workspace/nmstate && tox -e check-py3'
+    fi
+
+    if [ $TEST_TYPE == "all" ] || [ $TEST_TYPE == "integ" ];then
+        docker_exec "
+          cd /workspace/nmstate &&
+          pytest \
+            --verbose --verbose \
+            --log-level=DEBUG \
+            --durations=5 \
+            --cov=\$($PYTHON_SITE_PATH_CMD)/libnmstate \
+            --cov=\$($PYTHON_SITE_PATH_CMD)/nmstatectl \
+            --cov-report=html:htmlcov-integ \
+            tests/integration \
+        ${nmstate_pytest_extra_args}"
+    fi
     if [ -n "$TRAVIS" ];then
         docker_exec 'cd /workspace/nmstate && coveralls'
     fi
