@@ -70,7 +70,7 @@ def test_missing_operation():
     ret = libcmd.exec_cmd(cmds)
     rc, out, err = ret
 
-    assert_rc(rc, RC_FAIL2, ret)
+    assert rc == RC_FAIL2, format_exec_cmd_result(ret)
     assert "nmstatectl: error: invalid choice: 'no-such-oper'" in err
 
 
@@ -78,7 +78,7 @@ def test_show_command_with_no_flags():
     ret = libcmd.exec_cmd(SHOW_CMD)
     rc, out, err = ret
 
-    assert_rc(rc, RC_SUCCESS, ret)
+    assert rc == RC_SUCCESS, format_exec_cmd_result(ret)
     assert LOOPBACK_JSON_CONFIG in out
 
     state = json.loads(out)
@@ -89,7 +89,7 @@ def test_show_command_with_yaml_format():
     ret = libcmd.exec_cmd(SHOW_CMD + ['--yaml'])
     rc, out, err = ret
 
-    assert_rc(rc, RC_SUCCESS, ret)
+    assert rc == RC_SUCCESS, format_exec_cmd_result(ret)
     assert LOOPBACK_YAML_CONFIG in out
 
 
@@ -97,7 +97,7 @@ def test_show_command_only_lo():
     ret = libcmd.exec_cmd(SHOW_CMD + ['lo'])
     rc, out, err = ret
 
-    assert_rc(rc, RC_SUCCESS, ret)
+    assert rc == RC_SUCCESS, format_exec_cmd_result(ret)
 
     state = json.loads(out)
     assert len(state[Constants.INTERFACES]) == 1
@@ -108,7 +108,7 @@ def test_show_command_only_non_existing():
     ret = libcmd.exec_cmd(SHOW_CMD + ['non_existing_interface'])
     rc, out, err = ret
 
-    assert_rc(rc, RC_SUCCESS, ret)
+    assert rc == RC_SUCCESS, format_exec_cmd_result(ret)
 
     state = json.loads(out)
     assert len(state[Constants.INTERFACES]) == 0
@@ -118,8 +118,8 @@ def test_set_command_with_yaml_format():
     ret = libcmd.exec_cmd(SET_CMD, stdin=ETH1_YAML_CONFIG)
     rc, out, err = ret
 
-    assert_rc(rc, RC_SUCCESS, ret)
+    assert rc == RC_SUCCESS, format_exec_cmd_result(ret)
 
 
-def assert_rc(actual, expected, return_tuple):
-    assert actual == expected, 'rc={}, out={}, err={}'.format(*return_tuple)
+def format_exec_cmd_result(result):
+    return 'rc={}, out={}, err={}'.format(*result)
