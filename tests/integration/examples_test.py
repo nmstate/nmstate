@@ -1,5 +1,5 @@
 #
-# Copyright 2018 Red Hat, Inc.
+# Copyright 2018-2019 Red Hat, Inc.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -97,7 +97,7 @@ def find_examples_dir():
     parent = '../'
     rootdir = '/'
     examples = None
-    for _ in range(PATH_MAX / len('x/')):
+    for _ in range(PATH_MAX // len('x/')):
         maybe_examples = os.path.abspath(os.path.join(path, 'examples'))
         if os.path.isdir(maybe_examples):
             examples = maybe_examples
