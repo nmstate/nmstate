@@ -1,5 +1,5 @@
 #
-# Copyright 2018 Red Hat, Inc.
+# Copyright 2018-2019 Red Hat, Inc.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -15,6 +15,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 from __future__ import absolute_import
+from operator import itemgetter
 
 from libnmstate import nm
 from libnmstate import validator
@@ -77,6 +78,8 @@ def interfaces():
                 continue
 
         info.append(iface_info)
+
+    info.sort(key=itemgetter('name'))
 
     return info
 
