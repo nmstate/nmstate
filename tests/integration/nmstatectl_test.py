@@ -1,5 +1,5 @@
 #
-# Copyright 2018 Red Hat, Inc.
+# Copyright 2018-2019 Red Hat, Inc.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -28,7 +28,7 @@ SHOW_CMD = ['nmstatectl', 'show']
 RC_SUCCESS = 0
 RC_FAIL2 = 2
 
-LOOPBACK_JSON_CONFIG = b"""        {
+LOOPBACK_JSON_CONFIG = """        {
             "name": "lo",
             "type": "unknown",
             "state": "down",
@@ -41,7 +41,7 @@ LOOPBACK_JSON_CONFIG = b"""        {
             "mtu": 65536
         }"""
 
-LOOPBACK_YAML_CONFIG = b"""- name: lo
+LOOPBACK_YAML_CONFIG = """- name: lo
   type: unknown
   state: down
   ipv4:
@@ -71,7 +71,7 @@ def test_missing_operation():
     rc, out, err = ret
 
     assert_rc(rc, RC_FAIL2, ret)
-    assert b"nmstatectl: error: invalid choice: 'no-such-oper'" in err
+    assert "nmstatectl: error: invalid choice: 'no-such-oper'" in err
 
 
 def test_show_command_with_no_flags():

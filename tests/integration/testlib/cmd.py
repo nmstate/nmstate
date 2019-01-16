@@ -1,5 +1,5 @@
 #
-# Copyright 2018 Red Hat, Inc.
+# Copyright 2018-2019 Red Hat, Inc.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -29,7 +29,8 @@ def exec_cmd(cmd, env=None, stdin=None):
                 of the external process. If None, the environment of the
                 calling process is used.
     :returns: a 3-tuple of the process's
-              (returncode, stdout content, stderr content.)
+              (returncode, stdout content as unicode,
+               stderr content as unicode.)
     """
     logging.debug(command_log_line(cmd))
 
@@ -46,7 +47,7 @@ def exec_cmd(cmd, env=None, stdin=None):
 
     logging.debug(_retcode_log_line(p.returncode, err=err))
 
-    return p.returncode, out, err
+    return (p.returncode, out.decode('utf-8'), err.decode('utf-8'))
 
 
 def command_log_line(args, cwd=None):
