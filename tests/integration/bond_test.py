@@ -165,7 +165,7 @@ def test_rollback_for_bond(eth1_up, eth2_up):
     with pytest.raises(netapplier.DesiredStateIsNotCurrentError):
         netapplier.apply(desired_state)
 
-    time.sleep(2)
+    time.sleep(5)
 
     current_state_after_apply = netinfo.show()
     assert current_state == current_state_after_apply
