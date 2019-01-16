@@ -16,6 +16,7 @@
 #
 
 from contextlib import contextmanager
+import time
 
 import pytest
 
@@ -79,6 +80,7 @@ def test_rollback_for_vlans(eth1_up):
     with pytest.raises(netapplier.DesiredStateIsNotCurrentError):
         netapplier.apply(desired_state)
 
+    time.sleep(5)   # Give some time for NetworkManager to rollback
     current_state_after_apply = netinfo.show()
     assert current_state == current_state_after_apply
 
