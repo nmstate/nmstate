@@ -1,4 +1,4 @@
-#!/bin/sh -ex
+#!/bin/bash -ex
 
 EXEC_PATH=$(dirname "$(realpath "$0")")
 PROJECT_PATH="$(dirname $EXEC_PATH)"
