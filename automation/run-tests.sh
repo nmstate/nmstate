@@ -14,7 +14,7 @@ fi
 NET0="nmstate-net0"
 NET1="nmstate-net1"
 
-#Valid TEST_TYPE are: all, tox_code_style, tox_py27, tox_py36, integ
+#Valid TEST_TYPE are: all, tox_code_style, tox_py27, tox_py36, tox_py37, integ
 : ${TEST_TYPE:="integ"}
 
 test -t 1 && USE_TTY="-t"
@@ -81,6 +81,10 @@ function run_tests {
 
     if [ $TEST_TYPE == "all" ] || [ $TEST_TYPE == "tox_py36" ];then
         docker_exec 'cd /workspace/nmstate && tox -e check-py36'
+    fi
+
+    if [ $TEST_TYPE == "all" ] || [ $TEST_TYPE == "tox_py37" ];then
+        docker_exec 'cd /workspace/nmstate && tox -e check-py37'
     fi
 
     if [ $TEST_TYPE == "all" ] || [ $TEST_TYPE == "integ" ];then

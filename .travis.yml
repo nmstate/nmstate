@@ -7,6 +7,7 @@ env:
         - DOCKER_IMAGE=nmstate/fedora-nmstate-dev TEST_TYPE=tox_code_style
         - DOCKER_IMAGE=nmstate/fedora-nmstate-dev TEST_TYPE=tox_py27
         - DOCKER_IMAGE=nmstate/fedora-nmstate-dev TEST_TYPE=tox_py36
+        - DOCKER_IMAGE=nmstate/fedora-nmstate-dev TEST_TYPE=tox_py37
 
 addons:
   apt:

@@ -44,6 +44,8 @@ container. You may change the test type by using:
 
  * `TEST_TYPE=tox_py36 ./automation/run-tests.sh`: Unit tests in Python 3.6.
 
+ * `TEST_TYPE=tox_py37 ./automation/run-tests.sh`: Unit tests in Python 3.7.
+
  * `TEST_TYPE=integ ./automation/run-tests.sh`: Integration tests.
 
  * `TEST_TYPE=all ./automation/run-tests.sh`: All tests above.
