@@ -1,5 +1,5 @@
 # Automation Environment
-The automation env is serving the integration tests of nmstate.
+The automation env is serving the tests of nmstate.
 It may be used both locally and through CI.
 
 ## Components
@@ -15,8 +15,7 @@ It may be used both locally and through CI.
   The image can be found at:
   https://hub.docker.com/r/nmstate/fedora-nmstate-dev/
 
-- run-integration-tests.sh: Execute the integration tests in a
-  container using docker.
+- run-tests.sh: Execute the tests in a container using docker.
 
   The following steps are executed:
   - Run the container (defined in the Dockerfile) as a daemon.
@@ -27,16 +26,28 @@ It may be used both locally and through CI.
 
   It also handles the cleanup of the container and nets (stop,rm).
 
-- run-integration-tests.mounts: Includes mounts to be used by the
-  oVirt CI (STDCI) worker.
+- run-tests.mounts: Includes mounts to be used by the oVirt CI (STDCI) worker.
 
-- run-integration-tests.packages: Includes the packages needed by
-  the oVirt CI (STDCI) worker.
+- run-tests.packages: Includes the packages needed by the oVirt CI (STDCI)
+  worker.
 
 ## Running the Tests
-Assuming *docker* is installed on the host,
-just run:
-`./automation/run-integration-tests.sh`
+Assuming *docker* is installed on the host, just run:
+`./automation/run-tests.sh`
+
+By default, `./automation/run-tests.sh` will run integration test only in
+container. You may change the test type by using:
+
+ * `TEST_TYPE=tox_code_style ./automation/run-tests.sh`: Code style tests.
+
+ * `TEST_TYPE=tox_py27 ./automation/run-tests.sh`: Unit tests in Python 2.7.
+
+ * `TEST_TYPE=tox_py36 ./automation/run-tests.sh`: Unit tests in Python 3.6.
+
+ * `TEST_TYPE=integ ./automation/run-tests.sh`: Integration tests.
+
+ * `TEST_TYPE=all ./automation/run-tests.sh`: All tests above.
+
 
 ## Development
 
@@ -46,7 +57,7 @@ order to run the tests. Setting the environment variable `debug_exit_shell`
 will make the script start a shell instead of exiting the script after an error
 or running the scripts:
 
-`debug_exit_shell=1 ./automation/run-integration-tests.sh`
+`debug_exit_shell=1 ./automation/run-tests.sh`
 
 
 After closing the shell, the container will be removed.
@@ -54,11 +65,11 @@ After closing the shell, the container will be removed.
 To specify a different container image for the tests, specify it with the
 `DOCKER_IMAGE` variable:
 
-`DOCKER_IMAGE=local/centos7-nmstate-dev debug_exit_shell=1 ./automation/run-integration-tests.sh`
+`DOCKER_IMAGE=local/centos7-nmstate-dev debug_exit_shell=1 ./automation/run-tests.sh`
 
 It is also possible to pass extra arguments to PDB using the
 `nmstate_pytest_extra_args` variable, for example:
-`nmstate_pytest_extra_args="--pdb -x" ./automation/run-integration-tests.sh`
+`nmstate_pytest_extra_args="--pdb -x" ./automation/run-tests.sh`
 
 
 Alternatively, the following commands start the container manually:
