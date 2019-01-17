@@ -247,6 +247,6 @@ def _try_edit_again(error):
 def print_state(state, use_yaml=False):
     state = PrettyState(state)
     if use_yaml:
-        print(state.yaml)
+        sys.stdout.write(state.yaml)
     else:
         print(state.json)
