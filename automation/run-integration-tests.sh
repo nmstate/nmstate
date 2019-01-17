@@ -31,7 +31,11 @@ function pyclean {
 }
 
 function docker_exec {
-    docker exec $USE_TTY -i $CONTAINER_ID /bin/bash -c "$1"
+    docker exec \
+        -e TRAVIS="$TRAVIS" \
+        -e TRAVIS_JOB_ID="$TRAVIS_JOB_ID" \
+        -e TRAVIS_BRANCH="$TRAVIS_BRANCH" \
+        $USE_TTY -i $CONTAINER_ID /bin/bash -c "$1"
 }
 
 function add_extra_networks {
@@ -75,6 +79,9 @@ function run_tests {
         --cov-report=html:htmlcov-integ \
         tests/integration \
     ${nmstate_pytest_extra_args}"
+    if [ -n "$TRAVIS" ];then
+        docker_exec 'cd /workspace/nmstate && coveralls'
+    fi
 }
 
 function collect_artifacts {
