@@ -5,7 +5,11 @@ PROJECT_PATH="$(dirname $EXEC_PATH)"
 : ${DOCKER_IMAGE:=nmstate/centos7-nmstate-dev}
 EXPORT_DIR="$PWD/exported-artifacts"
 CONT_EXPORT_DIR="/exported-artifacts"
-PYTHON27_PATH="/usr/lib/python2.7/site-packages"
+if [[ $DOCKER_IMAGE == *"fedora"* ]];then
+    PYTHON_SITE_PATH_CMD="rpm -E %{python3_sitelib}"
+else
+    PYTHON_SITE_PATH_CMD="rpm -E %{python_sitelib}"
+fi
 
 NET0="nmstate-net0"
 NET1="nmstate-net1"
@@ -66,9 +70,9 @@ function run_tests {
         --verbose --verbose \
         --log-level=DEBUG \
         --durations=5 \
-        --cov=$PYTHON27_PATH/libnmstate \
-        --cov=$PYTHON27_PATH/nmstatectl \
-        --cov-report=html:htmlcov-py27 \
+        --cov=\$($PYTHON_SITE_PATH_CMD)/libnmstate \
+        --cov=\$($PYTHON_SITE_PATH_CMD)/nmstatectl \
+        --cov-report=html:htmlcov-integ \
         tests/integration \
     ${nmstate_pytest_extra_args}"
 }
