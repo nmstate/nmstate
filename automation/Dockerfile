@@ -13,21 +13,15 @@ RUN (cd /lib/systemd/system/sysinit.target.wants/; for i in *; do [ $i == \
     rm -f /lib/systemd/system/basic.target.wants/*;\
     rm -f /lib/systemd/system/anaconda.target.wants/*;
 
-# Enable EPEL and centos-release-openstack-rocky repo for new version of pytest.
-RUN yum -y install epel-release centos-release-openstack-rocky
-
-# Enable nmstate test repo for new version of pytest-cov and NetworkManager bug
-# fix of https://bugzilla.redhat.com/show_bug.cgi?id=1642625
-RUN yum-config-manager --add-repo https://copr.fedorainfracloud.org/coprs/nmstate/nmstate-test-env-el/repo/epel-7/nmstate-nmstate-test-env-el-epel-7.repo && \
-    yum-config-manager --enable nmstate-nmstate-test-env-el
-
 # libibverbs is a dependency for openvswitch that is missing as a dependency in the RPM
 RUN yum -y upgrade && \
-    yum -y install iproute python2-pytest python2-pytest-cov NetworkManager \
+    yum -y install epel-release && \
+    yum -y install python2-pip iproute NetworkManager \
                    rpm-build git python2-devel python2-six \
                    python2-pyyaml python-jsonschema python-setuptools \
                    NetworkManager-ovs openvswitch libibverbs \
                    python-gobject-base dnsmasq && \
+    pip install -U pip pytest==4.1.0 pytest-cov==2.6.1 python-coveralls && \
     yum clean all && \
     install -o root -g root -d /etc/sysconfig/network-scripts && \
     echo -e "[logging]\nlevel=TRACE\ndomains=ALL\n" > /etc/NetworkManager/conf.d/97-docker-build.conf && \
