@@ -3,11 +3,17 @@ The automation env is serving the integration tests of nmstate.
 It may be used both locally and through CI.
 
 ## Components
-- Dockerfile: Defines a container image which includes systemd,
+- Dockerfile: Defines a Centos 7 based container image which includes systemd,
   NetworkManager and other basic build tools (e.g. tox).
 
   The image can be found at:
   https://hub.docker.com/r/nmstate/centos7-nmstate-dev/
+
+- Dockerfile.fedora: Defines a Fedora based container image for nmstate test
+  purpose.
+
+  The image can be found at:
+  https://hub.docker.com/r/nmstate/fedora-nmstate-dev/
 
 - run-integration-tests.sh: Execute the integration tests in a
   container using docker.
@@ -78,12 +84,15 @@ tox -e check-integ-py27
 
 ```
 sudo docker build --no-cache --rm -t local/centos7-nmstate-dev .
+sudo docker build --file Dockerfile.fedora --no-cache --rm \
+    -t local/fedora-nmstate-dev  .
 ```
 
 To test the image, either specify it manually as described above or tag it locally:
 
 ```
 sudo docker tag local/centos7-nmstate-dev nmstate/centos7-nmstate-dev:latest
+sudo docker tag local/fedora-nmstate-dev nmstate/fedora-nmstate-dev:latest
 ```
 
 ### Push local image to the docker hub
@@ -93,4 +102,9 @@ sudo docker tag local/centos7-nmstate-dev nmstate/centos7-nmstate-dev:"${VERSION
 sudo docker tag local/centos7-nmstate-dev nmstate/centos7-nmstate-dev:latest
 sudo docker push nmstate/centos7-nmstate-dev:"${VERSION}"
 sudo docker push nmstate/centos7-nmstate-dev:latest
+
+sudo docker tag local/fedora-nmstate-dev nmstate/fedora-nmstate-dev:"${VERSION}"
+sudo docker push nmstate/fedora-nmstate-dev:"${VERSION}"
+sudo docker tag local/fedora-nmstate-dev nmstate/fedora-nmstate-dev:latest
+sudo docker push nmstate/fedora-nmstate-dev:latest
 ```
