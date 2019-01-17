@@ -103,6 +103,10 @@ mkdir -p $EXPORT_DIR
 CONTAINER_ID="$(docker run --privileged -d -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v $PROJECT_PATH:/workspace/nmstate -v $EXPORT_DIR:$CONT_EXPORT_DIR $DOCKER_IMAGE)"
 [ -n "$debug_exit_shell" ] && trap open_shell EXIT || trap run_exit EXIT
 docker_exec 'while ! systemctl is-active dbus; do sleep 1; done'
+docker_exec '
+    systemctl start NetworkManager
+    while ! systemctl is-active NetworkManager; do sleep 1; done
+'
 pyclean
 
 dump_network_info
