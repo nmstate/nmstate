@@ -1,5 +1,5 @@
 #
-# Copyright 2018 Red Hat, Inc.
+# Copyright 2018-2019 Red Hat, Inc.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -41,6 +41,17 @@ EMPTY_JSON_STATE = """{
 }
 """
 
+EMPTY_YAML_STATE = """---
+interfaces: []
+"""
+
+LO_YAML_STATE = """---
+interfaces:
+- name: lo
+  type: unknown
+  state: down
+"""
+
 
 @mock.patch('sys.argv', ['nmstatectl', 'set', 'mystate.json'])
 @mock.patch.object(nmstatectl.netapplier, 'apply',
@@ -57,13 +68,13 @@ def test_run_ctl_directly_show_empty():
     nmstatectl.main()
 
 
-@mock.patch('sys.argv', ['nmstatectl', 'show', 'eth1'])
+@mock.patch('sys.argv', ['nmstatectl', 'show', 'non_existing_interface'])
 @mock.patch.object(
     nmstatectl.netinfo, 'show', lambda: json.loads(LO_JSON_STATE))
 @mock.patch('nmstatectl.nmstatectl.sys.stdout', new_callable=six.StringIO)
 def test_run_ctl_directly_show_only_empty(mock_stdout):
     nmstatectl.main()
-    assert mock_stdout.getvalue() == EMPTY_JSON_STATE
+    assert mock_stdout.getvalue() == EMPTY_YAML_STATE
 
 
 @mock.patch('sys.argv', ['nmstatectl', 'show', 'lo'])
@@ -71,6 +82,25 @@ def test_run_ctl_directly_show_only_empty(mock_stdout):
     nmstatectl.netinfo, 'show', lambda: json.loads(LO_JSON_STATE))
 @mock.patch('nmstatectl.nmstatectl.sys.stdout', new_callable=six.StringIO)
 def test_run_ctl_directly_show_only(mock_stdout):
+    nmstatectl.main()
+    assert mock_stdout.getvalue() == LO_YAML_STATE
+
+
+@mock.patch('sys.argv', ['nmstatectl', 'show', '--json',
+                         'non_existing_interface'])
+@mock.patch.object(
+    nmstatectl.netinfo, 'show', lambda: json.loads(LO_JSON_STATE))
+@mock.patch('nmstatectl.nmstatectl.sys.stdout', new_callable=six.StringIO)
+def test_run_ctl_directly_show_json_only_empty(mock_stdout):
+    nmstatectl.main()
+    assert mock_stdout.getvalue() == EMPTY_JSON_STATE
+
+
+@mock.patch('sys.argv', ['nmstatectl', 'show', '--json', 'lo'])
+@mock.patch.object(
+    nmstatectl.netinfo, 'show', lambda: json.loads(LO_JSON_STATE))
+@mock.patch('nmstatectl.nmstatectl.sys.stdout', new_callable=six.StringIO)
+def test_run_ctl_directly_show_json_only(mock_stdout):
     nmstatectl.main()
     assert mock_stdout.getvalue() == LO_JSON_STATE
 

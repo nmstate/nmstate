@@ -1,5 +1,5 @@
 #
-# Copyright 2018 Red Hat, Inc.
+# Copyright 2018-2019 Red Hat, Inc.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -74,8 +74,8 @@ def setup_subcommand_edit(subparsers):
 def setup_subcommand_show(subparsers):
     parser_show = subparsers.add_parser('show', help='Show network state')
     parser_show.set_defaults(func=show)
-    parser_show.add_argument('--yaml', help='Output as yaml', default=False,
-                             action='store_true')
+    parser_show.add_argument('--json', help='Edit as JSON', default=True,
+                             action='store_false', dest='yaml')
     parser_show.add_argument(
         'only', default='*', nargs='?', metavar=Constants.INTERFACES,
         help='Show only specified interfaces (comma-separated)'
