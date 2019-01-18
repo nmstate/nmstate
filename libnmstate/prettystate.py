@@ -1,5 +1,5 @@
 #
-# Copyright 2018 Red Hat, Inc.
+# Copyright 2018-2019 Red Hat, Inc.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@ import difflib
 import json
 from operator import itemgetter
 
-
+import six
 import yaml
 
 from libnmstate.schema import Constants
@@ -56,11 +56,15 @@ def format_desired_current_state_diff(desired_state, current_state):
 class PrettyState(object):
     def __init__(self, state):
         yaml.add_representer(OrderedDict, represent_ordereddict)
+
+        if six.PY2:
+            yaml.add_representer(unicode, represent_unicode)
         self.state = order_state(deepcopy(state))
 
     @property
     def yaml(self):
-        return yaml.dump(self.state, default_flow_style=False)
+        return yaml.dump(self.state, default_flow_style=False,
+                         explicit_start=True)
 
     @property
     def json(self):
@@ -97,6 +101,19 @@ def order_state(state):
         ]
 
     return state
+
+
+def represent_unicode(_, data):
+    """
+    Represent unicode as regular string
+
+    Source:
+        https://stackoverflow.com/questions/1950306/pyyaml-dumping-without-tags
+
+    """
+
+    return yaml.ScalarNode(tag=u'tag:yaml.org,2002:str',
+                           value=data.encode('utf-8'))
 
 
 def order_iface_state(iface_state):

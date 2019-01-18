@@ -74,8 +74,8 @@ def test_missing_operation():
     assert "nmstatectl: error: invalid choice: 'no-such-oper'" in err
 
 
-def test_show_command_with_no_flags():
-    ret = libcmd.exec_cmd(SHOW_CMD)
+def test_show_command_with_json():
+    ret = libcmd.exec_cmd(SHOW_CMD + ['--json'])
     rc, out, err = ret
 
     assert rc == RC_SUCCESS, format_exec_cmd_result(ret)
@@ -86,15 +86,15 @@ def test_show_command_with_no_flags():
 
 
 def test_show_command_with_yaml_format():
-    ret = libcmd.exec_cmd(SHOW_CMD + ['--yaml'])
+    ret = libcmd.exec_cmd(SHOW_CMD)
     rc, out, err = ret
 
     assert rc == RC_SUCCESS, format_exec_cmd_result(ret)
     assert LOOPBACK_YAML_CONFIG in out
 
 
-def test_show_command_only_lo():
-    ret = libcmd.exec_cmd(SHOW_CMD + ['lo'])
+def test_show_command_json_only_lo():
+    ret = libcmd.exec_cmd(SHOW_CMD + ['--json', 'lo'])
     rc, out, err = ret
 
     assert rc == RC_SUCCESS, format_exec_cmd_result(ret)
@@ -105,7 +105,7 @@ def test_show_command_only_lo():
 
 
 def test_show_command_only_non_existing():
-    ret = libcmd.exec_cmd(SHOW_CMD + ['non_existing_interface'])
+    ret = libcmd.exec_cmd(SHOW_CMD + ['--json', 'non_existing_interface'])
     rc, out, err = ret
 
     assert rc == RC_SUCCESS, format_exec_cmd_result(ret)
