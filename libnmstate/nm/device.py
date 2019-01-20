@@ -1,5 +1,5 @@
 #
-# Copyright 2018 Red Hat, Inc.
+# Copyright 2018-2019 Red Hat, Inc.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -126,6 +126,9 @@ def _safe_activate_async(dev, connection_id):
     connection = None
     if connection_id:
         connection = client.get_connection_by_id(connection_id)
+    if connection:
+        dev = None
+
     specific_object = None
     user_data = mainloop, dev, connection_id, cancellable
     client.activate_connection_async(
