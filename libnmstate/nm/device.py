@@ -84,11 +84,8 @@ class ActiveConnection(object):
 
     @property
     def is_activating(self):
-        activation_failed = (
-            not self.is_active and
-            self._alternative_state == AlternativeACState.FAIL
-        )
-        return not activation_failed
+        activation_failed = self._alternative_state == AlternativeACState.FAIL
+        return not self.is_active and not activation_failed
 
     @property
     def reason(self):
