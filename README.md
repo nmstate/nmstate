@@ -21,6 +21,19 @@ NMState is aimed to satisfy enterprise needs to manage host networking through
 a northbound declarative API and multi provider support on the southbound.
 NetworkManager acts as the main (and currently the only) provider supported.
 
+## Contact
+*nmstate* uses the [NetworkManager mailing
+list](https://mail.gnome.org/mailman/listinfo/networkmanager-list)
+([Archives](https://mail.gnome.org/archives/networkmanager-list/)) for
+discussions. Emails about nmstate should be tagged with `[nmstate]` in the
+subject header to ease filtering.
+
+Development planning (sprints and progress reporting) happens in
+([Jira](https://nmstate.atlassian.net)). Access requires login.
+
+There is also `#nmstate` on [Freenode
+IRC](https://freenode.net/kb/answer/chat).
+
 ## Development Environment
 
 Install:
