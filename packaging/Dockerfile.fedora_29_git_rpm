@@ -1,0 +1,20 @@
+# This Dockerfile is based on the recommendations provided in the
+# Centos official repository (https://hub.docker.com/_/centos/).
+# It enables systemd to be operational.
+FROM fedora:29
+ENV container docker
+COPY docker_enable_systemd.sh docker_sys_config.sh ./
+RUN bash ./docker_enable_systemd.sh && rm ./docker_enable_systemd.sh -f
+
+# libibverbs is a dependency for openvswitch that is missing as a dependency in the RPM
+RUN yum -y upgrade && \
+    yum -y install NetworkManager NetworkManager-ovs openvswitch libibverbs && \
+    yum -y install dnf-utils && \
+    yum-config-manager --add-repo=https://copr.fedorainfracloud.org/coprs/nmstate/nmstate-git-fedora/repo/fedora-29/nmstate-nmstate-git-fedora-fedora-29.repo && \
+    yum -y install nmstate && \
+    yum clean all && \
+    bash ./docker_sys_config.sh && rm ./docker_sys_config -f
+
+VOLUME [ "/sys/fs/cgroup" ]
+
+CMD ["/usr/sbin/init"]
