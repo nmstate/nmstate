@@ -1,0 +1,15 @@
+FROM nmstate/centos7-nmstate-base
+
+ARG SOURCE_COMMIT
+
+RUN yum -y install \
+        python2-pip \
+        git \
+    && \
+    yum clean all
+
+RUN pip install git+https://github.com/nmstate/nmstate@${SOURCE_COMMIT:-master}
+
+VOLUME [ "/sys/fs/cgroup" ]
+
+CMD ["/usr/sbin/init"]
