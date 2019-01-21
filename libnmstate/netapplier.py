@@ -1,5 +1,5 @@
 #
-# Copyright 2018 Red Hat, Inc.
+# Copyright 2018-2019 Red Hat, Inc.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -305,7 +305,8 @@ def _edit_interfaces(ifaces_desired_state, ifaces_current_state):
         iface2prepare + proxy_ifaces)
     nm.applier.edit_existing_ifaces(ifaces_configs)
 
-    nm.applier.set_ifaces_admin_state(ifaces2edit)
+    nm.applier.set_ifaces_admin_state(ifaces2edit + proxy_ifaces,
+                                      con_profiles=ifaces_configs)
 
 
 def _canonicalize_desired_state(iface_desired_state, iface_current_state):
