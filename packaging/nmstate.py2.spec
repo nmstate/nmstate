@@ -10,7 +10,8 @@ URL:            https://github.com/%{srcname}/%{srcname}
 Source0:        https://github.com/%{srcname}/%{srcname}/archive/v%{version}/%{srcname}-%{version}.tar
 BuildArch:      noarch
 BuildRequires:  python2-devel
-BuildRequires:  python-setuptools
+BuildRequires:  python2-setuptools
+Requires:       python2-setuptools
 Requires:       python2-%{libname} = %{?epoch:%{epoch}:}%{version}-%{release}
 
 %description

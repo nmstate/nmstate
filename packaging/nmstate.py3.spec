@@ -12,6 +12,7 @@ Source0:        https://github.com/%{srcname}/%{srcname}/archive/v%{version}/%{s
 BuildArch:      noarch
 BuildRequires:  python3-devel
 BuildRequires:  python3-setuptools
+Requires:       python3-setuptools
 Requires:       python3-%{libname} = %{?epoch:%{epoch}:}%{version}-%{release}
 
 %description
