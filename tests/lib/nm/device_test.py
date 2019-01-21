@@ -1,5 +1,5 @@
 #
-# Copyright 2018 Red Hat, Inc.
+# Copyright 2018-2019 Red Hat, Inc.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -39,8 +39,10 @@ def mainloop_mock():
         yield m.return_value
 
 
-def test_activate(client_mock, mainloop_mock):
-    dev = 'foodev'
+@mock.patch.object(nm.device.connection, 'get_device_active_connection',
+                   return_value=None)
+def test_activate(NM_mock, client_mock, mainloop_mock):
+    dev = mock.MagicMock()
     mainloop_mock.push_action = lambda func, dev, con_id: func(dev, con_id)
     cancellable = mainloop_mock.new_cancellable()
 

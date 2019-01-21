@@ -17,6 +17,7 @@
 
 import logging
 
+from . import connection
 from . import nmclient
 
 
@@ -120,16 +121,24 @@ def _safe_activate_async(dev, connection_id):
     client = nmclient.client()
     mainloop = nmclient.mainloop()
     cancellable = mainloop.new_cancellable()
-    connection = None
-    if connection_id:
-        connection = client.get_connection_by_id(connection_id)
-    if connection:
+
+    conn = connection.get_connection_by_id(connection_id)
+    if conn:
         dev = None
+    active_conn = connection.get_device_active_connection(dev)
+    if active_conn:
+        ac = ActiveConnection(active_conn)
+        if ac.is_activating:
+            logging.debug(
+                'Connection activation in progress: dev=%s, state=%s',
+                ac.devname, ac.state)
+            _waitfor_active_connection_async(ac, mainloop)
+            return
 
     specific_object = None
     user_data = mainloop, dev, connection_id, cancellable
     client.activate_connection_async(
-        connection,
+        conn,
         dev,
         specific_object,
         cancellable,

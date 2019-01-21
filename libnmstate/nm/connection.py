@@ -142,7 +142,18 @@ def get_device_connection(nm_device):
 
 
 def get_device_active_connection(nm_device):
-    return nm_device.get_active_connection()
+    active_conn = None
+    if nm_device:
+        active_conn = nm_device.get_active_connection()
+    return active_conn
+
+
+def get_connection_by_id(connection_id):
+    client = nmclient.client()
+    conn = None
+    if connection_id:
+        conn = client.get_connection_by_id(connection_id)
+    return conn
 
 
 def _logging_connection_info(con_setting, source):
