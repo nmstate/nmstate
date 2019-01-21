@@ -161,6 +161,10 @@ def _active_connection_callback(src_object, result, user_data):
             logging.debug(
                 'Connection activation canceled on %s %s: error=%s',
                 activation_type, activation_object, e)
+        elif is_connection_unavailable(e):
+            logging.warning('Connection unavailable on %s %s, retrying',
+                            activation_type, activation_object)
+            mainloop.execute_last_action()
         else:
             mainloop.quit(
                 'Connection activation failed on {} {}: error={}'.format(
@@ -186,6 +190,13 @@ def _active_connection_callback(src_object, result, user_data):
             mainloop.quit(
                 'Connection activation failed on {}: reason={}'.format(
                     ac.devname, ac.reason))
+
+
+def is_connection_unavailable(err):
+    return (isinstance(err, nmclient.GLib.GError) and
+            err.domain == 'nm-manager-error-quark' and
+            err.code == 2 and
+            'is not available on the device' in err.message)
 
 
 def _get_activation_metadata(nmdev, connection_id):
