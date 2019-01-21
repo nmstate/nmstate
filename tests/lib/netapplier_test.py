@@ -1,5 +1,5 @@
 #
-# Copyright 2018 Red Hat, Inc.
+# Copyright 2018-2019 Red Hat, Inc.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -85,11 +85,15 @@ def test_iface_admin_state_change(netinfo_nm_mock, netapplier_nm_mock):
     netapplier.apply(desired_config, verify_change=False)
 
     applier_mock = netapplier_nm_mock.applier
-    ifaces_conf = applier_mock.prepare_new_ifaces_configuration.return_value
+    ifaces_conf_new = (
+        applier_mock.prepare_new_ifaces_configuration.return_value)
+    ifaces_conf_edit = (
+        applier_mock.prepare_edited_ifaces_configuration.return_value)
     applier_mock.set_ifaces_admin_state.assert_has_calls(
         [
-            mock.call([], con_profiles=ifaces_conf),
-            mock.call(desired_config[INTERFACES])
+            mock.call([], con_profiles=ifaces_conf_new),
+            mock.call(desired_config[INTERFACES],
+                      con_profiles=ifaces_conf_edit)
         ]
     )
 
