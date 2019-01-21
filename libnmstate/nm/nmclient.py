@@ -1,5 +1,5 @@
 #
-# Copyright 2018 Red Hat, Inc.
+# Copyright 2018-2019 Red Hat, Inc.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -68,16 +68,23 @@ class _MainLoop(object):
         self._cancellables = []
         self.new_cancellable()
         self._error = ''
+        self._last_action = None
 
     def execute_next_action(self):
         action = self.pop_action()
         if action:
+            self._last_action = action
             func, args, kwargs = action
             logging.debug('Executing NM action: func=%s', func.__name__)
             func(*args, **kwargs)
         else:
             logging.debug('NM action queue exhausted, quiting mainloop')
             self._mainloop.quit()
+
+    def execute_last_action(self):
+        func, args, kwargs = self._last_action
+        logging.debug('Executing last NM action: func=%s', func.__name__)
+        func(*args, **kwargs)
 
     def push_action(self, func, *args, **kwargs):
         action = (func, args, kwargs)
