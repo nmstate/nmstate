@@ -1,5 +1,5 @@
 #
-# Copyright 2018 Red Hat, Inc.
+# Copyright 2018-2019 Red Hat, Inc.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -108,9 +108,9 @@ def create_setting(con_name, iface_name, iface_type):
     con_setting.props.interface_name = iface_name
     con_setting.props.uuid = str(uuid.uuid4())
     con_setting.props.type = iface_type
-    con_setting.props.autoconnect = False
+    con_setting.props.autoconnect = True
     con_setting.props.autoconnect_slaves = (
-        nmclient.NM.SettingConnectionAutoconnectSlaves.NO)
+        nmclient.NM.SettingConnectionAutoconnectSlaves.YES)
     _logging_connection_info(con_setting, 'create_setting')
     return con_setting
 
@@ -122,7 +122,7 @@ def duplicate_settings(base_connection_profile):
     new.props.interface_name = base.props.interface_name
     new.props.uuid = base.props.uuid
     new.props.type = base.props.type
-    new.props.autoconnect = False
+    new.props.autoconnect = True
     new.props.autoconnect_slaves = base.props.autoconnect_slaves
     _logging_connection_info(new, 'duplicate_settings')
     return new
