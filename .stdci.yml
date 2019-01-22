@@ -2,5 +2,7 @@
 Architectures:
   - x86_64:
       Distributions: ["el7"]
+      runtime-requirements:
+        host-distro: same
 script:
     from-file: automation/run-integration-tests.sh
