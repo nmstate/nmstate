@@ -69,6 +69,7 @@ function run_tests {
         --cov=$PYTHON27_PATH/libnmstate \
         --cov=$PYTHON27_PATH/nmstatectl \
         --cov-report=html:htmlcov-py27 \
+        --cov-report=term \
         tests/integration \
     ${nmstate_pytest_extra_args}"
 }
