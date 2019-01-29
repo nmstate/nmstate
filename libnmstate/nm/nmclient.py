@@ -22,19 +22,18 @@ import logging
 
 import six
 
+import gi
 try:
-    import gi                           # pylint: disable=import-error
-    gi.require_version('NM', '1.0')     # NOQA: F402
-    from gi.repository import Gio, GLib, NM  # pylint: disable=import-error
-    from gi.repository import GObject        # pylint: disable=import-error
-except ImportError:
+    gi.require_version('NM', '1.0')  # NOQA: F402
+    from gi.repository import NM     # pylint: disable=no-name-in-module
+except ValueError:
     # Allow the error to pass in case we are running in a unit test context
-    g = None
-    Gio = None
-    GLib = None
-    GObject = None
     NM = None
 
+from gi.repository import Gio
+from gi.repository import GLib
+from gi.repository import GObject
+GObject
 
 _mainloop = None
 _nmclient = None
