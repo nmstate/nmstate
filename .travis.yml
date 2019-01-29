@@ -1,8 +1,12 @@
-sudo: false
-dist: trusty
+dist: xenial
 language: python
 python:
   - 3.6
+
+addons:
+  apt:
+    packages:
+    - libgirepository1.0-dev
 
 install:
   - pip install tox
