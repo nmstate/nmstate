@@ -23,9 +23,6 @@ from .testlib import statelib
 from .testlib.statelib import INTERFACES
 
 
-IPV4_ADDRESS1 = '192.0.2.251'
-IPV4_ADDRESS2 = '192.0.2.252'
-
 LINUX_BRIDGE_YAML_BASE = """
 interfaces:
   - name: linux-br0
@@ -65,4 +62,30 @@ def test_create_and_remove_linux_bridge(eth1_up):
     }
     netapplier.apply(setup_remove_linux_bridge_state)
     state = statelib.show_only((state[INTERFACES][0]['name'],))
+    assert not state[INTERFACES]
+
+
+def test_create_and_remove_linux_bridge_with_min_desired_state(eth1_up):
+    desired_state = {
+        INTERFACES: [
+            {
+                'name': 'linux-br0',
+                'type': 'linux-bridge',
+                'state': 'up'
+            }
+        ]
+    }
+    netapplier.apply(desired_state)
+
+    setup_remove_linux_bridge_state = {
+        INTERFACES: [
+            {
+                'name': 'linux-br0',
+                'type': 'linux-bridge',
+                'state': 'absent'
+            }
+        ]
+    }
+    netapplier.apply(setup_remove_linux_bridge_state)
+    state = statelib.show_only((desired_state[INTERFACES][0]['name'],))
     assert not state[INTERFACES]
