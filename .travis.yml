@@ -7,6 +7,7 @@ addons:
   apt:
     packages:
     - libgirepository1.0-dev
+    - gir1.2-networkmanager-1.0
 
 install:
   - pip install tox
