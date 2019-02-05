@@ -27,14 +27,13 @@ try:
     gi.require_version('NM', '1.0')  # NOQA: F402
     from gi.repository import NM     # pylint: disable=no-name-in-module
 except ValueError:
-    # Allow the error to pass in case we are running in a unit test context
     NM = None
 
 from gi.repository import Gio
 from gi.repository import GLib
 from gi.repository import GObject
-from libnmstate.error import NmstateValueError
-from libnmstate.error import NmstateInternalError
+
+from libnmstate import error
 
 GObject
 
@@ -47,7 +46,16 @@ def client(refresh=False):
     # refresh is a workaround to get the current state when GMainLoop is not
     # running
     if _nmclient is None or refresh:
-        _nmclient = NM.Client.new(None)
+        if NM:
+            _nmclient = NM.Client.new(None)
+        else:
+            logging.error(
+                'Missing introspection data for libnm'
+                'please make sure to install it prior to running nmstate.\n'
+                'Check the documentation for more information.'
+            )
+            raise error.NmstateDependencyError(
+                'Missing introspection data for libnm')
     return _nmclient
 
 
@@ -105,7 +113,7 @@ class _MainLoop(object):
 
     def run(self, timeout):
         if not isinstance(timeout, six.integer_types):
-            raise NmstateValueError(
+            raise error.NmstateValueError(
                 "Invalid timeout value: should be an integer")
 
         if not self.actions_exists():
@@ -136,7 +144,7 @@ class _MainLoop(object):
     def drop_cancellable(self, c):
         idx = self._cancellables.index(c)
         if idx == 0:
-            raise NmstateInternalError('Cannot drop main cancellable')
+            raise error.NmstateInternalError('Cannot drop main cancellable')
         del self._cancellables[idx]
 
     def _cancel_cancellables(self):
