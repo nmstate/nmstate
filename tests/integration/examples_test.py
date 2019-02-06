@@ -24,8 +24,7 @@ import yaml
 from libnmstate import netapplier
 
 from .testlib import assertlib
-
-PATH_MAX = 4096
+from .testlib.examplelib import find_examples_dir
 
 
 def test_add_down_remove_vlan(eth1_up):
@@ -86,29 +85,3 @@ def load_example(name):
         state = yaml.load(yamlfile)
 
     return state
-
-
-def find_examples_dir():
-    """
-    Look recursively for the directory containing the examples
-    """
-
-    path = ''
-    parent = '../'
-    rootdir = '/'
-    examples = None
-    for _ in range(PATH_MAX // len('x/')):
-        maybe_examples = os.path.abspath(os.path.join(path, 'examples'))
-        if os.path.isdir(maybe_examples):
-            examples = maybe_examples
-            break
-
-        if os.path.abspath(path) == rootdir:
-            break
-
-        path = parent + path
-
-    if examples:
-        return examples
-    else:
-        raise RuntimeError('Cannot find examples directory')
