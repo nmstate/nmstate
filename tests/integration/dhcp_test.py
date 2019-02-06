@@ -83,6 +83,21 @@ def setup_remove_bond99():
     netapplier.apply(remove_bond)
 
 
+@pytest.fixture
+def setup_remove_dhcpcli():
+    yield
+    remove_bond = {
+        INTERFACES: [
+            {
+                'name': 'dhcpcli',
+                'type': 'ethernet',
+                'state': 'absent'
+            }
+        ]
+    }
+    netapplier.apply(remove_bond)
+
+
 def test_ipv4_dhcp(dhcp_env):
     desired_state = statelib.show_only((DHCP_CLI_NIC,))
     dhcp_cli_desired_state = desired_state[INTERFACES][0]
@@ -164,8 +179,8 @@ def test_dhcp_with_addresses(dhcp_env):
 
 
 def test_dhcp_for_bond_with_ip_address_and_slave(dhcp_env,
+                                                 setup_remove_dhcpcli,
                                                  setup_remove_bond99):
-
     desired_state = {
         INTERFACES: [
             {
@@ -219,3 +234,68 @@ def _clean_up():
         os.unlink(DNSMASQ_CONF_PATH)
     except FileNotFoundError:
         pass
+
+
+def test_slave_ipaddr_learned_via_dhcp_added_as_static_to_linux_bridge(
+                                         dhcp_env, setup_remove_dhcpcli):
+    desired_state = {
+        INTERFACES: [
+            {
+                'name': 'dhcpcli',
+                'type': 'ethernet',
+                'state': 'up',
+                'ipv4': {
+                    'enabled': True,
+                    'dhcp': True
+                },
+            }
+        ]
+    }
+
+    netapplier.apply(desired_state)
+
+    current_state = statelib.show_only(('dhcpcli',))
+    client_current_state = current_state[INTERFACES][0]
+    dhcpcli_ip = client_current_state['ipv4']['address']
+
+    bridge_desired_state = {
+        INTERFACES: [
+            {
+                'name': 'linux-br0',
+                'type': 'linux-bridge',
+                'state': 'up',
+                'ipv4': {
+                    'enabled': True,
+                    'dhcp': False,
+                    'address': dhcpcli_ip
+                },
+                'bridge': {
+                    'options': {},
+                    'port': [
+                        {
+                            'name': 'dhcpcli',
+                            'stp-hairpin-mode': False,
+                            'stp-path-cost': 100,
+                            'stp-priority': 32
+                        }
+                    ]
+                }
+            },
+            {
+                'name': 'dhcpcli',
+                'type': 'ethernet',
+                'state': 'up',
+                'ipv4': {
+                    'enabled': False,
+                    'dhcp': False
+                },
+                'ipv6': {
+                    'enabled': False,
+                    'dhcp': False
+                }
+            }
+        ]
+    }
+
+    netapplier.apply(bridge_desired_state)
+    assertlib.assert_state(bridge_desired_state)
