@@ -86,7 +86,7 @@ def setup_subcommand_set(subparsers):
     parser_set = subparsers.add_parser('set', help='Set network state')
     parser_set.add_argument('file', help='File containing desired state. '
                             'stdin is used when no file is specified.',
-                            nargs='?')
+                            nargs='*')
     parser_set.add_argument(
         '--no-verify', action='store_false', dest='verify', default=True,
         help='Do not verify that the state was completely set and disable '
@@ -127,16 +127,24 @@ def show(args):
 
 
 def apply(args):
-    # read from file when it is not '-' unless '-' actually exists
-    if args.file and (args.file != '-' or os.path.isfile(args.file)):
-        with open(args.file) as statefile:
-            statedata = statefile.read()
-    elif not sys.stdin.isatty() or args.file == '-':
+    if args.file:
+        for statefile in args.file:
+            if statefile == '-' and not os.path.isfile(statefile):
+                statedata = sys.stdin.read()
+            else:
+                with open(statefile) as statefile:
+                    statedata = statefile.read()
+
+            apply_state(statedata, args.verify)
+    elif not sys.stdin.isatty():
         statedata = sys.stdin.read()
+        apply_state(statedata, args.verify)
     else:
         sys.stderr.write('ERROR: No state specified\n')
         return 1
 
+
+def apply_state(statedata, verify_change):
     use_yaml = False
     # JSON dictionaries start with a curly brace
     if statedata[0] == '{':
@@ -144,7 +152,7 @@ def apply(args):
     else:
         state = yaml.load(statedata)
         use_yaml = True
-    netapplier.apply(state, verify_change=args.verify)
+    netapplier.apply(state, verify_change)
     print('Desired state applied: ')
     print_state(state, use_yaml=use_yaml)
 
