@@ -105,7 +105,30 @@ function open_shell {
     run_exit
 }
 
-cd $EXEC_PATH 
+options=$(getopt --options "" --long pytest-args:,help,debug-shell -- "${@}")
+eval set -- "$options"
+while true; do
+    case "$1" in
+    --pytest-args)
+        shift
+        nmstate_pytest_extra_args="$1"
+        ;;
+    --debug-shell)
+        debug_exit_shell="1"
+        ;;
+    --help)
+        echo "$0 [--pytest-args=...] [--help] [--debug-shell]"
+        exit
+        ;;
+    --)
+        shift
+        break
+        ;;
+    esac
+    shift
+done
+
+cd $EXEC_PATH
 docker --version && cat /etc/resolv.conf
 
 mkdir -p $EXPORT_DIR
