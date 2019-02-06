@@ -48,8 +48,8 @@ or running the scripts:
 
 `debug_exit_shell=1 ./automation/run-integration-tests.sh`
 
-
-After closing the shell, the container will be removed.
+After closing the shell, the container will be removed. Alternatively it is
+possible to provide the `--debug-shell` command-line option.
 
 To specify a different container image for the tests, specify it with the
 `DOCKER_IMAGE` variable:
@@ -57,8 +57,14 @@ To specify a different container image for the tests, specify it with the
 `DOCKER_IMAGE=local/centos7-nmstate-dev debug_exit_shell=1 ./automation/run-integration-tests.sh`
 
 It is also possible to pass extra arguments to PDB using the
-`nmstate_pytest_extra_args` variable, for example:
+`nmstate_pytest_extra_args` variable or via `--pytest-args` command-line
+option, for example:
+
 `nmstate_pytest_extra_args="--pdb -x" ./automation/run-integration-tests.sh`
+
+or:
+
+`./automation/run-integration-tests.sh --pytest-args "--pdb -x"`
 
 
 Alternatively, the following commands start the container manually:
