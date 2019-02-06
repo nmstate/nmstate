@@ -103,6 +103,10 @@ class State(object):
         self._ignore_dhcp_manual_addr()
         self._ignore_ipv6_link_local()
         self._sort_ip_addresses()
+        self._sort_interfaces_by_name()
+
+    def _sort_interfaces_by_name(self):
+        self._state[INTERFACES].sort(key=lambda d: d['name'])
 
     def remove_absent_entries(self):
         self._state[INTERFACES] = [
