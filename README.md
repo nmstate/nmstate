@@ -36,11 +36,23 @@ IRC](https://freenode.net/kb/answer/chat).
 
 ## Development Environment
 
-Install:
+nmstate uses `tox` to run unit tests and linters. Since nmstate uses the binary
+module PyGObject it also requires the build dependencies for it.
+
+### RHEL 7.6
+
+Recommended minimum installation:
 ```shell
-pip install tox pbr
+yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm  # install EPEL for python-pip
+subscription-manager repos --enable "rhel-*-optional-rpms" --enable "rhel-*-extras-rpms"  # recommended for EPEL
+yum install git python-pip
+pip install tox  # python-tox in EPEL seems to be too old
+yum-builddep python-gobject  # install build dependencies for PyGObject
 ```
 
+Note: This will not run the unit tests for Python 3.6 because this Python version is not available there.
+
+### Unit tests
 Run Unit Tests:
 ```shell
 tox
