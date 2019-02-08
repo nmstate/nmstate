@@ -88,12 +88,13 @@ nmstatectl show
 
 Change to desired state:
 ```shell
+nmstatectl set desired-state.yml
 nmstatectl set desired-state.json
 ```
 
 Edit current state of eth3 in a text editor:
 ```shell
-nmstatectl edit --only eth3
+nmstatectl edit eth3
 ```
 
 
@@ -101,10 +102,10 @@ nmstatectl edit --only eth3
 
 
 ```shell
-nmstatectl set < desired-state.json
+nmstatectl set < desired-state.yml
 ```
 
-Desired/Current state example:
+Desired/Current state example (JSON):
 ```shell
 {
     "interfaces": [
@@ -133,13 +134,7 @@ Desired/Current state example:
 }
 ```
 
-The state is also supported as YAML, to get the current state in YAML format:
-
-```shell
-nmstatectl show --yaml
-```
-
-The `set` command accepts both YAML and JSON.
+See `nmstatectl --help` for additional command-line options.
 
 ## Supported Interfaces:
 - bond
