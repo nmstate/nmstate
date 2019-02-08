@@ -16,10 +16,12 @@
 #
 
 import json
+import os.path
 
 from libnmstate.schema import Constants
 
 from .testlib import cmd as libcmd
+from .testlib.examplelib import find_examples_dir
 
 
 SET_CMD = ['nmstatectl', 'set']
@@ -117,6 +119,16 @@ def test_show_command_only_non_existing():
 def test_set_command_with_yaml_format():
     ret = libcmd.exec_cmd(SET_CMD, stdin=ETH1_YAML_CONFIG)
     rc, out, err = ret
+
+    assert rc == RC_SUCCESS, format_exec_cmd_result(ret)
+
+
+def test_set_command_with_two_states():
+    examples = find_examples_dir()
+    cmd = SET_CMD + [os.path.join(examples, 'linuxbrige_eth1_up.yml'),
+                     os.path.join(examples, 'linuxbrige_eth1_absent.yml')]
+    ret = libcmd.exec_cmd(cmd)
+    rc = ret[0]
 
     assert rc == RC_SUCCESS, format_exec_cmd_result(ret)
 
