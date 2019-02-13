@@ -14,7 +14,7 @@ RUN yum -y upgrade && \
                    python2-pyyaml python-jsonschema python-setuptools \
                    NetworkManager-ovs openvswitch libibverbs \
                    python-gobject-base dnsmasq && \
-    pip install -U pip pytest==4.1.0 pytest-cov==2.6.1 python-coveralls && \
+    pip install -U pip pytest==4.2.1 pytest-cov==2.6.1 python-coveralls && \
     yum clean all && \
     bash ./docker_sys_config.sh && rm ./docker_sys_config -f
 
