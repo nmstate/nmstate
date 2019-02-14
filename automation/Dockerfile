@@ -13,7 +13,7 @@ RUN yum -y upgrade && \
                    rpm-build git python2-devel python2-six \
                    python2-pyyaml python-jsonschema python-setuptools \
                    NetworkManager-ovs openvswitch libibverbs \
-                   python-gobject-base dnsmasq && \
+                   python-gobject-base dnsmasq radvd && \
     pip install -U pip pytest==4.2.1 pytest-cov==2.6.1 python-coveralls && \
     yum clean all && \
     bash ./docker_sys_config.sh && rm ./docker_sys_config -f
