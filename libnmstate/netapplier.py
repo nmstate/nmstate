@@ -51,7 +51,6 @@ def apply(desired_state, verify_change=True):
 
 def _apply_ifaces_state(interfaces_desired_state, verify_change):
     ifaces_desired_state = _index_by_name(interfaces_desired_state)
-    netinfo.interfaces()
     ifaces_current_state = _index_by_name(netinfo.interfaces())
 
     ifaces_desired_state = sanitize_ethernet_state(ifaces_desired_state,
