@@ -109,7 +109,7 @@ def test_get_info_with_ipv4_config(NM_mock):
     address_mock = mock.MagicMock()
     config_mock.get_addresses.return_value = [address_mock]
     remote_conn_mock = mock.MagicMock()
-    act_con_mock.get_connection().return_value = remote_conn_mock
+    act_con_mock.get_connection.return_value = remote_conn_mock
     set_ip_conf = mock.MagicMock()
     remote_conn_mock.get_setting_ip4_config.return_value = set_ip_conf
     set_ip_conf.get_method.return_value = (
