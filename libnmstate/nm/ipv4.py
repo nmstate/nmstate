@@ -27,6 +27,9 @@ def create_setting(config, base_con_profile):
         if setting_ipv4:
             setting_ipv4 = setting_ipv4.duplicate()
             setting_ipv4.clear_addresses()
+            setting_ipv4.props.ignore_auto_routes = False
+            setting_ipv4.props.never_default = False
+            setting_ipv4.props.ignore_auto_dns = False
 
     if not setting_ipv4:
         setting_ipv4 = nmclient.NM.SettingIP4Config.new()
@@ -37,6 +40,12 @@ def create_setting(config, base_con_profile):
         if config.get('dhcp'):
             setting_ipv4.props.method = (
                 nmclient.NM.SETTING_IP4_CONFIG_METHOD_AUTO)
+            setting_ipv4.props.ignore_auto_routes = (
+                not config.get('auto-routes', True))
+            setting_ipv4.props.never_default = (
+                not config.get('auto-gateway', True))
+            setting_ipv4.props.ignore_auto_dns = (
+                not config.get('auto-dns', True))
         elif config.get('address'):
             setting_ipv4.props.method = (
                 nmclient.NM.SETTING_IP4_CONFIG_METHOD_MANUAL)
@@ -67,6 +76,10 @@ def get_info(active_connection):
     if ip_profile:
         info['dhcp'] = ip_profile.get_method() == (
             nmclient.NM.SETTING_IP4_CONFIG_METHOD_AUTO)
+        if info['dhcp']:
+            info['auto-routes'] = not ip_profile.props.ignore_auto_routes
+            info['auto-gateway'] = not ip_profile.props.never_default
+            info['auto-dns'] = not ip_profile.props.ignore_auto_dns
     else:
         info['dhcp'] = False
 

@@ -301,6 +301,12 @@ definitions:
               type: boolean
             dhcp:
               type: boolean
+            auto-routes:
+              type: boolean
+            auto-gateway:
+              type: boolean
+            auto-dns:
+              type: boolean
             address:
               type: array
               items:
@@ -331,6 +337,12 @@ definitions:
             autoconf:
               type: boolean
             dhcp:
+              type: boolean
+            auto-routes:
+              type: boolean
+            auto-gateway:
+              type: boolean
+            auto-dns:
               type: boolean
             address:
               type: array
