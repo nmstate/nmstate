@@ -40,6 +40,11 @@ def get_info(active_connection):
             info['dhcp'] = True
             info['autoconf'] = False
 
+        if info['dhcp'] or info['autoconf']:
+            info['auto-routes'] = not ip_profile.props.ignore_auto_routes
+            info['auto-gateway'] = not ip_profile.props.never_default
+            info['auto-dns'] = not ip_profile.props.ignore_auto_dns
+
     ipconfig = active_connection.get_ip6_config()
     if ipconfig is None:
         # When DHCP is enable, it might be possible, the active_connection does
@@ -75,6 +80,9 @@ def create_setting(config, base_con_profile):
         if setting_ip:
             setting_ip = setting_ip.duplicate()
             setting_ip.clear_addresses()
+            setting_ip.props.ignore_auto_routes = False
+            setting_ip.props.never_default = False
+            setting_ip.props.ignore_auto_dns = False
 
     if not setting_ip:
         setting_ip = nmclient.NM.SettingIP6Config.new()
@@ -90,6 +98,12 @@ def create_setting(config, base_con_profile):
 
     if is_dhcp or is_autoconf:
         _set_dynamic(setting_ip, is_dhcp, is_autoconf)
+        setting_ip.props.ignore_auto_routes = (
+            not config.get('auto-routes', True))
+        setting_ip.props.never_default = (
+            not config.get('auto-gateway', True))
+        setting_ip.props.ignore_auto_dns = (
+            not config.get('auto-dns', True))
     elif ip_addresses:
         _set_static(setting_ip, ip_addresses)
     else:

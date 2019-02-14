@@ -165,12 +165,19 @@ def sanitize_dhcp_state(ifaces_state):
     If dynamic IP is enabled and IP address is missing, set an empty address
     list. This assures that the desired state is not complemented by the
     current state address values.
+    If dynamic IP is disabled, all dynamic IP options should be removed.
     """
     for iface_state in six.viewvalues(ifaces_state):
         for family in ('ipv4', 'ipv6'):
             ip = iface_state.get(family, {})
             if ip.get('enabled') and (ip.get('dhcp') or ip.get('autoconf')):
                 ip['address'] = []
+            else:
+                for dhcp_option in ('auto-routes',
+                                    'auto-gateway',
+                                    'auto-dns'):
+                    ip.pop(dhcp_option, None)
+
     return ifaces_state
 
 

@@ -123,6 +123,9 @@ def test_get_info_with_ipv6_config(NM_mock):
     remote_conn_mock.get_setting_ip6_config.return_value = set_ip_conf
     set_ip_conf.get_method.return_value = (
         NM_mock.SETTING_IP6_CONFIG_METHOD_MANUAL)
+    set_ip_conf.props.never_default = False
+    set_ip_conf.props.ignore_auto_dns = False
+    set_ip_conf.props.ignore_auto_routes = False
 
     info = nm.ipv6.get_info(active_connection=act_con_mock)
 

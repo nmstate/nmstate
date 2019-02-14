@@ -101,6 +101,7 @@ class State(object):
         self._ipv4_skeleton_canonicalization()
         self._ipv6_skeleton_canonicalization()
         self._ignore_dhcp_manual_addr()
+        self._ignore_dhcp_option_when_off()
         self._ignore_ipv6_link_local()
         self._sort_ip_addresses()
         self._sort_interfaces_by_name()
@@ -151,6 +152,17 @@ class State(object):
             for family in ('ipv4', 'ipv6'):
                 if iface_state.get(family, {}).get('dhcp'):
                     iface_state[family]['address'] = []
+
+    def _ignore_dhcp_option_when_off(self):
+        for iface_state in self._state.get(INTERFACES, []):
+            for family in ('ipv4', 'ipv6'):
+                ip = iface_state.get(family, {})
+                if not (ip.get('enabled') and
+                        (ip.get('dhcp') or ip.get('autoconf'))):
+                    for dhcp_option in ('auto-routes',
+                                        'auto-gateway',
+                                        'auto-dns'):
+                        ip.pop(dhcp_option, None)
 
 
 def _lookup_iface_state_by_name(interfaces_state, ifname):
