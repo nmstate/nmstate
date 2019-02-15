@@ -8,4 +8,5 @@
 jsonschema
 PyGObject
 PyYAML
+setuptools
 six
