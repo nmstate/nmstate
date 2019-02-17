@@ -1,5 +1,5 @@
 #
-# Copyright 2018 Red Hat, Inc.
+# Copyright 2018-2019 Red Hat, Inc.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -67,3 +67,20 @@ class LinuxBridge(object):
     PORT_STP_PRIORITY = 'stp-priority'
     PORT_STP_HAIRPIN_MODE = 'stp-hairpin-mode'
     PORT_STP_PATH_COST = 'stp-path-cost'
+
+
+class OVSBridge(object):
+    TYPE = 'ovs-bridge'
+    CONFIG_SUBTREE = 'bridge'
+
+    OPTIONS_SUBTREE = 'options'
+    FAIL_MODE = 'fail-mode'
+    MCAST_SNOOPING_ENABLED = 'mcast-snooping-enable'
+    RSTP = 'rstp'
+    STP = 'stp'
+
+    PORT_SUBTREE = 'port'
+    PORT_NAME = 'name'
+    PORT_TYPE = 'type'
+    PORT_VLAN_MODE = 'vlan-mode'
+    PORT_ACCESS_TAG = 'access-tag'
