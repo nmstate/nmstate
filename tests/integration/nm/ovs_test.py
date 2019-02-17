@@ -21,6 +21,7 @@ import pytest
 
 from libnmstate import nm
 from libnmstate.schema import OVSBridge as OB
+from libnmstate.schema import OVSBridgePortType as OBPortType
 
 from .testlib import mainloop
 
@@ -70,7 +71,7 @@ def test_bridge_with_system_port(eth1_up, bridge_default_config):
 
     eth1_port = {
         OB.PORT_NAME: 'eth1',
-        OB.PORT_TYPE: 'system',
+        OB.PORT_TYPE: OBPortType.SYSTEM,
         # OVS vlan/s are not yet supported.
         # OB.PORT_VLAN_MODE: None,
         # OB.PORT_ACCESS_TAG: 0,
