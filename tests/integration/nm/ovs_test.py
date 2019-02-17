@@ -101,7 +101,6 @@ def _create_bridge_iface(iface_bridge_settings):
 def _delete_iface(devname):
     nmdev = nm.device.get_device_by_name(devname)
     with mainloop():
-        nm.device.deactivate(nmdev)
         nm.device.delete(nmdev)
 
 
