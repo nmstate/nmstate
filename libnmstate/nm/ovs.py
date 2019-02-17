@@ -1,5 +1,5 @@
 #
-# Copyright 2018 Red Hat, Inc.
+# Copyright 2018-2019 Red Hat, Inc.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,6 +16,8 @@
 #
 
 import six
+
+from libnmstate.schema import OVSBridge as OB
 
 from . import connection
 from . import device
@@ -121,6 +123,10 @@ def is_ovs_port_type_id(type_id):
 
 def is_ovs_interface_type_id(type_id):
     return type_id == nmclient.NM.DeviceType.OVS_INTERFACE
+
+
+def get_bridge_info(bridge_device, devices_info):
+    return {OB.CONFIG_SUBTREE: get_ovs_info(bridge_device, devices_info)}
 
 
 def get_ovs_info(bridge_device, devices_info):
