@@ -71,9 +71,6 @@ function run_tests {
         --log-level=DEBUG \
         --log-date-format='%Y-%m-%d %H:%M:%S' \
         --log-format='%(asctime)s %(filename)s:%(lineno)d %(levelname)s %(message)s' \
-        --log-cli-level=DEBUG \
-        --log-cli-date-format='%Y-%m-%d %H:%M:%S' \
-        --log-cli-format='%(asctime)s %(filename)s:%(lineno)d %(levelname)s %(message)s' \
         --durations=5 \
         --cov=\$($PYTHON_SITE_PATH_CMD)/libnmstate \
         --cov=\$($PYTHON_SITE_PATH_CMD)/nmstatectl \
