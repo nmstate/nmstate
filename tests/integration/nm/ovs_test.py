@@ -26,6 +26,7 @@ from .testlib import mainloop
 
 
 BRIDGE0 = 'brtest0'
+ETH1 = 'eth1'
 
 
 @pytest.fixture
@@ -64,6 +65,26 @@ def test_create_and_remove_minimum_config_bridge(bridge_minimum_config,
     assert not _get_bridge_current_state()
 
 
+def test_bridge_with_system_port(eth1_up, bridge_default_config):
+    bridge_desired_state = bridge_default_config
+
+    eth1_port = {
+        OB.PORT_NAME: 'eth1',
+        OB.PORT_TYPE: 'system',
+        # OVS vlan/s are not yet supported.
+        # OB.PORT_VLAN_MODE: None,
+        # OB.PORT_ACCESS_TAG: 0,
+    }
+
+    bridge_desired_state[OB.CONFIG_SUBTREE][OB.PORT_SUBTREE].append(eth1_port)
+
+    with _bridge_interface(bridge_desired_state):
+        bridge_current_state = _get_bridge_current_state()
+        assert bridge_desired_state == bridge_current_state
+
+    assert not _get_bridge_current_state()
+
+
 @contextmanager
 def _bridge_interface(state):
     try:
@@ -71,6 +92,9 @@ def _bridge_interface(state):
         yield
     finally:
         _delete_iface(BRIDGE0)
+        for p in state[OB.CONFIG_SUBTREE][OB.PORT_SUBTREE]:
+            _delete_iface(nm.ovs.PORT_PROFILE_PREFIX + p[OB.PORT_NAME])
+            _delete_iface(p[OB.PORT_NAME])
 
 
 def _get_bridge_current_state():
@@ -90,12 +114,62 @@ def _create_bridge(bridge_desired_state):
 
     with mainloop():
         _create_bridge_iface(iface_bridge_settings)
+        ports_state = bridge_desired_state[OB.CONFIG_SUBTREE][OB.PORT_SUBTREE]
+        for port_state in ports_state:
+            _attach_port_to_bridge(port_state)
+
+
+def _attach_port_to_bridge(port_state):
+    port_profile_name = nm.ovs.PORT_PROFILE_PREFIX + port_state[OB.PORT_NAME]
+
+    _create_proxy_port(port_profile_name, port_state)
+    _connect_interface(port_profile_name, port_state)
+
+
+def _connect_interface(port_profile_name, port_state):
+    iface_nmdev = nm.device.get_device_by_name(port_state[OB.PORT_NAME])
+    curr_iface_con_profile = nm.connection.get_device_connection(iface_nmdev)
+    slave_iface_settings = _create_iface_settings(curr_iface_con_profile,
+                                                  port_profile_name)
+    iface_con_profile = nm.connection.create_profile(slave_iface_settings)
+    nm.connection.update_profile(curr_iface_con_profile, iface_con_profile)
+    nm.connection.commit_profile(curr_iface_con_profile, nmdev=iface_nmdev)
+    nm.device.activate(connection_id=port_state[OB.PORT_NAME])
+
+
+def _create_proxy_port(port_profile_name, port_state):
+    port_settings = _create_port_setting(port_state, port_profile_name)
+    port_con_profile = nm.connection.create_profile(port_settings)
+    nm.connection.add_profile(port_con_profile, save_to_disk=False)
+    nm.device.activate(connection_id=port_profile_name)
 
 
 def _create_bridge_iface(iface_bridge_settings):
     br_con_profile = nm.connection.create_profile(iface_bridge_settings)
     nm.connection.add_profile(br_con_profile, save_to_disk=False)
     nm.device.activate(connection_id=BRIDGE0)
+
+
+def _create_iface_settings(iface_con_profile, port_master_name):
+    iface_con_setting = nm.connection.duplicate_settings(iface_con_profile)
+    nm.connection.set_master_setting(iface_con_setting,
+                                     port_master_name,
+                                     nm.ovs.PORT_TYPE)
+    return (iface_con_setting,)
+
+
+def _create_port_setting(port_state, port_profile_name):
+    iface_con_setting = nm.connection.create_setting(
+        con_name=port_profile_name,
+        iface_name=port_profile_name,
+        iface_type=nm.ovs.PORT_TYPE
+    )
+    nm.connection.set_master_setting(iface_con_setting,
+                                     BRIDGE0,
+                                     nm.ovs.BRIDGE_TYPE)
+    port_options = nm.ovs.translate_port_options(port_state)
+    bridge_port_setting = nm.ovs.create_port_setting(port_options)
+    return iface_con_setting, bridge_port_setting
 
 
 def _delete_iface(devname):
