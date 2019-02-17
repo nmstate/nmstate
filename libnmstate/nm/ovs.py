@@ -97,6 +97,12 @@ def create_port_setting(options):
     return port_setting
 
 
+def create_interface_setting():
+    interface_setting = nmclient.NM.SettingOvsInterface.new()
+    interface_setting.props.type = 'internal'
+    return interface_setting
+
+
 def translate_bridge_options(iface_state):
     br_opts = {}
     bridge_state = iface_state.get('bridge', {}).get('options', {})
@@ -165,8 +171,16 @@ def _get_bridge_port_info(port_profile, devices_info):
     port_slave_names = [c.get_interface_name() for c in port_slave_profiles]
 
     if port_slave_names:
-        port_info['name'] = port_slave_names[0]
-        port_info['type'] = OBPortType.SYSTEM
+        iface_slave_name = port_slave_names[0]
+        iface_device = device.get_device_by_name(iface_slave_name)
+
+        if is_ovs_interface_type_id(iface_device.props.device_type):
+            port_type = OBPortType.INTERNAL
+        else:
+            port_type = OBPortType.SYSTEM
+
+        port_info['name'] = iface_slave_name
+        port_info['type'] = port_type
         if vlan_mode:
             port_info['vlan-mode'] = vlan_mode
             port_info['access-tag'] = port_setting.props.tag
