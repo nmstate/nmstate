@@ -18,6 +18,7 @@
 import six
 
 from libnmstate.schema import OVSBridge as OB
+from libnmstate.schema import OVSBridgePortType as OBPortType
 
 from . import connection
 from . import device
@@ -165,7 +166,7 @@ def _get_bridge_port_info(port_profile, devices_info):
 
     if port_slave_names:
         port_info['name'] = port_slave_names[0]
-        port_info['type'] = 'system'
+        port_info['type'] = OBPortType.SYSTEM
         if vlan_mode:
             port_info['vlan-mode'] = vlan_mode
             port_info['access-tag'] = port_setting.props.tag

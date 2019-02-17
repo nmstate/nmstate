@@ -22,6 +22,7 @@ from .compat import mock
 
 from libnmstate import netapplier
 from libnmstate.schema import Constants
+from libnmstate.schema import OVSBridgePortType as OBPortType
 
 
 INTERFACES = Constants.INTERFACES
@@ -421,8 +422,8 @@ class TestDesiredStateOvsMetadata(object):
                 'state': 'up',
                 'bridge': {
                     'port': [
-                        {'name': 'eth0', 'type': 'system'},
-                        {'name': 'eth1', 'type': 'system'}
+                        {'name': 'eth0', 'type': OBPortType.SYSTEM},
+                        {'name': 'eth1', 'type': OBPortType.SYSTEM}
                     ]
                 }
             },
@@ -454,8 +455,8 @@ class TestDesiredStateOvsMetadata(object):
                 'state': 'up',
                 'bridge': {
                     'port': [
-                        {'name': 'eth0', 'type': 'system'},
-                        {'name': 'eth1', 'type': 'system'}
+                        {'name': 'eth0', 'type': OBPortType.SYSTEM},
+                        {'name': 'eth1', 'type': OBPortType.SYSTEM}
                     ]
                 }
             }
@@ -497,8 +498,8 @@ class TestDesiredStateOvsMetadata(object):
                 'state': 'up',
                 'bridge': {
                     'port': [
-                        {'name': 'eth0', 'type': 'system'},
-                        {'name': 'eth1', 'type': 'system'}
+                        {'name': 'eth0', 'type': OBPortType.SYSTEM},
+                        {'name': 'eth1', 'type': OBPortType.SYSTEM}
                     ]
                 }
             },
@@ -521,8 +522,8 @@ class TestDesiredStateOvsMetadata(object):
                 'state': 'up',
                 'bridge': {
                     'port': [
-                        {'name': 'eth0', 'type': 'system'},
-                        {'name': 'eth1', 'type': 'system'}
+                        {'name': 'eth0', 'type': OBPortType.SYSTEM},
+                        {'name': 'eth1', 'type': OBPortType.SYSTEM}
                     ]
                 }
             },
@@ -556,7 +557,7 @@ class TestDesiredStateOvsMetadata(object):
                 'state': 'up',
                 'bridge': {
                     'port': [
-                        {'name': 'eth0', 'type': 'system'}
+                        {'name': 'eth0', 'type': OBPortType.SYSTEM}
                     ]
                 }
             }
@@ -568,8 +569,8 @@ class TestDesiredStateOvsMetadata(object):
                 'state': 'up',
                 'bridge': {
                     'port': [
-                        {'name': 'eth0', 'type': 'system'},
-                        {'name': 'eth1', 'type': 'system'}
+                        {'name': 'eth0', 'type': OBPortType.SYSTEM},
+                        {'name': 'eth1', 'type': OBPortType.SYSTEM}
                     ]
                 }
             },
@@ -605,8 +606,8 @@ class TestDesiredStateOvsMetadata(object):
                 'state': 'up',
                 'bridge': {
                     'port': [
-                        {'name': 'eth0', 'type': 'system'},
-                        {'name': 'eth1', 'type': 'system'}
+                        {'name': 'eth0', 'type': OBPortType.SYSTEM},
+                        {'name': 'eth1', 'type': OBPortType.SYSTEM}
                     ]
                 }
             },
@@ -634,7 +635,7 @@ class TestDesiredStateOvsMetadata(object):
                 'state': 'up',
                 'bridge': {
                     'port': [
-                        {'name': 'eth0', 'type': 'system'}
+                        {'name': 'eth0', 'type': OBPortType.SYSTEM}
                     ]
                 }
             }
@@ -646,8 +647,8 @@ class TestDesiredStateOvsMetadata(object):
                 'state': 'up',
                 'bridge': {
                     'port': [
-                        {'name': 'eth0', 'type': 'system'},
-                        {'name': 'eth1', 'type': 'system'}
+                        {'name': 'eth0', 'type': OBPortType.SYSTEM},
+                        {'name': 'eth1', 'type': OBPortType.SYSTEM}
                     ]
                 }
             },

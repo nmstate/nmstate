@@ -84,3 +84,8 @@ class OVSBridge(object):
     PORT_TYPE = 'type'
     PORT_VLAN_MODE = 'vlan-mode'
     PORT_ACCESS_TAG = 'access-tag'
+
+
+class OVSBridgePortType(object):
+    SYSTEM = 'system'
+    INTERNAL = 'internal'
