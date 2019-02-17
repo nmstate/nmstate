@@ -86,6 +86,23 @@ def test_bridge_with_system_port(eth1_up, bridge_default_config):
     assert not _get_bridge_current_state()
 
 
+def test_bridge_with_internal_interface(eth1_up, bridge_default_config):
+    bridge_desired_state = bridge_default_config
+
+    ovs_port = {
+        OB.PORT_NAME: 'ovs0',
+        OB.PORT_TYPE: OBPortType.INTERNAL,
+    }
+
+    bridge_desired_state[OB.CONFIG_SUBTREE][OB.PORT_SUBTREE].append(ovs_port)
+
+    with _bridge_interface(bridge_desired_state):
+        bridge_current_state = _get_bridge_current_state()
+        assert bridge_desired_state == bridge_current_state
+
+    assert not _get_bridge_current_state()
+
+
 @contextmanager
 def _bridge_interface(state):
     try:
@@ -124,7 +141,19 @@ def _attach_port_to_bridge(port_state):
     port_profile_name = nm.ovs.PORT_PROFILE_PREFIX + port_state[OB.PORT_NAME]
 
     _create_proxy_port(port_profile_name, port_state)
-    _connect_interface(port_profile_name, port_state)
+    if port_state[OB.PORT_TYPE] == OBPortType.SYSTEM:
+        _connect_interface(port_profile_name, port_state)
+    elif port_state[OB.PORT_TYPE] == OBPortType.INTERNAL:
+        iface_name = port_state[OB.PORT_NAME]
+        _create_internal_interface(iface_name, master_name=port_profile_name)
+
+
+def _create_internal_interface(iface_name, master_name):
+    iface_settings = _create_internal_iface_setting(iface_name,
+                                                    master_name)
+    iface_con_profile = nm.connection.create_profile(iface_settings)
+    nm.connection.add_profile(iface_con_profile, save_to_disk=False)
+    nm.device.activate(connection_id=iface_name)
 
 
 def _connect_interface(port_profile_name, port_state):
@@ -171,6 +200,26 @@ def _create_port_setting(port_state, port_profile_name):
     port_options = nm.ovs.translate_port_options(port_state)
     bridge_port_setting = nm.ovs.create_port_setting(port_options)
     return iface_con_setting, bridge_port_setting
+
+
+def _create_internal_iface_setting(iface_name, master_name):
+    iface_con_setting = nm.connection.create_setting(
+        con_name=iface_name,
+        iface_name=iface_name,
+        iface_type=nm.ovs.INTERNAL_INTERFACE_TYPE
+    )
+    nm.connection.set_master_setting(iface_con_setting,
+                                     master_name,
+                                     nm.ovs.PORT_TYPE)
+    bridge_internal_iface_setting = nm.ovs.create_interface_setting()
+    ipv4_setting = nm.ipv4.create_setting({}, None)
+    ipv6_setting = nm.ipv6.create_setting({}, None)
+    return (
+        iface_con_setting,
+        bridge_internal_iface_setting,
+        ipv4_setting,
+        ipv6_setting
+    )
 
 
 def _delete_iface(devname):

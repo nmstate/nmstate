@@ -35,6 +35,7 @@ class Constants(object):
     LINUX_BRIDGE = 'linux-bridge'
     OVS_BRIDGE = 'ovs-bridge'
     OVS_PORT = 'ovs-port'
+    OVS_INTERFACE = 'ovs-interface'
     VLAN = 'vlan'
 
     VIRT_IFACE_TYPES = (
@@ -42,6 +43,7 @@ class Constants(object):
         LINUX_BRIDGE,
         OVS_BRIDGE,
         OVS_PORT,
+        OVS_INTERFACE,
         VLAN
     )
 
