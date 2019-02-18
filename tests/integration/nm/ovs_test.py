@@ -176,7 +176,10 @@ def _create_port_setting(port_state, port_profile_name):
 def _delete_iface(devname):
     nmdev = nm.device.get_device_by_name(devname)
     with mainloop():
-        nm.device.delete(nmdev)
+        if nmdev:
+            nm.device.delete(nmdev)
+        else:
+            nm.device.delete_connection(devname)
 
 
 def _get_iface_bridge_settings(bridge_options):
