@@ -294,9 +294,20 @@ def delete(dev):
     mainloop.push_action(_safe_delete_async, dev)
 
 
-def _safe_delete_async(dev):
+# FIXME: Move the connection related functionality to the connection module.
+def delete_connection(connection_id):
+    mainloop = nmclient.mainloop()
+    mainloop.push_action(
+        _safe_delete_async, dev=None, connection_id=connection_id)
+
+
+def _safe_delete_async(dev, connection_id=None):
     """Removes all device profiles."""
-    connections = dev.get_available_connections()
+    if dev:
+        connections = dev.get_available_connections()
+    else:
+        conn = connection.get_connection_by_id(connection_id)
+        connections = [conn] if conn else []
     mainloop = nmclient.mainloop()
     if not connections:
         # No callback is expected, so we should call the next one.
