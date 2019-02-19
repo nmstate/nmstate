@@ -102,15 +102,18 @@ sudo docker tag local/fedora-nmstate-dev nmstate/fedora-nmstate-dev:latest
 ```
 
 ### Push local image to the docker hub
-```
-VERSION=<ver>
-sudo docker tag local/centos7-nmstate-dev nmstate/centos7-nmstate-dev:"${VERSION}"
+The container images are automatically rebuilt for new commits to the master
+branch or new tags. Therefore updates to the Docker Hub images should always
+happen with a pull request that is merged to ensure that the change is
+persistent. If this is not feasible, a new build could be pushed as follow to
+the Docker Hub:
+
+```shell
 sudo docker tag local/centos7-nmstate-dev nmstate/centos7-nmstate-dev:latest
-sudo docker push nmstate/centos7-nmstate-dev:"${VERSION}"
 sudo docker push nmstate/centos7-nmstate-dev:latest
 
-sudo docker tag local/fedora-nmstate-dev nmstate/fedora-nmstate-dev:"${VERSION}"
-sudo docker push nmstate/fedora-nmstate-dev:"${VERSION}"
 sudo docker tag local/fedora-nmstate-dev nmstate/fedora-nmstate-dev:latest
 sudo docker push nmstate/fedora-nmstate-dev:latest
 ```
+
+It will be overwritten after the next commit to master, though.
