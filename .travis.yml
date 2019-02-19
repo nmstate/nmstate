@@ -12,4 +12,8 @@ install:
   - pip install tox
 
 script:
-  - tox -e flake8,pylint,check-py27,check-py36,coveralls
+  - tox -e flake8,pylint,check-py27,check-py36
+
+after_success:
+  - pip install python-coveralls
+  - cd tests && coveralls
