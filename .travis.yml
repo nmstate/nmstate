@@ -1,7 +1,12 @@
 dist: xenial
 language: python
-python:
-  - 3.6
+
+matrix:
+  include:
+    - python: 2.7
+      env: TOXENV=check-py27
+    - python: 3.6
+      env: TOXENV=flake8,pylint,check-py36
 
 addons:
   apt:
@@ -12,7 +17,7 @@ install:
   - pip install tox
 
 script:
-  - tox -e flake8,pylint,check-py27,check-py36
+  - tox
 
 after_success:
   - tox -e coveralls
