@@ -20,6 +20,7 @@ from operator import itemgetter
 from libnmstate import nm
 from libnmstate import validator
 from libnmstate.schema import Constants
+from libnmstate.schema import Interface
 
 
 def show(include_status_data=False):
@@ -76,6 +77,7 @@ def interfaces():
         elif nm.ovs.has_ovs_capability():
             if nm.ovs.is_ovs_bridge_type_id(type_id):
                 iface_info['bridge'] = nm.ovs.get_ovs_info(dev, devices_info)
+                iface_info = _remove_ovs_bridge_unsupported_entries(iface_info)
             elif nm.ovs.is_ovs_port_type_id(type_id):
                 continue
 
@@ -92,3 +94,14 @@ def _ifaceinfo_bond(devinfo):
     if 'link-aggregation' in bondinfo:
         return bondinfo
     return {}
+
+
+def _remove_ovs_bridge_unsupported_entries(iface_info):
+    """
+    OVS bridges are not supporting several common interface key entries.
+    These entries are removed explicitly.
+    """
+    iface_info.pop(Interface.IPV4, None)
+    iface_info.pop(Interface.IPV6, None)
+
+    return iface_info
