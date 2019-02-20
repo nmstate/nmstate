@@ -30,6 +30,7 @@ from libnmstate.appliers import linux_bridge
 from libnmstate.nm import nmclient
 from libnmstate.prettystate import format_desired_current_state_diff
 from libnmstate.schema import Constants
+from libnmstate.schema import InterfaceType
 
 
 class ApplyError(Exception):
@@ -405,7 +406,7 @@ def _remove_down_virt_iface_entries(ifaces_desired_state):
     for ifname, ifstate in six.viewitems(ifaces_desired_state):
         is_virt_down = (
                 ifstate.get('state') == 'down' and
-                ifstate.get('type') in Constants.VIRT_IFACE_TYPES
+                ifstate.get('type') in InterfaceType.VIRT_TYPES
         )
         if not is_virt_down:
             ifaces[ifname] = ifstate
