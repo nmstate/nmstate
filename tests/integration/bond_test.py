@@ -169,3 +169,31 @@ def test_rollback_for_bond(eth1_up, eth2_up):
 
     current_state_after_apply = netinfo.show()
     assert current_state == current_state_after_apply
+
+
+def test_add_slave_to_bond_without_slaves(eth1_up, setup_remove_bond99):
+    bond_state = {
+            INTERFACES: [
+                {
+                    'name': 'bond99',
+                    'type': 'bond',
+                    'state': 'up',
+                    'link-aggregation': {
+                        'mode': 'balance-rr',
+                        'slaves': []
+                    },
+                }
+
+            ]
+        }
+
+    netapplier.apply(bond_state)
+
+    bond_state[INTERFACES][0]['link-aggregation']['slaves'] = ['eth1']
+
+    netapplier.apply(bond_state)
+
+    current_state = statelib.show_only(('bond99',))
+    bond99_cur_state = current_state[INTERFACES][0]
+
+    assert bond99_cur_state['link-aggregation']['slaves'][0] == 'eth1'
