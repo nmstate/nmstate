@@ -1,5 +1,5 @@
 #
-# Copyright 2018 Red Hat, Inc.
+# Copyright 2018-2019 Red Hat, Inc.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -19,7 +19,6 @@ import six
 
 from libnmstate.schema import LinuxBridge as LB
 from libnmstate.error import NmstateValueError
-from libnmstate.error import NmstateNotImplementedError
 
 from . import bond
 from . import bridge
@@ -97,12 +96,16 @@ def set_ifaces_admin_state(ifaces_desired_state, con_profiles=()):
     leaving it to choose the correct profile.
 
     In order to activate correctly the interfaces, the order is significant:
-    - New interfaces (virtual interfaces).
+    - New interfaces (virtual interfaces, but not OVS ones).
     - Master interfaces.
+    - OVS ports.
+    - OVS internal.
     - All the rest.
     """
     new_ifaces = _get_new_ifaces(con_profiles)
     new_ifaces_to_activate = set()
+    new_ovs_interface_to_activate = set()
+    new_ovs_port_to_activate = set()
     master_ifaces_to_activate = set()
     devs_actions = {}
 
@@ -111,6 +114,11 @@ def set_ifaces_admin_state(ifaces_desired_state, con_profiles=()):
         if not nmdev:
             ifname = iface_desired_state['name']
             if ifname in new_ifaces and iface_desired_state['state'] == 'up':
+                if iface_desired_state['type'] == ovs.INTERNAL_INTERFACE_TYPE:
+                    new_ovs_interface_to_activate.add(ifname)
+                elif iface_desired_state['type'] == ovs.PORT_TYPE:
+                    new_ovs_port_to_activate.add(ifname)
+                else:
                     new_ifaces_to_activate.add(ifname)
         else:
             if iface_desired_state['state'] == 'up':
@@ -134,6 +142,12 @@ def set_ifaces_admin_state(ifaces_desired_state, con_profiles=()):
 
     for dev in master_ifaces_to_activate:
         device.activate(dev)
+
+    for ifname in new_ovs_port_to_activate:
+        device.activate(dev=None, connection_id=ifname)
+
+    for ifname in new_ovs_interface_to_activate:
+        device.activate(dev=None, connection_id=ifname)
 
     for dev, actions in six.viewitems(devs_actions):
         for action in actions:
@@ -226,13 +240,6 @@ def _create_ovs_port_iface_desired_state(iface_desired_state, port_options):
 def _build_connection_profile(iface_desired_state, base_con_profile=None):
     iface_type = translator.Api2Nm.get_iface_type(iface_desired_state['type'])
 
-    # TODO: Support ovs-interface type on setup
-    if iface_type == ovs.INTERNAL_INTERFACE_TYPE:
-        raise NmstateNotImplementedError(
-            'Interface type {} of interface {} not supported yet'.format(
-                iface_type,
-                iface_desired_state['name']))
-
     settings = [
         ipv4.create_setting(iface_desired_state.get('ipv4'), base_con_profile),
         ipv6.create_setting(iface_desired_state.get('ipv6'), base_con_profile),
@@ -275,6 +282,8 @@ def _build_connection_profile(iface_desired_state, base_con_profile=None):
     elif iface_type == ovs.PORT_TYPE:
         ovs_port_options = iface_desired_state.get('options')
         settings.append(ovs.create_port_setting(ovs_port_options))
+    elif iface_type == ovs.INTERNAL_INTERFACE_TYPE:
+        settings.append(ovs.create_interface_setting())
 
     bridge_port_options = iface_desired_state.get('_brport_options')
     if bridge_port_options and master_type == bridge.BRIDGE_TYPE:
