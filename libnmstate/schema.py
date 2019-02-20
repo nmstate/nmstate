@@ -28,8 +28,31 @@ def load(schema_name):
 ifaces_schema = load('operational-state')
 
 
+class Interface(object):
+    KEY = 'interfaces'
+
+    NAME = 'name'
+    TYPE = 'type'
+    STATE = 'state'
+
+    IPV4 = 'ipv4'
+    IPV6 = 'ipv6'
+
+
 class Constants(object):
-    INTERFACES = 'interfaces'
+    INTERFACES = Interface.KEY
+
+
+class InterfaceState(object):
+    KEY = Interface.STATE
+
+    DOWN = 'down'
+    UP = 'up'
+    ABSENT = 'absent'
+
+
+class InterfaceType(object):
+    KEY = Interface.TYPE
 
     BOND = 'bond'
     LINUX_BRIDGE = 'linux-bridge'
@@ -38,7 +61,7 @@ class Constants(object):
     OVS_INTERFACE = 'ovs-interface'
     VLAN = 'vlan'
 
-    VIRT_IFACE_TYPES = (
+    VIRT_TYPES = (
         BOND,
         LINUX_BRIDGE,
         OVS_BRIDGE,
