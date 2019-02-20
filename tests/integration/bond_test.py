@@ -197,3 +197,31 @@ def test_add_slave_to_bond_without_slaves(eth1_up, setup_remove_bond99):
     bond99_cur_state = current_state[INTERFACES][0]
 
     assert bond99_cur_state['link-aggregation']['slaves'][0] == 'eth1'
+
+
+@pytest.mark.xfail(strict=True, reason="Jira issue # NMSTATE-143")
+def test_remove_all_slaves_from_bond(eth1_up, setup_remove_bond99):
+    bond_state = {
+        INTERFACES: [
+            {
+                'name': 'bond99',
+                'type': 'bond',
+                'state': 'up',
+                'link-aggregation': {
+                    'mode': 'balance-rr',
+                    'slaves': ['eth1']
+                }
+            }
+        ]
+    }
+
+    netapplier.apply(bond_state)
+
+    bond_state[INTERFACES][0]['link-aggregation']['slaves'] = []
+
+    netapplier.apply(bond_state)
+
+    current_state = statelib.show_only(('bond99',))
+    bond99_cur_state = current_state[INTERFACES][0]
+
+    assert bond99_cur_state['link-aggregation']['slaves'] == []
