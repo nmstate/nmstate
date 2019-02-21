@@ -78,6 +78,19 @@ The `export` command can be used to add it for the current session:
 export PATH="${HOME}/.local/bin:${PATH}"
 ```
 
+### Container Image
+
+Nmstate also provides a container image based on CentOS 7 to try it:
+
+```shell
+CONTAINER_ID=$(sudo docker run --privileged -d -v /sys/fs/cgroup:/sys/fs/cgroup:ro nmstate/centos7-nmstate)
+sudo docker exec -ti "${CONTAINER_ID}" /bin/bash
+# now play with nmstatectl in the container
+nmstatectl show
+# remove the container at the end
+sudo docker stop "${CONTAINER_ID}"
+sudo docker rm "${CONTAINER_ID}"
+```
 
 ## Basic Operations
 
