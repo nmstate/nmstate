@@ -252,3 +252,31 @@ def test_replace_bond_slave(eth1_up, eth2_up, setup_remove_bond99):
     bond99_cur_state = current_state[INTERFACES][0]
 
     assert bond99_cur_state['link-aggregation']['slaves'][0] == 'eth2'
+
+
+def test_remove_one_of_the_bond_slaves(eth1_up, eth2_up):
+
+    bond_state = {
+                INTERFACES: [
+                    {
+                        'name': 'bond99',
+                        'type': 'bond',
+                        'state': 'up',
+                        'link-aggregation': {
+                            'mode': 'balance-rr',
+                            'slaves': ['eth1', 'eth2']
+                        },
+                    }
+                ]
+            }
+
+    netapplier.apply(bond_state)
+
+    bond_state[INTERFACES][0]['link-aggregation']['slaves'] = ['eth2']
+
+    netapplier.apply(bond_state)
+
+    current_state = statelib.show_only(('bond99',))
+    bond99_cur_state = current_state[INTERFACES][0]
+
+    assert bond99_cur_state['link-aggregation']['slaves'] == ['eth2']
