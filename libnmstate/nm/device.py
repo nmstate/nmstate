@@ -342,7 +342,7 @@ def get_device_by_name(devname):
 
 
 def list_devices():
-    client = nmclient.client(refresh=True)
+    client = nmclient.client()
     return client.get_devices()
 
 
