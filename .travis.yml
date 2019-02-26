@@ -15,7 +15,12 @@ matrix:
 addons:
   apt:
     packages:
+        - git
+        - gnupg2
         - realpath
+        - openssh-client
+        - python-tox
+        - xz-utils
 
 services:
     - docker
@@ -33,3 +38,6 @@ after_success:
     - sudo mv tests/.coverage .coverage.tox || true
     - sudo coverage combine --append .
     - coveralls
+
+after_failure:
+    - ./automation/upload_test_artifacts.sh
