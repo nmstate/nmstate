@@ -52,6 +52,8 @@ def capabilities():
 def interfaces():
     info = []
 
+    nm.nmclient.client(refresh=True)
+
     devices_info = [(dev, nm.device.get_device_common_info(dev))
                     for dev in nm.device.list_devices()]
 
