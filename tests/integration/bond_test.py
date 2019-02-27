@@ -15,6 +15,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
+from contextlib import contextmanager
 import pytest
 import time
 import yaml
@@ -55,6 +56,38 @@ def setup_remove_bond99():
     netapplier.apply(remove_bond)
 
 
+@contextmanager
+def bond_interface(name, slaves):
+    desired_state = {
+        INTERFACES: [
+            {
+                'name': name,
+                'type': 'bond',
+                'state': 'up',
+                'link-aggregation': {
+                        'mode': 'balance-rr',
+                        'slaves': slaves
+                }
+            }
+
+        ]
+    }
+    netapplier.apply(desired_state)
+    try:
+        yield desired_state
+    finally:
+        netapplier.apply({
+                INTERFACES: [
+                    {
+                        'name': name,
+                        'type': 'bond',
+                        'state': 'absent'
+                    }
+                ]
+            }
+        )
+
+
 def test_add_and_remove_bond_with_two_slaves(eth1_up, eth2_up):
     state = yaml.load(BOND99_YAML_BASE)
     netapplier.apply(state)
@@ -88,24 +121,9 @@ def test_remove_bond_with_minimum_desired_state(eth1_up, eth2_up):
 
 
 def test_add_bond_without_slaves():
-    desired_bond_state = {
-            INTERFACES: [
-                {
-                    'name': 'bond99',
-                    'type': 'bond',
-                    'state': 'up',
-                    'link-aggregation': {
-                        'mode': 'balance-rr',
-                        'slaves': []
-                    },
-                }
+    with bond_interface(name='bond99', slaves=[]) as bond_state:
 
-            ]
-        }
-
-    netapplier.apply(desired_bond_state)
-
-    assertlib.assert_state(desired_bond_state)
+        assert bond_state[INTERFACES][0]['link-aggregation']['slaves'] == []
 
 
 def test_add_bond_with_slaves_and_ipv4(eth1_up, eth2_up, setup_remove_bond99):
@@ -171,112 +189,54 @@ def test_rollback_for_bond(eth1_up, eth2_up):
     assert current_state == current_state_after_apply
 
 
-def test_add_slave_to_bond_without_slaves(eth1_up, setup_remove_bond99):
-    bond_state = {
-            INTERFACES: [
-                {
-                    'name': 'bond99',
-                    'type': 'bond',
-                    'state': 'up',
-                    'link-aggregation': {
-                        'mode': 'balance-rr',
-                        'slaves': []
-                    },
-                }
+def test_add_slave_to_bond_without_slaves(eth1_up):
 
-            ]
-        }
+    with bond_interface(name='bond99', slaves=[]) as bond_state:
 
-    netapplier.apply(bond_state)
+        bond_state[INTERFACES][0]['link-aggregation']['slaves'] = ['eth1']
+        netapplier.apply(bond_state)
 
-    bond_state[INTERFACES][0]['link-aggregation']['slaves'] = ['eth1']
+        current_state = statelib.show_only(('bond99',))
+        bond99_cur_state = current_state[INTERFACES][0]
 
-    netapplier.apply(bond_state)
-
-    current_state = statelib.show_only(('bond99',))
-    bond99_cur_state = current_state[INTERFACES][0]
-
-    assert bond99_cur_state['link-aggregation']['slaves'][0] == 'eth1'
+        assert bond99_cur_state['link-aggregation']['slaves'][0] == 'eth1'
 
 
 @pytest.mark.xfail(strict=True, reason="Jira issue # NMSTATE-143")
-def test_remove_all_slaves_from_bond(eth1_up, setup_remove_bond99):
-    bond_state = {
-        INTERFACES: [
-            {
-                'name': 'bond99',
-                'type': 'bond',
-                'state': 'up',
-                'link-aggregation': {
-                    'mode': 'balance-rr',
-                    'slaves': ['eth1']
-                }
-            }
-        ]
-    }
+def test_remove_all_slaves_from_bond(eth1_up):
 
-    netapplier.apply(bond_state)
+    with bond_interface(name='bond99', slaves=['eth1']) as bond_state:
+        bond_state[INTERFACES][0]['link-aggregation']['slaves'] = []
 
-    bond_state[INTERFACES][0]['link-aggregation']['slaves'] = []
+        netapplier.apply(bond_state)
 
-    netapplier.apply(bond_state)
+        current_state = statelib.show_only(('bond99',))
+        bond99_cur_state = current_state[INTERFACES][0]
 
-    current_state = statelib.show_only(('bond99',))
-    bond99_cur_state = current_state[INTERFACES][0]
-
-    assert bond99_cur_state['link-aggregation']['slaves'] == []
+        assert bond99_cur_state['link-aggregation']['slaves'] == []
 
 
-def test_replace_bond_slave(eth1_up, eth2_up, setup_remove_bond99):
-    bond_state = {
-        INTERFACES: [
-            {
-                'name': 'bond99',
-                'type': 'bond',
-                'state': 'up',
-                'link-aggregation': {
-                    'mode': 'balance-rr',
-                    'slaves': ['eth1']
-                }
-            }
-        ]
-    }
+def test_replace_bond_slave(eth1_up, eth2_up):
 
-    netapplier.apply(bond_state)
+    with bond_interface(name='bond99', slaves=['eth1']) as bond_state:
+        bond_state[INTERFACES][0]['link-aggregation']['slaves'] = ['eth2']
 
-    bond_state[INTERFACES][0]['link-aggregation']['slaves'] = ['eth2']
+        netapplier.apply(bond_state)
 
-    netapplier.apply(bond_state)
+        current_state = statelib.show_only(('bond99',))
+        bond99_cur_state = current_state[INTERFACES][0]
 
-    current_state = statelib.show_only(('bond99',))
-    bond99_cur_state = current_state[INTERFACES][0]
-
-    assert bond99_cur_state['link-aggregation']['slaves'][0] == 'eth2'
+        assert bond99_cur_state['link-aggregation']['slaves'][0] == 'eth2'
 
 
 def test_remove_one_of_the_bond_slaves(eth1_up, eth2_up):
+    with bond_interface(name='bond99', slaves=['eth1', 'eth2']) as bond_state:
 
-    bond_state = {
-                INTERFACES: [
-                    {
-                        'name': 'bond99',
-                        'type': 'bond',
-                        'state': 'up',
-                        'link-aggregation': {
-                            'mode': 'balance-rr',
-                            'slaves': ['eth1', 'eth2']
-                        },
-                    }
-                ]
-            }
+        bond_state[INTERFACES][0]['link-aggregation']['slaves'] = ['eth2']
 
-    netapplier.apply(bond_state)
+        netapplier.apply(bond_state)
 
-    bond_state[INTERFACES][0]['link-aggregation']['slaves'] = ['eth2']
-
-    netapplier.apply(bond_state)
-
-    current_state = statelib.show_only(('bond99',))
-    bond99_cur_state = current_state[INTERFACES][0]
+        current_state = statelib.show_only(('bond99',))
+        bond99_cur_state = current_state[INTERFACES][0]
 
     assert bond99_cur_state['link-aggregation']['slaves'] == ['eth2']
