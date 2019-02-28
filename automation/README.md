@@ -1,5 +1,5 @@
 # Automation Environment
-The automation env is serving the integration tests of Nmstate.
+The automation env is serving the tests of Nmstate.
 It may be used both locally and through CI.
 
 ## Components
@@ -15,28 +15,51 @@ It may be used both locally and through CI.
   The image can be found at:
   https://hub.docker.com/r/nmstate/fedora-nmstate-dev/
 
-- run-integration-tests.sh: Execute the integration tests in a
-  container using docker.
+- run-tests.sh: Execute the tests in a container using
+  'nmstate/fedora-nmstate-dev' docker image.
 
   The following steps are executed:
   - Run the container (defined in the Dockerfile) as a daemon.
   - Stop NetworkManager before adding additional networks (ifaces).
   - Add additonal networks (ifaces) to the container.
   - Start NetworkManager.
-  - Execute the integration tests (using tox) in the container.
+  - Execute all tests in the container.
 
   It also handles the cleanup of the container and nets (stop,rm).
 
-- run-integration-tests.mounts: Includes mounts to be used by the
-  oVirt CI (STDCI) worker.
+- run-tests.mounts: Includes mounts to be used by the oVirt CI (STDCI) worker.
 
-- run-integration-tests.packages: Includes the packages needed by
-  the oVirt CI (STDCI) worker.
+- run-tests.packages: Includes the packages needed by the oVirt CI (STDCI)
+  worker.
+
+- run-tests.environment.yaml: Instruct the oVirt CI (STDCI) to run
+  integration test.
 
 ## Running the Tests
-Assuming *docker* is installed on the host,
-just run:
-`./automation/run-integration-tests.sh`
+Assuming *docker* is installed on the host, just run:
+`./automation/run-tests.sh`
+
+By default, `./automation/run-tests.sh` will run all tests in the container
+using 'nmstate/fedora-nmstate-dev' docker image.
+You may change the test type by using:
+
+ * `./automation/run-tests.sh --test-type lint`:
+   Static analysis of code using 'nmstate/fedora-nmstate-dev' docker image.
+
+ * `./automation/run-tests.sh --test-type unit_py27`:
+   Unit tests in Python 2.7 using 'nmstate/fedora-nmstate-dev' docker image.
+
+ * `./automation/run-tests.sh --test-type unit_py36`:
+   Unit tests in Python 3.6 using 'nmstate/fedora-nmstate-dev' docker image.
+
+ * `./automation/run-tests.sh --test-type unit_py37`:
+   Unit tests in Python 3.7 using 'nmstate/fedora-nmstate-dev' docker image.
+
+ * `./automation/run-tests.sh --test-type integ --el7`:
+   Integration tests using 'nmstate/centos7-nmstate-dev' docker image.
+
+ * `./automation/run-tests.sh --test-type integ`:
+   Integration tests using 'nmstate/fedora-nmstate-dev' docker image.
 
 ## Development
 
@@ -46,7 +69,7 @@ order to run the tests. Setting the environment variable `debug_exit_shell`
 will make the script start a shell instead of exiting the script after an error
 or running the scripts:
 
-`debug_exit_shell=1 ./automation/run-integration-tests.sh`
+`debug_exit_shell=1 ./automation/run-tests.sh`
 
 After closing the shell, the container will be removed. Alternatively it is
 possible to provide the `--debug-shell` command-line option.
@@ -54,13 +77,13 @@ possible to provide the `--debug-shell` command-line option.
 To specify a different container image for the tests, specify it with the
 `DOCKER_IMAGE` variable:
 
-`DOCKER_IMAGE=local/centos7-nmstate-dev debug_exit_shell=1 ./automation/run-integration-tests.sh`
+`DOCKER_IMAGE=local/centos7-nmstate-dev debug_exit_shell=1 ./automation/run-tests.sh`
 
 It is also possible to pass extra arguments to PDB using the
 `nmstate_pytest_extra_args` variable or via `--pytest-args` command-line
 option, for example:
 
-`nmstate_pytest_extra_args="--pdb -x" ./automation/run-integration-tests.sh`
+`nmstate_pytest_extra_args="--pdb -x" ./automation/run-tests.sh`
 
 or:
 
@@ -70,7 +93,7 @@ or:
 Alternatively, the following commands start the container manually:
 
 ```
-DOCKER_IMAGE="nmstate/centos7-nmstate-dev"
+DOCKER_IMAGE="nmstate/fedora-nmstate-dev"
 NET0="nmstate-net0"
 NET1="nmstate-net1"
 
