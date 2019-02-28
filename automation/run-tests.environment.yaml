@@ -1,0 +1,5 @@
+---
+- name: 'TEST_TYPE'
+  value: 'integ'
+- name: 'DOCKER_IMAGE'
+  value: 'nmstate/centos7-nmstate-dev'
