@@ -60,7 +60,7 @@ def test_add_profile(client_mock, mainloop_mock):
         'profile',
         save_to_disk,
         mainloop_mock.cancellable,
-        nm.connection._add_connection_callback,
+        nm.connection.ConnectionProfile._add_connection_callback,
         mainloop_mock,
     )
 
@@ -82,7 +82,7 @@ def test_commit_profile(mainloop_mock):
         con_profile.commit_changes_async,
         save_to_disk,
         mainloop_mock.cancellable,
-        nm.connection._commit_changes_callback,
+        nm.connection.ConnectionProfile._commit_changes_callback,
         (mainloop_mock, None),
     )
 

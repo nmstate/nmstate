@@ -54,7 +54,7 @@ class ConnectionProfile(object):
             self._con_profile,
             save_to_disk,
             self._mainloop.cancellable,
-            _add_connection_callback,
+            self._add_connection_callback,
             user_data,
         )
 
@@ -64,13 +64,56 @@ class ConnectionProfile(object):
             self._con_profile.commit_changes_async,
             save_to_disk,
             self._mainloop.cancellable,
-            _commit_changes_callback,
+            self._commit_changes_callback,
             user_data,
         )
 
     @property
     def profile(self):
         return self._con_profile
+
+    @staticmethod
+    def _add_connection_callback(src_object, result, user_data):
+        mainloop = user_data
+        try:
+            con = src_object.add_connection_finish(result)
+        except Exception as e:
+            if mainloop.is_action_canceled(e):
+                logging.debug(
+                    'Connection adding canceled: error=%s', e)
+            else:
+                mainloop.quit(
+                    'Connection adding failed: error={}'.format(e))
+            return
+
+        if con is None:
+            mainloop.quit('Connection adding failed: error=unknown')
+        else:
+            devname = con.get_interface_name()
+            logging.debug('Connection adding succeeded: dev=%s', devname)
+            mainloop.execute_next_action()
+
+    @staticmethod
+    def _commit_changes_callback(src_object, result, user_data):
+        mainloop, nmdev = user_data
+        try:
+            success = src_object.commit_changes_finish(result)
+        except Exception as e:
+            if mainloop.is_action_canceled(e):
+                logging.debug('Connection update aborted: error=%s', e)
+            else:
+                mainloop.quit(
+                    'Connection update failed: error={}, dev={}/{}'.format(
+                        e, nmdev.props.interface, nmdev.props.state))
+            return
+
+        devname = src_object.get_interface_name()
+        if success:
+            logging.debug('Connection update succeeded: dev=%s', devname)
+            mainloop.execute_next_action()
+        else:
+            mainloop.quit('Connection update failed: '
+                          'dev={}, error=unknown'.format(devname))
 
 
 def create_profile(settings):
@@ -84,27 +127,6 @@ def add_profile(connection_profile, save_to_disk=True):
     con_profile.add(save_to_disk)
 
 
-def _add_connection_callback(src_object, result, user_data):
-    mainloop = user_data
-    try:
-        con = src_object.add_connection_finish(result)
-    except Exception as e:
-        if mainloop.is_action_canceled(e):
-            logging.debug(
-                'Connection adding canceled: error=%s', e)
-        else:
-            mainloop.quit(
-                'Connection adding failed: error={}'.format(e))
-        return
-
-    if con is None:
-        mainloop.quit('Connection adding failed: error=unknown')
-    else:
-        devname = con.get_interface_name()
-        logging.debug('Connection adding succeeded: dev=%s', devname)
-        mainloop.execute_next_action()
-
-
 def update_profile(base_profile, new_profile):
     con_profile = ConnectionProfile(base_profile)
     con_profile.update(ConnectionProfile(new_profile))
@@ -113,28 +135,6 @@ def update_profile(base_profile, new_profile):
 def commit_profile(connection_profile, save_to_disk=True, nmdev=None):
     con_profile = ConnectionProfile(connection_profile)
     con_profile.commit(save_to_disk, nmdev)
-
-
-def _commit_changes_callback(src_object, result, user_data):
-    mainloop, nmdev = user_data
-    try:
-        success = src_object.commit_changes_finish(result)
-    except Exception as e:
-        if mainloop.is_action_canceled(e):
-            logging.debug('Connection update aborted: error=%s', e)
-        else:
-            mainloop.quit(
-                'Connection update failed: error={}, dev={}/{}'.format(
-                    e, nmdev.props.interface, nmdev.props.state))
-        return
-
-    devname = src_object.get_interface_name()
-    if success:
-        logging.debug('Connection update succeeded: dev=%s', devname)
-        mainloop.execute_next_action()
-    else:
-        mainloop.quit('Connection update failed: '
-                      'dev={}, error=unknown'.format(devname))
 
 
 def create_setting(con_name, iface_name, iface_type):
