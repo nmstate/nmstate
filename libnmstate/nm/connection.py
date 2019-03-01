@@ -137,36 +137,83 @@ def commit_profile(connection_profile, save_to_disk=True, nmdev=None):
     con_profile.commit(save_to_disk, nmdev)
 
 
+class ConnectionSetting(object):
+
+    def __init__(self, con_setting=None):
+        self._setting = con_setting
+
+    def create(self, con_name, iface_name, iface_type):
+        con_setting = nmclient.NM.SettingConnection.new()
+        con_setting.props.id = con_name
+        con_setting.props.interface_name = iface_name
+        con_setting.props.uuid = str(uuid.uuid4())
+        con_setting.props.type = iface_type
+        con_setting.props.autoconnect = True
+        con_setting.props.autoconnect_slaves = (
+            nmclient.NM.SettingConnectionAutoconnectSlaves.YES)
+
+        self._setting = con_setting
+        self._log_connection_info('ConnectionSetting.create')
+
+    def import_by_profile(self, con_profile):
+        base = con_profile.get_setting_connection()
+        new = nmclient.NM.SettingConnection.new()
+        new.props.id = base.props.id
+        new.props.interface_name = base.props.interface_name
+        new.props.uuid = base.props.uuid
+        new.props.type = base.props.type
+        new.props.autoconnect = True
+        new.props.autoconnect_slaves = base.props.autoconnect_slaves
+
+        self._setting = new
+        self._log_connection_info('ConnectionSetting.import_by_profile')
+
+    def set_master(self, master, slave_type):
+        if master is not None:
+            self._setting.props.master = master
+            self._setting.props.slave_type = slave_type
+
+    @property
+    def setting(self):
+        return self._setting
+
+    def _log_connection_info(self, source):
+        setting = self._setting
+        logging.debug(
+            'Connection settings for %s:\n' +
+            '\n'.join([
+                'id: %s',
+                'iface: %s',
+                'uuid: %s',
+                'type: %s',
+                'autoconnect: %s',
+                'autoconnect_slaves: %s'
+            ]),
+            source,
+            setting.props.id,
+            setting.props.interface_name,
+            setting.props.uuid,
+            setting.props.type,
+            setting.props.autoconnect,
+            setting.props.autoconnect_slaves
+        )
+
+
 def create_setting(con_name, iface_name, iface_type):
-    con_setting = nmclient.NM.SettingConnection.new()
-    con_setting.props.id = con_name
-    con_setting.props.interface_name = iface_name
-    con_setting.props.uuid = str(uuid.uuid4())
-    con_setting.props.type = iface_type
-    con_setting.props.autoconnect = True
-    con_setting.props.autoconnect_slaves = (
-        nmclient.NM.SettingConnectionAutoconnectSlaves.YES)
-    _logging_connection_info(con_setting, 'create_setting')
-    return con_setting
+    con_setting = ConnectionSetting()
+    con_setting.create(con_name, iface_name, iface_type)
+    return con_setting.setting
 
 
 def duplicate_settings(base_connection_profile):
-    base = base_connection_profile.get_setting_connection()
-    new = nmclient.NM.SettingConnection.new()
-    new.props.id = base.props.id
-    new.props.interface_name = base.props.interface_name
-    new.props.uuid = base.props.uuid
-    new.props.type = base.props.type
-    new.props.autoconnect = True
-    new.props.autoconnect_slaves = base.props.autoconnect_slaves
-    _logging_connection_info(new, 'duplicate_settings')
-    return new
+    con_setting = ConnectionSetting()
+    con_setting.import_by_profile(base_connection_profile)
+    return con_setting.setting
 
 
 def set_master_setting(con_setting, master, slave_type):
-    if master is not None:
-        con_setting.props.master = master
-        con_setting.props.slave_type = slave_type
+    setting = ConnectionSetting(con_setting)
+    setting.set_master(master, slave_type)
 
 
 def get_device_connection(nm_device):
@@ -186,24 +233,3 @@ def get_connection_by_id(connection_id):
     con_profile = ConnectionProfile()
     con_profile.import_by_id(connection_id)
     return con_profile.profile
-
-
-def _logging_connection_info(con_setting, source):
-    logging.debug(
-        'Connection settings for %s:\n' +
-        '\n'.join([
-            'id: %s',
-            'iface: %s',
-            'uuid: %s',
-            'type: %s',
-            'autoconnect: %s',
-            'autoconnect_slaves: %s'
-        ]),
-        source,
-        con_setting.props.id,
-        con_setting.props.interface_name,
-        con_setting.props.uuid,
-        con_setting.props.type,
-        con_setting.props.autoconnect,
-        con_setting.props.autoconnect_slaves
-    )
