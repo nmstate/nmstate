@@ -21,26 +21,67 @@ import uuid
 from . import nmclient
 
 
-def create_profile(settings):
-    con_profile = nmclient.NM.SimpleConnection.new()
-    for setting in settings:
-        con_profile.add_setting(setting)
+class ConnectionProfile(object):
 
-    return con_profile
+    def __init__(self, profile=None):
+        self._con_profile = profile
+        self._nmclient = nmclient.client()
+        self._mainloop = nmclient.mainloop()
+
+    def create(self, settings):
+        self._con_profile = nmclient.NM.SimpleConnection.new()
+        for setting in settings:
+            self._con_profile.add_setting(setting)
+
+    def import_by_device(self, nmdev):
+        self._con_profile = None
+        ac = get_device_active_connection(nmdev)
+        if ac:
+            self._con_profile = ac.props.connection
+
+    def import_by_id(self, con_id):
+        self._con_profile = None
+        if con_id:
+            self._con_profile = self._nmclient.get_connection_by_id(con_id)
+
+    def update(self, con_profile):
+        self._con_profile.replace_settings_from_connection(con_profile.profile)
+
+    def add(self, save_to_disk=True):
+        user_data = self._mainloop
+        self._mainloop.push_action(
+            self._nmclient.add_connection_async,
+            self._con_profile,
+            save_to_disk,
+            self._mainloop.cancellable,
+            _add_connection_callback,
+            user_data,
+        )
+
+    def commit(self, save_to_disk=True, nmdev=None):
+        user_data = self._mainloop, nmdev
+        self._mainloop.push_action(
+            self._con_profile.commit_changes_async,
+            save_to_disk,
+            self._mainloop.cancellable,
+            _commit_changes_callback,
+            user_data,
+        )
+
+    @property
+    def profile(self):
+        return self._con_profile
+
+
+def create_profile(settings):
+    con_profile = ConnectionProfile()
+    con_profile.create(settings)
+    return con_profile.profile
 
 
 def add_profile(connection_profile, save_to_disk=True):
-    client = nmclient.client()
-    mainloop = nmclient.mainloop()
-    user_data = mainloop
-    mainloop.push_action(
-        client.add_connection_async,
-        connection_profile,
-        save_to_disk,
-        mainloop.cancellable,
-        _add_connection_callback,
-        user_data,
-    )
+    con_profile = ConnectionProfile(connection_profile)
+    con_profile.add(save_to_disk)
 
 
 def _add_connection_callback(src_object, result, user_data):
@@ -65,19 +106,13 @@ def _add_connection_callback(src_object, result, user_data):
 
 
 def update_profile(base_profile, new_profile):
-    base_profile.replace_settings_from_connection(new_profile)
+    con_profile = ConnectionProfile(base_profile)
+    con_profile.update(ConnectionProfile(new_profile))
 
 
 def commit_profile(connection_profile, save_to_disk=True, nmdev=None):
-    mainloop = nmclient.mainloop()
-    user_data = mainloop, nmdev
-    mainloop.push_action(
-        connection_profile.commit_changes_async,
-        save_to_disk,
-        mainloop.cancellable,
-        _commit_changes_callback,
-        user_data,
-    )
+    con_profile = ConnectionProfile(connection_profile)
+    con_profile.commit(save_to_disk, nmdev)
 
 
 def _commit_changes_callback(src_object, result, user_data):
@@ -135,10 +170,9 @@ def set_master_setting(con_setting, master, slave_type):
 
 
 def get_device_connection(nm_device):
-    act_connection = get_device_active_connection(nm_device)
-    if act_connection:
-        return act_connection.props.connection
-    return None
+    con_profile = ConnectionProfile()
+    con_profile.import_by_device(nm_device)
+    return con_profile.profile
 
 
 def get_device_active_connection(nm_device):
@@ -149,11 +183,9 @@ def get_device_active_connection(nm_device):
 
 
 def get_connection_by_id(connection_id):
-    client = nmclient.client()
-    conn = None
-    if connection_id:
-        conn = client.get_connection_by_id(connection_id)
-    return conn
+    con_profile = ConnectionProfile()
+    con_profile.import_by_id(connection_id)
+    return con_profile.profile
 
 
 def _logging_connection_info(con_setting, source):
