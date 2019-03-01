@@ -1,18 +1,28 @@
-dist: xenial
-language: python
-python:
-  - 3.6
+language: generic
+env:
+    matrix:
+        - TEST_TYPE=integ DOCKER_IMAGE=nmstate/centos7-nmstate-dev
+        - TEST_TYPE=integ DOCKER_IMAGE=nmstate/fedora-nmstate-dev
+        - TEST_TYPE=unit_code_style DOCKER_IMAGE=nmstate/fedora-nmstate-dev
+        - TEST_TYPE=unit_py27 DOCKER_IMAGE=nmstate/fedora-nmstate-dev
+        - TEST_TYPE=unit_py36 DOCKER_IMAGE=nmstate/fedora-nmstate-dev
+        - TEST_TYPE=unit_py37 DOCKER_IMAGE=nmstate/fedora-nmstate-dev
+
+matrix:
+    allow_failures:
+        - env: TEST_TYPE=integ DOCKER_IMAGE=nmstate/centos7-nmstate-dev
 
 addons:
   apt:
     packages:
-    - libgirepository1.0-dev
+        - realpath
 
-install:
-  - pip install tox
+services:
+    - docker
+
+before_install:
+    - docker pull $DOCKER_IMAGE
 
 script:
-  - tox -e flake8,pylint,check-py27,check-py36
-
-after_success:
-  - tox -e coveralls
+    - sudo modprobe openvswitch
+    - ./automation/run-tests.sh
