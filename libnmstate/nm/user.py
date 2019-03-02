@@ -56,12 +56,13 @@ def get_info(device):
     """
     info = {}
 
-    connection = nm_connection.get_device_connection(device)
-    if not connection:
+    connection = nm_connection.ConnectionProfile()
+    connection.import_by_device(device)
+    if not connection.profile:
         return info
 
     try:
-        user_setting = connection.get_setting_by_name(
+        user_setting = connection.profile.get_setting_by_name(
             nmclient.NM.SETTING_USER_SETTING_NAME)
         description = user_setting.get_data(NMSTATE_DESCRIPTION)
         if description:

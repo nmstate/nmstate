@@ -58,17 +58,15 @@ def nm_ovs_mock():
         yield m
 
 
-def test_create_new_ifaces(nm_connection_mock):
-    con_profiles = ['profile1', 'profile2']
+@mock.patch.object(nm.connection, 'ConnectionProfile')
+def test_create_new_ifaces(con_profile_mock):
+    con_profiles = [con_profile_mock(), con_profile_mock()]
 
     nm.applier.create_new_ifaces(con_profiles)
 
-    nm_connection_mock.add_profile.assert_has_calls(
-        [
-            mock.call(con_profiles[0], save_to_disk=True),
-            mock.call(con_profiles[1], save_to_disk=True)
-        ]
-    )
+    for con_profile in con_profiles:
+        con_profile.add.assert_has_calls(
+            [mock.call(save_to_disk=True)])
 
 
 @mock.patch.object(nm.translator.Api2Nm, 'get_iface_type',
@@ -105,57 +103,54 @@ def test_prepare_new_ifaces_configuration(nm_bond_mock,
 
     nm.applier.prepare_new_ifaces_configuration(ifaces_desired_state)
 
-    con_setting = nm_connection_mock.create_setting.return_value
-    nm_connection_mock.set_master_setting.assert_has_calls(
+    con_setting = nm_connection_mock.ConnectionSetting.return_value
+    con_setting.set_master.assert_has_calls(
         [
-            mock.call(con_setting, 'bond99', 'bond'),
-            mock.call(con_setting, None, None)
+            mock.call('bond99', 'bond'),
+            mock.call(None, None)
         ],
         any_order=True
     )
-    nm_connection_mock.create_profile.assert_has_calls(
+    con_profile = nm_connection_mock.ConnectionProfile.return_value
+    con_profile.create.assert_has_calls(
         [
             mock.call([
                 nm_ipv4_mock.create_setting.return_value,
                 nm_ipv6_mock.create_setting.return_value,
-                con_setting,
+                con_setting.setting,
             ]),
             mock.call([
                 nm_ipv4_mock.create_setting.return_value,
                 nm_ipv6_mock.create_setting.return_value,
-                con_setting,
+                con_setting.setting,
                 nm_bond_mock.create_setting.return_value,
             ])
         ]
     )
 
 
-def test_edit_existing_ifaces_with_profile(nm_device_mock, nm_connection_mock):
-    con_profiles = [mock.MagicMock(), mock.MagicMock()]
+@mock.patch.object(nm.connection, 'ConnectionProfile')
+def test_edit_existing_ifaces_with_profile(con_profile_mock, nm_device_mock):
+    con_profiles = [con_profile_mock(), con_profile_mock()]
 
     nm.applier.edit_existing_ifaces(con_profiles)
 
-    nm_connection_mock.commit_profile.assert_has_calls(
-        [mock.call(con_profiles[0],
-                   nmdev=nm_device_mock.get_device_by_name.return_value),
-         mock.call(con_profiles[1],
-                   nmdev=nm_device_mock.get_device_by_name.return_value)]
-    )
+    for con_profile in con_profiles:
+        con_profile.commit.assert_has_calls(
+            [mock.call(nmdev=nm_device_mock.get_device_by_name.return_value)])
 
 
-def test_edit_existing_ifaces_without_profile(nm_device_mock,
-                                              nm_connection_mock):
+@mock.patch.object(nm.connection, 'ConnectionProfile')
+def test_edit_existing_ifaces_without_profile(con_profile_mock,
+                                              nm_device_mock):
     con_profiles = [mock.MagicMock(), mock.MagicMock()]
-    nm_connection_mock.get_device_connection.return_value = None
+    con_profile_mock.return_value.profile = None
 
     nm.applier.edit_existing_ifaces(con_profiles)
 
-    nm_connection_mock.add_profile.assert_has_calls(
-        [
-            mock.call(con_profiles[0], save_to_disk=True),
-            mock.call(con_profiles[1], save_to_disk=True)
-        ]
-    )
+    for con_profile in con_profiles:
+        con_profile.add.assert_has_calls(
+            [mock.call(save_to_disk=True)])
 
 
 @mock.patch.object(nm.translator.Api2Nm, 'get_iface_type',
@@ -179,10 +174,10 @@ def test_prepare_edited_ifaces_configuration(nm_device_mock,
 
     assert len(cons) == 1
 
-    nm_connection_mock.update_profile.assert_has_calls(
+    con_profile = nm_connection_mock.ConnectionProfile.return_value
+    con_profile.update.assert_has_calls(
         [
-            mock.call(nm_connection_mock.get_device_connection.return_value,
-                      nm_connection_mock.create_profile.return_value),
+            mock.call(con_profile),
         ]
     )
 

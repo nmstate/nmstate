@@ -54,7 +54,8 @@ def _get_vlan_current_state(vlan_desired_state):
 
 def _create_vlan(vlan_desired_state):
     ifname = _get_vlan_ifname(vlan_desired_state)
-    con_setting = nm.connection.create_setting(
+    con_setting = nm.connection.ConnectionSetting()
+    con_setting.create(
         con_name=ifname,
         iface_name=ifname,
         iface_type=nm.nmclient.NM.SETTING_VLAN_SETTING_NAME,
@@ -64,9 +65,10 @@ def _create_vlan(vlan_desired_state):
     ipv4_setting = nm.ipv4.create_setting({}, None)
     ipv6_setting = nm.ipv6.create_setting({}, None)
     with mainloop():
-        con_profile = nm.connection.create_profile(
-            (con_setting, vlan_setting, ipv4_setting, ipv6_setting))
-        nm.connection.add_profile(con_profile, save_to_disk=False)
+        con_profile = nm.connection.ConnectionProfile()
+        con_profile.create(
+            (con_setting.setting, vlan_setting, ipv4_setting, ipv6_setting))
+        con_profile.add(save_to_disk=False)
         nm.device.activate(connection_id=ifname)
 
 

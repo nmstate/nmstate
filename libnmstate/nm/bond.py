@@ -49,9 +49,10 @@ def get_bond_info(nm_device):
 
 
 def get_options(nm_device):
-    con = connection.get_device_connection(nm_device)
-    if con:
-        bond_settings = con.get_setting_bond()
+    con = connection.ConnectionProfile()
+    con.import_by_device(nm_device)
+    if con.profile:
+        bond_settings = con.profile.get_setting_bond()
         return bond_settings.props.options
     return {}
 

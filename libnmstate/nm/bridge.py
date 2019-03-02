@@ -128,9 +128,10 @@ def get_slaves(nm_device):
 
 def _get_bridge_setting(nmdev):
     bridge_setting = None
-    bridge_profile = connection.get_device_connection(nmdev)
-    if bridge_profile:
-        bridge_setting = bridge_profile.get_setting_bridge()
+    bridge_con_profile = connection.ConnectionProfile()
+    bridge_con_profile.import_by_device(nmdev)
+    if bridge_con_profile.profile:
+        bridge_setting = bridge_con_profile.profile.get_setting_bridge()
     return bridge_setting
 
 

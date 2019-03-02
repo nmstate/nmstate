@@ -195,9 +195,10 @@ def _get_bridge_port_info(port_profile, devices_info):
 
 def _get_bridge_options(bridge_device):
     bridge_options = {}
-    con = connection.get_device_connection(bridge_device)
-    if con:
-        bridge_setting = con.get_setting(nmclient.NM.SettingOvsBridge)
+    con = connection.ConnectionProfile()
+    con.import_by_device(bridge_device)
+    if con.profile:
+        bridge_setting = con.profile.get_setting(nmclient.NM.SettingOvsBridge)
         bridge_options['stp'] = bridge_setting.props.stp_enable
         bridge_options['rstp'] = bridge_setting.props.rstp_enable
         bridge_options['fail-mode'] = bridge_setting.props.fail_mode or ''
