@@ -116,27 +116,6 @@ class ConnectionProfile(object):
                           'dev={}, error=unknown'.format(devname))
 
 
-def create_profile(settings):
-    con_profile = ConnectionProfile()
-    con_profile.create(settings)
-    return con_profile.profile
-
-
-def add_profile(connection_profile, save_to_disk=True):
-    con_profile = ConnectionProfile(connection_profile)
-    con_profile.add(save_to_disk)
-
-
-def update_profile(base_profile, new_profile):
-    con_profile = ConnectionProfile(base_profile)
-    con_profile.update(ConnectionProfile(new_profile))
-
-
-def commit_profile(connection_profile, save_to_disk=True, nmdev=None):
-    con_profile = ConnectionProfile(connection_profile)
-    con_profile.commit(save_to_disk, nmdev)
-
-
 class ConnectionSetting(object):
 
     def __init__(self, con_setting=None):
@@ -199,37 +178,8 @@ class ConnectionSetting(object):
         )
 
 
-def create_setting(con_name, iface_name, iface_type):
-    con_setting = ConnectionSetting()
-    con_setting.create(con_name, iface_name, iface_type)
-    return con_setting.setting
-
-
-def duplicate_settings(base_connection_profile):
-    con_setting = ConnectionSetting()
-    con_setting.import_by_profile(base_connection_profile)
-    return con_setting.setting
-
-
-def set_master_setting(con_setting, master, slave_type):
-    setting = ConnectionSetting(con_setting)
-    setting.set_master(master, slave_type)
-
-
-def get_device_connection(nm_device):
-    con_profile = ConnectionProfile()
-    con_profile.import_by_device(nm_device)
-    return con_profile.profile
-
-
 def get_device_active_connection(nm_device):
     active_conn = None
     if nm_device:
         active_conn = nm_device.get_active_connection()
     return active_conn
-
-
-def get_connection_by_id(connection_id):
-    con_profile = ConnectionProfile()
-    con_profile.import_by_id(connection_id)
-    return con_profile.profile

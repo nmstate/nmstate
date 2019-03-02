@@ -160,7 +160,8 @@ def test_create_port_setting(NM_mock):
 
 
 def _mock_port_profile(nm_connection_mock):
-    connection_profile = nm_connection_mock.get_device_connection.return_value
+    con_prof_mock = nm_connection_mock.ConnectionProfile.return_value
+    connection_profile = con_prof_mock.profile
     bridge_setting = connection_profile.get_setting.return_value
     bridge_setting.props.stp_enable = False
     bridge_setting.props.rstp_enable = False

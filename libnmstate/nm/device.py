@@ -118,8 +118,9 @@ def _safe_activate_async(dev, connection_id):
     mainloop = nmclient.mainloop()
     cancellable = mainloop.new_cancellable()
 
-    conn = connection.get_connection_by_id(connection_id)
-    if conn:
+    conn = connection.ConnectionProfile()
+    conn.import_by_id(connection_id)
+    if conn.profile:
         dev = None
     active_conn = connection.get_device_active_connection(dev)
     if active_conn:
@@ -134,7 +135,7 @@ def _safe_activate_async(dev, connection_id):
     specific_object = None
     user_data = mainloop, dev, connection_id, cancellable
     client.activate_connection_async(
-        conn,
+        conn.profile,
         dev,
         specific_object,
         cancellable,
@@ -302,12 +303,14 @@ def _safe_delete_async(dev, connection_id=None):
     if dev:
         connections = dev.get_available_connections()
         if not connections:
-            con = connection.get_connection_by_id(dev.get_iface())
-            if con:
-                connections = [con]
+            conn = connection.ConnectionProfile()
+            conn.import_by_id(dev.get_iface())
+            if conn.profile:
+                connections = [conn.profile]
     else:
-        conn = connection.get_connection_by_id(connection_id)
-        connections = [conn] if conn else []
+        conn = connection.ConnectionProfile()
+        conn.import_by_id(connection_id)
+        connections = [conn.profile] if conn.profile else []
     mainloop = nmclient.mainloop()
     if not connections:
         # No callback is expected, so we should call the next one.

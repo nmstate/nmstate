@@ -1,5 +1,5 @@
 #
-# Copyright 2018 Red Hat, Inc.
+# Copyright 2018-2019 Red Hat, Inc.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -122,28 +122,33 @@ def _create_bridge(bridge_desired_state):
 
 def _attach_port_to_bridge(port_state):
     eth1_nmdev = nm.device.get_device_by_name(port_state['name'])
-    curr_port_con_profile = nm.connection.get_device_connection(eth1_nmdev)
+    curr_port_con_profile = nm.connection.ConnectionProfile()
+    curr_port_con_profile.import_by_device(eth1_nmdev)
     iface_port_settings = _get_iface_port_settings(port_state,
                                                    curr_port_con_profile)
-    port_con_profile = nm.connection.create_profile(iface_port_settings)
-    nm.connection.update_profile(curr_port_con_profile, port_con_profile)
-    nm.connection.commit_profile(curr_port_con_profile, nmdev=eth1_nmdev)
+    port_con_profile = nm.connection.ConnectionProfile()
+    port_con_profile.create(iface_port_settings)
+
+    curr_port_con_profile.update(port_con_profile)
+    curr_port_con_profile.commit(nmdev=eth1_nmdev)
     nm.device.activate(connection_id=port_state[LB.PORT_NAME])
 
 
 def _create_bridge_iface(iface_bridge_settings):
-    br_con_profile = nm.connection.create_profile(iface_bridge_settings)
-    nm.connection.add_profile(br_con_profile, save_to_disk=False)
+    br_con_profile = nm.connection.ConnectionProfile()
+    br_con_profile.create(iface_bridge_settings)
+    br_con_profile.add(save_to_disk=False)
     nm.device.activate(connection_id=BRIDGE0)
 
 
 def _get_iface_port_settings(port_state, port_con_profile):
-    port_con_setting = nm.connection.duplicate_settings(port_con_profile)
+    con_setting = nm.connection.ConnectionSetting()
+    con_setting.import_by_profile(port_con_profile.profile)
+    con_setting.set_master(BRIDGE0, 'bridge')
 
-    nm.connection.set_master_setting(port_con_setting, BRIDGE0, 'bridge')
-    bridge_port_setting = nm.bridge.create_port_setting(port_state,
-                                                        port_con_profile)
-    return port_con_setting, bridge_port_setting
+    bridge_port_setting = nm.bridge.create_port_setting(
+        port_state, port_con_profile.profile)
+    return con_setting.setting, bridge_port_setting
 
 
 def _delete_iface(devname):
@@ -154,7 +159,8 @@ def _delete_iface(devname):
 
 
 def _get_iface_bridge_settings(bridge_options):
-    bridge_con_setting = nm.connection.create_setting(
+    con_setting = nm.connection.ConnectionSetting()
+    con_setting.create(
         con_name=BRIDGE0,
         iface_name=BRIDGE0,
         iface_type=nm.nmclient.NM.SETTING_BRIDGE_SETTING_NAME,
@@ -163,4 +169,4 @@ def _get_iface_bridge_settings(bridge_options):
                                               base_con_profile=None)
     ipv4_setting = nm.ipv4.create_setting({}, None)
     ipv6_setting = nm.ipv6.create_setting({}, None)
-    return bridge_con_setting, bridge_setting, ipv4_setting, ipv6_setting
+    return con_setting.setting, bridge_setting, ipv4_setting, ipv6_setting

@@ -42,18 +42,20 @@ def mainloop_mock():
 
 def test_create_profile(NM_mock):
     settings = [11, 22]
-    profile = nm.connection.create_profile(settings)
+    con_profile = nm.connection.ConnectionProfile()
+    con_profile.create(settings)
 
     con_profile_mock = NM_mock.SimpleConnection.new.return_value
 
     con_profile_mock.add_setting.assert_has_calls(
         [mock.call(settings[0]), mock.call(settings[1])])
-    assert con_profile_mock == profile
+    assert con_profile_mock == con_profile.profile
 
 
 def test_add_profile(client_mock, mainloop_mock):
     save_to_disk = True
-    nm.connection.add_profile('profile', save_to_disk)
+    con_profile = nm.connection.ConnectionProfile('profile')
+    con_profile.add(save_to_disk)
 
     mainloop_mock.push_action.assert_called_once_with(
         client_mock.add_connection_async,
@@ -66,20 +68,23 @@ def test_add_profile(client_mock, mainloop_mock):
 
 
 def test_update_profile():
-    base_profile = mock.MagicMock()
+    base_profile = nm.connection.ConnectionProfile('p')
 
-    nm.connection.update_profile(base_profile, 'p')
+    profile = mock.MagicMock()
+    con_profile = nm.connection.ConnectionProfile(profile)
+    con_profile.update(base_profile)
 
-    base_profile.replace_settings_from_connection.assert_called_once_with('p')
+    profile.replace_settings_from_connection.assert_called_once_with('p')
 
 
 def test_commit_profile(mainloop_mock):
-    con_profile = mock.MagicMock()
+    profile = mock.MagicMock()
     save_to_disk = True
-    nm.connection.commit_profile(con_profile, save_to_disk)
+    con_profile = nm.connection.ConnectionProfile(profile)
+    con_profile.commit(save_to_disk)
 
     mainloop_mock.push_action.assert_called_once_with(
-        con_profile.commit_changes_async,
+        profile.commit_changes_async,
         save_to_disk,
         mainloop_mock.cancellable,
         nm.connection.ConnectionProfile._commit_changes_callback,
@@ -88,46 +93,47 @@ def test_commit_profile(mainloop_mock):
 
 
 def test_create_setting(NM_mock):
-    con_setting = nm.connection.create_setting(
-        'con-name', 'iface-name', 'iface-type')
+    con_setting = nm.connection.ConnectionSetting()
+    con_setting.create('con-name', 'iface-name', 'iface-type')
 
-    assert con_setting.props.id == 'con-name'
-    assert con_setting.props.interface_name == 'iface-name'
-    assert con_setting.props.uuid
-    assert con_setting.props.type == 'iface-type'
-    assert con_setting.props.autoconnect is True
-    assert con_setting.props.autoconnect_slaves == (
+    assert con_setting.setting.props.id == 'con-name'
+    assert con_setting.setting.props.interface_name == 'iface-name'
+    assert con_setting.setting.props.uuid
+    assert con_setting.setting.props.type == 'iface-type'
+    assert con_setting.setting.props.autoconnect is True
+    assert con_setting.setting.props.autoconnect_slaves == (
         NM_mock.SettingConnectionAutoconnectSlaves.YES)
 
 
 def test_duplicate_settings(NM_mock):
     base_con_profile_mock = mock.MagicMock()
 
-    new_con = nm.connection.duplicate_settings(base_con_profile_mock)
+    new_con_setting = nm.connection.ConnectionSetting()
+    new_con_setting.import_by_profile(base_con_profile_mock)
 
-    base_con = base_con_profile_mock.get_setting_connection.return_value
-
-    assert new_con.props.id == base_con.props.id
-    assert new_con.props.interface_name == base_con.props.interface_name
-    assert new_con.props.uuid == base_con.props.uuid
-    assert new_con.props.type == base_con.props.type
-    assert new_con.props.autoconnect is True
-    assert new_con.props.autoconnect_slaves == (
-        base_con.props.autoconnect_slaves)
+    base = base_con_profile_mock.get_setting_connection.return_value
+    new = new_con_setting.setting
+    assert new.props.id == base.props.id
+    assert new.props.interface_name == base.props.interface_name
+    assert new.props.uuid == base.props.uuid
+    assert new.props.type == base.props.type
+    assert new.props.autoconnect is True
+    assert new.props.autoconnect_slaves == base.props.autoconnect_slaves
 
 
 def test_set_master_setting():
-    con_setting_mock = mock.MagicMock()
+    con_setting = nm.connection.ConnectionSetting(mock.MagicMock())
+    con_setting.set_master('master0', 'slave-type')
 
-    nm.connection.set_master_setting(con_setting_mock, 'master0', 'slave-type')
-
-    assert con_setting_mock.props.master == 'master0'
-    assert con_setting_mock.props.slave_type == 'slave-type'
+    assert con_setting.setting.props.master == 'master0'
+    assert con_setting.setting.props.slave_type == 'slave-type'
 
 
 def test_get_device_connection():
     dev_mock = mock.MagicMock()
 
-    con = nm.connection.get_device_connection(dev_mock)
+    con = nm.connection.ConnectionProfile()
+    con.import_by_device(dev_mock)
 
-    assert dev_mock.get_active_connection.return_value.props.connection == con
+    assert (dev_mock.get_active_connection.return_value.props.connection ==
+            con.profile)
