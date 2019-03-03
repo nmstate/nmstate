@@ -39,23 +39,14 @@ def mainloop_mock():
         yield m.return_value
 
 
-@mock.patch.object(nm.device.connection, 'get_device_active_connection',
-                   return_value=None)
-def test_activate(NM_mock, client_mock, mainloop_mock):
+@mock.patch.object(nm.device.connection, 'ConnectionProfile')
+def test_activate(con_profile_mock):
     dev = mock.MagicMock()
-    mainloop_mock.push_action = lambda func, dev, con_id: func(dev, con_id)
-    cancellable = mainloop_mock.new_cancellable()
+    con_profile = con_profile_mock()
 
     nm.device.activate(dev)
 
-    client_mock.activate_connection_async.assert_called_once_with(
-        None,
-        dev,
-        None,
-        cancellable,
-        nm.device._active_connection_callback,
-        (mainloop_mock, dev, None, cancellable),
-    )
+    con_profile.activate.assert_called_once_with(dev, None)
 
 
 def test_deactivate(NM_mock, client_mock, mainloop_mock):
