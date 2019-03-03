@@ -24,7 +24,9 @@ from . import nmclient
 def activate(dev=None, connection_id=None):
     """Activate the given device or remote connection profile."""
     conn = connection.ConnectionProfile()
-    conn.activate(dev, connection_id)
+    conn.nmdevice = dev
+    conn.con_id = connection_id
+    conn.activate()
 
 
 def deactivate(dev):
