@@ -19,6 +19,7 @@ import logging
 import uuid
 
 from . import nmclient
+from .active_connection import ActiveConnection
 
 
 class ConnectionProfile(object):
@@ -27,6 +28,8 @@ class ConnectionProfile(object):
         self._con_profile = profile
         self._nmclient = nmclient.client()
         self._mainloop = nmclient.mainloop()
+        self._nmdevice = None
+        self._con_id = None
 
     def create(self, settings):
         self._con_profile = nmclient.NM.SimpleConnection.new()
@@ -38,11 +41,13 @@ class ConnectionProfile(object):
         ac = get_device_active_connection(nmdev)
         if ac:
             self._con_profile = ac.props.connection
+            self._nmdevice = nmdev
 
     def import_by_id(self, con_id):
         self._con_profile = None
         if con_id:
             self._con_profile = self._nmclient.get_connection_by_id(con_id)
+            self._con_id = con_id
 
     def update(self, con_profile):
         self._con_profile.replace_settings_from_connection(con_profile.profile)
@@ -68,6 +73,10 @@ class ConnectionProfile(object):
             user_data,
         )
 
+    def activate(self, dev=None, connection_id=None):
+        self._mainloop.push_action(
+            self._safe_activate_async, dev, connection_id)
+
     @property
     def profile(self):
         return self._con_profile
@@ -77,6 +86,131 @@ class ConnectionProfile(object):
         if self._con_profile:
             return self._con_profile.get_interface_name()
         return None
+
+    def _safe_activate_async(self, dev, connection_id):
+        if connection_id:
+            self.import_by_id(connection_id)
+        elif dev:
+            self.import_by_device(dev)
+        elif not self._con_profile:
+            err_msg = (
+                'Missing base properties: profile={}, id={}, dev={}'.format(
+                    self._con_profile, connection_id, dev)
+            )
+            self._mainloop.quit(err_msg)
+
+        cancellable = self._mainloop.new_cancellable()
+
+        active_conn = get_device_active_connection(dev)
+        if active_conn:
+            ac = ActiveConnection(active_conn)
+            if ac.is_activating:
+                logging.debug(
+                    'Connection activation in progress: dev=%s, state=%s',
+                    ac.devname, ac.state)
+                self._waitfor_active_connection_async(ac)
+                return
+
+        specific_object = None
+        user_data = cancellable
+        self._nmclient.activate_connection_async(
+            self.profile,
+            dev,
+            specific_object,
+            cancellable,
+            self._active_connection_callback,
+            user_data,
+        )
+
+    def _active_connection_callback(self, src_object, result, user_data):
+        cancellable = user_data
+        self._mainloop.drop_cancellable(cancellable)
+
+        try:
+            nm_act_con = src_object.activate_connection_finish(result)
+        except Exception as e:
+            act_type, act_object = self._get_activation_metadata()
+
+            if self._mainloop.is_action_canceled(e):
+                logging.debug(
+                    'Connection activation canceled on %s %s: error=%s',
+                    act_type, act_object, e)
+            elif self._is_connection_unavailable(e):
+                logging.warning('Connection unavailable on %s %s, retrying',
+                                act_type, act_object)
+                self._mainloop.execute_last_action()
+            else:
+                self._mainloop.quit(
+                    'Connection activation failed on {} {}: error={}'.format(
+                        act_type, act_object, e))
+            return
+
+        if nm_act_con is None:
+            act_type, act_object = self._get_activation_metadata()
+            self._mainloop.quit(
+                'Connection activation failed on {} {}: error=unknown'.format(
+                    act_type, act_object)
+            )
+        else:
+            devname = nm_act_con.props.connection.get_interface_name()
+            logging.debug(
+                'Connection activation initiated: dev=%s, con-state=%s',
+                devname, nm_act_con.props.state)
+
+            ac = ActiveConnection(nm_act_con)
+            if ac.is_active:
+                self._mainloop.execute_next_action()
+            elif ac.is_activating:
+                self._waitfor_active_connection_async(ac)
+            else:
+                self._mainloop.quit(
+                    'Connection activation failed on {}: reason={}'.format(
+                        ac.devname, ac.reason))
+
+    @staticmethod
+    def _is_connection_unavailable(err):
+        return (isinstance(err, nmclient.GLib.GError) and
+                err.domain == 'nm-manager-error-quark' and
+                err.code == 2 and
+                'is not available on the device' in err.message)
+
+    def _get_activation_metadata(self):
+        if self._nmdevice:
+            activation_type = 'device'
+            activation_object = self._nmdevice.get_iface()
+        elif self._con_id:
+            activation_type = 'connection_id'
+            activation_object = self._con_id
+        else:
+            activation_type = activation_object = 'unknown'
+
+        return activation_type, activation_object
+
+    def _waitfor_active_connection_async(self, ac):
+        ac.handlers.add(
+            ac.nm_active_connection.connect(
+                'state-changed', self._waitfor_active_connection_callback, ac)
+        )
+
+    def _waitfor_active_connection_callback(self,
+                                            nm_act_con,
+                                            state,
+                                            reason,
+                                            ac):
+        ac.refresh_state()
+        if ac.is_active:
+            logging.debug(
+                'Connection activation succeeded: dev=%s, con-state=%s',
+                ac.devname, ac.state)
+            for handler_id in ac.handlers:
+                ac.nm_active_connection.handler_disconnect(handler_id)
+            self._mainloop.execute_next_action()
+        elif not ac.is_activating:
+            for handler_id in ac.handlers:
+                ac.nm_active_connection.handler_disconnect(handler_id)
+            self._mainloop.quit(
+                'Connection activation failed on {}: reason={}'.format(
+                    ac.devname, ac.reason))
 
     @staticmethod
     def _add_connection_callback(src_object, result, user_data):
