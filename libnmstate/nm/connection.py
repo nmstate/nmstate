@@ -32,31 +32,31 @@ class ConnectionProfile(object):
         self._con_id = None
 
     def create(self, settings):
-        self._con_profile = nmclient.NM.SimpleConnection.new()
+        self.profile = nmclient.NM.SimpleConnection.new()
         for setting in settings:
-            self._con_profile.add_setting(setting)
+            self.profile.add_setting(setting)
 
-    def import_by_device(self, nmdev):
-        self._con_profile = None
-        ac = get_device_active_connection(nmdev)
+    def import_by_device(self, nmdev=None):
+        ac = get_device_active_connection(nmdev or self.nmdevice)
         if ac:
-            self._con_profile = ac.props.connection
-            self._nmdevice = nmdev
+            if nmdev:
+                self.nmdevice = nmdev
+            self.profile = ac.props.connection
 
-    def import_by_id(self, con_id):
-        self._con_profile = None
+    def import_by_id(self, con_id=None):
         if con_id:
-            self._con_profile = self._nmclient.get_connection_by_id(con_id)
-            self._con_id = con_id
+            self.con_id = con_id
+        if self.con_id:
+            self.profile = self._nmclient.get_connection_by_id(self.con_id)
 
     def update(self, con_profile):
-        self._con_profile.replace_settings_from_connection(con_profile.profile)
+        self.profile.replace_settings_from_connection(con_profile.profile)
 
     def add(self, save_to_disk=True):
         user_data = self._mainloop
         self._mainloop.push_action(
             self._nmclient.add_connection_async,
-            self._con_profile,
+            self.profile,
             save_to_disk,
             self._mainloop.cancellable,
             self._add_connection_callback,
@@ -66,20 +66,25 @@ class ConnectionProfile(object):
     def commit(self, save_to_disk=True, nmdev=None):
         user_data = self._mainloop, nmdev
         self._mainloop.push_action(
-            self._con_profile.commit_changes_async,
+            self.profile.commit_changes_async,
             save_to_disk,
             self._mainloop.cancellable,
             self._commit_changes_callback,
             user_data,
         )
 
-    def activate(self, dev=None, connection_id=None):
+    def activate(self):
         self._mainloop.push_action(
-            self._safe_activate_async, dev, connection_id)
+            self._safe_activate_async)
 
     @property
     def profile(self):
         return self._con_profile
+
+    @profile.setter
+    def profile(self, con_profile):
+        assert self._con_profile is None
+        self._con_profile = con_profile
 
     @property
     def devname(self):
@@ -87,21 +92,39 @@ class ConnectionProfile(object):
             return self._con_profile.get_interface_name()
         return None
 
-    def _safe_activate_async(self, dev, connection_id):
-        if connection_id:
-            self.import_by_id(connection_id)
-        elif dev:
-            self.import_by_device(dev)
-        elif not self._con_profile:
+    @property
+    def nmdevice(self):
+        return self._nmdevice
+
+    @nmdevice.setter
+    def nmdevice(self, dev):
+        assert self._nmdevice is None
+        self._nmdevice = dev
+
+    @property
+    def con_id(self):
+        return self._con_id
+
+    @con_id.setter
+    def con_id(self, connection_id):
+        assert self._con_id is None
+        self._con_id = connection_id
+
+    def _safe_activate_async(self):
+        if self.con_id:
+            self.import_by_id()
+        elif self.nmdevice:
+            self.import_by_device()
+        elif not self.profile:
             err_msg = (
                 'Missing base properties: profile={}, id={}, dev={}'.format(
-                    self._con_profile, connection_id, dev)
+                    self.profile, self.con_id, self.nmdevice)
             )
             self._mainloop.quit(err_msg)
 
         cancellable = self._mainloop.new_cancellable()
 
-        active_conn = get_device_active_connection(dev)
+        active_conn = get_device_active_connection(self.nmdevice)
         if active_conn:
             ac = ActiveConnection(active_conn)
             if ac.is_activating:
@@ -115,7 +138,7 @@ class ConnectionProfile(object):
         user_data = cancellable
         self._nmclient.activate_connection_async(
             self.profile,
-            dev,
+            self.nmdevice,
             specific_object,
             cancellable,
             self._active_connection_callback,
@@ -138,6 +161,7 @@ class ConnectionProfile(object):
             elif self._is_connection_unavailable(e):
                 logging.warning('Connection unavailable on %s %s, retrying',
                                 act_type, act_object)
+                self._reset_profile()
                 self._mainloop.execute_last_action()
             else:
                 self._mainloop.quit(
@@ -254,6 +278,9 @@ class ConnectionProfile(object):
         else:
             mainloop.quit('Connection update failed: '
                           'dev={}, error=unknown'.format(devname))
+
+    def _reset_profile(self):
+        self._con_profile = None
 
 
 class ConnectionSetting(object):

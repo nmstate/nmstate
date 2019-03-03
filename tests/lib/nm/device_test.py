@@ -46,7 +46,7 @@ def test_activate(con_profile_mock):
 
     nm.device.activate(dev)
 
-    con_profile.activate.assert_called_once_with(dev, None)
+    con_profile.activate.assert_called_once()
 
 
 def test_deactivate(NM_mock, client_mock, mainloop_mock):
