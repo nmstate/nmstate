@@ -103,5 +103,6 @@ def _remove_ovs_bridge_unsupported_entries(iface_info):
     """
     iface_info.pop(Interface.IPV4, None)
     iface_info.pop(Interface.IPV6, None)
+    iface_info.pop(Interface.MTU, None)
 
     return iface_info
