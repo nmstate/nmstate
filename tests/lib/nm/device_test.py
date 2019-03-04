@@ -49,20 +49,15 @@ def test_activate(con_profile_mock):
     con_profile.activate.assert_called_once()
 
 
-def test_deactivate(NM_mock, client_mock, mainloop_mock):
+@mock.patch.object(nm.device.ac, 'ActiveConnection')
+def test_deactivate(act_con_mock):
     dev = mock.MagicMock()
-    mainloop_mock.push_action = lambda func, dev: func(dev)
+    act_con = act_con_mock()
 
     nm.device.deactivate(dev)
 
-    dev.get_active_connection.assert_called_once()
-
-    client_mock.deactivate_connection_async.assert_called_once_with(
-        dev.get_active_connection.return_value,
-        mainloop_mock.cancellable,
-        nm.device._deactivate_connection_callback,
-        (mainloop_mock, dev),
-    )
+    assert act_con.nmdevice == dev
+    act_con.deactivate.assert_called_once()
 
 
 @mock.patch.object(nm.connection, 'ConnectionProfile')
