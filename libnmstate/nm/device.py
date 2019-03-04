@@ -90,12 +90,6 @@ def delete(dev):
         con_profile.delete()
 
 
-def delete_connection(connection_id):
-    con_profile = connection.ConnectionProfile()
-    con_profile.con_id = connection_id
-    con_profile.delete()
-
-
 def delete_device(nmdev):
     mainloop = nmclient.mainloop()
     mainloop.push_action(_safe_delete_device_async, nmdev)

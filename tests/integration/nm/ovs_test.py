@@ -235,7 +235,9 @@ def _delete_iface(devname):
                     nm.nmclient.NM.DeviceType.OVS_INTERFACE):
                 nm.device.delete_device(nmdev)
         else:
-            nm.device.delete_connection(devname)
+            con_profile = nm.connection.ConnectionProfile()
+            con_profile.con_id = devname
+            con_profile.delete()
 
 
 def _get_iface_bridge_settings(bridge_options):
