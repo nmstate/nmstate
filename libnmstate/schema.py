@@ -38,6 +38,8 @@ class Interface(object):
     IPV4 = 'ipv4'
     IPV6 = 'ipv6'
 
+    MTU = 'mtu'
+
 
 class Constants(object):
     INTERFACES = Interface.KEY
