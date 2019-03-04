@@ -63,6 +63,26 @@ class ConnectionProfile(object):
             user_data,
         )
 
+    def delete(self):
+        self._mainloop.push_action(self._safe_delete_async)
+
+    def _safe_delete_async(self):
+        if not self.profile:
+            self.import_by_id()
+            if not self.profile:
+                self.import_by_device()
+        if not self.profile:
+            # No callback is expected, so we should call the next one.
+            self._mainloop.execute_next_action()
+            return
+
+        user_data = None
+        self.profile.delete_async(
+            self._mainloop.cancellable,
+            self._delete_connection_callback,
+            user_data,
+        )
+
     def commit(self, save_to_disk=True, nmdev=None):
         user_data = self._mainloop, nmdev
         self._mainloop.push_action(
@@ -256,6 +276,33 @@ class ConnectionProfile(object):
             devname = con.get_interface_name()
             logging.debug('Connection adding succeeded: dev=%s', devname)
             mainloop.execute_next_action()
+
+    def _delete_connection_callback(self, src_object, result, user_data):
+        try:
+            success = src_object.delete_finish(result)
+        except Exception as e:
+            if self.nmdevice:
+                target = 'dev/' + str(self.nmdevice.get_iface())
+            else:
+                target = 'con/' + str(self.con_id)
+
+            if self._mainloop.is_action_canceled(e):
+                logging.debug('Connection deletion aborted on %s: error=%s',
+                              target, e)
+            else:
+                self._mainloop.quit(
+                    'Connection deletion failed on {}: error={}'.format(
+                        target, e))
+            return
+
+        devname = src_object.get_interface_name()
+        if success:
+            logging.debug('Connection deletion succeeded: dev=%s', devname)
+            self._mainloop.execute_next_action()
+        else:
+            self._mainloop.quit(
+                'Connection deletion failed: '
+                'dev={}, error=unknown'.format(devname))
 
     @staticmethod
     def _commit_changes_callback(src_object, result, user_data):
