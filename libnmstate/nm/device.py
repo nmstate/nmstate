@@ -84,67 +84,16 @@ def _deactivate_connection_callback(src_object, result, user_data):
 
 
 def delete(dev):
-    mainloop = nmclient.mainloop()
-    mainloop.push_action(_safe_delete_async, dev)
-
-
-# FIXME: Move the connection related functionality to the connection module.
-def delete_connection(connection_id):
-    mainloop = nmclient.mainloop()
-    mainloop.push_action(
-        _safe_delete_async, dev=None, connection_id=connection_id)
-
-
-def _safe_delete_async(dev, connection_id=None):
-    """Removes all device profiles."""
-    if dev:
-        connections = dev.get_available_connections()
-        if not connections:
-            conn = connection.ConnectionProfile()
-            conn.import_by_id(dev.get_iface())
-            if conn.profile:
-                connections = [conn.profile]
-    else:
-        conn = connection.ConnectionProfile()
-        conn.import_by_id(connection_id)
-        connections = [conn.profile] if conn.profile else []
-    mainloop = nmclient.mainloop()
-    if not connections:
-        # No callback is expected, so we should call the next one.
-        mainloop.execute_next_action()
-        return
-
-    user_data = mainloop, dev
+    connections = dev.get_available_connections()
     for con in connections:
-        con.delete_async(
-            mainloop.cancellable,
-            _delete_connection_callback,
-            user_data,
-        )
+        con_profile = connection.ConnectionProfile(con)
+        con_profile.delete()
 
 
-def _delete_connection_callback(src_object, result, user_data):
-    mainloop, nmdev = user_data
-    try:
-        success = src_object.delete_finish(result)
-    except Exception as e:
-        if mainloop.is_action_canceled(e):
-            logging.debug('Connection deletion aborted on %s: error=%s',
-                          nmdev.get_iface(), e)
-        else:
-            mainloop.quit(
-                'Connection deletion failed on {}: error={}'.format(
-                    nmdev.get_iface(), e))
-        return
-
-    devname = src_object.get_interface_name()
-    if success:
-        logging.debug('Connection deletion succeeded: dev=%s', devname)
-        mainloop.execute_next_action()
-    else:
-        mainloop.quit(
-            'Connection deletion failed: '
-            'dev={}, error=unknown'.format(devname))
+def delete_connection(connection_id):
+    con_profile = connection.ConnectionProfile()
+    con_profile.con_id = connection_id
+    con_profile.delete()
 
 
 def delete_device(nmdev):

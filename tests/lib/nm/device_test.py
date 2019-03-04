@@ -65,20 +65,15 @@ def test_deactivate(NM_mock, client_mock, mainloop_mock):
     )
 
 
-def test_delete(mainloop_mock):
+@mock.patch.object(nm.connection, 'ConnectionProfile')
+def test_delete(con_profile_mock):
     dev = mock.MagicMock()
     dev.get_available_connections.return_value = [mock.MagicMock()]
-    mainloop_mock.push_action = lambda func, dev: func(dev)
+    con_profile = con_profile_mock()
+
     nm.device.delete(dev)
 
-    dev.get_available_connections.assert_called_once()
-    connections = dev.get_available_connections.return_value
-
-    connections[0].delete_async.assert_called_once_with(
-        mainloop_mock.cancellable,
-        nm.device._delete_connection_callback,
-        (mainloop_mock, dev)
-    )
+    con_profile.delete.assert_called_once()
 
 
 def test_get_device_by_name(client_mock):
