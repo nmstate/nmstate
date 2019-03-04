@@ -72,6 +72,12 @@ class ConnectionProfile(object):
     def profile(self):
         return self._con_profile
 
+    @property
+    def devname(self):
+        if self._con_profile:
+            return self._con_profile.get_interface_name()
+        return None
+
     @staticmethod
     def _add_connection_callback(src_object, result, user_data):
         mainloop = user_data
@@ -135,7 +141,7 @@ class ConnectionSetting(object):
         self._log_connection_info('ConnectionSetting.create')
 
     def import_by_profile(self, con_profile):
-        base = con_profile.get_setting_connection()
+        base = con_profile.profile.get_setting_connection()
         new = nmclient.NM.SettingConnection.new()
         new.props.id = base.props.id
         new.props.interface_name = base.props.interface_name

@@ -48,7 +48,7 @@ def prepare_new_ifaces_configuration(ifaces_desired_state):
 
 def edit_existing_ifaces(con_profiles):
     for connection_profile in con_profiles:
-        devname = connection_profile.profile.get_interface_name()
+        devname = connection_profile.devname
         nmdev = device.get_device_by_name(devname)
         cur_con_profile = None
         if nmdev:
@@ -72,7 +72,7 @@ def prepare_edited_ifaces_configuration(ifaces_desired_state):
             cur_con_profile.import_by_device(nmdev)
         new_con_profile = _build_connection_profile(
             iface_desired_state, base_con_profile=cur_con_profile)
-        if not new_con_profile.profile.get_interface_name():
+        if not new_con_profile.devname:
             set_conn = new_con_profile.profile.get_setting_connection()
             set_conn.props.interface_name = iface_desired_state['name']
         if cur_con_profile and cur_con_profile.profile:
@@ -165,7 +165,7 @@ def set_ifaces_admin_state(ifaces_desired_state, con_profiles=()):
 def _get_new_ifaces(con_profiles):
     ifaces_without_device = set()
     for con_profile in con_profiles:
-        ifname = con_profile.profile.get_interface_name()
+        ifname = con_profile.devname
         nmdev = device.get_device_by_name(ifname)
         if not nmdev:
             ifaces_without_device.add(ifname)
@@ -248,16 +248,15 @@ def _create_ovs_port_iface_desired_state(iface_desired_state, port_options):
 def _build_connection_profile(iface_desired_state, base_con_profile=None):
     iface_type = translator.Api2Nm.get_iface_type(iface_desired_state['type'])
 
-    if base_con_profile:
-        base_con_profile = base_con_profile.profile
+    base_profile = base_con_profile.profile if base_con_profile else None
 
     settings = [
-        ipv4.create_setting(iface_desired_state.get('ipv4'), base_con_profile),
-        ipv6.create_setting(iface_desired_state.get('ipv6'), base_con_profile),
+        ipv4.create_setting(iface_desired_state.get('ipv4'), base_profile),
+        ipv6.create_setting(iface_desired_state.get('ipv6'), base_profile),
     ]
 
     con_setting = connection.ConnectionSetting()
-    if base_con_profile:
+    if base_profile:
         con_setting.import_by_profile(base_con_profile)
     else:
         con_setting.create(
@@ -271,11 +270,11 @@ def _build_connection_profile(iface_desired_state, base_con_profile=None):
     con_setting.set_master(master, master_type)
     settings.append(con_setting.setting)
 
-    wired_setting = wired.create_setting(iface_desired_state, base_con_profile)
+    wired_setting = wired.create_setting(iface_desired_state, base_profile)
     if wired_setting:
         settings.append(wired_setting)
 
-    user_setting = user.create_setting(iface_desired_state, base_con_profile)
+    user_setting = user.create_setting(iface_desired_state, base_profile)
     if user_setting:
         settings.append(user_setting)
 
@@ -286,7 +285,7 @@ def _build_connection_profile(iface_desired_state, base_con_profile=None):
         bridge_options = iface_desired_state.get('bridge', {}).get('options')
         if bridge_options:
             linux_bridge_setting = bridge.create_setting(bridge_options,
-                                                         base_con_profile)
+                                                         base_profile)
             settings.append(linux_bridge_setting)
     elif iface_type == ovs.BRIDGE_TYPE:
         ovs_bridge_options = ovs.translate_bridge_options(iface_desired_state)
@@ -301,10 +300,10 @@ def _build_connection_profile(iface_desired_state, base_con_profile=None):
     bridge_port_options = iface_desired_state.get('_brport_options')
     if bridge_port_options and master_type == bridge.BRIDGE_TYPE:
         settings.append(
-            bridge.create_port_setting(bridge_port_options, base_con_profile)
+            bridge.create_port_setting(bridge_port_options, base_profile)
         )
 
-    vlan_setting = vlan.create_setting(iface_desired_state, base_con_profile)
+    vlan_setting = vlan.create_setting(iface_desired_state, base_profile)
     if vlan_setting:
         settings.append(vlan_setting)
 

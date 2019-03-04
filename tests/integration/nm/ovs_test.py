@@ -187,7 +187,7 @@ def _create_bridge_iface(iface_bridge_settings):
 
 def _create_iface_settings(iface_con_profile, port_master_name):
     iface_con_setting = nm.connection.ConnectionSetting()
-    iface_con_setting.import_by_profile(iface_con_profile.profile)
+    iface_con_setting.import_by_profile(iface_con_profile)
     iface_con_setting.set_master(port_master_name, nm.ovs.PORT_TYPE)
     return (iface_con_setting.setting,)
 
