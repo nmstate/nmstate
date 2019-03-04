@@ -111,7 +111,7 @@ def test_duplicate_settings(NM_mock):
     new_con_setting = nm.connection.ConnectionSetting()
     new_con_setting.import_by_profile(base_con_profile_mock)
 
-    base = base_con_profile_mock.get_setting_connection.return_value
+    base = base_con_profile_mock.profile.get_setting_connection.return_value
     new = new_con_setting.setting
     assert new.props.id == base.props.id
     assert new.props.interface_name == base.props.interface_name
