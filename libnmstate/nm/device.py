@@ -17,6 +17,7 @@
 
 import logging
 
+from . import active_connection as ac
 from . import connection
 from . import nmclient
 
@@ -36,51 +37,9 @@ def deactivate(dev):
 
     For software devices, deactivation removes the devices from the kernel.
     """
-    mainloop = nmclient.mainloop()
-    mainloop.push_action(_safe_deactivate_async, dev)
-
-
-def _safe_deactivate_async(dev):
-    act_connection = dev.get_active_connection()
-    mainloop = nmclient.mainloop()
-    if not act_connection or act_connection.props.state in (
-            nmclient.NM.ActiveConnectionState.DEACTIVATING,
-            nmclient.NM.ActiveConnectionState.DEACTIVATED):
-        # Nothing left to do here, call the next action.
-        mainloop.execute_next_action()
-        return
-
-    user_data = mainloop, dev
-    client = nmclient.client()
-    client.deactivate_connection_async(
-        act_connection,
-        mainloop.cancellable,
-        _deactivate_connection_callback,
-        user_data,
-    )
-
-
-def _deactivate_connection_callback(src_object, result, user_data):
-    mainloop, nmdev = user_data
-    try:
-        success = src_object.deactivate_connection_finish(result)
-    except Exception as e:
-        if mainloop.is_action_canceled(e):
-            logging.debug('Connection deactivation aborted on %s: error=%s',
-                          nmdev.get_iface(), e)
-        else:
-            mainloop.quit(
-                'Connection deactivation failed on {}: error={}'.format(
-                    nmdev.get_iface(), e))
-        return
-
-    if success:
-        logging.debug(
-            'Connection deactivation succeeded on %s', nmdev.get_iface())
-        mainloop.execute_next_action()
-    else:
-        mainloop.quit('Connection deactivation failed on %s: error=unknown' %
-                      nmdev.get_iface())
+    act_con = ac.ActiveConnection()
+    act_con.nmdevice = dev
+    act_con.deactivate()
 
 
 def delete(dev):
