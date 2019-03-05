@@ -3,6 +3,14 @@ interfaces:
   - name: eth1
     type: ethernet
     state: up
+  - name: ovs0
+    type: ovs-interface
+    state: up
+    ipv4:
+      enabled: true
+      address:
+        - ip: 192.0.2.1
+          prefix-length: 24
   - name: ovs-br0
     type: ovs-bridge
     state: up
@@ -15,3 +23,5 @@ interfaces:
       port:
         - name: eth1
           type: system
+        - name: ovs0
+          type: internal
