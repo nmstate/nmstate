@@ -357,6 +357,8 @@ def assert_ifaces_state(ifaces_desired_state, ifaces_current_state):
             iface_dstate, iface_cstate)
         iface_dstate, iface_cstate = _sort_lag_slaves(
             iface_dstate, iface_cstate)
+        iface_dstate, iface_cstate = _sort_bridge_ports(
+            iface_dstate, iface_cstate)
         iface_dstate, iface_cstate = _canonicalize_ipv6_state(
             iface_dstate, iface_cstate)
         iface_dstate, iface_cstate = _remove_iface_ipv6_link_local_addr(
@@ -389,6 +391,12 @@ def _cleanup_iface_ethernet_state_sanitize(desired_state, current_state):
 def _sort_lag_slaves(desired_state, current_state):
     for state in (desired_state, current_state):
         state.get('link-aggregation', {}).get('slaves', []).sort()
+    return desired_state, current_state
+
+
+def _sort_bridge_ports(desired_state, current_state):
+    for state in (desired_state, current_state):
+        state.get('bridge', {}).get('port', []).sort(key=itemgetter('name'))
     return desired_state, current_state
 
 

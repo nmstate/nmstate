@@ -98,6 +98,7 @@ class State(object):
 
     def normalize(self):
         self._sort_iface_lag_slaves()
+        self._sort_iface_bridge_ports()
         self._ipv4_skeleton_canonicalization()
         self._ipv6_skeleton_canonicalization()
         self._ignore_dhcp_manual_addr()
@@ -118,6 +119,11 @@ class State(object):
     def _sort_iface_lag_slaves(self):
         for ifstate in self._state[INTERFACES]:
             ifstate.get('link-aggregation', {}).get('slaves', []).sort()
+
+    def _sort_iface_bridge_ports(self):
+        for ifstate in self._state[INTERFACES]:
+            ifstate.get('bridge', {}).get('port', []).sort(
+                key=itemgetter('name'))
 
     def _ipv6_skeleton_canonicalization(self):
         for iface_state in self._state.get(INTERFACES, []):
