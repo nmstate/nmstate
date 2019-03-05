@@ -125,8 +125,8 @@ def test_set_command_with_yaml_format():
 
 def test_set_command_with_two_states():
     examples = find_examples_dir()
-    cmd = SET_CMD + [os.path.join(examples, 'linuxbrige_eth1_up.yml'),
-                     os.path.join(examples, 'linuxbrige_eth1_absent.yml')]
+    cmd = SET_CMD + [os.path.join(examples, 'linuxbridge_creation.yml'),
+                     os.path.join(examples, 'linuxbridge_deletion.yml')]
     ret = libcmd.exec_cmd(cmd)
     rc = ret[0]
 
