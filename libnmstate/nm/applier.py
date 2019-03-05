@@ -26,6 +26,7 @@ from . import connection
 from . import device
 from . import ipv4
 from . import ipv6
+from . import nmclient
 from . import ovs
 from . import translator
 from . import user
@@ -130,7 +131,12 @@ def set_ifaces_admin_state(ifaces_desired_state, con_profiles=()):
             elif iface_desired_state['state'] in ('down', 'absent'):
                 nmdevs = _get_affected_devices(iface_desired_state)
                 for nmdev in nmdevs:
-                    devs_actions[nmdev] = (device.deactivate, device.delete)
+                    devs_actions[nmdev] = [device.deactivate, device.delete]
+                    if nmdev.get_device_type() in (
+                            nmclient.NM.DeviceType.OVS_BRIDGE,
+                            nmclient.NM.DeviceType.OVS_PORT,
+                            nmclient.NM.DeviceType.OVS_INTERFACE):
+                        devs_actions[nmdev].append(device.delete_device)
             else:
                 raise NmstateValueError(
                     'Invalid state {} for interface {}'.format(
