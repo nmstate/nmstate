@@ -161,6 +161,7 @@ def _filter_state(state, whitelist):
     if whitelist != '*':
         patterns = [p for p in whitelist.split(',')]
         state[Constants.INTERFACES] = _filter_interfaces(state, patterns)
+        state[Constants.ROUTES] = _filter_routes(state, patterns)
     return state
 
 
@@ -258,3 +259,18 @@ def print_state(state, use_yaml=False):
         sys.stdout.write(state.yaml)
     else:
         print(state.json)
+
+
+def _filter_routes(state, patterns):
+    """
+    return the states for all routes from `state` that match at least one
+    of the provided patterns.
+    """
+    routes = {'ipv4': [], 'ipv6': []}
+
+    for family in ('ipv4', 'ipv6'):
+        for route in state.get(Constants.ROUTES, {}).get(family, []):
+            for pattern in patterns:
+                if fnmatch.fnmatch(route['next-hop-iface'], pattern):
+                    routes[family].append(route)
+    return routes

@@ -41,6 +41,7 @@ class Interface(object):
 
 class Constants(object):
     INTERFACES = Interface.KEY
+    ROUTES = 'routes'
 
 
 class InterfaceState(object):
@@ -60,7 +61,6 @@ class InterfaceType(object):
     OVS_PORT = 'ovs-port'
     OVS_INTERFACE = 'ovs-interface'
     VLAN = 'vlan'
-    ROUTES = 'routes'
 
     VIRT_TYPES = (
         BOND,

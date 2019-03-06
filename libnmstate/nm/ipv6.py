@@ -16,10 +16,18 @@
 #
 
 import logging
+from operator import itemgetter
 import socket
 
 from libnmstate.nm import nmclient
 from libnmstate import iplib
+
+IPV6_DEFAULT_GATEWAY_NETWORK = '::/0'
+MAIN_ROUTE_TABLE = 'main'
+MAIN_ROUTE_TABLE_INT = 0
+IPV6_DEFAULT_ROUTE_METRIC = 1024
+IPV6_KERNEL_AUTO_MULTICAST_NETWORK = 'ff00::/8'
+
 
 
 def get_info(active_connection):
@@ -161,3 +169,110 @@ def get_ip_profile(active_connection):
     if remote_conn:
         return remote_conn.get_setting_ip6_config()
     return None
+
+
+def get_route_info():
+    ret = []
+    client = nmclient.client()
+    for active_connection in client.get_active_connections():
+        if active_connection is None:
+            continue
+        ip_cfg = active_connection.get_ip6_config()
+        if not ip_cfg:
+            continue
+
+        devs = active_connection.get_devices()
+        iface_name = None
+        # If we have master device, we use it, else we use first device.
+        if hasattr(active_connection, 'master'):
+            iface_name = active_connection.master.get_iface()
+        else:
+            devs = active_connection.get_devices()
+            if devs:
+                iface_name = devs[0].get_iface()
+
+        if not iface_name:
+            logging.warning(
+                'Got connection {} has not interface name'.format(
+                    active_connection.get_id()))
+            continue
+
+        skip_networks = list('{}/{}'.format(addr.get_address(),
+                                             addr.get_prefix())
+                              for addr in ip_cfg.get_addresses())
+        skip_networks.append(iplib.IPV6_LINK_LOCAL_NETWORK)
+
+        static_routes = []
+        ip_profile = get_ip_profile(active_connection)
+        if ip_profile:
+            for route in ip_profile.props.routes:
+                static_routes.append(
+                    '{ip}/{prefix}'.format(
+                        ip=route.get_dest(), prefix=route.get_prefix()))
+
+        table_id = _get_route_table_id(active_connection, ip_cfg)
+        for route in ip_cfg.get_routes():
+            dst = '{ip}/{prefix}'.format(
+                ip=route.get_dest(), prefix=route.get_prefix())
+            if dst == IPV6_KERNEL_AUTO_MULTICAST_NETWORK:
+                continue
+            if _should_skip(dst, skip_networks):
+                continue
+
+            route_origin = 'static'
+            if _ra_is_enabled(ip_profile) and dst not in static_routes:
+                route_origin = 'router-advertisement'
+
+            next_hop = route.get_next_hop()
+            if not next_hop:
+                next_hop = ''
+            metric = int(route.get_metric())
+            if metric == 0:
+                metric = IPV6_DEFAULT_ROUTE_METRIC
+
+            route_entry = {
+                'status': 'up',
+                'origin': route_origin,
+                'table-id': table_id,
+                'table-name': iplib.get_route_table_name(table_id),
+                'destination': dst,
+                'next-hop-iface': iface_name,
+                'next-hop-address': next_hop,
+                'metric': metric,
+            }
+            ret.append(route_entry)
+    ret.sort(key=itemgetter('table-id', 'destination'))
+    return ret
+
+
+def _should_skip(dst, skips):
+    '''
+    Check whether specified route destination should be skipped for unicast
+    routing table.
+    Meeting any Any of these condition will return True:
+        * Is direct route(route for the LAN network)
+        * Is link-local network.
+    '''
+    for network in skips:
+        if iplib.is_subnet_of(dst, network):
+            return True
+    return False
+
+
+def _get_route_table_id(active_connection, ip_cfg):
+    conn = active_connection.get_connection()
+    ip_cfg = conn.get_setting_ip6_config()
+    table_id = ip_cfg.props.route_table if ip_cfg else MAIN_ROUTE_TABLE_INT
+    if table_id == MAIN_ROUTE_TABLE_INT:
+        return iplib.get_route_table_id(MAIN_ROUTE_TABLE)
+    return table_id
+
+
+def _ra_is_enabled(ip_profile):
+    """
+    Return True if IPv6 router advertisement is enabled.
+    """
+    if ip_profile and \
+       ip_profile.get_method() == nmclient.NM.SETTING_IP6_CONFIG_METHOD_AUTO:
+        return True
+    return False

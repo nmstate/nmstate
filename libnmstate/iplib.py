@@ -75,3 +75,20 @@ def get_route_table_name(table_id):
     except Exception as e:
         logging.debug(e)
     return ""
+
+
+def get_route_table_id(table_name):
+    """
+    Parse /etc/iproute2/rt_tables to find out the route table ID for given
+    route table name. Return 0 if not found or any error.
+    """
+    regex = re.compile('^[^#0-9]*([0-9]+)\s+{}[#\s]*$'.format(table_name))
+    try:
+        with open('/etc/iproute2/rt_tables') as fd:
+            for line in fd:
+                match = regex.match(line.strip())
+                if match:
+                    return int(match.groups()[0])
+    except Exception as e:
+        logging.debug(e)
+    return 0

@@ -16,9 +16,11 @@
 #
 
 import logging
+from operator import itemgetter
 import socket
 
 from . import nmclient
+from libnmstate import iplib
 
 IPV4_DEFAULT_GATEWAY_NETWORK = '0.0.0.0/0'
 MAIN_ROUTE_TABLE = 'main'
@@ -128,6 +130,7 @@ def get_ip_profile(active_connection):
 
 def get_route_info():
     ret = []
+    client = nmclient.client()
     for active_connection in client.get_active_connections():
         if active_connection is None:
             continue
@@ -164,13 +167,13 @@ def get_route_info():
                     '{ip}/{prefix}'.format(
                         ip=route.get_dest(), prefix=route.get_prefix()))
 
-        route_table = _get_route_table(active_connection, ip_cfg)
+        table_id = _get_route_table_id(active_connection, ip_cfg)
         for route in ip_cfg.get_routes():
             dst = '{ip}/{prefix}'.format(
                 ip=route.get_dest(), prefix=route.get_prefix())
-            route_origin = 'static'
             if _should_skip(dst, skip_networks):
                 continue
+            route_origin = 'static'
             if active_connection.get_dhcp4_config() and \
                dst not in static_routes:
                 route_origin = 'dhcp'
@@ -179,20 +182,18 @@ def get_route_info():
             if not next_hop:
                 next_hop = ''
             metric = int(route.get_metric())
-            if metric == 0 and _is_ipv6(ip_cfg):
-                metric = IPV6_DEFAULT_ROUTE_METRIC
-
             route_entry = {
                 'status': 'up',
                 'origin': route_origin,
-                'table-id': route_table,
-                'table-name': iplib.get_route_table_name(route_table),
+                'table-id': table_id,
+                'table-name': iplib.get_route_table_name(table_id),
                 'destination': dst,
                 'next-hop-iface': iface_name,
                 'next-hop-address': next_hop,
                 'metric': metric,
             }
             ret.append(route_entry)
+    ret.sort(key=itemgetter('table-id', 'destination'))
     return ret
 
 
@@ -208,3 +209,12 @@ def _should_skip(dst, skips):
         if iplib.is_subnet_of(dst, network):
             return True
     return False
+
+
+def _get_route_table_id(active_connection, ip_cfg):
+    conn = active_connection.get_connection()
+    ip_cfg = conn.get_setting_ip4_config()
+    table_id = ip_cfg.props.route_table if ip_cfg else MAIN_ROUTE_TABLE_INT
+    if table_id == MAIN_ROUTE_TABLE_INT:
+        return iplib.get_route_table_id(MAIN_ROUTE_TABLE)
+    return table_id
