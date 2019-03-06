@@ -21,10 +21,6 @@ from . import connection
 from . import nmclient
 
 
-class ActivationError(Exception):
-    pass
-
-
 class AlternativeACState(object):
     UNKNOWN = 0
     ACTIVE = 1

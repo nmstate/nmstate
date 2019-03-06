@@ -20,6 +20,7 @@ import socket
 
 from libnmstate.nm import nmclient
 from libnmstate import iplib
+from libnmstate.error import NmstateNotImplementedError
 
 
 def get_info(active_connection):
@@ -113,13 +114,9 @@ def create_setting(config, base_con_profile):
     return setting_ip
 
 
-class NoSupportDynamicIPv6OptionError(Exception):
-    pass
-
-
 def _set_dynamic(setting_ip, is_dhcp, is_autoconf):
     if not is_dhcp and is_autoconf:
-        raise NoSupportDynamicIPv6OptionError(
+        raise NmstateNotImplementedError(
             'Autoconf without DHCP is not supported yet')
 
     if is_dhcp and is_autoconf:

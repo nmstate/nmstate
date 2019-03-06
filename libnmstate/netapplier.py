@@ -27,18 +27,12 @@ from libnmstate import netinfo
 from libnmstate import nm
 from libnmstate import validator
 from libnmstate.appliers import linux_bridge
+from libnmstate.error import NmstateVerificationError
+from libnmstate.error import NmstateLibnmError
 from libnmstate.nm import nmclient
 from libnmstate.prettystate import format_desired_current_state_diff
 from libnmstate.schema import Constants
 from libnmstate.schema import InterfaceType
-
-
-class ApplyError(Exception):
-    pass
-
-
-class DesiredStateIsNotCurrentError(Exception):
-    pass
 
 
 def apply(desired_state, verify_change=True):
@@ -97,7 +91,9 @@ def _setup_providers():
     yield
     success = mainloop.run(timeout=20)
     if not success:
-        raise ApplyError(mainloop.error)
+        raise NmstateLibnmError(
+            'Unexpected failure of libnm when running the mainloop: {}'.format(
+                mainloop.error))
 
 
 @contextmanager
@@ -343,10 +339,9 @@ def _index_by_name(ifaces_state):
 
 def assert_ifaces_state(ifaces_desired_state, ifaces_current_state):
     if not (set(ifaces_desired_state) <= set(ifaces_current_state)):
-        raise DesiredStateIsNotCurrentError(
+        raise NmstateVerificationError(
             format_desired_current_state_diff(ifaces_desired_state,
-                                              ifaces_current_state)
-        )
+                                              ifaces_current_state))
 
     for ifname in ifaces_desired_state:
         iface_cstate = ifaces_current_state[ifname]
@@ -368,10 +363,8 @@ def assert_ifaces_state(ifaces_desired_state, ifaces_current_state):
             iface_dstate, iface_cstate)
 
         if iface_dstate != iface_cstate:
-            raise DesiredStateIsNotCurrentError(
-                format_desired_current_state_diff(iface_dstate,
-                                                  iface_cstate)
-            )
+            raise NmstateVerificationError(
+                format_desired_current_state_diff(iface_dstate, iface_cstate))
 
 
 def _cleanup_iface_ethernet_state_sanitize(desired_state, current_state):

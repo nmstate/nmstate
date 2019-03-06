@@ -22,6 +22,7 @@ import pytest
 import jsonschema as js
 
 from libnmstate import netapplier
+from libnmstate.error import NmstateVerificationError
 
 from .testlib import assertlib
 from .testlib import statelib
@@ -79,7 +80,7 @@ def test_decrease_to_zero_iface_mtu():
     eth1_desired_state = desired_state[INTERFACES][0]
     eth1_desired_state['mtu'] = 0
 
-    with pytest.raises(netapplier.DesiredStateIsNotCurrentError) as err:
+    with pytest.raises(NmstateVerificationError) as err:
         netapplier.apply(desired_state)
     assert '-mtu: 0' in err.value.args[0]
     # FIXME: Drop the sleep when the waiting logic is implemented.
@@ -115,7 +116,7 @@ def test_decrease_to_lower_than_min_ipv6_iface_mtu():
     eth1_desired_state = desired_state[INTERFACES][0]
     eth1_desired_state['mtu'] = 1279
 
-    with pytest.raises(netapplier.DesiredStateIsNotCurrentError) as err:
+    with pytest.raises(NmstateVerificationError) as err:
         netapplier.apply(desired_state)
     assert '1279' in err.value.args[0]
     # FIXME: Drop the sleep when the waiting logic is implemented.

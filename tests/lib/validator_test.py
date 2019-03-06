@@ -18,6 +18,7 @@
 import pytest
 
 import libnmstate
+from libnmstate.error import NmstateValueError
 
 
 class TestLinkAggregationState(object):
@@ -96,8 +97,7 @@ class TestLinkAggregationState(object):
                 },
             }
         ]
-        with pytest.raises(
-                libnmstate.validator.LinkAggregationSlavesReuseError):
+        with pytest.raises(NmstateValueError):
             libnmstate.validator.verify_link_aggregation_state(config, {})
 
     def test_bonds_with_missing_slaves(self):
@@ -117,6 +117,5 @@ class TestLinkAggregationState(object):
                 },
             }
         ]
-        with pytest.raises(
-                libnmstate.validator.LinkAggregationSlavesMissingError):
+        with pytest.raises(NmstateValueError):
             libnmstate.validator.verify_link_aggregation_state(config, {})

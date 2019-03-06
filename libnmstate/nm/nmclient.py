@@ -33,6 +33,9 @@ except ValueError:
 from gi.repository import Gio
 from gi.repository import GLib
 from gi.repository import GObject
+from libnmstate.error import NmstateValueError
+from libnmstate.error import NmstateInternalError
+
 GObject
 
 _mainloop = None
@@ -102,7 +105,8 @@ class _MainLoop(object):
 
     def run(self, timeout):
         if not isinstance(timeout, six.integer_types):
-            raise TypeError('timeout is expected to be an integer')
+            raise NmstateValueError(
+                "Invalid timeout value: should be an integer")
 
         if not self.actions_exists():
             return _MainLoop.SUCCESS
@@ -132,7 +136,7 @@ class _MainLoop(object):
     def drop_cancellable(self, c):
         idx = self._cancellables.index(c)
         if idx == 0:
-            raise MainloopCancellableDropError('Cannot drop main cancellable')
+            raise NmstateInternalError('Cannot drop main cancellable')
         del self._cancellables[idx]
 
     def _cancel_cancellables(self):
@@ -185,7 +189,3 @@ class _MainLoop(object):
     def _execute_action_once(self, _):
         self.execute_next_action()
         return False
-
-
-class MainloopCancellableDropError(Exception):
-    pass

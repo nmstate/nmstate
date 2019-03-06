@@ -21,7 +21,7 @@ import time
 import pytest
 
 from libnmstate import netapplier
-from libnmstate import nm
+from libnmstate.error import NmstateNotImplementedError
 
 from .testlib import assertlib
 from .testlib import cmd as libcmd
@@ -210,7 +210,7 @@ def test_ipv6_dhcp_and_autoconf(dhcp_env):
     assert _has_ipv6_auto_nameserver()
 
 
-@pytest.mark.xfail(raises=nm.ipv6.NoSupportDynamicIPv6OptionError)
+@pytest.mark.xfail(raises=NmstateNotImplementedError)
 def test_ipv6_autoconf_only(dhcp_env):
     desired_state = statelib.show_only((DHCP_CLI_NIC,))
     dhcp_cli_desired_state = desired_state[INTERFACES][0]

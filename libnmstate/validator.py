@@ -23,18 +23,8 @@ import six
 from . import nm
 from . import schema
 from .schema import Constants
-
-
-class LinkAggregationSlavesMissingError(Exception):
-    pass
-
-
-class LinkAggregationSlavesReuseError(Exception):
-    pass
-
-
-class CapabilityNotSupportedError(Exception):
-    pass
+from libnmstate.error import NmstateDependencyError
+from libnmstate.error import NmstateValueError
 
 
 def verify(data, validation_schema=schema.ifaces_schema):
@@ -55,7 +45,9 @@ def verify_interface_capabilities(ifaces_state, capabilities):
             nm.ovs.INTERNAL_INTERFACE_TYPE
         )
         if is_ovs_type and not has_ovs_capability:
-            raise CapabilityNotSupportedError(iface_type)
+            raise NmstateDependencyError(
+                "Open vSwitch NetworkManager support not installed "
+                "and started")
 
 
 def verify_interfaces_state(ifaces_state, ifaces_desired_state):
@@ -78,9 +70,13 @@ def verify_link_aggregation_state(ifaces_state, ifaces_desired_state):
             if link_aggregation:
                 slaves = set(link_aggregation.get('slaves', []))
                 if not (slaves <= available_ifaces):
-                    raise LinkAggregationSlavesMissingError(iface_state)
+                    raise NmstateValueError(
+                        "Link aggregation has missing slave: {}".format(
+                            iface_state))
                 if slaves & specified_slaves:
-                    raise LinkAggregationSlavesReuseError(iface_state)
+                    raise NmstateValueError(
+                        "Link aggregation has reused slave: {}".format(
+                            iface_state))
                 specified_slaves |= slaves
 
 

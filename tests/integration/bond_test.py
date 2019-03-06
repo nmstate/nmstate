@@ -22,6 +22,7 @@ import yaml
 
 from libnmstate import netapplier
 from libnmstate import netinfo
+from libnmstate.error import NmstateVerificationError
 
 from .testlib import assertlib
 from .testlib import statelib
@@ -180,7 +181,7 @@ def test_rollback_for_bond(eth1_up, eth2_up):
 
     desired_state[INTERFACES][0]['invalid_key'] = 'foo'
 
-    with pytest.raises(netapplier.DesiredStateIsNotCurrentError):
+    with pytest.raises(NmstateVerificationError):
         netapplier.apply(desired_state)
 
     time.sleep(5)
