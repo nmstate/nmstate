@@ -60,6 +60,7 @@ class InterfaceType(object):
     OVS_PORT = 'ovs-port'
     OVS_INTERFACE = 'ovs-interface'
     VLAN = 'vlan'
+    ROUTES = 'routes'
 
     VIRT_TYPES = (
         BOND,

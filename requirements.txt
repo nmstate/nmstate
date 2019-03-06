@@ -10,3 +10,4 @@ PyGObject
 PyYAML
 setuptools
 six
+ipaddress

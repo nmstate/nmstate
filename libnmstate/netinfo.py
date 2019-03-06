@@ -36,6 +36,11 @@ def show(include_status_data=False):
     if include_status_data:
         report['capabilities'] = capabilities()
 
+    report[Constants.ROUTES] = {
+        'ipv4': nm.ipv4.get_route_info(),
+        'ipv6': nm.ipv6.get_route_info(),
+    }
+
     validator.verify(report)
     return report
 
