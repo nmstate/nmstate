@@ -17,6 +17,7 @@
 
 import six
 
+from libnmstate.error import NmstateValueError
 from libnmstate.schema import OVSBridge as OB
 from libnmstate.schema import OVSBridgePortType as OBPortType
 
@@ -71,7 +72,9 @@ def create_bridge_setting(options):
         elif option_name == 'stp':
             bridge_setting.props.stp_enable = option_value
         else:
-            raise InvalidOvsBridgeOptionError(option_name, option_value)
+            raise NmstateValueError(
+                'Invalid OVS bridge option: \{}\=\'{}\''.format(
+                    option_name, option_value))
 
     return bridge_setting
 
@@ -92,7 +95,9 @@ def create_port_setting(options):
         elif option_name == 'bond-downdelay':
             port_setting.props.bond_downdelay = option_value
         else:
-            raise InvalidOvsPortOptionError(option_name, option_value)
+            raise NmstateValueError(
+                'Invalid OVS port option: \{}\=\'{}\''.format(
+                    option_name, option_value))
 
     return port_setting
 
@@ -211,11 +216,3 @@ def _get_slave_profiles(master_device, devices_info):
             if master and (master.get_iface() == master_device.get_iface()):
                 slave_profiles.append(active_con.props.connection)
     return slave_profiles
-
-
-class InvalidOvsBridgeOptionError(Exception):
-    pass
-
-
-class InvalidOvsPortOptionError(Exception):
-    pass

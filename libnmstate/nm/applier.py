@@ -18,6 +18,8 @@
 import six
 
 from libnmstate.schema import LinuxBridge as LB
+from libnmstate.error import NmstateValueError
+from libnmstate.error import NmstateNotImplementedError
 
 from . import bond
 from . import bridge
@@ -30,14 +32,6 @@ from . import translator
 from . import user
 from . import vlan
 from . import wired
-
-
-class UnsupportedIfaceStateError(Exception):
-    pass
-
-
-class UnsupportedIfaceTypeError(Exception):
-    pass
 
 
 def create_new_ifaces(con_profiles):
@@ -130,7 +124,10 @@ def set_ifaces_admin_state(ifaces_desired_state, con_profiles=()):
                 for nmdev in nmdevs:
                     devs_actions[nmdev] = (device.deactivate, device.delete)
             else:
-                raise UnsupportedIfaceStateError(iface_desired_state)
+                raise NmstateValueError(
+                    'Invalid state {} for interface {}'.format(
+                        iface_desired_state['state'],
+                        iface_desired_state['name']))
 
     for ifname in new_ifaces_to_activate:
         device.activate(dev=None, connection_id=ifname)
@@ -231,8 +228,10 @@ def _build_connection_profile(iface_desired_state, base_con_profile=None):
 
     # TODO: Support ovs-interface type on setup
     if iface_type == ovs.INTERNAL_INTERFACE_TYPE:
-        raise UnsupportedIfaceTypeError(iface_type,
-                                        iface_desired_state['name'])
+        raise NmstateNotImplementedError(
+            'Interface type {} of interface {} not supported yet'.format(
+                iface_type,
+                iface_desired_state['name']))
 
     settings = [
         ipv4.create_setting(iface_desired_state.get('ipv4'), base_con_profile),

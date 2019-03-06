@@ -21,6 +21,7 @@ import pytest
 from .compat import mock
 
 from libnmstate import netapplier
+from libnmstate.error import NmstateVerificationError
 from libnmstate.schema import Constants
 from libnmstate.schema import OVSBridgePortType as OBPortType
 
@@ -695,7 +696,7 @@ class TestAssertIfaceState(object):
             'eth1': {'name': 'eth1', 'state': 'up', 'type': 'unknown'}
         })
 
-        with pytest.raises(netapplier.DesiredStateIsNotCurrentError):
+        with pytest.raises(NmstateVerificationError):
             netapplier.assert_ifaces_state(desired_state, current_state)
 
     def test_desired_is_not_equal_to_current(self):
@@ -703,7 +704,7 @@ class TestAssertIfaceState(object):
         current_state = self._base_state
         current_state['foo-name']['state'] = 'down'
 
-        with pytest.raises(netapplier.DesiredStateIsNotCurrentError):
+        with pytest.raises(NmstateVerificationError):
             netapplier.assert_ifaces_state(desired_state, current_state)
 
     def test_sort_multiple_ip(self):

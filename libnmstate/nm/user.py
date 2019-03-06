@@ -20,14 +20,11 @@ does not fit somewhere else such as an interface's description.
 https://lazka.github.io/pgi-docs/#NM-1.0/classes/SettingUser.html
 """
 
+from libnmstate.error import NmstateValueError
 from libnmstate.nm import connection as nm_connection
 from libnmstate.nm import nmclient
 
 NMSTATE_DESCRIPTION = "nmstate.interface.description"
-
-
-class InvalidDescriptionError(Exception):
-    pass
 
 
 def create_setting(iface_state, base_con_profile):
@@ -37,7 +34,7 @@ def create_setting(iface_state, base_con_profile):
         return None
 
     if not nmclient.NM.SettingUser.check_val(description):
-        raise InvalidDescriptionError()
+        raise NmstateValueError('Invalid description')
 
     user_setting = None
     if base_con_profile:

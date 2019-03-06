@@ -19,6 +19,7 @@ import pytest
 from lib.compat import mock
 
 from libnmstate import nm
+from libnmstate.error import NmstateValueError
 
 
 @pytest.fixture()
@@ -53,7 +54,7 @@ def test_create_setting_with_invalid_bond_option(NM_mock):
         'foo': '100',
     }
 
-    with pytest.raises(nm.bond.InvalidBondOptionError):
+    with pytest.raises(NmstateValueError):
         nm.bond.create_setting(options)
 
 

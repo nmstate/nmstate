@@ -22,6 +22,7 @@ import pytest
 
 from libnmstate import netapplier
 from libnmstate import netinfo
+from libnmstate.error import NmstateVerificationError
 
 from .testlib import assertlib
 from .testlib import statelib
@@ -77,7 +78,7 @@ def test_rollback_for_vlans(eth1_up):
     desired_state = TWO_VLANS_STATE
 
     desired_state[INTERFACES][1]['invalid_key'] = 'foo'
-    with pytest.raises(netapplier.DesiredStateIsNotCurrentError):
+    with pytest.raises(NmstateVerificationError):
         netapplier.apply(desired_state)
 
     time.sleep(5)   # Give some time for NetworkManager to rollback
