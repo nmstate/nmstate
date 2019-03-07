@@ -27,9 +27,10 @@ from libnmstate.schema import Constants
 
 
 INTERFACES = Constants.INTERFACES
+ROUTES = Constants.ROUTES
 
 
-COMMON_IFACE_DATA = {
+COMMON_DATA = {
     INTERFACES: [
         {
             'name': 'lo',
@@ -62,13 +63,33 @@ COMMON_IFACE_DATA = {
                 'out-errors': 0,
             }
         }
+    ],
+    ROUTES: [
+        {
+            'table-name': 'main',
+            'table-id': 254,
+            'origin': 'static',
+            'metric': 100,
+            'destination': '0.0.0.0/0',
+            'next-hop-interface': 'eth0',
+            'next-hop-address': '192.0.2.1'
+        },
+        {
+            'table-name': 'main',
+            'table-id': 254,
+            'origin': 'static',
+            'metric': 100,
+            'destination': '::/0',
+            'next-hop-interface': 'eth0',
+            'next-hop-address': 'fe80::1'
+        },
     ]
 }
 
 
 @pytest.fixture
 def default_data():
-    return copy.deepcopy(COMMON_IFACE_DATA)
+    return copy.deepcopy(COMMON_DATA)
 
 
 class TestIfaceCommon(object):
@@ -121,3 +142,31 @@ class TestIfaceTypeEthernet(object):
         del default_data[INTERFACES][0]['link-speed']
 
         libnmstate.validator.verify(default_data)
+
+
+class TestRoutes(object):
+    def test_valid_state_absent(self, default_data):
+        default_data[ROUTES][0]['state'] = 'absent'
+        libnmstate.validator.verify(default_data)
+
+    def test_invalid_state(self, default_data):
+        default_data[ROUTES][0]['state'] = 'bad-state'
+
+        with pytest.raises(js.ValidationError) as err:
+            libnmstate.validator.verify(default_data)
+        assert 'bad-state' in err.value.args[0]
+
+    def test_valid_origin_dhcp(self, default_data):
+        default_data[ROUTES][0]['origin'] = 'dhcp'
+        libnmstate.validator.verify(default_data)
+
+    def test_valid_origin_ipv6_ra(self, default_data):
+        default_data[ROUTES][0]['origin'] = 'router-advertisement'
+        libnmstate.validator.verify(default_data)
+
+    def test_invalid_origin(self, default_data):
+        default_data[ROUTES][0]['origin'] = 'bad-origin'
+
+        with pytest.raises(js.ValidationError) as err:
+            libnmstate.validator.verify(default_data)
+        assert 'bad-origin' in err.value.args[0]

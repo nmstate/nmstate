@@ -24,6 +24,33 @@ properties:
             - "$ref": "#/definitions/interface-ovs-interface/rw"
             - "$ref": "#/definitions/interface-dummy/rw"
             - "$ref": "#/definitions/interface-vlan/rw"
+  routes:
+    type: array
+    items:
+      type: object
+      properties:
+        state:
+          type: string
+          enum:
+            - absent
+        table-name:
+          type: string
+        table-id:
+          type: integer
+        origin:
+          type: string
+          enum:
+            - dhcp
+            - router-advertisement
+            - static
+        metric:
+          type: integer
+        destination:
+          type: string
+        next-hop-interface:
+          type: string
+        next-hop-address:
+          type: string
 
 definitions:
   types:
