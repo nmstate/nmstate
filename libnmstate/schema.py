@@ -43,6 +43,7 @@ class Interface(object):
 
 class Constants(object):
     INTERFACES = Interface.KEY
+    ROUTES = 'routes'
 
 
 class InterfaceState(object):
