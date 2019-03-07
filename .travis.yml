@@ -3,7 +3,7 @@ env:
     matrix:
         - TEST_TYPE=integ DOCKER_IMAGE=nmstate/centos7-nmstate-dev
         - TEST_TYPE=integ DOCKER_IMAGE=nmstate/fedora-nmstate-dev
-        - TEST_TYPE=unit_code_style DOCKER_IMAGE=nmstate/fedora-nmstate-dev
+        - TEST_TYPE=lint DOCKER_IMAGE=nmstate/fedora-nmstate-dev
         - TEST_TYPE=unit_py27 DOCKER_IMAGE=nmstate/fedora-nmstate-dev
         - TEST_TYPE=unit_py36 DOCKER_IMAGE=nmstate/fedora-nmstate-dev
         - TEST_TYPE=unit_py37 DOCKER_IMAGE=nmstate/fedora-nmstate-dev
