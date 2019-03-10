@@ -227,6 +227,11 @@ def _delete_iface(devname):
     with mainloop():
         if nmdev:
             nm.device.delete(nmdev)
+            if nmdev.get_device_type() in (
+                    nm.nmclient.NM.DeviceType.OVS_BRIDGE,
+                    nm.nmclient.NM.DeviceType.OVS_PORT,
+                    nm.nmclient.NM.DeviceType.OVS_INTERFACE):
+                nm.device.delete_device(nmdev)
         else:
             nm.device.delete_connection(devname)
 
