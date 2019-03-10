@@ -349,16 +349,13 @@ def _delete_connection_callback(src_object, result, user_data):
 
 def delete_device(nmdev):
     mainloop = nmclient.mainloop()
-    devpath = nmdev.get_path()
-    mainloop.push_action(_safe_delete_device_async, devpath)
+    mainloop.push_action(_safe_delete_device_async, nmdev)
 
 
-def _safe_delete_device_async(devpath):
+def _safe_delete_device_async(nmdev):
     mainloop = nmclient.mainloop()
-    client = nmclient.client()
-    nmdev = client.get_device_by_path(devpath)
-    if not nmdev:
-        # Nothing to do since the device is already gone.
+    if nmdev.get_state() == nmclient.NM.DeviceState.DEACTIVATING:
+        # Nothing to do since the device is already being removed.
         mainloop.execute_next_action()
         return
 
@@ -374,6 +371,19 @@ def _delete_device_callback(src_object, result, user_data):
     mainloop, nmdev = user_data
     try:
         success = src_object.delete_finish(result)
+    # pylint: disable=catching-non-exception
+    except nmclient.GLib.GError as e:
+        # pylint: enable=catching-non-exception
+        if e.matches(nmclient.Gio.DBusError.quark(),
+                     nmclient.Gio.DBusError.UNKNOWN_METHOD):
+            logging.debug('Device %s has been already deleted: error=%s',
+                          nmdev.get_iface(), e)
+            mainloop.execute_next_action()
+        else:
+            mainloop.quit(
+                'Device deletion failed on {}: error={}'.format(
+                    nmdev.get_iface(), e))
+        return
     except Exception as e:
         if mainloop.is_action_canceled(e):
             logging.debug('Device deletion aborted on %s: error=%s',
