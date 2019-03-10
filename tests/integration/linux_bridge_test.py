@@ -15,77 +15,88 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
+from contextlib import contextmanager
+
 import yaml
 
 from libnmstate import netapplier
+from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceState
+from libnmstate.schema import InterfaceType
+from libnmstate.schema import LinuxBridge
 
-from .testlib import statelib
+from .testlib import assertlib
 from .testlib.statelib import INTERFACES
 
 
-LINUX_BRIDGE_YAML_BASE = """
-interfaces:
-  - name: linux-br0
-    type: linux-bridge
-    state: up
-    bridge:
-      options:
-        group-forward-mask: 0
-        mac-ageing-time: 300
-        multicast-snooping: true
-        stp:
-          enabled: true
-          forward-delay: 15
-          hello-time: 2
-          max-age: 20
-          priority: 32768
-      port:
-        - name: eth1
-          stp-hairpin-mode: false
-          stp-path-cost: 100
-          stp-priority: 32
+BRIDGE_OPTIONS_YAML = """
+options:
+  group-forward-mask: 0
+  mac-ageing-time: 300
+  multicast-snooping: true
+  stp:
+    enabled: true
+    forward-delay: 15
+    hello-time: 2
+    max-age: 20
+    priority: 32768
+"""
+
+BRIDGE_PORT_ETH1_YAML = """
+port:
+  - name: eth1
+    stp-hairpin-mode: false
+    stp-path-cost: 100
+    stp-priority: 32
 """
 
 
-def test_create_and_remove_linux_bridge(eth1_up):
-    state = yaml.load(LINUX_BRIDGE_YAML_BASE)
-    netapplier.apply(state)
+def test_create_and_remove_linux_bridge_with_one_port(eth1_up):
+    bridge_name = 'linux-br0'
+    bridge_state = yaml.load(BRIDGE_OPTIONS_YAML)
+    port_state = yaml.load(BRIDGE_PORT_ETH1_YAML)
+    bridge_state.update(port_state)
 
-    setup_remove_linux_bridge_state = {
-        INTERFACES: [
-            {
-                'name': 'linux-br0',
-                'type': 'linux-bridge',
-                'state': 'absent'
-            }
-        ]
-    }
-    netapplier.apply(setup_remove_linux_bridge_state)
-    state = statelib.show_only((state[INTERFACES][0]['name'],))
-    assert not state[INTERFACES]
+    with linux_bridge(bridge_name, bridge_state) as desired_state:
+
+        assertlib.assert_state(desired_state)
+
+    assertlib.assert_absent(bridge_name)
 
 
-def test_create_and_remove_linux_bridge_with_min_desired_state(eth1_up):
+def test_create_and_remove_linux_bridge_with_min_desired_state():
+    bridge_name = 'linux-br0'
+    with linux_bridge(bridge_name, bridge_state=None) as desired_state:
+        assertlib.assert_state(desired_state)
+
+    assertlib.assert_absent(bridge_name)
+
+
+@contextmanager
+def linux_bridge(name, bridge_state):
     desired_state = {
         INTERFACES: [
             {
-                'name': 'linux-br0',
-                'type': 'linux-bridge',
-                'state': 'up'
+                Interface.NAME: name,
+                Interface.TYPE: InterfaceType.LINUX_BRIDGE,
+                Interface.STATE: InterfaceState.UP
             }
         ]
     }
+    if bridge_state:
+        desired_state[INTERFACES][0][LinuxBridge.CONFIG_SUBTREE] = bridge_state
+
     netapplier.apply(desired_state)
 
-    setup_remove_linux_bridge_state = {
-        INTERFACES: [
-            {
-                'name': 'linux-br0',
-                'type': 'linux-bridge',
-                'state': 'absent'
-            }
-        ]
-    }
-    netapplier.apply(setup_remove_linux_bridge_state)
-    state = statelib.show_only((desired_state[INTERFACES][0]['name'],))
-    assert not state[INTERFACES]
+    try:
+        yield desired_state
+    finally:
+        netapplier.apply({
+            INTERFACES: [
+                {
+                    Interface.NAME: name,
+                    Interface.TYPE: InterfaceType.LINUX_BRIDGE,
+                    Interface.STATE: InterfaceState.ABSENT
+                }
+            ]
+        })
