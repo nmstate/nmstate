@@ -1,7 +1,7 @@
 # This Dockerfile is based on the recommendations provided in the
 # Centos official repository (https://hub.docker.com/_/centos/).
 # It enables systemd to be operational.
-FROM centos:7.5.1804
+FROM centos:7
 
 ENV container docker
 
