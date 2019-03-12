@@ -1,8 +1,8 @@
 language: generic
 env:
     matrix:
-        - TEST_TYPE=integ DOCKER_IMAGE=nmstate/centos7-nmstate-dev
-        - TEST_TYPE=integ DOCKER_IMAGE=nmstate/fedora-nmstate-dev
+        - TEST_TYPE=integ DOCKER_IMAGE=nmstate/centos7-nmstate-dev nmstate_pytest_extra_args="-x"
+        - TEST_TYPE=integ DOCKER_IMAGE=nmstate/fedora-nmstate-dev nmstate_pytest_extra_args="-x"
         - TEST_TYPE=lint DOCKER_IMAGE=nmstate/fedora-nmstate-dev
         - TEST_TYPE=unit_py27 DOCKER_IMAGE=nmstate/fedora-nmstate-dev
         - TEST_TYPE=unit_py36 DOCKER_IMAGE=nmstate/fedora-nmstate-dev
@@ -10,7 +10,7 @@ env:
 
 matrix:
     allow_failures:
-        - env: TEST_TYPE=integ DOCKER_IMAGE=nmstate/centos7-nmstate-dev
+        - env: TEST_TYPE=integ DOCKER_IMAGE=nmstate/centos7-nmstate-dev nmstate_pytest_extra_args="-x"
 
 addons:
   apt:
