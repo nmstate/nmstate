@@ -51,8 +51,7 @@ def _apply_ifaces_state(desired_state, verify_change):
     desired_state.sanitize_ethernet(current_state)
     desired_state.sanitize_dynamic_ip()
 
-    generate_ifaces_metadata(desired_state.interfaces,
-                             current_state.interfaces)
+    generate_ifaces_metadata(desired_state, current_state)
 
     with _transaction():
         with _setup_providers():
@@ -106,7 +105,7 @@ def _placeholder_ctx():
     yield
 
 
-def generate_ifaces_metadata(ifaces_desired_state, ifaces_current_state):
+def generate_ifaces_metadata(desired_state, current_state):
     """
     The described desired state for each interface may include references to
     other interfaces. As the provider handles the interface setting in an
@@ -120,22 +119,22 @@ def generate_ifaces_metadata(ifaces_desired_state, ifaces_current_state):
     configuring the interface.
     """
     _generate_link_master_metadata(
-        ifaces_desired_state,
-        ifaces_current_state,
+        desired_state.interfaces,
+        current_state.interfaces,
         master_type='bond',
         get_slaves_func=_get_bond_slaves_from_state,
         set_metadata_func=_set_common_slaves_metadata
     )
     _generate_link_master_metadata(
-        ifaces_desired_state,
-        ifaces_current_state,
+        desired_state.interfaces,
+        current_state.interfaces,
         master_type='ovs-bridge',
         get_slaves_func=_get_ovs_slaves_from_state,
         set_metadata_func=_set_ovs_bridge_ports_metadata
     )
     _generate_link_master_metadata(
-        ifaces_desired_state,
-        ifaces_current_state,
+        desired_state.interfaces,
+        current_state.interfaces,
         master_type='linux-bridge',
         get_slaves_func=linux_bridge.get_slaves_from_state,
         set_metadata_func=linux_bridge.set_bridge_ports_metadata
