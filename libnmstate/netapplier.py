@@ -25,6 +25,7 @@ import six
 from libnmstate import iplib
 from libnmstate import netinfo
 from libnmstate import nm
+from libnmstate import state
 from libnmstate import validator
 from libnmstate.appliers import linux_bridge
 from libnmstate.error import NmstateVerificationError
@@ -41,37 +42,41 @@ def apply(desired_state, verify_change=True):
     validator.verify_capabilities(desired_state, netinfo.capabilities())
     validator.verify_dhcp(desired_state)
 
-    _apply_ifaces_state(desired_state[Constants.INTERFACES], verify_change)
+    _apply_ifaces_state(state.State(desired_state), verify_change)
 
 
-def _apply_ifaces_state(interfaces_desired_state, verify_change):
-    ifaces_desired_state = _index_by_name(interfaces_desired_state)
-    ifaces_current_state = _index_by_name(netinfo.interfaces())
+def _apply_ifaces_state(desired_state, verify_change):
+    current_state = state.State({Constants.INTERFACES: netinfo.interfaces()})
 
-    ifaces_desired_state = sanitize_ethernet_state(ifaces_desired_state,
-                                                   ifaces_current_state)
-    ifaces_desired_state = sanitize_dhcp_state(ifaces_desired_state)
-    generate_ifaces_metadata(ifaces_desired_state, ifaces_current_state)
+    desired_state.sanitize_ethernet(current_state)
+    desired_state.sanitize_dynamic_ip()
+
+    generate_ifaces_metadata(desired_state.interfaces,
+                             current_state.interfaces)
 
     with _transaction():
         with _setup_providers():
-            _add_interfaces(ifaces_desired_state, ifaces_current_state)
+            _add_interfaces(desired_state.interfaces, current_state.interfaces)
         with _setup_providers():
-            ifaces_current_state = _index_by_name(netinfo.interfaces())
-            _edit_interfaces(ifaces_desired_state, ifaces_current_state)
+            current_state = state.State(
+                {Constants.INTERFACES: netinfo.interfaces()}
+            )
+            _edit_interfaces(desired_state.interfaces,
+                             current_state.interfaces)
         if verify_change:
-            _verify_change(ifaces_desired_state)
+            _verify_change(desired_state)
 
 
-def _verify_change(ifaces_desired_state):
-    ifaces_current_state = _index_by_name(netinfo.interfaces())
+def _verify_change(desired_state):
+    ifaces_desired_state = desired_state.interfaces
+    current_state = state.State({Constants.INTERFACES: netinfo.interfaces()})
     ifaces_desired_state = _remove_absent_iface_entries(
         ifaces_desired_state)
     ifaces_desired_state = _remove_down_virt_iface_entries(
         ifaces_desired_state)
     ifaces_desired_state = remove_ifaces_metadata(ifaces_desired_state)
 
-    assert_ifaces_state(ifaces_desired_state, ifaces_current_state)
+    assert_ifaces_state(ifaces_desired_state, current_state)
 
 
 @contextmanager
@@ -137,46 +142,6 @@ def generate_ifaces_metadata(ifaces_desired_state, ifaces_current_state):
     )
 
 
-def sanitize_ethernet_state(ifaces_desired_state, ifaces_current_state):
-    """
-    If auto-negotiation, speed and duplex settings are not provided,
-    but exist in the current state, they need to be set to None
-    to not override them with the values from the current settings
-    since the current settings are read from the device state and not
-    from the actual configuration.  This makes it possible to distiguish
-    whether a user specified these values in the later configuration step.
-    """
-    for ifname, iface_state in six.viewitems(ifaces_desired_state):
-        iface_current_state = ifaces_current_state.get(ifname, {})
-        if iface_current_state.get('type') == 'ethernet':
-            ethernet = iface_state.setdefault('ethernet', {})
-            ethernet.setdefault('auto-negotiation', None)
-            ethernet.setdefault('speed', None)
-            ethernet.setdefault('duplex', None)
-    return ifaces_desired_state
-
-
-def sanitize_dhcp_state(ifaces_state):
-    """
-    If dynamic IP is enabled and IP address is missing, set an empty address
-    list. This assures that the desired state is not complemented by the
-    current state address values.
-    If dynamic IP is disabled, all dynamic IP options should be removed.
-    """
-    for iface_state in six.viewvalues(ifaces_state):
-        for family in ('ipv4', 'ipv6'):
-            ip = iface_state.get(family, {})
-            if ip.get('enabled') and (ip.get('dhcp') or ip.get('autoconf')):
-                ip['address'] = []
-            else:
-                for dhcp_option in ('auto-routes',
-                                    'auto-gateway',
-                                    'auto-dns'):
-                    ip.pop(dhcp_option, None)
-
-    return ifaces_state
-
-
 def remove_ifaces_metadata(ifaces_state):
     clean_ifaces_state = copy.deepcopy(ifaces_state)
     for iface_state in six.viewvalues(clean_ifaces_state):
@@ -187,8 +152,8 @@ def remove_ifaces_metadata(ifaces_state):
     return clean_ifaces_state
 
 
-def _get_bond_slaves_from_state(state, default=()):
-    return state.get('link-aggregation', {}).get('slaves', default)
+def _get_bond_slaves_from_state(iface_state, default=()):
+    return iface_state.get('link-aggregation', {}).get('slaves', default)
 
 
 def _set_ovs_bridge_ports_metadata(master_state, slave_state):
@@ -207,8 +172,8 @@ def _set_common_slaves_metadata(master_state, slave_state):
     slave_state['_master_type'] = master_state['type']
 
 
-def _get_ovs_slaves_from_state(state, default=()):
-    ports = state.get('bridge', {}).get('port')
+def _get_ovs_slaves_from_state(iface_state, default=()):
+    ports = iface_state.get('bridge', {}).get('port')
     if ports is None:
         return default
     return [p['name'] for p in ports]
@@ -337,12 +302,14 @@ def _index_by_name(ifaces_state):
     return {iface['name']: iface for iface in ifaces_state}
 
 
-def assert_ifaces_state(ifaces_desired_state, ifaces_current_state):
+def assert_ifaces_state(ifaces_desired_state, current_state):
+    ifaces_current_state = current_state.interfaces
     if not (set(ifaces_desired_state) <= set(ifaces_current_state)):
         raise NmstateVerificationError(
             format_desired_current_state_diff(ifaces_desired_state,
                                               ifaces_current_state))
 
+    current_state.sanitize_dynamic_ip()
     for ifname in ifaces_desired_state:
         iface_cstate = ifaces_current_state[ifname]
         iface_dstate = _canonicalize_desired_state(
@@ -358,7 +325,6 @@ def assert_ifaces_state(ifaces_desired_state, ifaces_current_state):
             iface_dstate, iface_cstate)
         iface_dstate, iface_cstate = _remove_iface_ipv6_link_local_addr(
             iface_dstate, iface_cstate)
-        iface_cstate = sanitize_dhcp_state({ifname: iface_cstate})[ifname]
         iface_dstate, iface_cstate = _sort_ip_addresses(
             iface_dstate, iface_cstate)
 
@@ -382,14 +348,14 @@ def _cleanup_iface_ethernet_state_sanitize(desired_state, current_state):
 
 
 def _sort_lag_slaves(desired_state, current_state):
-    for state in (desired_state, current_state):
-        state.get('link-aggregation', {}).get('slaves', []).sort()
+    for ifstate in (desired_state, current_state):
+        ifstate.get('link-aggregation', {}).get('slaves', []).sort()
     return desired_state, current_state
 
 
 def _sort_bridge_ports(desired_state, current_state):
-    for state in (desired_state, current_state):
-        state.get('bridge', {}).get('port', []).sort(key=itemgetter('name'))
+    for ifstate in (desired_state, current_state):
+        ifstate.get('bridge', {}).get('port', []).sort(key=itemgetter('name'))
     return desired_state, current_state
 
 
@@ -415,9 +381,9 @@ def _remove_down_virt_iface_entries(ifaces_desired_state):
 
 
 def _remove_iface_ipv6_link_local_addr(desired_state, current_state):
-    for state in (desired_state, current_state):
-        state['ipv6']['address'] = list(
-            addr for addr in state['ipv6']['address']
+    for ifstate in (desired_state, current_state):
+        ifstate['ipv6']['address'] = list(
+            addr for addr in ifstate['ipv6']['address']
             if not iplib.is_ipv6_link_local_addr(addr['ip'],
                                                  addr['prefix-length']))
     return desired_state, current_state
@@ -432,7 +398,8 @@ def _canonicalize_ipv6_state(desired_state, current_state):
 
 
 def _sort_ip_addresses(desired_state, current_state):
-    for state in (desired_state, current_state):
+    for ifstate in (desired_state, current_state):
         for family in ('ipv4', 'ipv6'):
-            state.get(family, {}).get('address', []).sort(key=itemgetter('ip'))
+            ifstate.get(family, {}).get('address', []).sort(
+                key=itemgetter('ip'))
     return desired_state, current_state

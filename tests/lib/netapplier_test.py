@@ -21,6 +21,7 @@ import pytest
 from .compat import mock
 
 from libnmstate import netapplier
+from libnmstate import state
 from libnmstate.error import NmstateVerificationError
 from libnmstate.schema import Constants
 from libnmstate.schema import OVSBridgePortType as OBPortType
@@ -676,7 +677,10 @@ class TestAssertIfaceState(object):
         desired_state = self._base_state
         current_state = self._base_state
 
-        netapplier.assert_ifaces_state(desired_state, current_state)
+        cstate = state.State(
+            {Constants.INTERFACES: list(current_state.values())}
+        )
+        netapplier.assert_ifaces_state(desired_state, cstate)
 
     def test_desired_is_partial_to_current(self):
         desired_state = self._base_state
@@ -686,7 +690,10 @@ class TestAssertIfaceState(object):
             'eth1': {'name': 'eth1', 'state': 'up', 'type': 'unknown'}
         })
 
-        netapplier.assert_ifaces_state(desired_state, current_state)
+        cstate = state.State(
+            {Constants.INTERFACES: list(current_state.values())}
+        )
+        netapplier.assert_ifaces_state(desired_state, cstate)
 
     def test_current_is_partial_to_desired(self):
         desired_state = self._base_state
@@ -696,16 +703,22 @@ class TestAssertIfaceState(object):
             'eth1': {'name': 'eth1', 'state': 'up', 'type': 'unknown'}
         })
 
+        cstate = state.State(
+            {Constants.INTERFACES: list(current_state.values())}
+        )
         with pytest.raises(NmstateVerificationError):
-            netapplier.assert_ifaces_state(desired_state, current_state)
+            netapplier.assert_ifaces_state(desired_state, cstate)
 
     def test_desired_is_not_equal_to_current(self):
         desired_state = self._base_state
         current_state = self._base_state
         current_state['foo-name']['state'] = 'down'
 
+        cstate = state.State(
+            {Constants.INTERFACES: list(current_state.values())}
+        )
         with pytest.raises(NmstateVerificationError):
-            netapplier.assert_ifaces_state(desired_state, current_state)
+            netapplier.assert_ifaces_state(desired_state, cstate)
 
     def test_sort_multiple_ip(self):
         desired_state = self._base_state
@@ -763,7 +776,10 @@ class TestAssertIfaceState(object):
             'enabled': True
         }
 
-        netapplier.assert_ifaces_state(desired_state, current_state)
+        cstate = state.State(
+            {Constants.INTERFACES: list(current_state.values())}
+        )
+        netapplier.assert_ifaces_state(desired_state, cstate)
 
     @property
     def _base_state(self):
