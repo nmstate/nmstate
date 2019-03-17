@@ -22,7 +22,9 @@ import yaml
 
 def load(schema_name):
     return yaml.load(
-        pkgutil.get_data('libnmstate', 'schemas/' + schema_name + '.yaml'))
+        pkgutil.get_data('libnmstate', 'schemas/' + schema_name + '.yaml'),
+        Loader=yaml.SafeLoader
+    )
 
 
 ifaces_schema = load('operational-state')

@@ -53,8 +53,8 @@ port:
 
 def test_create_and_remove_linux_bridge_with_one_port(eth1_up):
     bridge_name = 'linux-br0'
-    bridge_state = yaml.load(BRIDGE_OPTIONS_YAML)
-    port_state = yaml.load(BRIDGE_PORT_ETH1_YAML)
+    bridge_state = yaml.load(BRIDGE_OPTIONS_YAML, Loader=yaml.SafeLoader)
+    port_state = yaml.load(BRIDGE_PORT_ETH1_YAML, Loader=yaml.SafeLoader)
     bridge_state.update(port_state)
 
     with linux_bridge(bridge_name, bridge_state) as desired_state:
@@ -104,9 +104,9 @@ def linux_bridge(name, bridge_state):
 
 def test_create_and_remove_linux_bridge_with_two_ports(eth1_up, eth2_up):
     bridge_name = 'linux-br0'
-    bridge_state = yaml.load(BRIDGE_OPTIONS_YAML)
-    port1_state = yaml.load(BRIDGE_PORT_ETH1_YAML)
-    port2_state = yaml.load(BRIDGE_PORT_ETH1_YAML)
+    bridge_state = yaml.load(BRIDGE_OPTIONS_YAML, Loader=yaml.SafeLoader)
+    port1_state = yaml.load(BRIDGE_PORT_ETH1_YAML, Loader=yaml.SafeLoader)
+    port2_state = yaml.load(BRIDGE_PORT_ETH1_YAML, Loader=yaml.SafeLoader)
     port2_state[LinuxBridge.PORT_SUBTREE][0][LinuxBridge.PORT_NAME] = 'eth2'
     bridge_state.update(port1_state)
     bridge_state[LinuxBridge.PORT_SUBTREE].append(

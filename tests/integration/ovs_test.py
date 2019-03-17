@@ -38,7 +38,7 @@ interfaces:
 
 
 def test_create_and_remove_ovs_bridge_with_a_system_port(eth1_up):
-    state = yaml.load(OVS_BRIDGE_YAML_BASE)
+    state = yaml.load(OVS_BRIDGE_YAML_BASE, Loader=yaml.SafeLoader)
     state[INTERFACES][0]['bridge']['port'] = [
         {
             'name': 'eth1',
@@ -88,7 +88,7 @@ def test_create_and_remove_ovs_bridge_with_min_desired_state():
 
 
 def test_create_and_remove_ovs_bridge_with_an_internal_port():
-    state = yaml.load(OVS_BRIDGE_YAML_BASE)
+    state = yaml.load(OVS_BRIDGE_YAML_BASE, Loader=yaml.SafeLoader)
     state[INTERFACES][0]['bridge']['port'] = [
         {
             'name': 'ovs0',

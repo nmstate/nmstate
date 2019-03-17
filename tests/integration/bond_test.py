@@ -90,7 +90,7 @@ def bond_interface(name, slaves):
 
 
 def test_add_and_remove_bond_with_two_slaves(eth1_up, eth2_up):
-    state = yaml.load(BOND99_YAML_BASE)
+    state = yaml.load(BOND99_YAML_BASE, Loader=yaml.SafeLoader)
     netapplier.apply(state)
 
     assertlib.assert_state(state)
@@ -104,7 +104,7 @@ def test_add_and_remove_bond_with_two_slaves(eth1_up, eth2_up):
 
 
 def test_remove_bond_with_minimum_desired_state(eth1_up, eth2_up):
-    state = yaml.load(BOND99_YAML_BASE)
+    state = yaml.load(BOND99_YAML_BASE, Loader=yaml.SafeLoader)
     netapplier.apply(state)
 
     remove_bond_state = {
