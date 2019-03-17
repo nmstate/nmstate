@@ -90,4 +90,5 @@ class State(object):
                         ip.pop(dhcp_option, None)
 
     def _index_interfaces_state_by_name(self):
-        return {iface['name']: iface for iface in self._state[INTERFACES]}
+        return {iface['name']: iface
+                for iface in self._state.get(INTERFACES, [])}

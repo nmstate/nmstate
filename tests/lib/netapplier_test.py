@@ -184,8 +184,8 @@ def test_edit_existing_bond(netinfo_nm_mock, netapplier_nm_mock):
 
 class TestDesiredStateMetadata(object):
     def test_empty_states(self):
-        desired_state = {}
-        current_state = {}
+        desired_state = state.State({})
+        current_state = state.State({})
 
         netapplier.generate_ifaces_metadata(desired_state, current_state)
 
@@ -195,85 +195,95 @@ class TestDesiredStateMetadata(object):
 
 class TestDesiredStateBondMetadata(object):
     def test_bond_creation_with_new_slaves(self):
-        desired_state = {
-            BOND_NAME: {
-                'name': BOND_NAME,
-                'type': BOND_TYPE,
-                'state': 'up',
-                'link-aggregation': {
-                    'mode': 'balance-rr',
-                    'slaves': ['eth0', 'eth1']
-                }
-            },
-            'eth0': {'name': 'eth0', 'type': 'unknown'},
-            'eth1': {'name': 'eth1', 'type': 'unknown'}
-        }
-        current_state = {}
-        expected_desired_state = copy.deepcopy(desired_state)
-        expected_current_state = copy.deepcopy(current_state)
-        expected_desired_state['eth0']['_master'] = BOND_NAME
-        expected_desired_state['eth1']['_master'] = BOND_NAME
-        expected_desired_state['eth0']['_master_type'] = BOND_TYPE
-        expected_desired_state['eth1']['_master_type'] = BOND_TYPE
+        desired_state = state.State({
+            INTERFACES: [
+                {
+                    'name': BOND_NAME,
+                    'type': BOND_TYPE,
+                    'state': 'up',
+                    'link-aggregation': {
+                        'mode': 'balance-rr',
+                        'slaves': ['eth0', 'eth1']
+                    }
+                },
+                {'name': 'eth0', 'type': 'unknown'},
+                {'name': 'eth1', 'type': 'unknown'}
+            ]
+        })
+        current_state = state.State({})
+        expected_dstate = state.State(desired_state.state)
+        expected_cstate = state.State(current_state.state)
+        expected_dstate.interfaces['eth0']['_master'] = BOND_NAME
+        expected_dstate.interfaces['eth1']['_master'] = BOND_NAME
+        expected_dstate.interfaces['eth0']['_master_type'] = BOND_TYPE
+        expected_dstate.interfaces['eth1']['_master_type'] = BOND_TYPE
 
         netapplier.generate_ifaces_metadata(desired_state, current_state)
 
-        assert desired_state == expected_desired_state
-        assert current_state == expected_current_state
+        assert desired_state == expected_dstate
+        assert current_state == expected_cstate
 
     def test_bond_creation_with_existing_slaves(self):
-        desired_state = {
-            BOND_NAME: {
-                'name': BOND_NAME,
-                'type': BOND_TYPE,
-                'state': 'up',
-                'link-aggregation': {
-                    'mode': 'balance-rr',
-                    'slaves': ['eth0', 'eth1']
+        desired_state = state.State({
+            INTERFACES: [
+                {
+                    'name': BOND_NAME,
+                    'type': BOND_TYPE,
+                    'state': 'up',
+                    'link-aggregation': {
+                        'mode': 'balance-rr',
+                        'slaves': ['eth0', 'eth1']
+                    }
                 }
-            }
-        }
-        current_state = {
-            'eth0': {'name': 'eth0', 'type': 'unknown'},
-            'eth1': {'name': 'eth1', 'type': 'unknown'}
-        }
-        expected_desired_state = copy.deepcopy(desired_state)
-        expected_current_state = copy.deepcopy(current_state)
-        expected_desired_state['eth0'] = {'name': 'eth0', 'state': 'up'}
-        expected_desired_state['eth0']['_master'] = BOND_NAME
-        expected_desired_state['eth0']['_master_type'] = BOND_TYPE
-        expected_desired_state['eth1'] = {'name': 'eth1', 'state': 'up'}
-        expected_desired_state['eth1']['_master'] = BOND_NAME
-        expected_desired_state['eth1']['_master_type'] = BOND_TYPE
+            ]
+        })
+        current_state = state.State({
+            INTERFACES: [
+                {'name': 'eth0', 'type': 'unknown'},
+                {'name': 'eth1', 'type': 'unknown'}
+            ]
+        })
+        expected_dstate = state.State(desired_state.state)
+        expected_cstate = state.State(current_state.state)
+        expected_dstate.interfaces['eth0'] = {'name': 'eth0', 'state': 'up'}
+        expected_dstate.interfaces['eth0']['_master'] = BOND_NAME
+        expected_dstate.interfaces['eth0']['_master_type'] = BOND_TYPE
+        expected_dstate.interfaces['eth1'] = {'name': 'eth1', 'state': 'up'}
+        expected_dstate.interfaces['eth1']['_master'] = BOND_NAME
+        expected_dstate.interfaces['eth1']['_master_type'] = BOND_TYPE
 
         netapplier.generate_ifaces_metadata(desired_state, current_state)
 
-        assert desired_state == expected_desired_state
-        assert current_state == expected_current_state
+        assert desired_state == expected_dstate
+        assert current_state == expected_cstate
 
     def test_bond_editing_option(self):
-        desired_state = {
-            BOND_NAME: {
-                'name': BOND_NAME,
-                'type': BOND_TYPE,
-                'state': 'down'
-            }
-        }
-        current_state = {
-            BOND_NAME: {
-                'name': BOND_NAME,
-                'type': BOND_TYPE,
-                'state': 'up',
-                'link-aggregation': {
-                    'mode': 'balance-rr',
-                    'slaves': ['eth0', 'eth1']
+        desired_state = state.State({
+            INTERFACES: [
+                {
+                    'name': BOND_NAME,
+                    'type': BOND_TYPE,
+                    'state': 'down'
                 }
-            },
-            'eth0': {'name': 'eth0', 'type': 'unknown'},
-            'eth1': {'name': 'eth1', 'type': 'unknown'}
-        }
-        expected_desired_state = copy.deepcopy(desired_state)
-        expected_current_state = copy.deepcopy(current_state)
+            ]
+        })
+        current_state = state.State({
+            INTERFACES: [
+                {
+                    'name': BOND_NAME,
+                    'type': BOND_TYPE,
+                    'state': 'up',
+                    'link-aggregation': {
+                        'mode': 'balance-rr',
+                        'slaves': ['eth0', 'eth1']
+                    }
+                },
+                {'name': 'eth0', 'type': 'unknown'},
+                {'name': 'eth1', 'type': 'unknown'}
+            ]
+        })
+        expected_desired_state = state.State(desired_state.state)
+        expected_current_state = state.State(current_state.state)
 
         netapplier.generate_ifaces_metadata(desired_state, current_state)
 
@@ -281,235 +291,259 @@ class TestDesiredStateBondMetadata(object):
         assert current_state == expected_current_state
 
     def test_bond_adding_slaves(self):
-        desired_state = {
-            BOND_NAME: {
-                'name': BOND_NAME,
-                'type': BOND_TYPE,
-                'state': 'up',
-                'link-aggregation': {
-                    'mode': 'balance-rr',
-                    'slaves': ['eth0', 'eth1']
-                }
-            },
-            'eth1': {'name': 'eth1', 'state': 'up', 'type': 'unknown'}
-        }
-        current_state = {
-            'eth0': {'name': 'eth0', 'type': 'unknown'}
-        }
-        expected_desired_state = copy.deepcopy(desired_state)
-        expected_current_state = copy.deepcopy(current_state)
-        expected_desired_state['eth0'] = {'name': 'eth0', 'state': 'up'}
-        expected_desired_state['eth0']['_master'] = BOND_NAME
-        expected_desired_state['eth1']['_master'] = BOND_NAME
-        expected_desired_state['eth0']['_master_type'] = BOND_TYPE
-        expected_desired_state['eth1']['_master_type'] = BOND_TYPE
+        desired_state = state.State({
+            INTERFACES: [
+                {
+                    'name': BOND_NAME,
+                    'type': BOND_TYPE,
+                    'state': 'up',
+                    'link-aggregation': {
+                        'mode': 'balance-rr',
+                        'slaves': ['eth0', 'eth1']
+                    }
+                },
+                {'name': 'eth1', 'state': 'up', 'type': 'unknown'}
+            ]
+        })
+        current_state = state.State({
+            INTERFACES: [{'name': 'eth0', 'type': 'unknown'}]
+        })
+        expected_dstate = state.State(desired_state.state)
+        expected_cstate = state.State(current_state.state)
+        expected_dstate.interfaces['eth0'] = {'name': 'eth0', 'state': 'up'}
+        expected_dstate.interfaces['eth0']['_master'] = BOND_NAME
+        expected_dstate.interfaces['eth1']['_master'] = BOND_NAME
+        expected_dstate.interfaces['eth0']['_master_type'] = BOND_TYPE
+        expected_dstate.interfaces['eth1']['_master_type'] = BOND_TYPE
 
         netapplier.generate_ifaces_metadata(desired_state, current_state)
 
-        assert desired_state == expected_desired_state
-        assert current_state == expected_current_state
+        assert desired_state == expected_dstate
+        assert current_state == expected_cstate
 
     def test_bond_removing_slaves(self):
-        desired_state = {
-            BOND_NAME: {
-                'name': BOND_NAME,
-                'type': BOND_TYPE,
-                'state': 'up',
-                'link-aggregation': {
-                    'mode': 'balance-rr',
-                    'slaves': ['eth0']
+        desired_state = state.State({
+            INTERFACES: [
+                {
+                    'name': BOND_NAME,
+                    'type': BOND_TYPE,
+                    'state': 'up',
+                    'link-aggregation': {
+                        'mode': 'balance-rr',
+                        'slaves': ['eth0']
+                    }
                 }
-            }
-        }
-        current_state = {
-            BOND_NAME: {
-                'name': BOND_NAME,
-                'type': BOND_TYPE,
-                'state': 'up',
-                'link-aggregation': {
-                    'mode': 'balance-rr',
-                    'slaves': ['eth0', 'eth1']
-                }
-            },
-            'eth0': {'name': 'eth0', 'state': 'up', 'type': 'unknown'},
-            'eth1': {'name': 'eth1', 'state': 'up', 'type': 'unknown'}
-        }
-        expected_desired_state = copy.deepcopy(desired_state)
-        expected_current_state = copy.deepcopy(current_state)
-        expected_desired_state['eth0'] = {'name': 'eth0', 'state': 'up'}
-        expected_desired_state['eth0']['_master'] = BOND_NAME
-        expected_desired_state['eth0']['_master_type'] = BOND_TYPE
-        expected_desired_state['eth1'] = {}
+            ]
+        })
+        current_state = state.State({
+            INTERFACES: [
+                {
+                    'name': BOND_NAME,
+                    'type': BOND_TYPE,
+                    'state': 'up',
+                    'link-aggregation': {
+                        'mode': 'balance-rr',
+                        'slaves': ['eth0', 'eth1']
+                    }
+                },
+                {'name': 'eth0', 'state': 'up', 'type': 'unknown'},
+                {'name': 'eth1', 'state': 'up', 'type': 'unknown'}
+            ]
+        })
+        expected_dstate = state.State(desired_state.state)
+        expected_cstate = state.State(current_state.state)
+        expected_dstate.interfaces['eth0'] = {'name': 'eth0', 'state': 'up'}
+        expected_dstate.interfaces['eth0']['_master'] = BOND_NAME
+        expected_dstate.interfaces['eth0']['_master_type'] = BOND_TYPE
+        expected_dstate.interfaces['eth1'] = {}
 
         netapplier.generate_ifaces_metadata(desired_state, current_state)
 
-        assert desired_state == expected_desired_state
-        assert current_state == expected_current_state
+        assert desired_state == expected_dstate
+        assert current_state == expected_cstate
 
     def test_edit_slave(self):
-        desired_state = {
-            'eth0': {
-                'name': 'eth0',
-                'type': 'unknown',
-                'fookey': 'fooval'
-            }
-        }
-        current_state = {
-            BOND_NAME: {
-                'name': BOND_NAME,
-                'type': BOND_TYPE,
-                'state': 'up',
-                'link-aggregation': {
-                    'mode': 'balance-rr',
-                    'slaves': ['eth0', 'eth1']
+        desired_state = state.State({
+            INTERFACES: [
+                {
+                    'name': 'eth0',
+                    'type': 'unknown',
+                    'fookey': 'fooval'
                 }
-            },
-            'eth0': {'name': 'eth0', 'type': 'unknown'},
-            'eth1': {'name': 'eth1', 'type': 'unknown'}
-        }
-        expected_desired_state = copy.deepcopy(desired_state)
-        expected_current_state = copy.deepcopy(current_state)
-        expected_desired_state['eth0']['_master'] = BOND_NAME
-        expected_desired_state['eth0']['_master_type'] = BOND_TYPE
+            ]
+        })
+        current_state = state.State({
+            INTERFACES: [
+                {
+                    'name': BOND_NAME,
+                    'type': BOND_TYPE,
+                    'state': 'up',
+                    'link-aggregation': {
+                        'mode': 'balance-rr',
+                        'slaves': ['eth0', 'eth1']
+                    }
+                },
+                {'name': 'eth0', 'type': 'unknown'},
+                {'name': 'eth1', 'type': 'unknown'}
+            ]
+        })
+        expected_dstate = state.State(desired_state.state)
+        expected_cstate = state.State(current_state.state)
+        expected_dstate.interfaces['eth0']['_master'] = BOND_NAME
+        expected_dstate.interfaces['eth0']['_master_type'] = BOND_TYPE
 
         netapplier.generate_ifaces_metadata(desired_state, current_state)
 
-        assert desired_state == expected_desired_state
-        assert current_state == expected_current_state
+        assert desired_state == expected_dstate
+        assert current_state == expected_cstate
 
     def test_bond_reusing_slave_used_by_existing_bond(self):
         BOND2_NAME = 'bond88'
-        desired_state = {
-            BOND2_NAME: {
-                'name': BOND2_NAME,
-                'type': BOND_TYPE,
-                'state': 'up',
-                'link-aggregation': {
-                    'mode': 'balance-rr',
-                    'slaves': ['eth0']
+        desired_state = state.State({
+            INTERFACES: [
+                {
+                    'name': BOND2_NAME,
+                    'type': BOND_TYPE,
+                    'state': 'up',
+                    'link-aggregation': {
+                        'mode': 'balance-rr',
+                        'slaves': ['eth0']
+                    }
                 }
-            }
-        }
-        current_state = {
-            BOND_NAME: {
-                'name': BOND_NAME,
-                'type': BOND_TYPE,
-                'state': 'up',
-                'link-aggregation': {
-                    'mode': 'balance-rr',
-                    'slaves': ['eth0', 'eth1']
-                }
-            },
-            'eth0': {'name': 'eth0', 'state': 'up', 'type': 'unknown'},
-            'eth1': {'name': 'eth1', 'state': 'up', 'type': 'unknown'}
-        }
-        expected_desired_state = copy.deepcopy(desired_state)
-        expected_current_state = copy.deepcopy(current_state)
-        expected_desired_state['eth0'] = {'name': 'eth0', 'state': 'up'}
-        expected_desired_state['eth0']['_master'] = BOND2_NAME
-        expected_desired_state['eth0']['_master_type'] = BOND_TYPE
+            ]
+        })
+        current_state = state.State({
+            INTERFACES: [
+                {
+                    'name': BOND_NAME,
+                    'type': BOND_TYPE,
+                    'state': 'up',
+                    'link-aggregation': {
+                        'mode': 'balance-rr',
+                        'slaves': ['eth0', 'eth1']
+                    }
+                },
+                {'name': 'eth0', 'state': 'up', 'type': 'unknown'},
+                {'name': 'eth1', 'state': 'up', 'type': 'unknown'}
+            ]
+        })
+        expected_dstate = state.State(desired_state.state)
+        expected_cstate = state.State(current_state.state)
+        expected_dstate.interfaces['eth0'] = {'name': 'eth0', 'state': 'up'}
+        expected_dstate.interfaces['eth0']['_master'] = BOND2_NAME
+        expected_dstate.interfaces['eth0']['_master_type'] = BOND_TYPE
 
         netapplier.generate_ifaces_metadata(desired_state, current_state)
 
-        assert desired_state == expected_desired_state
-        assert current_state == expected_current_state
+        assert desired_state == expected_dstate
+        assert current_state == expected_cstate
 
 
 class TestDesiredStateOvsMetadata(object):
     def test_ovs_creation_with_new_ports(self):
-        desired_state = {
-            OVS_NAME: {
-                'name': OVS_NAME,
-                'type': OVS_BR_TYPE,
-                'state': 'up',
-                'bridge': {
-                    'port': [
-                        {'name': 'eth0', 'type': OBPortType.SYSTEM},
-                        {'name': 'eth1', 'type': OBPortType.SYSTEM}
-                    ]
-                }
-            },
-            'eth0': {'name': 'eth0', 'type': 'unknown'},
-            'eth1': {'name': 'eth1', 'type': 'unknown'}
-        }
-        current_state = {}
-        expected_desired_state = copy.deepcopy(desired_state)
-        expected_current_state = copy.deepcopy(current_state)
-        expected_desired_state['eth0']['_master'] = OVS_NAME
-        expected_desired_state['eth1']['_master'] = OVS_NAME
-        expected_desired_state['eth0']['_master_type'] = OVS_BR_TYPE
-        expected_desired_state['eth1']['_master_type'] = OVS_BR_TYPE
-        expected_desired_state['eth0']['_brport_options'] = (
-            desired_state[OVS_NAME]['bridge']['port'][0])
-        expected_desired_state['eth1']['_brport_options'] = (
-            desired_state[OVS_NAME]['bridge']['port'][1])
+        desired_state = state.State({
+            INTERFACES: [
+                {
+                    'name': OVS_NAME,
+                    'type': OVS_BR_TYPE,
+                    'state': 'up',
+                    'bridge': {
+                        'port': [
+                            {'name': 'eth0', 'type': OBPortType.SYSTEM},
+                            {'name': 'eth1', 'type': OBPortType.SYSTEM}
+                        ]
+                    }
+                },
+                {'name': 'eth0', 'type': 'unknown'},
+                {'name': 'eth1', 'type': 'unknown'}
+            ]
+        })
+        current_state = state.State({})
+        expected_dstate = state.State(desired_state.state)
+        expected_cstate = state.State(current_state.state)
+        expected_dstate.interfaces['eth0']['_master'] = OVS_NAME
+        expected_dstate.interfaces['eth1']['_master'] = OVS_NAME
+        expected_dstate.interfaces['eth0']['_master_type'] = OVS_BR_TYPE
+        expected_dstate.interfaces['eth1']['_master_type'] = OVS_BR_TYPE
+        expected_dstate.interfaces['eth0']['_brport_options'] = (
+            desired_state.interfaces[OVS_NAME]['bridge']['port'][0])
+        expected_dstate.interfaces['eth1']['_brport_options'] = (
+            desired_state.interfaces[OVS_NAME]['bridge']['port'][1])
 
         netapplier.generate_ifaces_metadata(desired_state, current_state)
 
-        assert desired_state == expected_desired_state
-        assert current_state == expected_current_state
+        assert desired_state == expected_dstate
+        assert current_state == expected_cstate
 
     def test_ovs_creation_with_existing_ports(self):
-        desired_state = {
-            OVS_NAME: {
-                'name': OVS_NAME,
-                'type': OVS_BR_TYPE,
-                'state': 'up',
-                'bridge': {
-                    'port': [
-                        {'name': 'eth0', 'type': OBPortType.SYSTEM},
-                        {'name': 'eth1', 'type': OBPortType.SYSTEM}
-                    ]
+        desired_state = state.State({
+            INTERFACES: [
+                {
+                    'name': OVS_NAME,
+                    'type': OVS_BR_TYPE,
+                    'state': 'up',
+                    'bridge': {
+                        'port': [
+                            {'name': 'eth0', 'type': OBPortType.SYSTEM},
+                            {'name': 'eth1', 'type': OBPortType.SYSTEM}
+                        ]
+                    }
                 }
-            }
-        }
-        current_state = {
-            'eth0': {'name': 'eth0', 'state': 'up', 'type': 'unknown'},
-            'eth1': {'name': 'eth1', 'state': 'up', 'type': 'unknown'}
-        }
-        expected_desired_state = copy.deepcopy(desired_state)
-        expected_current_state = copy.deepcopy(current_state)
-        expected_desired_state['eth0'] = {'name': 'eth0', 'state': 'up'}
-        expected_desired_state['eth0']['_master'] = OVS_NAME
-        expected_desired_state['eth0']['_master_type'] = OVS_BR_TYPE
-        expected_desired_state['eth1'] = {'name': 'eth1', 'state': 'up'}
-        expected_desired_state['eth1']['_master'] = OVS_NAME
-        expected_desired_state['eth1']['_master_type'] = OVS_BR_TYPE
-        expected_desired_state['eth0']['_brport_options'] = (
-            desired_state[OVS_NAME]['bridge']['port'][0])
-        expected_desired_state['eth1']['_brport_options'] = (
-            desired_state[OVS_NAME]['bridge']['port'][1])
+            ]
+        })
+        current_state = state.State({
+            INTERFACES: [
+                {'name': 'eth0', 'state': 'up', 'type': 'unknown'},
+                {'name': 'eth1', 'state': 'up', 'type': 'unknown'}
+            ]
+        })
+        expected_dstate = state.State(desired_state.state)
+        expected_cstate = state.State(current_state.state)
+        expected_dstate.interfaces['eth0'] = {'name': 'eth0', 'state': 'up'}
+        expected_dstate.interfaces['eth0']['_master'] = OVS_NAME
+        expected_dstate.interfaces['eth0']['_master_type'] = OVS_BR_TYPE
+        expected_dstate.interfaces['eth1'] = {'name': 'eth1', 'state': 'up'}
+        expected_dstate.interfaces['eth1']['_master'] = OVS_NAME
+        expected_dstate.interfaces['eth1']['_master_type'] = OVS_BR_TYPE
+        expected_dstate.interfaces['eth0']['_brport_options'] = (
+            desired_state.interfaces[OVS_NAME]['bridge']['port'][0])
+        expected_dstate.interfaces['eth1']['_brport_options'] = (
+            desired_state.interfaces[OVS_NAME]['bridge']['port'][1])
 
         netapplier.generate_ifaces_metadata(desired_state, current_state)
 
-        assert desired_state == expected_desired_state
-        assert current_state == expected_current_state
+        assert desired_state == expected_dstate
+        assert current_state == expected_cstate
 
     def test_ovs_editing_option(self):
-        desired_state = {
-            OVS_NAME: {
-                'name': OVS_NAME,
-                'type': OVS_BR_TYPE,
-                'state': 'down'
-            }
-        }
-        current_state = {
-            OVS_NAME: {
-                'name': OVS_NAME,
-                'type': OVS_BR_TYPE,
-                'state': 'up',
-                'bridge': {
-                    'port': [
-                        {'name': 'eth0', 'type': OBPortType.SYSTEM},
-                        {'name': 'eth1', 'type': OBPortType.SYSTEM}
-                    ]
+        desired_state = state.State({
+            INTERFACES: [
+                {
+                    'name': OVS_NAME,
+                    'type': OVS_BR_TYPE,
+                    'state': 'down'
                 }
-            },
-            'eth0': {'name': 'eth0', 'type': 'unknown'},
-            'eth1': {'name': 'eth1', 'type': 'unknown'}
-        }
-        expected_desired_state = copy.deepcopy(desired_state)
-        expected_current_state = copy.deepcopy(current_state)
+            ]
+        })
+        current_state = state.State({
+            INTERFACES: [
+                {
+                    'name': OVS_NAME,
+                    'type': OVS_BR_TYPE,
+                    'state': 'up',
+                    'bridge': {
+                        'port': [
+                            {'name': 'eth0', 'type': OBPortType.SYSTEM},
+                            {'name': 'eth1', 'type': OBPortType.SYSTEM}
+                        ]
+                    }
+                },
+                {'name': 'eth0', 'type': 'unknown'},
+                {'name': 'eth1', 'type': 'unknown'}
+            ]
+        })
+        expected_desired_state = state.State(desired_state.state)
+        expected_current_state = state.State(current_state.state)
 
         netapplier.generate_ifaces_metadata(desired_state, current_state)
 
@@ -517,158 +551,172 @@ class TestDesiredStateOvsMetadata(object):
         assert current_state == expected_current_state
 
     def test_ovs_adding_slaves(self):
-        desired_state = {
-            OVS_NAME: {
-                'name': OVS_NAME,
-                'type': OVS_BR_TYPE,
-                'state': 'up',
-                'bridge': {
-                    'port': [
-                        {'name': 'eth0', 'type': OBPortType.SYSTEM},
-                        {'name': 'eth1', 'type': OBPortType.SYSTEM}
-                    ]
-                }
-            },
-            'eth1': {'name': 'eth1', 'state': 'up', 'type': 'unknown'}
-        }
-        current_state = {
-            'eth0': {'name': 'eth0', 'state': 'up', 'type': 'unknown'}
-        }
-        expected_desired_state = copy.deepcopy(desired_state)
-        expected_current_state = copy.deepcopy(current_state)
-        expected_desired_state['eth0'] = {'name': 'eth0', 'state': 'up'}
-        expected_desired_state['eth0']['_master'] = OVS_NAME
-        expected_desired_state['eth1']['_master'] = OVS_NAME
-        expected_desired_state['eth0']['_master_type'] = OVS_BR_TYPE
-        expected_desired_state['eth1']['_master_type'] = OVS_BR_TYPE
-        expected_desired_state['eth0']['_brport_options'] = (
-            desired_state[OVS_NAME]['bridge']['port'][0])
-        expected_desired_state['eth1']['_brport_options'] = (
-            desired_state[OVS_NAME]['bridge']['port'][1])
+        desired_state = state.State({
+            INTERFACES: [
+                {
+                    'name': OVS_NAME,
+                    'type': OVS_BR_TYPE,
+                    'state': 'up',
+                    'bridge': {
+                        'port': [
+                            {'name': 'eth0', 'type': OBPortType.SYSTEM},
+                            {'name': 'eth1', 'type': OBPortType.SYSTEM}
+                        ]
+                    }
+                },
+                {'name': 'eth1', 'state': 'up', 'type': 'unknown'}
+            ]
+        })
+        current_state = state.State({
+            INTERFACES: [{'name': 'eth0', 'state': 'up', 'type': 'unknown'}]
+        })
+        expected_dstate = state.State(desired_state.state)
+        expected_cstate = state.State(current_state.state)
+        expected_dstate.interfaces['eth0'] = {'name': 'eth0', 'state': 'up'}
+        expected_dstate.interfaces['eth0']['_master'] = OVS_NAME
+        expected_dstate.interfaces['eth1']['_master'] = OVS_NAME
+        expected_dstate.interfaces['eth0']['_master_type'] = OVS_BR_TYPE
+        expected_dstate.interfaces['eth1']['_master_type'] = OVS_BR_TYPE
+        expected_dstate.interfaces['eth0']['_brport_options'] = (
+            desired_state.interfaces[OVS_NAME]['bridge']['port'][0])
+        expected_dstate.interfaces['eth1']['_brport_options'] = (
+            desired_state.interfaces[OVS_NAME]['bridge']['port'][1])
 
         netapplier.generate_ifaces_metadata(desired_state, current_state)
 
-        assert desired_state == expected_desired_state
-        assert current_state == expected_current_state
+        assert desired_state == expected_dstate
+        assert current_state == expected_cstate
 
     def test_ovs_removing_slaves(self):
-        desired_state = {
-            OVS_NAME: {
-                'name': OVS_NAME,
-                'type': OVS_BR_TYPE,
-                'state': 'up',
-                'bridge': {
-                    'port': [
-                        {'name': 'eth0', 'type': OBPortType.SYSTEM}
-                    ]
+        desired_state = state.State({
+            INTERFACES: [
+                {
+                    'name': OVS_NAME,
+                    'type': OVS_BR_TYPE,
+                    'state': 'up',
+                    'bridge': {
+                        'port': [
+                            {'name': 'eth0', 'type': OBPortType.SYSTEM}
+                        ]
+                    }
                 }
-            }
-        }
-        current_state = {
-            OVS_NAME: {
-                'name': OVS_NAME,
-                'type': OVS_BR_TYPE,
-                'state': 'up',
-                'bridge': {
-                    'port': [
-                        {'name': 'eth0', 'type': OBPortType.SYSTEM},
-                        {'name': 'eth1', 'type': OBPortType.SYSTEM}
-                    ]
-                }
-            },
-            'eth0': {'name': 'eth0', 'state': 'up', 'type': 'unknown'},
-            'eth1': {'name': 'eth1', 'state': 'up', 'type': 'unknown'}
-        }
-        expected_desired_state = copy.deepcopy(desired_state)
-        expected_current_state = copy.deepcopy(current_state)
-        expected_desired_state['eth0'] = {'name': 'eth0', 'state': 'up'}
-        expected_desired_state['eth0']['_master'] = OVS_NAME
-        expected_desired_state['eth0']['_master_type'] = OVS_BR_TYPE
-        expected_desired_state['eth1'] = {}
-        expected_desired_state['eth0']['_brport_options'] = (
-            desired_state[OVS_NAME]['bridge']['port'][0])
+            ]
+        })
+        current_state = state.State({
+            INTERFACES: [
+                {
+                    'name': OVS_NAME,
+                    'type': OVS_BR_TYPE,
+                    'state': 'up',
+                    'bridge': {
+                        'port': [
+                            {'name': 'eth0', 'type': OBPortType.SYSTEM},
+                            {'name': 'eth1', 'type': OBPortType.SYSTEM}
+                        ]
+                    }
+                },
+                {'name': 'eth0', 'state': 'up', 'type': 'unknown'},
+                {'name': 'eth1', 'state': 'up', 'type': 'unknown'}
+            ]
+        })
+        expected_dstate = state.State(desired_state.state)
+        expected_cstate = state.State(current_state.state)
+        expected_dstate.interfaces['eth0'] = {'name': 'eth0', 'state': 'up'}
+        expected_dstate.interfaces['eth0']['_master'] = OVS_NAME
+        expected_dstate.interfaces['eth0']['_master_type'] = OVS_BR_TYPE
+        expected_dstate.interfaces['eth1'] = {}
+        expected_dstate.interfaces['eth0']['_brport_options'] = (
+            desired_state.interfaces[OVS_NAME]['bridge']['port'][0])
 
         netapplier.generate_ifaces_metadata(desired_state, current_state)
 
-        assert desired_state == expected_desired_state
-        assert current_state == expected_current_state
+        assert desired_state == expected_dstate
+        assert current_state == expected_cstate
 
     def test_ovs_edit_slave(self):
-        desired_state = {
-            'eth0': {
-                'name': 'eth0',
-                'type': 'unknown',
-                'fookey': 'fooval'
-            }
-        }
-        current_state = {
-            OVS_NAME: {
-                'name': OVS_NAME,
-                'type': OVS_BR_TYPE,
-                'state': 'up',
-                'bridge': {
-                    'port': [
-                        {'name': 'eth0', 'type': OBPortType.SYSTEM},
-                        {'name': 'eth1', 'type': OBPortType.SYSTEM}
-                    ]
+        desired_state = state.State({
+            INTERFACES: [
+                {
+                    'name': 'eth0',
+                    'type': 'unknown',
+                    'fookey': 'fooval'
                 }
-            },
-            'eth0': {'name': 'eth0', 'type': 'unknown'},
-            'eth1': {'name': 'eth1', 'type': 'unknown'}
-        }
-        expected_desired_state = copy.deepcopy(desired_state)
-        expected_current_state = copy.deepcopy(current_state)
-        expected_desired_state['eth0']['_master'] = OVS_NAME
-        expected_desired_state['eth0']['_master_type'] = OVS_BR_TYPE
-        expected_desired_state['eth0']['_brport_options'] = (
-            current_state[OVS_NAME]['bridge']['port'][0])
+            ]
+        })
+        current_state = state.State({
+            INTERFACES: [
+                {
+                    'name': OVS_NAME,
+                    'type': OVS_BR_TYPE,
+                    'state': 'up',
+                    'bridge': {
+                        'port': [
+                            {'name': 'eth0', 'type': OBPortType.SYSTEM},
+                            {'name': 'eth1', 'type': OBPortType.SYSTEM}
+                        ]
+                    }
+                },
+                {'name': 'eth0', 'type': 'unknown'},
+                {'name': 'eth1', 'type': 'unknown'}
+            ]
+        })
+        expected_dstate = state.State(desired_state.state)
+        expected_cstate = state.State(current_state.state)
+        expected_dstate.interfaces['eth0']['_master'] = OVS_NAME
+        expected_dstate.interfaces['eth0']['_master_type'] = OVS_BR_TYPE
+        expected_dstate.interfaces['eth0']['_brport_options'] = (
+            current_state.interfaces[OVS_NAME]['bridge']['port'][0])
 
         netapplier.generate_ifaces_metadata(desired_state, current_state)
 
-        assert desired_state == expected_desired_state
-        assert current_state == expected_current_state
+        assert desired_state == expected_dstate
+        assert current_state == expected_cstate
 
     def test_ovs_reusing_slave_used_by_existing_bridge(self):
         OVS2_NAME = 'ovs-br88'
-        desired_state = {
-            OVS2_NAME: {
-                'name': OVS2_NAME,
-                'type': OVS_BR_TYPE,
-                'state': 'up',
-                'bridge': {
-                    'port': [
-                        {'name': 'eth0', 'type': OBPortType.SYSTEM}
-                    ]
+        desired_state = state.State({
+            INTERFACES: [
+                {
+                    'name': OVS2_NAME,
+                    'type': OVS_BR_TYPE,
+                    'state': 'up',
+                    'bridge': {
+                        'port': [
+                            {'name': 'eth0', 'type': OBPortType.SYSTEM}
+                        ]
+                    }
                 }
-            }
-        }
-        current_state = {
-            OVS_NAME: {
-                'name': OVS_NAME,
-                'type': OVS_BR_TYPE,
-                'state': 'up',
-                'bridge': {
-                    'port': [
-                        {'name': 'eth0', 'type': OBPortType.SYSTEM},
-                        {'name': 'eth1', 'type': OBPortType.SYSTEM}
-                    ]
-                }
-            },
-            'eth0': {'name': 'eth0', 'state': 'up', 'type': 'unknown'},
-            'eth1': {'name': 'eth1', 'state': 'up', 'type': 'unknown'}
-        }
-        expected_desired_state = copy.deepcopy(desired_state)
-        expected_current_state = copy.deepcopy(current_state)
-        expected_desired_state['eth0'] = {'name': 'eth0', 'state': 'up'}
-        expected_desired_state['eth0']['_master'] = OVS2_NAME
-        expected_desired_state['eth0']['_master_type'] = OVS_BR_TYPE
-        expected_desired_state['eth0']['_brport_options'] = (
-            desired_state[OVS2_NAME]['bridge']['port'][0])
+            ]
+        })
+        current_state = state.State({
+            INTERFACES: [
+                {
+                    'name': OVS_NAME,
+                    'type': OVS_BR_TYPE,
+                    'state': 'up',
+                    'bridge': {
+                        'port': [
+                            {'name': 'eth0', 'type': OBPortType.SYSTEM},
+                            {'name': 'eth1', 'type': OBPortType.SYSTEM}
+                        ]
+                    }
+                },
+                {'name': 'eth0', 'state': 'up', 'type': 'unknown'},
+                {'name': 'eth1', 'state': 'up', 'type': 'unknown'}
+            ]
+        })
+        expected_dstate = state.State(desired_state.state)
+        expected_cstate = state.State(current_state.state)
+        expected_dstate.interfaces['eth0'] = {'name': 'eth0', 'state': 'up'}
+        expected_dstate.interfaces['eth0']['_master'] = OVS2_NAME
+        expected_dstate.interfaces['eth0']['_master_type'] = OVS_BR_TYPE
+        expected_dstate.interfaces['eth0']['_brport_options'] = (
+            desired_state.interfaces[OVS2_NAME]['bridge']['port'][0])
 
         netapplier.generate_ifaces_metadata(desired_state, current_state)
 
-        assert desired_state == expected_desired_state
-        assert current_state == expected_current_state
+        assert desired_state == expected_dstate
+        assert current_state == expected_cstate
 
 
 class TestAssertIfaceState(object):
