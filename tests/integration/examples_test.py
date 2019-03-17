@@ -82,6 +82,6 @@ def load_example(name):
     examples = find_examples_dir()
 
     with open(os.path.join(examples, name)) as yamlfile:
-        state = yaml.load(yamlfile)
+        state = yaml.load(yamlfile, Loader=yaml.SafeLoader)
 
     return state

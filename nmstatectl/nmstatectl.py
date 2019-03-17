@@ -151,7 +151,7 @@ def apply_state(statedata, verify_change):
     if statedata[0] == '{':
         state = json.loads(statedata)
     else:
-        state = yaml.load(statedata)
+        state = yaml.load(statedata, Loader=yaml.SafeLoader)
         use_yaml = True
     netapplier.apply(state, verify_change)
     print('Desired state applied: ')
@@ -219,7 +219,7 @@ def _parse_state(txtstate, parse_yaml):
     state = {}
     if parse_yaml:
         try:
-            state = yaml.load(txtstate)
+            state = yaml.load(txtstate, Loader=yaml.SafeLoader)
         except yaml.parser.ParserError as e:
             error = 'Invalid YAML syntax: %s\n' % e
         except yaml.parser.ScannerError as e:
