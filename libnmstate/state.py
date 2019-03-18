@@ -18,10 +18,8 @@
 import copy
 import six
 
-from libnmstate.schema import Constants
-
-
-INTERFACES = Constants.INTERFACES
+from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceType
 
 
 class State(object):
@@ -89,6 +87,25 @@ class State(object):
                                         'auto-dns'):
                         ip.pop(dhcp_option, None)
 
+    def remove_absent_interfaces(self):
+        ifaces = {}
+        for ifname, ifstate in six.viewitems(self.interfaces):
+            is_absent = ifstate.get('state') == 'absent'
+            if not is_absent:
+                ifaces[ifname] = ifstate
+        self._ifaces_state = ifaces
+
+    def remove_down_virt_interfaces(self):
+        ifaces = {}
+        for ifname, ifstate in six.viewitems(self.interfaces):
+            is_virt_down = (
+                ifstate.get('state') == 'down' and
+                ifstate.get('type') in InterfaceType.VIRT_TYPES
+            )
+            if not is_virt_down:
+                ifaces[ifname] = ifstate
+        self._ifaces_state = ifaces
+
     def _index_interfaces_state_by_name(self):
         return {iface['name']: iface
-                for iface in self._state.get(INTERFACES, [])}
+                for iface in self._state.get(Interface.KEY, [])}

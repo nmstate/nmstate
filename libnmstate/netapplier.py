@@ -33,7 +33,6 @@ from libnmstate.error import NmstateLibnmError
 from libnmstate.nm import nmclient
 from libnmstate.prettystate import format_desired_current_state_diff
 from libnmstate.schema import Constants
-from libnmstate.schema import InterfaceType
 
 
 def apply(desired_state, verify_change=True):
@@ -67,16 +66,13 @@ def _apply_ifaces_state(desired_state, verify_change):
 
 
 def _verify_change(desired_state):
-    ifaces_desired_state = desired_state.interfaces
-    current_state = state.State({Constants.INTERFACES: netinfo.interfaces()})
-    ifaces_desired_state = _remove_absent_iface_entries(
-        ifaces_desired_state)
-    ifaces_desired_state = _remove_down_virt_iface_entries(
-        ifaces_desired_state)
-    ifaces_desired_state = metadata.remove_ifaces_metadata(
-        ifaces_desired_state)
+    desired_state.remove_absent_interfaces()
+    desired_state.remove_down_virt_interfaces()
 
-    assert_ifaces_state(ifaces_desired_state, current_state)
+    metadata.remove_ifaces_metadata(desired_state)
+
+    current_state = state.State({Constants.INTERFACES: netinfo.interfaces()})
+    assert_ifaces_state(desired_state, current_state)
 
 
 @contextmanager
@@ -170,7 +166,8 @@ def _index_by_name(ifaces_state):
     return {iface['name']: iface for iface in ifaces_state}
 
 
-def assert_ifaces_state(ifaces_desired_state, current_state):
+def assert_ifaces_state(desired_state, current_state):
+    ifaces_desired_state = desired_state.interfaces
     ifaces_current_state = current_state.interfaces
     if not (set(ifaces_desired_state) <= set(ifaces_current_state)):
         raise NmstateVerificationError(
@@ -225,27 +222,6 @@ def _sort_bridge_ports(desired_state, current_state):
     for ifstate in (desired_state, current_state):
         ifstate.get('bridge', {}).get('port', []).sort(key=itemgetter('name'))
     return desired_state, current_state
-
-
-def _remove_absent_iface_entries(ifaces_desired_state):
-    ifaces = {}
-    for ifname, ifstate in six.viewitems(ifaces_desired_state):
-        is_absent = ifstate.get('state') == 'absent'
-        if not is_absent:
-            ifaces[ifname] = ifstate
-    return ifaces
-
-
-def _remove_down_virt_iface_entries(ifaces_desired_state):
-    ifaces = {}
-    for ifname, ifstate in six.viewitems(ifaces_desired_state):
-        is_virt_down = (
-                ifstate.get('state') == 'down' and
-                ifstate.get('type') in InterfaceType.VIRT_TYPES
-        )
-        if not is_virt_down:
-            ifaces[ifname] = ifstate
-    return ifaces
 
 
 def _remove_iface_ipv6_link_local_addr(desired_state, current_state):

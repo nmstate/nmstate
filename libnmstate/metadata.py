@@ -14,7 +14,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
-import copy
 
 import six
 
@@ -58,13 +57,10 @@ def generate_ifaces_metadata(desired_state, current_state):
 
 
 def remove_ifaces_metadata(ifaces_state):
-    clean_ifaces_state = copy.deepcopy(ifaces_state)
-    for iface_state in six.viewvalues(clean_ifaces_state):
+    for iface_state in six.viewvalues(ifaces_state.interfaces):
         iface_state.pop('_master', None)
         iface_state.pop('_master_type', None)
         iface_state.pop('_brport_options', None)
-
-    return clean_ifaces_state
 
 
 def _get_bond_slaves_from_state(iface_state, default=()):
