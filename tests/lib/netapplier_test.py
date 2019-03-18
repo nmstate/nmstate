@@ -183,53 +183,41 @@ class TestAssertIfaceState(object):
         desired_state = self._base_state
         current_state = self._base_state
 
-        cstate = state.State(
-            {Constants.INTERFACES: list(current_state.values())}
-        )
-        netapplier.assert_ifaces_state(desired_state, cstate)
+        netapplier.assert_ifaces_state(desired_state, current_state)
 
     def test_desired_is_partial_to_current(self):
         desired_state = self._base_state
         current_state = self._base_state
-        current_state.update({
+        current_state.interfaces.update({
             'eth0': {'name': 'eth0', 'state': 'up', 'type': 'unknown'},
             'eth1': {'name': 'eth1', 'state': 'up', 'type': 'unknown'}
         })
 
-        cstate = state.State(
-            {Constants.INTERFACES: list(current_state.values())}
-        )
-        netapplier.assert_ifaces_state(desired_state, cstate)
+        netapplier.assert_ifaces_state(desired_state, current_state)
 
     def test_current_is_partial_to_desired(self):
         desired_state = self._base_state
         current_state = self._base_state
-        desired_state.update({
+        desired_state.interfaces.update({
             'eth0': {'name': 'eth0', 'state': 'up', 'type': 'unknown'},
             'eth1': {'name': 'eth1', 'state': 'up', 'type': 'unknown'}
         })
 
-        cstate = state.State(
-            {Constants.INTERFACES: list(current_state.values())}
-        )
         with pytest.raises(NmstateVerificationError):
-            netapplier.assert_ifaces_state(desired_state, cstate)
+            netapplier.assert_ifaces_state(desired_state, current_state)
 
     def test_desired_is_not_equal_to_current(self):
         desired_state = self._base_state
         current_state = self._base_state
-        current_state['foo-name']['state'] = 'down'
+        current_state.interfaces['foo-name']['state'] = 'down'
 
-        cstate = state.State(
-            {Constants.INTERFACES: list(current_state.values())}
-        )
         with pytest.raises(NmstateVerificationError):
-            netapplier.assert_ifaces_state(desired_state, cstate)
+            netapplier.assert_ifaces_state(desired_state, current_state)
 
     def test_sort_multiple_ip(self):
         desired_state = self._base_state
         current_state = self._base_state
-        desired_state['foo-name']['ipv4'] = {
+        desired_state.interfaces['foo-name']['ipv4'] = {
             'address': [
                 {
                     'ip': '192.168.122.10',
@@ -242,7 +230,7 @@ class TestAssertIfaceState(object):
             ],
             'enabled': True
         }
-        current_state['foo-name']['ipv4'] = {
+        current_state.interfaces['foo-name']['ipv4'] = {
             'address': [
                 {
                     'ip': '192.168.121.10',
@@ -255,7 +243,7 @@ class TestAssertIfaceState(object):
             ],
             'enabled': True
         }
-        desired_state['foo-name']['ipv6'] = {
+        desired_state.interfaces['foo-name']['ipv6'] = {
             'address': [
                 {
                     'ip': '2001::2',
@@ -268,7 +256,7 @@ class TestAssertIfaceState(object):
             ],
             'enabled': True
         }
-        current_state['foo-name']['ipv6'] = {
+        current_state.interfaces['foo-name']['ipv6'] = {
             'address': [
                 {
                     'ip': '2001::1',
@@ -282,22 +270,21 @@ class TestAssertIfaceState(object):
             'enabled': True
         }
 
-        cstate = state.State(
-            {Constants.INTERFACES: list(current_state.values())}
-        )
-        netapplier.assert_ifaces_state(desired_state, cstate)
+        netapplier.assert_ifaces_state(desired_state, current_state)
 
     @property
     def _base_state(self):
-        return {
-            'foo-name': {
-                'name': 'foo-name',
-                'type': 'foo-type',
-                'state': 'up',
-                'bridge': {
-                    'port': [
-                        {'name': 'eth0', 'type': 'system'}
-                    ]
+        return state.State({
+            Constants.INTERFACES: [
+                {
+                    'name': 'foo-name',
+                    'type': 'foo-type',
+                    'state': 'up',
+                    'bridge': {
+                        'port': [
+                            {'name': 'eth0', 'type': 'system'}
+                        ]
+                    }
                 }
-            }
-        }
+            ]
+        })
