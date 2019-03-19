@@ -24,6 +24,24 @@ from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceType
 
 
+def create_state(state, interfaces_to_filter=None):
+    """
+    Create a state object, given an initial state.
+    interface_filter: Limit the interfaces included in the state to the ones
+    mentioned in the list. None implied no filtering.
+    """
+    new_state = {}
+    if interfaces_to_filter is not None:
+        origin = State(state)
+        iface_names = set(origin.interfaces) & interfaces_to_filter
+        filtered_ifaces_state = [
+            origin.interfaces[ifname] for ifname in iface_names
+        ]
+        new_state[Interface.KEY] = filtered_ifaces_state
+
+    return State(new_state)
+
+
 class State(object):
     def __init__(self, state):
         self._state = copy.deepcopy(state)
@@ -111,6 +129,20 @@ class State(object):
             if not is_virt_down:
                 ifaces[ifname] = ifstate
         self._ifaces_state = ifaces
+
+    def canonicalize_interfaces(self, other_state):
+        """
+        Given the self and other states, complete the self state by merging
+        the missing parts from the current state.
+        The operation is performed on entries that exist in both states,
+        entries that appear only on one state are ignored.
+        This is a reverse recursive update operation.
+        """
+        other_state = State(other_state.state)
+        for name in (six.viewkeys(self.interfaces) &
+                     six.viewkeys(other_state.interfaces)):
+            dict_update(other_state.interfaces[name], self.interfaces[name])
+            self._ifaces_state[name] = other_state.interfaces[name]
 
     @staticmethod
     def _index_interfaces_state_by_name(state):
