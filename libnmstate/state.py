@@ -20,6 +20,10 @@ import copy
 from operator import itemgetter
 import six
 
+from libnmstate import iplib
+from libnmstate import metadata
+from libnmstate.error import NmstateVerificationError
+from libnmstate.prettystate import format_desired_current_state_diff
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceType
 
@@ -111,24 +115,30 @@ class State(object):
                                         'auto-dns'):
                         ip.pop(dhcp_option, None)
 
-    def remove_absent_interfaces(self):
-        ifaces = {}
-        for ifname, ifstate in six.viewitems(self.interfaces):
-            is_absent = ifstate.get('state') == 'absent'
-            if not is_absent:
-                ifaces[ifname] = ifstate
-        self._ifaces_state = ifaces
+    def verify_interfaces(self, other_state):
+        """Verify that the (self) state is a subset of the other_state. """
+        self._remove_absent_interfaces()
+        self._remove_down_virt_interfaces()
 
-    def remove_down_virt_interfaces(self):
-        ifaces = {}
-        for ifname, ifstate in six.viewitems(self.interfaces):
-            is_virt_down = (
-                ifstate.get('state') == 'down' and
-                ifstate.get('type') in InterfaceType.VIRT_TYPES
-            )
-            if not is_virt_down:
-                ifaces[ifname] = ifstate
-        self._ifaces_state = ifaces
+        self._assert_interfaces_included_in(other_state)
+
+        metadata.remove_ifaces_metadata(self)
+        other_state.sanitize_dynamic_ip()
+
+        self.canonicalize_interfaces(other_state)
+
+        self.normalize_for_verification()
+        other_state.normalize_for_verification()
+
+        self._assert_interfaces_equal(other_state)
+
+    def normalize_for_verification(self):
+        self._clean_sanitize_ethernet()
+        self._sort_lag_slaves()
+        self._sort_bridge_ports()
+        self._canonicalize_ipv6()
+        self._remove_iface_ipv6_link_local_addr()
+        self._sort_ip_addresses()
 
     def canonicalize_interfaces(self, other_state):
         """
@@ -144,9 +154,87 @@ class State(object):
             dict_update(other_state.interfaces[name], self.interfaces[name])
             self._ifaces_state[name] = other_state.interfaces[name]
 
+    def _remove_absent_interfaces(self):
+        ifaces = {}
+        for ifname, ifstate in six.viewitems(self.interfaces):
+            is_absent = ifstate.get('state') == 'absent'
+            if not is_absent:
+                ifaces[ifname] = ifstate
+        self._ifaces_state = ifaces
+
+    def _remove_down_virt_interfaces(self):
+        ifaces = {}
+        for ifname, ifstate in six.viewitems(self.interfaces):
+            is_virt_down = (
+                ifstate.get('state') == 'down' and
+                ifstate.get('type') in InterfaceType.VIRT_TYPES
+            )
+            if not is_virt_down:
+                ifaces[ifname] = ifstate
+        self._ifaces_state = ifaces
+
     @staticmethod
     def _index_interfaces_state_by_name(state):
         return {iface['name']: iface for iface in state.get(Interface.KEY, [])}
+
+    def _clean_sanitize_ethernet(self):
+        for ifstate in six.viewvalues(self.interfaces):
+            ethernet_state = ifstate.get('ethernet')
+            if ethernet_state:
+                for key in ('auto-negotiation', 'speed', 'duplex'):
+                    if ethernet_state.get(key, None) is None:
+                        ethernet_state.pop(key, None)
+                if not ethernet_state:
+                    ifstate.pop('ethernet', None)
+
+    def _sort_lag_slaves(self):
+        for ifstate in six.viewvalues(self.interfaces):
+            ifstate.get('link-aggregation', {}).get('slaves', []).sort()
+
+    def _sort_bridge_ports(self):
+        for ifstate in six.viewvalues(self.interfaces):
+            ifstate.get('bridge', {}).get('port', []).sort(
+                key=itemgetter('name'))
+
+    def _canonicalize_ipv6(self):
+        for ifstate in six.viewvalues(self.interfaces):
+            new_state = {Interface.IPV6: {'enabled': False, 'address': []}}
+            dict_update(new_state, ifstate)
+            self._ifaces_state[ifstate[Interface.NAME]] = new_state
+
+    def _remove_iface_ipv6_link_local_addr(self):
+        for ifstate in six.viewvalues(self.interfaces):
+            ifstate['ipv6']['address'] = list(
+                addr for addr in ifstate['ipv6']['address']
+                if not iplib.is_ipv6_link_local_addr(addr['ip'],
+                                                     addr['prefix-length'])
+            )
+
+    def _sort_ip_addresses(self):
+        for ifstate in six.viewvalues(self.interfaces):
+            for family in ('ipv4', 'ipv6'):
+                ifstate.get(family, {}).get('address', []).sort(
+                    key=itemgetter('ip'))
+
+    def _assert_interfaces_equal(self, current_state):
+        for ifname in self.interfaces:
+            iface_dstate = self.interfaces[ifname]
+            iface_cstate = current_state.interfaces[ifname]
+
+            if iface_dstate != iface_cstate:
+                raise NmstateVerificationError(
+                    format_desired_current_state_diff(
+                        self.interfaces[ifname],
+                        current_state.interfaces[ifname]
+                    )
+                )
+
+    def _assert_interfaces_included_in(self, current_state):
+        if not (set(self.interfaces) <= set(
+                current_state.interfaces)):
+            raise NmstateVerificationError(
+                format_desired_current_state_diff(self.interfaces,
+                                                  current_state.interfaces))
 
 
 def dict_update(origin_data, to_merge_data):
