@@ -36,8 +36,8 @@ class TestDesiredStateMetadata(object):
 
         metadata.generate_ifaces_metadata(desired_state, current_state)
 
-        assert desired_state == {}
-        assert current_state == {}
+        assert desired_state.state == {Interface.KEY: []}
+        assert current_state.state == {Interface.KEY: []}
 
 
 class TestDesiredStateBondMetadata(object):
@@ -67,7 +67,7 @@ class TestDesiredStateBondMetadata(object):
 
         metadata.generate_ifaces_metadata(desired_state, current_state)
 
-        assert desired_state == expected_dstate
+        assert desired_state.state == expected_dstate.state
         assert current_state == expected_cstate
 
     def test_bond_creation_with_existing_slaves(self):
@@ -202,7 +202,7 @@ class TestDesiredStateBondMetadata(object):
         expected_dstate.interfaces['eth0'] = {'name': 'eth0', 'state': 'up'}
         expected_dstate.interfaces['eth0']['_master'] = BOND_NAME
         expected_dstate.interfaces['eth0']['_master_type'] = TYPE_BOND
-        expected_dstate.interfaces['eth1'] = {}
+        expected_dstate.interfaces['eth1'] = {'name': 'eth1'}
 
         metadata.generate_ifaces_metadata(desired_state, current_state)
 
@@ -471,7 +471,7 @@ class TestDesiredStateOvsMetadata(object):
         expected_dstate.interfaces['eth0'] = {'name': 'eth0', 'state': 'up'}
         expected_dstate.interfaces['eth0']['_master'] = OVS_NAME
         expected_dstate.interfaces['eth0']['_master_type'] = TYPE_OVS_BR
-        expected_dstate.interfaces['eth1'] = {}
+        expected_dstate.interfaces['eth1'] = {'name': 'eth1'}
         expected_dstate.interfaces['eth0']['_brport_options'] = (
             desired_state.interfaces[OVS_NAME]['bridge']['port'][0])
 
