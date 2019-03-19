@@ -48,9 +48,7 @@ def _apply_ifaces_state(desired_state, verify_change):
 
     desired_state.sanitize_ethernet(current_state)
     desired_state.sanitize_dynamic_ip()
-
     metadata.generate_ifaces_metadata(desired_state, current_state)
-
     with _transaction():
         with _setup_providers():
             _add_interfaces(desired_state.interfaces, current_state.interfaces)
@@ -58,8 +56,7 @@ def _apply_ifaces_state(desired_state, verify_change):
             current_state = state.State(
                 {Constants.INTERFACES: netinfo.interfaces()}
             )
-            _edit_interfaces(desired_state.interfaces,
-                             current_state.interfaces)
+            _edit_interfaces(desired_state, current_state)
         if verify_change:
             _verify_change(desired_state)
 
@@ -117,15 +114,15 @@ def _add_interfaces(ifaces_desired_state, ifaces_current_state):
     nm.applier.set_ifaces_admin_state(ifaces2add, con_profiles=ifaces_configs)
 
 
-def _edit_interfaces(ifaces_desired_state, ifaces_current_state):
-    ifaces2edit = [
-        _canonicalize_desired_state(ifaces_desired_state[name],
-                                    ifaces_current_state[name])
-        for name in
-        six.viewkeys(ifaces_desired_state) & six.viewkeys(ifaces_current_state)
-    ]
+def _edit_interfaces(desired_state, current_state):
+    state2edit = state.create_state(
+        desired_state.state,
+        interfaces_to_filter=set(current_state.interfaces)
+    )
+    state2edit.canonicalize_interfaces(current_state)
+    ifaces2edit = list(six.viewvalues(state2edit.interfaces))
 
-    validator.verify_interfaces_state(ifaces2edit, ifaces_desired_state)
+    validator.verify_interfaces_state(ifaces2edit, desired_state.interfaces)
 
     iface2prepare = list(
         filter(lambda state: state.get('state') not in ('absent', 'down'),
@@ -140,32 +137,21 @@ def _edit_interfaces(ifaces_desired_state, ifaces_current_state):
                                       con_profiles=ifaces_configs)
 
 
-def _canonicalize_desired_state(iface_desired_state, iface_current_state):
-    """
-    Given the desired and current states, complete the desired state by merging
-    the missing parts from the current state.
-    """
-    iface_current_state = copy.deepcopy(iface_current_state)
-    return state.dict_update(iface_current_state, iface_desired_state)
-
-
 def _index_by_name(ifaces_state):
     return {iface['name']: iface for iface in ifaces_state}
 
 
 def assert_ifaces_state(desired_state, current_state):
-    ifaces_desired_state = desired_state.interfaces
-    ifaces_current_state = current_state.interfaces
-    if not (set(ifaces_desired_state) <= set(ifaces_current_state)):
+    if not (set(desired_state.interfaces) <= set(current_state.interfaces)):
         raise NmstateVerificationError(
-            format_desired_current_state_diff(ifaces_desired_state,
-                                              ifaces_current_state))
+            format_desired_current_state_diff(desired_state.interfaces,
+                                              current_state.interfaces))
 
     current_state.sanitize_dynamic_ip()
-    for ifname in ifaces_desired_state:
-        iface_cstate = ifaces_current_state[ifname]
-        iface_dstate = _canonicalize_desired_state(
-            ifaces_desired_state[ifname], iface_cstate)
+    desired_state.canonicalize_interfaces(current_state)
+    for ifname in desired_state.interfaces:
+        iface_dstate = desired_state.interfaces[ifname]
+        iface_cstate = current_state.interfaces[ifname]
 
         iface_dstate, iface_cstate = _cleanup_iface_ethernet_state_sanitize(
             iface_dstate, iface_cstate)
