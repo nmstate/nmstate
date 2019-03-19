@@ -18,7 +18,6 @@
 from contextlib import contextmanager
 from operator import itemgetter
 
-import collections
 import copy
 import six
 
@@ -147,19 +146,7 @@ def _canonicalize_desired_state(iface_desired_state, iface_current_state):
     the missing parts from the current state.
     """
     iface_current_state = copy.deepcopy(iface_current_state)
-    return _dict_update(iface_current_state, iface_desired_state)
-
-
-def _dict_update(origin_data, to_merge_data):
-    """Recursevely performes a dict update (merge)"""
-
-    for key, val in six.viewitems(to_merge_data):
-        if isinstance(val, collections.Mapping):
-            origin_data[key] = _dict_update(origin_data.get(key, {}), val)
-        else:
-            origin_data[key] = val
-
-    return origin_data
+    return state.dict_update(iface_current_state, iface_desired_state)
 
 
 def _index_by_name(ifaces_state):
@@ -234,10 +221,10 @@ def _remove_iface_ipv6_link_local_addr(desired_state, current_state):
 
 
 def _canonicalize_ipv6_state(desired_state, current_state):
-    desired_state = _dict_update({'ipv6': {'enabled': False, 'address': []}},
-                                 desired_state)
-    current_state = _dict_update({'ipv6': {'enabled': False, 'address': []}},
-                                 current_state)
+    desired_state = state.dict_update(
+        {'ipv6': {'enabled': False, 'address': []}}, desired_state)
+    current_state = state.dict_update(
+        {'ipv6': {'enabled': False, 'address': []}}, current_state)
     return desired_state, current_state
 
 

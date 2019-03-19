@@ -15,6 +15,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
+import collections
 import copy
 from operator import itemgetter
 import six
@@ -114,3 +115,14 @@ class State(object):
     @staticmethod
     def _index_interfaces_state_by_name(state):
         return {iface['name']: iface for iface in state.get(Interface.KEY, [])}
+
+
+def dict_update(origin_data, to_merge_data):
+    """Recursevely performes a dict update (merge)"""
+
+    for key, val in six.viewitems(to_merge_data):
+        if isinstance(val, collections.Mapping):
+            origin_data[key] = dict_update(origin_data.get(key, {}), val)
+        else:
+            origin_data[key] = val
+    return origin_data
