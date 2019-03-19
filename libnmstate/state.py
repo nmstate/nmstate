@@ -16,6 +16,7 @@
 #
 
 import copy
+from operator import itemgetter
 import six
 
 from libnmstate.schema import Interface
@@ -25,22 +26,26 @@ from libnmstate.schema import InterfaceType
 class State(object):
     def __init__(self, state):
         self._state = copy.deepcopy(state)
-        self._ifaces_state = self._index_interfaces_state_by_name()
+        self._ifaces_state = State._index_interfaces_state_by_name(self._state)
 
     def __eq__(self, other):
-        return self._state == other
+        return self.state == other.state
 
     def __hash__(self):
-        return hash(self._state)
+        return hash(self.state)
 
     def __str__(self):
-        return self._state
+        return str(self.state)
 
     def __repr__(self):
         return self.__str__()
 
     @property
     def state(self):
+        self._state[Interface.KEY] = sorted(
+            list(six.viewvalues(self._ifaces_state)),
+            key=itemgetter('name')
+        )
         return self._state
 
     @property
@@ -106,6 +111,6 @@ class State(object):
                 ifaces[ifname] = ifstate
         self._ifaces_state = ifaces
 
-    def _index_interfaces_state_by_name(self):
-        return {iface['name']: iface
-                for iface in self._state.get(Interface.KEY, [])}
+    @staticmethod
+    def _index_interfaces_state_by_name(state):
+        return {iface['name']: iface for iface in state.get(Interface.KEY, [])}
