@@ -127,7 +127,7 @@ def _generate_link_master_metadata(ifaces_desired_state,
             slaves2remove = (set(current_slaves) - set(desired_slaves))
             for slave in slaves2remove:
                 if slave not in ifaces_desired_state:
-                    ifaces_desired_state[slave] = {}
+                    ifaces_desired_state[slave] = {'name': slave}
 
     current_masters = (
         (ifname, ifstate)
