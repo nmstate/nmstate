@@ -41,9 +41,22 @@ class Interface(object):
     MTU = 'mtu'
 
 
+class Route(object):
+    KEY = 'routes'
+
+    RUNNING = 'running'
+    CONFIG = 'config'
+    TABLE_ID = 'table-id'
+    TABLE_NAME = 'table-name'
+    DESTINATION = 'destination'
+    NEXT_HOP_INTERFACE = 'next-hop-interface'
+    NEXT_HOP_ADDRESS = 'next-hop-address'
+    METRIC = 'metric'
+
+
 class Constants(object):
     INTERFACES = Interface.KEY
-    ROUTES = 'routes'
+    ROUTES = Route.KEY
 
 
 class InterfaceState(object):

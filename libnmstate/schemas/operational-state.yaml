@@ -25,32 +25,16 @@ properties:
             - "$ref": "#/definitions/interface-dummy/rw"
             - "$ref": "#/definitions/interface-vlan/rw"
   routes:
-    type: array
-    items:
-      type: object
-      properties:
-        state:
-          type: string
-          enum:
-            - absent
-        table-name:
-          type: string
-        table-id:
-          type: integer
-        origin:
-          type: string
-          enum:
-            - dhcp
-            - router-advertisement
-            - static
-        metric:
-          type: integer
-        destination:
-          type: string
-        next-hop-interface:
-          type: string
-        next-hop-address:
-          type: string
+    type: object
+    properties:
+      config:
+        type: array
+        items:
+          $ref: "#/definitions/route"
+      running:
+        type: array
+        items:
+          $ref: "#/definitions/route"
 
 definitions:
   types:
@@ -435,3 +419,23 @@ definitions:
                     type: boolean
                   state:
                     type: string
+
+  route:
+    type: object
+    properties:
+      state:
+        type: string
+        enum:
+          - absent
+      table-name:
+        type: string
+      table-id:
+        type: integer
+      metric:
+        type: integer
+      destination:
+        type: string
+      next-hop-interface:
+        type: string
+      next-hop-address:
+        type: string
