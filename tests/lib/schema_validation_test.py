@@ -67,7 +67,6 @@ COMMON_DATA = {
     ROUTES: {
         'config': [
             {
-                'table-name': 'main',
                 'table-id': 254,
                 'metric': 100,
                 'destination': '0.0.0.0/0',
@@ -77,7 +76,6 @@ COMMON_DATA = {
         ],
         'running': [
             {
-                'table-name': '',
                 'table-id': 254,
                 'metric': 100,
                 'destination': '::/0',
