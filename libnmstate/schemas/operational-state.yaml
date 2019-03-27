@@ -427,8 +427,6 @@ definitions:
         type: string
         enum:
           - absent
-      table-name:
-        type: string
       table-id:
         type: integer
       metric:
