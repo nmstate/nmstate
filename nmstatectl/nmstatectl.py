@@ -33,6 +33,7 @@ from libnmstate import netapplier
 from libnmstate import netinfo
 from libnmstate.prettystate import PrettyState
 from libnmstate.schema import Constants
+from libnmstate.schema import Route
 
 
 def main():
@@ -161,6 +162,7 @@ def _filter_state(state, whitelist):
     if whitelist != '*':
         patterns = [p for p in whitelist.split(',')]
         state[Constants.INTERFACES] = _filter_interfaces(state, patterns)
+        state[Constants.ROUTES] = _filter_routes(state, patterns)
     return state
 
 
@@ -229,7 +231,8 @@ def _parse_state(txtstate, parse_yaml):
             error = 'Invalid JSON syntax: %s\n' % e
 
     if not error and Constants.INTERFACES not in state:
-        error = 'Invalid state: should contain "interfaces" entry.\n'
+        # Allow editing routes only.
+        state[Constants.INTERFACES] = []
 
     return state, error
 
@@ -258,3 +261,20 @@ def print_state(state, use_yaml=False):
         sys.stdout.write(state.yaml)
     else:
         print(state.json)
+
+
+def _filter_routes(state, patterns):
+    """
+    return the states for all routes from `state` that match at least one
+    of the provided patterns.
+    """
+    routes = {
+        Route.CONFIG: [],
+        Route.RUNNING: []
+    }
+    for route_type in (Route.RUNNING, Route.CONFIG):
+        for route in state.get(Constants.ROUTES, {}).get(route_type, []):
+            for pattern in patterns:
+                if fnmatch.fnmatch(route[Route.NEXT_HOP_INTERFACE], pattern):
+                    routes[route_type].append(route)
+    return routes

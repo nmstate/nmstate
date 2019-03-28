@@ -26,6 +26,10 @@ from .compat import mock
 from nmstatectl import nmstatectl
 
 LO_JSON_STATE = """{
+    "routes": {
+        "config": [],
+        "running": []
+    },
     "interfaces": [
         {
             "name": "lo",
@@ -37,15 +41,25 @@ LO_JSON_STATE = """{
 """
 
 EMPTY_JSON_STATE = """{
+    "routes": {
+        "config": [],
+        "running": []
+    },
     "interfaces": []
 }
 """
 
 EMPTY_YAML_STATE = """---
+routes:
+  config: []
+  running: []
 interfaces: []
 """
 
 LO_YAML_STATE = """---
+routes:
+  config: []
+  running: []
 interfaces:
 - name: lo
   type: unknown

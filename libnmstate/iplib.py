@@ -1,5 +1,5 @@
 #
-# Copyright 2018 Red Hat, Inc.
+# Copyright 2018-2019 Red Hat, Inc.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,6 +17,8 @@
 
 _IPV6_LINK_LOCAL_NETWORK_PREFIXES = ['fe8', 'fe9', 'fea', 'feb']
 _IPV6_LINK_LOCAL_NETWORK_PREFIX_LENGTH = 10
+
+KERNEL_MAIN_ROUTE_TABLE_ID = 254
 
 
 def is_ipv6_link_local_addr(ip, prefix):
