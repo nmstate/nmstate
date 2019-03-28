@@ -21,6 +21,10 @@ import time
 import pytest
 
 from libnmstate import netapplier
+from libnmstate import netinfo
+from libnmstate.schema import Constants
+from libnmstate.schema import Route as RT
+
 from libnmstate.error import NmstateNotImplementedError
 
 from .testlib import assertlib
@@ -44,6 +48,9 @@ DHCP_SRV_IP6 = IPV6_ADDRESS1
 DHCP_SRV_IP4_PREFIX = '192.0.2'
 DHCP_SRV_IP6_PREFIX = '2001:db8:1'
 DHCP_SRV_IP6_NETWORK = '{}::/64'.format(DHCP_SRV_IP6_PREFIX)
+
+IPV6_DEFAULT_GATEWAY = '::/0'
+IPV4_DEFAULT_GATEWAY = '0.0.0.0/0'
 
 DNSMASQ_CONF_STR = """
 interface={iface}
@@ -627,38 +634,27 @@ def _get_nameservers():
     return ret
 
 
-def _get_ipv4_main_routes():
+def _get_running_routes():
     """
-    return a list of route entry string from `ip -4 route`.
+    return a list of running routes
     """
-    rc, output, _ = libcmd.exec_cmd(['ip', '-4', 'route'])
-    if rc != 0:
-        return []
-    return [line for line in output.split('\n') if line]
-
-
-def _get_ipv6_main_routes():
-    """
-    return a list of route entry string from `ip -6 route`.
-    """
-    rc, output, _ = libcmd.exec_cmd(['ip', '-6', 'route'])
-    if rc != 0:
-        return []
-    return [line for line in output.split('\n') if line]
+    return netinfo.show().get(Constants.ROUTES, {}).get(RT.RUNNING, [])
 
 
 def _has_ipv6_auto_gateway():
-    routes = _get_ipv6_main_routes()
+    routes = _get_running_routes()
     for route in routes:
-        if 'default' in route and DHCP_CLI_NIC in route:
+        if route[RT.DESTINATION] == IPV6_DEFAULT_GATEWAY and \
+           route[RT.NEXT_HOP_INTERFACE] == DHCP_CLI_NIC:
             return True
     return False
 
 
 def _has_ipv6_auto_extra_route():
-    routes = _get_ipv6_main_routes()
+    routes = _get_running_routes()
     for route in routes:
-        if IPV6_CLASSLESS_ROUTE_DST_NET1 in route and DHCP_CLI_NIC in route:
+        if route[RT.DESTINATION] == IPV6_CLASSLESS_ROUTE_DST_NET1 and \
+           route[RT.NEXT_HOP_INTERFACE] == DHCP_CLI_NIC:
             return True
     return False
 
@@ -672,16 +668,19 @@ def _has_ipv4_dhcp_nameserver():
 
 
 def _has_ipv4_dhcp_gateway():
-    routes = _get_ipv4_main_routes()
+    routes = _get_running_routes()
     for route in routes:
-        if 'default' in route and DHCP_CLI_NIC in route:
+        if route[RT.DESTINATION] == IPV4_DEFAULT_GATEWAY and \
+           route[RT.NEXT_HOP_INTERFACE] == DHCP_CLI_NIC:
             return True
     return False
 
 
 def _has_ipv4_classless_route():
-    routes = _get_ipv4_main_routes()
+    routes = _get_running_routes()
     for route in routes:
-        if IPV4_CLASSLESS_ROUTE_DST_NET1 in route and DHCP_CLI_NIC in route:
+        if route[RT.DESTINATION] == IPV4_CLASSLESS_ROUTE_DST_NET1 and \
+           route[RT.NEXT_HOP_ADDRESS] == IPV4_CLASSLESS_ROUTE_NEXT_HOP1 and \
+           route[RT.NEXT_HOP_INTERFACE] == DHCP_CLI_NIC:
             return True
     return False

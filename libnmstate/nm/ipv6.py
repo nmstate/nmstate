@@ -18,9 +18,14 @@
 import logging
 import socket
 
-from libnmstate.nm import nmclient
 from libnmstate import iplib
 from libnmstate.error import NmstateNotImplementedError
+from libnmstate.nm import nmclient
+from libnmstate.nm import route as nm_route
+from libnmstate.schema import Route
+
+
+IPV6_DEFAULT_ROUTE_METRIC = 1024
 
 
 def get_info(active_connection):
@@ -158,3 +163,33 @@ def get_ip_profile(active_connection):
     if remote_conn:
         return remote_conn.get_setting_ip6_config()
     return None
+
+
+def get_route_running():
+    return nm_route.get_running(_acs_and_ip_cfgs(nmclient.client()))
+
+
+def get_route_config():
+    routes = nm_route.get_config(_acs_and_ip_profiles(nmclient.client()))
+    for route in routes:
+        if route[Route.METRIC] == 0:
+            # Kernel will convert 0 to IPV6_DEFAULT_ROUTE_METRIC.
+            route[Route.METRIC] = IPV6_DEFAULT_ROUTE_METRIC
+
+    return routes
+
+
+def _acs_and_ip_cfgs(client):
+    for ac in client.get_active_connections():
+        ip_cfg = ac.get_ip6_config()
+        if not ip_cfg:
+            continue
+        yield ac, ip_cfg
+
+
+def _acs_and_ip_profiles(client):
+    for ac in client.get_active_connections():
+        ip_profile = get_ip_profile(ac)
+        if not ip_profile:
+            continue
+        yield ac, ip_profile

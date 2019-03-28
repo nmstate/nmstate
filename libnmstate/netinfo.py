@@ -21,6 +21,7 @@ from libnmstate import nm
 from libnmstate import validator
 from libnmstate.schema import Constants
 from libnmstate.schema import Interface
+from libnmstate.schema import Route
 
 
 def show(include_status_data=False):
@@ -36,6 +37,13 @@ def show(include_status_data=False):
     report = {Constants.INTERFACES: interfaces()}
     if include_status_data:
         report['capabilities'] = capabilities()
+
+    report[Constants.ROUTES] = {
+        Route.RUNNING: (nm.ipv4.get_route_running() +
+                        nm.ipv6.get_route_running()),
+        Route.CONFIG: (nm.ipv4.get_route_config() +
+                       nm.ipv6.get_route_config()),
+    }
 
     validator.verify(report)
     return report

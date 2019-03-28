@@ -18,6 +18,7 @@
 import socket
 
 from . import nmclient
+from libnmstate.nm import route as nm_route
 
 
 def create_setting(config, base_con_profile):
@@ -119,3 +120,27 @@ def get_ip_profile(active_connection):
     if remote_conn:
         return remote_conn.get_setting_ip4_config()
     return None
+
+
+def get_route_running():
+    return nm_route.get_running(_acs_and_ip_cfgs(nmclient.client()))
+
+
+def get_route_config():
+    return nm_route.get_config(_acs_and_ip_profiles(nmclient.client()))
+
+
+def _acs_and_ip_cfgs(client):
+    for ac in client.get_active_connections():
+        ip_cfg = ac.get_ip4_config()
+        if not ip_cfg:
+            continue
+        yield ac, ip_cfg
+
+
+def _acs_and_ip_profiles(client):
+    for ac in client.get_active_connections():
+        ip_profile = get_ip_profile(ac)
+        if not ip_profile:
+            continue
+        yield ac, ip_profile
