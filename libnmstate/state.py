@@ -125,7 +125,7 @@ class State(object):
         metadata.remove_ifaces_metadata(self)
         other_state.sanitize_dynamic_ip()
 
-        self.canonicalize_interfaces(other_state)
+        self.merge_interfaces(other_state)
 
         self.normalize_for_verification()
         other_state.normalize_for_verification()
@@ -140,7 +140,7 @@ class State(object):
         self._remove_iface_ipv6_link_local_addr()
         self._sort_ip_addresses()
 
-    def canonicalize_interfaces(self, other_state):
+    def merge_interfaces(self, other_state):
         """
         Given the self and other states, complete the self state by merging
         the missing parts from the current state.

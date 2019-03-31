@@ -110,7 +110,7 @@ def _edit_interfaces(desired_state, current_state):
         desired_state.state,
         interfaces_to_filter=set(current_state.interfaces)
     )
-    state2edit.canonicalize_interfaces(current_state)
+    state2edit.merge_interfaces(current_state)
     ifaces2edit = list(six.viewvalues(state2edit.interfaces))
 
     validator.verify_interfaces_state(ifaces2edit, desired_state.interfaces)
