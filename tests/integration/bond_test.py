@@ -187,7 +187,7 @@ def test_rollback_for_bond(eth1_up, eth2_up):
     time.sleep(5)
 
     current_state_after_apply = netinfo.show()
-    assert current_state == current_state_after_apply
+    assert current_state[INTERFACES] == current_state_after_apply[INTERFACES]
 
 
 def test_add_slave_to_bond_without_slaves(eth1_up):
