@@ -82,3 +82,12 @@ def test_non_auto_destroying_checkpoint():
     assert checkpoints[0] == checkpoint.dbuspath
     checkpoint.destroy()
     assert not get_checkpoints()
+
+
+def test_creating_a_checkpoint_from_dbuspath():
+    with CheckPoint(autodestroy=False) as initial_checkpoint:
+        pass
+
+    new_checkpoint = CheckPoint(dbuspath=initial_checkpoint.dbuspath)
+    new_checkpoint.destroy()
+    assert not get_checkpoints()
