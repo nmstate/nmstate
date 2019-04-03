@@ -82,7 +82,7 @@ class CheckPoint(object):
     def __init__(self, timeout=60):
         self._manager = nmdbus_manager()
         self._timeout = timeout
-        self._checkpoint = None
+        self._dbuspath = None
 
     def __enter__(self):
         self.create()
@@ -108,17 +108,17 @@ class CheckPoint(object):
                                                                 cp_flags)
             logging.debug('Checkpoint %s created for all devices: %s',
                           dbuspath, timeout)
-            self._checkpoint = dbuspath
+            self._dbuspath = dbuspath
         except dbus.exceptions.DBusException as e:
             raise NMCheckPointCreationError(str(e))
 
     def destroy(self):
-        self._manager.interface.CheckpointDestroy(self._checkpoint)
-        logging.debug('Checkpoint %s destroyed', self._checkpoint)
+        self._manager.interface.CheckpointDestroy(self._dbuspath)
+        logging.debug('Checkpoint %s destroyed', self._dbuspath)
 
     def rollback(self):
         result = self._manager.interface.CheckpointRollback(
-            self._checkpoint)
-        logging.debug('Checkpoint %s rollback executed: %s', self._checkpoint,
+            self._dbuspath)
+        logging.debug('Checkpoint %s rollback executed: %s', self._dbuspath,
                       result)
         return result
