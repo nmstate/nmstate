@@ -40,6 +40,7 @@ class Interface(object):
     IPV4 = 'ipv4'
     IPV6 = 'ipv6'
 
+    MAC = 'mac-address'
     MTU = 'mtu'
 
 
