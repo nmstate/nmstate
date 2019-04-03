@@ -47,7 +47,20 @@ yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarc
 subscription-manager repos --enable "rhel-*-optional-rpms" --enable "rhel-*-extras-rpms"  # recommended for EPEL
 yum install git python-pip
 pip install tox  # python-tox in EPEL seems to be too old
+```
+
+### CentOS 7.6
+
+Recommended minimum installation:
+```shell
+yum -y install epel-release
+yum -y install \
+    NetworkManager \
+    NetworkManager-libnm \
+    git \
+    python-pip
 yum-builddep python-gobject  # install build dependencies for PyGObject
+pip install tox  # python-tox in EPEL seems to be too old
 ```
 
 Note: This will not run the unit tests for Python 3.6 because this Python version is not available there.
@@ -60,9 +73,55 @@ tox
 
 ## Runtime Environment
 
-Install (from sources) system-wide:
+### Install pre-requirements
+Despite the pure python dependencies (see requirements.txt),
+Nmstate also needs NetworkManager to be running on the local system
+in order to configure the local network state.
+To access NetworkManager, Nmstate needs libnm and the corresponding
+introspection data (`NM-1.0.typelib`, provided by `python-gobject-base`).
+To manage OvS, Nmstate needs the packages `NetworkManager-ovs` and `openvswitch`.
+NetworkManager needs to be restarted in order to use the new configuration
+parameters (`conf.d/97-nmstate.conf`) and the OvS plugin.
+openvswitch service needs to be started.
+
+NetworkManager requires special configuration snippets to overcome some
+existing limitations.
+
 ```shell
-sudo pip install --upgrade .
+yum -y install epel-release
+yum -y install \
+    dbus-python \
+    libibverbs \
+    NetworkManager \
+    NetworkManager-libnm \
+    NetworkManager-ovs \
+    openvswitch \
+    python-gobject-base \
+    python-ipaddress \
+    python-jsonschema \
+    python-setuptools \
+    python2-pyyaml \
+    python2-six
+echo -e "[device]\nmatch-device=*\nmanaged=0\n" >> \
+    /etc/NetworkManager/conf.d/97-nmstate.conf
+echo -e "[main]\nno-auto-default=*\n" >> \
+    /etc/NetworkManager/conf.d/97-nmstate.conf
+systemctl restart NetworkManager
+systemctl restart openvswitch
+# To keep NetworkManager and openvswitch running after reboot:
+systemctl enable --now NetworkManager openvswitch
+```
+
+### Install nmstate from PyPi
+```shell
+yum -y install python2-pip
+pip uninstall nmstate; pip install nmstate
+```
+
+### Install nmstate from source
+Install system-wide:
+```shell
+pip uninstall nmstate; pip install .
 ```
 
 Install just for the local user:
