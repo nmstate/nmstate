@@ -79,10 +79,11 @@ def get_checkpoints():
 
 class CheckPoint(object):
 
-    def __init__(self, timeout=60):
+    def __init__(self, timeout=60, autodestroy=True):
         self._manager = nmdbus_manager()
         self._timeout = timeout
         self._dbuspath = None
+        self._autodestroy = autodestroy
 
     def __enter__(self):
         self.create()
@@ -90,9 +91,10 @@ class CheckPoint(object):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if exc_type is None:
-            # If the rollback has been explicit or implicit triggered already,
-            # this command should fail.
-            self.destroy()
+            if self._autodestroy:
+                # If the rollback has been explicit or implicit triggered
+                # already, this command should fail.
+                self.destroy()
         else:
             self.rollback()
 

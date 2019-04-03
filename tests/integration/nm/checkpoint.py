@@ -69,3 +69,16 @@ def test_getting_a_checkpoint():
 
     assert len(checkpoints) == 1
     assert checkpoints[0] == checkpoint.dbuspath
+
+
+def test_non_auto_destroying_checkpoint():
+    """ I can create a checkpoint that needs to be confirmed manually. """
+
+    with CheckPoint(autodestroy=False) as checkpoint:
+        pass
+
+    checkpoints = get_checkpoints()
+
+    assert checkpoints[0] == checkpoint.dbuspath
+    checkpoint.destroy()
+    assert not get_checkpoints()
