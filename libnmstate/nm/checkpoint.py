@@ -93,7 +93,6 @@ class CheckPoint(object):
         devs = []
         timeout = self._timeout
         cp_flags = (
-            CHECKPOINT_CREATE_FLAG_DESTROY_ALL |
             CHECKPOINT_CREATE_FLAG_DELETE_NEW_CONNECTIONS |
             CHECKPOINT_CREATE_FLAG_DISCONNECT_NEW_DEVICES
         )
