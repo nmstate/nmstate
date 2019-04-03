@@ -79,10 +79,10 @@ def get_checkpoints():
 
 class CheckPoint(object):
 
-    def __init__(self, timeout=60, autodestroy=True):
+    def __init__(self, timeout=60, autodestroy=True, dbuspath=None):
         self._manager = nmdbus_manager()
         self._timeout = timeout
-        self._dbuspath = None
+        self._dbuspath = dbuspath
         self._autodestroy = autodestroy
 
     def __enter__(self):
