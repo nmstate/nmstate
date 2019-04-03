@@ -139,6 +139,7 @@ class State(object):
         self._canonicalize_ipv6()
         self._remove_iface_ipv6_link_local_addr()
         self._sort_ip_addresses()
+        self._capitalize_mac()
 
     def merge_interfaces(self, other_state):
         """
@@ -215,6 +216,12 @@ class State(object):
             for family in ('ipv4', 'ipv6'):
                 ifstate.get(family, {}).get('address', []).sort(
                     key=itemgetter('ip'))
+
+    def _capitalize_mac(self):
+        for ifstate in six.viewvalues(self.interfaces):
+            mac = ifstate.get(Interface.MAC)
+            if mac:
+                ifstate[Interface.MAC] = mac.upper()
 
     def _assert_interfaces_equal(self, current_state):
         for ifname in self.interfaces:

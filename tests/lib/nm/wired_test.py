@@ -42,6 +42,13 @@ def test_create_setting_duplicate(NM_mock):
         base_profile.get_setting_wired.return_value.duplicate.return_value
 
 
+def test_create_setting_mac(NM_mock):
+    setting = nm.wired.create_setting(
+        {'mac-address': '01:23:45:67:89:ab'}, None)
+    assert setting == NM_mock.SettingWired.new.return_value
+    assert setting.props.cloned_mac_address == '01:23:45:67:89:ab'
+
+
 def test_create_setting_mtu(NM_mock):
     setting = nm.wired.create_setting({'mtu': 1500}, None)
     assert setting == NM_mock.SettingWired.new.return_value
@@ -96,11 +103,13 @@ def test_create_setting_speed_duplex(NM_mock):
 def test_get_info_with_invalid_duplex(ethtool_mock, NM_mock):
     dev_mock = mock.MagicMock()
     dev_mock.get_iface.return_value = 'nmstate_test'
+    dev_mock.get_hw_address.return_value = 'ab:cd:ef:01:23:45'
     dev_mock.get_mtu.return_value = 1500
     dev_mock.get_device_type.return_value = NM_mock.DeviceType.ETHERNET
 
     info = nm.wired.get_info(dev_mock)
 
     assert info == {
+        'mac-address': dev_mock.get_hw_address.return_value,
         'mtu': dev_mock.get_mtu.return_value
     }

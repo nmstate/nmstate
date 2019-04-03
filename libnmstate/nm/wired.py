@@ -17,17 +17,22 @@
 
 from libnmstate.ethtool import minimal_ethtool
 from libnmstate.nm import nmclient
+from libnmstate.schema import Interface
+
+
+ZEROED_MAC = '00:00:00:00:00:00'
 
 
 def create_setting(iface_state, base_con_profile):
     mtu = iface_state.get('mtu')
+    mac = iface_state.get(Interface.MAC)
 
     ethernet = iface_state.get('ethernet', {})
     speed = ethernet.get('speed')
     duplex = ethernet.get('duplex')
     auto_negotiation = ethernet.get('auto-negotiation')
 
-    if not (mtu or speed or duplex or (auto_negotiation is not None)):
+    if not (mac or mtu or speed or duplex or (auto_negotiation is not None)):
         return None
 
     wired_setting = None
@@ -38,6 +43,9 @@ def create_setting(iface_state, base_con_profile):
 
     if not wired_setting:
         wired_setting = nmclient.NM.SettingWired.new()
+
+    if mac:
+        wired_setting.props.cloned_mac_address = mac
 
     if mtu:
         wired_setting.props.mtu = mtu
@@ -83,6 +91,11 @@ def get_info(device):
         info['mtu'] = int(device.get_mtu())
     except AttributeError:
         pass
+
+    mac = device.get_hw_address()
+    # A device may not have a MAC or it may not yet be "realized" (zeroed mac).
+    if mac and mac != ZEROED_MAC:
+        info[Interface.MAC] = mac
 
     if device.get_device_type() == nmclient.NM.DeviceType.ETHERNET:
         ethernet = _get_ethernet_info(device, iface)
