@@ -22,6 +22,7 @@ import pytest
 
 
 from libnmstate.nm.checkpoint import CheckPoint
+from libnmstate.nm.checkpoint import get_checkpoints
 from libnmstate.nm.checkpoint import NMCheckPointCreationError
 
 
@@ -54,3 +55,16 @@ def test_checkpoint_timeout():
 
     assert checkpoint_b is not None
     assert checkpoint_a is not None
+
+
+def test_getting_a_checkpoint():
+    """ I can get a list of all checkpoints. """
+
+    checkpoints = get_checkpoints()
+
+    assert len(checkpoints) == 0
+
+    with CheckPoint():
+        checkpoints = get_checkpoints()
+
+    assert len(checkpoints) == 1

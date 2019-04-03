@@ -19,8 +19,11 @@ import logging
 
 import dbus
 
+import libnmstate.nm.nmclient
+
 
 DBUS_STD_PROPERTIES_IFNAME = 'org.freedesktop.DBus.Properties'
+
 CHECKPOINT_CREATE_FLAG_DESTROY_ALL = 0x01
 CHECKPOINT_CREATE_FLAG_DELETE_NEW_CONNECTIONS = 0x02
 CHECKPOINT_CREATE_FLAG_DISCONNECT_NEW_DEVICES = 0x04
@@ -66,6 +69,12 @@ class _NMDbusManager(object):
                                            _NMDbusManager.OBJ_PATH)
         self.properties = dbus.Interface(mng_proxy, DBUS_STD_PROPERTIES_IFNAME)
         self.interface = dbus.Interface(mng_proxy, _NMDbusManager.IF_NAME)
+
+
+def get_checkpoints():
+    nmclient = libnmstate.nm.nmclient.client(refresh=True)
+
+    return [c.get_path() for c in nmclient.get_checkpoints()]
 
 
 class CheckPoint(object):
