@@ -122,3 +122,7 @@ class CheckPoint(object):
         logging.debug('Checkpoint %s rollback executed: %s', self._dbuspath,
                       result)
         return result
+
+    @property
+    def dbuspath(self):
+        return self._dbuspath

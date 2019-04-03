@@ -64,7 +64,8 @@ def test_getting_a_checkpoint():
 
     assert len(checkpoints) == 0
 
-    with CheckPoint():
+    with CheckPoint() as checkpoint:
         checkpoints = get_checkpoints()
 
     assert len(checkpoints) == 1
+    assert checkpoints[0] == checkpoint.dbuspath
