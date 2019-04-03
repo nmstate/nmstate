@@ -32,6 +32,12 @@ CHECKPOINT_CREATE_FLAG_DISCONNECT_NEW_DEVICES = 0x04
 _nmdbus_manager = None
 
 
+class NMCheckPointCreationError(Exception):
+    """ Error creating a Network Manager CheckPoint """
+
+    pass
+
+
 def has_checkpoint_capability():
     return dbus is not None
 
@@ -96,16 +102,22 @@ class CheckPoint(object):
             CHECKPOINT_CREATE_FLAG_DELETE_NEW_CONNECTIONS |
             CHECKPOINT_CREATE_FLAG_DISCONNECT_NEW_DEVICES
         )
-        cp = self._manager.interface.CheckpointCreate(devs, timeout, cp_flags)
-        logging.debug('Checkpoint %s created for all devices: %s', cp, timeout)
-        self._checkpoint = cp
+        try:
+            dbuspath = self._manager.interface.CheckpointCreate(devs, timeout,
+                                                                cp_flags)
+            logging.debug('Checkpoint %s created for all devices: %s',
+                          dbuspath, timeout)
+            self._checkpoint = dbuspath
+        except dbus.exceptions.DBusException:
+            raise NMCheckPointCreationError()
 
     def destroy(self):
         self._manager.interface.CheckpointDestroy(self._checkpoint)
         logging.debug('Checkpoint %s destroyed', self._checkpoint)
 
     def rollback(self):
-        result = self._manager.interface.CheckpointRollback(self._checkpoint)
-        logging.debug('Checkpoint %s rollback executed: %s',
-                      self._checkpoint, result)
+        result = self._manager.interface.CheckpointRollback(
+            self._checkpoint)
+        logging.debug('Checkpoint %s rollback executed: %s', self._checkpoint,
+                      result)
         return result
