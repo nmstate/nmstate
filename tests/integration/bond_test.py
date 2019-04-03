@@ -23,11 +23,15 @@ import yaml
 from libnmstate import netapplier
 from libnmstate import netinfo
 from libnmstate.error import NmstateVerificationError
+from libnmstate.schema import Interface
 
 from .testlib import assertlib
 from .testlib import statelib
 from .testlib.statelib import INTERFACES
 
+
+MAC0 = '02:ff:ff:ff:ff:00'
+MAC1 = '02:ff:ff:ff:ff:01'
 
 BOND99_YAML_BASE = """
 interfaces:
@@ -241,3 +245,20 @@ def test_remove_one_of_the_bond_slaves(eth1_up, eth2_up):
         bond99_cur_state = current_state[INTERFACES][0]
 
     assert bond99_cur_state['link-aggregation']['slaves'] == ['eth2']
+
+
+def test_set_bond_mac_address(eth1_up):
+    with bond_interface(name='bond99', slaves=['eth1']) as bond_state:
+        bond_state[Interface.KEY][0][Interface.MAC] = MAC0
+        netapplier.apply(bond_state)
+
+        current_state = statelib.show_only(('bond99',))
+        bond99_cur_state = current_state[INTERFACES][0]
+        assert bond99_cur_state[Interface.MAC] == MAC0.upper()
+
+        bond_state[Interface.KEY][0][Interface.MAC] = MAC1
+        netapplier.apply(bond_state)
+
+        current_state = statelib.show_only(('bond99',))
+        bond99_cur_state = current_state[INTERFACES][0]
+        assert bond99_cur_state[Interface.MAC] == MAC1.upper()
