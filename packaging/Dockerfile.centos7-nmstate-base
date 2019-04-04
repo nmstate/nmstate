@@ -19,7 +19,8 @@ RUN yum -y upgrade && \
         openvswitch \
     && \
     yum -y install epel-release && \
-    yum -y install \\
+    yum -y install \
+        dbus-python \
         python2-pyyaml \
         python2-six \
         python-gobject-base \
