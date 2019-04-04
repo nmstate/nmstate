@@ -115,6 +115,13 @@ class State(object):
                                         'auto-dns'):
                         ip.pop(dhcp_option, None)
 
+    def sanitize_mac_address(self):
+        # FIXME: Explicitly setting the MAC is unstable on the integ tests
+        # If the MAC is not specified, overwrite it so it will not be set.
+        for iface_state in six.viewvalues(self.interfaces):
+            if Interface.MAC not in iface_state:
+                iface_state[Interface.MAC] = None
+
     def verify_interfaces(self, other_state):
         """Verify that the (self) state is a subset of the other_state. """
         self._remove_absent_interfaces()
@@ -125,6 +132,7 @@ class State(object):
         metadata.remove_ifaces_metadata(self)
         other_state.sanitize_dynamic_ip()
 
+        self._clean_sanitize_mac_address()
         self.merge_interfaces(other_state)
 
         self.normalize_for_verification()
@@ -186,6 +194,12 @@ class State(object):
                         ethernet_state.pop(key, None)
                 if not ethernet_state:
                     ifstate.pop('ethernet', None)
+
+    def _clean_sanitize_mac_address(self):
+        # FIXME: Remove together with the sanitize_mac_address method
+        for iface_state in six.viewvalues(self.interfaces):
+            if not iface_state.get(Interface.MAC):
+                iface_state.pop(Interface.MAC, None)
 
     def _sort_lag_slaves(self):
         for ifstate in six.viewvalues(self.interfaces):

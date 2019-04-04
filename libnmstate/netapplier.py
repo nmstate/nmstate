@@ -44,6 +44,7 @@ def _apply_ifaces_state(desired_state, verify_change):
 
     desired_state.sanitize_ethernet(current_state)
     desired_state.sanitize_dynamic_ip()
+    desired_state.sanitize_mac_address()
     metadata.generate_ifaces_metadata(desired_state, current_state)
     with _transaction():
         with _setup_providers():
