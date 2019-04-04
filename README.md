@@ -116,13 +116,13 @@ systemctl enable --now NetworkManager openvswitch
 ### Install nmstate from PyPi
 ```shell
 yum -y install python2-pip
-pip uninstall nmstate; pip install nmstate
+pip uninstall -y nmstate; pip install nmstate
 ```
 
 ### Install nmstate from source
 Install system-wide:
 ```shell
-pip uninstall nmstate; pip install .
+pip uninstall -y nmstate; pip install .
 ```
 
 Install just for the local user:
