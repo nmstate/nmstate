@@ -26,6 +26,7 @@ from libnmstate import nm
 from libnmstate import state
 from libnmstate import validator
 from libnmstate.error import NmstateLibnmError
+from libnmstate.error import NmstateConflictError
 from libnmstate.nm import nmclient
 from libnmstate.schema import Constants
 
@@ -45,16 +46,20 @@ def _apply_ifaces_state(desired_state, verify_change):
     desired_state.sanitize_ethernet(current_state)
     desired_state.sanitize_dynamic_ip()
     metadata.generate_ifaces_metadata(desired_state, current_state)
-    with _transaction():
-        with _setup_providers():
-            _add_interfaces(desired_state.interfaces, current_state.interfaces)
-        with _setup_providers():
-            current_state = state.State(
-                {Constants.INTERFACES: netinfo.interfaces()}
-            )
-            _edit_interfaces(desired_state, current_state)
-        if verify_change:
-            _verify_change(desired_state)
+    try:
+        with _transaction():
+            with _setup_providers():
+                _add_interfaces(desired_state.interfaces,
+                                current_state.interfaces)
+            with _setup_providers():
+                current_state = state.State(
+                    {Constants.INTERFACES: netinfo.interfaces()}
+                )
+                _edit_interfaces(desired_state, current_state)
+            if verify_change:
+                _verify_change(desired_state)
+    except nm.checkpoint.NMCheckPointCreationError:
+        raise NmstateConflictError('Error creating a check point')
 
 
 def _verify_change(desired_state):
@@ -69,8 +74,8 @@ def _transaction():
     else:
         checkpoint_ctx = _placeholder_ctx()
 
-    with checkpoint_ctx:
-        yield
+    with checkpoint_ctx as checkpoint:
+        yield checkpoint
 
 
 @contextmanager
