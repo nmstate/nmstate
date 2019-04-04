@@ -46,6 +46,7 @@ Recommended minimum installation:
 yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm  # install EPEL for python-pip
 subscription-manager repos --enable "rhel-*-optional-rpms" --enable "rhel-*-extras-rpms"  # recommended for EPEL
 yum install git python-pip
+yum-builddep python-gobject  # install build dependencies for PyGObject
 pip install tox  # python-tox in EPEL seems to be too old
 ```
 
