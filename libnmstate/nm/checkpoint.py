@@ -17,11 +17,7 @@
 
 import logging
 
-try:
-    import dbus                         # pylint: disable=import-error
-except ImportError:
-    # dbus is set to None to indicate that checkpoint is not available
-    dbus = None
+import dbus
 
 
 DBUS_STD_PROPERTIES_IFNAME = 'org.freedesktop.DBus.Properties'
@@ -36,10 +32,6 @@ class NMCheckPointCreationError(Exception):
     """ Error creating a Network Manager CheckPoint """
 
     pass
-
-
-def has_checkpoint_capability():
-    return dbus is not None
 
 
 def nmdbus_manager():
