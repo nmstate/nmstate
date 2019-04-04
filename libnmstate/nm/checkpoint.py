@@ -108,8 +108,8 @@ class CheckPoint(object):
             logging.debug('Checkpoint %s created for all devices: %s',
                           dbuspath, timeout)
             self._checkpoint = dbuspath
-        except dbus.exceptions.DBusException:
-            raise NMCheckPointCreationError()
+        except dbus.exceptions.DBusException as e:
+            raise NMCheckPointCreationError(str(e))
 
     def destroy(self):
         self._manager.interface.CheckpointDestroy(self._checkpoint)

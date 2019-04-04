@@ -54,6 +54,13 @@ class NmstatePermissionError(NmstateError, PermissionError):
     pass
 
 
+class NmstateConflictError(NmstateError, RuntimeError):
+    """
+    Something else is already editing the network state via Nmstate.
+    """
+    pass
+
+
 class NmstateLibnmError(NmstateError):
     """
     Exception for unexpected libnm failure.
