@@ -11,17 +11,41 @@ RUN bash ./docker_enable_systemd.sh && rm ./docker_enable_systemd.sh
 # libibverbs is a dependency for openvswitch that is missing as a dependency in
 # the RPM
 RUN dnf -y install --setopt=install_weak_deps=False \
-                   iproute python3-pytest python3-pytest-cov NetworkManager \
-                   rpm-build git python3-devel python2-dbus python3-dbus \
-                   python3-coveralls \
-                   python3-pyyaml python3-jsonschema python3-setuptools \
-                   NetworkManager-ovs openvswitch libibverbs python36 \
-                   python3-gobject-base dnsmasq radvd python3-tox python2 \
+                   libibverbs \
+                   NetworkManager \
+                   NetworkManager-ovs \
+                   openvswitch \
+                   \
+                   python2-dbus \
                    python2-ipaddress \
+                   python3-dbus \
+                   python3-gobject-base \
+                   python3-jsonschema \
+                   python3-pyyaml \
+                   python3-setuptools \
+                   \
+                   python2 \
+                   python36 \
+                   \
+                   dnsmasq \
+                   git \
+                   iproute \
+                   python3-coveralls \
+                   python3-pytest \
+                   python3-pytest-cov \
+                   python3-tox \
+                   radvd \
+                   rpm-build \
+                   \
                    # Below packages for pip (used by tox) to build
                    # python-gobject
-                   glib2-devel cairo-devel gobject-introspection-devel \
-                   python2-devel python3-devel cairo-gobject-devel \
+                   cairo-devel \
+                   cairo-gobject-devel \
+                   glib2-devel \
+                   gobject-introspection-devel \
+                   python2-devel \
+                   python3-devel \
+                   \
                    # Below package for pip (used by tox) to build dbus-python
                    dbus-devel && \
     alternatives --install /usr/bin/python python /usr/bin/python3 1 && \
