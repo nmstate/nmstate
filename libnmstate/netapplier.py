@@ -47,7 +47,7 @@ def _apply_ifaces_state(desired_state, verify_change):
     desired_state.sanitize_dynamic_ip()
     metadata.generate_ifaces_metadata(desired_state, current_state)
     try:
-        with _transaction():
+        with nm.checkpoint.CheckPoint():
             with _setup_providers():
                 _add_interfaces(desired_state.interfaces,
                                 current_state.interfaces)
@@ -68,17 +68,6 @@ def _verify_change(desired_state):
 
 
 @contextmanager
-def _transaction():
-    if nm.checkpoint.has_checkpoint_capability():
-        checkpoint_ctx = nm.checkpoint.CheckPoint()
-    else:
-        checkpoint_ctx = _placeholder_ctx()
-
-    with checkpoint_ctx as checkpoint:
-        yield checkpoint
-
-
-@contextmanager
 def _setup_providers():
     mainloop = nmclient.mainloop()
     yield
@@ -87,11 +76,6 @@ def _setup_providers():
         raise NmstateLibnmError(
             'Unexpected failure of libnm when running the mainloop: {}'.format(
                 mainloop.error))
-
-
-@contextmanager
-def _placeholder_ctx():
-    yield
 
 
 def _add_interfaces(ifaces_desired_state, ifaces_current_state):
