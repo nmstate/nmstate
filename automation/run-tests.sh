@@ -115,8 +115,8 @@ function run_tests {
             --log-date-format='%Y-%m-%d %H:%M:%S' \
             --log-format='%(asctime)s %(filename)s:%(lineno)d %(levelname)s %(message)s' \
             --durations=5 \
-            --cov=\$($PYTHON_SITE_PATH_CMD)/libnmstate \
-            --cov=\$($PYTHON_SITE_PATH_CMD)/nmstatectl \
+            --cov /usr/lib/python*/site-packages/libnmstate \
+            --cov /usr/lib/python*/site-packages/nmstatectl \
             --cov-report=html:htmlcov-integ \
             --cov-report=term \
             tests/integration \
@@ -224,12 +224,6 @@ done
 #Valid TEST_TYPE are: all, lint, unit_py27, unit_py36, unit_py37, integ.
 : ${TEST_TYPE:=$TEST_TYPE_ALL}
 : ${DOCKER_IMAGE:=nmstate/fedora-nmstate-dev}
-
-if [[ $DOCKER_IMAGE == *"fedora"* ]];then
-    PYTHON_SITE_PATH_CMD="rpm -E %{python3_sitelib}"
-else
-    PYTHON_SITE_PATH_CMD="rpm -E %{python_sitelib}"
-fi
 
 cd $EXEC_PATH
 docker --version && cat /etc/resolv.conf
