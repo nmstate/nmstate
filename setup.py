@@ -1,3 +1,5 @@
+import sys
+
 from setuptools import setup, find_packages
 
 
@@ -11,6 +13,11 @@ def requirements():
     with open('requirements.txt') as f:
         for l in f:
             l.strip()
+            # workaround for old setuptools in CentOS/RHEL 7
+            if l == 'ipaddress;python_version<"3.3"':
+                if sys.version_info < (3, 3):
+                    req.append('ipaddress')
+                    continue
             if not l.startswith('#'):
                 req.append(l)
     return req
