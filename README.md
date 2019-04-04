@@ -120,11 +120,6 @@ pip uninstall -y nmstate; pip install nmstate
 ```
 
 ### Install nmstate from source
-Install system-wide:
-```shell
-pip uninstall -y nmstate; pip install .
-```
-
 Install just for the local user:
 
 ```shell
@@ -136,6 +131,11 @@ The `export` command can be used to add it for the current session:
 
 ```shell
 export PATH="${HOME}/.local/bin:${PATH}"
+```
+
+Alternatively, install Nmstate system-wide:
+```shell
+pip uninstall -y nmstate; pip install .
 ```
 
 ### Container Image
