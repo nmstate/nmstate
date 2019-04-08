@@ -146,6 +146,40 @@ function open_shell {
     run_exit
 }
 
+function is_file_changed {
+    git diff --exit-code --name-only origin/master -- $1
+}
+
+function rebuild_el7_base_container_image {
+    docker build --no-cache -t nmstate/centos7-nmstate-base \
+        -f "$PROJECT_PATH/packaging/Dockerfile.centos7-nmstate-base" \
+        "$PROJECT_PATH/packaging"
+}
+
+function rebuild_el7_container_image {
+    docker build --no-cache -t nmstate/centos7-nmstate-dev \
+        -f "$PROJECT_PATH/automation/Dockerfile" \
+        "$PROJECT_PATH/automation"
+}
+
+function rebuild_fed_container_image {
+    docker build --no-cache -t nmstate/fedora-nmstate-dev \
+        -f "$PROJECT_PATH/automation/Dockerfile.fedora" \
+        "$PROJECT_PATH/automation"
+}
+
+function rebuild_container_images {
+    if [[ $DOCKER_IMAGE == *"centos"* ]]; then
+        is_file_changed \
+            "$PROJECT_PATH/packaging/Dockerfile.centos7-nmstate-base" || \
+            (rebuild_el7_base_container_image && rebuild_el7_container_image)
+        is_file_changed "$PROJECT_PATH/automation/Dockerfile" || \
+            rebuild_el7_container_image
+    fi
+    is_file_changed "$PROJECT_PATH/automation/Dockerfile.fedora" || \
+        rebuild_fed_container_image
+}
+
 options=$(getopt --options "" \
     --long pytest-args:,help,debug-shell,test-type:,el7\
     -- "${@}")
@@ -203,6 +237,10 @@ docker --version && cat /etc/resolv.conf
 mkdir -p $EXPORT_DIR
 
 lsmod | grep -q ^openvswitch || modprobe openvswitch || { echo 1>&2 "Please run 'modprobe openvswitch' as root"; exit 1; }
+
+if [ "CHK$CI" == "CHKtrue" ] ;then
+    rebuild_container_images
+fi
 
 CONTAINER_ID="$(docker run --privileged -d -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v $PROJECT_PATH:/workspace/nmstate -v $EXPORT_DIR:$CONT_EXPORT_DIR $DOCKER_IMAGE)"
 [ -n "$debug_exit_shell" ] && trap open_shell EXIT || trap run_exit EXIT
