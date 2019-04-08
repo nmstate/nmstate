@@ -28,12 +28,14 @@ Requires:       python-gobject-base
 Requires:       python2-six
 Requires:       python-jsonschema
 Requires:       python2-pyyaml
+Requires:       dbus-python
 
 %description -n python2-%{libname}
 This package contains the Python 2 library for Nmstate.
 
 %prep
 %setup -q
+sed -i -e '/^dbus-python$/d' requirements.txt
 
 %build
 %py2_build

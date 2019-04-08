@@ -23,6 +23,7 @@ provider support on the southbound.
 
 %package -n python3-%{libname}
 Summary:        nmstate Python 3 API library
+Requires:       python3-dbus
 Requires:       NetworkManager-libnm
 # Use Recommends for NetworkManager because only access to NM DBus is required,
 # but NM could be running on a different host
@@ -36,6 +37,7 @@ This package contains the Python 3 library for Nmstate.
 
 %prep
 %setup -q
+sed -i -e '/^dbus-python$/d' requirements.txt
 
 %build
 %py3_build
