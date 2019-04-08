@@ -20,7 +20,9 @@ RUN dnf -y install --setopt=install_weak_deps=False \
                    # Below packages for pip (used by tox) to build
                    # python-gobject
                    glib2-devel cairo-devel gobject-introspection-devel \
-                   python2-devel python3-devel cairo-gobject-devel && \
+                   python2-devel python3-devel cairo-gobject-devel \
+                   # Below package for pip (used by tox) to build dbus-python
+                   dbus-devel && \
     alternatives --install /usr/bin/python python /usr/bin/python3 1 && \
     ln -s /usr/bin/pytest-3 /usr/bin/pytest && \
     dnf clean all && \
