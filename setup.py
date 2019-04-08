@@ -1,3 +1,5 @@
+import logging
+import setuptools
 from setuptools import setup, find_packages
 
 
@@ -6,13 +8,32 @@ def readme():
         return f.read()
 
 
+def _is_outdated_setuptools():
+    """
+    Return True if setuptool is older than 20.5 which introduced environment
+    markers for requirements:
+        https://www.python.org/dev/peps/pep-0508/#environment-markers
+    """
+    major, minor = setuptools.__version__.split('.')[:2]
+    return (int(major), int(minor)) < (20, 5)
+
+
 def requirements():
     req = []
-    with open('requirements.txt') as f:
-        for l in f:
-            l.strip()
-            if not l.startswith('#'):
-                req.append(l)
+    setuptools_is_outdated = _is_outdated_setuptools()
+    with open('requirements.txt') as fd:
+        for line in fd:
+            line.strip()
+            if setuptools_is_outdated:
+                if ';' in line:
+                    # Remove the environment marker
+                    logging.warning(
+                        "Your setuptools is too old(<20.5) to support "
+                        "environment marker, removing the environment marker "
+                        "as workaround but it could be buggy")
+                    line = line.split(';')[0]
+            if not line.startswith('#'):
+                req.append(line)
     return req
 
 
