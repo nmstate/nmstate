@@ -27,6 +27,7 @@ from libnmstate import state
 from libnmstate import validator
 from libnmstate.error import NmstateConflictError
 from libnmstate.error import NmstateLibnmError
+from libnmstate.error import NmstateValueError
 from libnmstate.nm import nmclient
 from libnmstate.schema import Constants
 
@@ -55,6 +56,27 @@ def apply(desired_state, verify_change=True, commit=True, rollback_timeout=60):
         state.State(desired_state), verify_change, commit, rollback_timeout)
     if checkpoint:
         return str(checkpoint.dbuspath)
+
+
+def commit(checkpoint=None):
+    """
+    Commit a checkpoint that was received from `apply()`.
+
+    :param checkpoint: Checkpoint to commit. If not specified, a checkpoint
+        will be selected and committed.
+    :type checkpoint: str
+    """
+
+    dbuspath = checkpoint
+    if not dbuspath:
+        candidates = nm.checkpoint.get_checkpoints()
+        if candidates:
+            dbuspath = candidates[0]
+
+    if not dbuspath:
+        raise NmstateValueError("No checkpoint specified or found")
+    nmcheckpoint = nm.checkpoint.CheckPoint(dbuspath=checkpoint)
+    nmcheckpoint.destroy()
 
 
 def _apply_ifaces_state(desired_state, verify_change, commit,
