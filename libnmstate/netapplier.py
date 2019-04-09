@@ -32,6 +32,20 @@ from libnmstate.schema import Constants
 
 
 def apply(desired_state, verify_change=True, commit=True, rollback_timeout=60):
+    """
+    Apply the desired state
+
+    :param verify_change: Check if the outcome state matches the desired state
+        and rollback if not.
+    :param commit: Commit the changes after verification if the state matches.
+    :param rollback_timeout: Revert the changes if they are not commited within
+        this timeout (specified in seconds).
+    :type verify_change: bool
+    :type commit: bool
+    :type rollback_timeout: int (seconds)
+    :returns: Checkpoint identifier
+    :rtype: str
+    """
     desired_state = copy.deepcopy(desired_state)
     validator.verify(desired_state)
     validator.verify_capabilities(desired_state, netinfo.capabilities())
