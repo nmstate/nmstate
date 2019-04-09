@@ -31,6 +31,7 @@ import yaml
 
 from libnmstate import netapplier
 from libnmstate import netinfo
+from libnmstate.error import NmstateValueError
 from libnmstate.prettystate import PrettyState
 from libnmstate.schema import Constants
 from libnmstate.schema import Route
@@ -44,7 +45,9 @@ def main():
     parser = argparse.ArgumentParser()
 
     subparsers = parser.add_subparsers()
+    setup_subcommand_commit(subparsers)
     setup_subcommand_edit(subparsers)
+    setup_subcommand_rollback(subparsers)
     setup_subcommand_set(subparsers)
     setup_subcommand_show(subparsers)
 
@@ -53,6 +56,15 @@ def main():
         return errno.EINVAL
     args = parser.parse_args()
     return args.func(args)
+
+
+def setup_subcommand_commit(subparsers):
+    parser_commit = subparsers.add_parser('commit', help='Commit a change')
+    parser_commit.add_argument(
+        'checkpoint', nargs='?', default=None,
+        help='checkpoint to commit'
+    )
+    parser_commit.set_defaults(func=commit)
 
 
 def setup_subcommand_edit(subparsers):
@@ -70,6 +82,16 @@ def setup_subcommand_edit(subparsers):
         help='Do not verify that the state was completely set and disable '
         'rollback to previous state.'
     )
+
+
+def setup_subcommand_rollback(subparsers):
+    parser_rollback = subparsers.add_parser('rollback',
+                                            help='Rollback a change')
+    parser_rollback.add_argument(
+        'checkpoint', nargs='?', default=None,
+        help='checkpoint to roll back'
+    )
+    parser_rollback.set_defaults(func=rollback)
 
 
 def setup_subcommand_set(subparsers):
@@ -104,6 +126,14 @@ def setup_subcommand_show(subparsers):
     )
 
 
+def commit(args):
+    try:
+        netapplier.commit(args.checkpoint)
+    except NmstateValueError as e:
+        print("ERROR committing change: {}\n".format(str(e)))
+        return os.EX_DATAERR
+
+
 def edit(args):
     state = _filter_state(netinfo.show(), args.only)
 
@@ -128,6 +158,14 @@ def edit(args):
     print_state(new_state, use_yaml=args.yaml)
 
     netapplier.apply(new_state, verify_change=args.verify)
+
+
+def rollback(args):
+    try:
+        netapplier.rollback(args.checkpoint)
+    except NmstateValueError as e:
+        print("ERROR rolling back change: {}\n".format(str(e)))
+        return os.EX_DATAERR
 
 
 def show(args):
