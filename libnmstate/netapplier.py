@@ -67,7 +67,11 @@ def commit(checkpoint=None):
     :type checkpoint: str
     """
 
-    dbuspath = checkpoint
+    nmcheckpoint = _choose_checkpoint(checkpoint)
+    nmcheckpoint.destroy()
+
+
+def _choose_checkpoint(dbuspath):
     if not dbuspath:
         candidates = nm.checkpoint.get_checkpoints()
         if candidates:
@@ -75,8 +79,8 @@ def commit(checkpoint=None):
 
     if not dbuspath:
         raise NmstateValueError("No checkpoint specified or found")
-    nmcheckpoint = nm.checkpoint.CheckPoint(dbuspath=checkpoint)
-    nmcheckpoint.destroy()
+    checkpoint = nm.checkpoint.CheckPoint(dbuspath=dbuspath)
+    return checkpoint
 
 
 def _apply_ifaces_state(desired_state, verify_change, commit,
