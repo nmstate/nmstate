@@ -71,6 +71,19 @@ def commit(checkpoint=None):
     nmcheckpoint.destroy()
 
 
+def rollback(checkpoint=None):
+    """
+    Roll back a checkpoint that was received from `apply()`.
+
+    :param checkpoint: Checkpoint to roll back. If not specified, a checkpoint
+        will be selected and rolled back.
+    :type checkpoint: str
+    """
+
+    nmcheckpoint = _choose_checkpoint(checkpoint)
+    nmcheckpoint.rollback()
+
+
 def _choose_checkpoint(dbuspath):
     if not dbuspath:
         candidates = nm.checkpoint.get_checkpoints()
