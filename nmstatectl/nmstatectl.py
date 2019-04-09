@@ -91,7 +91,15 @@ def setup_subcommand_set(subparsers):
     parser_set.add_argument(
         '--no-verify', action='store_false', dest='verify', default=True,
         help='Do not verify that the state was completely set and disable '
-        'rollback to previous state.'
+        'rollback to previous state'
+    )
+    parser_set.add_argument(
+        '--no-commit', action='store_false', dest='commit', default=True,
+        help='Do not commit new state after verification'
+    )
+    parser_set.add_argument(
+        '--timeout', type=int, default=60,
+        help='Timeout in seconds before reverting uncommited changes.'
     )
     parser_set.set_defaults(func=apply)
 
@@ -136,16 +144,16 @@ def apply(args):
                 with open(statefile) as statefile:
                     statedata = statefile.read()
 
-            apply_state(statedata, args.verify)
+            apply_state(statedata, args.verify, args.commit, args.timeout)
     elif not sys.stdin.isatty():
         statedata = sys.stdin.read()
-        apply_state(statedata, args.verify)
+        apply_state(statedata, args.verify, args.commit, args.timeout)
     else:
         sys.stderr.write('ERROR: No state specified\n')
         return 1
 
 
-def apply_state(statedata, verify_change):
+def apply_state(statedata, verify_change, commit, timeout):
     use_yaml = False
     # JSON dictionaries start with a curly brace
     if statedata[0] == '{':
@@ -153,9 +161,11 @@ def apply_state(statedata, verify_change):
     else:
         state = yaml.load(statedata, Loader=yaml.SafeLoader)
         use_yaml = True
-    netapplier.apply(state, verify_change)
+    checkpoint = netapplier.apply(state, verify_change, commit, timeout)
     print('Desired state applied: ')
     print_state(state, use_yaml=use_yaml)
+    if checkpoint:
+        print('Checkpoint: {}'.format(checkpoint))
 
 
 def _filter_state(state, whitelist):
