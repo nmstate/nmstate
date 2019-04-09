@@ -25,8 +25,8 @@ from libnmstate import netinfo
 from libnmstate import nm
 from libnmstate import state
 from libnmstate import validator
-from libnmstate.error import NmstateLibnmError
 from libnmstate.error import NmstateConflictError
+from libnmstate.error import NmstateLibnmError
 from libnmstate.nm import nmclient
 from libnmstate.schema import Constants
 
