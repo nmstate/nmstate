@@ -31,23 +31,28 @@ from libnmstate.nm import nmclient
 from libnmstate.schema import Constants
 
 
-def apply(desired_state, verify_change=True):
+def apply(desired_state, verify_change=True, commit=True, rollback_timeout=60):
     desired_state = copy.deepcopy(desired_state)
     validator.verify(desired_state)
     validator.verify_capabilities(desired_state, netinfo.capabilities())
     validator.verify_dhcp(desired_state)
 
-    _apply_ifaces_state(state.State(desired_state), verify_change)
+    checkpoint = _apply_ifaces_state(
+        state.State(desired_state), verify_change, commit, rollback_timeout)
+    if checkpoint:
+        return str(checkpoint.dbuspath)
 
 
-def _apply_ifaces_state(desired_state, verify_change):
+def _apply_ifaces_state(desired_state, verify_change, commit,
+                        rollback_timeout):
     current_state = state.State({Constants.INTERFACES: netinfo.interfaces()})
 
     desired_state.sanitize_ethernet(current_state)
     desired_state.sanitize_dynamic_ip()
     metadata.generate_ifaces_metadata(desired_state, current_state)
     try:
-        with nm.checkpoint.CheckPoint():
+        with nm.checkpoint.CheckPoint(autodestroy=commit,
+                                      timeout=rollback_timeout) as checkpoint:
             with _setup_providers():
                 _add_interfaces(desired_state.interfaces,
                                 current_state.interfaces)
@@ -58,6 +63,8 @@ def _apply_ifaces_state(desired_state, verify_change):
                 _edit_interfaces(desired_state, current_state)
             if verify_change:
                 _verify_change(desired_state)
+        if not commit:
+            return checkpoint
     except nm.checkpoint.NMCheckPointCreationError:
         raise NmstateConflictError('Error creating a check point')
 
