@@ -15,7 +15,11 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-import collections
+try:
+    from collections.abc import Mapping
+except ImportError:
+    from collections import Mapping
+
 import copy
 from operator import itemgetter
 import six
@@ -248,7 +252,7 @@ def dict_update(origin_data, to_merge_data):
     """Recursevely performes a dict update (merge)"""
 
     for key, val in six.viewitems(to_merge_data):
-        if isinstance(val, collections.Mapping):
+        if isinstance(val, Mapping):
             origin_data[key] = dict_update(origin_data.get(key, {}), val)
         else:
             origin_data[key] = val
