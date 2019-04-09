@@ -45,8 +45,8 @@ def main():
 
     subparsers = parser.add_subparsers()
     setup_subcommand_edit(subparsers)
-    setup_subcommand_show(subparsers)
     setup_subcommand_set(subparsers)
+    setup_subcommand_show(subparsers)
 
     if len(sys.argv) == 1:
         parser.print_usage()
@@ -72,17 +72,6 @@ def setup_subcommand_edit(subparsers):
     )
 
 
-def setup_subcommand_show(subparsers):
-    parser_show = subparsers.add_parser('show', help='Show network state')
-    parser_show.set_defaults(func=show)
-    parser_show.add_argument('--json', help='Edit as JSON', default=True,
-                             action='store_false', dest='yaml')
-    parser_show.add_argument(
-        'only', default='*', nargs='?', metavar=Constants.INTERFACES,
-        help='Show only specified interfaces (comma-separated)'
-    )
-
-
 def setup_subcommand_set(subparsers):
     parser_set = subparsers.add_parser('set', help='Set network state')
     parser_set.add_argument('file', help='File containing desired state. '
@@ -102,6 +91,17 @@ def setup_subcommand_set(subparsers):
         help='Timeout in seconds before reverting uncommited changes.'
     )
     parser_set.set_defaults(func=apply)
+
+
+def setup_subcommand_show(subparsers):
+    parser_show = subparsers.add_parser('show', help='Show network state')
+    parser_show.set_defaults(func=show)
+    parser_show.add_argument('--json', help='Edit as JSON', default=True,
+                             action='store_false', dest='yaml')
+    parser_show.add_argument(
+        'only', default='*', nargs='?', metavar=Constants.INTERFACES,
+        help='Show only specified interfaces (comma-separated)'
+    )
 
 
 def edit(args):
