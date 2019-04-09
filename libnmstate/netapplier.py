@@ -68,7 +68,10 @@ def commit(checkpoint=None):
     """
 
     nmcheckpoint = _choose_checkpoint(checkpoint)
-    nmcheckpoint.destroy()
+    try:
+        nmcheckpoint.destroy()
+    except nm.checkpoint.NMCheckPointError as e:
+        raise NmstateValueError(str(e))
 
 
 def rollback(checkpoint=None):
@@ -81,7 +84,10 @@ def rollback(checkpoint=None):
     """
 
     nmcheckpoint = _choose_checkpoint(checkpoint)
-    nmcheckpoint.rollback()
+    try:
+        nmcheckpoint.rollback()
+    except nm.checkpoint.NMCheckPointError as e:
+        raise NmstateValueError(str(e))
 
 
 def _choose_checkpoint(dbuspath):
