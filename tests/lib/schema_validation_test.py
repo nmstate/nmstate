@@ -24,6 +24,7 @@ import jsonschema as js
 
 import libnmstate
 from libnmstate.schema import Constants
+from libnmstate.schema import DNS
 
 
 INTERFACES = Constants.INTERFACES
@@ -83,6 +84,28 @@ COMMON_DATA = {
                 'next-hop-address': 'fe80::1'
             }
         ]
+    },
+    DNS.KEY: {
+        DNS.RUNNING: {
+            DNS.SERVER: [
+                "2001:db8::1",
+                "192.0.2.1"
+            ],
+            DNS.SEARCH: [
+                "example.com",
+                "example.org"
+            ]
+        },
+        DNS.CONFIG: {
+            DNS.SERVER: [
+                "2001:db8::1",
+                "192.0.2.1"
+            ],
+            DNS.SEARCH: [
+                "example.com",
+                "example.org"
+            ]
+        }
     }
 }
 

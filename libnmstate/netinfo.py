@@ -19,7 +19,9 @@ from operator import itemgetter
 
 from libnmstate import nm
 from libnmstate import validator
+from libnmstate.nm import dns as nm_dns
 from libnmstate.schema import Constants
+from libnmstate.schema import DNS
 from libnmstate.schema import Interface
 from libnmstate.schema import Route
 
@@ -43,6 +45,11 @@ def show(include_status_data=False):
                         nm.ipv6.get_route_running()),
         Route.CONFIG: (nm.ipv4.get_route_config() +
                        nm.ipv6.get_route_config()),
+    }
+
+    report[Constants.DNS] = {
+        DNS.RUNNING: nm_dns.get_running(),
+        DNS.CONFIG: nm_dns.get_config(),
     }
 
     validator.verify(report)

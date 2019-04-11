@@ -15,7 +15,6 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 import os
-import re
 import time
 
 import pytest
@@ -23,6 +22,7 @@ import pytest
 from libnmstate import netapplier
 from libnmstate import netinfo
 from libnmstate.schema import Constants
+from libnmstate.schema import DNS
 from libnmstate.schema import Route as RT
 
 from libnmstate.error import NmstateNotImplementedError
@@ -638,14 +638,8 @@ def _get_nameservers():
     """
     Return a list of name server string configured in RESOLV_CONF_PATH.
     """
-    ret = []
-    regex = re.compile('^nameserver +([0-9\.a-f:]+)$')
-    with open(RESOLV_CONF_PATH, 'r') as fd:
-        for line in fd:
-            match = regex.match(line)
-            if match:
-                ret.append(match.group(1))
-    return ret
+    return netinfo.show().get(
+        Constants.DNS, {}).get(DNS.RUNNING, {}).get(DNS.SERVER, [])
 
 
 def _get_running_routes():

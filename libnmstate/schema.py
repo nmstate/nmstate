@@ -56,9 +56,18 @@ class Route(object):
     METRIC = 'metric'
 
 
+class DNS(object):
+    KEY = 'dns-resolver'
+    RUNNING = 'running'
+    CONFIG = 'config'
+    SERVER = 'server'
+    SEARCH = 'search'
+
+
 class Constants(object):
     INTERFACES = Interface.KEY
     ROUTES = Route.KEY
+    DNS = DNS.KEY
 
 
 class InterfaceState(object):
