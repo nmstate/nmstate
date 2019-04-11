@@ -35,6 +35,15 @@ properties:
         type: array
         items:
           $ref: "#/definitions/route"
+  dns-resolver:
+    type: object
+    properties:
+      config:
+        items:
+          $ref: "#/definitions/dns"
+      running:
+        items:
+          $ref: "#/definitions/dns"
 
 definitions:
   types:
@@ -437,3 +446,14 @@ definitions:
         type: string
       next-hop-address:
         type: string
+  dns:
+    type: object
+    properties:
+      server:
+        type: array
+        items:
+          type: string
+      search:
+        type: array
+        items:
+          type: string

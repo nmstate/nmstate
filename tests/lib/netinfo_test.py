@@ -20,6 +20,7 @@ from .compat import mock
 
 from libnmstate import netinfo
 from libnmstate.schema import Constants
+from libnmstate.schema import DNS
 
 
 INTERFACES = Constants.INTERFACES
@@ -32,8 +33,18 @@ def nm_mock():
         yield m
 
 
-def test_netinfo_show_generic_iface(nm_mock):
+@pytest.fixture
+def nm_dns_mock():
+    with mock.patch.object(netinfo, 'nm_dns') as m:
+        yield m
+
+
+def test_netinfo_show_generic_iface(nm_mock, nm_dns_mock):
     current_config = {
+        DNS.KEY: {
+            DNS.RUNNING: {},
+            DNS.CONFIG: {}
+        },
         ROUTES: {
             'config': [],
             'running': []
@@ -65,14 +76,20 @@ def test_netinfo_show_generic_iface(nm_mock):
     nm_mock.ipv4.get_route_config.return_value = []
     nm_mock.ipv6.get_route_running.return_value = []
     nm_mock.ipv6.get_route_config.return_value = []
+    nm_dns_mock.get_running.return_value = current_config[DNS.KEY][DNS.RUNNING]
+    nm_dns_mock.get_config.return_value = current_config[DNS.KEY][DNS.CONFIG]
 
     report = netinfo.show()
 
     assert current_config == report
 
 
-def test_netinfo_show_bond_iface(nm_mock):
+def test_netinfo_show_bond_iface(nm_mock, nm_dns_mock):
     current_config = {
+        DNS.KEY: {
+            DNS.RUNNING: {},
+            DNS.CONFIG: {}
+        },
         ROUTES: {
             'config': [],
             'running': []
@@ -117,6 +134,8 @@ def test_netinfo_show_bond_iface(nm_mock):
     nm_mock.ipv4.get_route_config.return_value = []
     nm_mock.ipv6.get_route_running.return_value = []
     nm_mock.ipv6.get_route_config.return_value = []
+    nm_dns_mock.get_running.return_value = current_config[DNS.KEY][DNS.RUNNING]
+    nm_dns_mock.get_config.return_value = current_config[DNS.KEY][DNS.CONFIG]
 
     report = netinfo.show()
 
