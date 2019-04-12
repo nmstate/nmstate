@@ -33,33 +33,33 @@ def test_add_down_remove_vlan(eth1_up):
     """
 
     vlan_ifname = 'eth1.101'
-    with yaml_state('vlan101_eth1_up.yml',
-                    cleanup='vlan101_eth1_absent.yml') as desired_state:
+    with example_state('vlan101_eth1_up.yml',
+                       cleanup='vlan101_eth1_absent.yml') as desired_state:
         assertlib.assert_state(desired_state)
-        with yaml_state('vlan101_eth1_down.yml') as desired_state:
+        with example_state('vlan101_eth1_down.yml') as desired_state:
             assertlib.assert_absent(vlan_ifname)
 
     assertlib.assert_absent(vlan_ifname)
 
 
 def test_add_remove_ovs_bridge(eth1_up):
-    with yaml_state('ovsbridge_create.yml',
-                    cleanup='ovsbridge_delete.yml') as desired_state:
+    with example_state('ovsbridge_create.yml',
+                       cleanup='ovsbridge_delete.yml') as desired_state:
         assertlib.assert_state(desired_state)
 
     assertlib.assert_absent('ovs-br0')
 
 
 def test_add_remove_linux_bridge(eth1_up):
-    with yaml_state('linuxbrige_eth1_up.yml',
-                    cleanup='linuxbrige_eth1_absent.yml') as desired_state:
+    with example_state('linuxbrige_eth1_up.yml',
+                       cleanup='linuxbrige_eth1_absent.yml') as desired_state:
         assertlib.assert_state(desired_state)
 
     assertlib.assert_absent('linux-br0')
 
 
 @contextmanager
-def yaml_state(initial, cleanup=None):
+def example_state(initial, cleanup=None):
     """
     Apply the initial state and optionally the cleanup state at the end
     """
