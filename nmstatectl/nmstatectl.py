@@ -31,6 +31,7 @@ import yaml
 
 from libnmstate import netapplier
 from libnmstate import netinfo
+from libnmstate.error import NmstateConflictError
 from libnmstate.error import NmstateValueError
 from libnmstate.prettystate import PrettyState
 from libnmstate.schema import Constants
@@ -182,10 +183,11 @@ def apply(args):
                 with open(statefile) as statefile:
                     statedata = statefile.read()
 
-            apply_state(statedata, args.verify, args.commit, args.timeout)
+            return apply_state(statedata, args.verify, args.commit,
+                               args.timeout)
     elif not sys.stdin.isatty():
         statedata = sys.stdin.read()
-        apply_state(statedata, args.verify, args.commit, args.timeout)
+        return apply_state(statedata, args.verify, args.commit, args.timeout)
     else:
         sys.stderr.write('ERROR: No state specified\n')
         return 1
@@ -199,7 +201,14 @@ def apply_state(statedata, verify_change, commit, timeout):
     else:
         state = yaml.load(statedata, Loader=yaml.SafeLoader)
         use_yaml = True
-    checkpoint = netapplier.apply(state, verify_change, commit, timeout)
+
+    try:
+        checkpoint = netapplier.apply(state, verify_change, commit, timeout)
+    except NmstateConflictError:
+        sys.stderr.write('ERROR: State editing already in progress.\n'
+                         'Commit, roll back or wait before retrying.\n')
+        return os.EX_UNAVAILABLE
+
     print('Desired state applied: ')
     print_state(state, use_yaml=use_yaml)
     if checkpoint:
