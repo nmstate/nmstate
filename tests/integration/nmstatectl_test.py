@@ -16,16 +16,23 @@
 #
 
 import json
-import os.path
+import os
+import time
+
 
 from libnmstate.schema import Constants
 
+from .testlib import assertlib
 from .testlib import cmd as libcmd
+from .testlib.examplelib import example_state
 from .testlib.examplelib import find_examples_dir
+from .testlib.examplelib import load_example
 
 
 SET_CMD = ['nmstatectl', 'set']
 SHOW_CMD = ['nmstatectl', 'show']
+CONFIRM_CMD = ['nmstatectl', 'commit']
+ROLLBACK_CMD = ['nmstatectl', 'rollback']
 
 RC_SUCCESS = 0
 RC_FAIL2 = 2
@@ -65,6 +72,18 @@ ETH1_YAML_CONFIG = b"""interfaces:
   ipv6:
     enabled: false
 """
+
+EXAMPLES = find_examples_dir()
+CONFIRMATION_INTERFACE = 'eth1.101'
+CONFIRMATION_CLEAN = 'vlan101_eth1_absent.yml'
+CONFIRMATION_TEST = 'vlan101_eth1_up.yml'
+CONFIRMATION_TEST_STATE = load_example(CONFIRMATION_TEST)
+CONFIRMATION_SET = SET_CMD + ['--no-commit',
+                              os.path.join(EXAMPLES, CONFIRMATION_TEST)]
+CONFIRMATION_TIMEOUT = 5
+CONFIRMATION_TIMOUT_COMMAND = SET_CMD + \
+    ['--no-commit', '--timeout', str(CONFIRMATION_TIMEOUT),
+     os.path.join(EXAMPLES, CONFIRMATION_TEST)]
 
 
 def test_missing_operation():
@@ -131,6 +150,65 @@ def test_set_command_with_two_states():
     rc = ret[0]
 
     assert rc == RC_SUCCESS, format_exec_cmd_result(ret)
+
+
+def test_manual_confirmation(eth1_up):
+    """ I can manually confirm a state. """
+
+    with example_state(CONFIRMATION_CLEAN, CONFIRMATION_CLEAN):
+
+        assert_command(CONFIRMATION_SET)
+        assertlib.assert_state(CONFIRMATION_TEST_STATE)
+        assert_command(CONFIRM_CMD)
+        assertlib.assert_state(CONFIRMATION_TEST_STATE)
+
+
+def test_manual_rollback(eth1_up):
+    """ I can manually roll back a state. """
+
+    with example_state(CONFIRMATION_CLEAN,
+                       CONFIRMATION_CLEAN) as clean_state:
+
+        assert_command(CONFIRMATION_SET)
+        assertlib.assert_state(CONFIRMATION_TEST_STATE)
+        assert_command(ROLLBACK_CMD)
+        assertlib.assert_state(clean_state)
+
+
+def test_dual_change(eth1_up):
+    """ I cannot set a state without confirming/rolling back the state change.
+    """
+
+    with example_state(CONFIRMATION_CLEAN,
+                       CONFIRMATION_CLEAN) as clean_state:
+
+        assert_command(CONFIRMATION_SET)
+        assertlib.assert_state(CONFIRMATION_TEST_STATE)
+        assert_command(CONFIRMATION_SET, os.EX_UNAVAILABLE)
+
+        assert_command(ROLLBACK_CMD)
+        assertlib.assert_state(clean_state)
+
+
+def test_automatic_rollback(eth1_up):
+    """ If I do not confirm the state, it is automatically rolled back. """
+
+    with example_state(CONFIRMATION_CLEAN,
+                       CONFIRMATION_CLEAN) as clean_state:
+
+        assert_command(CONFIRMATION_TIMOUT_COMMAND)
+        assertlib.assert_state(CONFIRMATION_TEST_STATE)
+
+        time.sleep(CONFIRMATION_TIMEOUT)
+        assertlib.assert_state(clean_state)
+
+
+def assert_command(cmd, expected_rc=RC_SUCCESS):
+    ret = libcmd.exec_cmd(cmd)
+    returncode = ret[0]
+
+    assert returncode == expected_rc, format_exec_cmd_result(ret)
+    return ret
 
 
 def format_exec_cmd_result(result):
