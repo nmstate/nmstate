@@ -16,15 +16,8 @@
 #
 """ Test the nmstate example files """
 
-from contextlib import contextmanager
-import os.path
-
-import yaml
-
-from libnmstate import netapplier
-
 from .testlib import assertlib
-from .testlib.examplelib import find_examples_dir
+from .testlib.examplelib import example_state
 
 
 def test_add_down_remove_vlan(eth1_up):
@@ -56,32 +49,3 @@ def test_add_remove_linux_bridge(eth1_up):
         assertlib.assert_state(desired_state)
 
     assertlib.assert_absent('linux-br0')
-
-
-@contextmanager
-def example_state(initial, cleanup=None):
-    """
-    Apply the initial state and optionally the cleanup state at the end
-    """
-
-    desired_state = load_example(initial)
-
-    netapplier.apply(desired_state)
-    try:
-        yield desired_state
-    finally:
-        if cleanup:
-            netapplier.apply(load_example(cleanup))
-
-
-def load_example(name):
-    """
-    Load the state from an example yaml file
-    """
-
-    examples = find_examples_dir()
-
-    with open(os.path.join(examples, name)) as yamlfile:
-        state = yaml.load(yamlfile, Loader=yaml.SafeLoader)
-
-    return state
