@@ -15,10 +15,46 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
+from contextlib import contextmanager
 import os
 
 
+import yaml
+
+
+from libnmstate import netapplier
+
+
 PATH_MAX = 4096
+
+
+@contextmanager
+def example_state(initial, cleanup=None):
+    """
+    Apply the initial state and optionally the cleanup state at the end
+    """
+
+    desired_state = load_example(initial)
+
+    netapplier.apply(desired_state)
+    try:
+        yield desired_state
+    finally:
+        if cleanup:
+            netapplier.apply(load_example(cleanup))
+
+
+def load_example(name):
+    """
+    Load the state from an example yaml file
+    """
+
+    examples = find_examples_dir()
+
+    with open(os.path.join(examples, name)) as yamlfile:
+        state = yaml.load(yamlfile, Loader=yaml.SafeLoader)
+
+    return state
 
 
 def find_examples_dir():
