@@ -237,9 +237,9 @@ class ConnectionProfile(object):
         )
 
     def _waitfor_active_connection_callback(self,
-                                            nm_act_con,
-                                            state,
-                                            reason,
+                                            _nm_act_con,
+                                            _state,
+                                            _reason,
                                             ac):
         ac.refresh_state()
         if ac.is_active:
