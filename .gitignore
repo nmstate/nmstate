@@ -17,3 +17,7 @@ ChangeLog
 
 exported-artifacts
 *.rpm
+
+/ansible
+/.vagrant
+/Vagrantfile
