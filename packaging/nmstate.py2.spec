@@ -23,7 +23,7 @@ provider support on the southbound.
 
 %package -n python2-%{libname}
 Summary:        nmstate Python 2 API library
-Requires:       NetworkManager-libnm
+Requires:       NetworkManager-libnm >= 1:1.12
 Requires:       python-gobject-base
 Requires:       python2-six
 Requires:       python-jsonschema
