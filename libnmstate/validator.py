@@ -32,7 +32,8 @@ def verify(data, validation_schema=schema.ifaces_schema):
 
 
 def verify_capabilities(state, capabilities):
-    verify_interface_capabilities(state[Constants.INTERFACES], capabilities)
+    verify_interface_capabilities(state.get(Constants.INTERFACES, []),
+                                  capabilities)
 
 
 def verify_interface_capabilities(ifaces_state, capabilities):
@@ -81,7 +82,7 @@ def verify_link_aggregation_state(ifaces_state, ifaces_desired_state):
 
 
 def verify_dhcp(state):
-    for iface_state in state[Constants.INTERFACES]:
+    for iface_state in state.get(Constants.INTERFACES, []):
         for family in ('ipv4', 'ipv6'):
             ip = iface_state.get(family, {})
             if ip.get('enabled') and ip.get('address') and \
