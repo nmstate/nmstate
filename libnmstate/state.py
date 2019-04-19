@@ -32,6 +32,7 @@ from libnmstate.error import NmstateVerificationError
 from libnmstate.prettystate import format_desired_current_state_diff
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceType
+from libnmstate.schema import InterfaceState
 from libnmstate.schema import Route
 from libnmstate.nm import route as nm_route
 
@@ -195,6 +196,8 @@ class State(object):
         """
         Verify that the self state and the other_state are identical.
         """
+        self._clean_routes()
+        other_state._clean_routes()
         for iface_name, routes in six.viewitems(self.iface_routes):
             routes.sort(key=_route_sort_key)
             other_routes = other_state.iface_routes.get(iface_name, [])
@@ -323,6 +326,56 @@ class State(object):
                         ethernet_state.pop(key, None)
                 if not ethernet_state:
                     ifstate.pop('ethernet', None)
+
+    def _clean_routes(self):
+        """
+        Remove routes for down/absent interface
+        Remove routes for non-exit interface
+        Remove routes when IPv4/IPv6 down.
+        """
+        self._clean_routes_iface_down()
+        self._clean_routes_missing_iface()
+        self._clean_routes_ip_down()
+
+    def _clean_routes_iface_down(self):
+        for iface_name, iface_state in six.viewitems(self.interfaces):
+            if iface_state[Interface.STATE] in (InterfaceState.DOWN,
+                                                InterfaceState.ABSENT):
+                if self.iface_routes.get(iface_name, []):
+                    logging.info(
+                        "Removing routes next hop to interface %s "
+                        "which is in %s state", iface_name,
+                        iface_state[Interface.STATE])
+                    for route in self.iface_routes[iface_name]:
+                        self.routes.remove(route)
+
+    def _clean_routes_missing_iface(self):
+        for missing_iface in set(self.iface_routes) - set(self.interfaces):
+            if self.iface_routes.get(missing_iface, []):
+                logging.info(
+                    "Removing routes next hop to interface %s "
+                    "which does not exists", missing_iface)
+                for route in self.iface_routes[missing_iface]:
+                    self.routes.remove(route)
+
+    def _clean_routes_ip_down(self):
+        removed_iface_family = set()
+        for route in self.routes:
+            iface_name = route[Route.NEXT_HOP_INTERFACE]
+            iface_state = self.interfaces[iface_name]
+            if iplib.is_ipv6_address(route[Route.DESTINATION]):
+                if not iface_state.get('ipv6', {}).get('enabled'):
+                    removed_iface_family.add((iface_name, 'ipv6'))
+                    self.routes.remove(route)
+            else:
+                if not iface_state.get('ipv4', {}).get('enabled'):
+                    removed_iface_family.add((iface_name, 'ipv4'))
+                    self.routes.remove(route)
+
+        for iface_name, family in removed_iface_family:
+            logging.info(
+                "Removing %s routes next hop to interface %s "
+                "which has %s disabled", family, iface_name, family)
 
     def _sort_lag_slaves(self):
         for ifstate in six.viewvalues(self.interfaces):
