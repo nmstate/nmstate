@@ -70,7 +70,7 @@ def get_config(acs_and_ip_profiles):
             raise NmstateInternalError(
                 'Got connection {} has not interface name'.format(
                     active_connection.get_id()))
-        default_table_id = _get_cfg_default_route_table_id(ip_profile)
+        default_table_id = ip_profile.props.route_table
         # NM supports multiple route table in single profile:
         #   https://bugzilla.redhat.com/show_bug.cgi?id=1436531
         # The `ipv4.route-table` and `ipv6.route-table` will be the default
@@ -88,13 +88,6 @@ def get_config(acs_and_ip_profiles):
                                Route.NEXT_HOP_INTERFACE,
                                Route.DESTINATION))
     return routes
-
-
-def _get_cfg_default_route_table_id(ip_profile):
-    table_id = iplib.KERNEL_MAIN_ROUTE_TABLE_ID
-    if ip_profile and ip_profile.props.route_table != NM_MAIN_ROUTE_TABLE_ID:
-        table_id = ip_profile.props.route_table
-    return table_id
 
 
 def _get_per_route_table_id(nm_route, default_table_id):
