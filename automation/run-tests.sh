@@ -253,7 +253,7 @@ then
     docker_exec "command -v dnf && plugin='dnf-command(copr)' || plugin='yum-plugin-copr'; yum install --assumeyes \$plugin;"
     docker_exec "yum copr enable --assumeyes ${copr_repo}"
     # Update only from Copr to limit the changes in the environment
-    docker_exec "yum update --assumeyes --repoid '${copr_repo_id}'"
+    docker_exec "yum update --assumeyes --disablerepo '*' --enablerepo '${copr_repo_id}'"
     docker_exec "systemctl restart NetworkManager"
 fi
 
