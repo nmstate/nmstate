@@ -185,7 +185,7 @@ function rebuild_container_images {
 }
 
 options=$(getopt --options "" \
-    --long pytest-args:,help,debug-shell,test-type:,el7\
+    --long pytest-args:,help,debug-shell,test-type:,el7,copr:\
     -- "${@}")
 eval set -- "$options"
 while true; do
@@ -193,6 +193,10 @@ while true; do
     --pytest-args)
         shift
         nmstate_pytest_extra_args="$1"
+        ;;
+    --copr)
+        shift
+        copr_repo="$1"
         ;;
     --debug-shell)
         debug_exit_shell="1"
@@ -205,7 +209,7 @@ while true; do
         DOCKER_IMAGE="nmstate/centos7-nmstate-dev"
         ;;
     --help)
-        echo -n "$0 [--pytest-args=...] [--help] [--debug-shell] "
+        echo -n "$0 [--copr=...] [--pytest-args=...] [--help] [--debug-shell] "
         echo -n "[--el7] "
         echo "[--test-type=<TEST_TYPE>]"
         echo "    Valid TEST_TYPE are:"
@@ -242,6 +246,17 @@ fi
 
 CONTAINER_ID="$(docker run --privileged -d -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v $PROJECT_PATH:/workspace/nmstate -v $EXPORT_DIR:$CONT_EXPORT_DIR $DOCKER_IMAGE)"
 [ -n "$debug_exit_shell" ] && trap open_shell EXIT || trap run_exit EXIT
+if [[ -v copr_repo ]]
+then
+    # The repoid for a Copr repo is the name with the slash replaces by a dash
+    copr_repo_id="${copr_repo/\//-}"
+    docker_exec "command -v dnf && plugin='dnf-command(copr)' || plugin='yum-plugin-copr'; yum install --assumeyes \$plugin;"
+    docker_exec "yum copr enable --assumeyes ${copr_repo}"
+    # Update only from Copr to limit the changes in the environment
+    docker_exec "yum update --assumeyes --repoid '${copr_repo_id}'"
+    docker_exec "systemctl restart NetworkManager"
+fi
+
 docker_exec 'while ! systemctl is-active dbus; do sleep 1; done'
 docker_exec '
     systemctl start NetworkManager
