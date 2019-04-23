@@ -9,10 +9,8 @@ COPY docker_enable_systemd.sh docker_sys_config.sh ./
 
 RUN bash ./docker_enable_systemd.sh && rm ./docker_enable_systemd.sh -f
 
-# libibverbs is a dependency for openvswitch that is missing as a dependency in the RPM
 RUN yum -y upgrade && \
     yum -y install \
-        libibverbs \
         NetworkManager \
         NetworkManager-libnm \
         NetworkManager-ovs \
