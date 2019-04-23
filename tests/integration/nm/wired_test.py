@@ -15,18 +15,23 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
+import pytest
+
 from libnmstate import nm
 from libnmstate import schema
 
 from .testlib import mainloop
+from .testlib import TestMainloopError
 
 
 ETH1 = 'eth1'
 
+MAC0 = '02:FF:FF:FF:FF:00'
 MTU0 = 1200
 
 
-def test_interface_mtu_change(eth1_up):
+@pytest.mark.xfail(reason='https://bugzilla.redhat.com/1702657', strict=True)
+def test_interface_mtu_change_with_reapply(eth1_up):
     wired_base_state = _get_wired_current_state(ETH1)
     with mainloop():
         _modify_interface(wired_state={schema.Interface.MTU: MTU0})
@@ -40,6 +45,25 @@ def test_interface_mtu_change(eth1_up):
     }
 
 
+def test_interface_mac_change_with_reapply_fails(eth1_up):
+    with pytest.raises(TestMainloopError):
+        _test_interface_mac_change()
+
+
+def _test_interface_mac_change():
+    wired_base_state = _get_wired_current_state(ETH1)
+    with mainloop():
+        _modify_interface(wired_state={schema.Interface.MAC: MAC0})
+
+    nm.nmclient.client(refresh=True)
+    wired_current_state = _get_wired_current_state(ETH1)
+
+    assert wired_current_state == {
+        schema.Interface.MAC: MAC0,
+        schema.Interface.MTU: wired_base_state[schema.Interface.MTU]
+    }
+
+
 def _modify_interface(wired_state):
     conn = nm.connection.ConnectionProfile()
     conn.import_by_id(ETH1)
@@ -48,7 +72,9 @@ def _modify_interface(wired_state):
     new_conn.create(settings)
     conn.update(new_conn)
     conn.commit(save_to_disk=False)
-    nm.device.activate(connection_id=ETH1)
+
+    nmdev = nm.device.get_device_by_name(ETH1)
+    nm.device.reapply(nmdev, conn.profile)
 
 
 def _get_wired_current_state(ifname):
