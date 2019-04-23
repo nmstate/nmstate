@@ -49,6 +49,64 @@ def delete(dev):
         con_profile.delete()
 
 
+def reapply(dev, connection_profile):
+    """Reapply the given connection profile on the device."""
+    mainloop = nmclient.mainloop()
+    mainloop.push_action(_safe_reapply_async, dev, connection_profile)
+
+
+def _safe_reapply_async(dev, connection_profile):
+    mainloop = nmclient.mainloop()
+    cancellable = mainloop.new_cancellable()
+
+    active_conn = connection.get_device_active_connection(dev)
+    if active_conn:
+        act_conn = ac.ActiveConnection(active_conn)
+        if act_conn.is_activating:
+            logging.debug(
+                'Connection activation in progress: dev=%s, state=%s',
+                act_conn.devname, act_conn.state)
+            conn = connection.ConnectionProfile(connection_profile)
+            conn.waitfor_active_connection_async(act_conn)
+            return
+
+    version_id = 0
+    flags = 0
+    user_data = mainloop, dev, cancellable
+    dev.reapply_async(
+        connection_profile,
+        version_id,
+        flags,
+        cancellable,
+        _reapply_callback,
+        user_data,
+    )
+
+
+def _reapply_callback(src_object, result, user_data):
+    mainloop, nmdev, cancellable = user_data
+    mainloop.drop_cancellable(cancellable)
+
+    devname = src_object.get_iface()
+    try:
+        success = src_object.reapply_finish(result)
+    except Exception as e:
+        if mainloop.is_action_canceled(e):
+            logging.debug('Connection deletion aborted on %s: error=%s',
+                          devname, e)
+        else:
+            mainloop.quit('Connection deletion failed on {}: error={}'.format(
+                devname, e))
+        return
+
+    if success:
+        logging.debug('Device reapply succeeded: dev=%s', devname)
+        mainloop.execute_next_action()
+    else:
+        mainloop.quit(
+            'Device reapply failed: dev={}, error=unknown'.format(devname))
+
+
 def delete_device(nmdev):
     mainloop = nmclient.mainloop()
     mainloop.push_action(_safe_delete_device_async, nmdev)

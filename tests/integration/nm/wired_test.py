@@ -15,6 +15,8 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
+import pytest
+
 from libnmstate import nm
 from libnmstate import schema
 
@@ -26,6 +28,7 @@ ETH1 = 'eth1'
 MTU0 = 1200
 
 
+@pytest.mark.xfail(reason='https://bugzilla.redhat.com/1702657', strict=True)
 def test_interface_mtu_change(eth1_up):
     wired_base_state = _get_wired_current_state(ETH1)
     with mainloop():
@@ -48,7 +51,9 @@ def _modify_interface(wired_state):
     new_conn.create(settings)
     conn.update(new_conn)
     conn.commit(save_to_disk=False)
-    nm.device.activate(connection_id=ETH1)
+
+    nmdev = nm.device.get_device_by_name(ETH1)
+    nm.device.reapply(nmdev, conn.profile)
 
 
 def _get_wired_current_state(ifname):

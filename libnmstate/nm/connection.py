@@ -151,7 +151,7 @@ class ConnectionProfile(object):
                 logging.debug(
                     'Connection activation in progress: dev=%s, state=%s',
                     ac.devname, ac.state)
-                self._waitfor_active_connection_async(ac)
+                self.waitfor_active_connection_async(ac)
                 return
 
         specific_object = None
@@ -205,7 +205,7 @@ class ConnectionProfile(object):
             if ac.is_active:
                 self._mainloop.execute_next_action()
             elif ac.is_activating:
-                self._waitfor_active_connection_async(ac)
+                self.waitfor_active_connection_async(ac)
             else:
                 self._mainloop.quit(
                     'Connection activation failed on {}: reason={}'.format(
@@ -230,7 +230,7 @@ class ConnectionProfile(object):
 
         return activation_type, activation_object
 
-    def _waitfor_active_connection_async(self, ac):
+    def waitfor_active_connection_async(self, ac):
         ac.handlers.add(
             ac.nm_active_connection.connect(
                 'state-changed', self._waitfor_active_connection_callback, ac)
