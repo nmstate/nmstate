@@ -1,3 +1,4 @@
+---
 language: generic
 env:
     matrix:
@@ -20,14 +21,14 @@ matrix:
                testflags="--test-type integ --pytest-args='-x'"
 
 addons:
-  apt:
-    packages:
-        - git
-        - gnupg2
-        - realpath
-        - openssh-client
-        - python-tox
-        - xz-utils
+    apt:
+        packages:
+            - git
+            - gnupg2
+            - realpath
+            - openssh-client
+            - python-tox
+            - xz-utils
 
 services:
     - docker
