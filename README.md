@@ -92,7 +92,6 @@ existing limitations.
 yum -y install epel-release
 yum -y install \
     dbus-python \
-    libibverbs \
     NetworkManager \
     NetworkManager-libnm \
     NetworkManager-ovs \
