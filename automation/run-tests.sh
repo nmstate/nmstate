@@ -146,8 +146,14 @@ function open_shell {
     run_exit
 }
 
+# Return 0 if file is changed else 1
 function is_file_changed {
     git diff --exit-code --name-only origin/master -- $1
+    if [ $? -eq 0 ];then
+        return 1
+    else
+        return 0
+    fi
 }
 
 function rebuild_el7_base_container_image {
@@ -169,15 +175,12 @@ function rebuild_fed_container_image {
 }
 
 function rebuild_container_images {
-    if [[ $DOCKER_IMAGE == *"centos"* ]]; then
-        is_file_changed \
-            "$PROJECT_PATH/packaging/Dockerfile.centos7-nmstate-base" || \
-            (rebuild_el7_base_container_image && rebuild_el7_container_image)
-        is_file_changed "$PROJECT_PATH/automation/Dockerfile" || \
-            rebuild_el7_container_image
-    fi
-    is_file_changed "$PROJECT_PATH/automation/Dockerfile.fedora" || \
-        rebuild_fed_container_image
+    (is_file_changed "$PROJECT_PATH/packaging" || \
+     is_file_changed "$PROJECT_PATH/automation") \
+         &&
+    (rebuild_el7_base_container_image \
+     rebuild_el7_container_image \
+     rebuild_fed_container_image)
 }
 
 options=$(getopt --options "" \
@@ -232,7 +235,7 @@ mkdir -p $EXPORT_DIR
 
 lsmod | grep -q ^openvswitch || modprobe openvswitch || { echo 1>&2 "Please run 'modprobe openvswitch' as root"; exit 1; }
 
-if [ "CHK$CI" == "CHKtrue" ] ;then
+if [[ "$CI" == "true" ]];then
     rebuild_container_images
 fi
 
