@@ -29,7 +29,6 @@ from libnmstate.error import NmstateConflictError
 from libnmstate.error import NmstateLibnmError
 from libnmstate.error import NmstateValueError
 from libnmstate.nm import nmclient
-from libnmstate.schema import Constants
 
 
 def apply(desired_state, verify_change=True, commit=True, rollback_timeout=60):
@@ -104,10 +103,11 @@ def _choose_checkpoint(dbuspath):
 
 def _apply_ifaces_state(desired_state, verify_change, commit,
                         rollback_timeout):
-    current_state = state.State({Constants.INTERFACES: netinfo.interfaces()})
+    current_state = state.State(netinfo.show())
 
     desired_state.sanitize_ethernet(current_state)
     desired_state.sanitize_dynamic_ip()
+    desired_state.merge_route_config(current_state)
     metadata.generate_ifaces_metadata(desired_state, current_state)
     try:
         with nm.checkpoint.CheckPoint(autodestroy=commit,
@@ -116,9 +116,7 @@ def _apply_ifaces_state(desired_state, verify_change, commit,
                 _add_interfaces(desired_state.interfaces,
                                 current_state.interfaces)
             with _setup_providers():
-                current_state = state.State(
-                    {Constants.INTERFACES: netinfo.interfaces()}
-                )
+                current_state = state.State(netinfo.show())
                 _edit_interfaces(desired_state, current_state)
             if verify_change:
                 _verify_change(desired_state)
@@ -129,8 +127,9 @@ def _apply_ifaces_state(desired_state, verify_change, commit,
 
 
 def _verify_change(desired_state):
-    current_state = state.State({Constants.INTERFACES: netinfo.interfaces()})
+    current_state = state.State(netinfo.show())
     desired_state.verify_interfaces(current_state)
+    desired_state.verify_routes(current_state)
 
 
 @contextmanager

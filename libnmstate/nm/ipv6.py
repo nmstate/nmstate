@@ -89,6 +89,10 @@ def create_setting(config, base_con_profile):
             setting_ip.props.ignore_auto_routes = False
             setting_ip.props.never_default = False
             setting_ip.props.ignore_auto_dns = False
+            setting_ip.props.gateway = None
+            setting_ip.props.route_table = \
+                nm_route.NM_ROUTE_TABLE_USE_DEFAULT_CFG
+            setting_ip.clear_routes()
 
     if not setting_ip:
         setting_ip = nmclient.NM.SettingIP6Config.new()
@@ -116,6 +120,7 @@ def create_setting(config, base_con_profile):
         setting_ip.props.method = (
             nmclient.NM.SETTING_IP6_CONFIG_METHOD_LINK_LOCAL)
 
+    nm_route.add_routes(setting_ip, config.get('routes', []))
     return setting_ip
 
 

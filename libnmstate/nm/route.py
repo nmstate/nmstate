@@ -16,14 +16,22 @@
 #
 
 from operator import itemgetter
-from libnmstate.error import NmstateInternalError
-from libnmstate.schema import Route
+import socket
 
 from libnmstate import iplib
+from libnmstate.error import NmstateInternalError
+from libnmstate.error import NmstateNotImplementedError
+from libnmstate.nm import nmclient
+from libnmstate.nm.nmclient import GLib
+from libnmstate.schema import Route
 
-NM_MAIN_ROUTE_TABLE_ID = 0
+
+NM_ROUTE_TABLE_USE_DEFAULT_CFG = 0
+NM_ROUTE_TABLE_ATTRIBUTE = 'table'
+NM_ROUTE_DEFAULT_METRIC = -1
 IPV4_DEFAULT_GATEWAY_DESTINATION = '0.0.0.0/0'
 IPV6_DEFAULT_GATEWAY_DESTINATION = '::/0'
+
 
 def get_running(acs_and_ip_cfgs):
     """
@@ -96,7 +104,7 @@ def get_config(acs_and_ip_profiles):
 
 
 def _get_per_route_table_id(nm_route, default_table_id):
-    table = nm_route.get_attribute('table')
+    table = nm_route.get_attribute(NM_ROUTE_TABLE_ATTRIBUTE)
     return int(table.get_uint32()) if table else default_table_id
 
 
@@ -109,8 +117,8 @@ def _get_iface_name(active_connection):
 
 
 def _nm_route_to_route(nm_route, table_id, iface_name):
-    dst = '{ip}/{prefix}'.format(
-        ip=nm_route.get_dest(), prefix=nm_route.get_prefix())
+    dst = '{ip}/{prefix_len}'.format(
+        ip=nm_route.get_dest(), prefix_len=nm_route.get_prefix())
     next_hop = nm_route.get_next_hop() or ''
     metric = int(nm_route.get_metric())
 
@@ -135,3 +143,40 @@ def _get_default_route_config(ip_profile, default_table_id, iface_name):
         Route.NEXT_HOP_ADDRESS: ip_profile.props.gateway,
         Route.METRIC: ip_profile.props.route_metric,
     }
+
+
+def add_routes(setting_ip, routes):
+    default_gateway_defined = False
+    for route in routes:
+        if route[Route.DESTINATION] in (IPV4_DEFAULT_GATEWAY_DESTINATION,
+                                        IPV6_DEFAULT_GATEWAY_DESTINATION):
+            if default_gateway_defined:
+                raise NmstateNotImplementedError(
+                    'Only a single default gateway is supported.')
+            default_gateway_defined = True
+            _add_route_gateway(setting_ip, route)
+        else:
+            _add_specfic_route(setting_ip, route)
+
+
+def _add_route_gateway(setting_ip, route):
+    setting_ip.props.gateway = route[Route.NEXT_HOP_ADDRESS]
+    if route[Route.TABLE_ID] != NM_ROUTE_TABLE_USE_DEFAULT_CFG:
+        setting_ip.props.route_table = route[Route.TABLE_ID]
+    if route[Route.METRIC] != NM_ROUTE_DEFAULT_METRIC:
+        setting_ip.props.route_metric = route[Route.METRIC]
+
+
+def _add_specfic_route(setting_ip, route):
+    destination, prefix_len = route[Route.DESTINATION].split('/')
+    prefix_len = int(prefix_len)
+    family = socket.AF_INET6 if iplib.is_ipv6_address(destination) \
+        else socket.AF_INET
+    metric = route.get(Route.METRIC, NM_ROUTE_DEFAULT_METRIC)
+    next_hop = route[Route.NEXT_HOP_ADDRESS]
+    rt = nmclient.NM.IPRoute.new(family, destination, prefix_len, next_hop,
+                                 metric)
+    if route[Route.TABLE_ID] != NM_ROUTE_TABLE_USE_DEFAULT_CFG:
+        rt.set_attribute(NM_ROUTE_TABLE_ATTRIBUTE,
+                         GLib.Variant.new_uint32(route[Route.TABLE_ID]))
+    setting_ip.add_route(rt)
