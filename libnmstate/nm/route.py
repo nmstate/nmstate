@@ -22,7 +22,8 @@ from libnmstate.schema import Route
 from libnmstate import iplib
 
 NM_MAIN_ROUTE_TABLE_ID = 0
-
+IPV4_DEFAULT_GATEWAY_DESTINATION = '0.0.0.0/0'
+IPV6_DEFAULT_GATEWAY_DESTINATION = '::/0'
 
 def get_running(acs_and_ip_cfgs):
     """
@@ -63,7 +64,7 @@ def get_config(acs_and_ip_profiles):
     """
     routes = []
     for (active_connection, ip_profile) in acs_and_ip_profiles:
-        if not ip_profile.props.routes:
+        if not ip_profile.props.routes and not ip_profile.props.gateway:
             continue
         iface_name = _get_iface_name(active_connection)
         if not iface_name:
@@ -71,6 +72,10 @@ def get_config(acs_and_ip_profiles):
                 'Got connection {} has not interface name'.format(
                     active_connection.get_id()))
         default_table_id = ip_profile.props.route_table
+        if ip_profile.props.gateway:
+            routes.append(
+                _get_default_route_config(
+                    ip_profile, default_table_id, iface_name))
         # NM supports multiple route table in single profile:
         #   https://bugzilla.redhat.com/show_bug.cgi?id=1436531
         # The `ipv4.route-table` and `ipv6.route-table` will be the default
@@ -115,4 +120,18 @@ def _nm_route_to_route(nm_route, table_id, iface_name):
         Route.NEXT_HOP_INTERFACE: iface_name,
         Route.NEXT_HOP_ADDRESS: next_hop,
         Route.METRIC: metric,
+    }
+
+
+def _get_default_route_config(ip_profile, default_table_id, iface_name):
+    if iplib.is_ipv6_address(ip_profile.props.gateway):
+        destination = IPV6_DEFAULT_GATEWAY_DESTINATION
+    else:
+        destination = IPV4_DEFAULT_GATEWAY_DESTINATION
+    return {
+        Route.TABLE_ID: default_table_id,
+        Route.DESTINATION: destination,
+        Route.NEXT_HOP_INTERFACE: iface_name,
+        Route.NEXT_HOP_ADDRESS: ip_profile.props.gateway,
+        Route.METRIC: ip_profile.props.route_metric,
     }
