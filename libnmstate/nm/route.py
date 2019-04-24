@@ -22,6 +22,8 @@ from libnmstate.schema import Route
 from libnmstate import iplib
 
 NM_MAIN_ROUTE_TABLE_ID = 0
+IPV4_DEFAULT_GATEWAY_DESTINATION = '0.0.0.0/0'
+IPV6_DEFAULT_GATEWAY_DESTINATION = '::/0'
 
 
 def get_running(acs_and_ip_cfgs):
@@ -63,7 +65,9 @@ def get_config(acs_and_ip_profiles):
     """
     routes = []
     for (active_connection, ip_profile) in acs_and_ip_profiles:
-        if not ip_profile.props.routes:
+        nm_routes = ip_profile.props.routes
+        gateway = ip_profile.props.gateway
+        if not nm_routes and not gateway:
             continue
         iface_name = _get_iface_name(active_connection)
         if not iface_name:
@@ -71,12 +75,19 @@ def get_config(acs_and_ip_profiles):
                 'Got connection {} has not interface name'.format(
                     active_connection.get_id()))
         default_table_id = ip_profile.props.route_table
+        if gateway:
+            routes.append(
+                _get_default_route_config(
+                    gateway,
+                    ip_profile.props.route_metric,
+                    default_table_id,
+                    iface_name))
         # NM supports multiple route table in single profile:
         #   https://bugzilla.redhat.com/show_bug.cgi?id=1436531
         # The `ipv4.route-table` and `ipv6.route-table` will be the default
         # table id for static routes and auto routes. But each static route can
         # still specify route table id.
-        for nm_route in ip_profile.props.routes:
+        for nm_route in nm_routes:
             table_id = _get_per_route_table_id(nm_route, default_table_id)
             route_entry = _nm_route_to_route(
                 nm_route,
@@ -114,5 +125,19 @@ def _nm_route_to_route(nm_route, table_id, iface_name):
         Route.DESTINATION: dst,
         Route.NEXT_HOP_INTERFACE: iface_name,
         Route.NEXT_HOP_ADDRESS: next_hop,
+        Route.METRIC: metric,
+    }
+
+
+def _get_default_route_config(gateway, metric, default_table_id, iface_name):
+    if iplib.is_ipv6_address(gateway):
+        destination = IPV6_DEFAULT_GATEWAY_DESTINATION
+    else:
+        destination = IPV4_DEFAULT_GATEWAY_DESTINATION
+    return {
+        Route.TABLE_ID: default_table_id,
+        Route.DESTINATION: destination,
+        Route.NEXT_HOP_INTERFACE: iface_name,
+        Route.NEXT_HOP_ADDRESS: gateway,
         Route.METRIC: metric,
     }
