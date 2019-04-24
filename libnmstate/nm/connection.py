@@ -95,7 +95,7 @@ class ConnectionProfile(object):
 
     def activate(self):
         self._mainloop.push_action(
-            self._safe_activate_async)
+            self.safe_activate_async)
 
     @property
     def profile(self):
@@ -130,7 +130,7 @@ class ConnectionProfile(object):
         assert self._con_id is None
         self._con_id = connection_id
 
-    def _safe_activate_async(self):
+    def safe_activate_async(self):
         if self.con_id:
             self.import_by_id()
         elif self.nmdevice:

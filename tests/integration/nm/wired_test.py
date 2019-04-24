@@ -32,9 +32,18 @@ MTU0 = 1200
 
 @pytest.mark.xfail(reason='https://bugzilla.redhat.com/1702657', strict=True)
 def test_interface_mtu_change_with_reapply(eth1_up):
+    _test_interface_mtu_change(nm.device.reapply)
+
+
+def test_interface_mtu_change_with_modify(eth1_up):
+    _test_interface_mtu_change(nm.device.modify)
+
+
+def _test_interface_mtu_change(apply_operation):
     wired_base_state = _get_wired_current_state(ETH1)
     with mainloop():
-        _modify_interface(wired_state={schema.Interface.MTU: MTU0})
+        _modify_interface(wired_state={schema.Interface.MTU: MTU0},
+                          apply_operation=apply_operation)
 
     nm.nmclient.client(refresh=True)
     wired_current_state = _get_wired_current_state(ETH1)
@@ -47,13 +56,18 @@ def test_interface_mtu_change_with_reapply(eth1_up):
 
 def test_interface_mac_change_with_reapply_fails(eth1_up):
     with pytest.raises(TestMainloopError):
-        _test_interface_mac_change()
+        _test_interface_mac_change(nm.device.reapply)
 
 
-def _test_interface_mac_change():
+def test_interface_mac_change_with_modify(eth1_up):
+    _test_interface_mac_change(nm.device.modify)
+
+
+def _test_interface_mac_change(apply_operation):
     wired_base_state = _get_wired_current_state(ETH1)
     with mainloop():
-        _modify_interface(wired_state={schema.Interface.MAC: MAC0})
+        _modify_interface(wired_state={schema.Interface.MAC: MAC0},
+                          apply_operation=apply_operation)
 
     nm.nmclient.client(refresh=True)
     wired_current_state = _get_wired_current_state(ETH1)
@@ -64,7 +78,7 @@ def _test_interface_mac_change():
     }
 
 
-def _modify_interface(wired_state):
+def _modify_interface(wired_state, apply_operation):
     conn = nm.connection.ConnectionProfile()
     conn.import_by_id(ETH1)
     settings = _create_iface_settings(wired_state, conn)
@@ -74,7 +88,7 @@ def _modify_interface(wired_state):
     conn.commit(save_to_disk=False)
 
     nmdev = nm.device.get_device_by_name(ETH1)
-    nm.device.reapply(nmdev, conn.profile)
+    apply_operation(nmdev, conn.profile)
 
 
 def _get_wired_current_state(ifname):
