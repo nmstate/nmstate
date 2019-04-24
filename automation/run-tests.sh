@@ -175,12 +175,13 @@ function rebuild_fed_container_image {
 }
 
 function rebuild_container_images {
-    (is_file_changed "$PROJECT_PATH/packaging" || \
-     is_file_changed "$PROJECT_PATH/automation") \
-         &&
-    (rebuild_el7_base_container_image \
-     rebuild_el7_container_image \
-     rebuild_fed_container_image)
+    if (is_file_changed "$PROJECT_PATH/packaging" ||
+        is_file_changed "$PROJECT_PATH/automation"); then
+
+        rebuild_el7_base_container_image
+        rebuild_el7_container_image
+        rebuild_fed_container_image
+    fi
 }
 
 options=$(getopt --options "" \
