@@ -111,6 +111,88 @@ def _reapply_callback(src_object, result, user_data):
             'Device reapply failed: dev={}, error=unknown'.format(devname))
 
 
+def modify(dev, connection_profile):
+    """
+    Modify the given connection profile on the device.
+    Implemented by the reapply operation with a fallback to the
+    connection profile activation.
+    """
+    mainloop = nmclient.mainloop()
+    mainloop.push_action(_safe_modify_async, dev, connection_profile)
+
+
+def _safe_modify_async(dev, connection_profile):
+    # Special cases are known to exist (bugs) where reapply is not functioning
+    # correctly. Use activation instead. (https://bugzilla.redhat.com/1702657)
+    if _requires_activation(dev, connection_profile):
+        _activate_async(dev)
+        return
+
+    mainloop = nmclient.mainloop()
+    cancellable = mainloop.new_cancellable()
+
+    if _wait_for_active_connection_async(dev, connection_profile):
+        return
+
+    version_id = 0
+    flags = 0
+    user_data = mainloop, dev, cancellable
+    dev.reapply_async(
+        connection_profile,
+        version_id,
+        flags,
+        cancellable,
+        _modify_callback,
+        user_data,
+    )
+
+
+def _modify_callback(src_object, result, user_data):
+    mainloop, nmdev, cancellable = user_data
+    mainloop.drop_cancellable(cancellable)
+
+    devname = src_object.get_iface()
+    try:
+        success = src_object.reapply_finish(result)
+    except Exception as e:
+        if mainloop.is_action_canceled(e):
+            logging.debug('Device reapply aborted on %s: error=%s', devname, e)
+        else:
+            logging.debug('Device reapply failed on %s: error=%s\n'
+                          'Fallback to device activation', devname, e)
+            _activate_async(src_object)
+        return
+
+    if success:
+        logging.debug('Device reapply succeeded: dev=%s', devname)
+        mainloop.execute_next_action()
+    else:
+        logging.debug(
+            'Device reapply failed, fallback to device activation: dev=%s, '
+            'error=unknown', devname)
+        _activate_async(src_object)
+
+
+def _requires_activation(dev, connection_profile):
+    wired_setting = connection_profile.get_setting_wired()
+    configured_mtu = wired_setting.props.mtu if wired_setting else None
+    if configured_mtu:
+        current_mtu = int(dev.get_mtu())
+        if configured_mtu != current_mtu:
+            logging.debug('Device reapply does not support mtu changes, '
+                          'fallback to device activation: dev=%s',
+                          dev.get_iface())
+            return True
+
+    return False
+
+
+def _activate_async(dev):
+    conn = connection.ConnectionProfile()
+    conn.nmdevice = dev
+    conn.safe_activate_async()
+
+
 def delete_device(nmdev):
     mainloop = nmclient.mainloop()
     mainloop.push_action(_safe_delete_device_async, nmdev)
