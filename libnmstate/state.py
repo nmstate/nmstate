@@ -267,7 +267,8 @@ class State(object):
                 _Route(route))
 
         change_ifaces = _remove_absent_routes(absent_route_sets,
-                                              iface_route_sets)
+                                              iface_route_sets,
+                                              current_iface_route_sets)
 
         for iface_name in list(six.viewkeys(iface_route_sets)):
             # Remove routes if certain interface routes never changes.
@@ -450,7 +451,8 @@ def _route_sort_key(route):
             route.get(Route.DESTINATION, ''))
 
 
-def _remove_absent_routes(absent_route_sets, iface_route_sets):
+def _remove_absent_routes(absent_route_sets, iface_route_sets,
+                          current_iface_route_sets):
     """
     Remove routes based on absent routes:
         * Treat missing property as wildcard match.
@@ -466,6 +468,12 @@ def _remove_absent_routes(absent_route_sets, iface_route_sets):
                 continue
             for route in copy.deepcopy(route_set):
                 if absent_route.is_match(route):
-                    changed_ifaces.add(route.state[Route.NEXT_HOP_INTERFACE])
-                    route_set.remove(route)
+                    # Make sure this route entry is copied, not added by user.
+                    if not iface_name:
+                        iface_name = route.state[Route.NEXT_HOP_INTERFACE]
+                    current_route_set = current_iface_route_sets.get(
+                        iface_name)
+                    if route in current_route_set:
+                        changed_ifaces.add(iface_name)
+                        route_set.remove(route)
     return changed_ifaces

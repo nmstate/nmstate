@@ -22,9 +22,12 @@ import six
 
 from libnmstate import netinfo
 from libnmstate.schema import Constants
+from libnmstate.schema import Route
 
 
 INTERFACES = Constants.INTERFACES
+ROUTES = Constants.ROUTES
+DNS = Constants.DNS
 
 
 def show_only(ifnames):
@@ -77,7 +80,15 @@ class State(object):
             for ifstate in self._state[INTERFACES]
             if ifstate['name'] in base_iface_names
         ]
-        self._state = {INTERFACES: filtered_iface_state}
+        for rt_type in (Route.RUNNING, Route.CONFIG):
+            filtered_routes = [
+                route
+                for route in self._state.get(ROUTES, {}).get(rt_type, [])
+                if route.get(Route.NEXT_HOP_INTERFACE) in base_iface_names
+            ]
+            if filtered_routes:
+                self._state[ROUTES][rt_type] = filtered_routes
+        self._state[INTERFACES] = filtered_iface_state
 
     def update(self, other_state):
         """
