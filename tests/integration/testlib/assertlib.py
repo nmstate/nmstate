@@ -14,8 +14,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
+import copy
 
 from libnmstate import netinfo
+from libnmstate.schema import DNS
+from libnmstate.schema import Route
 
 from . import statelib
 from .statelib import INTERFACES
@@ -25,6 +28,14 @@ def assert_state(desired_state_data):
     """Given a state, assert it against the current state."""
 
     current_state_data = netinfo.show()
+    # Ignore route and dns for assert check as the check are done in the test
+    # case code.
+    current_state_data.pop(Route.KEY, None)
+    current_state_data.pop(DNS.KEY, None)
+    desired_state_data = copy.deepcopy(desired_state_data)
+    desired_state_data.pop(Route.KEY, None)
+    desired_state_data.pop(DNS.KEY, None)
+
     current_state = statelib.State(current_state_data)
     current_state.filter(desired_state_data)
     current_state.normalize()
