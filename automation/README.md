@@ -112,9 +112,8 @@ tox -e check-integ-py27
 ### Build a new container image
 
 ```
-sudo docker build --no-cache --rm -t local/centos7-nmstate-dev .
-sudo docker build --file Dockerfile.fedora --no-cache --rm \
-    -t local/fedora-nmstate-dev  .
+sudo ../packaging/build-container.sh local/centos7-nmstate-dev
+sudo ../packaging/build-container.sh local/fedora-nmstate-dev
 ```
 
 To test the image, either specify it manually as described above or tag it locally:
