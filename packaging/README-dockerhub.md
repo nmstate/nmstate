@@ -4,6 +4,8 @@ The images are automatically rebuilt on new GIT tags or pushes to the master bra
 
 `Dockerfile.centos7-nmstate` by https://cloud.docker.com/u/nmstate/repository/docker/nmstate/centos7-nmstate
 `Dockerfile.centos7-nmstate-base` by https://cloud.docker.com/u/nmstate/repository/docker/nmstate/centos7-nmstate-base
+`Dockerfile.centos7-nmstate-dev` by https://cloud.docker.com/u/nmstate/repository/docker/nmstate/centos7-nmstate-dev
+`Dockerfile.fedora-nmstate-dev` by https://cloud.docker.com/u/nmstate/repository/docker/nmstate/fedora-nmstate-dev
 
 The base image contains a common base that is used both for the development
 image and for the distributed image.
@@ -37,5 +39,6 @@ The Nmstate user image builds the master master branch by default. To specify a
 different commit or tag, specify the `SOURCE_COMMIT` build argument:
 
 ```shell
-sudo docker build --no-cache --build-arg SOURCE_COMMIT=v0.0.4 -t nmstate/centos7-nmstate -f Dockerfile.centos7-nmstate .
+./build-container.sh --extra-args "--build-arg SOURCE_COMMIT=v0.0.6" nmstate/centos7-nmstate
+
 ```

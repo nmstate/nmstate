@@ -156,31 +156,10 @@ function is_file_changed {
     fi
 }
 
-function rebuild_el7_base_container_image {
-    docker build --no-cache -t nmstate/centos7-nmstate-base \
-        -f "$PROJECT_PATH/packaging/Dockerfile.centos7-nmstate-base" \
-        "$PROJECT_PATH/packaging"
-}
-
-function rebuild_el7_container_image {
-    docker build --no-cache -t nmstate/centos7-nmstate-dev \
-        -f "$PROJECT_PATH/automation/Dockerfile" \
-        "$PROJECT_PATH/automation"
-}
-
-function rebuild_fed_container_image {
-    docker build --no-cache -t nmstate/fedora-nmstate-dev \
-        -f "$PROJECT_PATH/automation/Dockerfile.fedora" \
-        "$PROJECT_PATH/automation"
-}
-
 function rebuild_container_images {
-    if (is_file_changed "$PROJECT_PATH/packaging" ||
-        is_file_changed "$PROJECT_PATH/automation"); then
+    if is_file_changed "$PROJECT_PATH/packaging"; then
 
-        rebuild_el7_base_container_image
-        rebuild_el7_container_image
-        rebuild_fed_container_image
+        ${PROJECT_PATH}/packaging/build-container.sh all
     fi
 }
 
