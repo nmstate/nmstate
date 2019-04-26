@@ -164,7 +164,7 @@ function rebuild_container_images {
 }
 
 options=$(getopt --options "" \
-    --long pytest-args:,help,debug-shell,test-type:,el7,copr:\
+    --long customize:,pytest-args:,help,debug-shell,test-type:,el7,copr:\
     -- "${@}")
 eval set -- "$options"
 while true; do
@@ -177,6 +177,10 @@ while true; do
         shift
         copr_repo="$1"
         ;;
+    --customize)
+        shift
+        customize_cmd="$1"
+        ;;
     --debug-shell)
         debug_exit_shell="1"
         ;;
@@ -188,8 +192,8 @@ while true; do
         DOCKER_IMAGE="nmstate/centos7-nmstate-dev"
         ;;
     --help)
-        echo -n "$0 [--copr=...] [--pytest-args=...] [--help] [--debug-shell] "
-        echo -n "[--el7] "
+        echo -n "$0 [--copr=...] [--customize=...] [--debug-shell] [--el7] "
+        echo -n "[--help] [--pytest-args=...] "
         echo "[--test-type=<TEST_TYPE>]"
         echo "    Valid TEST_TYPE are:"
         echo "     * $TEST_TYPE_ALL (default)"
@@ -198,6 +202,8 @@ while true; do
         echo "     * $TEST_TYPE_UNIT_PY27"
         echo "     * $TEST_TYPE_UNIT_PY36"
         echo "     * $TEST_TYPE_UNIT_PY37"
+        echo -n "--customize allows to specify a command to customize the "
+        echo "container before running the tests"
         exit
         ;;
     --)
@@ -234,6 +240,11 @@ then
     # Update only from Copr to limit the changes in the environment
     docker_exec "yum update --assumeyes --disablerepo '*' --enablerepo '${copr_repo_id}'"
     docker_exec "systemctl restart NetworkManager"
+fi
+
+if [[ -v customize_cmd ]]
+then
+    docker_exec "${customize_cmd}"
 fi
 
 docker_exec 'while ! systemctl is-active dbus; do sleep 1; done'
