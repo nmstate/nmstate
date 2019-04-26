@@ -87,7 +87,7 @@ option, for example:
 
 or:
 
-`./automation/run-integration-tests.sh --pytest-args "--pdb -x"`
+`./automation/run-tests.sh --pytest-args "--pdb -x"`
 
 
 Alternatively, the following commands start the container manually:
