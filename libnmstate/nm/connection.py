@@ -138,7 +138,7 @@ class ConnectionProfile(object):
         elif not self.profile:
             err_msg = (
                 'Missing base properties: profile={}, id={}, dev={}'.format(
-                    self.profile, self.con_id, self.nmdevice)
+                    self.profile, self.con_id, self.devname)
             )
             self._mainloop.quit(err_msg)
 
