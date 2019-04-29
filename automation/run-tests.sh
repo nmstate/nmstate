@@ -258,8 +258,11 @@ then
 fi
 
 docker_exec 'while ! systemctl is-active dbus; do sleep 1; done'
+docker_exec 'systemctl start systemd-udevd
+             while ! systemctl is-active systemd-udevd; do sleep 1; done
+'
 docker_exec '
-    systemctl start NetworkManager
+    systemctl restart NetworkManager
     while ! systemctl is-active NetworkManager; do sleep 1; done
 '
 pyclean
