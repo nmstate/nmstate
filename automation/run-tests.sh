@@ -192,6 +192,7 @@ while true; do
         DOCKER_IMAGE="nmstate/centos7-nmstate-dev"
         ;;
     --help)
+        set +x
         echo -n "$0 [--copr=...] [--customize=...] [--debug-shell] [--el7] "
         echo -n "[--help] [--pytest-args=...] "
         echo "[--test-type=<TEST_TYPE>]"
