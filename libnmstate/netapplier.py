@@ -18,6 +18,7 @@
 from contextlib import contextmanager
 
 import copy
+import logging
 import six
 
 from libnmstate import metadata
@@ -109,23 +110,54 @@ def _apply_ifaces_state(desired_state, verify_change, commit,
     desired_state.sanitize_ethernet(current_state)
     desired_state.sanitize_dynamic_ip()
     metadata.generate_ifaces_metadata(desired_state, current_state)
+
+    new_interfaces = _list_new_interfaces(desired_state, current_state)
+
     try:
         with nm.checkpoint.CheckPoint(autodestroy=commit,
                                       timeout=rollback_timeout) as checkpoint:
             with _setup_providers():
-                _add_interfaces(desired_state.interfaces,
-                                current_state.interfaces)
+                _add_interfaces(new_interfaces, desired_state)
             with _setup_providers():
                 current_state = state.State(
                     {schema.Interface.KEY: netinfo.interfaces()}
                 )
-                _edit_interfaces(desired_state, current_state)
+                state2edit = _create_editable_desired_state(desired_state,
+                                                            current_state,
+                                                            new_interfaces)
+                _edit_interfaces(state2edit, desired_state)
             if verify_change:
                 _verify_change(desired_state)
         if not commit:
             return checkpoint
     except nm.checkpoint.NMCheckPointCreationError:
         raise NmstateConflictError('Error creating a check point')
+
+
+def _create_editable_desired_state(desired_state,
+                                   current_state,
+                                   new_intefaces):
+    """
+    Create a new state object that includes only existing interfaces which need
+    to be edited/changed.
+    """
+    state2edit = state.create_state(
+        desired_state.state,
+        interfaces_to_filter=(
+                set(current_state.interfaces) - set(new_intefaces))
+    )
+    state2edit.merge_interfaces(current_state)
+    return state2edit
+
+
+def _list_new_interfaces(desired_state, current_state):
+    return [
+        name for name in
+        six.viewkeys(desired_state.interfaces) -
+        six.viewkeys(current_state.interfaces)
+        if desired_state.interfaces[name].get(schema.Interface.STATE) not in (
+            schema.InterfaceState.ABSENT, schema.InterfaceState.DOWN)
+    ]
 
 
 def _verify_change(desired_state):
@@ -144,14 +176,12 @@ def _setup_providers():
                 mainloop.error))
 
 
-def _add_interfaces(ifaces_desired_state, ifaces_current_state):
-    ifaces2add = [
-        ifaces_desired_state[name] for name in
-        six.viewkeys(ifaces_desired_state) - six.viewkeys(ifaces_current_state)
-        if ifaces_desired_state[name].get('state') not in ('absent', 'down')
-    ]
+def _add_interfaces(new_interfaces, desired_state):
+    logging.debug('Adding new interfaces: %s', new_interfaces)
 
-    validator.verify_interfaces_state(ifaces2add, ifaces_desired_state)
+    ifaces2add = [desired_state.interfaces[name] for name in new_interfaces]
+
+    validator.verify_interfaces_state(ifaces2add, desired_state.interfaces)
 
     ifaces2add += nm.applier.prepare_proxy_ifaces_desired_state(ifaces2add)
     ifaces_configs = nm.applier.prepare_new_ifaces_configuration(ifaces2add)
@@ -160,12 +190,9 @@ def _add_interfaces(ifaces_desired_state, ifaces_current_state):
     nm.applier.set_ifaces_admin_state(ifaces2add, con_profiles=ifaces_configs)
 
 
-def _edit_interfaces(desired_state, current_state):
-    state2edit = state.create_state(
-        desired_state.state,
-        interfaces_to_filter=set(current_state.interfaces)
-    )
-    state2edit.merge_interfaces(current_state)
+def _edit_interfaces(state2edit, desired_state):
+    logging.debug('Editing interfaces: %s', list(state2edit.interfaces))
+
     ifaces2edit = list(six.viewvalues(state2edit.interfaces))
 
     validator.verify_interfaces_state(ifaces2edit, desired_state.interfaces)
