@@ -23,13 +23,13 @@ import six
 from libnmstate import metadata
 from libnmstate import netinfo
 from libnmstate import nm
+from libnmstate import schema
 from libnmstate import state
 from libnmstate import validator
 from libnmstate.error import NmstateConflictError
 from libnmstate.error import NmstateLibnmError
 from libnmstate.error import NmstateValueError
 from libnmstate.nm import nmclient
-from libnmstate.schema import Constants
 
 
 def apply(desired_state, verify_change=True, commit=True, rollback_timeout=60):
@@ -104,7 +104,7 @@ def _choose_checkpoint(dbuspath):
 
 def _apply_ifaces_state(desired_state, verify_change, commit,
                         rollback_timeout):
-    current_state = state.State({Constants.INTERFACES: netinfo.interfaces()})
+    current_state = state.State({schema.Interface.KEY: netinfo.interfaces()})
 
     desired_state.sanitize_ethernet(current_state)
     desired_state.sanitize_dynamic_ip()
@@ -117,7 +117,7 @@ def _apply_ifaces_state(desired_state, verify_change, commit,
                                 current_state.interfaces)
             with _setup_providers():
                 current_state = state.State(
-                    {Constants.INTERFACES: netinfo.interfaces()}
+                    {schema.Interface.KEY: netinfo.interfaces()}
                 )
                 _edit_interfaces(desired_state, current_state)
             if verify_change:
@@ -129,7 +129,7 @@ def _apply_ifaces_state(desired_state, verify_change, commit,
 
 
 def _verify_change(desired_state):
-    current_state = state.State({Constants.INTERFACES: netinfo.interfaces()})
+    current_state = state.State({schema.Interface.KEY: netinfo.interfaces()})
     desired_state.verify_interfaces(current_state)
 
 
