@@ -32,14 +32,14 @@ def create_setting(iface_state, base_con_profile):
     duplex = ethernet.get('duplex')
     auto_negotiation = ethernet.get('auto-negotiation')
 
-    if not (mac or mtu or speed or duplex or (auto_negotiation is not None)):
-        return None
-
     wired_setting = None
     if base_con_profile:
         wired_setting = base_con_profile.get_setting_wired()
         if wired_setting:
             wired_setting = wired_setting.duplicate()
+
+    if not (mac or mtu or speed or duplex or (auto_negotiation is not None)):
+        return wired_setting
 
     if not wired_setting:
         wired_setting = nmclient.NM.SettingWired.new()
