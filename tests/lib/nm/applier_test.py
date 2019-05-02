@@ -192,10 +192,13 @@ class TestIfaceAdminStateControl(object):
                 'state': 'up',
             }
         ]
-        nm.applier.set_ifaces_admin_state(ifaces_desired_state)
+        con_profile = mock.MagicMock()
+        con_profile.devname = ifaces_desired_state[0]['name']
+        nm.applier.set_ifaces_admin_state(ifaces_desired_state, [con_profile])
 
-        nm_device_mock.activate.assert_called_once_with(
-            nm_device_mock.get_device_by_name.return_value)
+        nm_device_mock.modify.assert_called_once_with(
+            nm_device_mock.get_device_by_name.return_value,
+            con_profile.profile)
 
     def test_set_ifaces_admin_state_down(self, nm_device_mock):
         ifaces_desired_state = [
@@ -253,11 +256,17 @@ class TestIfaceAdminStateControl(object):
         nm_bond_mock.BOND_TYPE = nm.bond.BOND_TYPE
         nm_bond_mock.get_slaves.return_value = slaves
 
-        nm.applier.set_ifaces_admin_state(ifaces_desired_state)
+        bond_con_profile = mock.MagicMock()
+        bond_con_profile.devname = ifaces_desired_state[0]['name']
+        slave_con_profile = mock.MagicMock()
+        slave_con_profile.devname = ifaces_desired_state[1]['name']
+
+        nm.applier.set_ifaces_admin_state(
+            ifaces_desired_state, [bond_con_profile, slave_con_profile])
 
         expected_calls = [
-            mock.call(bond),
-            mock.call(slaves[0])
+            mock.call(bond, bond_con_profile.profile),
+            mock.call(slaves[0], slave_con_profile.profile)
         ]
-        actual_calls = nm_device_mock.activate.mock_calls
+        actual_calls = nm_device_mock.modify.mock_calls
         assert sorted(expected_calls) == sorted(actual_calls)

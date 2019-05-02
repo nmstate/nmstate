@@ -111,17 +111,19 @@ def set_ifaces_admin_state(ifaces_desired_state, con_profiles=()):
     - OVS internal.
     - All the rest.
     """
+    con_profiles_by_devname = _index_profiles_by_devname(con_profiles)
     new_ifaces = _get_new_ifaces(con_profiles)
     new_ifaces_to_activate = set()
     new_ovs_interface_to_activate = set()
     new_ovs_port_to_activate = set()
-    master_ifaces_to_activate = set()
+    master_ifaces_to_edit = set()
+    ifaces_to_edit = set()
     devs_actions = {}
 
     for iface_desired_state in ifaces_desired_state:
-        nmdev = device.get_device_by_name(iface_desired_state['name'])
+        ifname = iface_desired_state['name']
+        nmdev = device.get_device_by_name(ifname)
         if not nmdev:
-            ifname = iface_desired_state['name']
             if ifname in new_ifaces and iface_desired_state['state'] == 'up':
                 if iface_desired_state['type'] == ovs.INTERNAL_INTERFACE_TYPE:
                     new_ovs_interface_to_activate.add(ifname)
@@ -133,9 +135,11 @@ def set_ifaces_admin_state(ifaces_desired_state, con_profiles=()):
             if iface_desired_state['state'] == 'up':
                 master_iface_types = ovs.BRIDGE_TYPE, bond.BOND_TYPE, LB.TYPE
                 if iface_desired_state['type'] in master_iface_types:
-                    master_ifaces_to_activate.add(nmdev)
+                    master_ifaces_to_edit.add(
+                        (nmdev, con_profiles_by_devname[ifname].profile))
                 else:
-                    devs_actions[nmdev] = (device.activate,)
+                    ifaces_to_edit.add(
+                        (nmdev, con_profiles_by_devname[ifname].profile))
             elif iface_desired_state['state'] in ('down', 'absent'):
                 nmdevs = _get_affected_devices(iface_desired_state)
                 for nmdev in nmdevs:
@@ -154,8 +158,8 @@ def set_ifaces_admin_state(ifaces_desired_state, con_profiles=()):
     for ifname in new_ifaces_to_activate:
         device.activate(dev=None, connection_id=ifname)
 
-    for dev in master_ifaces_to_activate:
-        device.activate(dev)
+    for dev, con_profile in master_ifaces_to_edit:
+        device.modify(dev, con_profile)
 
     for ifname in new_ovs_port_to_activate:
         device.activate(dev=None, connection_id=ifname)
@@ -163,9 +167,16 @@ def set_ifaces_admin_state(ifaces_desired_state, con_profiles=()):
     for ifname in new_ovs_interface_to_activate:
         device.activate(dev=None, connection_id=ifname)
 
+    for dev, con_profile in ifaces_to_edit:
+        device.modify(dev, con_profile)
+
     for dev, actions in six.viewitems(devs_actions):
         for action in actions:
             action(dev)
+
+
+def _index_profiles_by_devname(con_profiles):
+    return {con_profile.devname: con_profile for con_profile in con_profiles}
 
 
 def _get_new_ifaces(con_profiles):
