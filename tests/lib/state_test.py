@@ -33,20 +33,16 @@ class TestAssertIfaceState(object):
     def test_desired_is_partial_to_current(self):
         desired_state = self._base_state
         current_state = self._base_state
-        current_state.interfaces.update({
-            'eth0': {'name': 'eth0', 'state': 'up', 'type': 'unknown'},
-            'eth1': {'name': 'eth1', 'state': 'up', 'type': 'unknown'}
-        })
+        extra_state = self._extra_state
+        current_state.interfaces.update(extra_state.interfaces)
 
         desired_state.verify_interfaces(current_state)
 
     def test_current_is_partial_to_desired(self):
         desired_state = self._base_state
         current_state = self._base_state
-        desired_state.interfaces.update({
-            'eth0': {'name': 'eth0', 'state': 'up', 'type': 'unknown'},
-            'eth1': {'name': 'eth1', 'state': 'up', 'type': 'unknown'}
-        })
+        extra_state = self._extra_state
+        desired_state.interfaces.update(extra_state.interfaces)
 
         with pytest.raises(NmstateVerificationError):
             desired_state.verify_interfaces(current_state)
@@ -131,5 +127,14 @@ class TestAssertIfaceState(object):
                         ]
                     }
                 }
+            ]
+        })
+
+    @property
+    def _extra_state(self):
+        return state.State({
+            Interface.KEY: [
+                {'name': 'eth0', 'state': 'up', 'type': 'unknown'},
+                {'name': 'eth1', 'state': 'up', 'type': 'unknown'}
             ]
         })
