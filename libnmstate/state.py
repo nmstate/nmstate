@@ -117,7 +117,7 @@ class State(object):
         """
         for iface_state in six.viewvalues(self.interfaces):
             for family in ('ipv4', 'ipv6'):
-                ip = iface_state.get(family, {})
+                ip = iface_state[family]
                 if ip.get('enabled') and (
                         ip.get('dhcp') or ip.get('autoconf')):
                     ip['address'] = []
@@ -226,8 +226,7 @@ class State(object):
     def _sort_ip_addresses(self):
         for ifstate in six.viewvalues(self.interfaces):
             for family in ('ipv4', 'ipv6'):
-                ifstate.get(family, {}).get('address', []).sort(
-                    key=itemgetter('ip'))
+                ifstate[family].get('address', []).sort(key=itemgetter('ip'))
 
     def _capitalize_mac(self):
         for ifstate in six.viewvalues(self.interfaces):
