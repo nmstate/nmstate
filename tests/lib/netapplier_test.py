@@ -109,7 +109,9 @@ def test_add_new_bond(netinfo_nm_mock, netapplier_nm_mock):
                     'options': {
                         'miimon': 200,
                     }
-                }
+                },
+                'ipv4': {},
+                'ipv6': {}
             }
         ]
     }

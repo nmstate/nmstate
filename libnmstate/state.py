@@ -54,6 +54,7 @@ class State(object):
     def __init__(self, state):
         self._state = copy.deepcopy(state)
         self._ifaces_state = State._index_interfaces_state_by_name(self._state)
+        self._complement_interface_empty_ip_subtrees()
 
     def __eq__(self, other):
         return self.state == other.state
@@ -79,6 +80,13 @@ class State(object):
     def interfaces(self):
         """ Indexed interfaces state """
         return self._ifaces_state
+
+    def _complement_interface_empty_ip_subtrees(self):
+        """ Complement the interfaces states with empty IPv4/IPv6 subtrees. """
+        for iface_state in six.viewvalues(self.interfaces):
+            for family in (Interface.IPV4, Interface.IPV6):
+                if family not in iface_state:
+                    iface_state[family] = {}
 
     def sanitize_ethernet(self, other_state):
         """
