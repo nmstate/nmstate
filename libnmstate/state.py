@@ -38,25 +38,39 @@ from libnmstate.nm import route as nm_route
 
 class _Route(object):
     def __init__(self, route):
-        self.state = {
-            Route.TABLE_ID: route.get(Route.TABLE_ID,
-                                      nm_route.NM_ROUTE_TABLE_USE_DEFAULT_CFG),
-            Route.DESTINATION: route[Route.DESTINATION],
-            Route.NEXT_HOP_INTERFACE: route[Route.NEXT_HOP_INTERFACE],
-            Route.NEXT_HOP_ADDRESS: route[Route.NEXT_HOP_ADDRESS],
-            Route.METRIC: route.get(Route.METRIC,
-                                    nm_route.NM_ROUTE_DEFAULT_METRIC),
-        }
+        self.state = copy.deepcopy(route)
+        if route.get(Route.STATE) != Route.ABSENT:
+            if Route.TABLE_ID not in route:
+                self.state[Route.TABLE_ID] = \
+                    nm_route.NM_ROUTE_TABLE_USE_DEFAULT_CFG
+            if Route.METRIC not in route:
+                self.state[Route.METRIC] = nm_route.NM_ROUTE_DEFAULT_METRIC
+            if Route.NEXT_HOP_ADDRESS not in route:
+                self.state[Route.NEXT_HOP_ADDRESS] = ''
 
     def __hash__(self):
-        return hash((self.state[Route.TABLE_ID],
-                     self.state[Route.DESTINATION],
-                     self.state[Route.NEXT_HOP_INTERFACE],
-                     self.state[Route.NEXT_HOP_ADDRESS],
-                     self.state[Route.METRIC]))
+        return hash((self.state.get(Route.STATE),
+                     self.state.get(Route.TABLE_ID),
+                     self.state.get(Route.DESTINATION),
+                     self.state.get(Route.NEXT_HOP_INTERFACE),
+                     self.state.get(Route.NEXT_HOP_ADDRESS),
+                     self.state.get(Route.METRIC)))
 
     def __eq__(self, other):
         return self.state == other.state
+
+    def is_match(self, other):
+        """
+        Assuming the other state contains all the properties to compare.
+        This is OK as other state is always current route state.
+        """
+        for prop_name in (Route.DESTINATION, Route.NEXT_HOP_INTERFACE,
+                          Route.NEXT_HOP_ADDRESS, Route.METRIC,
+                          Route.TABLE_ID):
+            if prop_name in self.state and \
+               self.state[prop_name] != other.state[prop_name]:
+                return False
+        return True
 
 
 def create_state(state, interfaces_to_filter=None):
@@ -224,25 +238,33 @@ class State(object):
         If any changed route referring non-exist interface, create the
         interface state with name only, in order to trigger the recreating of
         the interface profile.
+        Delete route entries if 'state: absent'.
         """
         # Merge other_routes
         iface_route_sets = defaultdict(set)
+        absent_route_sets = set()
         current_iface_route_sets = defaultdict(set)
 
         for route in self.routes:
-            if Route.NEXT_HOP_INTERFACE in route:
-                iface_route_sets[route[Route.NEXT_HOP_INTERFACE]].add(
-                    _Route(route))
+            if route.get(Route.STATE) == Route.ABSENT:
+                absent_route_sets.add(_Route(route))
             else:
-                logging.warning("Ignoring the route entry with no "
-                                "next hop interface defined: %s",
-                                route)
+                if Route.NEXT_HOP_INTERFACE in route:
+                    iface_route_sets[route[Route.NEXT_HOP_INTERFACE]].add(
+                        _Route(route))
+                else:
+                    logging.warning("Ignoring the route entry with no "
+                                    "next hop interface defined: %s",
+                                    route)
 
         for route in current.routes:
             iface_route_sets[route[Route.NEXT_HOP_INTERFACE]].add(
                 _Route(route))
             current_iface_route_sets[route[Route.NEXT_HOP_INTERFACE]].add(
                 _Route(route))
+
+        change_ifaces = _remove_absent_routes(absent_route_sets,
+                                              iface_route_sets)
 
         for iface_name in list(six.viewkeys(iface_route_sets)):
             # Remove routes if certain interface routes never changes.
@@ -251,7 +273,7 @@ class State(object):
                 del iface_route_sets[iface_name]
 
         # Create basic interface information for changed routes.
-        for iface_name in six.viewkeys(iface_route_sets):
+        for iface_name in set(six.viewkeys(iface_route_sets)) | change_ifaces:
             if iface_name not in self.interfaces and \
                iface_name in current.interfaces:
                 self.interfaces[iface_name] = {'name': iface_name}
@@ -373,3 +395,24 @@ def _route_sort_key(route):
     return (route.get(Route.TABLE_ID, -1),
             route.get(Route.NEXT_HOP_INTERFACE, ''),
             route.get(Route.DESTINATION, ''))
+
+
+def _remove_absent_routes(absent_route_sets, iface_route_sets):
+    """
+    Remove routes based on absent routes:
+        * Treat missing property as wildcard match.
+        * Mark interface as edited(include it in self.interfaces) if
+          routes changed.
+    Return a list of interface names got route deleted.
+    """
+    changed_ifaces = set()
+    for absent_route in absent_route_sets:
+        for iface_name, route_set in six.viewitems(iface_route_sets):
+            if Route.NEXT_HOP_INTERFACE in absent_route.state and \
+               absent_route.state[Route.NEXT_HOP_INTERFACE] != iface_name:
+                continue
+            for route in copy.deepcopy(route_set):
+                if absent_route.is_match(route):
+                    changed_ifaces.add(route.state[Route.NEXT_HOP_INTERFACE])
+                    route_set.remove(route)
+    return changed_ifaces

@@ -47,6 +47,8 @@ class Interface(object):
 class Route(object):
     KEY = 'routes'
 
+    STATE = 'state'
+    ABSENT = 'absent'
     RUNNING = 'running'
     CONFIG = 'config'
     TABLE_ID = 'table-id'
