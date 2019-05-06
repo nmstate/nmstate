@@ -17,7 +17,10 @@
 
 import six
 
+from libnmstate import iplib
 from libnmstate.appliers import linux_bridge
+from libnmstate.schema import Interface
+from libnmstate.schema import Route
 
 
 def generate_ifaces_metadata(desired_state, current_state):
@@ -54,6 +57,7 @@ def generate_ifaces_metadata(desired_state, current_state):
         get_slaves_func=linux_bridge.get_slaves_from_state,
         set_metadata_func=linux_bridge.set_bridge_ports_metadata
     )
+    _generate_route_metadata(desired_state)
 
 
 def remove_ifaces_metadata(ifaces_state):
@@ -61,6 +65,8 @@ def remove_ifaces_metadata(ifaces_state):
         iface_state.pop('_master', None)
         iface_state.pop('_master_type', None)
         iface_state.pop('_brport_options', None)
+        iface_state.get(Interface.IPV4, {}).pop('_routes', None)
+        iface_state.get(Interface.IPV6, {}).pop('_routes', None)
 
 
 def _get_bond_slaves_from_state(iface_state, default=()):
@@ -147,3 +153,23 @@ def _generate_link_master_metadata(ifaces_desired_state,
                         master_has_no_slaves_specified_in_desired):
                     set_metadata_func(
                         master_state, ifaces_desired_state[slave])
+
+
+def _generate_route_metadata(desired_state):
+    """
+    Save routes under interface IP protocol so that nm/ipv4.py or nm/ipv6.py
+    could include route configuration in `create_setting()`.
+    Currently route['next-hop-interface'] is mandatory.
+    """
+    for iface_name, routes in six.viewitems(desired_state.iface_routes):
+        iface_state = desired_state.interfaces.get(iface_name, {})
+        for family in (Interface.IPV4, Interface.IPV6):
+            if family in iface_state:
+                iface_state[family]['_routes'] = []
+            else:
+                iface_state[family] = {'_routes': []}
+        for route in routes:
+            if iplib.is_ipv6_address(route[Route.DESTINATION]):
+                iface_state[Interface.IPV6]['_routes'].append(route)
+            else:
+                iface_state[Interface.IPV4]['_routes'].append(route)
