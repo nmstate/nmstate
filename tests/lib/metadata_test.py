@@ -60,10 +60,10 @@ class TestDesiredStateBondMetadata(object):
         current_state = state.State({})
         expected_dstate = state.State(desired_state.state)
         expected_cstate = state.State(current_state.state)
-        expected_dstate.interfaces['eth0']['_master'] = BOND_NAME
-        expected_dstate.interfaces['eth1']['_master'] = BOND_NAME
-        expected_dstate.interfaces['eth0']['_master_type'] = TYPE_BOND
-        expected_dstate.interfaces['eth1']['_master_type'] = TYPE_BOND
+        expected_dstate.interfaces['eth0'][metadata.MASTER] = BOND_NAME
+        expected_dstate.interfaces['eth1'][metadata.MASTER] = BOND_NAME
+        expected_dstate.interfaces['eth0'][metadata.MASTER_TYPE] = TYPE_BOND
+        expected_dstate.interfaces['eth1'][metadata.MASTER_TYPE] = TYPE_BOND
 
         metadata.generate_ifaces_metadata(desired_state, current_state)
 
@@ -93,11 +93,11 @@ class TestDesiredStateBondMetadata(object):
         expected_dstate = state.State(desired_state.state)
         expected_cstate = state.State(current_state.state)
         expected_dstate.interfaces['eth0'] = {'name': 'eth0', 'state': 'up'}
-        expected_dstate.interfaces['eth0']['_master'] = BOND_NAME
-        expected_dstate.interfaces['eth0']['_master_type'] = TYPE_BOND
+        expected_dstate.interfaces['eth0'][metadata.MASTER] = BOND_NAME
+        expected_dstate.interfaces['eth0'][metadata.MASTER_TYPE] = TYPE_BOND
         expected_dstate.interfaces['eth1'] = {'name': 'eth1', 'state': 'up'}
-        expected_dstate.interfaces['eth1']['_master'] = BOND_NAME
-        expected_dstate.interfaces['eth1']['_master_type'] = TYPE_BOND
+        expected_dstate.interfaces['eth1'][metadata.MASTER] = BOND_NAME
+        expected_dstate.interfaces['eth1'][metadata.MASTER_TYPE] = TYPE_BOND
 
         metadata.generate_ifaces_metadata(desired_state, current_state)
 
@@ -158,10 +158,10 @@ class TestDesiredStateBondMetadata(object):
         expected_dstate = state.State(desired_state.state)
         expected_cstate = state.State(current_state.state)
         expected_dstate.interfaces['eth0'] = {'name': 'eth0', 'state': 'up'}
-        expected_dstate.interfaces['eth0']['_master'] = BOND_NAME
-        expected_dstate.interfaces['eth1']['_master'] = BOND_NAME
-        expected_dstate.interfaces['eth0']['_master_type'] = TYPE_BOND
-        expected_dstate.interfaces['eth1']['_master_type'] = TYPE_BOND
+        expected_dstate.interfaces['eth0'][metadata.MASTER] = BOND_NAME
+        expected_dstate.interfaces['eth1'][metadata.MASTER] = BOND_NAME
+        expected_dstate.interfaces['eth0'][metadata.MASTER_TYPE] = TYPE_BOND
+        expected_dstate.interfaces['eth1'][metadata.MASTER_TYPE] = TYPE_BOND
 
         metadata.generate_ifaces_metadata(desired_state, current_state)
 
@@ -200,8 +200,8 @@ class TestDesiredStateBondMetadata(object):
         expected_dstate = state.State(desired_state.state)
         expected_cstate = state.State(current_state.state)
         expected_dstate.interfaces['eth0'] = {'name': 'eth0', 'state': 'up'}
-        expected_dstate.interfaces['eth0']['_master'] = BOND_NAME
-        expected_dstate.interfaces['eth0']['_master_type'] = TYPE_BOND
+        expected_dstate.interfaces['eth0'][metadata.MASTER] = BOND_NAME
+        expected_dstate.interfaces['eth0'][metadata.MASTER_TYPE] = TYPE_BOND
         expected_dstate.interfaces['eth1'] = {'name': 'eth1'}
 
         metadata.generate_ifaces_metadata(desired_state, current_state)
@@ -236,8 +236,8 @@ class TestDesiredStateBondMetadata(object):
         })
         expected_dstate = state.State(desired_state.state)
         expected_cstate = state.State(current_state.state)
-        expected_dstate.interfaces['eth0']['_master'] = BOND_NAME
-        expected_dstate.interfaces['eth0']['_master_type'] = TYPE_BOND
+        expected_dstate.interfaces['eth0'][metadata.MASTER] = BOND_NAME
+        expected_dstate.interfaces['eth0'][metadata.MASTER_TYPE] = TYPE_BOND
 
         metadata.generate_ifaces_metadata(desired_state, current_state)
 
@@ -277,8 +277,8 @@ class TestDesiredStateBondMetadata(object):
         expected_dstate = state.State(desired_state.state)
         expected_cstate = state.State(current_state.state)
         expected_dstate.interfaces['eth0'] = {'name': 'eth0', 'state': 'up'}
-        expected_dstate.interfaces['eth0']['_master'] = BOND2_NAME
-        expected_dstate.interfaces['eth0']['_master_type'] = TYPE_BOND
+        expected_dstate.interfaces['eth0'][metadata.MASTER] = BOND2_NAME
+        expected_dstate.interfaces['eth0'][metadata.MASTER_TYPE] = TYPE_BOND
 
         metadata.generate_ifaces_metadata(desired_state, current_state)
 
@@ -308,13 +308,13 @@ class TestDesiredStateOvsMetadata(object):
         current_state = state.State({})
         expected_dstate = state.State(desired_state.state)
         expected_cstate = state.State(current_state.state)
-        expected_dstate.interfaces['eth0']['_master'] = OVS_NAME
-        expected_dstate.interfaces['eth1']['_master'] = OVS_NAME
-        expected_dstate.interfaces['eth0']['_master_type'] = TYPE_OVS_BR
-        expected_dstate.interfaces['eth1']['_master_type'] = TYPE_OVS_BR
-        expected_dstate.interfaces['eth0']['_brport_options'] = (
+        expected_dstate.interfaces['eth0'][metadata.MASTER] = OVS_NAME
+        expected_dstate.interfaces['eth1'][metadata.MASTER] = OVS_NAME
+        expected_dstate.interfaces['eth0'][metadata.MASTER_TYPE] = TYPE_OVS_BR
+        expected_dstate.interfaces['eth1'][metadata.MASTER_TYPE] = TYPE_OVS_BR
+        expected_dstate.interfaces['eth0'][metadata.BRPORT_OPTIONS] = (
             desired_state.interfaces[OVS_NAME]['bridge']['port'][0])
-        expected_dstate.interfaces['eth1']['_brport_options'] = (
+        expected_dstate.interfaces['eth1'][metadata.BRPORT_OPTIONS] = (
             desired_state.interfaces[OVS_NAME]['bridge']['port'][1])
 
         metadata.generate_ifaces_metadata(desired_state, current_state)
@@ -347,14 +347,14 @@ class TestDesiredStateOvsMetadata(object):
         expected_dstate = state.State(desired_state.state)
         expected_cstate = state.State(current_state.state)
         expected_dstate.interfaces['eth0'] = {'name': 'eth0', 'state': 'up'}
-        expected_dstate.interfaces['eth0']['_master'] = OVS_NAME
-        expected_dstate.interfaces['eth0']['_master_type'] = TYPE_OVS_BR
+        expected_dstate.interfaces['eth0'][metadata.MASTER] = OVS_NAME
+        expected_dstate.interfaces['eth0'][metadata.MASTER_TYPE] = TYPE_OVS_BR
         expected_dstate.interfaces['eth1'] = {'name': 'eth1', 'state': 'up'}
-        expected_dstate.interfaces['eth1']['_master'] = OVS_NAME
-        expected_dstate.interfaces['eth1']['_master_type'] = TYPE_OVS_BR
-        expected_dstate.interfaces['eth0']['_brport_options'] = (
+        expected_dstate.interfaces['eth1'][metadata.MASTER] = OVS_NAME
+        expected_dstate.interfaces['eth1'][metadata.MASTER_TYPE] = TYPE_OVS_BR
+        expected_dstate.interfaces['eth0'][metadata.BRPORT_OPTIONS] = (
             desired_state.interfaces[OVS_NAME]['bridge']['port'][0])
-        expected_dstate.interfaces['eth1']['_brport_options'] = (
+        expected_dstate.interfaces['eth1'][metadata.BRPORT_OPTIONS] = (
             desired_state.interfaces[OVS_NAME]['bridge']['port'][1])
 
         metadata.generate_ifaces_metadata(desired_state, current_state)
@@ -420,13 +420,13 @@ class TestDesiredStateOvsMetadata(object):
         expected_dstate = state.State(desired_state.state)
         expected_cstate = state.State(current_state.state)
         expected_dstate.interfaces['eth0'] = {'name': 'eth0', 'state': 'up'}
-        expected_dstate.interfaces['eth0']['_master'] = OVS_NAME
-        expected_dstate.interfaces['eth1']['_master'] = OVS_NAME
-        expected_dstate.interfaces['eth0']['_master_type'] = TYPE_OVS_BR
-        expected_dstate.interfaces['eth1']['_master_type'] = TYPE_OVS_BR
-        expected_dstate.interfaces['eth0']['_brport_options'] = (
+        expected_dstate.interfaces['eth0'][metadata.MASTER] = OVS_NAME
+        expected_dstate.interfaces['eth1'][metadata.MASTER] = OVS_NAME
+        expected_dstate.interfaces['eth0'][metadata.MASTER_TYPE] = TYPE_OVS_BR
+        expected_dstate.interfaces['eth1'][metadata.MASTER_TYPE] = TYPE_OVS_BR
+        expected_dstate.interfaces['eth0'][metadata.BRPORT_OPTIONS] = (
             desired_state.interfaces[OVS_NAME]['bridge']['port'][0])
-        expected_dstate.interfaces['eth1']['_brport_options'] = (
+        expected_dstate.interfaces['eth1'][metadata.BRPORT_OPTIONS] = (
             desired_state.interfaces[OVS_NAME]['bridge']['port'][1])
 
         metadata.generate_ifaces_metadata(desired_state, current_state)
@@ -469,10 +469,10 @@ class TestDesiredStateOvsMetadata(object):
         expected_dstate = state.State(desired_state.state)
         expected_cstate = state.State(current_state.state)
         expected_dstate.interfaces['eth0'] = {'name': 'eth0', 'state': 'up'}
-        expected_dstate.interfaces['eth0']['_master'] = OVS_NAME
-        expected_dstate.interfaces['eth0']['_master_type'] = TYPE_OVS_BR
+        expected_dstate.interfaces['eth0'][metadata.MASTER] = OVS_NAME
+        expected_dstate.interfaces['eth0'][metadata.MASTER_TYPE] = TYPE_OVS_BR
         expected_dstate.interfaces['eth1'] = {'name': 'eth1'}
-        expected_dstate.interfaces['eth0']['_brport_options'] = (
+        expected_dstate.interfaces['eth0'][metadata.BRPORT_OPTIONS] = (
             desired_state.interfaces[OVS_NAME]['bridge']['port'][0])
 
         metadata.generate_ifaces_metadata(desired_state, current_state)
@@ -509,9 +509,9 @@ class TestDesiredStateOvsMetadata(object):
         })
         expected_dstate = state.State(desired_state.state)
         expected_cstate = state.State(current_state.state)
-        expected_dstate.interfaces['eth0']['_master'] = OVS_NAME
-        expected_dstate.interfaces['eth0']['_master_type'] = TYPE_OVS_BR
-        expected_dstate.interfaces['eth0']['_brport_options'] = (
+        expected_dstate.interfaces['eth0'][metadata.MASTER] = OVS_NAME
+        expected_dstate.interfaces['eth0'][metadata.MASTER_TYPE] = TYPE_OVS_BR
+        expected_dstate.interfaces['eth0'][metadata.BRPORT_OPTIONS] = (
             current_state.interfaces[OVS_NAME]['bridge']['port'][0])
 
         metadata.generate_ifaces_metadata(desired_state, current_state)
@@ -555,9 +555,9 @@ class TestDesiredStateOvsMetadata(object):
         expected_dstate = state.State(desired_state.state)
         expected_cstate = state.State(current_state.state)
         expected_dstate.interfaces['eth0'] = {'name': 'eth0', 'state': 'up'}
-        expected_dstate.interfaces['eth0']['_master'] = OVS2_NAME
-        expected_dstate.interfaces['eth0']['_master_type'] = TYPE_OVS_BR
-        expected_dstate.interfaces['eth0']['_brport_options'] = (
+        expected_dstate.interfaces['eth0'][metadata.MASTER] = OVS2_NAME
+        expected_dstate.interfaces['eth0'][metadata.MASTER_TYPE] = TYPE_OVS_BR
+        expected_dstate.interfaces['eth0'][metadata.BRPORT_OPTIONS] = (
             desired_state.interfaces[OVS2_NAME]['bridge']['port'][0])
 
         metadata.generate_ifaces_metadata(desired_state, current_state)

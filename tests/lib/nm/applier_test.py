@@ -19,6 +19,7 @@ import pytest
 
 from lib.compat import mock
 
+from libnmstate import metadata
 from libnmstate import nm
 
 
@@ -84,8 +85,8 @@ def test_prepare_new_ifaces_configuration(nm_bond_mock,
             'name': 'eth0',
             'type': 'ethernet',
             'state': 'up',
-            '_master': 'bond99',
-            '_master_type': 'bond'
+            metadata.MASTER: 'bond99',
+            metadata.MASTER_TYPE: 'bond'
         },
         {
             'name': 'bond99',

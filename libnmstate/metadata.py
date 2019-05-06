@@ -20,6 +20,11 @@ import six
 from libnmstate.appliers import linux_bridge
 
 
+BRPORT_OPTIONS = '_brport_options'
+MASTER = '_master'
+MASTER_TYPE = '_master_type'
+
+
 def generate_ifaces_metadata(desired_state, current_state):
     """
     The described desired state for each interface may include references to
@@ -58,9 +63,9 @@ def generate_ifaces_metadata(desired_state, current_state):
 
 def remove_ifaces_metadata(ifaces_state):
     for iface_state in six.viewvalues(ifaces_state.interfaces):
-        iface_state.pop('_master', None)
-        iface_state.pop('_master_type', None)
-        iface_state.pop('_brport_options', None)
+        iface_state.pop(MASTER, None)
+        iface_state.pop(MASTER_TYPE, None)
+        iface_state.pop(BRPORT_OPTIONS, None)
 
 
 def _get_bond_slaves_from_state(iface_state, default=()):
@@ -75,12 +80,12 @@ def _set_ovs_bridge_ports_metadata(master_state, slave_state):
         six.moves.filter(lambda n: n['name'] == slave_state['name'], ports),
         {}
     )
-    slave_state['_brport_options'] = port
+    slave_state[BRPORT_OPTIONS] = port
 
 
 def _set_common_slaves_metadata(master_state, slave_state):
-    slave_state['_master'] = master_state['name']
-    slave_state['_master_type'] = master_state['type']
+    slave_state[MASTER] = master_state['name']
+    slave_state[MASTER_TYPE] = master_state['type']
 
 
 def _get_ovs_slaves_from_state(iface_state, default=()):
@@ -142,7 +147,7 @@ def _generate_link_master_metadata(ifaces_desired_state,
                 master_has_no_slaves_specified_in_desired = (
                     get_slaves_func(iface_state, None) is None)
                 slave_has_no_master_specified_in_desired = (
-                    ifaces_desired_state[slave].get('_master') is None)
+                    ifaces_desired_state[slave].get(MASTER) is None)
                 if (slave_has_no_master_specified_in_desired and
                         master_has_no_slaves_specified_in_desired):
                     set_metadata_func(
