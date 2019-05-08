@@ -28,6 +28,9 @@ CHECKPOINT_CREATE_FLAG_DESTROY_ALL = 0x01
 CHECKPOINT_CREATE_FLAG_DELETE_NEW_CONNECTIONS = 0x02
 CHECKPOINT_CREATE_FLAG_DISCONNECT_NEW_DEVICES = 0x04
 
+NM_PERMISSION_DENIED = 'org.freedesktop.NetworkManager.PermissionDenied'
+
+
 _nmdbus_manager = None
 
 
@@ -40,6 +43,10 @@ class NMCheckPointError(Exception):
 class NMCheckPointCreationError(NMCheckPointError):
     """ Error creating a Network Manager CheckPoint """
 
+    pass
+
+
+class NMCheckPointPermissionError(NMCheckPointError):
     pass
 
 
@@ -118,6 +125,8 @@ class CheckPoint(object):
                           dbuspath, timeout)
             self._dbuspath = dbuspath
         except dbus.exceptions.DBusException as e:
+            if e.get_dbus_name() == NM_PERMISSION_DENIED:
+                raise NMCheckPointPermissionError(str(e))
             raise NMCheckPointCreationError(str(e))
 
     def destroy(self):
