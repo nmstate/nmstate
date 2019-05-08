@@ -32,6 +32,7 @@ import yaml
 from libnmstate import netapplier
 from libnmstate import netinfo
 from libnmstate.error import NmstateConflictError
+from libnmstate.error import NmstatePermissionError
 from libnmstate.error import NmstateValueError
 from libnmstate.prettystate import PrettyState
 from libnmstate.schema import Constants
@@ -204,6 +205,9 @@ def apply_state(statedata, verify_change, commit, timeout):
 
     try:
         checkpoint = netapplier.apply(state, verify_change, commit, timeout)
+    except NmstatePermissionError as e:
+        sys.stderr.write('ERROR: Missing permissions:{}\n'.format(str(e)))
+        return os.EX_NOPERM
     except NmstateConflictError:
         sys.stderr.write('ERROR: State editing already in progress.\n'
                          'Commit, roll back or wait before retrying.\n')

@@ -29,6 +29,7 @@ from libnmstate import state
 from libnmstate import validator
 from libnmstate.error import NmstateConflictError
 from libnmstate.error import NmstateLibnmError
+from libnmstate.error import NmstatePermissionError
 from libnmstate.error import NmstateValueError
 from libnmstate.nm import nmclient
 
@@ -130,6 +131,8 @@ def _apply_ifaces_state(desired_state, verify_change, commit,
                 _verify_change(desired_state)
         if not commit:
             return checkpoint
+    except nm.checkpoint.NMCheckPointPermissionError:
+        raise NmstatePermissionError('Error creating a check point')
     except nm.checkpoint.NMCheckPointCreationError:
         raise NmstateConflictError('Error creating a check point')
 
