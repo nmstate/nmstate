@@ -1,5 +1,5 @@
 #
-# Copyright 2018 Red Hat, Inc.
+# Copyright 2018-2019 Red Hat, Inc.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -18,104 +18,122 @@
 import pytest
 
 import libnmstate
+from libnmstate import schema
+from libnmstate import state
 from libnmstate.error import NmstateValueError
 
 
 class TestLinkAggregationState(object):
     def test_bonds_with_no_slaves(self):
-        config = [
-            {
-                'name': 'bond0',
-                'link-aggregation': {
-                    'slaves': []
+        desired_state = state.State({
+            schema.Interface.KEY: [
+                {
+                    'name': 'bond0',
+                    'link-aggregation': {
+                        'slaves': []
+                    },
                 },
-            },
-            {
-                'name': 'bond1',
-                'link-aggregation': {
-                    'slaves': []
-                },
-            }
-        ]
-        libnmstate.validator.verify_link_aggregation_state(config, {})
+                {
+                    'name': 'bond1',
+                    'link-aggregation': {
+                        'slaves': []
+                    },
+                }
+            ]
+        })
+
+        libnmstate.validator.verify_link_aggregation_state(desired_state,
+                                                           state.State({}))
 
     def test_bonds_with_single_slave(self):
-        config = [
-            {'name': 'slave0'},
-            {'name': 'slave1'},
-            {
-                'name': 'bond0',
-                'link-aggregation': {
-                    'slaves': ['slave0']
+        desired_state = state.State({
+            schema.Interface.KEY: [
+                {'name': 'slave0'},
+                {'name': 'slave1'},
+                {
+                    'name': 'bond0',
+                    'link-aggregation': {
+                        'slaves': ['slave0']
+                    },
                 },
-            },
-            {
-                'name': 'bond1',
-                'link-aggregation': {
-                    'slaves': ['slave1']
-                },
-            }
-        ]
-        libnmstate.validator.verify_link_aggregation_state(config, {})
+                {
+                    'name': 'bond1',
+                    'link-aggregation': {
+                        'slaves': ['slave1']
+                    },
+                }
+            ]
+        })
+        libnmstate.validator.verify_link_aggregation_state(desired_state,
+                                                           state.State({}))
 
     def test_bonds_with_multiple_slaves(self):
-        config = [
-            {'name': 'slave0'},
-            {'name': 'slave1'},
-            {'name': 'slave00'},
-            {'name': 'slave11'},
-            {
-                'name': 'bond0',
-                'link-aggregation': {
-                    'slaves': ['slave0', 'slave00']
+        desired_state = state.State({
+            schema.Interface.KEY: [
+                {'name': 'slave0'},
+                {'name': 'slave1'},
+                {'name': 'slave00'},
+                {'name': 'slave11'},
+                {
+                    'name': 'bond0',
+                    'link-aggregation': {
+                        'slaves': ['slave0', 'slave00']
+                    },
                 },
-            },
-            {
-                'name': 'bond1',
-                'link-aggregation': {
-                    'slaves': ['slave1', 'slave11']
-                },
-            }
-        ]
-        libnmstate.validator.verify_link_aggregation_state(config, {})
+                {
+                    'name': 'bond1',
+                    'link-aggregation': {
+                        'slaves': ['slave1', 'slave11']
+                    },
+                }
+            ]
+        })
+        libnmstate.validator.verify_link_aggregation_state(desired_state,
+                                                           state.State({}))
 
     def test_bonds_with_multiple_slaves_reused(self):
-        config = [
-            {'name': 'slave0'},
-            {'name': 'slave1'},
-            {'name': 'slave00'},
-            {
-                'name': 'bond0',
-                'link-aggregation': {
-                    'slaves': ['slave0', 'slave00']
+        desired_state = state.State({
+            schema.Interface.KEY: [
+                {'name': 'slave0'},
+                {'name': 'slave1'},
+                {'name': 'slave00'},
+                {
+                    'name': 'bond0',
+                    'link-aggregation': {
+                        'slaves': ['slave0', 'slave00']
+                    },
                 },
-            },
-            {
-                'name': 'bond1',
-                'link-aggregation': {
-                    'slaves': ['slave1', 'slave00']
-                },
-            }
-        ]
+                {
+                    'name': 'bond1',
+                    'link-aggregation': {
+                        'slaves': ['slave1', 'slave00']
+                    },
+                }
+            ]
+        })
         with pytest.raises(NmstateValueError):
-            libnmstate.validator.verify_link_aggregation_state(config, {})
+            libnmstate.validator.verify_link_aggregation_state(desired_state,
+                                                               state.State({}))
 
     def test_bonds_with_missing_slaves(self):
-        config = [
-            {'name': 'slave0'},
-            {'name': 'slave1'},
-            {
-                'name': 'bond0',
-                'link-aggregation': {
-                    'slaves': ['slave0', 'slave00']
+        desired_state = state.State({
+            schema.Interface.KEY: [
+                {'name': 'slave0'},
+                {'name': 'slave1'},
+                {
+                    'name': 'bond0',
+                    'link-aggregation': {
+                        'slaves': ['slave0', 'slave00']
+                    },
                 },
-            },
-            {
-                'name': 'bond1',
-                'link-aggregation': {
-                    'slaves': ['slave1', 'slave11']
-                },
-            }
-        ]
+                {
+                    'name': 'bond1',
+                    'link-aggregation': {
+                        'slaves': ['slave1', 'slave11']
+                    },
+                }
+            ]
+        })
         with pytest.raises(NmstateValueError):
-            libnmstate.validator.verify_link_aggregation_state(config, {})
+            libnmstate.validator.verify_link_aggregation_state(desired_state,
+                                                               state.State({}))

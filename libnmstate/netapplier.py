@@ -112,6 +112,8 @@ def _apply_ifaces_state(desired_state, verify_change, commit,
     desired_state.sanitize_dynamic_ip()
     metadata.generate_ifaces_metadata(desired_state, current_state)
 
+    validator.verify_interfaces_state(desired_state, current_state)
+
     new_interfaces = _list_new_interfaces(desired_state, current_state)
 
     try:
@@ -126,7 +128,7 @@ def _apply_ifaces_state(desired_state, verify_change, commit,
                 state2edit = _create_editable_desired_state(desired_state,
                                                             current_state,
                                                             new_interfaces)
-                _edit_interfaces(state2edit, desired_state)
+                _edit_interfaces(state2edit)
             if verify_change:
                 _verify_change(desired_state)
         if not commit:
@@ -184,8 +186,6 @@ def _add_interfaces(new_interfaces, desired_state):
 
     ifaces2add = [desired_state.interfaces[name] for name in new_interfaces]
 
-    validator.verify_interfaces_state(ifaces2add, desired_state.interfaces)
-
     ifaces2add += nm.applier.prepare_proxy_ifaces_desired_state(ifaces2add)
     ifaces_configs = nm.applier.prepare_new_ifaces_configuration(ifaces2add)
     nm.applier.create_new_ifaces(ifaces_configs)
@@ -193,12 +193,10 @@ def _add_interfaces(new_interfaces, desired_state):
     nm.applier.set_ifaces_admin_state(ifaces2add, con_profiles=ifaces_configs)
 
 
-def _edit_interfaces(state2edit, desired_state):
+def _edit_interfaces(state2edit):
     logging.debug('Editing interfaces: %s', list(state2edit.interfaces))
 
     ifaces2edit = list(six.viewvalues(state2edit.interfaces))
-
-    validator.verify_interfaces_state(ifaces2edit, desired_state.interfaces)
 
     iface2prepare = list(
         filter(lambda state: state.get('state') not in ('absent', 'down'),
