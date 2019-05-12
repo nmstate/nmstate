@@ -20,6 +20,7 @@ import pytest
 from lib.compat import mock
 
 from libnmstate import nm
+from libnmstate import schema
 
 
 @pytest.fixture
@@ -113,3 +114,118 @@ def test_get_info_with_invalid_duplex(ethtool_mock, NM_mock):
         'mac-address': dev_mock.get_hw_address.return_value,
         'mtu': dev_mock.get_mtu.return_value
     }
+
+
+class TestWiredSetting(object):
+
+    def test_identity(self):
+        state = {}
+        obj1 = obj2 = nm.wired.WiredSetting(state)
+
+        assert obj1 == obj2
+        assert not (obj1 != obj2)
+
+    def test_empty_state_is_false(self):
+        state = {}
+        obj = nm.wired.WiredSetting(state)
+
+        assert not obj
+
+    def test_no_relevant_keys_is_false(self):
+        state = {'foo': 'boo'}
+        obj = nm.wired.WiredSetting(state)
+
+        assert not obj
+
+    def test_relevant_keys_with_false_values_is_false(self):
+        state = {
+            schema.Interface.MTU: 0,
+            schema.Interface.MAC: '',
+        }
+        obj = nm.wired.WiredSetting(state)
+
+        assert not obj
+
+    def test_partial_relevant_keys_is_true(self):
+        state = {
+            schema.Interface.MTU: 1500,
+            schema.Interface.MAC: 'abc',
+        }
+        obj = nm.wired.WiredSetting(state)
+
+        assert obj
+
+    def test_equality_for_empty_states(self):
+        state = {}
+        obj1 = nm.wired.WiredSetting(state)
+        obj2 = nm.wired.WiredSetting(state)
+
+        assert obj1 == obj2
+        assert not (obj1 != obj2)
+
+    def test_equality_for_partial_states(self):
+        state = {
+            schema.Interface.MTU: 1500,
+            schema.Interface.MAC: 'abc',
+        }
+        obj1 = nm.wired.WiredSetting(state)
+        obj2 = nm.wired.WiredSetting(state)
+
+        assert obj1 == obj2
+        assert not (obj1 != obj2)
+
+    def test_inequality_for_partial_states(self):
+        state1 = {
+            schema.Interface.MTU: 1500,
+            schema.Interface.MAC: 'abc',
+        }
+        state2 = {
+            schema.Interface.MTU: 1000,
+            schema.Interface.MAC: 'abc',
+        }
+        obj1 = nm.wired.WiredSetting(state1)
+        obj2 = nm.wired.WiredSetting(state2)
+
+        assert obj1 != obj2
+        assert not (obj1 == obj2)
+
+    def test_inequality_for_partial_states_with_missing_properties(self):
+        state1 = {
+            schema.Interface.MTU: 1500,
+            schema.Interface.MAC: 'abc',
+        }
+        state2 = {schema.Interface.MAC: 'abc'}
+
+        obj1 = nm.wired.WiredSetting(state1)
+        obj2 = nm.wired.WiredSetting(state2)
+
+        assert obj1 != obj2
+        assert not (obj1 == obj2)
+
+    def test_hash_unique(self):
+        state = {
+            schema.Interface.MTU: 1500,
+            schema.Interface.MAC: 'abc',
+        }
+        obj1 = nm.wired.WiredSetting(state)
+        obj2 = nm.wired.WiredSetting(state)
+
+        assert hash(obj1) == hash(obj2)
+
+    def test_behaviour_with_set(self):
+        state1 = {
+            schema.Interface.MTU: 1500,
+            schema.Interface.MAC: 'abc',
+        }
+        state2 = {
+            schema.Interface.MTU: 1500,
+            schema.Interface.MAC: 'abc',
+        }
+        state3 = {schema.Interface.MAC: 'abc'}
+
+        obj1 = nm.wired.WiredSetting(state1)
+        obj2 = nm.wired.WiredSetting(state2)
+        obj3 = nm.wired.WiredSetting(state3)
+
+        assert 1 == len(set([obj1, obj2]))
+        assert 2 == len(set([obj1, obj3]))

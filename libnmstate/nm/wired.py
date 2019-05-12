@@ -1,5 +1,5 @@
 #
-# Copyright 2018 Red Hat, Inc.
+# Copyright 2018-2019 Red Hat, Inc.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -23,61 +23,96 @@ from libnmstate.schema import Interface
 ZEROED_MAC = '00:00:00:00:00:00'
 
 
+class WiredSetting(object):
+    def __init__(self, state):
+        self.mtu = state.get(Interface.MTU)
+        self.mac = state.get(Interface.MAC)
+
+        ethernet = state.get('ethernet', {})
+        self.speed = ethernet.get('speed')
+        self.duplex = ethernet.get('duplex')
+        self.auto_negotiation = ethernet.get('auto-negotiation')
+
+    def __hash__(self):
+        return hash(self.__key())
+
+    def __eq__(self, other):
+        return self is other or self.__key() == other.__key()
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __bool__(self):
+        return bool(
+            self.mac or
+            self.mtu or
+            self.speed or
+            self.duplex or
+            (self.auto_negotiation is not None)
+        )
+
+    # TODO: drop when py2 is no longer needed
+    __nonzero__ = __bool__
+
+    def __key(self):
+        return (
+            self.mtu,
+            self.mac,
+            self.speed,
+            self.duplex,
+            self.auto_negotiation
+        )
+
+
 def create_setting(iface_state, base_con_profile):
-    mtu = iface_state.get('mtu')
-    mac = iface_state.get(Interface.MAC)
+    setting = WiredSetting(iface_state)
 
-    ethernet = iface_state.get('ethernet', {})
-    speed = ethernet.get('speed')
-    duplex = ethernet.get('duplex')
-    auto_negotiation = ethernet.get('auto-negotiation')
-
-    wired_setting = None
+    nm_wired_setting = None
     if base_con_profile:
-        wired_setting = base_con_profile.get_setting_wired()
-        if wired_setting:
-            wired_setting = wired_setting.duplicate()
+        nm_wired_setting = base_con_profile.get_setting_wired()
+        if nm_wired_setting:
+            nm_wired_setting = nm_wired_setting.duplicate()
 
-    if not (mac or mtu or speed or duplex or (auto_negotiation is not None)):
-        return wired_setting
+    if not setting:
+        return nm_wired_setting
 
-    if not wired_setting:
-        wired_setting = nmclient.NM.SettingWired.new()
+    if not nm_wired_setting:
+        nm_wired_setting = nmclient.NM.SettingWired.new()
 
-    if mac:
-        wired_setting.props.cloned_mac_address = mac
+    if setting.mac:
+        nm_wired_setting.props.cloned_mac_address = setting.mac
 
-    if mtu:
-        wired_setting.props.mtu = mtu
+    if setting.mtu:
+        nm_wired_setting.props.mtu = setting.mtu
 
-    if auto_negotiation:
-        wired_setting.props.auto_negotiate = True
-        if not speed and not duplex:
-            wired_setting.props.speed = 0
-            wired_setting.props.duplex = None
+    if setting.auto_negotiation:
+        nm_wired_setting.props.auto_negotiate = True
+        if not setting.speed and not setting.duplex:
+            nm_wired_setting.props.speed = 0
+            nm_wired_setting.props.duplex = None
 
-        elif not speed:
+        elif not setting.speed:
             ethtool_results = minimal_ethtool(str(iface_state['name']))
-            speed = ethtool_results['speed']
-        elif not duplex:
+            setting.speed = ethtool_results['speed']
+        elif not setting.duplex:
             ethtool_results = minimal_ethtool(str(iface_state['name']))
-            duplex = ethtool_results['duplex']
+            setting.duplex = ethtool_results['duplex']
 
-    elif auto_negotiation is False:
-        wired_setting.props.auto_negotiate = False
+    elif setting.auto_negotiation is False:
+        nm_wired_setting.props.auto_negotiate = False
         ethtool_results = minimal_ethtool(str(iface_state['name']))
-        if not speed:
-            speed = ethtool_results['speed']
-        if not duplex:
-            duplex = ethtool_results['duplex']
+        if not setting.speed:
+            setting.speed = ethtool_results['speed']
+        if not setting.duplex:
+            setting.duplex = ethtool_results['duplex']
 
-    if speed:
-        wired_setting.props.speed = speed
+    if setting.speed:
+        nm_wired_setting.props.speed = setting.speed
 
-    if duplex in ['half', 'full']:
-        wired_setting.props.duplex = duplex
+    if setting.duplex in ['half', 'full']:
+        nm_wired_setting.props.duplex = setting.duplex
 
-    return wired_setting
+    return nm_wired_setting
 
 
 def get_info(device):
