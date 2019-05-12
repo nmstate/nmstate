@@ -50,21 +50,19 @@ def verify_interface_capabilities(ifaces_state, capabilities):
                 "and started")
 
 
-def verify_interfaces_state(ifaces_state, ifaces_desired_state):
-    verify_link_aggregation_state(ifaces_state, ifaces_desired_state)
+def verify_interfaces_state(desired_state, current_state):
+    verify_link_aggregation_state(desired_state, current_state)
 
 
-def verify_link_aggregation_state(ifaces_state, ifaces_desired_state):
+def verify_link_aggregation_state(desired_state, current_state):
     available_ifaces = {
-        iface_state['name'] for iface_state in ifaces_state
-        if iface_state.get('state') != 'absent'
-    }
-    available_ifaces |= {
-        ifname for ifname, ifstate in six.viewitems(ifaces_desired_state)
+        ifname for ifname, ifstate in six.viewitems(desired_state.interfaces)
         if ifstate.get('state') != 'absent'
     }
+    available_ifaces |= set(current_state.interfaces)
+
     specified_slaves = set()
-    for iface_state in ifaces_state:
+    for iface_state in six.viewvalues(desired_state.interfaces):
         if iface_state.get('state') != 'absent':
             link_aggregation = iface_state.get('link-aggregation')
             if link_aggregation:
