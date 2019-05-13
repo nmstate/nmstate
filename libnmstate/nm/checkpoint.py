@@ -35,14 +35,10 @@ _nmdbus_manager = None
 
 
 class NMCheckPointError(Exception):
-    """ Error creating a Network Manager CheckPoint """
-
     pass
 
 
 class NMCheckPointCreationError(NMCheckPointError):
-    """ Error creating a Network Manager CheckPoint """
-
     pass
 
 
