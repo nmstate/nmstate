@@ -84,6 +84,7 @@ class InterfaceType(object):
     KEY = Interface.TYPE
 
     BOND = 'bond'
+    ETHERNET = 'ethernet'
     LINUX_BRIDGE = 'linux-bridge'
     OVS_BRIDGE = 'ovs-bridge'
     OVS_PORT = 'ovs-port'
@@ -140,6 +141,18 @@ class LinuxBridge(object):
     PORT_STP_PRIORITY = 'stp-priority'
     PORT_STP_HAIRPIN_MODE = 'stp-hairpin-mode'
     PORT_STP_PATH_COST = 'stp-path-cost'
+
+
+class Ethernet(object):
+    TYPE = InterfaceType.ETHERNET
+    CONFIG_SUBTREE = 'ethernet'
+
+    AUTO_NEGOTIATION = 'auto-negotiation'
+    SPEED = 'speed'
+    DUPLEX = 'duplex'
+
+    FULL_DUPLEX = 'full'
+    HALF_DUPLEX = 'half'
 
 
 class OVSBridge(object):
