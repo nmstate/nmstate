@@ -52,7 +52,7 @@ def show(include_status_data=False):
         DNS.CONFIG: nm_dns.get_config(),
     }
 
-    validator.verify(report)
+    validator.validate(report)
     return report
 
 

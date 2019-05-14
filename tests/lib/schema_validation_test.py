@@ -118,20 +118,20 @@ def default_data():
 class TestIfaceCommon(object):
 
     def test_valid_instance(self, default_data):
-        libnmstate.validator.verify(default_data)
+        libnmstate.validator.validate(default_data)
 
     def test_invalid_instance(self, default_data):
         default_data[INTERFACES][0]['state'] = 'bad-state'
 
         with pytest.raises(js.ValidationError) as err:
-            libnmstate.validator.verify(default_data)
+            libnmstate.validator.validate(default_data)
         assert 'bad-state' in err.value.args[0]
 
     def test_invalid_type(self, default_data):
         default_data[INTERFACES][0]['type'] = 'bad-type'
 
         with pytest.raises(js.ValidationError) as err:
-            libnmstate.validator.verify(default_data)
+            libnmstate.validator.validate(default_data)
         assert 'bad-type' in err.value.args[0]
 
 
@@ -142,7 +142,7 @@ class TestIfaceTypeEthernet(object):
             'type': 'ethernet',
             'auto-negotiation': True,
         })
-        libnmstate.validator.verify(default_data)
+        libnmstate.validator.validate(default_data)
 
     def test_valid_ethernet_without_auto_neg(self, default_data):
         default_data[INTERFACES][0].update({
@@ -150,7 +150,7 @@ class TestIfaceTypeEthernet(object):
             'link-speed': 1000,
             'duplex': 'full',
         })
-        libnmstate.validator.verify(default_data)
+        libnmstate.validator.validate(default_data)
 
     def test_valid_without_auto_neg_and_missing_speed(self, default_data):
         """
@@ -164,17 +164,17 @@ class TestIfaceTypeEthernet(object):
         })
         del default_data[INTERFACES][0]['link-speed']
 
-        libnmstate.validator.verify(default_data)
+        libnmstate.validator.validate(default_data)
 
 
 class TestRoutes(object):
     def test_valid_state_absent(self, default_data):
         default_data[ROUTES]['config'][0]['state'] = 'absent'
-        libnmstate.validator.verify(default_data)
+        libnmstate.validator.validate(default_data)
 
     def test_invalid_state(self, default_data):
         default_data[ROUTES]['config'][0]['state'] = 'bad-state'
 
         with pytest.raises(js.ValidationError) as err:
-            libnmstate.validator.verify(default_data)
+            libnmstate.validator.validate(default_data)
         assert 'bad-state' in err.value.args[0]

@@ -1,5 +1,5 @@
 #
-# Copyright 2018 Red Hat, Inc.
+# Copyright 2018-2019 Red Hat, Inc.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -14,11 +14,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
-from __future__ import absolute_import
 
-import jsonschema as js
 import logging
 import six
+
+import jsonschema as js
 
 from . import nm
 from . import schema
@@ -27,15 +27,15 @@ from libnmstate.error import NmstateDependencyError
 from libnmstate.error import NmstateValueError
 
 
-def verify(data, validation_schema=schema.ifaces_schema):
+def validate(data, validation_schema=schema.ifaces_schema):
     js.validate(data, validation_schema)
 
 
-def verify_capabilities(state, capabilities):
-    verify_interface_capabilities(state[Constants.INTERFACES], capabilities)
+def validate_capabilities(state, capabilities):
+    validate_interface_capabilities(state[Constants.INTERFACES], capabilities)
 
 
-def verify_interface_capabilities(ifaces_state, capabilities):
+def validate_interface_capabilities(ifaces_state, capabilities):
     ifaces_types = [iface_state['type'] for iface_state in ifaces_state]
     has_ovs_capability = nm.ovs.CAPABILITY in capabilities
     for iface_type in ifaces_types:
@@ -50,11 +50,11 @@ def verify_interface_capabilities(ifaces_state, capabilities):
                 "and started")
 
 
-def verify_interfaces_state(desired_state, current_state):
-    verify_link_aggregation_state(desired_state, current_state)
+def validate_interfaces_state(desired_state, current_state):
+    validate_link_aggregation_state(desired_state, current_state)
 
 
-def verify_link_aggregation_state(desired_state, current_state):
+def validate_link_aggregation_state(desired_state, current_state):
     available_ifaces = {
         ifname for ifname, ifstate in six.viewitems(desired_state.interfaces)
         if ifstate.get('state') != 'absent'
@@ -78,7 +78,7 @@ def verify_link_aggregation_state(desired_state, current_state):
                 specified_slaves |= slaves
 
 
-def verify_dhcp(state):
+def validate_dhcp(state):
     for iface_state in state[Constants.INTERFACES]:
         for family in ('ipv4', 'ipv6'):
             ip = iface_state.get(family, {})

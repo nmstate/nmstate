@@ -50,9 +50,9 @@ def apply(desired_state, verify_change=True, commit=True, rollback_timeout=60):
     :rtype: str
     """
     desired_state = copy.deepcopy(desired_state)
-    validator.verify(desired_state)
-    validator.verify_capabilities(desired_state, netinfo.capabilities())
-    validator.verify_dhcp(desired_state)
+    validator.validate(desired_state)
+    validator.validate_capabilities(desired_state, netinfo.capabilities())
+    validator.validate_dhcp(desired_state)
 
     checkpoint = _apply_ifaces_state(
         state.State(desired_state), verify_change, commit, rollback_timeout)
@@ -112,7 +112,7 @@ def _apply_ifaces_state(desired_state, verify_change, commit,
     desired_state.sanitize_dynamic_ip()
     metadata.generate_ifaces_metadata(desired_state, current_state)
 
-    validator.verify_interfaces_state(desired_state, current_state)
+    validator.validate_interfaces_state(desired_state, current_state)
 
     new_interfaces = _list_new_interfaces(desired_state, current_state)
 
