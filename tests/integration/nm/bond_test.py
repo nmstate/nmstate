@@ -20,7 +20,7 @@ from contextlib import contextmanager
 from libnmstate import nm
 from libnmstate import schema
 
-from .testlib import mainloop
+from .testlib import mainloop_run
 
 
 BOND0 = 'bondtest0'
@@ -60,6 +60,7 @@ def _get_bond_current_state(name):
     return nm.bond.get_bond_info(nmdev) if nmdev else {}
 
 
+@mainloop_run
 def _create_bond(name, options):
     con_setting = nm.connection.ConnectionSetting()
     con_setting.create(
@@ -70,16 +71,16 @@ def _create_bond(name, options):
     bond_setting = nm.bond.create_setting(options)
     ipv4_setting = nm.ipv4.create_setting({}, None)
     ipv6_setting = nm.ipv6.create_setting({}, None)
-    with mainloop():
-        con_profile = nm.connection.ConnectionProfile()
-        con_profile.create(
-            (con_setting.setting, bond_setting, ipv4_setting, ipv6_setting))
-        con_profile.add(save_to_disk=False)
-        nm.device.activate(connection_id=name)
+
+    con_profile = nm.connection.ConnectionProfile()
+    con_profile.create(
+        (con_setting.setting, bond_setting, ipv4_setting, ipv6_setting))
+    con_profile.add(save_to_disk=False)
+    nm.device.activate(connection_id=name)
 
 
+@mainloop_run
 def _delete_bond(devname):
     nmdev = nm.device.get_device_by_name(devname)
-    with mainloop():
-        nm.device.deactivate(nmdev)
-        nm.device.delete(nmdev)
+    nm.device.deactivate(nmdev)
+    nm.device.delete(nmdev)

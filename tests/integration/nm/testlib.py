@@ -1,5 +1,5 @@
 #
-# Copyright 2018 Red Hat, Inc.
+# Copyright 2018-2019 Red Hat, Inc.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -15,6 +15,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 from contextlib import contextmanager
+import functools
 
 from libnmstate import nm
 
@@ -25,3 +26,11 @@ def mainloop():
     yield
     success = mloop.run(timeout=5)
     assert success, 'Mainloop error: ' + mloop.error
+
+
+def mainloop_run(func):
+    @functools.wraps(func)
+    def wrapper_mainloop(*args, **kwargs):
+        with mainloop():
+            return func(*args, **kwargs)
+    return wrapper_mainloop
