@@ -1,5 +1,5 @@
 #
-# Copyright 2018 Red Hat, Inc.
+# Copyright 2018-2019 Red Hat, Inc.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -32,30 +32,35 @@ def logging_setup():
         level=logging.DEBUG)
 
 
-@pytest.fixture(scope='function')
-def eth1_down():
+@pytest.fixture(scope='session', autouse=True)
+def ethx_init():
+    """ Remove any existing definitions on the ethX interfaces. """
     _set_eth_admin_state('eth1', 'down')
-
-
-@pytest.fixture(scope='function')
-def eth2_down():
     _set_eth_admin_state('eth2', 'down')
 
 
 @pytest.fixture(scope='function')
-def eth1_up(eth1_down):
+def eth1_up():
     _set_eth_admin_state('eth1', 'up')
+    try:
+        yield
+    finally:
+        _set_eth_admin_state('eth1', 'down')
 
 
 @pytest.fixture(scope='function')
-def eth2_up(eth2_down):
+def eth2_up():
     _set_eth_admin_state('eth2', 'up')
+    try:
+        yield
+    finally:
+        _set_eth_admin_state('eth2', 'down')
 
 
 def _set_eth_admin_state(ifname, state):
     current_state = statelib.show_only((ifname,))
     iface_current_state, = current_state[INTERFACES]
-    if iface_current_state['state'] != state:
+    if iface_current_state['state'] != state or state == 'down':
         desired_state = {INTERFACES: [{'name': iface_current_state['name'],
                                        'type': iface_current_state['type'],
                                        'state': state}]}
