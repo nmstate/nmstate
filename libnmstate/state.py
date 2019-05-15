@@ -28,7 +28,9 @@ from libnmstate import iplib
 from libnmstate import metadata
 from libnmstate.error import NmstateVerificationError
 from libnmstate.prettystate import format_desired_current_state_diff
+from libnmstate.schema import Ethernet
 from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
 
 
@@ -72,7 +74,7 @@ class State(object):
     def state(self):
         self._state[Interface.KEY] = sorted(
             list(six.viewvalues(self._ifaces_state)),
-            key=itemgetter('name')
+            key=itemgetter(Interface.NAME)
         )
         return self._state
 
@@ -102,11 +104,11 @@ class State(object):
         """
         for ifname, iface_state in six.viewitems(self.interfaces):
             iface_current_state = other_state.interfaces.get(ifname, {})
-            if iface_current_state.get('type') == 'ethernet':
-                ethernet = iface_state.setdefault('ethernet', {})
-                ethernet.setdefault('auto-negotiation', None)
-                ethernet.setdefault('speed', None)
-                ethernet.setdefault('duplex', None)
+            if iface_current_state.get(Interface.TYPE) == Ethernet.TYPE:
+                ethernet = iface_state.setdefault(Ethernet.CONFIG_SUBTREE, {})
+                ethernet.setdefault(Ethernet.AUTO_NEGOTIATION, None)
+                ethernet.setdefault(Ethernet.SPEED, None)
+                ethernet.setdefault(Ethernet.DUPLEX, None)
 
     def sanitize_dynamic_ip(self):
         """
@@ -170,7 +172,7 @@ class State(object):
     def _remove_absent_interfaces(self):
         ifaces = {}
         for ifname, ifstate in six.viewitems(self.interfaces):
-            is_absent = ifstate.get('state') == 'absent'
+            is_absent = ifstate.get(Interface.STATE) == InterfaceState.ABSENT
             if not is_absent:
                 ifaces[ifname] = ifstate
         self._ifaces_state = ifaces
@@ -179,8 +181,8 @@ class State(object):
         ifaces = {}
         for ifname, ifstate in six.viewitems(self.interfaces):
             is_virt_down = (
-                ifstate.get('state') == 'down' and
-                ifstate.get('type') in InterfaceType.VIRT_TYPES
+                ifstate.get(Interface.STATE) == InterfaceState.DOWN and
+                ifstate.get(Interface.TYPE) in InterfaceType.VIRT_TYPES
             )
             if not is_virt_down:
                 ifaces[ifname] = ifstate
@@ -188,17 +190,20 @@ class State(object):
 
     @staticmethod
     def _index_interfaces_state_by_name(state):
-        return {iface['name']: iface for iface in state.get(Interface.KEY, [])}
+        return {iface[Interface.NAME]: iface
+                for iface in state.get(Interface.KEY, [])}
 
     def _clean_sanitize_ethernet(self):
         for ifstate in six.viewvalues(self.interfaces):
-            ethernet_state = ifstate.get('ethernet')
+            ethernet_state = ifstate.get(Ethernet.CONFIG_SUBTREE)
             if ethernet_state:
-                for key in ('auto-negotiation', 'speed', 'duplex'):
+                for key in (Ethernet.AUTO_NEGOTIATION,
+                            Ethernet.SPEED,
+                            Ethernet.DUPLEX):
                     if ethernet_state.get(key, None) is None:
                         ethernet_state.pop(key, None)
                 if not ethernet_state:
-                    ifstate.pop('ethernet', None)
+                    ifstate.pop(Ethernet.CONFIG_SUBTREE, None)
 
     def _sort_lag_slaves(self):
         for ifstate in six.viewvalues(self.interfaces):
