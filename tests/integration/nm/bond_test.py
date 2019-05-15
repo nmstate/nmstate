@@ -18,6 +18,7 @@
 from contextlib import contextmanager
 
 from libnmstate import nm
+from libnmstate import schema
 
 from .testlib import mainloop
 
@@ -27,14 +28,17 @@ ETH1 = 'eth1'
 
 
 def test_create_and_remove_bond(eth1_up):
-    bond_options = {'mode': 'balance-rr', 'miimon': '140'}
+    bond_options = {
+        schema.Bond.MODE: schema.BondMode.ROUND_ROBIN,
+        'miimon': '140'
+    }
 
     with _bond_interface(BOND0, bond_options):
         bond_current_state = _get_bond_current_state(BOND0)
 
         bond_desired_state = {
-            'slaves': [],
-            'options': bond_options
+            schema.Bond.SLAVES: [],
+            schema.Bond.OPTIONS_SUBTREE: bond_options
         }
         assert bond_desired_state == bond_current_state
 

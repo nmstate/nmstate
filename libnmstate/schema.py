@@ -98,6 +98,25 @@ class InterfaceType(object):
     )
 
 
+class Bond(object):
+    KEY = InterfaceType.BOND
+    CONFIG_SUBTREE = 'link-aggregation'
+
+    MODE = 'mode'
+    SLAVES = 'slaves'
+    OPTIONS_SUBTREE = 'options'
+
+
+class BondMode(object):
+    ROUND_ROBIN = 'balance-rr'
+    ACTIVE_BACKUP = 'active-backup'
+    XOR = 'balance-xor'
+    BROADCAST = 'broadcast'
+    LACP = '802.3ad'
+    TLB = 'balance-tlb'
+    ALB = 'balance-alb'
+
+
 class LinuxBridge(object):
     TYPE = 'linux-bridge'
     CONFIG_SUBTREE = 'bridge'
