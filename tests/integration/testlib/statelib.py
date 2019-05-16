@@ -22,6 +22,7 @@ import six
 
 from libnmstate import netinfo
 from libnmstate.schema import Constants
+from libnmstate.schema import Route
 
 
 INTERFACES = Constants.INTERFACES
@@ -77,7 +78,20 @@ class State(object):
             for ifstate in self._state[INTERFACES]
             if ifstate['name'] in base_iface_names
         ]
-        self._state = {INTERFACES: filtered_iface_state}
+        self._state[INTERFACES] = filtered_iface_state
+        if Route.KEY in self._state:
+            self._state[Route.KEY] = {
+                Route.RUNNING: self._filter_routes(Route.RUNNING,
+                                                   base_iface_names),
+                Route.CONFIG: self._filter_routes(Route.CONFIG,
+                                                  base_iface_names)
+            }
+
+    def _filter_routes(self, route_type, base_iface_names):
+        return list(
+            route
+            for route in self._state.get(Route.KEY, {}).get(route_type, [])
+            if route.get(Route.NEXT_HOP_INTERFACE) in base_iface_names)
 
     def update(self, other_state):
         """

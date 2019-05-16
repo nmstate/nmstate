@@ -20,7 +20,9 @@ try:
 except ImportError:
     from collections import Mapping
 
+from collections import defaultdict
 import copy
+import logging
 from operator import itemgetter
 import six
 
@@ -30,6 +32,29 @@ from libnmstate.error import NmstateVerificationError
 from libnmstate.prettystate import format_desired_current_state_diff
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceType
+from libnmstate.schema import Route
+
+
+class _Route(object):
+    def __init__(self, route):
+        self.state = {
+            Route.TABLE_ID: route.get(Route.TABLE_ID,
+                                      Route.USE_DEFAULT_ROUTE_TABLE),
+            Route.DESTINATION: route[Route.DESTINATION],
+            Route.NEXT_HOP_INTERFACE: route[Route.NEXT_HOP_INTERFACE],
+            Route.NEXT_HOP_ADDRESS: route[Route.NEXT_HOP_ADDRESS],
+            Route.METRIC: route.get(Route.METRIC, Route.USE_DEFAULT_METRIC),
+        }
+
+    def __hash__(self):
+        return hash((self.state[Route.TABLE_ID],
+                     self.state[Route.DESTINATION],
+                     self.state[Route.NEXT_HOP_INTERFACE],
+                     self.state[Route.NEXT_HOP_ADDRESS],
+                     self.state[Route.METRIC]))
+
+    def __eq__(self, other):
+        return self.state == other.state
 
 
 def create_state(state, interfaces_to_filter=None):
@@ -55,6 +80,8 @@ class State(object):
         self._state = copy.deepcopy(state)
         self._ifaces_state = State._index_interfaces_state_by_name(self._state)
         self._complement_interface_empty_ip_subtrees()
+        self._routes = self._state.get(Route.KEY, {}).get(Route.CONFIG, [])
+        self._iface_routes = State._index_routes_by_iface(self._routes)
 
     def __eq__(self, other):
         return self.state == other.state
@@ -87,6 +114,13 @@ class State(object):
             for family in (Interface.IPV4, Interface.IPV6):
                 if family not in iface_state:
                     iface_state[family] = {}
+
+    @property
+    def iface_routes(self):
+        """
+        Indexed routes by next hop interface name. Read only.
+        """
+        return self._iface_routes
 
     def sanitize_ethernet(self, other_state):
         """
@@ -144,6 +178,22 @@ class State(object):
 
         self._assert_interfaces_equal(other_state)
 
+    def verify_routes(self, other_state):
+        """
+        Verify that the self state and the other_state are identical.
+        """
+        for iface_name, routes in six.viewitems(self.iface_routes):
+            other_routes = other_state.iface_routes.get(iface_name, [])
+            if routes != other_routes:
+                raise NmstateVerificationError(
+                    format_desired_current_state_diff(
+                        {
+                            Route.KEY: routes
+                        },
+                        {
+                            Route.KEY: other_routes
+                        }))
+
     def normalize_for_verification(self):
         self._clean_sanitize_ethernet()
         self._sort_lag_slaves()
@@ -167,6 +217,55 @@ class State(object):
             dict_update(other_state.interfaces[name], self.interfaces[name])
             self._ifaces_state[name] = other_state.interfaces[name]
 
+    def merge_route_config(self, other):
+        """
+        Merge routes from other to self.
+        Interfaces that are referred by routes and exists in the other state
+        but but do not exist in self, are added to the interfaces state by name
+        only in order to trigger the recreating of the interface profile.
+        Return changed interface names.
+        """
+        # Merge other_routes
+        iface_route_sets = defaultdict(set)
+        other_iface_route_sets = defaultdict(set)
+
+        for route in self._routes:
+            if Route.NEXT_HOP_INTERFACE in route:
+                iface_route_sets[route[Route.NEXT_HOP_INTERFACE]].add(
+                    _Route(route))
+            else:
+                logging.warning("Ignoring the route entry with no "
+                                "next hop interface defined: %s",
+                                route)
+
+        for route in other._routes:
+            iface_route_sets[route[Route.NEXT_HOP_INTERFACE]].add(
+                _Route(route))
+            other_iface_route_sets[route[Route.NEXT_HOP_INTERFACE]].add(
+                _Route(route))
+
+        for iface_name in list(six.viewkeys(iface_route_sets)):
+            # Remove routes if certain interface routes never changes.
+            if iface_route_sets[iface_name] == \
+               other_iface_route_sets.get(iface_name):
+                del iface_route_sets[iface_name]
+
+        # Recreate the route index
+        cfg_routes = []
+        for iface_name, route_set in six.viewitems(iface_route_sets):
+            cfg_routes.extend(list(route_obj.state for route_obj in route_set))
+        self._state[Route.KEY] = {Route.CONFIG: cfg_routes}
+        self._routes = self._state[Route.KEY][Route.CONFIG]
+        self._iface_routes = State._index_routes_by_iface(self._routes)
+
+        return list(six.viewkeys(iface_route_sets))
+
+    def include_changed_interfaces(self, other, changed_iface_names):
+        for iface_name in changed_iface_names:
+            if iface_name not in self.interfaces and \
+               iface_name in other.interfaces:
+                self.interfaces[iface_name] = {'name': iface_name}
+
     def _remove_absent_interfaces(self):
         ifaces = {}
         for ifname, ifstate in six.viewitems(self.interfaces):
@@ -189,6 +288,16 @@ class State(object):
     @staticmethod
     def _index_interfaces_state_by_name(state):
         return {iface['name']: iface for iface in state.get(Interface.KEY, [])}
+
+    @staticmethod
+    def _index_routes_by_iface(routes):
+        iface_routes = defaultdict(list)
+        for route in routes:
+            if Route.NEXT_HOP_INTERFACE in route:
+                iface_routes[route[Route.NEXT_HOP_INTERFACE]].append(route)
+        for iface_name, routes in six.viewitems(iface_routes):
+            routes.sort(key=_route_sort_key)
+        return iface_routes
 
     def _clean_sanitize_ethernet(self):
         for ifstate in six.viewvalues(self.interfaces):
@@ -264,3 +373,9 @@ def dict_update(origin_data, to_merge_data):
         else:
             origin_data[key] = val
     return origin_data
+
+
+def _route_sort_key(route):
+    return (route.get(Route.TABLE_ID, Route.USE_DEFAULT_ROUTE_TABLE),
+            route.get(Route.NEXT_HOP_INTERFACE, ''),
+            route.get(Route.DESTINATION, ''))
