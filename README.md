@@ -112,11 +112,25 @@ systemctl restart openvswitch
 systemctl enable --now NetworkManager openvswitch
 ```
 
-### Install nmstate from PyPi
+### Install nmstate from PyPi (Python 2)
 ```shell
 yum -y install python2-pip
 pip uninstall -y nmstate; pip install nmstate
 ```
+
+### Install nmstate from PyPi on RHEL 8
+
+Minimal Nmstate installation:
+``` shell
+# install binary dependencies; The development packages are needed to build
+# python-dbus which is improperly packaged on RHEL 8
+yum install -y dbus-devel gcc glib2-devel make python3-devel python3-gobject-base
+yum install -y python3-pip
+pip3 uninstall -y nmstate; pip3 install nmstate
+```
+
+For all features, extra workarounds and other packages might be necessary, see
+the pre-requirements section for details.
 
 ### Install nmstate from source
 Install just for the local user:
