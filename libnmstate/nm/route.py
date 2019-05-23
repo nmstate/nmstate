@@ -16,12 +16,14 @@
 #
 
 from operator import itemgetter
-from libnmstate.error import NmstateInternalError
-from libnmstate.schema import Route
+import socket
 
 from libnmstate import iplib
+from libnmstate.error import NmstateInternalError
+from libnmstate.nm import nmclient
+from libnmstate.schema import Route
 
-NM_MAIN_ROUTE_TABLE_ID = 0
+NM_ROUTE_TABLE_ATTRIBUTE = 'table'
 IPV4_DEFAULT_GATEWAY_DESTINATION = '0.0.0.0/0'
 IPV6_DEFAULT_GATEWAY_DESTINATION = '::/0'
 
@@ -102,7 +104,7 @@ def get_config(acs_and_ip_profiles):
 
 
 def _get_per_route_table_id(nm_route, default_table_id):
-    table = nm_route.get_attribute('table')
+    table = nm_route.get_attribute(NM_ROUTE_TABLE_ATTRIBUTE)
     return int(table.get_uint32()) if table else default_table_id
 
 
@@ -141,3 +143,26 @@ def _get_default_route_config(gateway, metric, default_table_id, iface_name):
         Route.NEXT_HOP_ADDRESS: gateway,
         Route.METRIC: metric,
     }
+
+
+def add_routes(setting_ip, routes):
+    for route in routes:
+        _add_specfic_route(setting_ip, route)
+
+
+def _add_specfic_route(setting_ip, route):
+    destination, prefix_len = route[Route.DESTINATION].split('/')
+    prefix_len = int(prefix_len)
+    if iplib.is_ipv6_address(destination):
+        family = socket.AF_INET6
+    else:
+        family = socket.AF_INET
+    metric = route.get(Route.METRIC, Route.USE_DEFAULT_METRIC)
+    next_hop = route[Route.NEXT_HOP_ADDRESS]
+    ip_route = nmclient.NM.IPRoute.new(family, destination, prefix_len,
+                                       next_hop, metric)
+    table_id = route.get(Route.TABLE_ID, Route.USE_DEFAULT_ROUTE_TABLE)
+    ip_route.set_attribute(NM_ROUTE_TABLE_ATTRIBUTE,
+                           nmclient.GLib.Variant.new_uint32(table_id))
+    # Duplicate route entry will be ignored by libnm.
+    setting_ip.add_route(ip_route)

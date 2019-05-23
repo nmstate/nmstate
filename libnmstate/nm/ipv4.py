@@ -18,6 +18,7 @@
 import socket
 
 from . import nmclient
+from libnmstate import metadata
 from libnmstate.nm import route as nm_route
 
 
@@ -31,6 +32,7 @@ def create_setting(config, base_con_profile):
             setting_ipv4.props.ignore_auto_routes = False
             setting_ipv4.props.never_default = False
             setting_ipv4.props.ignore_auto_dns = False
+            setting_ipv4.clear_routes()
 
     if not setting_ipv4:
         setting_ipv4 = nmclient.NM.SettingIP4Config.new()
@@ -51,6 +53,7 @@ def create_setting(config, base_con_profile):
             setting_ipv4.props.method = (
                 nmclient.NM.SETTING_IP4_CONFIG_METHOD_MANUAL)
             _add_addresses(setting_ipv4, config['address'])
+        nm_route.add_routes(setting_ipv4, config.get(metadata.ROUTES, []))
     return setting_ipv4
 
 

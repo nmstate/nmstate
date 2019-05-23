@@ -19,6 +19,7 @@ import logging
 import socket
 
 from libnmstate import iplib
+from libnmstate import metadata
 from libnmstate.error import NmstateNotImplementedError
 from libnmstate.nm import nmclient
 from libnmstate.nm import route as nm_route
@@ -89,6 +90,7 @@ def create_setting(config, base_con_profile):
             setting_ip.props.ignore_auto_routes = False
             setting_ip.props.never_default = False
             setting_ip.props.ignore_auto_dns = False
+            setting_ip.clear_routes()
 
     if not setting_ip:
         setting_ip = nmclient.NM.SettingIP6Config.new()
@@ -116,6 +118,7 @@ def create_setting(config, base_con_profile):
         setting_ip.props.method = (
             nmclient.NM.SETTING_IP6_CONFIG_METHOD_LINK_LOCAL)
 
+    nm_route.add_routes(setting_ip, config.get(metadata.ROUTES, []))
     return setting_ip
 
 
