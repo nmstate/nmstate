@@ -54,6 +54,8 @@ class Route(object):
     NEXT_HOP_INTERFACE = 'next-hop-interface'
     NEXT_HOP_ADDRESS = 'next-hop-address'
     METRIC = 'metric'
+    USE_DEFAULT_METRIC = -1
+    USE_DEFAULT_ROUTE_TABLE = 0
 
 
 class DNS(object):

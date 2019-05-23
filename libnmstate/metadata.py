@@ -23,6 +23,7 @@ from libnmstate.appliers import linux_bridge
 BRPORT_OPTIONS = '_brport_options'
 MASTER = '_master'
 MASTER_TYPE = '_master_type'
+ROUTES = '_routes'
 
 
 def generate_ifaces_metadata(desired_state, current_state):
