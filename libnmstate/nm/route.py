@@ -20,6 +20,7 @@ import socket
 
 from libnmstate import iplib
 from libnmstate.error import NmstateInternalError
+from libnmstate.error import NmstateNotImplementedError
 from libnmstate.nm import nmclient
 from libnmstate.schema import Route
 
@@ -147,7 +148,16 @@ def _get_default_route_config(gateway, metric, default_table_id, iface_name):
 
 def add_routes(setting_ip, routes):
     for route in routes:
-        _add_specfic_route(setting_ip, route)
+        if route[Route.DESTINATION] in (IPV4_DEFAULT_GATEWAY_DESTINATION,
+                                        IPV6_DEFAULT_GATEWAY_DESTINATION):
+            if setting_ip.get_gateway():
+                raise NmstateNotImplementedError(
+                    'Only a single default gateway is supported due to a '
+                    'limitation of NetworkManager: '
+                    'https://bugzilla.redhat.com/1707396')
+            _add_route_gateway(setting_ip, route)
+        else:
+            _add_specfic_route(setting_ip, route)
 
 
 def _add_specfic_route(setting_ip, route):
@@ -166,3 +176,11 @@ def _add_specfic_route(setting_ip, route):
                            nmclient.GLib.Variant.new_uint32(table_id))
     # Duplicate route entry will be ignored by libnm.
     setting_ip.add_route(ip_route)
+
+
+def _add_route_gateway(setting_ip, route):
+    setting_ip.props.gateway = route[Route.NEXT_HOP_ADDRESS]
+    setting_ip.props.route_table = route.get(Route.TABLE_ID,
+                                             Route.USE_DEFAULT_ROUTE_TABLE)
+    setting_ip.props.route_metric = route.get(Route.METRIC,
+                                              Route.USE_DEFAULT_METRIC)
