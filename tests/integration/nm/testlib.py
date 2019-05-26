@@ -20,12 +20,18 @@ import functools
 from libnmstate import nm
 
 
+class TestMainloopError(Exception):
+    pass
+
+
 @contextmanager
 def mainloop():
     mloop = nm.nmclient.mainloop()
     yield
     success = mloop.run(timeout=5)
-    assert success, 'Mainloop error: ' + mloop.error
+    if not success:
+        nm.nmclient.mainloop(refresh=True)
+        raise TestMainloopError(mloop.error)
 
 
 def mainloop_run(func):

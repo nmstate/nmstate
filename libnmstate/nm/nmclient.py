@@ -59,9 +59,17 @@ def client(refresh=False):
     return _nmclient
 
 
-def mainloop():
+def mainloop(refresh=False):
+    """
+    Create a singleton (global) mainloop object.
+
+    When the refresh flag is set, the existing mainloop object is re-created.
+    Use the refresh flag in scenarios where the mainloop is needed but
+    the existing object is no longer usable (in an undefined state),
+    e.g. the mainloop exited with failure.
+    """
     global _mainloop
-    if _mainloop is None:
+    if _mainloop is None or refresh:
         _mainloop = _MainLoop()
     return _mainloop
 
