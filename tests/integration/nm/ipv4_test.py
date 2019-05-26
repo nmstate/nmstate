@@ -18,6 +18,7 @@
 from libnmstate import nm
 
 from .testlib import mainloop
+from ..testlib.monitorlib import monitor_stable_link_state
 
 
 TEST_IFACE = 'eth1'
@@ -26,16 +27,17 @@ IPV4_ADDRESS1 = '192.0.2.251'
 
 
 def test_interface_ipv4_change(eth1_up):
-    with mainloop():
-        _modify_interface(
-            ipv4_state={
-                'enabled': True,
-                'dhcp': False,
-                'address': [
-                    {'ip': IPV4_ADDRESS1, 'prefix-length': 24}
-                ]
-            }
-        )
+    with monitor_stable_link_state(TEST_IFACE):
+        with mainloop():
+            _modify_interface(
+                ipv4_state={
+                    'enabled': True,
+                    'dhcp': False,
+                    'address': [
+                        {'ip': IPV4_ADDRESS1, 'prefix-length': 24}
+                    ]
+                }
+            )
 
     nm.nmclient.client(refresh=True)
     ipv4_current_state = _get_ipv4_current_state(TEST_IFACE)
