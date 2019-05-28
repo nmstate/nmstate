@@ -49,6 +49,8 @@ class Route(object):
 
     RUNNING = 'running'
     CONFIG = 'config'
+    STATE = 'state'
+    STATE_ABSENT = 'absent'
     TABLE_ID = 'table-id'
     DESTINATION = 'destination'
     NEXT_HOP_INTERFACE = 'next-hop-interface'
