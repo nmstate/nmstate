@@ -32,6 +32,66 @@ from libnmstate.schema import Ethernet
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
+from libnmstate.schema import Route
+
+
+class RouteEntry(object):
+    def __init__(self, route):
+        self.table_id = route.get(Route.TABLE_ID)
+        self.state = route.get(Route.STATE)
+        self.metric = route.get(Route.METRIC)
+        self.destination = route.get(Route.DESTINATION)
+        self.next_hop_address = route.get(Route.NEXT_HOP_ADDRESS)
+        self.next_hop_interface = route.get(Route.NEXT_HOP_INTERFACE)
+        self.complement_defaults()
+
+    def complement_defaults(self):
+        if self.state != Route.STATE_ABSENT:
+            if self.table_id is None:
+                self.table_id = Route.USE_DEFAULT_ROUTE_TABLE
+            if self.metric is None:
+                self.metric = Route.USE_DEFAULT_METRIC
+            if self.next_hop_address is None:
+                self.next_hop_address = ''
+
+    def __hash__(self):
+        return hash(self.__keys())
+
+    def __keys(self):
+        return (self.table_id, self.metric, self.destination,
+                self.next_hop_address, self.next_hop_interface)
+
+    def to_dict(self):
+        route_entry = {}
+        for key, value in six.viewitems(vars(self)):
+            if value is not None:
+                route_entry[key.replace('_', '-')] = value
+        return route_entry
+
+    def __eq__(self, other):
+        return self is other or self.to_dict() == other.to_dict()
+
+    def __ne__(self, other):
+        """
+        Workaround for python2
+        """
+        return not self.__eq__(other)
+
+    def is_match(self, other):
+        """
+        Return True if other route is matched by self absent route.
+        """
+        if self.state != Route.STATE_ABSENT:
+            return False
+
+        if other.state == Route.STATE_ABSENT:
+            # Absent route cannot match another absent route
+            return False
+
+        for self_value, other_value in zip(self.__keys(), other.__keys()):
+            if self_value is not None and self_value != other_value:
+                return False
+        return True
 
 
 def create_state(state, interfaces_to_filter=None):
