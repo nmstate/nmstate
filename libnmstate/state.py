@@ -20,6 +20,7 @@ try:
 except ImportError:
     from collections import Mapping
 
+from collections import defaultdict
 import copy
 from operator import itemgetter
 import six
@@ -117,6 +118,10 @@ class State(object):
         self._state = copy.deepcopy(state)
         self._ifaces_state = State._index_interfaces_state_by_name(self._state)
         self._complement_interface_empty_ip_subtrees()
+        self._config_routes = self._state.get(
+            Route.KEY, {}).get(Route.CONFIG, [])
+        self._config_iface_routes = State._index_routes_by_iface(
+            self._config_routes)
 
     def __eq__(self, other):
         return self.state == other.state
@@ -142,6 +147,13 @@ class State(object):
     def interfaces(self):
         """ Indexed interfaces state """
         return self._ifaces_state
+
+    @property
+    def config_iface_routes(self):
+        """
+        Indexed config routes by next hop interface name. Read only.
+        """
+        return self._config_iface_routes
 
     def _complement_interface_empty_ip_subtrees(self):
         """ Complement the interfaces states with empty IPv4/IPv6 subtrees. """
@@ -253,6 +265,17 @@ class State(object):
         return {iface[Interface.NAME]: iface
                 for iface in state.get(Interface.KEY, [])}
 
+    @staticmethod
+    def _index_routes_by_iface(routes):
+        iface_routes = defaultdict(list)
+        for route in routes:
+            iface_name = route.get(Route.NEXT_HOP_INTERFACE)
+            if iface_name:
+                iface_routes[iface_name].append(route)
+        for routes in six.viewvalues(iface_routes):
+            routes.sort(key=_route_sort_key)
+        return iface_routes
+
     def _clean_sanitize_ethernet(self):
         for ifstate in six.viewvalues(self.interfaces):
             ethernet_state = ifstate.get(Ethernet.CONFIG_SUBTREE)
@@ -329,3 +352,9 @@ def dict_update(origin_data, to_merge_data):
         else:
             origin_data[key] = val
     return origin_data
+
+
+def _route_sort_key(route):
+    return (route.get(Route.TABLE_ID, Route.USE_DEFAULT_ROUTE_TABLE),
+            route.get(Route.NEXT_HOP_INTERFACE, ''),
+            route.get(Route.DESTINATION, ''))
