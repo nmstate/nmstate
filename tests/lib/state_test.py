@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
+from collections import defaultdict
 import copy
 
 import pytest
@@ -241,6 +242,79 @@ class TestAssertRouteState(object):
         assert not obj1.is_match(obj2)
 
 
+def test_state_empty_routes():
+    route_state = state.State(
+        {
+            Route.KEY: {
+                Route.CONFIG: []
+            }
+        }
+    )
+
+    assert {} == route_state.config_iface_routes
+
+
+def test_state_iface_routes_with_distinct_ifaces():
+    routes = _get_mixed_test_routes()
+    route_state = state.State(
+        {
+            Route.KEY: {
+                Route.CONFIG: routes
+            }
+        }
+    )
+    expected_indexed_route_state = defaultdict(list)
+    for route in routes:
+        iface_name = route[Route.NEXT_HOP_INTERFACE]
+        expected_indexed_route_state[iface_name].append(route)
+        # No need to sort the routes as there is only 1 route per interface.
+
+    assert expected_indexed_route_state == route_state.config_iface_routes
+
+
+def test_state_iface_routes_with_same_iface():
+    routes = _get_mixed_test_routes()
+    for route in routes:
+        route[Route.NEXT_HOP_INTERFACE] = 'eth1'
+    route_state = state.State(
+        {
+            Route.KEY: {
+                Route.CONFIG: routes
+            }
+        }
+    )
+    expected_indexed_route_state = {
+        'eth1': sorted(routes, key=_route_sort_key)
+    }
+
+    assert expected_indexed_route_state == route_state.config_iface_routes
+
+
+def test_state_iface_routes_order():
+    # Changing all routes to eth1
+    routes = _get_mixed_test_routes()
+    for route in routes:
+        route[Route.NEXT_HOP_INTERFACE] = 'eth1'
+
+    route_state = state.State(
+        {
+            Route.KEY: {
+                Route.CONFIG: [routes[0], routes[1]],
+            }
+        }
+    )
+    reverse_route_state = state.State(
+        {
+            Route.KEY: {
+                Route.CONFIG: [routes[1], routes[0]],
+            }
+        }
+    )
+
+    assert (route_state.config_iface_routes ==
+            reverse_route_state.config_iface_routes)
+
+
 def _get_mixed_test_routes():
     return [
         {
@@ -258,3 +332,9 @@ def _get_mixed_test_routes():
             Route.TABLE_ID: 51
         }
     ]
+
+
+def _route_sort_key(route):
+    return (route.get(Route.TABLE_ID, Route.USE_DEFAULT_ROUTE_TABLE),
+            route.get(Route.NEXT_HOP_INTERFACE, ''),
+            route.get(Route.DESTINATION, ''))
