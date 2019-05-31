@@ -241,6 +241,38 @@ class State(object):
             dict_update(other_state.interfaces[name], self.interfaces[name])
             self._ifaces_state[name] = other_state.interfaces[name]
 
+    def merge_route_config(self, other_state):
+        """
+        Converting route partial editing to route full editing by
+        merging config routes from other state to self.
+        Assuming the other state is from `netinfo.show()` which don't have
+        absent routes in it.
+        """
+        self_iface_route_sets = defaultdict(set)
+
+        for route in self._config_routes:
+            if route.get(Route.STATE) != Route.STATE_ABSENT:
+                # The absent route is discarded, so the metadata.py don't need
+                # handle it.
+                if Route.NEXT_HOP_INTERFACE in route:
+                    self_iface_route_sets[route[Route.NEXT_HOP_INTERFACE]].add(
+                        RouteEntry(route))
+
+        for route in other_state._config_routes:
+            # The other_state(running state) does not have any absent
+            # route entry and all have NEXT_HOP_INTERFACE
+            iface_name = route[Route.NEXT_HOP_INTERFACE]
+            self_iface_route_sets[iface_name].add(RouteEntry(route))
+
+        merged_routes = []
+        for iface_name, route_set in six.viewitems(self_iface_route_sets):
+            merged_routes.extend(
+                list(route_obj.to_dict() for route_obj in route_set))
+
+        self._config_routes = merged_routes
+        self._config_iface_routes = State._index_routes_by_iface(
+            self._config_routes)
+
     def _remove_absent_interfaces(self):
         ifaces = {}
         for ifname, ifstate in six.viewitems(self.interfaces):
