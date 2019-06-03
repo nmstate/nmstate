@@ -219,6 +219,19 @@ class State(object):
 
         self._assert_interfaces_equal(other_state)
 
+    def verify_routes(self, other_state):
+        for iface_name, routes in six.viewitems(self.config_iface_routes):
+            other_routes = other_state.config_iface_routes.get(iface_name, [])
+            if routes != other_routes:
+                raise NmstateVerificationError(
+                    format_desired_current_state_diff(
+                        {
+                            Route.KEY: routes
+                        },
+                        {
+                            Route.KEY: other_routes
+                        }))
+
     def normalize_for_verification(self):
         self._clean_sanitize_ethernet()
         self._sort_lag_slaves()
