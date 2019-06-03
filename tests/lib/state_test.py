@@ -491,6 +491,62 @@ def test_merge_desired_route_ip_disabled():
             desired_state.merge_route_config(state.State({}))
 
 
+def test_state_verify_route_same():
+    routes = _get_mixed_test_routes()
+    route_state = state.State({
+        Route.KEY: {
+            Route.CONFIG: routes
+        }
+    })
+    route_state_2 = state.State({
+        Route.KEY: {
+            Route.CONFIG: routes
+        }
+    })
+    route_state.verify_routes(route_state_2)
+
+
+def test_state_verify_route_diff_route_count():
+    routes = _get_mixed_test_routes()
+    route_state = state.State({
+        Route.KEY: {
+            Route.CONFIG: routes
+        }
+    })
+    route_state_2 = state.State({
+        Route.KEY: {
+            Route.CONFIG: routes[:1]
+        }
+    })
+
+    with pytest.raises(NmstateVerificationError):
+        route_state.verify_routes(route_state_2)
+
+
+def test_state_verify_route_diff_route_prop():
+    routes = _get_mixed_test_routes()
+    route_state = state.State({
+        Route.KEY: {
+            Route.CONFIG: routes
+        }
+    })
+    routes[0][Route.NEXT_HOP_INTERFACE] = 'another_nic'
+    route_state_2 = state.State({
+        Route.KEY: {
+            Route.CONFIG: routes
+        }
+    })
+
+    with pytest.raises(NmstateVerificationError):
+        route_state.verify_routes(route_state_2)
+
+
+def test_state_verify_route_empty():
+    route_state = state.State({})
+    route_state_2 = state.State({})
+    route_state.verify_routes(route_state_2)
+
+
 def _get_mixed_test_routes():
     return [
         {
