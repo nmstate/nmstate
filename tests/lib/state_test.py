@@ -20,8 +20,11 @@ import copy
 import pytest
 
 from libnmstate import state
+from libnmstate.iplib import is_ipv6_address
+from libnmstate.error import NmstateValueError
 from libnmstate.error import NmstateVerificationError
 from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceState
 from libnmstate.schema import Route
 
 
@@ -317,8 +320,10 @@ def test_state_iface_routes_order():
 
 def test_state_merge_config_add():
     routes = _get_mixed_test_routes()
+    iface_states = _gen_iface_states_for_routes(routes)
     other_state = state.State(
         {
+            Interface.KEY: iface_states,
             Route.KEY: {
                 Route.CONFIG: [routes[0]],
             }
@@ -345,8 +350,10 @@ def test_state_merge_config_add():
 
 def test_state_merge_config_add_duplicate():
     routes = _get_mixed_test_routes()
+    iface_states = _gen_iface_states_for_routes(routes)
     other_state = state.State(
         {
+            Interface.KEY: iface_states,
             Route.KEY: {
                 Route.CONFIG: routes,
             }
@@ -373,8 +380,10 @@ def test_state_merge_config_add_duplicate():
 
 def test_state_merge_config_add_empty():
     routes = _get_mixed_test_routes()
+    iface_states = _gen_iface_states_for_routes(routes)
     other_state = state.State(
         {
+            Interface.KEY: iface_states,
             Route.KEY: {
                 Route.CONFIG: routes,
             }
@@ -400,6 +409,7 @@ def test_state_merge_config_add_empty():
 
 def test_state_merge_config_discard_absent():
     routes = _get_mixed_test_routes()
+    iface_states = _gen_iface_states_for_routes(routes)
     for route in routes:
         route[Route.STATE] = Route.STATE_ABSENT
     other_state = state.State(
@@ -411,6 +421,7 @@ def test_state_merge_config_discard_absent():
     )
     route_state = state.State(
         {
+            Interface.KEY: iface_states,
             Route.KEY: {
                 Route.CONFIG: routes
             }
@@ -420,6 +431,64 @@ def test_state_merge_config_discard_absent():
 
     expected_indexed_route_state = {}
     assert expected_indexed_route_state == route_state.config_iface_routes
+
+
+def test_merge_desired_route_iface_down():
+    routes = _get_mixed_test_routes()
+    iface_states = _gen_iface_states_for_routes(routes)
+    iface_states[0][Interface.STATE] = InterfaceState.DOWN
+    desired_state = state.State(
+        {
+            Interface.KEY: iface_states,
+            Route.KEY: {
+                Route.CONFIG: routes,
+            }
+        }
+    )
+    with pytest.raises(NmstateValueError):
+        desired_state.merge_route_config(state.State({}))
+
+
+def test_merge_desired_route_iface_missing():
+    routes = _get_mixed_test_routes()
+    iface_states = _gen_iface_states_for_routes(routes)
+    routes[0][Route.NEXT_HOP_INTERFACE] = 'not_exists'
+    desired_state = state.State(
+        {
+            Interface.KEY: iface_states,
+            Route.KEY: {
+                Route.CONFIG: routes,
+            }
+        }
+    )
+    with pytest.raises(NmstateValueError):
+        desired_state.merge_route_config(state.State({}))
+
+
+def test_merge_desired_route_ip_disabled():
+    routes = _get_mixed_test_routes()
+    ipv4_routes = []
+    ipv6_routes = []
+
+    for route in routes:
+        if is_ipv6_address(route[Route.DESTINATION]):
+            ipv6_routes.append(route)
+        else:
+            ipv4_routes.append(route)
+    for routes in (ipv4_routes, ipv6_routes):
+        iface_states = _gen_iface_states_for_routes(routes)
+        iface_states[0][Interface.IPV4]['enabled'] = False
+        iface_states[0][Interface.IPV6]['enabled'] = False
+        desired_state = state.State(
+            {
+                Interface.KEY: iface_states,
+                Route.KEY: {
+                    Route.CONFIG: routes,
+                }
+            }
+        )
+        with pytest.raises(NmstateValueError):
+            desired_state.merge_route_config(state.State({}))
 
 
 def _get_mixed_test_routes():
@@ -438,6 +507,23 @@ def _get_mixed_test_routes():
             Route.NEXT_HOP_ADDRESS: '2001:db8:1::a',
             Route.TABLE_ID: 51
         }
+    ]
+
+
+def _gen_iface_states_for_routes(routes):
+    ifaces = set([route[Route.NEXT_HOP_INTERFACE] for route in routes])
+    return [
+        {
+            Interface.NAME: iface,
+            Interface.STATE: InterfaceState.UP,
+            Interface.IPV4: {
+                'enabled': True
+            },
+            Interface.IPV6: {
+                'enabled': True
+            }
+        }
+        for iface in ifaces
     ]
 
 

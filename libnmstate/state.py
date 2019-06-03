@@ -27,6 +27,7 @@ import six
 
 from libnmstate import iplib
 from libnmstate import metadata
+from libnmstate.error import NmstateValueError
 from libnmstate.error import NmstateVerificationError
 from libnmstate.prettystate import format_desired_current_state_diff
 from libnmstate.schema import Ethernet
@@ -248,6 +249,11 @@ class State(object):
         Assuming the other state is from `netinfo.show()` which don't have
         absent routes in it.
         """
+        iface_enable_states = _get_iface_enable_states(self, other_state)
+        ipv4_enable_states = _get_ip_enable_states(
+            Interface.IPV4, self, other_state)
+        ipv6_enable_states = _get_ip_enable_states(
+            Interface.IPV6, self, other_state)
         self_iface_route_sets = defaultdict(set)
 
         for route in self._config_routes:
@@ -258,11 +264,20 @@ class State(object):
                     self_iface_route_sets[route[Route.NEXT_HOP_INTERFACE]].add(
                         RouteEntry(route))
 
+        _validate_routes(self_iface_route_sets,
+                         iface_enable_states,
+                         ipv4_enable_states,
+                         ipv6_enable_states)
+
         for route in other_state._config_routes:
             # The other_state(running state) does not have any absent
             # route entry and all have NEXT_HOP_INTERFACE
-            iface_name = route[Route.NEXT_HOP_INTERFACE]
-            self_iface_route_sets[iface_name].add(RouteEntry(route))
+            if _route_is_valid(route,
+                               iface_enable_states,
+                               ipv4_enable_states,
+                               ipv6_enable_states):
+                iface_name = route[Route.NEXT_HOP_INTERFACE]
+                self_iface_route_sets[iface_name].add(RouteEntry(route))
 
         merged_routes = []
         for iface_name, route_set in six.viewitems(self_iface_route_sets):
@@ -390,3 +405,81 @@ def _route_sort_key(route):
     return (route.get(Route.TABLE_ID, Route.USE_DEFAULT_ROUTE_TABLE),
             route.get(Route.NEXT_HOP_INTERFACE, ''),
             route.get(Route.DESTINATION, ''))
+
+
+def _validate_routes(iface_route_sets, iface_enable_states,
+                     ipv4_enable_states, ipv6_enable_states):
+    """
+    Check whether user desire routes next hop to:
+        * down/absent interface
+        * Non-exit interface
+        * IPv4/IPv6 disabled
+    """
+    for iface_name, route_set in six.viewitems(iface_route_sets):
+        if not route_set:
+            continue
+        iface_enable_state = iface_enable_states.get(iface_name)
+        if iface_enable_state is None:
+            raise NmstateValueError('Cannot set route to non-exist interface')
+        if iface_enable_state != InterfaceState.UP:
+            raise NmstateValueError(
+                'Cannot set route to {} interface'.format(iface_enable_state))
+        # Interface is already check, so the ip enable status should be defined
+        ipv4_enabled = ipv4_enable_states[iface_name]
+        ipv6_enabled = ipv6_enable_states[iface_name]
+        for route_obj in route_set:
+            if iplib.is_ipv6_address(route_obj.destination):
+                if not ipv6_enabled:
+                    raise NmstateValueError(
+                        'Cannot set IPv6 route when IPv6 is disabled')
+            elif not ipv4_enabled:
+                    raise NmstateValueError(
+                        'Cannot set IPv4 route when IPv4 is disabled')
+
+
+def _get_iface_enable_states(desire_state, current_state):
+    iface_enable_states = {}
+    for iface_name, iface_state in six.viewitems(current_state.interfaces):
+        iface_enable_states[iface_name] = iface_state[Interface.STATE]
+    for iface_name, iface_state in six.viewitems(desire_state.interfaces):
+        if Interface.STATE in iface_state:
+            # If desire_state does not have Interface.STATE, it will use
+            # current_state settings.
+            iface_enable_states[iface_name] = iface_state[Interface.STATE]
+    return iface_enable_states
+
+
+def _get_ip_enable_states(family, desire_state, current_state):
+    ip_enable_states = {}
+    for iface_name, iface_state in six.viewitems(current_state.interfaces):
+        ip_enable_states[iface_name] = iface_state.get(
+            family, {}).get('enabled', False)
+    for iface_name, iface_state in six.viewitems(desire_state.interfaces):
+        ip_enable_state = iface_state.get(family, {}).get('enabled')
+        if ip_enable_state is not None:
+            # If desire_state does not have Interface.IPV4/IPV6, it will use
+            # current_state settings.
+            ip_enable_states[iface_name] = ip_enable_state
+
+    return ip_enable_states
+
+
+def _route_is_valid(route, iface_enable_states, ipv4_enable_states,
+                    ipv6_enable_states):
+    """
+    Return False when route is next hop to any of these interfaces:
+        * Interface not in InterfaceState.UP state.
+        * Interface does not exists.
+        * Interface has IPv4/IPv6 disabled.
+    """
+    iface_name = route[Route.NEXT_HOP_INTERFACE]
+    iface_enable_state = iface_enable_states.get(iface_name)
+    if iface_enable_state != InterfaceState.UP:
+        return False
+    if iplib.is_ipv6_address(route[Route.DESTINATION]):
+        if not ipv6_enable_states.get(iface_name):
+            return False
+    else:
+        if not ipv4_enable_states.get(iface_name):
+            return False
+    return True
