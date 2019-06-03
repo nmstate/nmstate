@@ -547,6 +547,94 @@ def test_state_verify_route_empty():
     route_state.verify_routes(route_state_2)
 
 
+def test_state_merge_config_specific_remove():
+    routes = _get_mixed_test_routes()
+    iface_states = _gen_iface_states_for_routes(routes)
+    current_state = state.State({
+        Interface.KEY: iface_states,
+        Route.KEY: {
+            Route.CONFIG: routes
+        }
+    })
+    absent_route = routes[0]
+    absent_route[Route.STATE] = Route.STATE_ABSENT
+    desired_state = state.State({
+        Interface.KEY: iface_states,
+        Route.KEY: {
+            Route.CONFIG: [absent_route]
+        }
+    })
+
+    desired_state.merge_route_config(current_state)
+
+    expected_indexed_route_state = defaultdict(list)
+    for route in routes[1:]:
+        iface_name = route[Route.NEXT_HOP_INTERFACE]
+        expected_indexed_route_state[iface_name].append(route)
+        # No need to sort the routes as there is only 1 route per interface.
+
+    assert expected_indexed_route_state == desired_state.config_iface_routes
+
+
+def test_state_remote_route_wildcard_with_iface():
+    routes = _get_mixed_test_routes()
+    iface_states = _gen_iface_states_for_routes(routes)
+    current_state = state.State({
+        Interface.KEY: iface_states,
+        Route.KEY: {
+            Route.CONFIG: routes
+        }
+    })
+    absent_route_iface_name = routes[0][Route.NEXT_HOP_INTERFACE]
+    absent_route = {
+        Route.STATE: Route.STATE_ABSENT,
+        Route.NEXT_HOP_INTERFACE: absent_route_iface_name
+    }
+    desired_state = state.State({
+        Interface.KEY: iface_states,
+        Route.KEY: {
+            Route.CONFIG: [absent_route]
+        }
+    })
+
+    desired_state.merge_route_config(current_state)
+
+    expected_indexed_route_state = defaultdict(list)
+    for route in routes:
+        iface_name = route[Route.NEXT_HOP_INTERFACE]
+        if iface_name != absent_route_iface_name:
+            expected_indexed_route_state[iface_name].append(route)
+            # No need to sort the routes as there is only 1 route per
+            # interface.
+
+    assert expected_indexed_route_state == desired_state.config_iface_routes
+
+
+def test_state_remote_route_wildcard_destination_without_iface():
+    routes = _get_mixed_test_routes()
+    current_state = state.State({
+        Route.KEY: {
+            Route.CONFIG: routes
+        }
+    })
+    absent_routes = []
+    for route in routes:
+        absent_routes.append({
+            Route.STATE: Route.STATE_ABSENT,
+            Route.DESTINATION: route[Route.DESTINATION]
+        })
+    desired_state = state.State({
+        Route.KEY: {
+            Route.CONFIG: absent_routes
+        }
+    })
+
+    desired_state.merge_route_config(current_state)
+
+    expected_indexed_route_state = {}
+    assert expected_indexed_route_state == desired_state.config_iface_routes
+
+
 def _get_mixed_test_routes():
     return [
         {
