@@ -22,6 +22,7 @@ import pytest
 
 from libnmstate import netapplier
 from libnmstate import netinfo
+from libnmstate.schema import Interface
 from libnmstate.error import NmstateVerificationError
 
 from .testlib import assertlib
@@ -62,6 +63,22 @@ def test_add_and_remove_vlan(eth1_up):
 
     current_state = statelib.show_only((VLAN_IFNAME,))
     assert not current_state[INTERFACES]
+
+
+@pytest.fixture
+def vlan_on_eth1(eth1_up):
+    with vlan_interface(VLAN_IFNAME, 101) as desired_state:
+        base_iface_name = desired_state[INTERFACES][0]['vlan']['base-iface']
+        iface_states = statelib.show_only((base_iface_name, VLAN_IFNAME))
+        yield iface_states
+
+
+def test_vlan_iface_uses_the_mac_of_base_iface(vlan_on_eth1):
+    base_iface_state = vlan_on_eth1[INTERFACES][0]
+    vlan_iface_state = vlan_on_eth1[INTERFACES][1]
+    base_iface_mac = base_iface_state[Interface.MAC]
+    vlan_iface_mac = vlan_iface_state[Interface.MAC]
+    assert base_iface_mac == vlan_iface_mac
 
 
 def test_add_and_remove_two_vlans_on_same_iface(eth1_up):
