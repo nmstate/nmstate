@@ -22,6 +22,7 @@ import pytest
 
 from libnmstate import netapplier
 from libnmstate import netinfo
+from libnmstate.schema import Interface
 from libnmstate.error import NmstateVerificationError
 
 from .testlib import assertlib
@@ -101,6 +102,21 @@ def test_set_vlan_iface_down(eth1_up):
 
         current_state = statelib.show_only((VLAN_IFNAME,))
         assert not current_state[INTERFACES]
+
+
+def test_mac_addr_behavior_with_vlan(eth1_up):
+    with vlan_interface(VLAN_IFNAME, 101) as desired_state:
+        assertlib.assert_state(desired_state)
+        base_iface_name = desired_state[INTERFACES][0]['vlan']['base-iface']
+        base_iface_state = statelib.show_only((base_iface_name,))
+        base_iface_mac = base_iface_state[INTERFACES][0][Interface.MAC]
+
+        vlan_state = statelib.show_only((VLAN_IFNAME,))
+        vlan_mac = vlan_state[INTERFACES][0][Interface.MAC]
+        assert base_iface_mac == vlan_mac
+
+    current_state = statelib.show_only((VLAN_IFNAME,))
+    assert not current_state[INTERFACES]
 
 
 @contextmanager
