@@ -106,10 +106,11 @@ def _choose_checkpoint(dbuspath):
 
 def _apply_ifaces_state(desired_state, verify_change, commit,
                         rollback_timeout):
-    current_state = state.State({schema.Interface.KEY: netinfo.interfaces()})
+    current_state = state.State(netinfo.show())
 
     desired_state.sanitize_ethernet(current_state)
     desired_state.sanitize_dynamic_ip()
+    desired_state.merge_route_config(current_state)
     metadata.generate_ifaces_metadata(desired_state, current_state)
 
     validator.validate_interfaces_state(desired_state, current_state)
@@ -122,9 +123,7 @@ def _apply_ifaces_state(desired_state, verify_change, commit,
             with _setup_providers():
                 _add_interfaces(new_interfaces, desired_state)
             with _setup_providers():
-                current_state = state.State(
-                    {schema.Interface.KEY: netinfo.interfaces()}
-                )
+                current_state = state.State(netinfo.show())
                 state2edit = _create_editable_desired_state(desired_state,
                                                             current_state,
                                                             new_interfaces)
@@ -166,8 +165,9 @@ def _list_new_interfaces(desired_state, current_state):
 
 
 def _verify_change(desired_state):
-    current_state = state.State({schema.Interface.KEY: netinfo.interfaces()})
+    current_state = state.State(netinfo.show())
     desired_state.verify_interfaces(current_state)
+    desired_state.verify_routes(current_state)
 
 
 @contextmanager
