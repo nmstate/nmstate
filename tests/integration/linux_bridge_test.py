@@ -25,6 +25,7 @@ from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import LinuxBridge
 
+from .testlib import statelib
 from .testlib import assertlib
 from .testlib.statelib import INTERFACES
 
@@ -114,5 +115,23 @@ def test_create_and_remove_linux_bridge_with_two_ports(eth1_up, eth2_up):
 
     with linux_bridge(bridge_name, bridge_state) as desired_state:
         assertlib.assert_state(desired_state)
+
+    assertlib.assert_absent(bridge_name)
+
+
+def test_linux_bridge_mac_with_one_iface_uses_default_mac_addr(eth1_up):
+    bridge_name = 'linux-br0'
+    bridge_state = yaml.load(BRIDGE_OPTIONS_YAML, Loader=yaml.SafeLoader)
+    port_state = yaml.load(BRIDGE_PORT_ETH1_YAML, Loader=yaml.SafeLoader)
+    port_name = port_state[LinuxBridge.PORT_SUBTREE][0][LinuxBridge.PORT_NAME]
+    bridge_state.update(port_state)
+
+    with linux_bridge(bridge_name, bridge_state) as desired_state:
+        assertlib.assert_state(desired_state)
+        bridge_state = statelib.show_only((bridge_name,))
+        port_state = statelib.show_only((port_name,))
+        bridge_mac = bridge_state[Interface.KEY][0][Interface.MAC]
+        port_mac = port_state[Interface.KEY][0][Interface.MAC]
+        assert bridge_mac == port_mac
 
     assertlib.assert_absent(bridge_name)
