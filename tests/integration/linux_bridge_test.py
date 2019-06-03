@@ -29,6 +29,9 @@ from .testlib import assertlib
 from .testlib.statelib import INTERFACES
 
 
+TEST_BRIDGE0 = 'linux-br0'
+
+
 BRIDGE_OPTIONS_YAML = """
 options:
   group-forward-mask: 0
@@ -42,38 +45,56 @@ options:
     priority: 32768
 """
 
-BRIDGE_PORT_ETH1_YAML = """
-port:
-  - name: eth1
-    stp-hairpin-mode: false
-    stp-path-cost: 100
-    stp-priority: 32
+BRIDGE_PORT_YAML = """
+stp-hairpin-mode: false
+stp-path-cost: 100
+stp-priority: 32
 """
 
 
-def test_create_and_remove_linux_bridge_with_one_port(eth1_up):
-    bridge_name = 'linux-br0'
-    bridge_state = yaml.load(BRIDGE_OPTIONS_YAML, Loader=yaml.SafeLoader)
-    port_state = yaml.load(BRIDGE_PORT_ETH1_YAML, Loader=yaml.SafeLoader)
-    bridge_state.update(port_state)
-
-    with linux_bridge(bridge_name, bridge_state) as desired_state:
-
-        assertlib.assert_state(desired_state)
-
-    assertlib.assert_absent(bridge_name)
-
-
 def test_create_and_remove_linux_bridge_with_min_desired_state():
-    bridge_name = 'linux-br0'
-    with linux_bridge(bridge_name, bridge_state=None) as desired_state:
+    bridge_name = TEST_BRIDGE0
+    with _linux_bridge(bridge_name, bridge_state=None) as desired_state:
         assertlib.assert_state(desired_state)
 
     assertlib.assert_absent(bridge_name)
+
+
+def test_create_and_remove_linux_bridge_with_one_port(eth1_up):
+    bridge_name = TEST_BRIDGE0
+    bridge_state = _create_bridge_subtree_config(('eth1',))
+    with _linux_bridge(bridge_name, bridge_state) as desired_state:
+
+        assertlib.assert_state(desired_state)
+
+    assertlib.assert_absent(bridge_name)
+
+
+def test_create_and_remove_linux_bridge_with_two_ports(eth1_up, eth2_up):
+    bridge_name = TEST_BRIDGE0
+    bridge_state = _create_bridge_subtree_config(('eth1', 'eth2'))
+
+    with _linux_bridge(bridge_name, bridge_state) as desired_state:
+        assertlib.assert_state(desired_state)
+
+    assertlib.assert_absent(bridge_name)
+
+
+def _create_bridge_subtree_config(port_names):
+    bridge_state = yaml.load(BRIDGE_OPTIONS_YAML, Loader=yaml.SafeLoader)
+
+    ports_state = []
+    for port in port_names:
+        port_state = yaml.load(BRIDGE_PORT_YAML, Loader=yaml.SafeLoader)
+        port_state[LinuxBridge.PORT_NAME] = port
+        ports_state.append(port_state)
+
+    bridge_state[LinuxBridge.PORT_SUBTREE] = ports_state
+    return bridge_state
 
 
 @contextmanager
-def linux_bridge(name, bridge_state):
+def _linux_bridge(name, bridge_state):
     desired_state = {
         INTERFACES: [
             {
@@ -100,19 +121,3 @@ def linux_bridge(name, bridge_state):
                 }
             ]
         })
-
-
-def test_create_and_remove_linux_bridge_with_two_ports(eth1_up, eth2_up):
-    bridge_name = 'linux-br0'
-    bridge_state = yaml.load(BRIDGE_OPTIONS_YAML, Loader=yaml.SafeLoader)
-    port1_state = yaml.load(BRIDGE_PORT_ETH1_YAML, Loader=yaml.SafeLoader)
-    port2_state = yaml.load(BRIDGE_PORT_ETH1_YAML, Loader=yaml.SafeLoader)
-    port2_state[LinuxBridge.PORT_SUBTREE][0][LinuxBridge.PORT_NAME] = 'eth2'
-    bridge_state.update(port1_state)
-    bridge_state[LinuxBridge.PORT_SUBTREE].append(
-        port2_state[LinuxBridge.PORT_SUBTREE][0])
-
-    with linux_bridge(bridge_name, bridge_state) as desired_state:
-        assertlib.assert_state(desired_state)
-
-    assertlib.assert_absent(bridge_name)
