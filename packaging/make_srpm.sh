@@ -7,6 +7,22 @@ TMP_DIR=$(mktemp -d)
 SPEC_FILE="$TMP_DIR/nmstate.spec"
 OLD_PWD=$(pwd)
 
+for candidate in python3 python2 python
+do
+    python="$(command -v "${candidate}")"
+    if [[ -v python ]]
+    then
+        break
+    fi
+done
+
+
+if [[ ! -v python ]]
+then
+    echo >/dev/stderr "ERROR: No python command found."
+    exit 127
+fi
+
 # outdir is used by COPR as well: https://docs.pagure.org/copr.copr/user_documentation.html
 : ${outdir:=${OLD_PWD}}
 
@@ -19,7 +35,7 @@ eval "$(./packaging/get_version.sh)"
 
 TAR_FILE="${TMP_DIR}/nmstate-${VERSION}.tar"
 (
-    python setup.py sdist --format tar --dist-dir $TMP_DIR
+    "${python}" setup.py sdist --format tar --dist-dir $TMP_DIR
 
     ./packaging/make_spec.sh > "${SPEC_FILE}"
     tar --append --file=$TAR_FILE $SPEC_FILE
