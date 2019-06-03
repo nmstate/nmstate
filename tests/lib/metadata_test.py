@@ -20,6 +20,7 @@ from libnmstate import state
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import OVSBridgePortType as OBPortType
+from libnmstate.schema import Route
 
 
 TYPE_BOND = InterfaceType.BOND
@@ -564,3 +565,70 @@ class TestDesiredStateOvsMetadata(object):
 
         assert desired_state == expected_dstate
         assert current_state == expected_cstate
+
+
+def test_route_metadata():
+    routes = _get_mixed_test_routes()
+    desired_state = state.State({
+            Route.KEY: {
+                Route.CONFIG: routes,
+            },
+            Interface.KEY: [
+                {
+                    Interface.NAME: 'eth1',
+                    Interface.TYPE: InterfaceType.ETHERNET,
+                    Interface.IPV4: {},
+                    Interface.IPV6: {},
+                },
+                {
+                    Interface.NAME: 'eth2',
+                    Interface.TYPE: InterfaceType.ETHERNET,
+                    Interface.IPV4: {},
+                    Interface.IPV6: {},
+                },
+            ]
+    })
+    current_state = state.State({})
+    metadata.generate_ifaces_metadata(desired_state, current_state)
+    expected_iface_state = {
+        'eth1': {
+            Interface.NAME: 'eth1',
+            Interface.TYPE: InterfaceType.ETHERNET,
+            Interface.IPV4: {
+                metadata.ROUTES: [routes[0]]
+            },
+            Interface.IPV6: {
+                metadata.ROUTES: []
+            },
+        },
+        'eth2': {
+            Interface.NAME: 'eth2',
+            Interface.TYPE: InterfaceType.ETHERNET,
+            Interface.IPV4: {
+                metadata.ROUTES: []
+            },
+            Interface.IPV6: {
+                metadata.ROUTES: [routes[1]]
+            },
+        }
+    }
+    assert desired_state.interfaces == expected_iface_state
+
+
+def _get_mixed_test_routes():
+    return [
+        {
+            Route.DESTINATION: '198.51.100.0/24',
+            Route.METRIC: 103,
+            Route.NEXT_HOP_INTERFACE: 'eth1',
+            Route.NEXT_HOP_ADDRESS: '192.0.2.1',
+            Route.TABLE_ID: 50
+        },
+        {
+            Route.DESTINATION: '2001:db8:a::/64',
+            Route.METRIC: 104,
+            Route.NEXT_HOP_INTERFACE: 'eth2',
+            Route.NEXT_HOP_ADDRESS: '2001:db8:1::a',
+            Route.TABLE_ID: 51
+        }
+    ]

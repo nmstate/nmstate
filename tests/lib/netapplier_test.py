@@ -76,6 +76,10 @@ def test_iface_admin_state_change(netinfo_nm_mock, netapplier_nm_mock):
         current_config[INTERFACES][0]['ipv4'])
     netinfo_nm_mock.ipv6.get_info.return_value = (
         current_config[INTERFACES][0]['ipv6'])
+    netinfo_nm_mock.ipv4.get_route_running.return_value = []
+    netinfo_nm_mock.ipv4.get_route_config.return_value = []
+    netinfo_nm_mock.ipv6.get_route_running.return_value = []
+    netinfo_nm_mock.ipv6.get_route_config.return_value = []
 
     desired_config[INTERFACES][0]['state'] = 'down'
     netapplier.apply(desired_config, verify_change=False)
@@ -96,6 +100,10 @@ def test_iface_admin_state_change(netinfo_nm_mock, netapplier_nm_mock):
 
 def test_add_new_bond(netinfo_nm_mock, netapplier_nm_mock):
     netinfo_nm_mock.device.list_devices.return_value = []
+    netinfo_nm_mock.ipv4.get_route_running.return_value = []
+    netinfo_nm_mock.ipv4.get_route_config.return_value = []
+    netinfo_nm_mock.ipv6.get_route_running.return_value = []
+    netinfo_nm_mock.ipv6.get_route_config.return_value = []
 
     desired_config = {
         INTERFACES: [
@@ -163,6 +171,10 @@ def test_edit_existing_bond(netinfo_nm_mock, netapplier_nm_mock):
         current_config[INTERFACES][0]['ipv4'])
     netinfo_nm_mock.ipv6.get_info.return_value = (
         current_config[INTERFACES][0]['ipv6'])
+    netinfo_nm_mock.ipv4.get_route_running.return_value = []
+    netinfo_nm_mock.ipv4.get_route_config.return_value = []
+    netinfo_nm_mock.ipv6.get_route_running.return_value = []
+    netinfo_nm_mock.ipv6.get_route_config.return_value = []
 
     desired_config = copy.deepcopy(current_config)
     options = desired_config[INTERFACES][0]['link-aggregation']['options']
