@@ -268,6 +268,18 @@ class State(object):
         ipv6_enable_states = _get_ip_enable_states(
             Interface.IPV6, self, other_state)
         self_iface_route_sets = defaultdict(set)
+        absent_route_sets = set()
+        other_iface_route_sets = defaultdict(set)
+
+        for route in self._config_routes:
+            if route.get(Route.STATE) == Route.STATE_ABSENT:
+                absent_route_sets.add(RouteEntry(route))
+
+        for route in other_state._config_routes:
+            # The other_state(running state) does not have any absent
+            # route entry and all have NEXT_HOP_INTERFACE
+            iface_name = route[Route.NEXT_HOP_INTERFACE]
+            other_iface_route_sets[iface_name].add(RouteEntry(route))
 
         for route in self._config_routes:
             if route.get(Route.STATE) != Route.STATE_ABSENT:
@@ -282,15 +294,18 @@ class State(object):
                          ipv4_enable_states,
                          ipv6_enable_states)
 
-        for route in other_state._config_routes:
+        # Absent route can only remove routes in current state.
+        _apply_absent_routes(absent_route_sets, other_iface_route_sets)
+
+        for iface_name, route_set in six.viewitems(other_iface_route_sets):
             # The other_state(running state) does not have any absent
             # route entry and all have NEXT_HOP_INTERFACE
-            if _route_is_valid(route,
-                               iface_enable_states,
-                               ipv4_enable_states,
-                               ipv6_enable_states):
-                iface_name = route[Route.NEXT_HOP_INTERFACE]
-                self_iface_route_sets[iface_name].add(RouteEntry(route))
+            for route_obj in route_set:
+                if _route_is_valid(route_obj,
+                                   iface_enable_states,
+                                   ipv4_enable_states,
+                                   ipv6_enable_states):
+                    self_iface_route_sets[iface_name].add(route_obj)
 
         merged_routes = []
         for iface_name, route_set in six.viewitems(self_iface_route_sets):
@@ -477,7 +492,7 @@ def _get_ip_enable_states(family, desire_state, current_state):
     return ip_enable_states
 
 
-def _route_is_valid(route, iface_enable_states, ipv4_enable_states,
+def _route_is_valid(route_obj, iface_enable_states, ipv4_enable_states,
                     ipv6_enable_states):
     """
     Return False when route is next hop to any of these interfaces:
@@ -485,14 +500,31 @@ def _route_is_valid(route, iface_enable_states, ipv4_enable_states,
         * Interface does not exists.
         * Interface has IPv4/IPv6 disabled.
     """
-    iface_name = route[Route.NEXT_HOP_INTERFACE]
+    iface_name = route_obj.next_hop_interface
     iface_enable_state = iface_enable_states.get(iface_name)
     if iface_enable_state != InterfaceState.UP:
         return False
-    if iplib.is_ipv6_address(route[Route.DESTINATION]):
+    if iplib.is_ipv6_address(route_obj.destination):
         if not ipv6_enable_states.get(iface_name):
             return False
     else:
         if not ipv4_enable_states.get(iface_name):
             return False
     return True
+
+
+def _apply_absent_routes(absent_route_sets, iface_route_sets):
+    """
+    Remove routes based on absent routes and treat missing property as wildcard
+    match.
+    """
+    for absent_route in absent_route_sets:
+        absent_iface_name = absent_route.next_hop_interface
+        for iface_name, route_set in six.viewitems(iface_route_sets):
+            if absent_iface_name and absent_iface_name != iface_name:
+                continue
+            new_routes = set()
+            for route in route_set:
+                if not absent_route.is_match(route):
+                    new_routes.add(route)
+            iface_route_sets[iface_name] = new_routes

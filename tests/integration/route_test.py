@@ -251,3 +251,97 @@ def _route_sort_key(route):
     return (route.get(Route.TABLE_ID, Route.USE_DEFAULT_ROUTE_TABLE),
             route.get(Route.NEXT_HOP_INTERFACE, ''),
             route.get(Route.DESTINATION, ''))
+
+
+parametrize_ip_ver_routes = pytest.mark.parametrize(
+    'get_routes_func',
+    [(_get_ipv4_test_routes),
+     (_get_ipv6_test_routes)],
+    ids=['ipv4', 'ipv6'])
+
+
+@parametrize_ip_ver_routes
+def test_remove_specific_route(eth1_up, get_routes_func):
+    routes = get_routes_func()
+    netapplier.apply({
+        Interface.KEY: [ETH1_INTERFACE_STATE],
+        Route.KEY: {
+            Route.CONFIG: routes
+        },
+    })
+    cur_state = netinfo.show()
+    _assert_routes(routes, cur_state)
+
+    absent_route = routes[0]
+    absent_route[Route.STATE] = Route.STATE_ABSENT
+    netapplier.apply({
+        Interface.KEY: [ETH1_INTERFACE_STATE],
+        Route.KEY: {
+            Route.CONFIG: [absent_route]
+        },
+    })
+
+    expected_routes = routes[1:]
+
+    cur_state = netinfo.show()
+    _assert_routes(expected_routes, cur_state)
+
+
+@parametrize_ip_ver_routes
+def test_remove_wildcast_route_with_iface(eth1_up, get_routes_func):
+    routes = get_routes_func()
+    netapplier.apply({
+        Interface.KEY: [ETH1_INTERFACE_STATE],
+        Route.KEY: {
+            Route.CONFIG: routes
+        },
+    })
+    cur_state = netinfo.show()
+    _assert_routes(routes, cur_state)
+
+    absent_route = {
+        Route.STATE: Route.STATE_ABSENT,
+        Route.NEXT_HOP_INTERFACE: 'eth1'
+    }
+    netapplier.apply({
+        Interface.KEY: [ETH1_INTERFACE_STATE],
+        Route.KEY: {
+            Route.CONFIG: [absent_route]
+        },
+    })
+
+    expected_routes = []
+
+    cur_state = netinfo.show()
+    _assert_routes(expected_routes, cur_state)
+
+
+@parametrize_ip_ver_routes
+def test_remove_wildcast_route_without_iface(eth1_up, get_routes_func):
+    routes = get_routes_func()
+    netapplier.apply({
+        Interface.KEY: [ETH1_INTERFACE_STATE],
+        Route.KEY: {
+            Route.CONFIG: routes
+        },
+    })
+    cur_state = netinfo.show()
+    _assert_routes(routes, cur_state)
+
+    absent_routes = []
+    for route in routes:
+        absent_routes.append({
+            Route.STATE: Route.STATE_ABSENT,
+            Route.DESTINATION: route[Route.DESTINATION]
+        })
+    netapplier.apply({
+        Interface.KEY: [ETH1_INTERFACE_STATE],
+        Route.KEY: {
+            Route.CONFIG: absent_routes
+        },
+    })
+
+    expected_routes = []
+
+    cur_state = netinfo.show()
+    _assert_routes(expected_routes, cur_state)
