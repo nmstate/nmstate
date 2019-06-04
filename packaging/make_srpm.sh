@@ -42,7 +42,7 @@ TAR_FILE="${TMP_DIR}/nmstate-${VERSION}.tar"
 
     rpmbuild --define "_rpmdir $TMP_DIR/" --define "_srcrpmdir $TMP_DIR/" \
     -ts $TAR_FILE
-) &> /dev/null
+) &> /dev/stderr
 
 SRPM=$(find $TMP_DIR -type f -name \*.src.rpm -exec basename {} \;)
 find $TMP_DIR -type f -name \*.rpm -exec mv {} "${outdir}" \;
