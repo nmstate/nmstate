@@ -30,6 +30,8 @@ from .testlib.statelib import INTERFACES
 
 
 TEST_BRIDGE0 = 'linux-br0'
+TEST_BRIDGE0_PORT0 = 'eth1'
+TEST_BRIDGE0_PORT1 = 'eth2'
 
 
 BRIDGE_OPTIONS_YAML = """
@@ -62,7 +64,7 @@ def test_create_and_remove_linux_bridge_with_min_desired_state():
 
 def test_create_and_remove_linux_bridge_with_one_port(eth1_up):
     bridge_name = TEST_BRIDGE0
-    bridge_state = _create_bridge_subtree_config(('eth1',))
+    bridge_state = _create_bridge_subtree_config((TEST_BRIDGE0_PORT0,))
     with _linux_bridge(bridge_name, bridge_state) as desired_state:
 
         assertlib.assert_state(desired_state)
@@ -72,7 +74,8 @@ def test_create_and_remove_linux_bridge_with_one_port(eth1_up):
 
 def test_create_and_remove_linux_bridge_with_two_ports(eth1_up, eth2_up):
     bridge_name = TEST_BRIDGE0
-    bridge_state = _create_bridge_subtree_config(('eth1', 'eth2'))
+    bridge_state = _create_bridge_subtree_config((TEST_BRIDGE0_PORT0,
+                                                  TEST_BRIDGE0_PORT1))
 
     with _linux_bridge(bridge_name, bridge_state) as desired_state:
         assertlib.assert_state(desired_state)
