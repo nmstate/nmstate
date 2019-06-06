@@ -17,6 +17,7 @@
 
 from contextlib import contextmanager
 
+import pytest
 import yaml
 
 from libnmstate import netapplier
@@ -26,6 +27,7 @@ from libnmstate.schema import InterfaceType
 from libnmstate.schema import LinuxBridge
 
 from .testlib import assertlib
+from .testlib.statelib import show_only
 from .testlib.statelib import INTERFACES
 
 
@@ -81,6 +83,28 @@ def test_create_and_remove_linux_bridge_with_two_ports(eth1_up, eth2_up):
         assertlib.assert_state(desired_state)
 
     assertlib.assert_absent(bridge_name)
+
+
+@pytest.fixture
+def bridge0_with_port0(eth1_up):
+    bridge_state = _create_bridge_subtree_config((TEST_BRIDGE0_PORT0,))
+    previous_state = show_only((TEST_BRIDGE0, TEST_BRIDGE0_PORT0))
+    with _linux_bridge(TEST_BRIDGE0, bridge_state) as desired_state:
+        current_state = show_only((TEST_BRIDGE0, TEST_BRIDGE0_PORT0))
+        yield dict(desired_state=desired_state,
+                   previous_state=previous_state,
+                   current_state=current_state)
+
+
+def test_linux_bridge_with_one_port_uses_the_port_mac(bridge0_with_port0):
+    prev_port_state = bridge0_with_port0['previous_state'][Interface.KEY][0]
+    curr_bridge_state = bridge0_with_port0['current_state'][Interface.KEY][0]
+    curr_port_state = bridge0_with_port0['current_state'][Interface.KEY][1]
+
+    prev_port_mac = prev_port_state[Interface.MAC]
+    curr_bridge_mac = curr_bridge_state[Interface.MAC]
+    curr_port_mac = curr_port_state[Interface.MAC]
+    assert prev_port_mac == curr_port_mac == curr_bridge_mac
 
 
 def _create_bridge_subtree_config(port_names):
