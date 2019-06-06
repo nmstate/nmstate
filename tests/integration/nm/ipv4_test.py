@@ -26,20 +26,18 @@ TEST_IFACE = 'eth1'
 IPV4_ADDRESS1 = '192.0.2.251'
 
 
+@iproutelib.ip_monitor_assert_stable_link_up(TEST_IFACE)
 def test_interface_ipv4_change(eth1_up):
-    with iproutelib.ip_monitor(object_type='link', dev=TEST_IFACE) as result:
-        with mainloop():
-            _modify_interface(
-                ipv4_state={
-                    'enabled': True,
-                    'dhcp': False,
-                    'address': [
-                        {'ip': IPV4_ADDRESS1, 'prefix-length': 24}
-                    ]
-                }
-            )
-
-    assert len(iproutelib.get_non_up_events(result, dev='eth1')) == 0
+    with mainloop():
+        _modify_interface(
+            ipv4_state={
+                'enabled': True,
+                'dhcp': False,
+                'address': [
+                    {'ip': IPV4_ADDRESS1, 'prefix-length': 24}
+                ]
+            }
+        )
 
     nm.nmclient.client(refresh=True)
     ipv4_current_state = _get_ipv4_current_state(TEST_IFACE)

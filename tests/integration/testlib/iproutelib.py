@@ -20,6 +20,8 @@ import subprocess
 import threading
 import time
 
+import six
+
 
 TIMEOUT = 10
 
@@ -29,6 +31,18 @@ class IpMonitorResult(object):
         self.out = None
         self.err = None
         self.popen = None
+
+
+def ip_monitor_assert_stable_link_up(dev, timeout=10):
+    def decorator(func):
+        @six.wraps(func)
+        def wrapper_ip_monitor(*args, **kwargs):
+            with ip_monitor('link', dev, timeout) as result:
+                func(*args, **kwargs)
+            assert len(get_non_up_events(result, dev)) == 0, ('result: ' +
+                                                              result.out)
+        return wrapper_ip_monitor
+    return decorator
 
 
 @contextmanager
