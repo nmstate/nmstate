@@ -16,6 +16,7 @@
 #
 
 from contextlib import contextmanager
+from copy import deepcopy
 
 import pytest
 import yaml
@@ -27,9 +28,9 @@ from libnmstate.schema import InterfaceType
 from libnmstate.schema import LinuxBridge
 
 from .testlib import assertlib
+from .testlib.iproutelib import ip_monitor_assert_stable_link_up
 from .testlib.statelib import show_only
 from .testlib.statelib import INTERFACES
-
 
 TEST_BRIDGE0 = 'linux-br0'
 TEST_BRIDGE0_PORT0 = 'eth1'
@@ -54,6 +55,22 @@ stp-hairpin-mode: false
 stp-path-cost: 100
 stp-priority: 32
 """
+
+
+@pytest.fixture
+def bridge0_with_port0(eth1_up):
+    bridge_name = TEST_BRIDGE0
+    bridge_state = _create_bridge_subtree_config(('eth1',))
+    # Disable STP to avoid topology changes and the consequence link change.
+    options_subtree = bridge_state[LinuxBridge.OPTIONS_SUBTREE]
+    options_subtree[LinuxBridge.STP_SUBTREE][LinuxBridge.STP_ENABLED] = False
+
+    with _linux_bridge(bridge_name, bridge_state) as desired_state:
+        # Need to set twice so the wired setting will be explicitly set,
+        # allowing reapply to succeed.
+        # https://bugzilla.redhat.com/1703960
+        libnmstate.apply(desired_state)
+        yield deepcopy(desired_state)
 
 
 def test_create_and_remove_linux_bridge_with_min_desired_state():
@@ -85,26 +102,31 @@ def test_create_and_remove_linux_bridge_with_two_ports(eth1_up, eth2_up):
     assertlib.assert_absent(bridge_name)
 
 
-@pytest.fixture
-def bridge0_with_port0(eth1_up):
-    bridge_state = _create_bridge_subtree_config((TEST_BRIDGE0_PORT0,))
-    previous_state = show_only((TEST_BRIDGE0, TEST_BRIDGE0_PORT0))
-    with _linux_bridge(TEST_BRIDGE0, bridge_state) as desired_state:
-        current_state = show_only((TEST_BRIDGE0, TEST_BRIDGE0_PORT0))
-        yield dict(desired_state=desired_state,
-                   previous_state=previous_state,
-                   current_state=current_state)
+@ip_monitor_assert_stable_link_up(TEST_BRIDGE0)
+def test_add_port_to_existing_bridge(bridge0_with_port0):
+    desired_state = bridge0_with_port0
+    bridge_iface_state = desired_state[Interface.KEY][0]
+    bridge_state = bridge_iface_state[LinuxBridge.CONFIG_SUBTREE]
+    _add_port_to_bridge(bridge_state, 'eth2')
+
+    libnmstate.apply(desired_state)
+
+    assertlib.assert_state(desired_state)
 
 
-def test_linux_bridge_with_one_port_uses_the_port_mac(bridge0_with_port0):
-    prev_port_state = bridge0_with_port0['previous_state'][Interface.KEY][0]
-    curr_bridge_state = bridge0_with_port0['current_state'][Interface.KEY][0]
-    curr_port_state = bridge0_with_port0['current_state'][Interface.KEY][1]
+def test_linux_bridge_uses_the_port_mac(eth1_up, bridge0_with_port0):
+    prev_port_mac = eth1_up[Interface.KEY][0][Interface.MAC]
+    current_state = show_only((TEST_BRIDGE0, TEST_BRIDGE0_PORT0))
+    curr_iface0_mac = current_state[Interface.KEY][0][Interface.MAC]
+    curr_iface1_mac = current_state[Interface.KEY][1][Interface.MAC]
 
-    prev_port_mac = prev_port_state[Interface.MAC]
-    curr_bridge_mac = curr_bridge_state[Interface.MAC]
-    curr_port_mac = curr_port_state[Interface.MAC]
-    assert prev_port_mac == curr_port_mac == curr_bridge_mac
+    assert prev_port_mac == curr_iface0_mac == curr_iface1_mac
+
+
+def _add_port_to_bridge(bridge_state, ifname):
+    port_state = yaml.load(BRIDGE_PORT_YAML, Loader=yaml.SafeLoader)
+    port_state[LinuxBridge.PORT_NAME] = ifname
+    bridge_state[LinuxBridge.PORT_SUBTREE] += [port_state]
 
 
 def _create_bridge_subtree_config(port_names):
