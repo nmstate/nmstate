@@ -22,7 +22,9 @@ except ImportError:
 
 from collections import defaultdict
 import copy
+from functools import total_ordering
 from operator import itemgetter
+
 import six
 
 from libnmstate import iplib
@@ -38,6 +40,7 @@ from libnmstate.schema import InterfaceType
 from libnmstate.schema import Route
 
 
+@total_ordering
 class RouteEntry(object):
     def __init__(self, route):
         self.table_id = route.get(Route.TABLE_ID)
@@ -65,32 +68,33 @@ class RouteEntry(object):
                 self.next_hop_address, self.next_hop_interface)
 
     def to_dict(self):
-        route_entry = {}
-        for key, value in six.viewitems(vars(self)):
-            if value is not None:
-                route_entry[key.replace('_', '-')] = value
-        return route_entry
+        return {
+            key.replace('_', '-'): value
+            for key, value in six.viewitems(vars(self)) if value is not None
+        }
 
     def __eq__(self, other):
-        return self is other or self.to_dict() == other.to_dict()
+        return self is other or self.__keys() == other.__keys()
 
-    def __ne__(self, other):
-        """
-        Workaround for python2
-        """
-        return not self.__eq__(other)
+    def __lt__(self, other):
+        return (
+            (self.table_id, self.next_hop_interface, self.destination) <
+            (other.table_id, other.next_hop_interface, other.destination)
+        )
 
-    def is_match(self, other):
-        """
-        Return True if other route is matched by self absent route.
-        """
-        if self.state != Route.STATE_ABSENT:
-            return False
+    def __repr__(self):
+        return str(self.to_dict())
 
-        if other.state == Route.STATE_ABSENT:
-            # Absent route cannot match another absent route
-            return False
+    @property
+    def absent(self):
+        return self.state == Route.STATE_ABSENT
 
+    def match(self, other):
+        """
+        Match self against other. Treat self None attributes as wildcards,
+        matching against any value in others.
+        Return True for a match, False otherwise.
+        """
         for self_value, other_value in zip(self.__keys(), other.__keys()):
             if self_value is not None and self_value != other_value:
                 return False
@@ -555,6 +559,6 @@ def _apply_absent_routes(absent_route_sets, iface_route_sets):
                 continue
             new_routes = set()
             for route in route_set:
-                if not absent_route.is_match(route):
+                if not absent_route.match(route):
                     new_routes.add(route)
             iface_route_sets[iface_name] = new_routes

@@ -29,6 +29,17 @@ from libnmstate.schema import InterfaceState
 from libnmstate.schema import Route
 
 
+parametrize_route_property = pytest.mark.parametrize(
+    'route_property', [
+        Route.TABLE_ID,
+        Route.DESTINATION,
+        Route.NEXT_HOP_INTERFACE,
+        Route.NEXT_HOP_ADDRESS,
+        Route.METRIC
+    ]
+)
+
+
 class TestAssertIfaceState(object):
 
     def test_desired_is_identical_to_current(self):
@@ -147,7 +158,7 @@ class TestAssertIfaceState(object):
         })
 
 
-class TestAssertRouteState(object):
+class TestRouteEntry(object):
     def test_hash_unique(self):
         routes = _get_mixed_test_routes()
         assert (hash(state.RouteEntry(routes[0])) ==
@@ -188,62 +199,90 @@ class TestAssertRouteState(object):
         assert (state.RouteEntry(route_without_next_hop) ==
                 state.RouteEntry(route_with_default_next_hop))
 
-    def test_normal_route_object(self):
+    def test_normal_route_object_as_dict(self):
         routes = _get_mixed_test_routes()
         route = routes[0]
         route_obj = state.RouteEntry(route)
         assert route_obj.to_dict() == route
 
-    def test_absent_route_object(self):
+    def test_absent_route_object_as_dict(self):
         routes = _get_mixed_test_routes()
         route = routes[0]
         route[Route.STATE] = Route.STATE_ABSENT
         route_obj = state.RouteEntry(route)
+        assert route_obj.absent
         assert route_obj.to_dict() == route
 
-    def test_absent_wildcard(self):
+    @parametrize_route_property
+    def test_absent_route_with_missing_props_as_dict(self, route_property):
         routes = _get_mixed_test_routes()
         original_route = routes[0]
-        for prop_name in (Route.TABLE_ID, Route.DESTINATION,
-                          Route.NEXT_HOP_INTERFACE, Route.NEXT_HOP_ADDRESS,
-                          Route.METRIC):
-            route = copy.deepcopy(original_route)
-            route[Route.STATE] = Route.STATE_ABSENT
-            del route[prop_name]
-            route_obj = state.RouteEntry(route)
-            assert route_obj.to_dict() == route
 
-    def test_absent_exact_match(self):
+        route = copy.deepcopy(original_route)
+        route[Route.STATE] = Route.STATE_ABSENT
+        del route[route_property]
+        route_obj = state.RouteEntry(route)
+        assert route_obj.to_dict() == route
+
+    def test_absent_route_with_exact_match(self):
+        routes_state = _get_mixed_test_routes()
+        route0 = state.RouteEntry(routes_state[0])
+
+        routes_state[0][Route.STATE] = Route.STATE_ABSENT
+        absent_route0 = state.RouteEntry(routes_state[0])
+
+        route1 = state.RouteEntry(routes_state[1])
+
+        assert absent_route0.match(route0)
+        assert absent_route0 == route0
+        assert not absent_route0.match(route1)
+        assert absent_route0 != route1
+
+    @parametrize_route_property
+    def test_absent_route_wildcard_match(self, route_property):
+        original_routes_state = _get_mixed_test_routes()
+        original_route0 = state.RouteEntry(original_routes_state[0])
+        original_route1 = state.RouteEntry(original_routes_state[1])
+
+        new_routes_state = _get_mixed_test_routes()
+        absent_route0_state = new_routes_state[0]
+        absent_route0_state[Route.STATE] = Route.STATE_ABSENT
+        del absent_route0_state[route_property]
+        new_route0 = state.RouteEntry(absent_route0_state)
+
+        assert new_route0.match(original_route0)
+        assert not new_route0.match(original_route1)
+
+    def test_absent_route_is_ignored_for_matching_and_equality(self):
         routes = _get_mixed_test_routes()
         routes[0][Route.STATE] = Route.STATE_ABSENT
         obj1 = state.RouteEntry(routes[0])
-        del routes[0][Route.STATE]
         obj2 = state.RouteEntry(routes[0])
-        obj3 = state.RouteEntry(routes[1])
-        assert obj1.is_match(obj2)
-        assert not obj1.is_match(obj3)
+        assert obj1.match(obj2)
+        assert obj1 == obj2
 
-    def test_absent_wildcard_match(self):
-        routes = _get_mixed_test_routes()
-        original_route = routes[0]
-        other_route_obj = state.RouteEntry(routes[1])
-        original_route_obj = state.RouteEntry(original_route)
-        for prop_name in (Route.TABLE_ID, Route.DESTINATION,
-                          Route.NEXT_HOP_INTERFACE, Route.NEXT_HOP_ADDRESS,
-                          Route.METRIC):
-            route = copy.deepcopy(original_route)
-            route[Route.STATE] = Route.STATE_ABSENT
-            del route[prop_name]
-            route_obj = state.RouteEntry(route)
-            assert route_obj.is_match(original_route_obj)
-            assert not route_obj.is_match(other_route_obj)
+    def test_sort_routes(self):
+        routes = [
+            _create_route('198.51.100.1/24', '192.0.2.1', 'eth0', 50, 103),
+            _create_route('198.51.100.0/24', '192.0.2.1', 'eth0', 50, 103),
+            _create_route('198.51.100.0/24', '192.0.2.1', 'eth1', 10, 103),
+        ]
+        expected_routes = [
+            _create_route('198.51.100.0/24', '192.0.2.1', 'eth1', 10, 103),
+            _create_route('198.51.100.0/24', '192.0.2.1', 'eth0', 50, 103),
+            _create_route('198.51.100.1/24', '192.0.2.1', 'eth0', 50, 103),
+        ]
+        assert expected_routes == sorted(routes)
 
-    def test_absent_cannot_remove_absent(self):
-        routes = _get_mixed_test_routes()
-        routes[0][Route.STATE] = Route.STATE_ABSENT
-        obj1 = state.RouteEntry(routes[0])
-        obj2 = state.RouteEntry(routes[0])
-        assert not obj1.is_match(obj2)
+
+def _create_route(dest, via_addr, via_iface, table, metric):
+    return state.RouteEntry({
+        Route.DESTINATION: dest,
+        Route.METRIC: metric,
+        Route.NEXT_HOP_ADDRESS: via_addr,
+        Route.NEXT_HOP_INTERFACE: via_iface,
+        Route.TABLE_ID: table
+    })
 
 
 def test_state_empty_routes():
