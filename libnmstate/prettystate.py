@@ -58,7 +58,7 @@ class PrettyState(object):
         yaml.add_representer(OrderedDict, represent_ordereddict)
 
         if six.PY2:
-            yaml.add_representer(unicode, represent_unicode)
+            yaml.add_representer(six.text_type, represent_unicode)
         self.state = order_state(deepcopy(state))
 
     @property
