@@ -125,8 +125,7 @@ class State(object):
 
         self._ifaces_state = self._index_interfaces_state_by_name()
         self._complement_interface_empty_ip_subtrees()
-        self._config_routes = self._state.get(
-            Route.KEY, {}).get(Route.CONFIG, [])
+
         self._config_iface_routes = self._index_routes_by_iface()
 
     def __eq__(self, other):
@@ -238,12 +237,10 @@ class State(object):
             if routes != other_routes:
                 raise NmstateVerificationError(
                     format_desired_current_state_diff(
-                        {
-                            Route.KEY: routes
-                        },
-                        {
-                            Route.KEY: other_routes
-                        }))
+                        {Route.KEY: routes},
+                        {Route.KEY: other_routes}
+                    )
+                )
 
     def verify_dns(self, other_state):
         if self.config_dns != other_state.config_dns:
@@ -447,6 +444,17 @@ class State(object):
             raise NmstateVerificationError(
                 format_desired_current_state_diff(self.interfaces,
                                                   current_state.interfaces))
+
+    @property
+    def _config_routes(self):
+        return self._state.get(Route.KEY, {}).get(Route.CONFIG, [])
+
+    @_config_routes.setter
+    def _config_routes(self, value):
+        routes = self._state.get(Route.KEY)
+        if not routes:
+            routes = self._state[Route.KEY] = {}
+        routes[Route.CONFIG] = value
 
 
 def dict_update(origin_data, to_merge_data):
