@@ -122,12 +122,12 @@ def create_state(state, interfaces_to_filter=None):
 class State(object):
     def __init__(self, state):
         self._state = copy.deepcopy(state)
-        self._ifaces_state = State._index_interfaces_state_by_name(self._state)
+
+        self._ifaces_state = self._index_interfaces_state_by_name()
         self._complement_interface_empty_ip_subtrees()
         self._config_routes = self._state.get(
             Route.KEY, {}).get(Route.CONFIG, [])
-        self._config_iface_routes = State._index_routes_by_iface(
-            self._config_routes)
+        self._config_iface_routes = self._index_routes_by_iface()
 
     def __eq__(self, other):
         return self.state == other.state
@@ -337,8 +337,7 @@ class State(object):
                 list(route_obj.to_dict() for route_obj in route_set))
 
         self._config_routes = merged_routes
-        self._config_iface_routes = State._index_routes_by_iface(
-            self._config_routes)
+        self._config_iface_routes = self._index_routes_by_iface()
 
     def merge_dns(self, other_state):
         """
@@ -369,15 +368,13 @@ class State(object):
                 ifaces[ifname] = ifstate
         self._ifaces_state = ifaces
 
-    @staticmethod
-    def _index_interfaces_state_by_name(state):
+    def _index_interfaces_state_by_name(self):
         return {iface[Interface.NAME]: iface
-                for iface in state.get(Interface.KEY, [])}
+                for iface in self._state.get(Interface.KEY, [])}
 
-    @staticmethod
-    def _index_routes_by_iface(routes):
+    def _index_routes_by_iface(self):
         iface_routes = defaultdict(list)
-        for route in routes:
+        for route in self._config_routes:
             iface_name = route.get(Route.NEXT_HOP_INTERFACE)
             if iface_name:
                 iface_routes[iface_name].append(route)
