@@ -43,7 +43,7 @@ def ethx_init(preserve_old_config):
 def eth1_up():
     _set_eth_admin_state('eth1', 'up')
     try:
-        yield
+        yield statelib.show_only(('eth1',))
     finally:
         _set_eth_admin_state('eth1', 'down')
 
@@ -52,7 +52,7 @@ def eth1_up():
 def eth2_up():
     _set_eth_admin_state('eth2', 'up')
     try:
-        yield
+        yield statelib.show_only(('eth2',))
     finally:
         _set_eth_admin_state('eth2', 'down')
 
