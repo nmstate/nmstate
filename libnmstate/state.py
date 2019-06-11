@@ -237,8 +237,8 @@ class State(object):
             if routes != other_routes:
                 raise NmstateVerificationError(
                     format_desired_current_state_diff(
-                        {Route.KEY: routes},
-                        {Route.KEY: other_routes}
+                        {Route.KEY: [r.to_dict() for r in routes]},
+                        {Route.KEY: [r.to_dict() for r in other_routes]}
                     )
                 )
 
@@ -374,9 +374,9 @@ class State(object):
         for route in self._config_routes:
             iface_name = route.get(Route.NEXT_HOP_INTERFACE)
             if iface_name:
-                iface_routes[iface_name].append(route)
+                iface_routes[iface_name].append(RouteEntry(route))
         for routes in six.viewvalues(iface_routes):
-            routes.sort(key=_route_sort_key)
+            routes.sort()
         return iface_routes
 
     def _clean_sanitize_ethernet(self):
@@ -466,12 +466,6 @@ def dict_update(origin_data, to_merge_data):
         else:
             origin_data[key] = val
     return origin_data
-
-
-def _route_sort_key(route):
-    return (route.get(Route.TABLE_ID, Route.USE_DEFAULT_ROUTE_TABLE),
-            route.get(Route.NEXT_HOP_INTERFACE, ''),
-            route.get(Route.DESTINATION, ''))
 
 
 def _validate_routes(iface_route_sets, iface_enable_states,

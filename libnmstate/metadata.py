@@ -24,7 +24,6 @@ from libnmstate import nm
 from libnmstate.schema import DNS
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceState
-from libnmstate.schema import Route
 
 
 BRPORT_OPTIONS = '_brport_options'
@@ -184,10 +183,10 @@ def _generate_route_metadata(desired_state):
             else:
                 iface_state[family] = {ROUTES: []}
         for route in routes:
-            if iplib.is_ipv6_address(route[Route.DESTINATION]):
-                iface_state[Interface.IPV6][ROUTES].append(route)
+            if iplib.is_ipv6_address(route.destination):
+                iface_state[Interface.IPV6][ROUTES].append(route.to_dict())
             else:
-                iface_state[Interface.IPV4][ROUTES].append(route)
+                iface_state[Interface.IPV4][ROUTES].append(route.to_dict())
 
 
 def _generate_dns_metadata(desired_state, current_state):
@@ -202,8 +201,12 @@ def _generate_dns_metadata(desired_state, current_state):
     if _dns_config_not_changed(desired_state, current_state):
         _preserve_current_dns_metadata(desired_state, current_state)
     else:
+        ifaces_routes = {ifname: [r.to_dict() for r in routes]
+                         for ifname, routes in
+                         six.viewitems(desired_state.config_iface_routes)}
         ipv4_iface, ipv6_iface = nm.dns.find_interfaces_for_name_servers(
-            desired_state.config_iface_routes)
+            ifaces_routes
+        )
         _save_dns_metadata(desired_state, current_state, ipv4_iface,
                            ipv6_iface, servers, searches)
 
