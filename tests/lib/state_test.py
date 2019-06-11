@@ -15,7 +15,6 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 from collections import defaultdict
-import copy
 
 import pytest
 
@@ -160,54 +159,56 @@ class TestAssertIfaceState(object):
 
 class TestRouteEntry(object):
     def test_hash_unique(self):
-        routes = _get_mixed_test_routes()
-        assert (hash(state.RouteEntry(routes[0])) ==
-                hash(state.RouteEntry(routes[0])))
+        route = _create_route('198.51.100.0/24', '192.0.2.1', 'eth1', 50, 103)
+        assert hash(route) == hash(route)
 
     def test_obj_unique(self):
-        routes = _get_mixed_test_routes()
-        route = routes[0]
-        new_route = copy.deepcopy(routes[0])
-        assert state.RouteEntry(route) == state.RouteEntry(new_route)
-        assert state.RouteEntry(route) != state.RouteEntry(routes[1])
+        route0 = _create_route('198.51.100.0/24', '192.0.2.1', 'eth1', 50, 103)
+        route1 = _create_route(
+            '2001:db8:a::/64', '2001:db8:1::a', 'eth2', 51, 104)
+        route0_clone = _create_route(
+            '198.51.100.0/24', '192.0.2.1', 'eth1', 50, 103)
+        assert route0 == route0_clone
+        assert route0 != route1
 
     def test_obj_unique_without_table_id(self):
-        routes = _get_mixed_test_routes()
-        route_with_default_table_id = routes[0]
-        route_without_table_id = copy.deepcopy(routes[0])
-        route_with_default_table_id[Route.TABLE_ID] = \
-            Route.USE_DEFAULT_ROUTE_TABLE
-        del route_without_table_id[Route.TABLE_ID]
-        assert (state.RouteEntry(route_without_table_id) ==
-                state.RouteEntry(route_with_default_table_id))
+        route_with_default_table_id = _create_route(
+            '198.51.100.0/24', '192.0.2.1', 'eth1',
+            Route.USE_DEFAULT_ROUTE_TABLE, 103)
+
+        route_without_table_id = _create_route(
+            '198.51.100.0/24', '192.0.2.1', 'eth1', None, 103)
+
+        assert route_without_table_id == route_with_default_table_id
 
     def test_obj_unique_without_metric(self):
-        routes = _get_mixed_test_routes()
-        route_with_default_metric = routes[0]
-        route_without_metric = copy.deepcopy(routes[0])
-        route_with_default_metric[Route.METRIC] = Route.USE_DEFAULT_METRIC
-        del route_without_metric[Route.METRIC]
-        assert (state.RouteEntry(route_without_metric) ==
-                state.RouteEntry(route_with_default_metric))
+        route_with_default_metric = _create_route(
+            '198.51.100.0/24', '192.0.2.1', 'eth1', 50,
+            Route.USE_DEFAULT_METRIC)
+
+        route_without_metric = _create_route(
+            '198.51.100.0/24', '192.0.2.1', 'eth1', 50, None)
+
+        assert route_without_metric == route_with_default_metric
 
     def test_obj_unique_without_next_hop(self):
-        routes = _get_mixed_test_routes()
-        route_with_default_next_hop = routes[0]
-        route_without_next_hop = copy.deepcopy(routes[0])
-        route_with_default_next_hop[Route.NEXT_HOP_ADDRESS] = ''
-        del route_without_next_hop[Route.NEXT_HOP_ADDRESS]
-        assert (state.RouteEntry(route_without_next_hop) ==
-                state.RouteEntry(route_with_default_next_hop))
+        route_with_default_next_hop = _create_route(
+            '198.51.100.0/24', '', 'eth1', 50, 103)
+
+        route_without_next_hop = _create_route(
+            '198.51.100.0/24', None, 'eth1', 50, 103)
+
+        assert route_without_next_hop == route_with_default_next_hop
 
     def test_normal_route_object_as_dict(self):
-        routes = _get_mixed_test_routes()
-        route = routes[0]
+        route = _create_route_dict(
+            '198.51.100.0/24', '192.0.2.1', 'eth1', 50, 103)
         route_obj = state.RouteEntry(route)
         assert route_obj.to_dict() == route
 
     def test_absent_route_object_as_dict(self):
-        routes = _get_mixed_test_routes()
-        route = routes[0]
+        route = _create_route_dict(
+            '198.51.100.0/24', '192.0.2.1', 'eth1', 50, 103)
         route[Route.STATE] = Route.STATE_ABSENT
         route_obj = state.RouteEntry(route)
         assert route_obj.absent
@@ -215,23 +216,23 @@ class TestRouteEntry(object):
 
     @parametrize_route_property
     def test_absent_route_with_missing_props_as_dict(self, route_property):
-        routes = _get_mixed_test_routes()
-        original_route = routes[0]
-
-        route = copy.deepcopy(original_route)
-        route[Route.STATE] = Route.STATE_ABSENT
-        del route[route_property]
-        route_obj = state.RouteEntry(route)
-        assert route_obj.to_dict() == route
+        absent_route = _create_route_dict(
+            '198.51.100.0/24', '192.0.2.1', 'eth1', 50, 103)
+        absent_route[Route.STATE] = Route.STATE_ABSENT
+        del absent_route[route_property]
+        route_obj = state.RouteEntry(absent_route)
+        assert route_obj.to_dict() == absent_route
 
     def test_absent_route_with_exact_match(self):
-        routes_state = _get_mixed_test_routes()
-        route0 = state.RouteEntry(routes_state[0])
+        route0 = _create_route('198.51.100.0/24', '192.0.2.1', 'eth1', 50, 103)
 
-        routes_state[0][Route.STATE] = Route.STATE_ABSENT
-        absent_route0 = state.RouteEntry(routes_state[0])
+        absent_r0 = _create_route_dict(
+            '198.51.100.0/24', '192.0.2.1', 'eth1', 50, 103)
+        absent_r0[Route.STATE] = Route.STATE_ABSENT
+        absent_route0 = state.RouteEntry(absent_r0)
 
-        route1 = state.RouteEntry(routes_state[1])
+        route1 = _create_route(
+            '2001:db8:a::/64', '2001:db8:1::a', 'eth2', 51, 104)
 
         assert absent_route0.match(route0)
         assert absent_route0 == route0
@@ -240,12 +241,13 @@ class TestRouteEntry(object):
 
     @parametrize_route_property
     def test_absent_route_wildcard_match(self, route_property):
-        original_routes_state = _get_mixed_test_routes()
-        original_route0 = state.RouteEntry(original_routes_state[0])
-        original_route1 = state.RouteEntry(original_routes_state[1])
+        original_route0 = _create_route(
+            '198.51.100.0/24', '192.0.2.1', 'eth1', 50, 103)
+        original_route1 = _create_route(
+            '2001:db8:a::/64', '2001:db8:1::a', 'eth2', 51, 104)
 
-        new_routes_state = _get_mixed_test_routes()
-        absent_route0_state = new_routes_state[0]
+        absent_route0_state = _create_route_dict(
+            '198.51.100.0/24', '192.0.2.1', 'eth1', 50, 103)
         absent_route0_state[Route.STATE] = Route.STATE_ABSENT
         del absent_route0_state[route_property]
         new_route0 = state.RouteEntry(absent_route0_state)
@@ -254,10 +256,11 @@ class TestRouteEntry(object):
         assert not new_route0.match(original_route1)
 
     def test_absent_route_is_ignored_for_matching_and_equality(self):
-        routes = _get_mixed_test_routes()
-        routes[0][Route.STATE] = Route.STATE_ABSENT
-        obj1 = state.RouteEntry(routes[0])
-        obj2 = state.RouteEntry(routes[0])
+        route = _create_route_dict(
+            '198.51.100.0/24', '192.0.2.1', 'eth1', 50, 103)
+        route[Route.STATE] = Route.STATE_ABSENT
+        obj1 = state.RouteEntry(route)
+        obj2 = state.RouteEntry(route)
         assert obj1.match(obj2)
         assert obj1 == obj2
 
@@ -276,13 +279,18 @@ class TestRouteEntry(object):
 
 
 def _create_route(dest, via_addr, via_iface, table, metric):
-    return state.RouteEntry({
+    return state.RouteEntry(
+        _create_route_dict(dest, via_addr, via_iface, table, metric))
+
+
+def _create_route_dict(dest, via_addr, via_iface, table, metric):
+    return {
         Route.DESTINATION: dest,
         Route.METRIC: metric,
         Route.NEXT_HOP_ADDRESS: via_addr,
         Route.NEXT_HOP_INTERFACE: via_iface,
         Route.TABLE_ID: table
-    })
+    }
 
 
 def test_state_empty_routes():
@@ -676,22 +684,9 @@ def test_state_remote_route_wildcard_destination_without_iface():
 
 
 def _get_mixed_test_routes():
-    return [
-        {
-            Route.DESTINATION: '198.51.100.0/24',
-            Route.METRIC: 103,
-            Route.NEXT_HOP_INTERFACE: 'eth1',
-            Route.NEXT_HOP_ADDRESS: '192.0.2.1',
-            Route.TABLE_ID: 50
-        },
-        {
-            Route.DESTINATION: '2001:db8:a::/64',
-            Route.METRIC: 104,
-            Route.NEXT_HOP_INTERFACE: 'eth2',
-            Route.NEXT_HOP_ADDRESS: '2001:db8:1::a',
-            Route.TABLE_ID: 51
-        }
-    ]
+    r0 = _create_route('198.51.100.0/24', '192.0.2.1', 'eth1', 50, 103)
+    r1 = _create_route('2001:db8:a::/64', '2001:db8:1::a', 'eth2', 51, 104)
+    return [r0.to_dict(), r1.to_dict()]
 
 
 def _gen_iface_states_for_routes(routes):
