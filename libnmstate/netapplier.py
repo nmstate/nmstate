@@ -111,11 +111,12 @@ def _apply_ifaces_state(desired_state, verify_change, commit,
 
     desired_state.sanitize_ethernet(current_state)
     desired_state.sanitize_dynamic_ip()
-    desired_state.merge_route_config(current_state)
+    desired_state.merge_routes(current_state)
     desired_state.merge_dns(current_state)
     metadata.generate_ifaces_metadata(desired_state, current_state)
 
     validator.validate_interfaces_state(desired_state, current_state)
+    validator.validate_routes(desired_state, current_state)
 
     new_interfaces = _list_new_interfaces(desired_state, current_state)
 

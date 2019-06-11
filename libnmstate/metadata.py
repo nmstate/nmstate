@@ -69,7 +69,7 @@ def generate_ifaces_metadata(desired_state, current_state):
         set_metadata_func=linux_bridge.set_bridge_ports_metadata
     )
     _generate_dns_metadata(desired_state, current_state)
-    _generate_route_metadata(desired_state)
+    _generate_route_metadata(desired_state, current_state)
 
 
 def remove_ifaces_metadata(ifaces_state):
@@ -169,24 +169,42 @@ def _generate_link_master_metadata(ifaces_desired_state,
                         master_state, ifaces_desired_state[slave])
 
 
-def _generate_route_metadata(desired_state):
+def _generate_route_metadata(desired_state, current_state):
     """
-    Save routes under interface IP protocol so that nm/ipv4.py or nm/ipv6.py
-    could include route configuration in `create_setting()`.
+    Save routes metadata under interface IP protocol for future processing by
+    the providers.
     Currently route['next-hop-interface'] is mandatory.
+    Routes which do not match any current or desired interface are ignored.
     """
     for iface_name, routes in six.viewitems(desired_state.config_iface_routes):
-        iface_state = desired_state.interfaces.get(iface_name, {})
-        for family in (Interface.IPV4, Interface.IPV6):
-            if family in iface_state:
-                iface_state[family][ROUTES] = []
-            else:
-                iface_state[family] = {ROUTES: []}
+        desired_iface_state = desired_state.interfaces.get(iface_name)
+        current_iface_state = current_state.interfaces.get(iface_name)
+        if desired_iface_state:
+            _attach_route_metadata(desired_iface_state, routes)
+        elif current_iface_state:
+            desired_iface_state = desired_state.interfaces[iface_name] = {
+                Interface.NAME: iface_name,
+                Interface.TYPE: current_iface_state[Interface.TYPE]
+            }
+            _attach_route_metadata(desired_iface_state, routes)
+
+
+def _attach_route_metadata(iface_state, routes):
+        _init_iface_route_metadata(iface_state, Interface.IPV4)
+        _init_iface_route_metadata(iface_state, Interface.IPV6)
+
         for route in routes:
             if iplib.is_ipv6_address(route.destination):
                 iface_state[Interface.IPV6][ROUTES].append(route.to_dict())
             else:
                 iface_state[Interface.IPV4][ROUTES].append(route.to_dict())
+
+
+def _init_iface_route_metadata(iface_state, ip_key):
+    ip_state = iface_state.get(ip_key)
+    if not ip_state:
+        ip_state = iface_state[ip_key] = {}
+    ip_state[ROUTES] = []
 
 
 def _generate_dns_metadata(desired_state, current_state):
