@@ -590,71 +590,135 @@ class TestDesiredStateOvsMetadata(object):
         assert current_state == expected_cstate
 
 
-def test_route_metadata():
-    routes = _get_mixed_test_routes()
-    desired_state = state.State({
-            Route.KEY: {
-                Route.CONFIG: routes,
-            },
-            Interface.KEY: [
-                {
-                    Interface.NAME: 'eth1',
-                    Interface.TYPE: InterfaceType.ETHERNET,
-                    Interface.IPV4: {},
-                    Interface.IPV6: {},
-                },
-                {
-                    Interface.NAME: 'eth2',
-                    Interface.TYPE: InterfaceType.ETHERNET,
-                    Interface.IPV4: {},
-                    Interface.IPV6: {},
-                },
-            ]
-    })
-    current_state = state.State({})
-    metadata.generate_ifaces_metadata(desired_state, current_state)
-    expected_iface_state = {
-        TEST_IFACE1: {
-            Interface.NAME: TEST_IFACE1,
-            Interface.TYPE: InterfaceType.ETHERNET,
-            Interface.IPV4: {
-                metadata.ROUTES: [routes[0]]
-            },
-            Interface.IPV6: {
-                metadata.ROUTES: []
-            },
-        },
-        'eth2': {
-            Interface.NAME: 'eth2',
-            Interface.TYPE: InterfaceType.ETHERNET,
-            Interface.IPV4: {
-                metadata.ROUTES: []
-            },
-            Interface.IPV6: {
-                metadata.ROUTES: [routes[1]]
-            },
-        }
+class TestRouteMetadata(object):
+
+    def test_with_empty_states(self):
+        desired_state = state.State({})
+        current_state = state.State({})
+
+        metadata.generate_ifaces_metadata(desired_state, current_state)
+
+        assert {} == desired_state.interfaces
+
+    def test_no_routes_with_no_interfaces(self):
+        desired_state = state.State({
+            Interface.KEY: [],
+            Route.KEY: {Route.CONFIG: []}}
+        )
+        current_state = state.State({
+            Interface.KEY: [],
+            Route.KEY: {Route.CONFIG: []}}
+        )
+
+        metadata.generate_ifaces_metadata(desired_state, current_state)
+
+        assert {} == desired_state.interfaces
+
+    def test_route_with_no_desired_or_current_interfaces(self):
+        route0 = self._create_route0()
+        desired_state = state.State({
+            Interface.KEY: [],
+            Route.KEY: {Route.CONFIG: [route0.to_dict()]}}
+        )
+        current_state = state.State({})
+
+        metadata.generate_ifaces_metadata(desired_state, current_state)
+
+        assert {} == desired_state.interfaces
+
+    def test_route_with_no_desired_or_current_matching_interface(self):
+        route0 = self._create_route0()
+        desired_state = state.State({
+            Interface.KEY: [_create_interface_state('foo')],
+            Route.KEY: {Route.CONFIG: [route0.to_dict()]}}
+        )
+        current_state = state.State({
+            Interface.KEY: [_create_interface_state('boo')],
+            Route.KEY: {Route.CONFIG: []}}
+        )
+
+        metadata.generate_ifaces_metadata(desired_state, current_state)
+
+        assert 'foo' in desired_state.interfaces
+        assert metadata.ROUTES not in desired_state.interfaces['foo']
+
+    def test_route_with_matching_desired_interface(self):
+        route0 = self._create_route0()
+        desired_state = state.State({
+            Interface.KEY: [_create_interface_state('eth1')],
+            Route.KEY: {Route.CONFIG: [route0.to_dict()]}}
+        )
+        current_state = state.State({})
+
+        metadata.generate_ifaces_metadata(desired_state, current_state)
+
+        iface_state = desired_state.interfaces['eth1']
+        route_metadata, = iface_state[Interface.IPV4][metadata.ROUTES]
+        assert route0.to_dict() == route_metadata
+
+    def test_route_with_matching_current_interface(self):
+        route0 = self._create_route0()
+        desired_state = state.State({
+            Interface.KEY: [],
+            Route.KEY: {Route.CONFIG: [route0.to_dict()]}
+        })
+        current_state = state.State({
+            Interface.KEY: [_create_interface_state('eth1')],
+            Route.KEY: {Route.CONFIG: []}
+        })
+
+        metadata.generate_ifaces_metadata(desired_state, current_state)
+
+        iface_state = desired_state.interfaces['eth1']
+        route_metadata, = iface_state[Interface.IPV4][metadata.ROUTES]
+        assert route0.to_dict() == route_metadata
+
+    def test_two_routes_with_matching_interfaces(self):
+        route0 = self._create_route0()
+        route1 = self._create_route1()
+        desired_state = state.State({
+            Interface.KEY: [_create_interface_state('eth1')],
+            Route.KEY: {Route.CONFIG: [route0.to_dict(), route1.to_dict()]}
+        })
+        current_state = state.State({
+            Interface.KEY: [_create_interface_state('eth2')],
+            Route.KEY: {Route.CONFIG: []}
+        })
+
+        metadata.generate_ifaces_metadata(desired_state, current_state)
+
+        iface0_state = desired_state.interfaces['eth1']
+        iface1_state = desired_state.interfaces['eth2']
+        route0_metadata, = iface0_state[Interface.IPV4][metadata.ROUTES]
+        route1_metadata, = iface1_state[Interface.IPV6][metadata.ROUTES]
+        assert route0.to_dict() == route0_metadata
+        assert route1.to_dict() == route1_metadata
+
+    def _create_route0(self):
+        return _create_route('198.51.100.0/24', '192.0.2.1', 'eth1', 50, 103)
+
+    def _create_route1(self):
+        return _create_route(
+            '2001:db8:a::/64', '2001:db8:1::a', 'eth2', 51, 104)
+
+
+def _create_interface_state(iface_name):
+    return {
+        Interface.NAME: iface_name,
+        Interface.TYPE: InterfaceType.ETHERNET,
+        Interface.IPV4: {},
+        Interface.IPV6: {},
     }
-    assert desired_state.interfaces == expected_iface_state
 
 
-def _get_mixed_test_routes():
-    return [
-        {
-            Route.DESTINATION: '198.51.100.0/24',
-            Route.METRIC: 103,
-            Route.NEXT_HOP_INTERFACE: TEST_IFACE1,
-            Route.NEXT_HOP_ADDRESS: '192.0.2.1',
-            Route.TABLE_ID: 50
-        },
-        {
-            Route.DESTINATION: '2001:db8:a::/64',
-            Route.METRIC: 104,
-            Route.NEXT_HOP_INTERFACE: 'eth2',
-            Route.NEXT_HOP_ADDRESS: '2001:db8:1::a',
-            Route.TABLE_ID: 51
-        }
-    ]
+def _create_route(dest, via_addr, via_iface, table, metric):
+    return state.RouteEntry({
+            Route.DESTINATION: dest,
+            Route.METRIC: metric,
+            Route.NEXT_HOP_ADDRESS: via_addr,
+            Route.NEXT_HOP_INTERFACE: via_iface,
+            Route.TABLE_ID: table
+    })
 
 
 def test_dns_metadata_empty():

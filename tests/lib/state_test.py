@@ -19,8 +19,6 @@ from collections import defaultdict
 import pytest
 
 from libnmstate import state
-from libnmstate.iplib import is_ipv6_address
-from libnmstate.error import NmstateValueError
 from libnmstate.error import NmstateVerificationError
 from libnmstate.schema import DNS
 from libnmstate.schema import Interface
@@ -299,6 +297,231 @@ class TestRouteEntry(object):
         assert expected_routes == sorted(routes)
 
 
+class TestRouteStateMerge(object):
+
+    def test_merge_empty_states(self):
+        s0 = state.State({})
+        s1 = state.State({})
+
+        s0.merge_routes(s1)
+
+        assert {'interfaces': [], 'routes': {'config': []}} == s0.state
+        assert {} == s0.config_iface_routes
+
+    def test_merge_identical_states(self):
+        route0_obj = self._create_route0()
+        route0 = route0_obj.to_dict()
+        s0 = state.State({'routes': {'config': [route0]}})
+        s1 = state.State({'routes': {'config': [route0]}})
+
+        s0.merge_routes(s1)
+
+        assert {'interfaces': [], 'routes': {'config': [route0]}} == s0.state
+        assert {'eth1': [route0_obj]} == s0.config_iface_routes
+
+    def test_merge_unique_states(self):
+        route0_obj = self._create_route0()
+        route0 = route0_obj.to_dict()
+        route1_obj = self._create_route1()
+        route1 = route1_obj.to_dict()
+        s0 = state.State({'routes': {'config': [route0]}})
+        s1 = state.State({'routes': {'config': [route1]}})
+
+        s0.merge_routes(s1)
+
+        expected_state = {'interfaces': [], 'routes': {'config': [route0]}}
+        assert expected_state == s0.state
+        expected_indexed_routes = {'eth1': [route0_obj]}
+        assert expected_indexed_routes == s0.config_iface_routes
+
+    def test_merge_empty_with_non_empty_state(self):
+        route0_obj = self._create_route0()
+        route0 = route0_obj.to_dict()
+        empty_state = state.State({})
+        state_with_route0 = state.State({'routes': {'config': [route0]}})
+
+        empty_state.merge_routes(state_with_route0)
+
+        assert ({'interfaces': [], 'routes': {'config': []}} ==
+                empty_state.state)
+        assert {} == empty_state.config_iface_routes
+
+    def test_merge_iface_only_with_same_iface_routes_state(self):
+        route0_obj = self._create_route0()
+        route0 = route0_obj.to_dict()
+        iface_only_state = state.State({
+            Interface.KEY: [{Interface.NAME: route0_obj.next_hop_interface}]
+        })
+        state_with_route0 = state.State({Route.KEY: {Route.CONFIG: [route0]}})
+
+        iface_only_state.merge_routes(state_with_route0)
+
+        expected = {
+            Interface.KEY: [{
+                Interface.NAME: route0_obj.next_hop_interface,
+                Interface.IPV4: {},
+                Interface.IPV6: {},
+            }],
+            Route.KEY: {Route.CONFIG: [route0]},
+        }
+        assert expected == iface_only_state.state
+        assert ({route0_obj.next_hop_interface: [route0_obj]} ==
+                iface_only_state.config_iface_routes)
+
+    def test_merge_iface_down_with_same_iface_routes_state(self):
+        route0_obj = self._create_route0()
+        route0 = route0_obj.to_dict()
+        iface_down_state = state.State({
+            Interface.KEY: [{
+                Interface.NAME: route0_obj.next_hop_interface,
+                Interface.STATE: InterfaceState.DOWN,
+            }]
+        })
+        state_with_route0 = state.State({Route.KEY: {Route.CONFIG: [route0]}})
+
+        iface_down_state.merge_routes(state_with_route0)
+
+        expected = {
+            Interface.KEY: [{
+                Interface.NAME: route0_obj.next_hop_interface,
+                Interface.STATE: InterfaceState.DOWN,
+                Interface.IPV4: {},
+                Interface.IPV6: {},
+            }],
+            Route.KEY: {Route.CONFIG: []},
+        }
+        assert expected == iface_down_state.state
+        assert {} == iface_down_state.config_iface_routes
+
+    def test_merge_iface_ipv4_disabled_with_same_iface_routes_state(self):
+        route0_obj = self._create_route0()
+        route0 = route0_obj.to_dict()
+        iface_down_state = state.State({
+            Interface.KEY: [{
+                Interface.NAME: route0_obj.next_hop_interface,
+                Interface.STATE: InterfaceState.UP,
+                Interface.IPV4: {'enabled': False},
+            }]
+        })
+        state_with_route0 = state.State({Route.KEY: {Route.CONFIG: [route0]}})
+
+        iface_down_state.merge_routes(state_with_route0)
+
+        expected = {
+            Interface.KEY: [{
+                Interface.NAME: route0_obj.next_hop_interface,
+                Interface.STATE: InterfaceState.UP,
+                Interface.IPV4: {'enabled': False},
+                Interface.IPV6: {},
+            }],
+            Route.KEY: {Route.CONFIG: []},
+        }
+        assert expected == iface_down_state.state
+        assert {} == iface_down_state.config_iface_routes
+
+    def test_merge_iface_ipv6_disabled_with_same_iface_routes_state(self):
+        route1_obj = self._create_route1()
+        route1 = route1_obj.to_dict()
+        iface_down_state = state.State({
+            Interface.KEY: [{
+                Interface.NAME: route1_obj.next_hop_interface,
+                Interface.STATE: InterfaceState.UP,
+                Interface.IPV6: {'enabled': False},
+            }]
+        })
+        state_with_route1 = state.State({Route.KEY: {Route.CONFIG: [route1]}})
+
+        iface_down_state.merge_routes(state_with_route1)
+
+        expected = {
+            Interface.KEY: [{
+                Interface.NAME: route1_obj.next_hop_interface,
+                Interface.STATE: InterfaceState.UP,
+                Interface.IPV4: {},
+                Interface.IPV6: {'enabled': False},
+            }],
+            Route.KEY: {Route.CONFIG: []},
+        }
+        assert expected == iface_down_state.state
+        assert {} == iface_down_state.config_iface_routes
+
+    def test_merge_iface_ipv6_disabled_with_same_iface_ipv4_routes_state(self):
+        route0_obj = self._create_route0()
+        route0 = route0_obj.to_dict()
+        iface_down_state = state.State({
+            Interface.KEY: [{
+                Interface.NAME: route0_obj.next_hop_interface,
+                Interface.STATE: InterfaceState.UP,
+                Interface.IPV6: {'enabled': False},
+            }]
+        })
+        state_with_route0 = state.State({Route.KEY: {Route.CONFIG: [route0]}})
+
+        iface_down_state.merge_routes(state_with_route0)
+
+        expected = {
+            Interface.KEY: [{
+                Interface.NAME: route0_obj.next_hop_interface,
+                Interface.STATE: InterfaceState.UP,
+                Interface.IPV4: {},
+                Interface.IPV6: {'enabled': False},
+            }],
+            Route.KEY: {Route.CONFIG: [route0]},
+        }
+        assert expected == iface_down_state.state
+        assert ({route0_obj.next_hop_interface: [route0_obj]} ==
+                iface_down_state.config_iface_routes)
+
+    def test_merge_non_empty_with_empty_state(self):
+        route0_obj = self._create_route0()
+        route0 = route0_obj.to_dict()
+        empty_state = state.State({})
+        state_with_route0 = state.State({'routes': {'config': [route0]}})
+
+        state_with_route0.merge_routes(empty_state)
+
+        assert ({'interfaces': [], 'routes': {'config': [route0]}} ==
+                state_with_route0.state)
+        assert {'eth1': [route0_obj]} == state_with_route0.config_iface_routes
+
+    def test_merge_absent_routes_with_no_matching(self):
+        absent_route_obj = self._create_route0()
+        absent_route_obj.state = Route.STATE_ABSENT
+        absent_route = absent_route_obj.to_dict()
+        other_route_obj = self._create_route1()
+        other_route = other_route_obj.to_dict()
+        s0 = state.State({'routes': {'config': [absent_route]}})
+        s1 = state.State({'routes': {'config': [other_route]}})
+
+        s0.merge_routes(s1)
+
+        expected_state = {
+            'interfaces': [], 'routes': {'config': []}}
+        assert expected_state == s0.state
+        assert {} == s0.config_iface_routes
+
+    def test_merge_absent_routes_with_matching(self):
+        absent_route_obj = self._create_route0()
+        absent_route_obj.state = Route.STATE_ABSENT
+        absent_route = absent_route_obj.to_dict()
+        other_route_obj = self._create_route0()
+        other_route = other_route_obj.to_dict()
+        s0 = state.State({'routes': {'config': [absent_route]}})
+        s1 = state.State({'routes': {'config': [other_route]}})
+
+        s0.merge_routes(s1)
+
+        assert {'interfaces': [], 'routes': {'config': []}} == s0.state
+        assert {} == s0.config_iface_routes
+
+    def _create_route0(self):
+        return _create_route('198.51.100.0/24', '192.0.2.1', 'eth1', 50, 103)
+
+    def _create_route1(self):
+        return _create_route(
+            '2001:db8:a::/64', '2001:db8:1::a', 'eth2', 51, 104)
+
+
 def _create_route(dest, via_addr, via_iface, table, metric):
     return state.RouteEntry(
         _create_route_dict(dest, via_addr, via_iface, table, metric))
@@ -388,182 +611,6 @@ def test_state_iface_routes_order():
             reverse_route_state.config_iface_routes)
 
 
-def test_state_merge_config_add():
-    routes = _get_mixed_test_routes()
-    iface_states = _gen_iface_states_for_routes(routes)
-    other_state = state.State(
-        {
-            Interface.KEY: iface_states,
-            Route.KEY: {
-                Route.CONFIG: [routes[0]],
-            }
-        }
-    )
-    route_state = state.State(
-        {
-            Route.KEY: {
-                Route.CONFIG: [routes[1]],
-            }
-        }
-    )
-
-    route_state.merge_route_config(other_state)
-
-    expected_indexed_route_state = defaultdict(list)
-    for route in routes[:2]:
-        iface_name = route[Route.NEXT_HOP_INTERFACE]
-        expected_indexed_route_state[iface_name].append(
-            state.RouteEntry(route))
-        # No need to sort the routes as there is only 1 route per interface.
-
-    assert expected_indexed_route_state == route_state.config_iface_routes
-
-
-def test_state_merge_config_add_duplicate():
-    routes = _get_mixed_test_routes()
-    iface_states = _gen_iface_states_for_routes(routes)
-    other_state = state.State(
-        {
-            Interface.KEY: iface_states,
-            Route.KEY: {
-                Route.CONFIG: routes,
-            }
-        }
-    )
-    route_state = state.State(
-        {
-            Route.KEY: {
-                Route.CONFIG: [routes[0]],
-            }
-        }
-    )
-
-    route_state.merge_route_config(other_state)
-
-    expected_indexed_route_state = defaultdict(list)
-    for route in routes:
-        iface_name = route[Route.NEXT_HOP_INTERFACE]
-        expected_indexed_route_state[iface_name].append(
-            state.RouteEntry(route))
-        # No need to sort the routes as there is only 1 route per interface.
-
-    assert expected_indexed_route_state == route_state.config_iface_routes
-
-
-def test_state_merge_config_add_empty():
-    routes = _get_mixed_test_routes()
-    iface_states = _gen_iface_states_for_routes(routes)
-    other_state = state.State(
-        {
-            Interface.KEY: iface_states,
-            Route.KEY: {
-                Route.CONFIG: routes,
-            }
-        }
-    )
-    route_state = state.State(
-        {
-            Route.KEY: {
-                Route.CONFIG: []
-            }
-        }
-    )
-    route_state.merge_route_config(other_state)
-
-    expected_indexed_route_state = defaultdict(list)
-    for route in routes:
-        iface_name = route[Route.NEXT_HOP_INTERFACE]
-        expected_indexed_route_state[iface_name].append(
-            state.RouteEntry(route))
-        # No need to sort the routes as there is only 1 route per interface.
-
-    assert expected_indexed_route_state == route_state.config_iface_routes
-
-
-def test_state_merge_config_discard_absent():
-    routes = _get_mixed_test_routes()
-    iface_states = _gen_iface_states_for_routes(routes)
-    for route in routes:
-        route[Route.STATE] = Route.STATE_ABSENT
-    other_state = state.State(
-        {
-            Route.KEY: {
-                Route.CONFIG: [],
-            }
-        }
-    )
-    route_state = state.State(
-        {
-            Interface.KEY: iface_states,
-            Route.KEY: {
-                Route.CONFIG: routes
-            }
-        }
-    )
-    route_state.merge_route_config(other_state)
-
-    expected_indexed_route_state = {}
-    assert expected_indexed_route_state == route_state.config_iface_routes
-
-
-def test_merge_desired_route_iface_down():
-    routes = _get_mixed_test_routes()
-    iface_states = _gen_iface_states_for_routes(routes)
-    iface_states[0][Interface.STATE] = InterfaceState.DOWN
-    desired_state = state.State(
-        {
-            Interface.KEY: iface_states,
-            Route.KEY: {
-                Route.CONFIG: routes,
-            }
-        }
-    )
-    with pytest.raises(NmstateValueError):
-        desired_state.merge_route_config(state.State({}))
-
-
-def test_merge_desired_route_iface_missing():
-    routes = _get_mixed_test_routes()
-    iface_states = _gen_iface_states_for_routes(routes)
-    routes[0][Route.NEXT_HOP_INTERFACE] = 'not_exists'
-    desired_state = state.State(
-        {
-            Interface.KEY: iface_states,
-            Route.KEY: {
-                Route.CONFIG: routes,
-            }
-        }
-    )
-    with pytest.raises(NmstateValueError):
-        desired_state.merge_route_config(state.State({}))
-
-
-def test_merge_desired_route_ip_disabled():
-    routes = _get_mixed_test_routes()
-    ipv4_routes = []
-    ipv6_routes = []
-
-    for route in routes:
-        if is_ipv6_address(route[Route.DESTINATION]):
-            ipv6_routes.append(route)
-        else:
-            ipv4_routes.append(route)
-    for routes in (ipv4_routes, ipv6_routes):
-        iface_states = _gen_iface_states_for_routes(routes)
-        iface_states[0][Interface.IPV4]['enabled'] = False
-        iface_states[0][Interface.IPV6]['enabled'] = False
-        desired_state = state.State(
-            {
-                Interface.KEY: iface_states,
-                Route.KEY: {
-                    Route.CONFIG: routes,
-                }
-            }
-        )
-        with pytest.raises(NmstateValueError):
-            desired_state.merge_route_config(state.State({}))
-
-
 def test_state_verify_route_same():
     routes = _get_mixed_test_routes()
     route_state = state.State({
@@ -618,96 +665,6 @@ def test_state_verify_route_empty():
     route_state = state.State({})
     route_state_2 = state.State({})
     route_state.verify_routes(route_state_2)
-
-
-def test_state_merge_config_specific_remove():
-    routes = _get_mixed_test_routes()
-    iface_states = _gen_iface_states_for_routes(routes)
-    current_state = state.State({
-        Interface.KEY: iface_states,
-        Route.KEY: {
-            Route.CONFIG: routes
-        }
-    })
-    absent_route = routes[0]
-    absent_route[Route.STATE] = Route.STATE_ABSENT
-    desired_state = state.State({
-        Interface.KEY: iface_states,
-        Route.KEY: {
-            Route.CONFIG: [absent_route]
-        }
-    })
-
-    desired_state.merge_route_config(current_state)
-
-    expected_indexed_route_state = defaultdict(list)
-    for route in routes[1:]:
-        iface_name = route[Route.NEXT_HOP_INTERFACE]
-        expected_indexed_route_state[iface_name].append(
-            state.RouteEntry(route))
-        # No need to sort the routes as there is only 1 route per interface.
-
-    assert expected_indexed_route_state == desired_state.config_iface_routes
-
-
-def test_state_remote_route_wildcard_with_iface():
-    routes = _get_mixed_test_routes()
-    iface_states = _gen_iface_states_for_routes(routes)
-    current_state = state.State({
-        Interface.KEY: iface_states,
-        Route.KEY: {
-            Route.CONFIG: routes
-        }
-    })
-    absent_route_iface_name = routes[0][Route.NEXT_HOP_INTERFACE]
-    absent_route = {
-        Route.STATE: Route.STATE_ABSENT,
-        Route.NEXT_HOP_INTERFACE: absent_route_iface_name
-    }
-    desired_state = state.State({
-        Interface.KEY: iface_states,
-        Route.KEY: {
-            Route.CONFIG: [absent_route]
-        }
-    })
-
-    desired_state.merge_route_config(current_state)
-
-    expected_indexed_route_state = defaultdict(list)
-    for route in routes:
-        iface_name = route[Route.NEXT_HOP_INTERFACE]
-        if iface_name != absent_route_iface_name:
-            expected_indexed_route_state[iface_name].append(
-                state.RouteEntry(route))
-            # No need to sort the routes as there is only 1 route per
-            # interface.
-
-    assert expected_indexed_route_state == desired_state.config_iface_routes
-
-
-def test_state_remote_route_wildcard_destination_without_iface():
-    routes = _get_mixed_test_routes()
-    current_state = state.State({
-        Route.KEY: {
-            Route.CONFIG: routes
-        }
-    })
-    absent_routes = []
-    for route in routes:
-        absent_routes.append({
-            Route.STATE: Route.STATE_ABSENT,
-            Route.DESTINATION: route[Route.DESTINATION]
-        })
-    desired_state = state.State({
-        Route.KEY: {
-            Route.CONFIG: absent_routes
-        }
-    })
-
-    desired_state.merge_route_config(current_state)
-
-    expected_indexed_route_state = {}
-    assert expected_indexed_route_state == desired_state.config_iface_routes
 
 
 def _get_mixed_test_routes():
