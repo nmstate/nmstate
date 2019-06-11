@@ -21,6 +21,7 @@ from . import bridge
 from . import checkpoint
 from . import connection
 from . import device
+from . import dns
 from . import ipv4
 from . import ipv6
 from . import nmclient
@@ -36,6 +37,7 @@ bridge
 checkpoint
 connection
 device
+dns
 ipv4
 ipv6
 nmclient

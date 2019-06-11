@@ -317,7 +317,8 @@ def test_state_iface_routes_with_distinct_ifaces():
     expected_indexed_route_state = defaultdict(list)
     for route in routes:
         iface_name = route[Route.NEXT_HOP_INTERFACE]
-        expected_indexed_route_state[iface_name].append(route)
+        expected_indexed_route_state[iface_name].append(
+            state.RouteEntry(route))
         # No need to sort the routes as there is only 1 route per interface.
 
     assert expected_indexed_route_state == route_state.config_iface_routes
@@ -335,7 +336,7 @@ def test_state_iface_routes_with_same_iface():
         }
     )
     expected_indexed_route_state = {
-        'eth1': sorted(routes, key=_route_sort_key)
+        'eth1': sorted([state.RouteEntry(r) for r in routes])
     }
 
     assert expected_indexed_route_state == route_state.config_iface_routes
@@ -390,7 +391,8 @@ def test_state_merge_config_add():
     expected_indexed_route_state = defaultdict(list)
     for route in routes[:2]:
         iface_name = route[Route.NEXT_HOP_INTERFACE]
-        expected_indexed_route_state[iface_name].append(route)
+        expected_indexed_route_state[iface_name].append(
+            state.RouteEntry(route))
         # No need to sort the routes as there is only 1 route per interface.
 
     assert expected_indexed_route_state == route_state.config_iface_routes
@@ -420,7 +422,8 @@ def test_state_merge_config_add_duplicate():
     expected_indexed_route_state = defaultdict(list)
     for route in routes:
         iface_name = route[Route.NEXT_HOP_INTERFACE]
-        expected_indexed_route_state[iface_name].append(route)
+        expected_indexed_route_state[iface_name].append(
+            state.RouteEntry(route))
         # No need to sort the routes as there is only 1 route per interface.
 
     assert expected_indexed_route_state == route_state.config_iface_routes
@@ -449,7 +452,8 @@ def test_state_merge_config_add_empty():
     expected_indexed_route_state = defaultdict(list)
     for route in routes:
         iface_name = route[Route.NEXT_HOP_INTERFACE]
-        expected_indexed_route_state[iface_name].append(route)
+        expected_indexed_route_state[iface_name].append(
+            state.RouteEntry(route))
         # No need to sort the routes as there is only 1 route per interface.
 
     assert expected_indexed_route_state == route_state.config_iface_routes
@@ -618,7 +622,8 @@ def test_state_merge_config_specific_remove():
     expected_indexed_route_state = defaultdict(list)
     for route in routes[1:]:
         iface_name = route[Route.NEXT_HOP_INTERFACE]
-        expected_indexed_route_state[iface_name].append(route)
+        expected_indexed_route_state[iface_name].append(
+            state.RouteEntry(route))
         # No need to sort the routes as there is only 1 route per interface.
 
     assert expected_indexed_route_state == desired_state.config_iface_routes
@@ -651,7 +656,8 @@ def test_state_remote_route_wildcard_with_iface():
     for route in routes:
         iface_name = route[Route.NEXT_HOP_INTERFACE]
         if iface_name != absent_route_iface_name:
-            expected_indexed_route_state[iface_name].append(route)
+            expected_indexed_route_state[iface_name].append(
+                state.RouteEntry(route))
             # No need to sort the routes as there is only 1 route per
             # interface.
 
