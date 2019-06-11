@@ -27,6 +27,19 @@ from libnmstate.schema import DNS
 from libnmstate.error import NmstateDependencyError
 from libnmstate.error import NmstateNotImplementedError
 from libnmstate.error import NmstateValueError
+from libnmstate.iplib import is_ipv6_address
+
+
+class NmstateRouteWithNoInterfaceError(NmstateValueError):
+    pass
+
+
+class NmstateRouteWithNoUpInterfaceError(NmstateValueError):
+    pass
+
+
+class NmstateRouteWithNoIPInterfaceError(NmstateValueError):
+    pass
 
 
 def validate(data, validation_schema=schema.ifaces_schema):
@@ -100,3 +113,75 @@ def validate_dns(state):
     if len(dns_servers) > 2:
         raise NmstateNotImplementedError(
             'Nmstate only support at most 2 DNS name servers')
+
+
+def validate_routes(desired_state, current_state):
+    """
+    A route has several requirements it must comply with:
+    - Next-hop interface must be provided
+    - The next-hop interface must:
+        - Exist and be up (no down/absent)
+        - Have the relevant IPv4/6 stack enabled.
+    """
+    for iface_name, routes in six.viewitems(desired_state.config_iface_routes):
+        if not routes:
+            continue
+
+        desired_iface_state = desired_state.interfaces.get(iface_name)
+        current_iface_state = current_state.interfaces.get(iface_name)
+        if desired_iface_state or current_iface_state:
+            _assert_iface_is_up(desired_iface_state, current_iface_state)
+            if any(is_ipv6_address(route.destination) for route in routes):
+                _assert_iface_ipv6_enabled(desired_iface_state,
+                                           current_iface_state)
+            if any(not is_ipv6_address(route.destination) for route in routes):
+                _assert_iface_ipv4_enabled(desired_iface_state,
+                                           current_iface_state)
+        else:
+            raise NmstateRouteWithNoInterfaceError(str(routes))
+
+
+def _assert_iface_is_up(desired_iface_state, current_iface_state):
+    """
+    Validates that the interface has an UP state.
+    Prioritize the desired state over the current state.
+    """
+    if desired_iface_state:
+        state = desired_iface_state.get(schema.Interface.STATE)
+        if state is not None:
+            if state == schema.InterfaceState.UP:
+                return
+            raise NmstateRouteWithNoUpInterfaceError(desired_iface_state)
+    if current_iface_state:
+        state = current_iface_state.get(schema.Interface.STATE)
+        if state != schema.InterfaceState.UP:
+            raise NmstateRouteWithNoUpInterfaceError(current_iface_state)
+
+
+def _assert_iface_ipv4_enabled(desired_iface_state, current_iface_state):
+    _assert_iface_ip_enabled(
+        desired_iface_state, current_iface_state, schema.Interface.IPV4)
+
+
+def _assert_iface_ipv6_enabled(desired_iface_state, current_iface_state):
+    _assert_iface_ip_enabled(
+        desired_iface_state, current_iface_state, schema.Interface.IPV6)
+
+
+def _assert_iface_ip_enabled(desired_iface_state, current_iface_state, ipkey):
+    """
+    Validates that the interface has IPv4/6 (ipkey) enabled.
+    Prioritize the desired state over the current state.
+    """
+    if desired_iface_state:
+        ip_state = desired_iface_state.get(ipkey)
+        if ip_state is not None:
+            ip_enabled = ip_state.get('enabled')
+            if ip_enabled is True:
+                return
+            elif ip_enabled is False:
+                raise NmstateRouteWithNoIPInterfaceError(desired_iface_state)
+    if current_iface_state:
+        ip_state = current_iface_state.get(ipkey)
+        if not ip_state.get('enabled'):
+            raise NmstateRouteWithNoIPInterfaceError(current_iface_state)
