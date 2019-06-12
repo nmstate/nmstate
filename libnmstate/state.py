@@ -241,6 +241,17 @@ class State(object):
                             Route.KEY: other_routes
                         }))
 
+    def verify_dns(self, other_state):
+        if self.config_dns != other_state.config_dns:
+            raise NmstateVerificationError(
+                format_desired_current_state_diff(
+                    {
+                        DNS.KEY: self.config_dns
+                    },
+                    {
+                        DNS.KEY: other_state.config_dns
+                    }))
+
     def normalize_for_verification(self):
         self._clean_sanitize_ethernet()
         self._sort_lag_slaves()
