@@ -27,6 +27,7 @@ from libnmstate.schema import Route
 NM_ROUTE_TABLE_ATTRIBUTE = 'table'
 IPV4_DEFAULT_GATEWAY_DESTINATION = '0.0.0.0/0'
 IPV6_DEFAULT_GATEWAY_DESTINATION = '::/0'
+ROUTE_METADATA = '_routes'
 
 
 def get_running(acs_and_ip_cfgs):
