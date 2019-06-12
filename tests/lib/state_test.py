@@ -119,6 +119,25 @@ class TestAssertIfaceState(object):
 
         desired_state.verify_interfaces(current_state)
 
+    def test_include_changed_ifaces(self):
+        current_state = self._base_state
+        desired_state = state.State({})
+        iface_names = current_state.interfaces.keys()
+        desired_state.include_changed_interfaces(current_state, iface_names)
+        assert desired_state.interfaces == current_state.interfaces
+
+    def test_include_changed_ifaces_but_not_in_current(self):
+        current_state = self._base_state
+        desired_state = state.State({})
+        desired_state.include_changed_interfaces(current_state, ['not-exists'])
+        assert desired_state.interfaces == {}
+
+    def test_include_changed_ifaces_with_empty_current(self):
+        desired_state = state.State({})
+        current_state = state.State({})
+        desired_state.include_changed_interfaces(current_state, ['foo-name'])
+        assert desired_state.interfaces == {}
+
     @property
     def _base_state(self):
         return state.State({

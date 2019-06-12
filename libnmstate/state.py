@@ -316,6 +316,17 @@ class State(object):
         self._config_iface_routes = State._index_routes_by_iface(
             self._config_routes)
 
+    def include_changed_interfaces(self, other, changed_iface_names):
+        """
+        Add copy interface state from other.interfaces if not found in
+        self.interfaces
+        """
+        for iface_name in changed_iface_names:
+            if iface_name not in self.interfaces and \
+               iface_name in other.interfaces:
+                self.interfaces[iface_name] = \
+                    copy.deepcopy(other.interfaces[iface_name])
+
     def _remove_absent_interfaces(self):
         ifaces = {}
         for ifname, ifstate in six.viewitems(self.interfaces):
