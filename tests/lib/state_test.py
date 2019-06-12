@@ -23,6 +23,7 @@ from libnmstate import state
 from libnmstate.iplib import is_ipv6_address
 from libnmstate.error import NmstateValueError
 from libnmstate.error import NmstateVerificationError
+from libnmstate.schema import DNS
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import Route
@@ -675,3 +676,31 @@ def _route_sort_key(route):
     return (route.get(Route.TABLE_ID, Route.USE_DEFAULT_ROUTE_TABLE),
             route.get(Route.NEXT_HOP_INTERFACE, ''),
             route.get(Route.DESTINATION, ''))
+
+
+class TestAssertDnsState(object):
+    def test_merge_dns_empty_state_with_non_empty_state(self):
+        dns_config = self._get_test_dns_config()
+        current_state = state.State({DNS.KEY: dns_config})
+        desire_state = state.State({})
+
+        desire_state.merge_dns(current_state)
+
+        assert current_state.config_dns == desire_state.config_dns
+
+    def test_merge_dns_non_empty_state_with_empty_state(self):
+        dns_config = self._get_test_dns_config()
+        desire_state = state.State({DNS.KEY: dns_config})
+        current_state = state.State({})
+
+        desire_state.merge_dns(current_state)
+
+        assert desire_state.config_dns == dns_config[DNS.CONFIG]
+
+    def _get_test_dns_config(self):
+        return {
+            DNS.CONFIG: {
+                DNS.SERVER: ['192.168.122.1', '2001:db8:a::1'],
+                DNS.SEARCH: ['example.com', 'example.org']
+            }
+        }

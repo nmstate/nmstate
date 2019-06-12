@@ -30,6 +30,7 @@ from libnmstate import metadata
 from libnmstate.error import NmstateValueError
 from libnmstate.error import NmstateVerificationError
 from libnmstate.prettystate import format_desired_current_state_diff
+from libnmstate.schema import DNS
 from libnmstate.schema import Ethernet
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceState
@@ -155,6 +156,14 @@ class State(object):
         Indexed config routes by next hop interface name. Read only.
         """
         return self._config_iface_routes
+
+    @property
+    def config_dns(self):
+        dns_conf = self._state.get(DNS.KEY, {}).get(DNS.CONFIG, {})
+        return {
+            DNS.SERVER: dns_conf.get(DNS.SERVER, []),
+            DNS.SEARCH: dns_conf.get(DNS.SEARCH, [])
+        }
 
     def _complement_interface_empty_ip_subtrees(self):
         """ Complement the interfaces states with empty IPv4/IPv6 subtrees. """
@@ -315,6 +324,16 @@ class State(object):
         self._config_routes = merged_routes
         self._config_iface_routes = State._index_routes_by_iface(
             self._config_routes)
+
+    def merge_dns(self, other_state):
+        """
+        If DNS is not mentioned in the self state, overwrite it with the other
+        DNS entries.
+        """
+        if not self._state.get(DNS.KEY):
+            self._state[DNS.KEY] = {
+                DNS.CONFIG: copy.deepcopy(other_state.config_dns)
+            }
 
     def _remove_absent_interfaces(self):
         ifaces = {}
