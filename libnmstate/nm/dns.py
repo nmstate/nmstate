@@ -19,13 +19,14 @@ from operator import itemgetter
 from libnmstate import iplib
 from libnmstate.error import NmstateInternalError
 from libnmstate.nm import nmclient
-from libnmstate.nm import ipv4 as nm_ipv4
-from libnmstate.nm import ipv6 as nm_ipv6
+from libnmstate.nm import connection as nm_connection
 from libnmstate.schema import DNS
 
 
 DNS_DEFAULT_PRIORITY_VPN = 50
 DNS_DEFAULT_PRIORITY_OTHER = 100
+DNS_METADATA_PRIORITY = '_priority'
+DEFAULT_DNS_PRIORITY = 0
 
 IPV6_ADDRESS_LENGTH = 128
 
@@ -65,14 +66,14 @@ def get_config():
     client = nmclient.client()
     for ac in client.get_active_connections():
         # NM prefers IPv6 over IPv4 DNS.
-        for ip_profile in (nm_ipv6.get_ip_profile(ac),
-                           nm_ipv4.get_ip_profile(ac)):
+        for ip_profile in (nm_connection.get_ipv6_profile(ac),
+                           nm_connection.get_ipv4_profile(ac)):
             if not ip_profile:
                 continue
             if not ip_profile.props.dns and not ip_profile.props.dns_search:
                 continue
             priority = ip_profile.props.dns_priority
-            if priority == 0:
+            if priority == DEFAULT_DNS_PRIORITY:
                 # ^ The dns_priority in 'NetworkManager.conf' is been ignored
                 #   due to the lacking of query function in libnm API.
                 if ac.get_vpn():
@@ -100,3 +101,13 @@ def get_config():
     if not dns_conf[DNS.SERVER] and dns_conf[DNS.SEARCH]:
         return {}
     return dns_conf
+
+
+def add_dns(setting_ip, dns_state):
+    priority = dns_state.get(DNS_METADATA_PRIORITY)
+    if priority is not None:
+        setting_ip.props.dns_priority = priority
+    for server in dns_state.get(DNS.SERVER, []):
+        setting_ip.add_dns(server)
+    for search in dns_state.get(DNS.SEARCH, []):
+        setting_ip.add_dns_search(search)

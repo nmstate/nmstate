@@ -19,6 +19,8 @@ import socket
 
 from . import nmclient
 from libnmstate import metadata
+from libnmstate.nm import connection as nm_connection
+from libnmstate.nm import dns as nm_dns
 from libnmstate.nm import route as nm_route
 from libnmstate.schema import Route
 
@@ -37,6 +39,9 @@ def create_setting(config, base_con_profile):
             setting_ipv4.props.route_table = Route.USE_DEFAULT_ROUTE_TABLE
             setting_ipv4.props.route_metric = Route.USE_DEFAULT_METRIC
             setting_ipv4.clear_routes()
+            setting_ipv4.clear_dns()
+            setting_ipv4.clear_dns_searches()
+            setting_ipv4.props.dns_priority = nm_dns.DEFAULT_DNS_PRIORITY
 
     if not setting_ipv4:
         setting_ipv4 = nmclient.NM.SettingIP4Config.new()
@@ -58,6 +63,7 @@ def create_setting(config, base_con_profile):
                 nmclient.NM.SETTING_IP4_CONFIG_METHOD_MANUAL)
             _add_addresses(setting_ipv4, config['address'])
         nm_route.add_routes(setting_ipv4, config.get(metadata.ROUTES, []))
+        nm_dns.add_dns(setting_ipv4, config.get(metadata.DNS_METADATA, {}))
     return setting_ipv4
 
 
@@ -80,7 +86,7 @@ def get_info(active_connection):
     if active_connection is None:
         return info
 
-    ip_profile = get_ip_profile(active_connection)
+    ip_profile = nm_connection.get_ipv4_profile(active_connection)
     if ip_profile:
         info['dhcp'] = ip_profile.get_method() == (
             nmclient.NM.SETTING_IP4_CONFIG_METHOD_AUTO)
@@ -118,17 +124,6 @@ def get_info(active_connection):
     return info
 
 
-def get_ip_profile(active_connection):
-    """
-    Get NMSettingIP4Config from NMActiveConnection.
-    For any error, return None.
-    """
-    remote_conn = active_connection.get_connection()
-    if remote_conn:
-        return remote_conn.get_setting_ip4_config()
-    return None
-
-
 def get_route_running():
     return nm_route.get_running(_acs_and_ip_cfgs(nmclient.client()))
 
@@ -147,7 +142,7 @@ def _acs_and_ip_cfgs(client):
 
 def _acs_and_ip_profiles(client):
     for ac in client.get_active_connections():
-        ip_profile = get_ip_profile(ac)
+        ip_profile = nm_connection.get_ipv4_profile(ac)
         if not ip_profile:
             continue
         yield ac, ip_profile

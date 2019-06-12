@@ -22,6 +22,8 @@ from libnmstate import iplib
 from libnmstate import metadata
 from libnmstate.error import NmstateNotImplementedError
 from libnmstate.nm import nmclient
+from libnmstate.nm import connection as nm_connection
+from libnmstate.nm import dns as nm_dns
 from libnmstate.nm import route as nm_route
 from libnmstate.schema import Route
 
@@ -37,7 +39,7 @@ def get_info(active_connection):
     info['dhcp'] = False
     info['autoconf'] = False
 
-    ip_profile = get_ip_profile(active_connection)
+    ip_profile = nm_connection.get_ipv6_profile(active_connection)
     if ip_profile:
         method = ip_profile.get_method()
         if method == nmclient.NM.SETTING_IP6_CONFIG_METHOD_AUTO:
@@ -94,6 +96,9 @@ def create_setting(config, base_con_profile):
             setting_ip.props.gateway = None
             setting_ip.props.route_table = Route.USE_DEFAULT_ROUTE_TABLE
             setting_ip.props.route_metric = Route.USE_DEFAULT_METRIC
+            setting_ip.clear_dns()
+            setting_ip.clear_dns_searches()
+            setting_ip.props.dns_priority = nm_dns.DEFAULT_DNS_PRIORITY
 
     if not setting_ip:
         setting_ip = nmclient.NM.SettingIP6Config.new()
@@ -122,6 +127,7 @@ def create_setting(config, base_con_profile):
             nmclient.NM.SETTING_IP6_CONFIG_METHOD_LINK_LOCAL)
 
     nm_route.add_routes(setting_ip, config.get(metadata.ROUTES, []))
+    nm_dns.add_dns(setting_ip, config.get(metadata.DNS_METADATA, {}))
     return setting_ip
 
 
@@ -160,17 +166,6 @@ def _set_static(setting_ip, ip_addresses):
             nmclient.NM.SETTING_IP6_CONFIG_METHOD_LINK_LOCAL)
 
 
-def get_ip_profile(active_connection):
-    """
-    Get NMSettingIP6Config from NMActiveConnection.
-    For any error, return None.
-    """
-    remote_conn = active_connection.get_connection()
-    if remote_conn:
-        return remote_conn.get_setting_ip6_config()
-    return None
-
-
 def get_route_running():
     return nm_route.get_running(_acs_and_ip_cfgs(nmclient.client()))
 
@@ -195,7 +190,7 @@ def _acs_and_ip_cfgs(client):
 
 def _acs_and_ip_profiles(client):
     for ac in client.get_active_connections():
-        ip_profile = get_ip_profile(ac)
+        ip_profile = nm_connection.get_ipv6_profile(ac)
         if not ip_profile:
             continue
         yield ac, ip_profile

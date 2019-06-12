@@ -397,3 +397,25 @@ def get_device_active_connection(nm_device):
     if nm_device:
         active_conn = nm_device.get_active_connection()
     return active_conn
+
+
+def get_ipv4_profile(active_connection):
+    """
+    Get NMSettingIP4Config from NMActiveConnection.
+    For any error, return None.
+    """
+    remote_conn = active_connection.get_connection()
+    if remote_conn:
+        return remote_conn.get_setting_ip4_config()
+    return None
+
+
+def get_ipv6_profile(active_connection):
+    """
+    Get NMSettingIP6Config from NMActiveConnection.
+    For any error, return None.
+    """
+    remote_conn = active_connection.get_connection()
+    if remote_conn:
+        return remote_conn.get_setting_ip6_config()
+    return None
