@@ -697,6 +697,27 @@ class TestAssertDnsState(object):
 
         assert desire_state.config_dns == dns_config[DNS.CONFIG]
 
+    def test_state_verify_dns_same(self):
+        dns_config = self._get_test_dns_config()
+        desire_state = state.State({DNS.KEY: dns_config})
+        current_state = state.State({DNS.KEY: dns_config})
+
+        desire_state.verify_dns(current_state)
+
+    def test_verify_dns_same_entries_different_order(self):
+        dns_config = self._get_test_dns_config()
+        desire_state = state.State({DNS.KEY: dns_config})
+        dns_config[DNS.CONFIG][DNS.SERVER].reverse()
+        current_state = state.State(dns_config)
+
+        with pytest.raises(NmstateVerificationError):
+            desire_state.verify_dns(current_state)
+
+    def test_state_verify_empty(self):
+        desire_state = state.State({})
+        current_state = state.State({})
+        desire_state.verify_dns(current_state)
+
     def _get_test_dns_config(self):
         return {
             DNS.CONFIG: {
