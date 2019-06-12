@@ -22,6 +22,7 @@ from libnmstate import iplib
 from libnmstate import metadata
 from libnmstate.error import NmstateNotImplementedError
 from libnmstate.nm import nmclient
+from libnmstate.nm import dns as nm_dns
 from libnmstate.nm import route as nm_route
 from libnmstate.schema import Route
 
@@ -94,6 +95,9 @@ def create_setting(config, base_con_profile):
             setting_ip.props.gateway = None
             setting_ip.props.route_table = Route.USE_DEFAULT_ROUTE_TABLE
             setting_ip.props.route_metric = Route.USE_DEFAULT_METRIC
+            setting_ip.clear_dns()
+            setting_ip.clear_dns_searches()
+            setting_ip.props.dns_priority = nm_dns.DEFAULT_DNS_PRIORITY
 
     if not setting_ip:
         setting_ip = nmclient.NM.SettingIP6Config.new()
@@ -122,6 +126,7 @@ def create_setting(config, base_con_profile):
             nmclient.NM.SETTING_IP6_CONFIG_METHOD_LINK_LOCAL)
 
     nm_route.add_routes(setting_ip, config.get(metadata.ROUTES, []))
+    nm_dns.add_dns(setting_ip, config.get(nm_dns.DNS_METADATA, {}))
     return setting_ip
 
 
