@@ -47,9 +47,11 @@ def show(include_status_data=False):
                        nm.ipv6.get_route_config()),
     }
 
+    client = nm.nmclient.client()
     report[Constants.DNS] = {
         DNS.RUNNING: nm_dns.get_running(),
-        DNS.CONFIG: nm_dns.get_config(),
+        DNS.CONFIG: nm_dns.get_config(nm.ipv4.acs_and_ip_profiles(client),
+                                      nm.ipv6.acs_and_ip_profiles(client)),
     }
 
     validator.validate(report)
