@@ -14,13 +14,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
+from itertools import chain
 from operator import itemgetter
 
 from libnmstate import iplib
 from libnmstate.error import NmstateInternalError
 from libnmstate.nm import nmclient
-from libnmstate.nm import ipv4 as nm_ipv4
-from libnmstate.nm import ipv6 as nm_ipv6
 from libnmstate.schema import DNS
 
 
@@ -56,37 +55,32 @@ def get_running():
     return dns_state
 
 
-def get_config():
+def get_config(acs_and_ipv4_profiles, acs_and_ipv6_profiles):
     dns_conf = {
         DNS.SERVER: [],
         DNS.SEARCH: []
     }
     tmp_dns_confs = []
-    client = nmclient.client()
-    for ac in client.get_active_connections():
-        # NM prefers IPv6 over IPv4 DNS.
-        for ip_profile in (nm_ipv6.get_ip_profile(ac),
-                           nm_ipv4.get_ip_profile(ac)):
-            if not ip_profile:
-                continue
-            if not ip_profile.props.dns and not ip_profile.props.dns_search:
-                continue
-            priority = ip_profile.props.dns_priority
-            if priority == 0:
-                # ^ The dns_priority in 'NetworkManager.conf' is been ignored
-                #   due to the lacking of query function in libnm API.
-                if ac.get_vpn():
-                    priority = DNS_DEFAULT_PRIORITY_VPN
-                else:
-                    priority = DNS_DEFAULT_PRIORITY_OTHER
 
-            tmp_dns_confs.append(
-                {
-                    'server': ip_profile.props.dns,
-                    'priority': priority,
-                    'search': ip_profile.props.dns_search,
-                }
-            )
+    for ac, ip_profile in chain(acs_and_ipv6_profiles, acs_and_ipv4_profiles):
+        if not ip_profile.props.dns and not ip_profile.props.dns_search:
+            continue
+        priority = ip_profile.props.dns_priority
+        if priority == 0:
+            # ^ The dns_priority in 'NetworkManager.conf' is been ignored
+            #   due to the lacking of query function in libnm API.
+            if ac.get_vpn():
+                priority = DNS_DEFAULT_PRIORITY_VPN
+            else:
+                priority = DNS_DEFAULT_PRIORITY_OTHER
+
+        tmp_dns_confs.append(
+            {
+                'server': ip_profile.props.dns,
+                'priority': priority,
+                'search': ip_profile.props.dns_search,
+            }
+        )
     # NetworkManager sorts the DNS entries based on various criteria including
     # which profile was activated first when profiles are activated. Therefore
     # the configuration does not completely define the order. To define the

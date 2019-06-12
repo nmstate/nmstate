@@ -176,7 +176,7 @@ def get_route_running():
 
 
 def get_route_config():
-    routes = nm_route.get_config(_acs_and_ip_profiles(nmclient.client()))
+    routes = nm_route.get_config(acs_and_ip_profiles(nmclient.client()))
     for route in routes:
         if route[Route.METRIC] == 0:
             # Kernel will convert 0 to IPV6_DEFAULT_ROUTE_METRIC.
@@ -193,7 +193,7 @@ def _acs_and_ip_cfgs(client):
         yield ac, ip_cfg
 
 
-def _acs_and_ip_profiles(client):
+def acs_and_ip_profiles(client):
     for ac in client.get_active_connections():
         ip_profile = get_ip_profile(ac)
         if not ip_profile:
