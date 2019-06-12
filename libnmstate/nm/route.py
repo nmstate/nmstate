@@ -22,6 +22,7 @@ from libnmstate import iplib
 from libnmstate.error import NmstateInternalError
 from libnmstate.error import NmstateNotImplementedError
 from libnmstate.nm import nmclient
+from libnmstate.nm import active_connection as nm_ac
 from libnmstate.schema import Route
 
 NM_ROUTE_TABLE_ATTRIBUTE = 'table'
@@ -40,7 +41,7 @@ def get_running(acs_and_ip_cfgs):
     for (active_connection, ip_cfg) in acs_and_ip_cfgs:
         if not ip_cfg.props.routes:
             continue
-        iface_name = _get_iface_name(active_connection)
+        iface_name = nm_ac.ActiveConnection(active_connection).devname
         if not iface_name:
             raise NmstateInternalError(
                 'Got connection {} has not interface name'.format(
@@ -73,7 +74,7 @@ def get_config(acs_and_ip_profiles):
         gateway = ip_profile.props.gateway
         if not nm_routes and not gateway:
             continue
-        iface_name = _get_iface_name(active_connection)
+        iface_name = nm_ac.ActiveConnection(active_connection).devname
         if not iface_name:
             raise NmstateInternalError(
                 'Got connection {} has not interface name'.format(
@@ -108,14 +109,6 @@ def get_config(acs_and_ip_profiles):
 def _get_per_route_table_id(nm_route, default_table_id):
     table = nm_route.get_attribute(NM_ROUTE_TABLE_ATTRIBUTE)
     return int(table.get_uint32()) if table else default_table_id
-
-
-def _get_iface_name(active_connection):
-    """
-    Return interface name for active_connection, return None if error.
-    """
-    devs = active_connection.get_devices()
-    return devs[0].get_iface() if devs else None
 
 
 def _nm_route_to_route(nm_route, table_id, iface_name):
