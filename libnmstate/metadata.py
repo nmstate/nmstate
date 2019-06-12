@@ -27,6 +27,8 @@ BRPORT_OPTIONS = '_brport_options'
 MASTER = '_master'
 MASTER_TYPE = '_master_type'
 ROUTES = '_routes'
+DNS_METADATA = '_dns'
+DNS_METADATA_PRIORITY = '_priority'
 
 
 def generate_ifaces_metadata(desired_state, current_state):
