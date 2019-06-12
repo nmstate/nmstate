@@ -23,7 +23,9 @@ import jsonschema as js
 from . import nm
 from . import schema
 from .schema import Constants
+from libnmstate.schema import DNS
 from libnmstate.error import NmstateDependencyError
+from libnmstate.error import NmstateNotImplementedError
 from libnmstate.error import NmstateValueError
 
 
@@ -86,3 +88,15 @@ def validate_dhcp(state):
                (ip.get('dhcp') or ip.get('autoconf')):
                 logging.warning('%s addresses are ignored when '
                                 'dynamic IP is enabled', family)
+
+
+def validate_dns(state):
+    """
+    Only support at most 2 name servers now:
+    https://nmstate.atlassian.net/browse/NMSTATE-220
+    """
+    dns_servers = state.get(
+        DNS.KEY, {}).get(DNS.CONFIG, {}).get(DNS.SERVER, [])
+    if len(dns_servers) > 2:
+        raise NmstateNotImplementedError(
+            'Nmstate only support at most 2 DNS name servers')
