@@ -23,6 +23,9 @@ from libnmstate import netapplier
 from libnmstate import netinfo
 from libnmstate.schema import Constants
 from libnmstate.schema import DNS
+from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceState
+from libnmstate.schema import InterfaceType
 from libnmstate.schema import Route as RT
 
 from libnmstate.error import NmstateNotImplementedError
@@ -632,6 +635,65 @@ def test_slave_ipaddr_learned_via_dhcp_added_as_static_to_linux_bridge(
 
     netapplier.apply(bridge_desired_state)
     assertlib.assert_state(bridge_desired_state)
+
+
+def test_dns_edit_with_dhcp_no_auto_dns(dhcp_env):
+    # Currently, route editing requires changed interfaces been listed manually
+    # in desire state
+    current_ifaces = netinfo.show().get(Interface.KEY, [])
+    # Remove gateways so that DNS entry could save to DHCP interfaces
+    netapplier.apply({
+        DNS.KEY: {
+            DNS.CONFIG: {
+                DNS.SERVER: [],
+                DNS.SEARCH: [],
+            }
+        },
+        Interface.KEY: current_ifaces,
+        RT.KEY: {
+            RT.CONFIG: [
+                {
+                    RT.STATE: RT.STATE_ABSENT,
+                    RT.DESTINATION: '0.0.0.0/0',
+                },
+                {
+                    RT.STATE: RT.STATE_ABSENT,
+                    RT.DESTINATION: '::/0',
+                },
+            ]
+        }
+    })
+
+    dns_config = {
+        DNS.SERVER: ['2001:4860:4860::8888', '8.8.8.8'],
+        DNS.SEARCH: ['example.org', 'example.com']
+    }
+    desired_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: DHCP_CLI_NIC,
+                Interface.TYPE: InterfaceType.ETHERNET,
+                Interface.STATE: InterfaceState.UP,
+                Interface.IPV4: {
+                    'enabled': True,
+                    'dhcp': True,
+                    'auto-dns': False,
+                },
+                Interface.IPV6: {
+                    'enabled': True,
+                    'dhcp': True,
+                    'autoconf': True,
+                    'auto-dns': False,
+                }
+            }
+        ],
+        DNS.KEY: {
+            DNS.CONFIG: dns_config
+        }
+    }
+    netapplier.apply(desired_state)
+    current_state = netinfo.show()
+    assert dns_config == current_state[DNS.KEY][DNS.CONFIG]
 
 
 def _get_nameservers():

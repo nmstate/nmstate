@@ -103,6 +103,24 @@ def get_config():
     return dns_conf
 
 
+def get_dns_config_iface_names():
+    """
+    Return a list of interface name which holds the static DNS configurations.
+    """
+    iface_names = []
+    client = nmclient.client()
+    for ac in client.get_active_connections():
+        for ip_profile in (nm_connection.get_ipv6_profile(ac),
+                           nm_connection.get_ipv4_profile(ac)):
+            if not ip_profile:
+                continue
+            if not ip_profile.props.dns and not ip_profile.props.dns_search:
+                continue
+            iface_names.append(nm_connection.get_iface_name(ac))
+    print('old_dns_config', iface_names)
+    return iface_names
+
+
 def add_dns(setting_ip, dns_state):
     priority = dns_state.get(DNS_METADATA_PRIORITY)
     if priority is not None:

@@ -1,0 +1,6 @@
+---
+dns-resolver:
+  config:
+    search: []
+    server: []
+interfaces: []

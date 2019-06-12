@@ -419,3 +419,11 @@ def get_ipv6_profile(active_connection):
     if remote_conn:
         return remote_conn.get_setting_ip6_config()
     return None
+
+
+def get_iface_name(active_connection):
+    """
+    Return interface name for active_connection, return None if error.
+    """
+    devs = active_connection.get_devices()
+    return devs[0].get_iface() if devs else None
