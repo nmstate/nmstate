@@ -20,6 +20,8 @@ import pytest
 import libnmstate
 from libnmstate import schema
 from libnmstate import state
+from libnmstate.schema import DNS
+from libnmstate.error import NmstateNotImplementedError
 from libnmstate.error import NmstateValueError
 
 
@@ -137,6 +139,19 @@ class TestLinkAggregationState(object):
         with pytest.raises(NmstateValueError):
             libnmstate.validator.validate_link_aggregation_state(desired_state,
                                                                  empty_state())
+
+
+@pytest.mark.xfail(raises=NmstateNotImplementedError,
+                   reason='https://nmstate.atlassian.net/browse/NMSTATE-220',
+                   strict=True)
+def test_dns_three_nameservers():
+    libnmstate.validator.validate_dns({
+        DNS.KEY: {
+            DNS.CONFIG: {
+                DNS.SERVER: ['8.8.8.8', '2001:4860:4860::8888', '8.8.4.4']
+            }
+        }
+    })
 
 
 def empty_state():
