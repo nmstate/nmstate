@@ -21,7 +21,9 @@ from libnmstate import iplib
 from libnmstate.error import NmstateInternalError
 from libnmstate.nm import nmclient
 from libnmstate.nm import active_connection as nm_ac
+from libnmstate.nm import route as nm_route
 from libnmstate.schema import DNS
+from libnmstate.schema import Interface
 
 
 DNS_DEFAULT_PRIORITY_VPN = 50
@@ -29,6 +31,9 @@ DNS_DEFAULT_PRIORITY_OTHER = 100
 DNS_METADATA = '_dns'
 DNS_METADATA_PRIORITY = '_priority'
 DEFAULT_DNS_PRIORITY = 0
+# The 40 is chose as default DHCP DNS priority is 100, and VPN DNS priority is
+# 50, the static DNS configuration should be list before them.
+DNS_PRIORITY_STATIC_BASE = 40
 
 IPV6_ADDRESS_LENGTH = 128
 
@@ -118,3 +123,14 @@ def get_dns_config_iface_names(acs_and_ipv4_profiles, acs_and_ipv6_profiles):
         if ip_profile.props.dns or ip_profile.props.dns_search:
             iface_names.append(nm_ac.ActiveConnection(ac).devname)
     return iface_names
+
+
+def find_interfaces_for_name_servers(iface_routes):
+    """
+    Find interfaces to store the DNS configurations:
+        * Interface with static gateway configured.
+    Return two interface names for IPv4 and IPv6 name servers.
+    The interface name will be None if failed to find proper interface.
+    """
+    return (nm_route.get_static_gateway_iface(Interface.IPV4, iface_routes),
+            nm_route.get_static_gateway_iface(Interface.IPV6, iface_routes))
