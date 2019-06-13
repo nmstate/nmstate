@@ -9,15 +9,15 @@ OLD_PWD=$(pwd)
 
 for candidate in python3 python2 python
 do
-    python="$(command -v "${candidate}")"
-    if [[ -v python ]]
+    python="$(command -v "${candidate}" || true)"
+    if [[ -n "${python}" ]]
     then
         break
     fi
 done
 
 
-if [[ ! -v python ]]
+if [[ -z "${python}" ]]
 then
     echo >/dev/stderr "ERROR: No python command found."
     exit 127
