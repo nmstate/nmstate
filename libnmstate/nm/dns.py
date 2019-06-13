@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
+from collections import defaultdict
 from itertools import chain
 from operator import itemgetter
 
@@ -134,3 +135,45 @@ def find_interfaces_for_name_servers(iface_routes):
     """
     return (nm_route.get_static_gateway_iface(Interface.IPV4, iface_routes),
             nm_route.get_static_gateway_iface(Interface.IPV6, iface_routes))
+
+
+def get_indexed_dns_config_by_iface(acs_and_ipv4_profiles,
+                                    acs_and_ipv6_profiles):
+    """
+    Get current DNS config indexed by interface name.
+    Return dict like {
+        'iface_name': {
+            Interface.IPV4: {
+                DNS.SERVER: servers,
+                DNS.SEARCH: searches,
+                DNS_METADATA_PRIORITY: priority
+            },
+            Interface.IPV6: {
+                DNS.SERVER: servers,
+                DNS.SEARCH: searches,
+                DNS_METADATA_PRIORITY: priority
+            },
+        }
+    }
+    """
+    iface_dns_configs = defaultdict(dict)
+    for ac, ip_profile in acs_and_ipv6_profiles:
+        if ip_profile.props.dns or ip_profile.props.dns_search:
+            iface_name = nm_ac.ActiveConnection(ac).devname
+            iface_dns_configs[iface_name][Interface.IPV6] = (
+                _get_ip_profile_dns_config(ip_profile))
+    for ac, ip_profile in acs_and_ipv4_profiles:
+        if ip_profile.props.dns or ip_profile.props.dns_search:
+            iface_name = nm_ac.ActiveConnection(ac).devname
+            iface_dns_configs[iface_name][Interface.IPV4] = (
+                _get_ip_profile_dns_config(ip_profile))
+
+    return iface_dns_configs
+
+
+def _get_ip_profile_dns_config(ip_profile):
+    return {
+        DNS.SERVER: ip_profile.props.dns,
+        DNS.SEARCH: ip_profile.props.dns_search,
+        DNS_METADATA_PRIORITY: ip_profile.props.dns_priority
+    }
