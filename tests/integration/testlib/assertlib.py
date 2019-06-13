@@ -16,7 +16,7 @@
 #
 import copy
 
-from libnmstate import netinfo
+import libnmstate
 from libnmstate.schema import DNS
 from libnmstate.schema import Route
 
@@ -27,7 +27,7 @@ from .statelib import INTERFACES
 def assert_state(desired_state_data):
     """Given a state, assert it against the current state."""
 
-    current_state_data = netinfo.show()
+    current_state_data = libnmstate.show()
     # Ignore route and dns for assert check as the check are done in the test
     # case code.
     current_state_data.pop(Route.KEY, None)

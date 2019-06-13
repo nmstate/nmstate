@@ -17,7 +17,7 @@
 
 import yaml
 
-from libnmstate import netapplier
+import libnmstate
 
 from .testlib import statelib
 from .testlib.statelib import INTERFACES
@@ -45,7 +45,7 @@ def test_create_and_remove_ovs_bridge_with_a_system_port(eth1_up):
             'type': 'system'
         }
     ]
-    netapplier.apply(state)
+    libnmstate.apply(state)
 
     setup_remove_ovs_bridge_state = {
         INTERFACES: [
@@ -56,7 +56,7 @@ def test_create_and_remove_ovs_bridge_with_a_system_port(eth1_up):
             }
         ]
     }
-    netapplier.apply(setup_remove_ovs_bridge_state)
+    libnmstate.apply(setup_remove_ovs_bridge_state)
     state = statelib.show_only((state[INTERFACES][0]['name'],))
     assert not state[INTERFACES]
 
@@ -71,7 +71,7 @@ def test_create_and_remove_ovs_bridge_with_min_desired_state():
             }
         ]
     }
-    netapplier.apply(desired_state)
+    libnmstate.apply(desired_state)
 
     setup_remove_ovs_bridge_state = {
         INTERFACES: [
@@ -82,7 +82,7 @@ def test_create_and_remove_ovs_bridge_with_min_desired_state():
             }
         ]
     }
-    netapplier.apply(setup_remove_ovs_bridge_state)
+    libnmstate.apply(setup_remove_ovs_bridge_state)
     state = statelib.show_only((desired_state[INTERFACES][0]['name'],))
     assert not state[INTERFACES]
 
@@ -111,7 +111,7 @@ def test_create_and_remove_ovs_bridge_with_an_internal_port():
         },
     }
     state[INTERFACES].append(ovs_internal_interface_state)
-    netapplier.apply(state, verify_change=False)
+    libnmstate.apply(state, verify_change=False)
 
     setup_remove_ovs_bridge_state_and_port = {
         INTERFACES: [
@@ -127,7 +127,7 @@ def test_create_and_remove_ovs_bridge_with_an_internal_port():
             }
         ]
     }
-    netapplier.apply(setup_remove_ovs_bridge_state_and_port)
+    libnmstate.apply(setup_remove_ovs_bridge_state_and_port)
     state = statelib.show_only(
         (state[INTERFACES][0]['name'], state[INTERFACES][1]['name']))
     assert not state[INTERFACES]

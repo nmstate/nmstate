@@ -20,7 +20,7 @@ import copy
 from operator import itemgetter
 import six
 
-from libnmstate import netinfo
+import libnmstate
 from libnmstate.schema import Constants
 
 
@@ -34,7 +34,7 @@ def show_only(ifnames):
     base_filter_state = {
         INTERFACES: [{'name': ifname} for ifname in ifnames]
     }
-    current_state = State(netinfo.show())
+    current_state = State(libnmstate.show())
     current_state.filter(base_filter_state)
     return current_state.state
 
@@ -200,7 +200,7 @@ def filter_current_state(desired_state):
     in the desired state.
     In case there are no entities for filtering, all are reported.
     """
-    current_state = netinfo.show()
+    current_state = libnmstate.show()
     desired_iface_names = {ifstate['name']
                            for ifstate in desired_state[INTERFACES]}
 

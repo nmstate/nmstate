@@ -20,8 +20,7 @@ import pytest
 import time
 import yaml
 
-from libnmstate import netapplier
-from libnmstate import netinfo
+import libnmstate
 from libnmstate.error import NmstateVerificationError
 from libnmstate.schema import Interface
 
@@ -58,7 +57,7 @@ def setup_remove_bond99():
             }
         ]
     }
-    netapplier.apply(remove_bond)
+    libnmstate.apply(remove_bond)
 
 
 @contextmanager
@@ -77,11 +76,11 @@ def bond_interface(name, slaves):
 
         ]
     }
-    netapplier.apply(desired_state)
+    libnmstate.apply(desired_state)
     try:
         yield desired_state
     finally:
-        netapplier.apply({
+        libnmstate.apply({
                 INTERFACES: [
                     {
                         'name': name,
@@ -95,13 +94,13 @@ def bond_interface(name, slaves):
 
 def test_add_and_remove_bond_with_two_slaves(eth1_up, eth2_up):
     state = yaml.load(BOND99_YAML_BASE, Loader=yaml.SafeLoader)
-    netapplier.apply(state)
+    libnmstate.apply(state)
 
     assertlib.assert_state(state)
 
     state[INTERFACES][0]['state'] = 'absent'
 
-    netapplier.apply(state)
+    libnmstate.apply(state)
 
     state = statelib.show_only((state[INTERFACES][0]['name'],))
     assert not state[INTERFACES]
@@ -109,7 +108,7 @@ def test_add_and_remove_bond_with_two_slaves(eth1_up, eth2_up):
 
 def test_remove_bond_with_minimum_desired_state(eth1_up, eth2_up):
     state = yaml.load(BOND99_YAML_BASE, Loader=yaml.SafeLoader)
-    netapplier.apply(state)
+    libnmstate.apply(state)
 
     remove_bond_state = {
         INTERFACES: [
@@ -120,7 +119,7 @@ def test_remove_bond_with_minimum_desired_state(eth1_up, eth2_up):
             }
         ]
     }
-    netapplier.apply(remove_bond_state)
+    libnmstate.apply(remove_bond_state)
     state = statelib.show_only((state[INTERFACES][0]['name'],))
     assert not state[INTERFACES]
 
@@ -154,13 +153,13 @@ def test_add_bond_with_slaves_and_ipv4(eth1_up, eth2_up, setup_remove_bond99):
                 ]
             }
 
-    netapplier.apply(desired_bond_state)
+    libnmstate.apply(desired_bond_state)
 
     assertlib.assert_state(desired_bond_state)
 
 
 def test_rollback_for_bond(eth1_up, eth2_up):
-    current_state = netinfo.show()
+    current_state = libnmstate.show()
     desired_state = {
                 INTERFACES: [
                     {
@@ -186,11 +185,11 @@ def test_rollback_for_bond(eth1_up, eth2_up):
     desired_state[INTERFACES][0]['invalid_key'] = 'foo'
 
     with pytest.raises(NmstateVerificationError):
-        netapplier.apply(desired_state)
+        libnmstate.apply(desired_state)
 
     time.sleep(5)
 
-    current_state_after_apply = netinfo.show()
+    current_state_after_apply = libnmstate.show()
     assert current_state[INTERFACES] == current_state_after_apply[INTERFACES]
 
 
@@ -199,7 +198,7 @@ def test_add_slave_to_bond_without_slaves(eth1_up):
     with bond_interface(name='bond99', slaves=[]) as bond_state:
 
         bond_state[INTERFACES][0]['link-aggregation']['slaves'] = ['eth1']
-        netapplier.apply(bond_state)
+        libnmstate.apply(bond_state)
 
         current_state = statelib.show_only(('bond99',))
         bond99_cur_state = current_state[INTERFACES][0]
@@ -213,7 +212,7 @@ def test_remove_all_slaves_from_bond(eth1_up):
     with bond_interface(name='bond99', slaves=['eth1']) as bond_state:
         bond_state[INTERFACES][0]['link-aggregation']['slaves'] = []
 
-        netapplier.apply(bond_state)
+        libnmstate.apply(bond_state)
 
         current_state = statelib.show_only(('bond99',))
         bond99_cur_state = current_state[INTERFACES][0]
@@ -226,7 +225,7 @@ def test_replace_bond_slave(eth1_up, eth2_up):
     with bond_interface(name='bond99', slaves=['eth1']) as bond_state:
         bond_state[INTERFACES][0]['link-aggregation']['slaves'] = ['eth2']
 
-        netapplier.apply(bond_state)
+        libnmstate.apply(bond_state)
 
         current_state = statelib.show_only(('bond99',))
         bond99_cur_state = current_state[INTERFACES][0]
@@ -239,7 +238,7 @@ def test_remove_one_of_the_bond_slaves(eth1_up, eth2_up):
 
         bond_state[INTERFACES][0]['link-aggregation']['slaves'] = ['eth2']
 
-        netapplier.apply(bond_state)
+        libnmstate.apply(bond_state)
 
         current_state = statelib.show_only(('bond99',))
         bond99_cur_state = current_state[INTERFACES][0]
@@ -250,14 +249,14 @@ def test_remove_one_of_the_bond_slaves(eth1_up, eth2_up):
 def test_set_bond_mac_address(eth1_up):
     with bond_interface(name='bond99', slaves=['eth1']) as bond_state:
         bond_state[Interface.KEY][0][Interface.MAC] = MAC0
-        netapplier.apply(bond_state)
+        libnmstate.apply(bond_state)
 
         current_state = statelib.show_only(('bond99',))
         bond99_cur_state = current_state[INTERFACES][0]
         assert bond99_cur_state[Interface.MAC] == MAC0.upper()
 
         bond_state[Interface.KEY][0][Interface.MAC] = MAC1
-        netapplier.apply(bond_state)
+        libnmstate.apply(bond_state)
 
         current_state = statelib.show_only(('bond99',))
         bond99_cur_state = current_state[INTERFACES][0]

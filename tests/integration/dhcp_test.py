@@ -19,8 +19,7 @@ import time
 
 import pytest
 
-from libnmstate import netapplier
-from libnmstate import netinfo
+import libnmstate
 from libnmstate.schema import Constants
 from libnmstate.schema import DNS
 from libnmstate.schema import Route as RT
@@ -132,7 +131,7 @@ def setup_remove_bond99():
             }
         ]
     }
-    netapplier.apply(remove_bond)
+    libnmstate.apply(remove_bond)
 
 
 @pytest.fixture
@@ -147,7 +146,7 @@ def setup_remove_dhcpcli():
             }
         ]
     }
-    netapplier.apply(remove_bond)
+    libnmstate.apply(remove_bond)
 
 
 def test_ipv4_dhcp(dhcp_env):
@@ -161,7 +160,7 @@ def test_ipv4_dhcp(dhcp_env):
     dhcp_cli_desired_state['ipv4']['auto-gateway'] = True
     dhcp_cli_desired_state['ipv6']['enabled'] = True
 
-    netapplier.apply(desired_state)
+    libnmstate.apply(desired_state)
     assertlib.assert_state(desired_state)
     time.sleep(5)  # wait to get resolv.conf updated
     assert _has_ipv4_dhcp_nameserver()
@@ -180,7 +179,7 @@ def test_ipv6_dhcp_only(dhcp_env):
     dhcp_cli_desired_state['ipv6']['auto-dns'] = True
     dhcp_cli_desired_state['ipv6']['auto-gateway'] = True
 
-    netapplier.apply(desired_state)
+    libnmstate.apply(desired_state)
 
     assertlib.assert_state(desired_state)
     time.sleep(5)  # libnm does not wait on ipv6-ra or DHCPv6.
@@ -208,7 +207,7 @@ def test_ipv6_dhcp_and_autoconf(dhcp_env):
     dhcp_cli_desired_state['ipv6']['auto-gateway'] = True
     dhcp_cli_desired_state['ipv6']['auto-routes'] = True
 
-    netapplier.apply(desired_state)
+    libnmstate.apply(desired_state)
 
     assertlib.assert_state(desired_state)
     time.sleep(5)  # libnm does not wait on ipv6-ra or DHCPv6.
@@ -224,7 +223,7 @@ def test_ipv6_autoconf_only(dhcp_env):
     dhcp_cli_desired_state['ipv6']['dhcp'] = False
     dhcp_cli_desired_state['ipv6']['autoconf'] = True
 
-    netapplier.apply(desired_state)
+    libnmstate.apply(desired_state)
 
 
 def test_dhcp_with_addresses(dhcp_env):
@@ -255,7 +254,7 @@ def test_dhcp_with_addresses(dhcp_env):
         ]
     }
 
-    netapplier.apply(desired_state)
+    libnmstate.apply(desired_state)
 
     assertlib.assert_state(desired_state)
 
@@ -284,7 +283,7 @@ def test_dhcp_for_bond_with_ip_address_and_slave(dhcp_env,
         ]
     }
 
-    netapplier.apply(desired_state, verify_change=False)
+    libnmstate.apply(desired_state, verify_change=False)
     # Long story for why we doing 'dhcp=False' with 'verify_change=False'
     # above:
     #   For `dhcp=False`:
@@ -298,7 +297,7 @@ def test_dhcp_for_bond_with_ip_address_and_slave(dhcp_env,
     #       interface will result in `state:down`. As a workaround the
     #       verification is ignored.
     desired_state[INTERFACES][0]['ipv4']['dhcp'] = True
-    netapplier.apply(desired_state)
+    libnmstate.apply(desired_state)
 
     assertlib.assert_state(desired_state)
 
@@ -314,7 +313,7 @@ def test_ipv4_dhcp_ignore_gateway(dhcp_env):
     dhcp_cli_desired_state['ipv4']['auto-dns'] = True
     dhcp_cli_desired_state['ipv6']['enabled'] = True
 
-    netapplier.apply(desired_state)
+    libnmstate.apply(desired_state)
 
     assertlib.assert_state(desired_state)
     time.sleep(5)  # wait to get resolv.conf updated
@@ -333,7 +332,7 @@ def test_ipv4_dhcp_ignore_dns(dhcp_env):
     dhcp_cli_desired_state['ipv4']['auto-gateway'] = True
     dhcp_cli_desired_state['ipv6']['enabled'] = True
 
-    netapplier.apply(desired_state)
+    libnmstate.apply(desired_state)
 
     assertlib.assert_state(desired_state)
     assert not _has_ipv4_dhcp_nameserver()
@@ -352,7 +351,7 @@ def test_ipv4_dhcp_ignore_routes(dhcp_env):
     dhcp_cli_desired_state['ipv4']['auto-dns'] = True
     dhcp_cli_desired_state['ipv6']['enabled'] = True
 
-    netapplier.apply(desired_state)
+    libnmstate.apply(desired_state)
 
     assertlib.assert_state(desired_state)
     time.sleep(5)  # wait to get resolv.conf updated
@@ -371,7 +370,7 @@ def test_ipv6_dhcp_and_autoconf_ignore_gateway(dhcp_env):
     dhcp_cli_desired_state['ipv6']['auto-gateway'] = False
     dhcp_cli_desired_state['ipv6']['auto-routes'] = True
 
-    netapplier.apply(desired_state)
+    libnmstate.apply(desired_state)
 
     assertlib.assert_state(desired_state)
     time.sleep(5)  # libnm does not wait on ipv6-ra or DHCPv6.
@@ -390,7 +389,7 @@ def test_ipv6_dhcp_and_autoconf_ignore_dns(dhcp_env):
     dhcp_cli_desired_state['ipv6']['auto-gateway'] = True
     dhcp_cli_desired_state['ipv6']['auto-routes'] = True
 
-    netapplier.apply(desired_state)
+    libnmstate.apply(desired_state)
 
     assertlib.assert_state(desired_state)
     time.sleep(5)  # libnm does not wait on ipv6-ra or DHCPv6.
@@ -409,7 +408,7 @@ def test_ipv6_dhcp_and_autoconf_ignore_routes(dhcp_env):
     dhcp_cli_desired_state['ipv6']['auto-gateway'] = True
     dhcp_cli_desired_state['ipv6']['auto-routes'] = False
 
-    netapplier.apply(desired_state)
+    libnmstate.apply(desired_state)
 
     assertlib.assert_state(desired_state)
     time.sleep(5)  # libnm does not wait on ipv6-ra or DHCPv6.
@@ -429,7 +428,7 @@ def test_ipv4_dhcp_off_and_option_on(dhcp_env):
     dhcp_cli_desired_state['ipv4']['auto-gateway'] = False
     dhcp_cli_desired_state['ipv6']['enabled'] = True
 
-    netapplier.apply(desired_state)
+    libnmstate.apply(desired_state)
 
     dhcp_cli_current_state = statelib.show_only((DHCP_CLI_NIC,))[INTERFACES][0]
     assert not dhcp_cli_current_state['ipv4']['dhcp']
@@ -452,7 +451,7 @@ def test_ipv6_dhcp_off_and_option_on(dhcp_env):
     dhcp_cli_desired_state['ipv6']['auto-dns'] = False
     dhcp_cli_desired_state['ipv6']['auto-gateway'] = False
 
-    netapplier.apply(desired_state)
+    libnmstate.apply(desired_state)
 
     dhcp_cli_current_state = statelib.show_only((DHCP_CLI_NIC,))[INTERFACES][0]
     assert not dhcp_cli_current_state['ipv6']['dhcp']
@@ -475,7 +474,7 @@ def test_ipv4_dhcp_switch_on_to_off(dhcp_env):
     dhcp_cli_desired_state['ipv4']['auto-routes'] = True
     dhcp_cli_desired_state['ipv6']['enabled'] = True
 
-    netapplier.apply(desired_state)
+    libnmstate.apply(desired_state)
     assertlib.assert_state(desired_state)
     time.sleep(5)  # wait to get resolv.conf updated
     assert _has_ipv4_dhcp_nameserver()
@@ -490,7 +489,7 @@ def test_ipv4_dhcp_switch_on_to_off(dhcp_env):
     dhcp_cli_desired_state['ipv4']['dhcp'] = False
     dhcp_cli_desired_state['ipv6']['enabled'] = True
 
-    netapplier.apply(desired_state)
+    libnmstate.apply(desired_state)
     assertlib.assert_state(desired_state)
     assert not _has_ipv4_dhcp_nameserver()
     assert not _has_ipv4_dhcp_gateway()
@@ -507,7 +506,7 @@ def test_ipv6_dhcp_switch_on_to_off(dhcp_env):
     dhcp_cli_desired_state['ipv6']['auto-dns'] = True
     dhcp_cli_desired_state['ipv6']['auto-routes'] = True
 
-    netapplier.apply(desired_state)
+    libnmstate.apply(desired_state)
 
     assertlib.assert_state(desired_state)
     time.sleep(5)  # libnm does not wait on ipv6-ra or DHCPv6.
@@ -522,7 +521,7 @@ def test_ipv6_dhcp_switch_on_to_off(dhcp_env):
     dhcp_cli_desired_state['ipv6']['dhcp'] = False
     dhcp_cli_desired_state['ipv6']['autoconf'] = False
 
-    netapplier.apply(desired_state)
+    libnmstate.apply(desired_state)
 
     assertlib.assert_state(desired_state)
     assert not _has_ipv6_auto_gateway()
@@ -585,7 +584,7 @@ def test_slave_ipaddr_learned_via_dhcp_added_as_static_to_linux_bridge(
         ]
     }
 
-    netapplier.apply(desired_state)
+    libnmstate.apply(desired_state)
 
     current_state = statelib.show_only(('dhcpcli',))
     client_current_state = current_state[INTERFACES][0]
@@ -630,7 +629,7 @@ def test_slave_ipaddr_learned_via_dhcp_added_as_static_to_linux_bridge(
         ]
     }
 
-    netapplier.apply(bridge_desired_state)
+    libnmstate.apply(bridge_desired_state)
     assertlib.assert_state(bridge_desired_state)
 
 
@@ -638,7 +637,7 @@ def _get_nameservers():
     """
     Return a list of name server string configured in RESOLV_CONF_PATH.
     """
-    return netinfo.show().get(
+    return libnmstate.show().get(
         Constants.DNS, {}).get(DNS.RUNNING, {}).get(DNS.SERVER, [])
 
 
@@ -646,7 +645,7 @@ def _get_running_routes():
     """
     return a list of running routes
     """
-    return netinfo.show().get(Constants.ROUTES, {}).get(RT.RUNNING, [])
+    return libnmstate.show().get(Constants.ROUTES, {}).get(RT.RUNNING, [])
 
 
 def _has_ipv6_auto_gateway():

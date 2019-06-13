@@ -29,13 +29,12 @@ import tempfile
 from six.moves import input
 import yaml
 
-from libnmstate import netapplier
-from libnmstate import netinfo
+import libnmstate
+from libnmstate import PrettyState
 from libnmstate.error import NmstateConflictError
 from libnmstate.error import NmstatePermissionError
 from libnmstate.error import NmstateValueError
-from libnmstate.prettystate import PrettyState
-from libnmstate.schema import Constants
+from libnmstate.schema import Interface
 from libnmstate.schema import Route
 
 
@@ -76,7 +75,7 @@ def setup_subcommand_edit(subparsers):
     parser_edit.add_argument('--json', help='Edit as JSON', default=True,
                              action='store_false', dest='yaml')
     parser_edit.add_argument(
-        'only', default='*', nargs='?', metavar=Constants.INTERFACES,
+        'only', default='*', nargs='?', metavar=Interface.KEY,
         help='Edit only specified interfaces (comma-separated)'
     )
     parser_edit.add_argument(
@@ -123,23 +122,23 @@ def setup_subcommand_show(subparsers):
     parser_show.add_argument('--json', help='Edit as JSON', default=True,
                              action='store_false', dest='yaml')
     parser_show.add_argument(
-        'only', default='*', nargs='?', metavar=Constants.INTERFACES,
+        'only', default='*', nargs='?', metavar=Interface.KEY,
         help='Show only specified interfaces (comma-separated)'
     )
 
 
 def commit(args):
     try:
-        netapplier.commit(args.checkpoint)
+        libnmstate.commit(args.checkpoint)
     except NmstateValueError as e:
         print("ERROR committing change: {}\n".format(str(e)))
         return os.EX_DATAERR
 
 
 def edit(args):
-    state = _filter_state(netinfo.show(), args.only)
+    state = _filter_state(libnmstate.show(), args.only)
 
-    if not state[Constants.INTERFACES]:
+    if not state[Interface.KEY]:
         sys.stderr.write('ERROR: No such interface\n')
         return os.EX_USAGE
 
@@ -159,19 +158,19 @@ def edit(args):
     print('Applying the following state: ')
     print_state(new_state, use_yaml=args.yaml)
 
-    netapplier.apply(new_state, verify_change=args.verify)
+    libnmstate.apply(new_state, verify_change=args.verify)
 
 
 def rollback(args):
     try:
-        netapplier.rollback(args.checkpoint)
+        libnmstate.rollback(args.checkpoint)
     except NmstateValueError as e:
         print("ERROR rolling back change: {}\n".format(str(e)))
         return os.EX_DATAERR
 
 
 def show(args):
-    state = _filter_state(netinfo.show(), args.only)
+    state = _filter_state(libnmstate.show(), args.only)
     print_state(state, use_yaml=args.yaml)
 
 
@@ -204,7 +203,7 @@ def apply_state(statedata, verify_change, commit, timeout):
         use_yaml = True
 
     try:
-        checkpoint = netapplier.apply(state, verify_change, commit, timeout)
+        checkpoint = libnmstate.apply(state, verify_change, commit, timeout)
     except NmstatePermissionError as e:
         sys.stderr.write('ERROR: Missing permissions:{}\n'.format(str(e)))
         return os.EX_NOPERM
@@ -222,8 +221,8 @@ def apply_state(statedata, verify_change, commit, timeout):
 def _filter_state(state, whitelist):
     if whitelist != '*':
         patterns = [p for p in whitelist.split(',')]
-        state[Constants.INTERFACES] = _filter_interfaces(state, patterns)
-        state[Constants.ROUTES] = _filter_routes(state, patterns)
+        state[Interface.KEY] = _filter_interfaces(state, patterns)
+        state[Route.KEY] = _filter_routes(state, patterns)
     return state
 
 
@@ -234,7 +233,7 @@ def _filter_interfaces(state, patterns):
     """
     showinterfaces = []
 
-    for interface in state[Constants.INTERFACES]:
+    for interface in state[Interface.KEY]:
         for pattern in patterns:
             if fnmatch.fnmatch(interface['name'], pattern):
                 showinterfaces.append(interface)
@@ -291,9 +290,9 @@ def _parse_state(txtstate, parse_yaml):
         except ValueError as e:
             error = 'Invalid JSON syntax: %s\n' % e
 
-    if not error and Constants.INTERFACES not in state:
+    if not error and Interface.KEY not in state:
         # Allow editing routes only.
-        state[Constants.INTERFACES] = []
+        state[Interface.KEY] = []
 
     return state, error
 
@@ -334,7 +333,7 @@ def _filter_routes(state, patterns):
         Route.RUNNING: []
     }
     for route_type in (Route.RUNNING, Route.CONFIG):
-        for route in state.get(Constants.ROUTES, {}).get(route_type, []):
+        for route in state.get(Route.KEY, {}).get(route_type, []):
             for pattern in patterns:
                 if fnmatch.fnmatch(route[Route.NEXT_HOP_INTERFACE], pattern):
                     routes[route_type].append(route)

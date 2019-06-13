@@ -21,7 +21,7 @@ import time
 import pytest
 import jsonschema as js
 
-from libnmstate import netapplier
+import libnmstate
 from libnmstate.error import NmstateVerificationError
 
 from .testlib import assertlib
@@ -39,7 +39,7 @@ def test_increase_iface_mtu():
     eth1_desired_state = desired_state[INTERFACES][0]
     eth1_desired_state['mtu'] = 1900
 
-    netapplier.apply(desired_state)
+    libnmstate.apply(desired_state)
 
     assertlib.assert_state(desired_state)
 
@@ -49,7 +49,7 @@ def test_decrease_iface_mtu():
     eth1_desired_state = desired_state[INTERFACES][0]
     eth1_desired_state['mtu'] = 1400
 
-    netapplier.apply(desired_state)
+    libnmstate.apply(desired_state)
 
     assertlib.assert_state(desired_state)
 
@@ -59,7 +59,7 @@ def test_upper_limit_jambo_iface_mtu():
     eth1_desired_state = desired_state[INTERFACES][0]
     eth1_desired_state['mtu'] = 9000
 
-    netapplier.apply(desired_state)
+    libnmstate.apply(desired_state)
 
     assertlib.assert_state(desired_state)
 
@@ -69,7 +69,7 @@ def test_increase_more_than_jambo_iface_mtu():
     eth1_desired_state = desired_state[INTERFACES][0]
     eth1_desired_state['mtu'] = 10000
 
-    netapplier.apply(desired_state)
+    libnmstate.apply(desired_state)
 
     assertlib.assert_state(desired_state)
 
@@ -81,7 +81,7 @@ def test_decrease_to_zero_iface_mtu():
     eth1_desired_state['mtu'] = 0
 
     with pytest.raises(NmstateVerificationError) as err:
-        netapplier.apply(desired_state)
+        libnmstate.apply(desired_state)
     assert '-mtu: 0' in err.value.args[0]
     # FIXME: Drop the sleep when the waiting logic is implemented.
     time.sleep(2)
@@ -95,7 +95,7 @@ def test_decrease_to_negative_iface_mtu():
     eth1_desired_state['mtu'] = -1
 
     with pytest.raises(js.ValidationError) as err:
-        netapplier.apply(desired_state)
+        libnmstate.apply(desired_state)
     assert '-1' in err.value.args[0]
     assertlib.assert_state(origin_desired_state)
 
@@ -105,7 +105,7 @@ def test_decrease_to_ipv6_min_ethernet_frame_size_iface_mtu():
     eth1_desired_state = desired_state[INTERFACES][0]
     eth1_desired_state['mtu'] = 1280
 
-    netapplier.apply(desired_state)
+    libnmstate.apply(desired_state)
 
     assertlib.assert_state(desired_state)
 
@@ -117,7 +117,7 @@ def test_decrease_to_lower_than_min_ipv6_iface_mtu():
     eth1_desired_state['mtu'] = 1279
 
     with pytest.raises(NmstateVerificationError) as err:
-        netapplier.apply(desired_state)
+        libnmstate.apply(desired_state)
     assert '1279' in err.value.args[0]
     # FIXME: Drop the sleep when the waiting logic is implemented.
     time.sleep(2)
