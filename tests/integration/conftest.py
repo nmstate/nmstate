@@ -33,7 +33,7 @@ def logging_setup():
 
 
 @pytest.fixture(scope='session', autouse=True)
-def ethx_init():
+def ethx_init(preserve_old_config):
     """ Remove any existing definitions on the ethX interfaces. """
     _set_eth_admin_state('eth1', 'down')
     _set_eth_admin_state('eth2', 'down')
@@ -68,3 +68,10 @@ def _set_eth_admin_state(ifname, state):
         if state == 'up':
             desired_state[INTERFACES][0].update({'ipv6': {'enabled': True}})
         libnmstate.apply(desired_state)
+
+
+@pytest.fixture(scope='session', autouse=True)
+def preserve_old_config():
+    old_state = libnmstate.show()
+    yield
+    libnmstate.apply(old_state, verify_change=False)
