@@ -18,11 +18,14 @@
 from operator import itemgetter
 import socket
 
+import six
+
 from libnmstate import iplib
 from libnmstate.error import NmstateInternalError
 from libnmstate.error import NmstateNotImplementedError
 from libnmstate.nm import nmclient
 from libnmstate.nm import active_connection as nm_ac
+from libnmstate.schema import Interface
 from libnmstate.schema import Route
 
 NM_ROUTE_TABLE_ATTRIBUTE = 'table'
@@ -178,3 +181,18 @@ def _add_route_gateway(setting_ip, route):
                                              Route.USE_DEFAULT_ROUTE_TABLE)
     setting_ip.props.route_metric = route.get(Route.METRIC,
                                               Route.USE_DEFAULT_METRIC)
+
+
+def get_static_gateway_iface(family, iface_routes):
+    """
+    Return one interface with gateway for given IP family.
+    Return None if not found.
+    """
+    destination = (IPV6_DEFAULT_GATEWAY_DESTINATION
+                   if family == Interface.IPV6
+                   else IPV4_DEFAULT_GATEWAY_DESTINATION)
+    for iface_name, routes in six.viewitems(iface_routes):
+        for route in routes:
+            if route[Route.DESTINATION] == destination:
+                return iface_name
+    return None
