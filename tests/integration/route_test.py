@@ -18,8 +18,7 @@ import copy
 
 import pytest
 
-from libnmstate import netapplier
-from libnmstate import netinfo
+import libnmstate
 from libnmstate.error import NmstateNotImplementedError
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceState
@@ -60,25 +59,25 @@ ETH1_INTERFACE_STATE = {
 
 def test_add_static_routes(eth1_up):
     routes = _get_ipv4_test_routes() + _get_ipv6_test_routes()
-    netapplier.apply({
+    libnmstate.apply({
         Interface.KEY: [ETH1_INTERFACE_STATE],
         Route.KEY: {
             Route.CONFIG: routes
         }
     })
-    cur_state = netinfo.show()
+    cur_state = libnmstate.show()
     _assert_routes(routes, cur_state)
 
 
 def test_add_gateway(eth1_up):
     routes = [_get_ipv4_gateways()[0], _get_ipv6_test_routes()[0]]
-    netapplier.apply({
+    libnmstate.apply({
         Interface.KEY: [ETH1_INTERFACE_STATE],
         Route.KEY: {
             Route.CONFIG: routes
         }
     })
-    cur_state = netinfo.show()
+    cur_state = libnmstate.show()
     _assert_routes(routes, cur_state)
 
 
@@ -87,14 +86,14 @@ def test_add_route_without_metric(eth1_up):
     for route in routes:
         del route[Route.METRIC]
 
-    netapplier.apply({
+    libnmstate.apply({
         Interface.KEY: [ETH1_INTERFACE_STATE],
         Route.KEY: {
             Route.CONFIG: routes
         }
     })
 
-    cur_state = netinfo.show()
+    cur_state = libnmstate.show()
     _assert_routes(routes, cur_state)
 
 
@@ -103,21 +102,21 @@ def test_add_route_without_table_id(eth1_up):
     for route in routes:
         del route[Route.TABLE_ID]
 
-    netapplier.apply({
+    libnmstate.apply({
         Interface.KEY: [ETH1_INTERFACE_STATE],
         Route.KEY: {
             Route.CONFIG: routes
         },
     })
 
-    cur_state = netinfo.show()
+    cur_state = libnmstate.show()
     _assert_routes(routes, cur_state)
 
 
 @pytest.mark.xfail(raises=NmstateNotImplementedError,
                    reason="Red Hat Bug 1707396")
 def test_multiple_gateway(eth1_up):
-    netapplier.apply(
+    libnmstate.apply(
         {
             Interface.KEY: [ETH1_INTERFACE_STATE],
             Route.KEY: {
@@ -263,18 +262,18 @@ parametrize_ip_ver_routes = pytest.mark.parametrize(
 @parametrize_ip_ver_routes
 def test_remove_specific_route(eth1_up, get_routes_func):
     routes = get_routes_func()
-    netapplier.apply({
+    libnmstate.apply({
         Interface.KEY: [ETH1_INTERFACE_STATE],
         Route.KEY: {
             Route.CONFIG: routes
         },
     })
-    cur_state = netinfo.show()
+    cur_state = libnmstate.show()
     _assert_routes(routes, cur_state)
 
     absent_route = routes[0]
     absent_route[Route.STATE] = Route.STATE_ABSENT
-    netapplier.apply({
+    libnmstate.apply({
         Interface.KEY: [ETH1_INTERFACE_STATE],
         Route.KEY: {
             Route.CONFIG: [absent_route]
@@ -283,27 +282,27 @@ def test_remove_specific_route(eth1_up, get_routes_func):
 
     expected_routes = routes[1:]
 
-    cur_state = netinfo.show()
+    cur_state = libnmstate.show()
     _assert_routes(expected_routes, cur_state)
 
 
 @parametrize_ip_ver_routes
 def test_remove_wildcast_route_with_iface(eth1_up, get_routes_func):
     routes = get_routes_func()
-    netapplier.apply({
+    libnmstate.apply({
         Interface.KEY: [ETH1_INTERFACE_STATE],
         Route.KEY: {
             Route.CONFIG: routes
         },
     })
-    cur_state = netinfo.show()
+    cur_state = libnmstate.show()
     _assert_routes(routes, cur_state)
 
     absent_route = {
         Route.STATE: Route.STATE_ABSENT,
         Route.NEXT_HOP_INTERFACE: 'eth1'
     }
-    netapplier.apply({
+    libnmstate.apply({
         Interface.KEY: [ETH1_INTERFACE_STATE],
         Route.KEY: {
             Route.CONFIG: [absent_route]
@@ -312,20 +311,20 @@ def test_remove_wildcast_route_with_iface(eth1_up, get_routes_func):
 
     expected_routes = []
 
-    cur_state = netinfo.show()
+    cur_state = libnmstate.show()
     _assert_routes(expected_routes, cur_state)
 
 
 @parametrize_ip_ver_routes
 def test_remove_wildcast_route_without_iface(eth1_up, get_routes_func):
     routes = get_routes_func()
-    netapplier.apply({
+    libnmstate.apply({
         Interface.KEY: [ETH1_INTERFACE_STATE],
         Route.KEY: {
             Route.CONFIG: routes
         },
     })
-    cur_state = netinfo.show()
+    cur_state = libnmstate.show()
     _assert_routes(routes, cur_state)
 
     absent_routes = []
@@ -334,7 +333,7 @@ def test_remove_wildcast_route_without_iface(eth1_up, get_routes_func):
             Route.STATE: Route.STATE_ABSENT,
             Route.DESTINATION: route[Route.DESTINATION]
         })
-    netapplier.apply({
+    libnmstate.apply({
         Interface.KEY: [ETH1_INTERFACE_STATE],
         Route.KEY: {
             Route.CONFIG: absent_routes
@@ -343,5 +342,5 @@ def test_remove_wildcast_route_without_iface(eth1_up, get_routes_func):
 
     expected_routes = []
 
-    cur_state = netinfo.show()
+    cur_state = libnmstate.show()
     _assert_routes(expected_routes, cur_state)

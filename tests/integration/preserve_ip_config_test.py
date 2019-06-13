@@ -17,7 +17,7 @@
 
 from contextlib import contextmanager
 
-from libnmstate import netapplier
+import libnmstate
 from libnmstate.nm import nmclient
 
 from .testlib import statelib
@@ -34,7 +34,7 @@ IPV6_ADDRESS1 = '2001:db8:1::1'
 
 
 def test_reapply_preserve_ip_config(eth1_up):
-    netapplier.apply(
+    libnmstate.apply(
         {
             'interfaces': [
                 {
@@ -71,7 +71,7 @@ def test_reapply_preserve_ip_config(eth1_up):
     for key, value in ((_IPV4_EXTRA_CONFIG, _IPV4_EXTRA_VALUE),
                        (_IPV6_EXTRA_CONFIG, _IPV6_EXTRA_VALUE)):
         with _extra_ip_config(uuid, key, value):
-            netapplier.apply(cur_state)
+            libnmstate.apply(cur_state)
             _assert_extra_ip_config(uuid, key, value)
 
 

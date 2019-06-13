@@ -20,7 +20,7 @@ from contextlib import contextmanager
 import pytest
 import yaml
 
-from libnmstate import netapplier
+import libnmstate
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
@@ -134,12 +134,12 @@ def _linux_bridge(name, bridge_state):
     if bridge_state:
         desired_state[INTERFACES][0][LinuxBridge.CONFIG_SUBTREE] = bridge_state
 
-    netapplier.apply(desired_state)
+    libnmstate.apply(desired_state)
 
     try:
         yield desired_state
     finally:
-        netapplier.apply({
+        libnmstate.apply({
             INTERFACES: [
                 {
                     Interface.NAME: name,

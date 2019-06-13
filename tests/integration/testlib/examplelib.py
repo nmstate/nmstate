@@ -18,11 +18,9 @@
 from contextlib import contextmanager
 import os
 
-
 import yaml
 
-
-from libnmstate import netapplier
+import libnmstate
 
 
 PATH_MAX = 4096
@@ -36,12 +34,12 @@ def example_state(initial, cleanup=None):
 
     desired_state = load_example(initial)
 
-    netapplier.apply(desired_state)
+    libnmstate.apply(desired_state)
     try:
         yield desired_state
     finally:
         if cleanup:
-            netapplier.apply(load_example(cleanup))
+            libnmstate.apply(load_example(cleanup))
 
 
 def load_example(name):

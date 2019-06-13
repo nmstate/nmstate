@@ -20,8 +20,7 @@ import time
 
 import pytest
 
-from libnmstate import netapplier
-from libnmstate import netinfo
+import libnmstate
 from libnmstate.schema import Interface
 from libnmstate.error import NmstateVerificationError
 
@@ -91,21 +90,21 @@ def test_add_and_remove_two_vlans_on_same_iface(eth1_up):
 
 
 def test_rollback_for_vlans(eth1_up):
-    current_state = netinfo.show()
+    current_state = libnmstate.show()
     desired_state = TWO_VLANS_STATE
 
     desired_state[INTERFACES][1]['invalid_key'] = 'foo'
     with pytest.raises(NmstateVerificationError):
-        netapplier.apply(desired_state)
+        libnmstate.apply(desired_state)
 
     time.sleep(5)   # Give some time for NetworkManager to rollback
-    current_state_after_apply = netinfo.show()
+    current_state_after_apply = libnmstate.show()
     assert current_state == current_state_after_apply
 
 
 def test_set_vlan_iface_down(eth1_up):
     with vlan_interface(VLAN_IFNAME, 101):
-        netapplier.apply({
+        libnmstate.apply({
                 INTERFACES: [
                     {
                         'name': VLAN_IFNAME,
@@ -135,11 +134,11 @@ def vlan_interface(ifname, vlan_id):
             }
         ]
     }
-    netapplier.apply(desired_state)
+    libnmstate.apply(desired_state)
     try:
         yield desired_state
     finally:
-        netapplier.apply({
+        libnmstate.apply({
                 INTERFACES: [
                     {
                         'name': ifname,
@@ -154,11 +153,11 @@ def vlan_interface(ifname, vlan_id):
 @contextmanager
 def two_vlans_on_eth1():
     desired_state = TWO_VLANS_STATE
-    netapplier.apply(desired_state)
+    libnmstate.apply(desired_state)
     try:
         yield desired_state
     finally:
-        netapplier.apply({
+        libnmstate.apply({
                 INTERFACES: [
                     {
                         'name': VLAN_IFNAME,

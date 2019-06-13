@@ -17,7 +17,7 @@
 
 import pytest
 
-from libnmstate import netapplier
+import libnmstate
 
 from .testlib import assertlib
 from .testlib import statelib
@@ -53,7 +53,7 @@ def setup_eth1_ipv4(eth1_up):
             }
         ]
     }
-    netapplier.apply(desired_state)
+    libnmstate.apply(desired_state)
 
 
 @pytest.fixture
@@ -73,7 +73,7 @@ def setup_eth1_ipv6(eth1_up):
             }
         ]
     }
-    netapplier.apply(desired_state)
+    libnmstate.apply(desired_state)
 
     return desired_state
 
@@ -87,7 +87,7 @@ def test_add_static_ipv4_with_full_state(eth1_up):
     eth1_desired_state['ipv4']['address'] = [
         {'ip': IPV4_ADDRESS3, 'prefix-length': 24}
     ]
-    netapplier.apply(desired_state)
+    libnmstate.apply(desired_state)
 
     assertlib.assert_state(desired_state)
 
@@ -108,7 +108,7 @@ def test_add_static_ipv4_with_min_state(eth2_up):
             }
         ]
     }
-    netapplier.apply(desired_state)
+    libnmstate.apply(desired_state)
 
     assertlib.assert_state(desired_state)
 
@@ -126,7 +126,7 @@ def test_remove_static_ipv4(setup_eth1_ipv4):
         ]
     }
 
-    netapplier.apply(desired_state)
+    libnmstate.apply(desired_state)
 
     assertlib.assert_state(desired_state)
 
@@ -148,7 +148,7 @@ def test_edit_static_ipv4_address_and_prefix(setup_eth1_ipv4):
         ]
     }
 
-    netapplier.apply(desired_state)
+    libnmstate.apply(desired_state)
 
     assertlib.assert_state(desired_state)
 
@@ -182,7 +182,7 @@ def test_add_ifaces_with_same_static_ipv4_address_in_one_transaction(eth1_up,
         ]
     }
 
-    netapplier.apply(desired_state)
+    libnmstate.apply(desired_state)
 
     assertlib.assert_state(desired_state)
 
@@ -204,7 +204,7 @@ def test_add_iface_with_same_static_ipv4_address_to_existing(setup_eth1_ipv4,
             }
         ]
     }
-    netapplier.apply(desired_state)
+    libnmstate.apply(desired_state)
 
     assertlib.assert_state(desired_state)
 
@@ -219,7 +219,7 @@ def test_add_static_ipv6_with_full_state(eth1_up):
         # This sequence is intentionally made for IP address sorting.
         {'ip': IPV6_ADDRESS1, 'prefix-length': 64},
     ]
-    netapplier.apply(desired_state)
+    libnmstate.apply(desired_state)
     assertlib.assert_state(desired_state)
 
 
@@ -233,7 +233,7 @@ def test_add_static_ipv6_with_link_local(eth1_up):
         {'ip': IPV6_ADDRESS1, 'prefix-length': 64}
     ]
 
-    netapplier.apply(desired_state)
+    libnmstate.apply(desired_state)
 
     # Make sure only the link local address got ignored.
     cur_state = statelib.show_only(('eth1',))
@@ -254,7 +254,7 @@ def test_add_static_ipv6_with_link_local_only(eth1_up):
         {'ip': IPV6_LINK_LOCAL_ADDRESS2, 'prefix-length': 64},
     ]
 
-    netapplier.apply(desired_state)
+    libnmstate.apply(desired_state)
 
     # Make sure the link local address got ignored.
     cur_state = statelib.show_only(('eth1',))
@@ -271,7 +271,7 @@ def test_add_static_ipv6_with_no_address(eth1_up):
     eth1_desired_state['state'] = 'up'
     eth1_desired_state['ipv6']['enabled'] = True
 
-    netapplier.apply(desired_state)
+    libnmstate.apply(desired_state)
 
     cur_state = statelib.show_only(('eth1',))
     eth1_cur_state = cur_state[INTERFACES][0]
@@ -295,7 +295,7 @@ def test_add_static_ipv6_with_min_state(eth2_up):
             }
         ]
     }
-    netapplier.apply(desired_state)
+    libnmstate.apply(desired_state)
 
     assertlib.assert_state(desired_state)
 
@@ -314,7 +314,7 @@ def test_disable_static_ipv6(setup_eth1_ipv6):
         ]
     }
 
-    netapplier.apply(desired_state)
+    libnmstate.apply(desired_state)
 
     assertlib.assert_state(desired_state)
 
@@ -337,7 +337,7 @@ def test_edit_static_ipv6_address_and_prefix(setup_eth1_ipv6):
         ]
     }
 
-    netapplier.apply(desired_state)
+    libnmstate.apply(desired_state)
     eth1_desired_state = desired_state[INTERFACES][0]
     current_state = statelib.show_only(('eth1',))
 
@@ -379,7 +379,7 @@ def test_add_ifaces_with_same_static_ipv6_address_in_one_transaction(eth1_up,
         ]
     }
 
-    netapplier.apply(desired_state)
+    libnmstate.apply(desired_state)
 
     assertlib.assert_state(desired_state)
 
@@ -401,6 +401,6 @@ def test_add_iface_with_same_static_ipv6_address_to_existing(setup_eth1_ipv6,
             }
         ]
     }
-    netapplier.apply(desired_state)
+    libnmstate.apply(desired_state)
 
     assertlib.assert_state(desired_state)
