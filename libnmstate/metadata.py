@@ -19,7 +19,11 @@ import six
 
 from libnmstate import iplib
 from libnmstate.appliers import linux_bridge
+from libnmstate.error import NmstateValueError
+from libnmstate import nm
+from libnmstate.schema import DNS
 from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceState
 from libnmstate.schema import Route
 
 
@@ -65,6 +69,7 @@ def generate_ifaces_metadata(desired_state, current_state):
         get_slaves_func=linux_bridge.get_slaves_from_state,
         set_metadata_func=linux_bridge.set_bridge_ports_metadata
     )
+    _generate_dns_metadata(desired_state, current_state)
     _generate_route_metadata(desired_state)
 
 
@@ -75,6 +80,8 @@ def remove_ifaces_metadata(ifaces_state):
         iface_state.pop(BRPORT_OPTIONS, None)
         iface_state.get(Interface.IPV4, {}).pop(ROUTES, None)
         iface_state.get(Interface.IPV6, {}).pop(ROUTES, None)
+        iface_state.get(Interface.IPV4, {}).pop(DNS_METADATA, None)
+        iface_state.get(Interface.IPV6, {}).pop(DNS_METADATA, None)
 
 
 def _get_bond_slaves_from_state(iface_state, default=()):
@@ -181,3 +188,120 @@ def _generate_route_metadata(desired_state):
                 iface_state[Interface.IPV6][ROUTES].append(route)
             else:
                 iface_state[Interface.IPV4][ROUTES].append(route)
+
+
+def _generate_dns_metadata(desired_state, current_state):
+    """
+    Save DNS configuration on chosen interfaces as metadata.
+    """
+    _clear_current_dns_config(desired_state, current_state)
+    servers = desired_state.config_dns.get(DNS.SERVER, [])
+    searches = desired_state.config_dns.get(DNS.SEARCH, [])
+    if not servers and not searches:
+        return
+    if _dns_config_not_changed(desired_state, current_state):
+        _preserve_current_dns_metadata(desired_state, current_state)
+    else:
+        ipv4_iface, ipv6_iface = nm.dns.find_interfaces_for_name_servers(
+            desired_state.config_iface_routes)
+        _save_dns_metadata(desired_state, current_state, ipv4_iface,
+                           ipv6_iface, servers, searches)
+
+
+def _save_dns_metadata(desired_state, current_state, ipv4_iface, ipv6_iface,
+                       servers, searches):
+    index = 0
+    searches_saved = False
+    for server in servers:
+        iface_name = None
+        if iplib.is_ipv6_address(server):
+            iface_name = ipv6_iface
+            family = Interface.IPV6
+        else:
+            iface_name = ipv4_iface
+            family = Interface.IPV4
+        if not iface_name:
+            raise NmstateValueError(
+                'Failed to find suitable interface for saving DNS '
+                'name servers: %s' % server)
+
+        _include_name_only_iface_state(
+            desired_state, current_state, [iface_name])
+        iface_state = desired_state.interfaces[iface_name]
+        if family not in iface_state:
+            iface_state[family] = {}
+
+        if DNS_METADATA not in iface_state[family]:
+            iface_state[family][DNS_METADATA] = {
+                DNS.SERVER: [server],
+                DNS.SEARCH: [] if searches_saved else searches,
+                DNS_METADATA_PRIORITY: nm.dns.DNS_PRIORITY_STATIC_BASE + index
+            }
+        else:
+            iface_state[family][DNS_METADATA][DNS.SERVER].append(server)
+        searches_saved = True
+        index += 1
+
+
+def _include_name_only_iface_state(desired_state, current_state, iface_names):
+    ifnames = (set(iface_names) & set(current_state.interfaces) -
+               set(desired_state.interfaces))
+    for ifname in ifnames:
+        desired_state.interfaces[ifname] = {Interface.NAME: ifname}
+
+    for iface_name in iface_names:
+        if iface_name not in desired_state.interfaces and \
+           iface_name in current_state.interfaces:
+            desired_state.interfaces[iface_name] = {Interface.NAME: iface_name}
+
+
+def _clear_current_dns_config(desired_state, current_state):
+    client = nm.nmclient.client()
+    current_dns_ifaces = nm.dns.get_dns_config_iface_names(
+        nm.ipv4.acs_and_ip_profiles(client),
+        nm.ipv6.acs_and_ip_profiles(client)
+    )
+    _include_name_only_iface_state(
+        desired_state, current_state, current_dns_ifaces)
+
+
+def _dns_config_not_changed(desired_state, current_state):
+    """
+    Return True if desired_state DNS config equal to current_state and
+    interface holding current DNS config is UP and corresponding IP family
+    is enabled.
+    """
+    if desired_state.config_dns != current_state.config_dns:
+        return False
+    client = nm.nmclient.client()
+    iface_dns_configs = nm.dns.get_indexed_dns_config_by_iface(
+        nm.ipv4.acs_and_ip_profiles(client),
+        nm.ipv6.acs_and_ip_profiles(client)
+    )
+    for iface_name, iface_dns_config in six.viewitems(iface_dns_configs):
+        if iface_name not in desired_state.interfaces:
+            continue
+        iface_state = desired_state.interfaces[iface_name]
+        if Interface.STATE in iface_state and \
+           iface_state[Interface.STATE] != InterfaceState.UP:
+            return False
+        for family in six.viewkeys(iface_dns_config):
+            if not iface_state.get(family, {}).get('enabled'):
+                return False
+    return True
+
+
+def _preserve_current_dns_metadata(desired_state, current_state):
+    client = nm.nmclient.client()
+    iface_dns_configs = nm.dns.get_indexed_dns_config_by_iface(
+        nm.ipv4.acs_and_ip_profiles(client),
+        nm.ipv6.acs_and_ip_profiles(client)
+    )
+    for iface_name, iface_dns_config in six.viewitems(iface_dns_configs):
+        if iface_name not in desired_state.interfaces:
+            continue
+        for family, dns_metadata in six.viewitems(iface_dns_config):
+            iface_state = desired_state.interfaces[iface_name]
+            if family not in iface_state:
+                iface_state[family] = {}
+            iface_state[family][DNS_METADATA] = dns_metadata

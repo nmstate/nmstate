@@ -17,8 +17,11 @@
 
 from libnmstate import metadata
 from libnmstate import state
+from libnmstate.nm import dns as nm_dns
+from libnmstate.schema import DNS
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceType
+from libnmstate.schema import InterfaceState
 from libnmstate.schema import OVSBridgePortType as OBPortType
 from libnmstate.schema import Route
 
@@ -630,5 +633,205 @@ def _get_mixed_test_routes():
             Route.NEXT_HOP_INTERFACE: 'eth2',
             Route.NEXT_HOP_ADDRESS: '2001:db8:1::a',
             Route.TABLE_ID: 51
+        }
+    ]
+
+
+def test_dns_metadata_empty():
+    desired_state = state.State({
+        Interface.KEY: _get_test_iface_states(),
+        Route.KEY: {},
+        DNS.KEY: {}
+    })
+    current_state = state.State({})
+
+    metadata.generate_ifaces_metadata(desired_state, current_state)
+    assert (nm_dns.DNS_METADATA not in
+            desired_state.interfaces['eth1'][Interface.IPV4])
+    assert (nm_dns.DNS_METADATA not in
+            desired_state.interfaces['eth1'][Interface.IPV6])
+
+
+def test_dns_gen_metadata_static_gateway_ipv6_name_server_before_ipv4():
+    dns_config = {
+        DNS.SERVER: ['2001:4860:4860::8888', '8.8.8.8'],
+        DNS.SEARCH: ['example.org', 'example.com']
+    }
+
+    desired_state = state.State({
+        Interface.KEY: _get_test_iface_states(),
+        Route.KEY: {
+            Route.CONFIG: _gen_default_gateway_route('eth1')
+        },
+        DNS.KEY: {
+            DNS.CONFIG: dns_config
+        }
+    })
+    current_state = state.State({})
+
+    metadata.generate_ifaces_metadata(desired_state, current_state)
+    ipv4_dns_config = {
+        DNS.SERVER: ['8.8.8.8'],
+        DNS.SEARCH: [],
+        nm_dns.DNS_METADATA_PRIORITY: nm_dns.DNS_PRIORITY_STATIC_BASE + 1,
+     }
+    ipv6_dns_config = {
+        DNS.SERVER: ['2001:4860:4860::8888'],
+        DNS.SEARCH: ['example.org', 'example.com'],
+        nm_dns.DNS_METADATA_PRIORITY: nm_dns.DNS_PRIORITY_STATIC_BASE,
+    }
+    iface_state = desired_state.interfaces['eth1']
+    assert (ipv4_dns_config ==
+            iface_state[Interface.IPV4][nm_dns.DNS_METADATA])
+    assert (ipv6_dns_config ==
+            iface_state[Interface.IPV6][nm_dns.DNS_METADATA])
+
+
+def test_dns_gen_metadata_static_gateway_ipv6_name_server_after_ipv4():
+    dns_config = {
+        DNS.SERVER: ['8.8.8.8', '2001:4860:4860::8888'],
+        DNS.SEARCH: ['example.org', 'example.com']
+    }
+
+    desired_state = state.State({
+        Interface.KEY: _get_test_iface_states(),
+        Route.KEY: {
+            Route.CONFIG: _gen_default_gateway_route('eth1')
+        },
+        DNS.KEY: {
+            DNS.CONFIG: dns_config
+        }
+    })
+    current_state = state.State({})
+
+    metadata.generate_ifaces_metadata(desired_state, current_state)
+    ipv4_dns_config = {
+        DNS.SERVER: ['8.8.8.8'],
+        DNS.SEARCH: ['example.org', 'example.com'],
+        nm_dns.DNS_METADATA_PRIORITY: nm_dns.DNS_PRIORITY_STATIC_BASE
+    }
+    ipv6_dns_config = {
+        DNS.SERVER: ['2001:4860:4860::8888'],
+        DNS.SEARCH: [],
+        nm_dns.DNS_METADATA_PRIORITY: nm_dns.DNS_PRIORITY_STATIC_BASE + 1
+    }
+    iface_state = desired_state.interfaces['eth1']
+    assert (ipv4_dns_config ==
+            iface_state[Interface.IPV4][nm_dns.DNS_METADATA])
+    assert (ipv6_dns_config ==
+            iface_state[Interface.IPV6][nm_dns.DNS_METADATA])
+
+
+def test_dns_metadata_interface_not_included_in_desire():
+    dns_config = {
+        DNS.SERVER: ['2001:4860:4860::8888', '8.8.8.8'],
+        DNS.SEARCH: ['example.org', 'example.com']
+    }
+
+    desired_state = state.State({
+        Interface.KEY: [],
+        Route.KEY: {
+            Route.CONFIG: _gen_default_gateway_route('eth1')
+        },
+        DNS.KEY: {
+            DNS.CONFIG: dns_config
+        }
+    })
+    current_state = state.State({
+        Interface.KEY: _get_test_iface_states(),
+        Route.KEY: {
+            Route.CONFIG: _gen_default_gateway_route('eth1')
+        },
+    })
+    metadata.generate_ifaces_metadata(desired_state, current_state)
+    iface_state = desired_state.interfaces['eth1']
+    ipv4_dns_config = {
+        DNS.SERVER: ['8.8.8.8'],
+        DNS.SEARCH: [],
+        nm_dns.DNS_METADATA_PRIORITY: nm_dns.DNS_PRIORITY_STATIC_BASE + 1
+    }
+    ipv6_dns_config = {
+        DNS.SERVER: ['2001:4860:4860::8888'],
+        DNS.SEARCH: ['example.org', 'example.com'],
+        nm_dns.DNS_METADATA_PRIORITY: nm_dns.DNS_PRIORITY_STATIC_BASE,
+    }
+    assert (ipv4_dns_config ==
+            iface_state[Interface.IPV4][nm_dns.DNS_METADATA])
+    assert (ipv6_dns_config ==
+            iface_state[Interface.IPV6][nm_dns.DNS_METADATA])
+
+
+def _get_test_iface_states():
+    return [
+        {
+            Interface.NAME: 'eth1',
+            Interface.STATE: InterfaceState.UP,
+            Interface.TYPE: InterfaceType.ETHERNET,
+            Interface.IPV4: {
+                'address': [
+                    {
+                        'ip': '192.0.2.251',
+                        'prefix-length': 24
+                    }
+                ],
+                'dhcp': False,
+                'enabled': True
+            },
+            Interface.IPV6: {
+                'address': [
+                    {
+                        'ip': '2001:db8:1::1',
+                        'prefix-length': 64
+                    }
+                ],
+                'dhcp': False,
+                'autoconf': False,
+                'enabled': True
+            }
+        },
+        {
+            Interface.NAME: 'eth2',
+            Interface.STATE: InterfaceState.UP,
+            Interface.TYPE: InterfaceType.ETHERNET,
+            Interface.IPV4: {
+                'address': [
+                    {
+                        'ip': '198.51.100.1',
+                        'prefix-length': 24
+                    }
+                ],
+                'dhcp': False,
+                'enabled': True
+            },
+            Interface.IPV6: {
+                'address': [
+                    {
+                        'ip': '2001:db8:2::1',
+                        'prefix-length': 64
+                    }
+                ],
+                'dhcp': False,
+                'autoconf': False,
+                'enabled': True
+            }
+        },
+    ]
+
+
+def _gen_default_gateway_route(iface_name):
+    return [
+        {
+            Route.DESTINATION: '0.0.0.0/0',
+            Route.METRIC: 200,
+            Route.NEXT_HOP_ADDRESS: '192.0.2.1',
+            Route.NEXT_HOP_INTERFACE: iface_name,
+            Route.TABLE_ID: 54
+        },
+        {
+            Route.DESTINATION: '::/0',
+            Route.METRIC: 201,
+            Route.NEXT_HOP_ADDRESS: '2001:db8:2::f',
+            Route.NEXT_HOP_INTERFACE: iface_name,
+            Route.TABLE_ID: 54
         }
     ]

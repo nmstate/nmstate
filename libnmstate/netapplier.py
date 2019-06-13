@@ -53,6 +53,7 @@ def apply(desired_state, verify_change=True, commit=True, rollback_timeout=60):
     validator.validate(desired_state)
     validator.validate_capabilities(desired_state, netinfo.capabilities())
     validator.validate_dhcp(desired_state)
+    validator.validate_dns(desired_state)
 
     checkpoint = _apply_ifaces_state(
         state.State(desired_state), verify_change, commit, rollback_timeout)
@@ -111,6 +112,7 @@ def _apply_ifaces_state(desired_state, verify_change, commit,
     desired_state.sanitize_ethernet(current_state)
     desired_state.sanitize_dynamic_ip()
     desired_state.merge_route_config(current_state)
+    desired_state.merge_dns(current_state)
     metadata.generate_ifaces_metadata(desired_state, current_state)
 
     validator.validate_interfaces_state(desired_state, current_state)
@@ -168,6 +170,7 @@ def _verify_change(desired_state):
     current_state = state.State(netinfo.show())
     desired_state.verify_interfaces(current_state)
     desired_state.verify_routes(current_state)
+    desired_state.verify_dns(current_state)
 
 
 @contextmanager

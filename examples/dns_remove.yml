@@ -1,0 +1,4 @@
+---
+dns-resolver:
+  config: {}
+interfaces: []
