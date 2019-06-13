@@ -697,6 +697,15 @@ class TestAssertDnsState(object):
 
         assert desire_state.config_dns == dns_config[DNS.CONFIG]
 
+    def test_merge_dns_empty_config_with_non_empty_state(self):
+        dns_config = self._get_test_dns_config()
+        current_state = state.State({DNS.KEY: dns_config})
+        desire_state = state.State({DNS.KEY: {}})
+
+        desire_state.merge_dns(current_state)
+
+        assert desire_state.config_dns == {DNS.SERVER: [], DNS.SEARCH: []}
+
     def test_state_verify_dns_same(self):
         dns_config = self._get_test_dns_config()
         desire_state = state.State({DNS.KEY: dns_config})

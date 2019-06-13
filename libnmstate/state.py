@@ -341,7 +341,7 @@ class State(object):
         If DNS is not mentioned in the self state, overwrite it with the other
         DNS entries.
         """
-        if not self._state.get(DNS.KEY):
+        if DNS.KEY not in self._state:
             self._state[DNS.KEY] = {
                 DNS.CONFIG: copy.deepcopy(other_state.config_dns)
             }
