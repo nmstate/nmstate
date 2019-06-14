@@ -15,6 +15,10 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
+import pytest
+
+from .compat import mock
+
 from libnmstate import metadata
 from libnmstate import state
 from libnmstate.nm import dns as nm_dns
@@ -31,6 +35,22 @@ TYPE_OVS_BR = InterfaceType.OVS_BRIDGE
 
 BOND_NAME = 'bond99'
 OVS_NAME = 'ovs-br99'
+TEST_IFACE1 = 'eth1'
+
+
+@pytest.fixture(autouse=True)
+def nm_mock():
+    with mock.patch.object(metadata, 'nm') as m:
+        yield m
+
+
+@pytest.fixture
+def nm_dns_mock(nm_mock):
+    nm_mock.dns.find_interfaces_for_name_servers.return_value = (TEST_IFACE1,
+                                                                 TEST_IFACE1)
+    nm_mock.dns.DNS_METADATA_PRIORITY = nm_dns.DNS_METADATA_PRIORITY
+    nm_mock.dns.DNS_PRIORITY_STATIC_BASE = nm_dns.DNS_PRIORITY_STATIC_BASE
+    return
 
 
 class TestDesiredStateMetadata(object):
@@ -594,8 +614,8 @@ def test_route_metadata():
     current_state = state.State({})
     metadata.generate_ifaces_metadata(desired_state, current_state)
     expected_iface_state = {
-        'eth1': {
-            Interface.NAME: 'eth1',
+        TEST_IFACE1: {
+            Interface.NAME: TEST_IFACE1,
             Interface.TYPE: InterfaceType.ETHERNET,
             Interface.IPV4: {
                 metadata.ROUTES: [routes[0]]
@@ -623,7 +643,7 @@ def _get_mixed_test_routes():
         {
             Route.DESTINATION: '198.51.100.0/24',
             Route.METRIC: 103,
-            Route.NEXT_HOP_INTERFACE: 'eth1',
+            Route.NEXT_HOP_INTERFACE: TEST_IFACE1,
             Route.NEXT_HOP_ADDRESS: '192.0.2.1',
             Route.TABLE_ID: 50
         },
@@ -647,12 +667,13 @@ def test_dns_metadata_empty():
 
     metadata.generate_ifaces_metadata(desired_state, current_state)
     assert (nm_dns.DNS_METADATA not in
-            desired_state.interfaces['eth1'][Interface.IPV4])
+            desired_state.interfaces[TEST_IFACE1][Interface.IPV4])
     assert (nm_dns.DNS_METADATA not in
-            desired_state.interfaces['eth1'][Interface.IPV6])
+            desired_state.interfaces[TEST_IFACE1][Interface.IPV6])
 
 
-def test_dns_gen_metadata_static_gateway_ipv6_name_server_before_ipv4():
+def test_dns_gen_metadata_static_gateway_ipv6_name_server_before_ipv4(
+        nm_dns_mock):
     dns_config = {
         DNS.SERVER: ['2001:4860:4860::8888', '8.8.8.8'],
         DNS.SEARCH: ['example.org', 'example.com']
@@ -661,7 +682,7 @@ def test_dns_gen_metadata_static_gateway_ipv6_name_server_before_ipv4():
     desired_state = state.State({
         Interface.KEY: _get_test_iface_states(),
         Route.KEY: {
-            Route.CONFIG: _gen_default_gateway_route('eth1')
+            Route.CONFIG: _gen_default_gateway_route(TEST_IFACE1)
         },
         DNS.KEY: {
             DNS.CONFIG: dns_config
@@ -680,14 +701,15 @@ def test_dns_gen_metadata_static_gateway_ipv6_name_server_before_ipv4():
         DNS.SEARCH: ['example.org', 'example.com'],
         nm_dns.DNS_METADATA_PRIORITY: nm_dns.DNS_PRIORITY_STATIC_BASE,
     }
-    iface_state = desired_state.interfaces['eth1']
+    iface_state = desired_state.interfaces[TEST_IFACE1]
     assert (ipv4_dns_config ==
             iface_state[Interface.IPV4][nm_dns.DNS_METADATA])
     assert (ipv6_dns_config ==
             iface_state[Interface.IPV6][nm_dns.DNS_METADATA])
 
 
-def test_dns_gen_metadata_static_gateway_ipv6_name_server_after_ipv4():
+def test_dns_gen_metadata_static_gateway_ipv6_name_server_after_ipv4(
+        nm_dns_mock):
     dns_config = {
         DNS.SERVER: ['8.8.8.8', '2001:4860:4860::8888'],
         DNS.SEARCH: ['example.org', 'example.com']
@@ -696,7 +718,7 @@ def test_dns_gen_metadata_static_gateway_ipv6_name_server_after_ipv4():
     desired_state = state.State({
         Interface.KEY: _get_test_iface_states(),
         Route.KEY: {
-            Route.CONFIG: _gen_default_gateway_route('eth1')
+            Route.CONFIG: _gen_default_gateway_route(TEST_IFACE1)
         },
         DNS.KEY: {
             DNS.CONFIG: dns_config
@@ -715,14 +737,14 @@ def test_dns_gen_metadata_static_gateway_ipv6_name_server_after_ipv4():
         DNS.SEARCH: [],
         nm_dns.DNS_METADATA_PRIORITY: nm_dns.DNS_PRIORITY_STATIC_BASE + 1
     }
-    iface_state = desired_state.interfaces['eth1']
+    iface_state = desired_state.interfaces[TEST_IFACE1]
     assert (ipv4_dns_config ==
             iface_state[Interface.IPV4][nm_dns.DNS_METADATA])
     assert (ipv6_dns_config ==
             iface_state[Interface.IPV6][nm_dns.DNS_METADATA])
 
 
-def test_dns_metadata_interface_not_included_in_desire():
+def test_dns_metadata_interface_not_included_in_desire(nm_dns_mock):
     dns_config = {
         DNS.SERVER: ['2001:4860:4860::8888', '8.8.8.8'],
         DNS.SEARCH: ['example.org', 'example.com']
@@ -731,7 +753,7 @@ def test_dns_metadata_interface_not_included_in_desire():
     desired_state = state.State({
         Interface.KEY: [],
         Route.KEY: {
-            Route.CONFIG: _gen_default_gateway_route('eth1')
+            Route.CONFIG: _gen_default_gateway_route(TEST_IFACE1)
         },
         DNS.KEY: {
             DNS.CONFIG: dns_config
@@ -740,11 +762,11 @@ def test_dns_metadata_interface_not_included_in_desire():
     current_state = state.State({
         Interface.KEY: _get_test_iface_states(),
         Route.KEY: {
-            Route.CONFIG: _gen_default_gateway_route('eth1')
+            Route.CONFIG: _gen_default_gateway_route(TEST_IFACE1)
         },
     })
     metadata.generate_ifaces_metadata(desired_state, current_state)
-    iface_state = desired_state.interfaces['eth1']
+    iface_state = desired_state.interfaces[TEST_IFACE1]
     ipv4_dns_config = {
         DNS.SERVER: ['8.8.8.8'],
         DNS.SEARCH: [],
@@ -764,7 +786,7 @@ def test_dns_metadata_interface_not_included_in_desire():
 def _get_test_iface_states():
     return [
         {
-            Interface.NAME: 'eth1',
+            Interface.NAME: TEST_IFACE1,
             Interface.STATE: InterfaceState.UP,
             Interface.TYPE: InterfaceType.ETHERNET,
             Interface.IPV4: {
