@@ -13,7 +13,9 @@ RUN yum -y upgrade \
     yum -y install epel-release \
     && \
     yum -y install \
+        python36 \
         python2-pip \
+        python36-pip \
         make \
     && \
     yum-builddep -y \
