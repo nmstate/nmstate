@@ -19,4 +19,5 @@ import ipaddress
 
 if not hasattr(ipaddress.IPv4Network, 'subnet_of'):
     from libnmstate.ipaddress_extender import IPv4Network as _IPv4Network
+
     ipaddress.IPv4Network = _IPv4Network

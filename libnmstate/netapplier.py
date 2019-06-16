@@ -56,7 +56,8 @@ def apply(desired_state, verify_change=True, commit=True, rollback_timeout=60):
     validator.validate_dns(desired_state)
 
     checkpoint = _apply_ifaces_state(
-        state.State(desired_state), verify_change, commit, rollback_timeout)
+        state.State(desired_state), verify_change, commit, rollback_timeout
+    )
     if checkpoint:
         return str(checkpoint.dbuspath)
 
@@ -105,8 +106,9 @@ def _choose_checkpoint(dbuspath):
     return checkpoint
 
 
-def _apply_ifaces_state(desired_state, verify_change, commit,
-                        rollback_timeout):
+def _apply_ifaces_state(
+    desired_state, verify_change, commit, rollback_timeout
+):
     current_state = state.State(netinfo.show())
 
     desired_state.sanitize_ethernet(current_state)
@@ -121,15 +123,16 @@ def _apply_ifaces_state(desired_state, verify_change, commit,
     new_interfaces = _list_new_interfaces(desired_state, current_state)
 
     try:
-        with nm.checkpoint.CheckPoint(autodestroy=commit,
-                                      timeout=rollback_timeout) as checkpoint:
+        with nm.checkpoint.CheckPoint(
+            autodestroy=commit, timeout=rollback_timeout
+        ) as checkpoint:
             with _setup_providers():
                 _add_interfaces(new_interfaces, desired_state)
             with _setup_providers():
                 current_state = state.State(netinfo.show())
-                state2edit = _create_editable_desired_state(desired_state,
-                                                            current_state,
-                                                            new_interfaces)
+                state2edit = _create_editable_desired_state(
+                    desired_state, current_state, new_interfaces
+                )
                 _edit_interfaces(state2edit)
             if verify_change:
                 _verify_change(desired_state)
@@ -141,9 +144,9 @@ def _apply_ifaces_state(desired_state, verify_change, commit,
         raise NmstateConflictError('Error creating a check point')
 
 
-def _create_editable_desired_state(desired_state,
-                                   current_state,
-                                   new_intefaces):
+def _create_editable_desired_state(
+    desired_state, current_state, new_intefaces
+):
     """
     Create a new state object that includes only existing interfaces which need
     to be edited/changed.
@@ -151,7 +154,8 @@ def _create_editable_desired_state(desired_state,
     state2edit = state.create_state(
         desired_state.state,
         interfaces_to_filter=(
-                set(current_state.interfaces) - set(new_intefaces))
+            set(current_state.interfaces) - set(new_intefaces)
+        ),
     )
     state2edit.merge_interfaces(current_state)
     return state2edit
@@ -159,11 +163,11 @@ def _create_editable_desired_state(desired_state,
 
 def _list_new_interfaces(desired_state, current_state):
     return [
-        name for name in
-        six.viewkeys(desired_state.interfaces) -
-        six.viewkeys(current_state.interfaces)
-        if desired_state.interfaces[name].get(schema.Interface.STATE) not in (
-            schema.InterfaceState.ABSENT, schema.InterfaceState.DOWN)
+        name
+        for name in six.viewkeys(desired_state.interfaces)
+        - six.viewkeys(current_state.interfaces)
+        if desired_state.interfaces[name].get(schema.Interface.STATE)
+        not in (schema.InterfaceState.ABSENT, schema.InterfaceState.DOWN)
     ]
 
 
@@ -182,7 +186,9 @@ def _setup_providers():
     if not success:
         raise NmstateLibnmError(
             'Unexpected failure of libnm when running the mainloop: {}'.format(
-                mainloop.error))
+                mainloop.error
+            )
+        )
 
 
 def _add_interfaces(new_interfaces, desired_state):
@@ -203,16 +209,20 @@ def _edit_interfaces(state2edit):
     ifaces2edit = list(six.viewvalues(state2edit.interfaces))
 
     iface2prepare = list(
-        filter(lambda state: state.get('state') not in ('absent', 'down'),
-               ifaces2edit)
+        filter(
+            lambda state: state.get('state') not in ('absent', 'down'),
+            ifaces2edit,
+        )
     )
     proxy_ifaces = nm.applier.prepare_proxy_ifaces_desired_state(iface2prepare)
     ifaces_configs = nm.applier.prepare_edited_ifaces_configuration(
-        iface2prepare + proxy_ifaces)
+        iface2prepare + proxy_ifaces
+    )
     nm.applier.edit_existing_ifaces(ifaces_configs)
 
-    nm.applier.set_ifaces_admin_state(ifaces2edit + proxy_ifaces,
-                                      con_profiles=ifaces_configs)
+    nm.applier.set_ifaces_admin_state(
+        ifaces2edit + proxy_ifaces, con_profiles=ifaces_configs
+    )
 
 
 def _index_by_name(ifaces_state):

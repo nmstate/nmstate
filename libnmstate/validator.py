@@ -57,12 +57,13 @@ def validate_interface_capabilities(ifaces_state, capabilities):
         is_ovs_type = iface_type in (
             nm.ovs.BRIDGE_TYPE,
             nm.ovs.PORT_TYPE,
-            nm.ovs.INTERNAL_INTERFACE_TYPE
+            nm.ovs.INTERNAL_INTERFACE_TYPE,
         )
         if is_ovs_type and not has_ovs_capability:
             raise NmstateDependencyError(
                 "Open vSwitch NetworkManager support not installed "
-                "and started")
+                "and started"
+            )
 
 
 def validate_interfaces_state(desired_state, current_state):
@@ -71,7 +72,8 @@ def validate_interfaces_state(desired_state, current_state):
 
 def validate_link_aggregation_state(desired_state, current_state):
     available_ifaces = {
-        ifname for ifname, ifstate in six.viewitems(desired_state.interfaces)
+        ifname
+        for ifname, ifstate in six.viewitems(desired_state.interfaces)
         if ifstate.get('state') != 'absent'
     }
     available_ifaces |= set(current_state.interfaces)
@@ -85,11 +87,15 @@ def validate_link_aggregation_state(desired_state, current_state):
                 if not (slaves <= available_ifaces):
                     raise NmstateValueError(
                         "Link aggregation has missing slave: {}".format(
-                            iface_state))
+                            iface_state
+                        )
+                    )
                 if slaves & specified_slaves:
                     raise NmstateValueError(
                         "Link aggregation has reused slave: {}".format(
-                            iface_state))
+                            iface_state
+                        )
+                    )
                 specified_slaves |= slaves
 
 
@@ -97,10 +103,15 @@ def validate_dhcp(state):
     for iface_state in state[Constants.INTERFACES]:
         for family in ('ipv4', 'ipv6'):
             ip = iface_state.get(family, {})
-            if ip.get('enabled') and ip.get('address') and \
-               (ip.get('dhcp') or ip.get('autoconf')):
-                logging.warning('%s addresses are ignored when '
-                                'dynamic IP is enabled', family)
+            if (
+                ip.get('enabled')
+                and ip.get('address')
+                and (ip.get('dhcp') or ip.get('autoconf'))
+            ):
+                logging.warning(
+                    '%s addresses are ignored when ' 'dynamic IP is enabled',
+                    family,
+                )
 
 
 def validate_dns(state):
@@ -108,11 +119,13 @@ def validate_dns(state):
     Only support at most 2 name servers now:
     https://nmstate.atlassian.net/browse/NMSTATE-220
     """
-    dns_servers = state.get(
-        DNS.KEY, {}).get(DNS.CONFIG, {}).get(DNS.SERVER, [])
+    dns_servers = (
+        state.get(DNS.KEY, {}).get(DNS.CONFIG, {}).get(DNS.SERVER, [])
+    )
     if len(dns_servers) > 2:
         raise NmstateNotImplementedError(
-            'Nmstate only support at most 2 DNS name servers')
+            'Nmstate only support at most 2 DNS name servers'
+        )
 
 
 def validate_routes(desired_state, current_state):
@@ -132,11 +145,13 @@ def validate_routes(desired_state, current_state):
         if desired_iface_state or current_iface_state:
             _assert_iface_is_up(desired_iface_state, current_iface_state)
             if any(is_ipv6_address(route.destination) for route in routes):
-                _assert_iface_ipv6_enabled(desired_iface_state,
-                                           current_iface_state)
+                _assert_iface_ipv6_enabled(
+                    desired_iface_state, current_iface_state
+                )
             if any(not is_ipv6_address(route.destination) for route in routes):
-                _assert_iface_ipv4_enabled(desired_iface_state,
-                                           current_iface_state)
+                _assert_iface_ipv4_enabled(
+                    desired_iface_state, current_iface_state
+                )
         else:
             raise NmstateRouteWithNoInterfaceError(str(routes))
 
@@ -160,12 +175,14 @@ def _assert_iface_is_up(desired_iface_state, current_iface_state):
 
 def _assert_iface_ipv4_enabled(desired_iface_state, current_iface_state):
     _assert_iface_ip_enabled(
-        desired_iface_state, current_iface_state, schema.Interface.IPV4)
+        desired_iface_state, current_iface_state, schema.Interface.IPV4
+    )
 
 
 def _assert_iface_ipv6_enabled(desired_iface_state, current_iface_state):
     _assert_iface_ip_enabled(
-        desired_iface_state, current_iface_state, schema.Interface.IPV6)
+        desired_iface_state, current_iface_state, schema.Interface.IPV6
+    )
 
 
 def _assert_iface_ip_enabled(desired_iface_state, current_iface_state, ipkey):

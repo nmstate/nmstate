@@ -31,11 +31,15 @@ def format_desired_current_state_diff(desired_state, current_state):
     pretty_desired_state = PrettyState(desired_state).yaml
     pretty_current_state = PrettyState(current_state).yaml
 
-    diff = ''.join(difflib.unified_diff(
-        pretty_desired_state.splitlines(True),
-        pretty_current_state.splitlines(True),
-        fromfile='desired',
-        tofile='current', n=3))
+    diff = ''.join(
+        difflib.unified_diff(
+            pretty_desired_state.splitlines(True),
+            pretty_current_state.splitlines(True),
+            fromfile='desired',
+            tofile='current',
+            n=3,
+        )
+    )
     return (
         '\n'
         'desired\n'
@@ -46,10 +50,7 @@ def format_desired_current_state_diff(desired_state, current_state):
         '{}\n'
         'difference\n'
         '==========\n'
-        '{}\n'.format(
-            pretty_desired_state,
-            pretty_current_state,
-            diff)
+        '{}\n'.format(pretty_desired_state, pretty_current_state, diff)
     )
 
 
@@ -63,8 +64,9 @@ class PrettyState(object):
 
     @property
     def yaml(self):
-        return yaml.dump(self.state, default_flow_style=False,
-                         explicit_start=True)
+        return yaml.dump(
+            self.state, default_flow_style=False, explicit_start=True
+        )
 
     @property
     def json(self):
@@ -95,9 +97,8 @@ def order_state(state):
 
     if iface_states is not None:
         state[Constants.INTERFACES] = [
-            order_iface_state(iface_state) for iface_state in sorted(
-                iface_states, key=itemgetter('name')
-            )
+            order_iface_state(iface_state)
+            for iface_state in sorted(iface_states, key=itemgetter('name'))
         ]
 
     return state
@@ -112,8 +113,9 @@ def represent_unicode(_, data):
 
     """
 
-    return yaml.ScalarNode(tag=u'tag:yaml.org,2002:str',
-                           value=data.encode('utf-8'))
+    return yaml.ScalarNode(
+        tag=u'tag:yaml.org,2002:str', value=data.encode('utf-8')
+    )
 
 
 def order_iface_state(iface_state):

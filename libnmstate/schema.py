@@ -23,7 +23,7 @@ import yaml
 def load(schema_name):
     return yaml.load(
         pkgutil.get_data('libnmstate', 'schemas/' + schema_name + '.yaml'),
-        Loader=yaml.SafeLoader
+        Loader=yaml.SafeLoader,
     )
 
 
@@ -99,7 +99,7 @@ class InterfaceType(object):
         OVS_BRIDGE,
         OVS_PORT,
         OVS_INTERFACE,
-        VLAN
+        VLAN,
     )
 
 
