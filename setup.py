@@ -30,7 +30,8 @@ def requirements():
                     logging.warning(
                         "Your setuptools is too old(<20.5) to support "
                         "environment marker, removing the environment marker "
-                        "as workaround but it could be buggy")
+                        "as workaround but it could be buggy"
+                    )
                     line = line.split(';')[0]
             if not line.startswith('#'):
                 req.append(line)
@@ -56,9 +57,7 @@ setup(
     packages=find_packages(),
     install_requires=requirements(),
     entry_points={
-        'console_scripts': ['nmstatectl = nmstatectl.nmstatectl:main'],
+        'console_scripts': ['nmstatectl = nmstatectl.nmstatectl:main']
     },
-    package_data={
-        'libnmstate': ['schemas/operational-state.yaml']
-    },
+    package_data={'libnmstate': ['schemas/operational-state.yaml']},
 )
