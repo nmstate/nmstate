@@ -39,4 +39,5 @@ def mainloop_run(func):
     def wrapper_mainloop(*args, **kwargs):
         with mainloop():
             return func(*args, **kwargs)
+
     return wrapper_mainloop
