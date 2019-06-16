@@ -40,7 +40,7 @@ def exec_cmd(cmd, env=None, stdin=None):
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        env=env
+        env=env,
     )
 
     out, err = p.communicate(stdin)

@@ -34,49 +34,39 @@ ETH1_INTERFACE_STATE = {
     Interface.STATE: InterfaceState.UP,
     Interface.TYPE: InterfaceType.ETHERNET,
     Interface.IPV4: {
-        'address': [
-            {
-                'ip': IPV4_ADDRESS1,
-                'prefix-length': 24
-            }
-        ],
+        'address': [{'ip': IPV4_ADDRESS1, 'prefix-length': 24}],
         'dhcp': False,
-        'enabled': True
+        'enabled': True,
     },
     Interface.IPV6: {
-        'address': [
-            {
-                'ip': IPV6_ADDRESS1,
-                'prefix-length': 64
-            }
-        ],
+        'address': [{'ip': IPV6_ADDRESS1, 'prefix-length': 64}],
         'dhcp': False,
         'autoconf': False,
-        'enabled': True
-    }
+        'enabled': True,
+    },
 }
 
 
 def test_add_static_routes(eth1_up):
     routes = _get_ipv4_test_routes() + _get_ipv6_test_routes()
-    libnmstate.apply({
-        Interface.KEY: [ETH1_INTERFACE_STATE],
-        Route.KEY: {
-            Route.CONFIG: routes
+    libnmstate.apply(
+        {
+            Interface.KEY: [ETH1_INTERFACE_STATE],
+            Route.KEY: {Route.CONFIG: routes},
         }
-    })
+    )
     cur_state = libnmstate.show()
     _assert_routes(routes, cur_state)
 
 
 def test_add_gateway(eth1_up):
     routes = [_get_ipv4_gateways()[0], _get_ipv6_test_routes()[0]]
-    libnmstate.apply({
-        Interface.KEY: [ETH1_INTERFACE_STATE],
-        Route.KEY: {
-            Route.CONFIG: routes
+    libnmstate.apply(
+        {
+            Interface.KEY: [ETH1_INTERFACE_STATE],
+            Route.KEY: {Route.CONFIG: routes},
         }
-    })
+    )
     cur_state = libnmstate.show()
     _assert_routes(routes, cur_state)
 
@@ -86,12 +76,12 @@ def test_add_route_without_metric(eth1_up):
     for route in routes:
         del route[Route.METRIC]
 
-    libnmstate.apply({
-        Interface.KEY: [ETH1_INTERFACE_STATE],
-        Route.KEY: {
-            Route.CONFIG: routes
+    libnmstate.apply(
+        {
+            Interface.KEY: [ETH1_INTERFACE_STATE],
+            Route.KEY: {Route.CONFIG: routes},
         }
-    })
+    )
 
     cur_state = libnmstate.show()
     _assert_routes(routes, cur_state)
@@ -102,56 +92,65 @@ def test_add_route_without_table_id(eth1_up):
     for route in routes:
         del route[Route.TABLE_ID]
 
-    libnmstate.apply({
-        Interface.KEY: [ETH1_INTERFACE_STATE],
-        Route.KEY: {
-            Route.CONFIG: routes
-        },
-    })
+    libnmstate.apply(
+        {
+            Interface.KEY: [ETH1_INTERFACE_STATE],
+            Route.KEY: {Route.CONFIG: routes},
+        }
+    )
 
     cur_state = libnmstate.show()
     _assert_routes(routes, cur_state)
 
 
-@pytest.mark.xfail(raises=NmstateNotImplementedError,
-                   reason="Red Hat Bug 1707396")
+@pytest.mark.xfail(
+    raises=NmstateNotImplementedError, reason="Red Hat Bug 1707396"
+)
 def test_multiple_gateway(eth1_up):
     libnmstate.apply(
         {
             Interface.KEY: [ETH1_INTERFACE_STATE],
             Route.KEY: {
                 Route.CONFIG: _get_ipv4_gateways() + _get_ipv6_gateways()
-            }
-        })
+            },
+        }
+    )
 
 
 def test_change_gateway(eth1_up):
-    libnmstate.apply({
-        Interface.KEY: [ETH1_INTERFACE_STATE],
-        Route.KEY: {
-            Route.CONFIG: [_get_ipv4_gateways()[0],
-                           _get_ipv6_gateways()[0]]
+    libnmstate.apply(
+        {
+            Interface.KEY: [ETH1_INTERFACE_STATE],
+            Route.KEY: {
+                Route.CONFIG: [
+                    _get_ipv4_gateways()[0],
+                    _get_ipv6_gateways()[0],
+                ]
+            },
         }
-    })
+    )
 
     routes = [_get_ipv4_gateways()[1], _get_ipv6_gateways()[1]]
-    libnmstate.apply({
-        Interface.KEY: [ETH1_INTERFACE_STATE],
-        Route.KEY: {
-            Route.CONFIG: [
-                {
-                    Route.STATE: Route.STATE_ABSENT,
-                    Route.NEXT_HOP_INTERFACE: 'eth1',
-                    Route.DESTINATION: '0.0.0.0/0'
-                },
-                {
-                    Route.STATE: Route.STATE_ABSENT,
-                    Route.NEXT_HOP_INTERFACE: 'eth1',
-                    Route.DESTINATION: '::/0'
-                }
-            ] + routes,
-        },
-    })
+    libnmstate.apply(
+        {
+            Interface.KEY: [ETH1_INTERFACE_STATE],
+            Route.KEY: {
+                Route.CONFIG: [
+                    {
+                        Route.STATE: Route.STATE_ABSENT,
+                        Route.NEXT_HOP_INTERFACE: 'eth1',
+                        Route.DESTINATION: '0.0.0.0/0',
+                    },
+                    {
+                        Route.STATE: Route.STATE_ABSENT,
+                        Route.NEXT_HOP_INTERFACE: 'eth1',
+                        Route.DESTINATION: '::/0',
+                    },
+                ]
+                + routes
+            },
+        }
+    )
 
     cur_state = libnmstate.show()
     _assert_routes(routes, cur_state)
@@ -209,15 +208,15 @@ def _get_ipv4_test_routes():
             Route.METRIC: 103,
             Route.NEXT_HOP_ADDRESS: '192.0.2.1',
             Route.NEXT_HOP_INTERFACE: 'eth1',
-            Route.TABLE_ID: 50
+            Route.TABLE_ID: 50,
         },
         {
             Route.DESTINATION: '203.0.113.0/24',
             Route.METRIC: 103,
             Route.NEXT_HOP_ADDRESS: '192.0.2.1',
             Route.NEXT_HOP_INTERFACE: 'eth1',
-            Route.TABLE_ID: 51
-        }
+            Route.TABLE_ID: 51,
+        },
     ]
 
 
@@ -228,15 +227,15 @@ def _get_ipv4_gateways():
             Route.METRIC: 103,
             Route.NEXT_HOP_ADDRESS: '192.0.2.1',
             Route.NEXT_HOP_INTERFACE: 'eth1',
-            Route.TABLE_ID: 254
+            Route.TABLE_ID: 254,
         },
         {
             Route.DESTINATION: '0.0.0.0/0',
             Route.METRIC: 101,
             Route.NEXT_HOP_ADDRESS: '192.0.2.2',
             Route.NEXT_HOP_INTERFACE: 'eth1',
-            Route.TABLE_ID: 254
-        }
+            Route.TABLE_ID: 254,
+        },
     ]
 
 
@@ -247,15 +246,15 @@ def _get_ipv6_test_routes():
             Route.METRIC: 103,
             Route.NEXT_HOP_ADDRESS: '2001:db8:1::a',
             Route.NEXT_HOP_INTERFACE: 'eth1',
-            Route.TABLE_ID: 50
+            Route.TABLE_ID: 50,
         },
         {
             Route.DESTINATION: '2001:db8:b::/64',
             Route.METRIC: 103,
             Route.NEXT_HOP_ADDRESS: '2001:db8:1::b',
             Route.NEXT_HOP_INTERFACE: 'eth1',
-            Route.TABLE_ID: 50
-        }
+            Route.TABLE_ID: 50,
+        },
     ]
 
 
@@ -266,51 +265,53 @@ def _get_ipv6_gateways():
             Route.METRIC: 103,
             Route.NEXT_HOP_ADDRESS: '2001:db8:1::f',
             Route.NEXT_HOP_INTERFACE: 'eth1',
-            Route.TABLE_ID: 254
+            Route.TABLE_ID: 254,
         },
         {
             Route.DESTINATION: '::/0',
             Route.METRIC: 101,
             Route.NEXT_HOP_ADDRESS: '2001:db8:1::e',
             Route.NEXT_HOP_INTERFACE: 'eth1',
-            Route.TABLE_ID: 254
-        }
+            Route.TABLE_ID: 254,
+        },
     ]
 
 
 def _route_sort_key(route):
-    return (route.get(Route.TABLE_ID, Route.USE_DEFAULT_ROUTE_TABLE),
-            route.get(Route.NEXT_HOP_INTERFACE, ''),
-            route.get(Route.DESTINATION, ''))
+    return (
+        route.get(Route.TABLE_ID, Route.USE_DEFAULT_ROUTE_TABLE),
+        route.get(Route.NEXT_HOP_INTERFACE, ''),
+        route.get(Route.DESTINATION, ''),
+    )
 
 
 parametrize_ip_ver_routes = pytest.mark.parametrize(
     'get_routes_func',
-    [(_get_ipv4_test_routes),
-     (_get_ipv6_test_routes)],
-    ids=['ipv4', 'ipv6'])
+    [(_get_ipv4_test_routes), (_get_ipv6_test_routes)],
+    ids=['ipv4', 'ipv6'],
+)
 
 
 @parametrize_ip_ver_routes
 def test_remove_specific_route(eth1_up, get_routes_func):
     routes = get_routes_func()
-    libnmstate.apply({
-        Interface.KEY: [ETH1_INTERFACE_STATE],
-        Route.KEY: {
-            Route.CONFIG: routes
-        },
-    })
+    libnmstate.apply(
+        {
+            Interface.KEY: [ETH1_INTERFACE_STATE],
+            Route.KEY: {Route.CONFIG: routes},
+        }
+    )
     cur_state = libnmstate.show()
     _assert_routes(routes, cur_state)
 
     absent_route = routes[0]
     absent_route[Route.STATE] = Route.STATE_ABSENT
-    libnmstate.apply({
-        Interface.KEY: [ETH1_INTERFACE_STATE],
-        Route.KEY: {
-            Route.CONFIG: [absent_route]
-        },
-    })
+    libnmstate.apply(
+        {
+            Interface.KEY: [ETH1_INTERFACE_STATE],
+            Route.KEY: {Route.CONFIG: [absent_route]},
+        }
+    )
 
     expected_routes = routes[1:]
 
@@ -321,25 +322,25 @@ def test_remove_specific_route(eth1_up, get_routes_func):
 @parametrize_ip_ver_routes
 def test_remove_wildcast_route_with_iface(eth1_up, get_routes_func):
     routes = get_routes_func()
-    libnmstate.apply({
-        Interface.KEY: [ETH1_INTERFACE_STATE],
-        Route.KEY: {
-            Route.CONFIG: routes
-        },
-    })
+    libnmstate.apply(
+        {
+            Interface.KEY: [ETH1_INTERFACE_STATE],
+            Route.KEY: {Route.CONFIG: routes},
+        }
+    )
     cur_state = libnmstate.show()
     _assert_routes(routes, cur_state)
 
     absent_route = {
         Route.STATE: Route.STATE_ABSENT,
-        Route.NEXT_HOP_INTERFACE: 'eth1'
+        Route.NEXT_HOP_INTERFACE: 'eth1',
     }
-    libnmstate.apply({
-        Interface.KEY: [ETH1_INTERFACE_STATE],
-        Route.KEY: {
-            Route.CONFIG: [absent_route]
-        },
-    })
+    libnmstate.apply(
+        {
+            Interface.KEY: [ETH1_INTERFACE_STATE],
+            Route.KEY: {Route.CONFIG: [absent_route]},
+        }
+    )
 
     expected_routes = []
 
@@ -350,27 +351,29 @@ def test_remove_wildcast_route_with_iface(eth1_up, get_routes_func):
 @parametrize_ip_ver_routes
 def test_remove_wildcast_route_without_iface(eth1_up, get_routes_func):
     routes = get_routes_func()
-    libnmstate.apply({
-        Interface.KEY: [ETH1_INTERFACE_STATE],
-        Route.KEY: {
-            Route.CONFIG: routes
-        },
-    })
+    libnmstate.apply(
+        {
+            Interface.KEY: [ETH1_INTERFACE_STATE],
+            Route.KEY: {Route.CONFIG: routes},
+        }
+    )
     cur_state = libnmstate.show()
     _assert_routes(routes, cur_state)
 
     absent_routes = []
     for route in routes:
-        absent_routes.append({
-            Route.STATE: Route.STATE_ABSENT,
-            Route.DESTINATION: route[Route.DESTINATION]
-        })
-    libnmstate.apply({
-        Interface.KEY: [ETH1_INTERFACE_STATE],
-        Route.KEY: {
-            Route.CONFIG: absent_routes
-        },
-    })
+        absent_routes.append(
+            {
+                Route.STATE: Route.STATE_ABSENT,
+                Route.DESTINATION: route[Route.DESTINATION],
+            }
+        )
+    libnmstate.apply(
+        {
+            Interface.KEY: [ETH1_INTERFACE_STATE],
+            Route.KEY: {Route.CONFIG: absent_routes},
+        }
+    )
 
     expected_routes = []
 
@@ -380,19 +383,17 @@ def test_remove_wildcast_route_without_iface(eth1_up, get_routes_func):
 
 # TODO: Once we can disable IPv6, we should add an IPv6 test case here
 def test_disable_ipv4_with_routes_in_current(eth1_up):
-    libnmstate.apply({
-        Interface.KEY: [ETH1_INTERFACE_STATE],
-        Route.KEY: {
-            Route.CONFIG: _get_ipv4_test_routes(),
+    libnmstate.apply(
+        {
+            Interface.KEY: [ETH1_INTERFACE_STATE],
+            Route.KEY: {Route.CONFIG: _get_ipv4_test_routes()},
         }
-    })
+    )
 
     eth1_state = copy.deepcopy(ETH1_INTERFACE_STATE)
     eth1_state[Interface.IPV4] = {'enabled': False}
 
-    libnmstate.apply({
-        Interface.KEY: [eth1_state],
-    })
+    libnmstate.apply({Interface.KEY: [eth1_state]})
 
     cur_state = libnmstate.show()
     _assert_routes([], cur_state)
@@ -400,20 +401,24 @@ def test_disable_ipv4_with_routes_in_current(eth1_up):
 
 @parametrize_ip_ver_routes
 def test_iface_down_with_routes_in_current(eth1_up, get_routes_func):
-    libnmstate.apply({
-        Interface.KEY: [ETH1_INTERFACE_STATE],
-        Route.KEY: {
-            Route.CONFIG: get_routes_func()
+    libnmstate.apply(
+        {
+            Interface.KEY: [ETH1_INTERFACE_STATE],
+            Route.KEY: {Route.CONFIG: get_routes_func()},
         }
-    })
+    )
 
-    libnmstate.apply({
-        Interface.KEY: [{
-            Interface.NAME: 'eth1',
-            Interface.TYPE: InterfaceType.ETHERNET,
-            Interface.STATE: InterfaceState.DOWN
-        }]
-    })
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: 'eth1',
+                    Interface.TYPE: InterfaceType.ETHERNET,
+                    Interface.STATE: InterfaceState.DOWN,
+                }
+            ]
+        }
+    )
 
     cur_state = libnmstate.show()
     _assert_routes([], cur_state)

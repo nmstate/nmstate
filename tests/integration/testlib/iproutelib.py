@@ -39,9 +39,12 @@ def ip_monitor_assert_stable_link_up(dev, timeout=10):
         def wrapper_ip_monitor(*args, **kwargs):
             with ip_monitor('link', dev, timeout) as result:
                 func(*args, **kwargs)
-            assert len(get_non_up_events(result, dev)) == 0, ('result: ' +
-                                                              result.out)
+            assert len(get_non_up_events(result, dev)) == 0, (
+                'result: ' + result.out
+            )
+
         return wrapper_ip_monitor
+
     return decorator
 
 
@@ -58,7 +61,7 @@ def ip_monitor(object_type, dev, timeout=10):
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            env=None
+            env=None,
         )
         result.out, result.err = result.popen.communicate(None)
         result.out = result.out.decode('utf-8')
@@ -81,8 +84,9 @@ def get_non_up_events(result, dev):
     :param result: IpMonitorResult
     :return: List of non UP events
     """
-    return [l for l in result.out.split('\n')
-            if 'state UP' not in l and dev in l]
+    return [
+        l for l in result.out.split('\n') if 'state UP' not in l and dev in l
+    ]
 
 
 @contextmanager

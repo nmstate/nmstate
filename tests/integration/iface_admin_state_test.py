@@ -25,13 +25,7 @@ from .testlib.statelib import INTERFACES
 
 def test_set_a_down_iface_down(eth1_up):
     desired_state = {
-        INTERFACES: [
-            {
-                'name': 'eth1',
-                'type': 'ethernet',
-                'state': 'down',
-            }
-        ]
+        INTERFACES: [{'name': 'eth1', 'type': 'ethernet', 'state': 'down'}]
     }
     libnmstate.apply(desired_state)
     assertlib.assert_state(desired_state)
@@ -44,13 +38,7 @@ def test_set_a_down_iface_down(eth1_up):
 @pytest.mark.xfail(reason='Some ifaces cannot be removed', strict=True)
 def test_removing_a_non_removable_iface(eth1_up):
     desired_state = {
-        INTERFACES: [
-            {
-                'name': 'eth1',
-                'type': 'ethernet',
-                'state': 'absent',
-            }
-        ]
+        INTERFACES: [{'name': 'eth1', 'type': 'ethernet', 'state': 'absent'}]
     }
 
     libnmstate.apply(desired_state)

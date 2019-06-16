@@ -40,20 +40,13 @@ interfaces:
 def test_create_and_remove_ovs_bridge_with_a_system_port(eth1_up):
     state = yaml.load(OVS_BRIDGE_YAML_BASE, Loader=yaml.SafeLoader)
     state[INTERFACES][0]['bridge']['port'] = [
-        {
-            'name': 'eth1',
-            'type': 'system'
-        }
+        {'name': 'eth1', 'type': 'system'}
     ]
     libnmstate.apply(state)
 
     setup_remove_ovs_bridge_state = {
         INTERFACES: [
-            {
-                'name': 'ovs-br0',
-                'type': 'ovs-bridge',
-                'state': 'absent'
-            }
+            {'name': 'ovs-br0', 'type': 'ovs-bridge', 'state': 'absent'}
         ]
     }
     libnmstate.apply(setup_remove_ovs_bridge_state)
@@ -63,23 +56,13 @@ def test_create_and_remove_ovs_bridge_with_a_system_port(eth1_up):
 
 def test_create_and_remove_ovs_bridge_with_min_desired_state():
     desired_state = {
-        INTERFACES: [
-            {
-                'name': 'ovs-br0',
-                'type': 'ovs-bridge',
-                'state': 'up'
-            }
-        ]
+        INTERFACES: [{'name': 'ovs-br0', 'type': 'ovs-bridge', 'state': 'up'}]
     }
     libnmstate.apply(desired_state)
 
     setup_remove_ovs_bridge_state = {
         INTERFACES: [
-            {
-                'name': 'ovs-br0',
-                'type': 'ovs-bridge',
-                'state': 'absent'
-            }
+            {'name': 'ovs-br0', 'type': 'ovs-bridge', 'state': 'absent'}
         ]
     }
     libnmstate.apply(setup_remove_ovs_bridge_state)
@@ -90,10 +73,7 @@ def test_create_and_remove_ovs_bridge_with_min_desired_state():
 def test_create_and_remove_ovs_bridge_with_an_internal_port():
     state = yaml.load(OVS_BRIDGE_YAML_BASE, Loader=yaml.SafeLoader)
     state[INTERFACES][0]['bridge']['port'] = [
-        {
-            'name': 'ovs0',
-            'type': 'internal'
-        }
+        {'name': 'ovs0', 'type': 'internal'}
     ]
     ovs_internal_interface_state = {
         'name': 'ovs0',
@@ -102,12 +82,7 @@ def test_create_and_remove_ovs_bridge_with_an_internal_port():
         'mtu': 1500,
         'ipv4': {
             'enabled': True,
-            'address': [
-                {
-                    'ip': '192.0.2.1',
-                    'prefix-length': 24
-                }
-            ]
+            'address': [{'ip': '192.0.2.1', 'prefix-length': 24}],
         },
     }
     state[INTERFACES].append(ovs_internal_interface_state)
@@ -115,19 +90,12 @@ def test_create_and_remove_ovs_bridge_with_an_internal_port():
 
     setup_remove_ovs_bridge_state_and_port = {
         INTERFACES: [
-            {
-                'name': 'ovs-br0',
-                'type': 'ovs-bridge',
-                'state': 'absent'
-            },
-            {
-                'name': 'ovs',
-                'type': 'ovs-interface',
-                'state': 'absent'
-            }
+            {'name': 'ovs-br0', 'type': 'ovs-bridge', 'state': 'absent'},
+            {'name': 'ovs', 'type': 'ovs-interface', 'state': 'absent'},
         ]
     }
     libnmstate.apply(setup_remove_ovs_bridge_state_and_port)
     state = statelib.show_only(
-        (state[INTERFACES][0]['name'], state[INTERFACES][1]['name']))
+        (state[INTERFACES][0]['name'], state[INTERFACES][1]['name'])
+    )
     assert not state[INTERFACES]

@@ -37,21 +37,14 @@ TWO_VLANS_STATE = {
             'name': VLAN_IFNAME,
             'type': 'vlan',
             'state': 'up',
-            'vlan': {
-                    'id': 101,
-                    'base-iface': 'eth1'
-            }
+            'vlan': {'id': 101, 'base-iface': 'eth1'},
         },
         {
-
             'name': VLAN2_IFNAME,
             'type': 'vlan',
             'state': 'up',
-            'vlan': {
-                    'id': 102,
-                    'base-iface': 'eth1'
-                    }
-        }
+            'vlan': {'id': 102, 'base-iface': 'eth1'},
+        },
     ]
 }
 
@@ -97,20 +90,17 @@ def test_rollback_for_vlans(eth1_up):
     with pytest.raises(NmstateVerificationError):
         libnmstate.apply(desired_state)
 
-    time.sleep(5)   # Give some time for NetworkManager to rollback
+    time.sleep(5)  # Give some time for NetworkManager to rollback
     current_state_after_apply = libnmstate.show()
     assert current_state == current_state_after_apply
 
 
 def test_set_vlan_iface_down(eth1_up):
     with vlan_interface(VLAN_IFNAME, 101):
-        libnmstate.apply({
+        libnmstate.apply(
+            {
                 INTERFACES: [
-                    {
-                        'name': VLAN_IFNAME,
-                        'type': 'vlan',
-                        'state': 'down'
-                    }
+                    {'name': VLAN_IFNAME, 'type': 'vlan', 'state': 'down'}
                 ]
             }
         )
@@ -127,10 +117,7 @@ def vlan_interface(ifname, vlan_id):
                 'name': ifname,
                 'type': 'vlan',
                 'state': 'up',
-                'vlan': {
-                    'id': vlan_id,
-                    'base-iface': 'eth1'
-                }
+                'vlan': {'id': vlan_id, 'base-iface': 'eth1'},
             }
         ]
     }
@@ -138,15 +125,8 @@ def vlan_interface(ifname, vlan_id):
     try:
         yield desired_state
     finally:
-        libnmstate.apply({
-                INTERFACES: [
-                    {
-                        'name': ifname,
-                        'type': 'vlan',
-                        'state': 'absent'
-                    }
-                ]
-            }
+        libnmstate.apply(
+            {INTERFACES: [{'name': ifname, 'type': 'vlan', 'state': 'absent'}]}
         )
 
 
@@ -157,19 +137,11 @@ def two_vlans_on_eth1():
     try:
         yield desired_state
     finally:
-        libnmstate.apply({
+        libnmstate.apply(
+            {
                 INTERFACES: [
-                    {
-                        'name': VLAN_IFNAME,
-                        'type': 'vlan',
-                        'state': 'absent'
-                    },
-                    {
-                        'name': VLAN2_IFNAME,
-                        'type': 'vlan',
-                        'state': 'absent'
-                    }
-
+                    {'name': VLAN_IFNAME, 'type': 'vlan', 'state': 'absent'},
+                    {'name': VLAN2_IFNAME, 'type': 'vlan', 'state': 'absent'},
                 ]
             }
         )

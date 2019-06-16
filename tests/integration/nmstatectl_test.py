@@ -78,12 +78,17 @@ CONFIRMATION_INTERFACE = 'eth1.101'
 CONFIRMATION_CLEAN = 'vlan101_eth1_absent.yml'
 CONFIRMATION_TEST = 'vlan101_eth1_up.yml'
 CONFIRMATION_TEST_STATE = load_example(CONFIRMATION_TEST)
-CONFIRMATION_SET = SET_CMD + ['--no-commit',
-                              os.path.join(EXAMPLES, CONFIRMATION_TEST)]
+CONFIRMATION_SET = SET_CMD + [
+    '--no-commit',
+    os.path.join(EXAMPLES, CONFIRMATION_TEST),
+]
 CONFIRMATION_TIMEOUT = 5
-CONFIRMATION_TIMOUT_COMMAND = SET_CMD + \
-    ['--no-commit', '--timeout', str(CONFIRMATION_TIMEOUT),
-     os.path.join(EXAMPLES, CONFIRMATION_TEST)]
+CONFIRMATION_TIMOUT_COMMAND = SET_CMD + [
+    '--no-commit',
+    '--timeout',
+    str(CONFIRMATION_TIMEOUT),
+    os.path.join(EXAMPLES, CONFIRMATION_TEST),
+]
 
 
 def test_missing_operation():
@@ -144,8 +149,10 @@ def test_set_command_with_yaml_format():
 
 def test_set_command_with_two_states():
     examples = find_examples_dir()
-    cmd = SET_CMD + [os.path.join(examples, 'linuxbrige_eth1_up.yml'),
-                     os.path.join(examples, 'linuxbrige_eth1_absent.yml')]
+    cmd = SET_CMD + [
+        os.path.join(examples, 'linuxbrige_eth1_up.yml'),
+        os.path.join(examples, 'linuxbrige_eth1_absent.yml'),
+    ]
     ret = libcmd.exec_cmd(cmd)
     rc = ret[0]
 
@@ -166,8 +173,7 @@ def test_manual_confirmation(eth1_up):
 def test_manual_rollback(eth1_up):
     """ I can manually roll back a state. """
 
-    with example_state(CONFIRMATION_CLEAN,
-                       CONFIRMATION_CLEAN) as clean_state:
+    with example_state(CONFIRMATION_CLEAN, CONFIRMATION_CLEAN) as clean_state:
 
         assert_command(CONFIRMATION_SET)
         assertlib.assert_state(CONFIRMATION_TEST_STATE)
@@ -179,8 +185,7 @@ def test_dual_change(eth1_up):
     """ I cannot set a state without confirming/rolling back the state change.
     """
 
-    with example_state(CONFIRMATION_CLEAN,
-                       CONFIRMATION_CLEAN) as clean_state:
+    with example_state(CONFIRMATION_CLEAN, CONFIRMATION_CLEAN) as clean_state:
 
         assert_command(CONFIRMATION_SET)
         assertlib.assert_state(CONFIRMATION_TEST_STATE)
@@ -193,8 +198,7 @@ def test_dual_change(eth1_up):
 def test_automatic_rollback(eth1_up):
     """ If I do not confirm the state, it is automatically rolled back. """
 
-    with example_state(CONFIRMATION_CLEAN,
-                       CONFIRMATION_CLEAN) as clean_state:
+    with example_state(CONFIRMATION_CLEAN, CONFIRMATION_CLEAN) as clean_state:
 
         assert_command(CONFIRMATION_TIMOUT_COMMAND)
         assertlib.assert_state(CONFIRMATION_TEST_STATE)

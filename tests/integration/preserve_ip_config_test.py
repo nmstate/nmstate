@@ -43,33 +43,30 @@ def test_reapply_preserve_ip_config(eth1_up):
                     'state': 'up',
                     'ipv4': {
                         'address': [
-                            {
-                                'ip': IPV4_ADDRESS1,
-                                'prefix-length': 24
-                            }
+                            {'ip': IPV4_ADDRESS1, 'prefix-length': 24}
                         ],
-                        'enabled': True
+                        'enabled': True,
                     },
                     'ipv6': {
                         'address': [
-                            {
-                                'ip': IPV6_ADDRESS1,
-                                'prefix-length': 64
-                            }
+                            {'ip': IPV6_ADDRESS1, 'prefix-length': 64}
                         ],
-                        'enabled': True
+                        'enabled': True,
                     },
-                    'mtu': 1500
-                },
+                    'mtu': 1500,
+                }
             ]
-        })
+        }
+    )
     cur_state = statelib.show_only(('eth1',))
     iface_name = cur_state[INTERFACES][0]['name']
 
     uuid = _get_nm_profile_uuid(iface_name)
 
-    for key, value in ((_IPV4_EXTRA_CONFIG, _IPV4_EXTRA_VALUE),
-                       (_IPV6_EXTRA_CONFIG, _IPV6_EXTRA_VALUE)):
+    for key, value in (
+        (_IPV4_EXTRA_CONFIG, _IPV4_EXTRA_VALUE),
+        (_IPV6_EXTRA_CONFIG, _IPV6_EXTRA_VALUE),
+    ):
         with _extra_ip_config(uuid, key, value):
             libnmstate.apply(cur_state)
             _assert_extra_ip_config(uuid, key, value)
@@ -88,8 +85,9 @@ def _get_nm_profile_uuid(iface_name):
 
 
 def _get_cur_extra_ip_config(uuid, key):
-    rc, output, _ = libcmd.exec_cmd(['nmcli', '--get-values', key,
-                                     'connection', 'show', uuid])
+    rc, output, _ = libcmd.exec_cmd(
+        ['nmcli', '--get-values', key, 'connection', 'show', uuid]
+    )
     assert rc == 0
     return output.split('\n')[0]
 
@@ -105,8 +103,10 @@ def _extra_ip_config(uuid, key, value):
 
 
 def _apply_extra_ip_config(uuid, key, value):
-    assert libcmd.exec_cmd(['nmcli', 'connection', 'modify', uuid,
-                            key, value])[0] == 0
+    assert (
+        libcmd.exec_cmd(['nmcli', 'connection', 'modify', uuid, key, value])[0]
+        == 0
+    )
 
 
 def _assert_extra_ip_config(uuid, key, value):
