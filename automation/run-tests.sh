@@ -5,6 +5,8 @@ PROJECT_PATH="$(dirname $EXEC_PATH)"
 EXPORT_DIR="$PWD/exported-artifacts"
 CONT_EXPORT_DIR="/exported-artifacts"
 
+CONTAINER_WORKSPACE="/workspace/nmstate"
+
 NET0="nmstate-net0"
 NET1="nmstate-net1"
 
@@ -23,7 +25,7 @@ test -t 1 && USE_TTY="-t"
 function remove_container {
     res=$?
     [ "$res" -ne 0 ] && echo "*** ERROR: $res"
-    docker_exec 'rm -rf /workspace/nmstate/*nmstate*.rpm'
+    docker_exec 'rm -rf $CONTAINER_WORKSPACE/*nmstate*.rpm'
     docker rm $CONTAINER_ID -f
     docker network rm $NET0
     docker network rm $NET1
@@ -36,7 +38,7 @@ function pyclean {
 
 function docker_exec {
     docker exec $USE_TTY -i $CONTAINER_ID \
-        /bin/bash -c "cd /workspace/nmstate && $1"
+        /bin/bash -c "cd $CONTAINER_WORKSPACE && $1"
 }
 
 function add_extra_networks {
@@ -111,7 +113,7 @@ function run_tests {
     if [ $TEST_TYPE == $TEST_TYPE_ALL ] || \
        [ $TEST_TYPE == $TEST_TYPE_INTEG ];then
         docker_exec "
-          cd /workspace/nmstate &&
+          cd $CONTAINER_WORKSPACE &&
           pytest \
             --verbose --verbose \
             --log-level=DEBUG \
@@ -182,7 +184,7 @@ function modprobe_ovs {
 }
 
 options=$(getopt --options "" \
-    --long customize:,pytest-args:,help,debug-shell,test-type:,el7,copr:\
+    --long customize:,pytest-args:,help,debug-shell,test-type:,el7,copr:,artifacts-dir:\
     -- "${@}")
 eval set -- "$options"
 while true; do
@@ -208,6 +210,10 @@ while true; do
         ;;
     --el7)
         DOCKER_IMAGE=$CENTOS_IMAGE_DEV
+        ;;
+    --artifacts-dir)
+        shift
+        EXPORT_DIR="$1"
         ;;
     --help)
         set +x
@@ -245,7 +251,7 @@ if [[ "$CI" == "true" ]];then
 fi
 
 mkdir -p $EXPORT_DIR
-CONTAINER_ID="$(docker run --privileged -d -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v $PROJECT_PATH:/workspace/nmstate -v $EXPORT_DIR:$CONT_EXPORT_DIR $DOCKER_IMAGE)"
+CONTAINER_ID="$(docker run --privileged -d -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v $PROJECT_PATH:$CONTAINER_WORKSPACE -v $EXPORT_DIR:$CONT_EXPORT_DIR $DOCKER_IMAGE)"
 [ -n "$debug_exit_shell" ] && trap open_shell EXIT || trap run_exit EXIT
 
 if [[ -v copr_repo ]];then
@@ -264,10 +270,12 @@ docker_exec '
     systemctl restart NetworkManager
     while ! systemctl is-active NetworkManager; do sleep 1; done
 '
-pyclean
-
-dump_network_info
-install_nmstate
 add_extra_networks
 dump_network_info
+
+pyclean
+docker_exec "cp -rf $CONTAINER_WORKSPACE /tmp/"
+# Change workspace to keep the original one clean
+CONTAINER_WORKSPACE="/tmp/nmstate"
+install_nmstate
 run_tests
