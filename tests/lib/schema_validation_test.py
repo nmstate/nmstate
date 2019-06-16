@@ -62,7 +62,7 @@ COMMON_DATA = {
                 'out-multicast-pkts': 0,
                 'out-discards': 0,
                 'out-errors': 0,
-            }
+            },
         }
     ],
     ROUTES: {
@@ -72,7 +72,7 @@ COMMON_DATA = {
                 'metric': 100,
                 'destination': '0.0.0.0/0',
                 'next-hop-interface': 'eth0',
-                'next-hop-address': '192.0.2.1'
+                'next-hop-address': '192.0.2.1',
             }
         ],
         'running': [
@@ -81,32 +81,20 @@ COMMON_DATA = {
                 'metric': 100,
                 'destination': '::/0',
                 'next-hop-interface': 'eth0',
-                'next-hop-address': 'fe80::1'
+                'next-hop-address': 'fe80::1',
             }
-        ]
+        ],
     },
     DNS.KEY: {
         DNS.RUNNING: {
-            DNS.SERVER: [
-                "2001:db8::1",
-                "192.0.2.1"
-            ],
-            DNS.SEARCH: [
-                "example.com",
-                "example.org"
-            ]
+            DNS.SERVER: ["2001:db8::1", "192.0.2.1"],
+            DNS.SEARCH: ["example.com", "example.org"],
         },
         DNS.CONFIG: {
-            DNS.SERVER: [
-                "2001:db8::1",
-                "192.0.2.1"
-            ],
-            DNS.SEARCH: [
-                "example.com",
-                "example.org"
-            ]
-        }
-    }
+            DNS.SERVER: ["2001:db8::1", "192.0.2.1"],
+            DNS.SEARCH: ["example.com", "example.org"],
+        },
+    },
 }
 
 
@@ -116,7 +104,6 @@ def default_data():
 
 
 class TestIfaceCommon(object):
-
     def test_valid_instance(self, default_data):
         libnmstate.validator.validate(default_data)
 
@@ -136,20 +123,16 @@ class TestIfaceCommon(object):
 
 
 class TestIfaceTypeEthernet(object):
-
     def test_valid_ethernet_with_auto_neg(self, default_data):
-        default_data[INTERFACES][0].update({
-            'type': 'ethernet',
-            'auto-negotiation': True,
-        })
+        default_data[INTERFACES][0].update(
+            {'type': 'ethernet', 'auto-negotiation': True}
+        )
         libnmstate.validator.validate(default_data)
 
     def test_valid_ethernet_without_auto_neg(self, default_data):
-        default_data[INTERFACES][0].update({
-            'auto-negotiation': False,
-            'link-speed': 1000,
-            'duplex': 'full',
-        })
+        default_data[INTERFACES][0].update(
+            {'auto-negotiation': False, 'link-speed': 1000, 'duplex': 'full'}
+        )
         libnmstate.validator.validate(default_data)
 
     def test_valid_without_auto_neg_and_missing_speed(self, default_data):
@@ -158,10 +141,9 @@ class TestIfaceTypeEthernet(object):
         not a valid configuration, however, this is not handled by the schema
         at the moment, deferring the handling to the application code.
         """
-        default_data[INTERFACES][0].update({
-            'type': 'ethernet',
-            'auto-negotiation': False,
-        })
+        default_data[INTERFACES][0].update(
+            {'type': 'ethernet', 'auto-negotiation': False}
+        )
         del default_data[INTERFACES][0]['link-speed']
 
         libnmstate.validator.validate(default_data)
