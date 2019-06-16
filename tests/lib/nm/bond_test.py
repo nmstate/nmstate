@@ -32,15 +32,12 @@ def test_create_setting(NM_mock):
     bond_setting_mock = NM_mock.SettingBond.new.return_value
     bond_setting_mock.add_option.return_value = True
 
-    options = {
-        'mode': 'balance-rr',
-        'miimon': '100',
-    }
+    options = {'mode': 'balance-rr', 'miimon': '100'}
     nm.bond.create_setting(options)
 
     bond_setting_mock.add_option.assert_has_calls(
         [mock.call('mode', 'balance-rr'), mock.call('miimon', '100')],
-        any_order=True
+        any_order=True,
     )
 
 
@@ -49,10 +46,7 @@ def test_create_setting_with_invalid_bond_option(NM_mock):
     bond_setting_mock = NM_mock.SettingBond.new.return_value
     bond_setting_mock.add_option.return_value = False
 
-    options = {
-        'mode': 'balance-rr',
-        'foo': '100',
-    }
+    options = {'mode': 'balance-rr', 'foo': '100'}
 
     with pytest.raises(NmstateValueError):
         nm.bond.create_setting(options)
@@ -70,13 +64,14 @@ def test_get_bond_info(con_profile_mock, dev_mock):
     info = nm.bond.get_bond_info(dev_mock)
 
     con_profile_mock.return_value.import_by_device.assert_called_once_with(
-        dev_mock)
+        dev_mock
+    )
 
     connection_mock = con_profile_mock.return_value.profile
     opts_mock = connection_mock.get_setting_bond.return_value.props.options
 
     expected_info = {
         'slaves': dev_mock.get_slaves.return_value,
-        'options': opts_mock
+        'options': opts_mock,
     }
     assert expected_info == info

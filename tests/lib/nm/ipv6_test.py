@@ -39,33 +39,34 @@ def test_create_setting_without_config(NM_mock):
     ipv6_setting = nm.ipv6.create_setting(config=None, base_con_profile=None)
 
     assert ipv6_setting == NM_mock.SettingIP6Config.new.return_value
-    assert (ipv6_setting.props.method ==
-            NM_mock.SETTING_IP6_CONFIG_METHOD_IGNORE)
+    assert (
+        ipv6_setting.props.method == NM_mock.SETTING_IP6_CONFIG_METHOD_IGNORE
+    )
 
 
 def test_create_setting_with_ipv6_disabled(NM_mock):
     NM_mock.SettingIP6Config.new().props.addresses = []
 
-    ipv6_setting = nm.ipv6.create_setting(config={'enabled': False},
-                                          base_con_profile=None)
+    ipv6_setting = nm.ipv6.create_setting(
+        config={'enabled': False}, base_con_profile=None
+    )
 
-    assert (ipv6_setting.props.method ==
-            NM_mock.SETTING_IP6_CONFIG_METHOD_IGNORE)
+    assert (
+        ipv6_setting.props.method == NM_mock.SETTING_IP6_CONFIG_METHOD_IGNORE
+    )
 
 
 def test_create_setting_without_addresses(NM_mock):
     NM_mock.SettingIP6Config.new().props.addresses = []
 
     ipv6_setting = nm.ipv6.create_setting(
-        config={
-            'enabled': True,
-            'address': [],
-        },
-        base_con_profile=None
+        config={'enabled': True, 'address': []}, base_con_profile=None
     )
 
-    assert (ipv6_setting.props.method ==
-            NM_mock.SETTING_IP6_CONFIG_METHOD_LINK_LOCAL)
+    assert (
+        ipv6_setting.props.method
+        == NM_mock.SETTING_IP6_CONFIG_METHOD_LINK_LOCAL
+    )
 
 
 def test_create_setting_with_static_addresses(NM_mock):
@@ -78,21 +79,28 @@ def test_create_setting_with_static_addresses(NM_mock):
     }
     ipv6_setting = nm.ipv6.create_setting(config=config, base_con_profile=None)
 
-    assert (ipv6_setting.props.method ==
-            NM_mock.SETTING_IP6_CONFIG_METHOD_MANUAL)
+    assert (
+        ipv6_setting.props.method == NM_mock.SETTING_IP6_CONFIG_METHOD_MANUAL
+    )
     NM_mock.IPAddress.new.assert_has_calls(
         [
-            mock.call(nm.ipv6.socket.AF_INET6,
-                      config['address'][0]['ip'],
-                      config['address'][0]['prefix-length']),
-            mock.call(nm.ipv6.socket.AF_INET6,
-                      config['address'][1]['ip'],
-                      config['address'][1]['prefix-length'])
+            mock.call(
+                nm.ipv6.socket.AF_INET6,
+                config['address'][0]['ip'],
+                config['address'][0]['prefix-length'],
+            ),
+            mock.call(
+                nm.ipv6.socket.AF_INET6,
+                config['address'][1]['ip'],
+                config['address'][1]['prefix-length'],
+            ),
         ]
     )
     NM_mock.SettingIP6Config.new.return_value.add_address.assert_has_calls(
-        [mock.call(NM_mock.IPAddress.new.return_value),
-         mock.call(NM_mock.IPAddress.new.return_value)]
+        [
+            mock.call(NM_mock.IPAddress.new.return_value),
+            mock.call(NM_mock.IPAddress.new.return_value),
+        ]
     )
 
 
@@ -122,7 +130,8 @@ def test_get_info_with_ipv6_config(NM_mock):
     set_ip_conf = mock.MagicMock()
     remote_conn_mock.get_setting_ip6_config.return_value = set_ip_conf
     set_ip_conf.get_method.return_value = (
-        NM_mock.SETTING_IP6_CONFIG_METHOD_MANUAL)
+        NM_mock.SETTING_IP6_CONFIG_METHOD_MANUAL
+    )
     set_ip_conf.props.never_default = False
     set_ip_conf.props.ignore_auto_dns = False
     set_ip_conf.props.ignore_auto_routes = False
@@ -138,7 +147,7 @@ def test_get_info_with_ipv6_config(NM_mock):
                 'ip': address_mock.get_address.return_value,
                 'prefix-length': int(address_mock.get_prefix.return_value),
             }
-        ]
+        ],
     }
 
 
@@ -152,13 +161,16 @@ def test_create_setting_with_link_local_addresses(NM_mock):
     }
     ipv6_setting = nm.ipv6.create_setting(config=config, base_con_profile=None)
 
-    assert (ipv6_setting.props.method ==
-            NM_mock.SETTING_IP6_CONFIG_METHOD_MANUAL)
+    assert (
+        ipv6_setting.props.method == NM_mock.SETTING_IP6_CONFIG_METHOD_MANUAL
+    )
     NM_mock.IPAddress.new.assert_has_calls(
         [
-            mock.call(nm.ipv6.socket.AF_INET6,
-                      config['address'][1]['ip'],
-                      config['address'][1]['prefix-length'])
+            mock.call(
+                nm.ipv6.socket.AF_INET6,
+                config['address'][1]['ip'],
+                config['address'][1]['prefix-length'],
+            )
         ]
     )
     NM_mock.SettingIP6Config.new.return_value.add_address.assert_has_calls(
@@ -169,16 +181,15 @@ def test_create_setting_with_link_local_addresses(NM_mock):
 def test_create_setting_with_base_con_profile(NM_mock):
     config = {
         'enabled': True,
-        'address': [
-            {'ip': IPV6_ADDRESS1, 'prefix-length': 24},
-        ],
+        'address': [{'ip': IPV6_ADDRESS1, 'prefix-length': 24}],
     }
     base_con_profile_mock = mock.MagicMock()
     config_mock = base_con_profile_mock.get_setting_ip6_config.return_value
     config_dup_mock = config_mock.duplicate.return_value
 
-    nm.ipv6.create_setting(config=config,
-                           base_con_profile=base_con_profile_mock)
+    nm.ipv6.create_setting(
+        config=config, base_con_profile=base_con_profile_mock
+    )
 
     base_con_profile_mock.get_setting_ip6_config.assert_called_once_with()
     config_mock.duplicate.assert_called_once_with()

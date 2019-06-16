@@ -58,19 +58,15 @@ def test_api2nm_get_iface_type(NM_mock):
     assert NM_mock.SETTING_WIRED_SETTING_NAME == nm_type
 
 
-@mock.patch.object(nm.translator.Api2Nm, 'get_iface_type',
-                   staticmethod(lambda t: t))
+@mock.patch.object(
+    nm.translator.Api2Nm, 'get_iface_type', staticmethod(lambda t: t)
+)
 def test_api2nm_bond_options():
     bond_options = {
         'name': 'bond99',
         'type': 'bond',
         'state': 'up',
-        'link-aggregation': {
-            'mode': 'balance-rr',
-            'options': {
-                'miimon': 120
-            }
-        }
+        'link-aggregation': {'mode': 'balance-rr', 'options': {'miimon': 120}},
     }
     nm_bond_options = nm.translator.Api2Nm.get_bond_options(bond_options)
 
@@ -86,11 +82,7 @@ def test_nm2api_common_device_info():
     }
     info = nm.translator.Nm2Api.get_common_device_info(devinfo)
 
-    expected_info = {
-        'name': 'devname',
-        'state': 'down',
-        'type': 'unknown',
-    }
+    expected_info = {'name': 'devname', 'state': 'down', 'type': 'unknown'}
     assert expected_info == info
 
 
@@ -98,23 +90,19 @@ def test_nm2api_bond_info():
     slaves_mock = [mock.MagicMock(), mock.MagicMock()]
     bondinfo = {
         'slaves': slaves_mock,
-        'options': {
-            'mode': 'balance-rr',
-            'miimon': 120,
-        }
+        'options': {'mode': 'balance-rr', 'miimon': 120},
     }
     info = nm.translator.Nm2Api.get_bond_info(bondinfo)
 
     expected_info = {
-        'link-aggregation':
-            {
-                'mode': 'balance-rr',
-                'slaves': [slaves_mock[0].props.interface,
-                           slaves_mock[1].props.interface],
-                'options': {
-                    'miimon': 120
-                }
-            }
+        'link-aggregation': {
+            'mode': 'balance-rr',
+            'slaves': [
+                slaves_mock[0].props.interface,
+                slaves_mock[1].props.interface,
+            ],
+            'options': {'miimon': 120},
+        }
     }
     assert expected_info == info
 

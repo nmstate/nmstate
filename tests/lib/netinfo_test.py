@@ -41,37 +41,27 @@ def nm_dns_mock():
 
 def test_netinfo_show_generic_iface(nm_mock, nm_dns_mock):
     current_config = {
-        DNS.KEY: {
-            DNS.RUNNING: {},
-            DNS.CONFIG: {}
-        },
-        ROUTES: {
-            'config': [],
-            'running': []
-        },
+        DNS.KEY: {DNS.RUNNING: {}, DNS.CONFIG: {}},
+        ROUTES: {'config': [], 'running': []},
         INTERFACES: [
             {
                 'name': 'foo',
                 'type': 'unknown',
                 'state': 'up',
-                'ipv4': {
-                    'enabled': False,
-                },
-                'ipv6': {
-                    'enabled': False,
-                },
+                'ipv4': {'enabled': False},
+                'ipv6': {'enabled': False},
             }
-        ]
+        ],
     }
 
+    current_iface0 = current_config[INTERFACES][0]
     nm_mock.device.list_devices.return_value = ['one-item']
     nm_mock.translator.Nm2Api.get_common_device_info.return_value = (
-        current_config[INTERFACES][0])
+        current_iface0
+    )
     nm_mock.bond.is_bond_type_id.return_value = False
-    nm_mock.ipv4.get_info.return_value = (
-        current_config[INTERFACES][0]['ipv4'])
-    nm_mock.ipv6.get_info.return_value = (
-        current_config[INTERFACES][0]['ipv6'])
+    nm_mock.ipv4.get_info.return_value = current_iface0['ipv4']
+    nm_mock.ipv6.get_info.return_value = current_iface0['ipv6']
     nm_mock.ipv4.get_route_running.return_value = []
     nm_mock.ipv4.get_route_config.return_value = []
     nm_mock.ipv6.get_route_running.return_value = []
@@ -86,14 +76,8 @@ def test_netinfo_show_generic_iface(nm_mock, nm_dns_mock):
 
 def test_netinfo_show_bond_iface(nm_mock, nm_dns_mock):
     current_config = {
-        DNS.KEY: {
-            DNS.RUNNING: {},
-            DNS.CONFIG: {}
-        },
-        ROUTES: {
-            'config': [],
-            'running': []
-        },
+        DNS.KEY: {DNS.RUNNING: {}, DNS.CONFIG: {}},
+        ROUTES: {'config': [], 'running': []},
         INTERFACES: [
             {
                 'name': 'bond99',
@@ -102,18 +86,12 @@ def test_netinfo_show_bond_iface(nm_mock, nm_dns_mock):
                 'link-aggregation': {
                     'mode': 'balance-rr',
                     'slaves': [],
-                    'options': {
-                        'miimon': '100',
-                    }
+                    'options': {'miimon': '100'},
                 },
-                'ipv4': {
-                    'enabled': False,
-                },
-                'ipv6': {
-                    'enabled': False,
-                },
+                'ipv4': {'enabled': False},
+                'ipv6': {'enabled': False},
             }
-        ]
+        ],
     }
 
     nm_mock.device.list_devices.return_value = ['one-item']
@@ -126,10 +104,8 @@ def test_netinfo_show_bond_iface(nm_mock, nm_dns_mock):
     nm_mock.translator.Nm2Api.get_bond_info.return_value = {
         'link-aggregation': current_config[INTERFACES][0]['link-aggregation']
     }
-    nm_mock.ipv4.get_info.return_value = (
-        current_config[INTERFACES][0]['ipv4'])
-    nm_mock.ipv6.get_info.return_value = (
-        current_config[INTERFACES][0]['ipv6'])
+    nm_mock.ipv4.get_info.return_value = current_config[INTERFACES][0]['ipv4']
+    nm_mock.ipv6.get_info.return_value = current_config[INTERFACES][0]['ipv6']
     nm_mock.ipv4.get_route_running.return_value = []
     nm_mock.ipv4.get_route_config.return_value = []
     nm_mock.ipv6.get_route_running.return_value = []

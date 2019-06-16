@@ -39,15 +39,18 @@ def test_create_setting_duplicate(NM_mock):
 
     setting = nm.wired.create_setting(
         {schema.Ethernet.CONFIG_SUBTREE: {schema.Ethernet.SPEED: 1000}},
-        base_profile
+        base_profile,
     )
-    assert setting == \
-        base_profile.get_setting_wired.return_value.duplicate.return_value
+    assert (
+        setting
+        == base_profile.get_setting_wired.return_value.duplicate.return_value
+    )
 
 
 def test_create_setting_mac(NM_mock):
     setting = nm.wired.create_setting(
-        {schema.Interface.MAC: '01:23:45:67:89:ab'}, None)
+        {schema.Interface.MAC: '01:23:45:67:89:ab'}, None
+    )
     assert setting == NM_mock.SettingWired.new.return_value
     assert setting.props.cloned_mac_address == '01:23:45:67:89:ab'
 
@@ -58,17 +61,24 @@ def test_create_setting_mtu(NM_mock):
     assert setting.props.mtu == 1500
 
 
-@mock.patch.object(nm.wired, 'minimal_ethtool',
-                   return_value={'speed': 1337, 'duplex': 'full',
-                                 'auto-negotiation': 'mocked'})
+@mock.patch.object(
+    nm.wired,
+    'minimal_ethtool',
+    return_value={
+        'speed': 1337,
+        'duplex': 'full',
+        'auto-negotiation': 'mocked',
+    },
+)
 def test_create_setting_auto_negotiation_False(ethtool_mock, NM_mock):
     setting = nm.wired.create_setting(
         {
             schema.Interface.NAME: 'nmstate_test',
-            schema.Ethernet.CONFIG_SUBTREE:
-                {schema.Ethernet.AUTO_NEGOTIATION: False}
+            schema.Ethernet.CONFIG_SUBTREE: {
+                schema.Ethernet.AUTO_NEGOTIATION: False
+            },
         },
-        None
+        None,
     )
     assert setting == NM_mock.SettingWired.new.return_value
     assert setting.props.auto_negotiate is False
@@ -80,10 +90,11 @@ def test_create_setting_auto_negotiation_False(ethtool_mock, NM_mock):
 def test_create_setting_only_auto_negotiation_True(NM_mock):
     setting = nm.wired.create_setting(
         {
-            schema.Ethernet.CONFIG_SUBTREE:
-                {schema.Ethernet.AUTO_NEGOTIATION: True}
+            schema.Ethernet.CONFIG_SUBTREE: {
+                schema.Ethernet.AUTO_NEGOTIATION: True
+            }
         },
-        None
+        None,
     )
     assert setting == NM_mock.SettingWired.new.return_value
     assert setting.props.auto_negotiate is True
@@ -97,10 +108,10 @@ def test_create_setting_auto_negotiation_speed_duplex(NM_mock):
             schema.Ethernet.CONFIG_SUBTREE: {
                 schema.Ethernet.AUTO_NEGOTIATION: True,
                 schema.Ethernet.SPEED: 1000,
-                schema.Ethernet.DUPLEX: schema.Ethernet.FULL_DUPLEX
+                schema.Ethernet.DUPLEX: schema.Ethernet.FULL_DUPLEX,
             }
         },
-        None
+        None,
     )
     assert setting == NM_mock.SettingWired.new.return_value
     assert setting.props.auto_negotiate is True
@@ -113,19 +124,25 @@ def test_create_setting_speed_duplex(NM_mock):
         {
             schema.Ethernet.CONFIG_SUBTREE: {
                 schema.Ethernet.SPEED: 1000,
-                schema.Ethernet.DUPLEX: schema.Ethernet.FULL_DUPLEX
+                schema.Ethernet.DUPLEX: schema.Ethernet.FULL_DUPLEX,
             }
         },
-        None
+        None,
     )
     assert setting == NM_mock.SettingWired.new.return_value
     assert setting.props.speed == 1000
     assert setting.props.duplex == schema.Ethernet.FULL_DUPLEX
 
 
-@mock.patch.object(nm.wired, 'minimal_ethtool',
-                   return_value={'speed': 1500, 'duplex': 'unknown',
-                                 'auto-negotiation': True})
+@mock.patch.object(
+    nm.wired,
+    'minimal_ethtool',
+    return_value={
+        'speed': 1500,
+        'duplex': 'unknown',
+        'auto-negotiation': True,
+    },
+)
 def test_get_info_with_invalid_duplex(ethtool_mock, NM_mock):
     dev_mock = mock.MagicMock()
     dev_mock.get_iface.return_value = 'nmstate_test'
@@ -137,12 +154,11 @@ def test_get_info_with_invalid_duplex(ethtool_mock, NM_mock):
 
     assert info == {
         schema.Interface.MAC: dev_mock.get_hw_address.return_value,
-        schema.Interface.MTU: dev_mock.get_mtu.return_value
+        schema.Interface.MTU: dev_mock.get_mtu.return_value,
     }
 
 
 class TestWiredSetting(object):
-
     def test_identity(self):
         state = {}
         obj1 = obj2 = nm.wired.WiredSetting(state)
@@ -163,19 +179,13 @@ class TestWiredSetting(object):
         assert not obj
 
     def test_relevant_keys_with_false_values_is_false(self):
-        state = {
-            schema.Interface.MTU: 0,
-            schema.Interface.MAC: '',
-        }
+        state = {schema.Interface.MTU: 0, schema.Interface.MAC: ''}
         obj = nm.wired.WiredSetting(state)
 
         assert not obj
 
     def test_partial_relevant_keys_is_true(self):
-        state = {
-            schema.Interface.MTU: 1500,
-            schema.Interface.MAC: 'abc',
-        }
+        state = {schema.Interface.MTU: 1500, schema.Interface.MAC: 'abc'}
         obj = nm.wired.WiredSetting(state)
 
         assert obj
@@ -189,10 +199,7 @@ class TestWiredSetting(object):
         assert not (obj1 != obj2)
 
     def test_equality_for_partial_states(self):
-        state = {
-            schema.Interface.MTU: 1500,
-            schema.Interface.MAC: 'abc',
-        }
+        state = {schema.Interface.MTU: 1500, schema.Interface.MAC: 'abc'}
         obj1 = nm.wired.WiredSetting(state)
         obj2 = nm.wired.WiredSetting(state)
 
@@ -200,14 +207,8 @@ class TestWiredSetting(object):
         assert not (obj1 != obj2)
 
     def test_inequality_for_partial_states(self):
-        state1 = {
-            schema.Interface.MTU: 1500,
-            schema.Interface.MAC: 'abc',
-        }
-        state2 = {
-            schema.Interface.MTU: 1000,
-            schema.Interface.MAC: 'abc',
-        }
+        state1 = {schema.Interface.MTU: 1500, schema.Interface.MAC: 'abc'}
+        state2 = {schema.Interface.MTU: 1000, schema.Interface.MAC: 'abc'}
         obj1 = nm.wired.WiredSetting(state1)
         obj2 = nm.wired.WiredSetting(state2)
 
@@ -215,10 +216,7 @@ class TestWiredSetting(object):
         assert not (obj1 == obj2)
 
     def test_inequality_for_partial_states_with_missing_properties(self):
-        state1 = {
-            schema.Interface.MTU: 1500,
-            schema.Interface.MAC: 'abc',
-        }
+        state1 = {schema.Interface.MTU: 1500, schema.Interface.MAC: 'abc'}
         state2 = {schema.Interface.MAC: 'abc'}
 
         obj1 = nm.wired.WiredSetting(state1)
@@ -228,24 +226,15 @@ class TestWiredSetting(object):
         assert not (obj1 == obj2)
 
     def test_hash_unique(self):
-        state = {
-            schema.Interface.MTU: 1500,
-            schema.Interface.MAC: 'abc',
-        }
+        state = {schema.Interface.MTU: 1500, schema.Interface.MAC: 'abc'}
         obj1 = nm.wired.WiredSetting(state)
         obj2 = nm.wired.WiredSetting(state)
 
         assert hash(obj1) == hash(obj2)
 
     def test_behaviour_with_set(self):
-        state1 = {
-            schema.Interface.MTU: 1500,
-            schema.Interface.MAC: 'abc',
-        }
-        state2 = {
-            schema.Interface.MTU: 1500,
-            schema.Interface.MAC: 'abc',
-        }
+        state1 = {schema.Interface.MTU: 1500, schema.Interface.MAC: 'abc'}
+        state2 = {schema.Interface.MTU: 1500, schema.Interface.MAC: 'abc'}
         state3 = {schema.Interface.MAC: 'abc'}
 
         obj1 = nm.wired.WiredSetting(state1)

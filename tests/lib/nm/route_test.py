@@ -33,35 +33,38 @@ IPV4_ROUTE1 = {
     Route.DESTINATION: '198.51.100.0/24',
     Route.METRIC: 103,
     Route.NEXT_HOP_ADDRESS: '192.0.2.1',
-    Route.TABLE_ID: 50
+    Route.TABLE_ID: 50,
 }
 
 IPV4_ROUTE2 = {
     Route.DESTINATION: '203.0.113.0/24',
     Route.METRIC: 103,
     Route.NEXT_HOP_ADDRESS: '192.0.2.2',
-    Route.TABLE_ID: 51
+    Route.TABLE_ID: 51,
 }
 
 IPV6_ROUTE1 = {
     Route.DESTINATION: '2001:db8:a::/64',
     Route.METRIC: 103,
     Route.NEXT_HOP_ADDRESS: '2001:db8:1::a',
-    Route.TABLE_ID: 50
+    Route.TABLE_ID: 50,
 }
 
 IPV6_ROUTE2 = {
     Route.DESTINATION: '2001:db8:b::/64',
     Route.METRIC: 103,
     Route.NEXT_HOP_ADDRESS: '2001:db8:1::b',
-    Route.TABLE_ID: 51
+    Route.TABLE_ID: 51,
 }
 
 parametrize_ip_ver_routes = pytest.mark.parametrize(
     'nm_ip, routes',
-    [(nm_ipv4, [IPV4_ROUTE1, IPV4_ROUTE2]),
-     (nm_ipv6, [IPV6_ROUTE1, IPV6_ROUTE2])],
-    ids=['ipv4', 'ipv6'])
+    [
+        (nm_ipv4, [IPV4_ROUTE1, IPV4_ROUTE2]),
+        (nm_ipv6, [IPV6_ROUTE1, IPV6_ROUTE2]),
+    ],
+    ids=['ipv4', 'ipv6'],
+)
 
 
 def _get_test_ipv4_gateways():
@@ -70,14 +73,14 @@ def _get_test_ipv4_gateways():
             Route.DESTINATION: '0.0.0.0/0',
             Route.METRIC: 103,
             Route.NEXT_HOP_ADDRESS: '192.0.2.1',
-            Route.TABLE_ID: 52
+            Route.TABLE_ID: 52,
         },
         {
             Route.DESTINATION: '0.0.0.0/0',
             Route.METRIC: 101,
             Route.NEXT_HOP_ADDRESS: '192.0.2.2',
-            Route.TABLE_ID: 53
-        }
+            Route.TABLE_ID: 53,
+        },
     ]
 
 
@@ -87,55 +90,57 @@ def _get_test_ipv6_gateways():
             Route.DESTINATION: '::/0',
             Route.METRIC: 103,
             Route.NEXT_HOP_ADDRESS: '2001:db8:1::f',
-            Route.TABLE_ID: 52
+            Route.TABLE_ID: 52,
         },
         {
             Route.DESTINATION: '::/0',
             Route.METRIC: 101,
             Route.NEXT_HOP_ADDRESS: '2001:db8:1::e',
-            Route.TABLE_ID: 53
-        }
+            Route.TABLE_ID: 53,
+        },
     ]
 
 
 parametrize_ip_ver_routes_gw = pytest.mark.parametrize(
     'nm_ip, routes, gateways',
-    [(nm_ipv4, [IPV4_ROUTE1, IPV4_ROUTE2], _get_test_ipv4_gateways()),
-     (nm_ipv6, [IPV6_ROUTE1, IPV6_ROUTE2], _get_test_ipv6_gateways())],
-    ids=['ipv4', 'ipv6'])
+    [
+        (nm_ipv4, [IPV4_ROUTE1, IPV4_ROUTE2], _get_test_ipv4_gateways()),
+        (nm_ipv6, [IPV6_ROUTE1, IPV6_ROUTE2], _get_test_ipv6_gateways()),
+    ],
+    ids=['ipv4', 'ipv6'],
+)
 
 
 @parametrize_ip_ver_routes
 def test_add_multiple_route(nm_ip, routes):
-    setting_ip = nm_ip.create_setting({
-        'enabled': True,
-        metadata.ROUTES: routes
-    }, base_con_profile=None)
+    setting_ip = nm_ip.create_setting(
+        {'enabled': True, metadata.ROUTES: routes}, base_con_profile=None
+    )
     assert [_nm_route_to_dict(r) for r in setting_ip.props.routes] == routes
 
 
 @parametrize_ip_ver_routes
 def test_add_duplicate_routes(nm_ip, routes):
-    setting_ip = nm_ip.create_setting({
-        'enabled': True,
-        metadata.ROUTES: [routes[0], routes[0]]
-    }, base_con_profile=None)
-    assert ([_nm_route_to_dict(r) for r in setting_ip.props.routes] ==
-            [routes[0]])
+    setting_ip = nm_ip.create_setting(
+        {'enabled': True, metadata.ROUTES: [routes[0], routes[0]]},
+        base_con_profile=None,
+    )
+    assert [_nm_route_to_dict(r) for r in setting_ip.props.routes] == [
+        routes[0]
+    ]
 
 
 @parametrize_ip_ver_routes
 def test_clear_route(nm_ip, routes):
-    setting_ip = nm_ip.create_setting({
-        'enabled': True,
-        metadata.ROUTES: routes
-    }, base_con_profile=None)
+    setting_ip = nm_ip.create_setting(
+        {'enabled': True, metadata.ROUTES: routes}, base_con_profile=None
+    )
     con_profile = nm_connection.ConnectionProfile()
     con_profile.create([setting_ip])
-    new_setting_ip = nm_ip.create_setting({
-        'enabled': True,
-        metadata.ROUTES: []
-    }, base_con_profile=con_profile.profile)
+    new_setting_ip = nm_ip.create_setting(
+        {'enabled': True, metadata.ROUTES: []},
+        base_con_profile=con_profile.profile,
+    )
     assert not [_nm_route_to_dict(r) for r in new_setting_ip.props.routes]
 
 
@@ -145,12 +150,13 @@ def test_add_route_without_metric(nm_ip, routes):
     route_with_default_metric[Route.METRIC] = Route.USE_DEFAULT_METRIC
     route_without_metric = copy.deepcopy(routes[0])
     del route_without_metric[Route.METRIC]
-    setting_ip = nm_ip.create_setting({
-        'enabled': True,
-        metadata.ROUTES: [route_without_metric]
-    }, base_con_profile=None)
-    assert ([_nm_route_to_dict(r) for r in setting_ip.props.routes] ==
-            [route_with_default_metric])
+    setting_ip = nm_ip.create_setting(
+        {'enabled': True, metadata.ROUTES: [route_without_metric]},
+        base_con_profile=None,
+    )
+    assert [_nm_route_to_dict(r) for r in setting_ip.props.routes] == [
+        route_with_default_metric
+    ]
 
 
 @parametrize_ip_ver_routes
@@ -159,56 +165,62 @@ def test_add_route_without_table_id(nm_ip, routes):
     route_with_default_table_id[Route.TABLE_ID] = Route.USE_DEFAULT_ROUTE_TABLE
     route_without_table_id = copy.deepcopy(routes[0])
     del route_without_table_id[Route.TABLE_ID]
-    setting_ip = nm_ip.create_setting({
-        'enabled': True,
-        metadata.ROUTES: [route_without_table_id]
-    }, base_con_profile=None)
-    assert ([_nm_route_to_dict(r) for r in setting_ip.props.routes] ==
-            [route_with_default_table_id])
+    setting_ip = nm_ip.create_setting(
+        {'enabled': True, metadata.ROUTES: [route_without_table_id]},
+        base_con_profile=None,
+    )
+    assert [_nm_route_to_dict(r) for r in setting_ip.props.routes] == [
+        route_with_default_table_id
+    ]
 
 
 @parametrize_ip_ver_routes_gw
 def test_change_gateway(nm_ip, routes, gateways):
     desired_routes = routes + gateways[:1]
-    setting_ip = nm_ip.create_setting({
-        'enabled': True,
-        metadata.ROUTES: desired_routes
-    }, base_con_profile=None)
+    setting_ip = nm_ip.create_setting(
+        {'enabled': True, metadata.ROUTES: desired_routes},
+        base_con_profile=None,
+    )
     assert [_nm_route_to_dict(r) for r in setting_ip.props.routes] == routes
     assert _get_gateway(setting_ip) == gateways[0]
 
 
-@pytest.mark.xfail(raises=NmstateNotImplementedError,
-                   strict=True,
-                   reason='Network Manager Bug: '
-                          'https://bugzilla.redhat.com/1707396')
+@pytest.mark.xfail(
+    raises=NmstateNotImplementedError,
+    strict=True,
+    reason='Network Manager Bug: ' 'https://bugzilla.redhat.com/1707396',
+)
 @parametrize_ip_ver_routes_gw
 def test_add_two_gateway(nm_ip, routes, gateways):
-    nm_ip.create_setting({
-        'enabled': True,
-        metadata.ROUTES: routes + gateways
-    }, base_con_profile=None)
+    nm_ip.create_setting(
+        {'enabled': True, metadata.ROUTES: routes + gateways},
+        base_con_profile=None,
+    )
 
 
-@pytest.mark.xfail(raises=NmstateNotImplementedError,
-                   strict=True,
-                   reason='Network Manager Bug: '
-                          'https://bugzilla.redhat.com/1707396')
+@pytest.mark.xfail(
+    raises=NmstateNotImplementedError,
+    strict=True,
+    reason='Network Manager Bug: ' 'https://bugzilla.redhat.com/1707396',
+)
 @parametrize_ip_ver_routes_gw
 def test_add_duplicate_gateways(nm_ip, routes, gateways):
-    nm_ip.create_setting({
-        'enabled': True,
-        metadata.ROUTES: routes + [gateways[0], gateways[0]]
-    }, base_con_profile=None)
+    nm_ip.create_setting(
+        {
+            'enabled': True,
+            metadata.ROUTES: routes + [gateways[0], gateways[0]],
+        },
+        base_con_profile=None,
+    )
 
 
 @parametrize_ip_ver_routes_gw
 def test_change_gateway_without_metric(nm_ip, routes, gateways):
     del gateways[0][Route.METRIC]
-    setting_ip = nm_ip.create_setting({
-        'enabled': True,
-        metadata.ROUTES: routes + [gateways[0]]
-    }, base_con_profile=None)
+    setting_ip = nm_ip.create_setting(
+        {'enabled': True, metadata.ROUTES: routes + [gateways[0]]},
+        base_con_profile=None,
+    )
     gateways[0][Route.METRIC] = Route.USE_DEFAULT_METRIC
     assert [_nm_route_to_dict(r) for r in setting_ip.props.routes] == routes
     assert _get_gateway(setting_ip) == gateways[0]
@@ -217,10 +229,10 @@ def test_change_gateway_without_metric(nm_ip, routes, gateways):
 @parametrize_ip_ver_routes_gw
 def test_change_gateway_without_table_id(nm_ip, routes, gateways):
     del gateways[0][Route.TABLE_ID]
-    setting_ip = nm_ip.create_setting({
-        'enabled': True,
-        metadata.ROUTES: routes + [gateways[0]]
-    }, base_con_profile=None)
+    setting_ip = nm_ip.create_setting(
+        {'enabled': True, metadata.ROUTES: routes + [gateways[0]]},
+        base_con_profile=None,
+    )
     gateways[0][Route.TABLE_ID] = Route.USE_DEFAULT_ROUTE_TABLE
 
     assert [_nm_route_to_dict(r) for r in setting_ip.props.routes] == routes
@@ -229,16 +241,16 @@ def test_change_gateway_without_table_id(nm_ip, routes, gateways):
 
 @parametrize_ip_ver_routes_gw
 def test_clear_gateway(nm_ip, routes, gateways):
-    setting_ip = nm_ip.create_setting({
-        'enabled': True,
-        metadata.ROUTES: routes + gateways[:1]
-    }, base_con_profile=None)
+    setting_ip = nm_ip.create_setting(
+        {'enabled': True, metadata.ROUTES: routes + gateways[:1]},
+        base_con_profile=None,
+    )
     con_profile = nm_connection.ConnectionProfile()
     con_profile.create([setting_ip])
-    setting_ip = nm_ip.create_setting({
-        'enabled': True,
-        metadata.ROUTES: routes
-    }, base_con_profile=con_profile.profile)
+    setting_ip = nm_ip.create_setting(
+        {'enabled': True, metadata.ROUTES: routes},
+        base_con_profile=con_profile.profile,
+    )
     assert [_nm_route_to_dict(r) for r in setting_ip.props.routes] == routes
     assert not setting_ip.get_gateway()
     assert setting_ip.get_route_table() == Route.USE_DEFAULT_ROUTE_TABLE
@@ -247,7 +259,8 @@ def test_clear_gateway(nm_ip, routes, gateways):
 
 def _nm_route_to_dict(nm_route):
     dst = '{ip}/{prefix}'.format(
-        ip=nm_route.get_dest(), prefix=nm_route.get_prefix())
+        ip=nm_route.get_dest(), prefix=nm_route.get_prefix()
+    )
     next_hop = nm_route.get_next_hop() or ''
     metric = int(nm_route.get_metric())
     table_id_variant = nm_route.get_attribute('table')

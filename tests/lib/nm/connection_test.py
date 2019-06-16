@@ -48,7 +48,8 @@ def test_create_profile(NM_mock):
     con_profile_mock = NM_mock.SimpleConnection.new.return_value
 
     con_profile_mock.add_setting.assert_has_calls(
-        [mock.call(settings[0]), mock.call(settings[1])])
+        [mock.call(settings[0]), mock.call(settings[1])]
+    )
     assert con_profile_mock == con_profile.profile
 
 
@@ -102,7 +103,8 @@ def test_create_setting(NM_mock):
     assert con_setting.setting.props.type == 'iface-type'
     assert con_setting.setting.props.autoconnect is True
     assert con_setting.setting.props.autoconnect_slaves == (
-        NM_mock.SettingConnectionAutoconnectSlaves.YES)
+        NM_mock.SettingConnectionAutoconnectSlaves.YES
+    )
 
 
 def test_duplicate_settings(NM_mock):
@@ -135,5 +137,7 @@ def test_get_device_connection():
     con = nm.connection.ConnectionProfile()
     con.import_by_device(dev_mock)
 
-    assert (dev_mock.get_active_connection.return_value.props.connection ==
-            con.profile)
+    assert (
+        dev_mock.get_active_connection.return_value.props.connection
+        == con.profile
+    )
