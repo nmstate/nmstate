@@ -32,7 +32,6 @@ class ActivationError(Exception):
 
 
 class ActiveConnection(object):
-
     def __init__(self, active_connection=None):
         self.handlers = set()
         self._act_con = active_connection
@@ -68,8 +67,9 @@ class ActiveConnection(object):
         act_connection = self._nmdev.get_active_connection()
         mainloop = nmclient.mainloop()
         if not act_connection or act_connection.props.state in (
-                nmclient.NM.ActiveConnectionState.DEACTIVATING,
-                nmclient.NM.ActiveConnectionState.DEACTIVATED):
+            nmclient.NM.ActiveConnectionState.DEACTIVATING,
+            nmclient.NM.ActiveConnectionState.DEACTIVATED,
+        ):
             # Nothing left to do here, call the next action.
             mainloop.execute_next_action()
             return
@@ -90,22 +90,28 @@ class ActiveConnection(object):
             if self._mainloop.is_action_canceled(e):
                 logging.debug(
                     'Connection deactivation aborted on %s: error=%s',
-                    self._nmdev.get_iface(), e)
+                    self._nmdev.get_iface(),
+                    e,
+                )
             else:
                 self._mainloop.quit(
                     'Connection deactivation failed on {}: error={}'.format(
-                        self._nmdev.get_iface(), e))
+                        self._nmdev.get_iface(), e
+                    )
+                )
             return
 
         if success:
             logging.debug(
                 'Connection deactivation succeeded on %s',
-                self._nmdev.get_iface())
+                self._nmdev.get_iface(),
+            )
             self._mainloop.execute_next_action()
         else:
             self._mainloop.quit(
-                'Connection deactivation failed on %s: error=unknown' %
-                self._nmdev.get_iface())
+                'Connection deactivation failed on %s: error=unknown'
+                % self._nmdev.get_iface()
+            )
 
     def refresh_state(self):
         self._state = self._act_con.get_state()
@@ -116,18 +122,20 @@ class ActiveConnection(object):
         nm_acsreason = nmclient.NM.ActiveConnectionStateReason
         if self._state == nm_acs.DEACTIVATED:
             unable_to_activate = (
-                    not self._nmdev or
-                    (
-                        self._state_reason is not None and
-                        self._state_reason != nm_acsreason.DEVICE_DISCONNECTED
-                    ) or
-                    self._nmdev.get_active_connection() is not self._act_con
+                not self._nmdev
+                or (
+                    self._state_reason is not None
+                    and self._state_reason != nm_acsreason.DEVICE_DISCONNECTED
+                )
+                or self._nmdev.get_active_connection() is not self._act_con
             )
             if unable_to_activate:
                 self._alternative_state = AlternativeACState.FAIL
             # Use the device-state as an alternative to determine if active.
-            elif (self.nmdev_state <= nmclient.NM.DeviceState.DISCONNECTED or
-                    self.nmdev_state > nmclient.NM.DeviceState.DEACTIVATING):
+            elif (
+                self.nmdev_state <= nmclient.NM.DeviceState.DISCONNECTED
+                or self.nmdev_state > nmclient.NM.DeviceState.DEACTIVATING
+            ):
                 self._alternative_state = AlternativeACState.FAIL
 
     @property
@@ -136,14 +144,15 @@ class ActiveConnection(object):
         if self._state == nm_acs.ACTIVATED:
             return True
         elif self._state == nm_acs.ACTIVATING:
-                # master connections qualify as activated once they
-                # reach IP-Config state. That is because they may
-                # wait for slave devices to attach
-                return (
-                    _is_device_master_type(self._nmdev) and
-                    nmclient.NM.DeviceState.IP_CONFIG <= self.nmdev_state <=
-                    nmclient.NM.DeviceState.ACTIVATED
-                )
+            # master connections qualify as activated once they
+            # reach IP-Config state. That is because they may
+            # wait for slave devices to attach
+            return (
+                _is_device_master_type(self._nmdev)
+                and nmclient.NM.DeviceState.IP_CONFIG
+                <= self.nmdev_state
+                <= nmclient.NM.DeviceState.ACTIVATED
+            )
 
         return False
 
@@ -179,18 +188,21 @@ class ActiveConnection(object):
 
     @property
     def nmdev_state(self):
-        return (self._nmdev.get_state() if self._nmdev
-                else nmclient.NM.DeviceState.UNKNOWN)
+        return (
+            self._nmdev.get_state()
+            if self._nmdev
+            else nmclient.NM.DeviceState.UNKNOWN
+        )
 
 
 def _is_device_master_type(nmdev):
     if nmdev:
         gobject = nmclient.GObject
         is_master_type = (
-            gobject.type_is_a(nmdev, nmclient.NM.DeviceBond) or
-            gobject.type_is_a(nmdev, nmclient.NM.DeviceBridge) or
-            gobject.type_is_a(nmdev, nmclient.NM.DeviceTeam) or
-            gobject.type_is_a(nmdev, nmclient.NM.DeviceOvsBridge)
+            gobject.type_is_a(nmdev, nmclient.NM.DeviceBond)
+            or gobject.type_is_a(nmdev, nmclient.NM.DeviceBridge)
+            or gobject.type_is_a(nmdev, nmclient.NM.DeviceTeam)
+            or gobject.type_is_a(nmdev, nmclient.NM.DeviceOvsBridge)
         )
         return is_master_type
     return False

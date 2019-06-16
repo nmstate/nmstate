@@ -33,12 +33,7 @@ PORT_PROFILE_PREFIX = 'ovs-port-'
 CAPABILITY = 'openvswitch'
 
 
-_BRIDGE_OPTION_NAMES = [
-    'fail-mode',
-    'mcast-snooping-enable',
-    'rstp',
-    'stp'
-]
+_BRIDGE_OPTION_NAMES = ['fail-mode', 'mcast-snooping-enable', 'rstp', 'stp']
 
 
 _PORT_OPTION_NAMES = [
@@ -47,7 +42,7 @@ _PORT_OPTION_NAMES = [
     'bond-mode',
     'lacp',
     'bond-updelay',
-    'bond-downdelay'
+    'bond-downdelay',
 ]
 
 
@@ -74,7 +69,9 @@ def create_bridge_setting(options):
         else:
             raise NmstateValueError(
                 'Invalid OVS bridge option: \{}\=\'{}\''.format(
-                    option_name, option_value))
+                    option_name, option_value
+                )
+            )
 
     return bridge_setting
 
@@ -97,7 +94,9 @@ def create_port_setting(options):
         else:
             raise NmstateValueError(
                 'Invalid OVS port option: \{}\=\'{}\''.format(
-                    option_name, option_value))
+                    option_name, option_value
+                )
+            )
 
     return port_setting
 
@@ -146,7 +145,7 @@ def get_ovs_info(bridge_device, devices_info):
 
     return {
         'port': _get_bridge_ports_info(port_profiles, devices_info),
-        'options': _get_bridge_options(bridge_device)
+        'options': _get_bridge_options(bridge_device),
     }
 
 
@@ -202,8 +201,9 @@ def _get_bridge_options(bridge_device):
         bridge_options['stp'] = bridge_setting.props.stp_enable
         bridge_options['rstp'] = bridge_setting.props.rstp_enable
         bridge_options['fail-mode'] = bridge_setting.props.fail_mode or ''
-        bridge_options['mcast-snooping-enable'] = (
-            bridge_setting.props.mcast_snooping_enable)
+        bridge_options[
+            'mcast-snooping-enable'
+        ] = bridge_setting.props.mcast_snooping_enable
 
     return bridge_options
 

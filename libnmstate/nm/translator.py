@@ -48,12 +48,14 @@ class Api2Nm(object):
                 'linux-bridge': nmclient.NM.SETTING_BRIDGE_SETTING_NAME,
             }
             try:
-                Api2Nm._iface_types_map.update({
+                ovs_types = {
                     'ovs-bridge': nmclient.NM.SETTING_OVS_BRIDGE_SETTING_NAME,
                     'ovs-port': nmclient.NM.SETTING_OVS_PORT_SETTING_NAME,
                     'ovs-interface': (
-                        nmclient.NM.SETTING_OVS_INTERFACE_SETTING_NAME),
-                })
+                        nmclient.NM.SETTING_OVS_INTERFACE_SETTING_NAME
+                    ),
+                }
+                Api2Nm._iface_types_map.update(ovs_types)
             except AttributeError:
                 pass
 
@@ -97,19 +99,19 @@ class Nm2Api(object):
         bond_mode = bond_options['mode']
         del bond_options['mode']
         return {
-            'link-aggregation':
-                {
-                    'mode': bond_mode,
-                    'slaves': [slave.props.interface for slave in bond_slaves],
-                    'options': bond_options
-                }
+            'link-aggregation': {
+                'mode': bond_mode,
+                'slaves': [slave.props.interface for slave in bond_slaves],
+                'options': bond_options,
+            }
         }
 
     @staticmethod
     def get_iface_type(name):
         if Nm2Api._iface_types_map is None:
             Nm2Api._iface_types_map = Nm2Api._swap_dict_keyval(
-                Api2Nm.get_iface_type_map())
+                Api2Nm.get_iface_type_map()
+            )
         return Nm2Api._iface_types_map.get(name, IFACE_TYPE_UNKNOWN)
 
     @staticmethod

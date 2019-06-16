@@ -32,7 +32,9 @@ def create_setting(options):
         if not success:
             raise NmstateValueError(
                 'Invalid bond option: \{}\=\'{}\''.format(
-                    option_name, option_value))
+                    option_name, option_value
+                )
+            )
 
     return bond_setting
 
@@ -42,10 +44,7 @@ def is_bond_type_id(type_id):
 
 
 def get_bond_info(nm_device):
-    return {
-        'slaves': get_slaves(nm_device),
-        'options': get_options(nm_device)
-    }
+    return {'slaves': get_slaves(nm_device), 'options': get_options(nm_device)}
 
 
 def get_options(nm_device):

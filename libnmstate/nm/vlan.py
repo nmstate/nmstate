@@ -52,6 +52,6 @@ def get_info(device):
     if device.get_device_type() == nmclient.NM.DeviceType.VLAN:
         info['vlan'] = {
             'id': device.props.vlan_id,
-            'base-iface': device.props.parent.get_iface()
+            'base-iface': device.props.parent.get_iface(),
         }
     return info

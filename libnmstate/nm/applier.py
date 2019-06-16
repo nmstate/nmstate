@@ -77,7 +77,8 @@ def prepare_edited_ifaces_configuration(ifaces_desired_state):
             cur_con_profile = connection.ConnectionProfile()
             cur_con_profile.import_by_device(nmdev)
         new_con_profile = _build_connection_profile(
-            iface_desired_state, base_con_profile=cur_con_profile)
+            iface_desired_state, base_con_profile=cur_con_profile
+        )
         if not new_con_profile.devname:
             set_conn = new_con_profile.profile.get_setting_connection()
             set_conn.props.interface_name = iface_desired_state['name']
@@ -136,24 +137,29 @@ def set_ifaces_admin_state(ifaces_desired_state, con_profiles=()):
                 master_iface_types = ovs.BRIDGE_TYPE, bond.BOND_TYPE, LB.TYPE
                 if iface_desired_state['type'] in master_iface_types:
                     master_ifaces_to_edit.add(
-                        (nmdev, con_profiles_by_devname[ifname].profile))
+                        (nmdev, con_profiles_by_devname[ifname].profile)
+                    )
                 else:
                     ifaces_to_edit.add(
-                        (nmdev, con_profiles_by_devname[ifname].profile))
+                        (nmdev, con_profiles_by_devname[ifname].profile)
+                    )
             elif iface_desired_state['state'] in ('down', 'absent'):
                 nmdevs = _get_affected_devices(iface_desired_state)
                 for nmdev in nmdevs:
                     devs_actions[nmdev] = [device.deactivate, device.delete]
                     if nmdev.get_device_type() in (
-                            nmclient.NM.DeviceType.OVS_BRIDGE,
-                            nmclient.NM.DeviceType.OVS_PORT,
-                            nmclient.NM.DeviceType.OVS_INTERFACE):
+                        nmclient.NM.DeviceType.OVS_BRIDGE,
+                        nmclient.NM.DeviceType.OVS_PORT,
+                        nmclient.NM.DeviceType.OVS_INTERFACE,
+                    ):
                         devs_actions[nmdev].append(device.delete_device)
             else:
                 raise NmstateValueError(
                     'Invalid state {} for interface {}'.format(
                         iface_desired_state['state'],
-                        iface_desired_state['name']))
+                        iface_desired_state['name'],
+                    )
+                )
 
     for ifname in new_ifaces_to_activate:
         device.activate(dev=None, connection_id=ifname)
@@ -243,7 +249,8 @@ def prepare_proxy_ifaces_desired_state(ifaces_desired_state):
             continue
         port_options = ovs.translate_port_options(port_opts_metadata)
         port_iface_desired_state = _create_ovs_port_iface_desired_state(
-            iface_desired_state, port_options)
+            iface_desired_state, port_options
+        )
         new_ifaces_desired_state.append(port_iface_desired_state)
         # The "visible" slave/interface needs to point to the port profile
         iface_desired_state[MASTER_METADATA] = port_iface_desired_state['name']
@@ -301,8 +308,9 @@ def _build_connection_profile(iface_desired_state, base_con_profile=None):
     elif iface_type == bridge.BRIDGE_TYPE:
         bridge_options = iface_desired_state.get('bridge', {}).get('options')
         if bridge_options:
-            linux_bridge_setting = bridge.create_setting(bridge_options,
-                                                         base_profile)
+            linux_bridge_setting = bridge.create_setting(
+                bridge_options, base_profile
+            )
             settings.append(linux_bridge_setting)
     elif iface_type == ovs.BRIDGE_TYPE:
         ovs_bridge_options = ovs.translate_bridge_options(iface_desired_state)

@@ -115,9 +115,9 @@ def get_info(nmdev):
                 LB.STP_PRIORITY: bridge_setting.props.priority,
                 LB.STP_FORWARD_DELAY: bridge_setting.props.forward_delay,
                 LB.STP_HELLO_TIME: bridge_setting.props.hello_time,
-                LB.STP_MAX_AGE: bridge_setting.props.max_age
-            }
-        }
+                LB.STP_MAX_AGE: bridge_setting.props.max_age,
+            },
+        },
     }
     return info
 
