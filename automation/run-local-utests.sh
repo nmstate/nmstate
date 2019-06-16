@@ -17,4 +17,4 @@ podman run \
          && \
          cd /tmp/$PROJECT \
          && \
-         tox --workdir $TOXWORKDIR"
+         tox -e black,flake8,pylint,check-py27 --workdir $TOXWORKDIR"
