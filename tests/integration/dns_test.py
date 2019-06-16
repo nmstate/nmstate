@@ -268,13 +268,11 @@ def _gen_default_gateway_route():
             Route.METRIC: 200,
             Route.NEXT_HOP_ADDRESS: '192.0.2.1',
             Route.NEXT_HOP_INTERFACE: 'eth1',
-            Route.TABLE_ID: 54
         },
         {
             Route.DESTINATION: '::/0',
             Route.METRIC: 201,
             Route.NEXT_HOP_ADDRESS: '2001:db8:2::f',
             Route.NEXT_HOP_INTERFACE: 'eth1',
-            Route.TABLE_ID: 54
         }
     ]
