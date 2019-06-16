@@ -31,9 +31,7 @@ def show_only(ifnames):
     """
     Report the current state, filtering based on the given interface names.
     """
-    base_filter_state = {
-        INTERFACES: [{'name': ifname} for ifname in ifnames]
-    }
+    base_filter_state = {INTERFACES: [{'name': ifname} for ifname in ifnames]}
     current_state = State(libnmstate.show())
     current_state.filter(base_filter_state)
     return current_state.state
@@ -66,8 +64,9 @@ class State(object):
         mentioned in the based_on_state.
         In case there are no entities for filtering, all are reported.
         """
-        base_iface_names = {ifstate['name']
-                            for ifstate in based_on_state[INTERFACES]}
+        base_iface_names = {
+            ifstate['name'] for ifstate in based_on_state[INTERFACES]
+        }
 
         if not base_iface_names:
             return
@@ -89,7 +88,8 @@ class State(object):
         for base_iface_state in self._state[INTERFACES]:
             ifname = base_iface_state['name']
             other_iface_state = _lookup_iface_state_by_name(
-                other_interfaces_state, ifname)
+                other_interfaces_state, ifname
+            )
             if other_iface_state is not None:
                 iface_state = _dict_update(base_iface_state, other_iface_state)
                 other_iface_state.update(iface_state)
@@ -112,7 +112,8 @@ class State(object):
 
     def remove_absent_entries(self):
         self._state[INTERFACES] = [
-            ifstate for ifstate in self._state[INTERFACES]
+            ifstate
+            for ifstate in self._state[INTERFACES]
             if ifstate.get('state') != 'absent'
         ]
 
@@ -123,7 +124,8 @@ class State(object):
     def _sort_iface_bridge_ports(self):
         for ifstate in self._state[INTERFACES]:
             ifstate.get('bridge', {}).get('port', []).sort(
-                key=itemgetter('name'))
+                key=itemgetter('name')
+            )
 
     def _ipv6_skeleton_canonicalization(self):
         for iface_state in self._state.get(INTERFACES, []):
@@ -143,15 +145,17 @@ class State(object):
     def _ignore_ipv6_link_local(self):
         for iface_state in self._state.get(INTERFACES, []):
             iface_state['ipv6']['address'] = list(
-                addr for addr in iface_state['ipv6']['address']
-                if not _is_ipv6_link_local(addr['ip'],
-                                           addr['prefix-length']))
+                addr
+                for addr in iface_state['ipv6']['address']
+                if not _is_ipv6_link_local(addr['ip'], addr['prefix-length'])
+            )
 
     def _sort_ip_addresses(self):
         for iface_state in self._state.get(INTERFACES, []):
             for family in ('ipv4', 'ipv6'):
                 iface_state.get(family, {}).get('address', []).sort(
-                    key=itemgetter('ip'))
+                    key=itemgetter('ip')
+                )
 
     def _ignore_dhcp_manual_addr(self):
         for iface_state in self._state.get(INTERFACES, []):
@@ -163,11 +167,15 @@ class State(object):
         for iface_state in self._state.get(INTERFACES, []):
             for family in ('ipv4', 'ipv6'):
                 ip = iface_state.get(family, {})
-                if not (ip.get('enabled') and
-                        (ip.get('dhcp') or ip.get('autoconf'))):
-                    for dhcp_option in ('auto-routes',
-                                        'auto-gateway',
-                                        'auto-dns'):
+                if not (
+                    ip.get('enabled')
+                    and (ip.get('dhcp') or ip.get('autoconf'))
+                ):
+                    for dhcp_option in (
+                        'auto-routes',
+                        'auto-gateway',
+                        'auto-dns',
+                    ):
                         ip.pop(dhcp_option, None)
 
 
@@ -201,8 +209,9 @@ def filter_current_state(desired_state):
     In case there are no entities for filtering, all are reported.
     """
     current_state = libnmstate.show()
-    desired_iface_names = {ifstate['name']
-                           for ifstate in desired_state[INTERFACES]}
+    desired_iface_names = {
+        ifstate['name'] for ifstate in desired_state[INTERFACES]
+    }
 
     if not desired_iface_names:
         return current_state

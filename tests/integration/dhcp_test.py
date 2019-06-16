@@ -58,14 +58,16 @@ enable-ra
 dhcp-range={ipv6_prefix}::100,{ipv6_prefix}::fff,ra-names,slaac,64,480h
 dhcp-option=option:classless-static-route,{classless_rt},{classless_rt_dst}
 dhcp-option=option:dns-server,{v4_dns_server}
-""".format(**{
+""".format(
+    **{
         'iface': DHCP_SRV_NIC,
         'ipv4_prefix': DHCP_SRV_IP4_PREFIX,
         'ipv6_prefix': DHCP_SRV_IP6_PREFIX,
         'classless_rt': IPV4_CLASSLESS_ROUTE_DST_NET1,
         'classless_rt_dst': IPV4_CLASSLESS_ROUTE_NEXT_HOP1,
-        'v4_dns_server': DHCP_SRV_IP4
-    })
+        'v4_dns_server': DHCP_SRV_IP4,
+    }
+)
 
 RADVD_CONF_STR = """
 interface {}
@@ -81,7 +83,9 @@ interface {}
     route {} {{
     }};
 }};
-""".format(DHCP_SRV_NIC, DHCP_SRV_IP6_NETWORK, IPV6_CLASSLESS_ROUTE_DST_NET1)
+""".format(
+    DHCP_SRV_NIC, DHCP_SRV_IP6_NETWORK, IPV6_CLASSLESS_ROUTE_DST_NET1
+)
 
 RADVD_CONF_PATH = '/etc/radvd.conf'
 DNSMASQ_CONF_PATH = '/etc/dnsmasq.d/nmstate.conf'
@@ -90,9 +94,11 @@ DNSMASQ_CONF_PATH = '/etc/dnsmasq.d/nmstate.conf'
 RESOLV_CONF_PATH = '/var/run/NetworkManager/resolv.conf'
 
 SYSFS_DISABLE_IPV6_FILE = '/proc/sys/net/ipv6/conf/{}/disable_ipv6'.format(
-    DHCP_SRV_NIC)
+    DHCP_SRV_NIC
+)
 SYSFS_DISABLE_RA_SRV = '/proc/sys/net/ipv6/conf/{}/accept_ra'.format(
-    DHCP_SRV_NIC)
+    DHCP_SRV_NIC
+)
 
 # Python 2 does not have FileNotFoundError and treat file not exist as IOError
 try:
@@ -123,13 +129,7 @@ def dhcp_env():
 def setup_remove_bond99():
     yield
     remove_bond = {
-        INTERFACES: [
-            {
-                'name': 'bond99',
-                'type': 'bond',
-                'state': 'absent'
-            }
-        ]
+        INTERFACES: [{'name': 'bond99', 'type': 'bond', 'state': 'absent'}]
     }
     libnmstate.apply(remove_bond)
 
@@ -139,11 +139,7 @@ def setup_remove_dhcpcli():
     yield
     remove_bond = {
         INTERFACES: [
-            {
-                'name': 'dhcpcli',
-                'type': 'ethernet',
-                'state': 'absent'
-            }
+            {'name': 'dhcpcli', 'type': 'ethernet', 'state': 'absent'}
         ]
     }
     libnmstate.apply(remove_bond)
@@ -191,7 +187,7 @@ def test_ipv6_dhcp_only(dhcp_env):
             has_dhcp_ip_addr = True
             break
     assert has_dhcp_ip_addr
-    assert not _has_ipv6_auto_gateway()      # DHCPv6 does not provide routes
+    assert not _has_ipv6_auto_gateway()  # DHCPv6 does not provide routes
     assert not _has_ipv6_auto_extra_route()  # DHCPv6 does not provide routes
     assert _has_ipv6_auto_nameserver()
 
@@ -238,8 +234,8 @@ def test_dhcp_with_addresses(dhcp_env):
                     'dhcp': True,
                     'address': [
                         {'ip': IPV4_ADDRESS1, 'prefix-length': 24},
-                        {'ip': IPV4_ADDRESS2, 'prefix-length': 24}
-                    ]
+                        {'ip': IPV4_ADDRESS2, 'prefix-length': 24},
+                    ],
                 },
                 'ipv6': {
                     'enabled': True,
@@ -247,9 +243,9 @@ def test_dhcp_with_addresses(dhcp_env):
                     'autoconf': True,
                     'address': [
                         {'ip': IPV6_ADDRESS1, 'prefix-length': 64},
-                        {'ip': IPV6_ADDRESS2, 'prefix-length': 64}
-                    ]
-                }
+                        {'ip': IPV6_ADDRESS2, 'prefix-length': 64},
+                    ],
+                },
             }
         ]
     }
@@ -259,26 +255,21 @@ def test_dhcp_with_addresses(dhcp_env):
     assertlib.assert_state(desired_state)
 
 
-def test_dhcp_for_bond_with_ip_address_and_slave(dhcp_env,
-                                                 setup_remove_dhcpcli,
-                                                 setup_remove_bond99):
+def test_dhcp_for_bond_with_ip_address_and_slave(
+    dhcp_env, setup_remove_dhcpcli, setup_remove_bond99
+):
     desired_state = {
         INTERFACES: [
             {
                 'name': 'bond99',
                 'type': 'bond',
                 'state': 'up',
-                'ipv4': {
-                    'enabled': True,
-                    'dhcp': False,
-                },
-
+                'ipv4': {'enabled': True, 'dhcp': False},
                 'link-aggregation': {
                     'mode': 'balance-rr',
                     'slaves': [DHCP_CLI_NIC],
-                    'options':
-                        {'miimon': '140'}
-                }
+                    'options': {'miimon': '140'},
+                },
             }
         ]
     }
@@ -530,8 +521,22 @@ def test_ipv6_dhcp_switch_on_to_off(dhcp_env):
 
 
 def _create_veth_pair():
-    assert libcmd.exec_cmd(['ip', 'link', 'add', DHCP_SRV_NIC, 'type', 'veth',
-                            'peer', 'name', DHCP_CLI_NIC])[0] == 0
+    assert (
+        libcmd.exec_cmd(
+            [
+                'ip',
+                'link',
+                'add',
+                DHCP_SRV_NIC,
+                'type',
+                'veth',
+                'peer',
+                'name',
+                DHCP_CLI_NIC,
+            ]
+        )[0]
+        == 0
+    )
 
 
 def _remove_veth_pair():
@@ -541,8 +546,19 @@ def _remove_veth_pair():
 def _setup_dhcp_nics():
     assert libcmd.exec_cmd(['ip', 'link', 'set', DHCP_SRV_NIC, 'up'])[0] == 0
     assert libcmd.exec_cmd(['ip', 'link', 'set', DHCP_CLI_NIC, 'up'])[0] == 0
-    assert libcmd.exec_cmd(['ip', 'addr', 'add', "{}/24".format(DHCP_SRV_IP4),
-                            'dev', DHCP_SRV_NIC])[0] == 0
+    assert (
+        libcmd.exec_cmd(
+            [
+                'ip',
+                'addr',
+                'add',
+                "{}/24".format(DHCP_SRV_IP4),
+                'dev',
+                DHCP_SRV_NIC,
+            ]
+        )[0]
+        == 0
+    )
     with open(SYSFS_DISABLE_RA_SRV, 'w') as fd:
         fd.write('0')
 
@@ -550,8 +566,19 @@ def _setup_dhcp_nics():
     with open(SYSFS_DISABLE_IPV6_FILE, 'w') as fd:
         fd.write('0')
 
-    assert libcmd.exec_cmd(['ip', 'addr', 'add', "{}/64".format(DHCP_SRV_IP6),
-                            'dev', DHCP_SRV_NIC])[0] == 0
+    assert (
+        libcmd.exec_cmd(
+            [
+                'ip',
+                'addr',
+                'add',
+                "{}/64".format(DHCP_SRV_IP6),
+                'dev',
+                DHCP_SRV_NIC,
+            ]
+        )[0]
+        == 0
+    )
 
 
 def _clean_up():
@@ -569,17 +596,15 @@ def _clean_up():
 
 
 def test_slave_ipaddr_learned_via_dhcp_added_as_static_to_linux_bridge(
-                                         dhcp_env, setup_remove_dhcpcli):
+    dhcp_env, setup_remove_dhcpcli
+):
     desired_state = {
         INTERFACES: [
             {
                 'name': 'dhcpcli',
                 'type': 'ethernet',
                 'state': 'up',
-                'ipv4': {
-                    'enabled': True,
-                    'dhcp': True
-                },
+                'ipv4': {'enabled': True, 'dhcp': True},
             }
         ]
     }
@@ -599,7 +624,7 @@ def test_slave_ipaddr_learned_via_dhcp_added_as_static_to_linux_bridge(
                 'ipv4': {
                     'enabled': True,
                     'dhcp': False,
-                    'address': dhcpcli_ip
+                    'address': dhcpcli_ip,
                 },
                 'bridge': {
                     'options': {},
@@ -608,24 +633,18 @@ def test_slave_ipaddr_learned_via_dhcp_added_as_static_to_linux_bridge(
                             'name': 'dhcpcli',
                             'stp-hairpin-mode': False,
                             'stp-path-cost': 100,
-                            'stp-priority': 32
+                            'stp-priority': 32,
                         }
-                    ]
-                }
+                    ],
+                },
             },
             {
                 'name': 'dhcpcli',
                 'type': 'ethernet',
                 'state': 'up',
-                'ipv4': {
-                    'enabled': False,
-                    'dhcp': False
-                },
-                'ipv6': {
-                    'enabled': False,
-                    'dhcp': False
-                }
-            }
+                'ipv4': {'enabled': False, 'dhcp': False},
+                'ipv6': {'enabled': False, 'dhcp': False},
+            },
         ]
     }
 
@@ -637,8 +656,12 @@ def _get_nameservers():
     """
     Return a list of name server string configured in RESOLV_CONF_PATH.
     """
-    return libnmstate.show().get(
-        Constants.DNS, {}).get(DNS.RUNNING, {}).get(DNS.SERVER, [])
+    return (
+        libnmstate.show()
+        .get(Constants.DNS, {})
+        .get(DNS.RUNNING, {})
+        .get(DNS.SERVER, [])
+    )
 
 
 def _get_running_routes():
@@ -651,8 +674,10 @@ def _get_running_routes():
 def _has_ipv6_auto_gateway():
     routes = _get_running_routes()
     for route in routes:
-        if route[RT.DESTINATION] == IPV6_DEFAULT_GATEWAY and \
-           route[RT.NEXT_HOP_INTERFACE] == DHCP_CLI_NIC:
+        if (
+            route[RT.DESTINATION] == IPV6_DEFAULT_GATEWAY
+            and route[RT.NEXT_HOP_INTERFACE] == DHCP_CLI_NIC
+        ):
             return True
     return False
 
@@ -660,8 +685,10 @@ def _has_ipv6_auto_gateway():
 def _has_ipv6_auto_extra_route():
     routes = _get_running_routes()
     for route in routes:
-        if route[RT.DESTINATION] == IPV6_CLASSLESS_ROUTE_DST_NET1 and \
-           route[RT.NEXT_HOP_INTERFACE] == DHCP_CLI_NIC:
+        if (
+            route[RT.DESTINATION] == IPV6_CLASSLESS_ROUTE_DST_NET1
+            and route[RT.NEXT_HOP_INTERFACE] == DHCP_CLI_NIC
+        ):
             return True
     return False
 
@@ -677,8 +704,10 @@ def _has_ipv4_dhcp_nameserver():
 def _has_ipv4_dhcp_gateway():
     routes = _get_running_routes()
     for route in routes:
-        if route[RT.DESTINATION] == IPV4_DEFAULT_GATEWAY and \
-           route[RT.NEXT_HOP_INTERFACE] == DHCP_CLI_NIC:
+        if (
+            route[RT.DESTINATION] == IPV4_DEFAULT_GATEWAY
+            and route[RT.NEXT_HOP_INTERFACE] == DHCP_CLI_NIC
+        ):
             return True
     return False
 
@@ -686,8 +715,10 @@ def _has_ipv4_dhcp_gateway():
 def _has_ipv4_classless_route():
     routes = _get_running_routes()
     for route in routes:
-        if route[RT.DESTINATION] == IPV4_CLASSLESS_ROUTE_DST_NET1 and \
-           route[RT.NEXT_HOP_ADDRESS] == IPV4_CLASSLESS_ROUTE_NEXT_HOP1 and \
-           route[RT.NEXT_HOP_INTERFACE] == DHCP_CLI_NIC:
+        if (
+            route[RT.DESTINATION] == IPV4_CLASSLESS_ROUTE_DST_NET1
+            and route[RT.NEXT_HOP_ADDRESS] == IPV4_CLASSLESS_ROUTE_NEXT_HOP1
+            and route[RT.NEXT_HOP_INTERFACE] == DHCP_CLI_NIC
+        ):
             return True
     return False

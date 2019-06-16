@@ -93,8 +93,9 @@ def test_create_and_remove_linux_bridge_with_one_port(eth1_up):
 
 def test_create_and_remove_linux_bridge_with_two_ports(eth1_up, eth2_up):
     bridge_name = TEST_BRIDGE0
-    bridge_state = _create_bridge_subtree_config((TEST_BRIDGE0_PORT0,
-                                                  TEST_BRIDGE0_PORT1))
+    bridge_state = _create_bridge_subtree_config(
+        (TEST_BRIDGE0_PORT0, TEST_BRIDGE0_PORT1)
+    )
 
     with _linux_bridge(bridge_name, bridge_state) as desired_state:
         assertlib.assert_state(desired_state)
@@ -149,7 +150,7 @@ def _linux_bridge(name, bridge_state):
             {
                 Interface.NAME: name,
                 Interface.TYPE: InterfaceType.LINUX_BRIDGE,
-                Interface.STATE: InterfaceState.UP
+                Interface.STATE: InterfaceState.UP,
             }
         ]
     }
@@ -161,12 +162,14 @@ def _linux_bridge(name, bridge_state):
     try:
         yield desired_state
     finally:
-        libnmstate.apply({
-            INTERFACES: [
-                {
-                    Interface.NAME: name,
-                    Interface.TYPE: InterfaceType.LINUX_BRIDGE,
-                    Interface.STATE: InterfaceState.ABSENT
-                }
-            ]
-        })
+        libnmstate.apply(
+            {
+                INTERFACES: [
+                    {
+                        Interface.NAME: name,
+                        Interface.TYPE: InterfaceType.LINUX_BRIDGE,
+                        Interface.STATE: InterfaceState.ABSENT,
+                    }
+                ]
+            }
+        )

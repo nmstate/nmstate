@@ -29,7 +29,8 @@ from .testlib.statelib import INTERFACES
 def logging_setup():
     logging.basicConfig(
         format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
-        level=logging.DEBUG)
+        level=logging.DEBUG,
+    )
 
 
 @pytest.fixture(scope='session', autouse=True)
@@ -61,9 +62,15 @@ def _set_eth_admin_state(ifname, state):
     current_state = statelib.show_only((ifname,))
     iface_current_state, = current_state[INTERFACES]
     if iface_current_state['state'] != state or state == 'down':
-        desired_state = {INTERFACES: [{'name': iface_current_state['name'],
-                                       'type': iface_current_state['type'],
-                                       'state': state}]}
+        desired_state = {
+            INTERFACES: [
+                {
+                    'name': iface_current_state['name'],
+                    'type': iface_current_state['type'],
+                    'state': state,
+                }
+            ]
+        }
         # FIXME: On most systems, IPv6 cannot be disabled by Nmstate/NM.
         if state == 'up':
             desired_state[INTERFACES][0].update({'ipv6': {'enabled': True}})

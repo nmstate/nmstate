@@ -49,13 +49,7 @@ interfaces:
 def setup_remove_bond99():
     yield
     remove_bond = {
-        INTERFACES: [
-            {
-                'name': 'bond99',
-                'type': 'bond',
-                'state': 'absent'
-            }
-        ]
+        INTERFACES: [{'name': 'bond99', 'type': 'bond', 'state': 'absent'}]
     }
     libnmstate.apply(remove_bond)
 
@@ -68,27 +62,16 @@ def bond_interface(name, slaves):
                 'name': name,
                 'type': 'bond',
                 'state': 'up',
-                'link-aggregation': {
-                        'mode': 'balance-rr',
-                        'slaves': slaves
-                }
+                'link-aggregation': {'mode': 'balance-rr', 'slaves': slaves},
             }
-
         ]
     }
     libnmstate.apply(desired_state)
     try:
         yield desired_state
     finally:
-        libnmstate.apply({
-                INTERFACES: [
-                    {
-                        'name': name,
-                        'type': 'bond',
-                        'state': 'absent'
-                    }
-                ]
-            }
+        libnmstate.apply(
+            {INTERFACES: [{'name': name, 'type': 'bond', 'state': 'absent'}]}
         )
 
 
@@ -111,13 +94,7 @@ def test_remove_bond_with_minimum_desired_state(eth1_up, eth2_up):
     libnmstate.apply(state)
 
     remove_bond_state = {
-        INTERFACES: [
-            {
-                'name': 'bond99',
-                'type': 'bond',
-                'state': 'absent'
-            }
-        ]
+        INTERFACES: [{'name': 'bond99', 'type': 'bond', 'state': 'absent'}]
     }
     libnmstate.apply(remove_bond_state)
     state = statelib.show_only((state[INTERFACES][0]['name'],))
@@ -132,26 +109,25 @@ def test_add_bond_without_slaves():
 
 def test_add_bond_with_slaves_and_ipv4(eth1_up, eth2_up, setup_remove_bond99):
     desired_bond_state = {
-                INTERFACES: [
-                    {
-                        'name': 'bond99',
-                        'type': 'bond',
-                        'state': 'up',
-                        'ipv4': {
-                            'enabled': True,
-                            'address': [
-                                {'ip': '192.168.122.250', 'prefix-length': 24}
-                            ]
-                        },
-                        'link-aggregation': {
-                            'mode': 'balance-rr',
-                            'slaves': ['eth1', 'eth2'],
-                            'options':
-                                {'miimon': '140'}
-                        },
-                    }
-                ]
+        INTERFACES: [
+            {
+                'name': 'bond99',
+                'type': 'bond',
+                'state': 'up',
+                'ipv4': {
+                    'enabled': True,
+                    'address': [
+                        {'ip': '192.168.122.250', 'prefix-length': 24}
+                    ],
+                },
+                'link-aggregation': {
+                    'mode': 'balance-rr',
+                    'slaves': ['eth1', 'eth2'],
+                    'options': {'miimon': '140'},
+                },
             }
+        ]
+    }
 
     libnmstate.apply(desired_bond_state)
 
@@ -161,26 +137,25 @@ def test_add_bond_with_slaves_and_ipv4(eth1_up, eth2_up, setup_remove_bond99):
 def test_rollback_for_bond(eth1_up, eth2_up):
     current_state = libnmstate.show()
     desired_state = {
-                INTERFACES: [
-                    {
-                        'name': 'bond99',
-                        'type': 'bond',
-                        'state': 'up',
-                        'ipv4': {
-                            'enabled': True,
-                            'address': [
-                                {'ip': '192.168.122.250', 'prefix-length': 24}
-                            ]
-                        },
-                        'link-aggregation': {
-                            'mode': 'balance-rr',
-                            'slaves': ['eth1', 'eth2'],
-                            'options':
-                                {'miimon': '140'}
-                        },
-                    }
-                ]
+        INTERFACES: [
+            {
+                'name': 'bond99',
+                'type': 'bond',
+                'state': 'up',
+                'ipv4': {
+                    'enabled': True,
+                    'address': [
+                        {'ip': '192.168.122.250', 'prefix-length': 24}
+                    ],
+                },
+                'link-aggregation': {
+                    'mode': 'balance-rr',
+                    'slaves': ['eth1', 'eth2'],
+                    'options': {'miimon': '140'},
+                },
             }
+        ]
+    }
 
     desired_state[INTERFACES][0]['invalid_key'] = 'foo'
 
@@ -279,9 +254,11 @@ def test_reordering_the_slaves_does_not_change_the_mac(bond99):
     eth1_state = state[Interface.KEY][1]
     eth2_state = state[Interface.KEY][2]
 
-    assert (bond99_state[Interface.MAC] ==
-            eth1_state[Interface.MAC] ==
-            eth2_state[Interface.MAC])
+    assert (
+        bond99_state[Interface.MAC]
+        == eth1_state[Interface.MAC]
+        == eth2_state[Interface.MAC]
+    )
 
     bond99[INTERFACES][0]['link-aggregation']['slaves'].reverse()
     libnmstate.apply(bond99)
@@ -291,7 +268,9 @@ def test_reordering_the_slaves_does_not_change_the_mac(bond99):
     eth1_modified_state = modified_state[Interface.KEY][1]
     eth2_modified_state = modified_state[Interface.KEY][2]
 
-    assert (bond99_modified_state[Interface.MAC] ==
-            eth1_modified_state[Interface.MAC] ==
-            eth2_modified_state[Interface.MAC] ==
-            bond99_state[Interface.MAC])
+    assert (
+        bond99_modified_state[Interface.MAC]
+        == eth1_modified_state[Interface.MAC]
+        == eth2_modified_state[Interface.MAC]
+        == bond99_state[Interface.MAC]
+    )
