@@ -52,21 +52,21 @@ def generate_ifaces_metadata(desired_state, current_state):
         current_state.interfaces,
         master_type='bond',
         get_slaves_func=_get_bond_slaves_from_state,
-        set_metadata_func=_set_common_slaves_metadata
+        set_metadata_func=_set_common_slaves_metadata,
     )
     _generate_link_master_metadata(
         desired_state.interfaces,
         current_state.interfaces,
         master_type='ovs-bridge',
         get_slaves_func=_get_ovs_slaves_from_state,
-        set_metadata_func=_set_ovs_bridge_ports_metadata
+        set_metadata_func=_set_ovs_bridge_ports_metadata,
     )
     _generate_link_master_metadata(
         desired_state.interfaces,
         current_state.interfaces,
         master_type='linux-bridge',
         get_slaves_func=linux_bridge.get_slaves_from_state,
-        set_metadata_func=linux_bridge.set_bridge_ports_metadata
+        set_metadata_func=linux_bridge.set_bridge_ports_metadata,
     )
     _generate_dns_metadata(desired_state, current_state)
     _generate_route_metadata(desired_state, current_state)
@@ -92,8 +92,7 @@ def _set_ovs_bridge_ports_metadata(master_state, slave_state):
 
     ports = master_state.get('bridge', {}).get('port', [])
     port = next(
-        six.moves.filter(lambda n: n['name'] == slave_state['name'], ports),
-        {}
+        six.moves.filter(lambda n: n['name'] == slave_state['name'], ports), {}
     )
     slave_state[BRPORT_OPTIONS] = port
 
@@ -110,11 +109,13 @@ def _get_ovs_slaves_from_state(iface_state, default=()):
     return [p['name'] for p in ports]
 
 
-def _generate_link_master_metadata(ifaces_desired_state,
-                                   ifaces_current_state,
-                                   master_type,
-                                   get_slaves_func,
-                                   set_metadata_func):
+def _generate_link_master_metadata(
+    ifaces_desired_state,
+    ifaces_current_state,
+    master_type,
+    get_slaves_func,
+    set_metadata_func,
+):
     """
     Given master's slaves, add to the slave interface the master information.
 
@@ -136,15 +137,17 @@ def _generate_link_master_metadata(ifaces_desired_state,
             if slave in ifaces_desired_state:
                 set_metadata_func(master_state, ifaces_desired_state[slave])
             elif slave in ifaces_current_state:
-                ifaces_desired_state[slave] = {'name': slave,
-                                               'state': master_state['state']}
+                ifaces_desired_state[slave] = {
+                    'name': slave,
+                    'state': master_state['state'],
+                }
                 set_metadata_func(master_state, ifaces_desired_state[slave])
 
         desired_slaves = get_slaves_func(master_state)
         current_master_state = ifaces_current_state.get(master_name)
         if desired_slaves and current_master_state:
             current_slaves = get_slaves_func(current_master_state)
-            slaves2remove = (set(current_slaves) - set(desired_slaves))
+            slaves2remove = set(current_slaves) - set(desired_slaves)
             for slave in slaves2remove:
                 if slave not in ifaces_desired_state:
                     ifaces_desired_state[slave] = {'name': slave}
@@ -160,13 +163,18 @@ def _generate_link_master_metadata(ifaces_desired_state,
             if slave in ifaces_desired_state:
                 iface_state = ifaces_desired_state.get(master_name, {})
                 master_has_no_slaves_specified_in_desired = (
-                    get_slaves_func(iface_state, None) is None)
+                    get_slaves_func(iface_state, None) is None
+                )
                 slave_has_no_master_specified_in_desired = (
-                    ifaces_desired_state[slave].get(MASTER) is None)
-                if (slave_has_no_master_specified_in_desired and
-                        master_has_no_slaves_specified_in_desired):
+                    ifaces_desired_state[slave].get(MASTER) is None
+                )
+                if (
+                    slave_has_no_master_specified_in_desired
+                    and master_has_no_slaves_specified_in_desired
+                ):
                     set_metadata_func(
-                        master_state, ifaces_desired_state[slave])
+                        master_state, ifaces_desired_state[slave]
+                    )
 
 
 def _generate_route_metadata(desired_state, current_state):
@@ -184,20 +192,20 @@ def _generate_route_metadata(desired_state, current_state):
         elif current_iface_state:
             desired_iface_state = desired_state.interfaces[iface_name] = {
                 Interface.NAME: iface_name,
-                Interface.TYPE: current_iface_state[Interface.TYPE]
+                Interface.TYPE: current_iface_state[Interface.TYPE],
             }
             _attach_route_metadata(desired_iface_state, routes)
 
 
 def _attach_route_metadata(iface_state, routes):
-        _init_iface_route_metadata(iface_state, Interface.IPV4)
-        _init_iface_route_metadata(iface_state, Interface.IPV6)
+    _init_iface_route_metadata(iface_state, Interface.IPV4)
+    _init_iface_route_metadata(iface_state, Interface.IPV6)
 
-        for route in routes:
-            if iplib.is_ipv6_address(route.destination):
-                iface_state[Interface.IPV6][ROUTES].append(route.to_dict())
-            else:
-                iface_state[Interface.IPV4][ROUTES].append(route.to_dict())
+    for route in routes:
+        if iplib.is_ipv6_address(route.destination):
+            iface_state[Interface.IPV6][ROUTES].append(route.to_dict())
+        else:
+            iface_state[Interface.IPV4][ROUTES].append(route.to_dict())
 
 
 def _init_iface_route_metadata(iface_state, ip_key):
@@ -219,18 +227,28 @@ def _generate_dns_metadata(desired_state, current_state):
     if _dns_config_not_changed(desired_state, current_state):
         _preserve_current_dns_metadata(desired_state, current_state)
     else:
-        ifaces_routes = {ifname: [r.to_dict() for r in routes]
-                         for ifname, routes in
-                         six.viewitems(desired_state.config_iface_routes)}
+        ifaces_routes = {
+            ifname: [r.to_dict() for r in routes]
+            for ifname, routes in six.viewitems(
+                desired_state.config_iface_routes
+            )
+        }
         ipv4_iface, ipv6_iface = nm.dns.find_interfaces_for_name_servers(
             ifaces_routes
         )
-        _save_dns_metadata(desired_state, current_state, ipv4_iface,
-                           ipv6_iface, servers, searches)
+        _save_dns_metadata(
+            desired_state,
+            current_state,
+            ipv4_iface,
+            ipv6_iface,
+            servers,
+            searches,
+        )
 
 
-def _save_dns_metadata(desired_state, current_state, ipv4_iface, ipv6_iface,
-                       servers, searches):
+def _save_dns_metadata(
+    desired_state, current_state, ipv4_iface, ipv6_iface, servers, searches
+):
     index = 0
     searches_saved = False
     for server in servers:
@@ -244,10 +262,12 @@ def _save_dns_metadata(desired_state, current_state, ipv4_iface, ipv6_iface,
         if not iface_name:
             raise NmstateValueError(
                 'Failed to find suitable interface for saving DNS '
-                'name servers: %s' % server)
+                'name servers: %s' % server
+            )
 
         _include_name_only_iface_state(
-            desired_state, current_state, [iface_name])
+            desired_state, current_state, [iface_name]
+        )
         iface_state = desired_state.interfaces[iface_name]
         if family not in iface_state:
             iface_state[family] = {}
@@ -256,7 +276,7 @@ def _save_dns_metadata(desired_state, current_state, ipv4_iface, ipv6_iface,
             iface_state[family][DNS_METADATA] = {
                 DNS.SERVER: [server],
                 DNS.SEARCH: [] if searches_saved else searches,
-                DNS_METADATA_PRIORITY: nm.dns.DNS_PRIORITY_STATIC_BASE + index
+                DNS_METADATA_PRIORITY: nm.dns.DNS_PRIORITY_STATIC_BASE + index,
             }
         else:
             iface_state[family][DNS_METADATA][DNS.SERVER].append(server)
@@ -265,14 +285,17 @@ def _save_dns_metadata(desired_state, current_state, ipv4_iface, ipv6_iface,
 
 
 def _include_name_only_iface_state(desired_state, current_state, iface_names):
-    ifnames = (set(iface_names) & set(current_state.interfaces) -
-               set(desired_state.interfaces))
+    ifnames = set(iface_names) & set(current_state.interfaces) - set(
+        desired_state.interfaces
+    )
     for ifname in ifnames:
         desired_state.interfaces[ifname] = {Interface.NAME: ifname}
 
     for iface_name in iface_names:
-        if iface_name not in desired_state.interfaces and \
-           iface_name in current_state.interfaces:
+        if (
+            iface_name not in desired_state.interfaces
+            and iface_name in current_state.interfaces
+        ):
             desired_state.interfaces[iface_name] = {Interface.NAME: iface_name}
 
 
@@ -280,10 +303,11 @@ def _clear_current_dns_config(desired_state, current_state):
     client = nm.nmclient.client()
     current_dns_ifaces = nm.dns.get_dns_config_iface_names(
         nm.ipv4.acs_and_ip_profiles(client),
-        nm.ipv6.acs_and_ip_profiles(client)
+        nm.ipv6.acs_and_ip_profiles(client),
     )
     _include_name_only_iface_state(
-        desired_state, current_state, current_dns_ifaces)
+        desired_state, current_state, current_dns_ifaces
+    )
 
 
 def _dns_config_not_changed(desired_state, current_state):
@@ -297,18 +321,21 @@ def _dns_config_not_changed(desired_state, current_state):
     client = nm.nmclient.client()
     iface_dns_configs = nm.dns.get_indexed_dns_config_by_iface(
         nm.ipv4.acs_and_ip_profiles(client),
-        nm.ipv6.acs_and_ip_profiles(client)
+        nm.ipv6.acs_and_ip_profiles(client),
     )
     for iface_name, iface_dns_config in six.viewitems(iface_dns_configs):
         if iface_name not in desired_state.interfaces:
             continue
         iface_state = desired_state.interfaces[iface_name]
-        if Interface.STATE in iface_state and \
-           iface_state[Interface.STATE] != InterfaceState.UP:
+        if (
+            Interface.STATE in iface_state
+            and iface_state[Interface.STATE] != InterfaceState.UP
+        ):
             return False
         for family in six.viewkeys(iface_dns_config):
-            if family in iface_state and \
-               not iface_state[family].get('enabled'):
+            if family in iface_state and not iface_state[family].get(
+                'enabled'
+            ):
                 return False
     return True
 
@@ -317,7 +344,7 @@ def _preserve_current_dns_metadata(desired_state, current_state):
     client = nm.nmclient.client()
     iface_dns_configs = nm.dns.get_indexed_dns_config_by_iface(
         nm.ipv4.acs_and_ip_profiles(client),
-        nm.ipv6.acs_and_ip_profiles(client)
+        nm.ipv6.acs_and_ip_profiles(client),
     )
     for iface_name, iface_dns_config in six.viewitems(iface_dns_configs):
         if iface_name not in desired_state.interfaces:

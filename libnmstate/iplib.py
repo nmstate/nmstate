@@ -22,9 +22,11 @@ KERNEL_MAIN_ROUTE_TABLE_ID = 254
 
 
 def is_ipv6_link_local_addr(ip, prefix):
-    return (ip[:len(_IPV6_LINK_LOCAL_NETWORK_PREFIXES[0])]
-            in _IPV6_LINK_LOCAL_NETWORK_PREFIXES and
-            prefix >= _IPV6_LINK_LOCAL_NETWORK_PREFIX_LENGTH)
+    return (
+        ip[: len(_IPV6_LINK_LOCAL_NETWORK_PREFIXES[0])]
+        in _IPV6_LINK_LOCAL_NETWORK_PREFIXES
+        and prefix >= _IPV6_LINK_LOCAL_NETWORK_PREFIX_LENGTH
+    )
 
 
 def is_ipv6_address(addr):

@@ -27,5 +27,12 @@ from .netinfo import show
 from .prettystate import PrettyState
 
 
-__all__ = ['show', 'apply', 'commit', 'rollback', 'error', 'schema',
-           'PrettyState']
+__all__ = [
+    'show',
+    'apply',
+    'commit',
+    'rollback',
+    'error',
+    'schema',
+    'PrettyState',
+]

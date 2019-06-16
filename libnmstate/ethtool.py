@@ -49,7 +49,9 @@ def minimal_ethtool(interface):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sockfd = sock.fileno()
 
-        ecmd = array.array('B', struct.pack('I39s', ETHTOOL_GSET, b'\x00'*39))
+        ecmd = array.array(
+            'B', struct.pack('I39s', ETHTOOL_GSET, b'\x00' * 39)
+        )
 
         interface = interface.encode('utf-8')
         ifreq = struct.pack('16sP', interface, ecmd.buffer_info()[0])

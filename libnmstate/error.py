@@ -26,6 +26,7 @@ class NmstateError(Exception):
     """
     The base exception of libnmstate.
     """
+
     pass
 
 
@@ -33,6 +34,7 @@ class NmstateDependencyError(NmstateError):
     """
     Nmstate requires external tools installed and/or started for desired state.
     """
+
     pass
 
 
@@ -44,6 +46,7 @@ class NmstateValueError(NmstateError, ValueError):
         * Nmstate schema issue.
         * Invalid value of desired property, like bond missing slave.
     """
+
     pass
 
 
@@ -51,6 +54,7 @@ class NmstatePermissionError(NmstateError, PermissionError):
     """
     Permission deny when applying the desired state.
     """
+
     pass
 
 
@@ -58,6 +62,7 @@ class NmstateConflictError(NmstateError, RuntimeError):
     """
     Something else is already editing the network state via Nmstate.
     """
+
     pass
 
 
@@ -65,6 +70,7 @@ class NmstateLibnmError(NmstateError):
     """
     Exception for unexpected libnm failure.
     """
+
     pass
 
 
@@ -73,6 +79,7 @@ class NmstateVerificationError(NmstateError):
     After applied desired state, current state does not match desired state for
     unknown reason.
     """
+
     pass
 
 
@@ -80,6 +87,7 @@ class NmstateNotImplementedError(NmstateError, NotImplementedError):
     """
     Desired feature is not supported by Nmstate yet.
     """
+
     pass
 
 
@@ -88,4 +96,5 @@ class NmstateInternalError(NmstateError):
     Unexpected behaviour happened. It is a bug of libnmstate which should be
     fixed.
     """
+
     pass

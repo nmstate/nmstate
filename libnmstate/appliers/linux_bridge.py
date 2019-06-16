@@ -30,8 +30,7 @@ def set_bridge_ports_metadata(master_state, slave_state):
 
     ports = master_state.get('bridge', {}).get('port', [])
     port = next(
-        six.moves.filter(lambda n: n['name'] == slave_state['name'], ports),
-        {}
+        six.moves.filter(lambda n: n['name'] == slave_state['name'], ports), {}
     )
     slave_state['_brport_options'] = port
 

@@ -41,17 +41,21 @@ def show(include_status_data=False):
         report['capabilities'] = capabilities()
 
     report[Constants.ROUTES] = {
-        Route.RUNNING: (nm.ipv4.get_route_running() +
-                        nm.ipv6.get_route_running()),
-        Route.CONFIG: (nm.ipv4.get_route_config() +
-                       nm.ipv6.get_route_config()),
+        Route.RUNNING: (
+            nm.ipv4.get_route_running() + nm.ipv6.get_route_running()
+        ),
+        Route.CONFIG: (
+            nm.ipv4.get_route_config() + nm.ipv6.get_route_config()
+        ),
     }
 
     client = nm.nmclient.client()
     report[Constants.DNS] = {
         DNS.RUNNING: nm_dns.get_running(),
-        DNS.CONFIG: nm_dns.get_config(nm.ipv4.acs_and_ip_profiles(client),
-                                      nm.ipv6.acs_and_ip_profiles(client)),
+        DNS.CONFIG: nm_dns.get_config(
+            nm.ipv4.acs_and_ip_profiles(client),
+            nm.ipv6.acs_and_ip_profiles(client),
+        ),
     }
 
     validator.validate(report)
@@ -72,8 +76,10 @@ def interfaces():
 
     nm.nmclient.client(refresh=True)
 
-    devices_info = [(dev, nm.device.get_device_common_info(dev))
-                    for dev in nm.device.list_devices()]
+    devices_info = [
+        (dev, nm.device.get_device_common_info(dev))
+        for dev in nm.device.list_devices()
+    ]
 
     for dev, devinfo in devices_info:
         type_id = devinfo['type_id']
