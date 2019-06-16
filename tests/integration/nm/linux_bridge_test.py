@@ -31,11 +31,7 @@ ETH1 = 'eth1'
 
 @pytest.fixture
 def bridge_minimum_config():
-    return {
-        LB.CONFIG_SUBTREE: {
-            LB.PORT_SUBTREE: []
-        }
-    }
+    return {LB.CONFIG_SUBTREE: {LB.PORT_SUBTREE: []}}
 
 
 @pytest.fixture
@@ -51,10 +47,10 @@ def bridge_default_config():
                     LB.STP_FORWARD_DELAY: 15,
                     LB.STP_HELLO_TIME: 2,
                     LB.STP_MAX_AGE: 20,
-                    LB.STP_PRIORITY: 32768
-                }
+                    LB.STP_PRIORITY: 32768,
+                },
             },
-            LB.PORT_SUBTREE: []
+            LB.PORT_SUBTREE: [],
         }
     }
 
@@ -78,7 +74,7 @@ def test_create_and_remove_bridge(eth1_up, bridge_default_config):
         LB.PORT_NAME: 'eth1',
         LB.PORT_STP_PRIORITY: 32,
         LB.PORT_STP_HAIRPIN_MODE: False,
-        LB.PORT_STP_PATH_COST: 100
+        LB.PORT_STP_PATH_COST: 100,
     }
 
     bridge_desired_state[LB.CONFIG_SUBTREE][LB.PORT_SUBTREE].append(eth1_port)
@@ -124,8 +120,9 @@ def _attach_port_to_bridge(port_state):
     eth1_nmdev = nm.device.get_device_by_name(port_state['name'])
     curr_port_con_profile = nm.connection.ConnectionProfile()
     curr_port_con_profile.import_by_device(eth1_nmdev)
-    iface_port_settings = _get_iface_port_settings(port_state,
-                                                   curr_port_con_profile)
+    iface_port_settings = _get_iface_port_settings(
+        port_state, curr_port_con_profile
+    )
     port_con_profile = nm.connection.ConnectionProfile()
     port_con_profile.create(iface_port_settings)
 
@@ -147,7 +144,8 @@ def _get_iface_port_settings(port_state, port_con_profile):
     con_setting.set_master(BRIDGE0, 'bridge')
 
     bridge_port_setting = nm.bridge.create_port_setting(
-        port_state, port_con_profile.profile)
+        port_state, port_con_profile.profile
+    )
     return con_setting.setting, bridge_port_setting
 
 
@@ -165,8 +163,9 @@ def _get_iface_bridge_settings(bridge_options):
         iface_name=BRIDGE0,
         iface_type=nm.nmclient.NM.SETTING_BRIDGE_SETTING_NAME,
     )
-    bridge_setting = nm.bridge.create_setting(bridge_options,
-                                              base_con_profile=None)
+    bridge_setting = nm.bridge.create_setting(
+        bridge_options, base_con_profile=None
+    )
     ipv4_setting = nm.ipv4.create_setting({}, None)
     ipv6_setting = nm.ipv6.create_setting({}, None)
     return con_setting.setting, bridge_setting, ipv4_setting, ipv6_setting

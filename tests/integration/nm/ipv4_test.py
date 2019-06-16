@@ -33,9 +33,7 @@ def test_interface_ipv4_change(eth1_up):
             ipv4_state={
                 'enabled': True,
                 'dhcp': False,
-                'address': [
-                    {'ip': IPV4_ADDRESS1, 'prefix-length': 24}
-                ]
+                'address': [{'ip': IPV4_ADDRESS1, 'prefix-length': 24}],
             }
         )
 
@@ -45,9 +43,7 @@ def test_interface_ipv4_change(eth1_up):
     ip4_expected_state = {
         'enabled': True,
         'dhcp': False,
-        'address': [
-            {'ip': IPV4_ADDRESS1, 'prefix-length': 24}
-        ]
+        'address': [{'ip': IPV4_ADDRESS1, 'prefix-length': 24}],
     }
     assert ip4_expected_state == ipv4_current_state
 

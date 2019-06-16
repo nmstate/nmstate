@@ -30,7 +30,7 @@ ETH1 = 'eth1'
 def test_create_and_remove_bond(eth1_up):
     bond_options = {
         schema.Bond.MODE: schema.BondMode.ROUND_ROBIN,
-        'miimon': '140'
+        'miimon': '140',
     }
 
     with _bond_interface(BOND0, bond_options):
@@ -38,7 +38,7 @@ def test_create_and_remove_bond(eth1_up):
 
         bond_desired_state = {
             schema.Bond.SLAVES: [],
-            schema.Bond.OPTIONS_SUBTREE: bond_options
+            schema.Bond.OPTIONS_SUBTREE: bond_options,
         }
         assert bond_desired_state == bond_current_state
 
@@ -74,7 +74,8 @@ def _create_bond(name, options):
 
     con_profile = nm.connection.ConnectionProfile()
     con_profile.create(
-        (con_setting.setting, bond_setting, ipv4_setting, ipv6_setting))
+        (con_setting.setting, bond_setting, ipv4_setting, ipv6_setting)
+    )
     con_profile.add(save_to_disk=False)
     nm.device.activate(connection_id=name)
 

@@ -32,11 +32,7 @@ ETH1 = 'eth1'
 
 @pytest.fixture
 def bridge_minimum_config():
-    return {
-        OB.CONFIG_SUBTREE: {
-            OB.PORT_SUBTREE: []
-        }
-    }
+    return {OB.CONFIG_SUBTREE: {OB.PORT_SUBTREE: []}}
 
 
 @pytest.fixture
@@ -47,15 +43,16 @@ def bridge_default_config():
                 OB.FAIL_MODE: '',
                 OB.MCAST_SNOOPING_ENABLED: False,
                 OB.RSTP: False,
-                OB.STP: False
+                OB.STP: False,
             },
-            OB.PORT_SUBTREE: []
+            OB.PORT_SUBTREE: [],
         }
     }
 
 
-def test_create_and_remove_minimum_config_bridge(bridge_minimum_config,
-                                                 bridge_default_config):
+def test_create_and_remove_minimum_config_bridge(
+    bridge_minimum_config, bridge_default_config
+):
     bridge_desired_state = bridge_minimum_config
 
     with _bridge_interface(bridge_desired_state):
@@ -89,10 +86,7 @@ def test_bridge_with_system_port(eth1_up, bridge_default_config):
 def test_bridge_with_internal_interface(eth1_up, bridge_default_config):
     bridge_desired_state = bridge_default_config
 
-    ovs_port = {
-        OB.PORT_NAME: 'ovs0',
-        OB.PORT_TYPE: OBPortType.INTERNAL,
-    }
+    ovs_port = {OB.PORT_NAME: 'ovs0', OB.PORT_TYPE: OBPortType.INTERNAL}
 
     bridge_desired_state[OB.CONFIG_SUBTREE][OB.PORT_SUBTREE].append(ovs_port)
 
@@ -120,8 +114,10 @@ def _get_bridge_current_state():
     state = {}
     nmdev = nm.device.get_device_by_name(BRIDGE0)
     if nmdev:
-        devices_info = [(dev, nm.device.get_device_common_info(dev))
-                        for dev in nm.device.list_devices()]
+        devices_info = [
+            (dev, nm.device.get_device_common_info(dev))
+            for dev in nm.device.list_devices()
+        ]
         state = nm.ovs.get_bridge_info(nmdev, devices_info)
     return state
 
@@ -149,8 +145,7 @@ def _attach_port_to_bridge(port_state):
 
 
 def _create_internal_interface(iface_name, master_name):
-    iface_settings = _create_internal_iface_setting(iface_name,
-                                                    master_name)
+    iface_settings = _create_internal_iface_setting(iface_name, master_name)
     iface_con_profile = nm.connection.ConnectionProfile()
     iface_con_profile.create(iface_settings)
     iface_con_profile.add(save_to_disk=False)
@@ -161,8 +156,9 @@ def _connect_interface(port_profile_name, port_state):
     iface_nmdev = nm.device.get_device_by_name(port_state[OB.PORT_NAME])
     curr_iface_con_profile = nm.connection.ConnectionProfile()
     curr_iface_con_profile.import_by_device(iface_nmdev)
-    slave_iface_settings = _create_iface_settings(curr_iface_con_profile,
-                                                  port_profile_name)
+    slave_iface_settings = _create_iface_settings(
+        curr_iface_con_profile, port_profile_name
+    )
     iface_con_profile = nm.connection.ConnectionProfile()
     iface_con_profile.create(slave_iface_settings)
     curr_iface_con_profile.update(iface_con_profile)
@@ -197,7 +193,7 @@ def _create_port_setting(port_state, port_profile_name):
     iface_con_setting.create(
         con_name=port_profile_name,
         iface_name=port_profile_name,
-        iface_type=nm.ovs.PORT_TYPE
+        iface_type=nm.ovs.PORT_TYPE,
     )
     iface_con_setting.set_master(BRIDGE0, nm.ovs.BRIDGE_TYPE)
     port_options = nm.ovs.translate_port_options(port_state)
@@ -210,7 +206,7 @@ def _create_internal_iface_setting(iface_name, master_name):
     iface_con_setting.create(
         con_name=iface_name,
         iface_name=iface_name,
-        iface_type=nm.ovs.INTERNAL_INTERFACE_TYPE
+        iface_type=nm.ovs.INTERNAL_INTERFACE_TYPE,
     )
     iface_con_setting.set_master(master_name, nm.ovs.PORT_TYPE)
     bridge_internal_iface_setting = nm.ovs.create_interface_setting()
@@ -220,7 +216,7 @@ def _create_internal_iface_setting(iface_name, master_name):
         iface_con_setting.setting,
         bridge_internal_iface_setting,
         ipv4_setting,
-        ipv6_setting
+        ipv6_setting,
     )
 
 
@@ -230,9 +226,10 @@ def _delete_iface(devname):
         if nmdev:
             nm.device.delete(nmdev)
             if nmdev.get_device_type() in (
-                    nm.nmclient.NM.DeviceType.OVS_BRIDGE,
-                    nm.nmclient.NM.DeviceType.OVS_PORT,
-                    nm.nmclient.NM.DeviceType.OVS_INTERFACE):
+                nm.nmclient.NM.DeviceType.OVS_BRIDGE,
+                nm.nmclient.NM.DeviceType.OVS_PORT,
+                nm.nmclient.NM.DeviceType.OVS_INTERFACE,
+            ):
                 nm.device.delete_device(nmdev)
         else:
             con_profile = nm.connection.ConnectionProfile()

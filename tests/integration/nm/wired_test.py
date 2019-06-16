@@ -42,15 +42,17 @@ def test_interface_mtu_change_with_modify(eth1_up):
 def _test_interface_mtu_change(apply_operation):
     wired_base_state = _get_wired_current_state(ETH1)
     with mainloop():
-        _modify_interface(wired_state={schema.Interface.MTU: MTU0},
-                          apply_operation=apply_operation)
+        _modify_interface(
+            wired_state={schema.Interface.MTU: MTU0},
+            apply_operation=apply_operation,
+        )
 
     nm.nmclient.client(refresh=True)
     wired_current_state = _get_wired_current_state(ETH1)
 
     assert wired_current_state == {
         schema.Interface.MAC: wired_base_state[schema.Interface.MAC],
-        schema.Interface.MTU: MTU0
+        schema.Interface.MTU: MTU0,
     }
 
 
@@ -66,15 +68,17 @@ def test_interface_mac_change_with_modify(eth1_up):
 def _test_interface_mac_change(apply_operation):
     wired_base_state = _get_wired_current_state(ETH1)
     with mainloop():
-        _modify_interface(wired_state={schema.Interface.MAC: MAC0},
-                          apply_operation=apply_operation)
+        _modify_interface(
+            wired_state={schema.Interface.MAC: MAC0},
+            apply_operation=apply_operation,
+        )
 
     nm.nmclient.client(refresh=True)
     wired_current_state = _get_wired_current_state(ETH1)
 
     assert wired_current_state == {
         schema.Interface.MAC: MAC0,
-        schema.Interface.MTU: wired_base_state[schema.Interface.MTU]
+        schema.Interface.MTU: wired_base_state[schema.Interface.MTU],
     }
 
 
@@ -100,8 +104,7 @@ def _create_iface_settings(wired_state, con_profile):
     con_setting = nm.connection.ConnectionSetting()
     con_setting.import_by_profile(con_profile)
 
-    wired_setting = nm.wired.create_setting(wired_state,
-                                            con_profile.profile)
+    wired_setting = nm.wired.create_setting(wired_state, con_profile.profile)
     ipv4_setting = nm.ipv4.create_setting({}, None)
     ipv6_setting = nm.ipv6.create_setting({}, None)
 
