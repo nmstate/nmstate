@@ -15,6 +15,9 @@ TEST_TYPE_UNIT_PY36="unit_py36"
 TEST_TYPE_UNIT_PY37="unit_py37"
 TEST_TYPE_INTEG="integ"
 
+FEDORA_IMAGE_DEV="nmstate/fedora-nmstate-dev"
+CENTOS_IMAGE_DEV="nmstate/centos7-nmstate-dev"
+
 test -t 1 && USE_TTY="-t"
 
 function remove_container {
@@ -163,6 +166,21 @@ function rebuild_container_images {
     fi
 }
 
+function upgrade_nm_from_copr {
+    local copr_repo=$1
+    # The repoid for a Copr repo is the name with the slash replaces by a dash
+    local copr_repo_id="${copr_repo/\//-}"
+    docker_exec "command -v dnf && plugin='dnf-command(copr)' || plugin='yum-plugin-copr'; yum install --assumeyes \$plugin;"
+    docker_exec "yum copr enable --assumeyes ${copr_repo}"
+    # Update only from Copr to limit the changes in the environment
+    docker_exec "yum update --assumeyes --disablerepo '*' --enablerepo '${copr_repo_id}'"
+    docker_exec "systemctl restart NetworkManager"
+}
+
+function modprobe_ovs {
+    lsmod | grep -q ^openvswitch || modprobe openvswitch || { echo 1>&2 "Please run 'modprobe openvswitch' as root"; exit 1; }
+}
+
 options=$(getopt --options "" \
     --long customize:,pytest-args:,help,debug-shell,test-type:,el7,copr:\
     -- "${@}")
@@ -189,7 +207,7 @@ while true; do
         TEST_TYPE="$1"
         ;;
     --el7)
-        DOCKER_IMAGE="nmstate/centos7-nmstate-dev"
+        DOCKER_IMAGE=$CENTOS_IMAGE_DEV
         ;;
     --help)
         set +x
@@ -215,36 +233,26 @@ while true; do
     shift
 done
 
-#Valid TEST_TYPE are: all, lint, unit_py27, unit_py36, unit_py37, integ.
 : ${TEST_TYPE:=$TEST_TYPE_ALL}
-: ${DOCKER_IMAGE:=nmstate/fedora-nmstate-dev}
+: ${DOCKER_IMAGE:=$FEDORA_IMAGE_DEV}
 
-cd $EXEC_PATH
 docker --version && cat /etc/resolv.conf
 
-mkdir -p $EXPORT_DIR
-
-lsmod | grep -q ^openvswitch || modprobe openvswitch || { echo 1>&2 "Please run 'modprobe openvswitch' as root"; exit 1; }
+modprobe_ovs
 
 if [[ "$CI" == "true" ]];then
     rebuild_container_images
 fi
 
+mkdir -p $EXPORT_DIR
 CONTAINER_ID="$(docker run --privileged -d -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v $PROJECT_PATH:/workspace/nmstate -v $EXPORT_DIR:$CONT_EXPORT_DIR $DOCKER_IMAGE)"
 [ -n "$debug_exit_shell" ] && trap open_shell EXIT || trap run_exit EXIT
-if [[ -v copr_repo ]]
-then
-    # The repoid for a Copr repo is the name with the slash replaces by a dash
-    copr_repo_id="${copr_repo/\//-}"
-    docker_exec "command -v dnf && plugin='dnf-command(copr)' || plugin='yum-plugin-copr'; yum install --assumeyes \$plugin;"
-    docker_exec "yum copr enable --assumeyes ${copr_repo}"
-    # Update only from Copr to limit the changes in the environment
-    docker_exec "yum update --assumeyes --disablerepo '*' --enablerepo '${copr_repo_id}'"
-    docker_exec "systemctl restart NetworkManager"
+
+if [[ -v copr_repo ]];then
+    upgrade_nm_from_copr copr_repo
 fi
 
-if [[ -v customize_cmd ]]
-then
+if [[ -v customize_cmd ]];then
     docker_exec "${customize_cmd}"
 fi
 
