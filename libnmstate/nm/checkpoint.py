@@ -74,8 +74,9 @@ class _NMDbusManager(object):
     OBJ_PATH = '/org/freedesktop/NetworkManager'
 
     def __init__(self):
-        mng_proxy = _NMDbus.bus.get_object(_NMDbus.BUS_NAME,
-                                           _NMDbusManager.OBJ_PATH)
+        mng_proxy = _NMDbus.bus.get_object(
+            _NMDbus.BUS_NAME, _NMDbusManager.OBJ_PATH
+        )
         self.properties = dbus.Interface(mng_proxy, DBUS_STD_PROPERTIES_IFNAME)
         self.interface = dbus.Interface(mng_proxy, _NMDbusManager.IF_NAME)
 
@@ -87,7 +88,6 @@ def get_checkpoints():
 
 
 class CheckPoint(object):
-
     def __init__(self, timeout=60, autodestroy=True, dbuspath=None):
         self._manager = nmdbus_manager()
         self._timeout = timeout
@@ -111,14 +111,16 @@ class CheckPoint(object):
         devs = []
         timeout = self._timeout
         cp_flags = (
-            CHECKPOINT_CREATE_FLAG_DELETE_NEW_CONNECTIONS |
-            CHECKPOINT_CREATE_FLAG_DISCONNECT_NEW_DEVICES
+            CHECKPOINT_CREATE_FLAG_DELETE_NEW_CONNECTIONS
+            | CHECKPOINT_CREATE_FLAG_DISCONNECT_NEW_DEVICES
         )
         try:
-            dbuspath = self._manager.interface.CheckpointCreate(devs, timeout,
-                                                                cp_flags)
-            logging.debug('Checkpoint %s created for all devices: %s',
-                          dbuspath, timeout)
+            dbuspath = self._manager.interface.CheckpointCreate(
+                devs, timeout, cp_flags
+            )
+            logging.debug(
+                'Checkpoint %s created for all devices: %s', dbuspath, timeout
+            )
             self._dbuspath = dbuspath
         except dbus.exceptions.DBusException as e:
             if e.get_dbus_name() == NM_PERMISSION_DENIED:
@@ -135,12 +137,12 @@ class CheckPoint(object):
 
     def rollback(self):
         try:
-            result = self._manager.interface.CheckpointRollback(
-                self._dbuspath)
+            result = self._manager.interface.CheckpointRollback(self._dbuspath)
         except dbus.exceptions.DBusException as e:
             raise NMCheckPointError(str(e))
-        logging.debug('Checkpoint %s rollback executed: %s', self._dbuspath,
-                      result)
+        logging.debug(
+            'Checkpoint %s rollback executed: %s', self._dbuspath, result
+        )
         return result
 
     @property

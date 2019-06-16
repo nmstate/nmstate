@@ -44,33 +44,38 @@ def create_setting(config, base_con_profile):
     if not setting_ipv4:
         setting_ipv4 = nmclient.NM.SettingIP4Config.new()
 
-    setting_ipv4.props.method = (
-        nmclient.NM.SETTING_IP4_CONFIG_METHOD_DISABLED)
+    setting_ipv4.props.method = nmclient.NM.SETTING_IP4_CONFIG_METHOD_DISABLED
     if config and config.get('enabled'):
         if config.get('dhcp'):
             setting_ipv4.props.method = (
-                nmclient.NM.SETTING_IP4_CONFIG_METHOD_AUTO)
-            setting_ipv4.props.ignore_auto_routes = (
-                not config.get('auto-routes', True))
-            setting_ipv4.props.never_default = (
-                not config.get('auto-gateway', True))
-            setting_ipv4.props.ignore_auto_dns = (
-                not config.get('auto-dns', True))
+                nmclient.NM.SETTING_IP4_CONFIG_METHOD_AUTO
+            )
+            setting_ipv4.props.ignore_auto_routes = not config.get(
+                'auto-routes', True
+            )
+            setting_ipv4.props.never_default = not config.get(
+                'auto-gateway', True
+            )
+            setting_ipv4.props.ignore_auto_dns = not config.get(
+                'auto-dns', True
+            )
         elif config.get('address'):
             setting_ipv4.props.method = (
-                nmclient.NM.SETTING_IP4_CONFIG_METHOD_MANUAL)
+                nmclient.NM.SETTING_IP4_CONFIG_METHOD_MANUAL
+            )
             _add_addresses(setting_ipv4, config['address'])
         nm_route.add_routes(
-            setting_ipv4, config.get(nm_route.ROUTE_METADATA, []))
+            setting_ipv4, config.get(nm_route.ROUTE_METADATA, [])
+        )
         nm_dns.add_dns(setting_ipv4, config.get(nm_dns.DNS_METADATA, {}))
     return setting_ipv4
 
 
 def _add_addresses(setting_ipv4, addresses):
     for address in addresses:
-        naddr = nmclient.NM.IPAddress.new(socket.AF_INET,
-                                          address['ip'],
-                                          address['prefix-length'])
+        naddr = nmclient.NM.IPAddress.new(
+            socket.AF_INET, address['ip'], address['prefix-length']
+        )
         setting_ipv4.add_address(naddr)
 
 
@@ -88,7 +93,8 @@ def get_info(active_connection):
     ip_profile = get_ip_profile(active_connection)
     if ip_profile:
         info['dhcp'] = ip_profile.get_method() == (
-            nmclient.NM.SETTING_IP4_CONFIG_METHOD_AUTO)
+            nmclient.NM.SETTING_IP4_CONFIG_METHOD_AUTO
+        )
         if info['dhcp']:
             info['auto-routes'] = not ip_profile.props.ignore_auto_routes
             info['auto-gateway'] = not ip_profile.props.never_default
@@ -111,7 +117,7 @@ def get_info(active_connection):
     addresses = [
         {
             'ip': address.get_address(),
-            'prefix-length': int(address.get_prefix())
+            'prefix-length': int(address.get_prefix()),
         }
         for address in ip4config.get_addresses()
     ]

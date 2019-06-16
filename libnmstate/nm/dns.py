@@ -40,10 +40,7 @@ IPV6_ADDRESS_LENGTH = 128
 
 
 def get_running():
-    dns_state = {
-        DNS.SERVER: [],
-        DNS.SEARCH: []
-    }
+    dns_state = {DNS.SERVER: [], DNS.SEARCH: []}
     client = nmclient.client()
     for dns_conf in client.get_dns_configuration():
         iface_name = dns_conf.get_interface()
@@ -54,7 +51,8 @@ def get_running():
                     # appended also.
                     raise NmstateInternalError(
                         'Missing interface for IPv6 link-local DNS server '
-                        'entry {}'.format(ns))
+                        'entry {}'.format(ns)
+                    )
                 ns_addr = '{}%{}'.format(ns, iface_name)
             else:
                 ns_addr = ns
@@ -66,10 +64,7 @@ def get_running():
 
 
 def get_config(acs_and_ipv4_profiles, acs_and_ipv6_profiles):
-    dns_conf = {
-        DNS.SERVER: [],
-        DNS.SEARCH: []
-    }
+    dns_conf = {DNS.SERVER: [], DNS.SEARCH: []}
     tmp_dns_confs = []
     for ac, ip_profile in chain(acs_and_ipv6_profiles, acs_and_ipv4_profiles):
         if not ip_profile.props.dns and not ip_profile.props.dns_search:
@@ -133,12 +128,15 @@ def find_interfaces_for_name_servers(iface_routes):
     Return two interface names for IPv4 and IPv6 name servers.
     The interface name will be None if failed to find proper interface.
     """
-    return (nm_route.get_static_gateway_iface(Interface.IPV4, iface_routes),
-            nm_route.get_static_gateway_iface(Interface.IPV6, iface_routes))
+    return (
+        nm_route.get_static_gateway_iface(Interface.IPV4, iface_routes),
+        nm_route.get_static_gateway_iface(Interface.IPV6, iface_routes),
+    )
 
 
-def get_indexed_dns_config_by_iface(acs_and_ipv4_profiles,
-                                    acs_and_ipv6_profiles):
+def get_indexed_dns_config_by_iface(
+    acs_and_ipv4_profiles, acs_and_ipv6_profiles
+):
     """
     Get current DNS config indexed by interface name.
     Return dict like {
@@ -160,13 +158,15 @@ def get_indexed_dns_config_by_iface(acs_and_ipv4_profiles,
     for ac, ip_profile in acs_and_ipv6_profiles:
         if ip_profile.props.dns or ip_profile.props.dns_search:
             iface_name = nm_ac.ActiveConnection(ac).devname
-            iface_dns_configs[iface_name][Interface.IPV6] = (
-                _get_ip_profile_dns_config(ip_profile))
+            iface_dns_configs[iface_name][
+                Interface.IPV6
+            ] = _get_ip_profile_dns_config(ip_profile)
     for ac, ip_profile in acs_and_ipv4_profiles:
         if ip_profile.props.dns or ip_profile.props.dns_search:
             iface_name = nm_ac.ActiveConnection(ac).devname
-            iface_dns_configs[iface_name][Interface.IPV4] = (
-                _get_ip_profile_dns_config(ip_profile))
+            iface_dns_configs[iface_name][
+                Interface.IPV4
+            ] = _get_ip_profile_dns_config(ip_profile)
 
     return iface_dns_configs
 
@@ -175,5 +175,5 @@ def _get_ip_profile_dns_config(ip_profile):
     return {
         DNS.SERVER: ip_profile.props.dns,
         DNS.SEARCH: ip_profile.props.dns_search,
-        DNS_METADATA_PRIORITY: ip_profile.props.dns_priority
+        DNS_METADATA_PRIORITY: ip_profile.props.dns_priority,
     }

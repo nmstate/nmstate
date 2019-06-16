@@ -39,7 +39,8 @@ def create_setting(iface_state, base_con_profile):
     user_setting = None
     if base_con_profile:
         user_setting = base_con_profile.get_setting_by_name(
-            nmclient.NM.SETTING_USER_SETTING_NAME)
+            nmclient.NM.SETTING_USER_SETTING_NAME
+        )
         if user_setting:
             user_setting = user_setting.duplicate()
 
@@ -63,7 +64,8 @@ def get_info(device):
 
     try:
         user_setting = connection.profile.get_setting_by_name(
-            nmclient.NM.SETTING_USER_SETTING_NAME)
+            nmclient.NM.SETTING_USER_SETTING_NAME
+        )
         description = user_setting.get_data(NMSTATE_DESCRIPTION)
         if description:
             info['description'] = description

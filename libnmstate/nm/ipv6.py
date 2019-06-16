@@ -68,7 +68,7 @@ def get_info(active_connection):
     addresses = [
         {
             'ip': address.get_address(),
-            'prefix-length': int(address.get_prefix())
+            'prefix-length': int(address.get_prefix()),
         }
         for address in ipconfig.get_addresses()
     ]
@@ -102,8 +102,7 @@ def create_setting(config, base_con_profile):
         setting_ip = nmclient.NM.SettingIP6Config.new()
 
     if not config or not config.get('enabled'):
-        setting_ip.props.method = (
-            nmclient.NM.SETTING_IP6_CONFIG_METHOD_IGNORE)
+        setting_ip.props.method = nmclient.NM.SETTING_IP6_CONFIG_METHOD_IGNORE
         return setting_ip
 
     is_dhcp = config.get('dhcp', False)
@@ -112,17 +111,17 @@ def create_setting(config, base_con_profile):
 
     if is_dhcp or is_autoconf:
         _set_dynamic(setting_ip, is_dhcp, is_autoconf)
-        setting_ip.props.ignore_auto_routes = (
-            not config.get('auto-routes', True))
-        setting_ip.props.never_default = (
-            not config.get('auto-gateway', True))
-        setting_ip.props.ignore_auto_dns = (
-            not config.get('auto-dns', True))
+        setting_ip.props.ignore_auto_routes = not config.get(
+            'auto-routes', True
+        )
+        setting_ip.props.never_default = not config.get('auto-gateway', True)
+        setting_ip.props.ignore_auto_dns = not config.get('auto-dns', True)
     elif ip_addresses:
         _set_static(setting_ip, ip_addresses)
     else:
         setting_ip.props.method = (
-            nmclient.NM.SETTING_IP6_CONFIG_METHOD_LINK_LOCAL)
+            nmclient.NM.SETTING_IP6_CONFIG_METHOD_LINK_LOCAL
+        )
 
     nm_route.add_routes(setting_ip, config.get(nm_route.ROUTE_METADATA, []))
     nm_dns.add_dns(setting_ip, config.get(nm_dns.DNS_METADATA, {}))
@@ -132,36 +131,37 @@ def create_setting(config, base_con_profile):
 def _set_dynamic(setting_ip, is_dhcp, is_autoconf):
     if not is_dhcp and is_autoconf:
         raise NmstateNotImplementedError(
-            'Autoconf without DHCP is not supported yet')
+            'Autoconf without DHCP is not supported yet'
+        )
 
     if is_dhcp and is_autoconf:
-        setting_ip.props.method = (
-            nmclient.NM.SETTING_IP6_CONFIG_METHOD_AUTO)
+        setting_ip.props.method = nmclient.NM.SETTING_IP6_CONFIG_METHOD_AUTO
     elif is_dhcp and not is_autoconf:
-        setting_ip.props.method = (
-            nmclient.NM.SETTING_IP6_CONFIG_METHOD_DHCP)
+        setting_ip.props.method = nmclient.NM.SETTING_IP6_CONFIG_METHOD_DHCP
 
 
 def _set_static(setting_ip, ip_addresses):
     for address in ip_addresses:
-        if iplib.is_ipv6_link_local_addr(address['ip'],
-                                         address['prefix-length']):
-            logging.warning('IPv6 link local address '
-                            '{a[ip]}/{a[prefix-length]} is ignored '
-                            'when applying desired state'
-                            .format(a=address))
+        if iplib.is_ipv6_link_local_addr(
+            address['ip'], address['prefix-length']
+        ):
+            logging.warning(
+                'IPv6 link local address '
+                '{a[ip]}/{a[prefix-length]} is ignored '
+                'when applying desired state'.format(a=address)
+            )
         else:
-            naddr = nmclient.NM.IPAddress.new(socket.AF_INET6,
-                                              address['ip'],
-                                              address['prefix-length'])
+            naddr = nmclient.NM.IPAddress.new(
+                socket.AF_INET6, address['ip'], address['prefix-length']
+            )
             setting_ip.add_address(naddr)
 
     if setting_ip.props.addresses:
-        setting_ip.props.method = (
-            nmclient.NM.SETTING_IP6_CONFIG_METHOD_MANUAL)
+        setting_ip.props.method = nmclient.NM.SETTING_IP6_CONFIG_METHOD_MANUAL
     else:
         setting_ip.props.method = (
-            nmclient.NM.SETTING_IP6_CONFIG_METHOD_LINK_LOCAL)
+            nmclient.NM.SETTING_IP6_CONFIG_METHOD_LINK_LOCAL
+        )
 
 
 def get_ip_profile(active_connection):

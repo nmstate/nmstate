@@ -23,9 +23,10 @@ import logging
 import six
 
 import gi
+
 try:
     gi.require_version('NM', '1.0')  # NOQA: F402
-    from gi.repository import NM     # pylint: disable=no-name-in-module
+    from gi.repository import NM  # pylint: disable=no-name-in-module
 except ValueError:
     NM = None
 
@@ -55,7 +56,8 @@ def client(refresh=False):
                 'Check the documentation for more information.'
             )
             raise error.NmstateDependencyError(
-                'Missing introspection data for libnm')
+                'Missing introspection data for libnm'
+            )
     return _nmclient
 
 
@@ -122,7 +124,8 @@ class _MainLoop(object):
     def run(self, timeout):
         if not isinstance(timeout, six.integer_types):
             raise error.NmstateValueError(
-                "Invalid timeout value: should be an integer")
+                "Invalid timeout value: should be an integer"
+            )
 
         if not self.actions_exists():
             return _MainLoop.SUCCESS
@@ -167,9 +170,11 @@ class _MainLoop(object):
         self._cancel_cancellables()
 
     def is_action_canceled(self, err):
-        return (isinstance(err, GLib.GError) and
-                err.domain == 'g-io-error-quark' and
-                err.code == Gio.IOErrorEnum.CANCELLED)
+        return (
+            isinstance(err, GLib.GError)
+            and err.domain == 'g-io-error-quark'
+            and err.code == Gio.IOErrorEnum.CANCELLED
+        )
 
     @property
     def error(self):
@@ -180,9 +185,7 @@ class _MainLoop(object):
         timeout_result = []
         data = (self._mainloop, timeout_result)
         timeout_id = GLib.timeout_add(
-            int(timeout * 1000),
-            _MainLoop._timeout_cb,
-            data
+            int(timeout * 1000), _MainLoop._timeout_cb, data
         )
         yield
         if timeout_result:

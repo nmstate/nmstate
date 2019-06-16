@@ -45,11 +45,11 @@ class WiredSetting(object):
 
     def __bool__(self):
         return bool(
-            self.mac or
-            self.mtu or
-            self.speed or
-            self.duplex or
-            (self.auto_negotiation is not None)
+            self.mac
+            or self.mtu
+            or self.speed
+            or self.duplex
+            or (self.auto_negotiation is not None)
         )
 
     # TODO: drop when py2 is no longer needed
@@ -61,7 +61,7 @@ class WiredSetting(object):
             self.mac,
             self.speed,
             self.duplex,
-            self.auto_negotiation
+            self.auto_negotiation,
         )
 
 
