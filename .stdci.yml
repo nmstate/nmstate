@@ -1,7 +1,8 @@
 ---
 Architectures:
   - x86_64:
-      Distributions: ["el7"]
+      Distributions:
+        - fc29
       runtime-requirements:
         host-distro: same
 script:
