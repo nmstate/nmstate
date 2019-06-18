@@ -376,3 +376,23 @@ def test_remove_wildcast_route_without_iface(eth1_up, get_routes_func):
 
     cur_state = libnmstate.show()
     _assert_routes(expected_routes, cur_state)
+
+
+# TODO: Once we can disable IPv6, we should add an IPv6 test case here
+def test_disable_ipv4_with_routes_in_current(eth1_up):
+    libnmstate.apply({
+        Interface.KEY: [ETH1_INTERFACE_STATE],
+        Route.KEY: {
+            Route.CONFIG: _get_ipv4_test_routes(),
+        }
+    })
+
+    eth1_state = copy.deepcopy(ETH1_INTERFACE_STATE)
+    eth1_state[Interface.IPV4] = {'enabled': False}
+
+    libnmstate.apply({
+        Interface.KEY: [eth1_state],
+    })
+
+    cur_state = libnmstate.show()
+    _assert_routes([], cur_state)
