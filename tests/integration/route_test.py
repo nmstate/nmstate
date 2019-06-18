@@ -125,6 +125,38 @@ def test_multiple_gateway(eth1_up):
         })
 
 
+def test_change_gateway(eth1_up):
+    libnmstate.apply({
+        Interface.KEY: [ETH1_INTERFACE_STATE],
+        Route.KEY: {
+            Route.CONFIG: [_get_ipv4_gateways()[0],
+                           _get_ipv6_gateways()[0]]
+        }
+    })
+
+    routes = [_get_ipv4_gateways()[1], _get_ipv6_gateways()[1]]
+    libnmstate.apply({
+        Interface.KEY: [ETH1_INTERFACE_STATE],
+        Route.KEY: {
+            Route.CONFIG: [
+                {
+                    Route.STATE: Route.STATE_ABSENT,
+                    Route.NEXT_HOP_INTERFACE: 'eth1',
+                    Route.DESTINATION: '0.0.0.0/0'
+                },
+                {
+                    Route.STATE: Route.STATE_ABSENT,
+                    Route.NEXT_HOP_INTERFACE: 'eth1',
+                    Route.DESTINATION: '::/0'
+                }
+            ] + routes,
+        },
+    })
+
+    cur_state = libnmstate.show()
+    _assert_routes(routes, cur_state)
+
+
 def _assert_routes(routes, state):
     """
     Assuming we are all operating eth1 routes
