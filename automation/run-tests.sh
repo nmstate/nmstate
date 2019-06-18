@@ -255,7 +255,7 @@ CONTAINER_ID="$(docker run --privileged -d -v /sys/fs/cgroup:/sys/fs/cgroup:ro -
 [ -n "$debug_exit_shell" ] && trap open_shell EXIT || trap run_exit EXIT
 
 if [[ -v copr_repo ]];then
-    upgrade_nm_from_copr copr_repo
+    upgrade_nm_from_copr "${copr_repo}"
 fi
 
 if [[ -v customize_cmd ]];then
