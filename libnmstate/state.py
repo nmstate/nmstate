@@ -77,10 +77,12 @@ class RouteEntry(object):
         return self is other or self.__keys() == other.__keys()
 
     def __lt__(self, other):
-        return (
-            (self.table_id, self.next_hop_interface, self.destination) <
-            (other.table_id, other.next_hop_interface, other.destination)
-        )
+        return ((self.table_id or Route.USE_DEFAULT_ROUTE_TABLE,
+                 self.next_hop_interface or '',
+                 self.destination or '') <
+                (other.table_id or Route.USE_DEFAULT_ROUTE_TABLE,
+                 other.next_hop_interface or '',
+                 other.destination or ''))
 
     def __repr__(self):
         return str(self.to_dict())

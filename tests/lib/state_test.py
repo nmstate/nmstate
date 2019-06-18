@@ -277,6 +277,27 @@ class TestRouteEntry(object):
         ]
         assert expected_routes == sorted(routes)
 
+    @parametrize_route_property
+    def test_sort_routes_with_absent_route(self, route_property):
+        absent_route = _create_route('198.51.100.0/24', '192.0.1.1', 'eth0',
+                                     9, 103).to_dict()
+        absent_route[Route.STATE] = Route.STATE_ABSENT
+        del absent_route[route_property]
+        absent_route = state.RouteEntry(absent_route)
+        routes = [
+            absent_route,
+            _create_route('198.51.100.1/24', '192.0.2.1', 'eth0', 50, 103),
+            _create_route('198.51.100.0/24', '192.0.2.1', 'eth0', 50, 103),
+            _create_route('198.51.100.0/24', '192.0.2.1', 'eth1', 10, 103),
+        ]
+        expected_routes = [
+            absent_route,
+            _create_route('198.51.100.0/24', '192.0.2.1', 'eth1', 10, 103),
+            _create_route('198.51.100.0/24', '192.0.2.1', 'eth0', 50, 103),
+            _create_route('198.51.100.1/24', '192.0.2.1', 'eth0', 50, 103),
+        ]
+        assert expected_routes == sorted(routes)
+
 
 def _create_route(dest, via_addr, via_iface, table, metric):
     return state.RouteEntry(
