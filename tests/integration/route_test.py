@@ -396,3 +396,24 @@ def test_disable_ipv4_with_routes_in_current(eth1_up):
 
     cur_state = libnmstate.show()
     _assert_routes([], cur_state)
+
+
+@parametrize_ip_ver_routes
+def test_iface_down_with_routes_in_current(eth1_up, get_routes_func):
+    libnmstate.apply({
+        Interface.KEY: [ETH1_INTERFACE_STATE],
+        Route.KEY: {
+            Route.CONFIG: get_routes_func()
+        }
+    })
+
+    libnmstate.apply({
+        Interface.KEY: [{
+            Interface.NAME: 'eth1',
+            Interface.TYPE: InterfaceType.ETHERNET,
+            Interface.STATE: InterfaceState.DOWN
+        }]
+    })
+
+    cur_state = libnmstate.show()
+    _assert_routes([], cur_state)
