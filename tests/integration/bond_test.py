@@ -266,3 +266,32 @@ def test_set_bond_mac_address(eth1_up):
         assert bond99_cur_state[Interface.MAC] == MAC1.upper()
         assert bond99_cur_state[Interface.MAC] == eth1_cur_state[Interface.MAC]
 
+
+@pytest.fixture
+def bond99():
+    with bond_interface(name='bond99', slaves=['eth1', 'eth2']) as bond_state:
+        yield bond_state
+
+
+def test_reordering_the_slaves_does_not_change_the_mac(bond99):
+    state = statelib.show_only(('bond99', 'eth1', 'eth2'))
+    bond99_state = state[Interface.KEY][0]
+    eth1_state = state[Interface.KEY][1]
+    eth2_state = state[Interface.KEY][2]
+
+    assert (bond99_state[Interface.MAC] ==
+            eth1_state[Interface.MAC] ==
+            eth2_state[Interface.MAC])
+
+    bond99[INTERFACES][0]['link-aggregation']['slaves'].reverse()
+    libnmstate.apply(bond99)
+
+    modified_state = statelib.show_only(('bond99', 'eth1', 'eth2'))
+    bond99_modified_state = modified_state[Interface.KEY][0]
+    eth1_modified_state = modified_state[Interface.KEY][1]
+    eth2_modified_state = modified_state[Interface.KEY][2]
+
+    assert (bond99_modified_state[Interface.MAC] ==
+            eth1_modified_state[Interface.MAC] ==
+            eth2_modified_state[Interface.MAC] ==
+            bond99_state[Interface.MAC])
