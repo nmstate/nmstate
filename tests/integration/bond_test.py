@@ -251,13 +251,18 @@ def test_set_bond_mac_address(eth1_up):
         bond_state[Interface.KEY][0][Interface.MAC] = MAC0
         libnmstate.apply(bond_state)
 
-        current_state = statelib.show_only(('bond99',))
+        current_state = statelib.show_only(('bond99', 'eth1'))
         bond99_cur_state = current_state[INTERFACES][0]
+        eth1_cur_state = current_state[INTERFACES][1]
         assert bond99_cur_state[Interface.MAC] == MAC0.upper()
+        assert bond99_cur_state[Interface.MAC] == eth1_cur_state[Interface.MAC]
 
         bond_state[Interface.KEY][0][Interface.MAC] = MAC1
         libnmstate.apply(bond_state)
 
-        current_state = statelib.show_only(('bond99',))
+        current_state = statelib.show_only(('bond99', 'eth1'))
         bond99_cur_state = current_state[INTERFACES][0]
+        eth1_cur_state = current_state[INTERFACES][1]
         assert bond99_cur_state[Interface.MAC] == MAC1.upper()
+        assert bond99_cur_state[Interface.MAC] == eth1_cur_state[Interface.MAC]
+
