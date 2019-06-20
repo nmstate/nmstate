@@ -13,6 +13,8 @@ env:
           testflags="--test-type integ --pytest-args='-x'
               --copr networkmanager/NetworkManager-1.18"
         - DOCKER_IMAGE=nmstate/fedora-nmstate-dev
+          testflags="--test-type format"
+        - DOCKER_IMAGE=nmstate/fedora-nmstate-dev
           testflags="--test-type lint"
         - DOCKER_IMAGE=nmstate/fedora-nmstate-dev
           testflags="--test-type unit_py27"
