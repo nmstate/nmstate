@@ -11,6 +11,7 @@ NET0="nmstate-net0"
 NET1="nmstate-net1"
 
 TEST_TYPE_ALL="all"
+TEST_TYPE_FORMAT="format"
 TEST_TYPE_LINT="lint"
 TEST_TYPE_UNIT_PY27="unit_py27"
 TEST_TYPE_UNIT_PY36="unit_py36"
@@ -70,6 +71,16 @@ function install_nmstate {
 }
 
 function run_tests {
+    if [ $TEST_TYPE == $TEST_TYPE_ALL ] || \
+       [ $TEST_TYPE == $TEST_TYPE_FORMAT ];then
+        if [[ $DOCKER_IMAGE == *"centos"* ]]; then
+            echo "Running formatter in $DOCKER_IMAGE container is not " \
+                 "support yet"
+        else
+            docker_exec 'tox -e black'
+        fi
+    fi
+
     if [ $TEST_TYPE == $TEST_TYPE_ALL ] || \
        [ $TEST_TYPE == $TEST_TYPE_LINT ];then
         if [[ $DOCKER_IMAGE == *"centos"* ]]; then
@@ -222,6 +233,7 @@ while true; do
         echo "[--test-type=<TEST_TYPE>]"
         echo "    Valid TEST_TYPE are:"
         echo "     * $TEST_TYPE_ALL (default)"
+        echo "     * $TEST_TYPE_FORMAT"
         echo "     * $TEST_TYPE_LINT"
         echo "     * $TEST_TYPE_INTEG"
         echo "     * $TEST_TYPE_UNIT_PY27"
