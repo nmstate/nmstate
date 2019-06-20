@@ -307,7 +307,8 @@ def _dns_config_not_changed(desired_state, current_state):
            iface_state[Interface.STATE] != InterfaceState.UP:
             return False
         for family in six.viewkeys(iface_dns_config):
-            if not iface_state.get(family, {}).get('enabled'):
+            if family in iface_state and \
+               not iface_state[family].get('enabled'):
                 return False
     return True
 

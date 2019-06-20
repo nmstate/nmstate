@@ -204,6 +204,35 @@ def test_preserve_dns_config():
     assert dns_config == current_state[DNS.KEY][DNS.CONFIG]
 
 
+@pytest.fixture
+def setup_ipv4_ipv6_name_server():
+    desired_state = {
+        Interface.KEY: _get_test_iface_states(),
+        Route.KEY: {
+            Route.CONFIG: _gen_default_gateway_route()
+        },
+        DNS.KEY: {
+            DNS.CONFIG: {
+                DNS.SERVER: [IPV6_DNS_NAMESERVERS[0], IPV4_DNS_NAMESERVERS[0]],
+                DNS.SEARCH: []
+            }
+        }
+    }
+    netapplier.apply(desired_state)
+    yield desired_state
+
+
+def test_preserve_dns_config_with_empty_state(setup_ipv4_ipv6_name_server):
+    old_state = setup_ipv4_ipv6_name_server
+
+    netapplier.apply({
+        Interface.KEY: [],
+    })
+    current_state = netinfo.show()
+
+    assert old_state[DNS.KEY][DNS.CONFIG] == current_state[DNS.KEY][DNS.CONFIG]
+
+
 def _get_test_iface_states():
     return [
         {
