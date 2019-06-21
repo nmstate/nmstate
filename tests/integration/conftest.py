@@ -58,6 +58,10 @@ def eth2_up():
         _set_eth_admin_state('eth2', 'down')
 
 
+port0_up = eth1_up
+port1_up = eth2_up
+
+
 def _set_eth_admin_state(ifname, state):
     current_state = statelib.show_only((ifname,))
     iface_current_state, = current_state[INTERFACES]
