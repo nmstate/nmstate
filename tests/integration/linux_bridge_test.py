@@ -58,7 +58,7 @@ stp-priority: 32
 
 
 @pytest.fixture
-def bridge0_with_port0(eth1_up):
+def bridge0_with_port0(port0_up):
     bridge_name = TEST_BRIDGE0
     bridge_state = _create_bridge_subtree_config(('eth1',))
     # Disable STP to avoid topology changes and the consequence link change.
@@ -81,7 +81,7 @@ def test_create_and_remove_linux_bridge_with_min_desired_state():
     assertlib.assert_absent(bridge_name)
 
 
-def test_create_and_remove_linux_bridge_with_one_port(eth1_up):
+def test_create_and_remove_linux_bridge_with_one_port(port0_up):
     bridge_name = TEST_BRIDGE0
     bridge_state = _create_bridge_subtree_config((TEST_BRIDGE0_PORT0,))
     with _linux_bridge(bridge_name, bridge_state) as desired_state:
@@ -91,7 +91,7 @@ def test_create_and_remove_linux_bridge_with_one_port(eth1_up):
     assertlib.assert_absent(bridge_name)
 
 
-def test_create_and_remove_linux_bridge_with_two_ports(eth1_up, eth2_up):
+def test_create_and_remove_linux_bridge_with_two_ports(port0_up, port1_up):
     bridge_name = TEST_BRIDGE0
     bridge_state = _create_bridge_subtree_config(
         (TEST_BRIDGE0_PORT0, TEST_BRIDGE0_PORT1)
@@ -115,8 +115,8 @@ def test_add_port_to_existing_bridge(bridge0_with_port0):
     assertlib.assert_state(desired_state)
 
 
-def test_linux_bridge_uses_the_port_mac(eth1_up, bridge0_with_port0):
-    prev_port_mac = eth1_up[Interface.KEY][0][Interface.MAC]
+def test_linux_bridge_uses_the_port_mac(port0_up, bridge0_with_port0):
+    prev_port_mac = port0_up[Interface.KEY][0][Interface.MAC]
     current_state = show_only((TEST_BRIDGE0, TEST_BRIDGE0_PORT0))
     curr_iface0_mac = current_state[Interface.KEY][0][Interface.MAC]
     curr_iface1_mac = current_state[Interface.KEY][1][Interface.MAC]

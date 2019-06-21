@@ -67,7 +67,7 @@ def test_create_and_remove_minimum_config_bridge(bridge_minimum_config):
     assert not _get_bridge_current_state()
 
 
-def test_create_and_remove_bridge(eth1_up, bridge_default_config):
+def test_create_and_remove_bridge(port0_up, bridge_default_config):
     bridge_desired_state = bridge_default_config
 
     eth1_port = {
