@@ -20,13 +20,13 @@ from contextlib import contextmanager
 import pytest
 
 from libnmstate import nm
+from libnmstate import schema
 from libnmstate.schema import LinuxBridge as LB
 
 from .testlib import mainloop
 
 
 BRIDGE0 = 'brtest0'
-ETH1 = 'eth1'
 
 
 @pytest.fixture
@@ -70,14 +70,15 @@ def test_create_and_remove_minimum_config_bridge(bridge_minimum_config):
 def test_create_and_remove_bridge(port0_up, bridge_default_config):
     bridge_desired_state = bridge_default_config
 
-    eth1_port = {
-        LB.PORT_NAME: 'eth1',
+    port_name = port0_up[schema.Interface.KEY][0][schema.Interface.NAME]
+    port = {
+        LB.PORT_NAME: port_name,
         LB.PORT_STP_PRIORITY: 32,
         LB.PORT_STP_HAIRPIN_MODE: False,
         LB.PORT_STP_PATH_COST: 100,
     }
 
-    bridge_desired_state[LB.CONFIG_SUBTREE][LB.PORT_SUBTREE].append(eth1_port)
+    bridge_desired_state[LB.CONFIG_SUBTREE][LB.PORT_SUBTREE].append(port)
 
     with _bridge_interface(bridge_desired_state):
 
@@ -117,9 +118,9 @@ def _create_bridge(bridge_desired_state):
 
 
 def _attach_port_to_bridge(port_state):
-    eth1_nmdev = nm.device.get_device_by_name(port_state['name'])
+    port_nmdev = nm.device.get_device_by_name(port_state['name'])
     curr_port_con_profile = nm.connection.ConnectionProfile()
-    curr_port_con_profile.import_by_device(eth1_nmdev)
+    curr_port_con_profile.import_by_device(port_nmdev)
     iface_port_settings = _get_iface_port_settings(
         port_state, curr_port_con_profile
     )
@@ -127,7 +128,7 @@ def _attach_port_to_bridge(port_state):
     port_con_profile.create(iface_port_settings)
 
     curr_port_con_profile.update(port_con_profile)
-    curr_port_con_profile.commit(nmdev=eth1_nmdev)
+    curr_port_con_profile.commit(nmdev=port_nmdev)
     nm.device.activate(connection_id=port_state[LB.PORT_NAME])
 
 

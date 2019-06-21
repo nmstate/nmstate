@@ -33,8 +33,6 @@ from .testlib.statelib import show_only
 from .testlib.statelib import INTERFACES
 
 TEST_BRIDGE0 = 'linux-br0'
-TEST_BRIDGE0_PORT0 = 'eth1'
-TEST_BRIDGE0_PORT1 = 'eth2'
 
 
 BRIDGE_OPTIONS_YAML = """
@@ -60,7 +58,8 @@ stp-priority: 32
 @pytest.fixture
 def bridge0_with_port0(port0_up):
     bridge_name = TEST_BRIDGE0
-    bridge_state = _create_bridge_subtree_config(('eth1',))
+    port_name = port0_up[Interface.KEY][0][Interface.NAME]
+    bridge_state = _create_bridge_subtree_config((port_name,))
     # Disable STP to avoid topology changes and the consequence link change.
     options_subtree = bridge_state[LinuxBridge.OPTIONS_SUBTREE]
     options_subtree[LinuxBridge.STP_SUBTREE][LinuxBridge.STP_ENABLED] = False
@@ -83,7 +82,8 @@ def test_create_and_remove_linux_bridge_with_min_desired_state():
 
 def test_create_and_remove_linux_bridge_with_one_port(port0_up):
     bridge_name = TEST_BRIDGE0
-    bridge_state = _create_bridge_subtree_config((TEST_BRIDGE0_PORT0,))
+    port_name = port0_up[Interface.KEY][0][Interface.NAME]
+    bridge_state = _create_bridge_subtree_config((port_name,))
     with _linux_bridge(bridge_name, bridge_state) as desired_state:
 
         assertlib.assert_state(desired_state)
@@ -93,9 +93,9 @@ def test_create_and_remove_linux_bridge_with_one_port(port0_up):
 
 def test_create_and_remove_linux_bridge_with_two_ports(port0_up, port1_up):
     bridge_name = TEST_BRIDGE0
-    bridge_state = _create_bridge_subtree_config(
-        (TEST_BRIDGE0_PORT0, TEST_BRIDGE0_PORT1)
-    )
+    port0_name = port0_up[Interface.KEY][0][Interface.NAME]
+    port1_name = port1_up[Interface.KEY][0][Interface.NAME]
+    bridge_state = _create_bridge_subtree_config((port0_name, port1_name))
 
     with _linux_bridge(bridge_name, bridge_state) as desired_state:
         assertlib.assert_state(desired_state)
@@ -104,11 +104,12 @@ def test_create_and_remove_linux_bridge_with_two_ports(port0_up, port1_up):
 
 
 @ip_monitor_assert_stable_link_up(TEST_BRIDGE0)
-def test_add_port_to_existing_bridge(bridge0_with_port0):
+def test_add_port_to_existing_bridge(bridge0_with_port0, port1_up):
     desired_state = bridge0_with_port0
     bridge_iface_state = desired_state[Interface.KEY][0]
     bridge_state = bridge_iface_state[LinuxBridge.CONFIG_SUBTREE]
-    _add_port_to_bridge(bridge_state, 'eth2')
+    port1_name = port1_up[Interface.KEY][0][Interface.NAME]
+    _add_port_to_bridge(bridge_state, port1_name)
 
     libnmstate.apply(desired_state)
 
@@ -116,8 +117,9 @@ def test_add_port_to_existing_bridge(bridge0_with_port0):
 
 
 def test_linux_bridge_uses_the_port_mac(port0_up, bridge0_with_port0):
+    port0_name = port0_up[Interface.KEY][0][Interface.NAME]
     prev_port_mac = port0_up[Interface.KEY][0][Interface.MAC]
-    current_state = show_only((TEST_BRIDGE0, TEST_BRIDGE0_PORT0))
+    current_state = show_only((TEST_BRIDGE0, port0_name))
     curr_iface0_mac = current_state[Interface.KEY][0][Interface.MAC]
     curr_iface1_mac = current_state[Interface.KEY][1][Interface.MAC]
 
