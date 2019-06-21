@@ -38,13 +38,28 @@ from libnmstate.schema import Interface
 from libnmstate.schema import Route
 
 
-def main():
-    logging.basicConfig(
-        format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
-        level=logging.DEBUG,
-    )
+class NmstateEnvVar(object):
+    LOG_LEVEL = 'NMSTATE_LOG_LEVEL'
 
+
+LOG_LEVELS = {
+    'CRITICAL': logging.CRITICAL,
+    'ERROR': logging.ERROR,
+    'WARN': logging.WARNING,
+    'WARNING': logging.WARNING,
+    'INFO': logging.INFO,
+    'DEBUG': logging.DEBUG,
+    'NOTSET': logging.NOTSET,
+}
+
+
+LOG_LEVEL_DEFAULT = 'DEBUG'
+
+
+def main():
     parser = argparse.ArgumentParser()
+
+    _setup_argument_log_level(parser)
 
     subparsers = parser.add_subparsers()
     setup_subcommand_commit(subparsers)
@@ -57,7 +72,28 @@ def main():
         parser.print_usage()
         return errno.EINVAL
     args = parser.parse_args()
+
+    try:
+        _setup_logging(args.log_level)
+    except ValueError:
+        return os.EX_USAGE
+
     return args.func(args)
+
+
+def _setup_argument_log_level(parser):
+    """
+    Setup the log level argument.
+    Default to the value passed through the environment variable.
+    """
+    log_level = os.getenv(NmstateEnvVar.LOG_LEVEL, LOG_LEVEL_DEFAULT)
+    parser.add_argument(
+        '--log-level',
+        type=str,
+        choices=LOG_LEVELS,
+        default=log_level,
+        help='Set log level.',
+    )
 
 
 def setup_subcommand_commit(subparsers):
@@ -372,3 +408,21 @@ def _filter_routes(state, patterns):
                 if fnmatch.fnmatch(route[Route.NEXT_HOP_INTERFACE], pattern):
                     routes[route_type].append(route)
     return routes
+
+
+def _setup_logging(log_level):
+    try:
+        log_level = log_level.upper()
+        log_level_id = LOG_LEVELS[log_level]
+    except (AttributeError, KeyError):
+        sys.stderr.write(
+            'ERROR: {} is not recognized as a logging level name\n'.format(
+                log_level
+            )
+        )
+        raise ValueError
+
+    logging.basicConfig(
+        format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
+        level=log_level_id,
+    )

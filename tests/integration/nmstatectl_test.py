@@ -29,6 +29,10 @@ from .testlib.examplelib import find_examples_dir
 from .testlib.examplelib import load_example
 
 
+DEBUG_LOG_LEVEL = 'DEBUG'
+WARNING_LOG_LEVEL = 'WARNING'
+
+BASE_CMD = ['nmstatectl']
 SET_CMD = ['nmstatectl', 'set']
 SHOW_CMD = ['nmstatectl', 'show']
 CONFIRM_CMD = ['nmstatectl', 'commit']
@@ -205,6 +209,68 @@ def test_automatic_rollback(eth1_up):
 
         time.sleep(CONFIRMATION_TIMEOUT)
         assertlib.assert_state(clean_state)
+
+
+class TestLogLevel(object):
+    def test_set_command_with_bad_log_level(self):
+        cmd = BASE_CMD + ['--log-level=FOO', 'set']
+        ret = libcmd.exec_cmd(cmd, stdin=self._create_state())
+        rc, out, err = ret
+
+        assert rc == RC_FAIL2, format_exec_cmd_result(ret)
+
+    def test_set_command_with_default_log_level(self):
+        ret = libcmd.exec_cmd(SET_CMD, stdin=self._create_state())
+        rc, out, err = ret
+
+        assert rc == RC_SUCCESS, format_exec_cmd_result(ret)
+        assert DEBUG_LOG_LEVEL in err, format_exec_cmd_result(ret)
+
+    def test_set_command_with_debug_log_level(self):
+        cmd = BASE_CMD + ['--log-level=DEBUG', 'set']
+        ret = libcmd.exec_cmd(cmd, stdin=self._create_state())
+        rc, out, err = ret
+
+        assert rc == RC_SUCCESS, format_exec_cmd_result(ret)
+        assert DEBUG_LOG_LEVEL in err, format_exec_cmd_result(ret)
+
+    def test_set_command_with_info_log_level(self):
+        cmd = BASE_CMD + ['--log-level=INFO', 'set']
+        ret = libcmd.exec_cmd(cmd, stdin=self._create_state())
+        rc, out, err = ret
+
+        assert rc == RC_SUCCESS, format_exec_cmd_result(ret)
+        assert DEBUG_LOG_LEVEL not in err, format_exec_cmd_result(ret)
+        assert WARNING_LOG_LEVEL in err, format_exec_cmd_result(ret)
+
+    def test_set_command_with_info_log_level_from_env_variable(self):
+        env = dict(os.environ)
+        env['NMSTATE_LOG_LEVEL'] = 'INFO'
+        ret = libcmd.exec_cmd(SET_CMD, stdin=self._create_state(), env=env)
+        rc, out, err = ret
+
+        assert rc == RC_SUCCESS, format_exec_cmd_result(ret)
+        assert DEBUG_LOG_LEVEL not in err, format_exec_cmd_result(ret)
+        assert WARNING_LOG_LEVEL in err, format_exec_cmd_result(ret)
+
+    def _create_state(self):
+        """
+        Create a desired state that includes a warning message:
+            IPv6 link-local address is ignored in a desired state.
+        """
+        return b"""interfaces:
+        - name: eth1
+          state: up
+          type: ethernet
+          mtu: 1500
+          ipv6:
+            enabled: true
+            address:
+            - ip: fe80::4d70:34d8:81:e0dd
+              prefix-length: 64
+            autoconf: false
+            dhcp: false
+        """
 
 
 def assert_command(cmd, expected_rc=RC_SUCCESS):
