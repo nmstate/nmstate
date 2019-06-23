@@ -1,4 +1,6 @@
-## Creating a New Release
+# Creating a New Release
+
+## Tagging
 
 * Tag new release in git.
 ```bash
@@ -17,6 +19,8 @@ git tag -d <tag_name>
 # Remove upstream tag
 git push --delete upstream <tag_name>
 ```
+
+## GitHub Release
 
 * Generate and sign the tarball.
 
@@ -53,9 +57,8 @@ Changes since 0.0.2:
 
  * Click `Publish release` once approved.
 
- * Create a pull request with increased version number in the `VERSION` file.
+## PyPi Release
 
-* Release to PyPi.
 ```
 # Make sure you installed python package: wheel and twine.
 rm dist  -rf
@@ -69,8 +72,13 @@ python3 -m twine upload --repository-url https://test.pypi.org/legacy/ dist/*
 python3 -m twine upload dist/*
 ```
 
+## Post Release
+
+* Create a pull request with increased version number in the `VERSION` file.
+
 * Send out a notification to the network manager mailing list
 
 * Update the SPEC files in Fedora
+
 
 [1]: https://github.com/nmstate/nmstate/releases/new
