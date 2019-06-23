@@ -22,7 +22,98 @@ Nmstate is aimed to satisfy enterprise needs to manage host networking through
 a northbound declarative API and multi provider support on the southbound.
 NetworkManager acts as the main (and currently the only) provider supported.
 
+## State example:
+
+Desired/Current state example (YAML):
+```yaml
+interfaces:
+- name: eth1
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: true
+    address:
+    - ip: 192.0.2.10
+      prefix-length: 24
+    dhcp: false
+  ipv6:
+    enabled: true
+    address:
+    - ip: 2001:db8:1::a
+      prefix-length: 64
+    autoconf: false
+    dhcp: false
+dns-resolver:
+  config:
+    search:
+    - example.com
+    - example.org
+    server:
+    - 2001:4860:4860::8888
+    - 8.8.8.8
+routes:
+  config:
+  - destination: 0.0.0.0/0
+    next-hop-address: 192.0.2.1
+    next-hop-interface: eth1
+  - destination: ::/0
+    next-hop-address: 2001:db8:1::1
+    next-hop-interface: eth1
+```
+
+## Basic Operations
+
+Show eth0 current state (python/shell):
+
+```python
+import libnmstate
+
+state = libnmstate.show()
+eth0_state = next(ifstate for ifstate in state['interfaces'] if ifstate['name'] == 'eth0')
+
+# Here is the MAC address
+eth0_mac = eth0_state['mac-address']
+```
+
+```shell
+nmstatectl show eth0
+```
+
+Change to desired state (python/shell):
+
+```python
+import libnmstate
+
+# Specify a Linux bridge (created if it does not exist).
+state = {'interfaces': [{'name': 'br0', 'type': 'linux-bridge', 'state': 'up'}]}
+libnmstate.apply(state)
+```
+
+```shell
+# use yaml or json formats
+nmstatectl set desired-state.yml
+nmstatectl set desired-state.json
+```
+
+Edit the current state(python/shell):
+```python
+import libnmstate
+
+state = libnmstate.show()
+eth0_state = next(ifstate for ifstate in state['interfaces'] if ifstate['name'] == 'eth0')
+
+# take eth0 down
+eth0_state['state'] = 'down'
+libnmstate.apply(state)
+```
+
+```shell
+# open current state in a text editor, change and save to apply
+nmstatectl edit eth3
+```
+
 ## Contact
+
 *Nmstate* uses the [NetworkManager mailing
 list](https://mail.gnome.org/mailman/listinfo/networkmanager-list)
 ([Archives](https://mail.gnome.org/archives/networkmanager-list/)) for
@@ -32,8 +123,8 @@ subject header to ease filtering.
 Development planning (sprints and progress reporting) happens in
 ([Jira](https://nmstate.atlassian.net)). Access requires login.
 
-There is also `#nmstate` on [Freenode
-IRC](https://freenode.net/kb/answer/chat).
+There is also `#nmstate` on
+[Freenode IRC](https://freenode.net/kb/answer/chat).
 
 ## Development Environment
 
@@ -167,7 +258,11 @@ sudo docker stop "${CONTAINER_ID}"
 sudo docker rm "${CONTAINER_ID}"
 ```
 
-## Basic Operations
+## nmstatectl
+
+`nmstatectl` is a simple (python) command line tool that utilizes `libnmstate`.
+
+Note: Applications are encouraged to use `libnmstate` directly.
 
 Show current state:
 ```shell
@@ -192,36 +287,6 @@ nmstatectl edit eth3
 ```shell
 nmstatectl set < desired-state.yml
 ```
-
-Desired/Current state example (JSON):
-```shell
-{
-    "interfaces": [
-        {
-            "description": "Production Network",
-            "ethernet": {
-                "auto-negotiation": true,
-                "duplex": "full",
-                "speed": 1000
-            },
-            "ipv4": {
-                "address": [
-                    {
-                        "ip": "192.0.2.142",
-                        "prefix-length": 24
-                    }
-                ],
-                "enabled": true
-            },
-            "mtu": 1500,
-            "name": "eth3",
-            "state": "up",
-            "type": "ethernet"
-        }
-    ]
-}
-```
-
 See `nmstatectl --help` for additional command-line options.
 
 ## Supported Interfaces:
