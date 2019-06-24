@@ -19,6 +19,7 @@ import copy
 import libnmstate
 from libnmstate.schema import DNS
 from libnmstate.schema import Route
+from libnmstate.schema import Interface
 
 from . import statelib
 from .statelib import INTERFACES
@@ -53,3 +54,17 @@ def assert_absent(*ifnames):
 
     current_state = statelib.show_only(ifnames)
     assert not current_state[INTERFACES]
+
+
+def assert_mac_address(state, expected_mac=None):
+    """ Asserts that all MAC addresses of ifaces in a state are the same """
+    macs = _iface_macs(state)
+    if not expected_mac:
+        expected_mac = next(macs)
+    for mac in macs:
+        assert expected_mac.upper() == mac
+
+
+def _iface_macs(state):
+    for ifstate in state[Interface.KEY]:
+        yield ifstate[Interface.MAC]

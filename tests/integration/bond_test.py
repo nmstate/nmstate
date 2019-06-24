@@ -27,7 +27,7 @@ from libnmstate.schema import Interface
 from .testlib import assertlib
 from .testlib import statelib
 from .testlib.statelib import INTERFACES
-
+from .testlib.assertlib import assert_mac_address
 
 MAC0 = '02:ff:ff:ff:ff:00'
 MAC1 = '02:ff:ff:ff:ff:01'
@@ -227,19 +227,13 @@ def test_set_bond_mac_address(eth1_up):
         libnmstate.apply(bond_state)
 
         current_state = statelib.show_only(('bond99', 'eth1'))
-        bond99_cur_state = current_state[INTERFACES][0]
-        eth1_cur_state = current_state[INTERFACES][1]
-        assert bond99_cur_state[Interface.MAC] == MAC0.upper()
-        assert bond99_cur_state[Interface.MAC] == eth1_cur_state[Interface.MAC]
+        assert_mac_address(current_state, MAC0)
 
         bond_state[Interface.KEY][0][Interface.MAC] = MAC1
         libnmstate.apply(bond_state)
 
         current_state = statelib.show_only(('bond99', 'eth1'))
-        bond99_cur_state = current_state[INTERFACES][0]
-        eth1_cur_state = current_state[INTERFACES][1]
-        assert bond99_cur_state[Interface.MAC] == MAC1.upper()
-        assert bond99_cur_state[Interface.MAC] == eth1_cur_state[Interface.MAC]
+        assert_mac_address(current_state, MAC1)
 
 
 @pytest.fixture
@@ -249,28 +243,13 @@ def bond99():
 
 
 def test_reordering_the_slaves_does_not_change_the_mac(bond99):
-    state = statelib.show_only(('bond99', 'eth1', 'eth2'))
-    bond99_state = state[Interface.KEY][0]
-    eth1_state = state[Interface.KEY][1]
-    eth2_state = state[Interface.KEY][2]
-
-    assert (
-        bond99_state[Interface.MAC]
-        == eth1_state[Interface.MAC]
-        == eth2_state[Interface.MAC]
-    )
+    current_state = statelib.show_only(('bond99', 'eth1', 'eth2'))
+    assert_mac_address(current_state)
 
     bond99[INTERFACES][0]['link-aggregation']['slaves'].reverse()
     libnmstate.apply(bond99)
 
     modified_state = statelib.show_only(('bond99', 'eth1', 'eth2'))
-    bond99_modified_state = modified_state[Interface.KEY][0]
-    eth1_modified_state = modified_state[Interface.KEY][1]
-    eth2_modified_state = modified_state[Interface.KEY][2]
-
-    assert (
-        bond99_modified_state[Interface.MAC]
-        == eth1_modified_state[Interface.MAC]
-        == eth2_modified_state[Interface.MAC]
-        == bond99_state[Interface.MAC]
+    assert_mac_address(
+        modified_state, current_state[Interface.KEY][0][Interface.MAC]
     )
