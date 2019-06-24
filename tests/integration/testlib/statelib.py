@@ -22,7 +22,7 @@ import six
 
 import libnmstate
 from libnmstate.schema import Constants
-
+from libnmstate.schema import Interface
 
 INTERFACES = Constants.INTERFACES
 
@@ -229,3 +229,10 @@ def _is_ipv6_link_local(ip, prefix):
     The IPv6 link local address range is fe80::/10.
     """
     return ip[:3] in ['fe8', 'fe9', 'fea', 'feb'] and prefix >= 10
+
+
+def get_macs(state):
+    """
+    Returns the MAC addresses of interfaces in the states
+    """
+    return [ifstate[Interface.MAC] for ifstate in state[Interface.KEY]]

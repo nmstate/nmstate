@@ -21,12 +21,13 @@ import time
 import pytest
 
 import libnmstate
-from libnmstate.schema import Interface
 from libnmstate.error import NmstateVerificationError
 
 from .testlib import assertlib
 from .testlib import statelib
 from .testlib.statelib import INTERFACES
+from .testlib.statelib import get_macs
+from .testlib.assertlib import assert_all_equal
 
 VLAN_IFNAME = 'eth1.101'
 VLAN2_IFNAME = 'eth1.102'
@@ -66,11 +67,8 @@ def vlan_on_eth1(eth1_up):
 
 
 def test_vlan_iface_uses_the_mac_of_base_iface(vlan_on_eth1):
-    base_iface_state = vlan_on_eth1[INTERFACES][0]
-    vlan_iface_state = vlan_on_eth1[INTERFACES][1]
-    base_iface_mac = base_iface_state[Interface.MAC]
-    vlan_iface_mac = vlan_iface_state[Interface.MAC]
-    assert base_iface_mac == vlan_iface_mac
+    vlan_on_eth1_iface_macs = get_macs(vlan_on_eth1)
+    assert_all_equal(vlan_on_eth1_iface_macs)
 
 
 def test_add_and_remove_two_vlans_on_same_iface(eth1_up):

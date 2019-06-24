@@ -31,6 +31,8 @@ from .testlib import assertlib
 from .testlib.iproutelib import ip_monitor_assert_stable_link_up
 from .testlib.statelib import show_only
 from .testlib.statelib import INTERFACES
+from .testlib.statelib import get_macs
+from .testlib.assertlib import assert_all_equal
 
 TEST_BRIDGE0 = 'linux-br0'
 
@@ -116,14 +118,12 @@ def test_add_port_to_existing_bridge(bridge0_with_port0, port1_up):
     assertlib.assert_state(desired_state)
 
 
-def test_linux_bridge_uses_the_port_mac(port0_up, bridge0_with_port0):
+def test_linux_bridge_uses_the_port_mac(bridge0_with_port0, port0_up):
     port0_name = port0_up[Interface.KEY][0][Interface.NAME]
-    prev_port_mac = port0_up[Interface.KEY][0][Interface.MAC]
     current_state = show_only((TEST_BRIDGE0, port0_name))
-    curr_iface0_mac = current_state[Interface.KEY][0][Interface.MAC]
-    curr_iface1_mac = current_state[Interface.KEY][1][Interface.MAC]
-
-    assert prev_port_mac == curr_iface0_mac == curr_iface1_mac
+    macs = get_macs(port0_up)
+    macs += get_macs(current_state)
+    assert_all_equal(macs)
 
 
 def _add_port_to_bridge(bridge_state, ifname):

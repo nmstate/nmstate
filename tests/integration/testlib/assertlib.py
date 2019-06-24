@@ -53,3 +53,8 @@ def assert_absent(*ifnames):
 
     current_state = statelib.show_only(ifnames)
     assert not current_state[INTERFACES]
+
+
+def assert_all_equal(items):
+    """ Assert that all the items are the same """
+    assert not items or len(set(items)) == 1
