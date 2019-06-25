@@ -20,6 +20,7 @@ import socket
 
 from libnmstate import iplib
 from libnmstate.error import NmstateNotImplementedError
+from libnmstate.nm import active_connection as nm_ac
 from libnmstate.nm import nmclient
 from libnmstate.nm import dns as nm_dns
 from libnmstate.nm import route as nm_route
@@ -31,7 +32,7 @@ IPV6_DEFAULT_ROUTE_METRIC = 1024
 
 def get_info(active_connection):
     info = {'enabled': False}
-    if active_connection is None:
+    if active_connection is None or _is_ipv6_disabled(active_connection):
         return info
 
     info['dhcp'] = False
@@ -72,8 +73,6 @@ def get_info(active_connection):
         }
         for address in ipconfig.get_addresses()
     ]
-    if not addresses:
-        return info
 
     info['enabled'] = True
     info['address'] = addresses
@@ -119,9 +118,7 @@ def create_setting(config, base_con_profile):
     elif ip_addresses:
         _set_static(setting_ip, ip_addresses)
     else:
-        setting_ip.props.method = (
-            nmclient.NM.SETTING_IP6_CONFIG_METHOD_LINK_LOCAL
-        )
+        setting_ip.props.method = nmclient.NM.SETTING_IP6_CONFIG_METHOD_IGNORE
 
     nm_route.add_routes(setting_ip, config.get(nm_route.ROUTE_METADATA, []))
     nm_dns.add_dns(setting_ip, config.get(nm_dns.DNS_METADATA, {}))
@@ -159,9 +156,7 @@ def _set_static(setting_ip, ip_addresses):
     if setting_ip.props.addresses:
         setting_ip.props.method = nmclient.NM.SETTING_IP6_CONFIG_METHOD_MANUAL
     else:
-        setting_ip.props.method = (
-            nmclient.NM.SETTING_IP6_CONFIG_METHOD_LINK_LOCAL
-        )
+        setting_ip.props.method = nmclient.NM.SETTING_IP6_CONFIG_METHOD_IGNORE
 
 
 def get_ip_profile(active_connection):
@@ -203,3 +198,19 @@ def acs_and_ip_profiles(client):
         if not ip_profile:
             continue
         yield ac, ip_profile
+
+
+def _is_ipv6_disabled(active_connection):
+    """
+    Return True if '/proc/sys/net/ipv6/conf/<ifname>/disable_ipv6' is 1,
+    else False.
+    """
+    ifname = nm_ac.ActiveConnection(active_connection).devname
+    sysfs_disable_ipv6_file = '/proc/sys/net/ipv6/conf/{}/disable_ipv6'.format(
+        ifname
+    )
+    with open(sysfs_disable_ipv6_file, 'r') as fd:
+        if fd.read().startswith('1'):
+            return True
+
+    return False

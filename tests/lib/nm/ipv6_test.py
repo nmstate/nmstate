@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
+from io import StringIO
 
 import pytest
 
@@ -64,8 +65,7 @@ def test_create_setting_without_addresses(NM_mock):
     )
 
     assert (
-        ipv6_setting.props.method
-        == NM_mock.SETTING_IP6_CONFIG_METHOD_LINK_LOCAL
+        ipv6_setting.props.method == NM_mock.SETTING_IP6_CONFIG_METHOD_IGNORE
     )
 
 
@@ -114,10 +114,14 @@ def test_get_info_with_no_ipv6_config():
     con_mock = mock.MagicMock()
     con_mock.get_ip6_config.return_value = None
     con_mock.get_connection.return_value = None
+    dev_mock = mock.MagicMock()
+    dev_mock.get_iface.return_value = 'foo'
+    con_mock.get_devices.return_value = [dev_mock]
 
-    info = nm.ipv6.get_info(active_connection=con_mock)
-
-    assert info == {'enabled': False}
+    with mock.patch('libnmstate.nm.ipv6.open') as mocked_open:
+        mocked_open.return_value = StringIO(u'1\n')
+        info = nm.ipv6.get_info(active_connection=con_mock)
+        assert info == {'enabled': False}
 
 
 def test_get_info_with_ipv6_config(NM_mock):
@@ -136,7 +140,13 @@ def test_get_info_with_ipv6_config(NM_mock):
     set_ip_conf.props.ignore_auto_dns = False
     set_ip_conf.props.ignore_auto_routes = False
 
-    info = nm.ipv6.get_info(active_connection=act_con_mock)
+    dev_mock = mock.MagicMock()
+    dev_mock.get_iface.return_value = 'foo'
+    act_con_mock.get_devices.return_value = [dev_mock]
+
+    with mock.patch('libnmstate.nm.ipv6.open') as mocked_open:
+        mocked_open.return_value = StringIO(u'0\n')
+        info = nm.ipv6.get_info(active_connection=act_con_mock)
 
     assert info == {
         'enabled': True,

@@ -126,6 +126,47 @@ def test_linux_bridge_uses_the_port_mac(port0_up, bridge0_with_port0):
     assert prev_port_mac == curr_iface0_mac == curr_iface1_mac
 
 
+def test_add_linux_bridge_with_empty_ipv6_static_address(port0_up):
+    port_name = port0_up[Interface.KEY][0][Interface.NAME]
+    bridge_state = _create_bridge_subtree_config((port_name,))
+    # Disable STP to avoid topology changes and the consequence link change.
+    options_subtree = bridge_state[LinuxBridge.OPTIONS_SUBTREE]
+    options_subtree[LinuxBridge.STP_SUBTREE][LinuxBridge.STP_ENABLED] = False
+
+    desired_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: TEST_BRIDGE0,
+                Interface.TYPE: InterfaceType.LINUX_BRIDGE,
+                Interface.STATE: InterfaceState.UP,
+                LinuxBridge.CONFIG_SUBTREE: bridge_state,
+                Interface.IPV6: {
+                    'enabled': True,
+                    'autoconf': False,
+                    'dhcp': False,
+                },
+            }
+        ]
+    }
+
+    libnmstate.apply(desired_state)
+    assertlib.assert_state(desired_state)
+
+    libnmstate.apply(
+        {
+            INTERFACES: [
+                {
+                    Interface.NAME: TEST_BRIDGE0,
+                    Interface.TYPE: InterfaceType.LINUX_BRIDGE,
+                    Interface.STATE: InterfaceState.ABSENT,
+                }
+            ]
+        }
+    )
+
+    assertlib.assert_absent(TEST_BRIDGE0)
+
+
 def _add_port_to_bridge(bridge_state, ifname):
     port_state = yaml.load(BRIDGE_PORT_YAML, Loader=yaml.SafeLoader)
     port_state[LinuxBridge.PORT_NAME] = ifname
