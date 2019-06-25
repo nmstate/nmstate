@@ -182,6 +182,7 @@ def _setup_providers():
     yield
     success = mainloop.run(timeout=20)
     if not success:
+        nmclient.mainloop(refresh=True)
         raise NmstateLibnmError(
             'Unexpected failure of libnm when running the mainloop: {}'.format(
                 mainloop.error
