@@ -188,7 +188,7 @@ class ConnectionProfile(object):
                     act_object,
                 )
                 self._reset_profile()
-                self._mainloop.execute_last_action()
+                self.safe_activate_async()
             else:
                 self._mainloop.quit(
                     'Connection activation failed on {} {}: error={}'.format(
