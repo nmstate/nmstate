@@ -128,8 +128,6 @@ def _apply_ifaces_state(
         ) as checkpoint:
             with _setup_providers():
                 _add_interfaces(new_interfaces, desired_state)
-            with _setup_providers():
-                current_state = state.State(netinfo.show())
                 state2edit = _create_editable_desired_state(
                     desired_state, current_state, new_interfaces
                 )
