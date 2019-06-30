@@ -44,3 +44,17 @@ def test_removing_a_non_removable_iface(eth1_up):
     libnmstate.apply(desired_state)
 
     assertlib.assert_state(desired_state)
+
+
+def test_set_iface_down_without_type(eth1_up):
+    desired_state = {INTERFACES: [{'name': 'eth1', 'state': 'down'}]}
+    libnmstate.apply(desired_state)
+
+    assertlib.assert_state(desired_state)
+
+
+def test_change_iface_without_type(eth1_up):
+    desired_state = {INTERFACES: [{'name': 'eth1', 'mtu': 1400}]}
+    libnmstate.apply(desired_state)
+
+    assertlib.assert_state(desired_state)
