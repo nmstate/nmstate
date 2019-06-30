@@ -15,6 +15,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
+import copy
 import logging
 import six
 
@@ -43,6 +44,10 @@ class NmstateRouteWithNoIPInterfaceError(NmstateValueError):
 
 
 def validate(data, validation_schema=schema.ifaces_schema):
+    data = copy.deepcopy(data)
+    for ifstate in data.get(schema.Interface.KEY, ()):
+        if not ifstate.get(schema.Interface.TYPE):
+            ifstate[schema.Interface.TYPE] = schema.InterfaceType.UNKNOWN
     js.validate(data, validation_schema)
 
 
@@ -51,7 +56,7 @@ def validate_capabilities(state, capabilities):
 
 
 def validate_interface_capabilities(ifaces_state, capabilities):
-    ifaces_types = [iface_state['type'] for iface_state in ifaces_state]
+    ifaces_types = [iface_state.get('type') for iface_state in ifaces_state]
     has_ovs_capability = nm.ovs.CAPABILITY in capabilities
     for iface_type in ifaces_types:
         is_ovs_type = iface_type in (

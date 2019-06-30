@@ -89,8 +89,9 @@ class InterfaceType(object):
     ETHERNET = 'ethernet'
     LINUX_BRIDGE = 'linux-bridge'
     OVS_BRIDGE = 'ovs-bridge'
-    OVS_PORT = 'ovs-port'
     OVS_INTERFACE = 'ovs-interface'
+    OVS_PORT = 'ovs-port'
+    UNKNOWN = 'unknown'
     VLAN = 'vlan'
 
     VIRT_TYPES = (

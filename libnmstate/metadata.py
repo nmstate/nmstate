@@ -99,7 +99,7 @@ def _set_ovs_bridge_ports_metadata(master_state, slave_state):
 
 def _set_common_slaves_metadata(master_state, slave_state):
     slave_state[MASTER] = master_state['name']
-    slave_state[MASTER_TYPE] = master_state['type']
+    slave_state[MASTER_TYPE] = master_state.get('type')
 
 
 def _get_ovs_slaves_from_state(iface_state, default=()):
