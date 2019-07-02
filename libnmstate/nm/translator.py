@@ -118,7 +118,10 @@ class Nm2Api(object):
 
     @staticmethod
     def get_iface_admin_state(state_name):
-        if state_name == nmclient.NM.DeviceState.ACTIVATED:
+        if state_name in (
+            nmclient.NM.DeviceState.ACTIVATED,
+            nmclient.NM.DeviceState.IP_CONFIG,
+        ):
             return ApiIfaceAdminState.UP
         return ApiIfaceAdminState.DOWN
 
