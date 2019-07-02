@@ -145,6 +145,7 @@ def _generate_link_master_metadata(
                 }
                 set_metadata_func(master_state, ifaces_desired_state[slave])
 
+    for master_name, master_state in desired_masters:
         desired_slaves = get_slaves_func(master_state)
         current_master_state = ifaces_current_state.get(master_name)
         if desired_slaves and current_master_state:

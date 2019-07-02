@@ -78,6 +78,20 @@ def bond99_with_2_slaves(eth1_up, eth2_up):
         yield state
 
 
+@pytest.fixture
+def bond88_with_slave(eth1_up):
+    slaves = [eth1_up[Interface.KEY][0][Interface.NAME]]
+    with bond_interface(BOND99, slaves) as state:
+        yield state
+
+
+@pytest.fixture
+def bond99_with_slave(eth2_up):
+    slaves = [eth2_up[Interface.KEY][0][Interface.NAME]]
+    with bond_interface(BOND99, slaves) as state:
+        yield state
+
+
 @contextmanager
 def bond_interface(name, slaves):
     desired_state = {
@@ -279,6 +293,22 @@ def test_remove_one_of_the_bond_slaves(eth1_up, eth2_up):
         bond_cur_state = current_state[Interface.KEY][0]
 
     assert bond_cur_state[Bond.CONFIG_SUBTREE][Bond.SLAVES] == [slave2_name]
+
+
+def test_swap_slaves_between_bonds(bond88_with_slave, bond99_with_slave):
+    bonding88 = bond88_with_slave[Interface.KEY][0][Bond.CONFIG_SUBTREE]
+    bonding99 = bond99_with_slave[Interface.KEY][0][Bond.CONFIG_SUBTREE]
+
+    bonding88[Bond.SLAVES], bonding99[Bond.SLAVES] = (
+        bonding99[Bond.SLAVES],
+        bonding88[Bond.SLAVES],
+    )
+
+    state = bond88_with_slave
+    state.update(bond99_with_slave)
+    libnmstate.apply(state)
+
+    assertlib.assert_state(state)
 
 
 def test_set_bond_mac_address(eth1_up):
