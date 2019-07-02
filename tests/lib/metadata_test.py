@@ -190,7 +190,7 @@ class TestDesiredStateBondMetadata(object):
         expected_dstate.interfaces['eth0'] = {'name': 'eth0', 'state': 'up'}
         expected_dstate.interfaces['eth0'][metadata.MASTER] = BOND_NAME
         expected_dstate.interfaces['eth0'][metadata.MASTER_TYPE] = TYPE_BOND
-        expected_dstate.interfaces['eth1'] = {'name': 'eth1'}
+        expected_dstate.interfaces['eth1'] = {'name': 'eth1', 'state': 'down'}
 
         metadata.generate_ifaces_metadata(desired_state, current_state)
 
@@ -501,7 +501,7 @@ class TestDesiredStateOvsMetadata(object):
         expected_dstate.interfaces['eth0'] = {'name': 'eth0', 'state': 'up'}
         expected_dstate.interfaces['eth0'][metadata.MASTER] = OVS_NAME
         expected_dstate.interfaces['eth0'][metadata.MASTER_TYPE] = TYPE_OVS_BR
-        expected_dstate.interfaces['eth1'] = {'name': 'eth1'}
+        expected_dstate.interfaces['eth1'] = {'name': 'eth1', 'state': 'down'}
         expected_dstate.interfaces['eth0'][
             metadata.BRPORT_OPTIONS
         ] = desired_state.interfaces[OVS_NAME]['bridge']['port'][0]
