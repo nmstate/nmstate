@@ -5,7 +5,7 @@ Name:           nmstate
 Version:        @VERSION@
 Release:        @RELEASE@%{?dist}
 Summary:        Declarative network manager API
-License:        GPLv2+
+License:        LGPLv2.1+
 URL:            https://github.com/%{srcname}/%{srcname}
 Source0:        https://github.com/%{srcname}/%{srcname}/archive/v%{version}/%{srcname}-%{version}.tar
 BuildArch:      noarch
