@@ -39,6 +39,7 @@ def get_info(active_connection):
     info['dhcp'] = False
     info['autoconf'] = False
 
+    is_link_local_method = False
     ip_profile = get_ip_profile(active_connection)
     if ip_profile:
         method = ip_profile.get_method()
@@ -48,6 +49,8 @@ def get_info(active_connection):
         elif method == nmclient.NM.SETTING_IP6_CONFIG_METHOD_DHCP:
             info['dhcp'] = True
             info['autoconf'] = False
+        elif method == nmclient.NM.SETTING_IP6_CONFIG_METHOD_LINK_LOCAL:
+            is_link_local_method = True
 
         if info['dhcp'] or info['autoconf']:
             info['auto-routes'] = not ip_profile.props.ignore_auto_routes
@@ -59,7 +62,7 @@ def get_info(active_connection):
         # When DHCP is enable, it might be possible, the active_connection does
         # not got IP address yet. In that case, we still mark
         # info['enabled'] as True.
-        if info['dhcp'] or info['autoconf']:
+        if info['dhcp'] or info['autoconf'] or is_link_local_method:
             info['enabled'] = True
             info['address'] = []
         else:
