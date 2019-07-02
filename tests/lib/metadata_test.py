@@ -249,6 +249,40 @@ class TestDesiredStateBondMetadata(object):
         assert desired_state == expected_dstate
         assert current_state == expected_cstate
 
+    def test_swap_slaves_between_bonds(self):
+        BOND2_NAME = 'bond88'
+        desired_state = state.State(
+            {
+                Interface.KEY: [
+                    create_bond_state_dict(BOND_NAME, ['eth1']),
+                    create_bond_state_dict(BOND2_NAME, ['eth0']),
+                ]
+            }
+        )
+        current_state = state.State(
+            {
+                Interface.KEY: [
+                    create_bond_state_dict(BOND_NAME, ['eth0']),
+                    create_bond_state_dict(BOND2_NAME, ['eth1']),
+                    {'name': 'eth0', 'state': 'up', 'type': 'unknown'},
+                    {'name': 'eth1', 'state': 'up', 'type': 'unknown'},
+                ]
+            }
+        )
+        expected_dstate = state.State(desired_state.state)
+        expected_cstate = state.State(current_state.state)
+        expected_dstate.interfaces['eth0'] = {'name': 'eth0', 'state': 'up'}
+        expected_dstate.interfaces['eth1'] = {'name': 'eth1', 'state': 'up'}
+        expected_dstate.interfaces['eth0'][metadata.MASTER] = BOND2_NAME
+        expected_dstate.interfaces['eth0'][metadata.MASTER_TYPE] = TYPE_BOND
+        expected_dstate.interfaces['eth1'][metadata.MASTER] = BOND_NAME
+        expected_dstate.interfaces['eth1'][metadata.MASTER_TYPE] = TYPE_BOND
+
+        metadata.generate_ifaces_metadata(desired_state, current_state)
+
+        assert desired_state == expected_dstate
+        assert current_state == expected_cstate
+
 
 def create_bond_state_dict(name, slaves=None):
     slaves = slaves or []
