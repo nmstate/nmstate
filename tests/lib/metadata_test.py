@@ -73,15 +73,7 @@ class TestDesiredStateBondMetadata(object):
         desired_state = state.State(
             {
                 Interface.KEY: [
-                    {
-                        'name': BOND_NAME,
-                        'type': TYPE_BOND,
-                        'state': 'up',
-                        'link-aggregation': {
-                            'mode': 'balance-rr',
-                            'slaves': ['eth0', 'eth1'],
-                        },
-                    },
+                    create_bond_state_dict(BOND_NAME, ['eth0', 'eth1']),
                     {'name': 'eth0', 'type': 'unknown'},
                     {'name': 'eth1', 'type': 'unknown'},
                 ]
@@ -104,15 +96,7 @@ class TestDesiredStateBondMetadata(object):
         desired_state = state.State(
             {
                 Interface.KEY: [
-                    {
-                        'name': BOND_NAME,
-                        'type': TYPE_BOND,
-                        'state': 'up',
-                        'link-aggregation': {
-                            'mode': 'balance-rr',
-                            'slaves': ['eth0', 'eth1'],
-                        },
-                    }
+                    create_bond_state_dict(BOND_NAME, ['eth0', 'eth1'])
                 ]
             }
         )
@@ -149,15 +133,7 @@ class TestDesiredStateBondMetadata(object):
         current_state = state.State(
             {
                 Interface.KEY: [
-                    {
-                        'name': BOND_NAME,
-                        'type': TYPE_BOND,
-                        'state': 'up',
-                        'link-aggregation': {
-                            'mode': 'balance-rr',
-                            'slaves': ['eth0', 'eth1'],
-                        },
-                    },
+                    create_bond_state_dict(BOND_NAME, ['eth0', 'eth1']),
                     {'name': 'eth0', 'type': 'unknown'},
                     {'name': 'eth1', 'type': 'unknown'},
                 ]
@@ -175,15 +151,7 @@ class TestDesiredStateBondMetadata(object):
         desired_state = state.State(
             {
                 Interface.KEY: [
-                    {
-                        'name': BOND_NAME,
-                        'type': TYPE_BOND,
-                        'state': 'up',
-                        'link-aggregation': {
-                            'mode': 'balance-rr',
-                            'slaves': ['eth0', 'eth1'],
-                        },
-                    },
+                    create_bond_state_dict(BOND_NAME, ['eth0', 'eth1']),
                     {'name': 'eth1', 'state': 'up', 'type': 'unknown'},
                 ]
             }
@@ -206,32 +174,12 @@ class TestDesiredStateBondMetadata(object):
 
     def test_bond_removing_slaves(self):
         desired_state = state.State(
-            {
-                Interface.KEY: [
-                    {
-                        'name': BOND_NAME,
-                        'type': TYPE_BOND,
-                        'state': 'up',
-                        'link-aggregation': {
-                            'mode': 'balance-rr',
-                            'slaves': ['eth0'],
-                        },
-                    }
-                ]
-            }
+            {Interface.KEY: [create_bond_state_dict(BOND_NAME, ['eth0'])]}
         )
         current_state = state.State(
             {
                 Interface.KEY: [
-                    {
-                        'name': BOND_NAME,
-                        'type': TYPE_BOND,
-                        'state': 'up',
-                        'link-aggregation': {
-                            'mode': 'balance-rr',
-                            'slaves': ['eth0', 'eth1'],
-                        },
-                    },
+                    create_bond_state_dict(BOND_NAME, ['eth0', 'eth1']),
                     {'name': 'eth0', 'state': 'up', 'type': 'unknown'},
                     {'name': 'eth1', 'state': 'up', 'type': 'unknown'},
                 ]
@@ -260,15 +208,7 @@ class TestDesiredStateBondMetadata(object):
         current_state = state.State(
             {
                 Interface.KEY: [
-                    {
-                        'name': BOND_NAME,
-                        'type': TYPE_BOND,
-                        'state': 'up',
-                        'link-aggregation': {
-                            'mode': 'balance-rr',
-                            'slaves': ['eth0', 'eth1'],
-                        },
-                    },
+                    create_bond_state_dict(BOND_NAME, ['eth0', 'eth1']),
                     {'name': 'eth0', 'type': 'unknown'},
                     {'name': 'eth1', 'type': 'unknown'},
                 ]
@@ -287,32 +227,12 @@ class TestDesiredStateBondMetadata(object):
     def test_bond_reusing_slave_used_by_existing_bond(self):
         BOND2_NAME = 'bond88'
         desired_state = state.State(
-            {
-                Interface.KEY: [
-                    {
-                        'name': BOND2_NAME,
-                        'type': TYPE_BOND,
-                        'state': 'up',
-                        'link-aggregation': {
-                            'mode': 'balance-rr',
-                            'slaves': ['eth0'],
-                        },
-                    }
-                ]
-            }
+            {Interface.KEY: [create_bond_state_dict(BOND2_NAME, ['eth0'])]}
         )
         current_state = state.State(
             {
                 Interface.KEY: [
-                    {
-                        'name': BOND_NAME,
-                        'type': TYPE_BOND,
-                        'state': 'up',
-                        'link-aggregation': {
-                            'mode': 'balance-rr',
-                            'slaves': ['eth0', 'eth1'],
-                        },
-                    },
+                    create_bond_state_dict(BOND_NAME, ['eth0', 'eth1']),
                     {'name': 'eth0', 'state': 'up', 'type': 'unknown'},
                     {'name': 'eth1', 'state': 'up', 'type': 'unknown'},
                 ]
@@ -328,6 +248,16 @@ class TestDesiredStateBondMetadata(object):
 
         assert desired_state == expected_dstate
         assert current_state == expected_cstate
+
+
+def create_bond_state_dict(name, slaves=None):
+    slaves = slaves or []
+    return {
+        'name': name,
+        'type': TYPE_BOND,
+        'state': 'up',
+        'link-aggregation': {'mode': 'balance-rr', 'slaves': slaves},
+    }
 
 
 class TestDesiredStateOvsMetadata(object):
