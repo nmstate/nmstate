@@ -18,6 +18,7 @@
 #
 
 import logging
+import time
 import uuid
 
 from . import nmclient
@@ -190,6 +191,7 @@ class ConnectionProfile(object):
                     act_object,
                 )
                 self._reset_profile()
+                time.sleep(0.1)
                 self.safe_activate_async()
             else:
                 self._mainloop.quit(
