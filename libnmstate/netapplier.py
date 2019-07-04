@@ -32,6 +32,7 @@ from libnmstate.error import NmstateLibnmError
 from libnmstate.error import NmstatePermissionError
 from libnmstate.error import NmstateValueError
 from libnmstate.nm import nmclient
+from libnmstate.nmstate import NmState
 
 
 def apply(desired_state, verify_change=True, commit=True, rollback_timeout=60):
@@ -49,6 +50,9 @@ def apply(desired_state, verify_change=True, commit=True, rollback_timeout=60):
     :returns: Checkpoint identifier
     :rtype: str
     """
+    return NmState(desired_state).apply(
+        verify_change, commit, rollback_timeout
+    )
     desired_state = copy.deepcopy(desired_state)
     validator.validate(desired_state)
     validator.validate_capabilities(desired_state, netinfo.capabilities())

@@ -44,6 +44,26 @@ class Interface(object):
     MTU = 'mtu'
 
 
+class InterfaceIP(object):
+    ENABLED = 'enabled'
+    ADDRESS = 'address'
+    ADDRESS_IP = 'ip'
+    ADDRESS_PREFIX_LENGTH = 'prefix-length'
+    DHCP = 'dhcp'
+    AUTO_DNS = 'auto-dns'
+    AUTO_GATEWAY = 'auto-gateway'
+    AUTO_ROUTES = 'auto-routes'
+
+
+class InterfaceIPV4(InterfaceIP):
+    KEY = Interface.IPV4
+
+
+class InterfaceIPV6(InterfaceIP):
+    KEY = Interface.IPV6
+    AUTOCONF = 'autoconf'
+
+
 class Route(object):
     KEY = 'routes'
 

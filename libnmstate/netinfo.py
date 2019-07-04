@@ -24,6 +24,7 @@ from libnmstate.schema import Constants
 from libnmstate.schema import DNS
 from libnmstate.schema import Interface
 from libnmstate.schema import Route
+from libnmstate.nmstate import NmState
 
 
 def show(include_status_data=False):
@@ -36,6 +37,7 @@ def show(include_status_data=False):
     When include_status_data is set, both are reported, otherwise only the
     configuration data is reported.
     """
+    return NmState().to_dict()
     report = {Constants.INTERFACES: interfaces()}
     if include_status_data:
         report['capabilities'] = capabilities()

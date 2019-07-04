@@ -28,6 +28,5 @@ def is_ipv6_link_local_addr(ip, prefix):
         and prefix >= _IPV6_LINK_LOCAL_NETWORK_PREFIX_LENGTH
     )
 
-
 def is_ipv6_address(addr):
     return ':' in addr
