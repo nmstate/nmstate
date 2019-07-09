@@ -56,6 +56,10 @@ definitions:
     mac-address:
       type: string
       pattern: "^([a-fA-F0-9]{2}:){5}[a-fA-F0-9]{2}$"
+    bridge-vlan-tag:
+      type: integer
+      minimum: 0
+      maximum: 4095
 
   # Interface types
   interface-base:
@@ -240,6 +244,22 @@ definitions:
                     type: integer
                   stp-hairpin-mode:
                     type: boolean
+                  vlan:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                        enum:
+                          - trunk
+                          - access
+                      trunk-tags:
+                        type: array
+                        items:
+                          $ref: "#/definitions/bridge-port-vlan"
+                      tag:
+                        $ref: "#/definitions/types/bridge-vlan-tag"
+                      enable-native:
+                        type: boolean
             options:
               type: object
               properties:
@@ -476,3 +496,15 @@ definitions:
         type: array
         items:
           type: string
+  bridge-port-vlan:
+    type: object
+    properties:
+      id:
+        $ref: "#/definitions/types/bridge-vlan-tag"
+      id-range:
+        type: object
+        properties:
+          min:
+            $ref: "#/definitions/types/bridge-vlan-tag"
+          max:
+            $ref: "#/definitions/types/bridge-vlan-tag"

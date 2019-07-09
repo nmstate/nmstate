@@ -171,6 +171,23 @@ class LinuxBridge(object):
     PORT_STP_HAIRPIN_MODE = 'stp-hairpin-mode'
     PORT_STP_PATH_COST = 'stp-path-cost'
 
+    class Port(object):
+        VLAN_SUBTREE = 'vlan'
+
+        class Vlan(object):
+            TRUNK_TAGS = 'trunk-tags'
+            TAG = 'tag'
+            ENABLE_NATIVE = 'enable-native'
+            TYPE = 'type'
+            ACCESS_TYPE = 'access'
+            TRUNK_TYPE = 'trunk'
+
+            class TrunkTags(object):
+                ID = 'id'
+                ID_RANGE = 'id-range'
+                MIN_RANGE = 'min'
+                MAX_RANGE = 'max'
+
 
 class Ethernet(object):
     TYPE = InterfaceType.ETHERNET

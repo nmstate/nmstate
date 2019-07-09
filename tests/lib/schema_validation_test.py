@@ -27,11 +27,13 @@ import jsonschema as js
 import libnmstate
 from libnmstate.schema import Constants
 from libnmstate.schema import DNS
+from libnmstate.schema import LinuxBridge as LB
 from libnmstate.schema import VXLAN
 from libnmstate.schema import Interface
 
 INTERFACES = Constants.INTERFACES
 ROUTES = Constants.ROUTES
+THE_BRIDGE = 'br0'
 VXLAN0 = 'vxlan0'
 
 COMMON_DATA = {
@@ -104,6 +106,23 @@ COMMON_DATA = {
 @pytest.fixture
 def default_data():
     return copy.deepcopy(COMMON_DATA)
+
+
+@pytest.fixture
+def portless_bridge_state():
+    return {
+        Interface.NAME: THE_BRIDGE,
+        Interface.STATE: 'up',
+        Interface.TYPE: LB.TYPE,
+        LB.CONFIG_SUBTREE: {LB.PORT_SUBTREE: []},
+    }
+
+
+@pytest.fixture
+def bridge_state(portless_bridge_state):
+    port = {LB.PORT_NAME: 'eth1', LB.Port.VLAN_SUBTREE: {}}
+    portless_bridge_state[LB.CONFIG_SUBTREE][LB.PORT_SUBTREE].append(port)
+    return portless_bridge_state
 
 
 class TestIfaceCommon(object):
@@ -211,3 +230,132 @@ class TestRoutes(object):
         with pytest.raises(js.ValidationError) as err:
             libnmstate.validator.validate(default_data)
         assert 'bad-state' in err.value.args[0]
+
+
+class TestLinuxBridgeVlanFiltering(object):
+    @pytest.mark.parametrize('port_type', argvalues=['trunk', 'access'])
+    def test_vlan_port_types(self, default_data, bridge_state, port_type):
+        valid_port_type = self._generate_vlan_filtering_config(port_type)
+        the_port = bridge_state[LB.CONFIG_SUBTREE][LB.PORT_SUBTREE][0]
+        the_port.update(valid_port_type)
+        default_data[Interface.KEY].append(bridge_state)
+
+        libnmstate.validator.validate(default_data)
+
+    def test_invalid_vlan_port_type(self, default_data, bridge_state):
+        invalid_port_type = self._generate_vlan_filtering_config('fake-type')
+        the_port = bridge_state[LB.CONFIG_SUBTREE][LB.PORT_SUBTREE][0]
+        the_port.update(invalid_port_type)
+        default_data[Interface.KEY].append(bridge_state)
+
+        with pytest.raises(js.ValidationError) as err:
+            libnmstate.validator.validate(default_data)
+        expected_error_msg = "'fake-type' is not one of ['trunk', 'access']"
+        assert expected_error_msg in err.value.args[0]
+
+    def test_access_port_accepted(self, default_data, bridge_state):
+        vlan_access_port_state = self._generate_vlan_filtering_config(
+            'access', access_tag=101
+        )
+        the_port = bridge_state[LB.CONFIG_SUBTREE][LB.PORT_SUBTREE][0]
+        the_port.update(vlan_access_port_state)
+        default_data[Interface.KEY].append(bridge_state)
+
+        libnmstate.validator.validate(default_data)
+
+    def test_wrong_access_port_tag_type(self, default_data, bridge_state):
+        invalid_access_port_tag_type = self._generate_vlan_filtering_config(
+            'access', access_tag='holy-guacamole!'
+        )
+        the_port = bridge_state[LB.CONFIG_SUBTREE][LB.PORT_SUBTREE][0]
+        the_port.update(invalid_access_port_tag_type)
+        default_data[Interface.KEY].append(bridge_state)
+
+        with pytest.raises(js.ValidationError) as err:
+            libnmstate.validator.validate(default_data)
+        expected_error_msg = "'holy-guacamole!' is not of type 'integer'"
+        assert expected_error_msg in err.value.args[0]
+
+    def test_wrong_access_tag_range(self, default_data, bridge_state):
+        invalid_vlan_id_range = self._generate_vlan_filtering_config(
+            'access', access_tag=48000
+        )
+        the_port = bridge_state[LB.CONFIG_SUBTREE][LB.PORT_SUBTREE][0]
+        the_port.update(invalid_vlan_id_range)
+        default_data[Interface.KEY].append(bridge_state)
+
+        with pytest.raises(js.ValidationError) as err:
+            libnmstate.validator.validate(default_data)
+        expected_error_msg = '48000 is greater than the maximum of 4095'
+        assert expected_error_msg in err.value.args[0]
+
+    @pytest.mark.parametrize(
+        'is_native_vlan', argvalues=[True, False], ids=['native', 'not-native']
+    )
+    def test_trunk_port_native_vlan(
+        self, default_data, bridge_state, is_native_vlan
+    ):
+        vlan_access_port_state = self._generate_vlan_filtering_config(
+            'trunk',
+            access_tag=101 if is_native_vlan else None,
+            native_vlan=is_native_vlan,
+        )
+        the_port = bridge_state[LB.CONFIG_SUBTREE][LB.PORT_SUBTREE][0]
+        the_port.update(vlan_access_port_state)
+        default_data[Interface.KEY].append(bridge_state)
+
+        libnmstate.validator.validate(default_data)
+
+    def test_trunk_ports(self, default_data, bridge_state):
+        trunk_tags = self._generate_vlan_id_config(101, 102, 103)
+        trunk_tags.append(self._generate_vlan_id_range_config(500, 1000))
+        vlan_trunk_tags_port_state = self._generate_vlan_filtering_config(
+            'trunk', trunk_tags=trunk_tags
+        )
+        the_port = bridge_state[LB.CONFIG_SUBTREE][LB.PORT_SUBTREE][0]
+        the_port.update(vlan_trunk_tags_port_state)
+        default_data[Interface.KEY].append(bridge_state)
+
+        libnmstate.validator.validate(default_data)
+
+    def test_invalid_trunk_port_vlan_range(self, default_data, bridge_state):
+        invalid_port_vlan_configuration = self._generate_vlan_filtering_config(
+            'trunk',
+            trunk_tags=[self._generate_vlan_id_range_config(100, 5000)],
+        )
+        the_port = bridge_state[LB.CONFIG_SUBTREE][LB.PORT_SUBTREE][0]
+        the_port.update(invalid_port_vlan_configuration)
+        default_data[Interface.KEY].append(bridge_state)
+
+        with pytest.raises(js.ValidationError) as err:
+            libnmstate.validator.validate(default_data)
+        assert '5000 is greater than the maximum of 4095' in err.value.args[0]
+
+    @staticmethod
+    def _generate_vlan_filtering_config(
+        port_type, trunk_tags=None, access_tag=None, native_vlan=None
+    ):
+        vlan_filtering_state = {
+            LB.Port.Vlan.TYPE: port_type,
+            LB.Port.Vlan.TRUNK_TAGS: trunk_tags or [],
+        }
+
+        if access_tag:
+            vlan_filtering_state[LB.Port.Vlan.TAG] = access_tag
+        if native_vlan:
+            vlan_filtering_state[LB.Port.Vlan.ENABLE_NATIVE] = native_vlan
+
+        return {LB.Port.VLAN_SUBTREE: vlan_filtering_state}
+
+    @staticmethod
+    def _generate_vlan_id_config(*vlan_ids):
+        return [{LB.Port.Vlan.TrunkTags.ID: vlan_id} for vlan_id in vlan_ids]
+
+    @staticmethod
+    def _generate_vlan_id_range_config(min_vlan_id, max_vlan_id):
+        return {
+            LB.Port.Vlan.TrunkTags.ID_RANGE: {
+                LB.Port.Vlan.TrunkTags.MIN_RANGE: min_vlan_id,
+                LB.Port.Vlan.TrunkTags.MAX_RANGE: max_vlan_id,
+            }
+        }
