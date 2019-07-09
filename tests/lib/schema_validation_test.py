@@ -65,7 +65,22 @@ COMMON_DATA = {
                 'out-discards': 0,
                 'out-errors': 0,
             },
-        }
+        },
+        {
+            'name': 'br0',
+            'state': 'up',
+            'type': 'linux-bridge',
+            'bridge': {
+                'options': {
+                    'vlan-filtering': True,
+                    'vlans': [
+                        {'vlan-range-min': 10},
+                        {'vlan-range-min': 100, 'vlan-range-max': 200},
+                    ],
+                },
+                'ports': [],
+            },
+        },
     ],
     ROUTES: {
         'config': [
@@ -162,3 +177,33 @@ class TestRoutes(object):
         with pytest.raises(js.ValidationError) as err:
             libnmstate.validator.validate(default_data)
         assert 'bad-state' in err.value.args[0]
+
+
+class TestVlanFiltering(object):
+    def test_basic_configuration(self, default_data):
+        libnmstate.validator.validate(default_data)
+
+    def test_port_configuration(self, default_data):
+        default_data[INTERFACES][1]['bridge']['ports'].append(
+            {
+                'name': 'eth1',
+                'vlans': [{'vlan-range-min': 50, 'vlan-range-max': 80}],
+            }
+        )
+        libnmstate.validator.validate(default_data)
+
+    def test_invalid_linux_bridge_vlan_range(self, default_data):
+        vlan_configs = default_data[INTERFACES][1]['bridge']['options'][
+            'vlans'
+        ]
+        for vlan in vlan_configs:
+            vlan['vlan-range-min'] = 'boom!'
+        with pytest.raises(js.ValidationError) as err:
+            libnmstate.validator.validate(default_data)
+        assert 'boom!' in err.value.args[0]
+
+        for vlan in vlan_configs:
+            vlan['vlan-range-min'] = 5000
+        with pytest.raises(js.ValidationError) as err:
+            libnmstate.validator.validate(default_data)
+        assert '5000 is greater than the maximum of 4095' in err.value.args[0]

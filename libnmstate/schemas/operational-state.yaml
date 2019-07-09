@@ -219,6 +219,10 @@ definitions:
                     type: integer
                   stp-hairpin-mode:
                     type: boolean
+                  vlans:
+                    type: array
+                    items:
+                      $ref: "#/definitions/vlan-filter"
             options:
               type: object
               properties:
@@ -241,6 +245,12 @@ definitions:
                       type: integer
                     max-age:
                       type: integer
+                vlan-filtering:
+                  type: boolean
+                vlans:
+                  type: array
+                  items:
+                    $ref: "#/definitions/vlan-filter"
   interface-ovs-bridge:
     all:
       allOf:
@@ -457,3 +467,14 @@ definitions:
         type: array
         items:
           type: string
+  vlan-filter:
+    type: object
+    properties:
+      vlan-range-min:
+        type: integer
+        minimum: 1
+        maximum: 4095
+      vlan-range-max:
+        type: integer
+        minimum: 1
+        maximum: 4095
