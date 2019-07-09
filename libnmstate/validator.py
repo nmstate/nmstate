@@ -29,6 +29,7 @@ from .schema import Constants
 from libnmstate.schema import DNS
 from libnmstate.schema import InterfaceIP
 from libnmstate.schema import InterfaceIPv6
+from libnmstate.schema import LinuxBridge as LB
 from libnmstate.schema import VXLAN
 from libnmstate.error import NmstateDependencyError
 from libnmstate.error import NmstateNotImplementedError
@@ -176,6 +177,14 @@ def validate_vxlan(state):
             )
 
 
+def validate_bridge(state):
+    for iface_state in state.get(schema.Interface.KEY, []):
+        if iface_state.get(schema.Interface.TYPE) == LB.TYPE:
+            _assert_vlan_filtering_trunk_tags(
+                iface_state.get(LB.PORT_SUBTREE, [])
+            )
+
+
 def _assert_iface_is_up(desired_iface_state, current_iface_state):
     """
     Validates that the interface has an UP state.
@@ -238,3 +247,37 @@ def _assert_vxlan_has_missing_attribute(state, *attributes):
                 state,
             )
         )
+
+
+def _assert_vlan_filtering_trunk_tags(ports_state):
+    for port_state in ports_state:
+        trunk_tags = port_state.get(LB.Port.VLAN_SUBTREE, {}).get(
+            LB.Port.Vlan.TRUNK_TAGS, []
+        )
+        for trunk_tag in trunk_tags:
+            _assert_vlan_filtering_trunk_tag(trunk_tag)
+
+
+def _assert_vlan_filtering_trunk_tag(trunk_tag_state):
+    vlan_id = trunk_tag_state.get(LB.Port.Vlan.TrunkTags.ID)
+    vlan_id_range = trunk_tag_state.get(LB.Port.Vlan.TrunkTags.ID_RANGE)
+
+    if vlan_id and vlan_id_range:
+        raise NmstateValueError(
+            'Trunk port cannot be configured by both id and range: {}'.format(
+                trunk_tag_state
+            )
+        )
+    elif vlan_id_range:
+        if not (
+            {
+                LB.Port.Vlan.TrunkTags.MIN_RANGE,
+                LB.Port.Vlan.TrunkTags.MAX_RANGE,
+            }
+            <= set(vlan_id_range)
+        ):
+            raise NmstateValueError(
+                'Trunk port range requires min / max keys: {}'.format(
+                    vlan_id_range
+                )
+            )

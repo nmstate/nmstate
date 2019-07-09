@@ -26,6 +26,7 @@ from libnmstate import validator
 from libnmstate.schema import DNS
 from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
+from libnmstate.schema import LinuxBridge as LB
 from libnmstate.schema import VXLAN
 from libnmstate.error import NmstateNotImplementedError
 from libnmstate.error import NmstateValueError
@@ -337,6 +338,78 @@ class TestVxlanValidation(object):
             ]
         }
         libnmstate.validator.validate_vxlan(desired_state)
+
+
+class TestVlanFilteringValidation(object):
+    def test_specify_both_vlan_id_and_id_range_is_invalid(self):
+        invalid_vlan_config = {
+            LB.Port.Vlan.TYPE: LB.Port.Vlan.TRUNK_TYPE,
+            LB.Port.Vlan.TRUNK_TAGS: [
+                {
+                    LB.Port.Vlan.TrunkTags.ID: 101,
+                    LB.Port.Vlan.TrunkTags.ID_RANGE: {
+                        LB.Port.Vlan.TrunkTags.MIN_RANGE: 200,
+                        LB.Port.Vlan.TrunkTags.MAX_RANGE: 299,
+                    },
+                }
+            ],
+        }
+        desired_state = {
+            schema.Interface.KEY: [
+                {
+                    schema.Interface.NAME: 'br0',
+                    schema.Interface.TYPE: LB.TYPE,
+                    schema.Interface.STATE: schema.InterfaceState.UP,
+                    LB.PORT_SUBTREE: [
+                        {
+                            LB.PORT_NAME: 'eth1',
+                            LB.Port.VLAN_SUBTREE: invalid_vlan_config,
+                        }
+                    ],
+                }
+            ]
+        }
+        with pytest.raises(NmstateValueError) as err:
+            libnmstate.validator.validate_bridge(desired_state)
+        assert (
+            'Trunk port cannot be configured by both id and range'
+            in err.value.args[0]
+        )
+
+    @pytest.mark.parametrize(
+        'range_key',
+        [LB.Port.Vlan.TrunkTags.MIN_RANGE, LB.Port.Vlan.TrunkTags.MAX_RANGE],
+        ids=['only_min', 'only_max'],
+    )
+    def test_vlan_ranges_must_have_min_and_max(self, range_key):
+        vlan_tag = 101
+        desired_state = {
+            schema.Interface.KEY: [
+                {
+                    schema.Interface.NAME: 'br0',
+                    schema.Interface.TYPE: LB.TYPE,
+                    schema.Interface.STATE: schema.InterfaceState.UP,
+                    LB.PORT_SUBTREE: [
+                        {
+                            LB.PORT_NAME: 'eth1',
+                            LB.Port.VLAN_SUBTREE: {
+                                LB.Port.Vlan.TYPE: LB.Port.Vlan.TRUNK_TYPE,
+                                LB.Port.Vlan.TRUNK_TAGS: [
+                                    {
+                                        LB.Port.Vlan.TrunkTags.ID_RANGE: {
+                                            range_key: vlan_tag
+                                        }
+                                    }
+                                ],
+                            },
+                        }
+                    ],
+                }
+            ]
+        }
+        with pytest.raises(NmstateValueError) as err:
+            libnmstate.validator.validate_bridge(desired_state)
+        assert 'Trunk port range requires min / max keys' in err.value.args[0]
 
 
 def _create_interface_state(
