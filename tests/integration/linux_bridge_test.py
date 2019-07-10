@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
-
 from contextlib import contextmanager
 from copy import deepcopy
 
@@ -127,6 +126,25 @@ def test_linux_bridge_uses_the_port_mac(port0_up, bridge0_with_port0):
     )
 
 
+def test_add_linux_bridge_with_empty_ipv6_static_address(port0_up):
+    bridge_name = TEST_BRIDGE0
+    port_name = port0_up[Interface.KEY][0][Interface.NAME]
+    bridge_state = _create_bridge_subtree_config((port_name,))
+    # Disable STP to avoid topology changes and the consequence link change.
+    options_subtree = bridge_state[LinuxBridge.OPTIONS_SUBTREE]
+    options_subtree[LinuxBridge.STP_SUBTREE][LinuxBridge.STP_ENABLED] = False
+
+    extra_iface_state = {
+        Interface.IPV6: {'enabled': True, 'autoconf': False, 'dhcp': False}
+    }
+    with _linux_bridge(
+        bridge_name, bridge_state, extra_iface_state
+    ) as desired_state:
+        assertlib.assert_state(desired_state)
+
+    assertlib.assert_absent(bridge_name)
+
+
 def _add_port_to_bridge(bridge_state, ifname):
     port_state = yaml.load(BRIDGE_PORT_YAML, Loader=yaml.SafeLoader)
     port_state[LinuxBridge.PORT_NAME] = ifname
@@ -147,7 +165,7 @@ def _create_bridge_subtree_config(port_names):
 
 
 @contextmanager
-def _linux_bridge(name, bridge_state):
+def _linux_bridge(name, bridge_state, extra_iface_state=None):
     desired_state = {
         INTERFACES: [
             {
@@ -157,6 +175,9 @@ def _linux_bridge(name, bridge_state):
             }
         ]
     }
+    if extra_iface_state:
+        desired_state[INTERFACES][0].update(extra_iface_state)
+
     if bridge_state:
         desired_state[INTERFACES][0][LinuxBridge.CONFIG_SUBTREE] = bridge_state
 

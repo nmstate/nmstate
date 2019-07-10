@@ -129,11 +129,17 @@ def _apply_ifaces_state(
             autodestroy=commit, timeout=rollback_timeout
         ) as checkpoint:
             with _setup_providers():
-                _add_interfaces(new_interfaces, desired_state)
+                ifaces2add, ifaces_add_configs = _add_interfaces(
+                    new_interfaces, desired_state
+                )
                 state2edit = _create_editable_desired_state(
                     desired_state, current_state, new_interfaces
                 )
-                _edit_interfaces(state2edit)
+                ifaces2edit, ifaces_edit_configs = _edit_interfaces(state2edit)
+                nm.applier.set_ifaces_admin_state(
+                    ifaces2add + ifaces2edit,
+                    con_profiles=ifaces_add_configs + ifaces_edit_configs,
+                )
             if verify_change:
                 _verify_change(desired_state)
         if not commit:
@@ -201,7 +207,7 @@ def _add_interfaces(new_interfaces, desired_state):
     ifaces_configs = nm.applier.prepare_new_ifaces_configuration(ifaces2add)
     nm.applier.create_new_ifaces(ifaces_configs)
 
-    nm.applier.set_ifaces_admin_state(ifaces2add, con_profiles=ifaces_configs)
+    return (ifaces2add, ifaces_configs)
 
 
 def _edit_interfaces(state2edit):
@@ -221,9 +227,7 @@ def _edit_interfaces(state2edit):
     )
     nm.applier.edit_existing_ifaces(ifaces_configs)
 
-    nm.applier.set_ifaces_admin_state(
-        ifaces2edit + proxy_ifaces, con_profiles=ifaces_configs
-    )
+    return (ifaces2edit + proxy_ifaces, ifaces_configs)
 
 
 def _index_by_name(ifaces_state):
