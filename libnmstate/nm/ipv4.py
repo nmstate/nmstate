@@ -101,18 +101,14 @@ def get_info(active_connection):
             info['auto-routes'] = not ip_profile.props.ignore_auto_routes
             info['auto-gateway'] = not ip_profile.props.never_default
             info['auto-dns'] = not ip_profile.props.ignore_auto_dns
+            info['enabled'] = True
+            info['address'] = []
     else:
         info['dhcp'] = False
 
     ip4config = active_connection.get_ip4_config()
     if ip4config is None:
-        # When DHCP is enable, it might be possible, the active_connection does
-        # not got IP address yet. In that case, we still mark
-        # info['enabled'] as True.
-        if info['dhcp']:
-            info['enabled'] = True
-            info['address'] = []
-        else:
+        if not info['dhcp']:
             del info['dhcp']
         return info
 
