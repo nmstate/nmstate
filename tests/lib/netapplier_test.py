@@ -91,10 +91,10 @@ def test_iface_admin_state_change(netinfo_nm_mock, netapplier_nm_mock):
     )
     applier_mock.set_ifaces_admin_state.assert_has_calls(
         [
-            mock.call([], con_profiles=ifaces_conf_new),
             mock.call(
-                desired_config[INTERFACES], con_profiles=ifaces_conf_edit
-            ),
+                desired_config[INTERFACES],
+                con_profiles=ifaces_conf_new + ifaces_conf_edit,
+            )
         ]
     )
 

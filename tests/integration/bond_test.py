@@ -93,7 +93,7 @@ def bond99_with_slave(eth2_up):
 
 
 @contextmanager
-def bond_interface(name, slaves):
+def bond_interface(name, slaves, extra_iface_state=None):
     desired_state = {
         Interface.KEY: [
             {
@@ -107,6 +107,9 @@ def bond_interface(name, slaves):
             }
         ]
     }
+    if extra_iface_state:
+        desired_state[Interface.KEY][0].update(extra_iface_state)
+
     libnmstate.apply(desired_state)
     try:
         yield desired_state
@@ -342,3 +345,15 @@ def test_reordering_the_slaves_does_not_change_the_mac(bond99_with_2_slaves):
     assert_mac_address(
         modified_state, current_state[Interface.KEY][0][Interface.MAC]
     )
+
+
+def test_bond_with_empty_ipv6_static_address(eth1_up):
+    extra_iface_state = {
+        Interface.IPV6: {'enabled': True, 'autoconf': False, 'dhcp': False}
+    }
+    with bond_interface(
+        name='bond99', slaves=['eth1'], extra_iface_state=extra_iface_state
+    ) as bond_state:
+        assertlib.assert_state(bond_state)
+
+    assertlib.assert_absent('bond99')
