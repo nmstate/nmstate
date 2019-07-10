@@ -50,6 +50,25 @@ def test_interface_ipv4_change(eth1_up):
     assert ip4_expected_state == ipv4_current_state
 
 
+def test_enable_dhcp_with_no_server(eth1_up):
+    with mainloop():
+        _modify_interface(
+            ipv4_state={'enabled': True, 'dhcp': True, 'address': []}
+        )
+
+    nm.nmclient.client(refresh=True)
+    ipv4_current_state = _get_ipv4_current_state(TEST_IFACE)
+    expected_ipv4_state = {
+        'enabled': True,
+        'dhcp': True,
+        'address': [],
+        'auto-dns': True,
+        'auto-gateway': True,
+        'auto-routes': True,
+    }
+    assert ipv4_current_state == expected_ipv4_state
+
+
 def _modify_interface(ipv4_state):
     conn = nm.connection.ConnectionProfile()
     conn.import_by_id(TEST_IFACE)
