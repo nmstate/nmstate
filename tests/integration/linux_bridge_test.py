@@ -145,6 +145,20 @@ def test_add_linux_bridge_with_empty_ipv6_static_address(port0_up):
     assertlib.assert_absent(bridge_name)
 
 
+def test_linux_bridge_add_port_with_name_only(bridge0_with_port0, port1_up):
+    desired_state = bridge0_with_port0
+    bridge_iface_state = desired_state[Interface.KEY][0]
+    bridge_state = bridge_iface_state[LinuxBridge.CONFIG_SUBTREE]
+    port1_name = port1_up[Interface.KEY][0][Interface.NAME]
+    bridge_state[LinuxBridge.PORT_SUBTREE].append(
+        {LinuxBridge.PORT_NAME: port1_name}
+    )
+
+    libnmstate.apply(desired_state)
+
+    assertlib.assert_state_match(desired_state)
+
+
 def _add_port_to_bridge(bridge_state, ifname):
     port_state = yaml.load(BRIDGE_PORT_YAML, Loader=yaml.SafeLoader)
     port_state[LinuxBridge.PORT_NAME] = ifname

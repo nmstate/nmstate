@@ -29,7 +29,46 @@ from .statelib import INTERFACES
 
 def assert_state(desired_state_data):
     """Given a state, assert it against the current state."""
+    desired_state, current_state = _perpare_state_for_verify(
+        desired_state_data
+    )
 
+    assert desired_state.state == current_state.state
+
+
+def assert_absent(*ifnames):
+    """ Assert that a interface is not present in the current state """
+
+    current_state = statelib.show_only(ifnames)
+    assert not current_state[INTERFACES]
+
+
+def assert_state_match(desired_state_data):
+    """
+    Given a state, assert it against the current state by treating missing
+    value in desired_state as match.
+    """
+    desired_state, current_state = _perpare_state_for_verify(
+        desired_state_data
+    )
+    assert desired_state.match(current_state)
+
+
+def assert_mac_address(state, expected_mac=None):
+    """ Asserts that all MAC addresses of ifaces in a state are the same """
+    macs = _iface_macs(state)
+    if not expected_mac:
+        expected_mac = next(macs)
+    for mac in macs:
+        assert expected_mac.upper() == mac
+
+
+def _iface_macs(state):
+    for ifstate in state[Interface.KEY]:
+        yield ifstate[Interface.MAC]
+
+
+def _perpare_state_for_verify(desired_state_data):
     current_state_data = libnmstate.show()
     # Ignore route and dns for assert check as the check are done in the test
     # case code.
@@ -47,26 +86,4 @@ def assert_state(desired_state_data):
     full_desired_state.update(desired_state_data)
     full_desired_state.remove_absent_entries()
     full_desired_state.normalize()
-
-    assert full_desired_state.state == current_state.state
-
-
-def assert_absent(*ifnames):
-    """ Assert that a interface is not present in the current state """
-
-    current_state = statelib.show_only(ifnames)
-    assert not current_state[INTERFACES]
-
-
-def assert_mac_address(state, expected_mac=None):
-    """ Asserts that all MAC addresses of ifaces in a state are the same """
-    macs = _iface_macs(state)
-    if not expected_mac:
-        expected_mac = next(macs)
-    for mac in macs:
-        assert expected_mac.upper() == mac
-
-
-def _iface_macs(state):
-    for ifstate in state[Interface.KEY]:
-        yield ifstate[Interface.MAC]
+    return full_desired_state, current_state

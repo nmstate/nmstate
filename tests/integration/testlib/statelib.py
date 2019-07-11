@@ -17,7 +17,13 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
-import collections
+try:
+    from collections.abc import Mapping
+    from collections.abc import Sequence
+except ImportError:
+    from collections import Mapping
+    from collections import Sequence
+
 import copy
 from operator import itemgetter
 import six
@@ -109,6 +115,9 @@ class State(object):
         self._sort_ip_addresses()
         self._sort_interfaces_by_name()
 
+    def match(self, other):
+        return _state_match(self.state, other.state)
+
     def _sort_interfaces_by_name(self):
         self._state[INTERFACES].sort(key=lambda d: d['name'])
 
@@ -195,7 +204,7 @@ def _dict_update(origin_data, to_merge_data):
     The function changes the origin_data in-place.
     """
     for key, val in six.viewitems(to_merge_data):
-        if isinstance(val, collections.Mapping):
+        if isinstance(val, Mapping):
             origin_data[key] = _dict_update(origin_data.get(key, {}), val)
         else:
             origin_data[key] = val
@@ -231,3 +240,22 @@ def _is_ipv6_link_local(ip, prefix):
     The IPv6 link local address range is fe80::/10.
     """
     return ip[:3] in ['fe8', 'fe9', 'fea', 'feb'] and prefix >= 10
+
+
+def _state_match(desire, current):
+    if isinstance(desire, Mapping):
+        return isinstance(current, Mapping) and all(
+            _state_match(val, current.get(key))
+            for key, val in six.viewitems(desire)
+        )
+    elif isinstance(desire, Sequence) and not isinstance(
+        desire, six.string_types
+    ):
+        return (
+            isinstance(current, Sequence)
+            and not isinstance(current, six.string_types)
+            and len(current) == len(desire)
+            and all(_state_match(d, c) for d, c in zip(desire, current))
+        )
+    else:
+        return desire == current
