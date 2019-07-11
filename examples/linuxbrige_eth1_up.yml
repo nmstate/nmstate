@@ -17,8 +17,17 @@ interfaces:
           hello-time: 2
           max-age: 20
           priority: 32768
+        vlan-filtering: true
+        vlans:
+          - vlan-range-min: 10
       port:
         - name: eth1
           stp-hairpin-mode: false
           stp-path-cost: 100
           stp-priority: 32
+          vlans:
+            - vlan-range-min: 20
+            - vlan-range-min: 21
+            - vlan-range-min: 22
+            - vlan-range-min: 200
+              vlan-range-max: 218

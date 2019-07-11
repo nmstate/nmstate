@@ -57,6 +57,12 @@ def _set_bridge_properties(bridge_setting, options):
             bridge_setting.props.multicast_snooping = val
         elif key == LB.STP_SUBTREE:
             _set_bridge_stp_properties(bridge_setting, val)
+        elif key == LB.VLAN_FILTERING:
+            bridge_setting.props.vlan_filtering = val
+            bridge_setting.props.vlan_default_pvid = 0
+        elif key == LB.VLANS:
+            for vlan_data in val:
+                bridge_setting.add_vlan(_build_vlan_bridge(vlan_data))
 
 
 def _set_bridge_stp_properties(bridge_setting, bridge_stp):
@@ -71,6 +77,16 @@ def _set_bridge_stp_properties(bridge_setting, bridge_stp):
                 bridge_setting.props.hello_time = stp_val
             elif stp_key == LB.STP_MAX_AGE:
                 bridge_setting.props.max_age = stp_val
+
+
+def _build_vlan_bridge(vlan_config):
+    vlan_range_min = vlan_config['vlan-range-min']
+    vlan_range_max = vlan_config.get('vlan-range-max')
+    bridge_vlan = nmclient.NM.BridgeVlan.new(
+        vlan_range_min, vlan_range_max or vlan_range_min
+    )
+    bridge_vlan.set_untagged(False)
+    return bridge_vlan
 
 
 def create_port_setting(options, base_con_profile):
@@ -90,6 +106,9 @@ def create_port_setting(options, base_con_profile):
             port_setting.props.hairpin_mode = val
         elif key == LB.PORT_STP_PATH_COST:
             port_setting.props.path_cost = val
+        elif key == LB.PORT_VLANS:
+            for vlan_data in val:
+                port_setting.add_vlan(_build_vlan_bridge(vlan_data))
 
     return port_setting
 
@@ -119,6 +138,11 @@ def get_info(nmdev):
                 LB.STP_HELLO_TIME: bridge_setting.props.hello_time,
                 LB.STP_MAX_AGE: bridge_setting.props.max_age,
             },
+            LB.VLAN_FILTERING: bridge_setting.props.vlan_filtering,
+            LB.VLANS: [
+                _get_vlan_info(bridge_vlan)
+                for bridge_vlan in bridge_setting.props.vlans
+            ],
         },
     }
     return info
@@ -155,6 +179,9 @@ def _get_bridge_port_info(port_profile):
         LB.PORT_STP_PRIORITY: port_setting.props.priority,
         LB.PORT_STP_HAIRPIN_MODE: port_setting.props.hairpin_mode,
         LB.PORT_STP_PATH_COST: port_setting.props.path_cost,
+        LB.PORT_VLANS: [
+            _get_vlan_info(port_vlan) for port_vlan in port_setting.props.vlans
+        ],
     }
 
 
@@ -165,3 +192,19 @@ def _get_slave_profiles(master_device):
         if active_con:
             slave_profiles.append(active_con.props.connection)
     return slave_profiles
+
+
+def _get_vlan_info(port_vlan_info):
+    vlan_min, vlan_max = _get_vlan_ranges(port_vlan_info.to_str())
+    port_data = {'vlan-range-min': vlan_min}
+    if vlan_max != vlan_min:
+        port_data['vlan-range-max'] = vlan_max
+    return port_data
+
+
+def _get_vlan_ranges(vlan_string_repr):
+    if '-' in vlan_string_repr:
+        vlan_min, vlan_max = vlan_string_repr.split('-')
+        return int(vlan_min), int(vlan_max)
+    else:
+        return int(vlan_string_repr), int(vlan_string_repr)

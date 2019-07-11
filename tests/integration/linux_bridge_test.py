@@ -57,6 +57,7 @@ BRIDGE_PORT_YAML = """
 stp-hairpin-mode: false
 stp-path-cost: 100
 stp-priority: 32
+vlans: []
 """
 
 

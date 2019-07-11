@@ -634,6 +634,7 @@ def test_slave_ipaddr_learned_via_dhcp_added_as_static_to_linux_bridge(
                             'stp-hairpin-mode': False,
                             'stp-path-cost': 100,
                             'stp-priority': 32,
+                            'vlans': [],
                         }
                     ],
                 },

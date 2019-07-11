@@ -160,11 +160,15 @@ class LinuxBridge(object):
     STP_HELLO_TIME = 'hello-time'
     STP_MAX_AGE = 'max-age'
 
+    VLAN_FILTERING = 'vlan-filtering'
+    VLANS = 'vlans'
+
     PORT_SUBTREE = 'port'
     PORT_NAME = 'name'
     PORT_STP_PRIORITY = 'stp-priority'
     PORT_STP_HAIRPIN_MODE = 'stp-hairpin-mode'
     PORT_STP_PATH_COST = 'stp-path-cost'
+    PORT_VLANS = 'vlans'
 
 
 class Ethernet(object):

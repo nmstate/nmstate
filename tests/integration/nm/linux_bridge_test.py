@@ -18,6 +18,7 @@
 #
 
 from contextlib import contextmanager
+from collections import namedtuple
 
 import pytest
 
@@ -29,13 +30,17 @@ from ..testlib import iproutelib
 from .testlib import mainloop_run
 
 
+PortConfig = namedtuple('PortConfig', ['name', 'vlan_config'])
+
 BRIDGE0 = 'brtest0'
 
 
 @pytest.fixture
 def bridge0_with_port0(port0_up):
     port_name = port0_up[schema.Interface.KEY][0][schema.Interface.NAME]
-    bridge_desired_state = _create_bridge_config((port_name,))
+    bridge_desired_state = _create_bridge_config(
+        (PortConfig(port_name, vlan_config=[]),)
+    )
     with _bridge_interface(bridge_desired_state):
         yield _get_bridge_current_state()
 
@@ -54,7 +59,9 @@ def test_create_and_remove_minimum_config_bridge():
 
 def test_create_and_remove_bridge(port0_up):
     port_name = port0_up[schema.Interface.KEY][0][schema.Interface.NAME]
-    bridge_desired_state = _create_bridge_config((port_name,))
+    bridge_desired_state = _create_bridge_config(
+        (PortConfig(port_name, vlan_config=[]),)
+    )
     with _bridge_interface(bridge_desired_state):
 
         bridge_current_state = _get_bridge_current_state()
@@ -66,16 +73,56 @@ def test_create_and_remove_bridge(port0_up):
 @iproutelib.ip_monitor_assert_stable_link_up(BRIDGE0)
 def test_add_port_to_existing_bridge(bridge0_with_port0, port1_up):
     port_name = port1_up[schema.Interface.KEY][0][schema.Interface.NAME]
-    _add_ports_to_bridge_config(bridge0_with_port0, (port_name,))
+    _add_ports_to_bridge_config_by_name(bridge0_with_port0, (port_name,))
 
     _modify_bridge(bridge0_with_port0)
 
     assert bridge0_with_port0 == _get_bridge_current_state()
 
 
-def _add_ports_to_bridge_config(bridge_state, ports):
-    ports_config = _create_bridge_ports_config(ports)
+def test_vlan_filtering_single_vlan(port0_up):
+    bridge_desired_state = _create_bridge_config(ports=[])
+    port_name = port0_up[schema.Interface.KEY][0][schema.Interface.NAME]
+    port = PortConfig(port_name, vlan_config=[{'vlan-range-min': 101}])
+    _add_ports_to_bridge_config(bridge_desired_state, (port,))
+
+    with _bridge_interface(bridge_desired_state):
+        bridge_current_state = _get_bridge_current_state()
+        assert bridge_desired_state == bridge_current_state
+
+    assert not _get_bridge_current_state()
+
+
+def test_vlan_filtering_with_range(port0_up):
+    bridge_desired_state = _create_bridge_config(ports=[])
+    port_name = port0_up[schema.Interface.KEY][0][schema.Interface.NAME]
+    port_config = PortConfig(
+        port_name,
+        vlan_config=[
+            {'vlan-range-min': 101, 'vlan-range-max': 201},
+            {'vlan-range-min': 500, 'vlan-range-max': 600},
+        ],
+    )
+    _add_ports_to_bridge_config(bridge_desired_state, (port_config,))
+
+    with _bridge_interface(bridge_desired_state):
+        bridge_current_state = _get_bridge_current_state()
+        assert bridge_desired_state == bridge_current_state
+
+    assert not _get_bridge_current_state()
+
+
+def _add_ports_to_bridge_config_by_name(bridge_state, port_names):
+    port_configs = [
+        PortConfig(port_name, vlan_config=[]) for port_name in port_names
+    ]
+    ports_config = _create_bridge_ports_config(port_configs)
     bridge_state[LB.CONFIG_SUBTREE][LB.PORT_SUBTREE] += ports_config
+
+
+def _add_ports_to_bridge_config(bridge_state, port_configs):
+    bridge_ports = bridge_state[LB.CONFIG_SUBTREE][LB.PORT_SUBTREE]
+    bridge_ports += _create_bridge_ports_config(port_configs)
 
 
 def _create_bridge_config(ports):
@@ -95,6 +142,8 @@ def _create_bridge_config(ports):
                     LB.STP_MAX_AGE: 20,
                     LB.STP_PRIORITY: 32768,
                 },
+                LB.VLAN_FILTERING: True,
+                LB.VLANS: [],
             },
             LB.PORT_SUBTREE: ports_states,
         }
@@ -103,14 +152,19 @@ def _create_bridge_config(ports):
 
 def _create_bridge_ports_config(ports):
     return [
-        {
-            LB.PORT_NAME: port,
-            LB.PORT_STP_PRIORITY: 32,
-            LB.PORT_STP_HAIRPIN_MODE: False,
-            LB.PORT_STP_PATH_COST: 100,
-        }
+        _create_bridge_port_config(port.name, port.vlan_config)
         for port in ports
     ]
+
+
+def _create_bridge_port_config(port_name, vlan_config):
+    return {
+        LB.PORT_NAME: port_name,
+        LB.PORT_STP_PRIORITY: 32,
+        LB.PORT_STP_HAIRPIN_MODE: False,
+        LB.PORT_STP_PATH_COST: 100,
+        LB.PORT_VLANS: vlan_config,
+    }
 
 
 @contextmanager
