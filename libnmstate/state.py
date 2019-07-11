@@ -19,8 +19,10 @@
 
 try:
     from collections.abc import Mapping
+    from collections.abc import Sequence
 except ImportError:
     from collections import Mapping
+    from collections import Sequence
 
 from collections import defaultdict
 import copy
@@ -465,8 +467,7 @@ class State(object):
         for ifname in self.interfaces:
             iface_dstate = self.interfaces[ifname]
             iface_cstate = current_state.interfaces[ifname]
-
-            if iface_dstate != iface_cstate:
+            if not state_match(iface_dstate, iface_cstate):
                 raise NmstateVerificationError(
                     format_desired_current_state_diff(
                         self.interfaces[ifname],
@@ -607,3 +608,26 @@ def _apply_absent_routes(absent_route_sets, iface_route_sets):
                 if not absent_route.match(route):
                     new_routes.add(route)
             iface_route_sets[iface_name] = new_routes
+
+
+def state_match(desire, current):
+    """
+    Return True when all values defined in desire equal to value in current,
+    else False.
+    """
+    if isinstance(desire, Mapping):
+        return isinstance(current, Mapping) and all(
+            state_match(val, current.get(key))
+            for key, val in six.viewitems(desire)
+        )
+    elif isinstance(desire, Sequence) and not isinstance(
+        desire, six.string_types
+    ):
+        return (
+            isinstance(current, Sequence)
+            and not isinstance(current, six.string_types)
+            and len(current) == len(desire)
+            and all(state_match(d, c) for d, c in zip(desire, current))
+        )
+    else:
+        return desire == current

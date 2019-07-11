@@ -730,3 +730,68 @@ class TestAssertDnsState(object):
                 DNS.SEARCH: ['example.com', 'example.org'],
             }
         }
+
+
+class TestStateMatch(object):
+    def test_match_empty_dict(self):
+        assert state.state_match({}, {})
+
+    def test_match_empty_list(self):
+        assert state.state_match([], [])
+
+    def test_match_none(self):
+        assert state.state_match(None, None)
+
+    def test_match_dict_vs_list(self):
+        assert not state.state_match({}, [])
+
+    def test_match_list_vs_string(self):
+        assert not state.state_match(['a', 'b', 'c'], 'abc')
+
+    def test_match_dict_identical(self):
+        assert state.state_match({'a': 1, 'b': 2}, {'a': 1, 'b': 2})
+
+    def test_match_dict_current_has_more_data(self):
+        assert state.state_match({'a': 1}, {'a': 1, 'b': 2})
+
+    def test_match_dict_desire_has_more_data(self):
+        assert not state.state_match({'a': 1, 'b': 2}, {'a': 1})
+
+    def test_match_dict_different_value_type(self):
+        assert not state.state_match({'a': 1, 'b': []}, {'a': 1, 'b': 2})
+
+    def test_match_list_identical(self):
+        assert state.state_match(['a', 'b', 1], ['a', 'b', 1])
+
+    def test_match_list_different_order(self):
+        assert not state.state_match(['a', 'b', 1], ['a', 1, 'b'])
+
+    def test_match_list_current_contains_more(self):
+        assert not state.state_match(['a', 'b', 1], ['a', 'b', 'c', 1])
+
+    def test_match_indentical_set(self):
+        assert state.state_match(set(['a', 'b', 1]), set(['a', 'b', 1]))
+        assert state.state_match(set(['a', 1, 'b']), set(['a', 'b', 1]))
+        assert state.state_match(set(['a', 1, 1, 'b']), set(['a', 'b', 1]))
+
+    def test_match_parital_set(self):
+        assert not state.state_match(
+            set(['a', 'b', 1]), set(['a', 'b', 'c', 1])
+        )
+
+    def test_match_nested_list_in_dict(self):
+        assert state.state_match({'a': 1, 'b': [1, 2]}, {'a': 1, 'b': [1, 2]})
+
+    def test_match_nested_dict_in_list(self):
+        assert state.state_match(
+            [{'a': 1, 'b': [1, 2]}, {'a': 2, 'b': [3, 4]}],
+            [{'a': 1, 'b': [1, 2]}, {'a': 2, 'b': [3, 4]}],
+        )
+        assert state.state_match(
+            [{'a': 1}, {'a': 2, 'b': [3, 4]}],
+            [{'a': 1, 'b': [1, 2]}, {'a': 2, 'b': [3, 4]}],
+        )
+        assert not state.state_match(
+            [{'a': 2, 'b': [3, 4]}, {'a': 1, 'b': [1, 2]}],
+            [{'a': 1, 'b': [1, 2]}, {'a': 2, 'b': [3, 4]}],
+        )
