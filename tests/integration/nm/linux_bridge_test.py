@@ -83,7 +83,9 @@ def test_add_port_to_existing_bridge(bridge0_with_port0, port1_up):
 def test_vlan_filtering_single_vlan(port0_up):
     bridge_desired_state = _create_bridge_config(ports=[])
     port_name = port0_up[schema.Interface.KEY][0][schema.Interface.NAME]
-    port = PortConfig(port_name, vlan_config=[{'vlan-range-min': 101}])
+    port = PortConfig(
+        port_name, vlan_config=[{'vlan-range-min': 101, 'pvid': True}]
+    )
     _add_ports_to_bridge_config(bridge_desired_state, (port,))
 
     with _bridge_interface(bridge_desired_state):
@@ -101,6 +103,27 @@ def test_vlan_filtering_with_range(port0_up):
         vlan_config=[
             {'vlan-range-min': 101, 'vlan-range-max': 201},
             {'vlan-range-min': 500, 'vlan-range-max': 600},
+        ],
+    )
+    _add_ports_to_bridge_config(bridge_desired_state, (port_config,))
+
+    with _bridge_interface(bridge_desired_state):
+        bridge_current_state = _get_bridge_current_state()
+        assert bridge_desired_state == bridge_current_state
+
+    assert not _get_bridge_current_state()
+
+
+def test_vlan_filtering_with_untagged(port0_up):
+    bridge_desired_state = _create_bridge_config(ports=[])
+
+    port_name = port0_up[schema.Interface.KEY][0][schema.Interface.NAME]
+    port_config = PortConfig(
+        port_name,
+        vlan_config=[
+            {'vlan-range-min': 101, 'vlan-range-max': 201},
+            {'vlan-range-min': 500, 'vlan-range-max': 600, 'untagged': True},
+            {'vlan-range-min': 1001},
         ],
     )
     _add_ports_to_bridge_config(bridge_desired_state, (port_config,))

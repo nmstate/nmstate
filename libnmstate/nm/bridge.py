@@ -82,10 +82,14 @@ def _set_bridge_stp_properties(bridge_setting, bridge_stp):
 def _build_vlan_bridge(vlan_config):
     vlan_range_min = vlan_config['vlan-range-min']
     vlan_range_max = vlan_config.get('vlan-range-max')
+    pvid = vlan_config.get('pvid', False)
+    untagged = vlan_config.get('untagged', False)
     bridge_vlan = nmclient.NM.BridgeVlan.new(
         vlan_range_min, vlan_range_max or vlan_range_min
     )
-    bridge_vlan.set_untagged(False)
+    bridge_vlan.set_untagged(untagged)
+    if pvid:
+        bridge_vlan.set_pvid(vlan_range_max or vlan_range_min)
     return bridge_vlan
 
 
@@ -199,12 +203,20 @@ def _get_vlan_info(port_vlan_info):
     port_data = {'vlan-range-min': vlan_min}
     if vlan_max != vlan_min:
         port_data['vlan-range-max'] = vlan_max
+    if port_vlan_info.is_pvid():
+        port_data['pvid'] = True
+    if port_vlan_info.is_untagged():
+        port_data['untagged'] = True
     return port_data
 
 
 def _get_vlan_ranges(vlan_string_repr):
-    if '-' in vlan_string_repr:
-        vlan_min, vlan_max = vlan_string_repr.split('-')
+    if 'untagged' in vlan_string_repr or 'pvid' in vlan_string_repr:
+        vlan_data = vlan_string_repr[: vlan_string_repr.find(' ')]
+    else:
+        vlan_data = vlan_string_repr
+    if '-' in vlan_data:
+        vlan_min, vlan_max = vlan_data.split('-')
         return int(vlan_min), int(vlan_max)
     else:
-        return int(vlan_string_repr), int(vlan_string_repr)
+        return int(vlan_data), int(vlan_data)

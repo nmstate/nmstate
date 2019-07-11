@@ -27,7 +27,10 @@ interfaces:
           stp-priority: 32
           vlans:
             - vlan-range-min: 20
+              pvid: true
+              untagged: true
             - vlan-range-min: 21
             - vlan-range-min: 22
             - vlan-range-min: 200
               vlan-range-max: 218
+              untagged: true
