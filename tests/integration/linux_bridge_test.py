@@ -105,6 +105,38 @@ def test_create_and_remove_linux_bridge_with_two_ports(port0_up, port1_up):
     assertlib.assert_absent(bridge_name)
 
 
+def test_remove_bridge_and_keep_slave_up(bridge0_with_port0, port0_up):
+    bridge_name = bridge0_with_port0[Interface.KEY][0][Interface.NAME]
+    port_name = port0_up[Interface.KEY][0][Interface.NAME]
+
+    port_desired_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: port_name,
+                Interface.STATE: InterfaceState.UP,
+                Interface.IPV4: {'enabled': False},
+                Interface.IPV6: {'enabled': False},
+            }
+        ]
+    }
+    desired_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: bridge_name,
+                Interface.STATE: InterfaceState.ABSENT,
+            },
+            port_desired_state[Interface.KEY][0],
+        ]
+    }
+
+    libnmstate.apply(desired_state)
+
+    current_state = show_only((bridge_name, port_name))
+
+    assertlib.assert_state_match(port_desired_state)
+    assert 1 == len(current_state[Interface.KEY])
+
+
 @ip_monitor_assert_stable_link_up(TEST_BRIDGE0)
 def test_add_port_to_existing_bridge(bridge0_with_port0, port1_up):
     desired_state = bridge0_with_port0

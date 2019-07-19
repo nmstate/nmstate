@@ -17,6 +17,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
+import itertools
 import six
 
 from libnmstate.error import NmstateValueError
@@ -121,7 +122,7 @@ def set_ifaces_admin_state(ifaces_desired_state, con_profiles=()):
     new_ovs_port_to_activate = set()
     master_ifaces_to_edit = set()
     ifaces_to_edit = set()
-    devs_actions = {}
+    remove_devs_actions = {}
 
     for iface_desired_state in ifaces_desired_state:
         ifname = iface_desired_state['name']
@@ -148,13 +149,16 @@ def set_ifaces_admin_state(ifaces_desired_state, con_profiles=()):
             elif iface_desired_state['state'] in ('down', 'absent'):
                 nmdevs = _get_affected_devices(iface_desired_state)
                 for nmdev in nmdevs:
-                    devs_actions[nmdev] = [device.deactivate, device.delete]
+                    remove_devs_actions[nmdev] = [
+                        device.deactivate,
+                        device.delete,
+                    ]
                     if nmdev.get_device_type() in (
                         nmclient.NM.DeviceType.OVS_BRIDGE,
                         nmclient.NM.DeviceType.OVS_PORT,
                         nmclient.NM.DeviceType.OVS_INTERFACE,
                     ):
-                        devs_actions[nmdev].append(device.delete_device)
+                        remove_devs_actions[nmdev].append(device.delete_device)
             else:
                 raise NmstateValueError(
                     'Invalid state {} for interface {}'.format(
@@ -162,6 +166,10 @@ def set_ifaces_admin_state(ifaces_desired_state, con_profiles=()):
                         iface_desired_state['name'],
                     )
                 )
+
+    # Do not remove devices that are marked for editing.
+    for dev, _ in itertools.chain(master_ifaces_to_edit, ifaces_to_edit):
+        remove_devs_actions.pop(dev, None)
 
     for ifname in new_ifaces_to_activate:
         device.activate(dev=None, connection_id=ifname)
@@ -178,7 +186,7 @@ def set_ifaces_admin_state(ifaces_desired_state, con_profiles=()):
     for dev, con_profile in ifaces_to_edit:
         device.modify(dev, con_profile)
 
-    for dev, actions in six.viewitems(devs_actions):
+    for dev, actions in six.viewitems(remove_devs_actions):
         for action in actions:
             action(dev)
 
