@@ -132,6 +132,7 @@ def _generate_link_master_metadata(
         (ifname, ifstate)
         for ifname, ifstate in six.viewitems(ifaces_desired_state)
         if ifstate.get('type') == master_type
+        and ifstate.get('state') not in ('down', 'absent')
     ]
     for master_name, master_state in desired_masters:
         desired_slaves = get_slaves_func(master_state)
@@ -168,19 +169,20 @@ def _generate_link_master_metadata(
         for slave in current_slaves:
             if slave in ifaces_desired_state:
                 iface_state = ifaces_desired_state.get(master_name, {})
-                master_has_no_slaves_specified_in_desired = (
-                    get_slaves_func(iface_state, None) is None
-                )
-                slave_has_no_master_specified_in_desired = (
-                    ifaces_desired_state[slave].get(MASTER) is None
-                )
-                if (
-                    slave_has_no_master_specified_in_desired
-                    and master_has_no_slaves_specified_in_desired
-                ):
-                    set_metadata_func(
-                        master_state, ifaces_desired_state[slave]
+                if iface_state.get('state') not in ('down', 'absent'):
+                    master_has_no_slaves_specified_in_desired = (
+                        get_slaves_func(iface_state, None) is None
                     )
+                    slave_has_no_master_specified_in_desired = (
+                        ifaces_desired_state[slave].get(MASTER) is None
+                    )
+                    if (
+                        slave_has_no_master_specified_in_desired
+                        and master_has_no_slaves_specified_in_desired
+                    ):
+                        set_metadata_func(
+                            master_state, ifaces_desired_state[slave]
+                        )
 
 
 def _generate_route_metadata(desired_state, current_state):
