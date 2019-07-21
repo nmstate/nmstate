@@ -38,6 +38,8 @@ def show(include_status_data=False):
     When include_status_data is set, both are reported, otherwise only the
     configuration data is reported.
     """
+    client = nm.nmclient.client(refresh=True)
+
     report = {Constants.INTERFACES: interfaces()}
     if include_status_data:
         report['capabilities'] = capabilities()
@@ -51,7 +53,6 @@ def show(include_status_data=False):
         ),
     }
 
-    client = nm.nmclient.client()
     report[Constants.DNS] = {
         DNS.RUNNING: nm_dns.get_running(),
         DNS.CONFIG: nm_dns.get_config(
