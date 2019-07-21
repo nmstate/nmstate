@@ -283,6 +283,39 @@ class TestDesiredStateBondMetadata(object):
         assert desired_state == expected_dstate
         assert current_state == expected_cstate
 
+    def test_remove_bond_while_keeping_slave(self):
+        desired_state = state.State(
+            {
+                Interface.KEY: [
+                    {
+                        Interface.NAME: BOND_NAME,
+                        Interface.STATE: InterfaceState.ABSENT,
+                    },
+                    {
+                        Interface.NAME: 'eth0',
+                        Interface.STATE: InterfaceState.UP,
+                        Interface.TYPE: InterfaceType.UNKNOWN,
+                    },
+                ]
+            }
+        )
+        current_state = state.State(
+            {
+                Interface.KEY: [
+                    create_bond_state_dict(BOND_NAME, ['eth0', 'eth1']),
+                    {'name': 'eth0', 'state': 'up', 'type': 'unknown'},
+                    {'name': 'eth1', 'state': 'up', 'type': 'unknown'},
+                ]
+            }
+        )
+        expected_dstate = state.State(desired_state.state)
+        expected_cstate = state.State(current_state.state)
+
+        metadata.generate_ifaces_metadata(desired_state, current_state)
+
+        assert desired_state == expected_dstate
+        assert current_state == expected_cstate
+
 
 def create_bond_state_dict(name, slaves=None):
     slaves = slaves or []
