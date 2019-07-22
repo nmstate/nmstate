@@ -106,6 +106,25 @@ class InterfaceType(object):
     )
 
 
+class InterfaceIP(object):
+    ENABLED = 'enabled'
+    ADDRESS = 'address'
+    ADDRESS_IP = 'ip'
+    ADDRESS_PREFIX_LENGTH = 'prefix-length'
+    DHCP = 'dhcp'
+    AUTO_DNS = 'auto-dns'
+    AUTO_GATEWAY = 'auto-gateway'
+    AUTO_ROUTES = 'auto-routes'
+
+
+class InterfaceIPv4(InterfaceIP):
+    pass
+
+
+class InterfaceIPv6(InterfaceIP):
+    AUTOCONF = 'autoconf'
+
+
 class Bond(object):
     KEY = InterfaceType.BOND
     CONFIG_SUBTREE = 'link-aggregation'

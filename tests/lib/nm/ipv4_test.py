@@ -22,6 +22,7 @@ import pytest
 from lib.compat import mock
 
 from libnmstate import nm
+from libnmstate.schema import InterfaceIPv4
 
 IPV4_ADDRESS1 = '192.0.2.251'
 
@@ -43,7 +44,7 @@ def test_create_setting_without_config(NM_mock):
 
 def test_create_setting_with_ipv4_disabled(NM_mock):
     ipv4_setting = nm.ipv4.create_setting(
-        config={'enabled': False}, base_con_profile=None
+        config={InterfaceIPv4.ENABLED: False}, base_con_profile=None
     )
 
     assert (
@@ -53,7 +54,8 @@ def test_create_setting_with_ipv4_disabled(NM_mock):
 
 def test_create_setting_without_addresses(NM_mock):
     ipv4_setting = nm.ipv4.create_setting(
-        config={'enabled': True, 'address': []}, base_con_profile=None
+        config={InterfaceIPv4.ENABLED: True, InterfaceIPv4.ADDRESS: []},
+        base_con_profile=None,
     )
 
     assert (
@@ -63,10 +65,16 @@ def test_create_setting_without_addresses(NM_mock):
 
 def test_create_setting_with_static_addresses(NM_mock):
     config = {
-        'enabled': True,
-        'address': [
-            {'ip': '10.10.10.1', 'prefix-length': 24},
-            {'ip': '10.10.20.1', 'prefix-length': 24},
+        InterfaceIPv4.ENABLED: True,
+        InterfaceIPv4.ADDRESS: [
+            {
+                InterfaceIPv4.ADDRESS_IP: '10.10.10.1',
+                InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+            },
+            {
+                InterfaceIPv4.ADDRESS_IP: '10.10.20.1',
+                InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+            },
         ],
     }
     ipv4_setting = nm.ipv4.create_setting(config=config, base_con_profile=None)
@@ -78,13 +86,17 @@ def test_create_setting_with_static_addresses(NM_mock):
         [
             mock.call(
                 nm.ipv4.socket.AF_INET,
-                config['address'][0]['ip'],
-                config['address'][0]['prefix-length'],
+                config[InterfaceIPv4.ADDRESS][0][InterfaceIPv4.ADDRESS_IP],
+                config[InterfaceIPv4.ADDRESS][0][
+                    InterfaceIPv4.ADDRESS_PREFIX_LENGTH
+                ],
             ),
             mock.call(
                 nm.ipv4.socket.AF_INET,
-                config['address'][1]['ip'],
-                config['address'][1]['prefix-length'],
+                config[InterfaceIPv4.ADDRESS][1][InterfaceIPv4.ADDRESS_IP],
+                config[InterfaceIPv4.ADDRESS][1][
+                    InterfaceIPv4.ADDRESS_PREFIX_LENGTH
+                ],
             ),
         ]
     )
@@ -99,7 +111,7 @@ def test_create_setting_with_static_addresses(NM_mock):
 def test_get_info_with_no_connection():
     info = nm.ipv4.get_info(active_connection=None)
 
-    assert info == {'enabled': False}
+    assert info == {InterfaceIPv4.ENABLED: False}
 
 
 def test_get_info_with_no_ipv4_config():
@@ -109,7 +121,7 @@ def test_get_info_with_no_ipv4_config():
 
     info = nm.ipv4.get_info(active_connection=con_mock)
 
-    assert info == {'enabled': False}
+    assert info == {InterfaceIPv4.ENABLED: False}
 
 
 def test_get_info_with_ipv4_config(NM_mock):
@@ -131,12 +143,16 @@ def test_get_info_with_ipv4_config(NM_mock):
     info = nm.ipv4.get_info(active_connection=act_con_mock)
 
     assert info == {
-        'enabled': True,
-        'dhcp': False,
-        'address': [
+        InterfaceIPv4.ENABLED: True,
+        InterfaceIPv4.DHCP: False,
+        InterfaceIPv4.ADDRESS: [
             {
-                'ip': address_mock.get_address.return_value,
-                'prefix-length': int(address_mock.get_prefix.return_value),
+                InterfaceIPv4.ADDRESS_IP: (
+                    address_mock.get_address.return_value
+                ),
+                InterfaceIPv4.ADDRESS_PREFIX_LENGTH: int(
+                    address_mock.get_prefix.return_value
+                ),
             }
         ],
     }
@@ -144,8 +160,13 @@ def test_get_info_with_ipv4_config(NM_mock):
 
 def test_create_setting_with_base_con_profile(NM_mock):
     config = {
-        'enabled': True,
-        'address': [{'ip': IPV4_ADDRESS1, 'prefix-length': 24}],
+        InterfaceIPv4.ENABLED: True,
+        InterfaceIPv4.ADDRESS: [
+            {
+                InterfaceIPv4.ADDRESS_IP: IPV4_ADDRESS1,
+                InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+            }
+        ],
     }
     base_con_profile_mock = mock.MagicMock()
     config_mock = base_con_profile_mock.get_setting_ip4_config.return_value

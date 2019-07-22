@@ -24,6 +24,8 @@ from .compat import mock
 
 from libnmstate import netapplier
 from libnmstate.schema import Constants
+from libnmstate.schema import InterfaceIPv4
+from libnmstate.schema import InterfaceIPv6
 
 INTERFACES = Constants.INTERFACES
 BOND_TYPE = 'bond'
@@ -57,8 +59,8 @@ def test_iface_admin_state_change(netinfo_nm_mock, netapplier_nm_mock):
                 'name': 'foo',
                 'type': 'unknown',
                 'state': 'up',
-                'ipv4': {'enabled': False},
-                'ipv6': {'enabled': False},
+                'ipv4': {InterfaceIPv4.ENABLED: False},
+                'ipv6': {InterfaceIPv6.ENABLED: False},
             }
         ]
     }
@@ -144,8 +146,8 @@ def test_edit_existing_bond(netinfo_nm_mock, netapplier_nm_mock):
                     'slaves': [],
                     'options': {'miimon': '100'},
                 },
-                'ipv4': {'enabled': False},
-                'ipv6': {'enabled': False},
+                'ipv4': {InterfaceIPv4.ENABLED: False},
+                'ipv6': {InterfaceIPv6.ENABLED: False},
             }
         ]
     }

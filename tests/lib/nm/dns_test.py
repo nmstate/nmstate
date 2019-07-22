@@ -24,6 +24,7 @@ import libnmstate.nm.dns as nm_dns
 import libnmstate.nm.ipv4 as nm_ipv4
 import libnmstate.nm.ipv6 as nm_ipv6
 from libnmstate.schema import DNS
+from libnmstate.schema import InterfaceIP
 from libnmstate.schema import Route
 
 
@@ -64,7 +65,8 @@ parametrize_ip_ver_dns = pytest.mark.parametrize(
 def test_add_dns_empty(nm_ip):
     dns_conf = {}
     setting_ip = nm_ip.create_setting(
-        {'enabled': True, nm_dns.DNS_METADATA: dns_conf}, base_con_profile=None
+        {InterfaceIP.ENABLED: True, nm_dns.DNS_METADATA: dns_conf},
+        base_con_profile=None,
     )
 
     _assert_dns(setting_ip, dns_conf)
@@ -74,7 +76,8 @@ def test_add_dns_empty(nm_ip):
 def test_add_dns(nm_ip, get_test_dns_func):
     dns_conf = get_test_dns_func()
     setting_ip = nm_ip.create_setting(
-        {'enabled': True, nm_dns.DNS_METADATA: dns_conf}, base_con_profile=None
+        {InterfaceIP.ENABLED: True, nm_dns.DNS_METADATA: dns_conf},
+        base_con_profile=None,
     )
 
     _assert_dns(setting_ip, dns_conf)
@@ -85,7 +88,8 @@ def test_add_dns_duplicate_server(nm_ip, get_test_dns_func):
     dns_conf = get_test_dns_func()
     dns_conf[DNS.SERVER] = [dns_conf[DNS.SERVER][0], dns_conf[DNS.SERVER][0]]
     setting_ip = nm_ip.create_setting(
-        {'enabled': True, nm_dns.DNS_METADATA: dns_conf}, base_con_profile=None
+        {InterfaceIP.ENABLED: True, nm_dns.DNS_METADATA: dns_conf},
+        base_con_profile=None,
     )
 
     dns_conf[DNS.SERVER] = [dns_conf[DNS.SERVER][0]]
@@ -97,7 +101,8 @@ def test_add_dns_duplicate_search(nm_ip, get_test_dns_func):
     dns_conf = get_test_dns_func()
     dns_conf[DNS.SEARCH] = [dns_conf[DNS.SEARCH][0], dns_conf[DNS.SEARCH][0]]
     setting_ip = nm_ip.create_setting(
-        {'enabled': True, nm_dns.DNS_METADATA: dns_conf}, base_con_profile=None
+        {InterfaceIP.ENABLED: True, nm_dns.DNS_METADATA: dns_conf},
+        base_con_profile=None,
     )
 
     dns_conf[DNS.SEARCH] = [dns_conf[DNS.SEARCH][0]]
@@ -108,12 +113,13 @@ def test_add_dns_duplicate_search(nm_ip, get_test_dns_func):
 def test_clear_dns(nm_ip, get_test_dns_func):
     dns_conf = get_test_dns_func()
     setting_ip = nm_ip.create_setting(
-        {'enabled': True, nm_dns.DNS_METADATA: dns_conf}, base_con_profile=None
+        {InterfaceIP.ENABLED: True, nm_dns.DNS_METADATA: dns_conf},
+        base_con_profile=None,
     )
     con_profile = nm_connection.ConnectionProfile()
     con_profile.create([setting_ip])
     new_setting_ip = nm_ip.create_setting(
-        {'enabled': True, nm_dns.DNS_METADATA: {}},
+        {InterfaceIP.ENABLED: True, nm_dns.DNS_METADATA: {}},
         base_con_profile=con_profile.profile,
     )
 

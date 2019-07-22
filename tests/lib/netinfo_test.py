@@ -23,6 +23,8 @@ from .compat import mock
 from libnmstate import netinfo
 from libnmstate.schema import Constants
 from libnmstate.schema import DNS
+from libnmstate.schema import InterfaceIPv4
+from libnmstate.schema import InterfaceIPv6
 
 
 INTERFACES = Constants.INTERFACES
@@ -50,8 +52,8 @@ def test_netinfo_show_generic_iface(nm_mock, nm_dns_mock):
                 'name': 'foo',
                 'type': 'unknown',
                 'state': 'up',
-                'ipv4': {'enabled': False},
-                'ipv6': {'enabled': False},
+                'ipv4': {InterfaceIPv4.ENABLED: False},
+                'ipv6': {InterfaceIPv6.ENABLED: False},
             }
         ],
     }
@@ -90,8 +92,8 @@ def test_netinfo_show_bond_iface(nm_mock, nm_dns_mock):
                     'slaves': [],
                     'options': {'miimon': '100'},
                 },
-                'ipv4': {'enabled': False},
-                'ipv6': {'enabled': False},
+                'ipv4': {InterfaceIPv4.ENABLED: False},
+                'ipv6': {InterfaceIPv6.ENABLED: False},
             }
         ],
     }

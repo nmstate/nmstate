@@ -29,6 +29,8 @@ from libnmstate.schema import BondMode
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
+from libnmstate.schema import InterfaceIPv4
+from libnmstate.schema import InterfaceIPv6
 
 from .testlib import assertlib
 from .testlib import statelib
@@ -175,9 +177,12 @@ def test_add_bond_with_slaves_and_ipv4(eth1_up, eth2_up, setup_remove_bond99):
                 Interface.TYPE: InterfaceType.BOND,
                 Interface.STATE: InterfaceState.UP,
                 Interface.IPV4: {
-                    'enabled': True,
-                    'address': [
-                        {'ip': '192.168.122.250', 'prefix-length': 24}
+                    InterfaceIPv4.ENABLED: True,
+                    InterfaceIPv4.ADDRESS: [
+                        {
+                            InterfaceIPv4.ADDRESS_IP: '192.168.122.250',
+                            InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+                        }
                     ],
                 },
                 Bond.CONFIG_SUBTREE: {
@@ -206,9 +211,12 @@ def test_rollback_for_bond(eth1_up, eth2_up):
                 Interface.TYPE: InterfaceType.BOND,
                 Interface.STATE: InterfaceState.UP,
                 Interface.IPV4: {
-                    'enabled': True,
-                    'address': [
-                        {'ip': '192.168.122.250', 'prefix-length': 24}
+                    InterfaceIPv4.ENABLED: True,
+                    InterfaceIPv4.ADDRESS: [
+                        {
+                            InterfaceIPv4.ADDRESS_IP: '192.168.122.250',
+                            InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+                        }
                     ],
                 },
                 Bond.CONFIG_SUBTREE: {
@@ -349,7 +357,11 @@ def test_reordering_the_slaves_does_not_change_the_mac(bond99_with_2_slaves):
 
 def test_bond_with_empty_ipv6_static_address(eth1_up):
     extra_iface_state = {
-        Interface.IPV6: {'enabled': True, 'autoconf': False, 'dhcp': False}
+        Interface.IPV6: {
+            InterfaceIPv6.ENABLED: True,
+            InterfaceIPv6.AUTOCONF: False,
+            InterfaceIPv6.DHCP: False,
+        }
     }
     with bond_interface(
         name='bond99', slaves=['eth1'], extra_iface_state=extra_iface_state

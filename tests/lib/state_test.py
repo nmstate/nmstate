@@ -24,6 +24,8 @@ from libnmstate import state
 from libnmstate.error import NmstateVerificationError
 from libnmstate.schema import DNS
 from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceIPv4
+from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import Route
 
@@ -76,32 +78,56 @@ class TestAssertIfaceState(object):
         desired_state = self._base_state
         current_state = self._base_state
         desired_state.interfaces['foo-name']['ipv4'] = {
-            'address': [
-                {'ip': '192.168.122.10', 'prefix-length': 24},
-                {'ip': '192.168.121.10', 'prefix-length': 24},
+            InterfaceIPv4.ADDRESS: [
+                {
+                    InterfaceIPv4.ADDRESS_IP: '192.168.122.10',
+                    InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+                },
+                {
+                    InterfaceIPv4.ADDRESS_IP: '192.168.121.10',
+                    InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+                },
             ],
-            'enabled': True,
+            InterfaceIPv4.ENABLED: True,
         }
         current_state.interfaces['foo-name']['ipv4'] = {
-            'address': [
-                {'ip': '192.168.121.10', 'prefix-length': 24},
-                {'ip': '192.168.122.10', 'prefix-length': 24},
+            InterfaceIPv4.ADDRESS: [
+                {
+                    InterfaceIPv4.ADDRESS_IP: '192.168.121.10',
+                    InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+                },
+                {
+                    InterfaceIPv4.ADDRESS_IP: '192.168.122.10',
+                    InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+                },
             ],
-            'enabled': True,
+            InterfaceIPv4.ENABLED: True,
         }
         desired_state.interfaces['foo-name']['ipv6'] = {
-            'address': [
-                {'ip': '2001::2', 'prefix-length': 64},
-                {'ip': '2001::1', 'prefix-length': 64},
+            InterfaceIPv6.ADDRESS: [
+                {
+                    InterfaceIPv6.ADDRESS_IP: '2001::2',
+                    InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
+                },
+                {
+                    InterfaceIPv6.ADDRESS_IP: '2001::1',
+                    InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
+                },
             ],
-            'enabled': True,
+            InterfaceIPv6.ENABLED: True,
         }
         current_state.interfaces['foo-name']['ipv6'] = {
-            'address': [
-                {'ip': '2001::1', 'prefix-length': 64},
-                {'ip': '2001::2', 'prefix-length': 64},
+            InterfaceIPv6.ADDRESS: [
+                {
+                    InterfaceIPv6.ADDRESS_IP: '2001::1',
+                    InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
+                },
+                {
+                    InterfaceIPv6.ADDRESS_IP: '2001::2',
+                    InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
+                },
             ],
-            'enabled': True,
+            InterfaceIPv6.ENABLED: True,
         }
 
         desired_state.verify_interfaces(current_state)
@@ -416,7 +442,7 @@ class TestRouteStateMerge(object):
                     {
                         Interface.NAME: route0_obj.next_hop_interface,
                         Interface.STATE: InterfaceState.UP,
-                        Interface.IPV4: {'enabled': False},
+                        Interface.IPV4: {InterfaceIPv4.ENABLED: False},
                     }
                 ]
             }
@@ -430,7 +456,7 @@ class TestRouteStateMerge(object):
                 {
                     Interface.NAME: route0_obj.next_hop_interface,
                     Interface.STATE: InterfaceState.UP,
-                    Interface.IPV4: {'enabled': False},
+                    Interface.IPV4: {InterfaceIPv4.ENABLED: False},
                     Interface.IPV6: {},
                 }
             ],
@@ -448,7 +474,7 @@ class TestRouteStateMerge(object):
                     {
                         Interface.NAME: route1_obj.next_hop_interface,
                         Interface.STATE: InterfaceState.UP,
-                        Interface.IPV6: {'enabled': False},
+                        Interface.IPV6: {InterfaceIPv6.ENABLED: False},
                     }
                 ]
             }
@@ -463,7 +489,7 @@ class TestRouteStateMerge(object):
                     Interface.NAME: route1_obj.next_hop_interface,
                     Interface.STATE: InterfaceState.UP,
                     Interface.IPV4: {},
-                    Interface.IPV6: {'enabled': False},
+                    Interface.IPV6: {InterfaceIPv6.ENABLED: False},
                 }
             ],
             Route.KEY: {Route.CONFIG: []},
@@ -480,7 +506,7 @@ class TestRouteStateMerge(object):
                     {
                         Interface.NAME: route0_obj.next_hop_interface,
                         Interface.STATE: InterfaceState.UP,
-                        Interface.IPV6: {'enabled': False},
+                        Interface.IPV6: {InterfaceIPv6.ENABLED: False},
                     }
                 ]
             }
@@ -495,7 +521,7 @@ class TestRouteStateMerge(object):
                     Interface.NAME: route0_obj.next_hop_interface,
                     Interface.STATE: InterfaceState.UP,
                     Interface.IPV4: {},
-                    Interface.IPV6: {'enabled': False},
+                    Interface.IPV6: {InterfaceIPv6.ENABLED: False},
                 }
             ],
             Route.KEY: {Route.CONFIG: [route0]},
@@ -668,8 +694,8 @@ def _gen_iface_states_for_routes(routes):
         {
             Interface.NAME: iface,
             Interface.STATE: InterfaceState.UP,
-            Interface.IPV4: {'enabled': True},
-            Interface.IPV6: {'enabled': True},
+            Interface.IPV4: {InterfaceIPv4.ENABLED: True},
+            Interface.IPV6: {InterfaceIPv6.ENABLED: True},
         }
         for iface in ifaces
     ]

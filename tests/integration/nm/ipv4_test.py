@@ -18,6 +18,7 @@
 #
 
 from libnmstate import nm
+from libnmstate.schema import InterfaceIPv4
 
 from ..testlib import iproutelib
 from .testlib import mainloop
@@ -33,9 +34,14 @@ def test_interface_ipv4_change(eth1_up):
     with mainloop():
         _modify_interface(
             ipv4_state={
-                'enabled': True,
-                'dhcp': False,
-                'address': [{'ip': IPV4_ADDRESS1, 'prefix-length': 24}],
+                InterfaceIPv4.ENABLED: True,
+                InterfaceIPv4.DHCP: False,
+                InterfaceIPv4.ADDRESS: [
+                    {
+                        InterfaceIPv4.ADDRESS_IP: IPV4_ADDRESS1,
+                        InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+                    }
+                ],
             }
         )
 
@@ -43,9 +49,14 @@ def test_interface_ipv4_change(eth1_up):
     ipv4_current_state = _get_ipv4_current_state(TEST_IFACE)
 
     ip4_expected_state = {
-        'enabled': True,
-        'dhcp': False,
-        'address': [{'ip': IPV4_ADDRESS1, 'prefix-length': 24}],
+        InterfaceIPv4.ENABLED: True,
+        InterfaceIPv4.DHCP: False,
+        InterfaceIPv4.ADDRESS: [
+            {
+                InterfaceIPv4.ADDRESS_IP: IPV4_ADDRESS1,
+                InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+            }
+        ],
     }
     assert ip4_expected_state == ipv4_current_state
 
@@ -53,18 +64,22 @@ def test_interface_ipv4_change(eth1_up):
 def test_enable_dhcp_with_no_server(eth1_up):
     with mainloop():
         _modify_interface(
-            ipv4_state={'enabled': True, 'dhcp': True, 'address': []}
+            ipv4_state={
+                InterfaceIPv4.ENABLED: True,
+                InterfaceIPv4.DHCP: True,
+                InterfaceIPv4.ADDRESS: [],
+            }
         )
 
     nm.nmclient.client(refresh=True)
     ipv4_current_state = _get_ipv4_current_state(TEST_IFACE)
     expected_ipv4_state = {
-        'enabled': True,
-        'dhcp': True,
-        'address': [],
-        'auto-dns': True,
-        'auto-gateway': True,
-        'auto-routes': True,
+        InterfaceIPv4.ENABLED: True,
+        InterfaceIPv4.DHCP: True,
+        InterfaceIPv4.ADDRESS: [],
+        InterfaceIPv4.AUTO_DNS: True,
+        InterfaceIPv4.AUTO_GATEWAY: True,
+        InterfaceIPv4.AUTO_ROUTES: True,
     }
     assert ipv4_current_state == expected_ipv4_state
 

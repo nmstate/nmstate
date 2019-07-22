@@ -22,6 +22,7 @@ import pytest
 from lib.compat import mock
 
 from libnmstate import nm
+from libnmstate.schema import InterfaceIPv6
 
 # IPv6 Address Prefix Reserved for Documentation:
 # https://tools.ietf.org/html/rfc3849
@@ -50,7 +51,7 @@ def test_create_setting_with_ipv6_disabled(NM_mock):
     NM_mock.SettingIP6Config.new().props.addresses = []
 
     ipv6_setting = nm.ipv6.create_setting(
-        config={'enabled': False}, base_con_profile=None
+        config={InterfaceIPv6.ENABLED: False}, base_con_profile=None
     )
 
     assert (
@@ -62,7 +63,8 @@ def test_create_setting_without_addresses(NM_mock):
     NM_mock.SettingIP6Config.new().props.addresses = []
 
     ipv6_setting = nm.ipv6.create_setting(
-        config={'enabled': True, 'address': []}, base_con_profile=None
+        config={InterfaceIPv6.ENABLED: True, InterfaceIPv6.ADDRESS: []},
+        base_con_profile=None,
     )
 
     assert (
@@ -73,10 +75,16 @@ def test_create_setting_without_addresses(NM_mock):
 
 def test_create_setting_with_static_addresses(NM_mock):
     config = {
-        'enabled': True,
-        'address': [
-            {'ip': 'fd12:3456:789a:1::1', 'prefix-length': 24},
-            {'ip': 'fd12:3456:789a:2::1', 'prefix-length': 24},
+        InterfaceIPv6.ENABLED: True,
+        InterfaceIPv6.ADDRESS: [
+            {
+                InterfaceIPv6.ADDRESS_IP: 'fd12:3456:789a:1::1',
+                InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 24,
+            },
+            {
+                InterfaceIPv6.ADDRESS_IP: 'fd12:3456:789a:2::1',
+                InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 24,
+            },
         ],
     }
     ipv6_setting = nm.ipv6.create_setting(config=config, base_con_profile=None)
@@ -88,13 +96,17 @@ def test_create_setting_with_static_addresses(NM_mock):
         [
             mock.call(
                 nm.ipv6.socket.AF_INET6,
-                config['address'][0]['ip'],
-                config['address'][0]['prefix-length'],
+                config[InterfaceIPv6.ADDRESS][0][InterfaceIPv6.ADDRESS_IP],
+                config[InterfaceIPv6.ADDRESS][0][
+                    InterfaceIPv6.ADDRESS_PREFIX_LENGTH
+                ],
             ),
             mock.call(
                 nm.ipv6.socket.AF_INET6,
-                config['address'][1]['ip'],
-                config['address'][1]['prefix-length'],
+                config[InterfaceIPv6.ADDRESS][1][InterfaceIPv6.ADDRESS_IP],
+                config[InterfaceIPv6.ADDRESS][1][
+                    InterfaceIPv6.ADDRESS_PREFIX_LENGTH
+                ],
             ),
         ]
     )
@@ -109,7 +121,7 @@ def test_create_setting_with_static_addresses(NM_mock):
 def test_get_info_with_no_connection():
     info = nm.ipv6.get_info(active_connection=None)
 
-    assert info == {'enabled': False}
+    assert info == {InterfaceIPv6.ENABLED: False}
 
 
 def test_get_info_with_no_ipv6_config():
@@ -119,7 +131,7 @@ def test_get_info_with_no_ipv6_config():
 
     info = nm.ipv6.get_info(active_connection=con_mock)
 
-    assert info == {'enabled': False}
+    assert info == {InterfaceIPv6.ENABLED: False}
 
 
 def test_get_info_with_ipv6_config(NM_mock):
@@ -141,13 +153,17 @@ def test_get_info_with_ipv6_config(NM_mock):
     info = nm.ipv6.get_info(active_connection=act_con_mock)
 
     assert info == {
-        'enabled': True,
-        'autoconf': False,
-        'dhcp': False,
-        'address': [
+        InterfaceIPv6.ENABLED: True,
+        InterfaceIPv6.AUTOCONF: False,
+        InterfaceIPv6.DHCP: False,
+        InterfaceIPv6.ADDRESS: [
             {
-                'ip': address_mock.get_address.return_value,
-                'prefix-length': int(address_mock.get_prefix.return_value),
+                InterfaceIPv6.ADDRESS_IP: (
+                    address_mock.get_address.return_value
+                ),
+                InterfaceIPv6.ADDRESS_PREFIX_LENGTH: int(
+                    address_mock.get_prefix.return_value
+                ),
             }
         ],
     }
@@ -155,10 +171,16 @@ def test_get_info_with_ipv6_config(NM_mock):
 
 def test_create_setting_with_link_local_addresses(NM_mock):
     config = {
-        'enabled': True,
-        'address': [
-            {'ip': IPV6_LINK_LOCAL_ADDRESS1, 'prefix-length': 64},
-            {'ip': IPV6_ADDRESS1, 'prefix-length': 64},
+        InterfaceIPv6.ENABLED: True,
+        InterfaceIPv6.ADDRESS: [
+            {
+                InterfaceIPv6.ADDRESS_IP: IPV6_LINK_LOCAL_ADDRESS1,
+                InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
+            },
+            {
+                InterfaceIPv6.ADDRESS_IP: IPV6_ADDRESS1,
+                InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
+            },
         ],
     }
     ipv6_setting = nm.ipv6.create_setting(config=config, base_con_profile=None)
@@ -170,8 +192,10 @@ def test_create_setting_with_link_local_addresses(NM_mock):
         [
             mock.call(
                 nm.ipv6.socket.AF_INET6,
-                config['address'][1]['ip'],
-                config['address'][1]['prefix-length'],
+                config[InterfaceIPv6.ADDRESS][1][InterfaceIPv6.ADDRESS_IP],
+                config[InterfaceIPv6.ADDRESS][1][
+                    InterfaceIPv6.ADDRESS_PREFIX_LENGTH
+                ],
             )
         ]
     )
@@ -182,8 +206,13 @@ def test_create_setting_with_link_local_addresses(NM_mock):
 
 def test_create_setting_with_base_con_profile(NM_mock):
     config = {
-        'enabled': True,
-        'address': [{'ip': IPV6_ADDRESS1, 'prefix-length': 24}],
+        InterfaceIPv6.ENABLED: True,
+        InterfaceIPv6.ADDRESS: [
+            {
+                InterfaceIPv6.ADDRESS_IP: IPV6_ADDRESS1,
+                InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 24,
+            }
+        ],
     }
     base_con_profile_mock = mock.MagicMock()
     config_mock = base_con_profile_mock.get_setting_ip6_config.return_value

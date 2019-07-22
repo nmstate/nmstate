@@ -26,6 +26,8 @@ from libnmstate import state
 from libnmstate.nm import dns as nm_dns
 from libnmstate.schema import DNS
 from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceIPv4
+from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import OVSBridgePortType as OBPortType
@@ -904,15 +906,25 @@ def _get_test_iface_states():
             Interface.STATE: InterfaceState.UP,
             Interface.TYPE: InterfaceType.ETHERNET,
             Interface.IPV4: {
-                'address': [{'ip': '192.0.2.251', 'prefix-length': 24}],
-                'dhcp': False,
-                'enabled': True,
+                InterfaceIPv4.ADDRESS: [
+                    {
+                        InterfaceIPv4.ADDRESS_IP: '192.0.2.251',
+                        InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+                    }
+                ],
+                InterfaceIPv4.DHCP: False,
+                InterfaceIPv4.ENABLED: True,
             },
             Interface.IPV6: {
-                'address': [{'ip': '2001:db8:1::1', 'prefix-length': 64}],
-                'dhcp': False,
-                'autoconf': False,
-                'enabled': True,
+                InterfaceIPv6.ADDRESS: [
+                    {
+                        InterfaceIPv6.ADDRESS_IP: '2001:db8:1::1',
+                        InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
+                    }
+                ],
+                InterfaceIPv6.DHCP: False,
+                InterfaceIPv6.AUTOCONF: False,
+                InterfaceIPv6.ENABLED: True,
             },
         },
         {
@@ -920,15 +932,25 @@ def _get_test_iface_states():
             Interface.STATE: InterfaceState.UP,
             Interface.TYPE: InterfaceType.ETHERNET,
             Interface.IPV4: {
-                'address': [{'ip': '198.51.100.1', 'prefix-length': 24}],
-                'dhcp': False,
-                'enabled': True,
+                InterfaceIPv4.ADDRESS: [
+                    {
+                        InterfaceIPv4.ADDRESS_IP: '198.51.100.1',
+                        InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+                    }
+                ],
+                InterfaceIPv4.DHCP: False,
+                InterfaceIPv4.ENABLED: True,
             },
             Interface.IPV6: {
-                'address': [{'ip': '2001:db8:2::1', 'prefix-length': 64}],
-                'dhcp': False,
-                'autoconf': False,
-                'enabled': True,
+                InterfaceIPv6.ADDRESS: [
+                    {
+                        InterfaceIPv6.ADDRESS_IP: '2001:db8:2::1',
+                        InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
+                    }
+                ],
+                InterfaceIPv6.DHCP: False,
+                InterfaceIPv6.AUTOCONF: False,
+                InterfaceIPv6.ENABLED: True,
             },
         },
     ]

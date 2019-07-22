@@ -24,6 +24,8 @@ from libnmstate import schema
 from libnmstate import state
 from libnmstate import validator
 from libnmstate.schema import DNS
+from libnmstate.schema import InterfaceIPv4
+from libnmstate.schema import InterfaceIPv6
 from libnmstate.error import NmstateNotImplementedError
 from libnmstate.error import NmstateValueError
 
@@ -295,8 +297,8 @@ def _create_interface_state(
         schema.Interface.NAME: iface_name,
         schema.Interface.TYPE: schema.InterfaceType.ETHERNET,
         schema.Interface.STATE: state,
-        schema.Interface.IPV4: {'enabled': ipv4},
-        schema.Interface.IPV6: {'enabled': ipv6},
+        schema.Interface.IPV4: {InterfaceIPv4.ENABLED: ipv4},
+        schema.Interface.IPV6: {InterfaceIPv6.ENABLED: ipv6},
     }
 
 
