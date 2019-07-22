@@ -26,6 +26,7 @@ from libnmstate.error import NmstateNotImplementedError
 from libnmstate.nm import ipv4 as nm_ipv4
 from libnmstate.nm import ipv6 as nm_ipv6
 from libnmstate.nm import connection as nm_connection
+from libnmstate.schema import InterfaceIP
 from libnmstate.schema import Route
 
 IPV4_DEFAULT_GATEWAY_DESTINATION = '0.0.0.0/0'
@@ -116,7 +117,8 @@ parametrize_ip_ver_routes_gw = pytest.mark.parametrize(
 @parametrize_ip_ver_routes
 def test_add_multiple_route(nm_ip, routes):
     setting_ip = nm_ip.create_setting(
-        {'enabled': True, metadata.ROUTES: routes}, base_con_profile=None
+        {InterfaceIP.ENABLED: True, metadata.ROUTES: routes},
+        base_con_profile=None,
     )
     assert [_nm_route_to_dict(r) for r in setting_ip.props.routes] == routes
 
@@ -124,7 +126,7 @@ def test_add_multiple_route(nm_ip, routes):
 @parametrize_ip_ver_routes
 def test_add_duplicate_routes(nm_ip, routes):
     setting_ip = nm_ip.create_setting(
-        {'enabled': True, metadata.ROUTES: [routes[0], routes[0]]},
+        {InterfaceIP.ENABLED: True, metadata.ROUTES: [routes[0], routes[0]]},
         base_con_profile=None,
     )
     assert [_nm_route_to_dict(r) for r in setting_ip.props.routes] == [
@@ -135,12 +137,13 @@ def test_add_duplicate_routes(nm_ip, routes):
 @parametrize_ip_ver_routes
 def test_clear_route(nm_ip, routes):
     setting_ip = nm_ip.create_setting(
-        {'enabled': True, metadata.ROUTES: routes}, base_con_profile=None
+        {InterfaceIP.ENABLED: True, metadata.ROUTES: routes},
+        base_con_profile=None,
     )
     con_profile = nm_connection.ConnectionProfile()
     con_profile.create([setting_ip])
     new_setting_ip = nm_ip.create_setting(
-        {'enabled': True, metadata.ROUTES: []},
+        {InterfaceIP.ENABLED: True, metadata.ROUTES: []},
         base_con_profile=con_profile.profile,
     )
     assert not [_nm_route_to_dict(r) for r in new_setting_ip.props.routes]
@@ -153,7 +156,7 @@ def test_add_route_without_metric(nm_ip, routes):
     route_without_metric = copy.deepcopy(routes[0])
     del route_without_metric[Route.METRIC]
     setting_ip = nm_ip.create_setting(
-        {'enabled': True, metadata.ROUTES: [route_without_metric]},
+        {InterfaceIP.ENABLED: True, metadata.ROUTES: [route_without_metric]},
         base_con_profile=None,
     )
     assert [_nm_route_to_dict(r) for r in setting_ip.props.routes] == [
@@ -168,7 +171,7 @@ def test_add_route_without_table_id(nm_ip, routes):
     route_without_table_id = copy.deepcopy(routes[0])
     del route_without_table_id[Route.TABLE_ID]
     setting_ip = nm_ip.create_setting(
-        {'enabled': True, metadata.ROUTES: [route_without_table_id]},
+        {InterfaceIP.ENABLED: True, metadata.ROUTES: [route_without_table_id]},
         base_con_profile=None,
     )
     assert [_nm_route_to_dict(r) for r in setting_ip.props.routes] == [
@@ -180,7 +183,7 @@ def test_add_route_without_table_id(nm_ip, routes):
 def test_change_gateway(nm_ip, routes, gateways):
     desired_routes = routes + gateways[:1]
     setting_ip = nm_ip.create_setting(
-        {'enabled': True, metadata.ROUTES: desired_routes},
+        {InterfaceIP.ENABLED: True, metadata.ROUTES: desired_routes},
         base_con_profile=None,
     )
     assert [_nm_route_to_dict(r) for r in setting_ip.props.routes] == routes
@@ -195,7 +198,7 @@ def test_change_gateway(nm_ip, routes, gateways):
 @parametrize_ip_ver_routes_gw
 def test_add_two_gateway(nm_ip, routes, gateways):
     nm_ip.create_setting(
-        {'enabled': True, metadata.ROUTES: routes + gateways},
+        {InterfaceIP.ENABLED: True, metadata.ROUTES: routes + gateways},
         base_con_profile=None,
     )
 
@@ -209,7 +212,7 @@ def test_add_two_gateway(nm_ip, routes, gateways):
 def test_add_duplicate_gateways(nm_ip, routes, gateways):
     nm_ip.create_setting(
         {
-            'enabled': True,
+            InterfaceIP.ENABLED: True,
             metadata.ROUTES: routes + [gateways[0], gateways[0]],
         },
         base_con_profile=None,
@@ -220,7 +223,7 @@ def test_add_duplicate_gateways(nm_ip, routes, gateways):
 def test_change_gateway_without_metric(nm_ip, routes, gateways):
     del gateways[0][Route.METRIC]
     setting_ip = nm_ip.create_setting(
-        {'enabled': True, metadata.ROUTES: routes + [gateways[0]]},
+        {InterfaceIP.ENABLED: True, metadata.ROUTES: routes + [gateways[0]]},
         base_con_profile=None,
     )
     gateways[0][Route.METRIC] = Route.USE_DEFAULT_METRIC
@@ -232,7 +235,7 @@ def test_change_gateway_without_metric(nm_ip, routes, gateways):
 def test_change_gateway_without_table_id(nm_ip, routes, gateways):
     del gateways[0][Route.TABLE_ID]
     setting_ip = nm_ip.create_setting(
-        {'enabled': True, metadata.ROUTES: routes + [gateways[0]]},
+        {InterfaceIP.ENABLED: True, metadata.ROUTES: routes + [gateways[0]]},
         base_con_profile=None,
     )
     gateways[0][Route.TABLE_ID] = Route.USE_DEFAULT_ROUTE_TABLE
@@ -244,13 +247,13 @@ def test_change_gateway_without_table_id(nm_ip, routes, gateways):
 @parametrize_ip_ver_routes_gw
 def test_clear_gateway(nm_ip, routes, gateways):
     setting_ip = nm_ip.create_setting(
-        {'enabled': True, metadata.ROUTES: routes + gateways[:1]},
+        {InterfaceIP.ENABLED: True, metadata.ROUTES: routes + gateways[:1]},
         base_con_profile=None,
     )
     con_profile = nm_connection.ConnectionProfile()
     con_profile.create([setting_ip])
     setting_ip = nm_ip.create_setting(
-        {'enabled': True, metadata.ROUTES: routes},
+        {InterfaceIP.ENABLED: True, metadata.ROUTES: routes},
         base_con_profile=con_profile.profile,
     )
     assert [_nm_route_to_dict(r) for r in setting_ip.props.routes] == routes

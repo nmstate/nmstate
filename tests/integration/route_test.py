@@ -23,6 +23,8 @@ import pytest
 import libnmstate
 from libnmstate.error import NmstateNotImplementedError
 from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceIPv4
+from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import Route
@@ -36,15 +38,25 @@ ETH1_INTERFACE_STATE = {
     Interface.STATE: InterfaceState.UP,
     Interface.TYPE: InterfaceType.ETHERNET,
     Interface.IPV4: {
-        'address': [{'ip': IPV4_ADDRESS1, 'prefix-length': 24}],
-        'dhcp': False,
-        'enabled': True,
+        InterfaceIPv4.ADDRESS: [
+            {
+                InterfaceIPv4.ADDRESS_IP: IPV4_ADDRESS1,
+                InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+            }
+        ],
+        InterfaceIPv4.DHCP: False,
+        InterfaceIPv4.ENABLED: True,
     },
     Interface.IPV6: {
-        'address': [{'ip': IPV6_ADDRESS1, 'prefix-length': 64}],
-        'dhcp': False,
-        'autoconf': False,
-        'enabled': True,
+        InterfaceIPv6.ADDRESS: [
+            {
+                InterfaceIPv6.ADDRESS_IP: IPV6_ADDRESS1,
+                InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
+            }
+        ],
+        InterfaceIPv6.DHCP: False,
+        InterfaceIPv6.AUTOCONF: False,
+        InterfaceIPv6.ENABLED: True,
     },
 }
 
@@ -393,7 +405,7 @@ def test_disable_ipv4_with_routes_in_current(eth1_up):
     )
 
     eth1_state = copy.deepcopy(ETH1_INTERFACE_STATE)
-    eth1_state[Interface.IPV4] = {'enabled': False}
+    eth1_state[Interface.IPV4] = {InterfaceIPv4.ENABLED: False}
 
     libnmstate.apply({Interface.KEY: [eth1_state]})
 

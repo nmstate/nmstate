@@ -20,6 +20,7 @@
 import yaml
 
 import libnmstate
+from libnmstate.schema import InterfaceIPv4
 
 from .testlib import statelib
 from .testlib.statelib import INTERFACES
@@ -83,8 +84,13 @@ def test_create_and_remove_ovs_bridge_with_an_internal_port():
         'state': 'up',
         'mtu': 1500,
         'ipv4': {
-            'enabled': True,
-            'address': [{'ip': '192.0.2.1', 'prefix-length': 24}],
+            InterfaceIPv4.ENABLED: True,
+            InterfaceIPv4.ADDRESS: [
+                {
+                    InterfaceIPv4.ADDRESS_IP: '192.0.2.1',
+                    InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+                }
+            ],
         },
     }
     state[INTERFACES].append(ovs_internal_interface_state)

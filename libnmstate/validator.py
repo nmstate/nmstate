@@ -27,6 +27,8 @@ from . import nm
 from . import schema
 from .schema import Constants
 from libnmstate.schema import DNS
+from libnmstate.schema import InterfaceIP
+from libnmstate.schema import InterfaceIPv6
 from libnmstate.error import NmstateDependencyError
 from libnmstate.error import NmstateNotImplementedError
 from libnmstate.error import NmstateValueError
@@ -111,9 +113,11 @@ def validate_dhcp(state):
         for family in ('ipv4', 'ipv6'):
             ip = iface_state.get(family, {})
             if (
-                ip.get('enabled')
-                and ip.get('address')
-                and (ip.get('dhcp') or ip.get('autoconf'))
+                ip.get(InterfaceIP.ENABLED)
+                and ip.get(InterfaceIP.ADDRESS)
+                and (
+                    ip.get(InterfaceIP.DHCP) or ip.get(InterfaceIPv6.AUTOCONF)
+                )
             ):
                 logging.warning(
                     '%s addresses are ignored when ' 'dynamic IP is enabled',
@@ -200,12 +204,12 @@ def _assert_iface_ip_enabled(desired_iface_state, current_iface_state, ipkey):
     if desired_iface_state:
         ip_state = desired_iface_state.get(ipkey)
         if ip_state is not None:
-            ip_enabled = ip_state.get('enabled')
+            ip_enabled = ip_state.get(InterfaceIP.ENABLED)
             if ip_enabled is True:
                 return
             elif ip_enabled is False:
                 raise NmstateRouteWithNoIPInterfaceError(desired_iface_state)
     if current_iface_state:
         ip_state = current_iface_state.get(ipkey)
-        if not ip_state.get('enabled'):
+        if not ip_state.get(InterfaceIP.ENABLED):
             raise NmstateRouteWithNoIPInterfaceError(current_iface_state)

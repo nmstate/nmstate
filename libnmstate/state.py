@@ -40,6 +40,9 @@ from libnmstate.prettystate import format_desired_current_state_diff
 from libnmstate.schema import DNS
 from libnmstate.schema import Ethernet
 from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceIP
+from libnmstate.schema import InterfaceIPv4
+from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import Route
@@ -224,15 +227,15 @@ class State(object):
         for iface_state in six.viewvalues(self.interfaces):
             for family in ('ipv4', 'ipv6'):
                 ip = iface_state[family]
-                if ip.get('enabled') and (
-                    ip.get('dhcp') or ip.get('autoconf')
+                if ip.get(InterfaceIP.ENABLED) and (
+                    ip.get(InterfaceIP.DHCP) or ip.get(InterfaceIPv6.AUTOCONF)
                 ):
-                    ip['address'] = []
+                    ip[InterfaceIP.ADDRESS] = []
                 else:
                     for dhcp_option in (
-                        'auto-routes',
-                        'auto-gateway',
-                        'auto-dns',
+                        InterfaceIP.AUTO_ROUTES,
+                        InterfaceIP.AUTO_GATEWAY,
+                        InterfaceIP.AUTO_DNS,
                     ):
                         ip.pop(dhcp_option, None)
 
@@ -351,14 +354,14 @@ class State(object):
         iface_up = ifstate.get(Interface.STATE) not in NON_UP_STATES
         if iface_up:
             ipv4_state = ifstate.get(Interface.IPV4, {})
-            ipv4_disabled = ipv4_state.get('enabled') is False
+            ipv4_disabled = ipv4_state.get(InterfaceIPv4.ENABLED) is False
             if ipv4_disabled and any(
                 not is_ipv6_address(r.destination) for r in routes
             ):
                 return False
 
             ipv6_state = ifstate.get(Interface.IPV6, {})
-            ipv6_disabled = ipv6_state.get('enabled') is False
+            ipv6_disabled = ipv6_state.get(InterfaceIPv6.ENABLED) is False
             if ipv6_disabled and any(
                 is_ipv6_address(r.destination) for r in routes
             ):
@@ -438,24 +441,32 @@ class State(object):
 
     def _canonicalize_ipv6(self):
         for ifstate in six.viewvalues(self.interfaces):
-            new_state = {Interface.IPV6: {'enabled': False, 'address': []}}
+            new_state = {
+                Interface.IPV6: {
+                    InterfaceIPv6.ENABLED: False,
+                    InterfaceIPv6.ADDRESS: [],
+                }
+            }
             dict_update(new_state, ifstate)
             self._ifaces_state[ifstate[Interface.NAME]] = new_state
 
     def _remove_iface_ipv6_link_local_addr(self):
         for ifstate in six.viewvalues(self.interfaces):
-            ifstate['ipv6']['address'] = list(
+            ifstate['ipv6'][InterfaceIPv6.ADDRESS] = list(
                 addr
-                for addr in ifstate['ipv6']['address']
+                for addr in ifstate['ipv6'][InterfaceIPv6.ADDRESS]
                 if not iplib.is_ipv6_link_local_addr(
-                    addr['ip'], addr['prefix-length']
+                    addr[InterfaceIPv6.ADDRESS_IP],
+                    addr[InterfaceIPv6.ADDRESS_PREFIX_LENGTH],
                 )
             )
 
     def _sort_ip_addresses(self):
         for ifstate in six.viewvalues(self.interfaces):
             for family in ('ipv4', 'ipv6'):
-                ifstate[family].get('address', []).sort(key=itemgetter('ip'))
+                ifstate[family].get(InterfaceIP.ADDRESS, []).sort(
+                    key=itemgetter(InterfaceIP.ADDRESS_IP)
+                )
 
     def _capitalize_mac(self):
         for ifstate in six.viewvalues(self.interfaces):
@@ -559,10 +570,10 @@ def _get_ip_enable_states(family, desire_state, current_state):
     ip_enable_states = {}
     for iface_name, iface_state in six.viewitems(current_state.interfaces):
         ip_enable_states[iface_name] = iface_state.get(family, {}).get(
-            'enabled', False
+            InterfaceIP.ENABLED, False
         )
     for iface_name, iface_state in six.viewitems(desire_state.interfaces):
-        ip_enable_state = iface_state.get(family, {}).get('enabled')
+        ip_enable_state = iface_state.get(family, {}).get(InterfaceIP.ENABLED)
         if ip_enable_state is not None:
             # If desire_state does not have Interface.IPV4/IPV6, it will use
             # current_state settings.

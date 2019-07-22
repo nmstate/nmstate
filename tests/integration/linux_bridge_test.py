@@ -24,6 +24,8 @@ import yaml
 
 import libnmstate
 from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceIPv4
+from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import LinuxBridge
@@ -114,8 +116,8 @@ def test_remove_bridge_and_keep_slave_up(bridge0_with_port0, port0_up):
             {
                 Interface.NAME: port_name,
                 Interface.STATE: InterfaceState.UP,
-                Interface.IPV4: {'enabled': False},
-                Interface.IPV6: {'enabled': False},
+                Interface.IPV4: {InterfaceIPv4.ENABLED: False},
+                Interface.IPV6: {InterfaceIPv6.ENABLED: False},
             }
         ]
     }
@@ -167,7 +169,11 @@ def test_add_linux_bridge_with_empty_ipv6_static_address(port0_up):
     options_subtree[LinuxBridge.STP_SUBTREE][LinuxBridge.STP_ENABLED] = False
 
     extra_iface_state = {
-        Interface.IPV6: {'enabled': True, 'autoconf': False, 'dhcp': False}
+        Interface.IPV6: {
+            InterfaceIPv6.ENABLED: True,
+            InterfaceIPv6.AUTOCONF: False,
+            InterfaceIPv6.DHCP: False,
+        }
     }
     with _linux_bridge(
         bridge_name, bridge_state, extra_iface_state

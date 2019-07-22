@@ -30,6 +30,9 @@ import six
 
 import libnmstate
 from libnmstate.schema import Constants
+from libnmstate.schema import InterfaceIP
+from libnmstate.schema import InterfaceIPv4
+from libnmstate.schema import InterfaceIPv6
 
 
 INTERFACES = Constants.INTERFACES
@@ -141,51 +144,57 @@ class State(object):
     def _ipv6_skeleton_canonicalization(self):
         for iface_state in self._state.get(INTERFACES, []):
             iface_state.setdefault('ipv6', {})
-            iface_state['ipv6'].setdefault('enabled', False)
-            iface_state['ipv6'].setdefault('address', [])
-            iface_state['ipv6'].setdefault('dhcp', False)
-            iface_state['ipv6'].setdefault('autoconf', False)
+            iface_state['ipv6'].setdefault(InterfaceIPv6.ENABLED, False)
+            iface_state['ipv6'].setdefault(InterfaceIPv6.ADDRESS, [])
+            iface_state['ipv6'].setdefault(InterfaceIPv6.DHCP, False)
+            iface_state['ipv6'].setdefault(InterfaceIPv6.AUTOCONF, False)
 
     def _ipv4_skeleton_canonicalization(self):
         for iface_state in self._state.get(INTERFACES, []):
             iface_state.setdefault('ipv4', {})
-            iface_state['ipv4'].setdefault('enabled', False)
-            iface_state['ipv4'].setdefault('address', [])
-            iface_state['ipv4'].setdefault('dhcp', False)
+            iface_state['ipv4'].setdefault(InterfaceIPv4.ENABLED, False)
+            iface_state['ipv4'].setdefault(InterfaceIPv4.ADDRESS, [])
+            iface_state['ipv4'].setdefault(InterfaceIPv4.DHCP, False)
 
     def _ignore_ipv6_link_local(self):
         for iface_state in self._state.get(INTERFACES, []):
-            iface_state['ipv6']['address'] = list(
+            iface_state['ipv6'][InterfaceIPv6.ADDRESS] = list(
                 addr
-                for addr in iface_state['ipv6']['address']
-                if not _is_ipv6_link_local(addr['ip'], addr['prefix-length'])
+                for addr in iface_state['ipv6'][InterfaceIPv6.ADDRESS]
+                if not _is_ipv6_link_local(
+                    addr[InterfaceIPv6.ADDRESS_IP],
+                    addr[InterfaceIPv6.ADDRESS_PREFIX_LENGTH],
+                )
             )
 
     def _sort_ip_addresses(self):
         for iface_state in self._state.get(INTERFACES, []):
             for family in ('ipv4', 'ipv6'):
-                iface_state.get(family, {}).get('address', []).sort(
-                    key=itemgetter('ip')
+                iface_state.get(family, {}).get(InterfaceIP.ADDRESS, []).sort(
+                    key=itemgetter(InterfaceIP.ADDRESS_IP)
                 )
 
     def _ignore_dhcp_manual_addr(self):
         for iface_state in self._state.get(INTERFACES, []):
             for family in ('ipv4', 'ipv6'):
-                if iface_state.get(family, {}).get('dhcp'):
-                    iface_state[family]['address'] = []
+                if iface_state.get(family, {}).get(InterfaceIP.DHCP):
+                    iface_state[family][InterfaceIP.ADDRESS] = []
 
     def _ignore_dhcp_option_when_off(self):
         for iface_state in self._state.get(INTERFACES, []):
             for family in ('ipv4', 'ipv6'):
                 ip = iface_state.get(family, {})
                 if not (
-                    ip.get('enabled')
-                    and (ip.get('dhcp') or ip.get('autoconf'))
+                    ip.get(InterfaceIP.ENABLED)
+                    and (
+                        ip.get(InterfaceIP.DHCP)
+                        or ip.get(InterfaceIPv6.AUTOCONF)
+                    )
                 ):
                     for dhcp_option in (
-                        'auto-routes',
-                        'auto-gateway',
-                        'auto-dns',
+                        InterfaceIP.AUTO_ROUTES,
+                        InterfaceIP.AUTO_GATEWAY,
+                        InterfaceIP.AUTO_DNS,
                     ):
                         ip.pop(dhcp_option, None)
 

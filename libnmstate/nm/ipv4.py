@@ -22,12 +22,13 @@ import socket
 from . import nmclient
 from libnmstate.nm import dns as nm_dns
 from libnmstate.nm import route as nm_route
+from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import Route
 
 
 def create_setting(config, base_con_profile):
     setting_ipv4 = None
-    if base_con_profile and config and config.get('enabled'):
+    if base_con_profile and config and config.get(InterfaceIPv4.ENABLED):
         setting_ipv4 = base_con_profile.get_setting_ip4_config()
         if setting_ipv4:
             setting_ipv4 = setting_ipv4.duplicate()
@@ -47,25 +48,25 @@ def create_setting(config, base_con_profile):
         setting_ipv4 = nmclient.NM.SettingIP4Config.new()
 
     setting_ipv4.props.method = nmclient.NM.SETTING_IP4_CONFIG_METHOD_DISABLED
-    if config and config.get('enabled'):
-        if config.get('dhcp'):
+    if config and config.get(InterfaceIPv4.ENABLED):
+        if config.get(InterfaceIPv4.DHCP):
             setting_ipv4.props.method = (
                 nmclient.NM.SETTING_IP4_CONFIG_METHOD_AUTO
             )
             setting_ipv4.props.ignore_auto_routes = not config.get(
-                'auto-routes', True
+                InterfaceIPv4.AUTO_ROUTES, True
             )
             setting_ipv4.props.never_default = not config.get(
-                'auto-gateway', True
+                InterfaceIPv4.AUTO_GATEWAY, True
             )
             setting_ipv4.props.ignore_auto_dns = not config.get(
-                'auto-dns', True
+                InterfaceIPv4.AUTO_DNS, True
             )
-        elif config.get('address'):
+        elif config.get(InterfaceIPv4.ADDRESS):
             setting_ipv4.props.method = (
                 nmclient.NM.SETTING_IP4_CONFIG_METHOD_MANUAL
             )
-            _add_addresses(setting_ipv4, config['address'])
+            _add_addresses(setting_ipv4, config[InterfaceIPv4.ADDRESS])
         nm_route.add_routes(
             setting_ipv4, config.get(nm_route.ROUTE_METADATA, [])
         )
@@ -76,7 +77,9 @@ def create_setting(config, base_con_profile):
 def _add_addresses(setting_ipv4, addresses):
     for address in addresses:
         naddr = nmclient.NM.IPAddress.new(
-            socket.AF_INET, address['ip'], address['prefix-length']
+            socket.AF_INET,
+            address[InterfaceIPv4.ADDRESS_IP],
+            address[InterfaceIPv4.ADDRESS_PREFIX_LENGTH],
         )
         setting_ipv4.add_address(naddr)
 
@@ -88,42 +91,43 @@ def get_info(active_connection):
     configuration (as in the case of ipv4.method=auto, where the address is
     not explicitly defined).
     """
-    info = {'enabled': False}
+    info = {InterfaceIPv4.ENABLED: False}
     if active_connection is None:
         return info
 
     ip_profile = get_ip_profile(active_connection)
     if ip_profile:
-        info['dhcp'] = ip_profile.get_method() == (
+        info[InterfaceIPv4.DHCP] = ip_profile.get_method() == (
             nmclient.NM.SETTING_IP4_CONFIG_METHOD_AUTO
         )
+        props = ip_profile.props
         if info['dhcp']:
-            info['auto-routes'] = not ip_profile.props.ignore_auto_routes
-            info['auto-gateway'] = not ip_profile.props.never_default
-            info['auto-dns'] = not ip_profile.props.ignore_auto_dns
-            info['enabled'] = True
-            info['address'] = []
+            info[InterfaceIPv4.AUTO_ROUTES] = not props.ignore_auto_routes
+            info[InterfaceIPv4.AUTO_GATEWAY] = not props.never_default
+            info[InterfaceIPv4.AUTO_DNS] = not props.ignore_auto_dns
+            info[InterfaceIPv4.ENABLED] = True
+            info[InterfaceIPv4.ADDRESS] = []
     else:
-        info['dhcp'] = False
+        info[InterfaceIPv4.DHCP] = False
 
     ip4config = active_connection.get_ip4_config()
     if ip4config is None:
-        if not info['dhcp']:
-            del info['dhcp']
+        if not info[InterfaceIPv4.DHCP]:
+            del info[InterfaceIPv4.DHCP]
         return info
 
     addresses = [
         {
-            'ip': address.get_address(),
-            'prefix-length': int(address.get_prefix()),
+            InterfaceIPv4.ADDRESS_IP: address.get_address(),
+            InterfaceIPv4.ADDRESS_PREFIX_LENGTH: int(address.get_prefix()),
         }
         for address in ip4config.get_addresses()
     ]
     if not addresses:
         return info
 
-    info['enabled'] = True
-    info['address'] = addresses
+    info[InterfaceIPv4.ENABLED] = True
+    info[InterfaceIPv4.ADDRESS] = addresses
     return info
 
 

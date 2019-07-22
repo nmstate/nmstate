@@ -25,6 +25,7 @@ from libnmstate.error import NmstateNotImplementedError
 from libnmstate.nm import nmclient
 from libnmstate.nm import dns as nm_dns
 from libnmstate.nm import route as nm_route
+from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import Route
 
 
@@ -32,62 +33,67 @@ IPV6_DEFAULT_ROUTE_METRIC = 1024
 
 
 def get_info(active_connection):
-    info = {'enabled': False}
+    info = {InterfaceIPv6.ENABLED: False}
     if active_connection is None:
         return info
 
-    info['dhcp'] = False
-    info['autoconf'] = False
+    info[InterfaceIPv6.DHCP] = False
+    info[InterfaceIPv6.AUTOCONF] = False
 
     is_link_local_method = False
     ip_profile = get_ip_profile(active_connection)
     if ip_profile:
         method = ip_profile.get_method()
         if method == nmclient.NM.SETTING_IP6_CONFIG_METHOD_AUTO:
-            info['dhcp'] = True
-            info['autoconf'] = True
+            info[InterfaceIPv6.DHCP] = True
+            info[InterfaceIPv6.AUTOCONF] = True
         elif method == nmclient.NM.SETTING_IP6_CONFIG_METHOD_DHCP:
-            info['dhcp'] = True
-            info['autoconf'] = False
+            info[InterfaceIPv6.DHCP] = True
+            info[InterfaceIPv6.AUTOCONF] = False
         elif method == nmclient.NM.SETTING_IP6_CONFIG_METHOD_LINK_LOCAL:
             is_link_local_method = True
 
-        if info['dhcp'] or info['autoconf']:
-            info['auto-routes'] = not ip_profile.props.ignore_auto_routes
-            info['auto-gateway'] = not ip_profile.props.never_default
-            info['auto-dns'] = not ip_profile.props.ignore_auto_dns
+        if info[InterfaceIPv6.DHCP] or info[InterfaceIPv6.AUTOCONF]:
+            props = ip_profile.props
+            info[InterfaceIPv6.AUTO_ROUTES] = not props.ignore_auto_routes
+            info[InterfaceIPv6.AUTO_GATEWAY] = not props.never_default
+            info[InterfaceIPv6.AUTO_DNS] = not props.ignore_auto_dns
 
     ipconfig = active_connection.get_ip6_config()
     if ipconfig is None:
         # When DHCP is enable, it might be possible, the active_connection does
         # not got IP address yet. In that case, we still mark
-        # info['enabled'] as True.
-        if info['dhcp'] or info['autoconf'] or is_link_local_method:
-            info['enabled'] = True
-            info['address'] = []
+        # info[InterfaceIPv6.ENABLED] as True.
+        if (
+            info[InterfaceIPv6.DHCP]
+            or info[InterfaceIPv6.AUTOCONF]
+            or is_link_local_method
+        ):
+            info[InterfaceIPv6.ENABLED] = True
+            info[InterfaceIPv6.ADDRESS] = []
         else:
-            del info['dhcp']
-            del info['autoconf']
+            del info[InterfaceIPv6.DHCP]
+            del info[InterfaceIPv6.AUTOCONF]
         return info
 
     addresses = [
         {
-            'ip': address.get_address(),
-            'prefix-length': int(address.get_prefix()),
+            InterfaceIPv6.ADDRESS_IP: address.get_address(),
+            InterfaceIPv6.ADDRESS_PREFIX_LENGTH: int(address.get_prefix()),
         }
         for address in ipconfig.get_addresses()
     ]
     if not addresses:
         return info
 
-    info['enabled'] = True
-    info['address'] = addresses
+    info[InterfaceIPv6.ENABLED] = True
+    info[InterfaceIPv6.ADDRESS] = addresses
     return info
 
 
 def create_setting(config, base_con_profile):
     setting_ip = None
-    if base_con_profile and config and config.get('enabled'):
+    if base_con_profile and config and config.get(InterfaceIPv6.ENABLED):
         setting_ip = base_con_profile.get_setting_ip6_config()
         if setting_ip:
             setting_ip = setting_ip.duplicate()
@@ -106,21 +112,25 @@ def create_setting(config, base_con_profile):
     if not setting_ip:
         setting_ip = nmclient.NM.SettingIP6Config.new()
 
-    if not config or not config.get('enabled'):
+    if not config or not config.get(InterfaceIPv6.ENABLED):
         setting_ip.props.method = nmclient.NM.SETTING_IP6_CONFIG_METHOD_IGNORE
         return setting_ip
 
-    is_dhcp = config.get('dhcp', False)
-    is_autoconf = config.get('autoconf', False)
-    ip_addresses = config.get('address', ())
+    is_dhcp = config.get(InterfaceIPv6.DHCP, False)
+    is_autoconf = config.get(InterfaceIPv6.AUTOCONF, False)
+    ip_addresses = config.get(InterfaceIPv6.ADDRESS, ())
 
     if is_dhcp or is_autoconf:
         _set_dynamic(setting_ip, is_dhcp, is_autoconf)
         setting_ip.props.ignore_auto_routes = not config.get(
-            'auto-routes', True
+            InterfaceIPv6.AUTO_ROUTES, True
         )
-        setting_ip.props.never_default = not config.get('auto-gateway', True)
-        setting_ip.props.ignore_auto_dns = not config.get('auto-dns', True)
+        setting_ip.props.never_default = not config.get(
+            InterfaceIPv6.AUTO_GATEWAY, True
+        )
+        setting_ip.props.ignore_auto_dns = not config.get(
+            InterfaceIPv6.AUTO_DNS, True
+        )
     elif ip_addresses:
         _set_static(setting_ip, ip_addresses)
     else:
@@ -148,7 +158,8 @@ def _set_dynamic(setting_ip, is_dhcp, is_autoconf):
 def _set_static(setting_ip, ip_addresses):
     for address in ip_addresses:
         if iplib.is_ipv6_link_local_addr(
-            address['ip'], address['prefix-length']
+            address[InterfaceIPv6.ADDRESS_IP],
+            address[InterfaceIPv6.ADDRESS_PREFIX_LENGTH],
         ):
             logging.warning(
                 'IPv6 link local address '
@@ -157,7 +168,9 @@ def _set_static(setting_ip, ip_addresses):
             )
         else:
             naddr = nmclient.NM.IPAddress.new(
-                socket.AF_INET6, address['ip'], address['prefix-length']
+                socket.AF_INET6,
+                address[InterfaceIPv6.ADDRESS_IP],
+                address[InterfaceIPv6.ADDRESS_PREFIX_LENGTH],
             )
             setting_ip.add_address(naddr)
 

@@ -25,6 +25,7 @@ from libnmstate.error import NmstateValueError
 from libnmstate import nm
 from libnmstate.schema import DNS
 from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceIP
 from libnmstate.schema import InterfaceState
 
 
@@ -342,7 +343,7 @@ def _dns_config_not_changed(desired_state, current_state):
             return False
         for family in six.viewkeys(iface_dns_config):
             if family in iface_state and not iface_state[family].get(
-                'enabled'
+                InterfaceIP.ENABLED
             ):
                 return False
     return True

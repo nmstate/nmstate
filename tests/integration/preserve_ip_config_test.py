@@ -21,6 +21,8 @@ from contextlib import contextmanager
 
 import libnmstate
 from libnmstate.nm import nmclient
+from libnmstate.schema import InterfaceIPv4
+from libnmstate.schema import InterfaceIPv6
 
 from .testlib import statelib
 from .testlib import cmd as libcmd
@@ -44,16 +46,22 @@ def test_reapply_preserve_ip_config(eth1_up):
                     'type': 'ethernet',
                     'state': 'up',
                     'ipv4': {
-                        'address': [
-                            {'ip': IPV4_ADDRESS1, 'prefix-length': 24}
+                        InterfaceIPv4.ADDRESS: [
+                            {
+                                InterfaceIPv4.ADDRESS_IP: IPV4_ADDRESS1,
+                                InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+                            }
                         ],
-                        'enabled': True,
+                        InterfaceIPv4.ENABLED: True,
                     },
                     'ipv6': {
-                        'address': [
-                            {'ip': IPV6_ADDRESS1, 'prefix-length': 64}
+                        InterfaceIPv6.ADDRESS: [
+                            {
+                                InterfaceIPv6.ADDRESS_IP: IPV6_ADDRESS1,
+                                InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
+                            }
                         ],
-                        'enabled': True,
+                        InterfaceIPv6.ENABLED: True,
                     },
                     'mtu': 1500,
                 }

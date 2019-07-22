@@ -20,6 +20,8 @@
 import pytest
 
 import libnmstate
+from libnmstate.schema import InterfaceIPv4
+from libnmstate.schema import InterfaceIPv6
 
 from .testlib import assertlib
 from .testlib import statelib
@@ -47,8 +49,13 @@ def setup_eth1_ipv4(eth1_up):
                 'type': 'ethernet',
                 'state': 'up',
                 'ipv4': {
-                    'enabled': True,
-                    'address': [{'ip': IPV4_ADDRESS1, 'prefix-length': 24}],
+                    InterfaceIPv4.ENABLED: True,
+                    InterfaceIPv4.ADDRESS: [
+                        {
+                            InterfaceIPv4.ADDRESS_IP: IPV4_ADDRESS1,
+                            InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+                        }
+                    ],
                 },
             }
         ]
@@ -65,8 +72,13 @@ def setup_eth1_ipv6(eth1_up):
                 'type': 'ethernet',
                 'state': 'up',
                 'ipv6': {
-                    'enabled': True,
-                    'address': [{'ip': IPV6_ADDRESS1, 'prefix-length': 64}],
+                    InterfaceIPv6.ENABLED: True,
+                    InterfaceIPv6.ADDRESS: [
+                        {
+                            InterfaceIPv6.ADDRESS_IP: IPV6_ADDRESS1,
+                            InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
+                        }
+                    ],
                 },
             }
         ]
@@ -84,7 +96,7 @@ def setup_eth1_ipv6_disable(eth1_up):
                 'name': 'eth1',
                 'type': 'ethernet',
                 'state': 'up',
-                'ipv6': {'enabled': False},
+                'ipv6': {InterfaceIPv6.ENABLED: False},
             }
         ]
     }
@@ -98,9 +110,12 @@ def test_add_static_ipv4_with_full_state(eth1_up):
     eth1_desired_state = desired_state[INTERFACES][0]
 
     eth1_desired_state['state'] = 'up'
-    eth1_desired_state['ipv4']['enabled'] = True
-    eth1_desired_state['ipv4']['address'] = [
-        {'ip': IPV4_ADDRESS3, 'prefix-length': 24}
+    eth1_desired_state['ipv4'][InterfaceIPv4.ENABLED] = True
+    eth1_desired_state['ipv4'][InterfaceIPv4.ADDRESS] = [
+        {
+            InterfaceIPv4.ADDRESS_IP: IPV4_ADDRESS3,
+            InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+        }
     ]
     libnmstate.apply(desired_state)
 
@@ -115,8 +130,13 @@ def test_add_static_ipv4_with_min_state(eth2_up):
                 'type': 'ethernet',
                 'state': 'up',
                 'ipv4': {
-                    'enabled': True,
-                    'address': [{'ip': IPV4_ADDRESS4, 'prefix-length': 24}],
+                    InterfaceIPv4.ENABLED: True,
+                    InterfaceIPv4.ADDRESS: [
+                        {
+                            InterfaceIPv4.ADDRESS_IP: IPV4_ADDRESS4,
+                            InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+                        }
+                    ],
                 },
             }
         ]
@@ -129,7 +149,11 @@ def test_add_static_ipv4_with_min_state(eth2_up):
 def test_remove_static_ipv4(setup_eth1_ipv4):
     desired_state = {
         INTERFACES: [
-            {'name': 'eth1', 'type': 'ethernet', 'ipv4': {'enabled': False}}
+            {
+                'name': 'eth1',
+                'type': 'ethernet',
+                'ipv4': {InterfaceIPv4.ENABLED: False},
+            }
         ]
     }
 
@@ -146,8 +170,13 @@ def test_edit_static_ipv4_address_and_prefix(setup_eth1_ipv4):
                 'type': 'ethernet',
                 'state': 'up',
                 'ipv4': {
-                    'enabled': True,
-                    'address': [{'ip': IPV4_ADDRESS2, 'prefix-length': 30}],
+                    InterfaceIPv4.ENABLED: True,
+                    InterfaceIPv4.ADDRESS: [
+                        {
+                            InterfaceIPv4.ADDRESS_IP: IPV4_ADDRESS2,
+                            InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 30,
+                        }
+                    ],
                 },
             }
         ]
@@ -168,8 +197,13 @@ def test_add_ifaces_with_same_static_ipv4_address_in_one_transaction(
                 'type': 'ethernet',
                 'state': 'up',
                 'ipv4': {
-                    'enabled': True,
-                    'address': [{'ip': IPV4_ADDRESS1, 'prefix-length': 24}],
+                    InterfaceIPv4.ENABLED: True,
+                    InterfaceIPv4.ADDRESS: [
+                        {
+                            InterfaceIPv4.ADDRESS_IP: IPV4_ADDRESS1,
+                            InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+                        }
+                    ],
                 },
             },
             {
@@ -177,8 +211,13 @@ def test_add_ifaces_with_same_static_ipv4_address_in_one_transaction(
                 'type': 'ethernet',
                 'state': 'up',
                 'ipv4': {
-                    'enabled': True,
-                    'address': [{'ip': IPV4_ADDRESS1, 'prefix-length': 24}],
+                    InterfaceIPv4.ENABLED: True,
+                    InterfaceIPv4.ADDRESS: [
+                        {
+                            InterfaceIPv4.ADDRESS_IP: IPV4_ADDRESS1,
+                            InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+                        }
+                    ],
                 },
             },
         ]
@@ -199,8 +238,13 @@ def test_add_iface_with_same_static_ipv4_address_to_existing(
                 'type': 'ethernet',
                 'state': 'up',
                 'ipv4': {
-                    'enabled': True,
-                    'address': [{'ip': IPV4_ADDRESS1, 'prefix-length': 24}],
+                    InterfaceIPv4.ENABLED: True,
+                    InterfaceIPv4.ADDRESS: [
+                        {
+                            InterfaceIPv4.ADDRESS_IP: IPV4_ADDRESS1,
+                            InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+                        }
+                    ],
                 },
             }
         ]
@@ -214,11 +258,17 @@ def test_add_static_ipv6_with_full_state(eth1_up):
     desired_state = statelib.show_only(('eth1',))
     eth1_desired_state = desired_state[INTERFACES][0]
     eth1_desired_state['state'] = 'up'
-    eth1_desired_state['ipv6']['enabled'] = True
-    eth1_desired_state['ipv6']['address'] = [
-        {'ip': IPV6_ADDRESS2, 'prefix-length': 64},
+    eth1_desired_state['ipv6'][InterfaceIPv6.ENABLED] = True
+    eth1_desired_state['ipv6'][InterfaceIPv6.ADDRESS] = [
+        {
+            InterfaceIPv6.ADDRESS_IP: IPV6_ADDRESS2,
+            InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
+        },
         # This sequence is intentionally made for IP address sorting.
-        {'ip': IPV6_ADDRESS1, 'prefix-length': 64},
+        {
+            InterfaceIPv6.ADDRESS_IP: IPV6_ADDRESS1,
+            InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
+        },
     ]
     libnmstate.apply(desired_state)
     assertlib.assert_state(desired_state)
@@ -228,10 +278,16 @@ def test_add_static_ipv6_with_link_local(eth1_up):
     desired_state = statelib.show_only(('eth1',))
     eth1_desired_state = desired_state[INTERFACES][0]
     eth1_desired_state['state'] = 'up'
-    eth1_desired_state['ipv6']['enabled'] = True
-    eth1_desired_state['ipv6']['address'] = [
-        {'ip': IPV6_LINK_LOCAL_ADDRESS1, 'prefix-length': 64},
-        {'ip': IPV6_ADDRESS1, 'prefix-length': 64},
+    eth1_desired_state['ipv6'][InterfaceIPv6.ENABLED] = True
+    eth1_desired_state['ipv6'][InterfaceIPv6.ADDRESS] = [
+        {
+            InterfaceIPv6.ADDRESS_IP: IPV6_LINK_LOCAL_ADDRESS1,
+            InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
+        },
+        {
+            InterfaceIPv6.ADDRESS_IP: IPV6_ADDRESS1,
+            InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
+        },
     ]
 
     libnmstate.apply(desired_state)
@@ -240,12 +296,12 @@ def test_add_static_ipv6_with_link_local(eth1_up):
     cur_state = statelib.show_only(('eth1',))
     eth1_cur_state = cur_state[INTERFACES][0]
     assert (
-        eth1_desired_state['ipv6']['address'][0]
-        not in eth1_cur_state['ipv6']['address']
+        eth1_desired_state['ipv6'][InterfaceIPv6.ADDRESS][0]
+        not in eth1_cur_state['ipv6'][InterfaceIPv6.ADDRESS]
     )
     assert (
-        eth1_desired_state['ipv6']['address'][1]
-        in eth1_cur_state['ipv6']['address']
+        eth1_desired_state['ipv6'][InterfaceIPv6.ADDRESS][1]
+        in eth1_cur_state['ipv6'][InterfaceIPv6.ADDRESS]
     )
 
 
@@ -253,10 +309,16 @@ def test_add_static_ipv6_with_link_local_only(eth1_up):
     desired_state = statelib.show_only(('eth1',))
     eth1_desired_state = desired_state[INTERFACES][0]
     eth1_desired_state['state'] = 'up'
-    eth1_desired_state['ipv6']['enabled'] = True
-    eth1_desired_state['ipv6']['address'] = [
-        {'ip': IPV6_LINK_LOCAL_ADDRESS1, 'prefix-length': 64},
-        {'ip': IPV6_LINK_LOCAL_ADDRESS2, 'prefix-length': 64},
+    eth1_desired_state['ipv6'][InterfaceIPv6.ENABLED] = True
+    eth1_desired_state['ipv6'][InterfaceIPv6.ADDRESS] = [
+        {
+            InterfaceIPv6.ADDRESS_IP: IPV6_LINK_LOCAL_ADDRESS1,
+            InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
+        },
+        {
+            InterfaceIPv6.ADDRESS_IP: IPV6_LINK_LOCAL_ADDRESS2,
+            InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
+        },
     ]
 
     libnmstate.apply(desired_state)
@@ -265,12 +327,12 @@ def test_add_static_ipv6_with_link_local_only(eth1_up):
     cur_state = statelib.show_only(('eth1',))
     eth1_cur_state = cur_state[INTERFACES][0]
     assert (
-        eth1_desired_state['ipv6']['address'][0]
-        not in eth1_cur_state['ipv6']['address']
+        eth1_desired_state['ipv6'][InterfaceIPv6.ADDRESS][0]
+        not in eth1_cur_state['ipv6'][InterfaceIPv6.ADDRESS]
     )
     assert (
-        eth1_desired_state['ipv6']['address'][1]
-        not in eth1_cur_state['ipv6']['address']
+        eth1_desired_state['ipv6'][InterfaceIPv6.ADDRESS][1]
+        not in eth1_cur_state['ipv6'][InterfaceIPv6.ADDRESS]
     )
 
 
@@ -278,14 +340,14 @@ def test_add_static_ipv6_with_no_address(eth1_up):
     desired_state = statelib.show_only(('eth1',))
     eth1_desired_state = desired_state[INTERFACES][0]
     eth1_desired_state['state'] = 'up'
-    eth1_desired_state['ipv6']['enabled'] = True
+    eth1_desired_state['ipv6'][InterfaceIPv6.ENABLED] = True
 
     libnmstate.apply(desired_state)
 
     cur_state = statelib.show_only(('eth1',))
     eth1_cur_state = cur_state[INTERFACES][0]
     # Should have at least 1 link-local address.
-    assert len(eth1_cur_state['ipv6']['address']) >= 1
+    assert len(eth1_cur_state['ipv6'][InterfaceIPv6.ADDRESS]) >= 1
 
 
 def test_add_static_ipv6_with_min_state(eth2_up):
@@ -296,8 +358,13 @@ def test_add_static_ipv6_with_min_state(eth2_up):
                 'type': 'ethernet',
                 'state': 'up',
                 'ipv6': {
-                    'enabled': True,
-                    'address': [{'ip': IPV6_ADDRESS1, 'prefix-length': 24}],
+                    InterfaceIPv6.ENABLED: True,
+                    InterfaceIPv6.ADDRESS: [
+                        {
+                            InterfaceIPv6.ADDRESS_IP: IPV6_ADDRESS1,
+                            InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
+                        }
+                    ],
                 },
             }
         ]
@@ -310,7 +377,11 @@ def test_add_static_ipv6_with_min_state(eth2_up):
 def test_disable_static_ipv6(setup_eth1_ipv6):
     desired_state = {
         INTERFACES: [
-            {'name': 'eth1', 'type': 'ethernet', 'ipv6': {'enabled': False}}
+            {
+                'name': 'eth1',
+                'type': 'ethernet',
+                'ipv6': {InterfaceIPv6.ENABLED: False},
+            }
         ]
     }
 
@@ -330,7 +401,7 @@ def test_disable_static_ipv6_and_rollback(setup_eth1_ipv6):
             {
                 'name': 'eth1',
                 'type': 'ethernet',
-                'ipv6': {'enabled': False},
+                'ipv6': {InterfaceIPv6.ENABLED: False},
                 'foo': 'bad_value',
             }
         ]
@@ -349,8 +420,13 @@ def test_enable_ipv6_and_rollback_to_disable_ipv6(setup_eth1_ipv6_disable):
                 'name': 'eth1',
                 'type': 'ethernet',
                 'ipv6': {
-                    'enabled': True,
-                    'address': [{'ip': IPV6_ADDRESS1, 'prefix-length': 64}],
+                    InterfaceIPv6.ENABLED: True,
+                    InterfaceIPv6.ADDRESS: [
+                        {
+                            InterfaceIPv6.ADDRESS_IP: IPV6_ADDRESS1,
+                            InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
+                        }
+                    ],
                 },
                 'foo': 'bad_value',
             }
@@ -372,8 +448,13 @@ def test_edit_static_ipv6_address_and_prefix(setup_eth1_ipv6):
                 'type': 'ethernet',
                 'state': 'up',
                 'ipv6': {
-                    'enabled': True,
-                    'address': [{'ip': IPV6_ADDRESS2, 'prefix-length': 24}],
+                    InterfaceIPv6.ENABLED: True,
+                    InterfaceIPv6.ADDRESS: [
+                        {
+                            InterfaceIPv6.ADDRESS_IP: IPV6_ADDRESS2,
+                            InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
+                        }
+                    ],
                 },
             }
         ]
@@ -386,13 +467,13 @@ def test_edit_static_ipv6_address_and_prefix(setup_eth1_ipv6):
     eth1_current_state = current_state[INTERFACES][0]
 
     assert (
-        eth1_desired_state['ipv6']['address'][0]
-        in eth1_current_state['ipv6']['address']
+        eth1_desired_state['ipv6'][InterfaceIPv6.ADDRESS][0]
+        in eth1_current_state['ipv6'][InterfaceIPv6.ADDRESS]
     )
 
     assert (
-        eth1_setup['ipv6']['address'][0]
-        not in eth1_current_state['ipv6']['address']
+        eth1_setup['ipv6'][InterfaceIPv6.ADDRESS][0]
+        not in eth1_current_state['ipv6'][InterfaceIPv6.ADDRESS]
     )
 
 
@@ -406,8 +487,13 @@ def test_add_ifaces_with_same_static_ipv6_address_in_one_transaction(
                 'type': 'ethernet',
                 'state': 'up',
                 'ipv6': {
-                    'enabled': True,
-                    'address': [{'ip': IPV6_ADDRESS1, 'prefix-length': 64}],
+                    InterfaceIPv6.ENABLED: True,
+                    InterfaceIPv6.ADDRESS: [
+                        {
+                            InterfaceIPv6.ADDRESS_IP: IPV6_ADDRESS1,
+                            InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
+                        }
+                    ],
                 },
             },
             {
@@ -415,8 +501,13 @@ def test_add_ifaces_with_same_static_ipv6_address_in_one_transaction(
                 'type': 'ethernet',
                 'state': 'up',
                 'ipv6': {
-                    'enabled': True,
-                    'address': [{'ip': IPV6_ADDRESS1, 'prefix-length': 64}],
+                    InterfaceIPv6.ENABLED: True,
+                    InterfaceIPv6.ADDRESS: [
+                        {
+                            InterfaceIPv6.ADDRESS_IP: IPV6_ADDRESS1,
+                            InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
+                        }
+                    ],
                 },
             },
         ]
@@ -437,8 +528,13 @@ def test_add_iface_with_same_static_ipv6_address_to_existing(
                 'type': 'ethernet',
                 'state': 'up',
                 'ipv6': {
-                    'enabled': True,
-                    'address': [{'ip': IPV6_ADDRESS1, 'prefix-length': 64}],
+                    InterfaceIPv6.ENABLED: True,
+                    InterfaceIPv6.ADDRESS: [
+                        {
+                            InterfaceIPv6.ADDRESS_IP: IPV6_ADDRESS1,
+                            InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
+                        }
+                    ],
                 },
             }
         ]
