@@ -59,7 +59,9 @@ def minimal_ethtool(interface):
         ifreq = struct.pack('16sP', interface, ecmd.buffer_info()[0])
 
         fcntl.ioctl(sockfd, SIOCETHTOOL, ifreq)
-        res = ecmd.tostring()
+        # pylint: disable=no-member
+        res = ecmd.tobytes() if hasattr(ecmd, 'tobytes') else ecmd.tostring()
+        # pylint: enable=no-member
         speed, duplex, auto = struct.unpack('12xHB3xB24x', res)
     except IOError:
         speed, duplex, auto = 65535, 255, 255
