@@ -1,0 +1,111 @@
+# Changelog
+## [Unreleased]
+### New Features
+ - Support reapply configuration without link down when possible.
+ - Relicensed to LGPL 2.1+.
+ - Allow editing existing interface without specifying the type property in the
+   desired state.
+
+### Bug Fixes
+ - Allow adding a port to the Linux bridge by specifying only its name.
+ - Allow enabling IPv6 with empty address.
+ - Recover from an abnormal failure when libnmstate is re-used in a process.
+ - DNS: Preserve DNS config with empty state.
+ - Fix random failure on showing interface as done when creating bond/linux
+   bridge
+ - Do refresh in libnm on each call of show().
+ - Allow removing slave while keeping its interface up.
+ - Support slaves swap between masters.
+
+## [0.0.7] - 2019-06-13
+### New Features
+ - Support editing DNS client configuration.
+ - Support editing IP routes.
+ - API: Promote the public API to libnmstate level:
+    * libnmstate.show()
+    * libnmstate.apply()
+    * libnmstate.commit()
+    * libnmstate.rollback()
+    * libnmstate.error
+    * libnmstate.schema
+
+### Bug Fixes
+ - Optimize new and existing interface processing when applying state.
+
+## [0.0.6] - 2019-04-24
+### New Features
+ - Support manual transaction control.
+ - Support querying DNS client configuration.
+ - Support querying IP routes.
+ - Support changing MAC address.
+
+### Bug Fixes
+ - nmstatectl: Handle state editing conflict.
+ - apply: Handle commit/rollback errors.
+ - nm.checkpoint: Handle DBusExceptions.
+ - Fix build on old setuptools.
+ - nm: Exit with a human readable error when missing libnm introspection.
+ - state: Rebuild the ifaces state on each call to the state getter.
+ - metadata: New created iface entry should include a name.
+ - state: Relocate the remove func of absent/down ifaces into State.
+ - apply: Pass the State object to the metadata generator.
+
+## [0.0.5] - 2019-03-12
+### New Features
+ - Support Open vSwitch internal interface.
+ - Support ignoring DNS/routes/gateways from DHCP/Autoconf.
+
+### Bug Fixes
+ - nm device: Include safety checks when deleting a device.
+ - nm: Delete explicitly OVS type interfaces.
+ - show: Do not include the mtu entry for ovs-bridge.
+ - show: Do not include ipv4/6 entries for ovs-bridge.
+ - Unify the Nmstate exceptions to error.py.
+ - verify: Sort bridge ports by name.
+ - nm device: Delete connection profiles with no device.
+ - nm ovs: Fix slave interface detection.
+ - nmclient: Explicitly create a new client object only in show.
+ - apply: Remove unuseful leftover code.
+ - Add option for ignoring auto DNS and routes.
+ - nmstatectl: Allow to set multiple states.
+
+## [0.0.4] - 2019-01-23
+### New Features
+ - Support Linux Bridge.
+
+### Bug Fixes
+ - nm, device: Retry if activation fails in specific cases.
+ - nm, nmclient: Allow mainloop to run the last action again.
+ - apply: Fix OVS proxy port handling in the edit step.
+ - nm, connection: Enable autoconnect by default.
+ - nm, device: Skip activation of an already activating device.
+ - nm, device: Fix ActiveConnection.is_activating.
+ - nm, device: Activate based on the device or connection object.
+ - nmstatectl: Output yaml by default.
+ - nmstatectl: Remove extra newline from yaml output.
+ - show: Sort interface state.
+ - nm.bridge: Set only specified port options.
+ - nm: Do not raise explcitly within the checkpoint context.
+ - nm: Reduce noise when logging actions execution.
+
+## [0.0.3] - 2018-12-20
+### New Features
+ - Support IPv4/IPv6 DHCP.
+
+### Bug Fixes
+ - NM/device: Handle activation failures for connections.
+ - apply: Ignore `down` state (for virt iface) in verification step.
+ - device: use per-action cancellable for activate_connection_async().
+ - mainloop: support multiple cancellables.
+ - Don't copy existing config when disabling IPv4/v6.
+
+## [0.0.2] - 2018-11-29
+### New Features
+ - Support bond interface.
+ - Support VLAN interface.
+ - Support dummy interface.
+ - Support ethernet interface.
+ - Support Open vSwitch bridge.
+
+### Bug Fixes
+ - Initial release.
