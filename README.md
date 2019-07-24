@@ -132,3 +132,7 @@ For Fedora 29+, `sudo dnf install nmstate`.
 
 For others distribution, please see the [install](README.install.md)
 instructions.
+
+## Changelog
+
+Please refer to [CHANGELOG](CHANGELOG)
