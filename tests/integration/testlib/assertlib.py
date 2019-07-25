@@ -87,3 +87,16 @@ def _perpare_state_for_verify(desired_state_data):
     full_desired_state.remove_absent_entries()
     full_desired_state.normalize()
     return full_desired_state, current_state
+
+
+def assert_no_config_route_to_iface(iface_name):
+    """
+    Asserts no config route next hop to specified interface.
+    """
+    current_state = libnmstate.show()
+
+    assert not any(
+        route
+        for route in current_state[Route.KEY][Route.CONFIG]
+        if route[Route.NEXT_HOP_INTERFACE] == iface_name
+    )

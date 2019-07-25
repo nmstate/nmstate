@@ -70,3 +70,15 @@ def test_dns_edit(eth1_up):
         DNS.SERVER: [],
         DNS.SEARCH: [],
     }
+
+
+def test_add_remove_routes(eth1_up):
+    """
+    Test adding a strict route and removing all routes next hop to eth1.
+    """
+    with example_state(
+        'eth1_add_route.yml', cleanup='eth1_del_all_routes.yml'
+    ) as desired_state:
+        assertlib.assert_state(desired_state)
+
+    assertlib.assert_no_config_route_to_iface('eth1')
