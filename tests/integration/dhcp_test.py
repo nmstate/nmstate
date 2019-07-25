@@ -24,6 +24,8 @@ import pytest
 import libnmstate
 from libnmstate.schema import Constants
 from libnmstate.schema import DNS
+from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import Route as RT
@@ -604,6 +606,15 @@ def _setup_dhcp_nics():
 
 
 def _clean_up():
+    remove_dhcpcli_profile = {
+        INTERFACES: [
+            {
+                Interface.NAME: DHCP_CLI_NIC,
+                Interface.STATE: InterfaceState.ABSENT,
+            }
+        ]
+    }
+    libnmstate.apply(remove_dhcpcli_profile, verify_change=False)
     libcmd.exec_cmd(['systemctl', 'stop', 'dnsmasq'])
     libcmd.exec_cmd(['systemctl', 'stop', 'radvd'])
     _remove_veth_pair()
