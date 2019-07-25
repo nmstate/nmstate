@@ -1,0 +1,8 @@
+---
+interfaces:
+  - name: eth1
+
+routes:
+  config:
+  - next-hop-interface: eth1
+    state: absent
