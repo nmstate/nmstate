@@ -17,6 +17,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 import copy
+import time
 
 import libnmstate
 from libnmstate.schema import DNS
@@ -100,3 +101,14 @@ def assert_no_config_route_to_iface(iface_name):
         for route in current_state[Route.KEY][Route.CONFIG]
         if route[Route.NEXT_HOP_INTERFACE] == iface_name
     )
+
+
+def retry_till_true(timeout, func, *args, **kwargs):
+    ret = func(*args, **kwargs)
+    while timeout > 0:
+        if ret:
+            break
+        time.sleep(1)
+        timeout -= 1
+        ret = func(*args, **kwargs)
+    return ret
