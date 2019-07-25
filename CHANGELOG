@@ -1,5 +1,6 @@
 # Changelog
-## [Unreleased]
+
+## [0.0.8] - 2019-07-25
 ### New Features
  - Support reapply configuration without link down when possible.
  - Relicensed to LGPL 2.1+.
@@ -8,14 +9,19 @@
 
 ### Bug Fixes
  - Allow adding a port to the Linux bridge by specifying only its name.
+ - Support IPv6 stack disable.
  - Allow enabling IPv6 with empty address.
  - Recover from an abnormal failure when libnmstate is re-used in a process.
  - DNS: Preserve DNS config with empty state.
  - Fix random failure on showing interface as done when creating bond/linux
    bridge
  - Do refresh in libnm on each call of show().
- - Allow removing slave while keeping its interface up.
+ - Allow removing slaves from parents while keeping their interfaces up.
+ - Do not remove slaves that are mentioned with state UP.
  - Support slaves swap between masters.
+ - API: Expose IP constants through libnmstate.schema.
+ - PY3: Fix deprecation of array.tostring().
+ - Fix IPv4 enabled criteria: When DHCP is enabled, it implies IPv4 is enabled.
 
 ## [0.0.7] - 2019-06-13
 ### New Features
