@@ -22,6 +22,7 @@ from contextlib import contextmanager
 import copy
 import logging
 import six
+import time
 
 from libnmstate import metadata
 from libnmstate import netinfo
@@ -31,6 +32,7 @@ from libnmstate import state
 from libnmstate import sysctl
 from libnmstate import validator
 from libnmstate.error import NmstateConflictError
+from libnmstate.error import NmstateError
 from libnmstate.error import NmstateLibnmError
 from libnmstate.error import NmstatePermissionError
 from libnmstate.error import NmstateValueError
@@ -150,6 +152,14 @@ def _apply_ifaces_state(
         raise NmstatePermissionError('Error creating a check point')
     except nm.checkpoint.NMCheckPointCreationError:
         raise NmstateConflictError('Error creating a check point')
+    except NmstateError:
+        # Assume rollback occured, revert IPv6 stack state.
+        # Checkpoint rollback is async, there is a need to wait for it to
+        # finish before proceeding with other actions.
+        # TODO: https://nmstate.atlassian.net/browse/NMSTATE-103
+        time.sleep(5)
+        _disable_ipv6(current_state)
+        raise
 
 
 def _create_editable_desired_state(
