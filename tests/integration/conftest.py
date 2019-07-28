@@ -23,8 +23,7 @@ import pytest
 
 import libnmstate
 
-from .testlib import statelib
-from .testlib.statelib import INTERFACES
+from .testlib import ifacelib
 
 
 @pytest.fixture(scope='session', autouse=True)
@@ -38,46 +37,23 @@ def logging_setup():
 @pytest.fixture(scope='session', autouse=True)
 def ethx_init(preserve_old_config):
     """ Remove any existing definitions on the ethX interfaces. """
-    _set_eth_admin_state('eth1', 'down')
-    _set_eth_admin_state('eth2', 'down')
+    ifacelib.ifaces_init('eth1', 'eth2')
 
 
 @pytest.fixture(scope='function')
 def eth1_up():
-    _set_eth_admin_state('eth1', 'up')
-    try:
-        yield statelib.show_only(('eth1',))
-    finally:
-        _set_eth_admin_state('eth1', 'down')
+    with ifacelib.iface_up('eth1') as ifstate:
+        yield ifstate
 
 
 @pytest.fixture(scope='function')
 def eth2_up():
-    _set_eth_admin_state('eth2', 'up')
-    try:
-        yield statelib.show_only(('eth2',))
-    finally:
-        _set_eth_admin_state('eth2', 'down')
+    with ifacelib.iface_up('eth2') as ifstate:
+        yield ifstate
 
 
 port0_up = eth1_up
 port1_up = eth2_up
-
-
-def _set_eth_admin_state(ifname, state):
-    current_state = statelib.show_only((ifname,))
-    iface_current_state, = current_state[INTERFACES]
-    if iface_current_state['state'] != state or state == 'down':
-        desired_state = {
-            INTERFACES: [
-                {
-                    'name': iface_current_state['name'],
-                    'type': iface_current_state['type'],
-                    'state': state,
-                }
-            ]
-        }
-        libnmstate.apply(desired_state)
 
 
 @pytest.fixture(scope='session', autouse=True)
