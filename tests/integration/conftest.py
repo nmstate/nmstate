@@ -22,7 +22,6 @@ import logging
 import pytest
 
 import libnmstate
-from libnmstate.schema import InterfaceIPv6
 
 from .testlib import statelib
 from .testlib.statelib import INTERFACES
@@ -78,11 +77,6 @@ def _set_eth_admin_state(ifname, state):
                 }
             ]
         }
-        # FIXME: On most systems, IPv6 cannot be disabled by Nmstate/NM.
-        if state == 'up':
-            desired_state[INTERFACES][0].update(
-                {'ipv6': {InterfaceIPv6.ENABLED: True}}
-            )
         libnmstate.apply(desired_state)
 
 
