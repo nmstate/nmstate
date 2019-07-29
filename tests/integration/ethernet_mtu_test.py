@@ -25,6 +25,7 @@ import pytest
 import jsonschema as js
 
 import libnmstate
+from libnmstate import schema
 from libnmstate.error import NmstateVerificationError
 
 from .testlib import assertlib
@@ -35,6 +36,13 @@ from .testlib.statelib import INTERFACES
 @pytest.fixture(scope='function', autouse=True)
 def eth1(eth1_up):
     pass
+
+
+@pytest.fixture
+def eth1_with_ipv6(eth1_up):
+    ifstate = eth1_up[schema.Interface.KEY][0]
+    ifstate[schema.Interface.IPV6][schema.InterfaceIPv6.ENABLED] = True
+    libnmstate.apply(eth1_up)
 
 
 def test_increase_iface_mtu():
@@ -103,7 +111,7 @@ def test_decrease_to_negative_iface_mtu():
     assertlib.assert_state(origin_desired_state)
 
 
-def test_decrease_to_ipv6_min_ethernet_frame_size_iface_mtu():
+def test_decrease_to_ipv6_min_ethernet_frame_size_iface_mtu(eth1_with_ipv6):
     desired_state = statelib.show_only(('eth1',))
     eth1_desired_state = desired_state[INTERFACES][0]
     eth1_desired_state['mtu'] = 1280
@@ -113,7 +121,7 @@ def test_decrease_to_ipv6_min_ethernet_frame_size_iface_mtu():
     assertlib.assert_state(desired_state)
 
 
-def test_decrease_to_lower_than_min_ipv6_iface_mtu():
+def test_decrease_to_lower_than_min_ipv6_iface_mtu(eth1_with_ipv6):
     original_state = statelib.show_only(('eth1',))
     desired_state = copy.deepcopy(original_state)
     eth1_desired_state = desired_state[INTERFACES][0]
