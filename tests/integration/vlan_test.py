@@ -25,11 +25,13 @@ import pytest
 import libnmstate
 from libnmstate.error import NmstateVerificationError
 from libnmstate.schema import VLAN
+from libnmstate.schema import Interface
 
 from .testlib import assertlib
 from .testlib import statelib
 from .testlib.statelib import INTERFACES
 from .testlib.assertlib import assert_mac_address
+from .testlib.vlan import vlan_interface
 
 VLAN_IFNAME = 'eth1.101'
 VLAN2_IFNAME = 'eth1.102'
@@ -53,7 +55,9 @@ TWO_VLANS_STATE = {
 
 
 def test_add_and_remove_vlan(eth1_up):
-    with vlan_interface(VLAN_IFNAME, 101) as desired_state:
+    with vlan_interface(
+        VLAN_IFNAME, 101, eth1_up[Interface.KEY][0][Interface.NAME]
+    ) as desired_state:
         assertlib.assert_state(desired_state)
 
     current_state = statelib.show_only((VLAN_IFNAME,))
@@ -62,7 +66,9 @@ def test_add_and_remove_vlan(eth1_up):
 
 @pytest.fixture
 def vlan_on_eth1(eth1_up):
-    with vlan_interface(VLAN_IFNAME, 101) as desired_state:
+    with vlan_interface(
+        VLAN_IFNAME, 101, eth1_up[Interface.KEY][0][Interface.NAME]
+    ) as desired_state:
         base_iface_name = desired_state[INTERFACES][0][VLAN.CONFIG_SUBTREE][
             VLAN.BASE_IFACE
         ]
@@ -97,7 +103,9 @@ def test_rollback_for_vlans(eth1_up):
 
 
 def test_set_vlan_iface_down(eth1_up):
-    with vlan_interface(VLAN_IFNAME, 101):
+    with vlan_interface(
+        VLAN_IFNAME, 101, eth1_up[Interface.KEY][0][Interface.NAME]
+    ):
         libnmstate.apply(
             {
                 INTERFACES: [
@@ -108,30 +116,6 @@ def test_set_vlan_iface_down(eth1_up):
 
         current_state = statelib.show_only((VLAN_IFNAME,))
         assert not current_state[INTERFACES]
-
-
-@contextmanager
-def vlan_interface(ifname, vlan_id):
-    desired_state = {
-        INTERFACES: [
-            {
-                'name': ifname,
-                'type': 'vlan',
-                'state': 'up',
-                VLAN.CONFIG_SUBTREE: {
-                    VLAN.ID: vlan_id,
-                    VLAN.BASE_IFACE: 'eth1',
-                },
-            }
-        ]
-    }
-    libnmstate.apply(desired_state)
-    try:
-        yield desired_state
-    finally:
-        libnmstate.apply(
-            {INTERFACES: [{'name': ifname, 'type': 'vlan', 'state': 'absent'}]}
-        )
 
 
 @contextmanager

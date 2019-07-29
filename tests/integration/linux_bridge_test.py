@@ -35,6 +35,7 @@ from .testlib.iproutelib import ip_monitor_assert_stable_link_up
 from .testlib.statelib import show_only
 from .testlib.statelib import INTERFACES
 from .testlib.assertlib import assert_mac_address
+from .testlib.vlan import vlan_interface
 
 TEST_BRIDGE0 = 'linux-br0'
 
@@ -74,6 +75,16 @@ def bridge0_with_port0(port0_up):
         # https://bugzilla.redhat.com/1703960
         libnmstate.apply(desired_state)
         yield deepcopy(desired_state)
+
+
+@pytest.fixture
+def port0_vlan101(port0_up):
+    vlan_id = 101
+    vlan_base_iface = port0_up[Interface.KEY][0][Interface.NAME]
+    port_name = '{}.{}'.format(vlan_base_iface, vlan_id)
+    with vlan_interface(port_name, vlan_id, vlan_base_iface):
+        state = show_only((port_name,))
+        yield state
 
 
 def test_create_and_remove_linux_bridge_with_min_desired_state():
@@ -137,6 +148,14 @@ def test_remove_bridge_and_keep_slave_up(bridge0_with_port0, port0_up):
 
     assertlib.assert_state_match(port_desired_state)
     assert 1 == len(current_state[Interface.KEY])
+
+
+def test_create_vlan_as_slave_of_linux_bridge(port0_vlan101):
+    bridge_name = TEST_BRIDGE0
+    port_name = port0_vlan101[Interface.KEY][0][Interface.NAME]
+    bridge_state = _create_bridge_subtree_config((port_name,))
+    with _linux_bridge(bridge_name, bridge_state) as desired_state:
+        assertlib.assert_state(desired_state)
 
 
 @ip_monitor_assert_stable_link_up(TEST_BRIDGE0)
