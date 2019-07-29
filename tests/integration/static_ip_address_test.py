@@ -390,11 +390,6 @@ def test_disable_static_ipv6(setup_eth1_ipv6):
     assertlib.assert_state(desired_state)
 
 
-@pytest.mark.xfail(
-    reason='https://nmstate.atlassian.net/browse/NMSTATE-231',
-    raises=AssertionError,
-    strict=True,
-)
 def test_disable_static_ipv6_and_rollback(setup_eth1_ipv6):
     desired_state = {
         INTERFACES: [
