@@ -224,6 +224,7 @@ def _linux_bridge(name, bridge_state, extra_iface_state=None):
                 Interface.NAME: name,
                 Interface.TYPE: InterfaceType.LINUX_BRIDGE,
                 Interface.STATE: InterfaceState.UP,
+                Interface.IPV6: {InterfaceIPv6.ENABLED: False},
             }
         ]
     }
