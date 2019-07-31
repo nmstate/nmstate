@@ -24,6 +24,7 @@ import pytest
 
 import libnmstate
 from libnmstate.error import NmstateVerificationError
+from libnmstate.schema import VLAN
 
 from .testlib import assertlib
 from .testlib import statelib
@@ -39,13 +40,13 @@ TWO_VLANS_STATE = {
             'name': VLAN_IFNAME,
             'type': 'vlan',
             'state': 'up',
-            'vlan': {'id': 101, 'base-iface': 'eth1'},
+            VLAN.CONFIG_SUBTREE: {VLAN.ID: 101, VLAN.BASE_IFACE: 'eth1'},
         },
         {
             'name': VLAN2_IFNAME,
             'type': 'vlan',
             'state': 'up',
-            'vlan': {'id': 102, 'base-iface': 'eth1'},
+            VLAN.CONFIG_SUBTREE: {VLAN.ID: 102, VLAN.BASE_IFACE: 'eth1'},
         },
     ]
 }
@@ -62,7 +63,9 @@ def test_add_and_remove_vlan(eth1_up):
 @pytest.fixture
 def vlan_on_eth1(eth1_up):
     with vlan_interface(VLAN_IFNAME, 101) as desired_state:
-        base_iface_name = desired_state[INTERFACES][0]['vlan']['base-iface']
+        base_iface_name = desired_state[INTERFACES][0][VLAN.CONFIG_SUBTREE][
+            VLAN.BASE_IFACE
+        ]
         iface_states = statelib.show_only((base_iface_name, VLAN_IFNAME))
         yield iface_states
 
@@ -115,7 +118,10 @@ def vlan_interface(ifname, vlan_id):
                 'name': ifname,
                 'type': 'vlan',
                 'state': 'up',
-                'vlan': {'id': vlan_id, 'base-iface': 'eth1'},
+                VLAN.CONFIG_SUBTREE: {
+                    VLAN.ID: vlan_id,
+                    VLAN.BASE_IFACE: 'eth1',
+                },
             }
         ]
     }
