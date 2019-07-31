@@ -18,18 +18,16 @@
 #
 
 from libnmstate.nm import nmclient
-
-
-VLAN_TYPE = 'vlan'
+from libnmstate.schema import VLAN
 
 
 def create_setting(iface_state, base_con_profile):
-    vlan = iface_state.get(VLAN_TYPE)
+    vlan = iface_state.get(VLAN.TYPE)
     if not vlan:
         return None
 
-    vlan_id = vlan['id']
-    vlan_base_iface = vlan['base-iface']
+    vlan_id = vlan[VLAN.ID]
+    vlan_base_iface = vlan[VLAN.BASE_IFACE]
 
     vlan_setting = None
     if base_con_profile:
@@ -52,8 +50,8 @@ def get_info(device):
     """
     info = {}
     if device.get_device_type() == nmclient.NM.DeviceType.VLAN:
-        info['vlan'] = {
-            'id': device.props.vlan_id,
-            'base-iface': device.props.parent.get_iface(),
+        info[VLAN.CONFIG_SUBTREE] = {
+            VLAN.ID: device.props.vlan_id,
+            VLAN.BASE_IFACE: device.props.parent.get_iface(),
         }
     return info

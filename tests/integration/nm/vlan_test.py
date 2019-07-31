@@ -20,6 +20,7 @@
 from contextlib import contextmanager
 
 from libnmstate import nm
+from libnmstate.schema import VLAN
 
 from .testlib import mainloop
 
@@ -28,7 +29,9 @@ ETH1 = 'eth1'
 
 
 def test_create_and_remove_vlan(eth1_up):
-    vlan_desired_state = {'vlan': {'id': 101, 'base-iface': ETH1}}
+    vlan_desired_state = {
+        VLAN.CONFIG_SUBTREE: {VLAN.ID: 101, VLAN.BASE_IFACE: ETH1}
+    }
 
     with _vlan_interface(vlan_desired_state):
 
@@ -84,4 +87,8 @@ def _delete_vlan(devname):
 
 
 def _get_vlan_ifname(state):
-    return state['vlan']['base-iface'] + '.' + str(state['vlan']['id'])
+    return (
+        state[VLAN.CONFIG_SUBTREE][VLAN.BASE_IFACE]
+        + '.'
+        + str(state[VLAN.CONFIG_SUBTREE][VLAN.ID])
+    )

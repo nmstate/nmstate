@@ -179,6 +179,14 @@ class Ethernet(object):
     HALF_DUPLEX = 'half'
 
 
+class VLAN(object):
+    TYPE = InterfaceType.VLAN
+    CONFIG_SUBTREE = 'vlan'
+
+    ID = 'id'
+    BASE_IFACE = 'base-iface'
+
+
 class OVSBridge(object):
     TYPE = 'ovs-bridge'
     CONFIG_SUBTREE = 'bridge'
