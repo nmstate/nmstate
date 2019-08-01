@@ -17,11 +17,13 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 """ Test the nmstate example files """
+import pytest
 
 from .testlib import assertlib
 from .testlib.examplelib import example_state
 
 from libnmstate import netinfo
+from libnmstate.error import NmstateLibnmError
 from libnmstate.schema import DNS
 
 
@@ -41,6 +43,9 @@ def test_add_down_remove_vlan(eth1_up):
     assertlib.assert_absent(vlan_ifname)
 
 
+@pytest.mark.xfail(
+    raises=NmstateLibnmError, reason='https://bugzilla.redhat.com/1724901'
+)
 def test_add_remove_ovs_bridge(eth1_up):
     with example_state(
         'ovsbridge_create.yml', cleanup='ovsbridge_delete.yml'
