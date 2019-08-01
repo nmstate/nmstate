@@ -42,12 +42,14 @@ IPV6_ADDRESS1 = '2001:db8:1::1'
 IPV6_ADDRESS2 = '2001:db8:2::1'
 IPV4_CLASSLESS_ROUTE_DST_NET1 = '198.51.100.0/24'
 IPV4_CLASSLESS_ROUTE_NEXT_HOP1 = '192.0.2.1'
-IPV6_CLASSLESS_ROUTE_DST_NET1 = '2001:db8:f::/64'
+IPV6_CLASSLESS_ROUTE_PREFIX = '2001:db8:f'
+IPV6_CLASSLESS_ROUTE_DST_NET1 = '{}::/64'.format(IPV6_CLASSLESS_ROUTE_PREFIX)
 
 DHCP_SRV_NIC = 'dhcpsrv'
 DHCP_CLI_NIC = 'dhcpcli'
 DHCP_SRV_IP4 = IPV4_ADDRESS1
 DHCP_SRV_IP6 = IPV6_ADDRESS1
+DHCP_SRV_IP6_2 = "{}::1".format(IPV6_CLASSLESS_ROUTE_PREFIX)
 DHCP_SRV_IP4_PREFIX = '192.0.2'
 DHCP_SRV_IP6_PREFIX = '2001:db8:1'
 DHCP_SRV_IP6_NETWORK = '{}::/64'.format(DHCP_SRV_IP6_PREFIX)
@@ -60,6 +62,7 @@ interface={iface}
 dhcp-range={ipv4_prefix}.200,{ipv4_prefix}.250,255.255.255.0,48h
 enable-ra
 dhcp-range={ipv6_prefix}::100,{ipv6_prefix}::fff,ra-names,slaac,64,480h
+dhcp-range={ipv6_classless_route}::100,{ipv6_classless_route}::fff,static
 dhcp-option=option:classless-static-route,{classless_rt},{classless_rt_dst}
 dhcp-option=option:dns-server,{v4_dns_server}
 """.format(
@@ -70,28 +73,10 @@ dhcp-option=option:dns-server,{v4_dns_server}
         'classless_rt': IPV4_CLASSLESS_ROUTE_DST_NET1,
         'classless_rt_dst': IPV4_CLASSLESS_ROUTE_NEXT_HOP1,
         'v4_dns_server': DHCP_SRV_IP4,
+        'ipv6_classless_route': IPV6_CLASSLESS_ROUTE_PREFIX,
     }
 )
 
-RADVD_CONF_STR = """
-interface {}
-{{
-    AdvSendAdvert on;
-    MinRtrAdvInterval 30;
-    MaxRtrAdvInterval 100;
-    prefix {} {{
-        AdvOnLink on;
-        AdvAutonomous on;
-        AdvRouterAddr off;
-    }};
-    route {} {{
-    }};
-}};
-""".format(
-    DHCP_SRV_NIC, DHCP_SRV_IP6_NETWORK, IPV6_CLASSLESS_ROUTE_DST_NET1
-)
-
-RADVD_CONF_PATH = '/etc/radvd.conf'
 DNSMASQ_CONF_PATH = '/etc/dnsmasq.d/nmstate.conf'
 # Docker does not allow NetworkManager to edit /etc/resolv.conf.
 # Have to read NetworkManager internal resolv.conf
@@ -121,9 +106,6 @@ def dhcp_env():
             fd.write(DNSMASQ_CONF_STR)
         assert libcmd.exec_cmd(['systemctl', 'restart', 'dnsmasq'])[0] == 0
 
-        with open(RADVD_CONF_PATH, 'w') as fd:
-            fd.write(RADVD_CONF_STR)
-        assert libcmd.exec_cmd(['systemctl', 'restart', 'radvd'])[0] == 0
         yield
     finally:
         _clean_up()
@@ -581,10 +563,10 @@ def _setup_dhcp_nics():
         )[0]
         == 0
     )
+    # This stop dhcp server NIC get another IPv6 address from dnsmasq.
     with open(SYSFS_DISABLE_RA_SRV, 'w') as fd:
         fd.write('0')
 
-    # This stop dhcp server NIC get another IPv6 address from radvd.
     with open(SYSFS_DISABLE_IPV6_FILE, 'w') as fd:
         fd.write('0')
 
@@ -602,17 +584,26 @@ def _setup_dhcp_nics():
         == 0
     )
 
+    assert (
+        libcmd.exec_cmd(
+            [
+                'ip',
+                'addr',
+                'add',
+                "{}/64".format(DHCP_SRV_IP6_2),
+                'dev',
+                DHCP_SRV_NIC,
+            ]
+        )[0]
+        == 0
+    )
+
 
 def _clean_up():
     libcmd.exec_cmd(['systemctl', 'stop', 'dnsmasq'])
-    libcmd.exec_cmd(['systemctl', 'stop', 'radvd'])
     _remove_veth_pair()
     try:
         os.unlink(DNSMASQ_CONF_PATH)
-    except (FileNotFoundError, OSError):
-        pass
-    try:
-        os.unlink(RADVD_CONF_PATH)
     except (FileNotFoundError, OSError):
         pass
 

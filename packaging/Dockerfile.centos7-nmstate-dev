@@ -7,7 +7,6 @@ RUN yum -y install \
         python2-devel \
         python2-pip \
         python36-pip \
-        radvd \
         rpm-build \
     && yum clean all
 
