@@ -17,10 +17,12 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
+import pytest
 import yaml
 
 import libnmstate
 from libnmstate.schema import InterfaceIPv4
+from libnmstate.error import NmstateLibnmError
 
 from .testlib import statelib
 from .testlib.statelib import INTERFACES
@@ -40,6 +42,9 @@ interfaces:
 """
 
 
+@pytest.mark.xfail(
+    raises=NmstateLibnmError, reason='https://bugzilla.redhat.com/1724901'
+)
 def test_create_and_remove_ovs_bridge_with_a_system_port(eth1_up):
     state = yaml.load(OVS_BRIDGE_YAML_BASE, Loader=yaml.SafeLoader)
     state[INTERFACES][0]['bridge']['port'] = [
@@ -57,6 +62,9 @@ def test_create_and_remove_ovs_bridge_with_a_system_port(eth1_up):
     assert not state[INTERFACES]
 
 
+@pytest.mark.xfail(
+    raises=NmstateLibnmError, reason='https://bugzilla.redhat.com/1724901'
+)
 def test_create_and_remove_ovs_bridge_with_min_desired_state():
     desired_state = {
         INTERFACES: [{'name': 'ovs-br0', 'type': 'ovs-bridge', 'state': 'up'}]
@@ -73,6 +81,9 @@ def test_create_and_remove_ovs_bridge_with_min_desired_state():
     assert not state[INTERFACES]
 
 
+@pytest.mark.xfail(
+    raises=NmstateLibnmError, reason='https://bugzilla.redhat.com/1724901'
+)
 def test_create_and_remove_ovs_bridge_with_an_internal_port():
     state = yaml.load(OVS_BRIDGE_YAML_BASE, Loader=yaml.SafeLoader)
     state[INTERFACES][0]['bridge']['port'] = [
