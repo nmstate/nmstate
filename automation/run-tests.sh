@@ -181,8 +181,8 @@ function rebuild_container_images {
 
 function upgrade_nm_from_copr {
     local copr_repo=$1
-    # The repoid for a Copr repo is the name with the slash replaces by a dash
-    local copr_repo_id="${copr_repo/\//-}"
+    # The repoid for a Copr repo is the name with the slash replaces by a colon
+    local copr_repo_id="copr:copr.fedorainfracloud.org:${copr_repo/\//:}"
     docker_exec "command -v dnf && plugin='dnf-command(copr)' || plugin='yum-plugin-copr'; yum install --assumeyes \$plugin;"
     docker_exec "yum copr enable --assumeyes ${copr_repo}"
     # Update only from Copr to limit the changes in the environment
