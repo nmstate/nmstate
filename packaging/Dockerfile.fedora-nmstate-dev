@@ -32,7 +32,6 @@ RUN dnf -y install --setopt=install_weak_deps=False \
                    python3-pytest \
                    python3-pytest-cov \
                    python3-tox \
-                   radvd \
                    rpm-build \
                    \
                    # Below packages for pip (used by tox) to build
