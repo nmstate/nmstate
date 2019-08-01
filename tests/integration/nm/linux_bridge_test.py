@@ -87,7 +87,9 @@ def _create_bridge_config(ports):
                 LB.MAC_AGEING_TIME: 300,
                 LB.MULTICAST_SNOOPING: True,
                 LB.STP_SUBTREE: {
-                    LB.STP_ENABLED: True,
+                    # Disable STP to avoid topology changes and the consequence
+                    # link change.
+                    LB.STP_ENABLED: False,
                     LB.STP_FORWARD_DELAY: 15,
                     LB.STP_HELLO_TIME: 2,
                     LB.STP_MAX_AGE: 20,
