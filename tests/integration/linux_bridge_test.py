@@ -158,6 +158,14 @@ def test_create_vlan_as_slave_of_linux_bridge(port0_vlan101):
         assertlib.assert_state(desired_state)
 
 
+def test_create_vlan_over_linux_bridge(bridge0_with_port0):
+    vlan_base_iface = TEST_BRIDGE0
+    vlan_id = 101
+    port_name = '{}.{}'.format(vlan_base_iface, vlan_id)
+    with vlan_interface(port_name, vlan_id, vlan_base_iface) as desired_state:
+        assertlib.assert_state(desired_state)
+
+
 @ip_monitor_assert_stable_link_up(TEST_BRIDGE0)
 def test_add_port_to_existing_bridge(bridge0_with_port0, port1_up):
     desired_state = bridge0_with_port0
