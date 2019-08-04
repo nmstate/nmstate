@@ -27,6 +27,7 @@ yum -y install \
     python-setuptools \
     python2-pyyaml \
     python2-six
+yum-builddep -y dbus-python
 ```
 
 #### Post Package installation
