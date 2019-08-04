@@ -26,6 +26,8 @@ import libnmstate
 from libnmstate.error import NmstateVerificationError
 from libnmstate.schema import VLAN
 from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceState
+from libnmstate.schema import InterfaceType
 
 from .testlib import assertlib
 from .testlib import statelib
@@ -116,6 +118,34 @@ def test_set_vlan_iface_down(eth1_up):
 
         current_state = statelib.show_only((VLAN_IFNAME,))
         assert not current_state[INTERFACES]
+
+
+def test_add_new_base_iface_with_vlan():
+    iface_base = 'dummy00'
+    desired_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: 'dummy00.101',
+                Interface.TYPE: InterfaceType.VLAN,
+                Interface.STATE: InterfaceState.UP,
+                VLAN.CONFIG_SUBTREE: {
+                    VLAN.ID: 101,
+                    VLAN.BASE_IFACE: iface_base,
+                },
+            },
+            {
+                Interface.NAME: iface_base,
+                Interface.TYPE: InterfaceType.DUMMY,
+                Interface.STATE: InterfaceState.UP,
+            },
+        ]
+    }
+    try:
+        libnmstate.apply(desired_state)
+    finally:
+        for ifstate in desired_state[Interface.KEY]:
+            ifstate[Interface.STATE] = InterfaceState.ABSENT
+        libnmstate.apply(desired_state, verify_change=False)
 
 
 @contextmanager
