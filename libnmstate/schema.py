@@ -88,6 +88,7 @@ class InterfaceType(object):
     KEY = Interface.TYPE
 
     BOND = 'bond'
+    DUMMY = 'dummy'
     ETHERNET = 'ethernet'
     LINUX_BRIDGE = 'linux-bridge'
     OVS_BRIDGE = 'ovs-bridge'
@@ -98,6 +99,7 @@ class InterfaceType(object):
 
     VIRT_TYPES = (
         BOND,
+        DUMMY,
         LINUX_BRIDGE,
         OVS_BRIDGE,
         OVS_PORT,
