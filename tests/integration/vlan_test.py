@@ -100,8 +100,8 @@ def test_rollback_for_vlans(eth1_up):
         libnmstate.apply(desired_state)
 
     time.sleep(5)  # Give some time for NetworkManager to rollback
-    current_state_after_apply = libnmstate.show()
-    assert current_state == current_state_after_apply
+
+    assertlib.assert_state(current_state)
 
 
 def test_set_vlan_iface_down(eth1_up):
