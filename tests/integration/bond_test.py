@@ -364,3 +364,14 @@ def test_create_linux_bridge_over_bond(bond99_with_slave):
     )
     with linux_bridge(bridge_name, bridge_state) as desired_state:
         assertlib.assert_state(desired_state)
+
+
+def test_create_vlan_over_a_bond(bond99_with_slave):
+    vlan_base_iface = bond99_with_slave[Interface.KEY][0][Interface.NAME]
+    vlan_id = 102
+    vlan_iface_name = '{}.{}'.format(vlan_base_iface, vlan_id)
+    with vlan_interface(
+        vlan_iface_name, vlan_id, vlan_base_iface
+    ) as desired_state:
+        assertlib.assert_state(desired_state)
+    assertlib.assert_state(bond99_with_slave)
