@@ -70,7 +70,7 @@ def create_bridge_setting(options):
             bridge_setting.props.stp_enable = option_value
         else:
             raise NmstateValueError(
-                'Invalid OVS bridge option: \{}\=\'{}\''.format(
+                'Invalid OVS bridge option: \'{}\'=\'{}\''.format(
                     option_name, option_value
                 )
             )
@@ -95,7 +95,7 @@ def create_port_setting(options):
             port_setting.props.bond_downdelay = option_value
         else:
             raise NmstateValueError(
-                'Invalid OVS port option: \{}\=\'{}\''.format(
+                'Invalid OVS port option: \'{}\'=\'{}\''.format(
                     option_name, option_value
                 )
             )

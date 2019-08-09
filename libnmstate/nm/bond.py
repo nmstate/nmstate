@@ -33,7 +33,7 @@ def create_setting(options):
         success = bond_setting.add_option(option_name, option_value)
         if not success:
             raise NmstateValueError(
-                'Invalid bond option: \{}\=\'{}\''.format(
+                'Invalid bond option: \'{}\'=\'{}\''.format(
                     option_name, option_value
                 )
             )
