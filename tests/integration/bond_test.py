@@ -35,6 +35,7 @@ from libnmstate.schema import InterfaceIPv6
 from .testlib import assertlib
 from .testlib import statelib
 from .testlib.assertlib import assert_mac_address
+from .testlib.vlan import vlan_interface
 
 
 BOND99 = 'bond99'
@@ -369,3 +370,15 @@ def test_bond_with_empty_ipv6_static_address(eth1_up):
         assertlib.assert_state(bond_state)
 
     assertlib.assert_absent('bond99')
+
+
+def test_create_vlan_over_a_bond_slave(bond99_with_slave):
+    bond_ifstate = bond99_with_slave[Interface.KEY][0]
+    bond_slave_ifname = bond_ifstate[Bond.CONFIG_SUBTREE][Bond.SLAVES][0]
+    vlan_id = 102
+    vlan_iface_name = '{}.{}'.format(bond_slave_ifname, vlan_id)
+    with vlan_interface(
+        vlan_iface_name, vlan_id, bond_slave_ifname
+    ) as desired_state:
+        assertlib.assert_state(desired_state)
+    assertlib.assert_state(bond99_with_slave)
