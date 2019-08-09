@@ -20,6 +20,11 @@
 import logging
 
 from . import nmclient
+from .nmclient import GLib
+from .nmclient import NM
+
+
+NM_MANAGER_ERROR_DOMAIN = 'nm-manager-error-quark'
 
 
 class AlternativeACState(object):
@@ -96,12 +101,24 @@ class ActiveConnection(object):
                     e,
                 )
             else:
-                self._mainloop.quit(
-                    'Connection deactivation failed on {}: error={}'.format(
-                        self._nmdev.get_iface(), e
+                if (
+                    isinstance(e, GLib.GError)
+                    # pylint: disable=no-member
+                    and e.domain == NM_MANAGER_ERROR_DOMAIN
+                    and e.code == NM.ManagerError.CONNECTIONNOTACTIVE
+                    # pylint: enable=no-member
+                ):
+                    success = True
+                    logging.debug(
+                        'Connection is not active on {}, no need to '
+                        'deactivate'.format(self.devname)
                     )
-                )
-            return
+                else:
+                    self._mainloop.quit(
+                        'Connection deactivation failed on {}: '
+                        'error={}'.format(self._nmdev.get_iface(), e)
+                    )
+                    return
 
         if success:
             logging.debug(
