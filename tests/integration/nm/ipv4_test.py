@@ -21,16 +21,15 @@ from libnmstate import nm
 from libnmstate.schema import InterfaceIPv4
 
 from ..testlib import iproutelib
+from ..testlib.env import TEST_NIC1
 from .testlib import mainloop
 
-
-TEST_IFACE = 'eth1'
 
 IPV4_ADDRESS1 = '192.0.2.251'
 
 
-@iproutelib.ip_monitor_assert_stable_link_up(TEST_IFACE)
-def test_interface_ipv4_change(eth1_up):
+@iproutelib.ip_monitor_assert_stable_link_up(TEST_NIC1)
+def test_interface_ipv4_change(test_nic1_up):
     with mainloop():
         _modify_interface(
             ipv4_state={
@@ -46,7 +45,7 @@ def test_interface_ipv4_change(eth1_up):
         )
 
     nm.nmclient.client(refresh=True)
-    ipv4_current_state = _get_ipv4_current_state(TEST_IFACE)
+    ipv4_current_state = _get_ipv4_current_state(TEST_NIC1)
 
     ip4_expected_state = {
         InterfaceIPv4.ENABLED: True,
@@ -61,7 +60,7 @@ def test_interface_ipv4_change(eth1_up):
     assert ip4_expected_state == ipv4_current_state
 
 
-def test_enable_dhcp_with_no_server(eth1_up):
+def test_enable_dhcp_with_no_server(test_nic1_up):
     with mainloop():
         _modify_interface(
             ipv4_state={
@@ -72,7 +71,7 @@ def test_enable_dhcp_with_no_server(eth1_up):
         )
 
     nm.nmclient.client(refresh=True)
-    ipv4_current_state = _get_ipv4_current_state(TEST_IFACE)
+    ipv4_current_state = _get_ipv4_current_state(TEST_NIC1)
     expected_ipv4_state = {
         InterfaceIPv4.ENABLED: True,
         InterfaceIPv4.DHCP: True,
@@ -86,14 +85,14 @@ def test_enable_dhcp_with_no_server(eth1_up):
 
 def _modify_interface(ipv4_state):
     conn = nm.connection.ConnectionProfile()
-    conn.import_by_id(TEST_IFACE)
+    conn.import_by_id(TEST_NIC1)
     settings = _create_iface_settings(ipv4_state, conn)
     new_conn = nm.connection.ConnectionProfile()
     new_conn.create(settings)
     conn.update(new_conn)
     conn.commit(save_to_disk=False)
 
-    nmdev = nm.device.get_device_by_name(TEST_IFACE)
+    nmdev = nm.device.get_device_by_name(TEST_NIC1)
     nm.device.reapply(nmdev, conn.profile)
 
 

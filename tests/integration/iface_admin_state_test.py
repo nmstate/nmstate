@@ -22,12 +22,13 @@ import pytest
 import libnmstate
 
 from .testlib import assertlib
+from .testlib.env import TEST_NIC1
 from .testlib.statelib import INTERFACES
 
 
-def test_set_a_down_iface_down(eth1_up):
+def test_set_a_down_iface_down(test_nic1_up):
     desired_state = {
-        INTERFACES: [{'name': 'eth1', 'type': 'ethernet', 'state': 'down'}]
+        INTERFACES: [{'name': TEST_NIC1, 'type': 'ethernet', 'state': 'down'}]
     }
     libnmstate.apply(desired_state)
     assertlib.assert_state(desired_state)
@@ -38,9 +39,11 @@ def test_set_a_down_iface_down(eth1_up):
 
 
 @pytest.mark.xfail(reason='Some ifaces cannot be removed', strict=True)
-def test_removing_a_non_removable_iface(eth1_up):
+def test_removing_a_non_removable_iface(test_nic1_up):
     desired_state = {
-        INTERFACES: [{'name': 'eth1', 'type': 'ethernet', 'state': 'absent'}]
+        INTERFACES: [
+            {'name': TEST_NIC1, 'type': 'ethernet', 'state': 'absent'}
+        ]
     }
 
     libnmstate.apply(desired_state)
@@ -48,15 +51,15 @@ def test_removing_a_non_removable_iface(eth1_up):
     assertlib.assert_state(desired_state)
 
 
-def test_set_iface_down_without_type(eth1_up):
-    desired_state = {INTERFACES: [{'name': 'eth1', 'state': 'down'}]}
+def test_set_iface_down_without_type(test_nic1_up):
+    desired_state = {INTERFACES: [{'name': TEST_NIC1, 'state': 'down'}]}
     libnmstate.apply(desired_state)
 
     assertlib.assert_state(desired_state)
 
 
-def test_change_iface_without_type(eth1_up):
-    desired_state = {INTERFACES: [{'name': 'eth1', 'mtu': 1400}]}
+def test_change_iface_without_type(test_nic1_up):
+    desired_state = {INTERFACES: [{'name': TEST_NIC1, 'mtu': 1400}]}
     libnmstate.apply(desired_state)
 
     assertlib.assert_state(desired_state)

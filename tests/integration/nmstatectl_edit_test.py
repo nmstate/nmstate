@@ -21,6 +21,7 @@ import os
 
 
 from .testlib import cmd as libcmd
+from .testlib.env import TEST_NIC1
 
 
 RC_SUCCESS = 0
@@ -39,13 +40,13 @@ def test_edit_abort():
     assert_rc(rc, os.EX_DATAERR, ret)
 
 
-def test_edit_no_change_eth1():
+def test_edit_no_change_test_nic1():
     runenv = dict(os.environ)
     env = {'EDITOR': 'touch'}
 
     runenv.update(env)
 
-    cmds = ['nmstatectl', 'edit', 'eth1']
+    cmds = ['nmstatectl', 'edit', TEST_NIC1]
     ret = libcmd.exec_cmd(cmds, env=runenv)
     rc, out, err = ret
 

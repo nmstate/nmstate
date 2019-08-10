@@ -31,12 +31,13 @@ from libnmstate.schema import InterfaceType
 
 from .testlib import assertlib
 from .testlib import statelib
-from .testlib.statelib import INTERFACES
 from .testlib.assertlib import assert_mac_address
 from .testlib.vlan import vlan_interface
+from .testlib.env import TEST_NIC1
+from .testlib.statelib import INTERFACES
 
-VLAN_IFNAME = 'eth1.101'
-VLAN2_IFNAME = 'eth1.102'
+VLAN_IFNAME = '{}.101'.format(TEST_NIC1)
+VLAN2_IFNAME = '{}.102'.format(TEST_NIC1)
 
 TWO_VLANS_STATE = {
     INTERFACES: [
@@ -44,22 +45,20 @@ TWO_VLANS_STATE = {
             'name': VLAN_IFNAME,
             'type': 'vlan',
             'state': 'up',
-            VLAN.CONFIG_SUBTREE: {VLAN.ID: 101, VLAN.BASE_IFACE: 'eth1'},
+            VLAN.CONFIG_SUBTREE: {VLAN.ID: 101, VLAN.BASE_IFACE: TEST_NIC1},
         },
         {
             'name': VLAN2_IFNAME,
             'type': 'vlan',
             'state': 'up',
-            VLAN.CONFIG_SUBTREE: {VLAN.ID: 102, VLAN.BASE_IFACE: 'eth1'},
+            VLAN.CONFIG_SUBTREE: {VLAN.ID: 102, VLAN.BASE_IFACE: TEST_NIC1},
         },
     ]
 }
 
 
-def test_add_and_remove_vlan(eth1_up):
-    with vlan_interface(
-        VLAN_IFNAME, 101, eth1_up[Interface.KEY][0][Interface.NAME]
-    ) as desired_state:
+def test_add_and_remove_vlan(test_nic1_up):
+    with vlan_interface(VLAN_IFNAME, 101, TEST_NIC1) as desired_state:
         assertlib.assert_state(desired_state)
 
     current_state = statelib.show_only((VLAN_IFNAME,))
@@ -67,10 +66,8 @@ def test_add_and_remove_vlan(eth1_up):
 
 
 @pytest.fixture
-def vlan_on_eth1(eth1_up):
-    with vlan_interface(
-        VLAN_IFNAME, 101, eth1_up[Interface.KEY][0][Interface.NAME]
-    ) as desired_state:
+def vlan_on_test_nic1(test_nic1_up):
+    with vlan_interface(VLAN_IFNAME, 101, TEST_NIC1) as desired_state:
         base_iface_name = desired_state[INTERFACES][0][VLAN.CONFIG_SUBTREE][
             VLAN.BASE_IFACE
         ]
@@ -78,12 +75,12 @@ def vlan_on_eth1(eth1_up):
         yield iface_states
 
 
-def test_vlan_iface_uses_the_mac_of_base_iface(vlan_on_eth1):
-    assert_mac_address(vlan_on_eth1)
+def test_vlan_iface_uses_the_mac_of_base_iface(vlan_on_test_nic1):
+    assert_mac_address(vlan_on_test_nic1)
 
 
-def test_add_and_remove_two_vlans_on_same_iface(eth1_up):
-    with two_vlans_on_eth1() as desired_state:
+def test_add_and_remove_two_vlans_on_same_iface(test_nic1_up):
+    with two_vlans_on_test_nic1() as desired_state:
         assertlib.assert_state(desired_state)
 
     vlan_interfaces = [i['name'] for i in desired_state[INTERFACES]]
@@ -91,7 +88,7 @@ def test_add_and_remove_two_vlans_on_same_iface(eth1_up):
     assert not current_state[INTERFACES]
 
 
-def test_rollback_for_vlans(eth1_up):
+def test_rollback_for_vlans(test_nic1_up):
     current_state = libnmstate.show()
     desired_state = TWO_VLANS_STATE
 
@@ -104,10 +101,8 @@ def test_rollback_for_vlans(eth1_up):
     assertlib.assert_state(current_state)
 
 
-def test_set_vlan_iface_down(eth1_up):
-    with vlan_interface(
-        VLAN_IFNAME, 101, eth1_up[Interface.KEY][0][Interface.NAME]
-    ):
+def test_set_vlan_iface_down(test_nic1_up):
+    with vlan_interface(VLAN_IFNAME, 101, TEST_NIC1):
         libnmstate.apply(
             {
                 INTERFACES: [
@@ -149,7 +144,7 @@ def test_add_new_base_iface_with_vlan():
 
 
 @contextmanager
-def two_vlans_on_eth1():
+def two_vlans_on_test_nic1():
     desired_state = TWO_VLANS_STATE
     libnmstate.apply(desired_state)
     try:

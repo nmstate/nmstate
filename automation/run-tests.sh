@@ -28,8 +28,6 @@ function remove_container {
     [ "$res" -ne 0 ] && echo "*** ERROR: $res"
     docker_exec 'rm -rf $CONTAINER_WORKSPACE/*nmstate*.rpm'
     docker rm $CONTAINER_ID -f
-    docker network rm $NET0
-    docker network rm $NET1
 }
 
 function pyclean {
@@ -40,17 +38,6 @@ function pyclean {
 function docker_exec {
     docker exec $USE_TTY -i $CONTAINER_ID \
         /bin/bash -c "cd $CONTAINER_WORKSPACE && $1"
-}
-
-function add_extra_networks {
-    docker network create $NET0 || true
-    docker network create $NET1 || true
-    docker network connect $NET0 $CONTAINER_ID
-    docker network connect $NET1 $CONTAINER_ID
-    docker_exec '
-      ip addr flush eth1 && \
-      ip addr flush eth2
-    '
 }
 
 function dump_network_info {
@@ -282,7 +269,6 @@ docker_exec '
     systemctl restart NetworkManager
     while ! systemctl is-active NetworkManager; do sleep 1; done
 '
-add_extra_networks
 dump_network_info
 
 pyclean

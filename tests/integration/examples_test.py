@@ -20,19 +20,21 @@
 import pytest
 
 from .testlib import assertlib
+from .testlib.env import TEST_NIC1
 from .testlib.examplelib import example_state
+
 
 from libnmstate import netinfo
 from libnmstate.error import NmstateLibnmError
 from libnmstate.schema import DNS
 
 
-def test_add_down_remove_vlan(eth1_up):
+def test_add_down_remove_vlan(test_nic1_up):
     """
     Test adding, downing and removing a vlan
     """
 
-    vlan_ifname = 'eth1.101'
+    vlan_ifname = '{}.101'.format(TEST_NIC1)
     with example_state(
         'vlan101_eth1_up.yml', cleanup='vlan101_eth1_absent.yml'
     ) as desired_state:
@@ -46,7 +48,7 @@ def test_add_down_remove_vlan(eth1_up):
 @pytest.mark.xfail(
     raises=NmstateLibnmError, reason='https://bugzilla.redhat.com/1724901'
 )
-def test_add_remove_ovs_bridge(eth1_up):
+def test_add_remove_ovs_bridge(test_nic1_up):
     with example_state(
         'ovsbridge_create.yml', cleanup='ovsbridge_delete.yml'
     ) as desired_state:
@@ -55,7 +57,7 @@ def test_add_remove_ovs_bridge(eth1_up):
     assertlib.assert_absent('ovs-br0')
 
 
-def test_add_remove_linux_bridge(eth1_up):
+def test_add_remove_linux_bridge(test_nic1_up):
     with example_state(
         'linuxbrige_eth1_up.yml', cleanup='linuxbrige_eth1_absent.yml'
     ) as desired_state:
@@ -64,7 +66,7 @@ def test_add_remove_linux_bridge(eth1_up):
     assertlib.assert_absent('linux-br0')
 
 
-def test_dns_edit(eth1_up):
+def test_dns_edit(test_nic1_up):
     with example_state(
         'dns_edit_eth1.yml', cleanup='dns_remove.yml'
     ) as desired_state:
@@ -77,13 +79,13 @@ def test_dns_edit(eth1_up):
     }
 
 
-def test_add_remove_routes(eth1_up):
+def test_add_remove_routes(test_nic1_up):
     """
-    Test adding a strict route and removing all routes next hop to eth1.
+    Test adding a strict route and removing all routes next hop to TEST_NIC1.
     """
     with example_state(
         'eth1_add_route.yml', cleanup='eth1_del_all_routes.yml'
     ) as desired_state:
         assertlib.assert_state(desired_state)
 
-    assertlib.assert_no_config_route_to_iface('eth1')
+    assertlib.assert_no_config_route_to_iface(TEST_NIC1)

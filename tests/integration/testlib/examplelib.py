@@ -24,6 +24,8 @@ import yaml
 
 import libnmstate
 
+from .env import TEST_NIC1
+
 
 PATH_MAX = 4096
 
@@ -52,7 +54,9 @@ def load_example(name):
     examples = find_examples_dir()
 
     with open(os.path.join(examples, name)) as yamlfile:
-        state = yaml.load(yamlfile, Loader=yaml.SafeLoader)
+        content = yamlfile.read()
+        content = content.replace('eth1', TEST_NIC1)
+        state = yaml.load(content, Loader=yaml.SafeLoader)
 
     return state
 

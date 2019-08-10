@@ -24,25 +24,24 @@ from libnmstate import schema
 
 from .testlib import mainloop
 from .testlib import TestMainloopError
+from ..testlib.env import TEST_NIC1
 
-
-ETH1 = 'eth1'
 
 MAC0 = '02:FF:FF:FF:FF:00'
-MTU0 = 1200
+MTU0 = 1280
 
 
-@pytest.mark.xfail(reason='https://bugzilla.redhat.com/1702657', strict=True)
-def test_interface_mtu_change_with_reapply(eth1_up):
+@pytest.mark.xfail(reason='https://bugzilla.redhat.com/1702657')
+def test_interface_mtu_change_with_reapply(test_nic1_up):
     _test_interface_mtu_change(nm.device.reapply)
 
 
-def test_interface_mtu_change_with_modify(eth1_up):
+def test_interface_mtu_change_with_modify(test_nic1_up):
     _test_interface_mtu_change(nm.device.modify)
 
 
 def _test_interface_mtu_change(apply_operation):
-    wired_base_state = _get_wired_current_state(ETH1)
+    wired_base_state = _get_wired_current_state(TEST_NIC1)
     with mainloop():
         _modify_interface(
             wired_state={schema.Interface.MTU: MTU0},
@@ -50,7 +49,7 @@ def _test_interface_mtu_change(apply_operation):
         )
 
     nm.nmclient.client(refresh=True)
-    wired_current_state = _get_wired_current_state(ETH1)
+    wired_current_state = _get_wired_current_state(TEST_NIC1)
 
     assert wired_current_state == {
         schema.Interface.MAC: wired_base_state[schema.Interface.MAC],
@@ -58,17 +57,17 @@ def _test_interface_mtu_change(apply_operation):
     }
 
 
-def test_interface_mac_change_with_reapply_fails(eth1_up):
+def test_interface_mac_change_with_reapply_fails(test_nic1_up):
     with pytest.raises(TestMainloopError):
         _test_interface_mac_change(nm.device.reapply)
 
 
-def test_interface_mac_change_with_modify(eth1_up):
+def test_interface_mac_change_with_modify(test_nic1_up):
     _test_interface_mac_change(nm.device.modify)
 
 
 def _test_interface_mac_change(apply_operation):
-    wired_base_state = _get_wired_current_state(ETH1)
+    wired_base_state = _get_wired_current_state(TEST_NIC1)
     with mainloop():
         _modify_interface(
             wired_state={schema.Interface.MAC: MAC0},
@@ -76,7 +75,7 @@ def _test_interface_mac_change(apply_operation):
         )
 
     nm.nmclient.client(refresh=True)
-    wired_current_state = _get_wired_current_state(ETH1)
+    wired_current_state = _get_wired_current_state(TEST_NIC1)
 
     assert wired_current_state == {
         schema.Interface.MAC: MAC0,
@@ -86,14 +85,14 @@ def _test_interface_mac_change(apply_operation):
 
 def _modify_interface(wired_state, apply_operation):
     conn = nm.connection.ConnectionProfile()
-    conn.import_by_id(ETH1)
+    conn.import_by_id(TEST_NIC1)
     settings = _create_iface_settings(wired_state, conn)
     new_conn = nm.connection.ConnectionProfile()
     new_conn.create(settings)
     conn.update(new_conn)
     conn.commit(save_to_disk=False)
 
-    nmdev = nm.device.get_device_by_name(ETH1)
+    nmdev = nm.device.get_device_by_name(TEST_NIC1)
     apply_operation(nmdev, conn.profile)
 
 

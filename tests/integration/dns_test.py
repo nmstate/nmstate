@@ -30,6 +30,8 @@ from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import Route
 
+from .testlib.env import TEST_NIC1
+from .testlib.env import TEST_NIC2
 
 IPV4_DNS_NAMESERVERS = ['8.8.8.8', '1.1.1.1']
 IPV6_DNS_NAMESERVERS = ['2001:4860:4860::8888', '2606:4700:4700::1111']
@@ -46,10 +48,10 @@ parametrize_ip_ver = pytest.mark.parametrize(
 
 
 @pytest.fixture(scope='function', autouse=True)
-def dns_test_env(eth1_up, eth2_up):
+def dns_test_env(test_nic1_up, test_nic2_up):
     yield
-    # Remove DNS config as it be saved in eth1 or eth2 which might trigger
-    # failure when bring eth1/eth2 down.
+    # Remove DNS config as it be saved in test_nic1 or test_nic2 which might
+    # trigger failure when bring test_nic1/test_nic2 down.
     desired_state = {
         Interface.KEY: _get_test_iface_states(),
         DNS.KEY: {DNS.CONFIG: {DNS.SERVER: [], DNS.SEARCH: []}},
@@ -203,7 +205,7 @@ def test_preserve_dns_config_with_empty_state(setup_ipv4_ipv6_name_server):
 def _get_test_iface_states():
     return [
         {
-            Interface.NAME: 'eth1',
+            Interface.NAME: TEST_NIC1,
             Interface.STATE: InterfaceState.UP,
             Interface.TYPE: InterfaceType.ETHERNET,
             Interface.IPV4: {
@@ -229,7 +231,7 @@ def _get_test_iface_states():
             },
         },
         {
-            Interface.NAME: 'eth2',
+            Interface.NAME: TEST_NIC2,
             Interface.STATE: InterfaceState.UP,
             Interface.TYPE: InterfaceType.ETHERNET,
             Interface.IPV4: {
@@ -263,12 +265,12 @@ def _gen_default_gateway_route():
             Route.DESTINATION: '0.0.0.0/0',
             Route.METRIC: 200,
             Route.NEXT_HOP_ADDRESS: '192.0.2.1',
-            Route.NEXT_HOP_INTERFACE: 'eth1',
+            Route.NEXT_HOP_INTERFACE: TEST_NIC1,
         },
         {
             Route.DESTINATION: '::/0',
             Route.METRIC: 201,
             Route.NEXT_HOP_ADDRESS: '2001:db8:2::f',
-            Route.NEXT_HOP_INTERFACE: 'eth1',
+            Route.NEXT_HOP_INTERFACE: TEST_NIC1,
         },
     ]

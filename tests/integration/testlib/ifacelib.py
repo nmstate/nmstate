@@ -18,11 +18,13 @@
 #
 
 from contextlib import contextmanager
+import os
 
 import libnmstate
 from libnmstate import schema
 
 from . import statelib
+from .cmd import exec_cmd
 
 
 def ifaces_init(*ifnames):
@@ -40,6 +42,58 @@ def iface_up(ifname):
         _set_eth_admin_state(ifname, schema.InterfaceState.DOWN)
 
 
+@contextmanager
+def veth_create(ifname, ifname_end):
+    """
+    Create veth interface named as `ifname` with peer `ifname_end`.
+    The `ifname` interface will be managed by nmcli whiel the 'ifname_end' is
+    not.
+    Firewalld will temporally trust all network flow on `ifname` and
+    `ifname_end`.
+    """
+    _delete_veth(ifname)
+    _delete_veth(ifname_end)
+    _create_veth(ifname, ifname_end)
+    yield
+    _delete_veth(ifname)
+    _delete_veth(ifname_end)
+
+
+def _create_veth(ifname, ifname_end):
+    assert (
+        exec_cmd(
+            ['ip', 'link', 'add', ifname, 'type', 'veth', 'peer', ifname_end]
+        )[0]
+        == 0
+    )
+    assert exec_cmd(['nmcli', 'd', 'set', ifname, 'managed', 'yes'])[0] == 0
+    assert exec_cmd(['ip', 'link', 'set', ifname, 'up'])[0] == 0
+    assert exec_cmd(['ip', 'link', 'set', ifname_end, 'up'])[0] == 0
+    try:
+        exec_cmd(['firewall-cmd', '--zone=trusted', '--add-interface', ifname])
+        exec_cmd(
+            ['firewall-cmd', '--zone=trusted', '--add-interface', ifname_end]
+        )
+    except FileNotFoundError:
+        pass
+
+
+def _delete_veth(ifname):
+    if os.path.exists('/sys/class/net/{}'.format(ifname)):
+        exec_cmd(['ip', 'link', 'del', ifname])
+        try:
+            exec_cmd(
+                [
+                    'firewall-cmd',
+                    '--zone=trusted',
+                    '--remove-interface',
+                    ifname,
+                ]
+            )
+        except FileNotFoundError:
+            pass
+
+
 def _set_eth_admin_state(ifname, state):
     current_state = statelib.show_only((ifname,))
     current_ifstate, = current_state[schema.Interface.KEY]
@@ -50,7 +104,14 @@ def _set_eth_admin_state(ifname, state):
     ):
         desired_state = {
             schema.Interface.KEY: [
-                {schema.Interface.NAME: ifname, schema.Interface.STATE: state}
+                {
+                    schema.Interface.NAME: ifname,
+                    schema.Interface.STATE: state,
+                    # The sysfs disable IPv6 only works if ask specifically.
+                    schema.Interface.IPV6: {
+                        schema.InterfaceIPv6.ENABLED: False
+                    },
+                }
             ]
         }
         libnmstate.apply(desired_state)

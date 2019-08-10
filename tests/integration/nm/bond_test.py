@@ -26,10 +26,9 @@ from .testlib import mainloop_run
 
 
 BOND0 = 'bondtest0'
-ETH1 = 'eth1'
 
 
-def test_create_and_remove_bond(eth1_up):
+def test_create_and_remove_bond(test_nic1_up):
     bond_options = {
         schema.Bond.MODE: schema.BondMode.ROUND_ROBIN,
         'miimon': '140',

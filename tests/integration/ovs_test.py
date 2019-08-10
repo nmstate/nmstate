@@ -25,6 +25,7 @@ from libnmstate.schema import InterfaceIPv4
 from libnmstate.error import NmstateLibnmError
 
 from .testlib import statelib
+from .testlib.env import TEST_NIC1
 from .testlib.statelib import INTERFACES
 
 
@@ -45,10 +46,10 @@ interfaces:
 @pytest.mark.xfail(
     raises=NmstateLibnmError, reason='https://bugzilla.redhat.com/1724901'
 )
-def test_create_and_remove_ovs_bridge_with_a_system_port(eth1_up):
+def test_create_and_remove_ovs_bridge_with_a_system_port(test_nic1_up):
     state = yaml.load(OVS_BRIDGE_YAML_BASE, Loader=yaml.SafeLoader)
     state[INTERFACES][0]['bridge']['port'] = [
-        {'name': 'eth1', 'type': 'system'}
+        {'name': TEST_NIC1, 'type': 'system'}
     ]
     libnmstate.apply(state)
 

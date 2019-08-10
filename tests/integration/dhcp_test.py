@@ -59,6 +59,7 @@ IPV6_DEFAULT_GATEWAY = '::/0'
 IPV4_DEFAULT_GATEWAY = '0.0.0.0/0'
 
 DNSMASQ_CONF_STR = """
+bind-interfaces
 interface={iface}
 dhcp-range={ipv4_prefix}.200,{ipv4_prefix}.250,255.255.255.0,48h
 enable-ra
@@ -100,14 +101,12 @@ except NameError:
 @pytest.fixture(scope='module')
 def dhcp_env():
     try:
-        _create_veth_pair()
-        _setup_dhcp_nics()
-
-        with open(DNSMASQ_CONF_PATH, 'w') as fd:
-            fd.write(DNSMASQ_CONF_STR)
-        assert libcmd.exec_cmd(['systemctl', 'restart', 'dnsmasq'])[0] == 0
-
-        yield
+        with ifacelib.veth_create(DHCP_CLI_NIC, DHCP_SRV_NIC):
+            _setup_dhcp_nics()
+            with open(DNSMASQ_CONF_PATH, 'w') as fd:
+                fd.write(DNSMASQ_CONF_STR)
+            assert libcmd.exec_cmd(['systemctl', 'restart', 'dnsmasq'])[0] == 0
+            yield
     finally:
         _clean_up()
 
@@ -492,32 +491,11 @@ def test_ipv6_dhcp_switch_on_to_off(dhcpcli_up):
     assert not _has_ipv6_auto_nameserver()
 
 
-def _create_veth_pair():
-    assert (
-        libcmd.exec_cmd(
-            [
-                'ip',
-                'link',
-                'add',
-                DHCP_SRV_NIC,
-                'type',
-                'veth',
-                'peer',
-                'name',
-                DHCP_CLI_NIC,
-            ]
-        )[0]
-        == 0
-    )
-
-
 def _remove_veth_pair():
     libcmd.exec_cmd(['ip', 'link', 'del', 'dev', DHCP_SRV_NIC])
 
 
 def _setup_dhcp_nics():
-    assert libcmd.exec_cmd(['ip', 'link', 'set', DHCP_SRV_NIC, 'up'])[0] == 0
-    assert libcmd.exec_cmd(['ip', 'link', 'set', DHCP_CLI_NIC, 'up'])[0] == 0
     assert (
         libcmd.exec_cmd(
             [
@@ -569,7 +547,6 @@ def _setup_dhcp_nics():
 
 def _clean_up():
     libcmd.exec_cmd(['systemctl', 'stop', 'dnsmasq'])
-    _remove_veth_pair()
     try:
         os.unlink(DNSMASQ_CONF_PATH)
     except (FileNotFoundError, OSError):

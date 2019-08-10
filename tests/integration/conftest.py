@@ -18,46 +18,50 @@
 #
 
 import logging
+import time
 
 import pytest
 
 import libnmstate
 
 from .testlib import ifacelib
+from .testlib.env import TEST_NIC1
+from .testlib.env import TEST_NIC2
+from .testlib.ifacelib import veth_create
+
+
+_NIC1_END = "_{}".format(TEST_NIC1)
+_NIC2_END = "_{}".format(TEST_NIC2)
 
 
 @pytest.fixture(scope='session', autouse=True)
-def logging_setup():
+def test_env_setup():
     logging.basicConfig(
         format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
         level=logging.DEBUG,
     )
-
-
-@pytest.fixture(scope='session', autouse=True)
-def ethx_init(preserve_old_config):
-    """ Remove any existing definitions on the ethX interfaces. """
-    ifacelib.ifaces_init('eth1', 'eth2')
-
-
-@pytest.fixture(scope='function')
-def eth1_up():
-    with ifacelib.iface_up('eth1') as ifstate:
-        yield ifstate
-
-
-@pytest.fixture(scope='function')
-def eth2_up():
-    with ifacelib.iface_up('eth2') as ifstate:
-        yield ifstate
-
-
-port0_up = eth1_up
-port1_up = eth2_up
-
-
-@pytest.fixture(scope='session', autouse=True)
-def preserve_old_config():
     old_state = libnmstate.show()
-    yield
+    with veth_create(TEST_NIC1, _NIC1_END), veth_create(TEST_NIC2, _NIC2_END):
+        yield
     libnmstate.apply(old_state, verify_change=False)
+
+
+@pytest.fixture(scope='function', autouse=True)
+def test_nic_init():
+    ifacelib.ifaces_init(TEST_NIC1, TEST_NIC2)
+
+
+@pytest.fixture(scope='function')
+def test_nic1_up():
+    with ifacelib.iface_up(TEST_NIC1) as ifstate:
+        yield ifstate
+
+
+@pytest.fixture(scope='function')
+def test_nic2_up():
+    with ifacelib.iface_up(TEST_NIC2) as ifstate:
+        yield ifstate
+
+
+port0_up = test_nic1_up
+port1_up = test_nic2_up

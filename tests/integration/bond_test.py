@@ -35,9 +35,12 @@ from libnmstate.schema import InterfaceIPv6
 from .testlib import assertlib
 from .testlib import statelib
 from .testlib.assertlib import assert_mac_address
+from .testlib.env import TEST_NIC1
+from .testlib.env import TEST_NIC2
 
 
 BOND99 = 'bond99'
+BOND88 = 'bond88'
 
 MAC0 = '02:ff:ff:ff:ff:00'
 MAC1 = '02:ff:ff:ff:ff:01'
@@ -50,9 +53,11 @@ interfaces:
   link-aggregation:
     mode: balance-rr
     slaves:
-    - eth1
-    - eth2
-"""
+    - {}
+    - {}
+""".format(
+    TEST_NIC1, TEST_NIC2
+)
 
 
 @pytest.fixture
@@ -71,25 +76,22 @@ def setup_remove_bond99():
 
 
 @pytest.fixture
-def bond99_with_2_slaves(eth1_up, eth2_up):
-    slaves = [
-        eth1_up[Interface.KEY][0][Interface.NAME],
-        eth2_up[Interface.KEY][0][Interface.NAME],
-    ]
+def bond99_with_2_slaves(test_nic1_up, test_nic2_up):
+    slaves = [TEST_NIC1, TEST_NIC2]
     with bond_interface('bond99', slaves) as state:
         yield state
 
 
 @pytest.fixture
-def bond88_with_slave(eth1_up):
-    slaves = [eth1_up[Interface.KEY][0][Interface.NAME]]
-    with bond_interface(BOND99, slaves) as state:
+def bond88_with_slave(test_nic1_up):
+    slaves = [TEST_NIC1]
+    with bond_interface(BOND88, slaves) as state:
         yield state
 
 
 @pytest.fixture
-def bond99_with_slave(eth2_up):
-    slaves = [eth2_up[Interface.KEY][0][Interface.NAME]]
+def bond99_with_slave(test_nic2_up):
+    slaves = [TEST_NIC2]
     with bond_interface(BOND99, slaves) as state:
         yield state
 
@@ -129,7 +131,7 @@ def bond_interface(name, slaves, extra_iface_state=None):
         )
 
 
-def test_add_and_remove_bond_with_two_slaves(eth1_up, eth2_up):
+def test_add_and_remove_bond_with_two_slaves(test_nic1_up, test_nic2_up):
     state = yaml.load(BOND99_YAML_BASE, Loader=yaml.SafeLoader)
     libnmstate.apply(state)
 
@@ -143,7 +145,7 @@ def test_add_and_remove_bond_with_two_slaves(eth1_up, eth2_up):
     assert not state[Interface.KEY]
 
 
-def test_remove_bond_with_minimum_desired_state(eth1_up, eth2_up):
+def test_remove_bond_with_minimum_desired_state(test_nic1_up, test_nic2_up):
     state = yaml.load(BOND99_YAML_BASE, Loader=yaml.SafeLoader)
     bond_name = state[Interface.KEY][0][Interface.NAME]
 
@@ -169,7 +171,9 @@ def test_add_bond_without_slaves():
         assert state[Interface.KEY][0][Bond.CONFIG_SUBTREE][Bond.SLAVES] == []
 
 
-def test_add_bond_with_slaves_and_ipv4(eth1_up, eth2_up, setup_remove_bond99):
+def test_add_bond_with_slaves_and_ipv4(
+    test_nic1_up, test_nic2_up, setup_remove_bond99
+):
     desired_bond_state = {
         Interface.KEY: [
             {
@@ -188,8 +192,8 @@ def test_add_bond_with_slaves_and_ipv4(eth1_up, eth2_up, setup_remove_bond99):
                 Bond.CONFIG_SUBTREE: {
                     Bond.MODE: BondMode.ROUND_ROBIN,
                     Bond.SLAVES: [
-                        eth1_up[Interface.KEY][0][Interface.NAME],
-                        eth2_up[Interface.KEY][0][Interface.NAME],
+                        TEST_NIC1,
+                        TEST_NIC2,
                     ],
                     Bond.OPTIONS_SUBTREE: {'miimon': '140'},
                 },
@@ -202,7 +206,7 @@ def test_add_bond_with_slaves_and_ipv4(eth1_up, eth2_up, setup_remove_bond99):
     assertlib.assert_state(desired_bond_state)
 
 
-def test_rollback_for_bond(eth1_up, eth2_up):
+def test_rollback_for_bond(test_nic1_up, test_nic2_up):
     current_state = libnmstate.show()
     desired_state = {
         Interface.KEY: [
@@ -222,8 +226,8 @@ def test_rollback_for_bond(eth1_up, eth2_up):
                 Bond.CONFIG_SUBTREE: {
                     Bond.MODE: BondMode.ROUND_ROBIN,
                     Bond.SLAVES: [
-                        eth1_up[Interface.KEY][0][Interface.NAME],
-                        eth2_up[Interface.KEY][0][Interface.NAME],
+                        TEST_NIC1,
+                        TEST_NIC2,
                     ],
                     Bond.OPTIONS_SUBTREE: {'miimon': '140'},
                 },
@@ -245,8 +249,8 @@ def test_rollback_for_bond(eth1_up, eth2_up):
     )
 
 
-def test_add_slave_to_bond_without_slaves(eth1_up):
-    slave_name = eth1_up[Interface.KEY][0][Interface.NAME]
+def test_add_slave_to_bond_without_slaves(test_nic1_up):
+    slave_name = test_nic1_up[Interface.KEY][0][Interface.NAME]
     with bond_interface(name=BOND99, slaves=[]) as state:
         bond_state = state[Interface.KEY][0]
         bond_state[Bond.CONFIG_SUBTREE][Bond.SLAVES] = [slave_name]
@@ -259,8 +263,8 @@ def test_add_slave_to_bond_without_slaves(eth1_up):
 
 
 @pytest.mark.xfail(strict=True, reason="Jira issue # NMSTATE-143")
-def test_remove_all_slaves_from_bond(eth1_up):
-    slave_name = (eth1_up[Interface.KEY][0][Interface.NAME],)
+def test_remove_all_slaves_from_bond(test_nic1_up):
+    slave_name = (test_nic1_up[Interface.KEY][0][Interface.NAME],)
     with bond_interface(name=BOND99, slaves=[slave_name]) as state:
         state[Interface.KEY][0][Bond.CONFIG_SUBTREE][Bond.SLAVES] = []
 
@@ -272,9 +276,9 @@ def test_remove_all_slaves_from_bond(eth1_up):
         assert bond_cur_state[Bond.CONFIG_SUBTREE][Bond.SLAVES] == []
 
 
-def test_replace_bond_slave(eth1_up, eth2_up):
-    slave1_name = eth1_up[Interface.KEY][0][Interface.NAME]
-    slave2_name = eth2_up[Interface.KEY][0][Interface.NAME]
+def test_replace_bond_slave(test_nic1_up, test_nic2_up):
+    slave1_name = test_nic1_up[Interface.KEY][0][Interface.NAME]
+    slave2_name = test_nic2_up[Interface.KEY][0][Interface.NAME]
     with bond_interface(name=BOND99, slaves=[slave1_name]) as state:
         bond_state = state[Interface.KEY][0]
         bond_state[Bond.CONFIG_SUBTREE][Bond.SLAVES] = [slave2_name]
@@ -289,9 +293,9 @@ def test_replace_bond_slave(eth1_up, eth2_up):
         ]
 
 
-def test_remove_one_of_the_bond_slaves(eth1_up, eth2_up):
-    slave1_name = eth1_up[Interface.KEY][0][Interface.NAME]
-    slave2_name = eth2_up[Interface.KEY][0][Interface.NAME]
+def test_remove_one_of_the_bond_slaves(test_nic1_up, test_nic2_up):
+    slave1_name = test_nic1_up[Interface.KEY][0][Interface.NAME]
+    slave2_name = test_nic2_up[Interface.KEY][0][Interface.NAME]
     with bond_interface(
         name=BOND99, slaves=[slave1_name, slave2_name]
     ) as state:
@@ -322,8 +326,8 @@ def test_swap_slaves_between_bonds(bond88_with_slave, bond99_with_slave):
     assertlib.assert_state(state)
 
 
-def test_set_bond_mac_address(eth1_up):
-    slave_name = eth1_up[Interface.KEY][0][Interface.NAME]
+def test_set_bond_mac_address(test_nic1_up):
+    slave_name = test_nic1_up[Interface.KEY][0][Interface.NAME]
     with bond_interface(name=BOND99, slaves=[slave_name]) as state:
         state[Interface.KEY][0][Interface.MAC] = MAC0
         libnmstate.apply(state)
@@ -355,7 +359,7 @@ def test_reordering_the_slaves_does_not_change_the_mac(bond99_with_2_slaves):
     )
 
 
-def test_bond_with_empty_ipv6_static_address(eth1_up):
+def test_bond_with_empty_ipv6_static_address(test_nic1_up):
     extra_iface_state = {
         Interface.IPV6: {
             InterfaceIPv6.ENABLED: True,
@@ -364,7 +368,7 @@ def test_bond_with_empty_ipv6_static_address(eth1_up):
         }
     }
     with bond_interface(
-        name='bond99', slaves=['eth1'], extra_iface_state=extra_iface_state
+        name='bond99', slaves=[TEST_NIC1], extra_iface_state=extra_iface_state
     ) as bond_state:
         assertlib.assert_state(bond_state)
 

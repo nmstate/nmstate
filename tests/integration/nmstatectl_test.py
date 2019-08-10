@@ -19,13 +19,17 @@
 
 import json
 import os
+import tempfile
 import time
+import shutil
 
+import pytest
 
 from libnmstate.schema import Constants
 
 from .testlib import assertlib
 from .testlib import cmd as libcmd
+from .testlib.env import TEST_NIC1
 from .testlib.examplelib import example_state
 from .testlib.examplelib import find_examples_dir
 from .testlib.examplelib import load_example
@@ -61,8 +65,8 @@ LOOPBACK_YAML_CONFIG = """- name: lo
     enabled: false
   mtu: 65536"""
 
-ETH1_YAML_CONFIG = b"""interfaces:
-- name: eth1
+ETH1_YAML_CONFIG = """interfaces:
+- name: {}
   state: up
   type: ethernet
   mtu: 1500
@@ -73,24 +77,11 @@ ETH1_YAML_CONFIG = b"""interfaces:
     enabled: true
   ipv6:
     enabled: false
-"""
+""".format(
+    TEST_NIC1
+).encode()
 
-EXAMPLES = find_examples_dir()
-CONFIRMATION_INTERFACE = 'eth1.101'
-CONFIRMATION_CLEAN = 'vlan101_eth1_absent.yml'
-CONFIRMATION_TEST = 'vlan101_eth1_up.yml'
-CONFIRMATION_TEST_STATE = load_example(CONFIRMATION_TEST)
-CONFIRMATION_SET = SET_CMD + [
-    '--no-commit',
-    os.path.join(EXAMPLES, CONFIRMATION_TEST),
-]
 CONFIRMATION_TIMEOUT = 5
-CONFIRMATION_TIMOUT_COMMAND = SET_CMD + [
-    '--no-commit',
-    '--timeout',
-    str(CONFIRMATION_TIMEOUT),
-    os.path.join(EXAMPLES, CONFIRMATION_TEST),
-]
 
 
 def test_missing_operation():
@@ -149,62 +140,92 @@ def test_set_command_with_yaml_format():
     assert rc == RC_SUCCESS, format_exec_cmd_result(ret)
 
 
-def test_set_command_with_two_states():
+@pytest.fixture(scope='module')
+def setup_tmp_linux_bridge_state_files():
+    files = []
+    tmp_dir = tempfile.mkdtemp()
     examples = find_examples_dir()
-    cmd = SET_CMD + [
-        os.path.join(examples, 'linuxbrige_eth1_up.yml'),
-        os.path.join(examples, 'linuxbrige_eth1_absent.yml'),
-    ]
+    for file_name in ('linuxbrige_eth1_up.yml', 'linuxbrige_eth1_absent.yml'):
+        tmp_file = os.path.join(tmp_dir, file_name)
+        with open(os.path.join(examples, file_name), 'r') as fd:
+            content = fd.read()
+            with open(tmp_file, 'w') as tmp_fd:
+                tmp_fd.write(content.replace('eth1', TEST_NIC1))
+
+        files.append(tmp_file)
+    yield files
+    shutil.rmtree(tmp_dir)
+
+
+def test_set_command_with_two_states(setup_tmp_linux_bridge_state_files):
+    files = setup_tmp_linux_bridge_state_files
+    cmd = SET_CMD + files
     ret = libcmd.exec_cmd(cmd)
     rc = ret[0]
 
     assert rc == RC_SUCCESS, format_exec_cmd_result(ret)
 
 
-def test_manual_confirmation(eth1_up):
+def test_manual_confirmation(setup_tmp_linux_bridge_state_files, test_nic1_up):
     """ I can manually confirm a state. """
+    set_file, absent_file = setup_tmp_linux_bridge_state_files
+    confirmation_clean = absent_file
+    confirmation_set = SET_CMD + ['--no-commit', set_file]
+    confirmation_test_state = load_example(set_file)
 
-    with example_state(CONFIRMATION_CLEAN, CONFIRMATION_CLEAN):
+    with example_state(confirmation_clean, confirmation_clean):
 
-        assert_command(CONFIRMATION_SET)
-        assertlib.assert_state(CONFIRMATION_TEST_STATE)
+        assert_command(confirmation_set)
+        assertlib.assert_state(confirmation_test_state)
         assert_command(CONFIRM_CMD)
-        assertlib.assert_state(CONFIRMATION_TEST_STATE)
+        assertlib.assert_state(confirmation_test_state)
 
 
-def test_manual_rollback(eth1_up):
+def test_manual_rollback(setup_tmp_linux_bridge_state_files, test_nic1_up):
     """ I can manually roll back a state. """
+    set_file, absent_file = setup_tmp_linux_bridge_state_files
+    confirmation_set = SET_CMD + ['--no-commit', set_file]
+    confirmation_test_state = load_example(set_file)
 
-    with example_state(CONFIRMATION_CLEAN, CONFIRMATION_CLEAN) as clean_state:
+    with example_state(absent_file, absent_file) as clean_state:
 
-        assert_command(CONFIRMATION_SET)
-        assertlib.assert_state(CONFIRMATION_TEST_STATE)
+        assert_command(confirmation_set)
+        assertlib.assert_state(confirmation_test_state)
         assert_command(ROLLBACK_CMD)
         assertlib.assert_state(clean_state)
 
 
-def test_dual_change(eth1_up):
+def test_dual_change(setup_tmp_linux_bridge_state_files, test_nic1_up):
     """ I cannot set a state without confirming/rolling back the state change.
     """
+    set_file, absent_file = setup_tmp_linux_bridge_state_files
+    confirmation_set = SET_CMD + ['--no-commit', set_file]
+    confirmation_test_state = load_example(set_file)
 
-    with example_state(CONFIRMATION_CLEAN, CONFIRMATION_CLEAN) as clean_state:
+    with example_state(absent_file, absent_file) as clean_state:
 
-        assert_command(CONFIRMATION_SET)
-        assertlib.assert_state(CONFIRMATION_TEST_STATE)
-        assert_command(CONFIRMATION_SET, os.EX_UNAVAILABLE)
+        assert_command(confirmation_set)
+        assertlib.assert_state(confirmation_test_state)
+        assert_command(confirmation_set, os.EX_UNAVAILABLE)
 
         assert_command(ROLLBACK_CMD)
         assertlib.assert_state(clean_state)
 
 
-def test_automatic_rollback(eth1_up):
+def test_automatic_rollback(setup_tmp_linux_bridge_state_files, test_nic1_up):
     """ If I do not confirm the state, it is automatically rolled back. """
+    set_file, absent_file = setup_tmp_linux_bridge_state_files
+    confirmation_set = SET_CMD + ['--no-commit', set_file]
+    confirmation_test_state = load_example(set_file)
+    confirmation_timout_command = confirmation_set + [
+        '--timeout',
+        str(CONFIRMATION_TIMEOUT),
+    ]
 
-    with example_state(CONFIRMATION_CLEAN, CONFIRMATION_CLEAN) as clean_state:
+    with example_state(absent_file, absent_file) as clean_state:
 
-        assert_command(CONFIRMATION_TIMOUT_COMMAND)
-        assertlib.assert_state(CONFIRMATION_TEST_STATE)
-
+        assert_command(confirmation_timout_command)
+        assertlib.assert_state(confirmation_test_state)
         time.sleep(CONFIRMATION_TIMEOUT)
         assertlib.assert_state(clean_state)
 

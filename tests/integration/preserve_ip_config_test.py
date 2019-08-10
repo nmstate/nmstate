@@ -26,6 +26,7 @@ from libnmstate.schema import InterfaceIPv6
 
 from .testlib import statelib
 from .testlib import cmd as libcmd
+from .testlib.env import TEST_NIC1
 from .testlib.statelib import INTERFACES
 
 _IPV4_EXTRA_CONFIG = 'ipv4.dad-timeout'
@@ -37,12 +38,12 @@ IPV4_ADDRESS1 = '192.0.2.251'
 IPV6_ADDRESS1 = '2001:db8:1::1'
 
 
-def test_reapply_preserve_ip_config(eth1_up):
+def test_reapply_preserve_ip_config(test_nic1_up):
     libnmstate.apply(
         {
             'interfaces': [
                 {
-                    'name': 'eth1',
+                    'name': TEST_NIC1,
                     'type': 'ethernet',
                     'state': 'up',
                     'ipv4': {
@@ -68,7 +69,7 @@ def test_reapply_preserve_ip_config(eth1_up):
             ]
         }
     )
-    cur_state = statelib.show_only(('eth1',))
+    cur_state = statelib.show_only((TEST_NIC1,))
     iface_name = cur_state[INTERFACES][0]['name']
 
     uuid = _get_nm_profile_uuid(iface_name)

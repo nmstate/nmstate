@@ -23,14 +23,12 @@ from libnmstate import nm
 from libnmstate.schema import VLAN
 
 from .testlib import mainloop
+from ..testlib.env import TEST_NIC1
 
 
-ETH1 = 'eth1'
-
-
-def test_create_and_remove_vlan(eth1_up):
+def test_create_and_remove_vlan(test_nic1_up):
     vlan_desired_state = {
-        VLAN.CONFIG_SUBTREE: {VLAN.ID: 101, VLAN.BASE_IFACE: ETH1}
+        VLAN.CONFIG_SUBTREE: {VLAN.ID: 101, VLAN.BASE_IFACE: TEST_NIC1}
     }
 
     with _vlan_interface(vlan_desired_state):

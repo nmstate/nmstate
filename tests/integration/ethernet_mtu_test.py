@@ -30,25 +30,26 @@ from libnmstate.error import NmstateVerificationError
 
 from .testlib import assertlib
 from .testlib import statelib
+from .testlib.env import TEST_NIC1
 from .testlib.statelib import INTERFACES
 
 
 @pytest.fixture(scope='function', autouse=True)
-def eth1(eth1_up):
+def test_nic1(test_nic1_up):
     pass
 
 
 @pytest.fixture
-def eth1_with_ipv6(eth1_up):
-    ifstate = eth1_up[schema.Interface.KEY][0]
+def test_nic1_with_ipv6(test_nic1_up):
+    ifstate = test_nic1_up[schema.Interface.KEY][0]
     ifstate[schema.Interface.IPV6][schema.InterfaceIPv6.ENABLED] = True
-    libnmstate.apply(eth1_up)
+    libnmstate.apply(test_nic1_up)
 
 
 def test_increase_iface_mtu():
-    desired_state = statelib.show_only(('eth1',))
-    eth1_desired_state = desired_state[INTERFACES][0]
-    eth1_desired_state['mtu'] = 1900
+    desired_state = statelib.show_only((TEST_NIC1,))
+    iface_state = desired_state[INTERFACES][0]
+    iface_state['mtu'] = 1900
 
     libnmstate.apply(desired_state)
 
@@ -56,9 +57,9 @@ def test_increase_iface_mtu():
 
 
 def test_decrease_iface_mtu():
-    desired_state = statelib.show_only(('eth1',))
-    eth1_desired_state = desired_state[INTERFACES][0]
-    eth1_desired_state['mtu'] = 1400
+    desired_state = statelib.show_only((TEST_NIC1,))
+    iface_state = desired_state[INTERFACES][0]
+    iface_state['mtu'] = 1400
 
     libnmstate.apply(desired_state)
 
@@ -66,9 +67,9 @@ def test_decrease_iface_mtu():
 
 
 def test_upper_limit_jambo_iface_mtu():
-    desired_state = statelib.show_only(('eth1',))
-    eth1_desired_state = desired_state[INTERFACES][0]
-    eth1_desired_state['mtu'] = 9000
+    desired_state = statelib.show_only((TEST_NIC1,))
+    iface_state = desired_state[INTERFACES][0]
+    iface_state['mtu'] = 9000
 
     libnmstate.apply(desired_state)
 
@@ -76,9 +77,9 @@ def test_upper_limit_jambo_iface_mtu():
 
 
 def test_increase_more_than_jambo_iface_mtu():
-    desired_state = statelib.show_only(('eth1',))
-    eth1_desired_state = desired_state[INTERFACES][0]
-    eth1_desired_state['mtu'] = 10000
+    desired_state = statelib.show_only((TEST_NIC1,))
+    iface_state = desired_state[INTERFACES][0]
+    iface_state['mtu'] = 10000
 
     libnmstate.apply(desired_state)
 
@@ -86,10 +87,10 @@ def test_increase_more_than_jambo_iface_mtu():
 
 
 def test_decrease_to_zero_iface_mtu():
-    desired_state = statelib.show_only(('eth1',))
+    desired_state = statelib.show_only((TEST_NIC1,))
     origin_desired_state = copy.deepcopy(desired_state)
-    eth1_desired_state = desired_state[INTERFACES][0]
-    eth1_desired_state['mtu'] = 0
+    iface_state = desired_state[INTERFACES][0]
+    iface_state['mtu'] = 0
 
     with pytest.raises(NmstateVerificationError) as err:
         libnmstate.apply(desired_state)
@@ -100,10 +101,10 @@ def test_decrease_to_zero_iface_mtu():
 
 
 def test_decrease_to_negative_iface_mtu():
-    desired_state = statelib.show_only(('eth1',))
+    desired_state = statelib.show_only((TEST_NIC1,))
     origin_desired_state = copy.deepcopy(desired_state)
-    eth1_desired_state = desired_state[INTERFACES][0]
-    eth1_desired_state['mtu'] = -1
+    iface_state = desired_state[INTERFACES][0]
+    iface_state['mtu'] = -1
 
     with pytest.raises(js.ValidationError) as err:
         libnmstate.apply(desired_state)
@@ -111,21 +112,23 @@ def test_decrease_to_negative_iface_mtu():
     assertlib.assert_state(origin_desired_state)
 
 
-def test_decrease_to_ipv6_min_ethernet_frame_size_iface_mtu(eth1_with_ipv6):
-    desired_state = statelib.show_only(('eth1',))
-    eth1_desired_state = desired_state[INTERFACES][0]
-    eth1_desired_state['mtu'] = 1280
+def test_decrease_to_ipv6_min_ethernet_frame_size_iface_mtu(
+    test_nic1_with_ipv6
+):
+    desired_state = statelib.show_only((TEST_NIC1,))
+    iface_state = desired_state[INTERFACES][0]
+    iface_state['mtu'] = 1280
 
     libnmstate.apply(desired_state)
 
     assertlib.assert_state(desired_state)
 
 
-def test_decrease_to_lower_than_min_ipv6_iface_mtu(eth1_with_ipv6):
-    original_state = statelib.show_only(('eth1',))
+def test_decrease_to_lower_than_min_ipv6_iface_mtu(test_nic1_with_ipv6):
+    original_state = statelib.show_only((TEST_NIC1,))
     desired_state = copy.deepcopy(original_state)
-    eth1_desired_state = desired_state[INTERFACES][0]
-    eth1_desired_state['mtu'] = 1279
+    iface_state = desired_state[INTERFACES][0]
+    iface_state['mtu'] = 1279
 
     with pytest.raises(NmstateVerificationError) as err:
         libnmstate.apply(desired_state)

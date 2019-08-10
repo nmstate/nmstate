@@ -25,6 +25,8 @@ from libnmstate.schema import InterfaceIPv6
 
 from .testlib import assertlib
 from .testlib import statelib
+from .testlib.env import TEST_NIC1
+from .testlib.env import TEST_NIC2
 from .testlib.statelib import INTERFACES
 
 # TEST-NET addresses: https://tools.ietf.org/html/rfc5737#section-3
@@ -41,11 +43,11 @@ IPV6_LINK_LOCAL_ADDRESS2 = 'fe80::2'
 
 
 @pytest.fixture
-def setup_eth1_ipv4(eth1_up):
+def setup_test_nic1_ipv4(test_nic1_up):
     desired_state = {
         INTERFACES: [
             {
-                'name': 'eth1',
+                'name': TEST_NIC1,
                 'type': 'ethernet',
                 'state': 'up',
                 'ipv4': {
@@ -64,11 +66,11 @@ def setup_eth1_ipv4(eth1_up):
 
 
 @pytest.fixture
-def setup_eth1_ipv6(eth1_up):
+def setup_test_nic1_ipv6(test_nic1_up):
     desired_state = {
         INTERFACES: [
             {
-                'name': 'eth1',
+                'name': TEST_NIC1,
                 'type': 'ethernet',
                 'state': 'up',
                 'ipv6': {
@@ -89,11 +91,11 @@ def setup_eth1_ipv6(eth1_up):
 
 
 @pytest.fixture
-def setup_eth1_ipv6_disable(eth1_up):
+def setup_test_nic1_ipv6_disable(test_nic1_up):
     desired_state = {
         INTERFACES: [
             {
-                'name': 'eth1',
+                'name': TEST_NIC1,
                 'type': 'ethernet',
                 'state': 'up',
                 'ipv6': {InterfaceIPv6.ENABLED: False},
@@ -105,13 +107,13 @@ def setup_eth1_ipv6_disable(eth1_up):
     return desired_state
 
 
-def test_add_static_ipv4_with_full_state(eth1_up):
-    desired_state = statelib.show_only(('eth1',))
-    eth1_desired_state = desired_state[INTERFACES][0]
+def test_add_static_ipv4_with_full_state(test_nic1_up):
+    desired_state = statelib.show_only((TEST_NIC1,))
+    test_nic1_desired_state = desired_state[INTERFACES][0]
 
-    eth1_desired_state['state'] = 'up'
-    eth1_desired_state['ipv4'][InterfaceIPv4.ENABLED] = True
-    eth1_desired_state['ipv4'][InterfaceIPv4.ADDRESS] = [
+    test_nic1_desired_state['state'] = 'up'
+    test_nic1_desired_state['ipv4'][InterfaceIPv4.ENABLED] = True
+    test_nic1_desired_state['ipv4'][InterfaceIPv4.ADDRESS] = [
         {
             InterfaceIPv4.ADDRESS_IP: IPV4_ADDRESS3,
             InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
@@ -122,11 +124,11 @@ def test_add_static_ipv4_with_full_state(eth1_up):
     assertlib.assert_state(desired_state)
 
 
-def test_add_static_ipv4_with_min_state(eth2_up):
+def test_add_static_ipv4_with_min_state(test_nic2_up):
     desired_state = {
         INTERFACES: [
             {
-                'name': 'eth2',
+                'name': TEST_NIC2,
                 'type': 'ethernet',
                 'state': 'up',
                 'ipv4': {
@@ -146,11 +148,11 @@ def test_add_static_ipv4_with_min_state(eth2_up):
     assertlib.assert_state(desired_state)
 
 
-def test_remove_static_ipv4(setup_eth1_ipv4):
+def test_remove_static_ipv4(setup_test_nic1_ipv4):
     desired_state = {
         INTERFACES: [
             {
-                'name': 'eth1',
+                'name': TEST_NIC1,
                 'type': 'ethernet',
                 'ipv4': {InterfaceIPv4.ENABLED: False},
             }
@@ -162,11 +164,11 @@ def test_remove_static_ipv4(setup_eth1_ipv4):
     assertlib.assert_state(desired_state)
 
 
-def test_edit_static_ipv4_address_and_prefix(setup_eth1_ipv4):
+def test_edit_static_ipv4_address_and_prefix(setup_test_nic1_ipv4):
     desired_state = {
         INTERFACES: [
             {
-                'name': 'eth1',
+                'name': TEST_NIC1,
                 'type': 'ethernet',
                 'state': 'up',
                 'ipv4': {
@@ -188,12 +190,12 @@ def test_edit_static_ipv4_address_and_prefix(setup_eth1_ipv4):
 
 
 def test_add_ifaces_with_same_static_ipv4_address_in_one_transaction(
-    eth1_up, eth2_up
+    test_nic1_up, test_nic2_up
 ):
     desired_state = {
         INTERFACES: [
             {
-                'name': 'eth1',
+                'name': TEST_NIC1,
                 'type': 'ethernet',
                 'state': 'up',
                 'ipv4': {
@@ -207,7 +209,7 @@ def test_add_ifaces_with_same_static_ipv4_address_in_one_transaction(
                 },
             },
             {
-                'name': 'eth2',
+                'name': TEST_NIC2,
                 'type': 'ethernet',
                 'state': 'up',
                 'ipv4': {
@@ -229,12 +231,12 @@ def test_add_ifaces_with_same_static_ipv4_address_in_one_transaction(
 
 
 def test_add_iface_with_same_static_ipv4_address_to_existing(
-    setup_eth1_ipv4, eth2_up
+    setup_test_nic1_ipv4, test_nic2_up
 ):
     desired_state = {
         INTERFACES: [
             {
-                'name': 'eth2',
+                'name': TEST_NIC2,
                 'type': 'ethernet',
                 'state': 'up',
                 'ipv4': {
@@ -254,12 +256,12 @@ def test_add_iface_with_same_static_ipv4_address_to_existing(
     assertlib.assert_state(desired_state)
 
 
-def test_add_static_ipv6_with_full_state(eth1_up):
-    desired_state = statelib.show_only(('eth1',))
-    eth1_desired_state = desired_state[INTERFACES][0]
-    eth1_desired_state['state'] = 'up'
-    eth1_desired_state['ipv6'][InterfaceIPv6.ENABLED] = True
-    eth1_desired_state['ipv6'][InterfaceIPv6.ADDRESS] = [
+def test_add_static_ipv6_with_full_state(test_nic1_up):
+    desired_state = statelib.show_only((TEST_NIC1,))
+    test_nic1_desired_state = desired_state[INTERFACES][0]
+    test_nic1_desired_state['state'] = 'up'
+    test_nic1_desired_state['ipv6'][InterfaceIPv6.ENABLED] = True
+    test_nic1_desired_state['ipv6'][InterfaceIPv6.ADDRESS] = [
         {
             InterfaceIPv6.ADDRESS_IP: IPV6_ADDRESS2,
             InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
@@ -274,12 +276,12 @@ def test_add_static_ipv6_with_full_state(eth1_up):
     assertlib.assert_state(desired_state)
 
 
-def test_add_static_ipv6_with_link_local(eth1_up):
-    desired_state = statelib.show_only(('eth1',))
-    eth1_desired_state = desired_state[INTERFACES][0]
-    eth1_desired_state['state'] = 'up'
-    eth1_desired_state['ipv6'][InterfaceIPv6.ENABLED] = True
-    eth1_desired_state['ipv6'][InterfaceIPv6.ADDRESS] = [
+def test_add_static_ipv6_with_link_local(test_nic1_up):
+    desired_state = statelib.show_only((TEST_NIC1,))
+    test_nic1_desired_state = desired_state[INTERFACES][0]
+    test_nic1_desired_state['state'] = 'up'
+    test_nic1_desired_state['ipv6'][InterfaceIPv6.ENABLED] = True
+    test_nic1_desired_state['ipv6'][InterfaceIPv6.ADDRESS] = [
         {
             InterfaceIPv6.ADDRESS_IP: IPV6_LINK_LOCAL_ADDRESS1,
             InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
@@ -293,24 +295,24 @@ def test_add_static_ipv6_with_link_local(eth1_up):
     libnmstate.apply(desired_state)
 
     # Make sure only the link local address got ignored.
-    cur_state = statelib.show_only(('eth1',))
-    eth1_cur_state = cur_state[INTERFACES][0]
+    cur_state = statelib.show_only((TEST_NIC1,))
+    test_nic1_cur_state = cur_state[INTERFACES][0]
     assert (
-        eth1_desired_state['ipv6'][InterfaceIPv6.ADDRESS][0]
-        not in eth1_cur_state['ipv6'][InterfaceIPv6.ADDRESS]
+        test_nic1_desired_state['ipv6'][InterfaceIPv6.ADDRESS][0]
+        not in test_nic1_cur_state['ipv6'][InterfaceIPv6.ADDRESS]
     )
     assert (
-        eth1_desired_state['ipv6'][InterfaceIPv6.ADDRESS][1]
-        in eth1_cur_state['ipv6'][InterfaceIPv6.ADDRESS]
+        test_nic1_desired_state['ipv6'][InterfaceIPv6.ADDRESS][1]
+        in test_nic1_cur_state['ipv6'][InterfaceIPv6.ADDRESS]
     )
 
 
-def test_add_static_ipv6_with_link_local_only(eth1_up):
-    desired_state = statelib.show_only(('eth1',))
-    eth1_desired_state = desired_state[INTERFACES][0]
-    eth1_desired_state['state'] = 'up'
-    eth1_desired_state['ipv6'][InterfaceIPv6.ENABLED] = True
-    eth1_desired_state['ipv6'][InterfaceIPv6.ADDRESS] = [
+def test_add_static_ipv6_with_link_local_only(test_nic1_up):
+    desired_state = statelib.show_only((TEST_NIC1,))
+    test_nic1_desired_state = desired_state[INTERFACES][0]
+    test_nic1_desired_state['state'] = 'up'
+    test_nic1_desired_state['ipv6'][InterfaceIPv6.ENABLED] = True
+    test_nic1_desired_state['ipv6'][InterfaceIPv6.ADDRESS] = [
         {
             InterfaceIPv6.ADDRESS_IP: IPV6_LINK_LOCAL_ADDRESS1,
             InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
@@ -324,37 +326,37 @@ def test_add_static_ipv6_with_link_local_only(eth1_up):
     libnmstate.apply(desired_state)
 
     # Make sure the link local address got ignored.
-    cur_state = statelib.show_only(('eth1',))
-    eth1_cur_state = cur_state[INTERFACES][0]
+    cur_state = statelib.show_only((TEST_NIC1,))
+    test_nic1_cur_state = cur_state[INTERFACES][0]
     assert (
-        eth1_desired_state['ipv6'][InterfaceIPv6.ADDRESS][0]
-        not in eth1_cur_state['ipv6'][InterfaceIPv6.ADDRESS]
+        test_nic1_desired_state['ipv6'][InterfaceIPv6.ADDRESS][0]
+        not in test_nic1_cur_state['ipv6'][InterfaceIPv6.ADDRESS]
     )
     assert (
-        eth1_desired_state['ipv6'][InterfaceIPv6.ADDRESS][1]
-        not in eth1_cur_state['ipv6'][InterfaceIPv6.ADDRESS]
+        test_nic1_desired_state['ipv6'][InterfaceIPv6.ADDRESS][1]
+        not in test_nic1_cur_state['ipv6'][InterfaceIPv6.ADDRESS]
     )
 
 
-def test_add_static_ipv6_with_no_address(eth1_up):
-    desired_state = statelib.show_only(('eth1',))
-    eth1_desired_state = desired_state[INTERFACES][0]
-    eth1_desired_state['state'] = 'up'
-    eth1_desired_state['ipv6'][InterfaceIPv6.ENABLED] = True
+def test_add_static_ipv6_with_no_address(test_nic1_up):
+    desired_state = statelib.show_only((TEST_NIC1,))
+    test_nic1_desired_state = desired_state[INTERFACES][0]
+    test_nic1_desired_state['state'] = 'up'
+    test_nic1_desired_state['ipv6'][InterfaceIPv6.ENABLED] = True
 
     libnmstate.apply(desired_state)
 
-    cur_state = statelib.show_only(('eth1',))
-    eth1_cur_state = cur_state[INTERFACES][0]
+    cur_state = statelib.show_only((TEST_NIC1,))
+    test_nic1_cur_state = cur_state[INTERFACES][0]
     # Should have at least 1 link-local address.
-    assert len(eth1_cur_state['ipv6'][InterfaceIPv6.ADDRESS]) >= 1
+    assert len(test_nic1_cur_state['ipv6'][InterfaceIPv6.ADDRESS]) >= 1
 
 
-def test_add_static_ipv6_with_min_state(eth2_up):
+def test_add_static_ipv6_with_min_state(test_nic2_up):
     desired_state = {
         INTERFACES: [
             {
-                'name': 'eth2',
+                'name': TEST_NIC2,
                 'type': 'ethernet',
                 'state': 'up',
                 'ipv6': {
@@ -374,11 +376,11 @@ def test_add_static_ipv6_with_min_state(eth2_up):
     assertlib.assert_state(desired_state)
 
 
-def test_disable_static_ipv6(setup_eth1_ipv6):
+def test_disable_static_ipv6(setup_test_nic1_ipv6):
     desired_state = {
         INTERFACES: [
             {
-                'name': 'eth1',
+                'name': TEST_NIC1,
                 'type': 'ethernet',
                 'ipv6': {InterfaceIPv6.ENABLED: False},
             }
@@ -390,11 +392,11 @@ def test_disable_static_ipv6(setup_eth1_ipv6):
     assertlib.assert_state(desired_state)
 
 
-def test_disable_static_ipv6_and_rollback(setup_eth1_ipv6):
+def test_disable_static_ipv6_and_rollback(setup_test_nic1_ipv6):
     desired_state = {
         INTERFACES: [
             {
-                'name': 'eth1',
+                'name': TEST_NIC1,
                 'type': 'ethernet',
                 'ipv6': {InterfaceIPv6.ENABLED: False},
                 'foo': 'bad_value',
@@ -405,14 +407,16 @@ def test_disable_static_ipv6_and_rollback(setup_eth1_ipv6):
     with pytest.raises(libnmstate.error.NmstateVerificationError):
         libnmstate.apply(desired_state)
 
-    assertlib.assert_state(setup_eth1_ipv6)
+    assertlib.assert_state(setup_test_nic1_ipv6)
 
 
-def test_enable_ipv6_and_rollback_to_disable_ipv6(setup_eth1_ipv6_disable):
+def test_enable_ipv6_and_rollback_to_disable_ipv6(
+    setup_test_nic1_ipv6_disable
+):
     desired_state = {
         INTERFACES: [
             {
-                'name': 'eth1',
+                'name': TEST_NIC1,
                 'type': 'ethernet',
                 'ipv6': {
                     InterfaceIPv6.ENABLED: True,
@@ -431,15 +435,15 @@ def test_enable_ipv6_and_rollback_to_disable_ipv6(setup_eth1_ipv6_disable):
     with pytest.raises(libnmstate.error.NmstateVerificationError):
         libnmstate.apply(desired_state)
 
-    assertlib.assert_state(setup_eth1_ipv6_disable)
+    assertlib.assert_state(setup_test_nic1_ipv6_disable)
 
 
-def test_edit_static_ipv6_address_and_prefix(setup_eth1_ipv6):
-    eth1_setup = setup_eth1_ipv6[INTERFACES][0]
+def test_edit_static_ipv6_address_and_prefix(setup_test_nic1_ipv6):
+    test_nic1_setup = setup_test_nic1_ipv6[INTERFACES][0]
     desired_state = {
         INTERFACES: [
             {
-                'name': 'eth1',
+                'name': TEST_NIC1,
                 'type': 'ethernet',
                 'state': 'up',
                 'ipv6': {
@@ -456,29 +460,29 @@ def test_edit_static_ipv6_address_and_prefix(setup_eth1_ipv6):
     }
 
     libnmstate.apply(desired_state)
-    eth1_desired_state = desired_state[INTERFACES][0]
-    current_state = statelib.show_only(('eth1',))
+    test_nic1_desired_state = desired_state[INTERFACES][0]
+    current_state = statelib.show_only((TEST_NIC1,))
 
-    eth1_current_state = current_state[INTERFACES][0]
+    test_nic1_current_state = current_state[INTERFACES][0]
 
     assert (
-        eth1_desired_state['ipv6'][InterfaceIPv6.ADDRESS][0]
-        in eth1_current_state['ipv6'][InterfaceIPv6.ADDRESS]
+        test_nic1_desired_state['ipv6'][InterfaceIPv6.ADDRESS][0]
+        in test_nic1_current_state['ipv6'][InterfaceIPv6.ADDRESS]
     )
 
     assert (
-        eth1_setup['ipv6'][InterfaceIPv6.ADDRESS][0]
-        not in eth1_current_state['ipv6'][InterfaceIPv6.ADDRESS]
+        test_nic1_setup['ipv6'][InterfaceIPv6.ADDRESS][0]
+        not in test_nic1_current_state['ipv6'][InterfaceIPv6.ADDRESS]
     )
 
 
 def test_add_ifaces_with_same_static_ipv6_address_in_one_transaction(
-    eth1_up, eth2_up
+    test_nic1_up, test_nic2_up
 ):
     desired_state = {
         INTERFACES: [
             {
-                'name': 'eth1',
+                'name': TEST_NIC1,
                 'type': 'ethernet',
                 'state': 'up',
                 'ipv6': {
@@ -492,7 +496,7 @@ def test_add_ifaces_with_same_static_ipv6_address_in_one_transaction(
                 },
             },
             {
-                'name': 'eth2',
+                'name': TEST_NIC2,
                 'type': 'ethernet',
                 'state': 'up',
                 'ipv6': {
@@ -514,12 +518,12 @@ def test_add_ifaces_with_same_static_ipv6_address_in_one_transaction(
 
 
 def test_add_iface_with_same_static_ipv6_address_to_existing(
-    setup_eth1_ipv6, eth2_up
+    setup_test_nic1_ipv6, test_nic2_up
 ):
     desired_state = {
         INTERFACES: [
             {
-                'name': 'eth2',
+                'name': TEST_NIC2,
                 'type': 'ethernet',
                 'state': 'up',
                 'ipv6': {

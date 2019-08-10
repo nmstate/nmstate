@@ -27,10 +27,11 @@ from libnmstate.schema import OVSBridgePortType as OBPortType
 
 from .testlib import mainloop
 from .testlib import TestMainloopError
+from ..testlib.env import TEST_NIC1
 
 
 BRIDGE0 = 'brtest0'
-ETH1 = 'eth1'
+ETH1 = TEST_NIC1
 
 
 @pytest.fixture
@@ -72,18 +73,20 @@ def test_create_and_remove_minimum_config_bridge(
 @pytest.mark.xfail(
     raises=TestMainloopError, reason='https://bugzilla.redhat.com/1724901'
 )
-def test_bridge_with_system_port(eth1_up, bridge_default_config):
+def test_bridge_with_system_port(test_nic1_up, bridge_default_config):
     bridge_desired_state = bridge_default_config
 
-    eth1_port = {
-        OB.PORT_NAME: 'eth1',
+    test_nic1_port = {
+        OB.PORT_NAME: TEST_NIC1,
         OB.PORT_TYPE: OBPortType.SYSTEM,
         # OVS vlan/s are not yet supported.
         # OB.PORT_VLAN_MODE: None,
         # OB.PORT_ACCESS_TAG: 0,
     }
 
-    bridge_desired_state[OB.CONFIG_SUBTREE][OB.PORT_SUBTREE].append(eth1_port)
+    bridge_desired_state[OB.CONFIG_SUBTREE][OB.PORT_SUBTREE].append(
+        test_nic1_port
+    )
 
     with _bridge_interface(bridge_desired_state):
         bridge_current_state = _get_bridge_current_state()
@@ -95,7 +98,7 @@ def test_bridge_with_system_port(eth1_up, bridge_default_config):
 @pytest.mark.xfail(
     raises=TestMainloopError, reason='https://bugzilla.redhat.com/1724901'
 )
-def test_bridge_with_internal_interface(eth1_up, bridge_default_config):
+def test_bridge_with_internal_interface(test_nic1_up, bridge_default_config):
     bridge_desired_state = bridge_default_config
 
     ovs_port = {OB.PORT_NAME: 'ovs0', OB.PORT_TYPE: OBPortType.INTERNAL}
