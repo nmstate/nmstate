@@ -37,6 +37,9 @@ from .testlib import statelib
 from .testlib.assertlib import assert_mac_address
 from .testlib.vlan import vlan_interface
 
+from .testlib.bridgelib import linux_bridge
+from .testlib.bridgelib import add_port_to_bridge
+from .testlib.bridgelib import create_bridge_subtree_state
 
 BOND99 = 'bond99'
 
@@ -382,3 +385,17 @@ def test_create_vlan_over_a_bond_slave(bond99_with_slave):
     ) as desired_state:
         assertlib.assert_state(desired_state)
     assertlib.assert_state(bond99_with_slave)
+
+
+def test_create_linux_bridge_over_bond(bond99_with_slave):
+    port_state = {
+        'stp-hairpin-mode': False,
+        'stp-path-cost': 100,
+        'stp-priority': 32,
+    }
+    bridge_name = 'linux-br0'
+    bridge_state = add_port_to_bridge(
+        create_bridge_subtree_state(), BOND99, port_state
+    )
+    with linux_bridge(bridge_name, bridge_state) as desired_state:
+        assertlib.assert_state(desired_state)
