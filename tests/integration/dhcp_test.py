@@ -241,9 +241,7 @@ def test_dhcp_with_addresses(dhcpcli_up):
     assertlib.assert_state(desired_state)
 
 
-def test_dhcp_for_bond_with_ip_address_and_slave(
-    dhcpcli_up, setup_remove_bond99
-):
+def test_ipv4_dhcp_on_bond(dhcpcli_up, setup_remove_bond99):
     desired_state = {
         INTERFACES: [
             {
@@ -252,7 +250,7 @@ def test_dhcp_for_bond_with_ip_address_and_slave(
                 'state': 'up',
                 'ipv4': {
                     InterfaceIPv4.ENABLED: True,
-                    InterfaceIPv4.DHCP: False,
+                    InterfaceIPv4.DHCP: True,
                 },
                 'link-aggregation': {
                     'mode': 'balance-rr',
@@ -263,20 +261,6 @@ def test_dhcp_for_bond_with_ip_address_and_slave(
         ]
     }
 
-    libnmstate.apply(desired_state, verify_change=False)
-    # Long story for why we doing 'dhcp=False' with 'verify_change=False'
-    # above:
-    #   For `dhcp=False`:
-    #       If there is a change, the master profile (bond99) might get
-    #       activated before the slave profile (dhcpcli). In this case, the
-    #       master does not have an active slave. Hence, the master will not
-    #       have an active link and there will be a IPv4 DHCP timeout failure.
-    #       As a workaround the interface is created initially without DHCP.
-    #   For `verify_change=False`:
-    #       As above, the master bond99 might has no link carrier, hence the
-    #       interface will result in `state:down`. As a workaround the
-    #       verification is ignored.
-    desired_state[INTERFACES][0]['ipv4'][InterfaceIPv4.DHCP] = True
     libnmstate.apply(desired_state)
 
     assertlib.assert_state(desired_state)
