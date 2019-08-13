@@ -21,6 +21,8 @@ import itertools
 import six
 
 from libnmstate.error import NmstateValueError
+from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceType
 from libnmstate.schema import LinuxBridge as LB
 
 from . import bond
@@ -118,6 +120,7 @@ def set_ifaces_admin_state(ifaces_desired_state, con_profiles=()):
     con_profiles_by_devname = _index_profiles_by_devname(con_profiles)
     new_ifaces = _get_new_ifaces(con_profiles)
     new_ifaces_to_activate = set()
+    new_vlan_ifaces_to_activate = set()
     new_ovs_interface_to_activate = set()
     new_ovs_port_to_activate = set()
     master_ifaces_to_edit = set()
@@ -133,6 +136,8 @@ def set_ifaces_admin_state(ifaces_desired_state, con_profiles=()):
                     new_ovs_interface_to_activate.add(ifname)
                 elif iface_desired_state['type'] == ovs.PORT_TYPE:
                     new_ovs_port_to_activate.add(ifname)
+                elif iface_desired_state[Interface.TYPE] == InterfaceType.VLAN:
+                    new_vlan_ifaces_to_activate.add(ifname)
                 else:
                     new_ifaces_to_activate.add(ifname)
         else:
@@ -185,6 +190,9 @@ def set_ifaces_admin_state(ifaces_desired_state, con_profiles=()):
 
     for dev, con_profile in ifaces_to_edit:
         device.modify(dev, con_profile)
+
+    for ifname in new_vlan_ifaces_to_activate:
+        device.activate(dev=None, connection_id=ifname)
 
     for dev, actions in six.viewitems(remove_devs_actions):
         for action in actions:
