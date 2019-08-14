@@ -18,6 +18,7 @@
 #
 
 import logging
+import time
 
 from . import nmclient
 from .nmclient import GLib
@@ -139,6 +140,23 @@ class ActiveConnection(object):
 
         nm_acs = nmclient.NM.ActiveConnectionState
         nm_acsreason = nmclient.NM.ActiveConnectionStateReason
+        if (
+            self._state_reason == nm_acsreason.DEVICE_DISCONNECTED
+            and self._act_con.get_master()
+            and self._nmdev
+        ):
+            # When master is activating, its slaves will be reactivated
+            # so we might get DEVICE_DISCONNECTED on slave.
+            ac == self._nmdev.get_active_connection()
+            if ac:
+                self._act_con = ac
+            else:
+                time.sleep(1)
+                self._act_con = self._nmdev.get_active_connection()
+            if self._act_con:
+                self.refresh_state()
+                return
+
         if self._state == nm_acs.DEACTIVATED:
             unable_to_activate = (
                 not self._nmdev
