@@ -246,6 +246,30 @@ def test_linux_bridge_add_port_with_name_only(bridge0_with_port0, port1_up):
     assertlib.assert_state_match(desired_state)
 
 
+def test_replace_port_on_linux_bridge(port0_vlan101, port1_up):
+    bridge_name = TEST_BRIDGE0
+    vlan_port0_name = port0_vlan101[Interface.KEY][0][Interface.NAME]
+    port1_name = port1_up[Interface.KEY][0][Interface.NAME]
+    bridge_state = _create_bridge_subtree_config((vlan_port0_name,))
+    with _linux_bridge(bridge_name, bridge_state) as state:
+        brconf_state = state[Interface.KEY][0][LinuxBridge.CONFIG_SUBTREE]
+        brconf_state[LinuxBridge.PORT_SUBTREE] = [
+            {LinuxBridge.PORT_NAME: port1_name}
+        ]
+        libnmstate.apply(state)
+
+        br_state = show_only((bridge_name,))
+        brconf_state = br_state[Interface.KEY][0][LinuxBridge.CONFIG_SUBTREE]
+        br_ports_state = brconf_state[LinuxBridge.PORT_SUBTREE]
+        assert 1 == len(br_ports_state)
+        assert port1_name == br_ports_state[0][LinuxBridge.PORT_NAME]
+
+        port_state = show_only((vlan_port0_name,))
+        assert (
+            InterfaceState.UP == port_state[Interface.KEY][0][Interface.STATE]
+        )
+
+
 def _add_port_to_bridge(bridge_state, ifname):
     port_state = yaml.load(BRIDGE_PORT_YAML, Loader=yaml.SafeLoader)
     port_state[LinuxBridge.PORT_NAME] = ifname
