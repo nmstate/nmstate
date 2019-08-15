@@ -183,6 +183,28 @@ def test_add_linux_bridge_with_empty_ipv6_static_address(port0_up):
     assertlib.assert_absent(bridge_name)
 
 
+def test_add_linux_bridge_with_empty_ipv6_static_address_with_stp(port0_up):
+    bridge_name = TEST_BRIDGE0
+    port_name = port0_up[Interface.KEY][0][Interface.NAME]
+    bridge_state = _create_bridge_subtree_config((port_name,))
+    options_subtree = bridge_state[LinuxBridge.OPTIONS_SUBTREE]
+    options_subtree[LinuxBridge.STP_SUBTREE][LinuxBridge.STP_ENABLED] = True
+
+    extra_iface_state = {
+        Interface.IPV6: {
+            InterfaceIPv6.ENABLED: True,
+            InterfaceIPv6.AUTOCONF: False,
+            InterfaceIPv6.DHCP: False,
+        }
+    }
+    with _linux_bridge(
+        bridge_name, bridge_state, extra_iface_state
+    ) as desired_state:
+        assertlib.assert_state(desired_state)
+
+    assertlib.assert_absent(bridge_name)
+
+
 def test_linux_bridge_add_port_with_name_only(bridge0_with_port0, port1_up):
     desired_state = bridge0_with_port0
     bridge_iface_state = desired_state[Interface.KEY][0]

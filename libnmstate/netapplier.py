@@ -38,6 +38,8 @@ from libnmstate.error import NmstatePermissionError
 from libnmstate.error import NmstateValueError
 from libnmstate.nm import nmclient
 
+MAINLOOP_TIMEOUT = 35
+
 
 def apply(desired_state, verify_change=True, commit=True, rollback_timeout=60):
     """
@@ -200,7 +202,7 @@ def _verify_change(desired_state):
 def _setup_providers():
     mainloop = nmclient.mainloop()
     yield
-    success = mainloop.run(timeout=20)
+    success = mainloop.run(timeout=MAINLOOP_TIMEOUT)
     if not success:
         nmclient.mainloop(refresh=True)
         raise NmstateLibnmError(
