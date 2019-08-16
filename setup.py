@@ -53,7 +53,7 @@ setup(
     long_description=readme(),
     long_description_content_type='text/markdown',
     url='https://nmstate.github.io/',
-    license='GPLv2+',
+    license='LGPL2.1+',
     packages=find_packages(),
     install_requires=requirements(),
     entry_points={
