@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
-from contextlib import contextmanager
 from copy import deepcopy
 
 import pytest
@@ -27,13 +26,13 @@ from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import InterfaceState
-from libnmstate.schema import InterfaceType
 from libnmstate.schema import LinuxBridge
 
 from .testlib import assertlib
+from .testlib.bridgelib import add_port_to_bridge
+from .testlib.bridgelib import linux_bridge
 from .testlib.iproutelib import ip_monitor_assert_stable_link_up
 from .testlib.statelib import show_only
-from .testlib.statelib import INTERFACES
 from .testlib.assertlib import assert_mac_address
 from .testlib.vlan import vlan_interface
 
@@ -69,7 +68,7 @@ def bridge0_with_port0(port0_up):
     options_subtree = bridge_state[LinuxBridge.OPTIONS_SUBTREE]
     options_subtree[LinuxBridge.STP_SUBTREE][LinuxBridge.STP_ENABLED] = False
 
-    with _linux_bridge(bridge_name, bridge_state) as desired_state:
+    with linux_bridge(bridge_name, bridge_state) as desired_state:
         # Need to set twice so the wired setting will be explicitly set,
         # allowing reapply to succeed.
         # https://bugzilla.redhat.com/1703960
@@ -89,7 +88,7 @@ def port0_vlan101(port0_up):
 
 def test_create_and_remove_linux_bridge_with_min_desired_state():
     bridge_name = TEST_BRIDGE0
-    with _linux_bridge(bridge_name, bridge_state=None) as desired_state:
+    with linux_bridge(bridge_name, bridge_subtree_state=None) as desired_state:
         assertlib.assert_state(desired_state)
 
     assertlib.assert_absent(bridge_name)
@@ -99,7 +98,7 @@ def test_create_and_remove_linux_bridge_with_one_port(port0_up):
     bridge_name = TEST_BRIDGE0
     port_name = port0_up[Interface.KEY][0][Interface.NAME]
     bridge_state = _create_bridge_subtree_config((port_name,))
-    with _linux_bridge(bridge_name, bridge_state) as desired_state:
+    with linux_bridge(bridge_name, bridge_state) as desired_state:
 
         assertlib.assert_state(desired_state)
 
@@ -112,7 +111,7 @@ def test_create_and_remove_linux_bridge_with_two_ports(port0_up, port1_up):
     port1_name = port1_up[Interface.KEY][0][Interface.NAME]
     bridge_state = _create_bridge_subtree_config((port0_name, port1_name))
 
-    with _linux_bridge(bridge_name, bridge_state) as desired_state:
+    with linux_bridge(bridge_name, bridge_state) as desired_state:
         assertlib.assert_state(desired_state)
 
     assertlib.assert_absent(bridge_name)
@@ -154,7 +153,7 @@ def test_create_vlan_as_slave_of_linux_bridge(port0_vlan101):
     bridge_name = TEST_BRIDGE0
     port_name = port0_vlan101[Interface.KEY][0][Interface.NAME]
     bridge_state = _create_bridge_subtree_config((port_name,))
-    with _linux_bridge(bridge_name, bridge_state) as desired_state:
+    with linux_bridge(bridge_name, bridge_state) as desired_state:
         assertlib.assert_state(desired_state)
 
 
@@ -202,7 +201,7 @@ def test_add_linux_bridge_with_empty_ipv6_static_address(port0_up):
             InterfaceIPv6.DHCP: False,
         }
     }
-    with _linux_bridge(
+    with linux_bridge(
         bridge_name, bridge_state, extra_iface_state
     ) as desired_state:
         assertlib.assert_state(desired_state)
@@ -224,7 +223,7 @@ def test_add_linux_bridge_with_empty_ipv6_static_address_with_stp(port0_up):
             InterfaceIPv6.DHCP: False,
         }
     }
-    with _linux_bridge(
+    with linux_bridge(
         bridge_name, bridge_state, extra_iface_state
     ) as desired_state:
         assertlib.assert_state(desired_state)
@@ -251,7 +250,7 @@ def test_replace_port_on_linux_bridge(port0_vlan101, port1_up):
     vlan_port0_name = port0_vlan101[Interface.KEY][0][Interface.NAME]
     port1_name = port1_up[Interface.KEY][0][Interface.NAME]
     bridge_state = _create_bridge_subtree_config((vlan_port0_name,))
-    with _linux_bridge(bridge_name, bridge_state) as state:
+    with linux_bridge(bridge_name, bridge_state) as state:
         brconf_state = state[Interface.KEY][0][LinuxBridge.CONFIG_SUBTREE]
         brconf_state[LinuxBridge.PORT_SUBTREE] = [
             {LinuxBridge.PORT_NAME: port1_name}
@@ -272,54 +271,14 @@ def test_replace_port_on_linux_bridge(port0_vlan101, port1_up):
 
 def _add_port_to_bridge(bridge_state, ifname):
     port_state = yaml.load(BRIDGE_PORT_YAML, Loader=yaml.SafeLoader)
-    port_state[LinuxBridge.PORT_NAME] = ifname
-    bridge_state[LinuxBridge.PORT_SUBTREE] += [port_state]
+    add_port_to_bridge(bridge_state, ifname, port_state)
 
 
 def _create_bridge_subtree_config(port_names):
     bridge_state = yaml.load(BRIDGE_OPTIONS_YAML, Loader=yaml.SafeLoader)
 
-    ports_state = []
     for port in port_names:
         port_state = yaml.load(BRIDGE_PORT_YAML, Loader=yaml.SafeLoader)
-        port_state[LinuxBridge.PORT_NAME] = port
-        ports_state.append(port_state)
+        add_port_to_bridge(bridge_state, port, port_state)
 
-    bridge_state[LinuxBridge.PORT_SUBTREE] = ports_state
     return bridge_state
-
-
-@contextmanager
-def _linux_bridge(name, bridge_state, extra_iface_state=None):
-    desired_state = {
-        INTERFACES: [
-            {
-                Interface.NAME: name,
-                Interface.TYPE: InterfaceType.LINUX_BRIDGE,
-                Interface.STATE: InterfaceState.UP,
-                Interface.IPV6: {InterfaceIPv6.ENABLED: False},
-            }
-        ]
-    }
-    if extra_iface_state:
-        desired_state[INTERFACES][0].update(extra_iface_state)
-
-    if bridge_state:
-        desired_state[INTERFACES][0][LinuxBridge.CONFIG_SUBTREE] = bridge_state
-
-    libnmstate.apply(desired_state)
-
-    try:
-        yield desired_state
-    finally:
-        libnmstate.apply(
-            {
-                INTERFACES: [
-                    {
-                        Interface.NAME: name,
-                        Interface.TYPE: InterfaceType.LINUX_BRIDGE,
-                        Interface.STATE: InterfaceState.ABSENT,
-                    }
-                ]
-            }
-        )
