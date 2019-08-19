@@ -531,6 +531,12 @@ def _setup_dhcp_nics():
         )[0]
         == 0
     )
+    assert (
+        libcmd.exec_cmd(
+            ['nmcli', 'device', 'set', DHCP_CLI_NIC, 'managed', 'yes']
+        )[0]
+        == 0
+    )
     # This stop dhcp server NIC get another IPv6 address from dnsmasq.
     with open(SYSFS_DISABLE_RA_SRV, 'w') as fd:
         fd.write('0')
