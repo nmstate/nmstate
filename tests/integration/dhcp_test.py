@@ -36,6 +36,9 @@ from libnmstate.error import NmstateNotImplementedError
 from .testlib import assertlib
 from .testlib import cmd as libcmd
 from .testlib import statelib
+from .testlib.bridgelib import add_port_to_bridge
+from .testlib.bridgelib import create_bridge_subtree_state
+from .testlib.bridgelib import linux_bridge
 from .testlib.statelib import INTERFACES
 
 
@@ -120,8 +123,14 @@ def dhcpcli_up(dhcp_env):
         yield ifstate
 
 
+@pytest.fixture
+def dhcpcli_up_with_delay_status(dhcp_env):
+    with iface_with_dynamic_ip_up(DHCP_CLI_NIC, delay_state_time=5) as ifstate:
+        yield ifstate
+
+
 @contextmanager
-def iface_with_dynamic_ip_up(ifname):
+def iface_with_dynamic_ip_up(ifname, delay_state_time=0):
     desired_state = {
         Interface.KEY: [
             {
@@ -141,6 +150,8 @@ def iface_with_dynamic_ip_up(ifname):
     }
     try:
         libnmstate.apply(desired_state)
+        if delay_state_time:
+            time.sleep(delay_state_time)
         yield statelib.show_only((ifname,))
     finally:
         libnmstate.apply(
@@ -527,6 +538,57 @@ def test_ipv6_dhcp_switch_on_to_off(dhcpcli_up):
     assert not _has_ipv6_auto_gateway()
     assert not _has_ipv6_auto_extra_route()
     assert not _has_ipv6_auto_nameserver()
+
+
+def test_dhcp_on_bridge0(dhcpcli_up_with_delay_status):
+    """
+    Test dynamic IPv4 & IPv6 addresses over a Linux bridge interface.
+
+    Several checks have been ecooperated in the test due to the high time cost.
+    The dynamic IP over the bridge includes the follwing checks:
+        - The dynamic settings have been applied.
+        - IPv4 and IPv6 addresses have been provided by the server.
+        - IPv4 addresses are identical to the original ones which existed on
+        the nic (dhcpcli interface). [XFAIL]
+        - IPv6 addresses are identical to the original ones which existed on
+        the nic (dhcpcli interface). [XFAIL]
+    """
+    origin_port_state = dhcpcli_up_with_delay_status
+
+    port_name = origin_port_state[Interface.KEY][0][Interface.NAME]
+
+    bridge_state = create_bridge_subtree_state()
+    bridge_state = add_port_to_bridge(bridge_state, port_name)
+
+    bridge_iface_state = {
+        Interface.IPV4: {
+            InterfaceIPv4.ENABLED: True,
+            InterfaceIPv4.DHCP: True,
+        },
+        Interface.IPV6: {
+            InterfaceIPv6.ENABLED: True,
+            InterfaceIPv6.DHCP: True,
+            InterfaceIPv6.AUTOCONF: True,
+        },
+    }
+    bridge_name = 'brtest0'
+    with linux_bridge(bridge_name, bridge_state, bridge_iface_state) as state:
+        assertlib.assert_state_match(state)
+
+        time.sleep(5)  # wait to get IP addresses
+        new_bridge_state = statelib.show_only((bridge_name,))
+
+    new_ipv4_state = new_bridge_state[Interface.KEY][0][Interface.IPV4]
+    new_ipv6_state = new_bridge_state[Interface.KEY][0][Interface.IPV6]
+    assert new_ipv4_state[InterfaceIPv4.ADDRESS]
+    assert len(new_ipv6_state[InterfaceIPv6.ADDRESS]) > 1
+
+    origin_ipv4_state = origin_port_state[Interface.KEY][0][Interface.IPV4]
+    origin_ipv6_state = origin_port_state[Interface.KEY][0][Interface.IPV6]
+    with pytest.raises(AssertionError):
+        assert origin_ipv4_state == new_ipv4_state
+    with pytest.raises(AssertionError):
+        assert origin_ipv6_state == new_ipv6_state
 
 
 def _create_veth_pair():
