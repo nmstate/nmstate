@@ -158,7 +158,7 @@ class ConnectionProfile(object):
                 return
 
         specific_object = None
-        user_data = cancellable
+        user_data = (self, cancellable)
         self._nmclient.activate_connection_async(
             self.profile,
             self.nmdevice,
@@ -168,8 +168,9 @@ class ConnectionProfile(object):
             user_data,
         )
 
-    def _active_connection_callback(self, src_object, result, user_data):
-        cancellable = user_data
+    @staticmethod
+    def _active_connection_callback(src_object, result, user_data):
+        self, cancellable = user_data
         self._mainloop.drop_cancellable(cancellable)
 
         try:
