@@ -259,19 +259,26 @@ class ConnectionProfile(object):
     def _waitfor_active_connection_callback(
         self, _nm_act_con, _state, _reason, ac
     ):
-        ac.refresh_state()
+        cur_nm_act_conn = get_device_active_connection(self.nmdevice)
+        if cur_nm_act_conn and cur_nm_act_conn != ac.nm_active_connection:
+            logging.debug(
+                'Active connection of device {} has been replaced'.format(
+                    self.devname
+                )
+            )
+            ac.remove_handlers()
+            ac = ActiveConnection(cur_nm_act_conn)
+            self.waitfor_active_connection_async(ac)
         if ac.is_active:
             logging.debug(
                 'Connection activation succeeded: dev=%s, con-state=%s',
                 ac.devname,
                 ac.state,
             )
-            for handler_id in ac.handlers:
-                ac.nm_active_connection.handler_disconnect(handler_id)
+            ac.remove_handlers()
             self._mainloop.execute_next_action()
         elif not ac.is_activating:
-            for handler_id in ac.handlers:
-                ac.nm_active_connection.handler_disconnect(handler_id)
+            ac.remove_handlers()
             self._mainloop.quit(
                 'Connection activation failed on {}: reason={}'.format(
                     ac.devname, ac.reason
