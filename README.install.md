@@ -22,7 +22,6 @@ yum -y install \
     NetworkManager-ovs \
     openvswitch \
     python-gobject-base \
-    python-ipaddress \
     python-jsonschema \
     python-setuptools \
     python2-pyyaml \

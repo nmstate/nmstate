@@ -15,7 +15,6 @@ RUN dnf -y install --setopt=install_weak_deps=False \
                    systemd-udev \
                    \
                    python2-dbus \
-                   python2-ipaddress \
                    python3-dbus \
                    python3-gobject-base \
                    python3-jsonschema \
