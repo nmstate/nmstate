@@ -29,6 +29,7 @@ from libnmstate.schema import InterfaceState
 from libnmstate.schema import LinuxBridge
 
 from .testlib import assertlib
+from .testlib.bondlib import bond_interface
 from .testlib.bridgelib import add_port_to_bridge
 from .testlib.bridgelib import linux_bridge
 from .testlib.iproutelib import ip_monitor_assert_stable_link_up
@@ -84,6 +85,14 @@ def port0_vlan101(port0_up):
     with vlan_interface(port_name, vlan_id, vlan_base_iface):
         state = show_only((port_name,))
         yield state
+
+
+@pytest.fixture
+def bond0(port0_up):
+    bond_name = 'testbond0'
+    port_name = port0_up[Interface.KEY][0][Interface.NAME]
+    with bond_interface(bond_name, [port_name], create=False) as bond0:
+        yield bond0
 
 
 def test_create_and_remove_linux_bridge_with_min_desired_state():
@@ -267,6 +276,23 @@ def test_replace_port_on_linux_bridge(port0_vlan101, port1_up):
         assert (
             InterfaceState.UP == port_state[Interface.KEY][0][Interface.STATE]
         )
+
+
+def test_linux_bridge_over_bond_over_slave_in_one_transaction(bond0):
+    bridge_name = TEST_BRIDGE0
+    bond_name = bond0[Interface.KEY][0][Interface.NAME]
+    bridge_config_state = _create_bridge_subtree_config((bond_name,))
+    with linux_bridge(
+        bridge_name, bridge_config_state, create=False
+    ) as bridge0:
+        desired_state = bond0
+        bridge_state = bridge0[Interface.KEY][0]
+        desired_state[Interface.KEY].append(bridge_state)
+        libnmstate.apply(desired_state)
+
+        assertlib.assert_state_match(desired_state)
+
+    assertlib.assert_absent(bridge_name)
 
 
 def _add_port_to_bridge(bridge_state, ifname):

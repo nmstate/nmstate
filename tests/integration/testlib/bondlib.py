@@ -27,7 +27,7 @@ from libnmstate.schema import InterfaceType
 
 
 @contextmanager
-def bond_interface(name, slaves, extra_iface_state=None):
+def bond_interface(name, slaves, extra_iface_state=None, create=True):
     desired_state = {
         Interface.KEY: [
             {
@@ -44,7 +44,9 @@ def bond_interface(name, slaves, extra_iface_state=None):
     if extra_iface_state:
         desired_state[Interface.KEY][0].update(extra_iface_state)
 
-    libnmstate.apply(desired_state)
+    if create:
+        libnmstate.apply(desired_state)
+
     try:
         yield desired_state
     finally:

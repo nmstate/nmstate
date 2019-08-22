@@ -28,7 +28,9 @@ from libnmstate.schema import LinuxBridge
 
 
 @contextmanager
-def linux_bridge(name, bridge_subtree_state, extra_iface_state=None):
+def linux_bridge(
+    name, bridge_subtree_state, extra_iface_state=None, create=True
+):
     desired_state = {
         Interface.KEY: [
             {
@@ -44,7 +46,8 @@ def linux_bridge(name, bridge_subtree_state, extra_iface_state=None):
     if extra_iface_state:
         desired_state[Interface.KEY][0].update(extra_iface_state)
 
-    libnmstate.apply(desired_state)
+    if create:
+        libnmstate.apply(desired_state)
 
     try:
         yield desired_state
