@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
+from contextlib import contextmanager
 import os
 import time
 
@@ -24,15 +25,16 @@ import pytest
 import libnmstate
 from libnmstate.schema import Constants
 from libnmstate.schema import DNS
+from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
+from libnmstate.schema import InterfaceState
 from libnmstate.schema import Route as RT
 
 from libnmstate.error import NmstateNotImplementedError
 
 from .testlib import assertlib
 from .testlib import cmd as libcmd
-from .testlib import ifacelib
 from .testlib import statelib
 from .testlib.statelib import INTERFACES
 
@@ -114,8 +116,43 @@ def dhcp_env():
 
 @pytest.fixture
 def dhcpcli_up(dhcp_env):
-    with ifacelib.iface_up(DHCP_CLI_NIC) as ifstate:
+    with iface_with_dynamic_ip_up(DHCP_CLI_NIC) as ifstate:
         yield ifstate
+
+
+@contextmanager
+def iface_with_dynamic_ip_up(ifname):
+    desired_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: ifname,
+                Interface.STATE: InterfaceState.UP,
+                Interface.IPV4: {
+                    InterfaceIPv4.ENABLED: True,
+                    InterfaceIPv4.DHCP: True,
+                },
+                Interface.IPV6: {
+                    InterfaceIPv6.ENABLED: True,
+                    InterfaceIPv6.DHCP: True,
+                    InterfaceIPv6.AUTOCONF: True,
+                },
+            }
+        ]
+    }
+    try:
+        libnmstate.apply(desired_state)
+        yield statelib.show_only((ifname,))
+    finally:
+        libnmstate.apply(
+            {
+                Interface.KEY: [
+                    {
+                        Interface.NAME: ifname,
+                        Interface.STATE: InterfaceState.DOWN,
+                    }
+                ]
+            }
+        )
 
 
 @pytest.fixture
