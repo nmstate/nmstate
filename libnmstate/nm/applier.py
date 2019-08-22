@@ -41,6 +41,7 @@ from . import wired
 
 MASTER_METADATA = '_master'
 MASTER_TYPE_METADATA = '_master_type'
+MASTER_IFACE_TYPES = ovs.BRIDGE_TYPE, bond.BOND_TYPE, LB.TYPE
 
 BRPORT_OPTIONS_METADATA = '_brport_options'
 
@@ -111,6 +112,7 @@ def set_ifaces_admin_state(ifaces_desired_state, con_profiles=()):
     leaving it to choose the correct profile.
 
     In order to activate correctly the interfaces, the order is significant:
+    - Master-less master interfaces.
     - New interfaces (virtual interfaces, but not OVS ones).
     - Master interfaces.
     - OVS ports.
@@ -123,6 +125,7 @@ def set_ifaces_admin_state(ifaces_desired_state, con_profiles=()):
     new_vlan_ifaces_to_activate = set()
     new_ovs_interface_to_activate = set()
     new_ovs_port_to_activate = set()
+    new_master_not_enslaved_ifaces = set()
     master_ifaces_to_edit = set()
     ifaces_to_edit = set()
     remove_devs_actions = {}
@@ -132,7 +135,13 @@ def set_ifaces_admin_state(ifaces_desired_state, con_profiles=()):
         nmdev = device.get_device_by_name(ifname)
         if not nmdev:
             if ifname in new_ifaces and iface_desired_state['state'] == 'up':
-                if iface_desired_state['type'] == ovs.INTERNAL_INTERFACE_TYPE:
+                if _is_master_iface(
+                    iface_desired_state
+                ) and not _is_slave_iface(iface_desired_state):
+                    new_master_not_enslaved_ifaces.add(ifname)
+                elif (
+                    iface_desired_state['type'] == ovs.INTERNAL_INTERFACE_TYPE
+                ):
                     new_ovs_interface_to_activate.add(ifname)
                 elif iface_desired_state['type'] == ovs.PORT_TYPE:
                     new_ovs_port_to_activate.add(ifname)
@@ -142,8 +151,7 @@ def set_ifaces_admin_state(ifaces_desired_state, con_profiles=()):
                     new_ifaces_to_activate.add(ifname)
         else:
             if iface_desired_state['state'] == 'up':
-                master_iface_types = ovs.BRIDGE_TYPE, bond.BOND_TYPE, LB.TYPE
-                if iface_desired_state['type'] in master_iface_types:
+                if _is_master_iface(iface_desired_state):
                     master_ifaces_to_edit.add(
                         (nmdev, con_profiles_by_devname[ifname].profile)
                     )
@@ -175,6 +183,9 @@ def set_ifaces_admin_state(ifaces_desired_state, con_profiles=()):
     # Do not remove devices that are marked for editing.
     for dev, _ in itertools.chain(master_ifaces_to_edit, ifaces_to_edit):
         remove_devs_actions.pop(dev, None)
+
+    for ifname in new_master_not_enslaved_ifaces:
+        device.activate(dev=None, connection_id=ifname)
 
     for ifname in new_ifaces_to_activate:
         device.activate(dev=None, connection_id=ifname)
@@ -211,6 +222,14 @@ def _get_new_ifaces(con_profiles):
         if not nmdev:
             ifaces_without_device.add(ifname)
     return ifaces_without_device
+
+
+def _is_master_iface(iface_state):
+    return iface_state[Interface.TYPE] in MASTER_IFACE_TYPES
+
+
+def _is_slave_iface(iface_state):
+    return iface_state.get(MASTER_METADATA)
 
 
 def _get_affected_devices(iface_state):
