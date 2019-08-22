@@ -57,6 +57,15 @@ def client(refresh=False):
     if _nmclient is None or refresh:
         if NM:
             _nmclient = NM.Client.new(None)
+            if not _nmclient.get_nm_running():
+                logging.error(
+                    'NetworkManager is not running, please make sure'
+                    'it is installed and running prior to running nmstate.\n'
+                    'Check the documentation for more information.'
+                )
+                raise error.NmstateDependencyError(
+                    'NetworkManager is not running'
+                )
         else:
             logging.error(
                 'Missing introspection data for libnm'
