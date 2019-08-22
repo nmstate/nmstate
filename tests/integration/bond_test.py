@@ -17,7 +17,6 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
-from contextlib import contextmanager
 import pytest
 import time
 import yaml
@@ -35,6 +34,7 @@ from libnmstate.schema import InterfaceIPv6
 from .testlib import assertlib
 from .testlib import statelib
 from .testlib.assertlib import assert_mac_address
+from .testlib.bondlib import bond_interface
 from .testlib.vlan import vlan_interface
 
 from .testlib.bridgelib import linux_bridge
@@ -96,41 +96,6 @@ def bond99_with_slave(eth2_up):
     slaves = [eth2_up[Interface.KEY][0][Interface.NAME]]
     with bond_interface(BOND99, slaves) as state:
         yield state
-
-
-@contextmanager
-def bond_interface(name, slaves, extra_iface_state=None):
-    desired_state = {
-        Interface.KEY: [
-            {
-                Interface.NAME: name,
-                Interface.TYPE: InterfaceType.BOND,
-                Interface.STATE: InterfaceState.UP,
-                Bond.CONFIG_SUBTREE: {
-                    Bond.MODE: BondMode.ROUND_ROBIN,
-                    Bond.SLAVES: slaves,
-                },
-            }
-        ]
-    }
-    if extra_iface_state:
-        desired_state[Interface.KEY][0].update(extra_iface_state)
-
-    libnmstate.apply(desired_state)
-    try:
-        yield desired_state
-    finally:
-        libnmstate.apply(
-            {
-                Interface.KEY: [
-                    {
-                        Interface.NAME: name,
-                        Interface.TYPE: InterfaceType.BOND,
-                        Interface.STATE: InterfaceState.ABSENT,
-                    }
-                ]
-            }
-        )
 
 
 def test_add_and_remove_bond_with_two_slaves(eth1_up, eth2_up):
