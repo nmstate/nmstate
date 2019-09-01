@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
+from copy import deepcopy
 
 import time
 
@@ -387,3 +388,18 @@ def test_create_vlan_over_a_bond(bond99_with_slave):
     ) as desired_state:
         assertlib.assert_state(desired_state)
     assertlib.assert_state(bond99_with_slave)
+
+
+def test_create_linux_bridge_over_vlan_over_bond(bond99_with_slave):
+    bridge_name = 'linux-br0'
+    port_name = bond99_with_slave[Interface.KEY][0][Interface.NAME]
+    bridge_state = add_port_to_bridge(
+        create_bridge_subtree_state(), port_name)
+    with linux_bridge(bridge_name, bridge_state) as desired_state:
+        assertlib.assert_state(desired_state)
+        vlan_base_iface = desired_state[Interface.KEY][0][Interface.NAME]
+        vlan_id = 102
+        port_name = '{}.{}'.format(vlan_base_iface, vlan_id)
+        with vlan_interface(port_name, vlan_id, vlan_base_iface) as desired_state:
+            assertlib.assert_state(desired_state)
+
