@@ -98,6 +98,16 @@ def bond99_with_slave(eth2_up):
         yield state
 
 
+@pytest.fixture
+def bond99_vlan102(bond99_with_slave):
+    vlan_id = 102
+    vlan_base_iface = bond99_with_slave[Interface.KEY][0][Interface.NAME]
+    port_name = '{}.{}'.format(vlan_base_iface, vlan_id)
+    with vlan_interface(port_name, vlan_id, vlan_base_iface):
+        state = statelib.show_only((port_name,))
+        yield state
+
+
 def test_add_and_remove_bond_with_two_slaves(eth1_up, eth2_up):
     state = yaml.load(BOND99_YAML_BASE, Loader=yaml.SafeLoader)
     libnmstate.apply(state)
@@ -375,3 +385,11 @@ def test_create_vlan_over_a_bond(bond99_with_slave):
     ) as desired_state:
         assertlib.assert_state(desired_state)
     assertlib.assert_state(bond99_with_slave)
+
+
+def test_create_vlan_as_slave_of_bond(bond99_vlan102, bond99_with_slave):
+    bond_name = bond99_with_slave[Interface.KEY][0][Interface.NAME]
+    vlan_id = 102
+    slaves = ['{}.{}'.format(bond_name, vlan_id)]
+    with bond_interface(bond_name, slaves) as state:
+        assertlib.assert_state(state)
