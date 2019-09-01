@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
+from copy import deepcopy
 
 import pytest
 import time
@@ -96,6 +97,23 @@ def bond99_with_slave(eth2_up):
     slaves = [eth2_up[Interface.KEY][0][Interface.NAME]]
     with bond_interface(BOND99, slaves) as state:
         yield state
+
+
+@pytest.fixture
+def linux_br0_over_vlan101(bond99_with_slave):
+    port_state = {
+        'stp-hairpin-mode': False,
+        'stp-path-cost': 100,
+        'stp-priority': 32,
+    }
+    bridge_name = 'linux-br0'
+    port_name = bond99_with_slave[Interface.KEY][0][Interface.NAME]
+    bridge_state = add_port_to_bridge(
+        create_bridge_subtree_state(), port_name, port_state
+    )
+    with linux_bridge(bridge_name, bridge_state) as desired_state:
+        assertlib.assert_state(desired_state)
+        yield deepcopy(desired_state)
 
 
 def test_add_and_remove_bond_with_two_slaves(eth1_up, eth2_up):
@@ -375,3 +393,11 @@ def test_create_vlan_over_a_bond(bond99_with_slave):
     ) as desired_state:
         assertlib.assert_state(desired_state)
     assertlib.assert_state(bond99_with_slave)
+
+
+def test_create_linux_bridge_over_vlan_over_bond(linux_br0_over_vlan101):
+    vlan_base_iface = linux_br0_over_vlan101[Interface.KEY][0][Interface.NAME]
+    vlan_id = 102
+    port_name = '{}.{}'.format(vlan_base_iface, vlan_id)
+    with vlan_interface(port_name, vlan_id, vlan_base_iface) as desired_state:
+        assertlib.assert_state(desired_state)
