@@ -22,6 +22,7 @@ import pytest
 
 import libnmstate
 from libnmstate.error import NmstateNotImplementedError
+from libnmstate.schema import DNS
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
@@ -32,6 +33,11 @@ from libnmstate.schema import Route
 IPV4_ADDRESS1 = '192.0.2.251'
 
 IPV6_ADDRESS1 = '2001:db8:1::1'
+
+IPV4_DNS_NAMESERVER = '8.8.8.8'
+IPV6_DNS_NAMESERVER = '2001:4860:4860::8888'
+DNS_SEARCHES = ['example.org', 'example.com']
+
 
 ETH1_INTERFACE_STATE = {
     Interface.NAME: 'eth1',
@@ -436,3 +442,49 @@ def test_iface_down_with_routes_in_current(eth1_up, get_routes_func):
 
     cur_state = libnmstate.show()
     _assert_routes([], cur_state)
+
+
+@pytest.fixture(scope='function')
+def eth1_static_gateway_dns(eth1_up):
+    routes = (
+        [_get_ipv4_gateways()[0], _get_ipv6_gateways()[0]]
+        + _get_ipv4_test_routes()
+        + _get_ipv6_test_routes()
+    )
+
+    state = {
+        Interface.KEY: [ETH1_INTERFACE_STATE],
+        Route.KEY: {Route.CONFIG: routes},
+        DNS.KEY: {
+            DNS.CONFIG: {
+                DNS.SERVER: [IPV6_DNS_NAMESERVER, IPV4_DNS_NAMESERVER],
+                DNS.SEARCH: DNS_SEARCHES,
+            }
+        },
+    }
+
+    libnmstate.apply(state)
+    yield state
+    # Remove DNS config
+    libnmstate.apply(
+        {Interface.KEY: [], DNS.KEY: {DNS.CONFIG: {}}}, verify_change=False
+    )
+
+
+@pytest.mark.xfail(
+    raises=AssertionError,
+    reason='https://bugzilla.redhat.com/1748389',
+    strict=True,
+)
+def test_apply_empty_state_preserve_routes(eth1_static_gateway_dns):
+    state = eth1_static_gateway_dns
+
+    libnmstate.apply({Interface.KEY: []})
+
+    current_state = libnmstate.show()
+
+    assert (
+        current_state[Route.KEY][Route.CONFIG]
+        == state[Route.KEY][Route.CONFIG]
+    )
+    assert current_state[DNS.KEY][DNS.CONFIG] == state[DNS.KEY][DNS.CONFIG]
