@@ -47,6 +47,7 @@ def create_setting(config, base_con_profile):
     if not setting_ipv4:
         setting_ipv4 = nmclient.NM.SettingIP4Config.new()
 
+    setting_ipv4.props.dhcp_client_id = 'mac'
     setting_ipv4.props.method = nmclient.NM.SETTING_IP4_CONFIG_METHOD_DISABLED
     if config and config.get(InterfaceIPv4.ENABLED):
         if config.get(InterfaceIPv4.DHCP):
