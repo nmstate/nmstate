@@ -112,6 +112,12 @@ def create_setting(config, base_con_profile):
     if not setting_ip:
         setting_ip = nmclient.NM.SettingIP6Config.new()
 
+    # Ensure IPv6 RA and DHCPv6 is based on MAC address only
+    setting_ip.props.addr_gen_mode = (
+        nmclient.NM.SettingIP6ConfigAddrGenMode.EUI64
+    )
+    setting_ip.props.dhcp_duid = 'll'
+
     if not config or not config.get(InterfaceIPv6.ENABLED):
         setting_ip.props.method = nmclient.NM.SETTING_IP6_CONFIG_METHOD_IGNORE
         return setting_ip
