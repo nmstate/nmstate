@@ -11,6 +11,7 @@ RUN bash ./docker_enable_systemd.sh && rm ./docker_enable_systemd.sh
 RUN dnf -y install --setopt=install_weak_deps=False \
                    NetworkManager \
                    NetworkManager-ovs \
+                   dhcp-client \
                    openvswitch \
                    systemd-udev \
                    \

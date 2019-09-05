@@ -23,4 +23,10 @@ cat > /etc/NetworkManager/conf.d/97-no-auto-default.conf <<EOF
 no-auto-default=*
 EOF
 
+cat > /etc/NetworkManager/conf.d/97-use-dhclient.conf <<EOF
+# Workaround for https://bugzilla.redhat.com/show_bug.cgi?id=1749358
+[main]
+dhcp=dhclient
+EOF
+
 systemctl enable openvswitch.service
