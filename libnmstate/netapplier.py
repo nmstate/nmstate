@@ -256,6 +256,8 @@ def _disable_ipv6(desired_state):
     This is an intermediate workaround for https://bugzilla.redhat.com/1643841.
     """
     for ifstate in six.viewvalues(desired_state.interfaces):
+        if ifstate.get(schema.Interface.STATE) != schema.InterfaceState.UP:
+            continue
         ipv6_state = ifstate.get(schema.Interface.IPV6, {})
         if ipv6_state.get('enabled') is False:
             sysctl.disable_ipv6(ifstate[schema.Interface.NAME])
