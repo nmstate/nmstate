@@ -549,9 +549,9 @@ def test_dhcp_on_bridge0(dhcpcli_up_with_delay_status):
         - The dynamic settings have been applied.
         - IPv4 and IPv6 addresses have been provided by the server.
         - IPv4 addresses are identical to the original ones which existed on
-        the nic (dhcpcli interface). [XFAIL]
+        the nic (dhcpcli interface).
         - IPv6 addresses are identical to the original ones which existed on
-        the nic (dhcpcli interface). [XFAIL]
+        the nic (dhcpcli interface).
     """
     origin_port_state = dhcpcli_up_with_delay_status
 
@@ -585,10 +585,8 @@ def test_dhcp_on_bridge0(dhcpcli_up_with_delay_status):
 
     origin_ipv4_state = origin_port_state[Interface.KEY][0][Interface.IPV4]
     origin_ipv6_state = origin_port_state[Interface.KEY][0][Interface.IPV6]
-    with pytest.raises(AssertionError):
-        assert origin_ipv4_state == new_ipv4_state
-    with pytest.raises(AssertionError):
-        assert origin_ipv6_state == new_ipv6_state
+    assert origin_ipv4_state == new_ipv4_state
+    assert origin_ipv6_state == new_ipv6_state
 
 
 def _create_veth_pair():
