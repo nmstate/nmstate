@@ -30,7 +30,7 @@ class TestMainloopError(Exception):
 def mainloop():
     mloop = nm.nmclient.mainloop()
     yield
-    success = mloop.run(timeout=5)
+    success = mloop.run(timeout=15)
     if not success:
         nm.nmclient.mainloop(refresh=True)
         raise TestMainloopError(mloop.error)
