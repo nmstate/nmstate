@@ -31,6 +31,7 @@ from libnmstate.error import NmstateVerificationError
 from .testlib import assertlib
 from .testlib import statelib
 from .testlib.statelib import INTERFACES
+from .testlib.vlan import vlan_interface
 
 
 @pytest.fixture(scope='function', autouse=True)
@@ -133,3 +134,24 @@ def test_decrease_to_lower_than_min_ipv6_iface_mtu(eth1_with_ipv6):
     # FIXME: Drop the sleep when the waiting logic is implemented.
     time.sleep(2)
     assertlib.assert_state(original_state)
+
+
+@pytest.mark.xfail(reason='https://bugzilla.redhat.com/1751079', strict=True)
+def test_set_mtu_on_two_vlans_with_a_shared_base(eth1_up):
+    base_ifname = eth1_up[schema.Interface.KEY][0][schema.Interface.NAME]
+    v101 = vlan_interface('eth1.101', 101, base_ifname)
+    v102 = vlan_interface('eth1.102', 102, base_ifname)
+    with v101 as v101_state, v102 as v102_state:
+        desired_state = {
+            schema.Interface.KEY: [
+                base_ifname[schema.Interface.KEY][0],
+                v101_state[schema.Interface.KEY][0],
+                v102_state[schema.Interface.KEY][0],
+            ]
+        }
+        for iface_state in desired_state[schema.Interface.KEY]:
+            iface_state[schema.Interface.MTU] = 2000
+
+        libnmstate.apply(desired_state)
+
+        assertlib.assert_state(desired_state)
