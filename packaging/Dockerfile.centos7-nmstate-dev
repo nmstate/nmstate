@@ -8,7 +8,7 @@ RUN yum -y install \
         python2-pip \
         python36-pip \
         rpm-build \
-        dhcp-client \
+        dhclient \
     && yum clean all
 
 RUN pip install --upgrade pip pytest==4.2.1 pytest-cov==2.6.1
