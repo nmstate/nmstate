@@ -96,9 +96,17 @@ def bond0(port0_up):
 
 
 @pytest.fixture
-def bond0_vlan101(bond0):
+def bond1(port0_up):
+    bond_name = 'testbond1'
+    port_name = port0_up[Interface.KEY][0][Interface.NAME]
+    with bond_interface(bond_name, [port_name], create=False) as bond1:
+        yield bond1
+
+
+@pytest.fixture
+def bond0_vlan101(bond1):
     vlan_id = 101
-    bond_name = bond0[Interface.KEY][0][Interface.NAME]
+    bond_name = bond1[Interface.KEY][0][Interface.NAME]
     vlan_port_name = '{base_iface}.{vlan_id}'.format(
         base_iface=bond_name, vlan_id=vlan_id
     )
@@ -308,7 +316,7 @@ def test_linux_bridge_over_bond_over_slave_in_one_transaction(bond0):
 
 
 def test_linux_bridge_over_vlan_over_bond_over_slave_in_one_transaction(
-    bond0, bond0_vlan101
+    bond1, bond0_vlan101
 ):
     bridge_name = TEST_BRIDGE0
     vlan_ifname = bond0_vlan101[Interface.KEY][0][Interface.NAME]
@@ -316,7 +324,7 @@ def test_linux_bridge_over_vlan_over_bond_over_slave_in_one_transaction(
     with linux_bridge(
         bridge_name, bridge_config_state, create=False
     ) as bridge0:
-        desired_state = bond0
+        desired_state = bond1
         _append_interface_state(desired_state, bond0_vlan101)
         _append_interface_state(desired_state, bridge0)
         libnmstate.apply(desired_state)
