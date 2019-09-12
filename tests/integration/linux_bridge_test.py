@@ -95,6 +95,19 @@ def bond0(port0_up):
         yield bond0
 
 
+@pytest.fixture
+def bond0_vlan101(bond0):
+    vlan_id = 101
+    bond_name = bond0[Interface.KEY][0][Interface.NAME]
+    vlan_port_name = '{base_iface}.{vlan_id}'.format(
+        base_iface=bond_name, vlan_id=vlan_id
+    )
+    with vlan_interface(
+        vlan_port_name, vlan_id, bond_name, create=False
+    ) as vlan101:
+        yield vlan101
+
+
 def test_create_and_remove_linux_bridge_with_min_desired_state():
     bridge_name = TEST_BRIDGE0
     with linux_bridge(bridge_name, bridge_subtree_state=None) as desired_state:
@@ -286,8 +299,26 @@ def test_linux_bridge_over_bond_over_slave_in_one_transaction(bond0):
         bridge_name, bridge_config_state, create=False
     ) as bridge0:
         desired_state = bond0
-        bridge_state = bridge0[Interface.KEY][0]
-        desired_state[Interface.KEY].append(bridge_state)
+        _append_interface_state(desired_state, bridge0)
+        libnmstate.apply(desired_state)
+
+        assertlib.assert_state_match(desired_state)
+
+    assertlib.assert_absent(bridge_name)
+
+
+def test_linux_bridge_over_vlan_over_bond_over_slave_in_one_transaction(
+    bond0, bond0_vlan101
+):
+    bridge_name = TEST_BRIDGE0
+    vlan_ifname = bond0_vlan101[Interface.KEY][0][Interface.NAME]
+    bridge_config_state = _create_bridge_subtree_config((vlan_ifname,))
+    with linux_bridge(
+        bridge_name, bridge_config_state, create=False
+    ) as bridge0:
+        desired_state = bond0
+        _append_interface_state(desired_state, bond0_vlan101)
+        _append_interface_state(desired_state, bridge0)
         libnmstate.apply(desired_state)
 
         assertlib.assert_state_match(desired_state)
@@ -308,3 +339,8 @@ def _create_bridge_subtree_config(port_names):
         add_port_to_bridge(bridge_state, port, port_state)
 
     return bridge_state
+
+
+def _append_interface_state(desired_state, interface):
+    iface_state = interface[Interface.KEY][0]
+    desired_state[Interface.KEY].append(iface_state)

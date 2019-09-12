@@ -24,7 +24,7 @@ from .statelib import INTERFACES
 
 
 @contextmanager
-def vlan_interface(ifname, vlan_id, base_iface):
+def vlan_interface(ifname, vlan_id, base_iface, create=True):
     desired_state = {
         INTERFACES: [
             {
@@ -35,7 +35,10 @@ def vlan_interface(ifname, vlan_id, base_iface):
             }
         ]
     }
-    libnmstate.apply(desired_state)
+
+    if create:
+        libnmstate.apply(desired_state)
+
     try:
         yield desired_state
     finally:

@@ -123,11 +123,12 @@ def set_ifaces_admin_state(ifaces_desired_state, con_profiles=()):
     """
     con_profiles_by_devname = _index_profiles_by_devname(con_profiles)
     new_ifaces = _get_new_ifaces(con_profiles)
-    new_ifaces_to_activate = set()
+    new_master_enslaved_ifaces = set()
     new_vlan_ifaces_to_activate = set()
     new_ovs_interface_to_activate = set()
     new_ovs_port_to_activate = set()
     new_master_not_enslaved_ifaces = set()
+    new_slave_not_master_ifaces = set()
     master_ifaces_to_edit = set()
     ifaces_to_edit = set()
     remove_devs_actions = {}
@@ -144,6 +145,10 @@ def set_ifaces_admin_state(ifaces_desired_state, con_profiles=()):
                     iface_desired_state
                 ) and not _is_slave_iface(iface_desired_state):
                     new_master_not_enslaved_ifaces.add(ifname)
+                elif _is_slave_iface(
+                    iface_desired_state
+                ) and not _is_master_iface(iface_desired_state):
+                    new_slave_not_master_ifaces.add(ifname)
                 elif (
                     iface_desired_state[Interface.TYPE]
                     == ovs.INTERNAL_INTERFACE_TYPE
@@ -154,7 +159,7 @@ def set_ifaces_admin_state(ifaces_desired_state, con_profiles=()):
                 elif iface_desired_state[Interface.TYPE] == InterfaceType.VLAN:
                     new_vlan_ifaces_to_activate.add(ifname)
                 else:
-                    new_ifaces_to_activate.add(ifname)
+                    new_master_enslaved_ifaces.add(ifname)
         else:
             if iface_desired_state[Interface.STATE] == InterfaceState.UP:
                 if _is_master_iface(iface_desired_state):
@@ -196,7 +201,10 @@ def set_ifaces_admin_state(ifaces_desired_state, con_profiles=()):
     for ifname in new_master_not_enslaved_ifaces:
         device.activate(dev=None, connection_id=ifname)
 
-    for ifname in new_ifaces_to_activate:
+    for ifname in new_master_enslaved_ifaces:
+        device.activate(dev=None, connection_id=ifname)
+
+    for ifname in new_slave_not_master_ifaces:
         device.activate(dev=None, connection_id=ifname)
 
     for dev, con_profile in master_ifaces_to_edit:
