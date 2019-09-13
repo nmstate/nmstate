@@ -74,7 +74,6 @@ definitions:
             - absent
             - up
             - down
-            - unknown
         mac-address:
           $ref: "#/definitions/types/mac-address"
         mtu:
