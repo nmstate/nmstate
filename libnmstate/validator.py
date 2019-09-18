@@ -29,6 +29,7 @@ from .schema import Constants
 from libnmstate.schema import DNS
 from libnmstate.schema import InterfaceIP
 from libnmstate.schema import InterfaceIPv6
+from libnmstate.schema import VXLAN
 from libnmstate.error import NmstateDependencyError
 from libnmstate.error import NmstateNotImplementedError
 from libnmstate.error import NmstateValueError
@@ -167,6 +168,14 @@ def validate_routes(desired_state, current_state):
             raise NmstateRouteWithNoInterfaceError(str(routes))
 
 
+def validate_vxlan(state):
+    for iface_state in state.get(schema.Interface.KEY, []):
+        if iface_state.get(schema.Interface.TYPE) == VXLAN.TYPE:
+            _assert_vxlan_has_missing_attribute(
+                iface_state, VXLAN.ID, VXLAN.BASE_IFACE, VXLAN.REMOTE
+            )
+
+
 def _assert_iface_is_up(desired_iface_state, current_iface_state):
     """
     Validates that the interface has an UP state.
@@ -213,3 +222,19 @@ def _assert_iface_ip_enabled(desired_iface_state, current_iface_state, ipkey):
         ip_state = current_iface_state.get(ipkey)
         if not ip_state.get(InterfaceIP.ENABLED):
             raise NmstateRouteWithNoIPInterfaceError(current_iface_state)
+
+
+def _assert_vxlan_has_missing_attribute(state, *attributes):
+    vxlan_config = state.get(VXLAN.CONFIG_SUBTREE, {})
+    if not vxlan_config:
+        return
+    attributes_set = set(attributes)
+    vxlan_config_set = set(vxlan_config)
+    if not (attributes_set <= vxlan_config_set):
+        raise NmstateValueError(
+            'Vxlan tunnel {} has missing {}: {}'.format(
+                state[schema.Interface.NAME],
+                attributes_set.difference(vxlan_config_set),
+                state,
+            )
+        )

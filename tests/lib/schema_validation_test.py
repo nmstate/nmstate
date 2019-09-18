@@ -27,11 +27,12 @@ import jsonschema as js
 import libnmstate
 from libnmstate.schema import Constants
 from libnmstate.schema import DNS
-
+from libnmstate.schema import VXLAN
+from libnmstate.schema import Interface
 
 INTERFACES = Constants.INTERFACES
 ROUTES = Constants.ROUTES
-
+VXLAN0 = 'vxlan0'
 
 COMMON_DATA = {
     INTERFACES: [
@@ -147,6 +148,54 @@ class TestIfaceTypeEthernet(object):
             {'type': 'ethernet', 'auto-negotiation': False}
         )
         del default_data[INTERFACES][0]['link-speed']
+
+        libnmstate.validator.validate(default_data)
+
+
+class TestIfaceTypeVxlan(object):
+    def test_bad_id_type_is_invalid(self, default_data):
+        default_data[Interface.KEY].append(
+            {
+                Interface.NAME: VXLAN0,
+                Interface.TYPE: VXLAN.TYPE,
+                VXLAN.CONFIG_SUBTREE: {
+                    VXLAN.ID: 'badtype',
+                    VXLAN.BASE_IFACE: 'eth1',
+                    VXLAN.REMOTE: '192.168.3.3',
+                },
+            }
+        )
+
+        with pytest.raises(js.ValidationError) as err:
+            libnmstate.validator.validate(default_data)
+
+        assert '\'badtype\' is not of type \'integer\'' in err.value.args[0]
+
+    def test_bad_id_range_is_invalid(self, default_data):
+        default_data[Interface.KEY].append(
+            {
+                Interface.NAME: VXLAN0,
+                Interface.TYPE: VXLAN.TYPE,
+                VXLAN.CONFIG_SUBTREE: {
+                    VXLAN.ID: 16777216,
+                    VXLAN.BASE_IFACE: 'eth1',
+                    VXLAN.REMOTE: '192.168.3.3',
+                },
+            }
+        )
+
+        with pytest.raises(js.ValidationError) as err:
+            libnmstate.validator.validate(default_data)
+
+        assert (
+            '16777216 is greater than the maximum of 16777215'
+            in err.value.args[0]
+        )
+
+    def test_no_config_is_valid(self, default_data):
+        default_data[Interface.KEY].append(
+            {Interface.NAME: VXLAN0, Interface.TYPE: VXLAN.TYPE}
+        )
 
         libnmstate.validator.validate(default_data)
 

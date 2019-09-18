@@ -61,6 +61,7 @@ def apply(desired_state, verify_change=True, commit=True, rollback_timeout=60):
     validator.validate_capabilities(desired_state, netinfo.capabilities())
     validator.validate_dhcp(desired_state)
     validator.validate_dns(desired_state)
+    validator.validate_vxlan(desired_state)
 
     checkpoint = _apply_ifaces_state(
         state.State(desired_state), verify_change, commit, rollback_timeout
