@@ -24,6 +24,7 @@ properties:
             - "$ref": "#/definitions/interface-ovs-interface/rw"
             - "$ref": "#/definitions/interface-dummy/rw"
             - "$ref": "#/definitions/interface-vlan/rw"
+            - "$ref": "#/definitions/interface-vxlan/rw"
   routes:
     type: object
     properties:
@@ -177,6 +178,27 @@ definitions:
           required:
             - id
             - base-iface
+  interface-vxlan:
+    rw:
+      properties:
+        type:
+          type: string
+          enum:
+            - vxlan
+        vxlan:
+          type: object
+          properties:
+            id:
+              type: integer
+              minimum: 0
+              maximum: 16777215
+            remote:
+              type: string
+            destination-port:
+              type: integer
+            base-iface:
+              type: string
+
   interface-bond:
     rw:
       properties:

@@ -97,6 +97,7 @@ class InterfaceType(object):
     OVS_PORT = 'ovs-port'
     UNKNOWN = 'unknown'
     VLAN = 'vlan'
+    VXLAN = 'vxlan'
 
     VIRT_TYPES = (
         BOND,
@@ -106,6 +107,7 @@ class InterfaceType(object):
         OVS_PORT,
         OVS_INTERFACE,
         VLAN,
+        VXLAN,
     )
 
 
@@ -188,6 +190,16 @@ class VLAN(object):
 
     ID = 'id'
     BASE_IFACE = 'base-iface'
+
+
+class VXLAN(object):
+    TYPE = InterfaceType.VXLAN
+    CONFIG_SUBTREE = 'vxlan'
+
+    ID = 'id'
+    BASE_IFACE = 'base-iface'
+    REMOTE = 'remote'
+    DESTINATION_PORT = 'destination-port'
 
 
 class OVSBridge(object):

@@ -26,6 +26,7 @@ from libnmstate import validator
 from libnmstate.schema import DNS
 from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
+from libnmstate.schema import VXLAN
 from libnmstate.error import NmstateNotImplementedError
 from libnmstate.error import NmstateValueError
 
@@ -288,6 +289,54 @@ class TestRouteValidation(object):
         return _create_route(
             '2001:db8:a::/64', '2001:db8:1::a', 'eth2', 51, 104
         )
+
+
+class TestVxlanValidation(object):
+
+    parametrize_vxlan_req_fields = pytest.mark.parametrize(
+        'required_field', [VXLAN.ID, VXLAN.REMOTE, VXLAN.BASE_IFACE]
+    )
+
+    @parametrize_vxlan_req_fields
+    def test_missing_requiered_field_is_invalid(self, required_field):
+        desired_state = {
+            schema.Interface.KEY: [
+                {
+                    schema.Interface.NAME: 'eth0.101',
+                    schema.Interface.TYPE: VXLAN.TYPE,
+                    VXLAN.CONFIG_SUBTREE: {
+                        VXLAN.ID: 99,
+                        VXLAN.REMOTE: '192.168.3.3',
+                        VXLAN.BASE_IFACE: 'eth0',
+                    },
+                }
+            ]
+        }
+
+        desired_state[schema.Interface.KEY][0][VXLAN.CONFIG_SUBTREE].pop(
+            required_field
+        )
+
+        with pytest.raises(NmstateValueError) as err:
+            libnmstate.validator.validate_vxlan(desired_state)
+
+        assert required_field in err.value.args[0]
+
+    def test_minimal_config_is_valid(self):
+        desired_state = {
+            schema.Interface.KEY: [
+                {
+                    schema.Interface.NAME: 'eth0.101',
+                    schema.Interface.TYPE: VXLAN.TYPE,
+                    VXLAN.CONFIG_SUBTREE: {
+                        VXLAN.ID: 99,
+                        VXLAN.REMOTE: '192.168.3.3',
+                        VXLAN.BASE_IFACE: "eth0",
+                    },
+                }
+            ]
+        }
+        libnmstate.validator.validate_vxlan(desired_state)
 
 
 def _create_interface_state(
