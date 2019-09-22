@@ -35,6 +35,7 @@ from libnmstate.error import NmstateNotImplementedError
 
 from .testlib import assertlib
 from .testlib import cmd as libcmd
+from .testlib import ifacelib
 from .testlib import statelib
 from .testlib.bridgelib import add_port_to_bridge
 from .testlib.bridgelib import create_bridge_subtree_state
@@ -119,12 +120,12 @@ def dhcp_env():
 
 @pytest.fixture
 def dhcpcli_up(dhcp_env):
-    with iface_with_dynamic_ip_up(DHCP_CLI_NIC) as ifstate:
+    with ifacelib.iface_up(DHCP_CLI_NIC) as ifstate:
         yield ifstate
 
 
 @pytest.fixture
-def dhcpcli_up_with_delay_status(dhcp_env):
+def dhcpcli_up_with_dynamic_ip(dhcp_env):
     with iface_with_dynamic_ip_up(DHCP_CLI_NIC, delay_state_time=5) as ifstate:
         yield ifstate
 
@@ -540,7 +541,7 @@ def test_ipv6_dhcp_switch_on_to_off(dhcpcli_up):
     assert not _has_ipv6_auto_nameserver()
 
 
-def test_dhcp_on_bridge0(dhcpcli_up_with_delay_status):
+def test_dhcp_on_bridge0(dhcpcli_up_with_dynamic_ip):
     """
     Test dynamic IPv4 & IPv6 addresses over a Linux bridge interface.
 
@@ -553,7 +554,7 @@ def test_dhcp_on_bridge0(dhcpcli_up_with_delay_status):
         - IPv6 addresses are identical to the original ones which existed on
         the nic (dhcpcli interface).
     """
-    origin_port_state = dhcpcli_up_with_delay_status
+    origin_port_state = dhcpcli_up_with_dynamic_ip
 
     port_name = origin_port_state[Interface.KEY][0][Interface.NAME]
 
