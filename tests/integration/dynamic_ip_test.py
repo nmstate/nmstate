@@ -35,6 +35,7 @@ from libnmstate.error import NmstateNotImplementedError
 
 from .testlib import assertlib
 from .testlib import cmd as libcmd
+from .testlib import bondlib
 from .testlib import ifacelib
 from .testlib import statelib
 from .testlib.bridgelib import add_port_to_bridge
@@ -162,15 +163,6 @@ def iface_with_dynamic_ip_up(ifname, delay_state_time=0):
         )
 
 
-@pytest.fixture
-def setup_remove_bond99():
-    yield
-    remove_bond = {
-        INTERFACES: [{'name': 'bond99', 'type': 'bond', 'state': 'absent'}]
-    }
-    libnmstate.apply(remove_bond)
-
-
 def test_ipv4_dhcp(dhcpcli_up):
     desired_state = dhcpcli_up
     dhcp_cli_desired_state = desired_state[INTERFACES][0]
@@ -262,26 +254,12 @@ def test_dhcp_with_addresses(dhcpcli_up):
     assertlib.assert_state(desired_state)
 
 
-def test_ipv4_dhcp_on_bond(dhcpcli_up, setup_remove_bond99):
-    desired_state = {
-        INTERFACES: [
-            {
-                'name': 'bond99',
-                'type': 'bond',
-                'state': 'up',
-                Interface.IPV4: create_ipv4_state(enabled=True, dhcp=True),
-                'link-aggregation': {
-                    'mode': 'balance-rr',
-                    'slaves': [DHCP_CLI_NIC],
-                    'options': {'miimon': '140'},
-                },
-            }
-        ]
-    }
-
-    libnmstate.apply(desired_state)
-
-    assertlib.assert_state(desired_state)
+def test_ipv4_dhcp_on_bond(dhcpcli_up):
+    ipv4_state = {Interface.IPV4: create_ipv4_state(enabled=True, dhcp=True)}
+    with bondlib.bond_interface(
+        'bond99', slaves=[DHCP_CLI_NIC], extra_iface_state=ipv4_state
+    ) as desired_state:
+        assertlib.assert_state(desired_state)
 
 
 def test_ipv4_dhcp_ignore_gateway(dhcpcli_up):
