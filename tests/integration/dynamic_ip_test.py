@@ -619,58 +619,39 @@ def _clean_up():
 def test_slave_ipaddr_learned_via_dhcp_added_as_static_to_linux_bridge(
     dhcpcli_up
 ):
-    desired_state = {
-        INTERFACES: [
+    dhcpcli_up[Interface.KEY][0][Interface.IPV4] = create_ipv4_state(
+        enabled=True, dhcp=True
+    )
+
+    libnmstate.apply(dhcpcli_up)
+
+    slave_ifname = dhcpcli_up[Interface.KEY][0][Interface.NAME]
+    slave_state = statelib.show_only((slave_ifname,))
+    slave_iface_state = slave_state[INTERFACES][0]
+    dhcpcli_ip = slave_iface_state[Interface.IPV4][InterfaceIPv4.ADDRESS]
+
+    bridge_state = add_port_to_bridge(
+        create_bridge_subtree_state(), slave_ifname
+    )
+
+    ipv4_state = create_ipv4_state(enabled=True, dhcp=False)
+    ipv4_state[InterfaceIPv4.ADDRESS] = dhcpcli_ip
+    with linux_bridge(
+        'brtest0',
+        bridge_state,
+        extra_iface_state={Interface.IPV4: ipv4_state},
+        create=False,
+    ) as state:
+        state[Interface.KEY].append(
             {
-                'name': 'dhcpcli',
-                'type': 'ethernet',
-                'state': 'up',
-                'ipv4': create_ipv4_state(enabled=True, dhcp=True),
+                Interface.NAME: slave_ifname,
+                Interface.IPV4: create_ipv4_state(enabled=False),
+                Interface.IPV6: create_ipv6_state(enabled=False),
             }
-        ]
-    }
+        )
+        libnmstate.apply(state)
 
-    libnmstate.apply(desired_state)
-
-    current_state = statelib.show_only(('dhcpcli',))
-    client_current_state = current_state[INTERFACES][0]
-    dhcpcli_ip = client_current_state['ipv4'][InterfaceIPv4.ADDRESS]
-
-    bridge_desired_state = {
-        INTERFACES: [
-            {
-                'name': 'linux-br0',
-                'type': 'linux-bridge',
-                'state': 'up',
-                'ipv4': {
-                    InterfaceIPv4.ENABLED: True,
-                    InterfaceIPv4.DHCP: False,
-                    InterfaceIPv4.ADDRESS: dhcpcli_ip,
-                },
-                'bridge': {
-                    'options': {},
-                    'port': [
-                        {
-                            'name': 'dhcpcli',
-                            'stp-hairpin-mode': False,
-                            'stp-path-cost': 100,
-                            'stp-priority': 32,
-                        }
-                    ],
-                },
-            },
-            {
-                'name': 'dhcpcli',
-                'type': 'ethernet',
-                'state': 'up',
-                'ipv4': create_ipv4_state(enabled=False),
-                'ipv6': create_ipv6_state(enabled=False),
-            },
-        ]
-    }
-
-    libnmstate.apply(bridge_desired_state)
-    assertlib.assert_state(bridge_desired_state)
+        assertlib.assert_state_match(state)
 
 
 @pytest.mark.xfail(raises=NmstateNotImplementedError)
