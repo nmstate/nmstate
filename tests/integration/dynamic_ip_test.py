@@ -166,7 +166,7 @@ def iface_with_dynamic_ip_up(ifname, delay_state_time=0):
 def test_ipv4_dhcp(dhcpcli_up):
     desired_state = dhcpcli_up
     dhcp_cli_desired_state = desired_state[INTERFACES][0]
-    dhcp_cli_desired_state['state'] = 'up'
+    dhcp_cli_desired_state[Interface.STATE] = InterfaceState.UP
     dhcp_cli_desired_state[Interface.IPV4] = create_ipv4_state(
         enabled=True, dhcp=True
     )
@@ -183,7 +183,7 @@ def test_ipv4_dhcp(dhcpcli_up):
 def test_ipv6_dhcp_only(dhcpcli_up):
     desired_state = dhcpcli_up
     dhcp_cli_desired_state = desired_state[INTERFACES][0]
-    dhcp_cli_desired_state['state'] = 'up'
+    dhcp_cli_desired_state[Interface.STATE] = InterfaceState.UP
     dhcp_cli_desired_state[Interface.IPV6] = create_ipv6_state(
         enabled=True, dhcp=True, autoconf=False
     )
@@ -195,7 +195,7 @@ def test_ipv6_dhcp_only(dhcpcli_up):
     current_state = statelib.show_only((DHCP_CLI_NIC,))
     dhcp_cli_current_state = current_state[INTERFACES][0]
     has_dhcp_ip_addr = False
-    for addr in dhcp_cli_current_state['ipv6'][InterfaceIPv6.ADDRESS]:
+    for addr in dhcp_cli_current_state[Interface.IPV6][InterfaceIPv6.ADDRESS]:
         if (
             addr[InterfaceIPv6.ADDRESS_PREFIX_LENGTH] == 128
             and DHCP_SRV_IP6_PREFIX in addr[InterfaceIPv6.ADDRESS_IP]
@@ -211,7 +211,7 @@ def test_ipv6_dhcp_only(dhcpcli_up):
 def test_ipv6_dhcp_and_autoconf(dhcpcli_up):
     desired_state = dhcpcli_up
     dhcp_cli_desired_state = desired_state[INTERFACES][0]
-    dhcp_cli_desired_state['state'] = 'up'
+    dhcp_cli_desired_state[Interface.STATE] = InterfaceState.UP
     dhcp_cli_desired_state[Interface.IPV6] = create_ipv6_state(
         enabled=True, dhcp=True, autoconf=True
     )
@@ -240,9 +240,8 @@ def test_dhcp_with_addresses(dhcpcli_up):
     desired_state = {
         INTERFACES: [
             {
-                'name': DHCP_CLI_NIC,
-                'type': 'ethernet',
-                'state': 'up',
+                Interface.NAME: DHCP_CLI_NIC,
+                Interface.STATE: InterfaceState.UP,
                 Interface.IPV4: ipv4_state,
                 Interface.IPV6: ipv6_state,
             }
@@ -265,7 +264,7 @@ def test_ipv4_dhcp_on_bond(dhcpcli_up):
 def test_ipv4_dhcp_ignore_gateway(dhcpcli_up):
     desired_state = dhcpcli_up
     dhcp_cli_desired_state = desired_state[INTERFACES][0]
-    dhcp_cli_desired_state['state'] = 'up'
+    dhcp_cli_desired_state[Interface.STATE] = InterfaceState.UP
     dhcp_cli_desired_state[Interface.IPV4] = create_ipv4_state(
         enabled=True, dhcp=True, auto_gateway=False
     )
@@ -282,7 +281,7 @@ def test_ipv4_dhcp_ignore_gateway(dhcpcli_up):
 def test_ipv4_dhcp_ignore_dns(dhcpcli_up):
     desired_state = dhcpcli_up
     dhcp_cli_desired_state = desired_state[INTERFACES][0]
-    dhcp_cli_desired_state['state'] = 'up'
+    dhcp_cli_desired_state[Interface.STATE] = InterfaceState.UP
     dhcp_cli_desired_state[Interface.IPV4] = create_ipv4_state(
         enabled=True, dhcp=True, auto_dns=False
     )
@@ -298,7 +297,7 @@ def test_ipv4_dhcp_ignore_dns(dhcpcli_up):
 def test_ipv4_dhcp_ignore_routes(dhcpcli_up):
     desired_state = dhcpcli_up
     dhcp_cli_desired_state = desired_state[INTERFACES][0]
-    dhcp_cli_desired_state['state'] = 'up'
+    dhcp_cli_desired_state[Interface.STATE] = InterfaceState.UP
     dhcp_cli_desired_state[Interface.IPV4] = create_ipv4_state(
         enabled=True, dhcp=True, auto_routes=False
     )
@@ -315,7 +314,7 @@ def test_ipv4_dhcp_ignore_routes(dhcpcli_up):
 def test_ipv6_dhcp_and_autoconf_ignore_gateway(dhcpcli_up):
     desired_state = dhcpcli_up
     dhcp_cli_desired_state = desired_state[INTERFACES][0]
-    dhcp_cli_desired_state['state'] = 'up'
+    dhcp_cli_desired_state[Interface.STATE] = InterfaceState.UP
     dhcp_cli_desired_state[Interface.IPV6] = create_ipv6_state(
         enabled=True, dhcp=True, autoconf=True, auto_gateway=False
     )
@@ -332,7 +331,7 @@ def test_ipv6_dhcp_and_autoconf_ignore_gateway(dhcpcli_up):
 def test_ipv6_dhcp_and_autoconf_ignore_dns(dhcpcli_up):
     desired_state = dhcpcli_up
     dhcp_cli_desired_state = desired_state[INTERFACES][0]
-    dhcp_cli_desired_state['state'] = 'up'
+    dhcp_cli_desired_state[Interface.STATE] = InterfaceState.UP
     dhcp_cli_desired_state[Interface.IPV6] = create_ipv6_state(
         enabled=True, dhcp=True, autoconf=True, auto_dns=False
     )
@@ -349,7 +348,7 @@ def test_ipv6_dhcp_and_autoconf_ignore_dns(dhcpcli_up):
 def test_ipv6_dhcp_and_autoconf_ignore_routes(dhcpcli_up):
     desired_state = dhcpcli_up
     dhcp_cli_desired_state = desired_state[INTERFACES][0]
-    dhcp_cli_desired_state['state'] = 'up'
+    dhcp_cli_desired_state[Interface.STATE] = InterfaceState.UP
     dhcp_cli_desired_state[Interface.IPV6] = create_ipv6_state(
         enabled=True, dhcp=True, autoconf=True, auto_routes=False
     )
@@ -370,7 +369,7 @@ def test_ipv4_dhcp_off_and_option_on(dhcpcli_up):
     """
     desired_state = dhcpcli_up
     dhcp_cli_desired_state = desired_state[INTERFACES][0]
-    dhcp_cli_desired_state['state'] = 'up'
+    dhcp_cli_desired_state[Interface.STATE] = InterfaceState.UP
     ipv4_state = create_ipv4_state(
         enabled=True,
         dhcp=False,
@@ -384,10 +383,11 @@ def test_ipv4_dhcp_off_and_option_on(dhcpcli_up):
     libnmstate.apply(desired_state)
 
     dhcp_cli_current_state = statelib.show_only((DHCP_CLI_NIC,))[INTERFACES][0]
-    assert not dhcp_cli_current_state['ipv4'][InterfaceIPv4.DHCP]
-    assert InterfaceIPv4.AUTO_ROUTES not in dhcp_cli_current_state['ipv4']
-    assert InterfaceIPv4.AUTO_DNS not in dhcp_cli_current_state['ipv4']
-    assert InterfaceIPv4.AUTO_GATEWAY not in dhcp_cli_current_state['ipv4']
+    ipv4_current_state = dhcp_cli_current_state[Interface.IPV4]
+    assert not ipv4_current_state[InterfaceIPv4.DHCP]
+    assert InterfaceIPv4.AUTO_ROUTES not in ipv4_current_state
+    assert InterfaceIPv4.AUTO_DNS not in ipv4_current_state
+    assert InterfaceIPv4.AUTO_GATEWAY not in ipv4_current_state
     assert not _has_ipv4_dhcp_nameserver()
     assert not _has_ipv4_dhcp_gateway()
     assert not _has_ipv4_classless_route()
@@ -400,7 +400,7 @@ def test_ipv6_dhcp_off_and_option_on(dhcpcli_up):
     """
     desired_state = dhcpcli_up
     dhcp_cli_desired_state = desired_state[INTERFACES][0]
-    dhcp_cli_desired_state['state'] = 'up'
+    dhcp_cli_desired_state[Interface.STATE] = InterfaceState.UP
     ipv6_state = create_ipv6_state(
         enabled=True,
         dhcp=False,
@@ -415,10 +415,11 @@ def test_ipv6_dhcp_off_and_option_on(dhcpcli_up):
     libnmstate.apply(desired_state)
 
     dhcp_cli_current_state = statelib.show_only((DHCP_CLI_NIC,))[INTERFACES][0]
-    assert not dhcp_cli_current_state['ipv6'][InterfaceIPv6.DHCP]
-    assert InterfaceIPv6.AUTO_ROUTES not in dhcp_cli_current_state['ipv6']
-    assert InterfaceIPv6.AUTO_DNS not in dhcp_cli_current_state['ipv6']
-    assert InterfaceIPv6.AUTO_GATEWAY not in dhcp_cli_current_state['ipv6']
+    ipv6_current_state = dhcp_cli_current_state[Interface.IPV6]
+    assert not ipv6_current_state[InterfaceIPv6.DHCP]
+    assert InterfaceIPv6.AUTO_ROUTES not in ipv6_current_state
+    assert InterfaceIPv6.AUTO_DNS not in ipv6_current_state
+    assert InterfaceIPv6.AUTO_GATEWAY not in ipv6_current_state
     assert not _has_ipv6_auto_gateway()
     assert not _has_ipv6_auto_extra_route()
     assert not _has_ipv6_auto_nameserver()
@@ -427,7 +428,7 @@ def test_ipv6_dhcp_off_and_option_on(dhcpcli_up):
 def test_ipv4_dhcp_switch_on_to_off(dhcpcli_up):
     desired_state = dhcpcli_up
     dhcp_cli_desired_state = desired_state[INTERFACES][0]
-    dhcp_cli_desired_state['state'] = 'up'
+    dhcp_cli_desired_state[Interface.STATE] = InterfaceState.UP
     dhcp_cli_desired_state[Interface.IPV4] = create_ipv4_state(
         enabled=True, dhcp=True
     )
@@ -442,7 +443,7 @@ def test_ipv4_dhcp_switch_on_to_off(dhcpcli_up):
     # disable dhcp and make sure dns, route, gone.
     desired_state = statelib.show_only((DHCP_CLI_NIC,))
     dhcp_cli_desired_state = desired_state[INTERFACES][0]
-    dhcp_cli_desired_state['state'] = 'up'
+    dhcp_cli_desired_state[Interface.STATE] = InterfaceState.UP
     dhcp_cli_desired_state[Interface.IPV4] = create_ipv4_state(enabled=True)
 
     libnmstate.apply(desired_state)
@@ -455,7 +456,7 @@ def test_ipv4_dhcp_switch_on_to_off(dhcpcli_up):
 def test_ipv6_dhcp_switch_on_to_off(dhcpcli_up):
     desired_state = dhcpcli_up
     dhcp_cli_desired_state = desired_state[INTERFACES][0]
-    dhcp_cli_desired_state['state'] = 'up'
+    dhcp_cli_desired_state[Interface.STATE] = InterfaceState.UP
     dhcp_cli_desired_state[Interface.IPV6] = create_ipv6_state(
         enabled=True, dhcp=True, autoconf=True
     )
@@ -471,7 +472,7 @@ def test_ipv6_dhcp_switch_on_to_off(dhcpcli_up):
     # disable dhcp and make sure dns, route, gone.
     desired_state = statelib.show_only((DHCP_CLI_NIC,))
     dhcp_cli_desired_state = desired_state[INTERFACES][0]
-    dhcp_cli_desired_state['state'] = 'up'
+    dhcp_cli_desired_state[Interface.STATE] = InterfaceState.UP
     dhcp_cli_desired_state[Interface.IPV6] = create_ipv6_state(enabled=True)
 
     libnmstate.apply(desired_state)
