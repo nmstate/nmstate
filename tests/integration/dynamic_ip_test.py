@@ -527,6 +527,55 @@ def test_dhcp_on_bridge0(dhcpcli_up_with_dynamic_ip):
     assert origin_ipv6_state == new_ipv6_state
 
 
+def test_slave_ipaddr_learned_via_dhcp_added_as_static_to_linux_bridge(
+    dhcpcli_up
+):
+    dhcpcli_up[Interface.KEY][0][Interface.IPV4] = create_ipv4_state(
+        enabled=True, dhcp=True
+    )
+
+    libnmstate.apply(dhcpcli_up)
+
+    slave_ifname = dhcpcli_up[Interface.KEY][0][Interface.NAME]
+    slave_state = statelib.show_only((slave_ifname,))
+    slave_iface_state = slave_state[INTERFACES][0]
+    dhcpcli_ip = slave_iface_state[Interface.IPV4][InterfaceIPv4.ADDRESS]
+
+    bridge_state = add_port_to_bridge(
+        create_bridge_subtree_state(), slave_ifname
+    )
+
+    ipv4_state = create_ipv4_state(enabled=True, dhcp=False)
+    ipv4_state[InterfaceIPv4.ADDRESS] = dhcpcli_ip
+    with linux_bridge(
+        'brtest0',
+        bridge_state,
+        extra_iface_state={Interface.IPV4: ipv4_state},
+        create=False,
+    ) as state:
+        state[Interface.KEY].append(
+            {
+                Interface.NAME: slave_ifname,
+                Interface.IPV4: create_ipv4_state(enabled=False),
+                Interface.IPV6: create_ipv6_state(enabled=False),
+            }
+        )
+        libnmstate.apply(state)
+
+        assertlib.assert_state_match(state)
+
+
+@pytest.mark.xfail(raises=NmstateNotImplementedError)
+def test_ipv6_autoconf_only(dhcpcli_up):
+    desired_state = dhcpcli_up
+    dhcp_cli_desired_state = desired_state[INTERFACES][0]
+    dhcp_cli_desired_state[Interface.IPV6] = create_ipv6_state(
+        enabled=True, autoconf=True
+    )
+
+    libnmstate.apply(desired_state)
+
+
 def _create_veth_pair():
     assert (
         libcmd.exec_cmd(
@@ -615,55 +664,6 @@ def _clean_up():
         os.unlink(DNSMASQ_CONF_PATH)
     except (FileNotFoundError, OSError):
         pass
-
-
-def test_slave_ipaddr_learned_via_dhcp_added_as_static_to_linux_bridge(
-    dhcpcli_up
-):
-    dhcpcli_up[Interface.KEY][0][Interface.IPV4] = create_ipv4_state(
-        enabled=True, dhcp=True
-    )
-
-    libnmstate.apply(dhcpcli_up)
-
-    slave_ifname = dhcpcli_up[Interface.KEY][0][Interface.NAME]
-    slave_state = statelib.show_only((slave_ifname,))
-    slave_iface_state = slave_state[INTERFACES][0]
-    dhcpcli_ip = slave_iface_state[Interface.IPV4][InterfaceIPv4.ADDRESS]
-
-    bridge_state = add_port_to_bridge(
-        create_bridge_subtree_state(), slave_ifname
-    )
-
-    ipv4_state = create_ipv4_state(enabled=True, dhcp=False)
-    ipv4_state[InterfaceIPv4.ADDRESS] = dhcpcli_ip
-    with linux_bridge(
-        'brtest0',
-        bridge_state,
-        extra_iface_state={Interface.IPV4: ipv4_state},
-        create=False,
-    ) as state:
-        state[Interface.KEY].append(
-            {
-                Interface.NAME: slave_ifname,
-                Interface.IPV4: create_ipv4_state(enabled=False),
-                Interface.IPV6: create_ipv6_state(enabled=False),
-            }
-        )
-        libnmstate.apply(state)
-
-        assertlib.assert_state_match(state)
-
-
-@pytest.mark.xfail(raises=NmstateNotImplementedError)
-def test_ipv6_autoconf_only(dhcpcli_up):
-    desired_state = dhcpcli_up
-    dhcp_cli_desired_state = desired_state[INTERFACES][0]
-    dhcp_cli_desired_state[Interface.IPV6] = create_ipv6_state(
-        enabled=True, autoconf=True
-    )
-
-    libnmstate.apply(desired_state)
 
 
 def _get_nameservers():
