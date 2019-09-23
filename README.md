@@ -134,6 +134,13 @@ For Fedora 29+, `sudo dnf install nmstate`.
 For others distribution, please see the [install](README.install.md)
 instructions.
 
+## Limitations
+
+Please refer to [jira page][jira_limitation] for details.
+
 ## Changelog
 
 Please refer to [CHANGELOG](CHANGELOG)
+
+
+[jira_limitation]: https://nmstate.atlassian.net/issues/?filter=10003
