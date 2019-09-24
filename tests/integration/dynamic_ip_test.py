@@ -41,7 +41,9 @@ from .testlib import statelib
 from .testlib.bridgelib import add_port_to_bridge
 from .testlib.bridgelib import create_bridge_subtree_state
 from .testlib.bridgelib import linux_bridge
+from .testlib.bondlib import bond_interface
 from .testlib.statelib import INTERFACES
+from .testlib.vlan import vlan_interface
 
 
 IPV4_ADDRESS1 = '192.0.2.251'
@@ -97,6 +99,13 @@ SYSFS_DISABLE_RA_SRV = '/proc/sys/net/ipv6/conf/{}/accept_ra'.format(
     DHCP_SRV_NIC
 )
 
+TEST_BRIDGE = 'linux-br0'
+BRIDGE_PORT_CONFIG = {
+    'stp-hairpin-mode': False,
+    'stp-path-cost': 100,
+    'stp-priority': 32,
+}
+
 # Python 2 does not have FileNotFoundError and treat file not exist as IOError
 try:
     FileNotFoundError
@@ -129,6 +138,27 @@ def dhcpcli_up(dhcp_env):
 def dhcpcli_up_with_dynamic_ip(dhcp_env):
     with iface_with_dynamic_ip_up(DHCP_CLI_NIC, delay_state_time=5) as ifstate:
         yield ifstate
+
+
+@pytest.fixture
+def bond0(dhcpcli_up):
+    bond_name = 'testbond0'
+    port_name = dhcpcli_up[Interface.KEY][0][Interface.NAME]
+    with bond_interface(bond_name, [port_name], create=False) as bond0:
+        yield bond0
+
+
+@pytest.fixture
+def bond0_vlan101(bond0):
+    vlan_id = 101
+    bond_name = bond0[Interface.KEY][0][Interface.NAME]
+    vlan_port_name = '{base_iface}.{vlan_id}'.format(
+        base_iface=bond_name, vlan_id=vlan_id
+    )
+    with vlan_interface(
+        vlan_port_name, vlan_id, bond_name, create=False
+    ) as vlan101:
+        yield vlan101
 
 
 @contextmanager
@@ -574,6 +604,71 @@ def test_ipv6_autoconf_only(dhcpcli_up):
     )
 
     libnmstate.apply(desired_state)
+
+
+@pytest.mark.xfail(reason='DHCP server does not run behind vlan', strict=True)
+def test_linux_bridge_over_vlan_over_bond_over_slave_single_transaction(
+    bond0, bond0_vlan101
+):
+    bridge_name = TEST_BRIDGE
+    vlan_ifname = bond0_vlan101[Interface.KEY][0][Interface.NAME]
+    bridge_config_state = add_port_to_bridge(
+        create_bridge_subtree_state(), vlan_ifname, BRIDGE_PORT_CONFIG
+    )
+
+    bridge_ip_config = {
+        Interface.IPV4: create_ipv4_state(enabled=True, dhcp=True)
+    }
+    with linux_bridge(
+        bridge_name,
+        bridge_config_state,
+        extra_iface_state=bridge_ip_config,
+        create=False,
+    ) as bridge0:
+        desired_state = bond0
+        vlan_iface_state = bond0_vlan101[Interface.KEY][0]
+        desired_state[Interface.KEY].append(vlan_iface_state)
+        bridge_iface_state = bridge0[Interface.KEY][0]
+        desired_state[Interface.KEY].append(bridge_iface_state)
+        libnmstate.apply(desired_state)
+
+        desired_state = bridge0
+        desired_state[Interface.KEY][0][Interface.IPV4] = create_ipv4_state(
+            enabled=True, dhcp=True
+        )
+        libnmstate.apply(desired_state)
+        assertlib.assert_state_match(desired_state)
+
+    assertlib.assert_absent(bridge_name)
+
+
+@pytest.mark.xfail(reason='DHCP server does not run behind vlan', strict=True)
+def test_linux_bridge_over_vlan_over_bond_over_slave_in_multiple_transactions(
+    bond0, bond0_vlan101
+):
+    bridge_name = TEST_BRIDGE
+    vlan_ifname = bond0_vlan101[Interface.KEY][0][Interface.NAME]
+    bridge_config_state = add_port_to_bridge(
+        create_bridge_subtree_state(), vlan_ifname, BRIDGE_PORT_CONFIG
+    )
+    with linux_bridge(
+        bridge_name, bridge_config_state, create=False
+    ) as bridge0:
+        desired_state = bond0
+        vlan_iface_state = bond0_vlan101[Interface.KEY][0]
+        desired_state[Interface.KEY].append(vlan_iface_state)
+        bridge_iface_state = bridge0[Interface.KEY][0]
+        desired_state[Interface.KEY].append(bridge_iface_state)
+        libnmstate.apply(desired_state)
+
+        desired_state = bridge0
+        desired_state[Interface.KEY][0][Interface.IPV4] = create_ipv4_state(
+            enabled=True, dhcp=True
+        )
+        libnmstate.apply(desired_state)
+        assertlib.assert_state_match(desired_state)
+
+    assertlib.assert_absent(bridge_name)
 
 
 def _create_veth_pair():
