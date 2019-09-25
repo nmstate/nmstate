@@ -67,37 +67,12 @@ DHCP_SRV_IP6_NETWORK = '{}::/64'.format(DHCP_SRV_IP6_PREFIX)
 IPV6_DEFAULT_GATEWAY = '::/0'
 IPV4_DEFAULT_GATEWAY = '0.0.0.0/0'
 
-DNSMASQ_CONF_STR = """
-interface={iface}
-dhcp-range={ipv4_prefix}.200,{ipv4_prefix}.250,255.255.255.0,48h
-enable-ra
-dhcp-range={ipv6_prefix}::100,{ipv6_prefix}::fff,ra-names,slaac,64,480h
-dhcp-range={ipv6_classless_route}::100,{ipv6_classless_route}::fff,static
-dhcp-option=option:classless-static-route,{classless_rt},{classless_rt_dst}
-dhcp-option=option:dns-server,{v4_dns_server}
-""".format(
-    **{
-        'iface': DHCP_SRV_NIC,
-        'ipv4_prefix': DHCP_SRV_IP4_PREFIX,
-        'ipv6_prefix': DHCP_SRV_IP6_PREFIX,
-        'classless_rt': IPV4_CLASSLESS_ROUTE_DST_NET1,
-        'classless_rt_dst': IPV4_CLASSLESS_ROUTE_NEXT_HOP1,
-        'v4_dns_server': DHCP_SRV_IP4,
-        'ipv6_classless_route': IPV6_CLASSLESS_ROUTE_PREFIX,
-    }
-)
-
 DNSMASQ_CONF_PATH = '/etc/dnsmasq.d/nmstate.conf'
+
 # Docker does not allow NetworkManager to edit /etc/resolv.conf.
 # Have to read NetworkManager internal resolv.conf
 RESOLV_CONF_PATH = '/var/run/NetworkManager/resolv.conf'
 
-SYSFS_DISABLE_IPV6_FILE = '/proc/sys/net/ipv6/conf/{}/disable_ipv6'.format(
-    DHCP_SRV_NIC
-)
-SYSFS_DISABLE_RA_SRV = '/proc/sys/net/ipv6/conf/{}/accept_ra'.format(
-    DHCP_SRV_NIC
-)
 
 TEST_BRIDGE = 'linux-br0'
 BRIDGE_PORT_CONFIG = {
@@ -114,13 +89,35 @@ except NameError:
 
 
 @pytest.fixture(scope='module')
-def dhcp_env():
+def dhcp_veths():
+    _create_veth_pair()
     try:
-        _create_veth_pair()
+        yield
+    finally:
+        _remove_veth_pair()
+
+
+@pytest.fixture(scope='module')
+def dhcp_env(dhcp_veths):
+    try:
         _setup_dhcp_nics()
 
         with open(DNSMASQ_CONF_PATH, 'w') as fd:
-            fd.write(DNSMASQ_CONF_STR)
+            fd.write(_get_dnsmasq_config_string())
+        assert libcmd.exec_cmd(['systemctl', 'restart', 'dnsmasq'])[0] == 0
+
+        yield
+    finally:
+        _clean_up()
+
+
+@pytest.fixture(scope='module')
+def dhcp_env_vlan(dhcp_veths):
+    try:
+        dhcp_srv_iface_name = _setup_dhcp_nics(101)
+
+        with open(DNSMASQ_CONF_PATH, 'w') as fd:
+            fd.write(_get_dnsmasq_config_string(dhcp_srv_iface_name))
         assert libcmd.exec_cmd(['systemctl', 'restart', 'dnsmasq'])[0] == 0
 
         yield
@@ -135,15 +132,21 @@ def dhcpcli_up(dhcp_env):
 
 
 @pytest.fixture
+def dhcp_sb_cli_up(dhcp_env_vlan):
+    with ifacelib.iface_up(DHCP_CLI_NIC) as ifstate:
+        yield ifstate
+
+
+@pytest.fixture
 def dhcpcli_up_with_dynamic_ip(dhcp_env):
     with iface_with_dynamic_ip_up(DHCP_CLI_NIC, delay_state_time=5) as ifstate:
         yield ifstate
 
 
 @pytest.fixture
-def bond0(dhcpcli_up):
+def bond0(dhcp_sb_cli_up):
     bond_name = 'testbond0'
-    port_name = dhcpcli_up[Interface.KEY][0][Interface.NAME]
+    port_name = dhcp_sb_cli_up[Interface.KEY][0][Interface.NAME]
     with bond_interface(bond_name, [port_name], create=False) as bond0:
         yield bond0
 
@@ -606,7 +609,6 @@ def test_ipv6_autoconf_only(dhcpcli_up):
     libnmstate.apply(desired_state)
 
 
-@pytest.mark.xfail(reason='DHCP server does not run behind vlan', strict=True)
 def test_linux_bridge_over_vlan_over_bond_over_slave_single_transaction(
     bond0, bond0_vlan101
 ):
@@ -642,7 +644,6 @@ def test_linux_bridge_over_vlan_over_bond_over_slave_single_transaction(
     assertlib.assert_absent(bridge_name)
 
 
-@pytest.mark.xfail(reason='DHCP server does not run behind vlan', strict=True)
 def test_linux_bridge_over_vlan_over_bond_over_slave_in_multiple_transactions(
     bond0, bond0_vlan101
 ):
@@ -694,9 +695,38 @@ def _remove_veth_pair():
     libcmd.exec_cmd(['ip', 'link', 'del', 'dev', DHCP_SRV_NIC])
 
 
-def _setup_dhcp_nics():
+def _setup_dhcp_nics(vlan_id=None):
     assert libcmd.exec_cmd(['ip', 'link', 'set', DHCP_SRV_NIC, 'up'])[0] == 0
+
+    if vlan_id:
+        dhcp_server_iface = '{}.{}'.format(DHCP_SRV_NIC, vlan_id)
+        assert (
+            libcmd.exec_cmd(
+                [
+                    'ip',
+                    'link',
+                    'add',
+                    'link',
+                    DHCP_SRV_NIC,
+                    'name',
+                    dhcp_server_iface,
+                    'type',
+                    'vlan',
+                    'id',
+                    str(vlan_id),
+                ]
+            )[0]
+            == 0
+        )
+        assert (
+            libcmd.exec_cmd(['ip', 'link', 'set', dhcp_server_iface, 'up'])[0]
+            == 0
+        )
+    else:
+        dhcp_server_iface = DHCP_SRV_NIC
+
     assert libcmd.exec_cmd(['ip', 'link', 'set', DHCP_CLI_NIC, 'up'])[0] == 0
+
     assert (
         libcmd.exec_cmd(
             [
@@ -705,7 +735,7 @@ def _setup_dhcp_nics():
                 'add',
                 "{}/24".format(DHCP_SRV_IP4),
                 'dev',
-                DHCP_SRV_NIC,
+                dhcp_server_iface,
             ]
         )[0]
         == 0
@@ -717,10 +747,10 @@ def _setup_dhcp_nics():
         == 0
     )
     # This stop dhcp server NIC get another IPv6 address from dnsmasq.
-    with open(SYSFS_DISABLE_RA_SRV, 'w') as fd:
+    with open(_get_disable_ra_ifcfg_path(dhcp_server_iface), 'w') as fd:
         fd.write('0')
 
-    with open(SYSFS_DISABLE_IPV6_FILE, 'w') as fd:
+    with open(_get_disable_ipv6_ifcfg_path(dhcp_server_iface), 'w') as fd:
         fd.write('0')
 
     assert (
@@ -731,12 +761,11 @@ def _setup_dhcp_nics():
                 'add',
                 "{}/64".format(DHCP_SRV_IP6),
                 'dev',
-                DHCP_SRV_NIC,
+                dhcp_server_iface,
             ]
         )[0]
         == 0
     )
-
     assert (
         libcmd.exec_cmd(
             [
@@ -745,16 +774,46 @@ def _setup_dhcp_nics():
                 'add',
                 "{}/64".format(DHCP_SRV_IP6_2),
                 'dev',
-                DHCP_SRV_NIC,
+                dhcp_server_iface,
             ]
         )[0]
         == 0
     )
+    return dhcp_server_iface
+
+
+def _get_dnsmasq_config_string(iface=None):
+    return """
+interface={iface}
+dhcp-range={ipv4_prefix}.200,{ipv4_prefix}.250,255.255.255.0,48h
+enable-ra
+dhcp-range={ipv6_prefix}::100,{ipv6_prefix}::fff,ra-names,slaac,64,480h
+dhcp-range={ipv6_classless_route}::100,{ipv6_classless_route}::fff,static
+dhcp-option=option:classless-static-route,{classless_rt},{classless_rt_dst}
+dhcp-option=option:dns-server,{v4_dns_server}
+""".format(
+        **{
+            'iface': iface or DHCP_SRV_NIC,
+            'ipv4_prefix': DHCP_SRV_IP4_PREFIX,
+            'ipv6_prefix': DHCP_SRV_IP6_PREFIX,
+            'classless_rt': IPV4_CLASSLESS_ROUTE_DST_NET1,
+            'classless_rt_dst': IPV4_CLASSLESS_ROUTE_NEXT_HOP1,
+            'v4_dns_server': DHCP_SRV_IP4,
+            'ipv6_classless_route': IPV6_CLASSLESS_ROUTE_PREFIX,
+        }
+    )
+
+
+def _get_disable_ipv6_ifcfg_path(iface_name=DHCP_SRV_NIC):
+    return '/proc/sys/net/ipv6/conf/{}/disable_ipv6'.format(iface_name)
+
+
+def _get_disable_ra_ifcfg_path(iface_name=DHCP_SRV_NIC):
+    return '/proc/sys/net/ipv6/conf/{}/accept_ra'.format(iface_name)
 
 
 def _clean_up():
     libcmd.exec_cmd(['systemctl', 'stop', 'dnsmasq'])
-    _remove_veth_pair()
     try:
         os.unlink(DNSMASQ_CONF_PATH)
     except (FileNotFoundError, OSError):
