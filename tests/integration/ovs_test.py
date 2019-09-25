@@ -21,11 +21,17 @@ import pytest
 import yaml
 
 import libnmstate
+from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
+from libnmstate.schema import InterfaceType
+from libnmstate.schema import InterfaceState
+from libnmstate.schema import OVSBridge
+from libnmstate.schema import OVSBridgePortType
 from libnmstate.error import NmstateLibnmError
 
 from .testlib import statelib
 from .testlib.statelib import INTERFACES
+from .testlib import cmd as libcmd
 
 
 OVS_BRIDGE_YAML_BASE = """
@@ -40,6 +46,41 @@ interfaces:
         rstp: false
         stp: true
 """
+
+OVS_SYSTEM_IFACE_NAME = 'eth1'
+OVS_INTERNAL_IFACE_NAME = 'ovs0'
+OVS_PORT_PREFIX = 'ovs-port'
+
+
+@pytest.fixture(scope='function')
+def ovs_bridge_up(eth1_up):
+    state = yaml.load(OVS_BRIDGE_YAML_BASE, Loader=yaml.SafeLoader)
+    bridge_iface_state = state[Interface.KEY][0]
+    bridge_iface_state[OVSBridge.CONFIG_SUBTREE][OVSBridge.PORT_SUBTREE] = [
+        {
+            OVSBridge.PORT_NAME: OVS_SYSTEM_IFACE_NAME,
+            OVSBridge.PORT_TYPE: OVSBridgePortType.SYSTEM,
+        },
+        {
+            OVSBridge.PORT_NAME: OVS_INTERNAL_IFACE_NAME,
+            OVSBridge.PORT_TYPE: OVSBridgePortType.INTERNAL,
+        },
+    ]
+    state[Interface.KEY].append(
+        {
+            Interface.NAME: OVS_INTERNAL_IFACE_NAME,
+            Interface.TYPE: InterfaceType.OVS_INTERFACE,
+            Interface.STATE: InterfaceState.UP,
+        }
+    )
+    try:
+        libnmstate.apply(state)
+        yield state
+    finally:
+        libnmstate.apply(
+            {INTERFACES: [{'name': 'ovs-br0', 'state': 'absent'}]},
+            verify_change=False,
+        )
 
 
 @pytest.mark.xfail(
@@ -118,3 +159,39 @@ def test_create_and_remove_ovs_bridge_with_an_internal_port():
         (state[INTERFACES][0]['name'], state[INTERFACES][1]['name'])
     )
     assert not state[INTERFACES]
+
+
+@pytest.mark.xfail(
+    raises=NmstateLibnmError, reason='https://bugzilla.redhat.com/1724901'
+)
+def test_ovs_remove_system_interface(ovs_bridge_up):
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: OVS_SYSTEM_IFACE_NAME,
+                    Interface.STATE: InterfaceState.ABSENT,
+                }
+            ]
+        }
+    )
+    port_profile_name = OVS_PORT_PREFIX + OVS_SYSTEM_IFACE_NAME
+    assert libcmd.exec_cmd(['nmcli', 'c', 'show', port_profile_name])[0] != 0
+
+
+@pytest.mark.xfail(
+    raises=NmstateLibnmError, reason='https://bugzilla.redhat.com/1724901'
+)
+def test_ovs_remove_internal_interface(ovs_bridge_up):
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: OVS_INTERNAL_IFACE_NAME,
+                    Interface.STATE: InterfaceState.ABSENT,
+                }
+            ]
+        }
+    )
+    port_profile_name = OVS_PORT_PREFIX + OVS_INTERNAL_IFACE_NAME
+    assert libcmd.exec_cmd(['nmcli', 'c', 'show', port_profile_name])[0] != 0

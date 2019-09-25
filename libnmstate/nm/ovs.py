@@ -219,3 +219,15 @@ def _get_slave_profiles(master_device, devices_info):
             if master and (master.get_iface() == master_device.get_iface()):
                 slave_profiles.append(active_con.props.connection)
     return slave_profiles
+
+
+def is_ovs_interface(nmdev):
+    active_con = connection.get_device_active_connection(nmdev)
+    if active_con:
+        master = active_con.get_master()
+        if (
+            master
+            and master.get_device_type() == nmclient.NM.DeviceType.OVS_PORT
+        ):
+            return True
+    return False

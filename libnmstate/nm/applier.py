@@ -249,6 +249,11 @@ def _get_affected_devices(iface_state):
         iface_type = iface_state[Interface.TYPE]
         if iface_type == ovs.BRIDGE_TYPE:
             devs += _get_ovs_bridge_port_devices(iface_state)
+        elif ovs.is_ovs_interface(nmdev):
+            port_name = ovs.PORT_PROFILE_PREFIX + iface_state[Interface.NAME]
+            port_dev = device.get_device_by_name(port_name)
+            if port_dev:
+                devs.append(port_dev)
         elif iface_type == LB.TYPE:
             devs += bridge.get_slaves(nmdev)
         elif iface_type == bond.BOND_TYPE:
