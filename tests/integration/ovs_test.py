@@ -18,83 +18,72 @@
 #
 
 import pytest
-import yaml
 
-import libnmstate
+from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
+from libnmstate.schema import OVSBridge
 from libnmstate.error import NmstateLibnmError
 
-from .testlib import statelib
-from .testlib.statelib import INTERFACES
+from .testlib import assertlib
+from .testlib.ovslib import Bridge
 
 
-OVS_BRIDGE_YAML_BASE = """
-interfaces:
-  - name: ovs-br0
-    type: ovs-bridge
-    state: up
-    bridge:
-      options:
-        fail-mode: ''
-        mcast-snooping-enable: false
-        rstp: false
-        stp: true
-"""
-
-
-@pytest.mark.xfail(
-    raises=NmstateLibnmError, reason='https://bugzilla.redhat.com/1724901'
-)
-def test_create_and_remove_ovs_bridge_with_a_system_port(eth1_up):
-    state = yaml.load(OVS_BRIDGE_YAML_BASE, Loader=yaml.SafeLoader)
-    state[INTERFACES][0]['bridge']['port'] = [
-        {'name': 'eth1', 'type': 'system'}
-    ]
-    libnmstate.apply(state)
-
-    setup_remove_ovs_bridge_state = {
-        INTERFACES: [
-            {'name': 'ovs-br0', 'type': 'ovs-bridge', 'state': 'absent'}
-        ]
-    }
-    libnmstate.apply(setup_remove_ovs_bridge_state)
-    state = statelib.show_only((state[INTERFACES][0]['name'],))
-    assert not state[INTERFACES]
+BRIDGE1 = 'br1'
+PORT1 = 'ovs1'
 
 
 @pytest.mark.xfail(
     raises=NmstateLibnmError, reason='https://bugzilla.redhat.com/1724901'
 )
 def test_create_and_remove_ovs_bridge_with_min_desired_state():
-    desired_state = {
-        INTERFACES: [{'name': 'ovs-br0', 'type': 'ovs-bridge', 'state': 'up'}]
-    }
-    libnmstate.apply(desired_state)
+    with Bridge(BRIDGE1).create() as state:
+        assertlib.assert_state_match(state)
 
-    setup_remove_ovs_bridge_state = {
-        INTERFACES: [
-            {'name': 'ovs-br0', 'type': 'ovs-bridge', 'state': 'absent'}
-        ]
-    }
-    libnmstate.apply(setup_remove_ovs_bridge_state)
-    state = statelib.show_only((desired_state[INTERFACES][0]['name'],))
-    assert not state[INTERFACES]
+    assertlib.assert_absent(BRIDGE1)
 
 
 @pytest.mark.xfail(
     raises=NmstateLibnmError, reason='https://bugzilla.redhat.com/1724901'
 )
-def test_create_and_remove_ovs_bridge_with_an_internal_port():
-    state = yaml.load(OVS_BRIDGE_YAML_BASE, Loader=yaml.SafeLoader)
-    state[INTERFACES][0]['bridge']['port'] = [
-        {'name': 'ovs0', 'type': 'internal'}
-    ]
-    ovs_internal_interface_state = {
-        'name': 'ovs0',
-        'type': 'ovs-interface',
-        'state': 'up',
-        'mtu': 1500,
-        'ipv4': {
+def test_create_and_remove_ovs_bridge_options_specified():
+    bridge = Bridge(BRIDGE1)
+    bridge.set_options(
+        {
+            OVSBridge.FAIL_MODE: '',
+            OVSBridge.MCAST_SNOOPING_ENABLED: False,
+            OVSBridge.RSTP: False,
+            OVSBridge.STP: True,
+        }
+    )
+
+    with bridge.create() as state:
+        assertlib.assert_state_match(state)
+
+    assertlib.assert_absent(BRIDGE1)
+
+
+@pytest.mark.xfail(
+    raises=NmstateLibnmError, reason='https://bugzilla.redhat.com/1724901'
+)
+def test_create_and_remove_ovs_bridge_with_a_system_port(port0_up):
+    bridge = Bridge(BRIDGE1)
+    port0_name = port0_up[Interface.KEY][0][Interface.NAME]
+    bridge.add_system_port(port0_name)
+
+    with bridge.create() as state:
+        assertlib.assert_state_match(state)
+
+    assertlib.assert_absent(BRIDGE1)
+
+
+@pytest.mark.xfail(
+    raises=NmstateLibnmError, reason='https://bugzilla.redhat.com/1724901'
+)
+def test_create_and_remove_ovs_bridge_with_internal_port_and_static_ip():
+    bridge = Bridge(BRIDGE1)
+    bridge.add_internal_port(
+        PORT1,
+        {
             InterfaceIPv4.ENABLED: True,
             InterfaceIPv4.ADDRESS: [
                 {
@@ -103,18 +92,10 @@ def test_create_and_remove_ovs_bridge_with_an_internal_port():
                 }
             ],
         },
-    }
-    state[INTERFACES].append(ovs_internal_interface_state)
-    libnmstate.apply(state, verify_change=False)
-
-    setup_remove_ovs_bridge_state_and_port = {
-        INTERFACES: [
-            {'name': 'ovs-br0', 'type': 'ovs-bridge', 'state': 'absent'},
-            {'name': 'ovs', 'type': 'ovs-interface', 'state': 'absent'},
-        ]
-    }
-    libnmstate.apply(setup_remove_ovs_bridge_state_and_port)
-    state = statelib.show_only(
-        (state[INTERFACES][0]['name'], state[INTERFACES][1]['name'])
     )
-    assert not state[INTERFACES]
+
+    with bridge.create() as state:
+        assertlib.assert_state_match(state)
+
+    assertlib.assert_absent(BRIDGE1)
+    assertlib.assert_absent(PORT1)
