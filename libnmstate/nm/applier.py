@@ -37,6 +37,7 @@ from . import ovs
 from . import translator
 from . import user
 from . import vlan
+from . import vxlan
 from . import wired
 
 
@@ -124,6 +125,7 @@ def set_ifaces_admin_state(ifaces_desired_state, con_profiles=()):
     new_ifaces = _get_new_ifaces(con_profiles)
     new_ifaces_to_activate = set()
     new_vlan_ifaces_to_activate = set()
+    new_vxlan_ifaces_to_activate = set()
     new_ovs_interface_to_activate = set()
     new_ovs_port_to_activate = set()
     new_master_not_enslaved_ifaces = set()
@@ -152,6 +154,10 @@ def set_ifaces_admin_state(ifaces_desired_state, con_profiles=()):
                     new_ovs_port_to_activate.add(ifname)
                 elif iface_desired_state[Interface.TYPE] == InterfaceType.VLAN:
                     new_vlan_ifaces_to_activate.add(ifname)
+                elif (
+                    iface_desired_state[Interface.TYPE] == InterfaceType.VXLAN
+                ):
+                    new_vxlan_ifaces_to_activate.add(ifname)
                 else:
                     new_ifaces_to_activate.add(ifname)
         else:
@@ -210,6 +216,9 @@ def set_ifaces_admin_state(ifaces_desired_state, con_profiles=()):
         device.modify(dev, con_profile)
 
     for ifname in new_vlan_ifaces_to_activate:
+        device.activate(dev=None, connection_id=ifname)
+
+    for ifname in new_vxlan_ifaces_to_activate:
         device.activate(dev=None, connection_id=ifname)
 
     for dev, actions in remove_devs_actions.items():
@@ -390,6 +399,10 @@ def _build_connection_profile(iface_desired_state, base_con_profile=None):
     vlan_setting = vlan.create_setting(iface_desired_state, base_profile)
     if vlan_setting:
         settings.append(vlan_setting)
+
+    vxlan_setting = vxlan.create_setting(iface_desired_state, base_profile)
+    if vxlan_setting:
+        settings.append(vxlan_setting)
 
     new_profile = connection.ConnectionProfile()
     new_profile.create(settings)
