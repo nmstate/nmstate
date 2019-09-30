@@ -18,10 +18,12 @@
 #
 from copy import deepcopy
 
+import time
 import pytest
 import yaml
 
 import libnmstate
+from libnmstate.error import NmstateVerificationError
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
@@ -293,6 +295,20 @@ def test_linux_bridge_over_bond_over_slave_in_one_transaction(bond0):
         assertlib.assert_state_match(desired_state)
 
     assertlib.assert_absent(bridge_name)
+
+
+def test_rollback_for_linux_bridge():
+    original_state = libnmstate.show()
+    bridge_name = TEST_BRIDGE0
+    bridge_state = _create_bridge_subtree_config(())
+    with pytest.raises(NmstateVerificationError):
+        with linux_bridge(bridge_name, bridge_state) as desired_state:
+            desired_state[Interface.KEY][0]['invalid_key'] = 'foo'
+            libnmstate.apply(desired_state)
+
+    time.sleep(5)  # Give some time for NetworkManager to rollback
+    current_state = libnmstate.show()
+    assert original_state == current_state
 
 
 def _add_port_to_bridge(bridge_state, ifname):
