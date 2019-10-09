@@ -20,8 +20,11 @@
 import pytest
 
 import libnmstate
+from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
+from libnmstate.schema import InterfaceState
+from libnmstate.schema import InterfaceType
 
 from .testlib import assertlib
 from .testlib import statelib
@@ -536,4 +539,29 @@ def test_add_iface_with_same_static_ipv6_address_to_existing(
     }
     libnmstate.apply(desired_state)
 
+    assertlib.assert_state(desired_state)
+
+
+@pytest.mark.xfail(reason='https://bugzilla.redhat.com/1760800', strict=True)
+def test_add_iface_with_static_ipv6_expanded_format(eth1_up):
+    ipv6_addr_lead_zeroes = '2001:0db8:85a3:0000:0000:8a2e:0370:7331'
+    desired_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: eth1_up[Interface.KEY][0][Interface.NAME],
+                Interface.TYPE: InterfaceType.ETHERNET,
+                Interface.STATE: InterfaceState.UP,
+                Interface.IPV6: {
+                    InterfaceIPv6.ENABLED: True,
+                    InterfaceIPv6.ADDRESS: [
+                        {
+                            InterfaceIPv6.ADDRESS_IP: ipv6_addr_lead_zeroes,
+                            InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
+                        }
+                    ],
+                },
+            }
+        ]
+    }
+    libnmstate.apply(desired_state)
     assertlib.assert_state(desired_state)
