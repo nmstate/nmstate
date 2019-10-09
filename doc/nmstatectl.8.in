@@ -1,0 +1,99 @@
+.\" Manpage for nmstatectl.
+.TH nmstatectl 8 "@DATE@" "@VERSION@" "nmstatectl man page"
+.SH NAME
+nmstatectl \- A nmstate command line tool
+.SH SYNOPSIS
+.B nmstatectl show \fR[\fIINTERFACE_NAME\fR] [\fB--json\fR]
+.br
+.B nmstatectl set \fISTATE_FILE_PATH\fR [\fIOPTIONS\fR]
+.br
+.B nmstatectl edit \fR[\fIINTERFACE_NAME\fR] [\fIOPTIONS\fR]
+.br
+.B nmstatectl rollback \fR[\fICHECKPOINT_PATH\fR]
+.br
+.B nmstatectl commit \fR[\fICHECKPOINT_PATH\fR]
+.SH DESCRIPTION
+.B nmstatectl\fR is created for users who want to try out nmstate without using
+\fIlibnmstate\fR.
+.PP
+.B show
+.RS
+Query the current network state. \fIYAML\fR is the default output format. Use
+the \fB--json\fR argument to change the output format to \fIJSON\fR. To limit
+the output state to include certain interfaces only, please specify the
+interface name. Please be advised, global config like DNS will be included.
+.PP
+For multiple interface names, use comma to separate them. You can also use
+patterns for interface names:
+.RS
+.B *\fR matches everything
+.br
+.B ?\fR matches any single character
+.br
+.B [seq]\fR matches any character in seq
+.br
+.B [!seq]\fR matches any character not in seq
+.RE
+.PP
+For example, to show all interfaces starts with eth:
+.RS
+nmstatectl show eth\\*
+.br
+# The backslash is required to stop shell expanding '*' to file names.
+.RE
+.RE
+.PP
+.B set
+.RS
+Apply the network state from specified file in \fIYAML\fR or \fIJSON\fR format.
+By default, if the network state after state applied is not identical to the
+desired state, \fBnmstatectl\fR rollbacks to the state before \fBset\fR
+command. Use the \fB--no-verify\fR argument to skip the verification.
+.RE
+.PP
+.B edit
+.RS
+.B nmstatectl\fR will invoke the text editor defined by environment variable
+\fIEDITOR\fR for editing the network state in \fIYAML\fR format. Once the text
+editor quit, \fBnmstatectl\fR will try to apply it using \fB"nmstatectl set"\fR.
+.br
+If there is any syntax error, you will be asked to edit again. Multiple
+interfaces are supported, check \fIshow\fR for detail.
+.PP
+By default, if the network state after state applied is not identical to the
+desired state, \fBnmstatectl\fR rollbacks to the state before \fBedit\fR
+command. Use the \fB--no-verify\fR argument to skip the verification.
+.RE
+.PP
+.B nmstatectl\fR supports manual transaction control which allows user to
+decide whether rollback to previous (before \fB"nmstatectl set/edit"\fR) state.
+.IP \fBrollback
+rollback the network state from specified checkpoint file. \fBnmstatectl\fR
+will take the latest checkpoint if not defined as argument.
+.PP
+.B commit
+.RS
+commit the current network state. \fBnmstatectl\fR will take the latest
+checkpoint if not defined as argument.
+.RE
+.SH OPTIONS
+.B --json
+.RS
+change the output format to \fIJSON\fR.
+.RE
+.IP \fB--no-verify
+skip the desired network state verification.
+.IP \fB--no-commit
+create a checkpoint which later could be used for rollback or commit. The
+checkpoint will be the last line of \fBnmstatectl\fR output, example:
+\fI/org/freedesktop/NetworkManager/Checkpoint/1\fR.
+.IP \fB--timeout\fR=<\fITIMEOUT\fR>
+the user must commit the changes within \fItimeout\fR, or they will be
+automatically rolled back. Default: 60 seconds.
+.SH BUG REPORTS
+Report bugs on nmstate GitHub issues <https://github.com/nmstate/nmstate>.
+.SH COPYRIGHT
+License LGPL-2.1 or any later version
+<https://www.gnu.org/licenses/old-licenses/lgpl-2.1.txt>.
+.SH SEE ALSO
+.B NetworkManager\fP(8)
