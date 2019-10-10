@@ -145,7 +145,8 @@ def _apply_ifaces_state(
                     ifaces2add + ifaces2edit,
                     con_profiles=ifaces_add_configs + ifaces_edit_configs,
                 )
-            _disable_ipv6(desired_state)
+            if not nmclient.can_disable_ipv6():
+                _disable_ipv6(desired_state)
             if verify_change:
                 _verify_change(desired_state)
         if not commit:
@@ -160,7 +161,8 @@ def _apply_ifaces_state(
         # finish before proceeding with other actions.
         # TODO: https://nmstate.atlassian.net/browse/NMSTATE-103
         time.sleep(5)
-        _disable_ipv6(current_state)
+        if not nmclient.can_disable_ipv6():
+            _disable_ipv6(current_state)
         raise
 
 
