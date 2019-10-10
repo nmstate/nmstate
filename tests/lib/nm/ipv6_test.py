@@ -38,25 +38,27 @@ def NM_mock():
 
 def test_create_setting_without_config(NM_mock):
     NM_mock.SettingIP6Config.new().props.addresses = []
+    NM_mock.NM.SETTING_IP6_CONFIG_METHOD_DISABLED = 'disabled'
 
     ipv6_setting = nm.ipv6.create_setting(config=None, base_con_profile=None)
 
     assert ipv6_setting == NM_mock.SettingIP6Config.new.return_value
-    assert (
-        ipv6_setting.props.method == NM_mock.SETTING_IP6_CONFIG_METHOD_IGNORE
-    )
+    disable_method = NM_mock.SETTING_IP6_CONFIG_METHOD_DISABLED
+    assert ipv6_setting.props.method == disable_method
 
 
 def test_create_setting_with_ipv6_disabled(NM_mock):
     NM_mock.SettingIP6Config.new().props.addresses = []
+    NM_mock.NM.SETTING_IP6_CONFIG_METHOD_DISABLED = 'disabled'
 
     ipv6_setting = nm.ipv6.create_setting(
         config={InterfaceIPv6.ENABLED: False}, base_con_profile=None
     )
 
-    assert (
-        ipv6_setting.props.method == NM_mock.SETTING_IP6_CONFIG_METHOD_IGNORE
-    )
+    assert ipv6_setting == NM_mock.SettingIP6Config.new.return_value
+    disable_method = NM_mock.SETTING_IP6_CONFIG_METHOD_DISABLED
+
+    assert ipv6_setting.props.method == disable_method
 
 
 def test_create_setting_without_addresses(NM_mock):

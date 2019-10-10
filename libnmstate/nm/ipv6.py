@@ -119,7 +119,16 @@ def create_setting(config, base_con_profile):
     setting_ip.props.dhcp_duid = 'll'
 
     if not config or not config.get(InterfaceIPv6.ENABLED):
-        setting_ip.props.method = nmclient.NM.SETTING_IP6_CONFIG_METHOD_IGNORE
+        try:
+            # pylint: disable=no-member
+            setting_ip.props.method = (
+                nmclient.NM.SETTING_IP6_CONFIG_METHOD_DISABLED
+            )
+            # pylint: enable=no-member
+        except AttributeError:
+            setting_ip.props.method = (
+                nmclient.NM.SETTING_IP6_CONFIG_METHOD_IGNORE
+            )
         return setting_ip
 
     is_dhcp = config.get(InterfaceIPv6.DHCP, False)

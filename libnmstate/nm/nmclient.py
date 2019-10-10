@@ -43,6 +43,12 @@ GObject
 _mainloop = None
 _nmclient = None
 
+_can_disable_ipv6 = hasattr(NM, 'SETTING_IP6_CONFIG_METHOD_DISABLED')
+
+
+def can_disable_ipv6():
+    return _can_disable_ipv6
+
 
 def client(refresh=False):
     global _nmclient
