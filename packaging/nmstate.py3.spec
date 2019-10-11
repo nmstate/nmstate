@@ -48,6 +48,7 @@ sed -i -e '/^dbus-python$/d' requirements.txt
 %files
 %doc README.md
 %doc examples/
+%{_mandir}/man8/nmstatectl.8*
 %{python3_sitelib}/nmstatectl
 %{_bindir}/nmstatectl
 
