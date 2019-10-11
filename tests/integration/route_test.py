@@ -22,6 +22,7 @@ import pytest
 
 import libnmstate
 from libnmstate.error import NmstateNotImplementedError
+from libnmstate.error import NmstateVerificationError
 from libnmstate.schema import DNS
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
@@ -488,3 +489,21 @@ def test_apply_empty_state_preserve_routes(eth1_static_gateway_dns):
         == state[Route.KEY][Route.CONFIG]
     )
     assert current_state[DNS.KEY][DNS.CONFIG] == state[DNS.KEY][DNS.CONFIG]
+
+
+@pytest.mark.xfail(
+    raises=AssertionError,
+    reason='https://bugzilla.redhat.com/1738269',
+    strict=True,
+)
+def test_route_rollback(eth1_up):
+    libnmstate.apply({Interface.KEY: [ETH1_INTERFACE_STATE]})
+    state = libnmstate.show()
+
+    with pytest.raises(NmstateVerificationError):
+        libnmstate.apply(
+            {Interface.KEY: [{Interface.NAME: 'eth1', 'invalid_key': 'foo'}]}
+        )
+
+    state_after_rollback = libnmstate.show()
+    assert state_after_rollback == state
