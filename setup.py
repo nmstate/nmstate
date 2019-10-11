@@ -1,6 +1,7 @@
 import logging
 import setuptools
 from setuptools import setup, find_packages
+from datetime import date
 
 
 def readme():
@@ -44,6 +45,17 @@ def get_version():
     return version
 
 
+def gen_manpage():
+    manpage = ""
+    with open('doc/nmstatectl.8.in') as f:
+        manpage = f.read()
+    manpage = manpage.replace("@DATE@", date.today().strftime("%B %d, %Y"))
+    manpage = manpage.replace("@VERSION@", get_version())
+    with open('doc/nmstatectl.8', 'w') as f:
+        f.write(manpage)
+    return [('share/man/man8', ['doc/nmstatectl.8'])]
+
+
 setup(
     name='nmstate',
     version=get_version(),
@@ -60,4 +72,5 @@ setup(
         'console_scripts': ['nmstatectl = nmstatectl.nmstatectl:main']
     },
     package_data={'libnmstate': ['schemas/operational-state.yaml']},
+    data_files=gen_manpage(),
 )
