@@ -122,7 +122,6 @@ def test_get_ovs_info_with_ports_with_interfaces(
 
     assert len(info['port']) == 1
     assert 'name' in info['port'][0]
-    assert 'type' in info['port'][0]
     assert 'vlan-mode' in info['port'][0]
     assert 'access-tag' in info['port'][0]
 

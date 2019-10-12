@@ -21,7 +21,6 @@ import six
 
 from libnmstate.error import NmstateValueError
 from libnmstate.schema import OVSBridge as OB
-from libnmstate.schema import OVSBridgePortType as OBPortType
 
 from . import connection
 from . import device
@@ -184,15 +183,7 @@ def _get_bridge_port_info(port_profile, devices_info):
 
     if port_slave_names:
         iface_slave_name = port_slave_names[0]
-        iface_device = device.get_device_by_name(iface_slave_name)
-
-        if is_ovs_interface_type_id(iface_device.props.device_type):
-            port_type = OBPortType.INTERNAL
-        else:
-            port_type = OBPortType.SYSTEM
-
         port_info['name'] = iface_slave_name
-        port_info['type'] = port_type
         if vlan_mode:
             port_info['vlan-mode'] = vlan_mode
             port_info['access-tag'] = port_setting.props.tag
