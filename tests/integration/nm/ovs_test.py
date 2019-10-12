@@ -72,16 +72,24 @@ def test_create_and_remove_minimum_config_bridge(
 @pytest.mark.xfail(
     raises=MainloopTestError, reason='https://bugzilla.redhat.com/1724901'
 )
+def test_bridge_without_ports(bridge_default_config):
+    bridge_desired_state = bridge_default_config
+
+    with _bridge_interface(bridge_desired_state):
+        bridge_current_state = _get_bridge_current_state()
+        assert bridge_desired_state == bridge_current_state
+        assert bridge_current_state[OB.CONFIG_SUBTREE][OB.PORT_SUBTREE] == []
+
+    assert not _get_bridge_current_state()
+
+
+@pytest.mark.xfail(
+    raises=MainloopTestError, reason='https://bugzilla.redhat.com/1724901'
+)
 def test_bridge_with_system_port(eth1_up, bridge_default_config):
     bridge_desired_state = bridge_default_config
 
-    eth1_port = {
-        OB.PORT_NAME: 'eth1',
-        OB.PORT_TYPE: OBPortType.SYSTEM,
-        # OVS vlan/s are not yet supported.
-        # OB.PORT_VLAN_MODE: None,
-        # OB.PORT_ACCESS_TAG: 0,
-    }
+    eth1_port = {OB.PORT_NAME: 'eth1', OB.PORT_TYPE: OBPortType.SYSTEM}
 
     bridge_desired_state[OB.CONFIG_SUBTREE][OB.PORT_SUBTREE].append(eth1_port)
 
@@ -95,11 +103,32 @@ def test_bridge_with_system_port(eth1_up, bridge_default_config):
 @pytest.mark.xfail(
     raises=MainloopTestError, reason='https://bugzilla.redhat.com/1724901'
 )
-def test_bridge_with_internal_interface(eth1_up, bridge_default_config):
+def test_bridge_with_internal_interface(bridge_default_config):
     bridge_desired_state = bridge_default_config
 
     ovs_port = {OB.PORT_NAME: 'ovs0', OB.PORT_TYPE: OBPortType.INTERNAL}
 
+    bridge_desired_state[OB.CONFIG_SUBTREE][OB.PORT_SUBTREE].append(ovs_port)
+
+    with _bridge_interface(bridge_desired_state):
+        bridge_current_state = _get_bridge_current_state()
+        assert bridge_desired_state == bridge_current_state
+
+    assert not _get_bridge_current_state()
+
+
+@pytest.mark.xfail(
+    raises=MainloopTestError, reason='https://bugzilla.redhat.com/1724901'
+)
+def test_bridge_with_system_port_and_internal_interface(
+    eth1_up, bridge_default_config
+):
+    bridge_desired_state = bridge_default_config
+
+    eth1_port = {OB.PORT_NAME: 'eth1', OB.PORT_TYPE: OBPortType.SYSTEM}
+    ovs_port = {OB.PORT_NAME: 'ovs0', OB.PORT_TYPE: OBPortType.INTERNAL}
+
+    bridge_desired_state[OB.CONFIG_SUBTREE][OB.PORT_SUBTREE].append(eth1_port)
     bridge_desired_state[OB.CONFIG_SUBTREE][OB.PORT_SUBTREE].append(ovs_port)
 
     with _bridge_interface(bridge_desired_state):
