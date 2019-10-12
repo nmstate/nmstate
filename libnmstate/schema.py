@@ -214,11 +214,5 @@ class OVSBridge(object):
 
     PORT_SUBTREE = 'port'
     PORT_NAME = 'name'
-    PORT_TYPE = 'type'
     PORT_VLAN_MODE = 'vlan-mode'
     PORT_ACCESS_TAG = 'access-tag'
-
-
-class OVSBridgePortType(object):
-    SYSTEM = 'system'
-    INTERNAL = 'internal'

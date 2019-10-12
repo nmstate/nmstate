@@ -25,10 +25,9 @@ from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import OVSBridge
-from libnmstate.schema import OVSBridgePortType
 
 
-class Bridge:
+class Bridge(object):
     def __init__(self, name):
         self._name = name
         self._ifaces = [
@@ -46,10 +45,10 @@ class Bridge:
         ] = options
 
     def add_system_port(self, name):
-        self._add_port(name, OVSBridgePortType.SYSTEM)
+        self._add_port(name)
 
     def add_internal_port(self, name, ipv4_state):
-        self._add_port(name, OVSBridgePortType.INTERNAL)
+        self._add_port(name)
         self._ifaces.append(
             {
                 Interface.NAME: name,
@@ -58,10 +57,10 @@ class Bridge:
             }
         )
 
-    def _add_port(self, name, _type):
+    def _add_port(self, name):
         self._bridge_iface[OVSBridge.CONFIG_SUBTREE].setdefault(
             OVSBridge.PORT_SUBTREE, []
-        ).append({OVSBridge.PORT_NAME: name, OVSBridge.PORT_TYPE: _type})
+        ).append({OVSBridge.PORT_NAME: name})
 
     @contextmanager
     def create(self):

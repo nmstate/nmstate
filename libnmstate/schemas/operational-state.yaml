@@ -283,8 +283,6 @@ definitions:
                 properties:
                   name:
                     type: string
-                  type:
-                    type: string
                   vlan-mode:
                     type: string
                   access-tag:

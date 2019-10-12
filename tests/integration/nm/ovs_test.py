@@ -23,7 +23,6 @@ import pytest
 
 from libnmstate import nm
 from libnmstate.schema import OVSBridge as OB
-from libnmstate.schema import OVSBridgePortType as OBPortType
 
 from .testlib import mainloop
 from .testlib import MainloopTestError
@@ -77,7 +76,6 @@ def test_bridge_with_system_port(eth1_up, bridge_default_config):
 
     eth1_port = {
         OB.PORT_NAME: 'eth1',
-        OB.PORT_TYPE: OBPortType.SYSTEM,
         # OVS vlan/s are not yet supported.
         # OB.PORT_VLAN_MODE: None,
         # OB.PORT_ACCESS_TAG: 0,
@@ -95,10 +93,10 @@ def test_bridge_with_system_port(eth1_up, bridge_default_config):
 @pytest.mark.xfail(
     raises=MainloopTestError, reason='https://bugzilla.redhat.com/1724901'
 )
-def test_bridge_with_internal_interface(eth1_up, bridge_default_config):
+def test_bridge_with_internal_interface(bridge_default_config):
     bridge_desired_state = bridge_default_config
 
-    ovs_port = {OB.PORT_NAME: 'ovs0', OB.PORT_TYPE: OBPortType.INTERNAL}
+    ovs_port = {OB.PORT_NAME: 'ovs0'}
 
     bridge_desired_state[OB.CONFIG_SUBTREE][OB.PORT_SUBTREE].append(ovs_port)
 
@@ -149,11 +147,18 @@ def _attach_port_to_bridge(port_state):
     port_profile_name = nm.ovs.PORT_PROFILE_PREFIX + port_state[OB.PORT_NAME]
 
     _create_proxy_port(port_profile_name, port_state)
-    if port_state[OB.PORT_TYPE] == OBPortType.SYSTEM:
-        _connect_interface(port_profile_name, port_state)
-    elif port_state[OB.PORT_TYPE] == OBPortType.INTERNAL:
+    if _is_internal_interface(port_state[OB.PORT_NAME]):
         iface_name = port_state[OB.PORT_NAME]
         _create_internal_interface(iface_name, master_name=port_profile_name)
+    else:
+        _connect_interface(port_profile_name, port_state)
+
+
+def _is_internal_interface(iface_name):
+    dev = nm.device.get_device_by_name(iface_name)
+    if not dev:
+        return True
+    return dev.get_device_type() == nm.nmclient.NM.DeviceType.OVS_INTERFACE
 
 
 def _create_internal_interface(iface_name, master_name):

@@ -30,7 +30,6 @@ from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import InterfaceState
-from libnmstate.schema import OVSBridgePortType as OBPortType
 from libnmstate.schema import Route
 
 
@@ -339,10 +338,7 @@ class TestDesiredStateOvsMetadata(object):
                         'type': TYPE_OVS_BR,
                         'state': 'up',
                         'bridge': {
-                            'port': [
-                                {'name': 'eth0', 'type': OBPortType.SYSTEM},
-                                {'name': 'eth1', 'type': OBPortType.SYSTEM},
-                            ]
+                            'port': [{'name': 'eth0'}, {'name': 'eth1'}]
                         },
                     },
                     {'name': 'eth0', 'type': 'unknown'},
@@ -378,10 +374,7 @@ class TestDesiredStateOvsMetadata(object):
                         'type': TYPE_OVS_BR,
                         'state': 'up',
                         'bridge': {
-                            'port': [
-                                {'name': 'eth0', 'type': OBPortType.SYSTEM},
-                                {'name': 'eth1', 'type': OBPortType.SYSTEM},
-                            ]
+                            'port': [{'name': 'eth0'}, {'name': 'eth1'}]
                         },
                     }
                 ]
@@ -431,10 +424,7 @@ class TestDesiredStateOvsMetadata(object):
                         'type': TYPE_OVS_BR,
                         'state': 'up',
                         'bridge': {
-                            'port': [
-                                {'name': 'eth0', 'type': OBPortType.SYSTEM},
-                                {'name': 'eth1', 'type': OBPortType.SYSTEM},
-                            ]
+                            'port': [{'name': 'eth0'}, {'name': 'eth1'}]
                         },
                     },
                     {'name': 'eth0', 'type': 'unknown'},
@@ -459,10 +449,7 @@ class TestDesiredStateOvsMetadata(object):
                         'type': TYPE_OVS_BR,
                         'state': 'up',
                         'bridge': {
-                            'port': [
-                                {'name': 'eth0', 'type': OBPortType.SYSTEM},
-                                {'name': 'eth1', 'type': OBPortType.SYSTEM},
-                            ]
+                            'port': [{'name': 'eth0'}, {'name': 'eth1'}]
                         },
                     },
                     {'name': 'eth1', 'state': 'up', 'type': 'unknown'},
@@ -503,11 +490,7 @@ class TestDesiredStateOvsMetadata(object):
                         'name': OVS_NAME,
                         'type': TYPE_OVS_BR,
                         'state': 'up',
-                        'bridge': {
-                            'port': [
-                                {'name': 'eth0', 'type': OBPortType.SYSTEM}
-                            ]
-                        },
+                        'bridge': {'port': [{'name': 'eth0'}]},
                     }
                 ]
             }
@@ -520,10 +503,7 @@ class TestDesiredStateOvsMetadata(object):
                         'type': TYPE_OVS_BR,
                         'state': 'up',
                         'bridge': {
-                            'port': [
-                                {'name': 'eth0', 'type': OBPortType.SYSTEM},
-                                {'name': 'eth1', 'type': OBPortType.SYSTEM},
-                            ]
+                            'port': [{'name': 'eth0'}, {'name': 'eth1'}]
                         },
                     },
                     {'name': 'eth0', 'state': 'up', 'type': 'unknown'},
@@ -562,10 +542,7 @@ class TestDesiredStateOvsMetadata(object):
                         'type': TYPE_OVS_BR,
                         'state': 'up',
                         'bridge': {
-                            'port': [
-                                {'name': 'eth0', 'type': OBPortType.SYSTEM},
-                                {'name': 'eth1', 'type': OBPortType.SYSTEM},
-                            ]
+                            'port': [{'name': 'eth0'}, {'name': 'eth1'}]
                         },
                     },
                     {'name': 'eth0', 'type': 'unknown'},
@@ -595,11 +572,7 @@ class TestDesiredStateOvsMetadata(object):
                         'name': OVS2_NAME,
                         'type': TYPE_OVS_BR,
                         'state': 'up',
-                        'bridge': {
-                            'port': [
-                                {'name': 'eth0', 'type': OBPortType.SYSTEM}
-                            ]
-                        },
+                        'bridge': {'port': [{'name': 'eth0'}]},
                     }
                 ]
             }
@@ -612,10 +585,7 @@ class TestDesiredStateOvsMetadata(object):
                         'type': TYPE_OVS_BR,
                         'state': 'up',
                         'bridge': {
-                            'port': [
-                                {'name': 'eth0', 'type': OBPortType.SYSTEM},
-                                {'name': 'eth1', 'type': OBPortType.SYSTEM},
-                            ]
+                            'port': [{'name': 'eth0'}, {'name': 'eth1'}]
                         },
                     },
                     {'name': 'eth0', 'state': 'up', 'type': 'unknown'},
