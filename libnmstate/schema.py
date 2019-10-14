@@ -38,6 +38,7 @@ class Interface(object):
     NAME = 'name'
     TYPE = 'type'
     STATE = 'state'
+    DESCRIPTION = 'description'
 
     IPV4 = 'ipv4'
     IPV6 = 'ipv6'
