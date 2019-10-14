@@ -132,6 +132,21 @@ class TestAssertIfaceState(object):
 
         desired_state.verify_interfaces(current_state)
 
+    def test_description_is_empty(self):
+        desired_state = self._base_state
+        current_state = self._base_state
+        desired_state.interfaces['foo-name'][Interface.DESCRIPTION] = ''
+
+        desired_state.verify_interfaces(current_state)
+
+    def test_description_is_not_empty(self):
+        desired_state = self._base_state
+        current_state = self._base_state
+        desired_state.interfaces['foo-name'][Interface.DESCRIPTION] = 'bar'
+        current_state.interfaces['foo-name'][Interface.DESCRIPTION] = 'bar'
+
+        desired_state.verify_interfaces(current_state)
+
     @property
     def _base_state(self):
         return state.State(
