@@ -36,7 +36,8 @@ Please follow these steps to have your contribution considered by the maintainer
 
 - Nmstate is written primarily in Python, and its coding style should follow
   the best practices of Python coding unless otherwise declared.
-- Nmstate uses [black](https://github.com/python/black) code formatter.
+- Nmstate uses the [black](https://github.com/python/black) code formatter
+  (except for string normalization).
 - PEP8 is holy.
 - Tests are holy.
   Production code must be covered by unit tests and/or basic integration tests.
