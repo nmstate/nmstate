@@ -26,4 +26,4 @@ RUN yum -y upgrade && \
         python-setuptools \
     && \
     yum clean all && \
-    bash ./docker_sys_config.sh && rm ./docker_sys_config -f
+    bash ./docker_sys_config.sh && rm ./docker_sys_config.sh -f
