@@ -27,7 +27,7 @@ Please follow these steps to have your contribution considered by the maintainer
 1. Run and pass the unit tests and integration tests locally.
 2. Follow the instructions on
 [how to open a PR](https://opensource.guide/how-to-contribute/#opening-a-pull-request).
-3. Follow the [Coding and Style Guidelines](#Coding and Style Guidelines).
+3. Follow the [Coding and Style Guidelines](#Coding-and-Style-Guidelines).
 4. After you submit your pull request, verify that all
 [status checks](https://help.github.com/articles/about-status-checks/) are passing.
 
