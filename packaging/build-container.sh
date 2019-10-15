@@ -78,7 +78,8 @@ do
             centos7-nmstate-base \
             centos7-nmstate-dev \
             centos7-nmstate \
-            fedora-nmstate-dev
+            fedora-nmstate-dev \
+            centos8-nmstate-dev
         do
             rebuild_container "${extra_args}" "${container_name}"
         done
