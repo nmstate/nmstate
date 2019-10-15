@@ -9,7 +9,9 @@ COPY docker_enable_systemd.sh docker_sys_config.sh ./
 
 RUN bash ./docker_enable_systemd.sh && rm ./docker_enable_systemd.sh -f
 
-RUN yum -y upgrade && \
+RUN yum -y install yum-plugin-copr && \
+    yum -y copr enable nmstate/ovs-el7 && \
+    yum -y upgrade && \
     yum -y install \
         NetworkManager \
         NetworkManager-libnm \
