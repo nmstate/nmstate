@@ -23,7 +23,7 @@ from libnmstate import nm
 from libnmstate import schema
 
 from .testlib import mainloop
-from .testlib import TestMainloopError
+from .testlib import MainloopTestError
 
 
 ETH1 = 'eth1'
@@ -59,7 +59,7 @@ def _test_interface_mtu_change(apply_operation):
 
 
 def test_interface_mac_change_with_reapply_fails(eth1_up):
-    with pytest.raises(TestMainloopError):
+    with pytest.raises(MainloopTestError):
         _test_interface_mac_change(nm.device.reapply)
 
 

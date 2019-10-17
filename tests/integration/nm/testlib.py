@@ -22,7 +22,7 @@ import functools
 from libnmstate import nm
 
 
-class TestMainloopError(Exception):
+class MainloopTestError(Exception):
     pass
 
 
@@ -33,7 +33,7 @@ def mainloop():
     success = mloop.run(timeout=15)
     if not success:
         nm.nmclient.mainloop(refresh=True)
-        raise TestMainloopError(mloop.error)
+        raise MainloopTestError(mloop.error)
 
 
 def mainloop_run(func):
