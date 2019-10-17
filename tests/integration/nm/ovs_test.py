@@ -26,7 +26,7 @@ from libnmstate.schema import OVSBridge as OB
 from libnmstate.schema import OVSBridgePortType as OBPortType
 
 from .testlib import mainloop
-from .testlib import TestMainloopError
+from .testlib import MainloopTestError
 
 
 BRIDGE0 = 'brtest0'
@@ -54,7 +54,7 @@ def bridge_default_config():
 
 
 @pytest.mark.xfail(
-    raises=TestMainloopError, reason='https://bugzilla.redhat.com/1724901'
+    raises=MainloopTestError, reason='https://bugzilla.redhat.com/1724901'
 )
 def test_create_and_remove_minimum_config_bridge(
     bridge_minimum_config, bridge_default_config
@@ -70,7 +70,7 @@ def test_create_and_remove_minimum_config_bridge(
 
 
 @pytest.mark.xfail(
-    raises=TestMainloopError, reason='https://bugzilla.redhat.com/1724901'
+    raises=MainloopTestError, reason='https://bugzilla.redhat.com/1724901'
 )
 def test_bridge_with_system_port(eth1_up, bridge_default_config):
     bridge_desired_state = bridge_default_config
@@ -93,7 +93,7 @@ def test_bridge_with_system_port(eth1_up, bridge_default_config):
 
 
 @pytest.mark.xfail(
-    raises=TestMainloopError, reason='https://bugzilla.redhat.com/1724901'
+    raises=MainloopTestError, reason='https://bugzilla.redhat.com/1724901'
 )
 def test_bridge_with_internal_interface(eth1_up, bridge_default_config):
     bridge_desired_state = bridge_default_config
