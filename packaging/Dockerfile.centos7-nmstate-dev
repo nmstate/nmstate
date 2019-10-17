@@ -11,7 +11,7 @@ RUN yum -y install \
         dhclient \
     && yum clean all
 
-RUN pip install --upgrade pip pytest==4.2.1 pytest-cov==2.6.1
+RUN pip install --upgrade pip pytest==4.6.6 pytest-cov==2.8.1
 
 RUN pip3 install --user python-coveralls
 
