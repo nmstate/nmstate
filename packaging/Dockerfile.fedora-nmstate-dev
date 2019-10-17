@@ -29,8 +29,6 @@ RUN dnf -y install --setopt=install_weak_deps=False \
                    git \
                    iproute \
                    python3-coveralls \
-                   python3-pytest \
-                   python3-pytest-cov \
                    python3-tox \
                    rpm-build \
                    \
@@ -49,6 +47,7 @@ RUN dnf -y install --setopt=install_weak_deps=False \
     alternatives --install /usr/bin/python python /usr/bin/python3 1 && \
     ln -s /usr/bin/pytest-3 /usr/bin/pytest && \
     dnf clean all && \
+    pip3 install --upgrade pip pytest==4.6.6 pytest-cov==2.8.1 && \
     bash ./docker_sys_config.sh && rm ./docker_sys_config.sh
 
 VOLUME [ "/sys/fs/cgroup" ]
