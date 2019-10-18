@@ -19,11 +19,14 @@
 
 import pytest
 
+import libnmstate
+
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import OVSBridge
 from libnmstate.error import NmstateLibnmError
 
+from .testlib import statelib
 from .testlib import assertlib
 from .testlib.ovslib import Bridge
 
@@ -72,6 +75,9 @@ def test_create_and_remove_ovs_bridge_with_a_system_port(port0_up):
 
     with bridge.create() as state:
         assertlib.assert_state_match(state)
+
+        filtered_state = statelib.filter_current_state(state)
+        assert Interface.MAC in filtered_state['interfaces'][0]
 
     assertlib.assert_absent(BRIDGE1)
 
