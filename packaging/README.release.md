@@ -74,7 +74,9 @@ python3 -m twine upload dist/*
 
 ## Post Release
 
-* Create a pull request with increased version number in the `VERSION` file.
+* Create a pull request with increased version number in the `VERSION` file and
+  merge it before any other PR. This is necessary to ensure that the
+  development RPMs are newer than the stable version in distributions.
 
 * Send out a notification to the network manager mailing list
 
