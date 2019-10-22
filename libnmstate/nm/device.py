@@ -219,13 +219,17 @@ def _mtu_changed(dev, connection_profile):
 def _ipv6_changed(dev, connection_profile):
     """
     Detecting that the IPv6 method changed is not possible at this stage,
-    therefore, if IPv6 is defined (i.e. the method if not 'ignore'), IPv6 is
-    considered as changed.
+    therefore, if IPv6 is defined (i.e. the method if not 'ignore' or
+    'disabled'), IPv6 is considered as changed.
     """
     ipv6_setting = connection_profile.get_setting_ip6_config()
     if ipv6_setting:
-        ignore = nmclient.NM.SETTING_IP6_CONFIG_METHOD_IGNORE
-        return ipv6_setting.props.method != ignore
+        methods = [nmclient.NM.SETTING_IP6_CONFIG_METHOD_IGNORE]
+        if nmclient.can_disable_ipv6():
+            # pylint: disable=no-member
+            methods.append(nmclient.NM.SETTING_IP6_CONFIG_METHOD_DISABLED)
+            # pylint: enable=no-member
+        return ipv6_setting.props.method not in methods
     return False
 
 
