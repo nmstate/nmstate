@@ -30,9 +30,11 @@ import six
 
 import libnmstate
 from libnmstate.schema import Constants
+from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIP
 from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
+from libnmstate.state import canonicalize_ipv6_addr
 
 
 INTERFACES = Constants.INTERFACES
@@ -117,12 +119,26 @@ class State(object):
         self._ignore_ipv6_link_local()
         self._sort_ip_addresses()
         self._sort_interfaces_by_name()
+        self._canonicalize_iface_ipv6_addresses()
 
     def match(self, other):
         return _state_match(self.state, other.state)
 
     def _sort_interfaces_by_name(self):
         self._state[INTERFACES].sort(key=lambda d: d['name'])
+
+    def _canonicalize_iface_ipv6_addresses(self):
+        for iface_state in self.state[Interface.KEY]:
+            iface_ipv6_state = iface_state.get(Interface.IPV6)
+            if iface_ipv6_state:
+                iface_ipv6_addresses_state = iface_ipv6_state.get(
+                    InterfaceIP.ADDRESS
+                )
+                if iface_ipv6_addresses_state:
+                    iface_ipv6_state[InterfaceIP.ADDRESS] = [
+                        canonicalize_ipv6_addr(iface_ipv6_addr)
+                        for iface_ipv6_addr in iface_ipv6_addresses_state
+                    ]
 
     def remove_absent_entries(self):
         self._state[INTERFACES] = [

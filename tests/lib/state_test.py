@@ -147,6 +147,31 @@ class TestAssertIfaceState(object):
 
         desired_state.verify_interfaces(current_state)
 
+    def test_accept_expanded_ipv6_notation(self):
+        desired_state = self._base_state
+        current_state = self._base_state
+        expanded_ipv6_addr = '2001:0db8:85a3:0000:0000:8a2e:0370:7331'
+
+        desired_state.interfaces['foo-name']['ipv6'] = {
+            InterfaceIPv6.ADDRESS: [
+                {
+                    InterfaceIPv6.ADDRESS_IP: expanded_ipv6_addr,
+                    InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
+                }
+            ],
+            InterfaceIPv6.ENABLED: True,
+        }
+        current_state.interfaces['foo-name']['ipv6'] = {
+            InterfaceIPv6.ADDRESS: [
+                {
+                    InterfaceIPv6.ADDRESS_IP: '2001:db8:85a3::8a2e:370:7331',
+                    InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
+                }
+            ],
+            InterfaceIPv6.ENABLED: True,
+        }
+        desired_state.verify_interfaces(current_state)
+
     @property
     def _base_state(self):
         return state.State(
