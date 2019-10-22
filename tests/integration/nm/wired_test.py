@@ -29,7 +29,7 @@ from .testlib import MainloopTestError
 ETH1 = 'eth1'
 
 MAC0 = '02:FF:FF:FF:FF:00'
-MTU0 = 1200
+MTU0 = 1290
 
 
 @pytest.mark.xfail(reason='https://bugzilla.redhat.com/1702657', strict=True)

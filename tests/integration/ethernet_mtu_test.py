@@ -32,6 +32,8 @@ from .testlib import assertlib
 from .testlib import statelib
 from .testlib.statelib import INTERFACES
 from .testlib.vlan import vlan_interface
+from .testlib.nm import nm_version
+from .testlib.nm import current_nm_version
 
 
 @pytest.fixture(scope='function', autouse=True)
@@ -155,3 +157,22 @@ def test_set_mtu_on_two_vlans_with_a_shared_base(eth1_up):
         libnmstate.apply(desired_state)
 
         assertlib.assert_state(desired_state)
+
+
+def _has_mtu_bug_1753128():
+    return nm_version(1, 20, 0) <= current_nm_version() < nm_version(1, 20, 4)
+
+
+@pytest.mark.xfail(
+    strict=_has_mtu_bug_1753128(),
+    raises=NmstateVerificationError,
+    reason='https://bugzilla.redhat.com/1753128',
+)
+def test_mtu_lower_than_min_ipv6_iface_mtu_with_ipv6_disabled(eth1_up):
+    state = statelib.show_only(('eth1',))
+    ifstate = state[schema.Interface.KEY][0]
+    ifstate[schema.Interface.IPV6][schema.InterfaceIPv6.ENABLED] = False
+    ifstate[schema.Interface.MTU] = 1279
+
+    libnmstate.apply(state)
+    assertlib.assert_state(state)
