@@ -32,9 +32,6 @@ BRIDGE1 = 'br1'
 PORT1 = 'ovs1'
 
 
-@pytest.mark.xfail(
-    raises=NmstateLibnmError, reason='https://bugzilla.redhat.com/1724901'
-)
 def test_create_and_remove_ovs_bridge_with_min_desired_state():
     with Bridge(BRIDGE1).create() as state:
         assertlib.assert_state_match(state)
@@ -42,9 +39,6 @@ def test_create_and_remove_ovs_bridge_with_min_desired_state():
     assertlib.assert_absent(BRIDGE1)
 
 
-@pytest.mark.xfail(
-    raises=NmstateLibnmError, reason='https://bugzilla.redhat.com/1724901'
-)
 def test_create_and_remove_ovs_bridge_options_specified():
     bridge = Bridge(BRIDGE1)
     bridge.set_options(
@@ -62,9 +56,6 @@ def test_create_and_remove_ovs_bridge_options_specified():
     assertlib.assert_absent(BRIDGE1)
 
 
-@pytest.mark.xfail(
-    raises=NmstateLibnmError, reason='https://bugzilla.redhat.com/1724901'
-)
 def test_create_and_remove_ovs_bridge_with_a_system_port(port0_up):
     bridge = Bridge(BRIDGE1)
     port0_name = port0_up[Interface.KEY][0][Interface.NAME]
@@ -76,9 +67,6 @@ def test_create_and_remove_ovs_bridge_with_a_system_port(port0_up):
     assertlib.assert_absent(BRIDGE1)
 
 
-@pytest.mark.xfail(
-    raises=NmstateLibnmError, reason='https://bugzilla.redhat.com/1724901'
-)
 def test_create_and_remove_ovs_bridge_with_internal_port_and_static_ip():
     bridge = Bridge(BRIDGE1)
     bridge.add_internal_port(
