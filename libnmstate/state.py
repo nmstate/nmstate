@@ -27,6 +27,7 @@ except ImportError:
 from collections import defaultdict
 import copy
 from functools import total_ordering
+from ipaddress import ip_address
 from operator import itemgetter
 
 import six
@@ -449,6 +450,17 @@ class State(object):
                 }
             }
             dict_update(new_state, ifstate)
+            ipv6_addrs = new_state[Interface.IPV6].get(
+                InterfaceIPv6.ADDRESS, []
+            )
+            if ipv6_addrs:
+                compressed_addresses = [
+                    canonicalize_ipv6_addr(ipv6_addr)
+                    for ipv6_addr in ipv6_addrs
+                ]
+                new_state[Interface.IPV6][
+                    InterfaceIPv6.ADDRESS
+                ] = compressed_addresses
             self._ifaces_state[ifstate[Interface.NAME]] = new_state
 
     def _remove_iface_ipv6_link_local_addr(self):
@@ -558,6 +570,18 @@ def _validate_routes(
                 raise NmstateValueError(
                     'Cannot set IPv4 route when IPv4 is disabled'
                 )
+
+
+def canonicalize_ipv6_addr(ipv6_address_prefix_len):
+    ipv6_address = ipv6_address_prefix_len[InterfaceIPv6.ADDRESS_IP]
+    ipv6_iface = ip_address(six.u(ipv6_address))
+
+    return {
+        InterfaceIPv6.ADDRESS_IP: str(ipv6_iface),
+        InterfaceIPv6.ADDRESS_PREFIX_LENGTH: ipv6_address_prefix_len[
+            InterfaceIPv6.ADDRESS_PREFIX_LENGTH
+        ],
+    }
 
 
 def _get_iface_enable_states(desire_state, current_state):
