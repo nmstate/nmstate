@@ -286,8 +286,10 @@ add_extra_networks
 dump_network_info
 
 pyclean
-docker_exec "cp -rf $CONTAINER_WORKSPACE /tmp/"
-# Change workspace to keep the original one clean
-CONTAINER_WORKSPACE="/tmp/nmstate"
+if [[ "$CI" != "true" ]];then
+    docker_exec "cp -rf $CONTAINER_WORKSPACE /tmp/"
+    # Change workspace to keep the original one clean
+    CONTAINER_WORKSPACE="/tmp/nmstate"
+fi
 install_nmstate
 run_tests
