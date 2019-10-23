@@ -24,7 +24,6 @@ from libnmstate.schema import Route
 from libnmstate.schema import Interface
 
 from . import statelib
-from .statelib import INTERFACES
 
 
 def assert_state(desired_state_data):
@@ -40,7 +39,7 @@ def assert_absent(*ifnames):
     """ Assert that a interface is not present in the current state """
 
     current_state = statelib.show_only(ifnames)
-    assert not current_state[INTERFACES]
+    assert not current_state[Interface.KEY]
 
 
 def assert_state_match(desired_state_data):

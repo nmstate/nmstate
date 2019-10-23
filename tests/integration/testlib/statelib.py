@@ -29,22 +29,23 @@ from operator import itemgetter
 import six
 
 import libnmstate
-from libnmstate.schema import Constants
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIP
 from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
+from libnmstate.schema import InterfaceState
+from libnmstate.schema import Bond
+from libnmstate.schema import LinuxBridge
 from libnmstate.state import canonicalize_ipv6_addr
-
-
-INTERFACES = Constants.INTERFACES
 
 
 def show_only(ifnames):
     """
     Report the current state, filtering based on the given interface names.
     """
-    base_filter_state = {INTERFACES: [{'name': ifname} for ifname in ifnames]}
+    base_filter_state = {
+        Interface.KEY: [{Interface.NAME: ifname} for ifname in ifnames]
+    }
     current_state = State(libnmstate.show())
     current_state.filter(base_filter_state)
     return current_state.state
@@ -78,7 +79,8 @@ class State(object):
         In case there are no entities for filtering, all are reported.
         """
         base_iface_names = {
-            ifstate['name'] for ifstate in based_on_state[INTERFACES]
+            ifstate[Interface.NAME]
+            for ifstate in based_on_state[Interface.KEY]
         }
 
         if not base_iface_names:
@@ -86,20 +88,20 @@ class State(object):
 
         filtered_iface_state = [
             ifstate
-            for ifstate in self._state[INTERFACES]
-            if ifstate['name'] in base_iface_names
+            for ifstate in self._state[Interface.KEY]
+            if ifstate[Interface.NAME] in base_iface_names
         ]
-        self._state = {INTERFACES: filtered_iface_state}
+        self._state = {Interface.KEY: filtered_iface_state}
 
     def update(self, other_state):
         """
         Given the other_state, update the state with the other_state data.
         """
         other_state = copy.deepcopy(other_state)
-        other_interfaces_state = other_state[INTERFACES]
+        other_interfaces_state = other_state[Interface.KEY]
 
-        for base_iface_state in self._state[INTERFACES]:
-            ifname = base_iface_state['name']
+        for base_iface_state in self._state[Interface.KEY]:
+            ifname = base_iface_state[Interface.NAME]
             other_iface_state = _lookup_iface_state_by_name(
                 other_interfaces_state, ifname
             )
@@ -125,7 +127,7 @@ class State(object):
         return _state_match(self.state, other.state)
 
     def _sort_interfaces_by_name(self):
-        self._state[INTERFACES].sort(key=lambda d: d['name'])
+        self._state[Interface.KEY].sort(key=lambda d: d[Interface.NAME])
 
     def _canonicalize_iface_ipv6_addresses(self):
         for iface_state in self.state[Interface.KEY]:
@@ -141,42 +143,48 @@ class State(object):
                     ]
 
     def remove_absent_entries(self):
-        self._state[INTERFACES] = [
+        self._state[Interface.KEY] = [
             ifstate
-            for ifstate in self._state[INTERFACES]
-            if ifstate.get('state') != 'absent'
+            for ifstate in self._state[Interface.KEY]
+            if ifstate.get(Interface.STATE) != InterfaceState.ABSENT
         ]
 
     def _sort_iface_lag_slaves(self):
-        for ifstate in self._state[INTERFACES]:
-            ifstate.get('link-aggregation', {}).get('slaves', []).sort()
+        for ifstate in self._state[Interface.KEY]:
+            ifstate.get(Bond.CONFIG_SUBTREE, {}).get(Bond.SLAVES, []).sort()
 
     def _sort_iface_bridge_ports(self):
-        for ifstate in self._state[INTERFACES]:
-            ifstate.get('bridge', {}).get('port', []).sort(
-                key=itemgetter('name')
-            )
+        for ifstate in self._state[Interface.KEY]:
+            ifstate.get(LinuxBridge.CONFIG_SUBTREE, {}).get(
+                LinuxBridge.PORT_SUBTREE, []
+            ).sort(key=itemgetter(LinuxBridge.PORT_NAME))
 
     def _ipv6_skeleton_canonicalization(self):
-        for iface_state in self._state.get(INTERFACES, []):
-            iface_state.setdefault('ipv6', {})
-            iface_state['ipv6'].setdefault(InterfaceIPv6.ENABLED, False)
-            iface_state['ipv6'].setdefault(InterfaceIPv6.ADDRESS, [])
-            iface_state['ipv6'].setdefault(InterfaceIPv6.DHCP, False)
-            iface_state['ipv6'].setdefault(InterfaceIPv6.AUTOCONF, False)
+        for iface_state in self._state.get(Interface.KEY, []):
+            iface_state.setdefault(Interface.IPV6, {})
+            iface_state[Interface.IPV6].setdefault(
+                InterfaceIPv6.ENABLED, False
+            )
+            iface_state[Interface.IPV6].setdefault(InterfaceIPv6.ADDRESS, [])
+            iface_state[Interface.IPV6].setdefault(InterfaceIPv6.DHCP, False)
+            iface_state[Interface.IPV6].setdefault(
+                InterfaceIPv6.AUTOCONF, False
+            )
 
     def _ipv4_skeleton_canonicalization(self):
-        for iface_state in self._state.get(INTERFACES, []):
-            iface_state.setdefault('ipv4', {})
-            iface_state['ipv4'].setdefault(InterfaceIPv4.ENABLED, False)
-            iface_state['ipv4'].setdefault(InterfaceIPv4.ADDRESS, [])
-            iface_state['ipv4'].setdefault(InterfaceIPv4.DHCP, False)
+        for iface_state in self._state.get(Interface.KEY, []):
+            iface_state.setdefault(Interface.IPV4, {})
+            iface_state[Interface.IPV4].setdefault(
+                InterfaceIPv4.ENABLED, False
+            )
+            iface_state[Interface.IPV4].setdefault(InterfaceIPv4.ADDRESS, [])
+            iface_state[Interface.IPV4].setdefault(InterfaceIPv4.DHCP, False)
 
     def _ignore_ipv6_link_local(self):
-        for iface_state in self._state.get(INTERFACES, []):
-            iface_state['ipv6'][InterfaceIPv6.ADDRESS] = list(
+        for iface_state in self._state.get(Interface.KEY, []):
+            iface_state[Interface.IPV6][InterfaceIPv6.ADDRESS] = list(
                 addr
-                for addr in iface_state['ipv6'][InterfaceIPv6.ADDRESS]
+                for addr in iface_state[Interface.IPV6][InterfaceIPv6.ADDRESS]
                 if not _is_ipv6_link_local(
                     addr[InterfaceIPv6.ADDRESS_IP],
                     addr[InterfaceIPv6.ADDRESS_PREFIX_LENGTH],
@@ -184,21 +192,21 @@ class State(object):
             )
 
     def _sort_ip_addresses(self):
-        for iface_state in self._state.get(INTERFACES, []):
-            for family in ('ipv4', 'ipv6'):
+        for iface_state in self._state.get(Interface.KEY, []):
+            for family in (Interface.IPV4, Interface.IPV6):
                 iface_state.get(family, {}).get(InterfaceIP.ADDRESS, []).sort(
                     key=itemgetter(InterfaceIP.ADDRESS_IP)
                 )
 
     def _ignore_dhcp_manual_addr(self):
-        for iface_state in self._state.get(INTERFACES, []):
-            for family in ('ipv4', 'ipv6'):
+        for iface_state in self._state.get(Interface.KEY, []):
+            for family in (Interface.IPV4, Interface.IPV6):
                 if iface_state.get(family, {}).get(InterfaceIP.DHCP):
                     iface_state[family][InterfaceIP.ADDRESS] = []
 
     def _ignore_dhcp_option_when_off(self):
-        for iface_state in self._state.get(INTERFACES, []):
-            for family in ('ipv4', 'ipv6'):
+        for iface_state in self._state.get(Interface.KEY, []):
+            for family in (Interface.IPV4, Interface.IPV6):
                 ip = iface_state.get(family, {})
                 if not (
                     ip.get(InterfaceIP.ENABLED)
@@ -217,7 +225,7 @@ class State(object):
 
 def _lookup_iface_state_by_name(interfaces_state, ifname):
     for iface_state in interfaces_state:
-        if iface_state['name'] == ifname:
+        if iface_state[Interface.NAME] == ifname:
             return iface_state
     return None
 
@@ -246,7 +254,7 @@ def filter_current_state(desired_state):
     """
     current_state = libnmstate.show()
     desired_iface_names = {
-        ifstate['name'] for ifstate in desired_state[INTERFACES]
+        ifstate[Interface.NAME] for ifstate in desired_state[Interface.KEY]
     }
 
     if not desired_iface_names:
@@ -254,10 +262,10 @@ def filter_current_state(desired_state):
 
     filtered_iface_current_state = [
         ifstate
-        for ifstate in current_state[INTERFACES]
-        if ifstate['name'] in desired_iface_names
+        for ifstate in current_state[Interface.KEY]
+        if ifstate[Interface.NAME] in desired_iface_names
     ]
-    return {INTERFACES: filtered_iface_current_state}
+    return {Interface.KEY: filtered_iface_current_state}
 
 
 def _is_ipv6_link_local(ip, prefix):
