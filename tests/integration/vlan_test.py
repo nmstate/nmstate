@@ -31,7 +31,6 @@ from libnmstate.schema import InterfaceType
 
 from .testlib import assertlib
 from .testlib import statelib
-from .testlib.statelib import INTERFACES
 from .testlib.assertlib import assert_mac_address
 from .testlib.vlan import vlan_interface
 
@@ -39,17 +38,17 @@ VLAN_IFNAME = 'eth1.101'
 VLAN2_IFNAME = 'eth1.102'
 
 TWO_VLANS_STATE = {
-    INTERFACES: [
+    Interface.KEY: [
         {
-            'name': VLAN_IFNAME,
-            'type': 'vlan',
-            'state': 'up',
+            Interface.NAME: VLAN_IFNAME,
+            Interface.TYPE: InterfaceType.VLAN,
+            Interface.STATE: InterfaceState.UP,
             VLAN.CONFIG_SUBTREE: {VLAN.ID: 101, VLAN.BASE_IFACE: 'eth1'},
         },
         {
-            'name': VLAN2_IFNAME,
-            'type': 'vlan',
-            'state': 'up',
+            Interface.NAME: VLAN2_IFNAME,
+            Interface.TYPE: InterfaceType.VLAN,
+            Interface.STATE: InterfaceState.UP,
             VLAN.CONFIG_SUBTREE: {VLAN.ID: 102, VLAN.BASE_IFACE: 'eth1'},
         },
     ]
@@ -63,7 +62,7 @@ def test_add_and_remove_vlan(eth1_up):
         assertlib.assert_state(desired_state)
 
     current_state = statelib.show_only((VLAN_IFNAME,))
-    assert not current_state[INTERFACES]
+    assert not current_state[Interface.KEY]
 
 
 @pytest.fixture
@@ -71,7 +70,7 @@ def vlan_on_eth1(eth1_up):
     with vlan_interface(
         VLAN_IFNAME, 101, eth1_up[Interface.KEY][0][Interface.NAME]
     ) as desired_state:
-        base_iface_name = desired_state[INTERFACES][0][VLAN.CONFIG_SUBTREE][
+        base_iface_name = desired_state[Interface.KEY][0][VLAN.CONFIG_SUBTREE][
             VLAN.BASE_IFACE
         ]
         iface_states = statelib.show_only((base_iface_name, VLAN_IFNAME))
@@ -86,16 +85,16 @@ def test_add_and_remove_two_vlans_on_same_iface(eth1_up):
     with two_vlans_on_eth1() as desired_state:
         assertlib.assert_state(desired_state)
 
-    vlan_interfaces = [i['name'] for i in desired_state[INTERFACES]]
+    vlan_interfaces = [i[Interface.NAME] for i in desired_state[Interface.KEY]]
     current_state = statelib.show_only(vlan_interfaces)
-    assert not current_state[INTERFACES]
+    assert not current_state[Interface.KEY]
 
 
 def test_rollback_for_vlans(eth1_up):
     current_state = libnmstate.show()
     desired_state = TWO_VLANS_STATE
 
-    desired_state[INTERFACES][1]['invalid_key'] = 'foo'
+    desired_state[Interface.KEY][1]['invalid_key'] = 'foo'
     with pytest.raises(NmstateVerificationError):
         libnmstate.apply(desired_state)
 
@@ -110,14 +109,18 @@ def test_set_vlan_iface_down(eth1_up):
     ):
         libnmstate.apply(
             {
-                INTERFACES: [
-                    {'name': VLAN_IFNAME, 'type': 'vlan', 'state': 'down'}
+                Interface.KEY: [
+                    {
+                        Interface.NAME: VLAN_IFNAME,
+                        Interface.TYPE: InterfaceType.VLAN,
+                        Interface.STATE: InterfaceState.DOWN,
+                    }
                 ]
             }
         )
 
         current_state = statelib.show_only((VLAN_IFNAME,))
-        assert not current_state[INTERFACES]
+        assert not current_state[Interface.KEY]
 
 
 def test_add_new_base_iface_with_vlan():
@@ -157,9 +160,17 @@ def two_vlans_on_eth1():
     finally:
         libnmstate.apply(
             {
-                INTERFACES: [
-                    {'name': VLAN_IFNAME, 'type': 'vlan', 'state': 'absent'},
-                    {'name': VLAN2_IFNAME, 'type': 'vlan', 'state': 'absent'},
+                Interface.KEY: [
+                    {
+                        Interface.NAME: VLAN_IFNAME,
+                        Interface.TYPE: InterfaceType.VLAN,
+                        Interface.STATE: InterfaceState.ABSENT,
+                    },
+                    {
+                        Interface.NAME: VLAN2_IFNAME,
+                        Interface.TYPE: InterfaceType.VLAN,
+                        Interface.STATE: InterfaceState.ABSENT,
+                    },
                 ]
             }
         )

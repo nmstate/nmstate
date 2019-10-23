@@ -21,12 +21,14 @@ from contextlib import contextmanager
 
 import libnmstate
 from libnmstate.nm import nmclient
+from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
+from libnmstate.schema import InterfaceType
+from libnmstate.schema import InterfaceState
 
 from .testlib import statelib
 from .testlib import cmd as libcmd
-from .testlib.statelib import INTERFACES
 
 _IPV4_EXTRA_CONFIG = 'ipv4.dad-timeout'
 _IPV4_EXTRA_VALUE = '0'
@@ -40,12 +42,12 @@ IPV6_ADDRESS1 = '2001:db8:1::1'
 def test_reapply_preserve_ip_config(eth1_up):
     libnmstate.apply(
         {
-            'interfaces': [
+            Interface.KEY: [
                 {
-                    'name': 'eth1',
-                    'type': 'ethernet',
-                    'state': 'up',
-                    'ipv4': {
+                    Interface.NAME: 'eth1',
+                    Interface.TYPE: InterfaceType.ETHERNET,
+                    Interface.STATE: InterfaceState.UP,
+                    Interface.IPV4: {
                         InterfaceIPv4.ADDRESS: [
                             {
                                 InterfaceIPv4.ADDRESS_IP: IPV4_ADDRESS1,
@@ -54,7 +56,7 @@ def test_reapply_preserve_ip_config(eth1_up):
                         ],
                         InterfaceIPv4.ENABLED: True,
                     },
-                    'ipv6': {
+                    Interface.IPV6: {
                         InterfaceIPv6.ADDRESS: [
                             {
                                 InterfaceIPv6.ADDRESS_IP: IPV6_ADDRESS1,
@@ -63,13 +65,13 @@ def test_reapply_preserve_ip_config(eth1_up):
                         ],
                         InterfaceIPv6.ENABLED: True,
                     },
-                    'mtu': 1500,
+                    Interface.MTU: 1500,
                 }
             ]
         }
     )
     cur_state = statelib.show_only(('eth1',))
-    iface_name = cur_state[INTERFACES][0]['name']
+    iface_name = cur_state[Interface.KEY][0][Interface.NAME]
 
     uuid = _get_nm_profile_uuid(iface_name)
 

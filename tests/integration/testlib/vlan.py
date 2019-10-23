@@ -20,18 +20,21 @@
 from contextlib import contextmanager
 
 import libnmstate
-from .statelib import INTERFACES
+from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceType
+from libnmstate.schema import InterfaceState
+from libnmstate.schema import VLAN
 
 
 @contextmanager
 def vlan_interface(ifname, vlan_id, base_iface):
     desired_state = {
-        INTERFACES: [
+        Interface.KEY: [
             {
-                'name': ifname,
-                'type': 'vlan',
-                'state': 'up',
-                'vlan': {'id': vlan_id, 'base-iface': base_iface},
+                Interface.NAME: ifname,
+                Interface.TYPE: InterfaceType.VLAN,
+                Interface.STATE: InterfaceState.UP,
+                VLAN.TYPE: {VLAN.ID: vlan_id, VLAN.BASE_IFACE: base_iface},
             }
         ]
     }
@@ -40,5 +43,13 @@ def vlan_interface(ifname, vlan_id, base_iface):
         yield desired_state
     finally:
         libnmstate.apply(
-            {INTERFACES: [{'name': ifname, 'type': 'vlan', 'state': 'absent'}]}
+            {
+                Interface.KEY: [
+                    {
+                        Interface.NAME: ifname,
+                        Interface.TYPE: InterfaceType.VLAN,
+                        Interface.STATE: InterfaceState.ABSENT,
+                    }
+                ]
+            }
         )
