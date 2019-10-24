@@ -1,4 +1,5 @@
 ---
+dist: bionic
 language: generic
 env:
     matrix:
@@ -29,7 +30,6 @@ addons:
         packages:
             - git
             - gnupg2
-            - realpath
             - openssh-client
             - python-tox
             - xz-utils
