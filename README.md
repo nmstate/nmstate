@@ -115,11 +115,10 @@ nmstatectl edit eth3
 
 ## Contact
 
-*Nmstate* uses the [NetworkManager mailing
-list](https://mail.gnome.org/mailman/listinfo/networkmanager-list)
-([Archives](https://mail.gnome.org/archives/networkmanager-list/)) for
-discussions. Emails about nmstate should be tagged with `[nmstate]` in the
-subject header to ease filtering.
+*Nmstate* uses the [nmstate-devel@lists.fedorahosted.org][mailing_list] for
+discussions. To subscribe you can send an email with 'subscribe' in the subject
+to <nmstate-devel-join@lists.fedorahosted.org> or visit the
+[mailing list page][mailing_list].
 
 Development planning (sprints and progress reporting) happens in
 ([Jira](https://nmstate.atlassian.net)). Access requires login.
@@ -144,3 +143,4 @@ Please refer to [CHANGELOG](CHANGELOG)
 
 
 [jira_limitation]: https://nmstate.atlassian.net/issues/?filter=10003
+[mailing_list]: https://lists.fedorahosted.org/admin/lists/nmstate-devel.lists.fedorahosted.org
