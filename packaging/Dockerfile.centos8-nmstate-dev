@@ -28,7 +28,6 @@ RUN dnf -y install --setopt=install_weak_deps=False \
                    dnsmasq \
                    git \
                    iproute \
-                   python3-pytest \
                    rpm-build \
                    # Below package for pip (used by tox) to build dbus-python
                    # Bug https://bugzilla.redhat.com/show_bug.cgi?id=1654774
@@ -39,11 +38,12 @@ RUN dnf -y install --setopt=install_weak_deps=False \
                    glib2-devel \
                    gobject-introspection-devel \
                    dbus-devel && \
-
     dnf -y group install "Development Tools" && \
-    pip3 install python-coveralls pytest-cov tox && \
+    pip3 install pytest==4.6.6 pytest-cov==2.8.1 \
+        python-coveralls tox --user && \
     alternatives --set python /usr/bin/python3 && \
-    ln -s /usr/bin/pytest-3 /usr/bin/pytest && \
+    ln -s /root/.local/bin/pytest /usr/bin/pytest && \
+    ln -s /root/.local/bin/tox /usr/bin/tox && \
     dnf clean all && \
     bash ./docker_sys_config.sh && rm ./docker_sys_config.sh
 
