@@ -38,7 +38,7 @@ from libnmstate.error import NmstatePermissionError
 from libnmstate.error import NmstateValueError
 from libnmstate.nm import nmclient
 
-MAINLOOP_TIMEOUT = 35
+MAINLOOP_TIMEOUT = 60
 
 
 def apply(desired_state, verify_change=True, commit=True, rollback_timeout=60):
