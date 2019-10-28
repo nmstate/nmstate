@@ -52,6 +52,13 @@ def get_info(active_connection):
             info[InterfaceIPv6.AUTOCONF] = False
         elif method == nmclient.NM.SETTING_IP6_CONFIG_METHOD_LINK_LOCAL:
             is_link_local_method = True
+        # pylint: disable=no-member
+        elif (
+            nmclient.can_disable_ipv6()
+            and method == nmclient.NM.SETTING_IP6_CONFIG_METHOD_DISABLED
+        ):
+            return info
+        # pylint: enable=no-member
 
         if info[InterfaceIPv6.DHCP] or info[InterfaceIPv6.AUTOCONF]:
             props = ip_profile.props
