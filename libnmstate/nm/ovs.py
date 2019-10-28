@@ -139,16 +139,22 @@ def is_ovs_interface_type_id(type_id):
 
 
 def get_bridge_info(bridge_device, devices_info):
-    return {OB.CONFIG_SUBTREE: get_ovs_info(bridge_device, devices_info)}
+    info = get_ovs_info(bridge_device, devices_info)
+    if info:
+        return {OB.CONFIG_SUBTREE: info}
+    else:
+        return {}
 
 
 def get_ovs_info(bridge_device, devices_info):
     port_profiles = _get_slave_profiles(bridge_device, devices_info)
+    ports = _get_bridge_ports_info(port_profiles, devices_info)
+    options = _get_bridge_options(bridge_device)
 
-    return {
-        'port': _get_bridge_ports_info(port_profiles, devices_info),
-        'options': _get_bridge_options(bridge_device),
-    }
+    if ports or options:
+        return {'port': ports, 'options': options}
+    else:
+        return {}
 
 
 def _get_bridge_ports_info(port_profiles, devices_info):
