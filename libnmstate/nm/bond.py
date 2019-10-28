@@ -46,7 +46,12 @@ def is_bond_type_id(type_id):
 
 
 def get_bond_info(nm_device):
-    return {'slaves': get_slaves(nm_device), 'options': get_options(nm_device)}
+    slaves = get_slaves(nm_device)
+    options = get_options(nm_device)
+    if slaves or options:
+        return {'slaves': slaves, 'options': options}
+    else:
+        return {}
 
 
 def get_options(nm_device):
