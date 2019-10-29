@@ -47,6 +47,17 @@ class Bridge(object):
     def add_system_port(self, name):
         self._add_port(name)
 
+    def add_link_aggregation_port(self, name, slaves, mode=None):
+        self._add_port(name)
+        port = self._get_port(name)
+        port[OVSBridge.Port.LINK_AGGREGATION_SUBTREE] = {
+            OVSBridge.Port.LinkAggregation.SLAVES_SUBTREE: slaves
+        }
+        if mode:
+            port[OVSBridge.Port.LINK_AGGREGATION_SUBTREE][
+                OVSBridge.Port.LinkAggregation.MODE
+            ] = mode
+
     def add_internal_port(self, name, ipv4_state):
         self._add_port(name)
         self._ifaces.append(
@@ -61,6 +72,14 @@ class Bridge(object):
         self._bridge_iface[OVSBridge.CONFIG_SUBTREE].setdefault(
             OVSBridge.PORT_SUBTREE, []
         ).append({OVSBridge.PORT_NAME: name})
+
+    def _get_port(self, name):
+        ports = self._bridge_iface[OVSBridge.CONFIG_SUBTREE].get(
+            OVSBridge.PORT_SUBTREE, []
+        )
+        return next(
+            (port for port in ports if port[OVSBridge.PORT_NAME] == name), None
+        )
 
     @contextmanager
     def create(self):

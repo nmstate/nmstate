@@ -319,6 +319,15 @@ class OVSBridge(object):
                 MIN_RANGE = 'min'
                 MAX_RANGE = 'max'
 
+        LINK_AGGREGATION_SUBTREE = 'link-aggregation'
+
+        class LinkAggregation:
+            MODE = 'mode'
+            SLAVES_SUBTREE = 'slaves'
+
+            class Slave:
+                NAME = 'name'
+
 
 class Team:
     TYPE = InterfaceType.TEAM
