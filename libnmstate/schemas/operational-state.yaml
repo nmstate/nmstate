@@ -333,6 +333,18 @@ definitions:
                         $ref: "#/definitions/types/bridge-vlan-tag"
                       enable-native:
                         type: boolean
+                  link-aggregation:
+                    type: object
+                    properties:
+                      mode:
+                        type: string
+                      slaves:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            name:
+                              type: string
             options:
               type: object
               properties:
