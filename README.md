@@ -133,6 +133,14 @@ For Fedora 29+, `sudo dnf install nmstate`.
 For others distribution, please see the [install](README.install.md)
 instructions.
 
+## Documentation
+
+* [libnmstate API](https://nmstate.github.io/devel/api.html)
+* [Code examples](https://nmstate.github.io/devel/py_example.html)
+* [State examples](https://nmstate.github.io/examples.html)
+* [nmstatectl user guide](https://nmstate.github.io/cli_guide.html)
+* nmstatectl man page: `man nmstatectl`
+
 ## Limitations
 
 Please refer to [jira page][jira_limitation] for details.
