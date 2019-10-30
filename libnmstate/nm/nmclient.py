@@ -50,6 +50,10 @@ def can_disable_ipv6():
     return _can_disable_ipv6
 
 
+def nm_version():
+    return NM.Client.get_version(client())
+
+
 def client(refresh=False):
     global _nmclient
     # refresh is a workaround to get the current state when GMainLoop is not

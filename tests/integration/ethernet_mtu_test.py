@@ -31,6 +31,7 @@ from libnmstate.error import NmstateVerificationError
 
 from .testlib import assertlib
 from .testlib import statelib
+from .testlib.iproutelib import ip_monitor_assert_stable_link_up
 from .testlib.vlan import vlan_interface
 
 
@@ -155,3 +156,14 @@ def test_set_mtu_on_two_vlans_with_a_shared_base(eth1_up):
         libnmstate.apply(desired_state)
 
         assertlib.assert_state(desired_state)
+
+
+@ip_monitor_assert_stable_link_up('eth1')
+def test_change_mtu_with_stable_link_up(eth1_up):
+    desired_state = statelib.show_only(('eth1',))
+    eth1_desired_state = desired_state[Interface.KEY][0]
+    eth1_desired_state[Interface.MTU] = 1900
+
+    libnmstate.apply(desired_state)
+
+    assertlib.assert_state(desired_state)
