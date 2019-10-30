@@ -23,6 +23,8 @@ from . import active_connection as ac
 from . import connection
 from . import nmclient
 
+from distutils.version import StrictVersion
+
 
 def activate(dev=None, connection_id=None):
     """Activate the given device or remote connection profile."""
@@ -186,7 +188,9 @@ def _modify_callback(src_object, result, user_data):
 
 
 def _requires_activation(dev, connection_profile):
-    if _mtu_changed(dev, connection_profile):
+    if StrictVersion(nmclient.nm_version()) < StrictVersion(
+        '1.18'
+    ) and _mtu_changed(dev, connection_profile):
         logging.debug(
             'Device reapply does not support mtu changes, '
             'fallback to device activation: dev=%s',
