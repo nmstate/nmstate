@@ -37,23 +37,6 @@ from .testlib.vlan import vlan_interface
 VLAN_IFNAME = 'eth1.101'
 VLAN2_IFNAME = 'eth1.102'
 
-TWO_VLANS_STATE = {
-    Interface.KEY: [
-        {
-            Interface.NAME: VLAN_IFNAME,
-            Interface.TYPE: InterfaceType.VLAN,
-            Interface.STATE: InterfaceState.UP,
-            VLAN.CONFIG_SUBTREE: {VLAN.ID: 101, VLAN.BASE_IFACE: 'eth1'},
-        },
-        {
-            Interface.NAME: VLAN2_IFNAME,
-            Interface.TYPE: InterfaceType.VLAN,
-            Interface.STATE: InterfaceState.UP,
-            VLAN.CONFIG_SUBTREE: {VLAN.ID: 102, VLAN.BASE_IFACE: 'eth1'},
-        },
-    ]
-}
-
 
 def test_add_and_remove_vlan(eth1_up):
     with vlan_interface(
@@ -90,9 +73,63 @@ def test_add_and_remove_two_vlans_on_same_iface(eth1_up):
     assert not current_state[Interface.KEY]
 
 
+def test_two_vlans_on_eth1_change_mtu(eth1_up):
+    desired_state = statelib.show_only(('eth1',))
+    eth1_state = desired_state[Interface.KEY][0]
+    vlans_state = create_two_vlans_state()
+    desired_state[Interface.KEY].extend(vlans_state[Interface.KEY])
+    for iface in desired_state[Interface.KEY]:
+        iface[Interface.MTU] = 2000
+    libnmstate.apply(desired_state)
+
+    eth1_102_state = next(
+        ifstate
+        for ifstate in desired_state[Interface.KEY]
+        if ifstate[Interface.NAME] == VLAN2_IFNAME
+    )
+    eth1_state[Interface.MTU] = 2200
+    eth1_102_state[Interface.MTU] = 2200
+    libnmstate.apply(desired_state)
+
+    eth1_vlan_iface_cstate = statelib.show_only((VLAN_IFNAME,))
+    assert eth1_vlan_iface_cstate[Interface.KEY][0][Interface.MTU] == 2000
+
+
+def test_two_vlans_on_eth1_change_base_iface_mtu(eth1_up):
+    desired_state = statelib.show_only(('eth1',))
+    eth1_state = desired_state[Interface.KEY][0]
+    vlans_state = create_two_vlans_state()
+    desired_state[Interface.KEY].extend(vlans_state[Interface.KEY])
+    for iface in desired_state[Interface.KEY]:
+        iface[Interface.MTU] = 2000
+    libnmstate.apply(desired_state)
+
+    eth1_state[Interface.MTU] = 2200
+    libnmstate.apply({Interface.KEY: [eth1_state]})
+    eth1_vlan_iface_cstate = statelib.show_only((VLAN_IFNAME,))
+    assert eth1_vlan_iface_cstate[Interface.KEY][0][Interface.MTU] == 2000
+
+
+def test_two_vlans_on_eth1_change_mtu_rollback(eth1_up):
+    desired_state = statelib.show_only(('eth1',))
+    vlans_state = create_two_vlans_state()
+    desired_state[Interface.KEY].extend(vlans_state[Interface.KEY])
+    for iface in desired_state[Interface.KEY]:
+        iface[Interface.MTU] = 2000
+    libnmstate.apply(desired_state)
+
+    for iface in desired_state[Interface.KEY]:
+        iface[Interface.MTU] = 2200
+    libnmstate.apply(desired_state, commit=False)
+    libnmstate.rollback()
+
+    eth1_vlan_iface_cstate = statelib.show_only((VLAN_IFNAME,))
+    assert eth1_vlan_iface_cstate[Interface.KEY][0][Interface.MTU] == 2000
+
+
 def test_rollback_for_vlans(eth1_up):
     current_state = libnmstate.show()
-    desired_state = TWO_VLANS_STATE
+    desired_state = create_two_vlans_state()
 
     desired_state[Interface.KEY][1]['invalid_key'] = 'foo'
     with pytest.raises(NmstateVerificationError):
@@ -153,7 +190,7 @@ def test_add_new_base_iface_with_vlan():
 
 @contextmanager
 def two_vlans_on_eth1():
-    desired_state = TWO_VLANS_STATE
+    desired_state = create_two_vlans_state()
     libnmstate.apply(desired_state)
     try:
         yield desired_state
@@ -174,3 +211,22 @@ def two_vlans_on_eth1():
                 ]
             }
         )
+
+
+def create_two_vlans_state():
+    return {
+        Interface.KEY: [
+            {
+                Interface.NAME: VLAN_IFNAME,
+                Interface.TYPE: InterfaceType.VLAN,
+                Interface.STATE: InterfaceState.UP,
+                VLAN.CONFIG_SUBTREE: {VLAN.ID: 101, VLAN.BASE_IFACE: 'eth1'},
+            },
+            {
+                Interface.NAME: VLAN2_IFNAME,
+                Interface.TYPE: InterfaceType.VLAN,
+                Interface.STATE: InterfaceState.UP,
+                VLAN.CONFIG_SUBTREE: {VLAN.ID: 102, VLAN.BASE_IFACE: 'eth1'},
+            },
+        ]
+    }
