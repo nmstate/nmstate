@@ -197,13 +197,6 @@ def _requires_activation(dev, connection_profile):
             dev.get_iface(),
         )
         return True
-    if _ipv6_changed(dev, connection_profile):
-        logging.debug(
-            'Device reapply does not support ipv6 changes, '
-            'fallback to device activation: dev=%s',
-            dev.get_iface(),
-        )
-        return True
     return False
 
 
@@ -213,19 +206,6 @@ def _mtu_changed(dev, connection_profile):
     if configured_mtu:
         current_mtu = int(dev.get_mtu())
         return configured_mtu != current_mtu
-    return False
-
-
-def _ipv6_changed(dev, connection_profile):
-    """
-    Detecting that the IPv6 method changed is not possible at this stage,
-    therefore, if IPv6 is defined (i.e. the method if not 'ignore'), IPv6 is
-    considered as changed.
-    """
-    ipv6_setting = connection_profile.get_setting_ip6_config()
-    if ipv6_setting:
-        ignore = nmclient.NM.SETTING_IP6_CONFIG_METHOD_IGNORE
-        return ipv6_setting.props.method != ignore
     return False
 
 
