@@ -147,7 +147,25 @@ function collect_artifacts {
     "
 }
 
+function write_separator {
+    set +x
+    local text="$(echo "${1}" | sed 's,., \0,g') "
+    local char="="
+
+    local textlength=$(echo -n "${text}" | wc --chars)
+    local cols="$(tput cols)"
+    local wraplength=$(((cols - textlength) / 2))
+
+    eval printf %.1s "${char}"'{1..'"${wraplength}"\}
+    echo -n "${text}"
+    wraplength=$((wraplength + ((cols - textlength) % 2)))
+    eval printf %.1s "${char}"'{1..'"${wraplength}"\}
+    echo
+    set -x
+}
+
 function run_exit {
+    write_separator "TEARDOWN"
     dump_network_info
     collect_artifacts
     remove_container
