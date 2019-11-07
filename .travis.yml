@@ -4,6 +4,10 @@ env:
     matrix:
         - DOCKER_IMAGE=nmstate/fedora-nmstate-dev
           testflags="--test-type integ --pytest-args='-x'"
+        - DOCKER_IMAGE=nmstate/centos8-nmstate-dev
+          testflags="--test-type integ --pytest-args='-x'
+                     --customize
+                     'rm /etc/NetworkManager/conf.d/*no-managed*; sleep 1'"
         - DOCKER_IMAGE=nmstate/centos7-nmstate-dev
           testflags="--test-type integ --pytest-args='-x'"
         - DOCKER_IMAGE=nmstate/fedora-nmstate-dev
