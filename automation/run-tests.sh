@@ -53,8 +53,9 @@ function add_extra_networks {
     '
 }
 
-function dump_network_info {
+function show_system_info {
     docker_exec '
+      rpm -q NetworkManager;
       nmcli dev; \
       nmcli con; \
       ip addr; \
@@ -148,7 +149,7 @@ function collect_artifacts {
 }
 
 function run_exit {
-    dump_network_info
+    show_system_info
     collect_artifacts
     remove_container
 }
@@ -283,7 +284,7 @@ docker_exec '
     while ! systemctl is-active NetworkManager; do sleep 1; done
 '
 add_extra_networks
-dump_network_info
+show_system_info
 
 pyclean
 if [[ "$CI" != "true" ]];then
