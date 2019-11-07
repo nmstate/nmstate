@@ -283,6 +283,9 @@ docker_exec '
     while ! systemctl is-active NetworkManager; do sleep 1; done
 '
 add_extra_networks
+
+docker_exec '(source /etc/os-release; echo $PRETTY_NAME); rpm -q NetworkManager'
+
 dump_network_info
 
 pyclean
