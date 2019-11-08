@@ -87,3 +87,34 @@ def create_bridge_subtree_state(options_state=None):
             LinuxBridge.STP_SUBTREE: {LinuxBridge.STP.ENABLED: False}
         }
     return {LinuxBridge.OPTIONS_SUBTREE: options_state}
+
+
+def generate_vlan_filtering_config(
+    port_type, trunk_tags=None, tag=None, native_vlan=None
+):
+    vlan_filtering_state = {
+        LinuxBridge.Port.Vlan.MODE: port_type,
+        LinuxBridge.Port.Vlan.TRUNK_TAGS: trunk_tags or [],
+    }
+
+    if tag:
+        vlan_filtering_state[LinuxBridge.Port.Vlan.TAG] = tag
+    if native_vlan is not None:
+        vlan_filtering_state[LinuxBridge.Port.Vlan.ENABLE_NATIVE] = native_vlan
+
+    return {LinuxBridge.Port.VLAN_SUBTREE: vlan_filtering_state}
+
+
+def generate_vlan_id_config(*vlan_ids):
+    return [
+        {LinuxBridge.Port.Vlan.TrunkTags.ID: vlan_id} for vlan_id in vlan_ids
+    ]
+
+
+def generate_vlan_id_range_config(min_vlan_id, max_vlan_id):
+    return {
+        LinuxBridge.Port.Vlan.TrunkTags.ID_RANGE: {
+            LinuxBridge.Port.Vlan.TrunkTags.MIN_RANGE: min_vlan_id,
+            LinuxBridge.Port.Vlan.TrunkTags.MAX_RANGE: max_vlan_id,
+        }
+    }
