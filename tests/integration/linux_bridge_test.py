@@ -120,6 +120,21 @@ def bond0(port0_up):
         yield bond0
 
 
+@pytest.fixture
+def bridge_with_port_vlan_config(port0_up):
+    access_port_state = TestVlanFiltering._generate_vlan_filtering_config(
+        LinuxBridge.Port.Vlan.Mode.TRUNK,
+        native_vlan=True,
+        tag=TestVlanFiltering.access_tag,
+        trunk_tags=TestVlanFiltering._generate_vlan_id_config(100, 101, 102),
+    )
+    port_name = port0_up[Interface.KEY][0][Interface.NAME]
+    bridge_state = _create_bridge_subtree_config((port_name,))
+    bridge_state[LinuxBridge.PORT_SUBTREE][0].update(access_port_state)
+    with linux_bridge(TEST_BRIDGE0, bridge_state):
+        yield
+
+
 def test_create_and_remove_linux_bridge_with_min_desired_state():
     bridge_name = TEST_BRIDGE0
     with linux_bridge(bridge_name, bridge_subtree_state=None) as desired_state:
@@ -399,6 +414,120 @@ def test_port_vlan_not_implemented(port0_up):
     bridge_state[LinuxBridge.PORT_SUBTREE][0].update(port_vlan_config)
     with linux_bridge(bridge_name, bridge_state):
         pass
+
+
+@pytest.mark.xfail(
+    reason="https://nmstate.atlassian.net/browse/NMSTATE-230", strict=True
+)
+class TestVlanFiltering:
+    access_tag = 300
+
+    @pytest.mark.parametrize(
+        "is_native_vlan", [True, False], ids=["native", "not-native"]
+    )
+    def test_trunk_port_config(self, is_native_vlan, port0_up):
+        trunk_tags = TestVlanFiltering._generate_vlan_id_config(100, 101)
+        trunk_port_state = TestVlanFiltering._generate_vlan_filtering_config(
+            "trunk",
+            tag=TestVlanFiltering.access_tag if is_native_vlan else None,
+            trunk_tags=trunk_tags,
+            native_vlan=is_native_vlan,
+        )
+
+        port_name = port0_up[Interface.KEY][0][Interface.NAME]
+        bridge_state = _create_bridge_subtree_config((port_name,))
+        bridge_state[LinuxBridge.PORT_SUBTREE][0].update(trunk_port_state)
+        with linux_bridge(TEST_BRIDGE0, bridge_state) as desired_state:
+            assertlib.assert_state(desired_state)
+
+    @pytest.mark.parametrize(
+        "is_native_vlan", [True, False], ids=["native", "not-native"]
+    )
+    def test_multiple_trunk_ports_config(self, is_native_vlan, port0_up):
+        trunk_tags = TestVlanFiltering._generate_vlan_id_config(100, 102)
+        trunk_tags.append(
+            TestVlanFiltering._generate_vlan_id_range_config(200, 299)
+        )
+        trunk_port_state = TestVlanFiltering._generate_vlan_filtering_config(
+            LinuxBridge.Port.Vlan.Mode.TRUNK,
+            tag=TestVlanFiltering.access_tag if is_native_vlan else None,
+            trunk_tags=trunk_tags,
+            native_vlan=is_native_vlan,
+        )
+
+        port_name = port0_up[Interface.KEY][0][Interface.NAME]
+        bridge_state = _create_bridge_subtree_config((port_name,))
+        bridge_state[LinuxBridge.PORT_SUBTREE][0].update(trunk_port_state)
+        with linux_bridge(TEST_BRIDGE0, bridge_state) as desired_state:
+            assertlib.assert_state(desired_state)
+
+    def test_access_port_config(self, port0_up):
+        access_port_state = TestVlanFiltering._generate_vlan_filtering_config(
+            LinuxBridge.Port.Vlan.Mode.ACCESS, tag=TestVlanFiltering.access_tag
+        )
+        port_name = port0_up[Interface.KEY][0][Interface.NAME]
+        bridge_state = _create_bridge_subtree_config((port_name,))
+        bridge_state[LinuxBridge.PORT_SUBTREE][0].update(access_port_state)
+        with linux_bridge(TEST_BRIDGE0, bridge_state) as desired_state:
+            assertlib.assert_state(desired_state)
+
+    def test_access_port_update(self, port0_up, bridge_with_port_vlan_config):
+        port_name = port0_up[Interface.KEY][0][Interface.NAME]
+        bridge_state = _create_bridge_subtree_config((port_name,))
+
+        new_port_state = TestVlanFiltering._generate_vlan_filtering_config(
+            LinuxBridge.Port.Vlan.Mode.ACCESS,
+            tag=TestVlanFiltering.access_tag + 5,
+        )
+        bridge_state[LinuxBridge.PORT_SUBTREE][0].update(new_port_state)
+        with linux_bridge(TEST_BRIDGE0, bridge_state) as desired_state:
+            assertlib.assert_state(desired_state)
+
+    def test_trunk_ports_update(self, port0_up, bridge_with_port_vlan_config):
+        port_name = port0_up[Interface.KEY][0][Interface.NAME]
+        bridge_state = _create_bridge_subtree_config((port_name,))
+
+        new_trunk_tags = TestVlanFiltering._generate_vlan_id_config(600, 602)
+        new_port_state = TestVlanFiltering._generate_vlan_filtering_config(
+            LinuxBridge.Port.Vlan.Mode.TRUNK, trunk_tags=new_trunk_tags
+        )
+        bridge_state[LinuxBridge.PORT_SUBTREE][0].update(new_port_state)
+        with linux_bridge(TEST_BRIDGE0, bridge_state) as desired_state:
+            assertlib.assert_state_match(desired_state)
+
+    @staticmethod
+    def _generate_vlan_filtering_config(
+        port_type, trunk_tags=None, tag=None, native_vlan=None
+    ):
+        vlan_filtering_state = {
+            LinuxBridge.Port.Vlan.MODE: port_type,
+            LinuxBridge.Port.Vlan.TRUNK_TAGS: trunk_tags or [],
+        }
+
+        if tag:
+            vlan_filtering_state[LinuxBridge.Port.Vlan.TAG] = tag
+        if native_vlan is not None:
+            vlan_filtering_state[
+                LinuxBridge.Port.Vlan.ENABLE_NATIVE
+            ] = native_vlan
+
+        return {LinuxBridge.Port.VLAN_SUBTREE: vlan_filtering_state}
+
+    @staticmethod
+    def _generate_vlan_id_config(*vlan_ids):
+        return [
+            {LinuxBridge.Port.Vlan.TrunkTags.ID: vlan_id}
+            for vlan_id in vlan_ids
+        ]
+
+    @staticmethod
+    def _generate_vlan_id_range_config(min_vlan_id, max_vlan_id):
+        return {
+            LinuxBridge.Port.Vlan.TrunkTags.ID_RANGE: {
+                LinuxBridge.Port.Vlan.TrunkTags.MIN_RANGE: min_vlan_id,
+                LinuxBridge.Port.Vlan.TrunkTags.MAX_RANGE: max_vlan_id,
+            }
+        }
 
 
 def _add_port_to_bridge(bridge_state, ifname):
