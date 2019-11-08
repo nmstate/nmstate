@@ -135,7 +135,7 @@ function run_tests {
             --cov /usr/lib/python*/site-packages/nmstatectl \
             --cov-report=html:htmlcov-integ \
             --cov-report=term \
-            tests/integration \
+            tests/integration${test_file}${test_name} \
             ${nmstate_pytest_extra_args}"
     fi
 }
@@ -195,7 +195,7 @@ function modprobe_ovs {
 }
 
 options=$(getopt --options "" \
-    --long customize:,pytest-args:,help,debug-shell,test-type:,el7,copr:,artifacts-dir:\
+    --long customize:,pytest-args:,help,debug-shell,test-type:,el7,copr:,artifacts-dir:,test-file:,test-name:\
     -- "${@}")
 eval set -- "$options"
 while true; do
@@ -226,10 +226,25 @@ while true; do
         shift
         EXPORT_DIR="$1"
         ;;
+    --test-file)
+	shift
+	if [ $1 ]
+	then
+		test_file="/$1"
+	fi
+	;;
+    --test-name)
+	shift
+	if [ $1 ]
+	then
+		test_name="::$1"
+	fi
+	;;
     --help)
         set +x
         echo -n "$0 [--copr=...] [--customize=...] [--debug-shell] [--el7] "
         echo -n "[--help] [--pytest-args=...] "
+        echo -n "[--test-file=...] [--test-name=...] "
         echo "[--test-type=<TEST_TYPE>]"
         echo "    Valid TEST_TYPE are:"
         echo "     * $TEST_TYPE_ALL (default)"
