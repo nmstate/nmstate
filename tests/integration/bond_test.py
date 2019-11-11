@@ -366,6 +366,17 @@ def test_create_linux_bridge_over_bond(bond99_with_slave):
         assertlib.assert_state(desired_state)
 
 
+@pytest.mark.xfail(
+    strict=True, reason="https://nmstate.atlassian.net/browse/NMSTATE-272"
+)
+def test_preserve_bond_after_bridge_removal(bond99_with_slave):
+    bridge_name = 'linux-br0'
+    bridge_state = add_port_to_bridge(create_bridge_subtree_state(), BOND99)
+    with linux_bridge(bridge_name, bridge_state) as desired_state:
+        assertlib.assert_state_match(desired_state)
+    assertlib.assert_state(bond99_with_slave)
+
+
 def test_create_vlan_over_a_bond(bond99_with_slave):
     vlan_base_iface = bond99_with_slave[Interface.KEY][0][Interface.NAME]
     vlan_id = 102
