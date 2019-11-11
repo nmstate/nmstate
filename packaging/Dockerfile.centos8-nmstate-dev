@@ -17,6 +17,7 @@ RUN dnf copr enable nmstate/ovs-el8 -y && \
 RUN dnf -y install --setopt=install_weak_deps=False \
                    NetworkManager \
                    NetworkManager-ovs \
+                   NetworkManager-config-server \
                    openvswitch2.11 \
                    systemd-udev \
                    python3-dbus \
