@@ -18,12 +18,18 @@
 #
 
 import logging
+import subprocess
 
 import pytest
 
 import libnmstate
 
 from .testlib import ifacelib
+
+
+REPORT_HEADER = """RPMs: {rpms}
+OS: {osname}
+"""
 
 
 @pytest.fixture(scope='session', autouse=True)
@@ -61,3 +67,23 @@ def preserve_old_config():
     old_state = libnmstate.show()
     yield
     libnmstate.apply(old_state, verify_change=False)
+
+
+def pytest_report_header(config):
+    return REPORT_HEADER.format(
+        rpms=_get_package_nvr('NetworkManager'), osname=_get_osname()
+    )
+
+
+def _get_package_nvr(package):
+    return (
+        subprocess.check_output(['rpm', '-q', package]).strip().decode('utf-8')
+    )
+
+
+def _get_osname():
+    with open('/etc/os-release') as os_release:
+        for line in os_release.readlines():
+            if line.startswith('PRETTY_NAME='):
+                return line.split('=', maxsplit=1)[1].strip().strip('"')
+    return ''
