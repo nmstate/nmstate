@@ -93,52 +93,10 @@ Alternatively, install Nmstate system-wide:
 pip uninstall -y nmstate; pip install .
 ```
 
-### Container Image
-
-Nmstate also provides a container image based on CentOS 7 to try it:
-
-```shell
-CONTAINER_ID=$(sudo docker run --privileged -d -v /sys/fs/cgroup:/sys/fs/cgroup:ro nmstate/centos7-nmstate)
-sudo docker exec -ti "${CONTAINER_ID}" /bin/bash
-# now play with nmstatectl in the container
-nmstatectl show
-# remove the container at the end
-sudo docker stop "${CONTAINER_ID}"
-sudo docker rm "${CONTAINER_ID}"
-```
-
-
 ## Development Environment
 
 Nmstate uses `tox` to run unit tests and linters. Since Nmstate uses the binary
 module PyGObject it also requires the build dependencies for it.
-
-### RHEL 7.6
-
-Recommended minimum installation:
-```shell
-yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm  # install EPEL for python-pip
-subscription-manager repos --enable "rhel-*-optional-rpms" --enable "rhel-*-extras-rpms"  # recommended for EPEL
-yum install git python-pip
-yum-builddep python-gobject  # install build dependencies for PyGObject
-pip install tox  # python-tox in EPEL seems to be too old
-```
-
-### CentOS 7.6
-
-Recommended minimum installation:
-```shell
-yum -y install epel-release
-yum -y install \
-    NetworkManager \
-    NetworkManager-libnm \
-    git \
-    python-pip
-yum-builddep python-gobject  # install build dependencies for PyGObject
-pip install tox  # python-tox in EPEL seems to be too old
-```
-
-Note: This will not run the unit tests for Python 3.6 because this Python version is not available there.
 
 ### Unit tests
 Run Unit Tests:

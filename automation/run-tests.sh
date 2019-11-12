@@ -19,7 +19,7 @@ TEST_TYPE_UNIT_PY37="unit_py37"
 TEST_TYPE_INTEG="integ"
 
 FEDORA_IMAGE_DEV="nmstate/fedora-nmstate-dev"
-CENTOS_IMAGE_DEV="nmstate/centos7-nmstate-dev"
+CENTOS_IMAGE_DEV="nmstate/centos8-nmstate-dev"
 
 test -t 1 && USE_TTY="-t"
 
@@ -213,7 +213,7 @@ function modprobe_ovs {
 }
 
 options=$(getopt --options "" \
-    --long customize:,pytest-args:,help,debug-shell,test-type:,el7,copr:,artifacts-dir:\
+    --long customize:,pytest-args:,help,debug-shell,test-type:,el8,copr:,artifacts-dir:\
     -- "${@}")
 eval set -- "$options"
 while true; do
@@ -237,7 +237,7 @@ while true; do
         shift
         TEST_TYPE="$1"
         ;;
-    --el7)
+    --el8)
         DOCKER_IMAGE=$CENTOS_IMAGE_DEV
         ;;
     --artifacts-dir)
@@ -246,7 +246,7 @@ while true; do
         ;;
     --help)
         set +x
-        echo -n "$0 [--copr=...] [--customize=...] [--debug-shell] [--el7] "
+        echo -n "$0 [--copr=...] [--customize=...] [--debug-shell] [--el8] "
         echo -n "[--help] [--pytest-args=...] "
         echo "[--test-type=<TEST_TYPE>]"
         echo "    Valid TEST_TYPE are:"
