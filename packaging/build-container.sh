@@ -75,9 +75,6 @@ do
     if [[ "${container_name}" == "all" ]]
     then
         for container_name in \
-            centos7-nmstate-base \
-            centos7-nmstate-dev \
-            centos7-nmstate \
             fedora-nmstate-dev \
             centos8-nmstate-dev
         do

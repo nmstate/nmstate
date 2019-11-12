@@ -9,7 +9,6 @@ A declarative network manager API for hosts.
 [![Language grade: Python](https://img.shields.io/lgtm/grade/python/g/nmstate/nmstate.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/nmstate/nmstate/context:python)
 
 Copr build status:
-* EPEL 7 GIT master: [![EPEL7 GIT master Copr build status](https://copr.fedorainfracloud.org/coprs/nmstate/nmstate-git-el7/package/nmstate/status_image/last_build.png)](https://copr.fedorainfracloud.org/coprs/nmstate/nmstate-git-el7/package/nmstate/)
 * Fedora GIT master: [![Fedora GIT master Copr build status](https://copr.fedorainfracloud.org/coprs/nmstate/nmstate-git-fedora/package/nmstate/status_image/last_build.png)](https://copr.fedorainfracloud.org/coprs/nmstate/nmstate-git-fedora/package/nmstate/)
 
 ## What is it?
