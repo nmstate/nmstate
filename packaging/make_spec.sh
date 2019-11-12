@@ -4,7 +4,7 @@ set -e
 
 SRC_DIR="$(dirname "$0")/.."
 
-eval "$(${SRC_DIR}/packaging/get_version.sh)"
+eval "$(bash ${SRC_DIR}/packaging/get_version.sh)"
 
 # spec variable is used by COPR as well: https://docs.pagure.org/copr.copr/user_documentation.html
 if [ -z "${spec}" ]; then

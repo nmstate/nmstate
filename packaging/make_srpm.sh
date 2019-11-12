@@ -30,14 +30,14 @@ trap 'rm -rf "$TMP_DIR"' INT TERM HUP EXIT
 
 cd $SRC_DIR
 
-eval "$(./packaging/get_version.sh)"
+eval "$(bash ./packaging/get_version.sh)"
 
 
 TAR_FILE="${TMP_DIR}/nmstate-${VERSION}.tar"
 (
     "${python}" setup.py sdist --format tar --dist-dir $TMP_DIR
 
-    ./packaging/make_spec.sh > "${SPEC_FILE}"
+    bash ./packaging/make_spec.sh > "${SPEC_FILE}"
     tar --append --file=$TAR_FILE $SPEC_FILE
 
     rpmbuild --define "_rpmdir $TMP_DIR/" --define "_srcrpmdir $TMP_DIR/" \

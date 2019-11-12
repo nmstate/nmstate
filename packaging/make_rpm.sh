@@ -10,9 +10,9 @@ trap 'rm -rf "$TMP_DIR"' INT TERM HUP EXIT
 
 cd $SRC_DIR
 
-eval "$(./packaging/get_version.sh)"
+eval "$(bash ./packaging/get_version.sh)"
 
-SRPM_FILE="$(./packaging/make_srpm.sh)"
+SRPM_FILE="$(bash ./packaging/make_srpm.sh)"
 
 TAR_FILE="${TMP_DIR}/nmstate-${VERSION}.tar"
 (

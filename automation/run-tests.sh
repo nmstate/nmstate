@@ -61,7 +61,7 @@ function dump_network_info {
 
 function install_nmstate {
     container_exec '
-      rpm -ivh `./packaging/make_rpm.sh|tail -1 || exit 1`
+      rpm -ivh `bash ./packaging/make_rpm.sh|tail -1 || exit 1`
     '
 }
 
