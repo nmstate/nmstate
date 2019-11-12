@@ -17,6 +17,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 from contextlib import contextmanager
+import logging
 import os
 import time
 
@@ -42,6 +43,7 @@ from .testlib.bridgelib import add_port_to_bridge
 from .testlib.bridgelib import create_bridge_subtree_state
 from .testlib.bridgelib import linux_bridge
 
+DEFAULT_TIMEOUT = 20
 
 IPV4_ADDRESS1 = '192.0.2.251'
 IPV4_ADDRESS2 = '192.0.2.252'
@@ -51,6 +53,8 @@ IPV4_CLASSLESS_ROUTE_DST_NET1 = '198.51.100.0/24'
 IPV4_CLASSLESS_ROUTE_NEXT_HOP1 = '192.0.2.1'
 IPV6_CLASSLESS_ROUTE_PREFIX = '2001:db8:f'
 IPV6_CLASSLESS_ROUTE_DST_NET1 = '{}::/64'.format(IPV6_CLASSLESS_ROUTE_PREFIX)
+
+TEST_BRIDGE_NIC = 'brtest0'
 
 DHCP_SRV_NIC = 'dhcpsrv'
 DHCP_CLI_NIC = 'dhcpcli'
@@ -126,12 +130,12 @@ def dhcpcli_up(dhcp_env):
 
 @pytest.fixture
 def dhcpcli_up_with_dynamic_ip(dhcp_env):
-    with iface_with_dynamic_ip_up(DHCP_CLI_NIC, delay_state_time=5) as ifstate:
+    with iface_with_dynamic_ip_up(DHCP_CLI_NIC) as ifstate:
         yield ifstate
 
 
 @contextmanager
-def iface_with_dynamic_ip_up(ifname, delay_state_time=0):
+def iface_with_dynamic_ip_up(ifname):
     desired_state = {
         Interface.KEY: [
             {
@@ -146,8 +150,10 @@ def iface_with_dynamic_ip_up(ifname, delay_state_time=0):
     }
     try:
         libnmstate.apply(desired_state)
-        if delay_state_time:
-            time.sleep(delay_state_time)
+        assert _poll(_has_ipv4_dhcp_gateway)
+        assert _poll(_has_dhcpv4_addr)
+        assert _poll(_has_ipv6_auto_gateway)
+        assert _poll(_has_dhcpv6_addr)
         yield statelib.show_only((ifname,))
     finally:
         libnmstate.apply(
@@ -172,11 +178,10 @@ def test_ipv4_dhcp(dhcpcli_up):
 
     libnmstate.apply(desired_state)
     assertlib.assert_state(desired_state)
-    time.sleep(5)  # wait to get resolv.conf updated
 
-    assert _has_ipv4_dhcp_nameserver()
-    assert _has_ipv4_dhcp_gateway()
-    assert _has_ipv4_classless_route()
+    assert _poll(_has_ipv4_dhcp_nameserver)
+    assert _poll(_has_ipv4_dhcp_gateway)
+    assert _poll(_has_ipv4_classless_route)
 
 
 def test_ipv6_dhcp_only(dhcpcli_up):
@@ -190,21 +195,11 @@ def test_ipv6_dhcp_only(dhcpcli_up):
     libnmstate.apply(desired_state)
 
     assertlib.assert_state(desired_state)
-    time.sleep(5)  # libnm does not wait on ipv6-ra or DHCPv6.
-    current_state = statelib.show_only((DHCP_CLI_NIC,))
-    dhcp_cli_current_state = current_state[Interface.KEY][0]
-    has_dhcp_ip_addr = False
-    for addr in dhcp_cli_current_state[Interface.IPV6][InterfaceIPv6.ADDRESS]:
-        if (
-            addr[InterfaceIPv6.ADDRESS_PREFIX_LENGTH] == 128
-            and DHCP_SRV_IP6_PREFIX in addr[InterfaceIPv6.ADDRESS_IP]
-        ):
-            has_dhcp_ip_addr = True
-            break
-    assert has_dhcp_ip_addr
-    assert not _has_ipv6_auto_gateway()  # DHCPv6 does not provide routes
-    assert not _has_ipv6_auto_extra_route()  # DHCPv6 does not provide routes
-    assert _has_ipv6_auto_nameserver()
+    assert _poll(_has_ipv6_auto_nameserver)
+    assert _poll(_has_dhcpv6_addr)
+    # DHCPv6 does not provide routes
+    assert not _has_ipv6_auto_gateway()
+    assert not _has_ipv6_auto_extra_route()
 
 
 def test_ipv6_dhcp_and_autoconf(dhcpcli_up):
@@ -218,10 +213,9 @@ def test_ipv6_dhcp_and_autoconf(dhcpcli_up):
     libnmstate.apply(desired_state)
 
     assertlib.assert_state(desired_state)
-    time.sleep(5)  # libnm does not wait on ipv6-ra or DHCPv6.
-    assert _has_ipv6_auto_gateway()
-    assert _has_ipv6_auto_extra_route()
-    assert _has_ipv6_auto_nameserver()
+    assert _poll(_has_ipv6_auto_gateway)
+    assert _poll(_has_ipv6_auto_extra_route)
+    assert _poll(_has_ipv6_auto_nameserver)
 
 
 def test_dhcp_with_addresses(dhcpcli_up):
@@ -271,10 +265,9 @@ def test_ipv4_dhcp_ignore_gateway(dhcpcli_up):
     libnmstate.apply(desired_state)
 
     assertlib.assert_state(desired_state)
-    time.sleep(5)  # wait to get resolv.conf updated
-    assert _has_ipv4_dhcp_nameserver()
+    assert _poll(_has_ipv4_dhcp_nameserver)
+    assert _poll(_has_ipv4_classless_route)
     assert not _has_ipv4_dhcp_gateway()
-    assert _has_ipv4_classless_route()
 
 
 def test_ipv4_dhcp_ignore_dns(dhcpcli_up):
@@ -288,9 +281,9 @@ def test_ipv4_dhcp_ignore_dns(dhcpcli_up):
     libnmstate.apply(desired_state)
 
     assertlib.assert_state(desired_state)
+    assert _poll(_has_ipv4_dhcp_gateway)
+    assert _poll(_has_ipv4_classless_route)
     assert not _has_ipv4_dhcp_nameserver()
-    assert _has_ipv4_dhcp_gateway()
-    assert _has_ipv4_classless_route()
 
 
 def test_ipv4_dhcp_ignore_routes(dhcpcli_up):
@@ -304,8 +297,7 @@ def test_ipv4_dhcp_ignore_routes(dhcpcli_up):
     libnmstate.apply(desired_state)
 
     assertlib.assert_state(desired_state)
-    time.sleep(5)  # wait to get resolv.conf updated
-    assert _has_ipv4_dhcp_nameserver()
+    assert _poll(_has_ipv4_dhcp_nameserver)
     assert not _has_ipv4_dhcp_gateway()
     assert not _has_ipv4_classless_route()
 
@@ -321,10 +313,9 @@ def test_ipv6_dhcp_and_autoconf_ignore_gateway(dhcpcli_up):
     libnmstate.apply(desired_state)
 
     assertlib.assert_state(desired_state)
-    time.sleep(5)  # libnm does not wait on ipv6-ra or DHCPv6.
+    assert _poll(_has_ipv6_auto_extra_route)
+    assert _poll(_has_ipv6_auto_nameserver)
     assert not _has_ipv6_auto_gateway()
-    assert _has_ipv6_auto_extra_route()
-    assert _has_ipv6_auto_nameserver()
 
 
 def test_ipv6_dhcp_and_autoconf_ignore_dns(dhcpcli_up):
@@ -338,9 +329,8 @@ def test_ipv6_dhcp_and_autoconf_ignore_dns(dhcpcli_up):
     libnmstate.apply(desired_state)
 
     assertlib.assert_state(desired_state)
-    time.sleep(5)  # libnm does not wait on ipv6-ra or DHCPv6.
-    assert _has_ipv6_auto_gateway()
-    assert _has_ipv6_auto_extra_route()
+    assert _poll(_has_ipv6_auto_gateway)
+    assert _poll(_has_ipv6_auto_extra_route)
     assert not _has_ipv6_auto_nameserver()
 
 
@@ -355,10 +345,9 @@ def test_ipv6_dhcp_and_autoconf_ignore_routes(dhcpcli_up):
     libnmstate.apply(desired_state)
 
     assertlib.assert_state(desired_state)
-    time.sleep(5)  # libnm does not wait on ipv6-ra or DHCPv6.
+    assert _poll(_has_ipv6_auto_nameserver)
     assert not _has_ipv6_auto_gateway()
     assert not _has_ipv6_auto_extra_route()
-    assert _has_ipv6_auto_nameserver()
 
 
 def test_ipv4_dhcp_off_and_option_on(dhcpcli_up):
@@ -388,7 +377,7 @@ def test_ipv4_dhcp_off_and_option_on(dhcpcli_up):
     assert InterfaceIPv4.AUTO_ROUTES not in ipv4_current_state
     assert InterfaceIPv4.AUTO_DNS not in ipv4_current_state
     assert InterfaceIPv4.AUTO_GATEWAY not in ipv4_current_state
-    assert not _has_ipv4_dhcp_nameserver()
+    assert not _poll(_has_ipv4_dhcp_nameserver)
     assert not _has_ipv4_dhcp_gateway()
     assert not _has_ipv4_classless_route()
 
@@ -421,7 +410,7 @@ def test_ipv6_dhcp_off_and_option_on(dhcpcli_up):
     assert InterfaceIPv6.AUTO_ROUTES not in ipv6_current_state
     assert InterfaceIPv6.AUTO_DNS not in ipv6_current_state
     assert InterfaceIPv6.AUTO_GATEWAY not in ipv6_current_state
-    assert not _has_ipv6_auto_gateway()
+    assert not _poll(_has_ipv6_auto_gateway)
     assert not _has_ipv6_auto_extra_route()
     assert not _has_ipv6_auto_nameserver()
 
@@ -436,10 +425,9 @@ def test_ipv4_dhcp_switch_on_to_off(dhcpcli_up):
 
     libnmstate.apply(desired_state)
     assertlib.assert_state(desired_state)
-    time.sleep(5)  # wait to get resolv.conf updated
-    assert _has_ipv4_dhcp_nameserver()
-    assert _has_ipv4_dhcp_gateway()
-    assert _has_ipv4_classless_route()
+    assert _poll(_has_ipv4_dhcp_nameserver)
+    assert _poll(_has_ipv4_dhcp_gateway)
+    assert _poll(_has_ipv4_classless_route)
 
     # disable dhcp and make sure dns, route, gone.
     desired_state = statelib.show_only((DHCP_CLI_NIC,))
@@ -449,7 +437,7 @@ def test_ipv4_dhcp_switch_on_to_off(dhcpcli_up):
 
     libnmstate.apply(desired_state)
     assertlib.assert_state(desired_state)
-    assert not _has_ipv4_dhcp_nameserver()
+    assert not _poll(_has_ipv4_dhcp_nameserver)
     assert not _has_ipv4_dhcp_gateway()
     assert not _has_ipv4_classless_route()
 
@@ -465,10 +453,9 @@ def test_ipv6_dhcp_switch_on_to_off(dhcpcli_up):
     libnmstate.apply(desired_state)
 
     assertlib.assert_state(desired_state)
-    time.sleep(5)  # libnm does not wait on ipv6-ra or DHCPv6.
-    assert _has_ipv6_auto_gateway()
-    assert _has_ipv6_auto_extra_route()
-    assert _has_ipv6_auto_nameserver()
+    assert _poll(_has_ipv6_auto_gateway)
+    assert _poll(_has_ipv6_auto_extra_route)
+    assert _poll(_has_ipv6_auto_nameserver)
 
     # disable dhcp and make sure dns, route, gone.
     desired_state = statelib.show_only((DHCP_CLI_NIC,))
@@ -479,7 +466,7 @@ def test_ipv6_dhcp_switch_on_to_off(dhcpcli_up):
     libnmstate.apply(desired_state)
 
     assertlib.assert_state(desired_state)
-    assert not _has_ipv6_auto_gateway()
+    assert not _poll(_has_ipv6_auto_gateway)
     assert not _has_ipv6_auto_extra_route()
     assert not _has_ipv6_auto_nameserver()
 
@@ -510,11 +497,14 @@ def test_dhcp_on_bridge0(dhcpcli_up_with_dynamic_ip):
             enabled=True, dhcp=True, autoconf=True
         ),
     }
-    bridge_name = 'brtest0'
+    bridge_name = TEST_BRIDGE_NIC
     with linux_bridge(bridge_name, bridge_state, bridge_iface_state) as state:
         assertlib.assert_state_match(state)
 
-        time.sleep(5)  # wait to get IP addresses
+        assert _poll(_has_dhcpv4_addr, nic=TEST_BRIDGE_NIC)
+        assert _poll(_has_ipv4_dhcp_gateway, nic=TEST_BRIDGE_NIC)
+        assert _poll(_has_dhcpv6_addr, nic=TEST_BRIDGE_NIC)
+        assert _poll(_has_ipv6_auto_gateway, nic=TEST_BRIDGE_NIC)
         new_bridge_state = statelib.show_only((bridge_name,))
 
     new_ipv4_state = new_bridge_state[Interface.KEY][0][Interface.IPV4]
@@ -549,7 +539,7 @@ def test_slave_ipaddr_learned_via_dhcp_added_as_static_to_linux_bridge(
     ipv4_state = create_ipv4_state(enabled=True, dhcp=False)
     ipv4_state[InterfaceIPv4.ADDRESS] = dhcpcli_ip
     with linux_bridge(
-        'brtest0',
+        TEST_BRIDGE_NIC,
         bridge_state,
         extra_iface_state={Interface.IPV4: ipv4_state},
         create=False,
@@ -671,27 +661,45 @@ def _get_nameservers():
     """
     Return a list of name server string configured in RESOLV_CONF_PATH.
     """
-    return (
+    running_ns = (
         libnmstate.show()
         .get(Constants.DNS, {})
         .get(DNS.RUNNING, {})
         .get(DNS.SERVER, [])
     )
+    logging.debug("Current running DNS: {}".format(running_ns))
+    return running_ns
 
 
 def _get_running_routes():
     """
     return a list of running routes
     """
-    return libnmstate.show().get(Constants.ROUTES, {}).get(RT.RUNNING, [])
+    running_routes = (
+        libnmstate.show().get(Constants.ROUTES, {}).get(RT.RUNNING, [])
+    )
+    logging.debug("Current running routes: {}".format(running_routes))
+    return running_routes
 
 
-def _has_ipv6_auto_gateway():
+def _poll(func, *args, **kwargs):
+    ret = func(*args, **kwargs)
+    timeout = DEFAULT_TIMEOUT
+    while timeout > 0:
+        if ret:
+            break
+        time.sleep(1)
+        timeout -= 1
+        ret = func(*args, **kwargs)
+    return ret
+
+
+def _has_ipv6_auto_gateway(nic=DHCP_CLI_NIC):
     routes = _get_running_routes()
     for route in routes:
         if (
             route[RT.DESTINATION] == IPV6_DEFAULT_GATEWAY
-            and route[RT.NEXT_HOP_INTERFACE] == DHCP_CLI_NIC
+            and route[RT.NEXT_HOP_INTERFACE] == nic
         ):
             return True
     return False
@@ -716,12 +724,12 @@ def _has_ipv4_dhcp_nameserver():
     return DHCP_SRV_IP4 in _get_nameservers()
 
 
-def _has_ipv4_dhcp_gateway():
+def _has_ipv4_dhcp_gateway(nic=DHCP_CLI_NIC):
     routes = _get_running_routes()
     for route in routes:
         if (
             route[RT.DESTINATION] == IPV4_DEFAULT_GATEWAY
-            and route[RT.NEXT_HOP_INTERFACE] == DHCP_CLI_NIC
+            and route[RT.NEXT_HOP_INTERFACE] == nic
         ):
             return True
     return False
@@ -737,6 +745,36 @@ def _has_ipv4_classless_route():
         ):
             return True
     return False
+
+
+def _has_dhcpv6_addr(nic=DHCP_CLI_NIC):
+    current_state = statelib.show_only((nic,))[Interface.KEY][0]
+    has_dhcp_ip_addr = False
+    addrs = current_state[Interface.IPV6].get(InterfaceIPv6.ADDRESS, [])
+    logging.debug('Current IPv6 address of {}: {}'.format(nic, addrs))
+    for addr in addrs:
+        if (
+            addr[InterfaceIPv6.ADDRESS_PREFIX_LENGTH] == 128
+            and DHCP_SRV_IP6_PREFIX in addr[InterfaceIPv6.ADDRESS_IP]
+        ):
+            has_dhcp_ip_addr = True
+            break
+    return has_dhcp_ip_addr
+
+
+def _has_dhcpv4_addr(nic=DHCP_CLI_NIC):
+    current_state = statelib.show_only((nic,))[Interface.KEY][0]
+    has_dhcp_ip_addr = False
+    addrs = current_state[Interface.IPV4].get(InterfaceIPv4.ADDRESS, [])
+    logging.debug('Current IPv4 address of {}: {}'.format(nic, addrs))
+    for addr in addrs:
+        if (
+            addr[InterfaceIPv6.ADDRESS_PREFIX_LENGTH] == 24
+            and DHCP_SRV_IP4_PREFIX in addr[InterfaceIPv4.ADDRESS_IP]
+        ):
+            has_dhcp_ip_addr = True
+            break
+    return has_dhcp_ip_addr
 
 
 def create_ipv4_state(
