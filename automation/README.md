@@ -3,17 +3,9 @@ The automation env is serving the tests of Nmstate.
 It may be used both locally and through CI.
 
 ## Components
-- Dockerfile: Defines a Centos 7 based container image which includes systemd,
-  NetworkManager and other basic build tools (e.g. tox).
-
-  The image can be found at:
-  https://hub.docker.com/r/nmstate/centos7-nmstate-dev/
-
-- Dockerfile.fedora: Defines a Fedora based container image for Nmstate test
-  purpose.
-
-  The image can be found at:
-  https://hub.docker.com/r/nmstate/fedora-nmstate-dev/
+- Container specifications to be used for the tests are in the `packaging`
+  directory. The images are published on docker hub:
+  https://hub.docker.com/r/nmstate/
 
 - run-tests.sh: Execute the tests in a container using
   'nmstate/fedora-nmstate-dev' docker image.
@@ -55,8 +47,8 @@ You may change the test type by using:
  * `./automation/run-tests.sh --test-type unit_py37`:
    Unit tests in Python 3.7 using 'nmstate/fedora-nmstate-dev' docker image.
 
- * `./automation/run-tests.sh --test-type integ --el7`:
-   Integration tests using 'nmstate/centos7-nmstate-dev' docker image.
+ * `./automation/run-tests.sh --test-type integ --el`:
+   Integration tests using 'nmstate/centos8-nmstate-dev' docker image.
 
  * `./automation/run-tests.sh --test-type integ`:
    Integration tests using 'nmstate/fedora-nmstate-dev' docker image.
@@ -77,7 +69,7 @@ possible to provide the `--debug-shell` command-line option.
 To specify a different container image for the tests, specify it with the
 `DOCKER_IMAGE` variable:
 
-`DOCKER_IMAGE=local/centos7-nmstate-dev debug_exit_shell=1 ./automation/run-tests.sh`
+`DOCKER_IMAGE=local/centos8-nmstate-dev debug_exit_shell=1 ./automation/run-tests.sh`
 
 It is also possible to pass extra arguments to PDB using the
 `nmstate_pytest_extra_args` variable or via `--pytest-args` command-line
@@ -112,14 +104,14 @@ tox -e check-integ-py27
 ### Build a new container image
 
 ```
-sudo ../packaging/build-container.sh local/centos7-nmstate-dev
+sudo ../packaging/build-container.sh local/centos8-nmstate-dev
 sudo ../packaging/build-container.sh local/fedora-nmstate-dev
 ```
 
 To test the image, either specify it manually as described above or tag it locally:
 
 ```
-sudo docker tag local/centos7-nmstate-dev nmstate/centos7-nmstate-dev:latest
+sudo docker tag local/centos8-nmstate-dev nmstate/centos8-nmstate-dev:latest
 sudo docker tag local/fedora-nmstate-dev nmstate/fedora-nmstate-dev:latest
 ```
 
@@ -131,8 +123,8 @@ persistent. If this is not feasible, a new build could be pushed as follow to
 the Docker Hub:
 
 ```shell
-sudo docker tag local/centos7-nmstate-dev nmstate/centos7-nmstate-dev:latest
-sudo docker push nmstate/centos7-nmstate-dev:latest
+sudo docker tag local/centos8-nmstate-dev nmstate/centos8-nmstate-dev:latest
+sudo docker push nmstate/centos8-nmstate-dev:latest
 
 sudo docker tag local/fedora-nmstate-dev nmstate/fedora-nmstate-dev:latest
 sudo docker push nmstate/fedora-nmstate-dev:latest

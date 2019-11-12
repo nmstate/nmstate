@@ -4,8 +4,6 @@ env:
     matrix:
         - DOCKER_IMAGE=nmstate/fedora-nmstate-dev
           testflags="--test-type integ --pytest-args='-x'"
-        - DOCKER_IMAGE=nmstate/centos7-nmstate-dev
-          testflags="--test-type integ --pytest-args='-x'"
         - DOCKER_IMAGE=nmstate/fedora-nmstate-dev
           testflags="--test-type integ --pytest-args='-x'
               --copr networkmanager/NetworkManager-master"
@@ -25,8 +23,6 @@ env:
 
 matrix:
     allow_failures:
-        - env: DOCKER_IMAGE=nmstate/centos7-nmstate-dev
-               testflags="--test-type integ --pytest-args='-x'"
         - env: DOCKER_IMAGE=nmstate/fedora-nmstate-dev
                testflags="--test-type integ --pytest-args='-x'
                    --copr networkmanager/NetworkManager-master"
