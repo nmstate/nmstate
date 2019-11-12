@@ -17,13 +17,15 @@ TEST_TYPE_INTEG="integ"
 FEDORA_IMAGE_DEV="nmstate/fedora-nmstate-dev"
 CENTOS_IMAGE_DEV="nmstate/centos8-nmstate-dev"
 
+: ${CONTAINER_CMD:=docker}
+
 test -t 1 && USE_TTY="-t"
 
 function remove_container {
     res=$?
     [ "$res" -ne 0 ] && echo "*** ERROR: $res"
-    docker_exec 'rm -rf $CONTAINER_WORKSPACE/*nmstate*.rpm'
-    docker rm $CONTAINER_ID -f
+    container_exec 'rm -rf $CONTAINER_WORKSPACE/*nmstate*.rpm'
+    ${CONTAINER_CMD} rm $CONTAINER_ID -f
 }
 
 function pyclean {
@@ -31,13 +33,13 @@ function pyclean {
         find . -type d -name "__pycache__" -delete
 }
 
-function docker_exec {
-    docker exec $USE_TTY -i $CONTAINER_ID \
+function container_exec {
+    ${CONTAINER_CMD} exec $USE_TTY -i $CONTAINER_ID \
         /bin/bash -c "cd $CONTAINER_WORKSPACE && $1"
 }
 
 function add_extra_networks {
-    docker_exec '
+    container_exec '
       ip link add eth1 type veth peer eth1peer && \
       ip link add eth2 type veth peer eth2peer && \
       ip link set eth1peer up && \
@@ -46,7 +48,7 @@ function add_extra_networks {
 }
 
 function dump_network_info {
-    docker_exec '
+    container_exec '
       nmcli dev; \
       # Use empty PAGER variable to stop nmcli send output to less which hang \
       # the CI. \
@@ -59,7 +61,7 @@ function dump_network_info {
 }
 
 function install_nmstate {
-    docker_exec '
+    container_exec '
       rpm -ivh `./packaging/make_rpm.sh|tail -1 || exit 1`
     '
 }
@@ -71,7 +73,7 @@ function run_tests {
             echo "Running formatter in $DOCKER_IMAGE container is not " \
                  "support yet"
         else
-            docker_exec 'tox -e black'
+            container_exec 'tox -e black'
         fi
     fi
 
@@ -81,7 +83,7 @@ function run_tests {
             echo "Running unit test in $DOCKER_IMAGE container is not " \
                  "support yet"
         else
-            docker_exec 'tox -e flake8,pylint'
+            container_exec 'tox -e flake8,pylint'
         fi
     fi
 
@@ -91,7 +93,7 @@ function run_tests {
             echo "Running unit test in $DOCKER_IMAGE container is not " \
                  "support yet"
         else
-            docker_exec 'tox -e check-py36'
+            container_exec 'tox -e check-py36'
         fi
     fi
 
@@ -101,13 +103,13 @@ function run_tests {
             echo "Running unit test in $DOCKER_IMAGE container is not " \
                  "support yet"
         else
-            docker_exec 'tox -e check-py37'
+            container_exec 'tox -e check-py37'
         fi
     fi
 
     if [ $TEST_TYPE == $TEST_TYPE_ALL ] || \
        [ $TEST_TYPE == $TEST_TYPE_INTEG ];then
-        docker_exec "
+        container_exec "
           cd $CONTAINER_WORKSPACE &&
           pytest \
             --verbose --verbose \
@@ -125,7 +127,7 @@ function run_tests {
 }
 
 function collect_artifacts {
-    docker_exec "
+    container_exec "
       journalctl > "$CONT_EXPORT_DIR/journal.log" && \
       cp core* "$CONT_EXPORT_DIR/" || true
     "
@@ -159,8 +161,8 @@ function open_shell {
     res=$?
     [ "$res" -ne 0 ] && echo "*** ERROR: $res"
     set +o errexit
-    docker_exec 'echo "pytest tests/integration --pdb" >> ~/.bash_history'
-    docker_exec 'exec /bin/bash'
+    container_exec 'echo "pytest tests/integration --pdb" >> ~/.bash_history'
+    container_exec 'exec /bin/bash'
     run_exit
 }
 
@@ -185,11 +187,11 @@ function upgrade_nm_from_copr {
     local copr_repo=$1
     # The repoid for a Copr repo is the name with the slash replaces by a colon
     local copr_repo_id="copr:copr.fedorainfracloud.org:${copr_repo/\//:}"
-    docker_exec "command -v dnf && plugin='dnf-command(copr)' || plugin='yum-plugin-copr'; yum install --assumeyes \$plugin;"
-    docker_exec "yum copr enable --assumeyes ${copr_repo}"
+    container_exec "command -v dnf && plugin='dnf-command(copr)' || plugin='yum-plugin-copr'; yum install --assumeyes \$plugin;"
+    container_exec "yum copr enable --assumeyes ${copr_repo}"
     # Update only from Copr to limit the changes in the environment
-    docker_exec "yum update --assumeyes --disablerepo '*' --enablerepo '${copr_repo_id}'"
-    docker_exec "systemctl restart NetworkManager"
+    container_exec "yum update --assumeyes --disablerepo '*' --enablerepo '${copr_repo_id}'"
+    container_exec "systemctl restart NetworkManager"
 }
 
 function modprobe_ovs {
@@ -255,7 +257,7 @@ done
 : ${TEST_TYPE:=$TEST_TYPE_ALL}
 : ${DOCKER_IMAGE:=$FEDORA_IMAGE_DEV}
 
-docker --version && cat /etc/resolv.conf
+${CONTAINER_CMD} --version && cat /etc/resolv.conf
 
 modprobe_ovs
 
@@ -264,7 +266,7 @@ if [[ "$CI" == "true" ]];then
 fi
 
 mkdir -p $EXPORT_DIR
-CONTAINER_ID="$(docker run --privileged -d -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v $PROJECT_PATH:$CONTAINER_WORKSPACE -v $EXPORT_DIR:$CONT_EXPORT_DIR $DOCKER_IMAGE)"
+CONTAINER_ID="$(${CONTAINER_CMD} run --privileged -d -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v $PROJECT_PATH:$CONTAINER_WORKSPACE -v $EXPORT_DIR:$CONT_EXPORT_DIR $DOCKER_IMAGE)"
 [ -n "$debug_exit_shell" ] && trap open_shell EXIT || trap run_exit EXIT
 
 if [[ -v copr_repo ]];then
@@ -272,26 +274,26 @@ if [[ -v copr_repo ]];then
 fi
 
 if [[ -v customize_cmd ]];then
-    docker_exec "${customize_cmd}"
+    container_exec "${customize_cmd}"
 fi
 
-docker_exec 'while ! systemctl is-active dbus; do sleep 1; done'
-docker_exec 'systemctl start systemd-udevd
+container_exec 'while ! systemctl is-active dbus; do sleep 1; done'
+container_exec 'systemctl start systemd-udevd
              while ! systemctl is-active systemd-udevd; do sleep 1; done
 '
-docker_exec '
+container_exec '
     systemctl restart NetworkManager
     while ! systemctl is-active NetworkManager; do sleep 1; done
 '
 add_extra_networks
 
-docker_exec '(source /etc/os-release; echo $PRETTY_NAME); rpm -q NetworkManager'
+container_exec '(source /etc/os-release; echo $PRETTY_NAME); rpm -q NetworkManager'
 
 dump_network_info
 
 pyclean
 if [[ "$CI" != "true" ]];then
-    docker_exec "cp -rf $CONTAINER_WORKSPACE /tmp/"
+    container_exec "cp -rf $CONTAINER_WORKSPACE /tmp/"
     # Change workspace to keep the original one clean
     CONTAINER_WORKSPACE="/tmp/nmstate"
 fi
