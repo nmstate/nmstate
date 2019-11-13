@@ -42,7 +42,7 @@ def iface_up(ifname):
 
 def _set_eth_admin_state(ifname, state):
     current_state = statelib.show_only((ifname,))
-    current_ifstate, = current_state[schema.Interface.KEY]
+    (current_ifstate,) = current_state[schema.Interface.KEY]
     iface_current_admin_state = current_ifstate[schema.Interface.STATE]
     if (
         iface_current_admin_state != state

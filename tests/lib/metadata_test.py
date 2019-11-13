@@ -673,7 +673,7 @@ class TestRouteMetadata(object):
         metadata.generate_ifaces_metadata(desired_state, current_state)
 
         iface_state = desired_state.interfaces['eth1']
-        route_metadata, = iface_state[Interface.IPV4][metadata.ROUTES]
+        (route_metadata,) = iface_state[Interface.IPV4][metadata.ROUTES]
         assert route0.to_dict() == route_metadata
 
     def test_route_with_matching_current_interface(self):
@@ -691,7 +691,7 @@ class TestRouteMetadata(object):
         metadata.generate_ifaces_metadata(desired_state, current_state)
 
         iface_state = desired_state.interfaces['eth1']
-        route_metadata, = iface_state[Interface.IPV4][metadata.ROUTES]
+        (route_metadata,) = iface_state[Interface.IPV4][metadata.ROUTES]
         assert route0.to_dict() == route_metadata
 
     def test_two_routes_with_matching_interfaces(self):
@@ -716,8 +716,8 @@ class TestRouteMetadata(object):
 
         iface0_state = desired_state.interfaces['eth1']
         iface1_state = desired_state.interfaces['eth2']
-        route0_metadata, = iface0_state[Interface.IPV4][metadata.ROUTES]
-        route1_metadata, = iface1_state[Interface.IPV6][metadata.ROUTES]
+        (route0_metadata,) = iface0_state[Interface.IPV4][metadata.ROUTES]
+        (route1_metadata,) = iface1_state[Interface.IPV6][metadata.ROUTES]
         assert route0.to_dict() == route0_metadata
         assert route1.to_dict() == route1_metadata
 
@@ -769,7 +769,7 @@ def test_dns_metadata_empty():
 
 
 def test_dns_gen_metadata_static_gateway_ipv6_name_server_before_ipv4(
-    nm_dns_mock
+    nm_dns_mock,
 ):
     dns_config = {
         DNS.SERVER: ['2001:4860:4860::8888', '8.8.8.8'],
@@ -802,7 +802,7 @@ def test_dns_gen_metadata_static_gateway_ipv6_name_server_before_ipv4(
 
 
 def test_dns_gen_metadata_static_gateway_ipv6_name_server_after_ipv4(
-    nm_dns_mock
+    nm_dns_mock,
 ):
     dns_config = {
         DNS.SERVER: ['8.8.8.8', '2001:4860:4860::8888'],
