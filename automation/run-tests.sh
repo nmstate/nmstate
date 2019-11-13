@@ -293,9 +293,9 @@ dump_network_info
 
 pyclean
 if [[ "$CI" != "true" ]];then
-    container_exec "cp -rf $CONTAINER_WORKSPACE /tmp/"
+    container_exec "cp -rf $CONTAINER_WORKSPACE /root/nmstate-workspace"
     # Change workspace to keep the original one clean
-    CONTAINER_WORKSPACE="/tmp/nmstate"
+    CONTAINER_WORKSPACE="/root/nmstate-workspace"
 fi
 install_nmstate
 run_tests
