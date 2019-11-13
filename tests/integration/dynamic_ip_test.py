@@ -519,7 +519,7 @@ def test_dhcp_on_bridge0(dhcpcli_up_with_dynamic_ip):
 
 
 def test_slave_ipaddr_learned_via_dhcp_added_as_static_to_linux_bridge(
-    dhcpcli_up
+    dhcpcli_up,
 ):
     dhcpcli_up[Interface.KEY][0][Interface.IPV4] = create_ipv4_state(
         enabled=True, dhcp=True
