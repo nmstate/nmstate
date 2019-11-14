@@ -2,16 +2,11 @@
 language: generic
 env:
     matrix:
-        - DOCKER_IMAGE=nmstate/fedora-nmstate-dev
-          testflags="--test-type integ --pytest-args='-x'"
         - DOCKER_IMAGE=nmstate/centos8-nmstate-dev
           testflags="--test-type integ --pytest-args='-x'"
-        - DOCKER_IMAGE=nmstate/fedora-nmstate-dev
+        - DOCKER_IMAGE=nmstate/centos8-nmstate-dev
           testflags="--test-type integ --pytest-args='-x'
               --copr networkmanager/NetworkManager-master"
-        - DOCKER_IMAGE=nmstate/fedora-nmstate-dev
-          testflags="--test-type integ --pytest-args='-x'
-              --copr networkmanager/NetworkManager-1.20"
         - DOCKER_IMAGE=nmstate/fedora-nmstate-dev
           testflags="--test-type format"
         - DOCKER_IMAGE=nmstate/fedora-nmstate-dev
@@ -24,13 +19,8 @@ env:
 matrix:
     allow_failures:
         - env: DOCKER_IMAGE=nmstate/centos8-nmstate-dev
-               testflags="--test-type integ --pytest-args='-x'"
-        - env: DOCKER_IMAGE=nmstate/fedora-nmstate-dev
                testflags="--test-type integ --pytest-args='-x'
                    --copr networkmanager/NetworkManager-master"
-        - env: DOCKER_IMAGE=nmstate/fedora-nmstate-dev
-               testflags="--test-type integ --pytest-args='-x'
-                   --copr networkmanager/NetworkManager-1.20"
 
 addons:
     apt:
