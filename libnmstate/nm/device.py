@@ -236,6 +236,9 @@ def _ipv6_changed(dev, connection_profile):
 def _activate_async(dev):
     conn = connection.ConnectionProfile()
     conn.nmdevice = dev
+    if dev:
+        # Workaround of https://bugzilla.redhat.com/show_bug.cgi?id=1772470
+        dev.set_managed(True)
     conn.safe_activate_async()
 
 
