@@ -38,9 +38,6 @@ You may change the test type by using:
  * `./automation/run-tests.sh --test-type lint`:
    Static analysis of code using 'nmstate/fedora-nmstate-dev' docker image.
 
- * `./automation/run-tests.sh --test-type unit_py27`:
-   Unit tests in Python 2.7 using 'nmstate/fedora-nmstate-dev' docker image.
-
  * `./automation/run-tests.sh --test-type unit_py36`:
    Unit tests in Python 3.6 using 'nmstate/fedora-nmstate-dev' docker image.
 
@@ -98,7 +95,7 @@ docker network connect $NET1 $CONTAINER_ID
 docker exec -ti $CONTAINER_ID /bin/bash
 systemctl start NetworkManager
 cd /workspace/nmstate
-tox -e check-integ-py27
+tox -e check-integ-py36
 ```
 
 ### Build a new container image

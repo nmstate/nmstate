@@ -17,8 +17,6 @@ env:
         - DOCKER_IMAGE=nmstate/fedora-nmstate-dev
           testflags="--test-type lint"
         - DOCKER_IMAGE=nmstate/fedora-nmstate-dev
-          testflags="--test-type unit_py27"
-        - DOCKER_IMAGE=nmstate/fedora-nmstate-dev
           testflags="--test-type unit_py36"
         - DOCKER_IMAGE=nmstate/fedora-nmstate-dev
           testflags="--test-type unit_py37"
