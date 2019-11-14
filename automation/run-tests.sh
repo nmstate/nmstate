@@ -13,7 +13,6 @@ NET1="nmstate-net1"
 TEST_TYPE_ALL="all"
 TEST_TYPE_FORMAT="format"
 TEST_TYPE_LINT="lint"
-TEST_TYPE_UNIT_PY27="unit_py27"
 TEST_TYPE_UNIT_PY36="unit_py36"
 TEST_TYPE_UNIT_PY37="unit_py37"
 TEST_TYPE_INTEG="integ"
@@ -88,16 +87,6 @@ function run_tests {
                  "support yet"
         else
             docker_exec 'tox -e flake8,pylint'
-        fi
-    fi
-
-    if [ $TEST_TYPE == $TEST_TYPE_ALL ] || \
-       [ $TEST_TYPE == $TEST_TYPE_UNIT_PY27 ];then
-        if [[ $DOCKER_IMAGE == *"centos"* ]]; then
-            echo "Running unit test in $DOCKER_IMAGE container is not " \
-                 "support yet"
-        else
-            docker_exec 'tox -e check-py27'
         fi
     fi
 
@@ -254,7 +243,6 @@ while true; do
         echo "     * $TEST_TYPE_FORMAT"
         echo "     * $TEST_TYPE_LINT"
         echo "     * $TEST_TYPE_INTEG"
-        echo "     * $TEST_TYPE_UNIT_PY27"
         echo "     * $TEST_TYPE_UNIT_PY36"
         echo "     * $TEST_TYPE_UNIT_PY37"
         echo -n "--customize allows to specify a command to customize the "
