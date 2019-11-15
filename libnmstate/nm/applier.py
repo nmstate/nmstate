@@ -54,6 +54,12 @@ def create_new_ifaces(con_profiles):
 
 
 def prepare_new_ifaces_configuration(ifaces_desired_state):
+    # Delete the existing profiles before create the new ones
+    for iface_desired_state in ifaces_desired_state:
+        connection.delete_iface_inactive_connections(
+            iface_desired_state[Interface.NAME]
+        )
+
     return [
         _build_connection_profile(iface_desired_state)
         for iface_desired_state in ifaces_desired_state
@@ -79,7 +85,8 @@ def prepare_edited_ifaces_configuration(ifaces_desired_state):
     con_profiles = []
 
     for iface_desired_state in ifaces_desired_state:
-        nmdev = device.get_device_by_name(iface_desired_state[Interface.NAME])
+        ifname = iface_desired_state[Interface.NAME]
+        nmdev = device.get_device_by_name(ifname)
         cur_con_profile = None
         if nmdev:
             cur_con_profile = connection.ConnectionProfile()
@@ -95,6 +102,7 @@ def prepare_edited_ifaces_configuration(ifaces_desired_state):
             con_profiles.append(cur_con_profile)
         else:
             # Missing connection, attempting to create a new one.
+            connection.delete_iface_inactive_connections(ifname)
             con_profiles.append(new_con_profile)
 
     return con_profiles
