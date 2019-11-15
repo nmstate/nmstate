@@ -2,6 +2,6 @@
 - name: 'TEST_TYPE'
   value: 'integ'
 - name: 'DOCKER_IMAGE'
-  value: 'nmstate/fedora-nmstate-dev'
+  value: 'nmstate/centos8-nmstate-dev'
 - name: 'CI'
   value: 'true'
