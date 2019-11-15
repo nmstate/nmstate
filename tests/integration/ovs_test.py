@@ -33,7 +33,8 @@ PORT1 = 'ovs1'
 
 
 @pytest.mark.xfail(
-    raises=NmstateLibnmError, reason='https://bugzilla.redhat.com/1724901'
+    raises=(NmstateLibnmError, AssertionError),
+    reason='https://bugzilla.redhat.com/1724901',
 )
 def test_create_and_remove_ovs_bridge_with_min_desired_state():
     with Bridge(BRIDGE1).create() as state:
@@ -43,7 +44,8 @@ def test_create_and_remove_ovs_bridge_with_min_desired_state():
 
 
 @pytest.mark.xfail(
-    raises=NmstateLibnmError, reason='https://bugzilla.redhat.com/1724901'
+    raises=(NmstateLibnmError, AssertionError),
+    reason='https://bugzilla.redhat.com/1724901',
 )
 def test_create_and_remove_ovs_bridge_options_specified():
     bridge = Bridge(BRIDGE1)
@@ -63,7 +65,8 @@ def test_create_and_remove_ovs_bridge_options_specified():
 
 
 @pytest.mark.xfail(
-    raises=NmstateLibnmError, reason='https://bugzilla.redhat.com/1724901'
+    raises=(NmstateLibnmError, AssertionError),
+    reason='https://bugzilla.redhat.com/1724901',
 )
 def test_create_and_remove_ovs_bridge_with_a_system_port(port0_up):
     bridge = Bridge(BRIDGE1)
@@ -77,7 +80,8 @@ def test_create_and_remove_ovs_bridge_with_a_system_port(port0_up):
 
 
 @pytest.mark.xfail(
-    raises=NmstateLibnmError, reason='https://bugzilla.redhat.com/1724901'
+    raises=(NmstateLibnmError, AssertionError),
+    reason='https://bugzilla.redhat.com/1724901',
 )
 def test_create_and_remove_ovs_bridge_with_internal_port_and_static_ip():
     bridge = Bridge(BRIDGE1)
