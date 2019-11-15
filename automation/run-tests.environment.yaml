@@ -3,3 +3,5 @@
   value: 'integ'
 - name: 'DOCKER_IMAGE'
   value: 'nmstate/fedora-nmstate-dev'
+- name: 'CI'
+  value: 'true'
