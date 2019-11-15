@@ -53,7 +53,8 @@ def bridge_default_config():
 
 
 @pytest.mark.xfail(
-    raises=MainloopTestError, reason='https://bugzilla.redhat.com/1724901'
+    raises=(MainloopTestError, AssertionError),
+    reason='https://bugzilla.redhat.com/1724901',
 )
 def test_create_and_remove_minimum_config_bridge(
     bridge_minimum_config, bridge_default_config
@@ -69,7 +70,8 @@ def test_create_and_remove_minimum_config_bridge(
 
 
 @pytest.mark.xfail(
-    raises=MainloopTestError, reason='https://bugzilla.redhat.com/1724901'
+    raises=(MainloopTestError, AssertionError),
+    reason='https://bugzilla.redhat.com/1724901',
 )
 def test_bridge_with_system_port(eth1_up, bridge_default_config):
     bridge_desired_state = bridge_default_config
@@ -91,7 +93,8 @@ def test_bridge_with_system_port(eth1_up, bridge_default_config):
 
 
 @pytest.mark.xfail(
-    raises=MainloopTestError, reason='https://bugzilla.redhat.com/1724901'
+    raises=(MainloopTestError, AssertionError),
+    reason='https://bugzilla.redhat.com/1724901',
 )
 def test_bridge_with_internal_interface(bridge_default_config):
     bridge_desired_state = bridge_default_config
