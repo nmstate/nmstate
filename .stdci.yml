@@ -6,4 +6,4 @@ Architectures:
       runtime-requirements:
         host-distro: same
 script:
-    from-file: automation/run-tests.sh
+  from-file: automation/run-tests.sh
