@@ -8,6 +8,8 @@ env:
           testflags="--test-type integ --pytest-args='-x'
               --copr networkmanager/NetworkManager-master"
         - DOCKER_IMAGE=nmstate/fedora-nmstate-dev
+          testflags="--test-type integ --pytest-args='-x'"
+        - DOCKER_IMAGE=nmstate/fedora-nmstate-dev
           testflags="--test-type format"
         - DOCKER_IMAGE=nmstate/fedora-nmstate-dev
           testflags="--test-type lint"
