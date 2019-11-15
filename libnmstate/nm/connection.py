@@ -450,3 +450,16 @@ def get_device_active_connection(nm_device):
     if nm_device:
         active_conn = nm_device.get_active_connection()
     return active_conn
+
+
+def delete_iface_inactive_connections(ifname):
+    for con in list_connections_by_ifname(ifname):
+        con.delete()
+
+
+def list_connections_by_ifname(ifname):
+    return [
+        ConnectionProfile(con)
+        for con in nmclient.NM.Client.get_connections(nmclient.client())
+        if con.get_interface_name() == ifname
+    ]
