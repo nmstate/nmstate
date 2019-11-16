@@ -55,7 +55,9 @@ function add_extra_networks {
 function dump_network_info {
     docker_exec '
       nmcli dev; \
-      nmcli con; \
+      # Use empty PAGER variable to stop nmcli send output to less which hang \
+      # the CI. \
+      PAGER= nmcli con; \
       ip addr; \
       ip route; \
       cat /etc/resolv.conf; \
