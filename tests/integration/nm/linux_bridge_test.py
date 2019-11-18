@@ -128,12 +128,12 @@ def _bridge_interface(state):
 @mainloop_run
 def _modify_bridge(bridge_desired_state):
     bridge_config = bridge_desired_state[LB.CONFIG_SUBTREE]
-    _modify_bridge_options(bridge_config)
+    _modify_bridge_options(bridge_desired_state)
     _modify_ports(bridge_config[LB.PORT_SUBTREE])
 
 
-def _modify_bridge_options(bridge_config):
-    br_options = bridge_config.get(LB.OPTIONS_SUBTREE)
+def _modify_bridge_options(bridge_state):
+    br_options = bridge_state.get(LB.CONFIG_SUBTREE).get(LB.OPTIONS_SUBTREE)
     nmdev = nm.device.get_device_by_name(BRIDGE0)
     conn = nm.connection.ConnectionProfile()
     conn.import_by_id(BRIDGE0)
@@ -158,9 +158,7 @@ def _get_bridge_current_state():
 
 @mainloop_run
 def _create_bridge(bridge_desired_state):
-    bridge_config = bridge_desired_state.get(LB.CONFIG_SUBTREE, {})
-    br_options = bridge_config.get(LB.OPTIONS_SUBTREE)
-    iface_bridge_settings = _create_iface_bridge_settings(br_options)
+    iface_bridge_settings = _create_iface_bridge_settings(bridge_desired_state)
 
     _create_bridge_iface(iface_bridge_settings)
     ports_state = bridge_desired_state[LB.CONFIG_SUBTREE][LB.PORT_SUBTREE]
@@ -208,7 +206,7 @@ def _delete_iface(devname):
     nm.device.delete(nmdev)
 
 
-def _create_iface_bridge_settings(bridge_options, base_con_profile=None):
+def _create_iface_bridge_settings(bridge_state, base_con_profile=None):
     con_profile = None
     con_setting = nm.connection.ConnectionSetting()
     if base_con_profile:
@@ -220,7 +218,7 @@ def _create_iface_bridge_settings(bridge_options, base_con_profile=None):
             iface_name=BRIDGE0,
             iface_type=nm.nmclient.NM.SETTING_BRIDGE_SETTING_NAME,
         )
-    bridge_setting = nm.bridge.create_setting(bridge_options, con_profile)
+    bridge_setting = nm.bridge.create_setting(bridge_state, con_profile)
     ipv4_setting = nm.ipv4.create_setting({}, None)
     ipv6_setting = nm.ipv6.create_setting({}, None)
     return con_setting.setting, bridge_setting, ipv4_setting, ipv6_setting

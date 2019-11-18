@@ -17,9 +17,9 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
-from libnmstate.error import NmstateNotImplementedError
 from libnmstate.nm import connection
 from libnmstate.nm import nmclient
+from libnmstate.nm.bridge_port_vlan import PortVlanFilter
 from libnmstate.schema import LinuxBridge as LB
 
 
@@ -27,15 +27,16 @@ BRIDGE_TYPE = "bridge"
 BRIDGE_ENABLE_VLAN_FILTERING_METADATA = "_enable_vlan_filtering"
 
 
-def create_setting(options, base_con_profile, bridge_desired_state=None):
+def create_setting(bridge_state, base_con_profile):
     bridge_setting = _get_current_bridge_setting(base_con_profile)
+    options = bridge_state.get(BRIDGE_TYPE, {}).get(LB.OPTIONS_SUBTREE)
     if not bridge_setting:
         bridge_setting = nmclient.NM.SettingBridge.new()
     if options:
         _set_bridge_properties(bridge_setting, options)
-    if bridge_desired_state:
+    if bridge_state:
         _set_bridge_properties_from_metadata(
-            bridge_setting, bridge_desired_state
+            bridge_setting, bridge_state
         )
 
     return bridge_setting
@@ -100,7 +101,17 @@ def create_port_setting(options, base_con_profile):
         elif key == LB.Port.STP_PATH_COST:
             port_setting.props.path_cost = val
         elif key == LB.Port.VLAN_SUBTREE:
-            raise NmstateNotImplementedError
+            trunk_tags = val.get(LB.Port.Vlan.TRUNK_TAGS)
+            tag = val.get(LB.Port.Vlan.TAG)
+            enable_native_vlan = val.get(LB.Port.Vlan.ENABLE_NATIVE)
+            port_vlan_config = PortVlanFilter()
+            port_vlan_config.create_configuration(
+                trunk_tags, tag, enable_native_vlan
+            )
+            port_setting.clear_vlans()
+
+            for vlan_config in port_vlan_config.to_nm():
+                port_setting.add_vlan(vlan_config)
 
     return port_setting
 
@@ -119,7 +130,9 @@ def get_info(nmdev):
     port_profiles = _get_slave_profiles(nmdev)
     props = bridge_setting.props
     info[LB.CONFIG_SUBTREE] = {
-        LB.PORT_SUBTREE: _get_bridge_ports_info(port_profiles),
+        LB.PORT_SUBTREE: _get_bridge_ports_info(
+            port_profiles, show_vlan_info=bridge_setting.get_vlan_filtering()
+        ),
         LB.OPTIONS_SUBTREE: {
             LB.Options.MAC_AGEING_TIME: props.ageing_time,
             LB.Options.GROUP_FORWARD_MASK: props.group_forward_mask,
@@ -149,11 +162,16 @@ def _get_bridge_setting(nmdev):
     return bridge_setting
 
 
-def _get_bridge_ports_info(port_profiles):
+def _get_bridge_ports_info(port_profiles, show_vlan_info=False):
     ports_info = []
     for p in port_profiles:
         port_info = _get_bridge_port_info(p)
         if port_info:
+            if show_vlan_info:
+                bridge_vlan_config = p.get_setting_bridge_port().props.vlans
+                port_vlan = PortVlanFilter()
+                port_vlan.import_from_bridge_settings(bridge_vlan_config)
+                port_info[LB.Port.VLAN_SUBTREE] = port_vlan.to_dict()
             ports_info.append(port_info)
     return ports_info
 
@@ -162,12 +180,13 @@ def _get_bridge_port_info(port_profile):
     """Report port information."""
 
     port_setting = port_profile.get_setting_bridge_port()
-    return {
+    port_state = {
         LB.Port.NAME: port_profile.get_interface_name(),
         LB.Port.STP_PRIORITY: port_setting.props.priority,
         LB.Port.STP_HAIRPIN_MODE: port_setting.props.hairpin_mode,
         LB.Port.STP_PATH_COST: port_setting.props.path_cost,
     }
+    return port_state
 
 
 def _get_slave_profiles(master_device):

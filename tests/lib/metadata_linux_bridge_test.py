@@ -21,6 +21,7 @@ import copy
 
 from libnmstate import metadata
 from libnmstate import state
+from libnmstate.appliers import linux_bridge
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
@@ -500,4 +501,4 @@ def _create_metadata_state(bridge_name, port_name):
 
 
 def _create_bridge_metadata_state(vlan_filtering):
-    return {metadata.BRIDGE_ENABLE_VLAN_FILTERING: vlan_filtering}
+    return {linux_bridge.BRIDGE_ENABLE_VLAN_FILTERING: vlan_filtering}

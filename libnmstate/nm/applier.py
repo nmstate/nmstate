@@ -413,14 +413,10 @@ def _build_connection_profile(iface_desired_state, base_con_profile=None):
     if bond_opts:
         settings.append(bond.create_setting(bond_opts, wired_setting))
     elif iface_type == bridge.BRIDGE_TYPE:
-        bridge_options = iface_desired_state.get(bridge.BRIDGE_TYPE, {}).get(
-            LB.OPTIONS_SUBTREE
+        linux_bridge_setting = bridge.create_setting(
+            iface_desired_state, base_profile,
         )
-        if bridge_options:
-            linux_bridge_setting = bridge.create_setting(
-                bridge_options, base_profile
-            )
-            settings.append(linux_bridge_setting)
+        settings.append(linux_bridge_setting)
     elif iface_type == ovs.BRIDGE_TYPE:
         ovs_bridge_state = iface_desired_state.get(OvsB.CONFIG_SUBTREE, {})
         ovs_bridge_options = ovs_bridge_state.get(OvsB.OPTIONS_SUBTREE)
