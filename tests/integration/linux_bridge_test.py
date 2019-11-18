@@ -311,6 +311,26 @@ def test_rollback_for_linux_bridge():
     assert original_state == current_state
 
 
+def test_activate_empty_bridge_does_not_blocked_by_dhcp():
+    bridge_name = TEST_BRIDGE0
+    bridge_state = None
+    extra_iface_state = {
+        Interface.IPV4: {
+            InterfaceIPv4.ENABLED: True,
+            InterfaceIPv4.DHCP: True,
+        },
+        Interface.IPV6: {
+            InterfaceIPv6.ENABLED: True,
+            InterfaceIPv6.AUTOCONF: True,
+            InterfaceIPv6.DHCP: True,
+        },
+    }
+    with linux_bridge(
+        bridge_name, bridge_state, extra_iface_state
+    ) as desired_state:
+        assertlib.assert_state(desired_state)
+
+
 def _add_port_to_bridge(bridge_state, ifname):
     port_state = yaml.load(BRIDGE_PORT_YAML, Loader=yaml.SafeLoader)
     add_port_to_bridge(bridge_state, ifname, port_state)

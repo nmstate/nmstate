@@ -34,6 +34,7 @@ class ActivationError(Exception):
 class ActiveConnection(object):
     def __init__(self, active_connection=None):
         self.handlers = set()
+        self.device_handlers = set()
         self._act_con = active_connection
         self._mainloop = nmclient.mainloop()
 
@@ -180,6 +181,9 @@ class ActiveConnection(object):
         for handler_id in self.handlers:
             self.nm_active_connection.handler_disconnect(handler_id)
         self.handlers = set()
+        for handler_id in self.device_handlers:
+            self.nmdevice.handler_disconnect(handler_id)
+        self.device_handlers = set()
 
 
 def _is_device_master_type(nmdev):
