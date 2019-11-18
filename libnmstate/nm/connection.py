@@ -147,7 +147,8 @@ class ConnectionProfile(object):
 
         active_conn = get_device_active_connection(self.nmdevice)
         if active_conn:
-            ac = ActiveConnection(active_conn)
+            ac = ActiveConnection()
+            ac.import_by_device(self.nmdevice)
             if ac.is_activating:
                 logging.debug(
                     'Connection activation in progress: dev=%s, state=%s',
@@ -255,6 +256,16 @@ class ConnectionProfile(object):
                 'state-changed', self._waitfor_active_connection_callback, ac
             )
         )
+        ac.device_handlers.add(
+            ac.nmdevice.connect(
+                'state-changed', self._waitfor_device_state_change_callback, ac
+            )
+        )
+
+    def _waitfor_device_state_change_callback(
+        self, _dev, _new_state, _old_state, _reason, ac
+    ):
+        self._waitfor_active_connection_callback(None, None, None, ac)
 
     def _waitfor_active_connection_callback(
         self, _nm_act_con, _state, _reason, ac
@@ -267,13 +278,18 @@ class ConnectionProfile(object):
                 )
             )
             ac.remove_handlers()
-            ac = ActiveConnection(cur_nm_act_conn)
+            ac = ActiveConnection()
+            # Don't rely on the first device of
+            # NM.ActiveConnection.get_devices() but set explicitly.
+            ac.import_by_device(self.nmdevice)
             self.waitfor_active_connection_async(ac)
         if ac.is_active:
             logging.debug(
-                'Connection activation succeeded: dev=%s, con-state=%s',
+                'Connection activation succeeded: dev=%s, con-state=%s, '
+                'dev-state= %s',
                 ac.devname,
                 ac.state,
+                ac.nmdev_state,
             )
             ac.remove_handlers()
             self._mainloop.execute_next_action()
