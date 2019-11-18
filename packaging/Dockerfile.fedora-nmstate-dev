@@ -2,7 +2,7 @@
 # Fedora official repository
 # (https://hub.docker.com/r/fedora/systemd-systemd/).
 # It enables systemd to be operational.
-FROM fedora:29
+FROM fedora:31
 ENV container docker
 COPY docker_enable_systemd.sh docker_sys_config.sh ./
 
@@ -22,6 +22,7 @@ RUN dnf -y install --setopt=install_weak_deps=False \
                    python3-jsonschema \
                    python3-pyyaml \
                    python3-setuptools \
+                   python3-pip \
                    \
                    python2 \
                    python36 \
@@ -45,10 +46,11 @@ RUN dnf -y install --setopt=install_weak_deps=False \
                    # Below package for pip (used by tox) to build dbus-python
                    make \
                    dbus-devel && \
-    alternatives --install /usr/bin/python python /usr/bin/python3 1 && \
-    ln -s /usr/bin/pytest-3 /usr/bin/pytest && \
     dnf clean all && \
-    pip3 install --upgrade pip pytest==4.6.6 pytest-cov==2.8.1 && \
+    pip install pytest==4.6.6 pytest-cov==2.8.1 --user && \
+    # Below line is workaround for
+    #   https://src.fedoraproject.org/rpms/rootfiles/pull-request/1
+    ln -s /root/.local/bin/pytest /usr/bin/pytest && \
     bash ./docker_sys_config.sh && rm ./docker_sys_config.sh
 
 VOLUME [ "/sys/fs/cgroup" ]
