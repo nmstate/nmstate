@@ -20,7 +20,6 @@ RUN dnf -y install --setopt=install_weak_deps=False \
                    NetworkManager-config-server \
                    openvswitch2.11 \
                    systemd-udev \
-                   python3-dbus \
                    python3-gobject-base \
                    python3-jsonschema \
                    python3-pyyaml \
@@ -30,15 +29,11 @@ RUN dnf -y install --setopt=install_weak_deps=False \
                    git \
                    iproute \
                    rpm-build \
-                   # Below package for pip (used by tox) to build dbus-python
-                   # Bug https://bugzilla.redhat.com/show_bug.cgi?id=1654774
-                   make \
                    python3-devel \
                    cairo-devel \
                    cairo-gobject-devel \
                    glib2-devel \
-                   gobject-introspection-devel \
-                   dbus-devel && \
+                   gobject-introspection-devel && \
     dnf -y group install "Development Tools" && \
     pip3 install pytest==4.6.6 pytest-cov==2.8.1 \
         python-coveralls tox --user && \

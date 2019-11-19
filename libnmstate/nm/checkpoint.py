@@ -17,23 +17,10 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
+from contextlib import contextmanager
 import logging
 
-import dbus
-
-import libnmstate.nm.nmclient
-
-
-DBUS_STD_PROPERTIES_IFNAME = 'org.freedesktop.DBus.Properties'
-
-CHECKPOINT_CREATE_FLAG_DESTROY_ALL = 0x01
-CHECKPOINT_CREATE_FLAG_DELETE_NEW_CONNECTIONS = 0x02
-CHECKPOINT_CREATE_FLAG_DISCONNECT_NEW_DEVICES = 0x04
-
-NM_PERMISSION_DENIED = 'org.freedesktop.NetworkManager.PermissionDenied'
-
-
-_nmdbus_manager = None
+from libnmstate.nm import nmclient
 
 
 class NMCheckPointError(Exception):
@@ -48,41 +35,6 @@ class NMCheckPointPermissionError(NMCheckPointError):
     pass
 
 
-def nmdbus_manager():
-    """
-    Returns the NM manager.
-    If it does not exists, it will initialize the dbus connection and
-    create the manager.
-    """
-    global _nmdbus_manager
-    if _nmdbus_manager is None:
-        _NMDbus.init()
-        _nmdbus_manager = _NMDbusManager()
-    return _nmdbus_manager
-
-
-class _NMDbus(object):
-    BUS_NAME = 'org.freedesktop.NetworkManager'
-
-    bus = None
-
-    @staticmethod
-    def init():
-        _NMDbus.bus = dbus.SystemBus()
-
-
-class _NMDbusManager(object):
-    IF_NAME = 'org.freedesktop.NetworkManager'
-    OBJ_PATH = '/org/freedesktop/NetworkManager'
-
-    def __init__(self):
-        mng_proxy = _NMDbus.bus.get_object(
-            _NMDbus.BUS_NAME, _NMDbusManager.OBJ_PATH
-        )
-        self.properties = dbus.Interface(mng_proxy, DBUS_STD_PROPERTIES_IFNAME)
-        self.interface = dbus.Interface(mng_proxy, _NMDbusManager.IF_NAME)
-
-
 def get_checkpoints():
     nmclient = libnmstate.nm.nmclient.client(refresh=True)
 
@@ -91,10 +43,11 @@ def get_checkpoints():
 
 class CheckPoint(object):
     def __init__(self, timeout=60, autodestroy=True, dbuspath=None):
-        self._manager = nmdbus_manager()
         self._timeout = timeout
-        self._dbuspath = dbuspath
         self._autodestroy = autodestroy
+        self._dbuspath = dbuspath
+        self._mainloop = nmclient.mainloop(refresh=True)
+        self._nmclient = nmclient.client()
 
     def __enter__(self):
         self.create()
@@ -110,43 +63,158 @@ class CheckPoint(object):
             self.rollback()
 
     def create(self):
-        devs = []
-        timeout = self._timeout
         cp_flags = (
-            CHECKPOINT_CREATE_FLAG_DELETE_NEW_CONNECTIONS
-            | CHECKPOINT_CREATE_FLAG_DISCONNECT_NEW_DEVICES
+            nmclient.NM.CheckpointCreateFlags.DELETE_NEW_CONNECTIONS
+            | nmclient.NM.CheckpointCreateFlags.DISCONNECT_NEW_DEVICES
         )
-        try:
-            dbuspath = self._manager.interface.CheckpointCreate(
-                devs, timeout, cp_flags
+        userdata = self
+        devs = []
+
+        self._mainloop.push_action(
+            self._nmclient.checkpoint_create,
+            devs,
+            self._timeout,
+            cp_flags,
+            self._mainloop.cancellable,
+            CheckPoint._checkpoint_create_callback,
+            userdata,
+        )
+
+        ok = self._mainloop.run(self._timeout)
+        if not ok:
+            raise NMCheckPointCreationError(
+                'Failed to create checkpoint: '
+                '{}'.format(self._mainloop.error)
             )
-            logging.debug(
-                'Checkpoint %s created for all devices: %s', dbuspath, timeout
-            )
-            self._dbuspath = dbuspath
-        except dbus.exceptions.DBusException as e:
-            if e.get_dbus_name() == NM_PERMISSION_DENIED:
-                raise NMCheckPointPermissionError(str(e))
-            raise NMCheckPointCreationError(str(e))
 
     def destroy(self):
-        try:
-            self._manager.interface.CheckpointDestroy(self._dbuspath)
-        except dbus.exceptions.DBusException as e:
-            raise NMCheckPointError(str(e))
-
-        logging.debug('Checkpoint %s destroyed', self._dbuspath)
+        if self._dbuspath:
+            dbus_path = self._dbuspath
+            userdata = self
+            self._mainloop.push_action(
+                self._nmclient.checkpoint_destroy,
+                self._dbuspath,
+                self._mainloop.cancellable,
+                CheckPoint._checkpoint_destroy_callback,
+                userdata,
+            )
+            ok = self._mainloop.run(self._timeout)
+            if not ok:
+                raise NMCheckPointError(
+                    'Failed to destroy checkpoint {}: '
+                    '{}'.format(self._dbuspath, self._mainloop.error)
+                )
+            logging.debug('Checkpoint %s destroyed', dbus_path)
+        else:
+            raise NMCheckPointError('No checkpoint to destroy')
 
     def rollback(self):
-        try:
-            result = self._manager.interface.CheckpointRollback(self._dbuspath)
-        except dbus.exceptions.DBusException as e:
-            raise NMCheckPointError(str(e))
-        logging.debug(
-            'Checkpoint %s rollback executed: %s', self._dbuspath, result
-        )
-        return result
+        if self._dbuspath:
+            dbus_path = self._dbuspath
+            userdata = self
+            self._mainloop.push_action(
+                self._nmclient.checkpoint_rollback,
+                dbus_path,
+                self._mainloop.cancellable,
+                CheckPoint._checkpoint_rollback_callback,
+                userdata,
+            )
+            ok = self._mainloop.run(self._timeout)
+            if not ok:
+                raise NMCheckPointError(
+                    'Failed to rollback checkpoint {}: {}'.format(
+                        self._dbuspath, self._mainloop.error
+                    )
+                )
+            logging.debug('Checkpoint %s rollback executed', dbus_path)
+        else:
+            raise NMCheckPointError('No checkpoint to rollback')
+
+        return
 
     @property
     def dbuspath(self):
         return self._dbuspath
+
+    @staticmethod
+    def _checkpoint_create_callback(client, result, data):
+        checkpoint = data
+        mainloop = checkpoint._mainloop
+        try:
+            cp = client.checkpoint_create_finish(result)
+            checkpoint._dbuspath = cp.get_path()
+            if cp:
+                logging.debug(
+                    'Checkpoint {} created for all devices'.format(
+                        checkpoint._dbuspath
+                    )
+                )
+                mainloop.execute_next_action()
+            else:
+                mainloop.quit(
+                    'Checkpoint creation failed: error={}'.format(
+                        mainloop.error
+                    )
+                )
+        except Exception as e:
+            if mainloop.is_action_canceled(e):
+                logging.debug(
+                    'Checkpoint creation canceled: error={}'.format(e)
+                )
+            else:
+                mainloop.quit('Checkpoint creation failed: error={}'.format(e))
+
+    @staticmethod
+    def _checkpoint_rollback_callback(client, result, data):
+        checkpoint = data
+        mainloop = checkpoint._mainloop
+        try:
+            CheckPoint._check_rollback_result(
+                client, result, checkpoint._dbuspath
+            )
+            checkpoint._dbuspath = None
+            mainloop.execute_next_action()
+        except Exception as e:
+            if mainloop.is_action_canceled(e):
+                logging.debug(
+                    'Checkpoint rollback canceled: error={}'.format(e)
+                )
+            else:
+                mainloop.quit('Checkpoint rollback failed: error={}'.format(e))
+
+    @staticmethod
+    def _check_rollback_result(client, result, dbus_path):
+        ret = client.checkpoint_rollback_finish(result)
+        logging.debug('Checkpoint %s rollback executed', dbus_path)
+        for path in ret:
+            d = client.get_device_by_path(path)
+            iface = path if d is None else d.get_iface()
+            if ret[path] != 0:
+                logging.error('Interface %s rollback failed', iface)
+            else:
+                logging.debug('Interface %s rollback succeeded', iface)
+
+    @staticmethod
+    def _checkpoint_destroy_callback(client, result, data):
+        checkpoint = data
+        mainloop = checkpoint._mainloop
+        try:
+            client.checkpoint_destroy_finish(result)
+            logging.debug(
+                'Checkpoint %s destroy executed', checkpoint._dbuspath
+            )
+            checkpoint._dbuspath = None
+            mainloop.execute_next_action()
+        except Exception as e:
+            if mainloop.is_action_canceled(e):
+                logging.debug(
+                    'Checkpoint %s destroy canceled: error=%s',
+                    checkpoint._dbuspath,
+                    e,
+                )
+            else:
+                mainloop.quit(
+                    'Checkpoint {} destroy failed: error={}'.format(
+                        checkpoint._dbuspath, e
+                    )
+                )

@@ -16,7 +16,6 @@ To manage OvS, Nmstate needs the packages `NetworkManager-ovs` and `openvswitch`
 ```shell
 yum -y install epel-release
 yum -y install \
-    dbus-python \
     NetworkManager \
     NetworkManager-libnm \
     NetworkManager-ovs \
@@ -26,7 +25,6 @@ yum -y install \
     python-setuptools \
     python2-pyyaml \
     python2-six
-yum-builddep -y dbus-python
 ```
 
 #### Post Package installation
@@ -63,9 +61,6 @@ pip uninstall -y nmstate; pip install nmstate
 Minimal Nmstate installation:
 ``` shell
 # install binary dependencies; The development packages are needed to build
-# python-dbus which is improperly packaged on RHEL 8:
-# https://bugzilla.redhat.com/show_bug.cgi?id=1654774
-yum install -y dbus-devel gcc glib2-devel make python3-devel python3-gobject-base
 yum install -y python3-pip
 pip3 uninstall -y nmstate; pip3 install nmstate
 ```

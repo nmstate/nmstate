@@ -93,3 +93,7 @@ def test_creating_a_checkpoint_from_dbuspath():
     new_checkpoint = CheckPoint(dbuspath=initial_checkpoint.dbuspath)
     new_checkpoint.destroy()
     assert not get_checkpoints()
+
+def test_repeat_create_destory_checkpoint():
+    for _ in range(0, 1000):
+        CheckPoint()
