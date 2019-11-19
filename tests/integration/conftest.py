@@ -22,8 +22,6 @@ import subprocess
 
 import pytest
 
-import libnmstate
-
 from .testlib import ifacelib
 
 
@@ -41,7 +39,7 @@ def logging_setup():
 
 
 @pytest.fixture(scope='session', autouse=True)
-def ethx_init(preserve_old_config):
+def ethx_init():
     """ Remove any existing definitions on the ethX interfaces. """
     ifacelib.ifaces_init('eth1', 'eth2')
 
@@ -60,13 +58,6 @@ def eth2_up():
 
 port0_up = eth1_up
 port1_up = eth2_up
-
-
-@pytest.fixture(scope='session', autouse=True)
-def preserve_old_config():
-    old_state = libnmstate.show()
-    yield
-    libnmstate.apply(old_state, verify_change=False)
 
 
 def pytest_report_header(config):
