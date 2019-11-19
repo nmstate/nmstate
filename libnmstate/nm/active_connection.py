@@ -142,7 +142,10 @@ class ActiveConnection(object):
 
     @property
     def is_activating(self):
-        return self.state == nmclient.NM.ActiveConnectionState.ACTIVATING
+        return (
+            self.state == nmclient.NM.ActiveConnectionState.ACTIVATING
+            and not self.is_active
+        )
 
     @property
     def reason(self):
