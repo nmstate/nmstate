@@ -341,6 +341,64 @@ class TestVxlanValidation(object):
 
 
 class TestVlanFilteringValidation(object):
+    def test_access_port_cant_have_trunks(self):
+        invalid_vlan_config = {
+            LB.Port.Vlan.TYPE: LB.Port.Vlan.ACCESS_TYPE,
+            LB.Port.Vlan.TRUNK_TAGS: [
+                {
+                    LB.Port.Vlan.TrunkTags.ID_RANGE: {
+                        LB.Port.Vlan.TrunkTags.MIN_RANGE: 200,
+                        LB.Port.Vlan.TrunkTags.MAX_RANGE: 299,
+                    }
+                }
+            ],
+        }
+        desired_state = {
+            schema.Interface.KEY: [
+                {
+                    schema.Interface.NAME: 'br0',
+                    schema.Interface.TYPE: LB.TYPE,
+                    schema.Interface.STATE: schema.InterfaceState.UP,
+                    LB.PORT_SUBTREE: [
+                        {
+                            LB.PORT_NAME: 'eth1',
+                            LB.Port.VLAN_SUBTREE: invalid_vlan_config,
+                        }
+                    ],
+                }
+            ]
+        }
+        with pytest.raises(
+            NmstateValueError, match='Access port cannot have trunk tags'
+        ):
+            libnmstate.validator.validate_bridge(desired_state)
+
+    def test_trunk_port_must_have_at_least_1_tag(self):
+        invalid_vlan_config = {
+            LB.Port.Vlan.TYPE: LB.Port.Vlan.TRUNK_TYPE,
+            LB.Port.Vlan.TRUNK_TAGS: [],
+        }
+        desired_state = {
+            schema.Interface.KEY: [
+                {
+                    schema.Interface.NAME: 'br0',
+                    schema.Interface.TYPE: LB.TYPE,
+                    schema.Interface.STATE: schema.InterfaceState.UP,
+                    LB.PORT_SUBTREE: [
+                        {
+                            LB.PORT_NAME: 'eth1',
+                            LB.Port.VLAN_SUBTREE: invalid_vlan_config,
+                        }
+                    ],
+                }
+            ]
+        }
+        with pytest.raises(
+            NmstateValueError,
+            match='A trunk port needs to specify trunk tags',
+        ):
+            libnmstate.validator.validate_bridge(desired_state)
+
     def test_specify_both_vlan_id_and_id_range_is_invalid(self):
         invalid_vlan_config = {
             LB.Port.Vlan.TYPE: LB.Port.Vlan.TRUNK_TYPE,

@@ -250,9 +250,18 @@ def _assert_vxlan_has_missing_attribute(state, *attributes):
 
 def _assert_vlan_filtering_trunk_tags(ports_state):
     for port_state in ports_state:
-        trunk_tags = port_state.get(LB.Port.VLAN_SUBTREE, {}).get(
-            LB.Port.Vlan.TRUNK_TAGS, []
-        )
+        port_vlan_state = port_state.get(LB.Port.VLAN_SUBTREE, {})
+        vlan_type = port_vlan_state.get(LB.Port.Vlan.TYPE)
+        trunk_tags = port_vlan_state.get(LB.Port.Vlan.TRUNK_TAGS, [])
+
+        if vlan_type == LB.Port.Vlan.ACCESS_TYPE:
+            if trunk_tags:
+                raise NmstateValueError('Access port cannot have trunk tags')
+        elif port_vlan_state:
+            if not trunk_tags:
+                raise NmstateValueError(
+                    'A trunk port needs to specify trunk tags'
+                )
         for trunk_tag in trunk_tags:
             _assert_vlan_filtering_trunk_tag(trunk_tag)
 
