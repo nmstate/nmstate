@@ -39,6 +39,7 @@ from .testlib import cmd as libcmd
 from .testlib import bondlib
 from .testlib import ifacelib
 from .testlib import statelib
+from .testlib.ifacelib import get_mac_address
 from .testlib.bridgelib import add_port_to_bridge
 from .testlib.bridgelib import create_bridge_subtree_state
 from .testlib.bridgelib import linux_bridge
@@ -496,6 +497,7 @@ def test_dhcp_on_bridge0(dhcpcli_up_with_dynamic_ip):
         Interface.IPV6: create_ipv6_state(
             enabled=True, dhcp=True, autoconf=True
         ),
+        Interface.MAC: get_mac_address(DHCP_CLI_NIC),
     }
     bridge_name = TEST_BRIDGE_NIC
     with linux_bridge(bridge_name, bridge_state, bridge_iface_state) as state:

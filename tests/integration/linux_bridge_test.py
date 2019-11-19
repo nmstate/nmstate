@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
+from contextlib import contextmanager
 from copy import deepcopy
 
 import time
@@ -34,10 +35,12 @@ from .testlib import assertlib
 from .testlib.bondlib import bond_interface
 from .testlib.bridgelib import add_port_to_bridge
 from .testlib.bridgelib import linux_bridge
+from .testlib.ifacelib import get_mac_address
 from .testlib.iproutelib import ip_monitor_assert_stable_link_up
 from .testlib.statelib import show_only
 from .testlib.assertlib import assert_mac_address
 from .testlib.vlan import vlan_interface
+from .testlib.env import is_fedora
 
 TEST_BRIDGE0 = 'linux-br0'
 
@@ -64,6 +67,18 @@ stp-priority: 32
 
 @pytest.fixture
 def bridge0_with_port0(port0_up):
+    with _bridge0_with_port0(port0_up) as state:
+        yield state
+
+
+@pytest.fixture
+def bridge0_with_port0_with_explicit_port_mac(port0_up):
+    with _bridge0_with_port0(port0_up, use_port_mac=True) as state:
+        yield state
+
+
+@contextmanager
+def _bridge0_with_port0(port0_up, use_port_mac=False):
     bridge_name = TEST_BRIDGE0
     port_name = port0_up[Interface.KEY][0][Interface.NAME]
     bridge_state = _create_bridge_subtree_config((port_name,))
@@ -71,7 +86,14 @@ def bridge0_with_port0(port0_up):
     options_subtree = bridge_state[LinuxBridge.OPTIONS_SUBTREE]
     options_subtree[LinuxBridge.STP_SUBTREE][LinuxBridge.STP_ENABLED] = False
 
-    with linux_bridge(bridge_name, bridge_state) as desired_state:
+    extra_iface_state = None
+
+    if use_port_mac:
+        extra_iface_state = {Interface.MAC: get_mac_address(port_name)}
+
+    with linux_bridge(
+        bridge_name, bridge_state, extra_iface_state
+    ) as desired_state:
         # Need to set twice so the wired setting will be explicitly set,
         # allowing reapply to succeed.
         # https://bugzilla.redhat.com/1703960
@@ -189,7 +211,29 @@ def test_add_port_to_existing_bridge(bridge0_with_port0, port1_up):
     assertlib.assert_state(desired_state)
 
 
-def test_linux_bridge_uses_the_port_mac(port0_up, bridge0_with_port0):
+@pytest.mark.xfail(
+    is_fedora(),
+    reason=(
+        'On Fedora 31+, users need to explicitly configure the port MAC '
+        'due to changes to the default systemd config.'
+    ),
+    raises=AssertionError,
+    strict=True,
+)
+def test_linux_bridge_uses_the_port_mac_implicitly(
+    port0_up, bridge0_with_port0
+):
+    print(bridge0_with_port0)
+    port0_name = port0_up[Interface.KEY][0][Interface.NAME]
+    current_state = show_only((TEST_BRIDGE0, port0_name))
+    assert_mac_address(
+        current_state, port0_up[Interface.KEY][0][Interface.MAC]
+    )
+
+
+def test_linux_bridge_uses_specified_mac_address(
+    port0_up, bridge0_with_port0_with_explicit_port_mac
+):
     port0_name = port0_up[Interface.KEY][0][Interface.NAME]
     current_state = show_only((TEST_BRIDGE0, port0_name))
     assert_mac_address(

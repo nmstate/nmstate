@@ -54,3 +54,8 @@ def _set_eth_admin_state(ifname, state):
             ]
         }
         libnmstate.apply(desired_state)
+
+
+def get_mac_address(ifname):
+    state = statelib.show_only((ifname,))
+    return state[schema.Interface.KEY][0].get(schema.Interface.MAC)
