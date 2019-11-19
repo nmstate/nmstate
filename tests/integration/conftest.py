@@ -19,8 +19,11 @@
 
 import logging
 import subprocess
+import warnings
 
 import pytest
+
+import libnmstate
 
 from .testlib import ifacelib
 
@@ -39,7 +42,7 @@ def logging_setup():
 
 
 @pytest.fixture(scope='session', autouse=True)
-def ethx_init():
+def ethx_init(diff_initial_state):
     """ Remove any existing definitions on the ethX interfaces. """
     ifacelib.ifaces_init('eth1', 'eth2')
 
@@ -58,6 +61,23 @@ def eth2_up():
 
 port0_up = eth1_up
 port1_up = eth2_up
+
+
+@pytest.fixture(scope='session', autouse=True)
+def diff_initial_state():
+    old_state = libnmstate.show()
+    yield
+    new_state = libnmstate.show()
+
+    if old_state != new_state:
+        warnings.warn(
+            'Network state after test run does not match network state '
+            'before test run:\n {}\n'.format(
+                libnmstate.prettystate.format_desired_current_state_diff(
+                    old_state, new_state
+                ),
+            )
+        )
 
 
 def pytest_report_header(config):
