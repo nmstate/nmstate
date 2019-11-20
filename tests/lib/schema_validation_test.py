@@ -25,9 +25,11 @@ import jsonschema as js
 import libnmstate
 from libnmstate.schema import Constants
 from libnmstate.schema import DNS
+from libnmstate.schema import Ethernet
 from libnmstate.schema import LinuxBridge as LB
 from libnmstate.schema import VXLAN
 from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceType
 
 INTERFACES = Constants.INTERFACES
 ROUTES = Constants.ROUTES
@@ -167,6 +169,34 @@ class TestIfaceTypeEthernet(object):
         del default_data[INTERFACES][0]['link-speed']
 
         libnmstate.validator.validate(default_data)
+
+    @pytest.mark.parametrize('valid_values', [0, 150, 256])
+    def test_valid_with_sriov_total_vfs(self, default_data, valid_values):
+        default_data[Interface.KEY][0].update(
+            {
+                Interface.TYPE: InterfaceType.ETHERNET,
+                Ethernet.SRIOV_SUBTREE: {
+                    Ethernet.SRIOV.TOTAL_VFS: valid_values
+                },
+            }
+        )
+        libnmstate.validator.validate(default_data)
+
+    @pytest.mark.parametrize('invalid_values', [-50, -1])
+    def test_over_maximum_total_vfs_is_invalid(
+        self, default_data, invalid_values
+    ):
+        default_data[Interface.KEY][0].update(
+            {
+                Interface.TYPE: InterfaceType.ETHERNET,
+                Ethernet.SRIOV_SUBTREE: {
+                    Ethernet.SRIOV.TOTAL_VFS: invalid_values
+                },
+            }
+        )
+
+        with pytest.raises(js.ValidationError, match=str(invalid_values)):
+            libnmstate.validator.validate(default_data)
 
 
 class TestIfaceTypeVxlan(object):
