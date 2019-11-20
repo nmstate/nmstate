@@ -17,16 +17,63 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
-from libnmstate.error import NmstateNotImplementedError
+from libnmstate.error import NmstateNotSupportedError
+from libnmstate.nm import connection as nm_connection
+from libnmstate.nm import device
+from libnmstate.nm import nmclient
 from libnmstate.schema import Ethernet
+from libnmstate.schema import Interface
 
 
-def create_setting(iface_state):
-    setting = None
+def create_setting(iface_state, base_con_profile):
+    sriov_setting = None
+    ifname = iface_state[Interface.NAME]
     sriov_config = iface_state.get(Ethernet.CONFIG_SUBTREE, {}).get(
         Ethernet.SRIOV_SUBTREE
     )
     if sriov_config:
-        raise NmstateNotImplementedError
+        if not _has_sriov_capability(ifname):
+            raise NmstateNotSupportedError(
+                f"Interface '{ifname}' does not support SR-IOV"
+            )
 
-    return setting
+        sriov_setting = base_con_profile.get_setting_duplicate(
+            nmclient.NM.SETTING_SRIOV_SETTING_NAME
+        )
+        if not sriov_setting:
+            sriov_setting = nmclient.NM.SettingSriov.new()
+
+        sriov_setting.props.total_vfs = sriov_config[Ethernet.SRIOV.TOTAL_VFS]
+
+    return sriov_setting
+
+
+def _has_sriov_capability(ifname):
+    dev = device.get_device_by_name(ifname)
+    if nmclient.NM.DeviceCapabilities.SRIOV & dev.props.capabilities:
+        return True
+
+    return False
+
+
+def get_info(device):
+    """
+    Provide the current active SR-IOV live configuration for a device
+    """
+    info = {}
+
+    connection = nm_connection.ConnectionProfile()
+    connection.import_by_device(device)
+    if not connection.profile:
+        return info
+
+    sriov_setting = connection.profile.get_setting_by_name(
+        nmclient.NM.SETTING_SRIOV_SETTING_NAME
+    )
+
+    if sriov_setting:
+        info[Ethernet.SRIOV_SUBTREE] = {
+            Ethernet.SRIOV.TOTAL_VFS: sriov_setting.props.total_vfs
+        }
+
+    return info

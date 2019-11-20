@@ -413,7 +413,7 @@ def _build_connection_profile(iface_desired_state, base_con_profile=None):
     if vxlan_setting:
         settings.append(vxlan_setting)
 
-    sriov_setting = sriov.create_setting(iface_desired_state)
+    sriov_setting = sriov.create_setting(iface_desired_state, base_con_profile)
     if sriov_setting:
         settings.append(sriov_setting)
 
