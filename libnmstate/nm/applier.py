@@ -170,17 +170,16 @@ def set_ifaces_admin_state(ifaces_desired_state, con_profiles=()):
                 InterfaceState.ABSENT,
             ):
                 nmdevs = _get_affected_devices(iface_desired_state)
-                for nmdev in nmdevs:
-                    remove_devs_actions[nmdev] = [
+                for affected_nmdev in nmdevs:
+                    remove_devs_actions[affected_nmdev] = [
                         device.deactivate,
                         device.delete,
                     ]
-                    if nmdev.get_device_type() in (
-                        nmclient.NM.DeviceType.OVS_BRIDGE,
-                        nmclient.NM.DeviceType.OVS_PORT,
-                        nmclient.NM.DeviceType.OVS_INTERFACE,
-                    ):
-                        remove_devs_actions[nmdev].append(device.delete_device)
+                if (
+                    nmdev.is_software()
+                    and nmdev.get_device_type() != nmclient.NM.DeviceType.VETH
+                ):
+                    remove_devs_actions[nmdev].append(device.delete_device)
             else:
                 raise NmstateValueError(
                     'Invalid state {} for interface {}'.format(
