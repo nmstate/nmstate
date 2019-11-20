@@ -169,6 +169,14 @@ class ConnectionProfile(object):
             user_data,
         )
 
+    def get_setting_duplicate(self, setting_name):
+        setting = None
+        if self.profile:
+            setting = self.profile.get_setting_by_name(setting_name)
+            if setting:
+                setting = setting.duplicate()
+        return setting
+
     def _active_connection_callback(self, src_object, result, user_data):
         cancellable = user_data
         self._mainloop.drop_cancellable(cancellable)

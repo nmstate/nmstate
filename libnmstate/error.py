@@ -101,3 +101,11 @@ class NmstateInternalError(NmstateError):
     """
 
     pass
+
+
+class NmstateNotSupportedError(NmstateError):
+    """
+    A resource like a device does not support the requested feature.
+    """
+
+    pass
