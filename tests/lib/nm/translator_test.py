@@ -75,12 +75,15 @@ def test_api2nm_bond_options():
     assert {'miimon': 120, 'mode': 'balance-rr'} == nm_bond_options
 
 
-def test_nm2api_common_device_info():
+def test_nm2api_common_device_info(NM_mock):
+    NM_mock.DeviceState.ACTIVATED = 100
+    NM_mock.DeviceState.IP_CONFIG = 70
+    nm.nmclient.NM.DeviceState.DISCONNECTED = 30
     devinfo = {
         'name': 'devname',
         'type_id': 'devtypeid',
         'type_name': 'devtypename',
-        'state': 'devstate',
+        'state': nm.nmclient.NM.DeviceState.DISCONNECTED,
     }
     info = nm.translator.Nm2Api.get_common_device_info(devinfo)
 
@@ -110,7 +113,11 @@ def test_nm2api_bond_info():
 
 
 def test_iface_admin_state(NM_mock):
-    NM_mock.DeviceState.ACTIVATED = 'ACTIVATED'
-    admin_state = nm.translator.Nm2Api.get_iface_admin_state('ACTIVATED')
+    NM_mock.DeviceState.ACTIVATED = 100
+    NM_mock.DeviceState.IP_CONFIG = 70
+    NM_mock.DeviceState.IP_CHECK = 80
+    admin_state = nm.translator.Nm2Api.get_iface_admin_state(
+        NM_mock.DeviceState.IP_CHECK
+    )
 
     assert nm.translator.ApiIfaceAdminState.UP == admin_state
