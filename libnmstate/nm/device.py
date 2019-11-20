@@ -270,6 +270,12 @@ def _delete_device_callback(src_object, result, user_data):
         if e.matches(
             nmclient.Gio.DBusError.quark(),
             nmclient.Gio.DBusError.UNKNOWN_METHOD,
+        ) or (
+            e.matches(
+                nmclient.NM.DeviceError.quark(),
+                nmclient.NM.DeviceError.NOTSOFTWARE,
+            )
+            and nmdev.is_software()
         ):
             logging.debug(
                 'Device %s has been already deleted: error=%s',
