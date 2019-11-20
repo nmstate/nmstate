@@ -163,6 +163,12 @@ definitions:
           minimum: 0
         flow-control:
           type: boolean
+        sr-iov:
+          type: object
+          properties:
+            total-vfs:
+              type: integer
+              minimum: 0
   interface-vlan:
     rw:
       properties:

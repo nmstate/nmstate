@@ -198,6 +198,11 @@ class Ethernet(object):
     FULL_DUPLEX = 'full'
     HALF_DUPLEX = 'half'
 
+    SRIOV_SUBTREE = 'sr-iov'
+
+    class SRIOV(object):
+        TOTAL_VFS = 'total-vfs'
+
 
 class VLAN(object):
     TYPE = InterfaceType.VLAN
