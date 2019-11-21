@@ -74,6 +74,27 @@ class TestAssertIfaceState(object):
         with pytest.raises(NmstateVerificationError):
             desired_state.verify_interfaces(current_state)
 
+    def test_desired_has_extra_info_when_ip_disabled(self):
+        desired_state = self._base_state
+        desired_state.interfaces['foo-name'][Interface.IPV4] = {
+            InterfaceIPv4.ENABLED: False,
+            InterfaceIPv4.DHCP: False,
+        }
+        desired_state.interfaces['foo-name'][Interface.IPV6] = {
+            InterfaceIPv6.ENABLED: False,
+            InterfaceIPv6.DHCP: False,
+            InterfaceIPv6.AUTOCONF: False,
+        }
+        current_state = self._base_state
+        current_state.interfaces['foo-name'][Interface.IPV4] = {
+            InterfaceIPv4.ENABLED: False
+        }
+        current_state.interfaces['foo-name'][Interface.IPV6] = {
+            InterfaceIPv6.ENABLED: False
+        }
+
+        desired_state.verify_interfaces(current_state)
+
     def test_sort_multiple_ip(self):
         desired_state = self._base_state
         current_state = self._base_state
