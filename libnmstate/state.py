@@ -286,6 +286,7 @@ class State(object):
         self._sort_ip_addresses()
         self._capitalize_mac()
         self._remove_empty_description()
+        self._remove_ip_stack_if_disabled()
 
     def merge_interfaces(self, other_state):
         """
@@ -473,6 +474,13 @@ class State(object):
                     addr[InterfaceIPv6.ADDRESS_PREFIX_LENGTH],
                 )
             )
+
+    def _remove_ip_stack_if_disabled(self):
+        for ifstate in self.interfaces.values():
+            for family in (Interface.IPV4, Interface.IPV6):
+                ip_state = ifstate.get(family)
+                if ip_state and not ip_state.get(InterfaceIP.ENABLED):
+                    ifstate[family] = {InterfaceIP.ENABLED: False}
 
     def _sort_ip_addresses(self):
         for ifstate in six.viewvalues(self.interfaces):
