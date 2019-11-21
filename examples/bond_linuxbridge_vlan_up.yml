@@ -1,0 +1,36 @@
+---
+# eth1 --+-- bond0 --+-- br0
+# eth2 --'           '-- vlan29 -- br29
+interfaces:
+  - name: vlan29
+    type: vlan
+    state: up
+    vlan:
+      base-iface: bond0
+      id: 29
+  - name: br29
+    type: linux-bridge
+    state: up
+    bridge:
+      port:
+        - name: vlan29
+  - name: br0
+    type: linux-bridge
+    state: up
+    bridge:
+      port:
+        - name: bond0
+  - name: bond0
+    type: bond
+    state: up
+    link-aggregation:
+      mode: active-backup
+      slaves:
+        - eth1
+        - eth2
+  - name: eth1
+    type: ethernet
+    state: up
+  - name: eth2
+    type: ethernet
+    state: up
