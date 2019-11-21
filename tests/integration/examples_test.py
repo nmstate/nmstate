@@ -64,6 +64,18 @@ def test_add_remove_linux_bridge(eth1_up):
     assertlib.assert_absent('linux-br0')
 
 
+def test_bond_linuxbridge_vlan(eth1_up, eth2_up):
+    with example_state(
+        'bond_linuxbridge_vlan_up.yml', cleanup='bond_linuxbridge_vlan_absent.yml'
+    ) as desired_state:
+        assertlib.assert_state(desired_state)
+
+    assertlib.assert_absent('bond0')
+    assertlib.assert_absent('bond0-br0')
+    assertlib.assert_absent('bond0-br29')
+    assertlib.assert_absent('vlan29')
+
+
 def test_dns_edit(eth1_up):
     with example_state(
         'dns_edit_eth1.yml', cleanup='dns_remove.yml'

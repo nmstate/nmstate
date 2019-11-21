@@ -1,0 +1,20 @@
+---
+interfaces:
+  - name: eth1
+    type: ethernet
+    state: absent
+  - name: eth2
+    type: ethernet
+    state: absent
+  - name: bond0
+    type: bond
+    state: absent
+  - name: bond0-br0
+    type: linux-bridge
+    state: absent
+  - name: vlan29
+    type: vlan
+    state: absent
+  - name: bond0-br29
+    type: linux-bridge
+    state: absent
