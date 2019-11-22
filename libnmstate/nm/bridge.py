@@ -17,6 +17,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
+from libnmstate.error import NmstateNotImplementedError
 from libnmstate.nm import connection
 from libnmstate.nm import nmclient
 from libnmstate.schema import LinuxBridge as LB
@@ -88,6 +89,8 @@ def create_port_setting(options, base_con_profile):
             port_setting.props.hairpin_mode = val
         elif key == LB.PORT_STP_PATH_COST:
             port_setting.props.path_cost = val
+        elif key == LB.Port.VLAN_SUBTREE:
+            raise NmstateNotImplementedError
 
     return port_setting
 
