@@ -1,7 +1,7 @@
 # We are Nmstate!
 A declarative network manager API for hosts.
 
-[![Unit Test Status](https://travis-ci.org/nmstate/nmstate.png?branch=master)](https://travis-ci.org/nmstate/nmstate)
+[![Test Status](https://travis-ci.com/nmstate/nmstate.png?branch=master)](https://travis-ci.com/nmstate/nmstate)
 [![Coverage Status](https://coveralls.io/repos/github/nmstate/nmstate/badge.svg?branch=master)](https://coveralls.io/github/nmstate/nmstate?branch=master)
 [![PyPI version](https://badge.fury.io/py/nmstate.svg)](https://badge.fury.io/py/nmstate)
 [![Fedora Rawhide version](https://img.shields.io/badge/dynamic/json.svg?label=Fedora%20Rawhide&url=https%3A%2F%2Fapps.fedoraproject.org%2Fmdapi%2Frawhide%2Fpkg%2Fnmstate&query=%24.version&colorB=blue)](https://apps.fedoraproject.org/packages/nmstate)
