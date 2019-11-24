@@ -21,7 +21,6 @@ from contextlib import contextmanager
 
 import copy
 import logging
-import six
 import time
 
 from libnmstate import metadata
@@ -187,8 +186,8 @@ def _create_editable_desired_state(
 def _list_new_interfaces(desired_state, current_state):
     return [
         name
-        for name in six.viewkeys(desired_state.interfaces)
-        - six.viewkeys(current_state.interfaces)
+        for name in desired_state.interfaces.keys()
+        - current_state.interfaces.keys()
         if desired_state.interfaces[name].get(schema.Interface.STATE)
         not in (schema.InterfaceState.ABSENT, schema.InterfaceState.DOWN)
     ]
@@ -230,7 +229,7 @@ def _add_interfaces(new_interfaces, desired_state):
 def _edit_interfaces(state2edit):
     logging.debug('Editing interfaces: %s', list(state2edit.interfaces))
 
-    ifaces2edit = list(six.viewvalues(state2edit.interfaces))
+    ifaces2edit = list(state2edit.interfaces.values())
 
     iface2prepare = list(
         filter(
@@ -258,7 +257,7 @@ def _disable_ipv6(desired_state):
 
     This is an intermediate workaround for https://bugzilla.redhat.com/1643841.
     """
-    for ifstate in six.viewvalues(desired_state.interfaces):
+    for ifstate in desired_state.interfaces.values():
         if ifstate.get(schema.Interface.STATE) != schema.InterfaceState.UP:
             continue
         ipv6_state = ifstate.get(schema.Interface.IPV6, {})

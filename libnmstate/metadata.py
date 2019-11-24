@@ -17,8 +17,6 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
-import six
-
 from libnmstate import iplib
 from libnmstate.appliers import linux_bridge
 from libnmstate.error import NmstateValueError
@@ -76,7 +74,7 @@ def generate_ifaces_metadata(desired_state, current_state):
 
 
 def remove_ifaces_metadata(ifaces_state):
-    for iface_state in six.viewvalues(ifaces_state.interfaces):
+    for iface_state in ifaces_state.interfaces.values():
         iface_state.pop(MASTER, None)
         iface_state.pop(MASTER_TYPE, None)
         iface_state.pop(BRPORT_OPTIONS, None)
@@ -94,9 +92,7 @@ def _set_ovs_bridge_ports_metadata(master_state, slave_state):
     _set_common_slaves_metadata(master_state, slave_state)
 
     ports = master_state.get('bridge', {}).get('port', [])
-    port = next(
-        six.moves.filter(lambda n: n['name'] == slave_state['name'], ports), {}
-    )
+    port = next(filter(lambda n: n['name'] == slave_state['name'], ports), {})
     slave_state[BRPORT_OPTIONS] = port
 
 
@@ -131,7 +127,7 @@ def _generate_link_master_metadata(
     """
     desired_masters = [
         (ifname, ifstate)
-        for ifname, ifstate in six.viewitems(ifaces_desired_state)
+        for ifname, ifstate in ifaces_desired_state.items()
         if ifstate.get('type') == master_type
         and ifstate.get('state') not in ('down', 'absent')
     ]
@@ -159,7 +155,7 @@ def _generate_link_master_metadata(
 
     current_masters = (
         (ifname, ifstate)
-        for ifname, ifstate in six.viewitems(ifaces_current_state)
+        for ifname, ifstate in ifaces_current_state.items()
         if ifstate.get('type') == master_type
     )
     for master_name, master_state in current_masters:
@@ -190,7 +186,7 @@ def _generate_route_metadata(desired_state, current_state):
     Currently route['next-hop-interface'] is mandatory.
     Routes which do not match any current or desired interface are ignored.
     """
-    for iface_name, routes in six.viewitems(desired_state.config_iface_routes):
+    for iface_name, routes in desired_state.config_iface_routes.items():
         desired_iface_state = desired_state.interfaces.get(iface_name)
         current_iface_state = current_state.interfaces.get(iface_name)
         if desired_iface_state:
@@ -235,9 +231,7 @@ def _generate_dns_metadata(desired_state, current_state):
     else:
         ifaces_routes = {
             ifname: [r.to_dict() for r in routes]
-            for ifname, routes in six.viewitems(
-                desired_state.config_iface_routes
-            )
+            for ifname, routes in desired_state.config_iface_routes.items()
         }
         ipv4_iface, ipv6_iface = nm.dns.find_interfaces_for_name_servers(
             ifaces_routes
@@ -329,7 +323,7 @@ def _dns_config_not_changed(desired_state, current_state):
         nm.ipv4.acs_and_ip_profiles(client),
         nm.ipv6.acs_and_ip_profiles(client),
     )
-    for iface_name, iface_dns_config in six.viewitems(iface_dns_configs):
+    for iface_name, iface_dns_config in iface_dns_configs.items():
         if iface_name not in desired_state.interfaces:
             continue
         iface_state = desired_state.interfaces[iface_name]
@@ -338,7 +332,7 @@ def _dns_config_not_changed(desired_state, current_state):
             and iface_state[Interface.STATE] != InterfaceState.UP
         ):
             return False
-        for family in six.viewkeys(iface_dns_config):
+        for family in iface_dns_config:
             if family in iface_state and not iface_state[family].get(
                 InterfaceIP.ENABLED
             ):
@@ -352,10 +346,10 @@ def _preserve_current_dns_metadata(desired_state, current_state):
         nm.ipv4.acs_and_ip_profiles(client),
         nm.ipv6.acs_and_ip_profiles(client),
     )
-    for iface_name, iface_dns_config in six.viewitems(iface_dns_configs):
+    for iface_name, iface_dns_config in iface_dns_configs.items():
         if iface_name not in desired_state.interfaces:
             continue
-        for family, dns_metadata in six.viewitems(iface_dns_config):
+        for family, dns_metadata in iface_dns_config.items():
             iface_state = desired_state.interfaces[iface_name]
             if family not in iface_state:
                 iface_state[family] = {}

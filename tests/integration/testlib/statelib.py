@@ -26,7 +26,6 @@ except ImportError:
 
 import copy
 from operator import itemgetter
-import six
 
 import libnmstate
 from libnmstate.schema import Interface
@@ -236,7 +235,7 @@ def _dict_update(origin_data, to_merge_data):
     updating the origin_data.
     The function changes the origin_data in-place.
     """
-    for key, val in six.viewitems(to_merge_data):
+    for key, val in to_merge_data.items():
         if isinstance(val, Mapping):
             origin_data[key] = _dict_update(origin_data.get(key, {}), val)
         else:
@@ -278,15 +277,12 @@ def _is_ipv6_link_local(ip, prefix):
 def _state_match(desire, current):
     if isinstance(desire, Mapping):
         return isinstance(current, Mapping) and all(
-            _state_match(val, current.get(key))
-            for key, val in six.viewitems(desire)
+            _state_match(val, current.get(key)) for key, val in desire.items()
         )
-    elif isinstance(desire, Sequence) and not isinstance(
-        desire, six.string_types
-    ):
+    elif isinstance(desire, Sequence) and not isinstance(desire, str):
         return (
             isinstance(current, Sequence)
-            and not isinstance(current, six.string_types)
+            and not isinstance(current, str)
             and len(current) == len(desire)
             and all(_state_match(d, c) for d, c in zip(desire, current))
         )

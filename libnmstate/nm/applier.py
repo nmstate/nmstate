@@ -18,7 +18,6 @@
 #
 
 import itertools
-import six
 
 from libnmstate.error import NmstateValueError
 from libnmstate.schema import Interface
@@ -213,7 +212,7 @@ def set_ifaces_admin_state(ifaces_desired_state, con_profiles=()):
     for ifname in new_vlan_ifaces_to_activate:
         device.activate(dev=None, connection_id=ifname)
 
-    for dev, actions in six.viewitems(remove_devs_actions):
+    for dev, actions in remove_devs_actions.items():
         for action in actions:
             action(dev)
 

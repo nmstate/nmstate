@@ -23,7 +23,6 @@ import difflib
 import json
 from operator import itemgetter
 
-import six
 import yaml
 
 from libnmstate.schema import Constants
@@ -59,9 +58,6 @@ def format_desired_current_state_diff(desired_state, current_state):
 class PrettyState(object):
     def __init__(self, state):
         yaml.add_representer(OrderedDict, represent_ordereddict)
-
-        if six.PY2:
-            yaml.add_representer(six.text_type, represent_unicode)
         self.state = order_state(deepcopy(state))
 
     @property

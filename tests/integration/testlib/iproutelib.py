@@ -18,11 +18,10 @@
 #
 
 from contextlib import contextmanager
+from functools import wraps
 import subprocess
 import threading
 import time
-
-import six
 
 
 TIMEOUT = 10
@@ -37,7 +36,7 @@ class IpMonitorResult(object):
 
 def ip_monitor_assert_stable_link_up(dev, timeout=10):
     def decorator(func):
-        @six.wraps(func)
+        @wraps(func)
         def wrapper_ip_monitor(*args, **kwargs):
             with ip_monitor('link', dev, timeout) as result:
                 func(*args, **kwargs)

@@ -20,8 +20,6 @@ from collections import deque
 from contextlib import contextmanager
 import logging
 
-import six
-
 import gi
 
 try:
@@ -134,7 +132,7 @@ class _MainLoop(object):
         return bool(self._action_queue)
 
     def run(self, timeout):
-        if not isinstance(timeout, six.integer_types):
+        if not isinstance(timeout, int):
             raise error.NmstateValueError(
                 "Invalid timeout value: should be an integer"
             )

@@ -17,8 +17,6 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
-import six
-
 from libnmstate.nm import connection
 from libnmstate.nm import nmclient
 from libnmstate.schema import LinuxBridge as LB
@@ -48,7 +46,7 @@ def _get_current_bridge_setting(base_con_profile):
 
 
 def _set_bridge_properties(bridge_setting, options):
-    for key, val in six.viewitems(options):
+    for key, val in options.items():
         if key == LB.MAC_AGEING_TIME:
             bridge_setting.props.ageing_time = val
         elif key == LB.GROUP_FORWARD_MASK:
@@ -62,7 +60,7 @@ def _set_bridge_properties(bridge_setting, options):
 def _set_bridge_stp_properties(bridge_setting, bridge_stp):
     bridge_setting.props.stp = bridge_stp[LB.STP_ENABLED]
     if bridge_stp[LB.STP_ENABLED] is True:
-        for stp_key, stp_val in six.viewitems(bridge_stp):
+        for stp_key, stp_val in bridge_stp.items():
             if stp_key == LB.STP_PRIORITY:
                 bridge_setting.props.priority = stp_val
             elif stp_key == LB.STP_FORWARD_DELAY:
@@ -83,7 +81,7 @@ def create_port_setting(options, base_con_profile):
     if not port_setting:
         port_setting = nmclient.NM.SettingBridgePort.new()
 
-    for key, val in six.viewitems(options):
+    for key, val in options.items():
         if key == LB.PORT_STP_PRIORITY:
             port_setting.props.priority = val
         elif key == LB.PORT_STP_HAIRPIN_MODE:

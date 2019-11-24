@@ -17,8 +17,6 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
-import six
-
 from libnmstate.error import NmstateValueError
 from libnmstate.schema import OVSBridge as OB
 
@@ -57,7 +55,7 @@ def has_ovs_capability():
 
 def create_bridge_setting(options):
     bridge_setting = nmclient.NM.SettingOvsBridge.new()
-    for option_name, option_value in six.viewitems(options):
+    for option_name, option_value in options.items():
         if option_name == 'fail-mode':
             if option_value:
                 bridge_setting.props.fail_mode = option_value
@@ -79,7 +77,7 @@ def create_bridge_setting(options):
 
 def create_port_setting(options):
     port_setting = nmclient.NM.SettingOvsPort.new()
-    for option_name, option_value in six.viewitems(options):
+    for option_name, option_value in options.items():
         if option_name == 'tag':
             port_setting.props.tag = option_value
         elif option_name == 'vlan-mode':
@@ -111,7 +109,7 @@ def create_interface_setting():
 def translate_bridge_options(iface_state):
     br_opts = {}
     bridge_state = iface_state.get('bridge', {}).get('options', {})
-    for key in six.viewkeys(bridge_state) & set(_BRIDGE_OPTION_NAMES):
+    for key in bridge_state.keys() & set(_BRIDGE_OPTION_NAMES):
         br_opts[key] = bridge_state[key]
 
     return br_opts
@@ -119,7 +117,7 @@ def translate_bridge_options(iface_state):
 
 def translate_port_options(port_state):
     port_opts = {}
-    for key in six.viewkeys(port_state) & set(_PORT_OPTION_NAMES):
+    for key in port_state.keys() & set(_PORT_OPTION_NAMES):
         port_opts[key] = port_state[key]
 
     return port_opts

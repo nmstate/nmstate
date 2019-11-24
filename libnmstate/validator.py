@@ -19,7 +19,6 @@
 
 import copy
 import logging
-import six
 
 import jsonschema as js
 
@@ -84,13 +83,13 @@ def validate_interfaces_state(desired_state, current_state):
 def validate_link_aggregation_state(desired_state, current_state):
     available_ifaces = {
         ifname
-        for ifname, ifstate in six.viewitems(desired_state.interfaces)
+        for ifname, ifstate in desired_state.interfaces.items()
         if ifstate.get('state') != 'absent'
     }
     available_ifaces |= set(current_state.interfaces)
 
     specified_slaves = set()
-    for iface_state in six.viewvalues(desired_state.interfaces):
+    for iface_state in desired_state.interfaces.values():
         if iface_state.get('state') != 'absent':
             link_aggregation = iface_state.get('link-aggregation')
             if link_aggregation:
@@ -149,7 +148,7 @@ def validate_routes(desired_state, current_state):
         - Exist and be up (no down/absent)
         - Have the relevant IPv4/6 stack enabled.
     """
-    for iface_name, routes in six.viewitems(desired_state.config_iface_routes):
+    for iface_name, routes in desired_state.config_iface_routes.items():
         if not routes:
             continue
 
