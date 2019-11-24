@@ -20,8 +20,6 @@
 from operator import itemgetter
 import socket
 
-import six
-
 from libnmstate import iplib
 from libnmstate.error import NmstateInternalError
 from libnmstate.error import NmstateNotImplementedError
@@ -207,7 +205,7 @@ def get_static_gateway_iface(family, iface_routes):
         if family == Interface.IPV6
         else IPV4_DEFAULT_GATEWAY_DESTINATION
     )
-    for iface_name, routes in six.viewitems(iface_routes):
+    for iface_name, routes in iface_routes.items():
         for route in routes:
             if route[Route.DESTINATION] == destination:
                 return iface_name

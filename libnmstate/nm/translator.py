@@ -19,8 +19,6 @@
 
 import copy
 
-import six
-
 from . import nmclient
 
 
@@ -128,4 +126,4 @@ class Nm2Api(object):
 
     @staticmethod
     def _swap_dict_keyval(dictionary):
-        return {val: key for key, val in six.viewitems(dictionary)}
+        return {val: key for key, val in dictionary.items()}

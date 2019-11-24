@@ -25,7 +25,6 @@ yum -y install \
     python-jsonschema \
     python-setuptools \
     python2-pyyaml \
-    python2-six
 yum-builddep -y dbus-python
 ```
 

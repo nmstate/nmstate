@@ -17,8 +17,6 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
-import six
-
 
 def get_slaves_from_state(state, default=()):
     ports = state.get('bridge', {}).get('port')
@@ -31,9 +29,7 @@ def set_bridge_ports_metadata(master_state, slave_state):
     _set_common_slaves_metadata(master_state, slave_state)
 
     ports = master_state.get('bridge', {}).get('port', [])
-    port = next(
-        six.moves.filter(lambda n: n['name'] == slave_state['name'], ports), {}
-    )
+    port = next(filter(lambda n: n['name'] == slave_state['name'], ports), {})
     slave_state['_brport_options'] = port
 
 

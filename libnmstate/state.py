@@ -30,8 +30,6 @@ from functools import total_ordering
 from ipaddress import ip_address
 from operator import itemgetter
 
-import six
-
 from libnmstate import iplib
 from libnmstate import metadata
 from libnmstate.error import NmstateValueError
@@ -87,7 +85,7 @@ class RouteEntry(object):
     def to_dict(self):
         return {
             key.replace('_', '-'): value
-            for key, value in six.viewitems(vars(self))
+            for key, value in vars(self).items()
             if value is not None
         }
 
@@ -166,8 +164,7 @@ class State(object):
     @property
     def state(self):
         self._state[Interface.KEY] = sorted(
-            list(six.viewvalues(self._ifaces_state)),
-            key=itemgetter(Interface.NAME),
+            list(self._ifaces_state.values()), key=itemgetter(Interface.NAME)
         )
         return self._state
 
@@ -193,7 +190,7 @@ class State(object):
 
     def _complement_interface_empty_ip_subtrees(self):
         """ Complement the interfaces states with empty IPv4/IPv6 subtrees. """
-        for iface_state in six.viewvalues(self.interfaces):
+        for iface_state in self.interfaces.values():
             for family in (Interface.IPV4, Interface.IPV6):
                 if family not in iface_state:
                     iface_state[family] = {}
@@ -210,7 +207,7 @@ class State(object):
         from the actual configuration.  This makes it possible to distinguish
         whether a user specified these values in the later configuration step.
         """
-        for ifname, iface_state in six.viewitems(self.interfaces):
+        for ifname, iface_state in self.interfaces.items():
             iface_current_state = other_state.interfaces.get(ifname, {})
             if iface_current_state.get(Interface.TYPE) == Ethernet.TYPE:
                 ethernet = iface_state.setdefault(Ethernet.CONFIG_SUBTREE, {})
@@ -225,7 +222,7 @@ class State(object):
         by the current state address values.
         If dynamic IP is disabled, all dynamic IP options should be removed.
         """
-        for iface_state in six.viewvalues(self.interfaces):
+        for iface_state in self.interfaces.values():
             for family in ('ipv4', 'ipv6'):
                 ip = iface_state[family]
                 if ip.get(InterfaceIP.ENABLED) and (
@@ -258,7 +255,7 @@ class State(object):
         self._assert_interfaces_equal(other_state)
 
     def verify_routes(self, other_state):
-        for iface_name, routes in six.viewitems(self.config_iface_routes):
+        for iface_name, routes in self.config_iface_routes.items():
             other_routes = other_state.config_iface_routes.get(iface_name, [])
             if routes != other_routes:
                 raise NmstateVerificationError(
@@ -297,9 +294,7 @@ class State(object):
         This is a reverse recursive update operation.
         """
         other_state = State(other_state.state)
-        for name in six.viewkeys(self.interfaces) & six.viewkeys(
-            other_state.interfaces
-        ):
+        for name in self.interfaces.keys() & other_state.interfaces.keys():
             dict_update(other_state.interfaces[name], self.interfaces[name])
             self._ifaces_state[name] = other_state.interfaces[name]
 
@@ -317,7 +312,7 @@ class State(object):
           - Support wildcard for matching the absent routes.
         """
         other_routes = set()
-        for ifname, routes in six.viewitems(other_state.config_iface_routes):
+        for ifname, routes in other_state.config_iface_routes.items():
             if (
                 ifname in self.config_iface_routes
                 or self._is_interface_routable(ifname, routes)
@@ -326,13 +321,13 @@ class State(object):
 
         self_routes = {
             route
-            for routes in six.viewvalues(self.config_iface_routes)
+            for routes in self.config_iface_routes.values()
             for route in routes
             if not route.absent
         }
 
         absent_routes = set()
-        for routes in six.viewvalues(self.config_iface_routes):
+        for routes in self.config_iface_routes.values():
             for absent_route in (r for r in routes if r.absent):
                 absent_routes |= {
                     r for r in other_routes if absent_route.match(r)
@@ -386,7 +381,7 @@ class State(object):
 
     def _remove_absent_interfaces(self):
         ifaces = {}
-        for ifname, ifstate in six.viewitems(self.interfaces):
+        for ifname, ifstate in self.interfaces.items():
             is_absent = ifstate.get(Interface.STATE) == InterfaceState.ABSENT
             if not is_absent:
                 ifaces[ifname] = ifstate
@@ -394,7 +389,7 @@ class State(object):
 
     def _remove_down_virt_interfaces(self):
         ifaces = {}
-        for ifname, ifstate in six.viewitems(self.interfaces):
+        for ifname, ifstate in self.interfaces.items():
             is_virt_down = (
                 ifstate.get(Interface.STATE) == InterfaceState.DOWN
                 and ifstate.get(Interface.TYPE) in InterfaceType.VIRT_TYPES
@@ -414,12 +409,12 @@ class State(object):
         for route in self._config_routes:
             iface_name = route.get(Route.NEXT_HOP_INTERFACE, '')
             iface_routes[iface_name].append(RouteEntry(route))
-        for routes in six.viewvalues(iface_routes):
+        for routes in iface_routes.values():
             routes.sort()
         return iface_routes
 
     def _clean_sanitize_ethernet(self):
-        for ifstate in six.viewvalues(self.interfaces):
+        for ifstate in self.interfaces.values():
             ethernet_state = ifstate.get(Ethernet.CONFIG_SUBTREE)
             if ethernet_state:
                 for key in (
@@ -433,17 +428,17 @@ class State(object):
                     ifstate.pop(Ethernet.CONFIG_SUBTREE, None)
 
     def _sort_lag_slaves(self):
-        for ifstate in six.viewvalues(self.interfaces):
+        for ifstate in self.interfaces.values():
             ifstate.get('link-aggregation', {}).get('slaves', []).sort()
 
     def _sort_bridge_ports(self):
-        for ifstate in six.viewvalues(self.interfaces):
+        for ifstate in self.interfaces.values():
             ifstate.get('bridge', {}).get('port', []).sort(
                 key=itemgetter('name')
             )
 
     def _canonicalize_ipv6(self):
-        for ifstate in six.viewvalues(self.interfaces):
+        for ifstate in self.interfaces.values():
             new_state = {
                 Interface.IPV6: {
                     InterfaceIPv6.ENABLED: False,
@@ -465,7 +460,7 @@ class State(object):
             self._ifaces_state[ifstate[Interface.NAME]] = new_state
 
     def _remove_iface_ipv6_link_local_addr(self):
-        for ifstate in six.viewvalues(self.interfaces):
+        for ifstate in self.interfaces.values():
             ifstate['ipv6'][InterfaceIPv6.ADDRESS] = list(
                 addr
                 for addr in ifstate['ipv6'][InterfaceIPv6.ADDRESS]
@@ -483,20 +478,20 @@ class State(object):
                     ifstate[family] = {InterfaceIP.ENABLED: False}
 
     def _sort_ip_addresses(self):
-        for ifstate in six.viewvalues(self.interfaces):
+        for ifstate in self.interfaces.values():
             for family in ('ipv4', 'ipv6'):
                 ifstate[family].get(InterfaceIP.ADDRESS, []).sort(
                     key=itemgetter(InterfaceIP.ADDRESS_IP)
                 )
 
     def _capitalize_mac(self):
-        for ifstate in six.viewvalues(self.interfaces):
+        for ifstate in self.interfaces.values():
             mac = ifstate.get(Interface.MAC)
             if mac:
                 ifstate[Interface.MAC] = mac.upper()
 
     def _remove_empty_description(self):
-        for ifstate in six.viewvalues(self.interfaces):
+        for ifstate in self.interfaces.values():
             if ifstate.get(Interface.DESCRIPTION) == '':
                 del ifstate[Interface.DESCRIPTION]
 
@@ -535,7 +530,7 @@ class State(object):
 def dict_update(origin_data, to_merge_data):
     """Recursevely performes a dict update (merge)"""
 
-    for key, val in six.viewitems(to_merge_data):
+    for key, val in to_merge_data.items():
         if isinstance(val, Mapping):
             origin_data[key] = dict_update(origin_data.get(key, {}), val)
         else:
@@ -555,7 +550,7 @@ def _validate_routes(
         * Non-exit interface
         * IPv4/IPv6 disabled
     """
-    for iface_name, route_set in six.viewitems(iface_route_sets):
+    for iface_name, route_set in iface_route_sets.items():
         if not route_set:
             continue
         iface_enable_state = iface_enable_states.get(iface_name)
@@ -582,7 +577,7 @@ def _validate_routes(
 
 def canonicalize_ipv6_addr(ipv6_address_prefix_len):
     ipv6_address = ipv6_address_prefix_len[InterfaceIPv6.ADDRESS_IP]
-    ipv6_iface = ip_address(six.u(ipv6_address))
+    ipv6_iface = ip_address(ipv6_address)
 
     return {
         InterfaceIPv6.ADDRESS_IP: str(ipv6_iface),
@@ -594,9 +589,9 @@ def canonicalize_ipv6_addr(ipv6_address_prefix_len):
 
 def _get_iface_enable_states(desire_state, current_state):
     iface_enable_states = {}
-    for iface_name, iface_state in six.viewitems(current_state.interfaces):
+    for iface_name, iface_state in current_state.interfaces.items():
         iface_enable_states[iface_name] = iface_state[Interface.STATE]
-    for iface_name, iface_state in six.viewitems(desire_state.interfaces):
+    for iface_name, iface_state in desire_state.interfaces.items():
         if Interface.STATE in iface_state:
             # If desire_state does not have Interface.STATE, it will use
             # current_state settings.
@@ -606,11 +601,11 @@ def _get_iface_enable_states(desire_state, current_state):
 
 def _get_ip_enable_states(family, desire_state, current_state):
     ip_enable_states = {}
-    for iface_name, iface_state in six.viewitems(current_state.interfaces):
+    for iface_name, iface_state in current_state.interfaces.items():
         ip_enable_states[iface_name] = iface_state.get(family, {}).get(
             InterfaceIP.ENABLED, False
         )
-    for iface_name, iface_state in six.viewitems(desire_state.interfaces):
+    for iface_name, iface_state in desire_state.interfaces.items():
         ip_enable_state = iface_state.get(family, {}).get(InterfaceIP.ENABLED)
         if ip_enable_state is not None:
             # If desire_state does not have Interface.IPV4/IPV6, it will use
@@ -649,7 +644,7 @@ def _apply_absent_routes(absent_route_sets, iface_route_sets):
     """
     for absent_route in absent_route_sets:
         absent_iface_name = absent_route.next_hop_interface
-        for iface_name, route_set in six.viewitems(iface_route_sets):
+        for iface_name, route_set in iface_route_sets.items():
             if absent_iface_name and absent_iface_name != iface_name:
                 continue
             new_routes = set()
@@ -666,15 +661,12 @@ def state_match(desire, current):
     """
     if isinstance(desire, Mapping):
         return isinstance(current, Mapping) and all(
-            state_match(val, current.get(key))
-            for key, val in six.viewitems(desire)
+            state_match(val, current.get(key)) for key, val in desire.items()
         )
-    elif isinstance(desire, Sequence) and not isinstance(
-        desire, six.string_types
-    ):
+    elif isinstance(desire, Sequence) and not isinstance(desire, str):
         return (
             isinstance(current, Sequence)
-            and not isinstance(current, six.string_types)
+            and not isinstance(current, str)
             and len(current) == len(desire)
             and all(state_match(d, c) for d, c in zip(desire, current))
         )

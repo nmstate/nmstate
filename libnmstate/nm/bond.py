@@ -17,8 +17,6 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
-import six
-
 from . import connection
 from . import nmclient
 from libnmstate.error import NmstateValueError
@@ -29,7 +27,7 @@ BOND_TYPE = 'bond'
 
 def create_setting(options):
     bond_setting = nmclient.NM.SettingBond.new()
-    for option_name, option_value in six.viewitems(options):
+    for option_name, option_value in options.items():
         success = bond_setting.add_option(option_name, option_value)
         if not success:
             raise NmstateValueError(

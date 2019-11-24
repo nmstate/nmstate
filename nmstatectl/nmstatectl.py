@@ -26,7 +26,6 @@ import subprocess
 import sys
 import tempfile
 
-from six.moves import input
 import yaml
 
 import libnmstate

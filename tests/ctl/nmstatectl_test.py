@@ -16,10 +16,9 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
+import io
 import json
 import subprocess
-
-import six
 
 from .compat import mock
 
@@ -90,7 +89,7 @@ def test_run_ctl_directly_show_empty():
 @mock.patch.object(
     nmstatectl.libnmstate, 'show', lambda: json.loads(LO_JSON_STATE)
 )
-@mock.patch('nmstatectl.nmstatectl.sys.stdout', new_callable=six.StringIO)
+@mock.patch('nmstatectl.nmstatectl.sys.stdout', new_callable=io.StringIO)
 def test_run_ctl_directly_show_only_empty(mock_stdout):
     nmstatectl.main()
     assert mock_stdout.getvalue() == EMPTY_YAML_STATE
@@ -100,7 +99,7 @@ def test_run_ctl_directly_show_only_empty(mock_stdout):
 @mock.patch.object(
     nmstatectl.libnmstate, 'show', lambda: json.loads(LO_JSON_STATE)
 )
-@mock.patch('nmstatectl.nmstatectl.sys.stdout', new_callable=six.StringIO)
+@mock.patch('nmstatectl.nmstatectl.sys.stdout', new_callable=io.StringIO)
 def test_run_ctl_directly_show_only(mock_stdout):
     nmstatectl.main()
     assert mock_stdout.getvalue() == LO_YAML_STATE
@@ -112,7 +111,7 @@ def test_run_ctl_directly_show_only(mock_stdout):
 @mock.patch.object(
     nmstatectl.libnmstate, 'show', lambda: json.loads(LO_JSON_STATE)
 )
-@mock.patch('nmstatectl.nmstatectl.sys.stdout', new_callable=six.StringIO)
+@mock.patch('nmstatectl.nmstatectl.sys.stdout', new_callable=io.StringIO)
 def test_run_ctl_directly_show_json_only_empty(mock_stdout):
     nmstatectl.main()
     assert mock_stdout.getvalue() == EMPTY_JSON_STATE
@@ -122,7 +121,7 @@ def test_run_ctl_directly_show_json_only_empty(mock_stdout):
 @mock.patch.object(
     nmstatectl.libnmstate, 'show', lambda: json.loads(LO_JSON_STATE)
 )
-@mock.patch('nmstatectl.nmstatectl.sys.stdout', new_callable=six.StringIO)
+@mock.patch('nmstatectl.nmstatectl.sys.stdout', new_callable=io.StringIO)
 def test_run_ctl_directly_show_json_only(mock_stdout):
     nmstatectl.main()
     assert mock_stdout.getvalue() == LO_JSON_STATE

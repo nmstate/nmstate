@@ -75,7 +75,7 @@ def diff_initial_state():
             'before test run:\n {}\n'.format(
                 libnmstate.prettystate.format_desired_current_state_diff(
                     old_state, new_state
-                ),
+                )
             )
         )
 
