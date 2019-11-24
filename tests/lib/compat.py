@@ -16,9 +16,6 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
-from __future__ import absolute_import
-from __future__ import division
-
 try:
     from unittest import mock
 except ImportError:  # py2
