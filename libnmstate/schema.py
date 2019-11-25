@@ -111,6 +111,7 @@ class InterfaceType(object):
     UNKNOWN = 'unknown'
     VLAN = 'vlan'
     VXLAN = 'vxlan'
+    TEAM = 'team'
 
     VIRT_TYPES = (
         BOND,
@@ -119,6 +120,7 @@ class InterfaceType(object):
         OVS_BRIDGE,
         OVS_PORT,
         OVS_INTERFACE,
+        TEAM,
         VLAN,
         VXLAN,
     )
@@ -316,3 +318,20 @@ class OVSBridge(object):
                 ID_RANGE = 'id-range'
                 MIN_RANGE = 'min'
                 MAX_RANGE = 'max'
+
+
+class Team:
+    TYPE = InterfaceType.TEAM
+    CONFIG_SUBTREE = InterfaceType.TEAM
+
+    PORT_SUBTREE = 'ports'
+    RUNNER_SUBTREE = 'runner'
+
+    class Port:
+        NAME = 'name'
+
+    class Runner:
+        NAME = 'name'
+
+        class RunnerMode:
+            LOAD_BALANCE = 'loadbalance'

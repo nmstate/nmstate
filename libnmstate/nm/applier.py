@@ -35,6 +35,7 @@ from . import ipv6
 from . import nmclient
 from . import ovs
 from . import sriov
+from . import team
 from . import translator
 from . import user
 from . import vlan
@@ -416,6 +417,10 @@ def _build_connection_profile(iface_desired_state, base_con_profile=None):
     sriov_setting = sriov.create_setting(iface_desired_state, base_con_profile)
     if sriov_setting:
         settings.append(sriov_setting)
+
+    team_setting = team.create_setting(iface_desired_state)
+    if team_setting:
+        settings.append(team_setting)
 
     new_profile = connection.ConnectionProfile()
     new_profile.create(settings)
