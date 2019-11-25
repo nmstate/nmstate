@@ -25,6 +25,7 @@ properties:
             - "$ref": "#/definitions/interface-dummy/rw"
             - "$ref": "#/definitions/interface-vlan/rw"
             - "$ref": "#/definitions/interface-vxlan/rw"
+            - "$ref": "#/definitions/interface-team/rw"
   routes:
     type: object
     properties:
@@ -492,6 +493,28 @@ definitions:
                     type: boolean
                   state:
                     type: string
+  interface-team:
+    rw:
+      properties:
+        type:
+          type: string
+          enum:
+          - team
+        team:
+          type: object
+          properties:
+            ports:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+            runner:
+              type: object
+              properties:
+                name:
+                  type: string
 
   route:
     type: object
