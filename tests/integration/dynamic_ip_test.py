@@ -29,6 +29,7 @@ from libnmstate.schema import DNS
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
+from libnmstate.schema import InterfaceType
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import Route as RT
 
@@ -821,3 +822,22 @@ def create_ipv6_address_state(address, prefix_length):
         InterfaceIPv6.ADDRESS_IP: address,
         InterfaceIPv6.ADDRESS_PREFIX_LENGTH: prefix_length,
     }
+
+
+def test_activate_dummy_without_dhcp_service():
+    ifstate = {
+        Interface.NAME: 'dummy00',
+        Interface.TYPE: InterfaceType.DUMMY,
+        Interface.STATE: InterfaceState.UP,
+        Interface.IPV4: create_ipv4_state(enabled=True, dhcp=True),
+        Interface.IPV6: create_ipv6_state(
+            enabled=True, dhcp=True, autoconf=True
+        ),
+    }
+    try:
+        libnmstate.apply({Interface.KEY: [ifstate]})
+    finally:
+        ifstate[Interface.STATE] = InterfaceState.ABSENT
+        libnmstate.apply(
+            {Interface.KEY: [ifstate]}, verify_change=False,
+        )

@@ -20,6 +20,8 @@
 import logging
 
 from . import nmclient
+from . import ipv4
+from . import ipv6
 from .nmclient import GLib
 from .nmclient import NM
 
@@ -128,15 +130,21 @@ class ActiveConnection(object):
         if self.state == nm_acs.ACTIVATED:
             return True
         elif self.state == nm_acs.ACTIVATING:
-            # master connections qualify as activated once they
-            # reach IP-Config state. That is because they may
-            # wait for slave devices to attach
-            return (
+            if (
                 _is_device_master_type(self._nmdev)
-                and nmclient.NM.DeviceState.IP_CONFIG
-                <= self.nmdev_state
-                <= nmclient.NM.DeviceState.ACTIVATED
-            )
+                or ipv4.is_dynamic(self.nm_active_connection)
+                or ipv6.is_dynamic(self.nm_active_connection)
+            ):
+                # For interface meet any condition below will be
+                # treated as activated when reach IP_CONFIG state:
+                #   * Is master device.
+                #   * DHCPv4 enabled.
+                #   * DHCPv6/Autoconf enabled.
+                return (
+                    nmclient.NM.DeviceState.IP_CONFIG
+                    <= self.nmdev_state
+                    <= nmclient.NM.DeviceState.ACTIVATED
+                )
 
         return False
 

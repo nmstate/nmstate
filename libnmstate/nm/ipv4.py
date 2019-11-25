@@ -165,3 +165,12 @@ def acs_and_ip_profiles(client):
         if not ip_profile:
             continue
         yield ac, ip_profile
+
+
+def is_dynamic(active_connection):
+    ip_profile = get_ip_profile(active_connection)
+    if ip_profile:
+        return ip_profile.get_method() == (
+            nmclient.NM.SETTING_IP4_CONFIG_METHOD_AUTO
+        )
+    return False
