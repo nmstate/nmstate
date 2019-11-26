@@ -20,7 +20,7 @@ import io
 import json
 import subprocess
 
-from .compat import mock
+from unittest import mock
 
 from nmstatectl import nmstatectl
 
