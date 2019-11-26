@@ -16,7 +16,6 @@ RUN dnf -y install --setopt=install_weak_deps=False \
                    openvswitch \
                    systemd-udev \
                    \
-                   python2-dbus \
                    python3-dbus \
                    python3-gobject-base \
                    python3-jsonschema \
@@ -24,7 +23,6 @@ RUN dnf -y install --setopt=install_weak_deps=False \
                    python3-setuptools \
                    python3-pip \
                    \
-                   python2 \
                    python36 \
                    \
                    dnsmasq \
@@ -40,7 +38,6 @@ RUN dnf -y install --setopt=install_weak_deps=False \
                    cairo-gobject-devel \
                    glib2-devel \
                    gobject-introspection-devel \
-                   python2-devel \
                    python3-devel \
                    \
                    # Below package for pip (used by tox) to build dbus-python
