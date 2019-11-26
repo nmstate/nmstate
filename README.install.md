@@ -2,8 +2,15 @@
 
 ## User Installation
 
-### Install pre-requirements
-Despite the pure python dependencies (see requirements.txt),
+To install the latest version build from the master branch on Fedora,
+CentOS/EPEL/RHEL 8, use the Nmstate Copr repository:
+
+``` shell
+yum copr enable nmstate/nmstate-git-fedora
+yum install nmstate
+```
+
+### Special Requirements
 Nmstate also needs NetworkManager to be running on the local system
 in order to configure the local network state.
 To access NetworkManager, Nmstate needs libnm and the corresponding
@@ -13,16 +20,8 @@ To manage OvS, Nmstate needs the packages `NetworkManager-ovs` and `openvswitch`
 
 #### Post Package installation
 
-NetworkManager requires special configuration snippets to overcome some
-existing limitations.
-
-```
-echo -e "[main]\nno-auto-default=*\n" >> \
-    /etc/NetworkManager/conf.d/97-nmstate.conf
-```
-
 NetworkManager needs to be restarted in order to use the new configuration
-parameters (`conf.d/97-nmstate.conf`) and the OvS plugin.
+parameters and the OvS plugin.
 The openvswitch service also needs to be started.
 
 ```
@@ -32,20 +31,18 @@ systemctl restart openvswitch
 systemctl enable --now NetworkManager openvswitch
 ```
 
-### Install nmstate from PyPi (on RHEL 8)
+### Install nmstate from PyPi
 
 Minimal Nmstate installation:
 ``` shell
-# install binary dependencies; The development packages are needed to build
-# python-dbus which is improperly packaged on RHEL 8:
-# https://bugzilla.redhat.com/show_bug.cgi?id=1654774
-yum install -y dbus-devel gcc glib2-devel make python3-devel python3-gobject-base
+# install binary dependencies
+yum install -y python3-dbus python3-gobject-base
 yum install -y python3-pip
 pip3 uninstall -y nmstate; pip3 install nmstate
 ```
 
 For all features, extra workarounds and other packages might be necessary, see
-the pre-requirements section for details.
+the Special Requirements section for details.
 
 ### Install nmstate from source
 
