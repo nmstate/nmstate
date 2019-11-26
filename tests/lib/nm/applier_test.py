@@ -19,7 +19,7 @@
 
 import pytest
 
-from lib.compat import mock
+from unittest import mock
 
 from libnmstate import metadata
 from libnmstate import nm
