@@ -11,23 +11,6 @@ introspection data (`NM-1.0.typelib`, provided by `python-gobject-base`).
 
 To manage OvS, Nmstate needs the packages `NetworkManager-ovs` and `openvswitch`.
 
-#### Package installation (CentOS 7)
-
-```shell
-yum -y install epel-release
-yum -y install \
-    dbus-python \
-    NetworkManager \
-    NetworkManager-libnm \
-    NetworkManager-ovs \
-    openvswitch \
-    python-gobject-base \
-    python-jsonschema \
-    python-setuptools \
-    python2-pyyaml \
-yum-builddep -y dbus-python
-```
-
 #### Post Package installation
 
 NetworkManager requires special configuration snippets to overcome some
@@ -49,12 +32,6 @@ systemctl restart NetworkManager
 systemctl restart openvswitch
 # To keep NetworkManager and openvswitch running after reboot:
 systemctl enable --now NetworkManager openvswitch
-```
-
-### Install nmstate from PyPi (Python 2)
-```shell
-yum -y install python2-pip
-pip uninstall -y nmstate; pip install nmstate
 ```
 
 ### Install nmstate from PyPi (on RHEL 8)
