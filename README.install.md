@@ -17,8 +17,6 @@ NetworkManager requires special configuration snippets to overcome some
 existing limitations.
 
 ```
-echo -e "[device]\nmatch-device=*\nmanaged=0\n" >> \
-    /etc/NetworkManager/conf.d/97-nmstate.conf
 echo -e "[main]\nno-auto-default=*\n" >> \
     /etc/NetworkManager/conf.d/97-nmstate.conf
 ```
