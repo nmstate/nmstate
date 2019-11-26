@@ -26,6 +26,7 @@ from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import OVSBridge
 from libnmstate.error import NmstateLibnmError
+from libnmstate.error import NmstateValueError
 
 from .testlib import assertlib
 from .testlib import nmlib
@@ -122,6 +123,23 @@ def test_create_and_remove_ovs_bridge_with_internal_port_static_ip_and_mac():
 
     assertlib.assert_absent(BRIDGE1)
     assertlib.assert_absent(PORT1)
+
+
+@pytest.mark.xfail(
+    raises=NmstateValueError,
+    reason="https://nmstate.atlassian.net/browse/NMSTATE-286",
+    strict=True,
+)
+def test_create_and_remove_ovs_bridge_with_internal_port_same_name():
+    bridge = Bridge(BRIDGE1)
+    bridge.add_internal_port(
+        BRIDGE1, ipv4_state={InterfaceIPv4.ENABLED: False}
+    )
+
+    with bridge.create() as state:
+        assertlib.assert_state_match(state)
+
+    assertlib.assert_absent(BRIDGE1)
 
 
 def test_vlan_as_ovs_bridge_slave(vlan_on_eth1):
