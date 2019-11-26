@@ -18,7 +18,7 @@
 #
 import pytest
 
-from .compat import mock
+from unittest import mock
 
 from libnmstate import netinfo
 from libnmstate.schema import Constants

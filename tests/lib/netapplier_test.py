@@ -20,7 +20,7 @@ import copy
 
 import pytest
 
-from .compat import mock
+from unittest import mock
 
 from libnmstate import netapplier
 from libnmstate.schema import Constants
