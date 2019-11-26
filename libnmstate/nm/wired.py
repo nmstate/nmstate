@@ -54,9 +54,6 @@ class WiredSetting(object):
             or (self.auto_negotiation is not None)
         )
 
-    # TODO: drop when py2 is no longer needed
-    __nonzero__ = __bool__
-
     def __key(self):
         return (
             self.mtu,
