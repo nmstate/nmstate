@@ -59,11 +59,14 @@ def get_info(device):
         base_iface = ''
         if device.props.parent:
             base_iface = device.props.parent.get_iface()
+        remote = device.props.group
+        if not remote:
+            remote = ''
         return {
             VXLAN.CONFIG_SUBTREE: {
                 VXLAN.ID: device.props.id,
                 VXLAN.BASE_IFACE: base_iface,
-                VXLAN.REMOTE: device.props.group,
+                VXLAN.REMOTE: remote,
                 VXLAN.DESTINATION_PORT: _get_destination_port(device),
             }
         }
