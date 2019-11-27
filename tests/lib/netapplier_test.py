@@ -49,6 +49,8 @@ def netapplier_nm_mock():
 @pytest.fixture
 def netinfo_nm_mock():
     with mock.patch.object(netapplier.netinfo, 'nm') as m:
+        m.ipv4.get_routing_rule_config.return_value = []
+        m.ipv6.get_routing_rule_config.return_value = []
         yield m
 
 

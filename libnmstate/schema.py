@@ -61,6 +61,17 @@ class Route(object):
     USE_DEFAULT_ROUTE_TABLE = 0
 
 
+class RouteRule(object):
+    KEY = 'route-rules'
+    CONFIG = 'config'
+    IP_FROM = 'ip-from'
+    IP_TO = 'ip-to'
+    PRIORITY = 'priority'
+    ROUTE_TABLE = 'route-table'
+    USE_DEFAULT_PRIORITY = -1
+    USE_DEFAULT_ROUTE_TABLE = 0
+
+
 class DNS(object):
     KEY = 'dns-resolver'
     RUNNING = 'running'

@@ -174,3 +174,7 @@ def is_dynamic(active_connection):
             nmclient.NM.SETTING_IP4_CONFIG_METHOD_AUTO
         )
     return False
+
+
+def get_routing_rule_config():
+    return []

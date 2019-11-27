@@ -36,6 +36,13 @@ properties:
         type: array
         items:
           $ref: "#/definitions/route"
+  route-rules:
+    type: object
+    properties:
+      config:
+        type: array
+        items:
+          $ref: "#/definitions/route-rule"
   dns-resolver:
     type: object
     properties:
@@ -514,3 +521,14 @@ definitions:
             $ref: "#/definitions/types/bridge-vlan-tag"
           max:
             $ref: "#/definitions/types/bridge-vlan-tag"
+  route-rule:
+    type: object
+    properties:
+      from:
+        type: string
+      to:
+        type: string
+      priority:
+        type: integer
+      route-table:
+        type: integer

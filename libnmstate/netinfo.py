@@ -25,6 +25,7 @@ from libnmstate.schema import Constants
 from libnmstate.schema import DNS
 from libnmstate.schema import Interface
 from libnmstate.schema import Route
+from libnmstate.schema import RouteRule
 
 
 def show(include_status_data=False):
@@ -50,6 +51,13 @@ def show(include_status_data=False):
         Route.CONFIG: (
             nm.ipv4.get_route_config() + nm.ipv6.get_route_config()
         ),
+    }
+
+    report[RouteRule.KEY] = {
+        RouteRule.CONFIG: (
+            nm.ipv4.get_routing_rule_config()
+            + nm.ipv6.get_routing_rule_config()
+        )
     }
 
     report[Constants.DNS] = {
