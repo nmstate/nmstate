@@ -30,6 +30,7 @@ from libnmstate.schema import LinuxBridge as LB
 from libnmstate.schema import VXLAN
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceType
+from libnmstate.schema import RouteRule
 
 INTERFACES = Constants.INTERFACES
 ROUTES = Constants.ROUTES
@@ -89,6 +90,16 @@ COMMON_DATA = {
                 'next-hop-address': 'fe80::1',
             }
         ],
+    },
+    RouteRule.KEY: {
+        RouteRule.CONFIG: [
+            {
+                RouteRule.IP_FROM: '192.0.2.0/24',
+                RouteRule.IP_TO: '198.51.100.0/24',
+                RouteRule.PRIORITY: 500,
+                RouteRule.ROUTE_TABLE: 254,
+            }
+        ]
     },
     DNS.KEY: {
         DNS.RUNNING: {
@@ -387,3 +398,13 @@ class TestLinuxBridgeVlanFiltering(object):
                 LB.Port.Vlan.TrunkTags.MAX_RANGE: max_vlan_id,
             }
         }
+
+
+class TestRouteRules(object):
+    def test_route_table(self, default_data):
+        route_rules = default_data[RouteRule.KEY][RouteRule.CONFIG]
+        route_rules[0][RouteRule.ROUTE_TABLE] = 'main'
+
+        with pytest.raises(js.ValidationError) as err:
+            libnmstate.validator.validate(default_data)
+        assert 'main' in err.value.args[0]

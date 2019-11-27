@@ -122,6 +122,7 @@ def _apply_ifaces_state(
     desired_state.sanitize_dynamic_ip()
     desired_state.merge_routes(current_state)
     desired_state.merge_dns(current_state)
+    desired_state.merge_route_rules(current_state)
     metadata.generate_ifaces_metadata(desired_state, current_state)
 
     validator.validate_interfaces_state(desired_state, current_state)

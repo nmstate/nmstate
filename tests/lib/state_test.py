@@ -28,6 +28,7 @@ from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import Route
+from libnmstate.schema import RouteRule
 
 
 parametrize_route_property = pytest.mark.parametrize(
@@ -882,3 +883,76 @@ class TestStateMatch(object):
             [{'a': 2, 'b': [3, 4]}, {'a': 1, 'b': [1, 2]}],
             [{'a': 1, 'b': [1, 2]}, {'a': 2, 'b': [3, 4]}],
         )
+
+
+class TestRouteRuleEntry(object):
+    def test_hash_unique(self):
+        rule = _create_route_rule('198.51.100.0/24', '192.0.2.1', 50, 103)
+        assert hash(rule) == hash(rule)
+
+    def test_obj_unique(self):
+        rule0 = _create_route_rule('198.51.100.0/24', '192.0.2.1', 50, 103)
+        rule1 = _create_route_rule('2001:db8:a::/64', '2001:db8:1::a', 51, 104)
+        rule0_clone = _create_route_rule(
+            '198.51.100.0/24', '192.0.2.1', 50, 103
+        )
+        assert rule0 == rule0_clone
+        assert rule0 != rule1
+
+    def test_obj_unique_without_table(self):
+        rule_with_default_table_id = _create_route_rule(
+            '198.51.100.0/24',
+            '192.0.2.1',
+            103,
+            RouteRule.USE_DEFAULT_ROUTE_TABLE,
+        )
+
+        rule_without_table_id = _create_route_rule(
+            '198.51.100.0/24', '192.0.2.1', 103, None
+        )
+
+        assert rule_without_table_id == rule_with_default_table_id
+
+    def test_obj_unique_without_priority(self):
+        rule_with_default_priority = _create_route_rule(
+            '198.51.100.0/24', '192.0.2.1', RouteRule.USE_DEFAULT_PRIORITY, 50,
+        )
+
+        rule_without_priority = _create_route_rule(
+            '198.51.100.0/24', '192.0.2.1', None, 50,
+        )
+
+        assert rule_without_priority == rule_with_default_priority
+
+    def test_normal_object_as_dict(self):
+        rule = _create_route_rule_dict('198.51.100.0/24', '192.0.2.1', 50, 103)
+        rule_obj = state.RouteRuleEntry(rule)
+        assert rule_obj.to_dict() == rule
+
+    def test_sort_routes(self):
+        rules = [
+            _create_route_rule('198.51.100.1/24', '192.0.2.1', 50, 103),
+            _create_route_rule('198.51.100.0/24', '192.0.2.1', 50, 103),
+            _create_route_rule('198.51.100.0/24', '192.0.2.1', 10, 103),
+        ]
+        expected_rules = [
+            _create_route_rule('198.51.100.0/24', '192.0.2.1', 10, 103),
+            _create_route_rule('198.51.100.0/24', '192.0.2.1', 50, 103),
+            _create_route_rule('198.51.100.1/24', '192.0.2.1', 50, 103),
+        ]
+        assert expected_rules == sorted(rules)
+
+
+def _create_route_rule(ip_from, ip_to, priority, table):
+    return state.RouteRuleEntry(
+        _create_route_rule_dict(ip_from, ip_to, priority, table)
+    )
+
+
+def _create_route_rule_dict(ip_from, ip_to, priority, table):
+    return {
+        RouteRule.IP_FROM: ip_from,
+        RouteRule.IP_TO: ip_to,
+        RouteRule.PRIORITY: priority,
+        RouteRule.ROUTE_TABLE: table,
+    }

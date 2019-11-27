@@ -45,16 +45,62 @@ from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import Route
+from libnmstate.schema import RouteRule
 
 
 NON_UP_STATES = (InterfaceState.DOWN, InterfaceState.ABSENT)
 
 
 @total_ordering
-class RouteEntry(object):
+class _StateObject(object):
+    def __init__(self):
+        self._absent = False
+
+    def keys(self):
+        return ()
+
+    def __hash__(self):
+        return hash(self.keys())
+
+    def __eq__(self, other):
+        return self is other or self.keys() == other.keys()
+
+    def __lt__(self, other):
+        return self.keys() < other.keys()
+
+    def __repr__(self):
+        return str(self.to_dict())
+
+    @property
+    def absent(self):
+        return self._absent
+
+    def to_dict(self):
+        return {
+            key.replace('_', '-'): value
+            for key, value in vars(self).items()
+            if (key != 'keys')
+            and (not key.startswith('_'))
+            and (value is not None)
+        }
+
+    def match(self, other):
+        """
+        Match self against other. Treat self None attributes as wildcards,
+        matching against any value in others.
+        Return True for a match, False otherwise.
+        """
+        for self_value, other_value in zip(self.keys(), other.keys()):
+            if self_value is not None and self_value != other_value:
+                return False
+        return True
+
+
+class RouteEntry(_StateObject):
     def __init__(self, route):
         self.table_id = route.get(Route.TABLE_ID)
         self.state = route.get(Route.STATE)
+        self._absent = self.state == Route.STATE_ABSENT
         self.metric = route.get(Route.METRIC)
         self.destination = route.get(Route.DESTINATION)
         self.next_hop_address = route.get(Route.NEXT_HOP_ADDRESS)
@@ -62,7 +108,7 @@ class RouteEntry(object):
         self.complement_defaults()
 
     def complement_defaults(self):
-        if self.state != Route.STATE_ABSENT:
+        if not self.absent:
             if self.table_id is None:
                 self.table_id = Route.USE_DEFAULT_ROUTE_TABLE
             if self.metric is None:
@@ -70,10 +116,7 @@ class RouteEntry(object):
             if self.next_hop_address is None:
                 self.next_hop_address = ''
 
-    def __hash__(self):
-        return hash(self.__keys())
-
-    def __keys(self):
+    def keys(self):
         return (
             self.table_id,
             self.metric,
@@ -81,16 +124,6 @@ class RouteEntry(object):
             self.next_hop_address,
             self.next_hop_interface,
         )
-
-    def to_dict(self):
-        return {
-            key.replace('_', '-'): value
-            for key, value in vars(self).items()
-            if value is not None
-        }
-
-    def __eq__(self, other):
-        return self is other or self.__keys() == other.__keys()
 
     def __lt__(self, other):
         return (
@@ -103,23 +136,37 @@ class RouteEntry(object):
             other.destination or '',
         )
 
-    def __repr__(self):
-        return str(self.to_dict())
 
-    @property
-    def absent(self):
-        return self.state == Route.STATE_ABSENT
+class RouteRuleEntry(_StateObject):
+    def __init__(self, route_rule):
+        self._absent = False
+        self.ip_from = route_rule.get(RouteRule.IP_FROM)
+        self.ip_to = route_rule.get(RouteRule.IP_TO)
+        self.priority = route_rule.get(RouteRule.PRIORITY)
+        self.route_table = route_rule.get(RouteRule.ROUTE_TABLE)
+        self.complement_defaults()
 
-    def match(self, other):
-        """
-        Match self against other. Treat self None attributes as wildcards,
-        matching against any value in others.
-        Return True for a match, False otherwise.
-        """
-        for self_value, other_value in zip(self.__keys(), other.__keys()):
-            if self_value is not None and self_value != other_value:
-                return False
-        return True
+    def complement_defaults(self):
+        if not self.absent:
+            if self.ip_from is None:
+                self.ip_from = ''
+            if self.ip_to is None:
+                self.ip_to = ''
+            if self.priority is None:
+                self.priority = RouteRule.USE_DEFAULT_PRIORITY
+            if (
+                self.route_table is None
+                or self.route_table == RouteRule.USE_DEFAULT_ROUTE_TABLE
+            ):
+                self.route_table = iplib.KERNEL_MAIN_ROUTE_TABLE_ID
+
+    def keys(self):
+        return (
+            self.ip_from,
+            self.ip_to,
+            self.priority,
+            self.route_table,
+        )
 
 
 def create_state(state, interfaces_to_filter=None):
@@ -148,6 +195,11 @@ class State(object):
         self._complement_interface_empty_ip_subtrees()
 
         self._config_iface_routes = self._index_routes_by_iface()
+
+        (
+            self._config_route_table_rules_v4,
+            self._config_route_table_rules_v6,
+        ) = self._index_route_rule_by_route_table()
 
     def __eq__(self, other):
         return self.state == other.state
@@ -187,6 +239,20 @@ class State(object):
             DNS.SERVER: dns_conf.get(DNS.SERVER, []),
             DNS.SEARCH: dns_conf.get(DNS.SEARCH, []),
         }
+
+    @property
+    def config_route_table_rules_v4(self):
+        """
+        IPv4 Route rules indexed by route table number.
+        """
+        return self._config_route_table_rules_v4
+
+    @property
+    def config_route_table_rules_v6(self):
+        """
+        IPv6 Route rules indexed by route table number.
+        """
+        return self._config_route_table_rules_v6
 
     def _complement_interface_empty_ip_subtrees(self):
         """ Complement the interfaces states with empty IPv4/IPv6 subtrees. """
@@ -346,6 +412,7 @@ class State(object):
         - It is not IPv4/6 disabled (corresponding to the routes).
         """
         ifstate = self.interfaces.get(ifname)
+
         if not ifstate:
             return False
 
@@ -406,12 +473,28 @@ class State(object):
 
     def _index_routes_by_iface(self):
         iface_routes = defaultdict(list)
+
         for route in self._config_routes:
             iface_name = route.get(Route.NEXT_HOP_INTERFACE, '')
             iface_routes[iface_name].append(RouteEntry(route))
         for routes in iface_routes.values():
             routes.sort()
         return iface_routes
+
+    def _index_route_rule_by_route_table(self):
+        index_rules_v4 = defaultdict(list)
+        index_rules_v6 = defaultdict(list)
+        for rule in self._config_route_rules:
+            entry = RouteRuleEntry(rule)
+            if is_ipv6_address(entry.ip_from) or is_ipv6_address(entry.ip_to):
+                index_rules_v6[entry.route_table].append(entry)
+            else:
+                index_rules_v4[entry.route_table].append(entry)
+        for rules in index_rules_v4.values():
+            rules.sort()
+        for rules in index_rules_v6.values():
+            rules.sort()
+        return index_rules_v4, index_rules_v6
 
     def _clean_sanitize_ethernet(self):
         for ifstate in self.interfaces.values():
@@ -525,6 +608,18 @@ class State(object):
         if not routes:
             routes = self._state[Route.KEY] = {}
         routes[Route.CONFIG] = value
+
+    @property
+    def _config_route_rules(self):
+        return self._state.get(RouteRule.KEY, {}).get(RouteRule.CONFIG, [])
+
+    def merge_route_rules(self, other_state):
+        if not self._state.get(RouteRule.KEY):
+            self._state[RouteRule.KEY] = {
+                RouteRule.CONFIG: copy.deepcopy(
+                    other_state._config_route_rules
+                )
+            }
 
 
 def dict_update(origin_data, to_merge_data):

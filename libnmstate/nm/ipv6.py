@@ -162,6 +162,11 @@ def create_setting(config, base_con_profile):
 
     nm_route.add_routes(setting_ip, config.get(nm_route.ROUTE_METADATA, []))
     nm_dns.add_dns(setting_ip, config.get(nm_dns.DNS_METADATA, {}))
+    nm_route.add_route_rules(
+        setting_ip,
+        socket.AF_INET6,
+        config.get(nm_route.ROUTE_RULES_METADATA, []),
+    )
     return setting_ip
 
 
@@ -254,3 +259,9 @@ def is_dynamic(active_connection):
             nmclient.NM.SETTING_IP6_CONFIG_METHOD_DHCP,
         )
     return False
+
+
+def get_routing_rule_config():
+    return nm_route.get_routing_rule_config(
+        acs_and_ip_profiles(nmclient.client())
+    )
