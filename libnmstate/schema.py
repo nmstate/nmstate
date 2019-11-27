@@ -16,6 +16,9 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
+import warnings
+
+
 import pkgutil
 import yaml
 
@@ -158,7 +161,45 @@ class BondMode(object):
     ALB = 'balance-alb'
 
 
-class LinuxBridge(object):
+def _deprecate_constant(f):
+    from functools import wraps
+    @wraps(f)
+    def wrapper(*args, **kwds):
+        deprecated_class = args[0]
+        deprecated_classname = args[0].__name__
+        deprecated_name = f.__name__
+        subclass, newname = deprecated_name.split('_', maxsplit=1)
+        subclass = subclass.capitalize()
+        _warn_deprecation(
+            f"Using '{deprecated_classname}.{deprecated_name}' is deprecated, "
+            f"use '{deprecated_classname}.{subclass}.{newname}' instead.")
+        return getattr(getattr(deprecated_class, subclass), newname)
+    return wrapper
+
+
+class _LinuxBridge(type):
+    @property
+    @_deprecate_constant
+    def PORT_NAME(cls):
+        pass
+
+    @property
+    @_deprecate_constant
+    def PORT_STP_PRIORITY(cls):
+        pass
+
+    @property
+    @_deprecate_constant
+    def PORT_STP_HAIRPIN_MODE(cls):
+        pass
+
+    @property
+    @_deprecate_constant
+    def PORT_STP_PATH_COST(cls):
+        pass
+
+
+class LinuxBridge(metaclass=_LinuxBridge):
     TYPE = 'linux-bridge'
     CONFIG_SUBTREE = 'bridge'
 
@@ -175,12 +216,13 @@ class LinuxBridge(object):
     STP_MAX_AGE = 'max-age'
 
     PORT_SUBTREE = 'port'
-    PORT_NAME = 'name'
-    PORT_STP_PRIORITY = 'stp-priority'
-    PORT_STP_HAIRPIN_MODE = 'stp-hairpin-mode'
-    PORT_STP_PATH_COST = 'stp-path-cost'
+
 
     class Port(object):
+        NAME = 'name'
+        STP_HAIRPIN_MODE = 'stp-hairpin-mode'
+        STP_PATH_COST = 'stp-path-cost'
+        STP_PRIORITY = 'stp-priority'
         VLAN_SUBTREE = 'vlan'
 
         class Vlan(object):
@@ -247,3 +289,7 @@ class OVSBridge(object):
     PORT_NAME = 'name'
     PORT_VLAN_MODE = 'vlan-mode'
     PORT_ACCESS_TAG = 'access-tag'
+
+
+def _warn_deprecation(message):
+    warnings.warn(message, DeprecationWarning, stacklevel=3)
