@@ -28,10 +28,14 @@ from libnmstate.schema import Interface
 
 from .testlib import assertlib
 from .testlib.bondlib import bond_interface
+from .testlib.cmd import RC_SUCCESS
+from .testlib.cmd import exec_cmd
+from .testlib.cmd import format_exec_cmd_result
 from .testlib.vxlan import VxlanState
 from .testlib.vxlan import vxlan_interfaces
-from .testlib.vxlan import vxlans_up
+from .testlib.vxlan import vxlans_absent
 from .testlib.vxlan import vxlans_down
+from .testlib.vxlan import vxlans_up
 
 VXLAN1_ID = 201
 VXLAN2_ID = 202
@@ -108,3 +112,21 @@ def test_add_new_bond_iface_with_vxlan(eth1_up):
 
     assertlib.assert_absent(vxlan.name)
     assertlib.assert_absent(bond_name)
+
+
+def test_show_vxlan_with_no_remote(eth1_up):
+    eth_name = eth1_up[Interface.KEY][0][Interface.NAME]
+    vxlan = VxlanState(id=VXLAN1_ID, base_if=eth_name, remote='')
+    add_vxlan_cmd = (
+        f'ip link add {vxlan.name} type vxlan id {vxlan.id}'
+        f' dstport {vxlan.destination_port} dev {eth_name}'.split()
+    )
+    try:
+        ret = exec_cmd(add_vxlan_cmd)
+        rc, _, _ = ret
+        assert rc == RC_SUCCESS, format_exec_cmd_result(ret)
+        desired_state = vxlans_down([vxlan])
+        assertlib.assert_state(desired_state)
+    finally:
+        libnmstate.apply(vxlans_absent([vxlan]))
+        assertlib.assert_absent(vxlan.name)
