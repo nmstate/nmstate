@@ -80,7 +80,7 @@ def _get_destination_port(device):
 
     [1] https://bugzilla.redhat.com/show_bug.cgi?id=1768388
     """
-    if nm.nmclient.nm_version() >= StrictVersion('1.22'):
+    if nm.nmclient.nm_version() >= StrictVersion('1.20.6'):
         return device.get_dst_port()
     else:
         con = connection.ConnectionProfile()
