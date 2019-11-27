@@ -23,6 +23,7 @@ from unittest import mock
 from libnmstate import netinfo
 from libnmstate.schema import Constants
 from libnmstate.schema import DNS
+from libnmstate.schema import RouteRule
 from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
 
@@ -34,6 +35,8 @@ ROUTES = Constants.ROUTES
 @pytest.fixture
 def nm_mock():
     with mock.patch.object(netinfo, 'nm') as m:
+        m.ipv4.get_routing_rule_config.return_value = []
+        m.ipv6.get_routing_rule_config.return_value = []
         yield m
 
 
@@ -47,6 +50,7 @@ def test_netinfo_show_generic_iface(nm_mock, nm_dns_mock):
     current_config = {
         DNS.KEY: {DNS.RUNNING: {}, DNS.CONFIG: {}},
         ROUTES: {'config': [], 'running': []},
+        RouteRule.KEY: {RouteRule.CONFIG: []},
         INTERFACES: [
             {
                 'name': 'foo',
@@ -82,6 +86,7 @@ def test_netinfo_show_bond_iface(nm_mock, nm_dns_mock):
     current_config = {
         DNS.KEY: {DNS.RUNNING: {}, DNS.CONFIG: {}},
         ROUTES: {'config': [], 'running': []},
+        RouteRule.KEY: {RouteRule.CONFIG: []},
         INTERFACES: [
             {
                 'name': 'bond99',

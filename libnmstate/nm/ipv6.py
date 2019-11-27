@@ -254,3 +254,7 @@ def is_dynamic(active_connection):
             nmclient.NM.SETTING_IP6_CONFIG_METHOD_DHCP,
         )
     return False
+
+
+def get_routing_rule_config():
+    return []
