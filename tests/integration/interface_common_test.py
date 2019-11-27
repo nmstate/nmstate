@@ -78,6 +78,10 @@ def test_iface_description_removal(eth1_up):
     assert Interface.DESCRIPTION not in current_state[Interface.KEY][0]
 
 
+@pytest.mark.xfail(
+    raises=(AssertionError),
+    reason='https://nmstate.atlassian.net/browse/NMSTATE-277',
+)
 def test_take_over_virtual_interface_then_remove(ip_link_dummy):
     with dummy_interface(DUMMY_INTERFACE) as dummy_desired_state:
         assertlib.assert_state_match(dummy_desired_state)
