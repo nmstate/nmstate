@@ -36,9 +36,6 @@ SHOW_CMD = ['nmstatectl', 'show']
 CONFIRM_CMD = ['nmstatectl', 'commit']
 ROLLBACK_CMD = ['nmstatectl', 'rollback']
 
-RC_SUCCESS = 0
-RC_FAIL2 = 2
-
 LOOPBACK_JSON_CONFIG = """        {
             "name": "lo",
             "type": "unknown",
@@ -98,7 +95,7 @@ def test_missing_operation():
     ret = libcmd.exec_cmd(cmds)
     rc, out, err = ret
 
-    assert rc == RC_FAIL2, format_exec_cmd_result(ret)
+    assert rc == libcmd.RC_FAIL2, libcmd.format_exec_cmd_result(ret)
     assert "nmstatectl: error: invalid choice: 'no-such-oper'" in err
 
 
@@ -106,7 +103,7 @@ def test_show_command_with_json():
     ret = libcmd.exec_cmd(SHOW_CMD + ['--json'])
     rc, out, err = ret
 
-    assert rc == RC_SUCCESS, format_exec_cmd_result(ret)
+    assert rc == libcmd.RC_SUCCESS, libcmd.format_exec_cmd_result(ret)
     assert LOOPBACK_JSON_CONFIG in out
 
     state = json.loads(out)
@@ -117,7 +114,7 @@ def test_show_command_with_yaml_format():
     ret = libcmd.exec_cmd(SHOW_CMD)
     rc, out, err = ret
 
-    assert rc == RC_SUCCESS, format_exec_cmd_result(ret)
+    assert rc == libcmd.RC_SUCCESS, libcmd.format_exec_cmd_result(ret)
     assert LOOPBACK_YAML_CONFIG in out
 
 
@@ -125,7 +122,7 @@ def test_show_command_json_only_lo():
     ret = libcmd.exec_cmd(SHOW_CMD + ['--json', 'lo'])
     rc, out, err = ret
 
-    assert rc == RC_SUCCESS, format_exec_cmd_result(ret)
+    assert rc == libcmd.RC_SUCCESS, libcmd.format_exec_cmd_result(ret)
 
     state = json.loads(out)
     assert len(state[Constants.INTERFACES]) == 1
@@ -136,7 +133,7 @@ def test_show_command_only_non_existing():
     ret = libcmd.exec_cmd(SHOW_CMD + ['--json', 'non_existing_interface'])
     rc, out, err = ret
 
-    assert rc == RC_SUCCESS, format_exec_cmd_result(ret)
+    assert rc == libcmd.RC_SUCCESS, libcmd.format_exec_cmd_result(ret)
 
     state = json.loads(out)
     assert len(state[Constants.INTERFACES]) == 0
@@ -146,7 +143,7 @@ def test_set_command_with_yaml_format():
     ret = libcmd.exec_cmd(SET_CMD, stdin=ETH1_YAML_CONFIG)
     rc, out, err = ret
 
-    assert rc == RC_SUCCESS, format_exec_cmd_result(ret)
+    assert rc == libcmd.RC_SUCCESS, libcmd.format_exec_cmd_result(ret)
 
 
 def test_set_command_with_two_states():
@@ -158,7 +155,7 @@ def test_set_command_with_two_states():
     ret = libcmd.exec_cmd(cmd)
     rc = ret[0]
 
-    assert rc == RC_SUCCESS, format_exec_cmd_result(ret)
+    assert rc == libcmd.RC_SUCCESS, libcmd.format_exec_cmd_result(ret)
 
 
 def test_manual_confirmation(eth1_up):
@@ -209,13 +206,9 @@ def test_automatic_rollback(eth1_up):
         assertlib.assert_state(clean_state)
 
 
-def assert_command(cmd, expected_rc=RC_SUCCESS):
+def assert_command(cmd, expected_rc=libcmd.RC_SUCCESS):
     ret = libcmd.exec_cmd(cmd)
     returncode = ret[0]
 
-    assert returncode == expected_rc, format_exec_cmd_result(ret)
+    assert returncode == expected_rc, libcmd.format_exec_cmd_result(ret)
     return ret
-
-
-def format_exec_cmd_result(result):
-    return 'rc={}, out={}, err={}'.format(*result)

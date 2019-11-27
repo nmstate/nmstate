@@ -21,6 +21,9 @@ import logging
 import re
 import subprocess
 
+RC_SUCCESS = 0
+RC_FAIL2 = 2
+
 
 def exec_cmd(cmd, env=None, stdin=None):
     """
@@ -54,6 +57,10 @@ def exec_cmd(cmd, env=None, stdin=None):
 
 def command_log_line(args, cwd=None):
     return "{0} (cwd {1})".format(_list2cmdline(args), cwd)
+
+
+def format_exec_cmd_result(result):
+    return 'rc={}, out={}, err={}'.format(*result)
 
 
 def _retcode_log_line(code, err=None):
