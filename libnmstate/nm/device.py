@@ -249,11 +249,6 @@ def delete_device(nmdev):
 
 def _safe_delete_device_async(nmdev):
     mainloop = nmclient.mainloop()
-    if nmdev.get_state() == nmclient.NM.DeviceState.DEACTIVATING:
-        # Nothing to do since the device is already being removed.
-        mainloop.execute_next_action()
-        return
-
     user_data = mainloop, nmdev
     nmdev.delete_async(
         mainloop.cancellable, _delete_device_callback, user_data
