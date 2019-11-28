@@ -40,6 +40,7 @@ def create_setting(config, base_con_profile):
             setting_ipv4.props.route_table = Route.USE_DEFAULT_ROUTE_TABLE
             setting_ipv4.props.route_metric = Route.USE_DEFAULT_METRIC
             setting_ipv4.clear_routes()
+            setting_ipv4.clear_routing_rules()
             setting_ipv4.clear_dns()
             setting_ipv4.clear_dns_searches()
             setting_ipv4.props.dns_priority = nm_dns.DEFAULT_DNS_PRIORITY
@@ -72,6 +73,11 @@ def create_setting(config, base_con_profile):
             setting_ipv4, config.get(nm_route.ROUTE_METADATA, [])
         )
         nm_dns.add_dns(setting_ipv4, config.get(nm_dns.DNS_METADATA, {}))
+        nm_route.add_route_rules(
+            setting_ipv4,
+            socket.AF_INET,
+            config.get(nm_route.ROUTE_RULES_METADATA, []),
+        )
     return setting_ipv4
 
 
@@ -177,4 +183,6 @@ def is_dynamic(active_connection):
 
 
 def get_routing_rule_config():
-    return []
+    return nm_route.get_routing_rule_config(
+        acs_and_ip_profiles(nmclient.client())
+    )

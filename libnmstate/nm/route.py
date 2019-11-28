@@ -23,15 +23,22 @@ import socket
 from libnmstate import iplib
 from libnmstate.error import NmstateInternalError
 from libnmstate.error import NmstateNotImplementedError
+from libnmstate.error import NmstateValueError
 from libnmstate.nm import nmclient
 from libnmstate.nm import active_connection as nm_ac
 from libnmstate.schema import Interface
 from libnmstate.schema import Route
+from libnmstate.schema import RouteRule
 
 NM_ROUTE_TABLE_ATTRIBUTE = 'table'
 IPV4_DEFAULT_GATEWAY_DESTINATION = '0.0.0.0/0'
 IPV6_DEFAULT_GATEWAY_DESTINATION = '::/0'
 ROUTE_METADATA = '_routes'
+ROUTE_RULES_METADATA = '_route_rules'
+
+# NM require route rule priority been set explicitly, use 30,000 when
+# desire state instruct to use USE_DEFAULT_PRIORITY
+ROUTE_RULE_DEFAULT_PRIORIRY = 30000
 
 
 def get_running(acs_and_ip_cfgs):
@@ -210,3 +217,73 @@ def get_static_gateway_iface(family, iface_routes):
             if route[Route.DESTINATION] == destination:
                 return iface_name
     return None
+
+
+def get_routing_rule_config(acs_and_ip_profiles):
+    rules = []
+    for (_, ip_profile) in acs_and_ip_profiles:
+        for i in range(ip_profile.get_num_routing_rules()):
+            nm_rule = ip_profile.get_routing_rule(i)
+            rules.append(_nm_rule_to_info(nm_rule))
+
+    return rules
+
+
+def _nm_rule_to_info(nm_rule):
+    info = {
+        RouteRule.IP_FROM: _nm_rule_get_from(nm_rule),
+        RouteRule.IP_TO: _nm_rule_get_to(nm_rule),
+        RouteRule.PRIORITY: nm_rule.get_priority(),
+        RouteRule.ROUTE_TABLE: nm_rule.get_table(),
+    }
+    cleanup_keys = [key for key, val in info.items() if val is None]
+    for key in cleanup_keys:
+        del info[key]
+
+    return info
+
+
+def _nm_rule_get_from(nm_rule):
+    if nm_rule.get_from():
+        return iplib.to_ip_address_full(
+            nm_rule.get_from(), nm_rule.get_from_len()
+        )
+    return None
+
+
+def _nm_rule_get_to(nm_rule):
+    if nm_rule.get_to():
+        return iplib.to_ip_address_full(nm_rule.get_to(), nm_rule.get_to_len())
+    return None
+
+
+def add_route_rules(setting_ip, family, rules):
+    for rule in rules:
+        setting_ip.add_routing_rule(_rule_info_to_nm_rule(rule, family))
+
+
+def _rule_info_to_nm_rule(rule, family):
+    nm_rule = nmclient.NM.IPRoutingRule.new(family)
+    ip_from = rule.get(RouteRule.IP_FROM)
+    ip_to = rule.get(RouteRule.IP_TO)
+    if not ip_from and not ip_to:
+        raise NmstateValueError(
+            f'Neither {RouteRule.IP_FROM} or {RouteRule.IP_TO} is defined'
+        )
+
+    if ip_from:
+        nm_rule.set_from(*iplib.ip_address_full_to_tuple(ip_from))
+    if ip_to:
+        nm_rule.set_to(*iplib.ip_address_full_to_tuple(ip_to))
+
+    priority = rule.get(RouteRule.PRIORITY)
+    if priority and priority != RouteRule.USE_DEFAULT_PRIORITY:
+        nm_rule.set_priority(priority)
+    else:
+        nm_rule.set_priority(ROUTE_RULE_DEFAULT_PRIORIRY)
+    table = rule.get(RouteRule.ROUTE_TABLE)
+    if table and table != RouteRule.USE_DEFAULT_ROUTE_TABLE:
+        nm_rule.set_table(table)
+    else:
+        nm_rule.set_table(iplib.KERNEL_MAIN_ROUTE_TABLE_ID)
+    return nm_rule
