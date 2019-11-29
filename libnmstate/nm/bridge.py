@@ -59,16 +59,16 @@ def _set_bridge_properties(bridge_setting, options):
 
 
 def _set_bridge_stp_properties(bridge_setting, bridge_stp):
-    bridge_setting.props.stp = bridge_stp[LB.STP_ENABLED]
-    if bridge_stp[LB.STP_ENABLED] is True:
+    bridge_setting.props.stp = bridge_stp[LB.STP.ENABLED]
+    if bridge_stp[LB.STP.ENABLED] is True:
         for stp_key, stp_val in bridge_stp.items():
-            if stp_key == LB.STP_PRIORITY:
+            if stp_key == LB.STP.PRIORITY:
                 bridge_setting.props.priority = stp_val
-            elif stp_key == LB.STP_FORWARD_DELAY:
+            elif stp_key == LB.STP.FORWARD_DELAY:
                 bridge_setting.props.forward_delay = stp_val
-            elif stp_key == LB.STP_HELLO_TIME:
+            elif stp_key == LB.STP.HELLO_TIME:
                 bridge_setting.props.hello_time = stp_val
-            elif stp_key == LB.STP_MAX_AGE:
+            elif stp_key == LB.STP.MAX_AGE:
                 bridge_setting.props.max_age = stp_val
 
 
@@ -114,11 +114,11 @@ def get_info(nmdev):
             LB.GROUP_FORWARD_MASK: bridge_setting.props.group_forward_mask,
             LB.MULTICAST_SNOOPING: bridge_setting.props.multicast_snooping,
             LB.STP_SUBTREE: {
-                LB.STP_ENABLED: bridge_setting.props.stp,
-                LB.STP_PRIORITY: bridge_setting.props.priority,
-                LB.STP_FORWARD_DELAY: bridge_setting.props.forward_delay,
-                LB.STP_HELLO_TIME: bridge_setting.props.hello_time,
-                LB.STP_MAX_AGE: bridge_setting.props.max_age,
+                LB.STP.ENABLED: bridge_setting.props.stp,
+                LB.STP.PRIORITY: bridge_setting.props.priority,
+                LB.STP.FORWARD_DELAY: bridge_setting.props.forward_delay,
+                LB.STP.HELLO_TIME: bridge_setting.props.hello_time,
+                LB.STP.MAX_AGE: bridge_setting.props.max_age,
             },
         },
     }
