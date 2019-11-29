@@ -167,6 +167,11 @@ DEPRECATED_CONSTANTS = {
     'LinuxBridge.PORT_STP_HAIRPIN_MODE': 'LinuxBridge.Port.STP_HAIRPIN_MODE',
     'LinuxBridge.PORT_STP_PATH_COST': 'LinuxBridge.Port.STP_PATH_COST',
     'LinuxBridge.PORT_STP_PRIORITY': 'LinuxBridge.Port.STP_PRIORITY',
+    'LinuxBridge.STP_ENABLED': 'LinuxBridge.STP.ENABLED',
+    'LinuxBridge.STP_FORWARD_DELAY': 'LinuxBridge.STP.FORWARD_DELAY',
+    'LinuxBridge.STP_HELLO_TIME': 'LinuxBridge.STP.HELLO_TIME',
+    'LinuxBridge.STP_MAX_AGE': 'LinuxBridge.STP.MAX_AGE',
+    'LinuxBridge.STP_PRIORITY': 'LinuxBridge.STP.PRIORITY',
 }
 
 
@@ -211,11 +216,6 @@ class LinuxBridge(metaclass=_DeprecatorType):
     MULTICAST_SNOOPING = 'multicast-snooping'
 
     STP_SUBTREE = 'stp'
-    STP_ENABLED = 'enabled'
-    STP_PRIORITY = 'priority'
-    STP_FORWARD_DELAY = 'forward-delay'
-    STP_HELLO_TIME = 'hello-time'
-    STP_MAX_AGE = 'max-age'
 
     PORT_SUBTREE = 'port'
 

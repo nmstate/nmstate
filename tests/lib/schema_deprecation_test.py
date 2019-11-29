@@ -28,6 +28,11 @@ from libnmstate.schema import LinuxBridge
         ['PORT_STP_HAIRPIN_MODE', LinuxBridge.Port.STP_HAIRPIN_MODE],
         ['PORT_STP_PATH_COST', LinuxBridge.Port.STP_PATH_COST],
         ['PORT_STP_PRIORITY', LinuxBridge.Port.STP_PRIORITY],
+        ['STP_ENABLED', LinuxBridge.STP.ENABLED],
+        ['STP_FORWARD_DELAY', LinuxBridge.STP.FORWARD_DELAY],
+        ['STP_HELLO_TIME', LinuxBridge.STP.HELLO_TIME],
+        ['STP_MAX_AGE', LinuxBridge.STP.MAX_AGE],
+        ['STP_PRIORITY', LinuxBridge.STP.PRIORITY],
     ],
 )
 def test_linuxbridge_deprecated_constants(changes):
