@@ -89,11 +89,11 @@ def _create_bridge_config(ports):
                 LB.STP_SUBTREE: {
                     # Disable STP to avoid topology changes and the consequence
                     # link change.
-                    LB.STP_ENABLED: False,
-                    LB.STP_FORWARD_DELAY: 15,
-                    LB.STP_HELLO_TIME: 2,
-                    LB.STP_MAX_AGE: 20,
-                    LB.STP_PRIORITY: 32768,
+                    LB.STP.ENABLED: False,
+                    LB.STP.FORWARD_DELAY: 15,
+                    LB.STP.HELLO_TIME: 2,
+                    LB.STP.MAX_AGE: 20,
+                    LB.STP.PRIORITY: 32768,
                 },
             },
             LB.PORT_SUBTREE: ports_states,

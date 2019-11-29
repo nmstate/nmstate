@@ -85,7 +85,7 @@ def _bridge0_with_port0(port0_up, use_port_mac=False):
     bridge_state = _create_bridge_subtree_config((port_name,))
     # Disable STP to avoid topology changes and the consequence link change.
     options_subtree = bridge_state[LinuxBridge.OPTIONS_SUBTREE]
-    options_subtree[LinuxBridge.STP_SUBTREE][LinuxBridge.STP_ENABLED] = False
+    options_subtree[LinuxBridge.STP_SUBTREE][LinuxBridge.STP.ENABLED] = False
 
     extra_iface_state = None
 
@@ -248,7 +248,7 @@ def test_add_linux_bridge_with_empty_ipv6_static_address(port0_up):
     bridge_state = _create_bridge_subtree_config((port_name,))
     # Disable STP to avoid topology changes and the consequence link change.
     options_subtree = bridge_state[LinuxBridge.OPTIONS_SUBTREE]
-    options_subtree[LinuxBridge.STP_SUBTREE][LinuxBridge.STP_ENABLED] = False
+    options_subtree[LinuxBridge.STP_SUBTREE][LinuxBridge.STP.ENABLED] = False
 
     extra_iface_state = {
         Interface.IPV6: {
@@ -270,7 +270,7 @@ def test_add_linux_bridge_with_empty_ipv6_static_address_with_stp(port0_up):
     port_name = port0_up[Interface.KEY][0][Interface.NAME]
     bridge_state = _create_bridge_subtree_config((port_name,))
     options_subtree = bridge_state[LinuxBridge.OPTIONS_SUBTREE]
-    options_subtree[LinuxBridge.STP_SUBTREE][LinuxBridge.STP_ENABLED] = True
+    options_subtree[LinuxBridge.STP_SUBTREE][LinuxBridge.STP.ENABLED] = True
 
     extra_iface_state = {
         Interface.IPV6: {
