@@ -82,6 +82,6 @@ def add_port_to_bridge(bridge_subtree_state, port_name, port_state=None):
 def create_bridge_subtree_state(options_state=None):
     if options_state is None:
         options_state = {
-            LinuxBridge.STP_SUBTREE: {LinuxBridge.STP_ENABLED: False}
+            LinuxBridge.STP_SUBTREE: {LinuxBridge.STP.ENABLED: False}
         }
     return {LinuxBridge.OPTIONS_SUBTREE: options_state}
