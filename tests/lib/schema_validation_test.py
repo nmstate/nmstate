@@ -131,7 +131,7 @@ def portless_bridge_state():
 
 @pytest.fixture
 def bridge_state(portless_bridge_state):
-    port = {LB.PORT_NAME: 'eth1', LB.Port.VLAN_SUBTREE: {}}
+    port = {LB.Port.NAME: 'eth1', LB.Port.VLAN_SUBTREE: {}}
     portless_bridge_state[LB.CONFIG_SUBTREE][LB.PORT_SUBTREE].append(port)
     return portless_bridge_state
 

@@ -73,7 +73,7 @@ def add_port_to_bridge(bridge_subtree_state, port_name, port_state=None):
     if port_state is None:
         port_state = {}
 
-    port_state[LinuxBridge.PORT_NAME] = port_name
+    port_state[LinuxBridge.Port.NAME] = port_name
     bridge_subtree_state[LinuxBridge.PORT_SUBTREE].append(port_state)
 
     return bridge_subtree_state

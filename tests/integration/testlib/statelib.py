@@ -156,7 +156,7 @@ class State(object):
         for ifstate in self._state[Interface.KEY]:
             ifstate.get(LinuxBridge.CONFIG_SUBTREE, {}).get(
                 LinuxBridge.PORT_SUBTREE, []
-            ).sort(key=itemgetter(LinuxBridge.PORT_NAME))
+            ).sort(key=itemgetter(LinuxBridge.Port.NAME))
 
     def _ipv6_skeleton_canonicalization(self):
         for iface_state in self._state.get(Interface.KEY, []):
