@@ -16,6 +16,10 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
+
+import warnings
+
+
 import pkgutil
 import yaml
 
@@ -158,7 +162,46 @@ class BondMode(object):
     ALB = 'balance-alb'
 
 
-class LinuxBridge(object):
+DEPRECATED_CONSTANTS = {
+    'LinuxBridge.PORT_NAME': 'LinuxBridge.Port.NAME',
+    'LinuxBridge.PORT_STP_HAIRPIN_MODE': 'LinuxBridge.Port.STP_HAIRPIN_MODE',
+    'LinuxBridge.PORT_STP_PATH_COST': 'LinuxBridge.Port.STP_PATH_COST',
+    'LinuxBridge.PORT_STP_PRIORITY': 'LinuxBridge.Port.STP_PRIORITY',
+}
+
+
+class _DeprecatorType(type):
+    def __getattribute__(cls, attribute):
+        try:
+            return super().__getattribute__(attribute)
+        except AttributeError:
+            deprecated_class = cls
+            deprecated_classname = deprecated_class.__name__
+            deprecated_name = attribute
+
+            oldconstant = f'{deprecated_classname}.{deprecated_name}'
+            newconstant = DEPRECATED_CONSTANTS.get(oldconstant)
+
+            if newconstant:
+                warnings.warn(
+                    f"Using '{oldconstant}' is deprecated, "
+                    f"use '{newconstant}' instead.",
+                    FutureWarning,
+                    stacklevel=3,
+                )
+
+                attributes = newconstant.split('.')
+                new_classname = attributes.pop(0)
+                new_value = globals()[new_classname]
+                while attributes:
+                    new_value = getattr(new_value, attributes.pop(0))
+
+                return new_value
+
+            raise
+
+
+class LinuxBridge(metaclass=_DeprecatorType):
     TYPE = 'linux-bridge'
     CONFIG_SUBTREE = 'bridge'
 
@@ -175,10 +218,6 @@ class LinuxBridge(object):
     STP_MAX_AGE = 'max-age'
 
     PORT_SUBTREE = 'port'
-    PORT_NAME = 'name'
-    PORT_STP_PRIORITY = 'stp-priority'
-    PORT_STP_HAIRPIN_MODE = 'stp-hairpin-mode'
-    PORT_STP_PATH_COST = 'stp-path-cost'
 
     class Port(object):
         NAME = 'name'
