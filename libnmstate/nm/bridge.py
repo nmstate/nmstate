@@ -83,11 +83,11 @@ def create_port_setting(options, base_con_profile):
         port_setting = nmclient.NM.SettingBridgePort.new()
 
     for key, val in options.items():
-        if key == LB.PORT_STP_PRIORITY:
+        if key == LB.Port.STP_PRIORITY:
             port_setting.props.priority = val
-        elif key == LB.PORT_STP_HAIRPIN_MODE:
+        elif key == LB.Port.STP_HAIRPIN_MODE:
             port_setting.props.hairpin_mode = val
-        elif key == LB.PORT_STP_PATH_COST:
+        elif key == LB.Port.STP_PATH_COST:
             port_setting.props.path_cost = val
         elif key == LB.Port.VLAN_SUBTREE:
             raise NmstateNotImplementedError
@@ -152,10 +152,10 @@ def _get_bridge_port_info(port_profile):
 
     port_setting = port_profile.get_setting_bridge_port()
     return {
-        LB.PORT_NAME: port_profile.get_interface_name(),
-        LB.PORT_STP_PRIORITY: port_setting.props.priority,
-        LB.PORT_STP_HAIRPIN_MODE: port_setting.props.hairpin_mode,
-        LB.PORT_STP_PATH_COST: port_setting.props.path_cost,
+        LB.Port.NAME: port_profile.get_interface_name(),
+        LB.Port.STP_PRIORITY: port_setting.props.priority,
+        LB.Port.STP_HAIRPIN_MODE: port_setting.props.hairpin_mode,
+        LB.Port.STP_PATH_COST: port_setting.props.path_cost,
     }
 
 
