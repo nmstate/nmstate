@@ -293,7 +293,7 @@ def test_linux_bridge_add_port_with_name_only(bridge0_with_port0, port1_up):
     bridge_state = bridge_iface_state[LinuxBridge.CONFIG_SUBTREE]
     port1_name = port1_up[Interface.KEY][0][Interface.NAME]
     bridge_state[LinuxBridge.PORT_SUBTREE].append(
-        {LinuxBridge.PORT_NAME: port1_name}
+        {LinuxBridge.Port.NAME: port1_name}
     )
 
     libnmstate.apply(desired_state)
@@ -309,7 +309,7 @@ def test_replace_port_on_linux_bridge(port0_vlan101, port1_up):
     with linux_bridge(bridge_name, bridge_state) as state:
         brconf_state = state[Interface.KEY][0][LinuxBridge.CONFIG_SUBTREE]
         brconf_state[LinuxBridge.PORT_SUBTREE] = [
-            {LinuxBridge.PORT_NAME: port1_name}
+            {LinuxBridge.Port.NAME: port1_name}
         ]
         libnmstate.apply(state)
 
@@ -317,7 +317,7 @@ def test_replace_port_on_linux_bridge(port0_vlan101, port1_up):
         brconf_state = br_state[Interface.KEY][0][LinuxBridge.CONFIG_SUBTREE]
         br_ports_state = brconf_state[LinuxBridge.PORT_SUBTREE]
         assert 1 == len(br_ports_state)
-        assert port1_name == br_ports_state[0][LinuxBridge.PORT_NAME]
+        assert port1_name == br_ports_state[0][LinuxBridge.Port.NAME]
 
         port_state = show_only((vlan_port0_name,))
         assert (

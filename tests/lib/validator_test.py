@@ -361,7 +361,7 @@ class TestVlanFilteringValidation(object):
                     schema.Interface.STATE: schema.InterfaceState.UP,
                     LB.PORT_SUBTREE: [
                         {
-                            LB.PORT_NAME: 'eth1',
+                            LB.Port.NAME: 'eth1',
                             LB.Port.VLAN_SUBTREE: invalid_vlan_config,
                         }
                     ],
@@ -386,7 +386,7 @@ class TestVlanFilteringValidation(object):
                     schema.Interface.STATE: schema.InterfaceState.UP,
                     LB.PORT_SUBTREE: [
                         {
-                            LB.PORT_NAME: 'eth1',
+                            LB.Port.NAME: 'eth1',
                             LB.Port.VLAN_SUBTREE: invalid_vlan_config,
                         }
                     ],
@@ -420,7 +420,7 @@ class TestVlanFilteringValidation(object):
                     schema.Interface.STATE: schema.InterfaceState.UP,
                     LB.PORT_SUBTREE: [
                         {
-                            LB.PORT_NAME: 'eth1',
+                            LB.Port.NAME: 'eth1',
                             LB.Port.VLAN_SUBTREE: invalid_vlan_config,
                         }
                     ],
@@ -449,7 +449,7 @@ class TestVlanFilteringValidation(object):
                     schema.Interface.STATE: schema.InterfaceState.UP,
                     LB.PORT_SUBTREE: [
                         {
-                            LB.PORT_NAME: 'eth1',
+                            LB.Port.NAME: 'eth1',
                             LB.Port.VLAN_SUBTREE: {
                                 LB.Port.Vlan.TYPE: LB.Port.Vlan.TRUNK_TYPE,
                                 LB.Port.Vlan.TRUNK_TAGS: [

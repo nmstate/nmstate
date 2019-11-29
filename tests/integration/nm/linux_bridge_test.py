@@ -104,10 +104,10 @@ def _create_bridge_config(ports):
 def _create_bridge_ports_config(ports):
     return [
         {
-            LB.PORT_NAME: port,
-            LB.PORT_STP_PRIORITY: 32,
-            LB.PORT_STP_HAIRPIN_MODE: False,
-            LB.PORT_STP_PATH_COST: 100,
+            LB.Port.NAME: port,
+            LB.Port.STP_PRIORITY: 32,
+            LB.Port.STP_HAIRPIN_MODE: False,
+            LB.Port.STP_PATH_COST: 100,
         }
         for port in ports
     ]
@@ -121,7 +121,7 @@ def _bridge_interface(state):
     finally:
         _delete_iface(BRIDGE0)
         for p in state[LB.CONFIG_SUBTREE][LB.PORT_SUBTREE]:
-            _delete_iface(p[LB.PORT_NAME])
+            _delete_iface(p[LB.Port.NAME])
 
 
 @mainloop_run
