@@ -240,6 +240,13 @@ class LinuxBridge(metaclass=_DeprecatorType):
                 MIN_RANGE = 'min'
                 MAX_RANGE = 'max'
 
+    class STP(object):
+        ENABLED = 'enabled'
+        FORWARD_DELAY = 'forward-delay'
+        HELLO_TIME = 'hello-time'
+        MAX_AGE = 'max-age'
+        PRIORITY = 'priority'
+
 
 class Ethernet(object):
     TYPE = InterfaceType.ETHERNET
