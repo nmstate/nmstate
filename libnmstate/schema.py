@@ -227,12 +227,14 @@ class LinuxBridge(metaclass=_DeprecatorType):
         VLAN_SUBTREE = 'vlan'
 
         class Vlan(object):
-            TRUNK_TAGS = 'trunk-tags'
-            TAG = 'tag'
             ENABLE_NATIVE = 'enable-native'
-            TYPE = 'type'
-            ACCESS_TYPE = 'access'
-            TRUNK_TYPE = 'trunk'
+            MODE = 'mode'
+            TAG = 'tag'
+            TRUNK_TAGS = 'trunk-tags'
+
+            class Mode:
+                ACCESS = 'access'
+                TRUNK = 'trunk'
 
             class TrunkTags(object):
                 ID = 'id'

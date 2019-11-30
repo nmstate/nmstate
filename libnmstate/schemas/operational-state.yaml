@@ -260,7 +260,7 @@ definitions:
                   vlan:
                     type: object
                     properties:
-                      type:
+                      mode:
                         type: string
                         enum:
                           - trunk
