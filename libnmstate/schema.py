@@ -295,5 +295,22 @@ class OVSBridge(object):
 
     PORT_SUBTREE = 'port'
     PORT_NAME = 'name'
-    PORT_VLAN_MODE = 'vlan-mode'
-    PORT_ACCESS_TAG = 'access-tag'
+
+    class Port:
+        VLAN_SUBTREE = 'vlan'
+
+        class Vlan:
+            TRUNK_TAGS = 'trunk-tags'
+            TAG = 'tag'
+            ENABLE_NATIVE = 'enable-native'
+            MODE = 'mode'
+
+            class Mode:
+                ACCESS = 'access'
+                TRUNK = 'trunk'
+
+            class TrunkTags:
+                ID = 'id'
+                ID_RANGE = 'id-range'
+                MIN_RANGE = 'min'
+                MAX_RANGE = 'max'

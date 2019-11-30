@@ -26,11 +26,12 @@ import libnmstate
 from libnmstate.schema import Constants
 from libnmstate.schema import DNS
 from libnmstate.schema import Ethernet
-from libnmstate.schema import LinuxBridge as LB
-from libnmstate.schema import VXLAN
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceType
+from libnmstate.schema import LinuxBridge as LB
+from libnmstate.schema import OVSBridge
 from libnmstate.schema import RouteRule
+from libnmstate.schema import VXLAN
 
 INTERFACES = Constants.INTERFACES
 ROUTES = Constants.ROUTES
@@ -134,6 +135,26 @@ def bridge_state(portless_bridge_state):
     port = {LB.Port.NAME: 'eth1', LB.Port.VLAN_SUBTREE: {}}
     portless_bridge_state[LB.CONFIG_SUBTREE][LB.PORT_SUBTREE].append(port)
     return portless_bridge_state
+
+
+@pytest.fixture
+def portless_ovs_bridge_state():
+    return {
+        Interface.NAME: THE_BRIDGE,
+        Interface.STATE: 'up',
+        Interface.TYPE: OVSBridge.TYPE,
+        LB.CONFIG_SUBTREE: {OVSBridge.PORT_SUBTREE: []},
+    }
+
+
+@pytest.fixture
+def ovs_bridge_state(portless_ovs_bridge_state):
+    port = {LB.Port.NAME: 'eth1', OVSBridge.Port.VLAN_SUBTREE: {}}
+    ovs_bridge_state_config = portless_ovs_bridge_state[
+        OVSBridge.CONFIG_SUBTREE
+    ]
+    ovs_bridge_state_config[OVSBridge.PORT_SUBTREE].append(port)
+    return portless_ovs_bridge_state
 
 
 class TestIfaceCommon(object):
@@ -396,6 +417,148 @@ class TestLinuxBridgeVlanFiltering(object):
             LB.Port.Vlan.TrunkTags.ID_RANGE: {
                 LB.Port.Vlan.TrunkTags.MIN_RANGE: min_vlan_id,
                 LB.Port.Vlan.TrunkTags.MAX_RANGE: max_vlan_id,
+            }
+        }
+
+
+class TestOvsBridgeVlan(object):
+    @pytest.mark.parametrize('vlan_mode', argvalues=['trunk', 'access'])
+    def test_vlan_port_modes(self, default_data, ovs_bridge_state, vlan_mode):
+        valid_vlan_mode = self._generate_vlan_config(vlan_mode)
+        bridge_state_config = ovs_bridge_state[OVSBridge.CONFIG_SUBTREE]
+        the_port = bridge_state_config[OVSBridge.PORT_SUBTREE][0]
+        the_port.update(valid_vlan_mode)
+        default_data[Interface.KEY].append(ovs_bridge_state)
+
+        libnmstate.validator.validate(default_data)
+
+    def test_invalid_vlan_port_mode(self, default_data, ovs_bridge_state):
+        invalid_vlan_mode = self._generate_vlan_config('fake-mode')
+        bridge_state_config = ovs_bridge_state[OVSBridge.CONFIG_SUBTREE]
+        the_port = bridge_state_config[OVSBridge.PORT_SUBTREE][0]
+        the_port.update(invalid_vlan_mode)
+        default_data[Interface.KEY].append(ovs_bridge_state)
+
+        with pytest.raises(js.ValidationError) as err:
+            libnmstate.validator.validate(default_data)
+        expected_error_msg = "'fake-mode' is not one of ['trunk', 'access']"
+        assert expected_error_msg in err.value.args[0]
+
+    def test_access_port_accepted(self, default_data, ovs_bridge_state):
+        vlan_access_port_state = self._generate_vlan_config(
+            'access', access_tag=101
+        )
+        bridge_state_config = ovs_bridge_state[OVSBridge.CONFIG_SUBTREE]
+        the_port = bridge_state_config[OVSBridge.PORT_SUBTREE][0]
+        the_port.update(vlan_access_port_state)
+        default_data[Interface.KEY].append(ovs_bridge_state)
+
+        libnmstate.validator.validate(default_data)
+
+    def test_wrong_access_port_tag_mode(self, default_data, ovs_bridge_state):
+        invalid_access_port_tag_mode = self._generate_vlan_config(
+            'access', access_tag='holy-guacamole!'
+        )
+        bridge_state_config = ovs_bridge_state[OVSBridge.CONFIG_SUBTREE]
+        the_port = bridge_state_config[OVSBridge.PORT_SUBTREE][0]
+        the_port.update(invalid_access_port_tag_mode)
+        default_data[Interface.KEY].append(ovs_bridge_state)
+
+        with pytest.raises(js.ValidationError) as err:
+            libnmstate.validator.validate(default_data)
+        expected_error_msg = "'holy-guacamole!' is not of type 'integer'"
+        assert expected_error_msg in err.value.args[0]
+
+    def test_wrong_access_tag_range(self, default_data, ovs_bridge_state):
+        invalid_vlan_id_range = self._generate_vlan_config(
+            'access', access_tag=48000
+        )
+        bridge_state_config = ovs_bridge_state[OVSBridge.CONFIG_SUBTREE]
+        the_port = bridge_state_config[OVSBridge.PORT_SUBTREE][0]
+        the_port.update(invalid_vlan_id_range)
+        default_data[Interface.KEY].append(ovs_bridge_state)
+
+        with pytest.raises(js.ValidationError) as err:
+            libnmstate.validator.validate(default_data)
+        expected_error_msg = '48000 is greater than the maximum of 4095'
+        assert expected_error_msg in err.value.args[0]
+
+    @pytest.mark.parametrize(
+        'is_native_vlan', argvalues=[True, False], ids=['native', 'not-native']
+    )
+    def test_trunk_port_native_vlan(
+        self, default_data, ovs_bridge_state, is_native_vlan
+    ):
+        vlan_access_port_state = self._generate_vlan_config(
+            'trunk',
+            access_tag=101 if is_native_vlan else None,
+            native_vlan=is_native_vlan,
+        )
+        bridge_state_config = ovs_bridge_state[OVSBridge.CONFIG_SUBTREE]
+        the_port = bridge_state_config[OVSBridge.PORT_SUBTREE][0]
+        the_port.update(vlan_access_port_state)
+        default_data[Interface.KEY].append(ovs_bridge_state)
+
+        libnmstate.validator.validate(default_data)
+
+    def test_trunk_ports(self, default_data, ovs_bridge_state):
+        trunk_tags = self._generate_vlan_id_config(101, 102, 103)
+        trunk_tags.append(self._generate_vlan_id_range_config(500, 1000))
+        vlan_trunk_tags_port_state = self._generate_vlan_config(
+            'trunk', trunk_tags=trunk_tags
+        )
+        bridge_state_config = ovs_bridge_state[OVSBridge.CONFIG_SUBTREE]
+        the_port = bridge_state_config[OVSBridge.PORT_SUBTREE][0]
+        the_port.update(vlan_trunk_tags_port_state)
+        default_data[Interface.KEY].append(ovs_bridge_state)
+
+        libnmstate.validator.validate(default_data)
+
+    def test_invalid_trunk_port_vlan_range(
+        self, default_data, ovs_bridge_state
+    ):
+        invalid_port_vlan_configuration = self._generate_vlan_config(
+            'trunk',
+            trunk_tags=[self._generate_vlan_id_range_config(100, 5000)],
+        )
+        bridge_state_config = ovs_bridge_state[OVSBridge.CONFIG_SUBTREE]
+        the_port = bridge_state_config[OVSBridge.PORT_SUBTREE][0]
+        the_port.update(invalid_port_vlan_configuration)
+        default_data[Interface.KEY].append(ovs_bridge_state)
+
+        with pytest.raises(js.ValidationError) as err:
+            libnmstate.validator.validate(default_data)
+        assert '5000 is greater than the maximum of 4095' in err.value.args[0]
+
+    @staticmethod
+    def _generate_vlan_config(
+        vlan_mode, trunk_tags=None, access_tag=None, native_vlan=None
+    ):
+        vlan_state = {
+            OVSBridge.Port.Vlan.MODE: vlan_mode,
+            OVSBridge.Port.Vlan.TRUNK_TAGS: trunk_tags or [],
+        }
+
+        if access_tag:
+            vlan_state[OVSBridge.Port.Vlan.TAG] = access_tag
+        if native_vlan:
+            enable_native = OVSBridge.Port.Vlan.ENABLE_NATIVE
+            vlan_state[enable_native] = native_vlan
+
+        return {OVSBridge.Port.VLAN_SUBTREE: vlan_state}
+
+    @staticmethod
+    def _generate_vlan_id_config(*vlan_ids):
+        return [
+            {OVSBridge.Port.Vlan.TrunkTags.ID: vlan_id} for vlan_id in vlan_ids
+        ]
+
+    @staticmethod
+    def _generate_vlan_id_range_config(min_vlan_id, max_vlan_id):
+        return {
+            OVSBridge.Port.Vlan.TrunkTags.ID_RANGE: {
+                OVSBridge.Port.Vlan.TrunkTags.MIN_RANGE: min_vlan_id,
+                OVSBridge.Port.Vlan.TrunkTags.MAX_RANGE: max_vlan_id,
             }
         }
 
