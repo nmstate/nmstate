@@ -343,7 +343,7 @@ class TestVxlanValidation(object):
 class TestVlanFilteringValidation(object):
     def test_access_port_cant_have_trunks(self):
         invalid_vlan_config = {
-            LB.Port.Vlan.TYPE: LB.Port.Vlan.ACCESS_TYPE,
+            LB.Port.Vlan.MODE: LB.Port.Vlan.Mode.ACCESS,
             LB.Port.Vlan.TRUNK_TAGS: [
                 {
                     LB.Port.Vlan.TrunkTags.ID_RANGE: {
@@ -375,7 +375,7 @@ class TestVlanFilteringValidation(object):
 
     def test_trunk_port_must_have_at_least_1_tag(self):
         invalid_vlan_config = {
-            LB.Port.Vlan.TYPE: LB.Port.Vlan.TRUNK_TYPE,
+            LB.Port.Vlan.MODE: LB.Port.Vlan.Mode.TRUNK,
             LB.Port.Vlan.TRUNK_TAGS: [],
         }
         desired_state = {
@@ -401,7 +401,7 @@ class TestVlanFilteringValidation(object):
 
     def test_specify_both_vlan_id_and_id_range_is_invalid(self):
         invalid_vlan_config = {
-            LB.Port.Vlan.TYPE: LB.Port.Vlan.TRUNK_TYPE,
+            LB.Port.Vlan.MODE: LB.Port.Vlan.Mode.TRUNK,
             LB.Port.Vlan.TRUNK_TAGS: [
                 {
                     LB.Port.Vlan.TrunkTags.ID: 101,
@@ -451,7 +451,7 @@ class TestVlanFilteringValidation(object):
                         {
                             LB.Port.NAME: 'eth1',
                             LB.Port.VLAN_SUBTREE: {
-                                LB.Port.Vlan.TYPE: LB.Port.Vlan.TRUNK_TYPE,
+                                LB.Port.Vlan.MODE: LB.Port.Vlan.Mode.TRUNK,
                                 LB.Port.Vlan.TRUNK_TAGS: [
                                     {
                                         LB.Port.Vlan.TrunkTags.ID_RANGE: {

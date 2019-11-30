@@ -386,7 +386,7 @@ def test_port_vlan_not_implemented(port0_up):
     port_name = port0_up[Interface.KEY][0][Interface.NAME]
     port_vlan_config = {
         LinuxBridge.Port.VLAN_SUBTREE: {
-            LinuxBridge.Port.Vlan.TYPE: LinuxBridge.Port.Vlan.ACCESS_TYPE,
+            LinuxBridge.Port.Vlan.MODE: LinuxBridge.Port.Vlan.Mode.ACCESS,
             LinuxBridge.Port.Vlan.TAG: 101,
         }
     }

@@ -396,7 +396,7 @@ class TestLinuxBridgeVlanFiltering(object):
         port_type, trunk_tags=None, access_tag=None, native_vlan=None
     ):
         vlan_filtering_state = {
-            LB.Port.Vlan.TYPE: port_type,
+            LB.Port.Vlan.MODE: port_type,
             LB.Port.Vlan.TRUNK_TAGS: trunk_tags or [],
         }
 
