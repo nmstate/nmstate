@@ -316,10 +316,22 @@ definitions:
                 properties:
                   name:
                     type: string
-                  vlan-mode:
-                    type: string
-                  access-tag:
-                    type: string
+                  vlan:
+                    type: object
+                    properties:
+                      mode:
+                        type: string
+                        enum:
+                          - trunk
+                          - access
+                      trunk-tags:
+                        type: array
+                        items:
+                          $ref: "#/definitions/bridge-port-vlan"
+                      tag:
+                        $ref: "#/definitions/types/bridge-vlan-tag"
+                      enable-native:
+                        type: boolean
             options:
               type: object
               properties:
