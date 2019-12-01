@@ -77,7 +77,7 @@ def test_bridge_with_system_port(eth1_up, bridge_default_config):
     bridge_desired_state = bridge_default_config
 
     eth1_port = {
-        OB.PORT_NAME: 'eth1',
+        OB.Port.NAME: 'eth1',
         # OVS vlan/s are not yet supported.
         # OB.VLAN.MODE: None,
         # OB.VLAN.TAG: 0,
@@ -99,7 +99,7 @@ def test_bridge_with_system_port(eth1_up, bridge_default_config):
 def test_bridge_with_internal_interface(bridge_default_config):
     bridge_desired_state = bridge_default_config
 
-    ovs_port = {OB.PORT_NAME: 'ovs0'}
+    ovs_port = {OB.Port.NAME: 'ovs0'}
 
     bridge_desired_state[OB.CONFIG_SUBTREE][OB.PORT_SUBTREE].append(ovs_port)
 
@@ -118,8 +118,8 @@ def _bridge_interface(state):
     finally:
         _delete_iface(BRIDGE0)
         for p in state[OB.CONFIG_SUBTREE][OB.PORT_SUBTREE]:
-            _delete_iface(nm.ovs.PORT_PROFILE_PREFIX + p[OB.PORT_NAME])
-            _delete_iface(p[OB.PORT_NAME])
+            _delete_iface(nm.ovs.PORT_PROFILE_PREFIX + p[OB.Port.NAME])
+            _delete_iface(p[OB.Port.NAME])
 
 
 def _get_bridge_current_state():
@@ -147,11 +147,11 @@ def _create_bridge(bridge_desired_state):
 
 
 def _attach_port_to_bridge(port_state):
-    port_profile_name = nm.ovs.PORT_PROFILE_PREFIX + port_state[OB.PORT_NAME]
+    port_profile_name = nm.ovs.PORT_PROFILE_PREFIX + port_state[OB.Port.NAME]
 
     _create_proxy_port(port_profile_name, port_state)
-    if _is_internal_interface(port_state[OB.PORT_NAME]):
-        iface_name = port_state[OB.PORT_NAME]
+    if _is_internal_interface(port_state[OB.Port.NAME]):
+        iface_name = port_state[OB.Port.NAME]
         _create_internal_interface(iface_name, master_name=port_profile_name)
     else:
         _connect_interface(port_profile_name, port_state)
@@ -173,7 +173,7 @@ def _create_internal_interface(iface_name, master_name):
 
 
 def _connect_interface(port_profile_name, port_state):
-    iface_nmdev = nm.device.get_device_by_name(port_state[OB.PORT_NAME])
+    iface_nmdev = nm.device.get_device_by_name(port_state[OB.Port.NAME])
     curr_iface_con_profile = nm.connection.ConnectionProfile()
     curr_iface_con_profile.import_by_device(iface_nmdev)
     slave_iface_settings = _create_iface_settings(
@@ -183,7 +183,7 @@ def _connect_interface(port_profile_name, port_state):
     iface_con_profile.create(slave_iface_settings)
     curr_iface_con_profile.update(iface_con_profile)
     curr_iface_con_profile.commit(nmdev=iface_nmdev)
-    nm.device.activate(connection_id=port_state[OB.PORT_NAME])
+    nm.device.activate(connection_id=port_state[OB.Port.NAME])
 
 
 def _create_proxy_port(port_profile_name, port_state):

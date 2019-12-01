@@ -71,14 +71,14 @@ class Bridge(object):
     def _add_port(self, name):
         self._bridge_iface[OVSBridge.CONFIG_SUBTREE].setdefault(
             OVSBridge.PORT_SUBTREE, []
-        ).append({OVSBridge.PORT_NAME: name})
+        ).append({OVSBridge.Port.NAME: name})
 
     def _get_port(self, name):
         ports = self._bridge_iface[OVSBridge.CONFIG_SUBTREE].get(
             OVSBridge.PORT_SUBTREE, []
         )
         return next(
-            (port for port in ports if port[OVSBridge.PORT_NAME] == name), None
+            (port for port in ports if port[OVSBridge.Port.NAME] == name), None
         )
 
     @contextmanager
