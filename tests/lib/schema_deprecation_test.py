@@ -34,7 +34,6 @@ from libnmstate.schema import OVSBridge
         ['STP_HELLO_TIME', LinuxBridge.STP.HELLO_TIME],
         ['STP_MAX_AGE', LinuxBridge.STP.MAX_AGE],
         ['STP_PRIORITY', LinuxBridge.STP.PRIORITY],
-        ['PORT_NAME', OVSBridge.Port.NAME],
     ],
 )
 def test_linuxbridge_deprecated_constants(changes):
@@ -50,6 +49,10 @@ def test_linuxbridge_deprecated_constants(changes):
     'changes',
     argvalues=[
         ['PORT_NAME', OVSBridge.Port.NAME],
+        ['FAIL_MODE', OVSBridge.Options.FAIL_MODE],
+        ['MCAST_SNOOPING_ENABLED', OVSBridge.Options.MCAST_SNOOPING_ENABLED],
+        ['RSTP', OVSBridge.Options.RSTP],
+        ['STP', OVSBridge.Options.STP],
     ],
 )
 def test_ovsbridge_deprecated_constants(changes):

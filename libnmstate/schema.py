@@ -164,6 +164,7 @@ class BondMode(object):
     ALB = 'balance-alb'
 
 
+_NEW_OVSBR_OPTS_MCAST_SNOOP = 'OVSBridge.Options.MCAST_SNOOPING_ENABLED'
 DEPRECATED_CONSTANTS = {
     'LinuxBridge.PORT_NAME': 'LinuxBridge.Port.NAME',
     'LinuxBridge.PORT_STP_HAIRPIN_MODE': 'LinuxBridge.Port.STP_HAIRPIN_MODE',
@@ -175,6 +176,10 @@ DEPRECATED_CONSTANTS = {
     'LinuxBridge.STP_MAX_AGE': 'LinuxBridge.STP.MAX_AGE',
     'LinuxBridge.STP_PRIORITY': 'LinuxBridge.STP.PRIORITY',
     'OVSBridge.PORT_NAME': 'OVSBridge.Port.NAME',
+    'OVSBridge.FAIL_MODE': 'OVSBridge.Options.FAIL_MODE',
+    'OVSBridge.MCAST_SNOOPING_ENABLED': _NEW_OVSBR_OPTS_MCAST_SNOOP,
+    'OVSBridge.RSTP': 'OVSBridge.Options.RSTP',
+    'OVSBridge.STP': 'OVSBridge.Options.STP',
 }
 
 
@@ -293,10 +298,12 @@ class OVSBridge(metaclass=_DeprecatorType):
     CONFIG_SUBTREE = 'bridge'
 
     OPTIONS_SUBTREE = 'options'
-    FAIL_MODE = 'fail-mode'
-    MCAST_SNOOPING_ENABLED = 'mcast-snooping-enable'
-    RSTP = 'rstp'
-    STP = 'stp'
+
+    class Options:
+        FAIL_MODE = 'fail-mode'
+        MCAST_SNOOPING_ENABLED = 'mcast-snooping-enable'
+        RSTP = 'rstp'
+        STP = 'stp'
 
     PORT_SUBTREE = 'port'
 
