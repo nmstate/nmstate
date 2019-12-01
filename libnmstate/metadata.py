@@ -33,6 +33,7 @@ MASTER_TYPE = '_master_type'
 ROUTES = '_routes'
 DNS_METADATA = '_dns'
 DNS_METADATA_PRIORITY = '_priority'
+ROUTE_RULES_METADATA = '_route_rules'
 
 
 def generate_ifaces_metadata(desired_state, current_state):
@@ -71,6 +72,7 @@ def generate_ifaces_metadata(desired_state, current_state):
     )
     _generate_dns_metadata(desired_state, current_state)
     _generate_route_metadata(desired_state, current_state)
+    _generate_route_rule_metadata(desired_state)
 
 
 def remove_ifaces_metadata(ifaces_state):
@@ -82,6 +84,8 @@ def remove_ifaces_metadata(ifaces_state):
         iface_state.get(Interface.IPV6, {}).pop(ROUTES, None)
         iface_state.get(Interface.IPV4, {}).pop(DNS_METADATA, None)
         iface_state.get(Interface.IPV6, {}).pop(DNS_METADATA, None)
+        iface_state.get(Interface.IPV4, {}).pop(ROUTE_RULES_METADATA, None)
+        iface_state.get(Interface.IPV6, {}).pop(ROUTE_RULES_METADATA, None)
 
 
 def _get_bond_slaves_from_state(iface_state, default=()):
@@ -354,3 +358,61 @@ def _preserve_current_dns_metadata(desired_state, current_state):
             if family not in iface_state:
                 iface_state[family] = {}
             iface_state[family][DNS_METADATA] = dns_metadata
+
+
+def _generate_route_rule_metadata(desired_state):
+    routes_v4 = []
+    routes_v6 = []
+    for routes in desired_state.config_iface_routes.values():
+        for route in routes:
+            if iplib.is_ipv6_address(route.destination):
+                routes_v6.append(route)
+            else:
+                routes_v4.append(route)
+
+    _generate_route_rule_per_stack_metadata(
+        Interface.IPV4,
+        desired_state.config_route_table_rules_v4,
+        routes_v4,
+        desired_state,
+    )
+    _generate_route_rule_per_stack_metadata(
+        Interface.IPV6,
+        desired_state.config_route_table_rules_v6,
+        routes_v6,
+        desired_state,
+    )
+
+
+def _generate_route_rule_per_stack_metadata(
+    family, indexed_rules, routes, desired_state
+):
+    for route_table, rules in indexed_rules.items():
+        iface_name = _find_iface_for_route_table(routes, route_table)
+        if not iface_name:
+            raise NmstateValueError(
+                'Failed to find suitable interface for saving route rule: '
+                '{}'.format(rules[0])
+            )
+        iface_state = desired_state.interfaces[iface_name]
+        _attach_route_rule_metadata(iface_state, rules, family)
+
+
+def _find_iface_for_route_table(routes, route_table):
+    for route in routes:
+        if route.table_id == route_table:
+            return route.next_hop_interface
+    return None
+
+
+def _attach_route_rule_metadata(iface_state, rules, family):
+    _init_iface_route_rule_metadata(iface_state, family)
+    for rule in rules:
+        iface_state[family][ROUTE_RULES_METADATA].append(rule.to_dict())
+
+
+def _init_iface_route_rule_metadata(iface_state, ip_key):
+    ip_state = iface_state.get(ip_key)
+    if not ip_state:
+        ip_state = iface_state[ip_key] = {}
+    ip_state[ROUTE_RULES_METADATA] = []

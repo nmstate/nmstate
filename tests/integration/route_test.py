@@ -22,6 +22,7 @@ import pytest
 
 import libnmstate
 from libnmstate.error import NmstateNotImplementedError
+from libnmstate.error import NmstateValueError
 from libnmstate.schema import DNS
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
@@ -29,10 +30,17 @@ from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import Route
+from libnmstate.schema import RouteRule
+
+from .testlib import iprule
 
 IPV4_ADDRESS1 = '192.0.2.251'
+IPV4_ROUTE_TABLE_ID1 = 50
+IPV4_ROUTE_TABLE_ID2 = 51
 
 IPV6_ADDRESS1 = '2001:db8:1::1'
+IPV6_ROUTE_TABLE_ID1 = 50
+IPV6_ROUTE_TABLE_ID2 = 51
 
 IPV4_DNS_NAMESERVER = '8.8.8.8'
 IPV6_DNS_NAMESERVER = '2001:4860:4860::8888'
@@ -228,14 +236,14 @@ def _get_ipv4_test_routes():
             Route.METRIC: 103,
             Route.NEXT_HOP_ADDRESS: '192.0.2.1',
             Route.NEXT_HOP_INTERFACE: 'eth1',
-            Route.TABLE_ID: 50,
+            Route.TABLE_ID: IPV4_ROUTE_TABLE_ID1,
         },
         {
             Route.DESTINATION: '203.0.113.0/24',
             Route.METRIC: 103,
             Route.NEXT_HOP_ADDRESS: '192.0.2.1',
             Route.NEXT_HOP_INTERFACE: 'eth1',
-            Route.TABLE_ID: 51,
+            Route.TABLE_ID: IPV4_ROUTE_TABLE_ID2,
         },
     ]
 
@@ -266,14 +274,14 @@ def _get_ipv6_test_routes():
             Route.METRIC: 103,
             Route.NEXT_HOP_ADDRESS: '2001:db8:1::a',
             Route.NEXT_HOP_INTERFACE: 'eth1',
-            Route.TABLE_ID: 50,
+            Route.TABLE_ID: IPV6_ROUTE_TABLE_ID1,
         },
         {
             Route.DESTINATION: '2001:db8:b::/64',
             Route.METRIC: 103,
             Route.NEXT_HOP_ADDRESS: '2001:db8:1::b',
             Route.NEXT_HOP_INTERFACE: 'eth1',
-            Route.TABLE_ID: 50,
+            Route.TABLE_ID: IPV6_ROUTE_TABLE_ID2,
         },
     ]
 
@@ -488,3 +496,142 @@ def test_apply_empty_state_preserve_routes(eth1_static_gateway_dns):
         == state[Route.KEY][Route.CONFIG]
     )
     assert current_state[DNS.KEY][DNS.CONFIG] == state[DNS.KEY][DNS.CONFIG]
+
+
+@pytest.fixture(scope='function')
+def route_rule_test_env(eth1_static_gateway_dns):
+    yield eth1_static_gateway_dns
+    libnmstate.apply(
+        {
+            Interface.KEY: [ETH1_INTERFACE_STATE],
+            Route.KEY: {Route.CONFIG: []},
+            RouteRule.KEY: {RouteRule.CONFIG: []},
+            DNS.KEY: {DNS.CONFIG: {}},
+        },
+        verify_change=False,
+    )
+
+
+def test_route_rule_add_without_from_or_to(route_rule_test_env):
+    state = route_rule_test_env
+    state[RouteRule.KEY] = {
+        RouteRule.CONFIG: [
+            {RouteRule.ROUTE_TABLE: IPV6_ROUTE_TABLE_ID1},
+            {RouteRule.ROUTE_TABLE: IPV4_ROUTE_TABLE_ID1},
+        ]
+    }
+
+    with pytest.raises(NmstateValueError):
+        libnmstate.apply(state)
+
+
+def test_route_rule_add_from_only(route_rule_test_env):
+    state = route_rule_test_env
+    rules = [
+        {
+            RouteRule.IP_FROM: '2001:db8:f::/64',
+            RouteRule.ROUTE_TABLE: IPV6_ROUTE_TABLE_ID1,
+        },
+        {
+            RouteRule.IP_FROM: '192.0.2.0/24',
+            RouteRule.ROUTE_TABLE: IPV4_ROUTE_TABLE_ID1,
+        },
+    ]
+    state[RouteRule.KEY] = {RouteRule.CONFIG: rules}
+
+    libnmstate.apply(state)
+    _check_ip_rules(rules)
+
+
+def test_route_rule_add_to_only(route_rule_test_env):
+    state = route_rule_test_env
+    rules = [
+        {
+            RouteRule.IP_TO: '2001:db8:f::/64',
+            RouteRule.ROUTE_TABLE: IPV6_ROUTE_TABLE_ID1,
+        },
+        {
+            RouteRule.IP_TO: '192.0.2.0/24',
+            RouteRule.ROUTE_TABLE: IPV4_ROUTE_TABLE_ID1,
+        },
+    ]
+    state[RouteRule.KEY] = {RouteRule.CONFIG: rules}
+
+    libnmstate.apply(state)
+    _check_ip_rules(rules)
+
+
+def test_route_rule_add(route_rule_test_env):
+    state = route_rule_test_env
+    rules = [
+        {
+            RouteRule.IP_FROM: '2001:db8:a::/64',
+            RouteRule.IP_TO: '2001:db8:f::/64',
+            RouteRule.PRIORITY: 1000,
+            RouteRule.ROUTE_TABLE: IPV6_ROUTE_TABLE_ID1,
+        },
+        {
+            RouteRule.IP_FROM: '203.0.113.0/24',
+            RouteRule.IP_TO: '192.0.2.0/24',
+            RouteRule.PRIORITY: 1000,
+            RouteRule.ROUTE_TABLE: IPV4_ROUTE_TABLE_ID1,
+        },
+    ]
+    state[RouteRule.KEY] = {RouteRule.CONFIG: rules}
+
+    libnmstate.apply(state)
+    _check_ip_rules(rules)
+
+
+def test_route_rule_add_without_priority(route_rule_test_env):
+    state = route_rule_test_env
+    rules = [
+        {
+            RouteRule.IP_FROM: '2001:db8:a::/64',
+            RouteRule.IP_TO: '2001:db8:f::/64',
+            RouteRule.ROUTE_TABLE: IPV6_ROUTE_TABLE_ID1,
+        },
+        {
+            RouteRule.IP_FROM: '203.0.113.0/24',
+            RouteRule.IP_TO: '192.0.2.0/24',
+            RouteRule.ROUTE_TABLE: IPV4_ROUTE_TABLE_ID1,
+        },
+    ]
+    state[RouteRule.KEY] = {RouteRule.CONFIG: rules}
+
+    libnmstate.apply(state)
+    _check_ip_rules(rules)
+
+
+def test_route_rule_add_without_route_table(route_rule_test_env):
+    """
+    When route table is not define in route rule, the main route table will
+    be used.
+    """
+    state = route_rule_test_env
+    rules = [
+        {
+            RouteRule.IP_FROM: '2001:db8:a::/64',
+            RouteRule.IP_TO: '2001:db8:f::/64',
+            RouteRule.PRIORITY: 1000,
+        },
+        {
+            RouteRule.IP_FROM: '203.0.113.0/24',
+            RouteRule.IP_TO: '192.0.2.0/24',
+            RouteRule.PRIORITY: 1000,
+        },
+    ]
+    state[RouteRule.KEY] = {RouteRule.CONFIG: rules}
+
+    libnmstate.apply(state)
+    _check_ip_rules(rules)
+
+
+def _check_ip_rules(rules):
+    for rule in rules:
+        iprule.ip_rule_exist_in_os(
+            rule.get(RouteRule.IP_FROM),
+            rule.get(RouteRule.IP_TO),
+            rule.get(RouteRule.PRIORITY),
+            rule.get(RouteRule.ROUTE_TABLE),
+        )

@@ -202,6 +202,11 @@ class State(object):
 
         self._config_iface_routes = self._index_routes_by_iface()
 
+        (
+            self._config_route_table_rules_v4,
+            self._config_route_table_rules_v6,
+        ) = self._index_route_rule_by_route_table()
+
     def __eq__(self, other):
         return self.state == other.state
 
@@ -240,6 +245,20 @@ class State(object):
             DNS.SERVER: dns_conf.get(DNS.SERVER, []),
             DNS.SEARCH: dns_conf.get(DNS.SEARCH, []),
         }
+
+    @property
+    def config_route_table_rules_v4(self):
+        """
+        IPv4 Route rules indexed by route table number.
+        """
+        return self._config_route_table_rules_v4
+
+    @property
+    def config_route_table_rules_v6(self):
+        """
+        IPv6 Route rules indexed by route table number.
+        """
+        return self._config_route_table_rules_v6
 
     def _complement_interface_empty_ip_subtrees(self):
         """ Complement the interfaces states with empty IPv4/IPv6 subtrees. """
@@ -326,6 +345,35 @@ class State(object):
                     {DNS.KEY: other_state.config_dns},
                 )
             )
+
+    def verify_route_rule(self, other_state):
+        for self_index_rules, other_index_rules in (
+            (
+                self.config_route_table_rules_v4,
+                other_state.config_route_table_rules_v4,
+            ),
+            (
+                self.config_route_table_rules_v6,
+                other_state.config_route_table_rules_v6,
+            ),
+        ):
+            self_rules = [
+                _remove_route_rule_default_values(rule.to_dict())
+                for rules in self_index_rules.values()
+                for rule in rules
+            ]
+            other_rules = [
+                rule.to_dict()
+                for rules in other_index_rules.values()
+                for rule in rules
+            ]
+            if not state_match(self_rules, other_rules):
+                raise NmstateVerificationError(
+                    format_desired_current_state_diff(
+                        {RouteRule.KEY: {RouteRule.CONFIG: self_rules}},
+                        {RouteRule.KEY: {RouteRule.CONFIG: other_rules}},
+                    )
+                )
 
     def normalize_for_verification(self):
         self._clean_sanitize_ethernet()
@@ -466,6 +514,21 @@ class State(object):
             routes.sort()
         return iface_routes
 
+    def _index_route_rule_by_route_table(self):
+        index_rules_v4 = defaultdict(list)
+        index_rules_v6 = defaultdict(list)
+        for rule in self._config_route_rules:
+            entry = RouteRuleEntry(rule)
+            if is_ipv6_address(entry.ip_from) or is_ipv6_address(entry.ip_to):
+                index_rules_v6[entry.route_table].append(entry)
+            else:
+                index_rules_v4[entry.route_table].append(entry)
+        for rules in index_rules_v4.values():
+            rules.sort()
+        for rules in index_rules_v6.values():
+            rules.sort()
+        return index_rules_v4, index_rules_v6
+
     def _clean_sanitize_ethernet(self):
         for ifstate in self.interfaces.values():
             ethernet_state = ifstate.get(Ethernet.CONFIG_SUBTREE)
@@ -578,6 +641,18 @@ class State(object):
         if not routes:
             routes = self._state[Route.KEY] = {}
         routes[Route.CONFIG] = value
+
+    @property
+    def _config_route_rules(self):
+        return self._state.get(RouteRule.KEY, {}).get(RouteRule.CONFIG, [])
+
+    def merge_route_rules(self, other_state):
+        if not self._state.get(RouteRule.KEY):
+            self._state[RouteRule.KEY] = {
+                RouteRule.CONFIG: copy.deepcopy(
+                    other_state._config_route_rules
+                )
+            }
 
 
 def dict_update(origin_data, to_merge_data):
@@ -725,3 +800,11 @@ def state_match(desire, current):
         )
     else:
         return desire == current
+
+
+def _remove_route_rule_default_values(rule):
+    if rule.get(RouteRule.PRIORITY) == RouteRule.USE_DEFAULT_PRIORITY:
+        del rule[RouteRule.PRIORITY]
+    if rule.get(RouteRule.ROUTE_TABLE) == RouteRule.USE_DEFAULT_ROUTE_TABLE:
+        del rule[RouteRule.ROUTE_TABLE]
+    return rule
