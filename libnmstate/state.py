@@ -24,6 +24,8 @@ except ImportError:
     from collections import Mapping
     from collections import Sequence
 
+from abc import ABCMeta
+from abc import abstractmethod
 from collections import defaultdict
 import copy
 from functools import total_ordering
@@ -32,6 +34,7 @@ from operator import itemgetter
 
 from libnmstate import iplib
 from libnmstate import metadata
+from libnmstate.error import NmstateInternalError
 from libnmstate.error import NmstateValueError
 from libnmstate.error import NmstateVerificationError
 from libnmstate.iplib import is_ipv6_address
@@ -51,7 +54,52 @@ NON_UP_STATES = (InterfaceState.DOWN, InterfaceState.ABSENT)
 
 
 @total_ordering
-class RouteEntry(object):
+class StateEntry(metaclass=ABCMeta):
+    @abstractmethod
+    def _keys(self):
+        """
+        Return the tuple representing this entry, will be used for hashing or
+        comparing.
+        """
+        pass
+
+    def __hash__(self):
+        return hash(self._keys())
+
+    def __eq__(self, other):
+        return self is other or self._keys() == other._keys()
+
+    def __lt__(self, other):
+        return self._keys() < other._keys()
+
+    def __repr__(self):
+        return str(self.to_dict())
+
+    @property
+    @abstractmethod
+    def absent(self):
+        pass
+
+    def to_dict(self):
+        return {
+            key.replace('_', '-'): value
+            for key, value in vars(self).items()
+            if (not key.startswith('_')) and (value is not None)
+        }
+
+    def match(self, other):
+        """
+        Match self against other. Treat self None attributes as wildcards,
+        matching against any value in others.
+        Return True for a match, False otherwise.
+        """
+        for self_value, other_value in zip(self._keys(), other._keys()):
+            if self_value is not None and self_value != other_value:
+                return False
+        return True
+
+
+class RouteEntry(StateEntry):
     def __init__(self, route):
         self.table_id = route.get(Route.TABLE_ID)
         self.state = route.get(Route.STATE)
@@ -62,7 +110,7 @@ class RouteEntry(object):
         self.complement_defaults()
 
     def complement_defaults(self):
-        if self.state != Route.STATE_ABSENT:
+        if not self.absent:
             if self.table_id is None:
                 self.table_id = Route.USE_DEFAULT_ROUTE_TABLE
             if self.metric is None:
@@ -70,10 +118,7 @@ class RouteEntry(object):
             if self.next_hop_address is None:
                 self.next_hop_address = ''
 
-    def __hash__(self):
-        return hash(self.__keys())
-
-    def __keys(self):
+    def _keys(self):
         return (
             self.table_id,
             self.metric,
@@ -81,16 +126,6 @@ class RouteEntry(object):
             self.next_hop_address,
             self.next_hop_interface,
         )
-
-    def to_dict(self):
-        return {
-            key.replace('_', '-'): value
-            for key, value in vars(self).items()
-            if value is not None
-        }
-
-    def __eq__(self, other):
-        return self is other or self.__keys() == other.__keys()
 
     def __lt__(self, other):
         return (
@@ -103,23 +138,9 @@ class RouteEntry(object):
             other.destination or '',
         )
 
-    def __repr__(self):
-        return str(self.to_dict())
-
     @property
     def absent(self):
         return self.state == Route.STATE_ABSENT
-
-    def match(self, other):
-        """
-        Match self against other. Treat self None attributes as wildcards,
-        matching against any value in others.
-        Return True for a match, False otherwise.
-        """
-        for self_value, other_value in zip(self.__keys(), other.__keys()):
-            if self_value is not None and self_value != other_value:
-                return False
-        return True
 
 
 def create_state(state, interfaces_to_filter=None):
