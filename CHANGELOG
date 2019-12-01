@@ -1,4 +1,62 @@
 # Changelog
+## [0.1.1] - 2019-12-01
+### Break Changes
+ - Removed the support of Python2. Require Python 3.6 or later version.
+ - Increased minimum supported NetworkManager version to 1.20.
+ - Deprecation in `libnmstate.schme`:
+    - 'LinuxBridge.PORT_NAME' -> 'LinuxBridge.Port.NAME'
+    - 'LinuxBridge.PORT_STP_HAIRPIN_MODE' -> 'LinuxBridge.Port.STP_HAIRPIN_MODE'
+    - 'LinuxBridge.PORT_STP_PATH_COST' -> 'LinuxBridge.Port.STP_PATH_COST'
+    - 'LinuxBridge.PORT_STP_PRIORITY' -> 'LinuxBridge.Port.STP_PRIORITY'
+    - 'LinuxBridge.STP_ENABLED' -> 'LinuxBridge.STP.ENABLED'
+    - 'LinuxBridge.STP_FORWARD_DELAY' -> 'LinuxBridge.STP.FORWARD_DELAY'
+    - 'LinuxBridge.STP_HELLO_TIME' -> 'LinuxBridge.STP.HELLO_TIME'
+    - 'LinuxBridge.STP_MAX_AGE' -> 'LinuxBridge.STP.MAX_AGE'
+    - 'LinuxBridge.STP_PRIORITY' -> 'LinuxBridge.STP.PRIORITY'
+    - 'OVSBridge.PORT_NAME' -> 'OVSBridge.Port.NAME'
+    - 'OVSBridge.FAIL_MODE' -> 'OVSBridge.Options.FAIL_MODE'
+    - 'OVSBridge.MCAST_SNOOPING_ENABLED' -> 'OVSBridge.Options.MCAST_SNOOPING_ENABLED'
+    - 'OVSBridge.RSTP' -> 'OVSBridge.Options.RSTP'
+    - 'OVSBridge.STP' -> 'OVSBridge.Options.STP'
+
+
+### New Features
+ - Support disabling IPv6 persistently.
+ - Support compressed IPv6 address.
+ - Support reapply on MTU changes.
+ - Support activation interface without blocking on DHCP results.
+ - Support SR-IOV.
+ - Support source routing via route rule.
+ - Support of VxLAN interface in schema without implementation.
+ - Support of Team interface in schema without implementation.
+ - Support of VLAN filtering in schema without implementation.
+ - Support of OVS Bonding in schema without implementation.
+ - Support of OVS VLAN in schema without implementation.
+
+### Bug Fixes
+ - Prioritize base iface activation before the vlan.
+ - Ignore not active failure when deactivating.
+ - Increase main loop timeout to support the linux bridge STP.
+ - Detach slaves without deleting them.
+ - Fix race problem on slave been deactivated by master.
+ - Prioritize master interfaces activaction.
+ - Don't disable IPv6 on down interface.
+ - Raise exception when the NM service is not running.
+ - Introduce nmstatectl man page.
+ - Allow empty interface description.
+ - Change DHCP and IPv6-RA address selction based on MAC address only.
+ - Fix race problem when IPv6 is disabled.
+ - Handle race problem when OVS bridge is deleting.
+ - Handle bond get_info() while deleting.
+ - Drop type attribute of OVS port.
+ - Treat disabled IPv6 as OK to reapply.
+ - Mark device as managed before activate.
+ - Fix ActiveConnection.is_activating.
+ - Fix the incorrect interface state when device in IP_CHECK state.
+ - Discard IP stack when disabled for verification.
+ - Explicitly remove any virtual device.
+ - Delete inactive profiles when editting an interface.
+ - Explicitly delete device even in DEACTIVATING state.
 
 ## [0.0.8] - 2019-07-25
 ### New Features
