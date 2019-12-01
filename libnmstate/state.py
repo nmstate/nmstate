@@ -34,7 +34,7 @@ from operator import itemgetter
 
 from libnmstate import iplib
 from libnmstate import metadata
-from libnmstate.error import NmstateInternalError
+from libnmstate.error import NmstateNotImplementedError
 from libnmstate.error import NmstateValueError
 from libnmstate.error import NmstateVerificationError
 from libnmstate.iplib import is_ipv6_address
@@ -48,6 +48,7 @@ from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import Route
+from libnmstate.schema import RouteRule
 
 
 NON_UP_STATES = (InterfaceState.DOWN, InterfaceState.ABSENT)
@@ -141,6 +142,37 @@ class RouteEntry(StateEntry):
     @property
     def absent(self):
         return self.state == Route.STATE_ABSENT
+
+
+class RouteRuleEntry(StateEntry):
+    def __init__(self, route_rule):
+        self.ip_from = route_rule.get(RouteRule.IP_FROM)
+        self.ip_to = route_rule.get(RouteRule.IP_TO)
+        self.priority = route_rule.get(RouteRule.PRIORITY)
+        self.route_table = route_rule.get(RouteRule.ROUTE_TABLE)
+        self.complement_defaults()
+
+    def complement_defaults(self):
+        if self.ip_from is None:
+            self.ip_from = ''
+        if self.ip_to is None:
+            self.ip_to = ''
+        if self.priority is None:
+            self.priority = RouteRule.USE_DEFAULT_PRIORITY
+        if (
+            self.route_table is None
+            or self.route_table == RouteRule.USE_DEFAULT_ROUTE_TABLE
+        ):
+            self.route_table = iplib.KERNEL_MAIN_ROUTE_TABLE_ID
+
+    def _keys(self):
+        return (self.ip_from, self.ip_to, self.priority, self.route_table)
+
+    @property
+    def absent(self):
+        raise NmstateNotImplementedError(
+            'RouteRuleEntry does not support absent property'
+        )
 
 
 def create_state(state, interfaces_to_filter=None):
