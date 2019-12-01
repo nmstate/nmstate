@@ -24,6 +24,8 @@ matrix:
         - env: DOCKER_IMAGE=nmstate/centos8-nmstate-dev
                testflags="--test-type integ --pytest-args='-x'
                    --copr networkmanager/NetworkManager-master"
+        - env: DOCKER_IMAGE=nmstate/fedora-nmstate-dev
+               testflags="--test-type integ --pytest-args='-x'"
 
 addons:
     apt:
