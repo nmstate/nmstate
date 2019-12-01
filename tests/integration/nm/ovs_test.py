@@ -42,10 +42,10 @@ def bridge_default_config():
     return {
         OB.CONFIG_SUBTREE: {
             OB.OPTIONS_SUBTREE: {
-                OB.FAIL_MODE: '',
-                OB.MCAST_SNOOPING_ENABLED: False,
-                OB.RSTP: False,
-                OB.STP: False,
+                OB.Options.FAIL_MODE: '',
+                OB.Options.MCAST_SNOOPING_ENABLED: False,
+                OB.Options.RSTP: False,
+                OB.Options.STP: False,
             },
             OB.PORT_SUBTREE: [],
         }
