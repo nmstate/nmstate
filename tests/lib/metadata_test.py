@@ -24,6 +24,7 @@ from unittest import mock
 from libnmstate import metadata
 from libnmstate import state
 from libnmstate.nm import dns as nm_dns
+from libnmstate.error import NmstateValueError
 from libnmstate.schema import DNS
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
@@ -31,6 +32,7 @@ from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import Route
+from libnmstate.schema import RouteRule
 
 
 TYPE_BOND = InterfaceType.BOND
@@ -943,3 +945,156 @@ def _gen_default_gateway_route(iface_name):
             Route.TABLE_ID: 54,
         },
     ]
+
+
+class TestRouteRuleMetadata(object):
+    TEST_ROUTE_TABLE = 50
+
+    def test_with_empty_states(self):
+        desired_state = state.State({})
+        current_state = state.State({})
+
+        metadata.generate_ifaces_metadata(desired_state, current_state)
+
+        assert {} == desired_state.interfaces
+
+    def test_no_rules_with_no_interfaces(self):
+        desired_state = state.State(
+            {Interface.KEY: [], RouteRule.KEY: {RouteRule.CONFIG: []}}
+        )
+        current_state = state.State(
+            {Interface.KEY: [], RouteRule.KEY: {RouteRule.CONFIG: []}}
+        )
+
+        metadata.generate_ifaces_metadata(desired_state, current_state)
+
+        assert {} == desired_state.interfaces
+
+    def test_rule_with_no_route(self):
+        rule0 = self._create_rule0()
+        desired_state = state.State(
+            {
+                Route.KEY: {Route.CONFIG: []},
+                RouteRule.KEY: {RouteRule.CONFIG: [rule0.to_dict()]},
+            }
+        )
+        current_state = state.State({})
+
+        with pytest.raises(NmstateValueError):
+            metadata.generate_ifaces_metadata(desired_state, current_state)
+
+    def test_rule_with_no_matching_route_table(self):
+        rule0 = self._create_rule0()
+        route = _create_route(
+            '198.51.100.0/24',
+            '192.0.2.1',
+            'eth1',
+            TestRouteRuleMetadata.TEST_ROUTE_TABLE + 1,
+            103,
+        )
+        desired_state = state.State(
+            {
+                Interface.KEY: [_create_interface_state('eth1')],
+                Route.KEY: {Route.CONFIG: [route.to_dict()]},
+                RouteRule.KEY: {RouteRule.CONFIG: [rule0.to_dict()]},
+            }
+        )
+        current_state = state.State(
+            {
+                Interface.KEY: [_create_interface_state('eth1')],
+                Route.KEY: {Route.CONFIG: [route.to_dict()]},
+            }
+        )
+        rule0 = self._create_rule0()
+        route = _create_route(
+            '198.51.100.0/24',
+            '192.0.2.1',
+            'eth1',
+            TestRouteRuleMetadata.TEST_ROUTE_TABLE + 1,
+            103,
+        )
+        desired_state = state.State(
+            {
+                Interface.KEY: [_create_interface_state('eth1')],
+                Route.KEY: {Route.CONFIG: [route.to_dict()]},
+                RouteRule.KEY: {RouteRule.CONFIG: [rule0.to_dict()]},
+            }
+        )
+        current_state = state.State(
+            {
+                Interface.KEY: [_create_interface_state('eth1')],
+                Route.KEY: {Route.CONFIG: [route.to_dict()]},
+            }
+        )
+
+        with pytest.raises(NmstateValueError):
+            metadata.generate_ifaces_metadata(desired_state, current_state)
+
+    def test_rule_with_matching_route_table(self):
+        rule0 = self._create_rule0()
+        rule1 = self._create_rule1()
+        route0 = _create_route(
+            '198.51.100.0/24',
+            '192.0.2.1',
+            'eth1',
+            TestRouteRuleMetadata.TEST_ROUTE_TABLE,
+            103,
+        )
+        route1 = _create_route(
+            '2001:db8:f::/64',
+            '2001:db8:e::',
+            'eth1',
+            TestRouteRuleMetadata.TEST_ROUTE_TABLE,
+            103,
+        )
+        desired_state = state.State(
+            {
+                Interface.KEY: [_create_interface_state('eth1')],
+                Route.KEY: {
+                    Route.CONFIG: [route0.to_dict(), route1.to_dict()]
+                },
+                RouteRule.KEY: {
+                    RouteRule.CONFIG: [rule0.to_dict(), rule1.to_dict()]
+                },
+            }
+        )
+        current_state = state.State({})
+
+        metadata.generate_ifaces_metadata(desired_state, current_state)
+
+        iface_state = desired_state.interfaces['eth1']
+        (rule0_metadata,) = iface_state[Interface.IPV4][
+            metadata.ROUTE_RULES_METADATA
+        ]
+        (rule1_metadata,) = iface_state[Interface.IPV6][
+            metadata.ROUTE_RULES_METADATA
+        ]
+        assert rule0.to_dict() == rule0_metadata
+        assert rule1.to_dict() == rule1_metadata
+
+    def _create_rule0(self):
+        return _create_rule(
+            '198.51.100.0/24',
+            '192.0.2.1',
+            103,
+            TestRouteRuleMetadata.TEST_ROUTE_TABLE,
+        )
+
+    def _create_rule1(self):
+        return _create_rule(
+            '2001:db8:a::/64',
+            '2001:db8:1::a',
+            104,
+            TestRouteRuleMetadata.TEST_ROUTE_TABLE,
+        )
+
+
+def _create_rule(ip_from, ip_to, priority, table):
+    return state.RouteRuleEntry(
+        {
+            RouteRule.IP_FROM: ip_from,
+            RouteRule.IP_TO: ip_to,
+            RouteRule.PRIORITY: priority,
+            RouteRule.ROUTE_TABLE: table,
+        }
+    )
