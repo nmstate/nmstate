@@ -51,10 +51,10 @@ def test_create_and_remove_ovs_bridge_options_specified():
     bridge = Bridge(BRIDGE1)
     bridge.set_options(
         {
-            OVSBridge.FAIL_MODE: '',
-            OVSBridge.MCAST_SNOOPING_ENABLED: False,
-            OVSBridge.RSTP: False,
-            OVSBridge.STP: True,
+            OVSBridge.Options.FAIL_MODE: '',
+            OVSBridge.Options.MCAST_SNOOPING_ENABLED: False,
+            OVSBridge.Options.RSTP: False,
+            OVSBridge.Options.STP: True,
         }
     )
 
