@@ -637,7 +637,7 @@ class TestRouteRules(object):
 class TestOVSBridgeLinkAggregation:
     def test_valid_link_aggregation_port(self, default_data):
         link_aggregation_port = {
-            OVSBridge.PORT_NAME: 'bond',
+            OVSBridge.Port.NAME: 'bond',
             OVSBridge.Port.LINK_AGGREGATION_SUBTREE: {
                 OVSBridge.Port.LinkAggregation.MODE: 'bond-mode',
                 OVSBridge.Port.LinkAggregation.SLAVES_SUBTREE: [
