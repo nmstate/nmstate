@@ -34,7 +34,7 @@ def load(schema_name):
 ifaces_schema = load('operational-state')
 
 
-class Interface(object):
+class Interface:
     KEY = 'interfaces'
 
     NAME = 'name'
@@ -49,7 +49,7 @@ class Interface(object):
     MTU = 'mtu'
 
 
-class Route(object):
+class Route:
     KEY = 'routes'
 
     RUNNING = 'running'
@@ -65,7 +65,7 @@ class Route(object):
     USE_DEFAULT_ROUTE_TABLE = 0
 
 
-class RouteRule(object):
+class RouteRule:
     KEY = 'route-rules'
     CONFIG = 'config'
     IP_FROM = 'ip-from'
@@ -76,7 +76,7 @@ class RouteRule(object):
     USE_DEFAULT_ROUTE_TABLE = 0
 
 
-class DNS(object):
+class DNS:
     KEY = 'dns-resolver'
     RUNNING = 'running'
     CONFIG = 'config'
@@ -84,13 +84,13 @@ class DNS(object):
     SEARCH = 'search'
 
 
-class Constants(object):
+class Constants:
     INTERFACES = Interface.KEY
     ROUTES = Route.KEY
     DNS = DNS.KEY
 
 
-class InterfaceState(object):
+class InterfaceState:
     KEY = Interface.STATE
 
     DOWN = 'down'
@@ -98,7 +98,7 @@ class InterfaceState(object):
     ABSENT = 'absent'
 
 
-class InterfaceType(object):
+class InterfaceType:
     KEY = Interface.TYPE
 
     BOND = 'bond'
@@ -126,7 +126,7 @@ class InterfaceType(object):
     )
 
 
-class InterfaceIP(object):
+class InterfaceIP:
     ENABLED = 'enabled'
     ADDRESS = 'address'
     ADDRESS_IP = 'ip'
@@ -145,7 +145,7 @@ class InterfaceIPv6(InterfaceIP):
     AUTOCONF = 'autoconf'
 
 
-class Bond(object):
+class Bond:
     KEY = InterfaceType.BOND
     CONFIG_SUBTREE = 'link-aggregation'
 
@@ -154,7 +154,7 @@ class Bond(object):
     OPTIONS_SUBTREE = 'options'
 
 
-class BondMode(object):
+class BondMode:
     ROUND_ROBIN = 'balance-rr'
     ACTIVE_BACKUP = 'active-backup'
     XOR = 'balance-xor'
@@ -227,14 +227,14 @@ class LinuxBridge(metaclass=_DeprecatorType):
 
     PORT_SUBTREE = 'port'
 
-    class Port(object):
+    class Port:
         NAME = 'name'
         STP_HAIRPIN_MODE = 'stp-hairpin-mode'
         STP_PATH_COST = 'stp-path-cost'
         STP_PRIORITY = 'stp-priority'
         VLAN_SUBTREE = 'vlan'
 
-        class Vlan(object):
+        class Vlan:
             ENABLE_NATIVE = 'enable-native'
             MODE = 'mode'
             TAG = 'tag'
@@ -244,13 +244,13 @@ class LinuxBridge(metaclass=_DeprecatorType):
                 ACCESS = 'access'
                 TRUNK = 'trunk'
 
-            class TrunkTags(object):
+            class TrunkTags:
                 ID = 'id'
                 ID_RANGE = 'id-range'
                 MIN_RANGE = 'min'
                 MAX_RANGE = 'max'
 
-    class STP(object):
+    class STP:
         ENABLED = 'enabled'
         FORWARD_DELAY = 'forward-delay'
         HELLO_TIME = 'hello-time'
@@ -258,7 +258,7 @@ class LinuxBridge(metaclass=_DeprecatorType):
         PRIORITY = 'priority'
 
 
-class Ethernet(object):
+class Ethernet:
     TYPE = InterfaceType.ETHERNET
     CONFIG_SUBTREE = 'ethernet'
 
@@ -271,11 +271,11 @@ class Ethernet(object):
 
     SRIOV_SUBTREE = 'sr-iov'
 
-    class SRIOV(object):
+    class SRIOV:
         TOTAL_VFS = 'total-vfs'
 
 
-class VLAN(object):
+class VLAN:
     TYPE = InterfaceType.VLAN
     CONFIG_SUBTREE = 'vlan'
 
@@ -283,7 +283,7 @@ class VLAN(object):
     BASE_IFACE = 'base-iface'
 
 
-class VXLAN(object):
+class VXLAN:
     TYPE = InterfaceType.VXLAN
     CONFIG_SUBTREE = 'vxlan'
 
