@@ -174,6 +174,7 @@ DEPRECATED_CONSTANTS = {
     'LinuxBridge.STP_HELLO_TIME': 'LinuxBridge.STP.HELLO_TIME',
     'LinuxBridge.STP_MAX_AGE': 'LinuxBridge.STP.MAX_AGE',
     'LinuxBridge.STP_PRIORITY': 'LinuxBridge.STP.PRIORITY',
+    'OVSBridge.PORT_NAME': 'OVSBridge.Port.NAME',
 }
 
 
@@ -287,7 +288,7 @@ class VXLAN(object):
     DESTINATION_PORT = 'destination-port'
 
 
-class OVSBridge(object):
+class OVSBridge(metaclass=_DeprecatorType):
     TYPE = 'ovs-bridge'
     CONFIG_SUBTREE = 'bridge'
 
@@ -298,9 +299,10 @@ class OVSBridge(object):
     STP = 'stp'
 
     PORT_SUBTREE = 'port'
-    PORT_NAME = 'name'
 
     class Port:
+        NAME = 'name'
+
         VLAN_SUBTREE = 'vlan'
 
         class Vlan:
