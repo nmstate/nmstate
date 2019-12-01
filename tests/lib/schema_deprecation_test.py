@@ -19,6 +19,7 @@
 import pytest
 
 from libnmstate.schema import LinuxBridge
+from libnmstate.schema import OVSBridge
 
 
 @pytest.mark.parametrize(
@@ -33,11 +34,27 @@ from libnmstate.schema import LinuxBridge
         ['STP_HELLO_TIME', LinuxBridge.STP.HELLO_TIME],
         ['STP_MAX_AGE', LinuxBridge.STP.MAX_AGE],
         ['STP_PRIORITY', LinuxBridge.STP.PRIORITY],
+        ['PORT_NAME', OVSBridge.Port.NAME],
     ],
 )
 def test_linuxbridge_deprecated_constants(changes):
     with pytest.warns(FutureWarning) as record:
         deprecated_value = getattr(LinuxBridge, changes[0])
+
+    assert len(record) == 1
+    assert changes[0] in record[0].message.args[0]
+    assert deprecated_value == changes[1]
+
+
+@pytest.mark.parametrize(
+    'changes',
+    argvalues=[
+        ['PORT_NAME', OVSBridge.Port.NAME],
+    ],
+)
+def test_ovsbridge_deprecated_constants(changes):
+    with pytest.warns(FutureWarning) as record:
+        deprecated_value = getattr(OVSBridge, changes[0])
 
     assert len(record) == 1
     assert changes[0] in record[0].message.args[0]
