@@ -26,6 +26,7 @@ from libnmstate import netapplier
 from libnmstate.schema import Constants
 from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
+from libnmstate.schema import InterfaceType
 
 INTERFACES = Constants.INTERFACES
 BOND_TYPE = 'bond'
@@ -59,7 +60,7 @@ def test_iface_admin_state_change(netinfo_nm_mock, netapplier_nm_mock):
         INTERFACES: [
             {
                 'name': 'foo',
-                'type': 'unknown',
+                'type': InterfaceType.DUMMY,
                 'state': 'up',
                 'ipv4': {InterfaceIPv4.ENABLED: False},
                 'ipv6': {InterfaceIPv6.ENABLED: False},
