@@ -167,16 +167,14 @@ class TestIfaceCommon:
     def test_invalid_instance(self, default_data):
         default_data[INTERFACES][0]['state'] = 'bad-state'
 
-        with pytest.raises(js.ValidationError) as err:
+        with pytest.raises(js.ValidationError):
             libnmstate.validator.validate(default_data)
-        assert 'bad-state' in err.value.args[0]
 
     def test_invalid_type(self, default_data):
         default_data[INTERFACES][0]['type'] = 'bad-type'
 
-        with pytest.raises(js.ValidationError) as err:
+        with pytest.raises(js.ValidationError):
             libnmstate.validator.validate(default_data)
-        assert 'bad-type' in err.value.args[0]
 
 
 class TestIfaceTypeEthernet:
@@ -248,10 +246,8 @@ class TestIfaceTypeVxlan:
             }
         )
 
-        with pytest.raises(js.ValidationError) as err:
+        with pytest.raises(js.ValidationError):
             libnmstate.validator.validate(default_data)
-
-        assert '\'badtype\' is not of type \'integer\'' in err.value.args[0]
 
     def test_bad_id_range_is_invalid(self, default_data):
         default_data[Interface.KEY].append(
@@ -266,13 +262,8 @@ class TestIfaceTypeVxlan:
             }
         )
 
-        with pytest.raises(js.ValidationError) as err:
+        with pytest.raises(js.ValidationError):
             libnmstate.validator.validate(default_data)
-
-        assert (
-            '16777216 is greater than the maximum of 16777215'
-            in err.value.args[0]
-        )
 
     def test_no_config_is_valid(self, default_data):
         default_data[Interface.KEY].append(
@@ -348,9 +339,8 @@ class TestRoutes:
     def test_invalid_state(self, default_data):
         default_data[ROUTES]['config'][0]['state'] = 'bad-state'
 
-        with pytest.raises(js.ValidationError) as err:
+        with pytest.raises(js.ValidationError):
             libnmstate.validator.validate(default_data)
-        assert 'bad-state' in err.value.args[0]
 
 
 class TestLinuxBridgeVlanFiltering:
@@ -369,10 +359,8 @@ class TestLinuxBridgeVlanFiltering:
         the_port.update(invalid_port_type)
         default_data[Interface.KEY].append(bridge_state)
 
-        with pytest.raises(js.ValidationError) as err:
+        with pytest.raises(js.ValidationError):
             libnmstate.validator.validate(default_data)
-        expected_error_msg = "'fake-type' is not one of ['trunk', 'access']"
-        assert expected_error_msg in err.value.args[0]
 
     def test_access_port_accepted(self, default_data, bridge_state):
         vlan_access_port_state = self._generate_vlan_filtering_config(
@@ -392,10 +380,8 @@ class TestLinuxBridgeVlanFiltering:
         the_port.update(invalid_access_port_tag_type)
         default_data[Interface.KEY].append(bridge_state)
 
-        with pytest.raises(js.ValidationError) as err:
+        with pytest.raises(js.ValidationError):
             libnmstate.validator.validate(default_data)
-        expected_error_msg = "'holy-guacamole!' is not of type 'integer'"
-        assert expected_error_msg in err.value.args[0]
 
     def test_wrong_access_tag_range(self, default_data, bridge_state):
         invalid_vlan_id_range = self._generate_vlan_filtering_config(
@@ -405,10 +391,8 @@ class TestLinuxBridgeVlanFiltering:
         the_port.update(invalid_vlan_id_range)
         default_data[Interface.KEY].append(bridge_state)
 
-        with pytest.raises(js.ValidationError) as err:
+        with pytest.raises(js.ValidationError):
             libnmstate.validator.validate(default_data)
-        expected_error_msg = '48000 is greater than the maximum of 4095'
-        assert expected_error_msg in err.value.args[0]
 
     @pytest.mark.parametrize(
         'is_native_vlan', argvalues=[True, False], ids=['native', 'not-native']
@@ -448,9 +432,8 @@ class TestLinuxBridgeVlanFiltering:
         the_port.update(invalid_port_vlan_configuration)
         default_data[Interface.KEY].append(bridge_state)
 
-        with pytest.raises(js.ValidationError) as err:
+        with pytest.raises(js.ValidationError):
             libnmstate.validator.validate(default_data)
-        assert '5000 is greater than the maximum of 4095' in err.value.args[0]
 
     @staticmethod
     def _generate_vlan_filtering_config(
@@ -500,10 +483,8 @@ class TestOvsBridgeVlan:
         the_port.update(invalid_vlan_mode)
         default_data[Interface.KEY].append(ovs_bridge_state)
 
-        with pytest.raises(js.ValidationError) as err:
+        with pytest.raises(js.ValidationError):
             libnmstate.validator.validate(default_data)
-        expected_error_msg = "'fake-mode' is not one of ['trunk', 'access']"
-        assert expected_error_msg in err.value.args[0]
 
     def test_access_port_accepted(self, default_data, ovs_bridge_state):
         vlan_access_port_state = self._generate_vlan_config(
@@ -525,10 +506,8 @@ class TestOvsBridgeVlan:
         the_port.update(invalid_access_port_tag_mode)
         default_data[Interface.KEY].append(ovs_bridge_state)
 
-        with pytest.raises(js.ValidationError) as err:
+        with pytest.raises(js.ValidationError):
             libnmstate.validator.validate(default_data)
-        expected_error_msg = "'holy-guacamole!' is not of type 'integer'"
-        assert expected_error_msg in err.value.args[0]
 
     def test_wrong_access_tag_range(self, default_data, ovs_bridge_state):
         invalid_vlan_id_range = self._generate_vlan_config(
@@ -539,10 +518,8 @@ class TestOvsBridgeVlan:
         the_port.update(invalid_vlan_id_range)
         default_data[Interface.KEY].append(ovs_bridge_state)
 
-        with pytest.raises(js.ValidationError) as err:
+        with pytest.raises(js.ValidationError):
             libnmstate.validator.validate(default_data)
-        expected_error_msg = '48000 is greater than the maximum of 4095'
-        assert expected_error_msg in err.value.args[0]
 
     @pytest.mark.parametrize(
         'is_native_vlan', argvalues=[True, False], ids=['native', 'not-native']
@@ -587,9 +564,8 @@ class TestOvsBridgeVlan:
         the_port.update(invalid_port_vlan_configuration)
         default_data[Interface.KEY].append(ovs_bridge_state)
 
-        with pytest.raises(js.ValidationError) as err:
+        with pytest.raises(js.ValidationError):
             libnmstate.validator.validate(default_data)
-        assert '5000 is greater than the maximum of 4095' in err.value.args[0]
 
     @staticmethod
     def _generate_vlan_config(
@@ -629,9 +605,8 @@ class TestRouteRules:
         route_rules = default_data[RouteRule.KEY][RouteRule.CONFIG]
         route_rules[0][RouteRule.ROUTE_TABLE] = 'main'
 
-        with pytest.raises(js.ValidationError) as err:
+        with pytest.raises(js.ValidationError):
             libnmstate.validator.validate(default_data)
-        assert 'main' in err.value.args[0]
 
 
 class TestOVSBridgeLinkAggregation:
