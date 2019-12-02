@@ -43,7 +43,7 @@ parametrize_route_property = pytest.mark.parametrize(
 )
 
 
-class TestAssertIfaceState(object):
+class TestAssertIfaceState:
     def test_desired_is_identical_to_current(self):
         desired_state = self._base_state
         current_state = self._base_state
@@ -223,7 +223,7 @@ class TestAssertIfaceState(object):
         )
 
 
-class TestRouteEntry(object):
+class TestRouteEntry:
     def test_hash_unique(self):
         route = _create_route('198.51.100.0/24', '192.0.2.1', 'eth1', 50, 103)
         assert hash(route) == hash(route)
@@ -389,7 +389,7 @@ class TestRouteEntry(object):
         assert expected_routes == sorted(routes)
 
 
-class TestRouteStateMerge(object):
+class TestRouteStateMerge:
     def test_merge_empty_states(self):
         s0 = state.State({})
         s1 = state.State({})
@@ -771,7 +771,7 @@ def _route_sort_key(route):
     )
 
 
-class TestAssertDnsState(object):
+class TestAssertDnsState:
     def test_merge_dns_empty_state_with_non_empty_state(self):
         dns_config = self._get_test_dns_config()
         current_state = state.State({DNS.KEY: dns_config})
@@ -820,7 +820,7 @@ class TestAssertDnsState(object):
         }
 
 
-class TestStateMatch(object):
+class TestStateMatch:
     def test_match_empty_dict(self):
         assert state.state_match({}, {})
 

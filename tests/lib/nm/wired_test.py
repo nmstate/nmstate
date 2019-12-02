@@ -160,7 +160,7 @@ def test_get_info_with_invalid_duplex(ethtool_mock, NM_mock):
     }
 
 
-class TestWiredSetting(object):
+class TestWiredSetting:
     def test_identity(self):
         state = {}
         obj1 = obj2 = nm.wired.WiredSetting(state)

@@ -25,7 +25,7 @@ from . import nmclient
 from .active_connection import ActiveConnection
 
 
-class ConnectionProfile(object):
+class ConnectionProfile:
     def __init__(self, profile=None):
         self._con_profile = profile
         self._nmclient = nmclient.client()
@@ -389,7 +389,7 @@ class ConnectionProfile(object):
         self._con_profile = None
 
 
-class ConnectionSetting(object):
+class ConnectionSetting:
     def __init__(self, con_setting=None):
         self._setting = con_setting
 

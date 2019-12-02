@@ -50,7 +50,7 @@ def show_only(ifnames):
     return current_state.state
 
 
-class State(object):
+class State:
     def __init__(self, state):
         self._state = copy.deepcopy(state)
 
