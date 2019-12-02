@@ -173,7 +173,7 @@ def test_prepare_edited_ifaces_configuration(
     con_profile.update.assert_has_calls([mock.call(con_profile)])
 
 
-class TestIfaceAdminStateControl(object):
+class TestIfaceAdminStateControl:
     def test_set_ifaces_admin_state_up(self, nm_device_mock):
         ifaces_desired_state = [
             {'name': 'eth0', 'type': 'ethernet', 'state': 'up'}

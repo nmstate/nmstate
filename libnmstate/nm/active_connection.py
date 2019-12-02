@@ -33,7 +33,7 @@ class ActivationError(Exception):
     pass
 
 
-class ActiveConnection(object):
+class ActiveConnection:
     def __init__(self, active_connection=None):
         self.handlers = set()
         self.device_handlers = set()

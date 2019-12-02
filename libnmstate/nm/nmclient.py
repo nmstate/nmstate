@@ -93,7 +93,7 @@ def mainloop(refresh=False):
     return _mainloop
 
 
-class _MainLoop(object):
+class _MainLoop:
     SUCCESS = True
     FAIL = False
     RUN_TIMEOUT_ERROR = 'run timeout'

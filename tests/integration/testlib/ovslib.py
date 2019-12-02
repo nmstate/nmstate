@@ -27,7 +27,7 @@ from libnmstate.schema import InterfaceType
 from libnmstate.schema import OVSBridge
 
 
-class Bridge(object):
+class Bridge:
     def __init__(self, name):
         self._name = name
         self._ifaces = [

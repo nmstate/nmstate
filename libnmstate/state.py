@@ -193,7 +193,7 @@ def create_state(state, interfaces_to_filter=None):
     return State(new_state)
 
 
-class State(object):
+class State:
     def __init__(self, state):
         self._state = copy.deepcopy(state)
 

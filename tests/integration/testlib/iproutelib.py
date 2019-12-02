@@ -27,7 +27,7 @@ import time
 TIMEOUT = 10
 
 
-class IpMonitorResult(object):
+class IpMonitorResult:
     def __init__(self):
         self.out = None
         self.err = None
