@@ -399,6 +399,18 @@ class State:
             dict_update(other_state.interfaces[name], self.interfaces[name])
             self._ifaces_state[name] = other_state.interfaces[name]
 
+    def remove_unknown_interfaces(self):
+        """
+        Remove unknown type interfaces
+        """
+        unknown_ifaces = [
+            ifname
+            for ifname, ifstate in self.interfaces.items()
+            if ifstate.get(Interface.TYPE) == InterfaceType.UNKNOWN
+        ]
+        for unknown_iface in unknown_ifaces:
+            del self.interfaces[unknown_iface]
+
     def merge_routes(self, other_state):
         """
         Given the self and other states, complete the self state by merging
