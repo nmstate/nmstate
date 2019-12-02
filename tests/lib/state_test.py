@@ -27,6 +27,7 @@ from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import InterfaceState
+from libnmstate.schema import InterfaceType
 from libnmstate.schema import Route
 from libnmstate.schema import RouteRule
 
@@ -956,3 +957,16 @@ def _create_route_rule_dict(ip_from, ip_to, priority, table):
         RouteRule.PRIORITY: priority,
         RouteRule.ROUTE_TABLE: table,
     }
+
+
+def test_remove_unknown_interfaces():
+    desired_state = state.State(
+        {
+            Interface.KEY: [
+                {Interface.NAME: 'foo', Interface.TYPE: InterfaceType.UNKNOWN}
+            ]
+        }
+    )
+
+    desired_state.remove_unknown_interfaces()
+    assert not desired_state.interfaces
