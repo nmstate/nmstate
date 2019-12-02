@@ -55,7 +55,7 @@ def format_desired_current_state_diff(desired_state, current_state):
     )
 
 
-class PrettyState(object):
+class PrettyState:
     def __init__(self, state):
         yaml.add_representer(OrderedDict, represent_ordereddict)
         self.state = order_state(deepcopy(state))

@@ -32,7 +32,7 @@ from libnmstate.error import NmstateNotImplementedError
 from libnmstate.error import NmstateValueError
 
 
-class TestLinkAggregationState(object):
+class TestLinkAggregationState:
     def test_bonds_with_no_slaves(self):
         desired_state = state.State(
             {
@@ -158,7 +158,7 @@ def empty_state():
     return state.State({})
 
 
-class TestRouteValidation(object):
+class TestRouteValidation:
     def test_empty_states(self):
         validator.validate_routes(state.State({}), state.State({}))
 
@@ -292,7 +292,7 @@ class TestRouteValidation(object):
         )
 
 
-class TestVxlanValidation(object):
+class TestVxlanValidation:
 
     parametrize_vxlan_req_fields = pytest.mark.parametrize(
         'required_field', [VXLAN.ID, VXLAN.REMOTE, VXLAN.BASE_IFACE]
@@ -340,7 +340,7 @@ class TestVxlanValidation(object):
         libnmstate.validator.validate_vxlan(desired_state)
 
 
-class TestVlanFilteringValidation(object):
+class TestVlanFilteringValidation:
     def test_access_port_cant_have_trunks(self):
         invalid_vlan_config = {
             LB.Port.Vlan.MODE: LB.Port.Vlan.Mode.ACCESS,

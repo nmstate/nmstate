@@ -160,7 +160,7 @@ def ovs_bridge_state(portless_ovs_bridge_state):
     return portless_ovs_bridge_state
 
 
-class TestIfaceCommon(object):
+class TestIfaceCommon:
     def test_valid_instance(self, default_data):
         libnmstate.validator.validate(default_data)
 
@@ -179,7 +179,7 @@ class TestIfaceCommon(object):
         assert 'bad-type' in err.value.args[0]
 
 
-class TestIfaceTypeEthernet(object):
+class TestIfaceTypeEthernet:
     def test_valid_ethernet_with_auto_neg(self, default_data):
         default_data[INTERFACES][0].update(
             {'type': 'ethernet', 'auto-negotiation': True}
@@ -234,7 +234,7 @@ class TestIfaceTypeEthernet(object):
             libnmstate.validator.validate(default_data)
 
 
-class TestIfaceTypeVxlan(object):
+class TestIfaceTypeVxlan:
     def test_bad_id_type_is_invalid(self, default_data):
         default_data[Interface.KEY].append(
             {
@@ -282,7 +282,7 @@ class TestIfaceTypeVxlan(object):
         libnmstate.validator.validate(default_data)
 
 
-class TestIfaceTypeTeam(object):
+class TestIfaceTypeTeam:
     def test_valid_team_without_options(self, default_data):
         default_data[Interface.KEY].append(
             {
@@ -340,7 +340,7 @@ class TestIfaceTypeTeam(object):
         libnmstate.validator.validate(default_data)
 
 
-class TestRoutes(object):
+class TestRoutes:
     def test_valid_state_absent(self, default_data):
         default_data[ROUTES]['config'][0]['state'] = 'absent'
         libnmstate.validator.validate(default_data)
@@ -353,7 +353,7 @@ class TestRoutes(object):
         assert 'bad-state' in err.value.args[0]
 
 
-class TestLinuxBridgeVlanFiltering(object):
+class TestLinuxBridgeVlanFiltering:
     @pytest.mark.parametrize('port_type', argvalues=['trunk', 'access'])
     def test_vlan_port_types(self, default_data, bridge_state, port_type):
         valid_port_type = self._generate_vlan_filtering_config(port_type)
@@ -482,7 +482,7 @@ class TestLinuxBridgeVlanFiltering(object):
         }
 
 
-class TestOvsBridgeVlan(object):
+class TestOvsBridgeVlan:
     @pytest.mark.parametrize('vlan_mode', argvalues=['trunk', 'access'])
     def test_vlan_port_modes(self, default_data, ovs_bridge_state, vlan_mode):
         valid_vlan_mode = self._generate_vlan_config(vlan_mode)
@@ -624,7 +624,7 @@ class TestOvsBridgeVlan(object):
         }
 
 
-class TestRouteRules(object):
+class TestRouteRules:
     def test_non_interger_route_table(self, default_data):
         route_rules = default_data[RouteRule.KEY][RouteRule.CONFIG]
         route_rules[0][RouteRule.ROUTE_TABLE] = 'main'
