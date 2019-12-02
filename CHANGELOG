@@ -1,9 +1,13 @@
 # Changelog
+## [0.2.0] - 2019-12-02
+### Bug Fixes
+ - Skip editing on unknown type interface
+
 ## [0.1.1] - 2019-12-01
 ### Break Changes
  - Removed the support of Python2. Require Python 3.6 or later version.
  - Increased minimum supported NetworkManager version to 1.20.
- - Deprecation in `libnmstate.schme`:
+ - Deprecation in `libnmstate.schema`:
     - 'LinuxBridge.PORT_NAME' -> 'LinuxBridge.Port.NAME'
     - 'LinuxBridge.PORT_STP_HAIRPIN_MODE' -> 'LinuxBridge.Port.STP_HAIRPIN_MODE'
     - 'LinuxBridge.PORT_STP_PATH_COST' -> 'LinuxBridge.Port.STP_PATH_COST'
