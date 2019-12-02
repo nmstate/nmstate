@@ -25,12 +25,12 @@ from . import nmclient
 IFACE_TYPE_UNKNOWN = 'unknown'
 
 
-class ApiIfaceAdminState(object):
+class ApiIfaceAdminState:
     DOWN = 'down'
     UP = 'up'
 
 
-class Api2Nm(object):
+class Api2Nm:
     _iface_types_map = None
 
     @staticmethod
@@ -76,7 +76,7 @@ class Api2Nm(object):
         return bond_opts
 
 
-class Nm2Api(object):
+class Nm2Api:
     _iface_types_map = None
 
     @staticmethod

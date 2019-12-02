@@ -27,7 +27,7 @@ from libnmstate.schema import Interface
 ZEROED_MAC = '00:00:00:00:00:00'
 
 
-class WiredSetting(object):
+class WiredSetting:
     def __init__(self, state):
         self.mtu = state.get(Interface.MTU)
         self.mac = state.get(Interface.MAC)

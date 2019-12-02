@@ -60,7 +60,7 @@ def nm_dns_mock(nm_mock):
     return
 
 
-class TestDesiredStateMetadata(object):
+class TestDesiredStateMetadata:
     def test_empty_states(self):
         desired_state = state.State({})
         current_state = state.State({})
@@ -71,7 +71,7 @@ class TestDesiredStateMetadata(object):
         assert current_state.state == {Interface.KEY: []}
 
 
-class TestDesiredStateBondMetadata(object):
+class TestDesiredStateBondMetadata:
     def test_bond_creation_with_new_slaves(self):
         desired_state = state.State(
             {
@@ -330,7 +330,7 @@ def create_bond_state_dict(name, slaves=None):
     }
 
 
-class TestDesiredStateOvsMetadata(object):
+class TestDesiredStateOvsMetadata:
     def test_ovs_creation_with_new_ports(self):
         desired_state = state.State(
             {
@@ -610,7 +610,7 @@ class TestDesiredStateOvsMetadata(object):
         assert current_state == expected_cstate
 
 
-class TestRouteMetadata(object):
+class TestRouteMetadata:
     def test_with_empty_states(self):
         desired_state = state.State({})
         current_state = state.State({})
@@ -947,7 +947,7 @@ def _gen_default_gateway_route(iface_name):
     ]
 
 
-class TestRouteRuleMetadata(object):
+class TestRouteRuleMetadata:
     TEST_ROUTE_TABLE = 50
 
     def test_with_empty_states(self):

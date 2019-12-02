@@ -61,7 +61,7 @@ def nmdbus_manager():
     return _nmdbus_manager
 
 
-class _NMDbus(object):
+class _NMDbus:
     BUS_NAME = 'org.freedesktop.NetworkManager'
 
     bus = None
@@ -71,7 +71,7 @@ class _NMDbus(object):
         _NMDbus.bus = dbus.SystemBus()
 
 
-class _NMDbusManager(object):
+class _NMDbusManager:
     IF_NAME = 'org.freedesktop.NetworkManager'
     OBJ_PATH = '/org/freedesktop/NetworkManager'
 
@@ -89,7 +89,7 @@ def get_checkpoints():
     return [c.get_path() for c in nmclient.get_checkpoints()]
 
 
-class CheckPoint(object):
+class CheckPoint:
     def __init__(self, timeout=60, autodestroy=True, dbuspath=None):
         self._manager = nmdbus_manager()
         self._timeout = timeout
