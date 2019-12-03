@@ -25,6 +25,9 @@ from libnmstate.schema import OVSBridge
 @pytest.mark.parametrize(
     'changes',
     argvalues=[
+        ['GROUP_FORWARD_MASK', LinuxBridge.Options.GROUP_FORWARD_MASK],
+        ['MAC_AGEING_TIME', LinuxBridge.Options.MAC_AGEING_TIME],
+        ['MULTICAST_SNOOPING', LinuxBridge.Options.MULTICAST_SNOOPING],
         ['PORT_NAME', LinuxBridge.Port.NAME],
         ['PORT_STP_HAIRPIN_MODE', LinuxBridge.Port.STP_HAIRPIN_MODE],
         ['PORT_STP_PATH_COST', LinuxBridge.Port.STP_PATH_COST],
