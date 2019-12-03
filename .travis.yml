@@ -7,6 +7,9 @@ env:
           testflags="--test-type integ --pytest-args='-x'"
         - DOCKER_IMAGE=nmstate/centos8-nmstate-dev
           testflags="--test-type integ --pytest-args='-x'
+              --copr networkmanager/NetworkManager-1.22-git"
+        - DOCKER_IMAGE=nmstate/centos8-nmstate-dev
+          testflags="--test-type integ --pytest-args='-x'
               --copr networkmanager/NetworkManager-master"
         - DOCKER_IMAGE=nmstate/fedora-nmstate-dev
           testflags="--test-type integ --pytest-args='-x'"
@@ -24,6 +27,9 @@ matrix:
         - env: DOCKER_IMAGE=nmstate/centos8-nmstate-dev
                testflags="--test-type integ --pytest-args='-x'
                    --copr networkmanager/NetworkManager-master"
+        - env: DOCKER_IMAGE=nmstate/centos8-nmstate-dev
+               testflags="--test-type integ --pytest-args='-x'
+                   --copr networkmanager/NetworkManager-1.22-git"
         - env: DOCKER_IMAGE=nmstate/fedora-nmstate-dev
                testflags="--test-type integ --pytest-args='-x'"
 
