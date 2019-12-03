@@ -166,6 +166,9 @@ class BondMode:
 
 _NEW_OVSBR_OPTS_MCAST_SNOOP = 'OVSBridge.Options.MCAST_SNOOPING_ENABLED'
 DEPRECATED_CONSTANTS = {
+    'LinuxBridge.GROUP_FORWARD_MASK': 'LinuxBridge.Options.GROUP_FORWARD_MASK',
+    'LinuxBridge.MAC_AGEING_TIME': 'LinuxBridge.Options.MAC_AGEING_TIME',
+    'LinuxBridge.MULTICAST_SNOOPING': 'LinuxBridge.Options.MULTICAST_SNOOPING',
     'LinuxBridge.PORT_NAME': 'LinuxBridge.Port.NAME',
     'LinuxBridge.PORT_STP_HAIRPIN_MODE': 'LinuxBridge.Port.STP_HAIRPIN_MODE',
     'LinuxBridge.PORT_STP_PATH_COST': 'LinuxBridge.Port.STP_PATH_COST',
@@ -219,13 +222,15 @@ class LinuxBridge(metaclass=_DeprecatorType):
     CONFIG_SUBTREE = 'bridge'
 
     OPTIONS_SUBTREE = 'options'
-    MAC_AGEING_TIME = 'mac-ageing-time'
-    GROUP_FORWARD_MASK = 'group-forward-mask'
-    MULTICAST_SNOOPING = 'multicast-snooping'
 
     STP_SUBTREE = 'stp'
 
     PORT_SUBTREE = 'port'
+
+    class Options:
+        GROUP_FORWARD_MASK = 'group-forward-mask'
+        MAC_AGEING_TIME = 'mac-ageing-time'
+        MULTICAST_SNOOPING = 'multicast-snooping'
 
     class Port:
         NAME = 'name'
