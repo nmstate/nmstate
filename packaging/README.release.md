@@ -1,5 +1,8 @@
 # Creating a New Release
 
+Important: If you do not finish these steps, add Jira cards for the remaining
+tasks and ensure that they are taken care of in a timely manner.
+
 ## Tagging
 
 * Tag new release in git.
