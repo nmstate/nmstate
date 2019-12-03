@@ -61,6 +61,7 @@ Changes since 0.0.2:
 
 ```
 # Make sure you installed python package: wheel and twine.
+yum install twine python3-wheel
 rm dist  -rf
 python setup.py sdist bdist_wheel
 
