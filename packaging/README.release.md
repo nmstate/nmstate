@@ -86,5 +86,8 @@ python3 -m twine upload dist/*
 
 * Update the SPEC files in Fedora
 
+* Rebuild Copr repositories for stable releases as necessary (this requires the
+  SPEC files in Fedora to be updated, first)
+  https://copr.fedorainfracloud.org/coprs/nmstate/
 
 [1]: https://github.com/nmstate/nmstate/releases/new
