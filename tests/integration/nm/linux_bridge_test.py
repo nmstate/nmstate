@@ -83,9 +83,9 @@ def _create_bridge_config(ports):
     return {
         LB.CONFIG_SUBTREE: {
             LB.OPTIONS_SUBTREE: {
-                LB.GROUP_FORWARD_MASK: 0,
-                LB.MAC_AGEING_TIME: 300,
-                LB.MULTICAST_SNOOPING: True,
+                LB.Options.GROUP_FORWARD_MASK: 0,
+                LB.Options.MAC_AGEING_TIME: 300,
+                LB.Options.MULTICAST_SNOOPING: True,
                 LB.STP_SUBTREE: {
                     # Disable STP to avoid topology changes and the consequence
                     # link change.
