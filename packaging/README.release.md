@@ -59,7 +59,7 @@ Changes since 0.0.2:
 
 ## PyPi Release
 
-```
+```bash
 # Make sure you installed python package: wheel and twine.
 yum install twine python3-wheel
 rm dist  -rf
