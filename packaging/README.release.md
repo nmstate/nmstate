@@ -84,7 +84,7 @@ python3 -m twine upload dist/*
 
 * Send out a notification to the fedorahosted mailing list: nmstate-devel@lists.fedorahosted.org
 
-* Update the SPEC files in Fedora
+* Update the SPEC files in Fedora, create new builds and updates as neccessary
 
 * Rebuild Copr repositories for stable releases as necessary (this requires the
   SPEC files in Fedora to be updated, first)
