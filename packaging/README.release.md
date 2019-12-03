@@ -78,16 +78,17 @@ python3 -m twine upload dist/*
 
 ## Post Release
 
-* Create a pull request with increased version number in the `VERSION` file and
-  merge it before any other PR. This is necessary to ensure that the
-  development RPMs are newer than the stable version in distributions.
+1. Create a pull request with increased version number in the `VERSION` file
+   and merge it before any other PR. This is necessary to ensure that the
+   development RPMs are newer than the stable version in distributions.
 
-* Send out a notification to the fedorahosted mailing list: nmstate-devel@lists.fedorahosted.org
+2. Update the SPEC files in Fedora, create new builds and updates as neccessary
 
-* Update the SPEC files in Fedora, create new builds and updates as neccessary
+3. Rebuild Copr repositories for stable releases as necessary (this requires
+   the SPEC files in Fedora to be updated, first)
+   https://copr.fedorainfracloud.org/coprs/nmstate/
 
-* Rebuild Copr repositories for stable releases as necessary (this requires the
-  SPEC files in Fedora to be updated, first)
-  https://copr.fedorainfracloud.org/coprs/nmstate/
+4. Send out a notification to the fedorahosted mailing list:
+   nmstate-devel@lists.fedorahosted.org
 
 [1]: https://github.com/nmstate/nmstate/releases/new
