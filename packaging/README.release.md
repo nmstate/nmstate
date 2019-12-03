@@ -65,8 +65,8 @@ Changes since 0.0.2:
 ```bash
 # Make sure you installed python package: wheel and twine.
 yum install twine python3-wheel
-rm dist  -rf
-python setup.py sdist bdist_wheel
+rm -rf dist
+python3 setup.py sdist bdist_wheel
 
 # Upload to pypi test.
 python3 -m twine upload --repository-url https://test.pypi.org/legacy/ dist/*
