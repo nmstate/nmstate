@@ -48,11 +48,11 @@ def _get_current_bridge_setting(base_con_profile):
 
 def _set_bridge_properties(bridge_setting, options):
     for key, val in options.items():
-        if key == LB.MAC_AGEING_TIME:
+        if key == LB.Options.MAC_AGEING_TIME:
             bridge_setting.props.ageing_time = val
-        elif key == LB.GROUP_FORWARD_MASK:
+        elif key == LB.Options.GROUP_FORWARD_MASK:
             bridge_setting.props.group_forward_mask = val
-        elif key == LB.MULTICAST_SNOOPING:
+        elif key == LB.Options.MULTICAST_SNOOPING:
             bridge_setting.props.multicast_snooping = val
         elif key == LB.STP_SUBTREE:
             _set_bridge_stp_properties(bridge_setting, val)
@@ -107,12 +107,13 @@ def get_info(nmdev):
         return info
 
     port_profiles = _get_slave_profiles(nmdev)
+    props = bridge_setting.props
     info[LB.CONFIG_SUBTREE] = {
         LB.PORT_SUBTREE: _get_bridge_ports_info(port_profiles),
         LB.OPTIONS_SUBTREE: {
-            LB.MAC_AGEING_TIME: bridge_setting.props.ageing_time,
-            LB.GROUP_FORWARD_MASK: bridge_setting.props.group_forward_mask,
-            LB.MULTICAST_SNOOPING: bridge_setting.props.multicast_snooping,
+            LB.Options.MAC_AGEING_TIME: props.ageing_time,
+            LB.Options.GROUP_FORWARD_MASK: props.group_forward_mask,
+            LB.Options.MULTICAST_SNOOPING: props.multicast_snooping,
             LB.STP_SUBTREE: {
                 LB.STP.ENABLED: bridge_setting.props.stp,
                 LB.STP.PRIORITY: bridge_setting.props.priority,
