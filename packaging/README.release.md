@@ -82,7 +82,7 @@ python3 -m twine upload dist/*
   merge it before any other PR. This is necessary to ensure that the
   development RPMs are newer than the stable version in distributions.
 
-* Send out a notification to the network manager mailing list
+* Send out a notification to the fedorahosted mailing list: nmstate-devel@lists.fedorahosted.org
 
 * Update the SPEC files in Fedora
 
