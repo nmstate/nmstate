@@ -189,6 +189,11 @@ class ConnectionProfile:
                 self._reset_profile()
                 time.sleep(0.1)
                 self.safe_activate_async()
+            elif self._is_ovs_plugin_missing(e):
+                self._mainloop.quit(
+                    "Missing 'NetworkManager-ovs' plugin"
+                    f" to handle device={self.devname}"
+                )
             else:
                 self._mainloop.quit(
                     "Connection activation failed on {} {}: error={}".format(
@@ -231,6 +236,23 @@ class ConnectionProfile:
             and err.domain == "nm-manager-error-quark"
             and err.code == 2
             and "is not available on the device" in err.message
+        )
+
+    def _is_ovs_plugin_missing(self, err):
+        return (
+            isinstance(err, nmclient.GLib.GError)
+            and err.domain == nmclient.NM_MANAGER_ERROR_DOMAIN
+            and (
+                self._con_profile.is_type(
+                    nmclient.NM.SETTING_OVS_INTERFACE_SETTING_NAME
+                )
+                or self._con_profile.is_type(
+                    nmclient.NM.SETTING_OVS_PORT_SETTING_NAME
+                )
+                or self._con_profile.is_type(
+                    nmclient.NM.SETTING_OVS_BRIDGE_SETTING_NAME
+                )
+            )
         )
 
     def _get_activation_metadata(self):

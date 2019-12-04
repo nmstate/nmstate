@@ -17,19 +17,29 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
+from contextlib import contextmanager
+
 import pytest
 
+import libnmstate
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
+from libnmstate.schema import InterfaceState
+from libnmstate.schema import InterfaceType
 from libnmstate.schema import OVSBridge
 from libnmstate.error import NmstateLibnmError
 
 from .testlib import assertlib
+from .testlib import cmd as libcmd
 from .testlib.ovslib import Bridge
 
 
 BRIDGE1 = "br1"
 PORT1 = "ovs1"
+
+DNF_REMOVE_NM_OVS_CMD = ("dnf", "remove", "-y", "-q", "NetworkManager-ovs")
+DNF_INSTALL_NM_OVS_CMD = ("dnf", "install", "-y", "-q", "NetworkManager-ovs")
+SYSTEMCTL_RESTART_NM_CMD = ("systemctl", "restart", "NetworkManager")
 
 
 @pytest.mark.xfail(
@@ -103,3 +113,30 @@ def test_create_and_remove_ovs_bridge_with_internal_port_and_static_ip():
 
     assertlib.assert_absent(BRIDGE1)
     assertlib.assert_absent(PORT1)
+
+
+def test_nm_ovs_plugin_missing():
+    with disable_nm_ovs_plugin():
+        with pytest.raises(NmstateLibnmError):
+            libnmstate.apply(
+                {
+                    Interface.KEY: [
+                        {
+                            Interface.NAME: BRIDGE1,
+                            Interface.TYPE: InterfaceType.OVS_BRIDGE,
+                            Interface.STATE: InterfaceState.UP,
+                        }
+                    ]
+                }
+            )
+
+
+@contextmanager
+def disable_nm_ovs_plugin():
+    libcmd.exec_cmd(DNF_REMOVE_NM_OVS_CMD)
+    libcmd.exec_cmd(SYSTEMCTL_RESTART_NM_CMD)
+    try:
+        yield
+    finally:
+        libcmd.exec_cmd(DNF_INSTALL_NM_OVS_CMD)
+        libcmd.exec_cmd(SYSTEMCTL_RESTART_NM_CMD)
