@@ -26,9 +26,6 @@ from .nmclient import GLib
 from .nmclient import NM
 
 
-NM_MANAGER_ERROR_DOMAIN = "nm-manager-error-quark"
-
-
 class ActivationError(Exception):
     pass
 
@@ -96,7 +93,7 @@ class ActiveConnection:
                 if (
                     isinstance(e, GLib.GError)
                     # pylint: disable=no-member
-                    and e.domain == NM_MANAGER_ERROR_DOMAIN
+                    and e.domain == nmclient.NM_MANAGER_ERROR_DOMAIN
                     and e.code == NM.ManagerError.CONNECTIONNOTACTIVE
                     # pylint: enable=no-member
                 ):
