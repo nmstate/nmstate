@@ -133,6 +133,7 @@ function run_tests {
 function collect_artifacts {
     container_exec "
       journalctl > "$CONT_EXPORT_DIR/journal.log" && \
+      dmesg > "$CONT_EXPORT_DIR/dmesg.log" && \
       cp core* "$CONT_EXPORT_DIR/" || true
     "
 }
