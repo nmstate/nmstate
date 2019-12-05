@@ -28,7 +28,7 @@ from libnmstate.schema import Route
 from libnmstate.schema import RouteRule
 
 
-def show(include_status_data=False):
+def show(*, include_status_data=False):
     """
     Reports configuration and status data on the system.
     Configuration data is the set of writable data which can change the system

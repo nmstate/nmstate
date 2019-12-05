@@ -40,7 +40,7 @@ from libnmstate.nm import nmclient
 MAINLOOP_TIMEOUT = 35
 
 
-def apply(desired_state, verify_change=True, commit=True, rollback_timeout=60):
+def apply(desired_state, *, verify_change=True, commit=True, rollback_timeout=60):
     """
     Apply the desired state
 
@@ -69,7 +69,7 @@ def apply(desired_state, verify_change=True, commit=True, rollback_timeout=60):
         return str(checkpoint.dbuspath)
 
 
-def commit(checkpoint=None):
+def commit(*, checkpoint=None):
     """
     Commit a checkpoint that was received from `apply()`.
 
@@ -85,7 +85,7 @@ def commit(checkpoint=None):
         raise NmstateValueError(str(e))
 
 
-def rollback(checkpoint=None):
+def rollback(*, checkpoint=None):
     """
     Roll back a checkpoint that was received from `apply()`.
 
