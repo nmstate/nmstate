@@ -36,8 +36,8 @@ def ip_rule_exist_in_os(ip_from, ip_to, priority, table):
     logging.debug(f'Current ip rules in OS: {result[1]}')
     assert result[0] == 0
     current_rules = json.loads(result[1])
-    found = True
     for rule in current_rules:
+        found = False
         if rule.get('src') == 'all' or rule.get('dst') == 'all':
             continue
 
@@ -45,25 +45,20 @@ def ip_rule_exist_in_os(ip_from, ip_to, priority, table):
             rule['table'] = f'{iplib.KERNEL_MAIN_ROUTE_TABLE_ID}'
 
         logging.debug(f'Checking ip rule is OS: {rule}')
-        found = True
         if ip_from and ip_from != iplib.to_ip_address_full(
             rule['src'], rule.get('srclen')
         ):
-            found = False
             continue
         if ip_to and ip_to != iplib.to_ip_address_full(
             rule['dst'], rule.get('dstlen')
         ):
-            found = False
             continue
         if priority is not None and rule['priority'] != priority:
-            found = False
             continue
         if table is not None and rule['table'] != f'{table}':
-            found = False
             continue
-        if found:
-            break
+        found = True
+        break
     if not found:
         logging.debug(f'Failed to find expected ip rule: {expected_rule}')
     assert found
