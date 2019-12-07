@@ -38,21 +38,19 @@ def ip_rule_exist_in_os(ip_from, ip_to, priority, table):
     current_rules = json.loads(result[1])
     for rule in current_rules:
         found = False
-        if rule.get('src') == 'all' or rule.get('dst') == 'all':
+        if ip_from and not _is_rule_addr_match(
+            ip_from, rule.get('src'), rule.get('srclen')
+        ):
+            continue
+        if ip_to and not _is_rule_addr_match(
+            ip_to, rule.get('dst'), rule.get('dstlen')
+        ):
             continue
 
         if rule.get('table') == 'main':
             rule['table'] = f'{iplib.KERNEL_MAIN_ROUTE_TABLE_ID}'
 
         logging.debug(f'Checking ip rule is OS: {rule}')
-        if ip_from and ip_from != iplib.to_ip_address_full(
-            rule['src'], rule.get('srclen')
-        ):
-            continue
-        if ip_to and ip_to != iplib.to_ip_address_full(
-            rule['dst'], rule.get('dstlen')
-        ):
-            continue
         if priority is not None and rule['priority'] != priority:
             continue
         if table is not None and rule['table'] != f'{table}':
@@ -62,3 +60,12 @@ def ip_rule_exist_in_os(ip_from, ip_to, priority, table):
     if not found:
         logging.debug(f'Failed to find expected ip rule: {expected_rule}')
     assert found
+
+
+def _is_rule_addr_match(expected_addr, rule_addr, rule_addr_len):
+    if rule_addr == 'all' or rule_addr is None:
+        rule_addr_full = None
+    else:
+        rule_addr_full = iplib.to_ip_address_full(rule_addr, rule_addr_len)
+
+    return expected_addr == rule_addr_full
