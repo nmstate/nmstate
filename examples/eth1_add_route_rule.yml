@@ -1,0 +1,46 @@
+---
+interfaces:
+  - name: eth1
+    type: ethernet
+    state: up
+    ipv4:
+      address:
+      - ip: 192.0.2.251
+        prefix-length: 24
+      dhcp: false
+      enabled: true
+  - name: eth2
+    type: ethernet
+    state: up
+    ipv4:
+      address:
+      - ip: 198.51.100.251
+        prefix-length: 24
+      dhcp: false
+      enabled: true
+route-rules:
+  config:
+  - ip-to: 192.0.2.0/24
+    priority: 1000
+    route-table: 50
+  - ip-from: 192.0.2.0/24
+    priority: 1000
+    route-table: 50
+  - ip-to: 198.51.100.0/24
+    priority: 1000
+    route-table: 51
+  - ip-from: 198.51.100.0/24
+    priority: 1000
+    route-table: 51
+routes:
+  config:
+  - destination: 0.0.0.0/0
+    metric: 150
+    next-hop-address: 192.0.2.1
+    next-hop-interface: eth1
+    table-id: 50
+  - destination: 0.0.0.0/0
+    metric: 150
+    next-hop-address: 198.51.100.1
+    next-hop-interface: eth2
+    table-id: 51

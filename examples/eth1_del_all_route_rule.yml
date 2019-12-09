@@ -1,0 +1,5 @@
+---
+interfaces:
+  - name: eth1
+route-rules:
+  config: []

@@ -21,6 +21,7 @@ import copy
 import libnmstate
 from libnmstate.schema import DNS
 from libnmstate.schema import Route
+from libnmstate.schema import RouteRule
 from libnmstate.schema import Interface
 
 from . import statelib
@@ -76,6 +77,7 @@ def _prepare_state_for_verify(desired_state_data):
     desired_state_data = copy.deepcopy(desired_state_data)
     desired_state_data.pop(Route.KEY, None)
     desired_state_data.pop(DNS.KEY, None)
+    desired_state_data.pop(RouteRule.KEY, None)
 
     current_state = statelib.State(current_state_data)
     current_state.filter(desired_state_data)

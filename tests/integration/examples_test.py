@@ -21,6 +21,7 @@ import pytest
 
 from .testlib import assertlib
 from .testlib.examplelib import example_state
+from .testlib.iprule import ip_rule_exist_in_os
 
 from libnmstate import netinfo
 from libnmstate.error import NmstateLibnmError
@@ -100,3 +101,16 @@ def test_add_remove_routes(eth1_up):
         assertlib.assert_state(desired_state)
 
     assertlib.assert_no_config_route_to_iface('eth1')
+
+
+def test_add_remove_route_rules(eth1_up, eth2_up):
+    with example_state(
+        'eth1_add_route_rule.yml', cleanup='eth1_del_all_route_rule.yml'
+    ) as desired_state:
+        assertlib.assert_state(desired_state)
+
+    route_table_used_by_example_eth1 = 50
+    route_table_used_by_example_eth2 = 51
+    with pytest.raises(AssertionError):
+        ip_rule_exist_in_os(None, None, None, route_table_used_by_example_eth1)
+        ip_rule_exist_in_os(None, None, None, route_table_used_by_example_eth2)
