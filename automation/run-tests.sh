@@ -97,7 +97,7 @@ function run_tests {
             echo "Running unit test in $DOCKER_IMAGE container is not " \
                  "support yet"
         else
-            container_exec 'tox -e check-py36'
+            container_exec 'tox -e py36'
         fi
     fi
 
@@ -107,7 +107,7 @@ function run_tests {
             echo "Running unit test in $DOCKER_IMAGE container is not " \
                  "support yet"
         else
-            container_exec 'tox -e check-py37'
+            container_exec 'tox -e py37'
         fi
     fi
 
