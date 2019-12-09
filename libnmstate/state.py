@@ -347,33 +347,14 @@ class State:
             )
 
     def verify_route_rule(self, other_state):
-        for self_index_rules, other_index_rules in (
-            (
-                self.config_route_table_rules_v4,
-                other_state.config_route_table_rules_v4,
-            ),
-            (
-                self.config_route_table_rules_v6,
-                other_state.config_route_table_rules_v6,
-            ),
-        ):
-            self_rules = [
-                _remove_route_rule_default_values(rule.to_dict())
-                for rules in self_index_rules.values()
-                for rule in rules
-            ]
-            other_rules = [
-                rule.to_dict()
-                for rules in other_index_rules.values()
-                for rule in rules
-            ]
-            if not state_match(self_rules, other_rules):
-                raise NmstateVerificationError(
-                    format_desired_current_state_diff(
-                        {RouteRule.KEY: {RouteRule.CONFIG: self_rules}},
-                        {RouteRule.KEY: {RouteRule.CONFIG: other_rules}},
-                    )
-                )
+        _verify_route_rules(
+            self.config_route_table_rules_v4,
+            other_state.config_route_table_rules_v4,
+        )
+        _verify_route_rules(
+            self.config_route_table_rules_v6,
+            other_state.config_route_table_rules_v6,
+        )
 
     def normalize_for_verification(self):
         self._clean_sanitize_ethernet()
@@ -812,6 +793,23 @@ def state_match(desire, current):
         )
     else:
         return desire == current
+
+
+def _verify_route_rules(self_indexed_rules, other_indexed_rules):
+    for table_id, rules in self_indexed_rules.items():
+        self_rules = [
+            _remove_route_rule_default_values(rule.to_dict()) for rule in rules
+        ]
+        other_rules = [
+            rule.to_dict() for rule in other_indexed_rules.get(table_id, [])
+        ]
+        if not state_match(self_rules, other_rules):
+            raise NmstateVerificationError(
+                format_desired_current_state_diff(
+                    {RouteRule.KEY: {RouteRule.CONFIG: self_rules}},
+                    {RouteRule.KEY: {RouteRule.CONFIG: other_rules}},
+                )
+            )
 
 
 def _remove_route_rule_default_values(rule):

@@ -943,6 +943,44 @@ class TestRouteRuleEntry:
         ]
         assert expected_rules == sorted(rules)
 
+    def test_verify_route_rules(self):
+        self_state = state.State(
+            {
+                RouteRule.KEY: {
+                    RouteRule.CONFIG: [
+                        _create_route_rule_dict(
+                            '198.51.100.1/24', '192.0.2.1', 50, 103
+                        ),
+                        _create_route_rule_dict(
+                            '198.51.100.0/24', '192.0.2.1', 50, 103
+                        ),
+                        _create_route_rule_dict(
+                            '198.51.100.0/24', '192.0.2.1', 10, 104
+                        ),
+                    ]
+                }
+            }
+        )
+
+        other_state = state.State(
+            {
+                RouteRule.KEY: {
+                    RouteRule.CONFIG: [
+                        _create_route_rule_dict(
+                            '198.51.100.0/24', '192.0.2.1', 10, 104
+                        ),
+                        _create_route_rule_dict(
+                            '198.51.100.1/24', '192.0.2.1', 50, 103
+                        ),
+                        _create_route_rule_dict(
+                            '198.51.100.0/24', '192.0.2.1', 50, 103
+                        ),
+                    ]
+                }
+            }
+        )
+        self_state.verify_route_rule(other_state)
+
 
 def _create_route_rule(ip_from, ip_to, priority, table):
     return state.RouteRuleEntry(
