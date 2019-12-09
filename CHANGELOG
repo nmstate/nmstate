@@ -8,6 +8,7 @@
 
 ### Bug Fixes
  - Skip editing on unknown type interface
+ - Fix verification failure when applying route rule to 2+ route tables.
 
 ## [0.1.1] - 2019-12-01
 ### Break Changes
