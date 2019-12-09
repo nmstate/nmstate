@@ -78,26 +78,6 @@ or:
 
 `./automation/run-tests.sh --pytest-args "--pdb -x"`
 
-
-Alternatively, the following commands start the container manually:
-
-```
-DOCKER_IMAGE="nmstate/fedora-nmstate-dev"
-NET0="nmstate-net0"
-NET1="nmstate-net1"
-
-CONTAINER_ID="$(docker run --privileged -d -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v $PWD:/workspace/nmstate $DOCKER_IMAGE)"
-docker exec $USE_TTY -i $CONTAINER_ID /bin/bash -c 'systemctl stop NetworkManager'
-docker network create $NET0 || true
-docker network create $NET1 || true
-docker network connect $NET0 $CONTAINER_ID
-docker network connect $NET1 $CONTAINER_ID
-docker exec -ti $CONTAINER_ID /bin/bash
-systemctl start NetworkManager
-cd /workspace/nmstate
-tox -e check-integ-py36
-```
-
 ### Build a new container image
 
 ```
