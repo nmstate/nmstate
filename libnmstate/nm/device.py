@@ -197,13 +197,6 @@ def _requires_activation(dev, connection_profile):
             dev.get_iface(),
         )
         return True
-    if _ipv6_changed(dev, connection_profile):
-        logging.debug(
-            'Device reapply does not support ipv6 changes, '
-            'fallback to device activation: dev=%s',
-            dev.get_iface(),
-        )
-        return True
     return False
 
 

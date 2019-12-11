@@ -28,6 +28,7 @@ from libnmstate.schema import InterfaceType
 
 from .testlib import assertlib
 from .testlib import statelib
+from .testlib.iproutelib import ip_monitor_assert_stable_link_up
 
 # TEST-NET addresses: https://tools.ietf.org/html/rfc5737#section-3
 IPV4_ADDRESS1 = '192.0.2.251'
@@ -563,3 +564,13 @@ def test_add_iface_with_static_ipv6_expanded_format(eth1_up):
     }
     libnmstate.apply(desired_state)
     assertlib.assert_state(desired_state)
+
+
+@ip_monitor_assert_stable_link_up('eth1')
+def test_modify_ipv6_with_reapply(setup_eth1_ipv6):
+    ipv6_addr = IPV6_ADDRESS2
+    ipv6_state = setup_eth1_ipv6[Interface.KEY][0][Interface.IPV6]
+    ipv6_state[InterfaceIPv6.ADDRESS][0][InterfaceIPv6.ADDRESS_IP] = ipv6_addr
+    libnmstate.apply(setup_eth1_ipv6)
+
+    assertlib.assert_state(setup_eth1_ipv6)
