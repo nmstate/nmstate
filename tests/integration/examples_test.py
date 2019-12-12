@@ -32,54 +32,54 @@ def test_add_down_remove_vlan(eth1_up):
     Test adding, downing and removing a vlan
     """
 
-    vlan_ifname = 'eth1.101'
+    vlan_ifname = "eth1.101"
     with example_state(
-        'vlan101_eth1_up.yml', cleanup='vlan101_eth1_absent.yml'
+        "vlan101_eth1_up.yml", cleanup="vlan101_eth1_absent.yml"
     ) as desired_state:
         assertlib.assert_state(desired_state)
-        with example_state('vlan101_eth1_down.yml') as desired_state:
+        with example_state("vlan101_eth1_down.yml") as desired_state:
             assertlib.assert_absent(vlan_ifname)
 
     assertlib.assert_absent(vlan_ifname)
 
 
 @pytest.mark.xfail(
-    raises=NmstateLibnmError, reason='https://bugzilla.redhat.com/1724901'
+    raises=NmstateLibnmError, reason="https://bugzilla.redhat.com/1724901"
 )
 def test_add_remove_ovs_bridge(eth1_up):
     with example_state(
-        'ovsbridge_create.yml', cleanup='ovsbridge_delete.yml'
+        "ovsbridge_create.yml", cleanup="ovsbridge_delete.yml"
     ) as desired_state:
         assertlib.assert_state(desired_state)
 
-    assertlib.assert_absent('ovs-br0')
+    assertlib.assert_absent("ovs-br0")
 
 
 def test_add_remove_linux_bridge(eth1_up):
     with example_state(
-        'linuxbrige_eth1_up.yml', cleanup='linuxbrige_eth1_absent.yml'
+        "linuxbrige_eth1_up.yml", cleanup="linuxbrige_eth1_absent.yml"
     ) as desired_state:
         assertlib.assert_state(desired_state)
 
-    assertlib.assert_absent('linux-br0')
+    assertlib.assert_absent("linux-br0")
 
 
 def test_bond_linuxbridge_vlan(eth1_up, eth2_up):
     with example_state(
-        'bond_linuxbridge_vlan_up.yml',
-        cleanup='bond_linuxbridge_vlan_absent.yml',
+        "bond_linuxbridge_vlan_up.yml",
+        cleanup="bond_linuxbridge_vlan_absent.yml",
     ) as desired_state:
         assertlib.assert_state_match(desired_state)
 
-    assertlib.assert_absent('bond0')
-    assertlib.assert_absent('br0')
-    assertlib.assert_absent('br29')
-    assertlib.assert_absent('vlan29')
+    assertlib.assert_absent("bond0")
+    assertlib.assert_absent("br0")
+    assertlib.assert_absent("br29")
+    assertlib.assert_absent("vlan29")
 
 
 def test_dns_edit(eth1_up):
     with example_state(
-        'dns_edit_eth1.yml', cleanup='dns_remove.yml'
+        "dns_edit_eth1.yml", cleanup="dns_remove.yml"
     ) as desired_state:
         assertlib.assert_state(desired_state)
 
@@ -95,8 +95,8 @@ def test_add_remove_routes(eth1_up):
     Test adding a strict route and removing all routes next hop to eth1.
     """
     with example_state(
-        'eth1_add_route.yml', cleanup='eth1_del_all_routes.yml'
+        "eth1_add_route.yml", cleanup="eth1_del_all_routes.yml"
     ) as desired_state:
         assertlib.assert_state(desired_state)
 
-    assertlib.assert_no_config_route_to_iface('eth1')
+    assertlib.assert_no_config_route_to_iface("eth1")

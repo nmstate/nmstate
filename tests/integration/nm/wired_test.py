@@ -28,15 +28,15 @@ from .testlib import mainloop
 from .testlib import MainloopTestError
 
 
-ETH1 = 'eth1'
+ETH1 = "eth1"
 
-MAC0 = '02:FF:FF:FF:FF:00'
+MAC0 = "02:FF:FF:FF:FF:00"
 MTU0 = 1200
 
 
 @pytest.mark.xfail(
-    condition=StrictVersion(nm.nmclient.nm_version()) < StrictVersion('1.18'),
-    reason='https://bugzilla.redhat.com/1702657',
+    condition=StrictVersion(nm.nmclient.nm_version()) < StrictVersion("1.18"),
+    reason="https://bugzilla.redhat.com/1702657",
     strict=True,
 )
 def test_interface_mtu_change_with_reapply(eth1_up):

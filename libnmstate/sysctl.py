@@ -36,8 +36,8 @@ def disable_ipv6(dev):
 
 def _change_ipv6_state(dev, disable):
     try:
-        with open('/proc/sys/net/ipv6/conf/%s/disable_ipv6' % dev, 'w') as f:
-            f.write('1' if disable else '0')
+        with open("/proc/sys/net/ipv6/conf/%s/disable_ipv6" % dev, "w") as f:
+            f.write("1" if disable else "0")
     except IOError as e:
         if e.errno == errno.ENOENT and disable:
             # IPv6 stack is (already) not available on this device
@@ -45,9 +45,9 @@ def _change_ipv6_state(dev, disable):
         raise ChangeIpv6StateError(str(e))
 
 
-def is_disabled_ipv6(dev='default'):
+def is_disabled_ipv6(dev="default"):
     try:
-        with open('/proc/sys/net/ipv6/conf/%s/disable_ipv6' % dev) as f:
+        with open("/proc/sys/net/ipv6/conf/%s/disable_ipv6" % dev) as f:
             return int(f.read())
     except IOError as e:
         if e.errno == errno.ENOENT:

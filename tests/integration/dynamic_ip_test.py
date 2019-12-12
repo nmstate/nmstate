@@ -47,28 +47,28 @@ from .testlib.bridgelib import linux_bridge
 
 DEFAULT_TIMEOUT = 20
 
-IPV4_ADDRESS1 = '192.0.2.251'
-IPV4_ADDRESS2 = '192.0.2.252'
-IPV6_ADDRESS1 = '2001:db8:1::1'
-IPV6_ADDRESS2 = '2001:db8:2::1'
-IPV4_CLASSLESS_ROUTE_DST_NET1 = '198.51.100.0/24'
-IPV4_CLASSLESS_ROUTE_NEXT_HOP1 = '192.0.2.1'
-IPV6_CLASSLESS_ROUTE_PREFIX = '2001:db8:f'
-IPV6_CLASSLESS_ROUTE_DST_NET1 = '{}::/64'.format(IPV6_CLASSLESS_ROUTE_PREFIX)
+IPV4_ADDRESS1 = "192.0.2.251"
+IPV4_ADDRESS2 = "192.0.2.252"
+IPV6_ADDRESS1 = "2001:db8:1::1"
+IPV6_ADDRESS2 = "2001:db8:2::1"
+IPV4_CLASSLESS_ROUTE_DST_NET1 = "198.51.100.0/24"
+IPV4_CLASSLESS_ROUTE_NEXT_HOP1 = "192.0.2.1"
+IPV6_CLASSLESS_ROUTE_PREFIX = "2001:db8:f"
+IPV6_CLASSLESS_ROUTE_DST_NET1 = "{}::/64".format(IPV6_CLASSLESS_ROUTE_PREFIX)
 
-TEST_BRIDGE_NIC = 'brtest0'
+TEST_BRIDGE_NIC = "brtest0"
 
-DHCP_SRV_NIC = 'dhcpsrv'
-DHCP_CLI_NIC = 'dhcpcli'
+DHCP_SRV_NIC = "dhcpsrv"
+DHCP_CLI_NIC = "dhcpcli"
 DHCP_SRV_IP4 = IPV4_ADDRESS1
 DHCP_SRV_IP6 = IPV6_ADDRESS1
 DHCP_SRV_IP6_2 = "{}::1".format(IPV6_CLASSLESS_ROUTE_PREFIX)
-DHCP_SRV_IP4_PREFIX = '192.0.2'
-DHCP_SRV_IP6_PREFIX = '2001:db8:1'
-DHCP_SRV_IP6_NETWORK = '{}::/64'.format(DHCP_SRV_IP6_PREFIX)
+DHCP_SRV_IP4_PREFIX = "192.0.2"
+DHCP_SRV_IP6_PREFIX = "2001:db8:1"
+DHCP_SRV_IP6_NETWORK = "{}::/64".format(DHCP_SRV_IP6_PREFIX)
 
-IPV6_DEFAULT_GATEWAY = '::/0'
-IPV4_DEFAULT_GATEWAY = '0.0.0.0/0'
+IPV6_DEFAULT_GATEWAY = "::/0"
+IPV4_DEFAULT_GATEWAY = "0.0.0.0/0"
 
 DNSMASQ_CONF_STR = """
 interface={iface}
@@ -80,25 +80,25 @@ dhcp-option=option:classless-static-route,{classless_rt},{classless_rt_dst}
 dhcp-option=option:dns-server,{v4_dns_server}
 """.format(
     **{
-        'iface': DHCP_SRV_NIC,
-        'ipv4_prefix': DHCP_SRV_IP4_PREFIX,
-        'ipv6_prefix': DHCP_SRV_IP6_PREFIX,
-        'classless_rt': IPV4_CLASSLESS_ROUTE_DST_NET1,
-        'classless_rt_dst': IPV4_CLASSLESS_ROUTE_NEXT_HOP1,
-        'v4_dns_server': DHCP_SRV_IP4,
-        'ipv6_classless_route': IPV6_CLASSLESS_ROUTE_PREFIX,
+        "iface": DHCP_SRV_NIC,
+        "ipv4_prefix": DHCP_SRV_IP4_PREFIX,
+        "ipv6_prefix": DHCP_SRV_IP6_PREFIX,
+        "classless_rt": IPV4_CLASSLESS_ROUTE_DST_NET1,
+        "classless_rt_dst": IPV4_CLASSLESS_ROUTE_NEXT_HOP1,
+        "v4_dns_server": DHCP_SRV_IP4,
+        "ipv6_classless_route": IPV6_CLASSLESS_ROUTE_PREFIX,
     }
 )
 
-DNSMASQ_CONF_PATH = '/etc/dnsmasq.d/nmstate.conf'
+DNSMASQ_CONF_PATH = "/etc/dnsmasq.d/nmstate.conf"
 # Docker does not allow NetworkManager to edit /etc/resolv.conf.
 # Have to read NetworkManager internal resolv.conf
-RESOLV_CONF_PATH = '/var/run/NetworkManager/resolv.conf'
+RESOLV_CONF_PATH = "/var/run/NetworkManager/resolv.conf"
 
-SYSFS_DISABLE_IPV6_FILE = '/proc/sys/net/ipv6/conf/{}/disable_ipv6'.format(
+SYSFS_DISABLE_IPV6_FILE = "/proc/sys/net/ipv6/conf/{}/disable_ipv6".format(
     DHCP_SRV_NIC
 )
-SYSFS_DISABLE_RA_SRV = '/proc/sys/net/ipv6/conf/{}/accept_ra'.format(
+SYSFS_DISABLE_RA_SRV = "/proc/sys/net/ipv6/conf/{}/accept_ra".format(
     DHCP_SRV_NIC
 )
 
@@ -109,15 +109,15 @@ except NameError:
     FileNotFoundError = IOError
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture(scope="module")
 def dhcp_env():
     try:
         _create_veth_pair()
         _setup_dhcp_nics()
 
-        with open(DNSMASQ_CONF_PATH, 'w') as fd:
+        with open(DNSMASQ_CONF_PATH, "w") as fd:
             fd.write(DNSMASQ_CONF_STR)
-        assert libcmd.exec_cmd(['systemctl', 'restart', 'dnsmasq'])[0] == 0
+        assert libcmd.exec_cmd(["systemctl", "restart", "dnsmasq"])[0] == 0
 
         yield
     finally:
@@ -251,7 +251,7 @@ def test_dhcp_with_addresses(dhcpcli_up):
 def test_ipv4_dhcp_on_bond(dhcpcli_up):
     ipv4_state = {Interface.IPV4: create_ipv4_state(enabled=True, dhcp=True)}
     with bondlib.bond_interface(
-        'bond99', slaves=[DHCP_CLI_NIC], extra_iface_state=ipv4_state
+        "bond99", slaves=[DHCP_CLI_NIC], extra_iface_state=ipv4_state
     ) as desired_state:
         assertlib.assert_state(desired_state)
 
@@ -574,14 +574,14 @@ def _create_veth_pair():
     assert (
         libcmd.exec_cmd(
             [
-                'ip',
-                'link',
-                'add',
+                "ip",
+                "link",
+                "add",
                 DHCP_SRV_NIC,
-                'type',
-                'veth',
-                'peer',
-                'name',
+                "type",
+                "veth",
+                "peer",
+                "name",
                 DHCP_CLI_NIC,
             ]
         )[0]
@@ -590,20 +590,20 @@ def _create_veth_pair():
 
 
 def _remove_veth_pair():
-    libcmd.exec_cmd(['ip', 'link', 'del', 'dev', DHCP_SRV_NIC])
+    libcmd.exec_cmd(["ip", "link", "del", "dev", DHCP_SRV_NIC])
 
 
 def _setup_dhcp_nics():
-    assert libcmd.exec_cmd(['ip', 'link', 'set', DHCP_SRV_NIC, 'up'])[0] == 0
-    assert libcmd.exec_cmd(['ip', 'link', 'set', DHCP_CLI_NIC, 'up'])[0] == 0
+    assert libcmd.exec_cmd(["ip", "link", "set", DHCP_SRV_NIC, "up"])[0] == 0
+    assert libcmd.exec_cmd(["ip", "link", "set", DHCP_CLI_NIC, "up"])[0] == 0
     assert (
         libcmd.exec_cmd(
             [
-                'ip',
-                'addr',
-                'add',
+                "ip",
+                "addr",
+                "add",
                 "{}/24".format(DHCP_SRV_IP4),
-                'dev',
+                "dev",
                 DHCP_SRV_NIC,
             ]
         )[0]
@@ -611,25 +611,25 @@ def _setup_dhcp_nics():
     )
     assert (
         libcmd.exec_cmd(
-            ['nmcli', 'device', 'set', DHCP_CLI_NIC, 'managed', 'yes']
+            ["nmcli", "device", "set", DHCP_CLI_NIC, "managed", "yes"]
         )[0]
         == 0
     )
     # This stop dhcp server NIC get another IPv6 address from dnsmasq.
-    with open(SYSFS_DISABLE_RA_SRV, 'w') as fd:
-        fd.write('0')
+    with open(SYSFS_DISABLE_RA_SRV, "w") as fd:
+        fd.write("0")
 
-    with open(SYSFS_DISABLE_IPV6_FILE, 'w') as fd:
-        fd.write('0')
+    with open(SYSFS_DISABLE_IPV6_FILE, "w") as fd:
+        fd.write("0")
 
     assert (
         libcmd.exec_cmd(
             [
-                'ip',
-                'addr',
-                'add',
+                "ip",
+                "addr",
+                "add",
                 "{}/64".format(DHCP_SRV_IP6),
-                'dev',
+                "dev",
                 DHCP_SRV_NIC,
             ]
         )[0]
@@ -639,11 +639,11 @@ def _setup_dhcp_nics():
     assert (
         libcmd.exec_cmd(
             [
-                'ip',
-                'addr',
-                'add',
+                "ip",
+                "addr",
+                "add",
                 "{}/64".format(DHCP_SRV_IP6_2),
-                'dev',
+                "dev",
                 DHCP_SRV_NIC,
             ]
         )[0]
@@ -652,7 +652,7 @@ def _setup_dhcp_nics():
 
 
 def _clean_up():
-    libcmd.exec_cmd(['systemctl', 'stop', 'dnsmasq'])
+    libcmd.exec_cmd(["systemctl", "stop", "dnsmasq"])
     _remove_veth_pair()
     try:
         os.unlink(DNSMASQ_CONF_PATH)
@@ -754,7 +754,7 @@ def _has_dhcpv6_addr(nic=DHCP_CLI_NIC):
     current_state = statelib.show_only((nic,))[Interface.KEY][0]
     has_dhcp_ip_addr = False
     addrs = current_state[Interface.IPV6].get(InterfaceIPv6.ADDRESS, [])
-    logging.debug('Current IPv6 address of {}: {}'.format(nic, addrs))
+    logging.debug("Current IPv6 address of {}: {}".format(nic, addrs))
     for addr in addrs:
         if (
             addr[InterfaceIPv6.ADDRESS_PREFIX_LENGTH] == 128
@@ -769,7 +769,7 @@ def _has_dhcpv4_addr(nic=DHCP_CLI_NIC):
     current_state = statelib.show_only((nic,))[Interface.KEY][0]
     has_dhcp_ip_addr = False
     addrs = current_state[Interface.IPV4].get(InterfaceIPv4.ADDRESS, [])
-    logging.debug('Current IPv4 address of {}: {}'.format(nic, addrs))
+    logging.debug("Current IPv4 address of {}: {}".format(nic, addrs))
     for addr in addrs:
         if (
             addr[InterfaceIPv6.ADDRESS_PREFIX_LENGTH] == 24
@@ -826,7 +826,7 @@ def create_ipv6_address_state(address, prefix_length):
 
 def test_activate_dummy_without_dhcp_service():
     ifstate = {
-        Interface.NAME: 'dummy00',
+        Interface.NAME: "dummy00",
         Interface.TYPE: InterfaceType.DUMMY,
         Interface.STATE: InterfaceState.UP,
         Interface.IPV4: create_ipv4_state(enabled=True, dhcp=True),

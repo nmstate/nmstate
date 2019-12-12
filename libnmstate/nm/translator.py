@@ -22,12 +22,12 @@ import copy
 from . import nmclient
 
 
-IFACE_TYPE_UNKNOWN = 'unknown'
+IFACE_TYPE_UNKNOWN = "unknown"
 
 
 class ApiIfaceAdminState:
-    DOWN = 'down'
-    UP = 'up'
+    DOWN = "down"
+    UP = "up"
 
 
 class Api2Nm:
@@ -41,18 +41,18 @@ class Api2Nm:
     def get_iface_type_map():
         if Api2Nm._iface_types_map is None:
             Api2Nm._iface_types_map = {
-                'ethernet': nmclient.NM.SETTING_WIRED_SETTING_NAME,
-                'bond': nmclient.NM.SETTING_BOND_SETTING_NAME,
-                'dummy': nmclient.NM.SETTING_DUMMY_SETTING_NAME,
-                'vlan': nmclient.NM.SETTING_VLAN_SETTING_NAME,
-                'vxlan': nmclient.NM.SETTING_VXLAN_SETTING_NAME,
-                'linux-bridge': nmclient.NM.SETTING_BRIDGE_SETTING_NAME,
+                "ethernet": nmclient.NM.SETTING_WIRED_SETTING_NAME,
+                "bond": nmclient.NM.SETTING_BOND_SETTING_NAME,
+                "dummy": nmclient.NM.SETTING_DUMMY_SETTING_NAME,
+                "vlan": nmclient.NM.SETTING_VLAN_SETTING_NAME,
+                "vxlan": nmclient.NM.SETTING_VXLAN_SETTING_NAME,
+                "linux-bridge": nmclient.NM.SETTING_BRIDGE_SETTING_NAME,
             }
             try:
                 ovs_types = {
-                    'ovs-bridge': nmclient.NM.SETTING_OVS_BRIDGE_SETTING_NAME,
-                    'ovs-port': nmclient.NM.SETTING_OVS_PORT_SETTING_NAME,
-                    'ovs-interface': (
+                    "ovs-bridge": nmclient.NM.SETTING_OVS_BRIDGE_SETTING_NAME,
+                    "ovs-port": nmclient.NM.SETTING_OVS_PORT_SETTING_NAME,
+                    "ovs-interface": (
                         nmclient.NM.SETTING_OVS_INTERFACE_SETTING_NAME
                     ),
                 }
@@ -64,12 +64,12 @@ class Api2Nm:
 
     @staticmethod
     def get_bond_options(iface_desired_state):
-        iface_type = Api2Nm.get_iface_type(iface_desired_state['type'])
-        if iface_type == 'bond':
+        iface_type = Api2Nm.get_iface_type(iface_desired_state["type"])
+        if iface_type == "bond":
             # Is the mode a must config parameter?
-            bond_conf = iface_desired_state['link-aggregation']
-            bond_opts = {'mode': bond_conf['mode']}
-            bond_opts.update(bond_conf.get('options', {}))
+            bond_conf = iface_desired_state["link-aggregation"]
+            bond_opts = {"mode": bond_conf["mode"]}
+            bond_opts.update(bond_conf.get("options", {}))
         else:
             bond_opts = {}
 
@@ -81,29 +81,29 @@ class Nm2Api:
 
     @staticmethod
     def get_common_device_info(devinfo):
-        type_name = devinfo['type_name']
-        if type_name != 'ethernet':
+        type_name = devinfo["type_name"]
+        if type_name != "ethernet":
             type_name = Nm2Api.get_iface_type(type_name)
         return {
-            'name': devinfo['name'],
-            'type': type_name,
-            'state': Nm2Api.get_iface_admin_state(devinfo['state']),
+            "name": devinfo["name"],
+            "type": type_name,
+            "state": Nm2Api.get_iface_admin_state(devinfo["state"]),
         }
 
     @staticmethod
     def get_bond_info(bondinfo):
-        bond_options = copy.deepcopy(bondinfo.get('options'))
+        bond_options = copy.deepcopy(bondinfo.get("options"))
         if not bond_options:
             return {}
-        bond_slaves = bondinfo['slaves']
+        bond_slaves = bondinfo["slaves"]
 
-        bond_mode = bond_options['mode']
-        del bond_options['mode']
+        bond_mode = bond_options["mode"]
+        del bond_options["mode"]
         return {
-            'link-aggregation': {
-                'mode': bond_mode,
-                'slaves': [slave.props.interface for slave in bond_slaves],
-                'options': bond_options,
+            "link-aggregation": {
+                "mode": bond_mode,
+                "slaves": [slave.props.interface for slave in bond_slaves],
+                "options": bond_options,
             }
         }
 

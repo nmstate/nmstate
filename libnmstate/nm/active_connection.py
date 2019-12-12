@@ -26,7 +26,7 @@ from .nmclient import GLib
 from .nmclient import NM
 
 
-NM_MANAGER_ERROR_DOMAIN = 'nm-manager-error-quark'
+NM_MANAGER_ERROR_DOMAIN = "nm-manager-error-quark"
 
 
 class ActivationError(Exception):
@@ -88,7 +88,7 @@ class ActiveConnection:
         except Exception as e:
             if self._mainloop.is_action_canceled(e):
                 logging.debug(
-                    'Connection deactivation aborted on %s: error=%s',
+                    "Connection deactivation aborted on %s: error=%s",
                     self._nmdev.get_iface(),
                     e,
                 )
@@ -102,25 +102,25 @@ class ActiveConnection:
                 ):
                     success = True
                     logging.debug(
-                        'Connection is not active on {}, no need to '
-                        'deactivate'.format(self.devname)
+                        "Connection is not active on {}, no need to "
+                        "deactivate".format(self.devname)
                     )
                 else:
                     self._mainloop.quit(
-                        'Connection deactivation failed on {}: '
-                        'error={}'.format(self._nmdev.get_iface(), e)
+                        "Connection deactivation failed on {}: "
+                        "error={}".format(self._nmdev.get_iface(), e)
                     )
                     return
 
         if success:
             logging.debug(
-                'Connection deactivation succeeded on %s',
+                "Connection deactivation succeeded on %s",
                 self._nmdev.get_iface(),
             )
             self._mainloop.execute_next_action()
         else:
             self._mainloop.quit(
-                'Connection deactivation failed on %s: error=unknown'
+                "Connection deactivation failed on %s: error=unknown"
                 % self._nmdev.get_iface()
             )
 

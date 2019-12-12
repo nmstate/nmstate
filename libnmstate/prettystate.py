@@ -32,26 +32,26 @@ def format_desired_current_state_diff(desired_state, current_state):
     pretty_desired_state = PrettyState(desired_state).yaml
     pretty_current_state = PrettyState(current_state).yaml
 
-    diff = ''.join(
+    diff = "".join(
         difflib.unified_diff(
             pretty_desired_state.splitlines(True),
             pretty_current_state.splitlines(True),
-            fromfile='desired',
-            tofile='current',
+            fromfile="desired",
+            tofile="current",
             n=3,
         )
     )
     return (
-        '\n'
-        'desired\n'
-        '=======\n'
-        '{}\n'
-        'current\n'
-        '=======\n'
-        '{}\n'
-        'difference\n'
-        '==========\n'
-        '{}\n'.format(pretty_desired_state, pretty_current_state, diff)
+        "\n"
+        "desired\n"
+        "=======\n"
+        "{}\n"
+        "current\n"
+        "=======\n"
+        "{}\n"
+        "difference\n"
+        "==========\n"
+        "{}\n".format(pretty_desired_state, pretty_current_state, diff)
     )
 
 
@@ -68,7 +68,7 @@ class PrettyState:
 
     @property
     def json(self):
-        return json.dumps(self.state, indent=4, separators=(',', ': '))
+        return json.dumps(self.state, indent=4, separators=(",", ": "))
 
 
 def represent_ordereddict(dumper, data):
@@ -85,7 +85,7 @@ def represent_ordereddict(dumper, data):
 
         value.append((node_key, node_value))
 
-    return yaml.nodes.MappingNode(u'tag:yaml.org,2002:map', value)
+    return yaml.nodes.MappingNode(u"tag:yaml.org,2002:map", value)
 
 
 def order_state(state):
@@ -96,7 +96,7 @@ def order_state(state):
     if iface_states is not None:
         state[Constants.INTERFACES] = [
             order_iface_state(iface_state)
-            for iface_state in sorted(iface_states, key=itemgetter('name'))
+            for iface_state in sorted(iface_states, key=itemgetter("name"))
         ]
 
     return state
@@ -112,14 +112,14 @@ def represent_unicode(_, data):
     """
 
     return yaml.ScalarNode(
-        tag=u'tag:yaml.org,2002:str', value=data.encode('utf-8')
+        tag=u"tag:yaml.org,2002:str", value=data.encode("utf-8")
     )
 
 
 def order_iface_state(iface_state):
     ordered_state = OrderedDict()
 
-    for setting in ('name', 'type', 'state'):
+    for setting in ("name", "type", "state"):
         try:
             ordered_state[setting] = iface_state.pop(setting)
         except KeyError:

@@ -31,7 +31,7 @@ def test_set_a_down_iface_down(eth1_up):
     desired_state = {
         Interface.KEY: [
             {
-                Interface.NAME: 'eth1',
+                Interface.NAME: "eth1",
                 Interface.TYPE: InterfaceType.ETHERNET,
                 Interface.STATE: InterfaceState.DOWN,
             }
@@ -45,12 +45,12 @@ def test_set_a_down_iface_down(eth1_up):
     assertlib.assert_state(desired_state)
 
 
-@pytest.mark.xfail(reason='Some ifaces cannot be removed', strict=True)
+@pytest.mark.xfail(reason="Some ifaces cannot be removed", strict=True)
 def test_removing_a_non_removable_iface(eth1_up):
     desired_state = {
         Interface.KEY: [
             {
-                Interface.NAME: 'eth1',
+                Interface.NAME: "eth1",
                 Interface.TYPE: InterfaceType.ETHERNET,
                 Interface.STATE: InterfaceState.ABSENT,
             }
@@ -65,7 +65,7 @@ def test_removing_a_non_removable_iface(eth1_up):
 def test_set_iface_down_without_type(eth1_up):
     desired_state = {
         Interface.KEY: [
-            {Interface.NAME: 'eth1', Interface.STATE: InterfaceState.DOWN}
+            {Interface.NAME: "eth1", Interface.STATE: InterfaceState.DOWN}
         ]
     }
     libnmstate.apply(desired_state)
@@ -75,7 +75,7 @@ def test_set_iface_down_without_type(eth1_up):
 
 def test_change_iface_without_type(eth1_up):
     desired_state = {
-        Interface.KEY: [{Interface.NAME: 'eth1', Interface.MTU: 1400}]
+        Interface.KEY: [{Interface.NAME: "eth1", Interface.MTU: 1400}]
     }
     libnmstate.apply(desired_state)
 

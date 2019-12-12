@@ -26,7 +26,7 @@ from libnmstate import nm
 
 @pytest.fixture
 def NM_mock():
-    with mock.patch.object(nm.user.nmclient, 'NM') as m:
+    with mock.patch.object(nm.user.nmclient, "NM") as m:
         yield m
 
 
@@ -39,7 +39,7 @@ def test_create_setting_duplicate(NM_mock):
     base_profile = mock.MagicMock()
 
     setting = nm.user.create_setting(
-        {'description': 'test_interface'}, base_profile
+        {"description": "test_interface"}, base_profile
     )
     base_profile.get_setting_by_name.assert_called_with(
         NM_mock.SETTING_USER_SETTING_NAME
@@ -51,8 +51,8 @@ def test_create_setting_duplicate(NM_mock):
 
 
 def test_create_setting_description(NM_mock):
-    setting = nm.user.create_setting({'description': 'test_interface'}, None)
+    setting = nm.user.create_setting({"description": "test_interface"}, None)
     assert setting == NM_mock.SettingUser.new.return_value
     setting.set_data.assert_called_with(
-        'nmstate.interface.description', 'test_interface'
+        "nmstate.interface.description", "test_interface"
     )

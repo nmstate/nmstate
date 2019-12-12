@@ -31,10 +31,10 @@ from .testlib.examplelib import find_examples_dir
 from .testlib.examplelib import load_example
 
 
-SET_CMD = ['nmstatectl', 'set']
-SHOW_CMD = ['nmstatectl', 'show']
-CONFIRM_CMD = ['nmstatectl', 'commit']
-ROLLBACK_CMD = ['nmstatectl', 'rollback']
+SET_CMD = ["nmstatectl", "set"]
+SHOW_CMD = ["nmstatectl", "show"]
+CONFIRM_CMD = ["nmstatectl", "commit"]
+ROLLBACK_CMD = ["nmstatectl", "rollback"]
 
 LOOPBACK_JSON_CONFIG = """        {
             "name": "lo",
@@ -73,25 +73,25 @@ ETH1_YAML_CONFIG = b"""interfaces:
 """
 
 EXAMPLES = find_examples_dir()
-CONFIRMATION_INTERFACE = 'eth1.101'
-CONFIRMATION_CLEAN = 'vlan101_eth1_absent.yml'
-CONFIRMATION_TEST = 'vlan101_eth1_up.yml'
+CONFIRMATION_INTERFACE = "eth1.101"
+CONFIRMATION_CLEAN = "vlan101_eth1_absent.yml"
+CONFIRMATION_TEST = "vlan101_eth1_up.yml"
 CONFIRMATION_TEST_STATE = load_example(CONFIRMATION_TEST)
 CONFIRMATION_SET = SET_CMD + [
-    '--no-commit',
+    "--no-commit",
     os.path.join(EXAMPLES, CONFIRMATION_TEST),
 ]
 CONFIRMATION_TIMEOUT = 5
 CONFIRMATION_TIMOUT_COMMAND = SET_CMD + [
-    '--no-commit',
-    '--timeout',
+    "--no-commit",
+    "--timeout",
     str(CONFIRMATION_TIMEOUT),
     os.path.join(EXAMPLES, CONFIRMATION_TEST),
 ]
 
 
 def test_missing_operation():
-    cmds = ['nmstatectl', 'no-such-oper']
+    cmds = ["nmstatectl", "no-such-oper"]
     ret = libcmd.exec_cmd(cmds)
     rc, out, err = ret
 
@@ -100,7 +100,7 @@ def test_missing_operation():
 
 
 def test_show_command_with_json():
-    ret = libcmd.exec_cmd(SHOW_CMD + ['--json'])
+    ret = libcmd.exec_cmd(SHOW_CMD + ["--json"])
     rc, out, err = ret
 
     assert rc == libcmd.RC_SUCCESS, libcmd.format_exec_cmd_result(ret)
@@ -119,18 +119,18 @@ def test_show_command_with_yaml_format():
 
 
 def test_show_command_json_only_lo():
-    ret = libcmd.exec_cmd(SHOW_CMD + ['--json', 'lo'])
+    ret = libcmd.exec_cmd(SHOW_CMD + ["--json", "lo"])
     rc, out, err = ret
 
     assert rc == libcmd.RC_SUCCESS, libcmd.format_exec_cmd_result(ret)
 
     state = json.loads(out)
     assert len(state[Constants.INTERFACES]) == 1
-    assert state[Constants.INTERFACES][0]['name'] == 'lo'
+    assert state[Constants.INTERFACES][0]["name"] == "lo"
 
 
 def test_show_command_only_non_existing():
-    ret = libcmd.exec_cmd(SHOW_CMD + ['--json', 'non_existing_interface'])
+    ret = libcmd.exec_cmd(SHOW_CMD + ["--json", "non_existing_interface"])
     rc, out, err = ret
 
     assert rc == libcmd.RC_SUCCESS, libcmd.format_exec_cmd_result(ret)
@@ -149,8 +149,8 @@ def test_set_command_with_yaml_format():
 def test_set_command_with_two_states():
     examples = find_examples_dir()
     cmd = SET_CMD + [
-        os.path.join(examples, 'linuxbrige_eth1_up.yml'),
-        os.path.join(examples, 'linuxbrige_eth1_absent.yml'),
+        os.path.join(examples, "linuxbrige_eth1_up.yml"),
+        os.path.join(examples, "linuxbrige_eth1_absent.yml"),
     ]
     ret = libcmd.exec_cmd(cmd)
     rc = ret[0]

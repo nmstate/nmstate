@@ -19,20 +19,20 @@
 
 
 def get_slaves_from_state(state, default=()):
-    ports = state.get('bridge', {}).get('port')
+    ports = state.get("bridge", {}).get("port")
     if ports is None:
         return default
-    return [p['name'] for p in ports]
+    return [p["name"] for p in ports]
 
 
 def set_bridge_ports_metadata(master_state, slave_state):
     _set_common_slaves_metadata(master_state, slave_state)
 
-    ports = master_state.get('bridge', {}).get('port', [])
-    port = next(filter(lambda n: n['name'] == slave_state['name'], ports), {})
-    slave_state['_brport_options'] = port
+    ports = master_state.get("bridge", {}).get("port", [])
+    port = next(filter(lambda n: n["name"] == slave_state["name"], ports), {})
+    slave_state["_brport_options"] = port
 
 
 def _set_common_slaves_metadata(master_state, slave_state):
-    slave_state['_master'] = master_state['name']
-    slave_state['_master_type'] = master_state['type']
+    slave_state["_master"] = master_state["name"]
+    slave_state["_master_type"] = master_state["type"]

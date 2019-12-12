@@ -28,36 +28,36 @@ from libnmstate.schema import InterfaceIP
 from libnmstate.schema import Route
 
 
-TEST_IPV4_GATEWAY_IFACE = 'eth1'
-TEST_IPV6_GATEWAY_IFACE = 'eth2'
-TEST_STATIC_ROUTE_IFACE = 'eth3'
+TEST_IPV4_GATEWAY_IFACE = "eth1"
+TEST_IPV6_GATEWAY_IFACE = "eth2"
+TEST_STATIC_ROUTE_IFACE = "eth3"
 
 
 def _get_test_dns_v4():
     return {
         nm_dns.DNS_METADATA_PRIORITY: 40,
-        DNS.SERVER: ['8.8.8.8', '1.1.1.1'],
-        DNS.SEARCH: ['example.org', 'example.com'],
+        DNS.SERVER: ["8.8.8.8", "1.1.1.1"],
+        DNS.SEARCH: ["example.org", "example.com"],
     }
 
 
 def _get_test_dns_v6():
     return {
         nm_dns.DNS_METADATA_PRIORITY: 40,
-        DNS.SERVER: ['2001:4860:4860::8888', '2606:4700:4700::1111'],
-        DNS.SEARCH: ['example.net', 'example.edu'],
+        DNS.SERVER: ["2001:4860:4860::8888", "2606:4700:4700::1111"],
+        DNS.SEARCH: ["example.net", "example.edu"],
     }
 
 
 parametrize_ip_ver = pytest.mark.parametrize(
-    'nm_ip', [(nm_ipv4), (nm_ipv6)], ids=['ipv4', 'ipv6']
+    "nm_ip", [(nm_ipv4), (nm_ipv6)], ids=["ipv4", "ipv6"]
 )
 
 
 parametrize_ip_ver_dns = pytest.mark.parametrize(
-    'nm_ip, get_test_dns_func',
+    "nm_ip, get_test_dns_func",
     [(nm_ipv4, _get_test_dns_v4), (nm_ipv6, _get_test_dns_v6)],
-    ids=['ipv4', 'ipv6'],
+    ids=["ipv4", "ipv6"],
 )
 
 
@@ -182,9 +182,9 @@ def test_find_interfaces_for_dns_with_no_gateway():
 def _get_test_ipv4_gateway():
     return [
         {
-            Route.DESTINATION: '0.0.0.0/0',
+            Route.DESTINATION: "0.0.0.0/0",
             Route.METRIC: 200,
-            Route.NEXT_HOP_ADDRESS: '192.0.2.1',
+            Route.NEXT_HOP_ADDRESS: "192.0.2.1",
             Route.NEXT_HOP_INTERFACE: TEST_IPV4_GATEWAY_IFACE,
             Route.TABLE_ID: 54,
         }
@@ -194,9 +194,9 @@ def _get_test_ipv4_gateway():
 def _get_test_ipv6_gateway():
     return [
         {
-            Route.DESTINATION: '::/0',
+            Route.DESTINATION: "::/0",
             Route.METRIC: 201,
-            Route.NEXT_HOP_ADDRESS: '2001:db8:2::f',
+            Route.NEXT_HOP_ADDRESS: "2001:db8:2::f",
             Route.NEXT_HOP_INTERFACE: TEST_IPV6_GATEWAY_IFACE,
             Route.TABLE_ID: 54,
         }
@@ -206,16 +206,16 @@ def _get_test_ipv6_gateway():
 def _get_test_static_routes():
     return [
         {
-            Route.DESTINATION: '2001:db8:3::1',
+            Route.DESTINATION: "2001:db8:3::1",
             Route.METRIC: 201,
-            Route.NEXT_HOP_ADDRESS: '2001:db8:2::f',
+            Route.NEXT_HOP_ADDRESS: "2001:db8:2::f",
             Route.NEXT_HOP_INTERFACE: TEST_STATIC_ROUTE_IFACE,
             Route.TABLE_ID: 54,
         },
         {
-            Route.DESTINATION: '198.51.100.0/24',
+            Route.DESTINATION: "198.51.100.0/24",
             Route.METRIC: 201,
-            Route.NEXT_HOP_ADDRESS: '192.0.2.1',
+            Route.NEXT_HOP_ADDRESS: "192.0.2.1",
             Route.NEXT_HOP_INTERFACE: TEST_STATIC_ROUTE_IFACE,
             Route.TABLE_ID: 54,
         },

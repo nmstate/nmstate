@@ -21,4 +21,4 @@ import os
 
 
 def is_fedora():
-    return os.path.exists('/etc/fedora-release')
+    return os.path.exists("/etc/fedora-release")
