@@ -2,9 +2,13 @@
 dist: bionic
 language: generic
 env:
+    global:
+        - use_codecov=true
     matrix:
         - DOCKER_IMAGE=nmstate/centos8-nmstate-dev
           testflags="--test-type integ --pytest-args='-x'"
+          use_codecov=false
+          use_coveralls=true
         - DOCKER_IMAGE=nmstate/centos8-nmstate-dev
           testflags="--test-type integ --pytest-args='-x'
               --copr networkmanager/NetworkManager-1.22-git"
@@ -57,8 +61,8 @@ after_success:
     - sudo mv .coverage .coverage.orig || true
     - sudo mv tests/.coverage .coverage.tox || true
     - sudo coverage combine --append .
-    - coveralls
-    - codecov
+    - test "${use_coveralls}" == "true" && coveralls || true
+    - test "${use_codecov}" == "true" && codecov || true
 
 after_failure:
     - ./automation/upload_test_artifacts.sh
