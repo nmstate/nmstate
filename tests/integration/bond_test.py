@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2019 Red Hat, Inc.
+# Copyright (c) 2018-2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -33,6 +33,7 @@ from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
 
 from .testlib import assertlib
+from .testlib import cmdlib
 from .testlib import statelib
 from .testlib.assertlib import assert_mac_address
 from .testlib.bondlib import bond_interface
@@ -97,6 +98,19 @@ def bond99_with_slave(eth2_up):
     slaves = [eth2_up[Interface.KEY][0][Interface.NAME]]
     with bond_interface(BOND99, slaves) as state:
         yield state
+
+
+def test_remove_existing_bond(setup_remove_bond99):
+    assert (
+        cmdlib.exec_cmd(["ip", "link", "add", BOND99, "type", "bond"])[0]
+        == cmdlib.RC_SUCCESS
+    )
+    assertlib.assert_present(BOND99, timeout=1)
+
+    with bond_interface(BOND99, [], create=False):
+        pass
+
+    assertlib.assert_absent(BOND99, timeout=1)
 
 
 def test_add_and_remove_bond_with_two_slaves(eth1_up, eth2_up):

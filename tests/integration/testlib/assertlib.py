@@ -17,6 +17,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 import copy
+import time
 
 import libnmstate
 from libnmstate.schema import DNS
@@ -35,11 +36,36 @@ def assert_state(desired_state_data):
     assert desired_state.state == current_state.state
 
 
-def assert_absent(*ifnames):
+def assert_absent(*ifnames, timeout=0):
     """ Assert that a interface is not present in the current state """
 
-    current_state = statelib.show_only(ifnames)
+    now = time.time()
+    while True:
+        current_state = statelib.show_only(ifnames)
+        if not current_state[Interface.KEY] or (time.time() - now) > timeout:
+            break
+        time.sleep(0.1)
+
     assert not current_state[Interface.KEY]
+
+
+def assert_present(*ifnames, timeout=0):
+    """ Assert that an interfaces is present in the current state """
+
+    now = time.time()
+    while True:
+        current_state = statelib.show_only(ifnames)
+        existing_interfaces = {
+            i[Interface.NAME] for i in current_state[Interface.KEY]
+        }
+        if (
+            existing_interfaces == set(ifnames)
+            or (time.time() - now) > timeout
+        ):
+            break
+        time.sleep(0.1)
+
+    assert existing_interfaces == set(ifnames)
 
 
 def assert_state_match(desired_state_data):
