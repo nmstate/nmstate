@@ -29,7 +29,7 @@ from ..testlib import iproutelib
 from .testlib import mainloop_run
 
 
-BRIDGE0 = 'brtest0'
+BRIDGE0 = "brtest0"
 
 
 @pytest.fixture
@@ -168,7 +168,7 @@ def _create_bridge(bridge_desired_state):
 
 
 def _attach_port_to_bridge(port_state):
-    port_nmdev = nm.device.get_device_by_name(port_state['name'])
+    port_nmdev = nm.device.get_device_by_name(port_state["name"])
     curr_port_con_profile = nm.connection.ConnectionProfile()
     curr_port_con_profile.import_by_device(port_nmdev)
     iface_port_settings = _get_iface_port_settings(
@@ -192,7 +192,7 @@ def _create_bridge_iface(iface_bridge_settings):
 def _get_iface_port_settings(port_state, port_con_profile):
     con_setting = nm.connection.ConnectionSetting()
     con_setting.import_by_profile(port_con_profile)
-    con_setting.set_master(BRIDGE0, 'bridge')
+    con_setting.set_master(BRIDGE0, "bridge")
 
     bridge_port_setting = nm.bridge.create_port_setting(
         port_state, port_con_profile.profile

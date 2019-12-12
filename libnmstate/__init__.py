@@ -28,11 +28,11 @@ from .prettystate import PrettyState
 
 
 __all__ = [
-    'show',
-    'apply',
-    'commit',
-    'rollback',
-    'error',
-    'schema',
-    'PrettyState',
+    "show",
+    "apply",
+    "commit",
+    "rollback",
+    "error",
+    "schema",
+    "PrettyState",
 ]

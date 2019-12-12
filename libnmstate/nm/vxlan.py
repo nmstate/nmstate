@@ -56,12 +56,12 @@ def get_info(device):
     Provides the current active values for a device
     """
     if device.get_device_type() == nmclient.NM.DeviceType.VXLAN:
-        base_iface = ''
+        base_iface = ""
         if device.props.parent:
             base_iface = device.props.parent.get_iface()
         remote = device.props.group
         if not remote:
-            remote = ''
+            remote = ""
         return {
             VXLAN.CONFIG_SUBTREE: {
                 VXLAN.ID: device.props.id,
@@ -83,7 +83,7 @@ def _get_destination_port(device):
 
     [1] https://bugzilla.redhat.com/show_bug.cgi?id=1768388
     """
-    if nm.nmclient.nm_version() >= StrictVersion('1.20.6'):
+    if nm.nmclient.nm_version() >= StrictVersion("1.20.6"):
         return device.get_dst_port()
     else:
         con = connection.ConnectionProfile()

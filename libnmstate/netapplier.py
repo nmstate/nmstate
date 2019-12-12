@@ -154,9 +154,9 @@ def _apply_ifaces_state(
         if not commit:
             return checkpoint
     except nm.checkpoint.NMCheckPointPermissionError:
-        raise NmstatePermissionError('Error creating a check point')
+        raise NmstatePermissionError("Error creating a check point")
     except nm.checkpoint.NMCheckPointCreationError:
-        raise NmstateConflictError('Error creating a check point')
+        raise NmstateConflictError("Error creating a check point")
     except NmstateError:
         # Assume rollback occured, revert IPv6 stack state.
         # Checkpoint rollback is async, there is a need to wait for it to
@@ -211,14 +211,14 @@ def _setup_providers():
     if not success:
         nmclient.mainloop(refresh=True)
         raise NmstateLibnmError(
-            'Unexpected failure of libnm when running the mainloop: {}'.format(
+            "Unexpected failure of libnm when running the mainloop: {}".format(
                 mainloop.error
             )
         )
 
 
 def _add_interfaces(new_interfaces, desired_state):
-    logging.debug('Adding new interfaces: %s', new_interfaces)
+    logging.debug("Adding new interfaces: %s", new_interfaces)
 
     ifaces2add = [desired_state.interfaces[name] for name in new_interfaces]
 
@@ -230,13 +230,13 @@ def _add_interfaces(new_interfaces, desired_state):
 
 
 def _edit_interfaces(state2edit):
-    logging.debug('Editing interfaces: %s', list(state2edit.interfaces))
+    logging.debug("Editing interfaces: %s", list(state2edit.interfaces))
 
     ifaces2edit = list(state2edit.interfaces.values())
 
     iface2prepare = list(
         filter(
-            lambda state: state.get('state') not in ('absent', 'down'),
+            lambda state: state.get("state") not in ("absent", "down"),
             ifaces2edit,
         )
     )
@@ -250,7 +250,7 @@ def _edit_interfaces(state2edit):
 
 
 def _index_by_name(ifaces_state):
-    return {iface['name']: iface for iface in ifaces_state}
+    return {iface["name"]: iface for iface in ifaces_state}
 
 
 def _disable_ipv6(desired_state):
@@ -264,5 +264,5 @@ def _disable_ipv6(desired_state):
         if ifstate.get(schema.Interface.STATE) != schema.InterfaceState.UP:
             continue
         ipv6_state = ifstate.get(schema.Interface.IPV6, {})
-        if ipv6_state.get('enabled') is False:
+        if ipv6_state.get("enabled") is False:
             sysctl.disable_ipv6(ifstate[schema.Interface.NAME])

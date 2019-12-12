@@ -28,8 +28,8 @@ from .testlib import mainloop
 from .testlib import MainloopTestError
 
 
-BRIDGE0 = 'brtest0'
-ETH1 = 'eth1'
+BRIDGE0 = "brtest0"
+ETH1 = "eth1"
 
 
 @pytest.fixture
@@ -42,7 +42,7 @@ def bridge_default_config():
     return {
         OB.CONFIG_SUBTREE: {
             OB.OPTIONS_SUBTREE: {
-                OB.Options.FAIL_MODE: '',
+                OB.Options.FAIL_MODE: "",
                 OB.Options.MCAST_SNOOPING_ENABLED: False,
                 OB.Options.RSTP: False,
                 OB.Options.STP: False,
@@ -54,7 +54,7 @@ def bridge_default_config():
 
 @pytest.mark.xfail(
     raises=(MainloopTestError, AssertionError),
-    reason='https://bugzilla.redhat.com/1724901',
+    reason="https://bugzilla.redhat.com/1724901",
 )
 def test_create_and_remove_minimum_config_bridge(
     bridge_minimum_config, bridge_default_config
@@ -71,13 +71,13 @@ def test_create_and_remove_minimum_config_bridge(
 
 @pytest.mark.xfail(
     raises=(MainloopTestError, AssertionError),
-    reason='https://bugzilla.redhat.com/1724901',
+    reason="https://bugzilla.redhat.com/1724901",
 )
 def test_bridge_with_system_port(eth1_up, bridge_default_config):
     bridge_desired_state = bridge_default_config
 
     eth1_port = {
-        OB.Port.NAME: 'eth1',
+        OB.Port.NAME: "eth1",
         # OVS vlan/s are not yet supported.
         # OB.VLAN.MODE: None,
         # OB.VLAN.TAG: 0,
@@ -94,12 +94,12 @@ def test_bridge_with_system_port(eth1_up, bridge_default_config):
 
 @pytest.mark.xfail(
     raises=(MainloopTestError, AssertionError),
-    reason='https://bugzilla.redhat.com/1724901',
+    reason="https://bugzilla.redhat.com/1724901",
 )
 def test_bridge_with_internal_interface(bridge_default_config):
     bridge_desired_state = bridge_default_config
 
-    ovs_port = {OB.Port.NAME: 'ovs0'}
+    ovs_port = {OB.Port.NAME: "ovs0"}
 
     bridge_desired_state[OB.CONFIG_SUBTREE][OB.PORT_SUBTREE].append(ovs_port)
 

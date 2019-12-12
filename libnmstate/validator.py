@@ -61,7 +61,7 @@ def validate_capabilities(state, capabilities):
 
 
 def validate_interface_capabilities(ifaces_state, capabilities):
-    ifaces_types = [iface_state.get('type') for iface_state in ifaces_state]
+    ifaces_types = [iface_state.get("type") for iface_state in ifaces_state]
     has_ovs_capability = nm.ovs.CAPABILITY in capabilities
     for iface_type in ifaces_types:
         is_ovs_type = iface_type in (
@@ -84,16 +84,16 @@ def validate_link_aggregation_state(desired_state, current_state):
     available_ifaces = {
         ifname
         for ifname, ifstate in desired_state.interfaces.items()
-        if ifstate.get('state') != 'absent'
+        if ifstate.get("state") != "absent"
     }
     available_ifaces |= set(current_state.interfaces)
 
     specified_slaves = set()
     for iface_state in desired_state.interfaces.values():
-        if iface_state.get('state') != 'absent':
-            link_aggregation = iface_state.get('link-aggregation')
+        if iface_state.get("state") != "absent":
+            link_aggregation = iface_state.get("link-aggregation")
             if link_aggregation:
-                slaves = set(link_aggregation.get('slaves', []))
+                slaves = set(link_aggregation.get("slaves", []))
                 if not (slaves <= available_ifaces):
                     raise NmstateValueError(
                         "Link aggregation has missing slave: {}".format(
@@ -111,7 +111,7 @@ def validate_link_aggregation_state(desired_state, current_state):
 
 def validate_dhcp(state):
     for iface_state in state[Constants.INTERFACES]:
-        for family in ('ipv4', 'ipv6'):
+        for family in ("ipv4", "ipv6"):
             ip = iface_state.get(family, {})
             if (
                 ip.get(InterfaceIP.ENABLED)
@@ -121,7 +121,7 @@ def validate_dhcp(state):
                 )
             ):
                 logging.warning(
-                    '%s addresses are ignored when ' 'dynamic IP is enabled',
+                    "%s addresses are ignored when " "dynamic IP is enabled",
                     family,
                 )
 
@@ -136,7 +136,7 @@ def validate_dns(state):
     )
     if len(dns_servers) > 2:
         raise NmstateNotImplementedError(
-            'Nmstate only support at most 2 DNS name servers'
+            "Nmstate only support at most 2 DNS name servers"
         )
 
 
@@ -240,7 +240,7 @@ def _assert_vxlan_has_missing_attribute(state, *attributes):
     vxlan_config_set = set(vxlan_config)
     if not (attributes_set <= vxlan_config_set):
         raise NmstateValueError(
-            'Vxlan tunnel {} has missing {}: {}'.format(
+            "Vxlan tunnel {} has missing {}: {}".format(
                 state[schema.Interface.NAME],
                 attributes_set.difference(vxlan_config_set),
                 state,
@@ -256,11 +256,11 @@ def _assert_vlan_filtering_trunk_tags(ports_state):
 
         if vlan_mode == LB.Port.Vlan.Mode.ACCESS:
             if trunk_tags:
-                raise NmstateValueError('Access port cannot have trunk tags')
+                raise NmstateValueError("Access port cannot have trunk tags")
         elif port_vlan_state:
             if not trunk_tags:
                 raise NmstateValueError(
-                    'A trunk port needs to specify trunk tags'
+                    "A trunk port needs to specify trunk tags"
                 )
         for trunk_tag in trunk_tags:
             _assert_vlan_filtering_trunk_tag(trunk_tag)
@@ -272,7 +272,7 @@ def _assert_vlan_filtering_trunk_tag(trunk_tag_state):
 
     if vlan_id and vlan_id_range:
         raise NmstateValueError(
-            'Trunk port cannot be configured by both id and range: {}'.format(
+            "Trunk port cannot be configured by both id and range: {}".format(
                 trunk_tag_state
             )
         )
@@ -285,7 +285,7 @@ def _assert_vlan_filtering_trunk_tag(trunk_tag_state):
             <= set(vlan_id_range)
         ):
             raise NmstateValueError(
-                'Trunk port range requires min / max keys: {}'.format(
+                "Trunk port range requires min / max keys: {}".format(
                     vlan_id_range
                 )
             )

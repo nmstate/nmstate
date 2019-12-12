@@ -23,20 +23,20 @@ from libnmstate.schema import OVSBridge
 
 
 @pytest.mark.parametrize(
-    'changes',
+    "changes",
     argvalues=[
-        ['GROUP_FORWARD_MASK', LinuxBridge.Options.GROUP_FORWARD_MASK],
-        ['MAC_AGEING_TIME', LinuxBridge.Options.MAC_AGEING_TIME],
-        ['MULTICAST_SNOOPING', LinuxBridge.Options.MULTICAST_SNOOPING],
-        ['PORT_NAME', LinuxBridge.Port.NAME],
-        ['PORT_STP_HAIRPIN_MODE', LinuxBridge.Port.STP_HAIRPIN_MODE],
-        ['PORT_STP_PATH_COST', LinuxBridge.Port.STP_PATH_COST],
-        ['PORT_STP_PRIORITY', LinuxBridge.Port.STP_PRIORITY],
-        ['STP_ENABLED', LinuxBridge.STP.ENABLED],
-        ['STP_FORWARD_DELAY', LinuxBridge.STP.FORWARD_DELAY],
-        ['STP_HELLO_TIME', LinuxBridge.STP.HELLO_TIME],
-        ['STP_MAX_AGE', LinuxBridge.STP.MAX_AGE],
-        ['STP_PRIORITY', LinuxBridge.STP.PRIORITY],
+        ["GROUP_FORWARD_MASK", LinuxBridge.Options.GROUP_FORWARD_MASK],
+        ["MAC_AGEING_TIME", LinuxBridge.Options.MAC_AGEING_TIME],
+        ["MULTICAST_SNOOPING", LinuxBridge.Options.MULTICAST_SNOOPING],
+        ["PORT_NAME", LinuxBridge.Port.NAME],
+        ["PORT_STP_HAIRPIN_MODE", LinuxBridge.Port.STP_HAIRPIN_MODE],
+        ["PORT_STP_PATH_COST", LinuxBridge.Port.STP_PATH_COST],
+        ["PORT_STP_PRIORITY", LinuxBridge.Port.STP_PRIORITY],
+        ["STP_ENABLED", LinuxBridge.STP.ENABLED],
+        ["STP_FORWARD_DELAY", LinuxBridge.STP.FORWARD_DELAY],
+        ["STP_HELLO_TIME", LinuxBridge.STP.HELLO_TIME],
+        ["STP_MAX_AGE", LinuxBridge.STP.MAX_AGE],
+        ["STP_PRIORITY", LinuxBridge.STP.PRIORITY],
     ],
 )
 def test_linuxbridge_deprecated_constants(changes):
@@ -49,13 +49,13 @@ def test_linuxbridge_deprecated_constants(changes):
 
 
 @pytest.mark.parametrize(
-    'changes',
+    "changes",
     argvalues=[
-        ['PORT_NAME', OVSBridge.Port.NAME],
-        ['FAIL_MODE', OVSBridge.Options.FAIL_MODE],
-        ['MCAST_SNOOPING_ENABLED', OVSBridge.Options.MCAST_SNOOPING_ENABLED],
-        ['RSTP', OVSBridge.Options.RSTP],
-        ['STP', OVSBridge.Options.STP],
+        ["PORT_NAME", OVSBridge.Port.NAME],
+        ["FAIL_MODE", OVSBridge.Options.FAIL_MODE],
+        ["MCAST_SNOOPING_ENABLED", OVSBridge.Options.MCAST_SNOOPING_ENABLED],
+        ["RSTP", OVSBridge.Options.RSTP],
+        ["STP", OVSBridge.Options.STP],
     ],
 )
 def test_ovsbridge_deprecated_constants(changes):

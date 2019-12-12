@@ -24,12 +24,12 @@ from unittest import mock
 from libnmstate import nm
 from libnmstate.schema import InterfaceIPv4
 
-IPV4_ADDRESS1 = '192.0.2.251'
+IPV4_ADDRESS1 = "192.0.2.251"
 
 
 @pytest.fixture
 def NM_mock():
-    with mock.patch.object(nm.ipv4.nmclient, 'NM') as m:
+    with mock.patch.object(nm.ipv4.nmclient, "NM") as m:
         yield m
 
 
@@ -68,11 +68,11 @@ def test_create_setting_with_static_addresses(NM_mock):
         InterfaceIPv4.ENABLED: True,
         InterfaceIPv4.ADDRESS: [
             {
-                InterfaceIPv4.ADDRESS_IP: '10.10.10.1',
+                InterfaceIPv4.ADDRESS_IP: "10.10.10.1",
                 InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
             },
             {
-                InterfaceIPv4.ADDRESS_IP: '10.10.20.1',
+                InterfaceIPv4.ADDRESS_IP: "10.10.20.1",
                 InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
             },
         ],

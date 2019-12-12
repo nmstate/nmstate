@@ -42,9 +42,9 @@ def test_create_and_remove_vxlan(eth1_up):
 
 @pytest.mark.xfail(
     condition=StrictVersion(nm.nmclient.nm_version())
-    < StrictVersion('1.20.6'),
+    < StrictVersion("1.20.6"),
     strict=True,
-    reason='https://bugzilla.redhat.com/show_bug.cgi?id=1768388',
+    reason="https://bugzilla.redhat.com/show_bug.cgi?id=1768388",
 )
 def test_read_destination_port_from_libnm(eth1_up):
     vxlan_desired_state = _create_vxlan_state(eth1_up)
@@ -65,7 +65,7 @@ def _create_vxlan_state(eth1_up):
         VXLAN.CONFIG_SUBTREE: {
             VXLAN.ID: 201,
             VXLAN.BASE_IFACE: ifname,
-            VXLAN.REMOTE: '192.168.1.18',
+            VXLAN.REMOTE: "192.168.1.18",
             VXLAN.DESTINATION_PORT: 4789,
         }
     }
@@ -123,6 +123,6 @@ def _get_vxlan_device(ifname):
 def _vxlan_ifname(state):
     return (
         state[VXLAN.CONFIG_SUBTREE][VXLAN.BASE_IFACE]
-        + '.'
+        + "."
         + str(state[VXLAN.CONFIG_SUBTREE][VXLAN.ID])
     )

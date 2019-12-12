@@ -83,9 +83,9 @@ class StateEntry(metaclass=ABCMeta):
 
     def to_dict(self):
         return {
-            key.replace('_', '-'): value
+            key.replace("_", "-"): value
             for key, value in vars(self).items()
-            if (not key.startswith('_')) and (value is not None)
+            if (not key.startswith("_")) and (value is not None)
         }
 
     def match(self, other):
@@ -117,7 +117,7 @@ class RouteEntry(StateEntry):
             if self.metric is None:
                 self.metric = Route.USE_DEFAULT_METRIC
             if self.next_hop_address is None:
-                self.next_hop_address = ''
+                self.next_hop_address = ""
 
     def _keys(self):
         return (
@@ -131,12 +131,12 @@ class RouteEntry(StateEntry):
     def __lt__(self, other):
         return (
             self.table_id or Route.USE_DEFAULT_ROUTE_TABLE,
-            self.next_hop_interface or '',
-            self.destination or '',
+            self.next_hop_interface or "",
+            self.destination or "",
         ) < (
             other.table_id or Route.USE_DEFAULT_ROUTE_TABLE,
-            other.next_hop_interface or '',
-            other.destination or '',
+            other.next_hop_interface or "",
+            other.destination or "",
         )
 
     @property
@@ -154,9 +154,9 @@ class RouteRuleEntry(StateEntry):
 
     def complement_defaults(self):
         if self.ip_from is None:
-            self.ip_from = ''
+            self.ip_from = ""
         if self.ip_to is None:
-            self.ip_to = ''
+            self.ip_to = ""
         if self.priority is None:
             self.priority = RouteRule.USE_DEFAULT_PRIORITY
         if (
@@ -171,7 +171,7 @@ class RouteRuleEntry(StateEntry):
     @property
     def absent(self):
         raise NmstateNotImplementedError(
-            'RouteRuleEntry does not support absent property'
+            "RouteRuleEntry does not support absent property"
         )
 
 
@@ -295,7 +295,7 @@ class State:
         If dynamic IP is disabled, all dynamic IP options should be removed.
         """
         for iface_state in self.interfaces.values():
-            for family in ('ipv4', 'ipv6'):
+            for family in ("ipv4", "ipv6"):
                 ip = iface_state[family]
                 if ip.get(InterfaceIP.ENABLED) and (
                     ip.get(InterfaceIP.DHCP) or ip.get(InterfaceIPv6.AUTOCONF)
@@ -501,7 +501,7 @@ class State:
     def _index_routes_by_iface(self):
         iface_routes = defaultdict(list)
         for route in self._config_routes:
-            iface_name = route.get(Route.NEXT_HOP_INTERFACE, '')
+            iface_name = route.get(Route.NEXT_HOP_INTERFACE, "")
             iface_routes[iface_name].append(RouteEntry(route))
         for routes in iface_routes.values():
             routes.sort()
@@ -538,12 +538,12 @@ class State:
 
     def _sort_lag_slaves(self):
         for ifstate in self.interfaces.values():
-            ifstate.get('link-aggregation', {}).get('slaves', []).sort()
+            ifstate.get("link-aggregation", {}).get("slaves", []).sort()
 
     def _sort_bridge_ports(self):
         for ifstate in self.interfaces.values():
-            ifstate.get('bridge', {}).get('port', []).sort(
-                key=itemgetter('name')
+            ifstate.get("bridge", {}).get("port", []).sort(
+                key=itemgetter("name")
             )
 
     def _canonicalize_ipv6(self):
@@ -570,9 +570,9 @@ class State:
 
     def _remove_iface_ipv6_link_local_addr(self):
         for ifstate in self.interfaces.values():
-            ifstate['ipv6'][InterfaceIPv6.ADDRESS] = list(
+            ifstate["ipv6"][InterfaceIPv6.ADDRESS] = list(
                 addr
-                for addr in ifstate['ipv6'][InterfaceIPv6.ADDRESS]
+                for addr in ifstate["ipv6"][InterfaceIPv6.ADDRESS]
                 if not iplib.is_ipv6_link_local_addr(
                     addr[InterfaceIPv6.ADDRESS_IP],
                     addr[InterfaceIPv6.ADDRESS_PREFIX_LENGTH],
@@ -588,7 +588,7 @@ class State:
 
     def _sort_ip_addresses(self):
         for ifstate in self.interfaces.values():
-            for family in ('ipv4', 'ipv6'):
+            for family in ("ipv4", "ipv6"):
                 ifstate[family].get(InterfaceIP.ADDRESS, []).sort(
                     key=itemgetter(InterfaceIP.ADDRESS_IP)
                 )
@@ -601,7 +601,7 @@ class State:
 
     def _remove_empty_description(self):
         for ifstate in self.interfaces.values():
-            if ifstate.get(Interface.DESCRIPTION) == '':
+            if ifstate.get(Interface.DESCRIPTION) == "":
                 del ifstate[Interface.DESCRIPTION]
 
     def _assert_interfaces_equal(self, current_state):
@@ -676,10 +676,10 @@ def _validate_routes(
             continue
         iface_enable_state = iface_enable_states.get(iface_name)
         if iface_enable_state is None:
-            raise NmstateValueError('Cannot set route to non-exist interface')
+            raise NmstateValueError("Cannot set route to non-exist interface")
         if iface_enable_state != InterfaceState.UP:
             raise NmstateValueError(
-                'Cannot set route to {} interface'.format(iface_enable_state)
+                "Cannot set route to {} interface".format(iface_enable_state)
             )
         # Interface is already check, so the ip enable status should be defined
         ipv4_enabled = ipv4_enable_states[iface_name]
@@ -688,11 +688,11 @@ def _validate_routes(
             if iplib.is_ipv6_address(route_obj.destination):
                 if not ipv6_enabled:
                     raise NmstateValueError(
-                        'Cannot set IPv6 route when IPv6 is disabled'
+                        "Cannot set IPv6 route when IPv6 is disabled"
                     )
             elif not ipv4_enabled:
                 raise NmstateValueError(
-                    'Cannot set IPv4 route when IPv4 is disabled'
+                    "Cannot set IPv4 route when IPv4 is disabled"
                 )
 
 

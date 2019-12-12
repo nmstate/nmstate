@@ -37,69 +37,69 @@ from libnmstate.schema import VXLAN
 
 INTERFACES = Constants.INTERFACES
 ROUTES = Constants.ROUTES
-THE_BRIDGE = 'br0'
-VXLAN0 = 'vxlan0'
-TEAM0 = 'team0'
+THE_BRIDGE = "br0"
+VXLAN0 = "vxlan0"
+TEAM0 = "team0"
 
 COMMON_DATA = {
     INTERFACES: [
         {
-            'name': 'lo',
-            'description': 'Loopback Interface',
-            'type': 'unknown',
-            'state': 'down',
-            'link-speed': 1000,
-            'mac-address': '12:34:56:78:90:ab',
-            'mtu': 1500,
+            "name": "lo",
+            "description": "Loopback Interface",
+            "type": "unknown",
+            "state": "down",
+            "link-speed": 1000,
+            "mac-address": "12:34:56:78:90:ab",
+            "mtu": 1500,
             # Read Only entries
-            'if-index': 0,
-            'admin-status': 'up',
-            'link-status': 'down',
-            'phys-address': '12:34:56:78:90:ab',
-            'higher-layer-if': '',
-            'lower-layer-if': '',
-            'low-control': True,
-            'statistics': {
-                'in-octets': 0,
-                'in-unicast-pkts': 0,
-                'in-broadcast-pkts': 0,
-                'in-multicast-pkts': 0,
-                'in-discards': 0,
-                'in-errors': 0,
-                'out-octets': 0,
-                'out-unicast-pkts': 0,
-                'out-broadcast-pkts': 0,
-                'out-multicast-pkts': 0,
-                'out-discards': 0,
-                'out-errors': 0,
+            "if-index": 0,
+            "admin-status": "up",
+            "link-status": "down",
+            "phys-address": "12:34:56:78:90:ab",
+            "higher-layer-if": "",
+            "lower-layer-if": "",
+            "low-control": True,
+            "statistics": {
+                "in-octets": 0,
+                "in-unicast-pkts": 0,
+                "in-broadcast-pkts": 0,
+                "in-multicast-pkts": 0,
+                "in-discards": 0,
+                "in-errors": 0,
+                "out-octets": 0,
+                "out-unicast-pkts": 0,
+                "out-broadcast-pkts": 0,
+                "out-multicast-pkts": 0,
+                "out-discards": 0,
+                "out-errors": 0,
             },
         }
     ],
     ROUTES: {
-        'config': [
+        "config": [
             {
-                'table-id': 254,
-                'metric': 100,
-                'destination': '0.0.0.0/0',
-                'next-hop-interface': 'eth0',
-                'next-hop-address': '192.0.2.1',
+                "table-id": 254,
+                "metric": 100,
+                "destination": "0.0.0.0/0",
+                "next-hop-interface": "eth0",
+                "next-hop-address": "192.0.2.1",
             }
         ],
-        'running': [
+        "running": [
             {
-                'table-id': 254,
-                'metric': 100,
-                'destination': '::/0',
-                'next-hop-interface': 'eth0',
-                'next-hop-address': 'fe80::1',
+                "table-id": 254,
+                "metric": 100,
+                "destination": "::/0",
+                "next-hop-interface": "eth0",
+                "next-hop-address": "fe80::1",
             }
         ],
     },
     RouteRule.KEY: {
         RouteRule.CONFIG: [
             {
-                RouteRule.IP_FROM: '192.0.2.0/24',
-                RouteRule.IP_TO: '198.51.100.0/24',
+                RouteRule.IP_FROM: "192.0.2.0/24",
+                RouteRule.IP_TO: "198.51.100.0/24",
                 RouteRule.PRIORITY: 500,
                 RouteRule.ROUTE_TABLE: 254,
             }
@@ -127,7 +127,7 @@ def default_data():
 def portless_bridge_state():
     return {
         Interface.NAME: THE_BRIDGE,
-        Interface.STATE: 'up',
+        Interface.STATE: "up",
         Interface.TYPE: LB.TYPE,
         LB.CONFIG_SUBTREE: {LB.PORT_SUBTREE: []},
     }
@@ -135,7 +135,7 @@ def portless_bridge_state():
 
 @pytest.fixture
 def bridge_state(portless_bridge_state):
-    port = {LB.Port.NAME: 'eth1', LB.Port.VLAN_SUBTREE: {}}
+    port = {LB.Port.NAME: "eth1", LB.Port.VLAN_SUBTREE: {}}
     portless_bridge_state[LB.CONFIG_SUBTREE][LB.PORT_SUBTREE].append(port)
     return portless_bridge_state
 
@@ -144,7 +144,7 @@ def bridge_state(portless_bridge_state):
 def portless_ovs_bridge_state():
     return {
         Interface.NAME: THE_BRIDGE,
-        Interface.STATE: 'up',
+        Interface.STATE: "up",
         Interface.TYPE: OVSBridge.TYPE,
         LB.CONFIG_SUBTREE: {OVSBridge.PORT_SUBTREE: []},
     }
@@ -152,7 +152,7 @@ def portless_ovs_bridge_state():
 
 @pytest.fixture
 def ovs_bridge_state(portless_ovs_bridge_state):
-    port = {LB.Port.NAME: 'eth1', OVSBridge.Port.VLAN_SUBTREE: {}}
+    port = {LB.Port.NAME: "eth1", OVSBridge.Port.VLAN_SUBTREE: {}}
     ovs_bridge_state_config = portless_ovs_bridge_state[
         OVSBridge.CONFIG_SUBTREE
     ]
@@ -165,13 +165,13 @@ class TestIfaceCommon:
         libnmstate.validator.validate(default_data)
 
     def test_invalid_instance(self, default_data):
-        default_data[INTERFACES][0]['state'] = 'bad-state'
+        default_data[INTERFACES][0]["state"] = "bad-state"
 
         with pytest.raises(js.ValidationError):
             libnmstate.validator.validate(default_data)
 
     def test_invalid_type(self, default_data):
-        default_data[INTERFACES][0]['type'] = 'bad-type'
+        default_data[INTERFACES][0]["type"] = "bad-type"
 
         with pytest.raises(js.ValidationError):
             libnmstate.validator.validate(default_data)
@@ -180,13 +180,13 @@ class TestIfaceCommon:
 class TestIfaceTypeEthernet:
     def test_valid_ethernet_with_auto_neg(self, default_data):
         default_data[INTERFACES][0].update(
-            {'type': 'ethernet', 'auto-negotiation': True}
+            {"type": "ethernet", "auto-negotiation": True}
         )
         libnmstate.validator.validate(default_data)
 
     def test_valid_ethernet_without_auto_neg(self, default_data):
         default_data[INTERFACES][0].update(
-            {'auto-negotiation': False, 'link-speed': 1000, 'duplex': 'full'}
+            {"auto-negotiation": False, "link-speed": 1000, "duplex": "full"}
         )
         libnmstate.validator.validate(default_data)
 
@@ -197,13 +197,13 @@ class TestIfaceTypeEthernet:
         at the moment, deferring the handling to the application code.
         """
         default_data[INTERFACES][0].update(
-            {'type': 'ethernet', 'auto-negotiation': False}
+            {"type": "ethernet", "auto-negotiation": False}
         )
-        del default_data[INTERFACES][0]['link-speed']
+        del default_data[INTERFACES][0]["link-speed"]
 
         libnmstate.validator.validate(default_data)
 
-    @pytest.mark.parametrize('valid_values', [0, 150, 256])
+    @pytest.mark.parametrize("valid_values", [0, 150, 256])
     def test_valid_with_sriov_total_vfs(self, default_data, valid_values):
         default_data[Interface.KEY][0].update(
             {
@@ -215,7 +215,7 @@ class TestIfaceTypeEthernet:
         )
         libnmstate.validator.validate(default_data)
 
-    @pytest.mark.parametrize('invalid_values', [-50, -1])
+    @pytest.mark.parametrize("invalid_values", [-50, -1])
     def test_over_maximum_total_vfs_is_invalid(
         self, default_data, invalid_values
     ):
@@ -239,9 +239,9 @@ class TestIfaceTypeVxlan:
                 Interface.NAME: VXLAN0,
                 Interface.TYPE: VXLAN.TYPE,
                 VXLAN.CONFIG_SUBTREE: {
-                    VXLAN.ID: 'badtype',
-                    VXLAN.BASE_IFACE: 'eth1',
-                    VXLAN.REMOTE: '192.168.3.3',
+                    VXLAN.ID: "badtype",
+                    VXLAN.BASE_IFACE: "eth1",
+                    VXLAN.REMOTE: "192.168.3.3",
                 },
             }
         )
@@ -256,8 +256,8 @@ class TestIfaceTypeVxlan:
                 Interface.TYPE: VXLAN.TYPE,
                 VXLAN.CONFIG_SUBTREE: {
                     VXLAN.ID: 16777216,
-                    VXLAN.BASE_IFACE: 'eth1',
-                    VXLAN.REMOTE: '192.168.3.3',
+                    VXLAN.BASE_IFACE: "eth1",
+                    VXLAN.REMOTE: "192.168.3.3",
                 },
             }
         )
@@ -291,7 +291,7 @@ class TestIfaceTypeTeam:
                 Interface.NAME: TEAM0,
                 Interface.TYPE: Team.TYPE,
                 Team.CONFIG_SUBTREE: {
-                    Team.PORT_SUBTREE: [{Team.Port.NAME: 'eth1'}]
+                    Team.PORT_SUBTREE: [{Team.Port.NAME: "eth1"}]
                 },
             }
         )
@@ -320,7 +320,7 @@ class TestIfaceTypeTeam:
                 Interface.NAME: TEAM0,
                 Interface.TYPE: Team.TYPE,
                 Team.CONFIG_SUBTREE: {
-                    Team.PORT_SUBTREE: [{Team.Port.NAME: 'eth1'}],
+                    Team.PORT_SUBTREE: [{Team.Port.NAME: "eth1"}],
                     Team.RUNNER_SUBTREE: {
                         Team.Runner.NAME: Team.Runner.RunnerMode.LOAD_BALANCE
                     },
@@ -333,18 +333,18 @@ class TestIfaceTypeTeam:
 
 class TestRoutes:
     def test_valid_state_absent(self, default_data):
-        default_data[ROUTES]['config'][0]['state'] = 'absent'
+        default_data[ROUTES]["config"][0]["state"] = "absent"
         libnmstate.validator.validate(default_data)
 
     def test_invalid_state(self, default_data):
-        default_data[ROUTES]['config'][0]['state'] = 'bad-state'
+        default_data[ROUTES]["config"][0]["state"] = "bad-state"
 
         with pytest.raises(js.ValidationError):
             libnmstate.validator.validate(default_data)
 
 
 class TestLinuxBridgeVlanFiltering:
-    @pytest.mark.parametrize('port_type', argvalues=['trunk', 'access'])
+    @pytest.mark.parametrize("port_type", argvalues=["trunk", "access"])
     def test_vlan_port_types(self, default_data, bridge_state, port_type):
         valid_port_type = self._generate_vlan_filtering_config(port_type)
         the_port = bridge_state[LB.CONFIG_SUBTREE][LB.PORT_SUBTREE][0]
@@ -354,7 +354,7 @@ class TestLinuxBridgeVlanFiltering:
         libnmstate.validator.validate(default_data)
 
     def test_invalid_vlan_port_type(self, default_data, bridge_state):
-        invalid_port_type = self._generate_vlan_filtering_config('fake-type')
+        invalid_port_type = self._generate_vlan_filtering_config("fake-type")
         the_port = bridge_state[LB.CONFIG_SUBTREE][LB.PORT_SUBTREE][0]
         the_port.update(invalid_port_type)
         default_data[Interface.KEY].append(bridge_state)
@@ -364,7 +364,7 @@ class TestLinuxBridgeVlanFiltering:
 
     def test_access_port_accepted(self, default_data, bridge_state):
         vlan_access_port_state = self._generate_vlan_filtering_config(
-            'access', access_tag=101
+            "access", access_tag=101
         )
         the_port = bridge_state[LB.CONFIG_SUBTREE][LB.PORT_SUBTREE][0]
         the_port.update(vlan_access_port_state)
@@ -374,7 +374,7 @@ class TestLinuxBridgeVlanFiltering:
 
     def test_wrong_access_port_tag_type(self, default_data, bridge_state):
         invalid_access_port_tag_type = self._generate_vlan_filtering_config(
-            'access', access_tag='holy-guacamole!'
+            "access", access_tag="holy-guacamole!"
         )
         the_port = bridge_state[LB.CONFIG_SUBTREE][LB.PORT_SUBTREE][0]
         the_port.update(invalid_access_port_tag_type)
@@ -385,7 +385,7 @@ class TestLinuxBridgeVlanFiltering:
 
     def test_wrong_access_tag_range(self, default_data, bridge_state):
         invalid_vlan_id_range = self._generate_vlan_filtering_config(
-            'access', access_tag=48000
+            "access", access_tag=48000
         )
         the_port = bridge_state[LB.CONFIG_SUBTREE][LB.PORT_SUBTREE][0]
         the_port.update(invalid_vlan_id_range)
@@ -395,13 +395,13 @@ class TestLinuxBridgeVlanFiltering:
             libnmstate.validator.validate(default_data)
 
     @pytest.mark.parametrize(
-        'is_native_vlan', argvalues=[True, False], ids=['native', 'not-native']
+        "is_native_vlan", argvalues=[True, False], ids=["native", "not-native"]
     )
     def test_trunk_port_native_vlan(
         self, default_data, bridge_state, is_native_vlan
     ):
         vlan_access_port_state = self._generate_vlan_filtering_config(
-            'trunk',
+            "trunk",
             access_tag=101 if is_native_vlan else None,
             native_vlan=is_native_vlan,
         )
@@ -415,7 +415,7 @@ class TestLinuxBridgeVlanFiltering:
         trunk_tags = self._generate_vlan_id_config(101, 102, 103)
         trunk_tags.append(self._generate_vlan_id_range_config(500, 1000))
         vlan_trunk_tags_port_state = self._generate_vlan_filtering_config(
-            'trunk', trunk_tags=trunk_tags
+            "trunk", trunk_tags=trunk_tags
         )
         the_port = bridge_state[LB.CONFIG_SUBTREE][LB.PORT_SUBTREE][0]
         the_port.update(vlan_trunk_tags_port_state)
@@ -425,7 +425,7 @@ class TestLinuxBridgeVlanFiltering:
 
     def test_invalid_trunk_port_vlan_range(self, default_data, bridge_state):
         invalid_port_vlan_configuration = self._generate_vlan_filtering_config(
-            'trunk',
+            "trunk",
             trunk_tags=[self._generate_vlan_id_range_config(100, 5000)],
         )
         the_port = bridge_state[LB.CONFIG_SUBTREE][LB.PORT_SUBTREE][0]
@@ -466,7 +466,7 @@ class TestLinuxBridgeVlanFiltering:
 
 
 class TestOvsBridgeVlan:
-    @pytest.mark.parametrize('vlan_mode', argvalues=['trunk', 'access'])
+    @pytest.mark.parametrize("vlan_mode", argvalues=["trunk", "access"])
     def test_vlan_port_modes(self, default_data, ovs_bridge_state, vlan_mode):
         valid_vlan_mode = self._generate_vlan_config(vlan_mode)
         bridge_state_config = ovs_bridge_state[OVSBridge.CONFIG_SUBTREE]
@@ -477,7 +477,7 @@ class TestOvsBridgeVlan:
         libnmstate.validator.validate(default_data)
 
     def test_invalid_vlan_port_mode(self, default_data, ovs_bridge_state):
-        invalid_vlan_mode = self._generate_vlan_config('fake-mode')
+        invalid_vlan_mode = self._generate_vlan_config("fake-mode")
         bridge_state_config = ovs_bridge_state[OVSBridge.CONFIG_SUBTREE]
         the_port = bridge_state_config[OVSBridge.PORT_SUBTREE][0]
         the_port.update(invalid_vlan_mode)
@@ -488,7 +488,7 @@ class TestOvsBridgeVlan:
 
     def test_access_port_accepted(self, default_data, ovs_bridge_state):
         vlan_access_port_state = self._generate_vlan_config(
-            'access', access_tag=101
+            "access", access_tag=101
         )
         bridge_state_config = ovs_bridge_state[OVSBridge.CONFIG_SUBTREE]
         the_port = bridge_state_config[OVSBridge.PORT_SUBTREE][0]
@@ -499,7 +499,7 @@ class TestOvsBridgeVlan:
 
     def test_wrong_access_port_tag_mode(self, default_data, ovs_bridge_state):
         invalid_access_port_tag_mode = self._generate_vlan_config(
-            'access', access_tag='holy-guacamole!'
+            "access", access_tag="holy-guacamole!"
         )
         bridge_state_config = ovs_bridge_state[OVSBridge.CONFIG_SUBTREE]
         the_port = bridge_state_config[OVSBridge.PORT_SUBTREE][0]
@@ -511,7 +511,7 @@ class TestOvsBridgeVlan:
 
     def test_wrong_access_tag_range(self, default_data, ovs_bridge_state):
         invalid_vlan_id_range = self._generate_vlan_config(
-            'access', access_tag=48000
+            "access", access_tag=48000
         )
         bridge_state_config = ovs_bridge_state[OVSBridge.CONFIG_SUBTREE]
         the_port = bridge_state_config[OVSBridge.PORT_SUBTREE][0]
@@ -522,13 +522,13 @@ class TestOvsBridgeVlan:
             libnmstate.validator.validate(default_data)
 
     @pytest.mark.parametrize(
-        'is_native_vlan', argvalues=[True, False], ids=['native', 'not-native']
+        "is_native_vlan", argvalues=[True, False], ids=["native", "not-native"]
     )
     def test_trunk_port_native_vlan(
         self, default_data, ovs_bridge_state, is_native_vlan
     ):
         vlan_access_port_state = self._generate_vlan_config(
-            'trunk',
+            "trunk",
             access_tag=101 if is_native_vlan else None,
             native_vlan=is_native_vlan,
         )
@@ -543,7 +543,7 @@ class TestOvsBridgeVlan:
         trunk_tags = self._generate_vlan_id_config(101, 102, 103)
         trunk_tags.append(self._generate_vlan_id_range_config(500, 1000))
         vlan_trunk_tags_port_state = self._generate_vlan_config(
-            'trunk', trunk_tags=trunk_tags
+            "trunk", trunk_tags=trunk_tags
         )
         bridge_state_config = ovs_bridge_state[OVSBridge.CONFIG_SUBTREE]
         the_port = bridge_state_config[OVSBridge.PORT_SUBTREE][0]
@@ -556,7 +556,7 @@ class TestOvsBridgeVlan:
         self, default_data, ovs_bridge_state
     ):
         invalid_port_vlan_configuration = self._generate_vlan_config(
-            'trunk',
+            "trunk",
             trunk_tags=[self._generate_vlan_id_range_config(100, 5000)],
         )
         bridge_state_config = ovs_bridge_state[OVSBridge.CONFIG_SUBTREE]
@@ -603,7 +603,7 @@ class TestOvsBridgeVlan:
 class TestRouteRules:
     def test_non_interger_route_table(self, default_data):
         route_rules = default_data[RouteRule.KEY][RouteRule.CONFIG]
-        route_rules[0][RouteRule.ROUTE_TABLE] = 'main'
+        route_rules[0][RouteRule.ROUTE_TABLE] = "main"
 
         with pytest.raises(js.ValidationError):
             libnmstate.validator.validate(default_data)
@@ -612,18 +612,18 @@ class TestRouteRules:
 class TestOVSBridgeLinkAggregation:
     def test_valid_link_aggregation_port(self, default_data):
         link_aggregation_port = {
-            OVSBridge.Port.NAME: 'bond',
+            OVSBridge.Port.NAME: "bond",
             OVSBridge.Port.LINK_AGGREGATION_SUBTREE: {
-                OVSBridge.Port.LinkAggregation.MODE: 'bond-mode',
+                OVSBridge.Port.LinkAggregation.MODE: "bond-mode",
                 OVSBridge.Port.LinkAggregation.SLAVES_SUBTREE: [
-                    {OVSBridge.Port.LinkAggregation.Slave.NAME: 'iface1'},
-                    {OVSBridge.Port.LinkAggregation.Slave.NAME: 'iface2'},
+                    {OVSBridge.Port.LinkAggregation.Slave.NAME: "iface1"},
+                    {OVSBridge.Port.LinkAggregation.Slave.NAME: "iface2"},
                 ],
             },
         }
         default_data[Interface.KEY].append(
             {
-                Interface.NAME: 'bridge',
+                Interface.NAME: "bridge",
                 Interface.TYPE: InterfaceType.OVS_BRIDGE,
                 OVSBridge.CONFIG_SUBTREE: {
                     OVSBridge.PORT_SUBTREE: [link_aggregation_port]

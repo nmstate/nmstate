@@ -43,7 +43,7 @@ from .testlib.assertlib import assert_mac_address
 from .testlib.vlan import vlan_interface
 from .testlib.env import is_fedora
 
-TEST_BRIDGE0 = 'linux-br0'
+TEST_BRIDGE0 = "linux-br0"
 
 
 BRIDGE_OPTIONS_YAML = """
@@ -106,7 +106,7 @@ def _bridge0_with_port0(port0_up, use_port_mac=False):
 def port0_vlan101(port0_up):
     vlan_id = 101
     vlan_base_iface = port0_up[Interface.KEY][0][Interface.NAME]
-    port_name = '{}.{}'.format(vlan_base_iface, vlan_id)
+    port_name = "{}.{}".format(vlan_base_iface, vlan_id)
     with vlan_interface(port_name, vlan_id, vlan_base_iface):
         state = show_only((port_name,))
         yield state
@@ -114,7 +114,7 @@ def port0_vlan101(port0_up):
 
 @pytest.fixture
 def bond0(port0_up):
-    bond_name = 'testbond0'
+    bond_name = "testbond0"
     port_name = port0_up[Interface.KEY][0][Interface.NAME]
     with bond_interface(bond_name, [port_name], create=False) as bond0:
         yield bond0
@@ -194,7 +194,7 @@ def test_create_vlan_as_slave_of_linux_bridge(port0_vlan101):
 def test_create_vlan_over_linux_bridge(bridge0_with_port0):
     vlan_base_iface = TEST_BRIDGE0
     vlan_id = 101
-    port_name = '{}.{}'.format(vlan_base_iface, vlan_id)
+    port_name = "{}.{}".format(vlan_base_iface, vlan_id)
     with vlan_interface(port_name, vlan_id, vlan_base_iface) as desired_state:
         assertlib.assert_state(desired_state)
 
@@ -215,8 +215,8 @@ def test_add_port_to_existing_bridge(bridge0_with_port0, port1_up):
 @pytest.mark.xfail(
     is_fedora(),
     reason=(
-        'On Fedora 31+, users need to explicitly configure the port MAC '
-        'due to changes to the default systemd config.'
+        "On Fedora 31+, users need to explicitly configure the port MAC "
+        "due to changes to the default systemd config."
     ),
     raises=AssertionError,
     strict=True,
@@ -348,7 +348,7 @@ def test_rollback_for_linux_bridge():
     bridge_state = _create_bridge_subtree_config(())
     with pytest.raises(NmstateVerificationError):
         with linux_bridge(bridge_name, bridge_state) as desired_state:
-            desired_state[Interface.KEY][0]['invalid_key'] = 'foo'
+            desired_state[Interface.KEY][0]["invalid_key"] = "foo"
             libnmstate.apply(desired_state)
 
     time.sleep(5)  # Give some time for NetworkManager to rollback
@@ -378,7 +378,7 @@ def test_activate_empty_bridge_does_not_blocked_by_dhcp():
 
 @pytest.mark.xfail(
     raises=NmstateNotImplementedError,
-    reason='https://nmstate.atlassian.net/browse/NMSTATE-230',
+    reason="https://nmstate.atlassian.net/browse/NMSTATE-230",
     strict=True,
 )
 def test_port_vlan_not_implemented(port0_up):

@@ -52,17 +52,17 @@ def minimal_ethtool(interface):
         sockfd = sock.fileno()
 
         ecmd = array.array(
-            'B', struct.pack('I39s', ETHTOOL_GSET, b'\x00' * 39)
+            "B", struct.pack("I39s", ETHTOOL_GSET, b"\x00" * 39)
         )
 
-        interface = interface.encode('utf-8')
-        ifreq = struct.pack('16sP', interface, ecmd.buffer_info()[0])
+        interface = interface.encode("utf-8")
+        ifreq = struct.pack("16sP", interface, ecmd.buffer_info()[0])
 
         fcntl.ioctl(sockfd, SIOCETHTOOL, ifreq)
         # pylint: disable=no-member
-        res = ecmd.tobytes() if hasattr(ecmd, 'tobytes') else ecmd.tostring()
+        res = ecmd.tobytes() if hasattr(ecmd, "tobytes") else ecmd.tostring()
         # pylint: enable=no-member
-        speed, duplex, auto = struct.unpack('12xHB3xB24x', res)
+        speed, duplex, auto = struct.unpack("12xHB3xB24x", res)
     except IOError:
         speed, duplex, auto = 65535, 255, 255
     finally:
@@ -72,9 +72,9 @@ def minimal_ethtool(interface):
         speed = 0
 
     if duplex == 255:
-        duplex = 'unknown'
+        duplex = "unknown"
     else:
-        duplex = 'full' if bool(duplex) else 'half'
+        duplex = "full" if bool(duplex) else "half"
 
     if auto == 255:
         auto = None
