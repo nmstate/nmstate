@@ -41,10 +41,10 @@ from .testlib.bridgelib import linux_bridge
 from .testlib.bridgelib import add_port_to_bridge
 from .testlib.bridgelib import create_bridge_subtree_state
 
-BOND99 = 'bond99'
+BOND99 = "bond99"
 
-MAC0 = '02:ff:ff:ff:ff:00'
-MAC1 = '02:ff:ff:ff:ff:01'
+MAC0 = "02:ff:ff:ff:ff:00"
+MAC1 = "02:ff:ff:ff:ff:01"
 
 BOND99_YAML_BASE = """
 interfaces:
@@ -65,7 +65,7 @@ def setup_remove_bond99():
     remove_bond = {
         Interface.KEY: [
             {
-                Interface.NAME: 'bond99',
+                Interface.NAME: "bond99",
                 Interface.TYPE: InterfaceType.BOND,
                 Interface.STATE: InterfaceState.ABSENT,
             }
@@ -80,7 +80,7 @@ def bond99_with_2_slaves(eth1_up, eth2_up):
         eth1_up[Interface.KEY][0][Interface.NAME],
         eth2_up[Interface.KEY][0][Interface.NAME],
     ]
-    with bond_interface('bond99', slaves) as state:
+    with bond_interface("bond99", slaves) as state:
         yield state
 
 
@@ -133,7 +133,7 @@ def test_remove_bond_with_minimum_desired_state(eth1_up, eth2_up):
 
 
 def test_add_bond_without_slaves():
-    with bond_interface(name='bond99', slaves=[]) as state:
+    with bond_interface(name="bond99", slaves=[]) as state:
 
         assert state[Interface.KEY][0][Bond.CONFIG_SUBTREE][Bond.SLAVES] == []
 
@@ -142,14 +142,14 @@ def test_add_bond_with_slaves_and_ipv4(eth1_up, eth2_up, setup_remove_bond99):
     desired_bond_state = {
         Interface.KEY: [
             {
-                Interface.NAME: 'bond99',
+                Interface.NAME: "bond99",
                 Interface.TYPE: InterfaceType.BOND,
                 Interface.STATE: InterfaceState.UP,
                 Interface.IPV4: {
                     InterfaceIPv4.ENABLED: True,
                     InterfaceIPv4.ADDRESS: [
                         {
-                            InterfaceIPv4.ADDRESS_IP: '192.168.122.250',
+                            InterfaceIPv4.ADDRESS_IP: "192.168.122.250",
                             InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
                         }
                     ],
@@ -160,7 +160,7 @@ def test_add_bond_with_slaves_and_ipv4(eth1_up, eth2_up, setup_remove_bond99):
                         eth1_up[Interface.KEY][0][Interface.NAME],
                         eth2_up[Interface.KEY][0][Interface.NAME],
                     ],
-                    Bond.OPTIONS_SUBTREE: {'miimon': '140'},
+                    Bond.OPTIONS_SUBTREE: {"miimon": "140"},
                 },
             }
         ]
@@ -176,14 +176,14 @@ def test_rollback_for_bond(eth1_up, eth2_up):
     desired_state = {
         Interface.KEY: [
             {
-                Interface.NAME: 'bond99',
+                Interface.NAME: "bond99",
                 Interface.TYPE: InterfaceType.BOND,
                 Interface.STATE: InterfaceState.UP,
                 Interface.IPV4: {
                     InterfaceIPv4.ENABLED: True,
                     InterfaceIPv4.ADDRESS: [
                         {
-                            InterfaceIPv4.ADDRESS_IP: '192.168.122.250',
+                            InterfaceIPv4.ADDRESS_IP: "192.168.122.250",
                             InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
                         }
                     ],
@@ -194,13 +194,13 @@ def test_rollback_for_bond(eth1_up, eth2_up):
                         eth1_up[Interface.KEY][0][Interface.NAME],
                         eth2_up[Interface.KEY][0][Interface.NAME],
                     ],
-                    Bond.OPTIONS_SUBTREE: {'miimon': '140'},
+                    Bond.OPTIONS_SUBTREE: {"miimon": "140"},
                 },
             }
         ]
     }
 
-    desired_state[Interface.KEY][0]['invalid_key'] = 'foo'
+    desired_state[Interface.KEY][0]["invalid_key"] = "foo"
 
     with pytest.raises(NmstateVerificationError):
         libnmstate.apply(desired_state)
@@ -333,18 +333,18 @@ def test_bond_with_empty_ipv6_static_address(eth1_up):
         }
     }
     with bond_interface(
-        name='bond99', slaves=['eth1'], extra_iface_state=extra_iface_state
+        name="bond99", slaves=["eth1"], extra_iface_state=extra_iface_state
     ) as bond_state:
         assertlib.assert_state(bond_state)
 
-    assertlib.assert_absent('bond99')
+    assertlib.assert_absent("bond99")
 
 
 def test_create_vlan_over_a_bond_slave(bond99_with_slave):
     bond_ifstate = bond99_with_slave[Interface.KEY][0]
     bond_slave_ifname = bond_ifstate[Bond.CONFIG_SUBTREE][Bond.SLAVES][0]
     vlan_id = 102
-    vlan_iface_name = '{}.{}'.format(bond_slave_ifname, vlan_id)
+    vlan_iface_name = "{}.{}".format(bond_slave_ifname, vlan_id)
     with vlan_interface(
         vlan_iface_name, vlan_id, bond_slave_ifname
     ) as desired_state:
@@ -354,11 +354,11 @@ def test_create_vlan_over_a_bond_slave(bond99_with_slave):
 
 def test_create_linux_bridge_over_bond(bond99_with_slave):
     port_state = {
-        'stp-hairpin-mode': False,
-        'stp-path-cost': 100,
-        'stp-priority': 32,
+        "stp-hairpin-mode": False,
+        "stp-path-cost": 100,
+        "stp-priority": 32,
     }
-    bridge_name = 'linux-br0'
+    bridge_name = "linux-br0"
     bridge_state = add_port_to_bridge(
         create_bridge_subtree_state(), BOND99, port_state
     )
@@ -370,7 +370,7 @@ def test_create_linux_bridge_over_bond(bond99_with_slave):
     strict=True, reason="https://nmstate.atlassian.net/browse/NMSTATE-272"
 )
 def test_preserve_bond_after_bridge_removal(bond99_with_slave):
-    bridge_name = 'linux-br0'
+    bridge_name = "linux-br0"
     bridge_state = add_port_to_bridge(create_bridge_subtree_state(), BOND99)
     with linux_bridge(bridge_name, bridge_state) as desired_state:
         assertlib.assert_state_match(desired_state)
@@ -380,7 +380,7 @@ def test_preserve_bond_after_bridge_removal(bond99_with_slave):
 def test_create_vlan_over_a_bond(bond99_with_slave):
     vlan_base_iface = bond99_with_slave[Interface.KEY][0][Interface.NAME]
     vlan_id = 102
-    vlan_iface_name = '{}.{}'.format(vlan_base_iface, vlan_id)
+    vlan_iface_name = "{}.{}".format(vlan_base_iface, vlan_id)
     with vlan_interface(
         vlan_iface_name, vlan_id, vlan_base_iface
     ) as desired_state:

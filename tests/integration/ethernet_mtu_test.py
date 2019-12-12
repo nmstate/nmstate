@@ -33,7 +33,7 @@ from .testlib.iproutelib import ip_monitor_assert_stable_link_up
 from .testlib.vlan import vlan_interface
 
 
-@pytest.fixture(scope='function', autouse=True)
+@pytest.fixture(scope="function", autouse=True)
 def eth1(eth1_up):
     pass
 
@@ -46,7 +46,7 @@ def eth1_with_ipv6(eth1_up):
 
 
 def test_increase_iface_mtu():
-    desired_state = statelib.show_only(('eth1',))
+    desired_state = statelib.show_only(("eth1",))
     eth1_desired_state = desired_state[Interface.KEY][0]
     eth1_desired_state[Interface.MTU] = 1900
 
@@ -56,7 +56,7 @@ def test_increase_iface_mtu():
 
 
 def test_decrease_iface_mtu():
-    desired_state = statelib.show_only(('eth1',))
+    desired_state = statelib.show_only(("eth1",))
     eth1_desired_state = desired_state[Interface.KEY][0]
     eth1_desired_state[Interface.MTU] = 1400
 
@@ -66,7 +66,7 @@ def test_decrease_iface_mtu():
 
 
 def test_upper_limit_jambo_iface_mtu():
-    desired_state = statelib.show_only(('eth1',))
+    desired_state = statelib.show_only(("eth1",))
     eth1_desired_state = desired_state[Interface.KEY][0]
     eth1_desired_state[Interface.MTU] = 9000
 
@@ -76,7 +76,7 @@ def test_upper_limit_jambo_iface_mtu():
 
 
 def test_increase_more_than_jambo_iface_mtu():
-    desired_state = statelib.show_only(('eth1',))
+    desired_state = statelib.show_only(("eth1",))
     eth1_desired_state = desired_state[Interface.KEY][0]
     eth1_desired_state[Interface.MTU] = 10000
 
@@ -86,33 +86,33 @@ def test_increase_more_than_jambo_iface_mtu():
 
 
 def test_decrease_to_zero_iface_mtu():
-    desired_state = statelib.show_only(('eth1',))
+    desired_state = statelib.show_only(("eth1",))
     origin_desired_state = copy.deepcopy(desired_state)
     eth1_desired_state = desired_state[Interface.KEY][0]
     eth1_desired_state[Interface.MTU] = 0
 
     with pytest.raises(NmstateVerificationError) as err:
         libnmstate.apply(desired_state)
-    assert '-mtu: 0' in err.value.args[0]
+    assert "-mtu: 0" in err.value.args[0]
     # FIXME: Drop the sleep when the waiting logic is implemented.
     time.sleep(2)
     assertlib.assert_state(origin_desired_state)
 
 
 def test_decrease_to_negative_iface_mtu():
-    desired_state = statelib.show_only(('eth1',))
+    desired_state = statelib.show_only(("eth1",))
     origin_desired_state = copy.deepcopy(desired_state)
     eth1_desired_state = desired_state[Interface.KEY][0]
     eth1_desired_state[Interface.MTU] = -1
 
     with pytest.raises(js.ValidationError) as err:
         libnmstate.apply(desired_state)
-    assert '-1' in err.value.args[0]
+    assert "-1" in err.value.args[0]
     assertlib.assert_state(origin_desired_state)
 
 
 def test_decrease_to_ipv6_min_ethernet_frame_size_iface_mtu(eth1_with_ipv6):
-    desired_state = statelib.show_only(('eth1',))
+    desired_state = statelib.show_only(("eth1",))
     eth1_desired_state = desired_state[Interface.KEY][0]
     eth1_desired_state[Interface.MTU] = 1280
 
@@ -122,24 +122,24 @@ def test_decrease_to_ipv6_min_ethernet_frame_size_iface_mtu(eth1_with_ipv6):
 
 
 def test_decrease_to_lower_than_min_ipv6_iface_mtu(eth1_with_ipv6):
-    original_state = statelib.show_only(('eth1',))
+    original_state = statelib.show_only(("eth1",))
     desired_state = copy.deepcopy(original_state)
     eth1_desired_state = desired_state[Interface.KEY][0]
     eth1_desired_state[Interface.MTU] = 1279
 
     with pytest.raises(NmstateVerificationError) as err:
         libnmstate.apply(desired_state)
-    assert '1279' in err.value.args[0]
+    assert "1279" in err.value.args[0]
     # FIXME: Drop the sleep when the waiting logic is implemented.
     time.sleep(2)
     assertlib.assert_state(original_state)
 
 
-@pytest.mark.xfail(reason='https://bugzilla.redhat.com/1751079', strict=True)
+@pytest.mark.xfail(reason="https://bugzilla.redhat.com/1751079", strict=True)
 def test_set_mtu_on_two_vlans_with_a_shared_base(eth1_up):
     base_ifname = eth1_up[Interface.KEY][0][Interface.NAME]
-    v101 = vlan_interface('eth1.101', 101, base_ifname)
-    v102 = vlan_interface('eth1.102', 102, base_ifname)
+    v101 = vlan_interface("eth1.101", 101, base_ifname)
+    v102 = vlan_interface("eth1.102", 102, base_ifname)
     with v101 as v101_state, v102 as v102_state:
         desired_state = {
             Interface.KEY: [
@@ -156,9 +156,9 @@ def test_set_mtu_on_two_vlans_with_a_shared_base(eth1_up):
         assertlib.assert_state(desired_state)
 
 
-@ip_monitor_assert_stable_link_up('eth1')
+@ip_monitor_assert_stable_link_up("eth1")
 def test_change_mtu_with_stable_link_up(eth1_up):
-    desired_state = statelib.show_only(('eth1',))
+    desired_state = statelib.show_only(("eth1",))
     eth1_desired_state = desired_state[Interface.KEY][0]
     eth1_desired_state[Interface.MTU] = 1900
 

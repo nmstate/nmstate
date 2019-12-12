@@ -34,21 +34,21 @@ from libnmstate.schema import RouteRule
 
 from .testlib import iprule
 
-IPV4_ADDRESS1 = '192.0.2.251'
+IPV4_ADDRESS1 = "192.0.2.251"
 IPV4_ROUTE_TABLE_ID1 = 50
 IPV4_ROUTE_TABLE_ID2 = 51
 
-IPV6_ADDRESS1 = '2001:db8:1::1'
+IPV6_ADDRESS1 = "2001:db8:1::1"
 IPV6_ROUTE_TABLE_ID1 = 50
 IPV6_ROUTE_TABLE_ID2 = 51
 
-IPV4_DNS_NAMESERVER = '8.8.8.8'
-IPV6_DNS_NAMESERVER = '2001:4860:4860::8888'
-DNS_SEARCHES = ['example.org', 'example.com']
+IPV4_DNS_NAMESERVER = "8.8.8.8"
+IPV6_DNS_NAMESERVER = "2001:4860:4860::8888"
+DNS_SEARCHES = ["example.org", "example.com"]
 
 
 ETH1_INTERFACE_STATE = {
-    Interface.NAME: 'eth1',
+    Interface.NAME: "eth1",
     Interface.STATE: InterfaceState.UP,
     Interface.TYPE: InterfaceType.ETHERNET,
     Interface.IPV4: {
@@ -166,13 +166,13 @@ def test_change_gateway(eth1_up):
                 Route.CONFIG: [
                     {
                         Route.STATE: Route.STATE_ABSENT,
-                        Route.NEXT_HOP_INTERFACE: 'eth1',
-                        Route.DESTINATION: '0.0.0.0/0',
+                        Route.NEXT_HOP_INTERFACE: "eth1",
+                        Route.DESTINATION: "0.0.0.0/0",
                     },
                     {
                         Route.STATE: Route.STATE_ABSENT,
-                        Route.NEXT_HOP_INTERFACE: 'eth1',
-                        Route.DESTINATION: '::/0',
+                        Route.NEXT_HOP_INTERFACE: "eth1",
+                        Route.DESTINATION: "::/0",
                     },
                 ]
                 + routes
@@ -197,7 +197,7 @@ def _assert_routes(routes, state):
     routes.sort(key=_route_sort_key)
     config_routes = []
     for config_route in state[Route.KEY][Route.CONFIG]:
-        if config_route[Route.NEXT_HOP_INTERFACE] == 'eth1':
+        if config_route[Route.NEXT_HOP_INTERFACE] == "eth1":
             config_routes.append(config_route)
 
     config_routes.sort(key=_route_sort_key)
@@ -232,17 +232,17 @@ def _assert_in_running_route(route, running_routes):
 def _get_ipv4_test_routes():
     return [
         {
-            Route.DESTINATION: '198.51.100.0/24',
+            Route.DESTINATION: "198.51.100.0/24",
             Route.METRIC: 103,
-            Route.NEXT_HOP_ADDRESS: '192.0.2.1',
-            Route.NEXT_HOP_INTERFACE: 'eth1',
+            Route.NEXT_HOP_ADDRESS: "192.0.2.1",
+            Route.NEXT_HOP_INTERFACE: "eth1",
             Route.TABLE_ID: IPV4_ROUTE_TABLE_ID1,
         },
         {
-            Route.DESTINATION: '203.0.113.0/24',
+            Route.DESTINATION: "203.0.113.0/24",
             Route.METRIC: 103,
-            Route.NEXT_HOP_ADDRESS: '192.0.2.1',
-            Route.NEXT_HOP_INTERFACE: 'eth1',
+            Route.NEXT_HOP_ADDRESS: "192.0.2.1",
+            Route.NEXT_HOP_INTERFACE: "eth1",
             Route.TABLE_ID: IPV4_ROUTE_TABLE_ID2,
         },
     ]
@@ -251,17 +251,17 @@ def _get_ipv4_test_routes():
 def _get_ipv4_gateways():
     return [
         {
-            Route.DESTINATION: '0.0.0.0/0',
+            Route.DESTINATION: "0.0.0.0/0",
             Route.METRIC: 103,
-            Route.NEXT_HOP_ADDRESS: '192.0.2.1',
-            Route.NEXT_HOP_INTERFACE: 'eth1',
+            Route.NEXT_HOP_ADDRESS: "192.0.2.1",
+            Route.NEXT_HOP_INTERFACE: "eth1",
             Route.TABLE_ID: 254,
         },
         {
-            Route.DESTINATION: '0.0.0.0/0',
+            Route.DESTINATION: "0.0.0.0/0",
             Route.METRIC: 101,
-            Route.NEXT_HOP_ADDRESS: '192.0.2.2',
-            Route.NEXT_HOP_INTERFACE: 'eth1',
+            Route.NEXT_HOP_ADDRESS: "192.0.2.2",
+            Route.NEXT_HOP_INTERFACE: "eth1",
             Route.TABLE_ID: 254,
         },
     ]
@@ -270,17 +270,17 @@ def _get_ipv4_gateways():
 def _get_ipv6_test_routes():
     return [
         {
-            Route.DESTINATION: '2001:db8:a::/64',
+            Route.DESTINATION: "2001:db8:a::/64",
             Route.METRIC: 103,
-            Route.NEXT_HOP_ADDRESS: '2001:db8:1::a',
-            Route.NEXT_HOP_INTERFACE: 'eth1',
+            Route.NEXT_HOP_ADDRESS: "2001:db8:1::a",
+            Route.NEXT_HOP_INTERFACE: "eth1",
             Route.TABLE_ID: IPV6_ROUTE_TABLE_ID1,
         },
         {
-            Route.DESTINATION: '2001:db8:b::/64',
+            Route.DESTINATION: "2001:db8:b::/64",
             Route.METRIC: 103,
-            Route.NEXT_HOP_ADDRESS: '2001:db8:1::b',
-            Route.NEXT_HOP_INTERFACE: 'eth1',
+            Route.NEXT_HOP_ADDRESS: "2001:db8:1::b",
+            Route.NEXT_HOP_INTERFACE: "eth1",
             Route.TABLE_ID: IPV6_ROUTE_TABLE_ID2,
         },
     ]
@@ -289,17 +289,17 @@ def _get_ipv6_test_routes():
 def _get_ipv6_gateways():
     return [
         {
-            Route.DESTINATION: '::/0',
+            Route.DESTINATION: "::/0",
             Route.METRIC: 103,
-            Route.NEXT_HOP_ADDRESS: '2001:db8:1::f',
-            Route.NEXT_HOP_INTERFACE: 'eth1',
+            Route.NEXT_HOP_ADDRESS: "2001:db8:1::f",
+            Route.NEXT_HOP_INTERFACE: "eth1",
             Route.TABLE_ID: 254,
         },
         {
-            Route.DESTINATION: '::/0',
+            Route.DESTINATION: "::/0",
             Route.METRIC: 101,
-            Route.NEXT_HOP_ADDRESS: '2001:db8:1::e',
-            Route.NEXT_HOP_INTERFACE: 'eth1',
+            Route.NEXT_HOP_ADDRESS: "2001:db8:1::e",
+            Route.NEXT_HOP_INTERFACE: "eth1",
             Route.TABLE_ID: 254,
         },
     ]
@@ -308,15 +308,15 @@ def _get_ipv6_gateways():
 def _route_sort_key(route):
     return (
         route.get(Route.TABLE_ID, Route.USE_DEFAULT_ROUTE_TABLE),
-        route.get(Route.NEXT_HOP_INTERFACE, ''),
-        route.get(Route.DESTINATION, ''),
+        route.get(Route.NEXT_HOP_INTERFACE, ""),
+        route.get(Route.DESTINATION, ""),
     )
 
 
 parametrize_ip_ver_routes = pytest.mark.parametrize(
-    'get_routes_func',
+    "get_routes_func",
     [(_get_ipv4_test_routes), (_get_ipv6_test_routes)],
-    ids=['ipv4', 'ipv6'],
+    ids=["ipv4", "ipv6"],
 )
 
 
@@ -361,7 +361,7 @@ def test_remove_wildcast_route_with_iface(eth1_up, get_routes_func):
 
     absent_route = {
         Route.STATE: Route.STATE_ABSENT,
-        Route.NEXT_HOP_INTERFACE: 'eth1',
+        Route.NEXT_HOP_INTERFACE: "eth1",
     }
     libnmstate.apply(
         {
@@ -440,7 +440,7 @@ def test_iface_down_with_routes_in_current(eth1_up, get_routes_func):
         {
             Interface.KEY: [
                 {
-                    Interface.NAME: 'eth1',
+                    Interface.NAME: "eth1",
                     Interface.TYPE: InterfaceType.ETHERNET,
                     Interface.STATE: InterfaceState.DOWN,
                 }
@@ -452,7 +452,7 @@ def test_iface_down_with_routes_in_current(eth1_up, get_routes_func):
     _assert_routes([], cur_state)
 
 
-@pytest.fixture(scope='function')
+@pytest.fixture(scope="function")
 def eth1_static_gateway_dns(eth1_up):
     routes = (
         [_get_ipv4_gateways()[0], _get_ipv6_gateways()[0]]
@@ -481,7 +481,7 @@ def eth1_static_gateway_dns(eth1_up):
 
 @pytest.mark.xfail(
     raises=AssertionError,
-    reason='https://bugzilla.redhat.com/1748389',
+    reason="https://bugzilla.redhat.com/1748389",
     strict=True,
 )
 def test_apply_empty_state_preserve_routes(eth1_static_gateway_dns):
@@ -498,7 +498,7 @@ def test_apply_empty_state_preserve_routes(eth1_static_gateway_dns):
     assert current_state[DNS.KEY][DNS.CONFIG] == state[DNS.KEY][DNS.CONFIG]
 
 
-@pytest.fixture(scope='function')
+@pytest.fixture(scope="function")
 def route_rule_test_env(eth1_static_gateway_dns):
     yield eth1_static_gateway_dns
     libnmstate.apply(
@@ -529,11 +529,11 @@ def test_route_rule_add_from_only(route_rule_test_env):
     state = route_rule_test_env
     rules = [
         {
-            RouteRule.IP_FROM: '2001:db8:f::/64',
+            RouteRule.IP_FROM: "2001:db8:f::/64",
             RouteRule.ROUTE_TABLE: IPV6_ROUTE_TABLE_ID1,
         },
         {
-            RouteRule.IP_FROM: '192.0.2.0/24',
+            RouteRule.IP_FROM: "192.0.2.0/24",
             RouteRule.ROUTE_TABLE: IPV4_ROUTE_TABLE_ID1,
         },
     ]
@@ -547,11 +547,11 @@ def test_route_rule_add_to_only(route_rule_test_env):
     state = route_rule_test_env
     rules = [
         {
-            RouteRule.IP_TO: '2001:db8:f::/64',
+            RouteRule.IP_TO: "2001:db8:f::/64",
             RouteRule.ROUTE_TABLE: IPV6_ROUTE_TABLE_ID1,
         },
         {
-            RouteRule.IP_TO: '192.0.2.0/24',
+            RouteRule.IP_TO: "192.0.2.0/24",
             RouteRule.ROUTE_TABLE: IPV4_ROUTE_TABLE_ID1,
         },
     ]
@@ -565,14 +565,14 @@ def test_route_rule_add(route_rule_test_env):
     state = route_rule_test_env
     rules = [
         {
-            RouteRule.IP_FROM: '2001:db8:a::/64',
-            RouteRule.IP_TO: '2001:db8:f::/64',
+            RouteRule.IP_FROM: "2001:db8:a::/64",
+            RouteRule.IP_TO: "2001:db8:f::/64",
             RouteRule.PRIORITY: 1000,
             RouteRule.ROUTE_TABLE: IPV6_ROUTE_TABLE_ID1,
         },
         {
-            RouteRule.IP_FROM: '203.0.113.0/24',
-            RouteRule.IP_TO: '192.0.2.0/24',
+            RouteRule.IP_FROM: "203.0.113.0/24",
+            RouteRule.IP_TO: "192.0.2.0/24",
             RouteRule.PRIORITY: 1000,
             RouteRule.ROUTE_TABLE: IPV4_ROUTE_TABLE_ID1,
         },
@@ -587,13 +587,13 @@ def test_route_rule_add_without_priority(route_rule_test_env):
     state = route_rule_test_env
     rules = [
         {
-            RouteRule.IP_FROM: '2001:db8:a::/64',
-            RouteRule.IP_TO: '2001:db8:f::/64',
+            RouteRule.IP_FROM: "2001:db8:a::/64",
+            RouteRule.IP_TO: "2001:db8:f::/64",
             RouteRule.ROUTE_TABLE: IPV6_ROUTE_TABLE_ID1,
         },
         {
-            RouteRule.IP_FROM: '203.0.113.0/24',
-            RouteRule.IP_TO: '192.0.2.0/24',
+            RouteRule.IP_FROM: "203.0.113.0/24",
+            RouteRule.IP_TO: "192.0.2.0/24",
             RouteRule.ROUTE_TABLE: IPV4_ROUTE_TABLE_ID1,
         },
     ]
@@ -611,13 +611,13 @@ def test_route_rule_add_without_route_table(route_rule_test_env):
     state = route_rule_test_env
     rules = [
         {
-            RouteRule.IP_FROM: '2001:db8:a::/64',
-            RouteRule.IP_TO: '2001:db8:f::/64',
+            RouteRule.IP_FROM: "2001:db8:a::/64",
+            RouteRule.IP_TO: "2001:db8:f::/64",
             RouteRule.PRIORITY: 1000,
         },
         {
-            RouteRule.IP_FROM: '203.0.113.0/24',
-            RouteRule.IP_TO: '192.0.2.0/24',
+            RouteRule.IP_FROM: "203.0.113.0/24",
+            RouteRule.IP_TO: "192.0.2.0/24",
             RouteRule.PRIORITY: 1000,
         },
     ]

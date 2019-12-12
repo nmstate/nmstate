@@ -22,7 +22,7 @@ from . import nmclient
 from libnmstate.error import NmstateValueError
 
 
-BOND_TYPE = 'bond'
+BOND_TYPE = "bond"
 
 
 def create_setting(options):
@@ -31,7 +31,7 @@ def create_setting(options):
         success = bond_setting.add_option(option_name, option_value)
         if not success:
             raise NmstateValueError(
-                'Invalid bond option: \'{}\'=\'{}\''.format(
+                "Invalid bond option: '{}'='{}'".format(
                     option_name, option_value
                 )
             )
@@ -47,7 +47,7 @@ def get_bond_info(nm_device):
     slaves = get_slaves(nm_device)
     options = get_options(nm_device)
     if slaves or options:
-        return {'slaves': slaves, 'options': options}
+        return {"slaves": slaves, "options": options}
     else:
         return {}
 

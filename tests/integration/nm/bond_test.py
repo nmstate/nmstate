@@ -26,13 +26,13 @@ from libnmstate.schema import Interface
 from .testlib import mainloop_run
 
 
-BOND0 = 'bondtest0'
+BOND0 = "bondtest0"
 
 
 def test_create_and_remove_bond(eth1_up):
     bond_options = {
         schema.Bond.MODE: schema.BondMode.ROUND_ROBIN,
-        'miimon': '140',
+        "miimon": "140",
     }
 
     with _bond_interface(BOND0, bond_options):
@@ -126,12 +126,12 @@ def _attach_slave_to_bond(bond, slave):
 def _create_connection_setting(bond, port_con_profile):
     con_setting = nm.connection.ConnectionSetting()
     con_setting.import_by_profile(port_con_profile)
-    con_setting.set_master(bond, 'bond')
+    con_setting.set_master(bond, "bond")
 
     return con_setting.setting
 
 
 def _convert_slaves_devices_to_iface_names(info):
     if info:
-        info['slaves'] = [slave.props.interface for slave in info['slaves']]
+        info["slaves"] = [slave.props.interface for slave in info["slaves"]]
     return info

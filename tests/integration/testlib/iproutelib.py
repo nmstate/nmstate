@@ -38,10 +38,10 @@ def ip_monitor_assert_stable_link_up(dev, timeout=10):
     def decorator(func):
         @wraps(func)
         def wrapper_ip_monitor(*args, **kwargs):
-            with ip_monitor('link', dev, timeout) as result:
+            with ip_monitor("link", dev, timeout) as result:
                 func(*args, **kwargs)
             assert len(get_non_up_events(result, dev)) == 0, (
-                'result: ' + result.out
+                "result: " + result.out
             )
 
         return wrapper_ip_monitor
@@ -53,7 +53,7 @@ def ip_monitor_assert_stable_link_up(dev, timeout=10):
 def ip_monitor(object_type, dev, timeout=10):
     result = IpMonitorResult()
 
-    cmds = 'timeout {} ip monitor {} dev {}'.format(timeout, object_type, dev)
+    cmds = "timeout {} ip monitor {} dev {}".format(timeout, object_type, dev)
 
     def run():
         result.popen = subprocess.Popen(
@@ -65,14 +65,14 @@ def ip_monitor(object_type, dev, timeout=10):
             env=None,
         )
         result.out, result.err = result.popen.communicate(None)
-        result.out = result.out.decode('utf-8')
-        result.err = result.err.decode('utf-8')
+        result.out = result.out.decode("utf-8")
+        result.err = result.err.decode("utf-8")
 
     def finalize():
         if result.popen:
             result.popen.terminate()
 
-    with _thread(run, 'ip-monitor', teardown_cb=finalize):
+    with _thread(run, "ip-monitor", teardown_cb=finalize):
         # Let the ip monitor thread start before proceeding to the action.
         time.sleep(1)
         yield result
@@ -86,7 +86,7 @@ def get_non_up_events(result, dev):
     :return: List of non UP events
     """
     return [
-        l for l in result.out.split('\n') if 'state UP' not in l and dev in l
+        l for l in result.out.split("\n") if "state UP" not in l and dev in l
     ]
 
 

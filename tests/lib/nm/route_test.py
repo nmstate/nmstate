@@ -29,59 +29,59 @@ from libnmstate.nm import connection as nm_connection
 from libnmstate.schema import InterfaceIP
 from libnmstate.schema import Route
 
-IPV4_DEFAULT_GATEWAY_DESTINATION = '0.0.0.0/0'
-IPV6_DEFAULT_GATEWAY_DESTINATION = '::/0'
+IPV4_DEFAULT_GATEWAY_DESTINATION = "0.0.0.0/0"
+IPV6_DEFAULT_GATEWAY_DESTINATION = "::/0"
 
 IPV4_ROUTE1 = {
-    Route.DESTINATION: '198.51.100.0/24',
+    Route.DESTINATION: "198.51.100.0/24",
     Route.METRIC: 103,
-    Route.NEXT_HOP_ADDRESS: '192.0.2.1',
+    Route.NEXT_HOP_ADDRESS: "192.0.2.1",
     Route.TABLE_ID: 50,
 }
 
 IPV4_ROUTE2 = {
-    Route.DESTINATION: '203.0.113.0/24',
+    Route.DESTINATION: "203.0.113.0/24",
     Route.METRIC: 103,
-    Route.NEXT_HOP_ADDRESS: '192.0.2.2',
+    Route.NEXT_HOP_ADDRESS: "192.0.2.2",
     Route.TABLE_ID: 51,
 }
 
 IPV6_ROUTE1 = {
-    Route.DESTINATION: '2001:db8:a::/64',
+    Route.DESTINATION: "2001:db8:a::/64",
     Route.METRIC: 103,
-    Route.NEXT_HOP_ADDRESS: '2001:db8:1::a',
+    Route.NEXT_HOP_ADDRESS: "2001:db8:1::a",
     Route.TABLE_ID: 50,
 }
 
 IPV6_ROUTE2 = {
-    Route.DESTINATION: '2001:db8:b::/64',
+    Route.DESTINATION: "2001:db8:b::/64",
     Route.METRIC: 103,
-    Route.NEXT_HOP_ADDRESS: '2001:db8:1::b',
+    Route.NEXT_HOP_ADDRESS: "2001:db8:1::b",
     Route.TABLE_ID: 51,
 }
 
 parametrize_ip_ver_routes = pytest.mark.parametrize(
-    'nm_ip, routes',
+    "nm_ip, routes",
     [
         (nm_ipv4, [IPV4_ROUTE1, IPV4_ROUTE2]),
         (nm_ipv6, [IPV6_ROUTE1, IPV6_ROUTE2]),
     ],
-    ids=['ipv4', 'ipv6'],
+    ids=["ipv4", "ipv6"],
 )
 
 
 def _get_test_ipv4_gateways():
     return [
         {
-            Route.DESTINATION: '0.0.0.0/0',
+            Route.DESTINATION: "0.0.0.0/0",
             Route.METRIC: 103,
-            Route.NEXT_HOP_ADDRESS: '192.0.2.1',
+            Route.NEXT_HOP_ADDRESS: "192.0.2.1",
             Route.TABLE_ID: 52,
         },
         {
-            Route.DESTINATION: '0.0.0.0/0',
+            Route.DESTINATION: "0.0.0.0/0",
             Route.METRIC: 101,
-            Route.NEXT_HOP_ADDRESS: '192.0.2.2',
+            Route.NEXT_HOP_ADDRESS: "192.0.2.2",
             Route.TABLE_ID: 53,
         },
     ]
@@ -90,27 +90,27 @@ def _get_test_ipv4_gateways():
 def _get_test_ipv6_gateways():
     return [
         {
-            Route.DESTINATION: '::/0',
+            Route.DESTINATION: "::/0",
             Route.METRIC: 103,
-            Route.NEXT_HOP_ADDRESS: '2001:db8:1::f',
+            Route.NEXT_HOP_ADDRESS: "2001:db8:1::f",
             Route.TABLE_ID: 52,
         },
         {
-            Route.DESTINATION: '::/0',
+            Route.DESTINATION: "::/0",
             Route.METRIC: 101,
-            Route.NEXT_HOP_ADDRESS: '2001:db8:1::e',
+            Route.NEXT_HOP_ADDRESS: "2001:db8:1::e",
             Route.TABLE_ID: 53,
         },
     ]
 
 
 parametrize_ip_ver_routes_gw = pytest.mark.parametrize(
-    'nm_ip, routes, gateways',
+    "nm_ip, routes, gateways",
     [
         (nm_ipv4, [IPV4_ROUTE1, IPV4_ROUTE2], _get_test_ipv4_gateways()),
         (nm_ipv6, [IPV6_ROUTE1, IPV6_ROUTE2], _get_test_ipv6_gateways()),
     ],
-    ids=['ipv4', 'ipv6'],
+    ids=["ipv4", "ipv6"],
 )
 
 
@@ -193,7 +193,7 @@ def test_change_gateway(nm_ip, routes, gateways):
 @pytest.mark.xfail(
     raises=NmstateNotImplementedError,
     strict=True,
-    reason='Network Manager Bug: ' 'https://bugzilla.redhat.com/1707396',
+    reason="Network Manager Bug: " "https://bugzilla.redhat.com/1707396",
 )
 @parametrize_ip_ver_routes_gw
 def test_add_two_gateway(nm_ip, routes, gateways):
@@ -206,7 +206,7 @@ def test_add_two_gateway(nm_ip, routes, gateways):
 @pytest.mark.xfail(
     raises=NmstateNotImplementedError,
     strict=True,
-    reason='Network Manager Bug: ' 'https://bugzilla.redhat.com/1707396',
+    reason="Network Manager Bug: " "https://bugzilla.redhat.com/1707396",
 )
 @parametrize_ip_ver_routes_gw
 def test_add_duplicate_gateways(nm_ip, routes, gateways):
@@ -263,12 +263,12 @@ def test_clear_gateway(nm_ip, routes, gateways):
 
 
 def _nm_route_to_dict(nm_route):
-    dst = '{ip}/{prefix}'.format(
+    dst = "{ip}/{prefix}".format(
         ip=nm_route.get_dest(), prefix=nm_route.get_prefix()
     )
-    next_hop = nm_route.get_next_hop() or ''
+    next_hop = nm_route.get_next_hop() or ""
     metric = int(nm_route.get_metric())
-    table_id_variant = nm_route.get_attribute('table')
+    table_id_variant = nm_route.get_attribute("table")
 
     return {
         Route.TABLE_ID: int(table_id_variant.get_uint32()),

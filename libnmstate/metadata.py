@@ -27,13 +27,13 @@ from libnmstate.schema import InterfaceIP
 from libnmstate.schema import InterfaceState
 
 
-BRPORT_OPTIONS = '_brport_options'
-MASTER = '_master'
-MASTER_TYPE = '_master_type'
-ROUTES = '_routes'
-DNS_METADATA = '_dns'
-DNS_METADATA_PRIORITY = '_priority'
-ROUTE_RULES_METADATA = '_route_rules'
+BRPORT_OPTIONS = "_brport_options"
+MASTER = "_master"
+MASTER_TYPE = "_master_type"
+ROUTES = "_routes"
+DNS_METADATA = "_dns"
+DNS_METADATA_PRIORITY = "_priority"
+ROUTE_RULES_METADATA = "_route_rules"
 
 
 def generate_ifaces_metadata(desired_state, current_state):
@@ -52,21 +52,21 @@ def generate_ifaces_metadata(desired_state, current_state):
     _generate_link_master_metadata(
         desired_state.interfaces,
         current_state.interfaces,
-        master_type='bond',
+        master_type="bond",
         get_slaves_func=_get_bond_slaves_from_state,
         set_metadata_func=_set_common_slaves_metadata,
     )
     _generate_link_master_metadata(
         desired_state.interfaces,
         current_state.interfaces,
-        master_type='ovs-bridge',
+        master_type="ovs-bridge",
         get_slaves_func=_get_ovs_slaves_from_state,
         set_metadata_func=_set_ovs_bridge_ports_metadata,
     )
     _generate_link_master_metadata(
         desired_state.interfaces,
         current_state.interfaces,
-        master_type='linux-bridge',
+        master_type="linux-bridge",
         get_slaves_func=linux_bridge.get_slaves_from_state,
         set_metadata_func=linux_bridge.set_bridge_ports_metadata,
     )
@@ -89,27 +89,27 @@ def remove_ifaces_metadata(ifaces_state):
 
 
 def _get_bond_slaves_from_state(iface_state, default=()):
-    return iface_state.get('link-aggregation', {}).get('slaves', default)
+    return iface_state.get("link-aggregation", {}).get("slaves", default)
 
 
 def _set_ovs_bridge_ports_metadata(master_state, slave_state):
     _set_common_slaves_metadata(master_state, slave_state)
 
-    ports = master_state.get('bridge', {}).get('port', [])
-    port = next(filter(lambda n: n['name'] == slave_state['name'], ports), {})
+    ports = master_state.get("bridge", {}).get("port", [])
+    port = next(filter(lambda n: n["name"] == slave_state["name"], ports), {})
     slave_state[BRPORT_OPTIONS] = port
 
 
 def _set_common_slaves_metadata(master_state, slave_state):
-    slave_state[MASTER] = master_state['name']
-    slave_state[MASTER_TYPE] = master_state.get('type')
+    slave_state[MASTER] = master_state["name"]
+    slave_state[MASTER_TYPE] = master_state.get("type")
 
 
 def _get_ovs_slaves_from_state(iface_state, default=()):
-    ports = iface_state.get('bridge', {}).get('port')
+    ports = iface_state.get("bridge", {}).get("port")
     if ports is None:
         return default
-    return [p['name'] for p in ports]
+    return [p["name"] for p in ports]
 
 
 def _generate_link_master_metadata(
@@ -132,8 +132,8 @@ def _generate_link_master_metadata(
     desired_masters = [
         (ifname, ifstate)
         for ifname, ifstate in ifaces_desired_state.items()
-        if ifstate.get('type') == master_type
-        and ifstate.get('state') not in ('down', 'absent')
+        if ifstate.get("type") == master_type
+        and ifstate.get("state") not in ("down", "absent")
     ]
     for master_name, master_state in desired_masters:
         desired_slaves = get_slaves_func(master_state)
@@ -142,8 +142,8 @@ def _generate_link_master_metadata(
                 set_metadata_func(master_state, ifaces_desired_state[slave])
             elif slave in ifaces_current_state:
                 ifaces_desired_state[slave] = {
-                    'name': slave,
-                    'state': master_state['state'],
+                    "name": slave,
+                    "state": master_state["state"],
                 }
                 set_metadata_func(master_state, ifaces_desired_state[slave])
 
@@ -155,19 +155,19 @@ def _generate_link_master_metadata(
             slaves2remove = set(current_slaves) - set(desired_slaves)
             for slave in slaves2remove:
                 if slave not in ifaces_desired_state:
-                    ifaces_desired_state[slave] = {'name': slave}
+                    ifaces_desired_state[slave] = {"name": slave}
 
     current_masters = (
         (ifname, ifstate)
         for ifname, ifstate in ifaces_current_state.items()
-        if ifstate.get('type') == master_type
+        if ifstate.get("type") == master_type
     )
     for master_name, master_state in current_masters:
         current_slaves = get_slaves_func(master_state)
         for slave in current_slaves:
             if slave in ifaces_desired_state:
                 iface_state = ifaces_desired_state.get(master_name, {})
-                if iface_state.get('state') not in ('down', 'absent'):
+                if iface_state.get("state") not in ("down", "absent"):
                     master_has_no_slaves_specified_in_desired = (
                         get_slaves_func(iface_state, None) is None
                     )
@@ -265,8 +265,8 @@ def _save_dns_metadata(
             family = Interface.IPV4
         if not iface_name:
             raise NmstateValueError(
-                'Failed to find suitable interface for saving DNS '
-                'name servers: %s' % server
+                "Failed to find suitable interface for saving DNS "
+                "name servers: %s" % server
             )
 
         _include_name_only_iface_state(
@@ -391,8 +391,8 @@ def _generate_route_rule_per_stack_metadata(
         iface_name = _find_iface_for_route_table(routes, route_table)
         if not iface_name:
             raise NmstateValueError(
-                'Failed to find suitable interface for saving route rule: '
-                '{}'.format(rules[0])
+                "Failed to find suitable interface for saving route rule: "
+                "{}".format(rules[0])
             )
         iface_state = desired_state.interfaces[iface_name]
         _attach_route_rule_metadata(iface_state, rules, family)

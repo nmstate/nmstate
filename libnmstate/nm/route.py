@@ -30,11 +30,11 @@ from libnmstate.schema import Interface
 from libnmstate.schema import Route
 from libnmstate.schema import RouteRule
 
-NM_ROUTE_TABLE_ATTRIBUTE = 'table'
-IPV4_DEFAULT_GATEWAY_DESTINATION = '0.0.0.0/0'
-IPV6_DEFAULT_GATEWAY_DESTINATION = '::/0'
-ROUTE_METADATA = '_routes'
-ROUTE_RULES_METADATA = '_route_rules'
+NM_ROUTE_TABLE_ATTRIBUTE = "table"
+IPV4_DEFAULT_GATEWAY_DESTINATION = "0.0.0.0/0"
+IPV6_DEFAULT_GATEWAY_DESTINATION = "::/0"
+ROUTE_METADATA = "_routes"
+ROUTE_RULES_METADATA = "_route_rules"
 
 # NM require route rule priority been set explicitly, use 30,000 when
 # desire state instruct to use USE_DEFAULT_PRIORITY
@@ -54,7 +54,7 @@ def get_running(acs_and_ip_cfgs):
         iface_name = nm_ac.ActiveConnection(active_connection).devname
         if not iface_name:
             raise NmstateInternalError(
-                'Got connection {} has not interface name'.format(
+                "Got connection {} has not interface name".format(
                     active_connection.get_id()
                 )
             )
@@ -88,7 +88,7 @@ def get_config(acs_and_ip_profiles):
         iface_name = nm_ac.ActiveConnection(active_connection).devname
         if not iface_name:
             raise NmstateInternalError(
-                'Got connection {} has not interface name'.format(
+                "Got connection {} has not interface name".format(
                     active_connection.get_id()
                 )
             )
@@ -126,10 +126,10 @@ def _get_per_route_table_id(nm_route, default_table_id):
 
 
 def _nm_route_to_route(nm_route, table_id, iface_name):
-    dst = '{ip}/{prefix}'.format(
+    dst = "{ip}/{prefix}".format(
         ip=nm_route.get_dest(), prefix=nm_route.get_prefix()
     )
-    next_hop = nm_route.get_next_hop() or ''
+    next_hop = nm_route.get_next_hop() or ""
     metric = int(nm_route.get_metric())
 
     return {
@@ -163,9 +163,9 @@ def add_routes(setting_ip, routes):
         ):
             if setting_ip.get_gateway():
                 raise NmstateNotImplementedError(
-                    'Only a single default gateway is supported due to a '
-                    'limitation of NetworkManager: '
-                    'https://bugzilla.redhat.com/1707396'
+                    "Only a single default gateway is supported due to a "
+                    "limitation of NetworkManager: "
+                    "https://bugzilla.redhat.com/1707396"
                 )
             _add_route_gateway(setting_ip, route)
         else:
@@ -173,7 +173,7 @@ def add_routes(setting_ip, routes):
 
 
 def _add_specfic_route(setting_ip, route):
-    destination, prefix_len = route[Route.DESTINATION].split('/')
+    destination, prefix_len = route[Route.DESTINATION].split("/")
     prefix_len = int(prefix_len)
     if iplib.is_ipv6_address(destination):
         family = socket.AF_INET6
@@ -268,7 +268,7 @@ def _rule_info_to_nm_rule(rule, family):
     ip_to = rule.get(RouteRule.IP_TO)
     if not ip_from and not ip_to:
         raise NmstateValueError(
-            f'Neither {RouteRule.IP_FROM} or {RouteRule.IP_TO} is defined'
+            f"Neither {RouteRule.IP_FROM} or {RouteRule.IP_TO} is defined"
         )
 
     if ip_from:

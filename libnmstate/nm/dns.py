@@ -31,8 +31,8 @@ from libnmstate.schema import Interface
 
 DNS_DEFAULT_PRIORITY_VPN = 50
 DNS_DEFAULT_PRIORITY_OTHER = 100
-DNS_METADATA = '_dns'
-DNS_METADATA_PRIORITY = '_priority'
+DNS_METADATA = "_dns"
+DNS_METADATA_PRIORITY = "_priority"
 DEFAULT_DNS_PRIORITY = 0
 # The 40 is chose as default DHCP DNS priority is 100, and VPN DNS priority is
 # 50, the static DNS configuration should be list before them.
@@ -52,10 +52,10 @@ def get_running():
                     # For IPv6 link local address, the interface name should be
                     # appended also.
                     raise NmstateInternalError(
-                        'Missing interface for IPv6 link-local DNS server '
-                        'entry {}'.format(ns)
+                        "Missing interface for IPv6 link-local DNS server "
+                        "entry {}".format(ns)
                     )
-                ns_addr = '{}%{}'.format(ns, iface_name)
+                ns_addr = "{}%{}".format(ns, iface_name)
             else:
                 ns_addr = ns
             dns_state[DNS.SERVER].append(ns_addr)
@@ -82,9 +82,9 @@ def get_config(acs_and_ipv4_profiles, acs_and_ipv6_profiles):
 
         tmp_dns_confs.append(
             {
-                'server': ip_profile.props.dns,
-                'priority': priority,
-                'search': ip_profile.props.dns_search,
+                "server": ip_profile.props.dns,
+                "priority": priority,
+                "search": ip_profile.props.dns_search,
             }
         )
     # NetworkManager sorts the DNS entries based on various criteria including
@@ -93,10 +93,10 @@ def get_config(acs_and_ipv4_profiles, acs_and_ipv6_profiles):
     # order in a declarative way, Nmstate only uses the priority to order the
     # entries. Reference:
     # https://developer.gnome.org/NetworkManager/stable/nm-settings.html#nm-settings.property.ipv4.dns-priority
-    tmp_dns_confs.sort(key=itemgetter('priority'))
+    tmp_dns_confs.sort(key=itemgetter("priority"))
     for e in tmp_dns_confs:
-        dns_conf[DNS.SERVER].extend(e['server'])
-        dns_conf[DNS.SEARCH].extend(e['search'])
+        dns_conf[DNS.SERVER].extend(e["server"])
+        dns_conf[DNS.SEARCH].extend(e["search"])
     if not dns_conf[DNS.SERVER] and dns_conf[DNS.SEARCH]:
         return {}
     return dns_conf

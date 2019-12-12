@@ -43,11 +43,11 @@ from . import vxlan
 from . import wired
 
 
-MASTER_METADATA = '_master'
-MASTER_TYPE_METADATA = '_master_type'
+MASTER_METADATA = "_master"
+MASTER_TYPE_METADATA = "_master_type"
 MASTER_IFACE_TYPES = ovs.BRIDGE_TYPE, bond.BOND_TYPE, LB.TYPE
 
-BRPORT_OPTIONS_METADATA = '_brport_options'
+BRPORT_OPTIONS_METADATA = "_brport_options"
 
 
 def create_new_ifaces(con_profiles):
@@ -197,7 +197,7 @@ def set_ifaces_admin_state(ifaces_desired_state, con_profiles=()):
                     remove_devs_actions[nmdev].append(device.delete_device)
             else:
                 raise NmstateValueError(
-                    'Invalid state {} for interface {}'.format(
+                    "Invalid state {} for interface {}".format(
                         iface_desired_state[Interface.STATE],
                         iface_desired_state[Interface.NAME],
                     )
@@ -330,12 +330,12 @@ def prepare_proxy_ifaces_desired_state(ifaces_desired_state):
 
 def _create_ovs_port_iface_desired_state(iface_desired_state, port_options):
     return {
-        'name': ovs.PORT_PROFILE_PREFIX + iface_desired_state[Interface.NAME],
-        'type': ovs.PORT_TYPE,
-        'state': iface_desired_state[Interface.STATE],
+        "name": ovs.PORT_PROFILE_PREFIX + iface_desired_state[Interface.NAME],
+        "type": ovs.PORT_TYPE,
+        "state": iface_desired_state[Interface.STATE],
         MASTER_METADATA: iface_desired_state[MASTER_METADATA],
         MASTER_TYPE_METADATA: iface_desired_state[MASTER_TYPE_METADATA],
-        'options': port_options,
+        "options": port_options,
     }
 
 
