@@ -42,7 +42,7 @@ def show(include_status_data=False):
 
     report = {Constants.INTERFACES: interfaces()}
     if include_status_data:
-        report['capabilities'] = capabilities()
+        report["capabilities"] = capabilities()
 
     report[Constants.ROUTES] = {
         Route.RUNNING: (
@@ -92,13 +92,13 @@ def interfaces():
     ]
 
     for dev, devinfo in devices_info:
-        type_id = devinfo['type_id']
+        type_id = devinfo["type_id"]
 
         iface_info = nm.translator.Nm2Api.get_common_device_info(devinfo)
 
         act_con = nm.connection.get_device_active_connection(dev)
-        iface_info['ipv4'] = nm.ipv4.get_info(act_con)
-        iface_info['ipv6'] = nm.ipv6.get_info(act_con)
+        iface_info["ipv4"] = nm.ipv4.get_info(act_con)
+        iface_info["ipv6"] = nm.ipv6.get_info(act_con)
         iface_info.update(nm.wired.get_info(dev))
         iface_info.update(nm.user.get_info(dev))
         iface_info.update(nm.vlan.get_info(dev))
@@ -110,14 +110,14 @@ def interfaces():
             iface_info.update(_ifaceinfo_bond(bondinfo))
         elif nm.ovs.has_ovs_capability():
             if nm.ovs.is_ovs_bridge_type_id(type_id):
-                iface_info['bridge'] = nm.ovs.get_ovs_info(dev, devices_info)
+                iface_info["bridge"] = nm.ovs.get_ovs_info(dev, devices_info)
                 iface_info = _remove_ovs_bridge_unsupported_entries(iface_info)
             elif nm.ovs.is_ovs_port_type_id(type_id):
                 continue
 
         info.append(iface_info)
 
-    info.sort(key=itemgetter('name'))
+    info.sort(key=itemgetter("name"))
 
     return info
 
@@ -125,7 +125,7 @@ def interfaces():
 def _ifaceinfo_bond(devinfo):
     # TODO: What about unmanaged devices?
     bondinfo = nm.translator.Nm2Api.get_bond_info(devinfo)
-    if 'link-aggregation' in bondinfo:
+    if "link-aggregation" in bondinfo:
         return bondinfo
     return {}
 

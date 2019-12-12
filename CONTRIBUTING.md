@@ -37,7 +37,6 @@ Please follow these steps to have your contribution considered by the maintainer
 - Nmstate is written primarily in Python, and its coding style should follow
   the best practices of Python coding unless otherwise declared.
 - Nmstate uses the [black](https://github.com/python/black) code formatter
-  (except for string normalization).
 - PEP8 is holy.
 - Tests are holy.
   Production code must be covered by unit tests and/or basic integration tests.
@@ -58,7 +57,6 @@ Please follow these steps to have your contribution considered by the maintainer
   White space between code stanzas are welcome. They help to create breathing
   while reading long code.
   However, splitting stanzas into helper functions could be even better.
-- Prefer single quotes (') whenever possible.
 
 Ref:
 https://www.ovirt.org/develop/developer-guide/vdsm/coding-guidelines/

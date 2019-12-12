@@ -31,45 +31,45 @@ from libnmstate.schema import InterfaceState
 from .testlib import cmd as libcmd
 
 
-DUMMY0_IFNAME = 'dummy0'
+DUMMY0_IFNAME = "dummy0"
 
 NMCLI_CON_ADD_DUMMY_CMD = [
-    'nmcli',
-    'con',
-    'add',
-    'type',
-    'dummy',
-    'con-name',
-    'testProfile',
-    'connection.autoconnect',
-    'no',
-    'ifname',
+    "nmcli",
+    "con",
+    "add",
+    "type",
+    "dummy",
+    "con-name",
+    "testProfile",
+    "connection.autoconnect",
+    "no",
+    "ifname",
     DUMMY0_IFNAME,
 ]
 
 NMCLI_CON_ADD_ETH_CMD = [
-    'nmcli',
-    'con',
-    'add',
-    'type',
-    'ethernet',
-    'con-name',
-    'testProfile',
-    'connection.autoconnect',
-    'no',
-    'ifname',
-    'eth1',
+    "nmcli",
+    "con",
+    "add",
+    "type",
+    "ethernet",
+    "con-name",
+    "testProfile",
+    "connection.autoconnect",
+    "no",
+    "ifname",
+    "eth1",
 ]
 
-DUMMY_PROFILE_DIRECTORY = '/etc/NetworkManager/system-connections/'
+DUMMY_PROFILE_DIRECTORY = "/etc/NetworkManager/system-connections/"
 
-ETH_PROFILE_DIRECTORY = '/etc/sysconfig/network-scripts/'
+ETH_PROFILE_DIRECTORY = "/etc/sysconfig/network-scripts/"
 
 
 def test_delete_new_interface_inactive_profiles(dummy_inactive_profile):
     with dummy_interface(dummy_inactive_profile):
         profile_exists = _profile_exists(
-            DUMMY_PROFILE_DIRECTORY + 'testProfile.nmconnection'
+            DUMMY_PROFILE_DIRECTORY + "testProfile.nmconnection"
         )
         assert not profile_exists
 
@@ -79,7 +79,7 @@ def test_delete_existing_interface_inactive_profiles(eth1_up):
         eth1_up[Interface.KEY][0][Interface.MTU] = 2000
         libnmstate.apply(eth1_up)
         profile_exists = _profile_exists(
-            ETH_PROFILE_DIRECTORY + 'ifcfg-testProfile'
+            ETH_PROFILE_DIRECTORY + "ifcfg-testProfile"
         )
         assert not profile_exists
 
@@ -108,13 +108,13 @@ def dummy_interface(ifname):
 def dummy_inactive_profile():
     libcmd.exec_cmd(NMCLI_CON_ADD_DUMMY_CMD)
     profile_exists = _profile_exists(
-        DUMMY_PROFILE_DIRECTORY + 'testProfile.nmconnection'
+        DUMMY_PROFILE_DIRECTORY + "testProfile.nmconnection"
     )
     assert profile_exists
     try:
         yield DUMMY0_IFNAME
     finally:
-        libcmd.exec_cmd(_nmcli_delete_connection('testProfile'))
+        libcmd.exec_cmd(_nmcli_delete_connection("testProfile"))
 
 
 @contextmanager
@@ -122,21 +122,21 @@ def create_inactive_profile(con_name):
     libcmd.exec_cmd(_nmcli_deactivate_connection(con_name))
     libcmd.exec_cmd(NMCLI_CON_ADD_ETH_CMD)
     profile_exists = _profile_exists(
-        ETH_PROFILE_DIRECTORY + 'ifcfg-testProfile'
+        ETH_PROFILE_DIRECTORY + "ifcfg-testProfile"
     )
     assert profile_exists
     try:
         yield
     finally:
-        libcmd.exec_cmd(_nmcli_delete_connection('testProfile'))
+        libcmd.exec_cmd(_nmcli_delete_connection("testProfile"))
 
 
 def _nmcli_deactivate_connection(con_name):
-    return ['nmcli', 'con', 'down', con_name]
+    return ["nmcli", "con", "down", con_name]
 
 
 def _nmcli_delete_connection(con_name):
-    return ['nmcli', 'con', 'delete', con_name]
+    return ["nmcli", "con", "delete", con_name]
 
 
 def _profile_exists(profile_name):

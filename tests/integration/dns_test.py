@@ -31,21 +31,21 @@ from libnmstate.schema import InterfaceType
 from libnmstate.schema import Route
 
 
-IPV4_DNS_NAMESERVERS = ['8.8.8.8', '1.1.1.1']
-IPV6_DNS_NAMESERVERS = ['2001:4860:4860::8888', '2606:4700:4700::1111']
-EXAMPLE_SEARCHES = ['example.org', 'example.com']
+IPV4_DNS_NAMESERVERS = ["8.8.8.8", "1.1.1.1"]
+IPV6_DNS_NAMESERVERS = ["2001:4860:4860::8888", "2606:4700:4700::1111"]
+EXAMPLE_SEARCHES = ["example.org", "example.com"]
 
 parametrize_ip_ver = pytest.mark.parametrize(
-    'dns_config',
+    "dns_config",
     [
         ({DNS.SERVER: IPV4_DNS_NAMESERVERS, DNS.SEARCH: EXAMPLE_SEARCHES}),
         ({DNS.SERVER: IPV6_DNS_NAMESERVERS, DNS.SEARCH: EXAMPLE_SEARCHES}),
     ],
-    ids=['ipv4', 'ipv6'],
+    ids=["ipv4", "ipv6"],
 )
 
 
-@pytest.fixture(scope='function', autouse=True)
+@pytest.fixture(scope="function", autouse=True)
 def dns_test_env(eth1_up, eth2_up):
     yield
     # Remove DNS config as it be saved in eth1 or eth2 which might trigger
@@ -101,7 +101,7 @@ def test_dns_edit_ipv6_nameserver_before_ipv4():
 
 @pytest.mark.xfail(
     raises=NmstateNotImplementedError,
-    reason='https://nmstate.atlassian.net/browse/NMSTATE-220',
+    reason="https://nmstate.atlassian.net/browse/NMSTATE-220",
     strict=True,
 )
 def test_dns_edit_three_nameservers():
@@ -158,11 +158,11 @@ def test_preserve_dns_config():
             Route.KEY: {
                 Route.CONFIG: [
                     {
-                        Route.DESTINATION: '0.0.0.0/0',
+                        Route.DESTINATION: "0.0.0.0/0",
                         Route.STATE: Route.STATE_ABSENT,
                     },
                     {
-                        Route.DESTINATION: '::/0',
+                        Route.DESTINATION: "::/0",
                         Route.STATE: Route.STATE_ABSENT,
                     },
                 ]
@@ -203,13 +203,13 @@ def test_preserve_dns_config_with_empty_state(setup_ipv4_ipv6_name_server):
 def _get_test_iface_states():
     return [
         {
-            Interface.NAME: 'eth1',
+            Interface.NAME: "eth1",
             Interface.STATE: InterfaceState.UP,
             Interface.TYPE: InterfaceType.ETHERNET,
             Interface.IPV4: {
                 InterfaceIPv4.ADDRESS: [
                     {
-                        InterfaceIPv4.ADDRESS_IP: '192.0.2.251',
+                        InterfaceIPv4.ADDRESS_IP: "192.0.2.251",
                         InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
                     }
                 ],
@@ -219,7 +219,7 @@ def _get_test_iface_states():
             Interface.IPV6: {
                 InterfaceIPv6.ADDRESS: [
                     {
-                        InterfaceIPv6.ADDRESS_IP: '2001:db8:1::1',
+                        InterfaceIPv6.ADDRESS_IP: "2001:db8:1::1",
                         InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
                     }
                 ],
@@ -229,13 +229,13 @@ def _get_test_iface_states():
             },
         },
         {
-            Interface.NAME: 'eth2',
+            Interface.NAME: "eth2",
             Interface.STATE: InterfaceState.UP,
             Interface.TYPE: InterfaceType.ETHERNET,
             Interface.IPV4: {
                 InterfaceIPv4.ADDRESS: [
                     {
-                        InterfaceIPv4.ADDRESS_IP: '198.51.100.1',
+                        InterfaceIPv4.ADDRESS_IP: "198.51.100.1",
                         InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
                     }
                 ],
@@ -245,7 +245,7 @@ def _get_test_iface_states():
             Interface.IPV6: {
                 InterfaceIPv6.ADDRESS: [
                     {
-                        InterfaceIPv6.ADDRESS_IP: '2001:db8:2::1',
+                        InterfaceIPv6.ADDRESS_IP: "2001:db8:2::1",
                         InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
                     }
                 ],
@@ -260,15 +260,15 @@ def _get_test_iface_states():
 def _gen_default_gateway_route():
     return [
         {
-            Route.DESTINATION: '0.0.0.0/0',
+            Route.DESTINATION: "0.0.0.0/0",
             Route.METRIC: 200,
-            Route.NEXT_HOP_ADDRESS: '192.0.2.1',
-            Route.NEXT_HOP_INTERFACE: 'eth1',
+            Route.NEXT_HOP_ADDRESS: "192.0.2.1",
+            Route.NEXT_HOP_INTERFACE: "eth1",
         },
         {
-            Route.DESTINATION: '::/0',
+            Route.DESTINATION: "::/0",
             Route.METRIC: 201,
-            Route.NEXT_HOP_ADDRESS: '2001:db8:2::f',
-            Route.NEXT_HOP_INTERFACE: 'eth1',
+            Route.NEXT_HOP_ADDRESS: "2001:db8:2::f",
+            Route.NEXT_HOP_INTERFACE: "eth1",
         },
     ]

@@ -23,7 +23,7 @@ import logging
 import gi
 
 try:
-    gi.require_version('NM', '1.0')  # NOQA: F402
+    gi.require_version("NM", "1.0")  # NOQA: F402
     from gi.repository import NM  # pylint: disable=no-name-in-module
 except ValueError:
     NM = None
@@ -39,7 +39,7 @@ GObject
 _mainloop = None
 _nmclient = None
 
-_can_disable_ipv6 = hasattr(NM, 'SETTING_IP6_CONFIG_METHOD_DISABLED')
+_can_disable_ipv6 = hasattr(NM, "SETTING_IP6_CONFIG_METHOD_DISABLED")
 
 
 def can_disable_ipv6():
@@ -59,21 +59,21 @@ def client(refresh=False):
             _nmclient = NM.Client.new(None)
             if not _nmclient.get_nm_running():
                 logging.error(
-                    'NetworkManager is not running, please make sure'
-                    'it is installed and running prior to running nmstate.\n'
-                    'Check the documentation for more information.'
+                    "NetworkManager is not running, please make sure"
+                    "it is installed and running prior to running nmstate.\n"
+                    "Check the documentation for more information."
                 )
                 raise error.NmstateDependencyError(
-                    'NetworkManager is not running'
+                    "NetworkManager is not running"
                 )
         else:
             logging.error(
-                'Missing introspection data for libnm'
-                'please make sure to install it prior to running nmstate.\n'
-                'Check the documentation for more information.'
+                "Missing introspection data for libnm"
+                "please make sure to install it prior to running nmstate.\n"
+                "Check the documentation for more information."
             )
             raise error.NmstateDependencyError(
-                'Missing introspection data for libnm'
+                "Missing introspection data for libnm"
             )
     return _nmclient
 
@@ -96,24 +96,24 @@ def mainloop(refresh=False):
 class _MainLoop:
     SUCCESS = True
     FAIL = False
-    RUN_TIMEOUT_ERROR = 'run timeout'
-    RUN_EXECUTION_ERROR = 'run execution'
+    RUN_TIMEOUT_ERROR = "run timeout"
+    RUN_EXECUTION_ERROR = "run execution"
 
     def __init__(self):
         self._action_queue = deque()
         self._mainloop = GLib.MainLoop()
         self._cancellables = []
         self.new_cancellable()
-        self._error = ''
+        self._error = ""
 
     def execute_next_action(self):
         action = self.pop_action()
         if action:
             func, args, kwargs = action
-            logging.debug('Executing NM action: func=%s', func.__name__)
+            logging.debug("Executing NM action: func=%s", func.__name__)
             func(*args, **kwargs)
         else:
-            logging.debug('NM action queue exhausted, quiting mainloop')
+            logging.debug("NM action queue exhausted, quiting mainloop")
             self._mainloop.quit()
 
     def push_action(self, func, *args, **kwargs):
@@ -165,7 +165,7 @@ class _MainLoop:
     def drop_cancellable(self, c):
         idx = self._cancellables.index(c)
         if idx == 0:
-            raise error.NmstateInternalError('Cannot drop main cancellable')
+            raise error.NmstateInternalError("Cannot drop main cancellable")
         del self._cancellables[idx]
 
     def _cancel_cancellables(self):
@@ -173,7 +173,7 @@ class _MainLoop:
             c.cancel()
 
     def quit(self, reason):
-        logging.error('NM main-loop aborted: %s', reason)
+        logging.error("NM main-loop aborted: %s", reason)
         # In case it was the last action, add a sentinel to fail run.
         self.push_action(None)
         self._mainloop.quit()
@@ -182,7 +182,7 @@ class _MainLoop:
     def is_action_canceled(self, err):
         return (
             isinstance(err, GLib.GError)
-            and err.domain == 'g-io-error-quark'
+            and err.domain == "g-io-error-quark"
             and err.code == Gio.IOErrorEnum.CANCELLED
         )
 
@@ -208,7 +208,7 @@ class _MainLoop:
     def _timeout_cb(data):
         mainloop, result = data
         result.append(1)
-        logging.warning('NM main-loop timed out.')
+        logging.warning("NM main-loop timed out.")
         mainloop.quit()
         return _MainLoop.FAIL
 

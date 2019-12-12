@@ -24,13 +24,13 @@ import dbus
 import libnmstate.nm.nmclient
 
 
-DBUS_STD_PROPERTIES_IFNAME = 'org.freedesktop.DBus.Properties'
+DBUS_STD_PROPERTIES_IFNAME = "org.freedesktop.DBus.Properties"
 
 CHECKPOINT_CREATE_FLAG_DESTROY_ALL = 0x01
 CHECKPOINT_CREATE_FLAG_DELETE_NEW_CONNECTIONS = 0x02
 CHECKPOINT_CREATE_FLAG_DISCONNECT_NEW_DEVICES = 0x04
 
-NM_PERMISSION_DENIED = 'org.freedesktop.NetworkManager.PermissionDenied'
+NM_PERMISSION_DENIED = "org.freedesktop.NetworkManager.PermissionDenied"
 
 
 _nmdbus_manager = None
@@ -62,7 +62,7 @@ def nmdbus_manager():
 
 
 class _NMDbus:
-    BUS_NAME = 'org.freedesktop.NetworkManager'
+    BUS_NAME = "org.freedesktop.NetworkManager"
 
     bus = None
 
@@ -72,8 +72,8 @@ class _NMDbus:
 
 
 class _NMDbusManager:
-    IF_NAME = 'org.freedesktop.NetworkManager'
-    OBJ_PATH = '/org/freedesktop/NetworkManager'
+    IF_NAME = "org.freedesktop.NetworkManager"
+    OBJ_PATH = "/org/freedesktop/NetworkManager"
 
     def __init__(self):
         mng_proxy = _NMDbus.bus.get_object(
@@ -121,7 +121,7 @@ class CheckPoint:
                 devs, timeout, cp_flags
             )
             logging.debug(
-                'Checkpoint %s created for all devices: %s', dbuspath, timeout
+                "Checkpoint %s created for all devices: %s", dbuspath, timeout
             )
             self._dbuspath = dbuspath
         except dbus.exceptions.DBusException as e:
@@ -135,7 +135,7 @@ class CheckPoint:
         except dbus.exceptions.DBusException as e:
             raise NMCheckPointError(str(e))
 
-        logging.debug('Checkpoint %s destroyed', self._dbuspath)
+        logging.debug("Checkpoint %s destroyed", self._dbuspath)
 
     def rollback(self):
         try:
@@ -143,7 +143,7 @@ class CheckPoint:
         except dbus.exceptions.DBusException as e:
             raise NMCheckPointError(str(e))
         logging.debug(
-            'Checkpoint %s rollback executed: %s', self._dbuspath, result
+            "Checkpoint %s rollback executed: %s", self._dbuspath, result
         )
         return result
 

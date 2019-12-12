@@ -32,13 +32,13 @@ from libnmstate.schema import InterfaceIPv6
 from .testlib import mainloop_run
 from ..testlib import iprule
 
-ETH1 = 'eth1'
+ETH1 = "eth1"
 
-IPV4_ADDRESS1 = '192.0.2.251'
-IPV6_ADDRESS1 = '2001:db8:1::1'
+IPV4_ADDRESS1 = "192.0.2.251"
+IPV6_ADDRESS1 = "2001:db8:1::1"
 
 
-@pytest.fixture(scope='function')
+@pytest.fixture(scope="function")
 def eth1_up_with_static(eth1_up):
     state = eth1_up
     iface_state = state[Interface.KEY][0]
@@ -72,13 +72,13 @@ def eth1_up_with_static(eth1_up):
 
 
 def test_create_rule_add_full(eth1_up_with_static):
-    rule_v4_0 = _create_route_rule('198.51.100.0/24', '192.0.2.1/32', 50, 103)
-    rule_v4_1 = _create_route_rule('198.51.100.0/24', '192.0.2.2/32', 51, 104)
+    rule_v4_0 = _create_route_rule("198.51.100.0/24", "192.0.2.1/32", 50, 103)
+    rule_v4_1 = _create_route_rule("198.51.100.0/24", "192.0.2.2/32", 51, 104)
     rule_v6_0 = _create_route_rule(
-        '2001:db8:a::/64', '2001:db8:1::a/128', 50, 103
+        "2001:db8:a::/64", "2001:db8:1::a/128", 50, 103
     )
     rule_v6_1 = _create_route_rule(
-        '2001:db8:b::/64', '2001:db8:1::a/128', 51, 104
+        "2001:db8:b::/64", "2001:db8:1::a/128", 51, 104
     )
 
     ipv4_state = eth1_up_with_static[Interface.KEY][0][Interface.IPV4]
@@ -94,7 +94,7 @@ def test_create_rule_add_full(eth1_up_with_static):
 
 
 def test_route_rule_without_prioriry(eth1_up_with_static):
-    rule = _create_route_rule('198.51.100.0/24', '192.0.2.1/32', 50, 103)
+    rule = _create_route_rule("198.51.100.0/24", "192.0.2.1/32", 50, 103)
     del rule[RouteRule.PRIORITY]
     ipv4_state = eth1_up_with_static[Interface.KEY][0][Interface.IPV4]
     ipv4_state.update({nm.route.ROUTE_RULES_METADATA: [rule]})
@@ -107,7 +107,7 @@ def test_route_rule_without_prioriry(eth1_up_with_static):
 
 
 def test_route_rule_without_table(eth1_up_with_static):
-    rule = _create_route_rule('198.51.100.0/24', '192.0.2.1/32', 50, 103)
+    rule = _create_route_rule("198.51.100.0/24", "192.0.2.1/32", 50, 103)
     del rule[RouteRule.ROUTE_TABLE]
     ipv4_state = eth1_up_with_static[Interface.KEY][0][Interface.IPV4]
     ipv4_state.update({nm.route.ROUTE_RULES_METADATA: [rule]})
@@ -120,7 +120,7 @@ def test_route_rule_without_table(eth1_up_with_static):
 
 
 def test_route_rule_without_from(eth1_up_with_static):
-    rule = _create_route_rule('198.51.100.0/24', '192.0.2.1/32', 50, 103)
+    rule = _create_route_rule("198.51.100.0/24", "192.0.2.1/32", 50, 103)
     del rule[RouteRule.IP_FROM]
     ipv4_state = eth1_up_with_static[Interface.KEY][0][Interface.IPV4]
     ipv4_state.update({nm.route.ROUTE_RULES_METADATA: [rule]})
@@ -132,7 +132,7 @@ def test_route_rule_without_from(eth1_up_with_static):
 
 
 def test_route_rule_without_to(eth1_up_with_static):
-    rule = _create_route_rule('198.51.100.0/24', '192.0.2.1/32', 50, 103)
+    rule = _create_route_rule("198.51.100.0/24", "192.0.2.1/32", 50, 103)
     del rule[RouteRule.IP_TO]
     ipv4_state = eth1_up_with_static[Interface.KEY][0][Interface.IPV4]
     ipv4_state.update({nm.route.ROUTE_RULES_METADATA: [rule]})
@@ -191,6 +191,6 @@ def _assert_route_rules(expected_rules):
     cur_rules = (
         nm.ipv4.get_routing_rule_config() + nm.ipv6.get_routing_rule_config()
     )
-    logging.debug(f'Current route rules reported by NM {cur_rules}')
+    logging.debug(f"Current route rules reported by NM {cur_rules}")
     for rule in expected_rules:
         assert rule in expected_rules

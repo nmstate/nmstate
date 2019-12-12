@@ -26,19 +26,19 @@ from libnmstate.schema import InterfaceIPv6
 
 # IPv6 Address Prefix Reserved for Documentation:
 # https://tools.ietf.org/html/rfc3849
-IPV6_ADDRESS1 = '2001:db8:1::1'
-IPV6_LINK_LOCAL_ADDRESS1 = 'fe80::1'
+IPV6_ADDRESS1 = "2001:db8:1::1"
+IPV6_LINK_LOCAL_ADDRESS1 = "fe80::1"
 
 
 @pytest.fixture
 def NM_mock():
-    with mock.patch.object(nm.ipv6.nmclient, 'NM') as m:
+    with mock.patch.object(nm.ipv6.nmclient, "NM") as m:
         yield m
 
 
 def test_create_setting_without_config(NM_mock):
     NM_mock.SettingIP6Config.new().props.addresses = []
-    NM_mock.NM.SETTING_IP6_CONFIG_METHOD_DISABLED = 'disabled'
+    NM_mock.NM.SETTING_IP6_CONFIG_METHOD_DISABLED = "disabled"
 
     ipv6_setting = nm.ipv6.create_setting(config=None, base_con_profile=None)
 
@@ -49,7 +49,7 @@ def test_create_setting_without_config(NM_mock):
 
 def test_create_setting_with_ipv6_disabled(NM_mock):
     NM_mock.SettingIP6Config.new().props.addresses = []
-    NM_mock.NM.SETTING_IP6_CONFIG_METHOD_DISABLED = 'disabled'
+    NM_mock.NM.SETTING_IP6_CONFIG_METHOD_DISABLED = "disabled"
 
     ipv6_setting = nm.ipv6.create_setting(
         config={InterfaceIPv6.ENABLED: False}, base_con_profile=None
@@ -80,11 +80,11 @@ def test_create_setting_with_static_addresses(NM_mock):
         InterfaceIPv6.ENABLED: True,
         InterfaceIPv6.ADDRESS: [
             {
-                InterfaceIPv6.ADDRESS_IP: 'fd12:3456:789a:1::1',
+                InterfaceIPv6.ADDRESS_IP: "fd12:3456:789a:1::1",
                 InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 24,
             },
             {
-                InterfaceIPv6.ADDRESS_IP: 'fd12:3456:789a:2::1',
+                InterfaceIPv6.ADDRESS_IP: "fd12:3456:789a:2::1",
                 InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 24,
             },
         ],

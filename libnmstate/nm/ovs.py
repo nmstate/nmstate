@@ -25,23 +25,23 @@ from . import device
 from . import nmclient
 
 
-BRIDGE_TYPE = 'ovs-bridge'
-INTERNAL_INTERFACE_TYPE = 'ovs-interface'
-PORT_TYPE = 'ovs-port'
-PORT_PROFILE_PREFIX = 'ovs-port-'
-CAPABILITY = 'openvswitch'
+BRIDGE_TYPE = "ovs-bridge"
+INTERNAL_INTERFACE_TYPE = "ovs-interface"
+PORT_TYPE = "ovs-port"
+PORT_PROFILE_PREFIX = "ovs-port-"
+CAPABILITY = "openvswitch"
 
 
-_BRIDGE_OPTION_NAMES = ['fail-mode', 'mcast-snooping-enable', 'rstp', 'stp']
+_BRIDGE_OPTION_NAMES = ["fail-mode", "mcast-snooping-enable", "rstp", "stp"]
 
 
 _PORT_OPTION_NAMES = [
-    'tag',
-    'vlan-mode',
-    'bond-mode',
-    'lacp',
-    'bond-updelay',
-    'bond-downdelay',
+    "tag",
+    "vlan-mode",
+    "bond-mode",
+    "lacp",
+    "bond-updelay",
+    "bond-downdelay",
 ]
 
 
@@ -56,18 +56,18 @@ def has_ovs_capability():
 def create_bridge_setting(options):
     bridge_setting = nmclient.NM.SettingOvsBridge.new()
     for option_name, option_value in options.items():
-        if option_name == 'fail-mode':
+        if option_name == "fail-mode":
             if option_value:
                 bridge_setting.props.fail_mode = option_value
-        elif option_name == 'mcast-snooping-enable':
+        elif option_name == "mcast-snooping-enable":
             bridge_setting.props.mcast_snooping_enable = option_value
-        elif option_name == 'rstp':
+        elif option_name == "rstp":
             bridge_setting.props.rstp_enable = option_value
-        elif option_name == 'stp':
+        elif option_name == "stp":
             bridge_setting.props.stp_enable = option_value
         else:
             raise NmstateValueError(
-                'Invalid OVS bridge option: \'{}\'=\'{}\''.format(
+                "Invalid OVS bridge option: '{}'='{}'".format(
                     option_name, option_value
                 )
             )
@@ -78,21 +78,21 @@ def create_bridge_setting(options):
 def create_port_setting(options):
     port_setting = nmclient.NM.SettingOvsPort.new()
     for option_name, option_value in options.items():
-        if option_name == 'tag':
+        if option_name == "tag":
             port_setting.props.tag = option_value
-        elif option_name == 'vlan-mode':
+        elif option_name == "vlan-mode":
             port_setting.props.vlan_mode = option_value
-        elif option_name == 'bond-mode':
+        elif option_name == "bond-mode":
             port_setting.props.bond_mode = option_value
-        elif option_name == 'lacp':
+        elif option_name == "lacp":
             port_setting.props.lacp = option_value
-        elif option_name == 'bond-updelay':
+        elif option_name == "bond-updelay":
             port_setting.props.bond_updelay = option_value
-        elif option_name == 'bond-downdelay':
+        elif option_name == "bond-downdelay":
             port_setting.props.bond_downdelay = option_value
         else:
             raise NmstateValueError(
-                'Invalid OVS port option: \'{}\'=\'{}\''.format(
+                "Invalid OVS port option: '{}'='{}'".format(
                     option_name, option_value
                 )
             )
@@ -102,13 +102,13 @@ def create_port_setting(options):
 
 def create_interface_setting():
     interface_setting = nmclient.NM.SettingOvsInterface.new()
-    interface_setting.props.type = 'internal'
+    interface_setting.props.type = "internal"
     return interface_setting
 
 
 def translate_bridge_options(iface_state):
     br_opts = {}
-    bridge_state = iface_state.get('bridge', {}).get('options', {})
+    bridge_state = iface_state.get("bridge", {}).get("options", {})
     for key in bridge_state.keys() & set(_BRIDGE_OPTION_NAMES):
         br_opts[key] = bridge_state[key]
 
@@ -149,7 +149,7 @@ def get_ovs_info(bridge_device, devices_info):
     options = _get_bridge_options(bridge_device)
 
     if ports or options:
-        return {'port': ports, 'options': options}
+        return {"port": ports, "options": options}
     else:
         return {}
 
@@ -181,10 +181,10 @@ def _get_bridge_port_info(port_profile, devices_info):
 
     if port_slave_names:
         iface_slave_name = port_slave_names[0]
-        port_info['name'] = iface_slave_name
+        port_info["name"] = iface_slave_name
         if vlan_mode:
-            port_info['vlan-mode'] = vlan_mode
-            port_info['access-tag'] = port_setting.props.tag
+            port_info["vlan-mode"] = vlan_mode
+            port_info["access-tag"] = port_setting.props.tag
 
     return port_info
 
@@ -195,11 +195,11 @@ def _get_bridge_options(bridge_device):
     con.import_by_device(bridge_device)
     if con.profile:
         bridge_setting = con.profile.get_setting(nmclient.NM.SettingOvsBridge)
-        bridge_options['stp'] = bridge_setting.props.stp_enable
-        bridge_options['rstp'] = bridge_setting.props.rstp_enable
-        bridge_options['fail-mode'] = bridge_setting.props.fail_mode or ''
+        bridge_options["stp"] = bridge_setting.props.stp_enable
+        bridge_options["rstp"] = bridge_setting.props.rstp_enable
+        bridge_options["fail-mode"] = bridge_setting.props.fail_mode or ""
         bridge_options[
-            'mcast-snooping-enable'
+            "mcast-snooping-enable"
         ] = bridge_setting.props.mcast_snooping_enable
 
     return bridge_options

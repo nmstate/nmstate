@@ -84,7 +84,7 @@ def _wait_for_active_connection_async(dev, connection_profile):
         act_conn = ac.ActiveConnection(active_conn)
         if act_conn.is_activating:
             logging.debug(
-                'Connection activation in progress: dev=%s, state=%s',
+                "Connection activation in progress: dev=%s, state=%s",
                 act_conn.devname,
                 act_conn.state,
             )
@@ -103,19 +103,19 @@ def _reapply_callback(src_object, result, user_data):
         success = src_object.reapply_finish(result)
     except Exception as e:
         if mainloop.is_action_canceled(e):
-            logging.debug('Device reapply aborted on %s: error=%s', devname, e)
+            logging.debug("Device reapply aborted on %s: error=%s", devname, e)
         else:
             mainloop.quit(
-                'Device reapply failed on {}: error={}'.format(devname, e)
+                "Device reapply failed on {}: error={}".format(devname, e)
             )
         return
 
     if success:
-        logging.debug('Device reapply succeeded: dev=%s', devname)
+        logging.debug("Device reapply succeeded: dev=%s", devname)
         mainloop.execute_next_action()
     else:
         mainloop.quit(
-            'Device reapply failed: dev={}, error=unknown'.format(devname)
+            "Device reapply failed: dev={}, error=unknown".format(devname)
         )
 
 
@@ -164,11 +164,11 @@ def _modify_callback(src_object, result, user_data):
         success = src_object.reapply_finish(result)
     except Exception as e:
         if mainloop.is_action_canceled(e):
-            logging.debug('Device reapply aborted on %s: error=%s', devname, e)
+            logging.debug("Device reapply aborted on %s: error=%s", devname, e)
         else:
             logging.debug(
-                'Device reapply failed on %s: error=%s\n'
-                'Fallback to device activation',
+                "Device reapply failed on %s: error=%s\n"
+                "Fallback to device activation",
                 devname,
                 e,
             )
@@ -176,12 +176,12 @@ def _modify_callback(src_object, result, user_data):
         return
 
     if success:
-        logging.debug('Device reapply succeeded: dev=%s', devname)
+        logging.debug("Device reapply succeeded: dev=%s", devname)
         mainloop.execute_next_action()
     else:
         logging.debug(
-            'Device reapply failed, fallback to device activation: dev=%s, '
-            'error=unknown',
+            "Device reapply failed, fallback to device activation: dev=%s, "
+            "error=unknown",
             devname,
         )
         _activate_async(src_object)
@@ -189,18 +189,18 @@ def _modify_callback(src_object, result, user_data):
 
 def _requires_activation(dev, connection_profile):
     if StrictVersion(nmclient.nm_version()) < StrictVersion(
-        '1.18'
+        "1.18"
     ) and _mtu_changed(dev, connection_profile):
         logging.debug(
-            'Device reapply does not support mtu changes, '
-            'fallback to device activation: dev=%s',
+            "Device reapply does not support mtu changes, "
+            "fallback to device activation: dev=%s",
             dev.get_iface(),
         )
         return True
     if _ipv6_changed(dev, connection_profile):
         logging.debug(
-            'Device reapply does not support ipv6 changes, '
-            'fallback to device activation: dev=%s',
+            "Device reapply does not support ipv6 changes, "
+            "fallback to device activation: dev=%s",
             dev.get_iface(),
         )
         return True
@@ -273,14 +273,14 @@ def _delete_device_callback(src_object, result, user_data):
             and nmdev.is_software()
         ):
             logging.debug(
-                'Device %s has been already deleted: error=%s',
+                "Device %s has been already deleted: error=%s",
                 nmdev.get_iface(),
                 e,
             )
             mainloop.execute_next_action()
         else:
             mainloop.quit(
-                'Device deletion failed on {}: error={}'.format(
+                "Device deletion failed on {}: error={}".format(
                     nmdev.get_iface(), e
                 )
             )
@@ -288,11 +288,11 @@ def _delete_device_callback(src_object, result, user_data):
     except Exception as e:
         if mainloop.is_action_canceled(e):
             logging.debug(
-                'Device deletion aborted on %s: error=%s', nmdev.get_iface(), e
+                "Device deletion aborted on %s: error=%s", nmdev.get_iface(), e
             )
         else:
             mainloop.quit(
-                'Device deletion failed on {}: error={}'.format(
+                "Device deletion failed on {}: error={}".format(
                     nmdev.get_iface(), e
                 )
             )
@@ -300,11 +300,11 @@ def _delete_device_callback(src_object, result, user_data):
 
     devname = src_object.get_iface()
     if success:
-        logging.debug('Device deletion succeeded: dev=%s', devname)
+        logging.debug("Device deletion succeeded: dev=%s", devname)
         mainloop.execute_next_action()
     else:
         mainloop.quit(
-            'Device deletion failed: dev={}, error=unknown'.format(devname)
+            "Device deletion failed: dev={}, error=unknown".format(devname)
         )
 
 
@@ -320,8 +320,8 @@ def list_devices():
 
 def get_device_common_info(dev):
     return {
-        'name': dev.get_iface(),
-        'type_id': dev.get_device_type(),
-        'type_name': dev.get_type_description(),
-        'state': dev.get_state(),
+        "name": dev.get_iface(),
+        "type_id": dev.get_device_type(),
+        "type_name": dev.get_type_description(),
+        "state": dev.get_state(),
     }

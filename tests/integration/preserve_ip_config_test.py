@@ -30,13 +30,13 @@ from libnmstate.schema import InterfaceState
 from .testlib import statelib
 from .testlib import cmd as libcmd
 
-_IPV4_EXTRA_CONFIG = 'ipv4.dad-timeout'
-_IPV4_EXTRA_VALUE = '0'
-_IPV6_EXTRA_CONFIG = 'ipv6.dhcp-hostname'
-_IPV6_EXTRA_VALUE = 'libnmstate.example.com'
+_IPV4_EXTRA_CONFIG = "ipv4.dad-timeout"
+_IPV4_EXTRA_VALUE = "0"
+_IPV6_EXTRA_CONFIG = "ipv6.dhcp-hostname"
+_IPV6_EXTRA_VALUE = "libnmstate.example.com"
 
-IPV4_ADDRESS1 = '192.0.2.251'
-IPV6_ADDRESS1 = '2001:db8:1::1'
+IPV4_ADDRESS1 = "192.0.2.251"
+IPV6_ADDRESS1 = "2001:db8:1::1"
 
 
 def test_reapply_preserve_ip_config(eth1_up):
@@ -44,7 +44,7 @@ def test_reapply_preserve_ip_config(eth1_up):
         {
             Interface.KEY: [
                 {
-                    Interface.NAME: 'eth1',
+                    Interface.NAME: "eth1",
                     Interface.TYPE: InterfaceType.ETHERNET,
                     Interface.STATE: InterfaceState.UP,
                     Interface.IPV4: {
@@ -70,7 +70,7 @@ def test_reapply_preserve_ip_config(eth1_up):
             ]
         }
     )
-    cur_state = statelib.show_only(('eth1',))
+    cur_state = statelib.show_only(("eth1",))
     iface_name = cur_state[Interface.KEY][0][Interface.NAME]
 
     uuid = _get_nm_profile_uuid(iface_name)
@@ -98,10 +98,10 @@ def _get_nm_profile_uuid(iface_name):
 
 def _get_cur_extra_ip_config(uuid, key):
     rc, output, _ = libcmd.exec_cmd(
-        ['nmcli', '--get-values', key, 'connection', 'show', uuid]
+        ["nmcli", "--get-values", key, "connection", "show", uuid]
     )
     assert rc == 0
-    return output.split('\n')[0]
+    return output.split("\n")[0]
 
 
 @contextmanager
@@ -116,7 +116,7 @@ def _extra_ip_config(uuid, key, value):
 
 def _apply_extra_ip_config(uuid, key, value):
     assert (
-        libcmd.exec_cmd(['nmcli', 'connection', 'modify', uuid, key, value])[0]
+        libcmd.exec_cmd(["nmcli", "connection", "modify", uuid, key, value])[0]
         == 0
     )
 

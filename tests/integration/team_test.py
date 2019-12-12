@@ -26,7 +26,7 @@ from libnmstate.schema import InterfaceType
 from libnmstate.schema import Team
 
 
-TEAM0 = 'team0'
+TEAM0 = "team0"
 
 TEAM0_STATE = {
     Interface.KEY: [
@@ -34,7 +34,7 @@ TEAM0_STATE = {
             Interface.NAME: TEAM0,
             Interface.TYPE: InterfaceType.TEAM,
             Team.CONFIG_SUBTREE: {
-                Team.PORT_SUBTREE: [{Team.Port.NAME: 'eth1'}]
+                Team.PORT_SUBTREE: [{Team.Port.NAME: "eth1"}]
             },
         }
     ]
@@ -43,7 +43,7 @@ TEAM0_STATE = {
 
 @pytest.mark.xfail(
     raises=NmstateNotImplementedError,
-    reason='Team interface is not supported yet',
+    reason="Team interface is not supported yet",
     strict=True,
 )
 def test_sriov_not_implemented():

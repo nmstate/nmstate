@@ -24,7 +24,7 @@ from libnmstate.schema import Ethernet
 from libnmstate.schema import Interface
 
 
-ZEROED_MAC = '00:00:00:00:00:00'
+ZEROED_MAC = "00:00:00:00:00:00"
 
 
 class WiredSetting:
