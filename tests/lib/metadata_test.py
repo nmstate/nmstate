@@ -38,14 +38,14 @@ from libnmstate.schema import RouteRule
 TYPE_BOND = InterfaceType.BOND
 TYPE_OVS_BR = InterfaceType.OVS_BRIDGE
 
-BOND_NAME = 'bond99'
-OVS_NAME = 'ovs-br99'
-TEST_IFACE1 = 'eth1'
+BOND_NAME = "bond99"
+OVS_NAME = "ovs-br99"
+TEST_IFACE1 = "eth1"
 
 
 @pytest.fixture(autouse=True)
 def nm_mock():
-    with mock.patch.object(metadata, 'nm') as m:
+    with mock.patch.object(metadata, "nm") as m:
         yield m
 
 
@@ -76,19 +76,19 @@ class TestDesiredStateBondMetadata:
         desired_state = state.State(
             {
                 Interface.KEY: [
-                    create_bond_state_dict(BOND_NAME, ['eth0', 'eth1']),
-                    {'name': 'eth0', 'type': 'unknown'},
-                    {'name': 'eth1', 'type': 'unknown'},
+                    create_bond_state_dict(BOND_NAME, ["eth0", "eth1"]),
+                    {"name": "eth0", "type": "unknown"},
+                    {"name": "eth1", "type": "unknown"},
                 ]
             }
         )
         current_state = state.State({})
         expected_dstate = state.State(desired_state.state)
         expected_cstate = state.State(current_state.state)
-        expected_dstate.interfaces['eth0'][metadata.MASTER] = BOND_NAME
-        expected_dstate.interfaces['eth1'][metadata.MASTER] = BOND_NAME
-        expected_dstate.interfaces['eth0'][metadata.MASTER_TYPE] = TYPE_BOND
-        expected_dstate.interfaces['eth1'][metadata.MASTER_TYPE] = TYPE_BOND
+        expected_dstate.interfaces["eth0"][metadata.MASTER] = BOND_NAME
+        expected_dstate.interfaces["eth1"][metadata.MASTER] = BOND_NAME
+        expected_dstate.interfaces["eth0"][metadata.MASTER_TYPE] = TYPE_BOND
+        expected_dstate.interfaces["eth1"][metadata.MASTER_TYPE] = TYPE_BOND
 
         metadata.generate_ifaces_metadata(desired_state, current_state)
 
@@ -99,26 +99,26 @@ class TestDesiredStateBondMetadata:
         desired_state = state.State(
             {
                 Interface.KEY: [
-                    create_bond_state_dict(BOND_NAME, ['eth0', 'eth1'])
+                    create_bond_state_dict(BOND_NAME, ["eth0", "eth1"])
                 ]
             }
         )
         current_state = state.State(
             {
                 Interface.KEY: [
-                    {'name': 'eth0', 'type': 'unknown'},
-                    {'name': 'eth1', 'type': 'unknown'},
+                    {"name": "eth0", "type": "unknown"},
+                    {"name": "eth1", "type": "unknown"},
                 ]
             }
         )
         expected_dstate = state.State(desired_state.state)
         expected_cstate = state.State(current_state.state)
-        expected_dstate.interfaces['eth0'] = {'name': 'eth0', 'state': 'up'}
-        expected_dstate.interfaces['eth0'][metadata.MASTER] = BOND_NAME
-        expected_dstate.interfaces['eth0'][metadata.MASTER_TYPE] = TYPE_BOND
-        expected_dstate.interfaces['eth1'] = {'name': 'eth1', 'state': 'up'}
-        expected_dstate.interfaces['eth1'][metadata.MASTER] = BOND_NAME
-        expected_dstate.interfaces['eth1'][metadata.MASTER_TYPE] = TYPE_BOND
+        expected_dstate.interfaces["eth0"] = {"name": "eth0", "state": "up"}
+        expected_dstate.interfaces["eth0"][metadata.MASTER] = BOND_NAME
+        expected_dstate.interfaces["eth0"][metadata.MASTER_TYPE] = TYPE_BOND
+        expected_dstate.interfaces["eth1"] = {"name": "eth1", "state": "up"}
+        expected_dstate.interfaces["eth1"][metadata.MASTER] = BOND_NAME
+        expected_dstate.interfaces["eth1"][metadata.MASTER_TYPE] = TYPE_BOND
 
         metadata.generate_ifaces_metadata(desired_state, current_state)
 
@@ -129,16 +129,16 @@ class TestDesiredStateBondMetadata:
         desired_state = state.State(
             {
                 Interface.KEY: [
-                    {'name': BOND_NAME, 'type': TYPE_BOND, 'state': 'down'}
+                    {"name": BOND_NAME, "type": TYPE_BOND, "state": "down"}
                 ]
             }
         )
         current_state = state.State(
             {
                 Interface.KEY: [
-                    create_bond_state_dict(BOND_NAME, ['eth0', 'eth1']),
-                    {'name': 'eth0', 'type': 'unknown'},
-                    {'name': 'eth1', 'type': 'unknown'},
+                    create_bond_state_dict(BOND_NAME, ["eth0", "eth1"]),
+                    {"name": "eth0", "type": "unknown"},
+                    {"name": "eth1", "type": "unknown"},
                 ]
             }
         )
@@ -154,21 +154,21 @@ class TestDesiredStateBondMetadata:
         desired_state = state.State(
             {
                 Interface.KEY: [
-                    create_bond_state_dict(BOND_NAME, ['eth0', 'eth1']),
-                    {'name': 'eth1', 'state': 'up', 'type': 'unknown'},
+                    create_bond_state_dict(BOND_NAME, ["eth0", "eth1"]),
+                    {"name": "eth1", "state": "up", "type": "unknown"},
                 ]
             }
         )
         current_state = state.State(
-            {Interface.KEY: [{'name': 'eth0', 'type': 'unknown'}]}
+            {Interface.KEY: [{"name": "eth0", "type": "unknown"}]}
         )
         expected_dstate = state.State(desired_state.state)
         expected_cstate = state.State(current_state.state)
-        expected_dstate.interfaces['eth0'] = {'name': 'eth0', 'state': 'up'}
-        expected_dstate.interfaces['eth0'][metadata.MASTER] = BOND_NAME
-        expected_dstate.interfaces['eth1'][metadata.MASTER] = BOND_NAME
-        expected_dstate.interfaces['eth0'][metadata.MASTER_TYPE] = TYPE_BOND
-        expected_dstate.interfaces['eth1'][metadata.MASTER_TYPE] = TYPE_BOND
+        expected_dstate.interfaces["eth0"] = {"name": "eth0", "state": "up"}
+        expected_dstate.interfaces["eth0"][metadata.MASTER] = BOND_NAME
+        expected_dstate.interfaces["eth1"][metadata.MASTER] = BOND_NAME
+        expected_dstate.interfaces["eth0"][metadata.MASTER_TYPE] = TYPE_BOND
+        expected_dstate.interfaces["eth1"][metadata.MASTER_TYPE] = TYPE_BOND
 
         metadata.generate_ifaces_metadata(desired_state, current_state)
 
@@ -177,23 +177,23 @@ class TestDesiredStateBondMetadata:
 
     def test_bond_removing_slaves(self):
         desired_state = state.State(
-            {Interface.KEY: [create_bond_state_dict(BOND_NAME, ['eth0'])]}
+            {Interface.KEY: [create_bond_state_dict(BOND_NAME, ["eth0"])]}
         )
         current_state = state.State(
             {
                 Interface.KEY: [
-                    create_bond_state_dict(BOND_NAME, ['eth0', 'eth1']),
-                    {'name': 'eth0', 'state': 'up', 'type': 'unknown'},
-                    {'name': 'eth1', 'state': 'up', 'type': 'unknown'},
+                    create_bond_state_dict(BOND_NAME, ["eth0", "eth1"]),
+                    {"name": "eth0", "state": "up", "type": "unknown"},
+                    {"name": "eth1", "state": "up", "type": "unknown"},
                 ]
             }
         )
         expected_dstate = state.State(desired_state.state)
         expected_cstate = state.State(current_state.state)
-        expected_dstate.interfaces['eth0'] = {'name': 'eth0', 'state': 'up'}
-        expected_dstate.interfaces['eth0'][metadata.MASTER] = BOND_NAME
-        expected_dstate.interfaces['eth0'][metadata.MASTER_TYPE] = TYPE_BOND
-        expected_dstate.interfaces['eth1'] = {'name': 'eth1'}
+        expected_dstate.interfaces["eth0"] = {"name": "eth0", "state": "up"}
+        expected_dstate.interfaces["eth0"][metadata.MASTER] = BOND_NAME
+        expected_dstate.interfaces["eth0"][metadata.MASTER_TYPE] = TYPE_BOND
+        expected_dstate.interfaces["eth1"] = {"name": "eth1"}
 
         metadata.generate_ifaces_metadata(desired_state, current_state)
 
@@ -204,23 +204,23 @@ class TestDesiredStateBondMetadata:
         desired_state = state.State(
             {
                 Interface.KEY: [
-                    {'name': 'eth0', 'type': 'unknown', 'fookey': 'fooval'}
+                    {"name": "eth0", "type": "unknown", "fookey": "fooval"}
                 ]
             }
         )
         current_state = state.State(
             {
                 Interface.KEY: [
-                    create_bond_state_dict(BOND_NAME, ['eth0', 'eth1']),
-                    {'name': 'eth0', 'type': 'unknown'},
-                    {'name': 'eth1', 'type': 'unknown'},
+                    create_bond_state_dict(BOND_NAME, ["eth0", "eth1"]),
+                    {"name": "eth0", "type": "unknown"},
+                    {"name": "eth1", "type": "unknown"},
                 ]
             }
         )
         expected_dstate = state.State(desired_state.state)
         expected_cstate = state.State(current_state.state)
-        expected_dstate.interfaces['eth0'][metadata.MASTER] = BOND_NAME
-        expected_dstate.interfaces['eth0'][metadata.MASTER_TYPE] = TYPE_BOND
+        expected_dstate.interfaces["eth0"][metadata.MASTER] = BOND_NAME
+        expected_dstate.interfaces["eth0"][metadata.MASTER_TYPE] = TYPE_BOND
 
         metadata.generate_ifaces_metadata(desired_state, current_state)
 
@@ -228,24 +228,24 @@ class TestDesiredStateBondMetadata:
         assert current_state == expected_cstate
 
     def test_bond_reusing_slave_used_by_existing_bond(self):
-        BOND2_NAME = 'bond88'
+        BOND2_NAME = "bond88"
         desired_state = state.State(
-            {Interface.KEY: [create_bond_state_dict(BOND2_NAME, ['eth0'])]}
+            {Interface.KEY: [create_bond_state_dict(BOND2_NAME, ["eth0"])]}
         )
         current_state = state.State(
             {
                 Interface.KEY: [
-                    create_bond_state_dict(BOND_NAME, ['eth0', 'eth1']),
-                    {'name': 'eth0', 'state': 'up', 'type': 'unknown'},
-                    {'name': 'eth1', 'state': 'up', 'type': 'unknown'},
+                    create_bond_state_dict(BOND_NAME, ["eth0", "eth1"]),
+                    {"name": "eth0", "state": "up", "type": "unknown"},
+                    {"name": "eth1", "state": "up", "type": "unknown"},
                 ]
             }
         )
         expected_dstate = state.State(desired_state.state)
         expected_cstate = state.State(current_state.state)
-        expected_dstate.interfaces['eth0'] = {'name': 'eth0', 'state': 'up'}
-        expected_dstate.interfaces['eth0'][metadata.MASTER] = BOND2_NAME
-        expected_dstate.interfaces['eth0'][metadata.MASTER_TYPE] = TYPE_BOND
+        expected_dstate.interfaces["eth0"] = {"name": "eth0", "state": "up"}
+        expected_dstate.interfaces["eth0"][metadata.MASTER] = BOND2_NAME
+        expected_dstate.interfaces["eth0"][metadata.MASTER_TYPE] = TYPE_BOND
 
         metadata.generate_ifaces_metadata(desired_state, current_state)
 
@@ -253,33 +253,33 @@ class TestDesiredStateBondMetadata:
         assert current_state == expected_cstate
 
     def test_swap_slaves_between_bonds(self):
-        BOND2_NAME = 'bond88'
+        BOND2_NAME = "bond88"
         desired_state = state.State(
             {
                 Interface.KEY: [
-                    create_bond_state_dict(BOND_NAME, ['eth1']),
-                    create_bond_state_dict(BOND2_NAME, ['eth0']),
+                    create_bond_state_dict(BOND_NAME, ["eth1"]),
+                    create_bond_state_dict(BOND2_NAME, ["eth0"]),
                 ]
             }
         )
         current_state = state.State(
             {
                 Interface.KEY: [
-                    create_bond_state_dict(BOND_NAME, ['eth0']),
-                    create_bond_state_dict(BOND2_NAME, ['eth1']),
-                    {'name': 'eth0', 'state': 'up', 'type': 'unknown'},
-                    {'name': 'eth1', 'state': 'up', 'type': 'unknown'},
+                    create_bond_state_dict(BOND_NAME, ["eth0"]),
+                    create_bond_state_dict(BOND2_NAME, ["eth1"]),
+                    {"name": "eth0", "state": "up", "type": "unknown"},
+                    {"name": "eth1", "state": "up", "type": "unknown"},
                 ]
             }
         )
         expected_dstate = state.State(desired_state.state)
         expected_cstate = state.State(current_state.state)
-        expected_dstate.interfaces['eth0'] = {'name': 'eth0', 'state': 'up'}
-        expected_dstate.interfaces['eth1'] = {'name': 'eth1', 'state': 'up'}
-        expected_dstate.interfaces['eth0'][metadata.MASTER] = BOND2_NAME
-        expected_dstate.interfaces['eth0'][metadata.MASTER_TYPE] = TYPE_BOND
-        expected_dstate.interfaces['eth1'][metadata.MASTER] = BOND_NAME
-        expected_dstate.interfaces['eth1'][metadata.MASTER_TYPE] = TYPE_BOND
+        expected_dstate.interfaces["eth0"] = {"name": "eth0", "state": "up"}
+        expected_dstate.interfaces["eth1"] = {"name": "eth1", "state": "up"}
+        expected_dstate.interfaces["eth0"][metadata.MASTER] = BOND2_NAME
+        expected_dstate.interfaces["eth0"][metadata.MASTER_TYPE] = TYPE_BOND
+        expected_dstate.interfaces["eth1"][metadata.MASTER] = BOND_NAME
+        expected_dstate.interfaces["eth1"][metadata.MASTER_TYPE] = TYPE_BOND
 
         metadata.generate_ifaces_metadata(desired_state, current_state)
 
@@ -295,7 +295,7 @@ class TestDesiredStateBondMetadata:
                         Interface.STATE: InterfaceState.ABSENT,
                     },
                     {
-                        Interface.NAME: 'eth0',
+                        Interface.NAME: "eth0",
                         Interface.STATE: InterfaceState.UP,
                         Interface.TYPE: InterfaceType.UNKNOWN,
                     },
@@ -305,9 +305,9 @@ class TestDesiredStateBondMetadata:
         current_state = state.State(
             {
                 Interface.KEY: [
-                    create_bond_state_dict(BOND_NAME, ['eth0', 'eth1']),
-                    {'name': 'eth0', 'state': 'up', 'type': 'unknown'},
-                    {'name': 'eth1', 'state': 'up', 'type': 'unknown'},
+                    create_bond_state_dict(BOND_NAME, ["eth0", "eth1"]),
+                    {"name": "eth0", "state": "up", "type": "unknown"},
+                    {"name": "eth1", "state": "up", "type": "unknown"},
                 ]
             }
         )
@@ -323,10 +323,10 @@ class TestDesiredStateBondMetadata:
 def create_bond_state_dict(name, slaves=None):
     slaves = slaves or []
     return {
-        'name': name,
-        'type': TYPE_BOND,
-        'state': 'up',
-        'link-aggregation': {'mode': 'balance-rr', 'slaves': slaves},
+        "name": name,
+        "type": TYPE_BOND,
+        "state": "up",
+        "link-aggregation": {"mode": "balance-rr", "slaves": slaves},
     }
 
 
@@ -336,31 +336,31 @@ class TestDesiredStateOvsMetadata:
             {
                 Interface.KEY: [
                     {
-                        'name': OVS_NAME,
-                        'type': TYPE_OVS_BR,
-                        'state': 'up',
-                        'bridge': {
-                            'port': [{'name': 'eth0'}, {'name': 'eth1'}]
+                        "name": OVS_NAME,
+                        "type": TYPE_OVS_BR,
+                        "state": "up",
+                        "bridge": {
+                            "port": [{"name": "eth0"}, {"name": "eth1"}]
                         },
                     },
-                    {'name': 'eth0', 'type': 'unknown'},
-                    {'name': 'eth1', 'type': 'unknown'},
+                    {"name": "eth0", "type": "unknown"},
+                    {"name": "eth1", "type": "unknown"},
                 ]
             }
         )
         current_state = state.State({})
         expected_dstate = state.State(desired_state.state)
         expected_cstate = state.State(current_state.state)
-        expected_dstate.interfaces['eth0'][metadata.MASTER] = OVS_NAME
-        expected_dstate.interfaces['eth1'][metadata.MASTER] = OVS_NAME
-        expected_dstate.interfaces['eth0'][metadata.MASTER_TYPE] = TYPE_OVS_BR
-        expected_dstate.interfaces['eth1'][metadata.MASTER_TYPE] = TYPE_OVS_BR
-        expected_dstate.interfaces['eth0'][
+        expected_dstate.interfaces["eth0"][metadata.MASTER] = OVS_NAME
+        expected_dstate.interfaces["eth1"][metadata.MASTER] = OVS_NAME
+        expected_dstate.interfaces["eth0"][metadata.MASTER_TYPE] = TYPE_OVS_BR
+        expected_dstate.interfaces["eth1"][metadata.MASTER_TYPE] = TYPE_OVS_BR
+        expected_dstate.interfaces["eth0"][
             metadata.BRPORT_OPTIONS
-        ] = desired_state.interfaces[OVS_NAME]['bridge']['port'][0]
-        expected_dstate.interfaces['eth1'][
+        ] = desired_state.interfaces[OVS_NAME]["bridge"]["port"][0]
+        expected_dstate.interfaces["eth1"][
             metadata.BRPORT_OPTIONS
-        ] = desired_state.interfaces[OVS_NAME]['bridge']['port'][1]
+        ] = desired_state.interfaces[OVS_NAME]["bridge"]["port"][1]
 
         metadata.generate_ifaces_metadata(desired_state, current_state)
 
@@ -372,11 +372,11 @@ class TestDesiredStateOvsMetadata:
             {
                 Interface.KEY: [
                     {
-                        'name': OVS_NAME,
-                        'type': TYPE_OVS_BR,
-                        'state': 'up',
-                        'bridge': {
-                            'port': [{'name': 'eth0'}, {'name': 'eth1'}]
+                        "name": OVS_NAME,
+                        "type": TYPE_OVS_BR,
+                        "state": "up",
+                        "bridge": {
+                            "port": [{"name": "eth0"}, {"name": "eth1"}]
                         },
                     }
                 ]
@@ -385,25 +385,25 @@ class TestDesiredStateOvsMetadata:
         current_state = state.State(
             {
                 Interface.KEY: [
-                    {'name': 'eth0', 'state': 'up', 'type': 'unknown'},
-                    {'name': 'eth1', 'state': 'up', 'type': 'unknown'},
+                    {"name": "eth0", "state": "up", "type": "unknown"},
+                    {"name": "eth1", "state": "up", "type": "unknown"},
                 ]
             }
         )
         expected_dstate = state.State(desired_state.state)
         expected_cstate = state.State(current_state.state)
-        expected_dstate.interfaces['eth0'] = {'name': 'eth0', 'state': 'up'}
-        expected_dstate.interfaces['eth0'][metadata.MASTER] = OVS_NAME
-        expected_dstate.interfaces['eth0'][metadata.MASTER_TYPE] = TYPE_OVS_BR
-        expected_dstate.interfaces['eth1'] = {'name': 'eth1', 'state': 'up'}
-        expected_dstate.interfaces['eth1'][metadata.MASTER] = OVS_NAME
-        expected_dstate.interfaces['eth1'][metadata.MASTER_TYPE] = TYPE_OVS_BR
-        expected_dstate.interfaces['eth0'][
+        expected_dstate.interfaces["eth0"] = {"name": "eth0", "state": "up"}
+        expected_dstate.interfaces["eth0"][metadata.MASTER] = OVS_NAME
+        expected_dstate.interfaces["eth0"][metadata.MASTER_TYPE] = TYPE_OVS_BR
+        expected_dstate.interfaces["eth1"] = {"name": "eth1", "state": "up"}
+        expected_dstate.interfaces["eth1"][metadata.MASTER] = OVS_NAME
+        expected_dstate.interfaces["eth1"][metadata.MASTER_TYPE] = TYPE_OVS_BR
+        expected_dstate.interfaces["eth0"][
             metadata.BRPORT_OPTIONS
-        ] = desired_state.interfaces[OVS_NAME]['bridge']['port'][0]
-        expected_dstate.interfaces['eth1'][
+        ] = desired_state.interfaces[OVS_NAME]["bridge"]["port"][0]
+        expected_dstate.interfaces["eth1"][
             metadata.BRPORT_OPTIONS
-        ] = desired_state.interfaces[OVS_NAME]['bridge']['port'][1]
+        ] = desired_state.interfaces[OVS_NAME]["bridge"]["port"][1]
 
         metadata.generate_ifaces_metadata(desired_state, current_state)
 
@@ -414,7 +414,7 @@ class TestDesiredStateOvsMetadata:
         desired_state = state.State(
             {
                 Interface.KEY: [
-                    {'name': OVS_NAME, 'type': TYPE_OVS_BR, 'state': 'down'}
+                    {"name": OVS_NAME, "type": TYPE_OVS_BR, "state": "down"}
                 ]
             }
         )
@@ -422,15 +422,15 @@ class TestDesiredStateOvsMetadata:
             {
                 Interface.KEY: [
                     {
-                        'name': OVS_NAME,
-                        'type': TYPE_OVS_BR,
-                        'state': 'up',
-                        'bridge': {
-                            'port': [{'name': 'eth0'}, {'name': 'eth1'}]
+                        "name": OVS_NAME,
+                        "type": TYPE_OVS_BR,
+                        "state": "up",
+                        "bridge": {
+                            "port": [{"name": "eth0"}, {"name": "eth1"}]
                         },
                     },
-                    {'name': 'eth0', 'type': 'unknown'},
-                    {'name': 'eth1', 'type': 'unknown'},
+                    {"name": "eth0", "type": "unknown"},
+                    {"name": "eth1", "type": "unknown"},
                 ]
             }
         )
@@ -447,37 +447,37 @@ class TestDesiredStateOvsMetadata:
             {
                 Interface.KEY: [
                     {
-                        'name': OVS_NAME,
-                        'type': TYPE_OVS_BR,
-                        'state': 'up',
-                        'bridge': {
-                            'port': [{'name': 'eth0'}, {'name': 'eth1'}]
+                        "name": OVS_NAME,
+                        "type": TYPE_OVS_BR,
+                        "state": "up",
+                        "bridge": {
+                            "port": [{"name": "eth0"}, {"name": "eth1"}]
                         },
                     },
-                    {'name': 'eth1', 'state': 'up', 'type': 'unknown'},
+                    {"name": "eth1", "state": "up", "type": "unknown"},
                 ]
             }
         )
         current_state = state.State(
             {
                 Interface.KEY: [
-                    {'name': 'eth0', 'state': 'up', 'type': 'unknown'}
+                    {"name": "eth0", "state": "up", "type": "unknown"}
                 ]
             }
         )
         expected_dstate = state.State(desired_state.state)
         expected_cstate = state.State(current_state.state)
-        expected_dstate.interfaces['eth0'] = {'name': 'eth0', 'state': 'up'}
-        expected_dstate.interfaces['eth0'][metadata.MASTER] = OVS_NAME
-        expected_dstate.interfaces['eth1'][metadata.MASTER] = OVS_NAME
-        expected_dstate.interfaces['eth0'][metadata.MASTER_TYPE] = TYPE_OVS_BR
-        expected_dstate.interfaces['eth1'][metadata.MASTER_TYPE] = TYPE_OVS_BR
-        expected_dstate.interfaces['eth0'][
+        expected_dstate.interfaces["eth0"] = {"name": "eth0", "state": "up"}
+        expected_dstate.interfaces["eth0"][metadata.MASTER] = OVS_NAME
+        expected_dstate.interfaces["eth1"][metadata.MASTER] = OVS_NAME
+        expected_dstate.interfaces["eth0"][metadata.MASTER_TYPE] = TYPE_OVS_BR
+        expected_dstate.interfaces["eth1"][metadata.MASTER_TYPE] = TYPE_OVS_BR
+        expected_dstate.interfaces["eth0"][
             metadata.BRPORT_OPTIONS
-        ] = desired_state.interfaces[OVS_NAME]['bridge']['port'][0]
-        expected_dstate.interfaces['eth1'][
+        ] = desired_state.interfaces[OVS_NAME]["bridge"]["port"][0]
+        expected_dstate.interfaces["eth1"][
             metadata.BRPORT_OPTIONS
-        ] = desired_state.interfaces[OVS_NAME]['bridge']['port'][1]
+        ] = desired_state.interfaces[OVS_NAME]["bridge"]["port"][1]
 
         metadata.generate_ifaces_metadata(desired_state, current_state)
 
@@ -489,10 +489,10 @@ class TestDesiredStateOvsMetadata:
             {
                 Interface.KEY: [
                     {
-                        'name': OVS_NAME,
-                        'type': TYPE_OVS_BR,
-                        'state': 'up',
-                        'bridge': {'port': [{'name': 'eth0'}]},
+                        "name": OVS_NAME,
+                        "type": TYPE_OVS_BR,
+                        "state": "up",
+                        "bridge": {"port": [{"name": "eth0"}]},
                     }
                 ]
             }
@@ -501,27 +501,27 @@ class TestDesiredStateOvsMetadata:
             {
                 Interface.KEY: [
                     {
-                        'name': OVS_NAME,
-                        'type': TYPE_OVS_BR,
-                        'state': 'up',
-                        'bridge': {
-                            'port': [{'name': 'eth0'}, {'name': 'eth1'}]
+                        "name": OVS_NAME,
+                        "type": TYPE_OVS_BR,
+                        "state": "up",
+                        "bridge": {
+                            "port": [{"name": "eth0"}, {"name": "eth1"}]
                         },
                     },
-                    {'name': 'eth0', 'state': 'up', 'type': 'unknown'},
-                    {'name': 'eth1', 'state': 'up', 'type': 'unknown'},
+                    {"name": "eth0", "state": "up", "type": "unknown"},
+                    {"name": "eth1", "state": "up", "type": "unknown"},
                 ]
             }
         )
         expected_dstate = state.State(desired_state.state)
         expected_cstate = state.State(current_state.state)
-        expected_dstate.interfaces['eth0'] = {'name': 'eth0', 'state': 'up'}
-        expected_dstate.interfaces['eth0'][metadata.MASTER] = OVS_NAME
-        expected_dstate.interfaces['eth0'][metadata.MASTER_TYPE] = TYPE_OVS_BR
-        expected_dstate.interfaces['eth1'] = {'name': 'eth1'}
-        expected_dstate.interfaces['eth0'][
+        expected_dstate.interfaces["eth0"] = {"name": "eth0", "state": "up"}
+        expected_dstate.interfaces["eth0"][metadata.MASTER] = OVS_NAME
+        expected_dstate.interfaces["eth0"][metadata.MASTER_TYPE] = TYPE_OVS_BR
+        expected_dstate.interfaces["eth1"] = {"name": "eth1"}
+        expected_dstate.interfaces["eth0"][
             metadata.BRPORT_OPTIONS
-        ] = desired_state.interfaces[OVS_NAME]['bridge']['port'][0]
+        ] = desired_state.interfaces[OVS_NAME]["bridge"]["port"][0]
 
         metadata.generate_ifaces_metadata(desired_state, current_state)
 
@@ -532,7 +532,7 @@ class TestDesiredStateOvsMetadata:
         desired_state = state.State(
             {
                 Interface.KEY: [
-                    {'name': 'eth0', 'type': 'unknown', 'fookey': 'fooval'}
+                    {"name": "eth0", "type": "unknown", "fookey": "fooval"}
                 ]
             }
         )
@@ -540,25 +540,25 @@ class TestDesiredStateOvsMetadata:
             {
                 Interface.KEY: [
                     {
-                        'name': OVS_NAME,
-                        'type': TYPE_OVS_BR,
-                        'state': 'up',
-                        'bridge': {
-                            'port': [{'name': 'eth0'}, {'name': 'eth1'}]
+                        "name": OVS_NAME,
+                        "type": TYPE_OVS_BR,
+                        "state": "up",
+                        "bridge": {
+                            "port": [{"name": "eth0"}, {"name": "eth1"}]
                         },
                     },
-                    {'name': 'eth0', 'type': 'unknown'},
-                    {'name': 'eth1', 'type': 'unknown'},
+                    {"name": "eth0", "type": "unknown"},
+                    {"name": "eth1", "type": "unknown"},
                 ]
             }
         )
         expected_dstate = state.State(desired_state.state)
         expected_cstate = state.State(current_state.state)
-        expected_dstate.interfaces['eth0'][metadata.MASTER] = OVS_NAME
-        expected_dstate.interfaces['eth0'][metadata.MASTER_TYPE] = TYPE_OVS_BR
-        expected_dstate.interfaces['eth0'][
+        expected_dstate.interfaces["eth0"][metadata.MASTER] = OVS_NAME
+        expected_dstate.interfaces["eth0"][metadata.MASTER_TYPE] = TYPE_OVS_BR
+        expected_dstate.interfaces["eth0"][
             metadata.BRPORT_OPTIONS
-        ] = current_state.interfaces[OVS_NAME]['bridge']['port'][0]
+        ] = current_state.interfaces[OVS_NAME]["bridge"]["port"][0]
 
         metadata.generate_ifaces_metadata(desired_state, current_state)
 
@@ -566,15 +566,15 @@ class TestDesiredStateOvsMetadata:
         assert current_state == expected_cstate
 
     def test_ovs_reusing_slave_used_by_existing_bridge(self):
-        OVS2_NAME = 'ovs-br88'
+        OVS2_NAME = "ovs-br88"
         desired_state = state.State(
             {
                 Interface.KEY: [
                     {
-                        'name': OVS2_NAME,
-                        'type': TYPE_OVS_BR,
-                        'state': 'up',
-                        'bridge': {'port': [{'name': 'eth0'}]},
+                        "name": OVS2_NAME,
+                        "type": TYPE_OVS_BR,
+                        "state": "up",
+                        "bridge": {"port": [{"name": "eth0"}]},
                     }
                 ]
             }
@@ -583,26 +583,26 @@ class TestDesiredStateOvsMetadata:
             {
                 Interface.KEY: [
                     {
-                        'name': OVS_NAME,
-                        'type': TYPE_OVS_BR,
-                        'state': 'up',
-                        'bridge': {
-                            'port': [{'name': 'eth0'}, {'name': 'eth1'}]
+                        "name": OVS_NAME,
+                        "type": TYPE_OVS_BR,
+                        "state": "up",
+                        "bridge": {
+                            "port": [{"name": "eth0"}, {"name": "eth1"}]
                         },
                     },
-                    {'name': 'eth0', 'state': 'up', 'type': 'unknown'},
-                    {'name': 'eth1', 'state': 'up', 'type': 'unknown'},
+                    {"name": "eth0", "state": "up", "type": "unknown"},
+                    {"name": "eth1", "state": "up", "type": "unknown"},
                 ]
             }
         )
         expected_dstate = state.State(desired_state.state)
         expected_cstate = state.State(current_state.state)
-        expected_dstate.interfaces['eth0'] = {'name': 'eth0', 'state': 'up'}
-        expected_dstate.interfaces['eth0'][metadata.MASTER] = OVS2_NAME
-        expected_dstate.interfaces['eth0'][metadata.MASTER_TYPE] = TYPE_OVS_BR
-        expected_dstate.interfaces['eth0'][
+        expected_dstate.interfaces["eth0"] = {"name": "eth0", "state": "up"}
+        expected_dstate.interfaces["eth0"][metadata.MASTER] = OVS2_NAME
+        expected_dstate.interfaces["eth0"][metadata.MASTER_TYPE] = TYPE_OVS_BR
+        expected_dstate.interfaces["eth0"][
             metadata.BRPORT_OPTIONS
-        ] = desired_state.interfaces[OVS2_NAME]['bridge']['port'][0]
+        ] = desired_state.interfaces[OVS2_NAME]["bridge"]["port"][0]
 
         metadata.generate_ifaces_metadata(desired_state, current_state)
 
@@ -646,27 +646,27 @@ class TestRouteMetadata:
         route0 = self._create_route0()
         desired_state = state.State(
             {
-                Interface.KEY: [_create_interface_state('foo')],
+                Interface.KEY: [_create_interface_state("foo")],
                 Route.KEY: {Route.CONFIG: [route0.to_dict()]},
             }
         )
         current_state = state.State(
             {
-                Interface.KEY: [_create_interface_state('boo')],
+                Interface.KEY: [_create_interface_state("boo")],
                 Route.KEY: {Route.CONFIG: []},
             }
         )
 
         metadata.generate_ifaces_metadata(desired_state, current_state)
 
-        assert 'foo' in desired_state.interfaces
-        assert metadata.ROUTES not in desired_state.interfaces['foo']
+        assert "foo" in desired_state.interfaces
+        assert metadata.ROUTES not in desired_state.interfaces["foo"]
 
     def test_route_with_matching_desired_interface(self):
         route0 = self._create_route0()
         desired_state = state.State(
             {
-                Interface.KEY: [_create_interface_state('eth1')],
+                Interface.KEY: [_create_interface_state("eth1")],
                 Route.KEY: {Route.CONFIG: [route0.to_dict()]},
             }
         )
@@ -674,7 +674,7 @@ class TestRouteMetadata:
 
         metadata.generate_ifaces_metadata(desired_state, current_state)
 
-        iface_state = desired_state.interfaces['eth1']
+        iface_state = desired_state.interfaces["eth1"]
         (route_metadata,) = iface_state[Interface.IPV4][metadata.ROUTES]
         assert route0.to_dict() == route_metadata
 
@@ -685,14 +685,14 @@ class TestRouteMetadata:
         )
         current_state = state.State(
             {
-                Interface.KEY: [_create_interface_state('eth1')],
+                Interface.KEY: [_create_interface_state("eth1")],
                 Route.KEY: {Route.CONFIG: []},
             }
         )
 
         metadata.generate_ifaces_metadata(desired_state, current_state)
 
-        iface_state = desired_state.interfaces['eth1']
+        iface_state = desired_state.interfaces["eth1"]
         (route_metadata,) = iface_state[Interface.IPV4][metadata.ROUTES]
         assert route0.to_dict() == route_metadata
 
@@ -701,7 +701,7 @@ class TestRouteMetadata:
         route1 = self._create_route1()
         desired_state = state.State(
             {
-                Interface.KEY: [_create_interface_state('eth1')],
+                Interface.KEY: [_create_interface_state("eth1")],
                 Route.KEY: {
                     Route.CONFIG: [route0.to_dict(), route1.to_dict()]
                 },
@@ -709,26 +709,26 @@ class TestRouteMetadata:
         )
         current_state = state.State(
             {
-                Interface.KEY: [_create_interface_state('eth2')],
+                Interface.KEY: [_create_interface_state("eth2")],
                 Route.KEY: {Route.CONFIG: []},
             }
         )
 
         metadata.generate_ifaces_metadata(desired_state, current_state)
 
-        iface0_state = desired_state.interfaces['eth1']
-        iface1_state = desired_state.interfaces['eth2']
+        iface0_state = desired_state.interfaces["eth1"]
+        iface1_state = desired_state.interfaces["eth2"]
         (route0_metadata,) = iface0_state[Interface.IPV4][metadata.ROUTES]
         (route1_metadata,) = iface1_state[Interface.IPV6][metadata.ROUTES]
         assert route0.to_dict() == route0_metadata
         assert route1.to_dict() == route1_metadata
 
     def _create_route0(self):
-        return _create_route('198.51.100.0/24', '192.0.2.1', 'eth1', 50, 103)
+        return _create_route("198.51.100.0/24", "192.0.2.1", "eth1", 50, 103)
 
     def _create_route1(self):
         return _create_route(
-            '2001:db8:a::/64', '2001:db8:1::a', 'eth2', 51, 104
+            "2001:db8:a::/64", "2001:db8:1::a", "eth2", 51, 104
         )
 
 
@@ -774,8 +774,8 @@ def test_dns_gen_metadata_static_gateway_ipv6_name_server_before_ipv4(
     nm_dns_mock,
 ):
     dns_config = {
-        DNS.SERVER: ['2001:4860:4860::8888', '8.8.8.8'],
-        DNS.SEARCH: ['example.org', 'example.com'],
+        DNS.SERVER: ["2001:4860:4860::8888", "8.8.8.8"],
+        DNS.SEARCH: ["example.org", "example.com"],
     }
 
     desired_state = state.State(
@@ -789,13 +789,13 @@ def test_dns_gen_metadata_static_gateway_ipv6_name_server_before_ipv4(
 
     metadata.generate_ifaces_metadata(desired_state, current_state)
     ipv4_dns_config = {
-        DNS.SERVER: ['8.8.8.8'],
+        DNS.SERVER: ["8.8.8.8"],
         DNS.SEARCH: [],
         nm_dns.DNS_METADATA_PRIORITY: nm_dns.DNS_PRIORITY_STATIC_BASE + 1,
     }
     ipv6_dns_config = {
-        DNS.SERVER: ['2001:4860:4860::8888'],
-        DNS.SEARCH: ['example.org', 'example.com'],
+        DNS.SERVER: ["2001:4860:4860::8888"],
+        DNS.SEARCH: ["example.org", "example.com"],
         nm_dns.DNS_METADATA_PRIORITY: nm_dns.DNS_PRIORITY_STATIC_BASE,
     }
     iface_state = desired_state.interfaces[TEST_IFACE1]
@@ -807,8 +807,8 @@ def test_dns_gen_metadata_static_gateway_ipv6_name_server_after_ipv4(
     nm_dns_mock,
 ):
     dns_config = {
-        DNS.SERVER: ['8.8.8.8', '2001:4860:4860::8888'],
-        DNS.SEARCH: ['example.org', 'example.com'],
+        DNS.SERVER: ["8.8.8.8", "2001:4860:4860::8888"],
+        DNS.SEARCH: ["example.org", "example.com"],
     }
 
     desired_state = state.State(
@@ -822,12 +822,12 @@ def test_dns_gen_metadata_static_gateway_ipv6_name_server_after_ipv4(
 
     metadata.generate_ifaces_metadata(desired_state, current_state)
     ipv4_dns_config = {
-        DNS.SERVER: ['8.8.8.8'],
-        DNS.SEARCH: ['example.org', 'example.com'],
+        DNS.SERVER: ["8.8.8.8"],
+        DNS.SEARCH: ["example.org", "example.com"],
         nm_dns.DNS_METADATA_PRIORITY: nm_dns.DNS_PRIORITY_STATIC_BASE,
     }
     ipv6_dns_config = {
-        DNS.SERVER: ['2001:4860:4860::8888'],
+        DNS.SERVER: ["2001:4860:4860::8888"],
         DNS.SEARCH: [],
         nm_dns.DNS_METADATA_PRIORITY: nm_dns.DNS_PRIORITY_STATIC_BASE + 1,
     }
@@ -838,8 +838,8 @@ def test_dns_gen_metadata_static_gateway_ipv6_name_server_after_ipv4(
 
 def test_dns_metadata_interface_not_included_in_desire(nm_dns_mock):
     dns_config = {
-        DNS.SERVER: ['2001:4860:4860::8888', '8.8.8.8'],
-        DNS.SEARCH: ['example.org', 'example.com'],
+        DNS.SERVER: ["2001:4860:4860::8888", "8.8.8.8"],
+        DNS.SEARCH: ["example.org", "example.com"],
     }
 
     desired_state = state.State(
@@ -858,13 +858,13 @@ def test_dns_metadata_interface_not_included_in_desire(nm_dns_mock):
     metadata.generate_ifaces_metadata(desired_state, current_state)
     iface_state = desired_state.interfaces[TEST_IFACE1]
     ipv4_dns_config = {
-        DNS.SERVER: ['8.8.8.8'],
+        DNS.SERVER: ["8.8.8.8"],
         DNS.SEARCH: [],
         nm_dns.DNS_METADATA_PRIORITY: nm_dns.DNS_PRIORITY_STATIC_BASE + 1,
     }
     ipv6_dns_config = {
-        DNS.SERVER: ['2001:4860:4860::8888'],
-        DNS.SEARCH: ['example.org', 'example.com'],
+        DNS.SERVER: ["2001:4860:4860::8888"],
+        DNS.SEARCH: ["example.org", "example.com"],
         nm_dns.DNS_METADATA_PRIORITY: nm_dns.DNS_PRIORITY_STATIC_BASE,
     }
     assert ipv4_dns_config == iface_state[Interface.IPV4][nm_dns.DNS_METADATA]
@@ -880,7 +880,7 @@ def _get_test_iface_states():
             Interface.IPV4: {
                 InterfaceIPv4.ADDRESS: [
                     {
-                        InterfaceIPv4.ADDRESS_IP: '192.0.2.251',
+                        InterfaceIPv4.ADDRESS_IP: "192.0.2.251",
                         InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
                     }
                 ],
@@ -890,7 +890,7 @@ def _get_test_iface_states():
             Interface.IPV6: {
                 InterfaceIPv6.ADDRESS: [
                     {
-                        InterfaceIPv6.ADDRESS_IP: '2001:db8:1::1',
+                        InterfaceIPv6.ADDRESS_IP: "2001:db8:1::1",
                         InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
                     }
                 ],
@@ -900,13 +900,13 @@ def _get_test_iface_states():
             },
         },
         {
-            Interface.NAME: 'eth2',
+            Interface.NAME: "eth2",
             Interface.STATE: InterfaceState.UP,
             Interface.TYPE: InterfaceType.ETHERNET,
             Interface.IPV4: {
                 InterfaceIPv4.ADDRESS: [
                     {
-                        InterfaceIPv4.ADDRESS_IP: '198.51.100.1',
+                        InterfaceIPv4.ADDRESS_IP: "198.51.100.1",
                         InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
                     }
                 ],
@@ -916,7 +916,7 @@ def _get_test_iface_states():
             Interface.IPV6: {
                 InterfaceIPv6.ADDRESS: [
                     {
-                        InterfaceIPv6.ADDRESS_IP: '2001:db8:2::1',
+                        InterfaceIPv6.ADDRESS_IP: "2001:db8:2::1",
                         InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
                     }
                 ],
@@ -931,16 +931,16 @@ def _get_test_iface_states():
 def _gen_default_gateway_route(iface_name):
     return [
         {
-            Route.DESTINATION: '0.0.0.0/0',
+            Route.DESTINATION: "0.0.0.0/0",
             Route.METRIC: 200,
-            Route.NEXT_HOP_ADDRESS: '192.0.2.1',
+            Route.NEXT_HOP_ADDRESS: "192.0.2.1",
             Route.NEXT_HOP_INTERFACE: iface_name,
             Route.TABLE_ID: 54,
         },
         {
-            Route.DESTINATION: '::/0',
+            Route.DESTINATION: "::/0",
             Route.METRIC: 201,
-            Route.NEXT_HOP_ADDRESS: '2001:db8:2::f',
+            Route.NEXT_HOP_ADDRESS: "2001:db8:2::f",
             Route.NEXT_HOP_INTERFACE: iface_name,
             Route.TABLE_ID: 54,
         },
@@ -986,43 +986,43 @@ class TestRouteRuleMetadata:
     def test_rule_with_no_matching_route_table(self):
         rule0 = self._create_rule0()
         route = _create_route(
-            '198.51.100.0/24',
-            '192.0.2.1',
-            'eth1',
+            "198.51.100.0/24",
+            "192.0.2.1",
+            "eth1",
             TestRouteRuleMetadata.TEST_ROUTE_TABLE + 1,
             103,
         )
         desired_state = state.State(
             {
-                Interface.KEY: [_create_interface_state('eth1')],
+                Interface.KEY: [_create_interface_state("eth1")],
                 Route.KEY: {Route.CONFIG: [route.to_dict()]},
                 RouteRule.KEY: {RouteRule.CONFIG: [rule0.to_dict()]},
             }
         )
         current_state = state.State(
             {
-                Interface.KEY: [_create_interface_state('eth1')],
+                Interface.KEY: [_create_interface_state("eth1")],
                 Route.KEY: {Route.CONFIG: [route.to_dict()]},
             }
         )
         rule0 = self._create_rule0()
         route = _create_route(
-            '198.51.100.0/24',
-            '192.0.2.1',
-            'eth1',
+            "198.51.100.0/24",
+            "192.0.2.1",
+            "eth1",
             TestRouteRuleMetadata.TEST_ROUTE_TABLE + 1,
             103,
         )
         desired_state = state.State(
             {
-                Interface.KEY: [_create_interface_state('eth1')],
+                Interface.KEY: [_create_interface_state("eth1")],
                 Route.KEY: {Route.CONFIG: [route.to_dict()]},
                 RouteRule.KEY: {RouteRule.CONFIG: [rule0.to_dict()]},
             }
         )
         current_state = state.State(
             {
-                Interface.KEY: [_create_interface_state('eth1')],
+                Interface.KEY: [_create_interface_state("eth1")],
                 Route.KEY: {Route.CONFIG: [route.to_dict()]},
             }
         )
@@ -1034,22 +1034,22 @@ class TestRouteRuleMetadata:
         rule0 = self._create_rule0()
         rule1 = self._create_rule1()
         route0 = _create_route(
-            '198.51.100.0/24',
-            '192.0.2.1',
-            'eth1',
+            "198.51.100.0/24",
+            "192.0.2.1",
+            "eth1",
             TestRouteRuleMetadata.TEST_ROUTE_TABLE,
             103,
         )
         route1 = _create_route(
-            '2001:db8:f::/64',
-            '2001:db8:e::',
-            'eth1',
+            "2001:db8:f::/64",
+            "2001:db8:e::",
+            "eth1",
             TestRouteRuleMetadata.TEST_ROUTE_TABLE,
             103,
         )
         desired_state = state.State(
             {
-                Interface.KEY: [_create_interface_state('eth1')],
+                Interface.KEY: [_create_interface_state("eth1")],
                 Route.KEY: {
                     Route.CONFIG: [route0.to_dict(), route1.to_dict()]
                 },
@@ -1062,7 +1062,7 @@ class TestRouteRuleMetadata:
 
         metadata.generate_ifaces_metadata(desired_state, current_state)
 
-        iface_state = desired_state.interfaces['eth1']
+        iface_state = desired_state.interfaces["eth1"]
         (rule0_metadata,) = iface_state[Interface.IPV4][
             metadata.ROUTE_RULES_METADATA
         ]
@@ -1074,16 +1074,16 @@ class TestRouteRuleMetadata:
 
     def _create_rule0(self):
         return _create_rule(
-            '198.51.100.0/24',
-            '192.0.2.1',
+            "198.51.100.0/24",
+            "192.0.2.1",
             103,
             TestRouteRuleMetadata.TEST_ROUTE_TABLE,
         )
 
     def _create_rule1(self):
         return _create_rule(
-            '2001:db8:a::/64',
-            '2001:db8:1::a',
+            "2001:db8:a::/64",
+            "2001:db8:1::a",
             104,
             TestRouteRuleMetadata.TEST_ROUTE_TABLE,
         )

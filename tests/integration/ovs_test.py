@@ -28,13 +28,13 @@ from .testlib import assertlib
 from .testlib.ovslib import Bridge
 
 
-BRIDGE1 = 'br1'
-PORT1 = 'ovs1'
+BRIDGE1 = "br1"
+PORT1 = "ovs1"
 
 
 @pytest.mark.xfail(
     raises=(NmstateLibnmError, AssertionError),
-    reason='https://bugzilla.redhat.com/1724901',
+    reason="https://bugzilla.redhat.com/1724901",
 )
 def test_create_and_remove_ovs_bridge_with_min_desired_state():
     with Bridge(BRIDGE1).create() as state:
@@ -45,13 +45,13 @@ def test_create_and_remove_ovs_bridge_with_min_desired_state():
 
 @pytest.mark.xfail(
     raises=(NmstateLibnmError, AssertionError),
-    reason='https://bugzilla.redhat.com/1724901',
+    reason="https://bugzilla.redhat.com/1724901",
 )
 def test_create_and_remove_ovs_bridge_options_specified():
     bridge = Bridge(BRIDGE1)
     bridge.set_options(
         {
-            OVSBridge.Options.FAIL_MODE: '',
+            OVSBridge.Options.FAIL_MODE: "",
             OVSBridge.Options.MCAST_SNOOPING_ENABLED: False,
             OVSBridge.Options.RSTP: False,
             OVSBridge.Options.STP: True,
@@ -66,7 +66,7 @@ def test_create_and_remove_ovs_bridge_options_specified():
 
 @pytest.mark.xfail(
     raises=(NmstateLibnmError, AssertionError),
-    reason='https://bugzilla.redhat.com/1724901',
+    reason="https://bugzilla.redhat.com/1724901",
 )
 def test_create_and_remove_ovs_bridge_with_a_system_port(port0_up):
     bridge = Bridge(BRIDGE1)
@@ -81,7 +81,7 @@ def test_create_and_remove_ovs_bridge_with_a_system_port(port0_up):
 
 @pytest.mark.xfail(
     raises=(NmstateLibnmError, AssertionError),
-    reason='https://bugzilla.redhat.com/1724901',
+    reason="https://bugzilla.redhat.com/1724901",
 )
 def test_create_and_remove_ovs_bridge_with_internal_port_and_static_ip():
     bridge = Bridge(BRIDGE1)
@@ -91,7 +91,7 @@ def test_create_and_remove_ovs_bridge_with_internal_port_and_static_ip():
             InterfaceIPv4.ENABLED: True,
             InterfaceIPv4.ADDRESS: [
                 {
-                    InterfaceIPv4.ADDRESS_IP: '192.0.2.1',
+                    InterfaceIPv4.ADDRESS_IP: "192.0.2.1",
                     InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
                 }
             ],

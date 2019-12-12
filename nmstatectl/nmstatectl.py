@@ -39,7 +39,7 @@ from libnmstate.schema import Route
 
 def main():
     logging.basicConfig(
-        format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
+        format="%(asctime)s %(name)-12s %(levelname)-8s %(message)s",
         level=logging.DEBUG,
     )
 
@@ -60,100 +60,100 @@ def main():
 
 
 def setup_subcommand_commit(subparsers):
-    parser_commit = subparsers.add_parser('commit', help='Commit a change')
+    parser_commit = subparsers.add_parser("commit", help="Commit a change")
     parser_commit.add_argument(
-        'checkpoint', nargs='?', default=None, help='checkpoint to commit'
+        "checkpoint", nargs="?", default=None, help="checkpoint to commit"
     )
     parser_commit.set_defaults(func=commit)
 
 
 def setup_subcommand_edit(subparsers):
     parser_edit = subparsers.add_parser(
-        'edit', help='Edit network state in EDITOR'
+        "edit", help="Edit network state in EDITOR"
     )
     parser_edit.set_defaults(func=edit)
     parser_edit.add_argument(
-        '--json',
-        help='Edit as JSON',
+        "--json",
+        help="Edit as JSON",
         default=True,
-        action='store_false',
-        dest='yaml',
+        action="store_false",
+        dest="yaml",
     )
     parser_edit.add_argument(
-        'only',
-        default='*',
-        nargs='?',
+        "only",
+        default="*",
+        nargs="?",
         metavar=Interface.KEY,
-        help='Edit only specified interfaces (comma-separated)',
+        help="Edit only specified interfaces (comma-separated)",
     )
     parser_edit.add_argument(
-        '--no-verify',
-        action='store_false',
-        dest='verify',
+        "--no-verify",
+        action="store_false",
+        dest="verify",
         default=True,
-        help='Do not verify that the state was completely set and disable '
-        'rollback to previous state.',
+        help="Do not verify that the state was completely set and disable "
+        "rollback to previous state.",
     )
 
 
 def setup_subcommand_rollback(subparsers):
     parser_rollback = subparsers.add_parser(
-        'rollback', help='Rollback a change'
+        "rollback", help="Rollback a change"
     )
     parser_rollback.add_argument(
-        'checkpoint', nargs='?', default=None, help='checkpoint to roll back'
+        "checkpoint", nargs="?", default=None, help="checkpoint to roll back"
     )
     parser_rollback.set_defaults(func=rollback)
 
 
 def setup_subcommand_set(subparsers):
-    parser_set = subparsers.add_parser('set', help='Set network state')
+    parser_set = subparsers.add_parser("set", help="Set network state")
     parser_set.add_argument(
-        'file',
-        help='File containing desired state. '
-        'stdin is used when no file is specified.',
-        nargs='*',
+        "file",
+        help="File containing desired state. "
+        "stdin is used when no file is specified.",
+        nargs="*",
     )
     parser_set.add_argument(
-        '--no-verify',
-        action='store_false',
-        dest='verify',
+        "--no-verify",
+        action="store_false",
+        dest="verify",
         default=True,
-        help='Do not verify that the state was completely set and disable '
-        'rollback to previous state',
+        help="Do not verify that the state was completely set and disable "
+        "rollback to previous state",
     )
     parser_set.add_argument(
-        '--no-commit',
-        action='store_false',
-        dest='commit',
+        "--no-commit",
+        action="store_false",
+        dest="commit",
         default=True,
-        help='Do not commit new state after verification',
+        help="Do not commit new state after verification",
     )
     parser_set.add_argument(
-        '--timeout',
+        "--timeout",
         type=int,
         default=60,
-        help='Timeout in seconds before reverting uncommited changes.',
+        help="Timeout in seconds before reverting uncommited changes.",
     )
     parser_set.set_defaults(func=apply)
 
 
 def setup_subcommand_show(subparsers):
-    parser_show = subparsers.add_parser('show', help='Show network state')
+    parser_show = subparsers.add_parser("show", help="Show network state")
     parser_show.set_defaults(func=show)
     parser_show.add_argument(
-        '--json',
-        help='Edit as JSON',
+        "--json",
+        help="Edit as JSON",
         default=True,
-        action='store_false',
-        dest='yaml',
+        action="store_false",
+        dest="yaml",
     )
     parser_show.add_argument(
-        'only',
-        default='*',
-        nargs='?',
+        "only",
+        default="*",
+        nargs="?",
         metavar=Interface.KEY,
-        help='Show only specified interfaces (comma-separated)',
+        help="Show only specified interfaces (comma-separated)",
     )
 
 
@@ -169,23 +169,23 @@ def edit(args):
     state = _filter_state(libnmstate.show(), args.only)
 
     if not state[Interface.KEY]:
-        sys.stderr.write('ERROR: No such interface\n')
+        sys.stderr.write("ERROR: No such interface\n")
         return os.EX_USAGE
 
     pretty_state = PrettyState(state)
 
     if args.yaml:
-        suffix = '.yaml'
+        suffix = ".yaml"
         txtstate = pretty_state.yaml
     else:
-        suffix = '.json'
+        suffix = ".json"
         txtstate = pretty_state.json
 
     new_state = _get_edited_state(txtstate, suffix, args.yaml)
     if not new_state:
         return os.EX_DATAERR
 
-    print('Applying the following state: ')
+    print("Applying the following state: ")
     print_state(new_state, use_yaml=args.yaml)
 
     libnmstate.apply(new_state, verify_change=args.verify)
@@ -207,7 +207,7 @@ def show(args):
 def apply(args):
     if args.file:
         for statefile in args.file:
-            if statefile == '-' and not os.path.isfile(statefile):
+            if statefile == "-" and not os.path.isfile(statefile):
                 statedata = sys.stdin.read()
             else:
                 with open(statefile) as statefile:
@@ -220,14 +220,14 @@ def apply(args):
         statedata = sys.stdin.read()
         return apply_state(statedata, args.verify, args.commit, args.timeout)
     else:
-        sys.stderr.write('ERROR: No state specified\n')
+        sys.stderr.write("ERROR: No state specified\n")
         return 1
 
 
 def apply_state(statedata, verify_change, commit, timeout):
     use_yaml = False
     # JSON dictionaries start with a curly brace
-    if statedata[0] == '{':
+    if statedata[0] == "{":
         state = json.loads(statedata)
     else:
         state = yaml.load(statedata, Loader=yaml.SafeLoader)
@@ -236,24 +236,24 @@ def apply_state(statedata, verify_change, commit, timeout):
     try:
         checkpoint = libnmstate.apply(state, verify_change, commit, timeout)
     except NmstatePermissionError as e:
-        sys.stderr.write('ERROR: Missing permissions:{}\n'.format(str(e)))
+        sys.stderr.write("ERROR: Missing permissions:{}\n".format(str(e)))
         return os.EX_NOPERM
     except NmstateConflictError:
         sys.stderr.write(
-            'ERROR: State editing already in progress.\n'
-            'Commit, roll back or wait before retrying.\n'
+            "ERROR: State editing already in progress.\n"
+            "Commit, roll back or wait before retrying.\n"
         )
         return os.EX_UNAVAILABLE
 
-    print('Desired state applied: ')
+    print("Desired state applied: ")
     print_state(state, use_yaml=use_yaml)
     if checkpoint:
-        print('Checkpoint: {}'.format(checkpoint))
+        print("Checkpoint: {}".format(checkpoint))
 
 
 def _filter_state(state, whitelist):
-    if whitelist != '*':
-        patterns = [p for p in whitelist.split(',')]
+    if whitelist != "*":
+        patterns = [p for p in whitelist.split(",")]
         state[Interface.KEY] = _filter_interfaces(state, patterns)
         state[Route.KEY] = _filter_routes(state, patterns)
     return state
@@ -268,7 +268,7 @@ def _filter_interfaces(state, patterns):
 
     for interface in state[Interface.KEY]:
         for pattern in patterns:
-            if fnmatch.fnmatch(interface['name'], pattern):
+            if fnmatch.fnmatch(interface["name"], pattern):
                 showinterfaces.append(interface)
                 break
     return showinterfaces
@@ -291,11 +291,11 @@ def _get_edited_state(txtstate, suffix, use_yaml):
 
 
 def _run_editor(txtstate, suffix):
-    editor = os.environ.get('EDITOR', 'vi')
+    editor = os.environ.get("EDITOR", "vi")
     with tempfile.NamedTemporaryFile(
-        suffix=suffix, prefix='nmstate-'
+        suffix=suffix, prefix="nmstate-"
     ) as statefile:
-        statefile.write(txtstate.encode('utf-8'))
+        statefile.write(txtstate.encode("utf-8"))
         statefile.flush()
 
         try:
@@ -304,25 +304,25 @@ def _run_editor(txtstate, suffix):
             return statefile.read()
 
         except subprocess.CalledProcessError:
-            sys.stderr.write('Error running editor, aborting...\n')
+            sys.stderr.write("Error running editor, aborting...\n")
             return None
 
 
 def _parse_state(txtstate, parse_yaml):
-    error = ''
+    error = ""
     state = {}
     if parse_yaml:
         try:
             state = yaml.load(txtstate, Loader=yaml.SafeLoader)
         except yaml.parser.ParserError as e:
-            error = 'Invalid YAML syntax: %s\n' % e
+            error = "Invalid YAML syntax: %s\n" % e
         except yaml.parser.ScannerError as e:
-            error = 'Invalid YAML syntax: %s\n' % e
+            error = "Invalid YAML syntax: %s\n" % e
     else:
         try:
             state = json.loads(txtstate)
         except ValueError as e:
-            error = 'Invalid JSON syntax: %s\n' % e
+            error = "Invalid JSON syntax: %s\n" % e
 
     if not error and Interface.KEY not in state:
         # Allow editing routes only.
@@ -337,16 +337,16 @@ def _try_edit_again(error):
     edited again and False otherwise.
     """
 
-    sys.stderr.write('ERROR: ' + error)
-    response = ''
-    while response not in ('y', 'n'):
+    sys.stderr.write("ERROR: " + error)
+    response = ""
+    while response not in ("y", "n"):
         response = input(
-            'Try again? [y,n]:\n'
-            'y - yes, start editor again\n'
-            'n - no, throw away my changes\n'
-            '> '
+            "Try again? [y,n]:\n"
+            "y - yes, start editor again\n"
+            "n - no, throw away my changes\n"
+            "> "
         ).lower()
-        if response == 'n':
+        if response == "n":
             return False
     return True
 

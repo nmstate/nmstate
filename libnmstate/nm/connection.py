@@ -137,7 +137,7 @@ class ConnectionProfile:
         elif self.nmdevice:
             self.import_by_device()
         elif not self.profile:
-            err_format = 'Missing base properties: profile={}, id={}, dev={}'
+            err_format = "Missing base properties: profile={}, id={}, dev={}"
             err_msg = err_format.format(
                 self.profile, self.con_id, self.devname
             )
@@ -151,7 +151,7 @@ class ConnectionProfile:
             ac.import_by_device(self.nmdevice)
             if ac.is_activating:
                 logging.debug(
-                    'Connection activation in progress: dev=%s, state=%s',
+                    "Connection activation in progress: dev=%s, state=%s",
                     ac.devname,
                     ac.state,
                 )
@@ -188,14 +188,14 @@ class ConnectionProfile:
 
             if self._mainloop.is_action_canceled(e):
                 logging.debug(
-                    'Connection activation canceled on %s %s: error=%s',
+                    "Connection activation canceled on %s %s: error=%s",
                     act_type,
                     act_object,
                     e,
                 )
             elif self._is_connection_unavailable(e):
                 logging.warning(
-                    'Connection unavailable on %s %s, retrying',
+                    "Connection unavailable on %s %s, retrying",
                     act_type,
                     act_object,
                 )
@@ -204,7 +204,7 @@ class ConnectionProfile:
                 self.safe_activate_async()
             else:
                 self._mainloop.quit(
-                    'Connection activation failed on {} {}: error={}'.format(
+                    "Connection activation failed on {} {}: error={}".format(
                         act_type, act_object, e
                     )
                 )
@@ -213,14 +213,14 @@ class ConnectionProfile:
         if nm_act_con is None:
             act_type, act_object = self._get_activation_metadata()
             self._mainloop.quit(
-                'Connection activation failed on {} {}: error=unknown'.format(
+                "Connection activation failed on {} {}: error=unknown".format(
                     act_type, act_object
                 )
             )
         else:
             devname = nm_act_con.props.connection.get_interface_name()
             logging.debug(
-                'Connection activation initiated: dev=%s, con-state=%s',
+                "Connection activation initiated: dev=%s, con-state=%s",
                 devname,
                 nm_act_con.props.state,
             )
@@ -232,7 +232,7 @@ class ConnectionProfile:
                 self.waitfor_active_connection_async(ac)
             else:
                 self._mainloop.quit(
-                    'Connection activation failed on {}: reason={}'.format(
+                    "Connection activation failed on {}: reason={}".format(
                         ac.devname, ac.reason
                     )
                 )
@@ -241,32 +241,32 @@ class ConnectionProfile:
     def _is_connection_unavailable(err):
         return (
             isinstance(err, nmclient.GLib.GError)
-            and err.domain == 'nm-manager-error-quark'
+            and err.domain == "nm-manager-error-quark"
             and err.code == 2
-            and 'is not available on the device' in err.message
+            and "is not available on the device" in err.message
         )
 
     def _get_activation_metadata(self):
         if self._nmdevice:
-            activation_type = 'device'
+            activation_type = "device"
             activation_object = self._nmdevice.get_iface()
         elif self._con_id:
-            activation_type = 'connection_id'
+            activation_type = "connection_id"
             activation_object = self._con_id
         else:
-            activation_type = activation_object = 'unknown'
+            activation_type = activation_object = "unknown"
 
         return activation_type, activation_object
 
     def waitfor_active_connection_async(self, ac):
         ac.handlers.add(
             ac.nm_active_connection.connect(
-                'state-changed', self._waitfor_active_connection_callback, ac
+                "state-changed", self._waitfor_active_connection_callback, ac
             )
         )
         ac.device_handlers.add(
             ac.nmdevice.connect(
-                'state-changed', self._waitfor_device_state_change_callback, ac
+                "state-changed", self._waitfor_device_state_change_callback, ac
             )
         )
 
@@ -281,7 +281,7 @@ class ConnectionProfile:
         cur_nm_act_conn = get_device_active_connection(self.nmdevice)
         if cur_nm_act_conn and cur_nm_act_conn != ac.nm_active_connection:
             logging.debug(
-                'Active connection of device {} has been replaced'.format(
+                "Active connection of device {} has been replaced".format(
                     self.devname
                 )
             )
@@ -293,8 +293,8 @@ class ConnectionProfile:
             self.waitfor_active_connection_async(ac)
         if ac.is_active:
             logging.debug(
-                'Connection activation succeeded: dev=%s, con-state=%s, '
-                'dev-state= %s',
+                "Connection activation succeeded: dev=%s, con-state=%s, "
+                "dev-state= %s",
                 ac.devname,
                 ac.state,
                 ac.nmdev_state,
@@ -304,7 +304,7 @@ class ConnectionProfile:
         elif not ac.is_activating:
             ac.remove_handlers()
             self._mainloop.quit(
-                'Connection activation failed on {}: reason={}'.format(
+                "Connection activation failed on {}: reason={}".format(
                     ac.devname, ac.reason
                 )
             )
@@ -316,16 +316,16 @@ class ConnectionProfile:
             con = src_object.add_connection_finish(result)
         except Exception as e:
             if mainloop.is_action_canceled(e):
-                logging.debug('Connection adding canceled: error=%s', e)
+                logging.debug("Connection adding canceled: error=%s", e)
             else:
-                mainloop.quit('Connection adding failed: error={}'.format(e))
+                mainloop.quit("Connection adding failed: error={}".format(e))
             return
 
         if con is None:
-            mainloop.quit('Connection adding failed: error=unknown')
+            mainloop.quit("Connection adding failed: error=unknown")
         else:
             devname = con.get_interface_name()
-            logging.debug('Connection adding succeeded: dev=%s', devname)
+            logging.debug("Connection adding succeeded: dev=%s", devname)
             mainloop.execute_next_action()
 
     def _delete_connection_callback(self, src_object, result, user_data):
@@ -333,17 +333,17 @@ class ConnectionProfile:
             success = src_object.delete_finish(result)
         except Exception as e:
             if self.nmdevice:
-                target = 'dev/' + str(self.nmdevice.get_iface())
+                target = "dev/" + str(self.nmdevice.get_iface())
             else:
-                target = 'con/' + str(self.con_id)
+                target = "con/" + str(self.con_id)
 
             if self._mainloop.is_action_canceled(e):
                 logging.debug(
-                    'Connection deletion aborted on %s: error=%s', target, e
+                    "Connection deletion aborted on %s: error=%s", target, e
                 )
             else:
                 self._mainloop.quit(
-                    'Connection deletion failed on {}: error={}'.format(
+                    "Connection deletion failed on {}: error={}".format(
                         target, e
                     )
                 )
@@ -351,12 +351,12 @@ class ConnectionProfile:
 
         devname = src_object.get_interface_name()
         if success:
-            logging.debug('Connection deletion succeeded: dev=%s', devname)
+            logging.debug("Connection deletion succeeded: dev=%s", devname)
             self._mainloop.execute_next_action()
         else:
             self._mainloop.quit(
-                'Connection deletion failed: '
-                'dev={}, error=unknown'.format(devname)
+                "Connection deletion failed: "
+                "dev={}, error=unknown".format(devname)
             )
 
     @staticmethod
@@ -366,10 +366,10 @@ class ConnectionProfile:
             success = src_object.commit_changes_finish(result)
         except Exception as e:
             if mainloop.is_action_canceled(e):
-                logging.debug('Connection update aborted: error=%s', e)
+                logging.debug("Connection update aborted: error=%s", e)
             else:
                 mainloop.quit(
-                    'Connection update failed: error={}, dev={}/{}'.format(
+                    "Connection update failed: error={}, dev={}/{}".format(
                         e, nmdev.props.interface, nmdev.props.state
                     )
                 )
@@ -377,12 +377,12 @@ class ConnectionProfile:
 
         devname = src_object.get_interface_name()
         if success:
-            logging.debug('Connection update succeeded: dev=%s', devname)
+            logging.debug("Connection update succeeded: dev=%s", devname)
             mainloop.execute_next_action()
         else:
             mainloop.quit(
-                'Connection update failed: '
-                'dev={}, error=unknown'.format(devname)
+                "Connection update failed: "
+                "dev={}, error=unknown".format(devname)
             )
 
     def _reset_profile(self):
@@ -405,7 +405,7 @@ class ConnectionSetting:
         )
 
         self._setting = con_setting
-        self._log_connection_info('ConnectionSetting.create')
+        self._log_connection_info("ConnectionSetting.create")
 
     def import_by_profile(self, con_profile):
         base = con_profile.profile.get_setting_connection()
@@ -418,7 +418,7 @@ class ConnectionSetting:
         new.props.autoconnect_slaves = base.props.autoconnect_slaves
 
         self._setting = new
-        self._log_connection_info('ConnectionSetting.import_by_profile')
+        self._log_connection_info("ConnectionSetting.import_by_profile")
 
     def set_master(self, master, slave_type):
         if master is not None:
@@ -432,15 +432,15 @@ class ConnectionSetting:
     def _log_connection_info(self, source):
         setting = self._setting
         logging.debug(
-            'Connection settings for %s:\n'
-            + '\n'.join(
+            "Connection settings for %s:\n"
+            + "\n".join(
                 [
-                    'id: %s',
-                    'iface: %s',
-                    'uuid: %s',
-                    'type: %s',
-                    'autoconnect: %s',
-                    'autoconnect_slaves: %s',
+                    "id: %s",
+                    "iface: %s",
+                    "uuid: %s",
+                    "type: %s",
+                    "autoconnect: %s",
+                    "autoconnect_slaves: %s",
                 ]
             ),
             source,

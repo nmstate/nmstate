@@ -32,16 +32,16 @@ from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import InterfaceState
 
-DUMMY_INTERFACE = 'dummy_test'
+DUMMY_INTERFACE = "dummy_test"
 
 
-@pytest.fixture(scope='function')
+@pytest.fixture(scope="function")
 def ip_link_dummy():
-    libcmd.exec_cmd(['ip', 'link', 'add', DUMMY_INTERFACE, 'type', 'dummy'])
+    libcmd.exec_cmd(["ip", "link", "add", DUMMY_INTERFACE, "type", "dummy"])
     try:
         yield
     finally:
-        libcmd.exec_cmd(['ip', 'link', 'del', DUMMY_INTERFACE])
+        libcmd.exec_cmd(["ip", "link", "del", DUMMY_INTERFACE])
 
 
 @contextmanager
@@ -67,14 +67,14 @@ def dummy_interface(name):
 
 def test_iface_description_removal(eth1_up):
     desired_state = eth1_up
-    desired_state[Interface.KEY][0][Interface.DESCRIPTION] = 'bar'
+    desired_state[Interface.KEY][0][Interface.DESCRIPTION] = "bar"
     libnmstate.apply(desired_state)
-    current_state = statelib.show_only(('eth1',))
-    assert current_state[Interface.KEY][0][Interface.DESCRIPTION] == 'bar'
+    current_state = statelib.show_only(("eth1",))
+    assert current_state[Interface.KEY][0][Interface.DESCRIPTION] == "bar"
 
-    desired_state[Interface.KEY][0][Interface.DESCRIPTION] = ''
+    desired_state[Interface.KEY][0][Interface.DESCRIPTION] = ""
     libnmstate.apply(desired_state)
-    current_state = statelib.show_only(('eth1',))
+    current_state = statelib.show_only(("eth1",))
     assert Interface.DESCRIPTION not in current_state[Interface.KEY][0]
 
 
@@ -90,7 +90,7 @@ def test_take_over_virtual_interface_and_rollback(ip_link_dummy):
     with dummy_interface(DUMMY_INTERFACE) as dummy_desired_state:
         assertlib.assert_state_match(dummy_desired_state)
 
-        dummy_desired_state[Interface.KEY][0]['invalid_key'] = 'foo'
+        dummy_desired_state[Interface.KEY][0]["invalid_key"] = "foo"
         with pytest.raises(NmstateVerificationError):
             libnmstate.apply(dummy_desired_state)
 

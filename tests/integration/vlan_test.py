@@ -34,8 +34,8 @@ from .testlib import statelib
 from .testlib.assertlib import assert_mac_address
 from .testlib.vlan import vlan_interface
 
-VLAN_IFNAME = 'eth1.101'
-VLAN2_IFNAME = 'eth1.102'
+VLAN_IFNAME = "eth1.101"
+VLAN2_IFNAME = "eth1.102"
 
 
 def test_add_and_remove_vlan(eth1_up):
@@ -74,7 +74,7 @@ def test_add_and_remove_two_vlans_on_same_iface(eth1_up):
 
 
 def test_two_vlans_on_eth1_change_mtu(eth1_up):
-    desired_state = statelib.show_only(('eth1',))
+    desired_state = statelib.show_only(("eth1",))
     eth1_state = desired_state[Interface.KEY][0]
     vlans_state = create_two_vlans_state()
     desired_state[Interface.KEY].extend(vlans_state[Interface.KEY])
@@ -96,7 +96,7 @@ def test_two_vlans_on_eth1_change_mtu(eth1_up):
 
 
 def test_two_vlans_on_eth1_change_base_iface_mtu(eth1_up):
-    desired_state = statelib.show_only(('eth1',))
+    desired_state = statelib.show_only(("eth1",))
     eth1_state = desired_state[Interface.KEY][0]
     vlans_state = create_two_vlans_state()
     desired_state[Interface.KEY].extend(vlans_state[Interface.KEY])
@@ -111,7 +111,7 @@ def test_two_vlans_on_eth1_change_base_iface_mtu(eth1_up):
 
 
 def test_two_vlans_on_eth1_change_mtu_rollback(eth1_up):
-    desired_state = statelib.show_only(('eth1',))
+    desired_state = statelib.show_only(("eth1",))
     vlans_state = create_two_vlans_state()
     desired_state[Interface.KEY].extend(vlans_state[Interface.KEY])
     for iface in desired_state[Interface.KEY]:
@@ -131,7 +131,7 @@ def test_rollback_for_vlans(eth1_up):
     current_state = libnmstate.show()
     desired_state = create_two_vlans_state()
 
-    desired_state[Interface.KEY][1]['invalid_key'] = 'foo'
+    desired_state[Interface.KEY][1]["invalid_key"] = "foo"
     with pytest.raises(NmstateVerificationError):
         libnmstate.apply(desired_state)
 
@@ -161,11 +161,11 @@ def test_set_vlan_iface_down(eth1_up):
 
 
 def test_add_new_base_iface_with_vlan():
-    iface_base = 'dummy00'
+    iface_base = "dummy00"
     desired_state = {
         Interface.KEY: [
             {
-                Interface.NAME: 'dummy00.101',
+                Interface.NAME: "dummy00.101",
                 Interface.TYPE: InterfaceType.VLAN,
                 Interface.STATE: InterfaceState.UP,
                 VLAN.CONFIG_SUBTREE: {
@@ -220,13 +220,13 @@ def create_two_vlans_state():
                 Interface.NAME: VLAN_IFNAME,
                 Interface.TYPE: InterfaceType.VLAN,
                 Interface.STATE: InterfaceState.UP,
-                VLAN.CONFIG_SUBTREE: {VLAN.ID: 101, VLAN.BASE_IFACE: 'eth1'},
+                VLAN.CONFIG_SUBTREE: {VLAN.ID: 101, VLAN.BASE_IFACE: "eth1"},
             },
             {
                 Interface.NAME: VLAN2_IFNAME,
                 Interface.TYPE: InterfaceType.VLAN,
                 Interface.STATE: InterfaceState.UP,
-                VLAN.CONFIG_SUBTREE: {VLAN.ID: 102, VLAN.BASE_IFACE: 'eth1'},
+                VLAN.CONFIG_SUBTREE: {VLAN.ID: 102, VLAN.BASE_IFACE: "eth1"},
             },
         ]
     }

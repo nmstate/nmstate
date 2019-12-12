@@ -3,52 +3,52 @@ from datetime import date
 
 
 def readme():
-    with open('README.md') as f:
+    with open("README.md") as f:
         return f.read()
 
 
 def requirements():
     req = []
-    with open('requirements.txt') as fd:
+    with open("requirements.txt") as fd:
         for line in fd:
             line.strip()
-            if not line.startswith('#'):
+            if not line.startswith("#"):
                 req.append(line)
     return req
 
 
 def get_version():
-    with open('VERSION') as f:
+    with open("VERSION") as f:
         version = f.read().strip()
     return version
 
 
 def gen_manpage():
     manpage = ""
-    with open('doc/nmstatectl.8.in') as f:
+    with open("doc/nmstatectl.8.in") as f:
         manpage = f.read()
     manpage = manpage.replace("@DATE@", date.today().strftime("%B %d, %Y"))
     manpage = manpage.replace("@VERSION@", get_version())
-    with open('doc/nmstatectl.8', 'w') as f:
+    with open("doc/nmstatectl.8", "w") as f:
         f.write(manpage)
-    return [('share/man/man8', ['doc/nmstatectl.8'])]
+    return [("share/man/man8", ["doc/nmstatectl.8"])]
 
 
 setup(
-    name='nmstate',
+    name="nmstate",
     version=get_version(),
-    description='Declarative network manager API',
+    description="Declarative network manager API",
     author="Edward Haas",
     author_email="ehaas@redhat.com",
     long_description=readme(),
-    long_description_content_type='text/markdown',
-    url='https://nmstate.github.io/',
-    license='LGPL2.1+',
+    long_description_content_type="text/markdown",
+    url="https://nmstate.github.io/",
+    license="LGPL2.1+",
     packages=find_packages(),
     install_requires=requirements(),
     entry_points={
-        'console_scripts': ['nmstatectl = nmstatectl.nmstatectl:main']
+        "console_scripts": ["nmstatectl = nmstatectl.nmstatectl:main"]
     },
-    package_data={'libnmstate': ['schemas/operational-state.yaml']},
+    package_data={"libnmstate": ["schemas/operational-state.yaml"]},
     data_files=gen_manpage(),
 )

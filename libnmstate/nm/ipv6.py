@@ -123,7 +123,7 @@ def create_setting(config, base_con_profile):
     setting_ip.props.addr_gen_mode = (
         nmclient.NM.SettingIP6ConfigAddrGenMode.EUI64
     )
-    setting_ip.props.dhcp_duid = 'll'
+    setting_ip.props.dhcp_duid = "ll"
 
     if not config or not config.get(InterfaceIPv6.ENABLED):
         try:
@@ -173,7 +173,7 @@ def create_setting(config, base_con_profile):
 def _set_dynamic(setting_ip, is_dhcp, is_autoconf):
     if not is_dhcp and is_autoconf:
         raise NmstateNotImplementedError(
-            'Autoconf without DHCP is not supported yet'
+            "Autoconf without DHCP is not supported yet"
         )
 
     if is_dhcp and is_autoconf:
@@ -189,9 +189,9 @@ def _set_static(setting_ip, ip_addresses):
             address[InterfaceIPv6.ADDRESS_PREFIX_LENGTH],
         ):
             logging.warning(
-                'IPv6 link local address '
-                '{a[ip]}/{a[prefix-length]} is ignored '
-                'when applying desired state'.format(a=address)
+                "IPv6 link local address "
+                "{a[ip]}/{a[prefix-length]} is ignored "
+                "when applying desired state".format(a=address)
             )
         else:
             naddr = nmclient.NM.IPAddress.new(

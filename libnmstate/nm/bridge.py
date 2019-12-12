@@ -23,7 +23,7 @@ from libnmstate.nm import nmclient
 from libnmstate.schema import LinuxBridge as LB
 
 
-BRIDGE_TYPE = 'bridge'
+BRIDGE_TYPE = "bridge"
 
 
 def create_setting(options, base_con_profile):

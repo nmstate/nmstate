@@ -24,9 +24,9 @@ from ..testlib import iproutelib
 from .testlib import mainloop
 
 
-TEST_IFACE = 'eth1'
+TEST_IFACE = "eth1"
 
-IPV4_ADDRESS1 = '192.0.2.251'
+IPV4_ADDRESS1 = "192.0.2.251"
 
 
 @iproutelib.ip_monitor_assert_stable_link_up(TEST_IFACE)

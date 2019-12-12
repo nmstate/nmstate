@@ -25,7 +25,7 @@ from libnmstate.schema import VLAN
 from .testlib import mainloop
 
 
-ETH1 = 'eth1'
+ETH1 = "eth1"
 
 
 def test_create_and_remove_vlan(eth1_up):
@@ -89,6 +89,6 @@ def _delete_vlan(devname):
 def _get_vlan_ifname(state):
     return (
         state[VLAN.CONFIG_SUBTREE][VLAN.BASE_IFACE]
-        + '.'
+        + "."
         + str(state[VLAN.CONFIG_SUBTREE][VLAN.ID])
     )

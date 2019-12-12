@@ -30,13 +30,13 @@ NMSTATE_DESCRIPTION = "nmstate.interface.description"
 
 
 def create_setting(iface_state, base_con_profile):
-    description = iface_state.get('description')
+    description = iface_state.get("description")
 
     if not description:
         return None
 
     if not nmclient.NM.SettingUser.check_val(description):
-        raise NmstateValueError('Invalid description')
+        raise NmstateValueError("Invalid description")
 
     user_setting = None
     if base_con_profile:
@@ -70,7 +70,7 @@ def get_info(device):
         )
         description = user_setting.get_data(NMSTATE_DESCRIPTION)
         if description:
-            info['description'] = description
+            info["description"] = description
     except AttributeError:
         pass
 

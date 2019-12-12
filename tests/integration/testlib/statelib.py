@@ -271,7 +271,7 @@ def _is_ipv6_link_local(ip, prefix):
     """
     The IPv6 link local address range is fe80::/10.
     """
-    return ip[:3] in ['fe8', 'fe9', 'fea', 'feb'] and prefix >= 10
+    return ip[:3] in ["fe8", "fe9", "fea", "feb"] and prefix >= 10
 
 
 def _state_match(desire, current):

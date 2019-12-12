@@ -25,23 +25,23 @@ from libnmstate import nm
 
 @pytest.fixture
 def NM_mock():
-    with mock.patch.object(nm.device.nmclient, 'NM') as m:
+    with mock.patch.object(nm.device.nmclient, "NM") as m:
         yield m
 
 
 @pytest.fixture()
 def client_mock():
-    with mock.patch.object(nm.device.nmclient, 'client') as m:
+    with mock.patch.object(nm.device.nmclient, "client") as m:
         yield m.return_value
 
 
 @pytest.fixture()
 def mainloop_mock():
-    with mock.patch.object(nm.device.nmclient, 'mainloop') as m:
+    with mock.patch.object(nm.device.nmclient, "mainloop") as m:
         yield m.return_value
 
 
-@mock.patch.object(nm.device.connection, 'ConnectionProfile')
+@mock.patch.object(nm.device.connection, "ConnectionProfile")
 def test_activate(con_profile_mock):
     dev = mock.MagicMock()
     con_profile = con_profile_mock()
@@ -51,7 +51,7 @@ def test_activate(con_profile_mock):
     con_profile.activate.assert_called_once()
 
 
-@mock.patch.object(nm.device.ac, 'ActiveConnection')
+@mock.patch.object(nm.device.ac, "ActiveConnection")
 def test_deactivate(act_con_mock):
     dev = mock.MagicMock()
     act_con = act_con_mock()
@@ -62,7 +62,7 @@ def test_deactivate(act_con_mock):
     act_con.deactivate.assert_called_once()
 
 
-@mock.patch.object(nm.connection, 'ConnectionProfile')
+@mock.patch.object(nm.connection, "ConnectionProfile")
 def test_delete(con_profile_mock):
     dev = mock.MagicMock()
     dev.get_available_connections.return_value = [mock.MagicMock()]
@@ -74,7 +74,7 @@ def test_delete(con_profile_mock):
 
 
 def test_get_device_by_name(client_mock):
-    devname = 'foo'
+    devname = "foo"
     nm.device.get_device_by_name(devname)
 
     client_mock.get_device_by_iface.assert_called_once_with(devname)
@@ -92,9 +92,9 @@ def test_get_device_common_info():
     info = nm.device.get_device_common_info(dev)
 
     expected_info = {
-        'name': dev.get_iface.return_value,
-        'type_id': dev.get_device_type.return_value,
-        'type_name': dev.get_type_description.return_value,
-        'state': dev.get_state.return_value,
+        "name": dev.get_iface.return_value,
+        "type_id": dev.get_device_type.return_value,
+        "type_name": dev.get_type_description.return_value,
+        "state": dev.get_state.return_value,
     }
     assert expected_info == info

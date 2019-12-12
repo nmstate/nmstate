@@ -37,8 +37,8 @@ class TestLinkAggregationState:
         desired_state = state.State(
             {
                 schema.Interface.KEY: [
-                    {'name': 'bond0', 'link-aggregation': {'slaves': []}},
-                    {'name': 'bond1', 'link-aggregation': {'slaves': []}},
+                    {"name": "bond0", "link-aggregation": {"slaves": []}},
+                    {"name": "bond1", "link-aggregation": {"slaves": []}},
                 ]
             }
         )
@@ -51,15 +51,15 @@ class TestLinkAggregationState:
         desired_state = state.State(
             {
                 schema.Interface.KEY: [
-                    {'name': 'slave0'},
-                    {'name': 'slave1'},
+                    {"name": "slave0"},
+                    {"name": "slave1"},
                     {
-                        'name': 'bond0',
-                        'link-aggregation': {'slaves': ['slave0']},
+                        "name": "bond0",
+                        "link-aggregation": {"slaves": ["slave0"]},
                     },
                     {
-                        'name': 'bond1',
-                        'link-aggregation': {'slaves': ['slave1']},
+                        "name": "bond1",
+                        "link-aggregation": {"slaves": ["slave1"]},
                     },
                 ]
             }
@@ -72,17 +72,17 @@ class TestLinkAggregationState:
         desired_state = state.State(
             {
                 schema.Interface.KEY: [
-                    {'name': 'slave0'},
-                    {'name': 'slave1'},
-                    {'name': 'slave00'},
-                    {'name': 'slave11'},
+                    {"name": "slave0"},
+                    {"name": "slave1"},
+                    {"name": "slave00"},
+                    {"name": "slave11"},
                     {
-                        'name': 'bond0',
-                        'link-aggregation': {'slaves': ['slave0', 'slave00']},
+                        "name": "bond0",
+                        "link-aggregation": {"slaves": ["slave0", "slave00"]},
                     },
                     {
-                        'name': 'bond1',
-                        'link-aggregation': {'slaves': ['slave1', 'slave11']},
+                        "name": "bond1",
+                        "link-aggregation": {"slaves": ["slave1", "slave11"]},
                     },
                 ]
             }
@@ -95,16 +95,16 @@ class TestLinkAggregationState:
         desired_state = state.State(
             {
                 schema.Interface.KEY: [
-                    {'name': 'slave0'},
-                    {'name': 'slave1'},
-                    {'name': 'slave00'},
+                    {"name": "slave0"},
+                    {"name": "slave1"},
+                    {"name": "slave00"},
                     {
-                        'name': 'bond0',
-                        'link-aggregation': {'slaves': ['slave0', 'slave00']},
+                        "name": "bond0",
+                        "link-aggregation": {"slaves": ["slave0", "slave00"]},
                     },
                     {
-                        'name': 'bond1',
-                        'link-aggregation': {'slaves': ['slave1', 'slave00']},
+                        "name": "bond1",
+                        "link-aggregation": {"slaves": ["slave1", "slave00"]},
                     },
                 ]
             }
@@ -118,15 +118,15 @@ class TestLinkAggregationState:
         desired_state = state.State(
             {
                 schema.Interface.KEY: [
-                    {'name': 'slave0'},
-                    {'name': 'slave1'},
+                    {"name": "slave0"},
+                    {"name": "slave1"},
                     {
-                        'name': 'bond0',
-                        'link-aggregation': {'slaves': ['slave0', 'slave00']},
+                        "name": "bond0",
+                        "link-aggregation": {"slaves": ["slave0", "slave00"]},
                     },
                     {
-                        'name': 'bond1',
-                        'link-aggregation': {'slaves': ['slave1', 'slave11']},
+                        "name": "bond1",
+                        "link-aggregation": {"slaves": ["slave1", "slave11"]},
                     },
                 ]
             }
@@ -139,7 +139,7 @@ class TestLinkAggregationState:
 
 @pytest.mark.xfail(
     raises=NmstateNotImplementedError,
-    reason='https://nmstate.atlassian.net/browse/NMSTATE-220',
+    reason="https://nmstate.atlassian.net/browse/NMSTATE-220",
     strict=True,
 )
 def test_dns_three_nameservers():
@@ -147,7 +147,7 @@ def test_dns_three_nameservers():
         {
             DNS.KEY: {
                 DNS.CONFIG: {
-                    DNS.SERVER: ['8.8.8.8', '2001:4860:4860::8888', '8.8.4.4']
+                    DNS.SERVER: ["8.8.8.8", "2001:4860:4860::8888", "8.8.4.4"]
                 }
             }
         }
@@ -163,7 +163,7 @@ class TestRouteValidation:
         validator.validate_routes(state.State({}), state.State({}))
 
     def test_valid_route_based_on_desired_state(self):
-        iface0 = _create_interface_state('eth1', ipv4=True)
+        iface0 = _create_interface_state("eth1", ipv4=True)
         route0 = self._create_route0()
         desired_state = state.State(
             {
@@ -175,7 +175,7 @@ class TestRouteValidation:
         validator.validate_routes(desired_state, state.State({}))
 
     def test_valid_route_based_on_current_state(self):
-        iface0 = _create_interface_state('eth1', ipv4=True)
+        iface0 = _create_interface_state("eth1", ipv4=True)
         route0 = self._create_route0()
         desired_state = state.State(
             {
@@ -206,7 +206,7 @@ class TestRouteValidation:
 
     def test_invalid_route_due_to_non_up_iface(self):
         iface0 = _create_interface_state(
-            'eth1', state=schema.InterfaceState.DOWN, ipv4=True
+            "eth1", state=schema.InterfaceState.DOWN, ipv4=True
         )
         route0 = self._create_route0()
         desired_state = state.State(
@@ -219,7 +219,7 @@ class TestRouteValidation:
             validator.validate_routes(desired_state, state.State({}))
 
     def test_invalid_route_due_to_missing_ipv4(self):
-        iface0 = _create_interface_state('eth1', ipv4=False)
+        iface0 = _create_interface_state("eth1", ipv4=False)
         route0 = self._create_route0()
         desired_state = state.State(
             {
@@ -231,7 +231,7 @@ class TestRouteValidation:
             validator.validate_routes(desired_state, state.State({}))
 
     def test_invalid_route_due_to_missing_ipv6(self):
-        iface1 = _create_interface_state('eth2', ipv6=False)
+        iface1 = _create_interface_state("eth2", ipv6=False)
         route1 = self._create_route1()
         desired_state = state.State(
             {
@@ -243,7 +243,7 @@ class TestRouteValidation:
             validator.validate_routes(desired_state, state.State({}))
 
     def test_valid_route_based_on_desired_state_but_not_current(self):
-        iface0 = _create_interface_state('eth1', ipv4=True)
+        iface0 = _create_interface_state("eth1", ipv4=True)
         route0 = self._create_route0()
         desired_state = state.State(
             {
@@ -252,7 +252,7 @@ class TestRouteValidation:
             }
         )
         iface0_down = _create_interface_state(
-            'eth1', state=schema.InterfaceState.DOWN
+            "eth1", state=schema.InterfaceState.DOWN
         )
         current_state = state.State(
             {
@@ -264,7 +264,7 @@ class TestRouteValidation:
         validator.validate_routes(desired_state, current_state)
 
     def test_invalid_route_based_on_desired_state_but_not_current(self):
-        iface0_ipv4_disabled = _create_interface_state('eth1', ipv4=False)
+        iface0_ipv4_disabled = _create_interface_state("eth1", ipv4=False)
         route0 = self._create_route0()
         desired_state = state.State(
             {
@@ -272,7 +272,7 @@ class TestRouteValidation:
                 schema.Route.KEY: {schema.Route.CONFIG: [route0]},
             }
         )
-        iface0_ipv4_enabled = _create_interface_state('eth1', ipv4=True)
+        iface0_ipv4_enabled = _create_interface_state("eth1", ipv4=True)
         current_state = state.State(
             {
                 schema.Interface.KEY: [iface0_ipv4_enabled],
@@ -284,18 +284,18 @@ class TestRouteValidation:
             validator.validate_routes(desired_state, current_state)
 
     def _create_route0(self):
-        return _create_route('198.51.100.0/24', '192.0.2.1', 'eth1', 50, 103)
+        return _create_route("198.51.100.0/24", "192.0.2.1", "eth1", 50, 103)
 
     def _create_route1(self):
         return _create_route(
-            '2001:db8:a::/64', '2001:db8:1::a', 'eth2', 51, 104
+            "2001:db8:a::/64", "2001:db8:1::a", "eth2", 51, 104
         )
 
 
 class TestVxlanValidation:
 
     parametrize_vxlan_req_fields = pytest.mark.parametrize(
-        'required_field', [VXLAN.ID, VXLAN.REMOTE, VXLAN.BASE_IFACE]
+        "required_field", [VXLAN.ID, VXLAN.REMOTE, VXLAN.BASE_IFACE]
     )
 
     @parametrize_vxlan_req_fields
@@ -303,12 +303,12 @@ class TestVxlanValidation:
         desired_state = {
             schema.Interface.KEY: [
                 {
-                    schema.Interface.NAME: 'eth0.101',
+                    schema.Interface.NAME: "eth0.101",
                     schema.Interface.TYPE: VXLAN.TYPE,
                     VXLAN.CONFIG_SUBTREE: {
                         VXLAN.ID: 99,
-                        VXLAN.REMOTE: '192.168.3.3',
-                        VXLAN.BASE_IFACE: 'eth0',
+                        VXLAN.REMOTE: "192.168.3.3",
+                        VXLAN.BASE_IFACE: "eth0",
                     },
                 }
             ]
@@ -327,11 +327,11 @@ class TestVxlanValidation:
         desired_state = {
             schema.Interface.KEY: [
                 {
-                    schema.Interface.NAME: 'eth0.101',
+                    schema.Interface.NAME: "eth0.101",
                     schema.Interface.TYPE: VXLAN.TYPE,
                     VXLAN.CONFIG_SUBTREE: {
                         VXLAN.ID: 99,
-                        VXLAN.REMOTE: '192.168.3.3',
+                        VXLAN.REMOTE: "192.168.3.3",
                         VXLAN.BASE_IFACE: "eth0",
                     },
                 }
@@ -356,12 +356,12 @@ class TestVlanFilteringValidation:
         desired_state = {
             schema.Interface.KEY: [
                 {
-                    schema.Interface.NAME: 'br0',
+                    schema.Interface.NAME: "br0",
                     schema.Interface.TYPE: LB.TYPE,
                     schema.Interface.STATE: schema.InterfaceState.UP,
                     LB.PORT_SUBTREE: [
                         {
-                            LB.Port.NAME: 'eth1',
+                            LB.Port.NAME: "eth1",
                             LB.Port.VLAN_SUBTREE: invalid_vlan_config,
                         }
                     ],
@@ -369,7 +369,7 @@ class TestVlanFilteringValidation:
             ]
         }
         with pytest.raises(
-            NmstateValueError, match='Access port cannot have trunk tags'
+            NmstateValueError, match="Access port cannot have trunk tags"
         ):
             libnmstate.validator.validate_bridge(desired_state)
 
@@ -381,12 +381,12 @@ class TestVlanFilteringValidation:
         desired_state = {
             schema.Interface.KEY: [
                 {
-                    schema.Interface.NAME: 'br0',
+                    schema.Interface.NAME: "br0",
                     schema.Interface.TYPE: LB.TYPE,
                     schema.Interface.STATE: schema.InterfaceState.UP,
                     LB.PORT_SUBTREE: [
                         {
-                            LB.Port.NAME: 'eth1',
+                            LB.Port.NAME: "eth1",
                             LB.Port.VLAN_SUBTREE: invalid_vlan_config,
                         }
                     ],
@@ -395,7 +395,7 @@ class TestVlanFilteringValidation:
         }
         with pytest.raises(
             NmstateValueError,
-            match='A trunk port needs to specify trunk tags',
+            match="A trunk port needs to specify trunk tags",
         ):
             libnmstate.validator.validate_bridge(desired_state)
 
@@ -415,12 +415,12 @@ class TestVlanFilteringValidation:
         desired_state = {
             schema.Interface.KEY: [
                 {
-                    schema.Interface.NAME: 'br0',
+                    schema.Interface.NAME: "br0",
                     schema.Interface.TYPE: LB.TYPE,
                     schema.Interface.STATE: schema.InterfaceState.UP,
                     LB.PORT_SUBTREE: [
                         {
-                            LB.Port.NAME: 'eth1',
+                            LB.Port.NAME: "eth1",
                             LB.Port.VLAN_SUBTREE: invalid_vlan_config,
                         }
                     ],
@@ -430,26 +430,26 @@ class TestVlanFilteringValidation:
         with pytest.raises(NmstateValueError) as err:
             libnmstate.validator.validate_bridge(desired_state)
         assert (
-            'Trunk port cannot be configured by both id and range'
+            "Trunk port cannot be configured by both id and range"
             in err.value.args[0]
         )
 
     @pytest.mark.parametrize(
-        'range_key',
+        "range_key",
         [LB.Port.Vlan.TrunkTags.MIN_RANGE, LB.Port.Vlan.TrunkTags.MAX_RANGE],
-        ids=['only_min', 'only_max'],
+        ids=["only_min", "only_max"],
     )
     def test_vlan_ranges_must_have_min_and_max(self, range_key):
         vlan_tag = 101
         desired_state = {
             schema.Interface.KEY: [
                 {
-                    schema.Interface.NAME: 'br0',
+                    schema.Interface.NAME: "br0",
                     schema.Interface.TYPE: LB.TYPE,
                     schema.Interface.STATE: schema.InterfaceState.UP,
                     LB.PORT_SUBTREE: [
                         {
-                            LB.Port.NAME: 'eth1',
+                            LB.Port.NAME: "eth1",
                             LB.Port.VLAN_SUBTREE: {
                                 LB.Port.Vlan.MODE: LB.Port.Vlan.Mode.TRUNK,
                                 LB.Port.Vlan.TRUNK_TAGS: [
@@ -467,7 +467,7 @@ class TestVlanFilteringValidation:
         }
         with pytest.raises(NmstateValueError) as err:
             libnmstate.validator.validate_bridge(desired_state)
-        assert 'Trunk port range requires min / max keys' in err.value.args[0]
+        assert "Trunk port range requires min / max keys" in err.value.args[0]
 
 
 def _create_interface_state(

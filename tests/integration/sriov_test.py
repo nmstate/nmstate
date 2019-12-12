@@ -32,7 +32,7 @@ SRIOV_CONFIG = {Ethernet.SRIOV_SUBTREE: {Ethernet.SRIOV.TOTAL_VFS: 0}}
 
 @pytest.mark.xfail(
     raises=NmstateNotSupportedError,
-    reason='The device does not support SR-IOV.',
+    reason="The device does not support SR-IOV.",
 )
 def test_sriov_zero_vfs(sriov_interface):
     assertlib.assert_state(sriov_interface)
@@ -40,7 +40,7 @@ def test_sriov_zero_vfs(sriov_interface):
 
 @pytest.mark.xfail(
     raises=NmstateNotSupportedError,
-    reason='The device does not support SR-IOV.',
+    reason="The device does not support SR-IOV.",
 )
 def test_sriov_increase_vfs(sriov_interface):
     eth_config = sriov_interface[Interface.KEY][0][Ethernet.CONFIG_SUBTREE]
@@ -51,7 +51,7 @@ def test_sriov_increase_vfs(sriov_interface):
 
 @pytest.mark.xfail(
     raises=NmstateNotSupportedError,
-    reason='The device does not support SR-IOV.',
+    reason="The device does not support SR-IOV.",
 )
 def test_sriov_decrease_vfs(sriov_interface):
     eth_config = sriov_interface[Interface.KEY][0][Ethernet.CONFIG_SUBTREE]

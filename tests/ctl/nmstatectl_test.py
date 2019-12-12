@@ -66,67 +66,67 @@ interfaces:
 """
 
 
-@mock.patch('sys.argv', ['nmstatectl', 'set', 'mystate.json'])
+@mock.patch("sys.argv", ["nmstatectl", "set", "mystate.json"])
 @mock.patch.object(
     nmstatectl.libnmstate,
-    'apply',
+    "apply",
     lambda state, verify_change, commit, timeout: None,
 )
 @mock.patch.object(
-    nmstatectl, 'open', mock.mock_open(read_data='{}'), create=True
+    nmstatectl, "open", mock.mock_open(read_data="{}"), create=True
 )
 def test_run_ctl_directly_set():
     nmstatectl.main()
 
 
-@mock.patch('sys.argv', ['nmstatectl', 'show'])
-@mock.patch.object(nmstatectl.libnmstate, 'show', lambda: {})
+@mock.patch("sys.argv", ["nmstatectl", "show"])
+@mock.patch.object(nmstatectl.libnmstate, "show", lambda: {})
 def test_run_ctl_directly_show_empty():
     nmstatectl.main()
 
 
-@mock.patch('sys.argv', ['nmstatectl', 'show', 'non_existing_interface'])
+@mock.patch("sys.argv", ["nmstatectl", "show", "non_existing_interface"])
 @mock.patch.object(
-    nmstatectl.libnmstate, 'show', lambda: json.loads(LO_JSON_STATE)
+    nmstatectl.libnmstate, "show", lambda: json.loads(LO_JSON_STATE)
 )
-@mock.patch('nmstatectl.nmstatectl.sys.stdout', new_callable=io.StringIO)
+@mock.patch("nmstatectl.nmstatectl.sys.stdout", new_callable=io.StringIO)
 def test_run_ctl_directly_show_only_empty(mock_stdout):
     nmstatectl.main()
     assert mock_stdout.getvalue() == EMPTY_YAML_STATE
 
 
-@mock.patch('sys.argv', ['nmstatectl', 'show', 'lo'])
+@mock.patch("sys.argv", ["nmstatectl", "show", "lo"])
 @mock.patch.object(
-    nmstatectl.libnmstate, 'show', lambda: json.loads(LO_JSON_STATE)
+    nmstatectl.libnmstate, "show", lambda: json.loads(LO_JSON_STATE)
 )
-@mock.patch('nmstatectl.nmstatectl.sys.stdout', new_callable=io.StringIO)
+@mock.patch("nmstatectl.nmstatectl.sys.stdout", new_callable=io.StringIO)
 def test_run_ctl_directly_show_only(mock_stdout):
     nmstatectl.main()
     assert mock_stdout.getvalue() == LO_YAML_STATE
 
 
 @mock.patch(
-    'sys.argv', ['nmstatectl', 'show', '--json', 'non_existing_interface']
+    "sys.argv", ["nmstatectl", "show", "--json", "non_existing_interface"]
 )
 @mock.patch.object(
-    nmstatectl.libnmstate, 'show', lambda: json.loads(LO_JSON_STATE)
+    nmstatectl.libnmstate, "show", lambda: json.loads(LO_JSON_STATE)
 )
-@mock.patch('nmstatectl.nmstatectl.sys.stdout', new_callable=io.StringIO)
+@mock.patch("nmstatectl.nmstatectl.sys.stdout", new_callable=io.StringIO)
 def test_run_ctl_directly_show_json_only_empty(mock_stdout):
     nmstatectl.main()
     assert mock_stdout.getvalue() == EMPTY_JSON_STATE
 
 
-@mock.patch('sys.argv', ['nmstatectl', 'show', '--json', 'lo'])
+@mock.patch("sys.argv", ["nmstatectl", "show", "--json", "lo"])
 @mock.patch.object(
-    nmstatectl.libnmstate, 'show', lambda: json.loads(LO_JSON_STATE)
+    nmstatectl.libnmstate, "show", lambda: json.loads(LO_JSON_STATE)
 )
-@mock.patch('nmstatectl.nmstatectl.sys.stdout', new_callable=io.StringIO)
+@mock.patch("nmstatectl.nmstatectl.sys.stdout", new_callable=io.StringIO)
 def test_run_ctl_directly_show_json_only(mock_stdout):
     nmstatectl.main()
     assert mock_stdout.getvalue() == LO_JSON_STATE
 
 
 def test_run_ctl_executable():
-    rc = subprocess.call(['nmstatectl', '--help'])
+    rc = subprocess.call(["nmstatectl", "--help"])
     assert rc == 0

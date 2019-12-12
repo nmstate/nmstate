@@ -52,7 +52,7 @@ def exec_cmd(cmd, env=None, stdin=None):
 
     logging.debug(_retcode_log_line(p.returncode, err=err))
 
-    return (p.returncode, out.decode('utf-8'), err.decode('utf-8'))
+    return (p.returncode, out.decode("utf-8"), err.decode("utf-8"))
 
 
 def command_log_line(args, cwd=None):
@@ -60,7 +60,7 @@ def command_log_line(args, cwd=None):
 
 
 def format_exec_cmd_result(result):
-    return 'rc={}, out={}, err={}'.format(*result)
+    return "rc={}, out={}, err={}".format(*result)
 
 
 def _retcode_log_line(code, err=None):
@@ -76,13 +76,13 @@ def _list2cmdline(args):
     """
     parts = []
     for arg in args:
-        if _needs_quoting(arg) or arg == '':
+        if _needs_quoting(arg) or arg == "":
             arg = "'" + arg.replace("'", r"'\''") + "'"
         parts.append(arg)
-    return ' '.join(parts)
+    return " ".join(parts)
 
 
 # This function returns truthy value if its argument contains unsafe characters
 # for including in a command passed to the shell. The safe characters were
 # stolen from pipes._safechars.
-_needs_quoting = re.compile(r'[^A-Za-z0-9_%+,\-./:=@]').search
+_needs_quoting = re.compile(r"[^A-Za-z0-9_%+,\-./:=@]").search
