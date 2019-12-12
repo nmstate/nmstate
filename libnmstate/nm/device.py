@@ -23,8 +23,6 @@ from . import active_connection as ac
 from . import connection
 from . import nmclient
 
-from distutils.version import StrictVersion
-
 
 def activate(dev=None, connection_id=None):
     """Activate the given device or remote connection profile."""
@@ -130,12 +128,6 @@ def modify(dev, connection_profile):
 
 
 def _safe_modify_async(dev, connection_profile):
-    # Special cases are known to exist (bugs) where reapply is not functioning
-    # correctly. Use activation instead. (https://bugzilla.redhat.com/1702657)
-    if _requires_activation(dev, connection_profile):
-        _activate_async(dev)
-        return
-
     mainloop = nmclient.mainloop()
     cancellable = mainloop.new_cancellable()
 
@@ -185,28 +177,6 @@ def _modify_callback(src_object, result, user_data):
             devname,
         )
         _activate_async(src_object)
-
-
-def _requires_activation(dev, connection_profile):
-    if StrictVersion(nmclient.nm_version()) < StrictVersion(
-        "1.18"
-    ) and _mtu_changed(dev, connection_profile):
-        logging.debug(
-            "Device reapply does not support mtu changes, "
-            "fallback to device activation: dev=%s",
-            dev.get_iface(),
-        )
-        return True
-    return False
-
-
-def _mtu_changed(dev, connection_profile):
-    wired_setting = connection_profile.get_setting_wired()
-    configured_mtu = wired_setting.props.mtu if wired_setting else None
-    if configured_mtu:
-        current_mtu = int(dev.get_mtu())
-        return configured_mtu != current_mtu
-    return False
 
 
 def _activate_async(dev):
