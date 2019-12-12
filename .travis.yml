@@ -53,11 +53,12 @@ script:
     - ./automation/run-tests.sh $testflags
 
 after_success:
-    - sudo pip install coveralls
+    - sudo pip install coveralls codecov
     - sudo mv .coverage .coverage.orig || true
     - sudo mv tests/.coverage .coverage.tox || true
     - sudo coverage combine --append .
     - coveralls
+    - codecov
 
 after_failure:
     - ./automation/upload_test_artifacts.sh
