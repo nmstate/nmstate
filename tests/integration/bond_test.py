@@ -66,7 +66,7 @@ def setup_remove_bond99():
     remove_bond = {
         Interface.KEY: [
             {
-                Interface.NAME: "bond99",
+                Interface.NAME: BOND99,
                 Interface.TYPE: InterfaceType.BOND,
                 Interface.STATE: InterfaceState.ABSENT,
             }
@@ -81,7 +81,7 @@ def bond99_with_2_slaves(eth1_up, eth2_up):
         eth1_up[Interface.KEY][0][Interface.NAME],
         eth2_up[Interface.KEY][0][Interface.NAME],
     ]
-    with bond_interface("bond99", slaves) as state:
+    with bond_interface(BOND99, slaves) as state:
         yield state
 
 
@@ -134,7 +134,7 @@ def test_remove_bond_with_minimum_desired_state(eth1_up, eth2_up):
 
 
 def test_add_bond_without_slaves():
-    with bond_interface(name="bond99", slaves=[]) as state:
+    with bond_interface(name=BOND99, slaves=[]) as state:
 
         assert state[Interface.KEY][0][Bond.CONFIG_SUBTREE][Bond.SLAVES] == []
 
@@ -143,7 +143,7 @@ def test_add_bond_with_slaves_and_ipv4(eth1_up, eth2_up, setup_remove_bond99):
     desired_bond_state = {
         Interface.KEY: [
             {
-                Interface.NAME: "bond99",
+                Interface.NAME: BOND99,
                 Interface.TYPE: InterfaceType.BOND,
                 Interface.STATE: InterfaceState.UP,
                 Interface.IPV4: {
@@ -177,7 +177,7 @@ def test_rollback_for_bond(eth1_up, eth2_up):
     desired_state = {
         Interface.KEY: [
             {
-                Interface.NAME: "bond99",
+                Interface.NAME: BOND99,
                 Interface.TYPE: InterfaceType.BOND,
                 Interface.STATE: InterfaceState.UP,
                 Interface.IPV4: {
@@ -334,11 +334,11 @@ def test_bond_with_empty_ipv6_static_address(eth1_up):
         }
     }
     with bond_interface(
-        name="bond99", slaves=["eth1"], extra_iface_state=extra_iface_state
+        name=BOND99, slaves=["eth1"], extra_iface_state=extra_iface_state
     ) as bond_state:
         assertlib.assert_state(bond_state)
 
-    assertlib.assert_absent("bond99")
+    assertlib.assert_absent(BOND99)
 
 
 def test_create_vlan_over_a_bond_slave(bond99_with_slave):
