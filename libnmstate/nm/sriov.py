@@ -25,6 +25,53 @@ from libnmstate.schema import Ethernet
 from libnmstate.schema import Interface
 
 
+SRIOV_NMSTATE_TO_NM_MAP = {
+    Ethernet.SRIOV.VFS.MAC_ADDRESS: (
+        nmclient.NM.SRIOV_VF_ATTRIBUTE_MAC,
+        nmclient.GLib.Variant.new_string,
+    ),
+    Ethernet.SRIOV.VFS.SPOOF_CHECK: (
+        nmclient.NM.SRIOV_VF_ATTRIBUTE_SPOOF_CHECK,
+        nmclient.GLib.Variant.new_boolean,
+    ),
+    Ethernet.SRIOV.VFS.TRUST: (
+        nmclient.NM.SRIOV_VF_ATTRIBUTE_TRUST,
+        nmclient.GLib.Variant.new_boolean,
+    ),
+    Ethernet.SRIOV.VFS.MIN_TX_RATE: (
+        nmclient.NM.SRIOV_VF_ATTRIBUTE_MIN_TX_RATE,
+        nmclient.GLib.Variant.new_uint32,
+    ),
+    Ethernet.SRIOV.VFS.MAX_TX_RATE: (
+        nmclient.NM.SRIOV_VF_ATTRIBUTE_MAX_TX_RATE,
+        nmclient.GLib.Variant.new_uint32,
+    ),
+}
+
+SRIOV_NM_TO_NMSTATE_MAP = {
+    nmclient.NM.SRIOV_VF_ATTRIBUTE_MAC: (
+        Ethernet.SRIOV.VFS.MAC_ADDRESS,
+        nmclient.GLib.Variant.get_string,
+    ),
+    nmclient.NM.SRIOV_VF_ATTRIBUTE_SPOOF_CHECK: (
+        Ethernet.SRIOV.VFS.SPOOF_CHECK,
+        nmclient.GLib.Variant.get_boolean,
+    ),
+    nmclient.NM.SRIOV_VF_ATTRIBUTE_TRUST: (
+        Ethernet.SRIOV.VFS.TRUST,
+        nmclient.GLib.Variant.get_boolean,
+    ),
+    nmclient.NM.SRIOV_VF_ATTRIBUTE_MIN_TX_RATE: (
+        Ethernet.SRIOV.VFS.MIN_TX_RATE,
+        nmclient.GLib.Variant.get_uint32,
+    ),
+    nmclient.NM.SRIOV_VF_ATTRIBUTE_MAX_TX_RATE: (
+        Ethernet.SRIOV.VFS.MAX_TX_RATE,
+        nmclient.GLib.Variant.get_uint32,
+    ),
+}
+
+
 def create_setting(iface_state, base_con_profile):
     sriov_setting = None
     ifname = iface_state[Interface.NAME]
@@ -43,9 +90,52 @@ def create_setting(iface_state, base_con_profile):
         if not sriov_setting:
             sriov_setting = nmclient.NM.SettingSriov.new()
 
+        vfs_config = sriov_config.get(Ethernet.SRIOV.VFS_SUBTREE, [])
+        vf_object_ids = {vf.get_index() for vf in sriov_setting.props.vfs}
+        vf_config_ids = {
+            vf_config[Ethernet.SRIOV.VFS.ID] for vf_config in vfs_config
+        }
+
+        # As the user must do full edit of vfs, nmstate is deleting all the vfs
+        # and then adding all the vfs from the config.
+        for vf_id in _remove_sriov_vfs_in_setting(
+            vfs_config, sriov_setting, vf_object_ids
+        ):
+            sriov_setting.remove_vf_by_index(vf_id)
+
+        for vf_object in _create_sriov_vfs_from_config(
+            vfs_config, sriov_setting, vf_config_ids
+        ):
+            sriov_setting.add_vf(vf_object)
+
         sriov_setting.props.total_vfs = sriov_config[Ethernet.SRIOV.TOTAL_VFS]
 
     return sriov_setting
+
+
+def _create_sriov_vfs_from_config(vfs_config, sriov_setting, vf_ids_to_add):
+    vfs_config_to_add = (
+        vf_config
+        for vf_config in vfs_config
+        if vf_config[Ethernet.SRIOV.VFS.ID] in vf_ids_to_add
+    )
+    for vf_config in vfs_config_to_add:
+        vf_id = vf_config.pop(Ethernet.SRIOV.VFS.ID)
+        vf_object = nmclient.NM.SriovVF.new(vf_id)
+        for key, val in vf_config.items():
+            _set_nm_attribute(vf_object, key, val)
+
+        yield vf_object
+
+
+def _set_nm_attribute(vf_object, key, value):
+    nm_attr, nm_variant = SRIOV_NMSTATE_TO_NM_MAP[key]
+    vf_object.set_attribute(nm_attr, nm_variant(value))
+
+
+def _remove_sriov_vfs_in_setting(vfs_config, sriov_setting, vf_ids_to_remove):
+    for vf_id in vf_ids_to_remove:
+        yield vf_id
 
 
 def _has_sriov_capability(ifname):
@@ -72,8 +162,34 @@ def get_info(device):
     )
 
     if sriov_setting:
-        info[Ethernet.SRIOV_SUBTREE] = {
+        sriov_config = {
             Ethernet.SRIOV.TOTAL_VFS: sriov_setting.props.total_vfs
         }
+        vfs_config = _get_info_sriov_vfs_config(sriov_setting)
+        sriov_config[Ethernet.SRIOV.VFS_SUBTREE] = vfs_config
+
+        info[Ethernet.SRIOV_SUBTREE] = sriov_config
 
     return info
+
+
+def _get_info_sriov_vfs_config(sriov_setting):
+    vfs_config = []
+    vfs_setting = sriov_setting.props.vfs
+    for vf in vfs_setting:
+        vf_config = {}
+        vf_config[Ethernet.SRIOV.VFS.ID] = vf.get_index()
+        for nm_attribute in SRIOV_NM_TO_NMSTATE_MAP.keys():
+            _get_nm_attribute(vf, vf_config, nm_attribute)
+
+        vfs_config.append(vf_config)
+
+    return vfs_config
+
+
+def _get_nm_attribute(vf_object, vf_config, nm_attribute):
+    nmstate_key, nm_variant = SRIOV_NM_TO_NMSTATE_MAP[nm_attribute]
+    if vf_object.get_attribute(nm_attribute) is not None:
+        vf_config[nmstate_key] = nm_variant(
+            vf_object.get_attribute(nm_attribute)
+        )
