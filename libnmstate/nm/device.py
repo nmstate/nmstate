@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2019 Red Hat, Inc.
+# Copyright (c) 2018-2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -173,62 +173,37 @@ def delete_device(nmdev):
 
 def _safe_delete_device_async(nmdev):
     mainloop = nmclient.mainloop()
-    user_data = mainloop, nmdev
+    user_data = mainloop, nmdev, nmdev.get_iface()
     nmdev.delete_async(
         mainloop.cancellable, _delete_device_callback, user_data
     )
 
 
 def _delete_device_callback(src_object, result, user_data):
-    mainloop, nmdev = user_data
+    mainloop, nmdev, iface = user_data
+    error = None
     try:
-        success = src_object.delete_finish(result)
-    # pylint: disable=catching-non-exception
-    except nmclient.GLib.GError as e:
-        # pylint: enable=catching-non-exception
-        if e.matches(
-            nmclient.Gio.DBusError.quark(),
-            nmclient.Gio.DBusError.UNKNOWN_METHOD,
-        ) or (
-            e.matches(
-                nmclient.NM.DeviceError.quark(),
-                nmclient.NM.DeviceError.NOTSOFTWARE,
-            )
-            and nmdev.is_software()
-        ):
-            logging.debug(
-                "Device %s has been already deleted: error=%s",
-                nmdev.get_iface(),
-                e,
-            )
-            mainloop.execute_next_action()
-        else:
-            mainloop.quit(
-                "Device deletion failed on {}: error={}".format(
-                    nmdev.get_iface(), e
-                )
-            )
-        return
+        src_object.delete_finish(result)
     except Exception as e:
-        if mainloop.is_action_canceled(e):
+        error = e
+        if mainloop.is_action_canceled(error):
             logging.debug(
-                "Device deletion aborted on %s: error=%s", nmdev.get_iface(), e
+                "Device deletion aborted on %s: error=%s", iface, error
             )
-        else:
-            mainloop.quit(
-                "Device deletion failed on {}: error={}".format(
-                    nmdev.get_iface(), e
-                )
-            )
-        return
+            return
 
-    devname = src_object.get_iface()
-    if success:
-        logging.debug("Device deletion succeeded: dev=%s", devname)
+    if not nmdev.is_real():
+        logging.debug("Interface is not real anymore: iface=%s", iface)
+        if error:
+            logging.debug(
+                "Ignored error: %s", error,
+            )
+
         mainloop.execute_next_action()
     else:
         mainloop.quit(
-            "Device deletion failed: dev={}, error=unknown".format(devname)
+            f"Device deletion failed on {iface} ({nmdev.get_path()}): "
+            f"error={error or 'unknown'}"
         )
 
 
