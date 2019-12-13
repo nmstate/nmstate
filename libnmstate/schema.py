@@ -278,6 +278,15 @@ class Ethernet:
 
     class SRIOV:
         TOTAL_VFS = "total-vfs"
+        VFS_SUBTREE = "vfs"
+
+        class VFS:
+            ID = "id"
+            MAC_ADDRESS = "mac-address"
+            SPOOF_CHECK = "spoof-check"
+            TRUST = "trust"
+            MIN_TX_RATE = "min-tx-rate"
+            MAX_TX_RATE = "max-tx-rate"
 
 
 class VLAN:

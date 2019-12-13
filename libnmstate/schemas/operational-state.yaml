@@ -177,6 +177,28 @@ definitions:
             total-vfs:
               type: integer
               minimum: 0
+            vfs:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    minimum: 0
+                  mac-address:
+                    $ref: "#/definitions/types/mac-address"
+                  spoof-check:
+                    type: boolean
+                  trust:
+                    type: boolean
+                  min-tx-rate:
+                    type: integer
+                    minimum: 0
+                  max-tx-rate:
+                    type: integer
+                    minimum: 0
+                required:
+                  - id
   interface-vlan:
     rw:
       properties:

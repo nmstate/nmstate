@@ -40,6 +40,7 @@ ROUTES = Constants.ROUTES
 THE_BRIDGE = "br0"
 VXLAN0 = "vxlan0"
 TEAM0 = "team0"
+SRIOV_MAC = "12:34:56:78:90:ab"
 
 COMMON_DATA = {
     INTERFACES: [
@@ -230,6 +231,71 @@ class TestIfaceTypeEthernet:
 
         with pytest.raises(js.ValidationError, match=str(invalid_values)):
             libnmstate.validator.validate(default_data)
+
+    @pytest.mark.parametrize("vf_id", [-50, -1])
+    def test_invalid_vf_ids(self, default_data, vf_id):
+        default_data[Interface.KEY][0].update(
+            {
+                Interface.TYPE: InterfaceType.ETHERNET,
+                Ethernet.SRIOV_SUBTREE: {
+                    Ethernet.SRIOV.TOTAL_VFS: 2,
+                    Ethernet.SRIOV.VFS_SUBTREE: [
+                        {Ethernet.SRIOV.VFS.ID: vf_id}
+                    ],
+                },
+            }
+        )
+
+        with pytest.raises(js.ValidationError, match=str(vf_id)):
+            libnmstate.validator.validate(default_data)
+
+    @pytest.mark.parametrize("vf_id", [0, 1, 20])
+    def test_valid_vf_ids(self, default_data, vf_id):
+        default_data[Interface.KEY][0].update(
+            {
+                Interface.TYPE: InterfaceType.ETHERNET,
+                Ethernet.SRIOV_SUBTREE: {
+                    Ethernet.SRIOV.TOTAL_VFS: 2,
+                    Ethernet.SRIOV.VFS_SUBTREE: [
+                        {Ethernet.SRIOV.VFS.ID: vf_id},
+                    ],
+                },
+            }
+        )
+        libnmstate.validator.validate(default_data)
+
+    def test_sriov_with_empty_vf_config_is_valid(self, default_data):
+        default_data[Interface.KEY][0].update(
+            {
+                Interface.TYPE: InterfaceType.ETHERNET,
+                Ethernet.SRIOV_SUBTREE: {
+                    Ethernet.SRIOV.TOTAL_VFS: 1,
+                    Ethernet.SRIOV.VFS_SUBTREE: [],
+                },
+            }
+        )
+        libnmstate.validator.validate(default_data)
+
+    def test_sriov_vf_config_is_valid(self, default_data):
+        default_data[Interface.KEY][0].update(
+            {
+                Interface.TYPE: InterfaceType.ETHERNET,
+                Ethernet.SRIOV_SUBTREE: {
+                    Ethernet.SRIOV.TOTAL_VFS: 1,
+                    Ethernet.SRIOV.VFS_SUBTREE: [
+                        {
+                            Ethernet.SRIOV.VFS.ID: 1,
+                            Ethernet.SRIOV.VFS.MAC_ADDRESS: SRIOV_MAC,
+                            Ethernet.SRIOV.VFS.SPOOF_CHECK: True,
+                            Ethernet.SRIOV.VFS.TRUST: False,
+                            Ethernet.SRIOV.VFS.MIN_TX_RATE: 1000,
+                            Ethernet.SRIOV.VFS.MAX_TX_RATE: 2000,
+                        }
+                    ],
+                },
+            }
+        )
+        libnmstate.validator.validate(default_data)
 
 
 class TestIfaceTypeVxlan:
