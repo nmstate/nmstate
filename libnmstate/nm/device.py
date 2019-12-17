@@ -168,57 +168,49 @@ def _activate_async(dev):
 
 def delete_device(nmdev):
     mainloop = nmclient.mainloop()
-    mainloop.push_action(_safe_delete_device_async, nmdev)
+    ifname = nmdev.get_iface()
+    if ifname:
+        mainloop.push_action(_safe_delete_device_async, nmdev, ifname)
 
 
-def _safe_delete_device_async(nmdev):
+def _safe_delete_device_async(nmdev, ifname):
     mainloop = nmclient.mainloop()
-    user_data = mainloop, nmdev
-    nmdev.delete_async(
-        mainloop.cancellable, _delete_device_callback, user_data
-    )
+    cur_ifname = nmdev.get_iface()
+    if cur_ifname:
+        user_data = mainloop, cur_ifname
+        nmdev.delete_async(
+            mainloop.cancellable, _delete_device_callback, user_data
+        )
+    else:
+        logging.debug("Device %s has been already deleted", ifname)
+        mainloop.execute_next_action()
 
 
 def _delete_device_callback(src_object, result, user_data):
-    mainloop, nmdev = user_data
+    mainloop, ifname = user_data
     try:
         success = src_object.delete_finish(result)
     # pylint: disable=catching-non-exception
     except nmclient.GLib.GError as e:
         # pylint: enable=catching-non-exception
-        if e.matches(
-            nmclient.Gio.DBusError.quark(),
-            nmclient.Gio.DBusError.UNKNOWN_METHOD,
-        ) or (
-            e.matches(
-                nmclient.NM.DeviceError.quark(),
-                nmclient.NM.DeviceError.NOTSOFTWARE,
-            )
-            and nmdev.is_software()
+        if (
+            not src_object
+            or not src_object.get_iface()
+            or not get_device_by_name(ifname)
         ):
-            logging.debug(
-                "Device %s has been already deleted: error=%s",
-                nmdev.get_iface(),
-                e,
-            )
+            logging.debug("Device %s has been already deleted", ifname)
             mainloop.execute_next_action()
         else:
             mainloop.quit(
-                "Device deletion failed on {}: error={}".format(
-                    nmdev.get_iface(), e
-                )
+                "Device deletion failed on {}: error={}".format(ifname, e)
             )
         return
     except Exception as e:
         if mainloop.is_action_canceled(e):
-            logging.debug(
-                "Device deletion aborted on %s: error=%s", nmdev.get_iface(), e
-            )
+            logging.debug("Device deletion aborted on %s: error=%s", ifname, e)
         else:
             mainloop.quit(
-                "Device deletion failed on {}: error={}".format(
-                    nmdev.get_iface(), e
-                )
+                "Device deletion failed on {}: error={}".format(ifname, e)
             )
         return
 
