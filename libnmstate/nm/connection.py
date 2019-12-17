@@ -145,19 +145,6 @@ class ConnectionProfile:
 
         cancellable = self._mainloop.new_cancellable()
 
-        active_conn = get_device_active_connection(self.nmdevice)
-        if active_conn:
-            ac = ActiveConnection()
-            ac.import_by_device(self.nmdevice)
-            if ac.is_activating:
-                logging.debug(
-                    "Connection activation in progress: dev=%s, state=%s",
-                    ac.devname,
-                    ac.state,
-                )
-                self.waitfor_active_connection_async(ac)
-                return
-
         specific_object = None
         user_data = cancellable
         self._nmclient.activate_connection_async(

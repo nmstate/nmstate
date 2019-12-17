@@ -824,20 +824,35 @@ def create_ipv6_address_state(address, prefix_length):
     }
 
 
-def test_activate_dummy_without_dhcp_service():
+@pytest.fixture(scope="function")
+def dummy00():
     ifstate = {
         Interface.NAME: "dummy00",
         Interface.TYPE: InterfaceType.DUMMY,
         Interface.STATE: InterfaceState.UP,
-        Interface.IPV4: create_ipv4_state(enabled=True, dhcp=True),
-        Interface.IPV6: create_ipv6_state(
-            enabled=True, dhcp=True, autoconf=True
-        ),
     }
-    try:
-        libnmstate.apply({Interface.KEY: [ifstate]})
-    finally:
-        ifstate[Interface.STATE] = InterfaceState.ABSENT
-        libnmstate.apply(
-            {Interface.KEY: [ifstate]}, verify_change=False,
-        )
+    libnmstate.apply({Interface.KEY: [ifstate]})
+    yield ifstate
+    ifstate[Interface.STATE] = InterfaceState.ABSENT
+    libnmstate.apply({Interface.KEY: [ifstate]}, verify_change=False)
+
+
+def test_activate_dummy_without_dhcp_service(dummy00):
+    ifstate = dummy00
+    ifstate[Interface.IPV4] = create_ipv4_state(enabled=True, dhcp=True)
+    ifstate[Interface.IPV6] = create_ipv6_state(
+        enabled=True, dhcp=True, autoconf=True
+    )
+    libnmstate.apply({Interface.KEY: [ifstate]})
+
+
+def test_dummy_disable_ip_stack_with_on_going_dhcp(dummy00):
+    ifstate = dummy00
+    ifstate[Interface.IPV4] = create_ipv4_state(enabled=True, dhcp=True)
+    ifstate[Interface.IPV6] = create_ipv6_state(
+        enabled=True, dhcp=True, autoconf=True
+    )
+    libnmstate.apply({Interface.KEY: [ifstate]})
+    ifstate[Interface.IPV4] = create_ipv4_state(enabled=False)
+    ifstate[Interface.IPV6] = create_ipv6_state(enabled=False)
+    libnmstate.apply({Interface.KEY: [ifstate]})
