@@ -60,9 +60,6 @@ def _safe_reapply_async(dev, connection_profile):
     mainloop = nmclient.mainloop()
     cancellable = mainloop.new_cancellable()
 
-    if _wait_for_active_connection_async(dev, connection_profile):
-        return
-
     version_id = 0
     flags = 0
     user_data = mainloop, dev, cancellable
@@ -74,22 +71,6 @@ def _safe_reapply_async(dev, connection_profile):
         _reapply_callback,
         user_data,
     )
-
-
-def _wait_for_active_connection_async(dev, connection_profile):
-    active_conn = connection.get_device_active_connection(dev)
-    if active_conn:
-        act_conn = ac.ActiveConnection(active_conn)
-        if act_conn.is_activating:
-            logging.debug(
-                "Connection activation in progress: dev=%s, state=%s",
-                act_conn.devname,
-                act_conn.state,
-            )
-            conn = connection.ConnectionProfile(connection_profile)
-            conn.waitfor_active_connection_async(act_conn)
-            return True
-    return False
 
 
 def _reapply_callback(src_object, result, user_data):
@@ -130,9 +111,6 @@ def modify(dev, connection_profile):
 def _safe_modify_async(dev, connection_profile):
     mainloop = nmclient.mainloop()
     cancellable = mainloop.new_cancellable()
-
-    if _wait_for_active_connection_async(dev, connection_profile):
-        return
 
     version_id = 0
     flags = 0
