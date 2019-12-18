@@ -38,6 +38,7 @@ from .testlib.vlan import vlan_interface
 BRIDGE1 = "br1"
 PORT1 = "ovs1"
 VLAN_IFNAME = "eth101"
+BOND1 = "bond1"
 
 DNF_REMOVE_NM_OVS_CMD = ("dnf", "remove", "-y", "-q", "NetworkManager-ovs")
 DNF_INSTALL_NM_OVS_CMD = ("dnf", "install", "-y", "-q", "NetworkManager-ovs")
@@ -150,6 +151,89 @@ def disable_nm_ovs_plugin():
     finally:
         libcmd.exec_cmd(DNF_INSTALL_NM_OVS_CMD)
         libcmd.exec_cmd(SYSTEMCTL_RESTART_NM_CMD)
+
+
+@pytest.mark.xfail(
+    raises=(NmstateLibnmError, AssertionError),
+    reason="https://bugzilla.redhat.com/1724901",
+)
+def test_create_and_remove_ovs_bridge_link_aggregation(port0_up, port1_up):
+    port0_name = port0_up[Interface.KEY][0][Interface.NAME]
+    port1_name = port1_up[Interface.KEY][0][Interface.NAME]
+
+    bridge = Bridge(BRIDGE1)
+    bridge.add_link_aggregation_port(BOND1, [port0_name, port1_name])
+
+    with bridge.create() as state:
+        assertlib.assert_state_match(state)
+
+    assertlib.assert_absent(BRIDGE1)
+    assertlib.assert_absent(BOND1)
+
+
+@pytest.mark.xfail(
+    raises=(NmstateLibnmError, AssertionError),
+    reason="https://bugzilla.redhat.com/1724901",
+)
+def test_ovs_bridge_link_aggregation_add_additional_slave(
+    port0_up, port1_up, port2_up
+):
+    port0_name = port0_up[Interface.KEY][0][Interface.NAME]
+    port1_name = port1_up[Interface.KEY][0][Interface.NAME]
+    port2_name = port2_up[Interface.KEY][0][Interface.NAME]
+
+    bridge = Bridge(BRIDGE1)
+    bridge.add_link_aggregation_port(BOND1, [port0_name, port1_name])
+
+    with bridge.create() as state:
+        # Plug in additional slave
+        bridge.del_port(BOND1)
+        bridge.add_link_aggregation_port(
+            BOND1, [port0_name, port1_name, port2_name]
+        )
+
+        with bridge.create() as state:
+            assertlib.assert_state_match(state)
+
+    assertlib.assert_absent(BRIDGE1)
+    assertlib.assert_absent(BOND1)
+
+
+@pytest.mark.xfail(
+    raises=(NmstateLibnmError, AssertionError),
+    reason="https://bugzilla.redhat.com/1724901",
+)
+def test_ovs_bridge_link_aggregation_and_specific_mode(port0_up, port1_up):
+    port0_name = port0_up[Interface.KEY][0][Interface.NAME]
+    port1_name = port1_up[Interface.KEY][0][Interface.NAME]
+
+    bridge = Bridge(BRIDGE1)
+    bridge.add_link_aggregation_port(
+        BOND1, [port0_name, port1_name], mode="balance-slb"
+    )
+
+    with bridge.create() as state:
+        assertlib.assert_state_match(state)
+
+    assertlib.assert_absent(BRIDGE1)
+    assertlib.assert_absent(BOND1)
+
+
+def test_ovs_bridge_link_aggregation_and_invalid_mode(port0_up, port1_up):
+    port0_name = port0_up[Interface.KEY][0][Interface.NAME]
+    port1_name = port1_up[Interface.KEY][0][Interface.NAME]
+
+    bridge = Bridge(BRIDGE1)
+    bridge.add_link_aggregation_port(
+        BOND1, [port0_name, port1_name], mode="invalid-mode"
+    )
+
+    with pytest.raises(NmstateLibnmError):
+        with bridge.create():
+            pass
+
+    assertlib.assert_absent(BRIDGE1)
+    assertlib.assert_absent(BOND1)
 
 
 @pytest.fixture

@@ -55,6 +55,19 @@ def test_add_remove_ovs_bridge(eth1_up):
     assertlib.assert_absent("ovs-br0")
 
 
+@pytest.mark.xfail(
+    raises=NmstateLibnmError, reason="https://bugzilla.redhat.com/1724901"
+)
+def test_add_remove_ovs_bridge_bond(eth1_up, eth2_up):
+    with example_state(
+        "ovsbridge_bond_create.yml", cleanup="ovsbridge_bond_delete.yml"
+    ) as desired_state:
+        assertlib.assert_state(desired_state)
+
+    assertlib.assert_absent("ovs-br0")
+    assertlib.assert_absent("ovs-bond1")
+
+
 def test_add_remove_linux_bridge(eth1_up):
     with example_state(
         "linuxbrige_eth1_up.yml", cleanup="linuxbrige_eth1_absent.yml"

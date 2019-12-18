@@ -279,19 +279,28 @@ def _get_ovs_bridge_port_devices(iface_state):
     OVS bridge.
     Note: Ports must be activated before the ifaces (NM limitation).
     """
-    ifaces = [
-        p[Interface.NAME]
-        for p in iface_state.get(OvsB.CONFIG_SUBTREE, {}).get(
-            OvsB.PORT_SUBTREE, []
-        )
-    ]
-    ports = [ovs.PORT_PROFILE_PREFIX + iface for iface in ifaces]
+    ports = []
+    ifaces = []
+    for port in iface_state.get(OvsB.CONFIG_SUBTREE, {}).get(
+        OvsB.PORT_SUBTREE, []
+    ):
+        ports.append(ovs.PORT_PROFILE_PREFIX + port[OvsB.Port.NAME])
+        if OvsB.Port.LINK_AGGREGATION_SUBTREE in port:
+            for slave in port[OvsB.Port.LINK_AGGREGATION_SUBTREE].get(
+                OvsB.Port.LinkAggregation.SLAVES_SUBTREE, []
+            ):
+                ifaces.append(slave[OvsB.Port.LinkAggregation.Slave.NAME])
+        else:
+            ifaces.append(port[OvsB.Port.NAME])
+
     devnames = ports + ifaces
+
     nmdevs = []
     for devname in devnames:
         dev = device.get_device_by_name(devname)
         if dev:
             nmdevs.append(dev)
+
     return nmdevs
 
 
@@ -303,34 +312,53 @@ def prepare_proxy_ifaces_desired_state(ifaces_desired_state):
     definition.
     Note: This function modifies the ifaces_desired_state content in addition
     to returning a new set of states for the proxy interfaces.
-
     In OVS case, the port profile is the proxy, it is not part of the public
     state of the system, but internal to the NM provider.
     """
     new_ifaces_desired_state = []
     for iface_desired_state in ifaces_desired_state:
         master_type = iface_desired_state.get(MASTER_TYPE_METADATA)
-        if master_type != ovs.BRIDGE_TYPE:
-            continue
-        port_opts_metadata = iface_desired_state.get(BRPORT_OPTIONS_METADATA)
-        if port_opts_metadata is None:
-            continue
-        port_options = ovs.translate_port_options(port_opts_metadata)
-        port_iface_desired_state = _create_ovs_port_iface_desired_state(
-            iface_desired_state, port_options
-        )
-        new_ifaces_desired_state.append(port_iface_desired_state)
-        # The "visible" slave/interface needs to point to the port profile
-        iface_desired_state[MASTER_METADATA] = port_iface_desired_state[
-            Interface.NAME
-        ]
-        iface_desired_state[MASTER_TYPE_METADATA] = ovs.PORT_TYPE
+        if master_type is not None:
+            if master_type == ovs.BRIDGE_TYPE:
+                _prepare_proxy_ovs_ifaces(
+                    iface_desired_state, new_ifaces_desired_state
+                )
+
     return new_ifaces_desired_state
 
 
-def _create_ovs_port_iface_desired_state(iface_desired_state, port_options):
+def _prepare_proxy_ovs_ifaces(iface_desired_state, new_ifaces_desired_state):
+    bridge_port_state = iface_desired_state.get(BRPORT_OPTIONS_METADATA)
+    if bridge_port_state is None:
+        return
+
+    port_desired_state = _create_ovs_port_desired_state(
+        iface_desired_state, bridge_port_state
+    )
+
+    # Bond port need to be added only once per all their slaves
+    if port_desired_state[OvsB.Port.NAME] not in [
+        i[Interface.NAME] for i in new_ifaces_desired_state
+    ]:
+        new_ifaces_desired_state.append(port_desired_state)
+
+    # The "visible" slave/interface needs to point to the port profile
+    iface_desired_state[MASTER_METADATA] = port_desired_state[Interface.NAME]
+    iface_desired_state[MASTER_TYPE_METADATA] = ovs.PORT_TYPE
+
+
+def _create_ovs_port_desired_state(iface_desired_state, bridge_port_state):
+    port_options = ovs.translate_port_options(bridge_port_state)
+
+    if OvsB.Port.LINK_AGGREGATION_SUBTREE in bridge_port_state:
+        port_name = bridge_port_state[OvsB.Port.NAME]
+    else:
+        port_name = (
+            ovs.PORT_PROFILE_PREFIX + iface_desired_state[Interface.NAME]
+        )
+
     return {
-        "name": ovs.PORT_PROFILE_PREFIX + iface_desired_state[Interface.NAME],
+        "name": port_name,
         "type": ovs.PORT_TYPE,
         "state": iface_desired_state[Interface.STATE],
         MASTER_METADATA: iface_desired_state[MASTER_METADATA],

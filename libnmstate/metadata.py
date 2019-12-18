@@ -26,6 +26,7 @@ from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIP
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
+from libnmstate.schema import OVSBridge
 
 
 BRPORT_OPTIONS = "_brport_options"
@@ -61,8 +62,8 @@ def generate_ifaces_metadata(desired_state, current_state):
         desired_state.interfaces,
         current_state.interfaces,
         master_type="ovs-bridge",
-        get_slaves_func=_get_ovs_slaves_from_state,
-        set_metadata_func=_set_ovs_bridge_ports_metadata,
+        get_slaves_func=_get_interfaces_from_ovs_bridge_state,
+        set_metadata_func=_set_ovs_bridge_interfaces_metadata,
     )
     _generate_link_master_metadata(
         desired_state.interfaces,
@@ -93,24 +94,78 @@ def _get_bond_slaves_from_state(iface_state, default=()):
     return iface_state.get("link-aggregation", {}).get("slaves", default)
 
 
-def _set_ovs_bridge_ports_metadata(master_state, slave_state):
-    _set_common_slaves_metadata(master_state, slave_state)
+def _set_ovs_bridge_interfaces_metadata(master_state, interface_state):
+    """
+    Add information about the parent port to the interface state. All
+    interfaces are slaves of OVS ports which themselves are slaves of
+    OVS bridges.
+    """
+    _set_common_slaves_metadata(master_state, interface_state)
+    interface_state[BRPORT_OPTIONS] = _find_ovs_bridge_port_for_interface(
+        master_state, interface_state[Interface.NAME],
+    )
 
-    ports = master_state.get("bridge", {}).get("port", [])
-    port = next(filter(lambda n: n["name"] == slave_state["name"], ports), {})
-    slave_state[BRPORT_OPTIONS] = port
+
+def _find_ovs_bridge_port_for_interface(bridge_state, interface_name):
+    """
+    Find bridge's port for given interface name. For simple ports connected
+    to a single system or internal interface, the interface name matches the
+    port name. When looking for a slave of a link aggregation port, we return
+    the whole parent port.
+    """
+    bridge_subtree = bridge_state.get(OVSBridge.CONFIG_SUBTREE, {})
+    ports = bridge_subtree.get(OVSBridge.PORT_SUBTREE, [])
+    for port in ports:
+        if OVSBridge.Port.LINK_AGGREGATION_SUBTREE in port:
+            la_subtree = port[OVSBridge.Port.LINK_AGGREGATION_SUBTREE]
+            slaves = la_subtree.get(
+                OVSBridge.Port.LinkAggregation.SLAVES_SUBTREE, []
+            )
+            for slave in slaves:
+                if (
+                    slave[OVSBridge.Port.LinkAggregation.Slave.NAME]
+                    == interface_name
+                ):
+                    return port
+        else:
+            if port[OVSBridge.Port.NAME] == interface_name:
+                return port
+    return None
+
+
+def _get_interfaces_from_ovs_bridge_state(bridge_state, default=()):
+    """
+    Return names of all the interfaces connected to ports of given OVS bridge.
+    For simple ports connected to internal and system interfaces, the interface
+    name matches the port name. For link aggregation ports, the interface names
+    are obtained from listed slaves.
+    """
+    ovs_slaves = []
+
+    bridge_subtree = bridge_state.get(OVSBridge.CONFIG_SUBTREE, {})
+    ports = bridge_subtree.get(OVSBridge.PORT_SUBTREE, [])
+    for port in ports:
+        if OVSBridge.Port.LINK_AGGREGATION_SUBTREE in port:
+            la_subtree = port[OVSBridge.Port.LINK_AGGREGATION_SUBTREE]
+            slaves = la_subtree.get(
+                OVSBridge.Port.LinkAggregation.SLAVES_SUBTREE, []
+            )
+            for slave in slaves:
+                ovs_slaves.append(
+                    slave[OVSBridge.Port.LinkAggregation.Slave.NAME]
+                )
+        else:
+            ovs_slaves.append(port[OVSBridge.Port.NAME])
+
+    if not ovs_slaves:
+        return default
+
+    return ovs_slaves
 
 
 def _set_common_slaves_metadata(master_state, slave_state):
     slave_state[MASTER] = master_state["name"]
     slave_state[MASTER_TYPE] = master_state.get("type")
-
-
-def _get_ovs_slaves_from_state(iface_state, default=()):
-    ports = iface_state.get("bridge", {}).get("port")
-    if ports is None:
-        return default
-    return [p["name"] for p in ports]
 
 
 def _generate_link_master_metadata(

@@ -43,12 +43,15 @@ function add_extra_networks {
     container_exec '
       ip link add eth1 type veth peer eth1peer && \
       ip link add eth2 type veth peer eth2peer && \
+      ip link add eth3 type veth peer eth3peer && \
       ip link set eth1peer up && \
-      ip link set eth2peer up
+      ip link set eth2peer up && \
+      ip link set eth3peer up
       # Due to https://nmstate.atlassian.net/browse/NMSTATE-279
       # Mandually set test NICs as managed by NetworkManager.
       nmcli device set eth1 managed yes
       nmcli device set eth2 managed yes
+      nmcli device set eth3 managed yes
     '
 }
 

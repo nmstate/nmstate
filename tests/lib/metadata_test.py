@@ -442,7 +442,7 @@ class TestDesiredStateOvsMetadata:
         assert desired_state == expected_desired_state
         assert current_state == expected_current_state
 
-    def test_ovs_adding_slaves(self):
+    def test_ovs_adding_ports(self):
         desired_state = state.State(
             {
                 Interface.KEY: [
@@ -484,7 +484,7 @@ class TestDesiredStateOvsMetadata:
         assert desired_state == expected_dstate
         assert current_state == expected_cstate
 
-    def test_ovs_removing_slaves(self):
+    def test_ovs_removing_ports(self):
         desired_state = state.State(
             {
                 Interface.KEY: [
@@ -528,7 +528,7 @@ class TestDesiredStateOvsMetadata:
         assert desired_state == expected_dstate
         assert current_state == expected_cstate
 
-    def test_ovs_edit_slave(self):
+    def test_ovs_edit_port(self):
         desired_state = state.State(
             {
                 Interface.KEY: [
@@ -565,7 +565,7 @@ class TestDesiredStateOvsMetadata:
         assert desired_state == expected_dstate
         assert current_state == expected_cstate
 
-    def test_ovs_reusing_slave_used_by_existing_bridge(self):
+    def test_ovs_reusing_port_used_by_existing_bridge(self):
         OVS2_NAME = "ovs-br88"
         desired_state = state.State(
             {
@@ -603,6 +603,122 @@ class TestDesiredStateOvsMetadata:
         expected_dstate.interfaces["eth0"][
             metadata.BRPORT_OPTIONS
         ] = desired_state.interfaces[OVS2_NAME]["bridge"]["port"][0]
+
+        metadata.generate_ifaces_metadata(desired_state, current_state)
+
+        assert desired_state == expected_dstate
+        assert current_state == expected_cstate
+
+    def test_ovs_creation_with_new_link_aggregation_port(self):
+        desired_state = state.State(
+            {
+                Interface.KEY: [
+                    {
+                        "name": OVS_NAME,
+                        "type": TYPE_OVS_BR,
+                        "state": "up",
+                        "bridge": {
+                            "port": [
+                                {
+                                    "name": "bond1",
+                                    "link-aggregation": {
+                                        "slaves": [
+                                            {"name": "eth0"},
+                                            {"name": "eth1"},
+                                        ],
+                                    },
+                                }
+                            ]
+                        },
+                    },
+                    {"name": "eth0", "type": "unknown"},
+                    {"name": "eth1", "type": "unknown"},
+                ]
+            }
+        )
+        current_state = state.State({})
+        expected_dstate = state.State(desired_state.state)
+        expected_cstate = state.State(current_state.state)
+        for iface in ("eth0", "eth1"):
+            expected_dstate.interfaces[iface][metadata.MASTER] = OVS_NAME
+            expected_dstate.interfaces[iface][
+                metadata.MASTER_TYPE
+            ] = TYPE_OVS_BR
+            expected_dstate.interfaces[iface][
+                metadata.BRPORT_OPTIONS
+            ] = desired_state.interfaces[OVS_NAME]["bridge"]["port"][0]
+
+        metadata.generate_ifaces_metadata(desired_state, current_state)
+
+        assert desired_state == expected_dstate
+        assert current_state == expected_cstate
+
+    def test_ovs_adding_slaves(self):
+        desired_state = state.State(
+            {
+                Interface.KEY: [
+                    {
+                        "name": OVS_NAME,
+                        "type": TYPE_OVS_BR,
+                        "state": "up",
+                        "bridge": {
+                            "port": [
+                                {
+                                    "name": "bond1",
+                                    "link-aggregation": {
+                                        "slaves": [
+                                            {"name": "eth0"},
+                                            {"name": "eth1"},
+                                            {"name": "eth2"},
+                                        ],
+                                    },
+                                }
+                            ]
+                        },
+                    },
+                    {"name": "eth0", "type": "unknown"},
+                    {"name": "eth1", "type": "unknown"},
+                    {"name": "eth2", "type": "unknown"},
+                ]
+            }
+        )
+        current_state = state.State(
+            {
+                Interface.KEY: [
+                    {
+                        "name": OVS_NAME,
+                        "type": TYPE_OVS_BR,
+                        "state": "up",
+                        "bridge": {
+                            "port": [
+                                {
+                                    "name": "bond1",
+                                    "link-aggregation": {
+                                        "slaves": [
+                                            {"name": "eth0"},
+                                            {"name": "eth1"},
+                                        ],
+                                    },
+                                }
+                            ]
+                        },
+                    },
+                    {"name": "eth0", "type": "unknown"},
+                    {"name": "eth1", "type": "unknown"},
+                    {"name": "eth2", "type": "unknown"},
+                ]
+            }
+        )
+        expected_dstate = state.State(desired_state.state)
+        expected_cstate = state.State(current_state.state)
+        for iface in ("eth0", "eth1", "eth2"):
+            expected_dstate.interfaces[iface][metadata.MASTER] = OVS_NAME
+            expected_dstate.interfaces[iface][
+                metadata.MASTER_TYPE
+            ] = TYPE_OVS_BR
+            expected_dstate.interfaces[iface][
+                metadata.BRPORT_OPTIONS
+            ] = desired_state.interfaces[OVS_NAME]["bridge"]["port"][0]
 
         metadata.generate_ifaces_metadata(desired_state, current_state)
 

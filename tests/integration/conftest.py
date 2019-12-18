@@ -44,7 +44,7 @@ def logging_setup():
 @pytest.fixture(scope="session", autouse=True)
 def ethx_init(diff_initial_state):
     """ Remove any existing definitions on the ethX interfaces. """
-    ifacelib.ifaces_init("eth1", "eth2")
+    ifacelib.ifaces_init("eth1", "eth2", "eth3")
 
 
 @pytest.fixture(scope="function")
@@ -59,8 +59,15 @@ def eth2_up():
         yield ifstate
 
 
+@pytest.fixture(scope="function")
+def eth3_up():
+    with ifacelib.iface_up("eth3") as ifstate:
+        yield ifstate
+
+
 port0_up = eth1_up
 port1_up = eth2_up
+port2_up = eth3_up
 
 
 @pytest.fixture(scope="session", autouse=True)
