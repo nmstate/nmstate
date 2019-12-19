@@ -33,9 +33,6 @@ CHECKPOINT_CREATE_FLAG_DISCONNECT_NEW_DEVICES = 0x04
 NM_PERMISSION_DENIED = "org.freedesktop.NetworkManager.PermissionDenied"
 
 
-_nmdbus_manager = None
-
-
 class NMCheckPointError(Exception):
     pass
 
@@ -51,14 +48,10 @@ class NMCheckPointPermissionError(NMCheckPointError):
 def nmdbus_manager():
     """
     Returns the NM manager.
-    If it does not exists, it will initialize the dbus connection and
-    create the manager.
+    Initializes the dbus connection and creates the manager.
     """
-    global _nmdbus_manager
-    if _nmdbus_manager is None:
-        _NMDbus.init()
-        _nmdbus_manager = _NMDbusManager()
-    return _nmdbus_manager
+    _NMDbus.init()
+    return _NMDbusManager()
 
 
 class _NMDbus:
