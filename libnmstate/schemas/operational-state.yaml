@@ -63,7 +63,7 @@ definitions:
         - down
     mac-address:
       type: string
-      pattern: "^([a-fA-F0-9]{2}:){5}[a-fA-F0-9]{2}$"
+      pattern: "^([a-fA-F0-9]{2}:){5,31}[a-fA-F0-9]{2}$"
     bridge-vlan-tag:
       type: integer
       minimum: 0
