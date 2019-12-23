@@ -196,6 +196,11 @@ class ConnectionProfile:
                     "Missing 'NetworkManager-ovs' plugin"
                     f" to handle device={self.devname}"
                 )
+            elif self._is_team_plugin_missing(e):
+                self._mainloop.quit(
+                    "Missing 'NetworkManager-team' plugin"
+                    f" to handle device={self.devname}"
+                )
             else:
                 self._mainloop.quit(
                     "Connection activation failed on {} {}: error={}".format(
@@ -254,6 +259,15 @@ class ConnectionProfile:
                 or self._con_profile.is_type(
                     nmclient.NM.SETTING_OVS_BRIDGE_SETTING_NAME
                 )
+            )
+        )
+
+    def _is_team_plugin_missing(self, err):
+        return (
+            isinstance(err, nmclient.GLib.GError)
+            and err.domain == nmclient.NM_MANAGER_ERROR_DOMAIN
+            and self._con_profile.is_type(
+                nmclient.NM.SETTING_TEAM_SETTING_NAME
             )
         )
 

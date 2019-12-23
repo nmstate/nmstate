@@ -103,6 +103,7 @@ def _interfaces():
         iface_info.update(nm.vlan.get_info(dev))
         iface_info.update(nm.vxlan.get_info(dev))
         iface_info.update(nm.bridge.get_info(dev))
+        iface_info.update(nm.team.get_info(dev))
 
         if nm.bond.is_bond_type_id(type_id):
             bondinfo = nm.bond.get_bond_info(dev)

@@ -400,7 +400,7 @@ def _build_connection_profile(iface_desired_state, base_con_profile=None):
     if sriov_setting:
         settings.append(sriov_setting)
 
-    team_setting = team.create_setting(iface_desired_state)
+    team_setting = team.create_setting(iface_desired_state, base_con_profile)
     if team_setting:
         settings.append(team_setting)
 

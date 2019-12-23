@@ -283,7 +283,7 @@ if [[ "$CI" == "true" ]];then
 fi
 
 mkdir -p $EXPORT_DIR
-CONTAINER_ID="$(${CONTAINER_CMD} run --privileged -d -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v $PROJECT_PATH:$CONTAINER_WORKSPACE -v $EXPORT_DIR:$CONT_EXPORT_DIR $CONTAINER_IMAGE)"
+CONTAINER_ID="$(${CONTAINER_CMD} run --privileged -d -e CI=$CI -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v $PROJECT_PATH:$CONTAINER_WORKSPACE -v $EXPORT_DIR:$CONT_EXPORT_DIR $CONTAINER_IMAGE)"
 [ -n "$debug_exit_shell" ] && trap open_shell EXIT || trap run_exit EXIT
 
 if [[ -v copr_repo ]];then

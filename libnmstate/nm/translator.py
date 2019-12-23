@@ -44,6 +44,7 @@ class Api2Nm:
                 "ethernet": nmclient.NM.SETTING_WIRED_SETTING_NAME,
                 "bond": nmclient.NM.SETTING_BOND_SETTING_NAME,
                 "dummy": nmclient.NM.SETTING_DUMMY_SETTING_NAME,
+                "team": nmclient.NM.SETTING_TEAM_SETTING_NAME,
                 "vlan": nmclient.NM.SETTING_VLAN_SETTING_NAME,
                 "vxlan": nmclient.NM.SETTING_VXLAN_SETTING_NAME,
                 "linux-bridge": nmclient.NM.SETTING_BRIDGE_SETTING_NAME,
