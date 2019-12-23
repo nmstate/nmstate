@@ -17,34 +17,115 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
+from contextlib import contextmanager
+import os
+
 import pytest
 
 import libnmstate
-from libnmstate.error import NmstateNotImplementedError
+from libnmstate.error import NmstateLibnmError
 from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import Team
 
+from .testlib import assertlib
+from .testlib import cmdlib
+
+
+DNF_INSTALL_NM_TEAM_PLUGIN_CMD = (
+    "dnf",
+    "install",
+    "-y",
+    "--cacheonly",
+    "NetworkManager-team",
+)
+
+DNF_REMOVE_NM_TEAM_PLUGIN_CMD = (
+    "dnf",
+    "remove",
+    "-y",
+    "-q",
+    "NetworkManager-team",
+)
+
+SYSTEMCTL_RESTART_NM_CMD = ("systemctl", "restart", "NetworkManager")
 
 TEAM0 = "team0"
 
-TEAM0_STATE = {
-    Interface.KEY: [
-        {
-            Interface.NAME: TEAM0,
-            Interface.TYPE: InterfaceType.TEAM,
-            Team.CONFIG_SUBTREE: {
-                Team.PORT_SUBTREE: [{Team.Port.NAME: "eth1"}]
-            },
-        }
-    ]
-}
 
-
-@pytest.mark.xfail(
-    raises=NmstateNotImplementedError,
-    reason="Team interface is not supported yet",
-    strict=True,
+pytestmark = pytest.mark.skipif(
+    os.environ.get("CI") == "true",
+    reason="Team kmod not available in Travis CI",
 )
-def test_sriov_not_implemented():
-    libnmstate.apply(TEAM0_STATE)
+
+
+def test_create_team_iface():
+    with team_interface(TEAM0) as team_state:
+        assertlib.assert_state(team_state)
+
+
+def test_edit_team_iface():
+    with team_interface(TEAM0) as team_state:
+        team_state[Interface.KEY][0][Team.CONFIG_SUBTREE] = {
+            Team.RUNNER_SUBTREE: {
+                Team.Runner.NAME: Team.Runner.RunnerMode.LOAD_BALANCE
+            },
+            Team.PORT_SUBTREE: [{Team.Port.NAME: "eth1"}],
+        }
+        libnmstate.apply(team_state)
+        assertlib.assert_state(team_state)
+
+
+def test_nm_team_plugin_missing():
+    with disable_nm_team_plugin():
+        with pytest.raises(NmstateLibnmError):
+            libnmstate.apply(
+                {
+                    Interface.KEY: [
+                        {
+                            Interface.NAME: TEAM0,
+                            Interface.TYPE: InterfaceType.TEAM,
+                            Interface.STATE: InterfaceState.UP,
+                        }
+                    ]
+                }
+            )
+
+
+@contextmanager
+def team_interface(ifname):
+    desired_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: ifname,
+                Interface.TYPE: InterfaceType.TEAM,
+                Interface.STATE: InterfaceState.UP,
+            }
+        ]
+    }
+    libnmstate.apply(desired_state)
+    try:
+        yield desired_state
+    finally:
+        libnmstate.apply(
+            {
+                Interface.KEY: [
+                    {
+                        Interface.NAME: ifname,
+                        Interface.STATE: InterfaceState.ABSENT,
+                    }
+                ]
+            }
+        )
+
+
+@contextmanager
+def disable_nm_team_plugin():
+    cmdlib.exec_cmd(DNF_REMOVE_NM_TEAM_PLUGIN_CMD)
+    cmdlib.exec_cmd(SYSTEMCTL_RESTART_NM_CMD)
+    try:
+        yield
+    finally:
+        cmdlib.exec_cmd(DNF_INSTALL_NM_TEAM_PLUGIN_CMD)
+        cmdlib.exec_cmd(SYSTEMCTL_RESTART_NM_CMD)

@@ -29,8 +29,10 @@ Requires:       NetworkManager-libnm >= 1:1.20
 Recommends:     NetworkManager
 # Avoid automatically generated profiles
 Recommends:     NetworkManager-config-server
-# Use Suggests for NetworkManager-ovs since it is only required for OVS support
+# Use Suggests for NetworkManager-ovs and NetworkManager-team since it is only
+# required for OVS and team support
 Suggests:       NetworkManager-ovs
+Suggests:       NetworkManager-team
 
 
 %description -n python3-%{libname}

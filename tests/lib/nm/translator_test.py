@@ -48,6 +48,7 @@ def test_api2nm_iface_type_map(NM_mock):
         "ovs-bridge": NM_mock.SETTING_OVS_BRIDGE_SETTING_NAME,
         "ovs-port": NM_mock.SETTING_OVS_PORT_SETTING_NAME,
         "ovs-interface": NM_mock.SETTING_OVS_INTERFACE_SETTING_NAME,
+        "team": NM_mock.SETTING_TEAM_SETTING_NAME,
         "vlan": NM_mock.SETTING_VLAN_SETTING_NAME,
         "linux-bridge": NM_mock.SETTING_BRIDGE_SETTING_NAME,
         "vxlan": NM_mock.SETTING_VXLAN_SETTING_NAME,
