@@ -47,6 +47,7 @@ from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
+from libnmstate.schema import LinuxBridge
 from libnmstate.schema import Route
 from libnmstate.schema import RouteRule
 
@@ -313,6 +314,7 @@ class State:
         """Verify that the (self) state is a subset of the other_state. """
         self._remove_absent_interfaces()
         self._remove_down_virt_interfaces()
+        other_state.remove_unmanaged_bridge_ports()
 
         self._assert_interfaces_included_in(other_state)
 
@@ -491,6 +493,40 @@ class State:
             if not is_virt_down:
                 ifaces[ifname] = ifstate
         self._ifaces_state = ifaces
+
+    def remove_unmanaged_bridge_ports(self):
+        """
+        Remove ports which should not be managed/controlled.
+        """
+        ports2remove = set()
+        bridge_ifaces = (
+            ifstate
+            for ifstate in self.interfaces.values()
+            if ifstate[Interface.STATE] == InterfaceState.UP
+            and ifstate[Interface.TYPE]
+            in (InterfaceType.LINUX_BRIDGE, InterfaceType.OVS_BRIDGE)
+        )
+        for br_ifstate in bridge_ifaces:
+            bridge_state = br_ifstate[LinuxBridge.CONFIG_SUBTREE]
+            ports_by_name = {
+                port[LinuxBridge.Port.NAME]: port
+                for port in bridge_state.get(LinuxBridge.PORT_SUBTREE, [])
+            }
+            for port in ports_by_name:
+                port_ifstate = self.interfaces.get(port)
+                if port_ifstate:
+                    if (
+                        port_ifstate.get(Interface.STATE) != InterfaceState.UP
+                        or port_ifstate.get(Interface.TYPE)
+                        == InterfaceType.UNKNOWN
+                    ):
+                        ports2remove.add(port_ifstate[Interface.NAME])
+            if ports_by_name:
+                new_ports_states = [
+                    ports_by_name[port_name]
+                    for port_name in (set(ports_by_name) - ports2remove)
+                ]
+                bridge_state[LinuxBridge.PORT_SUBTREE] = new_ports_states
 
     def _index_interfaces_state_by_name(self):
         return {
