@@ -25,6 +25,7 @@ from libnmstate.schema import DNS
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIP
 from libnmstate.schema import InterfaceState
+from libnmstate.schema import InterfaceType
 
 
 BRPORT_OPTIONS = "_brport_options"
@@ -154,7 +155,10 @@ def _generate_link_master_metadata(
             current_slaves = get_slaves_func(current_master_state)
             slaves2remove = set(current_slaves) - set(desired_slaves)
             for slave in slaves2remove:
-                if slave not in ifaces_desired_state:
+                if (
+                    slave not in ifaces_desired_state
+                    and _is_managed_interface(slave, ifaces_current_state)
+                ):
                     ifaces_desired_state[slave] = {"name": slave}
 
     current_masters = (
@@ -181,6 +185,13 @@ def _generate_link_master_metadata(
                         set_metadata_func(
                             master_state, ifaces_desired_state[slave]
                         )
+
+
+def _is_managed_interface(ifname, ifaces_state):
+    return (
+        ifaces_state[ifname][Interface.STATE] == InterfaceState.UP
+        and ifaces_state[ifname][Interface.TYPE] != InterfaceType.UNKNOWN
+    )
 
 
 def _generate_route_metadata(desired_state, current_state):

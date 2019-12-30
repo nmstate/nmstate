@@ -183,8 +183,8 @@ class TestDesiredStateBondMetadata:
             {
                 Interface.KEY: [
                     create_bond_state_dict(BOND_NAME, ["eth0", "eth1"]),
-                    {"name": "eth0", "state": "up", "type": "unknown"},
-                    {"name": "eth1", "state": "up", "type": "unknown"},
+                    {"name": "eth0", "state": "up", "type": "ethernet"},
+                    {"name": "eth1", "state": "up", "type": "ethernet"},
                 ]
             }
         )
@@ -508,8 +508,8 @@ class TestDesiredStateOvsMetadata:
                             "port": [{"name": "eth0"}, {"name": "eth1"}]
                         },
                     },
-                    {"name": "eth0", "state": "up", "type": "unknown"},
-                    {"name": "eth1", "state": "up", "type": "unknown"},
+                    {"name": "eth0", "state": "up", "type": "ethernet"},
+                    {"name": "eth1", "state": "up", "type": "ethernet"},
                 ]
             }
         )
