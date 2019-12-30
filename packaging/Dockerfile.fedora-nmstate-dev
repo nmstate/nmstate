@@ -25,6 +25,8 @@ RUN dnf -y install --setopt=install_weak_deps=False \
                    \
                    python36 \
                    \
+                   python38 \
+                   \
                    dnsmasq \
                    git \
                    iproute \
