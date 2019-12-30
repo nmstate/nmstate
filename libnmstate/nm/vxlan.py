@@ -19,9 +19,9 @@
 
 from distutils.version import StrictVersion
 
-from libnmstate import nm
 from libnmstate.nm import connection
-from libnmstate.nm import nmclient
+from libnmstate.nm.nmclient import nm_version
+from libnmstate.nm.nmclient import NM
 from libnmstate.schema import VXLAN
 
 
@@ -37,7 +37,7 @@ def create_setting(iface_state, base_con_profile):
             vxlan_setting = vxlan_setting.duplicate()
 
     if not vxlan_setting:
-        vxlan_setting = nmclient.NM.SettingVxlan.new()
+        vxlan_setting = NM.SettingVxlan.new()
 
     vxlan_setting.props.id = vxlan[VXLAN.ID]
     vxlan_setting.props.parent = vxlan[VXLAN.BASE_IFACE]
@@ -51,11 +51,11 @@ def create_setting(iface_state, base_con_profile):
     return vxlan_setting
 
 
-def get_info(device):
+def get_info(ctx, device):
     """
     Provides the current active values for a device
     """
-    if device.get_device_type() == nmclient.NM.DeviceType.VXLAN:
+    if device.get_device_type() == NM.DeviceType.VXLAN:
         base_iface = ""
         if device.props.parent:
             base_iface = device.props.parent.get_iface()
@@ -67,13 +67,13 @@ def get_info(device):
                 VXLAN.ID: device.props.id,
                 VXLAN.BASE_IFACE: base_iface,
                 VXLAN.REMOTE: remote,
-                VXLAN.DESTINATION_PORT: _get_destination_port(device),
+                VXLAN.DESTINATION_PORT: _get_destination_port(ctx, device),
             }
         }
     return {}
 
 
-def _get_destination_port(device):
+def _get_destination_port(ctx, device):
     """
     Retrieve the destination port.
 
@@ -83,10 +83,10 @@ def _get_destination_port(device):
 
     [1] https://bugzilla.redhat.com/show_bug.cgi?id=1768388
     """
-    if nm.nmclient.nm_version() >= StrictVersion("1.20.6"):
+    if nm_version(ctx.client) >= StrictVersion("1.20.6"):
         return device.get_dst_port()
     else:
-        con = connection.ConnectionProfile()
+        con = connection.ConnectionProfile(ctx)
         con.import_by_device(device)
         if con.profile:
             vxlan_settings = con.profile.get_setting_vxlan()

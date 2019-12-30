@@ -21,20 +21,20 @@ import logging
 import time
 import uuid
 
-from . import nmclient
 from .active_connection import ActiveConnection
+from libnmstate.nm.nmclient import NM
+from libnmstate.nm.nmclient import GLib
 
 
 class ConnectionProfile:
-    def __init__(self, profile=None):
+    def __init__(self, ctx, profile=None):
         self._con_profile = profile
-        self._nmclient = nmclient.client()
-        self._mainloop = nmclient.mainloop()
+        self._ctx = ctx
         self._nmdevice = None
         self._con_id = None
 
     def create(self, settings):
-        self.profile = nmclient.NM.SimpleConnection.new()
+        self.profile = NM.SimpleConnection.new()
         for setting in settings:
             self.profile.add_setting(setting)
 
@@ -49,24 +49,24 @@ class ConnectionProfile:
         if con_id:
             self.con_id = con_id
         if self.con_id:
-            self.profile = self._nmclient.get_connection_by_id(self.con_id)
+            self.profile = self._ctx.client.get_connection_by_id(self.con_id)
 
     def update(self, con_profile):
         self.profile.replace_settings_from_connection(con_profile.profile)
 
     def add(self, save_to_disk=True):
-        user_data = self._mainloop
-        self._mainloop.push_action(
-            self._nmclient.add_connection_async,
+        user_data = self._ctx.mainloop
+        self._ctx.mainloop.push_action(
+            self._ctx.client.add_connection_async,
             self.profile,
             save_to_disk,
-            self._mainloop.cancellable,
+            self._ctx.mainloop.cancellable,
             self._add_connection_callback,
             user_data,
         )
 
     def delete(self):
-        self._mainloop.push_action(self._safe_delete_async)
+        self._ctx.mainloop.push_action(self._safe_delete_async)
 
     def _safe_delete_async(self):
         if not self.profile:
@@ -75,28 +75,28 @@ class ConnectionProfile:
                 self.import_by_device()
         if not self.profile:
             # No callback is expected, so we should call the next one.
-            self._mainloop.execute_next_action()
+            self._ctx.mainloop.execute_next_action()
             return
 
         user_data = None
         self.profile.delete_async(
-            self._mainloop.cancellable,
+            self._ctx.mainloop.cancellable,
             self._delete_connection_callback,
             user_data,
         )
 
     def commit(self, save_to_disk=True, nmdev=None):
-        user_data = self._mainloop, nmdev
-        self._mainloop.push_action(
+        user_data = self._ctx.mainloop, nmdev
+        self._ctx.mainloop.push_action(
             self.profile.commit_changes_async,
             save_to_disk,
-            self._mainloop.cancellable,
+            self._ctx.mainloop.cancellable,
             self._commit_changes_callback,
             user_data,
         )
 
     def activate(self):
-        self._mainloop.push_action(self.safe_activate_async)
+        self._ctx.mainloop.push_action(self.safe_activate_async)
 
     @property
     def profile(self):
@@ -141,13 +141,13 @@ class ConnectionProfile:
             err_msg = err_format.format(
                 self.profile, self.con_id, self.devname
             )
-            self._mainloop.quit(err_msg)
+            self._ctx.mainloop.quit(err_msg)
 
-        cancellable = self._mainloop.new_cancellable()
+        cancellable = self._ctx.mainloop.new_cancellable()
 
         specific_object = None
         user_data = cancellable
-        self._nmclient.activate_connection_async(
+        self._ctx.client.activate_connection_async(
             self.profile,
             self.nmdevice,
             specific_object,
@@ -166,14 +166,14 @@ class ConnectionProfile:
 
     def _active_connection_callback(self, src_object, result, user_data):
         cancellable = user_data
-        self._mainloop.drop_cancellable(cancellable)
+        self._ctx.mainloop.drop_cancellable(cancellable)
 
         try:
             nm_act_con = src_object.activate_connection_finish(result)
         except Exception as e:
             act_type, act_object = self._get_activation_metadata()
 
-            if self._mainloop.is_action_canceled(e):
+            if self._ctx.mainloop.is_action_canceled(e):
                 logging.debug(
                     "Connection activation canceled on %s %s: error=%s",
                     act_type,
@@ -190,7 +190,7 @@ class ConnectionProfile:
                 time.sleep(0.1)
                 self.safe_activate_async()
             else:
-                self._mainloop.quit(
+                self._ctx.mainloop.quit(
                     "Connection activation failed on {} {}: error={}".format(
                         act_type, act_object, e
                     )
@@ -199,7 +199,7 @@ class ConnectionProfile:
 
         if nm_act_con is None:
             act_type, act_object = self._get_activation_metadata()
-            self._mainloop.quit(
+            self._ctx.mainloop.quit(
                 "Connection activation failed on {} {}: error=unknown".format(
                     act_type, act_object
                 )
@@ -212,13 +212,13 @@ class ConnectionProfile:
                 nm_act_con.props.state,
             )
 
-            ac = ActiveConnection(nm_act_con)
+            ac = ActiveConnection(self._ctx, nm_act_con)
             if ac.is_active:
-                self._mainloop.execute_next_action()
+                self._ctx.mainloop.execute_next_action()
             elif ac.is_activating:
                 self.waitfor_active_connection_async(ac)
             else:
-                self._mainloop.quit(
+                self._ctx.mainloop.quit(
                     "Connection activation failed on {}: reason={}".format(
                         ac.devname, ac.reason
                     )
@@ -227,7 +227,7 @@ class ConnectionProfile:
     @staticmethod
     def _is_connection_unavailable(err):
         return (
-            isinstance(err, nmclient.GLib.GError)
+            isinstance(err, GLib.GError)
             and err.domain == "nm-manager-error-quark"
             and err.code == 2
             and "is not available on the device" in err.message
@@ -273,7 +273,7 @@ class ConnectionProfile:
                 )
             )
             ac.remove_handlers()
-            ac = ActiveConnection()
+            ac = ActiveConnection(self._ctx)
             # Don't rely on the first device of
             # NM.ActiveConnection.get_devices() but set explicitly.
             ac.import_by_device(self.nmdevice)
@@ -287,10 +287,10 @@ class ConnectionProfile:
                 ac.nmdev_state,
             )
             ac.remove_handlers()
-            self._mainloop.execute_next_action()
+            self._ctx.mainloop.execute_next_action()
         elif not ac.is_activating:
             ac.remove_handlers()
-            self._mainloop.quit(
+            self._ctx.mainloop.quit(
                 "Connection activation failed on {}: reason={}".format(
                     ac.devname, ac.reason
                 )
@@ -324,12 +324,12 @@ class ConnectionProfile:
             else:
                 target = "con/" + str(self.con_id)
 
-            if self._mainloop.is_action_canceled(e):
+            if self._ctx.mainloop.is_action_canceled(e):
                 logging.debug(
                     "Connection deletion aborted on %s: error=%s", target, e
                 )
             else:
-                self._mainloop.quit(
+                self._ctx.mainloop.quit(
                     "Connection deletion failed on {}: error={}".format(
                         target, e
                     )
@@ -339,9 +339,9 @@ class ConnectionProfile:
         devname = src_object.get_interface_name()
         if success:
             logging.debug("Connection deletion succeeded: dev=%s", devname)
-            self._mainloop.execute_next_action()
+            self._ctx.mainloop.execute_next_action()
         else:
-            self._mainloop.quit(
+            self._ctx.mainloop.quit(
                 "Connection deletion failed: "
                 "dev={}, error=unknown".format(devname)
             )
@@ -381,14 +381,14 @@ class ConnectionSetting:
         self._setting = con_setting
 
     def create(self, con_name, iface_name, iface_type):
-        con_setting = nmclient.NM.SettingConnection.new()
+        con_setting = NM.SettingConnection.new()
         con_setting.props.id = con_name
         con_setting.props.interface_name = iface_name
         con_setting.props.uuid = str(uuid.uuid4())
         con_setting.props.type = iface_type
         con_setting.props.autoconnect = True
         con_setting.props.autoconnect_slaves = (
-            nmclient.NM.SettingConnectionAutoconnectSlaves.YES
+            NM.SettingConnectionAutoconnectSlaves.YES
         )
 
         self._setting = con_setting
@@ -396,7 +396,7 @@ class ConnectionSetting:
 
     def import_by_profile(self, con_profile):
         base = con_profile.profile.get_setting_connection()
-        new = nmclient.NM.SettingConnection.new()
+        new = NM.SettingConnection.new()
         new.props.id = base.props.id
         new.props.interface_name = base.props.interface_name
         new.props.uuid = base.props.uuid
@@ -447,14 +447,14 @@ def get_device_active_connection(nm_device):
     return active_conn
 
 
-def delete_iface_inactive_connections(ifname):
-    for con in list_connections_by_ifname(ifname):
+def delete_iface_inactive_connections(ctx, ifname):
+    for con in list_connections_by_ifname(ctx, ifname):
         con.delete()
 
 
-def list_connections_by_ifname(ifname):
+def list_connections_by_ifname(ctx, ifname):
     return [
-        ConnectionProfile(con)
-        for con in nmclient.NM.Client.get_connections(nmclient.client())
+        ConnectionProfile(ctx, con)
+        for con in ctx.client.get_connections()
         if con.get_interface_name() == ifname
     ]

@@ -33,11 +33,9 @@ BOND_TYPE = "bond"
 
 
 @pytest.fixture(scope="module", autouse=True)
-def nmclient_mock():
-    client_mock = mock.patch.object(netapplier.nmclient, "client")
-    mainloop_mock = mock.patch.object(netapplier.nmclient, "mainloop")
-    with client_mock, mainloop_mock:
-        yield
+def nm_ctx_mock():
+    with mock.patch.object(netapplier.nm_ctx, "NmContext") as m:
+        yield m
 
 
 @pytest.fixture
@@ -94,17 +92,19 @@ def test_iface_admin_state_change(netinfo_nm_mock, netapplier_nm_mock):
     ifaces_conf_edit = (
         applier_mock.prepare_edited_ifaces_configuration.return_value
     )
-    applier_mock.set_ifaces_admin_state.assert_has_calls(
-        [
-            mock.call(
-                desired_config[INTERFACES],
-                con_profiles=ifaces_conf_new + ifaces_conf_edit,
-            )
-        ]
-    )
+    with netapplier.nm_ctx.NmContext() as ctx:
+        applier_mock.set_ifaces_admin_state.assert_has_calls(
+            [
+                mock.call(
+                    ctx,
+                    desired_config[INTERFACES],
+                    con_profiles=ifaces_conf_new + ifaces_conf_edit,
+                )
+            ]
+        )
 
 
-def test_add_new_bond(netinfo_nm_mock, netapplier_nm_mock):
+def test_add_new_bond(netinfo_nm_mock, netapplier_nm_mock, nm_ctx_mock):
     netinfo_nm_mock.device.list_devices.return_value = []
     netinfo_nm_mock.ipv4.get_route_running.return_value = []
     netinfo_nm_mock.ipv4.get_route_config.return_value = []
@@ -130,11 +130,13 @@ def test_add_new_bond(netinfo_nm_mock, netapplier_nm_mock):
 
     netapplier.apply(desired_config, verify_change=False)
 
-    m_prepare = netapplier_nm_mock.applier.prepare_edited_ifaces_configuration
-    m_prepare.assert_called_once_with([])
-
-    m_prepare = netapplier_nm_mock.applier.prepare_new_ifaces_configuration
-    m_prepare.assert_called_once_with(desired_config[INTERFACES])
+    with netapplier.nm_ctx.NmContext() as ctx:
+        m_prepare = (
+            netapplier_nm_mock.applier.prepare_edited_ifaces_configuration
+        )
+        m_prepare.assert_called_once_with(ctx, [])
+        m_prepare = netapplier_nm_mock.applier.prepare_new_ifaces_configuration
+        m_prepare.assert_called_once_with(ctx, desired_config[INTERFACES])
 
 
 def test_edit_existing_bond(netinfo_nm_mock, netapplier_nm_mock):
@@ -177,10 +179,13 @@ def test_edit_existing_bond(netinfo_nm_mock, netapplier_nm_mock):
     options = desired_config[INTERFACES][0]["link-aggregation"]["options"]
     options["miimon"] = 200
 
-    netapplier.apply(desired_config, verify_change=False)
+    with netapplier.nm_ctx.NmContext() as ctx:
+        netapplier.apply(desired_config, verify_change=False)
 
-    m_prepare = netapplier_nm_mock.applier.prepare_edited_ifaces_configuration
-    m_prepare.assert_called_once_with(desired_config[INTERFACES])
+        m_prepare = (
+            netapplier_nm_mock.applier.prepare_edited_ifaces_configuration
+        )
+        m_prepare.assert_called_once_with(ctx, desired_config[INTERFACES])
 
-    m_prepare = netapplier_nm_mock.applier.prepare_new_ifaces_configuration
-    m_prepare.assert_called_once_with([])
+        m_prepare = netapplier_nm_mock.applier.prepare_new_ifaces_configuration
+        m_prepare.assert_called_once_with(ctx, [])

@@ -32,6 +32,12 @@ INTERFACES = Constants.INTERFACES
 ROUTES = Constants.ROUTES
 
 
+@pytest.fixture(scope="module", autouse=True)
+def nm_ctx_mock():
+    with mock.patch.object(netinfo, "nm_ctx") as m:
+        yield m
+
+
 @pytest.fixture
 def nm_mock():
     with mock.patch.object(netinfo, "nm") as m:

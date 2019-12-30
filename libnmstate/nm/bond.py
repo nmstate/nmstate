@@ -18,15 +18,15 @@
 #
 
 from . import connection
-from . import nmclient
 from libnmstate.error import NmstateValueError
+from libnmstate.nm.nmclient import NM
 
 
 BOND_TYPE = "bond"
 
 
 def create_setting(options):
-    bond_setting = nmclient.NM.SettingBond.new()
+    bond_setting = NM.SettingBond.new()
     for option_name, option_value in options.items():
         success = bond_setting.add_option(option_name, option_value)
         if not success:
@@ -40,20 +40,20 @@ def create_setting(options):
 
 
 def is_bond_type_id(type_id):
-    return type_id == nmclient.NM.DeviceType.BOND
+    return type_id == NM.DeviceType.BOND
 
 
-def get_bond_info(nm_device):
+def get_bond_info(ctx, nm_device):
     slaves = get_slaves(nm_device)
-    options = get_options(nm_device)
+    options = _get_options(ctx, nm_device)
     if slaves or options:
         return {"slaves": slaves, "options": options}
     else:
         return {}
 
 
-def get_options(nm_device):
-    con = connection.ConnectionProfile()
+def _get_options(ctx, nm_device):
+    con = connection.ConnectionProfile(ctx)
     con.import_by_device(nm_device)
     if con.profile:
         bond_settings = con.profile.get_setting_bond()

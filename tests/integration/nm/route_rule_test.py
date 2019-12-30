@@ -29,7 +29,7 @@ from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
 
-from .testlib import mainloop_run
+from .testlib import context
 from ..testlib import iprule
 
 ETH1 = "eth1"
@@ -152,26 +152,26 @@ def _create_route_rule(ip_from, ip_to, priority, table):
     }
 
 
-@mainloop_run
 def _modify_interface(ipv4_state, ipv6_state):
-    conn = nm.connection.ConnectionProfile()
-    conn.import_by_id(ETH1)
-    settings = _create_iface_settings(conn, ipv4_state, ipv6_state)
-    new_conn = nm.connection.ConnectionProfile()
-    new_conn.create(settings)
-    conn.update(new_conn)
-    conn.commit(save_to_disk=False)
+    with context() as ctx:
+        conn = nm.connection.ConnectionProfile(ctx)
+        conn.import_by_id(ETH1)
+        settings = _create_iface_settings(ctx, conn, ipv4_state, ipv6_state)
+        new_conn = nm.connection.ConnectionProfile(ctx)
+        new_conn.create(settings)
+        conn.update(new_conn)
+        conn.commit(save_to_disk=False)
 
-    nmdev = nm.device.get_device_by_name(ETH1)
-    nm.device.modify(nmdev, conn.profile)
+        nmdev = nm.device.get_device_by_name(ctx, ETH1)
+        nm.device.modify(ctx, nmdev, conn.profile)
 
 
-def _create_iface_settings(con_profile, ipv4_state, ipv6_state):
+def _create_iface_settings(ctx, con_profile, ipv4_state, ipv6_state):
     con_setting = nm.connection.ConnectionSetting()
     con_setting.import_by_profile(con_profile)
 
-    ipv4_setting = nm.ipv4.create_setting(ipv4_state, None)
-    ipv6_setting = nm.ipv6.create_setting(ipv6_state, None)
+    ipv4_setting = nm.ipv4.create_setting(ctx, ipv4_state, None)
+    ipv6_setting = nm.ipv6.create_setting(ctx, ipv6_state, None)
 
     return con_setting.setting, ipv4_setting, ipv6_setting
 
@@ -187,10 +187,10 @@ def _check_ip_rules_exist_in_os(rules):
 
 
 def _assert_route_rules(expected_rules):
-    nm.nmclient.client(refresh=True)
-    cur_rules = (
-        nm.ipv4.get_routing_rule_config() + nm.ipv6.get_routing_rule_config()
-    )
-    logging.debug(f"Current route rules reported by NM {cur_rules}")
-    for rule in expected_rules:
-        assert rule in expected_rules
+    with context() as ctx:
+        cur_rules = nm.ipv4.get_routing_rule_config(
+            ctx
+        ) + nm.ipv6.get_routing_rule_config(ctx)
+        logging.debug(f"Current route rules reported by NM {cur_rules}")
+        for rule in expected_rules:
+            assert rule in cur_rules

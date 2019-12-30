@@ -20,7 +20,7 @@
 from contextlib import contextmanager
 
 import libnmstate
-from libnmstate.nm import nmclient
+from libnmstate.nm.context import NmContext
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
@@ -85,15 +85,15 @@ def test_reapply_preserve_ip_config(eth1_up):
 
 
 def _get_nm_profile_uuid(iface_name):
-    nmcli = nmclient.client()
-    cur_dev = None
-    for dev in nmcli.get_all_devices():
-        if dev.get_iface() == iface_name:
-            cur_dev = dev
-            break
+    with NmContext() as ctx:
+        cur_dev = None
+        for dev in ctx.client.get_all_devices():
+            if dev.get_iface() == iface_name:
+                cur_dev = dev
+                break
 
-    active_conn = cur_dev.get_active_connection()
-    return active_conn.get_uuid()
+        active_conn = cur_dev.get_active_connection()
+        return active_conn.get_uuid()
 
 
 def _get_cur_extra_ip_config(uuid, key):

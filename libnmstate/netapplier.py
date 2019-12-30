@@ -36,6 +36,8 @@ from libnmstate.error import NmstateLibnmError
 from libnmstate.error import NmstatePermissionError
 from libnmstate.error import NmstateValueError
 from libnmstate.nm import nmclient
+from libnmstate.nm import context as nm_ctx
+
 
 MAINLOOP_TIMEOUT = 35
 
@@ -62,11 +64,16 @@ def apply(desired_state, verify_change=True, commit=True, rollback_timeout=60):
     validator.validate_dns(desired_state)
     validator.validate_vxlan(desired_state)
 
-    checkpoint = _apply_ifaces_state(
-        state.State(desired_state), verify_change, commit, rollback_timeout
-    )
-    if checkpoint:
-        return str(checkpoint.dbuspath)
+    with nm_ctx.NmContext() as ctx:
+        checkpoint = _apply_ifaces_state(
+            ctx,
+            state.State(desired_state),
+            verify_change,
+            commit,
+            rollback_timeout,
+        )
+        if checkpoint:
+            return str(checkpoint.dbuspath)
 
 
 def commit(checkpoint=None):
@@ -114,7 +121,7 @@ def _choose_checkpoint(dbuspath):
 
 
 def _apply_ifaces_state(
-    desired_state, verify_change, commit, rollback_timeout
+    ctx, desired_state, verify_change, commit, rollback_timeout
 ):
     current_state = state.State(netinfo.show())
 
@@ -124,7 +131,7 @@ def _apply_ifaces_state(
     desired_state.merge_dns(current_state)
     desired_state.merge_route_rules(current_state)
     desired_state.remove_unknown_interfaces()
-    metadata.generate_ifaces_metadata(desired_state, current_state)
+    metadata.generate_ifaces_metadata(ctx, desired_state, current_state)
 
     validator.validate_interfaces_state(desired_state, current_state)
     validator.validate_routes(desired_state, current_state)
@@ -135,15 +142,18 @@ def _apply_ifaces_state(
         with nm.checkpoint.CheckPoint(
             autodestroy=commit, timeout=rollback_timeout
         ) as checkpoint:
-            with _setup_providers():
+            with _setup_providers(ctx):
                 ifaces2add, ifaces_add_configs = _add_interfaces(
-                    new_interfaces, desired_state
+                    ctx, new_interfaces, desired_state
                 )
                 state2edit = _create_editable_desired_state(
                     desired_state, current_state, new_interfaces
                 )
-                ifaces2edit, ifaces_edit_configs = _edit_interfaces(state2edit)
+                ifaces2edit, ifaces_edit_configs = _edit_interfaces(
+                    ctx, state2edit
+                )
                 nm.applier.set_ifaces_admin_state(
+                    ctx,
                     ifaces2add + ifaces2edit,
                     con_profiles=ifaces_add_configs + ifaces_edit_configs,
                 )
@@ -204,32 +214,32 @@ def _verify_change(desired_state):
 
 
 @contextmanager
-def _setup_providers():
-    mainloop = nmclient.mainloop()
+def _setup_providers(ctx):
     yield
-    success = mainloop.run(timeout=MAINLOOP_TIMEOUT)
+    success = ctx.mainloop.run(timeout=MAINLOOP_TIMEOUT)
     if not success:
-        nmclient.mainloop(refresh=True)
         raise NmstateLibnmError(
             "Unexpected failure of libnm when running the mainloop: {}".format(
-                mainloop.error
+                ctx.mainloop.error
             )
         )
 
 
-def _add_interfaces(new_interfaces, desired_state):
+def _add_interfaces(ctx, new_interfaces, desired_state):
     logging.debug("Adding new interfaces: %s", new_interfaces)
 
     ifaces2add = [desired_state.interfaces[name] for name in new_interfaces]
 
     ifaces2add += nm.applier.prepare_proxy_ifaces_desired_state(ifaces2add)
-    ifaces_configs = nm.applier.prepare_new_ifaces_configuration(ifaces2add)
+    ifaces_configs = nm.applier.prepare_new_ifaces_configuration(
+        ctx, ifaces2add
+    )
     nm.applier.create_new_ifaces(ifaces_configs)
 
     return (ifaces2add, ifaces_configs)
 
 
-def _edit_interfaces(state2edit):
+def _edit_interfaces(ctx, state2edit):
     logging.debug("Editing interfaces: %s", list(state2edit.interfaces))
 
     ifaces2edit = list(state2edit.interfaces.values())
@@ -242,9 +252,9 @@ def _edit_interfaces(state2edit):
     )
     proxy_ifaces = nm.applier.prepare_proxy_ifaces_desired_state(iface2prepare)
     ifaces_configs = nm.applier.prepare_edited_ifaces_configuration(
-        iface2prepare + proxy_ifaces
+        ctx, iface2prepare + proxy_ifaces
     )
-    nm.applier.edit_existing_ifaces(ifaces_configs)
+    nm.applier.edit_existing_ifaces(ctx, ifaces_configs)
 
     return (ifaces2edit + proxy_ifaces, ifaces_configs)
 

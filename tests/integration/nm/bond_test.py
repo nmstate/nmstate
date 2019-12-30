@@ -23,7 +23,7 @@ from libnmstate import nm
 from libnmstate import schema
 from libnmstate.schema import Interface
 
-from .testlib import mainloop_run
+from .testlib import context
 
 
 BOND0 = "bondtest0"
@@ -75,52 +75,54 @@ def _bond_interface(name, options):
 
 
 def _get_bond_current_state(name):
-    nm.nmclient.client(refresh=True)
-    nmdev = nm.device.get_device_by_name(name)
-    nm_bond_info = nm.bond.get_bond_info(nmdev) if nmdev else {}
-    return _convert_slaves_devices_to_iface_names(nm_bond_info)
+    with context() as ctx:
+        nmdev = nm.device.get_device_by_name(ctx, name)
+        nm_bond_info = nm.bond.get_bond_info(ctx, nmdev) if nmdev else {}
+        return _convert_slaves_devices_to_iface_names(nm_bond_info)
 
 
-@mainloop_run
 def _create_bond(name, options):
-    con_setting = nm.connection.ConnectionSetting()
-    con_setting.create(
-        con_name=name,
-        iface_name=name,
-        iface_type=nm.nmclient.NM.SETTING_BOND_SETTING_NAME,
-    )
-    bond_setting = nm.bond.create_setting(options)
-    ipv4_setting = nm.ipv4.create_setting({}, None)
-    ipv6_setting = nm.ipv6.create_setting({}, None)
+    with context() as ctx:
+        con_setting = nm.connection.ConnectionSetting()
+        con_setting.create(
+            con_name=name,
+            iface_name=name,
+            iface_type=nm.nmclient.NM.SETTING_BOND_SETTING_NAME,
+        )
+        bond_setting = nm.bond.create_setting(options)
+        ipv4_setting = nm.ipv4.create_setting(ctx, {}, None)
+        ipv6_setting = nm.ipv6.create_setting(ctx, {}, None)
 
-    con_profile = nm.connection.ConnectionProfile()
-    con_profile.create(
-        (con_setting.setting, bond_setting, ipv4_setting, ipv6_setting)
-    )
-    con_profile.add(save_to_disk=False)
-    nm.device.activate(connection_id=name)
+        con_profile = nm.connection.ConnectionProfile(ctx)
+        con_profile.create(
+            (con_setting.setting, bond_setting, ipv4_setting, ipv6_setting)
+        )
+        con_profile.add(save_to_disk=False)
+        nm.device.activate(ctx, connection_id=name)
 
 
-@mainloop_run
 def _delete_bond(devname):
-    nmdev = nm.device.get_device_by_name(devname)
-    nm.device.deactivate(nmdev)
-    nm.device.delete(nmdev)
+    with context() as ctx:
+        nmdev = nm.device.get_device_by_name(ctx, devname)
+        nm.device.deactivate(ctx, nmdev)
+        nm.device.delete(ctx, nmdev)
 
 
-@mainloop_run
 def _attach_slave_to_bond(bond, slave):
-    slave_nmdev = nm.device.get_device_by_name(slave)
-    curr_slave_con_profile = nm.connection.ConnectionProfile()
-    curr_slave_con_profile.import_by_device(slave_nmdev)
+    with context() as ctx:
+        slave_nmdev = nm.device.get_device_by_name(ctx, slave)
+        curr_slave_con_profile = nm.connection.ConnectionProfile(ctx)
+        curr_slave_con_profile.import_by_device(slave_nmdev)
 
-    slave_con_profile = nm.connection.ConnectionProfile()
-    slave_settings = [_create_connection_setting(bond, curr_slave_con_profile)]
-    slave_con_profile.create(slave_settings)
+        slave_con_profile = nm.connection.ConnectionProfile(ctx)
+        slave_settings = [
+            _create_connection_setting(bond, curr_slave_con_profile)
+        ]
+        slave_con_profile.create(slave_settings)
 
-    curr_slave_con_profile.update(slave_con_profile)
-    curr_slave_con_profile.commit(nmdev=slave_nmdev)
-    nm.device.activate(connection_id=slave)
+        curr_slave_con_profile.update(slave_con_profile)
+        curr_slave_con_profile.commit(nmdev=slave_nmdev)
+        nm.device.activate(ctx, connection_id=slave)
 
 
 def _create_connection_setting(bond, port_con_profile):

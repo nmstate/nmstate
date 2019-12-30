@@ -26,25 +26,14 @@ from libnmstate import nm
 
 @pytest.fixture
 def NM_mock():
-    with mock.patch.object(nm.connection.nmclient, "NM") as m:
+    with mock.patch.object(nm.connection, "NM") as m:
         yield m
-
-
-@pytest.fixture()
-def client_mock():
-    with mock.patch.object(nm.connection.nmclient, "client") as m:
-        yield m.return_value
-
-
-@pytest.fixture()
-def mainloop_mock():
-    with mock.patch.object(nm.connection.nmclient, "mainloop") as m:
-        yield m.return_value
 
 
 def test_create_profile(NM_mock):
     settings = [11, 22]
-    con_profile = nm.connection.ConnectionProfile()
+    ctx = mock.MagicMock()
+    con_profile = nm.connection.ConnectionProfile(ctx)
     con_profile.create(settings)
 
     con_profile_mock = NM_mock.SimpleConnection.new.return_value
@@ -55,43 +44,46 @@ def test_create_profile(NM_mock):
     assert con_profile_mock == con_profile.profile
 
 
-def test_add_profile(client_mock, mainloop_mock):
+def test_add_profile():
     save_to_disk = True
-    con_profile = nm.connection.ConnectionProfile("profile")
+    ctx = mock.MagicMock()
+    con_profile = nm.connection.ConnectionProfile(ctx, "profile")
     con_profile.add(save_to_disk)
 
-    mainloop_mock.push_action.assert_called_once_with(
-        client_mock.add_connection_async,
+    ctx.mainloop.push_action.assert_called_once_with(
+        ctx.client.add_connection_async,
         "profile",
         save_to_disk,
-        mainloop_mock.cancellable,
+        ctx.mainloop.cancellable,
         nm.connection.ConnectionProfile._add_connection_callback,
-        mainloop_mock,
+        ctx.mainloop,
     )
 
 
 def test_update_profile():
-    base_profile = nm.connection.ConnectionProfile("p")
+    ctx = mock.MagicMock()
+    base_profile = nm.connection.ConnectionProfile(ctx, "p")
 
     profile = mock.MagicMock()
-    con_profile = nm.connection.ConnectionProfile(profile)
+    con_profile = nm.connection.ConnectionProfile(ctx, profile)
     con_profile.update(base_profile)
 
     profile.replace_settings_from_connection.assert_called_once_with("p")
 
 
-def test_commit_profile(mainloop_mock):
+def test_commit_profile():
     profile = mock.MagicMock()
     save_to_disk = True
-    con_profile = nm.connection.ConnectionProfile(profile)
+    ctx = mock.MagicMock()
+    con_profile = nm.connection.ConnectionProfile(ctx, profile)
     con_profile.commit(save_to_disk)
 
-    mainloop_mock.push_action.assert_called_once_with(
+    ctx.mainloop.push_action.assert_called_once_with(
         profile.commit_changes_async,
         save_to_disk,
-        mainloop_mock.cancellable,
+        ctx.mainloop.cancellable,
         nm.connection.ConnectionProfile._commit_changes_callback,
-        (mainloop_mock, None),
+        (ctx.mainloop, None),
     )
 
 
@@ -135,8 +127,9 @@ def test_set_master_setting():
 
 def test_get_device_connection():
     dev_mock = mock.MagicMock()
+    ctx = mock.MagicMock()
 
-    con = nm.connection.ConnectionProfile()
+    con = nm.connection.ConnectionProfile(ctx)
     con.import_by_device(dev_mock)
 
     assert (

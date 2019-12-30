@@ -55,26 +55,26 @@ def create_new_ifaces(con_profiles):
         connection_profile.add(save_to_disk=True)
 
 
-def prepare_new_ifaces_configuration(ifaces_desired_state):
+def prepare_new_ifaces_configuration(ctx, ifaces_desired_state):
     # Delete the existing profiles before create the new ones
     for iface_desired_state in ifaces_desired_state:
         connection.delete_iface_inactive_connections(
-            iface_desired_state[Interface.NAME]
+            ctx, iface_desired_state[Interface.NAME]
         )
 
     return [
-        _build_connection_profile(iface_desired_state)
+        _build_connection_profile(ctx, iface_desired_state)
         for iface_desired_state in ifaces_desired_state
     ]
 
 
-def edit_existing_ifaces(con_profiles):
+def edit_existing_ifaces(ctx, con_profiles):
     for connection_profile in con_profiles:
         devname = connection_profile.devname
-        nmdev = device.get_device_by_name(devname)
+        nmdev = device.get_device_by_name(ctx, devname)
         cur_con_profile = None
         if nmdev:
-            cur_con_profile = connection.ConnectionProfile()
+            cur_con_profile = connection.ConnectionProfile(ctx)
             cur_con_profile.import_by_device(nmdev)
         if cur_con_profile and cur_con_profile.profile:
             connection_profile.commit(nmdev=nmdev)
@@ -83,18 +83,18 @@ def edit_existing_ifaces(con_profiles):
             connection_profile.add(save_to_disk=True)
 
 
-def prepare_edited_ifaces_configuration(ifaces_desired_state):
+def prepare_edited_ifaces_configuration(ctx, ifaces_desired_state):
     con_profiles = []
 
     for iface_desired_state in ifaces_desired_state:
         ifname = iface_desired_state[Interface.NAME]
-        nmdev = device.get_device_by_name(ifname)
+        nmdev = device.get_device_by_name(ctx, ifname)
         cur_con_profile = None
         if nmdev:
-            cur_con_profile = connection.ConnectionProfile()
+            cur_con_profile = connection.ConnectionProfile(ctx)
             cur_con_profile.import_by_device(nmdev)
         new_con_profile = _build_connection_profile(
-            iface_desired_state, base_con_profile=cur_con_profile
+            ctx, iface_desired_state, base_con_profile=cur_con_profile
         )
         if not new_con_profile.devname:
             set_conn = new_con_profile.profile.get_setting_connection()
@@ -104,13 +104,13 @@ def prepare_edited_ifaces_configuration(ifaces_desired_state):
             con_profiles.append(cur_con_profile)
         else:
             # Missing connection, attempting to create a new one.
-            connection.delete_iface_inactive_connections(ifname)
+            connection.delete_iface_inactive_connections(ctx, ifname)
             con_profiles.append(new_con_profile)
 
     return con_profiles
 
 
-def set_ifaces_admin_state(ifaces_desired_state, con_profiles=()):
+def set_ifaces_admin_state(ctx, ifaces_desired_state, con_profiles=()):
     """
     Control interface admin state by activating, deactivating and deleting
     devices connection profiles.
@@ -132,7 +132,7 @@ def set_ifaces_admin_state(ifaces_desired_state, con_profiles=()):
     - All the rest.
     """
     con_profiles_by_devname = _index_profiles_by_devname(con_profiles)
-    new_ifaces = _get_new_ifaces(con_profiles)
+    new_ifaces = _get_new_ifaces(ctx, con_profiles)
     new_ifaces_to_activate = set()
     new_vlan_ifaces_to_activate = set()
     new_vxlan_ifaces_to_activate = set()
@@ -145,7 +145,7 @@ def set_ifaces_admin_state(ifaces_desired_state, con_profiles=()):
 
     for iface_desired_state in ifaces_desired_state:
         ifname = iface_desired_state[Interface.NAME]
-        nmdev = device.get_device_by_name(ifname)
+        nmdev = device.get_device_by_name(ctx, ifname)
         if not nmdev:
             if (
                 ifname in new_ifaces
@@ -184,7 +184,7 @@ def set_ifaces_admin_state(ifaces_desired_state, con_profiles=()):
                 InterfaceState.DOWN,
                 InterfaceState.ABSENT,
             ):
-                nmdevs = _get_affected_devices(iface_desired_state)
+                nmdevs = _get_affected_devices(ctx, iface_desired_state)
                 for affected_nmdev in nmdevs:
                     remove_devs_actions[affected_nmdev] = [
                         device.deactivate,
@@ -208,43 +208,43 @@ def set_ifaces_admin_state(ifaces_desired_state, con_profiles=()):
         remove_devs_actions.pop(dev, None)
 
     for ifname in new_master_not_enslaved_ifaces:
-        device.activate(dev=None, connection_id=ifname)
+        device.activate(ctx, dev=None, connection_id=ifname)
 
     for ifname in new_ifaces_to_activate:
-        device.activate(dev=None, connection_id=ifname)
+        device.activate(ctx, dev=None, connection_id=ifname)
 
     for dev, con_profile in master_ifaces_to_edit:
-        device.modify(dev, con_profile)
+        device.modify(ctx, dev, con_profile)
 
     for ifname in new_ovs_port_to_activate:
-        device.activate(dev=None, connection_id=ifname)
+        device.activate(ctx, dev=None, connection_id=ifname)
 
     for ifname in new_ovs_interface_to_activate:
-        device.activate(dev=None, connection_id=ifname)
+        device.activate(ctx, dev=None, connection_id=ifname)
 
     for dev, con_profile in ifaces_to_edit:
-        device.modify(dev, con_profile)
+        device.modify(ctx, dev, con_profile)
 
     for ifname in new_vlan_ifaces_to_activate:
-        device.activate(dev=None, connection_id=ifname)
+        device.activate(ctx, dev=None, connection_id=ifname)
 
     for ifname in new_vxlan_ifaces_to_activate:
-        device.activate(dev=None, connection_id=ifname)
+        device.activate(ctx, dev=None, connection_id=ifname)
 
     for dev, actions in remove_devs_actions.items():
         for action in actions:
-            action(dev)
+            action(ctx, dev)
 
 
 def _index_profiles_by_devname(con_profiles):
     return {con_profile.devname: con_profile for con_profile in con_profiles}
 
 
-def _get_new_ifaces(con_profiles):
+def _get_new_ifaces(ctx, con_profiles):
     ifaces_without_device = set()
     for con_profile in con_profiles:
         ifname = con_profile.devname
-        nmdev = device.get_device_by_name(ifname)
+        nmdev = device.get_device_by_name(ctx, ifname)
         if not nmdev:
             ifaces_without_device.add(ifname)
     return ifaces_without_device
@@ -258,14 +258,14 @@ def _is_slave_iface(iface_state):
     return iface_state.get(MASTER_METADATA)
 
 
-def _get_affected_devices(iface_state):
-    nmdev = device.get_device_by_name(iface_state[Interface.NAME])
+def _get_affected_devices(ctx, iface_state):
+    nmdev = device.get_device_by_name(ctx, iface_state[Interface.NAME])
     devs = []
     if nmdev:
         devs += [nmdev]
         iface_type = iface_state[Interface.TYPE]
         if iface_type == ovs.BRIDGE_TYPE:
-            devs += _get_ovs_bridge_port_devices(iface_state)
+            devs += _get_ovs_bridge_port_devices(ctx, iface_state)
         elif iface_type == LB.TYPE:
             devs += bridge.get_slaves(nmdev)
         elif iface_type == bond.BOND_TYPE:
@@ -273,7 +273,7 @@ def _get_affected_devices(iface_state):
     return devs
 
 
-def _get_ovs_bridge_port_devices(iface_state):
+def _get_ovs_bridge_port_devices(ctx, iface_state):
     """
     Report a list of all ovs ports and interfaces that are connected to the
     OVS bridge.
@@ -289,7 +289,7 @@ def _get_ovs_bridge_port_devices(iface_state):
     devnames = ports + ifaces
     nmdevs = []
     for devname in devnames:
-        dev = device.get_device_by_name(devname)
+        dev = device.get_device_by_name(ctx, devname)
         if dev:
             nmdevs.append(dev)
     return nmdevs
@@ -339,7 +339,7 @@ def _create_ovs_port_iface_desired_state(iface_desired_state, port_options):
     }
 
 
-def _build_connection_profile(iface_desired_state, base_con_profile=None):
+def _build_connection_profile(ctx, iface_desired_state, base_con_profile=None):
     iface_type = translator.Api2Nm.get_iface_type(
         iface_desired_state[Interface.TYPE]
     )
@@ -348,10 +348,10 @@ def _build_connection_profile(iface_desired_state, base_con_profile=None):
 
     settings = [
         ipv4.create_setting(
-            iface_desired_state.get(Interface.IPV4), base_profile
+            ctx, iface_desired_state.get(Interface.IPV4), base_profile
         ),
         ipv6.create_setting(
-            iface_desired_state.get(Interface.IPV6), base_profile
+            ctx, iface_desired_state.get(Interface.IPV6), base_profile
         ),
     ]
 
@@ -414,7 +414,9 @@ def _build_connection_profile(iface_desired_state, base_con_profile=None):
     if vxlan_setting:
         settings.append(vxlan_setting)
 
-    sriov_setting = sriov.create_setting(iface_desired_state, base_con_profile)
+    sriov_setting = sriov.create_setting(
+        ctx, iface_desired_state, base_con_profile
+    )
     if sriov_setting:
         settings.append(sriov_setting)
 
@@ -422,7 +424,7 @@ def _build_connection_profile(iface_desired_state, base_con_profile=None):
     if team_setting:
         settings.append(team_setting)
 
-    new_profile = connection.ConnectionProfile()
+    new_profile = connection.ConnectionProfile(ctx)
     new_profile.create(settings)
     return new_profile
 

@@ -21,6 +21,7 @@ from operator import itemgetter
 from libnmstate import nm
 from libnmstate import validator
 from libnmstate.nm import dns as nm_dns
+from libnmstate.nm import context as nm_ctx
 from libnmstate.schema import Constants
 from libnmstate.schema import DNS
 from libnmstate.schema import Interface
@@ -38,35 +39,34 @@ def show(include_status_data=False):
     When include_status_data is set, both are reported, otherwise only the
     configuration data is reported.
     """
-    client = nm.nmclient.client(refresh=True)
+    with nm_ctx.NmContext() as ctx:
+        report = {Constants.INTERFACES: _interfaces(ctx)}
+        if include_status_data:
+            report["capabilities"] = capabilities()
 
-    report = {Constants.INTERFACES: interfaces()}
-    if include_status_data:
-        report["capabilities"] = capabilities()
+        report[Constants.ROUTES] = {
+            Route.RUNNING: (
+                nm.ipv4.get_route_running(ctx) + nm.ipv6.get_route_running(ctx)
+            ),
+            Route.CONFIG: (
+                nm.ipv4.get_route_config(ctx) + nm.ipv6.get_route_config(ctx)
+            ),
+        }
 
-    report[Constants.ROUTES] = {
-        Route.RUNNING: (
-            nm.ipv4.get_route_running() + nm.ipv6.get_route_running()
-        ),
-        Route.CONFIG: (
-            nm.ipv4.get_route_config() + nm.ipv6.get_route_config()
-        ),
-    }
+        report[RouteRule.KEY] = {
+            RouteRule.CONFIG: (
+                nm.ipv4.get_routing_rule_config(ctx)
+                + nm.ipv6.get_routing_rule_config(ctx)
+            )
+        }
 
-    report[RouteRule.KEY] = {
-        RouteRule.CONFIG: (
-            nm.ipv4.get_routing_rule_config()
-            + nm.ipv6.get_routing_rule_config()
-        )
-    }
-
-    report[Constants.DNS] = {
-        DNS.RUNNING: nm_dns.get_running(),
-        DNS.CONFIG: nm_dns.get_config(
-            nm.ipv4.acs_and_ip_profiles(client),
-            nm.ipv6.acs_and_ip_profiles(client),
-        ),
-    }
+        report[Constants.DNS] = {
+            DNS.RUNNING: nm_dns.get_running(ctx),
+            DNS.CONFIG: nm_dns.get_config(
+                nm.ipv4.acs_and_ip_profiles(ctx.client),
+                nm.ipv6.acs_and_ip_profiles(ctx.client),
+            ),
+        }
 
     validator.validate(report)
     return report
@@ -81,14 +81,12 @@ def capabilities():
     return list(caps)
 
 
-def interfaces():
+def _interfaces(ctx):
     info = []
-
-    nm.nmclient.client(refresh=True)
 
     devices_info = [
         (dev, nm.device.get_device_common_info(dev))
-        for dev in nm.device.list_devices()
+        for dev in nm.device.list_devices(ctx)
     ]
 
     for dev, devinfo in devices_info:
@@ -97,20 +95,22 @@ def interfaces():
         iface_info = nm.translator.Nm2Api.get_common_device_info(devinfo)
 
         act_con = nm.connection.get_device_active_connection(dev)
-        iface_info["ipv4"] = nm.ipv4.get_info(act_con)
-        iface_info["ipv6"] = nm.ipv6.get_info(act_con)
-        iface_info.update(nm.wired.get_info(dev))
-        iface_info.update(nm.user.get_info(dev))
+        iface_info["ipv4"] = nm.ipv4.get_info(ctx, act_con)
+        iface_info["ipv6"] = nm.ipv6.get_info(ctx, act_con)
+        iface_info.update(nm.wired.get_info(ctx, dev))
+        iface_info.update(nm.user.get_info(ctx, dev))
         iface_info.update(nm.vlan.get_info(dev))
-        iface_info.update(nm.vxlan.get_info(dev))
-        iface_info.update(nm.bridge.get_info(dev))
+        iface_info.update(nm.vxlan.get_info(ctx, dev))
+        iface_info.update(nm.bridge.get_info(ctx, dev))
 
         if nm.bond.is_bond_type_id(type_id):
-            bondinfo = nm.bond.get_bond_info(dev)
+            bondinfo = nm.bond.get_bond_info(ctx, dev)
             iface_info.update(_ifaceinfo_bond(bondinfo))
         elif nm.ovs.has_ovs_capability():
             if nm.ovs.is_ovs_bridge_type_id(type_id):
-                iface_info["bridge"] = nm.ovs.get_ovs_info(dev, devices_info)
+                iface_info["bridge"] = nm.ovs.get_ovs_info(
+                    ctx, dev, devices_info
+                )
                 iface_info = _remove_ovs_bridge_unsupported_entries(iface_info)
             elif nm.ovs.is_ovs_port_type_id(type_id):
                 continue

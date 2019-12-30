@@ -29,7 +29,7 @@ def dev_mock():
     return mock.MagicMock()
 
 
-@mock.patch.object(nm.bond.nmclient, "NM")
+@mock.patch.object(nm.bond, "NM")
 def test_create_setting(NM_mock):
     bond_setting_mock = NM_mock.SettingBond.new.return_value
     bond_setting_mock.add_option.return_value = True
@@ -43,7 +43,7 @@ def test_create_setting(NM_mock):
     )
 
 
-@mock.patch.object(nm.bond.nmclient, "NM")
+@mock.patch.object(nm.bond, "NM")
 def test_create_setting_with_invalid_bond_option(NM_mock):
     bond_setting_mock = NM_mock.SettingBond.new.return_value
     bond_setting_mock.add_option.return_value = False
@@ -54,7 +54,7 @@ def test_create_setting_with_invalid_bond_option(NM_mock):
         nm.bond.create_setting(options)
 
 
-@mock.patch.object(nm.bond.nmclient, "NM")
+@mock.patch.object(nm.bond, "NM")
 def test_is_bond_type_id(NM_mock):
     type_id = NM_mock.DeviceType.BOND
 
@@ -63,7 +63,8 @@ def test_is_bond_type_id(NM_mock):
 
 @mock.patch.object(nm.bond.connection, "ConnectionProfile")
 def test_get_bond_info(con_profile_mock, dev_mock):
-    info = nm.bond.get_bond_info(dev_mock)
+    ctx = mock.MagicMock()
+    info = nm.bond.get_bond_info(ctx, dev_mock)
 
     con_profile_mock.return_value.import_by_device.assert_called_once_with(
         dev_mock

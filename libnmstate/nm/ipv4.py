@@ -19,14 +19,14 @@
 
 import socket
 
-from . import nmclient
 from libnmstate.nm import dns as nm_dns
 from libnmstate.nm import route as nm_route
+from libnmstate.nm.nmclient import NM
 from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import Route
 
 
-def create_setting(config, base_con_profile):
+def create_setting(ctx, config, base_con_profile):
     setting_ipv4 = None
     if base_con_profile and config and config.get(InterfaceIPv4.ENABLED):
         setting_ipv4 = base_con_profile.get_setting_ip4_config()
@@ -46,15 +46,13 @@ def create_setting(config, base_con_profile):
             setting_ipv4.props.dns_priority = nm_dns.DEFAULT_DNS_PRIORITY
 
     if not setting_ipv4:
-        setting_ipv4 = nmclient.NM.SettingIP4Config.new()
+        setting_ipv4 = NM.SettingIP4Config.new()
 
     setting_ipv4.props.dhcp_client_id = "mac"
-    setting_ipv4.props.method = nmclient.NM.SETTING_IP4_CONFIG_METHOD_DISABLED
+    setting_ipv4.props.method = NM.SETTING_IP4_CONFIG_METHOD_DISABLED
     if config and config.get(InterfaceIPv4.ENABLED):
         if config.get(InterfaceIPv4.DHCP):
-            setting_ipv4.props.method = (
-                nmclient.NM.SETTING_IP4_CONFIG_METHOD_AUTO
-            )
+            setting_ipv4.props.method = NM.SETTING_IP4_CONFIG_METHOD_AUTO
             setting_ipv4.props.ignore_auto_routes = not config.get(
                 InterfaceIPv4.AUTO_ROUTES, True
             )
@@ -65,9 +63,7 @@ def create_setting(config, base_con_profile):
                 InterfaceIPv4.AUTO_DNS, True
             )
         elif config.get(InterfaceIPv4.ADDRESS):
-            setting_ipv4.props.method = (
-                nmclient.NM.SETTING_IP4_CONFIG_METHOD_MANUAL
-            )
+            setting_ipv4.props.method = NM.SETTING_IP4_CONFIG_METHOD_MANUAL
             _add_addresses(setting_ipv4, config[InterfaceIPv4.ADDRESS])
         nm_route.add_routes(
             setting_ipv4, config.get(nm_route.ROUTE_METADATA, [])
@@ -83,7 +79,7 @@ def create_setting(config, base_con_profile):
 
 def _add_addresses(setting_ipv4, addresses):
     for address in addresses:
-        naddr = nmclient.NM.IPAddress.new(
+        naddr = NM.IPAddress.new(
             socket.AF_INET,
             address[InterfaceIPv4.ADDRESS_IP],
             address[InterfaceIPv4.ADDRESS_PREFIX_LENGTH],
@@ -91,7 +87,7 @@ def _add_addresses(setting_ipv4, addresses):
         setting_ipv4.add_address(naddr)
 
 
-def get_info(active_connection):
+def get_info(ctx, active_connection):
     """
     Provides the current active values for an active connection.
     It includes not only the configured values, but the consequences of the
@@ -105,7 +101,7 @@ def get_info(active_connection):
     ip_profile = get_ip_profile(active_connection)
     if ip_profile:
         info[InterfaceIPv4.DHCP] = ip_profile.get_method() == (
-            nmclient.NM.SETTING_IP4_CONFIG_METHOD_AUTO
+            NM.SETTING_IP4_CONFIG_METHOD_AUTO
         )
         props = ip_profile.props
         if info["dhcp"]:
@@ -149,12 +145,12 @@ def get_ip_profile(active_connection):
     return None
 
 
-def get_route_running():
-    return nm_route.get_running(_acs_and_ip_cfgs(nmclient.client()))
+def get_route_running(ctx):
+    return nm_route.get_running(ctx, _acs_and_ip_cfgs(ctx.client))
 
 
-def get_route_config():
-    return nm_route.get_config(acs_and_ip_profiles(nmclient.client()))
+def get_route_config(ctx):
+    return nm_route.get_config(ctx, acs_and_ip_profiles(ctx.client))
 
 
 def _acs_and_ip_cfgs(client):
@@ -176,13 +172,9 @@ def acs_and_ip_profiles(client):
 def is_dynamic(active_connection):
     ip_profile = get_ip_profile(active_connection)
     if ip_profile:
-        return ip_profile.get_method() == (
-            nmclient.NM.SETTING_IP4_CONFIG_METHOD_AUTO
-        )
+        return ip_profile.get_method() == NM.SETTING_IP4_CONFIG_METHOD_AUTO
     return False
 
 
-def get_routing_rule_config():
-    return nm_route.get_routing_rule_config(
-        acs_and_ip_profiles(nmclient.client())
-    )
+def get_routing_rule_config(ctx):
+    return nm_route.get_routing_rule_config(acs_and_ip_profiles(ctx.client))

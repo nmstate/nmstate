@@ -100,7 +100,8 @@ def test_prepare_new_ifaces_configuration(
         },
     ]
 
-    nm.applier.prepare_new_ifaces_configuration(ifaces_desired_state)
+    ctx = mock.MagicMock()
+    nm.applier.prepare_new_ifaces_configuration(ctx, ifaces_desired_state)
 
     con_setting = nm_connection_mock.ConnectionSetting.return_value
     con_setting.set_master.assert_has_calls(
@@ -131,8 +132,9 @@ def test_prepare_new_ifaces_configuration(
 @mock.patch.object(nm.connection, "ConnectionProfile")
 def test_edit_existing_ifaces_with_profile(con_profile_mock, nm_device_mock):
     con_profiles = [con_profile_mock(), con_profile_mock()]
+    ctx = mock.MagicMock()
 
-    nm.applier.edit_existing_ifaces(con_profiles)
+    nm.applier.edit_existing_ifaces(ctx, con_profiles)
 
     for con_profile in con_profiles:
         con_profile.commit.assert_has_calls(
@@ -147,7 +149,8 @@ def test_edit_existing_ifaces_without_profile(
     con_profiles = [mock.MagicMock(), mock.MagicMock()]
     con_profile_mock.return_value.profile = None
 
-    nm.applier.edit_existing_ifaces(con_profiles)
+    ctx = mock.MagicMock()
+    nm.applier.edit_existing_ifaces(ctx, con_profiles)
 
     for con_profile in con_profiles:
         con_profile.add.assert_has_calls([mock.call(save_to_disk=True)])
@@ -165,7 +168,10 @@ def test_prepare_edited_ifaces_configuration(
     ifaces_desired_state = [
         {"name": "eth0", "type": "ethernet", "state": "up"}
     ]
-    cons = nm.applier.prepare_edited_ifaces_configuration(ifaces_desired_state)
+    ctx = mock.MagicMock()
+    cons = nm.applier.prepare_edited_ifaces_configuration(
+        ctx, ifaces_desired_state
+    )
 
     assert len(cons) == 1
 
@@ -180,36 +186,43 @@ class TestIfaceAdminStateControl:
         ]
         con_profile = mock.MagicMock()
         con_profile.devname = ifaces_desired_state[0]["name"]
-        nm.applier.set_ifaces_admin_state(ifaces_desired_state, [con_profile])
+        ctx = mock.MagicMock()
+        nm.applier.set_ifaces_admin_state(
+            ctx, ifaces_desired_state, [con_profile]
+        )
 
         nm_device_mock.modify.assert_called_once_with(
-            nm_device_mock.get_device_by_name.return_value, con_profile.profile
+            ctx,
+            nm_device_mock.get_device_by_name.return_value,
+            con_profile.profile,
         )
 
     def test_set_ifaces_admin_state_down(self, nm_device_mock):
         ifaces_desired_state = [
             {"name": "eth0", "type": "ethernet", "state": "down"}
         ]
-        nm.applier.set_ifaces_admin_state(ifaces_desired_state)
+        ctx = mock.MagicMock()
+        nm.applier.set_ifaces_admin_state(ctx, ifaces_desired_state)
 
         nm_device_mock.deactivate.assert_called_once_with(
-            nm_device_mock.get_device_by_name.return_value
+            ctx, nm_device_mock.get_device_by_name.return_value
         )
         nm_device_mock.delete.assert_called_once_with(
-            nm_device_mock.get_device_by_name.return_value
+            ctx, nm_device_mock.get_device_by_name.return_value
         )
 
     def test_set_ifaces_admin_state_absent(self, nm_device_mock):
         ifaces_desired_state = [
             {"name": "eth0", "type": "ethernet", "state": "absent"}
         ]
-        nm.applier.set_ifaces_admin_state(ifaces_desired_state)
+        ctx = mock.MagicMock()
+        nm.applier.set_ifaces_admin_state(ctx, ifaces_desired_state)
 
         nm_device_mock.deactivate.assert_called_once_with(
-            nm_device_mock.get_device_by_name.return_value
+            ctx, nm_device_mock.get_device_by_name.return_value
         )
         nm_device_mock.delete.assert_called_once_with(
-            nm_device_mock.get_device_by_name.return_value
+            ctx, nm_device_mock.get_device_by_name.return_value
         )
 
     def test_set_bond_and_its_slaves_admin_state_up(
@@ -225,7 +238,7 @@ class TestIfaceAdminStateControl:
             {"name": "eth0", "type": "ethernet", "state": "up"},
         ]
 
-        nm_device_mock.get_device_by_name = lambda devname: devname
+        nm_device_mock.get_device_by_name = lambda ctx, devname: devname
         bond = ifaces_desired_state[0]["name"]
         slaves = ifaces_desired_state[0]["link-aggregation"]["slaves"]
         nm_bond_mock.BOND_TYPE = nm.bond.BOND_TYPE
@@ -236,13 +249,15 @@ class TestIfaceAdminStateControl:
         slave_con_profile = mock.MagicMock()
         slave_con_profile.devname = ifaces_desired_state[1]["name"]
 
+        ctx = mock.MagicMock()
+
         nm.applier.set_ifaces_admin_state(
-            ifaces_desired_state, [bond_con_profile, slave_con_profile]
+            ctx, ifaces_desired_state, [bond_con_profile, slave_con_profile]
         )
 
         expected_calls = [
-            mock.call(bond, bond_con_profile.profile),
-            mock.call(slaves[0], slave_con_profile.profile),
+            mock.call(ctx, bond, bond_con_profile.profile),
+            mock.call(ctx, slaves[0], slave_con_profile.profile),
         ]
         actual_calls = nm_device_mock.modify.mock_calls
         assert sorted(expected_calls) == sorted(actual_calls)

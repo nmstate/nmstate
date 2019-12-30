@@ -18,7 +18,7 @@
 #
 
 from libnmstate.ethtool import minimal_ethtool
-from libnmstate.nm import nmclient
+from libnmstate.nm.nmclient import NM
 from libnmstate.nm import sriov
 from libnmstate.schema import Ethernet
 from libnmstate.schema import Interface
@@ -78,7 +78,7 @@ def create_setting(iface_state, base_con_profile):
         return nm_wired_setting
 
     if not nm_wired_setting:
-        nm_wired_setting = nmclient.NM.SettingWired.new()
+        nm_wired_setting = NM.SettingWired.new()
 
     if setting.mac:
         nm_wired_setting.props.cloned_mac_address = setting.mac
@@ -116,7 +116,7 @@ def create_setting(iface_state, base_con_profile):
     return nm_wired_setting
 
 
-def get_info(device):
+def get_info(ctx, device):
     """
     Provides the current active values for a device
     """
@@ -133,15 +133,15 @@ def get_info(device):
     if mac and mac != ZEROED_MAC:
         info[Interface.MAC] = mac
 
-    if device.get_device_type() == nmclient.NM.DeviceType.ETHERNET:
-        ethernet = _get_ethernet_info(device, iface)
+    if device.get_device_type() == NM.DeviceType.ETHERNET:
+        ethernet = _get_ethernet_info(ctx, device, iface)
         if ethernet:
             info[Ethernet.CONFIG_SUBTREE] = ethernet
 
     return info
 
 
-def _get_ethernet_info(device, iface):
+def _get_ethernet_info(ctx, device, iface):
     ethernet = {}
     try:
         speed = int(device.get_speed())
@@ -167,7 +167,7 @@ def _get_ethernet_info(device, iface):
     else:
         return None
 
-    sriov_info = sriov.get_info(device)
+    sriov_info = sriov.get_info(ctx, device)
     if sriov_info:
         ethernet.update(sriov_info)
 

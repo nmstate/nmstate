@@ -27,19 +27,9 @@ class MainloopTestError(Exception):
 
 
 @contextmanager
-def mainloop():
-    mloop = nm.nmclient.mainloop()
-    yield
-    success = mloop.run(timeout=15)
-    if not success:
-        nm.nmclient.mainloop(refresh=True)
-        raise MainloopTestError(mloop.error)
-
-
-def mainloop_run(func):
-    @functools.wraps(func)
-    def wrapper_mainloop(*args, **kwargs):
-        with mainloop():
-            return func(*args, **kwargs)
-
-    return wrapper_mainloop
+def context():
+    with nm.context.NmContext() as ctx:
+        yield ctx
+        success = ctx.mainloop.run(timeout=15)
+        if not success:
+            raise MainloopTestError(ctx.mainloop.error)

@@ -29,12 +29,15 @@ IPV4_ADDRESS1 = "192.0.2.251"
 
 @pytest.fixture
 def NM_mock():
-    with mock.patch.object(nm.ipv4.nmclient, "NM") as m:
+    with mock.patch.object(nm.ipv4, "NM") as m:
         yield m
 
 
 def test_create_setting_without_config(NM_mock):
-    ipv4_setting = nm.ipv4.create_setting(config=None, base_con_profile=None)
+    ctx = mock.MagicMock()
+    ipv4_setting = nm.ipv4.create_setting(
+        ctx, config=None, base_con_profile=None
+    )
 
     assert ipv4_setting == NM_mock.SettingIP4Config.new.return_value
     assert (
@@ -43,8 +46,9 @@ def test_create_setting_without_config(NM_mock):
 
 
 def test_create_setting_with_ipv4_disabled(NM_mock):
+    ctx = mock.MagicMock()
     ipv4_setting = nm.ipv4.create_setting(
-        config={InterfaceIPv4.ENABLED: False}, base_con_profile=None
+        ctx, config={InterfaceIPv4.ENABLED: False}, base_con_profile=None
     )
 
     assert (
@@ -53,7 +57,9 @@ def test_create_setting_with_ipv4_disabled(NM_mock):
 
 
 def test_create_setting_without_addresses(NM_mock):
+    ctx = mock.MagicMock()
     ipv4_setting = nm.ipv4.create_setting(
+        ctx,
         config={InterfaceIPv4.ENABLED: True, InterfaceIPv4.ADDRESS: []},
         base_con_profile=None,
     )
@@ -77,7 +83,10 @@ def test_create_setting_with_static_addresses(NM_mock):
             },
         ],
     }
-    ipv4_setting = nm.ipv4.create_setting(config=config, base_con_profile=None)
+    ctx = mock.MagicMock()
+    ipv4_setting = nm.ipv4.create_setting(
+        ctx, config=config, base_con_profile=None
+    )
 
     assert (
         ipv4_setting.props.method == NM_mock.SETTING_IP4_CONFIG_METHOD_MANUAL
@@ -109,17 +118,19 @@ def test_create_setting_with_static_addresses(NM_mock):
 
 
 def test_get_info_with_no_connection():
-    info = nm.ipv4.get_info(active_connection=None)
+    ctx = mock.MagicMock()
+    info = nm.ipv4.get_info(ctx, active_connection=None)
 
     assert info == {InterfaceIPv4.ENABLED: False}
 
 
 def test_get_info_with_no_ipv4_config():
     con_mock = mock.MagicMock()
+    ctx = mock.MagicMock()
     con_mock.get_ip4_config.return_value = None
     con_mock.get_connection.return_value = None
 
-    info = nm.ipv4.get_info(active_connection=con_mock)
+    info = nm.ipv4.get_info(ctx, active_connection=con_mock)
 
     assert info == {InterfaceIPv4.ENABLED: False}
 
@@ -139,8 +150,9 @@ def test_get_info_with_ipv4_config(NM_mock):
     set_ip_conf.props.never_default = False
     set_ip_conf.props.ignore_auto_dns = False
     set_ip_conf.props.ignore_auto_routes = False
+    ctx = mock.MagicMock()
 
-    info = nm.ipv4.get_info(active_connection=act_con_mock)
+    info = nm.ipv4.get_info(ctx, active_connection=act_con_mock)
 
     assert info == {
         InterfaceIPv4.ENABLED: True,
@@ -171,9 +183,10 @@ def test_create_setting_with_base_con_profile(NM_mock):
     base_con_profile_mock = mock.MagicMock()
     config_mock = base_con_profile_mock.get_setting_ip4_config.return_value
     config_dup_mock = config_mock.duplicate.return_value
+    ctx = mock.MagicMock()
 
     nm.ipv4.create_setting(
-        config=config, base_con_profile=base_con_profile_mock
+        ctx, config=config, base_con_profile=base_con_profile_mock
     )
 
     base_con_profile_mock.get_setting_ip4_config.assert_called_once_with()

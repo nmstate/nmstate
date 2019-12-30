@@ -53,13 +53,13 @@ def create_setting(iface_state, base_con_profile):
     return user_setting
 
 
-def get_info(device):
+def get_info(ctx, device):
     """
     Get description from user settings for a connection
     """
     info = {}
 
-    connection = nm_connection.ConnectionProfile()
+    connection = nm_connection.ConnectionProfile(ctx)
     connection.import_by_device(device)
     if not connection.profile:
         return info

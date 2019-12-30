@@ -32,15 +32,18 @@ IPV6_LINK_LOCAL_ADDRESS1 = "fe80::1"
 
 @pytest.fixture
 def NM_mock():
-    with mock.patch.object(nm.ipv6.nmclient, "NM") as m:
+    with mock.patch.object(nm.ipv6, "NM") as m:
         yield m
 
 
 def test_create_setting_without_config(NM_mock):
     NM_mock.SettingIP6Config.new().props.addresses = []
     NM_mock.NM.SETTING_IP6_CONFIG_METHOD_DISABLED = "disabled"
+    ctx = mock.MagicMock()
 
-    ipv6_setting = nm.ipv6.create_setting(config=None, base_con_profile=None)
+    ipv6_setting = nm.ipv6.create_setting(
+        ctx, config=None, base_con_profile=None
+    )
 
     assert ipv6_setting == NM_mock.SettingIP6Config.new.return_value
     disable_method = NM_mock.SETTING_IP6_CONFIG_METHOD_DISABLED
@@ -50,9 +53,10 @@ def test_create_setting_without_config(NM_mock):
 def test_create_setting_with_ipv6_disabled(NM_mock):
     NM_mock.SettingIP6Config.new().props.addresses = []
     NM_mock.NM.SETTING_IP6_CONFIG_METHOD_DISABLED = "disabled"
+    ctx = mock.MagicMock()
 
     ipv6_setting = nm.ipv6.create_setting(
-        config={InterfaceIPv6.ENABLED: False}, base_con_profile=None
+        ctx, config={InterfaceIPv6.ENABLED: False}, base_con_profile=None
     )
 
     assert ipv6_setting == NM_mock.SettingIP6Config.new.return_value
@@ -63,8 +67,10 @@ def test_create_setting_with_ipv6_disabled(NM_mock):
 
 def test_create_setting_without_addresses(NM_mock):
     NM_mock.SettingIP6Config.new().props.addresses = []
+    ctx = mock.MagicMock()
 
     ipv6_setting = nm.ipv6.create_setting(
+        ctx,
         config={InterfaceIPv6.ENABLED: True, InterfaceIPv6.ADDRESS: []},
         base_con_profile=None,
     )
@@ -89,7 +95,10 @@ def test_create_setting_with_static_addresses(NM_mock):
             },
         ],
     }
-    ipv6_setting = nm.ipv6.create_setting(config=config, base_con_profile=None)
+    ctx = mock.MagicMock()
+    ipv6_setting = nm.ipv6.create_setting(
+        ctx, config=config, base_con_profile=None
+    )
 
     assert (
         ipv6_setting.props.method == NM_mock.SETTING_IP6_CONFIG_METHOD_MANUAL
@@ -121,7 +130,8 @@ def test_create_setting_with_static_addresses(NM_mock):
 
 
 def test_get_info_with_no_connection():
-    info = nm.ipv6.get_info(active_connection=None)
+    ctx = mock.MagicMock()
+    info = nm.ipv6.get_info(ctx, active_connection=None)
 
     assert info == {InterfaceIPv6.ENABLED: False}
 
@@ -130,8 +140,9 @@ def test_get_info_with_no_ipv6_config():
     con_mock = mock.MagicMock()
     con_mock.get_ip6_config.return_value = None
     con_mock.get_connection.return_value = None
+    ctx = mock.MagicMock()
 
-    info = nm.ipv6.get_info(active_connection=con_mock)
+    info = nm.ipv6.get_info(ctx, active_connection=con_mock)
 
     assert info == {InterfaceIPv6.ENABLED: False}
 
@@ -151,8 +162,9 @@ def test_get_info_with_ipv6_config(NM_mock):
     set_ip_conf.props.never_default = False
     set_ip_conf.props.ignore_auto_dns = False
     set_ip_conf.props.ignore_auto_routes = False
+    ctx = mock.MagicMock()
 
-    info = nm.ipv6.get_info(active_connection=act_con_mock)
+    info = nm.ipv6.get_info(ctx, active_connection=act_con_mock)
 
     assert info == {
         InterfaceIPv6.ENABLED: True,
@@ -185,7 +197,10 @@ def test_create_setting_with_link_local_addresses(NM_mock):
             },
         ],
     }
-    ipv6_setting = nm.ipv6.create_setting(config=config, base_con_profile=None)
+    ctx = mock.MagicMock()
+    ipv6_setting = nm.ipv6.create_setting(
+        ctx, config=config, base_con_profile=None
+    )
 
     assert (
         ipv6_setting.props.method == NM_mock.SETTING_IP6_CONFIG_METHOD_MANUAL
@@ -219,9 +234,10 @@ def test_create_setting_with_base_con_profile(NM_mock):
     base_con_profile_mock = mock.MagicMock()
     config_mock = base_con_profile_mock.get_setting_ip6_config.return_value
     config_dup_mock = config_mock.duplicate.return_value
+    ctx = mock.MagicMock()
 
     nm.ipv6.create_setting(
-        config=config, base_con_profile=base_con_profile_mock
+        ctx, config=config, base_con_profile=base_con_profile_mock
     )
 
     base_con_profile_mock.get_setting_ip6_config.assert_called_once_with()

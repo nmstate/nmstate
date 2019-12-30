@@ -25,14 +25,14 @@ from libnmstate.schema import Ethernet
 from libnmstate.schema import Interface
 
 
-def create_setting(iface_state, base_con_profile):
+def create_setting(ctx, iface_state, base_con_profile):
     sriov_setting = None
     ifname = iface_state[Interface.NAME]
     sriov_config = iface_state.get(Ethernet.CONFIG_SUBTREE, {}).get(
         Ethernet.SRIOV_SUBTREE
     )
     if sriov_config:
-        if not _has_sriov_capability(ifname):
+        if not _has_sriov_capability(ctx, ifname):
             raise NmstateNotSupportedError(
                 f"Interface '{ifname}' does not support SR-IOV"
             )
@@ -48,21 +48,21 @@ def create_setting(iface_state, base_con_profile):
     return sriov_setting
 
 
-def _has_sriov_capability(ifname):
-    dev = device.get_device_by_name(ifname)
+def _has_sriov_capability(ctx, ifname):
+    dev = device.get_device_by_name(ctx, ifname)
     if nmclient.NM.DeviceCapabilities.SRIOV & dev.props.capabilities:
         return True
 
     return False
 
 
-def get_info(device):
+def get_info(ctx, device):
     """
     Provide the current active SR-IOV live configuration for a device
     """
     info = {}
 
-    connection = nm_connection.ConnectionProfile()
+    connection = nm_connection.ConnectionProfile(ctx)
     connection.import_by_device(device)
     if not connection.profile:
         return info

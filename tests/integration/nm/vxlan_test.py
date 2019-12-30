@@ -27,7 +27,7 @@ from libnmstate import nm
 from libnmstate.schema import Interface
 from libnmstate.schema import VXLAN
 
-from .testlib import mainloop_run
+from .testlib import context
 
 
 def test_create_and_remove_vxlan(eth1_up):
@@ -40,9 +40,13 @@ def test_create_and_remove_vxlan(eth1_up):
     assert not _get_vxlan_current_state(vxlan_name)
 
 
+def _nm_version():
+    with context() as ctx:
+        return nm.nmclient.nm_version(ctx.client)
+
+
 @pytest.mark.xfail(
-    condition=StrictVersion(nm.nmclient.nm_version())
-    < StrictVersion("1.20.6"),
+    condition=StrictVersion(_nm_version()) < StrictVersion("1.20.6"),
     strict=True,
     reason="https://bugzilla.redhat.com/show_bug.cgi?id=1768388",
 )
@@ -73,15 +77,16 @@ def _create_vxlan_state(eth1_up):
 
 @contextmanager
 def _vxlan_interface(state):
-    _create_vxlan(state)
     try:
+        with context() as ctx:
+            _create_vxlan(ctx, state)
         yield state
     finally:
-        _delete_vxlan(_vxlan_ifname(state))
+        with context() as ctx:
+            _delete_vxlan(ctx, _vxlan_ifname(state))
 
 
-@mainloop_run
-def _create_vxlan(vxlan_desired_state):
+def _create_vxlan(ctx, vxlan_desired_state):
     ifname = _vxlan_ifname(vxlan_desired_state)
     con_setting = nm.connection.ConnectionSetting()
     con_setting.create(
@@ -92,32 +97,31 @@ def _create_vxlan(vxlan_desired_state):
     vxlan_setting = nm.vxlan.create_setting(
         vxlan_desired_state, base_con_profile=None
     )
-    ipv4_setting = nm.ipv4.create_setting({}, None)
-    ipv6_setting = nm.ipv6.create_setting({}, None)
+    ipv4_setting = nm.ipv4.create_setting(ctx, {}, None)
+    ipv6_setting = nm.ipv6.create_setting(ctx, {}, None)
     con_profile = nm.connection.ConnectionProfile()
     con_profile.create(
         (con_setting.setting, vxlan_setting, ipv4_setting, ipv6_setting)
     )
     con_profile.add(save_to_disk=False)
-    nm.device.activate(connection_id=ifname)
+    nm.device.activate(ctx, connection_id=ifname)
 
 
-@mainloop_run
-def _delete_vxlan(devname):
-    nmdev = nm.device.get_device_by_name(devname)
-    nm.device.deactivate(nmdev)
-    nm.device.delete(nmdev)
-    nm.device.delete_device(nmdev)
+def _delete_vxlan(ctx, devname):
+    nmdev = nm.device.get_device_by_name(ctx, devname)
+    nm.device.deactivate(ctx, nmdev)
+    nm.device.delete(ctx, nmdev)
+    nm.device.delete_device(ctx, nmdev)
 
 
-def _get_vxlan_current_state(ifname):
-    nmdev = _get_vxlan_device(ifname)
-    return nm.vxlan.get_info(nmdev) if nmdev else {}
+def _get_vxlan_current_state(ctx, ifname):
+    with context() as ctx:
+        nmdev = _get_vxlan_device(ctx, ifname)
+        return nm.vxlan.get_info(ctx, nmdev) if nmdev else {}
 
 
-def _get_vxlan_device(ifname):
-    nm.nmclient.client(refresh=True)
-    return nm.device.get_device_by_name(ifname)
+def _get_vxlan_device(ctx, ifname):
+    return nm.device.get_device_by_name(ctx, ifname)
 
 
 def _vxlan_ifname(state):

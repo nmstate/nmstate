@@ -60,9 +60,10 @@ def test_is_ovs_interface_type_id(NM_mock):
 def test_get_ovs_info_without_ports(nm_connection_mock, NM_mock):
     bridge_device = mock.MagicMock()
     _mock_port_profile(nm_connection_mock)
+    ctx = mock.MagicMock()
 
     device_info = [(bridge_device, None)]
-    info = nm.ovs.get_ovs_info(bridge_device, device_info)
+    info = nm.ovs.get_ovs_info(ctx, bridge_device, device_info)
 
     expected_info = {
         "port": [],
@@ -84,9 +85,10 @@ def test_get_ovs_info_with_ports_without_interfaces(
     _mock_port_profile(nm_connection_mock)
     active_con = nm_connection_mock.get_device_active_connection.return_value
     active_con.props.master = bridge_device
+    ctx = mock.MagicMock()
 
     device_info = [(bridge_device, None), (port_device, None)]
-    info = nm.ovs.get_ovs_info(bridge_device, device_info)
+    info = nm.ovs.get_ovs_info(ctx, bridge_device, device_info)
 
     expected_info = {
         "port": [],
@@ -116,9 +118,10 @@ def test_get_ovs_info_with_ports_with_interfaces(
     )
     bridge_active_con.props.master = bridge_device
     port_active_con.props.master = port_device
+    ctx = mock.MagicMock()
 
     device_info = [(bridge_device, None), (port_device, None)]
-    info = nm.ovs.get_ovs_info(bridge_device, device_info)
+    info = nm.ovs.get_ovs_info(ctx, bridge_device, device_info)
 
     assert len(info["port"]) == 1
     assert "name" in info["port"][0]

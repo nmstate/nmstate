@@ -21,7 +21,7 @@ import logging
 
 import dbus
 
-import libnmstate.nm.nmclient
+from libnmstate.nm.context import NmContext
 
 
 DBUS_STD_PROPERTIES_IFNAME = "org.freedesktop.DBus.Properties"
@@ -84,9 +84,8 @@ class _NMDbusManager:
 
 
 def get_checkpoints():
-    nmclient = libnmstate.nm.nmclient.client(refresh=True)
-
-    return [c.get_path() for c in nmclient.get_checkpoints()]
+    with NmContext() as ctx:
+        return [c.get_path() for c in ctx.client.get_checkpoints()]
 
 
 class CheckPoint:

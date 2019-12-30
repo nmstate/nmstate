@@ -27,7 +27,7 @@ from libnmstate import schema
 
 @pytest.fixture
 def NM_mock():
-    with mock.patch.object(nm.wired.nmclient, "NM") as m:
+    with mock.patch.object(nm.wired, "NM") as m:
         yield m
 
 
@@ -151,8 +151,9 @@ def test_get_info_with_invalid_duplex(ethtool_mock, NM_mock):
     dev_mock.get_hw_address.return_value = "ab:cd:ef:01:23:45"
     dev_mock.get_mtu.return_value = 1500
     dev_mock.get_device_type.return_value = NM_mock.DeviceType.ETHERNET
+    ctx = mock.MagicMock()
 
-    info = nm.wired.get_info(dev_mock)
+    info = nm.wired.get_info(ctx, dev_mock)
 
     assert info == {
         schema.Interface.MAC: dev_mock.get_hw_address.return_value,
