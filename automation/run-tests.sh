@@ -12,6 +12,7 @@ TEST_TYPE_FORMAT="format"
 TEST_TYPE_LINT="lint"
 TEST_TYPE_UNIT_PY36="unit_py36"
 TEST_TYPE_UNIT_PY37="unit_py37"
+TEST_TYPE_UNIT_PY38="unit_py38"
 TEST_TYPE_INTEG="integ"
 
 FEDORA_IMAGE_DEV="nmstate/fedora-nmstate-dev"
@@ -108,6 +109,16 @@ function run_tests {
                  "support yet"
         else
             container_exec 'tox -e py37'
+        fi
+    fi
+
+    if [ $TEST_TYPE == $TEST_TYPE_ALL ] || \
+       [ $TEST_TYPE == $TEST_TYPE_UNIT_PY38 ];then
+        if [[ $DOCKER_IMAGE == *"centos"* ]]; then
+            echo "Running unit test in $DOCKER_IMAGE container is not " \
+                 "support yet"
+        else
+            container_exec 'tox -e py38'
         fi
     fi
 
@@ -247,6 +258,7 @@ while true; do
         echo "     * $TEST_TYPE_INTEG"
         echo "     * $TEST_TYPE_UNIT_PY36"
         echo "     * $TEST_TYPE_UNIT_PY37"
+        echo "     * $TEST_TYPE_UNIT_PY38"
         echo -n "--customize allows to specify a command to customize the "
         echo "container before running the tests"
         exit
