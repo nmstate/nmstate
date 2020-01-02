@@ -7,7 +7,7 @@ SRC_DIR="$(dirname "$0")/.."
 
 cd "$SRC_DIR"
 
-VERSION="$(cat VERSION)"
+VERSION="$(cat libnmstate/VERSION)"
 DATE="$(date +%Y%m%d)"
 
 COMMIT_COUNT="$(git rev-list --count HEAD --)"

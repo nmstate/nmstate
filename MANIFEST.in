@@ -2,6 +2,5 @@ include LICENSE
 include README.md
 include pyproject.toml
 include requirements.txt
-include VERSION
 include doc/nmstatectl.8.in
 recursive-include examples *.yml
