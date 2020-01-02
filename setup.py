@@ -18,7 +18,7 @@ def requirements():
 
 
 def get_version():
-    with open("VERSION") as f:
+    with open("libnmstate/VERSION") as f:
         version = f.read().strip()
     return version
 
@@ -49,6 +49,6 @@ setup(
     entry_points={
         "console_scripts": ["nmstatectl = nmstatectl.nmstatectl:main"]
     },
-    package_data={"libnmstate": ["schemas/operational-state.yaml"]},
+    package_data={"libnmstate": ["schemas/operational-state.yaml", "VERSION"]},
     data_files=gen_manpage(),
 )

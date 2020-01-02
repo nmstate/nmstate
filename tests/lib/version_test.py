@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2020 Red Hat, Inc.
+# Copyright (c) 2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -17,36 +17,10 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
-import os
+from distutils.version import StrictVersion
 
-from . import error
-from . import schema
-
-from .netapplier import apply
-from .netapplier import commit
-from .netapplier import rollback
-from .netinfo import show
-
-from .prettystate import PrettyState
+import libnmstate
 
 
-ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-
-__all__ = [
-    "show",
-    "apply",
-    "commit",
-    "rollback",
-    "error",
-    "schema",
-    "PrettyState",
-]
-
-
-def _get_version():
-    with open(os.path.join(ROOT_DIR, "VERSION")) as f:
-        version = f.read().strip()
-    return version
-
-
-__version__ = _get_version()
+def test_version():
+    assert StrictVersion(libnmstate.__version__)
