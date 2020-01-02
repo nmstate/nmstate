@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2019 Red Hat, Inc.
+# Copyright (c) 2018-2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -129,6 +129,9 @@ def get_info(device):
         pass
 
     mac = device.get_hw_address()
+    if not mac:
+        mac = _get_mac_address_from_sysfs(iface)
+
     # A device may not have a MAC or it may not yet be "realized" (zeroed mac).
     if mac and mac != ZEROED_MAC:
         info[Interface.MAC] = mac
@@ -139,6 +142,21 @@ def get_info(device):
             info[Ethernet.CONFIG_SUBTREE] = ethernet
 
     return info
+
+
+def _get_mac_address_from_sysfs(ifname):
+    """
+    Fetch the mac address of an interface from sysfs.
+    This is a workaround for https://bugzilla.redhat.com/1786937.
+    """
+    mac = None
+    sysfs_path = f"/sys/class/net/{ifname}/address"
+    try:
+        with open(sysfs_path) as f:
+            mac = f.read().rstrip("\n")
+    except FileNotFoundError:
+        pass
+    return mac
 
 
 def _get_ethernet_info(device, iface):
