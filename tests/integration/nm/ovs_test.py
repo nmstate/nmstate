@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019 Red Hat, Inc.
+# Copyright (c) 2019-2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -22,6 +22,7 @@ from contextlib import contextmanager
 import pytest
 
 from libnmstate import nm
+from libnmstate.schema import Interface
 from libnmstate.schema import OVSBridge as OB
 
 from .testlib import mainloop
@@ -99,13 +100,15 @@ def test_bridge_with_system_port(eth1_up, bridge_default_config):
 def test_bridge_with_internal_interface(bridge_default_config):
     bridge_desired_state = bridge_default_config
 
-    ovs_port = {OB.Port.NAME: "ovs0"}
+    port_name = "ovs0"
+    ovs_port = {OB.Port.NAME: port_name}
 
     bridge_desired_state[OB.CONFIG_SUBTREE][OB.PORT_SUBTREE].append(ovs_port)
 
     with _bridge_interface(bridge_desired_state):
         bridge_current_state = _get_bridge_current_state()
         assert bridge_desired_state == bridge_current_state
+        _assert_mac_exists(port_name)
 
     assert not _get_bridge_current_state()
 
@@ -266,3 +269,11 @@ def _get_iface_bridge_settings(bridge_options):
     )
     bridge_setting = nm.ovs.create_bridge_setting(bridge_options)
     return bridge_con_setting.setting, bridge_setting
+
+
+def _assert_mac_exists(ifname):
+    state = {}
+    nmdev = nm.device.get_device_by_name(ifname)
+    if nmdev:
+        state = nm.wired.get_info(nmdev)
+    assert state.get(Interface.MAC)
