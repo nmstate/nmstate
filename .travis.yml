@@ -25,6 +25,8 @@ env:
           testflags="--test-type unit_py36"
         - DOCKER_IMAGE=nmstate/fedora-nmstate-dev
           testflags="--test-type unit_py37"
+        - DOCKER_IMAGE=nmstate/fedora-nmstate-dev
+          testflags="--test-type unit_py38"
 
 matrix:
     allow_failures:
