@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019 Red Hat, Inc.
+# Copyright (c) 2019-2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -502,7 +502,8 @@ class State:
         bridge_ifaces = (
             ifstate
             for ifstate in self.interfaces.values()
-            if ifstate[Interface.TYPE]
+            if ifstate[Interface.STATE] == InterfaceState.UP
+            and ifstate[Interface.TYPE]
             in (InterfaceType.LINUX_BRIDGE, InterfaceType.OVS_BRIDGE)
         )
         for br_ifstate in bridge_ifaces:
