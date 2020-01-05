@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019 Red Hat, Inc.
+# Copyright (c) 2019-2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -17,6 +17,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 from collections import defaultdict
+import copy
 
 import pytest
 
@@ -28,6 +29,7 @@ from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
+from libnmstate.schema import LinuxBridge
 from libnmstate.schema import Route
 from libnmstate.schema import RouteRule
 
@@ -193,6 +195,80 @@ class TestAssertIfaceState:
             ],
             InterfaceIPv6.ENABLED: True,
         }
+        desired_state.verify_interfaces(current_state)
+
+    def test_unmanaged_bridge_port_known_type(self):
+        desired_state_raw = {
+            Interface.KEY: [
+                {
+                    Interface.NAME: "bridge00",
+                    Interface.TYPE: InterfaceType.LINUX_BRIDGE,
+                    Interface.STATE: InterfaceState.UP,
+                    LinuxBridge.CONFIG_SUBTREE: {LinuxBridge.PORT_SUBTREE: []},
+                }
+            ]
+        }
+        desired_state = state.State(desired_state_raw)
+
+        current_state_raw = copy.deepcopy(desired_state_raw)
+        brstate = current_state_raw[Interface.KEY][0]
+        brstate[LinuxBridge.CONFIG_SUBTREE][LinuxBridge.PORT_SUBTREE].append(
+            {LinuxBridge.Port.NAME: "eth0"}
+        )
+        current_state_raw[Interface.KEY].append(
+            {
+                Interface.NAME: "eth0",
+                Interface.TYPE: InterfaceType.ETHERNET,
+                Interface.STATE: InterfaceState.DOWN,
+            }
+        )
+        current_state = state.State(current_state_raw)
+
+        desired_state.verify_interfaces(current_state)
+
+    def test_unmanaged_bridge_port_unknown_type(self):
+        desired_state_raw = {
+            Interface.KEY: [
+                {
+                    Interface.NAME: "bridge00",
+                    Interface.TYPE: InterfaceType.LINUX_BRIDGE,
+                    Interface.STATE: InterfaceState.UP,
+                    LinuxBridge.CONFIG_SUBTREE: {LinuxBridge.PORT_SUBTREE: []},
+                }
+            ]
+        }
+        desired_state = state.State(desired_state_raw)
+
+        current_state_raw = copy.deepcopy(desired_state_raw)
+        brstate = current_state_raw[Interface.KEY][0]
+        brstate[LinuxBridge.CONFIG_SUBTREE][LinuxBridge.PORT_SUBTREE].append(
+            {LinuxBridge.Port.NAME: "eth0"}
+        )
+        current_state_raw[Interface.KEY].append(
+            {
+                Interface.NAME: "eth0",
+                Interface.TYPE: InterfaceType.UNKNOWN,
+                Interface.STATE: InterfaceState.UP,
+            }
+        )
+        current_state = state.State(current_state_raw)
+
+        desired_state.verify_interfaces(current_state)
+
+    def test_ignore_current_unmanaged_bridge(self):
+        desired_state = state.State({Interface.KEY: []})
+        current_state = state.State(
+            {
+                Interface.KEY: [
+                    {
+                        Interface.NAME: "bridge00",
+                        Interface.TYPE: InterfaceType.LINUX_BRIDGE,
+                        Interface.STATE: InterfaceState.DOWN,
+                    }
+                ]
+            }
+        )
+
         desired_state.verify_interfaces(current_state)
 
     @property
