@@ -530,6 +530,8 @@ def test_slave_ipaddr_learned_via_dhcp_added_as_static_to_linux_bridge(
 
     libnmstate.apply(dhcpcli_up)
 
+    assert _poll(_has_dhcpv4_addr)
+
     slave_ifname = dhcpcli_up[Interface.KEY][0][Interface.NAME]
     slave_state = statelib.show_only((slave_ifname,))
     slave_iface_state = slave_state[Interface.KEY][0]
