@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019 Red Hat, Inc.
+# Copyright (c) 2019-2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -58,15 +58,18 @@ class Bridge:
                 OVSBridge.Port.LinkAggregation.MODE
             ] = mode
 
-    def add_internal_port(self, name, ipv4_state):
+    def add_internal_port(self, name, *, mac=None, ipv4_state=None):
+        ifstate = {
+            Interface.NAME: name,
+            Interface.TYPE: InterfaceType.OVS_INTERFACE,
+        }
+        if mac:
+            ifstate[Interface.MAC] = mac
+        if ipv4_state:
+            ifstate[Interface.IPV4] = ipv4_state
+
         self._add_port(name)
-        self._ifaces.append(
-            {
-                Interface.NAME: name,
-                Interface.TYPE: InterfaceType.OVS_INTERFACE,
-                Interface.IPV4: ipv4_state,
-            }
-        )
+        self._ifaces.append(ifstate)
 
     def _add_port(self, name):
         self._bridge_iface[OVSBridge.CONFIG_SUBTREE].setdefault(
