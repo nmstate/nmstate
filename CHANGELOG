@@ -1,4 +1,8 @@
 # Changelog
+## [0.1.3] - 2020-01-07
+### Bug Fixes
+ - Ignore unmanaged bridge ports when editing the bridge state.
+
 ## [0.1.2] - 2019-12-09
 ### Break Changes
  - Deprecation in `libnmstate.schema`:
