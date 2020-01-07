@@ -2,7 +2,7 @@
 Architectures:
   - x86_64:
       Distributions:
-        - fc29
+        - fc30
       runtime-requirements:
         host-distro: same
 script:
