@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019 Red Hat, Inc.
+# Copyright (c) 2019-2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -93,11 +93,12 @@ def test_create_and_remove_ovs_bridge_with_a_system_port(port0_up):
     raises=(NmstateLibnmError, AssertionError),
     reason="https://bugzilla.redhat.com/1724901",
 )
-def test_create_and_remove_ovs_bridge_with_internal_port_and_static_ip():
+def test_create_and_remove_ovs_bridge_with_internal_port_static_ip_and_mac():
     bridge = Bridge(BRIDGE1)
     bridge.add_internal_port(
         PORT1,
-        {
+        mac="02:ff:ff:ff:ff:01",
+        ipv4_state={
             InterfaceIPv4.ENABLED: True,
             InterfaceIPv4.ADDRESS: [
                 {
