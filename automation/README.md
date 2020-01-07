@@ -33,22 +33,15 @@ Assuming *docker* is installed on the host, just run:
 
 By default, `./automation/run-tests.sh` will run all tests in the container
 using 'nmstate/fedora-nmstate-dev' docker image.
-You may change the test type by using:
-
- * `./automation/run-tests.sh --test-type lint`:
-   Static analysis of code using 'nmstate/fedora-nmstate-dev' docker image.
-
- * `./automation/run-tests.sh --test-type unit_py36`:
-   Unit tests in Python 3.6 using 'nmstate/fedora-nmstate-dev' docker image.
-
- * `./automation/run-tests.sh --test-type unit_py37`:
-   Unit tests in Python 3.7 using 'nmstate/fedora-nmstate-dev' docker image.
+You may change the test type by specifying the `--test-type` flag, for example:
 
  * `./automation/run-tests.sh --test-type integ --el8`:
    Integration tests using 'nmstate/centos8-nmstate-dev' docker image.
 
  * `./automation/run-tests.sh --test-type integ`:
    Integration tests using 'nmstate/fedora-nmstate-dev' docker image.
+
+For a full list of command-line flags, run `./automation/run-tests.sh --help`.
 
 ## Development
 
