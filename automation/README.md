@@ -64,9 +64,9 @@ After closing the shell, the container will be removed. Alternatively it is
 possible to provide the `--debug-shell` command-line option.
 
 To specify a different container image for the tests, specify it with the
-`DOCKER_IMAGE` variable:
+`CONTAINER_IMAGE` variable:
 
-`DOCKER_IMAGE=local/centos8-nmstate-dev debug_exit_shell=1 ./automation/run-tests.sh`
+`CONTAINER_IMAGE=local/centos8-nmstate-dev debug_exit_shell=1 ./automation/run-tests.sh`
 
 It is also possible to pass extra arguments to PDB using the
 `nmstate_pytest_extra_args` variable or via `--pytest-args` command-line
