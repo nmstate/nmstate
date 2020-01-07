@@ -3,6 +3,25 @@
 Important: If you do not finish these steps, add Jira cards for the remaining
 tasks and ensure that they are taken care of in a timely manner.
 
+## Changelog
+
+First, update the CHANGELOG file in the project root directory. Use the command
+`git log  --oneline --since v0.1.2` to get the changes since the last tag. Add
+an entry like the following:
+
+```
+## [X.Y.Z] - YYYY-MM-DD
+### Breaking Changes
+ - ...
+
+### New Features
+ - ...
+
+### Bug Fixes
+ - ...
+
+```
+
 ## Tagging
 
 * Tag new release in git.
@@ -39,18 +58,8 @@ gpg2 --armor --detach-sign dist/nmstate-<version>.tar.gz
 * Make sure you are in `Release` tab.
 * Choose the git tag just pushed.
 * Title should be like `Version 0.0.3 release`.
-* The content should be like:
+* The content should be copied from the `CHANGELOG` file.
 
-```
-Changes since 0.0.2:
-
- * Enhancements:
-    * Added DHCP support.
- * Bug fixes:
-    * <List import bug fix here>.
-      Use command `git log  --oneline --since v0.0.2` to find out.
-
-```
 
  * Click `Attach binaries by dropping them here or selecting them.` and
    upload the `dist/nmstate-<version>.tar.gz` and
