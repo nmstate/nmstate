@@ -47,10 +47,10 @@ git push --delete upstream <tag_name>
 * Generate and sign the tarball.
 
 ```bash
-git clean -d -n
+git clean -x -d -n
 # before running the next command check, that it is ok to remove the files
-git clean -d -f
-python setup.py sdist
+git clean -x -d -f
+python3 setup.py sdist
 gpg2 --armor --detach-sign dist/nmstate-<version>.tar.gz
 ```
 
