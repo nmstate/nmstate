@@ -5,38 +5,38 @@ env:
     global:
         - use_codecov=true
     matrix:
-        - DOCKER_IMAGE=nmstate/centos8-nmstate-dev
+        - CONTAINER_IMAGE=nmstate/centos8-nmstate-dev
           testflags="--test-type integ --pytest-args='-x'"
           use_codecov=false
           use_coveralls=true
-        - DOCKER_IMAGE=nmstate/centos8-nmstate-dev
+        - CONTAINER_IMAGE=nmstate/centos8-nmstate-dev
           testflags="--test-type integ --pytest-args='-x'
               --copr networkmanager/NetworkManager-1.22-git"
-        - DOCKER_IMAGE=nmstate/centos8-nmstate-dev
+        - CONTAINER_IMAGE=nmstate/centos8-nmstate-dev
           testflags="--test-type integ --pytest-args='-x'
               --copr networkmanager/NetworkManager-master"
-        - DOCKER_IMAGE=nmstate/fedora-nmstate-dev
+        - CONTAINER_IMAGE=nmstate/fedora-nmstate-dev
           testflags="--test-type integ --pytest-args='-x'"
-        - DOCKER_IMAGE=nmstate/fedora-nmstate-dev
+        - CONTAINER_IMAGE=nmstate/fedora-nmstate-dev
           testflags="--test-type format"
-        - DOCKER_IMAGE=nmstate/fedora-nmstate-dev
+        - CONTAINER_IMAGE=nmstate/fedora-nmstate-dev
           testflags="--test-type lint"
-        - DOCKER_IMAGE=nmstate/fedora-nmstate-dev
+        - CONTAINER_IMAGE=nmstate/fedora-nmstate-dev
           testflags="--test-type unit_py36"
-        - DOCKER_IMAGE=nmstate/fedora-nmstate-dev
+        - CONTAINER_IMAGE=nmstate/fedora-nmstate-dev
           testflags="--test-type unit_py37"
-        - DOCKER_IMAGE=nmstate/fedora-nmstate-dev
+        - CONTAINER_IMAGE=nmstate/fedora-nmstate-dev
           testflags="--test-type unit_py38"
 
 matrix:
     allow_failures:
-        - env: DOCKER_IMAGE=nmstate/centos8-nmstate-dev
+        - env: CONTAINER_IMAGE=nmstate/centos8-nmstate-dev
                testflags="--test-type integ --pytest-args='-x'
                    --copr networkmanager/NetworkManager-master"
-        - env: DOCKER_IMAGE=nmstate/centos8-nmstate-dev
+        - env: CONTAINER_IMAGE=nmstate/centos8-nmstate-dev
                testflags="--test-type integ --pytest-args='-x'
                    --copr networkmanager/NetworkManager-1.22-git"
-        - env: DOCKER_IMAGE=nmstate/fedora-nmstate-dev
+        - env: CONTAINER_IMAGE=nmstate/fedora-nmstate-dev
                testflags="--test-type integ --pytest-args='-x'"
 
 addons:
@@ -52,7 +52,7 @@ services:
     - docker
 
 before_install:
-    - docker pull $DOCKER_IMAGE
+    - docker pull $CONTAINER_IMAGE
 
 script:
     - sudo modprobe openvswitch

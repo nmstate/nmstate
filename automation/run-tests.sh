@@ -74,8 +74,8 @@ function install_nmstate {
 function run_tests {
     if [ $TEST_TYPE == $TEST_TYPE_ALL ] || \
        [ $TEST_TYPE == $TEST_TYPE_FORMAT ];then
-        if [[ $DOCKER_IMAGE == *"centos"* ]]; then
-            echo "Running formatter in $DOCKER_IMAGE container is not " \
+        if [[ $CONTAINER_IMAGE == *"centos"* ]]; then
+            echo "Running formatter in $CONTAINER_IMAGE container is not " \
                  "support yet"
         else
             container_exec 'tox -e black'
@@ -84,8 +84,8 @@ function run_tests {
 
     if [ $TEST_TYPE == $TEST_TYPE_ALL ] || \
        [ $TEST_TYPE == $TEST_TYPE_LINT ];then
-        if [[ $DOCKER_IMAGE == *"centos"* ]]; then
-            echo "Running unit test in $DOCKER_IMAGE container is not " \
+        if [[ $CONTAINER_IMAGE == *"centos"* ]]; then
+            echo "Running unit test in $CONTAINER_IMAGE container is not " \
                  "support yet"
         else
             container_exec 'tox -e flake8,pylint'
@@ -94,8 +94,8 @@ function run_tests {
 
     if [ $TEST_TYPE == $TEST_TYPE_ALL ] || \
        [ $TEST_TYPE == $TEST_TYPE_UNIT_PY36 ];then
-        if [[ $DOCKER_IMAGE == *"centos"* ]]; then
-            echo "Running unit test in $DOCKER_IMAGE container is not " \
+        if [[ $CONTAINER_IMAGE == *"centos"* ]]; then
+            echo "Running unit test in $CONTAINER_IMAGE container is not " \
                  "support yet"
         else
             container_exec 'tox -e py36'
@@ -104,8 +104,8 @@ function run_tests {
 
     if [ $TEST_TYPE == $TEST_TYPE_ALL ] || \
        [ $TEST_TYPE == $TEST_TYPE_UNIT_PY37 ];then
-        if [[ $DOCKER_IMAGE == *"centos"* ]]; then
-            echo "Running unit test in $DOCKER_IMAGE container is not " \
+        if [[ $CONTAINER_IMAGE == *"centos"* ]]; then
+            echo "Running unit test in $CONTAINER_IMAGE container is not " \
                  "support yet"
         else
             container_exec 'tox -e py37'
@@ -114,8 +114,8 @@ function run_tests {
 
     if [ $TEST_TYPE == $TEST_TYPE_ALL ] || \
        [ $TEST_TYPE == $TEST_TYPE_UNIT_PY38 ];then
-        if [[ $DOCKER_IMAGE == *"centos"* ]]; then
-            echo "Running unit test in $DOCKER_IMAGE container is not " \
+        if [[ $CONTAINER_IMAGE == *"centos"* ]]; then
+            echo "Running unit test in $CONTAINER_IMAGE container is not " \
                  "support yet"
         else
             container_exec 'tox -e py38'
@@ -240,7 +240,7 @@ while true; do
         TEST_TYPE="$1"
         ;;
     --el8)
-        DOCKER_IMAGE=$CENTOS_IMAGE_DEV
+        CONTAINER_IMAGE=$CENTOS_IMAGE_DEV
         ;;
     --artifacts-dir)
         shift
@@ -272,7 +272,7 @@ while true; do
 done
 
 : ${TEST_TYPE:=$TEST_TYPE_ALL}
-: ${DOCKER_IMAGE:=$FEDORA_IMAGE_DEV}
+: ${CONTAINER_IMAGE:=$FEDORA_IMAGE_DEV}
 
 ${CONTAINER_CMD} --version && cat /etc/resolv.conf
 
@@ -283,7 +283,7 @@ if [[ "$CI" == "true" ]];then
 fi
 
 mkdir -p $EXPORT_DIR
-CONTAINER_ID="$(${CONTAINER_CMD} run --privileged -d -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v $PROJECT_PATH:$CONTAINER_WORKSPACE -v $EXPORT_DIR:$CONT_EXPORT_DIR $DOCKER_IMAGE)"
+CONTAINER_ID="$(${CONTAINER_CMD} run --privileged -d -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v $PROJECT_PATH:$CONTAINER_WORKSPACE -v $EXPORT_DIR:$CONT_EXPORT_DIR $CONTAINER_IMAGE)"
 [ -n "$debug_exit_shell" ] && trap open_shell EXIT || trap run_exit EXIT
 
 if [[ -v copr_repo ]];then
