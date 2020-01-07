@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019 Red Hat, Inc.
+# Copyright (c) 2019-2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -148,13 +148,24 @@ def _has_sriov_capability(ifname):
 
 def get_info(device):
     """
-    Provide the current active SR-IOV live configuration for a device
+    Provide the current active SR-IOV total-vfs runtime value and the live
+    configuration for each VF for a device.
     """
     info = {}
+    sriov_config = {}
+
+    ifname = device.get_iface()
+    numvf_path = f"/sys/class/net/{ifname}/device/sriov_numvfs"
+    try:
+        with open(numvf_path) as f:
+            sriov_config[Ethernet.SRIOV.TOTAL_VFS] = int(f.read())
+    except FileNotFoundError:
+        return info
 
     connection = nm_connection.ConnectionProfile()
     connection.import_by_device(device)
     if not connection.profile:
+        info[Ethernet.SRIOV_SUBTREE] = sriov_config
         return info
 
     sriov_setting = connection.profile.get_setting_by_name(
@@ -162,9 +173,6 @@ def get_info(device):
     )
 
     if sriov_setting:
-        sriov_config = {
-            Ethernet.SRIOV.TOTAL_VFS: sriov_setting.props.total_vfs
-        }
         vfs_config = _get_info_sriov_vfs_config(sriov_setting)
         sriov_config[Ethernet.SRIOV.VFS_SUBTREE] = vfs_config
 
