@@ -192,10 +192,11 @@ function is_file_changed {
     fi
 }
 
-function rebuild_container_images {
+function update_container_images {
     if is_file_changed "$PROJECT_PATH/packaging"; then
-
         ${PROJECT_PATH}/packaging/build-container.sh all
+    else
+        ${CONTAINER_CMD} pull "${CONTAINER_IMAGE}"
     fi
 }
 
@@ -279,7 +280,7 @@ ${CONTAINER_CMD} --version && cat /etc/resolv.conf
 modprobe_ovs
 
 if [[ "$CI" == "true" ]];then
-    rebuild_container_images
+    update_container_images
 fi
 
 mkdir -p $EXPORT_DIR

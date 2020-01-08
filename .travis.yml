@@ -5,39 +5,27 @@ env:
     global:
         - use_codecov=true
     matrix:
-        - CONTAINER_IMAGE=docker.io/nmstate/centos8-nmstate-dev
-          testflags="--test-type integ --pytest-args='-x'"
+        - testflags="--el8 --test-type integ --pytest-args='-x'"
           use_codecov=false
           use_coveralls=true
-        - CONTAINER_IMAGE=docker.io/nmstate/centos8-nmstate-dev
-          testflags="--test-type integ --pytest-args='-x'
+        - testflags="--el8 --test-type integ --pytest-args='-x'
               --copr networkmanager/NetworkManager-1.22-git"
-        - CONTAINER_IMAGE=docker.io/nmstate/centos8-nmstate-dev
-          testflags="--test-type integ --pytest-args='-x'
+        - testflags="--el8 --test-type integ --pytest-args='-x'
               --copr networkmanager/NetworkManager-master"
-        - CONTAINER_IMAGE=docker.io/nmstate/fedora-nmstate-dev
-          testflags="--test-type integ --pytest-args='-x'"
-        - CONTAINER_IMAGE=docker.io/nmstate/fedora-nmstate-dev
-          testflags="--test-type format"
-        - CONTAINER_IMAGE=docker.io/nmstate/fedora-nmstate-dev
-          testflags="--test-type lint"
-        - CONTAINER_IMAGE=docker.io/nmstate/fedora-nmstate-dev
-          testflags="--test-type unit_py36"
-        - CONTAINER_IMAGE=docker.io/nmstate/fedora-nmstate-dev
-          testflags="--test-type unit_py37"
-        - CONTAINER_IMAGE=docker.io/nmstate/fedora-nmstate-dev
-          testflags="--test-type unit_py38"
+        - testflags="--test-type integ --pytest-args='-x'"
+        - testflags="--test-type format"
+        - testflags="--test-type lint"
+        - testflags="--test-type unit_py36"
+        - testflags="--test-type unit_py37"
+        - testflags="--test-type unit_py38"
 
 matrix:
     allow_failures:
-        - env: CONTAINER_IMAGE=docker.io/nmstate/centos8-nmstate-dev
-               testflags="--test-type integ --pytest-args='-x'
+        - env: testflags="--el8 --test-type integ --pytest-args='-x'
                    --copr networkmanager/NetworkManager-master"
-        - env: CONTAINER_IMAGE=docker.io/nmstate/centos8-nmstate-dev
-               testflags="--test-type integ --pytest-args='-x'
+        - env: testflags="--el8 --test-type integ --pytest-args='-x'
                    --copr networkmanager/NetworkManager-1.22-git"
-        - env: CONTAINER_IMAGE=docker.io/nmstate/fedora-nmstate-dev
-               testflags="--test-type integ --pytest-args='-x'"
+        - env: testflags="--test-type integ --pytest-args='-x'"
 
 addons:
     apt:
@@ -50,9 +38,6 @@ addons:
 
 services:
     - docker
-
-before_install:
-    - docker pull $CONTAINER_IMAGE
 
 script:
     - sudo modprobe openvswitch
