@@ -3,12 +3,12 @@ dist: bionic
 language: generic
 env:
     global:
-        - use_codecov=true
+        - use_coveralls=true
     matrix:
         - CONTAINER_IMAGE=nmstate/centos8-nmstate-dev
           testflags="--test-type integ --pytest-args='-x'"
-          use_codecov=false
-          use_coveralls=true
+          use_codecov=true
+          use_coveralls=false
         - CONTAINER_IMAGE=nmstate/centos8-nmstate-dev
           testflags="--test-type integ --pytest-args='-x'
               --copr networkmanager/NetworkManager-1.22-git"
