@@ -24,7 +24,8 @@ Please report unacceptable behavior to the nmstate team.
 #### Pull Requests
 Please follow these steps to have your contribution considered by the maintainers:
 
-1. Run and pass the unit tests and integration tests locally.
+1. Run and pass the unit tests and integration tests locally. In order to do
+this, please follow the steps in the [run-test.sh documentation](automation/README.md).
 2. Follow the instructions on
 [how to open a PR](https://opensource.guide/how-to-contribute/#opening-a-pull-request).
 3. Follow the [Coding and Style Guidelines](#Coding-and-Style-Guidelines).
