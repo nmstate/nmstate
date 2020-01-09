@@ -135,6 +135,12 @@ def test_decrease_to_lower_than_min_ipv6_iface_mtu(eth1_with_ipv6):
     assertlib.assert_state(original_state)
 
 
+def test_mtu_without_ipv6(eth1_up):
+    eth1_up[Interface.KEY][0][Interface.MTU] = 576
+    libnmstate.apply(eth1_up)
+    assertlib.assert_state(eth1_up)
+
+
 @pytest.mark.xfail(reason="https://bugzilla.redhat.com/1751079", strict=True)
 def test_set_mtu_on_two_vlans_with_a_shared_base(eth1_up):
     base_ifname = eth1_up[Interface.KEY][0][Interface.NAME]
