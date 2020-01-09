@@ -129,6 +129,11 @@ Development planning (sprints and progress reporting) happens in
 There is also `#nmstate` on
 [Freenode IRC](https://freenode.net/kb/answer/chat).
 
+## Contributing
+
+Yay! We are happy to accept new contributors to the Nmstate project. Please follow
+these [instructions](CONTRIBUTING.md) to contribute.
+
 ## Installation
 
 For Fedora 29+, `sudo dnf install nmstate`.
