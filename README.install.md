@@ -6,7 +6,7 @@ To install the latest version build from the master branch on Fedora,
 CentOS/EPEL/RHEL 8, use the Nmstate Copr repository:
 
 ``` shell
-yum copr enable nmstate/nmstate-git-fedora
+yum copr enable nmstate/nmstate-git
 yum install nmstate
 ```
 
