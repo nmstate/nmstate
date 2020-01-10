@@ -32,10 +32,12 @@ from libnmstate.error import NmstateLibnmError
 from .testlib import assertlib
 from .testlib import cmd as libcmd
 from .testlib.ovslib import Bridge
+from .testlib.vlan import vlan_interface
 
 
 BRIDGE1 = "br1"
 PORT1 = "ovs1"
+VLAN_IFNAME = "eth101"
 
 DNF_REMOVE_NM_OVS_CMD = ("dnf", "remove", "-y", "-q", "NetworkManager-ovs")
 DNF_INSTALL_NM_OVS_CMD = ("dnf", "install", "-y", "-q", "NetworkManager-ovs")
@@ -116,6 +118,13 @@ def test_create_and_remove_ovs_bridge_with_internal_port_static_ip_and_mac():
     assertlib.assert_absent(PORT1)
 
 
+def test_vlan_as_ovs_bridge_slave(vlan_on_eth1):
+    bridge = Bridge(BRIDGE1)
+    bridge.add_system_port(vlan_on_eth1)
+    with bridge.create() as state:
+        assertlib.assert_state_match(state)
+
+
 def test_nm_ovs_plugin_missing():
     with disable_nm_ovs_plugin():
         with pytest.raises(NmstateLibnmError):
@@ -141,3 +150,11 @@ def disable_nm_ovs_plugin():
     finally:
         libcmd.exec_cmd(DNF_INSTALL_NM_OVS_CMD)
         libcmd.exec_cmd(SYSTEMCTL_RESTART_NM_CMD)
+
+
+@pytest.fixture
+def vlan_on_eth1(eth1_up):
+    with vlan_interface(
+        VLAN_IFNAME, 101, eth1_up[Interface.KEY][0][Interface.NAME]
+    ):
+        yield VLAN_IFNAME
