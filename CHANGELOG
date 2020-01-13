@@ -1,4 +1,27 @@
 # Changelog
+## [0.2.1] - 2019-01-13
+### Breaking Changes
+ - Deprecations in `libnmstate.schema`:
+    - 'LinuxBridge.GROUP_FORWARD_MASK' -> 'LinuxBridge.Options.GROUP_FORWARD_MASK'
+    - 'LinuxBridge.MAC_AGEING_TIME' -> 'LinuxBridge.Options.MAC_AGEING_TIME'
+    - 'LinuxBridge.MULTICAST_SNOOPING' -> 'LinuxBridge.Options.MULTICAST_SNOOPING'
+
+### New Features
+ - Support SR-IOV VFs configuration.
+ - Introduce libnmstate.__version__.
+
+### Bug Fixes
+ - Fix verification of route rules with 2+ route tables.
+ - Support reapply on IPv6 changes.
+ - Fix disable IP stack after enabled DHCP.
+ - Fix MAC address pattern to support infiniband MAC addresses.
+ - Report missing OVS NM plugin on profile activation.
+ - Ignore existing unmanaged and unknown type bridge ports.
+ - Fix bridge type interface state parsing.
+ - Fix success check after interface deletion.
+ - Read mac-address from sysfs when missing from NM (ovs-interface).
+ - Get the SR-IOV total-vfs from sysfs instead from NM configuration.
+
 ## [0.2.0] - 2019-12-02
 ### Bug Fixes
  - Skip editing on unknown type interface
