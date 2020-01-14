@@ -59,15 +59,26 @@ gpg2 --armor --detach-sign dist/nmstate-<version>.tar.gz
 * Choose the git tag just pushed.
 * Title should be like `Version 0.0.3 release`.
 * The content should be copied from the `CHANGELOG` file.
-
-
- * Click `Attach binaries by dropping them here or selecting them.` and
-   upload the `dist/nmstate-<version>.tar.gz` and
-   `dist/nmstate-<version>.tar.gz.asc`.
-
- * Click `Save draft` and seek for review.
-
- * Click `Publish release` once approved.
+* Click `Attach binaries by dropping them here or selecting them.` and upload
+  the `dist/nmstate-<version>.tar.gz` and `dist/nmstate-<version>.tar.gz.asc`.
+* Download the tarball and the signature.
+* Check if the signature is correct.
+```bash
+gpg2 --recv-keys F7910D93CA83D77348595C0E899014C0463C12BB
+gpg2 --verify nmstate-<version>.tar.gz.asc nmstate-<version>.tar.gz
+```
+* Check in a clean Fedora/centOS container if the package build and install correctly.
+```bash
+podman run -d -it --name <name> docker.io/library/fedora:31 bash
+podman cp nmstate-<version>.tar.gz <name>:/home/nmstate-<version>.tar.gz
+podman exec -it <name> bash
+cd /home/
+tar xzvf nmstate-<version>.tar.gz
+python3 setup.py build
+python3 setup.py install
+```
+* Click `Save draft` and seek for review.
+* Click `Publish release` once approved.
 
 ## PyPi Release
 

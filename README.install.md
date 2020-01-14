@@ -63,6 +63,24 @@ Alternatively, install Nmstate system-wide:
 ```shell
 pip uninstall -y nmstate; pip install .
 ```
+### Install nmstate from tarball
+
+Please, consider using the distributed version/Copr or PyPi instead of this
+method.
+
+Download the tarball and the signature file. Then, verify the signature:
+```bash
+gpg2 --recv-keys F7910D93CA83D77348595C0E899014C0463C12BB
+gpg2 --verify nmstate-<version>.tar.gz.asc nmstate-<version>.tar.gz
+```
+
+Extract the tarball and install nmstate.
+
+```bash
+tar xzvf nmstate-<version>.tar.gz
+python3 nmstate-<version>/setup.py build
+python3 nmstate-<version>/setup.py install
+```
 
 ## Development Environment
 
