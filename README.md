@@ -13,6 +13,7 @@ Copr build status, all repos are built for Fedora 31+ and RHEL/CentOS/EPEL 8:
 * Latest release: [![Latest release Copr build status](https://copr.fedorainfracloud.org/coprs/nmstate/nmstate/package/nmstate/status_image/last_build.png)](https://copr.fedorainfracloud.org/coprs/nmstate/nmstate/package/nmstate/)
 * Git master: [![Git master Copr build status](https://copr.fedorainfracloud.org/coprs/nmstate/nmstate-git/package/nmstate/status_image/last_build.png)](https://copr.fedorainfracloud.org/coprs/nmstate/nmstate-git/package/nmstate/)
 * Latest 0.1 release: [![Latest 0.1 release Copr build status](https://copr.fedorainfracloud.org/coprs/nmstate/nmstate-0.1/package/nmstate/status_image/last_build.png)](https://copr.fedorainfracloud.org/coprs/nmstate/nmstate-0.1/package/nmstate/)
+* Latest 0.2 release: [![Latest 0.2 release Copr build status](https://copr.fedorainfracloud.org/coprs/nmstate/nmstate-0.2/package/nmstate/status_image/last_build.png)](https://copr.fedorainfracloud.org/coprs/nmstate/nmstate-0.2/package/nmstate/)
 * Git nmstate-0.1: [![Git nmstate-0.1 Copr build status](https://copr.fedorainfracloud.org/coprs/nmstate/nmstate-0.1-git/package/nmstate/status_image/last_build.png)](https://copr.fedorainfracloud.org/coprs/nmstate/nmstate-0.1-git/package/nmstate/)
 
 ## What is it?
