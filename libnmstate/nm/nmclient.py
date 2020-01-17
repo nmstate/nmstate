@@ -41,14 +41,8 @@ GObject
 _mainloop = None
 _nmclient = None
 
-_can_disable_ipv6 = hasattr(NM, "SETTING_IP6_CONFIG_METHOD_DISABLED")
-
 NM_MANAGER_ERROR_DOMAIN = "nm-manager-error-quark"
 _NMCLIENT_CLEANUP_TIMEOUT = 5
-
-
-def can_disable_ipv6():
-    return _can_disable_ipv6
 
 
 def nm_version():
