@@ -29,7 +29,6 @@ from libnmstate import nm
 from libnmstate.nm.nmclient import nmclient_context
 from libnmstate import schema
 from libnmstate import state
-from libnmstate import sysctl
 from libnmstate import validator
 from libnmstate.error import NmstateConflictError
 from libnmstate.error import NmstateError
@@ -149,8 +148,6 @@ def _apply_ifaces_state(
                     ifaces2add + ifaces2edit,
                     con_profiles=ifaces_add_configs + ifaces_edit_configs,
                 )
-            if not nmclient.can_disable_ipv6():
-                _disable_ipv6(desired_state)
             if verify_change:
                 _verify_change(desired_state)
         if not commit:
@@ -160,13 +157,10 @@ def _apply_ifaces_state(
     except nm.checkpoint.NMCheckPointCreationError:
         raise NmstateConflictError("Error creating a check point")
     except NmstateError:
-        # Assume rollback occured, revert IPv6 stack state.
+        # Assume rollback occurred.
         # Checkpoint rollback is async, there is a need to wait for it to
         # finish before proceeding with other actions.
-        # TODO: https://nmstate.atlassian.net/browse/NMSTATE-103
         time.sleep(5)
-        if not nmclient.can_disable_ipv6():
-            _disable_ipv6(current_state)
         raise
 
 
@@ -253,18 +247,3 @@ def _edit_interfaces(state2edit):
 
 def _index_by_name(ifaces_state):
     return {iface["name"]: iface for iface in ifaces_state}
-
-
-def _disable_ipv6(desired_state):
-    """
-    Identify in the desired state all interfaces that explicitly disable
-    the IPv6 stack and apply it through sysfs.
-
-    This is an intermediate workaround for https://bugzilla.redhat.com/1643841.
-    """
-    for ifstate in desired_state.interfaces.values():
-        if ifstate.get(schema.Interface.STATE) != schema.InterfaceState.UP:
-            continue
-        ipv6_state = ifstate.get(schema.Interface.IPV6, {})
-        if ipv6_state.get("enabled") is False:
-            sysctl.disable_ipv6(ifstate[schema.Interface.NAME])
