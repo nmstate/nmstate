@@ -17,8 +17,10 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
+import re
+import subprocess
+
 from libnmstate.error import NmstateNotSupportedError
-from libnmstate.nm import connection as nm_connection
 from libnmstate.nm import device
 from libnmstate.nm import nmclient
 from libnmstate.schema import Ethernet
@@ -48,27 +50,14 @@ SRIOV_NMSTATE_TO_NM_MAP = {
     ),
 }
 
-SRIOV_NM_TO_NMSTATE_MAP = {
-    nmclient.NM.SRIOV_VF_ATTRIBUTE_MAC: (
-        Ethernet.SRIOV.VFS.MAC_ADDRESS,
-        nmclient.GLib.Variant.get_string,
+SRIOV_NMSTATE_TO_REGEX = {
+    Ethernet.SRIOV.VFS.MAC_ADDRESS: re.compile(
+        r"[a-fA-F0-9:]{17}|[a-fA-F0-9]{12}"
     ),
-    nmclient.NM.SRIOV_VF_ATTRIBUTE_SPOOF_CHECK: (
-        Ethernet.SRIOV.VFS.SPOOF_CHECK,
-        nmclient.GLib.Variant.get_boolean,
-    ),
-    nmclient.NM.SRIOV_VF_ATTRIBUTE_TRUST: (
-        Ethernet.SRIOV.VFS.TRUST,
-        nmclient.GLib.Variant.get_boolean,
-    ),
-    nmclient.NM.SRIOV_VF_ATTRIBUTE_MIN_TX_RATE: (
-        Ethernet.SRIOV.VFS.MIN_TX_RATE,
-        nmclient.GLib.Variant.get_uint32,
-    ),
-    nmclient.NM.SRIOV_VF_ATTRIBUTE_MAX_TX_RATE: (
-        Ethernet.SRIOV.VFS.MAX_TX_RATE,
-        nmclient.GLib.Variant.get_uint32,
-    ),
+    Ethernet.SRIOV.VFS.SPOOF_CHECK: re.compile(r"checking (on|off)"),
+    Ethernet.SRIOV.VFS.TRUST: re.compile(r"trust (on|off)"),
+    Ethernet.SRIOV.VFS.MIN_TX_RATE: re.compile(r"min_tx_rate ([0-9]+)"),
+    Ethernet.SRIOV.VFS.MAX_TX_RATE: re.compile(r"max_tx_rate ([0-9]+)"),
 }
 
 
@@ -148,56 +137,73 @@ def _has_sriov_capability(ifname):
 
 def get_info(device):
     """
-    Provide the current active SR-IOV total-vfs runtime value and the live
-    configuration for each VF for a device.
+    Provide the current active SR-IOV runtime values
     """
-    info = {}
-    sriov_config = {}
+    sriov_running_info = {}
 
     ifname = device.get_iface()
     numvf_path = f"/sys/class/net/{ifname}/device/sriov_numvfs"
     try:
         with open(numvf_path) as f:
-            sriov_config[Ethernet.SRIOV.TOTAL_VFS] = int(f.read())
+            sriov_running_info[Ethernet.SRIOV.TOTAL_VFS] = int(f.read())
     except FileNotFoundError:
-        return info
+        return sriov_running_info
 
-    connection = nm_connection.ConnectionProfile()
-    connection.import_by_device(device)
-    if not connection.profile:
-        info[Ethernet.SRIOV_SUBTREE] = sriov_config
-        return info
+    if sriov_running_info[Ethernet.SRIOV.TOTAL_VFS]:
+        sriov_running_info[Ethernet.SRIOV.VFS_SUBTREE] = _get_sriov_vfs_info(
+            ifname
+        )
+    else:
+        sriov_running_info[Ethernet.SRIOV.VFS_SUBTREE] = []
 
-    sriov_setting = connection.profile.get_setting_by_name(
-        nmclient.NM.SETTING_SRIOV_SETTING_NAME
+    return {Ethernet.SRIOV_SUBTREE: sriov_running_info}
+
+
+def _get_sriov_vfs_info(ifname):
+    """
+    This is a workaround to get the VFs configuration from runtime.
+    Ref: https://bugzilla.redhat.com/1777520
+    """
+    proc = subprocess.run(
+        ("ip", "link", "show", ifname),
+        stdout=subprocess.PIPE,
+        encoding="utf-8",
     )
+    iplink_output = proc.stdout
 
-    if sriov_setting:
-        vfs_config = _get_info_sriov_vfs_config(sriov_setting)
-        sriov_config[Ethernet.SRIOV.VFS_SUBTREE] = vfs_config
-
-        info[Ethernet.SRIOV_SUBTREE] = sriov_config
-
-    return info
-
-
-def _get_info_sriov_vfs_config(sriov_setting):
-    vfs_config = []
-    vfs_setting = sriov_setting.props.vfs
-    for vf in vfs_setting:
-        vf_config = {}
-        vf_config[Ethernet.SRIOV.VFS.ID] = vf.get_index()
-        for nm_attribute in SRIOV_NM_TO_NMSTATE_MAP.keys():
-            _get_nm_attribute(vf, vf_config, nm_attribute)
-
-        vfs_config.append(vf_config)
+    # This is ignoring the first two line of the ip link output because they
+    # are about the PF and we don't need them.
+    vfs = iplink_output.splitlines(False)[2:]
+    vfs_config = [
+        vf_config for vf_config in _parse_ip_link_output_for_vfs(vfs)
+    ]
 
     return vfs_config
 
 
-def _get_nm_attribute(vf_object, vf_config, nm_attribute):
-    nmstate_key, nm_variant = SRIOV_NM_TO_NMSTATE_MAP[nm_attribute]
-    if vf_object.get_attribute(nm_attribute) is not None:
-        vf_config[nmstate_key] = nm_variant(
-            vf_object.get_attribute(nm_attribute)
-        )
+def _parse_ip_link_output_for_vfs(vfs):
+    for vf_id, vf in enumerate(vfs):
+        vf_config = _parse_ip_link_output_options_for_vf(vf)
+        vf_config[Ethernet.SRIOV.VFS.ID] = vf_id
+        yield vf_config
+
+
+def _parse_ip_link_output_options_for_vf(vf):
+    vf_options = {}
+    for option, expr in SRIOV_NMSTATE_TO_REGEX.items():
+        match_expr = expr.search(vf)
+        if match_expr:
+            if option == Ethernet.SRIOV.VFS.MAC_ADDRESS:
+                value = match_expr.group(0)
+            else:
+                value = match_expr.group(1)
+
+            if value.isdigit():
+                value = int(value)
+            elif value == "on":
+                value = True
+            elif value == "off":
+                value = False
+            vf_options[option] = value
+
+    return vf_options
