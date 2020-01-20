@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019 Red Hat, Inc.
+# Copyright (c) 2019-2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -23,6 +23,7 @@ from distutils.version import StrictVersion
 
 from libnmstate import nm
 from libnmstate import schema
+from libnmstate.nm.nmclient import nmclient_context
 
 from .testlib import mainloop
 from .testlib import MainloopTestError
@@ -55,7 +56,6 @@ def _test_interface_mtu_change(apply_operation):
             apply_operation=apply_operation,
         )
 
-    nm.nmclient.client(refresh=True)
     wired_current_state = _get_wired_current_state(ETH1)
 
     assert wired_current_state == {
@@ -81,7 +81,6 @@ def _test_interface_mac_change(apply_operation):
             apply_operation=apply_operation,
         )
 
-    nm.nmclient.client(refresh=True)
     wired_current_state = _get_wired_current_state(ETH1)
 
     assert wired_current_state == {
@@ -90,6 +89,7 @@ def _test_interface_mac_change(apply_operation):
     }
 
 
+@nmclient_context
 def _modify_interface(wired_state, apply_operation):
     conn = nm.connection.ConnectionProfile()
     conn.import_by_id(ETH1)
@@ -103,6 +103,7 @@ def _modify_interface(wired_state, apply_operation):
     apply_operation(nmdev, conn.profile)
 
 
+@nmclient_context
 def _get_wired_current_state(ifname):
     nmdev = nm.device.get_device_by_name(ifname)
     return nm.wired.get_info(nmdev) if nmdev else {}

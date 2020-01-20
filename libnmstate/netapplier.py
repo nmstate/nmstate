@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2019 Red Hat, Inc.
+# Copyright (c) 2018-2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -26,6 +26,7 @@ import time
 from libnmstate import metadata
 from libnmstate import netinfo
 from libnmstate import nm
+from libnmstate.nm.nmclient import nmclient_context
 from libnmstate import schema
 from libnmstate import state
 from libnmstate import sysctl
@@ -40,6 +41,7 @@ from libnmstate.nm import nmclient
 MAINLOOP_TIMEOUT = 35
 
 
+@nmclient_context
 def apply(desired_state, verify_change=True, commit=True, rollback_timeout=60):
     """
     Apply the desired state

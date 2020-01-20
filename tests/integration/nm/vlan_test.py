@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2019 Red Hat, Inc.
+# Copyright (c) 2018-2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -20,6 +20,7 @@
 from contextlib import contextmanager
 
 from libnmstate import nm
+from libnmstate.nm.nmclient import nmclient_context
 from libnmstate.schema import VLAN
 
 from .testlib import mainloop
@@ -50,13 +51,14 @@ def _vlan_interface(state):
         _delete_vlan(_get_vlan_ifname(state))
 
 
+@nmclient_context
 def _get_vlan_current_state(vlan_desired_state):
-    nm.nmclient.client(refresh=True)
     ifname = _get_vlan_ifname(vlan_desired_state)
     nmdev = nm.device.get_device_by_name(ifname)
     return nm.vlan.get_info(nmdev) if nmdev else {}
 
 
+@nmclient_context
 def _create_vlan(vlan_desired_state):
     ifname = _get_vlan_ifname(vlan_desired_state)
     con_setting = nm.connection.ConnectionSetting()
@@ -79,6 +81,7 @@ def _create_vlan(vlan_desired_state):
         nm.device.activate(connection_id=ifname)
 
 
+@nmclient_context
 def _delete_vlan(devname):
     nmdev = nm.device.get_device_by_name(devname)
     with mainloop():

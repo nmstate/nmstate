@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2019 Red Hat, Inc.
+# Copyright (c) 2018-2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -23,6 +23,7 @@ import pytest
 
 from libnmstate import nm
 from libnmstate import schema
+from libnmstate.nm.nmclient import nmclient_context
 from libnmstate.schema import LinuxBridge as LB
 
 from ..testlib import iproutelib
@@ -149,8 +150,8 @@ def _modify_ports(ports_state):
         _attach_port_to_bridge(port_state)
 
 
+@nmclient_context
 def _get_bridge_current_state():
-    nm.nmclient.client(refresh=True)
     nmdev = nm.device.get_device_by_name(BRIDGE0)
     return nm.bridge.get_info(nmdev) if nmdev else {}
 

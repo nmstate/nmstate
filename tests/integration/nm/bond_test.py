@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019 Red Hat, Inc.
+# Copyright (c) 2019-2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -21,6 +21,7 @@ from contextlib import contextmanager
 
 from libnmstate import nm
 from libnmstate import schema
+from libnmstate.nm.nmclient import nmclient_context
 from libnmstate.schema import Interface
 
 from .testlib import mainloop_run
@@ -74,8 +75,8 @@ def _bond_interface(name, options):
         _delete_bond(name)
 
 
+@nmclient_context
 def _get_bond_current_state(name):
-    nm.nmclient.client(refresh=True)
     nmdev = nm.device.get_device_by_name(name)
     nm_bond_info = nm.bond.get_bond_info(nmdev) if nmdev else {}
     return _convert_slaves_devices_to_iface_names(nm_bond_info)

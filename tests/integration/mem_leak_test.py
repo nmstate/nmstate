@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2020 Red Hat, Inc.
+# Copyright (c) 2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -16,33 +16,17 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
-from contextlib import contextmanager
-import functools
 
-from libnmstate import nm
-from libnmstate.nm.nmclient import nmclient_context
+import libnmstate
+import os
 
 
-class MainloopTestError(Exception):
-    pass
+def get_current_open_fd():
+    return len(os.listdir("/proc/self/fd"))
 
 
-@contextmanager
-def mainloop():
-    mloop = nm.nmclient.mainloop()
-    yield
-    success = mloop.run(timeout=15)
-    if not success:
-        nm.nmclient.mainloop(refresh=True)
-        raise MainloopTestError(mloop.error)
-
-
-def mainloop_run(func):
-    @nmclient_context
-    @functools.wraps(func)
-    def wrapper_mainloop(*args, **kwargs):
-        with mainloop():
-            ret = func(*args, **kwargs)
-        return ret
-
-    return wrapper_mainloop
+def test_libnmstae_show_fd_leak():
+    original_fd = get_current_open_fd()
+    for x in range(0, 100):
+        libnmstate.show()
+    assert get_current_open_fd() == original_fd
