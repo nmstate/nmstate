@@ -2,13 +2,10 @@
 dist: bionic
 language: generic
 env:
-    global:
-        - use_coveralls=true
     matrix:
         - CONTAINER_IMAGE=nmstate/centos8-nmstate-dev
           testflags="--test-type integ --pytest-args='-x'"
           use_codecov=true
-          use_coveralls=false
         - CONTAINER_IMAGE=nmstate/centos8-nmstate-dev
           testflags="--test-type integ --pytest-args='-x'
               --copr networkmanager/NetworkManager-1.22-git"
@@ -23,6 +20,7 @@ env:
           testflags="--test-type lint"
         - CONTAINER_IMAGE=nmstate/fedora-nmstate-dev
           testflags="--test-type unit_py36"
+          use_coveralls=true
         - CONTAINER_IMAGE=nmstate/fedora-nmstate-dev
           testflags="--test-type unit_py37"
         - CONTAINER_IMAGE=nmstate/fedora-nmstate-dev
