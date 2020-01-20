@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019 Red Hat, Inc.
+# Copyright (c) 2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -24,6 +24,7 @@ import pytest
 import libnmstate
 from libnmstate import nm
 from libnmstate import iplib
+from libnmstate.nm.nmclient import nmclient_context
 from libnmstate.schema import RouteRule
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
@@ -186,8 +187,8 @@ def _check_ip_rules_exist_in_os(rules):
         )
 
 
+@nmclient_context
 def _assert_route_rules(expected_rules):
-    nm.nmclient.client(refresh=True)
     cur_rules = (
         nm.ipv4.get_routing_rule_config() + nm.ipv6.get_routing_rule_config()
     )

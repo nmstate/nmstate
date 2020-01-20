@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2019 Red Hat, Inc.
+# Copyright (c) 2018-2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -28,7 +28,6 @@ from .active_connection import ActiveConnection
 class ConnectionProfile:
     def __init__(self, profile=None):
         self._con_profile = profile
-        self._nmclient = nmclient.client()
         self._mainloop = nmclient.mainloop()
         self._nmdevice = None
         self._con_id = None
@@ -49,15 +48,17 @@ class ConnectionProfile:
         if con_id:
             self.con_id = con_id
         if self.con_id:
-            self.profile = self._nmclient.get_connection_by_id(self.con_id)
+            client = nmclient.client()
+            self.profile = client.get_connection_by_id(self.con_id)
 
     def update(self, con_profile):
         self.profile.replace_settings_from_connection(con_profile.profile)
 
     def add(self, save_to_disk=True):
         user_data = self._mainloop
+        client = nmclient.client()
         self._mainloop.push_action(
-            self._nmclient.add_connection_async,
+            client.add_connection_async,
             self.profile,
             save_to_disk,
             self._mainloop.cancellable,
@@ -147,7 +148,8 @@ class ConnectionProfile:
 
         specific_object = None
         user_data = cancellable
-        self._nmclient.activate_connection_async(
+        client = nmclient.client()
+        client.activate_connection_async(
             self.profile,
             self.nmdevice,
             specific_object,
