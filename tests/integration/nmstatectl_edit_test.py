@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2019 Red Hat, Inc.
+# Copyright (c) 2018-2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -20,7 +20,7 @@
 import os
 
 
-from .testlib import cmd as libcmd
+from .testlib import cmdlib
 
 
 RC_SUCCESS = 0
@@ -33,7 +33,7 @@ def test_edit_abort():
     runenv.update(env)
 
     cmds = ["nmstatectl", "edit", "lo"]
-    ret = libcmd.exec_cmd(cmds, env=runenv)
+    ret = cmdlib.exec_cmd(cmds, env=runenv)
     rc, out, err = ret
 
     assert_rc(rc, os.EX_DATAERR, ret)
@@ -46,7 +46,7 @@ def test_edit_no_change_eth1():
     runenv.update(env)
 
     cmds = ["nmstatectl", "edit", "eth1"]
-    ret = libcmd.exec_cmd(cmds, env=runenv)
+    ret = cmdlib.exec_cmd(cmds, env=runenv)
     rc, out, err = ret
 
     assert_rc(rc, RC_SUCCESS, ret)

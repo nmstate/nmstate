@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019 Red Hat, Inc.
+# Copyright (c) 2019-2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -21,7 +21,7 @@ import json
 import logging
 
 from libnmstate import iplib
-from . import cmd as libcmd
+from . import cmdlib
 
 
 def ip_rule_exist_in_os(ip_from, ip_to, priority, table):
@@ -32,7 +32,7 @@ def ip_rule_exist_in_os(ip_from, ip_to, priority, table):
         ip_to and iplib.is_ipv6_address(ip_to)
     ):
         cmds.append("-6")
-    result = libcmd.exec_cmd(cmds + ["--json", "rule"])
+    result = cmdlib.exec_cmd(cmds + ["--json", "rule"])
     logging.debug(f"Current ip rules in OS: {result[1]}")
     assert result[0] == 0
     current_rules = json.loads(result[1])

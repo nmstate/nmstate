@@ -30,7 +30,7 @@ from libnmstate.schema import OVSBridge
 from libnmstate.error import NmstateLibnmError
 
 from .testlib import assertlib
-from .testlib import cmd as libcmd
+from .testlib import cmdlib
 from .testlib.ovslib import Bridge
 from .testlib.vlan import vlan_interface
 
@@ -143,13 +143,13 @@ def test_nm_ovs_plugin_missing():
 
 @contextmanager
 def disable_nm_ovs_plugin():
-    libcmd.exec_cmd(DNF_REMOVE_NM_OVS_CMD)
-    libcmd.exec_cmd(SYSTEMCTL_RESTART_NM_CMD)
+    cmdlib.exec_cmd(DNF_REMOVE_NM_OVS_CMD)
+    cmdlib.exec_cmd(SYSTEMCTL_RESTART_NM_CMD)
     try:
         yield
     finally:
-        libcmd.exec_cmd(DNF_INSTALL_NM_OVS_CMD)
-        libcmd.exec_cmd(SYSTEMCTL_RESTART_NM_CMD)
+        cmdlib.exec_cmd(DNF_INSTALL_NM_OVS_CMD)
+        cmdlib.exec_cmd(SYSTEMCTL_RESTART_NM_CMD)
 
 
 @pytest.fixture

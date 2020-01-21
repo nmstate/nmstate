@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019 Red Hat, Inc.
+# Copyright (c) 2019-2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -28,7 +28,7 @@ from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import InterfaceState
 
-from .testlib import cmd as libcmd
+from .testlib import cmdlib
 
 
 DUMMY0_IFNAME = "dummy0"
@@ -106,7 +106,7 @@ def dummy_interface(ifname):
 
 @pytest.fixture
 def dummy_inactive_profile():
-    libcmd.exec_cmd(NMCLI_CON_ADD_DUMMY_CMD)
+    cmdlib.exec_cmd(NMCLI_CON_ADD_DUMMY_CMD)
     profile_exists = _profile_exists(
         DUMMY_PROFILE_DIRECTORY + "testProfile.nmconnection"
     )
@@ -114,13 +114,13 @@ def dummy_inactive_profile():
     try:
         yield DUMMY0_IFNAME
     finally:
-        libcmd.exec_cmd(_nmcli_delete_connection("testProfile"))
+        cmdlib.exec_cmd(_nmcli_delete_connection("testProfile"))
 
 
 @contextmanager
 def create_inactive_profile(con_name):
-    libcmd.exec_cmd(_nmcli_deactivate_connection(con_name))
-    libcmd.exec_cmd(NMCLI_CON_ADD_ETH_CMD)
+    cmdlib.exec_cmd(_nmcli_deactivate_connection(con_name))
+    cmdlib.exec_cmd(NMCLI_CON_ADD_ETH_CMD)
     profile_exists = _profile_exists(
         ETH_PROFILE_DIRECTORY + "ifcfg-testProfile"
     )
@@ -128,7 +128,7 @@ def create_inactive_profile(con_name):
     try:
         yield
     finally:
-        libcmd.exec_cmd(_nmcli_delete_connection("testProfile"))
+        cmdlib.exec_cmd(_nmcli_delete_connection("testProfile"))
 
 
 def _nmcli_deactivate_connection(con_name):
