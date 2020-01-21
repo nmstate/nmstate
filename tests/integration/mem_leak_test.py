@@ -19,6 +19,7 @@
 
 import libnmstate
 import os
+import time
 
 
 def get_current_open_fd():
@@ -29,4 +30,5 @@ def test_libnmstae_show_fd_leak():
     original_fd = get_current_open_fd()
     for x in range(0, 100):
         libnmstate.show()
+    time.sleep(0.1)  # Wait sysfs/proc been updated.
     assert get_current_open_fd() == original_fd
