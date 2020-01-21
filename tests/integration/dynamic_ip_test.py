@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2019 Red Hat, Inc.
+# Copyright (c) 2018-2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -36,7 +36,7 @@ from libnmstate.schema import Route as RT
 from libnmstate.error import NmstateNotImplementedError
 
 from .testlib import assertlib
-from .testlib import cmd as libcmd
+from .testlib import cmdlib
 from .testlib import bondlib
 from .testlib import ifacelib
 from .testlib import statelib
@@ -117,7 +117,7 @@ def dhcp_env():
 
         with open(DNSMASQ_CONF_PATH, "w") as fd:
             fd.write(DNSMASQ_CONF_STR)
-        assert libcmd.exec_cmd(["systemctl", "restart", "dnsmasq"])[0] == 0
+        assert cmdlib.exec_cmd(["systemctl", "restart", "dnsmasq"])[0] == 0
 
         yield
     finally:
@@ -574,7 +574,7 @@ def test_ipv6_autoconf_only(dhcpcli_up):
 
 def _create_veth_pair():
     assert (
-        libcmd.exec_cmd(
+        cmdlib.exec_cmd(
             [
                 "ip",
                 "link",
@@ -592,14 +592,14 @@ def _create_veth_pair():
 
 
 def _remove_veth_pair():
-    libcmd.exec_cmd(["ip", "link", "del", "dev", DHCP_SRV_NIC])
+    cmdlib.exec_cmd(["ip", "link", "del", "dev", DHCP_SRV_NIC])
 
 
 def _setup_dhcp_nics():
-    assert libcmd.exec_cmd(["ip", "link", "set", DHCP_SRV_NIC, "up"])[0] == 0
-    assert libcmd.exec_cmd(["ip", "link", "set", DHCP_CLI_NIC, "up"])[0] == 0
+    assert cmdlib.exec_cmd(["ip", "link", "set", DHCP_SRV_NIC, "up"])[0] == 0
+    assert cmdlib.exec_cmd(["ip", "link", "set", DHCP_CLI_NIC, "up"])[0] == 0
     assert (
-        libcmd.exec_cmd(
+        cmdlib.exec_cmd(
             [
                 "ip",
                 "addr",
@@ -612,7 +612,7 @@ def _setup_dhcp_nics():
         == 0
     )
     assert (
-        libcmd.exec_cmd(
+        cmdlib.exec_cmd(
             ["nmcli", "device", "set", DHCP_CLI_NIC, "managed", "yes"]
         )[0]
         == 0
@@ -625,7 +625,7 @@ def _setup_dhcp_nics():
         fd.write("0")
 
     assert (
-        libcmd.exec_cmd(
+        cmdlib.exec_cmd(
             [
                 "ip",
                 "addr",
@@ -639,7 +639,7 @@ def _setup_dhcp_nics():
     )
 
     assert (
-        libcmd.exec_cmd(
+        cmdlib.exec_cmd(
             [
                 "ip",
                 "addr",
@@ -654,7 +654,7 @@ def _setup_dhcp_nics():
 
 
 def _clean_up():
-    libcmd.exec_cmd(["systemctl", "stop", "dnsmasq"])
+    cmdlib.exec_cmd(["systemctl", "stop", "dnsmasq"])
     _remove_veth_pair()
     try:
         os.unlink(DNSMASQ_CONF_PATH)

@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019 Red Hat, Inc.
+# Copyright (c) 2019-2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -25,7 +25,7 @@ import libnmstate
 from libnmstate.error import NmstateVerificationError
 
 from .testlib import assertlib
-from .testlib import cmd as libcmd
+from .testlib import cmdlib
 from .testlib import statelib
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
@@ -37,11 +37,11 @@ DUMMY_INTERFACE = "dummy_test"
 
 @pytest.fixture(scope="function")
 def ip_link_dummy():
-    libcmd.exec_cmd(["ip", "link", "add", DUMMY_INTERFACE, "type", "dummy"])
+    cmdlib.exec_cmd(["ip", "link", "add", DUMMY_INTERFACE, "type", "dummy"])
     try:
         yield
     finally:
-        libcmd.exec_cmd(["ip", "link", "del", DUMMY_INTERFACE])
+        cmdlib.exec_cmd(["ip", "link", "del", DUMMY_INTERFACE])
 
 
 @contextmanager

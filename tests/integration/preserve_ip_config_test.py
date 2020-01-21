@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2019 Red Hat, Inc.
+# Copyright (c) 2018-2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -28,7 +28,7 @@ from libnmstate.schema import InterfaceType
 from libnmstate.schema import InterfaceState
 
 from .testlib import statelib
-from .testlib import cmd as libcmd
+from .testlib import cmdlib
 
 _IPV4_EXTRA_CONFIG = "ipv4.dad-timeout"
 _IPV4_EXTRA_VALUE = "0"
@@ -97,7 +97,7 @@ def _get_nm_profile_uuid(iface_name):
 
 
 def _get_cur_extra_ip_config(uuid, key):
-    rc, output, _ = libcmd.exec_cmd(
+    rc, output, _ = cmdlib.exec_cmd(
         ["nmcli", "--get-values", key, "connection", "show", uuid]
     )
     assert rc == 0
@@ -116,7 +116,7 @@ def _extra_ip_config(uuid, key, value):
 
 def _apply_extra_ip_config(uuid, key, value):
     assert (
-        libcmd.exec_cmd(["nmcli", "connection", "modify", uuid, key, value])[0]
+        cmdlib.exec_cmd(["nmcli", "connection", "modify", uuid, key, value])[0]
         == 0
     )
 

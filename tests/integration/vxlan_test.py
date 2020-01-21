@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019 Red Hat, Inc.
+# Copyright (c) 2019-2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -28,9 +28,9 @@ from libnmstate.schema import Interface
 
 from .testlib import assertlib
 from .testlib.bondlib import bond_interface
-from .testlib.cmd import RC_SUCCESS
-from .testlib.cmd import exec_cmd
-from .testlib.cmd import format_exec_cmd_result
+from .testlib.cmdlib import RC_SUCCESS
+from .testlib.cmdlib import exec_cmd
+from .testlib.cmdlib import format_exec_cmd_result
 from .testlib.vxlan import VxlanState
 from .testlib.vxlan import vxlan_interfaces
 from .testlib.vxlan import vxlans_absent
