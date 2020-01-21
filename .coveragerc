@@ -1,9 +1,9 @@
 [paths]
 source =
     .
-    /workspace/nmstate/.tox/check-py36/lib/python3.6/site-packages
-    /workspace/nmstate/.tox/check-py37/lib/python3.7/site-packages
-    /workspace/nmstate/.tox/check-py38/lib/python3.8/site-packages
+    /workspace/nmstate/.tox/py36/lib/python3.6/site-packages
+    /workspace/nmstate/.tox/py37/lib/python3.7/site-packages
+    /workspace/nmstate/.tox/py38/lib/python3.8/site-packages
     /usr/lib/python3.6/site-packages
     /usr/lib/python3.7/site-packages
     /usr/lib/python3.8/site-packages
