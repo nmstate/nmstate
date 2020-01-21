@@ -125,6 +125,22 @@ def test_vlan_as_ovs_bridge_slave(vlan_on_eth1):
         assertlib.assert_state_match(state)
 
 
+@pytest.mark.xfail(
+    raises=(NmstateLibnmError, AssertionError),
+    reason="https://bugzilla.redhat.com/1724901",
+)
+def test_ovs_interface_with_longest_name():
+    bridge = Bridge(BRIDGE1)
+    ovs_interface_name = "ovs123456789012"
+    bridge.add_internal_port(ovs_interface_name, ipv4_state={})
+
+    with bridge.create() as state:
+        assertlib.assert_state_match(state)
+
+    assertlib.assert_absent(BRIDGE1)
+    assertlib.assert_absent(ovs_interface_name)
+
+
 def test_nm_ovs_plugin_missing():
     with disable_nm_ovs_plugin():
         with pytest.raises(NmstateLibnmError):

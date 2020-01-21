@@ -321,7 +321,12 @@ def prepare_proxy_ifaces_desired_state(ifaces_desired_state):
         )
         new_ifaces_desired_state.append(port_iface_desired_state)
         # The "visible" slave/interface needs to point to the port profile
-        iface_desired_state[MASTER_METADATA] = port_iface_desired_state[
+
+        # The OVS port does not have actual interface in kernel, but
+        # its length still limited by NM connection.interface-name.
+        # https://bugzilla.redhat.com/show_bug.cgi?id=1788432
+        # As workaround, just use the ovs-interface name.
+        iface_desired_state[MASTER_METADATA] = iface_desired_state[
             Interface.NAME
         ]
         iface_desired_state[MASTER_TYPE_METADATA] = ovs.PORT_TYPE
@@ -359,9 +364,20 @@ def _build_connection_profile(iface_desired_state, base_con_profile=None):
     if base_profile:
         con_setting.import_by_profile(base_con_profile)
     else:
+        prefix_len = len(ovs.PORT_PROFILE_PREFIX)
+        iface_name = (
+            iface_desired_state[Interface.NAME][prefix_len:]
+            # The OVS port does not have actual interface in kernel, but
+            # its length still limited by NM connection.interface-name.
+            # https://bugzilla.redhat.com/show_bug.cgi?id=1788432
+            # As workaround, just use the ovs-interface name.
+            if iface_desired_state[Interface.TYPE] == InterfaceType.OVS_PORT
+            else iface_desired_state[Interface.NAME]
+        )
+
         con_setting.create(
             con_name=iface_desired_state[Interface.NAME],
-            iface_name=iface_desired_state[Interface.NAME],
+            iface_name=iface_name,
             iface_type=iface_type,
         )
     master = iface_desired_state.get(MASTER_METADATA)
