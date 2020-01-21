@@ -214,6 +214,10 @@ function modprobe_ovs {
     lsmod | grep -q ^openvswitch || modprobe openvswitch || { echo 1>&2 "Please run 'modprobe openvswitch' as root"; exit 1; }
 }
 
+function modprobe_team {
+    lsmod | grep -q ^team || modprobe team || { echo 1>&2 "Please run 'modprobe team' as root"; exit 1; }
+}
+
 options=$(getopt --options "" \
     --long customize:,pytest-args:,help,debug-shell,test-type:,el8,copr:,artifacts-dir:\
     -- "${@}")
@@ -277,6 +281,7 @@ done
 ${CONTAINER_CMD} --version && cat /etc/resolv.conf
 
 modprobe_ovs
+modprobe_team
 
 if [[ "$CI" == "true" ]];then
     rebuild_container_images
@@ -316,3 +321,4 @@ if [[ "$CI" != "true" ]];then
 fi
 install_nmstate
 run_tests
+lsmod
