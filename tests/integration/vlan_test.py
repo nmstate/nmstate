@@ -123,6 +123,8 @@ def test_two_vlans_on_eth1_change_mtu_rollback(eth1_up):
     libnmstate.apply(desired_state, commit=False)
     libnmstate.rollback()
 
+    time.sleep(5)  # Give some time for NetworkManager to rollback
+
     eth1_vlan_iface_cstate = statelib.show_only((VLAN_IFNAME,))
     assert eth1_vlan_iface_cstate[Interface.KEY][0][Interface.MTU] == 2000
 

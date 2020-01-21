@@ -24,6 +24,7 @@ import pytest
 from distutils.version import StrictVersion
 
 from libnmstate import nm
+from libnmstate.nm.nmclient import nmclient_context
 from libnmstate.schema import Interface
 from libnmstate.schema import VXLAN
 
@@ -110,14 +111,15 @@ def _delete_vxlan(devname):
     nm.device.delete_device(nmdev)
 
 
+@nmclient_context
 def _get_vxlan_current_state(ifname):
     nmdev = _get_vxlan_device(ifname)
     return nm.vxlan.get_info(nmdev) if nmdev else {}
 
 
 def _get_vxlan_device(ifname):
-    nm.nmclient.client(refresh=True)
-    return nm.device.get_device_by_name(ifname)
+    dev = nm.device.get_device_by_name(ifname)
+    return dev
 
 
 def _vxlan_ifname(state):

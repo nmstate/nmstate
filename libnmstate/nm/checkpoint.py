@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2019 Red Hat, Inc.
+# Copyright (c) 2018-2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -21,7 +21,8 @@ import logging
 
 import dbus
 
-import libnmstate.nm.nmclient
+from libnmstate.nm.nmclient import nmclient_context
+from libnmstate.nm.nmclient import client
 
 
 DBUS_STD_PROPERTIES_IFNAME = "org.freedesktop.DBus.Properties"
@@ -76,10 +77,11 @@ class _NMDbusManager:
         self.interface = dbus.Interface(mng_proxy, _NMDbusManager.IF_NAME)
 
 
+@nmclient_context
 def get_checkpoints():
-    nmclient = libnmstate.nm.nmclient.client(refresh=True)
-
-    return [c.get_path() for c in nmclient.get_checkpoints()]
+    nm_client = client()
+    checkpoints = [c.get_path() for c in nm_client.get_checkpoints()]
+    return checkpoints
 
 
 class CheckPoint:

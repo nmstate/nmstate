@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2019 Red Hat, Inc.
+# Copyright (c) 2018-2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -21,6 +21,7 @@ from operator import itemgetter
 from libnmstate import nm
 from libnmstate import validator
 from libnmstate.nm import dns as nm_dns
+from libnmstate.nm.nmclient import nmclient_context
 from libnmstate.schema import Constants
 from libnmstate.schema import DNS
 from libnmstate.schema import Interface
@@ -28,6 +29,7 @@ from libnmstate.schema import Route
 from libnmstate.schema import RouteRule
 
 
+@nmclient_context
 def show(include_status_data=False):
     """
     Reports configuration and status data on the system.
@@ -38,9 +40,8 @@ def show(include_status_data=False):
     When include_status_data is set, both are reported, otherwise only the
     configuration data is reported.
     """
-    client = nm.nmclient.client(refresh=True)
-
-    report = {Constants.INTERFACES: interfaces()}
+    client = nm.nmclient.client()
+    report = {Constants.INTERFACES: _interfaces()}
     if include_status_data:
         report["capabilities"] = capabilities()
 
@@ -81,10 +82,8 @@ def capabilities():
     return list(caps)
 
 
-def interfaces():
+def _interfaces():
     info = []
-
-    nm.nmclient.client(refresh=True)
 
     devices_info = [
         (dev, nm.device.get_device_common_info(dev))

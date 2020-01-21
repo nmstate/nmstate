@@ -22,6 +22,7 @@ from contextlib import contextmanager
 import pytest
 
 from libnmstate import nm
+from libnmstate.nm.nmclient import nmclient_context
 from libnmstate.schema import Interface
 from libnmstate.schema import OVSBridge as OB
 
@@ -125,8 +126,8 @@ def _bridge_interface(state):
             _delete_iface(p[OB.Port.NAME])
 
 
+@nmclient_context
 def _get_bridge_current_state():
-    nm.nmclient.client(refresh=True)
     state = {}
     nmdev = nm.device.get_device_by_name(BRIDGE0)
     if nmdev:
@@ -138,6 +139,7 @@ def _get_bridge_current_state():
     return state
 
 
+@nmclient_context
 def _create_bridge(bridge_desired_state):
     br_options = nm.ovs.translate_bridge_options(bridge_desired_state)
     iface_bridge_settings = _get_iface_bridge_settings(br_options)
@@ -243,6 +245,7 @@ def _create_internal_iface_setting(iface_name, master_name):
     )
 
 
+@nmclient_context
 def _delete_iface(devname):
     nmdev = nm.device.get_device_by_name(devname)
     with mainloop():
