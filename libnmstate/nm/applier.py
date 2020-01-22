@@ -285,8 +285,9 @@ def _get_ovs_bridge_port_devices(iface_state):
         OvsB.PORT_SUBTREE, []
     ):
         ports.append(ovs.PORT_PROFILE_PREFIX + port[OvsB.Port.NAME])
-        if OvsB.Port.LINK_AGGREGATION_SUBTREE in port:
-            for slave in port[OvsB.Port.LINK_AGGREGATION_SUBTREE].get(
+        la_subtree = port.get(OvsB.Port.LINK_AGGREGATION_SUBTREE)
+        if la_subtree:
+            for slave in la_subtree.get(
                 OvsB.Port.LinkAggregation.SLAVES_SUBTREE, []
             ):
                 ifaces.append(slave[OvsB.Port.LinkAggregation.Slave.NAME])
@@ -318,22 +319,21 @@ def prepare_proxy_ifaces_desired_state(ifaces_desired_state):
     new_ifaces_desired_state = []
     for iface_desired_state in ifaces_desired_state:
         master_type = iface_desired_state.get(MASTER_TYPE_METADATA)
-        if master_type is not None:
-            if master_type == ovs.BRIDGE_TYPE:
-                _prepare_proxy_ovs_ifaces(
-                    iface_desired_state, new_ifaces_desired_state
-                )
+        if master_type == ovs.BRIDGE_TYPE:
+            _prepare_proxy_ovs_ifaces(
+                iface_desired_state, new_ifaces_desired_state
+            )
 
     return new_ifaces_desired_state
 
 
 def _prepare_proxy_ovs_ifaces(iface_desired_state, new_ifaces_desired_state):
-    bridge_port_state = iface_desired_state.get(BRPORT_OPTIONS_METADATA)
-    if bridge_port_state is None:
+    bridge_port_options = iface_desired_state.get(BRPORT_OPTIONS_METADATA)
+    if bridge_port_options is None:
         return
 
     port_desired_state = _create_ovs_port_desired_state(
-        iface_desired_state, bridge_port_state
+        iface_desired_state, bridge_port_options
     )
 
     # Bond port need to be added only once per all their slaves

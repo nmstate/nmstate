@@ -105,10 +105,10 @@ def translate_bridge_options(iface_state):
     return br_opts
 
 
-def translate_port_options(bridge_port_state):
+def translate_port_options(port_state):
     port_opts = {}
 
-    bond_mode = bridge_port_state.get("link-aggregation", {}).get("mode")
+    bond_mode = port_state.get("link-aggregation", {}).get("mode")
     if bond_mode:
         port_opts["bond-mode"] = bond_mode
 

@@ -32,8 +32,6 @@ from functools import total_ordering
 from ipaddress import ip_address
 from operator import itemgetter
 
-import six
-
 from libnmstate import iplib
 from libnmstate import metadata
 from libnmstate.error import NmstateNotImplementedError
@@ -581,7 +579,7 @@ class State:
             ifstate.get("link-aggregation", {}).get("slaves", []).sort()
 
     def _sort_ovs_lag_slaves(self):
-        for ifstate in six.viewvalues(self.interfaces):
+        for ifstate in self.interfaces.values():
             for port in ifstate.get(OVSBridge.CONFIG_SUBTREE, {}).get(
                 OVSBridge.PORT_SUBTREE, []
             ):

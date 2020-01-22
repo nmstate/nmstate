@@ -62,7 +62,7 @@ def generate_ifaces_metadata(desired_state, current_state):
         desired_state.interfaces,
         current_state.interfaces,
         master_type="ovs-bridge",
-        get_slaves_func=_get_interfaces_from_ovs_bridge_state,
+        get_slaves_func=_get_ovs_interfaces_from_interface_state,
         set_metadata_func=_set_ovs_bridge_interfaces_metadata,
     )
     _generate_link_master_metadata(
@@ -101,54 +101,55 @@ def _set_ovs_bridge_interfaces_metadata(master_state, interface_state):
     OVS bridges.
     """
     _set_common_slaves_metadata(master_state, interface_state)
-    interface_state[BRPORT_OPTIONS] = _find_ovs_bridge_port_for_interface(
+    interface_state[BRPORT_OPTIONS] = _lookup_ovs_port_by_interface(
         master_state, interface_state[Interface.NAME],
     )
 
 
-def _find_ovs_bridge_port_for_interface(bridge_state, interface_name):
+def _lookup_ovs_port_by_interface(bridge_state, interface_name):
     """
-    Find bridge's port for given interface name. For simple ports connected
-    to a single system or internal interface, the interface name matches the
-    port name. When looking for a slave of a link aggregation port, we return
-    the whole parent port.
+    Return the OVS port state given an interface name.
+    For a link aggregation port, any of its slaves will match the port.
     """
     bridge_subtree = bridge_state.get(OVSBridge.CONFIG_SUBTREE, {})
-    ports = bridge_subtree.get(OVSBridge.PORT_SUBTREE, [])
+    ports = bridge_subtree.get(OVSBridge.PORT_SUBTREE, ())
     for port in ports:
-        if OVSBridge.Port.LINK_AGGREGATION_SUBTREE in port:
-            la_subtree = port[OVSBridge.Port.LINK_AGGREGATION_SUBTREE]
-            slaves = la_subtree.get(
-                OVSBridge.Port.LinkAggregation.SLAVES_SUBTREE, []
-            )
-            for slave in slaves:
-                if (
-                    slave[OVSBridge.Port.LinkAggregation.Slave.NAME]
-                    == interface_name
-                ):
-                    return port
-        else:
-            if port[OVSBridge.Port.NAME] == interface_name:
-                return port
+        if _is_iface_a_slave_of(interface_name, port):
+            return port
+        if port[OVSBridge.Port.NAME] == interface_name:
+            return port
     return None
 
 
-def _get_interfaces_from_ovs_bridge_state(bridge_state, default=()):
+def _is_iface_a_slave_of(interface_name, port):
+    la_subtree = port.get(OVSBridge.Port.LINK_AGGREGATION_SUBTREE)
+    if la_subtree:
+        slaves = la_subtree.get(
+            OVSBridge.Port.LinkAggregation.SLAVES_SUBTREE, ()
+        )
+        for slave in slaves:
+            if (
+                slave[OVSBridge.Port.LinkAggregation.Slave.NAME]
+                == interface_name
+            ):
+                return True
+    return False
+
+
+def _get_ovs_interfaces_from_interface_state(interface_state, default=()):
     """
-    Return names of all the interfaces connected to ports of given OVS bridge.
-    For simple ports connected to internal and system interfaces, the interface
-    name matches the port name. For link aggregation ports, the interface names
-    are obtained from listed slaves.
+    Return all interfaces connected to the given bridge, including
+    link-aggregation slaves.
     """
     ovs_slaves = []
 
-    bridge_subtree = bridge_state.get(OVSBridge.CONFIG_SUBTREE, {})
-    ports = bridge_subtree.get(OVSBridge.PORT_SUBTREE, [])
+    bridge_subtree = interface_state.get(OVSBridge.CONFIG_SUBTREE, {})
+    ports = bridge_subtree.get(OVSBridge.PORT_SUBTREE, ())
     for port in ports:
         if OVSBridge.Port.LINK_AGGREGATION_SUBTREE in port:
             la_subtree = port[OVSBridge.Port.LINK_AGGREGATION_SUBTREE]
             slaves = la_subtree.get(
-                OVSBridge.Port.LinkAggregation.SLAVES_SUBTREE, []
+                OVSBridge.Port.LinkAggregation.SLAVES_SUBTREE, ()
             )
             for slave in slaves:
                 ovs_slaves.append(
