@@ -858,3 +858,114 @@ def test_dummy_disable_ip_stack_with_on_going_dhcp(dummy00):
     ifstate[Interface.IPV4] = create_ipv4_state(enabled=False)
     ifstate[Interface.IPV6] = create_ipv6_state(enabled=False)
     libnmstate.apply({Interface.KEY: [ifstate]})
+
+
+def test_dhcp4_with_static_ipv6(dhcpcli_up):
+    desired_state = dhcpcli_up
+    dhcp_cli_desired_state = desired_state[Interface.KEY][0]
+    dhcp_cli_desired_state[Interface.STATE] = InterfaceState.UP
+    dhcp_cli_desired_state[Interface.IPV4] = create_ipv4_state(
+        enabled=True, dhcp=True
+    )
+    dhcp_cli_desired_state[Interface.IPV6] = {
+        InterfaceIPv6.ENABLED: True,
+        InterfaceIPv6.ADDRESS: [
+            {
+                InterfaceIPv6.ADDRESS_IP: IPV6_ADDRESS2,
+                InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
+            }
+        ],
+    }
+
+    libnmstate.apply(desired_state)
+    assertlib.assert_state(desired_state)
+    assert _poll(_has_ipv4_dhcp_nameserver)
+    assert _poll(_has_ipv4_dhcp_gateway)
+    assert _poll(_has_ipv4_classless_route)
+
+
+def test_dhcp6_and_autoconf_with_static_ipv4(dhcpcli_up):
+    desired_state = dhcpcli_up
+    dhcp_cli_desired_state = desired_state[Interface.KEY][0]
+    dhcp_cli_desired_state[Interface.STATE] = InterfaceState.UP
+    dhcp_cli_desired_state[Interface.IPV6] = create_ipv6_state(
+        enabled=True, dhcp=True, autoconf=True
+    )
+    dhcp_cli_desired_state[Interface.IPV4] = {
+        InterfaceIPv4.ENABLED: True,
+        InterfaceIPv4.ADDRESS: [
+            {
+                InterfaceIPv4.ADDRESS_IP: IPV4_ADDRESS2,
+                InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+            }
+        ],
+    }
+
+    libnmstate.apply(desired_state)
+    assertlib.assert_state(desired_state)
+
+    assert _poll(_has_ipv6_auto_gateway)
+    assert _poll(_has_dhcpv6_addr)
+
+
+@pytest.fixture(scope="function")
+def dhcpcli_up_with_static_ip(dhcpcli_up):
+    desired_state = dhcpcli_up
+    dhcp_cli_desired_state = desired_state[Interface.KEY][0]
+    dhcp_cli_desired_state[Interface.STATE] = InterfaceState.UP
+    dhcp_cli_desired_state[Interface.IPV4] = {
+        InterfaceIPv4.ENABLED: True,
+        InterfaceIPv4.ADDRESS: [
+            {
+                InterfaceIPv4.ADDRESS_IP: IPV4_ADDRESS2,
+                InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+            }
+        ],
+    }
+    dhcp_cli_desired_state[Interface.IPV6] = {
+        InterfaceIPv6.ENABLED: True,
+        InterfaceIPv6.ADDRESS: [
+            {
+                InterfaceIPv6.ADDRESS_IP: IPV6_ADDRESS2,
+                InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
+            }
+        ],
+    }
+
+    libnmstate.apply(desired_state)
+    assertlib.assert_state(desired_state)
+    yield desired_state
+
+
+def test_change_static_to_dhcp4_with_disabled_ipv6(dhcpcli_up_with_static_ip):
+    desired_state = dhcpcli_up_with_static_ip
+    dhcp_cli_desired_state = desired_state[Interface.KEY][0]
+    dhcp_cli_desired_state[Interface.IPV4] = create_ipv4_state(
+        enabled=True, dhcp=True
+    )
+    dhcp_cli_desired_state[Interface.IPV6] = {InterfaceIPv6.ENABLED: False}
+
+    libnmstate.apply(desired_state)
+    assertlib.assert_state(desired_state)
+    assert _poll(_has_ipv4_dhcp_nameserver)
+    assert _poll(_has_ipv4_dhcp_gateway)
+    assert _poll(_has_ipv4_classless_route)
+
+
+def test_change_static_to_dhcp6_autoconf_with_disabled_ipv4(
+    dhcpcli_up_with_static_ip,
+):
+    desired_state = dhcpcli_up_with_static_ip
+    dhcp_cli_desired_state = desired_state[Interface.KEY][0]
+
+    dhcp_cli_desired_state[Interface.IPV6] = create_ipv6_state(
+        enabled=True, dhcp=True, autoconf=True
+    )
+    dhcp_cli_desired_state[Interface.IPV4] = {InterfaceIPv4.ENABLED: False}
+
+    libnmstate.apply(desired_state)
+    assertlib.assert_state(desired_state)
+    assert _poll(_has_dhcpv6_addr)
+    assert _poll(_has_ipv6_auto_gateway)
+    assert _poll(_has_ipv6_auto_nameserver)
+    assert _poll(_has_ipv6_auto_extra_route)
