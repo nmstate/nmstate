@@ -164,9 +164,8 @@ class _MainLoop:
         if not self.actions_exists():
             return
 
-        with self._idle_timeout(timeout):
-            self._register_first_action()
-            self._mainloop.run()
+        self._register_first_action(timeout)
+        self._mainloop.run()
 
         if self._error == _MainLoop.RUN_TIMEOUT_ERROR:
             raise error.NmstateTimeoutError(
@@ -238,11 +237,12 @@ class _MainLoop:
         mainloop.quit()
         return _MainLoop.FAIL
 
-    def _register_first_action(self):
-        GLib.timeout_add(1, self._execute_action_once, None)
+    def _register_first_action(self, timeout):
+        GLib.timeout_add(1, self._execute_action_once, timeout)
 
-    def _execute_action_once(self, _):
-        self.execute_next_action()
+    def _execute_action_once(self, timeout):
+        with self._idle_timeout(timeout):
+            self.execute_next_action()
         return False
 
     def _execute_teardown_action(self):

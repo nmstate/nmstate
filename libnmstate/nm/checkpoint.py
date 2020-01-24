@@ -21,6 +21,8 @@ import logging
 
 import dbus
 
+from gi.repository import GLib
+
 from libnmstate.nm.nmclient import nmclient_context
 from libnmstate.nm.nmclient import client
 
@@ -123,6 +125,27 @@ class CheckPoint:
             if e.get_dbus_name() == NM_PERMISSION_DENIED:
                 raise NMCheckPointPermissionError(str(e))
             raise NMCheckPointCreationError(str(e))
+
+        GLib.timeout_add(
+            self._timeout * 0.5, self._refresh_checkpoint_timeout, None,
+        )
+
+    def _refresh_checkpoint_timeout(self, data):
+        cancellable, cb, cb_data = (None, None, None)
+        nm_client = client()
+
+        # Activation finished, _delete_client() invoked, which then invoke
+        # _nmclient.delete_client(). Then it set self._client as None. The main
+        # context got event from timeout, then invoke
+        # _refresh_checkpoint_timeout(). So that time, the _nmclient is not
+        # None while _nmclient.client is None.
+        if nm_client:
+            nm_client.checkpoint_adjust_rollback_timeout(
+                self._dbuspath, self._timeout, cancellable, cb, cb_data
+            )
+            return GLib.SOURCE_CONTINUE
+        else:
+            return GLib.SOURCE_REMOVE
 
     def destroy(self):
         try:
