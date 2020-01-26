@@ -416,7 +416,6 @@ class ConnectionSetting:
         )
 
         self._setting = con_setting
-        self._log_connection_info("ConnectionSetting.create")
 
     def import_by_profile(self, con_profile):
         base = con_profile.profile.get_setting_connection()
@@ -429,7 +428,6 @@ class ConnectionSetting:
         new.props.autoconnect_slaves = base.props.autoconnect_slaves
 
         self._setting = new
-        self._log_connection_info("ConnectionSetting.import_by_profile")
 
     def set_master(self, master, slave_type):
         if master is not None:
@@ -439,29 +437,6 @@ class ConnectionSetting:
     @property
     def setting(self):
         return self._setting
-
-    def _log_connection_info(self, source):
-        setting = self._setting
-        logging.debug(
-            "Connection settings for %s:\n"
-            + "\n".join(
-                [
-                    "id: %s",
-                    "iface: %s",
-                    "uuid: %s",
-                    "type: %s",
-                    "autoconnect: %s",
-                    "autoconnect_slaves: %s",
-                ]
-            ),
-            source,
-            setting.props.id,
-            setting.props.interface_name,
-            setting.props.uuid,
-            setting.props.type,
-            setting.props.autoconnect,
-            setting.props.autoconnect_slaves,
-        )
 
 
 def get_device_active_connection(nm_device):
