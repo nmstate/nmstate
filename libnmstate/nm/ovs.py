@@ -154,6 +154,10 @@ def get_ovs_info(bridge_device, devices_info):
         return {}
 
 
+def get_slaves(nm_device):
+    return nm_device.get_slaves()
+
+
 def _get_bridge_ports_info(port_profiles, devices_info):
     ports_info = []
     for p in port_profiles:
