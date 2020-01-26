@@ -246,7 +246,6 @@ class _MainLoop:
 class _NmClient:
     def __init__(self):
         self._client = NM.Client.new(None)
-        logging.debug("NM.Client created")
 
     @property
     def client(self):
@@ -308,4 +307,3 @@ class _NmClient:
                         context.iteration(True)
                 finally:
                     timeout_source.destroy()
-            logging.debug("NM.Client cleaned")
