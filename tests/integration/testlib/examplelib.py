@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019 Red Hat, Inc.
+# Copyright (c) 2019-2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -41,7 +41,11 @@ def example_state(initial, cleanup=None):
         yield desired_state
     finally:
         if cleanup:
-            libnmstate.apply(load_example(cleanup))
+            try:
+                libnmstate.apply(load_example(cleanup), verify_change=True)
+            except libnmstate.error.NmstateVerificationError:
+                libnmstate.apply(load_example(cleanup), verify_change=False)
+                raise
 
 
 def load_example(name):
