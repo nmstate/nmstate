@@ -265,34 +265,16 @@ def _get_affected_devices(iface_state):
         devs += [nmdev]
         iface_type = iface_state[Interface.TYPE]
         if iface_type == ovs.BRIDGE_TYPE:
-            devs += _get_ovs_bridge_port_devices(iface_state)
+            port_slaves = ovs.get_slaves(nmdev)
+            iface_slaves = [
+                iface for port in port_slaves for iface in ovs.get_slaves(port)
+            ]
+            devs += port_slaves + iface_slaves
         elif iface_type == LB.TYPE:
             devs += bridge.get_slaves(nmdev)
         elif iface_type == bond.BOND_TYPE:
             devs += bond.get_slaves(nmdev)
     return devs
-
-
-def _get_ovs_bridge_port_devices(iface_state):
-    """
-    Report a list of all ovs ports and interfaces that are connected to the
-    OVS bridge.
-    Note: Ports must be activated before the ifaces (NM limitation).
-    """
-    ifaces = [
-        p[Interface.NAME]
-        for p in iface_state.get(OvsB.CONFIG_SUBTREE, {}).get(
-            OvsB.PORT_SUBTREE, []
-        )
-    ]
-    ports = [ovs.PORT_PROFILE_PREFIX + iface for iface in ifaces]
-    devnames = ports + ifaces
-    nmdevs = []
-    for devname in devnames:
-        dev = device.get_device_by_name(devname)
-        if dev:
-            nmdevs.append(dev)
-    return nmdevs
 
 
 def prepare_proxy_ifaces_desired_state(ifaces_desired_state):
