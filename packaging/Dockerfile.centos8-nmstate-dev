@@ -12,7 +12,7 @@ RUN dnf -y install dnf-plugins-core && \
     dnf config-manager --set-enabled PowerTools
 
 RUN dnf copr enable nmstate/ovs-el8 -y && \
-    dnf copr enable networkmanager/NetworkManager-1.20 -y
+    dnf copr enable networkmanager/NetworkManager-1.22 -y
 
 RUN dnf -y install --setopt=install_weak_deps=False \
                    NetworkManager \

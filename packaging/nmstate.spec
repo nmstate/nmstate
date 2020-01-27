@@ -23,7 +23,7 @@ provider support on the southbound.
 
 %package -n python3-%{libname}
 Summary:        nmstate Python 3 API library
-Requires:       NetworkManager-libnm >= 1:1.20
+Requires:       NetworkManager-libnm >= 1:1.22
 # Use Recommends for NetworkManager because only access to NM DBus is required,
 # but NM could be running on a different host
 Recommends:     NetworkManager
