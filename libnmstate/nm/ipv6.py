@@ -119,6 +119,7 @@ def create_setting(config, base_con_profile):
         nmclient.NM.SettingIP6ConfigAddrGenMode.EUI64
     )
     setting_ip.props.dhcp_duid = "ll"
+    setting_ip.props.dhcp_iaid = "mac"
 
     if not config or not config.get(InterfaceIPv6.ENABLED):
         setting_ip.props.method = (

@@ -13,7 +13,6 @@ RUN dnf -y install --setopt=install_weak_deps=False \
                    NetworkManager-ovs \
                    NetworkManager-team \
                    NetworkManager-config-server \
-                   dhcp-client \
                    openvswitch \
                    systemd-udev \
                    \
