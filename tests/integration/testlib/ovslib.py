@@ -71,24 +71,29 @@ class Bridge:
         self._add_port(name)
         self._ifaces.append(ifstate)
 
+    @property
+    def ports_names(self):
+        return [port[OVSBridge.Port.NAME] for port in self._get_ports()]
+
     def _add_port(self, name):
         self._bridge_iface[OVSBridge.CONFIG_SUBTREE].setdefault(
             OVSBridge.PORT_SUBTREE, []
         ).append({OVSBridge.Port.NAME: name})
 
     def _get_port(self, name):
-        ports = self._bridge_iface[OVSBridge.CONFIG_SUBTREE].get(
-            OVSBridge.PORT_SUBTREE, []
-        )
+        ports = self._get_ports()
         return next(
             (port for port in ports if port[OVSBridge.Port.NAME] == name), None
         )
 
+    def _get_ports(self):
+        return self._bridge_iface[OVSBridge.CONFIG_SUBTREE].get(
+            OVSBridge.PORT_SUBTREE, []
+        )
+
     @contextmanager
     def create(self):
-        desired_state = {
-            Interface.KEY: _set_ifaces_state(self._ifaces, InterfaceState.UP)
-        }
+        desired_state = self.state
         libnmstate.apply(desired_state)
         try:
             yield desired_state
@@ -99,6 +104,15 @@ class Bridge:
                 )
             }
             libnmstate.apply(desired_state, verify_change=False)
+
+    def apply(self):
+        libnmstate.apply(self.state)
+
+    @property
+    def state(self):
+        return {
+            Interface.KEY: _set_ifaces_state(self._ifaces, InterfaceState.UP)
+        }
 
 
 def _set_ifaces_state(ifaces, state):

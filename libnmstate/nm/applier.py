@@ -274,6 +274,10 @@ def _get_affected_devices(iface_state):
             devs += bridge.get_slaves(nmdev)
         elif iface_type == bond.BOND_TYPE:
             devs += bond.get_slaves(nmdev)
+
+        ovs_port_dev = ovs.get_port_by_slave(nmdev)
+        if ovs_port_dev:
+            devs.append(ovs_port_dev)
     return devs
 
 
