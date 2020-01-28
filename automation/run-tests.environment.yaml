@@ -1,7 +1,0 @@
----
-- name: 'TEST_TYPE'
-  value: 'integ'
-- name: 'CONTAINER_IMAGE'
-  value: 'nmstate/centos8-nmstate-dev'
-- name: 'CI'
-  value: 'true'
