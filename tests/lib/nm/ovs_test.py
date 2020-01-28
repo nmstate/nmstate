@@ -122,8 +122,6 @@ def test_get_ovs_info_with_ports_with_interfaces(
 
     assert len(info["port"]) == 1
     assert "name" in info["port"][0]
-    assert "vlan-mode" in info["port"][0]
-    assert "access-tag" in info["port"][0]
 
 
 def test_create_bridge_setting(NM_mock):
@@ -145,19 +143,13 @@ def test_create_bridge_setting(NM_mock):
 
 def test_create_port_setting(NM_mock):
     options = {
-        "tag": 101,
-        "vlan-mode": "voomode",
         "bond-mode": "boomode",
-        "lacp": "yes",
         "bond-updelay": 0,
         "bond-downdelay": 0,
     }
     port_setting = nm.ovs.create_port_setting(options)
 
-    assert port_setting.props.tag == options["tag"]
-    assert port_setting.props.vlan_mode == options["vlan-mode"]
     assert port_setting.props.bond_mode == options["bond-mode"]
-    assert port_setting.props.lacp == options["lacp"]
     assert port_setting.props.bond_updelay == options["bond-updelay"]
     assert port_setting.props.bond_downdelay == options["bond-downdelay"]
 

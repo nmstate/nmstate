@@ -35,16 +35,6 @@ CAPABILITY = "openvswitch"
 _BRIDGE_OPTION_NAMES = ["fail-mode", "mcast-snooping-enable", "rstp", "stp"]
 
 
-_PORT_OPTION_NAMES = [
-    "tag",
-    "vlan-mode",
-    "bond-mode",
-    "lacp",
-    "bond-updelay",
-    "bond-downdelay",
-]
-
-
 def has_ovs_capability():
     try:
         nmclient.NM.DeviceType.OVS_BRIDGE
@@ -78,18 +68,8 @@ def create_bridge_setting(options):
 def create_port_setting(options):
     port_setting = nmclient.NM.SettingOvsPort.new()
     for option_name, option_value in options.items():
-        if option_name == "tag":
-            port_setting.props.tag = option_value
-        elif option_name == "vlan-mode":
-            port_setting.props.vlan_mode = option_value
-        elif option_name == "bond-mode":
+        if option_name == "bond-mode":
             port_setting.props.bond_mode = option_value
-        elif option_name == "lacp":
-            port_setting.props.lacp = option_value
-        elif option_name == "bond-updelay":
-            port_setting.props.bond_updelay = option_value
-        elif option_name == "bond-downdelay":
-            port_setting.props.bond_downdelay = option_value
         else:
             raise NmstateValueError(
                 "Invalid OVS port option: '{}'='{}'".format(
@@ -106,11 +86,10 @@ def create_interface_setting():
     return interface_setting
 
 
-def translate_bridge_options(iface_state):
+def translate_bridge_options(_):
     br_opts = {}
-    bridge_state = iface_state.get("bridge", {}).get("options", {})
-    for key in bridge_state.keys() & set(_BRIDGE_OPTION_NAMES):
-        br_opts[key] = bridge_state[key]
+
+    # TODO: Translate bond options: https://github.com/nmstate/nmstate/pull/514
 
     return br_opts
 
@@ -166,13 +145,8 @@ def _get_bridge_ports_info(port_profiles, devices_info):
 def _get_bridge_port_info(port_profile, devices_info):
     """
     Report port information.
-    Note: The current implementation supports only system OVS ports and
-    access vlan-mode (trunks are not supported).
     """
     port_info = {}
-
-    port_setting = port_profile.get_setting(nmclient.NM.SettingOvsPort)
-    vlan_mode = port_setting.props.vlan_mode
 
     port_name = port_profile.get_interface_name()
     port_device = device.get_device_by_name(port_name)
@@ -182,9 +156,6 @@ def _get_bridge_port_info(port_profile, devices_info):
     if port_slave_names:
         iface_slave_name = port_slave_names[0]
         port_info["name"] = iface_slave_name
-        if vlan_mode:
-            port_info["vlan-mode"] = vlan_mode
-            port_info["access-tag"] = port_setting.props.tag
 
     return port_info
 
