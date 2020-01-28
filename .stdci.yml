@@ -1,9 +1,0 @@
----
-Architectures:
-  - x86_64:
-      Distributions:
-        - fc30
-      runtime-requirements:
-        host-distro: same
-script:
-  from-file: automation/run-tests.sh

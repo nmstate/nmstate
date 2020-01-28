@@ -19,14 +19,6 @@ It may be used both locally and through CI.
 
   It also handles the cleanup of the container and nets (stop,rm).
 
-- run-tests.mounts: Includes mounts to be used by the oVirt CI (STDCI) worker.
-
-- run-tests.packages: Includes the packages needed by the oVirt CI (STDCI)
-  worker.
-
-- run-tests.environment.yaml: Instruct the oVirt CI (STDCI) to run
-  integration test.
-
 ## Running the Tests
 Assuming *docker* is installed on the host, just run:
 `./automation/run-tests.sh`
