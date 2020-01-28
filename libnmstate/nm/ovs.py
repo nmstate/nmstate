@@ -135,6 +135,15 @@ def is_ovs_interface_type_id(type_id):
     return type_id == nmclient.NM.DeviceType.OVS_INTERFACE
 
 
+def get_port_by_slave(nmdev):
+    active_con = connection.get_device_active_connection(nmdev)
+    if active_con:
+        master = active_con.get_master()
+        if master and is_ovs_port_type_id(master.get_device_type()):
+            return master
+    return None
+
+
 def get_bridge_info(bridge_device, devices_info):
     info = get_ovs_info(bridge_device, devices_info)
     if info:

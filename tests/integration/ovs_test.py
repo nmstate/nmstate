@@ -31,6 +31,7 @@ from libnmstate.error import NmstateLibnmError
 
 from .testlib import assertlib
 from .testlib import cmdlib
+from .testlib import nmlib
 from .testlib.ovslib import Bridge
 from .testlib.vlan import vlan_interface
 
@@ -48,6 +49,17 @@ DNF_INSTALL_NM_OVS_CMD = (
     "NetworkManager-ovs",
 )
 SYSTEMCTL_RESTART_NM_CMD = ("systemctl", "restart", "NetworkManager")
+
+
+@pytest.fixture
+def bridge_with_ports(port0_up):
+    system_port0_name = port0_up[Interface.KEY][0][Interface.NAME]
+
+    bridge = Bridge(BRIDGE1)
+    bridge.add_system_port(system_port0_name)
+    bridge.add_internal_port(PORT1, ipv4_state={InterfaceIPv4.ENABLED: False})
+    with bridge.create():
+        yield bridge
 
 
 @pytest.mark.xfail(
@@ -145,6 +157,26 @@ def test_nm_ovs_plugin_missing():
                     ]
                 }
             )
+
+
+@pytest.mark.xfail(
+    raises=NmstateLibnmError, reason="https://bugzilla.redhat.com/1724901"
+)
+def test_ovs_remove_port(bridge_with_ports):
+    for port_name in bridge_with_ports.ports_names:
+        nm_port_profile_name = nmlib.get_ovs_port_by_slave(port_name)
+        assert nmlib.list_profiles_by_iface_name(nm_port_profile_name)
+        libnmstate.apply(
+            {
+                Interface.KEY: [
+                    {
+                        Interface.NAME: port_name,
+                        Interface.STATE: InterfaceState.ABSENT,
+                    }
+                ]
+            }
+        )
+        assert not nmlib.list_profiles_by_iface_name(nm_port_profile_name)
 
 
 @contextmanager
