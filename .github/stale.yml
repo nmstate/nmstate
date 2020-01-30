@@ -1,0 +1,12 @@
+---
+# Configuration for probot-stale - https://github.com/probot/stale
+daysUntilStale: 14
+daysUntilClose: 14
+staleLabel: stale
+markComment: >
+  Thank you for your contribution! There was not activity in this pull request
+  recently. To avoid pull requests to pile up, an automated process marked this
+  pull request as stale. It will close this pull request if no further activity
+  occurs. The current policy is available at:
+  https://github.com/nmstate/nmstate/blob/master/.github/stale.yml
+only: pulls
