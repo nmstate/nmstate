@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2019 Red Hat, Inc.
+# Copyright (c) 2018-2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -159,7 +159,7 @@ def setup_subcommand_show(subparsers):
 
 def commit(args):
     try:
-        libnmstate.commit(args.checkpoint)
+        libnmstate.commit(checkpoint=args.checkpoint)
     except NmstateValueError as e:
         print("ERROR committing change: {}\n".format(str(e)))
         return os.EX_DATAERR
@@ -193,7 +193,7 @@ def edit(args):
 
 def rollback(args):
     try:
-        libnmstate.rollback(args.checkpoint)
+        libnmstate.rollback(checkpoint=args.checkpoint)
     except NmstateValueError as e:
         print("ERROR rolling back change: {}\n".format(str(e)))
         return os.EX_DATAERR
@@ -234,7 +234,12 @@ def apply_state(statedata, verify_change, commit, timeout):
         use_yaml = True
 
     try:
-        checkpoint = libnmstate.apply(state, verify_change, commit, timeout)
+        checkpoint = libnmstate.apply(
+            state,
+            verify_change=verify_change,
+            commit=commit,
+            rollback_timeout=timeout,
+        )
     except NmstatePermissionError as e:
         sys.stderr.write("ERROR: Missing permissions:{}\n".format(str(e)))
         return os.EX_NOPERM

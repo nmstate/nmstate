@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2019 Red Hat, Inc.
+# Copyright (c) 2018-2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -70,7 +70,7 @@ interfaces:
 @mock.patch.object(
     nmstatectl.libnmstate,
     "apply",
-    lambda state, verify_change, commit, timeout: None,
+    lambda state, verify_change=True, commit=True, rollback_timeout=60: None,
 )
 @mock.patch.object(
     nmstatectl, "open", mock.mock_open(read_data="{}"), create=True
