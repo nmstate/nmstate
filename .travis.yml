@@ -17,11 +17,11 @@ env:
               --copr networkmanager/NetworkManager-master"
         - CONTAINER_IMAGE=nmstate/fedora-nmstate-dev
           testflags="--test-type integ --pytest-args='-x'"
-        - CONTAINER_IMAGE=nmstate/fedora-nmstate-dev
+        - CONTAINER_IMAGE=nmstate/centos8-nmstate-dev
           testflags="--test-type format"
-        - CONTAINER_IMAGE=nmstate/fedora-nmstate-dev
+        - CONTAINER_IMAGE=nmstate/centos8-nmstate-dev
           testflags="--test-type lint"
-        - CONTAINER_IMAGE=nmstate/fedora-nmstate-dev
+        - CONTAINER_IMAGE=nmstate/centos8-nmstate-dev
           testflags="--test-type unit_py36"
         - CONTAINER_IMAGE=nmstate/fedora-nmstate-dev
           testflags="--test-type unit_py37"
