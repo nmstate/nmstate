@@ -2,7 +2,7 @@
 # Fedora official repository
 # (https://hub.docker.com/r/fedora/systemd-systemd/).
 # It enables systemd to be operational.
-FROM docker.io/library/fedora:31
+FROM docker.io/library/fedora:32
 ENV container docker
 COPY docker_enable_systemd.sh docker_sys_config.sh ./
 
