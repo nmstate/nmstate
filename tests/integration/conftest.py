@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2019 Red Hat, Inc.
+# Copyright (c) 2018-2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -102,7 +102,14 @@ def _get_osname():
 
 
 @pytest.fixture(scope="session", autouse=True)
-def download_nm_team_plugin():
+def download_packages():
     cmdlib.exec_cmd(
-        ("dnf", "install", "-y", "--downloadonly", "NetworkManager-team",)
+        (
+            "dnf",
+            "install",
+            "-y",
+            "--downloadonly",
+            "NetworkManager-ovs",
+            "NetworkManager-team",
+        )
     )

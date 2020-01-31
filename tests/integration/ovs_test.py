@@ -40,7 +40,13 @@ PORT1 = "ovs1"
 VLAN_IFNAME = "eth101"
 
 DNF_REMOVE_NM_OVS_CMD = ("dnf", "remove", "-y", "-q", "NetworkManager-ovs")
-DNF_INSTALL_NM_OVS_CMD = ("dnf", "install", "-y", "-q", "NetworkManager-ovs")
+DNF_INSTALL_NM_OVS_CMD = (
+    "dnf",
+    "install",
+    "-y",
+    "--cacheonly",
+    "NetworkManager-ovs",
+)
 SYSTEMCTL_RESTART_NM_CMD = ("systemctl", "restart", "NetworkManager")
 
 
