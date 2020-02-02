@@ -125,7 +125,8 @@ class ConnectionProfile:
 
     @property
     def con_id(self):
-        return self._con_id
+        con_id = self._con_profile.get_id() if self._con_profile else None
+        return self._con_id or con_id
 
     @con_id.setter
     def con_id(self, connection_id):
