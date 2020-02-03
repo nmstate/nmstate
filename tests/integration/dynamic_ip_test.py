@@ -70,7 +70,10 @@ DHCP_SRV_IP6_NETWORK = "{}::/64".format(DHCP_SRV_IP6_PREFIX)
 IPV6_DEFAULT_GATEWAY = "::/0"
 IPV4_DEFAULT_GATEWAY = "0.0.0.0/0"
 
+LEASE_FILE = "/tmp/nmstate.dnsmasq.lease"
+
 DNSMASQ_CONF_STR = """
+dhcp-leasefile={lease_file}
 interface={iface}
 dhcp-range={ipv4_prefix}.200,{ipv4_prefix}.250,255.255.255.0,48h
 enable-ra
@@ -80,6 +83,7 @@ dhcp-option=option:classless-static-route,{classless_rt},{classless_rt_dst}
 dhcp-option=option:dns-server,{v4_dns_server}
 """.format(
     **{
+        "lease_file": LEASE_FILE,
         "iface": DHCP_SRV_NIC,
         "ipv4_prefix": DHCP_SRV_IP4_PREFIX,
         "ipv6_prefix": DHCP_SRV_IP6_PREFIX,
@@ -664,6 +668,10 @@ def _clean_up():
     _remove_veth_pair()
     try:
         os.unlink(DNSMASQ_CONF_PATH)
+    except (FileNotFoundError, OSError):
+        pass
+    try:
+        os.unlink(LEASE_FILE)
     except (FileNotFoundError, OSError):
         pass
 
