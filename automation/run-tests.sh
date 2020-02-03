@@ -74,22 +74,12 @@ function install_nmstate {
 function run_tests {
     if [ $TEST_TYPE == $TEST_TYPE_ALL ] || \
        [ $TEST_TYPE == $TEST_TYPE_FORMAT ];then
-        if [[ $CONTAINER_IMAGE == *"centos"* ]]; then
-            echo "Running formatter in $CONTAINER_IMAGE container is not " \
-                 "support yet"
-        else
-            container_exec 'tox -e black'
-        fi
+        container_exec "tox -e black"
     fi
 
     if [ $TEST_TYPE == $TEST_TYPE_ALL ] || \
        [ $TEST_TYPE == $TEST_TYPE_LINT ];then
-        if [[ $CONTAINER_IMAGE == *"centos"* ]]; then
-            echo "Running unit test in $CONTAINER_IMAGE container is not " \
-                 "support yet"
-        else
-            container_exec 'tox -e flake8,pylint'
-        fi
+        container_exec "tox -e flake8,pylint"
     fi
 
     if [ $TEST_TYPE == $TEST_TYPE_ALL ] || \
