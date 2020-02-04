@@ -149,9 +149,6 @@ def _apply_ifaces_state(
                     con_profiles=ifaces_add_configs + ifaces_edit_configs,
                 )
             if verify_change:
-                # Some actions are not getting updated fast enough in the
-                # kernel/cache. Wait a bit before the verification step.
-                time.sleep(2)
                 _verify_change(desired_state)
         if not commit:
             return checkpoint
