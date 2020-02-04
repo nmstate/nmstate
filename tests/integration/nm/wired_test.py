@@ -19,8 +19,6 @@
 
 import pytest
 
-from distutils.version import StrictVersion
-
 from libnmstate import nm
 from libnmstate import schema
 from libnmstate.nm.nmclient import nmclient_context
@@ -35,15 +33,12 @@ MAC0 = "02:FF:FF:FF:FF:00"
 MTU0 = 1200
 
 
-@pytest.mark.xfail(
-    condition=StrictVersion(nm.nmclient.nm_version()) < StrictVersion("1.18"),
-    reason="https://bugzilla.redhat.com/1702657",
-    strict=True,
-)
+@pytest.mark.xfail(reason="https://bugzilla.redhat.com/1797986")
 def test_interface_mtu_change_with_reapply(eth1_up):
     _test_interface_mtu_change(nm.device.reapply)
 
 
+@pytest.mark.xfail(reason="https://bugzilla.redhat.com/1797986")
 def test_interface_mtu_change_with_modify(eth1_up):
     _test_interface_mtu_change(nm.device.modify)
 
@@ -69,6 +64,7 @@ def test_interface_mac_change_with_reapply_fails(eth1_up):
         _test_interface_mac_change(nm.device.reapply)
 
 
+@pytest.mark.xfail(reason="https://bugzilla.redhat.com/1797986")
 def test_interface_mac_change_with_modify(eth1_up):
     _test_interface_mac_change(nm.device.modify)
 
