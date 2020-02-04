@@ -85,8 +85,7 @@ function run_tests {
     if [ $TEST_TYPE == $TEST_TYPE_ALL ] || \
        [ $TEST_TYPE == $TEST_TYPE_UNIT_PY36 ];then
         if [[ $CONTAINER_IMAGE == *"centos"* ]]; then
-            echo "Running unit test in $CONTAINER_IMAGE container is not " \
-                 "support yet"
+            container_exec 'tox --sitepackages -e py36'
         else
             container_exec 'tox -e py36'
         fi
