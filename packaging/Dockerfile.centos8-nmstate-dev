@@ -36,6 +36,9 @@ RUN dnf -y install --setopt=install_weak_deps=False \
     dnf -y group install "Development Tools" && \
     pip3 install pytest==4.6.6 pytest-cov==2.8.1 \
         python-coveralls tox --user && \
+    # Upgrade OS python3-setuptool as workaround of bug:
+    #   https://github.com/pypa/pip/issues/6264
+    pip3 install setuptools --upgrade && \
     alternatives --set python /usr/bin/python3 && \
     ln -s /root/.local/bin/pytest /usr/bin/pytest && \
     ln -s /root/.local/bin/tox /usr/bin/tox && \
