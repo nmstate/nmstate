@@ -9,12 +9,6 @@ env:
           testflags="--test-type integ --pytest-args='-x'"
           use_codecov=true
           use_coveralls=false
-        - CONTAINER_IMAGE=nmstate/centos8-nmstate-dev
-          testflags="--test-type integ --pytest-args='-x'
-              --copr networkmanager/NetworkManager-1.22-git"
-        - CONTAINER_IMAGE=nmstate/centos8-nmstate-dev
-          testflags="--test-type integ --pytest-args='-x'
-              --copr networkmanager/NetworkManager-master"
         - CONTAINER_IMAGE=nmstate/fedora-nmstate-dev
           testflags="--test-type integ --pytest-args='-x'"
         - CONTAINER_IMAGE=nmstate/centos8-nmstate-dev
@@ -30,12 +24,6 @@ env:
 
 matrix:
     allow_failures:
-        - env: CONTAINER_IMAGE=nmstate/centos8-nmstate-dev
-               testflags="--test-type integ --pytest-args='-x'
-                   --copr networkmanager/NetworkManager-master"
-        - env: CONTAINER_IMAGE=nmstate/centos8-nmstate-dev
-               testflags="--test-type integ --pytest-args='-x'
-                   --copr networkmanager/NetworkManager-1.22-git"
         - env: CONTAINER_IMAGE=nmstate/fedora-nmstate-dev
                testflags="--test-type integ --pytest-args='-x'"
 
