@@ -41,7 +41,7 @@ GObject
 _mainloop = None
 _nmclient = None
 
-MAINLOOP_TEARDOWN_DELAY = 2 * 1000
+MAINLOOP_TEARDOWN_DELAY = 500  # msec
 
 NM_MANAGER_ERROR_DOMAIN = "nm-manager-error-quark"
 _NMCLIENT_CLEANUP_TIMEOUT = 5
