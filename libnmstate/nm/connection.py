@@ -387,20 +387,25 @@ class ConnectionProfile:
     @staticmethod
     def _commit_changes_callback(src_object, result, user_data):
         mainloop, nmdev = user_data
+        devname = src_object.get_interface_name()
         try:
             success = src_object.commit_changes_finish(result)
         except Exception as e:
             if mainloop.is_action_canceled(e):
                 logging.debug("Connection update aborted: error=%s", e)
             else:
+                if nmdev:
+                    devname = nmdev.props.interface
+                    devstate = nmdev.props.state
+                else:
+                    devstate = "absent"
                 mainloop.quit(
                     "Connection update failed: error={}, dev={}/{}".format(
-                        e, nmdev.props.interface, nmdev.props.state
+                        e, devname, devstate
                     )
                 )
             return
 
-        devname = src_object.get_interface_name()
         if success:
             logging.debug("Connection update succeeded: dev=%s", devname)
             mainloop.execute_next_action()
