@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019 Red Hat, Inc.
+# Copyright (c) 2019-2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -17,6 +17,8 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
+import os
+
 import pytest
 
 import libnmstate
@@ -28,6 +30,11 @@ from .testlib import assertlib
 
 
 SRIOV_CONFIG = {Ethernet.SRIOV_SUBTREE: {Ethernet.SRIOV.TOTAL_VFS: 2}}
+
+
+pytestmark = pytest.mark.skipif(
+    os.environ.get("CI") == "true", reason="CI devices do not support SR-IOV",
+)
 
 
 @pytest.mark.xfail(
