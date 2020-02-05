@@ -102,6 +102,26 @@ SYSFS_DISABLE_RA_SRV = "/proc/sys/net/ipv6/conf/{}/accept_ra".format(
     DHCP_SRV_NIC
 )
 
+parametrize_ip_ver = pytest.mark.parametrize(
+    "ip_ver",
+    [
+        pytest.param(
+            (Interface.IPV4,),
+            marks=pytest.mark.xfail(
+                reason="https://bugzilla.redhat.com/1798374", strict=True
+            ),
+        ),
+        pytest.param(
+            (Interface.IPV6,),
+            marks=pytest.mark.xfail(
+                reason="https://bugzilla.redhat.com/1798374", strict=True
+            ),
+        ),
+        (Interface.IPV4, Interface.IPV6),
+    ],
+    ids=["ipv4", "ipv6", "ipv4&6"],
+)
+
 # Python 2 does not have FileNotFoundError and treat file not exist as IOError
 try:
     FileNotFoundError
@@ -839,12 +859,15 @@ def dummy00():
     libnmstate.apply({Interface.KEY: [ifstate]}, verify_change=False)
 
 
-def test_activate_dummy_without_dhcp_service(dummy00):
+@parametrize_ip_ver
+def test_activate_dummy_without_dhcp_service(ip_ver, dummy00):
     ifstate = dummy00
-    ifstate[Interface.IPV4] = create_ipv4_state(enabled=True, dhcp=True)
-    ifstate[Interface.IPV6] = create_ipv6_state(
-        enabled=True, dhcp=True, autoconf=True
-    )
+    if Interface.IPV4 in ip_ver:
+        ifstate[Interface.IPV4] = create_ipv4_state(enabled=True, dhcp=True)
+    if Interface.IPV6 in ip_ver:
+        ifstate[Interface.IPV6] = create_ipv6_state(
+            enabled=True, dhcp=True, autoconf=True
+        )
     libnmstate.apply({Interface.KEY: [ifstate]})
 
 
