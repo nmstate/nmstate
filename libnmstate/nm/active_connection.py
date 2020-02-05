@@ -34,6 +34,7 @@ class ActiveConnection:
     def __init__(self, active_connection=None):
         self.handlers = set()
         self.device_handlers = set()
+        self.state_check_running = False
         self._act_con = active_connection
         self._mainloop = nmclient.mainloop()
 

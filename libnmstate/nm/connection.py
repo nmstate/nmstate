@@ -26,11 +26,17 @@ from .active_connection import ActiveConnection
 
 
 class ConnectionProfile:
+    _ACTIVATION_CHECK_INTERNAL = 1  # second
+    _MAX_ACTIVATION_CHECK_COUNT = 34
+    # The maximum activation status check count in seconds.
+    # Context: The STP need 30 seconds, and nmstate mainloop timeout is 35.
+
     def __init__(self, profile=None):
         self._con_profile = profile
         self._mainloop = nmclient.mainloop()
         self._nmdevice = None
         self._con_id = None
+        self._activation_check_count = 0
 
     def create(self, settings):
         self.profile = nmclient.NM.SimpleConnection.new()
@@ -294,6 +300,28 @@ class ConnectionProfile:
                 "state-changed", self._waitfor_device_state_change_callback, ac
             )
         )
+        # As we also depend on IP4_READY flag which does not trigger
+        # 'state-change' signal, hence do a repeated recheck without timeout.
+        ac.state_check_running = True
+        nmclient.GLib.timeout_add_seconds(
+            ConnectionProfile._ACTIVATION_CHECK_INTERNAL,
+            self._check_device_state,
+            ac,
+        )
+        logging.debug("Activation state check started")
+
+    def _check_device_state(self, ac):
+        if ac.state_check_running and (
+            self._activation_check_count
+            < ConnectionProfile._MAX_ACTIVATION_CHECK_COUNT
+        ):
+            self._activation_check_count += 1
+
+            self._waitfor_active_connection_callback(None, None, None, ac)
+            return nmclient.GLib.SOURCE_CONTINUE
+
+        logging.debug(f"Activation state check stopped")
+        return nmclient.GLib.SOURCE_REMOVE
 
     def _waitfor_device_state_change_callback(
         self, _dev, _new_state, _old_state, _reason, ac
@@ -311,6 +339,7 @@ class ConnectionProfile:
                 )
             )
             ac.remove_handlers()
+            ac.state_check_running = False
             ac = ActiveConnection()
             # Don't rely on the first device of
             # NM.ActiveConnection.get_devices() but set explicitly.
@@ -319,12 +348,14 @@ class ConnectionProfile:
         if ac.is_active:
             logging.debug(
                 "Connection activation succeeded: dev=%s, con-state=%s, "
-                "dev-state= %s",
+                "dev-state= %s state-flags= %s",
                 ac.devname,
                 ac.state,
                 ac.nmdev_state,
+                ac.nm_active_connection.get_state_flags()
             )
             ac.remove_handlers()
+            ac.state_check_running = False
             self._mainloop.execute_next_action()
         elif not ac.is_activating:
             ac.remove_handlers()

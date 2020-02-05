@@ -105,18 +105,8 @@ SYSFS_DISABLE_RA_SRV = "/proc/sys/net/ipv6/conf/{}/accept_ra".format(
 parametrize_ip_ver = pytest.mark.parametrize(
     "ip_ver",
     [
-        pytest.param(
-            (Interface.IPV4,),
-            marks=pytest.mark.xfail(
-                reason="https://bugzilla.redhat.com/1798374", strict=True
-            ),
-        ),
-        pytest.param(
-            (Interface.IPV6,),
-            marks=pytest.mark.xfail(
-                reason="https://bugzilla.redhat.com/1798374", strict=True
-            ),
-        ),
+        (InterfaceIPv4,),
+        (InterfaceIPv6,),
         (Interface.IPV4, Interface.IPV6),
     ],
     ids=["ipv4", "ipv6", "ipv4&6"],
