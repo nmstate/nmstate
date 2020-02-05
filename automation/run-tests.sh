@@ -14,6 +14,7 @@ TEST_TYPE_UNIT_PY36="unit_py36"
 TEST_TYPE_UNIT_PY37="unit_py37"
 TEST_TYPE_UNIT_PY38="unit_py38"
 TEST_TYPE_INTEG="integ"
+TEST_TYPE_INTEG_NM="integ_nm"
 
 FEDORA_IMAGE_DEV="nmstate/fedora-nmstate-dev"
 CENTOS_IMAGE_DEV="nmstate/centos8-nmstate-dev"
@@ -126,7 +127,26 @@ function run_tests {
             --cov /usr/lib/python*/site-packages/nmstatectl \
             --cov-report=html:htmlcov-integ \
             --cov-report=term \
+            --ignore=tests/integration/nm \
             tests/integration \
+            ${nmstate_pytest_extra_args}"
+    fi
+
+    if [ $TEST_TYPE == $TEST_TYPE_ALL ] || \
+       [ $TEST_TYPE == $TEST_TYPE_INTEG_NM ];then
+        container_exec "
+          cd $CONTAINER_WORKSPACE &&
+          pytest \
+            --verbose --verbose \
+            --log-level=DEBUG \
+            --log-date-format='%Y-%m-%d %H:%M:%S' \
+            --log-format='%(asctime)s %(filename)s:%(lineno)d %(levelname)s %(message)s' \
+            --durations=5 \
+            --cov /usr/lib/python*/site-packages/libnmstate \
+            --cov /usr/lib/python*/site-packages/nmstatectl \
+            --cov-report=html:htmlcov-integ \
+            --cov-report=term \
+            tests/integration/nm \
             ${nmstate_pytest_extra_args}"
     fi
 }
@@ -246,6 +266,7 @@ while true; do
         echo "     * $TEST_TYPE_FORMAT"
         echo "     * $TEST_TYPE_LINT"
         echo "     * $TEST_TYPE_INTEG"
+        echo "     * $TEST_TYPE_INTEG_NM"
         echo "     * $TEST_TYPE_UNIT_PY36"
         echo "     * $TEST_TYPE_UNIT_PY37"
         echo "     * $TEST_TYPE_UNIT_PY38"

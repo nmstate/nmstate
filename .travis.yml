@@ -9,6 +9,10 @@ env:
           testflags="--test-type integ --pytest-args='-x'"
           use_codecov=true
           use_coveralls=false
+        - CONTAINER_IMAGE=nmstate/centos8-nmstate-dev
+          testflags="--test-type integ_nm --pytest-args='-x'"
+          use_codecov=true
+          use_coveralls=false
         - CONTAINER_IMAGE=nmstate/fedora-nmstate-dev
           testflags="--test-type integ --pytest-args='-x'"
         - CONTAINER_IMAGE=nmstate/centos8-nmstate-dev
