@@ -289,6 +289,13 @@ class ConnectionProfile:
                 "state-changed", self._waitfor_active_connection_callback, ac
             )
         )
+        ac.handlers.add(
+            ac.nm_active_connection.connect(
+                "notify::state-flags",
+                self._waitfor_state_flags_change_callback,
+                ac,
+            )
+        )
         ac.device_handlers.add(
             ac.nmdevice.connect(
                 "state-changed", self._waitfor_device_state_change_callback, ac
@@ -298,6 +305,9 @@ class ConnectionProfile:
     def _waitfor_device_state_change_callback(
         self, _dev, _new_state, _old_state, _reason, ac
     ):
+        self._waitfor_active_connection_callback(None, None, None, ac)
+
+    def _waitfor_state_flags_change_callback(self, _nm_act_con, _state, ac):
         self._waitfor_active_connection_callback(None, None, None, ac)
 
     def _waitfor_active_connection_callback(
@@ -319,10 +329,11 @@ class ConnectionProfile:
         if ac.is_active:
             logging.debug(
                 "Connection activation succeeded: dev=%s, con-state=%s, "
-                "dev-state= %s",
+                "dev-state=%s, state-flags=%s",
                 ac.devname,
                 ac.state,
                 ac.nmdev_state,
+                ac.nm_active_connection.get_state_flags(),
             )
             ac.remove_handlers()
             self._mainloop.execute_next_action()
