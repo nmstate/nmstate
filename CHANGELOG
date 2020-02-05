@@ -1,4 +1,10 @@
 # Changelog
+## [0.2.3] - 2020-02-05
+### Bug Fixes
+ - Reduce the delay before the verification step to 0.5 second.
+ - Fix dynamic IP configuration with no server response.
+ - Fix OVS port name limit.
+
 ## [0.2.2] - 2020-02-04
 ### Breaking changes
  - NetworkManager 1.22 is required now.
