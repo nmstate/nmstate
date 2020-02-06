@@ -40,7 +40,11 @@ BRIDGE1 = "br1"
 PORT1 = "ovs1"
 VLAN_IFNAME = "eth101"
 
-DNF_REMOVE_NM_OVS_CMD = ("dnf", "remove", "-y", "-q", "NetworkManager-ovs")
+DNF_REMOVE_NM_OVS_CMD = (
+    "rpm",
+    "-e",
+    "NetworkManager-ovs",
+)
 DNF_INSTALL_NM_OVS_CMD = (
     "dnf",
     "install",
