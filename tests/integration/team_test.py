@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019 Red Hat, Inc.
+# Copyright (c) 2019-2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -58,11 +58,13 @@ pytestmark = pytest.mark.skipif(
 )
 
 
+@pytest.mark.xfail(reason="https://bugzilla.redhat.com/1798947")
 def test_create_team_iface():
     with team_interface(TEAM0) as team_state:
         assertlib.assert_state(team_state)
 
 
+@pytest.mark.xfail(reason="https://bugzilla.redhat.com/1798947")
 def test_edit_team_iface():
     with team_interface(TEAM0) as team_state:
         team_state[Interface.KEY][0][Team.CONFIG_SUBTREE] = {
