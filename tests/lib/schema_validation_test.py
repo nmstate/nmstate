@@ -178,6 +178,34 @@ class TestIfaceCommon:
             libnmstate.validator.validate(default_data)
 
 
+class TestIfaceMacAddress:
+    @pytest.mark.parametrize(
+        "mac_address",
+        [
+            "00:11:22:33",
+            "00:11:22:33:44:55",
+            "80:00:02:08:fe:80:00:00:00:00:00:00:f4:52:14:03:00:8d:52:11",
+        ],
+    )
+    def test_valid_mac_address(self, default_data, mac_address):
+        default_data[INTERFACES][0][Interface.MAC] = mac_address
+        libnmstate.validator.validate(default_data)
+
+    @pytest.mark.parametrize(
+        "mac_address",
+        [
+            "00:11:22",
+            "00:xx:xx:yy:100",
+            "90:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00"
+            "00:00:00:00:00:00:00:00:00:00:00",
+        ],
+    )
+    def test_invalid_mac_address(self, default_data, mac_address):
+        default_data[INTERFACES][0][Interface.MAC] = mac_address
+        with pytest.raises(js.ValidationError, match=str(mac_address)):
+            libnmstate.validator.validate(default_data)
+
+
 class TestIfaceTypeEthernet:
     def test_valid_ethernet_with_auto_neg(self, default_data):
         default_data[INTERFACES][0].update(
