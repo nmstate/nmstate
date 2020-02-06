@@ -42,10 +42,8 @@ DNF_INSTALL_NM_TEAM_PLUGIN_CMD = (
 )
 
 DNF_REMOVE_NM_TEAM_PLUGIN_CMD = (
-    "dnf",
-    "remove",
-    "-y",
-    "-q",
+    "rpm",
+    "-e",
     "NetworkManager-team",
 )
 
