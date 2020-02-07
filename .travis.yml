@@ -18,8 +18,6 @@ env:
         - CONTAINER_IMAGE=nmstate/centos8-nmstate-dev
           testflags="--test-type unit_py36"
         - CONTAINER_IMAGE=nmstate/fedora-nmstate-dev
-          testflags="--test-type unit_py37"
-        - CONTAINER_IMAGE=nmstate/fedora-nmstate-dev
           testflags="--test-type unit_py38"
 
 matrix:
