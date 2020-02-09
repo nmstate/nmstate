@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2019 Red Hat, Inc.
+# Copyright (c) 2018-2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -35,16 +35,6 @@ CAPABILITY = "openvswitch"
 _BRIDGE_OPTION_NAMES = ["fail-mode", "mcast-snooping-enable", "rstp", "stp"]
 
 
-_PORT_OPTION_NAMES = [
-    "tag",
-    "vlan-mode",
-    "bond-mode",
-    "lacp",
-    "bond-updelay",
-    "bond-downdelay",
-]
-
-
 def has_ovs_capability():
     try:
         nmclient.NM.DeviceType.OVS_BRIDGE
@@ -75,9 +65,9 @@ def create_bridge_setting(options):
     return bridge_setting
 
 
-def create_port_setting(options):
+def create_port_setting(port_state):
     port_setting = nmclient.NM.SettingOvsPort.new()
-    for option_name, option_value in options.items():
+    for option_name, option_value in port_state.items():
         if option_name == "tag":
             port_setting.props.tag = option_value
         elif option_name == "vlan-mode":
@@ -90,12 +80,6 @@ def create_port_setting(options):
             port_setting.props.bond_updelay = option_value
         elif option_name == "bond-downdelay":
             port_setting.props.bond_downdelay = option_value
-        else:
-            raise NmstateValueError(
-                "Invalid OVS port option: '{}'='{}'".format(
-                    option_name, option_value
-                )
-            )
 
     return port_setting
 
@@ -113,14 +97,6 @@ def translate_bridge_options(iface_state):
         br_opts[key] = bridge_state[key]
 
     return br_opts
-
-
-def translate_port_options(port_state):
-    port_opts = {}
-    for key in port_state.keys() & set(_PORT_OPTION_NAMES):
-        port_opts[key] = port_state[key]
-
-    return port_opts
 
 
 def is_ovs_bridge_type_id(type_id):

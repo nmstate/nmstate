@@ -311,9 +311,8 @@ def prepare_proxy_ifaces_desired_state(ifaces_desired_state):
         port_opts_metadata = iface_desired_state.get(BRPORT_OPTIONS_METADATA)
         if port_opts_metadata is None:
             continue
-        port_options = ovs.translate_port_options(port_opts_metadata)
         port_iface_desired_state = _create_ovs_port_iface_desired_state(
-            iface_desired_state, port_options
+            iface_desired_state, port_opts_metadata
         )
         new_ifaces_desired_state.append(port_iface_desired_state)
         # The "visible" slave/interface needs to point to the port profile
