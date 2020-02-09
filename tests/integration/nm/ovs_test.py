@@ -208,8 +208,7 @@ def _create_port_setting(port_state, port_profile_name):
         iface_type=nm.ovs.PORT_TYPE,
     )
     iface_con_setting.set_master(BRIDGE0, nm.ovs.BRIDGE_TYPE)
-    port_options = nm.ovs.translate_port_options(port_state)
-    bridge_port_setting = nm.ovs.create_port_setting(port_options)
+    bridge_port_setting = nm.ovs.create_port_setting(port_state)
     return iface_con_setting.setting, bridge_port_setting
 
 
