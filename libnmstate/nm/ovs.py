@@ -17,7 +17,6 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
-from libnmstate.error import NmstateValueError
 from libnmstate.schema import OVSBridge as OB
 
 from . import connection
@@ -32,9 +31,6 @@ PORT_PROFILE_PREFIX = "ovs-port-"
 CAPABILITY = "openvswitch"
 
 
-_BRIDGE_OPTION_NAMES = ["fail-mode", "mcast-snooping-enable", "rstp", "stp"]
-
-
 def has_ovs_capability():
     try:
         nmclient.NM.DeviceType.OVS_BRIDGE
@@ -43,9 +39,9 @@ def has_ovs_capability():
         return False
 
 
-def create_bridge_setting(options):
+def create_bridge_setting(options_state):
     bridge_setting = nmclient.NM.SettingOvsBridge.new()
-    for option_name, option_value in options.items():
+    for option_name, option_value in options_state.items():
         if option_name == "fail-mode":
             if option_value:
                 bridge_setting.props.fail_mode = option_value
@@ -55,12 +51,6 @@ def create_bridge_setting(options):
             bridge_setting.props.rstp_enable = option_value
         elif option_name == "stp":
             bridge_setting.props.stp_enable = option_value
-        else:
-            raise NmstateValueError(
-                "Invalid OVS bridge option: '{}'='{}'".format(
-                    option_name, option_value
-                )
-            )
 
     return bridge_setting
 
@@ -88,15 +78,6 @@ def create_interface_setting():
     interface_setting = nmclient.NM.SettingOvsInterface.new()
     interface_setting.props.type = "internal"
     return interface_setting
-
-
-def translate_bridge_options(iface_state):
-    br_opts = {}
-    bridge_state = iface_state.get("bridge", {}).get("options", {})
-    for key in bridge_state.keys() & set(_BRIDGE_OPTION_NAMES):
-        br_opts[key] = bridge_state[key]
-
-    return br_opts
 
 
 def is_ovs_bridge_type_id(type_id):

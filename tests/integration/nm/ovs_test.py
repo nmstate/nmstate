@@ -128,7 +128,8 @@ def _get_bridge_current_state():
 
 @nmclient_context
 def _create_bridge(bridge_desired_state):
-    br_options = nm.ovs.translate_bridge_options(bridge_desired_state)
+    bridge_state = bridge_desired_state.get(OB.CONFIG_SUBTREE, {})
+    br_options = bridge_state.get(OB.OPTIONS_SUBTREE, {})
     iface_bridge_settings = _get_iface_bridge_settings(br_options)
 
     with mainloop():

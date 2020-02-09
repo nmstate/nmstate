@@ -407,7 +407,8 @@ def _build_connection_profile(iface_desired_state, base_con_profile=None):
             )
             settings.append(linux_bridge_setting)
     elif iface_type == ovs.BRIDGE_TYPE:
-        ovs_bridge_options = ovs.translate_bridge_options(iface_desired_state)
+        ovs_bridge_state = iface_desired_state.get(OvsB.CONFIG_SUBTREE, {})
+        ovs_bridge_options = ovs_bridge_state.get(OvsB.OPTIONS_SUBTREE)
         if ovs_bridge_options:
             settings.append(ovs.create_bridge_setting(ovs_bridge_options))
     elif iface_type == ovs.PORT_TYPE:
