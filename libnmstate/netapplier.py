@@ -59,6 +59,7 @@ def apply(desired_state, verify_change=True, commit=True, rollback_timeout=60):
     desired_state = copy.deepcopy(desired_state)
     validator.validate(desired_state)
     validator.validate_capabilities(desired_state, netinfo.capabilities())
+    validator.validate_unique_interface_name(desired_state)
     validator.validate_dhcp(desired_state)
     validator.validate_dns(desired_state)
     validator.validate_vxlan(desired_state)

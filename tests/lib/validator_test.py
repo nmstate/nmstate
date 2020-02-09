@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2019 Red Hat, Inc.
+# Copyright (c) 2018-2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -152,6 +152,18 @@ def test_dns_three_nameservers():
             }
         }
     )
+
+
+def test_unique_interface_name():
+    with pytest.raises(validator.NmstateDuplicateInterfaceNameError):
+        libnmstate.validator.validate_unique_interface_name(
+            {
+                schema.Interface.KEY: [
+                    {schema.Interface.NAME: "foo0"},
+                    {schema.Interface.NAME: "foo0"},
+                ]
+            }
+        )
 
 
 def empty_state():

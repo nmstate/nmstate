@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2019 Red Hat, Inc.
+# Copyright (c) 2018-2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -45,6 +45,10 @@ class NmstateRouteWithNoUpInterfaceError(NmstateValueError):
 
 
 class NmstateRouteWithNoIPInterfaceError(NmstateValueError):
+    pass
+
+
+class NmstateDuplicateInterfaceNameError(NmstateValueError):
     pass
 
 
@@ -107,6 +111,17 @@ def validate_link_aggregation_state(desired_state, current_state):
                         )
                     )
                 specified_slaves |= slaves
+
+
+def validate_unique_interface_name(state):
+    ifaces_names = [
+        ifstate[schema.Interface.NAME]
+        for ifstate in state.get(schema.Interface.KEY, [])
+    ]
+    if len(ifaces_names) != len(set(ifaces_names)):
+        raise NmstateDuplicateInterfaceNameError(
+            f"Duplicate interfaces names detected: {sorted(ifaces_names)}"
+        )
 
 
 def validate_dhcp(state):
