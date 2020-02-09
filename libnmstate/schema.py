@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2019 Red Hat, Inc.
+# Copyright (c) 2018-2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -350,6 +350,16 @@ class OVSBridge(metaclass=_DeprecatorType):
 
             class Slave:
                 NAME = "name"
+
+            class Options:
+                DOWN_DELAY = "bond-downdelay"
+                UP_DELAY = "bond-updelay"
+
+            class Mode:
+                ACTIVE_BACKUP = "active-backup"
+                BALANCE_SLB = "balance-slb"
+                BALANCE_TCP = "balance-tcp"
+                LACP = "lacp"
 
 
 class Team:

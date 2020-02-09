@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2019 Red Hat, Inc.
+# Copyright (c) 2018-2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -22,6 +22,7 @@ import pytest
 from unittest import mock
 
 from libnmstate import nm
+from libnmstate.schema import OVSBridge
 
 
 @pytest.fixture
@@ -144,22 +145,26 @@ def test_create_bridge_setting(NM_mock):
 
 
 def test_create_port_setting(NM_mock):
+    mode = OVSBridge.Port.LinkAggregation.Mode.BALANCE_TCP
+    updelay = 1
+    downdelay = 2
     options = {
         "tag": 101,
         "vlan-mode": "voomode",
-        "bond-mode": "boomode",
-        "lacp": "yes",
-        "bond-updelay": 0,
-        "bond-downdelay": 0,
+        OVSBridge.Port.LINK_AGGREGATION_SUBTREE: {
+            OVSBridge.Port.LinkAggregation.MODE: mode,
+            OVSBridge.Port.LinkAggregation.Options.UP_DELAY: updelay,
+            OVSBridge.Port.LinkAggregation.Options.DOWN_DELAY: downdelay,
+        },
     }
     port_setting = nm.ovs.create_port_setting(options)
 
     assert port_setting.props.tag == options["tag"]
     assert port_setting.props.vlan_mode == options["vlan-mode"]
-    assert port_setting.props.bond_mode == options["bond-mode"]
-    assert port_setting.props.lacp == options["lacp"]
-    assert port_setting.props.bond_updelay == options["bond-updelay"]
-    assert port_setting.props.bond_downdelay == options["bond-downdelay"]
+    assert port_setting.props.bond_mode == mode
+    assert port_setting.props.lacp == nm.ovs.LacpValue.ACTIVE
+    assert port_setting.props.bond_updelay == updelay
+    assert port_setting.props.bond_downdelay == downdelay
 
 
 def _mock_port_profile(nm_connection_mock):

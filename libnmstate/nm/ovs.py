@@ -31,6 +31,11 @@ PORT_PROFILE_PREFIX = "ovs-port-"
 CAPABILITY = "openvswitch"
 
 
+class LacpValue:
+    ACTIVE = "active"
+    OFF = "off"
+
+
 def has_ovs_capability():
     try:
         nmclient.NM.DeviceType.OVS_BRIDGE
@@ -57,19 +62,34 @@ def create_bridge_setting(options_state):
 
 def create_port_setting(port_state):
     port_setting = nmclient.NM.SettingOvsPort.new()
+
+    lag_state = port_state.get(OB.Port.LINK_AGGREGATION_SUBTREE)
+    if lag_state:
+        mode = lag_state.get(OB.Port.LinkAggregation.MODE)
+        if mode == OB.Port.LinkAggregation.Mode.LACP:
+            port_setting.props.lacp = LacpValue.ACTIVE
+        elif mode in (
+            OB.Port.LinkAggregation.Mode.ACTIVE_BACKUP,
+            OB.Port.LinkAggregation.Mode.BALANCE_SLB,
+        ):
+            port_setting.props.lacp = LacpValue.OFF
+            port_setting.props.bond_mode = mode
+        elif mode == OB.Port.LinkAggregation.Mode.BALANCE_TCP:
+            port_setting.props.lacp = LacpValue.ACTIVE
+            port_setting.props.bond_mode = mode
+
+        down_delay = lag_state.get(OB.Port.LinkAggregation.Options.DOWN_DELAY)
+        if down_delay:
+            port_setting.props.bond_downdelay = down_delay
+        up_delay = lag_state.get(OB.Port.LinkAggregation.Options.UP_DELAY)
+        if up_delay:
+            port_setting.props.bond_updelay = up_delay
+
     for option_name, option_value in port_state.items():
         if option_name == "tag":
             port_setting.props.tag = option_value
         elif option_name == "vlan-mode":
             port_setting.props.vlan_mode = option_value
-        elif option_name == "bond-mode":
-            port_setting.props.bond_mode = option_value
-        elif option_name == "lacp":
-            port_setting.props.lacp = option_value
-        elif option_name == "bond-updelay":
-            port_setting.props.bond_updelay = option_value
-        elif option_name == "bond-downdelay":
-            port_setting.props.bond_downdelay = option_value
 
     return port_setting
 
@@ -150,12 +170,36 @@ def _get_bridge_port_info(port_profile, devices_info):
     port_slave_names = [c.get_interface_name() for c in port_slave_profiles]
 
     if port_slave_names:
-        iface_slave_name = port_slave_names[0]
-        port_info["name"] = iface_slave_name
+        number_of_interfaces = len(port_slave_names)
+        if number_of_interfaces == 1:
+            port_info[OB.Port.NAME] = port_slave_names[0]
+        else:
+            port_lag_info = _get_lag_info(
+                port_name, port_setting, port_slave_names
+            )
+            port_info.update(port_lag_info)
         if vlan_mode:
             port_info["vlan-mode"] = vlan_mode
             port_info["access-tag"] = port_setting.props.tag
 
+    return port_info
+
+
+def _get_lag_info(port_name, port_setting, port_slave_names):
+    port_info = {}
+
+    lacp = port_setting.props.lacp
+    mode = port_setting.props.bond_mode
+    if not mode and lacp == LacpValue.ACTIVE:
+        mode = OB.Port.LinkAggregation.Mode.LACP
+    port_info[OB.Port.NAME] = port_name
+    port_info[OB.Port.LINK_AGGREGATION_SUBTREE] = {
+        OB.Port.LinkAggregation.MODE: mode,
+        OB.Port.LinkAggregation.SLAVES_SUBTREE: [
+            {OB.Port.LinkAggregation.Slave.NAME: iface_name}
+            for iface_name in port_slave_names
+        ],
+    }
     return port_info
 
 
