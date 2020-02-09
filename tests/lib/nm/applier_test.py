@@ -77,8 +77,6 @@ def test_create_new_ifaces(con_profile_mock):
 def test_prepare_new_ifaces_configuration(
     nm_bond_mock, nm_connection_mock, nm_ipv4_mock, nm_ipv6_mock, nm_ovs_mock
 ):
-    nm_ovs_mock.translate_bridge_options.return_value = {}
-
     ifaces_desired_state = [
         {
             "name": "eth0",
@@ -158,8 +156,6 @@ def test_edit_existing_ifaces_without_profile(
 def test_prepare_edited_ifaces_configuration(
     nm_device_mock, nm_connection_mock, nm_ipv4_mock, nm_ipv6_mock, nm_ovs_mock
 ):
-    nm_ovs_mock.translate_bridge_options.return_value = {}
-
     ifaces_desired_state = [
         {"name": "eth0", "type": "ethernet", "state": "up"}
     ]
