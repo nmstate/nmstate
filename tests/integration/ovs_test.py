@@ -163,6 +163,9 @@ def test_ovs_interface_with_max_length_name():
     assertlib.assert_absent(ovs_interface_name)
 
 
+@pytest.mark.xfail(
+    reason="https://github.com/nmstate/nmstate/issues/759", run=False
+)
 def test_nm_ovs_plugin_missing():
     with disable_nm_ovs_plugin():
         with pytest.raises(NmstateLibnmError):
