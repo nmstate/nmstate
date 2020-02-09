@@ -101,6 +101,43 @@ def test_bridge_with_internal_interface(bridge_default_config):
     assert not _get_bridge_current_state()
 
 
+@pytest.mark.parametrize(
+    "mode",
+    [
+        OB.Port.LinkAggregation.Mode.ACTIVE_BACKUP,
+        OB.Port.LinkAggregation.Mode.BALANCE_SLB,
+        OB.Port.LinkAggregation.Mode.BALANCE_TCP,
+        OB.Port.LinkAggregation.Mode.LACP,
+    ],
+)
+def test_bridge_with_bond_and_two_slaves(
+    port0_up, port1_up, bridge_default_config, mode
+):
+    slave0_name = port0_up[Interface.KEY][0][Interface.NAME]
+    slave1_name = port1_up[Interface.KEY][0][Interface.NAME]
+    bridge_desired_state = bridge_default_config
+
+    port_name = "bond0"
+    LAG = OB.Port.LinkAggregation
+    port_state = {
+        OB.Port.NAME: port_name,
+        OB.Port.LINK_AGGREGATION_SUBTREE: {
+            LAG.MODE: mode,
+            LAG.SLAVES_SUBTREE: [
+                {LAG.Slave.NAME: slave0_name},
+                {LAG.Slave.NAME: slave1_name},
+            ],
+        },
+    }
+    bridge_desired_state[OB.CONFIG_SUBTREE][OB.PORT_SUBTREE].append(port_state)
+
+    with _bridge_interface(bridge_desired_state):
+        bridge_current_state = _get_bridge_current_state()
+        assert bridge_desired_state == bridge_current_state
+
+    assert not _get_bridge_current_state()
+
+
 @contextmanager
 def _bridge_interface(state):
     try:
@@ -140,11 +177,23 @@ def _create_bridge(bridge_desired_state):
 
 
 def _attach_port_to_bridge(port_state):
-    port_profile_name = nm.ovs.PORT_PROFILE_PREFIX + port_state[OB.Port.NAME]
+    port_name = port_state[OB.Port.NAME]
+    lag_state = port_state.get(OB.Port.LINK_AGGREGATION_SUBTREE)
+    if lag_state:
+        port_profile_name = port_name
+    else:
+        port_profile_name = nm.ovs.PORT_PROFILE_PREFIX + port_name
 
     _create_proxy_port(port_profile_name, port_state)
-    if _is_internal_interface(port_state[OB.Port.NAME]):
-        iface_name = port_state[OB.Port.NAME]
+    if lag_state:
+        slaves = [
+            slave
+            for slave in lag_state[OB.Port.LinkAggregation.SLAVES_SUBTREE]
+        ]
+        for slave in slaves:
+            _connect_interface(port_profile_name, slave)
+    elif _is_internal_interface(port_name):
+        iface_name = port_name
         _create_internal_interface(iface_name, master_name=port_profile_name)
     else:
         _connect_interface(port_profile_name, port_state)
