@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019 Red Hat, Inc.
+# Copyright (c) 2019-2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -21,11 +21,13 @@ from libnmstate import iplib
 from libnmstate.appliers import linux_bridge
 from libnmstate.error import NmstateValueError
 from libnmstate import nm
+from libnmstate.schema import Bond
 from libnmstate.schema import DNS
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIP
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
+from libnmstate.schema import OVSBridge
 
 
 BRPORT_OPTIONS = "_brport_options"
@@ -53,21 +55,21 @@ def generate_ifaces_metadata(desired_state, current_state):
     _generate_link_master_metadata(
         desired_state.interfaces,
         current_state.interfaces,
-        master_type="bond",
+        master_type=InterfaceType.BOND,
         get_slaves_func=_get_bond_slaves_from_state,
         set_metadata_func=_set_common_slaves_metadata,
     )
     _generate_link_master_metadata(
         desired_state.interfaces,
         current_state.interfaces,
-        master_type="ovs-bridge",
+        master_type=InterfaceType.OVS_BRIDGE,
         get_slaves_func=_get_ovs_slaves_from_state,
         set_metadata_func=_set_ovs_bridge_ports_metadata,
     )
     _generate_link_master_metadata(
         desired_state.interfaces,
         current_state.interfaces,
-        master_type="linux-bridge",
+        master_type=InterfaceType.LINUX_BRIDGE,
         get_slaves_func=linux_bridge.get_slaves_from_state,
         set_metadata_func=linux_bridge.set_bridge_ports_metadata,
     )
@@ -90,27 +92,32 @@ def remove_ifaces_metadata(ifaces_state):
 
 
 def _get_bond_slaves_from_state(iface_state, default=()):
-    return iface_state.get("link-aggregation", {}).get("slaves", default)
+    return iface_state.get(Bond.CONFIG_SUBTREE, {}).get(Bond.SLAVES, default)
 
 
 def _set_ovs_bridge_ports_metadata(master_state, slave_state):
     _set_common_slaves_metadata(master_state, slave_state)
 
-    ports = master_state.get("bridge", {}).get("port", [])
-    port = next(filter(lambda n: n["name"] == slave_state["name"], ports), {})
+    bridge = master_state.get(OVSBridge.CONFIG_SUBTREE, {})
+    ports = bridge.get(OVSBridge.PORT_SUBTREE, [])
+    slave_name = slave_state[Interface.NAME]
+    port = next(
+        filter(lambda n: n[OVSBridge.Port.NAME] == slave_name, ports,), {},
+    )
     slave_state[BRPORT_OPTIONS] = port
 
 
 def _set_common_slaves_metadata(master_state, slave_state):
-    slave_state[MASTER] = master_state["name"]
-    slave_state[MASTER_TYPE] = master_state.get("type")
+    slave_state[MASTER] = master_state[Interface.NAME]
+    slave_state[MASTER_TYPE] = master_state.get(Interface.TYPE)
 
 
 def _get_ovs_slaves_from_state(iface_state, default=()):
-    ports = iface_state.get("bridge", {}).get("port")
+    bridge = iface_state.get(OVSBridge.CONFIG_SUBTREE, {})
+    ports = bridge.get(OVSBridge.PORT_SUBTREE)
     if ports is None:
         return default
-    return [p["name"] for p in ports]
+    return [p[OVSBridge.Port.NAME] for p in ports]
 
 
 def _generate_link_master_metadata(
@@ -133,8 +140,9 @@ def _generate_link_master_metadata(
     desired_masters = [
         (ifname, ifstate)
         for ifname, ifstate in ifaces_desired_state.items()
-        if ifstate.get("type") == master_type
-        and ifstate.get("state") not in ("down", "absent")
+        if ifstate.get(Interface.TYPE) == master_type
+        and ifstate.get(Interface.STATE)
+        not in (InterfaceState.DOWN, InterfaceState.ABSENT)
     ]
     for master_name, master_state in desired_masters:
         desired_slaves = get_slaves_func(master_state)
@@ -143,8 +151,8 @@ def _generate_link_master_metadata(
                 set_metadata_func(master_state, ifaces_desired_state[slave])
             elif slave in ifaces_current_state:
                 ifaces_desired_state[slave] = {
-                    "name": slave,
-                    "state": master_state["state"],
+                    Interface.NAME: slave,
+                    Interface.STATE: master_state[Interface.STATE],
                 }
                 set_metadata_func(master_state, ifaces_desired_state[slave])
 
@@ -159,19 +167,22 @@ def _generate_link_master_metadata(
                     slave not in ifaces_desired_state
                     and _is_managed_interface(slave, ifaces_current_state)
                 ):
-                    ifaces_desired_state[slave] = {"name": slave}
+                    ifaces_desired_state[slave] = {Interface.NAME: slave}
 
     current_masters = (
         (ifname, ifstate)
         for ifname, ifstate in ifaces_current_state.items()
-        if ifstate.get("type") == master_type
+        if ifstate.get(Interface.TYPE) == master_type
     )
     for master_name, master_state in current_masters:
         current_slaves = get_slaves_func(master_state)
         for slave in current_slaves:
             if slave in ifaces_desired_state:
                 iface_state = ifaces_desired_state.get(master_name, {})
-                if iface_state.get("state") not in ("down", "absent"):
+                if iface_state.get(Interface.STATE) not in (
+                    InterfaceState.DOWN,
+                    InterfaceState.ABSENT,
+                ):
                     master_has_no_slaves_specified_in_desired = (
                         get_slaves_func(iface_state, None) is None
                     )
