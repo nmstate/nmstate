@@ -30,24 +30,8 @@ from libnmstate.schema import InterfaceType
 from libnmstate.schema import Team
 
 from .testlib import assertlib
-from .testlib import cmdlib
+from .testlib.nmplugin import disable_nm_plugin
 
-
-DNF_INSTALL_NM_TEAM_PLUGIN_CMD = (
-    "dnf",
-    "install",
-    "-y",
-    "--cacheonly",
-    "NetworkManager-team",
-)
-
-DNF_REMOVE_NM_TEAM_PLUGIN_CMD = (
-    "rpm",
-    "-e",
-    "NetworkManager-team",
-)
-
-SYSTEMCTL_RESTART_NM_CMD = ("systemctl", "restart", "NetworkManager")
 
 TEAM0 = "team0"
 
@@ -78,7 +62,7 @@ def test_edit_team_iface():
 
 
 def test_nm_team_plugin_missing():
-    with disable_nm_team_plugin():
+    with disable_nm_plugin("team"):
         with pytest.raises(NmstateLibnmError):
             libnmstate.apply(
                 {
@@ -118,14 +102,3 @@ def team_interface(ifname):
                 ]
             }
         )
-
-
-@contextmanager
-def disable_nm_team_plugin():
-    cmdlib.exec_cmd(DNF_REMOVE_NM_TEAM_PLUGIN_CMD)
-    cmdlib.exec_cmd(SYSTEMCTL_RESTART_NM_CMD)
-    try:
-        yield
-    finally:
-        cmdlib.exec_cmd(DNF_INSTALL_NM_TEAM_PLUGIN_CMD)
-        cmdlib.exec_cmd(SYSTEMCTL_RESTART_NM_CMD)

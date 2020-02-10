@@ -17,8 +17,6 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
-from contextlib import contextmanager
-
 import pytest
 
 import libnmstate
@@ -30,8 +28,8 @@ from libnmstate.schema import OVSBridge
 from libnmstate.error import NmstateLibnmError
 
 from .testlib import assertlib
-from .testlib import cmdlib
 from .testlib import nmlib
+from .testlib.nmplugin import disable_nm_plugin
 from .testlib.ovslib import Bridge
 from .testlib.vlan import vlan_interface
 
@@ -39,20 +37,6 @@ from .testlib.vlan import vlan_interface
 BRIDGE1 = "br1"
 PORT1 = "ovs1"
 VLAN_IFNAME = "eth101"
-
-DNF_REMOVE_NM_OVS_CMD = (
-    "rpm",
-    "-e",
-    "NetworkManager-ovs",
-)
-DNF_INSTALL_NM_OVS_CMD = (
-    "dnf",
-    "install",
-    "-y",
-    "--cacheonly",
-    "NetworkManager-ovs",
-)
-SYSTEMCTL_RESTART_NM_CMD = ("systemctl", "restart", "NetworkManager")
 
 
 @pytest.fixture
@@ -163,11 +147,8 @@ def test_ovs_interface_with_max_length_name():
     assertlib.assert_absent(ovs_interface_name)
 
 
-@pytest.mark.xfail(
-    reason="https://github.com/nmstate/nmstate/issues/759", run=False
-)
 def test_nm_ovs_plugin_missing():
-    with disable_nm_ovs_plugin():
+    with disable_nm_plugin("ovs"):
         with pytest.raises(NmstateLibnmError):
             libnmstate.apply(
                 {
@@ -200,17 +181,6 @@ def test_ovs_remove_port(bridge_with_ports):
             }
         )
         assert not nmlib.list_profiles_by_iface_name(nm_port_profile_name)
-
-
-@contextmanager
-def disable_nm_ovs_plugin():
-    cmdlib.exec_cmd(DNF_REMOVE_NM_OVS_CMD)
-    cmdlib.exec_cmd(SYSTEMCTL_RESTART_NM_CMD)
-    try:
-        yield
-    finally:
-        cmdlib.exec_cmd(DNF_INSTALL_NM_OVS_CMD)
-        cmdlib.exec_cmd(SYSTEMCTL_RESTART_NM_CMD)
 
 
 @pytest.fixture
