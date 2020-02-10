@@ -25,7 +25,6 @@ import pytest
 
 import libnmstate
 
-from .testlib import cmdlib
 from .testlib import ifacelib
 
 
@@ -99,17 +98,3 @@ def _get_osname():
             if line.startswith("PRETTY_NAME="):
                 return line.split("=", maxsplit=1)[1].strip().strip('"')
     return ""
-
-
-@pytest.fixture(scope="session", autouse=True)
-def download_packages():
-    cmdlib.exec_cmd(
-        (
-            "dnf",
-            "install",
-            "-y",
-            "--downloadonly",
-            "NetworkManager-ovs",
-            "NetworkManager-team",
-        )
-    )
