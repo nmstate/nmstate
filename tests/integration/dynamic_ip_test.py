@@ -71,6 +71,7 @@ IPV6_DEFAULT_GATEWAY = "::/0"
 IPV4_DEFAULT_GATEWAY = "0.0.0.0/0"
 
 DNSMASQ_CONF_STR = """
+leasefile-ro
 interface={iface}
 dhcp-range={ipv4_prefix}.200,{ipv4_prefix}.250,255.255.255.0,48h
 enable-ra
