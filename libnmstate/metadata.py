@@ -141,8 +141,7 @@ def _generate_link_master_metadata(
         (ifname, ifstate)
         for ifname, ifstate in ifaces_desired_state.items()
         if ifstate.get(Interface.TYPE) == master_type
-        and ifstate.get(Interface.STATE)
-        not in (InterfaceState.DOWN, InterfaceState.ABSENT)
+        and _iface_to_remove(ifstate)
     ]
     for master_name, master_state in desired_masters:
         desired_slaves = get_slaves_func(master_state)
@@ -179,10 +178,7 @@ def _generate_link_master_metadata(
         for slave in current_slaves:
             if slave in ifaces_desired_state:
                 iface_state = ifaces_desired_state.get(master_name, {})
-                if iface_state.get(Interface.STATE) not in (
-                    InterfaceState.DOWN,
-                    InterfaceState.ABSENT,
-                ):
+                if _iface_to_remove(iface_state):
                     master_has_no_slaves_specified_in_desired = (
                         get_slaves_func(iface_state, None) is None
                     )
@@ -196,6 +192,13 @@ def _generate_link_master_metadata(
                         set_metadata_func(
                             master_state, ifaces_desired_state[slave]
                         )
+
+
+def _iface_to_remove(iface_state):
+    return iface_state.get(Interface.STATE) not in (
+        InterfaceState.DOWN,
+        InterfaceState.ABSENT,
+    )
 
 
 def _is_managed_interface(ifname, ifaces_state):
