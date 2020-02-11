@@ -25,7 +25,7 @@ RC_SUCCESS = 0
 RC_FAIL2 = 2
 
 
-def exec_cmd(cmd, env=None, stdin=None):
+def exec_cmd(cmd, env=None, stdin=None, check=False):
     """
     Execute cmd in an external process, collect its output and returncode
 
@@ -39,16 +39,18 @@ def exec_cmd(cmd, env=None, stdin=None):
     """
     logging.debug(command_log_line(cmd))
 
-    p = subprocess.Popen(
+    p = subprocess.run(
         cmd,
         close_fds=True,
-        stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         env=env,
+        check=check,
+        input=stdin,
     )
 
-    out, err = p.communicate(stdin)
+    out = p.stdout
+    err = p.stderr
 
     logging.debug(_retcode_log_line(p.returncode, err=err))
 
