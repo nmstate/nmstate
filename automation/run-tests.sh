@@ -84,7 +84,11 @@ function run_tests {
     if [ $TEST_TYPE == $TEST_TYPE_ALL ] || \
        [ $TEST_TYPE == $TEST_TYPE_UNIT_PY36 ];then
         if [[ $CONTAINER_IMAGE == *"centos"* ]]; then
-            container_exec 'tox --sitepackages -e py36'
+            # Due to https://github.com/pypa/virtualenv/issues/1009
+            # Instruct virtualenv not to upgrade to the latest versions of pip,
+            # setuptools, wheel and etc
+            container_exec 'env VIRTUALENV_NO_DOWNLOAD=1 \
+                            tox --sitepackages -e py36'
         else
             container_exec 'tox -e py36'
         fi
