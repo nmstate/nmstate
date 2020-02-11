@@ -162,20 +162,22 @@ class _MainLoop:
             )
 
         if not self.actions_exists():
-            return _MainLoop.SUCCESS
+            return
 
         with self._idle_timeout(timeout):
             self._register_first_action()
             self._mainloop.run()
 
         if self._error == _MainLoop.RUN_TIMEOUT_ERROR:
-            return _MainLoop.FAIL
+            raise error.NmstateLibnmError(
+                f"libnm mainloop timed out after {timeout} seconds."
+            )
 
         if len(self._action_queue):
-            self._error = _MainLoop.RUN_EXECUTION_ERROR
-            return _MainLoop.FAIL
-
-        return _MainLoop.SUCCESS
+            err = _MainLoop.RUN_EXECUTION_ERROR
+            raise error.NmstateLibnmError(
+                f"Unexpected failure of libnm when running the mainloop: {err}"
+            )
 
     @property
     def cancellable(self):

@@ -19,6 +19,7 @@
 from contextlib import contextmanager
 import functools
 
+from libnmstate import error
 from libnmstate import nm
 from libnmstate.nm.nmclient import nmclient_context
 
@@ -31,10 +32,11 @@ class MainloopTestError(Exception):
 def mainloop():
     mloop = nm.nmclient.mainloop()
     yield
-    success = mloop.run(timeout=15)
-    if not success:
+    try:
+        mloop.run(timeout=15)
+    except error.NmstateLibnmError as ex:
         nm.nmclient.mainloop(refresh=True)
-        raise MainloopTestError(mloop.error)
+        raise MainloopTestError(str(ex.args))
 
 
 def mainloop_run(func):
