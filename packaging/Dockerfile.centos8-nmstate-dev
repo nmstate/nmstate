@@ -8,7 +8,7 @@ COPY docker_enable_systemd.sh docker_sys_config.sh ./
 
 RUN bash ./docker_enable_systemd.sh && rm ./docker_enable_systemd.sh
 
-RUN dnf -y install dnf-plugins-core && \
+RUN dnf -y install dnf-plugins-core epel-release && \
     dnf config-manager --set-enabled PowerTools
 
 RUN dnf copr enable nmstate/ovs-el8 -y && \
@@ -32,16 +32,14 @@ RUN dnf -y install --setopt=install_weak_deps=False \
                    git \
                    iproute \
                    rpm-build \
+                   python3-pytest \
+                   python3-pytest-cov \
+                   python3-virtualenv \
                    && \
-    dnf -y group install "Development Tools" && \
-    pip3 install pytest==4.6.6 pytest-cov==2.8.1 \
-        python-coveralls tox --user && \
-    # Upgrade OS python3-setuptool as workaround of bug:
-    #   https://github.com/pypa/pip/issues/6264
-    pip3 install setuptools --upgrade && \
+    pip3 install python-coveralls tox==3.5.3 --user && \
     alternatives --set python /usr/bin/python3 && \
-    ln -s /root/.local/bin/pytest /usr/bin/pytest && \
     ln -s /root/.local/bin/tox /usr/bin/tox && \
+    ln -s /usr/bin/pytest-3 /usr/bin/pytest && \
     dnf clean all && \
     bash ./docker_sys_config.sh && rm ./docker_sys_config.sh
 
