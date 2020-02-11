@@ -203,14 +203,11 @@ def _verify_change(desired_state):
 def _setup_providers():
     mainloop = nmclient.mainloop()
     yield
-    success = mainloop.run(timeout=MAINLOOP_TIMEOUT)
-    if not success:
+    try:
+        mainloop.run(timeout=MAINLOOP_TIMEOUT)
+    except NmstateLibnmError:
         nmclient.mainloop(refresh=True)
-        raise NmstateLibnmError(
-            "Unexpected failure of libnm when running the mainloop: {}".format(
-                mainloop.error
-            )
-        )
+        raise
 
 
 def _add_interfaces(new_interfaces, desired_state):
