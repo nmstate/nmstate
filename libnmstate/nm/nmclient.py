@@ -169,7 +169,7 @@ class _MainLoop:
             self._mainloop.run()
 
         if self._error == _MainLoop.RUN_TIMEOUT_ERROR:
-            raise error.NmstateLibnmError(
+            raise error.NmstateTimeoutError(
                 f"libnm mainloop timed out after {timeout} seconds."
             )
 

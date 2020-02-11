@@ -109,3 +109,11 @@ class NmstateNotSupportedError(NmstateError):
     """
 
     pass
+
+
+class NmstateTimeoutError(NmstateLibnmError):
+    """
+    The transaction execution timed out.
+    """
+
+    pass
