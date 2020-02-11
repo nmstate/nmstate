@@ -276,7 +276,9 @@ def _get_affected_devices(iface_state):
         iface_type = iface_state[Interface.TYPE]
         if iface_type == ovs.BRIDGE_TYPE:
             port_slaves = ovs.get_slaves(nmdev)
-            iface_slaves = _get_ovs_interfaces(iface_state)
+            iface_slaves = [
+                iface for port in port_slaves for iface in ovs.get_slaves(port)
+            ]
             devs += port_slaves + iface_slaves
         elif iface_type == LB.TYPE:
             devs += bridge.get_slaves(nmdev)
@@ -287,25 +289,6 @@ def _get_affected_devices(iface_state):
         if ovs_port_dev:
             devs.append(ovs_port_dev)
     return devs
-
-
-def _get_ovs_interfaces(iface_state):
-    """
-    Report a list of all interfaces that are connected to the OVS bridge.
-    This is a workaround solution for https://bugzilla.redhat.com/1797478.
-    """
-    ifaces = [
-        port[Interface.NAME]
-        for port in iface_state.get(OvsB.CONFIG_SUBTREE, {}).get(
-            OvsB.PORT_SUBTREE, []
-        )
-    ]
-    nmdevs = []
-    for ifname in ifaces:
-        dev = device.get_device_by_name(ifname)
-        if dev:
-            nmdevs.append(dev)
-    return nmdevs
 
 
 def prepare_proxy_ifaces_desired_state(ifaces_desired_state):
