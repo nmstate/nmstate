@@ -11,6 +11,8 @@ env:
           use_coveralls=false
         - CONTAINER_IMAGE=nmstate/fedora-nmstate-dev
           testflags="--test-type integ --pytest-args='-x'"
+        - CONTAINER_IMAGE=nmstate/centos8-nmstate-dev-nm-1.22-git
+          testflags="--test-type integ --pytest-args='-x'"
         - CONTAINER_IMAGE=nmstate/centos8-nmstate-dev
           testflags="--test-type format"
         - CONTAINER_IMAGE=nmstate/centos8-nmstate-dev
@@ -23,6 +25,8 @@ env:
 matrix:
     allow_failures:
         - env: CONTAINER_IMAGE=nmstate/fedora-nmstate-dev
+               testflags="--test-type integ --pytest-args='-x'"
+        - env: CONTAINER_IMAGE=nmstate/centos8-nmstate-dev-nm-1.22-git
                testflags="--test-type integ --pytest-args='-x'"
 
 addons:
