@@ -20,6 +20,7 @@ from operator import itemgetter
 
 from libnmstate import nm
 from libnmstate import validator
+from libnmstate.deprecation import _warn_keyword_as_positional
 from libnmstate.nm import dns as nm_dns
 from libnmstate.nm.nmclient import nmclient_context
 from libnmstate.schema import Constants
@@ -29,6 +30,7 @@ from libnmstate.schema import Route
 from libnmstate.schema import RouteRule
 
 
+@_warn_keyword_as_positional
 @nmclient_context
 def show(include_status_data=False):
     """

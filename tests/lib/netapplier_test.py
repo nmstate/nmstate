@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2019 Red Hat, Inc.
+# Copyright (c) 2018-2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -190,3 +190,38 @@ def test_edit_existing_bond(netinfo_nm_mock, netapplier_nm_mock):
 
     m_prepare = netapplier_nm_mock.applier.prepare_new_ifaces_configuration
     m_prepare.assert_called_once_with([])
+
+
+@mock.patch.object(netapplier, "_apply_ifaces_state", lambda *_: None)
+def test_warning_apply():
+    with pytest.warns(FutureWarning) as record:
+        netapplier.apply({"interfaces": []}, True)
+
+    assert len(record) == 1
+    assert "'verify_change'" in record[0].message.args[0]
+
+    with pytest.warns(FutureWarning) as record:
+        netapplier.apply({"interfaces": []}, True, True, 0)
+
+    assert len(record) == 3
+    assert "'verify_change'" in record[0].message.args[0]
+    assert "'commit'" in record[1].message.args[0]
+    assert "'rollback_timeout'" in record[2].message.args[0]
+
+
+@mock.patch.object(netapplier, "_choose_checkpoint", lambda *_: mock.Mock())
+def test_warning_commit():
+    with pytest.warns(FutureWarning) as record:
+        netapplier.commit(None)
+
+    assert len(record) == 1
+    assert "'checkpoint'" in record[0].message.args[0]
+
+
+@mock.patch.object(netapplier, "_choose_checkpoint", lambda *_: mock.Mock())
+def test_warning_rollback():
+    with pytest.warns(FutureWarning) as record:
+        netapplier.rollback(None)
+
+    assert len(record) == 1
+    assert "'checkpoint'" in record[0].message.args[0]

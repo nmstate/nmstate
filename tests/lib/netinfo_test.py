@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2019 Red Hat, Inc.
+# Copyright (c) 2018-2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -135,3 +135,41 @@ def test_netinfo_show_bond_iface(nm_mock, nm_dns_mock):
     report = netinfo.show()
 
     assert current_config == report
+
+
+def test_warning_show(nm_mock, nm_dns_mock):
+    current_config = {
+        DNS.KEY: {DNS.RUNNING: {}, DNS.CONFIG: {}},
+        ROUTES: {"config": [], "running": []},
+        RouteRule.KEY: {RouteRule.CONFIG: []},
+        INTERFACES: [
+            {
+                "name": "foo",
+                "type": "unknown",
+                "state": "up",
+                "ipv4": {InterfaceIPv4.ENABLED: False},
+                "ipv6": {InterfaceIPv6.ENABLED: False},
+            }
+        ],
+    }
+
+    current_iface0 = current_config[INTERFACES][0]
+    nm_mock.device.list_devices.return_value = ["one-item"]
+    nm_mock.translator.Nm2Api.get_common_device_info.return_value = (
+        current_iface0
+    )
+    nm_mock.bond.is_bond_type_id.return_value = False
+    nm_mock.ipv4.get_info.return_value = current_iface0["ipv4"]
+    nm_mock.ipv6.get_info.return_value = current_iface0["ipv6"]
+    nm_mock.ipv4.get_route_running.return_value = []
+    nm_mock.ipv4.get_route_config.return_value = []
+    nm_mock.ipv6.get_route_running.return_value = []
+    nm_mock.ipv6.get_route_config.return_value = []
+    nm_dns_mock.get_running.return_value = current_config[DNS.KEY][DNS.RUNNING]
+    nm_dns_mock.get_config.return_value = current_config[DNS.KEY][DNS.CONFIG]
+
+    with pytest.warns(FutureWarning) as record:
+        netinfo.show(None)
+
+    assert len(record) == 1
+    assert "'include_status_data'" in record[0].message.args[0]
