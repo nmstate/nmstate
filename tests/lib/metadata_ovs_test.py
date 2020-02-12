@@ -19,8 +19,13 @@
 
 from libnmstate import state, metadata
 from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
+from libnmstate.schema import OVSBridge
 
+
+PORT0 = "eth0"
+PORT1 = "eth1"
 
 OVS_NAME = "ovs-br99"
 TYPE_OVS_BR = InterfaceType.OVS_BRIDGE
@@ -32,31 +37,38 @@ class TestDesiredStateOvsMetadata:
             {
                 Interface.KEY: [
                     {
-                        "name": OVS_NAME,
-                        "type": TYPE_OVS_BR,
-                        "state": "up",
-                        "bridge": {
-                            "port": [{"name": "eth0"}, {"name": "eth1"}]
+                        Interface.NAME: OVS_NAME,
+                        Interface.TYPE: TYPE_OVS_BR,
+                        Interface.STATE: InterfaceState.UP,
+                        OVSBridge.CONFIG_SUBTREE: {
+                            OVSBridge.PORT_SUBTREE: [
+                                {OVSBridge.Port.NAME: PORT0},
+                                {OVSBridge.Port.NAME: PORT1},
+                            ]
                         },
                     },
-                    {"name": "eth0", "type": "unknown"},
-                    {"name": "eth1", "type": "unknown"},
+                    {
+                        Interface.NAME: PORT0,
+                        Interface.TYPE: InterfaceType.UNKNOWN,
+                    },
+                    {
+                        Interface.NAME: PORT1,
+                        Interface.TYPE: InterfaceType.UNKNOWN,
+                    },
                 ]
             }
         )
         current_state = state.State({})
         expected_dstate = state.State(desired_state.state)
         expected_cstate = state.State(current_state.state)
-        expected_dstate.interfaces["eth0"][metadata.MASTER] = OVS_NAME
-        expected_dstate.interfaces["eth1"][metadata.MASTER] = OVS_NAME
-        expected_dstate.interfaces["eth0"][metadata.MASTER_TYPE] = TYPE_OVS_BR
-        expected_dstate.interfaces["eth1"][metadata.MASTER_TYPE] = TYPE_OVS_BR
-        expected_dstate.interfaces["eth0"][
-            metadata.BRPORT_OPTIONS
-        ] = desired_state.interfaces[OVS_NAME]["bridge"]["port"][0]
-        expected_dstate.interfaces["eth1"][
-            metadata.BRPORT_OPTIONS
-        ] = desired_state.interfaces[OVS_NAME]["bridge"]["port"][1]
+        expected_dstate.interfaces[PORT0][metadata.MASTER] = OVS_NAME
+        expected_dstate.interfaces[PORT1][metadata.MASTER] = OVS_NAME
+        expected_dstate.interfaces[PORT0][metadata.MASTER_TYPE] = TYPE_OVS_BR
+        expected_dstate.interfaces[PORT1][metadata.MASTER_TYPE] = TYPE_OVS_BR
+        desired_p0 = _get_bridge_port_state(desired_state, OVS_NAME, 0)
+        expected_dstate.interfaces[PORT0][metadata.BRPORT_OPTIONS] = desired_p0
+        desired_p1 = _get_bridge_port_state(desired_state, OVS_NAME, 1)
+        expected_dstate.interfaces[PORT1][metadata.BRPORT_OPTIONS] = desired_p1
 
         metadata.generate_ifaces_metadata(desired_state, current_state)
 
@@ -68,11 +80,14 @@ class TestDesiredStateOvsMetadata:
             {
                 Interface.KEY: [
                     {
-                        "name": OVS_NAME,
-                        "type": TYPE_OVS_BR,
-                        "state": "up",
-                        "bridge": {
-                            "port": [{"name": "eth0"}, {"name": "eth1"}]
+                        Interface.NAME: OVS_NAME,
+                        Interface.TYPE: TYPE_OVS_BR,
+                        Interface.STATE: InterfaceState.UP,
+                        OVSBridge.CONFIG_SUBTREE: {
+                            OVSBridge.PORT_SUBTREE: [
+                                {OVSBridge.Port.NAME: PORT0},
+                                {OVSBridge.Port.NAME: PORT1},
+                            ]
                         },
                     }
                 ]
@@ -81,25 +96,37 @@ class TestDesiredStateOvsMetadata:
         current_state = state.State(
             {
                 Interface.KEY: [
-                    {"name": "eth0", "state": "up", "type": "unknown"},
-                    {"name": "eth1", "state": "up", "type": "unknown"},
+                    {
+                        Interface.NAME: PORT0,
+                        Interface.STATE: InterfaceState.UP,
+                        Interface.TYPE: InterfaceType.UNKNOWN,
+                    },
+                    {
+                        Interface.NAME: PORT1,
+                        Interface.STATE: InterfaceState.UP,
+                        Interface.TYPE: InterfaceType.UNKNOWN,
+                    },
                 ]
             }
         )
         expected_dstate = state.State(desired_state.state)
         expected_cstate = state.State(current_state.state)
-        expected_dstate.interfaces["eth0"] = {"name": "eth0", "state": "up"}
-        expected_dstate.interfaces["eth0"][metadata.MASTER] = OVS_NAME
-        expected_dstate.interfaces["eth0"][metadata.MASTER_TYPE] = TYPE_OVS_BR
-        expected_dstate.interfaces["eth1"] = {"name": "eth1", "state": "up"}
-        expected_dstate.interfaces["eth1"][metadata.MASTER] = OVS_NAME
-        expected_dstate.interfaces["eth1"][metadata.MASTER_TYPE] = TYPE_OVS_BR
-        expected_dstate.interfaces["eth0"][
-            metadata.BRPORT_OPTIONS
-        ] = desired_state.interfaces[OVS_NAME]["bridge"]["port"][0]
-        expected_dstate.interfaces["eth1"][
-            metadata.BRPORT_OPTIONS
-        ] = desired_state.interfaces[OVS_NAME]["bridge"]["port"][1]
+        expected_dstate.interfaces[PORT0] = {
+            Interface.NAME: PORT0,
+            Interface.STATE: InterfaceState.UP,
+        }
+        expected_dstate.interfaces[PORT0][metadata.MASTER] = OVS_NAME
+        expected_dstate.interfaces[PORT0][metadata.MASTER_TYPE] = TYPE_OVS_BR
+        expected_dstate.interfaces[PORT1] = {
+            Interface.NAME: PORT1,
+            Interface.STATE: InterfaceState.UP,
+        }
+        expected_dstate.interfaces[PORT1][metadata.MASTER] = OVS_NAME
+        expected_dstate.interfaces[PORT1][metadata.MASTER_TYPE] = TYPE_OVS_BR
+        desired_p0 = _get_bridge_port_state(desired_state, OVS_NAME, 0)
+        expected_dstate.interfaces[PORT0][metadata.BRPORT_OPTIONS] = desired_p0
+        desired_p1 = _get_bridge_port_state(desired_state, OVS_NAME, 1)
+        expected_dstate.interfaces[PORT1][metadata.BRPORT_OPTIONS] = desired_p1
 
         metadata.generate_ifaces_metadata(desired_state, current_state)
 
@@ -110,7 +137,11 @@ class TestDesiredStateOvsMetadata:
         desired_state = state.State(
             {
                 Interface.KEY: [
-                    {"name": OVS_NAME, "type": TYPE_OVS_BR, "state": "down"}
+                    {
+                        Interface.NAME: OVS_NAME,
+                        Interface.TYPE: TYPE_OVS_BR,
+                        Interface.STATE: InterfaceState.DOWN,
+                    }
                 ]
             }
         )
@@ -118,15 +149,24 @@ class TestDesiredStateOvsMetadata:
             {
                 Interface.KEY: [
                     {
-                        "name": OVS_NAME,
-                        "type": TYPE_OVS_BR,
-                        "state": "up",
-                        "bridge": {
-                            "port": [{"name": "eth0"}, {"name": "eth1"}]
+                        Interface.NAME: OVS_NAME,
+                        Interface.TYPE: TYPE_OVS_BR,
+                        Interface.STATE: InterfaceState.UP,
+                        OVSBridge.CONFIG_SUBTREE: {
+                            OVSBridge.PORT_SUBTREE: [
+                                {OVSBridge.Port.NAME: PORT0},
+                                {OVSBridge.Port.NAME: PORT1},
+                            ]
                         },
                     },
-                    {"name": "eth0", "type": "unknown"},
-                    {"name": "eth1", "type": "unknown"},
+                    {
+                        Interface.NAME: PORT0,
+                        Interface.TYPE: InterfaceType.UNKNOWN,
+                    },
+                    {
+                        Interface.NAME: PORT1,
+                        Interface.TYPE: InterfaceType.UNKNOWN,
+                    },
                 ]
             }
         )
@@ -143,37 +183,49 @@ class TestDesiredStateOvsMetadata:
             {
                 Interface.KEY: [
                     {
-                        "name": OVS_NAME,
-                        "type": TYPE_OVS_BR,
-                        "state": "up",
-                        "bridge": {
-                            "port": [{"name": "eth0"}, {"name": "eth1"}]
+                        Interface.NAME: OVS_NAME,
+                        Interface.TYPE: TYPE_OVS_BR,
+                        Interface.STATE: InterfaceState.UP,
+                        OVSBridge.CONFIG_SUBTREE: {
+                            OVSBridge.PORT_SUBTREE: [
+                                {OVSBridge.Port.NAME: PORT0},
+                                {OVSBridge.Port.NAME: PORT1},
+                            ]
                         },
                     },
-                    {"name": "eth1", "state": "up", "type": "unknown"},
+                    {
+                        Interface.NAME: PORT1,
+                        Interface.STATE: InterfaceState.UP,
+                        Interface.TYPE: InterfaceType.UNKNOWN,
+                    },
                 ]
             }
         )
         current_state = state.State(
             {
                 Interface.KEY: [
-                    {"name": "eth0", "state": "up", "type": "unknown"}
+                    {
+                        Interface.NAME: PORT0,
+                        Interface.STATE: InterfaceState.UP,
+                        Interface.TYPE: InterfaceType.UNKNOWN,
+                    }
                 ]
             }
         )
         expected_dstate = state.State(desired_state.state)
         expected_cstate = state.State(current_state.state)
-        expected_dstate.interfaces["eth0"] = {"name": "eth0", "state": "up"}
-        expected_dstate.interfaces["eth0"][metadata.MASTER] = OVS_NAME
-        expected_dstate.interfaces["eth1"][metadata.MASTER] = OVS_NAME
-        expected_dstate.interfaces["eth0"][metadata.MASTER_TYPE] = TYPE_OVS_BR
-        expected_dstate.interfaces["eth1"][metadata.MASTER_TYPE] = TYPE_OVS_BR
-        expected_dstate.interfaces["eth0"][
-            metadata.BRPORT_OPTIONS
-        ] = desired_state.interfaces[OVS_NAME]["bridge"]["port"][0]
-        expected_dstate.interfaces["eth1"][
-            metadata.BRPORT_OPTIONS
-        ] = desired_state.interfaces[OVS_NAME]["bridge"]["port"][1]
+        expected_dstate.interfaces[PORT0] = {
+            Interface.NAME: PORT0,
+            Interface.STATE: InterfaceState.UP,
+        }
+        expected_dstate.interfaces[PORT0][metadata.MASTER] = OVS_NAME
+        expected_dstate.interfaces[PORT1][metadata.MASTER] = OVS_NAME
+        expected_dstate.interfaces[PORT0][metadata.MASTER_TYPE] = TYPE_OVS_BR
+        expected_dstate.interfaces[PORT1][metadata.MASTER_TYPE] = TYPE_OVS_BR
+        desired_p0 = _get_bridge_port_state(desired_state, OVS_NAME, 0)
+        expected_dstate.interfaces[PORT0][metadata.BRPORT_OPTIONS] = desired_p0
+        desired_p1 = _get_bridge_port_state(desired_state, OVS_NAME, 1)
+        expected_dstate.interfaces[PORT1][metadata.BRPORT_OPTIONS] = desired_p1
 
         metadata.generate_ifaces_metadata(desired_state, current_state)
 
@@ -185,10 +237,14 @@ class TestDesiredStateOvsMetadata:
             {
                 Interface.KEY: [
                     {
-                        "name": OVS_NAME,
-                        "type": TYPE_OVS_BR,
-                        "state": "up",
-                        "bridge": {"port": [{"name": "eth0"}]},
+                        Interface.NAME: OVS_NAME,
+                        Interface.TYPE: TYPE_OVS_BR,
+                        Interface.STATE: InterfaceState.UP,
+                        OVSBridge.CONFIG_SUBTREE: {
+                            OVSBridge.PORT_SUBTREE: [
+                                {OVSBridge.Port.NAME: PORT0}
+                            ]
+                        },
                     }
                 ]
             }
@@ -197,27 +253,40 @@ class TestDesiredStateOvsMetadata:
             {
                 Interface.KEY: [
                     {
-                        "name": OVS_NAME,
-                        "type": TYPE_OVS_BR,
-                        "state": "up",
-                        "bridge": {
-                            "port": [{"name": "eth0"}, {"name": "eth1"}]
+                        Interface.NAME: OVS_NAME,
+                        Interface.TYPE: TYPE_OVS_BR,
+                        Interface.STATE: InterfaceState.UP,
+                        OVSBridge.CONFIG_SUBTREE: {
+                            OVSBridge.PORT_SUBTREE: [
+                                {OVSBridge.Port.NAME: PORT0},
+                                {OVSBridge.Port.NAME: PORT1},
+                            ]
                         },
                     },
-                    {"name": "eth0", "state": "up", "type": "ethernet"},
-                    {"name": "eth1", "state": "up", "type": "ethernet"},
+                    {
+                        Interface.NAME: PORT0,
+                        Interface.STATE: InterfaceState.UP,
+                        Interface.TYPE: InterfaceType.ETHERNET,
+                    },
+                    {
+                        Interface.NAME: PORT1,
+                        Interface.STATE: InterfaceState.UP,
+                        Interface.TYPE: InterfaceType.ETHERNET,
+                    },
                 ]
             }
         )
         expected_dstate = state.State(desired_state.state)
         expected_cstate = state.State(current_state.state)
-        expected_dstate.interfaces["eth0"] = {"name": "eth0", "state": "up"}
-        expected_dstate.interfaces["eth0"][metadata.MASTER] = OVS_NAME
-        expected_dstate.interfaces["eth0"][metadata.MASTER_TYPE] = TYPE_OVS_BR
-        expected_dstate.interfaces["eth1"] = {"name": "eth1"}
-        expected_dstate.interfaces["eth0"][
-            metadata.BRPORT_OPTIONS
-        ] = desired_state.interfaces[OVS_NAME]["bridge"]["port"][0]
+        expected_dstate.interfaces[PORT0] = {
+            Interface.NAME: PORT0,
+            Interface.STATE: InterfaceState.UP,
+        }
+        expected_dstate.interfaces[PORT0][metadata.MASTER] = OVS_NAME
+        expected_dstate.interfaces[PORT0][metadata.MASTER_TYPE] = TYPE_OVS_BR
+        expected_dstate.interfaces[PORT1] = {Interface.NAME: PORT1}
+        desired_p0 = _get_bridge_port_state(desired_state, OVS_NAME, 0)
+        expected_dstate.interfaces[PORT0][metadata.BRPORT_OPTIONS] = desired_p0
 
         metadata.generate_ifaces_metadata(desired_state, current_state)
 
@@ -228,7 +297,11 @@ class TestDesiredStateOvsMetadata:
         desired_state = state.State(
             {
                 Interface.KEY: [
-                    {"name": "eth0", "type": "unknown", "fookey": "fooval"}
+                    {
+                        Interface.NAME: PORT0,
+                        Interface.TYPE: InterfaceType.UNKNOWN,
+                        "fookey": "fooval",
+                    }
                 ]
             }
         )
@@ -236,25 +309,33 @@ class TestDesiredStateOvsMetadata:
             {
                 Interface.KEY: [
                     {
-                        "name": OVS_NAME,
-                        "type": TYPE_OVS_BR,
-                        "state": "up",
-                        "bridge": {
-                            "port": [{"name": "eth0"}, {"name": "eth1"}]
+                        Interface.NAME: OVS_NAME,
+                        Interface.TYPE: TYPE_OVS_BR,
+                        Interface.STATE: InterfaceState.UP,
+                        OVSBridge.CONFIG_SUBTREE: {
+                            OVSBridge.PORT_SUBTREE: [
+                                {OVSBridge.Port.NAME: PORT0},
+                                {OVSBridge.Port.NAME: PORT1},
+                            ]
                         },
                     },
-                    {"name": "eth0", "type": "unknown"},
-                    {"name": "eth1", "type": "unknown"},
+                    {
+                        Interface.NAME: PORT0,
+                        Interface.TYPE: InterfaceType.UNKNOWN,
+                    },
+                    {
+                        Interface.NAME: PORT1,
+                        Interface.TYPE: InterfaceType.UNKNOWN,
+                    },
                 ]
             }
         )
         expected_dstate = state.State(desired_state.state)
         expected_cstate = state.State(current_state.state)
-        expected_dstate.interfaces["eth0"][metadata.MASTER] = OVS_NAME
-        expected_dstate.interfaces["eth0"][metadata.MASTER_TYPE] = TYPE_OVS_BR
-        expected_dstate.interfaces["eth0"][
-            metadata.BRPORT_OPTIONS
-        ] = current_state.interfaces[OVS_NAME]["bridge"]["port"][0]
+        expected_dstate.interfaces[PORT0][metadata.MASTER] = OVS_NAME
+        expected_dstate.interfaces[PORT0][metadata.MASTER_TYPE] = TYPE_OVS_BR
+        current_p0 = _get_bridge_port_state(current_state, OVS_NAME, 0)
+        expected_dstate.interfaces[PORT0][metadata.BRPORT_OPTIONS] = current_p0
 
         metadata.generate_ifaces_metadata(desired_state, current_state)
 
@@ -267,10 +348,14 @@ class TestDesiredStateOvsMetadata:
             {
                 Interface.KEY: [
                     {
-                        "name": OVS2_NAME,
-                        "type": TYPE_OVS_BR,
-                        "state": "up",
-                        "bridge": {"port": [{"name": "eth0"}]},
+                        Interface.NAME: OVS2_NAME,
+                        Interface.TYPE: TYPE_OVS_BR,
+                        Interface.STATE: InterfaceState.UP,
+                        OVSBridge.CONFIG_SUBTREE: {
+                            OVSBridge.PORT_SUBTREE: [
+                                {OVSBridge.Port.NAME: PORT0}
+                            ]
+                        },
                     }
                 ]
             }
@@ -279,28 +364,46 @@ class TestDesiredStateOvsMetadata:
             {
                 Interface.KEY: [
                     {
-                        "name": OVS_NAME,
-                        "type": TYPE_OVS_BR,
-                        "state": "up",
-                        "bridge": {
-                            "port": [{"name": "eth0"}, {"name": "eth1"}]
+                        Interface.NAME: OVS_NAME,
+                        Interface.TYPE: TYPE_OVS_BR,
+                        Interface.STATE: InterfaceState.UP,
+                        OVSBridge.CONFIG_SUBTREE: {
+                            OVSBridge.PORT_SUBTREE: [
+                                {OVSBridge.Port.NAME: PORT0},
+                                {OVSBridge.Port.NAME: PORT1},
+                            ]
                         },
                     },
-                    {"name": "eth0", "state": "up", "type": "unknown"},
-                    {"name": "eth1", "state": "up", "type": "unknown"},
+                    {
+                        Interface.NAME: PORT0,
+                        Interface.STATE: InterfaceState.UP,
+                        Interface.TYPE: InterfaceType.UNKNOWN,
+                    },
+                    {
+                        Interface.NAME: PORT1,
+                        Interface.STATE: InterfaceState.UP,
+                        Interface.TYPE: InterfaceType.UNKNOWN,
+                    },
                 ]
             }
         )
         expected_dstate = state.State(desired_state.state)
         expected_cstate = state.State(current_state.state)
-        expected_dstate.interfaces["eth0"] = {"name": "eth0", "state": "up"}
-        expected_dstate.interfaces["eth0"][metadata.MASTER] = OVS2_NAME
-        expected_dstate.interfaces["eth0"][metadata.MASTER_TYPE] = TYPE_OVS_BR
-        expected_dstate.interfaces["eth0"][
-            metadata.BRPORT_OPTIONS
-        ] = desired_state.interfaces[OVS2_NAME]["bridge"]["port"][0]
+        expected_dstate.interfaces[PORT0] = {
+            Interface.NAME: PORT0,
+            Interface.STATE: InterfaceState.UP,
+        }
+        expected_dstate.interfaces[PORT0][metadata.MASTER] = OVS2_NAME
+        expected_dstate.interfaces[PORT0][metadata.MASTER_TYPE] = TYPE_OVS_BR
+        desired_p0 = _get_bridge_port_state(desired_state, OVS2_NAME, 0)
+        expected_dstate.interfaces[PORT0][metadata.BRPORT_OPTIONS] = desired_p0
 
         metadata.generate_ifaces_metadata(desired_state, current_state)
 
         assert desired_state == expected_dstate
         assert current_state == expected_cstate
+
+
+def _get_bridge_port_state(desired_state, bridge_name, port_index):
+    brconfig = desired_state.interfaces[bridge_name][OVSBridge.CONFIG_SUBTREE]
+    return brconfig[OVSBridge.PORT_SUBTREE][port_index]
