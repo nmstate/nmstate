@@ -1,4 +1,12 @@
 # Changelog
+## [0.2.4] - 2020-02-12
+### Bug Fixes
+ - Reduce minimal required MAC address length to 4 octets
+ - Warn early when the same interface name is mentioned multiple times
+
+### New Features
+ - Raise NmstateTimeoutError on mainloop timeout
+
 ## [0.2.3] - 2020-02-05
 ### Bug Fixes
  - Reduce the delay before the verification step to 0.5 second.
