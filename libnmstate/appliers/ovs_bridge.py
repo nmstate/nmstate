@@ -46,7 +46,25 @@ def set_ovs_bridge_ports_metadata(master_state, slave_state):
     bridge = master_state.get(OVSBridge.CONFIG_SUBTREE, {})
     ports = bridge.get(OVSBridge.PORT_SUBTREE, [])
     slave_name = slave_state[Interface.NAME]
-    port = next(
-        filter(lambda n: n[OVSBridge.Port.NAME] == slave_name, ports,), {},
-    )
+
+    port = _lookup_ovs_port_by_interface(ports, slave_name)
+
     slave_state[BRPORT_OPTIONS] = port
+
+
+def _lookup_ovs_port_by_interface(ports, slave_name):
+    for port in ports:
+        lag_state = port.get(OVSBridge.Port.LINK_AGGREGATION_SUBTREE)
+        if lag_state and _is_ovs_lag_slave(lag_state, slave_name):
+            return port
+        elif port[OVSBridge.Port.NAME] == slave_name:
+            return port
+    return {}
+
+
+def _is_ovs_lag_slave(lag_state, iface_name):
+    slaves = lag_state.get(OVSBridge.Port.LinkAggregation.SLAVES_SUBTREE, ())
+    for slave in slaves:
+        if slave[OVSBridge.Port.LinkAggregation.Slave.NAME] == iface_name:
+            return True
+    return False
