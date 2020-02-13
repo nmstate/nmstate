@@ -164,6 +164,34 @@ class TestAssertIfaceState:
 
         desired_state.verify_interfaces(current_state)
 
+    def test_sort_ovs_lag_slaves(self):
+        desired_state = self._base_state
+        current_state = self._base_state
+        slaves = [
+            {OVSBridge.Port.LinkAggregation.Slave.NAME: "slave1"},
+            {OVSBridge.Port.LinkAggregation.Slave.NAME: "slave2"},
+        ]
+        desired_ovs = {
+            OVSBridge.PORT_SUBTREE: [
+                {
+                    OVSBridge.Port.NAME: "boo",
+                    OVSBridge.Port.LINK_AGGREGATION_SUBTREE: {
+                        OVSBridge.Port.LinkAggregation.SLAVES_SUBTREE: slaves
+                    },
+                }
+            ]
+        }
+        current_ovs = copy.deepcopy(desired_ovs)
+        current_port0 = current_ovs[OVSBridge.PORT_SUBTREE][0]
+        current_lag0 = current_port0[OVSBridge.Port.LINK_AGGREGATION_SUBTREE]
+        current_lag0[OVSBridge.Port.LinkAggregation.SLAVES_SUBTREE].reverse()
+        desired_iface_state = desired_state.interfaces["foo-name"]
+        desired_iface_state[OVSBridge.CONFIG_SUBTREE] = desired_ovs
+        current_iface_state = current_state.interfaces["foo-name"]
+        current_iface_state[OVSBridge.CONFIG_SUBTREE] = current_ovs
+
+        desired_state.verify_interfaces(current_state)
+
     def test_description_is_empty(self):
         desired_state = self._base_state
         current_state = self._base_state
