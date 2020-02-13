@@ -94,6 +94,8 @@ def prepare_edited_ifaces_configuration(ifaces_desired_state):
 
     for iface_desired_state in ifaces_desired_state:
         ifname = iface_desired_state[Interface.NAME]
+        if iface_desired_state[Interface.TYPE] == InterfaceType.OVS_PORT:
+            ifname = iface_desired_state[IFACE_NAME_METADATA]
         nmdev = device.get_device_by_name(ifname)
         cur_con_profile = None
         if nmdev:

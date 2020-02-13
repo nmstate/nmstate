@@ -207,3 +207,20 @@ def vlan_on_eth1(eth1_up):
         VLAN_IFNAME, 101, eth1_up[Interface.KEY][0][Interface.NAME]
     ):
         yield VLAN_IFNAME
+
+
+def test_change_ovs_interface_mac():
+    bridge = Bridge(BRIDGE1)
+    bridge.add_internal_port(PORT1, ipv4_state={InterfaceIPv4.ENABLED: False})
+
+    with bridge.create() as state:
+        desired_state = {
+            Interface.KEY: [
+                {Interface.NAME: PORT1, Interface.MAC: "32:e4:ff:ff:ff:ff"}
+            ]
+        }
+        libnmstate.apply(desired_state)
+        assertlib.assert_state_match(state)
+
+    assertlib.assert_absent(BRIDGE1)
+    assertlib.assert_absent(PORT1)
