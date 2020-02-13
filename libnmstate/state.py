@@ -47,6 +47,7 @@ from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import LinuxBridge
+from libnmstate.schema import OVSBridge
 from libnmstate.schema import Route
 from libnmstate.schema import RouteRule
 
@@ -360,6 +361,7 @@ class State:
     def normalize_for_verification(self):
         self._clean_sanitize_ethernet()
         self._sort_lag_slaves()
+        self._sort_ovs_lag_slaves()
         self._sort_bridge_ports()
         self._canonicalize_ipv6()
         self._remove_iface_ipv6_link_local_addr()
@@ -611,6 +613,20 @@ class State:
     def _sort_lag_slaves(self):
         for ifstate in self.interfaces.values():
             ifstate.get("link-aggregation", {}).get("slaves", []).sort()
+
+    def _sort_ovs_lag_slaves(self):
+        for ifstate in self.interfaces.values():
+            ports = ifstate.get(OVSBridge.CONFIG_SUBTREE, {}).get(
+                OVSBridge.PORT_SUBTREE, ()
+            )
+            for port in ports:
+                lag = port.get(OVSBridge.Port.LINK_AGGREGATION_SUBTREE, {})
+                slaves = lag.get(
+                    OVSBridge.Port.LinkAggregation.SLAVES_SUBTREE, []
+                )
+                slaves.sort(
+                    key=lambda k: k[OVSBridge.Port.LinkAggregation.Slave.NAME]
+                )
 
     def _sort_bridge_ports(self):
         for ifstate in self.interfaces.values():
