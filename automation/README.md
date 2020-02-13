@@ -28,10 +28,15 @@ using 'nmstate/fedora-nmstate-dev' docker image.
 You may change the test type by specifying the `--test-type` flag, for example:
 
  * `./automation/run-tests.sh --test-type integ --el8`:
-   Integration tests using 'nmstate/centos8-nmstate-dev' docker image.
+   Integration tests (without slow test cases) using
+   'nmstate/centos8-nmstate-dev' docker image.
 
  * `./automation/run-tests.sh --test-type integ`:
-   Integration tests using 'nmstate/fedora-nmstate-dev' docker image.
+   Integration tests (without slow test cases) using
+   'nmstate/fedora-nmstate-dev' docker image.
+
+ * `./automation/run-tests.sh --test-type integ_slow`:
+   Integration slow test cases using `nmstate/fedora-nmstate-dev` docker image.
 
 For a full list of command-line flags, run `./automation/run-tests.sh --help`.
 
