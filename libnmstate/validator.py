@@ -28,6 +28,7 @@ from .schema import Constants
 from libnmstate.schema import DNS
 from libnmstate.schema import InterfaceIP
 from libnmstate.schema import InterfaceIPv6
+from libnmstate.schema import InterfaceType
 from libnmstate.schema import LinuxBridge as LB
 from libnmstate.schema import VXLAN
 from libnmstate.error import NmstateDependencyError
@@ -67,6 +68,7 @@ def validate_capabilities(state, capabilities):
 def validate_interface_capabilities(ifaces_state, capabilities):
     ifaces_types = [iface_state.get("type") for iface_state in ifaces_state]
     has_ovs_capability = nm.ovs.CAPABILITY in capabilities
+    has_team_capability = nm.team.CAPABILITY in capabilities
     for iface_type in ifaces_types:
         is_ovs_type = iface_type in (
             nm.ovs.BRIDGE_TYPE,
@@ -77,6 +79,10 @@ def validate_interface_capabilities(ifaces_state, capabilities):
             raise NmstateDependencyError(
                 "Open vSwitch NetworkManager support not installed "
                 "and started"
+            )
+        if iface_type == InterfaceType.TEAM and not has_team_capability:
+            raise NmstateDependencyError(
+                "NetworkManager-team plugin not installed and started"
             )
 
 

@@ -37,11 +37,8 @@ class LacpValue:
 
 
 def has_ovs_capability():
-    try:
-        nmclient.NM.DeviceType.OVS_BRIDGE
-        return True
-    except AttributeError:
-        return False
+    nm_client = nmclient.client()
+    return nmclient.NM.Capability.OVS in nm_client.get_capabilities()
 
 
 def create_bridge_setting(options_state):

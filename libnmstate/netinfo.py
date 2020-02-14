@@ -79,6 +79,9 @@ def capabilities():
     if nm.ovs.has_ovs_capability():
         caps.add(nm.ovs.CAPABILITY)
 
+    if nm.team.has_team_capability():
+        caps.add(nm.team.CAPABILITY)
+
     return list(caps)
 
 

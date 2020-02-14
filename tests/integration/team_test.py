@@ -23,7 +23,7 @@ import os
 import pytest
 
 import libnmstate
-from libnmstate.error import NmstateLibnmError
+from libnmstate.error import NmstateDependencyError
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
@@ -63,7 +63,7 @@ def test_edit_team_iface():
 
 def test_nm_team_plugin_missing():
     with disable_nm_plugin("team"):
-        with pytest.raises(NmstateLibnmError):
+        with pytest.raises(NmstateDependencyError):
             libnmstate.apply(
                 {
                     Interface.KEY: [

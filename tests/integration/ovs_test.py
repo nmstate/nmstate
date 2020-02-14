@@ -25,6 +25,7 @@ from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import OVSBridge
+from libnmstate.error import NmstateDependencyError
 from libnmstate.error import NmstateLibnmError
 from libnmstate.error import NmstateValueError
 
@@ -167,7 +168,7 @@ def test_ovs_interface_with_max_length_name():
 
 def test_nm_ovs_plugin_missing():
     with disable_nm_plugin("ovs"):
-        with pytest.raises(NmstateLibnmError):
+        with pytest.raises(NmstateDependencyError):
             libnmstate.apply(
                 {
                     Interface.KEY: [

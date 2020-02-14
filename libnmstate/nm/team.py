@@ -25,7 +25,13 @@ from libnmstate.schema import Interface
 from libnmstate.schema import Team
 
 
+CAPABILITY = "team"
 TEAMD_JSON_DEVICE = "device"
+
+
+def has_team_capability():
+    nm_client = nmclient.client()
+    return nmclient.NM.Capability.TEAM in nm_client.get_capabilities()
 
 
 def create_setting(iface_state, base_con_profile):
