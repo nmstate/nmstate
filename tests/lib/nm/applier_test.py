@@ -23,6 +23,11 @@ from unittest import mock
 
 from libnmstate import metadata
 from libnmstate import nm
+from libnmstate.schema import Bond
+from libnmstate.schema import BondMode
+from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceState
+from libnmstate.schema import InterfaceType
 
 
 @pytest.fixture
@@ -79,20 +84,20 @@ def test_prepare_new_ifaces_configuration(
 ):
     ifaces_desired_state = [
         {
-            "name": "eth0",
-            "type": "ethernet",
-            "state": "up",
+            Interface.NAME: "eth0",
+            Interface.TYPE: InterfaceType.ETHERNET,
+            Interface.STATE: InterfaceState.UP,
             metadata.MASTER: "bond99",
-            metadata.MASTER_TYPE: "bond",
+            metadata.MASTER_TYPE: InterfaceType.BOND,
         },
         {
-            "name": "bond99",
-            "type": "bond",
-            "state": "up",
-            "link-aggregation": {
-                "mode": "balance-rr",
-                "slaves": ["eth0"],
-                "options": {"miimon": 120},
+            Interface.NAME: "bond99",
+            Interface.TYPE: InterfaceType.BOND,
+            Interface.STATE: InterfaceState.UP,
+            Bond.CONFIG_SUBTREE: {
+                Bond.MODE: BondMode.ROUND_ROBIN,
+                Bond.SLAVES: ["eth0"],
+                Bond.OPTIONS_SUBTREE: {"miimon": 120},
             },
         },
     ]
@@ -157,7 +162,11 @@ def test_prepare_edited_ifaces_configuration(
     nm_device_mock, nm_connection_mock, nm_ipv4_mock, nm_ipv6_mock, nm_ovs_mock
 ):
     ifaces_desired_state = [
-        {"name": "eth0", "type": "ethernet", "state": "up"}
+        {
+            Interface.NAME: "eth0",
+            Interface.TYPE: InterfaceType.ETHERNET,
+            Interface.STATE: InterfaceState.UP,
+        }
     ]
     cons = nm.applier.prepare_edited_ifaces_configuration(ifaces_desired_state)
 
@@ -170,10 +179,14 @@ def test_prepare_edited_ifaces_configuration(
 class TestIfaceAdminStateControl:
     def test_set_ifaces_admin_state_up(self, nm_device_mock):
         ifaces_desired_state = [
-            {"name": "eth0", "type": "ethernet", "state": "up"}
+            {
+                Interface.NAME: "eth0",
+                Interface.TYPE: InterfaceType.ETHERNET,
+                Interface.STATE: InterfaceState.UP,
+            }
         ]
         con_profile = mock.MagicMock()
-        con_profile.devname = ifaces_desired_state[0]["name"]
+        con_profile.devname = ifaces_desired_state[0][Interface.NAME]
         nm.applier.set_ifaces_admin_state(ifaces_desired_state, [con_profile])
 
         nm_device_mock.modify.assert_called_once_with(
@@ -182,7 +195,11 @@ class TestIfaceAdminStateControl:
 
     def test_set_ifaces_admin_state_down(self, nm_device_mock):
         ifaces_desired_state = [
-            {"name": "eth0", "type": "ethernet", "state": "down"}
+            {
+                Interface.NAME: "eth0",
+                Interface.TYPE: InterfaceType.ETHERNET,
+                Interface.STATE: InterfaceState.DOWN,
+            }
         ]
         nm.applier.set_ifaces_admin_state(ifaces_desired_state)
 
@@ -195,7 +212,11 @@ class TestIfaceAdminStateControl:
 
     def test_set_ifaces_admin_state_absent(self, nm_device_mock):
         ifaces_desired_state = [
-            {"name": "eth0", "type": "ethernet", "state": "absent"}
+            {
+                Interface.NAME: "eth0",
+                Interface.TYPE: InterfaceType.ETHERNET,
+                Interface.STATE: InterfaceState.ABSENT,
+            }
         ]
         nm.applier.set_ifaces_admin_state(ifaces_desired_state)
 
@@ -211,24 +232,31 @@ class TestIfaceAdminStateControl:
     ):
         ifaces_desired_state = [
             {
-                "name": "bond0",
-                "type": "bond",
-                "state": "up",
-                "link-aggregation": {"mode": "802.3ad", "slaves": ["eth0"]},
+                Interface.NAME: "bond0",
+                Interface.TYPE: InterfaceType.BOND,
+                Interface.STATE: InterfaceState.UP,
+                Bond.CONFIG_SUBTREE: {
+                    Bond.MODE: BondMode.LACP,
+                    Bond.SLAVES: ["eth0"],
+                },
             },
-            {"name": "eth0", "type": "ethernet", "state": "up"},
+            {
+                Interface.NAME: "eth0",
+                Interface.TYPE: InterfaceType.ETHERNET,
+                Interface.STATE: InterfaceState.UP,
+            },
         ]
 
         nm_device_mock.get_device_by_name = lambda devname: devname
-        bond = ifaces_desired_state[0]["name"]
-        slaves = ifaces_desired_state[0]["link-aggregation"]["slaves"]
+        bond = ifaces_desired_state[0][Interface.NAME]
+        slaves = ifaces_desired_state[0][Bond.CONFIG_SUBTREE][Bond.SLAVES]
         nm_bond_mock.BOND_TYPE = nm.bond.BOND_TYPE
         nm_bond_mock.get_slaves.return_value = slaves
 
         bond_con_profile = mock.MagicMock()
-        bond_con_profile.devname = ifaces_desired_state[0]["name"]
+        bond_con_profile.devname = ifaces_desired_state[0][Interface.NAME]
         slave_con_profile = mock.MagicMock()
-        slave_con_profile.devname = ifaces_desired_state[1]["name"]
+        slave_con_profile.devname = ifaces_desired_state[1][Interface.NAME]
 
         nm.applier.set_ifaces_admin_state(
             ifaces_desired_state, [bond_con_profile, slave_con_profile]

@@ -66,12 +66,12 @@ def test_get_ovs_info_without_ports(nm_connection_mock, NM_mock):
     info = nm.ovs.get_ovs_info(bridge_device, device_info)
 
     expected_info = {
-        "port": [],
-        "options": {
-            "fail-mode": "",
-            "mcast-snooping-enable": False,
-            "rstp": False,
-            "stp": False,
+        OVSBridge.PORT_SUBTREE: [],
+        OVSBridge.OPTIONS_SUBTREE: {
+            OVSBridge.Options.FAIL_MODE: "",
+            OVSBridge.Options.MCAST_SNOOPING_ENABLED: False,
+            OVSBridge.Options.RSTP: False,
+            OVSBridge.Options.STP: False,
         },
     }
     assert expected_info == info
@@ -90,12 +90,12 @@ def test_get_ovs_info_with_ports_without_interfaces(
     info = nm.ovs.get_ovs_info(bridge_device, device_info)
 
     expected_info = {
-        "port": [],
-        "options": {
-            "fail-mode": "",
-            "mcast-snooping-enable": False,
-            "rstp": False,
-            "stp": False,
+        OVSBridge.PORT_SUBTREE: [],
+        OVSBridge.OPTIONS_SUBTREE: {
+            OVSBridge.Options.FAIL_MODE: "",
+            OVSBridge.Options.MCAST_SNOOPING_ENABLED: False,
+            OVSBridge.Options.RSTP: False,
+            OVSBridge.Options.STP: False,
         },
     }
     assert expected_info == info
@@ -121,27 +121,29 @@ def test_get_ovs_info_with_ports_with_interfaces(
     device_info = [(bridge_device, None), (port_device, None)]
     info = nm.ovs.get_ovs_info(bridge_device, device_info)
 
-    assert len(info["port"]) == 1
-    assert "name" in info["port"][0]
-    assert "vlan-mode" in info["port"][0]
-    assert "access-tag" in info["port"][0]
+    assert len(info[OVSBridge.PORT_SUBTREE]) == 1
+    assert OVSBridge.Port.NAME in info[OVSBridge.PORT_SUBTREE][0]
+    assert "vlan-mode" in info[OVSBridge.PORT_SUBTREE][0]
+    assert "access-tag" in info[OVSBridge.PORT_SUBTREE][0]
 
 
 def test_create_bridge_setting(NM_mock):
     options = {
-        "fail-mode": "foo",
-        "mcast-snooping-enable": False,
-        "rstp": False,
-        "stp": False,
+        OVSBridge.Options.FAIL_MODE: "foo",
+        OVSBridge.Options.MCAST_SNOOPING_ENABLED: False,
+        OVSBridge.Options.RSTP: False,
+        OVSBridge.Options.STP: False,
     }
     bridge_setting = nm.ovs.create_bridge_setting(options)
 
-    assert bridge_setting.props.fail_mode == options["fail-mode"]
-    assert bridge_setting.props.mcast_snooping_enable == (
-        options["mcast-snooping-enable"]
+    assert (
+        bridge_setting.props.fail_mode == options[OVSBridge.Options.FAIL_MODE]
     )
-    assert bridge_setting.props.rstp_enable == options["rstp"]
-    assert bridge_setting.props.stp_enable == options["stp"]
+    assert bridge_setting.props.mcast_snooping_enable == (
+        options[OVSBridge.Options.MCAST_SNOOPING_ENABLED]
+    )
+    assert bridge_setting.props.rstp_enable == options[OVSBridge.Options.RSTP]
+    assert bridge_setting.props.stp_enable == options[OVSBridge.Options.STP]
 
 
 def test_create_port_setting(NM_mock):
@@ -149,7 +151,7 @@ def test_create_port_setting(NM_mock):
     updelay = 1
     downdelay = 2
     options = {
-        "tag": 101,
+        OVSBridge.Port.Vlan.TAG: 101,
         "vlan-mode": "voomode",
         OVSBridge.Port.LINK_AGGREGATION_SUBTREE: {
             OVSBridge.Port.LinkAggregation.MODE: mode,
@@ -159,7 +161,7 @@ def test_create_port_setting(NM_mock):
     }
     port_setting = nm.ovs.create_port_setting(options)
 
-    assert port_setting.props.tag == options["tag"]
+    assert port_setting.props.tag == options[OVSBridge.Port.Vlan.TAG]
     assert port_setting.props.vlan_mode == options["vlan-mode"]
     assert port_setting.props.bond_mode == mode
     assert port_setting.props.lacp == nm.ovs.LacpValue.ACTIVE

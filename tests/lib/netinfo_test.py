@@ -21,11 +21,17 @@ import pytest
 from unittest import mock
 
 from libnmstate import netinfo
+from libnmstate.schema import Bond
+from libnmstate.schema import BondMode
 from libnmstate.schema import Constants
 from libnmstate.schema import DNS
-from libnmstate.schema import RouteRule
+from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
+from libnmstate.schema import InterfaceState
+from libnmstate.schema import InterfaceType
+from libnmstate.schema import Route
+from libnmstate.schema import RouteRule
 
 
 INTERFACES = Constants.INTERFACES
@@ -49,15 +55,15 @@ def nm_dns_mock():
 def test_netinfo_show_generic_iface(nm_mock, nm_dns_mock):
     current_config = {
         DNS.KEY: {DNS.RUNNING: {}, DNS.CONFIG: {}},
-        ROUTES: {"config": [], "running": []},
+        ROUTES: {Route.CONFIG: [], Route.RUNNING: []},
         RouteRule.KEY: {RouteRule.CONFIG: []},
         INTERFACES: [
             {
-                "name": "foo",
-                "type": "unknown",
-                "state": "up",
-                "ipv4": {InterfaceIPv4.ENABLED: False},
-                "ipv6": {InterfaceIPv6.ENABLED: False},
+                Interface.NAME: "foo",
+                Interface.TYPE: InterfaceType.UNKNOWN,
+                Interface.STATE: InterfaceState.UP,
+                Interface.IPV4: {InterfaceIPv4.ENABLED: False},
+                Interface.IPV6: {InterfaceIPv6.ENABLED: False},
             }
         ],
     }
@@ -68,8 +74,8 @@ def test_netinfo_show_generic_iface(nm_mock, nm_dns_mock):
         current_iface0
     )
     nm_mock.bond.is_bond_type_id.return_value = False
-    nm_mock.ipv4.get_info.return_value = current_iface0["ipv4"]
-    nm_mock.ipv6.get_info.return_value = current_iface0["ipv6"]
+    nm_mock.ipv4.get_info.return_value = current_iface0[Interface.IPV4]
+    nm_mock.ipv6.get_info.return_value = current_iface0[Interface.IPV6]
     nm_mock.ipv4.get_route_running.return_value = []
     nm_mock.ipv4.get_route_config.return_value = []
     nm_mock.ipv6.get_route_running.return_value = []
@@ -85,36 +91,40 @@ def test_netinfo_show_generic_iface(nm_mock, nm_dns_mock):
 def test_netinfo_show_bond_iface(nm_mock, nm_dns_mock):
     current_config = {
         DNS.KEY: {DNS.RUNNING: {}, DNS.CONFIG: {}},
-        ROUTES: {"config": [], "running": []},
+        ROUTES: {Route.CONFIG: [], Route.RUNNING: []},
         RouteRule.KEY: {RouteRule.CONFIG: []},
         INTERFACES: [
             {
-                "name": "bond99",
-                "type": "bond",
-                "state": "up",
-                "link-aggregation": {
-                    "mode": "balance-rr",
-                    "slaves": [],
-                    "options": {"miimon": "100"},
+                Interface.NAME: "bond99",
+                Interface.TYPE: InterfaceType.BOND,
+                Interface.STATE: InterfaceState.UP,
+                Bond.CONFIG_SUBTREE: {
+                    Bond.MODE: BondMode.ROUND_ROBIN,
+                    Bond.SLAVES: [],
+                    Bond.OPTIONS_SUBTREE: {"miimon": "100"},
                 },
-                "ipv4": {InterfaceIPv4.ENABLED: False},
-                "ipv6": {InterfaceIPv6.ENABLED: False},
+                Interface.IPV4: {InterfaceIPv4.ENABLED: False},
+                Interface.IPV6: {InterfaceIPv6.ENABLED: False},
             }
         ],
     }
 
     nm_mock.device.list_devices.return_value = ["one-item"]
     nm_mock.translator.Nm2Api.get_common_device_info.return_value = {
-        "name": current_config[INTERFACES][0]["name"],
-        "type": current_config[INTERFACES][0]["type"],
-        "state": current_config[INTERFACES][0]["state"],
+        Interface.NAME: current_config[INTERFACES][0][Interface.NAME],
+        Interface.TYPE: current_config[INTERFACES][0][Interface.TYPE],
+        Interface.STATE: current_config[INTERFACES][0][Interface.STATE],
     }
     nm_mock.bond.is_bond_type_id.return_value = True
     nm_mock.translator.Nm2Api.get_bond_info.return_value = {
-        "link-aggregation": current_config[INTERFACES][0]["link-aggregation"]
+        Bond.CONFIG_SUBTREE: current_config[INTERFACES][0][Bond.CONFIG_SUBTREE]
     }
-    nm_mock.ipv4.get_info.return_value = current_config[INTERFACES][0]["ipv4"]
-    nm_mock.ipv6.get_info.return_value = current_config[INTERFACES][0]["ipv6"]
+    nm_mock.ipv4.get_info.return_value = current_config[INTERFACES][0][
+        Interface.IPV4
+    ]
+    nm_mock.ipv6.get_info.return_value = current_config[INTERFACES][0][
+        Interface.IPV6
+    ]
     nm_mock.ipv4.get_route_running.return_value = []
     nm_mock.ipv4.get_route_config.return_value = []
     nm_mock.ipv6.get_route_running.return_value = []

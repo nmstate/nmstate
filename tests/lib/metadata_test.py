@@ -25,6 +25,8 @@ from libnmstate import metadata
 from libnmstate import state
 from libnmstate.nm import dns as nm_dns
 from libnmstate.error import NmstateValueError
+from libnmstate.schema import Bond
+from libnmstate.schema import BondMode
 from libnmstate.schema import DNS
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
@@ -75,8 +77,14 @@ class TestDesiredStateBondMetadata:
             {
                 Interface.KEY: [
                     create_bond_state_dict(BOND_NAME, ["eth0", "eth1"]),
-                    {"name": "eth0", "type": "unknown"},
-                    {"name": "eth1", "type": "unknown"},
+                    {
+                        Interface.NAME: "eth0",
+                        Interface.TYPE: InterfaceType.UNKNOWN,
+                    },
+                    {
+                        Interface.NAME: "eth1",
+                        Interface.TYPE: InterfaceType.UNKNOWN,
+                    },
                 ]
             }
         )
@@ -104,17 +112,29 @@ class TestDesiredStateBondMetadata:
         current_state = state.State(
             {
                 Interface.KEY: [
-                    {"name": "eth0", "type": "unknown"},
-                    {"name": "eth1", "type": "unknown"},
+                    {
+                        Interface.NAME: "eth0",
+                        Interface.TYPE: InterfaceType.UNKNOWN,
+                    },
+                    {
+                        Interface.NAME: "eth1",
+                        Interface.TYPE: InterfaceType.UNKNOWN,
+                    },
                 ]
             }
         )
         expected_dstate = state.State(desired_state.state)
         expected_cstate = state.State(current_state.state)
-        expected_dstate.interfaces["eth0"] = {"name": "eth0", "state": "up"}
+        expected_dstate.interfaces["eth0"] = {
+            Interface.NAME: "eth0",
+            Interface.STATE: InterfaceState.UP,
+        }
         expected_dstate.interfaces["eth0"][metadata.MASTER] = BOND_NAME
         expected_dstate.interfaces["eth0"][metadata.MASTER_TYPE] = TYPE_BOND
-        expected_dstate.interfaces["eth1"] = {"name": "eth1", "state": "up"}
+        expected_dstate.interfaces["eth1"] = {
+            Interface.NAME: "eth1",
+            Interface.STATE: InterfaceState.UP,
+        }
         expected_dstate.interfaces["eth1"][metadata.MASTER] = BOND_NAME
         expected_dstate.interfaces["eth1"][metadata.MASTER_TYPE] = TYPE_BOND
 
@@ -127,7 +147,11 @@ class TestDesiredStateBondMetadata:
         desired_state = state.State(
             {
                 Interface.KEY: [
-                    {"name": BOND_NAME, "type": TYPE_BOND, "state": "down"}
+                    {
+                        Interface.NAME: BOND_NAME,
+                        Interface.TYPE: TYPE_BOND,
+                        Interface.STATE: InterfaceState.DOWN,
+                    }
                 ]
             }
         )
@@ -135,8 +159,14 @@ class TestDesiredStateBondMetadata:
             {
                 Interface.KEY: [
                     create_bond_state_dict(BOND_NAME, ["eth0", "eth1"]),
-                    {"name": "eth0", "type": "unknown"},
-                    {"name": "eth1", "type": "unknown"},
+                    {
+                        Interface.NAME: "eth0",
+                        Interface.TYPE: InterfaceType.UNKNOWN,
+                    },
+                    {
+                        Interface.NAME: "eth1",
+                        Interface.TYPE: InterfaceType.UNKNOWN,
+                    },
                 ]
             }
         )
@@ -153,16 +183,30 @@ class TestDesiredStateBondMetadata:
             {
                 Interface.KEY: [
                     create_bond_state_dict(BOND_NAME, ["eth0", "eth1"]),
-                    {"name": "eth1", "state": "up", "type": "unknown"},
+                    {
+                        Interface.NAME: "eth1",
+                        Interface.STATE: InterfaceState.UP,
+                        Interface.TYPE: InterfaceType.UNKNOWN,
+                    },
                 ]
             }
         )
         current_state = state.State(
-            {Interface.KEY: [{"name": "eth0", "type": "unknown"}]}
+            {
+                Interface.KEY: [
+                    {
+                        Interface.NAME: "eth0",
+                        Interface.TYPE: InterfaceType.UNKNOWN,
+                    }
+                ]
+            }
         )
         expected_dstate = state.State(desired_state.state)
         expected_cstate = state.State(current_state.state)
-        expected_dstate.interfaces["eth0"] = {"name": "eth0", "state": "up"}
+        expected_dstate.interfaces["eth0"] = {
+            Interface.NAME: "eth0",
+            Interface.STATE: InterfaceState.UP,
+        }
         expected_dstate.interfaces["eth0"][metadata.MASTER] = BOND_NAME
         expected_dstate.interfaces["eth1"][metadata.MASTER] = BOND_NAME
         expected_dstate.interfaces["eth0"][metadata.MASTER_TYPE] = TYPE_BOND
@@ -181,17 +225,28 @@ class TestDesiredStateBondMetadata:
             {
                 Interface.KEY: [
                     create_bond_state_dict(BOND_NAME, ["eth0", "eth1"]),
-                    {"name": "eth0", "state": "up", "type": "ethernet"},
-                    {"name": "eth1", "state": "up", "type": "ethernet"},
+                    {
+                        Interface.NAME: "eth0",
+                        Interface.STATE: InterfaceState.UP,
+                        Interface.TYPE: InterfaceType.ETHERNET,
+                    },
+                    {
+                        Interface.NAME: "eth1",
+                        Interface.STATE: InterfaceState.UP,
+                        Interface.TYPE: InterfaceType.ETHERNET,
+                    },
                 ]
             }
         )
         expected_dstate = state.State(desired_state.state)
         expected_cstate = state.State(current_state.state)
-        expected_dstate.interfaces["eth0"] = {"name": "eth0", "state": "up"}
+        expected_dstate.interfaces["eth0"] = {
+            Interface.NAME: "eth0",
+            Interface.STATE: InterfaceState.UP,
+        }
         expected_dstate.interfaces["eth0"][metadata.MASTER] = BOND_NAME
         expected_dstate.interfaces["eth0"][metadata.MASTER_TYPE] = TYPE_BOND
-        expected_dstate.interfaces["eth1"] = {"name": "eth1"}
+        expected_dstate.interfaces["eth1"] = {Interface.NAME: "eth1"}
 
         metadata.generate_ifaces_metadata(desired_state, current_state)
 
@@ -202,7 +257,11 @@ class TestDesiredStateBondMetadata:
         desired_state = state.State(
             {
                 Interface.KEY: [
-                    {"name": "eth0", "type": "unknown", "fookey": "fooval"}
+                    {
+                        Interface.NAME: "eth0",
+                        Interface.TYPE: InterfaceType.UNKNOWN,
+                        "fookey": "fooval",
+                    }
                 ]
             }
         )
@@ -210,8 +269,14 @@ class TestDesiredStateBondMetadata:
             {
                 Interface.KEY: [
                     create_bond_state_dict(BOND_NAME, ["eth0", "eth1"]),
-                    {"name": "eth0", "type": "unknown"},
-                    {"name": "eth1", "type": "unknown"},
+                    {
+                        Interface.NAME: "eth0",
+                        Interface.TYPE: InterfaceType.UNKNOWN,
+                    },
+                    {
+                        Interface.NAME: "eth1",
+                        Interface.TYPE: InterfaceType.UNKNOWN,
+                    },
                 ]
             }
         )
@@ -234,14 +299,25 @@ class TestDesiredStateBondMetadata:
             {
                 Interface.KEY: [
                     create_bond_state_dict(BOND_NAME, ["eth0", "eth1"]),
-                    {"name": "eth0", "state": "up", "type": "unknown"},
-                    {"name": "eth1", "state": "up", "type": "unknown"},
+                    {
+                        Interface.NAME: "eth0",
+                        Interface.STATE: InterfaceState.UP,
+                        Interface.TYPE: InterfaceType.UNKNOWN,
+                    },
+                    {
+                        Interface.NAME: "eth1",
+                        Interface.STATE: InterfaceState.UP,
+                        Interface.TYPE: InterfaceType.UNKNOWN,
+                    },
                 ]
             }
         )
         expected_dstate = state.State(desired_state.state)
         expected_cstate = state.State(current_state.state)
-        expected_dstate.interfaces["eth0"] = {"name": "eth0", "state": "up"}
+        expected_dstate.interfaces["eth0"] = {
+            Interface.NAME: "eth0",
+            Interface.STATE: InterfaceState.UP,
+        }
         expected_dstate.interfaces["eth0"][metadata.MASTER] = BOND2_NAME
         expected_dstate.interfaces["eth0"][metadata.MASTER_TYPE] = TYPE_BOND
 
@@ -265,15 +341,29 @@ class TestDesiredStateBondMetadata:
                 Interface.KEY: [
                     create_bond_state_dict(BOND_NAME, ["eth0"]),
                     create_bond_state_dict(BOND2_NAME, ["eth1"]),
-                    {"name": "eth0", "state": "up", "type": "unknown"},
-                    {"name": "eth1", "state": "up", "type": "unknown"},
+                    {
+                        Interface.NAME: "eth0",
+                        Interface.STATE: InterfaceState.UP,
+                        Interface.TYPE: InterfaceType.UNKNOWN,
+                    },
+                    {
+                        Interface.NAME: "eth1",
+                        Interface.STATE: InterfaceState.UP,
+                        Interface.TYPE: InterfaceType.UNKNOWN,
+                    },
                 ]
             }
         )
         expected_dstate = state.State(desired_state.state)
         expected_cstate = state.State(current_state.state)
-        expected_dstate.interfaces["eth0"] = {"name": "eth0", "state": "up"}
-        expected_dstate.interfaces["eth1"] = {"name": "eth1", "state": "up"}
+        expected_dstate.interfaces["eth0"] = {
+            Interface.NAME: "eth0",
+            Interface.STATE: InterfaceState.UP,
+        }
+        expected_dstate.interfaces["eth1"] = {
+            Interface.NAME: "eth1",
+            Interface.STATE: InterfaceState.UP,
+        }
         expected_dstate.interfaces["eth0"][metadata.MASTER] = BOND2_NAME
         expected_dstate.interfaces["eth0"][metadata.MASTER_TYPE] = TYPE_BOND
         expected_dstate.interfaces["eth1"][metadata.MASTER] = BOND_NAME
@@ -304,8 +394,16 @@ class TestDesiredStateBondMetadata:
             {
                 Interface.KEY: [
                     create_bond_state_dict(BOND_NAME, ["eth0", "eth1"]),
-                    {"name": "eth0", "state": "up", "type": "unknown"},
-                    {"name": "eth1", "state": "up", "type": "unknown"},
+                    {
+                        Interface.NAME: "eth0",
+                        Interface.STATE: InterfaceState.UP,
+                        Interface.TYPE: InterfaceType.UNKNOWN,
+                    },
+                    {
+                        Interface.NAME: "eth1",
+                        Interface.STATE: InterfaceState.UP,
+                        Interface.TYPE: InterfaceType.UNKNOWN,
+                    },
                 ]
             }
         )
@@ -321,10 +419,13 @@ class TestDesiredStateBondMetadata:
 def create_bond_state_dict(name, slaves=None):
     slaves = slaves or []
     return {
-        "name": name,
-        "type": TYPE_BOND,
-        "state": "up",
-        "link-aggregation": {"mode": "balance-rr", "slaves": slaves},
+        Interface.NAME: name,
+        Interface.TYPE: TYPE_BOND,
+        Interface.STATE: InterfaceState.UP,
+        Bond.CONFIG_SUBTREE: {
+            Bond.MODE: BondMode.ROUND_ROBIN,
+            Bond.SLAVES: slaves,
+        },
     }
 
 
