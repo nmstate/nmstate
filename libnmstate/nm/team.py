@@ -102,7 +102,7 @@ def get_info(device):
 
 
 def _convert_teamd_config_to_nmstate_config(team_config):
-    team_config.pop("device")
+    team_config.pop(TEAMD_JSON_DEVICE, None)
     port_config = team_config.get(Team.PORT_SUBTREE)
 
     if port_config:
