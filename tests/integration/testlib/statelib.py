@@ -17,13 +17,8 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
-try:
-    from collections.abc import Mapping
-    from collections.abc import Sequence
-except ImportError:
-    from collections import Mapping
-    from collections import Sequence
-
+from collections.abc import Mapping
+from collections.abc import Sequence
 import copy
 from operator import itemgetter
 
