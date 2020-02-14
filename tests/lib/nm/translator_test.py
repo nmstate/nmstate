@@ -22,6 +22,11 @@ import pytest
 from unittest import mock
 
 from libnmstate import nm
+from libnmstate.schema import Bond
+from libnmstate.schema import BondMode
+from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceState
+from libnmstate.schema import InterfaceType
 
 
 @pytest.fixture(scope="module")
@@ -39,26 +44,27 @@ def NM_mock():
 
 
 def test_api2nm_iface_type_map(NM_mock):
+    ovs_interface_setting = NM_mock.SETTING_OVS_INTERFACE_SETTING_NAME
     map = nm.translator.Api2Nm.get_iface_type_map()
 
     expected_map = {
-        "ethernet": NM_mock.SETTING_WIRED_SETTING_NAME,
-        "bond": NM_mock.SETTING_BOND_SETTING_NAME,
-        "dummy": NM_mock.SETTING_DUMMY_SETTING_NAME,
-        "ovs-bridge": NM_mock.SETTING_OVS_BRIDGE_SETTING_NAME,
-        "ovs-port": NM_mock.SETTING_OVS_PORT_SETTING_NAME,
-        "ovs-interface": NM_mock.SETTING_OVS_INTERFACE_SETTING_NAME,
-        "team": NM_mock.SETTING_TEAM_SETTING_NAME,
-        "vlan": NM_mock.SETTING_VLAN_SETTING_NAME,
-        "linux-bridge": NM_mock.SETTING_BRIDGE_SETTING_NAME,
-        "vxlan": NM_mock.SETTING_VXLAN_SETTING_NAME,
+        InterfaceType.ETHERNET: NM_mock.SETTING_WIRED_SETTING_NAME,
+        InterfaceType.BOND: NM_mock.SETTING_BOND_SETTING_NAME,
+        InterfaceType.DUMMY: NM_mock.SETTING_DUMMY_SETTING_NAME,
+        InterfaceType.OVS_BRIDGE: NM_mock.SETTING_OVS_BRIDGE_SETTING_NAME,
+        InterfaceType.OVS_PORT: NM_mock.SETTING_OVS_PORT_SETTING_NAME,
+        InterfaceType.OVS_INTERFACE: ovs_interface_setting,
+        InterfaceType.TEAM: NM_mock.SETTING_TEAM_SETTING_NAME,
+        InterfaceType.VLAN: NM_mock.SETTING_VLAN_SETTING_NAME,
+        InterfaceType.LINUX_BRIDGE: NM_mock.SETTING_BRIDGE_SETTING_NAME,
+        InterfaceType.VXLAN: NM_mock.SETTING_VXLAN_SETTING_NAME,
     }
 
     assert map == expected_map
 
 
 def test_api2nm_get_iface_type(NM_mock):
-    nm_type = nm.translator.Api2Nm.get_iface_type("ethernet")
+    nm_type = nm.translator.Api2Nm.get_iface_type(InterfaceType.ETHERNET)
     assert NM_mock.SETTING_WIRED_SETTING_NAME == nm_type
 
 
@@ -67,14 +73,17 @@ def test_api2nm_get_iface_type(NM_mock):
 )
 def test_api2nm_bond_options():
     bond_options = {
-        "name": "bond99",
-        "type": "bond",
-        "state": "up",
-        "link-aggregation": {"mode": "balance-rr", "options": {"miimon": 120}},
+        Interface.NAME: "bond99",
+        Interface.TYPE: InterfaceType.BOND,
+        Interface.STATE: InterfaceState.UP,
+        Bond.CONFIG_SUBTREE: {
+            Bond.MODE: BondMode.ROUND_ROBIN,
+            Bond.OPTIONS_SUBTREE: {"miimon": 120},
+        },
     }
     nm_bond_options = nm.translator.Api2Nm.get_bond_options(bond_options)
 
-    assert {"miimon": 120, "mode": "balance-rr"} == nm_bond_options
+    assert {"miimon": 120, Bond.MODE: BondMode.ROUND_ROBIN} == nm_bond_options
 
 
 def test_nm2api_common_device_info(NM_mock):
@@ -89,26 +98,30 @@ def test_nm2api_common_device_info(NM_mock):
     }
     info = nm.translator.Nm2Api.get_common_device_info(devinfo)
 
-    expected_info = {"name": "devname", "state": "down", "type": "unknown"}
+    expected_info = {
+        Interface.NAME: "devname",
+        Interface.STATE: InterfaceState.DOWN,
+        Interface.TYPE: InterfaceType.UNKNOWN,
+    }
     assert expected_info == info
 
 
 def test_nm2api_bond_info():
     slaves_mock = [mock.MagicMock(), mock.MagicMock()]
     bondinfo = {
-        "slaves": slaves_mock,
-        "options": {"mode": "balance-rr", "miimon": 120},
+        Bond.SLAVES: slaves_mock,
+        Bond.OPTIONS_SUBTREE: {Bond.MODE: BondMode.ROUND_ROBIN, "miimon": 120},
     }
     info = nm.translator.Nm2Api.get_bond_info(bondinfo)
 
     expected_info = {
-        "link-aggregation": {
-            "mode": "balance-rr",
-            "slaves": [
+        Bond.CONFIG_SUBTREE: {
+            Bond.MODE: BondMode.ROUND_ROBIN,
+            Bond.SLAVES: [
                 slaves_mock[0].props.interface,
                 slaves_mock[1].props.interface,
             ],
-            "options": {"miimon": 120},
+            Bond.OPTIONS_SUBTREE: {"miimon": 120},
         }
     }
     assert expected_info == info

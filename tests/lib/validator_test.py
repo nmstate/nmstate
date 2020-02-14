@@ -23,7 +23,9 @@ import libnmstate
 from libnmstate import schema
 from libnmstate import state
 from libnmstate import validator
+from libnmstate.schema import Bond
 from libnmstate.schema import DNS
+from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import LinuxBridge as LB
@@ -37,8 +39,14 @@ class TestLinkAggregationState:
         desired_state = state.State(
             {
                 schema.Interface.KEY: [
-                    {"name": "bond0", "link-aggregation": {"slaves": []}},
-                    {"name": "bond1", "link-aggregation": {"slaves": []}},
+                    {
+                        Interface.NAME: "bond0",
+                        Bond.CONFIG_SUBTREE: {Bond.SLAVES: []},
+                    },
+                    {
+                        Interface.NAME: "bond1",
+                        Bond.CONFIG_SUBTREE: {Bond.SLAVES: []},
+                    },
                 ]
             }
         )
@@ -51,15 +59,15 @@ class TestLinkAggregationState:
         desired_state = state.State(
             {
                 schema.Interface.KEY: [
-                    {"name": "slave0"},
-                    {"name": "slave1"},
+                    {Interface.NAME: "slave0"},
+                    {Interface.NAME: "slave1"},
                     {
-                        "name": "bond0",
-                        "link-aggregation": {"slaves": ["slave0"]},
+                        Interface.NAME: "bond0",
+                        Bond.CONFIG_SUBTREE: {Bond.SLAVES: ["slave0"]},
                     },
                     {
-                        "name": "bond1",
-                        "link-aggregation": {"slaves": ["slave1"]},
+                        Interface.NAME: "bond1",
+                        Bond.CONFIG_SUBTREE: {Bond.SLAVES: ["slave1"]},
                     },
                 ]
             }
@@ -72,17 +80,21 @@ class TestLinkAggregationState:
         desired_state = state.State(
             {
                 schema.Interface.KEY: [
-                    {"name": "slave0"},
-                    {"name": "slave1"},
-                    {"name": "slave00"},
-                    {"name": "slave11"},
+                    {Interface.NAME: "slave0"},
+                    {Interface.NAME: "slave1"},
+                    {Interface.NAME: "slave00"},
+                    {Interface.NAME: "slave11"},
                     {
-                        "name": "bond0",
-                        "link-aggregation": {"slaves": ["slave0", "slave00"]},
+                        Interface.NAME: "bond0",
+                        Bond.CONFIG_SUBTREE: {
+                            Bond.SLAVES: ["slave0", "slave00"]
+                        },
                     },
                     {
-                        "name": "bond1",
-                        "link-aggregation": {"slaves": ["slave1", "slave11"]},
+                        Interface.NAME: "bond1",
+                        Bond.CONFIG_SUBTREE: {
+                            Bond.SLAVES: ["slave1", "slave11"]
+                        },
                     },
                 ]
             }
@@ -95,16 +107,20 @@ class TestLinkAggregationState:
         desired_state = state.State(
             {
                 schema.Interface.KEY: [
-                    {"name": "slave0"},
-                    {"name": "slave1"},
-                    {"name": "slave00"},
+                    {Interface.NAME: "slave0"},
+                    {Interface.NAME: "slave1"},
+                    {Interface.NAME: "slave00"},
                     {
-                        "name": "bond0",
-                        "link-aggregation": {"slaves": ["slave0", "slave00"]},
+                        Interface.NAME: "bond0",
+                        Bond.CONFIG_SUBTREE: {
+                            Bond.SLAVES: ["slave0", "slave00"]
+                        },
                     },
                     {
-                        "name": "bond1",
-                        "link-aggregation": {"slaves": ["slave1", "slave00"]},
+                        Interface.NAME: "bond1",
+                        Bond.CONFIG_SUBTREE: {
+                            Bond.SLAVES: ["slave1", "slave00"]
+                        },
                     },
                 ]
             }
@@ -118,15 +134,19 @@ class TestLinkAggregationState:
         desired_state = state.State(
             {
                 schema.Interface.KEY: [
-                    {"name": "slave0"},
-                    {"name": "slave1"},
+                    {Interface.NAME: "slave0"},
+                    {Interface.NAME: "slave1"},
                     {
-                        "name": "bond0",
-                        "link-aggregation": {"slaves": ["slave0", "slave00"]},
+                        Interface.NAME: "bond0",
+                        Bond.CONFIG_SUBTREE: {
+                            Bond.SLAVES: ["slave0", "slave00"]
+                        },
                     },
                     {
-                        "name": "bond1",
-                        "link-aggregation": {"slaves": ["slave1", "slave11"]},
+                        Interface.NAME: "bond1",
+                        Bond.CONFIG_SUBTREE: {
+                            Bond.SLAVES: ["slave1", "slave11"]
+                        },
                     },
                 ]
             }

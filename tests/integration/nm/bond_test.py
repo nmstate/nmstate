@@ -22,7 +22,9 @@ from contextlib import contextmanager
 from libnmstate import nm
 from libnmstate import schema
 from libnmstate.nm.nmclient import nmclient_context
+from libnmstate.schema import Bond
 from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceType
 
 from .testlib import mainloop_run
 
@@ -127,12 +129,14 @@ def _attach_slave_to_bond(bond, slave):
 def _create_connection_setting(bond, port_con_profile):
     con_setting = nm.connection.ConnectionSetting()
     con_setting.import_by_profile(port_con_profile)
-    con_setting.set_master(bond, "bond")
+    con_setting.set_master(bond, InterfaceType.BOND)
 
     return con_setting.setting
 
 
 def _convert_slaves_devices_to_iface_names(info):
     if info:
-        info["slaves"] = [slave.props.interface for slave in info["slaves"]]
+        info[Bond.SLAVES] = [
+            slave.props.interface for slave in info[Bond.SLAVES]
+        ]
     return info

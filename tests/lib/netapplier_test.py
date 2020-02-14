@@ -23,13 +23,17 @@ import pytest
 from unittest import mock
 
 from libnmstate import netapplier
+from libnmstate.schema import Bond
+from libnmstate.schema import BondMode
 from libnmstate.schema import Constants
+from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
+from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
 
 INTERFACES = Constants.INTERFACES
-BOND_TYPE = "bond"
+BOND_TYPE = InterfaceType.BOND
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -59,11 +63,11 @@ def test_iface_admin_state_change(netinfo_nm_mock, netapplier_nm_mock):
     current_config = {
         INTERFACES: [
             {
-                "name": "foo",
-                "type": InterfaceType.DUMMY,
-                "state": "up",
-                "ipv4": {InterfaceIPv4.ENABLED: False},
-                "ipv6": {InterfaceIPv6.ENABLED: False},
+                Interface.NAME: "foo",
+                Interface.TYPE: InterfaceType.DUMMY,
+                Interface.STATE: InterfaceState.UP,
+                Interface.IPV4: {InterfaceIPv4.ENABLED: False},
+                Interface.IPV6: {InterfaceIPv6.ENABLED: False},
             }
         ]
     }
@@ -77,14 +81,14 @@ def test_iface_admin_state_change(netinfo_nm_mock, netapplier_nm_mock):
     netinfo_nm_mock.bond.is_bond_type_id.return_value = False
     netinfo_nm_mock.ovs.is_ovs_bridge_type_id.return_value = False
     netinfo_nm_mock.ovs.is_ovs_port_type_id.return_value = False
-    netinfo_nm_mock.ipv4.get_info.return_value = current_iface0["ipv4"]
-    netinfo_nm_mock.ipv6.get_info.return_value = current_iface0["ipv6"]
+    netinfo_nm_mock.ipv4.get_info.return_value = current_iface0[Interface.IPV4]
+    netinfo_nm_mock.ipv6.get_info.return_value = current_iface0[Interface.IPV6]
     netinfo_nm_mock.ipv4.get_route_running.return_value = []
     netinfo_nm_mock.ipv4.get_route_config.return_value = []
     netinfo_nm_mock.ipv6.get_route_running.return_value = []
     netinfo_nm_mock.ipv6.get_route_config.return_value = []
 
-    desired_config[INTERFACES][0]["state"] = "down"
+    desired_config[INTERFACES][0][Interface.STATE] = InterfaceState.DOWN
     netapplier.apply(desired_config, verify_change=False)
 
     applier_mock = netapplier_nm_mock.applier
@@ -114,16 +118,16 @@ def test_add_new_bond(netinfo_nm_mock, netapplier_nm_mock):
     desired_config = {
         INTERFACES: [
             {
-                "name": "bond99",
-                "type": BOND_TYPE,
-                "state": "up",
-                "link-aggregation": {
-                    "mode": "balance-rr",
-                    "slaves": [],
-                    "options": {"miimon": 200},
+                Interface.NAME: "bond99",
+                Interface.TYPE: BOND_TYPE,
+                Interface.STATE: InterfaceState.UP,
+                Bond.CONFIG_SUBTREE: {
+                    Bond.MODE: BondMode.ROUND_ROBIN,
+                    Bond.SLAVES: [],
+                    Bond.OPTIONS_SUBTREE: {"miimon": 200},
                 },
-                "ipv4": {},
-                "ipv6": {},
+                Interface.IPV4: {},
+                Interface.IPV6: {},
             }
         ]
     }
@@ -141,16 +145,16 @@ def test_edit_existing_bond(netinfo_nm_mock, netapplier_nm_mock):
     current_config = {
         INTERFACES: [
             {
-                "name": "bond99",
-                "type": BOND_TYPE,
-                "state": "up",
-                "link-aggregation": {
-                    "mode": "balance-rr",
-                    "slaves": [],
-                    "options": {"miimon": "100"},
+                Interface.NAME: "bond99",
+                Interface.TYPE: BOND_TYPE,
+                Interface.STATE: InterfaceState.UP,
+                Bond.CONFIG_SUBTREE: {
+                    Bond.MODE: BondMode.ROUND_ROBIN,
+                    Bond.SLAVES: [],
+                    Bond.OPTIONS_SUBTREE: {"miimon": "100"},
                 },
-                "ipv4": {InterfaceIPv4.ENABLED: False},
-                "ipv6": {InterfaceIPv6.ENABLED: False},
+                Interface.IPV4: {InterfaceIPv4.ENABLED: False},
+                Interface.IPV6: {InterfaceIPv6.ENABLED: False},
             }
         ]
     }
@@ -158,23 +162,25 @@ def test_edit_existing_bond(netinfo_nm_mock, netapplier_nm_mock):
     current_iface0 = current_config[INTERFACES][0]
     netinfo_nm_mock.device.list_devices.return_value = ["one-item"]
     netinfo_nm_mock.translator.Nm2Api.get_common_device_info.return_value = {
-        "name": current_iface0["name"],
-        "type": current_iface0["type"],
-        "state": current_iface0["state"],
+        Interface.NAME: current_iface0[Interface.NAME],
+        Interface.TYPE: current_iface0[Interface.TYPE],
+        Interface.STATE: current_iface0[Interface.STATE],
     }
     netinfo_nm_mock.bond.is_bond_type_id.return_value = True
     netinfo_nm_mock.translator.Nm2Api.get_bond_info.return_value = {
-        "link-aggregation": current_iface0["link-aggregation"]
+        Bond.CONFIG_SUBTREE: current_iface0[Bond.CONFIG_SUBTREE]
     }
-    netinfo_nm_mock.ipv4.get_info.return_value = current_iface0["ipv4"]
-    netinfo_nm_mock.ipv6.get_info.return_value = current_iface0["ipv6"]
+    netinfo_nm_mock.ipv4.get_info.return_value = current_iface0[Interface.IPV4]
+    netinfo_nm_mock.ipv6.get_info.return_value = current_iface0[Interface.IPV6]
     netinfo_nm_mock.ipv4.get_route_running.return_value = []
     netinfo_nm_mock.ipv4.get_route_config.return_value = []
     netinfo_nm_mock.ipv6.get_route_running.return_value = []
     netinfo_nm_mock.ipv6.get_route_config.return_value = []
 
     desired_config = copy.deepcopy(current_config)
-    options = desired_config[INTERFACES][0]["link-aggregation"]["options"]
+    options = desired_config[INTERFACES][0][Bond.CONFIG_SUBTREE][
+        Bond.OPTIONS_SUBTREE
+    ]
     options["miimon"] = 200
 
     netapplier.apply(desired_config, verify_change=False)
