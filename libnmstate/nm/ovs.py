@@ -187,8 +187,11 @@ def _get_lag_info(port_name, port_setting, port_slave_names):
 
     lacp = port_setting.props.lacp
     mode = port_setting.props.bond_mode
-    if not mode and lacp == LacpValue.ACTIVE:
-        mode = OB.Port.LinkAggregation.Mode.LACP
+    if not mode:
+        if lacp == LacpValue.ACTIVE:
+            mode = OB.Port.LinkAggregation.Mode.LACP
+        else:
+            mode = OB.Port.LinkAggregation.Mode.ACTIVE_BACKUP
     port_info[OB.Port.NAME] = port_name
     port_info[OB.Port.LINK_AGGREGATION_SUBTREE] = {
         OB.Port.LinkAggregation.MODE: mode,
