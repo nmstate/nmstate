@@ -306,6 +306,7 @@ def prepare_proxy_ifaces_desired_state(ifaces_desired_state):
     state of the system, but internal to the NM provider.
     """
     new_ifaces_desired_state = []
+    new_ifaces_names = set()
     for iface_desired_state in ifaces_desired_state:
         master_type = iface_desired_state.get(MASTER_TYPE_METADATA)
         if master_type != ovs.BRIDGE_TYPE:
@@ -316,7 +317,10 @@ def prepare_proxy_ifaces_desired_state(ifaces_desired_state):
         port_iface_desired_state = _create_ovs_port_iface_desired_state(
             iface_desired_state, port_opts_metadata
         )
-        new_ifaces_desired_state.append(port_iface_desired_state)
+        port_iface_name = port_iface_desired_state[Interface.NAME]
+        if port_iface_name not in new_ifaces_names:
+            new_ifaces_names.add(port_iface_name)
+            new_ifaces_desired_state.append(port_iface_desired_state)
         # The "visible" slave/interface needs to point to the port profile
         iface_desired_state[MASTER_METADATA] = port_iface_desired_state[
             IFACE_NAME_METADATA
@@ -326,7 +330,12 @@ def prepare_proxy_ifaces_desired_state(ifaces_desired_state):
 
 
 def _create_ovs_port_iface_desired_state(iface_desired_state, port_options):
-    port_name = ovs.PORT_PROFILE_PREFIX + iface_desired_state[Interface.NAME]
+    iface_name = iface_desired_state[Interface.NAME]
+    if _is_ovs_lag_port(port_options):
+        port_name = iface_name_metadata = port_options[OvsB.Port.NAME]
+    else:
+        port_name = ovs.PORT_PROFILE_PREFIX + iface_name
+        iface_name_metadata = _generate_hash_iface_name(port_name)
     return {
         Interface.NAME: port_name,
         Interface.TYPE: ovs.PORT_TYPE,
@@ -334,8 +343,12 @@ def _create_ovs_port_iface_desired_state(iface_desired_state, port_options):
         OvsB.OPTIONS_SUBTREE: port_options,
         MASTER_METADATA: iface_desired_state[MASTER_METADATA],
         MASTER_TYPE_METADATA: iface_desired_state[MASTER_TYPE_METADATA],
-        IFACE_NAME_METADATA: _generate_hash_iface_name(port_name),
+        IFACE_NAME_METADATA: iface_name_metadata,
     }
+
+
+def _is_ovs_lag_port(port_state):
+    return port_state.get(OvsB.Port.LINK_AGGREGATION_SUBTREE) is not None
 
 
 def _generate_hash_iface_name(name):
