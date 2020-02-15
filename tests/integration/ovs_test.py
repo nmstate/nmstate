@@ -37,6 +37,7 @@ from .testlib.ovslib import Bridge
 from .testlib.vlan import vlan_interface
 
 
+BOND1 = "bond1"
 BRIDGE1 = "br1"
 PORT1 = "ovs1"
 VLAN_IFNAME = "eth101"
@@ -230,3 +231,18 @@ def test_change_ovs_interface_mac():
 
     assertlib.assert_absent(BRIDGE1)
     assertlib.assert_absent(PORT1)
+
+
+class TestOvsLinkAggregation:
+    def test_create_and_remove_lag(self, port0_up, port1_up):
+        port0_name = port0_up[Interface.KEY][0][Interface.NAME]
+        port1_name = port1_up[Interface.KEY][0][Interface.NAME]
+
+        bridge = Bridge(BRIDGE1)
+        bridge.add_link_aggregation_port(BOND1, (port0_name, port1_name))
+
+        with bridge.create() as state:
+            assertlib.assert_state_match(state)
+
+        assertlib.assert_absent(BRIDGE1)
+        assertlib.assert_absent(BOND1)
