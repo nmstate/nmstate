@@ -31,6 +31,7 @@ from libnmstate.error import NmstateValueError
 
 from .testlib import assertlib
 from .testlib import nmlib
+from .testlib import statelib
 from .testlib.nmplugin import disable_nm_plugin
 from .testlib.ovslib import Bridge
 from .testlib.vlan import vlan_interface
@@ -97,6 +98,10 @@ def test_create_and_remove_ovs_bridge_with_a_system_port(port0_up):
         assertlib.assert_state_match(state)
 
     assertlib.assert_absent(BRIDGE1)
+
+    state = statelib.show_only((port0_name,))
+    assert state
+    assert state[Interface.KEY][0][Interface.STATE] == InterfaceState.UP
 
 
 @pytest.mark.xfail(

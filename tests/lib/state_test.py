@@ -23,6 +23,7 @@ import pytest
 
 from libnmstate import state
 from libnmstate.error import NmstateVerificationError
+from libnmstate.schema import Bond
 from libnmstate.schema import DNS
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
@@ -30,9 +31,13 @@ from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import LinuxBridge
+from libnmstate.schema import OVSBridge
 from libnmstate.schema import Route
 from libnmstate.schema import RouteRule
+from libnmstate.schema import Team
 
+
+IFACE0 = "foo"
 
 parametrize_route_property = pytest.mark.parametrize(
     "route_property",
@@ -1084,3 +1089,157 @@ def test_remove_unknown_interfaces():
 
     desired_state.remove_unknown_interfaces()
     assert not desired_state.interfaces
+
+
+class TestComplementMasterRemoval:
+    def test_slaves_are_present_in_state_when_bond_is_removed(self):
+        desired_state = TestComplementMasterRemoval._create_desired_state()
+        slaves = ["s0", "s1"]
+        current_state = state.State(
+            {
+                Interface.KEY: [
+                    {
+                        Interface.NAME: IFACE0,
+                        Interface.TYPE: InterfaceType.BOND,
+                        Bond.CONFIG_SUBTREE: {Bond.SLAVES: slaves},
+                    }
+                ]
+            }
+        )
+        desired_state.complement_master_interfaces_removal(current_state)
+
+        assert slaves[0] in desired_state.interfaces
+        assert slaves[1] in desired_state.interfaces
+
+    def test_slaves_are_present_in_state_when_linux_bridge_is_removed(self):
+        desired_state = TestComplementMasterRemoval._create_desired_state()
+        ports = [{LinuxBridge.Port.NAME: "s0"}, {LinuxBridge.Port.NAME: "s1"}]
+        current_state = state.State(
+            {
+                Interface.KEY: [
+                    {
+                        Interface.NAME: IFACE0,
+                        Interface.TYPE: InterfaceType.LINUX_BRIDGE,
+                        LinuxBridge.CONFIG_SUBTREE: {
+                            LinuxBridge.PORT_SUBTREE: ports
+                        },
+                    }
+                ]
+            }
+        )
+        desired_state.complement_master_interfaces_removal(current_state)
+
+        assert ports[0][LinuxBridge.Port.NAME] in desired_state.interfaces
+        assert ports[1][LinuxBridge.Port.NAME] in desired_state.interfaces
+
+    def test_slaves_are_present_in_state_when_ovs_bridge_is_removed(self):
+        desired_state = TestComplementMasterRemoval._create_desired_state()
+        ports = [{OVSBridge.Port.NAME: "s0"}, {OVSBridge.Port.NAME: "s1"}]
+        current_state = state.State(
+            {
+                Interface.KEY: [
+                    {
+                        Interface.NAME: IFACE0,
+                        Interface.TYPE: InterfaceType.OVS_BRIDGE,
+                        OVSBridge.CONFIG_SUBTREE: {
+                            OVSBridge.PORT_SUBTREE: ports
+                        },
+                    }
+                ]
+            }
+        )
+        desired_state.complement_master_interfaces_removal(current_state)
+
+        assert ports[0][OVSBridge.Port.NAME] in desired_state.interfaces
+        assert ports[1][OVSBridge.Port.NAME] in desired_state.interfaces
+
+    def test_lag_slaves_are_present_in_state_when_ovs_bridge_is_removed(self):
+        desired_state = TestComplementMasterRemoval._create_desired_state()
+        slaves = [
+            {OVSBridge.Port.LinkAggregation.Slave.NAME: "s0"},
+            {OVSBridge.Port.LinkAggregation.Slave.NAME: "s1"},
+        ]
+        port_state = {
+            OVSBridge.Port.NAME: "bond0",
+            OVSBridge.Port.LINK_AGGREGATION_SUBTREE: {
+                OVSBridge.Port.LinkAggregation.SLAVES_SUBTREE: slaves
+            },
+        }
+        current_state = state.State(
+            {
+                Interface.KEY: [
+                    {
+                        Interface.NAME: IFACE0,
+                        Interface.TYPE: InterfaceType.OVS_BRIDGE,
+                        OVSBridge.CONFIG_SUBTREE: {
+                            OVSBridge.PORT_SUBTREE: [port_state]
+                        },
+                    }
+                ]
+            }
+        )
+        desired_state.complement_master_interfaces_removal(current_state)
+
+        assert slaves[0][LinuxBridge.Port.NAME] in desired_state.interfaces
+        assert slaves[1][LinuxBridge.Port.NAME] in desired_state.interfaces
+
+    def test_internal_slaves_are_excluded_when_ovs_bridge_is_removed(self):
+        desired_state = TestComplementMasterRemoval._create_desired_state()
+        ovs_interface0 = "s1"
+        ports = [
+            {OVSBridge.Port.NAME: "s0"},
+            {OVSBridge.Port.NAME: ovs_interface0},
+        ]
+        current_state = state.State(
+            {
+                Interface.KEY: [
+                    {
+                        Interface.NAME: IFACE0,
+                        Interface.TYPE: InterfaceType.OVS_BRIDGE,
+                        OVSBridge.CONFIG_SUBTREE: {
+                            OVSBridge.PORT_SUBTREE: ports
+                        },
+                    },
+                    {
+                        Interface.NAME: ovs_interface0,
+                        Interface.TYPE: InterfaceType.OVS_INTERFACE,
+                    },
+                ]
+            }
+        )
+        desired_state.complement_master_interfaces_removal(current_state)
+
+        assert ports[0][OVSBridge.Port.NAME] in desired_state.interfaces
+        assert ports[1][OVSBridge.Port.NAME] not in desired_state.interfaces
+
+    def test_slaves_are_present_in_state_when_team_is_removed(self):
+        desired_state = TestComplementMasterRemoval._create_desired_state()
+        ports = [{Team.Port.NAME: "s0"}, {Team.Port.NAME: "s1"}]
+        current_state = state.State(
+            {
+                Interface.KEY: [
+                    {
+                        Interface.NAME: IFACE0,
+                        Interface.TYPE: InterfaceType.TEAM,
+                        Team.CONFIG_SUBTREE: {Team.PORT_SUBTREE: ports},
+                    }
+                ]
+            }
+        )
+        desired_state.complement_master_interfaces_removal(current_state)
+
+        assert ports[0][Team.Port.NAME] in desired_state.interfaces
+        assert ports[1][Team.Port.NAME] in desired_state.interfaces
+
+    @staticmethod
+    def _create_desired_state():
+        return state.State(
+            {
+                Interface.KEY: [
+                    {
+                        Interface.NAME: IFACE0,
+                        Interface.STATE: InterfaceState.ABSENT,
+                    }
+                ]
+            }
+        )
