@@ -1,0 +1,15 @@
+---
+interfaces:
+  - name: ovs-br0
+    type: ovs-bridge
+    state: up
+    bridge:
+      options:
+        stp: false
+      port:
+        - name: ovs-bond1
+          link-aggregation:
+            mode: balance-slb
+            slaves:
+              - name: eth1
+              - name: eth2
