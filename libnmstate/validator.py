@@ -30,6 +30,7 @@ from libnmstate.schema import InterfaceIP
 from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import LinuxBridge as LB
+from libnmstate.schema import OVSBridge
 from libnmstate.schema import VXLAN
 from libnmstate.error import NmstateDependencyError
 from libnmstate.error import NmstateNotImplementedError
@@ -50,6 +51,10 @@ class NmstateRouteWithNoIPInterfaceError(NmstateValueError):
 
 
 class NmstateDuplicateInterfaceNameError(NmstateValueError):
+    pass
+
+
+class NmstateOvsLagValueError(NmstateValueError):
     pass
 
 
@@ -205,6 +210,12 @@ def validate_bridge(state):
             )
 
 
+def validate_ovs_link_aggregation(state):
+    for iface_state in state.get(schema.Interface.KEY, []):
+        if iface_state.get(schema.Interface.TYPE) == OVSBridge.TYPE:
+            _assert_ovs_lag_slave_count(iface_state)
+
+
 def _assert_iface_is_up(desired_iface_state, current_iface_state):
     """
     Validates that the interface has an UP state.
@@ -310,3 +321,16 @@ def _assert_vlan_filtering_trunk_tag(trunk_tag_state):
                     vlan_id_range
                 )
             )
+
+
+def _assert_ovs_lag_slave_count(iface_state):
+    bridge_state = iface_state.get(OVSBridge.CONFIG_SUBTREE)
+    if bridge_state:
+        for port in bridge_state.get(OVSBridge.PORT_SUBTREE, ()):
+            slaves_subtree = OVSBridge.Port.LinkAggregation.SLAVES_SUBTREE
+            lag = port.get(OVSBridge.Port.LINK_AGGREGATION_SUBTREE)
+            if lag and len(lag.get(slaves_subtree, ())) < 2:
+                ifname = iface_state[schema.Interface.NAME]
+                raise NmstateOvsLagValueError(
+                    f"OVS {ifname} LAG port {lag} has less than 2 slaves."
+                )

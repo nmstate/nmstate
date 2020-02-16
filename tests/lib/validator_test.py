@@ -29,6 +29,7 @@ from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import LinuxBridge as LB
+from libnmstate.schema import OVSBridge as OB
 from libnmstate.schema import VXLAN
 from libnmstate.error import NmstateNotImplementedError
 from libnmstate.error import NmstateValueError
@@ -500,6 +501,31 @@ class TestVlanFilteringValidation:
         with pytest.raises(NmstateValueError) as err:
             libnmstate.validator.validate_bridge(desired_state)
         assert "Trunk port range requires min / max keys" in err.value.args[0]
+
+
+def test_ovs_lag_with_a_single_slave():
+    desired_state = {
+        schema.Interface.KEY: [
+            {
+                schema.Interface.NAME: "br0",
+                schema.Interface.TYPE: OB.TYPE,
+                OB.CONFIG_SUBTREE: {
+                    OB.PORT_SUBTREE: [
+                        {
+                            OB.Port.NAME: "bond0",
+                            OB.Port.LINK_AGGREGATION_SUBTREE: {
+                                OB.Port.LinkAggregation.SLAVES_SUBTREE: [
+                                    {OB.Port.LinkAggregation.Slave.NAME: "s1"}
+                                ]
+                            },
+                        }
+                    ]
+                },
+            }
+        ]
+    }
+    with pytest.raises(validator.NmstateOvsLagValueError):
+        validator.validate_ovs_link_aggregation(desired_state)
 
 
 def _create_interface_state(
