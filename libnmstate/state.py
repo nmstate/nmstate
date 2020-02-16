@@ -29,6 +29,10 @@ from operator import itemgetter
 
 from libnmstate import iplib
 from libnmstate import metadata
+from libnmstate.appliers import bond
+from libnmstate.appliers import linux_bridge
+from libnmstate.appliers import ovs_bridge
+from libnmstate.appliers import team
 from libnmstate.error import NmstateNotImplementedError
 from libnmstate.error import NmstateValueError
 from libnmstate.error import NmstateVerificationError
@@ -376,6 +380,43 @@ class State:
         for name in self.interfaces.keys() & other_state.interfaces.keys():
             dict_update(other_state.interfaces[name], self.interfaces[name])
             self._ifaces_state[name] = other_state.interfaces[name]
+
+    def complement_master_interfaces_removal(self, other_state):
+        """
+        Complement slaves in the state for masters that are being removed.
+
+        An explicit removal of a master interface that does not mention its
+        slaves may cause these slaves implicit removal.
+        In order to avoid such an implicit behaviour, slaves of a master that
+        is removed and are not mentioned in the state are added to it.
+        """
+        slaves = []
+        for ifname, ifstate in self.interfaces.items():
+            if ifstate.get(Interface.STATE) in NON_UP_STATES:
+                other_ifstate = other_state.interfaces.get(ifname, {})
+                iftype = other_ifstate.get(Interface.TYPE)
+                if iftype == InterfaceType.BOND:
+                    slaves += bond.get_bond_slaves_from_state(other_ifstate)
+                elif iftype == InterfaceType.LINUX_BRIDGE:
+                    slaves += linux_bridge.get_slaves_from_state(other_ifstate)
+                elif iftype == InterfaceType.OVS_BRIDGE:
+                    ovs_slaves = ovs_bridge.get_ovs_slaves_from_state(
+                        other_ifstate
+                    )
+                    # OVS internal interface (ovs-interface) are excluded
+                    # because such interfaces cannot exist without their master
+                    for ovs_slave in ovs_slaves:
+                        ovs_slave_state = other_state.interfaces.get(
+                            ovs_slave, {}
+                        )
+                        ovs_slave_type = ovs_slave_state.get(Interface.TYPE)
+                        if ovs_slave_type != InterfaceType.OVS_INTERFACE:
+                            slaves.append(ovs_slave)
+                elif iftype == InterfaceType.TEAM:
+                    slaves += team.get_slaves_from_state(other_ifstate)
+        for slave in slaves:
+            if slave not in self._ifaces_state:
+                self._ifaces_state[slave] = {Interface.NAME: slave}
 
     def remove_unknown_interfaces(self):
         """

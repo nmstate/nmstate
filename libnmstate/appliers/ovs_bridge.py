@@ -25,11 +25,21 @@ BRPORT_OPTIONS = "_brport_options"
 
 
 def get_ovs_slaves_from_state(iface_state, default=()):
+    slaves = []
     bridge = iface_state.get(OVSBridge.CONFIG_SUBTREE, {})
     ports = bridge.get(OVSBridge.PORT_SUBTREE)
     if ports is None:
         return default
-    return [p[OVSBridge.Port.NAME] for p in ports]
+    for port in ports:
+        lag = port.get(OVSBridge.Port.LINK_AGGREGATION_SUBTREE)
+        if lag:
+            lag_slaves = lag.get(OVSBridge.Port.LinkAggregation.SLAVES_SUBTREE)
+            if lag_slaves:
+                name_key = OVSBridge.Port.LinkAggregation.Slave.NAME
+                slaves += [s[name_key] for s in lag_slaves]
+        else:
+            slaves.append(port[OVSBridge.Port.NAME])
+    return slaves
 
 
 def set_ovs_bridge_ports_metadata(master_state, slave_state):

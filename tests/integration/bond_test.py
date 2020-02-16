@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2019 Red Hat, Inc.
+# Copyright (c) 2018-2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -111,6 +111,16 @@ def test_add_and_remove_bond_with_two_slaves(eth1_up, eth2_up):
 
     state = statelib.show_only((state[Interface.KEY][0][Interface.NAME],))
     assert not state[Interface.KEY]
+
+    state = statelib.show_only(
+        (
+            eth1_up[Interface.KEY][0][Interface.NAME],
+            eth2_up[Interface.KEY][0][Interface.NAME],
+        )
+    )
+    assert state
+    assert state[Interface.KEY][0][Interface.STATE] == InterfaceState.UP
+    assert state[Interface.KEY][1][Interface.STATE] == InterfaceState.UP
 
 
 def test_remove_bond_with_minimum_desired_state(eth1_up, eth2_up):
@@ -367,9 +377,6 @@ def test_create_linux_bridge_over_bond(bond99_with_slave):
         assertlib.assert_state(desired_state)
 
 
-@pytest.mark.xfail(
-    strict=True, reason="https://nmstate.atlassian.net/browse/NMSTATE-272"
-)
 def test_preserve_bond_after_bridge_removal(bond99_with_slave):
     bridge_name = "linux-br0"
     bridge_state = add_port_to_bridge(create_bridge_subtree_state(), BOND99)

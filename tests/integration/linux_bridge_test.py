@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019 Red Hat, Inc.
+# Copyright (c) 2019-2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -137,6 +137,10 @@ def test_create_and_remove_linux_bridge_with_one_port(port0_up):
         assertlib.assert_state(desired_state)
 
     assertlib.assert_absent(bridge_name)
+
+    state = show_only((port_name,))
+    assert state
+    assert state[Interface.KEY][0][Interface.STATE] == InterfaceState.UP
 
 
 def test_create_and_remove_linux_bridge_with_two_ports(port0_up, port1_up):

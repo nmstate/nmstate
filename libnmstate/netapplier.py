@@ -126,6 +126,7 @@ def _apply_ifaces_state(
     desired_state.merge_dns(current_state)
     desired_state.merge_route_rules(current_state)
     desired_state.remove_unknown_interfaces()
+    desired_state.complement_master_interfaces_removal(current_state)
     metadata.generate_ifaces_metadata(desired_state, current_state)
 
     validator.validate_interfaces_state(desired_state, current_state)
