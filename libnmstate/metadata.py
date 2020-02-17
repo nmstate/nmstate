@@ -19,15 +19,15 @@
 
 from libnmstate import iplib
 from libnmstate.appliers import linux_bridge
+from libnmstate.appliers import ovs_bridge
+from libnmstate.appliers import bond
 from libnmstate.error import NmstateValueError
 from libnmstate import nm
-from libnmstate.schema import Bond
 from libnmstate.schema import DNS
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIP
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
-from libnmstate.schema import OVSBridge
 
 
 BRPORT_OPTIONS = "_brport_options"
@@ -56,15 +56,15 @@ def generate_ifaces_metadata(desired_state, current_state):
         desired_state.interfaces,
         current_state.interfaces,
         master_type=InterfaceType.BOND,
-        get_slaves_func=_get_bond_slaves_from_state,
-        set_metadata_func=_set_common_slaves_metadata,
+        get_slaves_func=bond.get_bond_slaves_from_state,
+        set_metadata_func=lambda *args: None,
     )
     _generate_link_master_metadata(
         desired_state.interfaces,
         current_state.interfaces,
         master_type=InterfaceType.OVS_BRIDGE,
-        get_slaves_func=_get_ovs_slaves_from_state,
-        set_metadata_func=_set_ovs_bridge_ports_metadata,
+        get_slaves_func=ovs_bridge.get_ovs_slaves_from_state,
+        set_metadata_func=ovs_bridge.set_ovs_bridge_ports_metadata,
     )
     _generate_link_master_metadata(
         desired_state.interfaces,
@@ -91,33 +91,9 @@ def remove_ifaces_metadata(ifaces_state):
         iface_state.get(Interface.IPV6, {}).pop(ROUTE_RULES_METADATA, None)
 
 
-def _get_bond_slaves_from_state(iface_state, default=()):
-    return iface_state.get(Bond.CONFIG_SUBTREE, {}).get(Bond.SLAVES, default)
-
-
-def _set_ovs_bridge_ports_metadata(master_state, slave_state):
-    _set_common_slaves_metadata(master_state, slave_state)
-
-    bridge = master_state.get(OVSBridge.CONFIG_SUBTREE, {})
-    ports = bridge.get(OVSBridge.PORT_SUBTREE, [])
-    slave_name = slave_state[Interface.NAME]
-    port = next(
-        filter(lambda n: n[OVSBridge.Port.NAME] == slave_name, ports,), {},
-    )
-    slave_state[BRPORT_OPTIONS] = port
-
-
 def _set_common_slaves_metadata(master_state, slave_state):
     slave_state[MASTER] = master_state[Interface.NAME]
     slave_state[MASTER_TYPE] = master_state.get(Interface.TYPE)
-
-
-def _get_ovs_slaves_from_state(iface_state, default=()):
-    bridge = iface_state.get(OVSBridge.CONFIG_SUBTREE, {})
-    ports = bridge.get(OVSBridge.PORT_SUBTREE)
-    if ports is None:
-        return default
-    return [p[OVSBridge.Port.NAME] for p in ports]
 
 
 def _generate_link_master_metadata(
@@ -137,6 +113,11 @@ def _generate_link_master_metadata(
     - Master is in the current state and some of the slaves are in the desired
       state.
     """
+
+    def set_metadata(*args):
+        _set_common_slaves_metadata(*args)
+        set_metadata_func(*args)
+
     desired_masters = [
         (ifname, ifstate)
         for ifname, ifstate in ifaces_desired_state.items()
@@ -148,13 +129,13 @@ def _generate_link_master_metadata(
         desired_slaves = get_slaves_func(master_state)
         for slave in desired_slaves:
             if slave in ifaces_desired_state:
-                set_metadata_func(master_state, ifaces_desired_state[slave])
+                set_metadata(master_state, ifaces_desired_state[slave])
             elif slave in ifaces_current_state:
                 ifaces_desired_state[slave] = {
                     Interface.NAME: slave,
                     Interface.STATE: master_state[Interface.STATE],
                 }
-                set_metadata_func(master_state, ifaces_desired_state[slave])
+                set_metadata(master_state, ifaces_desired_state[slave])
 
     for master_name, master_state in desired_masters:
         desired_slaves = get_slaves_func(master_state)
@@ -193,9 +174,7 @@ def _generate_link_master_metadata(
                         slave_has_no_master_specified_in_desired
                         and master_has_no_slaves_specified_in_desired
                     ):
-                        set_metadata_func(
-                            master_state, ifaces_desired_state[slave]
-                        )
+                        set_metadata(master_state, ifaces_desired_state[slave])
 
 
 def _is_managed_interface(ifname, ifaces_state):

@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2020 Red Hat, Inc.
+# Copyright (c) 2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -17,15 +17,26 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
+from libnmstate.schema import Interface
+from libnmstate.schema import OVSBridge
 
-def get_slaves_from_state(state, default=()):
-    ports = state.get("bridge", {}).get("port")
+
+BRPORT_OPTIONS = "_brport_options"
+
+
+def get_ovs_slaves_from_state(iface_state, default=()):
+    bridge = iface_state.get(OVSBridge.CONFIG_SUBTREE, {})
+    ports = bridge.get(OVSBridge.PORT_SUBTREE)
     if ports is None:
         return default
-    return [p["name"] for p in ports]
+    return [p[OVSBridge.Port.NAME] for p in ports]
 
 
-def set_bridge_ports_metadata(master_state, slave_state):
-    ports = master_state.get("bridge", {}).get("port", [])
-    port = next(filter(lambda n: n["name"] == slave_state["name"], ports), {})
-    slave_state["_brport_options"] = port
+def set_ovs_bridge_ports_metadata(master_state, slave_state):
+    bridge = master_state.get(OVSBridge.CONFIG_SUBTREE, {})
+    ports = bridge.get(OVSBridge.PORT_SUBTREE, [])
+    slave_name = slave_state[Interface.NAME]
+    port = next(
+        filter(lambda n: n[OVSBridge.Port.NAME] == slave_name, ports,), {},
+    )
+    slave_state[BRPORT_OPTIONS] = port
