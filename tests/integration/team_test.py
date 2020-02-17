@@ -18,22 +18,28 @@
 #
 
 from contextlib import contextmanager
+import json
 import os
 
 import pytest
 
 import libnmstate
 from libnmstate.error import NmstateDependencyError
+from libnmstate.error import NmstateLibnmError
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import Team
 
 from .testlib import assertlib
+from .testlib.cmdlib import exec_cmd
+from .testlib.cmdlib import RC_SUCCESS
 from .testlib.nmplugin import disable_nm_plugin
 
 
 TEAM0 = "team0"
+PORT1 = "eth1"
+PORT2 = "eth2"
 
 
 pytestmark = pytest.mark.skipif(
@@ -42,13 +48,27 @@ pytestmark = pytest.mark.skipif(
 )
 
 
-@pytest.mark.xfail(reason="https://bugzilla.redhat.com/1798947")
-def test_create_team_iface():
+@pytest.mark.xfail(
+    raises=NmstateLibnmError, reason="https://bugzilla.redhat.com/1798947"
+)
+def test_create_team_iface_without_slaves():
     with team_interface(TEAM0) as team_state:
         assertlib.assert_state(team_state)
 
 
-@pytest.mark.xfail(reason="https://bugzilla.redhat.com/1798947")
+@pytest.mark.xfail(
+    raises=NmstateLibnmError, reason="https://bugzilla.redhat.com/1798947"
+)
+def test_create_team_iface_with_slaves():
+    with team_interface(TEAM0, [PORT1, PORT2]) as team_state:
+        assertlib.assert_state(team_state)
+        assert [PORT1, PORT2] == _get_runtime_team_slaves(TEAM0)
+    assertlib.assert_absent(TEAM0)
+
+
+@pytest.mark.xfail(
+    raises=NmstateLibnmError, reason="https://bugzilla.redhat.com/1798947"
+)
 def test_edit_team_iface():
     with team_interface(TEAM0) as team_state:
         team_state[Interface.KEY][0][Team.CONFIG_SUBTREE] = {
@@ -78,7 +98,7 @@ def test_nm_team_plugin_missing():
 
 
 @contextmanager
-def team_interface(ifname):
+def team_interface(ifname, slaves=None):
     desired_state = {
         Interface.KEY: [
             {
@@ -88,6 +108,11 @@ def team_interface(ifname):
             }
         ]
     }
+    if slaves:
+        team_state = {Team.PORT_SUBTREE: []}
+        desired_state[Interface.KEY][0][Team.CONFIG_SUBTREE] = team_state
+        for slave in slaves:
+            team_state[Team.PORT_SUBTREE].append({Team.Port.NAME: slave})
     libnmstate.apply(desired_state)
     try:
         yield desired_state
@@ -102,3 +127,13 @@ def team_interface(ifname):
                 ]
             }
         )
+
+
+def _get_runtime_team_slaves(team_iface_name):
+    """
+    Use `teamdctl team0 state dump` to check team runtime status
+    """
+    rc, output, _ = exec_cmd(f"teamdctl {team_iface_name} state dump".split())
+    assert rc == RC_SUCCESS
+    teamd_state = json.loads(output)
+    return sorted(teamd_state.get("ports", {}).keys())
