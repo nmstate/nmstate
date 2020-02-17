@@ -1001,11 +1001,6 @@ def test_dummy_existance_after_dhcp_timeout(ip_ver, dummy00):
 
 
 @pytest.mark.slow
-@pytest.mark.xfail(
-    raises=AssertionError,
-    strict=True,
-    reason="https://bugzilla.redhat.com/1801158",
-)
 def test_dummy_existance_after_ipv6_autoconf_timeout(dummy00):
     ifstate = dummy00
     ifstate[Interface.IPV4] = create_ipv4_state(enabled=False)
