@@ -13,9 +13,19 @@ TEST_TYPE_LINT="lint"
 TEST_TYPE_UNIT_PY36="unit_py36"
 TEST_TYPE_UNIT_PY38="unit_py38"
 TEST_TYPE_INTEG="integ"
+TEST_TYPE_INTEG_SLOW="integ_slow"
 
 FEDORA_IMAGE_DEV="nmstate/fedora-nmstate-dev"
 CENTOS_IMAGE_DEV="nmstate/centos8-nmstate-dev"
+
+PYTEST_OPTIONS="--verbose --verbose \
+    --log-level=DEBUG \
+    --log-date-format='%Y-%m-%d %H:%M:%S' \
+    --log-format='%(asctime)s %(filename)s:%(lineno)d %(levelname)s %(message)s' \
+    --durations=5 \
+    --cov /usr/lib/python*/site-packages/libnmstate \
+    --cov /usr/lib/python*/site-packages/nmstatectl \
+    --cov-report=term"
 
 : ${CONTAINER_CMD:=docker}
 
@@ -109,15 +119,19 @@ function run_tests {
         container_exec "
           cd $CONTAINER_WORKSPACE &&
           pytest \
-            --verbose --verbose \
-            --log-level=DEBUG \
-            --log-date-format='%Y-%m-%d %H:%M:%S' \
-            --log-format='%(asctime)s %(filename)s:%(lineno)d %(levelname)s %(message)s' \
-            --durations=5 \
-            --cov /usr/lib/python*/site-packages/libnmstate \
-            --cov /usr/lib/python*/site-packages/nmstatectl \
+            $PYTEST_OPTIONS \
             --cov-report=html:htmlcov-integ \
-            --cov-report=term \
+            tests/integration \
+            ${nmstate_pytest_extra_args}"
+    fi
+    if [ $TEST_TYPE == $TEST_TYPE_ALL ] || \
+       [ $TEST_TYPE == $TEST_TYPE_INTEG_SLOW ];then
+        container_exec "
+          cd $CONTAINER_WORKSPACE &&
+          pytest \
+            $PYTEST_OPTIONS \
+            --cov-report=html:htmlcov-integ-slow \
+            -m slow --runslow \
             tests/integration \
             ${nmstate_pytest_extra_args}"
     fi
@@ -238,6 +252,7 @@ while true; do
         echo "     * $TEST_TYPE_FORMAT"
         echo "     * $TEST_TYPE_LINT"
         echo "     * $TEST_TYPE_INTEG"
+        echo "     * $TEST_TYPE_INTEG_SLOW"
         echo "     * $TEST_TYPE_UNIT_PY36"
         echo "     * $TEST_TYPE_UNIT_PY38"
         echo -n "--customize allows to specify a command to customize the "

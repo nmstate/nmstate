@@ -25,6 +25,8 @@ from libnmstate.nm import route as nm_route
 from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import Route
 
+INT32_MAX = 2 ** 31 - 1
+
 
 def create_setting(config, base_con_profile):
     setting_ipv4 = None
@@ -64,6 +66,10 @@ def create_setting(config, base_con_profile):
             setting_ipv4.props.ignore_auto_dns = not config.get(
                 InterfaceIPv4.AUTO_DNS, True
             )
+            setting_ipv4.props.dhcp_timeout = INT32_MAX
+            # NetworkManager will remove the virtual interfaces like bridges
+            # when the DHCP timeout expired, set it to the maximum value to
+            # make this unlikely.
         elif config.get(InterfaceIPv4.ADDRESS):
             setting_ipv4.props.method = (
                 nmclient.NM.SETTING_IP4_CONFIG_METHOD_MANUAL

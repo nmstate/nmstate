@@ -30,6 +30,7 @@ from libnmstate.schema import Route
 
 
 IPV6_DEFAULT_ROUTE_METRIC = 1024
+INT32_MAX = 2 ** 31 - 1
 
 
 def get_info(active_connection):
@@ -133,6 +134,9 @@ def create_setting(config, base_con_profile):
 
     if is_dhcp or is_autoconf:
         _set_dynamic(setting_ip, is_dhcp, is_autoconf)
+        setting_ip.props.dhcp_timeout = INT32_MAX
+        # NetworkManager will remove the virtual interface when DHCP
+        # timeout, set it to infinity.
         setting_ip.props.ignore_auto_routes = not config.get(
             InterfaceIPv6.AUTO_ROUTES, True
         )
