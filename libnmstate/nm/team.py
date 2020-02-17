@@ -17,6 +17,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
+import copy
 import json
 
 from libnmstate.nm import connection as nm_connection
@@ -59,6 +60,7 @@ def create_setting(iface_state, base_con_profile):
 
 
 def _convert_team_config_to_teamd_format(team_config, ifname):
+    team_config = copy.deepcopy(team_config)
     team_config[TEAMD_JSON_DEVICE] = ifname
 
     team_ports = team_config.get(Team.PORT_SUBTREE, ())

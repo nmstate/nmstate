@@ -21,6 +21,7 @@ from libnmstate import iplib
 from libnmstate.appliers import linux_bridge
 from libnmstate.appliers import ovs_bridge
 from libnmstate.appliers import bond
+from libnmstate.appliers import team
 from libnmstate.error import NmstateValueError
 from libnmstate import nm
 from libnmstate.schema import DNS
@@ -72,6 +73,13 @@ def generate_ifaces_metadata(desired_state, current_state):
         master_type=InterfaceType.LINUX_BRIDGE,
         get_slaves_func=linux_bridge.get_slaves_from_state,
         set_metadata_func=linux_bridge.set_bridge_ports_metadata,
+    )
+    _generate_link_master_metadata(
+        desired_state.interfaces,
+        current_state.interfaces,
+        master_type=InterfaceType.TEAM,
+        get_slaves_func=team.get_slaves_from_state,
+        set_metadata_func=lambda *args: None,
     )
     _generate_dns_metadata(desired_state, current_state)
     _generate_route_metadata(desired_state, current_state)
