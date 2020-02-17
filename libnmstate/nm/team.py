@@ -27,6 +27,7 @@ from libnmstate.schema import Team
 
 CAPABILITY = "team"
 TEAMD_JSON_DEVICE = "device"
+TEAMD_JSON_PORTS = "ports"
 
 
 def has_team_capability():
@@ -94,14 +95,13 @@ def get_info(device):
     return info
 
 
-def _convert_teamd_config_to_nmstate_config(team_config):
-    team_config.pop(TEAMD_JSON_DEVICE, None)
-    port_config = team_config.get(Team.PORT_SUBTREE)
+def _convert_teamd_config_to_nmstate_config(teamd_config):
+    teamd_config.pop(TEAMD_JSON_DEVICE, None)
+    port_config = teamd_config.get(TEAMD_JSON_PORTS, {})
+    team_port = _teamd_port_to_nmstate_port(port_config)
 
-    if port_config:
-        team_port = _teamd_port_to_nmstate_port(port_config)
-        team_config[Team.PORT_SUBTREE] = team_port
-
+    team_config = teamd_config
+    team_config[Team.PORT_SUBTREE] = team_port
     return team_config
 
 

@@ -61,7 +61,7 @@ def test_create_team_iface_without_slaves():
 )
 def test_create_team_iface_with_slaves():
     with team_interface(TEAM0, [PORT1, PORT2]) as team_state:
-        assertlib.assert_state(team_state)
+        assertlib.assert_state_match(team_state)
         assert [PORT1, PORT2] == _get_runtime_team_slaves(TEAM0)
     assertlib.assert_absent(TEAM0)
 
@@ -78,7 +78,7 @@ def test_edit_team_iface():
             Team.PORT_SUBTREE: [{Team.Port.NAME: "eth1"}],
         }
         libnmstate.apply(team_state)
-        assertlib.assert_state(team_state)
+        assertlib.assert_state_match(team_state)
 
 
 def test_nm_team_plugin_missing():
