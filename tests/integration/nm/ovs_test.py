@@ -85,6 +85,7 @@ def test_bridge_with_system_port(eth1_up, bridge_default_config):
     assert not _get_bridge_current_state()
 
 
+@pytest.mark.xfail(reason="https://github.com/nmstate/nmstate/issues/802")
 def test_bridge_with_internal_interface(bridge_default_config):
     bridge_desired_state = bridge_default_config
 
