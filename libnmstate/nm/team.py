@@ -20,7 +20,6 @@
 import copy
 import json
 
-from libnmstate.nm import connection as nm_connection
 from libnmstate.nm import nmclient
 from libnmstate.schema import Interface
 from libnmstate.schema import Team
@@ -79,22 +78,14 @@ def _dict_key_filter(dict_to_filter, key):
 
 def get_info(device):
     """
-    Provide the current active teamd values for an interface.
+    Provide the current active teamd values for an interface. Please note that
+    these values might be outdated due to the bug below.
     Ref: https://bugzilla.redhat.com/1792232
     """
     info = {}
 
-    connection = nm_connection.ConnectionProfile()
-    connection.import_by_device(device)
-    if not connection.profile:
-        return info
-
-    team_setting = connection.profile.get_setting_by_name(
-        nmclient.NM.SETTING_TEAM_SETTING_NAME
-    )
-
-    if team_setting:
-        teamd_json = team_setting.get_config()
+    if device.get_device_type() == nmclient.NM.DeviceType.TEAM:
+        teamd_json = device.get_config()
         if teamd_json:
             teamd_config = json.loads(teamd_json)
             team_config = _convert_teamd_config_to_nmstate_config(teamd_config)
