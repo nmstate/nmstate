@@ -1,6 +1,6 @@
 #! /bin/bash -e
 #
-# Copyright 2019 Red Hat, Inc.
+# Copyright 2019-2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -76,7 +76,8 @@ do
     then
         for container_name in \
             fedora-nmstate-dev \
-            centos8-nmstate-dev
+            centos8-nmstate-dev \
+            centos8-nmstate-dev-nm-1.22-git
         do
             rebuild_container "${extra_args}" "${container_name}"
         done
