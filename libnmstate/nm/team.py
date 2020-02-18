@@ -89,26 +89,30 @@ def get_info(device):
         teamd_json = device.get_config()
         if teamd_json:
             teamd_config = json.loads(teamd_json)
-            team_config = _convert_teamd_config_to_nmstate_config(teamd_config)
+            slave_names = [dev.get_iface() for dev in device.get_slaves()]
+            team_config = _convert_teamd_config_to_nmstate_config(
+                teamd_config, slave_names
+            )
             info[Team.CONFIG_SUBTREE] = team_config
 
     return info
 
 
-def _convert_teamd_config_to_nmstate_config(teamd_config):
+def _convert_teamd_config_to_nmstate_config(teamd_config, slave_names):
     teamd_config.pop(TEAMD_JSON_DEVICE, None)
     port_config = teamd_config.get(TEAMD_JSON_PORTS, {})
-    team_port = _teamd_port_to_nmstate_port(port_config)
+    team_port = _merge_port_config_with_slaves_info(port_config, slave_names)
 
     team_config = teamd_config
     team_config[Team.PORT_SUBTREE] = team_port
     return team_config
 
 
-def _teamd_port_to_nmstate_port(port_config):
+def _merge_port_config_with_slaves_info(port_config, slave_names):
     port_list = []
-    for name, port in port_config.items():
-        port.update({Team.Port.NAME: name})
+    for name in slave_names:
+        port = port_config.get(name, {})
+        port[Team.Port.NAME] = name
         port_list.append(port)
 
     return port_list
