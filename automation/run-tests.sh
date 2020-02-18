@@ -307,7 +307,11 @@ dump_network_info
 
 pyclean
 if [[ "$CI" != "true" ]];then
-    container_exec "cp -rf $CONTAINER_WORKSPACE /root/nmstate-workspace"
+    if $CONTAINER_CMD --version | grep -qv podman; then
+      container_exec "cp -rf $CONTAINER_WORKSPACE /root/nmstate-workspace || true"
+    else
+      container_exec "cp -rf $CONTAINER_WORKSPACE /root/nmstate-workspace"
+    fi
     # Change workspace to keep the original one clean
     CONTAINER_WORKSPACE="/root/nmstate-workspace"
 fi
