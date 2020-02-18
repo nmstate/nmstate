@@ -34,8 +34,8 @@ test -t 1 && USE_TTY="-t"
 function remove_container {
     res=$?
     [ "$res" -ne 0 ] && echo "*** ERROR: $res"
-    container_exec 'rm -rf $CONTAINER_WORKSPACE/*nmstate*.rpm'
-    ${CONTAINER_CMD} rm $CONTAINER_ID -f
+    container_exec 'rm -rf $CONTAINER_WORKSPACE/*nmstate*.rpm' || true
+    ${CONTAINER_CMD} rm -f $CONTAINER_ID
 }
 
 function pyclean {
