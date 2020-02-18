@@ -26,7 +26,7 @@ def get_current_open_fd():
     return len(os.listdir("/proc/self/fd"))
 
 
-def test_libnmstae_show_fd_leak():
+def test_libnmstate_show_fd_leak():
     original_fd = get_current_open_fd()
     for x in range(0, 100):
         libnmstate.show()
