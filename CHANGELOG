@@ -1,4 +1,32 @@
 # Changelog
+## [0.2.5] - 2020-02-19
+### Breaking changes
+ - Deprecate specifying keyword arguments as positional arguments in the public methods.
+   This will become a hard failure in Nmstate-0.3.0 and later and it affects the following functions:
+   - "libnmstate.apply()"
+   - "libnmstate.commit()"
+   - "libnmstate.rollback()"
+   - "libmstate.show()"
+
+ - NetworkManager 1.22.8 or later is now required.
+
+### New Features
+ - Report missing NetworkManager plugin during validation.
+ - Support OVS Link Aggregation (Bonding).
+
+### Bug Fixes
+ - Fix "AtributeError" when editing an existing OVS interface.
+ - Do not remove slaves implicitly when removing the master interface.
+ - Fix team interface port support.
+ - Prevent virtual interface removal after DHCP or IPV6-RA timeout.
+ - Get Linux Bonding options from kernel instead of reading the NetworkManager configuration.
+
+### Known issues when using NetworkManager 1.22.8
+ - All changes to bridges might disrupt their connectivity.
+ - Cannot set Linux Bond option to "fail_over_mac=1".
+ - Cannot detach a system port from an OVS bridge.
+ - Sometimes, NetworkManager may throw a "Failed to find a compatible device for this connection" error.
+
 ## [0.2.4] - 2020-02-12
 ### Bug Fixes
  - Reduce minimal required MAC address length to 4 octets
