@@ -59,7 +59,7 @@ def test_create_team_iface_without_slaves():
 @pytest.mark.xfail(
     raises=NmstateLibnmError, reason="https://bugzilla.redhat.com/1798947"
 )
-def test_create_team_iface_with_slaves():
+def test_create_team_iface_with_slaves(eth1_up, eth2_up):
     with team_interface(TEAM0, [PORT1, PORT2]) as team_state:
         assertlib.assert_state_match(team_state)
         assert [PORT1, PORT2] == _get_runtime_team_slaves(TEAM0)
@@ -69,7 +69,7 @@ def test_create_team_iface_with_slaves():
 @pytest.mark.xfail(
     raises=NmstateLibnmError, reason="https://bugzilla.redhat.com/1798947"
 )
-def test_edit_team_iface():
+def test_edit_team_iface(eth1_up):
     with team_interface(TEAM0) as team_state:
         team_state[Interface.KEY][0][Team.CONFIG_SUBTREE] = {
             Team.RUNNER_SUBTREE: {
