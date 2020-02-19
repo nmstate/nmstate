@@ -64,21 +64,3 @@ def test_is_bond_type_id(NM_mock):
     type_id = NM_mock.DeviceType.BOND
 
     assert nm.bond.is_bond_type_id(type_id)
-
-
-@mock.patch.object(nm.bond.connection, "ConnectionProfile")
-def test_get_bond_info(con_profile_mock, dev_mock):
-    info = nm.bond.get_bond_info(dev_mock)
-
-    con_profile_mock.return_value.import_by_device.assert_called_once_with(
-        dev_mock
-    )
-
-    connection_mock = con_profile_mock.return_value.profile
-    opts_mock = connection_mock.get_setting_bond.return_value.props.options
-
-    expected_info = {
-        Bond.SLAVES: dev_mock.get_slaves.return_value,
-        Bond.OPTIONS_SUBTREE: opts_mock,
-    }
-    assert expected_info == info
