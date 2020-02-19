@@ -2,13 +2,15 @@
 # Fedora official repository
 # (https://hub.docker.com/r/fedora/systemd-systemd/).
 # It enables systemd to be operational.
-FROM docker.io/library/fedora:32
+FROM docker.io/library/fedora
 ENV container docker
 COPY docker_enable_systemd.sh docker_sys_config.sh ./
 
 RUN bash ./docker_enable_systemd.sh && rm ./docker_enable_systemd.sh
 
-RUN dnf -y install --setopt=install_weak_deps=False \
+RUN dnf -y install dnf-plugins-core && \
+    dnf copr enable networkmanager/NetworkManager-1.22 -y && \
+    dnf -y install --setopt=install_weak_deps=False \
                    NetworkManager \
                    NetworkManager-ovs \
                    NetworkManager-team \
