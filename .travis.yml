@@ -9,8 +9,6 @@ env:
           testflags="--test-type integ --pytest-args='-x'"
           use_codecov=true
           use_coveralls=false
-        - CONTAINER_IMAGE=nmstate/fedora-nmstate-dev
-          testflags="--test-type integ --pytest-args='-x'"
         - CONTAINER_IMAGE=nmstate/centos8-nmstate-dev
           testflags="--test-type integ_slow --pytest-args='-x'"
         - CONTAINER_IMAGE=nmstate/centos8-nmstate-dev-nm-1.22-git
@@ -21,14 +19,10 @@ env:
           testflags="--test-type lint"
         - CONTAINER_IMAGE=nmstate/centos8-nmstate-dev
           testflags="--test-type unit_py36"
-        - CONTAINER_IMAGE=nmstate/fedora-nmstate-dev
-          testflags="--test-type unit_py38"
 
 matrix:
     fast_finish: true
     allow_failures:
-        - env: CONTAINER_IMAGE=nmstate/fedora-nmstate-dev
-               testflags="--test-type integ --pytest-args='-x'"
         - env: CONTAINER_IMAGE=nmstate/centos8-nmstate-dev-nm-1.22-git
                testflags="--test-type integ --pytest-args='-x'"
 
