@@ -46,6 +46,9 @@ from .testlib.bridgelib import create_bridge_subtree_state
 from .testlib.bridgelib import linux_bridge
 
 DEFAULT_TIMEOUT = 20
+NM_DHCP_TIMEOUT_DEFAULT = 45
+# The default IPv6 RA/Autoconf timeout is 30 seconds, less than above.
+NM_IPV6_AUTOCONF_TIMEOUT_DEFAULT = 30
 
 IPV4_ADDRESS1 = "192.0.2.251"
 IPV4_ADDRESS2 = "192.0.2.252"
@@ -979,3 +982,35 @@ def test_change_static_to_dhcp6_autoconf_with_disabled_ipv4(
     assert _poll(_has_ipv6_auto_gateway)
     assert _poll(_has_ipv6_auto_nameserver)
     assert _poll(_has_ipv6_auto_extra_route)
+
+
+@pytest.mark.slow
+@parametrize_ip_ver
+def test_dummy_existance_after_dhcp_timeout(ip_ver, dummy00):
+    ifstate = dummy00
+    if Interface.IPV4 in ip_ver:
+        ifstate[Interface.IPV4] = create_ipv4_state(enabled=True, dhcp=True)
+    if Interface.IPV6 in ip_ver:
+        ifstate[Interface.IPV6] = create_ipv6_state(
+            enabled=True, dhcp=True, autoconf=False
+        )
+    libnmstate.apply({Interface.KEY: [ifstate]})
+    time.sleep(NM_DHCP_TIMEOUT_DEFAULT + 1)
+    # NetworkManager by default remove virtual interface after DHCP timeout
+    assertlib.assert_state({Interface.KEY: [ifstate]})
+
+
+@pytest.mark.slow
+def test_dummy_existance_after_ipv6_autoconf_timeout(dummy00):
+    ifstate = dummy00
+    ifstate[Interface.IPV4] = create_ipv4_state(enabled=False)
+    ifstate[Interface.IPV6] = create_ipv6_state(
+        enabled=True, dhcp=True, autoconf=True
+    )
+    libnmstate.apply({Interface.KEY: [ifstate]})
+    time.sleep(NM_IPV6_AUTOCONF_TIMEOUT_DEFAULT + 1)
+
+    # NetworkManager by default remove virtual interface after autoconf timeout
+    # According to RFC 4861, autoconf(IPv6-RA) will instruct client to do
+    # DHCPv6 or not. With autoconf timeout, DHCPv6 will not start.
+    assertlib.assert_state({Interface.KEY: [ifstate]})
