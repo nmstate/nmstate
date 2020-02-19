@@ -45,7 +45,7 @@ def test_create_and_remove_bond(eth1_up):
             schema.Bond.SLAVES: [],
             schema.Bond.OPTIONS_SUBTREE: bond_options,
         }
-        assert bond_desired_state == bond_current_state
+        assert bond_current_state == bond_desired_state
 
     assert not _get_bond_current_state(BOND0)
 
@@ -63,7 +63,7 @@ def test_bond_with_a_slave(eth1_up):
             schema.Bond.SLAVES: [nic_name],
             schema.Bond.OPTIONS_SUBTREE: bond_options,
         }
-        assert bond_desired_state == bond_current_state
+        assert bond_current_state == bond_desired_state
 
     assert not _get_bond_current_state(BOND0)
 
