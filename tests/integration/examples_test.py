@@ -17,6 +17,8 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 """ Test the nmstate example files """
+import os
+
 import pytest
 
 from .testlib import assertlib
@@ -110,3 +112,16 @@ def test_add_remove_routes(eth1_up):
         assertlib.assert_state(desired_state)
 
     assertlib.assert_no_config_route_to_iface("eth1")
+
+
+@pytest.mark.skipif(
+    os.environ.get("CI") == "true",
+    reason="Team kmod not available in Travis CI",
+)
+def test_add_remove_team_with_slaves(eth1_up, eth2_up):
+    with example_state(
+        "team0_with_slaves.yml", cleanup="team0_absent.yml"
+    ) as desired_state:
+        assertlib.assert_state_match(desired_state)
+
+    assertlib.assert_absent("team0")

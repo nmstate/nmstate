@@ -1,0 +1,5 @@
+---
+interfaces:
+- name: team0
+  type: team
+  state: absent
