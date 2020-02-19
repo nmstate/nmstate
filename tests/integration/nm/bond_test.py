@@ -39,7 +39,7 @@ def test_create_and_remove_bond(eth1_up):
     }
 
     with _bond_interface(BOND0, bond_options):
-        bond_current_state = _get_bond_current_state(BOND0)
+        bond_current_state = _get_bond_current_state(BOND0, "miimon")
 
         bond_desired_state = {
             schema.Bond.SLAVES: [],
@@ -78,9 +78,25 @@ def _bond_interface(name, options):
 
 
 @nmclient_context
-def _get_bond_current_state(name):
+def _get_bond_current_state(name, option=None):
+    """
+    When option defined, the returned state will only contains the
+    specified bond option and the bond mode.
+    When option not defined, the return state will only contains bond mode.
+    This is needed for assert check.
+    """
     nmdev = nm.device.get_device_by_name(name)
     nm_bond_info = nm.bond.get_bond_info(nmdev) if nmdev else {}
+    if not nm_bond_info:
+        return {}
+    bond_options = nm_bond_info[schema.Bond.OPTIONS_SUBTREE]
+    nm_bond_info[schema.Bond.OPTIONS_SUBTREE] = {
+        schema.Bond.MODE: bond_options[schema.Bond.MODE]
+    }
+    if option:
+        nm_bond_info[schema.Bond.OPTIONS_SUBTREE][option] = bond_options[
+            option
+        ]
     return _convert_slaves_devices_to_iface_names(nm_bond_info)
 
 
