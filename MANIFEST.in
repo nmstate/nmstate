@@ -4,3 +4,4 @@ include pyproject.toml
 include requirements.txt
 include doc/nmstatectl.8.in
 recursive-include examples *.yml
+exclude packaging/nmstate.spec
