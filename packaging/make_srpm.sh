@@ -7,7 +7,7 @@ TMP_DIR=$(mktemp -d)
 SPEC_FILE="$TMP_DIR/nmstate.spec"
 OLD_PWD=$(pwd)
 
-for candidate in python3 python2 python
+for candidate in python3 python
 do
     python="$(command -v "${candidate}" || true)"
     if [[ -n "${python}" ]]

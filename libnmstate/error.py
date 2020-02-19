@@ -17,13 +17,6 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
-try:
-    PermissionError
-except NameError:
-    # Python 2 does not have PermissionError.
-    class PermissionError(Exception):
-        pass
-
 
 class NmstateError(Exception):
     """
