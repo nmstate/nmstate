@@ -112,12 +112,6 @@ parametrize_ip_ver = pytest.mark.parametrize(
     ids=["ipv4", "ipv6", "ipv4&6"],
 )
 
-# Python 2 does not have FileNotFoundError and treat file not exist as IOError
-try:
-    FileNotFoundError
-except NameError:
-    FileNotFoundError = IOError
-
 
 @pytest.fixture(scope="module")
 def dhcp_env():
