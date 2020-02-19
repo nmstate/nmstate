@@ -9,12 +9,10 @@ COPY docker_enable_systemd.sh docker_sys_config.sh ./
 RUN bash ./docker_enable_systemd.sh && rm ./docker_enable_systemd.sh
 
 RUN dnf -y install dnf-plugins-core epel-release && \
-    dnf config-manager --set-enabled PowerTools
-
-RUN dnf copr enable nmstate/ovs-el8 -y && \
-    dnf copr enable networkmanager/NetworkManager-1.22 -y
-
-RUN dnf -y install --setopt=install_weak_deps=False \
+    dnf config-manager --set-enabled PowerTools && \
+    dnf copr enable nmstate/ovs-el8 -y && \
+    dnf copr enable networkmanager/NetworkManager-1.22 -y && \
+    dnf -y install --setopt=install_weak_deps=False \
                    NetworkManager \
                    NetworkManager-ovs \
                    NetworkManager-team \
