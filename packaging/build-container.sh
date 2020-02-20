@@ -24,6 +24,8 @@ PROJECT_PATH="$(dirname $EXEC_PATH)"
 DEFAULT_BUILD_FLAGS="--no-cache --rm"
 DEFAULT_TAG_PREFIX="nmstate"
 
+: ${CONTAINER_CMD:=podman}
+
 options=$(getopt --options "" \
     --longoptions extra-args: \
     -- "${@}")
@@ -66,7 +68,8 @@ rebuild_container() {
 
     echo >/dev/stderr "Building '${container_spec}' into tag '${build_tag}'..."
 
-    docker build ${DEFAULT_BUILD_FLAGS} ${extra_args} -t "${build_tag}" \
+    $CONTAINER_CMD build ${DEFAULT_BUILD_FLAGS} ${extra_args} \
+        -t "${build_tag}" \
         -f "${container_spec}" "$PROJECT_PATH/packaging"
 }
 

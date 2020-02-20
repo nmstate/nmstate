@@ -8,7 +8,7 @@ It may be used both locally and through CI.
   https://hub.docker.com/r/nmstate/
 
 - run-tests.sh: Execute the tests in a container using
-  'nmstate/fedora-nmstate-dev' docker image.
+  'nmstate/fedora-nmstate-dev' container image.
 
   The following steps are executed:
   - Run the container (defined in the Dockerfile) as a daemon.
@@ -20,23 +20,24 @@ It may be used both locally and through CI.
   It also handles the cleanup of the container and nets (stop,rm).
 
 ## Running the Tests
-Assuming *docker* is installed on the host, just run:
+Assuming *podman* is installed on the host, just run:
 `./automation/run-tests.sh`
 
 By default, `./automation/run-tests.sh` will run all tests in the container
-using 'nmstate/fedora-nmstate-dev' docker image.
+using 'nmstate/fedora-nmstate-dev' container image.
 You may change the test type by specifying the `--test-type` flag, for example:
 
  * `./automation/run-tests.sh --test-type integ --el8`:
    Integration tests (without slow test cases) using
-   'nmstate/centos8-nmstate-dev' docker image.
+   'nmstate/centos8-nmstate-dev' container image.
 
  * `./automation/run-tests.sh --test-type integ`:
    Integration tests (without slow test cases) using
-   'nmstate/fedora-nmstate-dev' docker image.
+   'nmstate/fedora-nmstate-dev' container image.
 
  * `./automation/run-tests.sh --test-type integ_slow`:
-   Integration slow test cases using `nmstate/fedora-nmstate-dev` docker image.
+   Integration slow test cases using `nmstate/fedora-nmstate-dev` container
+   image.
 
 For a full list of command-line flags, run `./automation/run-tests.sh --help`.
 
@@ -78,8 +79,8 @@ sudo ../packaging/build-container.sh local/fedora-nmstate-dev
 To test the image, either specify it manually as described above or tag it locally:
 
 ```
-sudo docker tag local/centos8-nmstate-dev nmstate/centos8-nmstate-dev:latest
-sudo docker tag local/fedora-nmstate-dev nmstate/fedora-nmstate-dev:latest
+sudo podman tag local/centos8-nmstate-dev nmstate/centos8-nmstate-dev:latest
+sudo podman tag local/fedora-nmstate-dev nmstate/fedora-nmstate-dev:latest
 ```
 
 ### Push local image to the docker hub
@@ -90,11 +91,14 @@ persistent. If this is not feasible, a new build could be pushed as follow to
 the Docker Hub:
 
 ```shell
-sudo docker tag local/centos8-nmstate-dev nmstate/centos8-nmstate-dev:latest
-sudo docker push nmstate/centos8-nmstate-dev:latest
+sudo podman login docker.io
+sudo podman tag local/centos8-nmstate-dev nmstate/centos8-nmstate-dev:latest
+sudo podman push nmstate/centos8-nmstate-dev:latest \
+    docker://docker.io/nmstate/centos8-nmstate-dev:latest
 
-sudo docker tag local/fedora-nmstate-dev nmstate/fedora-nmstate-dev:latest
-sudo docker push nmstate/fedora-nmstate-dev:latest
+sudo podman tag local/fedora-nmstate-dev nmstate/fedora-nmstate-dev:latest
+sudo podman push nmstate/fedora-nmstate-dev:latest \
+    docker://docker.io/nmstate/fedora-nmstate-dev:latest
 ```
 
 It will be overwritten after the next commit to master, though.

@@ -18,11 +18,14 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-docker_ps() {
-    docker ps --format '{{.ID}} {{.Image}}' | grep nmstate-dev
+: ${CONTAINER_CMD:=podman}
+
+
+container_ps() {
+    $CONTAINER_CMD ps --format '{{.ID}} {{.Image}}' | grep nmstate-dev
 }
 
-number_of_containers="$(docker_ps | wc -l)"
+number_of_containers="$(container_ps | wc -l)"
 
 if [[ "${number_of_containers}" == "0" ]]
 then
@@ -36,6 +39,6 @@ then
         "WARNING: ${number_of_containers} of containers found, using first"
 fi
 
-container_id="$(docker_ps \
+container_id="$(container_ps \
     | head -n 1 | cut -d " " -f 1)"
-docker exec -it "${container_id}" /bin/bash
+$CONTAINER_CMD exec -it "${container_id}" /bin/bash

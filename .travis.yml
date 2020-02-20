@@ -11,8 +11,12 @@ env:
           use_coveralls=false
         - CONTAINER_IMAGE=nmstate/centos8-nmstate-dev
           testflags="--test-type integ_slow --pytest-args='-x'"
-        - CONTAINER_IMAGE=nmstate/centos8-nmstate-dev-nm-1.22-git
-          testflags="--test-type integ --pytest-args='-x'"
+        - CONTAINER_IMAGE=nmstate/centos8-nmstate-dev
+          testflags="--test-type integ --pytest-args='-x'
+              --copr networkmanager/NetworkManager-1.22-git"
+        - CONTAINER_IMAGE=nmstate/centos8-nmstate-dev
+          testflags="--test-type integ --pytest-args='-x'
+              --copr networkmanager/NetworkManager-master"
         - CONTAINER_IMAGE=nmstate/centos8-nmstate-dev
           testflags="--test-type format"
         - CONTAINER_IMAGE=nmstate/centos8-nmstate-dev
@@ -23,27 +27,33 @@ env:
 matrix:
     fast_finish: true
     allow_failures:
-        - env: CONTAINER_IMAGE=nmstate/centos8-nmstate-dev-nm-1.22-git
-               testflags="--test-type integ --pytest-args='-x'"
+        - env: CONTAINER_IMAGE=nmstate/centos8-nmstate-dev
+               testflags="--test-type integ --pytest-args='-x'
+                   --copr networkmanager/NetworkManager-1.22-git"
+        - env: CONTAINER_IMAGE=nmstate/centos8-nmstate-dev
+               testflags="--test-type integ --pytest-args='-x'
+                   --copr networkmanager/NetworkManager-master"
 
 addons:
     apt:
+        sources:
+        # Add podman repo suggested by
+        #   https://podman.io/getting-started/installation.html
+        - sourceline: 'deb http://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_18.04/ /'
+          key_url: 'https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable/xUbuntu_18.04/Release.key'
+
         packages:
             - git
             - gnupg2
             - openssh-client
             - python-tox
             - xz-utils
-
-services:
-    - docker
-
-before_install:
-    - docker pull $CONTAINER_IMAGE
+            - podman
+            - containernetworking-plugins   # Need for podman as root user
 
 script:
     - sudo modprobe openvswitch
-    - ./automation/run-tests.sh $testflags
+    - sudo ./automation/run-tests.sh $testflags
 
 after_success:
     - sudo pip install coveralls codecov
@@ -54,4 +64,4 @@ after_success:
     - test "${use_codecov}" == "true" && codecov || true
 
 after_failure:
-    - ./automation/upload_test_artifacts.sh
+    - sudo ./automation/upload_test_artifacts.sh
