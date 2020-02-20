@@ -71,9 +71,10 @@ def test_bridge_with_system_port(eth1_up, bridge_default_config):
 
     eth1_port = {
         OB.Port.NAME: "eth1",
-        # OVS vlan/s are not yet supported.
-        # OB.VLAN.MODE: None,
-        # OB.VLAN.TAG: 0,
+        OB.Port.VLAN_SUBTREE: {
+            OB.Port.Vlan.MODE: OB.Port.Vlan.Mode.ACCESS,
+            OB.Port.Vlan.TAG: 2,
+        },
     }
 
     bridge_desired_state[OB.CONFIG_SUBTREE][OB.PORT_SUBTREE].append(eth1_port)

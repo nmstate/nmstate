@@ -335,6 +335,7 @@ class OVSBridge(metaclass=_DeprecatorType):
             class Mode:
                 ACCESS = "access"
                 TRUNK = "trunk"
+                UNKNOWN = "unknown"
 
             class TrunkTags:
                 ID = "id"

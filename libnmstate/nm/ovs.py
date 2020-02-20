@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
+import logging
 
 from libnmstate.schema import OVSBridge as OB
 
@@ -29,6 +30,14 @@ INTERNAL_INTERFACE_TYPE = "ovs-interface"
 PORT_TYPE = "ovs-port"
 PORT_PROFILE_PREFIX = "ovs-port-"
 CAPABILITY = "openvswitch"
+
+NM_OVS_VLAN_MODE_MAP = {
+    "trunk": OB.Port.Vlan.Mode.TRUNK,
+    "access": OB.Port.Vlan.Mode.ACCESS,
+    "native-tagged": OB.Port.Vlan.Mode.TRUNK,
+    "native-untagged": OB.Port.Vlan.Mode.UNKNOWN,  # Not supported yet
+    "dot1q-tunnel": OB.Port.Vlan.Mode.UNKNOWN,  # Not supported yet
+}
 
 
 class LacpValue:
@@ -82,11 +91,12 @@ def create_port_setting(port_state):
         if up_delay:
             port_setting.props.bond_updelay = up_delay
 
-    for option_name, option_value in port_state.items():
-        if option_name == "tag":
-            port_setting.props.tag = option_value
-        elif option_name == "vlan-mode":
-            port_setting.props.vlan_mode = option_value
+    vlan_state = port_state.get(OB.Port.VLAN_SUBTREE, {})
+    if OB.Port.Vlan.MODE in vlan_state:
+        if vlan_state[OB.Port.Vlan.MODE] != OB.Port.Vlan.Mode.UNKNOWN:
+            port_setting.props.vlan_mode = vlan_state[OB.Port.Vlan.MODE]
+    if OB.Port.Vlan.TAG in vlan_state:
+        port_setting.props.tag = vlan_state[OB.Port.Vlan.TAG]
 
     return port_setting
 
@@ -175,10 +185,19 @@ def _get_bridge_port_info(port_profile, devices_info):
                 port_name, port_setting, port_slave_names
             )
             port_info.update(port_lag_info)
-        if vlan_mode:
-            port_info["vlan-mode"] = vlan_mode
-            port_info["access-tag"] = port_setting.props.tag
 
+        if vlan_mode:
+            nmstate_vlan_mode = NM_OVS_VLAN_MODE_MAP.get(
+                vlan_mode, OB.Port.Vlan.Mode.UNKNOWN
+            )
+            if nmstate_vlan_mode == OB.Port.Vlan.Mode.UNKNOWN:
+                logging.warning(
+                    f"OVS Port VLAN mode '{vlan_mode}' is not supported yet"
+                )
+            port_info[OB.Port.VLAN_SUBTREE] = {
+                OB.Port.Vlan.MODE: nmstate_vlan_mode,
+                OB.Port.Vlan.TAG: port_setting.get_tag(),
+            }
     return port_info
 
 

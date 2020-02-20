@@ -67,6 +67,15 @@ def test_add_remove_ovs_bridge_bond(eth1_up, eth2_up):
     assertlib.assert_absent("ovs-bond1")
 
 
+def test_add_remove_ovs_bridge_vlan(eth1_up, eth2_up):
+    with example_state(
+        "ovsbridge_vlan_port.yml", cleanup="ovsbridge_delete.yml"
+    ) as desired_state:
+        assertlib.assert_state(desired_state)
+
+    assertlib.assert_absent("ovs-br0")
+
+
 def test_add_remove_linux_bridge(eth1_up):
     with example_state(
         "linuxbrige_eth1_up.yml", cleanup="linuxbrige_eth1_absent.yml"
