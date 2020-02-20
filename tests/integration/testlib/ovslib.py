@@ -94,6 +94,13 @@ class Bridge:
             OVSBridge.PORT_SUBTREE, []
         )
 
+    def set_port_option(self, port_name, new_option):
+        for port_option in self._bridge_iface[OVSBridge.CONFIG_SUBTREE].get(
+            OVSBridge.PORT_SUBTREE, []
+        ):
+            if port_option[OVSBridge.Port.NAME] == port_name:
+                port_option.update(new_option)
+
     @contextmanager
     def create(self):
         desired_state = self.state

@@ -1,0 +1,14 @@
+---
+interfaces:
+  - name: ovs0
+    type: ovs-interface
+    state: up
+  - name: ovs-br0
+    type: ovs-bridge
+    state: up
+    bridge:
+      port:
+        - name: ovs0
+          vlan:
+            mode: access
+            tag: 2

@@ -122,9 +122,11 @@ def test_get_ovs_info_with_ports_with_interfaces(
     info = nm.ovs.get_ovs_info(bridge_device, device_info)
 
     assert len(info[OVSBridge.PORT_SUBTREE]) == 1
-    assert OVSBridge.Port.NAME in info[OVSBridge.PORT_SUBTREE][0]
-    assert "vlan-mode" in info[OVSBridge.PORT_SUBTREE][0]
-    assert "access-tag" in info[OVSBridge.PORT_SUBTREE][0]
+    port_state = info[OVSBridge.PORT_SUBTREE][0]
+    assert OVSBridge.Port.NAME in port_state
+    vlan_state = port_state[OVSBridge.Port.VLAN_SUBTREE]
+    assert OVSBridge.Port.Vlan.MODE in vlan_state
+    assert OVSBridge.Port.Vlan.TAG in vlan_state
 
 
 def test_create_bridge_setting(NM_mock):
@@ -150,23 +152,28 @@ def test_create_port_setting(NM_mock):
     mode = OVSBridge.Port.LinkAggregation.Mode.BALANCE_TCP
     updelay = 1
     downdelay = 2
+    vlan_mode = OVSBridge.Port.Vlan.Mode.ACCESS
+    vlan_tag = 2
     options = {
-        OVSBridge.Port.Vlan.TAG: 101,
-        "vlan-mode": "voomode",
         OVSBridge.Port.LINK_AGGREGATION_SUBTREE: {
             OVSBridge.Port.LinkAggregation.MODE: mode,
             OVSBridge.Port.LinkAggregation.Options.UP_DELAY: updelay,
             OVSBridge.Port.LinkAggregation.Options.DOWN_DELAY: downdelay,
         },
+        OVSBridge.Port.VLAN_SUBTREE: {
+            OVSBridge.Port.Vlan.MODE: vlan_mode,
+            OVSBridge.Port.Vlan.TAG: vlan_tag,
+        },
     }
+
     port_setting = nm.ovs.create_port_setting(options)
 
-    assert port_setting.props.tag == options[OVSBridge.Port.Vlan.TAG]
-    assert port_setting.props.vlan_mode == options["vlan-mode"]
     assert port_setting.props.bond_mode == mode
     assert port_setting.props.lacp == nm.ovs.LacpValue.ACTIVE
     assert port_setting.props.bond_updelay == updelay
     assert port_setting.props.bond_downdelay == downdelay
+    assert port_setting.props.tag == vlan_tag
+    assert port_setting.props.vlan_mode == vlan_mode
 
 
 def _mock_port_profile(nm_connection_mock):

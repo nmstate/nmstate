@@ -246,3 +246,23 @@ class TestOvsLinkAggregation:
 
         assertlib.assert_absent(BRIDGE1)
         assertlib.assert_absent(BOND1)
+
+
+def test_ovs_vlan_access_tag():
+    bridge = Bridge(BRIDGE1)
+    bridge.add_internal_port(PORT1, ipv4_state={InterfaceIPv4.ENABLED: False})
+    bridge.set_port_option(
+        PORT1,
+        {
+            OVSBridge.Port.NAME: PORT1,
+            OVSBridge.Port.VLAN_SUBTREE: {
+                OVSBridge.Port.Vlan.MODE: OVSBridge.Port.Vlan.Mode.ACCESS,
+                OVSBridge.Port.Vlan.TAG: 2,
+            },
+        },
+    )
+    with bridge.create() as state:
+        assertlib.assert_state_match(state)
+
+    assertlib.assert_absent(BRIDGE1)
+    assertlib.assert_absent(PORT1)
