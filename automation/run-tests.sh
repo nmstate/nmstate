@@ -27,7 +27,7 @@ PYTEST_OPTIONS="--verbose --verbose \
         --cov /usr/lib/python*/site-packages/nmstatectl \
         --cov-report=term"
 
-: ${CONTAINER_CMD:=docker}
+: ${CONTAINER_CMD:=podman}
 
 test -t 1 && USE_TTY="-t"
 

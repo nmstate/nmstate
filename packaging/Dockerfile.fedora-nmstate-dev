@@ -1,12 +1,4 @@
-# This Dockerfile is based on the recommendations provided in the
-# Fedora official repository
-# (https://hub.docker.com/r/fedora/systemd-systemd/).
-# It enables systemd to be operational.
 FROM docker.io/library/fedora:32
-ENV container docker
-COPY docker_enable_systemd.sh docker_sys_config.sh ./
-
-RUN bash ./docker_enable_systemd.sh && rm ./docker_enable_systemd.sh
 
 RUN dnf -y install --setopt=install_weak_deps=False \
                    NetworkManager \
@@ -32,6 +24,8 @@ RUN dnf -y install --setopt=install_weak_deps=False \
                    iproute \
                    python3-coveralls \
                    python3-tox \
+                   python3-pytest \
+                   python3-pytest-cov \
                    rpm-build \
                    \
                    # Below packages for pip (used by tox) to build
@@ -46,11 +40,13 @@ RUN dnf -y install --setopt=install_weak_deps=False \
                    make \
                    dbus-devel && \
     dnf clean all && \
-    pip install pytest==4.6.6 pytest-cov==2.8.1 --user && \
-    # Below line is workaround for
-    #   https://src.fedoraproject.org/rpms/rootfiles/pull-request/1
-    ln -s /root/.local/bin/pytest /usr/bin/pytest && \
-    bash ./docker_sys_config.sh && rm ./docker_sys_config.sh
+    systemctl enable openvswitch && \
+    sed -i -e 's/^#RateLimitInterval=.*/RateLimitInterval=0/' \
+    -e 's/^#RateLimitBurst=.*/RateLimitBurst=0/' \
+    /etc/systemd/journald.conf
+
+COPY network_manager_enable_trace.conf \
+     /etc/NetworkManager/conf.d/97-trace-logging.conf
 
 VOLUME [ "/sys/fs/cgroup" ]
 

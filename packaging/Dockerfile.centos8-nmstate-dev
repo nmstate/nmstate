@@ -1,12 +1,4 @@
-# This Dockerfile is based on the recommendations provided in the
-# Fedora official repository
-# (https://hub.docker.com/r/fedora/systemd-systemd/).
-# It enables systemd to be operational.
 FROM docker.io/library/centos:8
-ENV container docker
-COPY docker_enable_systemd.sh docker_sys_config.sh ./
-
-RUN bash ./docker_enable_systemd.sh && rm ./docker_enable_systemd.sh
 
 RUN dnf -y install dnf-plugins-core epel-release && \
     dnf config-manager --set-enabled PowerTools && \
@@ -39,7 +31,13 @@ RUN dnf -y install dnf-plugins-core epel-release && \
     ln -s /root/.local/bin/tox /usr/bin/tox && \
     ln -s /usr/bin/pytest-3 /usr/bin/pytest && \
     dnf clean all && \
-    bash ./docker_sys_config.sh && rm ./docker_sys_config.sh
+    systemctl enable openvswitch && \
+    sed -i -e 's/^#RateLimitInterval=.*/RateLimitInterval=0/' \
+    -e 's/^#RateLimitBurst=.*/RateLimitBurst=0/' \
+    /etc/systemd/journald.conf
+
+COPY network_manager_enable_trace.conf \
+     /etc/NetworkManager/conf.d/97-trace-logging.conf
 
 VOLUME [ "/sys/fs/cgroup" ]
 
