@@ -24,15 +24,19 @@ from libnmstate.schema import LinuxBridge as LB
 
 
 BRIDGE_TYPE = "bridge"
+BRIDGE_ENABLE_VLAN_FILTERING_METADATA = "_enable_vlan_filtering"
 
 
-def create_setting(options, base_con_profile):
+def create_setting(options, base_con_profile, bridge_desired_state=None):
     bridge_setting = _get_current_bridge_setting(base_con_profile)
     if not bridge_setting:
         bridge_setting = nmclient.NM.SettingBridge.new()
-
     if options:
         _set_bridge_properties(bridge_setting, options)
+    if bridge_desired_state:
+        _set_bridge_properties_from_metadata(
+            bridge_setting, bridge_desired_state
+        )
 
     return bridge_setting
 
@@ -70,6 +74,12 @@ def _set_bridge_stp_properties(bridge_setting, bridge_stp):
                 bridge_setting.props.hello_time = stp_val
             elif stp_key == LB.STP.MAX_AGE:
                 bridge_setting.props.max_age = stp_val
+
+
+def _set_bridge_properties_from_metadata(bridge_setting, metadata):
+    for metadata_name, metadata_value in metadata.items():
+        if metadata_name == BRIDGE_ENABLE_VLAN_FILTERING_METADATA:
+            bridge_setting.props.vlan_filtering = metadata_value
 
 
 def create_port_setting(options, base_con_profile):

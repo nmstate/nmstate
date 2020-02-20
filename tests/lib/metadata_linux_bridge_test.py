@@ -17,6 +17,8 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
+import copy
+
 from libnmstate import metadata
 from libnmstate import state
 from libnmstate.schema import Interface
@@ -24,6 +26,9 @@ from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import LinuxBridge
 
+from .testlib.portvlanlib import generate_vlan_filtering_config
+from .testlib.portvlanlib import generate_vlan_id_config
+from .testlib.portvlanlib import update_bridge_port_vlan_config
 
 BRIDGE0 = "br0"
 BRIDGE1 = "br1"
@@ -46,7 +51,13 @@ class TestLinuxBridgeMetadata:
         expected_dstate = state.State(
             {
                 Interface.KEY: [
-                    _create_bridge_state(BRIDGE0, (IFACE0, IFACE1)),
+                    _create_bridge_state(
+                        BRIDGE0,
+                        (IFACE0, IFACE1),
+                        extra=_create_bridge_metadata_state(
+                            vlan_filtering=False
+                        ),
+                    ),
                     _create_iface_state(
                         IFACE0,
                         InterfaceType.UNKNOWN,
@@ -86,7 +97,13 @@ class TestLinuxBridgeMetadata:
         expected_dstate = state.State(
             {
                 Interface.KEY: [
-                    _create_bridge_state(BRIDGE0, (IFACE0, IFACE1)),
+                    _create_bridge_state(
+                        BRIDGE0,
+                        (IFACE0, IFACE1),
+                        extra=_create_bridge_metadata_state(
+                            vlan_filtering=False
+                        ),
+                    ),
                     _create_iface_state(
                         IFACE0,
                         ifstate=InterfaceState.UP,
@@ -160,7 +177,13 @@ class TestLinuxBridgeMetadata:
         expected_dstate = state.State(
             {
                 Interface.KEY: [
-                    _create_bridge_state(BRIDGE0, (IFACE0, IFACE1)),
+                    _create_bridge_state(
+                        BRIDGE0,
+                        (IFACE0, IFACE1),
+                        extra=_create_bridge_metadata_state(
+                            vlan_filtering=False
+                        ),
+                    ),
                     _create_iface_state(
                         IFACE1,
                         InterfaceType.UNKNOWN,
@@ -202,7 +225,13 @@ class TestLinuxBridgeMetadata:
         expected_dstate = state.State(
             {
                 Interface.KEY: [
-                    _create_bridge_state(BRIDGE0, (IFACE0,)),
+                    _create_bridge_state(
+                        BRIDGE0,
+                        (IFACE0,),
+                        extra=_create_bridge_metadata_state(
+                            vlan_filtering=False
+                        ),
+                    ),
                     _create_iface_state(
                         IFACE0,
                         ifstate=InterfaceState.UP,
@@ -239,7 +268,13 @@ class TestLinuxBridgeMetadata:
         expected_dstate = state.State(
             {
                 Interface.KEY: [
-                    _create_bridge_state(BRIDGE0, (IFACE0,)),
+                    _create_bridge_state(
+                        BRIDGE0,
+                        (IFACE0,),
+                        extra=_create_bridge_metadata_state(
+                            vlan_filtering=False
+                        ),
+                    ),
                     _create_iface_state(
                         IFACE0,
                         ifstate=InterfaceState.UP,
@@ -270,7 +305,13 @@ class TestLinuxBridgeMetadata:
         current_state = state.State(
             {
                 Interface.KEY: [
-                    _create_bridge_state(BRIDGE0, (IFACE0, IFACE1)),
+                    _create_bridge_state(
+                        BRIDGE0,
+                        (IFACE0, IFACE1),
+                        extra=_create_bridge_metadata_state(
+                            vlan_filtering=False
+                        ),
+                    ),
                     _create_iface_state(IFACE0, InterfaceType.UNKNOWN),
                     _create_iface_state(IFACE1, InterfaceType.UNKNOWN),
                 ]
@@ -316,7 +357,13 @@ class TestLinuxBridgeMetadata:
         expected_dstate = state.State(
             {
                 Interface.KEY: [
-                    _create_bridge_state(BRIDGE1, (IFACE0,)),
+                    _create_bridge_state(
+                        BRIDGE1,
+                        (IFACE0,),
+                        extra=_create_bridge_metadata_state(
+                            vlan_filtering=False
+                        ),
+                    ),
                     _create_iface_state(
                         IFACE0,
                         ifstate=InterfaceState.UP,
@@ -332,9 +379,92 @@ class TestLinuxBridgeMetadata:
         assert state.State(desired_state.state) == expected_dstate
         assert current_state == expected_cstate
 
+    def test_port_vlan_metadata_create(self):
+        bridge = _create_bridge_state(BRIDGE1, (IFACE0,))
+        update_bridge_port_vlan_config(
+            bridge,
+            IFACE0,
+            generate_vlan_filtering_config(
+                LinuxBridge.Port.Vlan.Mode.TRUNK,
+                generate_vlan_id_config(100, 200, 300),
+            ),
+        )
+        desired_state = state.State({Interface.KEY: [bridge]})
+        current_state = state.State({})
 
-def _create_bridge_state(bridge_name, ports_names):
-    return {
+        expected_bridge_state = copy.deepcopy(bridge)
+        expected_bridge_state.update(
+            _create_bridge_metadata_state(vlan_filtering=True)
+        )
+        expected_dstate = state.State({Interface.KEY: [expected_bridge_state]})
+
+        metadata.generate_ifaces_metadata(desired_state, current_state)
+
+        assert state.State(desired_state.state) == expected_dstate
+
+    def test_port_vlan_metadata_update_keep_vlan_filtering_enabled(self):
+        bridge = _create_bridge_state(BRIDGE1, (IFACE0, IFACE1))
+        update_bridge_port_vlan_config(
+            bridge,
+            IFACE0,
+            generate_vlan_filtering_config(
+                LinuxBridge.Port.Vlan.Mode.TRUNK,
+                generate_vlan_id_config(100, 200, 300),
+            ),
+        )
+
+        current_bridge = copy.deepcopy(bridge)
+        update_bridge_port_vlan_config(
+            current_bridge,
+            IFACE1,
+            generate_vlan_filtering_config(
+                LinuxBridge.Port.Vlan.Mode.TRUNK, generate_vlan_id_config(500),
+            ),
+        )
+        desired_state = state.State({Interface.KEY: [bridge]})
+        current_state = state.State({Interface.KEY: [current_bridge]})
+
+        expected_desired_bridge_state = copy.deepcopy(bridge)
+        expected_desired_bridge_state.update(
+            _create_bridge_metadata_state(vlan_filtering=True)
+        )
+        expected_dstate = state.State(
+            {Interface.KEY: [expected_desired_bridge_state]}
+        )
+
+        metadata.generate_ifaces_metadata(desired_state, current_state)
+        assert state.State(desired_state.state) == expected_dstate
+
+    def test_port_vlan_metadata_update_disable_vlan_filtering(self):
+        bridge = _create_bridge_state(BRIDGE1, (IFACE0, IFACE1))
+        current_bridge = copy.deepcopy(bridge)
+
+        update_bridge_port_vlan_config(
+            current_bridge,
+            IFACE0,
+            generate_vlan_filtering_config(
+                LinuxBridge.Port.Vlan.Mode.TRUNK,
+                generate_vlan_id_config(100, 200, 300),
+            ),
+        )
+
+        desired_state = state.State({Interface.KEY: [bridge]})
+        current_state = state.State({Interface.KEY: [current_bridge]})
+
+        expected_desired_bridge_state = copy.deepcopy(bridge)
+        expected_desired_bridge_state.update(
+            _create_bridge_metadata_state(vlan_filtering=False)
+        )
+        expected_dstate = state.State(
+            {Interface.KEY: [expected_desired_bridge_state]}
+        )
+
+        metadata.generate_ifaces_metadata(desired_state, current_state)
+        assert state.State(desired_state.state) == expected_dstate
+
+
+def _create_bridge_state(bridge_name, ports_names, extra=None):
+    bridge_state = {
         Interface.NAME: bridge_name,
         Interface.TYPE: InterfaceType.LINUX_BRIDGE,
         Interface.STATE: InterfaceState.UP,
@@ -344,6 +474,10 @@ def _create_bridge_state(bridge_name, ports_names):
             ]
         },
     }
+
+    if extra:
+        bridge_state.update(extra)
+    return bridge_state
 
 
 def _create_iface_state(ifname, iftype=None, ifstate=None, extra=None):
@@ -363,3 +497,7 @@ def _create_metadata_state(bridge_name, port_name):
         metadata.MASTER_TYPE: InterfaceType.LINUX_BRIDGE,
         metadata.BRPORT_OPTIONS: {LinuxBridge.Port.NAME: port_name},
     }
+
+
+def _create_bridge_metadata_state(vlan_filtering):
+    return {metadata.BRIDGE_ENABLE_VLAN_FILTERING: vlan_filtering}
