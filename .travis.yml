@@ -5,32 +5,32 @@ env:
     global:
         - use_coveralls=true
     matrix:
-        - CONTAINER_IMAGE=nmstate/centos8-nmstate-dev
+        - CONTAINER_IMAGE=docker.io/nmstate/centos8-nmstate-dev
           testflags="--test-type integ --pytest-args='-x'"
           use_codecov=true
           use_coveralls=false
-        - CONTAINER_IMAGE=nmstate/centos8-nmstate-dev
+        - CONTAINER_IMAGE=docker.io/nmstate/centos8-nmstate-dev
           testflags="--test-type integ_slow --pytest-args='-x'"
-        - CONTAINER_IMAGE=nmstate/centos8-nmstate-dev
+        - CONTAINER_IMAGE=docker.io/nmstate/centos8-nmstate-dev
           testflags="--test-type integ --pytest-args='-x'
               --copr networkmanager/NetworkManager-1.22-git"
-        - CONTAINER_IMAGE=nmstate/centos8-nmstate-dev
+        - CONTAINER_IMAGE=docker.io/nmstate/centos8-nmstate-dev
           testflags="--test-type integ --pytest-args='-x'
               --copr networkmanager/NetworkManager-master"
-        - CONTAINER_IMAGE=nmstate/centos8-nmstate-dev
+        - CONTAINER_IMAGE=docker.io/nmstate/centos8-nmstate-dev
           testflags="--test-type format"
-        - CONTAINER_IMAGE=nmstate/centos8-nmstate-dev
+        - CONTAINER_IMAGE=docker.io/nmstate/centos8-nmstate-dev
           testflags="--test-type lint"
-        - CONTAINER_IMAGE=nmstate/centos8-nmstate-dev
+        - CONTAINER_IMAGE=docker.io/nmstate/centos8-nmstate-dev
           testflags="--test-type unit_py36"
 
 matrix:
     fast_finish: true
     allow_failures:
-        - env: CONTAINER_IMAGE=nmstate/centos8-nmstate-dev
+        - env: CONTAINER_IMAGE=docker.io/nmstate/centos8-nmstate-dev
                testflags="--test-type integ --pytest-args='-x'
                    --copr networkmanager/NetworkManager-1.22-git"
-        - env: CONTAINER_IMAGE=nmstate/centos8-nmstate-dev
+        - env: CONTAINER_IMAGE=docker.io/nmstate/centos8-nmstate-dev
                testflags="--test-type integ --pytest-args='-x'
                    --copr networkmanager/NetworkManager-master"
 
