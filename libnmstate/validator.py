@@ -24,7 +24,6 @@ import jsonschema as js
 
 from . import nm
 from . import schema
-from .schema import Constants
 from libnmstate.appliers.bond import is_in_mac_restricted_mode
 from libnmstate.schema import DNS
 from libnmstate.schema import Interface
@@ -71,7 +70,7 @@ def validate(data, validation_schema=schema.ifaces_schema):
 
 
 def validate_capabilities(state, capabilities):
-    validate_interface_capabilities(state[Constants.INTERFACES], capabilities)
+    validate_interface_capabilities(state.get(Interface.KEY, []), capabilities)
 
 
 def validate_interface_capabilities(ifaces_state, capabilities):
@@ -143,7 +142,7 @@ def validate_unique_interface_name(state):
 
 
 def validate_dhcp(state):
-    for iface_state in state[Constants.INTERFACES]:
+    for iface_state in state.get(Interface.KEY, []):
         for family in ("ipv4", "ipv6"):
             ip = iface_state.get(family, {})
             if (

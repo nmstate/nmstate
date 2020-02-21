@@ -164,21 +164,37 @@ class TestLinkAggregationState:
             )
 
 
-@pytest.mark.xfail(
-    raises=NmstateNotImplementedError,
-    reason="https://nmstate.atlassian.net/browse/NMSTATE-220",
-    strict=True,
-)
-def test_dns_three_nameservers():
-    libnmstate.validator.validate_dns(
-        {
-            DNS.KEY: {
-                DNS.CONFIG: {
-                    DNS.SERVER: ["8.8.8.8", "2001:4860:4860::8888", "8.8.4.4"]
+class TestDnsValidation:
+    @pytest.mark.xfail(
+        raises=NmstateNotImplementedError,
+        reason="https://nmstate.atlassian.net/browse/NMSTATE-220",
+        strict=True,
+    )
+    def test_dns_three_nameservers(self):
+        libnmstate.validator.validate_dns(
+            {
+                DNS.KEY: {
+                    DNS.CONFIG: {
+                        DNS.SERVER: [
+                            "8.8.8.8",
+                            "2001:4860:4860::8888",
+                            "8.8.4.4",
+                        ]
+                    }
                 }
             }
-        }
-    )
+        )
+
+    def test_dns_state_without_interfaces(self):
+        libnmstate.validator.validate_dns(
+            {
+                DNS.KEY: {
+                    DNS.CONFIG: {
+                        DNS.SERVER: ["8.8.8.8", "2001:4860:4860:8888"]
+                    }
+                }
+            }
+        )
 
 
 def test_unique_interface_name():
