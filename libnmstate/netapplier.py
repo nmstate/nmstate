@@ -122,6 +122,7 @@ def _choose_checkpoint(dbuspath):
 def _apply_ifaces_state(
     desired_state, verify_change, commit, rollback_timeout
 ):
+    original_desired_state = copy.deepcopy(desired_state)
     current_state = state.State(netinfo.show())
 
     desired_state.sanitize_ethernet(current_state)
@@ -133,7 +134,9 @@ def _apply_ifaces_state(
     desired_state.complement_master_interfaces_removal(current_state)
     metadata.generate_ifaces_metadata(desired_state, current_state)
 
-    validator.validate_interfaces_state(desired_state, current_state)
+    validator.validate_interfaces_state(
+        original_desired_state, desired_state, current_state
+    )
     validator.validate_routes(desired_state, current_state)
 
     new_interfaces = _list_new_interfaces(desired_state, current_state)

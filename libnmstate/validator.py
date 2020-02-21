@@ -25,13 +25,17 @@ import jsonschema as js
 from . import nm
 from . import schema
 from .schema import Constants
+from libnmstate.appliers.bond import is_in_mac_restricted_mode
 from libnmstate.schema import DNS
+from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIP
 from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import InterfaceType
+from libnmstate.schema import InterfaceState
 from libnmstate.schema import LinuxBridge as LB
 from libnmstate.schema import OVSBridge
 from libnmstate.schema import VXLAN
+from libnmstate.schema import Bond
 from libnmstate.error import NmstateDependencyError
 from libnmstate.error import NmstateNotImplementedError
 from libnmstate.error import NmstateValueError
@@ -91,8 +95,11 @@ def validate_interface_capabilities(ifaces_state, capabilities):
             )
 
 
-def validate_interfaces_state(desired_state, current_state):
-    validate_link_aggregation_state(desired_state, current_state)
+def validate_interfaces_state(
+    original_desired_state, desired_state, current_state
+):
+    validate_link_aggregation_state(original_desired_state, current_state)
+    _validate_linux_bond(original_desired_state, current_state)
 
 
 def validate_link_aggregation_state(desired_state, current_state):
@@ -334,3 +341,51 @@ def _assert_ovs_lag_slave_count(iface_state):
                 raise NmstateOvsLagValueError(
                     f"OVS {ifname} LAG port {lag} has less than 2 slaves."
                 )
+
+
+def _validate_linux_bond(original_desired_state, current_state):
+    """
+    Raise NmstateValueError on these scenarios:
+        * Bond mode not defined.
+        * Original desire state contains illegal bond config.
+        * After merge, user's intention will cause illegal bong config.
+          For example: mac specified in desired_state without any bond options
+                       defined. While current state is fail_over_mac=1 with
+                       active-backup mode.
+    """
+    merged_desired_state = copy.deepcopy(original_desired_state)
+    merged_desired_state.merge_interfaces(current_state)
+
+    original_iface_states = {}
+    for iface_name, iface_state in original_desired_state.interfaces.items():
+        original_iface_states[iface_name] = iface_state
+
+    for iface_state in merged_desired_state.interfaces.values():
+        if iface_state[Interface.STATE] != InterfaceState.UP:
+            continue
+        if iface_state[Interface.TYPE] == InterfaceType.BOND:
+            if not iface_state.get(Bond.CONFIG_SUBTREE, {}).get(Bond.MODE):
+                raise NmstateValueError("Bond mode is not defined")
+
+            original_iface_state = original_iface_states.get(
+                iface_state[Interface.NAME], {}
+            )
+            _assert_bond_config_is_legal(iface_state, original_iface_state)
+
+
+def _assert_bond_config_is_legal(iface_state, original_iface_state):
+    """
+    When MAC address defined in original_iface_state and bond is MAC
+    address restricted mode(cannot define MAC), raise NmstateValueError.
+    """
+    mac = original_iface_state.get(Interface.MAC)
+    bond_options = iface_state[Bond.CONFIG_SUBTREE].get(
+        Bond.OPTIONS_SUBTREE, {}
+    )
+    bond_options[Bond.MODE] = iface_state[Bond.CONFIG_SUBTREE].get(Bond.MODE)
+
+    if mac and is_in_mac_restricted_mode(bond_options):
+        raise NmstateValueError(
+            "MAC address cannot be specified in bond interface along with "
+            "specified bond options"
+        )

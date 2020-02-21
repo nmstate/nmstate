@@ -411,7 +411,7 @@ def _build_connection_profile(iface_desired_state, base_con_profile=None):
 
     bond_opts = translator.Api2Nm.get_bond_options(iface_desired_state)
     if bond_opts:
-        settings.append(bond.create_setting(bond_opts))
+        settings.append(bond.create_setting(bond_opts, wired_setting))
     elif iface_type == bridge.BRIDGE_TYPE:
         bridge_options = iface_desired_state.get(bridge.BRIDGE_TYPE, {}).get(
             LB.OPTIONS_SUBTREE

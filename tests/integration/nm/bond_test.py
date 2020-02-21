@@ -108,7 +108,7 @@ def _create_bond(name, options):
         iface_name=name,
         iface_type=nm.nmclient.NM.SETTING_BOND_SETTING_NAME,
     )
-    bond_setting = nm.bond.create_setting(options)
+    bond_setting = nm.bond.create_setting(options, wired_setting=None)
     ipv4_setting = nm.ipv4.create_setting({}, None)
     ipv6_setting = nm.ipv6.create_setting({}, None)
 

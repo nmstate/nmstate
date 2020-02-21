@@ -23,6 +23,7 @@ import re
 
 from . import nmclient
 from libnmstate.error import NmstateValueError
+from libnmstate.appliers.bond import is_in_mac_restricted_mode
 
 
 BOND_TYPE = "bond"
@@ -34,9 +35,12 @@ NM_SUPPORTED_BOND_OPTIONS = nmclient.NM.SettingBond.get_valid_options(
 )
 
 
-def create_setting(options):
+def create_setting(options, wired_setting):
     bond_setting = nmclient.NM.SettingBond.new()
     for option_name, option_value in options.items():
+        if wired_setting and is_in_mac_restricted_mode(options):
+            # When in MAC restricted mode, MAC address should be unset.
+            wired_setting.props.cloned_mac_address = None
         if option_value != SYSFS_EMPTY_VALUE:
             success = bond_setting.add_option(option_name, str(option_value))
             if not success:
