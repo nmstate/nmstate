@@ -24,15 +24,21 @@ from libnmstate import schema
 from libnmstate import state
 from libnmstate import validator
 from libnmstate.schema import Bond
+from libnmstate.schema import BondMode
 from libnmstate.schema import DNS
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
+from libnmstate.schema import InterfaceState
+from libnmstate.schema import InterfaceType
 from libnmstate.schema import LinuxBridge as LB
 from libnmstate.schema import OVSBridge as OB
 from libnmstate.schema import VXLAN
 from libnmstate.error import NmstateNotImplementedError
 from libnmstate.error import NmstateValueError
+
+
+MAC0 = "02:ff:ff:ff:ff:00"
 
 
 class TestLinkAggregationState:
@@ -548,3 +554,91 @@ def _create_route(dest, via_addr, via_iface, table, metric):
         schema.Route.NEXT_HOP_INTERFACE: via_iface,
         schema.Route.TABLE_ID: table,
     }
+
+
+class TestLinuxBondValidator:
+    def test_mode_not_defined(self):
+        iface_state = self._gen_iface_state("bond0")
+        iface_state[Bond.CONFIG_SUBTREE].pop(Bond.MODE)
+        original_desired_state = state.State({Interface.KEY: [iface_state]})
+        desired_state = state.State({Interface.KEY: [iface_state]})
+        current_state = empty_state()
+        with pytest.raises(NmstateValueError):
+            libnmstate.validator.validate_interfaces_state(
+                original_desired_state, desired_state, current_state
+            )
+
+    def test_mac_restriction_without_mac_in_desire(self):
+        iface_state = self._gen_iface_state("bond0")
+        bond_config = iface_state[Bond.CONFIG_SUBTREE]
+        bond_config[Bond.MODE] = BondMode.ACTIVE_BACKUP
+        bond_config[Bond.OPTIONS_SUBTREE]["fail_over_mac"] = "active"
+
+        original_desired_state = state.State({Interface.KEY: [iface_state]})
+        desired_state = state.State({Interface.KEY: [iface_state]})
+        current_state = empty_state()
+
+        libnmstate.validator.validate_interfaces_state(
+            original_desired_state, desired_state, current_state
+        )
+
+    def test_mac_restriction_with_mac_in_desire(self):
+        iface_state = self._gen_iface_state("bond0")
+        iface_state[Interface.MAC] = MAC0
+        bond_config = iface_state[Bond.CONFIG_SUBTREE]
+        bond_config[Bond.MODE] = BondMode.ACTIVE_BACKUP
+        bond_config[Bond.OPTIONS_SUBTREE]["fail_over_mac"] = "active"
+
+        original_desired_state = state.State({Interface.KEY: [iface_state]})
+        desired_state = state.State({Interface.KEY: [iface_state]})
+        current_state = state.State({Interface.KEY: [iface_state]})
+
+        with pytest.raises(NmstateValueError):
+            libnmstate.validator.validate_interfaces_state(
+                original_desired_state, desired_state, current_state
+            )
+
+    def test_mac_restriction_in_desire_mac_in_current(self):
+        iface_state = self._gen_iface_state("bond0")
+        bond_config = iface_state[Bond.CONFIG_SUBTREE]
+        bond_config[Bond.MODE] = BondMode.ACTIVE_BACKUP
+        bond_config[Bond.OPTIONS_SUBTREE]["fail_over_mac"] = "active"
+
+        original_desired_state = state.State({Interface.KEY: [iface_state]})
+        desired_state = state.State({Interface.KEY: [iface_state]})
+        iface_state[Interface.MAC] = MAC0
+        current_state = state.State({Interface.KEY: [iface_state]})
+
+        libnmstate.validator.validate_interfaces_state(
+            original_desired_state, desired_state, current_state
+        )
+
+    def test_mac_restriction_in_current_mac_in_desire(self):
+        iface_state = self._gen_iface_state("bond0")
+        bond_config = iface_state[Bond.CONFIG_SUBTREE]
+        bond_config[Bond.MODE] = BondMode.ACTIVE_BACKUP
+        bond_config[Bond.OPTIONS_SUBTREE]["fail_over_mac"] = "active"
+        current_state = state.State({Interface.KEY: [iface_state]})
+
+        iface_state = self._gen_iface_state("bond0")
+        iface_state[Interface.MAC] = MAC0
+        bond_config = iface_state[Bond.CONFIG_SUBTREE]
+        bond_config.pop(Bond.MODE)
+        original_desired_state = state.State({Interface.KEY: [iface_state]})
+        desired_state = state.State({Interface.KEY: [iface_state]})
+
+        with pytest.raises(NmstateValueError):
+            libnmstate.validator.validate_interfaces_state(
+                original_desired_state, desired_state, current_state
+            )
+
+    def _gen_iface_state(self, bond_name):
+        return {
+            Interface.NAME: bond_name,
+            Interface.TYPE: InterfaceType.BOND,
+            Interface.STATE: InterfaceState.UP,
+            Bond.CONFIG_SUBTREE: {
+                Bond.MODE: BondMode.ROUND_ROBIN,
+                Bond.OPTIONS_SUBTREE: {},
+            },
+        }

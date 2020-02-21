@@ -18,7 +18,20 @@
 #
 
 from libnmstate.schema import Bond
+from libnmstate.schema import BondMode
 
 
 def get_bond_slaves_from_state(iface_state, default=()):
     return iface_state.get(Bond.CONFIG_SUBTREE, {}).get(Bond.SLAVES, default)
+
+
+def is_in_mac_restricted_mode(bond_options):
+    """
+    Return True when Bond option does not allow MAC address defined.
+    In MAC restricted mode means:
+        Bond mode is BondMode.ACTIVE_BACKUP
+        Bond option "fail_over_mac" is active.
+    """
+    return BondMode.ACTIVE_BACKUP == bond_options.get(
+        Bond.MODE
+    ) and bond_options.get("fail_over_mac") in ("1", 1, "active",)

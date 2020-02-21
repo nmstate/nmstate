@@ -24,6 +24,7 @@ import yaml
 
 import libnmstate
 from libnmstate.error import NmstateVerificationError
+from libnmstate.error import NmstateValueError
 from libnmstate.schema import Bond
 from libnmstate.schema import BondMode
 from libnmstate.schema import Interface
@@ -43,9 +44,11 @@ from .testlib.bridgelib import add_port_to_bridge
 from .testlib.bridgelib import create_bridge_subtree_state
 
 BOND99 = "bond99"
+ETH1 = "eth1"
+ETH2 = "eth2"
 
-MAC0 = "02:ff:ff:ff:ff:00"
-MAC1 = "02:ff:ff:ff:ff:01"
+MAC0 = "02:FF:FF:FF:FF:00"
+MAC1 = "02:FF:FF:FF:FF:01"
 
 BOND99_YAML_BASE = """
 interfaces:
@@ -403,3 +406,86 @@ def test_change_bond_option_miimon(bond99_with_2_slaves):
     bond_options["miimon"] = "200"
     libnmstate.apply(desired_state)
     assertlib.assert_state(desired_state)
+
+
+def test_create_bond_without_mode():
+    with bond_interface(name=BOND99, slaves=[], create=False) as state:
+        state[Interface.KEY][0][Bond.CONFIG_SUBTREE].pop(Bond.MODE)
+        with pytest.raises(NmstateValueError):
+            libnmstate.apply(state)
+
+
+def test_bond_mac_restriction_without_mac_in_desire(eth1_up, eth2_up):
+    with bond_interface(
+        name=BOND99,
+        slaves=[ETH1, ETH2],
+        extra_iface_state={
+            Bond.CONFIG_SUBTREE: {
+                Bond.MODE: BondMode.ACTIVE_BACKUP,
+                Bond.OPTIONS_SUBTREE: {"fail_over_mac": "active"},
+            },
+        },
+    ) as state:
+        assertlib.assert_state_match(state)
+
+
+def test_bond_mac_restriction_with_mac_in_desire(eth1_up, eth2_up):
+    with bond_interface(
+        name=BOND99,
+        slaves=[ETH1, ETH2],
+        extra_iface_state={
+            Interface.MAC: MAC0,
+            Bond.CONFIG_SUBTREE: {
+                Bond.MODE: BondMode.ACTIVE_BACKUP,
+                Bond.OPTIONS_SUBTREE: {"fail_over_mac": "active"},
+            },
+        },
+        create=False,
+    ) as state:
+        with pytest.raises(NmstateValueError):
+            libnmstate.apply(state)
+
+
+def test_bond_mac_restriction_in_desire_mac_in_current(bond99_with_2_slaves):
+    with bond_interface(
+        name=BOND99,
+        slaves=[ETH1, ETH2],
+        extra_iface_state={
+            Bond.CONFIG_SUBTREE: {
+                Bond.MODE: BondMode.ACTIVE_BACKUP,
+                Bond.OPTIONS_SUBTREE: {"fail_over_mac": "active"},
+            },
+        },
+    ) as state:
+        assertlib.assert_state_match(state)
+
+
+def test_bond_mac_restriction_in_current_mac_in_desire(eth1_up, eth2_up):
+    with bond_interface(
+        name=BOND99,
+        slaves=[ETH1, ETH2],
+        extra_iface_state={
+            Bond.CONFIG_SUBTREE: {
+                Bond.MODE: BondMode.ACTIVE_BACKUP,
+                Bond.OPTIONS_SUBTREE: {"fail_over_mac": "active"},
+            },
+        },
+    ) as state:
+        assertlib.assert_state_match(state)
+        with pytest.raises(NmstateValueError):
+            libnmstate.apply(
+                {
+                    Interface.KEY: [
+                        {Interface.NAME: BOND99, Interface.MAC: MAC0}
+                    ]
+                }
+            )
+
+
+def test_create_bond_with_mac(eth1_up, eth2_up):
+    with bond_interface(
+        name=BOND99,
+        slaves=[ETH1, ETH2],
+        extra_iface_state={Interface.MAC: MAC0},
+    ) as state:
+        assertlib.assert_state_match(state)
