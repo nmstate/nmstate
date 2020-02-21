@@ -79,8 +79,8 @@ sudo ../packaging/build-container.sh local/fedora-nmstate-dev
 To test the image, either specify it manually as described above or tag it locally:
 
 ```
-sudo podman tag local/centos8-nmstate-dev nmstate/centos8-nmstate-dev:latest
-sudo podman tag local/fedora-nmstate-dev nmstate/fedora-nmstate-dev:latest
+sudo podman tag local/centos8-nmstate-dev docker.io/nmstate/centos8-nmstate-dev:latest
+sudo podman tag local/fedora-nmstate-dev docker.io/nmstate/fedora-nmstate-dev:latest
 ```
 
 ### Push local image to the docker hub
