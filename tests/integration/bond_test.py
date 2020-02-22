@@ -403,7 +403,7 @@ def test_change_bond_option_miimon(bond99_with_2_slaves):
     desired_state = statelib.show_only((BOND99,))
     iface_state = desired_state[Interface.KEY][0]
     bond_options = iface_state[Bond.CONFIG_SUBTREE][Bond.OPTIONS_SUBTREE]
-    bond_options["miimon"] = "200"
+    bond_options["miimon"] = 200
     libnmstate.apply(desired_state)
     assertlib.assert_state(desired_state)
 
