@@ -90,6 +90,8 @@ def normalize_options_values(iface_state):
     if options:
         normalized_options = {}
         for option_name, option_value in options.items():
+            with contextlib.suppress(ValueError):
+                option_value = int(option_value)
             option_value = get_bond_named_option_value_by_id(
                 option_name, option_value
             )

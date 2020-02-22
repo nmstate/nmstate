@@ -19,6 +19,7 @@
 
 from collections.abc import Mapping
 from collections.abc import Sequence
+import contextlib
 import copy
 from operator import itemgetter
 
@@ -106,6 +107,7 @@ class State:
         self._state = other_state
 
     def normalize(self):
+        self._convert_lag_numeric_value_options_to_integer()
         self._sort_iface_lag_slaves()
         self._sort_iface_bridge_ports()
         self._ipv4_skeleton_canonicalization()
@@ -215,6 +217,17 @@ class State:
                         InterfaceIP.AUTO_DNS,
                     ):
                         ip.pop(dhcp_option, None)
+
+    def _convert_lag_numeric_value_options_to_integer(self):
+        for iface_state in self._state.get(Interface.KEY, []):
+            if iface_state.get(Interface.TYPE) == Bond.KEY:
+                bond_state = iface_state.get(Bond.CONFIG_SUBTREE, {})
+                options = bond_state.get(Bond.OPTIONS_SUBTREE)
+                if options:
+                    for option_name, option_value in options.items():
+                        with contextlib.suppress(ValueError):
+                            option_value = int(option_value)
+                        options[option_name] = option_value
 
 
 def _lookup_iface_state_by_name(interfaces_state, ifname):
