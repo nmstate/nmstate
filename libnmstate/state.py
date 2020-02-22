@@ -38,6 +38,7 @@ from libnmstate.error import NmstateValueError
 from libnmstate.error import NmstateVerificationError
 from libnmstate.iplib import is_ipv6_address
 from libnmstate.prettystate import format_desired_current_state_diff
+from libnmstate.schema import Bond
 from libnmstate.schema import DNS
 from libnmstate.schema import Ethernet
 from libnmstate.schema import Interface
@@ -360,6 +361,7 @@ class State:
 
     def normalize_for_verification(self):
         self._clean_sanitize_ethernet()
+        self._normalize_lag_options()
         self._sort_lag_slaves()
         self._sort_ovs_lag_slaves()
         self._sort_bridge_ports()
@@ -613,6 +615,11 @@ class State:
     def _sort_lag_slaves(self):
         for ifstate in self.interfaces.values():
             ifstate.get("link-aggregation", {}).get("slaves", []).sort()
+
+    def _normalize_lag_options(self):
+        for ifstate in self.interfaces.values():
+            if ifstate.get(Interface.TYPE) == Bond.KEY:
+                bond.normalize_options_values(ifstate)
 
     def _sort_ovs_lag_slaves(self):
         for ifstate in self.interfaces.values():

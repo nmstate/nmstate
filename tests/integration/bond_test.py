@@ -408,6 +408,18 @@ def test_change_bond_option_miimon(bond99_with_2_slaves):
     assertlib.assert_state(desired_state)
 
 
+def test_change_bond_option_with_an_id_value(bond99_with_slave):
+    option_name = "xmit_hash_policy"
+    desired_state = statelib.show_only((BOND99,))
+    iface_state = desired_state[Interface.KEY][0]
+    bond_options = iface_state[Bond.CONFIG_SUBTREE][Bond.OPTIONS_SUBTREE]
+    bond_options[option_name] = "2"
+    libnmstate.apply(desired_state)
+    new_iface_state = statelib.show_only((BOND99,))[Interface.KEY][0]
+    new_options = new_iface_state[Bond.CONFIG_SUBTREE][Bond.OPTIONS_SUBTREE]
+    assert new_options.get(option_name) == "layer2+3"
+
+
 def test_create_bond_without_mode():
     with bond_interface(name=BOND99, slaves=[], create=False) as state:
         state[Interface.KEY][0][Bond.CONFIG_SUBTREE].pop(Bond.MODE)
