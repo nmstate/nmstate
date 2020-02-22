@@ -203,6 +203,11 @@ function upgrade_nm_from_copr {
     local copr_repo=$1
     # The repoid for a Copr repo is the name with the slash replaces by a colon
     local copr_repo_id="copr:copr.fedorainfracloud.org:${copr_repo/\//:}"
+    # Workaround for dnf failure:
+    # [Errno 2] No such file or directory: '/var/cache/dnf/metadata_lock.pid'
+    if [[ "$CI" == "true" ]];then
+        container_exec "rm -f /var/cache/dnf/metadata_lock.pid"
+    fi
     container_exec "command -v dnf && plugin='dnf-command(copr)' || plugin='yum-plugin-copr'; yum install --assumeyes \$plugin;"
     container_exec "yum copr enable --assumeyes ${copr_repo}"
     # Update only from Copr to limit the changes in the environment
