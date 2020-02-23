@@ -74,59 +74,57 @@ def test_add_and_remove_two_vlans_on_same_iface(eth1_up):
 
 
 def test_two_vlans_on_eth1_change_mtu(eth1_up):
-    desired_state = statelib.show_only(("eth1",))
-    eth1_state = desired_state[Interface.KEY][0]
-    vlans_state = create_two_vlans_state()
-    desired_state[Interface.KEY].extend(vlans_state[Interface.KEY])
-    for iface in desired_state[Interface.KEY]:
-        iface[Interface.MTU] = 2000
-    libnmstate.apply(desired_state)
+    with two_vlans_on_eth1() as desired_state:
+        eth1_state = eth1_up[Interface.KEY][0]
+        desired_state[Interface.KEY].append(eth1_state)
+        for iface in desired_state[Interface.KEY]:
+            iface[Interface.MTU] = 2000
+        libnmstate.apply(desired_state)
 
-    eth1_102_state = next(
-        ifstate
-        for ifstate in desired_state[Interface.KEY]
-        if ifstate[Interface.NAME] == VLAN2_IFNAME
-    )
-    eth1_state[Interface.MTU] = 2200
-    eth1_102_state[Interface.MTU] = 2200
-    libnmstate.apply(desired_state)
+        eth1_102_state = next(
+            ifstate
+            for ifstate in desired_state[Interface.KEY]
+            if ifstate[Interface.NAME] == VLAN2_IFNAME
+        )
+        eth1_state[Interface.MTU] = 2200
+        eth1_102_state[Interface.MTU] = 2200
+        libnmstate.apply(desired_state)
 
-    eth1_vlan_iface_cstate = statelib.show_only((VLAN_IFNAME,))
-    assert eth1_vlan_iface_cstate[Interface.KEY][0][Interface.MTU] == 2000
+        eth1_vlan_iface_cstate = statelib.show_only((VLAN_IFNAME,))
+        assert eth1_vlan_iface_cstate[Interface.KEY][0][Interface.MTU] == 2000
 
 
 def test_two_vlans_on_eth1_change_base_iface_mtu(eth1_up):
-    desired_state = statelib.show_only(("eth1",))
-    eth1_state = desired_state[Interface.KEY][0]
-    vlans_state = create_two_vlans_state()
-    desired_state[Interface.KEY].extend(vlans_state[Interface.KEY])
-    for iface in desired_state[Interface.KEY]:
-        iface[Interface.MTU] = 2000
-    libnmstate.apply(desired_state)
+    with two_vlans_on_eth1() as desired_state:
+        eth1_state = eth1_up[Interface.KEY][0]
+        desired_state[Interface.KEY].append(eth1_state)
+        for iface in desired_state[Interface.KEY]:
+            iface[Interface.MTU] = 2000
+        libnmstate.apply(desired_state)
 
-    eth1_state[Interface.MTU] = 2200
-    libnmstate.apply({Interface.KEY: [eth1_state]})
-    eth1_vlan_iface_cstate = statelib.show_only((VLAN_IFNAME,))
-    assert eth1_vlan_iface_cstate[Interface.KEY][0][Interface.MTU] == 2000
+        eth1_state[Interface.MTU] = 2200
+        libnmstate.apply(eth1_up)
+        eth1_vlan_iface_cstate = statelib.show_only((VLAN_IFNAME,))
+        assert eth1_vlan_iface_cstate[Interface.KEY][0][Interface.MTU] == 2000
 
 
 def test_two_vlans_on_eth1_change_mtu_rollback(eth1_up):
-    desired_state = statelib.show_only(("eth1",))
-    vlans_state = create_two_vlans_state()
-    desired_state[Interface.KEY].extend(vlans_state[Interface.KEY])
-    for iface in desired_state[Interface.KEY]:
-        iface[Interface.MTU] = 2000
-    libnmstate.apply(desired_state)
+    with two_vlans_on_eth1() as desired_state:
+        eth1_state = eth1_up[Interface.KEY][0]
+        desired_state[Interface.KEY].append(eth1_state)
+        for iface in desired_state[Interface.KEY]:
+            iface[Interface.MTU] = 2000
+        libnmstate.apply(desired_state)
 
-    for iface in desired_state[Interface.KEY]:
-        iface[Interface.MTU] = 2200
-    libnmstate.apply(desired_state, commit=False)
-    libnmstate.rollback()
+        for iface in desired_state[Interface.KEY]:
+            iface[Interface.MTU] = 2200
+        libnmstate.apply(desired_state, commit=False)
+        libnmstate.rollback()
 
-    time.sleep(5)  # Give some time for NetworkManager to rollback
+        time.sleep(5)  # Give some time for NetworkManager to rollback
 
-    eth1_vlan_iface_cstate = statelib.show_only((VLAN_IFNAME,))
-    assert eth1_vlan_iface_cstate[Interface.KEY][0][Interface.MTU] == 2000
+        eth1_vlan_iface_cstate = statelib.show_only((VLAN_IFNAME,))
+        assert eth1_vlan_iface_cstate[Interface.KEY][0][Interface.MTU] == 2000
 
 
 def test_rollback_for_vlans(eth1_up):
