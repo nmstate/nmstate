@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2019 Red Hat, Inc.
+# Copyright (c) 2018-2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -68,11 +68,16 @@ def get_bond_info(nm_device):
 
 def _get_options(nm_device):
     ifname = nm_device.get_iface()
+    bond_setting = nmclient.NM.SettingBond.new()
     options = {}
     for sysfs_file in glob.iglob(f"/sys/class/net/{ifname}/bonding/*"):
         option = os.path.basename(sysfs_file)
         if option in NM_SUPPORTED_BOND_OPTIONS:
-            options[option] = _read_sysfs_file(sysfs_file)
+            value = _read_sysfs_file(sysfs_file)
+            if option == "mode" or value != bond_setting.get_option_default(
+                option
+            ):
+                options[option] = value
     return options
 
 
