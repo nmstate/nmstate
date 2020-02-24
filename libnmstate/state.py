@@ -434,6 +434,24 @@ class State:
         for unknown_iface in unknown_ifaces:
             del self.interfaces[unknown_iface]
 
+    def _route_is_next_hop_to_dynamic_ip_iface(self, route):
+        ifname = route.next_hop_interface
+        if not ifname:
+            return False
+        iface_state = self.interfaces.get(ifname)
+        if not iface_state:
+            return False
+
+        if is_ipv6_address(route.destination):
+            ip_state = iface_state.get(Interface.IPV6)
+            return ip_state and (
+                ip_state.get(InterfaceIPv6.AUTOCONF)
+                or ip_state.get(InterfaceIPv6.DHCP)
+            )
+        else:
+            ip_state = iface_state.get(Interface.IPV4, {})
+            return ip_state.get(InterfaceIPv4.DHCP, False)
+
     def merge_routes(self, other_state):
         """
         Given the self and other states, complete the self state by merging
@@ -446,6 +464,7 @@ class State:
           - Self iface explicitly specified (regardless of routes)
         - Self absent routes overwrite other routes state.
           - Support wildcard for matching the absent routes.
+        - Other routes next hop to DHCP/Autoconf interface will be discarded.
         """
         other_routes = set()
         for ifname, routes in other_state.config_iface_routes.items():
@@ -453,13 +472,16 @@ class State:
                 ifname in self.config_iface_routes
                 or self._is_interface_routable(ifname, routes)
             ):
-                other_routes |= set(routes)
+                for route in routes:
+                    if not self._route_is_next_hop_to_dynamic_ip_iface(route):
+                        other_routes.add(route)
 
         self_routes = {
             route
             for routes in self.config_iface_routes.values()
             for route in routes
             if not route.absent
+            and not self._route_is_next_hop_to_dynamic_ip_iface(route)
         }
 
         absent_routes = set()

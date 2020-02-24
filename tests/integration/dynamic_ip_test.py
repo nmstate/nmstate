@@ -54,6 +54,9 @@ IPV4_ADDRESS1 = "192.0.2.251"
 IPV4_ADDRESS2 = "192.0.2.252"
 IPV6_ADDRESS1 = "2001:db8:1::1"
 IPV6_ADDRESS2 = "2001:db8:2::1"
+IPV6_ADDRESS3 = "2001:db8:1::3"
+IPV4_NETWORK1 = "203.0.113.0/24"
+IPV6_NETWORK1 = "2001:db8:2::/64"
 IPV4_CLASSLESS_ROUTE_DST_NET1 = "198.51.100.0/24"
 IPV4_CLASSLESS_ROUTE_NEXT_HOP1 = "192.0.2.1"
 IPV6_CLASSLESS_ROUTE_PREFIX = "2001:db8:f"
@@ -1008,3 +1011,69 @@ def test_dummy_existance_after_ipv6_autoconf_timeout(dummy00):
     # According to RFC 4861, autoconf(IPv6-RA) will instruct client to do
     # DHCPv6 or not. With autoconf timeout, DHCPv6 will not start.
     assertlib.assert_state({Interface.KEY: [ifstate]})
+
+
+@pytest.fixture(scope="function")
+def dhcpcli_up_with_static_ip_and_route(dhcpcli_up_with_static_ip):
+    desired_state = dhcpcli_up_with_static_ip
+    desired_state[RT.KEY] = {
+        RT.CONFIG: [
+            {
+                RT.DESTINATION: IPV4_DEFAULT_GATEWAY,
+                RT.NEXT_HOP_ADDRESS: DHCP_SRV_IP4,
+                RT.NEXT_HOP_INTERFACE: DHCP_CLI_NIC,
+            },
+            {
+                RT.DESTINATION: IPV4_NETWORK1,
+                RT.NEXT_HOP_ADDRESS: DHCP_SRV_IP4,
+                RT.NEXT_HOP_INTERFACE: DHCP_CLI_NIC,
+            },
+            {
+                RT.DESTINATION: IPV6_DEFAULT_GATEWAY,
+                RT.NEXT_HOP_ADDRESS: IPV6_ADDRESS3,
+                RT.NEXT_HOP_INTERFACE: DHCP_CLI_NIC,
+            },
+            {
+                RT.DESTINATION: IPV6_NETWORK1,
+                RT.NEXT_HOP_ADDRESS: IPV6_ADDRESS3,
+                RT.NEXT_HOP_INTERFACE: DHCP_CLI_NIC,
+            },
+        ]
+    }
+
+    libnmstate.apply(desired_state)
+    yield desired_state
+
+
+def test_static_ip_with_routes_switch_back_to_dynamic(
+    dhcpcli_up_with_static_ip_and_route,
+):
+    desired_state = dhcpcli_up_with_static_ip_and_route
+    desired_state.pop(RT.KEY)
+    dhcp_cli_desired_state = desired_state[Interface.KEY][0]
+    dhcp_cli_desired_state[Interface.STATE] = InterfaceState.UP
+    dhcp_cli_desired_state[Interface.IPV4] = create_ipv4_state(
+        enabled=True, dhcp=True
+    )
+    dhcp_cli_desired_state[Interface.IPV6] = create_ipv6_state(
+        enabled=True, dhcp=True, autoconf=True
+    )
+
+    libnmstate.apply(desired_state)
+    assertlib.assert_state(desired_state)
+
+    assert _poll(_has_ipv4_dhcp_nameserver)
+    assert _poll(_has_ipv4_dhcp_gateway)
+    assert _poll(_has_ipv4_classless_route)
+    assert _poll(_has_dhcpv4_addr)
+    assert _poll(_has_dhcpv6_addr)
+    assert _poll(_has_ipv6_auto_gateway)
+    assert _poll(_has_ipv6_auto_extra_route)
+    assert _poll(_has_ipv6_auto_nameserver)
+
+    current_config_routes = [
+        route
+        for route in libnmstate.show()[RT.KEY][RT.CONFIG]
+        if route[RT.NEXT_HOP_INTERFACE] == DHCP_CLI_NIC
+    ]
+    assert not current_config_routes
