@@ -77,6 +77,8 @@ def _get_options(nm_device):
             if option == "mode" or value != bond_setting.get_option_default(
                 option
             ):
+                if option == "arp_ip_target":
+                    value = value.replace(" ", ",")
                 options[option] = value
     return options
 

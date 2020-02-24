@@ -501,3 +501,21 @@ def test_create_bond_with_mac(eth1_up, eth2_up):
         extra_iface_state={Interface.MAC: MAC0},
     ) as state:
         assertlib.assert_state_match(state)
+
+
+@pytest.mark.parametrize("ips", ("192.0.2.1,192.0.2.2", "192.0.2.2,192.0.1.1"))
+def test_bond_with_arp_ip_target(eth1_up, eth2_up, ips):
+    with bond_interface(
+        name=BOND99,
+        slaves=[ETH1, ETH2],
+        extra_iface_state={
+            Bond.CONFIG_SUBTREE: {
+                Bond.MODE: BondMode.ACTIVE_BACKUP,
+                Bond.OPTIONS_SUBTREE: {
+                    "arp_interval": 1000,
+                    "arp_ip_target": ips,
+                },
+            },
+        },
+    ) as desired_state:
+        assertlib.assert_state_match(desired_state)
