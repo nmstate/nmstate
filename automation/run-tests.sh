@@ -141,8 +141,7 @@ function run_tests {
 function collect_artifacts {
     container_exec "
       journalctl > "$CONT_EXPORT_DIR/journal.log" && \
-      dmesg > "$CONT_EXPORT_DIR/dmesg.log" && \
-      cp core* "$CONT_EXPORT_DIR/" || true
+      dmesg > "$CONT_EXPORT_DIR/dmesg.log" || true
     "
 }
 
@@ -298,6 +297,10 @@ fi
 if [[ -v customize_cmd ]];then
     container_exec "${customize_cmd}"
 fi
+
+container_exec "echo '$CONT_EXPORT_DIR/core.%h.%e.%t' > \
+    /proc/sys/kernel/core_pattern"
+container_exec "ulimit -c unlimited"
 
 container_exec 'while ! systemctl is-active dbus; do sleep 1; done'
 container_exec 'systemctl start systemd-udevd
