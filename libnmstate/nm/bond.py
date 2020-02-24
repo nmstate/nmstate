@@ -17,6 +17,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
+import contextlib
 import os
 import glob
 import re
@@ -69,13 +70,18 @@ def get_bond_info(nm_device):
 def _get_options(nm_device):
     ifname = nm_device.get_iface()
     bond_setting = nmclient.NM.SettingBond.new()
+    bond_option_names_in_profile = get_bond_option_names_in_profile(nm_device)
     options = {}
     for sysfs_file in glob.iglob(f"/sys/class/net/{ifname}/bonding/*"):
         option = os.path.basename(sysfs_file)
         if option in NM_SUPPORTED_BOND_OPTIONS:
             value = _read_sysfs_file(sysfs_file)
-            if option == "mode" or value != bond_setting.get_option_default(
-                option
+            if (
+                option == "mode"
+                or value != bond_setting.get_option_default(option)
+                # Always include bond options which are explicitly defined in
+                # on-disk profile.
+                or option in bond_option_names_in_profile
             ):
                 if option == "arp_ip_target":
                     value = value.replace(" ", ",")
@@ -99,3 +105,14 @@ def _strip_sysfs_name_number_value(value):
 
 def get_slaves(nm_device):
     return nm_device.get_slaves()
+
+
+def get_bond_option_names_in_profile(nm_device):
+    ac = nm_device.get_active_connection()
+    with contextlib.suppress(AttributeError):
+        bond_setting = ac.get_connection().get_setting_bond()
+        return {
+            bond_setting.get_option(i)[1]
+            for i in range(0, bond_setting.get_num_options())
+        }
+    return set()

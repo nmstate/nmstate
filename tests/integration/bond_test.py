@@ -519,3 +519,17 @@ def test_bond_with_arp_ip_target(eth1_up, eth2_up, ips):
         },
     ) as desired_state:
         assertlib.assert_state_match(desired_state)
+
+
+def test_create_bond_with_default_miimon_explicitly():
+    with bond_interface(
+        name=BOND99,
+        slaves=[],
+        extra_iface_state={
+            Bond.CONFIG_SUBTREE: {
+                Bond.MODE: BondMode.ACTIVE_BACKUP,
+                Bond.OPTIONS_SUBTREE: {"miimon": 100},
+            },
+        },
+    ) as state:
+        assertlib.assert_state_match(state)
