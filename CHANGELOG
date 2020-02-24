@@ -1,4 +1,24 @@
 # Changelog
+## [0.2.6] - 2020-02-24
+### New Features
+ - Linux Bonding: Support numeric values for options.
+
+### Bug Fixes
+ - Linux Bonding: Fix "fail_over_mac" support with active backup bond mode.
+ - Linux Bonding: Fix "arp_ip_target" bond option support.
+ - OVS Bridge VLAN: Use "unknown" value for unsupported modes.
+ - Fix partial editting for DNS configuration.
+ - Report only non-default bonding option values.
+ - Fix switching from static IP to DHCP/Autoconf.
+
+
+### Known Issues with NetworkManager Version 1.22.8
+ - All changes to bridges might disrupt their connectivity.
+ - Cannot detach a system port from an OVS bridge.
+ - Sometimes, NetworkManager may throw a "Failed to find a compatible device for this connection" error.
+ - Cannot set bond option with updelay=0,miimon=0.
+ - Cannot set bond option with miimon=100,arp_interval=0.
+
 ## [0.2.5] - 2020-02-19
 ### Breaking changes
  - Deprecate specifying keyword arguments as positional arguments in the public methods.
