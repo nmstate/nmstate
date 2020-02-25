@@ -33,6 +33,8 @@ from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import LinuxBridge as LB
 from libnmstate.schema import OVSBridge as OB
+from libnmstate.schema import Team
+from libnmstate.schema import VLAN
 from libnmstate.schema import VXLAN
 from libnmstate.error import NmstateNotImplementedError
 from libnmstate.error import NmstateValueError
@@ -582,7 +584,7 @@ def _create_route(dest, via_addr, via_iface, table, metric):
 
 class TestLinuxBondValidator:
     def test_mode_not_defined(self):
-        iface_state = self._gen_iface_state("bond0")
+        iface_state = _gen_bond_iface_state("bond0")
         iface_state[Bond.CONFIG_SUBTREE].pop(Bond.MODE)
         original_desired_state = state.State({Interface.KEY: [iface_state]})
         current_state = empty_state()
@@ -592,7 +594,7 @@ class TestLinuxBondValidator:
             )
 
     def test_mac_restriction_without_mac_in_desire(self):
-        iface_state = self._gen_iface_state("bond0")
+        iface_state = _gen_bond_iface_state("bond0")
         bond_config = iface_state[Bond.CONFIG_SUBTREE]
         bond_config[Bond.MODE] = BondMode.ACTIVE_BACKUP
         bond_config[Bond.OPTIONS_SUBTREE]["fail_over_mac"] = "active"
@@ -605,7 +607,7 @@ class TestLinuxBondValidator:
         )
 
     def test_mac_restriction_with_mac_in_desire(self):
-        iface_state = self._gen_iface_state("bond0")
+        iface_state = _gen_bond_iface_state("bond0")
         iface_state[Interface.MAC] = MAC0
         bond_config = iface_state[Bond.CONFIG_SUBTREE]
         bond_config[Bond.MODE] = BondMode.ACTIVE_BACKUP
@@ -620,7 +622,7 @@ class TestLinuxBondValidator:
             )
 
     def test_mac_restriction_in_desire_mac_in_current(self):
-        iface_state = self._gen_iface_state("bond0")
+        iface_state = _gen_bond_iface_state("bond0")
         bond_config = iface_state[Bond.CONFIG_SUBTREE]
         bond_config[Bond.MODE] = BondMode.ACTIVE_BACKUP
         bond_config[Bond.OPTIONS_SUBTREE]["fail_over_mac"] = "active"
@@ -634,13 +636,13 @@ class TestLinuxBondValidator:
         )
 
     def test_mac_restriction_in_current_mac_in_desire(self):
-        iface_state = self._gen_iface_state("bond0")
+        iface_state = _gen_bond_iface_state("bond0")
         bond_config = iface_state[Bond.CONFIG_SUBTREE]
         bond_config[Bond.MODE] = BondMode.ACTIVE_BACKUP
         bond_config[Bond.OPTIONS_SUBTREE]["fail_over_mac"] = "active"
         current_state = state.State({Interface.KEY: [iface_state]})
 
-        iface_state = self._gen_iface_state("bond0")
+        iface_state = _gen_bond_iface_state("bond0")
         iface_state[Interface.MAC] = MAC0
         bond_config = iface_state[Bond.CONFIG_SUBTREE]
         bond_config.pop(Bond.MODE)
@@ -652,13 +654,145 @@ class TestLinuxBondValidator:
                 original_desired_state, current_state
             )
 
-    def _gen_iface_state(self, bond_name):
-        return {
-            Interface.NAME: bond_name,
-            Interface.TYPE: InterfaceType.BOND,
+
+class TestPortsValidator:
+
+    parametrize_ip_ver = pytest.mark.parametrize(
+        "ipv_state",
+        [(True, False), (False, True)],
+        ids=["ipv4 on, ipv6 off", "ipv4 off, ipv6 on"],
+    )
+
+    @parametrize_ip_ver
+    def test_bond_with_invalid_slave_ip_config(self, ipv_state):
+        iface0 = _create_interface_state(
+            "eth1", ipv4=ipv_state[0], ipv6=ipv_state[1]
+        )
+        iface1 = _gen_bond_iface_state("bond0")
+        iface1[Bond.CONFIG_SUBTREE][Bond.SLAVES] = ["eth1"]
+        original_desired_state = state.State(
+            {schema.Interface.KEY: [iface0, iface1]}
+        )
+        current_state = state.State({Interface.KEY: [iface0]})
+        with pytest.raises(NmstateValueError):
+            libnmstate.validator.validate_interfaces_state(
+                original_desired_state, current_state
+            )
+
+    @parametrize_ip_ver
+    def test_lb_with_invalid_slave_ip_config(self, ipv_state):
+        iface0 = _create_interface_state(
+            "eth1", ipv4=ipv_state[0], ipv6=ipv_state[1]
+        )
+        iface1 = {
+            Interface.NAME: "lbridge1",
+            Interface.TYPE: InterfaceType.LINUX_BRIDGE,
             Interface.STATE: InterfaceState.UP,
-            Bond.CONFIG_SUBTREE: {
-                Bond.MODE: BondMode.ROUND_ROBIN,
-                Bond.OPTIONS_SUBTREE: {},
+            LB.CONFIG_SUBTREE: {LB.PORT_SUBTREE: [{LB.Port.NAME: "eth1"}]},
+        }
+
+        original_desired_state = state.State(
+            {schema.Interface.KEY: [iface0, iface1]}
+        )
+        current_state = state.State({Interface.KEY: [iface0]})
+        with pytest.raises(NmstateValueError):
+            libnmstate.validator.validate_interfaces_state(
+                original_desired_state, current_state
+            )
+
+    @parametrize_ip_ver
+    def test_ovs_with_invalid_slave_ip_config(self, ipv_state):
+        iface0 = _create_interface_state(
+            "eth1", ipv4=ipv_state[0], ipv6=ipv_state[1]
+        )
+        iface1 = {
+            Interface.NAME: "ovsbridge1",
+            Interface.TYPE: InterfaceType.OVS_BRIDGE,
+            Interface.STATE: InterfaceState.UP,
+            OB.CONFIG_SUBTREE: {OB.PORT_SUBTREE: [{OB.Port.NAME: "eth1"}]},
+        }
+
+        original_desired_state = state.State(
+            {schema.Interface.KEY: [iface0, iface1]}
+        )
+        current_state = state.State({Interface.KEY: [iface0]})
+        with pytest.raises(NmstateValueError):
+            libnmstate.validator.validate_interfaces_state(
+                original_desired_state, current_state
+            )
+
+    @parametrize_ip_ver
+    def test_team_with_invalid_slave_ip_config(self, ipv_state):
+        iface0 = _create_interface_state(
+            "eth1", ipv4=ipv_state[0], ipv6=ipv_state[1]
+        )
+        iface1 = {
+            Interface.NAME: "team1",
+            Interface.TYPE: InterfaceType.TEAM,
+            Interface.STATE: InterfaceState.UP,
+            Team.CONFIG_SUBTREE: {
+                Team.PORT_SUBTREE: [{Team.Port.NAME: "eth1"}]
             },
         }
+
+        original_desired_state = state.State(
+            {schema.Interface.KEY: [iface0, iface1]}
+        )
+        current_state = state.State({Interface.KEY: [iface0]})
+        with pytest.raises(NmstateValueError):
+            libnmstate.validator.validate_interfaces_state(
+                original_desired_state, current_state
+            )
+
+    @parametrize_ip_ver
+    def test_ifaces_with_vlan_slave_ip_config(self, ipv_state):
+        iface0 = _create_interface_state(
+            "eth1", ipv4=ipv_state[0], ipv6=ipv_state[1]
+        )
+        iface1 = _gen_bond_iface_state("bond0")
+        iface2 = {
+            Interface.NAME: "eth1.101",
+            Interface.TYPE: InterfaceType.VLAN,
+            Interface.STATE: InterfaceState.UP,
+            VLAN.CONFIG_SUBTREE: {VLAN.ID: "101", VLAN.BASE_IFACE: "eth1"},
+        }
+        iface1[Bond.CONFIG_SUBTREE][Bond.SLAVES] = ["eth1.101"]
+        original_desired_state = state.State(
+            {schema.Interface.KEY: [iface0, iface1, iface2]}
+        )
+        current_state = state.State({Interface.KEY: [iface0]})
+        libnmstate.validator.validate_interfaces_state(
+            original_desired_state, current_state
+        )
+
+    @parametrize_ip_ver
+    def test_ifaces_with_ovsiface_slave_ip_config(self, ipv_state):
+        iface0 = _create_interface_state(
+            "eth1", ipv4=ipv_state[0], ipv6=ipv_state[1]
+        )
+        iface1 = _gen_bond_iface_state("bond0")
+        iface2 = {
+            Interface.NAME: "eth1.101",
+            Interface.TYPE: InterfaceType.OVS_INTERFACE,
+            Interface.STATE: InterfaceState.UP,
+        }
+        iface1[Bond.CONFIG_SUBTREE][Bond.SLAVES] = ["eth1.101"]
+        original_desired_state = state.State(
+            {schema.Interface.KEY: [iface0, iface1, iface2]}
+        )
+        current_state = state.State({Interface.KEY: [iface0]})
+        libnmstate.validator.validate_interfaces_state(
+            original_desired_state, current_state
+        )
+
+
+def _gen_bond_iface_state(bond_name):
+    return {
+        Interface.NAME: bond_name,
+        Interface.TYPE: InterfaceType.BOND,
+        Interface.STATE: InterfaceState.UP,
+        Bond.CONFIG_SUBTREE: {
+            Bond.MODE: BondMode.ROUND_ROBIN,
+            Bond.OPTIONS_SUBTREE: {},
+        },
+    }

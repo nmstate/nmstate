@@ -30,6 +30,7 @@ from libnmstate.schema import BondMode
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
+from libnmstate.schema import InterfaceIP
 from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
 
@@ -839,3 +840,15 @@ def test_bond_switch_mode_with_conflict_option(
     current_bond_config = current_state[Interface.KEY][0][Bond.CONFIG_SUBTREE]
 
     assert "lacp_rate" not in current_bond_config[Bond.OPTIONS_SUBTREE]
+
+
+def test_add_invalid_slave_ip_config(eth1_up):
+    d_state = eth1_up
+    d_state[Interface.KEY][0][Interface.IPV4][InterfaceIPv4.ENABLED] = True
+    d_state[Interface.KEY][0][Interface.IPV4][InterfaceIP.DHCP] = True
+    with pytest.raises(NmstateValueError):
+        with bond_interface(
+            name=BOND99, slaves=[ETH1], create=False
+        ) as bond_state:
+            d_state[Interface.KEY].append(bond_state[Interface.KEY][0])
+            libnmstate.apply(d_state)
