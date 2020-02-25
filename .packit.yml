@@ -1,0 +1,15 @@
+---
+specfile_path: nmstate.spec
+upstream_package_name: nmstate
+upstream_project_url: http://nmstate.io
+create_tarball_command: ["python3", "setup.py", "sdist", "--dist-dir", "."]
+current_version_command: ["python3", "setup.py", "--version"]
+actions:
+  post-upstream-clone: "bash -c './packaging/make_spec.sh > nmstate.spec'"
+jobs:
+  - job: copr_build
+    trigger: pull_request
+    metadata:
+      targets:
+        - centos-stream-x86_64
+        - epel-8-x86_64
