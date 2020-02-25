@@ -26,10 +26,12 @@ import yaml
 import libnmstate
 from libnmstate.error import NmstateVerificationError
 from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceIP
 from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import LinuxBridge
+from libnmstate.error import NmstateValueError
 
 from .testlib import assertlib
 from .testlib.bondlib import bond_interface
@@ -569,6 +571,19 @@ def dummy0_as_slave(master):
         yield
     finally:
         exec_cmd(("ip", "link", "delete", "dummy0"))
+
+
+def test_add_invalid_slave_ip_config(eth1_up):
+    desired_state = eth1_up
+    desired_state[Interface.KEY][0][Interface.IPV4][InterfaceIP.ENABLED] = True
+    desired_state[Interface.KEY][0][Interface.IPV4][InterfaceIP.DHCP] = True
+    bridge_state = _create_bridge_subtree_config(("eth1",))
+    with pytest.raises(NmstateValueError):
+        with linux_bridge(
+            TEST_BRIDGE0, bridge_state, create=False
+        ) as lb_state:
+            desired_state[Interface.KEY].append(lb_state[Interface.KEY][0])
+            libnmstate.apply(desired_state)
 
 
 def _add_port_to_bridge(bridge_state, ifname):

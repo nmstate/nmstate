@@ -26,9 +26,11 @@ import pytest
 import libnmstate
 from libnmstate.error import NmstateDependencyError
 from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceIP
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import Team
+from libnmstate.error import NmstateValueError
 
 from .testlib import assertlib
 from .testlib.cmdlib import exec_cmd
@@ -86,6 +88,16 @@ def test_nm_team_plugin_missing():
                     ]
                 }
             )
+
+
+def test_add_invalid_slave_ip_config(eth1_up):
+    desired_state = eth1_up
+    desired_state[Interface.KEY][0][Interface.IPV4][InterfaceIP.ENABLED] = True
+    desired_state[Interface.KEY][0][Interface.IPV4][InterfaceIP.DHCP] = True
+    with pytest.raises(NmstateValueError):
+        with team_interface(TEAM0, slaves=("eth1",)) as state:
+            desired_state[Interface.KEY].append(state[Interface.KEY][0])
+            libnmstate.apply(desired_state)
 
 
 @contextmanager

@@ -23,6 +23,7 @@ import pytest
 
 import libnmstate
 from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceIP
 from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
@@ -293,3 +294,15 @@ def test_ovs_vlan_access_tag():
 
     assertlib.assert_absent(BRIDGE1)
     assertlib.assert_absent(PORT1)
+
+
+def test_add_invalid_slave_ip_config(eth1_up):
+    desired_state = eth1_up
+    desired_state[Interface.KEY][0][Interface.IPV4][InterfaceIP.ENABLED] = True
+    desired_state[Interface.KEY][0][Interface.IPV4][InterfaceIP.DHCP] = True
+    with pytest.raises(NmstateValueError):
+        bridge = Bridge(name=BRIDGE1)
+        bridge.add_system_port("eth1")
+        with bridge.create() as state:
+            desired_state[Interface.KEY].append(state[Interface.KEY][0])
+            libnmstate.apply(desired_state)

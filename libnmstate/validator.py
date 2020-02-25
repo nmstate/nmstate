@@ -26,6 +26,11 @@ from . import nm
 from . import schema
 from libnmstate.appliers.bond import is_in_mac_restricted_mode
 from libnmstate.appliers.ovs_bridge import is_ovs_running
+from libnmstate.appliers.bond import get_bond_slaves_from_state
+from libnmstate.appliers.team import get_slaves_from_state as get_team_slaves
+from libnmstate.appliers.linux_bridge import get_slaves_from_state
+from libnmstate.appliers.ovs_bridge import get_ovs_slaves_from_state
+from libnmstate.schema import Bond
 from libnmstate.schema import DNS
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIP
@@ -35,11 +40,17 @@ from libnmstate.schema import InterfaceState
 from libnmstate.schema import LinuxBridge as LB
 from libnmstate.schema import OVSBridge
 from libnmstate.schema import VXLAN
-from libnmstate.schema import Bond
 from libnmstate.error import NmstateDependencyError
 from libnmstate.error import NmstateNotImplementedError
 from libnmstate.error import NmstateValueError
 from libnmstate.iplib import is_ipv6_address
+
+IP_DISABLED_SLAVE_GETTERS = {
+    InterfaceType.BOND: get_bond_slaves_from_state,
+    InterfaceType.OVS_BRIDGE: get_ovs_slaves_from_state,
+    InterfaceType.LINUX_BRIDGE: get_slaves_from_state,
+    InterfaceType.TEAM: get_team_slaves,
+}
 
 
 class NmstateRouteWithNoInterfaceError(NmstateValueError):
@@ -103,6 +114,7 @@ def validate_interface_capabilities(ifaces_state, capabilities):
 def validate_interfaces_state(original_desired_state, current_state):
     validate_link_aggregation_state(original_desired_state, current_state)
     _validate_linux_bond(original_desired_state, current_state)
+    _validate_slave_ip_config(original_desired_state)
 
 
 def validate_link_aggregation_state(desired_state, current_state):
@@ -416,3 +428,37 @@ def _assert_bond_config_is_legal(iface_state, original_iface_state):
                 "Bond option arp_interval is conflicting with miimon, "
                 "please disable one of them by setting to 0"
             )
+
+
+def _validate_slave_ip_config(original_desired_state):
+    """
+    When an interface is created, the slaves/ports cannot have
+    their IP configuration enabled
+    """
+    for iface_state in original_desired_state.interfaces.values():
+        iface_type = iface_state.get(Interface.TYPE)
+        slaves = []
+        if iface_type in IP_DISABLED_SLAVE_GETTERS.keys():
+            slaves = IP_DISABLED_SLAVE_GETTERS[iface_type](iface_state)
+        if slaves:
+            for slave_iface_name in slaves:
+                slave_state = original_desired_state.interfaces.get(
+                    slave_iface_name, {}
+                )
+                if (
+                    slave_state.get(Interface.TYPE)
+                    != InterfaceType.OVS_INTERFACE
+                    and slave_state.get(Interface.TYPE) != InterfaceType.VLAN
+                ):
+                    ipv4_state = slave_state.get(Interface.IPV4, {}).get(
+                        InterfaceIP.ENABLED
+                    )
+                    ipv6_state = slave_state.get(Interface.IPV6, {}).get(
+                        InterfaceIP.ENABLED
+                    )
+                    if ipv4_state or ipv6_state:
+                        msg = (
+                            "The port {} cannot have its "
+                            "IP configuration enabled"
+                        )
+                        raise NmstateValueError(msg.format(slave_iface_name))
