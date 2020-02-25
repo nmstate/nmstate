@@ -141,7 +141,6 @@ def test_mtu_without_ipv6(eth1_up):
     assertlib.assert_state(eth1_up)
 
 
-@pytest.mark.xfail(reason="https://bugzilla.redhat.com/1751079", strict=True)
 def test_set_mtu_on_two_vlans_with_a_shared_base(eth1_up):
     base_ifname = eth1_up[Interface.KEY][0][Interface.NAME]
     v101 = vlan_interface("eth1.101", 101, base_ifname)
@@ -149,7 +148,7 @@ def test_set_mtu_on_two_vlans_with_a_shared_base(eth1_up):
     with v101 as v101_state, v102 as v102_state:
         desired_state = {
             Interface.KEY: [
-                base_ifname[Interface.KEY][0],
+                eth1_up[Interface.KEY][0],
                 v101_state[Interface.KEY][0],
                 v102_state[Interface.KEY][0],
             ]
