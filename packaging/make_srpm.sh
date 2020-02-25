@@ -39,9 +39,10 @@ TAR_FILE="${TMP_DIR}/nmstate-${VERSION}.tar"
 
     ./packaging/make_spec.sh > "${SPEC_FILE}"
     tar --append --file=$TAR_FILE $SPEC_FILE
+    gzip "${TAR_FILE}"
 
     rpmbuild --define "_rpmdir $TMP_DIR/" --define "_srcrpmdir $TMP_DIR/" \
-    -ts $TAR_FILE
+    -ts $TAR_FILE.gz
 ) &> /dev/stderr
 
 SRPM=$(find $TMP_DIR -type f -name \*.src.rpm -exec basename {} \;)
