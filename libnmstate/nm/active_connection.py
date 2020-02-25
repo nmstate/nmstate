@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019 Red Hat, Inc.
+# Copyright (c) 2019-2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -168,7 +168,10 @@ class ActiveConnection:
 
     @property
     def devname(self):
-        return self._nmdev.get_iface()
+        if self._nmdev:
+            return self._nmdev.get_iface()
+        else:
+            return None
 
     @property
     def nmdevice(self):
