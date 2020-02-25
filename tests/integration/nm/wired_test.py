@@ -17,14 +17,11 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
-import pytest
-
 from libnmstate import nm
 from libnmstate import schema
 from libnmstate.nm.nmclient import nmclient_context
 
-from .testlib import mainloop
-from .testlib import MainloopTestError
+from .testlib import mainloop_run
 
 
 ETH1 = "eth1"
@@ -33,23 +30,16 @@ MAC0 = "02:FF:FF:FF:FF:00"
 MTU0 = 1200
 
 
-@pytest.mark.xfail(reason="https://bugzilla.redhat.com/1797986")
-def test_interface_mtu_change_with_reapply(eth1_up):
-    _test_interface_mtu_change(nm.device.reapply)
-
-
-@pytest.mark.xfail(reason="https://bugzilla.redhat.com/1797986")
 def test_interface_mtu_change_with_modify(eth1_up):
     _test_interface_mtu_change(nm.device.modify)
 
 
 def _test_interface_mtu_change(apply_operation):
     wired_base_state = _get_wired_current_state(ETH1)
-    with mainloop():
-        _modify_interface(
-            wired_state={schema.Interface.MTU: MTU0},
-            apply_operation=apply_operation,
-        )
+    _modify_interface(
+        wired_state={schema.Interface.MTU: MTU0},
+        apply_operation=apply_operation,
+    )
 
     wired_current_state = _get_wired_current_state(ETH1)
 
@@ -59,23 +49,16 @@ def _test_interface_mtu_change(apply_operation):
     }
 
 
-def test_interface_mac_change_with_reapply_fails(eth1_up):
-    with pytest.raises(MainloopTestError):
-        _test_interface_mac_change(nm.device.reapply)
-
-
-@pytest.mark.xfail(reason="https://bugzilla.redhat.com/1797986")
 def test_interface_mac_change_with_modify(eth1_up):
     _test_interface_mac_change(nm.device.modify)
 
 
 def _test_interface_mac_change(apply_operation):
     wired_base_state = _get_wired_current_state(ETH1)
-    with mainloop():
-        _modify_interface(
-            wired_state={schema.Interface.MAC: MAC0},
-            apply_operation=apply_operation,
-        )
+    _modify_interface(
+        wired_state={schema.Interface.MAC: MAC0},
+        apply_operation=apply_operation,
+    )
 
     wired_current_state = _get_wired_current_state(ETH1)
 
@@ -85,7 +68,7 @@ def _test_interface_mac_change(apply_operation):
     }
 
 
-@nmclient_context
+@mainloop_run
 def _modify_interface(wired_state, apply_operation):
     conn = nm.connection.ConnectionProfile()
     conn.import_by_id(ETH1)

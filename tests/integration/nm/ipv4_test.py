@@ -92,7 +92,7 @@ def _modify_interface(ipv4_state):
     conn.commit(save_to_disk=False)
 
     nmdev = nm.device.get_device_by_name(TEST_IFACE)
-    nm.device.reapply(nmdev, conn.profile)
+    nm.device.modify(nmdev, conn.profile)
 
 
 @nmclient_context
