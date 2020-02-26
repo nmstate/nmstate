@@ -127,7 +127,7 @@ class CheckPoint:
             raise NMCheckPointCreationError(str(e))
 
         GLib.timeout_add(
-            self._timeout * 0.5, self._refresh_checkpoint_timeout, None,
+            self._timeout * 500, self._refresh_checkpoint_timeout, None,
         )
 
     def _refresh_checkpoint_timeout(self, data):
