@@ -72,15 +72,15 @@ or:
 ### Build a new container image
 
 ```
-sudo ../packaging/build-container.sh local/centos8-nmstate-dev
-sudo ../packaging/build-container.sh local/fedora-nmstate-dev
+../packaging/build-container.sh local/centos8-nmstate-dev
+../packaging/build-container.sh local/fedora-nmstate-dev
 ```
 
 To test the image, either specify it manually as described above or tag it locally:
 
 ```
-sudo podman tag local/centos8-nmstate-dev docker.io/nmstate/centos8-nmstate-dev:latest
-sudo podman tag local/fedora-nmstate-dev docker.io/nmstate/fedora-nmstate-dev:latest
+podman tag local/centos8-nmstate-dev docker.io/nmstate/centos8-nmstate-dev:latest
+podman tag local/fedora-nmstate-dev docker.io/nmstate/fedora-nmstate-dev:latest
 ```
 
 ### Push local image to the docker hub
@@ -91,13 +91,13 @@ persistent. If this is not feasible, a new build could be pushed as follow to
 the Docker Hub:
 
 ```shell
-sudo podman login docker.io
-sudo podman tag local/centos8-nmstate-dev nmstate/centos8-nmstate-dev:latest
-sudo podman push nmstate/centos8-nmstate-dev:latest \
+podman login docker.io
+podman tag local/centos8-nmstate-dev nmstate/centos8-nmstate-dev:latest
+podman push nmstate/centos8-nmstate-dev:latest \
     docker://docker.io/nmstate/centos8-nmstate-dev:latest
 
-sudo podman tag local/fedora-nmstate-dev nmstate/fedora-nmstate-dev:latest
-sudo podman push nmstate/fedora-nmstate-dev:latest \
+podman tag local/fedora-nmstate-dev nmstate/fedora-nmstate-dev:latest
+podman push nmstate/fedora-nmstate-dev:latest \
     docker://docker.io/nmstate/fedora-nmstate-dev:latest
 ```
 
