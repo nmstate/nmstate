@@ -38,6 +38,7 @@ NM_SUPPORTED_BOND_OPTIONS = nmclient.NM.SettingBond.get_valid_options(
 
 def create_setting(options, wired_setting):
     bond_setting = nmclient.NM.SettingBond.new()
+    _fix_bond_option_arp_interval(options)
     for option_name, option_value in options.items():
         if wired_setting and is_in_mac_restricted_mode(options):
             # When in MAC restricted mode, MAC address should be unset.
@@ -71,6 +72,13 @@ def _get_options(nm_device):
     ifname = nm_device.get_iface()
     bond_setting = nmclient.NM.SettingBond.new()
     bond_option_names_in_profile = get_bond_option_names_in_profile(nm_device)
+    if (
+        "miimon" in bond_option_names_in_profile
+        or "arp_interval" in bond_option_names_in_profile
+    ):
+        bond_option_names_in_profile.add("arp_interval")
+        bond_option_names_in_profile.add("miimon")
+
     options = {}
     for sysfs_file in glob.iglob(f"/sys/class/net/{ifname}/bonding/*"):
         option = os.path.basename(sysfs_file)
@@ -116,3 +124,21 @@ def get_bond_option_names_in_profile(nm_device):
             for i in range(0, bond_setting.get_num_options())
         }
     return set()
+
+
+def _fix_bond_option_arp_interval(bond_options):
+    """
+    Due to bug https://bugzilla.redhat.com/show_bug.cgi?id=1806549
+    NM 1.22.8 treat 'arp_interval 0' as arp_interval enabled(0 actual means
+    disabled), which then conflict with 'miimon'.
+    The workaround is remove 'arp_interval 0' when 'miimon' > 0.
+    """
+    if "miimon" in bond_options and "arp_interval" in bond_options:
+        try:
+            miimon = int(bond_options["miimon"])
+            arp_interval = int(bond_options["arp_interval"])
+        except ValueError as e:
+            raise NmstateValueError(f"Invalid bond option: {e}")
+        if miimon > 0 and arp_interval == 0:
+            bond_options.pop("arp_interval")
+            bond_options.pop("arp_ip_target", None)
