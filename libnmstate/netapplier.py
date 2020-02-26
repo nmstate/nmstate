@@ -20,14 +20,12 @@
 from contextlib import contextmanager
 
 import copy
-import logging
 import time
 
 from libnmstate import metadata
 from libnmstate import netinfo
 from libnmstate import nm
 from libnmstate.nm.nmclient import nmclient_context
-from libnmstate import schema
 from libnmstate import state
 from libnmstate import validator
 from libnmstate.deprecation import _warn_keyword_as_positional
@@ -137,24 +135,14 @@ def _apply_ifaces_state(
     validator.validate_interfaces_state(original_desired_state, current_state)
     validator.validate_routes(desired_state, current_state)
 
-    new_interfaces = _list_new_interfaces(desired_state, current_state)
-
     try:
         with nm.checkpoint.CheckPoint(
             autodestroy=commit, timeout=rollback_timeout
         ) as checkpoint:
             with _setup_providers():
-                ifaces2add, ifaces_add_configs = _add_interfaces(
-                    new_interfaces, desired_state
-                )
-                state2edit = _create_editable_desired_state(
-                    desired_state, current_state, new_interfaces
-                )
-                ifaces2edit, ifaces_edit_configs = _edit_interfaces(state2edit)
-                nm.applier.set_ifaces_admin_state(
-                    ifaces2add + ifaces2edit,
-                    con_profiles=ifaces_add_configs + ifaces_edit_configs,
-                )
+                state2edit = state.State(desired_state.state)
+                state2edit.merge_interfaces(current_state)
+                nm.applier.apply_changes(list(state2edit.interfaces.values()))
             if verify_change:
                 _verify_change(desired_state)
         if not commit:
@@ -169,33 +157,6 @@ def _apply_ifaces_state(
         # finish before proceeding with other actions.
         time.sleep(5)
         raise
-
-
-def _create_editable_desired_state(
-    desired_state, current_state, new_intefaces
-):
-    """
-    Create a new state object that includes only existing interfaces which need
-    to be edited/changed.
-    """
-    state2edit = state.create_state(
-        desired_state.state,
-        interfaces_to_filter=(
-            set(current_state.interfaces) - set(new_intefaces)
-        ),
-    )
-    state2edit.merge_interfaces(current_state)
-    return state2edit
-
-
-def _list_new_interfaces(desired_state, current_state):
-    return [
-        name
-        for name in desired_state.interfaces.keys()
-        - current_state.interfaces.keys()
-        if desired_state.interfaces[name].get(schema.Interface.STATE)
-        not in (schema.InterfaceState.ABSENT, schema.InterfaceState.DOWN)
-    ]
 
 
 def _verify_change(desired_state):
@@ -215,39 +176,3 @@ def _setup_providers():
     except NmstateLibnmError:
         nmclient.mainloop(refresh=True)
         raise
-
-
-def _add_interfaces(new_interfaces, desired_state):
-    logging.debug("Adding new interfaces: %s", new_interfaces)
-
-    ifaces2add = [desired_state.interfaces[name] for name in new_interfaces]
-
-    ifaces2add += nm.applier.prepare_proxy_ifaces_desired_state(ifaces2add)
-    ifaces_configs = nm.applier.prepare_new_ifaces_configuration(ifaces2add)
-    nm.applier.create_new_ifaces(ifaces_configs)
-
-    return (ifaces2add, ifaces_configs)
-
-
-def _edit_interfaces(state2edit):
-    logging.debug("Editing interfaces: %s", list(state2edit.interfaces))
-
-    ifaces2edit = list(state2edit.interfaces.values())
-
-    iface2prepare = list(
-        filter(
-            lambda state: state.get("state") not in ("absent", "down"),
-            ifaces2edit,
-        )
-    )
-    proxy_ifaces = nm.applier.prepare_proxy_ifaces_desired_state(iface2prepare)
-    ifaces_configs = nm.applier.prepare_edited_ifaces_configuration(
-        iface2prepare + proxy_ifaces
-    )
-    nm.applier.edit_existing_ifaces(ifaces_configs)
-
-    return (ifaces2edit + proxy_ifaces, ifaces_configs)
-
-
-def _index_by_name(ifaces_state):
-    return {iface["name"]: iface for iface in ifaces_state}

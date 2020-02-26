@@ -76,10 +76,9 @@ def _modify_interface(wired_state, apply_operation):
     new_conn = nm.connection.ConnectionProfile()
     new_conn.create(settings)
     conn.update(new_conn)
-    conn.commit(save_to_disk=False)
 
     nmdev = nm.device.get_device_by_name(ETH1)
-    apply_operation(nmdev, conn.profile)
+    apply_operation(nmdev, new_conn.profile)
 
 
 @nmclient_context

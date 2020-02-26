@@ -57,41 +57,44 @@ def test_create_profile(NM_mock):
 
 def test_add_profile(client_mock, mainloop_mock):
     save_to_disk = True
-    con_profile = nm.connection.ConnectionProfile("profile")
+    profile = mock.MagicMock()
+    con_profile = nm.connection.ConnectionProfile(profile)
     con_profile.add(save_to_disk)
 
+    nm_add_conn2_flags = nm.nmclient.NM.SettingsAddConnection2Flags
+
     mainloop_mock.push_action.assert_called_once_with(
-        client_mock.add_connection_async,
-        "profile",
-        save_to_disk,
+        client_mock.add_connection2,
+        profile.to_dbus(client_mock.NM.ConnectionSerializationFlags.ALL),
+        nm_add_conn2_flags.BLOCK_AUTOCONNECT | nm_add_conn2_flags.TO_DISK,
+        None,
+        False,
         mainloop_mock.cancellable,
-        nm.connection.ConnectionProfile._add_connection_callback,
+        nm.connection.ConnectionProfile._add_connection2_callback,
         mainloop_mock,
     )
 
 
-def test_update_profile():
-    base_profile = nm.connection.ConnectionProfile("p")
+def test_update_profile(client_mock, mainloop_mock):
+    new_profile_mock = mock.MagicMock()
+    new_profile = nm.connection.ConnectionProfile(new_profile_mock)
 
     profile = mock.MagicMock()
     con_profile = nm.connection.ConnectionProfile(profile)
-    con_profile.update(base_profile)
+    con_profile.update(new_profile)
+    user_data = mainloop_mock, new_profile
 
-    profile.replace_settings_from_connection.assert_called_once_with("p")
-
-
-def test_commit_profile(mainloop_mock):
-    profile = mock.MagicMock()
-    save_to_disk = True
-    con_profile = nm.connection.ConnectionProfile(profile)
-    con_profile.commit(save_to_disk)
-
+    nm_update2_flags = nm.nmclient.NM.SettingsUpdate2Flags
     mainloop_mock.push_action.assert_called_once_with(
-        profile.commit_changes_async,
-        save_to_disk,
+        profile.update2,
+        new_profile_mock.to_dbus(
+            client_mock.NM.ConnectionSerializationFlags.ALL
+        ),
+        nm_update2_flags.BLOCK_AUTOCONNECT | nm_update2_flags.TO_DISK,
+        None,
         mainloop_mock.cancellable,
-        nm.connection.ConnectionProfile._commit_changes_callback,
-        (mainloop_mock, None),
+        nm.connection.ConnectionProfile._update2_callback,
+        user_data,
     )
 
 

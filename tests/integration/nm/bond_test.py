@@ -138,7 +138,6 @@ def _attach_slave_to_bond(bond, slave):
     slave_con_profile.create(slave_settings)
 
     curr_slave_con_profile.update(slave_con_profile)
-    curr_slave_con_profile.commit(nmdev=slave_nmdev)
     nm.device.activate(connection_id=slave)
 
 
