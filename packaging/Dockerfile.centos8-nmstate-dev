@@ -1,6 +1,7 @@
 FROM docker.io/library/centos:8
 
-RUN dnf -y install dnf-plugins-core epel-release && \
+RUN echo "*************************** T E S T **********************************" &&\
+    dnf -y install dnf-plugins-core epel-release && \
     dnf config-manager --set-enabled PowerTools && \
     dnf copr enable nmstate/ovs-el8 -y && \
     dnf copr enable networkmanager/NetworkManager-1.22 -y && \
