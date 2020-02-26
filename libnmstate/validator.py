@@ -94,9 +94,7 @@ def validate_interface_capabilities(ifaces_state, capabilities):
             )
 
 
-def validate_interfaces_state(
-    original_desired_state, desired_state, current_state
-):
+def validate_interfaces_state(original_desired_state, current_state):
     validate_link_aggregation_state(original_desired_state, current_state)
     _validate_linux_bond(original_desired_state, current_state)
 

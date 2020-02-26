@@ -577,11 +577,10 @@ class TestLinuxBondValidator:
         iface_state = self._gen_iface_state("bond0")
         iface_state[Bond.CONFIG_SUBTREE].pop(Bond.MODE)
         original_desired_state = state.State({Interface.KEY: [iface_state]})
-        desired_state = state.State({Interface.KEY: [iface_state]})
         current_state = empty_state()
         with pytest.raises(NmstateValueError):
             libnmstate.validator.validate_interfaces_state(
-                original_desired_state, desired_state, current_state
+                original_desired_state, current_state
             )
 
     def test_mac_restriction_without_mac_in_desire(self):
@@ -591,11 +590,10 @@ class TestLinuxBondValidator:
         bond_config[Bond.OPTIONS_SUBTREE]["fail_over_mac"] = "active"
 
         original_desired_state = state.State({Interface.KEY: [iface_state]})
-        desired_state = state.State({Interface.KEY: [iface_state]})
         current_state = empty_state()
 
         libnmstate.validator.validate_interfaces_state(
-            original_desired_state, desired_state, current_state
+            original_desired_state, current_state
         )
 
     def test_mac_restriction_with_mac_in_desire(self):
@@ -606,12 +604,11 @@ class TestLinuxBondValidator:
         bond_config[Bond.OPTIONS_SUBTREE]["fail_over_mac"] = "active"
 
         original_desired_state = state.State({Interface.KEY: [iface_state]})
-        desired_state = state.State({Interface.KEY: [iface_state]})
         current_state = state.State({Interface.KEY: [iface_state]})
 
         with pytest.raises(NmstateValueError):
             libnmstate.validator.validate_interfaces_state(
-                original_desired_state, desired_state, current_state
+                original_desired_state, current_state
             )
 
     def test_mac_restriction_in_desire_mac_in_current(self):
@@ -621,12 +618,11 @@ class TestLinuxBondValidator:
         bond_config[Bond.OPTIONS_SUBTREE]["fail_over_mac"] = "active"
 
         original_desired_state = state.State({Interface.KEY: [iface_state]})
-        desired_state = state.State({Interface.KEY: [iface_state]})
         iface_state[Interface.MAC] = MAC0
         current_state = state.State({Interface.KEY: [iface_state]})
 
         libnmstate.validator.validate_interfaces_state(
-            original_desired_state, desired_state, current_state
+            original_desired_state, current_state
         )
 
     def test_mac_restriction_in_current_mac_in_desire(self):
@@ -641,11 +637,10 @@ class TestLinuxBondValidator:
         bond_config = iface_state[Bond.CONFIG_SUBTREE]
         bond_config.pop(Bond.MODE)
         original_desired_state = state.State({Interface.KEY: [iface_state]})
-        desired_state = state.State({Interface.KEY: [iface_state]})
 
         with pytest.raises(NmstateValueError):
             libnmstate.validator.validate_interfaces_state(
-                original_desired_state, desired_state, current_state
+                original_desired_state, current_state
             )
 
     def _gen_iface_state(self, bond_name):
