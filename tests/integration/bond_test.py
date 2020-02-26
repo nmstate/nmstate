@@ -47,6 +47,8 @@ BOND99 = "bond99"
 ETH1 = "eth1"
 ETH2 = "eth2"
 
+IPV4_ADDRESS1 = "192.0.2.251"
+
 MAC0 = "02:FF:FF:FF:FF:00"
 MAC1 = "02:FF:FF:FF:FF:01"
 
@@ -533,3 +535,74 @@ def test_create_bond_with_default_miimon_explicitly():
         },
     ) as state:
         assertlib.assert_state_match(state)
+
+
+@pytest.fixture
+def bond99_with_miimon():
+    with bond_interface(
+        name=BOND99,
+        slaves=[],
+        extra_iface_state={
+            Bond.CONFIG_SUBTREE: {
+                Bond.MODE: BondMode.ACTIVE_BACKUP,
+                Bond.OPTIONS_SUBTREE: {"miimon": 101},
+            },
+        },
+    ) as state:
+        yield state
+
+
+def test_change_bond_from_miimon_to_arp_internal(bond99_with_miimon):
+    state = bond99_with_miimon
+    bond_config = state[Interface.KEY][0][Bond.CONFIG_SUBTREE]
+    bond_config[Bond.OPTIONS_SUBTREE] = {
+        "miimon": 0,
+        "arp_interval": 10,
+        "arp_ip_target": IPV4_ADDRESS1,
+    }
+
+
+@pytest.fixture
+def bond99_with_arp_internal():
+    with bond_interface(
+        name=BOND99,
+        slaves=[],
+        extra_iface_state={
+            Bond.CONFIG_SUBTREE: {
+                Bond.MODE: BondMode.ACTIVE_BACKUP,
+                Bond.OPTIONS_SUBTREE: {
+                    "arp_interval": 10,
+                    "arp_ip_target": IPV4_ADDRESS1,
+                },
+            },
+        },
+    ) as state:
+        yield state
+
+
+def test_change_bond_from_arp_internal_to_miimon(bond99_with_miimon):
+    state = bond99_with_miimon
+    bond_config = state[Interface.KEY][0][Bond.CONFIG_SUBTREE]
+    bond_config[Bond.OPTIONS_SUBTREE] = {
+        "miimon": 100,
+        "arp_interval": 0,
+    }
+
+
+def test_create_bond_with_both_miimon_and_arp_internal():
+    with pytest.raises(NmstateValueError):
+        with bond_interface(
+            name=BOND99,
+            slaves=[],
+            extra_iface_state={
+                Bond.CONFIG_SUBTREE: {
+                    Bond.MODE: BondMode.ACTIVE_BACKUP,
+                    Bond.OPTIONS_SUBTREE: {
+                        "miimon": 100,
+                        "arp_interval": 10,
+                        "arp_ip_target": IPV4_ADDRESS1,
+                    },
+                },
+            },
+        ) as state:
+            assertlib.assert_state_match(state)

@@ -376,6 +376,8 @@ def _assert_bond_config_is_legal(iface_state, original_iface_state):
     """
     When MAC address defined in original_iface_state and bond is MAC
     address restricted mode(cannot define MAC), raise NmstateValueError.
+    When both miimon > 0 and arp_interval > 0 defined in merged state,
+    raise NmstateValueError
     """
     mac = original_iface_state.get(Interface.MAC)
     bond_options = iface_state[Bond.CONFIG_SUBTREE].get(
@@ -388,3 +390,15 @@ def _assert_bond_config_is_legal(iface_state, original_iface_state):
             "MAC address cannot be specified in bond interface along with "
             "specified bond options"
         )
+
+    if "miimon" in bond_options and "arp_interval" in bond_options:
+        try:
+            miimon = int(bond_options["miimon"])
+            arp_interval = int(bond_options["arp_interval"])
+        except ValueError as e:
+            raise NmstateValueError(f"Invalid bond option: {e}")
+        if miimon > 0 and arp_interval > 0:
+            raise NmstateValueError(
+                "Bond option arp_interval is conflicting with miimon, "
+                "please disable one of them by setting to 0"
+            )
