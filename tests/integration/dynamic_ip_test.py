@@ -34,7 +34,6 @@ from libnmstate.schema import InterfaceState
 from libnmstate.schema import Route as RT
 
 from libnmstate.error import NmstateNotImplementedError
-from libnmstate.error import NmstateVerificationError
 
 from .testlib import assertlib
 from .testlib import cmdlib
@@ -1112,11 +1111,6 @@ def eth1_with_dhcp6_no_dhcp_server():
         )
 
 
-@pytest.mark.xfail(
-    reason="https://github.com/nmstate/nmstate/issues/736",
-    raises=NmstateVerificationError,
-    strict=True,
-)
 def test_switch_from_dynamic_ip_without_dhcp_srv_to_static_ipv6(
     eth1_with_dhcp6_no_dhcp_server,
 ):
