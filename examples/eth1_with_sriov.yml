@@ -1,6 +1,6 @@
 ---
 interfaces:
-- name: eth0
+- name: eth1
   type: ethernet
   state: up
   ethernet:
