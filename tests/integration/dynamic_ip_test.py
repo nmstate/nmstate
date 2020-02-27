@@ -34,6 +34,7 @@ from libnmstate.schema import InterfaceState
 from libnmstate.schema import Route as RT
 
 from libnmstate.error import NmstateNotImplementedError
+from libnmstate.error import NmstateVerificationError
 
 from .testlib import assertlib
 from .testlib import cmdlib
@@ -44,6 +45,8 @@ from .testlib.ifacelib import get_mac_address
 from .testlib.bridgelib import add_port_to_bridge
 from .testlib.bridgelib import create_bridge_subtree_state
 from .testlib.bridgelib import linux_bridge
+
+ETH1 = "eth1"
 
 DEFAULT_TIMEOUT = 20
 NM_DHCP_TIMEOUT_DEFAULT = 45
@@ -1077,3 +1080,58 @@ def test_static_ip_with_routes_switch_back_to_dynamic(
         if route[RT.NEXT_HOP_INTERFACE] == DHCP_CLI_NIC
     ]
     assert not current_config_routes
+
+
+@pytest.fixture(scope="function")
+def eth1_with_dhcp6_no_dhcp_server():
+    # Cannot depend on eth1_up fixture as the reproducer requires the
+    # veth profile been created with DHCPv6 enabled.
+    iface_state = {
+        Interface.NAME: ETH1,
+        Interface.TYPE: InterfaceType.ETHERNET,
+        Interface.STATE: InterfaceState.UP,
+    }
+    iface_state[Interface.IPV4] = create_ipv4_state(enabled=False)
+    iface_state[Interface.IPV6] = create_ipv6_state(
+        enabled=True, dhcp=True, autoconf=False
+    )
+    libnmstate.apply({Interface.KEY: [iface_state]})
+    try:
+        yield iface_state
+    finally:
+        libnmstate.apply(
+            {
+                Interface.KEY: [
+                    {
+                        Interface.NAME: ETH1,
+                        Interface.STATE: InterfaceState.ABSENT,
+                    }
+                ]
+            },
+            verify_change=False,
+        )
+
+
+@pytest.mark.xfail(
+    reason="https://github.com/nmstate/nmstate/issues/736",
+    raises=NmstateVerificationError,
+    strict=True,
+)
+def test_switch_from_dynamic_ip_without_dhcp_srv_to_static_ipv6(
+    eth1_with_dhcp6_no_dhcp_server,
+):
+    iface_state = eth1_with_dhcp6_no_dhcp_server
+    iface_state[Interface.IPV4] = {InterfaceIPv4.ENABLED: False}
+    iface_state[Interface.IPV6] = {
+        InterfaceIPv6.ENABLED: True,
+        InterfaceIPv6.DHCP: False,
+        InterfaceIPv6.AUTOCONF: False,
+        InterfaceIPv6.ADDRESS: [
+            {
+                InterfaceIPv6.ADDRESS_IP: IPV6_ADDRESS2,
+                InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
+            }
+        ],
+    }
+    libnmstate.apply({Interface.KEY: [iface_state]})
+    assertlib.assert_state_match({Interface.KEY: [iface_state]})
