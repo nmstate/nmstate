@@ -146,5 +146,5 @@ def test_add_remove_team_with_slaves(eth1_up, eth2_up):
     reason="The device does not support SR-IOV.",
 )
 def test_set_ethernet_sriov(eth1_up):
-    with example_state("eth0_with_sriov.yml") as desired_state:
+    with example_state("eth1_with_sriov.yml") as desired_state:
         assertlib.assert_state_match(desired_state)
