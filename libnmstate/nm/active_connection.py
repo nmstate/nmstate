@@ -19,11 +19,15 @@
 
 import logging
 
-from . import nmclient
 from . import ipv4
 from . import ipv6
-from .nmclient import GLib
-from .nmclient import NM
+from .common import GLib
+from .common import GObject
+from .common import NM
+from .nmclient import glib_mainloop
+
+
+NM_MANAGER_ERROR_DOMAIN = "nm-manager-error-quark"
 
 
 class ActivationError(Exception):
@@ -31,11 +35,12 @@ class ActivationError(Exception):
 
 
 class ActiveConnection:
-    def __init__(self, active_connection=None):
+    def __init__(self, nm_client=None, active_connection=None):
+        self._cli = nm_client
         self.handlers = set()
         self.device_handlers = set()
         self._act_con = active_connection
-        self._mainloop = nmclient.mainloop()
+        self._mainloop = glib_mainloop()
 
         nmdevs = None
         if active_connection:
@@ -61,20 +66,18 @@ class ActiveConnection:
 
     def _safe_deactivate_async(self):
         act_connection = self._nmdev.get_active_connection()
-        mainloop = nmclient.mainloop()
         if not act_connection or act_connection.props.state in (
-            nmclient.NM.ActiveConnectionState.DEACTIVATING,
-            nmclient.NM.ActiveConnectionState.DEACTIVATED,
+            NM.ActiveConnectionState.DEACTIVATING,
+            NM.ActiveConnectionState.DEACTIVATED,
         ):
             # Nothing left to do here, call the next action.
-            mainloop.execute_next_action()
+            self._mainloop.execute_next_action()
             return
 
         user_data = None
-        client = nmclient.client()
-        client.deactivate_connection_async(
+        self._cli.deactivate_connection_async(
             act_connection,
-            mainloop.cancellable,
+            self._mainloop.cancellable,
             self._deactivate_connection_callback,
             user_data,
         )
@@ -93,7 +96,7 @@ class ActiveConnection:
                 if (
                     isinstance(e, GLib.GError)
                     # pylint: disable=no-member
-                    and e.domain == nmclient.NM_MANAGER_ERROR_DOMAIN
+                    and e.domain == NM_MANAGER_ERROR_DOMAIN
                     and e.code == NM.ManagerError.CONNECTIONNOTACTIVE
                     # pylint: enable=no-member
                 ):
@@ -122,7 +125,7 @@ class ActiveConnection:
 
     @property
     def is_active(self):
-        nm_acs = nmclient.NM.ActiveConnectionState
+        nm_acs = NM.ActiveConnectionState
         if self.state == nm_acs.ACTIVATED:
             return True
         elif self.state == nm_acs.ACTIVATING:
@@ -143,9 +146,9 @@ class ActiveConnection:
                 #   * DHCPv6/Autoconf with IP4_READY flag.
                 #   * DHCPv4 enabled with DHCPv6/Autoconf enabled.
                 return (
-                    nmclient.NM.DeviceState.IP_CONFIG
+                    NM.DeviceState.IP_CONFIG
                     <= self.nmdev_state
-                    <= nmclient.NM.DeviceState.ACTIVATED
+                    <= NM.DeviceState.ACTIVATED
                 )
 
         return False
@@ -153,7 +156,7 @@ class ActiveConnection:
     @property
     def is_activating(self):
         return (
-            self.state == nmclient.NM.ActiveConnectionState.ACTIVATING
+            self.state == NM.ActiveConnectionState.ACTIVATING
             and not self.is_active
         )
 
@@ -188,9 +191,7 @@ class ActiveConnection:
     @property
     def nmdev_state(self):
         return (
-            self._nmdev.get_state()
-            if self._nmdev
-            else nmclient.NM.DeviceState.UNKNOWN
+            self._nmdev.get_state() if self._nmdev else NM.DeviceState.UNKNOWN
         )
 
     def remove_handlers(self):
@@ -199,17 +200,16 @@ class ActiveConnection:
         self.handlers = set()
         for handler_id in self.device_handlers:
             self.nmdevice.handler_disconnect(handler_id)
-        self.device_handlers = set()
 
 
 def _is_device_master_type(nmdev):
     if nmdev:
-        gobject = nmclient.GObject
+        gobject = GObject
         is_master_type = (
-            gobject.type_is_a(nmdev, nmclient.NM.DeviceBond)
-            or gobject.type_is_a(nmdev, nmclient.NM.DeviceBridge)
-            or gobject.type_is_a(nmdev, nmclient.NM.DeviceTeam)
-            or gobject.type_is_a(nmdev, nmclient.NM.DeviceOvsBridge)
+            gobject.type_is_a(nmdev, NM.DeviceBond)
+            or gobject.type_is_a(nmdev, NM.DeviceBridge)
+            or gobject.type_is_a(nmdev, NM.DeviceTeam)
+            or gobject.type_is_a(nmdev, NM.DeviceOvsBridge)
         )
         return is_master_type
     return False

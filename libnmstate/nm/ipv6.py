@@ -22,11 +22,11 @@ import socket
 
 from libnmstate import iplib
 from libnmstate.error import NmstateNotImplementedError
-from libnmstate.nm import nmclient
 from libnmstate.nm import dns as nm_dns
 from libnmstate.nm import route as nm_route
 from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import Route
+from .common import NM
 
 
 IPV6_DEFAULT_ROUTE_METRIC = 1024
@@ -45,15 +45,15 @@ def get_info(active_connection):
     ip_profile = get_ip_profile(active_connection)
     if ip_profile:
         method = ip_profile.get_method()
-        if method == nmclient.NM.SETTING_IP6_CONFIG_METHOD_AUTO:
+        if method == NM.SETTING_IP6_CONFIG_METHOD_AUTO:
             info[InterfaceIPv6.DHCP] = True
             info[InterfaceIPv6.AUTOCONF] = True
-        elif method == nmclient.NM.SETTING_IP6_CONFIG_METHOD_DHCP:
+        elif method == NM.SETTING_IP6_CONFIG_METHOD_DHCP:
             info[InterfaceIPv6.DHCP] = True
             info[InterfaceIPv6.AUTOCONF] = False
-        elif method == nmclient.NM.SETTING_IP6_CONFIG_METHOD_LINK_LOCAL:
+        elif method == NM.SETTING_IP6_CONFIG_METHOD_LINK_LOCAL:
             is_link_local_method = True
-        elif method == nmclient.NM.SETTING_IP6_CONFIG_METHOD_DISABLED:
+        elif method == NM.SETTING_IP6_CONFIG_METHOD_DISABLED:
             return info
 
         if info[InterfaceIPv6.DHCP] or info[InterfaceIPv6.AUTOCONF]:
@@ -113,19 +113,15 @@ def create_setting(config, base_con_profile):
             setting_ip.props.dns_priority = nm_dns.DEFAULT_DNS_PRIORITY
 
     if not setting_ip:
-        setting_ip = nmclient.NM.SettingIP6Config.new()
+        setting_ip = NM.SettingIP6Config.new()
 
     # Ensure IPv6 RA and DHCPv6 is based on MAC address only
-    setting_ip.props.addr_gen_mode = (
-        nmclient.NM.SettingIP6ConfigAddrGenMode.EUI64
-    )
+    setting_ip.props.addr_gen_mode = NM.SettingIP6ConfigAddrGenMode.EUI64
     setting_ip.props.dhcp_duid = "ll"
     setting_ip.props.dhcp_iaid = "mac"
 
     if not config or not config.get(InterfaceIPv6.ENABLED):
-        setting_ip.props.method = (
-            nmclient.NM.SETTING_IP6_CONFIG_METHOD_DISABLED
-        )
+        setting_ip.props.method = NM.SETTING_IP6_CONFIG_METHOD_DISABLED
         return setting_ip
 
     is_dhcp = config.get(InterfaceIPv6.DHCP, False)
@@ -150,9 +146,7 @@ def create_setting(config, base_con_profile):
     elif ip_addresses:
         _set_static(setting_ip, ip_addresses)
     else:
-        setting_ip.props.method = (
-            nmclient.NM.SETTING_IP6_CONFIG_METHOD_LINK_LOCAL
-        )
+        setting_ip.props.method = NM.SETTING_IP6_CONFIG_METHOD_LINK_LOCAL
 
     nm_route.add_routes(setting_ip, config.get(nm_route.ROUTE_METADATA, []))
     nm_dns.add_dns(setting_ip, config.get(nm_dns.DNS_METADATA, {}))
@@ -171,9 +165,9 @@ def _set_dynamic(setting_ip, is_dhcp, is_autoconf):
         )
 
     if is_dhcp and is_autoconf:
-        setting_ip.props.method = nmclient.NM.SETTING_IP6_CONFIG_METHOD_AUTO
+        setting_ip.props.method = NM.SETTING_IP6_CONFIG_METHOD_AUTO
     elif is_dhcp and not is_autoconf:
-        setting_ip.props.method = nmclient.NM.SETTING_IP6_CONFIG_METHOD_DHCP
+        setting_ip.props.method = NM.SETTING_IP6_CONFIG_METHOD_DHCP
 
 
 def _set_static(setting_ip, ip_addresses):
@@ -188,7 +182,7 @@ def _set_static(setting_ip, ip_addresses):
                 "when applying desired state".format(a=address)
             )
         else:
-            naddr = nmclient.NM.IPAddress.new(
+            naddr = NM.IPAddress.new(
                 socket.AF_INET6,
                 address[InterfaceIPv6.ADDRESS_IP],
                 address[InterfaceIPv6.ADDRESS_PREFIX_LENGTH],
@@ -196,11 +190,9 @@ def _set_static(setting_ip, ip_addresses):
             setting_ip.add_address(naddr)
 
     if setting_ip.props.addresses:
-        setting_ip.props.method = nmclient.NM.SETTING_IP6_CONFIG_METHOD_MANUAL
+        setting_ip.props.method = NM.SETTING_IP6_CONFIG_METHOD_MANUAL
     else:
-        setting_ip.props.method = (
-            nmclient.NM.SETTING_IP6_CONFIG_METHOD_LINK_LOCAL
-        )
+        setting_ip.props.method = NM.SETTING_IP6_CONFIG_METHOD_LINK_LOCAL
 
 
 def get_ip_profile(active_connection):
@@ -214,12 +206,12 @@ def get_ip_profile(active_connection):
     return None
 
 
-def get_route_running():
-    return nm_route.get_running(_acs_and_ip_cfgs(nmclient.client()))
+def get_route_running(client):
+    return nm_route.get_running(_acs_and_ip_cfgs(client))
 
 
-def get_route_config():
-    routes = nm_route.get_config(acs_and_ip_profiles(nmclient.client()))
+def get_route_config(client):
+    routes = nm_route.get_config(acs_and_ip_profiles(client))
     for route in routes:
         if route[Route.METRIC] == 0:
             # Kernel will convert 0 to IPV6_DEFAULT_ROUTE_METRIC.
@@ -249,13 +241,11 @@ def is_dynamic(active_connection):
     if ip_profile:
         method = ip_profile.get_method()
         return method in (
-            nmclient.NM.SETTING_IP6_CONFIG_METHOD_AUTO,
-            nmclient.NM.SETTING_IP6_CONFIG_METHOD_DHCP,
+            NM.SETTING_IP6_CONFIG_METHOD_AUTO,
+            NM.SETTING_IP6_CONFIG_METHOD_DHCP,
         )
     return False
 
 
-def get_routing_rule_config():
-    return nm_route.get_routing_rule_config(
-        acs_and_ip_profiles(nmclient.client())
-    )
+def get_routing_rule_config(client):
+    return nm_route.get_routing_rule_config(acs_and_ip_profiles(client))

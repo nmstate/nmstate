@@ -40,7 +40,7 @@ DNS_METADATA_PRIORITY = "_priority"
 ROUTE_RULES_METADATA = "_route_rules"
 
 
-def generate_ifaces_metadata(desired_state, current_state):
+def generate_ifaces_metadata(nm_client, desired_state, current_state):
     """
     The described desired state for each interface may include references to
     other interfaces. As the provider handles the interface setting in an
@@ -81,7 +81,7 @@ def generate_ifaces_metadata(desired_state, current_state):
         get_slaves_func=team.get_slaves_from_state,
         set_metadata_func=lambda *args: None,
     )
-    _generate_dns_metadata(desired_state, current_state)
+    _generate_dns_metadata(nm_client, desired_state, current_state)
     _generate_route_metadata(desired_state, current_state)
     _generate_route_rule_metadata(desired_state)
 
@@ -230,17 +230,17 @@ def _init_iface_route_metadata(iface_state, ip_key):
     ip_state[ROUTES] = []
 
 
-def _generate_dns_metadata(desired_state, current_state):
+def _generate_dns_metadata(nm_client, desired_state, current_state):
     """
     Save DNS configuration on chosen interfaces as metadata.
     """
-    _clear_current_dns_config(desired_state, current_state)
+    _clear_current_dns_config(nm_client, desired_state, current_state)
     servers = desired_state.config_dns.get(DNS.SERVER, [])
     searches = desired_state.config_dns.get(DNS.SEARCH, [])
     if not servers and not searches:
         return
-    if _dns_config_not_changed(desired_state, current_state):
-        _preserve_current_dns_metadata(desired_state, current_state)
+    if _dns_config_not_changed(nm_client, desired_state, current_state):
+        _preserve_current_dns_metadata(nm_client, desired_state, current_state)
     else:
         ifaces_routes = {
             ifname: [r.to_dict() for r in routes]
@@ -312,18 +312,17 @@ def _include_name_only_iface_state(desired_state, current_state, iface_names):
             desired_state.interfaces[iface_name] = {Interface.NAME: iface_name}
 
 
-def _clear_current_dns_config(desired_state, current_state):
-    client = nm.nmclient.client()
+def _clear_current_dns_config(nm_client, desired_state, current_state):
     current_dns_ifaces = nm.dns.get_dns_config_iface_names(
-        nm.ipv4.acs_and_ip_profiles(client),
-        nm.ipv6.acs_and_ip_profiles(client),
+        nm.ipv4.acs_and_ip_profiles(nm_client),
+        nm.ipv6.acs_and_ip_profiles(nm_client),
     )
     _include_name_only_iface_state(
         desired_state, current_state, current_dns_ifaces
     )
 
 
-def _dns_config_not_changed(desired_state, current_state):
+def _dns_config_not_changed(nm_client, desired_state, current_state):
     """
     Return True if desired_state DNS config equal to current_state and
     interface holding current DNS config is UP and corresponding IP family
@@ -331,10 +330,9 @@ def _dns_config_not_changed(desired_state, current_state):
     """
     if desired_state.config_dns != current_state.config_dns:
         return False
-    client = nm.nmclient.client()
     iface_dns_configs = nm.dns.get_indexed_dns_config_by_iface(
-        nm.ipv4.acs_and_ip_profiles(client),
-        nm.ipv6.acs_and_ip_profiles(client),
+        nm.ipv4.acs_and_ip_profiles(nm_client),
+        nm.ipv6.acs_and_ip_profiles(nm_client),
     )
     for iface_name, iface_dns_config in iface_dns_configs.items():
         if iface_name not in desired_state.interfaces:
@@ -353,11 +351,10 @@ def _dns_config_not_changed(desired_state, current_state):
     return True
 
 
-def _preserve_current_dns_metadata(desired_state, current_state):
-    client = nm.nmclient.client()
+def _preserve_current_dns_metadata(nm_client, desired_state, current_state):
     iface_dns_configs = nm.dns.get_indexed_dns_config_by_iface(
-        nm.ipv4.acs_and_ip_profiles(client),
-        nm.ipv6.acs_and_ip_profiles(client),
+        nm.ipv4.acs_and_ip_profiles(nm_client),
+        nm.ipv6.acs_and_ip_profiles(nm_client),
     )
     for iface_name, iface_dns_config in iface_dns_configs.items():
         if iface_name not in desired_state.interfaces:

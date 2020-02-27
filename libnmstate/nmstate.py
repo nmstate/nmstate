@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2019 Red Hat, Inc.
+# Copyright (c) 2018-2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -17,37 +17,22 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
-from . import applier
-from . import bond
-from . import bridge
-from . import checkpoint
-from . import connection
-from . import device
-from . import dns
-from . import ipv4
-from . import ipv6
-from . import ovs
-from . import translator
-from . import user
-from . import vlan
-from . import wired
-from .plugin import NetworkManagerPlugin
+from libnmstate import validator
+from libnmstate.schema import DNS
+from libnmstate.schema import Interface
+from libnmstate.schema import Route
+from libnmstate.schema import RouteRule
 
-__all__ = [
-    "NetworkManagerPlugin",
-    "applier",
-    "bond",
-    "bridge",
-    "checkpoint",
-    "connection",
-    "device",
-    "dns",
-    "ipv4",
-    "ipv6",
-    "nmclient",
-    "ovs",
-    "translator",
-    "user",
-    "vlan",
-    "wired",
-]
+
+def show_with_plugin(nm_plugin, include_status_data=None):
+    report = {}
+    if include_status_data:
+        report["capabilities"] = nm_plugin.capabilities
+
+    report[Interface.KEY] = nm_plugin.get_interfaces()
+    report[Route.KEY] = nm_plugin.get_routes()
+    report[RouteRule.KEY] = nm_plugin.get_route_rules()
+    report[DNS.KEY] = nm_plugin.get_dns_client_config()
+
+    validator.validate(report)
+    return report

@@ -22,7 +22,6 @@ from operator import itemgetter
 
 from libnmstate import iplib
 from libnmstate.error import NmstateInternalError
-from libnmstate.nm import nmclient
 from libnmstate.nm import active_connection as nm_ac
 from libnmstate.nm import route as nm_route
 from libnmstate.schema import DNS
@@ -41,10 +40,9 @@ DNS_PRIORITY_STATIC_BASE = 40
 IPV6_ADDRESS_LENGTH = 128
 
 
-def get_running():
+def get_running(nm_client):
     dns_state = {DNS.SERVER: [], DNS.SEARCH: []}
-    client = nmclient.client()
-    for dns_conf in client.get_dns_configuration():
+    for dns_conf in nm_client.get_dns_configuration():
         iface_name = dns_conf.get_interface()
         for ns in dns_conf.get_nameservers():
             if iplib.is_ipv6_link_local_addr(ns, IPV6_ADDRESS_LENGTH):
@@ -119,7 +117,9 @@ def get_dns_config_iface_names(acs_and_ipv4_profiles, acs_and_ipv6_profiles):
     iface_names = []
     for ac, ip_profile in chain(acs_and_ipv6_profiles, acs_and_ipv4_profiles):
         if ip_profile.props.dns or ip_profile.props.dns_search:
-            iface_names.append(nm_ac.ActiveConnection(ac).devname)
+            iface_names.append(
+                nm_ac.ActiveConnection(active_connection=ac).devname
+            )
     return iface_names
 
 
@@ -159,13 +159,13 @@ def get_indexed_dns_config_by_iface(
     iface_dns_configs = defaultdict(dict)
     for ac, ip_profile in acs_and_ipv6_profiles:
         if ip_profile.props.dns or ip_profile.props.dns_search:
-            iface_name = nm_ac.ActiveConnection(ac).devname
+            iface_name = nm_ac.ActiveConnection(active_connection=ac).devname
             iface_dns_configs[iface_name][
                 Interface.IPV6
             ] = _get_ip_profile_dns_config(ip_profile)
     for ac, ip_profile in acs_and_ipv4_profiles:
         if ip_profile.props.dns or ip_profile.props.dns_search:
-            iface_name = nm_ac.ActiveConnection(ac).devname
+            iface_name = nm_ac.ActiveConnection(active_connection=ac).devname
             iface_dns_configs[iface_name][
                 Interface.IPV4
             ] = _get_ip_profile_dns_config(ip_profile)

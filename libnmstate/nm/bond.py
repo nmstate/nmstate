@@ -22,22 +22,22 @@ import os
 import glob
 import re
 
-from . import nmclient
 from libnmstate.error import NmstateValueError
 from libnmstate.appliers.bond import is_in_mac_restricted_mode
+from .common import NM
 
 
 BOND_TYPE = "bond"
 
 SYSFS_EMPTY_VALUE = ""
 
-NM_SUPPORTED_BOND_OPTIONS = nmclient.NM.SettingBond.get_valid_options(
-    nmclient.NM.SettingBond.new()
+NM_SUPPORTED_BOND_OPTIONS = NM.SettingBond.get_valid_options(
+    NM.SettingBond.new()
 )
 
 
 def create_setting(options, wired_setting):
-    bond_setting = nmclient.NM.SettingBond.new()
+    bond_setting = NM.SettingBond.new()
     _fix_bond_option_arp_interval(options)
     for option_name, option_value in options.items():
         if wired_setting and is_in_mac_restricted_mode(options):
@@ -56,7 +56,7 @@ def create_setting(options, wired_setting):
 
 
 def is_bond_type_id(type_id):
-    return type_id == nmclient.NM.DeviceType.BOND
+    return type_id == NM.DeviceType.BOND
 
 
 def get_bond_info(nm_device):
@@ -70,7 +70,7 @@ def get_bond_info(nm_device):
 
 def _get_options(nm_device):
     ifname = nm_device.get_iface()
-    bond_setting = nmclient.NM.SettingBond.new()
+    bond_setting = NM.SettingBond.new()
     bond_option_names_in_profile = get_bond_option_names_in_profile(nm_device)
     if (
         "miimon" in bond_option_names_in_profile

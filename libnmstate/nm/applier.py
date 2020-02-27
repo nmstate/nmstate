@@ -35,7 +35,6 @@ from . import connection
 from . import device
 from . import ipv4
 from . import ipv6
-from . import nmclient
 from . import ovs
 from . import sriov
 from . import team
@@ -44,6 +43,7 @@ from . import user
 from . import vlan
 from . import vxlan
 from . import wired
+from .common import NM
 
 
 MAXIMUM_INTERFACE_LENGTH = 15
@@ -57,7 +57,7 @@ BRPORT_OPTIONS_METADATA = "_brport_options"
 IFACE_NAME_METADATA = "_iface_name"
 
 
-def apply_changes(ifaces_desired_state):
+def apply_changes(nm_client, ifaces_desired_state):
     con_profiles = []
 
     ifaces_desired_state.extend(
@@ -73,13 +73,13 @@ def apply_changes(ifaces_desired_state):
         if iface_desired_state[Interface.TYPE] == InterfaceType.OVS_PORT:
             ifname = iface_desired_state[IFACE_NAME_METADATA]
         logging.debug(f"Editing interface: {iface_desired_state}")
-        nmdev = device.get_device_by_name(ifname)
+        nmdev = device.get_device_by_name(nm_client, ifname)
         cur_con_profile = None
         if nmdev:
-            cur_con_profile = connection.ConnectionProfile()
+            cur_con_profile = connection.ConnectionProfile(nm_client)
             cur_con_profile.import_by_device(nmdev)
         new_con_profile = _build_connection_profile(
-            iface_desired_state, base_con_profile=cur_con_profile
+            nm_client, iface_desired_state, base_con_profile=cur_con_profile
         )
         if not new_con_profile.devname:
             set_conn = new_con_profile.profile.get_setting_connection()
@@ -89,14 +89,14 @@ def apply_changes(ifaces_desired_state):
             con_profiles.append(new_con_profile)
         else:
             # Missing connection, attempting to create a new one.
-            connection.delete_iface_inactive_connections(ifname)
+            connection.delete_iface_inactive_connections(nm_client, ifname)
             new_con_profile.add(save_to_disk=True)
             con_profiles.append(new_con_profile)
 
-    _set_ifaces_admin_state(ifaces_desired_state, con_profiles)
+    _set_ifaces_admin_state(nm_client, ifaces_desired_state, con_profiles)
 
 
-def _set_ifaces_admin_state(ifaces_desired_state, con_profiles):
+def _set_ifaces_admin_state(nm_client, ifaces_desired_state, con_profiles):
     """
     Control interface admin state by activating, deactivating and deleting
     devices connection profiles.
@@ -118,7 +118,7 @@ def _set_ifaces_admin_state(ifaces_desired_state, con_profiles):
     - All the rest.
     """
     con_profiles_by_devname = _index_profiles_by_devname(con_profiles)
-    new_ifaces = _get_new_ifaces(con_profiles)
+    new_ifaces = _get_new_ifaces(nm_client, con_profiles)
     new_ifaces_to_activate = set()
     new_vlan_ifaces_to_activate = set()
     new_vxlan_ifaces_to_activate = set()
@@ -131,7 +131,7 @@ def _set_ifaces_admin_state(ifaces_desired_state, con_profiles):
 
     for iface_desired_state in ifaces_desired_state:
         ifname = iface_desired_state[Interface.NAME]
-        nmdev = device.get_device_by_name(ifname)
+        nmdev = device.get_device_by_name(nm_client, ifname)
         if not nmdev:
             if (
                 ifname in new_ifaces
@@ -170,7 +170,7 @@ def _set_ifaces_admin_state(ifaces_desired_state, con_profiles):
                 InterfaceState.DOWN,
                 InterfaceState.ABSENT,
             ):
-                nmdevs = _get_affected_devices(iface_desired_state)
+                nmdevs = _get_affected_devices(nm_client, iface_desired_state)
                 for affected_nmdev in nmdevs:
                     remove_devs_actions[affected_nmdev] = [
                         device.deactivate,
@@ -178,7 +178,7 @@ def _set_ifaces_admin_state(ifaces_desired_state, con_profiles):
                     ]
                 if (
                     nmdev.is_software()
-                    and nmdev.get_device_type() != nmclient.NM.DeviceType.VETH
+                    and nmdev.get_device_type() != NM.DeviceType.VETH
                 ):
                     remove_devs_actions[nmdev].append(device.delete_device)
             else:
@@ -194,43 +194,43 @@ def _set_ifaces_admin_state(ifaces_desired_state, con_profiles):
         remove_devs_actions.pop(dev, None)
 
     for ifname in new_master_not_enslaved_ifaces:
-        device.activate(dev=None, connection_id=ifname)
+        device.activate(nm_client, dev=None, connection_id=ifname)
 
     for ifname in new_ifaces_to_activate:
-        device.activate(dev=None, connection_id=ifname)
+        device.activate(nm_client, dev=None, connection_id=ifname)
 
     for dev, con_profile in master_ifaces_to_edit:
-        device.modify(dev, con_profile)
+        device.modify(nm_client, dev, con_profile)
 
     for ifname in new_ovs_port_to_activate:
-        device.activate(dev=None, connection_id=ifname)
+        device.activate(nm_client, dev=None, connection_id=ifname)
 
     for ifname in new_ovs_interface_to_activate:
-        device.activate(dev=None, connection_id=ifname)
+        device.activate(nm_client, dev=None, connection_id=ifname)
 
     for dev, con_profile in ifaces_to_edit:
-        device.modify(dev, con_profile)
+        device.modify(nm_client, dev, con_profile)
 
     for ifname in new_vlan_ifaces_to_activate:
-        device.activate(dev=None, connection_id=ifname)
+        device.activate(nm_client, dev=None, connection_id=ifname)
 
     for ifname in new_vxlan_ifaces_to_activate:
-        device.activate(dev=None, connection_id=ifname)
+        device.activate(nm_client, dev=None, connection_id=ifname)
 
     for dev, actions in remove_devs_actions.items():
         for action in actions:
-            action(dev)
+            action(nm_client, dev)
 
 
 def _index_profiles_by_devname(con_profiles):
     return {con_profile.devname: con_profile for con_profile in con_profiles}
 
 
-def _get_new_ifaces(con_profiles):
+def _get_new_ifaces(nm_client, con_profiles):
     ifaces_without_device = set()
     for con_profile in con_profiles:
         ifname = con_profile.devname
-        nmdev = device.get_device_by_name(ifname)
+        nmdev = device.get_device_by_name(nm_client, ifname)
         if not nmdev:
             # When the profile id is different from the iface name, use the
             # profile id.
@@ -248,8 +248,8 @@ def _is_slave_iface(iface_state):
     return iface_state.get(MASTER_METADATA)
 
 
-def _get_affected_devices(iface_state):
-    nmdev = device.get_device_by_name(iface_state[Interface.NAME])
+def _get_affected_devices(nm_client, iface_state):
+    nmdev = device.get_device_by_name(nm_client, iface_state[Interface.NAME])
     devs = []
     if nmdev:
         devs += [nmdev]
@@ -344,7 +344,9 @@ def _generate_hash_iface_name(name):
     return name_[:MAXIMUM_INTERFACE_LENGTH].decode()
 
 
-def _build_connection_profile(iface_desired_state, base_con_profile=None):
+def _build_connection_profile(
+    nm_client, iface_desired_state, base_con_profile=None
+):
     iface_type = translator.Api2Nm.get_iface_type(
         iface_desired_state[Interface.TYPE]
     )
@@ -360,7 +362,7 @@ def _build_connection_profile(iface_desired_state, base_con_profile=None):
         ),
     ]
 
-    con_setting = connection.ConnectionSetting()
+    con_setting = connection.ConnectionSetting(nm_client)
     if base_profile:
         con_setting.import_by_profile(base_con_profile)
     else:
@@ -424,7 +426,9 @@ def _build_connection_profile(iface_desired_state, base_con_profile=None):
     if vxlan_setting:
         settings.append(vxlan_setting)
 
-    sriov_setting = sriov.create_setting(iface_desired_state, base_con_profile)
+    sriov_setting = sriov.create_setting(
+        nm_client, iface_desired_state, base_con_profile
+    )
     if sriov_setting:
         settings.append(sriov_setting)
 
@@ -432,7 +436,7 @@ def _build_connection_profile(iface_desired_state, base_con_profile=None):
     if team_setting:
         settings.append(team_setting)
 
-    new_profile = connection.ConnectionProfile()
+    new_profile = connection.ConnectionProfile(nm_client)
     new_profile.create(settings)
     return new_profile
 

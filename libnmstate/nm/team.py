@@ -20,19 +20,15 @@
 import copy
 import json
 
-from libnmstate.nm import nmclient
 from libnmstate.schema import Interface
 from libnmstate.schema import Team
+from .common import NM
+from .common import NmIfacePlugin
 
 
 CAPABILITY = "team"
 TEAMD_JSON_DEVICE = "device"
 TEAMD_JSON_PORTS = "ports"
-
-
-def has_team_capability():
-    nm_client = nmclient.client()
-    return nmclient.NM.Capability.TEAM in nm_client.get_capabilities()
 
 
 def create_setting(iface_state, base_con_profile):
@@ -44,11 +40,11 @@ def create_setting(iface_state, base_con_profile):
 
     if base_con_profile:
         team_setting = base_con_profile.get_setting_duplicate(
-            nmclient.NM.SETTING_TEAM_SETTING_NAME
+            NM.SETTING_TEAM_SETTING_NAME
         )
 
     if not team_setting:
-        team_setting = nmclient.NM.SettingTeam.new()
+        team_setting = NM.SettingTeam.new()
 
     teamd_config = _convert_team_config_to_teamd_format(
         team_config, iface_state[Interface.NAME]
@@ -85,7 +81,7 @@ def get_info(device):
     """
     info = {}
 
-    if device.get_device_type() == nmclient.NM.DeviceType.TEAM:
+    if device.get_device_type() == NM.DeviceType.TEAM:
         teamd_json = device.get_config()
         if teamd_json:
             teamd_config = json.loads(teamd_json)
@@ -116,3 +112,13 @@ def _merge_port_config_with_slaves_info(port_config, slave_names):
         port_list.append(port)
 
     return port_list
+
+
+class NmTeamIfacePlugin(NmIfacePlugin):
+    @property
+    def capabilities(self):
+        return (
+            [CAPABILITY]
+            if NM.Capability.TEAM in self.client.get_capabilities()
+            else []
+        )

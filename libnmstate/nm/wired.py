@@ -18,10 +18,10 @@
 #
 
 from libnmstate.ethtool import minimal_ethtool
-from libnmstate.nm import nmclient
 from libnmstate.nm import sriov
 from libnmstate.schema import Ethernet
 from libnmstate.schema import Interface
+from .common import NM
 
 
 ZEROED_MAC = "00:00:00:00:00:00"
@@ -78,7 +78,7 @@ def create_setting(iface_state, base_con_profile):
         return nm_wired_setting
 
     if not nm_wired_setting:
-        nm_wired_setting = nmclient.NM.SettingWired.new()
+        nm_wired_setting = NM.SettingWired.new()
 
     if setting.mac:
         nm_wired_setting.props.cloned_mac_address = setting.mac
@@ -136,7 +136,7 @@ def get_info(device):
     if mac and mac != ZEROED_MAC:
         info[Interface.MAC] = mac
 
-    if device.get_device_type() == nmclient.NM.DeviceType.ETHERNET:
+    if device.get_device_type() == NM.DeviceType.ETHERNET:
         ethernet = _get_ethernet_info(device, iface)
         if ethernet:
             info[Ethernet.CONFIG_SUBTREE] = ethernet

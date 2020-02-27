@@ -19,7 +19,7 @@
 
 import socket
 
-from . import nmclient
+from .common import NM
 from libnmstate.nm import dns as nm_dns
 from libnmstate.nm import route as nm_route
 from libnmstate.schema import InterfaceIPv4
@@ -48,15 +48,13 @@ def create_setting(config, base_con_profile):
             setting_ipv4.props.dns_priority = nm_dns.DEFAULT_DNS_PRIORITY
 
     if not setting_ipv4:
-        setting_ipv4 = nmclient.NM.SettingIP4Config.new()
+        setting_ipv4 = NM.SettingIP4Config.new()
 
     setting_ipv4.props.dhcp_client_id = "mac"
-    setting_ipv4.props.method = nmclient.NM.SETTING_IP4_CONFIG_METHOD_DISABLED
+    setting_ipv4.props.method = NM.SETTING_IP4_CONFIG_METHOD_DISABLED
     if config and config.get(InterfaceIPv4.ENABLED):
         if config.get(InterfaceIPv4.DHCP):
-            setting_ipv4.props.method = (
-                nmclient.NM.SETTING_IP4_CONFIG_METHOD_AUTO
-            )
+            setting_ipv4.props.method = NM.SETTING_IP4_CONFIG_METHOD_AUTO
             setting_ipv4.props.ignore_auto_routes = not config.get(
                 InterfaceIPv4.AUTO_ROUTES, True
             )
@@ -71,9 +69,7 @@ def create_setting(config, base_con_profile):
             # make this unlikely.
             setting_ipv4.props.dhcp_timeout = INT32_MAX
         elif config.get(InterfaceIPv4.ADDRESS):
-            setting_ipv4.props.method = (
-                nmclient.NM.SETTING_IP4_CONFIG_METHOD_MANUAL
-            )
+            setting_ipv4.props.method = NM.SETTING_IP4_CONFIG_METHOD_MANUAL
             _add_addresses(setting_ipv4, config[InterfaceIPv4.ADDRESS])
         nm_route.add_routes(
             setting_ipv4, config.get(nm_route.ROUTE_METADATA, [])
@@ -89,7 +85,7 @@ def create_setting(config, base_con_profile):
 
 def _add_addresses(setting_ipv4, addresses):
     for address in addresses:
-        naddr = nmclient.NM.IPAddress.new(
+        naddr = NM.IPAddress.new(
             socket.AF_INET,
             address[InterfaceIPv4.ADDRESS_IP],
             address[InterfaceIPv4.ADDRESS_PREFIX_LENGTH],
@@ -111,7 +107,7 @@ def get_info(active_connection):
     ip_profile = get_ip_profile(active_connection)
     if ip_profile:
         info[InterfaceIPv4.DHCP] = ip_profile.get_method() == (
-            nmclient.NM.SETTING_IP4_CONFIG_METHOD_AUTO
+            NM.SETTING_IP4_CONFIG_METHOD_AUTO
         )
         props = ip_profile.props
         if info["dhcp"]:
@@ -155,12 +151,12 @@ def get_ip_profile(active_connection):
     return None
 
 
-def get_route_running():
-    return nm_route.get_running(_acs_and_ip_cfgs(nmclient.client()))
+def get_route_running(nm_client):
+    return nm_route.get_running(_acs_and_ip_cfgs(nm_client))
 
 
-def get_route_config():
-    return nm_route.get_config(acs_and_ip_profiles(nmclient.client()))
+def get_route_config(nm_client):
+    return nm_route.get_config(acs_and_ip_profiles(nm_client))
 
 
 def _acs_and_ip_cfgs(client):
@@ -182,13 +178,9 @@ def acs_and_ip_profiles(client):
 def is_dynamic(active_connection):
     ip_profile = get_ip_profile(active_connection)
     if ip_profile:
-        return ip_profile.get_method() == (
-            nmclient.NM.SETTING_IP4_CONFIG_METHOD_AUTO
-        )
+        return ip_profile.get_method() == (NM.SETTING_IP4_CONFIG_METHOD_AUTO)
     return False
 
 
-def get_routing_rule_config():
-    return nm_route.get_routing_rule_config(
-        acs_and_ip_profiles(nmclient.client())
-    )
+def get_routing_rule_config(client):
+    return nm_route.get_routing_rule_config(acs_and_ip_profiles(client))

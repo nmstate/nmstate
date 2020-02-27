@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2019 Red Hat, Inc.
+# Copyright (c) 2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -17,37 +17,29 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
-from . import applier
-from . import bond
-from . import bridge
-from . import checkpoint
-from . import connection
-from . import device
-from . import dns
-from . import ipv4
-from . import ipv6
-from . import ovs
-from . import translator
-from . import user
-from . import vlan
-from . import wired
-from .plugin import NetworkManagerPlugin
+import gi
 
-__all__ = [
-    "NetworkManagerPlugin",
-    "applier",
-    "bond",
-    "bridge",
-    "checkpoint",
-    "connection",
-    "device",
-    "dns",
-    "ipv4",
-    "ipv6",
-    "nmclient",
-    "ovs",
-    "translator",
-    "user",
-    "vlan",
-    "wired",
-]
+try:
+    gi.require_version("NM", "1.0")  # NOQA: F402
+    from gi.repository import NM  # pylint: disable=no-name-in-module
+except ValueError:
+    NM = None
+
+from gi.repository import GLib
+from gi.repository import GObject
+
+
+class NmIfacePlugin:
+    def __init__(self, nm_client):
+        self._cli = nm_client
+
+    @property
+    def client(self):
+        return self._cli
+
+    @property
+    def capabilities(self):
+        return []
+
+
+__all__ = ["NM", "GLib", "GObject", "NmIfacePlugin"]
