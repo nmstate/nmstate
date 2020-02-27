@@ -30,6 +30,7 @@ from .testlib import ifacelib
 
 REPORT_HEADER = """RPMs: {rpms}
 OS: {osname}
+nmstate: {nmstate_version}
 """
 
 
@@ -98,8 +99,20 @@ def diff_initial_state():
 
 def pytest_report_header(config):
     return REPORT_HEADER.format(
-        rpms=_get_package_nvr("NetworkManager"), osname=_get_osname()
+        rpms=_get_package_nvr("NetworkManager"),
+        osname=_get_osname(),
+        nmstate_version=_get_nmstate_version(),
     )
+
+
+def _get_nmstate_version():
+    """
+    Prefer RPM version of nmstate, if not found, use libnmstate module version
+    """
+    try:
+        return _get_package_nvr("nmstate")
+    except subprocess.CalledProcessError:
+        return libnmstate.__version__
 
 
 def _get_package_nvr(package):
