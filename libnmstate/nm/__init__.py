@@ -44,7 +44,6 @@ __all__ = [
     "dns",
     "ipv4",
     "ipv6",
-    "nmclient",
     "ovs",
     "translator",
     "user",

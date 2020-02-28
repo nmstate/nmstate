@@ -21,19 +21,26 @@ import logging
 import time
 import uuid
 
+from libnmstate.error import NmstateLibnmError
+from libnmstate.error import NmstateInternalError
+
 from .active_connection import ActiveConnection
 from .common import NM
 from .common import GLib
-from .nmclient import glib_mainloop
+from .device import get_device_by_name
+from . import ipv4
+from . import ipv6
 
 
 class ConnectionProfile:
-    def __init__(self, client, profile=None):
-        self._cli = client
+    def __init__(self, context, profile=None):
+        self._ctx = context
         self._con_profile = profile
-        self._mainloop = glib_mainloop()
-        self._nmdevice = None
+        self._nm_dev = None
         self._con_id = None
+        self._nm_ac = None
+        self._ac_handlers = set()
+        self._dev_handlers = set()
 
     def create(self, settings):
         self.profile = NM.SimpleConnection.new()
@@ -41,75 +48,96 @@ class ConnectionProfile:
             self.profile.add_setting(setting)
 
     def import_by_device(self, nmdev=None):
-        ac = get_device_active_connection(nmdev or self.nmdevice)
+        if nmdev:
+            self.nmdevice = nmdev
+        ac = get_device_active_connection(self.nmdevice)
         if ac:
-            if nmdev:
-                self.nmdevice = nmdev
             self.profile = ac.props.connection
+        else:
+            for profile in self._ctx.client.get_connections():
+                if profile.get_id() == self.nmdevice.get_iface():
+                    self.profile = profile
 
     def import_by_id(self, con_id=None):
         if con_id:
             self.con_id = con_id
         if self.con_id:
-            self.profile = self._cli.get_connection_by_id(self.con_id)
+            self.profile = self._ctx.client.get_connection_by_id(self.con_id)
 
     def update(self, con_profile):
-        user_data = (self._mainloop, con_profile)
         flags = NM.SettingsUpdate2Flags.BLOCK_AUTOCONNECT
         flags |= NM.SettingsUpdate2Flags.TO_DISK
+        action = f"Update profile: {self.profile.get_id()}"
+        user_data = action
 
-        self._mainloop.push_action(
-            self.profile.update2,
+        self._ctx.register_async(action)
+        self.profile.update2(
             con_profile.profile.to_dbus(NM.ConnectionSerializationFlags.ALL),
             flags,
             None,
-            self._mainloop.cancellable,
+            self._ctx.cancellable,
             self._update2_callback,
             user_data,
         )
 
-    def add(self, save_to_disk=True):
-        user_data = self._mainloop
+    def add(self):
         nm_add_conn2_flags = NM.SettingsAddConnection2Flags
-        flags = nm_add_conn2_flags.BLOCK_AUTOCONNECT
-        if save_to_disk:
-            flags |= nm_add_conn2_flags.TO_DISK
-        else:
-            flags |= nm_add_conn2_flags.IN_MEMORY
+        flags = (
+            nm_add_conn2_flags.BLOCK_AUTOCONNECT | nm_add_conn2_flags.TO_DISK
+        )
 
-        self._mainloop.push_action(
-            self._cli.add_connection2,
+        action = f"Add profile: {self.profile.get_id()}"
+        self._ctx.register_async(action)
+
+        user_data = action
+        self._ctx.client.add_connection2(
             self.profile.to_dbus(NM.ConnectionSerializationFlags.ALL),
             flags,
             None,
             False,
-            self._mainloop.cancellable,
+            self._ctx.cancellable,
             self._add_connection2_callback,
             user_data,
         )
 
     def delete(self):
-        self._mainloop.push_action(self._safe_delete_async)
-
-    def _safe_delete_async(self):
         if not self.profile:
             self.import_by_id()
             if not self.profile:
                 self.import_by_device()
-        if not self.profile:
-            # No callback is expected, so we should call the next one.
-            self._mainloop.execute_next_action()
-            return
-
-        user_data = None
-        self.profile.delete_async(
-            self._mainloop.cancellable,
-            self._delete_connection_callback,
-            user_data,
-        )
+        if self.profile:
+            action = f"Delete profile: {self.profile.get_id()}"
+            user_data = action
+            self._ctx.register_async(action)
+            self.profile.delete_async(
+                self._ctx.cancellable,
+                self._delete_connection_callback,
+                user_data,
+            )
 
     def activate(self):
-        self._mainloop.push_action(self.safe_activate_async)
+        if self.con_id:
+            self.import_by_id()
+        elif self.nmdevice:
+            self.import_by_device()
+        elif not self.profile:
+            raise NmstateInternalError(
+                f"BUG: Failed  to find valid profile to activate: "
+                "id={self.con_id}, dev={self.devname}"
+            )
+
+        specific_object = None
+        action = f"Activate profile: {self.profile.get_id()}"
+        user_data = action
+        self._ctx.register_async(action)
+        self._ctx.client.activate_connection_async(
+            self.profile,
+            self.nmdevice,
+            specific_object,
+            self._ctx.cancellable,
+            self._active_connection_callback,
+            user_data,
+        )
 
     @property
     def profile(self):
@@ -128,12 +156,12 @@ class ConnectionProfile:
 
     @property
     def nmdevice(self):
-        return self._nmdevice
+        return self._nm_dev
 
     @nmdevice.setter
     def nmdevice(self, dev):
-        assert self._nmdevice is None
-        self._nmdevice = dev
+        assert self._nm_dev is None
+        self._nm_dev = dev
 
     @property
     def con_id(self):
@@ -145,31 +173,6 @@ class ConnectionProfile:
         assert self._con_id is None
         self._con_id = connection_id
 
-    def safe_activate_async(self):
-        if self.con_id:
-            self.import_by_id()
-        elif self.nmdevice:
-            self.import_by_device()
-        elif not self.profile:
-            err_format = "Missing base properties: profile={}, id={}, dev={}"
-            err_msg = err_format.format(
-                self.profile, self.con_id, self.devname
-            )
-            self._mainloop.quit(err_msg)
-
-        cancellable = self._mainloop.new_cancellable()
-
-        specific_object = None
-        user_data = cancellable
-        self._cli.activate_connection_async(
-            self.profile,
-            self.nmdevice,
-            specific_object,
-            cancellable,
-            self._active_connection_callback,
-            user_data,
-        )
-
     def get_setting_duplicate(self, setting_name):
         setting = None
         if self.profile:
@@ -179,45 +182,22 @@ class ConnectionProfile:
         return setting
 
     def _active_connection_callback(self, src_object, result, user_data):
-        cancellable = user_data
-        self._mainloop.drop_cancellable(cancellable)
+        action = user_data
 
         try:
             nm_act_con = src_object.activate_connection_finish(result)
         except Exception as e:
-            act_type, act_object = self._get_activation_metadata()
-
-            if self._mainloop.is_action_canceled(e):
-                logging.debug(
-                    "Connection activation canceled on %s %s: error=%s",
-                    act_type,
-                    act_object,
-                    e,
-                )
-            elif self._is_connection_unavailable(e):
-                logging.warning(
-                    "Connection unavailable on %s %s, retrying",
-                    act_type,
-                    act_object,
-                )
-                self._reset_profile()
-                time.sleep(0.1)
-                self.safe_activate_async()
-            else:
-                self._mainloop.quit(
-                    "Connection activation failed on {} {}: error={}".format(
-                        act_type, act_object, e
-                    )
-                )
+            self._ctx.fail(NmstateLibnmError(f"{action} failed: error={e}"))
             return
 
         if nm_act_con is None:
-            act_type, act_object = self._get_activation_metadata()
-            self._mainloop.quit(
-                "Connection activation failed on {} {}: error=unknown".format(
-                    act_type, act_object
+            self._ctx.fail(
+                NmstateLibnmError(
+                    f"{action} failed: "
+                    "error='None return from activate_connection_finish()'"
                 )
             )
+
         else:
             devname = nm_act_con.props.connection.get_interface_name()
             logging.debug(
@@ -225,180 +205,217 @@ class ConnectionProfile:
                 devname,
                 nm_act_con.props.state,
             )
+            self._nm_ac = nm_act_con
+            self._nm_dev = get_device_by_name(self._ctx.client, devname)
 
-            ac = ActiveConnection(self._cli, nm_act_con)
-            if ac.is_active:
-                self._mainloop.execute_next_action()
-            elif ac.is_activating:
-                self.waitfor_active_connection_async(ac)
+            if self._is_activated():
+                self._ctx.finish_async(action)
+            elif self._is_activating():
+                self._wait_ac_activation(action)
+                if self._nm_dev:
+                    self._wait_dev_activation(action)
             else:
-                self._mainloop.quit(
-                    "Connection activation failed on {}: reason={}".format(
-                        ac.devname, ac.reason
+                if self._nm_dev:
+                    error_msg = (
+                        f"Connection {self.profile.get_id()} failed: "
+                        f"state={self._nm_ac.get_state()} "
+                        f"reason={self._nm_ac.get_state_reason()} "
+                        f"dev_state={self._nm_dev.get_state()} "
+                        f"dev_reason={self._nm_dev.get_state_reason()}"
                     )
+                else:
+                    error_msg = (
+                        f"Connection {self.profile.get_id()} failed: "
+                        f"state={self._nm_ac.get_state()} "
+                        f"reason={self._nm_ac.get_state_reason()} dev=None"
+                    )
+                logging.error(error_msg)
+                self._ctx.fail(
+                    NmstateLibnmError(f"{action} failed: {error_msg}")
                 )
 
-    @staticmethod
-    def _is_connection_unavailable(err):
-        return (
-            isinstance(err, GLib.GError)
-            and err.domain == "nm-manager-error-quark"
-            and err.code == 2
-            and "is not available on the device" in err.message
-        )
-
-    def _get_activation_metadata(self):
-        if self._nmdevice:
-            activation_type = "device"
-            activation_object = self._nmdevice.get_iface()
-        elif self._con_id:
-            activation_type = "connection_id"
-            activation_object = self._con_id
-        else:
-            activation_type = activation_object = "unknown"
-
-        return activation_type, activation_object
-
-    def waitfor_active_connection_async(self, ac):
-        ac.handlers.add(
-            ac.nm_active_connection.connect(
-                "state-changed", self._waitfor_active_connection_callback, ac
+    def _wait_ac_activation(self, action):
+        self._ac_handlers.add(
+            self._nm_ac.connect(
+                "state-changed", self._ac_state_change_callback, action
             )
         )
-        ac.handlers.add(
-            ac.nm_active_connection.connect(
+        self._ac_handlers.add(
+            self._nm_ac.connect(
                 "notify::state-flags",
-                self._waitfor_state_flags_change_callback,
-                ac,
-            )
-        )
-        ac.device_handlers.add(
-            ac.nmdevice.connect(
-                "state-changed", self._waitfor_device_state_change_callback, ac
+                self._ac_state_flags_change_callback,
+                action,
             )
         )
 
-    def _waitfor_device_state_change_callback(
-        self, _dev, _new_state, _old_state, _reason, ac
-    ):
-        self._waitfor_active_connection_callback(None, None, None, ac)
+    def _wait_dev_activation(self, action):
+        if self._nm_dev:
+            self._dev_handlers.add(
+                self._nm_dev.connect(
+                    "state-changed", self._dev_state_change_callback, action
+                )
+            )
 
-    def _waitfor_state_flags_change_callback(self, _nm_act_con, _state, ac):
-        self._waitfor_active_connection_callback(None, None, None, ac)
-
-    def _waitfor_active_connection_callback(
-        self, _nm_act_con, _state, _reason, ac
+    def _dev_state_change_callback(
+        self, _dev, _new_state, _old_state, _reason, action,
     ):
-        cur_nm_act_conn = get_device_active_connection(self.nmdevice)
-        if cur_nm_act_conn and cur_nm_act_conn != ac.nm_active_connection:
+        self._ac_state_change_callback(None, None, None, action)
+
+    def _ac_state_flags_change_callback(self, _nm_act_con, _state, action):
+        self._ac_state_change_callback(None, None, None, action)
+
+    def _ac_state_change_callback(self, _nm_act_con, _state, _reason, action):
+        devname = self.profile.get_id()
+        cur_nm_dev = get_device_by_name(self._ctx.client, devname)
+        if cur_nm_dev and cur_nm_dev != self._nm_dev:
+            logging.debug(f"The NM.Device of profile {devname} changed")
+            self._remove_dev_handlers()
+            self._nm_dev = cur_nm_dev
+            self._wait_dev_activation(action)
+
+        cur_nm_ac = get_device_active_connection(self.nmdevice)
+        if cur_nm_ac and cur_nm_ac != self._nm_ac:
             logging.debug(
                 "Active connection of device {} has been replaced".format(
                     self.devname
                 )
             )
-            ac.remove_handlers()
-            ac = ActiveConnection(self._cli)
-            # Don't rely on the first device of
-            # NM.ActiveConnection.get_devices() but set explicitly.
-            ac.import_by_device(self.nmdevice)
-            self.waitfor_active_connection_async(ac)
-        if ac.is_active:
+            self._remove_ac_handlers()
+            self._nm_ac = cur_nm_ac
+            self._wait_ac_activation(action)
+        if self._is_activated():
             logging.debug(
                 "Connection activation succeeded: dev=%s, con-state=%s, "
                 "dev-state=%s, state-flags=%s",
-                ac.devname,
-                ac.state,
-                ac.nmdev_state,
-                ac.nm_active_connection.get_state_flags(),
+                self.profile.get_id(),
+                self._nm_ac.get_state(),
+                self._nm_dev.get_state(),
+                self._nm_ac.get_state_flags(),
             )
-            ac.remove_handlers()
-            self._mainloop.execute_next_action()
-        elif not ac.is_activating:
-            ac.remove_handlers()
-            self._mainloop.quit(
-                "Connection activation failed on {}: reason={}".format(
-                    ac.devname, ac.reason
-                )
+            self._remove_dev_handlers()
+            self._remove_ac_handlers()
+            self._ctx.finish_async(action)
+        elif not self._is_activating():
+            reason = self._nm_ac.get_state_reason()
+            if self.nmdevice:
+                reason += "f{self.nmdevice.get_state_reason()}"
+            self._remove_ac_handlers()
+            self._remove_dev_handlers()
+            self._ctx.fail(
+                NmstateLibnmError(f"{action} failed: reason={reason}")
             )
 
-    @staticmethod
-    def _add_connection2_callback(src_object, result, user_data):
-        mainloop = user_data
+    def _is_activated(self):
+        if not self._nm_ac or not self._nm_dev:
+            return False
+
+        state = self._nm_ac.get_state()
+        if state == NM.ActiveConnectionState.ACTIVATED:
+            return True
+        elif state == NM.ActiveConnectionState.ACTIVATING:
+            ac_state_flags = self._nm_ac.get_state_flags()
+            nm_flags = NM.ActivationStateFlags
+            ip4_is_dynamic = ipv4.is_dynamic(self._nm_ac)
+            ip6_is_dynamic = ipv6.is_dynamic(self._nm_ac)
+            if (
+                ac_state_flags & nm_flags.IS_MASTER
+                or (ip4_is_dynamic and ac_state_flags & nm_flags.IP6_READY)
+                or (ip6_is_dynamic and ac_state_flags & nm_flags.IP4_READY)
+                or (ip4_is_dynamic and ip6_is_dynamic)
+            ):
+                # For interface meet any condition below will be
+                # treated as activated when reach IP_CONFIG state:
+                #   * Is master device.
+                #   * DHCPv4 enabled with IP6_READY flag.
+                #   * DHCPv6/Autoconf with IP4_READY flag.
+                #   * DHCPv4 enabled with DHCPv6/Autoconf enabled.
+                return (
+                    NM.DeviceState.IP_CONFIG
+                    <= self._nm_dev.get_state()
+                    <= NM.DeviceState.ACTIVATED
+                )
+
+        return False
+
+    def _is_activating(self):
+        if not self._nm_ac or not self._nm_dev:
+            return True
+        if (
+            self._nm_dev.get_state_reason()
+            == NM.DeviceStateReason.NEW_ACTIVATION
+        ):
+            return True
+
+        return (
+            self._nm_ac.get_state() == NM.ActiveConnectionState.ACTIVATING
+            and not self._is_activated()
+        )
+
+    def _remove_dev_handlers(self):
+        for handler_id in self._dev_handlers:
+            self._nm_dev.handler_disconnect(handler_id)
+        self._dev_handlers = set()
+
+    def _remove_ac_handlers(self):
+        for handler_id in self._ac_handlers:
+            self._nm_ac.handler_disconnect(handler_id)
+        self._ac_handlers = set()
+
+    def _add_connection2_callback(self, src_object, result, user_data):
+        action = user_data
         try:
             profile = src_object.add_connection2_finish(result)[0]
         except Exception as e:
-            if mainloop.is_action_canceled(e):
-                logging.debug("Connection adding canceled: error=%s", e)
-            else:
-                mainloop.quit("Connection adding failed: error={}".format(e))
-            return
-
-        if profile is None:
-            mainloop.quit("Connection adding failed: error=unknown")
-        else:
-            devname = profile.get_interface_name()
-            logging.debug("Connection adding succeeded: dev=%s", devname)
-            mainloop.execute_next_action()
-
-    @staticmethod
-    def _update2_callback(src_object, result, user_data):
-        mainloop, con_profile = user_data
-        devname = con_profile.profile.get_interface_name()
-        try:
-            ret = src_object.update2_finish(result)
-        except Exception as e:
-            if mainloop.is_action_canceled(e):
-                logging.debug(
-                    "Connection update canceled: dev=%s, error=%s", devname, e
-                )
-            else:
-                mainloop.quit(
-                    "Connection update failed: dev={} error={}".format(
-                        devname, e
-                    )
-                )
-            return
-
-        if ret is None:
-            mainloop.quit(
-                "Connection update failed: dev={} unknown error".format(
-                    devname
-                )
+            self._ctx.fail(
+                NmstateLibnmError(f"{action} failed with error: {e}")
             )
             return
 
-        logging.debug("Connection update succeeded: dev=%s", devname)
-        mainloop.execute_next_action()
+        if profile is None:
+            self._ctx.fail(
+                NmstateLibnmError(
+                    f"{action} failed with error: 'None returned from "
+                    "add_connection2_finish()"
+                )
+            )
+        else:
+            self._ctx.finish_async(action)
+
+    def _update2_callback(self, src_object, result, user_data):
+        action = user_data
+        try:
+            ret = src_object.update2_finish(result)
+        except Exception as e:
+            self._ctx.fail(
+                NmstateLibnmError(f"{action} failed with error={e}")
+            )
+            return
+        if ret is None:
+            self._ctx.fail(
+                NmstateLibnmError(
+                    f"{action} failed with error='None returned from "
+                    "update2_finish()'"
+                )
+            )
+        else:
+            self._ctx.finish_async(action)
 
     def _delete_connection_callback(self, src_object, result, user_data):
+        action = user_data
         try:
             success = src_object.delete_finish(result)
         except Exception as e:
-            if self.nmdevice:
-                target = "dev/" + str(self.nmdevice.get_iface())
-            else:
-                target = "con/" + str(self.con_id)
-
-            if self._mainloop.is_action_canceled(e):
-                logging.debug(
-                    "Connection deletion aborted on %s: error=%s", target, e
-                )
-            else:
-                self._mainloop.quit(
-                    "Connection deletion failed on {}: error={}".format(
-                        target, e
-                    )
-                )
+            self._ctx.fail(NmstateLibnmError(f"{action} failed: error={e}"))
             return
 
-        devname = src_object.get_interface_name()
         if success:
-            logging.debug("Connection deletion succeeded: dev=%s", devname)
-            self._mainloop.execute_next_action()
+            self._ctx.finish_async(action)
         else:
-            self._mainloop.quit(
-                "Connection deletion failed: "
-                "dev={}, error=unknown".format(devname)
+            self._ctx.fail(
+                NmstateLibnmError(
+                    f"{action} failed: "
+                    "error='None returned from delete_finish()'"
+                )
             )
 
     def _reset_profile(self):
@@ -451,14 +468,14 @@ def get_device_active_connection(nm_device):
     return active_conn
 
 
-def delete_iface_inactive_connections(nm_client, ifname):
-    for con in list_connections_by_ifname(nm_client, ifname):
+def delete_iface_inactive_connections(context, ifname):
+    for con in list_connections_by_ifname(context, ifname):
         con.delete()
 
 
-def list_connections_by_ifname(nm_client, ifname):
+def list_connections_by_ifname(context, ifname):
     return [
-        ConnectionProfile(nm_client, profile=con)
-        for con in nm_client.get_connections()
+        ConnectionProfile(context, profile=con)
+        for con in context.client.get_connections()
         if con.get_interface_name() == ifname
     ]

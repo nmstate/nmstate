@@ -19,8 +19,8 @@
 
 import copy
 
-from . import nmclient
 
+from .common import NM
 
 IFACE_TYPE_UNKNOWN = "unknown"
 
@@ -41,21 +41,19 @@ class Api2Nm:
     def get_iface_type_map():
         if Api2Nm._iface_types_map is None:
             Api2Nm._iface_types_map = {
-                "ethernet": nmclient.NM.SETTING_WIRED_SETTING_NAME,
-                "bond": nmclient.NM.SETTING_BOND_SETTING_NAME,
-                "dummy": nmclient.NM.SETTING_DUMMY_SETTING_NAME,
-                "team": nmclient.NM.SETTING_TEAM_SETTING_NAME,
-                "vlan": nmclient.NM.SETTING_VLAN_SETTING_NAME,
-                "vxlan": nmclient.NM.SETTING_VXLAN_SETTING_NAME,
-                "linux-bridge": nmclient.NM.SETTING_BRIDGE_SETTING_NAME,
+                "ethernet": NM.SETTING_WIRED_SETTING_NAME,
+                "bond": NM.SETTING_BOND_SETTING_NAME,
+                "dummy": NM.SETTING_DUMMY_SETTING_NAME,
+                "team": NM.SETTING_TEAM_SETTING_NAME,
+                "vlan": NM.SETTING_VLAN_SETTING_NAME,
+                "vxlan": NM.SETTING_VXLAN_SETTING_NAME,
+                "linux-bridge": NM.SETTING_BRIDGE_SETTING_NAME,
             }
             try:
                 ovs_types = {
-                    "ovs-bridge": nmclient.NM.SETTING_OVS_BRIDGE_SETTING_NAME,
-                    "ovs-port": nmclient.NM.SETTING_OVS_PORT_SETTING_NAME,
-                    "ovs-interface": (
-                        nmclient.NM.SETTING_OVS_INTERFACE_SETTING_NAME
-                    ),
+                    "ovs-bridge": NM.SETTING_OVS_BRIDGE_SETTING_NAME,
+                    "ovs-port": NM.SETTING_OVS_PORT_SETTING_NAME,
+                    "ovs-interface": (NM.SETTING_OVS_INTERFACE_SETTING_NAME),
                 }
                 Api2Nm._iface_types_map.update(ovs_types)
             except AttributeError:
@@ -118,11 +116,7 @@ class Nm2Api:
 
     @staticmethod
     def get_iface_admin_state(dev_state):
-        if (
-            nmclient.NM.DeviceState.IP_CONFIG
-            <= dev_state
-            <= nmclient.NM.DeviceState.ACTIVATED
-        ):
+        if NM.DeviceState.IP_CONFIG <= dev_state <= NM.DeviceState.ACTIVATED:
             return ApiIfaceAdminState.UP
         return ApiIfaceAdminState.DOWN
 

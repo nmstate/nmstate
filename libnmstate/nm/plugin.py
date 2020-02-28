@@ -47,18 +47,22 @@ class NetworkManagerPlugin:
     def __init__(self):
         self._ctx = NmContext()
         self._iface_plugins = [
-            NmOvsIfacePlugin(self.client),
-            NmTeamIfacePlugin(self.client),
+            NmOvsIfacePlugin(self.context),
+            NmTeamIfacePlugin(self.context),
         ]
         self._capabilites = []
         self._quiting = False
+        self._checkpoint = None
         for iface_plugins in self._iface_plugins:
             self._capabilites.extend(iface_plugins.capabilities)
-        self._checkpoint = None
 
     @property
     def client(self):
         return self._ctx.client if self._ctx else None
+
+    @property
+    def context(self):
+        return self._ctx
 
     @property
     def capabilities(self):
@@ -88,10 +92,10 @@ class NetworkManagerPlugin:
             iface_info[Interface.IPV4] = nm_ipv4.get_info(act_con)
             iface_info[Interface.IPV6] = nm_ipv6.get_info(act_con)
             iface_info.update(nm_wired.get_info(dev))
-            iface_info.update(nm_user.get_info(self.client, dev))
+            iface_info.update(nm_user.get_info(self.context, dev))
             iface_info.update(nm_vlan.get_info(dev))
             iface_info.update(nm_vxlan.get_info(dev))
-            iface_info.update(nm_bridge.get_info(self.client, dev))
+            iface_info.update(nm_bridge.get_info(self.context, dev))
             iface_info.update(nm_team.get_info(dev))
 
             if nm_bond.is_bond_type_id(type_id):
@@ -100,7 +104,7 @@ class NetworkManagerPlugin:
             elif nm_ovs.CAPABILITY in self.capabilities:
                 if nm_ovs.is_ovs_bridge_type_id(type_id):
                     iface_info["bridge"] = nm_ovs.get_ovs_info(
-                        self.client, dev, devices_info
+                        self.context, dev, devices_info
                     )
                     iface_info = _remove_ovs_bridge_unsupported_entries(
                         iface_info

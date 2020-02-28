@@ -19,151 +19,134 @@
 
 import logging
 
+from libnmstate.error import NmstateLibnmError
+
 from . import active_connection as ac
 from . import connection
-from .nmclient import glib_mainloop
 
 
-def activate(nm_client, dev=None, connection_id=None):
+def activate(context, dev=None, connection_id=None):
     """Activate the given device or remote connection profile."""
-    conn = connection.ConnectionProfile(nm_client)
+    conn = connection.ConnectionProfile(context)
     conn.nmdevice = dev
     conn.con_id = connection_id
     conn.activate()
 
 
-def deactivate(nm_client, dev):
+def deactivate(context, dev):
     """
     Deactivating the current active connection,
     The profile itself is not removed.
 
     For software devices, deactivation removes the devices from the kernel.
     """
-    act_con = ac.ActiveConnection(nm_client)
+    act_con = ac.ActiveConnection(context)
     act_con.nmdevice = dev
     act_con.deactivate()
 
 
-def delete(nm_client, dev):
+def delete(context, dev):
     connections = dev.get_available_connections()
     for con in connections:
-        con_profile = connection.ConnectionProfile(nm_client, con)
+        con_profile = connection.ConnectionProfile(context, con)
         con_profile.delete()
 
 
-def modify(nm_client, dev, connection_profile):
+def modify(context, dev, connection_profile):
     """
     Modify the given connection profile on the device.
     Implemented by the reapply operation with a fallback to the
     connection profile activation.
     """
-    mainloop = glib_mainloop()
-    mainloop.push_action(
-        _safe_modify_async, nm_client, dev, connection_profile
-    )
-
-
-def _safe_modify_async(nm_client, dev, connection_profile):
-    mainloop = glib_mainloop()
-    cancellable = mainloop.new_cancellable()
-
     version_id = 0
     flags = 0
-    user_data = nm_client, mainloop, dev, cancellable
+    action = f"Reapply device config: {dev.get_iface()}"
+    context.register_async(action)
+    user_data = context, dev, action
     dev.reapply_async(
         connection_profile,
         version_id,
         flags,
-        cancellable,
+        context.cancellable,
         _modify_callback,
         user_data,
     )
 
 
 def _modify_callback(src_object, result, user_data):
-    nm_client, mainloop, nmdev, cancellable = user_data
-    mainloop.drop_cancellable(cancellable)
+    context, nmdev, action = user_data
 
     devname = src_object.get_iface()
     try:
         success = src_object.reapply_finish(result)
     except Exception as e:
-        if mainloop.is_action_canceled(e):
-            logging.debug("Device reapply aborted on %s: error=%s", devname, e)
-        else:
-            logging.debug(
-                "Device reapply failed on %s: error=%s\n"
-                "Fallback to device activation",
-                devname,
-                e,
-            )
-            _activate_async(nm_client, src_object)
+        logging.debug(
+            "Device reapply failed on %s: error=%s\n"
+            "Fallback to device activation",
+            devname,
+            e,
+        )
+        context.finish_async(action, suppress_log=True)
+        _activate_async(context, src_object)
         return
 
     if success:
-        logging.debug("Device reapply succeeded: dev=%s", devname)
-        mainloop.execute_next_action()
+        context.finish_async(action)
     else:
         logging.debug(
             "Device reapply failed, fallback to device activation: dev=%s, "
-            "error=unknown",
+            "error='None returned from reapply_finish()'",
             devname,
         )
-        _activate_async(nm_client, src_object)
+        context.finish_async(action, suppress_log=True)
+        _activate_async(context, src_object)
 
 
-def _activate_async(nm_client, dev):
-    conn = connection.ConnectionProfile(nm_client)
+def _activate_async(context, dev):
+    conn = connection.ConnectionProfile(context)
     conn.nmdevice = dev
     if dev:
         # Workaround of https://bugzilla.redhat.com/show_bug.cgi?id=1772470
         dev.set_managed(True)
-    conn.safe_activate_async()
+    conn.activate()
 
 
-def delete_device(_nmclient, nmdev):
-    mainloop = glib_mainloop()
-    mainloop.push_action(_safe_delete_device_async, nmdev)
-
-
-def _safe_delete_device_async(nmdev):
-    mainloop = glib_mainloop()
-    user_data = mainloop, nmdev, nmdev.get_iface()
-    nmdev.delete_async(
-        mainloop.cancellable, _delete_device_callback, user_data
-    )
+def delete_device(context, nmdev):
+    action = f"Delete device: {nmdev.get_iface()}"
+    user_data = context, nmdev, action
+    context.register_async(action)
+    nmdev.delete_async(context.cancellable, _delete_device_callback, user_data)
 
 
 def _delete_device_callback(src_object, result, user_data):
-    mainloop, nmdev, iface = user_data
+    context, nmdev, action = user_data
     error = None
     try:
         src_object.delete_finish(result)
     except Exception as e:
-        error = e
-        if mainloop.is_action_canceled(error):
-            logging.debug(
-                "Device deletion aborted on %s: error=%s", iface, error
-            )
-            return
+        context.fail(NmstateLibnmError(f"{action} failed: error={e}"))
+        return
 
     if not nmdev.is_real():
-        logging.debug("Interface is not real anymore: iface=%s", iface)
+        logging.debug(
+            "Interface is not real anymore: iface=%s", nmdev.get_iface()
+        )
         if error:
             logging.debug(
                 "Ignored error: %s", error,
             )
-
-        mainloop.execute_next_action()
+        context.finish_async(action)
     else:
-        mainloop.quit(
-            f"Device deletion failed on {iface} ({nmdev.get_path()}): "
-            f"error={error or 'unknown'}"
+        context.fail(
+            NmstateLibnmError(
+                f"{action} failed: "
+                f"error='Device still exists at {nmdev.get_path}'"
+            )
         )
 
 
-def get_device_by_name(nm_client, devname):
-    return nm_client.get_device_by_iface(devname)
+def get_device_by_name(client, devname):
+    return client.get_device_by_iface(devname)
 
 
 def list_devices(client):

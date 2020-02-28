@@ -75,8 +75,8 @@ class _NMDbusManager:
         self.interface = dbus.Interface(mng_proxy, _NMDbusManager.IF_NAME)
 
 
-def get_checkpoints(nm_client):
-    checkpoints = [c.get_path() for c in nm_client.get_checkpoints()]
+def get_checkpoints(context):
+    checkpoints = [c.get_path() for c in context.get_checkpoints()]
     return checkpoints
 
 

@@ -53,9 +53,7 @@ def get_running(acs_and_ip_cfgs):
     for (active_connection, ip_cfg) in acs_and_ip_cfgs:
         if not ip_cfg.props.routes:
             continue
-        iface_name = nm_ac.ActiveConnection(
-            active_connection=active_connection
-        ).devname
+        iface_name = nm_ac.ActiveConnection(ac=active_connection).devname
         if not iface_name:
             raise NmstateInternalError(
                 "Got connection {} has not interface name".format(
@@ -89,9 +87,7 @@ def get_config(acs_and_ip_profiles):
         gateway = ip_profile.props.gateway
         if not nm_routes and not gateway:
             continue
-        iface_name = nm_ac.ActiveConnection(
-            active_connection=active_connection
-        ).devname
+        iface_name = nm_ac.ActiveConnection(ac=active_connection).devname
         if not iface_name:
             raise NmstateInternalError(
                 "Got connection {} has not interface name".format(

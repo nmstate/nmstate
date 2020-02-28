@@ -63,14 +63,14 @@ SRIOV_NMSTATE_TO_REGEX = {
 }
 
 
-def create_setting(nm_client, iface_state, base_con_profile):
+def create_setting(context, iface_state, base_con_profile):
     sriov_setting = None
     ifname = iface_state[Interface.NAME]
     sriov_config = iface_state.get(Ethernet.CONFIG_SUBTREE, {}).get(
         Ethernet.SRIOV_SUBTREE
     )
     if sriov_config:
-        if not _has_sriov_capability(nm_client, ifname):
+        if not _has_sriov_capability(context, ifname):
             raise NmstateNotSupportedError(
                 f"Interface '{ifname}' does not support SR-IOV"
             )
@@ -129,8 +129,8 @@ def _remove_sriov_vfs_in_setting(vfs_config, sriov_setting, vf_ids_to_remove):
         yield vf_id
 
 
-def _has_sriov_capability(nm_client, ifname):
-    dev = device.get_device_by_name(nm_client, ifname)
+def _has_sriov_capability(context, ifname):
+    dev = device.get_device_by_name(context.client, ifname)
     if NM.DeviceCapabilities.SRIOV & dev.props.capabilities:
         return True
 

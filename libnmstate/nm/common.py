@@ -26,20 +26,25 @@ except ValueError:
     NM = None
 
 from gi.repository import GLib
+from gi.repository import Gio
 from gi.repository import GObject
 
 
 class NmIfacePlugin:
-    def __init__(self, nm_client):
-        self._cli = nm_client
+    def __init__(self, context):
+        self._ctx = context
+
+    @property
+    def context(self):
+        return self._ctx
 
     @property
     def client(self):
-        return self._cli
+        return self._ctx.client
 
     @property
     def capabilities(self):
         return []
 
 
-__all__ = ["NM", "GLib", "GObject", "NmIfacePlugin"]
+__all__ = ["NM", "GLib", "GObject", "Gio", "NmIfacePlugin"]
