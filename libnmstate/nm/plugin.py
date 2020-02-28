@@ -64,6 +64,9 @@ class NetworkManagerPlugin:
     def context(self):
         return self._ctx
 
+    def refresh_cache(self):
+        self._ctx.refresh_cache()
+
     @property
     def capabilities(self):
         return self._capabilites

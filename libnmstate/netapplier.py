@@ -31,11 +31,15 @@ from libnmstate.error import NmstateConflictError
 from libnmstate.error import NmstateLibnmError
 from libnmstate.error import NmstatePermissionError
 from libnmstate.error import NmstateValueError
+from libnmstate.error import NmstateVerificationError
 from libnmstate.nm import NetworkManagerPlugin
 
 from .nmstate import show_with_plugin
 
 MAINLOOP_TIMEOUT = 35
+
+VERIFICAITON_RETRY_COUNT = 5
+VERIFICAITON_RETRY_INTERVAL = 1
 
 
 @_warn_keyword_as_positional
@@ -141,11 +145,18 @@ def _apply_ifaces_state(nm_plugin, desired_state, verify_change):
 
     state2edit = state.State(desired_state.state)
     state2edit.merge_interfaces(current_state)
-    nm.applier.apply_changes(
-        nm_plugin, list(state2edit.interfaces.values())
-    )
+    nm.applier.apply_changes(nm_plugin, list(state2edit.interfaces.values()))
     if verify_change:
-        _verify_change(nm_plugin, desired_state)
+        original_desired_state = copy.deepcopy(desired_state)
+        for i in range(0, VERIFICAITON_RETRY_COUNT):
+            try:
+                _verify_change(nm_plugin, original_desired_state)
+                break
+            except NmstateVerificationError as error:
+                if i == VERIFICAITON_RETRY_COUNT - 1:
+                    raise error
+            time.sleep(VERIFICAITON_RETRY_INTERVAL)
+            nm_plugin.refresh_cache()
 
 
 def _verify_change(nm_plugin, desired_state):

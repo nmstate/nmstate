@@ -131,6 +131,7 @@ class ActiveConnection:
         assert self._nmdev is None
         self._nmdev = nmdev
 
+
 def _is_device_master_type(nmdev):
     if nmdev:
         gobject = GObject

@@ -54,6 +54,10 @@ class NmContext:
             logging.error("BUG: Accessing NM.Client when it is cleaning up")
         return self._cli
 
+    def refresh_cache(self):
+        while self.context.iteration(False):
+            pass
+
     @property
     def context(self):
         if not self._context:
