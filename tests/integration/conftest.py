@@ -33,18 +33,6 @@ OS: {osname}
 nmstate: {nmstate_version}
 """
 
-data_path = "failures.log" # name of file containing details of errors
-
-@pytest.hookimpl(tryfirst = True, hookwrapper = True)
-def pytest_runtest_makereport(item, call):
-    outcome = yield
-    rep = outcome.get_result()
-    print(os.path)
-    if rep.when == "call" and rep.failed:
-        mode = "a" if os.path.exists(data_path) else "w"
-        with open(data_path, mode) as f:
-            f.write(rep.longreprtext + "\n")
-
 
 data_path = "failures.log"   # name of file containing details of errors
 
