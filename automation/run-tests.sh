@@ -143,6 +143,12 @@ function collect_artifacts {
       journalctl > "$CONT_EXPORT_DIR/journal.log" && \
       dmesg > "$CONT_EXPORT_DIR/dmesg.log" || true
     "
+    # collect failures.log
+    container_exec "
+    if [ -f failures.log ]; then
+      mv failures.log $CONT_EXPORT_DIR
+    fi
+    "
 }
 
 function write_separator {
