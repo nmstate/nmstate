@@ -38,12 +38,14 @@ from .testlib.bridgelib import generate_vlan_filtering_config
 from .testlib.bridgelib import generate_vlan_id_config
 from .testlib.bridgelib import generate_vlan_id_range_config
 from .testlib.bridgelib import linux_bridge
+from .testlib.cmdlib import exec_cmd
 from .testlib.ifacelib import get_mac_address
 from .testlib.iproutelib import ip_monitor_assert_stable_link_up
 from .testlib.statelib import show_only
 from .testlib.assertlib import assert_mac_address
 from .testlib.vlan import vlan_interface
 from .testlib.env import is_fedora
+
 
 TEST_BRIDGE0 = "linux-br0"
 
@@ -535,6 +537,38 @@ class TestVlanFiltering:
             TEST_BRIDGE0, bridge_config_subtree
         ) as desired_state:
             assertlib.assert_state_match(desired_state)
+
+
+@pytest.fixture
+def bridge_unmanaged_port():
+    bridge_config = _create_bridge_subtree_config([])
+    with linux_bridge(TEST_BRIDGE0, bridge_config):
+        with dummy0_as_slave(TEST_BRIDGE0):
+            current_state = show_only((TEST_BRIDGE0,))
+            yield current_state
+
+
+def test_bridge_with_unmanaged_ports(bridge_unmanaged_port):
+    bridge_state = bridge_unmanaged_port[Interface.KEY][0]
+    port_subtree = bridge_state[LinuxBridge.CONFIG_SUBTREE][
+        LinuxBridge.PORT_SUBTREE
+    ]
+
+    assert port_subtree[0][LinuxBridge.Port.NAME] == "dummy0"
+
+
+@contextmanager
+def dummy0_as_slave(master):
+    exec_cmd(("ip", "link", "add", "dummy0", "type", "dummy"), check=True)
+    try:
+        exec_cmd(("ip", "link", "set", "dummy0", "up"), check=True)
+        exec_cmd(
+            ("nmcli", "dev", "set", "dummy0", "managed", "no"), check=True
+        )
+        exec_cmd(("ip", "link", "set", "dummy0", "master", master), check=True)
+        yield
+    finally:
+        exec_cmd(("ip", "link", "delete", "dummy0"))
 
 
 def _add_port_to_bridge(bridge_state, ifname):

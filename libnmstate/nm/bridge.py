@@ -17,6 +17,9 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
+import glob
+import os
+
 from libnmstate.nm import connection
 from libnmstate.nm import nmclient
 from libnmstate.nm.bridge_port_vlan import PortVlanFilter
@@ -24,6 +27,12 @@ from libnmstate.schema import LinuxBridge as LB
 
 
 BRIDGE_TYPE = "bridge"
+
+BRIDGE_PORT_NMSTATE_TO_SYSFS = {
+    LB.Port.STP_HAIRPIN_MODE: "hairpin_mode",
+    LB.Port.STP_PATH_COST: "path_cost",
+    LB.Port.STP_PRIORITY: "priority",
+}
 
 
 def create_setting(bridge_state, base_con_profile):
@@ -129,11 +138,13 @@ def get_info(nmdev):
     if not bridge_setting:
         return info
 
-    port_profiles = _get_slave_profiles(nmdev)
+    port_profiles_by_name = _get_slave_profiles_by_name(nmdev)
+    port_names_sysfs = _get_slaves_names_from_sysfs(nmdev.get_iface())
     props = bridge_setting.props
     info[LB.CONFIG_SUBTREE] = {
         LB.PORT_SUBTREE: _get_bridge_ports_info(
-            port_profiles,
+            port_profiles_by_name,
+            port_names_sysfs,
             vlan_filtering_enabled=bridge_setting.get_vlan_filtering(),
         ),
         LB.OPTIONS_SUBTREE: {
@@ -165,36 +176,57 @@ def _get_bridge_setting(nmdev):
     return bridge_setting
 
 
-def _get_bridge_ports_info(port_profiles, vlan_filtering_enabled=False):
-    ports_info = []
-    for p in port_profiles:
-        port_info = _get_bridge_port_info(p)
+def _get_bridge_ports_info(
+    port_profiles_by_name, port_names_sysfs, vlan_filtering_enabled=False
+):
+    ports_info_by_name = {
+        name: _get_bridge_port_info(name) for name in port_names_sysfs
+    }
+
+    for name, p in port_profiles_by_name.items():
+        port_info = ports_info_by_name.get(name, {})
         if port_info:
             if vlan_filtering_enabled:
                 bridge_vlan_config = p.get_setting_bridge_port().props.vlans
                 port_vlan = PortVlanFilter()
                 port_vlan.import_from_bridge_settings(bridge_vlan_config)
                 port_info[LB.Port.VLAN_SUBTREE] = port_vlan.to_dict()
-            ports_info.append(port_info)
-    return ports_info
+    return list(ports_info_by_name.values())
 
 
-def _get_bridge_port_info(port_profile):
-    """Report port information."""
-
-    port_setting = port_profile.get_setting_bridge_port()
-    return {
-        LB.Port.NAME: port_profile.get_interface_name(),
-        LB.Port.STP_PRIORITY: port_setting.props.priority,
-        LB.Port.STP_HAIRPIN_MODE: port_setting.props.hairpin_mode,
-        LB.Port.STP_PATH_COST: port_setting.props.path_cost,
-    }
-
-
-def _get_slave_profiles(master_device):
-    slave_profiles = []
+def _get_slave_profiles_by_name(master_device):
+    slaves_profiles_by_name = {}
     for dev in master_device.get_slaves():
         active_con = connection.get_device_active_connection(dev)
         if active_con:
-            slave_profiles.append(active_con.props.connection)
-    return slave_profiles
+            slaves_profiles_by_name[
+                dev.get_iface()
+            ] = active_con.props.connection
+    return slaves_profiles_by_name
+
+
+def _get_bridge_port_info(port_name):
+    """Report port runtime information from sysfs."""
+    port = {LB.Port.NAME: port_name}
+    for option, option_sysfs in BRIDGE_PORT_NMSTATE_TO_SYSFS.items():
+        sysfs_path = f"/sys/class/net/{port_name}/brport/{option_sysfs}"
+        with open(sysfs_path) as f:
+            option_value = int(f.read())
+            if option == LB.Port.STP_HAIRPIN_MODE:
+                option_value = bool(option_value)
+        port[option] = option_value
+    return port
+
+
+def _get_slaves_names_from_sysfs(master):
+    """
+    We need to use glob in order to get the slaves name due to bug in
+    NetworkManager.
+    Ref: https://bugzilla.redhat.com/show_bug.cgi?id=1809547
+    """
+    slaves = []
+    for sysfs_slave in glob.iglob(f"/sys/class/net/{master}/lower_*"):
+        # The format is lower_<iface>, we need to remove the "lower_" prefix
+        prefix_length = len("lower_")
+        slaves.append(os.path.basename(sysfs_slave)[prefix_length:])
+    return slaves
