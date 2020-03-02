@@ -86,7 +86,7 @@ class ActiveConnection:
             if self._mainloop.is_action_canceled(e):
                 logging.debug(
                     "Connection deactivation aborted on %s: error=%s",
-                    self._nmdev.get_iface(),
+                    self.devname,
                     e,
                 )
             else:
@@ -105,20 +105,19 @@ class ActiveConnection:
                 else:
                     self._mainloop.quit(
                         "Connection deactivation failed on {}: "
-                        "error={}".format(self._nmdev.get_iface(), e)
+                        "error={}".format(self.devname, e)
                     )
                     return
 
         if success:
             logging.debug(
-                "Connection deactivation succeeded on %s",
-                self._nmdev.get_iface(),
+                "Connection deactivation succeeded on %s", self.devname,
             )
             self._mainloop.execute_next_action()
         else:
             self._mainloop.quit(
                 "Connection deactivation failed on %s: error=unknown"
-                % self._nmdev.get_iface()
+                % self.devname
             )
 
     @property
