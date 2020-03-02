@@ -30,6 +30,7 @@ from libnmstate.error import NmstateNotSupportedError
 from libnmstate.schema import DNS
 
 
+@pytest.mark.tier1
 def test_add_down_remove_vlan(eth1_up):
     """
     Test adding, downing and removing a vlan
@@ -46,6 +47,7 @@ def test_add_down_remove_vlan(eth1_up):
     assertlib.assert_absent(vlan_ifname)
 
 
+@pytest.mark.tier1
 @pytest.mark.xfail(
     raises=NmstateLibnmError, reason="https://bugzilla.redhat.com/1724901"
 )
@@ -58,6 +60,7 @@ def test_add_remove_ovs_bridge(eth1_up):
     assertlib.assert_absent("ovs-br0")
 
 
+@pytest.mark.tier1
 def test_add_remove_ovs_bridge_bond(eth1_up, eth2_up):
     with example_state(
         "ovsbridge_bond_create.yml", cleanup="ovsbridge_delete.yml"
@@ -68,6 +71,7 @@ def test_add_remove_ovs_bridge_bond(eth1_up, eth2_up):
     assertlib.assert_absent("ovs-bond1")
 
 
+@pytest.mark.tier1
 def test_add_remove_ovs_bridge_vlan(eth1_up, eth2_up):
     with example_state(
         "ovsbridge_vlan_port.yml", cleanup="ovsbridge_delete.yml"
@@ -77,6 +81,7 @@ def test_add_remove_ovs_bridge_vlan(eth1_up, eth2_up):
     assertlib.assert_absent("ovs-br0")
 
 
+@pytest.mark.tier1
 def test_add_remove_linux_bridge(eth1_up):
     with example_state(
         "linuxbrige_eth1_up.yml", cleanup="linuxbrige_eth1_absent.yml"
@@ -86,6 +91,7 @@ def test_add_remove_linux_bridge(eth1_up):
     assertlib.assert_absent("linux-br0")
 
 
+@pytest.mark.tier1
 def test_bond_linuxbridge_vlan(eth1_up, eth2_up):
     with example_state(
         "bond_linuxbridge_vlan_up.yml",
@@ -99,6 +105,7 @@ def test_bond_linuxbridge_vlan(eth1_up, eth2_up):
     assertlib.assert_absent("vlan29")
 
 
+@pytest.mark.tier1
 def test_dns_edit(eth1_up):
     with example_state(
         "dns_edit_eth1.yml", cleanup="dns_remove.yml"
@@ -112,6 +119,7 @@ def test_dns_edit(eth1_up):
     }
 
 
+@pytest.mark.tier1
 def test_add_remove_routes(eth1_up):
     """
     Test adding a strict route and removing all routes next hop to eth1.
@@ -124,6 +132,7 @@ def test_add_remove_routes(eth1_up):
     assertlib.assert_no_config_route_to_iface("eth1")
 
 
+@pytest.mark.tier1
 @pytest.mark.skipif(
     os.environ.get("CI") == "true",
     reason="Team kmod not available in Travis CI",

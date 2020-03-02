@@ -52,6 +52,7 @@ def test_add_and_remove_vxlan(eth1_up):
     assertlib.assert_absent(vxlan1_ifname)
 
 
+@pytest.mark.tier1
 def test_add_and_remove_two_vxlans_on_same_iface(eth1_up):
     ifname = eth1_up[Interface.KEY][0][Interface.NAME]
     with vxlan_interfaces(
@@ -66,6 +67,7 @@ def test_add_and_remove_two_vxlans_on_same_iface(eth1_up):
     assertlib.assert_absent(vxlan_interfaces_name)
 
 
+@pytest.mark.tier1
 def test_rollback_for_vxlans(eth1_up):
     ifname = eth1_up[Interface.KEY][0][Interface.NAME]
     current_state = libnmstate.show()

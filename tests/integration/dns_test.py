@@ -57,6 +57,7 @@ def dns_test_env(eth1_up, eth2_up):
     netapplier.apply(desired_state)
 
 
+@pytest.mark.tier1
 @parametrize_ip_ver
 def test_dns_edit_nameserver_with_static_gateway(dns_config):
     desired_state = {
@@ -84,6 +85,7 @@ def test_dns_edit_ipv4_nameserver_before_ipv6():
     assert dns_config == current_state[DNS.KEY][DNS.CONFIG]
 
 
+@pytest.mark.tier1
 def test_dns_edit_ipv6_nameserver_before_ipv4():
     dns_config = {
         DNS.SERVER: [IPV6_DNS_NAMESERVERS[0], IPV4_DNS_NAMESERVERS[0]],
@@ -119,6 +121,7 @@ def test_dns_edit_three_nameservers():
     assert dns_config == current_state[DNS.KEY][DNS.CONFIG]
 
 
+@pytest.mark.tier1
 def test_remove_dns_config():
     dns_config = {
         DNS.SERVER: [IPV6_DNS_NAMESERVERS[0], IPV4_DNS_NAMESERVERS[0]],

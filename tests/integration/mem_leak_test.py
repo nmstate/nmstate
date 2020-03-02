@@ -17,15 +17,19 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
-import libnmstate
 import os
 import time
+
+import pytest
+
+import libnmstate
 
 
 def get_current_open_fd():
     return len(os.listdir("/proc/self/fd"))
 
 
+@pytest.mark.tier1
 def test_libnmstate_show_fd_leak():
     original_fd = get_current_open_fd()
     for x in range(0, 100):

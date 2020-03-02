@@ -125,6 +125,7 @@ def test_add_static_ipv4_with_full_state(eth1_up):
     assertlib.assert_state(desired_state)
 
 
+@pytest.mark.tier1
 def test_add_static_ipv4_with_min_state(eth2_up):
     desired_state = {
         Interface.KEY: [
@@ -149,6 +150,7 @@ def test_add_static_ipv4_with_min_state(eth2_up):
     assertlib.assert_state(desired_state)
 
 
+@pytest.mark.tier1
 def test_remove_static_ipv4(setup_eth1_ipv4):
     desired_state = {
         Interface.KEY: [
@@ -165,6 +167,7 @@ def test_remove_static_ipv4(setup_eth1_ipv4):
     assertlib.assert_state(desired_state)
 
 
+@pytest.mark.tier1
 def test_edit_static_ipv4_address_and_prefix(setup_eth1_ipv4):
     desired_state = {
         Interface.KEY: [
@@ -231,6 +234,7 @@ def test_add_ifaces_with_same_static_ipv4_address_in_one_transaction(
     assertlib.assert_state(desired_state)
 
 
+@pytest.mark.tier1
 def test_add_iface_with_same_static_ipv4_address_to_existing(
     setup_eth1_ipv4, eth2_up
 ):
@@ -257,6 +261,7 @@ def test_add_iface_with_same_static_ipv4_address_to_existing(
     assertlib.assert_state(desired_state)
 
 
+@pytest.mark.tier1
 def test_add_static_ipv6_with_full_state(eth1_up):
     desired_state = statelib.show_only(("eth1",))
     eth1_desired_state = desired_state[Interface.KEY][0]
@@ -339,6 +344,7 @@ def test_add_static_ipv6_with_link_local_only(eth1_up):
     )
 
 
+@pytest.mark.tier1
 def test_add_static_ipv6_with_no_address(eth1_up):
     desired_state = statelib.show_only(("eth1",))
     eth1_desired_state = desired_state[Interface.KEY][0]
@@ -377,6 +383,7 @@ def test_add_static_ipv6_with_min_state(eth2_up):
     assertlib.assert_state(desired_state)
 
 
+@pytest.mark.tier1
 def test_disable_static_ipv6(setup_eth1_ipv6):
     desired_state = {
         Interface.KEY: [
@@ -393,6 +400,7 @@ def test_disable_static_ipv6(setup_eth1_ipv6):
     assertlib.assert_state(desired_state)
 
 
+@pytest.mark.tier1
 def test_disable_static_ipv6_and_rollback(setup_eth1_ipv6):
     desired_state = {
         Interface.KEY: [
@@ -411,6 +419,7 @@ def test_disable_static_ipv6_and_rollback(setup_eth1_ipv6):
     assertlib.assert_state(setup_eth1_ipv6)
 
 
+@pytest.mark.tier1
 def test_enable_ipv6_and_rollback_to_disable_ipv6(setup_eth1_ipv6_disable):
     desired_state = {
         Interface.KEY: [
@@ -437,6 +446,7 @@ def test_enable_ipv6_and_rollback_to_disable_ipv6(setup_eth1_ipv6_disable):
     assertlib.assert_state(setup_eth1_ipv6_disable)
 
 
+@pytest.mark.tier1
 def test_edit_static_ipv6_address_and_prefix(setup_eth1_ipv6):
     eth1_setup = setup_eth1_ipv6[Interface.KEY][0]
     desired_state = {
@@ -566,6 +576,7 @@ def test_add_iface_with_static_ipv6_expanded_format(eth1_up):
     assertlib.assert_state(desired_state)
 
 
+@pytest.mark.tier1
 @ip_monitor_assert_stable_link_up("eth1")
 def test_modify_ipv6_with_reapply(setup_eth1_ipv6):
     ipv6_addr = IPV6_ADDRESS2

@@ -29,6 +29,7 @@ from libnmstate.schema import LinuxBridge
 from libnmstate.schema import VLAN
 
 
+@pytest.mark.tier1
 @pytest.mark.slow
 def test_lot_of_vlans_with_bridges(eth1_up):
     interfaces = []

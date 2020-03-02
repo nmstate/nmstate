@@ -45,6 +45,7 @@ def eth1_with_ipv6(eth1_up):
     libnmstate.apply(eth1_up)
 
 
+@pytest.mark.tier1
 def test_increase_iface_mtu():
     desired_state = statelib.show_only(("eth1",))
     eth1_desired_state = desired_state[Interface.KEY][0]
@@ -55,6 +56,7 @@ def test_increase_iface_mtu():
     assertlib.assert_state(desired_state)
 
 
+@pytest.mark.tier1
 def test_decrease_iface_mtu():
     desired_state = statelib.show_only(("eth1",))
     eth1_desired_state = desired_state[Interface.KEY][0]
@@ -65,6 +67,7 @@ def test_decrease_iface_mtu():
     assertlib.assert_state(desired_state)
 
 
+@pytest.mark.tier1
 def test_upper_limit_jambo_iface_mtu():
     desired_state = statelib.show_only(("eth1",))
     eth1_desired_state = desired_state[Interface.KEY][0]
@@ -141,6 +144,7 @@ def test_mtu_without_ipv6(eth1_up):
     assertlib.assert_state(eth1_up)
 
 
+@pytest.mark.tier1
 def test_set_mtu_on_two_vlans_with_a_shared_base(eth1_up):
     base_ifname = eth1_up[Interface.KEY][0][Interface.NAME]
     v101 = vlan_interface("eth1.101", 101, base_ifname)
@@ -161,6 +165,7 @@ def test_set_mtu_on_two_vlans_with_a_shared_base(eth1_up):
         assertlib.assert_state(desired_state)
 
 
+@pytest.mark.tier1
 @ip_monitor_assert_stable_link_up("eth1")
 def test_change_mtu_with_stable_link_up(eth1_up):
     desired_state = statelib.show_only(("eth1",))
