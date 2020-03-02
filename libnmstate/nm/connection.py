@@ -223,7 +223,7 @@ class ConnectionProfile:
             else:
                 self._mainloop.quit(
                     "Connection activation failed on {}: reason={}".format(
-                        ac.devname, ac.reason
+                        devname, ac.reason
                     )
                 )
 
