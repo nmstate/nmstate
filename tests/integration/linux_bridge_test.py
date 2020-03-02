@@ -143,6 +143,7 @@ def test_create_and_remove_linux_bridge_with_one_port(port0_up):
     assert state[Interface.KEY][0][Interface.STATE] == InterfaceState.UP
 
 
+@pytest.mark.tier1
 def test_create_and_remove_linux_bridge_with_two_ports(port0_up, port1_up):
     bridge_name = TEST_BRIDGE0
     port0_name = port0_up[Interface.KEY][0][Interface.NAME]
@@ -155,6 +156,7 @@ def test_create_and_remove_linux_bridge_with_two_ports(port0_up, port1_up):
     assertlib.assert_absent(bridge_name)
 
 
+@pytest.mark.tier1
 def test_remove_bridge_and_keep_slave_up(bridge0_with_port0, port0_up):
     bridge_name = bridge0_with_port0[Interface.KEY][0][Interface.NAME]
     port_name = port0_up[Interface.KEY][0][Interface.NAME]
@@ -187,6 +189,7 @@ def test_remove_bridge_and_keep_slave_up(bridge0_with_port0, port0_up):
     assert 1 == len(current_state[Interface.KEY])
 
 
+@pytest.mark.tier1
 def test_create_vlan_as_slave_of_linux_bridge(port0_vlan101):
     bridge_name = TEST_BRIDGE0
     port_name = port0_vlan101[Interface.KEY][0][Interface.NAME]
@@ -195,6 +198,7 @@ def test_create_vlan_as_slave_of_linux_bridge(port0_vlan101):
         assertlib.assert_state(desired_state)
 
 
+@pytest.mark.tier1
 def test_create_vlan_over_linux_bridge(bridge0_with_port0):
     vlan_base_iface = TEST_BRIDGE0
     vlan_id = 101
@@ -203,6 +207,7 @@ def test_create_vlan_over_linux_bridge(bridge0_with_port0):
         assertlib.assert_state(desired_state)
 
 
+@pytest.mark.tier1
 @ip_monitor_assert_stable_link_up(TEST_BRIDGE0)
 def test_add_port_to_existing_bridge(bridge0_with_port0, port1_up):
     desired_state = bridge0_with_port0
@@ -216,6 +221,7 @@ def test_add_port_to_existing_bridge(bridge0_with_port0, port1_up):
     assertlib.assert_state(desired_state)
 
 
+@pytest.mark.tier1
 @pytest.mark.xfail(
     is_fedora(),
     reason=(
@@ -236,6 +242,7 @@ def test_linux_bridge_uses_the_port_mac_implicitly(
     )
 
 
+@pytest.mark.tier1
 def test_linux_bridge_uses_specified_mac_address(
     port0_up, bridge0_with_port0_with_explicit_port_mac
 ):
@@ -305,6 +312,7 @@ def test_linux_bridge_add_port_with_name_only(bridge0_with_port0, port1_up):
     assertlib.assert_state_match(desired_state)
 
 
+@pytest.mark.tier1
 def test_replace_port_on_linux_bridge(port0_vlan101, port1_up):
     bridge_name = TEST_BRIDGE0
     vlan_port0_name = port0_vlan101[Interface.KEY][0][Interface.NAME]
@@ -360,6 +368,7 @@ def test_rollback_for_linux_bridge():
     assert original_state == current_state
 
 
+@pytest.mark.tier1
 def test_activate_empty_bridge_does_not_blocked_by_dhcp():
     bridge_name = TEST_BRIDGE0
     bridge_state = None

@@ -179,6 +179,7 @@ def iface_with_dynamic_ip_up(ifname):
         )
 
 
+@pytest.mark.tier1
 def test_ipv4_dhcp(dhcpcli_up):
     desired_state = dhcpcli_up
     dhcp_cli_desired_state = desired_state[Interface.KEY][0]
@@ -213,6 +214,7 @@ def test_ipv6_dhcp_only(dhcpcli_up):
     assert not _has_ipv6_auto_extra_route()
 
 
+@pytest.mark.tier1
 def test_ipv6_dhcp_and_autoconf(dhcpcli_up):
     desired_state = dhcpcli_up
     dhcp_cli_desired_state = desired_state[Interface.KEY][0]
@@ -257,6 +259,7 @@ def test_dhcp_with_addresses(dhcpcli_up):
     assertlib.assert_state(desired_state)
 
 
+@pytest.mark.tier1
 def test_ipv4_dhcp_on_bond(dhcpcli_up):
     ipv4_state = {Interface.IPV4: create_ipv4_state(enabled=True, dhcp=True)}
     with bondlib.bond_interface(
@@ -482,6 +485,7 @@ def test_ipv6_dhcp_switch_on_to_off(dhcpcli_up):
     assert not _has_ipv6_auto_nameserver()
 
 
+@pytest.mark.tier1
 def test_dhcp_on_bridge0(dhcpcli_up_with_dynamic_ip):
     """
     Test dynamic IPv4 & IPv6 addresses over a Linux bridge interface.
@@ -530,6 +534,7 @@ def test_dhcp_on_bridge0(dhcpcli_up_with_dynamic_ip):
     assert origin_ipv6_state == new_ipv6_state
 
 
+@pytest.mark.tier1
 def test_slave_ipaddr_learned_via_dhcp_added_as_static_to_linux_bridge(
     dhcpcli_up,
 ):
@@ -860,6 +865,7 @@ def test_activate_dummy_without_dhcp_service(ip_ver, dummy00):
     libnmstate.apply({Interface.KEY: [ifstate]})
 
 
+@pytest.mark.tier1
 def test_dummy_disable_ip_stack_with_on_going_dhcp(dummy00):
     ifstate = dummy00
     ifstate[Interface.IPV4] = create_ipv4_state(enabled=True, dhcp=True)
@@ -949,6 +955,7 @@ def dhcpcli_up_with_static_ip(dhcpcli_up):
     yield desired_state
 
 
+@pytest.mark.tier1
 def test_change_static_to_dhcp4_with_disabled_ipv6(dhcpcli_up_with_static_ip):
     desired_state = dhcpcli_up_with_static_ip
     dhcp_cli_desired_state = desired_state[Interface.KEY][0]
@@ -964,6 +971,7 @@ def test_change_static_to_dhcp4_with_disabled_ipv6(dhcpcli_up_with_static_ip):
     assert _poll(_has_ipv4_classless_route)
 
 
+@pytest.mark.tier1
 def test_change_static_to_dhcp6_autoconf_with_disabled_ipv4(
     dhcpcli_up_with_static_ip,
 ):
@@ -983,6 +991,7 @@ def test_change_static_to_dhcp6_autoconf_with_disabled_ipv4(
     assert _poll(_has_ipv6_auto_extra_route)
 
 
+@pytest.mark.tier1
 @pytest.mark.slow
 @parametrize_ip_ver
 def test_dummy_existance_after_dhcp_timeout(ip_ver, dummy00):
@@ -999,6 +1008,7 @@ def test_dummy_existance_after_dhcp_timeout(ip_ver, dummy00):
     assertlib.assert_state({Interface.KEY: [ifstate]})
 
 
+@pytest.mark.tier1
 @pytest.mark.slow
 def test_dummy_existance_after_ipv6_autoconf_timeout(dummy00):
     ifstate = dummy00
@@ -1047,6 +1057,7 @@ def dhcpcli_up_with_static_ip_and_route(dhcpcli_up_with_static_ip):
     yield desired_state
 
 
+@pytest.mark.tier1
 def test_static_ip_with_routes_switch_back_to_dynamic(
     dhcpcli_up_with_static_ip_and_route,
 ):

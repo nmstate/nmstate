@@ -38,6 +38,7 @@ VLAN_IFNAME = "eth1.101"
 VLAN2_IFNAME = "eth1.102"
 
 
+@pytest.mark.tier1
 def test_add_and_remove_vlan(eth1_up):
     with vlan_interface(
         VLAN_IFNAME, 101, eth1_up[Interface.KEY][0][Interface.NAME]
@@ -60,6 +61,7 @@ def vlan_on_eth1(eth1_up):
         yield iface_states
 
 
+@pytest.mark.tier1
 def test_vlan_iface_uses_the_mac_of_base_iface(vlan_on_eth1):
     assert_mac_address(vlan_on_eth1)
 
@@ -73,6 +75,7 @@ def test_add_and_remove_two_vlans_on_same_iface(eth1_up):
     assert not current_state[Interface.KEY]
 
 
+@pytest.mark.tier1
 def test_two_vlans_on_eth1_change_mtu(eth1_up):
     with two_vlans_on_eth1() as desired_state:
         eth1_state = eth1_up[Interface.KEY][0]
@@ -94,6 +97,7 @@ def test_two_vlans_on_eth1_change_mtu(eth1_up):
         assert eth1_vlan_iface_cstate[Interface.KEY][0][Interface.MTU] == 2000
 
 
+@pytest.mark.tier1
 def test_two_vlans_on_eth1_change_base_iface_mtu(eth1_up):
     with two_vlans_on_eth1() as desired_state:
         eth1_state = eth1_up[Interface.KEY][0]
@@ -108,6 +112,7 @@ def test_two_vlans_on_eth1_change_base_iface_mtu(eth1_up):
         assert eth1_vlan_iface_cstate[Interface.KEY][0][Interface.MTU] == 2000
 
 
+@pytest.mark.tier1
 def test_two_vlans_on_eth1_change_mtu_rollback(eth1_up):
     with two_vlans_on_eth1() as desired_state:
         eth1_state = eth1_up[Interface.KEY][0]
