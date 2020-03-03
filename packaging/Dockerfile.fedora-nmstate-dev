@@ -45,6 +45,8 @@ RUN dnf -y install --setopt=install_weak_deps=False \
     -e 's/^#RateLimitBurst=.*/RateLimitBurst=0/' \
     /etc/systemd/journald.conf
 
+RUN rpm --verifydb
+
 COPY network_manager_enable_trace.conf \
      /etc/NetworkManager/conf.d/97-trace-logging.conf
 
