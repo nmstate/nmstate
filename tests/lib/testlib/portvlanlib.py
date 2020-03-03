@@ -21,6 +21,19 @@
 from libnmstate.schema import LinuxBridge
 
 
+def update_bridge_port_vlan_config(bridge, port_name, vlan_config):
+    port_subtree = bridge[LinuxBridge.CONFIG_SUBTREE][LinuxBridge.PORT_SUBTREE]
+    port = next(
+        (
+            port
+            for port in port_subtree
+            if port[LinuxBridge.Port.NAME] == port_name
+        )
+    )
+    if port:
+        port.update(vlan_config)
+
+
 def generate_vlan_filtering_config(
     port_type, trunk_tags=None, tag=None, native_vlan=None
 ):

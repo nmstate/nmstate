@@ -36,6 +36,8 @@ from libnmstate.schema import Route
 from libnmstate.schema import RouteRule
 from libnmstate.schema import Team
 
+from .testlib import portvlanlib
+
 
 IFACE0 = "foo"
 
@@ -1292,4 +1294,300 @@ class TestComplementMasterRemoval:
                     }
                 ]
             }
+        )
+
+
+class TestLinuxBridgeState:
+    Bridge_name = "bridge0"
+    Port1 = "eth1"
+    Port2 = "eth2"
+
+    def test_add_port_to_bridge(self):
+        current_bridge_state = {
+            Interface.NAME: TestLinuxBridgeState.Bridge_name,
+            Interface.TYPE: InterfaceType.LINUX_BRIDGE,
+            Interface.STATE: InterfaceState.UP,
+            LinuxBridge.CONFIG_SUBTREE: {LinuxBridge.PORT_SUBTREE: []},
+        }
+        current_state = state.State({Interface.KEY: [current_bridge_state]})
+
+        desired_bridge_state = {
+            Interface.NAME: TestLinuxBridgeState.Bridge_name,
+            Interface.TYPE: InterfaceType.LINUX_BRIDGE,
+            Interface.STATE: InterfaceState.UP,
+            LinuxBridge.CONFIG_SUBTREE: {
+                LinuxBridge.PORT_SUBTREE: [
+                    {LinuxBridge.Port.NAME: TestLinuxBridgeState.Port1},
+                ]
+            },
+        }
+        desired_state = state.State({Interface.KEY: [desired_bridge_state]})
+        desired_state.merge_interfaces(current_state)
+
+        desired_bridge_ports = desired_bridge_state.get(
+            LinuxBridge.CONFIG_SUBTREE, {}
+        ).get(LinuxBridge.PORT_SUBTREE, [])
+        assert {
+            LinuxBridge.Port.NAME: TestLinuxBridgeState.Port1
+        } in desired_bridge_ports
+
+    def test_remove_port_from_bridge(self):
+        current_bridge_state = {
+            Interface.NAME: TestLinuxBridgeState.Bridge_name,
+            Interface.TYPE: InterfaceType.LINUX_BRIDGE,
+            Interface.STATE: InterfaceState.UP,
+            LinuxBridge.CONFIG_SUBTREE: {
+                LinuxBridge.PORT_SUBTREE: [
+                    {LinuxBridge.Port.NAME: TestLinuxBridgeState.Port1},
+                ]
+            },
+        }
+        current_state = state.State({Interface.KEY: [current_bridge_state]})
+
+        desired_bridge_state = {
+            Interface.NAME: TestLinuxBridgeState.Bridge_name,
+            Interface.TYPE: InterfaceType.LINUX_BRIDGE,
+            Interface.STATE: InterfaceState.UP,
+            LinuxBridge.CONFIG_SUBTREE: {LinuxBridge.PORT_SUBTREE: []},
+        }
+        desired_state = state.State({Interface.KEY: [desired_bridge_state]})
+        desired_state.merge_interfaces(current_state)
+
+        assert desired_bridge_state.get(LinuxBridge.CONFIG_SUBTREE)
+        desired_bridge_ports = desired_bridge_state.get(
+            LinuxBridge.CONFIG_SUBTREE, {}
+        ).get(LinuxBridge.PORT_SUBTREE, [])
+        assert not desired_bridge_ports
+
+    def test_linux_bridge_port_vlan_create(self):
+        desired_bridge_state = {
+            Interface.NAME: TestLinuxBridgeState.Bridge_name,
+            Interface.TYPE: InterfaceType.LINUX_BRIDGE,
+            Interface.STATE: InterfaceState.UP,
+            LinuxBridge.CONFIG_SUBTREE: {
+                LinuxBridge.PORT_SUBTREE: [
+                    {LinuxBridge.Port.NAME: TestLinuxBridgeState.Port1},
+                    {LinuxBridge.Port.NAME: TestLinuxBridgeState.Port2},
+                ]
+            },
+        }
+        current_state = state.State({Interface.KEY: []})
+        desired_state_raw = {Interface.KEY: [desired_bridge_state]}
+
+        portvlanlib.update_bridge_port_vlan_config(
+            desired_bridge_state,
+            TestLinuxBridgeState.Port1,
+            portvlanlib.generate_vlan_filtering_config(
+                LinuxBridge.Port.Vlan.Mode.TRUNK,
+                portvlanlib.generate_vlan_id_config(100, 200, 300),
+            ),
+        )
+        desired_state = state.State(desired_state_raw)
+
+        desired_state.merge_interfaces(current_state)
+        desired_bridge_state = desired_state.interfaces[
+            TestLinuxBridgeState.Bridge_name
+        ]
+        desired_bridge_ports = desired_bridge_state.get(
+            LinuxBridge.CONFIG_SUBTREE, {}
+        ).get(LinuxBridge.PORT_SUBTREE, [])
+
+        assert TestLinuxBridgeState._is_vlan_filtering_enabled(
+            desired_bridge_ports
+        )
+        assert {
+            LinuxBridge.Port.NAME: TestLinuxBridgeState.Port1,
+            LinuxBridge.Port.VLAN_SUBTREE: {
+                LinuxBridge.Port.Vlan.MODE: LinuxBridge.Port.Vlan.Mode.TRUNK,
+                LinuxBridge.Port.Vlan.TRUNK_TAGS: [
+                    {LinuxBridge.Port.Vlan.TrunkTags.ID: 100},
+                    {LinuxBridge.Port.Vlan.TrunkTags.ID: 200},
+                    {LinuxBridge.Port.Vlan.TrunkTags.ID: 300},
+                ],
+            },
+        } in desired_bridge_ports
+        assert {
+            LinuxBridge.Port.NAME: TestLinuxBridgeState.Port2
+        } in desired_bridge_ports
+
+    def test_port_vlan_update_keep_vlan_filtering_enabled(self):
+        current_bridge_state = {
+            Interface.NAME: TestLinuxBridgeState.Bridge_name,
+            Interface.TYPE: InterfaceType.LINUX_BRIDGE,
+            Interface.STATE: InterfaceState.UP,
+            LinuxBridge.CONFIG_SUBTREE: {
+                LinuxBridge.PORT_SUBTREE: [
+                    {LinuxBridge.Port.NAME: TestLinuxBridgeState.Port1},
+                    {LinuxBridge.Port.NAME: TestLinuxBridgeState.Port2},
+                ]
+            },
+        }
+        desired_bridge_state = copy.deepcopy(current_bridge_state)
+
+        portvlanlib.update_bridge_port_vlan_config(
+            current_bridge_state,
+            TestLinuxBridgeState.Port1,
+            portvlanlib.generate_vlan_filtering_config(
+                LinuxBridge.Port.Vlan.Mode.TRUNK,
+                portvlanlib.generate_vlan_id_config(100, 200, 300),
+            ),
+        )
+        current_state = state.State({Interface.KEY: [current_bridge_state]})
+
+        portvlanlib.update_bridge_port_vlan_config(
+            desired_bridge_state,
+            TestLinuxBridgeState.Port2,
+            portvlanlib.generate_vlan_filtering_config(
+                LinuxBridge.Port.Vlan.Mode.TRUNK,
+                portvlanlib.generate_vlan_id_config(1000, 1200, 1300),
+            ),
+        )
+
+        desired_state_raw = {Interface.KEY: [desired_bridge_state]}
+        desired_state = state.State(desired_state_raw)
+
+        desired_state.merge_interfaces(current_state)
+        desired_bridge_state = desired_state.interfaces[
+            TestLinuxBridgeState.Bridge_name
+        ]
+        desired_bridge_ports = desired_bridge_state.get(
+            LinuxBridge.CONFIG_SUBTREE, {}
+        ).get(LinuxBridge.PORT_SUBTREE, [])
+
+        assert TestLinuxBridgeState._is_vlan_filtering_enabled(
+            desired_bridge_ports
+        )
+        assert {
+            LinuxBridge.Port.NAME: TestLinuxBridgeState.Port1,
+            LinuxBridge.Port.VLAN_SUBTREE: {
+                LinuxBridge.Port.Vlan.MODE: LinuxBridge.Port.Vlan.Mode.TRUNK,
+                LinuxBridge.Port.Vlan.TRUNK_TAGS: [
+                    {LinuxBridge.Port.Vlan.TrunkTags.ID: 100},
+                    {LinuxBridge.Port.Vlan.TrunkTags.ID: 200},
+                    {LinuxBridge.Port.Vlan.TrunkTags.ID: 300},
+                ],
+            },
+        } in desired_bridge_ports
+        assert {
+            LinuxBridge.Port.NAME: TestLinuxBridgeState.Port2,
+            LinuxBridge.Port.VLAN_SUBTREE: {
+                LinuxBridge.Port.Vlan.MODE: LinuxBridge.Port.Vlan.Mode.TRUNK,
+                LinuxBridge.Port.Vlan.TRUNK_TAGS: [
+                    {LinuxBridge.Port.Vlan.TrunkTags.ID: 1000},
+                    {LinuxBridge.Port.Vlan.TrunkTags.ID: 1200},
+                    {LinuxBridge.Port.Vlan.TrunkTags.ID: 1300},
+                ],
+            },
+        } in desired_bridge_ports
+
+    def test_port_vlan_update_disable_vlan_filtering(self):
+
+        current_bridge_state = {
+            Interface.NAME: TestLinuxBridgeState.Bridge_name,
+            Interface.TYPE: InterfaceType.LINUX_BRIDGE,
+            Interface.STATE: InterfaceState.UP,
+            LinuxBridge.CONFIG_SUBTREE: {
+                LinuxBridge.PORT_SUBTREE: [
+                    {
+                        LinuxBridge.Port.NAME: TestLinuxBridgeState.Port1,
+                        LinuxBridge.Port.VLAN_SUBTREE: {},
+                    },
+                    {LinuxBridge.Port.NAME: TestLinuxBridgeState.Port2},
+                ]
+            },
+        }
+        desired_bridge_state = copy.deepcopy(current_bridge_state)
+
+        portvlanlib.update_bridge_port_vlan_config(
+            current_bridge_state,
+            TestLinuxBridgeState.Port1,
+            portvlanlib.generate_vlan_filtering_config(
+                LinuxBridge.Port.Vlan.Mode.TRUNK,
+                portvlanlib.generate_vlan_id_config(100, 200, 300),
+            ),
+        )
+        current_state = state.State({Interface.KEY: [current_bridge_state]})
+
+        desired_state_raw = {Interface.KEY: [desired_bridge_state]}
+        desired_state = state.State(desired_state_raw)
+
+        desired_state.merge_interfaces(current_state)
+        desired_bridge_state = desired_state.interfaces[
+            TestLinuxBridgeState.Bridge_name
+        ]
+        desired_bridge_ports = desired_bridge_state.get(
+            LinuxBridge.CONFIG_SUBTREE, {}
+        ).get(LinuxBridge.PORT_SUBTREE, [])
+
+        # this would assure that none of the ports have a port vlan subtree
+        assert not TestLinuxBridgeState._is_vlan_filtering_enabled(
+            desired_bridge_ports
+        )
+        assert {
+            LinuxBridge.Port.NAME: TestLinuxBridgeState.Port1,
+            LinuxBridge.Port.VLAN_SUBTREE: {},
+        } in desired_bridge_ports
+        assert {
+            LinuxBridge.Port.NAME: TestLinuxBridgeState.Port2
+        } in desired_bridge_ports
+
+    def test_update_port_stp_priority_preserves_vlan_config(self):
+        current_bridge_state = {
+            Interface.NAME: TestLinuxBridgeState.Bridge_name,
+            Interface.TYPE: InterfaceType.LINUX_BRIDGE,
+            Interface.STATE: InterfaceState.UP,
+            LinuxBridge.CONFIG_SUBTREE: {
+                LinuxBridge.PORT_SUBTREE: [
+                    {LinuxBridge.Port.NAME: TestLinuxBridgeState.Port1},
+                ]
+            },
+        }
+        desired_bridge_state = copy.deepcopy(current_bridge_state)
+
+        portvlanlib.update_bridge_port_vlan_config(
+            current_bridge_state,
+            TestLinuxBridgeState.Port1,
+            portvlanlib.generate_vlan_filtering_config(
+                LinuxBridge.Port.Vlan.Mode.TRUNK,
+                portvlanlib.generate_vlan_id_config(100, 200, 300),
+            ),
+        )
+        current_state = state.State({Interface.KEY: [current_bridge_state]})
+
+        desired_port_state = desired_bridge_state[LinuxBridge.CONFIG_SUBTREE][
+            LinuxBridge.PORT_SUBTREE
+        ]
+        desired_port_state[0][LinuxBridge.Port.STP_PRIORITY] = "100"
+        desired_state_raw = {Interface.KEY: [desired_bridge_state]}
+        desired_state = state.State(desired_state_raw)
+
+        desired_state.merge_interfaces(current_state)
+        desired_bridge_state = desired_state.interfaces[
+            TestLinuxBridgeState.Bridge_name
+        ]
+        desired_bridge_ports = desired_bridge_state.get(
+            LinuxBridge.CONFIG_SUBTREE, {}
+        ).get(LinuxBridge.PORT_SUBTREE, [])
+
+        assert TestLinuxBridgeState._is_vlan_filtering_enabled(
+            desired_bridge_ports
+        )
+        assert desired_bridge_ports[0] == {
+            LinuxBridge.Port.NAME: TestLinuxBridgeState.Port1,
+            LinuxBridge.Port.STP_PRIORITY: "100",
+            LinuxBridge.Port.VLAN_SUBTREE: {
+                LinuxBridge.Port.Vlan.MODE: LinuxBridge.Port.Vlan.Mode.TRUNK,
+                LinuxBridge.Port.Vlan.TRUNK_TAGS: [
+                    {LinuxBridge.Port.Vlan.TrunkTags.ID: 100},
+                    {LinuxBridge.Port.Vlan.TrunkTags.ID: 200},
+                    {LinuxBridge.Port.Vlan.TrunkTags.ID: 300},
+                ],
+            },
+        }
+
+    @staticmethod
+    def _is_vlan_filtering_enabled(bridge_ports):
+        return any(
+            port.get(LinuxBridge.Port.VLAN_SUBTREE, {}) != {}
+            for port in bridge_ports
         )
