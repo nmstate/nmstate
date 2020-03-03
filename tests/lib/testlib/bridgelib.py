@@ -18,7 +18,27 @@
 #
 
 
+from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceState
 from libnmstate.schema import LinuxBridge
+
+
+def generate_bridge_iface_state(
+    bridge_name, port_names=None, ports_extra_state=None
+):
+    bridge_state = {
+        Interface.NAME: bridge_name,
+        Interface.TYPE: LinuxBridge.TYPE,
+        Interface.STATE: InterfaceState.UP,
+        LinuxBridge.CONFIG_SUBTREE: {LinuxBridge.PORT_SUBTREE: []},
+    }
+    for port_name in port_names or []:
+        bridge_config = bridge_state[LinuxBridge.CONFIG_SUBTREE]
+        port_state = {LinuxBridge.Port.NAME: port_name}
+        port_extra_state = (ports_extra_state or {}).get(port_name, {})
+        port_state.update(port_extra_state)
+        bridge_config[LinuxBridge.PORT_SUBTREE].append(port_state)
+    return bridge_state
 
 
 def generate_vlan_filtering_config(
