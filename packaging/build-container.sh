@@ -22,7 +22,7 @@ EXEC_PATH="$(dirname "$(realpath "$0")")"
 PROJECT_PATH="$(dirname $EXEC_PATH)"
 
 DEFAULT_BUILD_FLAGS="--no-cache --rm"
-DEFAULT_TAG_PREFIX="docker.io/nmstate"
+DEFAULT_TAG_PREFIX="quay.io/nmstate"
 
 : ${CONTAINER_CMD:=podman}
 
