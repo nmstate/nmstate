@@ -414,12 +414,14 @@ class TestVlanFilteringValidation:
                     schema.Interface.NAME: "br0",
                     schema.Interface.TYPE: LB.TYPE,
                     schema.Interface.STATE: schema.InterfaceState.UP,
-                    LB.PORT_SUBTREE: [
-                        {
-                            LB.Port.NAME: "eth1",
-                            LB.Port.VLAN_SUBTREE: invalid_vlan_config,
-                        }
-                    ],
+                    LB.CONFIG_SUBTREE: {
+                        LB.PORT_SUBTREE: [
+                            {
+                                LB.Port.NAME: "eth1",
+                                LB.Port.VLAN_SUBTREE: invalid_vlan_config,
+                            }
+                        ],
+                    },
                 }
             ]
         }
@@ -439,12 +441,14 @@ class TestVlanFilteringValidation:
                     schema.Interface.NAME: "br0",
                     schema.Interface.TYPE: LB.TYPE,
                     schema.Interface.STATE: schema.InterfaceState.UP,
-                    LB.PORT_SUBTREE: [
-                        {
-                            LB.Port.NAME: "eth1",
-                            LB.Port.VLAN_SUBTREE: invalid_vlan_config,
-                        }
-                    ],
+                    LB.CONFIG_SUBTREE: {
+                        LB.PORT_SUBTREE: [
+                            {
+                                LB.Port.NAME: "eth1",
+                                LB.Port.VLAN_SUBTREE: invalid_vlan_config,
+                            }
+                        ],
+                    },
                 }
             ]
         }
@@ -473,12 +477,14 @@ class TestVlanFilteringValidation:
                     schema.Interface.NAME: "br0",
                     schema.Interface.TYPE: LB.TYPE,
                     schema.Interface.STATE: schema.InterfaceState.UP,
-                    LB.PORT_SUBTREE: [
-                        {
-                            LB.Port.NAME: "eth1",
-                            LB.Port.VLAN_SUBTREE: invalid_vlan_config,
-                        }
-                    ],
+                    LB.CONFIG_SUBTREE: {
+                        LB.PORT_SUBTREE: [
+                            {
+                                LB.Port.NAME: "eth1",
+                                LB.Port.VLAN_SUBTREE: invalid_vlan_config,
+                            }
+                        ],
+                    },
                 }
             ]
         }
@@ -502,21 +508,23 @@ class TestVlanFilteringValidation:
                     schema.Interface.NAME: "br0",
                     schema.Interface.TYPE: LB.TYPE,
                     schema.Interface.STATE: schema.InterfaceState.UP,
-                    LB.PORT_SUBTREE: [
-                        {
-                            LB.Port.NAME: "eth1",
-                            LB.Port.VLAN_SUBTREE: {
-                                LB.Port.Vlan.MODE: LB.Port.Vlan.Mode.TRUNK,
-                                LB.Port.Vlan.TRUNK_TAGS: [
-                                    {
-                                        LB.Port.Vlan.TrunkTags.ID_RANGE: {
-                                            range_key: vlan_tag
+                    LB.CONFIG_SUBTREE: {
+                        LB.PORT_SUBTREE: [
+                            {
+                                LB.Port.NAME: "eth1",
+                                LB.Port.VLAN_SUBTREE: {
+                                    LB.Port.Vlan.MODE: LB.Port.Vlan.Mode.TRUNK,
+                                    LB.Port.Vlan.TRUNK_TAGS: [
+                                        {
+                                            LB.Port.Vlan.TrunkTags.ID_RANGE: {
+                                                range_key: vlan_tag
+                                            }
                                         }
-                                    }
-                                ],
-                            },
-                        }
-                    ],
+                                    ],
+                                },
+                            }
+                        ],
+                    },
                 }
             ]
         }

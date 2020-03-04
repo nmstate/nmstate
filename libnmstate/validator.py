@@ -209,9 +209,10 @@ def validate_vxlan(state):
 def validate_bridge(state):
     for iface_state in state.get(schema.Interface.KEY, []):
         if iface_state.get(schema.Interface.TYPE) == LB.TYPE:
-            _assert_vlan_filtering_trunk_tags(
-                iface_state.get(LB.PORT_SUBTREE, [])
+            port_states = iface_state.get(LB.CONFIG_SUBTREE, {}).get(
+                LB.PORT_SUBTREE, []
             )
+            _assert_vlan_filtering_trunk_tags(port_states)
 
 
 def validate_ovs_link_aggregation(state):
