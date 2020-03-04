@@ -213,6 +213,15 @@ def validate_bridge(state):
                 LB.PORT_SUBTREE, []
             )
             _assert_vlan_filtering_trunk_tags(port_states)
+            _assert_bridge_port_vlan_not_implemented(port_states)
+
+
+def _assert_bridge_port_vlan_not_implemented(port_states):
+    for port in port_states:
+        if port.get(LB.Port.VLAN_SUBTREE):
+            raise NmstateNotImplementedError(
+                "Linux bridge port vlan filtering is not implemented yet."
+            )
 
 
 def validate_ovs_link_aggregation(state):
