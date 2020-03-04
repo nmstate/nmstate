@@ -1,4 +1,15 @@
 # Changelog
+## [0.2.7] - 2020-03-04
+### Bug Fixes
+ - Fix deadlock when openvswitch service is not running.
+
+### Known Issues with NetworkManager Version 1.22.8
+ - All changes to bridges might disrupt their connectivity.
+ - Cannot detach a system port from an OVS bridge.
+ - Sometimes, NetworkManager may throw a "Failed to find a compatible device for this connection" error.
+ - Cannot set bond option with updelay=0,miimon=0.
+ - Cannot set bond option with miimon=100,arp_interval=0.
+
 ## [0.2.6] - 2020-02-24
 ### New Features
  - Linux Bonding: Support numeric values for options.
