@@ -41,8 +41,6 @@ GObject
 _mainloop = None
 _nmclient = None
 
-MAINLOOP_TEARDOWN_DELAY = 500  # msec
-
 NM_MANAGER_ERROR_DOMAIN = "nm-manager-error-quark"
 _NMCLIENT_CLEANUP_TIMEOUT = 5
 
@@ -138,7 +136,8 @@ class _MainLoop:
             logging.debug("Executing NM action: func=%s", func.__name__)
             func(*args, **kwargs)
         else:
-            self._execute_teardown_action()
+            logging.debug("NM action queue exhausted, quiting mainloop")
+            self._mainloop.quit()
 
     def push_action(self, func, *args, **kwargs):
         action = (func, args, kwargs)
@@ -244,17 +243,6 @@ class _MainLoop:
         with self._idle_timeout(timeout):
             self.execute_next_action()
         return False
-
-    def _execute_teardown_action(self):
-        # Some actions are not getting updated fast enough in the
-        # kernel/cache. Wait a bit before quitting the mainloop.
-        GLib.timeout_add(
-            MAINLOOP_TEARDOWN_DELAY, self._execute_graceful_quit, None
-        )
-
-    def _execute_graceful_quit(self, _):
-        logging.debug("NM action queue exhausted, quiting mainloop")
-        self._mainloop.quit()
 
 
 class _NmClient:
