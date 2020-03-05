@@ -4,8 +4,8 @@ It may be used both locally and through CI.
 
 ## Components
 - Container specifications to be used for the tests are in the `packaging`
-  directory. The images are published on docker hub:
-  https://hub.docker.com/r/nmstate/
+  directory. The images are published on quay hub:
+  https://quay.io/organization/nmstate/
 
 - run-tests.sh: Execute the tests in a container using
   'nmstate/fedora-nmstate-dev' container image.
@@ -79,11 +79,11 @@ sudo ../packaging/build-container.sh local/fedora-nmstate-dev
 To test the image, either specify it manually as described above or tag it locally:
 
 ```
-sudo podman tag local/centos8-nmstate-dev nmstate/centos8-nmstate-dev:latest
-sudo podman tag local/fedora-nmstate-dev nmstate/fedora-nmstate-dev:latest
+sudo podman tag local/centos8-nmstate-dev quay.io/nmstate/centos8-nmstate-dev:latest
+sudo podman tag local/fedora-nmstate-dev quay.io/nmstate/fedora-nmstate-dev:latest
 ```
 
-### Push local image to the docker hub
+### Push local image to the quay hub
 The container images are automatically rebuilt for new commits to the master
 branch or new tags. Therefore updates to the Docker Hub images should always
 happen with a pull request that is merged to ensure that the change is
@@ -91,14 +91,14 @@ persistent. If this is not feasible, a new build could be pushed as follow to
 the Docker Hub:
 
 ```shell
-sudo podman login docker.io
+sudo podman login quay.io
 sudo podman tag local/centos8-nmstate-dev nmstate/centos8-nmstate-dev:latest
 sudo podman push nmstate/centos8-nmstate-dev:latest \
-    docker://docker.io/nmstate/centos8-nmstate-dev:latest
+    quay://quay.io/nmstate/centos8-nmstate-dev:latest
 
 sudo podman tag local/fedora-nmstate-dev nmstate/fedora-nmstate-dev:latest
 sudo podman push nmstate/fedora-nmstate-dev:latest \
-    docker://docker.io/nmstate/fedora-nmstate-dev:latest
+    quay://quay.io/nmstate/fedora-nmstate-dev:latest
 ```
 
 It will be overwritten after the next commit to master, though.
