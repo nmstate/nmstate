@@ -141,8 +141,7 @@ def _modify_bridge_options(bridge_config):
     new_conn = nm.connection.ConnectionProfile()
     new_conn.create(iface_bridge_settings)
     conn.update(new_conn)
-    conn.commit(save_to_disk=False, nmdev=nmdev)
-    nm.device.modify(nmdev, conn.profile)
+    nm.device.modify(nmdev, new_conn.profile)
 
 
 def _modify_ports(ports_state):
@@ -179,8 +178,7 @@ def _attach_port_to_bridge(port_state):
     port_con_profile.create(iface_port_settings)
 
     curr_port_con_profile.update(port_con_profile)
-    curr_port_con_profile.commit(nmdev=port_nmdev)
-    nm.device.modify(port_nmdev, curr_port_con_profile.profile)
+    nm.device.modify(port_nmdev, port_con_profile.profile)
 
 
 def _create_bridge_iface(iface_bridge_settings):

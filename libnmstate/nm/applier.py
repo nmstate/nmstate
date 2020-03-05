@@ -56,43 +56,18 @@ BRPORT_OPTIONS_METADATA = "_brport_options"
 IFACE_NAME_METADATA = "_iface_name"
 
 
-def create_new_ifaces(con_profiles):
-    for connection_profile in con_profiles:
-        connection_profile.add(save_to_disk=True)
-
-
-def prepare_new_ifaces_configuration(ifaces_desired_state):
-    # Delete the existing profiles before create the new ones
-    for iface_desired_state in ifaces_desired_state:
-        connection.delete_iface_inactive_connections(
-            iface_desired_state[Interface.NAME]
-        )
-
-    return [
-        _build_connection_profile(iface_desired_state)
-        for iface_desired_state in ifaces_desired_state
-    ]
-
-
-def edit_existing_ifaces(con_profiles):
-    for connection_profile in con_profiles:
-        devname = connection_profile.devname
-        nmdev = device.get_device_by_name(devname)
-        cur_con_profile = None
-        if nmdev:
-            cur_con_profile = connection.ConnectionProfile()
-            cur_con_profile.import_by_device(nmdev)
-        if cur_con_profile and cur_con_profile.profile:
-            connection_profile.commit(nmdev=nmdev)
-        else:
-            # Missing connection, attempting to create a new one.
-            connection_profile.add(save_to_disk=True)
-
-
-def prepare_edited_ifaces_configuration(ifaces_desired_state):
+def apply_changes(ifaces_desired_state):
     con_profiles = []
 
-    for iface_desired_state in ifaces_desired_state:
+    ifaces_desired_state.extend(
+        _create_proxy_ifaces_desired_state(ifaces_desired_state)
+    )
+    for iface_desired_state in filter(
+        lambda s: s.get(Interface.STATE)
+        not in (InterfaceState.ABSENT, InterfaceState.DOWN),
+        ifaces_desired_state,
+    ):
+
         ifname = iface_desired_state[Interface.NAME]
         if iface_desired_state[Interface.TYPE] == InterfaceType.OVS_PORT:
             ifname = iface_desired_state[IFACE_NAME_METADATA]
@@ -109,16 +84,17 @@ def prepare_edited_ifaces_configuration(ifaces_desired_state):
             set_conn.props.interface_name = iface_desired_state[Interface.NAME]
         if cur_con_profile and cur_con_profile.profile:
             cur_con_profile.update(new_con_profile)
-            con_profiles.append(cur_con_profile)
+            con_profiles.append(new_con_profile)
         else:
             # Missing connection, attempting to create a new one.
             connection.delete_iface_inactive_connections(ifname)
+            new_con_profile.add(save_to_disk=True)
             con_profiles.append(new_con_profile)
 
-    return con_profiles
+    _set_ifaces_admin_state(ifaces_desired_state, con_profiles)
 
 
-def set_ifaces_admin_state(ifaces_desired_state, con_profiles=()):
+def _set_ifaces_admin_state(ifaces_desired_state, con_profiles):
     """
     Control interface admin state by activating, deactivating and deleting
     devices connection profiles.
@@ -293,7 +269,7 @@ def _get_affected_devices(iface_state):
     return devs
 
 
-def prepare_proxy_ifaces_desired_state(ifaces_desired_state):
+def _create_proxy_ifaces_desired_state(ifaces_desired_state):
     """
     Prepare the state of the "proxy" interfaces. These are interfaces that
     exist as NM entities/profiles, but are invisible to the API.
