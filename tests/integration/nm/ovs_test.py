@@ -226,7 +226,6 @@ def _connect_interface(port_profile_name, port_state):
     iface_con_profile = nm.connection.ConnectionProfile()
     iface_con_profile.create(slave_iface_settings)
     curr_iface_con_profile.update(iface_con_profile)
-    curr_iface_con_profile.commit(nmdev=iface_nmdev)
     nm.device.activate(connection_id=port_state[OB.Port.NAME])
 
 

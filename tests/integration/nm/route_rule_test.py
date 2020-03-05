@@ -161,10 +161,9 @@ def _modify_interface(ipv4_state, ipv6_state):
     new_conn = nm.connection.ConnectionProfile()
     new_conn.create(settings)
     conn.update(new_conn)
-    conn.commit(save_to_disk=False)
 
     nmdev = nm.device.get_device_by_name(ETH1)
-    nm.device.modify(nmdev, conn.profile)
+    nm.device.modify(nmdev, new_conn.profile)
 
 
 def _create_iface_settings(con_profile, ipv4_state, ipv6_state):

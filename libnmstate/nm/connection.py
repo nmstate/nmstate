@@ -52,17 +52,43 @@ class ConnectionProfile:
             self.profile = client.get_connection_by_id(self.con_id)
 
     def update(self, con_profile):
-        self.profile.replace_settings_from_connection(con_profile.profile)
+        user_data = con_profile.profile.get_interface_name()
+        flags = nmclient.NM.SettingsUpdate2Flags.BLOCK_AUTOCONNECT
+        flags |= nmclient.NM.SettingsUpdate2Flags.TO_DISK
+        args = None
+
+        self._mainloop.push_action(
+            self.profile.update2,
+            con_profile.profile.to_dbus(
+                nmclient.NM.ConnectionSerializationFlags.ALL
+            ),
+            flags,
+            args,
+            self._mainloop.cancellable,
+            self._update2_callback,
+            user_data,
+        )
 
     def add(self, save_to_disk=True):
-        user_data = self._mainloop
+        nm_add_conn2_flags = nmclient.NM.SettingsAddConnection2Flags
+        flags = nm_add_conn2_flags.BLOCK_AUTOCONNECT
+        if save_to_disk:
+            flags |= nm_add_conn2_flags.TO_DISK
+        else:
+            flags |= nm_add_conn2_flags.IN_MEMORY
+
         client = nmclient.client()
+        user_data = None
+        args = None
+        ignore_out_result = False  # Don't fall back to old AddConnection()
         self._mainloop.push_action(
-            client.add_connection_async,
-            self.profile,
-            save_to_disk,
+            client.add_connection2,
+            self.profile.to_dbus(nmclient.NM.ConnectionSerializationFlags.ALL),
+            flags,
+            args,
+            ignore_out_result,
             self._mainloop.cancellable,
-            self._add_connection_callback,
+            self._add_connection2_callback,
             user_data,
         )
 
@@ -83,16 +109,6 @@ class ConnectionProfile:
         self.profile.delete_async(
             self._mainloop.cancellable,
             self._delete_connection_callback,
-            user_data,
-        )
-
-    def commit(self, save_to_disk=True, nmdev=None):
-        user_data = self._mainloop, nmdev
-        self._mainloop.push_action(
-            self.profile.commit_changes_async,
-            save_to_disk,
-            self._mainloop.cancellable,
-            self._commit_changes_callback,
             user_data,
         )
 
@@ -310,24 +326,54 @@ class ConnectionProfile:
                 )
             )
 
-    @staticmethod
-    def _add_connection_callback(src_object, result, user_data):
-        mainloop = user_data
+    def _add_connection2_callback(self, src_object, result, _user_data):
         try:
-            con = src_object.add_connection_finish(result)
+            profile = src_object.add_connection2_finish(result)[0]
         except Exception as e:
-            if mainloop.is_action_canceled(e):
+            if self._mainloop.is_action_canceled(e):
                 logging.debug("Connection adding canceled: error=%s", e)
             else:
-                mainloop.quit("Connection adding failed: error={}".format(e))
+                self._mainloop.quit(
+                    "Connection adding failed: error={}".format(e)
+                )
             return
 
-        if con is None:
-            mainloop.quit("Connection adding failed: error=unknown")
+        if profile is None:
+            self._mainloop.quit("Connection adding failed: error=unknown")
         else:
-            devname = con.get_interface_name()
+            devname = profile.get_interface_name()
             logging.debug("Connection adding succeeded: dev=%s", devname)
-            mainloop.execute_next_action()
+            self._mainloop.execute_next_action()
+
+    def _update2_callback(self, src_object, result, user_data):
+        iface_name = user_data
+        try:
+            ret = src_object.update2_finish(result)
+        except Exception as e:
+            if self._mainloop.is_action_canceled(e):
+                logging.debug(
+                    "Connection update canceled: dev=%s, error=%s",
+                    iface_name,
+                    e,
+                )
+            else:
+                self._mainloop.quit(
+                    "Connection update failed: dev={} error={}".format(
+                        iface_name, e
+                    )
+                )
+            return
+
+        if ret is None:
+            self._mainloop.quit(
+                "Connection update failed: dev={} unknown error".format(
+                    iface_name
+                )
+            )
+            return
+
+        logging.debug("Connection update succeeded: dev=%s", iface_name)
+        self._mainloop.execute_next_action()
 
     def _delete_connection_callback(self, src_object, result, user_data):
         try:
@@ -357,37 +403,6 @@ class ConnectionProfile:
         else:
             self._mainloop.quit(
                 "Connection deletion failed: "
-                "dev={}, error=unknown".format(devname)
-            )
-
-    @staticmethod
-    def _commit_changes_callback(src_object, result, user_data):
-        mainloop, nmdev = user_data
-        devname = src_object.get_interface_name()
-        try:
-            success = src_object.commit_changes_finish(result)
-        except Exception as e:
-            if mainloop.is_action_canceled(e):
-                logging.debug("Connection update aborted: error=%s", e)
-            else:
-                if nmdev:
-                    devname = nmdev.props.interface
-                    devstate = nmdev.props.state
-                else:
-                    devstate = "absent"
-                mainloop.quit(
-                    "Connection update failed: error={}, dev={}/{}".format(
-                        e, devname, devstate
-                    )
-                )
-            return
-
-        if success:
-            logging.debug("Connection update succeeded: dev=%s", devname)
-            mainloop.execute_next_action()
-        else:
-            mainloop.quit(
-                "Connection update failed: "
                 "dev={}, error=unknown".format(devname)
             )
 

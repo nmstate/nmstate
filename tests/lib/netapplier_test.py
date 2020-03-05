@@ -92,19 +92,8 @@ def test_iface_admin_state_change(netinfo_nm_mock, netapplier_nm_mock):
     netapplier.apply(desired_config, verify_change=False)
 
     applier_mock = netapplier_nm_mock.applier
-    ifaces_conf_new = (
-        applier_mock.prepare_new_ifaces_configuration.return_value
-    )
-    ifaces_conf_edit = (
-        applier_mock.prepare_edited_ifaces_configuration.return_value
-    )
-    applier_mock.set_ifaces_admin_state.assert_has_calls(
-        [
-            mock.call(
-                desired_config[INTERFACES],
-                con_profiles=ifaces_conf_new + ifaces_conf_edit,
-            )
-        ]
+    applier_mock.apply_changes.assert_has_calls(
+        [mock.call(desired_config[INTERFACES],)]
     )
 
 
@@ -134,11 +123,8 @@ def test_add_new_bond(netinfo_nm_mock, netapplier_nm_mock):
 
     netapplier.apply(desired_config, verify_change=False)
 
-    m_prepare = netapplier_nm_mock.applier.prepare_edited_ifaces_configuration
-    m_prepare.assert_called_once_with([])
-
-    m_prepare = netapplier_nm_mock.applier.prepare_new_ifaces_configuration
-    m_prepare.assert_called_once_with(desired_config[INTERFACES])
+    m_apply_changes = netapplier_nm_mock.applier.apply_changes
+    m_apply_changes.assert_called_once_with(desired_config[INTERFACES])
 
 
 def test_edit_existing_bond(netinfo_nm_mock, netapplier_nm_mock):
@@ -185,11 +171,8 @@ def test_edit_existing_bond(netinfo_nm_mock, netapplier_nm_mock):
 
     netapplier.apply(desired_config, verify_change=False)
 
-    m_prepare = netapplier_nm_mock.applier.prepare_edited_ifaces_configuration
-    m_prepare.assert_called_once_with(desired_config[INTERFACES])
-
-    m_prepare = netapplier_nm_mock.applier.prepare_new_ifaces_configuration
-    m_prepare.assert_called_once_with([])
+    m_apply_changes = netapplier_nm_mock.applier.apply_changes
+    m_apply_changes.assert_called_once_with(desired_config[INTERFACES])
 
 
 @mock.patch.object(netapplier, "_apply_ifaces_state", lambda *_: None)
