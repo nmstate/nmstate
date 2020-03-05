@@ -1,0 +1,13 @@
+---
+interfaces:
+- name: eth1
+  type: ethernet
+  state: up
+  ethernet:
+    sr-iov:
+      total-vfs: 1
+      vfs:
+      - id: 0
+        mac-address: ee:2a:4e:8e:71:f5
+        spoof-check: true
+        trust: false
