@@ -180,7 +180,8 @@ function open_shell {
 
 # Return 0 if file is changed else 1
 function is_file_changed {
-    git diff --exit-code --name-only origin/master -- $1
+    branch= "$(git rev-parse --abbrev-ref HEAD)"
+    git diff --exit-code --name-only origin/$branch -- $1
     if [ $? -eq 0 ];then
         return 1
     else
