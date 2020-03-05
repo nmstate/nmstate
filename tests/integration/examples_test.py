@@ -157,3 +157,13 @@ def test_add_remove_team_with_slaves(eth1_up, eth2_up):
 def test_set_ethernet_sriov(eth1_up):
     with example_state("eth1_with_sriov.yml") as desired_state:
         assertlib.assert_state_match(desired_state)
+
+
+def test_port_vlan(eth1_up):
+    with example_state(
+        "linuxbrige_eth1_up_port_vlan.yml",
+        cleanup="linuxbrige_eth1_absent.yml",
+    ) as desired_state:
+        assertlib.assert_state(desired_state)
+
+    assertlib.assert_absent("linux-br0")
