@@ -66,6 +66,7 @@ DUMMY_PROFILE_DIRECTORY = "/etc/NetworkManager/system-connections/"
 ETH_PROFILE_DIRECTORY = "/etc/sysconfig/network-scripts/"
 
 
+@pytest.mark.tier1
 def test_delete_new_interface_inactive_profiles(dummy_inactive_profile):
     with dummy_interface(dummy_inactive_profile):
         profile_exists = _profile_exists(
@@ -74,6 +75,7 @@ def test_delete_new_interface_inactive_profiles(dummy_inactive_profile):
         assert not profile_exists
 
 
+@pytest.mark.tier1
 def test_delete_existing_interface_inactive_profiles(eth1_up):
     with create_inactive_profile(eth1_up[Interface.KEY][0][Interface.NAME]):
         eth1_up[Interface.KEY][0][Interface.MTU] = 2000

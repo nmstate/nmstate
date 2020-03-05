@@ -54,6 +54,7 @@ def bridge_with_ports(port0_up):
         yield bridge
 
 
+@pytest.mark.tier1
 @pytest.mark.xfail(
     raises=(NmstateLibnmError, AssertionError),
     reason="https://bugzilla.redhat.com/1724901",
@@ -86,6 +87,7 @@ def test_create_and_remove_ovs_bridge_options_specified():
     assertlib.assert_absent(BRIDGE1)
 
 
+@pytest.mark.tier1
 @pytest.mark.xfail(
     raises=(NmstateLibnmError, AssertionError),
     reason="https://bugzilla.redhat.com/1724901",
@@ -105,6 +107,7 @@ def test_create_and_remove_ovs_bridge_with_a_system_port(port0_up):
     assert state[Interface.KEY][0][Interface.STATE] == InterfaceState.UP
 
 
+@pytest.mark.tier1
 @pytest.mark.xfail(
     raises=(NmstateLibnmError, AssertionError),
     reason="https://bugzilla.redhat.com/1724901",
@@ -149,6 +152,7 @@ def test_create_and_remove_ovs_bridge_with_internal_port_same_name():
     assertlib.assert_absent(BRIDGE1)
 
 
+@pytest.mark.tier1
 def test_vlan_as_ovs_bridge_slave(vlan_on_eth1):
     bridge = Bridge(BRIDGE1)
     bridge.add_system_port(vlan_on_eth1)
@@ -156,6 +160,7 @@ def test_vlan_as_ovs_bridge_slave(vlan_on_eth1):
         assertlib.assert_state_match(state)
 
 
+@pytest.mark.tier1
 @pytest.mark.xfail(
     raises=(NmstateLibnmError, AssertionError),
     reason="https://bugzilla.redhat.com/1724901",
@@ -188,6 +193,7 @@ def test_nm_ovs_plugin_missing():
             )
 
 
+@pytest.mark.tier1
 @pytest.mark.xfail(
     raises=NmstateLibnmError, reason="https://bugzilla.redhat.com/1724901"
 )
@@ -216,6 +222,7 @@ def vlan_on_eth1(eth1_up):
         yield VLAN_IFNAME
 
 
+@pytest.mark.tier1
 def test_change_ovs_interface_mac():
     bridge = Bridge(BRIDGE1)
     bridge.add_internal_port(PORT1, ipv4_state={InterfaceIPv4.ENABLED: False})
@@ -234,6 +241,7 @@ def test_change_ovs_interface_mac():
 
 
 class TestOvsLinkAggregation:
+    @pytest.mark.tier1
     def test_create_and_remove_lag(self, port0_up, port1_up):
         port0_name = port0_up[Interface.KEY][0][Interface.NAME]
         port1_name = port1_up[Interface.KEY][0][Interface.NAME]
@@ -248,6 +256,7 @@ class TestOvsLinkAggregation:
         assertlib.assert_absent(BOND1)
 
 
+@pytest.mark.tier1
 def test_ovs_vlan_access_tag():
     bridge = Bridge(BRIDGE1)
     bridge.add_internal_port(PORT1, ipv4_state={InterfaceIPv4.ENABLED: False})

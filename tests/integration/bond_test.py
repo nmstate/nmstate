@@ -104,6 +104,7 @@ def bond99_with_slave(eth2_up):
         yield state
 
 
+@pytest.mark.tier1
 def test_add_and_remove_bond_with_two_slaves(eth1_up, eth2_up):
     state = yaml.load(BOND99_YAML_BASE, Loader=yaml.SafeLoader)
     libnmstate.apply(state)
@@ -128,6 +129,7 @@ def test_add_and_remove_bond_with_two_slaves(eth1_up, eth2_up):
     assert state[Interface.KEY][1][Interface.STATE] == InterfaceState.UP
 
 
+@pytest.mark.tier1
 def test_remove_bond_with_minimum_desired_state(eth1_up, eth2_up):
     state = yaml.load(BOND99_YAML_BASE, Loader=yaml.SafeLoader)
     bond_name = state[Interface.KEY][0][Interface.NAME]
@@ -154,6 +156,7 @@ def test_add_bond_without_slaves():
         assert state[Interface.KEY][0][Bond.CONFIG_SUBTREE][Bond.SLAVES] == []
 
 
+@pytest.mark.tier1
 def test_add_bond_with_slaves_and_ipv4(eth1_up, eth2_up, setup_remove_bond99):
     desired_bond_state = {
         Interface.KEY: [
@@ -187,6 +190,7 @@ def test_add_bond_with_slaves_and_ipv4(eth1_up, eth2_up, setup_remove_bond99):
     assertlib.assert_state(desired_bond_state)
 
 
+@pytest.mark.tier1
 def test_rollback_for_bond(eth1_up, eth2_up):
     current_state = libnmstate.show()
     desired_state = {
@@ -230,6 +234,7 @@ def test_rollback_for_bond(eth1_up, eth2_up):
     )
 
 
+@pytest.mark.tier1
 def test_add_slave_to_bond_without_slaves(eth1_up):
     slave_name = eth1_up[Interface.KEY][0][Interface.NAME]
     with bond_interface(name=BOND99, slaves=[]) as state:
@@ -257,6 +262,7 @@ def test_remove_all_slaves_from_bond(eth1_up):
         assert bond_cur_state[Bond.CONFIG_SUBTREE][Bond.SLAVES] == []
 
 
+@pytest.mark.tier1
 def test_replace_bond_slave(eth1_up, eth2_up):
     slave1_name = eth1_up[Interface.KEY][0][Interface.NAME]
     slave2_name = eth2_up[Interface.KEY][0][Interface.NAME]
@@ -274,6 +280,7 @@ def test_replace_bond_slave(eth1_up, eth2_up):
         ]
 
 
+@pytest.mark.tier1
 def test_remove_one_of_the_bond_slaves(eth1_up, eth2_up):
     slave1_name = eth1_up[Interface.KEY][0][Interface.NAME]
     slave2_name = eth2_up[Interface.KEY][0][Interface.NAME]
@@ -291,6 +298,7 @@ def test_remove_one_of_the_bond_slaves(eth1_up, eth2_up):
     assert bond_cur_state[Bond.CONFIG_SUBTREE][Bond.SLAVES] == [slave2_name]
 
 
+@pytest.mark.tier1
 def test_swap_slaves_between_bonds(bond88_with_slave, bond99_with_slave):
     bonding88 = bond88_with_slave[Interface.KEY][0][Bond.CONFIG_SUBTREE]
     bonding99 = bond99_with_slave[Interface.KEY][0][Bond.CONFIG_SUBTREE]
@@ -307,6 +315,7 @@ def test_swap_slaves_between_bonds(bond88_with_slave, bond99_with_slave):
     assertlib.assert_state(state)
 
 
+@pytest.mark.tier1
 def test_set_bond_mac_address(eth1_up):
     slave_name = eth1_up[Interface.KEY][0][Interface.NAME]
     with bond_interface(name=BOND99, slaves=[slave_name]) as state:
@@ -323,6 +332,7 @@ def test_set_bond_mac_address(eth1_up):
         assert_mac_address(current_state, MAC1)
 
 
+@pytest.mark.tier1
 def test_reordering_the_slaves_does_not_change_the_mac(bond99_with_2_slaves):
     bond_state = bond99_with_2_slaves[Interface.KEY][0]
     bond_slaves = bond_state[Bond.CONFIG_SUBTREE][Bond.SLAVES]
@@ -340,6 +350,7 @@ def test_reordering_the_slaves_does_not_change_the_mac(bond99_with_2_slaves):
     )
 
 
+@pytest.mark.tier1
 def test_bond_with_empty_ipv6_static_address(eth1_up):
     extra_iface_state = {
         Interface.IPV6: {
@@ -356,6 +367,7 @@ def test_bond_with_empty_ipv6_static_address(eth1_up):
     assertlib.assert_absent(BOND99)
 
 
+@pytest.mark.tier1
 def test_create_vlan_over_a_bond_slave(bond99_with_slave):
     bond_ifstate = bond99_with_slave[Interface.KEY][0]
     bond_slave_ifname = bond_ifstate[Bond.CONFIG_SUBTREE][Bond.SLAVES][0]
@@ -368,6 +380,7 @@ def test_create_vlan_over_a_bond_slave(bond99_with_slave):
     assertlib.assert_state(bond99_with_slave)
 
 
+@pytest.mark.tier1
 def test_create_linux_bridge_over_bond(bond99_with_slave):
     port_state = {
         "stp-hairpin-mode": False,
@@ -382,6 +395,7 @@ def test_create_linux_bridge_over_bond(bond99_with_slave):
         assertlib.assert_state(desired_state)
 
 
+@pytest.mark.tier1
 def test_preserve_bond_after_bridge_removal(bond99_with_slave):
     bridge_name = "linux-br0"
     bridge_state = add_port_to_bridge(create_bridge_subtree_state(), BOND99)
@@ -390,6 +404,7 @@ def test_preserve_bond_after_bridge_removal(bond99_with_slave):
     assertlib.assert_state(bond99_with_slave)
 
 
+@pytest.mark.tier1
 def test_create_vlan_over_a_bond(bond99_with_slave):
     vlan_base_iface = bond99_with_slave[Interface.KEY][0][Interface.NAME]
     vlan_id = 102
@@ -401,6 +416,7 @@ def test_create_vlan_over_a_bond(bond99_with_slave):
     assertlib.assert_state(bond99_with_slave)
 
 
+@pytest.mark.tier1
 def test_change_bond_option_miimon(bond99_with_2_slaves):
     desired_state = statelib.show_only((BOND99,))
     iface_state = desired_state[Interface.KEY][0]
@@ -410,6 +426,7 @@ def test_change_bond_option_miimon(bond99_with_2_slaves):
     assertlib.assert_state(desired_state)
 
 
+@pytest.mark.tier1
 def test_change_bond_option_with_an_id_value(bond99_with_slave):
     option_name = "xmit_hash_policy"
     desired_state = statelib.show_only((BOND99,))
@@ -429,6 +446,7 @@ def test_create_bond_without_mode():
             libnmstate.apply(state)
 
 
+@pytest.mark.tier1
 def test_bond_mac_restriction_without_mac_in_desire(eth1_up, eth2_up):
     with bond_interface(
         name=BOND99,
@@ -460,6 +478,7 @@ def test_bond_mac_restriction_with_mac_in_desire(eth1_up, eth2_up):
             libnmstate.apply(state)
 
 
+@pytest.mark.tier1
 def test_bond_mac_restriction_in_desire_mac_in_current(bond99_with_2_slaves):
     with bond_interface(
         name=BOND99,
@@ -496,6 +515,7 @@ def test_bond_mac_restriction_in_current_mac_in_desire(eth1_up, eth2_up):
             )
 
 
+@pytest.mark.tier1
 def test_create_bond_with_mac(eth1_up, eth2_up):
     with bond_interface(
         name=BOND99,
@@ -505,6 +525,7 @@ def test_create_bond_with_mac(eth1_up, eth2_up):
         assertlib.assert_state_match(state)
 
 
+@pytest.mark.tier1
 @pytest.mark.parametrize("ips", ("192.0.2.1,192.0.2.2", "192.0.2.2,192.0.1.1"))
 def test_bond_with_arp_ip_target(eth1_up, eth2_up, ips):
     with bond_interface(
@@ -523,6 +544,7 @@ def test_bond_with_arp_ip_target(eth1_up, eth2_up, ips):
         assertlib.assert_state_match(desired_state)
 
 
+@pytest.mark.tier1
 def test_create_bond_with_default_miimon_explicitly():
     with bond_interface(
         name=BOND99,

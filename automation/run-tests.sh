@@ -211,7 +211,9 @@ function upgrade_nm_from_copr {
     # Workaround for dnf failure:
     # [Errno 2] No such file or directory: '/var/cache/dnf/metadata_lock.pid'
     if [[ "$CI" == "true" ]];then
-        container_exec "rm -f /var/cache/dnf/metadata_lock.pid"
+        container_exec "rm -fv /var/cache/dnf/metadata_lock.pid"
+        container_exec "dnf clean all"
+        container_exec "dnf makecache || :"
     fi
     container_exec "command -v dnf && plugin='dnf-command(copr)' || plugin='yum-plugin-copr'; yum install --assumeyes \$plugin;"
     container_exec "yum copr enable --assumeyes ${copr_repo}"

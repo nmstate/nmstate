@@ -56,6 +56,7 @@ def test_create_team_iface_without_slaves():
         assertlib.assert_state(team_state)
 
 
+@pytest.mark.tier1
 @pytest.mark.xfail(
     raises=NmstateLibnmError, reason="https://bugzilla.redhat.com/1798947"
 )

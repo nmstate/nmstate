@@ -36,9 +36,12 @@ from libnmstate.error import NmstateError
 from libnmstate.error import NmstateLibnmError
 from libnmstate.error import NmstatePermissionError
 from libnmstate.error import NmstateValueError
+from libnmstate.error import NmstateVerificationError
 from libnmstate.nm import nmclient
 
 MAINLOOP_TIMEOUT = 35
+VERIFY_RETRY_INTERNAL = 1
+VERIFY_RETRY_TIMEOUT = 5
 
 
 @_warn_keyword_as_positional
@@ -155,8 +158,18 @@ def _apply_ifaces_state(
                     ifaces2add + ifaces2edit,
                     con_profiles=ifaces_add_configs + ifaces_edit_configs,
                 )
+            verified = False
             if verify_change:
-                _verify_change(desired_state)
+                for _ in range(VERIFY_RETRY_TIMEOUT):
+                    try:
+                        _verify_change(desired_state)
+                        verified = True
+                        break
+                    except NmstateVerificationError:
+                        time.sleep(VERIFY_RETRY_INTERNAL)
+                if not verified:
+                    _verify_change(desired_state)
+
         if not commit:
             return checkpoint
     except nm.checkpoint.NMCheckPointPermissionError:
@@ -200,10 +213,11 @@ def _list_new_interfaces(desired_state, current_state):
 
 def _verify_change(desired_state):
     current_state = state.State(netinfo.show())
-    desired_state.verify_interfaces(current_state)
-    desired_state.verify_routes(current_state)
-    desired_state.verify_dns(current_state)
-    desired_state.verify_route_rule(current_state)
+    verifiable_desired_state = copy.deepcopy(desired_state)
+    verifiable_desired_state.verify_interfaces(current_state)
+    verifiable_desired_state.verify_routes(current_state)
+    verifiable_desired_state.verify_dns(current_state)
+    verifiable_desired_state.verify_route_rule(current_state)
 
 
 @contextmanager

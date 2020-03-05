@@ -75,6 +75,7 @@ ETH1_INTERFACE_STATE = {
 }
 
 
+@pytest.mark.tier1
 def test_add_static_routes(eth1_up):
     routes = _get_ipv4_test_routes() + _get_ipv6_test_routes()
     libnmstate.apply(
@@ -87,6 +88,7 @@ def test_add_static_routes(eth1_up):
     _assert_routes(routes, cur_state)
 
 
+@pytest.mark.tier1
 def test_add_gateway(eth1_up):
     routes = [_get_ipv4_gateways()[0], _get_ipv6_test_routes()[0]]
     libnmstate.apply(
@@ -145,6 +147,7 @@ def test_multiple_gateway(eth1_up):
     )
 
 
+@pytest.mark.tier1
 def test_change_gateway(eth1_up):
     libnmstate.apply(
         {
@@ -320,6 +323,7 @@ parametrize_ip_ver_routes = pytest.mark.parametrize(
 )
 
 
+@pytest.mark.tier1
 @parametrize_ip_ver_routes
 def test_remove_specific_route(eth1_up, get_routes_func):
     routes = get_routes_func()
@@ -347,6 +351,7 @@ def test_remove_specific_route(eth1_up, get_routes_func):
     _assert_routes(expected_routes, cur_state)
 
 
+@pytest.mark.tier1
 @parametrize_ip_ver_routes
 def test_remove_wildcast_route_with_iface(eth1_up, get_routes_func):
     routes = get_routes_func()
@@ -376,6 +381,7 @@ def test_remove_wildcast_route_with_iface(eth1_up, get_routes_func):
     _assert_routes(expected_routes, cur_state)
 
 
+@pytest.mark.tier1
 @parametrize_ip_ver_routes
 def test_remove_wildcast_route_without_iface(eth1_up, get_routes_func):
     routes = get_routes_func()
@@ -427,6 +433,7 @@ def test_disable_ipv4_with_routes_in_current(eth1_up):
     _assert_routes([], cur_state)
 
 
+@pytest.mark.tier1
 @parametrize_ip_ver_routes
 def test_iface_down_with_routes_in_current(eth1_up, get_routes_func):
     libnmstate.apply(
@@ -479,6 +486,7 @@ def eth1_static_gateway_dns(eth1_up):
     )
 
 
+@pytest.mark.tier1
 @pytest.mark.xfail(
     raises=AssertionError,
     reason="https://bugzilla.redhat.com/1748389",
@@ -512,6 +520,7 @@ def route_rule_test_env(eth1_static_gateway_dns):
     )
 
 
+@pytest.mark.tier1
 def test_route_rule_add_without_from_or_to(route_rule_test_env):
     state = route_rule_test_env
     state[RouteRule.KEY] = {
@@ -525,6 +534,7 @@ def test_route_rule_add_without_from_or_to(route_rule_test_env):
         libnmstate.apply(state)
 
 
+@pytest.mark.tier1
 def test_route_rule_add_from_only(route_rule_test_env):
     state = route_rule_test_env
     rules = [
@@ -543,6 +553,7 @@ def test_route_rule_add_from_only(route_rule_test_env):
     _check_ip_rules(rules)
 
 
+@pytest.mark.tier1
 def test_route_rule_add_to_only(route_rule_test_env):
     state = route_rule_test_env
     rules = [
@@ -561,6 +572,7 @@ def test_route_rule_add_to_only(route_rule_test_env):
     _check_ip_rules(rules)
 
 
+@pytest.mark.tier1
 def test_route_rule_add(route_rule_test_env):
     state = route_rule_test_env
     rules = [
@@ -583,6 +595,7 @@ def test_route_rule_add(route_rule_test_env):
     _check_ip_rules(rules)
 
 
+@pytest.mark.tier1
 def test_route_rule_add_without_priority(route_rule_test_env):
     state = route_rule_test_env
     rules = [
