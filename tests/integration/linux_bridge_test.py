@@ -24,7 +24,6 @@ import pytest
 import yaml
 
 import libnmstate
-from libnmstate.error import NmstateNotImplementedError
 from libnmstate.error import NmstateVerificationError
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
@@ -388,30 +387,6 @@ def test_activate_empty_bridge_does_not_blocked_by_dhcp():
         assertlib.assert_state(desired_state)
 
 
-@pytest.mark.xfail(
-    raises=NmstateNotImplementedError,
-    reason="https://nmstate.atlassian.net/browse/NMSTATE-230",
-    strict=True,
-)
-def test_port_vlan_not_implemented(port0_up):
-    bridge_name = TEST_BRIDGE0
-    port_name = port0_up[Interface.KEY][0][Interface.NAME]
-    port_vlan_config = {
-        LinuxBridge.Port.VLAN_SUBTREE: {
-            LinuxBridge.Port.Vlan.MODE: LinuxBridge.Port.Vlan.Mode.ACCESS,
-            LinuxBridge.Port.Vlan.TAG: 101,
-        }
-    }
-
-    bridge_state = _create_bridge_subtree_config((port_name,))
-    bridge_state[LinuxBridge.PORT_SUBTREE][0].update(port_vlan_config)
-    with linux_bridge(bridge_name, bridge_state):
-        pass
-
-
-@pytest.mark.xfail(
-    reason="https://nmstate.atlassian.net/browse/NMSTATE-230", strict=True
-)
 class TestVlanFiltering:
     ACCESS_TAG = 300
 
