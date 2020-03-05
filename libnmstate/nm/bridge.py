@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2019 Red Hat, Inc.
+# Copyright (c) 2018-2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -19,19 +19,23 @@
 
 from libnmstate.nm import connection
 from libnmstate.nm import nmclient
+from libnmstate.nm.bridge_port_vlan import PortVlanFilter
 from libnmstate.schema import LinuxBridge as LB
 
 
 BRIDGE_TYPE = "bridge"
 
 
-def create_setting(options, base_con_profile):
+def create_setting(bridge_state, base_con_profile):
+    options = bridge_state.get(BRIDGE_TYPE, {}).get(LB.OPTIONS_SUBTREE)
     bridge_setting = _get_current_bridge_setting(base_con_profile)
     if not bridge_setting:
         bridge_setting = nmclient.NM.SettingBridge.new()
 
     if options:
         _set_bridge_properties(bridge_setting, options)
+
+    bridge_setting.props.vlan_filtering = _is_vlan_filter_active(bridge_state)
 
     return bridge_setting
 
@@ -71,6 +75,15 @@ def _set_bridge_stp_properties(bridge_setting, bridge_stp):
                 bridge_setting.props.max_age = stp_val
 
 
+def _is_vlan_filter_active(bridge_state):
+    return any(
+        port.get(LB.Port.VLAN_SUBTREE, {}) != {}
+        for port in bridge_state.get(LB.CONFIG_SUBTREE, {}).get(
+            LB.PORT_SUBTREE, []
+        )
+    )
+
+
 def create_port_setting(options, base_con_profile):
     port_setting = None
     if base_con_profile:
@@ -88,8 +101,21 @@ def create_port_setting(options, base_con_profile):
             port_setting.props.hairpin_mode = val
         elif key == LB.Port.STP_PATH_COST:
             port_setting.props.path_cost = val
+        elif key == LB.Port.VLAN_SUBTREE:
+            port_setting.clear_vlans()
+            for vlan_config in _create_port_vlans_setting(val):
+                port_setting.add_vlan(vlan_config)
 
     return port_setting
+
+
+def _create_port_vlans_setting(val):
+    trunk_tags = val.get(LB.Port.Vlan.TRUNK_TAGS)
+    tag = val.get(LB.Port.Vlan.TAG)
+    enable_native_vlan = val.get(LB.Port.Vlan.ENABLE_NATIVE)
+    port_vlan_config = PortVlanFilter()
+    port_vlan_config.create_configuration(trunk_tags, tag, enable_native_vlan)
+    return (vlan_config for vlan_config in port_vlan_config.to_nm())
 
 
 def get_info(nmdev):
@@ -106,7 +132,10 @@ def get_info(nmdev):
     port_profiles = _get_slave_profiles(nmdev)
     props = bridge_setting.props
     info[LB.CONFIG_SUBTREE] = {
-        LB.PORT_SUBTREE: _get_bridge_ports_info(port_profiles),
+        LB.PORT_SUBTREE: _get_bridge_ports_info(
+            port_profiles,
+            vlan_filtering_enabled=bridge_setting.get_vlan_filtering(),
+        ),
         LB.OPTIONS_SUBTREE: {
             LB.Options.MAC_AGEING_TIME: props.ageing_time,
             LB.Options.GROUP_FORWARD_MASK: props.group_forward_mask,
@@ -136,11 +165,16 @@ def _get_bridge_setting(nmdev):
     return bridge_setting
 
 
-def _get_bridge_ports_info(port_profiles):
+def _get_bridge_ports_info(port_profiles, vlan_filtering_enabled=False):
     ports_info = []
     for p in port_profiles:
         port_info = _get_bridge_port_info(p)
         if port_info:
+            if vlan_filtering_enabled:
+                bridge_vlan_config = p.get_setting_bridge_port().props.vlans
+                port_vlan = PortVlanFilter()
+                port_vlan.import_from_bridge_settings(bridge_vlan_config)
+                port_info[LB.Port.VLAN_SUBTREE] = port_vlan.to_dict()
             ports_info.append(port_info)
     return ports_info
 
