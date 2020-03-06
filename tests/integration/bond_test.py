@@ -23,6 +23,7 @@ import pytest
 import yaml
 
 import libnmstate
+from libnmstate.error import NmstateLibnmError
 from libnmstate.error import NmstateVerificationError
 from libnmstate.error import NmstateValueError
 from libnmstate.schema import Bond
@@ -628,3 +629,20 @@ def test_create_bond_with_both_miimon_and_arp_internal():
             },
         ) as state:
             assertlib.assert_state_match(state)
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="https://bugzilla.redhat.com/1810506",
+    raises=(NmstateLibnmError, NmstateVerificationError),
+)
+def test_change_2_slaves_bond_mode_from_1_to_5():
+    with bond_interface(
+        name=BOND99,
+        slaves=[ETH1, ETH2],
+        extra_iface_state={
+            Bond.CONFIG_SUBTREE: {Bond.MODE: BondMode.ACTIVE_BACKUP},
+        },
+    ) as state:
+        state[Interface.KEY][0][Bond.CONFIG_SUBTREE][Bond.MODE] = BondMode.TLB
+        libnmstate.apply(state)
