@@ -105,10 +105,7 @@ def _create_iface_settings(ipv4_state, con_profile):
     con_setting = nm.connection.ConnectionSetting()
     con_setting.import_by_profile(con_profile)
 
-    # Wired is required due to https://bugzilla.redhat.com/1703960
-    wired_setting = con_profile.profile.get_setting_wired()
-
     ipv4_setting = nm.ipv4.create_setting(ipv4_state, con_profile.profile)
     ipv6_setting = nm.ipv6.create_setting({}, None)
 
-    return con_setting.setting, wired_setting, ipv4_setting, ipv6_setting
+    return con_setting.setting, ipv4_setting, ipv6_setting

@@ -31,6 +31,7 @@ from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
+from libnmstate.state import State
 
 INTERFACES = Constants.INTERFACES
 BOND_TYPE = InterfaceType.BOND
@@ -93,7 +94,7 @@ def test_iface_admin_state_change(netinfo_nm_mock, netapplier_nm_mock):
 
     applier_mock = netapplier_nm_mock.applier
     applier_mock.apply_changes.assert_has_calls(
-        [mock.call(desired_config[INTERFACES],)]
+        [mock.call(desired_config[INTERFACES], State(desired_config))]
     )
 
 
@@ -124,7 +125,9 @@ def test_add_new_bond(netinfo_nm_mock, netapplier_nm_mock):
     netapplier.apply(desired_config, verify_change=False)
 
     m_apply_changes = netapplier_nm_mock.applier.apply_changes
-    m_apply_changes.assert_called_once_with(desired_config[INTERFACES])
+    m_apply_changes.assert_called_once_with(
+        desired_config[INTERFACES], State(desired_config)
+    )
 
 
 def test_edit_existing_bond(netinfo_nm_mock, netapplier_nm_mock):
@@ -172,7 +175,9 @@ def test_edit_existing_bond(netinfo_nm_mock, netapplier_nm_mock):
     netapplier.apply(desired_config, verify_change=False)
 
     m_apply_changes = netapplier_nm_mock.applier.apply_changes
-    m_apply_changes.assert_called_once_with(desired_config[INTERFACES])
+    m_apply_changes.assert_called_once_with(
+        desired_config[INTERFACES], State(desired_config)
+    )
 
 
 @mock.patch.object(netapplier, "_apply_ifaces_state", lambda *_: None)
