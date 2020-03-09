@@ -200,7 +200,6 @@ class State:
         self._state = copy.deepcopy(state)
 
         self._ifaces_state = self._index_interfaces_state_by_name()
-        self._complement_interface_empty_ip_subtrees()
 
         self._config_iface_routes = self._index_routes_by_iface()
 
@@ -298,7 +297,7 @@ class State:
         """
         for iface_state in self.interfaces.values():
             for family in ("ipv4", "ipv6"):
-                ip = iface_state[family]
+                ip = iface_state.get(family, {})
                 if ip.get(InterfaceIP.ENABLED) and (
                     ip.get(InterfaceIP.DHCP) or ip.get(InterfaceIPv6.AUTOCONF)
                 ):
@@ -706,14 +705,16 @@ class State:
 
     def _remove_iface_ipv6_link_local_addr(self):
         for ifstate in self.interfaces.values():
-            ifstate["ipv6"][InterfaceIPv6.ADDRESS] = list(
-                addr
-                for addr in ifstate["ipv6"][InterfaceIPv6.ADDRESS]
-                if not iplib.is_ipv6_link_local_addr(
-                    addr[InterfaceIPv6.ADDRESS_IP],
-                    addr[InterfaceIPv6.ADDRESS_PREFIX_LENGTH],
+            ipv6_state = ifstate.get(Interface.IPV6)
+            if ipv6_state and InterfaceIPv6.ADDRESS in ipv6_state:
+                ipv6_state[InterfaceIPv6.ADDRESS] = list(
+                    addr
+                    for addr in ipv6_state[InterfaceIPv6.ADDRESS]
+                    if not iplib.is_ipv6_link_local_addr(
+                        addr[InterfaceIPv6.ADDRESS_IP],
+                        addr[InterfaceIPv6.ADDRESS_PREFIX_LENGTH],
+                    )
                 )
-            )
 
     def _remove_ip_stack_if_disabled(self):
         for ifstate in self.interfaces.values():
@@ -725,7 +726,7 @@ class State:
     def _sort_ip_addresses(self):
         for ifstate in self.interfaces.values():
             for family in ("ipv4", "ipv6"):
-                ifstate[family].get(InterfaceIP.ADDRESS, []).sort(
+                ifstate.get(family, {}).get(InterfaceIP.ADDRESS, []).sort(
                     key=itemgetter(InterfaceIP.ADDRESS_IP)
                 )
 
@@ -786,6 +787,9 @@ class State:
 
 def dict_update(origin_data, to_merge_data):
     """Recursevely performes a dict update (merge)"""
+
+    if not to_merge_data:
+        return to_merge_data
 
     for key, val in to_merge_data.items():
         if isinstance(val, Mapping):
