@@ -243,12 +243,14 @@ def _dict_update(origin_data, to_merge_data):
     updating the origin_data.
     The function changes the origin_data in-place.
     """
+    if not to_merge_data:
+        return to_merge_data
+
     for key, val in to_merge_data.items():
         if isinstance(val, Mapping):
             origin_data[key] = _dict_update(origin_data.get(key, {}), val)
         else:
             origin_data[key] = val
-
     return origin_data
 
 

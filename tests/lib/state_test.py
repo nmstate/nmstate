@@ -306,6 +306,21 @@ class TestAssertIfaceState:
 
         desired_state.verify_interfaces(current_state)
 
+    def test_initialize_subtree(self):
+        current_state = self._base_state
+        desired_state = state.State(
+            {
+                Interface.KEY: [
+                    {Interface.NAME: "foo-name", OVSBridge.CONFIG_SUBTREE: {}}
+                ]
+            }
+        )
+
+        desired_state.merge_interfaces(current_state)
+
+        desired_iface_state = desired_state.interfaces["foo-name"]
+        assert desired_iface_state[OVSBridge.CONFIG_SUBTREE] == {}
+
     @property
     def _base_state(self):
         return state.State(
@@ -578,13 +593,7 @@ class TestRouteStateMerge:
         iface_only_state.merge_routes(state_with_route0)
 
         expected = {
-            Interface.KEY: [
-                {
-                    Interface.NAME: route0_obj.next_hop_interface,
-                    Interface.IPV4: {},
-                    Interface.IPV6: {},
-                }
-            ],
+            Interface.KEY: [{Interface.NAME: route0_obj.next_hop_interface}],
             Route.KEY: {Route.CONFIG: [route0]},
         }
         assert expected == iface_only_state.state
@@ -614,8 +623,6 @@ class TestRouteStateMerge:
                 {
                     Interface.NAME: route0_obj.next_hop_interface,
                     Interface.STATE: InterfaceState.DOWN,
-                    Interface.IPV4: {},
-                    Interface.IPV6: {},
                 }
             ],
             Route.KEY: {Route.CONFIG: []},
@@ -647,7 +654,6 @@ class TestRouteStateMerge:
                     Interface.NAME: route0_obj.next_hop_interface,
                     Interface.STATE: InterfaceState.UP,
                     Interface.IPV4: {InterfaceIPv4.ENABLED: False},
-                    Interface.IPV6: {},
                 }
             ],
             Route.KEY: {Route.CONFIG: []},
@@ -678,7 +684,6 @@ class TestRouteStateMerge:
                 {
                     Interface.NAME: route1_obj.next_hop_interface,
                     Interface.STATE: InterfaceState.UP,
-                    Interface.IPV4: {},
                     Interface.IPV6: {InterfaceIPv6.ENABLED: False},
                 }
             ],
@@ -710,7 +715,6 @@ class TestRouteStateMerge:
                 {
                     Interface.NAME: route0_obj.next_hop_interface,
                     Interface.STATE: InterfaceState.UP,
-                    Interface.IPV4: {},
                     Interface.IPV6: {InterfaceIPv6.ENABLED: False},
                 }
             ],

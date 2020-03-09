@@ -39,12 +39,14 @@ def linux_bridge(
                 Interface.STATE: InterfaceState.UP,
                 Interface.IPV4: {InterfaceIPv4.ENABLED: False},
                 Interface.IPV6: {InterfaceIPv6.ENABLED: False},
-                LinuxBridge.CONFIG_SUBTREE: bridge_subtree_state or {},
             }
         ]
     }
+    desired_iface_state = desired_state[Interface.KEY][0]
+    if bridge_subtree_state:
+        desired_iface_state[LinuxBridge.CONFIG_SUBTREE] = bridge_subtree_state
     if extra_iface_state:
-        desired_state[Interface.KEY][0].update(extra_iface_state)
+        desired_iface_state.update(extra_iface_state)
 
     if create:
         libnmstate.apply(desired_state)

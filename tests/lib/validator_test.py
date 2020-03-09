@@ -636,6 +636,7 @@ class TestLinuxBondValidator:
         iface_state[Interface.MAC] = MAC0
         bond_config = iface_state[Bond.CONFIG_SUBTREE]
         bond_config.pop(Bond.MODE)
+        bond_config.pop(Bond.OPTIONS_SUBTREE)
         original_desired_state = state.State({Interface.KEY: [iface_state]})
 
         with pytest.raises(NmstateValueError):
