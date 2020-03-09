@@ -145,7 +145,10 @@ def _apply_ifaces_state(
             with _setup_providers():
                 state2edit = state.State(desired_state.state)
                 state2edit.merge_interfaces(current_state)
-                nm.applier.apply_changes(list(state2edit.interfaces.values()))
+                nm.applier.apply_changes(
+                    list(state2edit.interfaces.values()),
+                    original_desired_state,
+                )
             verified = False
             if verify_change:
                 for _ in range(VERIFY_RETRY_TIMEOUT):
