@@ -69,7 +69,10 @@ def prepare_new_ifaces_configuration(ifaces_desired_state):
         )
 
     return [
-        _build_connection_profile(iface_desired_state)
+        _build_connection_profile(
+            iface_desired_state,
+            original_desired_iface_state=iface_desired_state,
+        )
         for iface_desired_state in ifaces_desired_state
     ]
 
@@ -89,7 +92,9 @@ def edit_existing_ifaces(con_profiles):
             connection_profile.add(save_to_disk=True)
 
 
-def prepare_edited_ifaces_configuration(ifaces_desired_state):
+def prepare_edited_ifaces_configuration(
+    ifaces_desired_state, original_desired_state
+):
     con_profiles = []
 
     for iface_desired_state in ifaces_desired_state:
@@ -101,8 +106,13 @@ def prepare_edited_ifaces_configuration(ifaces_desired_state):
         if nmdev:
             cur_con_profile = connection.ConnectionProfile()
             cur_con_profile.import_by_device(nmdev)
+        original_desired_iface_state = original_desired_state.interfaces.get(
+            ifname, {}
+        )
         new_con_profile = _build_connection_profile(
-            iface_desired_state, base_con_profile=cur_con_profile
+            iface_desired_state,
+            base_con_profile=cur_con_profile,
+            original_desired_iface_state=original_desired_iface_state,
         )
         if not new_con_profile.devname:
             set_conn = new_con_profile.profile.get_setting_connection()
@@ -366,7 +376,14 @@ def _generate_hash_iface_name(name):
     return name_[:MAXIMUM_INTERFACE_LENGTH].decode()
 
 
-def _build_connection_profile(iface_desired_state, base_con_profile=None):
+def _build_connection_profile(
+    iface_desired_state,
+    base_con_profile=None,
+    original_desired_iface_state=None,
+):
+    if original_desired_iface_state is None:
+        original_desired_iface_state = {}
+
     iface_type = translator.Api2Nm.get_iface_type(
         iface_desired_state[Interface.TYPE]
     )
@@ -401,7 +418,11 @@ def _build_connection_profile(iface_desired_state, base_con_profile=None):
     con_setting.set_master(master, master_type)
     settings.append(con_setting.setting)
 
-    wired_setting = wired.create_setting(iface_desired_state, base_profile)
+    # Only apply wired/ethernet configuration based on original desire
+    # state rather than the merged one.
+    wired_setting = wired.create_setting(
+        original_desired_iface_state, base_profile
+    )
     if wired_setting:
         settings.append(wired_setting)
 

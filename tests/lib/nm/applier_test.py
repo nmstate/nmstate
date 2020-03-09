@@ -28,6 +28,7 @@ from libnmstate.schema import BondMode
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
+from libnmstate.state import State
 
 
 @pytest.fixture
@@ -168,7 +169,9 @@ def test_prepare_edited_ifaces_configuration(
             Interface.STATE: InterfaceState.UP,
         }
     ]
-    cons = nm.applier.prepare_edited_ifaces_configuration(ifaces_desired_state)
+    cons = nm.applier.prepare_edited_ifaces_configuration(
+        ifaces_desired_state, State({Interface.KEY: ifaces_desired_state})
+    )
 
     assert len(cons) == 1
 

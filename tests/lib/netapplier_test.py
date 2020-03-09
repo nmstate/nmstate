@@ -31,6 +31,7 @@ from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
+from libnmstate.state import State
 
 INTERFACES = Constants.INTERFACES
 BOND_TYPE = InterfaceType.BOND
@@ -135,7 +136,7 @@ def test_add_new_bond(netinfo_nm_mock, netapplier_nm_mock):
     netapplier.apply(desired_config, verify_change=False)
 
     m_prepare = netapplier_nm_mock.applier.prepare_edited_ifaces_configuration
-    m_prepare.assert_called_once_with([])
+    m_prepare.assert_called_once_with([], State(desired_config))
 
     m_prepare = netapplier_nm_mock.applier.prepare_new_ifaces_configuration
     m_prepare.assert_called_once_with(desired_config[INTERFACES])
@@ -186,7 +187,9 @@ def test_edit_existing_bond(netinfo_nm_mock, netapplier_nm_mock):
     netapplier.apply(desired_config, verify_change=False)
 
     m_prepare = netapplier_nm_mock.applier.prepare_edited_ifaces_configuration
-    m_prepare.assert_called_once_with(desired_config[INTERFACES])
+    m_prepare.assert_called_once_with(
+        desired_config[INTERFACES], State(desired_config)
+    )
 
     m_prepare = netapplier_nm_mock.applier.prepare_new_ifaces_configuration
     m_prepare.assert_called_once_with([])

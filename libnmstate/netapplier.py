@@ -152,7 +152,9 @@ def _apply_ifaces_state(
                 state2edit = _create_editable_desired_state(
                     desired_state, current_state, new_interfaces
                 )
-                ifaces2edit, ifaces_edit_configs = _edit_interfaces(state2edit)
+                ifaces2edit, ifaces_edit_configs = _edit_interfaces(
+                    state2edit, original_desired_state
+                )
                 nm.applier.set_ifaces_admin_state(
                     ifaces2add + ifaces2edit,
                     con_profiles=ifaces_add_configs + ifaces_edit_configs,
@@ -231,7 +233,7 @@ def _add_interfaces(new_interfaces, desired_state):
     return (ifaces2add, ifaces_configs)
 
 
-def _edit_interfaces(state2edit):
+def _edit_interfaces(state2edit, original_desired_state):
     logging.debug("Editing interfaces: %s", list(state2edit.interfaces))
 
     ifaces2edit = list(state2edit.interfaces.values())
@@ -244,7 +246,7 @@ def _edit_interfaces(state2edit):
     )
     proxy_ifaces = nm.applier.prepare_proxy_ifaces_desired_state(iface2prepare)
     ifaces_configs = nm.applier.prepare_edited_ifaces_configuration(
-        iface2prepare + proxy_ifaces
+        iface2prepare + proxy_ifaces, original_desired_state
     )
     nm.applier.edit_existing_ifaces(ifaces_configs)
 

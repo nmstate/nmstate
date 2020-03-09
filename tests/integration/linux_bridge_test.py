@@ -95,10 +95,6 @@ def _bridge0_with_port0(port0_up, use_port_mac=False):
     with linux_bridge(
         bridge_name, bridge_state, extra_iface_state
     ) as desired_state:
-        # Need to set twice so the wired setting will be explicitly set,
-        # allowing reapply to succeed.
-        # https://bugzilla.redhat.com/1703960
-        libnmstate.apply(desired_state)
         yield deepcopy(desired_state)
 
 

@@ -171,3 +171,20 @@ def test_change_mtu_with_stable_link_up(eth1_up):
     libnmstate.apply(desired_state)
 
     assertlib.assert_state(desired_state)
+
+
+@pytest.fixture(scope="function")
+def eth1_up_with_mtu_1900(eth1_up):
+    desired_state = statelib.show_only(("eth1",))
+    eth1_desired_state = desired_state[Interface.KEY][0]
+    eth1_desired_state[Interface.MTU] = 1900
+
+    libnmstate.apply(desired_state)
+    yield desired_state
+
+
+def test_empty_state_preserve_the_old_mtu(eth1_up_with_mtu_1900):
+    desired_state = eth1_up_with_mtu_1900
+    libnmstate.apply({Interface.KEY: [{Interface.NAME: "eth1"}]})
+
+    assertlib.assert_state(desired_state)
