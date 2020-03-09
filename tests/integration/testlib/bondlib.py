@@ -43,6 +43,10 @@ def bond_interface(name, slaves, extra_iface_state=None, create=True):
     }
     if extra_iface_state:
         desired_state[Interface.KEY][0].update(extra_iface_state)
+        if slaves:
+            desired_state[Interface.KEY][0][Bond.CONFIG_SUBTREE][
+                Bond.SLAVES
+            ] = slaves
 
     if create:
         libnmstate.apply(desired_state)

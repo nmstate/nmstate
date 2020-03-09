@@ -533,3 +533,15 @@ def test_create_bond_with_default_miimon_explicitly():
         },
     ) as state:
         assertlib.assert_state_match(state)
+
+
+def test_change_2_slaves_bond_mode_from_1_to_5():
+    with bond_interface(
+        name=BOND99,
+        slaves=[ETH1, ETH2],
+        extra_iface_state={
+            Bond.CONFIG_SUBTREE: {Bond.MODE: BondMode.ACTIVE_BACKUP}
+        },
+    ) as state:
+        state[Interface.KEY][0][Bond.CONFIG_SUBTREE][Bond.MODE] = BondMode.TLB
+        libnmstate.apply(state)
