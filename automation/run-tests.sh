@@ -215,6 +215,8 @@ function upgrade_nm_from_copr {
         container_exec "rm -fv /var/cache/dnf/metadata_lock.pid"
         container_exec "dnf clean all"
         container_exec "dnf makecache || :"
+        container_exec "rm -vf /var/lib/rpm/__db*"
+        container_exec "rpm --rebuilddb"
     fi
     container_exec "command -v dnf && plugin='dnf-command(copr)' || plugin='yum-plugin-copr'; yum install --assumeyes \$plugin;"
     container_exec "yum copr enable --assumeyes ${copr_repo}"
