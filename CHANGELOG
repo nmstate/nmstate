@@ -1,4 +1,15 @@
 # Changelog
+## [0.2.8] - 2020-03-12
+### Bug Fixes
+ - Fix adding slave to newly create bridge causes bridge link down.
+ - Fix switching bond mode from 1/4 to 5/6.
+ - Fix bond mac address changing when reordering the slaves.
+
+### Known Issues with NetworkManager Version 1.22.10
+ - All changes to bridges might disrupt their connectivity. https://bugzilla.redhat.com/1786547
+ - Cannot set bond option with updelay=0,miimon=0. https://bugzilla.redhat.com/1805184
+ - Cannot set bond option with miimon=100,arp_interval=0. https://bugzilla.redhat.com/1806549
+
 ## [0.2.7] - 2020-03-04
 ### Bug Fixes
  - Fix deadlock when openvswitch service is not running.
