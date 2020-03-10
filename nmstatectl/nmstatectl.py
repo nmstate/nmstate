@@ -51,6 +51,7 @@ def main():
     setup_subcommand_rollback(subparsers)
     setup_subcommand_set(subparsers)
     setup_subcommand_show(subparsers)
+    setup_subcommand_displayversion(subparsers)
 
     if len(sys.argv) == 1:
         parser.print_usage()
@@ -156,6 +157,17 @@ def setup_subcommand_show(subparsers):
         help="Show only specified interfaces (comma-separated)",
     )
 
+
+def setup_subcommand_displayversion(subparsers):
+    parser_display_version = subparsers.add_parser(
+        "version",
+        help="Display nmstate version"
+    )
+    parser_display_version.set_defaults(func=displayversion)
+
+
+def displayversion(args):
+    print(libnmstate.__version__)
 
 def commit(args):
     try:
