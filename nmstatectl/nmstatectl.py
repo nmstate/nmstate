@@ -44,6 +44,7 @@ def main():
     )
 
     parser = argparse.ArgumentParser()
+    parser.add_argument("--version", action="store_true")
 
     subparsers = parser.add_subparsers()
     setup_subcommand_commit(subparsers)
@@ -51,13 +52,15 @@ def main():
     setup_subcommand_rollback(subparsers)
     setup_subcommand_set(subparsers)
     setup_subcommand_show(subparsers)
-    setup_subcommand_displayversion(subparsers)
 
     if len(sys.argv) == 1:
         parser.print_usage()
         return errno.EINVAL
     args = parser.parse_args()
-    return args.func(args)
+    if args.version:
+        print(libnmstate.__version__)
+    else:
+        return args.func(args)
 
 
 def setup_subcommand_commit(subparsers):
@@ -157,17 +160,6 @@ def setup_subcommand_show(subparsers):
         help="Show only specified interfaces (comma-separated)",
     )
 
-
-def setup_subcommand_displayversion(subparsers):
-    parser_display_version = subparsers.add_parser(
-        "version",
-        help="Display nmstate version"
-    )
-    parser_display_version.set_defaults(func=displayversion)
-
-
-def displayversion(args):
-    print(libnmstate.__version__)
 
 def commit(args):
     try:
