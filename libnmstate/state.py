@@ -379,10 +379,16 @@ class State:
         entries that appear only on one state are ignored.
         This is a reverse recursive update operation.
         """
+        origin_other_state = other_state
         other_state = State(other_state.state)
         for name in self.interfaces.keys() & other_state.interfaces.keys():
             dict_update(other_state.interfaces[name], self.interfaces[name])
             self._ifaces_state[name] = other_state.interfaces[name]
+
+            iface_state = self.interfaces[name]
+            other_iface_state = origin_other_state.interfaces[name]
+            if iface_state.get(Interface.TYPE) == LinuxBridge.TYPE:
+                merge_linux_bridge_ports(iface_state, other_iface_state)
 
     def complement_master_interfaces_removal(self, other_state):
         """
@@ -939,3 +945,39 @@ def _remove_route_rule_default_values(rule):
     if rule.get(RouteRule.ROUTE_TABLE) == RouteRule.USE_DEFAULT_ROUTE_TABLE:
         del rule[RouteRule.ROUTE_TABLE]
     return rule
+
+
+def merge_linux_bridge_ports(desired_iface_state, current_iface_state):
+    """
+    Given a linux bridge desired state, and it's current state, merges
+    those together.
+
+    This extension of the interface merging mechanism simplifies the user's
+    life in scenarios where the user wants to partially update the bridge's
+    configuration - e.g. update only the bridge's port STP configuration -
+    since it enables the user to simply specify the updated values rather
+    than the full current state + the updated value.
+    """
+    desired_bridge_state = desired_iface_state.get(
+        LinuxBridge.CONFIG_SUBTREE, {}
+    )
+    desired_ports = desired_bridge_state.get(LinuxBridge.PORT_SUBTREE, [])
+    current_ports = current_iface_state.get(
+        LinuxBridge.CONFIG_SUBTREE, {}
+    ).get(LinuxBridge.PORT_SUBTREE, [])
+
+    current_indexed_ports = _index_ports(current_ports)
+    desired_indexed_ports = _index_ports(desired_ports)
+
+    merged_ports = desired_indexed_ports
+    for name in desired_indexed_ports.keys() & current_indexed_ports.keys():
+        dict_update(current_indexed_ports[name], desired_indexed_ports[name])
+        merged_ports[name] = current_indexed_ports[name]
+
+    desired_bridge_state[LinuxBridge.PORT_SUBTREE] = list(
+        merged_ports.values()
+    )
+
+
+def _index_ports(ports):
+    return {port[LinuxBridge.Port.NAME]: port for port in ports}
