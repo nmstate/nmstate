@@ -23,6 +23,7 @@ import time
 
 
 from libnmstate.schema import Constants
+from libnmstate import __version__
 
 from .testlib import assertlib
 from .testlib import cmdlib
@@ -35,6 +36,7 @@ SET_CMD = ["nmstatectl", "set"]
 SHOW_CMD = ["nmstatectl", "show"]
 CONFIRM_CMD = ["nmstatectl", "commit"]
 ROLLBACK_CMD = ["nmstatectl", "rollback"]
+VERSION_CMD = ["nmstatectl", "--version"]
 
 LOOPBACK_JSON_CONFIG = """        {
             "name": "lo",
@@ -205,6 +207,14 @@ def test_automatic_rollback(eth1_up):
         time.sleep(CONFIRMATION_TIMEOUT)
         assertlib.assert_state(clean_state)
 
+
+def test_version():
+    ret = cmdlib.exec_cmd(VERSION_CMD)
+    rc, out, err = ret
+    """Check if the --version option returns the same value as __version__"""
+    assert rc == cmdlib.RC_SUCCESS, cmdlib.format_exec_cmd_result(ret)
+    # Use rstrip to remove trailing newline
+    assert out.rstrip() == __version__
 
 def assert_command(cmd, expected_rc=cmdlib.RC_SUCCESS):
     ret = cmdlib.exec_cmd(cmd)
