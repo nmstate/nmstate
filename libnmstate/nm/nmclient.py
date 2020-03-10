@@ -23,6 +23,7 @@ import logging
 import sys
 
 import gi
+import warnings
 
 try:
     gi.require_version("NM", "1.0")  # NOQA: F402
@@ -47,6 +48,15 @@ _NMCLIENT_CLEANUP_TIMEOUT = 5
 
 def nm_version():
     return NM.Client.get_version(client())
+
+
+def libnm_nm_version_mismatch_check():
+    if NM.utils_version() < nm_encode_version(1, 20, 0):
+        warnings.warn("Version mismatch")
+
+
+def nm_encode_version(major, minor, micro):
+    return (major << 16) | (minor << 8) | micro
 
 
 def _delete_client():
