@@ -118,6 +118,7 @@ class State:
         self._sort_ip_addresses()
         self._sort_interfaces_by_name()
         self._canonicalize_iface_ipv6_addresses()
+        self._normalize_linux_bridge_port_vlan()
 
     def match(self, other):
         return _state_match(self.state, other.state)
@@ -228,6 +229,20 @@ class State:
                         with contextlib.suppress(ValueError):
                             option_value = int(option_value)
                         options[option_name] = option_value
+
+    def _normalize_linux_bridge_port_vlan(self):
+        linux_bridges = (
+            iface
+            for iface in self._state.get(Interface.KEY, [])
+            if iface[Interface.TYPE] == LinuxBridge.TYPE
+        )
+        for lb in linux_bridges:
+            ports = lb.get(LinuxBridge.CONFIG_SUBTREE, {}).get(
+                LinuxBridge.PORT_SUBTREE, []
+            )
+            for port in ports:
+                if not port.get(LinuxBridge.Port.VLAN_SUBTREE):
+                    port[LinuxBridge.Port.VLAN_SUBTREE] = {}
 
 
 def _lookup_iface_state_by_name(interfaces_state, ifname):

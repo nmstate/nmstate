@@ -380,6 +380,7 @@ class State:
         self._capitalize_mac()
         self._remove_empty_description()
         self._remove_ip_stack_if_disabled()
+        self._normalize_linux_bridge_port_vlan()
 
     def merge_interfaces(self, other_state):
         """
@@ -789,6 +790,20 @@ class State:
                     other_state._config_route_rules
                 )
             }
+
+    def _normalize_linux_bridge_port_vlan(self):
+        linux_bridges = (
+            iface
+            for iface in self.interfaces.values()
+            if iface[Interface.TYPE] == InterfaceType.LINUX_BRIDGE
+        )
+        for lb in linux_bridges:
+            ports = lb.get(LinuxBridge.CONFIG_SUBTREE, {}).get(
+                LinuxBridge.PORT_SUBTREE, []
+            )
+            for port in ports:
+                if not port.get(LinuxBridge.Port.VLAN_SUBTREE):
+                    port[LinuxBridge.Port.VLAN_SUBTREE] = {}
 
 
 def dict_update(origin_data, to_merge_data):
