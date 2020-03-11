@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019 Red Hat, Inc.
+# Copyright (c) 2019-2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -58,8 +58,14 @@ def get_running():
                 ns_addr = "{}%{}".format(ns, iface_name)
             else:
                 ns_addr = ns
-            dns_state[DNS.SERVER].append(ns_addr)
-        dns_state[DNS.SEARCH].extend(dns_conf.get_domains())
+            if ns_addr not in dns_state[DNS.SERVER]:
+                dns_state[DNS.SERVER].append(ns_addr)
+        dns_domains = [
+            dns_domain
+            for dns_domain in dns_conf.get_domains()
+            if dns_domain not in dns_state[DNS.SEARCH]
+        ]
+        dns_state[DNS.SEARCH].extend(dns_domains)
     if not dns_state[DNS.SERVER] and not dns_state[DNS.SEARCH]:
         dns_state = {}
     return dns_state

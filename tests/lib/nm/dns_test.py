@@ -19,6 +19,8 @@
 
 import pytest
 
+from unittest import mock
+
 import libnmstate.nm.connection as nm_connection
 import libnmstate.nm.dns as nm_dns
 import libnmstate.nm.ipv4 as nm_ipv4
@@ -126,6 +128,28 @@ def test_clear_dns(nm_ip, get_test_dns_func):
     _assert_dns(new_setting_ip, {})
 
 
+@mock.patch.object(nm_dns.nmclient, "NM")
+def test_get_dns_nameserver_duplicated(NM_mock):
+    client_mock = NM_mock.Client.new.return_value
+    dns_entry1 = mock_nm_dns_entry("eth1", "192.0.2.1", "example.org")
+    dns_entry2 = mock_nm_dns_entry("eth2", "192.0.2.1", "example.org")
+    client_mock.get_dns_configuration.return_value = [dns_entry1, dns_entry2]
+
+    dns_state = nm_dns.get_running()
+    assert dns_state[DNS.SERVER] == ["192.0.2.1"]
+
+
+@mock.patch.object(nm_dns.nmclient, "NM")
+def test_get_dns_domain_duplicated(NM_mock):
+    client_mock = NM_mock.Client.new.return_value
+    dns_entry1 = mock_nm_dns_entry("eth1", "192.0.2.1", "example.org")
+    dns_entry2 = mock_nm_dns_entry("eth2", "192.0.2.1", "example.org")
+    client_mock.get_dns_configuration.return_value = [dns_entry1, dns_entry2]
+
+    dns_state = nm_dns.get_running()
+    assert dns_state[DNS.SEARCH] == ["example.org"]
+
+
 def _assert_dns(setting_ip, dns_conf):
     assert setting_ip.props.dns == dns_conf.get(DNS.SERVER, [])
     assert setting_ip.props.dns_search == dns_conf.get(DNS.SEARCH, [])
@@ -228,3 +252,19 @@ def _get_test_iface_routes():
         TEST_IPV6_GATEWAY_IFACE: _get_test_ipv6_gateway(),
         TEST_STATIC_ROUTE_IFACE: _get_test_static_routes(),
     }
+
+
+class mock_nm_dns_entry:
+    def __init__(self, iface_name, nameserver, domain):
+        self.iface_name = iface_name
+        self.nameserver = nameserver
+        self.domain = domain
+
+    def get_interface(self):
+        return self.iface_name
+
+    def get_nameservers(self):
+        return [self.nameserver]
+
+    def get_domains(self):
+        return [self.domain]
