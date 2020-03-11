@@ -86,6 +86,9 @@ def _get_options(nm_device):
                 if option == "arp_ip_target":
                     value = value.replace(" ", ",")
                 options[option] = value
+    # Workaround of https://bugzilla.redhat.com/show_bug.cgi?id=1806549
+    if "miimon" not in options:
+        options["miimon"] = bond_setting.get_option_default("miimon")
     return options
 
 
