@@ -18,6 +18,7 @@
 #
 from collections import deque
 from contextlib import contextmanager
+from distutils.version import StrictVersion
 import functools
 import logging
 import sys
@@ -51,12 +52,10 @@ def nm_version():
 
 
 def libnm_nm_version_mismatch_check():
-    if NM.utils_version() < nm_encode_version(1, 20, 0):
+    if StrictVersion(NM.utils_version()) < StrictVersion(
+        NM.Client.get_version()
+    ):
         warnings.warn("Version mismatch")
-
-
-def nm_encode_version(major, minor, micro):
-    return (major << 16) | (minor << 8) | micro
 
 
 def _delete_client():
