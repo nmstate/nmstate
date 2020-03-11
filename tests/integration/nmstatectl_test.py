@@ -22,6 +22,7 @@ import os
 import time
 
 
+from libnmstate import __version__
 from libnmstate.schema import Constants
 
 from .testlib import assertlib
@@ -204,6 +205,20 @@ def test_automatic_rollback(eth1_up):
 
         time.sleep(CONFIRMATION_TIMEOUT)
         assertlib.assert_state(clean_state)
+
+
+def test_version_argument():
+    ret = cmdlib.exec_cmd(("nmstatectl", "--version"))
+    rc, out, _ = ret
+    assert rc == cmdlib.RC_SUCCESS, cmdlib.format_exec_cmd_result(ret)
+    assert out.rstrip() == __version__
+
+
+def test_version_command():
+    ret = cmdlib.exec_cmd(("nmstatectl", "version"))
+    rc, out, _ = ret
+    assert rc == cmdlib.RC_SUCCESS, cmdlib.format_exec_cmd_result(ret)
+    assert out.rstrip() == __version__
 
 
 def assert_command(cmd, expected_rc=cmdlib.RC_SUCCESS):
