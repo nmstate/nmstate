@@ -640,3 +640,11 @@ def test_change_2_slaves_bond_mode_from_1_to_5():
     ) as state:
         state[Interface.KEY][0][Bond.CONFIG_SUBTREE][Bond.MODE] = BondMode.TLB
         libnmstate.apply(state)
+
+
+def test_set_miimon_100_on_existing_bond(bond99_with_2_slaves):
+    state = bond99_with_2_slaves
+    bond_config = state[Interface.KEY][0][Bond.CONFIG_SUBTREE]
+    bond_config[Bond.OPTIONS_SUBTREE] = {"miimon": 100}
+    libnmstate.apply(state)
+    assertlib.assert_state_match(state)
