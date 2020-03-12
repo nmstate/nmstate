@@ -341,6 +341,77 @@ def test_changing_slave_order_keeps_mac_of_existing_bond(bond99_with_2_slaves):
     )
 
 
+@pytest.mark.tier1
+def test_adding_a_slave_keeps_mac_of_existing_bond(bond99_with_eth2, eth1_up):
+    desired_state = bond99_with_eth2
+    bond_state = desired_state[Interface.KEY][0]
+    bond_slaves = bond_state[Bond.CONFIG_SUBTREE][Bond.SLAVES]
+    bond_slaves.insert(0, eth1_up[Interface.KEY][0][Interface.NAME])
+
+    current_state = statelib.show_only((bond_state[Interface.NAME],))
+
+    libnmstate.apply(desired_state)
+    modified_state = statelib.show_only((bond_state[Interface.NAME],))
+    assert (
+        modified_state[Interface.KEY][0][Interface.MAC]
+        == current_state[Interface.KEY][0][Interface.MAC]
+    )
+
+
+@pytest.mark.tier1
+def test_adding_slaves_to_empty_bond_doesnt_keep_mac(eth1_up):
+    with bond_interface(BOND99, []) as state:
+        bond_state = state[Interface.KEY][0]
+        eth1_name = eth1_up[Interface.KEY][0][Interface.NAME]
+        bond_state[Bond.CONFIG_SUBTREE][Bond.SLAVES] = [eth1_name]
+
+        current_state = statelib.show_only((bond_state[Interface.NAME],))
+
+        libnmstate.apply(state)
+        modified_state = statelib.show_only((bond_state[Interface.NAME],))
+        assert (
+            modified_state[Interface.KEY][0][Interface.MAC]
+            != current_state[Interface.KEY][0][Interface.MAC]
+        )
+
+
+@pytest.mark.tier1
+def test_replacing_slaves_keeps_mac_of_existing_bond(
+    bond99_with_eth2, eth1_up
+):
+    desired_state = bond99_with_eth2
+    bond_state = desired_state[Interface.KEY][0]
+    eth1_name = eth1_up[Interface.KEY][0][Interface.NAME]
+    bond_state[Bond.CONFIG_SUBTREE][Bond.SLAVES] = [eth1_name]
+
+    current_state = statelib.show_only((bond_state[Interface.NAME],))
+
+    libnmstate.apply(desired_state)
+    modified_state = statelib.show_only((bond_state[Interface.NAME],))
+    assert (
+        modified_state[Interface.KEY][0][Interface.MAC]
+        == current_state[Interface.KEY][0][Interface.MAC]
+    )
+
+
+def test_removing_slaves_keeps_mac_of_existing_bond(
+    bond99_with_2_slaves, eth1_up
+):
+    desired_state = bond99_with_2_slaves
+    bond_state = desired_state[Interface.KEY][0]
+    eth1_name = eth1_up[Interface.KEY][0][Interface.NAME]
+    bond_state[Bond.CONFIG_SUBTREE][Bond.SLAVES] = [eth1_name]
+
+    current_state = statelib.show_only((bond_state[Interface.NAME],))
+
+    libnmstate.apply(desired_state)
+    modified_state = statelib.show_only((bond_state[Interface.NAME],))
+    assert (
+        modified_state[Interface.KEY][0][Interface.MAC]
+        == current_state[Interface.KEY][0][Interface.MAC]
+    )
+
+
 def test_bond_with_empty_ipv6_static_address(eth1_up):
     extra_iface_state = {
         Interface.IPV6: {
