@@ -99,7 +99,7 @@ def bond88_with_slave(eth1_up):
 
 
 @pytest.fixture
-def bond99_with_slave(eth2_up):
+def bond99_with_eth2(eth2_up):
     slaves = [eth2_up[Interface.KEY][0][Interface.NAME]]
     with bond_interface(BOND99, slaves) as state:
         yield state
@@ -292,9 +292,9 @@ def test_remove_one_of_the_bond_slaves(eth1_up, eth2_up):
     assert bond_cur_state[Bond.CONFIG_SUBTREE][Bond.SLAVES] == [slave2_name]
 
 
-def test_swap_slaves_between_bonds(bond88_with_slave, bond99_with_slave):
+def test_swap_slaves_between_bonds(bond88_with_slave, bond99_with_eth2):
     bonding88 = bond88_with_slave[Interface.KEY][0][Bond.CONFIG_SUBTREE]
-    bonding99 = bond99_with_slave[Interface.KEY][0][Bond.CONFIG_SUBTREE]
+    bonding99 = bond99_with_eth2[Interface.KEY][0][Bond.CONFIG_SUBTREE]
 
     bonding88[Bond.SLAVES], bonding99[Bond.SLAVES] = (
         bonding99[Bond.SLAVES],
@@ -302,7 +302,7 @@ def test_swap_slaves_between_bonds(bond88_with_slave, bond99_with_slave):
     )
 
     state = bond88_with_slave
-    state.update(bond99_with_slave)
+    state.update(bond99_with_eth2)
     libnmstate.apply(state)
 
     assertlib.assert_state(state)
@@ -357,8 +357,8 @@ def test_bond_with_empty_ipv6_static_address(eth1_up):
     assertlib.assert_absent(BOND99)
 
 
-def test_create_vlan_over_a_bond_slave(bond99_with_slave):
-    bond_ifstate = bond99_with_slave[Interface.KEY][0]
+def test_create_vlan_over_a_bond_slave(bond99_with_eth2):
+    bond_ifstate = bond99_with_eth2[Interface.KEY][0]
     bond_slave_ifname = bond_ifstate[Bond.CONFIG_SUBTREE][Bond.SLAVES][0]
     vlan_id = 102
     vlan_iface_name = "{}.{}".format(bond_slave_ifname, vlan_id)
@@ -366,10 +366,10 @@ def test_create_vlan_over_a_bond_slave(bond99_with_slave):
         vlan_iface_name, vlan_id, bond_slave_ifname
     ) as desired_state:
         assertlib.assert_state(desired_state)
-    assertlib.assert_state(bond99_with_slave)
+    assertlib.assert_state(bond99_with_eth2)
 
 
-def test_create_linux_bridge_over_bond(bond99_with_slave):
+def test_create_linux_bridge_over_bond(bond99_with_eth2):
     port_state = {
         "stp-hairpin-mode": False,
         "stp-path-cost": 100,
@@ -383,23 +383,23 @@ def test_create_linux_bridge_over_bond(bond99_with_slave):
         assertlib.assert_state(desired_state)
 
 
-def test_preserve_bond_after_bridge_removal(bond99_with_slave):
+def test_preserve_bond_after_bridge_removal(bond99_with_eth2):
     bridge_name = "linux-br0"
     bridge_state = add_port_to_bridge(create_bridge_subtree_state(), BOND99)
     with linux_bridge(bridge_name, bridge_state) as desired_state:
         assertlib.assert_state_match(desired_state)
-    assertlib.assert_state(bond99_with_slave)
+    assertlib.assert_state(bond99_with_eth2)
 
 
-def test_create_vlan_over_a_bond(bond99_with_slave):
-    vlan_base_iface = bond99_with_slave[Interface.KEY][0][Interface.NAME]
+def test_create_vlan_over_a_bond(bond99_with_eth2):
+    vlan_base_iface = bond99_with_eth2[Interface.KEY][0][Interface.NAME]
     vlan_id = 102
     vlan_iface_name = "{}.{}".format(vlan_base_iface, vlan_id)
     with vlan_interface(
         vlan_iface_name, vlan_id, vlan_base_iface
     ) as desired_state:
         assertlib.assert_state(desired_state)
-    assertlib.assert_state(bond99_with_slave)
+    assertlib.assert_state(bond99_with_eth2)
 
 
 def test_change_bond_option_miimon(bond99_with_2_slaves):
@@ -411,7 +411,7 @@ def test_change_bond_option_miimon(bond99_with_2_slaves):
     assertlib.assert_state(desired_state)
 
 
-def test_change_bond_option_with_an_id_value(bond99_with_slave):
+def test_change_bond_option_with_an_id_value(bond99_with_eth2):
     option_name = "xmit_hash_policy"
     desired_state = statelib.show_only((BOND99,))
     iface_state = desired_state[Interface.KEY][0]
