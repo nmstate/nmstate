@@ -67,9 +67,12 @@ def nm_ovs_mock():
         yield m
 
 
-@mock.patch.object(nm.connection, "ConnectionProfile")
-def test_create_new_ifaces(con_profile_mock):
-    con_profiles = [con_profile_mock(), con_profile_mock()]
+def test_create_new_ifaces():
+    con_profile_1 = mock.MagicMock()
+    con_profile_1.con_id = 1
+    con_profile_2 = mock.MagicMock()
+    con_profile_2.con_id = 2
+    con_profiles = [con_profile_1, con_profile_2]
 
     nm.applier.create_new_ifaces(con_profiles)
 
@@ -131,9 +134,12 @@ def test_prepare_new_ifaces_configuration(
     )
 
 
-@mock.patch.object(nm.connection, "ConnectionProfile")
-def test_edit_existing_ifaces_with_profile(con_profile_mock, nm_device_mock):
-    con_profiles = [con_profile_mock(), con_profile_mock()]
+def test_edit_existing_ifaces_with_profile(nm_device_mock):
+    con_profile_1 = mock.MagicMock()
+    con_profile_1.con_id = 1
+    con_profile_2 = mock.MagicMock()
+    con_profile_2.con_id = 2
+    con_profiles = [con_profile_1, con_profile_2]
 
     nm.applier.edit_existing_ifaces(con_profiles)
 
@@ -147,7 +153,11 @@ def test_edit_existing_ifaces_with_profile(con_profile_mock, nm_device_mock):
 def test_edit_existing_ifaces_without_profile(
     con_profile_mock, nm_device_mock
 ):
-    con_profiles = [mock.MagicMock(), mock.MagicMock()]
+    con_profile_1 = mock.MagicMock()
+    con_profile_1.con_id = 1
+    con_profile_2 = mock.MagicMock()
+    con_profile_2.con_id = 2
+    con_profiles = [con_profile_1, con_profile_2]
     con_profile_mock.return_value.profile = None
 
     nm.applier.edit_existing_ifaces(con_profiles)

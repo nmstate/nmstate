@@ -20,6 +20,7 @@
 import base64
 import hashlib
 import itertools
+from operator import attrgetter
 
 from libnmstate.error import NmstateValueError
 from libnmstate.schema import Interface
@@ -57,7 +58,11 @@ IFACE_NAME_METADATA = "_iface_name"
 
 
 def create_new_ifaces(con_profiles):
-    for connection_profile in con_profiles:
+    # By default, NetworkManager will activate the slave profiles in the order
+    # of sorted interface name. To make sure user get the same MAC address
+    # after reboot for bond/bridge/etc, sort the interfaces to be created
+    # as autoconnect=True will activate the profile at the creation time.
+    for connection_profile in sorted(con_profiles, key=attrgetter("con_id")):
         connection_profile.add(save_to_disk=True)
 
 
@@ -78,7 +83,11 @@ def prepare_new_ifaces_configuration(ifaces_desired_state):
 
 
 def edit_existing_ifaces(con_profiles):
-    for connection_profile in con_profiles:
+    # By default, NetworkManager will activate the slave profiles in the order
+    # of sorted interface name. To make sure user get the same MAC address
+    # after reboot for bond/bridge/etc, sort the interfaces to be updated
+    # as autoconnect=True will activate the profile at the profile update time.
+    for connection_profile in sorted(con_profiles, key=attrgetter("con_id")):
         devname = connection_profile.devname
         nmdev = device.get_device_by_name(devname)
         cur_con_profile = None
