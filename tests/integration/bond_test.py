@@ -633,6 +633,7 @@ def test_create_bond_with_both_miimon_and_arp_internal():
             assertlib.assert_state_match(state)
 
 
+@pytest.mark.tier1
 def test_change_2_slaves_bond_mode_from_1_to_5():
     with bond_interface(
         name=BOND99,
@@ -645,6 +646,7 @@ def test_change_2_slaves_bond_mode_from_1_to_5():
         libnmstate.apply(state)
 
 
+@pytest.mark.tier1
 def test_set_miimon_100_on_existing_bond(bond99_with_2_slaves):
     state = bond99_with_2_slaves
     bond_config = state[Interface.KEY][0][Bond.CONFIG_SUBTREE]
