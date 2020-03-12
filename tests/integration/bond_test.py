@@ -34,9 +34,12 @@ from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
 
 from .testlib import assertlib
+from .testlib import cmdlib
 from .testlib import statelib
 from .testlib.assertlib import assert_mac_address
 from .testlib.bondlib import bond_interface
+from .testlib.ifacelib import get_mac_address
+from .testlib.ifacelib import ifaces_init
 from .testlib.vlan import vlan_interface
 
 from .testlib.bridgelib import linux_bridge
@@ -333,7 +336,7 @@ def test_set_bond_mac_address(eth1_up):
 
 
 @pytest.mark.tier1
-def test_reordering_the_slaves_does_not_change_the_mac(bond99_with_2_slaves):
+def test_changing_slave_order_keeps_mac_of_existing_bond(bond99_with_2_slaves):
     bond_state = bond99_with_2_slaves[Interface.KEY][0]
     bond_slaves = bond_state[Bond.CONFIG_SUBTREE][Bond.SLAVES]
     ifaces_names = [bond_state[Interface.NAME]] + bond_slaves
@@ -648,3 +651,54 @@ def test_set_miimon_100_on_existing_bond(bond99_with_2_slaves):
     bond_config[Bond.OPTIONS_SUBTREE] = {"miimon": 100}
     libnmstate.apply(state)
     assertlib.assert_state_match(state)
+
+
+@pytest.fixture
+def eth1_eth2_with_no_profile():
+    yield
+    ifaces_init(ETH1, ETH2)
+
+
+def _nmcli_simulate_boot(ifname):
+    """
+    Use nmcli to reactivate the profile to simulate the server reboot.
+    """
+    cmdlib.exec_cmd(["nmcli", "connection", "down", ifname], check=True)
+    # Wait slave been deactivated
+    time.sleep(1)
+    cmdlib.exec_cmd(["nmcli", "connection", "up", ifname], check=True)
+    # Wait slave been activated
+    time.sleep(1)
+
+
+@pytest.mark.tier1
+def test_new_bond_uses_mac_of_first_slave_by_name(eth1_eth2_with_no_profile):
+    """
+    On system boot, NetworkManager will by default activate slaves in the
+    order of their name. Nmstate should provide the consistent MAC address for
+    bond regardless the order of slaves.
+    """
+    eth1_mac = get_mac_address(ETH1)
+    with bond_interface(
+        name=BOND99,
+        slaves=[ETH2, ETH1],
+        extra_iface_state={
+            Bond.CONFIG_SUBTREE: {Bond.MODE: BondMode.ROUND_ROBIN}
+        },
+    ):
+        assert get_mac_address(BOND99) == eth1_mac
+        _nmcli_simulate_boot(BOND99)
+        assert get_mac_address(BOND99) == eth1_mac
+
+    ifaces_init(ETH1, ETH2)
+
+    with bond_interface(
+        name=BOND99,
+        slaves=[ETH1, ETH2],
+        extra_iface_state={
+            Bond.CONFIG_SUBTREE: {Bond.MODE: BondMode.ROUND_ROBIN}
+        },
+    ):
+        assert get_mac_address(BOND99) == eth1_mac
+        _nmcli_simulate_boot(BOND99)
+        assert get_mac_address(BOND99) == eth1_mac
