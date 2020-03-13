@@ -137,7 +137,7 @@ def test_netinfo_show_bond_iface(nm_mock, nm_dns_mock):
     assert current_config == report
 
 
-def test_warning_show(nm_mock, nm_dns_mock):
+def test_error_show(nm_mock, nm_dns_mock):
     current_config = {
         DNS.KEY: {DNS.RUNNING: {}, DNS.CONFIG: {}},
         ROUTES: {"config": [], "running": []},
@@ -168,8 +168,7 @@ def test_warning_show(nm_mock, nm_dns_mock):
     nm_dns_mock.get_running.return_value = current_config[DNS.KEY][DNS.RUNNING]
     nm_dns_mock.get_config.return_value = current_config[DNS.KEY][DNS.CONFIG]
 
-    with pytest.warns(FutureWarning) as record:
+    with pytest.raises(TypeError):
+        # pylint: disable=too-many-function-args
         netinfo.show(None)
-
-    assert len(record) == 1
-    assert "'include_status_data'" in record[0].message.args[0]
+        # pylint: enable=too-many-function-args
