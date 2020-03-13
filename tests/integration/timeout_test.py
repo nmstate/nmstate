@@ -55,5 +55,5 @@ def test_lot_of_vlans_with_bridges(eth1_up):
             ]
         )
     checkpoint = libnmstate.apply({Interface.KEY: interfaces}, commit=False)
-    libnmstate.rollback(checkpoint)
+    libnmstate.rollback(checkpoint=checkpoint)
     time.sleep(5)
