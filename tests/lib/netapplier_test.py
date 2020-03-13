@@ -181,35 +181,29 @@ def test_edit_existing_bond(netinfo_nm_mock, netapplier_nm_mock):
 
 
 @mock.patch.object(netapplier, "_apply_ifaces_state", lambda *_: None)
-def test_warning_apply():
-    with pytest.warns(FutureWarning) as record:
+def test_error_apply():
+    with pytest.raises(TypeError):
+        # pylint: disable=too-many-function-args
         netapplier.apply({"interfaces": []}, True)
+        # pylint: enable=too-many-function-args
 
-    assert len(record) == 1
-    assert "'verify_change'" in record[0].message.args[0]
-
-    with pytest.warns(FutureWarning) as record:
+    with pytest.raises(TypeError):
+        # pylint: disable=too-many-function-args
         netapplier.apply({"interfaces": []}, True, True, 0)
-
-    assert len(record) == 3
-    assert "'verify_change'" in record[0].message.args[0]
-    assert "'commit'" in record[1].message.args[0]
-    assert "'rollback_timeout'" in record[2].message.args[0]
+        # pylint: enable=too-many-function-args
 
 
 @mock.patch.object(netapplier, "_choose_checkpoint", lambda *_: mock.Mock())
-def test_warning_commit():
-    with pytest.warns(FutureWarning) as record:
+def test_error_commit():
+    with pytest.raises(TypeError):
+        # pylint: disable=too-many-function-args
         netapplier.commit(None)
-
-    assert len(record) == 1
-    assert "'checkpoint'" in record[0].message.args[0]
+        # pylint: enable=too-many-function-args
 
 
 @mock.patch.object(netapplier, "_choose_checkpoint", lambda *_: mock.Mock())
-def test_warning_rollback():
-    with pytest.warns(FutureWarning) as record:
+def test_error_rollback():
+    with pytest.raises(TypeError):
+        # pylint: disable=too-many-function-args
         netapplier.rollback(None)
-
-    assert len(record) == 1
-    assert "'checkpoint'" in record[0].message.args[0]
+        # pylint: enable=too-many-function-args

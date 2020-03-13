@@ -28,7 +28,6 @@ from libnmstate import nm
 from libnmstate.nm.nmclient import nmclient_context
 from libnmstate import state
 from libnmstate import validator
-from libnmstate.deprecation import _warn_keyword_as_positional
 from libnmstate.error import NmstateConflictError
 from libnmstate.error import NmstateError
 from libnmstate.error import NmstateLibnmError
@@ -42,9 +41,10 @@ VERIFY_RETRY_INTERNAL = 1
 VERIFY_RETRY_TIMEOUT = 5
 
 
-@_warn_keyword_as_positional
 @nmclient_context
-def apply(desired_state, verify_change=True, commit=True, rollback_timeout=60):
+def apply(
+    desired_state, *, verify_change=True, commit=True, rollback_timeout=60
+):
     """
     Apply the desired state
 
@@ -75,8 +75,7 @@ def apply(desired_state, verify_change=True, commit=True, rollback_timeout=60):
         return str(checkpoint.dbuspath)
 
 
-@_warn_keyword_as_positional
-def commit(checkpoint=None):
+def commit(*, checkpoint=None):
     """
     Commit a checkpoint that was received from `apply()`.
 
@@ -92,8 +91,7 @@ def commit(checkpoint=None):
         raise NmstateValueError(str(e))
 
 
-@_warn_keyword_as_positional
-def rollback(checkpoint=None):
+def rollback(*, checkpoint=None):
     """
     Roll back a checkpoint that was received from `apply()`.
 
