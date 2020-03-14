@@ -279,6 +279,7 @@ def _filter_state(state, whitelist):
         patterns = [p for p in whitelist.split(",")]
         state[Interface.KEY] = _filter_interfaces(state, patterns)
         state[Route.KEY] = _filter_routes(state, patterns)
+        state[RouteRule.KEY] = _filter_route_rule(state, pattens)
     return state
 
 
@@ -394,3 +395,17 @@ def _filter_routes(state, patterns):
                 if fnmatch.fnmatch(route[Route.NEXT_HOP_INTERFACE], pattern):
                     routes[route_type].append(route)
     return routes
+
+
+def _filter_route_rule(state, pattens):
+
+    route_rules = []
+
+    for ruletype in RouteRule.CONFIG:
+        for rule in state.get(ruletype, []):
+            for patten in patterns:
+                if fnmatch.fnmatch(rule, patten):
+                    route_rules.append(rule)
+
+    return route_rules
+
