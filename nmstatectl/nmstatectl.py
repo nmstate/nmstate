@@ -35,6 +35,7 @@ from libnmstate.error import NmstatePermissionError
 from libnmstate.error import NmstateValueError
 from libnmstate.schema import Interface
 from libnmstate.schema import Route
+from libnmstate.schema import RouteRule
 
 
 def main():
@@ -279,7 +280,7 @@ def _filter_state(state, whitelist):
         patterns = [p for p in whitelist.split(",")]
         state[Interface.KEY] = _filter_interfaces(state, patterns)
         state[Route.KEY] = _filter_routes(state, patterns)
-        state[RouteRule.KEY] = _filter_route_rule(state, pattens)
+        state[RouteRule.KEY] = _filter_route_rule(state, patterns)
     return state
 
 
@@ -408,4 +409,3 @@ def _filter_route_rule(state, pattens):
                     route_rules.append(rule)
 
     return route_rules
-
