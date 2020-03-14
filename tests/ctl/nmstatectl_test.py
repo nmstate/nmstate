@@ -25,6 +25,9 @@ from unittest import mock
 from nmstatectl import nmstatectl
 
 LO_JSON_STATE = """{
+    "route-rules": {
+        "config": []
+    },
     "routes": {
         "config": [],
         "running": []
@@ -40,6 +43,9 @@ LO_JSON_STATE = """{
 """
 
 EMPTY_JSON_STATE = """{
+    "route-rules": {
+        "config": []
+    },
     "routes": {
         "config": [],
         "running": []
@@ -49,6 +55,8 @@ EMPTY_JSON_STATE = """{
 """
 
 EMPTY_YAML_STATE = """---
+route-rules:
+  config: []
 routes:
   config: []
   running: []
@@ -56,6 +64,8 @@ interfaces: []
 """
 
 LO_YAML_STATE = """---
+route-rules:
+  config: []
 routes:
   config: []
   running: []
