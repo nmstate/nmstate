@@ -35,6 +35,7 @@ from libnmstate.error import NmstatePermissionError
 from libnmstate.error import NmstateValueError
 from libnmstate.schema import Interface
 from libnmstate.schema import Route
+from libnmstate.schema import RouteRule
 
 
 def main():
@@ -279,6 +280,7 @@ def _filter_state(state, whitelist):
         patterns = [p for p in whitelist.split(",")]
         state[Interface.KEY] = _filter_interfaces(state, patterns)
         state[Route.KEY] = _filter_routes(state, patterns)
+        state[RouteRule.KEY] = _filter_route_rule(state)
     return state
 
 
@@ -394,3 +396,20 @@ def _filter_routes(state, patterns):
                 if fnmatch.fnmatch(route[Route.NEXT_HOP_INTERFACE], pattern):
                     routes[route_type].append(route)
     return routes
+
+
+def _filter_route_rule(state):
+    """
+    return the rules for state's route rule that match the table_id of the
+    filtered route of state by interface
+    """
+    route_rules = {RouteRule.CONFIG: []}
+    table_ids = []
+    for routes in {Route.CONFIG: [], Route.RUNNING: []}:
+        for route in state.get(Route.KEY, {}).get(routes, []):
+            if route.get(Route.TABLE_ID) not in table_ids:
+                table_ids.append(route.get(Route.TABLE_ID))
+    for rule in state.get(RouteRule.KEY, {}).get(RouteRule.CONFIG, []):
+        if rule.get(RouteRule.ROUTE_TABLE) in table_ids:
+            route_rules[RouteRule.CONFIG].append(rule)
+    return route_rules
