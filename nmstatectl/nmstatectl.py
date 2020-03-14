@@ -398,14 +398,15 @@ def _filter_routes(state, patterns):
     return routes
 
 
-def _filter_route_rule(state, pattens):
+def _filter_route_rule(state, patterns):
 
     route_rules = []
 
     for ruletype in RouteRule.CONFIG:
         for rule in state.get(ruletype, []):
-            for patten in patterns:
-                if fnmatch.fnmatch(rule, patten):
+            for pattern in patterns:
+                if fnmatch.fnmatch(rule, pattern):
                     route_rules.append(rule)
 
     return route_rules
+
