@@ -217,10 +217,11 @@ def _list_new_interfaces(desired_state, current_state):
 
 def _verify_change(desired_state):
     current_state = state.State(netinfo.show())
-    desired_state.verify_interfaces(current_state)
-    desired_state.verify_routes(current_state)
-    desired_state.verify_dns(current_state)
-    desired_state.verify_route_rule(current_state)
+    verifiable_desired_state = copy.deepcopy(desired_state)
+    verifiable_desired_state.verify_interfaces(current_state)
+    verifiable_desired_state.verify_routes(current_state)
+    verifiable_desired_state.verify_dns(current_state)
+    verifiable_desired_state.verify_route_rule(current_state)
 
 
 @contextmanager
