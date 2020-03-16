@@ -27,6 +27,8 @@ PYTEST_OPTIONS="--verbose --verbose \
         --cov /usr/lib/python*/site-packages/nmstatectl \
         --cov-report=term"
 
+NMSTATE_TEMPDIR=$(mktemp -d /tmp/nmstate-test-XXXX)
+
 : ${CONTAINER_CMD:=podman}
 
 test -t 1 && USE_TTY="-t"
@@ -167,6 +169,7 @@ function run_exit {
     dump_network_info
     collect_artifacts
     remove_container
+    remove_tempdir
 }
 
 function open_shell {
@@ -216,6 +219,10 @@ function upgrade_nm_from_copr {
 
 function modprobe_ovs {
     lsmod | grep -q ^openvswitch || modprobe openvswitch || { echo 1>&2 "Please run 'modprobe openvswitch' as root"; exit 1; }
+}
+
+function remove_tempdir {
+    rm -rf "$NMSTATE_TEMPDIR"
 }
 
 options=$(getopt --options "" \
