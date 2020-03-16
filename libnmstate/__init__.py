@@ -32,6 +32,8 @@ from .prettystate import PrettyState
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
+_MINIMUM_NM_VERSION = "1.22.8"
+
 __all__ = [
     "show",
     "apply",

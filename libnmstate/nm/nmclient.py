@@ -37,6 +37,7 @@ from gi.repository import GLib
 from gi.repository import GObject
 
 from libnmstate import error
+from libnmstate import _MINIMUM_NM_VERSION
 
 GObject
 
@@ -52,10 +53,34 @@ def nm_version():
 
 
 def libnm_nm_version_mismatch_check():
-    if StrictVersion(NM.utils_version()) < StrictVersion(
+    if StrictVersion(NM.Client.get_version()) < StrictVersion(
+        _MINIMUM_NM_VERSION
+    ):
+        warnings.warn(
+            "NetworkManager version ("
+            + NM.Client.get_version()
+            + ") is too old, atleast version ("
+            + _MINIMUM_NM_VERSION
+            + ") is required."
+        )
+    if StrictVersion(NM.utils_version()) < StrictVersion(_MINIMUM_NM_VERSION):
+        warnings.warn(
+            "Libnm version ("
+            + NM.utils_version()
+            + ") is too old, atleast version ("
+            + _MINIMUM_NM_VERSION
+            + ") is required."
+        )
+    if StrictVersion(NM.utils_version()) != StrictVersion(
         NM.Client.get_version()
     ):
-        warnings.warn("Version mismatch")
+        warnings.warn(
+            "NetworkManager version ("
+            + NM.Client.get_version()
+            + ") does not match libnm version ("
+            + NM.utils_version()
+            + ")."
+        )
 
 
 def _delete_client():
@@ -257,6 +282,7 @@ class _MainLoop:
 class _NmClient:
     def __init__(self):
         self._client = NM.Client.new(None)
+        libnm_nm_version_mismatch_check()
 
     @property
     def client(self):
