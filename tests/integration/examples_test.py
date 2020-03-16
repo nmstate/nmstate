@@ -26,6 +26,7 @@ from .testlib.examplelib import example_state
 
 from libnmstate import netinfo
 from libnmstate.error import NmstateLibnmError
+from libnmstate.error import NmstateNotSupportedError
 from libnmstate.schema import DNS
 
 
@@ -134,3 +135,16 @@ def test_add_remove_team_with_slaves(eth1_up, eth2_up):
         assertlib.assert_state_match(desired_state)
 
     assertlib.assert_absent("team0")
+
+
+@pytest.mark.skipif(
+    os.environ.get("CI") == "true",
+    reason="SR-IOV device required for this test case",
+)
+@pytest.mark.xfail(
+    raises=NmstateNotSupportedError,
+    reason="The device does not support SR-IOV.",
+)
+def test_set_ethernet_sriov(eth1_up):
+    with example_state("eth1_with_sriov.yml") as desired_state:
+        assertlib.assert_state_match(desired_state)
