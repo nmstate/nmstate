@@ -225,8 +225,16 @@ function remove_tempdir {
     rm -rf "$NMSTATE_TEMPDIR"
 }
 
+function vdsm_tests {
+    trap remove_tempdir EXIT
+    git -C "$NMSTATE_TEMPDIR" clone --depth 1 https://gerrit.ovirt.org/vdsm
+    cd "$NMSTATE_TEMPDIR/vdsm"
+    ./tests/network/functional/run-tests.sh --nmstate-source="$PROJECT_PATH"
+    cd -
+}
+
 options=$(getopt --options "" \
-    --long customize:,pytest-args:,help,debug-shell,test-type:,el8,copr:,artifacts-dir:\
+    --long customize:,pytest-args:,help,debug-shell,test-type:,el8,copr:,artifacts-dir:,test-vdsm\
     -- "${@}")
 eval set -- "$options"
 while true; do
@@ -257,11 +265,15 @@ while true; do
         shift
         EXPORT_DIR="$1"
         ;;
+    --test-vdsm)
+        vdsm_tests
+        exit
+        ;;
     --help)
         set +x
         echo -n "$0 [--copr=...] [--customize=...] [--debug-shell] [--el8] "
         echo -n "[--help] [--pytest-args=...] "
-        echo "[--test-type=<TEST_TYPE>]"
+        echo "[--test-type=<TEST_TYPE>] [--test-vdsm]"
         echo "    Valid TEST_TYPE are:"
         echo "     * $TEST_TYPE_ALL (default)"
         echo "     * $TEST_TYPE_FORMAT"
