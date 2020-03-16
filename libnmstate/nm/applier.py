@@ -17,8 +17,6 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
-import base64
-import hashlib
 import itertools
 
 from libnmstate.error import NmstateValueError
@@ -53,8 +51,6 @@ MASTER_IFACE_TYPES = ovs.BRIDGE_TYPE, bond.BOND_TYPE, LB.TYPE
 
 BRPORT_OPTIONS_METADATA = "_brport_options"
 
-IFACE_NAME_METADATA = "_iface_name"
-
 
 def apply_changes(ifaces_desired_state, original_desired_state):
     con_profiles = []
@@ -69,8 +65,6 @@ def apply_changes(ifaces_desired_state, original_desired_state):
     ):
 
         ifname = iface_desired_state[Interface.NAME]
-        if iface_desired_state[Interface.TYPE] == InterfaceType.OVS_PORT:
-            ifname = iface_desired_state[IFACE_NAME_METADATA]
         nmdev = device.get_device_by_name(ifname)
         cur_con_profile = None
         if nmdev:
@@ -302,7 +296,7 @@ def _create_proxy_ifaces_desired_state(ifaces_desired_state):
             new_ifaces_desired_state.append(port_iface_desired_state)
         # The "visible" slave/interface needs to point to the port profile
         iface_desired_state[MASTER_METADATA] = port_iface_desired_state[
-            IFACE_NAME_METADATA
+            Interface.NAME
         ]
         iface_desired_state[MASTER_TYPE_METADATA] = ovs.PORT_TYPE
     return new_ifaces_desired_state
@@ -311,10 +305,9 @@ def _create_proxy_ifaces_desired_state(ifaces_desired_state):
 def _create_ovs_port_iface_desired_state(iface_desired_state, port_options):
     iface_name = iface_desired_state[Interface.NAME]
     if _is_ovs_lag_port(port_options):
-        port_name = iface_name_metadata = port_options[OvsB.Port.NAME]
+        port_name = port_options[OvsB.Port.NAME]
     else:
         port_name = ovs.PORT_PROFILE_PREFIX + iface_name
-        iface_name_metadata = _generate_hash_iface_name(port_name)
     return {
         Interface.NAME: port_name,
         Interface.TYPE: ovs.PORT_TYPE,
@@ -322,27 +315,11 @@ def _create_ovs_port_iface_desired_state(iface_desired_state, port_options):
         OvsB.OPTIONS_SUBTREE: port_options,
         MASTER_METADATA: iface_desired_state[MASTER_METADATA],
         MASTER_TYPE_METADATA: iface_desired_state[MASTER_TYPE_METADATA],
-        IFACE_NAME_METADATA: iface_name_metadata,
     }
 
 
 def _is_ovs_lag_port(port_state):
     return port_state.get(OvsB.Port.LINK_AGGREGATION_SUBTREE) is not None
-
-
-def _generate_hash_iface_name(name):
-    """
-    Given a name, generate a hash string that may be used as an interface name.
-
-    The OVS port does not have an actual interface in the kernel, but
-    its length is still limited by NM connection.interface-name.
-    https://bugzilla.redhat.com/1788432
-    As a workaround, hash the full name and use it as an alternative device
-    name (assigned as a metadata). The profile/connection name format has
-    an OVS PORT prefix
-    """
-    name_ = base64.urlsafe_b64encode(hashlib.sha256(name.encode()).digest())
-    return name_[:MAXIMUM_INTERFACE_LENGTH].decode()
 
 
 def _build_connection_profile(
@@ -367,10 +344,7 @@ def _build_connection_profile(
     if base_profile:
         con_setting.import_by_profile(base_con_profile)
     else:
-        iface_name = (
-            iface_desired_state.get(IFACE_NAME_METADATA)
-            or iface_desired_state[Interface.NAME]
-        )
+        iface_name = iface_desired_state[Interface.NAME]
         con_setting.create(
             con_name=iface_desired_state[Interface.NAME],
             iface_name=iface_name,
