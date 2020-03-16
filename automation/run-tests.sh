@@ -183,7 +183,14 @@ function open_shell {
 
 # Return 0 if file is changed else 1
 function is_file_changed {
-    git diff --exit-code --name-only origin/master -- $1
+    git remote add upstream https://github.com/nmstate/nmstate.git
+    git fetch upstream
+    if [ -n "$TRAVIS_BRANCH" ]; then
+        git diff --exit-code --name-only upstream/$TRAVIS_BRANCH -- $1
+    else
+        git diff --exit-code --name-only upstream/nmstate-0.2 -- $1
+    fi
+
     if [ $? -eq 0 ];then
         return 1
     else
