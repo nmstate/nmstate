@@ -15,8 +15,8 @@ TEST_TYPE_UNIT_PY38="unit_py38"
 TEST_TYPE_INTEG="integ"
 TEST_TYPE_INTEG_SLOW="integ_slow"
 
-FEDORA_IMAGE_DEV="nmstate/fedora-nmstate-dev"
-CENTOS_IMAGE_DEV="nmstate/centos8-nmstate-dev"
+FEDORA_IMAGE_DEV="docker.io/nmstate/fedora-nmstate-dev:nmstate-0.2"
+CENTOS_IMAGE_DEV="docker.io/nmstate/centos8-nmstate-dev:nmstate-0.2"
 
 PYTEST_OPTIONS="--verbose --verbose \
         --log-level=DEBUG \
