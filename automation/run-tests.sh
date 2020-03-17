@@ -13,6 +13,8 @@ TEST_TYPE_LINT="lint"
 TEST_TYPE_UNIT_PY36="unit_py36"
 TEST_TYPE_UNIT_PY38="unit_py38"
 TEST_TYPE_INTEG="integ"
+TEST_TYPE_INTEG_TIER1="integ_tier1"
+TEST_TYPE_INTEG_TIER2="integ_tier2"
 TEST_TYPE_INTEG_SLOW="integ_slow"
 
 FEDORA_IMAGE_DEV="docker.io/nmstate/fedora-nmstate-dev"
@@ -123,6 +125,28 @@ function run_tests {
           pytest \
             $PYTEST_OPTIONS \
             --cov-report=html:htmlcov-integ \
+            tests/integration \
+            ${nmstate_pytest_extra_args}"
+    fi
+
+    if  [ $TEST_TYPE == $TEST_TYPE_INTEG_TIER1 ];then
+        container_exec "
+          cd $CONTAINER_WORKSPACE &&
+          pytest \
+            $PYTEST_OPTIONS \
+            --cov-report=html:htmlcov-integ_tier1 \
+            -m tier1 \
+            tests/integration \
+            ${nmstate_pytest_extra_args}"
+    fi
+
+    if  [ $TEST_TYPE == $TEST_TYPE_INTEG_TIER2 ];then
+        container_exec "
+          cd $CONTAINER_WORKSPACE &&
+          pytest \
+            $PYTEST_OPTIONS \
+            --cov-report=html:htmlcov-integ_tier2 \
+            -m tier2 \
             tests/integration \
             ${nmstate_pytest_extra_args}"
     fi
@@ -288,6 +312,8 @@ while true; do
         echo "     * $TEST_TYPE_FORMAT"
         echo "     * $TEST_TYPE_LINT"
         echo "     * $TEST_TYPE_INTEG"
+        echo "     * $TEST_TYPE_INTEG_TIER1"
+        echo "     * $TEST_TYPE_INTEG_TIER2"
         echo "     * $TEST_TYPE_INTEG_SLOW"
         echo "     * $TEST_TYPE_UNIT_PY36"
         echo "     * $TEST_TYPE_UNIT_PY38"
