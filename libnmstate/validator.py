@@ -25,6 +25,7 @@ import jsonschema as js
 from . import nm
 from . import schema
 from libnmstate.appliers.bond import is_in_mac_restricted_mode
+from libnmstate.appliers.ovs_bridge import is_ovs_running
 from libnmstate.schema import DNS
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIP
@@ -84,11 +85,16 @@ def validate_interface_capabilities(ifaces_state, capabilities):
             nm.ovs.INTERNAL_INTERFACE_TYPE,
         )
         if is_ovs_type and not has_ovs_capability:
-            raise NmstateDependencyError(
-                "Open vSwitch NetworkManager support not installed "
-                "and started"
-            )
-        if iface_type == InterfaceType.TEAM and not has_team_capability:
+            if not is_ovs_running():
+                raise NmstateDependencyError(
+                    "openvswitch service is not started."
+                )
+            else:
+                raise NmstateDependencyError(
+                    "Open vSwitch NetworkManager support not installed "
+                    "and started"
+                )
+        elif iface_type == InterfaceType.TEAM and not has_team_capability:
             raise NmstateDependencyError(
                 "NetworkManager-team plugin not installed and started"
             )

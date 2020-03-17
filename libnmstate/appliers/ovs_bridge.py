@@ -17,11 +17,14 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
+import subprocess
+
 from libnmstate.schema import Interface
 from libnmstate.schema import OVSBridge
 
 
 BRPORT_OPTIONS = "_brport_options"
+SYSTEMCTL_TIMEOUT_SECONDS = 5
 
 
 def get_ovs_slaves_from_state(iface_state, default=()):
@@ -68,3 +71,17 @@ def _is_ovs_lag_slave(lag_state, iface_name):
         if slave[OVSBridge.Port.LinkAggregation.Slave.NAME] == iface_name:
             return True
     return False
+
+
+def is_ovs_running():
+    try:
+        subprocess.run(
+            ("systemctl", "status", "openvswitch"),
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=True,
+            timeout=SYSTEMCTL_TIMEOUT_SECONDS,
+        )
+        return True
+    except Exception:
+        return False
