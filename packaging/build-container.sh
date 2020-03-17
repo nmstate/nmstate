@@ -22,7 +22,7 @@ EXEC_PATH="$(dirname "$(realpath "$0")")"
 PROJECT_PATH="$(dirname $EXEC_PATH)"
 
 DEFAULT_BUILD_FLAGS="--no-cache --rm"
-DEFAULT_TAG_PREFIX="nmstate"
+DEFAULT_TAG_PREFIX="docker.io/nmstate"
 
 : ${CONTAINER_CMD:=podman}
 
@@ -63,7 +63,7 @@ rebuild_container() {
     # assign default value in case argument did not contain a tag prefix
     : ${tag_prefix:=${DEFAULT_TAG_PREFIX}}
 
-    build_tag="${tag_prefix}/${container_name}"
+    build_tag="${tag_prefix}/${container_name}:nmstate-0.2"
     container_spec="$PROJECT_PATH/packaging/Dockerfile.${container_name}"
 
     echo >/dev/stderr "Building '${container_spec}' into tag '${build_tag}'..."
