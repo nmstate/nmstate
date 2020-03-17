@@ -44,13 +44,23 @@ def pytest_addoption(parser):
 
 
 def pytest_collection_modifyitems(config, items):
-    if config.getoption("--runslow"):
-        # --runslow is given in cli: do not skip slow tests
-        return
+    if not config.getoption("--runslow"):
+        # --runslow is not in cli: skip slow tests
+        _mark_skip_slow_tests(items)
+    _mark_tier2_tests(items)
+
+
+def _mark_skip_slow_tests(items):
     skip_slow = pytest.mark.skip(reason="need --runslow option to run")
     for item in items:
         if "slow" in item.keywords:
             item.add_marker(skip_slow)
+
+
+def _mark_tier2_tests(items):
+    for item in items:
+        if "tier1" not in item.keywords:
+            item.add_marker(pytest.mark.tier2)
 
 
 @pytest.fixture(scope="session", autouse=True)

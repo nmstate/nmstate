@@ -6,7 +6,12 @@ env:
         - use_coveralls=true
     matrix:
         - CONTAINER_IMAGE=docker.io/nmstate/centos8-nmstate-dev
-          testflags="--test-type integ --pytest-args='-x'
+          testflags="--test-type integ_tier1 --pytest-args='-x'
+              --copr networkmanager/NetworkManager-1.22-git"
+          use_codecov=true
+          use_coveralls=false
+        - CONTAINER_IMAGE=docker.io/nmstate/centos8-nmstate-dev
+          testflags="--test-type integ_tier2 --pytest-args='-x'
               --copr networkmanager/NetworkManager-1.22-git"
           use_codecov=true
           use_coveralls=false

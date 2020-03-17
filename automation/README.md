@@ -35,6 +35,14 @@ You may change the test type by specifying the `--test-type` flag, for example:
    Integration tests (without slow test cases) using
    'nmstate/fedora-nmstate-dev' container image.
 
+ * `./automation/run-tests.sh --test-type integ_tier1`:
+   Integration tier1 test cases using `nmstate/fedora-nmstate-dev` container
+   image.
+
+ * `./automation/run-tests.sh --test-type integ_tier2`:
+   Integration tier2 test cases using `nmstate/fedora-nmstate-dev` container
+   image.
+
  * `./automation/run-tests.sh --test-type integ_slow`:
    Integration slow test cases using `nmstate/fedora-nmstate-dev` container
    image.
