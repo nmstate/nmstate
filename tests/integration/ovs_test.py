@@ -34,6 +34,7 @@ from .testlib import statelib
 from .testlib.nmplugin import disable_nm_plugin
 from .testlib.ovslib import Bridge
 from .testlib.ovslib import get_proxy_port_name_of_ovs_interface
+from .testlib.servicelib import disable_service
 from .testlib.vlan import vlan_interface
 
 
@@ -191,6 +192,33 @@ def test_nm_ovs_plugin_missing():
                     ]
                 }
             )
+
+
+def test_ovs_service_missing():
+    with disable_service("openvswitch"):
+        with pytest.raises(NmstateDependencyError):
+            libnmstate.apply(
+                {
+                    Interface.KEY: [
+                        {
+                            Interface.NAME: BRIDGE1,
+                            Interface.TYPE: InterfaceType.OVS_BRIDGE,
+                            Interface.STATE: InterfaceState.UP,
+                        }
+                    ]
+                }
+            )
+
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: BRIDGE1,
+                    Interface.STATE: InterfaceState.ABSENT,
+                }
+            ]
+        }
+    )
 
 
 @pytest.mark.tier1

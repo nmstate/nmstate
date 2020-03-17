@@ -20,6 +20,7 @@ from operator import itemgetter
 
 from libnmstate import nm
 from libnmstate import validator
+from libnmstate.appliers.ovs_bridge import is_ovs_running
 from libnmstate.deprecation import _warn_keyword_as_positional
 from libnmstate.nm import dns as nm_dns
 from libnmstate.nm.nmclient import nmclient_context
@@ -78,7 +79,7 @@ def show(include_status_data=False):
 def capabilities():
     caps = set()
 
-    if nm.ovs.has_ovs_capability():
+    if nm.ovs.has_ovs_capability() and is_ovs_running():
         caps.add(nm.ovs.CAPABILITY)
 
     if nm.team.has_team_capability():
