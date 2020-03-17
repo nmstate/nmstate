@@ -26,7 +26,6 @@ from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import OVSBridge
 from libnmstate.error import NmstateDependencyError
-from libnmstate.error import NmstateLibnmError
 from libnmstate.error import NmstateValueError
 
 from .testlib import assertlib
@@ -43,6 +42,8 @@ BRIDGE1 = "br1"
 PORT1 = "ovs1"
 VLAN_IFNAME = "eth101"
 
+MAC1 = "02:FF:FF:FF:FF:01"
+
 
 @pytest.fixture
 def bridge_with_ports(port0_up):
@@ -56,10 +57,6 @@ def bridge_with_ports(port0_up):
 
 
 @pytest.mark.tier1
-@pytest.mark.xfail(
-    raises=(NmstateLibnmError, AssertionError),
-    reason="https://bugzilla.redhat.com/1724901",
-)
 def test_create_and_remove_ovs_bridge_with_min_desired_state():
     with Bridge(BRIDGE1).create() as state:
         assertlib.assert_state_match(state)
@@ -67,10 +64,6 @@ def test_create_and_remove_ovs_bridge_with_min_desired_state():
     assertlib.assert_absent(BRIDGE1)
 
 
-@pytest.mark.xfail(
-    raises=(NmstateLibnmError, AssertionError),
-    reason="https://bugzilla.redhat.com/1724901",
-)
 def test_create_and_remove_ovs_bridge_options_specified():
     bridge = Bridge(BRIDGE1)
     bridge.set_options(
@@ -89,10 +82,6 @@ def test_create_and_remove_ovs_bridge_options_specified():
 
 
 @pytest.mark.tier1
-@pytest.mark.xfail(
-    raises=(NmstateLibnmError, AssertionError),
-    reason="https://bugzilla.redhat.com/1724901",
-)
 def test_create_and_remove_ovs_bridge_with_a_system_port(port0_up):
     bridge = Bridge(BRIDGE1)
     port0_name = port0_up[Interface.KEY][0][Interface.NAME]
@@ -109,15 +98,11 @@ def test_create_and_remove_ovs_bridge_with_a_system_port(port0_up):
 
 
 @pytest.mark.tier1
-@pytest.mark.xfail(
-    raises=(NmstateLibnmError, AssertionError),
-    reason="https://bugzilla.redhat.com/1724901",
-)
 def test_create_and_remove_ovs_bridge_with_internal_port_static_ip_and_mac():
     bridge = Bridge(BRIDGE1)
     bridge.add_internal_port(
         PORT1,
-        mac="02:ff:ff:ff:ff:01",
+        mac=MAC1,
         ipv4_state={
             InterfaceIPv4.ENABLED: True,
             InterfaceIPv4.ADDRESS: [
@@ -162,10 +147,6 @@ def test_vlan_as_ovs_bridge_slave(vlan_on_eth1):
 
 
 @pytest.mark.tier1
-@pytest.mark.xfail(
-    raises=(NmstateLibnmError, AssertionError),
-    reason="https://bugzilla.redhat.com/1724901",
-)
 def test_ovs_interface_with_max_length_name():
     bridge = Bridge(BRIDGE1)
     ovs_interface_name = "ovs123456789012"
@@ -222,9 +203,6 @@ def test_ovs_service_missing():
 
 
 @pytest.mark.tier1
-@pytest.mark.xfail(
-    raises=NmstateLibnmError, reason="https://bugzilla.redhat.com/1724901"
-)
 def test_ovs_remove_port(bridge_with_ports):
     for port_name in bridge_with_ports.ports_names:
         assert get_proxy_port_name_of_ovs_interface(port_name)
@@ -256,9 +234,7 @@ def test_change_ovs_interface_mac():
 
     with bridge.create() as state:
         desired_state = {
-            Interface.KEY: [
-                {Interface.NAME: PORT1, Interface.MAC: "32:e4:ff:ff:ff:ff"}
-            ]
+            Interface.KEY: [{Interface.NAME: PORT1, Interface.MAC: MAC1}]
         }
         libnmstate.apply(desired_state)
         assertlib.assert_state_match(state)
