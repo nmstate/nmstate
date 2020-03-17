@@ -30,10 +30,10 @@ from libnmstate.error import NmstateLibnmError
 from libnmstate.error import NmstateValueError
 
 from .testlib import assertlib
-from .testlib import nmlib
 from .testlib import statelib
 from .testlib.nmplugin import disable_nm_plugin
 from .testlib.ovslib import Bridge
+from .testlib.ovslib import get_proxy_port_name_of_ovs_interface
 from .testlib.vlan import vlan_interface
 
 
@@ -199,8 +199,7 @@ def test_nm_ovs_plugin_missing():
 )
 def test_ovs_remove_port(bridge_with_ports):
     for port_name in bridge_with_ports.ports_names:
-        nm_port_profile_name = nmlib.get_ovs_port_by_slave(port_name)
-        assert nmlib.list_profiles_by_iface_name(nm_port_profile_name)
+        assert get_proxy_port_name_of_ovs_interface(port_name)
         libnmstate.apply(
             {
                 Interface.KEY: [
@@ -211,7 +210,7 @@ def test_ovs_remove_port(bridge_with_ports):
                 ]
             }
         )
-        assert not nmlib.list_profiles_by_iface_name(nm_port_profile_name)
+        assert not get_proxy_port_name_of_ovs_interface(port_name)
 
 
 @pytest.fixture

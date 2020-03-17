@@ -19,12 +19,15 @@
 
 from contextlib import contextmanager
 import copy
+import re
 
 import libnmstate
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import OVSBridge
+
+from . import cmdlib
 
 
 class Bridge:
@@ -130,3 +133,18 @@ def _set_ifaces_state(ifaces, state):
     for iface in ifaces:
         iface[Interface.STATE] = state
     return ifaces
+
+
+def get_proxy_port_name_of_ovs_interface(iface_name):
+    output = cmdlib.exec_cmd("ovs-vsctl show".split(" "), check=True)[1]
+    port_name = None
+    port_line_re = re.compile(r'^\s+Port\s"(.+)"$')
+    iface_line_re = re.compile(rf'^\s+Interface\s"{iface_name}"$')
+    for line in output.split("\n"):
+        match = port_line_re.match(line)
+        if match:
+            port_name = match.groups()[0]
+            continue
+        if iface_line_re.match(line):
+            return port_name
+    return None
