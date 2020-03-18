@@ -153,7 +153,7 @@ def _get_mac_address_from_sysfs(ifname):
     sysfs_path = f"/sys/class/net/{ifname}/address"
     try:
         with open(sysfs_path) as f:
-            mac = f.read().rstrip("\n")
+            mac = f.read().rstrip("\n").upper()
     except FileNotFoundError:
         pass
     return mac
