@@ -24,6 +24,9 @@ import warnings
 import pytest
 
 import libnmstate
+from libnmstate.schema import DNS
+from libnmstate.schema import Route
+from libnmstate.schema import RouteRule
 
 from .testlib import ifacelib
 
@@ -50,15 +53,37 @@ def pytest_collection_modifyitems(config, items):
 
 
 @pytest.fixture(scope="session", autouse=True)
-def logging_setup():
+def test_env_setup():
+    _logging_setup()
+    old_state = libnmstate.show()
+    _empty_net_state()
+    _ethx_init()
+    yield
+    libnmstate.apply(old_state, verify_change=False)
+    _diff_initial_state(old_state)
+
+
+def _empty_net_state():
+    """
+    Remove existing DNS, routes, route rules in case it interference tests.
+    """
+    desired_state = libnmstate.show()
+    desired_state[DNS.KEY] = {DNS.CONFIG: {}}
+    desired_state[Route.KEY] = {
+        Route.CONFIG: [{Route.STATE: Route.STATE_ABSENT}]
+    }
+    desired_state[RouteRule.KEY] = {RouteRule.CONFIG: []}
+    libnmstate.apply(desired_state)
+
+
+def _logging_setup():
     logging.basicConfig(
         format="%(asctime)s %(name)-12s %(levelname)-8s %(message)s",
         level=logging.DEBUG,
     )
 
 
-@pytest.fixture(scope="session", autouse=True)
-def ethx_init(diff_initial_state):
+def _ethx_init():
     """ Remove any existing definitions on the ethX interfaces. """
     ifacelib.ifaces_init("eth1", "eth2")
 
@@ -79,10 +104,7 @@ port0_up = eth1_up
 port1_up = eth2_up
 
 
-@pytest.fixture(scope="session", autouse=True)
-def diff_initial_state():
-    old_state = libnmstate.show()
-    yield
+def _diff_initial_state(old_state):
     new_state = libnmstate.show()
 
     if old_state != new_state:
