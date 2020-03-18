@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019 Red Hat, Inc.
+# Copyright (c) 2019-2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -19,8 +19,7 @@
 
 import pytest
 
-from libnmstate import netapplier
-from libnmstate import netinfo
+import libnmstate
 from libnmstate.error import NmstateNotImplementedError
 from libnmstate.schema import DNS
 from libnmstate.schema import Interface
@@ -54,7 +53,7 @@ def dns_test_env(eth1_up, eth2_up):
         Interface.KEY: _get_test_iface_states(),
         DNS.KEY: {DNS.CONFIG: {DNS.SERVER: [], DNS.SEARCH: []}},
     }
-    netapplier.apply(desired_state)
+    libnmstate.apply(desired_state)
 
 
 @pytest.mark.tier1
@@ -65,8 +64,8 @@ def test_dns_edit_nameserver_with_static_gateway(dns_config):
         Route.KEY: {Route.CONFIG: _gen_default_gateway_route()},
         DNS.KEY: {DNS.CONFIG: dns_config},
     }
-    netapplier.apply(desired_state)
-    current_state = netinfo.show()
+    libnmstate.apply(desired_state)
+    current_state = libnmstate.show()
     assert dns_config == current_state[DNS.KEY][DNS.CONFIG]
 
 
@@ -80,8 +79,8 @@ def test_dns_edit_ipv4_nameserver_before_ipv6():
         Route.KEY: {Route.CONFIG: _gen_default_gateway_route()},
         DNS.KEY: {DNS.CONFIG: dns_config},
     }
-    netapplier.apply(desired_state)
-    current_state = netinfo.show()
+    libnmstate.apply(desired_state)
+    current_state = libnmstate.show()
     assert dns_config == current_state[DNS.KEY][DNS.CONFIG]
 
 
@@ -96,8 +95,8 @@ def test_dns_edit_ipv6_nameserver_before_ipv4():
         Route.KEY: {Route.CONFIG: _gen_default_gateway_route()},
         DNS.KEY: {DNS.CONFIG: dns_config},
     }
-    netapplier.apply(desired_state)
-    current_state = netinfo.show()
+    libnmstate.apply(desired_state)
+    current_state = libnmstate.show()
     assert dns_config == current_state[DNS.KEY][DNS.CONFIG]
 
 
@@ -116,8 +115,8 @@ def test_dns_edit_three_nameservers():
         Route.KEY: {Route.CONFIG: _gen_default_gateway_route()},
         DNS.KEY: {DNS.CONFIG: dns_config},
     }
-    netapplier.apply(desired_state)
-    current_state = netinfo.show()
+    libnmstate.apply(desired_state)
+    current_state = libnmstate.show()
     assert dns_config == current_state[DNS.KEY][DNS.CONFIG]
 
 
@@ -132,10 +131,10 @@ def test_remove_dns_config():
         Route.KEY: {Route.CONFIG: _gen_default_gateway_route()},
         DNS.KEY: {DNS.CONFIG: dns_config},
     }
-    netapplier.apply(desired_state)
+    libnmstate.apply(desired_state)
 
-    netapplier.apply({Interface.KEY: [], DNS.KEY: {DNS.CONFIG: {}}})
-    current_state = netinfo.show()
+    libnmstate.apply({Interface.KEY: [], DNS.KEY: {DNS.CONFIG: {}}})
+    current_state = libnmstate.show()
     dns_config = {DNS.SERVER: [], DNS.SEARCH: []}
     assert dns_config == current_state[DNS.KEY][DNS.CONFIG]
 
@@ -150,12 +149,12 @@ def test_preserve_dns_config():
         Route.KEY: {Route.CONFIG: _gen_default_gateway_route()},
         DNS.KEY: {DNS.CONFIG: dns_config},
     }
-    netapplier.apply(desired_state)
-    current_state = netinfo.show()
+    libnmstate.apply(desired_state)
+    current_state = libnmstate.show()
 
     # Remove default gateways, so that if nmstate try to find new interface
     # for DNS profile, it will fail.
-    netapplier.apply(
+    libnmstate.apply(
         {
             Interface.KEY: _get_test_iface_states(),
             Route.KEY: {
@@ -173,7 +172,7 @@ def test_preserve_dns_config():
         }
     )
 
-    netapplier.apply({Interface.KEY: [], DNS.KEY: dns_config})
+    libnmstate.apply({Interface.KEY: [], DNS.KEY: dns_config})
 
     assert dns_config == current_state[DNS.KEY][DNS.CONFIG]
 
@@ -190,15 +189,15 @@ def setup_ipv4_ipv6_name_server():
             }
         },
     }
-    netapplier.apply(desired_state)
+    libnmstate.apply(desired_state)
     yield desired_state
 
 
 def test_preserve_dns_config_with_empty_state(setup_ipv4_ipv6_name_server):
     old_state = setup_ipv4_ipv6_name_server
 
-    netapplier.apply({Interface.KEY: []})
-    current_state = netinfo.show()
+    libnmstate.apply({Interface.KEY: []})
+    current_state = libnmstate.show()
 
     assert old_state[DNS.KEY][DNS.CONFIG] == current_state[DNS.KEY][DNS.CONFIG]
 
