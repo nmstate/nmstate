@@ -461,10 +461,11 @@ def _build_connection_profile(
     if bond_opts:
         settings.append(bond.create_setting(bond_opts, wired_setting))
     elif iface_type == bridge.BRIDGE_TYPE:
-        bridge_options = iface_desired_state.get(bridge.BRIDGE_TYPE, {}).get(
-            LB.OPTIONS_SUBTREE
-        )
-        if bridge_options:
+        bridge_config = iface_desired_state.get(bridge.BRIDGE_TYPE, {})
+        bridge_options = bridge_config.get(LB.OPTIONS_SUBTREE)
+        bridge_ports = bridge_config.get(LB.PORT_SUBTREE)
+
+        if bridge_options or bridge_ports:
             linux_bridge_setting = bridge.create_setting(
                 bridge_options, base_profile
             )
