@@ -95,8 +95,22 @@ def validate_interface_capabilities(ifaces_state, capabilities):
 
 
 def validate_interfaces_state(original_desired_state, current_state):
+    _validate_new_interface_state(original_desired_state, current_state)
     validate_link_aggregation_state(original_desired_state, current_state)
     _validate_linux_bond(original_desired_state, current_state)
+
+
+def _validate_new_interface_state(original_desired_state, current_state):
+    """
+    New interface should explictly specify the Interface.STATE
+    """
+    for iface_name, iface_state in original_desired_state.interfaces.items():
+        cur_iface_state = current_state.interfaces.get(iface_name)
+        if not cur_iface_state and not iface_state.get(Interface.STATE):
+            raise NmstateValueError(
+                "Interface.STATE is required but undefined for interface "
+                f"{iface_name}"
+            )
 
 
 def validate_link_aggregation_state(desired_state, current_state):

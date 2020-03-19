@@ -662,3 +662,36 @@ class TestLinuxBondValidator:
                 Bond.OPTIONS_SUBTREE: {},
             },
         }
+
+
+def test_new_interface_with_no_state():
+    current_state = state.State({})
+    desired_state = state.State(
+        {
+            Interface.KEY: [
+                {Interface.NAME: "foo", Interface.TYPE: InterfaceType.UNKNOWN}
+            ]
+        }
+    )
+    with pytest.raises(NmstateValueError):
+        libnmstate.validator.validate_interfaces_state(
+            desired_state, current_state
+        )
+
+
+def test_existing_interface_with_no_state():
+    current_state = state.State(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: "foo",
+                    Interface.STATE: InterfaceState.UP,
+                    Interface.TYPE: InterfaceType.UNKNOWN,
+                }
+            ]
+        }
+    )
+    desired_state = state.State({Interface.KEY: [{Interface.NAME: "foo",}]})
+    libnmstate.validator.validate_interfaces_state(
+        desired_state, current_state
+    )
