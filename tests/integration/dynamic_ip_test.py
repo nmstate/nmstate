@@ -76,6 +76,10 @@ DHCP_SRV_IP6_NETWORK = "{}::/64".format(DHCP_SRV_IP6_PREFIX)
 IPV6_DEFAULT_GATEWAY = "::/0"
 IPV4_DEFAULT_GATEWAY = "0.0.0.0/0"
 
+IPV4_DNS_NAMESERVER = "8.8.8.8"
+IPV6_DNS_NAMESERVER = "2001:4860:4860::8888"
+EXAMPLE_SEARCHES = ["example.org", "example.com"]
+
 DNSMASQ_CONF_STR = """
 leasefile-ro
 interface={iface}
@@ -1077,3 +1081,42 @@ def test_static_ip_with_routes_switch_back_to_dynamic(
         if route[RT.NEXT_HOP_INTERFACE] == DHCP_CLI_NIC
     ]
     assert not current_config_routes
+
+
+@pytest.fixture
+def dhcpcli_up_with_dns_cleanup(dhcpcli_up):
+    yield dhcpcli_up
+    libnmstate.apply({DNS.KEY: {DNS.CONFIG: {}}})
+
+
+def test_dynamic_ip_with_static_dns(dhcpcli_up_with_dns_cleanup):
+    iface_state = {
+        Interface.NAME: DHCP_CLI_NIC,
+        Interface.STATE: InterfaceState.UP,
+        Interface.IPV4: create_ipv4_state(
+            enabled=True, dhcp=True, auto_dns=False
+        ),
+        Interface.IPV6: create_ipv6_state(
+            enabled=True, dhcp=True, autoconf=True, auto_dns=False
+        ),
+    }
+    dns_config = {
+        DNS.CONFIG: {
+            DNS.SERVER: [IPV6_DNS_NAMESERVER, IPV4_DNS_NAMESERVER],
+            DNS.SEARCH: EXAMPLE_SEARCHES,
+        }
+    }
+    desired_state = {Interface.KEY: [iface_state], DNS.KEY: dns_config}
+
+    libnmstate.apply(desired_state)
+    assertlib.assert_state_match(desired_state)
+
+    assert _poll(_has_ipv4_dhcp_gateway)
+    assert _poll(_has_ipv6_auto_gateway)
+    assert _poll(_has_dhcpv4_addr)
+    assert _poll(_has_dhcpv6_addr)
+    assert not _has_ipv4_dhcp_nameserver()
+    assert not _has_ipv6_auto_nameserver()
+    new_state = libnmstate.show()
+    assert dns_config[DNS.CONFIG] == new_state[DNS.KEY][DNS.CONFIG]
+    assert dns_config[DNS.CONFIG] == new_state[DNS.KEY][DNS.RUNNING]
