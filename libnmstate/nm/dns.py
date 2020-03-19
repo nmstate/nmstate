@@ -27,6 +27,8 @@ from libnmstate.nm import active_connection as nm_ac
 from libnmstate.nm import route as nm_route
 from libnmstate.schema import DNS
 from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceIP
+from libnmstate.schema import InterfaceIPv6
 
 
 DNS_DEFAULT_PRIORITY_VPN = 50
@@ -123,17 +125,26 @@ def get_dns_config_iface_names(acs_and_ipv4_profiles, acs_and_ipv6_profiles):
     return iface_names
 
 
-def find_interfaces_for_name_servers(iface_routes):
+def find_interfaces_for_name_servers(desired_state):
     """
     Find interfaces to store the DNS configurations:
         * Interface with static gateway configured.
+        * Interface with dynamic IP and auto-dns: False.
     Return two interface names for IPv4 and IPv6 name servers.
     The interface name will be None if failed to find proper interface.
     """
-    return (
-        nm_route.get_static_gateway_iface(Interface.IPV4, iface_routes),
-        nm_route.get_static_gateway_iface(Interface.IPV6, iface_routes),
-    )
+    iface_routes = {
+        ifname: [r.to_dict() for r in routes]
+        for ifname, routes in desired_state.config_iface_routes.items()
+    }
+    ipv4_iface = nm_route.get_static_gateway_iface(
+        Interface.IPV4, iface_routes
+    ) or _get_auto_dns_false_iface(Interface.IPV4, desired_state.interfaces)
+
+    ipv6_iface = nm_route.get_static_gateway_iface(
+        Interface.IPV6, iface_routes
+    ) or _get_auto_dns_false_iface(Interface.IPV6, desired_state.interfaces)
+    return ipv4_iface, ipv6_iface
 
 
 def get_indexed_dns_config_by_iface(
@@ -179,3 +190,16 @@ def _get_ip_profile_dns_config(ip_profile):
         DNS.SEARCH: ip_profile.props.dns_search,
         DNS_METADATA_PRIORITY: ip_profile.props.dns_priority,
     }
+
+
+def _get_auto_dns_false_iface(family, iface_states):
+    for iface_name, iface_state in iface_states.items():
+        ip_state = iface_state.get(family, {})
+        if ip_state.get(InterfaceIP.ENABLED) and not ip_state.get(
+            InterfaceIP.AUTO_DNS
+        ):
+            if ip_state.get(InterfaceIP.DHCP) or ip_state.get(
+                InterfaceIPv6.AUTOCONF
+            ):
+                return iface_name
+    return None

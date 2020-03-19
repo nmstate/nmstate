@@ -242,12 +242,8 @@ def _generate_dns_metadata(desired_state, current_state):
     if _dns_config_not_changed(desired_state, current_state):
         _preserve_current_dns_metadata(desired_state, current_state)
     else:
-        ifaces_routes = {
-            ifname: [r.to_dict() for r in routes]
-            for ifname, routes in desired_state.config_iface_routes.items()
-        }
         ipv4_iface, ipv6_iface = nm.dns.find_interfaces_for_name_servers(
-            ifaces_routes
+            desired_state
         )
         _save_dns_metadata(
             desired_state,
