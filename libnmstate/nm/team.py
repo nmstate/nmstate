@@ -28,6 +28,7 @@ from libnmstate.schema import Team
 CAPABILITY = "team"
 TEAMD_JSON_DEVICE = "device"
 TEAMD_JSON_PORTS = "ports"
+TEAMD_JSON_HWADDR = "hwaddr"
 
 
 def has_team_capability():
@@ -100,6 +101,7 @@ def get_info(device):
 
 def _convert_teamd_config_to_nmstate_config(teamd_config, slave_names):
     teamd_config.pop(TEAMD_JSON_DEVICE, None)
+    teamd_config.pop(TEAMD_JSON_HWADDR, None)
     port_config = teamd_config.get(TEAMD_JSON_PORTS, {})
     team_port = _merge_port_config_with_slaves_info(port_config, slave_names)
 

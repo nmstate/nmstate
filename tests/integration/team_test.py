@@ -35,6 +35,7 @@ from .testlib import assertlib
 from .testlib.cmdlib import exec_cmd
 from .testlib.cmdlib import RC_SUCCESS
 from .testlib.nmplugin import disable_nm_plugin
+from .testlib.statelib import show_only
 
 
 TEAM0 = "team0"
@@ -96,6 +97,14 @@ def test_nm_team_plugin_missing():
                     ]
                 }
             )
+
+
+def test_hwaddr_team_show(eth1_up, eth2_up):
+    with team_interface(TEAM0, [PORT1, PORT2]):
+        state = show_only((TEAM0,))
+        assert (
+            state[Interface.KEY][0][Team.CONFIG_SUBTREE].get("hwaddr") is None
+        )
 
 
 @contextmanager
