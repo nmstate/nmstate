@@ -57,29 +57,23 @@ def libnm_nm_version_mismatch_check():
         _MINIMUM_NM_VERSION
     ):
         warnings.warn(
-            "NetworkManager version ("
-            + NM.Client.get_version()
-            + ") is too old, atleast version ("
-            + _MINIMUM_NM_VERSION
-            + ") is required."
+            "NetworkManager version ({}) is too old, atleast version ({}) is required.".format(
+                NM.Client.get_version(), _MINIMUM_NM_VERSION
+            )
         )
     if StrictVersion(NM.utils_version()) < StrictVersion(_MINIMUM_NM_VERSION):
         warnings.warn(
-            "Libnm version ("
-            + NM.utils_version()
-            + ") is too old, atleast version ("
-            + _MINIMUM_NM_VERSION
-            + ") is required."
+            "Libnm version ({}) is too old, atleast version ({}) is required.".format(
+                NM.utils_version(), _MINIMUM_NM_VERSION
+            )
         )
     if StrictVersion(NM.utils_version()) != StrictVersion(
         NM.Client.get_version()
     ):
         warnings.warn(
-            "NetworkManager version ("
-            + NM.Client.get_version()
-            + ") does not match libnm version ("
-            + NM.utils_version()
-            + ")."
+            "NetworkManager version ({}) does not match libnm version ({}).".format(
+                NM.Client.get_version(), NM.utils_version()
+            )
         )
 
 
