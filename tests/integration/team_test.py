@@ -128,3 +128,11 @@ def _get_runtime_team_slaves(team_iface_name):
     assert rc == RC_SUCCESS
     teamd_state = json.loads(output)
     return sorted(teamd_state.get("ports", {}).keys())
+
+
+def test_team_change_port_order(eth1_up, eth2_up):
+    with team_interface(TEAM0, [PORT1, PORT2]) as desired_state:
+        desired_state[Interface.KEY][0][Team.CONFIG_SUBTREE][
+            Team.PORT_SUBTREE
+        ].reverse()
+        libnmstate.apply(desired_state)

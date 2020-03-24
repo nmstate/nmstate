@@ -51,6 +51,7 @@ from libnmstate.schema import LinuxBridge
 from libnmstate.schema import OVSBridge
 from libnmstate.schema import Route
 from libnmstate.schema import RouteRule
+from libnmstate.schema import Team
 
 
 NON_UP_STATES = (InterfaceState.DOWN, InterfaceState.ABSENT)
@@ -364,6 +365,7 @@ class State:
         self._sort_lag_slaves()
         self._sort_ovs_lag_slaves()
         self._sort_bridge_ports()
+        self._sort_team_ports()
         self._canonicalize_ipv6()
         self._remove_iface_ipv6_link_local_addr()
         self._sort_ip_addresses()
@@ -668,6 +670,12 @@ class State:
             ifstate.get("bridge", {}).get("port", []).sort(
                 key=itemgetter("name")
             )
+
+    def _sort_team_ports(self):
+        for ifstate in self.interfaces.values():
+            ifstate.get(Team.CONFIG_SUBTREE, {}).get(
+                Team.PORT_SUBTREE, []
+            ).sort(key=itemgetter(Team.Port.NAME))
 
     def _canonicalize_ipv6(self):
         for ifstate in self.interfaces.values():
