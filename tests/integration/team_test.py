@@ -25,7 +25,6 @@ import pytest
 
 import libnmstate
 from libnmstate.error import NmstateDependencyError
-from libnmstate.error import NmstateLibnmError
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
@@ -48,18 +47,12 @@ pytestmark = pytest.mark.skipif(
 )
 
 
-@pytest.mark.xfail(
-    raises=NmstateLibnmError, reason="https://bugzilla.redhat.com/1798947"
-)
 def test_create_team_iface_without_slaves():
     with team_interface(TEAM0) as team_state:
         assertlib.assert_state(team_state)
 
 
 @pytest.mark.tier1
-@pytest.mark.xfail(
-    raises=NmstateLibnmError, reason="https://bugzilla.redhat.com/1798947"
-)
 def test_create_team_iface_with_slaves(eth1_up, eth2_up):
     with team_interface(TEAM0, [PORT1, PORT2]) as team_state:
         assertlib.assert_state_match(team_state)
@@ -67,9 +60,6 @@ def test_create_team_iface_with_slaves(eth1_up, eth2_up):
     assertlib.assert_absent(TEAM0)
 
 
-@pytest.mark.xfail(
-    raises=NmstateLibnmError, reason="https://bugzilla.redhat.com/1798947"
-)
 def test_edit_team_iface(eth1_up):
     with team_interface(TEAM0) as team_state:
         team_state[Interface.KEY][0][Team.CONFIG_SUBTREE] = {
