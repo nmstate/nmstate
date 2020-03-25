@@ -166,9 +166,18 @@ def validate_dns(state):
     dns_servers = (
         state.get(DNS.KEY, {}).get(DNS.CONFIG, {}).get(DNS.SERVER, [])
     )
-    if len(dns_servers) > 2:
+    if len(dns_servers) > 3:
+        logging.warning(
+            "The libc resolver may not support more than 3 nameservers."
+        )
+    if (
+        len(dns_servers) > 2
+        and any(is_ipv6_address(n) for n in dns_servers)
+        and any(not is_ipv6_address(n) for n in dns_servers)
+    ):
         raise NmstateNotImplementedError(
-            "Nmstate only support at most 2 DNS name servers"
+            "Three or more nameservers are only supported when using "
+            "either IPv4 or IPv6 nameservers but not both."
         )
 
 

@@ -32,7 +32,9 @@ from libnmstate.schema import Route
 
 
 IPV4_DNS_NAMESERVERS = ["8.8.8.8", "1.1.1.1"]
+EXTRA_IPV4_DNS_NAMESERVER = "9.9.9.9"
 IPV6_DNS_NAMESERVERS = ["2001:4860:4860::8888", "2606:4700:4700::1111"]
+EXTRA_IPV6_DNS_NAMESERVER = "2620:fe::9"
 EXAMPLE_SEARCHES = ["example.org", "example.com"]
 
 parametrize_ip_ver = pytest.mark.parametrize(
@@ -99,14 +101,27 @@ def test_dns_edit_ipv6_nameserver_before_ipv4():
     assert dns_config == current_state[DNS.KEY][DNS.CONFIG]
 
 
-@pytest.mark.xfail(
-    raises=NmstateNotImplementedError,
-    reason="https://nmstate.atlassian.net/browse/NMSTATE-220",
-    strict=True,
+@pytest.mark.parametrize(
+    "dns_servers",
+    [
+        (IPV4_DNS_NAMESERVERS + [EXTRA_IPV4_DNS_NAMESERVER]),
+        (IPV6_DNS_NAMESERVERS + [EXTRA_IPV6_DNS_NAMESERVER]),
+        pytest.mark.xfail(
+            reason="Not supported",
+            raises=NmstateNotImplementedError,
+            strict=True,
+        )(IPV4_DNS_NAMESERVERS + [EXTRA_IPV6_DNS_NAMESERVER]),
+        pytest.mark.xfail(
+            reason="Not supported",
+            raises=NmstateNotImplementedError,
+            strict=True,
+        )(IPV6_DNS_NAMESERVERS + [EXTRA_IPV4_DNS_NAMESERVER]),
+    ],
+    ids=["ipv4", "ipv6", "ipv4+ipv6", "ipv6+ipv4"],
 )
-def test_dns_edit_three_nameservers():
+def test_dns_edit_three_nameservers(dns_servers):
     dns_config = {
-        DNS.SERVER: IPV6_DNS_NAMESERVERS + [IPV4_DNS_NAMESERVERS[0]],
+        DNS.SERVER: dns_servers,
         DNS.SEARCH: [],
     }
     desired_state = {
