@@ -153,7 +153,12 @@ def _modify_ports(ports_state):
 @nmclient_context
 def _get_bridge_current_state():
     nmdev = nm.device.get_device_by_name(BRIDGE0)
-    return nm.bridge.get_info(nmdev) if nmdev else {}
+    state = nm.bridge.get_info(nmdev) if nmdev else {}
+    if state:
+        slaves = state.get(LB.CONFIG_SUBTREE, {}).get(LB.PORT_SUBTREE, [])
+        slaves.sort(key=lambda d: d[LB.Port.NAME])
+
+    return state
 
 
 @mainloop_run
