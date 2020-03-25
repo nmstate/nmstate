@@ -12,6 +12,8 @@ nmstatectl \- A nmstate command line tool
 .B nmstatectl rollback \fR[\fICHECKPOINT_PATH\fR]
 .br
 .B nmstatectl commit \fR[\fICHECKPOINT_PATH\fR]
+.br
+.B nmstatectl version
 .SH DESCRIPTION
 .B nmstatectl\fR is created for users who want to try out nmstate without using
 \fIlibnmstate\fR.
@@ -76,6 +78,9 @@ will take the latest checkpoint if not defined as argument.
 commit the current network state. \fBnmstatectl\fR will take the latest
 checkpoint if not defined as argument.
 .RE
+.B version
+.RS
+displays nmstate version.
 .SH OPTIONS
 .B --json
 .RS
@@ -90,6 +95,8 @@ checkpoint will be the last line of \fBnmstatectl\fR output, example:
 .IP \fB--timeout\fR=<\fITIMEOUT\fR>
 the user must commit the changes within \fItimeout\fR, or they will be
 automatically rolled back. Default: 60 seconds.
+.IP \fB--version
+displays nmstate version.
 .SH BUG REPORTS
 Report bugs on nmstate GitHub issues <https://github.com/nmstate/nmstate>.
 .SH COPYRIGHT
