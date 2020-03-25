@@ -17,6 +17,9 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
+import glob
+import os
+
 from libnmstate.error import NmstateNotImplementedError
 from libnmstate.nm import connection
 from libnmstate.nm import nmclient
@@ -24,6 +27,12 @@ from libnmstate.schema import LinuxBridge as LB
 
 
 BRIDGE_TYPE = "bridge"
+
+BRIDGE_PORT_NMSTATE_TO_SYSFS = {
+    LB.Port.STP_HAIRPIN_MODE: "hairpin_mode",
+    LB.Port.STP_PATH_COST: "path_cost",
+    LB.Port.STP_PRIORITY: "priority",
+}
 
 
 def create_setting(options, base_con_profile):
@@ -106,10 +115,10 @@ def get_info(nmdev):
     if not bridge_setting:
         return info
 
-    port_profiles = _get_slave_profiles(nmdev)
+    port_names_sysfs = _get_slaves_names_from_sysfs(nmdev.get_iface())
     props = bridge_setting.props
     info[LB.CONFIG_SUBTREE] = {
-        LB.PORT_SUBTREE: _get_bridge_ports_info(port_profiles),
+        LB.PORT_SUBTREE: _get_bridge_ports_info(port_names_sysfs),
         LB.OPTIONS_SUBTREE: {
             LB.Options.MAC_AGEING_TIME: props.ageing_time,
             LB.Options.GROUP_FORWARD_MASK: props.group_forward_mask,
@@ -139,25 +148,35 @@ def _get_bridge_setting(nmdev):
     return bridge_setting
 
 
-def _get_bridge_ports_info(port_profiles):
-    ports_info = []
-    for p in port_profiles:
-        port_info = _get_bridge_port_info(p)
-        if port_info:
-            ports_info.append(port_info)
-    return ports_info
+def _get_bridge_ports_info(port_names_sysfs):
+    return [_get_bridge_port_info(name) for name in port_names_sysfs]
 
 
-def _get_bridge_port_info(port_profile):
-    """Report port information."""
+def _get_bridge_port_info(port_name):
+    """Report port runtime information from sysfs."""
+    port = {LB.Port.NAME: port_name}
+    for option, option_sysfs in BRIDGE_PORT_NMSTATE_TO_SYSFS.items():
+        sysfs_path = f"/sys/class/net/{port_name}/brport/{option_sysfs}"
+        with open(sysfs_path) as f:
+            option_value = int(f.read())
+            if option == LB.Port.STP_HAIRPIN_MODE:
+                option_value = bool(option_value)
+        port[option] = option_value
+    return port
 
-    port_setting = port_profile.get_setting_bridge_port()
-    return {
-        LB.Port.NAME: port_profile.get_interface_name(),
-        LB.Port.STP_PRIORITY: port_setting.props.priority,
-        LB.Port.STP_HAIRPIN_MODE: port_setting.props.hairpin_mode,
-        LB.Port.STP_PATH_COST: port_setting.props.path_cost,
-    }
+
+def _get_slaves_names_from_sysfs(master):
+    """
+    We need to use glob in order to get the slaves name due to bug in
+    NetworkManager.
+    Ref: https://bugzilla.redhat.com/show_bug.cgi?id=1809547
+    """
+    slaves = []
+    for sysfs_slave in glob.iglob(f"/sys/class/net/{master}/lower_*"):
+        # The format is lower_<iface>, we need to remove the "lower_" prefix
+        prefix_length = len("lower_")
+        slaves.append(os.path.basename(sysfs_slave)[prefix_length:])
+    return slaves
 
 
 def _get_slave_profiles(master_device):
