@@ -1,4 +1,18 @@
 # Changelog
+## [0.2.9] - 2020-03-25
+### Bug Fixes
+ - Fix verification errors due to outdated values: https://github.com/nmstate/nmstate/issues/853
+ - Fix missing linux bridge slaves reporting: https://github.com/nmstate/nmstate/issues/869
+ - Allow missing arp_ip_target when ARP monitoring is disabled: https://bugzilla.redhat.com/1817478 
+
+### New features
+ - Support static DNS with dynamic IP: https://github.com/nmstate/nmstate/issues/867
+ - Support 3+ single stack DNS nameservers: https://bugzilla.redhat.com/1816043
+
+### Known Issues with NetworkManager Version 1.22.10
+ - Cannot set bond option with updelay=0,miimon=0: https://bugzilla.redhat.com/1805184
+ - Cannot set bond option with miimon=100,arp_interval=0: https://bugzilla.redhat.com/1806549
+
 ## [0.2.8] - 2020-03-12
 ### Bug Fixes
  - Fix adding slave to newly create bridge causes bridge link down.
