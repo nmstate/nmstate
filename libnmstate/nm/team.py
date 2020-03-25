@@ -90,29 +90,18 @@ def get_info(device):
         if teamd_json:
             teamd_config = json.loads(teamd_json)
             slave_names = [dev.get_iface() for dev in device.get_slaves()]
-            team_config = _convert_teamd_config_to_nmstate_config(
-                teamd_config, slave_names
-            )
-            info[Team.CONFIG_SUBTREE] = team_config
-
+            info[Team.CONFIG_SUBTREE] = {
+                Team.PORT_SUBTREE: [
+                    {Team.Port.NAME: n} for n in sorted(slave_names)
+                ],
+            }
+            runner = _get_runner_name(teamd_config)
+            if runner:
+                info[Team.CONFIG_SUBTREE][Team.RUNNER_SUBTREE] = {
+                    Team.Runner.NAME: runner
+                }
     return info
 
 
-def _convert_teamd_config_to_nmstate_config(teamd_config, slave_names):
-    teamd_config.pop(TEAMD_JSON_DEVICE, None)
-    port_config = teamd_config.get(TEAMD_JSON_PORTS, {})
-    team_port = _merge_port_config_with_slaves_info(port_config, slave_names)
-
-    team_config = teamd_config
-    team_config[Team.PORT_SUBTREE] = team_port
-    return team_config
-
-
-def _merge_port_config_with_slaves_info(port_config, slave_names):
-    port_list = []
-    for name in slave_names:
-        port = port_config.get(name, {})
-        port[Team.Port.NAME] = name
-        port_list.append(port)
-
-    return port_list
+def _get_runner_name(teamd_config):
+    return teamd_config.get("runner", {}).get("name")
