@@ -130,7 +130,7 @@ def _remove_sriov_vfs_in_setting(vfs_config, sriov_setting, vf_ids_to_remove):
 def _has_sriov_capability(ifname):
     dev = device.get_device_by_name(ifname)
     return dev and (
-        nmclient.NM.DeviceCapabilities.SRIOV & dev.props.capabilites
+        nmclient.NM.DeviceCapabilities.SRIOV & dev.props.capabilities
     )
 
 
