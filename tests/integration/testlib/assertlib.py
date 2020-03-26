@@ -19,9 +19,11 @@
 import copy
 
 import libnmstate
+from libnmstate.schema import Bond
 from libnmstate.schema import DNS
 from libnmstate.schema import Route
 from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceType
 
 from . import statelib
 
@@ -85,6 +87,8 @@ def _prepare_state_for_verify(desired_state_data):
     full_desired_state.update(desired_state_data)
     full_desired_state.remove_absent_entries()
     full_desired_state.normalize()
+    _fix_bond_state(current_state)
+
     return full_desired_state, current_state
 
 
@@ -99,3 +103,20 @@ def assert_no_config_route_to_iface(iface_name):
         for route in current_state[Route.KEY][Route.CONFIG]
         if route[Route.NEXT_HOP_INTERFACE] == iface_name
     )
+
+
+def _fix_bond_state(current_state):
+    """
+    Allow current state include default value of "arp_ip_target"
+    when not found in bond_options and "arp_interval" is found in bond_options.
+    """
+    for iface_state in current_state.state[Interface.KEY]:
+        if iface_state.get(Interface.TYPE) == InterfaceType.BOND:
+            bond_options = iface_state[Bond.CONFIG_SUBTREE][
+                Bond.OPTIONS_SUBTREE
+            ]
+            if (
+                "arp_interval" in bond_options
+                and "arp_ip_target" not in bond_options
+            ):
+                bond_options["arp_ip_target"] = ""

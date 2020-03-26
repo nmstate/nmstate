@@ -190,7 +190,7 @@ def test_add_bond_with_slaves_and_ipv4(eth1_up, eth2_up, setup_remove_bond99):
 
     libnmstate.apply(desired_bond_state)
 
-    assertlib.assert_state(desired_bond_state)
+    assertlib.assert_state_match(desired_bond_state)
 
 
 @pytest.mark.tier1
@@ -317,7 +317,7 @@ def test_swap_slaves_between_bonds(bond88_with_slave, bond99_with_eth2):
     state.update(bond99_with_eth2)
     libnmstate.apply(state)
 
-    assertlib.assert_state(state)
+    assertlib.assert_state_match(state)
 
 
 @pytest.mark.tier1
@@ -477,7 +477,7 @@ def test_preserve_bond_after_bridge_removal(bond99_with_eth2):
     bridge_state = add_port_to_bridge(create_bridge_subtree_state(), BOND99)
     with linux_bridge(bridge_name, bridge_state) as desired_state:
         assertlib.assert_state_match(desired_state)
-    assertlib.assert_state(bond99_with_eth2)
+    assertlib.assert_state_match(bond99_with_eth2)
 
 
 @pytest.mark.tier1
@@ -499,7 +499,7 @@ def test_change_bond_option_miimon(bond99_with_2_slaves):
     bond_options = iface_state[Bond.CONFIG_SUBTREE][Bond.OPTIONS_SUBTREE]
     bond_options["miimon"] = 200
     libnmstate.apply(desired_state)
-    assertlib.assert_state(desired_state)
+    assertlib.assert_state_match(desired_state)
 
 
 @pytest.mark.tier1
@@ -777,3 +777,32 @@ def test_new_bond_uses_mac_of_first_slave_by_name(eth1_eth2_with_no_profile):
         assert get_mac_address(BOND99) == eth1_mac
         _nmcli_simulate_boot(BOND99)
         assert get_mac_address(BOND99) == eth1_mac
+
+
+@pytest.fixture
+def bond99_with_2_slaves_and_arp_monitor(eth1_up, eth2_up):
+    with bond_interface(
+        name=BOND99,
+        slaves=[ETH1, ETH2],
+        extra_iface_state={
+            Bond.CONFIG_SUBTREE: {
+                Bond.MODE: BondMode.ACTIVE_BACKUP,
+                Bond.OPTIONS_SUBTREE: {
+                    "arp_interval": 60,
+                    "arp_ip_target": IPV4_ADDRESS1,
+                },
+            },
+        },
+    ) as state:
+        yield state
+
+
+def test_bond_disable_arp_interval(bond99_with_2_slaves_and_arp_monitor):
+    state = bond99_with_2_slaves_and_arp_monitor
+    bond_config = state[Interface.KEY][0][Bond.CONFIG_SUBTREE]
+    bond_config[Bond.OPTIONS_SUBTREE]["arp_interval"] = 0
+    bond_config[Bond.OPTIONS_SUBTREE]["arp_ip_target"] = ""
+
+    libnmstate.apply(state)
+
+    assertlib.assert_state_match(state)
