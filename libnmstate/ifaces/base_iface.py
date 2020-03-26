@@ -296,6 +296,10 @@ class BaseIface:
     def mac(self):
         return self._info.get(Interface.MAC)
 
+    @property
+    def mtu(self):
+        return self._info.get(Interface.MTU)
+
     def _capitalize_mac(self):
         if self.mac:
             self._info[Interface.MAC] = self.mac.upper()

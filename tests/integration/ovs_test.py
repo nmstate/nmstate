@@ -29,12 +29,15 @@ from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import OVSBridge
 from libnmstate.schema import OvsDB
+from libnmstate.schema import OVSInterface
 from libnmstate.error import NmstateDependencyError
+from libnmstate.error import NmstateLibnmError
 from libnmstate.error import NmstateValueError
 
 from .testlib import assertlib
 from .testlib import cmdlib
 from .testlib import statelib
+from .testlib.env import nm_is_not_supporting_ovs_patch_port
 from .testlib.nmplugin import disable_nm_plugin
 from .testlib.ovslib import Bridge
 from .testlib.servicelib import disable_service
@@ -44,9 +47,12 @@ from .testlib.vlan import vlan_interface
 
 
 BOND1 = "bond1"
+BRIDGE0 = "br0"
 BRIDGE1 = "br1"
 PORT1 = "ovs1"
 PORT2 = "ovs2"
+PATCH0 = "patch0"
+PATCH1 = "patch1"
 VLAN_IFNAME = "eth101"
 
 MAC1 = "02:FF:FF:FF:FF:01"
@@ -332,3 +338,101 @@ def test_ovsdb_set_external_ids_for_existing_bridge(bridge_with_ports):
     )
     bridge.apply()
     assertlib.assert_state_match(bridge.state)
+
+
+class TestOvsPatch:
+    @pytest.mark.xfail(
+        nm_is_not_supporting_ovs_patch_port(),
+        reason="Using the interface name is supported only with NM "
+        "1.22.16/1.24.2 or greater.",
+        raises=NmstateLibnmError,
+        strict=True,
+    )
+    def test_create_and_remove_patch_port(self):
+        patch0_state = {OVSInterface.Patch.PEER: "patch1"}
+        patch1_state = {OVSInterface.Patch.PEER: "patch0"}
+        bridge = Bridge(BRIDGE0)
+        bridge.add_internal_port(PATCH0, patch_state=patch0_state)
+        desired_state = bridge.state
+        bridge = Bridge(BRIDGE1)
+        bridge.add_internal_port(PATCH1, patch_state=patch1_state)
+        desired_state[Interface.KEY].extend(bridge.state[Interface.KEY])
+        try:
+            libnmstate.apply(desired_state)
+            assertlib.assert_state_match(desired_state)
+        finally:
+            for iface in desired_state[Interface.KEY]:
+                iface[Interface.STATE] = InterfaceState.ABSENT
+            libnmstate.apply(desired_state)
+
+        assertlib.assert_absent(BRIDGE1)
+        assertlib.assert_absent(BRIDGE0)
+        assertlib.assert_absent(PATCH0)
+        assertlib.assert_absent(PATCH1)
+
+    def test_add_patch_to_existing_interface_invalid(self):
+        patch0_state = {OVSInterface.Patch.PEER: "falsepatch"}
+        bridge = Bridge(BRIDGE0)
+        bridge.add_internal_port(PATCH0)
+        desired_state = bridge.state
+        bridge = Bridge(BRIDGE1)
+        bridge.add_internal_port(PATCH1)
+        desired_state[Interface.KEY].extend(bridge.state[Interface.KEY])
+        try:
+            desired_state[Interface.KEY][1][
+                OVSInterface.PATCH_CONFIG_SUBTREE
+            ] = patch0_state
+            desired_state[Interface.KEY][1][Interface.MTU] = 1500
+
+            with pytest.raises(NmstateValueError):
+                libnmstate.apply(desired_state)
+        finally:
+            for iface in desired_state[Interface.KEY]:
+                iface[Interface.STATE] = InterfaceState.ABSENT
+                iface[OVSInterface.PATCH_CONFIG_SUBTREE] = {}
+            libnmstate.apply(desired_state)
+
+        assertlib.assert_absent(BRIDGE1)
+        assertlib.assert_absent(BRIDGE0)
+        assertlib.assert_absent(PATCH0)
+        assertlib.assert_absent(PATCH1)
+
+    @pytest.mark.xfail(
+        nm_is_not_supporting_ovs_patch_port(),
+        reason="Using the interface name is supported only with NM "
+        "1.22.16/1.24.2 or greater",
+        raises=NmstateLibnmError,
+        strict=True,
+    )
+    def test_add_patch_to_existing_interface_valid(self):
+        patch0_state = {OVSInterface.Patch.PEER: "patch1"}
+        patch1_state = {OVSInterface.Patch.PEER: "patch0"}
+        bridge = Bridge(BRIDGE0)
+        bridge.add_internal_port(PATCH0)
+        desired_state = bridge.state
+        bridge = Bridge(BRIDGE1)
+        bridge.add_internal_port(PATCH1)
+        desired_state[Interface.KEY].extend(bridge.state[Interface.KEY])
+        try:
+            desired_state[Interface.KEY][1].pop(Interface.MTU, None)
+            desired_state[Interface.KEY][1].pop(Interface.MAC, None)
+            desired_state[Interface.KEY][1][
+                OVSInterface.PATCH_CONFIG_SUBTREE
+            ] = patch0_state
+            desired_state[Interface.KEY][3].pop(Interface.MTU, None)
+            desired_state[Interface.KEY][3].pop(Interface.MAC, None)
+            desired_state[Interface.KEY][3][
+                OVSInterface.PATCH_CONFIG_SUBTREE
+            ] = patch1_state
+
+            libnmstate.apply(desired_state)
+            assertlib.assert_state_match(desired_state)
+        finally:
+            for iface in desired_state[Interface.KEY]:
+                iface[Interface.STATE] = InterfaceState.ABSENT
+            libnmstate.apply(desired_state)
+
+        assertlib.assert_absent(BRIDGE1)
+        assertlib.assert_absent(BRIDGE0)
+        assertlib.assert_absent(PATCH0)
+        assertlib.assert_absent(PATCH1)

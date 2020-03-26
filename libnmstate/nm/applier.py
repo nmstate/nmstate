@@ -26,6 +26,7 @@ from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import LinuxBridge as LB
 from libnmstate.schema import OVSBridge as OvsB
+from libnmstate.schema import OVSInterface
 from libnmstate.schema import Team
 from libnmstate.ifaces.bond import BondIface
 from libnmstate.ifaces.bridge import BridgeIface
@@ -507,7 +508,10 @@ def _build_connection_profile(
         ovs_port_options = iface_desired_state.get(OvsB.OPTIONS_SUBTREE)
         settings.append(ovs.create_port_setting(ovs_port_options))
     elif iface_type == InterfaceType.OVS_INTERFACE:
-        settings.append(ovs.create_interface_setting())
+        patch_state = iface_desired_state.get(
+            OVSInterface.PATCH_CONFIG_SUBTREE
+        )
+        settings.extend(ovs.create_interface_setting(patch_state))
 
     bridge_port_options = iface_desired_state.get(
         BridgeIface.BRPORT_OPTIONS_METADATA

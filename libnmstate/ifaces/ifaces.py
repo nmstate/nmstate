@@ -126,6 +126,7 @@ class Ifaces:
         self._match_child_iface_state_with_parent()
         self._mark_orphen_as_absent()
         self._bring_slave_up_if_not_in_desire()
+        self._validate_ovs_patch_peers()
 
     def _bring_slave_up_if_not_in_desire(self):
         """
@@ -139,6 +140,29 @@ class Ifaces:
                     if not slave_iface.is_desired and not slave_iface.is_up:
                         slave_iface.mark_as_up()
                         slave_iface.mark_as_changed()
+
+    def _validate_ovs_patch_peers(self):
+        """
+        When OVS patch peer does not exist or is down, raise an error.
+        """
+        for iface in self._ifaces.values():
+            if iface.iface_type == InterfaceType.OVS_INTERFACE and iface.is_up:
+                if iface.peer:
+                    peer_iface = self._ifaces.get(iface.peer)
+                    if not peer_iface or not peer_iface.is_up:
+                        raise NmstateValueError(
+                            f"OVS patch port peer {iface.peer} must exist and "
+                            "be up"
+                        )
+                    elif (
+                        not peer_iface.iface_type
+                        == InterfaceType.OVS_INTERFACE
+                        or not peer_iface.is_patch_port
+                    ):
+                        raise NmstateValueError(
+                            f"OVS patch port peer {iface.peer} must be an OVS"
+                            " patch port"
+                        )
 
     def _handle_master_slave_list_change(self):
         """

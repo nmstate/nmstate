@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019 Red Hat, Inc.
+# Copyright (c) 2019-2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -34,3 +34,13 @@ def is_nm_older_than_1_25_2():
     assert match
 
     return StrictVersion(match.group(1)) < StrictVersion("1.25.2")
+
+
+def nm_is_not_supporting_ovs_patch_port():
+    _, output, _ = exec_cmd(["nmcli", "-v"], check=True)
+    match = re.compile("version ([0-9.]+)").search(output)
+
+    return StrictVersion(match.group(1)) <= StrictVersion("1.22.14") or (
+        StrictVersion(match.group(1)) >= StrictVersion("1.24.0")
+        and StrictVersion(match.group(1)) <= StrictVersion("1.24.2")
+    )

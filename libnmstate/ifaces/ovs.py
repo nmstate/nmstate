@@ -23,9 +23,11 @@ import subprocess
 
 from libnmstate.error import NmstateValueError
 from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceIP
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import OVSBridge
+from libnmstate.schema import OVSInterface
 from libnmstate.schema import OvsDB
 
 from .bridge import BridgeIface
@@ -190,10 +192,52 @@ class OvsInternalIface(BaseIface):
     def need_parent(self):
         return True
 
+    @property
+    def patch_config(self):
+        return self._info.get(OVSInterface.PATCH_CONFIG_SUBTREE)
+
     def state_for_verify(self):
         state = super().state_for_verify()
         _convert_external_ids_values_to_string(state)
         return state
+
+    @property
+    def is_patch_port(self):
+        return self.patch_config and self.patch_config.get(
+            OVSInterface.Patch.PEER
+        )
+
+    @property
+    def peer(self):
+        return (
+            self.patch_config.get(OVSInterface.Patch.PEER)
+            if self.patch_config
+            else None
+        )
+
+    def pre_edit_validation_and_cleanup(self):
+        super().pre_edit_validation_and_cleanup()
+        self._validate_ovs_mtu_mac_confliction()
+
+    def _validate_ovs_mtu_mac_confliction(self):
+        if self.is_patch_port:
+            if (
+                self.original_dict.get(Interface.IPV4, {}).get(
+                    InterfaceIP.ENABLED
+                )
+                or self.original_dict.get(Interface.IPV6, {}).get(
+                    InterfaceIP.ENABLED
+                )
+                or self.original_dict.get(Interface.MTU)
+                or self.original_dict.get(Interface.MAC)
+            ):
+                raise NmstateValueError(
+                    "OVS Patch interface cannot contain MAC address, MTU"
+                    " or IP configuration."
+                )
+            else:
+                self._info.pop(Interface.MTU, None)
+                self._info.pop(Interface.MAC, None)
 
 
 def is_ovs_running():
