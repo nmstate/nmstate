@@ -19,6 +19,7 @@
 import logging
 
 from libnmstate.schema import OVSBridge as OB
+from libnmstate.schema import OVSInterface
 
 from . import connection
 from .common import NM
@@ -95,10 +96,24 @@ def create_port_setting(port_state):
     return port_setting
 
 
-def create_interface_setting():
+def create_interface_setting(patch_state):
     interface_setting = NM.SettingOvsInterface.new()
-    interface_setting.props.type = "internal"
-    return interface_setting
+    settings = [interface_setting]
+
+    if patch_state and patch_state.get(OVSInterface.Patch.PEER):
+        interface_setting.props.type = "patch"
+        settings.append(create_patch_setting(patch_state))
+    else:
+        interface_setting.props.type = "internal"
+
+    return settings
+
+
+def create_patch_setting(patch_state):
+    patch_setting = NM.SettingOvsPatch.new()
+    patch_setting.props.peer = patch_state[OVSInterface.Patch.PEER]
+
+    return patch_setting
 
 
 def is_ovs_bridge_type_id(type_id):
@@ -131,6 +146,33 @@ def get_ovs_info(context, bridge_device, devices_info):
         return {"port": ports, "options": options}
     else:
         return {}
+
+
+def get_interface_info(act_con):
+    """
+    Get OVS interface information from the NM profile.
+    """
+    info = {}
+    if act_con:
+        patch_setting = _get_patch_setting(act_con)
+        if patch_setting:
+            info[OVSInterface.PATCH_CONFIG_SUBTREE] = {
+                OVSInterface.Patch.PEER: patch_setting.props.peer,
+            }
+
+    return info
+
+
+def _get_patch_setting(act_con):
+    """
+    Get NM.SettingOvsPatch from NM.ActiveConnection.
+    For any error, return None.
+    """
+    remote_con = act_con.get_connection()
+    if remote_con:
+        return remote_con.get_setting_ovs_patch()
+
+    return None
 
 
 def get_slaves(nm_device):

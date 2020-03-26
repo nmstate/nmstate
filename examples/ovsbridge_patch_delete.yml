@@ -1,0 +1,6 @@
+---
+interfaces:
+- name: ovs-br0
+  state: absent
+- name: ovs-br1
+  state: absent

@@ -69,7 +69,7 @@ class Bridge:
             ] = mode
 
     def add_internal_port(
-        self, name, *, mac=None, ipv4_state=None, ovs_db=None
+        self, name, *, mac=None, ipv4_state=None, ovs_db=None, patch_state=None
     ):
         ifstate = {
             Interface.NAME: name,
@@ -81,6 +81,8 @@ class Bridge:
             ifstate[Interface.IPV4] = ipv4_state
         if ovs_db:
             ifstate[OVSInterface.OVS_DB_SUBTREE] = ovs_db
+        if patch_state:
+            ifstate[OVSInterface.PATCH_CONFIG_SUBTREE] = patch_state
 
         self._add_port(name)
         self._ifaces.append(ifstate)

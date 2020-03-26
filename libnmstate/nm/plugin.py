@@ -130,6 +130,8 @@ class NetworkManagerPlugin(NmstatePlugin):
                     iface_info = _remove_ovs_bridge_unsupported_entries(
                         iface_info
                     )
+                elif nm_ovs.is_ovs_interface_type_id(type_id):
+                    iface_info.update(nm_ovs.get_interface_info(act_con))
                 elif nm_ovs.is_ovs_port_type_id(type_id):
                     continue
 

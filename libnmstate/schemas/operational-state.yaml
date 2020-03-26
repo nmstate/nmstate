@@ -450,6 +450,11 @@ definitions:
           - ovs-interface
         ovs-db:
           type: object
+        patch:
+          type: object
+          properties:
+            peer:
+              type: string
   interface-dummy:
     rw:
       properties:

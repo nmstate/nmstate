@@ -281,15 +281,17 @@ def _create_internal_iface_setting(iface_name, master_name):
         iface_type=InterfaceType.OVS_INTERFACE,
     )
     iface_con_setting.set_master(master_name, InterfaceType.OVS_PORT)
-    bridge_internal_iface_setting = nm.ovs.create_interface_setting()
+    bridge_internal_iface_setting = nm.ovs.create_interface_setting(None)
     ipv4_setting = nm.ipv4.create_setting({}, None)
     ipv6_setting = nm.ipv6.create_setting({}, None)
-    return (
+    settings = [
         iface_con_setting.setting,
-        bridge_internal_iface_setting,
         ipv4_setting,
         ipv6_setting,
-    )
+    ]
+    settings.extend(bridge_internal_iface_setting)
+
+    return settings
 
 
 def _delete_iface(ctx, devname):
