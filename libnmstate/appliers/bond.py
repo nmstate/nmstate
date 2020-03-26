@@ -113,3 +113,16 @@ def get_bond_named_option_value_by_id(option_name, option_id_value):
         with contextlib.suppress(ValueError, IndexError):
             return option_value[int(option_id_value)]
     return option_id_value
+
+
+def fix_bond_option_arp_monitor(cur_iface_state):
+    """
+    Fix the current iface_state by
+    adding 'arp_ip_target=""' when ARP monitor is disabled by `arp_interval=0`
+    """
+    bond_options = cur_iface_state[Bond.CONFIG_SUBTREE][Bond.OPTIONS_SUBTREE]
+    if (
+        bond_options.get("arp_interval") in ("0", 0)
+        and "arp_ip_target" not in bond_options
+    ):
+        bond_options["arp_ip_target"] = ""
