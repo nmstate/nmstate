@@ -321,6 +321,7 @@ class State:
 
         metadata.remove_ifaces_metadata(self)
         other_state.sanitize_dynamic_ip()
+        other_state._pre_verification_fix()
 
         self.merge_interfaces(other_state)
 
@@ -328,6 +329,15 @@ class State:
         other_state.normalize_for_verification()
 
         self._assert_interfaces_equal(other_state)
+
+    def _pre_verification_fix(self):
+        """
+        Invoking iface specific fixes.
+        Supposed to only run againt current state.
+        """
+        for iface_state in self.interfaces.values():
+            if iface_state.get(Interface.TYPE) == InterfaceType.BOND:
+                bond.fix_bond_option_arp_monitor(iface_state)
 
     def verify_routes(self, other_state):
         for iface_name, routes in self.config_iface_routes.items():
