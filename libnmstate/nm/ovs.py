@@ -245,5 +245,6 @@ def _get_slave_profiles(master_device, devices_info):
         if active_con:
             master = active_con.props.master
             if master and (master.get_iface() == master_device.get_iface()):
-                slave_profiles.append(active_con.props.connection)
+                if active_con.props.connection:
+                    slave_profiles.append(active_con.props.connection)
     return slave_profiles
