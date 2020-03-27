@@ -107,16 +107,22 @@ def test_dns_edit_ipv6_nameserver_before_ipv4():
     [
         (IPV4_DNS_NAMESERVERS + [EXTRA_IPV4_DNS_NAMESERVER]),
         (IPV6_DNS_NAMESERVERS + [EXTRA_IPV6_DNS_NAMESERVER]),
-        pytest.mark.xfail(
-            reason="Not supported",
-            raises=NmstateNotImplementedError,
-            strict=True,
-        )(IPV4_DNS_NAMESERVERS + [EXTRA_IPV6_DNS_NAMESERVER]),
-        pytest.mark.xfail(
-            reason="Not supported",
-            raises=NmstateNotImplementedError,
-            strict=True,
-        )(IPV6_DNS_NAMESERVERS + [EXTRA_IPV4_DNS_NAMESERVER]),
+        pytest.param(
+            (IPV4_DNS_NAMESERVERS + [EXTRA_IPV6_DNS_NAMESERVER]),
+            marks=pytest.mark.xfail(
+                reason="Not supported",
+                raises=NmstateNotImplementedError,
+                strict=True,
+            ),
+        ),
+        pytest.param(
+            (IPV6_DNS_NAMESERVERS + [EXTRA_IPV4_DNS_NAMESERVER]),
+            marks=pytest.mark.xfail(
+                reason="Not supported",
+                raises=NmstateNotImplementedError,
+                strict=True,
+            ),
+        ),
     ],
     ids=["ipv4", "ipv6", "ipv4+ipv6", "ipv6+ipv4"],
 )
