@@ -17,6 +17,8 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
+from subprocess import CalledProcessError
+
 import pytest
 
 import libnmstate
@@ -29,11 +31,13 @@ from libnmstate.error import NmstateDependencyError
 from libnmstate.error import NmstateValueError
 
 from .testlib import assertlib
+from .testlib import cmdlib
 from .testlib import statelib
 from .testlib.nmplugin import disable_nm_plugin
 from .testlib.ovslib import Bridge
-from .testlib.ovslib import get_proxy_port_name_of_ovs_interface
 from .testlib.servicelib import disable_service
+from .testlib.ovslib import get_proxy_port_profile_name_of_ovs_interface
+from .testlib.ovslib import get_nm_active_profiles
 from .testlib.vlan import vlan_interface
 
 
@@ -205,7 +209,13 @@ def test_ovs_service_missing():
 @pytest.mark.tier1
 def test_ovs_remove_port(bridge_with_ports):
     for port_name in bridge_with_ports.ports_names:
-        assert get_proxy_port_name_of_ovs_interface(port_name)
+        active_profiles = get_nm_active_profiles()
+        assert port_name in active_profiles
+        proxy_port_profile = get_proxy_port_profile_name_of_ovs_interface(
+            port_name
+        )
+        assert proxy_port_profile
+        assert proxy_port_profile in active_profiles
         libnmstate.apply(
             {
                 Interface.KEY: [
@@ -216,7 +226,12 @@ def test_ovs_remove_port(bridge_with_ports):
                 ]
             }
         )
-        assert not get_proxy_port_name_of_ovs_interface(port_name)
+
+        with pytest.raises(CalledProcessError):
+            cmdlib.exec_cmd(
+                f"nmcli connection show {proxy_port_profile}".split(" "),
+                check=True,
+            )
 
 
 @pytest.fixture
