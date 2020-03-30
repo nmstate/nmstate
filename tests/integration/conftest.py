@@ -25,6 +25,8 @@ import pytest
 
 import libnmstate
 from libnmstate.schema import DNS
+from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceIP
 from libnmstate.schema import Route
 from libnmstate.schema import RouteRule
 
@@ -73,6 +75,15 @@ def _empty_net_state():
         Route.CONFIG: [{Route.STATE: Route.STATE_ABSENT}]
     }
     desired_state[RouteRule.KEY] = {RouteRule.CONFIG: []}
+
+    for iface_state in desired_state[Interface.KEY]:
+        if iface_state[Interface.IPV4][InterfaceIP.ENABLED]:
+            iface_state[Interface.IPV4][InterfaceIP.AUTO_DNS] = False
+            iface_state[Interface.IPV4][InterfaceIP.AUTO_ROUTES] = False
+        if iface_state[Interface.IPV6][InterfaceIP.ENABLED]:
+            iface_state[Interface.IPV6][InterfaceIP.AUTO_DNS] = False
+            iface_state[Interface.IPV6][InterfaceIP.AUTO_ROUTES] = False
+
     libnmstate.apply(desired_state)
 
 
