@@ -136,3 +136,16 @@ def test_team_change_port_order(eth1_up, eth2_up):
             Team.PORT_SUBTREE
         ].reverse()
         libnmstate.apply(desired_state)
+
+
+@pytest.fixture
+def team_with_two_slaves(eth1_up, eth2_up):
+    with team_interface(TEAM0, [PORT1, PORT2]) as desired_state:
+        yield desired_state
+
+
+def test_team_remove_all_slaves(team_with_two_slaves):
+    state = team_with_two_slaves
+    state[Interface.KEY][0][Team.CONFIG_SUBTREE][Team.PORT_SUBTREE] = []
+    libnmstate.apply(state)
+    assertlib.assert_state_match(state)

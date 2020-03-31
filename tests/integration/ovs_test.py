@@ -293,3 +293,19 @@ def test_ovs_vlan_access_tag():
 
     assertlib.assert_absent(BRIDGE1)
     assertlib.assert_absent(PORT1)
+
+
+def test_ovs_bridge_remove_all_slaves(bridge_with_ports):
+    state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: BRIDGE1,
+                OVSBridge.CONFIG_SUBTREE: {OVSBridge.PORT_SUBTREE: []},
+            },
+            # OVS internal Interface is need to remove explicitly when master
+            # remove it # from slave list
+            {Interface.NAME: PORT1, Interface.STATE: InterfaceState.ABSENT},
+        ]
+    }
+    libnmstate.apply(state)
+    assertlib.assert_state_match(state)

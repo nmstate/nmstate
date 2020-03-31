@@ -403,6 +403,24 @@ class State:
             if iface_state.get(Interface.TYPE) == LinuxBridge.TYPE:
                 merge_linux_bridge_ports(iface_state, other_iface_state)
 
+    def complement_master_slave_list_change(self, other_state):
+        """
+        When master interface has changed slave list, all its original slave
+        interfaces should be included in desire state.
+        """
+        changed_slaves = set()
+        for iface_name, iface_state in self.interfaces.items():
+            self_slaves = set(_get_slaves(iface_state))
+            other_iface_state = other_state.interfaces.get(iface_name, {})
+            other_slaves = set(_get_slaves(other_iface_state))
+            if self_slaves != other_slaves:
+                changed_slaves.update(
+                    (self_slaves | other_slaves) - (self_slaves & other_slaves)
+                )
+        for slave in changed_slaves:
+            if slave not in self.interfaces:
+                self.interfaces[slave] = {Interface.NAME: slave}
+
     def complement_master_interfaces_removal(self, other_state):
         """
         Complement slaves in the state for masters that are being removed.
@@ -416,26 +434,23 @@ class State:
         for ifname, ifstate in self.interfaces.items():
             if ifstate.get(Interface.STATE) in NON_UP_STATES:
                 other_ifstate = other_state.interfaces.get(ifname, {})
-                iftype = other_ifstate.get(Interface.TYPE)
-                if iftype == InterfaceType.BOND:
-                    slaves += bond.get_bond_slaves_from_state(other_ifstate)
-                elif iftype == InterfaceType.LINUX_BRIDGE:
-                    slaves += linux_bridge.get_slaves_from_state(other_ifstate)
-                elif iftype == InterfaceType.OVS_BRIDGE:
-                    ovs_slaves = ovs_bridge.get_ovs_slaves_from_state(
-                        other_ifstate
-                    )
+                iface_slaves = _get_slaves(other_ifstate)
+                if (
+                    other_ifstate.get(Interface.TYPE)
+                    == InterfaceType.OVS_BRIDGE
+                ):
                     # OVS internal interface (ovs-interface) are excluded
                     # because such interfaces cannot exist without their master
-                    for ovs_slave in ovs_slaves:
+                    new_slaves = []
+                    for ovs_slave in iface_slaves:
                         ovs_slave_state = other_state.interfaces.get(
                             ovs_slave, {}
                         )
                         ovs_slave_type = ovs_slave_state.get(Interface.TYPE)
                         if ovs_slave_type != InterfaceType.OVS_INTERFACE:
-                            slaves.append(ovs_slave)
-                elif iftype == InterfaceType.TEAM:
-                    slaves += team.get_slaves_from_state(other_ifstate)
+                            new_slaves.append(ovs_slave)
+                    iface_slaves = new_slaves
+                slaves.extend(iface_slaves)
         for slave in slaves:
             if slave not in self._ifaces_state:
                 self._ifaces_state[slave] = {Interface.NAME: slave}
@@ -1014,3 +1029,21 @@ def merge_linux_bridge_ports(desired_iface_state, current_iface_state):
 
 def _index_ports(ports):
     return {port[LinuxBridge.Port.NAME]: port for port in ports}
+
+
+def _get_slaves(iface_state):
+    """
+    Return list of slave interface name of specified interface.
+    """
+    iface_type = iface_state.get(Interface.TYPE)
+    if iface_state.get(Interface.STATE) in NON_UP_STATES:
+        return []
+    elif iface_type == InterfaceType.BOND:
+        return bond.get_bond_slaves_from_state(iface_state)
+    elif iface_type == InterfaceType.LINUX_BRIDGE:
+        return linux_bridge.get_slaves_from_state(iface_state)
+    elif iface_type == InterfaceType.OVS_BRIDGE:
+        return ovs_bridge.get_ovs_slaves_from_state(iface_state)
+    elif iface_type == InterfaceType.TEAM:
+        return team.get_slaves_from_state(iface_state)
+    return []

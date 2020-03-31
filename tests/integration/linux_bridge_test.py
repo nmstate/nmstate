@@ -584,3 +584,12 @@ def _create_bridge_subtree_config(port_names):
         add_port_to_bridge(bridge_state, port, port_state)
 
     return bridge_state
+
+
+@pytest.mark.tier1
+def test_bridge_remove_all_slaves(bridge0_with_port0):
+    state = bridge0_with_port0
+    bridge_config = state[Interface.KEY][0][LinuxBridge.CONFIG_SUBTREE]
+    bridge_config[LinuxBridge.PORT_SUBTREE] = []
+    libnmstate.apply(state)
+    assertlib.assert_state_match(state)
