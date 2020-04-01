@@ -53,6 +53,7 @@ def generate_ifaces_metadata(desired_state, current_state):
     metadata is generated on interfaces, usable by the provider when
     configuring the interface.
     """
+    bond.generate_bond_mode_change_metadata(desired_state, current_state)
     _generate_link_master_metadata(
         desired_state.interfaces,
         current_state.interfaces,
@@ -91,6 +92,7 @@ def remove_ifaces_metadata(ifaces_state):
         iface_state.pop(MASTER, None)
         iface_state.pop(MASTER_TYPE, None)
         iface_state.pop(BRPORT_OPTIONS, None)
+        bond.remove_bond_mode_change_metadata(iface_state)
         iface_state.get(Interface.IPV4, {}).pop(ROUTES, None)
         iface_state.get(Interface.IPV6, {}).pop(ROUTES, None)
         iface_state.get(Interface.IPV4, {}).pop(DNS_METADATA, None)
