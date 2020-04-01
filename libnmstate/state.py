@@ -390,10 +390,19 @@ class State:
         entries that appear only on one state are ignored.
         This is a reverse recursive update operation.
         """
+        origin_self_state = State(self.state)
         other_state = State(other_state.state)
         for name in self.interfaces.keys() & other_state.interfaces.keys():
             dict_update(other_state.interfaces[name], self.interfaces[name])
             self._ifaces_state[name] = other_state.interfaces[name]
+            iface_state = self.interfaces[name]
+            if iface_state.get(Interface.TYPE) == InterfaceType.BOND:
+                origin_self_iface_state = origin_self_state.interfaces.get(
+                    name
+                )
+                bond.discard_merged_data_on_mode_change(
+                    iface_state, origin_self_iface_state
+                )
 
     def complement_master_interfaces_removal(self, other_state):
         """

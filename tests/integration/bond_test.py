@@ -708,3 +708,36 @@ def test_bond_disable_arp_interval(bond99_with_2_slaves_and_arp_monitor):
     libnmstate.apply(state)
 
     assertlib.assert_state_match(state)
+
+
+@pytest.fixture
+def bond99_with_2_slaves_and_lacp_rate(eth1_up, eth2_up):
+    with bond_interface(
+        name=BOND99,
+        slaves=[ETH1, ETH2],
+        extra_iface_state={
+            Bond.CONFIG_SUBTREE: {
+                Bond.MODE: BondMode.LACP,
+                Bond.OPTIONS_SUBTREE: {"lacp_rate": "fast"},
+            },
+        },
+    ) as state:
+        yield state
+
+
+def test_bond_switch_mode_with_conflict_option(
+    bond99_with_2_slaves_and_lacp_rate,
+):
+
+    state = bond99_with_2_slaves_and_lacp_rate
+    bond_config = state[Interface.KEY][0][Bond.CONFIG_SUBTREE]
+    bond_config[Bond.MODE] = BondMode.ROUND_ROBIN
+    bond_config[Bond.OPTIONS_SUBTREE] = {"miimon": "140"}
+
+    libnmstate.apply(state)
+
+    assertlib.assert_state_match(state)
+    current_state = statelib.show_only((BOND99,))
+    current_bond_config = current_state[Interface.KEY][0][Bond.CONFIG_SUBTREE]
+
+    assert "lacp_rate" not in current_bond_config[Bond.OPTIONS_SUBTREE]
