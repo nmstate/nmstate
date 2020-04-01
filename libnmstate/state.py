@@ -392,6 +392,7 @@ class State:
         entries that appear only on one state are ignored.
         This is a reverse recursive update operation.
         """
+        origin_self_state = State(self.state)
         origin_other_state = other_state
         other_state = State(other_state.state)
         for name in self.interfaces.keys() & other_state.interfaces.keys():
@@ -402,6 +403,13 @@ class State:
             other_iface_state = origin_other_state.interfaces[name]
             if iface_state.get(Interface.TYPE) == LinuxBridge.TYPE:
                 merge_linux_bridge_ports(iface_state, other_iface_state)
+            elif iface_state.get(Interface.TYPE) == InterfaceType.BOND:
+                origin_self_iface_state = origin_self_state.interfaces.get(
+                    name
+                )
+                bond.discard_merged_data_on_mode_change(
+                    iface_state, origin_self_iface_state
+                )
 
     def complement_master_interfaces_removal(self, other_state):
         """

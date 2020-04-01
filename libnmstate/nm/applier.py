@@ -17,6 +17,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
+import logging
 import itertools
 
 from libnmstate.error import NmstateValueError
@@ -25,6 +26,7 @@ from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import LinuxBridge as LB
 from libnmstate.schema import OVSBridge as OvsB
+from libnmstate.appliers.bond import is_bond_mode_changed
 
 from . import bond
 from . import bridge
@@ -123,6 +125,7 @@ def _set_ifaces_admin_state(ifaces_desired_state, con_profiles):
     master_ifaces_to_edit = set()
     ifaces_to_edit = set()
     remove_devs_actions = {}
+    devs_to_deactivate_beforehand = []
 
     for iface_desired_state in ifaces_desired_state:
         ifname = iface_desired_state[Interface.NAME]
@@ -153,6 +156,18 @@ def _set_ifaces_admin_state(ifaces_desired_state, con_profiles):
                     new_ifaces_to_activate.add(ifname)
         else:
             if iface_desired_state[Interface.STATE] == InterfaceState.UP:
+                if is_bond_mode_changed(iface_desired_state):
+                    # NetworkManager leaves leftover in sysfs for bond
+                    # options when changing bond mode, bug:
+                    # https://bugzilla.redhat.com/show_bug.cgi?id=1819137
+                    # Workaround: delete the bond interface from kernel and
+                    # create again via full deactivation beforehand.
+                    logging.debug(
+                        f"Bond interface {ifname} is changing bond mode, "
+                        "will do full deactivation before applying changes"
+                    )
+                    devs_to_deactivate_beforehand.append(nmdev)
+
                 if _is_master_iface(iface_desired_state):
                     master_ifaces_to_edit.add(
                         (nmdev, con_profiles_by_devname[ifname].profile)
@@ -183,6 +198,9 @@ def _set_ifaces_admin_state(ifaces_desired_state, con_profiles):
                         iface_desired_state[Interface.NAME],
                     )
                 )
+
+    for dev in devs_to_deactivate_beforehand:
+        device.deactivate(dev)
 
     # Do not remove devices that are marked for editing.
     for dev, _ in itertools.chain(master_ifaces_to_edit, ifaces_to_edit):

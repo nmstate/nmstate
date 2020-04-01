@@ -18,9 +18,16 @@
 #
 
 import contextlib
+import logging
 
 from libnmstate.schema import Bond
 from libnmstate.schema import BondMode
+from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceState
+from libnmstate.schema import InterfaceType
+
+BOND_MODE_CHANGED_METADATA = "_bond_mode_changed"
+NON_UP_STATES = (InterfaceState.DOWN, InterfaceState.ABSENT)
 
 
 class BondNamedOptions:
@@ -126,3 +133,58 @@ def fix_bond_option_arp_monitor(cur_iface_state):
         and "arp_ip_target" not in bond_options
     ):
         bond_options["arp_ip_target"] = ""
+
+
+def generate_bond_mode_change_metadata(desire_state, current_state):
+    for iface_name, iface_state in desire_state.interfaces.items():
+        current_iface_state = current_state.interfaces.get(iface_name, {})
+        if (
+            iface_state.get(
+                Interface.TYPE, current_iface_state.get(Interface.TYPE)
+            )
+            != InterfaceType.BOND
+        ):
+            continue
+        if iface_state.get(Interface.STATE) in NON_UP_STATES:
+            # Ignore bond mode change on absent/down interface
+            continue
+        current_bond_mode = current_iface_state.get(
+            Bond.CONFIG_SUBTREE, {}
+        ).get(Bond.MODE)
+        desire_bond_mode = iface_state.get(Bond.CONFIG_SUBTREE, {}).get(
+            Bond.MODE
+        )
+        if (
+            desire_bond_mode
+            and current_bond_mode
+            and desire_bond_mode != current_bond_mode
+        ):
+            logging.warning(
+                "Discarding all current bond options as interface "
+                f"{iface_name} has bond mode changed"
+            )
+            iface_state[BOND_MODE_CHANGED_METADATA] = True
+
+
+def remove_bond_mode_change_metadata(iface_state):
+    iface_state.pop(BOND_MODE_CHANGED_METADATA, None)
+
+
+def is_bond_mode_changed(iface_state):
+    return iface_state.get(BOND_MODE_CHANGED_METADATA)
+
+
+def discard_merged_data_on_mode_change(merged_iface_state, desire_iface_state):
+    """
+    When bond mode changed, use original desire bond options instead of merging
+    from current state.
+    """
+    if is_bond_mode_changed(merged_iface_state):
+        if merged_iface_state.get(Bond.CONFIG_SUBTREE, {}).get(
+            Bond.OPTIONS_SUBTREE
+        ):
+            merged_iface_state[Bond.CONFIG_SUBTREE][
+                Bond.OPTIONS_SUBTREE
+            ] = desire_iface_state[Bond.CONFIG_SUBTREE].get(
+                Bond.OPTIONS_SUBTREE, {}
+            )
