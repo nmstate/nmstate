@@ -16,10 +16,20 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
+import copy
 
 import pytest
 
 from libnmstate.appliers import bond
+from libnmstate.schema import Bond
+from libnmstate.schema import BondMode
+from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceType
+from libnmstate.schema import InterfaceState
+from libnmstate.state import State
+
+
+BOND1 = "bond1"
 
 
 @pytest.mark.parametrize(
@@ -52,3 +62,223 @@ def test_numeric_to_named_option_value_with_invalid_id(option_value):
 def test_numeric_to_named_option_value_with_invalid_option_name():
     value = 0
     assert value == bond.get_bond_named_option_value_by_id("foo", value)
+
+
+def test_discard_merged_data_on_mode_change_with_mode_changed():
+    merged_iface_state = {
+        bond.BOND_MODE_CHANGED_METADATA: True,
+        Bond.CONFIG_SUBTREE: {
+            Bond.MODE: BondMode.ROUND_ROBIN,
+            Bond.OPTIONS_SUBTREE: {"lacp_rate": "fast", "miimon": "140"},
+        },
+    }
+    desired_iface_state = {
+        Bond.CONFIG_SUBTREE: {
+            Bond.MODE: BondMode.ROUND_ROBIN,
+            Bond.OPTIONS_SUBTREE: {"miimon": "140"},
+        }
+    }
+    bond.discard_merged_data_on_mode_change(
+        merged_iface_state, desired_iface_state
+    )
+    assert merged_iface_state == {
+        bond.BOND_MODE_CHANGED_METADATA: True,
+        Bond.CONFIG_SUBTREE: {
+            Bond.MODE: BondMode.ROUND_ROBIN,
+            Bond.OPTIONS_SUBTREE: {"miimon": "140"},
+        },
+    }
+
+
+def test_discard_merged_data_on_mode_change_with_no_mode_changed():
+    merged_iface_state = {
+        Bond.CONFIG_SUBTREE: {
+            Bond.MODE: BondMode.LACP,
+            Bond.OPTIONS_SUBTREE: {"lacp_rate": "fast", "miimon": "140"},
+        },
+    }
+    desired_iface_state = {
+        Bond.CONFIG_SUBTREE: {
+            Bond.MODE: BondMode.LACP,
+            Bond.OPTIONS_SUBTREE: {"miimon": "140"},
+        }
+    }
+    expected_iface_state = copy.deepcopy(merged_iface_state)
+    bond.discard_merged_data_on_mode_change(
+        merged_iface_state, desired_iface_state
+    )
+    assert merged_iface_state == expected_iface_state
+
+
+def test_discard_merged_data_on_mode_change_with_option_not_defined():
+    merged_iface_state = {
+        bond.BOND_MODE_CHANGED_METADATA: True,
+        Bond.CONFIG_SUBTREE: {
+            Bond.MODE: BondMode.LACP,
+            Bond.OPTIONS_SUBTREE: {"lacp_rate": "fast", "miimon": "140"},
+        },
+    }
+    desired_iface_state = {Bond.CONFIG_SUBTREE: {Bond.MODE: BondMode.LACP}}
+    bond.discard_merged_data_on_mode_change(
+        merged_iface_state, desired_iface_state
+    )
+    assert merged_iface_state == {
+        bond.BOND_MODE_CHANGED_METADATA: True,
+        Bond.CONFIG_SUBTREE: {
+            Bond.MODE: BondMode.LACP,
+            Bond.OPTIONS_SUBTREE: {},
+        },
+    }
+
+
+def test_generate_bond_mode_change_metadata_with_mode_changed_and_full_state():
+    current_state = State(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: BOND1,
+                    Interface.TYPE: InterfaceType.BOND,
+                    Bond.CONFIG_SUBTREE: {Bond.MODE: BondMode.LACP},
+                }
+            ]
+        }
+    )
+    desire_state = State(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: BOND1,
+                    Interface.TYPE: InterfaceType.BOND,
+                    Bond.CONFIG_SUBTREE: {Bond.MODE: BondMode.ROUND_ROBIN},
+                }
+            ]
+        }
+    )
+    bond.generate_bond_mode_change_metadata(desire_state, current_state)
+
+    assert desire_state.interfaces[BOND1][bond.BOND_MODE_CHANGED_METADATA]
+
+
+def test_generate_bond_mode_change_metadata_with_mode_changed_and_no_type():
+    current_state = State(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: BOND1,
+                    Interface.TYPE: InterfaceType.BOND,
+                    Bond.CONFIG_SUBTREE: {Bond.MODE: BondMode.LACP},
+                }
+            ]
+        }
+    )
+    desire_state = State(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: BOND1,
+                    Bond.CONFIG_SUBTREE: {Bond.MODE: BondMode.ROUND_ROBIN},
+                }
+            ]
+        }
+    )
+    bond.generate_bond_mode_change_metadata(desire_state, current_state)
+
+    assert desire_state.interfaces[BOND1][bond.BOND_MODE_CHANGED_METADATA]
+
+
+def test_generate_bond_mode_change_metadata_without_mode_defined():
+    current_state = State(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: BOND1,
+                    Interface.TYPE: InterfaceType.BOND,
+                    Bond.CONFIG_SUBTREE: {Bond.MODE: BondMode.LACP},
+                }
+            ]
+        }
+    )
+    desire_state = State({Interface.KEY: [{Interface.NAME: BOND1}]})
+    bond.generate_bond_mode_change_metadata(desire_state, current_state)
+
+    assert (
+        bond.BOND_MODE_CHANGED_METADATA not in desire_state.interfaces[BOND1]
+    )
+
+
+def test_generate_bond_mode_change_metadata_with_new_bond():
+    current_state = State({})
+    desire_state = State(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: BOND1,
+                    Interface.TYPE: InterfaceType.BOND,
+                    Bond.CONFIG_SUBTREE: {Bond.MODE: BondMode.LACP},
+                }
+            ]
+        }
+    )
+    bond.generate_bond_mode_change_metadata(desire_state, current_state)
+
+    assert (
+        bond.BOND_MODE_CHANGED_METADATA not in desire_state.interfaces[BOND1]
+    )
+
+
+def test_generate_bond_mode_change_metadata_with_bond_removed():
+    current_state = State(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: BOND1,
+                    Interface.TYPE: InterfaceType.BOND,
+                    Bond.CONFIG_SUBTREE: {Bond.MODE: BondMode.LACP},
+                }
+            ]
+        }
+    )
+    desire_state = State(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: BOND1,
+                    Interface.STATE: InterfaceState.ABSENT,
+                    Bond.CONFIG_SUBTREE: {Bond.MODE: BondMode.ROUND_ROBIN},
+                }
+            ]
+        }
+    )
+    bond.generate_bond_mode_change_metadata(desire_state, current_state)
+
+    assert (
+        bond.BOND_MODE_CHANGED_METADATA not in desire_state.interfaces[BOND1]
+    )
+
+
+def test_generate_bond_mode_change_metadata_without_bond_interface():
+    current_state = State(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: "foo",
+                    Interface.TYPE: InterfaceType.ETHERNET,
+                }
+            ]
+        }
+    )
+    desire_state = State(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: "foo",
+                    Interface.TYPE: InterfaceType.ETHERNET,
+                }
+            ]
+        }
+    )
+    bond.generate_bond_mode_change_metadata(desire_state, current_state)
+
+    assert (
+        bond.BOND_MODE_CHANGED_METADATA not in desire_state.interfaces["foo"]
+    )
