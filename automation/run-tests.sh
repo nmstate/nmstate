@@ -167,7 +167,8 @@ function run_tests {
 function collect_artifacts {
     container_exec "
       journalctl > "$CONT_EXPORT_DIR/journal.log" && \
-      dmesg > "$CONT_EXPORT_DIR/dmesg.log" || true
+      dmesg > "$CONT_EXPORT_DIR/dmesg.log" && \
+      cat /var/log/openvswitch/ovsdb-server.log > "$CONT_EXPORT_DIR/ovsdb-server.log" || true
     "
 }
 
