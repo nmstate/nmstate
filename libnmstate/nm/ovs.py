@@ -19,6 +19,7 @@
 import logging
 
 from libnmstate.schema import OVSBridge as OB
+from libnmstate.appliers.ovs_bridge import is_ovs_running
 
 from . import connection
 from . import device
@@ -47,7 +48,10 @@ class LacpValue:
 
 def has_ovs_capability():
     nm_client = nmclient.client()
-    return nmclient.NM.Capability.OVS in nm_client.get_capabilities()
+    return (
+        nmclient.NM.Capability.OVS in nm_client.get_capabilities()
+        and is_ovs_running()
+    )
 
 
 def create_bridge_setting(options_state):
