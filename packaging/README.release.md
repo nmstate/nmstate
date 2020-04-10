@@ -1,7 +1,14 @@
 # Creating a New Release
 
-Important: If you do not finish these steps, add Jira cards for the remaining
+Important: If you do not finish these steps, add github issue for the remaining
 tasks and ensure that they are taken care of in a timely manner.
+
+A RC release is required to ship prior the stable release to provide at least
+1 week testing window.
+
+The tag name format for first RC release will be `v<version>-rc1`.
+The release tarball name for first RC release will be
+`nmstate-<version>-rc1.tar.gz`.
 
 ## Changelog
 
