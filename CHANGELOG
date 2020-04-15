@@ -1,9 +1,18 @@
 # Changelog
+## [0.2.10-rc1] - 2020-04-15
+### New features
+ - Support Linux bridge VLAN filtering
+
+### Bug Fixes
+ - bond: Don't merge bond options when bond mode changed
+   https://bugzilla.redhat.com/1812737
+ - Fix the race between OVS bridge config querying and OVS interface deletion
+
 ## [0.2.9] - 2020-03-25
 ### Bug Fixes
  - Fix verification errors due to outdated values: https://github.com/nmstate/nmstate/issues/853
  - Fix missing linux bridge slaves reporting: https://github.com/nmstate/nmstate/issues/869
- - Allow missing arp_ip_target when ARP monitoring is disabled: https://bugzilla.redhat.com/1817478 
+ - Allow missing arp_ip_target when ARP monitoring is disabled: https://bugzilla.redhat.com/1817478
 
 ### New features
  - Support static DNS with dynamic IP: https://github.com/nmstate/nmstate/issues/867
