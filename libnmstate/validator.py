@@ -51,6 +51,7 @@ IP_DISABLED_SLAVE_GETTERS = {
     InterfaceType.LINUX_BRIDGE: get_slaves_from_state,
     InterfaceType.TEAM: get_team_slaves,
 }
+MAX_SUPPORTED_INTERFACES = 1000
 
 
 class NmstateRouteWithNoInterfaceError(NmstateValueError):
@@ -75,6 +76,7 @@ class NmstateOvsLagValueError(NmstateValueError):
 
 def validate(data, validation_schema=schema.ifaces_schema):
     data = copy.deepcopy(data)
+    _validate_max_supported_intface_count(data)
     for ifstate in data.get(schema.Interface.KEY, ()):
         if not ifstate.get(schema.Interface.TYPE):
             ifstate[schema.Interface.TYPE] = schema.InterfaceType.UNKNOWN
@@ -462,3 +464,18 @@ def _validate_slave_ip_config(original_desired_state):
                             "IP configuration enabled"
                         )
                         raise NmstateValueError(msg.format(slave_iface_name))
+
+
+def _validate_max_supported_intface_count(data):
+    """
+    Raises warning if the interfaces count in the single desired state
+    exceeds the limit specified in MAX_SUPPORTED_INTERFACES
+    """
+    num_of_interfaces = len(
+        [intface for intface in data.get(schema.Interface.KEY, ())]
+    )
+    if num_of_interfaces > MAX_SUPPORTED_INTERFACES:
+        logging.warning(
+            "Interfaces count exceeds the limit %s in desired state",
+            MAX_SUPPORTED_INTERFACES,
+        )
