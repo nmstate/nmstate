@@ -153,6 +153,8 @@ instructions.
 
 Please refer to [jira page][jira_limitation] for details.
 
+* Maximum supported number of interfaces in a single desire state is 1000.
+
 ## Changelog
 
 Please refer to [CHANGELOG](CHANGELOG)

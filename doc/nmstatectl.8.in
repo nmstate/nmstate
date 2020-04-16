@@ -97,6 +97,8 @@ the user must commit the changes within \fItimeout\fR, or they will be
 automatically rolled back. Default: 60 seconds.
 .IP \fB--version
 displays nmstate version.
+.SH LIMITATIONS
+*\fR Maximum supported number of interfaces in a single desire state is 1000.
 .SH BUG REPORTS
 Report bugs on nmstate GitHub issues <https://github.com/nmstate/nmstate>.
 .SH COPYRIGHT
