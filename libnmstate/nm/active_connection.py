@@ -26,6 +26,9 @@ from .nmclient import GLib
 from .nmclient import NM
 
 
+NM_AC_STATE_CHANGED_SIGNAL = "state-changed"
+
+
 class ActivationError(Exception):
     pass
 
@@ -71,6 +74,9 @@ class ActiveConnection:
             return
 
         user_data = None
+        act_connection.connect(
+            NM_AC_STATE_CHANGED_SIGNAL, self._wait_state_changed_callback,
+        )
         client = nmclient.client()
         client.deactivate_connection_async(
             act_connection,
@@ -78,6 +84,14 @@ class ActiveConnection:
             self._deactivate_connection_callback,
             user_data,
         )
+
+    def _wait_state_changed_callback(self, act_con, state, reason):
+        if (
+            act_con.props.state
+            is nmclient.NM.ActiveConnectionState.DEACTIVATED
+        ):
+            mainloop = nmclient.mainloop()
+            mainloop.execute_next_action()
 
     def _deactivate_connection_callback(self, src_object, result, user_data):
         try:
@@ -113,7 +127,6 @@ class ActiveConnection:
             logging.debug(
                 "Connection deactivation succeeded on %s", self.devname,
             )
-            self._mainloop.execute_next_action()
         else:
             self._mainloop.quit(
                 "Connection deactivation failed on %s: error=unknown"
