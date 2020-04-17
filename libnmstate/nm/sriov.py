@@ -193,7 +193,7 @@ def _parse_ip_link_output_options_for_vf(vf):
         match_expr = expr.search(vf)
         if match_expr:
             if option == Ethernet.SRIOV.VFS.MAC_ADDRESS:
-                value = match_expr.group(0)
+                value = match_expr.group(0).upper()
             else:
                 value = match_expr.group(1)
 
