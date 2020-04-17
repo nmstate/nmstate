@@ -109,6 +109,17 @@ def test_sriov_remove_vf_config(sriov_iface_vf):
     assertlib.assert_state(sriov_interface)
 
 
+@pytest.mark.xfail(
+    raises=NmstateNotSupportedError,
+    reason="The device does not support SR-IOV.",
+)
+def test_sriov_vf_mac_mixed_case(sriov_iface_vf):
+    eth_config = sriov_iface_vf[Interface.KEY][0][Ethernet.CONFIG_SUBTREE]
+    vf0 = eth_config[Ethernet.SRIOV_SUBTREE][Ethernet.SRIOV.VFS_SUBTREE][0]
+    vf0[Ethernet.SRIOV.VFS.MAC_ADDRESS] = "FF:EE:dd:CC:BB:aa"
+    libnmstate.apply(sriov_interface)
+
+
 @pytest.fixture
 def sriov_interface(eth1_up):
     eth1_up[Interface.KEY][0][Ethernet.CONFIG_SUBTREE] = SRIOV_CONFIG

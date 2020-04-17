@@ -32,6 +32,7 @@ from libnmstate import metadata
 from libnmstate.appliers import bond
 from libnmstate.appliers import linux_bridge
 from libnmstate.appliers import ovs_bridge
+from libnmstate.appliers import sriov
 from libnmstate.appliers import team
 from libnmstate.error import NmstateNotImplementedError
 from libnmstate.error import NmstateValueError
@@ -746,10 +747,17 @@ class State:
                 )
 
     def _capitalize_mac(self):
+        """
+        The MAC address is upper case but case insensitive. This is
+        capitalizing the MAC address. In addition, this is unifying the output
+        format MAC for SR-IOV VFs.
+        """
         for ifstate in self.interfaces.values():
             mac = ifstate.get(Interface.MAC)
             if mac:
                 ifstate[Interface.MAC] = mac.upper()
+            if ifstate[Interface.TYPE] == InterfaceType.ETHERNET:
+                sriov.capitalize_vf_mac(ifstate)
 
     def _remove_empty_description(self):
         for ifstate in self.interfaces.values():
