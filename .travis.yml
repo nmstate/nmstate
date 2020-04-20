@@ -4,6 +4,7 @@ language: generic
 env:
     global:
         - use_coveralls=true
+        - CONTAINER_CMD=docker
     matrix:
         - CONTAINER_IMAGE=docker.io/nmstate/centos8-nmstate-dev:nmstate-0.2
           testflags="--test-type integ --pytest-args='-x'"
@@ -38,20 +39,15 @@ matrix:
 
 addons:
     apt:
-        sources:
-        # Add podman repo suggested by
-        #   https://podman.io/getting-started/installation.html
-        - sourceline: 'deb http://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_18.04/ /'
-          key_url: 'https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable/xUbuntu_18.04/Release.key'
-
         packages:
             - git
             - gnupg2
             - openssh-client
             - python-tox
             - xz-utils
-            - podman
-            - containernetworking-plugins   # Need for podman as root user
+
+services:
+    - docker
 
 script:
     - sudo modprobe openvswitch
