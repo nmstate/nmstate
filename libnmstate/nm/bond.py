@@ -35,6 +35,8 @@ NM_SUPPORTED_BOND_OPTIONS = nmclient.NM.SettingBond.get_valid_options(
     nmclient.NM.SettingBond.new()
 )
 
+SYSFS_BOND_OPTION_FOLDER_FMT = "/sys/class/net/{ifname}/bonding"
+
 
 def create_setting(options, wired_setting):
     bond_setting = nmclient.NM.SettingBond.new()
@@ -69,16 +71,25 @@ def get_bond_info(nm_device):
 
 def _get_options(nm_device):
     ifname = nm_device.get_iface()
-    bond_setting = nmclient.NM.SettingBond.new()
     bond_option_names_in_profile = get_bond_option_names_in_profile(nm_device)
-    options = {}
-    for sysfs_file in glob.iglob(f"/sys/class/net/{ifname}/bonding/*"):
+
+    # Mode is required
+    sysfs_folder = SYSFS_BOND_OPTION_FOLDER_FMT.format(ifname=ifname)
+    mode = _read_sysfs_file(f"{sysfs_folder}/mode")
+
+    bond_setting = nmclient.NM.SettingBond.new()
+    bond_setting.add_option("mode", mode)
+
+    options = {"mode": mode}
+    for sysfs_file in glob.iglob(f"{sysfs_folder}/*"):
         option = os.path.basename(sysfs_file)
         if option in NM_SUPPORTED_BOND_OPTIONS:
             value = _read_sysfs_file(sysfs_file)
+            # When default_value is None, it means this option is invalid
+            # under this bond mode
+            default_value = bond_setting.get_option_default(option)
             if (
-                option == "mode"
-                or value != bond_setting.get_option_default(option)
+                (default_value and value != default_value)
                 # Always include bond options which are explicitly defined in
                 # on-disk profile.
                 or option in bond_option_names_in_profile
