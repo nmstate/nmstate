@@ -725,6 +725,7 @@ def bond99_with_2_slaves_and_lacp_rate(eth1_up, eth2_up):
         yield state
 
 
+@pytest.mark.tier1
 def test_bond_switch_mode_with_conflict_option(
     bond99_with_2_slaves_and_lacp_rate,
 ):
