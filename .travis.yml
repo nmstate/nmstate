@@ -24,7 +24,8 @@ env:
           testflags="--test-type lint"
         - CONTAINER_IMAGE=docker.io/nmstate/centos8-nmstate-dev:nmstate-0.2
           testflags="--test-type unit_py36"
-        - testflags="--test-vdsm"
+        - CONTAINER_IMAGE=quay.io/ovirt/vdsm-test-func-network-centos-8
+          testflags="--test-vdsm"
 
 matrix:
     fast_finish: true
@@ -35,7 +36,8 @@ matrix:
         - env: CONTAINER_IMAGE=docker.io/nmstate/centos8-nmstate-dev:nmstate-0.2
                testflags="--test-type integ --pytest-args='-x'
                    --copr networkmanager/NetworkManager-master"
-        - env: testflags="--test-vdsm"
+        - env: CONTAINER_IMAGE=quay.io/ovirt/vdsm-test-func-network-centos-8
+               testflags="--test-vdsm"
 
 addons:
     apt:
