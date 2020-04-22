@@ -70,9 +70,7 @@ method.
 
 Download the tarball and the signature file. Then, verify the signature:
 ```bash
-curl --silent \
-    https://raw.githubusercontent.com/nmstate/nmstate/master/nmstate.gpg \
-    | gpg2 --import
+curl --silent https://www.nmstate.io/nmstate.gpg | gpg2 --import
 gpg2 --verify nmstate-<version>.tar.gz.asc nmstate-<version>.tar.gz
 ```
 
