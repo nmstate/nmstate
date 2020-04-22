@@ -1,4 +1,6 @@
 ---
+os: linux
+arch: s390x
 dist: bionic
 language: generic
 env:
