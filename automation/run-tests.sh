@@ -241,13 +241,11 @@ function upgrade_nm_from_copr {
     # [Errno 2] No such file or directory: '/var/cache/dnf/metadata_lock.pid'
     if [[ "$CI" == "true" ]];then
         container_exec "rm -fv /var/cache/dnf/metadata_lock.pid"
-        container_exec "dnf clean all"
-        container_exec "dnf makecache || :"
     fi
-    container_exec "command -v dnf && plugin='dnf-command(copr)' || plugin='yum-plugin-copr'; yum install --assumeyes \$plugin;"
-    container_exec "yum copr enable --assumeyes ${copr_repo}"
+    container_exec "dnf install --assumeyes 'dnf-command(copr)'"
+    container_exec "dnf copr enable --assumeyes ${copr_repo}"
     # Update only from Copr to limit the changes in the environment
-    container_exec "yum update --assumeyes --disablerepo '*' --enablerepo '${copr_repo_id}'"
+    container_exec "dnf update --assumeyes --disablerepo '*' --enablerepo '${copr_repo_id}'"
     container_exec "systemctl restart NetworkManager"
 }
 

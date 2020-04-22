@@ -1,6 +1,7 @@
 FROM docker.io/library/fedora:32
 
-RUN dnf -y install --setopt=install_weak_deps=False \
+RUN dnf -y install dnf-plugin-ovl &&
+    dnf -y install --setopt=install_weak_deps=False \
                    NetworkManager \
                    NetworkManager-ovs \
                    NetworkManager-team \
