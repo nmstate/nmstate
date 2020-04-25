@@ -27,7 +27,8 @@ PYTEST_OPTIONS="--verbose --verbose \
         --durations=5 \
         --cov /usr/lib/python*/site-packages/libnmstate \
         --cov /usr/lib/python*/site-packages/nmstatectl \
-        --cov-report=term"
+        --cov-report=term \
+        --log-file=pytest-run.log"
 
 NMSTATE_TEMPDIR=$(mktemp -d /tmp/nmstate-test-XXXX)
 
@@ -168,7 +169,8 @@ function collect_artifacts {
     container_exec "
       journalctl > "$CONT_EXPORT_DIR/journal.log" && \
       dmesg > "$CONT_EXPORT_DIR/dmesg.log" && \
-      cat /var/log/openvswitch/ovsdb-server.log > "$CONT_EXPORT_DIR/ovsdb-server.log" || true
+      cat /var/log/openvswitch/ovsdb-server.log > "$CONT_EXPORT_DIR/ovsdb-server.log" && \
+      mv "$CONTAINER_WORKSPACE/pytest-run.log" "$CONT_EXPORT_DIR/pytest-run.log" || true
     "
 }
 
