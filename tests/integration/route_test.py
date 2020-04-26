@@ -640,6 +640,30 @@ def test_route_rule_add_without_route_table(route_rule_test_env):
     _check_ip_rules(rules)
 
 
+def test_route_rule_add_from_to_single_host(route_rule_test_env):
+    """
+    When route table is not define in route rule, the main route table will
+    be used.
+    """
+    state = route_rule_test_env
+    rules = [
+        {
+            RouteRule.IP_FROM: "2001:db8:a::",
+            RouteRule.IP_TO: "2001:db8:f::/64",
+        },
+        {
+            RouteRule.IP_FROM: "2001:db8:a::/64",
+            RouteRule.IP_TO: "2001:db8:f::",
+        },
+        {RouteRule.IP_FROM: "203.0.113.1", RouteRule.IP_TO: "192.0.2.0/24"},
+        {RouteRule.IP_FROM: "203.0.113.0/24", RouteRule.IP_TO: "192.0.2.1"},
+    ]
+    state[RouteRule.KEY] = {RouteRule.CONFIG: rules}
+
+    libnmstate.apply(state)
+    _check_ip_rules(rules)
+
+
 def _check_ip_rules(rules):
     for rule in rules:
         iprule.ip_rule_exist_in_os(

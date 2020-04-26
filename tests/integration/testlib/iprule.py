@@ -32,6 +32,10 @@ def ip_rule_exist_in_os(ip_from, ip_to, priority, table):
         ip_to and iplib.is_ipv6_address(ip_to)
     ):
         cmds.append("-6")
+    if ip_from and "/" not in ip_from:
+        ip_from = iplib.to_ip_address_full(ip_from)
+    if ip_to and "/" not in ip_to:
+        ip_to = iplib.to_ip_address_full(ip_to)
     result = cmdlib.exec_cmd(cmds + ["--json", "rule"])
     logging.debug(f"Current ip rules in OS: {result[1]}")
     assert result[0] == 0

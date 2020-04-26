@@ -383,6 +383,7 @@ class State:
         self._remove_empty_description()
         self._remove_ip_stack_if_disabled()
         self._normalize_linux_bridge_port_vlan()
+        self._normalize_route_rule_from_to_address()
 
     def merge_interfaces(self, other_state):
         """
@@ -812,6 +813,10 @@ class State:
                 if not port.get(LinuxBridge.Port.VLAN_SUBTREE):
                     port[LinuxBridge.Port.VLAN_SUBTREE] = {}
 
+    def _normalize_route_rule_from_to_address(self):
+        _convert_route_rule_to_full_addr(self.config_route_table_rules_v4)
+        _convert_route_rule_to_full_addr(self.config_route_table_rules_v6)
+
 
 def dict_update(origin_data, to_merge_data):
     """Recursevely performes a dict update (merge)"""
@@ -1022,3 +1027,12 @@ def merge_linux_bridge_ports(desired_iface_state, current_iface_state):
 
 def _index_ports(ports):
     return {port[LinuxBridge.Port.NAME]: port for port in ports}
+
+
+def _convert_route_rule_to_full_addr(indexed_rules):
+    for rules in indexed_rules.values():
+        for rule in rules:
+            if rule.ip_from and "/" not in rule.ip_from:
+                rule.ip_from = iplib.to_ip_address_full(rule.ip_from)
+            if rule.ip_to and "/" not in rule.ip_to:
+                rule.ip_to = iplib.to_ip_address_full(rule.ip_to)
