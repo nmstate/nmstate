@@ -128,14 +128,6 @@ def get_port_by_slave(nmdev):
     return None
 
 
-def get_bridge_info(bridge_device, devices_info):
-    info = get_ovs_info(bridge_device, devices_info)
-    if info:
-        return {OB.CONFIG_SUBTREE: info}
-    else:
-        return {}
-
-
 def get_ovs_info(bridge_device, devices_info):
     port_profiles = _get_slave_profiles(bridge_device, devices_info)
     ports = _get_bridge_ports_info(port_profiles, devices_info)
