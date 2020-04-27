@@ -239,6 +239,11 @@ def test_rollback_for_bond(eth1_up, eth2_up):
 
 
 @pytest.mark.tier1
+def test_will_fail():
+    assert 1 == 0
+
+
+@pytest.mark.tier1
 def test_add_slave_to_bond_without_slaves(eth1_up):
     slave_name = eth1_up[Interface.KEY][0][Interface.NAME]
     with bond_interface(name=BOND99, slaves=[]) as state:
