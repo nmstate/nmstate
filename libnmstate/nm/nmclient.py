@@ -45,10 +45,6 @@ NM_MANAGER_ERROR_DOMAIN = "nm-manager-error-quark"
 _NMCLIENT_CLEANUP_TIMEOUT = 5
 
 
-def nm_version():
-    return NM.Client.get_version(client())
-
-
 def _delete_client():
     global _nmclient
     if _nmclient:

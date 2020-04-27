@@ -19,10 +19,6 @@
 
 from contextlib import contextmanager
 
-import pytest
-
-from distutils.version import StrictVersion
-
 from libnmstate import nm
 from libnmstate.nm.nmclient import nmclient_context
 from libnmstate.schema import Interface
@@ -41,12 +37,6 @@ def test_create_and_remove_vxlan(eth1_up):
     assert not _get_vxlan_current_state(vxlan_name)
 
 
-@pytest.mark.xfail(
-    condition=StrictVersion(nm.nmclient.nm_version())
-    < StrictVersion("1.20.6"),
-    strict=True,
-    reason="https://bugzilla.redhat.com/show_bug.cgi?id=1768388",
-)
 def test_read_destination_port_from_libnm(eth1_up):
     vxlan_desired_state = _create_vxlan_state(eth1_up)
     with _vxlan_interface(vxlan_desired_state):

@@ -17,10 +17,6 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
-from distutils.version import StrictVersion
-
-from libnmstate import nm
-from libnmstate.nm import connection
 from libnmstate.nm import nmclient
 from libnmstate.schema import VXLAN
 
@@ -83,13 +79,4 @@ def _get_destination_port(device):
 
     [1] https://bugzilla.redhat.com/show_bug.cgi?id=1768388
     """
-    if nm.nmclient.nm_version() >= StrictVersion("1.20.6"):
-        return device.get_dst_port()
-    else:
-        con = connection.ConnectionProfile()
-        con.import_by_device(device)
-        if con.profile:
-            vxlan_settings = con.profile.get_setting_vxlan()
-            if vxlan_settings:
-                return vxlan_settings.get_destination_port()
-    return 0
+    return device.get_dst_port()
