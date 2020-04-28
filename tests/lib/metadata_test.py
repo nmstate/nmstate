@@ -65,7 +65,10 @@ class TestDesiredStateMetadata:
         desired_state = state.State({})
         current_state = state.State({})
 
-        metadata.generate_ifaces_metadata(desired_state, current_state)
+        nmclient = mock.MagicMock()
+        metadata.generate_ifaces_metadata(
+            nmclient, desired_state, current_state
+        )
 
         assert desired_state.state == {Interface.KEY: []}
         assert current_state.state == {Interface.KEY: []}
@@ -96,7 +99,10 @@ class TestDesiredStateBondMetadata:
         expected_dstate.interfaces["eth0"][metadata.MASTER_TYPE] = TYPE_BOND
         expected_dstate.interfaces["eth1"][metadata.MASTER_TYPE] = TYPE_BOND
 
-        metadata.generate_ifaces_metadata(desired_state, current_state)
+        nmclient = mock.MagicMock()
+        metadata.generate_ifaces_metadata(
+            nmclient, desired_state, current_state
+        )
 
         assert desired_state.state == expected_dstate.state
         assert current_state == expected_cstate
@@ -138,7 +144,10 @@ class TestDesiredStateBondMetadata:
         expected_dstate.interfaces["eth1"][metadata.MASTER] = BOND_NAME
         expected_dstate.interfaces["eth1"][metadata.MASTER_TYPE] = TYPE_BOND
 
-        metadata.generate_ifaces_metadata(desired_state, current_state)
+        nmclient = mock.MagicMock()
+        metadata.generate_ifaces_metadata(
+            nmclient, desired_state, current_state
+        )
 
         assert desired_state == expected_dstate
         assert current_state == expected_cstate
@@ -173,7 +182,10 @@ class TestDesiredStateBondMetadata:
         expected_desired_state = state.State(desired_state.state)
         expected_current_state = state.State(current_state.state)
 
-        metadata.generate_ifaces_metadata(desired_state, current_state)
+        nmclient = mock.MagicMock()
+        metadata.generate_ifaces_metadata(
+            nmclient, desired_state, current_state
+        )
 
         assert desired_state == expected_desired_state
         assert current_state == expected_current_state
@@ -212,7 +224,10 @@ class TestDesiredStateBondMetadata:
         expected_dstate.interfaces["eth0"][metadata.MASTER_TYPE] = TYPE_BOND
         expected_dstate.interfaces["eth1"][metadata.MASTER_TYPE] = TYPE_BOND
 
-        metadata.generate_ifaces_metadata(desired_state, current_state)
+        nmclient = mock.MagicMock()
+        metadata.generate_ifaces_metadata(
+            nmclient, desired_state, current_state
+        )
 
         assert desired_state == expected_dstate
         assert current_state == expected_cstate
@@ -248,7 +263,10 @@ class TestDesiredStateBondMetadata:
         expected_dstate.interfaces["eth0"][metadata.MASTER_TYPE] = TYPE_BOND
         expected_dstate.interfaces["eth1"] = {Interface.NAME: "eth1"}
 
-        metadata.generate_ifaces_metadata(desired_state, current_state)
+        nmclient = mock.MagicMock()
+        metadata.generate_ifaces_metadata(
+            nmclient, desired_state, current_state
+        )
 
         assert desired_state == expected_dstate
         assert current_state == expected_cstate
@@ -285,7 +303,10 @@ class TestDesiredStateBondMetadata:
         expected_dstate.interfaces["eth0"][metadata.MASTER] = BOND_NAME
         expected_dstate.interfaces["eth0"][metadata.MASTER_TYPE] = TYPE_BOND
 
-        metadata.generate_ifaces_metadata(desired_state, current_state)
+        nmclient = mock.MagicMock()
+        metadata.generate_ifaces_metadata(
+            nmclient, desired_state, current_state
+        )
 
         assert desired_state == expected_dstate
         assert current_state == expected_cstate
@@ -321,7 +342,10 @@ class TestDesiredStateBondMetadata:
         expected_dstate.interfaces["eth0"][metadata.MASTER] = BOND2_NAME
         expected_dstate.interfaces["eth0"][metadata.MASTER_TYPE] = TYPE_BOND
 
-        metadata.generate_ifaces_metadata(desired_state, current_state)
+        nmclient = mock.MagicMock()
+        metadata.generate_ifaces_metadata(
+            nmclient, desired_state, current_state
+        )
 
         assert desired_state == expected_dstate
         assert current_state == expected_cstate
@@ -369,7 +393,10 @@ class TestDesiredStateBondMetadata:
         expected_dstate.interfaces["eth1"][metadata.MASTER] = BOND_NAME
         expected_dstate.interfaces["eth1"][metadata.MASTER_TYPE] = TYPE_BOND
 
-        metadata.generate_ifaces_metadata(desired_state, current_state)
+        nmclient = mock.MagicMock()
+        metadata.generate_ifaces_metadata(
+            nmclient, desired_state, current_state
+        )
 
         assert desired_state == expected_dstate
         assert current_state == expected_cstate
@@ -410,7 +437,10 @@ class TestDesiredStateBondMetadata:
         expected_dstate = state.State(desired_state.state)
         expected_cstate = state.State(current_state.state)
 
-        metadata.generate_ifaces_metadata(desired_state, current_state)
+        nmclient = mock.MagicMock()
+        metadata.generate_ifaces_metadata(
+            nmclient, desired_state, current_state
+        )
 
         assert desired_state == expected_dstate
         assert current_state == expected_cstate
@@ -434,7 +464,10 @@ class TestRouteMetadata:
         desired_state = state.State({})
         current_state = state.State({})
 
-        metadata.generate_ifaces_metadata(desired_state, current_state)
+        nmclient = mock.MagicMock()
+        metadata.generate_ifaces_metadata(
+            nmclient, desired_state, current_state
+        )
 
         assert {} == desired_state.interfaces
 
@@ -446,7 +479,10 @@ class TestRouteMetadata:
             {Interface.KEY: [], Route.KEY: {Route.CONFIG: []}}
         )
 
-        metadata.generate_ifaces_metadata(desired_state, current_state)
+        nmclient = mock.MagicMock()
+        metadata.generate_ifaces_metadata(
+            nmclient, desired_state, current_state
+        )
 
         assert {} == desired_state.interfaces
 
@@ -457,7 +493,10 @@ class TestRouteMetadata:
         )
         current_state = state.State({})
 
-        metadata.generate_ifaces_metadata(desired_state, current_state)
+        nmclient = mock.MagicMock()
+        metadata.generate_ifaces_metadata(
+            nmclient, desired_state, current_state
+        )
 
         assert {} == desired_state.interfaces
 
@@ -476,7 +515,10 @@ class TestRouteMetadata:
             }
         )
 
-        metadata.generate_ifaces_metadata(desired_state, current_state)
+        nmclient = mock.MagicMock()
+        metadata.generate_ifaces_metadata(
+            nmclient, desired_state, current_state
+        )
 
         assert "foo" in desired_state.interfaces
         assert metadata.ROUTES not in desired_state.interfaces["foo"]
@@ -491,7 +533,10 @@ class TestRouteMetadata:
         )
         current_state = state.State({})
 
-        metadata.generate_ifaces_metadata(desired_state, current_state)
+        nmclient = mock.MagicMock()
+        metadata.generate_ifaces_metadata(
+            nmclient, desired_state, current_state
+        )
 
         iface_state = desired_state.interfaces["eth1"]
         (route_metadata,) = iface_state[Interface.IPV4][metadata.ROUTES]
@@ -509,7 +554,10 @@ class TestRouteMetadata:
             }
         )
 
-        metadata.generate_ifaces_metadata(desired_state, current_state)
+        nmclient = mock.MagicMock()
+        metadata.generate_ifaces_metadata(
+            nmclient, desired_state, current_state
+        )
 
         iface_state = desired_state.interfaces["eth1"]
         (route_metadata,) = iface_state[Interface.IPV4][metadata.ROUTES]
@@ -533,7 +581,10 @@ class TestRouteMetadata:
             }
         )
 
-        metadata.generate_ifaces_metadata(desired_state, current_state)
+        nmclient = mock.MagicMock()
+        metadata.generate_ifaces_metadata(
+            nmclient, desired_state, current_state
+        )
 
         iface0_state = desired_state.interfaces["eth1"]
         iface1_state = desired_state.interfaces["eth2"]
@@ -578,7 +629,8 @@ def test_dns_metadata_empty():
     )
     current_state = state.State({})
 
-    metadata.generate_ifaces_metadata(desired_state, current_state)
+    nmclient = mock.MagicMock()
+    metadata.generate_ifaces_metadata(nmclient, desired_state, current_state)
     assert (
         nm_dns.DNS_METADATA
         not in desired_state.interfaces[TEST_IFACE1][Interface.IPV4]
@@ -606,7 +658,8 @@ def test_dns_gen_metadata_static_gateway_ipv6_name_server_before_ipv4(
     )
     current_state = state.State({})
 
-    metadata.generate_ifaces_metadata(desired_state, current_state)
+    nmclient = mock.MagicMock()
+    metadata.generate_ifaces_metadata(nmclient, desired_state, current_state)
     ipv4_dns_config = {
         DNS.SERVER: ["8.8.8.8"],
         DNS.SEARCH: [],
@@ -639,7 +692,8 @@ def test_dns_gen_metadata_static_gateway_ipv6_name_server_after_ipv4(
     )
     current_state = state.State({})
 
-    metadata.generate_ifaces_metadata(desired_state, current_state)
+    nmclient = mock.MagicMock()
+    metadata.generate_ifaces_metadata(nmclient, desired_state, current_state)
     ipv4_dns_config = {
         DNS.SERVER: ["8.8.8.8"],
         DNS.SEARCH: ["example.org", "example.com"],
@@ -674,7 +728,8 @@ def test_dns_metadata_interface_not_included_in_desire(nm_dns_mock):
             Route.KEY: {Route.CONFIG: _gen_default_gateway_route(TEST_IFACE1)},
         }
     )
-    metadata.generate_ifaces_metadata(desired_state, current_state)
+    nmclient = mock.MagicMock()
+    metadata.generate_ifaces_metadata(nmclient, desired_state, current_state)
     iface_state = desired_state.interfaces[TEST_IFACE1]
     ipv4_dns_config = {
         DNS.SERVER: ["8.8.8.8"],
@@ -773,7 +828,10 @@ class TestRouteRuleMetadata:
         desired_state = state.State({})
         current_state = state.State({})
 
-        metadata.generate_ifaces_metadata(desired_state, current_state)
+        nmclient = mock.MagicMock()
+        metadata.generate_ifaces_metadata(
+            nmclient, desired_state, current_state
+        )
 
         assert {} == desired_state.interfaces
 
@@ -785,7 +843,10 @@ class TestRouteRuleMetadata:
             {Interface.KEY: [], RouteRule.KEY: {RouteRule.CONFIG: []}}
         )
 
-        metadata.generate_ifaces_metadata(desired_state, current_state)
+        nmclient = mock.MagicMock()
+        metadata.generate_ifaces_metadata(
+            nmclient, desired_state, current_state
+        )
 
         assert {} == desired_state.interfaces
 
@@ -800,7 +861,10 @@ class TestRouteRuleMetadata:
         current_state = state.State({})
 
         with pytest.raises(NmstateValueError):
-            metadata.generate_ifaces_metadata(desired_state, current_state)
+            nmclient = mock.MagicMock()
+            metadata.generate_ifaces_metadata(
+                nmclient, desired_state, current_state
+            )
 
     def test_rule_with_no_matching_route_table(self):
         rule0 = self._create_rule0()
@@ -847,7 +911,10 @@ class TestRouteRuleMetadata:
         )
 
         with pytest.raises(NmstateValueError):
-            metadata.generate_ifaces_metadata(desired_state, current_state)
+            nmclient = mock.MagicMock()
+            metadata.generate_ifaces_metadata(
+                nmclient, desired_state, current_state
+            )
 
     def test_rule_with_matching_route_table(self):
         rule0 = self._create_rule0()
@@ -879,7 +946,10 @@ class TestRouteRuleMetadata:
         )
         current_state = state.State({})
 
-        metadata.generate_ifaces_metadata(desired_state, current_state)
+        nmclient = mock.MagicMock()
+        metadata.generate_ifaces_metadata(
+            nmclient, desired_state, current_state
+        )
 
         iface_state = desired_state.interfaces["eth1"]
         (rule0_metadata,) = iface_state[Interface.IPV4][

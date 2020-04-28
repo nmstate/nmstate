@@ -24,7 +24,7 @@ https://lazka.github.io/pgi-docs/#NM-1.0/classes/SettingUser.html
 
 from libnmstate.error import NmstateValueError
 from libnmstate.nm import connection as nm_connection
-from libnmstate.nm import nmclient
+from .common import NM
 
 NMSTATE_DESCRIPTION = "nmstate.interface.description"
 
@@ -35,38 +35,38 @@ def create_setting(iface_state, base_con_profile):
     if not description:
         return None
 
-    if not nmclient.NM.SettingUser.check_val(description):
+    if not NM.SettingUser.check_val(description):
         raise NmstateValueError("Invalid description")
 
     user_setting = None
     if base_con_profile:
         user_setting = base_con_profile.get_setting_by_name(
-            nmclient.NM.SETTING_USER_SETTING_NAME
+            NM.SETTING_USER_SETTING_NAME
         )
         if user_setting:
             user_setting = user_setting.duplicate()
 
     if not user_setting:
-        user_setting = nmclient.NM.SettingUser.new()
+        user_setting = NM.SettingUser.new()
 
     user_setting.set_data(NMSTATE_DESCRIPTION, description)
     return user_setting
 
 
-def get_info(device):
+def get_info(nm_client, device):
     """
     Get description from user settings for a connection
     """
     info = {}
 
-    connection = nm_connection.ConnectionProfile()
+    connection = nm_connection.ConnectionProfile(nm_client)
     connection.import_by_device(device)
     if not connection.profile:
         return info
 
     try:
         user_setting = connection.profile.get_setting_by_name(
-            nmclient.NM.SETTING_USER_SETTING_NAME
+            NM.SETTING_USER_SETTING_NAME
         )
         description = user_setting.get_data(NMSTATE_DESCRIPTION)
         if description:

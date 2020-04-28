@@ -19,77 +19,62 @@
 
 import time
 
-
 import pytest
-
 
 from libnmstate.nm.checkpoint import CheckPoint
 from libnmstate.nm.checkpoint import get_checkpoints
 from libnmstate.nm.checkpoint import NMCheckPointCreationError
 
 
-def test_creating_one_checkpoint():
+def test_creating_one_checkpoint(nm_context):
     """ I can create a checkpoint """
-    with CheckPoint() as checkpoint:
+    with CheckPoint(nm_context) as checkpoint:
         pass
 
     assert checkpoint is not None
 
 
-def test_creating_two_checkpoints():
+def test_creating_two_checkpoints(nm_context):
     """ I cannot create a checkpoint when a checkpoint already exists. """
-    with CheckPoint() as checkpoint:
+    with CheckPoint(nm_context) as checkpoint:
         with pytest.raises(NMCheckPointCreationError):
-            with CheckPoint():
+            with CheckPoint(nm_context):
                 pass
 
     assert checkpoint is not None
 
 
-def test_checkpoint_timeout():
+def test_checkpoint_timeout(nm_context):
     """ I can create a checkpoint that is removed after one second. """
-
-    with pytest.raises(Exception):
-        with CheckPoint(timeout=1) as checkpoint_a:
-            time.sleep(1)
-            with CheckPoint() as checkpoint_b:
-                pass
+    with CheckPoint(nm_context, timeout=1, autodestroy=False) as checkpoint_a:
+        time.sleep(1)
+        with CheckPoint(nm_context) as checkpoint_b:
+            pass
 
     assert checkpoint_b is not None
     assert checkpoint_a is not None
 
 
-def test_getting_a_checkpoint():
+def test_getting_a_checkpoint(nm_context):
     """ I can get a list of all checkpoints. """
 
-    checkpoints = get_checkpoints()
+    checkpoints = get_checkpoints(nm_context.client)
 
     assert len(checkpoints) == 0
 
-    with CheckPoint() as checkpoint:
-        checkpoints = get_checkpoints()
+    with CheckPoint(nm_context) as checkpoint:
+        nm_context.refresh_content()
+        checkpoints = get_checkpoints(nm_context.client)
 
     assert len(checkpoints) == 1
     assert checkpoints[0] == checkpoint.dbuspath
 
 
-def test_non_auto_destroying_checkpoint():
-    """ I can create a checkpoint that needs to be confirmed manually. """
-
-    with CheckPoint(autodestroy=False) as checkpoint:
+def test_creating_a_checkpoint_from_dbuspath(nm_context):
+    with CheckPoint(nm_context, autodestroy=False) as initial_checkpoint:
         pass
-
-    checkpoints = get_checkpoints()
-
-    assert checkpoints[0] == checkpoint.dbuspath
-    checkpoint.destroy()
-    assert not get_checkpoints()
-
-
-def test_creating_a_checkpoint_from_dbuspath():
-    with CheckPoint(autodestroy=False) as initial_checkpoint:
-        pass
-
-    new_checkpoint = CheckPoint(dbuspath=initial_checkpoint.dbuspath)
+    new_checkpoint = CheckPoint(
+        nm_context, dbuspath=initial_checkpoint.dbuspath
+    )
     new_checkpoint.destroy()
-    assert not get_checkpoints()
+    assert not get_checkpoints(nm_context.client)

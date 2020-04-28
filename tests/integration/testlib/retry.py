@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2019 Red Hat, Inc.
+# Copyright (c) 2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -17,37 +17,15 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
-from . import applier
-from . import bond
-from . import bridge
-from . import checkpoint
-from . import connection
-from . import device
-from . import dns
-from . import ipv4
-from . import ipv6
-from . import mainloop
-from . import ovs
-from . import translator
-from . import user
-from . import vlan
-from . import wired
-from .plugin import NetworkManagerPlugin
+import time
 
 
-applier
-bond
-bridge
-checkpoint
-connection
-device
-dns
-ipv4
-ipv6
-ovs
-translator
-user
-vlan
-wired
-mainloop
-NetworkManagerPlugin
+def retry_till_true_or_timeout(timeout, func, *args, **kwargs):
+    ret = func(*args, **kwargs)
+    while timeout > 0:
+        if ret:
+            break
+        time.sleep(1)
+        timeout -= 1
+        ret = func(*args, **kwargs)
+    return ret

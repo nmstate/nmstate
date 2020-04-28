@@ -19,9 +19,8 @@
 
 from libnmstate import nm
 from libnmstate import schema
-from libnmstate.nm.nmclient import nmclient_context
 
-from .testlib import mainloop_run
+from .testlib import mainloop
 
 
 ETH1 = "eth1"
@@ -30,18 +29,13 @@ MAC0 = "02:FF:FF:FF:FF:00"
 MTU0 = 1200
 
 
-def test_interface_mtu_change_with_modify(eth1_up):
-    _test_interface_mtu_change(nm.device.modify)
-
-
-def _test_interface_mtu_change(apply_operation):
-    wired_base_state = _get_wired_current_state(ETH1)
+def test_interface_mtu_change(eth1_up, nm_plugin):
+    wired_base_state = _get_wired_current_state(nm_plugin, ETH1)
     _modify_interface(
-        wired_state={schema.Interface.MTU: MTU0},
-        apply_operation=apply_operation,
+        nm_plugin.client, wired_state={schema.Interface.MTU: MTU0}
     )
 
-    wired_current_state = _get_wired_current_state(ETH1)
+    wired_current_state = _get_wired_current_state(nm_plugin, ETH1)
 
     assert wired_current_state == {
         schema.Interface.MAC: wired_base_state[schema.Interface.MAC],
@@ -49,18 +43,13 @@ def _test_interface_mtu_change(apply_operation):
     }
 
 
-def test_interface_mac_change_with_modify(eth1_up):
-    _test_interface_mac_change(nm.device.modify)
-
-
-def _test_interface_mac_change(apply_operation):
-    wired_base_state = _get_wired_current_state(ETH1)
+def test_interface_mac_change_with_modify(eth1_up, nm_plugin):
+    wired_base_state = _get_wired_current_state(nm_plugin, ETH1)
     _modify_interface(
-        wired_state={schema.Interface.MAC: MAC0},
-        apply_operation=apply_operation,
+        nm_plugin.client, wired_state={schema.Interface.MAC: MAC0}
     )
 
-    wired_current_state = _get_wired_current_state(ETH1)
+    wired_current_state = _get_wired_current_state(nm_plugin, ETH1)
 
     assert wired_current_state == {
         schema.Interface.MAC: MAC0,
@@ -68,22 +57,21 @@ def _test_interface_mac_change(apply_operation):
     }
 
 
-@mainloop_run
-def _modify_interface(wired_state, apply_operation):
-    conn = nm.connection.ConnectionProfile()
+def _modify_interface(client, wired_state):
+    conn = nm.connection.ConnectionProfile(client)
     conn.import_by_id(ETH1)
     settings = _create_iface_settings(wired_state, conn)
-    new_conn = nm.connection.ConnectionProfile()
-    new_conn.create(settings)
-    conn.update(new_conn)
+    new_conn = nm.connection.ConnectionProfile(client)
+    with mainloop():
+        new_conn.create(settings)
+        conn.update(new_conn)
+        nmdev = nm.device.get_device_by_name(client, ETH1)
+        nm.device.modify(client, nmdev, new_conn.profile)
 
-    nmdev = nm.device.get_device_by_name(ETH1)
-    apply_operation(nmdev, new_conn.profile)
 
-
-@nmclient_context
-def _get_wired_current_state(ifname):
-    nmdev = nm.device.get_device_by_name(ifname)
+def _get_wired_current_state(plugin, ifname):
+    plugin.refresh_content()
+    nmdev = nm.device.get_device_by_name(plugin.client, ifname)
     return nm.wired.get_info(nmdev) if nmdev else {}
 
 

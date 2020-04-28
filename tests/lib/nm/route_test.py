@@ -16,7 +16,9 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
+
 import copy
+from unittest import mock
 
 import pytest
 
@@ -68,6 +70,11 @@ parametrize_ip_ver_routes = pytest.mark.parametrize(
     ],
     ids=["ipv4", "ipv6"],
 )
+
+
+@pytest.fixture
+def client_mock():
+    yield mock.MagicMock()
 
 
 def _get_test_ipv4_gateways():
@@ -135,12 +142,12 @@ def test_add_duplicate_routes(nm_ip, routes):
 
 
 @parametrize_ip_ver_routes
-def test_clear_route(nm_ip, routes):
+def test_clear_route(nm_ip, routes, client_mock):
     setting_ip = nm_ip.create_setting(
         {InterfaceIP.ENABLED: True, metadata.ROUTES: routes},
         base_con_profile=None,
     )
-    con_profile = nm_connection.ConnectionProfile()
+    con_profile = nm_connection.ConnectionProfile(client_mock)
     con_profile.create([setting_ip])
     new_setting_ip = nm_ip.create_setting(
         {InterfaceIP.ENABLED: True, metadata.ROUTES: []},
@@ -245,12 +252,12 @@ def test_change_gateway_without_table_id(nm_ip, routes, gateways):
 
 
 @parametrize_ip_ver_routes_gw
-def test_clear_gateway(nm_ip, routes, gateways):
+def test_clear_gateway(nm_ip, routes, gateways, client_mock):
     setting_ip = nm_ip.create_setting(
         {InterfaceIP.ENABLED: True, metadata.ROUTES: routes + gateways[:1]},
         base_con_profile=None,
     )
-    con_profile = nm_connection.ConnectionProfile()
+    con_profile = nm_connection.ConnectionProfile(client_mock)
     con_profile.create([setting_ip])
     setting_ip = nm_ip.create_setting(
         {InterfaceIP.ENABLED: True, metadata.ROUTES: routes},

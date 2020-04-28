@@ -27,7 +27,7 @@ from libnmstate import schema
 
 @pytest.fixture
 def NM_mock():
-    with mock.patch.object(nm.wired.nmclient, "NM") as m:
+    with mock.patch.object(nm.wired, "NM") as m:
         yield m
 
 

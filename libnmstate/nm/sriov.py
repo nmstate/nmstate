@@ -22,31 +22,33 @@ import subprocess
 
 from libnmstate.error import NmstateNotSupportedError
 from libnmstate.nm import device
-from libnmstate.nm import nmclient
 from libnmstate.schema import Ethernet
 from libnmstate.schema import Interface
+
+from .common import NM
+from .common import GLib
 
 
 SRIOV_NMSTATE_TO_NM_MAP = {
     Ethernet.SRIOV.VFS.MAC_ADDRESS: (
-        nmclient.NM.SRIOV_VF_ATTRIBUTE_MAC,
-        nmclient.GLib.Variant.new_string,
+        NM.SRIOV_VF_ATTRIBUTE_MAC,
+        GLib.Variant.new_string,
     ),
     Ethernet.SRIOV.VFS.SPOOF_CHECK: (
-        nmclient.NM.SRIOV_VF_ATTRIBUTE_SPOOF_CHECK,
-        nmclient.GLib.Variant.new_boolean,
+        NM.SRIOV_VF_ATTRIBUTE_SPOOF_CHECK,
+        GLib.Variant.new_boolean,
     ),
     Ethernet.SRIOV.VFS.TRUST: (
-        nmclient.NM.SRIOV_VF_ATTRIBUTE_TRUST,
-        nmclient.GLib.Variant.new_boolean,
+        NM.SRIOV_VF_ATTRIBUTE_TRUST,
+        GLib.Variant.new_boolean,
     ),
     Ethernet.SRIOV.VFS.MIN_TX_RATE: (
-        nmclient.NM.SRIOV_VF_ATTRIBUTE_MIN_TX_RATE,
-        nmclient.GLib.Variant.new_uint32,
+        NM.SRIOV_VF_ATTRIBUTE_MIN_TX_RATE,
+        GLib.Variant.new_uint32,
     ),
     Ethernet.SRIOV.VFS.MAX_TX_RATE: (
-        nmclient.NM.SRIOV_VF_ATTRIBUTE_MAX_TX_RATE,
-        nmclient.GLib.Variant.new_uint32,
+        NM.SRIOV_VF_ATTRIBUTE_MAX_TX_RATE,
+        GLib.Variant.new_uint32,
     ),
 }
 
@@ -61,23 +63,23 @@ SRIOV_NMSTATE_TO_REGEX = {
 }
 
 
-def create_setting(iface_state, base_con_profile):
+def create_setting(nm_client, iface_state, base_con_profile):
     sriov_setting = None
     ifname = iface_state[Interface.NAME]
     sriov_config = iface_state.get(Ethernet.CONFIG_SUBTREE, {}).get(
         Ethernet.SRIOV_SUBTREE
     )
     if sriov_config:
-        if not _has_sriov_capability(ifname):
+        if not _has_sriov_capability(nm_client, ifname):
             raise NmstateNotSupportedError(
                 f"Interface '{ifname}' does not support SR-IOV"
             )
 
         sriov_setting = base_con_profile.get_setting_duplicate(
-            nmclient.NM.SETTING_SRIOV_SETTING_NAME
+            NM.SETTING_SRIOV_SETTING_NAME
         )
         if not sriov_setting:
-            sriov_setting = nmclient.NM.SettingSriov.new()
+            sriov_setting = NM.SettingSriov.new()
 
         vfs_config = sriov_config.get(Ethernet.SRIOV.VFS_SUBTREE, [])
         vf_object_ids = {vf.get_index() for vf in sriov_setting.props.vfs}
@@ -110,7 +112,7 @@ def _create_sriov_vfs_from_config(vfs_config, sriov_setting, vf_ids_to_add):
     )
     for vf_config in vfs_config_to_add:
         vf_id = vf_config.pop(Ethernet.SRIOV.VFS.ID)
-        vf_object = nmclient.NM.SriovVF.new(vf_id)
+        vf_object = NM.SriovVF.new(vf_id)
         for key, val in vf_config.items():
             _set_nm_attribute(vf_object, key, val)
 
@@ -127,11 +129,9 @@ def _remove_sriov_vfs_in_setting(vfs_config, sriov_setting, vf_ids_to_remove):
         yield vf_id
 
 
-def _has_sriov_capability(ifname):
-    dev = device.get_device_by_name(ifname)
-    return dev and (
-        nmclient.NM.DeviceCapabilities.SRIOV & dev.props.capabilities
-    )
+def _has_sriov_capability(nm_client, ifname):
+    dev = device.get_device_by_name(nm_client, ifname)
+    return dev and (NM.DeviceCapabilities.SRIOV & dev.props.capabilities)
 
 
 def get_info(device):

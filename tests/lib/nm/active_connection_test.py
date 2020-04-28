@@ -17,9 +17,9 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
-from libnmstate.nm.nmclient import NM
-from libnmstate.nm.nmclient import NM_MANAGER_ERROR_DOMAIN
-from libnmstate.nm.nmclient import GLib
+from libnmstate.nm.common import NM
+from libnmstate.nm.active_connection import NM_MANAGER_ERROR_DOMAIN
+from libnmstate.nm.common import GLib
 
 
 def test_nm_manager_error_domain_str():

@@ -21,9 +21,6 @@ import pytest
 from unittest import mock
 
 from libnmstate import netinfo
-from libnmstate.schema import Bond
-from libnmstate.schema import BondMode
-from libnmstate.schema import Constants
 from libnmstate.schema import DNS
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
@@ -34,30 +31,29 @@ from libnmstate.schema import Route
 from libnmstate.schema import RouteRule
 
 
-INTERFACES = Constants.INTERFACES
-ROUTES = Constants.ROUTES
-
-
 @pytest.fixture
-def nm_mock():
-    with mock.patch.object(netinfo, "nm") as m:
-        m.ipv4.get_routing_rule_config.return_value = []
-        m.ipv6.get_routing_rule_config.return_value = []
+def show_with_plugin_mock():
+    with mock.patch.object(netinfo, "show_with_plugin") as m:
         yield m
 
 
 @pytest.fixture
-def nm_dns_mock():
-    with mock.patch.object(netinfo, "nm_dns") as m:
+def plugin_context_mock():
+    with mock.patch.object(netinfo, "plugin_context") as m:
+
+        def enter(self):
+            return self
+
+        m().__enter__ = enter
         yield m
 
 
-def test_netinfo_show_generic_iface(nm_mock, nm_dns_mock):
+def test_netinfo_show(show_with_plugin_mock, plugin_context_mock):
     current_config = {
         DNS.KEY: {DNS.RUNNING: {}, DNS.CONFIG: {}},
-        ROUTES: {Route.CONFIG: [], Route.RUNNING: []},
+        Route.KEY: {Route.CONFIG: [], Route.RUNNING: []},
         RouteRule.KEY: {RouteRule.CONFIG: []},
-        INTERFACES: [
+        Interface.KEY: [
             {
                 Interface.NAME: "foo",
                 Interface.TYPE: InterfaceType.UNKNOWN,
@@ -68,81 +64,18 @@ def test_netinfo_show_generic_iface(nm_mock, nm_dns_mock):
         ],
     }
 
-    current_iface0 = current_config[INTERFACES][0]
-    nm_mock.device.list_devices.return_value = ["one-item"]
-    nm_mock.translator.Nm2Api.get_common_device_info.return_value = (
-        current_iface0
-    )
-    nm_mock.bond.is_bond_type_id.return_value = False
-    nm_mock.ipv4.get_info.return_value = current_iface0[Interface.IPV4]
-    nm_mock.ipv6.get_info.return_value = current_iface0[Interface.IPV6]
-    nm_mock.ipv4.get_route_running.return_value = []
-    nm_mock.ipv4.get_route_config.return_value = []
-    nm_mock.ipv6.get_route_running.return_value = []
-    nm_mock.ipv6.get_route_config.return_value = []
-    nm_dns_mock.get_running.return_value = current_config[DNS.KEY][DNS.RUNNING]
-    nm_dns_mock.get_config.return_value = current_config[DNS.KEY][DNS.CONFIG]
-
+    show_with_plugin_mock.return_value = current_config
     report = netinfo.show()
 
     assert current_config == report
 
 
-def test_netinfo_show_bond_iface(nm_mock, nm_dns_mock):
+def test_error_show(show_with_plugin_mock, plugin_context_mock):
     current_config = {
         DNS.KEY: {DNS.RUNNING: {}, DNS.CONFIG: {}},
-        ROUTES: {Route.CONFIG: [], Route.RUNNING: []},
+        Route.KEY: {"config": [], "running": []},
         RouteRule.KEY: {RouteRule.CONFIG: []},
-        INTERFACES: [
-            {
-                Interface.NAME: "bond99",
-                Interface.TYPE: InterfaceType.BOND,
-                Interface.STATE: InterfaceState.UP,
-                Bond.CONFIG_SUBTREE: {
-                    Bond.MODE: BondMode.ROUND_ROBIN,
-                    Bond.SLAVES: [],
-                    Bond.OPTIONS_SUBTREE: {"miimon": "100"},
-                },
-                Interface.IPV4: {InterfaceIPv4.ENABLED: False},
-                Interface.IPV6: {InterfaceIPv6.ENABLED: False},
-            }
-        ],
-    }
-
-    nm_mock.device.list_devices.return_value = ["one-item"]
-    nm_mock.translator.Nm2Api.get_common_device_info.return_value = {
-        Interface.NAME: current_config[INTERFACES][0][Interface.NAME],
-        Interface.TYPE: current_config[INTERFACES][0][Interface.TYPE],
-        Interface.STATE: current_config[INTERFACES][0][Interface.STATE],
-    }
-    nm_mock.bond.is_bond_type_id.return_value = True
-    nm_mock.translator.Nm2Api.get_bond_info.return_value = {
-        Bond.CONFIG_SUBTREE: current_config[INTERFACES][0][Bond.CONFIG_SUBTREE]
-    }
-    nm_mock.ipv4.get_info.return_value = current_config[INTERFACES][0][
-        Interface.IPV4
-    ]
-    nm_mock.ipv6.get_info.return_value = current_config[INTERFACES][0][
-        Interface.IPV6
-    ]
-    nm_mock.ipv4.get_route_running.return_value = []
-    nm_mock.ipv4.get_route_config.return_value = []
-    nm_mock.ipv6.get_route_running.return_value = []
-    nm_mock.ipv6.get_route_config.return_value = []
-    nm_dns_mock.get_running.return_value = current_config[DNS.KEY][DNS.RUNNING]
-    nm_dns_mock.get_config.return_value = current_config[DNS.KEY][DNS.CONFIG]
-
-    report = netinfo.show()
-
-    assert current_config == report
-
-
-def test_error_show(nm_mock, nm_dns_mock):
-    current_config = {
-        DNS.KEY: {DNS.RUNNING: {}, DNS.CONFIG: {}},
-        ROUTES: {"config": [], "running": []},
-        RouteRule.KEY: {RouteRule.CONFIG: []},
-        INTERFACES: [
+        Interface.KEY: [
             {
                 "name": "foo",
                 "type": "unknown",
@@ -152,21 +85,7 @@ def test_error_show(nm_mock, nm_dns_mock):
             }
         ],
     }
-
-    current_iface0 = current_config[INTERFACES][0]
-    nm_mock.device.list_devices.return_value = ["one-item"]
-    nm_mock.translator.Nm2Api.get_common_device_info.return_value = (
-        current_iface0
-    )
-    nm_mock.bond.is_bond_type_id.return_value = False
-    nm_mock.ipv4.get_info.return_value = current_iface0["ipv4"]
-    nm_mock.ipv6.get_info.return_value = current_iface0["ipv6"]
-    nm_mock.ipv4.get_route_running.return_value = []
-    nm_mock.ipv4.get_route_config.return_value = []
-    nm_mock.ipv6.get_route_running.return_value = []
-    nm_mock.ipv6.get_route_config.return_value = []
-    nm_dns_mock.get_running.return_value = current_config[DNS.KEY][DNS.RUNNING]
-    nm_dns_mock.get_config.return_value = current_config[DNS.KEY][DNS.CONFIG]
+    show_with_plugin_mock.return_value = current_config
 
     with pytest.raises(TypeError):
         # pylint: disable=too-many-function-args

@@ -17,6 +17,8 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
+from unittest import mock
+
 from libnmstate import metadata
 from libnmstate import state
 from libnmstate.schema import Interface
@@ -62,7 +64,10 @@ class TestLinuxBridgeMetadata:
         )
         expected_cstate = state.State(current_state.state)
 
-        metadata.generate_ifaces_metadata(desired_state, current_state)
+        nmclient = mock.MagicMock()
+        metadata.generate_ifaces_metadata(
+            nmclient, desired_state, current_state
+        )
 
         assert state.State(desired_state.state) == expected_dstate
         assert current_state == expected_cstate
@@ -102,7 +107,10 @@ class TestLinuxBridgeMetadata:
         )
         expected_cstate = state.State(current_state.state)
 
-        metadata.generate_ifaces_metadata(desired_state, current_state)
+        nmclient = mock.MagicMock()
+        metadata.generate_ifaces_metadata(
+            nmclient, desired_state, current_state
+        )
 
         assert state.State(desired_state.state) == expected_dstate
         assert current_state == expected_cstate
@@ -131,7 +139,10 @@ class TestLinuxBridgeMetadata:
         expected_desired_state = state.State(desired_state.state)
         expected_current_state = state.State(current_state.state)
 
-        metadata.generate_ifaces_metadata(desired_state, current_state)
+        nmclient = mock.MagicMock()
+        metadata.generate_ifaces_metadata(
+            nmclient, desired_state, current_state
+        )
 
         assert state.State(desired_state.state) == expected_desired_state
         assert current_state == expected_current_state
@@ -177,7 +188,10 @@ class TestLinuxBridgeMetadata:
         )
         expected_cstate = state.State(current_state.state)
 
-        metadata.generate_ifaces_metadata(desired_state, current_state)
+        nmclient = mock.MagicMock()
+        metadata.generate_ifaces_metadata(
+            nmclient, desired_state, current_state
+        )
 
         assert state.State(desired_state.state) == expected_dstate
         assert current_state == expected_cstate
@@ -214,7 +228,10 @@ class TestLinuxBridgeMetadata:
         )
         expected_cstate = state.State(current_state.state)
 
-        metadata.generate_ifaces_metadata(desired_state, current_state)
+        nmclient = mock.MagicMock()
+        metadata.generate_ifaces_metadata(
+            nmclient, desired_state, current_state
+        )
 
         assert state.State(desired_state.state) == expected_dstate
         assert current_state == expected_cstate
@@ -250,7 +267,10 @@ class TestLinuxBridgeMetadata:
         )
         expected_cstate = state.State(current_state.state)
 
-        metadata.generate_ifaces_metadata(desired_state, current_state)
+        nmclient = mock.MagicMock()
+        metadata.generate_ifaces_metadata(
+            nmclient, desired_state, current_state
+        )
 
         assert state.State(desired_state.state) == expected_dstate
         assert current_state == expected_cstate
@@ -291,7 +311,10 @@ class TestLinuxBridgeMetadata:
         )
         expected_cstate = state.State(current_state.state)
 
-        metadata.generate_ifaces_metadata(desired_state, current_state)
+        nmclient = mock.MagicMock()
+        metadata.generate_ifaces_metadata(
+            nmclient, desired_state, current_state
+        )
 
         assert state.State(desired_state.state) == expected_dstate
         assert current_state == expected_cstate
@@ -327,7 +350,10 @@ class TestLinuxBridgeMetadata:
         )
         expected_cstate = state.State(current_state.state)
 
-        metadata.generate_ifaces_metadata(desired_state, current_state)
+        nmclient = mock.MagicMock()
+        metadata.generate_ifaces_metadata(
+            nmclient, desired_state, current_state
+        )
 
         assert state.State(desired_state.state) == expected_dstate
         assert current_state == expected_cstate

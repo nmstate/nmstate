@@ -26,14 +26,14 @@ from libnmstate.schema import Bond
 from libnmstate.schema import BondMode
 
 
-@pytest.fixture()
-def dev_mock():
-    return mock.MagicMock()
+@pytest.fixture
+def nm_mock():
+    with mock.patch.object(nm.bond, "NM") as m:
+        yield m
 
 
-@mock.patch.object(nm.bond.nmclient, "NM")
-def test_create_setting(NM_mock):
-    bond_setting_mock = NM_mock.SettingBond.new.return_value
+def test_create_setting(nm_mock):
+    bond_setting_mock = nm_mock.SettingBond.new.return_value
     bond_setting_mock.add_option.return_value = True
 
     options = {Bond.MODE: BondMode.ROUND_ROBIN, "miimon": "100"}
@@ -48,9 +48,8 @@ def test_create_setting(NM_mock):
     )
 
 
-@mock.patch.object(nm.bond.nmclient, "NM")
-def test_create_setting_with_invalid_bond_option(NM_mock):
-    bond_setting_mock = NM_mock.SettingBond.new.return_value
+def test_create_setting_with_invalid_bond_option(nm_mock):
+    bond_setting_mock = nm_mock.SettingBond.new.return_value
     bond_setting_mock.add_option.return_value = False
 
     options = {Bond.MODE: BondMode.ROUND_ROBIN, "foo": "100"}
@@ -59,16 +58,14 @@ def test_create_setting_with_invalid_bond_option(NM_mock):
         nm.bond.create_setting(options, wired_setting=None)
 
 
-@mock.patch.object(nm.bond.nmclient, "NM")
-def test_is_bond_type_id(NM_mock):
-    type_id = NM_mock.DeviceType.BOND
+def test_is_bond_type_id(nm_mock):
+    type_id = nm_mock.DeviceType.BOND
 
     assert nm.bond.is_bond_type_id(type_id)
 
 
-@mock.patch.object(nm.bond.nmclient, "NM")
-def test_create_setting_with_mac_restriction(NM_mock):
-    bond_setting_mock = NM_mock.SettingBond.new.return_value
+def test_create_setting_with_mac_restriction(nm_mock):
+    bond_setting_mock = nm_mock.SettingBond.new.return_value
     bond_setting_mock.add_option.return_value = True
 
     options = {Bond.MODE: BondMode.ACTIVE_BACKUP, "fail_over_mac": "active"}

@@ -23,9 +23,7 @@ import copy
 import time
 
 from libnmstate import metadata
-from libnmstate import netinfo
 from libnmstate import nm
-from libnmstate.nm.nmclient import nmclient_context
 from libnmstate import state
 from libnmstate import validator
 from libnmstate.error import NmstateConflictError
@@ -34,14 +32,17 @@ from libnmstate.error import NmstateLibnmError
 from libnmstate.error import NmstatePermissionError
 from libnmstate.error import NmstateValueError
 from libnmstate.error import NmstateVerificationError
-from libnmstate.nm import nmclient
+
+from libnmstate.nm import mainloop as nm_mainloop
+
+from .nmstate import plugin_context
+from .nmstate import show_with_plugin
 
 MAINLOOP_TIMEOUT = 35
 VERIFY_RETRY_INTERNAL = 1
 VERIFY_RETRY_TIMEOUT = 5
 
 
-@nmclient_context
 def apply(
     desired_state, *, verify_change=True, commit=True, rollback_timeout=60
 ):
@@ -60,19 +61,23 @@ def apply(
     :rtype: str
     """
     desired_state = copy.deepcopy(desired_state)
-    validator.validate(desired_state)
-    validator.validate_capabilities(desired_state, netinfo.capabilities())
-    validator.validate_unique_interface_name(desired_state)
-    validator.validate_dhcp(desired_state)
-    validator.validate_dns(desired_state)
-    validator.validate_vxlan(desired_state)
-    validator.validate_bridge(desired_state)
-
-    checkpoint = _apply_ifaces_state(
-        state.State(desired_state), verify_change, commit, rollback_timeout
-    )
-    if checkpoint:
-        return str(checkpoint.dbuspath)
+    with plugin_context() as plugin:
+        validator.validate(desired_state)
+        validator.validate_capabilities(desired_state, plugin.capabilities)
+        validator.validate_unique_interface_name(desired_state)
+        validator.validate_dhcp(desired_state)
+        validator.validate_dns(desired_state)
+        validator.validate_vxlan(desired_state)
+        validator.validate_bridge(desired_state)
+        checkpoint = _apply_ifaces_state(
+            plugin,
+            state.State(desired_state),
+            verify_change,
+            commit,
+            rollback_timeout,
+        )
+        if checkpoint:
+            return str(checkpoint.dbuspath)
 
 
 def commit(*, checkpoint=None):
@@ -83,12 +88,12 @@ def commit(*, checkpoint=None):
         will be selected and committed.
     :type checkpoint: str
     """
-
-    nmcheckpoint = _choose_checkpoint(checkpoint)
-    try:
-        nmcheckpoint.destroy()
-    except nm.checkpoint.NMCheckPointError as e:
-        raise NmstateValueError(str(e))
+    with plugin_context() as plugin:
+        nmcheckpoint = _choose_checkpoint(plugin, checkpoint)
+        try:
+            nmcheckpoint.destroy()
+        except nm.checkpoint.NMCheckPointError as e:
+            raise NmstateValueError(str(e))
 
 
 def rollback(*, checkpoint=None):
@@ -99,31 +104,31 @@ def rollback(*, checkpoint=None):
         will be selected and rolled back.
     :type checkpoint: str
     """
+    with plugin_context() as plugin:
+        nmcheckpoint = _choose_checkpoint(plugin, checkpoint)
+        try:
+            nmcheckpoint.rollback()
+        except nm.checkpoint.NMCheckPointError as e:
+            raise NmstateValueError(str(e))
 
-    nmcheckpoint = _choose_checkpoint(checkpoint)
-    try:
-        nmcheckpoint.rollback()
-    except nm.checkpoint.NMCheckPointError as e:
-        raise NmstateValueError(str(e))
 
-
-def _choose_checkpoint(dbuspath):
+def _choose_checkpoint(plugin, dbuspath):
     if not dbuspath:
-        candidates = nm.checkpoint.get_checkpoints()
+        candidates = nm.checkpoint.get_checkpoints(plugin.client)
         if candidates:
             dbuspath = candidates[0]
 
     if not dbuspath:
         raise NmstateValueError("No checkpoint specified or found")
-    checkpoint = nm.checkpoint.CheckPoint(dbuspath=dbuspath)
+    checkpoint = nm.checkpoint.CheckPoint(plugin.context, dbuspath=dbuspath)
     return checkpoint
 
 
 def _apply_ifaces_state(
-    desired_state, verify_change, commit, rollback_timeout
+    plugin, desired_state, verify_change, commit, rollback_timeout
 ):
     original_desired_state = copy.deepcopy(desired_state)
-    current_state = state.State(netinfo.show())
+    current_state = state.State(show_with_plugin(plugin))
 
     desired_state.sanitize_ethernet(current_state)
     desired_state.sanitize_dynamic_ip()
@@ -132,19 +137,22 @@ def _apply_ifaces_state(
     desired_state.merge_route_rules(current_state)
     desired_state.remove_unknown_interfaces()
     desired_state.complement_master_interfaces_removal(current_state)
-    metadata.generate_ifaces_metadata(desired_state, current_state)
+    metadata.generate_ifaces_metadata(
+        plugin.client, desired_state, current_state
+    )
 
     validator.validate_interfaces_state(original_desired_state, current_state)
     validator.validate_routes(desired_state, current_state)
 
     try:
         with nm.checkpoint.CheckPoint(
-            autodestroy=commit, timeout=rollback_timeout
+            plugin.context, autodestroy=commit, timeout=rollback_timeout
         ) as checkpoint:
             with _setup_providers():
                 state2edit = state.State(desired_state.state)
                 state2edit.merge_interfaces(current_state)
                 nm.applier.apply_changes(
+                    plugin.client,
                     list(state2edit.interfaces.values()),
                     original_desired_state,
                 )
@@ -152,13 +160,13 @@ def _apply_ifaces_state(
             if verify_change:
                 for _ in range(VERIFY_RETRY_TIMEOUT):
                     try:
-                        _verify_change(desired_state)
+                        _verify_change(plugin, desired_state)
                         verified = True
                         break
                     except NmstateVerificationError:
                         time.sleep(VERIFY_RETRY_INTERNAL)
                 if not verified:
-                    _verify_change(desired_state)
+                    _verify_change(plugin, desired_state)
 
         if not commit:
             return checkpoint
@@ -174,8 +182,8 @@ def _apply_ifaces_state(
         raise
 
 
-def _verify_change(desired_state):
-    current_state = state.State(netinfo.show())
+def _verify_change(plugin, desired_state):
+    current_state = state.State(show_with_plugin(plugin))
     verifiable_desired_state = copy.deepcopy(desired_state)
     verifiable_desired_state.verify_interfaces(current_state)
     verifiable_desired_state.verify_routes(current_state)
@@ -185,10 +193,10 @@ def _verify_change(desired_state):
 
 @contextmanager
 def _setup_providers():
-    mainloop = nmclient.mainloop()
+    mainloop = nm_mainloop.mainloop()
     yield
     try:
         mainloop.run(timeout=MAINLOOP_TIMEOUT)
     except NmstateLibnmError:
-        nmclient.mainloop(refresh=True)
+        nm_mainloop.mainloop(refresh=True)
         raise

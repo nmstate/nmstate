@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
+from unittest import mock
 
 import pytest
 
@@ -81,7 +82,10 @@ class TestDesiredStateOvsMetadata:
             desired_p1 = _get_bridge_port_state(desired_state, OVS_NAME, 1)
         expected_dstate.interfaces[PORT1][metadata.BRPORT_OPTIONS] = desired_p1
 
-        metadata.generate_ifaces_metadata(desired_state, current_state)
+        nmclient = mock.MagicMock()
+        metadata.generate_ifaces_metadata(
+            nmclient, desired_state, current_state
+        )
 
         assert desired_state == expected_dstate
         assert current_state == expected_cstate
@@ -146,7 +150,10 @@ class TestDesiredStateOvsMetadata:
             desired_p1 = _get_bridge_port_state(desired_state, OVS_NAME, 1)
         expected_dstate.interfaces[PORT1][metadata.BRPORT_OPTIONS] = desired_p1
 
-        metadata.generate_ifaces_metadata(desired_state, current_state)
+        nmclient = mock.MagicMock()
+        metadata.generate_ifaces_metadata(
+            nmclient, desired_state, current_state
+        )
 
         assert desired_state == expected_dstate
         assert current_state == expected_cstate
@@ -195,7 +202,10 @@ class TestDesiredStateOvsMetadata:
         expected_desired_state = state.State(desired_state.state)
         expected_current_state = state.State(current_state.state)
 
-        metadata.generate_ifaces_metadata(desired_state, current_state)
+        nmclient = mock.MagicMock()
+        metadata.generate_ifaces_metadata(
+            nmclient, desired_state, current_state
+        )
 
         assert desired_state == expected_desired_state
         assert current_state == expected_current_state
@@ -256,7 +266,10 @@ class TestDesiredStateOvsMetadata:
             desired_p1 = _get_bridge_port_state(desired_state, OVS_NAME, 1)
         expected_dstate.interfaces[PORT1][metadata.BRPORT_OPTIONS] = desired_p1
 
-        metadata.generate_ifaces_metadata(desired_state, current_state)
+        nmclient = mock.MagicMock()
+        metadata.generate_ifaces_metadata(
+            nmclient, desired_state, current_state
+        )
 
         assert desired_state == expected_dstate
         assert current_state == expected_cstate
@@ -320,7 +333,10 @@ class TestDesiredStateOvsMetadata:
         desired_p0 = _get_bridge_port_state(desired_state, OVS_NAME, 0)
         expected_dstate.interfaces[PORT0][metadata.BRPORT_OPTIONS] = desired_p0
 
-        metadata.generate_ifaces_metadata(desired_state, current_state)
+        nmclient = mock.MagicMock()
+        metadata.generate_ifaces_metadata(
+            nmclient, desired_state, current_state
+        )
 
         assert desired_state == expected_dstate
         assert current_state == expected_cstate
@@ -373,7 +389,10 @@ class TestDesiredStateOvsMetadata:
         current_p0 = _get_bridge_port_state(current_state, OVS_NAME, 0)
         expected_dstate.interfaces[PORT0][metadata.BRPORT_OPTIONS] = current_p0
 
-        metadata.generate_ifaces_metadata(desired_state, current_state)
+        nmclient = mock.MagicMock()
+        metadata.generate_ifaces_metadata(
+            nmclient, desired_state, current_state
+        )
 
         assert desired_state == expected_dstate
         assert current_state == expected_cstate
@@ -437,7 +456,10 @@ class TestDesiredStateOvsMetadata:
         desired_p0 = _get_bridge_port_state(desired_state, OVS2_NAME, 0)
         expected_dstate.interfaces[PORT0][metadata.BRPORT_OPTIONS] = desired_p0
 
-        metadata.generate_ifaces_metadata(desired_state, current_state)
+        nmclient = mock.MagicMock()
+        metadata.generate_ifaces_metadata(
+            nmclient, desired_state, current_state
+        )
 
         assert desired_state == expected_dstate
         assert current_state == expected_cstate

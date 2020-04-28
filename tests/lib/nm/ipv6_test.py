@@ -32,7 +32,7 @@ IPV6_LINK_LOCAL_ADDRESS1 = "fe80::1"
 
 @pytest.fixture
 def NM_mock():
-    with mock.patch.object(nm.ipv6.nmclient, "NM") as m:
+    with mock.patch.object(nm.ipv6, "NM") as m:
         yield m
 
 

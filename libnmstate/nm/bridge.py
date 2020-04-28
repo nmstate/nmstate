@@ -21,9 +21,9 @@ import glob
 import os
 
 from libnmstate.nm import connection
-from libnmstate.nm import nmclient
 from libnmstate.nm.bridge_port_vlan import PortVlanFilter
 from libnmstate.schema import LinuxBridge as LB
+from .common import NM
 
 
 BRIDGE_TYPE = "bridge"
@@ -39,7 +39,7 @@ def create_setting(bridge_state, base_con_profile):
     options = bridge_state.get(BRIDGE_TYPE, {}).get(LB.OPTIONS_SUBTREE)
     bridge_setting = _get_current_bridge_setting(base_con_profile)
     if not bridge_setting:
-        bridge_setting = nmclient.NM.SettingBridge.new()
+        bridge_setting = NM.SettingBridge.new()
 
     if options:
         _set_bridge_properties(bridge_setting, options)
@@ -101,7 +101,7 @@ def create_port_setting(options, base_con_profile):
             port_setting = port_setting.duplicate()
 
     if not port_setting:
-        port_setting = nmclient.NM.SettingBridgePort.new()
+        port_setting = NM.SettingBridgePort.new()
 
     for key, val in options.items():
         if key == LB.Port.STP_PRIORITY:
@@ -127,14 +127,14 @@ def _create_port_vlans_setting(val):
     return (vlan_config for vlan_config in port_vlan_config.to_nm())
 
 
-def get_info(nmdev):
+def get_info(nm_client, nmdev):
     """
     Provides the current active values for a device
     """
     info = {}
-    if nmdev.get_device_type() != nmclient.NM.DeviceType.BRIDGE:
+    if nmdev.get_device_type() != NM.DeviceType.BRIDGE:
         return info
-    bridge_setting = _get_bridge_setting(nmdev)
+    bridge_setting = _get_bridge_setting(nm_client, nmdev)
     if not bridge_setting:
         return info
 
@@ -167,9 +167,9 @@ def get_slaves(nm_device):
     return nm_device.get_slaves()
 
 
-def _get_bridge_setting(nmdev):
+def _get_bridge_setting(nm_client, nmdev):
     bridge_setting = None
-    bridge_con_profile = connection.ConnectionProfile()
+    bridge_con_profile = connection.ConnectionProfile(nm_client)
     bridge_con_profile.import_by_device(nmdev)
     if bridge_con_profile.profile:
         bridge_setting = bridge_con_profile.profile.get_setting_bridge()

@@ -44,6 +44,7 @@ from .testlib.ifacelib import get_mac_address
 from .testlib.bridgelib import add_port_to_bridge
 from .testlib.bridgelib import create_bridge_subtree_state
 from .testlib.bridgelib import linux_bridge
+from .testlib.retry import retry_till_true_or_timeout
 
 ETH1 = "eth1"
 
@@ -706,15 +707,7 @@ def _get_running_routes():
 
 
 def _poll(func, *args, **kwargs):
-    ret = func(*args, **kwargs)
-    timeout = DEFAULT_TIMEOUT
-    while timeout > 0:
-        if ret:
-            break
-        time.sleep(1)
-        timeout -= 1
-        ret = func(*args, **kwargs)
-    return ret
+    return retry_till_true_or_timeout(DEFAULT_TIMEOUT, func, *args, **kwargs)
 
 
 def _has_ipv6_auto_gateway(nic=DHCP_CLI_NIC):

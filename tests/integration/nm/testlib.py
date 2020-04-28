@@ -17,11 +17,9 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 from contextlib import contextmanager
-import functools
 
 from libnmstate import error
 from libnmstate import nm
-from libnmstate.nm.nmclient import nmclient_context
 
 
 class MainloopTestError(Exception):
@@ -30,21 +28,10 @@ class MainloopTestError(Exception):
 
 @contextmanager
 def mainloop():
-    mloop = nm.nmclient.mainloop()
+    mloop = nm.mainloop.mainloop()
     yield
     try:
         mloop.run(timeout=15)
     except error.NmstateLibnmError as ex:
-        nm.nmclient.mainloop(refresh=True)
+        nm.mainloop.mainloop(refresh=True)
         raise MainloopTestError(str(ex.args))
-
-
-def mainloop_run(func):
-    @nmclient_context
-    @functools.wraps(func)
-    def wrapper_mainloop(*args, **kwargs):
-        with mainloop():
-            ret = func(*args, **kwargs)
-        return ret
-
-    return wrapper_mainloop

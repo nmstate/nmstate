@@ -36,7 +36,7 @@ def NM_mock():
     nm.translator.Api2Nm._iface_types_map = None
     nm.translator.Nm2Api._iface_types_map = None
 
-    with mock.patch.object(nm.translator.nmclient, "NM") as m:
+    with mock.patch.object(nm.translator, "NM") as m:
         yield m
 
     nm.translator.Api2Nm._iface_types_map = saved_api2nm_map
@@ -89,12 +89,12 @@ def test_api2nm_bond_options():
 def test_nm2api_common_device_info(NM_mock):
     NM_mock.DeviceState.ACTIVATED = 100
     NM_mock.DeviceState.IP_CONFIG = 70
-    nm.nmclient.NM.DeviceState.DISCONNECTED = 30
+    nm.common.NM.DeviceState.DISCONNECTED = 30
     devinfo = {
         "name": "devname",
         "type_id": "devtypeid",
         "type_name": "devtypename",
-        "state": nm.nmclient.NM.DeviceState.DISCONNECTED,
+        "state": nm.common.NM.DeviceState.DISCONNECTED,
     }
     info = nm.translator.Nm2Api.get_common_device_info(devinfo)
 

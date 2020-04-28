@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2019 Red Hat, Inc.
+# Copyright (c) 2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -17,37 +17,21 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
-from . import applier
-from . import bond
-from . import bridge
-from . import checkpoint
-from . import connection
-from . import device
-from . import dns
-from . import ipv4
-from . import ipv6
-from . import mainloop
-from . import ovs
-from . import translator
-from . import user
-from . import vlan
-from . import wired
-from .plugin import NetworkManagerPlugin
+import gi
+
+try:
+    gi.require_version("NM", "1.0")  # NOQA: F402
+    from gi.repository import NM  # pylint: disable=no-name-in-module
+except ValueError:
+    NM = None
+
+from gi.repository import GLib
+from gi.repository import GObject
+from gi.repository import Gio
 
 
-applier
-bond
-bridge
-checkpoint
-connection
-device
-dns
-ipv4
-ipv6
-ovs
-translator
-user
-vlan
-wired
-mainloop
-NetworkManagerPlugin
+# To suppress the "import not used" error
+NM
+GLib
+GObject
+Gio
