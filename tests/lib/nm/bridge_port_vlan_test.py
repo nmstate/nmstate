@@ -31,7 +31,7 @@ ACCESS_TAG = 4000
 
 @pytest.fixture
 def NM_mock():
-    with mock.patch.object(nm.user.nmclient, "NM") as m:
+    with mock.patch.object(nm.bridge_port_vlan, "NM") as m:
         yield m
 
 

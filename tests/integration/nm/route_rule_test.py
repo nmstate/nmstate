@@ -24,14 +24,14 @@ import pytest
 import libnmstate
 from libnmstate import nm
 from libnmstate import iplib
-from libnmstate.nm.nmclient import nmclient_context
 from libnmstate.schema import RouteRule
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
 
-from .testlib import mainloop_run
 from ..testlib import iprule
+from .testlib import mainloop
+
 
 ETH1 = "eth1"
 
@@ -72,7 +72,7 @@ def eth1_up_with_static(eth1_up):
     yield state
 
 
-def test_create_rule_add_full(eth1_up_with_static):
+def test_create_rule_add_full(eth1_up_with_static, nm_plugin):
     rule_v4_0 = _create_route_rule("198.51.100.0/24", "192.0.2.1/32", 50, 103)
     rule_v4_1 = _create_route_rule("198.51.100.0/24", "192.0.2.2/32", 51, 104)
     rule_v6_0 = _create_route_rule(
@@ -87,60 +87,60 @@ def test_create_rule_add_full(eth1_up_with_static):
     ipv6_state = eth1_up_with_static[Interface.KEY][0][Interface.IPV6]
     ipv6_state.update({nm.route.ROUTE_RULES_METADATA: [rule_v6_0, rule_v6_1]})
 
-    _modify_interface(ipv4_state, ipv6_state)
+    _modify_interface(nm_plugin.client, ipv4_state, ipv6_state)
 
     expected_rules = [rule_v4_0, rule_v4_1, rule_v6_0, rule_v6_1]
-    _assert_route_rules(expected_rules)
+    _assert_route_rules(nm_plugin, expected_rules)
     _check_ip_rules_exist_in_os(expected_rules)
 
 
-def test_route_rule_without_prioriry(eth1_up_with_static):
+def test_route_rule_without_prioriry(eth1_up_with_static, nm_plugin):
     rule = _create_route_rule("198.51.100.0/24", "192.0.2.1/32", 50, 103)
     del rule[RouteRule.PRIORITY]
     ipv4_state = eth1_up_with_static[Interface.KEY][0][Interface.IPV4]
     ipv4_state.update({nm.route.ROUTE_RULES_METADATA: [rule]})
 
-    _modify_interface(ipv4_state, {})
+    _modify_interface(nm_plugin.client, ipv4_state, {})
 
     rule[RouteRule.PRIORITY] = nm.route.ROUTE_RULE_DEFAULT_PRIORIRY
-    _assert_route_rules([rule])
+    _assert_route_rules(nm_plugin, [rule])
     _check_ip_rules_exist_in_os([rule])
 
 
-def test_route_rule_without_table(eth1_up_with_static):
+def test_route_rule_without_table(eth1_up_with_static, nm_plugin):
     rule = _create_route_rule("198.51.100.0/24", "192.0.2.1/32", 50, 103)
     del rule[RouteRule.ROUTE_TABLE]
     ipv4_state = eth1_up_with_static[Interface.KEY][0][Interface.IPV4]
     ipv4_state.update({nm.route.ROUTE_RULES_METADATA: [rule]})
 
-    _modify_interface(ipv4_state, {})
+    _modify_interface(nm_plugin.client, ipv4_state, {})
 
     rule[RouteRule.ROUTE_TABLE] = iplib.KERNEL_MAIN_ROUTE_TABLE_ID
-    _assert_route_rules([rule])
+    _assert_route_rules(nm_plugin, [rule])
     _check_ip_rules_exist_in_os([rule])
 
 
-def test_route_rule_without_from(eth1_up_with_static):
+def test_route_rule_without_from(eth1_up_with_static, nm_plugin):
     rule = _create_route_rule("198.51.100.0/24", "192.0.2.1/32", 50, 103)
     del rule[RouteRule.IP_FROM]
     ipv4_state = eth1_up_with_static[Interface.KEY][0][Interface.IPV4]
     ipv4_state.update({nm.route.ROUTE_RULES_METADATA: [rule]})
 
-    _modify_interface(ipv4_state, {})
+    _modify_interface(nm_plugin.client, ipv4_state, {})
 
-    _assert_route_rules([rule])
+    _assert_route_rules(nm_plugin, [rule])
     _check_ip_rules_exist_in_os([rule])
 
 
-def test_route_rule_without_to(eth1_up_with_static):
+def test_route_rule_without_to(eth1_up_with_static, nm_plugin):
     rule = _create_route_rule("198.51.100.0/24", "192.0.2.1/32", 50, 103)
     del rule[RouteRule.IP_TO]
     ipv4_state = eth1_up_with_static[Interface.KEY][0][Interface.IPV4]
     ipv4_state.update({nm.route.ROUTE_RULES_METADATA: [rule]})
 
-    _modify_interface(ipv4_state, {})
+    _modify_interface(nm_plugin.client, ipv4_state, {})
 
-    _assert_route_rules([rule])
+    _assert_route_rules(nm_plugin, [rule])
     _check_ip_rules_exist_in_os([rule])
 
 
@@ -153,17 +153,17 @@ def _create_route_rule(ip_from, ip_to, priority, table):
     }
 
 
-@mainloop_run
-def _modify_interface(ipv4_state, ipv6_state):
-    conn = nm.connection.ConnectionProfile()
+def _modify_interface(client, ipv4_state, ipv6_state):
+    conn = nm.connection.ConnectionProfile(client)
     conn.import_by_id(ETH1)
     settings = _create_iface_settings(conn, ipv4_state, ipv6_state)
-    new_conn = nm.connection.ConnectionProfile()
-    new_conn.create(settings)
-    conn.update(new_conn)
+    new_conn = nm.connection.ConnectionProfile(client)
 
-    nmdev = nm.device.get_device_by_name(ETH1)
-    nm.device.modify(nmdev, new_conn.profile)
+    with mainloop():
+        new_conn.create(settings)
+        conn.update(new_conn)
+        nmdev = nm.device.get_device_by_name(client, ETH1)
+        nm.device.modify(client, nmdev, new_conn.profile)
 
 
 def _create_iface_settings(con_profile, ipv4_state, ipv6_state):
@@ -186,11 +186,11 @@ def _check_ip_rules_exist_in_os(rules):
         )
 
 
-@nmclient_context
-def _assert_route_rules(expected_rules):
-    cur_rules = (
-        nm.ipv4.get_routing_rule_config() + nm.ipv6.get_routing_rule_config()
-    )
+def _assert_route_rules(nm_plugin, expected_rules):
+    nm_plugin.refresh_content()
+    cur_rules = nm.ipv4.get_routing_rule_config(
+        nm_plugin.client
+    ) + nm.ipv6.get_routing_rule_config(nm_plugin.client)
     logging.debug(f"Current route rules reported by NM {cur_rules}")
     for rule in expected_rules:
         assert rule in expected_rules

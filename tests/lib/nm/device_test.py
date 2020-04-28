@@ -16,72 +16,68 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
+from unittest import mock
 
 import pytest
-from unittest import mock
 
 from libnmstate import nm
 
 
-@pytest.fixture
-def NM_mock():
-    with mock.patch.object(nm.device.nmclient, "NM") as m:
+@pytest.fixture()
+def client_mock():
+    yield mock.MagicMock()
+
+
+@pytest.fixture()
+def con_profile_mock():
+    with mock.patch.object(nm.device.connection, "ConnectionProfile") as m:
         yield m
 
 
 @pytest.fixture()
-def client_mock():
-    with mock.patch.object(nm.device.nmclient, "client") as m:
-        yield m.return_value
+def act_con_mock():
+    with mock.patch.object(nm.device.ac, "ActiveConnection") as m:
+        yield m
 
 
-@pytest.fixture()
-def mainloop_mock():
-    with mock.patch.object(nm.device.nmclient, "mainloop") as m:
-        yield m.return_value
-
-
-@mock.patch.object(nm.device.connection, "ConnectionProfile")
-def test_activate(con_profile_mock):
+def test_activate(client_mock, con_profile_mock):
     dev = mock.MagicMock()
-    con_profile = con_profile_mock()
+    con_profile = con_profile_mock(client_mock)
 
-    nm.device.activate(dev)
+    nm.device.activate(client_mock, dev)
 
     con_profile.activate.assert_called_once()
 
 
-@mock.patch.object(nm.device.ac, "ActiveConnection")
-def test_deactivate(act_con_mock):
+def test_deactivate(client_mock, act_con_mock):
     dev = mock.MagicMock()
     act_con = act_con_mock()
 
-    nm.device.deactivate(dev)
+    nm.device.deactivate(client_mock, dev)
 
     assert act_con.nmdevice == dev
     act_con.deactivate.assert_called_once()
 
 
-@mock.patch.object(nm.connection, "ConnectionProfile")
-def test_delete(con_profile_mock):
+def test_delete(client_mock, con_profile_mock):
     dev = mock.MagicMock()
     dev.get_available_connections.return_value = [mock.MagicMock()]
-    con_profile = con_profile_mock()
+    con_profile = con_profile_mock(client_mock)
 
-    nm.device.delete(dev)
+    nm.device.delete(client_mock, dev)
 
     con_profile.delete.assert_called_once()
 
 
 def test_get_device_by_name(client_mock):
     devname = "foo"
-    nm.device.get_device_by_name(devname)
+    nm.device.get_device_by_name(client_mock, devname)
 
     client_mock.get_device_by_iface.assert_called_once_with(devname)
 
 
 def test_list_devices(client_mock):
-    nm.device.list_devices()
+    nm.device.list_devices(client_mock)
 
     client_mock.get_devices.assert_called_once()
 

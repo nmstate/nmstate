@@ -26,25 +26,24 @@ from libnmstate import nm
 
 @pytest.fixture
 def NM_mock():
-    with mock.patch.object(nm.connection.nmclient, "NM") as m:
+    with mock.patch.object(nm.connection, "NM") as m:
         yield m
 
 
 @pytest.fixture()
 def client_mock():
-    with mock.patch.object(nm.connection.nmclient, "client") as m:
-        yield m.return_value
+    yield mock.MagicMock()
 
 
 @pytest.fixture()
 def mainloop_mock():
-    with mock.patch.object(nm.connection.nmclient, "mainloop") as m:
+    with mock.patch.object(nm.connection.nm_mainloop, "mainloop") as m:
         yield m.return_value
 
 
-def test_create_profile(NM_mock):
+def test_create_profile(NM_mock, client_mock):
     settings = [11, 22]
-    con_profile = nm.connection.ConnectionProfile()
+    con_profile = nm.connection.ConnectionProfile(client_mock)
     con_profile.create(settings)
 
     con_profile_mock = NM_mock.SimpleConnection.new.return_value
@@ -55,18 +54,20 @@ def test_create_profile(NM_mock):
     assert con_profile_mock == con_profile.profile
 
 
-def test_add_profile(client_mock, mainloop_mock):
+def test_add_profile(NM_mock, client_mock, mainloop_mock):
     save_to_disk = True
     profile = mock.MagicMock()
-    con_profile = nm.connection.ConnectionProfile(profile)
+    con_profile = nm.connection.ConnectionProfile(client_mock, profile)
     con_profile.add(save_to_disk)
 
-    nm_add_conn2_flags = nm.nmclient.NM.SettingsAddConnection2Flags
+    nm_add_conn2_flags = NM_mock.SettingsAddConnection2Flags
+    flags = nm_add_conn2_flags.BLOCK_AUTOCONNECT
+    flags |= nm_add_conn2_flags.TO_DISK
 
     mainloop_mock.push_action.assert_called_once_with(
         client_mock.add_connection2,
         profile.to_dbus(client_mock.NM.ConnectionSerializationFlags.ALL),
-        nm_add_conn2_flags.BLOCK_AUTOCONNECT | nm_add_conn2_flags.TO_DISK,
+        flags,
         None,
         False,
         mainloop_mock.cancellable,
@@ -75,22 +76,26 @@ def test_add_profile(client_mock, mainloop_mock):
     )
 
 
-def test_update_profile(client_mock, mainloop_mock):
+def test_update_profile(NM_mock, client_mock, mainloop_mock):
     new_profile_mock = mock.MagicMock()
-    new_profile = nm.connection.ConnectionProfile(new_profile_mock)
+    new_profile = nm.connection.ConnectionProfile(
+        client_mock, new_profile_mock
+    )
 
     profile = mock.MagicMock()
-    con_profile = nm.connection.ConnectionProfile(profile)
+    con_profile = nm.connection.ConnectionProfile(client_mock, profile)
     con_profile.update(new_profile)
     user_data = new_profile.profile.get_interface_name()
 
-    nm_update2_flags = nm.nmclient.NM.SettingsUpdate2Flags
+    nm_update2_flags = NM_mock.SettingsUpdate2Flags
+    flags = nm_update2_flags.BLOCK_AUTOCONNECT
+    flags |= nm_update2_flags.TO_DISK
     mainloop_mock.push_action.assert_called_once_with(
         profile.update2,
         new_profile_mock.to_dbus(
             client_mock.NM.ConnectionSerializationFlags.ALL
         ),
-        nm_update2_flags.BLOCK_AUTOCONNECT | nm_update2_flags.TO_DISK,
+        flags,
         None,
         mainloop_mock.cancellable,
         con_profile._update2_callback,
@@ -136,10 +141,10 @@ def test_set_master_setting():
     assert con_setting.setting.props.slave_type == "slave-type"
 
 
-def test_get_device_connection():
+def test_get_device_connection(client_mock):
     dev_mock = mock.MagicMock()
 
-    con = nm.connection.ConnectionProfile()
+    con = nm.connection.ConnectionProfile(client_mock)
     con.import_by_device(dev_mock)
 
     assert (

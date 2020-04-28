@@ -21,19 +21,22 @@ import logging
 import time
 import uuid
 
-from . import nmclient
+from . import mainloop as nm_mainloop
 from .active_connection import ActiveConnection
+from .common import NM
+from .common import GLib
 
 
 class ConnectionProfile:
-    def __init__(self, profile=None):
+    def __init__(self, client, profile=None):
+        self._client = client
         self._con_profile = profile
-        self._mainloop = nmclient.mainloop()
+        self._mainloop = nm_mainloop.mainloop()
         self._nmdevice = None
         self._con_id = None
 
     def create(self, settings):
-        self.profile = nmclient.NM.SimpleConnection.new()
+        self.profile = NM.SimpleConnection.new()
         for setting in settings:
             self.profile.add_setting(setting)
 
@@ -48,20 +51,17 @@ class ConnectionProfile:
         if con_id:
             self.con_id = con_id
         if self.con_id:
-            client = nmclient.client()
-            self.profile = client.get_connection_by_id(self.con_id)
+            self.profile = self._client.get_connection_by_id(self.con_id)
 
     def update(self, con_profile):
         user_data = con_profile.profile.get_interface_name()
-        flags = nmclient.NM.SettingsUpdate2Flags.BLOCK_AUTOCONNECT
-        flags |= nmclient.NM.SettingsUpdate2Flags.TO_DISK
+        flags = NM.SettingsUpdate2Flags.BLOCK_AUTOCONNECT
+        flags |= NM.SettingsUpdate2Flags.TO_DISK
         args = None
 
         self._mainloop.push_action(
             self.profile.update2,
-            con_profile.profile.to_dbus(
-                nmclient.NM.ConnectionSerializationFlags.ALL
-            ),
+            con_profile.profile.to_dbus(NM.ConnectionSerializationFlags.ALL),
             flags,
             args,
             self._mainloop.cancellable,
@@ -70,20 +70,19 @@ class ConnectionProfile:
         )
 
     def add(self, save_to_disk=True):
-        nm_add_conn2_flags = nmclient.NM.SettingsAddConnection2Flags
+        nm_add_conn2_flags = NM.SettingsAddConnection2Flags
         flags = nm_add_conn2_flags.BLOCK_AUTOCONNECT
         if save_to_disk:
             flags |= nm_add_conn2_flags.TO_DISK
         else:
             flags |= nm_add_conn2_flags.IN_MEMORY
 
-        client = nmclient.client()
         user_data = None
         args = None
         ignore_out_result = False  # Don't fall back to old AddConnection()
         self._mainloop.push_action(
-            client.add_connection2,
-            self.profile.to_dbus(nmclient.NM.ConnectionSerializationFlags.ALL),
+            self._client.add_connection2,
+            self.profile.to_dbus(NM.ConnectionSerializationFlags.ALL),
             flags,
             args,
             ignore_out_result,
@@ -165,8 +164,7 @@ class ConnectionProfile:
 
         specific_object = None
         user_data = cancellable
-        client = nmclient.client()
-        client.activate_connection_async(
+        self._client.activate_connection_async(
             self.profile,
             self.nmdevice,
             specific_object,
@@ -231,7 +229,7 @@ class ConnectionProfile:
                 nm_act_con.props.state,
             )
 
-            ac = ActiveConnection(nm_act_con)
+            ac = ActiveConnection(self._client, nm_act_con)
             if ac.is_active:
                 self._mainloop.execute_next_action()
             elif ac.is_activating:
@@ -246,7 +244,7 @@ class ConnectionProfile:
     @staticmethod
     def _is_connection_unavailable(err):
         return (
-            isinstance(err, nmclient.GLib.GError)
+            isinstance(err, GLib.GError)
             and err.domain == "nm-manager-error-quark"
             and err.code == 2
             and "is not available on the device" in err.message
@@ -302,7 +300,7 @@ class ConnectionProfile:
                 )
             )
             ac.remove_handlers()
-            ac = ActiveConnection()
+            ac = ActiveConnection(self._client)
             # Don't rely on the first device of
             # NM.ActiveConnection.get_devices() but set explicitly.
             ac.import_by_device(self.nmdevice)
@@ -415,21 +413,21 @@ class ConnectionSetting:
         self._setting = con_setting
 
     def create(self, con_name, iface_name, iface_type):
-        con_setting = nmclient.NM.SettingConnection.new()
+        con_setting = NM.SettingConnection.new()
         con_setting.props.id = con_name
         con_setting.props.interface_name = iface_name
         con_setting.props.uuid = str(uuid.uuid4())
         con_setting.props.type = iface_type
         con_setting.props.autoconnect = True
         con_setting.props.autoconnect_slaves = (
-            nmclient.NM.SettingConnectionAutoconnectSlaves.YES
+            NM.SettingConnectionAutoconnectSlaves.YES
         )
 
         self._setting = con_setting
 
     def import_by_profile(self, con_profile):
         base = con_profile.profile.get_setting_connection()
-        new = nmclient.NM.SettingConnection.new()
+        new = NM.SettingConnection.new()
         new.props.id = base.props.id
         new.props.interface_name = base.props.interface_name
         new.props.uuid = base.props.uuid
@@ -456,14 +454,14 @@ def get_device_active_connection(nm_device):
     return active_conn
 
 
-def delete_iface_inactive_connections(ifname):
-    for con in list_connections_by_ifname(ifname):
+def delete_iface_inactive_connections(nm_client, ifname):
+    for con in list_connections_by_ifname(nm_client, ifname):
         con.delete()
 
 
-def list_connections_by_ifname(ifname):
+def list_connections_by_ifname(nm_client, ifname):
     return [
-        ConnectionProfile(con)
-        for con in nmclient.NM.Client.get_connections(nmclient.client())
+        ConnectionProfile(nm_client, profile=con)
+        for con in nm_client.get_connections()
         if con.get_interface_name() == ifname
     ]

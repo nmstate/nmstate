@@ -24,11 +24,13 @@ from libnmstate import iplib
 from libnmstate.error import NmstateInternalError
 from libnmstate.error import NmstateNotImplementedError
 from libnmstate.error import NmstateValueError
-from libnmstate.nm import nmclient
 from libnmstate.nm import active_connection as nm_ac
 from libnmstate.schema import Interface
 from libnmstate.schema import Route
 from libnmstate.schema import RouteRule
+
+from .common import GLib
+from .common import NM
 
 NM_ROUTE_TABLE_ATTRIBUTE = "table"
 IPV4_DEFAULT_GATEWAY_DESTINATION = "0.0.0.0/0"
@@ -51,7 +53,9 @@ def get_running(acs_and_ip_cfgs):
     for (active_connection, ip_cfg) in acs_and_ip_cfgs:
         if not ip_cfg.props.routes:
             continue
-        iface_name = nm_ac.ActiveConnection(active_connection).devname
+        iface_name = nm_ac.ActiveConnection(
+            active_connection=active_connection
+        ).devname
         if not iface_name:
             raise NmstateInternalError(
                 "Got connection {} has not interface name".format(
@@ -85,7 +89,9 @@ def get_config(acs_and_ip_profiles):
         gateway = ip_profile.props.gateway
         if not nm_routes and not gateway:
             continue
-        iface_name = nm_ac.ActiveConnection(active_connection).devname
+        iface_name = nm_ac.ActiveConnection(
+            active_connection=active_connection
+        ).devname
         if not iface_name:
             raise NmstateInternalError(
                 "Got connection {} has not interface name".format(
@@ -181,12 +187,12 @@ def _add_specfic_route(setting_ip, route):
         family = socket.AF_INET
     metric = route.get(Route.METRIC, Route.USE_DEFAULT_METRIC)
     next_hop = route[Route.NEXT_HOP_ADDRESS]
-    ip_route = nmclient.NM.IPRoute.new(
+    ip_route = NM.IPRoute.new(
         family, destination, prefix_len, next_hop, metric
     )
     table_id = route.get(Route.TABLE_ID, Route.USE_DEFAULT_ROUTE_TABLE)
     ip_route.set_attribute(
-        NM_ROUTE_TABLE_ATTRIBUTE, nmclient.GLib.Variant.new_uint32(table_id)
+        NM_ROUTE_TABLE_ATTRIBUTE, GLib.Variant.new_uint32(table_id)
     )
     # Duplicate route entry will be ignored by libnm.
     setting_ip.add_route(ip_route)
@@ -263,7 +269,7 @@ def add_route_rules(setting_ip, family, rules):
 
 
 def _rule_info_to_nm_rule(rule, family):
-    nm_rule = nmclient.NM.IPRoutingRule.new(family)
+    nm_rule = NM.IPRoutingRule.new(family)
     ip_from = rule.get(RouteRule.IP_FROM)
     ip_to = rule.get(RouteRule.IP_TO)
     if not ip_from and not ip_to:

@@ -21,10 +21,7 @@ import logging
 
 import dbus
 
-from gi.repository import GLib
-
-from libnmstate.nm.nmclient import nmclient_context
-from libnmstate.nm.nmclient import client
+from .common import GLib
 
 
 DBUS_STD_PROPERTIES_IFNAME = "org.freedesktop.DBus.Properties"
@@ -79,19 +76,24 @@ class _NMDbusManager:
         self.interface = dbus.Interface(mng_proxy, _NMDbusManager.IF_NAME)
 
 
-@nmclient_context
-def get_checkpoints():
-    nm_client = client()
+def get_checkpoints(nm_client):
     checkpoints = [c.get_path() for c in nm_client.get_checkpoints()]
     return checkpoints
 
 
 class CheckPoint:
-    def __init__(self, timeout=60, autodestroy=True, dbuspath=None):
+    def __init__(
+        self, nm_context, autodestroy=True, timeout=60, dbuspath=None
+    ):
+        self._ctx = nm_context
         self._manager = nmdbus_manager()
         self._timeout = timeout
         self._dbuspath = dbuspath
+        self._timeout_source = None
         self._autodestroy = autodestroy
+
+    def __str__(self):
+        return self.dbuspath
 
     def __enter__(self):
         self.create()
@@ -126,21 +128,25 @@ class CheckPoint:
                 raise NMCheckPointPermissionError(str(e))
             raise NMCheckPointCreationError(str(e))
 
-        GLib.timeout_add(
-            self._timeout * 500, self._refresh_checkpoint_timeout, None,
+        self._add_checkpoint_refresh_timeout()
+
+    def _add_checkpoint_refresh_timeout(self):
+        self._timeout_source = GLib.timeout_source_new(self._timeout * 500)
+        self._timeout_source.set_callback(
+            self._refresh_checkpoint_timeout, None
         )
+        self._timeout_source.attach(self._ctx.context)
 
-    def _refresh_checkpoint_timeout(self, data):
+    def _remove_checkpoint_refresh_timeout(self):
+        if self._timeout_source:
+            self._timeout_source.destroy()
+            self._timeout_source = None
+
+    def _refresh_checkpoint_timeout(self, _user_data):
         cancellable, cb, cb_data = (None, None, None)
-        nm_client = client()
 
-        # Activation finished, _delete_client() invoked, which then invoke
-        # _nmclient.delete_client(). Then it set self._client as None. The main
-        # context got event from timeout, then invoke
-        # _refresh_checkpoint_timeout(). So that time, the _nmclient is not
-        # None while _nmclient.client is None.
-        if nm_client:
-            nm_client.checkpoint_adjust_rollback_timeout(
+        if self._ctx and self._ctx.client:
+            self._ctx.client.checkpoint_adjust_rollback_timeout(
                 self._dbuspath, self._timeout, cancellable, cb, cb_data
             )
             return GLib.SOURCE_CONTINUE
@@ -152,7 +158,8 @@ class CheckPoint:
             self._manager.interface.CheckpointDestroy(self._dbuspath)
         except dbus.exceptions.DBusException as e:
             raise NMCheckPointError(str(e))
-
+        finally:
+            self._remove_checkpoint_refresh_timeout()
         logging.debug("Checkpoint %s destroyed", self._dbuspath)
 
     def rollback(self):
@@ -160,6 +167,8 @@ class CheckPoint:
             result = self._manager.interface.CheckpointRollback(self._dbuspath)
         except dbus.exceptions.DBusException as e:
             raise NMCheckPointError(str(e))
+        finally:
+            self._remove_checkpoint_refresh_timeout()
         logging.debug(
             "Checkpoint %s rollback executed: %s", self._dbuspath, result
         )

@@ -20,7 +20,6 @@
 from contextlib import contextmanager
 
 import libnmstate
-from libnmstate.nm import nmclient
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
@@ -73,45 +72,31 @@ def test_reapply_preserve_ip_config(eth1_up):
     cur_state = statelib.show_only(("eth1",))
     iface_name = cur_state[Interface.KEY][0][Interface.NAME]
 
-    uuid = _get_nm_profile_uuid(iface_name)
-
     for key, value in (
         (_IPV4_EXTRA_CONFIG, _IPV4_EXTRA_VALUE),
         (_IPV6_EXTRA_CONFIG, _IPV6_EXTRA_VALUE),
     ):
-        with _extra_ip_config(uuid, key, value):
+        with _extra_ip_config(iface_name, key, value):
             libnmstate.apply(cur_state)
-            _assert_extra_ip_config(uuid, key, value)
+            _assert_extra_ip_config(iface_name, key, value)
 
 
-def _get_nm_profile_uuid(iface_name):
-    nmcli = nmclient.client()
-    cur_dev = None
-    for dev in nmcli.get_all_devices():
-        if dev.get_iface() == iface_name:
-            cur_dev = dev
-            break
-
-    active_conn = cur_dev.get_active_connection()
-    return active_conn.get_uuid()
-
-
-def _get_cur_extra_ip_config(uuid, key):
+def _get_cur_extra_ip_config(profile_name, key):
     rc, output, _ = cmdlib.exec_cmd(
-        ["nmcli", "--get-values", key, "connection", "show", uuid]
+        ["nmcli", "--get-values", key, "connection", "show", profile_name]
     )
     assert rc == 0
     return output.split("\n")[0]
 
 
 @contextmanager
-def _extra_ip_config(uuid, key, value):
-    old_value = _get_cur_extra_ip_config(uuid, key)
-    _apply_extra_ip_config(uuid, key, value)
+def _extra_ip_config(iface_name, key, value):
+    old_value = _get_cur_extra_ip_config(iface_name, key)
+    _apply_extra_ip_config(iface_name, key, value)
     try:
         yield
     finally:
-        _apply_extra_ip_config(uuid, key, old_value)
+        _apply_extra_ip_config(iface_name, key, old_value)
 
 
 def _apply_extra_ip_config(uuid, key, value):
@@ -121,9 +106,9 @@ def _apply_extra_ip_config(uuid, key, value):
     )
 
 
-def _assert_extra_ip_config(uuid, key, value):
+def _assert_extra_ip_config(iface_name, key, value):
     """
     Check whether extra config is touched by libnmstate.
     """
-    cur_value = _get_cur_extra_ip_config(uuid, key)
+    cur_value = _get_cur_extra_ip_config(iface_name, key)
     assert cur_value == value

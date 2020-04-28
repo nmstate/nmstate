@@ -22,7 +22,7 @@ from contextlib import contextmanager
 import pytest
 
 from libnmstate import nm
-from libnmstate.nm.nmclient import nmclient_context
+from libnmstate.nm.common import NM
 from libnmstate.schema import Interface
 from libnmstate.schema import OVSBridge as OB
 
@@ -54,19 +54,19 @@ def bridge_default_config():
 
 
 def test_create_and_remove_minimum_config_bridge(
-    bridge_minimum_config, bridge_default_config
+    bridge_minimum_config, bridge_default_config, nm_plugin
 ):
     bridge_desired_state = bridge_minimum_config
 
-    with _bridge_interface(bridge_desired_state):
-        bridge_current_state = _get_bridge_current_state()
+    with _bridge_interface(nm_plugin.client, bridge_desired_state):
+        bridge_current_state = _get_bridge_current_state(nm_plugin)
         assert bridge_current_state == bridge_default_config
         assert bridge_current_state[OB.CONFIG_SUBTREE][OB.PORT_SUBTREE] == []
 
-    assert not _get_bridge_current_state()
+    assert not _get_bridge_current_state(nm_plugin)
 
 
-def test_bridge_with_system_port(eth1_up, bridge_default_config):
+def test_bridge_with_system_port(eth1_up, bridge_default_config, nm_plugin):
     bridge_desired_state = bridge_default_config
 
     eth1_port = {
@@ -79,14 +79,14 @@ def test_bridge_with_system_port(eth1_up, bridge_default_config):
 
     bridge_desired_state[OB.CONFIG_SUBTREE][OB.PORT_SUBTREE].append(eth1_port)
 
-    with _bridge_interface(bridge_desired_state):
-        bridge_current_state = _get_bridge_current_state()
+    with _bridge_interface(nm_plugin.client, bridge_desired_state):
+        bridge_current_state = _get_bridge_current_state(nm_plugin)
         assert bridge_desired_state == bridge_current_state
 
-    assert not _get_bridge_current_state()
+    assert not _get_bridge_current_state(nm_plugin)
 
 
-def test_bridge_with_internal_interface(bridge_default_config):
+def test_bridge_with_internal_interface(bridge_default_config, nm_plugin):
     bridge_desired_state = bridge_default_config
 
     port_name = "ovs0"
@@ -94,12 +94,12 @@ def test_bridge_with_internal_interface(bridge_default_config):
 
     bridge_desired_state[OB.CONFIG_SUBTREE][OB.PORT_SUBTREE].append(ovs_port)
 
-    with _bridge_interface(bridge_desired_state):
-        bridge_current_state = _get_bridge_current_state()
+    with _bridge_interface(nm_plugin.client, bridge_desired_state):
+        bridge_current_state = _get_bridge_current_state(nm_plugin)
         assert bridge_desired_state == bridge_current_state
-        _assert_mac_exists(port_name)
+        _assert_mac_exists(nm_plugin.client, port_name)
 
-    assert not _get_bridge_current_state()
+    assert not _get_bridge_current_state(nm_plugin)
 
 
 @pytest.mark.parametrize(
@@ -112,7 +112,7 @@ def test_bridge_with_internal_interface(bridge_default_config):
     ],
 )
 def test_bridge_with_bond_and_two_slaves(
-    port0_up, port1_up, bridge_default_config, mode
+    port0_up, port1_up, bridge_default_config, mode, nm_plugin
 ):
     slave0_name = port0_up[Interface.KEY][0][Interface.NAME]
     slave1_name = port1_up[Interface.KEY][0][Interface.NAME]
@@ -132,54 +132,53 @@ def test_bridge_with_bond_and_two_slaves(
     }
     bridge_desired_state[OB.CONFIG_SUBTREE][OB.PORT_SUBTREE].append(port_state)
 
-    with _bridge_interface(bridge_desired_state):
-        bridge_current_state = _get_bridge_current_state()
+    with _bridge_interface(nm_plugin.client, bridge_desired_state):
+        bridge_current_state = _get_bridge_current_state(nm_plugin)
         assert bridge_desired_state == bridge_current_state
 
-    assert not _get_bridge_current_state()
+    assert not _get_bridge_current_state(nm_plugin)
 
 
 @contextmanager
-def _bridge_interface(state):
+def _bridge_interface(client, state):
     try:
-        _create_bridge(state)
+        _create_bridge(client, state)
         yield
     finally:
-        _delete_iface(BRIDGE0)
+        _delete_iface(client, BRIDGE0)
         for p in state[OB.CONFIG_SUBTREE][OB.PORT_SUBTREE]:
-            _delete_iface(nm.ovs.PORT_PROFILE_PREFIX + p[OB.Port.NAME])
-            _delete_iface(p[OB.Port.NAME])
+            _delete_iface(client, nm.ovs.PORT_PROFILE_PREFIX + p[OB.Port.NAME])
+            _delete_iface(client, p[OB.Port.NAME])
 
 
-@nmclient_context
-def _get_bridge_current_state():
+def _get_bridge_current_state(nm_plugin):
+    nm_plugin.refresh_content()
     state = {}
-    nmdev = nm.device.get_device_by_name(BRIDGE0)
+    nmdev = nm.device.get_device_by_name(nm_plugin.client, BRIDGE0)
     if nmdev:
         devices_info = [
             (dev, nm.device.get_device_common_info(dev))
-            for dev in nm.device.list_devices()
+            for dev in nm.device.list_devices(nm_plugin.client)
         ]
-        ovs_info = nm.ovs.get_ovs_info(nmdev, devices_info)
+        ovs_info = nm.ovs.get_ovs_info(nm_plugin.client, nmdev, devices_info)
         if ovs_info:
             state[OB.CONFIG_SUBTREE] = ovs_info
     return state
 
 
-@nmclient_context
-def _create_bridge(bridge_desired_state):
+def _create_bridge(client, bridge_desired_state):
     bridge_state = bridge_desired_state.get(OB.CONFIG_SUBTREE, {})
     br_options = bridge_state.get(OB.OPTIONS_SUBTREE, {})
     iface_bridge_settings = _get_iface_bridge_settings(br_options)
 
     with mainloop():
-        _create_bridge_iface(iface_bridge_settings)
+        _create_bridge_iface(client, iface_bridge_settings)
         ports_state = bridge_desired_state[OB.CONFIG_SUBTREE][OB.PORT_SUBTREE]
         for port_state in ports_state:
-            _attach_port_to_bridge(port_state)
+            _attach_port_to_bridge(client, port_state)
 
 
-def _attach_port_to_bridge(port_state):
+def _attach_port_to_bridge(client, port_state):
     port_name = port_state[OB.Port.NAME]
     lag_state = port_state.get(OB.Port.LINK_AGGREGATION_SUBTREE)
     if lag_state:
@@ -187,62 +186,66 @@ def _attach_port_to_bridge(port_state):
     else:
         port_profile_name = nm.ovs.PORT_PROFILE_PREFIX + port_name
 
-    _create_proxy_port(port_profile_name, port_state)
+    _create_proxy_port(client, port_profile_name, port_state)
     if lag_state:
         slaves = [
             slave
             for slave in lag_state[OB.Port.LinkAggregation.SLAVES_SUBTREE]
         ]
         for slave in slaves:
-            _connect_interface(port_profile_name, slave)
-    elif _is_internal_interface(port_name):
+            _connect_interface(client, port_profile_name, slave)
+    elif _is_internal_interface(client, port_name):
         iface_name = port_name
-        _create_internal_interface(iface_name, master_name=port_profile_name)
+        _create_internal_interface(
+            client, iface_name, master_name=port_profile_name
+        )
     else:
-        _connect_interface(port_profile_name, port_state)
+        _connect_interface(client, port_profile_name, port_state)
 
 
-def _is_internal_interface(iface_name):
-    dev = nm.device.get_device_by_name(iface_name)
+def _is_internal_interface(client, iface_name):
+    dev = nm.device.get_device_by_name(client, iface_name)
     if not dev:
         return True
-    return dev.get_device_type() == nm.nmclient.NM.DeviceType.OVS_INTERFACE
+    return dev.get_device_type() == NM.DeviceType.OVS_INTERFACE
 
 
-def _create_internal_interface(iface_name, master_name):
+def _create_internal_interface(client, iface_name, master_name):
     iface_settings = _create_internal_iface_setting(iface_name, master_name)
-    iface_con_profile = nm.connection.ConnectionProfile()
+    iface_con_profile = nm.connection.ConnectionProfile(client)
     iface_con_profile.create(iface_settings)
     iface_con_profile.add(save_to_disk=False)
-    nm.device.activate(connection_id=iface_name)
+    nm.device.activate(client, connection_id=iface_name)
 
 
-def _connect_interface(port_profile_name, port_state):
-    iface_nmdev = nm.device.get_device_by_name(port_state[OB.Port.NAME])
-    curr_iface_con_profile = nm.connection.ConnectionProfile()
+def _connect_interface(client, port_profile_name, port_state):
+    iface_nmdev = nm.device.get_device_by_name(
+        client, port_state[OB.Port.NAME]
+    )
+    curr_iface_con_profile = nm.connection.ConnectionProfile(client)
     curr_iface_con_profile.import_by_device(iface_nmdev)
     slave_iface_settings = _create_iface_settings(
         curr_iface_con_profile, port_profile_name
     )
-    iface_con_profile = nm.connection.ConnectionProfile()
+    iface_con_profile = nm.connection.ConnectionProfile(client)
     iface_con_profile.create(slave_iface_settings)
     curr_iface_con_profile.update(iface_con_profile)
-    nm.device.activate(connection_id=port_state[OB.Port.NAME])
+    nm.device.activate(client, connection_id=port_state[OB.Port.NAME])
 
 
-def _create_proxy_port(port_profile_name, port_state):
+def _create_proxy_port(client, port_profile_name, port_state):
     port_settings = _create_port_setting(port_state, port_profile_name)
-    port_con_profile = nm.connection.ConnectionProfile()
+    port_con_profile = nm.connection.ConnectionProfile(client)
     port_con_profile.create(port_settings)
     port_con_profile.add(save_to_disk=False)
-    nm.device.activate(connection_id=port_profile_name)
+    nm.device.activate(client, connection_id=port_profile_name)
 
 
-def _create_bridge_iface(iface_bridge_settings):
-    br_con_profile = nm.connection.ConnectionProfile()
+def _create_bridge_iface(client, iface_bridge_settings):
+    br_con_profile = nm.connection.ConnectionProfile(client)
     br_con_profile.create(iface_bridge_settings)
     br_con_profile.add(save_to_disk=False)
-    nm.device.activate(connection_id=BRIDGE0)
+    nm.device.activate(client, connection_id=BRIDGE0)
 
 
 def _create_iface_settings(iface_con_profile, port_master_name):
@@ -283,20 +286,19 @@ def _create_internal_iface_setting(iface_name, master_name):
     )
 
 
-@nmclient_context
-def _delete_iface(devname):
-    nmdev = nm.device.get_device_by_name(devname)
+def _delete_iface(client, devname):
+    nmdev = nm.device.get_device_by_name(client, devname)
     with mainloop():
         if nmdev:
-            nm.device.delete(nmdev)
+            nm.device.delete(client, nmdev)
             if nmdev.get_device_type() in (
-                nm.nmclient.NM.DeviceType.OVS_BRIDGE,
-                nm.nmclient.NM.DeviceType.OVS_PORT,
-                nm.nmclient.NM.DeviceType.OVS_INTERFACE,
+                NM.DeviceType.OVS_BRIDGE,
+                NM.DeviceType.OVS_PORT,
+                NM.DeviceType.OVS_INTERFACE,
             ):
-                nm.device.delete_device(nmdev)
+                nm.device.delete_device(client, nmdev)
         else:
-            con_profile = nm.connection.ConnectionProfile()
+            con_profile = nm.connection.ConnectionProfile(client)
             con_profile.con_id = devname
             con_profile.delete()
 
@@ -306,15 +308,15 @@ def _get_iface_bridge_settings(bridge_options):
     bridge_con_setting.create(
         con_name=BRIDGE0,
         iface_name=BRIDGE0,
-        iface_type=nm.nmclient.NM.SETTING_OVS_BRIDGE_SETTING_NAME,
+        iface_type=NM.SETTING_OVS_BRIDGE_SETTING_NAME,
     )
     bridge_setting = nm.ovs.create_bridge_setting(bridge_options)
     return bridge_con_setting.setting, bridge_setting
 
 
-def _assert_mac_exists(ifname):
+def _assert_mac_exists(client, ifname):
     state = {}
-    nmdev = nm.device.get_device_by_name(ifname)
+    nmdev = nm.device.get_device_by_name(client, ifname)
     if nmdev:
         state = nm.wired.get_info(nmdev)
     assert state.get(Interface.MAC)

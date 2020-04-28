@@ -18,83 +18,14 @@
 #
 from collections import deque
 from contextlib import contextmanager
-import functools
 import logging
-import sys
-
-import gi
-
-try:
-    gi.require_version("NM", "1.0")  # NOQA: F402
-    from gi.repository import NM  # pylint: disable=no-name-in-module
-except ValueError:
-    NM = None
-
-from gi.repository import Gio
-from gi.repository import GLib
-from gi.repository import GObject
 
 from libnmstate import error
 
-GObject
+from .common import GLib
+from .common import Gio
 
 _mainloop = None
-_nmclient = None
-
-NM_MANAGER_ERROR_DOMAIN = "nm-manager-error-quark"
-_NMCLIENT_CLEANUP_TIMEOUT = 5
-
-
-def _delete_client():
-    global _nmclient
-    if _nmclient:
-        _nmclient.delete_client()
-        _nmclient = None
-
-
-def client():
-    global _nmclient
-    if _nmclient is None:
-        if NM:
-            _nmclient = _NmClient()
-            if not _nmclient.client.get_nm_running():
-                logging.error(
-                    "NetworkManager is not running, please make sure"
-                    "it is installed and running prior to running nmstate.\n"
-                    "Check the documentation for more information."
-                )
-                raise error.NmstateDependencyError(
-                    "NetworkManager is not running"
-                )
-        else:
-            logging.error(
-                "Missing introspection data for libnm"
-                "please make sure to install it prior to running nmstate.\n"
-                "Check the documentation for more information."
-            )
-            raise error.NmstateDependencyError(
-                "Missing introspection data for libnm"
-            )
-    return _nmclient.client
-
-
-def nmclient_context(func):
-    """
-    Decorator for handling NM.Client creation and clean up
-    """
-
-    @functools.wraps(func)
-    def wrapped(*args, **kwargs):
-        try:
-            _delete_client()
-            # Delete NM.Client is required, if not, previous changed interfaces
-            # might not updated in current NM.Client caches.
-            ret = func(*args, **kwargs)
-        finally:
-            _delete_client()
-        return ret
-
-    return wrapped
 
 
 def mainloop(refresh=False):
@@ -239,69 +170,3 @@ class _MainLoop:
         with self._idle_timeout(timeout):
             self.execute_next_action()
         return False
-
-
-class _NmClient:
-    def __init__(self):
-        self._client = NM.Client.new(None)
-
-    @property
-    def client(self):
-        return self._client
-
-    def delete_client(self):
-        if not self._client:
-            return
-        try:
-            ref_count = sys.getrefcount(self._client)
-            if ref_count != 2:
-                # The getrefcount() hold 1 reference and self.client itself
-                # hold 1 reference.
-                raise error.NmstateInternalError(
-                    "_NmClient.delete_client() cannot release resources "
-                    "of NM.Client duo to other unreleased use."
-                )
-            self._nmclient_cleanup()
-        except Exception:
-            pass
-
-    def __del__(self):
-        if self._client:
-            raise error.NmstateInternalError(
-                "_NmClient.delete_client() should be explicitly called "
-                "before python GC clean up the object."
-            )
-
-    def _nmclient_cleanup(self):
-        if self._client:
-            is_done = []
-            try:
-                context = self.client.get_main_context()
-                self.client.get_context_busy_watcher().weak_ref(
-                    lambda: is_done.append(1)
-                )
-            except AttributeError:
-                # For NM 1.20 which don't have get_context_busy_watcher()
-                # or get_main_context().
-                context = GLib.MainContext.default()
-                is_done.append(1)
-
-            self._client = None
-
-            while context.iteration(False):
-                pass
-
-            if not is_done:
-                logging.debug(
-                    "context.iteration() does not delete "
-                    "the context_busy_watcher, "
-                    "waiting 50 milliseconds"
-                )
-                timeout_source = GLib.timeout_source_new(50)
-                try:
-                    timeout_source.set_callback(lambda x: is_done.append(1))
-                    timeout_source.attach(context)
-                    while not is_done:
-                        context.iteration(True)
-                finally:
-                    timeout_source.destroy()

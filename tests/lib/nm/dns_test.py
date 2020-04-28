@@ -17,9 +17,9 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
-import pytest
-
 from unittest import mock
+
+import pytest
 
 import libnmstate.nm.connection as nm_connection
 import libnmstate.nm.dns as nm_dns
@@ -40,6 +40,11 @@ TEST_IPV6_GATEWAY_IFACE = "eth2"
 TEST_STATIC_ROUTE_IFACE = "eth3"
 
 TEST_IFACE1 = "eth4"
+
+
+@pytest.fixture()
+def client_mock():
+    yield mock.MagicMock()
 
 
 def _get_test_dns_v4():
@@ -119,13 +124,13 @@ def test_add_dns_duplicate_search(nm_ip, get_test_dns_func):
 
 
 @parametrize_ip_ver_dns
-def test_clear_dns(nm_ip, get_test_dns_func):
+def test_clear_dns(client_mock, nm_ip, get_test_dns_func):
     dns_conf = get_test_dns_func()
     setting_ip = nm_ip.create_setting(
         {InterfaceIP.ENABLED: True, nm_dns.DNS_METADATA: dns_conf},
         base_con_profile=None,
     )
-    con_profile = nm_connection.ConnectionProfile()
+    con_profile = nm_connection.ConnectionProfile(client_mock)
     con_profile.create([setting_ip])
     new_setting_ip = nm_ip.create_setting(
         {InterfaceIP.ENABLED: True, nm_dns.DNS_METADATA: {}},
@@ -135,25 +140,21 @@ def test_clear_dns(nm_ip, get_test_dns_func):
     _assert_dns(new_setting_ip, {})
 
 
-@mock.patch.object(nm_dns.nmclient, "NM")
-def test_get_dns_nameserver_duplicated(NM_mock):
-    client_mock = NM_mock.Client.new.return_value
+def test_get_dns_nameserver_duplicated(client_mock):
     dns_entry1 = mock_nm_dns_entry("eth1", "192.0.2.1", "example.org")
     dns_entry2 = mock_nm_dns_entry("eth2", "192.0.2.1", "example.org")
     client_mock.get_dns_configuration.return_value = [dns_entry1, dns_entry2]
 
-    dns_state = nm_dns.get_running()
+    dns_state = nm_dns.get_running(client_mock)
     assert dns_state[DNS.SERVER] == ["192.0.2.1"]
 
 
-@mock.patch.object(nm_dns.nmclient, "NM")
-def test_get_dns_domain_duplicated(NM_mock):
-    client_mock = NM_mock.Client.new.return_value
+def test_get_dns_domain_duplicated(client_mock):
     dns_entry1 = mock_nm_dns_entry("eth1", "192.0.2.1", "example.org")
     dns_entry2 = mock_nm_dns_entry("eth2", "192.0.2.1", "example.org")
     client_mock.get_dns_configuration.return_value = [dns_entry1, dns_entry2]
 
-    dns_state = nm_dns.get_running()
+    dns_state = nm_dns.get_running(client_mock)
     assert dns_state[DNS.SEARCH] == ["example.org"]
 
 

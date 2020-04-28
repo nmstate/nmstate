@@ -29,7 +29,7 @@ IPV4_ADDRESS1 = "192.0.2.251"
 
 @pytest.fixture
 def NM_mock():
-    with mock.patch.object(nm.ipv4.nmclient, "NM") as m:
+    with mock.patch.object(nm.ipv4, "NM") as m:
         yield m
 
 

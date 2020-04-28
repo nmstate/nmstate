@@ -25,7 +25,6 @@ from unittest import mock
 from libnmstate import netapplier
 from libnmstate.schema import Bond
 from libnmstate.schema import BondMode
-from libnmstate.schema import Constants
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
@@ -33,36 +32,37 @@ from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
 from libnmstate.state import State
 
-INTERFACES = Constants.INTERFACES
 BOND_TYPE = InterfaceType.BOND
-
-
-@pytest.fixture(scope="module", autouse=True)
-def nmclient_mock():
-    client_mock = mock.patch.object(netapplier.nmclient, "client")
-    mainloop_mock = mock.patch.object(netapplier.nmclient, "mainloop")
-    with client_mock, mainloop_mock:
-        yield
 
 
 @pytest.fixture
 def netapplier_nm_mock():
     with mock.patch.object(netapplier, "nm") as m:
-        m.applier.prepare_proxy_ifaces_desired_state.return_value = []
         yield m
 
 
 @pytest.fixture
-def netinfo_nm_mock():
-    with mock.patch.object(netapplier.netinfo, "nm") as m:
-        m.ipv4.get_routing_rule_config.return_value = []
-        m.ipv6.get_routing_rule_config.return_value = []
+def show_with_plugin_mock():
+    with mock.patch.object(netapplier, "show_with_plugin") as m:
         yield m
 
 
-def test_iface_admin_state_change(netinfo_nm_mock, netapplier_nm_mock):
+@pytest.fixture
+def plugin_context_mock():
+    with mock.patch.object(netapplier, "plugin_context") as m:
+
+        def enter(self):
+            return self
+
+        m().__enter__ = enter
+        yield m
+
+
+def test_iface_admin_state_change(
+    netapplier_nm_mock, show_with_plugin_mock, plugin_context_mock
+):
     current_config = {
-        INTERFACES: [
+        Interface.KEY: [
             {
                 Interface.NAME: "foo",
                 Interface.TYPE: InterfaceType.DUMMY,
@@ -74,39 +74,29 @@ def test_iface_admin_state_change(netinfo_nm_mock, netapplier_nm_mock):
     }
     desired_config = copy.deepcopy(current_config)
 
-    current_iface0 = current_config[INTERFACES][0]
-    netinfo_nm_mock.device.list_devices.return_value = ["one-item"]
-    netinfo_nm_mock.translator.Nm2Api.get_common_device_info.return_value = (
-        current_iface0
-    )
-    netinfo_nm_mock.bond.is_bond_type_id.return_value = False
-    netinfo_nm_mock.ovs.is_ovs_bridge_type_id.return_value = False
-    netinfo_nm_mock.ovs.is_ovs_port_type_id.return_value = False
-    netinfo_nm_mock.ipv4.get_info.return_value = current_iface0[Interface.IPV4]
-    netinfo_nm_mock.ipv6.get_info.return_value = current_iface0[Interface.IPV6]
-    netinfo_nm_mock.ipv4.get_route_running.return_value = []
-    netinfo_nm_mock.ipv4.get_route_config.return_value = []
-    netinfo_nm_mock.ipv6.get_route_running.return_value = []
-    netinfo_nm_mock.ipv6.get_route_config.return_value = []
-
-    desired_config[INTERFACES][0][Interface.STATE] = InterfaceState.DOWN
+    desired_config[Interface.KEY][0][Interface.STATE] = InterfaceState.DOWN
+    show_with_plugin_mock.return_value = current_config
     netapplier.apply(desired_config, verify_change=False)
 
     applier_mock = netapplier_nm_mock.applier
     applier_mock.apply_changes.assert_has_calls(
-        [mock.call(desired_config[INTERFACES], State(desired_config))]
+        [
+            mock.call(
+                plugin_context_mock().client,
+                desired_config[Interface.KEY],
+                State(desired_config),
+            )
+        ]
     )
 
 
-def test_add_new_bond(netinfo_nm_mock, netapplier_nm_mock):
-    netinfo_nm_mock.device.list_devices.return_value = []
-    netinfo_nm_mock.ipv4.get_route_running.return_value = []
-    netinfo_nm_mock.ipv4.get_route_config.return_value = []
-    netinfo_nm_mock.ipv6.get_route_running.return_value = []
-    netinfo_nm_mock.ipv6.get_route_config.return_value = []
+def test_add_new_bond(
+    plugin_context_mock, show_with_plugin_mock, netapplier_nm_mock
+):
+    show_with_plugin_mock.return_value = {}
 
     desired_config = {
-        INTERFACES: [
+        Interface.KEY: [
             {
                 Interface.NAME: "bond99",
                 Interface.TYPE: BOND_TYPE,
@@ -126,13 +116,17 @@ def test_add_new_bond(netinfo_nm_mock, netapplier_nm_mock):
 
     m_apply_changes = netapplier_nm_mock.applier.apply_changes
     m_apply_changes.assert_called_once_with(
-        desired_config[INTERFACES], State(desired_config)
+        plugin_context_mock().client,
+        desired_config[Interface.KEY],
+        State(desired_config),
     )
 
 
-def test_edit_existing_bond(netinfo_nm_mock, netapplier_nm_mock):
+def test_edit_existing_bond(
+    show_with_plugin_mock, plugin_context_mock, netapplier_nm_mock
+):
     current_config = {
-        INTERFACES: [
+        Interface.KEY: [
             {
                 Interface.NAME: "bond99",
                 Interface.TYPE: BOND_TYPE,
@@ -147,27 +141,10 @@ def test_edit_existing_bond(netinfo_nm_mock, netapplier_nm_mock):
             }
         ]
     }
-
-    current_iface0 = current_config[INTERFACES][0]
-    netinfo_nm_mock.device.list_devices.return_value = ["one-item"]
-    netinfo_nm_mock.translator.Nm2Api.get_common_device_info.return_value = {
-        Interface.NAME: current_iface0[Interface.NAME],
-        Interface.TYPE: current_iface0[Interface.TYPE],
-        Interface.STATE: current_iface0[Interface.STATE],
-    }
-    netinfo_nm_mock.bond.is_bond_type_id.return_value = True
-    netinfo_nm_mock.translator.Nm2Api.get_bond_info.return_value = {
-        Bond.CONFIG_SUBTREE: current_iface0[Bond.CONFIG_SUBTREE]
-    }
-    netinfo_nm_mock.ipv4.get_info.return_value = current_iface0[Interface.IPV4]
-    netinfo_nm_mock.ipv6.get_info.return_value = current_iface0[Interface.IPV6]
-    netinfo_nm_mock.ipv4.get_route_running.return_value = []
-    netinfo_nm_mock.ipv4.get_route_config.return_value = []
-    netinfo_nm_mock.ipv6.get_route_running.return_value = []
-    netinfo_nm_mock.ipv6.get_route_config.return_value = []
+    show_with_plugin_mock.return_value = current_config
 
     desired_config = copy.deepcopy(current_config)
-    options = desired_config[INTERFACES][0][Bond.CONFIG_SUBTREE][
+    options = desired_config[Interface.KEY][0][Bond.CONFIG_SUBTREE][
         Bond.OPTIONS_SUBTREE
     ]
     options["miimon"] = 200
@@ -176,11 +153,12 @@ def test_edit_existing_bond(netinfo_nm_mock, netapplier_nm_mock):
 
     m_apply_changes = netapplier_nm_mock.applier.apply_changes
     m_apply_changes.assert_called_once_with(
-        desired_config[INTERFACES], State(desired_config)
+        plugin_context_mock().client,
+        desired_config[Interface.KEY],
+        State(desired_config),
     )
 
 
-@mock.patch.object(netapplier, "_apply_ifaces_state", lambda *_: None)
 def test_error_apply():
     with pytest.raises(TypeError):
         # pylint: disable=too-many-function-args
@@ -193,7 +171,6 @@ def test_error_apply():
         # pylint: enable=too-many-function-args
 
 
-@mock.patch.object(netapplier, "_choose_checkpoint", lambda *_: mock.Mock())
 def test_error_commit():
     with pytest.raises(TypeError):
         # pylint: disable=too-many-function-args
@@ -201,7 +178,6 @@ def test_error_commit():
         # pylint: enable=too-many-function-args
 
 
-@mock.patch.object(netapplier, "_choose_checkpoint", lambda *_: mock.Mock())
 def test_error_rollback():
     with pytest.raises(TypeError):
         # pylint: disable=too-many-function-args

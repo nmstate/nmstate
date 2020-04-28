@@ -17,8 +17,8 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
-from libnmstate.nm import nmclient
 from libnmstate.schema import VXLAN
+from .common import NM
 
 
 def create_setting(iface_state, base_con_profile):
@@ -33,7 +33,7 @@ def create_setting(iface_state, base_con_profile):
             vxlan_setting = vxlan_setting.duplicate()
 
     if not vxlan_setting:
-        vxlan_setting = nmclient.NM.SettingVxlan.new()
+        vxlan_setting = NM.SettingVxlan.new()
 
     vxlan_setting.props.id = vxlan[VXLAN.ID]
     vxlan_setting.props.parent = vxlan[VXLAN.BASE_IFACE]
@@ -51,7 +51,7 @@ def get_info(device):
     """
     Provides the current active values for a device
     """
-    if device.get_device_type() == nmclient.NM.DeviceType.VXLAN:
+    if device.get_device_type() == NM.DeviceType.VXLAN:
         base_iface = ""
         if device.props.parent:
             base_iface = device.props.parent.get_iface()
@@ -72,11 +72,5 @@ def get_info(device):
 def _get_destination_port(device):
     """
     Retrieve the destination port.
-
-    The destination port is retrieved from the profile settings instead
-    of the device (which represents the kernel state)
-    due to an existing issue [1].
-
-    [1] https://bugzilla.redhat.com/show_bug.cgi?id=1768388
     """
     return device.get_dst_port()

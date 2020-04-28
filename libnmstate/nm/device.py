@@ -21,53 +21,55 @@ import logging
 
 from . import active_connection as ac
 from . import connection
-from . import nmclient
+from . import mainloop as nm_mainloop
 
 
-def activate(dev=None, connection_id=None):
+def activate(nm_client, dev=None, connection_id=None):
     """Activate the given device or remote connection profile."""
-    conn = connection.ConnectionProfile()
+    conn = connection.ConnectionProfile(nm_client)
     conn.nmdevice = dev
     conn.con_id = connection_id
     conn.activate()
 
 
-def deactivate(dev):
+def deactivate(nm_client, dev):
     """
     Deactivating the current active connection,
     The profile itself is not removed.
 
     For software devices, deactivation removes the devices from the kernel.
     """
-    act_con = ac.ActiveConnection()
+    act_con = ac.ActiveConnection(nm_client)
     act_con.nmdevice = dev
     act_con.deactivate()
 
 
-def delete(dev):
+def delete(nm_client, dev):
     connections = dev.get_available_connections()
     for con in connections:
-        con_profile = connection.ConnectionProfile(con)
+        con_profile = connection.ConnectionProfile(nm_client, con)
         con_profile.delete()
 
 
-def modify(dev, connection_profile):
+def modify(nm_client, dev, connection_profile):
     """
     Modify the given connection profile on the device.
     Implemented by the reapply operation with a fallback to the
     connection profile activation.
     """
-    mainloop = nmclient.mainloop()
-    mainloop.push_action(_safe_modify_async, dev, connection_profile)
+    mainloop = nm_mainloop.mainloop()
+    mainloop.push_action(
+        _safe_modify_async, nm_client, dev, connection_profile
+    )
 
 
-def _safe_modify_async(dev, connection_profile):
-    mainloop = nmclient.mainloop()
+def _safe_modify_async(nm_client, dev, connection_profile):
+    mainloop = nm_mainloop.mainloop()
     cancellable = mainloop.new_cancellable()
 
     version_id = 0
     flags = 0
-    user_data = mainloop, dev, cancellable
+    user_data = nm_client, mainloop, dev, cancellable
     dev.reapply_async(
         connection_profile,
         version_id,
@@ -79,7 +81,7 @@ def _safe_modify_async(dev, connection_profile):
 
 
 def _modify_callback(src_object, result, user_data):
-    mainloop, nmdev, cancellable = user_data
+    nm_client, mainloop, nmdev, cancellable = user_data
     mainloop.drop_cancellable(cancellable)
 
     devname = src_object.get_iface()
@@ -95,7 +97,7 @@ def _modify_callback(src_object, result, user_data):
                 devname,
                 e,
             )
-            _activate_async(src_object)
+            _activate_async(nm_client, src_object)
         return
 
     if success:
@@ -107,11 +109,11 @@ def _modify_callback(src_object, result, user_data):
             "error=unknown",
             devname,
         )
-        _activate_async(src_object)
+        _activate_async(nm_client, src_object)
 
 
-def _activate_async(dev):
-    conn = connection.ConnectionProfile()
+def _activate_async(nm_client, dev):
+    conn = connection.ConnectionProfile(nm_client)
     conn.nmdevice = dev
     if dev:
         # Workaround of https://bugzilla.redhat.com/show_bug.cgi?id=1772470
@@ -119,13 +121,13 @@ def _activate_async(dev):
     conn.safe_activate_async()
 
 
-def delete_device(nmdev):
-    mainloop = nmclient.mainloop()
+def delete_device(_nmclient, nmdev):
+    mainloop = nm_mainloop.mainloop()
     mainloop.push_action(_safe_delete_device_async, nmdev)
 
 
 def _safe_delete_device_async(nmdev):
-    mainloop = nmclient.mainloop()
+    mainloop = nm_mainloop.mainloop()
     user_data = mainloop, nmdev, nmdev.get_iface()
     nmdev.delete_async(
         mainloop.cancellable, _delete_device_callback, user_data
@@ -160,13 +162,11 @@ def _delete_device_callback(src_object, result, user_data):
         )
 
 
-def get_device_by_name(devname):
-    client = nmclient.client()
-    return client.get_device_by_iface(devname)
+def get_device_by_name(nm_client, devname):
+    return nm_client.get_device_by_iface(devname)
 
 
-def list_devices():
-    client = nmclient.client()
+def list_devices(client):
     return client.get_devices()
 
 

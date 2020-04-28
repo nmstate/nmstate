@@ -17,9 +17,9 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
-
-from libnmstate.nm import nmclient
 from libnmstate.schema import LinuxBridge as LB
+
+from .common import NM
 
 
 class PortVlanFilter:
@@ -195,14 +195,14 @@ class PortVlanFilter:
             ranged_vlan_tags = trunk_port.get(LB.Port.Vlan.TrunkTags.ID_RANGE)
             min_range = ranged_vlan_tags[LB.Port.Vlan.TrunkTags.MIN_RANGE]
             max_range = ranged_vlan_tags[LB.Port.Vlan.TrunkTags.MAX_RANGE]
-        port_vlan = nmclient.NM.BridgeVlan.new(min_range, max_range)
+        port_vlan = NM.BridgeVlan.new(min_range, max_range)
         port_vlan.set_untagged(False)
         port_vlan.set_pvid(False)
         return port_vlan
 
     @staticmethod
     def _generate_vlan_access_port_config(vlan_tag):
-        port_vlan = nmclient.NM.BridgeVlan.new(vlan_tag, vlan_tag)
+        port_vlan = NM.BridgeVlan.new(vlan_tag, vlan_tag)
         port_vlan.set_untagged(True)
         port_vlan.set_pvid(True)
         return port_vlan

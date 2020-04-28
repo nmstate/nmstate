@@ -22,7 +22,7 @@ from libnmstate.schema import OVSBridge as OB
 
 from . import connection
 from . import device
-from . import nmclient
+from .common import NM
 
 
 BRIDGE_TYPE = "ovs-bridge"
@@ -45,13 +45,12 @@ class LacpValue:
     OFF = "off"
 
 
-def has_ovs_capability():
-    nm_client = nmclient.client()
-    return nmclient.NM.Capability.OVS in nm_client.get_capabilities()
+def has_ovs_capability(nm_client):
+    return NM.Capability.OVS in nm_client.get_capabilities()
 
 
 def create_bridge_setting(options_state):
-    bridge_setting = nmclient.NM.SettingOvsBridge.new()
+    bridge_setting = NM.SettingOvsBridge.new()
     for option_name, option_value in options_state.items():
         if option_name == "fail-mode":
             if option_value:
@@ -67,7 +66,7 @@ def create_bridge_setting(options_state):
 
 
 def create_port_setting(port_state):
-    port_setting = nmclient.NM.SettingOvsPort.new()
+    port_setting = NM.SettingOvsPort.new()
 
     lag_state = port_state.get(OB.Port.LINK_AGGREGATION_SUBTREE)
     if lag_state:
@@ -102,21 +101,21 @@ def create_port_setting(port_state):
 
 
 def create_interface_setting():
-    interface_setting = nmclient.NM.SettingOvsInterface.new()
+    interface_setting = NM.SettingOvsInterface.new()
     interface_setting.props.type = "internal"
     return interface_setting
 
 
 def is_ovs_bridge_type_id(type_id):
-    return type_id == nmclient.NM.DeviceType.OVS_BRIDGE
+    return type_id == NM.DeviceType.OVS_BRIDGE
 
 
 def is_ovs_port_type_id(type_id):
-    return type_id == nmclient.NM.DeviceType.OVS_PORT
+    return type_id == NM.DeviceType.OVS_PORT
 
 
 def is_ovs_interface_type_id(type_id):
-    return type_id == nmclient.NM.DeviceType.OVS_INTERFACE
+    return type_id == NM.DeviceType.OVS_INTERFACE
 
 
 def get_port_by_slave(nmdev):
@@ -128,10 +127,10 @@ def get_port_by_slave(nmdev):
     return None
 
 
-def get_ovs_info(bridge_device, devices_info):
+def get_ovs_info(nm_client, bridge_device, devices_info):
     port_profiles = _get_slave_profiles(bridge_device, devices_info)
-    ports = _get_bridge_ports_info(port_profiles, devices_info)
-    options = _get_bridge_options(bridge_device)
+    ports = _get_bridge_ports_info(nm_client, port_profiles, devices_info)
+    options = _get_bridge_options(nm_client, bridge_device)
 
     if ports or options:
         return {"port": ports, "options": options}
@@ -143,16 +142,16 @@ def get_slaves(nm_device):
     return nm_device.get_slaves()
 
 
-def _get_bridge_ports_info(port_profiles, devices_info):
+def _get_bridge_ports_info(nm_client, port_profiles, devices_info):
     ports_info = []
     for p in port_profiles:
-        port_info = _get_bridge_port_info(p, devices_info)
+        port_info = _get_bridge_port_info(nm_client, p, devices_info)
         if port_info:
             ports_info.append(port_info)
     return ports_info
 
 
-def _get_bridge_port_info(port_profile, devices_info):
+def _get_bridge_port_info(nm_client, port_profile, devices_info):
     """
     Report port information.
     Note: The current implementation supports only system OVS ports and
@@ -160,11 +159,11 @@ def _get_bridge_port_info(port_profile, devices_info):
     """
     port_info = {}
 
-    port_setting = port_profile.get_setting(nmclient.NM.SettingOvsPort)
+    port_setting = port_profile.get_setting(NM.SettingOvsPort)
     vlan_mode = port_setting.props.vlan_mode
 
     port_name = port_profile.get_interface_name()
-    port_device = device.get_device_by_name(port_name)
+    port_device = device.get_device_by_name(nm_client, port_name)
     port_slave_profiles = _get_slave_profiles(port_device, devices_info)
     port_slave_names = [c.get_interface_name() for c in port_slave_profiles]
 
@@ -214,12 +213,12 @@ def _get_lag_info(port_name, port_setting, port_slave_names):
     return port_info
 
 
-def _get_bridge_options(bridge_device):
+def _get_bridge_options(nm_client, bridge_device):
     bridge_options = {}
-    con = connection.ConnectionProfile()
+    con = connection.ConnectionProfile(nm_client)
     con.import_by_device(bridge_device)
     if con.profile:
-        bridge_setting = con.profile.get_setting(nmclient.NM.SettingOvsBridge)
+        bridge_setting = con.profile.get_setting(NM.SettingOvsBridge)
         bridge_options["stp"] = bridge_setting.props.stp_enable
         bridge_options["rstp"] = bridge_setting.props.rstp_enable
         bridge_options["fail-mode"] = bridge_setting.props.fail_mode or ""

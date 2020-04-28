@@ -17,8 +17,8 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
-from libnmstate.nm import nmclient
 from libnmstate.schema import VLAN
+from .common import NM
 
 
 def create_setting(iface_state, base_con_profile):
@@ -36,7 +36,7 @@ def create_setting(iface_state, base_con_profile):
             vlan_setting = vlan_setting.duplicate()
 
     if not vlan_setting:
-        vlan_setting = nmclient.NM.SettingVlan.new()
+        vlan_setting = NM.SettingVlan.new()
 
     vlan_setting.props.id = vlan_id
     vlan_setting.props.parent = vlan_base_iface
@@ -49,7 +49,7 @@ def get_info(device):
     Provides the current active values for a device
     """
     info = {}
-    if device.get_device_type() == nmclient.NM.DeviceType.VLAN:
+    if device.get_device_type() == NM.DeviceType.VLAN:
         info[VLAN.CONFIG_SUBTREE] = {
             VLAN.ID: device.props.vlan_id,
             VLAN.BASE_IFACE: device.props.parent.get_iface(),
