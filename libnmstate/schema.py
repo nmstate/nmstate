@@ -217,43 +217,46 @@ class _DeprecatorType(type):
             raise
 
 
-class LinuxBridge(metaclass=_DeprecatorType):
-    TYPE = "linux-bridge"
+class Bridge(metaclass=_DeprecatorType):
     CONFIG_SUBTREE = "bridge"
-
     OPTIONS_SUBTREE = "options"
-
-    STP_SUBTREE = "stp"
-
     PORT_SUBTREE = "port"
-
-    class Options:
-        GROUP_FORWARD_MASK = "group-forward-mask"
-        MAC_AGEING_TIME = "mac-ageing-time"
-        MULTICAST_SNOOPING = "multicast-snooping"
 
     class Port:
         NAME = "name"
-        STP_HAIRPIN_MODE = "stp-hairpin-mode"
-        STP_PATH_COST = "stp-path-cost"
-        STP_PRIORITY = "stp-priority"
         VLAN_SUBTREE = "vlan"
 
         class Vlan:
             ENABLE_NATIVE = "enable-native"
+            TRUNK_TAGS = "trunk-tags"
             MODE = "mode"
             TAG = "tag"
-            TRUNK_TAGS = "trunk-tags"
 
             class Mode:
                 ACCESS = "access"
                 TRUNK = "trunk"
+                UNKNOWN = "unknown"
 
             class TrunkTags:
                 ID = "id"
                 ID_RANGE = "id-range"
                 MIN_RANGE = "min"
                 MAX_RANGE = "max"
+
+
+class LinuxBridge(Bridge):
+    TYPE = "linux-bridge"
+    STP_SUBTREE = "stp"
+
+    class Options:
+        GROUP_FORWARD_MASK = "group-forward-mask"
+        MAC_AGEING_TIME = "mac-ageing-time"
+        MULTICAST_SNOOPING = "multicast-snooping"
+
+    class Port(Bridge.Port):
+        STP_HAIRPIN_MODE = "stp-hairpin-mode"
+        STP_PATH_COST = "stp-path-cost"
+        STP_PRIORITY = "stp-priority"
 
     class STP:
         ENABLED = "enabled"
@@ -307,11 +310,8 @@ class VXLAN:
     DESTINATION_PORT = "destination-port"
 
 
-class OVSBridge(metaclass=_DeprecatorType):
+class OVSBridge(Bridge):
     TYPE = "ovs-bridge"
-    CONFIG_SUBTREE = "bridge"
-
-    OPTIONS_SUBTREE = "options"
 
     class Options:
         FAIL_MODE = "fail-mode"
@@ -319,30 +319,7 @@ class OVSBridge(metaclass=_DeprecatorType):
         RSTP = "rstp"
         STP = "stp"
 
-    PORT_SUBTREE = "port"
-
-    class Port:
-        NAME = "name"
-
-        VLAN_SUBTREE = "vlan"
-
-        class Vlan:
-            TRUNK_TAGS = "trunk-tags"
-            TAG = "tag"
-            ENABLE_NATIVE = "enable-native"
-            MODE = "mode"
-
-            class Mode:
-                ACCESS = "access"
-                TRUNK = "trunk"
-                UNKNOWN = "unknown"
-
-            class TrunkTags:
-                ID = "id"
-                ID_RANGE = "id-range"
-                MIN_RANGE = "min"
-                MAX_RANGE = "max"
-
+    class Port(Bridge.Port):
         LINK_AGGREGATION_SUBTREE = "link-aggregation"
 
         class LinkAggregation:
