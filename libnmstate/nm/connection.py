@@ -316,6 +316,15 @@ class ConnectionProfile:
             )
             ac.remove_handlers()
             self._mainloop.execute_next_action()
+        elif (
+            not ac.is_activating
+            and self._is_sriov_parameter_not_supported_by_driver()
+        ):
+            ac.remove_handlers()
+            self._mainloop.quit(
+                f"The device={self.devname} does not support one or more "
+                "of the SR-IOV parameters set."
+            )
         elif not ac.is_activating:
             ac.remove_handlers()
             self._mainloop.quit(
@@ -323,6 +332,12 @@ class ConnectionProfile:
                     ac.devname, ac.reason
                 )
             )
+
+    def _is_sriov_parameter_not_supported_by_driver(self):
+        return (
+            self._nmdevice.props.state_reason
+            == NM.DeviceStateReason.SRIOV_CONFIGURATION_FAILED
+        )
 
     def _add_connection2_callback(self, src_object, result, _user_data):
         try:
