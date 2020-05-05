@@ -20,16 +20,19 @@ from contextlib import contextmanager
 import time
 import yaml
 
+import pytest
+
 import libnmstate
 from libnmstate.schema import Interface
 from libnmstate.schema import LLDP
 
 from .testlib import assertlib
 from .testlib import cmdlib
+from .testlib import ifacelib
 from .testlib import statelib
 
 
-ETH1 = "eth1"
+LLDPTEST = "lldptest"
 
 LLDP_SYSTEM_DESC = (
     "Summit300-48 - Version 7.4e.1 (Build 5) by Release_Master "
@@ -111,25 +114,40 @@ MAC_PHY_SUBTREE = "ieee-802-3-mac-phy-conf"
 LLDP_TEST_SYSTEM_NAME = "Summit300-48"
 
 
-def test_enable_lldp(eth1_up):
-    with lldp_enabled(eth1_up) as dstate:
+@pytest.fixture(scope="module")
+def lldpiface_env():
+    try:
+        _create_veth_pair()
+        yield
+    finally:
+        _remove_veth_pair()
+
+
+@pytest.fixture
+def lldptest_up(lldpiface_env):
+    with ifacelib.iface_up(LLDPTEST) as ifstate:
+        yield ifstate
+
+
+def test_enable_lldp(lldptest_up):
+    with lldp_enabled(lldptest_up) as dstate:
         assertlib.assert_state_match(dstate)
 
 
-def test_lldp_yaml(eth1_up):
-    with lldp_enabled(eth1_up):
+def test_lldp_yaml(lldptest_up):
+    with lldp_enabled(lldptest_up):
         _send_lldp_packet()
-        dstate = statelib.show_only((ETH1,))
+        dstate = statelib.show_only((LLDPTEST,))
         lldp_config = dstate[Interface.KEY][0][LLDP.CONFIG_SUBTREE]
         test_neighbor = _get_lldp_test(lldp_config[LLDP.NEIGHBORS_SUBTREE])
 
         assert test_neighbor == yaml.safe_load(EXPECTED_LLDP_NEIGHBOR)
 
 
-def test_lldp_system(eth1_up):
-    with lldp_enabled(eth1_up):
+def test_lldp_system(lldptest_up):
+    with lldp_enabled(lldptest_up):
         _send_lldp_packet()
-        dstate = statelib.show_only((ETH1,))
+        dstate = statelib.show_only((LLDPTEST,))
         lldp_config = dstate[Interface.KEY][0][LLDP.CONFIG_SUBTREE]
         test_neighbor = _get_lldp_test(lldp_config[LLDP.NEIGHBORS_SUBTREE])
 
@@ -145,10 +163,10 @@ def test_lldp_system(eth1_up):
         assert set([5, 6, 7]).issubset(seen)
 
 
-def test_lldp_chassis(eth1_up):
-    with lldp_enabled(eth1_up):
+def test_lldp_chassis(lldptest_up):
+    with lldp_enabled(lldptest_up):
         _send_lldp_packet()
-        dstate = statelib.show_only((ETH1,))
+        dstate = statelib.show_only((LLDPTEST,))
         lldp_config = dstate[Interface.KEY][0][LLDP.CONFIG_SUBTREE]
         test_neighbor = _get_lldp_test(lldp_config[LLDP.NEIGHBORS_SUBTREE])
 
@@ -162,10 +180,10 @@ def test_lldp_chassis(eth1_up):
         assert tlvs[0][CHASSIS_ID_TYPE] == 4
 
 
-def test_lldp_management_addresses(eth1_up):
-    with lldp_enabled(eth1_up):
+def test_lldp_management_addresses(lldptest_up):
+    with lldp_enabled(lldptest_up):
         _send_lldp_packet()
-        dstate = statelib.show_only((ETH1,))
+        dstate = statelib.show_only((LLDPTEST,))
         lldp_config = dstate[Interface.KEY][0][LLDP.CONFIG_SUBTREE]
         test_neighbor = _get_lldp_test(lldp_config[LLDP.NEIGHBORS_SUBTREE])
 
@@ -182,10 +200,10 @@ def test_lldp_management_addresses(eth1_up):
         assert test_mngt[INTERFACE_NUMBER_SUBTYPE] == 2
 
 
-def test_lldp_macphy(eth1_up):
-    with lldp_enabled(eth1_up):
+def test_lldp_macphy(lldptest_up):
+    with lldp_enabled(lldptest_up):
         _send_lldp_packet()
-        dstate = statelib.show_only((ETH1,))
+        dstate = statelib.show_only((LLDPTEST,))
         lldp_config = dstate[Interface.KEY][0][LLDP.CONFIG_SUBTREE]
         test_neighbor = _get_lldp_test(lldp_config[LLDP.NEIGHBORS_SUBTREE])
 
@@ -203,10 +221,10 @@ def test_lldp_macphy(eth1_up):
         assert tlvs[0][MAC_PHY_SUBTREE][PMD_AUTONEG_CAP] == 27648
 
 
-def test_lldp_port(eth1_up):
-    with lldp_enabled(eth1_up):
+def test_lldp_port(lldptest_up):
+    with lldp_enabled(lldptest_up):
         _send_lldp_packet()
-        dstate = statelib.show_only((ETH1,))
+        dstate = statelib.show_only((LLDPTEST,))
         lldp_config = dstate[Interface.KEY][0][LLDP.CONFIG_SUBTREE]
         test_neighbor = _get_lldp_test(lldp_config[LLDP.NEIGHBORS_SUBTREE])
 
@@ -221,10 +239,10 @@ def test_lldp_port(eth1_up):
         assert tlvs[0][LLDP.Neighbors.DESCRIPTION] == "Interface name"
 
 
-def test_lldp_port_vlan(eth1_up):
-    with lldp_enabled(eth1_up):
+def test_lldp_port_vlan(lldptest_up):
+    with lldp_enabled(lldptest_up):
         _send_lldp_packet()
-        dstate = statelib.show_only((ETH1,))
+        dstate = statelib.show_only((LLDPTEST,))
         lldp_config = dstate[Interface.KEY][0][LLDP.CONFIG_SUBTREE]
         test_neighbor = _get_lldp_test(lldp_config[LLDP.NEIGHBORS_SUBTREE])
 
@@ -240,10 +258,10 @@ def test_lldp_port_vlan(eth1_up):
         assert tlvs[0][PPVIDS_SUBTREE][0] == 0
 
 
-def test_lldp_vlan(eth1_up):
-    with lldp_enabled(eth1_up):
+def test_lldp_vlan(lldptest_up):
+    with lldp_enabled(lldptest_up):
         _send_lldp_packet()
-        dstate = statelib.show_only((ETH1,))
+        dstate = statelib.show_only((LLDPTEST,))
         lldp_config = dstate[Interface.KEY][0][LLDP.CONFIG_SUBTREE]
         test_neighbor = _get_lldp_test(lldp_config[LLDP.NEIGHBORS_SUBTREE])
 
@@ -260,10 +278,10 @@ def test_lldp_vlan(eth1_up):
         assert test_vlan[NAME] == "v2-0488-03-0505"
 
 
-def test_lldp_mfs(eth1_up):
-    with lldp_enabled(eth1_up):
+def test_lldp_mfs(lldptest_up):
+    with lldp_enabled(lldptest_up):
         _send_lldp_packet()
-        dstate = statelib.show_only((ETH1,))
+        dstate = statelib.show_only((LLDPTEST,))
         lldp_config = dstate[Interface.KEY][0][LLDP.CONFIG_SUBTREE]
         test_neighbor = _get_lldp_test(lldp_config[LLDP.NEIGHBORS_SUBTREE])
 
@@ -279,9 +297,9 @@ def test_lldp_mfs(eth1_up):
         assert tlvs[0][MFS_KEY] == 1522
 
 
-def test_lldp_empty_neighbors(eth1_up):
-    with lldp_enabled(eth1_up):
-        dstate = statelib.show_only((ETH1,))
+def test_lldp_empty_neighbors(lldptest_up):
+    with lldp_enabled(lldptest_up):
+        dstate = statelib.show_only((LLDPTEST,))
         lldp_state = dstate[Interface.KEY][0][LLDP.CONFIG_SUBTREE]
         assert not lldp_state.get(LLDP.NEIGHBORS_SUBTREE, [])
 
@@ -302,8 +320,8 @@ def _send_lldp_packet():
     cmdlib.exec_cmd(
         (
             "tcpreplay",
-            "--intf1=eth1peer",
-            "tests/integration/test_captures/lldp.pcap",
+            "--intf1=lldptestpeer",
+            f"tests/integration/test_captures/lldp.pcap",
         ),
         check=True,
     )
@@ -323,3 +341,25 @@ def _get_lldp_test(neighbors):
             return neighbor
 
     return None
+
+
+def _create_veth_pair():
+    cmdlib.exec_cmd(
+        (
+            "ip",
+            "link",
+            "add",
+            LLDPTEST,
+            "type",
+            "veth",
+            "peer",
+            "name",
+            LLDPTEST + "peer",
+        ),
+        check=True,
+    )
+    cmdlib.exec_cmd(("ip", "link", "set", LLDPTEST + "peer", "up"), check=True)
+
+
+def _remove_veth_pair():
+    cmdlib.exec_cmd(("ip", "link", "del", "dev", LLDPTEST), check=True)
