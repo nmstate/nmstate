@@ -16,6 +16,8 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
+from distutils.version import StrictVersion
+import logging
 from operator import itemgetter
 
 from libnmstate.error import NmstateValueError
@@ -43,6 +45,7 @@ from . import dns as nm_dns
 from . import applier as nm_applier
 from .checkpoint import CheckPoint
 from .checkpoint import get_checkpoints
+from .common import NM
 from .context import NmContext
 
 
@@ -50,6 +53,7 @@ class NetworkManagerPlugin:
     def __init__(self):
         self._ctx = NmContext()
         self._checkpoint = None
+        self._check_version_mismatch()
 
     def unload(self):
         if self._ctx:
@@ -193,6 +197,21 @@ class NetworkManagerPlugin:
         self._checkpoint.destroy()
         self._checkpoint = None
 
+    def _check_version_mismatch(self):
+        nm_client_version = self._ctx.client.get_version()
+        nm_utils_version = _nm_utils_decode_version()
+
+        if nm_client_version is None:
+            logging.warning("NetworkManager is not running")
+        elif StrictVersion(nm_client_version) != StrictVersion(
+            nm_utils_version
+        ):
+            logging.warning(
+                "libnm version %s mismatches NetworkManager version %s",
+                nm_utils_version,
+                nm_client_version,
+            )
+
 
 def _ifaceinfo_bond(devinfo):
     # TODO: What about unmanaged devices?
@@ -212,3 +231,7 @@ def _remove_ovs_bridge_unsupported_entries(iface_info):
     iface_info.pop(Interface.MTU, None)
 
     return iface_info
+
+
+def _nm_utils_decode_version():
+    return f"{NM.MAJOR_VERSION}.{NM.MINOR_VERSION}.{NM.MICRO_VERSION}"
