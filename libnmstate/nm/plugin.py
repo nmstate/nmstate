@@ -55,10 +55,13 @@ class NetworkManagerPlugin(NmstatePlugin):
         self._ctx = NmContext()
         self._checkpoint = None
         self._check_version_mismatch()
+<<<<<<< HEAD
 
     @property
     def name(self):
         return "NetworkManager"
+=======
+>>>>>>> fc4223e... nm.plugin: Checking libnm/NM version mismatch
 
     def unload(self):
         if self._ctx:
