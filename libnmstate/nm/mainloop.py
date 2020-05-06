@@ -63,7 +63,7 @@ class _MainLoop:
             logging.debug("Executing NM action: func=%s", func.__name__)
             func(*args, **kwargs)
         else:
-            logging.debug("NM action queue exhausted, quiting mainloop")
+            logging.debug("NM action queue exhausted, quitting mainloop")
             self._mainloop.quit()
 
     def push_action(self, func, *args, **kwargs):

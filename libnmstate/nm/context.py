@@ -26,11 +26,11 @@ class NmContext:
     def __init__(self):
         self._client = NM.Client.new(cancellable=None)
         self._context = self._client.get_main_context()
-        self._quiting = False
+        self._quitting = False
 
     @property
     def client(self):
-        if self._quiting:
+        if self._quitting:
             return None
         return self._client
 
@@ -54,7 +54,7 @@ class NmContext:
                 lambda: is_done.append(1)
             )
             self._client = None
-            self._quiting = True
+            self._quitting = True
 
             self.refresh_content()
 
