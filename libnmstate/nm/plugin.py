@@ -34,6 +34,7 @@ from . import connection as nm_connection
 from . import device as nm_device
 from . import ipv4 as nm_ipv4
 from . import ipv6 as nm_ipv6
+from . import lldp as nm_lldp
 from . import ovs as nm_ovs
 from . import translator as nm_translator
 from . import wired as nm_wired
@@ -99,6 +100,7 @@ class NetworkManagerPlugin:
             iface_info[Interface.IPV6] = nm_ipv6.get_info(act_con)
             iface_info.update(nm_wired.get_info(dev))
             iface_info.update(nm_user.get_info(self.context, dev))
+            iface_info.update(nm_lldp.get_info(self.client, dev))
             iface_info.update(nm_vlan.get_info(dev))
             iface_info.update(nm_vxlan.get_info(dev))
             iface_info.update(nm_bridge.get_info(self.context, dev))
