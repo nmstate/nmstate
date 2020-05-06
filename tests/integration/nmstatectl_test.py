@@ -48,6 +48,9 @@ LOOPBACK_JSON_CONFIG = """        {
             "ipv6": {
                 "enabled": false
             },
+            "lldp": {
+                "enabled": false
+            },
             "mtu": 65536
         }"""
 
@@ -57,6 +60,8 @@ LOOPBACK_YAML_CONFIG = """- name: lo
   ipv4:
     enabled: false
   ipv6:
+    enabled: false
+  lldp:
     enabled: false
   mtu: 65536"""
 

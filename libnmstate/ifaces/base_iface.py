@@ -32,6 +32,7 @@ from libnmstate.schema import InterfaceIP
 from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import InterfaceState
+from libnmstate.schema import LLDP
 
 from ..state import state_match
 from ..state import merge_dict
@@ -323,6 +324,7 @@ class BaseIface:
         state = self.to_dict()
         _remove_empty_description(state)
         _remove_undesired_data(state, self.original_dict)
+        _remove_lldp_neighbors(state)
         if Interface.STATE not in state:
             state[Interface.STATE] = InterfaceState.UP
 
@@ -374,6 +376,10 @@ class BaseIface:
 def _remove_empty_description(state):
     if state.get(Interface.DESCRIPTION) == "":
         del state[Interface.DESCRIPTION]
+
+
+def _remove_lldp_neighbors(state):
+    state.get(LLDP.CONFIG_SUBTREE, {}).pop(LLDP.NEIGHBORS_SUBTREE, None)
 
 
 def _remove_undesired_data(state, desire):

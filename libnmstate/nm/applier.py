@@ -36,6 +36,7 @@ from . import connection
 from . import device
 from . import ipv4
 from . import ipv6
+from . import lldp
 from . import ovs
 from . import sriov
 from . import team
@@ -462,6 +463,8 @@ def _build_connection_profile(
         con_setting.create(
             con_name=iface_name, iface_name=iface_name, iface_type=iface_type,
         )
+    lldp.apply_lldp_setting(con_setting, iface_desired_state)
+
     master = iface_desired_state.get(MASTER_METADATA)
     _translate_master_type(iface_desired_state)
     master_type = iface_desired_state.get(MASTER_TYPE_METADATA)
