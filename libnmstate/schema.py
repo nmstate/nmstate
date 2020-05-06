@@ -299,3 +299,15 @@ class Team:
 
         class RunnerMode:
             LOAD_BALANCE = "loadbalance"
+
+
+class LLDP:
+    CONFIG_SUBTREE = "lldp"
+    ENABLED = "enabled"
+    NEIGHBORS_SUBTREE = "neighbors"
+
+    class Neighbors:
+        DESCRIPTION = "_description"
+        TLV_TYPE = "type"
+        TLV_SUBTYPE = "subtype"
+        ORGANIZATION_CODE = "oui"
