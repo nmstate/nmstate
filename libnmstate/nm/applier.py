@@ -127,7 +127,8 @@ def _set_ifaces_admin_state(nm_client, ifaces_desired_state, con_profiles):
     new_master_not_enslaved_ifaces = set()
     master_ifaces_to_edit = set()
     ifaces_to_edit = set()
-    remove_devs_actions = {}
+    devs_to_delete_profile = {}
+    devs_to_delete = {}
     devs_to_deactivate_beforehand = []
 
     for iface_desired_state in ifaces_desired_state:
@@ -185,15 +186,14 @@ def _set_ifaces_admin_state(nm_client, ifaces_desired_state, con_profiles):
             ):
                 nmdevs = _get_affected_devices(nm_client, iface_desired_state)
                 for affected_nmdev in nmdevs:
-                    remove_devs_actions[affected_nmdev] = [
-                        device.deactivate,
-                        device.delete,
-                    ]
+                    devs_to_delete_profile[
+                        affected_nmdev.get_iface()
+                    ] = affected_nmdev
                 if (
                     nmdev.is_software()
                     and nmdev.get_device_type() != NM.DeviceType.VETH
                 ):
-                    remove_devs_actions[nmdev].append(device.delete_device)
+                    devs_to_delete[nmdev.get_iface()] = nmdev
             else:
                 raise NmstateValueError(
                     "Invalid state {} for interface {}".format(
@@ -207,7 +207,8 @@ def _set_ifaces_admin_state(nm_client, ifaces_desired_state, con_profiles):
 
     # Do not remove devices that are marked for editing.
     for dev, _ in itertools.chain(master_ifaces_to_edit, ifaces_to_edit):
-        remove_devs_actions.pop(dev, None)
+        devs_to_delete_profile.pop(dev.get_iface(), None)
+        devs_to_delete.pop(dev.get_iface(), None)
 
     for ifname in new_master_not_enslaved_ifaces:
         device.activate(nm_client, dev=None, connection_id=ifname)
@@ -233,9 +234,14 @@ def _set_ifaces_admin_state(nm_client, ifaces_desired_state, con_profiles):
     for ifname in new_vxlan_ifaces_to_activate:
         device.activate(nm_client, dev=None, connection_id=ifname)
 
-    for dev, actions in remove_devs_actions.items():
-        for action in actions:
-            action(nm_client, dev)
+    for dev in devs_to_delete_profile.values():
+        device.deactivate(nm_client, dev)
+
+    for dev in devs_to_delete_profile.values():
+        device.delete(nm_client, dev)
+
+    for dev in devs_to_delete.values():
+        device.delete_device(nm_client, dev)
 
 
 def _index_profiles_by_devname(con_profiles):
