@@ -15,6 +15,8 @@ properties:
         - $ref: "#/definitions/interface-base/rw"
         - $ref: "#/definitions/interface-base/ro"
         - $ref: "#/definitions/interface-ip/all"
+        - $ref: "#/definitions/lldp/rw"
+        - $ref: "#/definitions/lldp/ro"
         - oneOf:
             - "$ref": "#/definitions/interface-unknown/rw"
             - "$ref": "#/definitions/interface-ethernet/rw"
@@ -601,3 +603,14 @@ definitions:
         type: integer
       route-table:
         type: integer
+  lldp:
+    ro:
+      properties:
+        neighbors:
+          type: array
+          items:
+            type: object
+    rw:
+      properties:
+        enabled:
+          type: boolean
