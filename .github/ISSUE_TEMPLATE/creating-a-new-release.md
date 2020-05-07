@@ -11,7 +11,7 @@ assignees: ''
 ## Changelog
 
 - [ ] First, update the CHANGELOG file in the project root directory. Use the command
-`git log  --oneline --since v0.1.2` to get the changes since the last tag. Add
+`git log  --oneline v0.3.0..HEAD` to get the changes since the last tag. Add
 an entry like the following:
 
 ```
