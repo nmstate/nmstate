@@ -1,4 +1,32 @@
 # Changelog
+## [0.3.0] - 2020-05-07
+### New features
+ - Linux Bridge: Support VLAN filtering.
+ - Add --version and version command in nmstatectl.
+ - Support 3+ single stack DNS nameservers: https://bugzilla.redhat.com/1816043
+ - Allow route rule filtering by interface when showing.
+
+### Bug Fixes
+ - Bond: Fix switch between miimon and arp_interval: https://bugzilla.redhat.com/1806549
+ - Bond: Fix switch bond mode from 1 (active-backup) to 5 (balance-tlb).
+ - Bond: Allow miimon=100 when ethernet setting not included: https://bugzilla.redhat.com/1806549
+ - Bond: Allow missing arp_ip_target when ARP monitoring is disabled.
+ - SR-IOV: Properly return when the device not exists.
+ - SR-IOV: Fix verification due to MAC address upper or lower cases: https://bugzilla.redhat.com/1818750
+ - SR-IOV: Raise an exception when a SR-IOV parameter is not supported by driver: https://bugzilla.redhat.com/1819588
+ - Fix verification errors due to outdated values.
+ - Report DNS nameservers and domains only once: https://bugzilla.redhat.com/1806969
+ - OVS: Raise an exception if the necessary services are not running.
+ - Linux Bridge: Show unmanaged ports: https://bugzilla.redhat.com/1806452
+ - Team: Fix verification error due to unsorted ports.
+ - Raise an exception when IP configuration is enabled in slaves or ports.
+ - Raise warning if interfaces exceeds 1000 in a single desired state.
+ - Support route rule host without prefix length.
+
+### Breaking Changes
+ - Enforce keyword args for APIs functions.
+ - Drop LinuxBridge_* constants support.
+
 ## [0.2.6] - 2020-02-24
 ### New Features
  - Linux Bonding: Support numeric values for options.
