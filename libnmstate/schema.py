@@ -17,9 +17,6 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
-import warnings
-
-
 import pkgutil
 import yaml
 
@@ -164,60 +161,7 @@ class BondMode:
     ALB = "balance-alb"
 
 
-_NEW_OVSBR_OPTS_MCAST_SNOOP = "OVSBridge.Options.MCAST_SNOOPING_ENABLED"
-DEPRECATED_CONSTANTS = {
-    "LinuxBridge.GROUP_FORWARD_MASK": "LinuxBridge.Options.GROUP_FORWARD_MASK",
-    "LinuxBridge.MAC_AGEING_TIME": "LinuxBridge.Options.MAC_AGEING_TIME",
-    "LinuxBridge.MULTICAST_SNOOPING": "LinuxBridge.Options.MULTICAST_SNOOPING",
-    "LinuxBridge.PORT_NAME": "LinuxBridge.Port.NAME",
-    "LinuxBridge.PORT_STP_HAIRPIN_MODE": "LinuxBridge.Port.STP_HAIRPIN_MODE",
-    "LinuxBridge.PORT_STP_PATH_COST": "LinuxBridge.Port.STP_PATH_COST",
-    "LinuxBridge.PORT_STP_PRIORITY": "LinuxBridge.Port.STP_PRIORITY",
-    "LinuxBridge.STP_ENABLED": "LinuxBridge.STP.ENABLED",
-    "LinuxBridge.STP_FORWARD_DELAY": "LinuxBridge.STP.FORWARD_DELAY",
-    "LinuxBridge.STP_HELLO_TIME": "LinuxBridge.STP.HELLO_TIME",
-    "LinuxBridge.STP_MAX_AGE": "LinuxBridge.STP.MAX_AGE",
-    "LinuxBridge.STP_PRIORITY": "LinuxBridge.STP.PRIORITY",
-    "OVSBridge.PORT_NAME": "OVSBridge.Port.NAME",
-    "OVSBridge.FAIL_MODE": "OVSBridge.Options.FAIL_MODE",
-    "OVSBridge.MCAST_SNOOPING_ENABLED": _NEW_OVSBR_OPTS_MCAST_SNOOP,
-    "OVSBridge.RSTP": "OVSBridge.Options.RSTP",
-    "OVSBridge.STP": "OVSBridge.Options.STP",
-}
-
-
-class _DeprecatorType(type):
-    def __getattribute__(cls, attribute):
-        try:
-            return super().__getattribute__(attribute)
-        except AttributeError:
-            deprecated_class = cls
-            deprecated_classname = deprecated_class.__name__
-            deprecated_name = attribute
-
-            oldconstant = f"{deprecated_classname}.{deprecated_name}"
-            newconstant = DEPRECATED_CONSTANTS.get(oldconstant)
-
-            if newconstant:
-                warnings.warn(
-                    f"Using '{oldconstant}' is deprecated, "
-                    f"use '{newconstant}' instead.",
-                    FutureWarning,
-                    stacklevel=3,
-                )
-
-                attributes = newconstant.split(".")
-                new_classname = attributes.pop(0)
-                new_value = globals()[new_classname]
-                while attributes:
-                    new_value = getattr(new_value, attributes.pop(0))
-
-                return new_value
-
-            raise
-
-
-class Bridge(metaclass=_DeprecatorType):
+class Bridge:
     CONFIG_SUBTREE = "bridge"
     OPTIONS_SUBTREE = "options"
     PORT_SUBTREE = "port"
