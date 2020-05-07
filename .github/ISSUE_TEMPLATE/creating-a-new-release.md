@@ -70,7 +70,7 @@ gpg2 --armor --detach-sign dist/nmstate-<version>.tar.gz
 - [ ] Download the tarball and the signature.
 - [ ] Check if the signature is correct.
 ```bash
-gpg2 --recv-keys F7910D93CA83D77348595C0E899014C0463C12BB
+curl --silent https://www.nmstate.io/nmstate.gpg | gpg2 --import
 gpg2 --verify nmstate-<version>.tar.gz.asc nmstate-<version>.tar.gz
 ```
 - [ ] Check in a clean Fedora/centOS container if the package build and install correctly.
