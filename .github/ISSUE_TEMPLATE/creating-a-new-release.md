@@ -56,7 +56,8 @@ git push --delete upstream <tag_name>
 git clean -x -d -n
 # before running the next command check, that it is ok to remove the files
 git clean -x -d -f
-python3 setup.py sdist
+# Please remove python3-setuptools_scm, or it will all git files into tarbal.
+env --unset=PYTHONPATH python3 setup.py sdist
 gpg2 --armor --detach-sign dist/nmstate-<version>.tar.gz
 ```
 
