@@ -26,8 +26,10 @@ RUN dnf -y install dnf-plugins-core epel-release && \
                    python3-pytest-cov \
                    python3-virtualenv \
                    python3-tox \
+                   python3-coveralls \
+                   python3-requests \
+                   python3-docopt \
                    && \
-    pip3 install python-coveralls --user && \
     alternatives --set python /usr/bin/python3 && \
     ln -s /usr/bin/pytest-3 /usr/bin/pytest && \
     dnf clean all && \

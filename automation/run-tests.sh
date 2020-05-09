@@ -28,6 +28,7 @@ PYTEST_OPTIONS="--verbose --verbose \
         --cov /usr/lib/python*/site-packages/libnmstate \
         --cov /usr/lib/python*/site-packages/nmstatectl \
         --cov-report=term \
+        --cov-report=xml \
         --log-file=pytest-run.log"
 
 NMSTATE_TEMPDIR=$(mktemp -d /tmp/nmstate-test-XXXX)
@@ -269,6 +270,19 @@ function vdsm_tests {
     cd -
 }
 
+function upload_coverage {
+    if [[ "$CI" == "true" ]] ;then
+        container_exec "
+            cd $CONTAINER_WORKSPACE &&
+            COVERALLS_PARALLEL=true COVERALLS_SERVICE_NAME=travis-ci coveralls
+        " || true
+        container_exec "
+            cd $CONTAINER_WORKSPACE &&
+            bash <(curl -s https://codecov.io/bash)
+        " || true
+    fi
+}
+
 options=$(getopt --options "" \
     --long customize:,pytest-args:,help,debug-shell,test-type:,el8,copr:,artifacts-dir:,test-vdsm\
     -- "${@}")
@@ -344,7 +358,24 @@ if [[ "$CI" == "true" ]];then
 fi
 
 mkdir -p $EXPORT_DIR
-CONTAINER_ID="$(${CONTAINER_CMD} run --privileged -d -e CI=$CI -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v $PROJECT_PATH:$CONTAINER_WORKSPACE -v $EXPORT_DIR:$CONT_EXPORT_DIR $CONTAINER_IMAGE)"
+# The podman support wildcard when passing enviroments, but docker does not.
+CONTAINER_ID="$(${CONTAINER_CMD} run --privileged -d \
+    -e CI \
+    -e COVERALLS_REPO_TOKEN \
+    -e CODECOV_TOKEN \
+    -e TRAVIS \
+    -e TRAVIS_BRANCH \
+    -e TRAVIS_COMMIT \
+    -e TRAVIS_JOB_NUMBER \
+    -e TRAVIS_PULL_REQUEST \
+    -e TRAVIS_JOB_ID \
+    -e TRAVIS_REPO_SLUG \
+    -e TRAVIS_TAG \
+    -e TRAVIS_OS_NAME \
+    -e SHIPPABLE \
+    -v /sys/fs/cgroup:/sys/fs/cgroup:ro \
+    -v $PROJECT_PATH:$CONTAINER_WORKSPACE \
+    -v $EXPORT_DIR:$CONT_EXPORT_DIR $CONTAINER_IMAGE)"
 [ -n "$debug_exit_shell" ] && trap open_shell EXIT || trap run_exit EXIT
 
 if [[ -v copr_repo ]];then
@@ -385,3 +416,4 @@ if [[ "$CI" != "true" ]];then
 fi
 install_nmstate
 run_tests
+upload_coverage
