@@ -54,7 +54,7 @@ MASTER_IFACE_TYPES = ovs.BRIDGE_TYPE, bond.BOND_TYPE, LB.TYPE
 BRPORT_OPTIONS_METADATA = "_brport_options"
 
 
-def apply_changes(nm_client, ifaces_desired_state, original_desired_state):
+def apply_changes(context, ifaces_desired_state, original_desired_state):
     con_profiles = []
 
     ifaces_desired_state.extend(
@@ -67,16 +67,16 @@ def apply_changes(nm_client, ifaces_desired_state, original_desired_state):
     ):
 
         ifname = iface_desired_state[Interface.NAME]
-        nmdev = device.get_device_by_name(nm_client, ifname)
+        nmdev = context.get_nm_dev(ifname)
         cur_con_profile = None
         if nmdev:
-            cur_con_profile = connection.ConnectionProfile(nm_client)
+            cur_con_profile = connection.ConnectionProfile(context)
             cur_con_profile.import_by_device(nmdev)
         original_desired_iface_state = original_desired_state.interfaces.get(
             ifname, {}
         )
         new_con_profile = _build_connection_profile(
-            nm_client,
+            context,
             iface_desired_state,
             cur_con_profile,
             original_desired_iface_state,
@@ -89,14 +89,16 @@ def apply_changes(nm_client, ifaces_desired_state, original_desired_state):
             con_profiles.append(new_con_profile)
         else:
             # Missing connection, attempting to create a new one.
-            connection.delete_iface_inactive_connections(nm_client, ifname)
-            new_con_profile.add(save_to_disk=True)
+            connection.delete_iface_inactive_connections(context, ifname)
+            new_con_profile.add()
             con_profiles.append(new_con_profile)
+    context.wait_all_finish()
 
-    _set_ifaces_admin_state(nm_client, ifaces_desired_state, con_profiles)
+    _set_ifaces_admin_state(context, ifaces_desired_state, con_profiles)
+    context.wait_all_finish()
 
 
-def _set_ifaces_admin_state(nm_client, ifaces_desired_state, con_profiles):
+def _set_ifaces_admin_state(context, ifaces_desired_state, con_profiles):
     """
     Control interface admin state by activating, deactivating and deleting
     devices connection profiles.
@@ -118,7 +120,7 @@ def _set_ifaces_admin_state(nm_client, ifaces_desired_state, con_profiles):
     - All the rest.
     """
     con_profiles_by_devname = _index_profiles_by_devname(con_profiles)
-    new_ifaces = _get_new_ifaces(nm_client, con_profiles)
+    new_ifaces = _get_new_ifaces(context, con_profiles)
     new_ifaces_to_activate = set()
     new_vlan_ifaces_to_activate = set()
     new_vxlan_ifaces_to_activate = set()
@@ -133,7 +135,7 @@ def _set_ifaces_admin_state(nm_client, ifaces_desired_state, con_profiles):
 
     for iface_desired_state in ifaces_desired_state:
         ifname = iface_desired_state[Interface.NAME]
-        nmdev = device.get_device_by_name(nm_client, ifname)
+        nmdev = context.get_nm_dev(ifname)
         if not nmdev:
             if (
                 ifname in new_ifaces
@@ -184,7 +186,7 @@ def _set_ifaces_admin_state(nm_client, ifaces_desired_state, con_profiles):
                 InterfaceState.DOWN,
                 InterfaceState.ABSENT,
             ):
-                nmdevs = _get_affected_devices(nm_client, iface_desired_state)
+                nmdevs = _get_affected_devices(context, iface_desired_state)
                 for affected_nmdev in nmdevs:
                     devs_to_delete_profile[
                         affected_nmdev.get_iface()
@@ -203,7 +205,7 @@ def _set_ifaces_admin_state(nm_client, ifaces_desired_state, con_profiles):
                 )
 
     for dev in devs_to_deactivate_beforehand:
-        device.deactivate(nm_client, dev)
+        device.deactivate(context, dev)
 
     # Do not remove devices that are marked for editing.
     for dev, _ in itertools.chain(master_ifaces_to_edit, ifaces_to_edit):
@@ -211,48 +213,59 @@ def _set_ifaces_admin_state(nm_client, ifaces_desired_state, con_profiles):
         devs_to_delete.pop(dev.get_iface(), None)
 
     for ifname in new_master_not_enslaved_ifaces:
-        device.activate(nm_client, dev=None, connection_id=ifname)
+        device.activate(context, dev=None, connection_id=ifname)
+    context.wait_all_finish()
 
     for ifname in new_ifaces_to_activate:
-        device.activate(nm_client, dev=None, connection_id=ifname)
+        device.activate(context, dev=None, connection_id=ifname)
+    context.wait_all_finish()
 
     for dev, con_profile in master_ifaces_to_edit:
-        device.modify(nm_client, dev, con_profile)
+        device.modify(context, dev, con_profile)
+    context.wait_all_finish()
 
     for ifname in new_ovs_port_to_activate:
-        device.activate(nm_client, dev=None, connection_id=ifname)
+        device.activate(context, dev=None, connection_id=ifname)
+    context.wait_all_finish()
 
     for ifname in new_ovs_interface_to_activate:
-        device.activate(nm_client, dev=None, connection_id=ifname)
+        device.activate(context, dev=None, connection_id=ifname)
+    context.wait_all_finish()
 
     for dev, con_profile in ifaces_to_edit:
-        device.modify(nm_client, dev, con_profile)
+        device.modify(context, dev, con_profile)
+    context.wait_all_finish()
 
     for ifname in new_vlan_ifaces_to_activate:
-        device.activate(nm_client, dev=None, connection_id=ifname)
+        device.activate(context, dev=None, connection_id=ifname)
+    context.wait_all_finish()
 
     for ifname in new_vxlan_ifaces_to_activate:
-        device.activate(nm_client, dev=None, connection_id=ifname)
+        device.activate(context, dev=None, connection_id=ifname)
+    context.wait_all_finish()
 
     for dev in devs_to_delete_profile.values():
-        device.deactivate(nm_client, dev)
+        device.deactivate(context, dev)
+    context.wait_all_finish()
 
     for dev in devs_to_delete_profile.values():
-        device.delete(nm_client, dev)
+        device.delete(context, dev)
+    context.wait_all_finish()
 
     for dev in devs_to_delete.values():
-        device.delete_device(nm_client, dev)
+        device.delete_device(context, dev)
+    context.wait_all_finish()
 
 
 def _index_profiles_by_devname(con_profiles):
     return {con_profile.devname: con_profile for con_profile in con_profiles}
 
 
-def _get_new_ifaces(nm_client, con_profiles):
+def _get_new_ifaces(context, con_profiles):
     ifaces_without_device = set()
     for con_profile in con_profiles:
         ifname = con_profile.devname
-        nmdev = device.get_device_by_name(nm_client, ifname)
+        nmdev = context.get_nm_dev(ifname)
         if not nmdev:
             # When the profile id is different from the iface name, use the
             # profile id.
@@ -270,8 +283,8 @@ def _is_slave_iface(iface_state):
     return iface_state.get(MASTER_METADATA)
 
 
-def _get_affected_devices(nm_client, iface_state):
-    nmdev = device.get_device_by_name(nm_client, iface_state[Interface.NAME])
+def _get_affected_devices(context, iface_state):
+    nmdev = context.get_nm_dev(iface_state[Interface.NAME])
     devs = []
     if nmdev:
         devs += [nmdev]
@@ -350,7 +363,7 @@ def _is_ovs_lag_port(port_state):
 
 
 def _build_connection_profile(
-    nm_client,
+    context,
     iface_desired_state,
     base_con_profile,
     original_desired_iface_state,
@@ -370,7 +383,7 @@ def _build_connection_profile(
         ),
     ]
 
-    con_setting = connection.ConnectionSetting(nm_client)
+    con_setting = connection.ConnectionSetting()
     if base_profile:
         con_setting.import_by_profile(base_con_profile)
     else:
@@ -437,7 +450,7 @@ def _build_connection_profile(
         settings.append(vxlan_setting)
 
     sriov_setting = sriov.create_setting(
-        nm_client, iface_desired_state, base_con_profile
+        context, iface_desired_state, base_con_profile
     )
     if sriov_setting:
         settings.append(sriov_setting)
@@ -446,7 +459,7 @@ def _build_connection_profile(
     if team_setting:
         settings.append(team_setting)
 
-    new_profile = connection.ConnectionProfile(nm_client)
+    new_profile = connection.ConnectionProfile(context)
     new_profile.create(settings)
     return new_profile
 

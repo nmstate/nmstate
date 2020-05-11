@@ -24,7 +24,7 @@ from libnmstate.nm.common import NM
 from libnmstate.schema import VLAN
 
 from ..testlib.retry import retry_till_true_or_timeout
-from .testlib import mainloop
+from .testlib import main_context
 
 
 ETH1 = "eth1"
@@ -37,7 +37,7 @@ def test_create_and_remove_vlan(nm_plugin, eth1_up):
         VLAN.CONFIG_SUBTREE: {VLAN.ID: 101, VLAN.BASE_IFACE: ETH1}
     }
 
-    with _vlan_interface(nm_plugin.client, vlan_desired_state):
+    with _vlan_interface(nm_plugin.context, vlan_desired_state):
         vlan_current_state = _get_vlan_current_state(
             nm_plugin, vlan_desired_state
         )
@@ -53,22 +53,22 @@ def _vlan_is_absent(nm_plugin, vlan_desired_state):
 
 
 @contextmanager
-def _vlan_interface(client, state):
+def _vlan_interface(ctx, state):
     try:
-        _create_vlan(client, state)
+        _create_vlan(ctx, state)
         yield
     finally:
-        _delete_vlan(client, _get_vlan_ifname(state))
+        _delete_vlan(ctx, _get_vlan_ifname(state))
 
 
 def _get_vlan_current_state(nm_plugin, vlan_desired_state):
     nm_plugin.refresh_content()
     ifname = _get_vlan_ifname(vlan_desired_state)
-    nmdev = nm.device.get_device_by_name(nm_plugin.client, ifname)
+    nmdev = nm_plugin.context.get_nm_dev(ifname)
     return nm.vlan.get_info(nmdev) if nmdev else {}
 
 
-def _create_vlan(client, vlan_desired_state):
+def _create_vlan(ctx, vlan_desired_state):
     ifname = _get_vlan_ifname(vlan_desired_state)
     con_setting = nm.connection.ConnectionSetting()
     con_setting.create(
@@ -81,20 +81,21 @@ def _create_vlan(client, vlan_desired_state):
     )
     ipv4_setting = nm.ipv4.create_setting({}, None)
     ipv6_setting = nm.ipv6.create_setting({}, None)
-    with mainloop():
-        con_profile = nm.connection.ConnectionProfile(client)
+    with main_context(ctx):
+        con_profile = nm.connection.ConnectionProfile(ctx)
         con_profile.create(
             (con_setting.setting, vlan_setting, ipv4_setting, ipv6_setting)
         )
-        con_profile.add(save_to_disk=False)
-        nm.device.activate(client, connection_id=ifname)
+        con_profile.add()
+        ctx.wait_all_finish()
+        nm.device.activate(ctx, connection_id=ifname)
 
 
-def _delete_vlan(client, devname):
-    nmdev = nm.device.get_device_by_name(client, devname)
-    with mainloop():
-        nm.device.deactivate(client, nmdev)
-        nm.device.delete(client, nmdev)
+def _delete_vlan(ctx, devname):
+    nmdev = ctx.get_nm_dev(devname)
+    with main_context(ctx):
+        nm.device.deactivate(ctx, nmdev)
+        nm.device.delete(ctx, nmdev)
 
 
 def _get_vlan_ifname(state):

@@ -21,7 +21,6 @@ import logging
 from libnmstate.schema import OVSBridge as OB
 
 from . import connection
-from . import device
 from .common import NM
 
 
@@ -127,10 +126,10 @@ def get_port_by_slave(nmdev):
     return None
 
 
-def get_ovs_info(nm_client, bridge_device, devices_info):
+def get_ovs_info(context, bridge_device, devices_info):
     port_profiles = _get_slave_profiles(bridge_device, devices_info)
-    ports = _get_bridge_ports_info(nm_client, port_profiles, devices_info)
-    options = _get_bridge_options(nm_client, bridge_device)
+    ports = _get_bridge_ports_info(context, port_profiles, devices_info)
+    options = _get_bridge_options(context, bridge_device)
 
     if ports or options:
         return {"port": ports, "options": options}
@@ -142,16 +141,16 @@ def get_slaves(nm_device):
     return nm_device.get_slaves()
 
 
-def _get_bridge_ports_info(nm_client, port_profiles, devices_info):
+def _get_bridge_ports_info(context, port_profiles, devices_info):
     ports_info = []
     for p in port_profiles:
-        port_info = _get_bridge_port_info(nm_client, p, devices_info)
+        port_info = _get_bridge_port_info(context, p, devices_info)
         if port_info:
             ports_info.append(port_info)
     return ports_info
 
 
-def _get_bridge_port_info(nm_client, port_profile, devices_info):
+def _get_bridge_port_info(context, port_profile, devices_info):
     """
     Report port information.
     Note: The current implementation supports only system OVS ports and
@@ -163,7 +162,7 @@ def _get_bridge_port_info(nm_client, port_profile, devices_info):
     vlan_mode = port_setting.props.vlan_mode
 
     port_name = port_profile.get_interface_name()
-    port_device = device.get_device_by_name(nm_client, port_name)
+    port_device = context.get_nm_dev(port_name)
     port_slave_profiles = _get_slave_profiles(port_device, devices_info)
     port_slave_names = [c.get_interface_name() for c in port_slave_profiles]
 
@@ -213,9 +212,9 @@ def _get_lag_info(port_name, port_setting, port_slave_names):
     return port_info
 
 
-def _get_bridge_options(nm_client, bridge_device):
+def _get_bridge_options(context, bridge_device):
     bridge_options = {}
-    con = connection.ConnectionProfile(nm_client)
+    con = connection.ConnectionProfile(context)
     con.import_by_device(bridge_device)
     if con.profile:
         bridge_setting = con.profile.get_setting(NM.SettingOvsBridge)

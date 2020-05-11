@@ -28,7 +28,7 @@ from libnmstate.schema import LinuxBridge as LB
 from libnmstate.nm.common import NM
 
 from ..testlib import iproutelib
-from .testlib import mainloop
+from .testlib import main_context
 
 
 BRIDGE0 = "brtest0"
@@ -38,14 +38,14 @@ BRIDGE0 = "brtest0"
 def bridge0_with_port0(port0_up, nm_plugin):
     port_name = port0_up[schema.Interface.KEY][0][schema.Interface.NAME]
     bridge_desired_state = _create_bridge_config((port_name,))
-    with _bridge_interface(nm_plugin.client, bridge_desired_state):
+    with _bridge_interface(nm_plugin.context, bridge_desired_state):
         yield _get_bridge_current_state(nm_plugin)
 
 
 def test_create_and_remove_minimum_config_bridge(nm_plugin):
     bridge_desired_state = {LB.CONFIG_SUBTREE: {LB.PORT_SUBTREE: []}}
 
-    with _bridge_interface(nm_plugin.client, bridge_desired_state):
+    with _bridge_interface(nm_plugin.context, bridge_desired_state):
 
         bridge_current_state = _get_bridge_current_state(nm_plugin)
         assert bridge_current_state
@@ -57,7 +57,7 @@ def test_create_and_remove_minimum_config_bridge(nm_plugin):
 def test_create_and_remove_bridge(nm_plugin, port0_up):
     port_name = port0_up[schema.Interface.KEY][0][schema.Interface.NAME]
     bridge_desired_state = _create_bridge_config((port_name,))
-    with _bridge_interface(nm_plugin.client, bridge_desired_state):
+    with _bridge_interface(nm_plugin.context, bridge_desired_state):
         bridge_current_state = _get_bridge_current_state(nm_plugin)
         assert bridge_desired_state == bridge_current_state
 
@@ -69,7 +69,7 @@ def test_add_port_to_existing_bridge(bridge0_with_port0, port1_up, nm_plugin):
     port_name = port1_up[schema.Interface.KEY][0][schema.Interface.NAME]
     _add_ports_to_bridge_config(bridge0_with_port0, (port_name,))
 
-    _modify_bridge(nm_plugin.client, bridge0_with_port0)
+    _modify_bridge(nm_plugin.context, bridge0_with_port0)
 
     assert bridge0_with_port0 == _get_bridge_current_state(nm_plugin)
 
@@ -115,81 +115,81 @@ def _create_bridge_ports_config(ports):
 
 
 @contextmanager
-def _bridge_interface(client, state):
+def _bridge_interface(ctx, state):
     try:
-        _create_bridge(client, state)
+        _create_bridge(ctx, state)
         yield
     finally:
-        _delete_iface(client, BRIDGE0)
+        _delete_iface(ctx, BRIDGE0)
         for p in state[LB.CONFIG_SUBTREE][LB.PORT_SUBTREE]:
-            _delete_iface(client, p[LB.Port.NAME])
+            _delete_iface(ctx, p[LB.Port.NAME])
 
 
-def _modify_bridge(client, bridge_desired_state):
+def _modify_bridge(ctx, bridge_desired_state):
     bridge_config = bridge_desired_state[LB.CONFIG_SUBTREE]
-    with mainloop():
-        _modify_bridge_options(client, bridge_desired_state)
-        _modify_ports(client, bridge_config[LB.PORT_SUBTREE])
+    with main_context(ctx):
+        _modify_bridge_options(ctx, bridge_desired_state)
+        _modify_ports(ctx, bridge_config[LB.PORT_SUBTREE])
 
 
-def _modify_bridge_options(client, bridge_state):
-    br_options = bridge_state.get(LB.CONFIG_SUBTREE, {}).get(
-        LB.OPTIONS_SUBTREE
-    )
-    nmdev = nm.device.get_device_by_name(client, BRIDGE0)
-    conn = nm.connection.ConnectionProfile(client)
+def _modify_bridge_options(ctx, bridge_state):
+    nmdev = ctx.get_nm_dev(BRIDGE0)
+    conn = nm.connection.ConnectionProfile(ctx)
     conn.import_by_id(BRIDGE0)
-    iface_bridge_settings = _create_iface_bridge_settings(br_options, conn)
-    new_conn = nm.connection.ConnectionProfile(client)
+    iface_bridge_settings = _create_iface_bridge_settings(bridge_state, conn)
+    new_conn = nm.connection.ConnectionProfile(ctx)
     new_conn.create(iface_bridge_settings)
     conn.update(new_conn)
-    nm.device.modify(client, nmdev, new_conn.profile)
+    ctx.wait_all_finish()
+    nm.device.modify(ctx, nmdev, new_conn.profile)
 
 
-def _modify_ports(client, ports_state):
+def _modify_ports(ctx, ports_state):
     for port_state in ports_state:
-        _attach_port_to_bridge(client, port_state)
+        _attach_port_to_bridge(ctx, port_state)
 
 
 def _get_bridge_current_state(nm_plugin):
     nm_plugin.refresh_content()
-    nmdev = nm.device.get_device_by_name(nm_plugin.client, BRIDGE0)
-    info = nm.bridge.get_info(nm_plugin.client, nmdev) if nmdev else {}
+    nmdev = nm_plugin.context.get_nm_dev(BRIDGE0)
+    info = nm.bridge.get_info(nm_plugin.context, nmdev) if nmdev else {}
     info.get(LB.CONFIG_SUBTREE, {}).get(LB.PORT_SUBTREE, []).sort(
         key=itemgetter(LB.Port.NAME)
     )
     return info
 
 
-def _create_bridge(client, bridge_desired_state):
+def _create_bridge(ctx, bridge_desired_state):
     iface_bridge_settings = _create_iface_bridge_settings(bridge_desired_state)
 
-    with mainloop():
-        _create_bridge_iface(client, iface_bridge_settings)
+    with main_context(ctx):
+        _create_bridge_iface(ctx, iface_bridge_settings)
         ports_state = bridge_desired_state[LB.CONFIG_SUBTREE][LB.PORT_SUBTREE]
         for port_state in ports_state:
-            _attach_port_to_bridge(client, port_state)
+            _attach_port_to_bridge(ctx, port_state)
 
 
-def _attach_port_to_bridge(client, port_state):
-    port_nmdev = nm.device.get_device_by_name(client, port_state["name"])
-    curr_port_con_profile = nm.connection.ConnectionProfile(client)
+def _attach_port_to_bridge(ctx, port_state):
+    port_nmdev = ctx.get_nm_dev(port_state["name"])
+    curr_port_con_profile = nm.connection.ConnectionProfile(ctx)
     curr_port_con_profile.import_by_device(port_nmdev)
     iface_port_settings = _get_iface_port_settings(
         port_state, curr_port_con_profile
     )
-    port_con_profile = nm.connection.ConnectionProfile(client)
+    port_con_profile = nm.connection.ConnectionProfile(ctx)
     port_con_profile.create(iface_port_settings)
 
     curr_port_con_profile.update(port_con_profile)
-    nm.device.modify(client, port_nmdev, port_con_profile.profile)
+    ctx.wait_all_finish()
+    nm.device.modify(ctx, port_nmdev, port_con_profile.profile)
 
 
-def _create_bridge_iface(client, iface_bridge_settings):
-    br_con_profile = nm.connection.ConnectionProfile(client)
+def _create_bridge_iface(ctx, iface_bridge_settings):
+    br_con_profile = nm.connection.ConnectionProfile(ctx)
     br_con_profile.create(iface_bridge_settings)
-    br_con_profile.add(save_to_disk=False)
-    nm.device.activate(client, connection_id=BRIDGE0)
+    br_con_profile.add()
+    ctx.wait_all_finish()
+    nm.device.activate(ctx, connection_id=BRIDGE0)
 
 
 def _get_iface_port_settings(port_state, port_con_profile):
@@ -203,11 +203,11 @@ def _get_iface_port_settings(port_state, port_con_profile):
     return con_setting.setting, bridge_port_setting
 
 
-def _delete_iface(client, devname):
-    nmdev = nm.device.get_device_by_name(client, devname)
-    with mainloop():
-        nm.device.deactivate(client, nmdev)
-        nm.device.delete(client, nmdev)
+def _delete_iface(ctx, devname):
+    nmdev = ctx.get_nm_dev(devname)
+    with main_context(ctx):
+        nm.device.deactivate(ctx, nmdev)
+        nm.device.delete(ctx, nmdev)
 
 
 def _create_iface_bridge_settings(bridge_state, base_con_profile=None):

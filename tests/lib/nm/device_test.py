@@ -69,13 +69,6 @@ def test_delete(client_mock, con_profile_mock):
     con_profile.delete.assert_called_once()
 
 
-def test_get_device_by_name(client_mock):
-    devname = "foo"
-    nm.device.get_device_by_name(client_mock, devname)
-
-    client_mock.get_device_by_iface.assert_called_once_with(devname)
-
-
 def test_list_devices(client_mock):
     nm.device.list_devices(client_mock)
 

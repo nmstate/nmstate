@@ -20,7 +20,7 @@
 from libnmstate import nm
 from libnmstate import schema
 
-from .testlib import mainloop
+from .testlib import main_context
 
 
 ETH1 = "eth1"
@@ -32,7 +32,7 @@ MTU0 = 1200
 def test_interface_mtu_change(eth1_up, nm_plugin):
     wired_base_state = _get_wired_current_state(nm_plugin, ETH1)
     _modify_interface(
-        nm_plugin.client, wired_state={schema.Interface.MTU: MTU0}
+        nm_plugin.context, wired_state={schema.Interface.MTU: MTU0}
     )
 
     wired_current_state = _get_wired_current_state(nm_plugin, ETH1)
@@ -46,7 +46,7 @@ def test_interface_mtu_change(eth1_up, nm_plugin):
 def test_interface_mac_change_with_modify(eth1_up, nm_plugin):
     wired_base_state = _get_wired_current_state(nm_plugin, ETH1)
     _modify_interface(
-        nm_plugin.client, wired_state={schema.Interface.MAC: MAC0}
+        nm_plugin.context, wired_state={schema.Interface.MAC: MAC0}
     )
 
     wired_current_state = _get_wired_current_state(nm_plugin, ETH1)
@@ -57,21 +57,22 @@ def test_interface_mac_change_with_modify(eth1_up, nm_plugin):
     }
 
 
-def _modify_interface(client, wired_state):
-    conn = nm.connection.ConnectionProfile(client)
+def _modify_interface(ctx, wired_state):
+    conn = nm.connection.ConnectionProfile(ctx)
     conn.import_by_id(ETH1)
     settings = _create_iface_settings(wired_state, conn)
-    new_conn = nm.connection.ConnectionProfile(client)
-    with mainloop():
+    new_conn = nm.connection.ConnectionProfile(ctx)
+    with main_context(ctx):
         new_conn.create(settings)
         conn.update(new_conn)
-        nmdev = nm.device.get_device_by_name(client, ETH1)
-        nm.device.modify(client, nmdev, new_conn.profile)
+        ctx.wait_all_finish()
+        nmdev = ctx.get_nm_dev(ETH1)
+        nm.device.modify(ctx, nmdev, new_conn.profile)
 
 
 def _get_wired_current_state(plugin, ifname):
     plugin.refresh_content()
-    nmdev = nm.device.get_device_by_name(plugin.client, ifname)
+    nmdev = plugin.context.get_nm_dev(ifname)
     return nm.wired.get_info(nmdev) if nmdev else {}
 
 

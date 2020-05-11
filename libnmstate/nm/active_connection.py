@@ -19,9 +19,8 @@
 
 import logging
 
-from . import mainloop as nm_mainloop
-from . import ipv4
-from . import ipv6
+from libnmstate.error import NmstateLibnmError
+
 from .common import GLib
 from .common import GObject
 from .common import NM
@@ -38,16 +37,13 @@ class ActivationError(Exception):
 
 
 class ActiveConnection:
-    def __init__(self, nm_client=None, active_connection=None):
-        self._client = nm_client
-        self.handlers = set()
-        self.device_handlers = set()
-        self._act_con = active_connection
-        self._mainloop = nm_mainloop.mainloop()
+    def __init__(self, context=None, nm_ac_con=None):
+        self._ctx = context
+        self._act_con = nm_ac_con
 
         nmdevs = None
-        if active_connection:
-            nmdevs = active_connection.get_devices()
+        if nm_ac_con:
+            nmdevs = nm_ac_con.get_devices()
         self._nmdev = nmdevs[0] if nmdevs else None
 
     def import_by_device(self, nmdev=None):
@@ -65,114 +61,83 @@ class ActiveConnection:
 
         For software devices, deactivation removes the devices from the kernel.
         """
-        self._mainloop.push_action(self._safe_deactivate_async)
-
-    def _safe_deactivate_async(self):
         act_connection = self._nmdev.get_active_connection()
         if not act_connection or act_connection.props.state in (
             NM.ActiveConnectionState.DEACTIVATING,
             NM.ActiveConnectionState.DEACTIVATED,
         ):
-            # Nothing left to do here, call the next action.
-            self._mainloop.execute_next_action()
             return
 
-        user_data = None
-        act_connection.connect(
-            NM_AC_STATE_CHANGED_SIGNAL, self._wait_state_changed_callback,
+        if self._act_con != act_connection:
+            raise NmstateLibnmError(
+                "When deactivating active connection, the newly get "
+                f"NM.ActiveConnection {act_connection}"
+                f"is different from original request: {self._act_con}"
+            )
+
+        action = f"Deactivate profile: {self.devname}"
+        self._ctx.register_async(action)
+        handler_id = act_connection.connect(
+            NM_AC_STATE_CHANGED_SIGNAL,
+            self._wait_state_changed_callback,
+            action,
         )
-        self._client.deactivate_connection_async(
+        user_data = (handler_id, action)
+        self._ctx.client.deactivate_connection_async(
             act_connection,
-            self._mainloop.cancellable,
+            self._ctx.cancellable,
             self._deactivate_connection_callback,
             user_data,
         )
 
-    def _wait_state_changed_callback(self, act_con, state, reason):
-        if act_con.props.state is NM.ActiveConnectionState.DEACTIVATED:
-            mainloop = nm_mainloop.mainloop()
-            mainloop.execute_next_action()
-
-    def _deactivate_connection_callback(self, src_object, result, user_data):
-        try:
-            success = src_object.deactivate_connection_finish(result)
-        except Exception as e:
-            if self._mainloop.is_action_canceled(e):
-                logging.debug(
-                    "Connection deactivation aborted on %s: error=%s",
-                    self.devname,
-                    e,
-                )
-            else:
-                if (
-                    isinstance(e, GLib.GError)
-                    # pylint: disable=no-member
-                    and e.domain == NM_MANAGER_ERROR_DOMAIN
-                    and e.code == NM.ManagerError.CONNECTIONNOTACTIVE
-                    # pylint: enable=no-member
-                ):
-                    success = True
-                    logging.debug(
-                        "Connection is not active on {}, no need to "
-                        "deactivate".format(self.devname)
-                    )
-                else:
-                    self._mainloop.quit(
-                        "Connection deactivation failed on {}: "
-                        "error={}".format(self.devname, e)
-                    )
-                    return
-
-        if success:
+    def _wait_state_changed_callback(self, act_con, state, reason, action):
+        if self._ctx.is_cancelled():
+            return
+        if act_con.props.state == NM.ActiveConnectionState.DEACTIVATED:
             logging.debug(
                 "Connection deactivation succeeded on %s", self.devname,
             )
-        else:
-            self._mainloop.quit(
-                "Connection deactivation failed on %s: error=unknown"
-                % self.devname
-            )
+            self._ctx.finish_async(action)
 
-    @property
-    def is_active(self):
-        nm_acs = NM.ActiveConnectionState
-        if self.state == nm_acs.ACTIVATED:
-            return True
-        elif self.state == nm_acs.ACTIVATING:
-            ac_state_flags = self.nm_active_connection.get_state_flags()
-            nm_flags = NM.ActivationStateFlags
-            ip4_is_dynamic = ipv4.is_dynamic(self.nm_active_connection)
-            ip6_is_dynamic = ipv6.is_dynamic(self.nm_active_connection)
+    def _deactivate_connection_callback(self, src_object, result, user_data):
+        handler_id, action = user_data
+        if self._ctx.is_cancelled():
+            if self._act_con:
+                self._act_con.handler_disconnect(handler_id)
+            return
+
+        try:
+            success = src_object.deactivate_connection_finish(result)
+        except Exception as e:
             if (
-                _is_device_master_type(self._nmdev)
-                or (ip4_is_dynamic and ac_state_flags & nm_flags.IP6_READY)
-                or (ip6_is_dynamic and ac_state_flags & nm_flags.IP4_READY)
-                or (ip4_is_dynamic and ip6_is_dynamic)
+                isinstance(e, GLib.GError)
+                # pylint: disable=no-member
+                and e.domain == NM_MANAGER_ERROR_DOMAIN
+                and e.code == NM.ManagerError.CONNECTIONNOTACTIVE
+                # pylint: enable=no-member
             ):
-                # For interface meet any condition below will be
-                # treated as activated when reach IP_CONFIG state:
-                #   * Is master device.
-                #   * DHCPv4 enabled with IP6_READY flag.
-                #   * DHCPv6/Autoconf with IP4_READY flag.
-                #   * DHCPv4 enabled with DHCPv6/Autoconf enabled.
-                return (
-                    NM.DeviceState.IP_CONFIG
-                    <= self.nmdev_state
-                    <= NM.DeviceState.ACTIVATED
+                success = True
+                logging.debug(
+                    "Connection is not active on {}, no need to "
+                    "deactivate".format(self.devname)
                 )
+            else:
+                if self._act_con:
+                    self._act_con.handler_disconnect(handler_id)
+                self._ctx.fail(
+                    NmstateLibnmError(f"{action} failed: error={e}")
+                )
+                return
 
-        return False
-
-    @property
-    def is_activating(self):
-        return (
-            self.state == NM.ActiveConnectionState.ACTIVATING
-            and not self.is_active
-        )
-
-    @property
-    def reason(self):
-        return self._act_con.get_state_reason()
+        if not success:
+            if self._act_con:
+                self._act_con.handler_disconnect(handler_id)
+            self._ctx.fail(
+                NmstateLibnmError(
+                    f"{action} failed: error='None returned from "
+                    "deactivate_connection_finish()'"
+                )
+            )
 
     @property
     def nm_active_connection(self):
@@ -193,24 +158,6 @@ class ActiveConnection:
     def nmdevice(self, nmdev):
         assert self._nmdev is None
         self._nmdev = nmdev
-
-    @property
-    def state(self):
-        return self._act_con.get_state()
-
-    @property
-    def nmdev_state(self):
-        return (
-            self._nmdev.get_state() if self._nmdev else NM.DeviceState.UNKNOWN
-        )
-
-    def remove_handlers(self):
-        for handler_id in self.handlers:
-            self.nm_active_connection.handler_disconnect(handler_id)
-        self.handlers = set()
-        for handler_id in self.device_handlers:
-            self.nmdevice.handler_disconnect(handler_id)
-        self.device_handlers = set()
 
 
 def _is_device_master_type(nmdev):

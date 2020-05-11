@@ -19,7 +19,6 @@
 from contextlib import contextmanager
 
 from libnmstate import error
-from libnmstate import nm
 
 
 class MainloopTestError(Exception):
@@ -27,11 +26,9 @@ class MainloopTestError(Exception):
 
 
 @contextmanager
-def mainloop():
-    mloop = nm.mainloop.mainloop()
+def main_context(ctx):
     yield
     try:
-        mloop.run(timeout=15)
+        ctx.wait_all_finish()
     except error.NmstateLibnmError as ex:
-        nm.mainloop.mainloop(refresh=True)
         raise MainloopTestError(str(ex.args))
