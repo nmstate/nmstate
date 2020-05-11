@@ -54,7 +54,7 @@ def get_running(acs_and_ip_cfgs):
         if not ip_cfg.props.routes:
             continue
         iface_name = nm_ac.ActiveConnection(
-            active_connection=active_connection
+            nm_ac_con=active_connection
         ).devname
         if not iface_name:
             raise NmstateInternalError(
@@ -90,7 +90,7 @@ def get_config(acs_and_ip_profiles):
         if not nm_routes and not gateway:
             continue
         iface_name = nm_ac.ActiveConnection(
-            active_connection=active_connection
+            nm_ac_con=active_connection
         ).devname
         if not iface_name:
             raise NmstateInternalError(

@@ -127,14 +127,14 @@ def _create_port_vlans_setting(val):
     return (vlan_config for vlan_config in port_vlan_config.to_nm())
 
 
-def get_info(nm_client, nmdev):
+def get_info(context, nmdev):
     """
     Provides the current active values for a device
     """
     info = {}
     if nmdev.get_device_type() != NM.DeviceType.BRIDGE:
         return info
-    bridge_setting = _get_bridge_setting(nm_client, nmdev)
+    bridge_setting = _get_bridge_setting(context, nmdev)
     if not bridge_setting:
         return info
 
@@ -167,9 +167,9 @@ def get_slaves(nm_device):
     return nm_device.get_slaves()
 
 
-def _get_bridge_setting(nm_client, nmdev):
+def _get_bridge_setting(context, nmdev):
     bridge_setting = None
-    bridge_con_profile = connection.ConnectionProfile(nm_client)
+    bridge_con_profile = connection.ConnectionProfile(context)
     bridge_con_profile.import_by_device(nmdev)
     if bridge_con_profile.profile:
         bridge_setting = bridge_con_profile.profile.get_setting_bridge()

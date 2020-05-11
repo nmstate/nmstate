@@ -26,7 +26,6 @@ from . import device
 from . import dns
 from . import ipv4
 from . import ipv6
-from . import mainloop
 from . import ovs
 from . import translator
 from . import user
@@ -49,5 +48,4 @@ translator
 user
 vlan
 wired
-mainloop
 NetworkManagerPlugin

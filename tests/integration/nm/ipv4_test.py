@@ -22,7 +22,7 @@ from libnmstate.schema import InterfaceIPv4
 
 from ..testlib import iproutelib
 from ..testlib.retry import retry_till_true_or_timeout
-from .testlib import mainloop
+from .testlib import main_context
 
 
 TEST_IFACE = "eth1"
@@ -34,14 +34,14 @@ RETRY_TIMEOUT = 5
 
 def _ip_state_is_expected(nm_plugin, expected_state):
     nm_plugin.refresh_content()
-    ipv4_current_state = _get_ipv4_current_state(nm_plugin.client, TEST_IFACE)
+    ipv4_current_state = _get_ipv4_current_state(nm_plugin.context, TEST_IFACE)
     return ipv4_current_state == expected_state
 
 
 @iproutelib.ip_monitor_assert_stable_link_up(TEST_IFACE)
 def test_interface_ipv4_change(eth1_up, nm_plugin):
     _modify_interface(
-        nm_plugin.client,
+        nm_plugin.context,
         ipv4_state={
             InterfaceIPv4.ENABLED: True,
             InterfaceIPv4.DHCP: False,
@@ -71,7 +71,7 @@ def test_interface_ipv4_change(eth1_up, nm_plugin):
 
 def test_enable_dhcp_with_no_server(eth1_up, nm_plugin):
     _modify_interface(
-        nm_plugin.client,
+        nm_plugin.context,
         ipv4_state={
             InterfaceIPv4.ENABLED: True,
             InterfaceIPv4.DHCP: True,
@@ -92,20 +92,21 @@ def test_enable_dhcp_with_no_server(eth1_up, nm_plugin):
     )
 
 
-def _modify_interface(client, ipv4_state):
-    conn = nm.connection.ConnectionProfile(client)
+def _modify_interface(ctx, ipv4_state):
+    conn = nm.connection.ConnectionProfile(ctx)
     conn.import_by_id(TEST_IFACE)
     settings = _create_iface_settings(ipv4_state, conn)
-    new_conn = nm.connection.ConnectionProfile(client)
+    new_conn = nm.connection.ConnectionProfile(ctx)
     new_conn.create(settings)
-    with mainloop():
+    with main_context(ctx):
         conn.update(new_conn)
-        nmdev = nm.device.get_device_by_name(client, TEST_IFACE)
-        nm.device.modify(client, nmdev, new_conn.profile)
+        ctx.wait_all_finish()
+        nmdev = ctx.get_nm_dev(TEST_IFACE)
+        nm.device.modify(ctx, nmdev, new_conn.profile)
 
 
-def _get_ipv4_current_state(client, ifname):
-    nmdev = nm.device.get_device_by_name(client, ifname)
+def _get_ipv4_current_state(ctx, ifname):
+    nmdev = ctx.get_nm_dev(ifname)
     active_connection = nm.connection.get_device_active_connection(nmdev)
     return nm.ipv4.get_info(active_connection)
 

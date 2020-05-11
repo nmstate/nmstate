@@ -99,9 +99,11 @@ def _extra_ip_config(iface_name, key, value):
         _apply_extra_ip_config(iface_name, key, old_value)
 
 
-def _apply_extra_ip_config(uuid, key, value):
+def _apply_extra_ip_config(iface_name, key, value):
     assert (
-        cmdlib.exec_cmd(["nmcli", "connection", "modify", uuid, key, value])[0]
+        cmdlib.exec_cmd(
+            ["nmcli", "connection", "modify", iface_name, key, value]
+        )[0]
         == 0
     )
 

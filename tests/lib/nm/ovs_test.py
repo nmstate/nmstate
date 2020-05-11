@@ -32,19 +32,13 @@ def NM_mock():
 
 
 @pytest.fixture
-def client_mock():
+def context_mock():
     yield mock.MagicMock()
 
 
 @pytest.fixture
 def nm_connection_mock():
     with mock.patch.object(nm.ovs, "connection") as m:
-        yield m
-
-
-@pytest.fixture
-def nm_device_mock():
-    with mock.patch.object(nm.ovs, "device") as m:
         yield m
 
 
@@ -63,12 +57,12 @@ def test_is_ovs_interface_type_id(NM_mock):
     assert nm.ovs.is_ovs_interface_type_id(type_id)
 
 
-def test_get_ovs_info_without_ports(client_mock, nm_connection_mock, NM_mock):
+def test_get_ovs_info_without_ports(context_mock, nm_connection_mock, NM_mock):
     bridge_device = mock.MagicMock()
     _mock_port_profile(nm_connection_mock)
 
     device_info = [(bridge_device, None)]
-    info = nm.ovs.get_ovs_info(client_mock, bridge_device, device_info)
+    info = nm.ovs.get_ovs_info(context_mock, bridge_device, device_info)
 
     expected_info = {
         OVSBridge.PORT_SUBTREE: [],
@@ -83,7 +77,7 @@ def test_get_ovs_info_without_ports(client_mock, nm_connection_mock, NM_mock):
 
 
 def test_get_ovs_info_with_ports_without_interfaces(
-    nm_connection_mock, nm_device_mock, NM_mock, client_mock
+    nm_connection_mock, NM_mock, context_mock
 ):
     bridge_device = mock.MagicMock()
     port_device = mock.MagicMock()
@@ -92,7 +86,7 @@ def test_get_ovs_info_with_ports_without_interfaces(
     active_con.props.master = bridge_device
 
     device_info = [(bridge_device, None), (port_device, None)]
-    info = nm.ovs.get_ovs_info(client_mock, bridge_device, device_info)
+    info = nm.ovs.get_ovs_info(context_mock, bridge_device, device_info)
 
     expected_info = {
         OVSBridge.PORT_SUBTREE: [],
@@ -107,13 +101,13 @@ def test_get_ovs_info_with_ports_without_interfaces(
 
 
 def test_get_ovs_info_with_ports_with_interfaces(
-    nm_connection_mock, nm_device_mock, NM_mock, client_mock
+    nm_connection_mock, NM_mock, context_mock
 ):
     bridge_device = mock.MagicMock()
     port_device = mock.MagicMock()
     bridge_active_con = mock.MagicMock()
     port_active_con = mock.MagicMock()
-    nm_device_mock.get_device_by_name.return_value = port_device
+    context_mock.get_nm_dev.return_value = port_device
     _mock_port_profile(nm_connection_mock)
     nm_connection_mock.get_device_active_connection = (
         lambda dev: bridge_active_con
@@ -124,7 +118,7 @@ def test_get_ovs_info_with_ports_with_interfaces(
     port_active_con.props.master = port_device
 
     device_info = [(bridge_device, None), (port_device, None)]
-    info = nm.ovs.get_ovs_info(client_mock, bridge_device, device_info)
+    info = nm.ovs.get_ovs_info(context_mock, bridge_device, device_info)
 
     assert len(info[OVSBridge.PORT_SUBTREE]) == 1
     port_state = info[OVSBridge.PORT_SUBTREE][0]

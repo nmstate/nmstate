@@ -17,8 +17,6 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
-from contextlib import contextmanager
-
 import copy
 import time
 
@@ -28,12 +26,9 @@ from libnmstate import state
 from libnmstate import validator
 from libnmstate.error import NmstateConflictError
 from libnmstate.error import NmstateError
-from libnmstate.error import NmstateLibnmError
 from libnmstate.error import NmstatePermissionError
 from libnmstate.error import NmstateValueError
 from libnmstate.error import NmstateVerificationError
-
-from libnmstate.nm import mainloop as nm_mainloop
 
 from .nmstate import plugin_context
 from .nmstate import show_with_plugin
@@ -148,14 +143,13 @@ def _apply_ifaces_state(
         with nm.checkpoint.CheckPoint(
             plugin.context, autodestroy=commit, timeout=rollback_timeout
         ) as checkpoint:
-            with _setup_providers():
-                state2edit = state.State(desired_state.state)
-                state2edit.merge_interfaces(current_state)
-                nm.applier.apply_changes(
-                    plugin.client,
-                    list(state2edit.interfaces.values()),
-                    original_desired_state,
-                )
+            state2edit = state.State(desired_state.state)
+            state2edit.merge_interfaces(current_state)
+            nm.applier.apply_changes(
+                plugin.context,
+                list(state2edit.interfaces.values()),
+                original_desired_state,
+            )
             verified = False
             if verify_change:
                 for _ in range(VERIFY_RETRY_TIMEOUT):
@@ -189,14 +183,3 @@ def _verify_change(plugin, desired_state):
     verifiable_desired_state.verify_routes(current_state)
     verifiable_desired_state.verify_dns(current_state)
     verifiable_desired_state.verify_route_rule(current_state)
-
-
-@contextmanager
-def _setup_providers():
-    mainloop = nm_mainloop.mainloop()
-    yield
-    try:
-        mainloop.run(timeout=MAINLOOP_TIMEOUT)
-    except NmstateLibnmError:
-        nm_mainloop.mainloop(refresh=True)
-        raise

@@ -82,7 +82,7 @@ def test_iface_admin_state_change(
     applier_mock.apply_changes.assert_has_calls(
         [
             mock.call(
-                plugin_context_mock().client,
+                plugin_context_mock().context,
                 desired_config[Interface.KEY],
                 State(desired_config),
             )
@@ -116,7 +116,7 @@ def test_add_new_bond(
 
     m_apply_changes = netapplier_nm_mock.applier.apply_changes
     m_apply_changes.assert_called_once_with(
-        plugin_context_mock().client,
+        plugin_context_mock().context,
         desired_config[Interface.KEY],
         State(desired_config),
     )
@@ -153,7 +153,7 @@ def test_edit_existing_bond(
 
     m_apply_changes = netapplier_nm_mock.applier.apply_changes
     m_apply_changes.assert_called_once_with(
-        plugin_context_mock().client,
+        plugin_context_mock().context,
         desired_config[Interface.KEY],
         State(desired_config),
     )
