@@ -47,8 +47,17 @@ setup(
     packages=find_packages(),
     install_requires=requirements(),
     entry_points={
-        "console_scripts": ["nmstatectl = nmstatectl.nmstatectl:main"]
+        "console_scripts": [
+            "nmstatectl = nmstatectl.nmstatectl:main",
+            "io.nmstate = libnmstate.varlink:main",
+        ]
     },
-    package_data={"libnmstate": ["schemas/operational-state.yaml", "VERSION"]},
+    package_data={
+        "libnmstate": [
+            "schemas/operational-state.yaml",
+            "VERSION",
+            "varlink/io.nmstate.varlink",
+        ],
+    },
     data_files=gen_manpage(),
 )

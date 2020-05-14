@@ -1,0 +1,61 @@
+#
+# Copyright (c) 2020 Red Hat, Inc.
+#
+# This file is part of nmstate
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, either version 2.1 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this program. If not, see <https://www.gnu.org/licenses/>.
+#
+
+# Interface definition
+interface io.nmstate
+
+# Method definition
+method Show(arguments: [string]object) -> (
+    state: ?object,
+    log: []object
+)
+
+method Apply(arguments: [string]object) -> (
+    result: ?object,
+    log: []object
+)
+
+method Commit(arguments: [string]object) -> (
+    result: ?object,
+    log: []object
+)
+
+method Rollback(arguments: [string]object) -> (
+    result: ?object,
+    log: []object
+)
+
+# Error definition
+error NmstateValueError (error_message: string, log: []object)
+
+error NmstatePermissionError (error_message: string, log: []object)
+
+error NmstateConflictError (error_message: string, log: []object)
+
+error NmstateError (error_message: string, log: []object)
+
+error NmstateLibnmError (error_message: string, log: []object)
+
+error NmstateVerificationError (error_message: string, log: []object)
+
+error NmstateNotImplementedError (error_message: string, log: []object)
+
+error NmstateInternalError (error_message: string, log: []object)
+
+error NmstateDependencyError (error_message: string, log: []object)

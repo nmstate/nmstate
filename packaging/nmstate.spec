@@ -41,11 +41,19 @@ Requires:       python3-%{libname} = %{?epoch:%{epoch}:}%{version}-%{release}
 # hence state it as Recommends, no requires.
 Requires:     python3dist(ovs)
 
+%package -n nmstate-varlink
+Summary:        Varlink support for libnmstate
+Requires:       python3dist(varlink)
+
+
 %description -n python3-%{libname}
 This package contains the Python 3 library for Nmstate.
 
 %description -n nmstate-plugin-ovsdb
 This package contains the nmstate plugin for OVS database manipulation.
+
+%description -n nmstate-varlink
+This package provides varlink support for libnmstate.
 
 %prep
 %setup -q
@@ -73,6 +81,10 @@ This package contains the nmstate plugin for OVS database manipulation.
 %files -n nmstate-plugin-ovsdb
 %{python3_sitelib}/%{libname}/plugins/nmstate_plugin_ovsdb*
 %{python3_sitelib}/%{libname}/plugins/__pycache__/nmstate_plugin_ovsdb*
+
+%files -n nmstate-varlink
+%{_bindir}/io.nmstate
+
 
 %changelog
 @CHANGELOG@

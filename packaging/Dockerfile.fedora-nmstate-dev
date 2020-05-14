@@ -38,6 +38,8 @@ RUN dnf -y install dnf-plugins-core && \
                    glib2-devel \
                    gobject-introspection-devel \
                    python3-devel \
+                   python3-varlink \
+                   libvarlink-util \
                    make && \
                    \
     dnf clean all && \
