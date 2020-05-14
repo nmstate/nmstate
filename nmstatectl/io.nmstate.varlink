@@ -1,0 +1,92 @@
+#
+# Copyright (c) 2020 Red Hat, Inc.
+#
+# This file is part of nmstate
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, either version 2.1 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this program. If not, see <https://www.gnu.org/licenses/>.
+#
+
+# Interface definition
+interface io.nmstate
+
+# Types definition
+type Logs (
+    time: string,
+    level: string,
+    message: string
+)
+
+# Method definition
+method Show(arguments: [string]object) -> (
+    state: ?object,
+    log: []Logs
+)
+
+method Apply(arguments: [string]object) -> (
+    log: []Logs
+)
+
+method Commit(arguments: [string]object) -> (
+    log: []Logs
+)
+
+method Rollback(arguments: [string]object) -> (
+    log: []Logs
+)
+
+# Errors definition
+error NmstateValueError (
+    error_message: string,
+    log: []Logs
+)
+
+error NmstatePermissionError (
+    error_message: string,
+    log: []Logs
+)
+
+error NmstateConflictError (
+    error_message: string,
+    log: []Logs
+)
+
+error NmstateError (
+    error_message: string,
+    log: []Logs
+)
+
+error NmstateLibnmError (
+    error_message: string,
+    log: []Logs
+)
+
+error NmstateVerificationError (
+    error_message: string,
+    log: []Logs
+)
+
+error NmstateNotImplementedError (
+    error_message: string,
+    log: []Logs
+)
+
+error NmstateInternalError (
+    error_message: string,
+    log: []Logs
+)
+
+error NmstateDependencyError (
+    error_message: string,
+    log: []Logs
+)
