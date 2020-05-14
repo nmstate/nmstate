@@ -13,6 +13,7 @@ BuildArch:      noarch
 BuildRequires:  python3-devel
 BuildRequires:  python3-setuptools
 Requires:       python3-%{libname} = %{?epoch:%{epoch}:}%{version}-%{release}
+BuildRequires:  systemd-rpm-macros
 
 %description
 Nmstate is a library with an accompanying command line tool that manages host
@@ -58,11 +59,18 @@ This package provides varlink support for libnmstate.
 %prep
 %setup -q
 
+%preun
+%systemd_preun nmstate-varlink.service
+
 %build
 %py3_build
 
 %install
 %py3_install
+mkdir -p %{buildroot}%{_unitdir} && cp -a %{buildroot}%{python3_sitelib}/nmstatectl/nmstate-varlink.service %{buildroot}%{_unitdir}/
+
+%post
+%systemd_post nmstate-varlink.service
 
 %files
 %doc README.md
@@ -81,6 +89,10 @@ This package provides varlink support for libnmstate.
 %files -n nmstate-plugin-ovsdb
 %{python3_sitelib}/%{libname}/plugins/nmstate_plugin_ovsdb*
 %{python3_sitelib}/%{libname}/plugins/__pycache__/nmstate_plugin_ovsdb*
+
+%files -n nmstate-varlink
+%{_unitdir}/nmstate-varlink.service
+
 
 %changelog
 @CHANGELOG@

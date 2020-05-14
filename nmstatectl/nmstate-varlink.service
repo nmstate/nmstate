@@ -1,0 +1,35 @@
+#
+# Copyright (c) 2020 Red Hat, Inc.
+#
+# This file is part of nmstate
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, either version 2.1 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this program. If not, see <https://www.gnu.org/licenses/>.
+#
+
+[Unit]
+Description= Varlink service of nmstate
+Documentation=https://www.nmstate.io/devel/libnmstate-varlink.html
+After=multi-user.target
+Requires=NetworkManager.service
+ConditionPathExists=/usr/bin/nmstatectl
+
+[Service]
+Type=simple
+User=root
+RuntimeDirectory=nmstate
+ExecStart=/usr/bin/nmstatectl varlink /run/nmstate/nmstate.so
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

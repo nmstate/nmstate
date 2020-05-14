@@ -51,7 +51,7 @@ setup(
     },
     package_data={
         "libnmstate": ["schemas/operational-state.yaml", "VERSION"],
-        "nmstatectl": ["io.nmstate.varlink"],
+        "nmstatectl": ["io.nmstate.varlink", "nmstate-varlink.service"],
     },
     data_files=gen_manpage(),
 )
