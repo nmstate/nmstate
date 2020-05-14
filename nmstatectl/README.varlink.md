@@ -7,7 +7,14 @@ User can initate nmstate-varlink services using ```nmstatectl``` command-line to
 
 unix socket connection
 ```bash
-$ nmstatectl varlink /run/nmstate.so &
+$ sudo nmstatectl varlink /run/nmstate.so &
+```
+
+Nmstate-varlink systemd services default listening address is ```unix:/run/nmstate/nmstate.so```
+systemd service initiation
+
+```bash
+$ sudo systemctl start nmstate-varlink.service
 ```
 
 After the `io.nmstate` interface is resolved using varlink resolver. Methods can be called directly via stdin/out without specifying the connection.
@@ -21,16 +28,12 @@ Using libnmstate show function via varlink (query network state)
 Required for varlink stdin/out operation
 
 ```bash
-$ dnf install libvarlink-utils
+$ sudo dnf install libvarlink-utils
 ```
 
 Varlink stdin/out:
 ```bash
-$ varlink call unix:/run/nmstate.so/io.nmstate.Show
-
-# If interface is resolved using the varlink resolver
-
-$ varlink call io.nmstate.Show
+$ sudo varlink call unix:/run/nmstate.so/io.nmstate.Show
 ```
 
 Varlink python client:
@@ -97,11 +100,8 @@ JSON output: libnmstate current network is reported under "state" object.
 Using libnmstate apply function via varlink (query network state)
 
 Varlink stdin/out:
-state should be passed in json string format and varlink doesn't support passing json file.
-
 ```bash
-$ varlink call unix:/run/nmstate.so/io.nmstate.Apply '{"arguments": {"desired_state": {"interfaces": [{"name": "foo", "type": "dummy", "state": "up", "ipv4": {"enabled": false}, "ipv6": {"enabled": false}}]} } }'
-
+$ sudo varlink call unix:/run/nmstate.so/io.nmstate.Apply '{"arguments": {"desired_state": {"interfaces": [{"name": "foo", "type": "dummy", "state": "up", "ipv4": {"enabled": false}, "ipv6": {"enabled": false}}]} } }'
 ```
 * When using the varlink client it is not requried specify the "argument" parameter.
 

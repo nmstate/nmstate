@@ -23,6 +23,8 @@ import subprocess
 import sys
 import json
 import libnmstate
+import os
+import time
 
 from nmstatectl.nmstate_varlink import gen_varlink_server
 from libnmstate.schema import Interface
@@ -33,6 +35,18 @@ from libnmstate.schema import InterfaceIPv6
 
 
 VARLINK_INTERFACE = "io.nmstate"
+
+APPLY_STATE = {
+    Interface.KEY: [
+        {
+            Interface.NAME: "varlink_test",
+            Interface.TYPE: InterfaceType.DUMMY,
+            Interface.STATE: InterfaceState.UP,
+            Interface.IPV4: {InterfaceIPv4.ENABLED: False},
+            Interface.IPV6: {InterfaceIPv6.ENABLED: False},
+        }
+    ]
+}
 
 
 @pytest.fixture(
@@ -45,6 +59,17 @@ def server(request):
     yield server
     server.shutdown()
     server.server_close()
+
+
+@pytest.fixture(
+    params=["unix:/run/nmstate/nmstate.so"], ids=["systemd_unix_connection"],
+)
+def systemd_service(request):
+    if os.system("systemctl is-active nmstate-varlink.service") != 0:
+        os.system("systemctl start nmstate-varlink.service")
+        time.sleep(1)
+    yield request.param
+    os.system("systemctl stop nmstate-varlink.service")
 
 
 def _format_address(server_address):
@@ -61,30 +86,19 @@ def test_varlink_show(server):
 
 
 def test_varlink_apply_state(server):
-    apply_state = {
-        Interface.KEY: [
-            {
-                Interface.NAME: "varlink_test",
-                Interface.TYPE: InterfaceType.DUMMY,
-                Interface.STATE: InterfaceState.UP,
-                Interface.IPV4: {InterfaceIPv4.ENABLED: False},
-                Interface.IPV6: {InterfaceIPv6.ENABLED: False},
-            }
-        ]
-    }
     with varlink.Client(_format_address(server.server_address)).open(
         VARLINK_INTERFACE, namespaced=False
     ) as con:
-        con._call("Apply", {"desired_state": apply_state})
+        con._call("Apply", {"desired_state": APPLY_STATE})
         lib_state = libnmstate.show()
         assert any(
             interface
             for interface in lib_state[Interface.KEY]
             if interface[Interface.NAME]
-            == apply_state[Interface.KEY][0][Interface.NAME]
+            == APPLY_STATE[Interface.KEY][0][Interface.NAME]
         )
-        apply_state[Interface.KEY][0][Interface.STATE] = InterfaceState.DOWN
-        libnmstate.apply(apply_state)
+        APPLY_STATE[Interface.KEY][0][Interface.STATE] = InterfaceState.DOWN
+        libnmstate.apply(APPLY_STATE)
 
 
 def test_varlink_apply_with_none_state(server):
@@ -123,3 +137,29 @@ def test_varlink_activation_mode():
     )
     parsed_out = json.loads(output)
     assert parsed_out["state"] == lib_state
+
+
+def test_systemd_varlink_show(systemd_service):
+    lib_state = libnmstate.show()
+    with varlink.Client(systemd_service).open(
+        VARLINK_INTERFACE, namespaced=False
+    ) as con:
+        varlink_state = con._call("Show")
+        assert varlink_state["state"] == lib_state
+
+
+def test_systemd_varlink_apply_state(systemd_service):
+    APPLY_STATE[Interface.KEY][0][Interface.STATE] = InterfaceState.UP
+    with varlink.Client(systemd_service).open(
+        VARLINK_INTERFACE, namespaced=False
+    ) as con:
+        con._call("Apply", {"desired_state": APPLY_STATE})
+        lib_state = libnmstate.show()
+        assert any(
+            interface
+            for interface in lib_state[Interface.KEY]
+            if interface[Interface.NAME]
+            == APPLY_STATE[Interface.KEY][0][Interface.NAME]
+        )
+        APPLY_STATE[Interface.KEY][0][Interface.STATE] = InterfaceState.DOWN
+        libnmstate.apply(APPLY_STATE)
