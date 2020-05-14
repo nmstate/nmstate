@@ -49,6 +49,12 @@ setup(
     entry_points={
         "console_scripts": ["nmstatectl = nmstatectl.nmstatectl:main"]
     },
-    package_data={"libnmstate": ["schemas/operational-state.yaml", "VERSION"]},
+    package_data={
+        "libnmstate": [
+            "schemas/operational-state.yaml",
+            "VERSION",
+            "varlink/io.nmstate.varlink",
+        ],
+    },
     data_files=gen_manpage(),
 )

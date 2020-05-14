@@ -36,6 +36,7 @@ from libnmstate.error import NmstateValueError
 from libnmstate.schema import Interface
 from libnmstate.schema import Route
 from libnmstate.schema import RouteRule
+from libnmstate.varlink import run_server
 
 
 def main():
@@ -53,6 +54,7 @@ def main():
     setup_subcommand_set(subparsers)
     setup_subcommand_show(subparsers)
     setup_subcommand_version(subparsers)
+    setup_subcommand_varlink(subparsers)
     parser.add_argument(
         "--version", action="store_true", help="Display nmstate version"
     )
@@ -186,6 +188,16 @@ def setup_subcommand_version(subparsers):
     parser_version.set_defaults(func=version)
 
 
+def setup_subcommand_varlink(subparsers):
+    parser_varlink = subparsers.add_parser(
+        "varlink", help="Varlink support for libnmstate"
+    )
+    parser_varlink.add_argument(
+        "address", type=str, help="Unix socket address e.g: /run/nmstate"
+    )
+    parser_varlink.set_defaults(func=run_varlink_server)
+
+
 def version(args):
     print(libnmstate.__version__)
 
@@ -269,6 +281,13 @@ def apply(args):
     else:
         sys.stderr.write("ERROR: No state specified\n")
         return 1
+
+
+def run_varlink_server(args):
+    try:
+        run_server(args.address)
+    except Exception as exception:
+        logging.exception(exception)
 
 
 def apply_state(statedata, verify_change, commit, timeout, save_to_disk):
