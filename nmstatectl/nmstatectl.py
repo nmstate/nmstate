@@ -35,6 +35,7 @@ from libnmstate.error import NmstatePermissionError
 from libnmstate.error import NmstateValueError
 from libnmstate.schema import Interface
 from libnmstate.schema import Route
+from nmstatectl.nmstate_varlink import start_varlink_server
 
 
 def main():
@@ -51,6 +52,7 @@ def main():
     setup_subcommand_rollback(subparsers)
     setup_subcommand_set(subparsers)
     setup_subcommand_show(subparsers)
+    setup_subcommand_varlink(subparsers)
 
     if len(sys.argv) == 1:
         parser.print_usage()
@@ -157,6 +159,16 @@ def setup_subcommand_show(subparsers):
     )
 
 
+def setup_subcommand_varlink(subparsers):
+    parser_varlink = subparsers.add_parser(
+        "varlink", help="Varlink support for libnmstate"
+    )
+    parser_varlink.add_argument(
+        "address", type=str, help="Unix socket address e.g: /run/nmstate"
+    )
+    parser_varlink.set_defaults(func=run_varlink_server)
+
+
 def commit(args):
     try:
         libnmstate.commit(checkpoint=args.checkpoint)
@@ -222,6 +234,13 @@ def apply(args):
     else:
         sys.stderr.write("ERROR: No state specified\n")
         return 1
+
+
+def run_varlink_server(args):
+    try:
+        start_varlink_server(args.address)
+    except Exception as exception:
+        logging.exception(exception)
 
 
 def apply_state(statedata, verify_change, commit, timeout):

@@ -35,6 +35,9 @@ RUN dnf -y install --setopt=install_weak_deps=False \
                    glib2-devel \
                    gobject-introspection-devel \
                    python3-devel \
+                   python3-varlink \
+                   libvarlink-util \
+                   make && \
                    \
                    # Below package for pip (used by tox) to build dbus-python
                    make \

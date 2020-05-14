@@ -1,18 +1,20 @@
 FROM docker.io/library/centos:8
 
-RUN dnf -y install dnf-plugins-core epel-release && \
+RUN dnf install -y centos-release-stream && \
+    dnf update -y && \
+    dnf -y install dnf-plugins-core epel-release && \
     dnf config-manager --set-enabled PowerTools && \
     dnf copr enable nmstate/ovs-el8 -y && \
-    dnf copr enable networkmanager/NetworkManager-1.22 -y && \
+    dnf copr enable nmstate/nispor -y && \
     dnf -y install --setopt=install_weak_deps=False \
                    NetworkManager \
                    NetworkManager-ovs \
                    NetworkManager-team \
                    NetworkManager-config-server \
                    openvswitch2.11 \
+                   python3-openvswitch2.11 \
                    systemd-udev \
                    python3-devel \
-                   python3-dbus \
                    python3-gobject-base \
                    python3-jsonschema \
                    python3-pyyaml \
@@ -25,17 +27,24 @@ RUN dnf -y install dnf-plugins-core epel-release && \
                    python3-pytest \
                    python3-pytest-cov \
                    python3-virtualenv \
+                   python3-tox \
+                   python3-coveralls \
+                   python3-requests \
+                   python3-docopt \
+                   python3-nispor \
+                   python3-varlink \
                    libvarlink-util \
+                   tcpreplay \
                    && \
-    pip3 install python-coveralls tox==3.5.3 --user && \
     alternatives --set python /usr/bin/python3 && \
-    ln -s /root/.local/bin/tox /usr/bin/tox && \
     ln -s /usr/bin/pytest-3 /usr/bin/pytest && \
     dnf clean all && \
     systemctl enable openvswitch && \
     sed -i -e 's/^#RateLimitInterval=.*/RateLimitInterval=0/' \
     -e 's/^#RateLimitBurst=.*/RateLimitBurst=0/' \
     /etc/systemd/journald.conf
+
+RUN rpm --verifydb
 
 COPY network_manager_enable_trace.conf \
      /etc/NetworkManager/conf.d/97-trace-logging.conf

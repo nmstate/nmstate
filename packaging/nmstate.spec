@@ -35,8 +35,16 @@ Suggests:       NetworkManager-ovs
 Suggests:       NetworkManager-team
 
 
+%package -n nmstate-varlink
+Summary:        Varlink support for libnmstate
+Requires:       python3dist(varlink)
+
+
 %description -n python3-%{libname}
 This package contains the Python 3 library for Nmstate.
+
+%description -n nmstate-varlink
+This package provides varlink support for libnmstate.
 
 %prep
 %setup -q
