@@ -32,7 +32,9 @@ def disable_nm_plugin(plugin):
     except CalledProcessError:
         yield
     else:
-        lib_path = [l for l in rpm_output.split() if l.endswith(".so")][0]
+        lib_path = [lib for lib in rpm_output.split() if lib.endswith(".so")][
+            0
+        ]
         with mount_devnull_to_path(lib_path):
             yield
 

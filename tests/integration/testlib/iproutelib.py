@@ -86,7 +86,9 @@ def get_non_up_events(result, dev):
     :return: List of non UP events
     """
     return [
-        l for l in result.out.split("\n") if "state UP" not in l and dev in l
+        line
+        for line in result.out.split("\n")
+        if "state UP" not in line and dev in line
     ]
 
 
