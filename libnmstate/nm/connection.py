@@ -319,9 +319,9 @@ class ConnectionProfile:
             self._activation_clean_up()
             self._ctx.finish_async(action)
         elif not self._is_activating():
-            reason = self._nm_ac.get_state_reason()
+            reason = f"{self._nm_ac.get_state_reason()}"
             if self.nmdevice:
-                reason += "f{self.nmdevice.get_state_reason()}"
+                reason += f" {self.nmdevice.get_state_reason()}"
             self._activation_clean_up()
             self._ctx.fail(
                 NmstateLibnmError(f"{action} failed: reason={reason}")
