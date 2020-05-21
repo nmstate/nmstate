@@ -78,3 +78,8 @@ def test_creating_a_checkpoint_from_dbuspath(nm_context):
     )
     new_checkpoint.destroy()
     assert not get_checkpoints(nm_context.client)
+
+
+def test_repeat_create_destroy_checkpoint(nm_context):
+    for _ in range(0, 1000):
+        CheckPoint(nm_context)

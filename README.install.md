@@ -36,7 +36,7 @@ systemctl enable --now NetworkManager openvswitch
 Minimal Nmstate installation:
 ``` shell
 # install binary dependencies
-yum install -y python3-dbus python3-gobject-base
+yum install -y python3-gobject-base
 yum install -y python3-pip
 pip3 uninstall -y nmstate; pip3 install nmstate
 ```
