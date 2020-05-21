@@ -222,7 +222,7 @@ class ConnectionProfile:
             elif self._is_activating():
                 self._wait_ac_activation(action)
                 if self._nm_dev:
-                    self._wait_dev_activation(action)
+                    self.wait_dev_activation(action)
             else:
                 if self._nm_dev:
                     error_msg = (
@@ -257,7 +257,7 @@ class ConnectionProfile:
             )
         )
 
-    def _wait_dev_activation(self, action):
+    def wait_dev_activation(self, action):
         if self._nm_dev:
             self._dev_handlers.add(
                 self._nm_dev.connect(
@@ -295,7 +295,7 @@ class ConnectionProfile:
             logging.debug(f"The NM.Device of profile {devname} changed")
             self._remove_dev_handlers()
             self._nm_dev = cur_nm_dev
-            self._wait_dev_activation(action)
+            self.wait_dev_activation(action)
 
         cur_nm_ac = get_device_active_connection(self.nmdevice)
         if cur_nm_ac and cur_nm_ac != self._nm_ac:

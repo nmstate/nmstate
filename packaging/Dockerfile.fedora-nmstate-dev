@@ -8,7 +8,6 @@ RUN dnf -y install --setopt=install_weak_deps=False \
                    openvswitch \
                    systemd-udev \
                    \
-                   python3-dbus \
                    python3-gobject-base \
                    python3-jsonschema \
                    python3-pyyaml \
@@ -35,10 +34,8 @@ RUN dnf -y install --setopt=install_weak_deps=False \
                    glib2-devel \
                    gobject-introspection-devel \
                    python3-devel \
+                   make && \
                    \
-                   # Below package for pip (used by tox) to build dbus-python
-                   make \
-                   dbus-devel && \
     dnf clean all && \
     systemctl enable openvswitch && \
     sed -i -e 's/^#RateLimitInterval=.*/RateLimitInterval=0/' \

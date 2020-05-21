@@ -23,6 +23,7 @@ import time
 
 
 from libnmstate import __version__
+from libnmstate.error import NmstateConflictError
 from libnmstate.schema import Constants
 
 from .testlib import assertlib
@@ -189,10 +190,14 @@ def test_dual_change(eth1_up):
 
         assert_command(CONFIRMATION_SET)
         assertlib.assert_state(CONFIRMATION_TEST_STATE)
-        assert_command(CONFIRMATION_SET, os.EX_UNAVAILABLE)
 
-        assert_command(ROLLBACK_CMD)
-        assertlib.assert_state(clean_state)
+        try:
+            cmdlib.exec_cmd(CONFIRMATION_SET)
+        except Exception as e:
+            assert isinstance(e, NmstateConflictError)
+        finally:
+            assert_command(ROLLBACK_CMD)
+            assertlib.assert_state(clean_state)
 
 
 def test_automatic_rollback(eth1_up):

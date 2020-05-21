@@ -12,7 +12,6 @@ RUN dnf -y install dnf-plugins-core epel-release && \
                    openvswitch2.11 \
                    systemd-udev \
                    python3-devel \
-                   python3-dbus \
                    python3-gobject-base \
                    python3-jsonschema \
                    python3-pyyaml \

@@ -19,18 +19,11 @@
 
 import logging
 
-import dbus
-
-from .common import GLib
-
-
-DBUS_STD_PROPERTIES_IFNAME = "org.freedesktop.DBus.Properties"
-
-CHECKPOINT_CREATE_FLAG_DESTROY_ALL = 0x01
-CHECKPOINT_CREATE_FLAG_DELETE_NEW_CONNECTIONS = 0x02
-CHECKPOINT_CREATE_FLAG_DISCONNECT_NEW_DEVICES = 0x04
-
-NM_PERMISSION_DENIED = "org.freedesktop.NetworkManager.PermissionDenied"
+from libnmstate.error import NmstateConflictError
+from libnmstate.error import NmstateLibnmError
+from libnmstate.error import NmstatePermissionError
+from libnmstate.nm import connection
+from libnmstate.nm import common
 
 
 class NMCheckPointError(Exception):
@@ -45,37 +38,6 @@ class NMCheckPointPermissionError(NMCheckPointError):
     pass
 
 
-def nmdbus_manager():
-    """
-    Returns the NM manager.
-    Initializes the dbus connection and creates the manager.
-    """
-    _NMDbus.init()
-    return _NMDbusManager()
-
-
-class _NMDbus:
-    BUS_NAME = "org.freedesktop.NetworkManager"
-
-    bus = None
-
-    @staticmethod
-    def init():
-        _NMDbus.bus = dbus.SystemBus()
-
-
-class _NMDbusManager:
-    IF_NAME = "org.freedesktop.NetworkManager"
-    OBJ_PATH = "/org/freedesktop/NetworkManager"
-
-    def __init__(self):
-        mng_proxy = _NMDbus.bus.get_object(
-            _NMDbus.BUS_NAME, _NMDbusManager.OBJ_PATH
-        )
-        self.properties = dbus.Interface(mng_proxy, DBUS_STD_PROPERTIES_IFNAME)
-        self.interface = dbus.Interface(mng_proxy, _NMDbusManager.IF_NAME)
-
-
 def get_checkpoints(nm_client):
     checkpoints = [c.get_path() for c in nm_client.get_checkpoints()]
     return checkpoints
@@ -86,7 +48,6 @@ class CheckPoint:
         self, nm_context, autodestroy=True, timeout=60, dbuspath=None
     ):
         self._ctx = nm_context
-        self._manager = nmdbus_manager()
         self._timeout = timeout
         self._dbuspath = dbuspath
         self._timeout_source = None
@@ -112,26 +73,31 @@ class CheckPoint:
         devs = []
         timeout = self._timeout
         cp_flags = (
-            CHECKPOINT_CREATE_FLAG_DELETE_NEW_CONNECTIONS
-            | CHECKPOINT_CREATE_FLAG_DISCONNECT_NEW_DEVICES
+            common.NM.CheckpointCreateFlags.DELETE_NEW_CONNECTIONS
+            | common.NM.CheckpointCreateFlags.DISCONNECT_NEW_DEVICES
         )
-        try:
-            dbuspath = self._manager.interface.CheckpointCreate(
-                devs, timeout, cp_flags
-            )
-            logging.debug(
-                "Checkpoint %s created for all devices: %s", dbuspath, timeout
-            )
-            self._dbuspath = dbuspath
-        except dbus.exceptions.DBusException as e:
-            if e.get_dbus_name() == NM_PERMISSION_DENIED:
-                raise NMCheckPointPermissionError(str(e))
-            raise NMCheckPointCreationError(str(e))
 
+        self._ctx.register_async("Create checkpoint")
+        try:
+            self._ctx.client.checkpoint_create(
+                devs,
+                timeout,
+                cp_flags,
+                self._ctx.cancellable,
+                self._checkpoint_create_callback,
+                None,
+            )
+        except Exception as e:
+            raise NMCheckPointCreationError(
+                "Failed to create checkpoint: " "{}".format(e)
+            )
         self._add_checkpoint_refresh_timeout()
+        self._ctx.wait_all_finish()
 
     def _add_checkpoint_refresh_timeout(self):
-        self._timeout_source = GLib.timeout_source_new(self._timeout * 500)
+        self._timeout_source = common.GLib.timeout_source_new(
+            self._timeout * 500
+        )
         self._timeout_source.set_callback(
             self._refresh_checkpoint_timeout, None
         )
@@ -149,31 +115,152 @@ class CheckPoint:
             self._ctx.client.checkpoint_adjust_rollback_timeout(
                 self._dbuspath, self._timeout, cancellable, cb, cb_data
             )
-            return GLib.SOURCE_CONTINUE
+            return common.GLib.SOURCE_CONTINUE
         else:
-            return GLib.SOURCE_REMOVE
+            return common.GLib.SOURCE_REMOVE
 
     def destroy(self):
-        try:
-            self._manager.interface.CheckpointDestroy(self._dbuspath)
-        except dbus.exceptions.DBusException as e:
-            raise NMCheckPointError(str(e))
-        finally:
-            self._remove_checkpoint_refresh_timeout()
-        logging.debug("Checkpoint %s destroyed", self._dbuspath)
+        if self._dbuspath:
+            action = f"Destroy checkpoint {self._dbuspath}"
+            userdata = action
+            self._ctx.register_async(action)
+            try:
+                self._ctx.client.checkpoint_destroy(
+                    self._dbuspath,
+                    self._ctx.cancellable,
+                    self._checkpoint_destroy_callback,
+                    userdata,
+                )
+            except Exception as e:
+                raise NMCheckPointError(
+                    "Failed to destroy checkpoint {}: "
+                    "{}".format(self._dbuspath, e)
+                )
+            finally:
+                self._remove_checkpoint_refresh_timeout()
+            logging.debug(f"Checkpoint {self._dbuspath} destroyed")
+            self._ctx.wait_all_finish()
 
     def rollback(self):
-        try:
-            result = self._manager.interface.CheckpointRollback(self._dbuspath)
-        except dbus.exceptions.DBusException as e:
-            raise NMCheckPointError(str(e))
-        finally:
-            self._remove_checkpoint_refresh_timeout()
-        logging.debug(
-            "Checkpoint %s rollback executed: %s", self._dbuspath, result
-        )
-        return result
+        if self._dbuspath:
+            action = f"Rollback to checkpoint {self._dbuspath}"
+            userdata = action
+            self._ctx.register_async(action)
+            try:
+                self._ctx.client.checkpoint_rollback(
+                    self._dbuspath,
+                    self._ctx.cancellable,
+                    self._checkpoint_rollback_callback,
+                    userdata,
+                )
+            except Exception as e:
+                raise NMCheckPointError(
+                    "Failed to rollback checkpoint {}: {}".format(
+                        self._dbuspath, e
+                    )
+                )
+            finally:
+                self._remove_checkpoint_refresh_timeout()
+            logging.debug(f"Checkpoint {self._dbuspath} rollback executed")
+            self._ctx.wait_all_finish()
 
     @property
     def dbuspath(self):
         return self._dbuspath
+
+    def _checkpoint_create_callback(self, client, result, data):
+        try:
+            cp = client.checkpoint_create_finish(result)
+            self._dbuspath = cp.get_path()
+            if cp:
+                logging.debug(
+                    "Checkpoint {} created for all devices".format(
+                        self._dbuspath
+                    )
+                )
+                self._ctx.finish_async("Create checkpoint")
+            else:
+                error_msg = (
+                    f"dbuspath={self._dbuspath} "
+                    f"timeout={self._timeout} "
+                    f"callback result={cp}"
+                )
+                self._ctx.fail(
+                    NmstateLibnmError(f"Checkpoint create failed: {error_msg}")
+                )
+        except Exception as e:
+            if (
+                isinstance(e, common.GLib.GError)
+                # pylint: disable=no-member
+                and e.code == common.Gio.IOErrorEnum.PERMISSION_DENIED
+                # pylint: enable=no-member
+            ):
+                self._ctx.fail(
+                    NmstatePermissionError(
+                        f"Checkpoint create failed due to insufficient"
+                        " permission"
+                    )
+                )
+            elif (
+                isinstance(e, common.GLib.GError)
+                # pylint: disable=no-member
+                and e.code == common.Gio.IOErrorEnum.NO_SPACE
+                # pylint: enable=no-member
+            ):
+                self._ctx.fail(
+                    NmstateConflictError(
+                        f"Checkpoint create failed due to a"
+                        " conflict with an existing checkpoint"
+                    )
+                )
+            else:
+                self._ctx.fail(
+                    NmstateLibnmError(f"Checkpoint create failed: error={e}")
+                )
+
+    def _checkpoint_rollback_callback(self, client, result, data):
+        action = data
+        try:
+            self._check_rollback_result(client, result, self._dbuspath)
+            self._dbuspath = None
+            self._ctx.finish_async(action)
+        except Exception as e:
+            self._ctx.fail(
+                NmstateLibnmError(f"Checkpoint rollback failed: error={e}")
+            )
+
+    def _check_rollback_result(self, client, result, dbus_path):
+        ret = client.checkpoint_rollback_finish(result)
+        logging.debug(f"Checkpoint {dbus_path} rollback executed")
+        for path in ret:
+            nm_dev = client.get_device_by_path(path)
+            iface = path if nm_dev is None else nm_dev.get_iface()
+            if (
+                nm_dev.get_state() == common.NM.DeviceState.DEACTIVATING
+                and nm_dev.get_state_reason()
+                == common.NM.DeviceStateReason.NEW_ACTIVATION
+            ) or nm_dev.get_state() == common.NM.DeviceState.IP_CONFIG:
+                action = f"Waiting for rolling back {iface}"
+                self._ctx.register_async(action)
+                profile = connection.ConnectionProfile(self._ctx)
+                profile.import_by_device(nm_dev)
+                profile.wait_dev_activation(action)
+            if ret[path] != 0:
+                logging.error(f"Interface {iface} rollback failed")
+            else:
+                logging.debug(f"Interface {iface} rollback succeeded")
+
+    def _checkpoint_destroy_callback(self, client, result, data):
+        action = data
+        try:
+            client.checkpoint_destroy_finish(result)
+            logging.debug(f"Checkpoint {self._dbuspath} destroy executed")
+            self._dbuspath = None
+            self._ctx.finish_async(action)
+        except Exception as e:
+            self._ctx.fail(
+                NmstateLibnmError(
+                    f"Checkpoint {self._dbuspath} destroy failed: "
+                    f"error={e}"
+                )
+            )

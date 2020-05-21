@@ -169,10 +169,6 @@ def _apply_ifaces_state(
     except nm.checkpoint.NMCheckPointCreationError:
         raise NmstateConflictError("Error creating a check point")
     except NmstateError:
-        # Assume rollback occurred.
-        # Checkpoint rollback is async, there is a need to wait for it to
-        # finish before proceeding with other actions.
-        time.sleep(5)
         raise
 
 
