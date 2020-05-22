@@ -23,7 +23,7 @@ import pytest
 
 from libnmstate.nm.checkpoint import CheckPoint
 from libnmstate.nm.checkpoint import get_checkpoints
-from libnmstate.nm.checkpoint import NMCheckPointCreationError
+from libnmstate.nm.checkpoint import NmstateConflictError
 
 
 def test_creating_one_checkpoint(nm_context):
@@ -37,7 +37,7 @@ def test_creating_one_checkpoint(nm_context):
 def test_creating_two_checkpoints(nm_context):
     """ I cannot create a checkpoint when a checkpoint already exists. """
     with CheckPoint(nm_context) as checkpoint:
-        with pytest.raises(NMCheckPointCreationError):
+        with pytest.raises(NmstateConflictError):
             with CheckPoint(nm_context):
                 pass
 
@@ -65,9 +65,8 @@ def test_getting_a_checkpoint(nm_context):
     with CheckPoint(nm_context) as checkpoint:
         nm_context.refresh_content()
         checkpoints = get_checkpoints(nm_context.client)
-
-    assert len(checkpoints) == 1
-    assert checkpoints[0] == checkpoint.dbuspath
+        assert checkpoints[0] == checkpoint.dbuspath
+        assert len(checkpoints) == 1
 
 
 def test_creating_a_checkpoint_from_dbuspath(nm_context):
