@@ -165,7 +165,7 @@ class NmContext:
         if self._error or self._action_all_finished():
             return GLib.SOURCE_REMOVE
         idle_time = datetime.datetime.now() - self._last_async_finish_time
-        if idle_time > datetime.timedelta(IDLE_TIMEOUT):
+        if idle_time > datetime.timedelta(seconds=IDLE_TIMEOUT):
             remaining_actions = self._slow_queue | self._fast_queue
             self.fail(
                 NmstateTimeoutError(f"Action {remaining_actions} timeout")
@@ -196,7 +196,7 @@ class NmContext:
         self._last_async_finish_time = datetime.datetime.now()
         if not self._action_all_finished():
             self._timeout_source = GLib.timeout_source_new(
-                IDLE_CHECK_INTERNAL * 100
+                IDLE_CHECK_INTERNAL * 1000
             )
             user_data = None
             self._timeout_source.set_callback(self._idle_timeout_cb, user_data)
