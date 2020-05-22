@@ -274,10 +274,6 @@ function upload_coverage {
     if [[ "$CI" == "true" ]] ;then
         container_exec "
             cd $CONTAINER_WORKSPACE &&
-            COVERALLS_PARALLEL=true COVERALLS_SERVICE_NAME=travis-ci coveralls
-        " || true
-        container_exec "
-            cd $CONTAINER_WORKSPACE &&
             bash <(curl -s https://codecov.io/bash)
         " || true
     fi
@@ -361,7 +357,6 @@ mkdir -p $EXPORT_DIR
 # The podman support wildcard when passing enviroments, but docker does not.
 CONTAINER_ID="$(${CONTAINER_CMD} run --privileged -d \
     -e CI \
-    -e COVERALLS_REPO_TOKEN \
     -e CODECOV_TOKEN \
     -e TRAVIS \
     -e TRAVIS_BRANCH \

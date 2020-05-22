@@ -21,7 +21,6 @@ RUN dnf -y install --setopt=install_weak_deps=False \
                    dnsmasq \
                    git \
                    iproute \
-                   python3-coveralls \
                    python3-tox \
                    python3-pytest \
                    python3-pytest-cov \
