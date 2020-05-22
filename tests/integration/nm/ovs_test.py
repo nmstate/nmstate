@@ -24,6 +24,7 @@ import pytest
 from libnmstate import nm
 from libnmstate.nm.common import NM
 from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceType
 from libnmstate.schema import OVSBridge as OB
 
 from .testlib import main_context
@@ -256,7 +257,7 @@ def _create_bridge_iface(ctx, iface_bridge_settings):
 def _create_iface_settings(iface_con_profile, port_master_name):
     iface_con_setting = nm.connection.ConnectionSetting()
     iface_con_setting.import_by_profile(iface_con_profile)
-    iface_con_setting.set_master(port_master_name, nm.ovs.PORT_TYPE)
+    iface_con_setting.set_master(port_master_name, InterfaceType.OVS_PORT)
     return (iface_con_setting.setting,)
 
 
@@ -265,9 +266,9 @@ def _create_port_setting(port_state, port_profile_name):
     iface_con_setting.create(
         con_name=port_profile_name,
         iface_name=port_profile_name,
-        iface_type=nm.ovs.PORT_TYPE,
+        iface_type=InterfaceType.OVS_PORT,
     )
-    iface_con_setting.set_master(BRIDGE0, nm.ovs.BRIDGE_TYPE)
+    iface_con_setting.set_master(BRIDGE0, InterfaceType.OVS_BRIDGE)
     bridge_port_setting = nm.ovs.create_port_setting(port_state)
     return iface_con_setting.setting, bridge_port_setting
 
@@ -277,9 +278,9 @@ def _create_internal_iface_setting(iface_name, master_name):
     iface_con_setting.create(
         con_name=iface_name,
         iface_name=iface_name,
-        iface_type=nm.ovs.INTERNAL_INTERFACE_TYPE,
+        iface_type=InterfaceType.OVS_INTERFACE,
     )
-    iface_con_setting.set_master(master_name, nm.ovs.PORT_TYPE)
+    iface_con_setting.set_master(master_name, InterfaceType.OVS_PORT)
     bridge_internal_iface_setting = nm.ovs.create_interface_setting()
     ipv4_setting = nm.ipv4.create_setting({}, None)
     ipv6_setting = nm.ipv6.create_setting({}, None)

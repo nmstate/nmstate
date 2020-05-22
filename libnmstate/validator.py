@@ -27,8 +27,8 @@ from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceType
 from libnmstate.error import NmstateDependencyError
 
-from . import nm
 from . import schema
+from .plugin import NmstatePlugin
 
 MAX_SUPPORTED_INTERFACES = 1000
 
@@ -48,13 +48,13 @@ def validate_capabilities(state, capabilities):
 
 def validate_interface_capabilities(ifaces_state, capabilities):
     ifaces_types = [iface_state.get("type") for iface_state in ifaces_state]
-    has_ovs_capability = nm.ovs.CAPABILITY in capabilities
-    has_team_capability = nm.team.CAPABILITY in capabilities
+    has_ovs_capability = NmstatePlugin.OVS_CAPABILITY in capabilities
+    has_team_capability = NmstatePlugin.TEAM_CAPABILITY in capabilities
     for iface_type in ifaces_types:
         is_ovs_type = iface_type in (
-            nm.ovs.BRIDGE_TYPE,
-            nm.ovs.PORT_TYPE,
-            nm.ovs.INTERNAL_INTERFACE_TYPE,
+            InterfaceType.OVS_BRIDGE,
+            InterfaceType.OVS_INTERFACE,
+            InterfaceType.OVS_PORT,
         )
         if is_ovs_type and not has_ovs_capability:
             if not is_ovs_running():

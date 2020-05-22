@@ -24,11 +24,7 @@ from . import connection
 from .common import NM
 
 
-BRIDGE_TYPE = "ovs-bridge"
-INTERNAL_INTERFACE_TYPE = "ovs-interface"
-PORT_TYPE = "ovs-port"
 PORT_PROFILE_PREFIX = "ovs-port-"
-CAPABILITY = "openvswitch"
 
 NM_OVS_VLAN_MODE_MAP = {
     "trunk": OB.Port.Vlan.Mode.TRUNK,

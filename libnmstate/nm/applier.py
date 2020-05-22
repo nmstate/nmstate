@@ -52,7 +52,12 @@ MAXIMUM_INTERFACE_LENGTH = 15
 
 MASTER_METADATA = "_master"
 MASTER_TYPE_METADATA = "_master_type"
-MASTER_IFACE_TYPES = ovs.BRIDGE_TYPE, bond.BOND_TYPE, LB.TYPE, Team.TYPE
+MASTER_IFACE_TYPES = (
+    InterfaceType.OVS_BRIDGE,
+    bond.BOND_TYPE,
+    LB.TYPE,
+    Team.TYPE,
+)
 
 
 def apply_changes(context, net_state):
@@ -178,10 +183,13 @@ def _set_ifaces_admin_state(context, ifaces_desired_state, con_profiles):
                     new_master_not_enslaved_ifaces.add(ifname)
                 elif (
                     iface_desired_state[Interface.TYPE]
-                    == ovs.INTERNAL_INTERFACE_TYPE
+                    == InterfaceType.OVS_INTERFACE
                 ):
                     new_ovs_interface_to_activate.add(ifname)
-                elif iface_desired_state[Interface.TYPE] == ovs.PORT_TYPE:
+                elif (
+                    iface_desired_state[Interface.TYPE]
+                    == InterfaceType.OVS_PORT
+                ):
                     new_ovs_port_to_activate.add(ifname)
                 elif iface_desired_state[Interface.TYPE] == InterfaceType.VLAN:
                     new_vlan_ifaces_to_activate.add(ifname)
@@ -349,7 +357,7 @@ def _get_affected_devices(context, iface_state):
     if nmdev:
         devs += [nmdev]
         iface_type = iface_state[Interface.TYPE]
-        if iface_type == ovs.BRIDGE_TYPE:
+        if iface_type == InterfaceType.OVS_BRIDGE:
             port_slaves = ovs.get_slaves(nmdev)
             iface_slaves = [
                 iface for port in port_slaves for iface in ovs.get_slaves(port)
@@ -382,7 +390,7 @@ def _create_proxy_ifaces_desired_state(ifaces_desired_state):
     new_ifaces_names = set()
     for iface_desired_state in ifaces_desired_state:
         master_type = iface_desired_state.get(MASTER_TYPE_METADATA)
-        if master_type != ovs.BRIDGE_TYPE:
+        if master_type != InterfaceType.OVS_BRIDGE:
             continue
         port_opts_metadata = iface_desired_state.get(
             BridgeIface.BRPORT_OPTIONS_METADATA
@@ -400,7 +408,7 @@ def _create_proxy_ifaces_desired_state(ifaces_desired_state):
         iface_desired_state[MASTER_METADATA] = port_iface_desired_state[
             Interface.NAME
         ]
-        iface_desired_state[MASTER_TYPE_METADATA] = ovs.PORT_TYPE
+        iface_desired_state[MASTER_TYPE_METADATA] = InterfaceType.OVS_PORT
     return new_ifaces_desired_state
 
 
@@ -412,7 +420,7 @@ def _create_ovs_port_iface_desired_state(iface_desired_state, port_options):
         port_name = ovs.PORT_PROFILE_PREFIX + iface_name
     return {
         Interface.NAME: port_name,
-        Interface.TYPE: ovs.PORT_TYPE,
+        Interface.TYPE: InterfaceType.OVS_PORT,
         Interface.STATE: iface_desired_state[Interface.STATE],
         OvsB.OPTIONS_SUBTREE: port_options,
         MASTER_METADATA: iface_desired_state[MASTER_METADATA],
@@ -485,15 +493,15 @@ def _build_connection_profile(
                 iface_desired_state, base_profile
             )
             settings.append(linux_bridge_setting)
-    elif iface_type == ovs.BRIDGE_TYPE:
+    elif iface_type == InterfaceType.OVS_BRIDGE:
         ovs_bridge_state = iface_desired_state.get(OvsB.CONFIG_SUBTREE, {})
         ovs_bridge_options = ovs_bridge_state.get(OvsB.OPTIONS_SUBTREE)
         if ovs_bridge_options:
             settings.append(ovs.create_bridge_setting(ovs_bridge_options))
-    elif iface_type == ovs.PORT_TYPE:
+    elif iface_type == InterfaceType.OVS_PORT:
         ovs_port_options = iface_desired_state.get(OvsB.OPTIONS_SUBTREE)
         settings.append(ovs.create_port_setting(ovs_port_options))
-    elif iface_type == ovs.INTERNAL_INTERFACE_TYPE:
+    elif iface_type == InterfaceType.OVS_INTERFACE:
         settings.append(ovs.create_interface_setting())
 
     bridge_port_options = iface_desired_state.get(

@@ -25,7 +25,6 @@ from libnmstate.schema import Team
 
 from .common import NM
 
-CAPABILITY = "team"
 TEAMD_JSON_DEVICE = "device"
 TEAMD_JSON_PORTS = "ports"
 
