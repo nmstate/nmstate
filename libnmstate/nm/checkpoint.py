@@ -188,12 +188,10 @@ class CheckPoint:
                 self._ctx.fail(
                     NmstateLibnmError(f"Checkpoint create failed: {error_msg}")
                 )
-        except Exception as e:
-            if (
-                isinstance(e, common.GLib.GError)
-                # pylint: disable=no-member
-                and e.code == common.Gio.IOErrorEnum.PERMISSION_DENIED
-                # pylint: enable=no-member
+        except common.GLib.Error as e:
+            if e.matches(
+                common.NM.ManagerError.quark(),
+                common.NM.ManagerError.PERMISSIONDENIED,
             ):
                 self._ctx.fail(
                     NmstatePermissionError(
@@ -201,11 +199,9 @@ class CheckPoint:
                         " permission"
                     )
                 )
-            elif (
-                isinstance(e, common.GLib.GError)
-                # pylint: disable=no-member
-                and e.code == common.Gio.IOErrorEnum.NO_SPACE
-                # pylint: enable=no-member
+            elif e.matches(
+                common.NM.ManagerError.quark(),
+                common.NM.ManagerError.INVALIDARGUMENTS,
             ):
                 self._ctx.fail(
                     NmstateConflictError(
@@ -217,6 +213,10 @@ class CheckPoint:
                 self._ctx.fail(
                     NmstateLibnmError(f"Checkpoint create failed: error={e}")
                 )
+        except Exception as e:
+            self._ctx.fail(
+                NmstateLibnmError(f"Checkpoint create failed: error={e}")
+            )
 
     def _checkpoint_rollback_callback(self, client, result, data):
         action = data
