@@ -46,12 +46,21 @@ class NmContext:
         self._client = NM.Client.new(cancellable=None)
         self._context = self._client.get_main_context()
         self._quitting = False
-        self._cancellable = Gio.Cancellable.new()
-        self._fast_queue = set()
-        self._slow_queue = set()
+        self._cancellable = None
         self._error = None
         self._timeout_source = None
         self._last_async_finish_time = None
+        self._fast_queue = None
+        self._slow_queue = None
+        self._init_queue()
+        self._init_cancellable()
+
+    def _init_queue(self):
+        self._fast_queue = set()
+        self._slow_queue = set()
+
+    def _init_cancellable(self):
+        self._cancellable = Gio.Cancellable.new()
 
     @property
     def cancellable(self):
@@ -198,7 +207,14 @@ class NmContext:
             self._del_timeout()
 
         if self._error:
-            raise self._error
+            # The queue and error should be flush and perpare for another run
+            self._init_queue()
+            self._init_cancellable()
+            tmp_error = self._error
+            self._error = None
+            # pylint: disable=raising-bad-type
+            raise tmp_error
+            # pylint: enable=raising-bad-type
 
     def get_nm_dev(self, iface_name):
         return self.client.get_device_by_iface(iface_name)
