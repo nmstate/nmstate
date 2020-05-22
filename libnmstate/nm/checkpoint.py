@@ -197,7 +197,7 @@ class CheckPoint:
             ):
                 self._ctx.fail(
                     NmstatePermissionError(
-                        f"Checkpoint create failed due to insufficient"
+                        "Checkpoint create failed due to insufficient"
                         " permission"
                     )
                 )
@@ -209,7 +209,7 @@ class CheckPoint:
             ):
                 self._ctx.fail(
                     NmstateConflictError(
-                        f"Checkpoint create failed due to a"
+                        "Checkpoint create failed due to a"
                         " conflict with an existing checkpoint"
                     )
                 )
