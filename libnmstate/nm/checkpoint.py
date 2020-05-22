@@ -171,13 +171,13 @@ class CheckPoint:
     def _checkpoint_create_callback(self, client, result, data):
         try:
             cp = client.checkpoint_create_finish(result)
-            self._dbuspath = cp.get_path()
             if cp:
                 logging.debug(
                     "Checkpoint {} created for all devices".format(
                         self._dbuspath
                     )
                 )
+                self._dbuspath = cp.get_path()
                 self._ctx.finish_async("Create checkpoint")
             else:
                 error_msg = (
