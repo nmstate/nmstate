@@ -77,7 +77,6 @@ class CheckPoint:
             | common.NM.CheckpointCreateFlags.DISCONNECT_NEW_DEVICES
         )
 
-        self._ctx.register_async("Create checkpoint")
         try:
             self._ctx.client.checkpoint_create(
                 devs,
@@ -91,8 +90,9 @@ class CheckPoint:
             raise NMCheckPointCreationError(
                 "Failed to create checkpoint: " "{}".format(e)
             )
-        self._add_checkpoint_refresh_timeout()
+        self._ctx.register_async("Create checkpoint")
         self._ctx.wait_all_finish()
+        self._add_checkpoint_refresh_timeout()
 
     def _add_checkpoint_refresh_timeout(self):
         self._timeout_source = common.GLib.timeout_source_new(
@@ -123,7 +123,6 @@ class CheckPoint:
         if self._dbuspath:
             action = f"Destroy checkpoint {self._dbuspath}"
             userdata = action
-            self._ctx.register_async(action)
             try:
                 self._ctx.client.checkpoint_destroy(
                     self._dbuspath,
@@ -139,13 +138,13 @@ class CheckPoint:
             finally:
                 self._remove_checkpoint_refresh_timeout()
             logging.debug(f"Checkpoint {self._dbuspath} destroyed")
+            self._ctx.register_async(action)
             self._ctx.wait_all_finish()
 
     def rollback(self):
         if self._dbuspath:
             action = f"Rollback to checkpoint {self._dbuspath}"
             userdata = action
-            self._ctx.register_async(action)
             try:
                 self._ctx.client.checkpoint_rollback(
                     self._dbuspath,
@@ -162,6 +161,7 @@ class CheckPoint:
             finally:
                 self._remove_checkpoint_refresh_timeout()
             logging.debug(f"Checkpoint {self._dbuspath} rollback executed")
+            self._ctx.register_async(action)
             self._ctx.wait_all_finish()
 
     @property
