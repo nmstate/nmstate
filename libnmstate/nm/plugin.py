@@ -24,6 +24,7 @@ from libnmstate.schema import DNS
 from libnmstate.schema import Interface
 from libnmstate.schema import Route
 from libnmstate.schema import RouteRule
+from libnmstate.plugin import NmstatePlugin
 
 from . import bond as nm_bond
 from . import bridge as nm_bridge
@@ -71,9 +72,9 @@ class NetworkManagerPlugin:
     def capabilities(self):
         capabilities = []
         if nm_ovs.has_ovs_capability(self.client) and is_ovs_running():
-            capabilities.append(nm_ovs.CAPABILITY)
+            capabilities.append(NmstatePlugin.OVS_CAPABILITY)
         if nm_team.has_team_capability(self.client):
-            capabilities.append(nm_team.CAPABILITY)
+            capabilities.append(NmstatePlugin.TEAM_CAPABILITY)
         return capabilities
 
     def get_interfaces(self):
@@ -102,7 +103,7 @@ class NetworkManagerPlugin:
             if nm_bond.is_bond_type_id(type_id):
                 bondinfo = nm_bond.get_bond_info(dev)
                 iface_info.update(_ifaceinfo_bond(bondinfo))
-            elif nm_ovs.CAPABILITY in self.capabilities:
+            elif NmstatePlugin.OVS_CAPABILITY in self.capabilities:
                 if nm_ovs.is_ovs_bridge_type_id(type_id):
                     iface_info["bridge"] = nm_ovs.get_ovs_info(
                         self.context, dev, devices_info
