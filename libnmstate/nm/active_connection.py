@@ -26,9 +26,6 @@ from .common import GObject
 from .common import NM
 
 
-NM_MANAGER_ERROR_DOMAIN = "nm-manager-error-quark"
-
-
 NM_AC_STATE_CHANGED_SIGNAL = "state-changed"
 
 
@@ -108,13 +105,9 @@ class ActiveConnection:
 
         try:
             success = src_object.deactivate_connection_finish(result)
-        except Exception as e:
-            if (
-                isinstance(e, GLib.GError)
-                # pylint: disable=no-member
-                and e.domain == NM_MANAGER_ERROR_DOMAIN
-                and e.code == NM.ManagerError.CONNECTIONNOTACTIVE
-                # pylint: enable=no-member
+        except GLib.Error as e:
+            if e.matches(
+                NM.ManagerError.quark(), NM.ManagerError.CONNECTIONNOTACTIVE
             ):
                 success = True
                 logging.debug(
@@ -128,6 +121,16 @@ class ActiveConnection:
                     NmstateLibnmError(f"{action} failed: error={e}")
                 )
                 return
+        except Exception as e:
+            if self._act_con:
+                self._act_con.handler_disconnect(handler_id)
+            self._ctx.fail(
+                NmstateLibnmError(
+                    f"BUG: Unexpected error when activating {self.devname} "
+                    f"error={e}"
+                )
+            )
+            return
 
         if not success:
             if self._act_con:
