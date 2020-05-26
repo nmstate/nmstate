@@ -488,6 +488,9 @@ class ConnectionSetting:
             self._setting.props.master = master
             self._setting.props.slave_type = slave_type
 
+    def set_profile_name(self, con_name):
+        self._setting.props.id = con_name
+
     @property
     def setting(self):
         return self._setting
