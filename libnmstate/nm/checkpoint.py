@@ -240,11 +240,12 @@ class CheckPoint:
                 and nm_dev.get_state_reason()
                 == common.NM.DeviceStateReason.NEW_ACTIVATION
             ) or nm_dev.get_state() == common.NM.DeviceState.IP_CONFIG:
-                action = f"Waiting for rolling back {iface}"
-                self._ctx.register_async(action)
                 profile = connection.ConnectionProfile(self._ctx)
                 profile.import_by_device(nm_dev)
-                profile.wait_dev_activation(action)
+                if not profile.is_activated():
+                    action = f"Waiting for rolling back {iface}"
+                    self._ctx.register_async(action)
+                    profile.wait_dev_activation(action)
             if ret[path] != 0:
                 logging.error(f"Interface {iface} rollback failed")
             else:
