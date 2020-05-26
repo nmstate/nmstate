@@ -384,14 +384,13 @@ def _build_connection_profile(
     ]
 
     con_setting = connection.ConnectionSetting()
+    iface_name = iface_desired_state[Interface.NAME]
     if base_profile:
         con_setting.import_by_profile(base_con_profile)
+        con_setting.set_profile_name(iface_name)
     else:
-        iface_name = iface_desired_state[Interface.NAME]
         con_setting.create(
-            con_name=iface_desired_state[Interface.NAME],
-            iface_name=iface_name,
-            iface_type=iface_type,
+            con_name=iface_name, iface_name=iface_name, iface_type=iface_type,
         )
     master = iface_desired_state.get(MASTER_METADATA)
     _translate_master_type(iface_desired_state)
