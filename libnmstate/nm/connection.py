@@ -217,7 +217,7 @@ class ConnectionProfile:
             self._nm_ac = nm_act_con
             self._nm_dev = self._ctx.get_nm_dev(devname)
 
-            if self._is_activated():
+            if self.is_activated():
                 self._ctx.finish_async(action)
             elif self._is_activating():
                 self._wait_ac_activation(action)
@@ -307,7 +307,7 @@ class ConnectionProfile:
             self._remove_ac_handlers()
             self._nm_ac = cur_nm_ac
             self._wait_ac_activation(action)
-        if self._is_activated():
+        if self.is_activated():
             logging.debug(
                 "Connection activation succeeded: dev=%s, con-state=%s, "
                 "dev-state=%s, state-flags=%s",
@@ -331,7 +331,7 @@ class ConnectionProfile:
         self._remove_ac_handlers()
         self._remove_dev_handlers()
 
-    def _is_activated(self):
+    def is_activated(self):
         if not self._nm_ac or not self._nm_dev:
             return False
 
@@ -374,7 +374,7 @@ class ConnectionProfile:
 
         return (
             self._nm_ac.get_state() == NM.ActiveConnectionState.ACTIVATING
-            and not self._is_activated()
+            and not self.is_activated()
         )
 
     def _remove_dev_handlers(self):
