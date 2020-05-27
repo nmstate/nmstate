@@ -61,6 +61,13 @@ NMCLI_CON_ADD_ETH_CMD = [
     "eth1",
 ]
 
+NMCLI_CON_UP_TEST_PROFILE_CMD = [
+    "nmcli",
+    "con",
+    "up",
+    "testProfile",
+]
+
 DUMMY_PROFILE_DIRECTORY = "/etc/NetworkManager/system-connections/"
 
 ETH_PROFILE_DIRECTORY = "/etc/sysconfig/network-scripts/"
@@ -84,6 +91,16 @@ def test_delete_existing_interface_inactive_profiles(eth1_up):
             ETH_PROFILE_DIRECTORY + "ifcfg-testProfile"
         )
         assert not profile_exists
+
+
+def test_rename_existing_interface_active_profile(eth1_up):
+    cloned_profile_name = "testProfile"
+    with cloned_active_profile(
+        cloned_profile_name, eth1_up[Interface.KEY][0][Interface.NAME]
+    ):
+        eth1_up[Interface.KEY][0][Interface.MTU] = 2000
+        libnmstate.apply(eth1_up)
+        assert _profile_exists(ETH_PROFILE_DIRECTORY + "ifcfg-testProfile")
 
 
 @contextmanager
@@ -117,6 +134,21 @@ def dummy_inactive_profile():
         yield DUMMY0_IFNAME
     finally:
         cmdlib.exec_cmd(_nmcli_delete_connection("testProfile"))
+
+
+@contextmanager
+def cloned_active_profile(con_name, source):
+    cmdlib.exec_cmd(["nmcli", "con", "clone", "id", source, con_name])
+    cmdlib.exec_cmd(_nmcli_delete_connection(source))
+    cmdlib.exec_cmd(NMCLI_CON_UP_TEST_PROFILE_CMD)
+    profile_exists = _profile_exists(
+        ETH_PROFILE_DIRECTORY + f"ifcfg-{con_name}"
+    )
+    assert profile_exists
+    try:
+        yield
+    finally:
+        cmdlib.exec_cmd(_nmcli_delete_connection(con_name))
 
 
 @contextmanager
