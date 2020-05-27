@@ -17,6 +17,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 from contextlib import contextmanager
+from copy import deepcopy
 import logging
 import os
 import time
@@ -1145,7 +1146,7 @@ def dhcpcli_up_with_dns_cleanup(dhcpcli_up):
     libnmstate.apply({DNS.KEY: {DNS.CONFIG: {}}})
 
 
-def test_dynamic_ip_with_static_dns(dhcpcli_up_with_dns_cleanup):
+def test_dynamic_ip_with_static_dns(dhcpcli_up_with_dns_cleanup, clean_state):
     iface_state = {
         Interface.NAME: DHCP_CLI_NIC,
         Interface.STATE: InterfaceState.UP,
@@ -1176,3 +1177,22 @@ def test_dynamic_ip_with_static_dns(dhcpcli_up_with_dns_cleanup):
     new_state = libnmstate.show()
     assert dns_config[DNS.CONFIG] == new_state[DNS.KEY][DNS.CONFIG]
     assert dns_config[DNS.CONFIG] == new_state[DNS.KEY][DNS.RUNNING]
+
+
+@pytest.fixture(scope="function")
+def clean_state():
+    current_state = libnmstate.show()
+    desired_state = deepcopy(current_state)
+    for iface_state in desired_state[Interface.KEY]:
+        if iface_state[Interface.IPV4][InterfaceIPv4.ENABLED]:
+            iface_state[Interface.IPV4][InterfaceIPv4.AUTO_DNS] = False
+            iface_state[Interface.IPV4][InterfaceIPv4.AUTO_ROUTES] = False
+        if iface_state[Interface.IPV6][InterfaceIPv6.ENABLED]:
+            iface_state[Interface.IPV6][InterfaceIPv6.AUTO_DNS] = False
+            iface_state[Interface.IPV6][InterfaceIPv6.AUTO_ROUTES] = False
+
+    libnmstate.apply(desired_state)
+    try:
+        yield
+    finally:
+        libnmstate.apply(current_state)
