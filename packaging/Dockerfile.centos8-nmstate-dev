@@ -28,6 +28,7 @@ RUN dnf -y install dnf-plugins-core epel-release && \
                    python3-coveralls \
                    python3-requests \
                    python3-docopt \
+                   tcpreplay \
                    && \
     alternatives --set python /usr/bin/python3 && \
     ln -s /usr/bin/pytest-3 /usr/bin/pytest && \

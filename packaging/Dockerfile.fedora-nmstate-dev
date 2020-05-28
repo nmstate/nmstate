@@ -26,6 +26,7 @@ RUN dnf -y install --setopt=install_weak_deps=False \
                    python3-pytest \
                    python3-pytest-cov \
                    rpm-build \
+                   tcpreplay \
                    \
                    # Below packages for pip (used by tox) to build
                    # python-gobject
