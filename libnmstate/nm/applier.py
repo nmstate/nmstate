@@ -26,6 +26,7 @@ from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import LinuxBridge as LB
 from libnmstate.schema import OVSBridge as OvsB
+from libnmstate.schema import Team
 from libnmstate.appliers.bond import is_bond_mode_changed
 
 from . import bond
@@ -49,7 +50,7 @@ MAXIMUM_INTERFACE_LENGTH = 15
 
 MASTER_METADATA = "_master"
 MASTER_TYPE_METADATA = "_master_type"
-MASTER_IFACE_TYPES = ovs.BRIDGE_TYPE, bond.BOND_TYPE, LB.TYPE
+MASTER_IFACE_TYPES = ovs.BRIDGE_TYPE, bond.BOND_TYPE, LB.TYPE, Team.TYPE
 
 BRPORT_OPTIONS_METADATA = "_brport_options"
 
