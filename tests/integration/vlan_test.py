@@ -161,8 +161,7 @@ def test_set_vlan_iface_down(eth1_up):
             }
         )
 
-        current_state = statelib.show_only((VLAN_IFNAME,))
-        assert not current_state[Interface.KEY]
+        assertlib.assert_absent(VLAN_IFNAME)
 
 
 def test_add_new_base_iface_with_vlan():

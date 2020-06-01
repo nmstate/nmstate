@@ -23,6 +23,7 @@ from libnmstate.schema import Bond
 from libnmstate.schema import DNS
 from libnmstate.schema import Route
 from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import OvsDB
 
@@ -43,6 +44,16 @@ def assert_absent(*ifnames):
 
     current_state = statelib.show_only(ifnames)
     assert not current_state[Interface.KEY]
+
+
+def assert_down(ifname):
+    """
+    Assert that a interface is down in the current state
+    """
+    current_state = statelib.show_only((ifname,))
+    assert (
+        current_state[Interface.KEY][0][Interface.STATE] == InterfaceState.DOWN
+    )
 
 
 def assert_state_match(desired_state_data):

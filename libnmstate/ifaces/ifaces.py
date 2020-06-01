@@ -52,19 +52,20 @@ class Ifaces:
     also responsible to handle desire vs current state related tasks.
     """
 
-    def __init__(self, des_iface_infos, cur_iface_infos):
+    def __init__(self, des_iface_infos, cur_iface_infos, save_to_disk=True):
+        self._save_to_disk = save_to_disk
         self._des_iface_infos = des_iface_infos
         self._cur_ifaces = {}
         self._ifaces = {}
         if cur_iface_infos:
             for iface_info in cur_iface_infos:
-                cur_iface = _to_specific_iface_obj(iface_info)
+                cur_iface = _to_specific_iface_obj(iface_info, save_to_disk)
                 self._ifaces[cur_iface.name] = cur_iface
                 self._cur_ifaces[cur_iface.name] = cur_iface
 
         if des_iface_infos:
             for iface_info in des_iface_infos:
-                iface = BaseIface(iface_info)
+                iface = BaseIface(iface_info, save_to_disk)
                 cur_iface = self._ifaces.get(iface.name)
                 if cur_iface and cur_iface.is_desired:
                     raise NmstateValueError(
@@ -79,7 +80,7 @@ class Ifaces:
                             f"Interface {iface.name} has no type defined "
                             "neither in desire state nor current state"
                         )
-                iface = _to_specific_iface_obj(iface_info)
+                iface = _to_specific_iface_obj(iface_info, save_to_disk)
                 if (
                     iface.iface_type == InterfaceType.UNKNOWN
                     # Allowing deletion of down profiles
@@ -234,7 +235,9 @@ class Ifaces:
 
     def verify(self, cur_iface_infos):
         cur_ifaces = Ifaces(
-            des_iface_infos=None, cur_iface_infos=cur_iface_infos
+            des_iface_infos=None,
+            cur_iface_infos=cur_iface_infos,
+            save_to_disk=self._save_to_disk,
         )
         for iface in self._ifaces.values():
             if iface.is_desired:
@@ -315,25 +318,25 @@ class Ifaces:
                     slave_master_map[slave_name] = iface.name
 
 
-def _to_specific_iface_obj(info):
+def _to_specific_iface_obj(info, save_to_disk):
     iface_type = info.get(Interface.TYPE, InterfaceType.UNKNOWN)
     if iface_type == InterfaceType.ETHERNET:
-        return EthernetIface(info)
+        return EthernetIface(info, save_to_disk)
     elif iface_type == InterfaceType.BOND:
-        return BondIface(info)
+        return BondIface(info, save_to_disk)
     elif iface_type == InterfaceType.DUMMY:
-        return DummyIface(info)
+        return DummyIface(info, save_to_disk)
     elif iface_type == InterfaceType.LINUX_BRIDGE:
-        return LinuxBridgeIface(info)
+        return LinuxBridgeIface(info, save_to_disk)
     elif iface_type == InterfaceType.OVS_BRIDGE:
-        return OvsBridgeIface(info)
+        return OvsBridgeIface(info, save_to_disk)
     elif iface_type == InterfaceType.OVS_INTERFACE:
-        return OvsInternalIface(info)
+        return OvsInternalIface(info, save_to_disk)
     elif iface_type == InterfaceType.VLAN:
-        return VlanIface(info)
+        return VlanIface(info, save_to_disk)
     elif iface_type == InterfaceType.VXLAN:
-        return VxlanIface(info)
+        return VxlanIface(info, save_to_disk)
     elif iface_type == InterfaceType.TEAM:
-        return TeamIface(info)
+        return TeamIface(info, save_to_disk)
     else:
-        return BaseIface(info)
+        return BaseIface(info, save_to_disk)

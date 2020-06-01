@@ -61,7 +61,7 @@ MASTER_IFACE_TYPES = (
 )
 
 
-def apply_changes(context, net_state):
+def apply_changes(context, net_state, save_to_disk):
     con_profiles = []
 
     _preapply_dns_fix(context, net_state)
@@ -118,12 +118,12 @@ def apply_changes(context, net_state):
             set_conn = new_con_profile.profile.get_setting_connection()
             set_conn.props.interface_name = iface_desired_state[Interface.NAME]
         if cur_con_profile and cur_con_profile.profile:
-            cur_con_profile.update(new_con_profile)
+            cur_con_profile.update(new_con_profile, save_to_disk)
             con_profiles.append(new_con_profile)
         else:
             # Missing connection, attempting to create a new one.
             connection.delete_iface_inactive_connections(context, ifname)
-            new_con_profile.add()
+            new_con_profile.add(save_to_disk)
             con_profiles.append(new_con_profile)
     context.wait_all_finish()
 
@@ -138,7 +138,6 @@ def _set_ifaces_admin_state(context, ifaces_desired_state, con_profiles):
 
     The `absent` state results in deactivating the device and deleting
     the connection profile.
-    FIXME: The `down` state is currently handled in the same way.
 
     For new virtual devices, the `up` state is handled by activating the
     new connection profile. For existing devices, the device is activated,

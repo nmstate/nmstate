@@ -80,7 +80,9 @@ interfaces:
 @mock.patch.object(
     nmstatectl.libnmstate,
     "apply",
-    lambda state, verify_change=True, commit=True, rollback_timeout=60: None,
+    # pylint: disable=max-line-length
+    lambda state, verify_change=True, commit=True, rollback_timeout=60, save_to_disk=True: None,
+    # pylint: enable=max-line-length
 )
 @mock.patch.object(
     nmstatectl, "open", mock.mock_open(read_data="{}"), create=True
