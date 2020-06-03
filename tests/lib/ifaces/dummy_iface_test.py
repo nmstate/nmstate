@@ -17,11 +17,16 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
-from libnmstate.schema import Team
+from libnmstate.schema import InterfaceType
+
+from libnmstate.ifaces.dummy import DummyIface
+
+from ..testlib.ifacelib import gen_foo_iface_info
 
 
-def get_slaves_from_state(state, default=()):
-    ports = state.get(Team.CONFIG_SUBTREE, {}).get(Team.PORT_SUBTREE)
-    if ports is None:
-        return default
-    return [p[Team.Port.NAME] for p in ports]
+class TestDummyIface:
+    def _gen_iface_info(self):
+        return gen_foo_iface_info(iface_type=InterfaceType.DUMMY)
+
+    def test_team_is_virtual(self):
+        assert DummyIface(self._gen_iface_info()).is_virtual

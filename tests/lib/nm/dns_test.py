@@ -25,7 +25,8 @@ import libnmstate.nm.connection as nm_connection
 import libnmstate.nm.dns as nm_dns
 import libnmstate.nm.ipv4 as nm_ipv4
 import libnmstate.nm.ipv6 as nm_ipv6
-from libnmstate.state import State
+from libnmstate.ifaces import BaseIface
+from libnmstate.dns import DnsState
 from libnmstate.schema import DNS
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIP
@@ -49,7 +50,7 @@ def client_mock():
 
 def _get_test_dns_v4():
     return {
-        nm_dns.DNS_METADATA_PRIORITY: 40,
+        DnsState.PRIORITY_METADATA: 40,
         DNS.SERVER: ["8.8.8.8", "1.1.1.1"],
         DNS.SEARCH: ["example.org", "example.com"],
     }
@@ -57,7 +58,7 @@ def _get_test_dns_v4():
 
 def _get_test_dns_v6():
     return {
-        nm_dns.DNS_METADATA_PRIORITY: 40,
+        DnsState.PRIORITY_METADATA: 40,
         DNS.SERVER: ["2001:4860:4860::8888", "2606:4700:4700::1111"],
         DNS.SEARCH: ["example.net", "example.edu"],
     }
@@ -79,7 +80,7 @@ parametrize_ip_ver_dns = pytest.mark.parametrize(
 def test_add_dns_empty(nm_ip):
     dns_conf = {}
     setting_ip = nm_ip.create_setting(
-        {InterfaceIP.ENABLED: True, nm_dns.DNS_METADATA: dns_conf},
+        {InterfaceIP.ENABLED: True, BaseIface.DNS_METADATA: dns_conf},
         base_con_profile=None,
     )
 
@@ -90,7 +91,7 @@ def test_add_dns_empty(nm_ip):
 def test_add_dns(nm_ip, get_test_dns_func):
     dns_conf = get_test_dns_func()
     setting_ip = nm_ip.create_setting(
-        {InterfaceIP.ENABLED: True, nm_dns.DNS_METADATA: dns_conf},
+        {InterfaceIP.ENABLED: True, BaseIface.DNS_METADATA: dns_conf},
         base_con_profile=None,
     )
 
@@ -102,7 +103,7 @@ def test_add_dns_duplicate_server(nm_ip, get_test_dns_func):
     dns_conf = get_test_dns_func()
     dns_conf[DNS.SERVER] = [dns_conf[DNS.SERVER][0], dns_conf[DNS.SERVER][0]]
     setting_ip = nm_ip.create_setting(
-        {InterfaceIP.ENABLED: True, nm_dns.DNS_METADATA: dns_conf},
+        {InterfaceIP.ENABLED: True, BaseIface.DNS_METADATA: dns_conf},
         base_con_profile=None,
     )
 
@@ -115,7 +116,7 @@ def test_add_dns_duplicate_search(nm_ip, get_test_dns_func):
     dns_conf = get_test_dns_func()
     dns_conf[DNS.SEARCH] = [dns_conf[DNS.SEARCH][0], dns_conf[DNS.SEARCH][0]]
     setting_ip = nm_ip.create_setting(
-        {InterfaceIP.ENABLED: True, nm_dns.DNS_METADATA: dns_conf},
+        {InterfaceIP.ENABLED: True, BaseIface.DNS_METADATA: dns_conf},
         base_con_profile=None,
     )
 
@@ -127,13 +128,13 @@ def test_add_dns_duplicate_search(nm_ip, get_test_dns_func):
 def test_clear_dns(client_mock, nm_ip, get_test_dns_func):
     dns_conf = get_test_dns_func()
     setting_ip = nm_ip.create_setting(
-        {InterfaceIP.ENABLED: True, nm_dns.DNS_METADATA: dns_conf},
+        {InterfaceIP.ENABLED: True, BaseIface.DNS_METADATA: dns_conf},
         base_con_profile=None,
     )
     con_profile = nm_connection.ConnectionProfile(client_mock)
     con_profile.create([setting_ip])
     new_setting_ip = nm_ip.create_setting(
-        {InterfaceIP.ENABLED: True, nm_dns.DNS_METADATA: {}},
+        {InterfaceIP.ENABLED: True, BaseIface.DNS_METADATA: {}},
         base_con_profile=con_profile.profile,
     )
 
@@ -161,104 +162,14 @@ def test_get_dns_domain_duplicated(client_mock):
 def _assert_dns(setting_ip, dns_conf):
     assert setting_ip.props.dns == dns_conf.get(DNS.SERVER, [])
     assert setting_ip.props.dns_search == dns_conf.get(DNS.SEARCH, [])
-    priority = dns_conf.get(
-        nm_dns.DNS_METADATA_PRIORITY, nm_dns.DEFAULT_DNS_PRIORITY
-    )
-    assert setting_ip.props.dns_priority == priority
-
-
-parametrize_ip_ver = pytest.mark.parametrize(
-    "families",
-    [(Interface.IPV4,), (Interface.IPV6,), (Interface.IPV4, InterfaceIPv6)],
-    ids=["ipv4", "ipv6", "ipv4&ipv6"],
-)
-
-
-@parametrize_ip_ver
-def test_find_interfaces_for_dns_with_static_gateways(families):
-    state = _get_test_desired_state_static_gateway(families)
-    expected_ifaces = [None, None]
-    if Interface.IPV4 in families:
-        expected_ifaces[0] = TEST_IPV4_GATEWAY_IFACE
-    if Interface.IPV6 in families:
-        expected_ifaces[1] = TEST_IPV6_GATEWAY_IFACE
-    expected_ifaces = tuple(expected_ifaces)
-    assert expected_ifaces == nm_dns.find_interfaces_for_name_servers(
-        State(state)
-    )
-
-
-def test_find_interfaces_for_dns_with_no_routes():
-    state = State(
-        {
-            Interface.KEY: [
-                {
-                    Interface.NAME: TEST_IPV4_GATEWAY_IFACE,
-                    Interface.STATE: InterfaceState.UP,
-                },
-                {
-                    Interface.NAME: TEST_IPV6_GATEWAY_IFACE,
-                    Interface.STATE: InterfaceState.UP,
-                },
-            ],
-        }
-    )
-    assert (None, None) == nm_dns.find_interfaces_for_name_servers(state)
-
-
-def test_find_interfaces_for_dns_with_no_gateway():
-    state = State(_get_test_desired_state_static_gateway(()))
-    assert (None, None) == nm_dns.find_interfaces_for_name_servers(state)
-
-
-@parametrize_ip_ver
-def test_find_interfaces_for_dns_with_dynamic_ip_but_no_auto_dns(families):
-    state = State(_get_test_desired_state_dynamic_ip_but_no_auto_dns(families))
-    expected_ifaces = [None, None]
-    if Interface.IPV4 in families:
-        expected_ifaces[0] = TEST_IFACE1
-    if Interface.IPV6 in families:
-        expected_ifaces[1] = TEST_IFACE1
-    expected_ifaces = tuple(expected_ifaces)
-    assert expected_ifaces == nm_dns.find_interfaces_for_name_servers(state)
-
-
-@parametrize_ip_ver
-def test_find_interfaces_for_dns_with_dynamic_ip_and_auto_dns(families):
-    iface_state = {
-        Interface.NAME: TEST_IFACE1,
-        Interface.STATE: InterfaceState.UP,
-        Interface.IPV4: {InterfaceIPv4.ENABLED: False},
-        Interface.IPV6: {InterfaceIPv6.ENABLED: False},
-    }
-    if Interface.IPV4 in families:
-        iface_state[Interface.IPV4][InterfaceIPv4.ENABLED] = True
-        iface_state[Interface.IPV4][InterfaceIPv4.DHCP] = True
-        iface_state[Interface.IPV4][InterfaceIPv4.AUTO_DNS] = True
-
-    if Interface.IPV6 in families:
-        iface_state[Interface.IPV6][InterfaceIPv6.ENABLED] = True
-        iface_state[Interface.IPV6][InterfaceIPv6.DHCP] = True
-        iface_state[Interface.IPV6][InterfaceIPv6.AUTOCONF] = True
-        iface_state[Interface.IPV6][InterfaceIPv6.AUTO_DNS] = True
-    state = State({Interface.KEY: [iface_state]})
-    assert (None, None) == nm_dns.find_interfaces_for_name_servers(state)
-
-
-@parametrize_ip_ver
-def test_find_interfaces_for_dns_prefer_static_gateway(families):
-    state = _get_test_desired_state_static_gateway(families)
-    state2 = _get_test_desired_state_dynamic_ip_but_no_auto_dns(families)
-    state[Interface.KEY].extend(state2[Interface.KEY])
-    state = State(state)
-
-    expected_ifaces = [None, None]
-    if Interface.IPV4 in families:
-        expected_ifaces[0] = TEST_IPV4_GATEWAY_IFACE
-    if Interface.IPV6 in families:
-        expected_ifaces[1] = TEST_IPV6_GATEWAY_IFACE
-    expected_ifaces = tuple(expected_ifaces)
-    assert expected_ifaces == nm_dns.find_interfaces_for_name_servers(state)
+    if dns_conf:
+        priority = (
+            dns_conf.get(
+                DnsState.PRIORITY_METADATA, nm_dns.DEFAULT_DNS_PRIORITY
+            )
+            + nm_dns.DNS_PRIORITY_STATIC_BASE
+        )
+        assert setting_ip.props.dns_priority == priority
 
 
 def _get_test_ipv4_gateway():

@@ -26,8 +26,9 @@ from libnmstate.nm import dns as nm_dns
 from libnmstate.nm import route as nm_route
 from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import Route
-from .common import NM
 
+from ..ifaces import BaseIface
+from .common import NM
 
 IPV6_DEFAULT_ROUTE_METRIC = 1024
 INT32_MAX = 2 ** 31 - 1
@@ -148,12 +149,12 @@ def create_setting(config, base_con_profile):
     else:
         setting_ip.props.method = NM.SETTING_IP6_CONFIG_METHOD_LINK_LOCAL
 
-    nm_route.add_routes(setting_ip, config.get(nm_route.ROUTE_METADATA, []))
-    nm_dns.add_dns(setting_ip, config.get(nm_dns.DNS_METADATA, {}))
+    nm_route.add_routes(setting_ip, config.get(BaseIface.ROUTES_METADATA, []))
+    nm_dns.add_dns(setting_ip, config.get(BaseIface.DNS_METADATA, {}))
     nm_route.add_route_rules(
         setting_ip,
         socket.AF_INET6,
-        config.get(nm_route.ROUTE_RULES_METADATA, []),
+        config.get(BaseIface.ROUTE_RULES_METADATA, []),
     )
     return setting_ip
 

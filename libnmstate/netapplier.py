@@ -20,9 +20,7 @@
 import copy
 import time
 
-from libnmstate import metadata
 from libnmstate import nm
-from libnmstate import state
 from libnmstate import validator
 from libnmstate.error import NmstateConflictError
 from libnmstate.error import NmstateError
@@ -32,6 +30,7 @@ from libnmstate.error import NmstateVerificationError
 
 from .nmstate import plugin_context
 from .nmstate import show_with_plugin
+from .net_state import NetState
 
 MAINLOOP_TIMEOUT = 35
 VERIFY_RETRY_INTERNAL = 1
@@ -57,19 +56,10 @@ def apply(
     """
     desired_state = copy.deepcopy(desired_state)
     with plugin_context() as plugin:
-        validator.validate(desired_state)
+        validator.schema_validate(desired_state)
         validator.validate_capabilities(desired_state, plugin.capabilities)
-        validator.validate_unique_interface_name(desired_state)
-        validator.validate_dhcp(desired_state)
-        validator.validate_dns(desired_state)
-        validator.validate_vxlan(desired_state)
-        validator.validate_bridge(desired_state)
         checkpoint = _apply_ifaces_state(
-            plugin,
-            state.State(desired_state),
-            verify_change,
-            commit,
-            rollback_timeout,
+            plugin, desired_state, verify_change, commit, rollback_timeout,
         )
         if checkpoint:
             return str(checkpoint.dbuspath)
@@ -122,45 +112,25 @@ def _choose_checkpoint(plugin, dbuspath):
 def _apply_ifaces_state(
     plugin, desired_state, verify_change, commit, rollback_timeout
 ):
-    original_desired_state = copy.deepcopy(desired_state)
-    current_state = state.State(show_with_plugin(plugin))
-
-    desired_state.sanitize_ethernet(current_state)
-    desired_state.sanitize_dynamic_ip()
-    desired_state.merge_routes(current_state)
-    desired_state.merge_dns(current_state)
-    desired_state.merge_route_rules(current_state)
-    desired_state.remove_unknown_interfaces()
-    desired_state.complement_master_interfaces_removal(current_state)
-    metadata.generate_ifaces_metadata(
-        plugin.client, desired_state, current_state
-    )
-
-    validator.validate_interfaces_state(original_desired_state, current_state)
-    validator.validate_routes(desired_state, current_state)
+    current_state = show_with_plugin(plugin)
+    net_state = NetState(desired_state, current_state)
 
     try:
         with nm.checkpoint.CheckPoint(
             plugin.context, autodestroy=commit, timeout=rollback_timeout
         ) as checkpoint:
-            state2edit = state.State(desired_state.state)
-            state2edit.merge_interfaces(current_state)
-            nm.applier.apply_changes(
-                plugin.context,
-                list(state2edit.interfaces.values()),
-                original_desired_state,
-            )
+            plugin.apply_changes(net_state)
             verified = False
             if verify_change:
                 for _ in range(VERIFY_RETRY_TIMEOUT):
                     try:
-                        _verify_change(plugin, desired_state)
+                        _verify_change(plugin, net_state)
                         verified = True
                         break
                     except NmstateVerificationError:
                         time.sleep(VERIFY_RETRY_INTERNAL)
                 if not verified:
-                    _verify_change(plugin, desired_state)
+                    _verify_change(plugin, net_state)
 
         if not commit:
             return checkpoint
@@ -172,10 +142,6 @@ def _apply_ifaces_state(
         raise
 
 
-def _verify_change(plugin, desired_state):
-    current_state = state.State(show_with_plugin(plugin))
-    verifiable_desired_state = copy.deepcopy(desired_state)
-    verifiable_desired_state.verify_interfaces(current_state)
-    verifiable_desired_state.verify_routes(current_state)
-    verifiable_desired_state.verify_dns(current_state)
-    verifiable_desired_state.verify_route_rule(current_state)
+def _verify_change(plugin, net_state):
+    current_state = show_with_plugin(plugin)
+    net_state.verify(current_state)

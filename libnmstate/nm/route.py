@@ -35,8 +35,6 @@ from .common import NM
 NM_ROUTE_TABLE_ATTRIBUTE = "table"
 IPV4_DEFAULT_GATEWAY_DESTINATION = "0.0.0.0/0"
 IPV6_DEFAULT_GATEWAY_DESTINATION = "::/0"
-ROUTE_METADATA = "_routes"
-ROUTE_RULES_METADATA = "_route_rules"
 
 # NM require route rule priority been set explicitly, use 30,000 when
 # desire state instruct to use USE_DEFAULT_PRIORITY

@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2020 Red Hat, Inc.
+# Copyright (c) 2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -17,15 +17,10 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
-
-def get_slaves_from_state(state, default=()):
-    ports = state.get("bridge", {}).get("port")
-    if ports is None:
-        return default
-    return [p["name"] for p in ports]
+from .base_iface import BaseIface
 
 
-def set_bridge_ports_metadata(master_state, slave_state):
-    ports = master_state.get("bridge", {}).get("port", [])
-    port = next(filter(lambda n: n["name"] == slave_state["name"], ports), {})
-    slave_state["_brport_options"] = port
+class DummyIface(BaseIface):
+    @property
+    def is_virtual(self):
+        return True

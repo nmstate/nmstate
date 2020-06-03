@@ -21,6 +21,7 @@ from collections.abc import Mapping
 from collections.abc import Sequence
 import contextlib
 import copy
+from ipaddress import ip_address
 from operator import itemgetter
 
 import libnmstate
@@ -31,7 +32,6 @@ from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import Bond
 from libnmstate.schema import LinuxBridge
-from libnmstate.state import canonicalize_ipv6_addr
 
 
 def show_only(ifnames):
@@ -135,7 +135,7 @@ class State:
                 )
                 if iface_ipv6_addresses_state:
                     iface_ipv6_state[InterfaceIP.ADDRESS] = [
-                        canonicalize_ipv6_addr(iface_ipv6_addr)
+                        _canonicalize_ipv6_addr(iface_ipv6_addr)
                         for iface_ipv6_addr in iface_ipv6_addresses_state
                     ]
 
@@ -313,3 +313,14 @@ def _state_match(desire, current):
         )
     else:
         return desire == current
+
+
+def _canonicalize_ipv6_addr(addr):
+    address = addr[InterfaceIP.ADDRESS_IP]
+    if _is_ipv6_address(address):
+        addr[InterfaceIP.ADDRESS_IP] = str(ip_address(address))
+    return addr
+
+
+def _is_ipv6_address(addr):
+    return ":" in addr

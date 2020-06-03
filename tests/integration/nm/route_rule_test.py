@@ -24,6 +24,7 @@ import pytest
 import libnmstate
 from libnmstate import nm
 from libnmstate import iplib
+from libnmstate.ifaces import BaseIface
 from libnmstate.schema import RouteRule
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
@@ -37,6 +38,11 @@ ETH1 = "eth1"
 
 IPV4_ADDRESS1 = "192.0.2.251"
 IPV6_ADDRESS1 = "2001:db8:1::1"
+
+
+@pytest.fixture(scope="function", autouse=True)
+def remove_route_rules_when_cleanup():
+    libnmstate.apply({RouteRule.KEY: {RouteRule.CONFIG: []}})
 
 
 @pytest.fixture(scope="function")
@@ -83,9 +89,9 @@ def test_create_rule_add_full(eth1_up_with_static, nm_plugin):
     )
 
     ipv4_state = eth1_up_with_static[Interface.KEY][0][Interface.IPV4]
-    ipv4_state.update({nm.route.ROUTE_RULES_METADATA: [rule_v4_0, rule_v4_1]})
+    ipv4_state.update({BaseIface.ROUTE_RULES_METADATA: [rule_v4_0, rule_v4_1]})
     ipv6_state = eth1_up_with_static[Interface.KEY][0][Interface.IPV6]
-    ipv6_state.update({nm.route.ROUTE_RULES_METADATA: [rule_v6_0, rule_v6_1]})
+    ipv6_state.update({BaseIface.ROUTE_RULES_METADATA: [rule_v6_0, rule_v6_1]})
 
     _modify_interface(nm_plugin.context, ipv4_state, ipv6_state)
 
@@ -98,7 +104,7 @@ def test_route_rule_without_prioriry(eth1_up_with_static, nm_plugin):
     rule = _create_route_rule("198.51.100.0/24", "192.0.2.1/32", 50, 103)
     del rule[RouteRule.PRIORITY]
     ipv4_state = eth1_up_with_static[Interface.KEY][0][Interface.IPV4]
-    ipv4_state.update({nm.route.ROUTE_RULES_METADATA: [rule]})
+    ipv4_state.update({BaseIface.ROUTE_RULES_METADATA: [rule]})
 
     _modify_interface(nm_plugin.context, ipv4_state, {})
 
@@ -111,7 +117,7 @@ def test_route_rule_without_table(eth1_up_with_static, nm_plugin):
     rule = _create_route_rule("198.51.100.0/24", "192.0.2.1/32", 50, 103)
     del rule[RouteRule.ROUTE_TABLE]
     ipv4_state = eth1_up_with_static[Interface.KEY][0][Interface.IPV4]
-    ipv4_state.update({nm.route.ROUTE_RULES_METADATA: [rule]})
+    ipv4_state.update({BaseIface.ROUTE_RULES_METADATA: [rule]})
 
     _modify_interface(nm_plugin.context, ipv4_state, {})
 
@@ -124,7 +130,7 @@ def test_route_rule_without_from(eth1_up_with_static, nm_plugin):
     rule = _create_route_rule("198.51.100.0/24", "192.0.2.1/32", 50, 103)
     del rule[RouteRule.IP_FROM]
     ipv4_state = eth1_up_with_static[Interface.KEY][0][Interface.IPV4]
-    ipv4_state.update({nm.route.ROUTE_RULES_METADATA: [rule]})
+    ipv4_state.update({BaseIface.ROUTE_RULES_METADATA: [rule]})
 
     _modify_interface(nm_plugin.context, ipv4_state, {})
 
@@ -136,7 +142,7 @@ def test_route_rule_without_to(eth1_up_with_static, nm_plugin):
     rule = _create_route_rule("198.51.100.0/24", "192.0.2.1/32", 50, 103)
     del rule[RouteRule.IP_TO]
     ipv4_state = eth1_up_with_static[Interface.KEY][0][Interface.IPV4]
-    ipv4_state.update({nm.route.ROUTE_RULES_METADATA: [rule]})
+    ipv4_state.update({BaseIface.ROUTE_RULES_METADATA: [rule]})
 
     _modify_interface(nm_plugin.context, ipv4_state, {})
 

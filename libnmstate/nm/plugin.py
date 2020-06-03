@@ -18,7 +18,7 @@
 #
 from operator import itemgetter
 
-from libnmstate.appliers.ovs_bridge import is_ovs_running
+from libnmstate.ifaces.ovs import is_ovs_running
 from libnmstate.schema import DNS
 from libnmstate.schema import Interface
 from libnmstate.schema import Route
@@ -38,6 +38,7 @@ from . import vlan as nm_vlan
 from . import vxlan as nm_vxlan
 from . import team as nm_team
 from . import dns as nm_dns
+from . import applier as nm_applier
 from .context import NmContext
 
 
@@ -141,6 +142,9 @@ class NetworkManagerPlugin:
 
     def refresh_content(self):
         self._ctx.refresh_content()
+
+    def apply_changes(self, net_state):
+        nm_applier.apply_changes(self.context, net_state)
 
 
 def _ifaceinfo_bond(devinfo):

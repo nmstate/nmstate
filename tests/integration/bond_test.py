@@ -252,20 +252,16 @@ def test_add_slave_to_bond_without_slaves(eth1_up):
         assert bond_cur_state[Bond.CONFIG_SUBTREE][Bond.SLAVES] == [slave_name]
 
 
-@pytest.mark.xfail(
-    strict=True, reason="https://github.com/nmstate/nmstate/issues/932"
-)
-def test_remove_all_slaves_from_bond(eth1_up):
-    slave_name = (eth1_up[Interface.KEY][0][Interface.NAME],)
-    with bond_interface(name=BOND99, slaves=[slave_name]) as state:
-        state[Interface.KEY][0][Bond.CONFIG_SUBTREE][Bond.SLAVES] = []
+def test_remove_all_slaves_from_bond(bond99_with_2_slaves):
+    state = bond99_with_2_slaves
+    state[Interface.KEY][0][Bond.CONFIG_SUBTREE][Bond.SLAVES] = []
 
-        libnmstate.apply(state)
+    libnmstate.apply(state)
 
-        current_state = statelib.show_only((BOND99,))
-        bond_cur_state = current_state[Interface.KEY][0]
+    current_state = statelib.show_only((BOND99,))
+    bond_cur_state = current_state[Interface.KEY][0]
 
-        assert bond_cur_state[Bond.CONFIG_SUBTREE][Bond.SLAVES] == []
+    assert bond_cur_state[Bond.CONFIG_SUBTREE][Bond.SLAVES] == []
 
 
 @pytest.mark.tier1

@@ -36,10 +36,6 @@ from libnmstate.schema import RouteRule
 from libnmstate.schema import Team
 from libnmstate.schema import VXLAN
 
-from .testlib.bridgelib import generate_vlan_filtering_config
-from .testlib.bridgelib import generate_vlan_id_config
-from .testlib.bridgelib import generate_vlan_id_range_config
-
 
 INTERFACES = Constants.INTERFACES
 ROUTES = Constants.ROUTES
@@ -169,19 +165,19 @@ def ovs_bridge_state(portless_ovs_bridge_state):
 
 class TestIfaceCommon:
     def test_valid_instance(self, default_data):
-        libnmstate.validator.validate(default_data)
+        libnmstate.validator.schema_validate(default_data)
 
     def test_invalid_instance(self, default_data):
         default_data[INTERFACES][0][Interface.STATE] = "bad-state"
 
         with pytest.raises(js.ValidationError):
-            libnmstate.validator.validate(default_data)
+            libnmstate.validator.schema_validate(default_data)
 
     def test_invalid_type(self, default_data):
         default_data[INTERFACES][0][Interface.TYPE] = "bad-type"
 
         with pytest.raises(js.ValidationError):
-            libnmstate.validator.validate(default_data)
+            libnmstate.validator.schema_validate(default_data)
 
 
 class TestIfaceMacAddress:
@@ -195,7 +191,7 @@ class TestIfaceMacAddress:
     )
     def test_valid_mac_address(self, default_data, mac_address):
         default_data[INTERFACES][0][Interface.MAC] = mac_address
-        libnmstate.validator.validate(default_data)
+        libnmstate.validator.schema_validate(default_data)
 
     @pytest.mark.parametrize(
         "mac_address",
@@ -209,7 +205,7 @@ class TestIfaceMacAddress:
     def test_invalid_mac_address(self, default_data, mac_address):
         default_data[INTERFACES][0][Interface.MAC] = mac_address
         with pytest.raises(js.ValidationError, match=str(mac_address)):
-            libnmstate.validator.validate(default_data)
+            libnmstate.validator.schema_validate(default_data)
 
 
 class TestIfaceTypeEthernet:
@@ -220,7 +216,7 @@ class TestIfaceTypeEthernet:
                 Ethernet.AUTO_NEGOTIATION: True,
             }
         )
-        libnmstate.validator.validate(default_data)
+        libnmstate.validator.schema_validate(default_data)
 
     def test_valid_ethernet_without_auto_neg(self, default_data):
         default_data[INTERFACES][0].update(
@@ -230,7 +226,7 @@ class TestIfaceTypeEthernet:
                 Ethernet.DUPLEX: Ethernet.FULL_DUPLEX,
             }
         )
-        libnmstate.validator.validate(default_data)
+        libnmstate.validator.schema_validate(default_data)
 
     def test_valid_without_auto_neg_and_missing_speed(self, default_data):
         """
@@ -246,7 +242,7 @@ class TestIfaceTypeEthernet:
         )
         del default_data[INTERFACES][0]["link-speed"]
 
-        libnmstate.validator.validate(default_data)
+        libnmstate.validator.schema_validate(default_data)
 
     @pytest.mark.parametrize("valid_values", [0, 150, 256])
     def test_valid_with_sriov_total_vfs(self, default_data, valid_values):
@@ -258,7 +254,7 @@ class TestIfaceTypeEthernet:
                 },
             }
         )
-        libnmstate.validator.validate(default_data)
+        libnmstate.validator.schema_validate(default_data)
 
     @pytest.mark.parametrize("invalid_values", [-50, -1])
     def test_over_maximum_total_vfs_is_invalid(
@@ -274,7 +270,7 @@ class TestIfaceTypeEthernet:
         )
 
         with pytest.raises(js.ValidationError, match=str(invalid_values)):
-            libnmstate.validator.validate(default_data)
+            libnmstate.validator.schema_validate(default_data)
 
     @pytest.mark.parametrize("vf_id", [-50, -1])
     def test_invalid_vf_ids(self, default_data, vf_id):
@@ -291,7 +287,7 @@ class TestIfaceTypeEthernet:
         )
 
         with pytest.raises(js.ValidationError, match=str(vf_id)):
-            libnmstate.validator.validate(default_data)
+            libnmstate.validator.schema_validate(default_data)
 
     @pytest.mark.parametrize("vf_id", [0, 1, 20])
     def test_valid_vf_ids(self, default_data, vf_id):
@@ -306,7 +302,7 @@ class TestIfaceTypeEthernet:
                 },
             }
         )
-        libnmstate.validator.validate(default_data)
+        libnmstate.validator.schema_validate(default_data)
 
     def test_sriov_with_empty_vf_config_is_valid(self, default_data):
         default_data[Interface.KEY][0].update(
@@ -318,7 +314,7 @@ class TestIfaceTypeEthernet:
                 },
             }
         )
-        libnmstate.validator.validate(default_data)
+        libnmstate.validator.schema_validate(default_data)
 
     def test_sriov_vf_config_is_valid(self, default_data):
         default_data[Interface.KEY][0].update(
@@ -339,7 +335,7 @@ class TestIfaceTypeEthernet:
                 },
             }
         )
-        libnmstate.validator.validate(default_data)
+        libnmstate.validator.schema_validate(default_data)
 
 
 class TestIfaceTypeVxlan:
@@ -357,7 +353,7 @@ class TestIfaceTypeVxlan:
         )
 
         with pytest.raises(js.ValidationError):
-            libnmstate.validator.validate(default_data)
+            libnmstate.validator.schema_validate(default_data)
 
     def test_bad_id_range_is_invalid(self, default_data):
         default_data[Interface.KEY].append(
@@ -373,14 +369,14 @@ class TestIfaceTypeVxlan:
         )
 
         with pytest.raises(js.ValidationError):
-            libnmstate.validator.validate(default_data)
+            libnmstate.validator.schema_validate(default_data)
 
     def test_no_config_is_valid(self, default_data):
         default_data[Interface.KEY].append(
             {Interface.NAME: VXLAN0, Interface.TYPE: VXLAN.TYPE}
         )
 
-        libnmstate.validator.validate(default_data)
+        libnmstate.validator.schema_validate(default_data)
 
 
 class TestIfaceTypeTeam:
@@ -393,7 +389,7 @@ class TestIfaceTypeTeam:
             }
         )
 
-        libnmstate.validator.validate(default_data)
+        libnmstate.validator.schema_validate(default_data)
 
     def test_valid_team_with_ports(self, default_data):
         default_data[Interface.KEY].append(
@@ -406,7 +402,7 @@ class TestIfaceTypeTeam:
             }
         )
 
-        libnmstate.validator.validate(default_data)
+        libnmstate.validator.schema_validate(default_data)
 
     def test_valid_team_with_runner(self, default_data):
         default_data[Interface.KEY].append(
@@ -422,7 +418,7 @@ class TestIfaceTypeTeam:
             }
         )
 
-        libnmstate.validator.validate(default_data)
+        libnmstate.validator.schema_validate(default_data)
 
     def test_valid_team_with_ports_and_runner(self, default_data):
         default_data[Interface.KEY].append(
@@ -438,19 +434,19 @@ class TestIfaceTypeTeam:
             }
         )
 
-        libnmstate.validator.validate(default_data)
+        libnmstate.validator.schema_validate(default_data)
 
 
 class TestRoutes:
     def test_valid_state_absent(self, default_data):
         default_data[ROUTES][Route.CONFIG][0][Route.STATE] = "absent"
-        libnmstate.validator.validate(default_data)
+        libnmstate.validator.schema_validate(default_data)
 
     def test_invalid_state(self, default_data):
         default_data[ROUTES][Route.CONFIG][0][Route.STATE] = "bad-state"
 
         with pytest.raises(js.ValidationError):
-            libnmstate.validator.validate(default_data)
+            libnmstate.validator.schema_validate(default_data)
 
 
 class TestLinuxBridgeVlanFiltering:
@@ -464,7 +460,7 @@ class TestLinuxBridgeVlanFiltering:
         the_port.update(valid_port_type)
         default_data[Interface.KEY].append(bridge_state)
 
-        libnmstate.validator.validate(default_data)
+        libnmstate.validator.schema_validate(default_data)
 
     def test_invalid_vlan_port_type(self, default_data, bridge_state):
         invalid_port_type = generate_vlan_filtering_config("fake-type")
@@ -473,7 +469,7 @@ class TestLinuxBridgeVlanFiltering:
         default_data[Interface.KEY].append(bridge_state)
 
         with pytest.raises(js.ValidationError):
-            libnmstate.validator.validate(default_data)
+            libnmstate.validator.schema_validate(default_data)
 
     def test_access_port_accepted(self, default_data, bridge_state):
         vlan_access_port_state = generate_vlan_filtering_config(
@@ -483,7 +479,7 @@ class TestLinuxBridgeVlanFiltering:
         the_port.update(vlan_access_port_state)
         default_data[Interface.KEY].append(bridge_state)
 
-        libnmstate.validator.validate(default_data)
+        libnmstate.validator.schema_validate(default_data)
 
     def test_wrong_access_port_tag_type(self, default_data, bridge_state):
         invalid_access_port_tag_type = generate_vlan_filtering_config(
@@ -494,7 +490,7 @@ class TestLinuxBridgeVlanFiltering:
         default_data[Interface.KEY].append(bridge_state)
 
         with pytest.raises(js.ValidationError):
-            libnmstate.validator.validate(default_data)
+            libnmstate.validator.schema_validate(default_data)
 
     def test_wrong_access_tag_range(self, default_data, bridge_state):
         invalid_vlan_id_range = generate_vlan_filtering_config(
@@ -505,7 +501,7 @@ class TestLinuxBridgeVlanFiltering:
         default_data[Interface.KEY].append(bridge_state)
 
         with pytest.raises(js.ValidationError):
-            libnmstate.validator.validate(default_data)
+            libnmstate.validator.schema_validate(default_data)
 
     @pytest.mark.parametrize(
         "is_native_vlan", argvalues=[True, False], ids=["native", "not-native"]
@@ -522,7 +518,7 @@ class TestLinuxBridgeVlanFiltering:
         the_port.update(vlan_access_port_state)
         default_data[Interface.KEY].append(bridge_state)
 
-        libnmstate.validator.validate(default_data)
+        libnmstate.validator.schema_validate(default_data)
 
     def test_trunk_ports(self, default_data, bridge_state):
         trunk_tags = generate_vlan_id_config(101, 102, 103)
@@ -534,7 +530,7 @@ class TestLinuxBridgeVlanFiltering:
         the_port.update(vlan_trunk_tags_port_state)
         default_data[Interface.KEY].append(bridge_state)
 
-        libnmstate.validator.validate(default_data)
+        libnmstate.validator.schema_validate(default_data)
 
     def test_invalid_trunk_port_vlan_range(self, default_data, bridge_state):
         invalid_port_vlan_configuration = generate_vlan_filtering_config(
@@ -546,7 +542,7 @@ class TestLinuxBridgeVlanFiltering:
         default_data[Interface.KEY].append(bridge_state)
 
         with pytest.raises(js.ValidationError):
-            libnmstate.validator.validate(default_data)
+            libnmstate.validator.schema_validate(default_data)
 
 
 class TestOvsBridgeVlan:
@@ -564,7 +560,7 @@ class TestOvsBridgeVlan:
         the_port.update(valid_vlan_mode)
         default_data[Interface.KEY].append(ovs_bridge_state)
 
-        libnmstate.validator.validate(default_data)
+        libnmstate.validator.schema_validate(default_data)
 
     def test_invalid_vlan_port_mode(self, default_data, ovs_bridge_state):
         invalid_vlan_mode = self._generate_vlan_config("fake-mode")
@@ -574,7 +570,7 @@ class TestOvsBridgeVlan:
         default_data[Interface.KEY].append(ovs_bridge_state)
 
         with pytest.raises(js.ValidationError):
-            libnmstate.validator.validate(default_data)
+            libnmstate.validator.schema_validate(default_data)
 
     def test_access_port_accepted(self, default_data, ovs_bridge_state):
         vlan_access_port_state = self._generate_vlan_config(
@@ -585,7 +581,7 @@ class TestOvsBridgeVlan:
         the_port.update(vlan_access_port_state)
         default_data[Interface.KEY].append(ovs_bridge_state)
 
-        libnmstate.validator.validate(default_data)
+        libnmstate.validator.schema_validate(default_data)
 
     def test_wrong_access_port_tag_mode(self, default_data, ovs_bridge_state):
         invalid_access_port_tag_mode = self._generate_vlan_config(
@@ -597,7 +593,7 @@ class TestOvsBridgeVlan:
         default_data[Interface.KEY].append(ovs_bridge_state)
 
         with pytest.raises(js.ValidationError):
-            libnmstate.validator.validate(default_data)
+            libnmstate.validator.schema_validate(default_data)
 
     def test_wrong_access_tag_range(self, default_data, ovs_bridge_state):
         invalid_vlan_id_range = self._generate_vlan_config(
@@ -609,7 +605,7 @@ class TestOvsBridgeVlan:
         default_data[Interface.KEY].append(ovs_bridge_state)
 
         with pytest.raises(js.ValidationError):
-            libnmstate.validator.validate(default_data)
+            libnmstate.validator.schema_validate(default_data)
 
     @pytest.mark.parametrize(
         "is_native_vlan", argvalues=[True, False], ids=["native", "not-native"]
@@ -627,7 +623,7 @@ class TestOvsBridgeVlan:
         the_port.update(vlan_access_port_state)
         default_data[Interface.KEY].append(ovs_bridge_state)
 
-        libnmstate.validator.validate(default_data)
+        libnmstate.validator.schema_validate(default_data)
 
     def test_trunk_ports(self, default_data, ovs_bridge_state):
         trunk_tags = self._generate_vlan_id_config(101, 102, 103)
@@ -640,7 +636,7 @@ class TestOvsBridgeVlan:
         the_port.update(vlan_trunk_tags_port_state)
         default_data[Interface.KEY].append(ovs_bridge_state)
 
-        libnmstate.validator.validate(default_data)
+        libnmstate.validator.schema_validate(default_data)
 
     def test_invalid_trunk_port_vlan_range(
         self, default_data, ovs_bridge_state
@@ -655,7 +651,7 @@ class TestOvsBridgeVlan:
         default_data[Interface.KEY].append(ovs_bridge_state)
 
         with pytest.raises(js.ValidationError):
-            libnmstate.validator.validate(default_data)
+            libnmstate.validator.schema_validate(default_data)
 
     @staticmethod
     def _generate_vlan_config(
@@ -696,7 +692,7 @@ class TestRouteRules:
         route_rules[0][RouteRule.ROUTE_TABLE] = "main"
 
         with pytest.raises(js.ValidationError):
-            libnmstate.validator.validate(default_data)
+            libnmstate.validator.schema_validate(default_data)
 
 
 class TestOVSBridgeLinkAggregation:
@@ -721,4 +717,33 @@ class TestOVSBridgeLinkAggregation:
             }
         )
 
-        libnmstate.validator.validate(default_data)
+        libnmstate.validator.schema_validate(default_data)
+
+
+def generate_vlan_filtering_config(
+    port_type, trunk_tags=None, tag=None, native_vlan=None
+):
+    vlan_filtering_state = {
+        LB.Port.Vlan.MODE: port_type,
+        LB.Port.Vlan.TRUNK_TAGS: trunk_tags or [],
+    }
+
+    if tag:
+        vlan_filtering_state[LB.Port.Vlan.TAG] = tag
+    if native_vlan is not None:
+        vlan_filtering_state[LB.Port.Vlan.ENABLE_NATIVE] = native_vlan
+
+    return {LB.Port.VLAN_SUBTREE: vlan_filtering_state}
+
+
+def generate_vlan_id_config(*vlan_ids):
+    return [{LB.Port.Vlan.TrunkTags.ID: vlan_id} for vlan_id in vlan_ids]
+
+
+def generate_vlan_id_range_config(min_vlan_id, max_vlan_id):
+    return {
+        LB.Port.Vlan.TrunkTags.ID_RANGE: {
+            LB.Port.Vlan.TrunkTags.MIN_RANGE: min_vlan_id,
+            LB.Port.Vlan.TrunkTags.MAX_RANGE: max_vlan_id,
+        }
+    }
