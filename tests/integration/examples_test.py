@@ -25,7 +25,6 @@ from .testlib import assertlib
 from .testlib.examplelib import example_state
 
 from libnmstate import netinfo
-from libnmstate.error import NmstateLibnmError
 from libnmstate.error import NmstateNotSupportedError
 from libnmstate.schema import DNS
 
@@ -48,9 +47,6 @@ def test_add_down_remove_vlan(eth1_up):
 
 
 @pytest.mark.tier1
-@pytest.mark.xfail(
-    raises=NmstateLibnmError, reason="https://bugzilla.redhat.com/1724901"
-)
 def test_add_remove_ovs_bridge(eth1_up):
     with example_state(
         "ovsbridge_create.yml", cleanup="ovsbridge_delete.yml"

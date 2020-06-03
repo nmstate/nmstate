@@ -47,5 +47,5 @@ def show_with_plugin(plugin, include_status_data=None):
     report[RouteRule.KEY] = plugin.get_route_rules()
     report[DNS.KEY] = plugin.get_dns_client_config()
 
-    validator.validate(report)
+    validator.schema_validate(report)
     return report

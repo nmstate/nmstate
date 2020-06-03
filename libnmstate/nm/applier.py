@@ -27,7 +27,8 @@ from libnmstate.schema import InterfaceType
 from libnmstate.schema import LinuxBridge as LB
 from libnmstate.schema import OVSBridge as OvsB
 from libnmstate.schema import Team
-from libnmstate.appliers.bond import is_bond_mode_changed
+from libnmstate.ifaces.bond import BondIface
+from libnmstate.ifaces.bridge import BridgeIface
 
 from . import bond
 from . import bridge
@@ -44,6 +45,7 @@ from . import vlan
 from . import vxlan
 from . import wired
 from .common import NM
+from .dns import get_dns_config_iface_names
 
 
 MAXIMUM_INTERFACE_LENGTH = 15
@@ -52,30 +54,33 @@ MASTER_METADATA = "_master"
 MASTER_TYPE_METADATA = "_master_type"
 MASTER_IFACE_TYPES = ovs.BRIDGE_TYPE, bond.BOND_TYPE, LB.TYPE, Team.TYPE
 
-BRPORT_OPTIONS_METADATA = "_brport_options"
 
-
-def apply_changes(context, ifaces_desired_state, original_desired_state):
+def apply_changes(context, net_state):
     con_profiles = []
 
+    _preapply_dns_fix(context, net_state)
+
+    ifaces_desired_state = net_state.ifaces.state_to_edit
     ifaces_desired_state.extend(
         _create_proxy_ifaces_desired_state(ifaces_desired_state)
     )
+
     for iface_desired_state in filter(
         lambda s: s.get(Interface.STATE)
         not in (InterfaceState.ABSENT, InterfaceState.DOWN),
         ifaces_desired_state,
     ):
-
         ifname = iface_desired_state[Interface.NAME]
         nmdev = context.get_nm_dev(ifname)
         cur_con_profile = None
         if nmdev:
             cur_con_profile = connection.ConnectionProfile(context)
             cur_con_profile.import_by_device(nmdev)
-        original_desired_iface_state = original_desired_state.interfaces.get(
-            ifname, {}
-        )
+        original_desired_iface_state = {}
+        if net_state.ifaces.get(ifname):
+            original_desired_iface_state = net_state.ifaces[
+                ifname
+            ].original_dict
         new_con_profile = _build_connection_profile(
             context,
             iface_desired_state,
@@ -163,17 +168,22 @@ def _set_ifaces_admin_state(context, ifaces_desired_state, con_profiles):
                     new_ifaces_to_activate.add(ifname)
         else:
             if iface_desired_state[Interface.STATE] == InterfaceState.UP:
-                if is_bond_mode_changed(iface_desired_state):
-                    # NetworkManager leaves leftover in sysfs for bond
-                    # options when changing bond mode, bug:
-                    # https://bugzilla.redhat.com/show_bug.cgi?id=1819137
-                    # Workaround: delete the bond interface from kernel and
-                    # create again via full deactivation beforehand.
-                    logging.debug(
-                        f"Bond interface {ifname} is changing bond mode, "
-                        "will do full deactivation before applying changes"
-                    )
-                    devs_to_deactivate_beforehand.append(nmdev)
+                if (
+                    iface_desired_state.get(Interface.TYPE)
+                    == InterfaceType.BOND
+                ):
+                    iface = BondIface(iface_desired_state)
+                    if iface.is_bond_mode_changed:
+                        # NetworkManager leaves leftover in sysfs for bond
+                        # options when changing bond mode, bug:
+                        # https://bugzilla.redhat.com/show_bug.cgi?id=1819137
+                        # Workaround: delete the bond interface from kernel and
+                        # create again via full deactivation beforehand.
+                        logging.debug(
+                            f"Bond interface {ifname} is changing bond mode, "
+                            "will do full deactivation before applying changes"
+                        )
+                        devs_to_deactivate_beforehand.append(nmdev)
 
                 if _is_master_iface(iface_desired_state):
                     master_ifaces_to_edit.add(
@@ -325,7 +335,9 @@ def _create_proxy_ifaces_desired_state(ifaces_desired_state):
         master_type = iface_desired_state.get(MASTER_TYPE_METADATA)
         if master_type != ovs.BRIDGE_TYPE:
             continue
-        port_opts_metadata = iface_desired_state.get(BRPORT_OPTIONS_METADATA)
+        port_opts_metadata = iface_desired_state.get(
+            BridgeIface.BRPORT_OPTIONS_METADATA
+        )
         if port_opts_metadata is None:
             continue
         port_iface_desired_state = _create_ovs_port_iface_desired_state(
@@ -435,7 +447,9 @@ def _build_connection_profile(
     elif iface_type == ovs.INTERNAL_INTERFACE_TYPE:
         settings.append(ovs.create_interface_setting())
 
-    bridge_port_options = iface_desired_state.get(BRPORT_OPTIONS_METADATA)
+    bridge_port_options = iface_desired_state.get(
+        BridgeIface.BRPORT_OPTIONS_METADATA
+    )
     if bridge_port_options and master_type == bridge.BRIDGE_TYPE:
         settings.append(
             bridge.create_port_setting(bridge_port_options, base_profile)
@@ -472,3 +486,44 @@ def _translate_master_type(iface_desired_state):
     master_type = iface_desired_state.get(MASTER_TYPE_METADATA)
     if master_type == LB.TYPE:
         iface_desired_state[MASTER_TYPE_METADATA] = bridge.BRIDGE_TYPE
+
+
+def _preapply_dns_fix(context, net_state):
+    """
+     * When DNS configuration does not changed and old interface hold DNS
+       configuration is not included in `ifaces_desired_state`, preserve
+       the old DNS configure by removing DNS metadata from
+       `ifaces_desired_state`.
+     * When DNS configuration changed, include old interface which is holding
+       DNS configuration, so it's DNS configure could be removed.
+    """
+    cur_dns_iface_names = get_dns_config_iface_names(
+        ipv4.acs_and_ip_profiles(context.client),
+        ipv6.acs_and_ip_profiles(context.client),
+    )
+
+    # Whether to mark interface as changed which is used for holding old DNS
+    # configurations
+    remove_existing_dns_config = False
+    # Whether to preserve old DNS config by DNS metadata to be removed from
+    # desired state
+    preserve_old_dns_config = False
+    if net_state.dns.config == net_state.dns.current_config:
+        for cur_dns_iface_name in cur_dns_iface_names:
+            iface = net_state.ifaces[cur_dns_iface_name]
+            if iface.is_changed or iface.is_desired:
+                remove_existing_dns_config = True
+        if not remove_existing_dns_config:
+            preserve_old_dns_config = True
+    else:
+        remove_existing_dns_config = True
+
+    if remove_existing_dns_config:
+        for cur_dns_iface_name in cur_dns_iface_names:
+            iface = net_state.ifaces[cur_dns_iface_name]
+            iface.mark_as_changed()
+
+    if preserve_old_dns_config:
+        for iface in net_state.ifaces.values():
+            if iface.is_changed or iface.is_desired:
+                iface.remove_dns_metadata()

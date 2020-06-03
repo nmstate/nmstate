@@ -45,6 +45,8 @@ parametrize_ip_ver = pytest.mark.parametrize(
     ids=["ipv4", "ipv6"],
 )
 
+DUMMY0 = "dummy0"
+
 
 @pytest.fixture(scope="function", autouse=True)
 def dns_test_env(eth1_up, eth2_up):
@@ -160,7 +162,20 @@ def test_remove_dns_config():
     assert dns_config == current_state[DNS.KEY][DNS.CONFIG]
 
 
-def test_preserve_dns_config():
+@pytest.fixture
+def dummy0_up():
+    dummy_iface_state = {
+        Interface.NAME: DUMMY0,
+        Interface.TYPE: InterfaceType.DUMMY,
+        Interface.STATE: InterfaceState.UP,
+    }
+    libnmstate.apply({Interface.KEY: [dummy_iface_state]})
+    yield dummy_iface_state
+    dummy_iface_state[Interface.STATE] = InterfaceState.ABSENT
+    libnmstate.apply({Interface.KEY: [dummy_iface_state]})
+
+
+def test_preserve_dns_config(dummy0_up):
     dns_config = {
         DNS.SERVER: [IPV6_DNS_NAMESERVERS[0], IPV4_DNS_NAMESERVERS[0]],
         DNS.SEARCH: [],
@@ -171,29 +186,54 @@ def test_preserve_dns_config():
         DNS.KEY: {DNS.CONFIG: dns_config},
     }
     libnmstate.apply(desired_state)
-    current_state = libnmstate.show()
 
-    # Remove default gateways, so that if nmstate try to find new interface
-    # for DNS profile, it will fail.
+    # Add new dummy interface with default gateway, nmstate should
+    # preserve the existing DNS configure as interface holding DNS
+    # configuration is not changed and DNS configure is still the same.
     libnmstate.apply(
         {
-            Interface.KEY: _get_test_iface_states(),
+            Interface.KEY: [
+                {
+                    Interface.NAME: DUMMY0,
+                    Interface.TYPE: InterfaceType.DUMMY,
+                    Interface.IPV4: {
+                        InterfaceIPv4.ADDRESS: [
+                            {
+                                InterfaceIPv4.ADDRESS_IP: "192.0.2.250",
+                                InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+                            }
+                        ],
+                        InterfaceIPv4.ENABLED: True,
+                    },
+                    Interface.IPV6: {
+                        InterfaceIPv6.ADDRESS: [
+                            {
+                                InterfaceIPv6.ADDRESS_IP: "2001:db8:f::1",
+                                InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
+                            }
+                        ],
+                        InterfaceIPv6.ENABLED: True,
+                    },
+                }
+            ],
             Route.KEY: {
                 Route.CONFIG: [
                     {
                         Route.DESTINATION: "0.0.0.0/0",
-                        Route.STATE: Route.STATE_ABSENT,
+                        Route.NEXT_HOP_ADDRESS: "192.0.2.2",
+                        Route.NEXT_HOP_INTERFACE: DUMMY0,
                     },
                     {
                         Route.DESTINATION: "::/0",
-                        Route.STATE: Route.STATE_ABSENT,
+                        Route.NEXT_HOP_ADDRESS: "2001:db8:f::2",
+                        Route.NEXT_HOP_INTERFACE: DUMMY0,
                     },
                 ]
             },
         }
     )
 
-    libnmstate.apply({Interface.KEY: [], DNS.KEY: dns_config})
+    current_state = libnmstate.show()
 
     assert dns_config == current_state[DNS.KEY][DNS.CONFIG]
 

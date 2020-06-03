@@ -30,7 +30,6 @@ from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
-from libnmstate.state import State
 
 BOND_TYPE = InterfaceType.BOND
 
@@ -58,8 +57,17 @@ def plugin_context_mock():
         yield m
 
 
+@pytest.fixture
+def net_state_mock():
+    with mock.patch.object(netapplier, "NetState") as m:
+        yield m
+
+
 def test_iface_admin_state_change(
-    netapplier_nm_mock, show_with_plugin_mock, plugin_context_mock
+    netapplier_nm_mock,
+    show_with_plugin_mock,
+    plugin_context_mock,
+    net_state_mock,
 ):
     current_config = {
         Interface.KEY: [
@@ -76,22 +84,19 @@ def test_iface_admin_state_change(
 
     desired_config[Interface.KEY][0][Interface.STATE] = InterfaceState.DOWN
     show_with_plugin_mock.return_value = current_config
+    plugin = plugin_context_mock()
     netapplier.apply(desired_config, verify_change=False)
 
-    applier_mock = netapplier_nm_mock.applier
-    applier_mock.apply_changes.assert_has_calls(
-        [
-            mock.call(
-                plugin_context_mock().context,
-                desired_config[Interface.KEY],
-                State(desired_config),
-            )
-        ]
+    plugin.apply_changes.assert_called_once_with(
+        net_state_mock(desired_config, current_config)
     )
 
 
 def test_add_new_bond(
-    plugin_context_mock, show_with_plugin_mock, netapplier_nm_mock
+    plugin_context_mock,
+    show_with_plugin_mock,
+    netapplier_nm_mock,
+    net_state_mock,
 ):
     show_with_plugin_mock.return_value = {}
 
@@ -112,18 +117,19 @@ def test_add_new_bond(
         ]
     }
 
+    plugin = plugin_context_mock()
     netapplier.apply(desired_config, verify_change=False)
 
-    m_apply_changes = netapplier_nm_mock.applier.apply_changes
-    m_apply_changes.assert_called_once_with(
-        plugin_context_mock().context,
-        desired_config[Interface.KEY],
-        State(desired_config),
+    plugin.apply_changes.assert_called_once_with(
+        net_state_mock(desired_config, {})
     )
 
 
 def test_edit_existing_bond(
-    show_with_plugin_mock, plugin_context_mock, netapplier_nm_mock
+    show_with_plugin_mock,
+    plugin_context_mock,
+    netapplier_nm_mock,
+    net_state_mock,
 ):
     current_config = {
         Interface.KEY: [
@@ -149,13 +155,11 @@ def test_edit_existing_bond(
     ]
     options["miimon"] = 200
 
+    plugin = plugin_context_mock()
     netapplier.apply(desired_config, verify_change=False)
 
-    m_apply_changes = netapplier_nm_mock.applier.apply_changes
-    m_apply_changes.assert_called_once_with(
-        plugin_context_mock().context,
-        desired_config[Interface.KEY],
-        State(desired_config),
+    plugin.apply_changes.assert_called_once_with(
+        net_state_mock(desired_config, current_config)
     )
 
 
