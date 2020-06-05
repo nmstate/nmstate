@@ -28,7 +28,7 @@ from . import statelib
 def ifaces_init(*ifnames):
     """ Remove any existing definitions on the interfaces. """
     for ifname in ifnames:
-        _set_eth_admin_state(ifname, schema.InterfaceState.DOWN)
+        _set_eth_admin_state(ifname, schema.InterfaceState.ABSENT)
 
 
 @contextmanager
@@ -37,7 +37,7 @@ def iface_up(ifname):
     try:
         yield statelib.show_only((ifname,))
     finally:
-        _set_eth_admin_state(ifname, schema.InterfaceState.DOWN)
+        _set_eth_admin_state(ifname, schema.InterfaceState.ABSENT)
 
 
 def _set_eth_admin_state(ifname, state):
@@ -46,7 +46,7 @@ def _set_eth_admin_state(ifname, state):
     iface_current_admin_state = current_ifstate[schema.Interface.STATE]
     if (
         iface_current_admin_state != state
-        or state == schema.InterfaceState.DOWN
+        or state == schema.InterfaceState.ABSENT
     ):
         desired_state = {
             schema.Interface.KEY: [

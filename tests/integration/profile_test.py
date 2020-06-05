@@ -25,10 +25,13 @@ import pytest
 
 import libnmstate
 from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import InterfaceState
 
+from .testlib import assertlib
 from .testlib import cmdlib
+from .testlib import statelib
 
 
 DUMMY0_IFNAME = "dummy0"
@@ -71,6 +74,8 @@ NMCLI_CON_UP_TEST_PROFILE_CMD = [
 DUMMY_PROFILE_DIRECTORY = "/etc/NetworkManager/system-connections/"
 
 ETH_PROFILE_DIRECTORY = "/etc/sysconfig/network-scripts/"
+
+MAC0 = "02:FF:FF:FF:FF:00"
 
 
 @pytest.mark.tier1
@@ -116,7 +121,7 @@ def dummy_interface(ifname):
     }
     libnmstate.apply(desired_state)
     try:
-        yield
+        yield desired_state
     finally:
         dummy0_dstate = desired_state[Interface.KEY][0]
         dummy0_dstate[Interface.STATE] = InterfaceState.ABSENT
@@ -163,6 +168,109 @@ def create_inactive_profile(con_name):
         yield
     finally:
         cmdlib.exec_cmd(_nmcli_delete_connection("testProfile"))
+
+
+def test_state_down_preserving_config():
+    with dummy_interface(DUMMY0_IFNAME) as desired_state:
+        iface_state = desired_state[Interface.KEY][0]
+        iface_state[Interface.MAC] = MAC0
+        iface_state[Interface.IPV4] = {
+            InterfaceIPv4.ENABLED: True,
+            InterfaceIPv4.DHCP: False,
+            InterfaceIPv4.ADDRESS: [
+                {
+                    InterfaceIPv4.ADDRESS_IP: "192.0.2.251",
+                    InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+                }
+            ],
+        }
+        libnmstate.apply(desired_state)
+        state_before_down = statelib.show_only((DUMMY0_IFNAME,))
+
+        libnmstate.apply(
+            {
+                Interface.KEY: [
+                    {
+                        Interface.NAME: DUMMY0_IFNAME,
+                        Interface.STATE: InterfaceState.DOWN,
+                    }
+                ]
+            }
+        )
+
+        libnmstate.apply(
+            {
+                Interface.KEY: [
+                    {
+                        Interface.NAME: DUMMY0_IFNAME,
+                        Interface.TYPE: InterfaceType.DUMMY,
+                        Interface.STATE: InterfaceState.UP,
+                    }
+                ]
+            }
+        )
+
+        assertlib.assert_state_match(state_before_down)
+
+
+@pytest.fixture
+def dummy0_with_down_profile():
+    with dummy_interface(DUMMY0_IFNAME) as desired_state:
+        iface_state = desired_state[Interface.KEY][0]
+        iface_state[Interface.MAC] = MAC0
+        iface_state[Interface.IPV4] = {
+            InterfaceIPv4.ENABLED: True,
+            InterfaceIPv4.DHCP: False,
+            InterfaceIPv4.ADDRESS: [
+                {
+                    InterfaceIPv4.ADDRESS_IP: "192.0.2.251",
+                    InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+                }
+            ],
+        }
+        libnmstate.apply(desired_state)
+        libnmstate.apply(
+            {
+                Interface.KEY: [
+                    {
+                        Interface.NAME: DUMMY0_IFNAME,
+                        Interface.STATE: InterfaceState.DOWN,
+                    }
+                ]
+            }
+        )
+        yield desired_state
+
+
+def test_state_absent_can_remove_down_profiles(dummy0_with_down_profile):
+    state_before_down = dummy0_with_down_profile
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: DUMMY0_IFNAME,
+                    Interface.STATE: InterfaceState.ABSENT,
+                }
+            ]
+        }
+    )
+
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: DUMMY0_IFNAME,
+                    Interface.TYPE: InterfaceType.DUMMY,
+                    Interface.STATE: InterfaceState.UP,
+                }
+            ]
+        }
+    )
+
+    # Sinec absent already removed the down profile, if we bring the same
+    # interface up, it should contain different states than before
+    with pytest.raises(AssertionError):
+        assertlib.assert_state_match(state_before_down)
 
 
 def _nmcli_deactivate_connection(con_name):

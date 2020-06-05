@@ -178,7 +178,7 @@ def iface_with_dynamic_ip_up(ifname):
                 Interface.KEY: [
                     {
                         Interface.NAME: ifname,
-                        Interface.STATE: InterfaceState.DOWN,
+                        Interface.STATE: InterfaceState.ABSENT,
                     }
                 ]
             }

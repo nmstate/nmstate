@@ -80,7 +80,11 @@ class Ifaces:
                             "neither in desire state nor current state"
                         )
                 iface = _to_specific_iface_obj(iface_info)
-                if iface.iface_type == InterfaceType.UNKNOWN:
+                if (
+                    iface.iface_type == InterfaceType.UNKNOWN
+                    # Allowing deletion of down profiles
+                    and not iface.is_absent
+                ):
                     # Ignore interface with unknown type
                     continue
                 if cur_iface:
