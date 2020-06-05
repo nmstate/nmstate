@@ -21,7 +21,6 @@ from operator import itemgetter
 import socket
 
 from libnmstate import iplib
-from libnmstate.error import NmstateInternalError
 from libnmstate.error import NmstateNotImplementedError
 from libnmstate.error import NmstateValueError
 from libnmstate.nm import active_connection as nm_ac
@@ -55,11 +54,7 @@ def get_running(acs_and_ip_cfgs):
             nm_ac_con=active_connection
         ).devname
         if not iface_name:
-            raise NmstateInternalError(
-                "Got connection {} has not interface name".format(
-                    active_connection.get_id()
-                )
-            )
+            continue
         for nm_route in ip_cfg.props.routes:
             table_id = _get_per_route_table_id(
                 nm_route, iplib.KERNEL_MAIN_ROUTE_TABLE_ID
@@ -91,11 +86,7 @@ def get_config(acs_and_ip_profiles):
             nm_ac_con=active_connection
         ).devname
         if not iface_name:
-            raise NmstateInternalError(
-                "Got connection {} has not interface name".format(
-                    active_connection.get_id()
-                )
-            )
+            continue
         default_table_id = ip_profile.props.route_table
         if gateway:
             routes.append(
