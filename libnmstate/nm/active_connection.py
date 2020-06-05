@@ -59,9 +59,10 @@ class ActiveConnection:
         For software devices, deactivation removes the devices from the kernel.
         """
         act_connection = self._nmdev.get_active_connection()
-        if not act_connection or act_connection.props.state in (
-            NM.ActiveConnectionState.DEACTIVATING,
-            NM.ActiveConnectionState.DEACTIVATED,
+        if (
+            not act_connection
+            or act_connection.props.state
+            == NM.ActiveConnectionState.DEACTIVATED
         ):
             return
 
@@ -79,13 +80,14 @@ class ActiveConnection:
             self._wait_state_changed_callback,
             action,
         )
-        user_data = (handler_id, action)
-        self._ctx.client.deactivate_connection_async(
-            act_connection,
-            self._ctx.cancellable,
-            self._deactivate_connection_callback,
-            user_data,
-        )
+        if act_connection.props.state != NM.ActiveConnectionState.DEACTIVATING:
+            user_data = (handler_id, action)
+            self._ctx.client.deactivate_connection_async(
+                act_connection,
+                self._ctx.cancellable,
+                self._deactivate_connection_callback,
+                user_data,
+            )
 
     def _wait_state_changed_callback(self, act_con, state, reason, action):
         if self._ctx.is_cancelled():
