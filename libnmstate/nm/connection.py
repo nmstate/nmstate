@@ -105,7 +105,10 @@ class ConnectionProfile:
             if not self.profile:
                 self.import_by_device()
         if self.profile:
-            action = f"Delete profile: {self.profile.get_id()}"
+            action = (
+                f"Delete profile: id:{self.profile.get_id()}, "
+                f"uuid:{self.profile.get_uuid()}"
+            )
             user_data = action
             self._ctx.register_async(action, fast=True)
             self.profile.delete_async(

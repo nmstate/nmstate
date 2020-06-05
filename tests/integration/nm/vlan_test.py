@@ -95,6 +95,7 @@ def _delete_vlan(ctx, devname):
     nmdev = ctx.get_nm_dev(devname)
     with main_context(ctx):
         nm.device.deactivate(ctx, nmdev)
+        ctx.wait_all_finish()
         nm.device.delete(ctx, nmdev)
 
 
