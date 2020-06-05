@@ -24,6 +24,7 @@ from libnmstate.error import NmstateLibnmError
 from libnmstate.error import NmstatePermissionError
 from libnmstate.nm import connection
 from libnmstate.nm import common
+from .connection import is_activated
 
 
 class NMCheckPointError(Exception):
@@ -236,13 +237,13 @@ class CheckPoint:
             nm_dev = client.get_device_by_path(path)
             iface = path if nm_dev is None else nm_dev.get_iface()
             if (
-                nm_dev.get_state() == common.NM.DeviceState.DEACTIVATING
-                and nm_dev.get_state_reason()
+                nm_dev.get_state_reason()
                 == common.NM.DeviceStateReason.NEW_ACTIVATION
             ) or nm_dev.get_state() == common.NM.DeviceState.IP_CONFIG:
-                profile = connection.ConnectionProfile(self._ctx)
-                profile.import_by_device(nm_dev)
-                if not profile.is_activated():
+                nm_ac = nm_dev.get_active_connection()
+                if not is_activated(nm_ac, nm_dev):
+                    profile = connection.ConnectionProfile(self._ctx)
+                    profile.nmdevice = nm_dev
                     action = f"Waiting for rolling back {iface}"
                     self._ctx.register_async(action)
                     profile.wait_dev_activation(action)

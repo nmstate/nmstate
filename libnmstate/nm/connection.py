@@ -220,7 +220,7 @@ class ConnectionProfile:
             self._nm_ac = nm_act_con
             self._nm_dev = self._ctx.get_nm_dev(devname)
 
-            if self.is_activated():
+            if is_activated(self._nm_ac, self._nm_dev):
                 self._ctx.finish_async(action)
             elif self._is_activating():
                 self._wait_ac_activation(action)
@@ -292,7 +292,7 @@ class ConnectionProfile:
         if self._ctx.is_cancelled():
             self._activation_clean_up()
             return
-        devname = self.profile.get_id()
+        devname = self._nm_dev.get_iface()
         cur_nm_dev = self._ctx.get_nm_dev(devname)
         if cur_nm_dev and cur_nm_dev != self._nm_dev:
             logging.debug(f"The NM.Device of profile {devname} changed")
@@ -310,11 +310,11 @@ class ConnectionProfile:
             self._remove_ac_handlers()
             self._nm_ac = cur_nm_ac
             self._wait_ac_activation(action)
-        if self.is_activated():
+        if is_activated(self._nm_ac, self._nm_dev):
             logging.debug(
                 "Connection activation succeeded: dev=%s, con-state=%s, "
                 "dev-state=%s, state-flags=%s",
-                self.profile.get_id(),
+                devname,
                 self._nm_ac.get_state(),
                 self._nm_dev.get_state(),
                 self._nm_ac.get_state_flags(),
@@ -334,38 +334,6 @@ class ConnectionProfile:
         self._remove_ac_handlers()
         self._remove_dev_handlers()
 
-    def is_activated(self):
-        if not self._nm_ac or not self._nm_dev:
-            return False
-
-        state = self._nm_ac.get_state()
-        if state == NM.ActiveConnectionState.ACTIVATED:
-            return True
-        elif state == NM.ActiveConnectionState.ACTIVATING:
-            ac_state_flags = self._nm_ac.get_state_flags()
-            nm_flags = NM.ActivationStateFlags
-            ip4_is_dynamic = ipv4.is_dynamic(self._nm_ac)
-            ip6_is_dynamic = ipv6.is_dynamic(self._nm_ac)
-            if (
-                ac_state_flags & nm_flags.IS_MASTER
-                or (ip4_is_dynamic and ac_state_flags & nm_flags.IP6_READY)
-                or (ip6_is_dynamic and ac_state_flags & nm_flags.IP4_READY)
-                or (ip4_is_dynamic and ip6_is_dynamic)
-            ):
-                # For interface meet any condition below will be
-                # treated as activated when reach IP_CONFIG state:
-                #   * Is master device.
-                #   * DHCPv4 enabled with IP6_READY flag.
-                #   * DHCPv6/Autoconf with IP4_READY flag.
-                #   * DHCPv4 enabled with DHCPv6/Autoconf enabled.
-                return (
-                    NM.DeviceState.IP_CONFIG
-                    <= self._nm_dev.get_state()
-                    <= NM.DeviceState.ACTIVATED
-                )
-
-        return False
-
     def _is_activating(self):
         if not self._nm_ac or not self._nm_dev:
             return True
@@ -377,8 +345,7 @@ class ConnectionProfile:
 
         return (
             self._nm_ac.get_state() == NM.ActiveConnectionState.ACTIVATING
-            and not self.is_activated()
-        )
+        ) and not is_activated(self._nm_ac, self._nm_dev)
 
     def _remove_dev_handlers(self):
         for handler_id in self._dev_handlers:
@@ -517,3 +484,36 @@ def list_connections_by_ifname(context, ifname):
         for con in context.client.get_connections()
         if con.get_interface_name() == ifname
     ]
+
+
+def is_activated(nm_ac, nm_dev):
+    if not (nm_ac and nm_dev):
+        return False
+
+    state = nm_ac.get_state()
+    if state == NM.ActiveConnectionState.ACTIVATED:
+        return True
+    elif state == NM.ActiveConnectionState.ACTIVATING:
+        ac_state_flags = nm_ac.get_state_flags()
+        nm_flags = NM.ActivationStateFlags
+        ip4_is_dynamic = ipv4.is_dynamic(nm_ac)
+        ip6_is_dynamic = ipv6.is_dynamic(nm_ac)
+        if (
+            ac_state_flags & nm_flags.IS_MASTER
+            or (ip4_is_dynamic and ac_state_flags & nm_flags.IP6_READY)
+            or (ip6_is_dynamic and ac_state_flags & nm_flags.IP4_READY)
+            or (ip4_is_dynamic and ip6_is_dynamic)
+        ):
+            # For interface meet any condition below will be
+            # treated as activated when reach IP_CONFIG state:
+            #   * Is master device.
+            #   * DHCPv4 enabled with IP6_READY flag.
+            #   * DHCPv6/Autoconf with IP4_READY flag.
+            #   * DHCPv4 enabled with DHCPv6/Autoconf enabled.
+            return (
+                NM.DeviceState.IP_CONFIG
+                <= nm_dev.get_state()
+                <= NM.DeviceState.ACTIVATED
+            )
+
+    return False
