@@ -90,14 +90,14 @@ class DnsState:
                 },
             }
         else:
-            iface_metadata = {
-                ipv4_iface: {
+            if ipv4_iface:
+                iface_metadata[ipv4_iface] = {
                     Interface.IPV4: {DNS.SERVER: [], DNS.SEARCH: []},
-                },
-                ipv6_iface: {
+                }
+            if ipv6_iface:
+                iface_metadata[ipv6_iface] = {
                     Interface.IPV6: {DNS.SERVER: [], DNS.SEARCH: []},
-                },
-            }
+                }
         index = 0
         searches_saved = False
         for server in self._config_servers:
