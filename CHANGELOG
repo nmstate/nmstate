@@ -1,4 +1,14 @@
 # Changelog
+## [0.3.1] - 2020-06-08
+### Bug fixes
+ - Wait until the rollback is completed.
+ - Fix base interfaces removal, VLAN/VXLAN interfaces will be removed automatically.
+ - Fix all slaves removal of a master interface.
+ - Interfaces state is not required when editting DNS/route/routerules.
+ - Fix routes lose when editting DNS.
+ - Interface is default to `state:up` when is not defined in desired state.
+ - Differentiate DOWN and ABSENT state. DOWN is not removing the profile anymore.
+
 ## [0.3.0] - 2020-05-07
 ### New features
  - Linux Bridge: Support VLAN filtering.
