@@ -18,6 +18,7 @@
 #
 
 from contextlib import contextmanager
+import logging
 
 from libnmstate import validator
 from libnmstate.nm import NetworkManagerPlugin
@@ -32,6 +33,15 @@ def plugin_context():
     nm_plugin = NetworkManagerPlugin()
     try:
         yield nm_plugin
+    except (Exception, KeyboardInterrupt):
+        if nm_plugin.checkpoint:
+            try:
+                nm_plugin.rollback_checkpoint()
+            # Don't complex thing by raise exception when handling another
+            # exception, just log the rollback failure.
+            except Exception as e:
+                logging.error(f"Rollback failed with error {e}")
+        raise
     finally:
         nm_plugin.unload()
 

@@ -35,12 +35,6 @@ BOND_TYPE = InterfaceType.BOND
 
 
 @pytest.fixture
-def netapplier_nm_mock():
-    with mock.patch.object(netapplier, "nm") as m:
-        yield m
-
-
-@pytest.fixture
 def show_with_plugin_mock():
     with mock.patch.object(netapplier, "show_with_plugin") as m:
         yield m
@@ -64,10 +58,7 @@ def net_state_mock():
 
 
 def test_iface_admin_state_change(
-    netapplier_nm_mock,
-    show_with_plugin_mock,
-    plugin_context_mock,
-    net_state_mock,
+    show_with_plugin_mock, plugin_context_mock, net_state_mock,
 ):
     current_config = {
         Interface.KEY: [
@@ -93,10 +84,7 @@ def test_iface_admin_state_change(
 
 
 def test_add_new_bond(
-    plugin_context_mock,
-    show_with_plugin_mock,
-    netapplier_nm_mock,
-    net_state_mock,
+    plugin_context_mock, show_with_plugin_mock, net_state_mock,
 ):
     show_with_plugin_mock.return_value = {}
 
@@ -126,10 +114,7 @@ def test_add_new_bond(
 
 
 def test_edit_existing_bond(
-    show_with_plugin_mock,
-    plugin_context_mock,
-    netapplier_nm_mock,
-    net_state_mock,
+    show_with_plugin_mock, plugin_context_mock, net_state_mock,
 ):
     current_config = {
         Interface.KEY: [

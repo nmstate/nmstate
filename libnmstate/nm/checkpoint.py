@@ -27,50 +27,28 @@ from libnmstate.nm import common
 from .connection import is_activated
 
 
-class NMCheckPointError(Exception):
-    pass
-
-
-class NMCheckPointCreationError(NMCheckPointError):
-    pass
-
-
-class NMCheckPointPermissionError(NMCheckPointError):
-    pass
-
-
 def get_checkpoints(nm_client):
     checkpoints = [c.get_path() for c in nm_client.get_checkpoints()]
     return checkpoints
 
 
 class CheckPoint:
-    def __init__(
-        self, nm_context, autodestroy=True, timeout=60, dbuspath=None
-    ):
+    def __init__(self, nm_context, timeout=60, dbuspath=None):
         self._ctx = nm_context
         self._timeout = timeout
         self._dbuspath = dbuspath
         self._timeout_source = None
-        self._autodestroy = autodestroy
 
     def __str__(self):
-        return self.dbuspath
+        return self._dbuspath
 
-    def __enter__(self):
-        self.create()
-        return self
+    @staticmethod
+    def create(nm_context, timeout=60):
+        cp = CheckPoint(nm_context=nm_context, timeout=timeout)
+        cp._create()
+        return cp
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        if exc_type is None:
-            if self._autodestroy:
-                # If the rollback has been explicit or implicit triggered
-                # already, this command should fail.
-                self.destroy()
-        else:
-            self.rollback()
-
-    def create(self):
+    def _create(self):
         devs = []
         timeout = self._timeout
         cp_flags = (
@@ -88,7 +66,7 @@ class CheckPoint:
                 None,
             )
         except Exception as e:
-            raise NMCheckPointCreationError(
+            raise NmstateLibnmError(
                 "Failed to create checkpoint: " "{}".format(e)
             )
         self._ctx.register_async("Create checkpoint")
@@ -103,6 +81,9 @@ class CheckPoint:
             self._refresh_checkpoint_timeout, None
         )
         self._timeout_source.attach(self._ctx.context)
+
+    def clean_up(self):
+        self._remove_checkpoint_refresh_timeout()
 
     def _remove_checkpoint_refresh_timeout(self):
         if self._timeout_source:
@@ -132,12 +113,12 @@ class CheckPoint:
                     userdata,
                 )
             except Exception as e:
-                raise NMCheckPointError(
+                raise NmstateLibnmError(
                     "Failed to destroy checkpoint {}: "
                     "{}".format(self._dbuspath, e)
                 )
             finally:
-                self._remove_checkpoint_refresh_timeout()
+                self.clean_up()
             logging.debug(f"Checkpoint {self._dbuspath} destroyed")
             self._ctx.register_async(action)
             self._ctx.wait_all_finish()
@@ -154,20 +135,16 @@ class CheckPoint:
                     userdata,
                 )
             except Exception as e:
-                raise NMCheckPointError(
+                raise NmstateLibnmError(
                     "Failed to rollback checkpoint {}: {}".format(
                         self._dbuspath, e
                     )
                 )
             finally:
-                self._remove_checkpoint_refresh_timeout()
+                self.clean_up()
             logging.debug(f"Checkpoint {self._dbuspath} rollback executed")
             self._ctx.register_async(action)
             self._ctx.wait_all_finish()
-
-    @property
-    def dbuspath(self):
-        return self._dbuspath
 
     def _checkpoint_create_callback(self, client, result, data):
         try:

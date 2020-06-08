@@ -26,6 +26,12 @@ from libnmstate.nm.context import NmContext
 def nm_plugin():
     plugin = NetworkManagerPlugin()
     yield plugin
+    if plugin.checkpoint:
+        # Ignore failures as the checkpoint might already expired
+        try:
+            plugin.rollback_checkpoint()
+        except Exception:
+            pass
     plugin.unload()
 
 

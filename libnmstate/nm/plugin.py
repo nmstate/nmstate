@@ -18,6 +18,7 @@
 #
 from operator import itemgetter
 
+from libnmstate.error import NmstateValueError
 from libnmstate.ifaces.ovs import is_ovs_running
 from libnmstate.schema import DNS
 from libnmstate.schema import Interface
@@ -39,17 +40,24 @@ from . import vxlan as nm_vxlan
 from . import team as nm_team
 from . import dns as nm_dns
 from . import applier as nm_applier
+from .checkpoint import CheckPoint
+from .checkpoint import get_checkpoints
 from .context import NmContext
 
 
 class NetworkManagerPlugin:
     def __init__(self):
         self._ctx = NmContext()
+        self._checkpoint = None
 
     def unload(self):
         if self._ctx:
             self._ctx.clean_up()
             self._ctx = None
+
+    @property
+    def checkpoint(self):
+        return self._checkpoint
 
     @property
     def client(self):
@@ -145,6 +153,44 @@ class NetworkManagerPlugin:
 
     def apply_changes(self, net_state):
         nm_applier.apply_changes(self.context, net_state)
+
+    def _load_checkpoint(self, checkpoint_path):
+        if checkpoint_path:
+            if self._checkpoint:
+                # Old checkpoint might timeout, hence it's legal to load
+                # another one.
+                self._checkpoint.clean_up()
+            candidates = get_checkpoints(self._ctx.client)
+            if checkpoint_path in candidates:
+                self._checkpoint = CheckPoint(
+                    nm_context=self._ctx, dbuspath=checkpoint_path
+                )
+            else:
+                raise NmstateValueError("No checkpoint specified or found")
+        else:
+            if not self._checkpoint:
+                # Get latest one
+                candidates = get_checkpoints(self._ctx.client)
+                if candidates:
+                    self._checkpoint = CheckPoint(
+                        nm_context=self._ctx, dbuspath=candidates[0]
+                    )
+                else:
+                    raise NmstateValueError("No checkpoint specified or found")
+
+    def create_checkpoint(self, timeout=60):
+        self._checkpoint = CheckPoint.create(self._ctx, timeout)
+        return str(self._checkpoint)
+
+    def rollback_checkpoint(self, checkpoint=None):
+        self._load_checkpoint(checkpoint)
+        self._checkpoint.rollback()
+        self._checkpoint = None
+
+    def destroy_checkpoint(self, checkpoint=None):
+        self._load_checkpoint(checkpoint)
+        self._checkpoint.destroy()
+        self._checkpoint = None
 
 
 def _ifaceinfo_bond(devinfo):
