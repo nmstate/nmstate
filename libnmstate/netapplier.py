@@ -20,12 +20,7 @@
 import copy
 import time
 
-from libnmstate import nm
 from libnmstate import validator
-from libnmstate.error import NmstateConflictError
-from libnmstate.error import NmstateError
-from libnmstate.error import NmstatePermissionError
-from libnmstate.error import NmstateValueError
 from libnmstate.error import NmstateVerificationError
 
 from .nmstate import plugin_context
@@ -58,11 +53,14 @@ def apply(
     with plugin_context() as plugin:
         validator.schema_validate(desired_state)
         validator.validate_capabilities(desired_state, plugin.capabilities)
-        checkpoint = _apply_ifaces_state(
-            plugin, desired_state, verify_change, commit, rollback_timeout,
-        )
-        if checkpoint:
-            return str(checkpoint.dbuspath)
+        current_state = show_with_plugin(plugin)
+        net_state = NetState(desired_state, current_state)
+        checkpoint = plugin.create_checkpoint(rollback_timeout)
+        _apply_ifaces_state(plugin, net_state, verify_change)
+        if commit:
+            plugin.destroy_checkpoint(checkpoint)
+        else:
+            return checkpoint
 
 
 def commit(*, checkpoint=None):
@@ -74,11 +72,7 @@ def commit(*, checkpoint=None):
     :type checkpoint: str
     """
     with plugin_context() as plugin:
-        nmcheckpoint = _choose_checkpoint(plugin, checkpoint)
-        try:
-            nmcheckpoint.destroy()
-        except nm.checkpoint.NMCheckPointError as e:
-            raise NmstateValueError(str(e))
+        plugin.destroy_checkpoint(checkpoint)
 
 
 def rollback(*, checkpoint=None):
@@ -90,56 +84,22 @@ def rollback(*, checkpoint=None):
     :type checkpoint: str
     """
     with plugin_context() as plugin:
-        nmcheckpoint = _choose_checkpoint(plugin, checkpoint)
-        try:
-            nmcheckpoint.rollback()
-        except nm.checkpoint.NMCheckPointError as e:
-            raise NmstateValueError(str(e))
+        plugin.rollback_checkpoint(checkpoint)
 
 
-def _choose_checkpoint(plugin, dbuspath):
-    if not dbuspath:
-        candidates = nm.checkpoint.get_checkpoints(plugin.client)
-        if candidates:
-            dbuspath = candidates[0]
-
-    if not dbuspath:
-        raise NmstateValueError("No checkpoint specified or found")
-    checkpoint = nm.checkpoint.CheckPoint(plugin.context, dbuspath=dbuspath)
-    return checkpoint
-
-
-def _apply_ifaces_state(
-    plugin, desired_state, verify_change, commit, rollback_timeout
-):
-    current_state = show_with_plugin(plugin)
-    net_state = NetState(desired_state, current_state)
-
-    try:
-        with nm.checkpoint.CheckPoint(
-            plugin.context, autodestroy=commit, timeout=rollback_timeout
-        ) as checkpoint:
-            plugin.apply_changes(net_state)
-            verified = False
-            if verify_change:
-                for _ in range(VERIFY_RETRY_TIMEOUT):
-                    try:
-                        _verify_change(plugin, net_state)
-                        verified = True
-                        break
-                    except NmstateVerificationError:
-                        time.sleep(VERIFY_RETRY_INTERNAL)
-                if not verified:
-                    _verify_change(plugin, net_state)
-
-        if not commit:
-            return checkpoint
-    except nm.checkpoint.NMCheckPointPermissionError:
-        raise NmstatePermissionError("Error creating a check point")
-    except nm.checkpoint.NMCheckPointCreationError:
-        raise NmstateConflictError("Error creating a check point")
-    except NmstateError:
-        raise
+def _apply_ifaces_state(plugin, net_state, verify_change):
+    plugin.apply_changes(net_state)
+    verified = False
+    if verify_change:
+        for _ in range(VERIFY_RETRY_TIMEOUT):
+            try:
+                _verify_change(plugin, net_state)
+                verified = True
+                break
+            except NmstateVerificationError:
+                time.sleep(VERIFY_RETRY_INTERNAL)
+        if not verified:
+            _verify_change(plugin, net_state)
 
 
 def _verify_change(plugin, net_state):
