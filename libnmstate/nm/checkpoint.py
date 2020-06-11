@@ -213,10 +213,13 @@ class CheckPoint:
         for path in ret:
             nm_dev = client.get_device_by_path(path)
             iface = path if nm_dev is None else nm_dev.get_iface()
-            if (
-                nm_dev.get_state_reason()
-                == common.NM.DeviceStateReason.NEW_ACTIVATION
-            ) or nm_dev.get_state() == common.NM.DeviceState.IP_CONFIG:
+            if nm_dev and (
+                (
+                    nm_dev.get_state_reason()
+                    == common.NM.DeviceStateReason.NEW_ACTIVATION
+                )
+                or nm_dev.get_state() == common.NM.DeviceState.IP_CONFIG
+            ):
                 nm_ac = nm_dev.get_active_connection()
                 if not is_activated(nm_ac, nm_dev):
                     profile = connection.ConnectionProfile(self._ctx)
