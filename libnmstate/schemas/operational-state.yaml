@@ -28,6 +28,7 @@ properties:
             - "$ref": "#/definitions/interface-vlan/rw"
             - "$ref": "#/definitions/interface-vxlan/rw"
             - "$ref": "#/definitions/interface-team/rw"
+            - "$ref": "#/definitions/interface-other/rw"
   routes:
     type: object
     properties:
@@ -552,6 +553,13 @@ definitions:
                 name:
                   type: string
 
+  interface-other:
+    rw:
+      properties:
+        type:
+          type: string
+          enum:
+          - other
   route:
     type: object
     properties:

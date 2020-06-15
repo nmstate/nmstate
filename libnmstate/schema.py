@@ -109,6 +109,7 @@ class InterfaceType:
     VLAN = "vlan"
     VXLAN = "vxlan"
     TEAM = "team"
+    OTHER = "other"
 
     VIRT_TYPES = (
         BOND,

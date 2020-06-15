@@ -20,11 +20,16 @@
 import copy
 import time
 
+
 from libnmstate import validator
 from libnmstate.error import NmstateVerificationError
 
+from .nmstate import create_checkpoints
+from .nmstate import destroy_checkpoints
 from .nmstate import plugin_context
-from .nmstate import show_with_plugin
+from .nmstate import plugins_capabilities
+from .nmstate import rollback_checkpoints
+from .nmstate import show_with_plugins
 from .net_state import NetState
 
 MAINLOOP_TIMEOUT = 35
@@ -50,17 +55,19 @@ def apply(
     :rtype: str
     """
     desired_state = copy.deepcopy(desired_state)
-    with plugin_context() as plugin:
+    with plugin_context() as plugins:
         validator.schema_validate(desired_state)
-        validator.validate_capabilities(desired_state, plugin.capabilities)
-        current_state = show_with_plugin(plugin)
+        current_state = show_with_plugins(plugins, include_status_data=True)
+        validator.validate_capabilities(
+            desired_state, plugins_capabilities(plugins)
+        )
         net_state = NetState(desired_state, current_state)
-        checkpoint = plugin.create_checkpoint(rollback_timeout)
-        _apply_ifaces_state(plugin, net_state, verify_change)
+        checkpoints = create_checkpoints(plugins, rollback_timeout)
+        _apply_ifaces_state(plugins, net_state, verify_change)
         if commit:
-            plugin.destroy_checkpoint(checkpoint)
+            destroy_checkpoints(plugins, checkpoints)
         else:
-            return checkpoint
+            return checkpoints
 
 
 def commit(*, checkpoint=None):
@@ -71,8 +78,8 @@ def commit(*, checkpoint=None):
         will be selected and committed.
     :type checkpoint: str
     """
-    with plugin_context() as plugin:
-        plugin.destroy_checkpoint(checkpoint)
+    with plugin_context() as plugins:
+        destroy_checkpoints(plugins, checkpoint)
 
 
 def rollback(*, checkpoint=None):
@@ -83,25 +90,26 @@ def rollback(*, checkpoint=None):
         will be selected and rolled back.
     :type checkpoint: str
     """
-    with plugin_context() as plugin:
-        plugin.rollback_checkpoint(checkpoint)
+    with plugin_context() as plugins:
+        rollback_checkpoints(plugins, checkpoint)
 
 
-def _apply_ifaces_state(plugin, net_state, verify_change):
-    plugin.apply_changes(net_state)
+def _apply_ifaces_state(plugins, net_state, verify_change):
+    for plugin in plugins:
+        plugin.apply_changes(net_state)
     verified = False
     if verify_change:
         for _ in range(VERIFY_RETRY_TIMEOUT):
             try:
-                _verify_change(plugin, net_state)
+                _verify_change(plugins, net_state)
                 verified = True
                 break
             except NmstateVerificationError:
                 time.sleep(VERIFY_RETRY_INTERNAL)
         if not verified:
-            _verify_change(plugin, net_state)
+            _verify_change(plugins, net_state)
 
 
-def _verify_change(plugin, net_state):
-    current_state = show_with_plugin(plugin)
+def _verify_change(plugins, net_state):
+    current_state = show_with_plugins(plugins)
     net_state.verify(current_state)

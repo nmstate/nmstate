@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2020 Red Hat, Inc.
+# Copyright (c) 2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -16,20 +16,3 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
-
-from .nmstate import show_with_plugins
-from .nmstate import plugin_context
-
-
-def show(*, include_status_data=False):
-    """
-    Reports configuration and status data on the system.
-    Configuration data is the set of writable data which can change the system
-    state.
-    Status data is the additional data which is not configuration data,
-    including read-only and statistics information.
-    When include_status_data is set, both are reported, otherwise only the
-    configuration data is reported.
-    """
-    with plugin_context() as plugins:
-        return show_with_plugins(plugins, include_status_data)

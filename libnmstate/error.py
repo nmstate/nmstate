@@ -110,3 +110,11 @@ class NmstateTimeoutError(NmstateLibnmError):
     """
 
     pass
+
+
+class NmstatePluginError(NmstateError):
+    """
+    Unexpected plugin behaviour happens, it is a bug of the plugin.
+    """
+
+    pass
