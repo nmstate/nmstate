@@ -10,6 +10,7 @@ RUN dnf -y install dnf-plugins-core epel-release && \
                    NetworkManager-team \
                    NetworkManager-config-server \
                    openvswitch2.11 \
+                   python3-openvswitch2.11 \
                    systemd-udev \
                    python3-devel \
                    python3-gobject-base \

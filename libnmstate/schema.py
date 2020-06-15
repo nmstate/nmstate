@@ -255,7 +255,17 @@ class VXLAN:
     DESTINATION_PORT = "destination-port"
 
 
-class OVSBridge(Bridge):
+class OvsDB:
+    OVS_DB_SUBTREE = "ovs-db"
+    # Don't use hypen as this is OVS data base entry
+    EXTERNAL_IDS = "external_ids"
+
+
+class OVSInterface(OvsDB):
+    TYPE = InterfaceType.OVS_INTERFACE
+
+
+class OVSBridge(Bridge, OvsDB):
     TYPE = "ovs-bridge"
 
     class Options:

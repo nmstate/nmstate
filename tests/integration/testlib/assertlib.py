@@ -24,6 +24,7 @@ from libnmstate.schema import DNS
 from libnmstate.schema import Route
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceType
+from libnmstate.schema import OvsDB
 
 from . import statelib
 
@@ -88,6 +89,7 @@ def _prepare_state_for_verify(desired_state_data):
     full_desired_state.remove_absent_entries()
     full_desired_state.normalize()
     _fix_bond_state(current_state)
+    _fix_ovsdb_external_ids(full_desired_state)
 
     return full_desired_state, current_state
 
@@ -120,3 +122,12 @@ def _fix_bond_state(current_state):
                 and "arp_ip_target" not in bond_options
             ):
                 bond_options["arp_ip_target"] = ""
+
+
+def _fix_ovsdb_external_ids(state):
+    for iface_state in state.state[Interface.KEY]:
+        external_ids = iface_state.get(OvsDB.OVS_DB_SUBTREE, {}).get(
+            OvsDB.EXTERNAL_IDS, {}
+        )
+        for key, value in external_ids.items():
+            external_ids[key] = str(value)

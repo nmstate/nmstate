@@ -34,9 +34,18 @@ Recommends:     NetworkManager-config-server
 Suggests:       NetworkManager-ovs
 Suggests:       NetworkManager-team
 
+%package -n nmstate-plugin-ovsdb
+Summary:        nmstate plugin for OVS database manipulation
+Requires:       python3-%{libname} = %{?epoch:%{epoch}:}%{version}-%{release}
+# The python-openvswitch rpm pacakge is not in the same repo with nmstate,
+# hence state it as Recommends, no requires.
+Recommends:     python3dist(ovs)
 
 %description -n python3-%{libname}
 This package contains the Python 3 library for Nmstate.
+
+%description -n nmstate-plugin-ovsdb
+This package contains the nmstate plugin for OVS database manipulation.
 
 %prep
 %setup -q
@@ -56,8 +65,14 @@ This package contains the Python 3 library for Nmstate.
 
 %files -n python3-%{libname}
 %license LICENSE
-%{python3_sitelib}/%{libname}
 %{python3_sitelib}/%{srcname}-*.egg-info/
+%{python3_sitelib}/%{libname}
+%exclude %{python3_sitelib}/%{libname}/plugins/nmstate_plugin_*
+%exclude %{python3_sitelib}/%{libname}/plugins/__pycache__/nmstate_plugin_*
+
+%files -n nmstate-plugin-ovsdb
+%{python3_sitelib}/%{libname}/plugins/nmstate_plugin_ovsdb*
+%{python3_sitelib}/%{libname}/plugins/__pycache__/nmstate_plugin_ovsdb*
 
 %changelog
 @CHANGELOG@
