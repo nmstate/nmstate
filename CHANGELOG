@@ -1,4 +1,13 @@
 # Changelog
+## [0.3.2] - 2020-06-15
+### New features
+ - Support third party plugin written in Python.
+ - Support LLDP.
+ - New OVS DB plugin for modifying OVS interface `external_ids`.
+ - Expanded the support of linux bridge options.
+ - Support applying desire state which only valid till next reboot.
+ - Support OVS patch port (requires NeworkManager 1.22.16+ or 1.24.4+).
+
 ## [0.3.1] - 2020-06-08
 ### Bug fixes
  - Wait until the rollback is completed.
