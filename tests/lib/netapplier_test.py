@@ -35,19 +35,18 @@ BOND_TYPE = InterfaceType.BOND
 
 
 @pytest.fixture
-def show_with_plugin_mock():
-    with mock.patch.object(netapplier, "show_with_plugin") as m:
+def show_with_plugins_mock():
+    with mock.patch.object(netapplier, "show_with_plugins") as m:
         yield m
 
 
 @pytest.fixture
 def plugin_context_mock():
     with mock.patch.object(netapplier, "plugin_context") as m:
-
-        def enter(self):
-            return self
-
-        m().__enter__ = enter
+        #        def enter(self):
+        #            return [mock.MagicMock()]
+        #
+        #        m().__enter__ = enter
         yield m
 
 
@@ -58,7 +57,7 @@ def net_state_mock():
 
 
 def test_iface_admin_state_change(
-    show_with_plugin_mock, plugin_context_mock, net_state_mock,
+    show_with_plugins_mock, plugin_context_mock, net_state_mock,
 ):
     current_config = {
         Interface.KEY: [
@@ -74,8 +73,9 @@ def test_iface_admin_state_change(
     desired_config = copy.deepcopy(current_config)
 
     desired_config[Interface.KEY][0][Interface.STATE] = InterfaceState.DOWN
-    show_with_plugin_mock.return_value = current_config
-    plugin = plugin_context_mock()
+    show_with_plugins_mock.return_value = current_config
+    plugin = mock.MagicMock()
+    plugin_context_mock.return_value.__enter__.return_value = [plugin]
     netapplier.apply(desired_config, verify_change=False)
 
     plugin.apply_changes.assert_called_once_with(
@@ -84,9 +84,9 @@ def test_iface_admin_state_change(
 
 
 def test_add_new_bond(
-    plugin_context_mock, show_with_plugin_mock, net_state_mock,
+    plugin_context_mock, show_with_plugins_mock, net_state_mock,
 ):
-    show_with_plugin_mock.return_value = {}
+    show_with_plugins_mock.return_value = {}
 
     desired_config = {
         Interface.KEY: [
@@ -105,7 +105,8 @@ def test_add_new_bond(
         ]
     }
 
-    plugin = plugin_context_mock()
+    plugin = mock.MagicMock()
+    plugin_context_mock.return_value.__enter__.return_value = [plugin]
     netapplier.apply(desired_config, verify_change=False)
 
     plugin.apply_changes.assert_called_once_with(
@@ -114,7 +115,7 @@ def test_add_new_bond(
 
 
 def test_edit_existing_bond(
-    show_with_plugin_mock, plugin_context_mock, net_state_mock,
+    show_with_plugins_mock, plugin_context_mock, net_state_mock,
 ):
     current_config = {
         Interface.KEY: [
@@ -132,7 +133,7 @@ def test_edit_existing_bond(
             }
         ]
     }
-    show_with_plugin_mock.return_value = current_config
+    show_with_plugins_mock.return_value = current_config
 
     desired_config = copy.deepcopy(current_config)
     options = desired_config[Interface.KEY][0][Bond.CONFIG_SUBTREE][
@@ -140,7 +141,8 @@ def test_edit_existing_bond(
     ]
     options["miimon"] = 200
 
-    plugin = plugin_context_mock()
+    plugin = mock.MagicMock()
+    plugin_context_mock.return_value.__enter__.return_value = [plugin]
     netapplier.apply(desired_config, verify_change=False)
 
     plugin.apply_changes.assert_called_once_with(

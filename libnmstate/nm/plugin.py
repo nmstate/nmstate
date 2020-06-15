@@ -50,11 +50,15 @@ from .common import NM
 from .context import NmContext
 
 
-class NetworkManagerPlugin:
+class NetworkManagerPlugin(NmstatePlugin):
     def __init__(self):
         self._ctx = NmContext()
         self._checkpoint = None
         self._check_version_mismatch()
+
+    @property
+    def name(self):
+        return "NetworkManager"
 
     def unload(self):
         if self._ctx:
@@ -81,6 +85,15 @@ class NetworkManagerPlugin:
         if nm_team.has_team_capability(self.client):
             capabilities.append(NmstatePlugin.TEAM_CAPABILITY)
         return capabilities
+
+    @property
+    def plugin_capabilities(self):
+        return [
+            NmstatePlugin.PLUGIN_CAPABILITY_IFACE,
+            NmstatePlugin.PLUGIN_CAPABILITY_ROUTE,
+            NmstatePlugin.PLUGIN_CAPABILITY_ROUTE_RULE,
+            NmstatePlugin.PLUGIN_CAPABILITY_DNS,
+        ]
 
     def get_interfaces(self):
         info = []

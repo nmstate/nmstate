@@ -32,8 +32,8 @@ from libnmstate.schema import RouteRule
 
 
 @pytest.fixture
-def show_with_plugin_mock():
-    with mock.patch.object(netinfo, "show_with_plugin") as m:
+def show_with_plugins_mock():
+    with mock.patch.object(netinfo, "show_with_plugins") as m:
         yield m
 
 
@@ -48,7 +48,7 @@ def plugin_context_mock():
         yield m
 
 
-def test_netinfo_show(show_with_plugin_mock, plugin_context_mock):
+def test_netinfo_show(show_with_plugins_mock, plugin_context_mock):
     current_config = {
         DNS.KEY: {DNS.RUNNING: {}, DNS.CONFIG: {}},
         Route.KEY: {Route.CONFIG: [], Route.RUNNING: []},
@@ -64,13 +64,13 @@ def test_netinfo_show(show_with_plugin_mock, plugin_context_mock):
         ],
     }
 
-    show_with_plugin_mock.return_value = current_config
+    show_with_plugins_mock.return_value = current_config
     report = netinfo.show()
 
     assert current_config == report
 
 
-def test_error_show(show_with_plugin_mock, plugin_context_mock):
+def test_error_show(show_with_plugins_mock, plugin_context_mock):
     current_config = {
         DNS.KEY: {DNS.RUNNING: {}, DNS.CONFIG: {}},
         Route.KEY: {"config": [], "running": []},
@@ -85,7 +85,7 @@ def test_error_show(show_with_plugin_mock, plugin_context_mock):
             }
         ],
     }
-    show_with_plugin_mock.return_value = current_config
+    show_with_plugins_mock.return_value = current_config
 
     with pytest.raises(TypeError):
         # pylint: disable=too-many-function-args
