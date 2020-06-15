@@ -58,9 +58,12 @@ class ConnectionProfile:
         if self.con_id:
             self.profile = self._ctx.client.get_connection_by_id(self.con_id)
 
-    def update(self, con_profile):
+    def update(self, con_profile, save_to_disk=True):
         flags = NM.SettingsUpdate2Flags.BLOCK_AUTOCONNECT
-        flags |= NM.SettingsUpdate2Flags.TO_DISK
+        if save_to_disk:
+            flags |= NM.SettingsUpdate2Flags.TO_DISK
+        else:
+            flags |= NM.SettingsUpdate2Flags.IN_MEMORY
         action = f"Update profile: {self.profile.get_id()}"
         user_data = action
         args = None

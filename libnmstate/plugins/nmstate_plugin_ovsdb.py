@@ -28,6 +28,7 @@ from libnmstate.schema import Interface
 from libnmstate.schema import OVSInterface
 from libnmstate.schema import OVSBridge
 from libnmstate.schema import OvsDB
+from libnmstate.error import NmstateNotImplementedError
 from libnmstate.error import NmstateTimeoutError
 from libnmstate.error import NmstatePermissionError
 from libnmstate.error import NmstateValueError
@@ -159,7 +160,7 @@ class NmstateOvsdbPlugin(NmstatePlugin):
             )
         return ifaces
 
-    def apply_changes(self, net_state):
+    def apply_changes(self, net_state, save_to_disk):
         self.refresh_content()
         pending_changes = []
         for iface in net_state.ifaces.values():
@@ -174,10 +175,15 @@ class NmstateOvsdbPlugin(NmstatePlugin):
             else:
                 continue
             pending_changes.extend(_generate_db_change(table_name, iface))
-        if pending_changes and self._idl:
-            self._start_transaction()
-            self._db_write(pending_changes)
-            self._commit_transaction()
+        if pending_changes:
+            if not save_to_disk:
+                raise NmstateNotImplementedError(
+                    "ovsdb plugin does not support memory only changes"
+                )
+            elif self._idl:
+                self._start_transaction()
+                self._db_write(pending_changes)
+                self._commit_transaction()
 
     def _db_write(self, changes):
         changes_index = {change.row_name: change for change in changes}

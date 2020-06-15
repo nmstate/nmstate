@@ -130,12 +130,13 @@ class BaseIface:
     ROUTES_METADATA = "_routes"
     ROUTE_RULES_METADATA = "_route_rules"
 
-    def __init__(self, info):
+    def __init__(self, info, save_to_disk=True):
         self._origin_info = deepcopy(info)
         self._info = deepcopy(info)
         self._is_desired = False
         self._is_changed = False
         self._name = self._info[Interface.NAME]
+        self._save_to_disk = save_to_disk
 
     @property
     def can_have_ip_when_enslaved(self):
@@ -219,6 +220,8 @@ class BaseIface:
             ip_state = self.ip_state(family)
             ip_state.remove_link_local_address()
             self._info[family] = ip_state.to_dict()
+            if self.is_absent and not self._save_to_disk:
+                self._info[Interface.STATE] = InterfaceState.DOWN
 
     def merge(self, other):
         merge_dict(self._info, other._info)
@@ -331,6 +334,8 @@ class BaseIface:
         _remove_lldp_neighbors(state)
         if Interface.STATE not in state:
             state[Interface.STATE] = InterfaceState.UP
+        if self.is_absent and not self._save_to_disk:
+            state[Interface.STATE] = InterfaceState.DOWN
 
         return state
 

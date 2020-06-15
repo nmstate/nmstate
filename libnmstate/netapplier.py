@@ -38,7 +38,12 @@ VERIFY_RETRY_TIMEOUT = 5
 
 
 def apply(
-    desired_state, *, verify_change=True, commit=True, rollback_timeout=60
+    desired_state,
+    *,
+    verify_change=True,
+    commit=True,
+    rollback_timeout=60,
+    save_to_disk=True,
 ):
     """
     Apply the desired state
@@ -61,9 +66,9 @@ def apply(
         validator.validate_capabilities(
             desired_state, plugins_capabilities(plugins)
         )
-        net_state = NetState(desired_state, current_state)
+        net_state = NetState(desired_state, current_state, save_to_disk)
         checkpoints = create_checkpoints(plugins, rollback_timeout)
-        _apply_ifaces_state(plugins, net_state, verify_change)
+        _apply_ifaces_state(plugins, net_state, verify_change, save_to_disk)
         if commit:
             destroy_checkpoints(plugins, checkpoints)
         else:
@@ -94,9 +99,9 @@ def rollback(*, checkpoint=None):
         rollback_checkpoints(plugins, checkpoint)
 
 
-def _apply_ifaces_state(plugins, net_state, verify_change):
+def _apply_ifaces_state(plugins, net_state, verify_change, save_to_disk):
     for plugin in plugins:
-        plugin.apply_changes(net_state)
+        plugin.apply_changes(net_state, save_to_disk)
     verified = False
     if verify_change:
         for _ in range(VERIFY_RETRY_TIMEOUT):

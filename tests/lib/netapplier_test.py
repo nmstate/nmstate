@@ -79,7 +79,7 @@ def test_iface_admin_state_change(
     netapplier.apply(desired_config, verify_change=False)
 
     plugin.apply_changes.assert_called_once_with(
-        net_state_mock(desired_config, current_config)
+        net_state_mock(desired_config, current_config), True
     )
 
 
@@ -110,7 +110,7 @@ def test_add_new_bond(
     netapplier.apply(desired_config, verify_change=False)
 
     plugin.apply_changes.assert_called_once_with(
-        net_state_mock(desired_config, {})
+        net_state_mock(desired_config, {}), True
     )
 
 
@@ -146,7 +146,7 @@ def test_edit_existing_bond(
     netapplier.apply(desired_config, verify_change=False)
 
     plugin.apply_changes.assert_called_once_with(
-        net_state_mock(desired_config, current_config)
+        net_state_mock(desired_config, current_config), True
     )
 
 

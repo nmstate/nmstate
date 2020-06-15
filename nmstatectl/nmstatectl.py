@@ -102,6 +102,13 @@ def setup_subcommand_edit(subparsers):
         help="Do not verify that the state was completely set and disable "
         "rollback to previous state.",
     )
+    parser_edit.add_argument(
+        "--memory-only",
+        action="store_false",
+        dest="save_to_disk",
+        default=True,
+        help="Do not make the state persistent.",
+    )
 
 
 def setup_subcommand_rollback(subparsers):
@@ -142,6 +149,13 @@ def setup_subcommand_set(subparsers):
         type=int,
         default=60,
         help="Timeout in seconds before reverting uncommited changes.",
+    )
+    parser_set.add_argument(
+        "--memory-only",
+        action="store_false",
+        dest="save_to_disk",
+        default=True,
+        help="Do not make the state persistent.",
     )
     parser_set.set_defaults(func=apply)
 
@@ -207,7 +221,9 @@ def edit(args):
     print("Applying the following state: ")
     print_state(new_state, use_yaml=args.yaml)
 
-    libnmstate.apply(new_state, verify_change=args.verify)
+    libnmstate.apply(
+        new_state, verify_change=args.verify, save_to_disk=args.save_to_disk
+    )
 
 
 def rollback(args):
@@ -233,17 +249,27 @@ def apply(args):
                     statedata = statefile.read()
 
             return apply_state(
-                statedata, args.verify, args.commit, args.timeout
+                statedata,
+                args.verify,
+                args.commit,
+                args.timeout,
+                args.save_to_disk,
             )
     elif not sys.stdin.isatty():
         statedata = sys.stdin.read()
-        return apply_state(statedata, args.verify, args.commit, args.timeout)
+        return apply_state(
+            statedata,
+            args.verify,
+            args.commit,
+            args.timeout,
+            args.save_to_disk,
+        )
     else:
         sys.stderr.write("ERROR: No state specified\n")
         return 1
 
 
-def apply_state(statedata, verify_change, commit, timeout):
+def apply_state(statedata, verify_change, commit, timeout, save_to_disk):
     use_yaml = False
     # JSON dictionaries start with a curly brace
     if statedata[0] == "{":
@@ -258,6 +284,7 @@ def apply_state(statedata, verify_change, commit, timeout):
             verify_change=verify_change,
             commit=commit,
             rollback_timeout=timeout,
+            save_to_disk=save_to_disk,
         )
     except NmstatePermissionError as e:
         sys.stderr.write("ERROR: Missing permissions:{}\n".format(str(e)))

@@ -92,6 +92,9 @@ skip the desired network state verification.
 create a checkpoint which later could be used for rollback or commit. The
 checkpoint will be the last line of \fBnmstatectl\fR output, example:
 \fI/org/freedesktop/NetworkManager/Checkpoint/1\fR.
+.IP \fB--memory-only
+all the changes done will be non persistent, they are going to be removed after
+rebooting.
 .IP \fB--timeout\fR=<\fITIMEOUT\fR>
 the user must commit the changes within \fItimeout\fR, or they will be
 automatically rolled back. Default: 60 seconds.

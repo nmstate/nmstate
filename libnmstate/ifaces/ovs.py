@@ -168,8 +168,8 @@ def _is_ovs_lag_slave(lag_state, iface_name):
 
 
 class OvsInternalIface(BaseIface):
-    def __init__(self, info):
-        super().__init__(info)
+    def __init__(self, info, save_to_disk=True):
+        super().__init__(info, save_to_disk)
         self._parent = None
 
     @property
