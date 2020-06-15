@@ -21,7 +21,7 @@ properties:
             - "$ref": "#/definitions/interface-unknown/rw"
             - "$ref": "#/definitions/interface-ethernet/rw"
             - "$ref": "#/definitions/interface-bond/rw"
-            - "$ref": "#/definitions/interface-linux-bridge/rw"
+            - "$ref": "#/definitions/interface-linux-bridge/all"
             - "$ref": "#/definitions/interface-ovs-bridge/all"
             - "$ref": "#/definitions/interface-ovs-interface/rw"
             - "$ref": "#/definitions/interface-dummy/rw"
@@ -261,6 +261,22 @@ definitions:
             options:
               type: object
   interface-linux-bridge:
+    all:
+      allOf:
+        - $ref: "#/definitions/interface-linux-bridge/rw"
+        - $ref: "#/definitions/interface-linux-bridge/ro"
+    ro:
+      properties:
+        bridge:
+          type: object
+          properties:
+            options:
+              type: object
+              properties:
+                gc-timer:
+                  type: integer
+                hello-timer:
+                  type: integer
     rw:
       properties:
         type:
@@ -306,8 +322,36 @@ definitions:
                   type: integer
                 group-forward-mask:
                   type: integer
+                group-addr:
+                  $ref: "#/definitions/types/mac-address"
+                hash-max:
+                  type: integer
                 multicast-snooping:
                   type: boolean
+                multicast-router:
+                  type: integer
+                multicast-last-member-count:
+                  type: integer
+                multicast-last-member-interval:
+                  type: integer
+                multicast-membership-interval:
+                  type: integer
+                multicast-querier:
+                  type: boolean
+                multicast-querier-interval:
+                  type: integer
+                multicast-query-use-ifaddr:
+                  type: boolean
+                multicast-query-interval:
+                  type: integer
+                multicast-query-response-interval:
+                  type: integer
+                multicast-router:
+                  type: integer
+                multicast-startup-query-count:
+                  type: integer
+                multicast-startup-query-interval:
+                  type: integer
                 stp:
                   type: object
                   properties:

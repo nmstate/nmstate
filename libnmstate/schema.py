@@ -192,11 +192,32 @@ class Bridge:
 class LinuxBridge(Bridge):
     TYPE = "linux-bridge"
     STP_SUBTREE = "stp"
+    MULTICAST_SUBTREE = "multicast"
 
     class Options:
         GROUP_FORWARD_MASK = "group-forward-mask"
         MAC_AGEING_TIME = "mac-ageing-time"
         MULTICAST_SNOOPING = "multicast-snooping"
+        GROUP_ADDR = "group-addr"
+        GROUP_FWD_MASK = "group-fwd-mask"
+        HASH_ELASTICITY = "hash-elasticity"
+        HASH_MAX = "hash-max"
+        MULTICAST_ROUTER = "multicast-router"
+        MULTICAST_LAST_MEMBER_COUNT = "multicast-last-member-count"
+        MULTICAST_LAST_MEMBER_INTERVAL = "multicast-last-member-interval"
+        MULTICAST_MEMBERSHIP_INTERVAL = "multicast-membership-interval"
+        MULTICAST_QUERIER = "multicast-querier"
+        MULTICAST_QUERIER_INTERVAL = "multicast-querier-interval"
+        MULTICAST_QUERY_USE_IFADDR = "multicast-query-use-ifaddr"
+        MULTICAST_QUERY_INTERVAL = "multicast-query-interval"
+        MULTICAST_QUERY_RESPONSE_INTERVAL = "multicast-query-response-interval"
+        MULTICAST_STARTUP_QUERY_COUNT = "multicast-startup-query-count"
+        MULTICAST_STARTUP_QUERY_INTERVAL = "multicast-startup-query-interval"
+
+        # Read only properties begin
+        HELLO_TIMER = "hello-timer"
+        GC_TIMER = "gc-timer"
+        # Read only properties end
 
     class Port(Bridge.Port):
         STP_HAIRPIN_MODE = "stp-hairpin-mode"

@@ -22,9 +22,15 @@
 from operator import itemgetter
 
 from libnmstate.schema import Bridge
+from libnmstate.schema import LinuxBridge
 
 from ..state import merge_dict
 from .base_iface import BaseIface
+
+READ_ONLY_OPTIONS = [
+    LinuxBridge.Options.HELLO_TIMER,
+    LinuxBridge.Options.GC_TIMER,
+]
 
 
 class BridgeIface(BaseIface):
@@ -93,6 +99,7 @@ class BridgeIface(BaseIface):
 
     def state_for_verify(self):
         self._normalize_linux_bridge_port_vlan()
+        self._remove_read_only_bridge_options()
         state = super().state_for_verify()
         return state
 
@@ -113,6 +120,12 @@ class BridgeIface(BaseIface):
         for port_config in self.port_configs:
             if not port_config.get(Bridge.Port.VLAN_SUBTREE):
                 port_config[Bridge.Port.VLAN_SUBTREE] = {}
+
+    def _remove_read_only_bridge_options(self):
+        for key in READ_ONLY_OPTIONS:
+            self._bridge_config.get(LinuxBridge.OPTIONS_SUBTREE, {}).pop(
+                key, None
+            )
 
 
 def _index_port_configs(port_configs):

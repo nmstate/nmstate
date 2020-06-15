@@ -24,6 +24,7 @@ from libnmstate.nm import connection
 from libnmstate.nm.bridge_port_vlan import PortVlanFilter
 from libnmstate.schema import LinuxBridge as LB
 from .common import NM
+from .common import nm_version_bigger_or_equal_to
 
 
 BRIDGE_TYPE = "bridge"
@@ -34,9 +35,56 @@ BRIDGE_PORT_NMSTATE_TO_SYSFS = {
     LB.Port.STP_PRIORITY: "priority",
 }
 
+SYSFS_USER_HZ_KEYS = [
+    "forward_delay",
+    "ageing_time",
+    "hello_time",
+    "max_age",
+]
 
-def create_setting(bridge_state, base_con_profile):
-    options = bridge_state.get(BRIDGE_TYPE, {}).get(LB.OPTIONS_SUBTREE)
+OPT = LB.Options
+
+EXTRA_OPTIONS_MAP = {
+    OPT.HELLO_TIMER: "hello_timer",
+    OPT.GC_TIMER: "gc_timer",
+    OPT.MULTICAST_ROUTER: "multicast_router",
+    OPT.GROUP_ADDR: "group_addr",
+    OPT.HASH_MAX: "hash_max",
+    OPT.MULTICAST_LAST_MEMBER_COUNT: "multicast_last_member_count",
+    OPT.MULTICAST_LAST_MEMBER_INTERVAL: "multicast_last_member_interval",
+    OPT.MULTICAST_QUERIER: "multicast_querier",
+    OPT.MULTICAST_QUERIER_INTERVAL: "multicast_querier_interval",
+    OPT.MULTICAST_QUERY_USE_IFADDR: "multicast_query_use_ifaddr",
+    OPT.MULTICAST_QUERY_INTERVAL: "multicast_query_interval",
+    OPT.MULTICAST_QUERY_RESPONSE_INTERVAL: "multicast_query_response_interval",
+    OPT.MULTICAST_STARTUP_QUERY_COUNT: "multicast_startup_query_count",
+    OPT.MULTICAST_STARTUP_QUERY_INTERVAL: "multicast_startup_query_interval",
+}
+
+BOOL_OPTIONS = (OPT.MULTICAST_QUERIER, OPT.MULTICAST_QUERY_USE_IFADDR)
+
+NM_BRIDGE_OPTIONS_MAP = {
+    OPT.GROUP_ADDR: "group_address",
+    OPT.HASH_MAX: "multicast_hash_max",
+    OPT.MULTICAST_LAST_MEMBER_COUNT: "multicast_last_member_count",
+    OPT.MULTICAST_LAST_MEMBER_INTERVAL: "multicast_last_member_interval",
+    OPT.MULTICAST_MEMBERSHIP_INTERVAL: "multicast_membership_interval",
+    OPT.MULTICAST_QUERIER: "multicast_querier",
+    OPT.MULTICAST_QUERIER_INTERVAL: "multicast_querier_interval",
+    OPT.MULTICAST_QUERY_USE_IFADDR: "multicast_query_use_ifaddr",
+    OPT.MULTICAST_QUERY_INTERVAL: "multicast_query_interval",
+    OPT.MULTICAST_QUERY_RESPONSE_INTERVAL: "multicast_query_response_interval",
+    OPT.MULTICAST_STARTUP_QUERY_COUNT: "multicast_startup_query_count",
+    OPT.MULTICAST_STARTUP_QUERY_INTERVAL: "multicast_startup_query_interval",
+}
+
+
+def create_setting(
+    bridge_state, base_con_profile, original_desired_iface_state
+):
+    options = original_desired_iface_state.get(LB.CONFIG_SUBTREE, {}).get(
+        LB.OPTIONS_SUBTREE
+    )
     bridge_setting = _get_current_bridge_setting(base_con_profile)
     if not bridge_setting:
         bridge_setting = NM.SettingBridge.new()
@@ -68,6 +116,15 @@ def _set_bridge_properties(bridge_setting, options):
             bridge_setting.props.multicast_snooping = val
         elif key == LB.STP_SUBTREE:
             _set_bridge_stp_properties(bridge_setting, val)
+        elif (
+            nm_version_bigger_or_equal_to("1.25.2")
+            and key in NM_BRIDGE_OPTIONS_MAP
+        ):
+            nm_prop_name = NM_BRIDGE_OPTIONS_MAP[key]
+            # NM is using the sysfs name
+            if key == LB.Options.GROUP_ADDR:
+                val = val.lower()
+            setattr(bridge_setting.props, nm_prop_name, val)
 
 
 def _set_bridge_stp_properties(bridge_setting, bridge_stp):
@@ -140,7 +197,7 @@ def get_info(context, nmdev):
 
     port_profiles_by_name = _get_slave_profiles_by_name(nmdev)
     port_names_sysfs = _get_slaves_names_from_sysfs(nmdev.get_iface())
-    props = bridge_setting.props
+    props = _get_sysfs_bridge_options(nmdev.get_iface())
     info[LB.CONFIG_SUBTREE] = {
         LB.PORT_SUBTREE: _get_bridge_ports_info(
             port_profiles_by_name,
@@ -148,18 +205,27 @@ def get_info(context, nmdev):
             vlan_filtering_enabled=bridge_setting.get_vlan_filtering(),
         ),
         LB.OPTIONS_SUBTREE: {
-            LB.Options.MAC_AGEING_TIME: props.ageing_time,
-            LB.Options.GROUP_FORWARD_MASK: props.group_forward_mask,
-            LB.Options.MULTICAST_SNOOPING: props.multicast_snooping,
+            LB.Options.MAC_AGEING_TIME: props["ageing_time"],
+            LB.Options.GROUP_FORWARD_MASK: props["group_fwd_mask"],
+            LB.Options.MULTICAST_SNOOPING: props["multicast_snooping"] > 0,
             LB.STP_SUBTREE: {
-                LB.STP.ENABLED: bridge_setting.props.stp,
-                LB.STP.PRIORITY: bridge_setting.props.priority,
-                LB.STP.FORWARD_DELAY: bridge_setting.props.forward_delay,
-                LB.STP.HELLO_TIME: bridge_setting.props.hello_time,
-                LB.STP.MAX_AGE: bridge_setting.props.max_age,
+                LB.STP.ENABLED: props["stp_state"] > 0,
+                LB.STP.PRIORITY: props["priority"],
+                LB.STP.FORWARD_DELAY: props["forward_delay"],
+                LB.STP.HELLO_TIME: props["hello_time"],
+                LB.STP.MAX_AGE: props["max_age"],
             },
         },
     }
+
+    if nm_version_bigger_or_equal_to("1.25.2"):
+        for schema_name, sysfs_key_name in EXTRA_OPTIONS_MAP.items():
+            value = props[sysfs_key_name]
+            if schema_name == LB.Options.GROUP_ADDR:
+                value = value.upper()
+            elif schema_name in BOOL_OPTIONS:
+                value = value > 0
+            info[LB.CONFIG_SUBTREE][LB.OPTIONS_SUBTREE][schema_name] = value
     return info
 
 
@@ -230,3 +296,21 @@ def _get_slaves_names_from_sysfs(master):
         prefix_length = len("lower_")
         slaves.append(os.path.basename(sysfs_slave)[prefix_length:])
     return slaves
+
+
+def _get_sysfs_bridge_options(iface_name):
+    user_hz = os.sysconf("SC_CLK_TCK")
+    options = {}
+    for sysfs_file_path in glob.iglob(f"/sys/class/net/{iface_name}/bridge/*"):
+        key = os.path.basename(sysfs_file_path)
+        try:
+            with open(sysfs_file_path) as fd:
+                value = fd.read().rstrip("\n")
+                options[key] = value
+                options[key] = int(value, base=0)
+        except Exception:
+            pass
+    for key, value in options.items():
+        if key in SYSFS_USER_HZ_KEYS:
+            options[key] = int(value / user_hz)
+    return options

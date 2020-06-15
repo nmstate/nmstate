@@ -17,8 +17,20 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
+from distutils.version import StrictVersion
 import os
+import re
+
+from .cmdlib import exec_cmd
 
 
 def is_fedora():
     return os.path.exists("/etc/fedora-release")
+
+
+def is_nm_older_than_1_25_2():
+    _, output, _ = exec_cmd(["nmcli", "-v"], check=True)
+    match = re.compile("version ([0-9.]+)").search(output)
+    assert match
+
+    return StrictVersion(match.group(1)) < StrictVersion("1.25.2")

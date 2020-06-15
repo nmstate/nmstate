@@ -493,7 +493,9 @@ def _build_connection_profile(
 
         if bridge_options or bridge_ports:
             linux_bridge_setting = bridge.create_setting(
-                iface_desired_state, base_profile
+                iface_desired_state,
+                base_profile,
+                original_desired_iface_state,
             )
             settings.append(linux_bridge_setting)
     elif iface_type == InterfaceType.OVS_BRIDGE:
