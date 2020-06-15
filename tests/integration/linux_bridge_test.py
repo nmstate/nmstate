@@ -47,6 +47,7 @@ from .testlib.statelib import show_only
 from .testlib.assertlib import assert_mac_address
 from .testlib.vlan import vlan_interface
 from .testlib.env import is_fedora
+from .testlib.env import is_nm_older_than_1_25_2
 
 
 TEST_BRIDGE0 = "linux-br0"
@@ -599,3 +600,23 @@ def _create_bridge_subtree_config(port_names):
         add_port_to_bridge(bridge_state, port, port_state)
 
     return bridge_state
+
+
+@pytest.mark.tier1
+@pytest.mark.xfail(
+    is_nm_older_than_1_25_2(),
+    reason=("Changing bridge group address is only supported by NM 1.25.2+"),
+    raises=NmstateVerificationError,
+    strict=True,
+)
+def test_change_linux_bridge_group_addr(bridge0_with_port0):
+    iface_state = bridge0_with_port0[Interface.KEY][0]
+    iface_state[LinuxBridge.CONFIG_SUBTREE][LinuxBridge.OPTIONS_SUBTREE][
+        LinuxBridge.Options.GROUP_ADDR
+    ] = "01:80:C2:00:00:04"
+
+    desired_state = {Interface.KEY: [iface_state]}
+
+    libnmstate.apply(desired_state)
+
+    assertlib.assert_state_match(desired_state)

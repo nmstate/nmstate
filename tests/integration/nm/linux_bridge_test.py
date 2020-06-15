@@ -26,6 +26,7 @@ from libnmstate import nm
 from libnmstate import schema
 from libnmstate.schema import LinuxBridge as LB
 from libnmstate.nm.common import NM
+from libnmstate.nm.common import nm_version_bigger_or_equal_to
 
 from ..testlib import iproutelib
 from .testlib import main_context
@@ -59,6 +60,7 @@ def test_create_and_remove_bridge(nm_plugin, port0_up):
     bridge_desired_state = _create_bridge_config((port_name,))
     with _bridge_interface(nm_plugin.context, bridge_desired_state):
         bridge_current_state = _get_bridge_current_state(nm_plugin)
+        _remove_read_only_properties(bridge_current_state)
         assert bridge_desired_state == bridge_current_state
 
     assert not _get_bridge_current_state(nm_plugin)
@@ -71,7 +73,11 @@ def test_add_port_to_existing_bridge(bridge0_with_port0, port1_up, nm_plugin):
 
     _modify_bridge(nm_plugin.context, bridge0_with_port0)
 
-    assert bridge0_with_port0 == _get_bridge_current_state(nm_plugin)
+    current_state = _get_bridge_current_state(nm_plugin)
+    _remove_read_only_properties(current_state)
+    _remove_read_only_properties(bridge0_with_port0)
+
+    assert bridge0_with_port0 == current_state
 
 
 def _add_ports_to_bridge_config(bridge_state, ports):
@@ -81,7 +87,7 @@ def _add_ports_to_bridge_config(bridge_state, ports):
 
 def _create_bridge_config(ports):
     ports_states = _create_bridge_ports_config(ports)
-    return {
+    bridge_config = {
         LB.CONFIG_SUBTREE: {
             LB.OPTIONS_SUBTREE: {
                 LB.Options.GROUP_FORWARD_MASK: 0,
@@ -100,6 +106,24 @@ def _create_bridge_config(ports):
             LB.PORT_SUBTREE: ports_states,
         }
     }
+    if nm_version_bigger_or_equal_to("1.25.2"):
+        bridge_config[LB.CONFIG_SUBTREE][LB.OPTIONS_SUBTREE].update(
+            {
+                LB.Options.MULTICAST_ROUTER: 1,
+                LB.Options.GROUP_ADDR: "01:80:C2:00:00:00",
+                LB.Options.HASH_MAX: 4096,
+                LB.Options.MULTICAST_LAST_MEMBER_COUNT: 2,
+                LB.Options.MULTICAST_LAST_MEMBER_INTERVAL: 100,
+                LB.Options.MULTICAST_QUERIER: False,
+                LB.Options.MULTICAST_QUERIER_INTERVAL: 25500,
+                LB.Options.MULTICAST_QUERY_USE_IFADDR: False,
+                LB.Options.MULTICAST_QUERY_INTERVAL: 12500,
+                LB.Options.MULTICAST_QUERY_RESPONSE_INTERVAL: 1000,
+                LB.Options.MULTICAST_STARTUP_QUERY_COUNT: 2,
+                LB.Options.MULTICAST_STARTUP_QUERY_INTERVAL: 3125,
+            }
+        )
+    return bridge_config
 
 
 def _create_bridge_ports_config(ports):
@@ -222,7 +246,18 @@ def _create_iface_bridge_settings(bridge_state, base_con_profile=None):
             iface_name=BRIDGE0,
             iface_type=NM.SETTING_BRIDGE_SETTING_NAME,
         )
-    bridge_setting = nm.bridge.create_setting(bridge_state, con_profile)
+    bridge_setting = nm.bridge.create_setting(
+        bridge_state, con_profile, bridge_state
+    )
     ipv4_setting = nm.ipv4.create_setting({}, None)
     ipv6_setting = nm.ipv6.create_setting({}, None)
     return con_setting.setting, bridge_setting, ipv4_setting, ipv6_setting
+
+
+def _remove_read_only_properties(bridge_state):
+    bridge_options = bridge_state.get(LB.CONFIG_SUBTREE, {}).get(
+        LB.OPTIONS_SUBTREE, {}
+    )
+    if bridge_options:
+        for key in (LB.Options.HELLO_TIMER, LB.Options.GC_TIMER):
+            bridge_options.pop(key, None)
