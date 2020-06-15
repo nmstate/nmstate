@@ -17,6 +17,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 from contextlib import contextmanager
+import os
 import time
 import yaml
 
@@ -317,11 +318,12 @@ def lldp_enabled(ifstate):
 
 
 def _send_lldp_packet():
+    test_dir = os.path.dirname(os.path.realpath(__file__))
     cmdlib.exec_cmd(
         (
             "tcpreplay",
-            "--intf1=lldptestpeer",
-            f"tests/integration/test_captures/lldp.pcap",
+            "--intf1=eth1peer",
+            f"{test_dir}/test_captures/lldp.pcap",
         ),
         check=True,
     )
