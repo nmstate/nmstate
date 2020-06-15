@@ -332,6 +332,8 @@ definitions:
           type: string
           enum:
           - ovs-bridge
+        ovs-db:
+          type: object
         bridge:
           type: object
           properties:
@@ -402,6 +404,8 @@ definitions:
           type: string
           enum:
           - ovs-interface
+        ovs-db:
+          type: object
   interface-dummy:
     rw:
       properties:

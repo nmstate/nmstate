@@ -22,10 +22,11 @@ from operator import itemgetter
 import subprocess
 
 from libnmstate.error import NmstateValueError
-from libnmstate.schema import OVSBridge
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import InterfaceState
+from libnmstate.schema import OVSBridge
+from libnmstate.schema import OvsDB
 
 from .bridge import BridgeIface
 from .base_iface import BaseIface
@@ -140,6 +141,11 @@ class OvsBridgeIface(BridgeIface):
         ] = new_port_configs
         self.sort_slaves()
 
+    def state_for_verify(self):
+        state = super().state_for_verify()
+        _convert_external_ids_values_to_string(state)
+        return state
+
 
 def _lookup_ovs_port_by_interface(ports, slave_name):
     for port in ports:
@@ -184,6 +190,11 @@ class OvsInternalIface(BaseIface):
     def need_parent(self):
         return True
 
+    def state_for_verify(self):
+        state = super().state_for_verify()
+        _convert_external_ids_values_to_string(state)
+        return state
+
 
 def is_ovs_running():
     try:
@@ -197,3 +208,11 @@ def is_ovs_running():
         return True
     except Exception:
         return False
+
+
+def _convert_external_ids_values_to_string(iface_info):
+    external_ids = iface_info.get(OvsDB.OVS_DB_SUBTREE, {}).get(
+        OvsDB.EXTERNAL_IDS, {}
+    )
+    for key, value in external_ids.items():
+        external_ids[key] = str(value)

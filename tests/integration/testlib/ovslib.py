@@ -26,6 +26,7 @@ from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import OVSBridge
+from libnmstate.schema import OVSInterface
 
 from . import cmdlib
 
@@ -47,6 +48,9 @@ class Bridge:
             OVSBridge.OPTIONS_SUBTREE
         ] = options
 
+    def set_ovs_db(self, ovs_db_config):
+        self._bridge_iface[OVSBridge.OVS_DB_SUBTREE] = ovs_db_config
+
     def add_system_port(self, name):
         self._add_port(name)
 
@@ -64,7 +68,9 @@ class Bridge:
                 OVSBridge.Port.LinkAggregation.MODE
             ] = mode
 
-    def add_internal_port(self, name, *, mac=None, ipv4_state=None):
+    def add_internal_port(
+        self, name, *, mac=None, ipv4_state=None, ovs_db=None
+    ):
         ifstate = {
             Interface.NAME: name,
             Interface.TYPE: InterfaceType.OVS_INTERFACE,
@@ -73,6 +79,8 @@ class Bridge:
             ifstate[Interface.MAC] = mac
         if ipv4_state:
             ifstate[Interface.IPV4] = ipv4_state
+        if ovs_db:
+            ifstate[OVSInterface.OVS_DB_SUBTREE] = ovs_db
 
         self._add_port(name)
         self._ifaces.append(ifstate)

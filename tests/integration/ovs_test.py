@@ -28,6 +28,7 @@ from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import OVSBridge
+from libnmstate.schema import OvsDB
 from libnmstate.error import NmstateDependencyError
 from libnmstate.error import NmstateValueError
 
@@ -45,6 +46,7 @@ from .testlib.vlan import vlan_interface
 BOND1 = "bond1"
 BRIDGE1 = "br1"
 PORT1 = "ovs1"
+PORT2 = "ovs2"
 VLAN_IFNAME = "eth101"
 
 MAC1 = "02:FF:FF:FF:FF:01"
@@ -306,3 +308,27 @@ def test_add_invalid_slave_ip_config(eth1_up):
         with bridge.create() as state:
             desired_state[Interface.KEY].append(state[Interface.KEY][0])
             libnmstate.apply(desired_state)
+
+
+def test_ovsdb_new_bridge_with_external_id():
+    bridge = Bridge(BRIDGE1)
+    bridge.set_ovs_db({OvsDB.EXTERNAL_IDS: {"foo": "abc", "bak": 1}})
+    bridge.add_internal_port(
+        PORT1,
+        ipv4_state={InterfaceIPv4.ENABLED: False},
+        ovs_db={OvsDB.EXTERNAL_IDS: {"foo": "abcd", "bak": 2}},
+    )
+    with bridge.create() as state:
+        assertlib.assert_state_match(state)
+
+
+def test_ovsdb_set_external_ids_for_existing_bridge(bridge_with_ports):
+    bridge = bridge_with_ports
+    bridge.set_ovs_db({OvsDB.EXTERNAL_IDS: {"foo": "abc", "bak": 1}})
+    bridge.add_internal_port(
+        PORT2,
+        ipv4_state={InterfaceIPv4.ENABLED: False},
+        ovs_db={OvsDB.EXTERNAL_IDS: {"foo": "abcd", "bak": 2}},
+    )
+    bridge.apply()
+    assertlib.assert_state_match(bridge.state)
