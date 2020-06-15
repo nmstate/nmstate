@@ -31,11 +31,13 @@ from .route_rule import RouteRuleState
 
 
 class NetState:
-    def __init__(self, desire_state, current_state=None):
+    def __init__(self, desire_state, current_state=None, save_to_disk=True):
         if current_state is None:
             current_state = {}
         self._ifaces = Ifaces(
-            desire_state.get(Interface.KEY), current_state.get(Interface.KEY)
+            desire_state.get(Interface.KEY),
+            current_state.get(Interface.KEY),
+            save_to_disk,
         )
         self._route = RouteState(
             self._ifaces,

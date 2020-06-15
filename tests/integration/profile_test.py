@@ -75,6 +75,8 @@ DUMMY_PROFILE_DIRECTORY = "/etc/NetworkManager/system-connections/"
 
 ETH_PROFILE_DIRECTORY = "/etc/sysconfig/network-scripts/"
 
+MEMORY_ONLY_PROFILE_DIRECTORY = "/run/NetworkManager/system-connections/"
+
 MAC0 = "02:FF:FF:FF:FF:00"
 
 
@@ -109,7 +111,7 @@ def test_rename_existing_interface_active_profile(eth1_up):
 
 
 @contextmanager
-def dummy_interface(ifname):
+def dummy_interface(ifname, save_to_disk=True):
     desired_state = {
         Interface.KEY: [
             {
@@ -119,7 +121,7 @@ def dummy_interface(ifname):
             }
         ]
     }
-    libnmstate.apply(desired_state)
+    libnmstate.apply(desired_state, save_to_disk=save_to_disk)
     try:
         yield desired_state
     finally:
@@ -271,6 +273,47 @@ def test_state_absent_can_remove_down_profiles(dummy0_with_down_profile):
     # interface up, it should contain different states than before
     with pytest.raises(AssertionError):
         assertlib.assert_state_match(state_before_down)
+
+
+def test_create_memory_only_profile_new_interface():
+    with dummy_interface(DUMMY0_IFNAME, save_to_disk=False):
+        assert not _profile_exists(
+            DUMMY_PROFILE_DIRECTORY + "dummy0.nmconnection"
+        )
+        assert _profile_exists(
+            MEMORY_ONLY_PROFILE_DIRECTORY + "dummy0.nmconnection"
+        )
+
+    assert not _profile_exists(
+        MEMORY_ONLY_PROFILE_DIRECTORY + "dummy0.nmconnection"
+    )
+
+
+def test_create_memory_only_profile_edit_interface():
+    with dummy_interface(DUMMY0_IFNAME) as dstate:
+        assert not _profile_exists(
+            MEMORY_ONLY_PROFILE_DIRECTORY + "dummy0.nmconnection"
+        )
+        dstate[Interface.KEY][0][Interface.MTU] = 2000
+        libnmstate.apply(dstate, save_to_disk=False)
+        assert _profile_exists(DUMMY_PROFILE_DIRECTORY + "dummy0.nmconnection")
+        assert _profile_exists(
+            MEMORY_ONLY_PROFILE_DIRECTORY + "dummy0.nmconnection"
+        )
+
+    assert not _profile_exists(
+        MEMORY_ONLY_PROFILE_DIRECTORY + "dummy0.nmconnection"
+    )
+
+
+def test_memory_only_profile_absent_interface():
+    with dummy_interface(DUMMY0_IFNAME) as dstate:
+        dstate[Interface.KEY][0][Interface.STATE] = InterfaceState.ABSENT
+        libnmstate.apply(dstate, save_to_disk=False)
+        assertlib.assert_absent(DUMMY0_IFNAME)
+        assert _profile_exists(DUMMY_PROFILE_DIRECTORY + "dummy0.nmconnection")
+
+    assertlib.assert_absent(DUMMY0_IFNAME)
 
 
 def _nmcli_deactivate_connection(con_name):

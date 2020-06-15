@@ -58,7 +58,7 @@ class NmstatePlugin(metaclass=ABCMeta):
             f"Plugin {self.name} BUG: get_interfaces() not implemented"
         )
 
-    def apply_changes(self, net_state):
+    def apply_changes(self, net_state, save_to_disk):
         pass
 
     @property

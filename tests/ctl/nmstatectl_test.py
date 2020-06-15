@@ -76,12 +76,18 @@ interfaces:
 """
 
 
+def _mock_libnmstate_apply_func(
+    state,
+    verify_change=True,
+    commit=True,
+    rollback_timeout=60,
+    save_to_disk=True,
+):
+    return None
+
+
 @mock.patch("sys.argv", ["nmstatectl", "set", "mystate.json"])
-@mock.patch.object(
-    nmstatectl.libnmstate,
-    "apply",
-    lambda state, verify_change=True, commit=True, rollback_timeout=60: None,
-)
+@mock.patch.object(nmstatectl.libnmstate, "apply", _mock_libnmstate_apply_func)
 @mock.patch.object(
     nmstatectl, "open", mock.mock_open(read_data="{}"), create=True
 )

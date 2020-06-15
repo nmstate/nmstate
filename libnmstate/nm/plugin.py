@@ -173,8 +173,8 @@ class NetworkManagerPlugin(NmstatePlugin):
     def refresh_content(self):
         self._ctx.refresh_content()
 
-    def apply_changes(self, net_state):
-        nm_applier.apply_changes(self.context, net_state)
+    def apply_changes(self, net_state, save_to_disk):
+        nm_applier.apply_changes(self.context, net_state, save_to_disk)
 
     def _load_checkpoint(self, checkpoint_path):
         if checkpoint_path:

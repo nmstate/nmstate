@@ -35,8 +35,8 @@ class BondIface(BaseIface):
         if self.slaves:
             self.raw[Bond.CONFIG_SUBTREE][Bond.SLAVES].sort()
 
-    def __init__(self, info):
-        super().__init__(info)
+    def __init__(self, info, save_to_disk=True):
+        super().__init__(info, save_to_disk)
         self._normalize_options_values()
         self._fix_bond_option_arp_monitor()
 
