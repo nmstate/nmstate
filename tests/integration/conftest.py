@@ -25,6 +25,9 @@ import pytest
 
 import libnmstate
 from libnmstate.schema import DNS
+from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceIP
+from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import Route
 from libnmstate.schema import RouteRule
 
@@ -70,8 +73,40 @@ def test_env_setup():
     _empty_net_state()
     _ethx_init()
     yield
+    _remove_static_routes_with_dynamic_iface(old_state)
     libnmstate.apply(old_state, verify_change=False)
     _diff_initial_state(old_state)
+
+
+def _remove_static_routes_with_dynamic_iface(old_state):
+    """
+    Remove the routes with a next hop interface with a dynamic IP address
+    configured.
+    """
+    routes = old_state[Route.KEY][Route.CONFIG]
+    new_routes = []
+    for route in routes:
+        ifname = route[Route.NEXT_HOP_INTERFACE]
+        iface = next(
+            ifstate
+            for ifstate in old_state[Interface.KEY]
+            if ifstate[Interface.NAME] == ifname
+        )
+        if _is_not_dynamic(iface[Interface.IPV4], iface[Interface.IPV6]):
+            new_routes.append(route)
+
+    old_state[Route.KEY][Route.CONFIG] = new_routes
+
+
+def _is_not_dynamic(ipv4_state, ipv6_state):
+    return not (
+        (ipv4_state[InterfaceIP.ENABLED] and ipv4_state[InterfaceIP.DHCP])
+        and (
+            ipv6_state[InterfaceIP.ENABLED]
+            and ipv6_state[InterfaceIPv6.AUTOCONF]
+            or ipv6_state[InterfaceIP.DHCP]
+        )
+    )
 
 
 def _empty_net_state():
