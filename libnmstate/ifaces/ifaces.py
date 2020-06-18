@@ -123,6 +123,7 @@ class Ifaces:
 
     def _pre_edit_validation_and_cleanup(self):
         self._validate_over_booked_slaves()
+        self._validate_vlan_mtu()
         self._handle_master_slave_list_change()
         self._match_child_iface_state_with_parent()
         self._mark_orphen_as_absent()
@@ -163,6 +164,31 @@ class Ifaces:
                             f"OVS patch port peer {iface.peer} must be an OVS"
                             " patch port"
                         )
+
+    def _validate_vlan_mtu(self):
+        """
+        Validate that mtu of vlan or vxlan is less than
+        or equal to it's base interface's MTU
+
+        If base MTU is not present, set same as vlan MTU
+        """
+        for iface in self._ifaces.values():
+
+            if (
+                iface.type in [InterfaceType.VLAN, InterfaceType.VXLAN]
+                and iface.is_up
+                and iface.mtu
+            ):
+                base_iface = self._ifaces.get(iface.parent)
+                if not base_iface.mtu:
+                    base_iface.mtu = iface.mtu
+                if iface.mtu > base_iface.mtu:
+                    raise NmstateValueError(
+                        f"Interface {iface.name} has bigger "
+                        f"MTU({iface.mtu}) "
+                        f"than its base interface: {iface.parent} "
+                        f"MTU({base_iface.mtu})"
+                    )
 
     def _handle_master_slave_list_change(self):
         """
