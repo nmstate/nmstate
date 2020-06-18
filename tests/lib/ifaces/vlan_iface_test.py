@@ -21,8 +21,10 @@ import pytest
 
 from libnmstate.error import NmstateValueError
 from libnmstate.schema import VLAN
+from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceType
 
+from libnmstate.ifaces.ifaces import Ifaces
 from libnmstate.ifaces.vlan import VlanIface
 
 from ..testlib.ifacelib import gen_foo_iface_info
@@ -58,3 +60,29 @@ class TestVlanIface:
         iface = VlanIface(iface_info)
         with pytest.raises(NmstateValueError):
             iface.pre_edit_validation_and_cleanup()
+
+    def test_validate_vlan_mtu_bigger_than_parent(self):
+        vlan_iface_info = self._gen_iface_info()
+        base_iface_info = gen_foo_iface_info()
+        base_iface_info[Interface.NAME] = BASE_IFACE_NAME
+        base_iface_info[Interface.MTU] = 1500
+        vlan_iface_info[Interface.MTU] = 1501
+        with pytest.raises(NmstateValueError):
+            Ifaces(
+                des_iface_infos=[base_iface_info, vlan_iface_info],
+                cur_iface_infos=[],
+            )
+
+    def test_validate_vlan_mtu_when_parent_mtu_not_defined(self):
+        vlan_iface_info = self._gen_iface_info()
+        base_iface_info = gen_foo_iface_info()
+        base_iface_info[Interface.NAME] = BASE_IFACE_NAME
+        vlan_iface_info[Interface.MTU] = 1501
+
+        ifaces = Ifaces(
+            des_iface_infos=[base_iface_info, vlan_iface_info],
+            cur_iface_infos=[],
+        )
+        new_base_iface = ifaces[BASE_IFACE_NAME]
+
+        assert new_base_iface.mtu == 1501

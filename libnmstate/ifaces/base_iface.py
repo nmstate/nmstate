@@ -303,6 +303,10 @@ class BaseIface:
     def mtu(self):
         return self._info.get(Interface.MTU)
 
+    @mtu.setter
+    def mtu(self, value):
+        self._info[Interface.MTU] = value
+
     def _capitalize_mac(self):
         if self.mac:
             self._info[Interface.MAC] = self.mac.upper()

@@ -128,6 +128,7 @@ class Ifaces:
         self._mark_orphen_as_absent()
         self._bring_slave_up_if_not_in_desire()
         self._validate_ovs_patch_peers()
+        self._validate_vlan_mtu()
 
     def _bring_slave_up_if_not_in_desire(self):
         """
@@ -340,6 +341,30 @@ class Ifaces:
                     )
                 else:
                     slave_master_map[slave_name] = iface.name
+
+    def _validate_vlan_mtu(self):
+        """
+        Check whether MTU of vlan/vxlan is bigger than parent.
+        If parent has undefined MTU, use VLAN/VxLAN's.
+        """
+        for iface in self._ifaces.values():
+            if (
+                iface.iface_type in (InterfaceType.VLAN, InterfaceType.VXLAN)
+                and iface.mtu
+            ):
+                parent_iface = self._ifaces.get(iface.parent)
+                if parent_iface:
+                    if parent_iface.mtu:
+                        if iface.mtu > parent_iface.mtu:
+                            raise NmstateValueError(
+                                f"Interface {iface.name} has bigger "
+                                f"MTU({iface.mtu}) "
+                                f"than its base interface: {iface.parent} "
+                                f"MTU({parent_iface.mtu})"
+                            )
+                    else:
+                        # Parent iface has no MTU defined, use vlan's
+                        parent_iface.mtu = iface.mtu
 
 
 def _to_specific_iface_obj(info, save_to_disk):
