@@ -20,7 +20,9 @@
 import pytest
 
 from libnmstate.error import NmstateValueError
+from libnmstate.ifaces import Ifaces
 from libnmstate.schema import VLAN
+from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceType
 
 from libnmstate.ifaces.vlan import VlanIface
@@ -31,6 +33,13 @@ BASE_IFACE_NAME = "base1"
 
 
 class TestVlanIface:
+    def _gen_base_iface_info(self):
+        iface_info = gen_foo_iface_info(iface_type=InterfaceType.ETHERNET)
+        iface_info[Interface.NAME] = BASE_IFACE_NAME
+        iface_info[Interface.MTU] = 1500
+
+        return iface_info
+
     def _gen_iface_info(self):
         iface_info = gen_foo_iface_info(iface_type=InterfaceType.VLAN)
         iface_info[VLAN.CONFIG_SUBTREE] = {
@@ -58,3 +67,29 @@ class TestVlanIface:
         iface = VlanIface(iface_info)
         with pytest.raises(NmstateValueError):
             iface.pre_edit_validation_and_cleanup()
+
+    def test_add_vlan_with_mtu_greater_than_base(self):
+        base_iface_info = self._gen_base_iface_info()
+        vlan_iface_info = self._gen_iface_info()
+        vlan_iface_info[Interface.MTU] = base_iface_info[Interface.MTU] + 1
+
+        with pytest.raises(NmstateValueError):
+            Ifaces(
+                des_iface_infos=[base_iface_info, vlan_iface_info],
+                cur_iface_infos=[],
+            )
+
+    def test_add_vlan_with_base_mtu_undefined(self):
+        base_iface_info = self._gen_base_iface_info()
+        base_iface_info[Interface.MTU] = None
+        vlan_iface_info = self._gen_iface_info()
+        vlan_iface_info[Interface.MTU] = 1501
+
+        ifaces = Ifaces(
+            des_iface_infos=[base_iface_info, vlan_iface_info],
+            cur_iface_infos=[],
+        )
+
+        base_iface = ifaces.get(base_iface_info.get(Interface.NAME))
+
+        assert base_iface.mtu == vlan_iface_info[Interface.MTU]
