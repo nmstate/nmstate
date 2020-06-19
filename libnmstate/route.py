@@ -22,6 +22,8 @@ from collections import defaultdict
 from libnmstate.error import NmstateValueError
 from libnmstate.error import NmstateVerificationError
 from libnmstate.iplib import is_ipv6_address
+from libnmstate.iplib import canonicalize_ip_network
+from libnmstate.iplib import canonicalize_ip_address
 from libnmstate.prettystate import format_desired_current_state_diff
 from libnmstate.schema import Interface
 from libnmstate.schema import Route
@@ -44,6 +46,7 @@ class RouteEntry(StateEntry):
         # TODO: Convert IPv6 full address to abbreviated address
         self.complement_defaults()
         self._invalid_reason = None
+        self._canonicalize_ip_address()
 
     @property
     def is_ipv6(self):
@@ -147,6 +150,15 @@ class RouteEntry(StateEntry):
                 )
                 return False
         return True
+
+    def _canonicalize_ip_address(self):
+        if not self.absent:
+            if self.destination:
+                self.destination = canonicalize_ip_network(self.destination)
+            if self.next_hop_address:
+                self.next_hop_address = canonicalize_ip_address(
+                    self.next_hop_address
+                )
 
 
 class RouteState:
