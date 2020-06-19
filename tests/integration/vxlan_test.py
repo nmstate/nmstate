@@ -95,9 +95,6 @@ def test_set_vxlan_iface_down(eth1_up):
         assertlib.assert_absent(vxlan.name)
 
 
-@pytest.mark.xfail(
-    reason="https://bugzilla.redhat.com/show_bug.cgi?id=1772382", strict=False
-)
 def test_add_new_bond_iface_with_vxlan(eth1_up):
     eth_name = eth1_up[Interface.KEY][0][Interface.NAME]
     bond_name = "bond1"
