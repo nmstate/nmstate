@@ -212,7 +212,7 @@ def test_change_gateway(nm_ip, routes, gateways):
 @pytest.mark.xfail(
     raises=NmstateNotImplementedError,
     strict=True,
-    reason="Network Manager Bug: " "https://bugzilla.redhat.com/1707396",
+    reason="Network Manager Bug: https://bugzilla.redhat.com/1707396",
 )
 @parametrize_ip_ver_routes_gw
 def test_add_two_gateway(nm_ip, routes, gateways):
@@ -228,7 +228,7 @@ def test_add_two_gateway(nm_ip, routes, gateways):
 @pytest.mark.xfail(
     raises=NmstateNotImplementedError,
     strict=True,
-    reason="Network Manager Bug: " "https://bugzilla.redhat.com/1707396",
+    reason="Network Manager Bug: https://bugzilla.redhat.com/1707396",
 )
 @parametrize_ip_ver_routes_gw
 def test_add_duplicate_gateways(nm_ip, routes, gateways):

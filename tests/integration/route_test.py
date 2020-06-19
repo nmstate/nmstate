@@ -134,7 +134,9 @@ def test_add_route_without_table_id(eth1_up):
 
 
 @pytest.mark.xfail(
-    raises=NmstateNotImplementedError, reason="Red Hat Bug 1707396"
+    raises=NmstateNotImplementedError,
+    reason="https://bugzilla.redhat.com/1707396",
+    strict=True,
 )
 def test_multiple_gateway(eth1_up):
     libnmstate.apply(
