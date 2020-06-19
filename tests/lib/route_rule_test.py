@@ -96,24 +96,24 @@ class TestRouteRuleEntry:
             (
                 "198.51.100.0",
                 "198.51.100.0/32",
-                "192.0.2.1/24",
-                "192.0.2.1/24",
+                "192.0.2.0/24",
+                "192.0.2.0/24",
             ),
             (
                 "2001:db8:a::1",
                 "2001:db8:a::1/128",
-                "2001:db8:b::1/64",
-                "2001:db8:b::1/64",
+                "2001:db8:b::/64",
+                "2001:db8:b::/64",
             ),
             (
-                "192.0.2.1/24",
-                "192.0.2.1/24",
+                "192.0.2.0/24",
+                "192.0.2.0/24",
                 "198.51.100.0",
                 "198.51.100.0/32",
             ),
             (
-                "2001:db8:b::1/64",
-                "2001:db8:b::1/64",
+                "2001:db8:b::/64",
+                "2001:db8:b::/64",
                 "2001:db8:a::1",
                 "2001:db8:a::1/128",
             ),
@@ -128,6 +128,43 @@ class TestRouteRuleEntry:
         )
         rule_obj = RouteRuleEntry(rule)
         assert rule_obj.to_dict() == expected_rule
+
+    @pytest.mark.parametrize(
+        "ip_ver_addrs",
+        [
+            ("198.51.100.1/24", "198.51.100.0/24",),
+            ("2001:db8:a::1/64", "2001:db8:a::/64",),
+        ],
+        ids=["ipv4", "ipv6"],
+    )
+    def test_ip_network_address_with_host_bits(self, ip_ver_addrs):
+        ip_addr, expected_ip_addr = ip_ver_addrs
+        rule = _create_route_rule_dict(ip_addr, ip_addr, 50, 103)
+        expected_rule = _create_route_rule_dict(
+            expected_ip_addr, expected_ip_addr, 50, 103
+        )
+        rule_obj = RouteRuleEntry(rule)
+        assert rule_obj.to_dict() == expected_rule
+
+    @pytest.mark.parametrize(
+        "ip_ver_addrs",
+        [
+            ("198.51.100.256/24", "198.51.100.2/33",),
+            ("2001:db8:a::ffff0/64", "2001:db8:a::/129",),
+            ("invalid_ip_string", "invalid_ip_string2"),
+        ],
+        ids=["ipv4", "ipv6", "invalid_format"],
+    )
+    def test_invalid_ip_address(self, ip_ver_addrs):
+        ip_from, ip_to = ip_ver_addrs
+        rule = _create_route_rule_dict(ip_from, ip_to, 50, 103)
+        with pytest.raises(NmstateValueError):
+            RouteRuleEntry(rule)
+
+    def test_invalid_ipv6_address(self):
+        rule = _create_route_rule_dict("256.0.0.0/24", "1.1.1.1/33", 50, 103)
+        with pytest.raises(NmstateValueError):
+            RouteRuleEntry(rule)
 
     def test_sort_route_rules(self):
         rules = [

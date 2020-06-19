@@ -6,7 +6,7 @@ from libnmstate.error import NmstateVerificationError
 from libnmstate.error import NmstateValueError
 from libnmstate.iplib import KERNEL_MAIN_ROUTE_TABLE_ID
 from libnmstate.iplib import is_ipv6_address
-from libnmstate.iplib import to_ip_address_full
+from libnmstate.iplib import canonicalize_ip_network
 from libnmstate.prettystate import format_desired_current_state_diff
 from libnmstate.schema import Interface
 from libnmstate.schema import RouteRule
@@ -23,7 +23,7 @@ class RouteRuleEntry(StateEntry):
         self.priority = route_rule.get(RouteRule.PRIORITY)
         self.route_table = route_rule.get(RouteRule.ROUTE_TABLE)
         self._complement_defaults()
-        self._append_prefix_length_for_host_only_ip()
+        self._canonicalize_ip_network()
 
     def _complement_defaults(self):
         if self.ip_from is None:
@@ -38,11 +38,11 @@ class RouteRuleEntry(StateEntry):
         ):
             self.route_table = KERNEL_MAIN_ROUTE_TABLE_ID
 
-    def _append_prefix_length_for_host_only_ip(self):
-        if self.ip_from and "/" not in self.ip_from:
-            self.ip_from = to_ip_address_full(self.ip_from)
-        if self.ip_to and "/" not in self.ip_to:
-            self.ip_to = to_ip_address_full(self.ip_to)
+    def _canonicalize_ip_network(self):
+        if self.ip_from:
+            self.ip_from = canonicalize_ip_network(self.ip_from)
+        if self.ip_to:
+            self.ip_to = canonicalize_ip_network(self.ip_to)
 
     def _keys(self):
         return (self.ip_from, self.ip_to, self.priority, self.route_table)
