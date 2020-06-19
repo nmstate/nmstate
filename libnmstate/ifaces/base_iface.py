@@ -20,13 +20,12 @@
 from collections.abc import Mapping
 from copy import deepcopy
 import logging
-from ipaddress import ip_address
 from operator import itemgetter
 
 from libnmstate.error import NmstateInternalError
 from libnmstate.error import NmstateValueError
-from libnmstate.iplib import is_ipv6_address
 from libnmstate.iplib import is_ipv6_link_local_addr
+from libnmstate.iplib import canonicalize_ip_address
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIP
 from libnmstate.schema import InterfaceIPv6
@@ -44,7 +43,7 @@ class IPState:
         self._info = info
         self._remove_stack_if_disabled()
         self._sort_addresses()
-        self._canonicalize_ipv6_addr()
+        self._canonicalize_ip_addr()
         self._canonicalize_dynamic()
 
     def _canonicalize_dynamic(self):
@@ -61,15 +60,11 @@ class IPState:
             ):
                 self._info.pop(dhcp_option, None)
 
-    def _canonicalize_ipv6_addr(self):
-        """
-        Convert full IPv6 address to abbreviated address.
-        """
-        if self._family == Interface.IPV6:
-            for addr in self.addresses:
-                address = addr[InterfaceIP.ADDRESS_IP]
-                if is_ipv6_address(address):
-                    addr[InterfaceIP.ADDRESS_IP] = str(ip_address(address))
+    def _canonicalize_ip_addr(self):
+        for addr in self.addresses:
+            addr[InterfaceIP.ADDRESS_IP] = canonicalize_ip_address(
+                addr[InterfaceIP.ADDRESS_IP]
+            )
 
     def _sort_addresses(self):
         self.addresses.sort(key=itemgetter(InterfaceIP.ADDRESS_IP))

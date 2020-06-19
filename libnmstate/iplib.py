@@ -52,3 +52,17 @@ def ip_address_full_to_tuple(addr):
         raise NmstateValueError(f"Invalid IP address, error: {err}")
 
     return f"{net.network_address}", net.prefixlen
+
+
+def canonicalize_ip_network(address):
+    try:
+        return ipaddress.ip_network(address, strict=False).with_prefixlen
+    except ValueError as e:
+        raise NmstateValueError(f"Invalid IP network address: {e}")
+
+
+def canonicalize_ip_address(address):
+    try:
+        return ipaddress.ip_address(address).compressed
+    except ValueError as e:
+        raise NmstateValueError(f"Invalid IP address: {e}")
