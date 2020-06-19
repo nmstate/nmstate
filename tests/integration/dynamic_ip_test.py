@@ -581,7 +581,7 @@ def test_slave_ipaddr_learned_via_dhcp_added_as_static_to_linux_bridge(
         assertlib.assert_state_match(state)
 
 
-@pytest.mark.xfail(raises=NmstateNotImplementedError)
+@pytest.mark.xfail(raises=NmstateNotImplementedError, strict=True)
 def test_ipv6_autoconf_only(dhcpcli_up):
     desired_state = dhcpcli_up
     dhcp_cli_desired_state = desired_state[Interface.KEY][0]
