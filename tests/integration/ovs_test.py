@@ -436,3 +436,38 @@ class TestOvsPatch:
         assertlib.assert_absent(BRIDGE0)
         assertlib.assert_absent(PATCH0)
         assertlib.assert_absent(PATCH1)
+
+
+@pytest.mark.tier1
+def test_create_internal_port_with_explict_mtu():
+    bridge = Bridge(BRIDGE1)
+    bridge.add_internal_port(
+        PORT1,
+        mac=MAC1,
+        mtu=1501,
+        ipv4_state={
+            InterfaceIPv4.ENABLED: True,
+            InterfaceIPv4.ADDRESS: [
+                {
+                    InterfaceIPv4.ADDRESS_IP: "192.0.2.1",
+                    InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+                }
+            ],
+        },
+    )
+
+    with bridge.create() as state:
+        assertlib.assert_state_match(state)
+
+    assertlib.assert_absent(BRIDGE1)
+    assertlib.assert_absent(PORT1)
+
+
+@pytest.mark.tier1
+def test_change_mtu_of_existing_internal_port(bridge_with_ports):
+    state = statelib.show_only((PORT1,))
+    state[Interface.KEY][0][Interface.MTU] = 1501
+
+    libnmstate.apply(state)
+
+    assertlib.assert_state_match(state)
