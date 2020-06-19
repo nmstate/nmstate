@@ -69,7 +69,14 @@ class Bridge:
             ] = mode
 
     def add_internal_port(
-        self, name, *, mac=None, ipv4_state=None, ovs_db=None, patch_state=None
+        self,
+        name,
+        *,
+        mac=None,
+        ipv4_state=None,
+        ovs_db=None,
+        patch_state=None,
+        mtu=None,
     ):
         ifstate = {
             Interface.NAME: name,
@@ -77,6 +84,8 @@ class Bridge:
         }
         if mac:
             ifstate[Interface.MAC] = mac
+        if mtu:
+            ifstate[Interface.MTU] = mtu
         if ipv4_state:
             ifstate[Interface.IPV4] = ipv4_state
         if ovs_db:
