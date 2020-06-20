@@ -482,6 +482,8 @@ definitions:
               type: boolean
             auto-dns:
               type: boolean
+            auto-route-table-id:
+              type: integer
             address:
               type: array
               items:
@@ -519,6 +521,8 @@ definitions:
               type: boolean
             auto-dns:
               type: boolean
+            auto-route-table-id:
+              type: integer
             address:
               type: array
               items:
