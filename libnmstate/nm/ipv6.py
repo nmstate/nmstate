@@ -62,6 +62,7 @@ def get_info(active_connection):
             info[InterfaceIPv6.AUTO_ROUTES] = not props.ignore_auto_routes
             info[InterfaceIPv6.AUTO_GATEWAY] = not props.never_default
             info[InterfaceIPv6.AUTO_DNS] = not props.ignore_auto_dns
+            info[InterfaceIPv6.AUTO_ROUTE_TABLE_ID] = props.route_table
 
     ipconfig = active_connection.get_ip6_config()
     if ipconfig is None:
@@ -144,6 +145,10 @@ def create_setting(config, base_con_profile):
         setting_ip.props.ignore_auto_dns = not config.get(
             InterfaceIPv6.AUTO_DNS, True
         )
+        route_table = config.get(InterfaceIPv6.AUTO_ROUTE_TABLE_ID)
+        if route_table:
+            setting_ip.props.route_table = route_table
+
     elif ip_addresses:
         _set_static(setting_ip, ip_addresses)
     else:

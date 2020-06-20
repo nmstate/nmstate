@@ -133,6 +133,7 @@ class InterfaceIP:
     AUTO_DNS = "auto-dns"
     AUTO_GATEWAY = "auto-gateway"
     AUTO_ROUTES = "auto-routes"
+    AUTO_ROUTE_TABLE_ID = "auto-route-table-id"
 
 
 class InterfaceIPv4(InterfaceIP):

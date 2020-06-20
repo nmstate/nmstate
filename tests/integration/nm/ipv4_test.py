@@ -86,6 +86,7 @@ def test_enable_dhcp_with_no_server(eth1_up, nm_plugin):
         InterfaceIPv4.AUTO_DNS: True,
         InterfaceIPv4.AUTO_GATEWAY: True,
         InterfaceIPv4.AUTO_ROUTES: True,
+        InterfaceIPv4.AUTO_ROUTE_TABLE_ID: 0,
     }
     assert retry_till_true_or_timeout(
         RETRY_TIMEOUT, _ip_state_is_expected, nm_plugin, expected_ipv4_state
