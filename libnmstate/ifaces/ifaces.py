@@ -17,6 +17,8 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
+import logging
+
 from libnmstate.error import NmstateValueError
 from libnmstate.error import NmstateVerificationError
 from libnmstate.prettystate import format_desired_current_state_diff
@@ -129,6 +131,7 @@ class Ifaces:
         self._mark_orphen_as_absent()
         self._bring_slave_up_if_not_in_desire()
         self._validate_ovs_patch_peers()
+        self._remove_unknown_type_interfaces()
 
     def _bring_slave_up_if_not_in_desire(self):
         """
@@ -348,6 +351,18 @@ class Ifaces:
                 raise NmstateValueError(
                     f"Interface {iface.name} has unknown parent: "
                     f"{iface.parent}"
+                )
+
+    def _remove_unknown_type_interfaces(self):
+        """
+        Remove unknown type interfaces that are set as up.
+        """
+        for iface in list(self._ifaces.values()):
+            if iface.type == InterfaceType.UNKNOWN and iface.is_up:
+                self._ifaces.pop(iface.name, None)
+                logging.debug(
+                    f"Interface {iface.name} is type {iface.type} and "
+                    "will be ignored during the activation"
                 )
 
     def _validate_over_booked_slaves(self):

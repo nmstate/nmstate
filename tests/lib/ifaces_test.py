@@ -143,6 +143,17 @@ class TestIfaces:
         with pytest.raises(NmstateValueError):
             Ifaces([des_iface_info1, des_iface_info2], cur_iface_infos)
 
+    def test_remove_unknown_interfaces(self):
+        des_iface_infos = self._gen_iface_infos()
+        cur_iface_info = {
+            Interface.NAME: FOO3_IFACE_NAME,
+            Interface.TYPE: InterfaceType.UNKNOWN,
+            Interface.STATE: InterfaceState.UP,
+        }
+
+        ifaces = Ifaces(des_iface_infos, [cur_iface_info])
+        assert cur_iface_info not in ifaces.values()
+
     def test_mark_slave_as_changed_if_master_marked_as_absent(self):
         cur_iface_infos = self._gen_iface_infos()
         cur_iface_infos[0][Interface.NAME] = SLAVE1_IFACE_NAME
