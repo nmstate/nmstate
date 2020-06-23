@@ -56,20 +56,15 @@ class CheckPoint:
             | common.NM.CheckpointCreateFlags.DISCONNECT_NEW_DEVICES
         )
 
-        try:
-            self._ctx.client.checkpoint_create(
-                devs,
-                timeout,
-                cp_flags,
-                self._ctx.cancellable,
-                self._checkpoint_create_callback,
-                None,
-            )
-        except Exception as e:
-            raise NmstateLibnmError(
-                "Failed to create checkpoint: " "{}".format(e)
-            )
         self._ctx.register_async("Create checkpoint")
+        self._ctx.client.checkpoint_create(
+            devs,
+            timeout,
+            cp_flags,
+            self._ctx.cancellable,
+            self._checkpoint_create_callback,
+            None,
+        )
         self._ctx.wait_all_finish()
         self._add_checkpoint_refresh_timeout()
 
@@ -105,46 +100,29 @@ class CheckPoint:
         if self._dbuspath:
             action = f"Destroy checkpoint {self._dbuspath}"
             userdata = action
-            try:
-                self._ctx.client.checkpoint_destroy(
-                    self._dbuspath,
-                    self._ctx.cancellable,
-                    self._checkpoint_destroy_callback,
-                    userdata,
-                )
-            except Exception as e:
-                raise NmstateLibnmError(
-                    "Failed to destroy checkpoint {}: "
-                    "{}".format(self._dbuspath, e)
-                )
-            finally:
-                self.clean_up()
-            logging.debug(f"Checkpoint {self._dbuspath} destroyed")
             self._ctx.register_async(action)
+            self._ctx.client.checkpoint_destroy(
+                self._dbuspath,
+                self._ctx.cancellable,
+                self._checkpoint_destroy_callback,
+                userdata,
+            )
             self._ctx.wait_all_finish()
+            self.clean_up()
 
     def rollback(self):
         if self._dbuspath:
             action = f"Rollback to checkpoint {self._dbuspath}"
-            userdata = action
-            try:
-                self._ctx.client.checkpoint_rollback(
-                    self._dbuspath,
-                    self._ctx.cancellable,
-                    self._checkpoint_rollback_callback,
-                    userdata,
-                )
-            except Exception as e:
-                raise NmstateLibnmError(
-                    "Failed to rollback checkpoint {}: {}".format(
-                        self._dbuspath, e
-                    )
-                )
-            finally:
-                self.clean_up()
-            logging.debug(f"Checkpoint {self._dbuspath} rollback executed")
             self._ctx.register_async(action)
+            userdata = action
+            self._ctx.client.checkpoint_rollback(
+                self._dbuspath,
+                self._ctx.cancellable,
+                self._checkpoint_rollback_callback,
+                userdata,
+            )
             self._ctx.wait_all_finish()
+            self.clean_up()
 
     def _checkpoint_create_callback(self, client, result, data):
         try:
@@ -236,7 +214,7 @@ class CheckPoint:
         action = data
         try:
             client.checkpoint_destroy_finish(result)
-            logging.debug(f"Checkpoint {self._dbuspath} destroy executed")
+            logging.debug(f"Checkpoint {self._dbuspath} destroyed")
             self._dbuspath = None
             self._ctx.finish_async(action)
         except Exception as e:
