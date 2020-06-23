@@ -37,6 +37,10 @@ nmstate: {nmstate_version}
 """
 
 
+def pytest_configure(config):
+    config.addinivalue_line("markers", "slow tier1 tier2")
+
+
 def pytest_addoption(parser):
     parser.addoption(
         "--runslow", action="store_true", default=False, help="run slow tests"
