@@ -47,9 +47,10 @@ def validate_capabilities(state, capabilities):
 
 
 def validate_interface_capabilities(ifaces_state, capabilities):
-    ifaces_types = [iface_state.get("type") for iface_state in ifaces_state]
+    ifaces_types = {iface_state.get("type") for iface_state in ifaces_state}
     has_ovs_capability = NmstatePlugin.OVS_CAPABILITY in capabilities
     has_team_capability = NmstatePlugin.TEAM_CAPABILITY in capabilities
+    ovs_is_running = is_ovs_running()
     for iface_type in ifaces_types:
         is_ovs_type = iface_type in (
             InterfaceType.OVS_BRIDGE,
@@ -57,7 +58,7 @@ def validate_interface_capabilities(ifaces_state, capabilities):
             InterfaceType.OVS_PORT,
         )
         if is_ovs_type and not has_ovs_capability:
-            if not is_ovs_running():
+            if not ovs_is_running:
                 raise NmstateDependencyError(
                     "openvswitch service is not started."
                 )
