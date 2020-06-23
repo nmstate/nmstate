@@ -168,9 +168,9 @@ class NmstateOvsdbPlugin(NmstatePlugin):
                 continue
             if not iface.is_up:
                 continue
-            if iface.iface_type == OVSBridge.TYPE:
+            if iface.type == OVSBridge.TYPE:
                 table_name = "Bridge"
-            elif iface.iface_type == OVSInterface.TYPE:
+            elif iface.type == OVSInterface.TYPE:
                 table_name = "Interface"
             else:
                 continue
