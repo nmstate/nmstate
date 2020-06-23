@@ -152,7 +152,7 @@ class BaseIface:
         return self._name
 
     @property
-    def iface_type(self):
+    def type(self):
         return self._info.get(Interface.TYPE, InterfaceType.UNKNOWN)
 
     @property
@@ -285,7 +285,7 @@ class BaseIface:
         if self.is_master and not self.is_absent:
             for slave_name in self.slaves:
                 slave_iface = ifaces[slave_name]
-                slave_iface.set_master(self.name, self.iface_type)
+                slave_iface.set_master(self.name, self.type)
 
     def update(self, info):
         self._info.update(info)

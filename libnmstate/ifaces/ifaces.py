@@ -74,7 +74,7 @@ class Ifaces:
 
                 if iface_info.get(Interface.TYPE) is None:
                     if cur_iface:
-                        iface_info[Interface.TYPE] = cur_iface.iface_type
+                        iface_info[Interface.TYPE] = cur_iface.type
                     elif iface.is_up:
                         raise NmstateValueError(
                             f"Interface {iface.name} has no type defined "
@@ -82,7 +82,7 @@ class Ifaces:
                         )
                 iface = _to_specific_iface_obj(iface_info, save_to_disk)
                 if (
-                    iface.iface_type == InterfaceType.UNKNOWN
+                    iface.type == InterfaceType.UNKNOWN
                     # Allowing deletion of down profiles
                     and not iface.is_absent
                 ):
@@ -147,7 +147,7 @@ class Ifaces:
         When OVS patch peer does not exist or is down, raise an error.
         """
         for iface in self._ifaces.values():
-            if iface.iface_type == InterfaceType.OVS_INTERFACE and iface.is_up:
+            if iface.type == InterfaceType.OVS_INTERFACE and iface.is_up:
                 if iface.peer:
                     peer_iface = self._ifaces.get(iface.peer)
                     if not peer_iface or not peer_iface.is_up:
@@ -156,8 +156,7 @@ class Ifaces:
                             "be up"
                         )
                     elif (
-                        not peer_iface.iface_type
-                        == InterfaceType.OVS_INTERFACE
+                        not peer_iface.type == InterfaceType.OVS_INTERFACE
                         or not peer_iface.is_patch_port
                     ):
                         raise NmstateValueError(

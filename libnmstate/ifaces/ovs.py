@@ -84,7 +84,7 @@ class OvsBridgeIface(BridgeIface):
             slave_iface.update(
                 {BridgeIface.BRPORT_OPTIONS_METADATA: port_config}
             )
-            if slave_iface.iface_type == InterfaceType.OVS_INTERFACE:
+            if slave_iface.type == InterfaceType.OVS_INTERFACE:
                 slave_iface.parent = self.name
         super().gen_metadata(ifaces)
 
@@ -101,7 +101,7 @@ class OvsBridgeIface(BridgeIface):
             }
         )
         slave_iface.mark_as_changed()
-        slave_iface.set_master(self.name, self.iface_type)
+        slave_iface.set_master(self.name, self.type)
         slave_iface.parent = self.name
         return slave_iface
 

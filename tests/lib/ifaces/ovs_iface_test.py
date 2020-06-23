@@ -183,7 +183,7 @@ class TestOvsBrigeIface:
         )
 
         ovs_iface = ifaces[OVS_IFACE_NAME]
-        assert ovs_iface.iface_type == InterfaceType.OVS_INTERFACE
+        assert ovs_iface.type == InterfaceType.OVS_INTERFACE
         assert ovs_iface.parent == OVS_BRIDGE_IFACE_NAME
         assert ovs_iface.is_virtual
         assert ovs_iface.master == OVS_BRIDGE_IFACE_NAME
