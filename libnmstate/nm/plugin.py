@@ -48,6 +48,7 @@ from .checkpoint import CheckPoint
 from .checkpoint import get_checkpoints
 from .common import NM
 from .context import NmContext
+from .profile import get_all_applied_configs
 
 
 class NetworkManagerPlugin(NmstatePlugin):
@@ -99,6 +100,8 @@ class NetworkManagerPlugin(NmstatePlugin):
         info = []
         capabilities = self.capabilities
 
+        applied_configs = get_all_applied_configs(self.context)
+
         devices_info = [
             (dev, nm_device.get_device_common_info(dev))
             for dev in nm_device.list_devices(self.client)
@@ -108,10 +111,15 @@ class NetworkManagerPlugin(NmstatePlugin):
             type_id = devinfo["type_id"]
 
             iface_info = nm_translator.Nm2Api.get_common_device_info(devinfo)
+            applied_config = applied_configs.get(iface_info[Interface.NAME])
 
             act_con = nm_connection.get_device_active_connection(dev)
-            iface_info[Interface.IPV4] = nm_ipv4.get_info(act_con)
-            iface_info[Interface.IPV6] = nm_ipv6.get_info(act_con)
+            iface_info[Interface.IPV4] = nm_ipv4.get_info(
+                act_con, applied_config
+            )
+            iface_info[Interface.IPV6] = nm_ipv6.get_info(
+                act_con, applied_config
+            )
             iface_info.update(nm_wired.get_info(dev))
             iface_info.update(nm_user.get_info(self.context, dev))
             iface_info.update(nm_lldp.get_info(self.client, dev))

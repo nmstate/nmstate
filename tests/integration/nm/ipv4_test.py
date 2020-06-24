@@ -17,10 +17,18 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
-from libnmstate import nm
-from libnmstate.schema import InterfaceIPv4
+import pytest
 
+import libnmstate
+from libnmstate import nm
+from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceIPv4
+from libnmstate.schema import InterfaceIPv6
+from libnmstate.nm.profile import get_all_applied_configs
+
+from ..testlib import cmdlib
 from ..testlib import iproutelib
+from ..testlib import assertlib
 from ..testlib.retry import retry_till_true_or_timeout
 from .testlib import main_context
 
@@ -109,7 +117,8 @@ def _modify_interface(ctx, ipv4_state):
 def _get_ipv4_current_state(ctx, ifname):
     nmdev = ctx.get_nm_dev(ifname)
     active_connection = nm.connection.get_device_active_connection(nmdev)
-    return nm.ipv4.get_info(active_connection)
+    applied_config = get_all_applied_configs(ctx)
+    return nm.ipv4.get_info(active_connection, applied_config.get(ifname))
 
 
 def _create_iface_settings(ipv4_state, con_profile):
@@ -120,3 +129,50 @@ def _create_iface_settings(ipv4_state, con_profile):
     ipv6_setting = nm.ipv6.create_setting({}, None)
 
     return con_setting.setting, ipv4_setting, ipv6_setting
+
+
+def test_get_applied_config_for_dhcp_state_with_dhcp_enabeld_on_disk(eth1_up):
+    iface_state = eth1_up[Interface.KEY][0]
+    iface_name = iface_state[Interface.NAME]
+    cmdlib.exec_cmd(
+        f"nmcli c modify {iface_name} ipv4.method auto".split(), check=True
+    )
+    cmdlib.exec_cmd(
+        f"nmcli c modify {iface_name} ipv6.method auto".split(), check=True
+    )
+
+    assertlib.assert_state_match({Interface.KEY: [iface_state]})
+
+
+@pytest.fixture
+def eth1_up_with_auto_ip(eth1_up):
+    iface_name = eth1_up[Interface.KEY][0][Interface.NAME]
+    iface_state = {
+        Interface.NAME: iface_name,
+        Interface.IPV4: {
+            InterfaceIPv4.ENABLED: True,
+            InterfaceIPv4.DHCP: True,
+        },
+        Interface.IPV6: {
+            InterfaceIPv6.ENABLED: True,
+            InterfaceIPv6.DHCP: True,
+            InterfaceIPv6.AUTOCONF: True,
+        },
+    }
+    libnmstate.apply({Interface.KEY: [iface_state]})
+    yield iface_state
+
+
+def test_get_applied_config_for_dhcp_state_with_dhcp_disabled_on_disk(
+    eth1_up_with_auto_ip,
+):
+    iface_state = eth1_up_with_auto_ip
+    iface_name = iface_state[Interface.NAME]
+    cmdlib.exec_cmd(
+        f"nmcli c modify {iface_name} ipv4.method disabled".split(), check=True
+    )
+    cmdlib.exec_cmd(
+        f"nmcli c modify {iface_name} ipv6.method disabled".split(), check=True
+    )
+
+    assertlib.assert_state_match({Interface.KEY: [iface_state]})

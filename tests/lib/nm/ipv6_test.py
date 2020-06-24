@@ -121,7 +121,7 @@ def test_create_setting_with_static_addresses(NM_mock):
 
 
 def test_get_info_with_no_connection():
-    info = nm.ipv6.get_info(active_connection=None)
+    info = nm.ipv6.get_info(active_connection=None, applied_config=None)
 
     assert info == {InterfaceIPv6.ENABLED: False}
 
@@ -131,7 +131,7 @@ def test_get_info_with_no_ipv6_config():
     con_mock.get_ip6_config.return_value = None
     con_mock.get_connection.return_value = None
 
-    info = nm.ipv6.get_info(active_connection=con_mock)
+    info = nm.ipv6.get_info(active_connection=con_mock, applied_config=None)
 
     assert info == {InterfaceIPv6.ENABLED: False}
 
@@ -152,7 +152,9 @@ def test_get_info_with_ipv6_config(NM_mock):
     set_ip_conf.props.ignore_auto_dns = False
     set_ip_conf.props.ignore_auto_routes = False
 
-    info = nm.ipv6.get_info(active_connection=act_con_mock)
+    info = nm.ipv6.get_info(
+        active_connection=act_con_mock, applied_config=None
+    )
 
     assert info == {
         InterfaceIPv6.ENABLED: True,

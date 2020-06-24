@@ -34,7 +34,7 @@ IPV6_DEFAULT_ROUTE_METRIC = 1024
 INT32_MAX = 2 ** 31 - 1
 
 
-def get_info(active_connection):
+def get_info(active_connection, applied_config):
     info = {InterfaceIPv6.ENABLED: False}
     if active_connection is None:
         return info
@@ -43,7 +43,9 @@ def get_info(active_connection):
     info[InterfaceIPv6.AUTOCONF] = False
 
     is_link_local_method = False
-    ip_profile = get_ip_profile(active_connection)
+    ip_profile = (
+        applied_config.get_setting_ip6_config() if applied_config else None
+    )
     if ip_profile:
         method = ip_profile.get_method()
         if method == NM.SETTING_IP6_CONFIG_METHOD_AUTO:
