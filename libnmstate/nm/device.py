@@ -53,25 +53,29 @@ def delete(context, dev):
         con_profile.delete()
 
 
-def modify(context, dev, connection_profile):
+def modify(context, nm_dev, connection_profile):
     """
     Modify the given connection profile on the device.
     Implemented by the reapply operation with a fallback to the
     connection profile activation.
     """
-    version_id = 0
-    flags = 0
-    action = f"Reapply device config: {dev.get_iface()}"
-    context.register_async(action)
-    user_data = context, dev, action
-    dev.reapply_async(
-        connection_profile,
-        version_id,
-        flags,
-        context.cancellable,
-        _modify_callback,
-        user_data,
-    )
+    nm_ac = nm_dev.get_active_connection()
+    if connection.is_activated(nm_ac, nm_dev):
+        version_id = 0
+        flags = 0
+        action = f"Reapply device config: {nm_dev.get_iface()}"
+        context.register_async(action)
+        user_data = context, nm_dev, action
+        nm_dev.reapply_async(
+            connection_profile,
+            version_id,
+            flags,
+            context.cancellable,
+            _modify_callback,
+            user_data,
+        )
+    else:
+        _activate_async(context, nm_dev)
 
 
 def _modify_callback(src_object, result, user_data):
