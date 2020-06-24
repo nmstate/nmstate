@@ -99,7 +99,7 @@ def _add_addresses(setting_ipv4, addresses):
         setting_ipv4.add_address(naddr)
 
 
-def get_info(active_connection):
+def get_info(active_connection, applied_config):
     """
     Provides the current active values for an active connection.
     It includes not only the configured values, but the consequences of the
@@ -110,7 +110,9 @@ def get_info(active_connection):
     if active_connection is None:
         return info
 
-    ip_profile = get_ip_profile(active_connection)
+    ip_profile = (
+        applied_config.get_setting_ip4_config() if applied_config else None
+    )
     if ip_profile:
         info[InterfaceIPv4.DHCP] = ip_profile.get_method() == (
             NM.SETTING_IP4_CONFIG_METHOD_AUTO
