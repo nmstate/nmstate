@@ -282,6 +282,20 @@ class TestOvsLinkAggregation:
         assertlib.assert_absent(BRIDGE1)
         assertlib.assert_absent(BOND1)
 
+    @pytest.mark.tier1
+    def test_create_lag_with_ports_in_reverse_order(self, port0_up, port1_up):
+        port0_name = port0_up[Interface.KEY][0][Interface.NAME]
+        port1_name = port1_up[Interface.KEY][0][Interface.NAME]
+
+        bridge = Bridge(BRIDGE1)
+        bridge.add_link_aggregation_port(BOND1, (port1_name, port0_name))
+
+        with bridge.create() as state:
+            assertlib.assert_state_match(state)
+
+        assertlib.assert_absent(BRIDGE1)
+        assertlib.assert_absent(BOND1)
+
 
 @pytest.mark.tier1
 def test_ovs_vlan_access_tag():
@@ -471,3 +485,17 @@ def test_change_mtu_of_existing_internal_port(bridge_with_ports):
     libnmstate.apply(state)
 
     assertlib.assert_state_match(state)
+
+
+@pytest.mark.tier1
+def test_create_ovs_with_internal_ports_in_reverse_order():
+    bridge = Bridge(BRIDGE1)
+    bridge.add_internal_port(PORT2)
+    bridge.add_internal_port(PORT1)
+
+    with bridge.create() as state:
+        assertlib.assert_state_match(state)
+
+    assertlib.assert_absent(BRIDGE1)
+    assertlib.assert_absent(PORT1)
+    assertlib.assert_absent(PORT2)
