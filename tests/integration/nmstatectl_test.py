@@ -163,6 +163,8 @@ def test_set_command_with_two_states():
     rc = ret[0]
 
     assert rc == cmdlib.RC_SUCCESS, cmdlib.format_exec_cmd_result(ret)
+    assertlib.assert_absent("linux-br0")
+
 
 
 def test_manual_confirmation(eth1_up):
