@@ -248,13 +248,15 @@ def apply(args):
                 with open(statefile) as statefile:
                     statedata = statefile.read()
 
-            return apply_state(
+            ret = apply_state(
                 statedata,
                 args.verify,
                 args.commit,
                 args.timeout,
                 args.save_to_disk,
             )
+            if ret:
+                return ret
     elif not sys.stdin.isatty():
         statedata = sys.stdin.read()
         return apply_state(
