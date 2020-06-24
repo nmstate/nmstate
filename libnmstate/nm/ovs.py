@@ -16,7 +16,9 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
+
 import logging
+from operator import itemgetter
 
 from libnmstate.schema import OVSBridge as OB
 from libnmstate.schema import OVSInterface
@@ -185,6 +187,7 @@ def _get_bridge_ports_info(context, port_profiles, devices_info):
         port_info = _get_bridge_port_info(context, p, devices_info)
         if port_info:
             ports_info.append(port_info)
+    ports_info.sort(key=itemgetter(OB.Port.NAME))
     return ports_info
 
 
@@ -242,10 +245,13 @@ def _get_lag_info(port_name, port_setting, port_slave_names):
     port_info[OB.Port.NAME] = port_name
     port_info[OB.Port.LINK_AGGREGATION_SUBTREE] = {
         OB.Port.LinkAggregation.MODE: mode,
-        OB.Port.LinkAggregation.SLAVES_SUBTREE: [
-            {OB.Port.LinkAggregation.Slave.NAME: iface_name}
-            for iface_name in port_slave_names
-        ],
+        OB.Port.LinkAggregation.SLAVES_SUBTREE: sorted(
+            [
+                {OB.Port.LinkAggregation.Slave.NAME: iface_name}
+                for iface_name in port_slave_names
+            ],
+            key=itemgetter(OB.Port.LinkAggregation.Slave.NAME),
+        ),
     }
     return port_info
 

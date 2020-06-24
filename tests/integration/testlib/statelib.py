@@ -32,6 +32,7 @@ from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import Bond
 from libnmstate.schema import LinuxBridge
+from libnmstate.schema import OVSBridge
 
 
 def show_only(ifnames):
@@ -119,6 +120,7 @@ class State:
         self._sort_interfaces_by_name()
         self._canonicalize_iface_ipv6_addresses()
         self._normalize_linux_bridge_port_vlan()
+        self._sort_ovs_lag_ports()
 
     def match(self, other):
         return _state_match(self.state, other.state)
@@ -243,6 +245,17 @@ class State:
             for port in ports:
                 if not port.get(LinuxBridge.Port.VLAN_SUBTREE):
                     port[LinuxBridge.Port.VLAN_SUBTREE] = {}
+
+    def _sort_ovs_lag_ports(self):
+        for iface_state in self._state[Interface.KEY]:
+            for port_config in iface_state.get(
+                OVSBridge.CONFIG_SUBTREE, {}
+            ).get(OVSBridge.PORT_SUBTREE, []):
+                port_config.get(
+                    OVSBridge.Port.LINK_AGGREGATION_SUBTREE, {}
+                ).get(OVSBridge.Port.LinkAggregation.SLAVES_SUBTREE, []).sort(
+                    key=itemgetter(OVSBridge.Port.LinkAggregation.Slave.NAME)
+                )
 
 
 def _lookup_iface_state_by_name(interfaces_state, ifname):
