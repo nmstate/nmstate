@@ -15,9 +15,9 @@ interfaces:
           vlan:
             mode: trunk
             trunk-tags:
-            - id: 101
-            - id-range:
-                min: 500
-                max: 599
+              - id: 101
+              - id-range:
+                  min: 500
+                  max: 599
             tag: 100
             enable-native: true
