@@ -94,7 +94,7 @@ function run_tests {
 
     if [ $TEST_TYPE == $TEST_TYPE_ALL ] || \
        [ $TEST_TYPE == $TEST_TYPE_LINT ];then
-        container_exec "tox -e flake8,pylint"
+        container_exec "tox -e flake8,pylint,yamllint"
     fi
 
     if [ $TEST_TYPE == $TEST_TYPE_ALL ] || \
