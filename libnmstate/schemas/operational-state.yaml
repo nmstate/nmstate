@@ -1,3 +1,4 @@
+---
 $schema: http://json-schema.org/draft-04/schema#
 type: object
 properties:
@@ -76,8 +77,8 @@ definitions:
   interface-base:
     all:
       allOf:
-      - $ref: "#/definitions/interface-base/rw"
-      - $ref: "#/definitions/interface-base/ro"
+        - $ref: "#/definitions/interface-base/rw"
+        - $ref: "#/definitions/interface-base/ro"
     rw:
       properties:
         description:
@@ -161,7 +162,7 @@ definitions:
         type:
           type: string
           enum:
-          - ethernet
+            - ethernet
         auto-negotiation:
           type: boolean
         duplex:
@@ -282,7 +283,7 @@ definitions:
         type:
           type: string
           enum:
-          - linux-bridge
+            - linux-bridge
         bridge:
           type: object
           properties:
@@ -346,8 +347,6 @@ definitions:
                   type: integer
                 multicast-query-response-interval:
                   type: integer
-                multicast-router:
-                  type: integer
                 multicast-startup-query-count:
                   type: integer
                 multicast-startup-query-interval:
@@ -375,7 +374,7 @@ definitions:
         type:
           type: string
           enum:
-          - ovs-bridge
+            - ovs-bridge
         ovs-db:
           type: object
         bridge:
@@ -447,7 +446,7 @@ definitions:
         type:
           type: string
           enum:
-          - ovs-interface
+            - ovs-interface
         ovs-db:
           type: object
         patch:
@@ -461,12 +460,12 @@ definitions:
         type:
           type: string
           enum:
-          - dummy
+            - dummy
   interface-ip:
     all:
       allOf:
-      - $ref: "#/definitions/interface-ip/rw"
-      - $ref: "#/definitions/interface-ip/ro"
+        - $ref: "#/definitions/interface-ip/rw"
+        - $ref: "#/definitions/interface-ip/ro"
     rw:
       properties:
         ipv4:
@@ -593,7 +592,7 @@ definitions:
         type:
           type: string
           enum:
-          - team
+            - team
         team:
           type: object
           properties:
@@ -616,7 +615,7 @@ definitions:
         type:
           type: string
           enum:
-          - other
+            - other
   route:
     type: object
     properties:
