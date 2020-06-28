@@ -33,14 +33,16 @@ class DnsState:
 
     def __init__(self, des_dns_state, cur_dns_state):
         self._config_changed = False
-        if des_dns_state:
+        if des_dns_state is None or des_dns_state.get(DNS.CONFIG) is None:
+            # Use current config if DNS.KEY not defined or DNS.CONFIG not
+            # defined.
+            self._dns_state = cur_dns_state or {}
+        else:
             self._dns_state = des_dns_state
             self._validate()
             self._config_changed = _is_dns_config_changed(
                 des_dns_state, cur_dns_state
             )
-        else:
-            self._dns_state = cur_dns_state or {}
         self._cur_dns_state = deepcopy(cur_dns_state) if cur_dns_state else {}
 
     @property
@@ -179,7 +181,9 @@ class DnsState:
 
     def verify(self, cur_dns_state):
         cur_dns = DnsState(des_dns_state=None, cur_dns_state=cur_dns_state,)
-        if self.config != cur_dns.config:
+        if self.config.get(DNS.SERVER) != cur_dns.config.get(
+            DNS.SERVER
+        ) or self.config.get(DNS.SEARCH) != cur_dns.config.get(DNS.SEARCH):
             raise NmstateVerificationError(
                 format_desired_current_state_diff(
                     {DNS.KEY: self.config}, {DNS.KEY: cur_dns.config},
