@@ -144,7 +144,17 @@ def test_dns_edit_three_nameservers(dns_servers):
 
 
 @pytest.mark.tier1
-def test_remove_dns_config():
+@pytest.mark.parametrize(
+    "empty_dns_config",
+    [{DNS.SERVER: []}, {DNS.SEARCH: []}, {DNS.SERVER: [], DNS.SEARCH: []}, {}],
+    ids=[
+        "empty_server",
+        "empty_search",
+        "empty_server_and_search",
+        "empty_dict",
+    ],
+)
+def test_remove_dns_config(empty_dns_config):
     dns_config = {
         DNS.SERVER: [IPV6_DNS_NAMESERVERS[0], IPV4_DNS_NAMESERVERS[0]],
         DNS.SEARCH: [],

@@ -50,7 +50,7 @@ IPV6_DNS_SERVER2 = "2001:db8:a::2"
 IPV6_DNS_SERVER3 = "2001:db8:a::3"
 
 DNS_SEARCHES_1 = ["example.com", "example.org"]
-DNS_SEARCHES_2 = (["example.info", "example.net"],)
+DNS_SEARCHES_2 = ["example.info", "example.net"]
 
 DNS_CONFIG1 = {
     DNS.SERVER: [IPV4_DNS_SERVER1, IPV6_DNS_SERVER1],
