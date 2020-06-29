@@ -22,6 +22,7 @@ from subprocess import CalledProcessError
 import pytest
 
 import libnmstate
+from libnmstate.prettystate import PrettyState
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIP
 from libnmstate.schema import InterfaceIPv4
@@ -56,6 +57,19 @@ PATCH1 = "patch1"
 VLAN_IFNAME = "eth101"
 
 MAC1 = "02:FF:FF:FF:FF:01"
+
+ETH1 = "eth1"
+ETH2 = "eth2"
+
+OVS_BOND_YAML_STATE = f"""
+    port:
+    - name: {BOND1}
+      link-aggregation:
+        mode: active-backup
+        slaves:
+        - name: {ETH1}
+        - name: {ETH2}
+"""
 
 
 @pytest.fixture
@@ -295,6 +309,15 @@ class TestOvsLinkAggregation:
 
         assertlib.assert_absent(BRIDGE1)
         assertlib.assert_absent(BOND1)
+
+    def test_pretty_state_ovs_lag_name_first(self, eth1_up, eth2_up):
+        bridge = Bridge(BRIDGE1)
+        bridge.add_link_aggregation_port(BOND1, (ETH1, ETH2))
+
+        with bridge.create():
+            current_state = statelib.show_only((BRIDGE1,))
+            pretty_state = PrettyState(current_state)
+            assert OVS_BOND_YAML_STATE in pretty_state.yaml
 
 
 @pytest.mark.tier1

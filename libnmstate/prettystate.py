@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2019 Red Hat, Inc.
+# Copyright (c) 2018-2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -17,15 +17,29 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
-from collections import OrderedDict
+from collections.abc import Mapping
+from collections.abc import Sequence
 from copy import deepcopy
 import difflib
 import json
-from operator import itemgetter
 
 import yaml
 
-from libnmstate.schema import Constants
+from .schema import DNS
+from .schema import Route
+from .schema import RouteRule
+from .schema import Interface
+
+PRIORITY_LIST = (
+    "name",
+    "type",
+    "state",
+    "enabled",
+    DNS.KEY,
+    RouteRule.KEY,
+    Route.KEY,
+    Interface.KEY,
+)
 
 
 def format_desired_current_state_diff(desired_state, current_state):
@@ -57,8 +71,8 @@ def format_desired_current_state_diff(desired_state, current_state):
 
 class PrettyState:
     def __init__(self, state):
-        yaml.add_representer(OrderedDict, represent_ordereddict)
-        self.state = order_state(deepcopy(state))
+        yaml.add_representer(dict, represent_dict)
+        self.state = _sort_with_priority(state)
 
     @property
     def yaml(self):
@@ -71,35 +85,18 @@ class PrettyState:
         return json.dumps(self.state, indent=4, separators=(",", ": "))
 
 
-def represent_ordereddict(dumper, data):
+def represent_dict(dumper, data):
     """
-    Represent OrderedDict as regular dictionary
-
-    Source: https://stackoverflow.com/questions/16782112/can-pyyaml-dump-dict-items-in-non-alphabetical-order
-    """  # noqa: E501
+    Represent dictionary with insert order
+    """
     value = []
 
     for item_key, item_value in data.items():
         node_key = dumper.represent_data(item_key)
         node_value = dumper.represent_data(item_value)
-
         value.append((node_key, node_value))
 
-    return yaml.nodes.MappingNode(u"tag:yaml.org,2002:map", value)
-
-
-def order_state(state):
-    iface_states = state.pop(Constants.INTERFACES, None)
-
-    state = order_iface_state(state)
-
-    if iface_states is not None:
-        state[Constants.INTERFACES] = [
-            order_iface_state(iface_state)
-            for iface_state in sorted(iface_states, key=itemgetter("name"))
-        ]
-
-    return state
+    return yaml.nodes.MappingNode("tag:yaml.org,2002:map", value)
 
 
 def represent_unicode(_, data):
@@ -112,30 +109,25 @@ def represent_unicode(_, data):
     """
 
     return yaml.ScalarNode(
-        tag=u"tag:yaml.org,2002:str", value=data.encode("utf-8")
+        tag="tag:yaml.org,2002:str", value=data.encode("utf-8")
     )
 
 
-def order_iface_state(iface_state):
-    ordered_state = OrderedDict()
-
-    for setting in ("name", "type", "state"):
-        try:
-            ordered_state[setting] = iface_state.pop(setting)
-        except KeyError:
-            pass
-
-    for key, value in order_dict(iface_state).items():
-        ordered_state[key] = value
-
-    return ordered_state
+def _sort_with_priority(data):
+    if isinstance(data, Sequence) and not isinstance(data, str):
+        return [_sort_with_priority(item) for item in data]
+    elif isinstance(data, Mapping):
+        new_data = {}
+        for key in sorted(data.keys(), key=_sort_with_priority_key_func):
+            new_data[key] = _sort_with_priority(data[key])
+        return new_data
+    else:
+        return deepcopy(data)
 
 
-def order_dict(dict_):
-    ordered_dict = OrderedDict()
-    for key, value in sorted(dict_.items()):
-        if isinstance(value, dict):
-            value = order_dict(value)
-        ordered_dict[key] = value
-
-    return ordered_dict
+def _sort_with_priority_key_func(key):
+    try:
+        priority = PRIORITY_LIST.index(key)
+    except ValueError:
+        priority = len(PRIORITY_LIST)
+    return (priority, key)
