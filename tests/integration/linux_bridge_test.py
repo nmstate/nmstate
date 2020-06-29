@@ -25,6 +25,7 @@ import yaml
 
 import libnmstate
 from libnmstate.error import NmstateVerificationError
+from libnmstate.prettystate import PrettyState
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIP
 from libnmstate.schema import InterfaceIPv4
@@ -70,6 +71,22 @@ BRIDGE_PORT_YAML = """
 stp-hairpin-mode: false
 stp-path-cost: 100
 stp-priority: 32
+"""
+
+VLAN_FILTER_PORT_YAML = """
+    port:
+    - name: eth1
+      stp-hairpin-mode: false
+      stp-path-cost: 100
+      stp-priority: 32
+      vlan:
+        enable-native: true
+        mode: trunk
+        tag: 300
+        trunk-tags:
+        - id: 100
+        - id: 101
+        - id: 102
 """
 
 
@@ -540,6 +557,13 @@ class TestVlanFiltering:
             TEST_BRIDGE0, bridge_config_subtree
         ) as desired_state:
             assertlib.assert_state_match(desired_state)
+
+    def test_pretty_state_port_name_first(
+        self, bridge_with_trunk_port_and_native_config
+    ):
+        current_state = show_only((TEST_BRIDGE0,))
+        pretty_state = PrettyState(current_state)
+        assert VLAN_FILTER_PORT_YAML in pretty_state.yaml
 
 
 @pytest.fixture

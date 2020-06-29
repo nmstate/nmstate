@@ -69,7 +69,6 @@ ETH1_YAML_CONFIG = b"""interfaces:
 - name: eth1
   state: up
   type: ethernet
-  mtu: 1500
   ipv4:
     address:
     - ip: 192.0.2.250
@@ -77,6 +76,7 @@ ETH1_YAML_CONFIG = b"""interfaces:
     enabled: true
   ipv6:
     enabled: false
+  mtu: 1500
 """
 
 EXAMPLES = find_examples_dir()
