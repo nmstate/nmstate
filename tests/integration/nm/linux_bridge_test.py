@@ -19,20 +19,29 @@
 
 from contextlib import contextmanager
 from operator import itemgetter
+import time
 
 import pytest
 
+import libnmstate
 from libnmstate import nm
 from libnmstate import schema
+from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceIPv4
+from libnmstate.schema import InterfaceIPv6
+from libnmstate.schema import InterfaceState
 from libnmstate.schema import LinuxBridge as LB
 from libnmstate.nm.common import NM
 from libnmstate.nm.common import nm_version_bigger_or_equal_to
 
+from ..testlib import cmdlib
 from ..testlib import iproutelib
+from ..testlib.bridgelib import linux_bridge
 from .testlib import main_context
 
 
 BRIDGE0 = "brtest0"
+DUMMY1 = "dummy1"
 
 
 @pytest.fixture
@@ -261,3 +270,52 @@ def _remove_read_only_properties(bridge_state):
     if bridge_options:
         for key in (LB.Options.HELLO_TIMER, LB.Options.GC_TIMER):
             bridge_options.pop(key, None)
+
+
+@pytest.fixture
+def nm_unmanaged_dummy1():
+    cmdlib.exec_cmd(
+        f"ip link add name {DUMMY1} type dummy".split(" "), check=True
+    )
+    cmdlib.exec_cmd(f"ip link set {DUMMY1} up".split(" "), check=True)
+    cmdlib.exec_cmd(
+        f"nmcli dev set {DUMMY1} managed yes".split(" "), check=True
+    )
+    time.sleep(1)  # Wait device became managed
+    yield
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: DUMMY1,
+                    Interface.STATE: InterfaceState.ABSENT,
+                }
+            ]
+        },
+        verify_change=False,
+    )
+
+
+@pytest.mark.tier1
+def test_bridge_enslave_unmanaged_interface(nm_unmanaged_dummy1):
+    with linux_bridge(
+        BRIDGE0,
+        bridge_subtree_state={
+            LB.OPTIONS_SUBTREE: {LB.STP_SUBTREE: {LB.STP.ENABLED: False}}
+        },
+    ) as desired_state:
+        bridge_iface_state = desired_state[Interface.KEY][0]
+        bridge_iface_state[LB.CONFIG_SUBTREE] = {
+            LB.PORT_SUBTREE: [{LB.Port.NAME: DUMMY1}],
+        }
+        # To reproduce bug https://bugzilla.redhat.com/1816517
+        # explitly define dummy1 as IPv4/IPv6 disabled is required.
+        desired_state[Interface.KEY].append(
+            {
+                Interface.NAME: DUMMY1,
+                Interface.STATE: InterfaceState.UP,
+                Interface.IPV4: {InterfaceIPv4.ENABLED: False},
+                Interface.IPV6: {InterfaceIPv6.ENABLED: False},
+            }
+        )
+        libnmstate.apply(desired_state)
