@@ -216,42 +216,42 @@ def _is_internal_interface(ctx, iface_name):
 
 def _create_internal_interface(ctx, iface_name, master_name):
     iface_settings = _create_internal_iface_setting(iface_name, master_name)
-    iface_con_profile = nm.connection.ConnectionProfile(ctx)
+    iface_con_profile = nm.profile.Profile(ctx)
     iface_con_profile.create(iface_settings)
     iface_con_profile.add()
     ctx.wait_all_finish()
-    nm.device.activate(ctx, connection_id=iface_name)
+    nm.device.activate(ctx, profile=iface_con_profile)
 
 
 def _connect_interface(ctx, port_profile_name, port_state):
     iface_nmdev = ctx.get_nm_dev(port_state[OB.Port.NAME])
-    curr_iface_con_profile = nm.connection.ConnectionProfile(ctx)
+    curr_iface_con_profile = nm.profile.Profile(ctx)
     curr_iface_con_profile.import_by_device(iface_nmdev)
     slave_iface_settings = _create_iface_settings(
         curr_iface_con_profile, port_profile_name
     )
-    iface_con_profile = nm.connection.ConnectionProfile(ctx)
+    iface_con_profile = nm.profile.Profile(ctx)
     iface_con_profile.create(slave_iface_settings)
     curr_iface_con_profile.update(iface_con_profile)
     ctx.wait_all_finish()
-    nm.device.activate(ctx, connection_id=port_state[OB.Port.NAME])
+    nm.device.activate(ctx, profile=iface_con_profile)
 
 
 def _create_proxy_port(ctx, port_profile_name, port_state):
     port_settings = _create_port_setting(port_state, port_profile_name)
-    port_con_profile = nm.connection.ConnectionProfile(ctx)
+    port_con_profile = nm.profile.Profile(ctx)
     port_con_profile.create(port_settings)
     port_con_profile.add()
     ctx.wait_all_finish()
-    nm.device.activate(ctx, connection_id=port_profile_name)
+    nm.device.activate(ctx, profile=port_con_profile)
 
 
 def _create_bridge_iface(ctx, iface_bridge_settings):
-    br_con_profile = nm.connection.ConnectionProfile(ctx)
+    br_con_profile = nm.profile.Profile(ctx)
     br_con_profile.create(iface_bridge_settings)
     br_con_profile.add()
     ctx.wait_all_finish()
-    nm.device.activate(ctx, connection_id=BRIDGE0)
+    nm.device.activate(ctx, profile=br_con_profile)
 
 
 def _create_iface_settings(iface_con_profile, port_master_name):
@@ -306,7 +306,7 @@ def _delete_iface(ctx, devname):
             ):
                 nm.device.delete_device(ctx, nmdev)
         else:
-            con_profile = nm.connection.ConnectionProfile(ctx)
+            con_profile = nm.profile.Profile(ctx)
             con_profile.con_id = devname
             con_profile.delete()
 

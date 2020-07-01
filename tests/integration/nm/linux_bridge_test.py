@@ -167,10 +167,10 @@ def _modify_bridge(ctx, bridge_desired_state):
 
 def _modify_bridge_options(ctx, bridge_state):
     nmdev = ctx.get_nm_dev(BRIDGE0)
-    conn = nm.connection.ConnectionProfile(ctx)
+    conn = nm.profile.Profile(ctx)
     conn.import_by_id(BRIDGE0)
     iface_bridge_settings = _create_iface_bridge_settings(bridge_state, conn)
-    new_conn = nm.connection.ConnectionProfile(ctx)
+    new_conn = nm.profile.Profile(ctx)
     new_conn.create(iface_bridge_settings)
     conn.update(new_conn)
     ctx.wait_all_finish()
@@ -204,12 +204,12 @@ def _create_bridge(ctx, bridge_desired_state):
 
 def _attach_port_to_bridge(ctx, port_state):
     port_nmdev = ctx.get_nm_dev(port_state["name"])
-    curr_port_con_profile = nm.connection.ConnectionProfile(ctx)
+    curr_port_con_profile = nm.profile.Profile(ctx)
     curr_port_con_profile.import_by_device(port_nmdev)
     iface_port_settings = _get_iface_port_settings(
         port_state, curr_port_con_profile
     )
-    port_con_profile = nm.connection.ConnectionProfile(ctx)
+    port_con_profile = nm.profile.Profile(ctx)
     port_con_profile.create(iface_port_settings)
 
     curr_port_con_profile.update(port_con_profile)
@@ -218,11 +218,11 @@ def _attach_port_to_bridge(ctx, port_state):
 
 
 def _create_bridge_iface(ctx, iface_bridge_settings):
-    br_con_profile = nm.connection.ConnectionProfile(ctx)
+    br_con_profile = nm.profile.Profile(ctx)
     br_con_profile.create(iface_bridge_settings)
     br_con_profile.add()
     ctx.wait_all_finish()
-    nm.device.activate(ctx, connection_id=BRIDGE0)
+    nm.device.activate(ctx, profile=br_con_profile)
 
 
 def _get_iface_port_settings(port_state, port_con_profile):

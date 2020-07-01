@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2019 Red Hat, Inc.
+# Copyright (c) 2018-2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -30,7 +30,7 @@ def client_mock():
 
 @pytest.fixture()
 def con_profile_mock():
-    with mock.patch.object(nm.device.connection, "ConnectionProfile") as m:
+    with mock.patch.object(nm.device.profile, "Profile") as m:
         yield m
 
 
@@ -44,7 +44,7 @@ def test_activate(client_mock, con_profile_mock):
     dev = mock.MagicMock()
     con_profile = con_profile_mock(client_mock)
 
-    nm.device.activate(client_mock, dev)
+    nm.device.activate(client_mock, con_profile)
 
     con_profile.activate.assert_called_once()
 

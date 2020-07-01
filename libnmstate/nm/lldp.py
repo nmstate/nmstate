@@ -17,7 +17,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
-from libnmstate.nm import connection
+from libnmstate.nm import profile
 from libnmstate.schema import LLDP
 
 from .common import NM
@@ -133,7 +133,7 @@ def _get_lldp_status(nm_client, nmdev):
     Ref: https://bugzilla.redhat.com/1832273
     """
     lldp_status = None
-    con_profile = connection.ConnectionProfile(nm_client)
+    con_profile = profile.Profile(nm_client)
     con_profile.import_by_device(nmdev)
     if con_profile.profile:
         con_setting = con_profile.profile.get_setting_connection()

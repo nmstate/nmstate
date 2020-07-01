@@ -58,10 +58,10 @@ def test_interface_mac_change_with_modify(eth1_up, nm_plugin):
 
 
 def _modify_interface(ctx, wired_state):
-    conn = nm.connection.ConnectionProfile(ctx)
+    conn = nm.profile.Profile(ctx)
     conn.import_by_id(ETH1)
     settings = _create_iface_settings(wired_state, conn)
-    new_conn = nm.connection.ConnectionProfile(ctx)
+    new_conn = nm.profile.Profile(ctx)
     with main_context(ctx):
         new_conn.create(settings)
         conn.update(new_conn)

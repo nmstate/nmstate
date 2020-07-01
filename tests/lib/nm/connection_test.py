@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2019 Red Hat, Inc.
+# Copyright (c) 2018-2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -26,6 +26,12 @@ from libnmstate import nm
 
 @pytest.fixture
 def NM_mock():
+    with mock.patch.object(nm.profile, "NM") as m:
+        yield m
+
+
+@pytest.fixture
+def NM_connection_mock():
     with mock.patch.object(nm.connection, "NM") as m:
         yield m
 
@@ -37,7 +43,7 @@ def context_mock():
 
 def test_create_profile(NM_mock, context_mock):
     settings = [11, 22]
-    con_profile = nm.connection.ConnectionProfile(context_mock)
+    con_profile = nm.profile.Profile(context_mock)
     con_profile.create(settings)
 
     con_profile_mock = NM_mock.SimpleConnection.new.return_value
@@ -49,8 +55,8 @@ def test_create_profile(NM_mock, context_mock):
 
 
 def test_add_profile(NM_mock, context_mock):
-    profile = mock.MagicMock()
-    con_profile = nm.connection.ConnectionProfile(context_mock, profile)
+    con_profile = nm.profile.Profile(context_mock)
+    con_profile.create([])
     con_profile.add()
 
     nm_add_conn2_flags = NM_mock.SettingsAddConnection2Flags
@@ -72,12 +78,10 @@ def test_add_profile(NM_mock, context_mock):
 
 def test_update_profile(NM_mock, context_mock):
     new_profile_mock = mock.MagicMock()
-    new_profile = nm.connection.ConnectionProfile(
-        context_mock, new_profile_mock
-    )
+    new_profile = nm.profile.Profile(context_mock, new_profile_mock)
 
     profile = mock.MagicMock()
-    con_profile = nm.connection.ConnectionProfile(context_mock, profile)
+    con_profile = nm.profile.Profile(context_mock, profile)
     con_profile.update(new_profile)
     user_data = f"Update profile: {profile.get_id()}"
 
@@ -96,7 +100,7 @@ def test_update_profile(NM_mock, context_mock):
     )
 
 
-def test_create_setting(NM_mock):
+def test_create_setting(NM_connection_mock):
     con_setting = nm.connection.ConnectionSetting()
     con_setting.create("con-name", "iface-name", "iface-type")
 
@@ -106,11 +110,11 @@ def test_create_setting(NM_mock):
     assert con_setting.setting.props.type == "iface-type"
     assert con_setting.setting.props.autoconnect is True
     assert con_setting.setting.props.autoconnect_slaves == (
-        NM_mock.SettingConnectionAutoconnectSlaves.YES
+        NM_connection_mock.SettingConnectionAutoconnectSlaves.YES
     )
 
 
-def test_duplicate_settings(NM_mock):
+def test_duplicate_settings(NM_connection_mock):
     base_con_profile_mock = mock.MagicMock()
 
     new_con_setting = nm.connection.ConnectionSetting()
@@ -137,7 +141,7 @@ def test_set_master_setting():
 def test_get_device_connection(context_mock):
     dev_mock = mock.MagicMock()
 
-    con = nm.connection.ConnectionProfile(context_mock)
+    con = nm.profile.Profile(context_mock)
     con.import_by_device(dev_mock)
 
     assert (

@@ -102,10 +102,10 @@ def test_enable_dhcp_with_no_server(eth1_up, nm_plugin):
 
 
 def _modify_interface(ctx, ipv4_state):
-    conn = nm.connection.ConnectionProfile(ctx)
+    conn = nm.profile.Profile(ctx)
     conn.import_by_id(TEST_IFACE)
     settings = _create_iface_settings(ipv4_state, conn)
-    new_conn = nm.connection.ConnectionProfile(ctx)
+    new_conn = nm.profile.Profile(ctx)
     new_conn.create(settings)
     with main_context(ctx):
         conn.update(new_conn)
@@ -116,7 +116,7 @@ def _modify_interface(ctx, ipv4_state):
 
 def _get_ipv4_current_state(ctx, ifname):
     nmdev = ctx.get_nm_dev(ifname)
-    active_connection = nm.connection.get_device_active_connection(nmdev)
+    active_connection = nm.profile.get_device_active_connection(nmdev)
     applied_config = get_all_applied_configs(ctx)
     return nm.ipv4.get_info(active_connection, applied_config.get(ifname))
 

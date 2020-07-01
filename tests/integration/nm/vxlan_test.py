@@ -83,14 +83,14 @@ def _create_vxlan(ctx, vxlan_desired_state):
     )
     ipv4_setting = nm.ipv4.create_setting({}, None)
     ipv6_setting = nm.ipv6.create_setting({}, None)
-    con_profile = nm.connection.ConnectionProfile(ctx)
+    con_profile = nm.profile.Profile(ctx)
     con_profile.create(
         (con_setting.setting, vxlan_setting, ipv4_setting, ipv6_setting)
     )
     with main_context(ctx):
         con_profile.add()
         ctx.wait_all_finish()
-        nm.device.activate(ctx, connection_id=ifname)
+        nm.device.activate(ctx, profile=con_profile)
 
 
 def _delete_vxlan(ctx, devname):

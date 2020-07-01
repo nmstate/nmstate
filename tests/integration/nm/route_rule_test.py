@@ -160,10 +160,10 @@ def _create_route_rule(ip_from, ip_to, priority, table):
 
 
 def _modify_interface(ctx, ipv4_state, ipv6_state):
-    conn = nm.connection.ConnectionProfile(ctx)
+    conn = nm.profile.Profile(ctx)
     conn.import_by_id(ETH1)
     settings = _create_iface_settings(conn, ipv4_state, ipv6_state)
-    new_conn = nm.connection.ConnectionProfile(ctx)
+    new_conn = nm.profile.Profile(ctx)
 
     with main_context(ctx):
         new_conn.create(settings)

@@ -26,7 +26,7 @@ from libnmstate import iplib
 from libnmstate.error import NmstateNotImplementedError
 from libnmstate.nm import ipv4 as nm_ipv4
 from libnmstate.nm import ipv6 as nm_ipv6
-from libnmstate.nm import connection as nm_connection
+from libnmstate.nm import profile as nm_profile
 from libnmstate.ifaces import BaseIface
 from libnmstate.schema import InterfaceIP
 from libnmstate.schema import Route
@@ -150,7 +150,7 @@ def test_clear_route(nm_ip, routes, client_mock):
         {InterfaceIP.ENABLED: True, BaseIface.ROUTES_METADATA: routes},
         base_con_profile=None,
     )
-    con_profile = nm_connection.ConnectionProfile(client_mock)
+    con_profile = nm_profile.Profile(client_mock)
     con_profile.create([setting_ip])
     new_setting_ip = nm_ip.create_setting(
         {InterfaceIP.ENABLED: True, BaseIface.ROUTES_METADATA: []},
@@ -281,7 +281,7 @@ def test_clear_gateway(nm_ip, routes, gateways, client_mock):
         },
         base_con_profile=None,
     )
-    con_profile = nm_connection.ConnectionProfile(client_mock)
+    con_profile = nm_profile.Profile(client_mock)
     con_profile.create([setting_ip])
     setting_ip = nm_ip.create_setting(
         {InterfaceIP.ENABLED: True, BaseIface.ROUTES_METADATA: routes},

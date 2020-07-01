@@ -20,7 +20,7 @@
 import glob
 import os
 
-from libnmstate.nm import connection
+from libnmstate.nm import profile
 from libnmstate.nm.bridge_port_vlan import PortVlanFilter
 from libnmstate.schema import LinuxBridge as LB
 from .common import NM
@@ -235,7 +235,7 @@ def get_slaves(nm_device):
 
 def _get_bridge_setting(context, nmdev):
     bridge_setting = None
-    bridge_con_profile = connection.ConnectionProfile(context)
+    bridge_con_profile = profile.Profile(context)
     bridge_con_profile.import_by_device(nmdev)
     if bridge_con_profile.profile:
         bridge_setting = bridge_con_profile.profile.get_setting_bridge()
@@ -263,7 +263,7 @@ def _get_bridge_ports_info(
 def _get_slave_profiles_by_name(master_device):
     slaves_profiles_by_name = {}
     for dev in master_device.get_slaves():
-        active_con = connection.get_device_active_connection(dev)
+        active_con = profile.get_device_active_connection(dev)
         if active_con:
             slaves_profiles_by_name[
                 dev.get_iface()

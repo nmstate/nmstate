@@ -82,13 +82,13 @@ def _create_vlan(ctx, vlan_desired_state):
     ipv4_setting = nm.ipv4.create_setting({}, None)
     ipv6_setting = nm.ipv6.create_setting({}, None)
     with main_context(ctx):
-        con_profile = nm.connection.ConnectionProfile(ctx)
+        con_profile = nm.profile.Profile(ctx)
         con_profile.create(
             (con_setting.setting, vlan_setting, ipv4_setting, ipv6_setting)
         )
         con_profile.add()
         ctx.wait_all_finish()
-        nm.device.activate(ctx, connection_id=ifname)
+        nm.device.activate(ctx, profile=con_profile)
 
 
 def _delete_vlan(ctx, devname):

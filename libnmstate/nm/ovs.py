@@ -23,7 +23,7 @@ from operator import itemgetter
 from libnmstate.schema import OVSBridge as OB
 from libnmstate.schema import OVSInterface
 
-from . import connection
+from . import profile
 from .common import NM
 
 
@@ -131,7 +131,7 @@ def is_ovs_interface_type_id(type_id):
 
 
 def get_port_by_slave(nmdev):
-    active_con = connection.get_device_active_connection(nmdev)
+    active_con = profile.get_device_active_connection(nmdev)
     if active_con:
         master = active_con.get_master()
         if master and is_ovs_port_type_id(master.get_device_type()):
@@ -258,7 +258,7 @@ def _get_lag_info(port_name, port_setting, port_slave_names):
 
 def _get_bridge_options(context, bridge_device):
     bridge_options = {}
-    con = connection.ConnectionProfile(context)
+    con = profile.Profile(context)
     con.import_by_device(bridge_device)
     if con.profile:
         bridge_setting = con.profile.get_setting(NM.SettingOvsBridge)
@@ -275,7 +275,7 @@ def _get_bridge_options(context, bridge_device):
 def _get_slave_profiles(master_device, devices_info):
     slave_profiles = []
     for dev, _ in devices_info:
-        active_con = connection.get_device_active_connection(dev)
+        active_con = profile.get_device_active_connection(dev)
         if active_con:
             master = active_con.props.master
             if master and (master.get_iface() == master_device.get_iface()):

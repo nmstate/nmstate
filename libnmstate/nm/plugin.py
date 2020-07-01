@@ -30,12 +30,12 @@ from libnmstate.plugin import NmstatePlugin
 
 from . import bond as nm_bond
 from . import bridge as nm_bridge
-from . import connection as nm_connection
 from . import device as nm_device
 from . import ipv4 as nm_ipv4
 from . import ipv6 as nm_ipv6
 from . import lldp as nm_lldp
 from . import ovs as nm_ovs
+from . import profile as nm_profile
 from . import translator as nm_translator
 from . import wired as nm_wired
 from . import user as nm_user
@@ -43,7 +43,6 @@ from . import vlan as nm_vlan
 from . import vxlan as nm_vxlan
 from . import team as nm_team
 from . import dns as nm_dns
-from . import applier as nm_applier
 from .checkpoint import CheckPoint
 from .checkpoint import get_checkpoints
 from .common import NM
@@ -113,7 +112,7 @@ class NetworkManagerPlugin(NmstatePlugin):
             iface_info = nm_translator.Nm2Api.get_common_device_info(devinfo)
             applied_config = applied_configs.get(iface_info[Interface.NAME])
 
-            act_con = nm_connection.get_device_active_connection(dev)
+            act_con = nm_profile.get_device_active_connection(dev)
             iface_info[Interface.IPV4] = nm_ipv4.get_info(
                 act_con, applied_config
             )
@@ -183,7 +182,9 @@ class NetworkManagerPlugin(NmstatePlugin):
         self._ctx.refresh_content()
 
     def apply_changes(self, net_state, save_to_disk):
-        nm_applier.apply_changes(self.context, net_state, save_to_disk)
+        nm_profile.Profiles(
+            self.context, net_state, save_to_disk
+        ).apply_changes()
 
     def _load_checkpoint(self, checkpoint_path):
         if checkpoint_path:

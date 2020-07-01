@@ -23,7 +23,7 @@ https://lazka.github.io/pgi-docs/#NM-1.0/classes/SettingUser.html
 """
 
 from libnmstate.error import NmstateValueError
-from libnmstate.nm import connection as nm_connection
+from libnmstate.nm import profile as nm_profile
 from .common import NM
 
 NMSTATE_DESCRIPTION = "nmstate.interface.description"
@@ -59,7 +59,7 @@ def get_info(context, device):
     """
     info = {}
 
-    connection = nm_connection.ConnectionProfile(context)
+    connection = nm_profile.Profile(context)
     connection.import_by_device(device)
     if not connection.profile:
         return info
