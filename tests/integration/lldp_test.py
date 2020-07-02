@@ -122,8 +122,8 @@ def test_lldp_yaml(eth1_up):
         _send_lldp_packet()
         dstate = statelib.show_only((ETH1,))
         lldp_config = dstate[Interface.KEY][0][LLDP.CONFIG_SUBTREE]
-        test_neighbor = _get_lldp_test(lldp_config[LLDP.NEIGHBORS_SUBTREE])
-
+        assert len(lldp_config[LLDP.NEIGHBORS_SUBTREE]) == 1
+        test_neighbor = lldp_config[LLDP.NEIGHBORS_SUBTREE][0]
         assert test_neighbor == yaml.safe_load(EXPECTED_LLDP_NEIGHBOR)
 
 
@@ -132,7 +132,8 @@ def test_lldp_system(eth1_up):
         _send_lldp_packet()
         dstate = statelib.show_only((ETH1,))
         lldp_config = dstate[Interface.KEY][0][LLDP.CONFIG_SUBTREE]
-        test_neighbor = _get_lldp_test(lldp_config[LLDP.NEIGHBORS_SUBTREE])
+        assert len(lldp_config[LLDP.NEIGHBORS_SUBTREE]) == 1
+        test_neighbor = lldp_config[LLDP.NEIGHBORS_SUBTREE][0]
 
         seen = set()
         for tlv in test_neighbor:
@@ -151,7 +152,8 @@ def test_lldp_chassis(eth1_up):
         _send_lldp_packet()
         dstate = statelib.show_only((ETH1,))
         lldp_config = dstate[Interface.KEY][0][LLDP.CONFIG_SUBTREE]
-        test_neighbor = _get_lldp_test(lldp_config[LLDP.NEIGHBORS_SUBTREE])
+        assert len(lldp_config[LLDP.NEIGHBORS_SUBTREE]) == 1
+        test_neighbor = lldp_config[LLDP.NEIGHBORS_SUBTREE][0]
 
         tlvs = list(
             filter(
@@ -168,7 +170,8 @@ def test_lldp_management_addresses(eth1_up):
         _send_lldp_packet()
         dstate = statelib.show_only((ETH1,))
         lldp_config = dstate[Interface.KEY][0][LLDP.CONFIG_SUBTREE]
-        test_neighbor = _get_lldp_test(lldp_config[LLDP.NEIGHBORS_SUBTREE])
+        assert len(lldp_config[LLDP.NEIGHBORS_SUBTREE]) == 1
+        test_neighbor = lldp_config[LLDP.NEIGHBORS_SUBTREE][0]
 
         tlvs = list(
             filter(
@@ -188,7 +191,8 @@ def test_lldp_macphy(eth1_up):
         _send_lldp_packet()
         dstate = statelib.show_only((ETH1,))
         lldp_config = dstate[Interface.KEY][0][LLDP.CONFIG_SUBTREE]
-        test_neighbor = _get_lldp_test(lldp_config[LLDP.NEIGHBORS_SUBTREE])
+        assert len(lldp_config[LLDP.NEIGHBORS_SUBTREE]) == 1
+        test_neighbor = lldp_config[LLDP.NEIGHBORS_SUBTREE][0]
 
         tlvs = list(
             filter(
@@ -209,7 +213,8 @@ def test_lldp_port(eth1_up):
         _send_lldp_packet()
         dstate = statelib.show_only((ETH1,))
         lldp_config = dstate[Interface.KEY][0][LLDP.CONFIG_SUBTREE]
-        test_neighbor = _get_lldp_test(lldp_config[LLDP.NEIGHBORS_SUBTREE])
+        assert len(lldp_config[LLDP.NEIGHBORS_SUBTREE]) == 1
+        test_neighbor = lldp_config[LLDP.NEIGHBORS_SUBTREE][0]
 
         tlvs = list(
             filter(
@@ -227,7 +232,8 @@ def test_lldp_port_vlan(eth1_up):
         _send_lldp_packet()
         dstate = statelib.show_only((ETH1,))
         lldp_config = dstate[Interface.KEY][0][LLDP.CONFIG_SUBTREE]
-        test_neighbor = _get_lldp_test(lldp_config[LLDP.NEIGHBORS_SUBTREE])
+        assert len(lldp_config[LLDP.NEIGHBORS_SUBTREE]) == 1
+        test_neighbor = lldp_config[LLDP.NEIGHBORS_SUBTREE][0]
 
         tlvs = list(
             filter(
@@ -246,7 +252,8 @@ def test_lldp_vlan(eth1_up):
         _send_lldp_packet()
         dstate = statelib.show_only((ETH1,))
         lldp_config = dstate[Interface.KEY][0][LLDP.CONFIG_SUBTREE]
-        test_neighbor = _get_lldp_test(lldp_config[LLDP.NEIGHBORS_SUBTREE])
+        assert len(lldp_config[LLDP.NEIGHBORS_SUBTREE]) == 1
+        test_neighbor = lldp_config[LLDP.NEIGHBORS_SUBTREE][0]
 
         tlvs = list(
             filter(
@@ -266,7 +273,8 @@ def test_lldp_mfs(eth1_up):
         _send_lldp_packet()
         dstate = statelib.show_only((ETH1,))
         lldp_config = dstate[Interface.KEY][0][LLDP.CONFIG_SUBTREE]
-        test_neighbor = _get_lldp_test(lldp_config[LLDP.NEIGHBORS_SUBTREE])
+        assert len(lldp_config[LLDP.NEIGHBORS_SUBTREE]) == 1
+        test_neighbor = lldp_config[LLDP.NEIGHBORS_SUBTREE][0]
 
         tlvs = list(
             filter(
@@ -310,18 +318,3 @@ def _send_lldp_packet():
         check=True,
     )
     time.sleep(1)
-
-
-def _get_lldp_test(neighbors):
-    for neighbor in neighbors:
-        tlvs = list(
-            filter(
-                lambda tlv: tlv[LLDP.Neighbors.TLV_TYPE] == 5
-                and tlv[SYSTEM_NAME] == LLDP_TEST_SYSTEM_NAME,
-                neighbor,
-            )
-        )
-        if len(tlvs) == 1:
-            return neighbor
-
-    return None
