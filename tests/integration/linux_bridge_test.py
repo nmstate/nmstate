@@ -254,7 +254,6 @@ def test_add_port_to_existing_bridge(bridge0_with_port0, port1_up):
 def test_linux_bridge_uses_the_port_mac_implicitly(
     port0_up, bridge0_with_port0
 ):
-    print(bridge0_with_port0)
     port0_name = port0_up[Interface.KEY][0][Interface.NAME]
     current_state = show_only((TEST_BRIDGE0, port0_name))
     assert_mac_address(

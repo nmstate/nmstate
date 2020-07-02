@@ -200,6 +200,4 @@ class TestIPState:
         ip_state = IPState(Interface.IPV6, ip_info)
         ip_state.remove_link_local_address()
 
-        print("haha expected", expected_ip_info)
-        print("haha", ip_state.to_dict())
         assert ip_state.to_dict() == expected_ip_info
