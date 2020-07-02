@@ -849,3 +849,41 @@ def test_add_invalid_slave_ip_config(eth1_up):
         ) as bond_state:
             d_state[Interface.KEY].append(bond_state[Interface.KEY][0])
             libnmstate.apply(d_state)
+
+
+@pytest.fixture
+def bond99_mode4_with_2_slaves(eth1_up, eth2_up):
+    slaves = [
+        eth1_up[Interface.KEY][0][Interface.NAME],
+        eth2_up[Interface.KEY][0][Interface.NAME],
+    ]
+    extra_iface_state = {Bond.CONFIG_SUBTREE: {Bond.MODE: BondMode.LACP}}
+    with bond_interface(
+        BOND99, slaves, extra_iface_state=extra_iface_state
+    ) as state:
+        yield state
+
+
+@pytest.mark.tier1
+def test_remove_mode4_bond_and_create_mode5_with_the_same_slaves(
+    bond99_mode4_with_2_slaves,
+):
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: BOND99,
+                    Interface.TYPE: InterfaceType.BOND,
+                    Interface.STATE: InterfaceState.ABSENT,
+                }
+            ]
+        }
+    )
+    extra_iface_state = {Bond.CONFIG_SUBTREE: {Bond.MODE: BondMode.TLB}}
+    slaves = bond99_mode4_with_2_slaves[Interface.KEY][0][Bond.CONFIG_SUBTREE][
+        Bond.SLAVES
+    ]
+    with bond_interface(
+        BOND99, slaves, extra_iface_state=extra_iface_state
+    ) as state:
+        assertlib.assert_state_match(state)
