@@ -1,4 +1,15 @@
 # Changelog
+## [0.3.3] - 2020-07-02
+### Bug fixes
+ - VLAN: Raise an error when VLAN MTU is greater than the base interface MTU.
+ - Support IP network address with host bits(e.g. 192.0.2.251/24).
+ - Show the OVS bond name first in nmstatectl show.
+ - Fix random rollback timeout.
+ - Fix error due to activation of unknown interface.
+ - Fix the support of multiple state files when using nmstatectl.
+ - Fix remove DNS config.
+ - Improve the performance by eliminating the repeat check of ovs daemon status.
+
 ## [0.3.2] - 2020-06-15
 ### New features
  - Support third party plugin written in Python.
