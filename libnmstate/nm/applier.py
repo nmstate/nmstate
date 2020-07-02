@@ -93,9 +93,9 @@ def apply_changes(context, net_state, save_to_disk):
                 )
         original_desired_iface_state = {}
         if net_state.ifaces.get(ifname):
-            original_desired_iface_state = net_state.ifaces[
-                ifname
-            ].original_dict
+            iface = net_state.ifaces[ifname]
+            if iface.is_desired:
+                original_desired_iface_state = iface.original_dict
             if (
                 set(original_desired_iface_state.keys())
                 <= set([Interface.STATE, Interface.NAME, Interface.TYPE])
