@@ -15,9 +15,9 @@ Please report unacceptable behavior to the nmstate team.
 
 ## How to Contribute
 
-- Bugs: Tracked as ([Jira](https://nmstate.atlassian.net)) issues.
+- Bugs: Tracked as ([GitHub issues](https://github.com/nmstate/nmstate/issues)).
 - Enhancements: RFE suggestions are tracked as
-  ([Jira](https://nmstate.atlassian.net)) issues.
+([GitHub issues](https://github.com/nmstate/nmstate/issues)).
 - Code: Managed on [GitHub](https://github.com/nmstate/nmstate) through
   Pull Requests ([PR](https://github.com/nmstate/nmstate/pulls)).
 
