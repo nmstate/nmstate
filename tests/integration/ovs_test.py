@@ -18,6 +18,7 @@
 #
 
 from subprocess import CalledProcessError
+import time
 
 import pytest
 
@@ -249,6 +250,7 @@ def test_ovs_remove_port(bridge_with_ports):
                 ]
             }
         )
+        time.sleep(1)
 
         with pytest.raises(CalledProcessError):
             cmdlib.exec_cmd(
