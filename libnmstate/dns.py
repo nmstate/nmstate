@@ -181,9 +181,11 @@ class DnsState:
 
     def verify(self, cur_dns_state):
         cur_dns = DnsState(des_dns_state=None, cur_dns_state=cur_dns_state,)
-        if self.config.get(DNS.SERVER) != cur_dns.config.get(
-            DNS.SERVER
-        ) or self.config.get(DNS.SEARCH) != cur_dns.config.get(DNS.SEARCH):
+        if self.config.get(DNS.SERVER, []) != cur_dns.config.get(
+            DNS.SERVER, []
+        ) or self.config.get(DNS.SEARCH, []) != cur_dns.config.get(
+            DNS.SEARCH, []
+        ):
             raise NmstateVerificationError(
                 format_desired_current_state_diff(
                     {DNS.KEY: self.config}, {DNS.KEY: cur_dns.config},

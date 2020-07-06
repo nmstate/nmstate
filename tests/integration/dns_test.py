@@ -166,7 +166,9 @@ def test_remove_dns_config(empty_dns_config):
     }
     libnmstate.apply(desired_state)
 
-    libnmstate.apply({Interface.KEY: [], DNS.KEY: {DNS.CONFIG: {}}})
+    libnmstate.apply(
+        {Interface.KEY: [], DNS.KEY: {DNS.CONFIG: empty_dns_config}}
+    )
     current_state = libnmstate.show()
     dns_config = {DNS.SERVER: [], DNS.SEARCH: []}
     assert dns_config == current_state[DNS.KEY][DNS.CONFIG]
