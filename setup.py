@@ -57,7 +57,8 @@ setup(
             "schemas/operational-state.yaml",
             "VERSION",
             "varlink/io.nmstate.varlink",
-        ],
+            "varlink/nmstate-varlink.service",
+        ]
     },
     data_files=gen_manpage(),
 )
