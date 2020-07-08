@@ -39,7 +39,6 @@ function is_file_changed {
 }
 
 function rebuild_container_images {
-    set +x
     if is_file_changed "$PROJECT_PATH/packaging"; then
         if [ $CONTAINER_IMAGE == $CENTOS_IMAGE_DEV ];then
             ${PROJECT_PATH}/packaging/build-container.sh centos8-nmstate-dev
@@ -71,6 +70,7 @@ function collect_artifacts {
 }
 
 function container_pre_test_setup {
+    set -x
     ${CONTAINER_CMD} --version && cat /etc/resolv.conf
 
     if [[ "$CI" == "true" ]];then
@@ -78,7 +78,8 @@ function container_pre_test_setup {
     fi
 
     create_container
-    if [[ -v customize_cmd ]];then
+    if [[ -n "$customize_cmd" ]];then
+        clean_dnf_cache
         container_exec "${customize_cmd}"
     fi
 
