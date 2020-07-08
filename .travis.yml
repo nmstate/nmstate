@@ -4,10 +4,17 @@ language: generic
 env:
     global:
         - CONTAINER_CMD=docker
+        - customize=""
     matrix:
         - CONTAINER_IMAGE=docker.io/nmstate/centos8-nmstate-dev
           testflags="--test-type integ_tier1 --pytest-args='-x'
               --copr networkmanager/NetworkManager-1.22-git"
+        - CONTAINER_IMAGE=docker.io/nmstate/centos8-nmstate-dev
+          testflags="--test-type integ_tier1 --pytest-args='-x'
+              --copr networkmanager/NetworkManager-1.22-git"
+          customize="dnf remove -y openvswitch2.11 python3-openvswitch2.11;
+            dnf install -y openvswitch2.13 python3-openvswitch2.13;
+            systemctl restart openvswitch"
         - CONTAINER_IMAGE=docker.io/nmstate/centos8-nmstate-dev
           testflags="--test-type integ_tier2 --pytest-args='-x'
               --copr networkmanager/NetworkManager-1.22-git"
@@ -55,7 +62,7 @@ services:
 
 script:
     - sudo modprobe openvswitch
-    - sudo ./automation/run-tests.sh $testflags
+    - sudo ./automation/run-tests.sh $testflags --customize="${customize}"
 
 after_failure:
     - sudo ./automation/upload_test_artifacts.sh

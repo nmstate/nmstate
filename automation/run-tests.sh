@@ -241,10 +241,7 @@ function teardown_network_environment {
     done
 }
 
-function upgrade_nm_from_copr {
-    local copr_repo=$1
-    # The repoid for a Copr repo is the name with the slash replaces by a colon
-    local copr_repo_id="copr:copr.fedorainfracloud.org:${copr_repo/\//:}"
+function clean_dnf_cache {
     # Workaround for dnf failure:
     # [Errno 2] No such file or directory: '/var/cache/dnf/metadata_lock.pid'
     if [[ "$CI" == "true" ]];then
@@ -252,6 +249,13 @@ function upgrade_nm_from_copr {
         exec_cmd "dnf clean all"
         exec_cmd "dnf makecache || :"
     fi
+}
+
+function upgrade_nm_from_copr {
+    local copr_repo=$1
+    # The repoid for a Copr repo is the name with the slash replaces by a colon
+    local copr_repo_id="copr:copr.fedorainfracloud.org:${copr_repo/\//:}"
+    clean_dnf_cache
     exec_cmd "command -v dnf && plugin='dnf-command(copr)' || plugin='yum-plugin-copr'; yum install --assumeyes \$plugin;"
     exec_cmd "yum copr enable --assumeyes ${copr_repo}"
     # Update only from Copr to limit the changes in the environment
