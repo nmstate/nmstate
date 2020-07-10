@@ -78,10 +78,6 @@ function container_pre_test_setup {
     fi
 
     create_container
-    if [[ -n "$customize_cmd" ]];then
-        clean_dnf_cache
-        container_exec "${customize_cmd}"
-    fi
 
     container_exec "echo '$CONT_EXPORT_DIR/core.%h.%e.%t' > \
         /proc/sys/kernel/core_pattern"
