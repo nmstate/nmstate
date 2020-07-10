@@ -259,6 +259,13 @@ function upgrade_nm_from_copr {
     exec_cmd "systemctl restart NetworkManager"
 }
 
+function run_customize_command {
+    if [[ -n "$customize_cmd" ]];then
+        clean_dnf_cache
+        exec_cmd "${customize_cmd}"
+    fi
+}
+
 options=$(getopt --options "" \
     --long customize:,pytest-args:,help,debug-shell,test-type:,el8,copr:,artifacts-dir:,test-vdsm,machine,use-installed-nmstate\
     -- "${@}")
@@ -335,11 +342,13 @@ done
 
 modprobe_ovs
 
-if [ -z ${RUN_BAREMETAL} ];then
-    container_pre_test_setup
-else
+if [ -n "${RUN_BAREMETAL}" ];then
     CONTAINER_WORKSPACE="."
+    run_customize_command
     start_machine_services
+else
+    container_pre_test_setup
+    run_customize_command
 fi
 
 if [[ -v copr_repo ]];then
