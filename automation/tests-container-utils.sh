@@ -119,5 +119,5 @@ function create_container {
       -v /sys/fs/cgroup:/sys/fs/cgroup:ro \
       -v $PROJECT_PATH:$CONTAINER_WORKSPACE \
       -v $EXPORT_DIR:$CONT_EXPORT_DIR $CONTAINER_IMAGE)"
-  [[ -v "$debug_exit_shell" ]] && trap open_shell EXIT || trap run_exit EXIT
+  [ -n "$debug_exit_shell" ] && trap open_shell EXIT || trap run_exit EXIT
 }
