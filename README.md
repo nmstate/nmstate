@@ -125,8 +125,8 @@ discussions. To subscribe you can send an email with 'subscribe' in the subject
 to <nmstate-devel-join@lists.fedorahosted.org> or visit the
 [mailing list page][mailing_list].
 
-Development planning (sprints and progress reporting) happens in
-([Jira](https://nmstate.atlassian.net)). Access requires login.
+Sprint tracking happens in 
+([Github projects](https://github.com/nmstate/nmstate/projects)).
 
 There is also `#nmstate` on
 [Freenode IRC](https://freenode.net/kb/answer/chat).
@@ -153,8 +153,6 @@ instructions.
 
 ## Limitations
 
-Please refer to [jira page][jira_limitation] for details.
-
 * Maximum supported number of interfaces in a single desire state is 1000.
 
 ## Changelog
@@ -162,5 +160,4 @@ Please refer to [jira page][jira_limitation] for details.
 Please refer to [CHANGELOG](CHANGELOG)
 
 
-[jira_limitation]: https://nmstate.atlassian.net/issues/?filter=10003
 [mailing_list]: https://lists.fedorahosted.org/admin/lists/nmstate-devel.lists.fedorahosted.org
