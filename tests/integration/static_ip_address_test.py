@@ -87,8 +87,7 @@ def setup_eth1_ipv6(eth1_up):
         ]
     }
     libnmstate.apply(desired_state)
-
-    return desired_state
+    yield desired_state
 
 
 @pytest.fixture
