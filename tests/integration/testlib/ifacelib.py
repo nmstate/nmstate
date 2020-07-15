@@ -41,19 +41,13 @@ def iface_up(ifname):
 
 
 def _set_eth_admin_state(ifname, state):
-    current_state = statelib.show_only((ifname,))
-    (current_ifstate,) = current_state[schema.Interface.KEY]
-    iface_current_admin_state = current_ifstate[schema.Interface.STATE]
-    if (
-        iface_current_admin_state != state
-        or state == schema.InterfaceState.ABSENT
-    ):
-        desired_state = {
+    libnmstate.apply(
+        {
             schema.Interface.KEY: [
                 {schema.Interface.NAME: ifname, schema.Interface.STATE: state}
             ]
         }
-        libnmstate.apply(desired_state)
+    )
 
 
 def get_mac_address(ifname):

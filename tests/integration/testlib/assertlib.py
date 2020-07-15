@@ -90,6 +90,8 @@ def _prepare_state_for_verify(desired_state_data):
     full_desired_state.normalize()
     _fix_bond_state(current_state)
     _fix_ovsdb_external_ids(full_desired_state)
+    _remove_iface_state_for_verify(full_desired_state)
+    _remove_iface_state_for_verify(current_state)
 
     return full_desired_state, current_state
 
@@ -131,3 +133,7 @@ def _fix_ovsdb_external_ids(state):
         )
         for key, value in external_ids.items():
             external_ids[key] = str(value)
+
+def _remove_iface_state_for_verify(state):
+    for iface_state in state.state[Interface.KEY]:
+        iface_state.pop(Interface.STATE, None)

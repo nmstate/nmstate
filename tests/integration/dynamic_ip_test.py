@@ -19,6 +19,7 @@
 from contextlib import contextmanager
 from copy import deepcopy
 import logging
+from operator import itemgetter
 import os
 import time
 
@@ -28,6 +29,7 @@ import libnmstate
 from libnmstate.schema import Constants
 from libnmstate.schema import DNS
 from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceIP
 from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import InterfaceType
@@ -572,6 +574,10 @@ def test_dhcp_on_bridge0(dhcpcli_up_with_dynamic_ip):
 
     origin_ipv4_state = origin_port_state[Interface.KEY][0][Interface.IPV4]
     origin_ipv6_state = origin_port_state[Interface.KEY][0][Interface.IPV6]
+    _sort_ip_addresses(origin_ipv4_state[InterfaceIP.ADDRESS])
+    _sort_ip_addresses(origin_ipv6_state[InterfaceIP.ADDRESS])
+    _sort_ip_addresses(new_ipv4_state[InterfaceIP.ADDRESS])
+    _sort_ip_addresses(new_ipv6_state[InterfaceIP.ADDRESS])
     assert origin_ipv4_state == new_ipv4_state
     assert origin_ipv6_state == new_ipv6_state
 
@@ -1247,3 +1253,7 @@ def clean_state():
         yield
     finally:
         libnmstate.apply(current_state)
+
+
+def _sort_ip_addresses(addresses):
+    addresses.sort(key=itemgetter(InterfaceIP.ADDRESS_IP))

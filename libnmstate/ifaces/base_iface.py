@@ -320,6 +320,7 @@ class BaseIface:
             * Explicitly set state as UP if not defined.
             * Remove IPv6 link local addresses.
             * Remove empty description.
+            * Ignore the down state for non-virtual interface
         """
         self._capitalize_mac()
         self.sort_slaves()
@@ -335,6 +336,8 @@ class BaseIface:
             state[Interface.STATE] = InterfaceState.UP
         if self.is_absent and not self._save_to_disk:
             state[Interface.STATE] = InterfaceState.DOWN
+        if not self.is_virtual and self.is_down:
+            state.pop(Interface.STATE)
 
         return state
 

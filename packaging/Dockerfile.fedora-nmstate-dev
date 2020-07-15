@@ -1,6 +1,8 @@
 FROM docker.io/library/fedora:32
 
-RUN dnf -y install --setopt=install_weak_deps=False \
+RUN dnf -y install dnf-plugins-core && \
+    dnf copr enable cathay4t/nispor -y && \
+    dnf -y install --setopt=install_weak_deps=False \
                    NetworkManager \
                    NetworkManager-ovs \
                    NetworkManager-team \
@@ -36,6 +38,7 @@ RUN dnf -y install --setopt=install_weak_deps=False \
                    glib2-devel \
                    gobject-introspection-devel \
                    python3-devel \
+                   python3-nispor \
                    make && \
                    \
     dnf clean all && \

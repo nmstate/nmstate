@@ -58,6 +58,11 @@ class NetworkManagerPlugin(NmstatePlugin):
         self._check_version_mismatch()
 
     @property
+    def priority(self):
+        # Let nispor plugin take priority
+        return NmstatePlugin.DEFAULT_PRIORITY - 1
+
+    @property
     def name(self):
         return "NetworkManager"
 
