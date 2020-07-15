@@ -128,12 +128,12 @@ class CheckPoint:
         try:
             cp = client.checkpoint_create_finish(result)
             if cp:
+                self._dbuspath = cp.get_path()
                 logging.debug(
                     "Checkpoint {} created for all devices".format(
                         self._dbuspath
                     )
                 )
-                self._dbuspath = cp.get_path()
                 self._ctx.finish_async("Create checkpoint")
             else:
                 error_msg = (
