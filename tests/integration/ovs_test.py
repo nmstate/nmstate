@@ -17,8 +17,6 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
-from subprocess import CalledProcessError
-
 import pytest
 
 import libnmstate
@@ -227,7 +225,16 @@ def test_ovs_service_missing():
     )
 
 
+class _OvsProfileStillExists(Exception):
+    pass
+
+
 @pytest.mark.tier1
+@pytest.mark.xfail(
+    reason="https://bugzilla.redhat.com/show_bug.cgi?id=1857123",
+    raises=_OvsProfileStillExists,
+    strict=False,
+)
 def test_ovs_remove_port(bridge_with_ports):
     for port_name in bridge_with_ports.ports_names:
         active_profiles = get_nm_active_profiles()
@@ -248,10 +255,12 @@ def test_ovs_remove_port(bridge_with_ports):
             }
         )
 
-        with pytest.raises(CalledProcessError):
-            cmdlib.exec_cmd(
-                f"nmcli connection show {proxy_port_profile}".split(" "),
-                check=True,
+        rc, output, _ = cmdlib.exec_cmd(
+            f"nmcli connection show {proxy_port_profile}".split(" "),
+        )
+        if rc == 0:
+            raise _OvsProfileStillExists(
+                f"{proxy_port_profile} still exists: {output}"
             )
 
 
