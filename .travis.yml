@@ -1,9 +1,9 @@
 ---
-dist: bionic
+dist: focal
 language: generic
 env:
     global:
-        - CONTAINER_CMD=docker
+        - CONTAINER_CMD=podman
         - customize=""
     matrix:
         - CONTAINER_IMAGE=docker.io/nmstate/centos8-nmstate-dev
@@ -56,9 +56,7 @@ addons:
             - openssh-client
             - python-tox
             - xz-utils
-
-services:
-    - docker
+            - podman
 
 script:
     - sudo modprobe openvswitch
