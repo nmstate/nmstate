@@ -1,5 +1,5 @@
 ---
-dist: bionic
+dist: focal
 language: generic
 env:
     global:
@@ -54,7 +54,6 @@ addons:
             - git
             - gnupg2
             - openssh-client
-            - python-tox
             - xz-utils
 
 services:
