@@ -22,8 +22,25 @@ from libnmstate.schema import LinuxBridge
 
 from .bridge import BridgeIface
 
+# The aging_time, forward_delay, hello_time, max_age options are multipled by
+# 100(USER_HZ) when apply to kernel(via NM), so they are not impacted by this
+# integer round up/down issue.
+INTEGER_ROUNDED_OPTIONS = [
+    LinuxBridge.Options.MULTICAST_LAST_MEMBER_INTERVAL,
+    LinuxBridge.Options.MULTICAST_MEMBERSHIP_INTERVAL,
+    LinuxBridge.Options.MULTICAST_QUERIER_INTERVAL,
+    LinuxBridge.Options.MULTICAST_QUERY_RESPONSE_INTERVAL,
+    LinuxBridge.Options.MULTICAST_STARTUP_QUERY_INTERVAL,
+]
+
 
 class LinuxBridgeIface(BridgeIface):
+    @property
+    def _options(self):
+        return self.raw.get(LinuxBridge.CONFIG_SUBTREE, {}).get(
+            LinuxBridge.OPTIONS_SUBTREE, {}
+        )
+
     def pre_edit_validation_and_cleanup(self):
         self._validate()
         self._fix_vlan_filtering_mode()
@@ -113,6 +130,38 @@ class LinuxBridgeIface(BridgeIface):
                 if port_config[LinuxBridge.Port.NAME] != slave_name
             ]
         self.sort_slaves()
+
+    @staticmethod
+    def is_integer_rounded(iface_state, current_iface_state):
+        for key, value in iface_state._options.items():
+            if key in INTEGER_ROUNDED_OPTIONS:
+                try:
+                    value = int(value)
+                    cur_value = int(current_iface_state._options.get(key))
+                except (TypeError, ValueError):
+                    continue
+                # With 250 HZ and 100 USER_HZ, every 8,000,000 will have 1
+                # deviation, caused by:
+                # * kernel set the value using clock_t_to_jiffies():
+                #       jiffies = int(clock * 100 / 250)
+                # * kernel showing the value using jiffies_to_clock_t():
+                #       clock =  int(int(jiffies * ( (10 ** 9 + 250/2) / 250)
+                #                    / 10 ** 9 * 100)
+                #
+                # The number 8,000,000 is found by exhaustion.
+                # There is no good way to detect kernel HZ in user space. Hence
+                # we check whether certain value is rounded.
+                if cur_value != value:
+                    if value >= 8 * (10 ** 6):
+                        if abs(value - cur_value) <= int(
+                            value / 8 * (10 ** 6)
+                        ):
+                            return key, value, cur_value
+                    else:
+                        if abs(value - cur_value) == 1:
+                            return key, value, cur_value
+
+        return None, None, None
 
 
 def _assert_vlan_filtering_trunk_tag(trunk_tag_state):

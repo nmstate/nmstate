@@ -24,6 +24,7 @@ import pytest
 import yaml
 
 import libnmstate
+from libnmstate.error import NmstateKernelIntegerRoundedError
 from libnmstate.error import NmstateVerificationError
 from libnmstate.prettystate import PrettyState
 from libnmstate.schema import Interface
@@ -33,6 +34,8 @@ from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import LinuxBridge
 from libnmstate.error import NmstateValueError
+
+from libnmstate.nm.common import nm_version_bigger_or_equal_to
 
 from .testlib import assertlib
 from .testlib.bondlib import bond_interface
@@ -49,6 +52,7 @@ from .testlib.assertlib import assert_mac_address
 from .testlib.vlan import vlan_interface
 from .testlib.env import is_fedora
 from .testlib.env import is_nm_older_than_1_25_2
+from .testlib.env import is_ubuntu_kernel
 
 
 TEST_BRIDGE0 = "linux-br0"
@@ -643,3 +647,22 @@ def test_change_linux_bridge_group_addr(bridge0_with_port0):
     libnmstate.apply(desired_state)
 
     assertlib.assert_state_match(desired_state)
+
+
+@pytest.mark.skipif(
+    not is_ubuntu_kernel() or not nm_version_bigger_or_equal_to("1.25.2"),
+    reason="Only 250 HZ kernel will fail on NmstateKernelIntergerRounded "
+    "for linux bridge MULTICAST_STARTUP_QUERY_INTERVAL option",
+)
+def test_linux_bridge_option_integer_rounded_on_ubuntu_kernel(
+    bridge0_with_port0,
+):
+    iface_state = bridge0_with_port0[Interface.KEY][0]
+    iface_state[LinuxBridge.CONFIG_SUBTREE][LinuxBridge.OPTIONS_SUBTREE][
+        LinuxBridge.Options.MULTICAST_STARTUP_QUERY_INTERVAL
+    ] = 3125
+
+    desired_state = {Interface.KEY: [iface_state]}
+
+    with pytest.raises(NmstateKernelIntegerRoundedError):
+        libnmstate.apply(desired_state)

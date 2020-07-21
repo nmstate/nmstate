@@ -28,6 +28,10 @@ def is_fedora():
     return os.path.exists("/etc/fedora-release")
 
 
+def is_ubuntu_kernel():
+    return "Ubuntu" in os.uname().version
+
+
 def is_nm_older_than_1_25_2():
     _, output, _ = exec_cmd(["nmcli", "-v"], check=True)
     match = re.compile("version ([0-9.]+)").search(output)
