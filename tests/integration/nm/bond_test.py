@@ -74,11 +74,12 @@ def test_bond_with_a_slave(eth1_up, nm_plugin):
 
 @contextmanager
 def _bond_interface(ctx, name, options):
+    con_profile = None
     try:
-        _create_bond(ctx, name, options)
+        con_profile = _create_bond(ctx, name, options)
         yield
     finally:
-        _delete_bond(ctx, name)
+        _delete_bond(ctx, con_profile)
 
 
 def _get_bond_current_state(plugin, name, option=None):
@@ -115,42 +116,47 @@ def _create_bond(ctx, name, options):
     ipv4_setting = nm.ipv4.create_setting({}, None)
     ipv6_setting = nm.ipv6.create_setting({}, None)
 
-    con_profile = nm.connection.ConnectionProfile(ctx)
-    con_profile.create(
+    con_profile = nm.profile.NmProfile(ctx, True)
+    simple_conn = nm.connection.create_new_simple_connection(
         (con_setting.setting, bond_setting, ipv4_setting, ipv6_setting)
     )
+    con_profile._simple_conn = simple_conn
     with main_context(ctx):
-        con_profile.add()
+        con_profile._add()
         ctx.wait_all_finish()
-        nm.device.activate(ctx, connection_id=name)
+        con_profile.activate()
+        ctx.wait_all_finish()
+        return con_profile
 
 
-def _delete_bond(ctx, devname):
+def _delete_bond(ctx, profile):
     with main_context(ctx):
-        nmdev = ctx.get_nm_dev(devname)
-        nm.device.deactivate(ctx, nmdev)
-        nm.device.delete(ctx, nmdev)
-        nm.device.delete_device(ctx, nmdev)
+        if profile:
+            nm.device.deactivate(ctx, profile.nmdev)
+            ctx.wait_all_finish()
+            profile.delete()
+            ctx.wait_all_finish()
+            nm.device.delete_device(ctx, profile.nmdev)
 
 
 def _attach_slave_to_bond(ctx, bond, slave):
-    slave_nmdev = ctx.get_nm_dev(slave)
-    curr_slave_con_profile = nm.connection.ConnectionProfile(ctx)
-    curr_slave_con_profile.import_by_device(slave_nmdev)
+    curr_slave_con_profile = nm.profile.NmProfile(ctx, True)
+    curr_slave_con_profile._import_existing_profile(slave)
 
-    slave_con_profile = nm.connection.ConnectionProfile(ctx)
     slave_settings = [_create_connection_setting(bond, curr_slave_con_profile)]
-    slave_con_profile.create(slave_settings)
+    simple_conn = nm.connection.create_new_simple_connection(slave_settings)
+    curr_slave_con_profile._simple_conn = simple_conn
 
     with main_context(ctx):
-        curr_slave_con_profile.update(slave_con_profile)
+        curr_slave_con_profile._update()
         ctx.wait_all_finish()
-        nm.device.activate(ctx, connection_id=slave)
+        curr_slave_con_profile.activate()
+        ctx.wait_all_finish()
 
 
 def _create_connection_setting(bond, port_con_profile):
     con_setting = nm.connection.ConnectionSetting()
-    con_setting.import_by_profile(port_con_profile)
+    con_setting.import_by_profile(port_con_profile.profile)
     con_setting.set_master(bond, InterfaceType.BOND)
 
     return con_setting.setting

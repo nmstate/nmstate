@@ -97,7 +97,7 @@ def test_set_vxlan_iface_down(eth1_up):
 
 def test_add_new_bond_iface_with_vxlan(eth1_up):
     eth_name = eth1_up[Interface.KEY][0][Interface.NAME]
-    bond_name = "bond1"
+    bond_name = "bond0"
     vxlan = VxlanState(id=VXLAN1_ID, base_if=bond_name, remote="192.168.100.2")
     with bond_interface(
         name=bond_name, slaves=[eth_name], extra_iface_state=None, create=False

@@ -22,9 +22,11 @@ import logging
 from libnmstate.error import NmstateConflictError
 from libnmstate.error import NmstateLibnmError
 from libnmstate.error import NmstatePermissionError
-from libnmstate.nm import connection
+from libnmstate.ifaces.base_iface import BaseIface
+from libnmstate.nm import profile
 from libnmstate.nm import common
-from .connection import is_activated
+from libnmstate.schema import Interface
+from .profile_state import is_activated
 
 
 def get_checkpoints(nm_client):
@@ -200,11 +202,15 @@ class CheckPoint:
             ):
                 nm_ac = nm_dev.get_active_connection()
                 if not is_activated(nm_ac, nm_dev):
-                    profile = connection.ConnectionProfile(self._ctx)
-                    profile.nmdevice = nm_dev
+                    nm_profile = profile.NmProfile(
+                        self._ctx, None, BaseIface({Interface.NAME: iface})
+                    )
+                    nm_profile.nmdev = nm_dev
                     action = f"Waiting for rolling back {iface}"
                     self._ctx.register_async(action)
-                    profile.wait_dev_activation(action)
+                    nm_profile.profile_state.wait_dev_activation(
+                        action, nm_profile
+                    )
             if ret[path] != 0:
                 logging.error(f"Interface {iface} rollback failed")
             else:

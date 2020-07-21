@@ -143,17 +143,15 @@ def test_bridge_with_bond_and_two_slaves(
 
 @contextmanager
 def _bridge_interface(ctx, state):
+    con_profile = None
+    port_profiles = []
     try:
-        _create_bridge(ctx, state)
+        con_profile, port_profiles = _create_bridge(ctx, state)
         yield
     finally:
-        _delete_iface(ctx, BRIDGE0)
-        for p in state[OB.CONFIG_SUBTREE][OB.PORT_SUBTREE]:
-            if not p.get(OB.Port.LINK_AGGREGATION_SUBTREE):
-                _delete_iface(
-                    ctx, nm.ovs.PORT_PROFILE_PREFIX + p[OB.Port.NAME]
-                )
-            _delete_iface(ctx, p[OB.Port.NAME])
+        _delete_iface(ctx, con_profile)
+        for p in port_profiles:
+            _delete_iface(ctx, p)
 
 
 def _get_bridge_current_state(nm_plugin):
@@ -176,14 +174,20 @@ def _create_bridge(ctx, bridge_desired_state):
     br_options = bridge_state.get(OB.OPTIONS_SUBTREE, {})
     iface_bridge_settings = _get_iface_bridge_settings(br_options)
 
+    con_profile = None
+    port_profiles = []
     with main_context(ctx):
-        _create_bridge_iface(ctx, iface_bridge_settings)
+        con_profile = _create_bridge_iface(ctx, iface_bridge_settings)
         ports_state = bridge_desired_state[OB.CONFIG_SUBTREE][OB.PORT_SUBTREE]
         for port_state in ports_state:
-            _attach_port_to_bridge(ctx, port_state)
+            port_profile = _attach_port_to_bridge(ctx, port_state)
+            port_profiles.append(port_profile)
+
+    return con_profile, port_profiles
 
 
 def _attach_port_to_bridge(ctx, port_state):
+    internal_profile = None
     port_name = port_state[OB.Port.NAME]
     lag_state = port_state.get(OB.Port.LINK_AGGREGATION_SUBTREE)
     if lag_state:
@@ -201,11 +205,13 @@ def _attach_port_to_bridge(ctx, port_state):
             _connect_interface(ctx, port_profile_name, slave)
     elif _is_internal_interface(ctx, port_name):
         iface_name = port_name
-        _create_internal_interface(
+        internal_profile = _create_internal_interface(
             ctx, iface_name, master_name=port_profile_name
         )
     else:
         _connect_interface(ctx, port_profile_name, port_state)
+
+    return internal_profile
 
 
 def _is_internal_interface(ctx, iface_name):
@@ -217,47 +223,63 @@ def _is_internal_interface(ctx, iface_name):
 
 def _create_internal_interface(ctx, iface_name, master_name):
     iface_settings = _create_internal_iface_setting(iface_name, master_name)
-    iface_con_profile = nm.connection.ConnectionProfile(ctx)
-    iface_con_profile.create(iface_settings)
-    iface_con_profile.add()
+    iface_con_profile = nm.profile.NmProfile(ctx, True)
+    simple_conn = nm.connection.create_new_simple_connection(iface_settings)
+    iface_con_profile._simple_conn = simple_conn
+    iface_con_profile._add()
     ctx.wait_all_finish()
-    nm.device.activate(ctx, connection_id=iface_name)
+    iface_con_profile.activate()
+    ctx.wait_all_finish()
+
+    return iface_con_profile
 
 
 def _connect_interface(ctx, port_profile_name, port_state):
-    iface_nmdev = ctx.get_nm_dev(port_state[OB.Port.NAME])
-    curr_iface_con_profile = nm.connection.ConnectionProfile(ctx)
-    curr_iface_con_profile.import_by_device(iface_nmdev)
+    curr_iface_con_profile = nm.profile.NmProfile(ctx, True)
+    curr_iface_con_profile._import_existing_profile(port_state[OB.Port.NAME])
     slave_iface_settings = _create_iface_settings(
         curr_iface_con_profile, port_profile_name
     )
-    iface_con_profile = nm.connection.ConnectionProfile(ctx)
-    iface_con_profile.create(slave_iface_settings)
-    curr_iface_con_profile.update(iface_con_profile)
+    simple_conn = nm.connection.create_new_simple_connection(
+        slave_iface_settings
+    )
+    curr_iface_con_profile._simple_conn = simple_conn
+    curr_iface_con_profile._update()
     ctx.wait_all_finish()
-    nm.device.activate(ctx, connection_id=port_state[OB.Port.NAME])
+    curr_iface_con_profile.activate()
+    ctx.wait_all_finish()
 
 
 def _create_proxy_port(ctx, port_profile_name, port_state):
     port_settings = _create_port_setting(port_state, port_profile_name)
-    port_con_profile = nm.connection.ConnectionProfile(ctx)
-    port_con_profile.create(port_settings)
-    port_con_profile.add()
+    port_con_profile = nm.profile.NmProfile(ctx, True)
+    port_con_profile._simple_conn = nm.connection.create_new_simple_connection(
+        port_settings
+    )
+    port_con_profile._add()
     ctx.wait_all_finish()
-    nm.device.activate(ctx, connection_id=port_profile_name)
+    port_con_profile.activate()
+    ctx.wait_all_finish()
+
+    return port_con_profile
 
 
 def _create_bridge_iface(ctx, iface_bridge_settings):
-    br_con_profile = nm.connection.ConnectionProfile(ctx)
-    br_con_profile.create(iface_bridge_settings)
-    br_con_profile.add()
+    br_con_profile = nm.profile.NmProfile(ctx, True)
+    br_con_profile._simple_conn = nm.connection.create_new_simple_connection(
+        iface_bridge_settings
+    )
+    br_con_profile._add()
     ctx.wait_all_finish()
-    nm.device.activate(ctx, connection_id=BRIDGE0)
+    br_con_profile.activate()
+    ctx.wait_all_finish()
+
+    return br_con_profile
 
 
 def _create_iface_settings(iface_con_profile, port_master_name):
     iface_con_setting = nm.connection.ConnectionSetting()
-    iface_con_setting.import_by_profile(iface_con_profile)
+    iface_con_setting.import_by_profile(iface_con_profile.profile)
     iface_con_setting.set_master(port_master_name, InterfaceType.OVS_PORT)
     return (iface_con_setting.setting,)
 
@@ -295,21 +317,24 @@ def _create_internal_iface_setting(iface_name, master_name):
     return settings
 
 
-def _delete_iface(ctx, devname):
-    nmdev = ctx.get_nm_dev(devname)
+def _delete_iface(ctx, con_profile):
     with main_context(ctx):
-        if nmdev:
-            nm.device.delete(ctx, nmdev)
-            if nmdev.get_device_type() in (
-                NM.DeviceType.OVS_BRIDGE,
-                NM.DeviceType.OVS_PORT,
-                NM.DeviceType.OVS_INTERFACE,
-            ):
-                nm.device.delete_device(ctx, nmdev)
-        else:
-            con_profile = nm.connection.ConnectionProfile(ctx)
-            con_profile.con_id = devname
-            con_profile.delete()
+        if con_profile:
+            if con_profile.nmdev:
+                remote_conns = con_profile.nmdev.get_available_connections()
+                for remote_conn in remote_conns:
+                    nm_profile = nm.profile.NmProfile(ctx, None)
+                    nm_profile.nmdev = con_profile.nmdev
+                    nm_profile.remote_conn = remote_conn
+                    nm_profile.delete()
+                if con_profile.nmdev.get_device_type() in (
+                    NM.DeviceType.OVS_BRIDGE,
+                    NM.DeviceType.OVS_PORT,
+                    NM.DeviceType.OVS_INTERFACE,
+                ):
+                    nm.device.delete_device(ctx, con_profile.nmdev)
+            else:
+                con_profile.delete()
 
 
 def _get_iface_bridge_settings(bridge_options):

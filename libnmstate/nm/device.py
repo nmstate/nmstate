@@ -22,16 +22,8 @@ import logging
 from libnmstate.error import NmstateLibnmError
 
 from . import active_connection as ac
-from . import connection
+from . import profile_state
 from .common import NM
-
-
-def activate(context, dev=None, connection_id=None):
-    """Activate the given device or remote connection profile."""
-    conn = connection.ConnectionProfile(context)
-    conn.nmdevice = dev
-    conn.con_id = connection_id
-    conn.activate()
 
 
 def deactivate(context, dev):
@@ -47,28 +39,21 @@ def deactivate(context, dev):
     act_con.deactivate()
 
 
-def delete(context, dev):
-    connections = dev.get_available_connections()
-    for con in connections:
-        con_profile = connection.ConnectionProfile(context, con)
-        con_profile.delete()
-
-
-def modify(context, nm_dev, connection_profile):
+def modify(context, nm_profile):
     """
     Modify the given connection profile on the device.
     Implemented by the reapply operation with a fallback to the
     connection profile activation.
     """
-    nm_ac = nm_dev.get_active_connection()
-    if connection.is_activated(nm_ac, nm_dev):
+    nm_ac = nm_profile.nmdev.get_active_connection()
+    if profile_state.is_activated(nm_ac, nm_profile.nmdev):
         version_id = 0
         flags = 0
-        action = f"Reapply device config: {nm_dev.get_iface()}"
+        action = f"Reapply device config: {nm_profile.nmdev.get_iface()}"
         context.register_async(action)
-        user_data = context, nm_dev, action
-        nm_dev.reapply_async(
-            connection_profile,
+        user_data = context, nm_profile, action
+        nm_profile.nmdev.reapply_async(
+            nm_profile.profile,
             version_id,
             flags,
             context.cancellable,
@@ -76,11 +61,11 @@ def modify(context, nm_dev, connection_profile):
             user_data,
         )
     else:
-        _activate_async(context, nm_dev)
+        _activate_async(context, nm_profile)
 
 
 def _modify_callback(src_object, result, user_data):
-    context, nmdev, action = user_data
+    context, nm_profile, action = user_data
     if context.is_cancelled():
         return
     devname = src_object.get_iface()
@@ -94,7 +79,7 @@ def _modify_callback(src_object, result, user_data):
             e,
         )
         context.finish_async(action, suppress_log=True)
-        _activate_async(context, src_object)
+        _activate_async(context, nm_profile)
         return
 
     if success:
@@ -106,17 +91,14 @@ def _modify_callback(src_object, result, user_data):
             devname,
         )
         context.finish_async(action, suppress_log=True)
-        _activate_async(context, src_object)
+        _activate_async(context, nm_profile)
 
 
-def _activate_async(context, dev):
-    conn = connection.ConnectionProfile(context)
-    conn.con_id = dev.get_iface()
-    conn.nmdevice = dev
-    if dev:
+def _activate_async(context, nm_profile):
+    if nm_profile.nmdev:
         # Workaround of https://bugzilla.redhat.com/show_bug.cgi?id=1772470
-        dev.set_managed(True)
-    conn.activate()
+        nm_profile.nmdev.set_managed(True)
+    nm_profile.activate()
 
 
 def delete_device(context, nmdev):
