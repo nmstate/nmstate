@@ -3,7 +3,7 @@ FROM docker.io/library/centos:8
 RUN dnf -y install dnf-plugins-core epel-release && \
     dnf config-manager --set-enabled PowerTools && \
     dnf copr enable nmstate/ovs-el8 -y && \
-    dnf copr enable networkmanager/NetworkManager-1.22 -y && \
+    dnf copr enable networkmanager/NetworkManager-1.26 -y && \
     dnf -y install --setopt=install_weak_deps=False \
                    NetworkManager \
                    NetworkManager-ovs \

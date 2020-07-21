@@ -7,20 +7,16 @@ env:
         - customize=""
     matrix:
         - CONTAINER_IMAGE=docker.io/nmstate/centos8-nmstate-dev
-          testflags="--test-type integ_tier1 --pytest-args='-x'
-              --copr networkmanager/NetworkManager-1.22-git"
+          testflags="--test-type integ_tier1 --pytest-args='-x'"
         - CONTAINER_IMAGE=docker.io/nmstate/centos8-nmstate-dev
-          testflags="--test-type integ_tier1 --pytest-args='-x'
-              --copr networkmanager/NetworkManager-1.22-git"
+          testflags="--test-type integ_tier1 --pytest-args='-x'"
           customize="dnf remove -y openvswitch2.11 python3-openvswitch2.11;
             dnf install -y openvswitch2.13 python3-openvswitch2.13;
             systemctl restart openvswitch"
         - CONTAINER_IMAGE=docker.io/nmstate/centos8-nmstate-dev
-          testflags="--test-type integ_tier2 --pytest-args='-x'
-              --copr networkmanager/NetworkManager-1.22-git"
+          testflags="--test-type integ_tier2 --pytest-args='-x'"
         - CONTAINER_IMAGE=docker.io/nmstate/centos8-nmstate-dev
-          testflags="--test-type integ_slow --pytest-args='-x'
-              --copr networkmanager/NetworkManager-1.22-git"
+          testflags="--test-type integ_slow --pytest-args='-x'"
         - CONTAINER_IMAGE=docker.io/nmstate/centos8-nmstate-dev
           testflags="--test-type integ_tier2 --pytest-args='-x'
               --copr networkmanager/NetworkManager-master"

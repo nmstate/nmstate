@@ -17,8 +17,6 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
-from distutils.version import StrictVersion
-
 import gi
 
 try:
@@ -30,12 +28,6 @@ except ValueError:
 from gi.repository import GLib
 from gi.repository import GObject
 from gi.repository import Gio
-
-
-def nm_version_bigger_or_equal_to(version):
-    return StrictVersion(
-        f"{NM.MAJOR_VERSION}.{NM.MINOR_VERSION}.{NM.MICRO_VERSION}"
-    ) >= StrictVersion(version)
 
 
 # To suppress the "import not used" error

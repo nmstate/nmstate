@@ -24,7 +24,6 @@ from libnmstate.nm import connection
 from libnmstate.nm.bridge_port_vlan import PortVlanFilter
 from libnmstate.schema import LinuxBridge as LB
 from .common import NM
-from .common import nm_version_bigger_or_equal_to
 
 
 BRIDGE_TYPE = "bridge"
@@ -116,10 +115,7 @@ def _set_bridge_properties(bridge_setting, options):
             bridge_setting.props.multicast_snooping = val
         elif key == LB.STP_SUBTREE:
             _set_bridge_stp_properties(bridge_setting, val)
-        elif (
-            nm_version_bigger_or_equal_to("1.25.2")
-            and key in NM_BRIDGE_OPTIONS_MAP
-        ):
+        elif key in NM_BRIDGE_OPTIONS_MAP:
             nm_prop_name = NM_BRIDGE_OPTIONS_MAP[key]
             # NM is using the sysfs name
             if key == LB.Options.GROUP_ADDR:
@@ -218,14 +214,13 @@ def get_info(context, nmdev):
         },
     }
 
-    if nm_version_bigger_or_equal_to("1.25.2"):
-        for schema_name, sysfs_key_name in EXTRA_OPTIONS_MAP.items():
-            value = props[sysfs_key_name]
-            if schema_name == LB.Options.GROUP_ADDR:
-                value = value.upper()
-            elif schema_name in BOOL_OPTIONS:
-                value = value > 0
-            info[LB.CONFIG_SUBTREE][LB.OPTIONS_SUBTREE][schema_name] = value
+    for schema_name, sysfs_key_name in EXTRA_OPTIONS_MAP.items():
+        value = props[sysfs_key_name]
+        if schema_name == LB.Options.GROUP_ADDR:
+            value = value.upper()
+        elif schema_name in BOOL_OPTIONS:
+            value = value > 0
+        info[LB.CONFIG_SUBTREE][LB.OPTIONS_SUBTREE][schema_name] = value
     return info
 
 
