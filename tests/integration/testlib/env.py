@@ -17,11 +17,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
-from distutils.version import StrictVersion
 import os
-import re
-
-from .cmdlib import exec_cmd
 
 
 def is_fedora():
@@ -30,21 +26,3 @@ def is_fedora():
 
 def is_ubuntu_kernel():
     return "Ubuntu" in os.uname().version
-
-
-def is_nm_older_than_1_25_2():
-    _, output, _ = exec_cmd(["nmcli", "-v"], check=True)
-    match = re.compile("version ([0-9.]+)").search(output)
-    assert match
-
-    return StrictVersion(match.group(1)) < StrictVersion("1.25.2")
-
-
-def nm_is_not_supporting_ovs_patch_port():
-    _, output, _ = exec_cmd(["nmcli", "-v"], check=True)
-    match = re.compile("version ([0-9.]+)").search(output)
-
-    return StrictVersion(match.group(1)) <= StrictVersion("1.22.14") or (
-        StrictVersion(match.group(1)) >= StrictVersion("1.24.0")
-        and StrictVersion(match.group(1)) <= StrictVersion("1.24.2")
-    )

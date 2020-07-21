@@ -32,7 +32,6 @@ from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import LinuxBridge as LB
 from libnmstate.nm.common import NM
-from libnmstate.nm.common import nm_version_bigger_or_equal_to
 
 from ..testlib import cmdlib
 from ..testlib import iproutelib
@@ -102,6 +101,18 @@ def _create_bridge_config(ports):
                 LB.Options.GROUP_FORWARD_MASK: 0,
                 LB.Options.MAC_AGEING_TIME: 300,
                 LB.Options.MULTICAST_SNOOPING: True,
+                LB.Options.MULTICAST_ROUTER: 1,
+                LB.Options.GROUP_ADDR: "01:80:C2:00:00:00",
+                LB.Options.HASH_MAX: 4096,
+                LB.Options.MULTICAST_LAST_MEMBER_COUNT: 2,
+                LB.Options.MULTICAST_LAST_MEMBER_INTERVAL: 100,
+                LB.Options.MULTICAST_QUERIER: False,
+                LB.Options.MULTICAST_QUERIER_INTERVAL: 25500,
+                LB.Options.MULTICAST_QUERY_USE_IFADDR: False,
+                LB.Options.MULTICAST_QUERY_INTERVAL: 12500,
+                LB.Options.MULTICAST_QUERY_RESPONSE_INTERVAL: 1000,
+                LB.Options.MULTICAST_STARTUP_QUERY_COUNT: 2,
+                LB.Options.MULTICAST_STARTUP_QUERY_INTERVAL: 3000,
                 LB.STP_SUBTREE: {
                     # Disable STP to avoid topology changes and the consequence
                     # link change.
@@ -115,23 +126,6 @@ def _create_bridge_config(ports):
             LB.PORT_SUBTREE: ports_states,
         }
     }
-    if nm_version_bigger_or_equal_to("1.25.2"):
-        bridge_config[LB.CONFIG_SUBTREE][LB.OPTIONS_SUBTREE].update(
-            {
-                LB.Options.MULTICAST_ROUTER: 1,
-                LB.Options.GROUP_ADDR: "01:80:C2:00:00:00",
-                LB.Options.HASH_MAX: 4096,
-                LB.Options.MULTICAST_LAST_MEMBER_COUNT: 2,
-                LB.Options.MULTICAST_LAST_MEMBER_INTERVAL: 100,
-                LB.Options.MULTICAST_QUERIER: False,
-                LB.Options.MULTICAST_QUERIER_INTERVAL: 25500,
-                LB.Options.MULTICAST_QUERY_USE_IFADDR: False,
-                LB.Options.MULTICAST_QUERY_INTERVAL: 12500,
-                LB.Options.MULTICAST_QUERY_RESPONSE_INTERVAL: 1000,
-                LB.Options.MULTICAST_STARTUP_QUERY_COUNT: 2,
-                LB.Options.MULTICAST_STARTUP_QUERY_INTERVAL: 3000,
-            }
-        )
     return bridge_config
 
 
