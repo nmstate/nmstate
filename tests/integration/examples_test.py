@@ -22,11 +22,9 @@ import os
 import pytest
 
 from .testlib import assertlib
-from .testlib.env import nm_is_not_supporting_ovs_patch_port
 from .testlib.examplelib import example_state
 
 from libnmstate import netinfo
-from libnmstate.error import NmstateLibnmError
 from libnmstate.error import NmstateNotSupportedError
 from libnmstate.schema import DNS
 
@@ -167,13 +165,6 @@ def test_port_vlan(eth1_up):
     assertlib.assert_absent("linux-br0")
 
 
-@pytest.mark.xfail(
-    nm_is_not_supporting_ovs_patch_port(),
-    reason="Using the interface name is supported only with NM 1.22.16/1.24.2"
-    " or greater",
-    raises=NmstateLibnmError,
-    strict=True,
-)
 def test_add_ovs_patch_and_remove():
     with example_state(
         "ovsbridge_patch_create.yml", cleanup="ovsbridge_patch_delete.yml"

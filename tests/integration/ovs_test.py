@@ -32,13 +32,11 @@ from libnmstate.schema import OVSBridge
 from libnmstate.schema import OvsDB
 from libnmstate.schema import OVSInterface
 from libnmstate.error import NmstateDependencyError
-from libnmstate.error import NmstateLibnmError
 from libnmstate.error import NmstateValueError
 
 from .testlib import assertlib
 from .testlib import cmdlib
 from .testlib import statelib
-from .testlib.env import nm_is_not_supporting_ovs_patch_port
 from .testlib.nmplugin import disable_nm_plugin
 from .testlib.ovslib import Bridge
 from .testlib.servicelib import disable_service
@@ -378,13 +376,6 @@ def test_ovsdb_set_external_ids_for_existing_bridge(bridge_with_ports):
 
 
 class TestOvsPatch:
-    @pytest.mark.xfail(
-        nm_is_not_supporting_ovs_patch_port(),
-        reason="Using the interface name is supported only with NM "
-        "1.22.16/1.24.2 or greater.",
-        raises=NmstateLibnmError,
-        strict=True,
-    )
     def test_create_and_remove_patch_port(self):
         patch0_state = {OVSInterface.Patch.PEER: "patch1"}
         patch1_state = {OVSInterface.Patch.PEER: "patch0"}
@@ -434,13 +425,6 @@ class TestOvsPatch:
         assertlib.assert_absent(PATCH0)
         assertlib.assert_absent(PATCH1)
 
-    @pytest.mark.xfail(
-        nm_is_not_supporting_ovs_patch_port(),
-        reason="Using the interface name is supported only with NM "
-        "1.22.16/1.24.2 or greater",
-        raises=NmstateLibnmError,
-        strict=True,
-    )
     def test_add_patch_to_existing_interface_valid(self):
         patch0_state = {OVSInterface.Patch.PEER: "patch1"}
         patch1_state = {OVSInterface.Patch.PEER: "patch0"}
