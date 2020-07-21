@@ -18,6 +18,8 @@
 #
 
 import logging
+import os
+import subprocess
 
 from libnmstate.error import NmstateKernelIntegerRoundedError
 from libnmstate.error import NmstateValueError
@@ -127,6 +129,7 @@ class Ifaces:
     def _pre_edit_validation_and_cleanup(self):
         self._validate_over_booked_slaves()
         self._validate_vlan_mtu()
+        self._validate_sriov_mtu()
         self._handle_master_slave_list_change()
         self._match_child_iface_state_with_parent()
         self._mark_orphen_as_absent()
@@ -193,6 +196,53 @@ class Ifaces:
                         f"than its base interface: {iface.parent} "
                         f"MTU({base_iface.mtu})"
                     )
+
+    def _validate_sriov_mtu(self):
+        """
+        Validate that mtu of SR-IOV VF is less or equal to it's parent PF
+        interface.
+        """
+        vf_pci_to_pf_name = {}
+        prefix_len = len("../")
+        for iface in self._ifaces.values():
+            if iface.type == InterfaceType.ETHERNET and iface.is_up:
+                syspath = f"/sys/class/net/{iface.name}/device/"
+                vf_number = 0
+                while True:
+                    if os.path.exists(syspath + f"virtfn{vf_number}"):
+                        proc = subprocess.run(
+                            ("readlink", syspath + f"virtfn{vf_number}"),
+                            stdout=subprocess.PIPE,
+                            encoding="utf-8",
+                        )
+                        vf_pci = proc.stdout[prefix_len:].rstrip()
+                        vf_pci_to_pf_name[vf_pci] = iface.name
+                        vf_number += 1
+                    else:
+                        break
+
+        for iface in self._ifaces.values():
+            if iface.is_up and iface.mtu:
+                sysnicpath = f"/sys/class/net/{iface.name}"
+                proc = subprocess.run(
+                    ("readlink", sysnicpath),
+                    stdout=subprocess.PIPE,
+                    encoding="utf-8",
+                )
+                full_pci_address = proc.stdout.rstrip()
+                parent_name = None
+                for pci_addr, pf_name in vf_pci_to_pf_name.items():
+                    if pci_addr in full_pci_address:
+                        parent_name = pf_name
+                        break
+                if parent_name:
+                    pf_iface = self._ifaces[parent_name]
+                    if pf_iface.mtu < iface.mtu:
+                        raise NmstateValueError(
+                            f"SR-IOV VF {iface.name} has bigger "
+                            f"MTU({iface.mtu})than its parent PF {parent_name}"
+                            f" MTU({pf_iface.mtu})"
+                        )
 
     def _handle_master_slave_list_change(self):
         """
