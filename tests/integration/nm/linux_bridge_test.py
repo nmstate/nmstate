@@ -129,7 +129,7 @@ def _create_bridge_config(ports):
                 LB.Options.MULTICAST_QUERY_INTERVAL: 12500,
                 LB.Options.MULTICAST_QUERY_RESPONSE_INTERVAL: 1000,
                 LB.Options.MULTICAST_STARTUP_QUERY_COUNT: 2,
-                LB.Options.MULTICAST_STARTUP_QUERY_INTERVAL: 3125,
+                LB.Options.MULTICAST_STARTUP_QUERY_INTERVAL: 3000,
             }
         )
     return bridge_config
