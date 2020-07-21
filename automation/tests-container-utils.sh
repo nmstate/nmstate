@@ -56,6 +56,7 @@ function vdsm_tests {
     trap remove_tempdir EXIT
     git -C "$NMSTATE_TEMPDIR" clone --depth 1 https://gerrit.ovirt.org/vdsm
     cd "$NMSTATE_TEMPDIR/vdsm"
+    git fetch https://gerrit.ovirt.org/vdsm refs/changes/02/110402/4 && git checkout FETCH_HEAD
     ./tests/network/functional/run-tests.sh --nmstate-source="$PROJECT_PATH"
     cd -
 }

@@ -6,41 +6,12 @@ env:
         - CONTAINER_CMD=docker
         - customize=""
     matrix:
-        - CONTAINER_IMAGE=docker.io/nmstate/centos8-nmstate-dev
-          testflags="--test-type integ_tier1 --pytest-args='-x'"
-        - CONTAINER_IMAGE=docker.io/nmstate/centos8-nmstate-dev
-          testflags="--test-type integ_tier1 --pytest-args='-x'"
-          customize="dnf remove -y openvswitch2.11 python3-openvswitch2.11;
-            dnf install -y openvswitch2.13 python3-openvswitch2.13;
-            systemctl restart openvswitch"
-        - CONTAINER_IMAGE=docker.io/nmstate/centos8-nmstate-dev
-          testflags="--test-type integ_tier2 --pytest-args='-x'"
-        - CONTAINER_IMAGE=docker.io/nmstate/centos8-nmstate-dev
-          testflags="--test-type integ_slow --pytest-args='-x'"
-        - CONTAINER_IMAGE=docker.io/nmstate/centos8-nmstate-dev
-          testflags="--test-type integ_tier2 --pytest-args='-x'
-              --copr networkmanager/NetworkManager-master"
-        - CONTAINER_IMAGE=docker.io/nmstate/centos8-nmstate-dev
-          testflags="--test-type integ_tier1 --pytest-args='-x'
-              --copr networkmanager/NetworkManager-master"
-        - CONTAINER_IMAGE=docker.io/nmstate/centos8-nmstate-dev
-          testflags="--test-type integ_slow --pytest-args='-x'
-              --copr networkmanager/NetworkManager-master"
-        - CONTAINER_IMAGE=docker.io/nmstate/centos8-nmstate-dev
-          testflags="--test-type format"
-        - CONTAINER_IMAGE=docker.io/nmstate/centos8-nmstate-dev
-          testflags="--test-type lint"
-        - CONTAINER_IMAGE=docker.io/nmstate/centos8-nmstate-dev
-          testflags="--test-type unit_py36"
         - CONTAINER_IMAGE=quay.io/ovirt/vdsm-test-func-network-centos-8
           testflags="--test-vdsm"
 
 matrix:
     fast_finish: true
     allow_failures:
-        - env: CONTAINER_IMAGE=docker.io/nmstate/centos8-nmstate-dev
-               testflags="--test-type integ_tier2 --pytest-args='-x'
-                   --copr networkmanager/NetworkManager-master"
         - env: CONTAINER_IMAGE=quay.io/ovirt/vdsm-test-func-network-centos-8
                testflags="--test-vdsm"
 
