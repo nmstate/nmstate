@@ -27,8 +27,6 @@ from . import connection
 from .common import NM
 
 
-PORT_PROFILE_PREFIX = "ovs-port-"
-
 NM_OVS_VLAN_MODE_MAP = {
     "trunk": OB.Port.Vlan.Mode.TRUNK,
     "access": OB.Port.Vlan.Mode.ACCESS,
@@ -258,10 +256,13 @@ def _get_lag_info(port_name, port_setting, port_slave_names):
 
 def _get_bridge_options(context, bridge_device):
     bridge_options = {}
-    con = connection.ConnectionProfile(context)
-    con.import_by_device(bridge_device)
-    if con.profile:
-        bridge_setting = con.profile.get_setting(NM.SettingOvsBridge)
+    bridge_profile = None
+    act_conn = bridge_device.get_active_connection()
+    if act_conn:
+        bridge_profile = act_conn.props.connection
+
+    if bridge_profile:
+        bridge_setting = bridge_profile.get_setting(NM.SettingOvsBridge)
         bridge_options["stp"] = bridge_setting.props.stp_enable
         bridge_options["rstp"] = bridge_setting.props.rstp_enable
         bridge_options["fail-mode"] = bridge_setting.props.fail_mode or ""

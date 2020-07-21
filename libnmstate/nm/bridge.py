@@ -235,10 +235,11 @@ def get_slaves(nm_device):
 
 def _get_bridge_setting(context, nmdev):
     bridge_setting = None
-    bridge_con_profile = connection.ConnectionProfile(context)
-    bridge_con_profile.import_by_device(nmdev)
-    if bridge_con_profile.profile:
-        bridge_setting = bridge_con_profile.profile.get_setting_bridge()
+    act_conn = nmdev.get_active_connection()
+    if act_conn:
+        bridge_profile = act_conn.props.connection
+        if bridge_profile:
+            bridge_setting = bridge_profile.get_setting_bridge()
     return bridge_setting
 
 

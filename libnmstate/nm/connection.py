@@ -225,7 +225,7 @@ class ConnectionProfile:
 
             if is_activated(self._nm_ac, self._nm_dev):
                 self._ctx.finish_async(action)
-            elif self._is_activating():
+            elif is_activating(self._nm_ac, self._nm_dev):
                 self._wait_ac_activation(action)
                 if self._nm_dev:
                     self.wait_dev_activation(action)
@@ -324,7 +324,7 @@ class ConnectionProfile:
             )
             self._activation_clean_up()
             self._ctx.finish_async(action)
-        elif not self._is_activating():
+        elif not is_activating(self._nm_ac, self._nm_dev):
             reason = f"{self._nm_ac.get_state_reason()}"
             if self.nmdevice:
                 reason += f" {self.nmdevice.get_state_reason()}"
@@ -336,19 +336,6 @@ class ConnectionProfile:
     def _activation_clean_up(self):
         self._remove_ac_handlers()
         self._remove_dev_handlers()
-
-    def _is_activating(self):
-        if not self._nm_ac or not self._nm_dev:
-            return True
-        if (
-            self._nm_dev.get_state_reason()
-            == NM.DeviceStateReason.NEW_ACTIVATION
-        ):
-            return True
-
-        return (
-            self._nm_ac.get_state() == NM.ActiveConnectionState.ACTIVATING
-        ) and not is_activated(self._nm_ac, self._nm_dev)
 
     def _remove_dev_handlers(self):
         for handler_id in self._dev_handlers:
@@ -444,8 +431,8 @@ class ConnectionSetting:
 
         self._setting = con_setting
 
-    def import_by_profile(self, con_profile):
-        base = con_profile.profile.get_setting_connection()
+    def import_by_profile(self, profile):
+        base = profile.get_setting_connection()
         new = NM.SettingConnection.new()
         new.props.id = base.props.id
         new.props.interface_name = base.props.interface_name
@@ -520,3 +507,14 @@ def is_activated(nm_ac, nm_dev):
             )
 
     return False
+
+
+def is_activating(nm_ac, nm_dev):
+    if not nm_ac or not nm_dev:
+        return True
+    if nm_dev.get_state_reason() == NM.DeviceStateReason.NEW_ACTIVATION:
+        return True
+
+    return (
+        nm_ac.get_state() == NM.ActiveConnectionState.ACTIVATING
+    ) and not is_activated(nm_ac, nm_dev)

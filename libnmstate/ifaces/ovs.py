@@ -34,6 +34,7 @@ from .bridge import BridgeIface
 from .base_iface import BaseIface
 
 
+PORT_PROFILE_PREFIX = "ovs-port-"
 SYSTEMCTL_TIMEOUT_SECONDS = 5
 
 
@@ -260,3 +261,7 @@ def _convert_external_ids_values_to_string(iface_info):
     )
     for key, value in external_ids.items():
         external_ids[key] = str(value)
+
+
+def is_ovs_lag_port(port_state):
+    return port_state.get(OVSBridge.Port.LINK_AGGREGATION_SUBTREE) is not None

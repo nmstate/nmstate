@@ -22,6 +22,7 @@ from contextlib import contextmanager
 import pytest
 
 from libnmstate import nm
+from libnmstate.ifaces import ovs
 from libnmstate.nm.common import NM
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceType
@@ -149,9 +150,7 @@ def _bridge_interface(ctx, state):
         _delete_iface(ctx, BRIDGE0)
         for p in state[OB.CONFIG_SUBTREE][OB.PORT_SUBTREE]:
             if not p.get(OB.Port.LINK_AGGREGATION_SUBTREE):
-                _delete_iface(
-                    ctx, nm.ovs.PORT_PROFILE_PREFIX + p[OB.Port.NAME]
-                )
+                _delete_iface(ctx, ovs.PORT_PROFILE_PREFIX + p[OB.Port.NAME])
             _delete_iface(ctx, p[OB.Port.NAME])
 
 
@@ -188,7 +187,7 @@ def _attach_port_to_bridge(ctx, port_state):
     if lag_state:
         port_profile_name = port_name
     else:
-        port_profile_name = nm.ovs.PORT_PROFILE_PREFIX + port_name
+        port_profile_name = ovs.PORT_PROFILE_PREFIX + port_name
 
     _create_proxy_port(ctx, port_profile_name, port_state)
     if lag_state:

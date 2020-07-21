@@ -24,6 +24,8 @@ from libnmstate import iplib
 from libnmstate.dns import DnsState
 from libnmstate.error import NmstateInternalError
 from libnmstate.nm import active_connection as nm_ac
+from libnmstate.nm import ipv4
+from libnmstate.nm import ipv6
 from libnmstate.schema import DNS
 
 
@@ -122,3 +124,44 @@ def get_dns_config_iface_names(acs_and_ipv4_profiles, acs_and_ipv6_profiles):
         if ip_profile.props.dns or ip_profile.props.dns_search:
             iface_names.append(nm_ac.ActiveConnection(nm_ac_con=ac).devname)
     return iface_names
+
+
+def preapply_dns_fix_for_profiles(context, net_state):
+    """
+     * When DNS configuration does not changed and old interface hold DNS
+       configuration is not included in `ifaces_desired_state`, preserve
+       the old DNS configure by removing DNS metadata from
+       `ifaces_desired_state`.
+     * When DNS configuration changed, include old interface which is holding
+       DNS configuration, so it's DNS configure could be removed.
+    """
+    cur_dns_iface_names = get_dns_config_iface_names(
+        ipv4.acs_and_ip_profiles(context.client),
+        ipv6.acs_and_ip_profiles(context.client),
+    )
+
+    # Whether to mark interface as changed which is used for holding old DNS
+    # configurations
+    remove_existing_dns_config = False
+    # Whether to preserve old DNS config by DNS metadata to be removed from
+    # desired state
+    preserve_old_dns_config = False
+    if net_state.dns.config == net_state.dns.current_config:
+        for cur_dns_iface_name in cur_dns_iface_names:
+            iface = net_state.ifaces[cur_dns_iface_name]
+            if iface.is_changed or iface.is_desired:
+                remove_existing_dns_config = True
+        if not remove_existing_dns_config:
+            preserve_old_dns_config = True
+    else:
+        remove_existing_dns_config = True
+
+    if remove_existing_dns_config:
+        for cur_dns_iface_name in cur_dns_iface_names:
+            iface = net_state.ifaces[cur_dns_iface_name]
+            iface.mark_as_changed()
+
+    if preserve_old_dns_config:
+        for iface in net_state.ifaces.values():
+            if iface.is_changed or iface.is_desired:
+                iface.remove_dns_metadata()

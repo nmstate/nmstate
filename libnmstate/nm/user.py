@@ -23,7 +23,6 @@ https://lazka.github.io/pgi-docs/#NM-1.0/classes/SettingUser.html
 """
 
 from libnmstate.error import NmstateValueError
-from libnmstate.nm import connection as nm_connection
 from .common import NM
 
 NMSTATE_DESCRIPTION = "nmstate.interface.description"
@@ -58,14 +57,15 @@ def get_info(context, device):
     Get description from user settings for a connection
     """
     info = {}
-
-    connection = nm_connection.ConnectionProfile(context)
-    connection.import_by_device(device)
-    if not connection.profile:
+    user_profile = None
+    act_conn = device.get_active_connection()
+    if act_conn:
+        user_profile = act_conn.props.connection
+    if not user_profile:
         return info
 
     try:
-        user_setting = connection.profile.get_setting_by_name(
+        user_setting = user_profile.get_setting_by_name(
             NM.SETTING_USER_SETTING_NAME
         )
         description = user_setting.get_data(NMSTATE_DESCRIPTION)

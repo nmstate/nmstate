@@ -43,12 +43,12 @@ from . import vlan as nm_vlan
 from . import vxlan as nm_vxlan
 from . import team as nm_team
 from . import dns as nm_dns
-from . import applier as nm_applier
 from .checkpoint import CheckPoint
 from .checkpoint import get_checkpoints
 from .common import NM
 from .context import NmContext
 from .profile import get_all_applied_configs
+from .profile import NmProfiles
 
 
 class NetworkManagerPlugin(NmstatePlugin):
@@ -183,7 +183,7 @@ class NetworkManagerPlugin(NmstatePlugin):
         self._ctx.refresh_content()
 
     def apply_changes(self, net_state, save_to_disk):
-        nm_applier.apply_changes(self.context, net_state, save_to_disk)
+        NmProfiles(self.context, save_to_disk).apply_config(net_state)
 
     def _load_checkpoint(self, checkpoint_path):
         if checkpoint_path:
