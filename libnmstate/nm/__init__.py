@@ -17,7 +17,6 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
-from . import applier
 from . import bond
 from . import bridge
 from . import checkpoint
@@ -27,6 +26,7 @@ from . import dns
 from . import ipv4
 from . import ipv6
 from . import ovs
+from . import profile
 from . import translator
 from . import user
 from . import vlan
@@ -34,7 +34,6 @@ from . import wired
 from .plugin import NetworkManagerPlugin
 
 
-applier
 bond
 bridge
 checkpoint
@@ -44,6 +43,7 @@ dns
 ipv4
 ipv6
 ovs
+profile
 translator
 user
 vlan

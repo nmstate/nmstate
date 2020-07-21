@@ -160,22 +160,23 @@ def _create_route_rule(ip_from, ip_to, priority, table):
 
 
 def _modify_interface(ctx, ipv4_state, ipv6_state):
-    conn = nm.connection.ConnectionProfile(ctx)
-    conn.import_by_id(ETH1)
+    conn = nm.profile.NmProfile(ctx, True)
+    conn._import_existing_profile(ETH1)
     settings = _create_iface_settings(conn, ipv4_state, ipv6_state)
-    new_conn = nm.connection.ConnectionProfile(ctx)
 
     with main_context(ctx):
-        new_conn.create(settings)
-        conn.update(new_conn)
+        conn._simple_conn = nm.connection.create_new_simple_connection(
+            settings
+        )
         ctx.wait_all_finish()
-        nmdev = ctx.get_nm_dev(ETH1)
-        nm.device.modify(ctx, nmdev, new_conn.profile)
+        conn._update()
+        ctx.wait_all_finish()
+        nm.device.modify(ctx, conn)
 
 
 def _create_iface_settings(con_profile, ipv4_state, ipv6_state):
     con_setting = nm.connection.ConnectionSetting()
-    con_setting.import_by_profile(con_profile)
+    con_setting.import_by_profile(con_profile.profile)
 
     ipv4_setting = nm.ipv4.create_setting(ipv4_state, None)
     ipv6_setting = nm.ipv6.create_setting(ipv6_state, None)

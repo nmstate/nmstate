@@ -57,9 +57,9 @@ def test_is_ovs_interface_type_id(NM_mock):
     assert nm.ovs.is_ovs_interface_type_id(type_id)
 
 
-def test_get_ovs_info_without_ports(context_mock, nm_connection_mock, NM_mock):
+def test_get_ovs_info_without_ports(context_mock, NM_mock):
     bridge_device = mock.MagicMock()
-    _mock_port_profile(nm_connection_mock)
+    _mock_port_profile(NM_mock, bridge_device)
 
     device_info = [(bridge_device, None)]
     info = nm.ovs.get_ovs_info(context_mock, bridge_device, device_info)
@@ -81,7 +81,7 @@ def test_get_ovs_info_with_ports_without_interfaces(
 ):
     bridge_device = mock.MagicMock()
     port_device = mock.MagicMock()
-    _mock_port_profile(nm_connection_mock)
+    _mock_port_profile(NM_mock, bridge_device)
     active_con = nm_connection_mock.get_device_active_connection.return_value
     active_con.props.master = bridge_device
 
@@ -108,7 +108,7 @@ def test_get_ovs_info_with_ports_with_interfaces(
     bridge_active_con = mock.MagicMock()
     port_active_con = mock.MagicMock()
     context_mock.get_nm_dev.return_value = port_device
-    _mock_port_profile(nm_connection_mock)
+    _mock_port_profile(NM_mock, bridge_device)
     nm_connection_mock.get_device_active_connection = (
         lambda dev: bridge_active_con
         if dev == bridge_device
@@ -175,10 +175,10 @@ def test_create_port_setting(NM_mock):
     assert port_setting.props.vlan_mode == vlan_mode
 
 
-def _mock_port_profile(nm_connection_mock):
-    con_prof_mock = nm_connection_mock.ConnectionProfile.return_value
-    connection_profile = con_prof_mock.profile
-    bridge_setting = connection_profile.get_setting.return_value
+def _mock_port_profile(NM_mock, bridge_device):
+    act_con = bridge_device.get_active_connection.return_value
+    conn = act_con.props.connection
+    bridge_setting = conn.get_setting.return_value
     bridge_setting.props.stp_enable = False
     bridge_setting.props.rstp_enable = False
     bridge_setting.props.fail_mode = None

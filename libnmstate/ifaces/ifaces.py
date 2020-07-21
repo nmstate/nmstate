@@ -271,6 +271,10 @@ class Ifaces:
         for iface in self._ifaces.values():
             yield iface
 
+    def update(self, ifaces):
+        if ifaces:
+            self._ifaces.update(ifaces)
+
     @property
     def current_ifaces(self):
         return self._cur_ifaces

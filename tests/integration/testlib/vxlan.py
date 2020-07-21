@@ -52,6 +52,7 @@ class VxlanState:
     def absent(self):
         return {
             Interface.NAME: self.name,
+            Interface.TYPE: VXLAN.TYPE,
             Interface.STATE: InterfaceState.ABSENT,
         }
 

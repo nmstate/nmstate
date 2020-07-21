@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2019 Red Hat, Inc.
+# Copyright (c) 2018-2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -29,24 +29,9 @@ def client_mock():
 
 
 @pytest.fixture()
-def con_profile_mock():
-    with mock.patch.object(nm.device.connection, "ConnectionProfile") as m:
-        yield m
-
-
-@pytest.fixture()
 def act_con_mock():
     with mock.patch.object(nm.device.ac, "ActiveConnection") as m:
         yield m
-
-
-def test_activate(client_mock, con_profile_mock):
-    dev = mock.MagicMock()
-    con_profile = con_profile_mock(client_mock)
-
-    nm.device.activate(client_mock, dev)
-
-    con_profile.activate.assert_called_once()
 
 
 def test_deactivate(client_mock, act_con_mock):
@@ -57,16 +42,6 @@ def test_deactivate(client_mock, act_con_mock):
 
     assert act_con.nmdevice == dev
     act_con.deactivate.assert_called_once()
-
-
-def test_delete(client_mock, con_profile_mock):
-    dev = mock.MagicMock()
-    dev.get_available_connections.return_value = [mock.MagicMock()]
-    con_profile = con_profile_mock(client_mock)
-
-    nm.device.delete(client_mock, dev)
-
-    con_profile.delete.assert_called_once()
 
 
 def test_list_devices(client_mock):

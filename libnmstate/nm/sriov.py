@@ -74,9 +74,11 @@ def create_setting(context, iface_state, base_con_profile):
                 f"Interface '{ifname}' does not support SR-IOV"
             )
 
-        sriov_setting = base_con_profile.get_setting_duplicate(
+        sriov_setting = base_con_profile.get_setting_by_name(
             NM.SETTING_SRIOV_SETTING_NAME
         )
+        if sriov_setting:
+            sriov_setting = sriov_setting.duplicate()
         if not sriov_setting:
             sriov_setting = NM.SettingSriov.new()
 

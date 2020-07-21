@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019 Red Hat, Inc.
+# Copyright (c) 2019-2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -64,11 +64,11 @@ def _create_vxlan_state(eth1_up):
 
 @contextmanager
 def _vxlan_interface(ctx, state):
-    _create_vxlan(ctx, state)
+    con_profile = _create_vxlan(ctx, state)
     try:
         yield state
     finally:
-        _delete_vxlan(ctx, _vxlan_ifname(state))
+        _delete_vxlan(ctx, con_profile)
 
 
 def _create_vxlan(ctx, vxlan_desired_state):
@@ -84,22 +84,23 @@ def _create_vxlan(ctx, vxlan_desired_state):
     )
     ipv4_setting = nm.ipv4.create_setting({}, None)
     ipv6_setting = nm.ipv6.create_setting({}, None)
-    con_profile = nm.connection.ConnectionProfile(ctx)
-    con_profile.create(
+    con_profile = nm.profile.NmProfile(ctx, True)
+    con_profile._simple_conn = nm.connection.create_new_simple_connection(
         (con_setting.setting, vxlan_setting, ipv4_setting, ipv6_setting)
     )
     with main_context(ctx):
-        con_profile.add()
+        con_profile._add()
         ctx.wait_all_finish()
-        nm.device.activate(ctx, connection_id=ifname)
+        con_profile.activate()
+
+    return con_profile
 
 
-def _delete_vxlan(ctx, devname):
-    nmdev = ctx.get_nm_dev(devname)
+def _delete_vxlan(ctx, con_profile):
     with main_context(ctx):
-        nm.device.deactivate(ctx, nmdev)
-        nm.device.delete(ctx, nmdev)
-        nm.device.delete_device(ctx, nmdev)
+        nm.device.deactivate(ctx, con_profile.nmdev)
+        con_profile.delete()
+        nm.device.delete_device(ctx, con_profile.nmdev)
 
 
 def _get_vxlan_current_state(ifname):

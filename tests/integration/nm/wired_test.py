@@ -59,16 +59,14 @@ def test_interface_mac_change_with_modify(eth1_up, nm_plugin):
 
 
 def _modify_interface(ctx, wired_state):
-    conn = nm.connection.ConnectionProfile(ctx)
-    conn.import_by_id(ETH1)
+    conn = nm.profile.NmProfile(ctx, True)
+    conn._import_existing_profile(ETH1)
     settings = _create_iface_settings(wired_state, conn)
-    new_conn = nm.connection.ConnectionProfile(ctx)
+    conn._simple_conn = nm.connection.create_new_simple_connection(settings)
     with main_context(ctx):
-        new_conn.create(settings)
-        conn.update(new_conn)
+        conn._update()
         ctx.wait_all_finish()
-        nmdev = ctx.get_nm_dev(ETH1)
-        nm.device.modify(ctx, nmdev, new_conn.profile)
+        nm.device.modify(ctx, conn)
 
 
 def _get_wired_current_state(ifname):
@@ -81,7 +79,7 @@ def _get_wired_current_state(ifname):
 
 def _create_iface_settings(wired_state, con_profile):
     con_setting = nm.connection.ConnectionSetting()
-    con_setting.import_by_profile(con_profile)
+    con_setting.import_by_profile(con_profile.profile)
 
     wired_setting = nm.wired.create_setting(wired_state, con_profile.profile)
     ipv4_setting = nm.ipv4.create_setting({}, None)

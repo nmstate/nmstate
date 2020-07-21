@@ -20,14 +20,21 @@
 import logging
 from operator import itemgetter
 
+from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceType
 from libnmstate.schema import OVSBridge as OB
 from libnmstate.schema import OVSInterface
+from libnmstate.ifaces import ovs
+from libnmstate.ifaces.bridge import BridgeIface
 
 from . import connection
 from .common import NM
 
 
 PORT_PROFILE_PREFIX = "ovs-port-"
+
+MASTER_TYPE_METADATA = "_master_type"
+MASTER_METADATA = "_master"
 
 NM_OVS_VLAN_MODE_MAP = {
     "trunk": OB.Port.Vlan.Mode.TRUNK,
@@ -258,10 +265,13 @@ def _get_lag_info(port_name, port_setting, port_slave_names):
 
 def _get_bridge_options(context, bridge_device):
     bridge_options = {}
-    con = connection.ConnectionProfile(context)
-    con.import_by_device(bridge_device)
-    if con.profile:
-        bridge_setting = con.profile.get_setting(NM.SettingOvsBridge)
+    bridge_profile = None
+    act_conn = bridge_device.get_active_connection()
+    if act_conn:
+        bridge_profile = act_conn.props.connection
+
+    if bridge_profile:
+        bridge_setting = bridge_profile.get_setting(NM.SettingOvsBridge)
         bridge_options["stp"] = bridge_setting.props.stp_enable
         bridge_options["rstp"] = bridge_setting.props.rstp_enable
         bridge_options["fail-mode"] = bridge_setting.props.fail_mode or ""
@@ -281,3 +291,46 @@ def _get_slave_profiles(master_device, devices_info):
             if master and (master.get_iface() == master_device.get_iface()):
                 slave_profiles.append(active_con.props.connection)
     return slave_profiles
+
+
+def create_ovs_proxy_iface_info(iface):
+    """
+        Prepare the state of the "proxy" interface. These are interfaces that
+        exist as NM entities/profiles, but are invisible to the API.
+        These proxy interfaces state is created as a side effect of other
+        ifaces definition.
+        In OVS case, the port profile is the proxy, it is not part of the
+        public state of the system, but internal to the NM provider.
+        """
+    iface_info = iface.to_dict()
+    master_type = iface_info.get(MASTER_TYPE_METADATA)
+    if master_type != InterfaceType.OVS_BRIDGE:
+        return None
+    port_opts_metadata = iface_info.get(BridgeIface.BRPORT_OPTIONS_METADATA)
+    if port_opts_metadata is None:
+        return None
+    port_iface_desired_state = _create_ovs_port_iface_desired_state(
+        port_opts_metadata, iface, iface_info
+    )
+    # The "visible" slave/interface needs to point to the port profile
+    iface.set_master(
+        port_iface_desired_state[Interface.NAME], InterfaceType.OVS_PORT
+    )
+
+    return port_iface_desired_state
+
+
+def _create_ovs_port_iface_desired_state(port_options, iface, iface_info):
+    iface_name = iface.name
+    if ovs.is_ovs_lag_port(port_options):
+        port_name = port_options[OB.Port.NAME]
+    else:
+        port_name = PORT_PROFILE_PREFIX + iface_name
+    return {
+        Interface.NAME: port_name,
+        Interface.TYPE: InterfaceType.OVS_PORT,
+        Interface.STATE: iface_info[Interface.STATE],
+        OB.OPTIONS_SUBTREE: port_options,
+        MASTER_METADATA: iface_info[MASTER_METADATA],
+        MASTER_TYPE_METADATA: iface_info[MASTER_TYPE_METADATA],
+    }

@@ -52,11 +52,12 @@ def _vlan_is_absent(vlan_desired_state):
 
 @contextmanager
 def _vlan_interface(ctx, state):
+    profile = None
     try:
-        _create_vlan(ctx, state)
+        profile = _create_vlan(ctx, state)
         yield
     finally:
-        _delete_vlan(ctx, _get_vlan_ifname(state))
+        _delete_vlan(ctx, profile)
 
 
 def _get_vlan_current_state(vlan_desired_state):
@@ -84,21 +85,15 @@ def _create_vlan(ctx, vlan_desired_state):
     ipv4_setting = nm.ipv4.create_setting({}, None)
     ipv6_setting = nm.ipv6.create_setting({}, None)
     with main_context(ctx):
-        con_profile = nm.connection.ConnectionProfile(ctx)
-        con_profile.create(
+        con_profile = nm.profile.NmProfile(ctx, True)
+        con_profile._simple_conn = nm.connection.create_new_simple_connection(
             (con_setting.setting, vlan_setting, ipv4_setting, ipv6_setting)
         )
-        con_profile.add()
+        con_profile._add()
         ctx.wait_all_finish()
-        nm.device.activate(ctx, connection_id=ifname)
-
-
-def _delete_vlan(ctx, devname):
-    nmdev = ctx.get_nm_dev(devname)
-    with main_context(ctx):
-        nm.device.deactivate(ctx, nmdev)
+        con_profile.activate()
         ctx.wait_all_finish()
-        nm.device.delete(ctx, nmdev)
+        return con_profile
 
 
 def _get_vlan_ifname(state):
@@ -107,3 +102,11 @@ def _get_vlan_ifname(state):
         + "."
         + str(state[VLAN.CONFIG_SUBTREE][VLAN.ID])
     )
+
+
+def _delete_vlan(ctx, profile):
+    with main_context(ctx):
+        if profile:
+            nm.device.deactivate(ctx, profile.nmdev)
+            ctx.wait_all_finish()
+            profile.delete()

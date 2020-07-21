@@ -41,9 +41,11 @@ def create_setting(iface_state, base_con_profile):
         return None
 
     if base_con_profile:
-        team_setting = base_con_profile.get_setting_duplicate(
+        team_setting = base_con_profile.get_setting_by_name(
             NM.SETTING_TEAM_SETTING_NAME
         )
+        if team_setting:
+            team_setting = team_setting.duplicate()
 
     if not team_setting:
         team_setting = NM.SettingTeam.new()
