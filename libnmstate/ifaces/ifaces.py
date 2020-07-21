@@ -19,6 +19,7 @@
 
 import logging
 
+from libnmstate.error import NmstateKernelIntegerRoundedError
 from libnmstate.error import NmstateValueError
 from libnmstate.error import NmstateVerificationError
 from libnmstate.prettystate import format_desired_current_state_diff
@@ -302,6 +303,21 @@ class Ifaces:
                             )
                         )
                     elif not iface.match(cur_iface):
+                        if iface.type == InterfaceType.LINUX_BRIDGE:
+                            (
+                                key,
+                                value,
+                                cur_value,
+                            ) = LinuxBridgeIface.is_integer_rounded(
+                                iface, cur_iface
+                            )
+                            if key:
+                                raise NmstateKernelIntegerRoundedError(
+                                    "Linux kernel configured with 250 HZ "
+                                    "will round up/down the integer in linux "
+                                    f"bridge {iface.name} option '{key}' "
+                                    f"from {value} to {cur_value}."
+                                )
                         raise NmstateVerificationError(
                             format_desired_current_state_diff(
                                 iface.state_for_verify(),

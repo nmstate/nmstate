@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019 Red Hat, Inc.
+# Copyright (c) 2019-2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -74,6 +74,17 @@ class NmstateVerificationError(NmstateError):
     """
     After applied desired state, current state does not match desired state for
     unknown reason.
+    """
+
+    pass
+
+
+class NmstateKernelIntegerRoundedError(NmstateVerificationError):
+    """
+    After applied desired state, current state does not match desire state
+    due to integer been rounded by kernel.
+    For example, with HZ configured as 250 in kernel, the linux bridge option
+    multicast_startup_query_interval, 3125 will be rounded to 3124.
     """
 
     pass
