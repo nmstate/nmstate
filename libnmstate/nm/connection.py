@@ -22,6 +22,7 @@ import uuid
 
 from libnmstate.error import NmstateLibnmError
 from libnmstate.error import NmstateInternalError
+from libnmstate.error import NmstateValueError
 
 from .common import NM
 from . import ipv4
@@ -324,6 +325,18 @@ class ConnectionProfile:
             )
             self._activation_clean_up()
             self._ctx.finish_async(action)
+        elif (
+            not self._is_activating()
+            and self._is_sriov_parameter_not_supported_by_driver()
+        ):
+            reason = (
+                f"The device={self.devname} does not support one or "
+                "more of the SR-IOV parameters set."
+            )
+            self._activation_clean_up()
+            self._ctx.fail(
+                NmstateValueError(f"{action} failed: reason={reason}")
+            )
         elif not self._is_activating():
             reason = f"{self._nm_ac.get_state_reason()}"
             if self.nmdevice:
@@ -332,6 +345,13 @@ class ConnectionProfile:
             self._ctx.fail(
                 NmstateLibnmError(f"{action} failed: reason={reason}")
             )
+
+    def _is_sriov_parameter_not_supported_by_driver(self):
+        return (
+            self.nmdevice
+            and self.nmdevice.props.state_reason
+            == NM.DeviceStateReason.SRIOV_CONFIGURATION_FAILED
+        )
 
     def _activation_clean_up(self):
         self._remove_ac_handlers()
