@@ -657,3 +657,35 @@ def test_linux_bridge_option_integer_rounded_on_ubuntu_kernel(
 
     with pytest.raises(NmstateKernelIntegerRoundedError):
         libnmstate.apply(desired_state)
+
+
+@pytest.mark.tier1
+def test_moving_ports_from_absent_interface(bridge0_with_port0):
+    iface_state = bridge0_with_port0[Interface.KEY][0]
+    iface_state[Interface.NAME] = "linux-br1"
+
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                iface_state,
+                {
+                    Interface.NAME: TEST_BRIDGE0,
+                    Interface.STATE: InterfaceState.ABSENT,
+                },
+            ]
+        }
+    )
+
+    assertlib.assert_state_match({Interface.KEY: [iface_state]})
+    assertlib.assert_absent(TEST_BRIDGE0)
+
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: "linux-br1",
+                    Interface.STATE: InterfaceState.ABSENT,
+                },
+            ]
+        }
+    )
