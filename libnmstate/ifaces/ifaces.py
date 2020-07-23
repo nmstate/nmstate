@@ -220,12 +220,24 @@ class Ifaces:
                     self._ifaces[slave_name].mark_as_changed()
 
     def _match_child_iface_state_with_parent(self):
+        """
+        Handles these use cases:
+            * When changed/desired parent interface is up, child is not
+              desired to be any state, set child as UP.
+            * When changed/desired parent interface is marked as down or
+              absent, child state should sync with parent.
+        """
         for iface in self._ifaces.values():
             if iface.parent and self._ifaces.get(iface.parent):
                 parent_iface = self._ifaces[iface.parent]
                 if parent_iface.is_desired or parent_iface.is_changed:
-                    iface.state = parent_iface.state
-                    iface.mark_as_changed()
+                    if (
+                        Interface.STATE not in iface.original_dict
+                        or parent_iface.is_down
+                        or parent_iface.is_absent
+                    ):
+                        iface.state = parent_iface.state
+                        iface.mark_as_changed()
 
     def _mark_orphen_as_absent(self):
         for iface in self._ifaces.values():
@@ -294,7 +306,18 @@ class Ifaces:
         )
         for iface in self._ifaces.values():
             if iface.is_desired:
-                if iface.is_up or (iface.is_down and not iface.is_virtual):
+                if iface.is_virtual and iface.original_dict.get(
+                    Interface.STATE
+                ) in (InterfaceState.DOWN, InterfaceState.ABSENT):
+                    cur_iface = cur_ifaces.get(iface.name)
+                    if cur_iface:
+                        raise NmstateVerificationError(
+                            format_desired_current_state_diff(
+                                iface.original_dict,
+                                cur_iface.state_for_verify(),
+                            )
+                        )
+                elif iface.is_up or (iface.is_down and not iface.is_virtual):
                     cur_iface = cur_ifaces.get(iface.name)
                     if not cur_iface:
                         raise NmstateVerificationError(
