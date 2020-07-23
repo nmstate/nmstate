@@ -413,10 +413,12 @@ class Ifaces:
             for slave_name in iface.slaves:
                 cur_master = slave_master_map.get(slave_name)
                 if cur_master:
-                    raise NmstateValueError(
-                        f"Interface {iface.name} slave {slave_name} is "
-                        f"already enslaved by interface {cur_master}"
-                    )
+                    cur_master_iface = self._ifaces.get(cur_master)
+                    if cur_master_iface and not cur_master_iface.is_absent:
+                        raise NmstateValueError(
+                            f"Interface {iface.name} slave {slave_name} is "
+                            f"already enslaved by interface {cur_master}"
+                        )
                 else:
                     slave_master_map[slave_name] = iface.name
 
