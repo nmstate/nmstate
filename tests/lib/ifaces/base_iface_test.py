@@ -24,6 +24,7 @@ import pytest
 from libnmstate.error import NmstateInternalError
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv6
+from libnmstate.schema import InterfaceState
 
 from libnmstate.ifaces.base_iface import BaseIface
 from ..testlib.constants import MAC_ADDRESS1
@@ -71,6 +72,19 @@ class TestBaseIface:
         assert des_info == ori_des_info
         assert cur_iface.to_dict() == ori_cur_info
         assert des_iface.to_dict() == expected_info
+
+    def test_do_not_merge_down_state_from_current(self):
+        iface_info = gen_foo_iface_info()
+        cur_iface_info = gen_foo_iface_info()
+        iface_info.pop(Interface.STATE)
+        cur_iface_info[Interface.STATE] = InterfaceState.DOWN
+
+        iface = BaseIface(iface_info)
+        cur_iface = BaseIface(cur_iface_info)
+
+        iface.merge(cur_iface)
+
+        assert iface.is_up
 
     def test_capitalize_mac(self):
         iface_info = gen_foo_iface_info()

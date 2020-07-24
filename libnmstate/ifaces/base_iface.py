@@ -220,6 +220,12 @@ class BaseIface:
 
     def merge(self, other):
         merge_dict(self._info, other._info)
+        # If down state is not from orignal state, set it as UP.
+        if (
+            Interface.STATE not in self._origin_info
+            and self.state == InterfaceState.DOWN
+        ):
+            self._info[Interface.STATE] = InterfaceState.UP
 
     def _validate_slave_ip(self):
         for family in (Interface.IPV4, Interface.IPV6):
