@@ -46,6 +46,8 @@ from .testlib.bridgelib import add_port_to_bridge
 from .testlib.bridgelib import create_bridge_subtree_state
 from .testlib.bridgelib import linux_bridge
 from .testlib.retry import retry_till_true_or_timeout
+from .testlib.veth import create_veth_pair
+from .testlib.veth import remove_veth_pair
 
 ETH1 = "eth1"
 
@@ -70,6 +72,7 @@ TEST_BRIDGE_NIC = "brtest0"
 
 DHCP_SRV_NIC = "dhcpsrv"
 DHCP_CLI_NIC = "dhcpcli"
+DHCP_SRV_NS = "nmstate_dhcp_test"
 DHCP_SRV_IP4 = IPV4_ADDRESS1
 DHCP_SRV_IP6 = IPV6_ADDRESS1
 DHCP_SRV_IP6_2 = "{}::1".format(IPV6_CLASSLESS_ROUTE_PREFIX)
@@ -110,13 +113,6 @@ DNSMASQ_CONF_PATH = "/etc/dnsmasq.d/nmstate.conf"
 # Have to read NetworkManager internal resolv.conf
 RESOLV_CONF_PATH = "/var/run/NetworkManager/resolv.conf"
 
-SYSFS_DISABLE_IPV6_FILE = "/proc/sys/net/ipv6/conf/{}/disable_ipv6".format(
-    DHCP_SRV_NIC
-)
-SYSFS_DISABLE_RA_SRV = "/proc/sys/net/ipv6/conf/{}/accept_ra".format(
-    DHCP_SRV_NIC
-)
-
 parametrize_ip_ver = pytest.mark.parametrize(
     "ip_ver",
     [(Interface.IPV4,), (Interface.IPV6,), (Interface.IPV4, Interface.IPV6)],
@@ -127,12 +123,16 @@ parametrize_ip_ver = pytest.mark.parametrize(
 @pytest.fixture(scope="module")
 def dhcp_env():
     try:
-        _create_veth_pair()
+        create_veth_pair(DHCP_CLI_NIC, DHCP_SRV_NIC, DHCP_SRV_NS)
         _setup_dhcp_nics()
 
         with open(DNSMASQ_CONF_PATH, "w") as fd:
             fd.write(DNSMASQ_CONF_STR)
-        assert cmdlib.exec_cmd(["systemctl", "restart", "dnsmasq"])[0] == 0
+        cmdlib.exec_cmd(
+            f"ip netns exec {DHCP_SRV_NS} "
+            f"dnsmasq -C {DNSMASQ_CONF_PATH}".split(),
+            check=True,
+        )
 
         yield
     finally:
@@ -592,90 +592,42 @@ def test_ipv6_autoconf_only(dhcpcli_up):
     libnmstate.apply(desired_state)
 
 
-def _create_veth_pair():
-    assert (
-        cmdlib.exec_cmd(
-            [
-                "ip",
-                "link",
-                "add",
-                DHCP_SRV_NIC,
-                "type",
-                "veth",
-                "peer",
-                "name",
-                DHCP_CLI_NIC,
-            ]
-        )[0]
-        == 0
-    )
-
-
-def _remove_veth_pair():
-    cmdlib.exec_cmd(["ip", "link", "del", "dev", DHCP_SRV_NIC])
-
-
 def _setup_dhcp_nics():
-    assert cmdlib.exec_cmd(["ip", "link", "set", DHCP_SRV_NIC, "up"])[0] == 0
-    assert cmdlib.exec_cmd(["ip", "link", "set", DHCP_CLI_NIC, "up"])[0] == 0
-    assert (
-        cmdlib.exec_cmd(
-            [
-                "ip",
-                "addr",
-                "add",
-                "{}/24".format(DHCP_SRV_IP4),
-                "dev",
-                DHCP_SRV_NIC,
-            ]
-        )[0]
-        == 0
-    )
-    assert (
-        cmdlib.exec_cmd(
-            ["nmcli", "device", "set", DHCP_CLI_NIC, "managed", "yes"]
-        )[0]
-        == 0
+    cmdlib.exec_cmd(
+        f"ip netns exec {DHCP_SRV_NS} "
+        f"ip addr add {DHCP_SRV_IP4}/24 dev {DHCP_SRV_NIC}".split(),
+        check=True,
     )
     # This stop dhcp server NIC get another IPv6 address from dnsmasq.
-    with open(SYSFS_DISABLE_RA_SRV, "w") as fd:
-        fd.write("0")
-
-    with open(SYSFS_DISABLE_IPV6_FILE, "w") as fd:
-        fd.write("0")
-
-    assert (
-        cmdlib.exec_cmd(
-            [
-                "ip",
-                "addr",
-                "add",
-                "{}/64".format(DHCP_SRV_IP6),
-                "dev",
-                DHCP_SRV_NIC,
-            ]
-        )[0]
-        == 0
+    cmdlib.exec_cmd(
+        f"ip netns exec {DHCP_SRV_NS} "
+        f"sysctl -w net.ipv6.conf.{DHCP_SRV_NIC}.accept_ra=0".split(),
+        check=True,
     )
 
-    assert (
-        cmdlib.exec_cmd(
-            [
-                "ip",
-                "addr",
-                "add",
-                "{}/64".format(DHCP_SRV_IP6_2),
-                "dev",
-                DHCP_SRV_NIC,
-            ]
-        )[0]
-        == 0
+    cmdlib.exec_cmd(
+        f"ip netns exec {DHCP_SRV_NS} "
+        f"sysctl -w net.ipv6.conf.{DHCP_SRV_NIC}.disable_ipv6=0".split(),
+        check=True,
+    )
+
+    cmdlib.exec_cmd(
+        f"ip netns exec {DHCP_SRV_NS} "
+        f"ip addr add {DHCP_SRV_IP6}/64 dev {DHCP_SRV_NIC}".split(),
+        check=True,
+    )
+
+    cmdlib.exec_cmd(
+        f"ip netns exec {DHCP_SRV_NS} "
+        f"ip addr add {DHCP_SRV_IP6_2}/64 dev {DHCP_SRV_NIC}".split(),
+        check=True,
     )
 
 
 def _clean_up():
-    cmdlib.exec_cmd(["systemctl", "stop", "dnsmasq"])
-    _remove_veth_pair()
+    dnsmasq_pid = cmdlib.exec_cmd(["pidof", "dnsmasq"])[1]
+    cmdlib.exec_cmd(["kill", dnsmasq_pid.strip()])
+    remove_veth_pair(DHCP_CLI_NIC, DHCP_SRV_NS)
     try:
         os.unlink(DNSMASQ_CONF_PATH)
     except (FileNotFoundError, OSError):
