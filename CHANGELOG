@@ -1,4 +1,16 @@
 # Changelog
+## [0.3.4] - 2020-07-24
+### Bug fixes
+ - Fix removing te DNS config.
+ - Fix Linux Bridge integer option round up/down on 250HZ kernel.
+ - Fix removing child interface.
+ - Linux Bridge: Fix support replacing unmanaged ports.
+ - SR-IOV: Raise an exception if the driver does not support a parameter.
+ - Fix moving subordination from removed interface to new main interface.
+
+### Breaking changes
+ - NetworkManager 1.26.0 or greater is now required.
+
 ## [0.3.3] - 2020-07-02
 ### Bug fixes
  - VLAN: Raise an error when VLAN MTU is greater than the base interface MTU.
