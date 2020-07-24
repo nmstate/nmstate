@@ -31,9 +31,14 @@ from .testlib import assertlib
 from .testlib import cmdlib
 from .testlib import ifacelib
 from .testlib import statelib
+from .testlib.veth import create_veth_pair
+from .testlib.veth import remove_veth_pair
 
 
 LLDPTEST = "lldptest"
+LLDPTEST_PEER = "lldptest.peer"
+
+LLDP_TEST_NS = "nmstate_lldp_test"
 
 LLDP_SYSTEM_DESC = (
     "Summit300-48 - Version 7.4e.1 (Build 5) by Release_Master "
@@ -118,10 +123,10 @@ LLDP_TEST_SYSTEM_NAME = "Summit300-48"
 @pytest.fixture(scope="module")
 def lldpiface_env():
     try:
-        _create_veth_pair()
+        create_veth_pair(LLDPTEST, LLDPTEST_PEER, LLDP_TEST_NS)
         yield
     finally:
-        _remove_veth_pair()
+        remove_veth_pair(LLDPTEST, LLDP_TEST_NS)
 
 
 @pytest.fixture
@@ -140,8 +145,8 @@ def test_lldp_yaml(lldptest_up):
         _send_lldp_packet()
         dstate = statelib.show_only((LLDPTEST,))
         lldp_config = dstate[Interface.KEY][0][LLDP.CONFIG_SUBTREE]
-        test_neighbor = _get_lldp_test(lldp_config[LLDP.NEIGHBORS_SUBTREE])
-
+        assert len(lldp_config[LLDP.NEIGHBORS_SUBTREE]) == 1
+        test_neighbor = lldp_config[LLDP.NEIGHBORS_SUBTREE][0]
         assert test_neighbor == yaml.safe_load(EXPECTED_LLDP_NEIGHBOR)
 
 
@@ -150,7 +155,8 @@ def test_lldp_system(lldptest_up):
         _send_lldp_packet()
         dstate = statelib.show_only((LLDPTEST,))
         lldp_config = dstate[Interface.KEY][0][LLDP.CONFIG_SUBTREE]
-        test_neighbor = _get_lldp_test(lldp_config[LLDP.NEIGHBORS_SUBTREE])
+        assert len(lldp_config[LLDP.NEIGHBORS_SUBTREE]) == 1
+        test_neighbor = lldp_config[LLDP.NEIGHBORS_SUBTREE][0]
 
         seen = set()
         for tlv in test_neighbor:
@@ -169,7 +175,8 @@ def test_lldp_chassis(lldptest_up):
         _send_lldp_packet()
         dstate = statelib.show_only((LLDPTEST,))
         lldp_config = dstate[Interface.KEY][0][LLDP.CONFIG_SUBTREE]
-        test_neighbor = _get_lldp_test(lldp_config[LLDP.NEIGHBORS_SUBTREE])
+        assert len(lldp_config[LLDP.NEIGHBORS_SUBTREE]) == 1
+        test_neighbor = lldp_config[LLDP.NEIGHBORS_SUBTREE][0]
 
         tlvs = list(
             filter(
@@ -186,7 +193,8 @@ def test_lldp_management_addresses(lldptest_up):
         _send_lldp_packet()
         dstate = statelib.show_only((LLDPTEST,))
         lldp_config = dstate[Interface.KEY][0][LLDP.CONFIG_SUBTREE]
-        test_neighbor = _get_lldp_test(lldp_config[LLDP.NEIGHBORS_SUBTREE])
+        assert len(lldp_config[LLDP.NEIGHBORS_SUBTREE]) == 1
+        test_neighbor = lldp_config[LLDP.NEIGHBORS_SUBTREE][0]
 
         tlvs = list(
             filter(
@@ -206,7 +214,8 @@ def test_lldp_macphy(lldptest_up):
         _send_lldp_packet()
         dstate = statelib.show_only((LLDPTEST,))
         lldp_config = dstate[Interface.KEY][0][LLDP.CONFIG_SUBTREE]
-        test_neighbor = _get_lldp_test(lldp_config[LLDP.NEIGHBORS_SUBTREE])
+        assert len(lldp_config[LLDP.NEIGHBORS_SUBTREE]) == 1
+        test_neighbor = lldp_config[LLDP.NEIGHBORS_SUBTREE][0]
 
         tlvs = list(
             filter(
@@ -227,7 +236,8 @@ def test_lldp_port(lldptest_up):
         _send_lldp_packet()
         dstate = statelib.show_only((LLDPTEST,))
         lldp_config = dstate[Interface.KEY][0][LLDP.CONFIG_SUBTREE]
-        test_neighbor = _get_lldp_test(lldp_config[LLDP.NEIGHBORS_SUBTREE])
+        assert len(lldp_config[LLDP.NEIGHBORS_SUBTREE]) == 1
+        test_neighbor = lldp_config[LLDP.NEIGHBORS_SUBTREE][0]
 
         tlvs = list(
             filter(
@@ -245,7 +255,8 @@ def test_lldp_port_vlan(lldptest_up):
         _send_lldp_packet()
         dstate = statelib.show_only((LLDPTEST,))
         lldp_config = dstate[Interface.KEY][0][LLDP.CONFIG_SUBTREE]
-        test_neighbor = _get_lldp_test(lldp_config[LLDP.NEIGHBORS_SUBTREE])
+        assert len(lldp_config[LLDP.NEIGHBORS_SUBTREE]) == 1
+        test_neighbor = lldp_config[LLDP.NEIGHBORS_SUBTREE][0]
 
         tlvs = list(
             filter(
@@ -264,7 +275,8 @@ def test_lldp_vlan(lldptest_up):
         _send_lldp_packet()
         dstate = statelib.show_only((LLDPTEST,))
         lldp_config = dstate[Interface.KEY][0][LLDP.CONFIG_SUBTREE]
-        test_neighbor = _get_lldp_test(lldp_config[LLDP.NEIGHBORS_SUBTREE])
+        assert len(lldp_config[LLDP.NEIGHBORS_SUBTREE]) == 1
+        test_neighbor = lldp_config[LLDP.NEIGHBORS_SUBTREE][0]
 
         tlvs = list(
             filter(
@@ -284,7 +296,8 @@ def test_lldp_mfs(lldptest_up):
         _send_lldp_packet()
         dstate = statelib.show_only((LLDPTEST,))
         lldp_config = dstate[Interface.KEY][0][LLDP.CONFIG_SUBTREE]
-        test_neighbor = _get_lldp_test(lldp_config[LLDP.NEIGHBORS_SUBTREE])
+        assert len(lldp_config[LLDP.NEIGHBORS_SUBTREE]) == 1
+        test_neighbor = lldp_config[LLDP.NEIGHBORS_SUBTREE][0]
 
         tlvs = list(
             filter(
@@ -320,48 +333,9 @@ def lldp_enabled(ifstate):
 def _send_lldp_packet():
     test_dir = os.path.dirname(os.path.realpath(__file__))
     cmdlib.exec_cmd(
-        (
-            "tcpreplay",
-            "--intf1=eth1peer",
-            f"{test_dir}/test_captures/lldp.pcap",
-        ),
+        f"ip netns exec {LLDP_TEST_NS} "
+        f"tcpreplay --intf1={LLDPTEST_PEER} "
+        f"{test_dir}/test_captures/lldp.pcap".split(),
         check=True,
     )
     time.sleep(1)
-
-
-def _get_lldp_test(neighbors):
-    for neighbor in neighbors:
-        tlvs = list(
-            filter(
-                lambda tlv: tlv[LLDP.Neighbors.TLV_TYPE] == 5
-                and tlv[SYSTEM_NAME] == LLDP_TEST_SYSTEM_NAME,
-                neighbor,
-            )
-        )
-        if len(tlvs) == 1:
-            return neighbor
-
-    return None
-
-
-def _create_veth_pair():
-    cmdlib.exec_cmd(
-        (
-            "ip",
-            "link",
-            "add",
-            LLDPTEST,
-            "type",
-            "veth",
-            "peer",
-            "name",
-            LLDPTEST + "peer",
-        ),
-        check=True,
-    )
-    cmdlib.exec_cmd(("ip", "link", "set", LLDPTEST + "peer", "up"), check=True)
-
-
-def _remove_veth_pair():
-    cmdlib.exec_cmd(("ip", "link", "del", "dev", LLDPTEST), check=True)
