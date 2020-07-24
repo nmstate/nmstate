@@ -596,6 +596,7 @@ def dummy0_as_slave(master):
         yield
     finally:
         exec_cmd(("ip", "link", "delete", "dummy0"))
+        exec_cmd(("nmcli", "c", "del", "dummy0"))
 
 
 def test_add_invalid_slave_ip_config(eth1_up):
@@ -689,3 +690,11 @@ def test_moving_ports_from_absent_interface(bridge0_with_port0):
             ]
         }
     )
+
+
+def test_linux_bridge_replace_unmanaged_port(bridge_unmanaged_port, eth1_up):
+    iface_state = bridge_unmanaged_port[Interface.KEY][0]
+    iface_state[LinuxBridge.CONFIG_SUBTREE][LinuxBridge.PORT_SUBTREE] = [
+        {LinuxBridge.Port.NAME: "eth1"}
+    ]
+    libnmstate.apply({Interface.KEY: [iface_state]})
