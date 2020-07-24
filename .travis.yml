@@ -34,6 +34,12 @@ env:
           testflags="--test-type unit_py36"
         - CONTAINER_IMAGE=quay.io/ovirt/vdsm-test-func-network-centos-8
           testflags="--test-vdsm"
+        - CONTAINER_IMAGE=docker.io/nmstate/centos-stream-nmstate-dev
+          testflags="--test-type integ_tier1 --pytest-args='-x' "
+        - CONTAINER_IMAGE=docker.io/nmstate/centos-stream-nmstate-dev
+          testflags="--test-type integ_tier2 --pytest-args='-x' "
+        - CONTAINER_IMAGE=docker.io/nmstate/centos-stream-nmstate-dev
+          testflags="--test-type integ_slow --pytest-args='-x' "
 
 matrix:
     fast_finish: true
@@ -43,6 +49,12 @@ matrix:
                    --copr networkmanager/NetworkManager-master"
         - env: CONTAINER_IMAGE=quay.io/ovirt/vdsm-test-func-network-centos-8
                testflags="--test-vdsm"
+        - env: CONTAINER_IMAGE=docker.io/nmstate/centos-stream-nmstate-dev
+               testflags="--test-type integ_tier1 --pytest-args='-x' "
+        - env: CONTAINER_IMAGE=docker.io/nmstate/centos-stream-nmstate-dev
+               testflags="--test-type integ_tier2 --pytest-args='-x' "
+        - env: CONTAINER_IMAGE=docker.io/nmstate/centos-stream-nmstate-dev
+               testflags="--test-type integ_slow --pytest-args='-x' "
 
 addons:
     apt:

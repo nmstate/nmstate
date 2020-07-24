@@ -79,7 +79,8 @@ do
     then
         for container_name in \
             fedora-nmstate-dev \
-            centos8-nmstate-dev
+            centos8-nmstate-dev \
+            centos-stream-nmstate-dev
         do
             rebuild_container "${extra_args}" "${container_name}"
         done
