@@ -31,9 +31,14 @@ from .testlib import assertlib
 from .testlib import cmdlib
 from .testlib import ifacelib
 from .testlib import statelib
+from .testlib.veth import create_veth_pair
+from .testlib.veth import remove_veth_pair
 
 
 LLDPTEST = "lldptest"
+LLDPTEST_PEER = "lldptest.peer"
+
+LLDP_TEST_NS = "nmstate_lldp_test"
 
 LLDP_SYSTEM_DESC = (
     "Summit300-48 - Version 7.4e.1 (Build 5) by Release_Master "
@@ -118,10 +123,10 @@ LLDP_TEST_SYSTEM_NAME = "Summit300-48"
 @pytest.fixture(scope="module")
 def lldpiface_env():
     try:
-        _create_veth_pair()
+        create_veth_pair(LLDPTEST, LLDPTEST_PEER, LLDP_TEST_NS)
         yield
     finally:
-        _remove_veth_pair()
+        remove_veth_pair(LLDPTEST, LLDP_TEST_NS)
 
 
 @pytest.fixture
@@ -328,33 +333,9 @@ def lldp_enabled(ifstate):
 def _send_lldp_packet():
     test_dir = os.path.dirname(os.path.realpath(__file__))
     cmdlib.exec_cmd(
-        (
-            "tcpreplay",
-            "--intf1=lldptestpeer",
-            f"{test_dir}/test_captures/lldp.pcap",
-        ),
+        f"ip netns exec {LLDP_TEST_NS} "
+        f"tcpreplay --intf1={LLDPTEST_PEER} "
+        f"{test_dir}/test_captures/lldp.pcap".split(),
         check=True,
     )
     time.sleep(1)
-
-
-def _create_veth_pair():
-    cmdlib.exec_cmd(
-        (
-            "ip",
-            "link",
-            "add",
-            LLDPTEST,
-            "type",
-            "veth",
-            "peer",
-            "name",
-            LLDPTEST + "peer",
-        ),
-        check=True,
-    )
-    cmdlib.exec_cmd(("ip", "link", "set", LLDPTEST + "peer", "up"), check=True)
-
-
-def _remove_veth_pair():
-    cmdlib.exec_cmd(("ip", "link", "del", "dev", LLDPTEST), check=True)
