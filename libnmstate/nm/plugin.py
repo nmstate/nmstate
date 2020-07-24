@@ -56,6 +56,7 @@ class NetworkManagerPlugin(NmstatePlugin):
         self._ctx = NmContext()
         self._checkpoint = None
         self._check_version_mismatch()
+        self.__applied_configs = None
 
     @property
     def name(self):
@@ -65,6 +66,12 @@ class NetworkManagerPlugin(NmstatePlugin):
         if self._ctx:
             self._ctx.clean_up()
             self._ctx = None
+
+    @property
+    def _applied_configs(self):
+        if self.__applied_configs is None:
+            self.__applied_configs = get_all_applied_configs(self.context)
+        return self.__applied_configs
 
     @property
     def checkpoint(self):
@@ -100,7 +107,7 @@ class NetworkManagerPlugin(NmstatePlugin):
         info = []
         capabilities = self.capabilities
 
-        applied_configs = get_all_applied_configs(self.context)
+        applied_configs = self._applied_configs
 
         devices_info = [
             (dev, nm_device.get_device_common_info(dev))
@@ -173,13 +180,11 @@ class NetworkManagerPlugin(NmstatePlugin):
     def get_dns_client_config(self):
         return {
             DNS.RUNNING: nm_dns.get_running(self.client),
-            DNS.CONFIG: nm_dns.get_config(
-                nm_ipv4.acs_and_ip_profiles(self.client),
-                nm_ipv6.acs_and_ip_profiles(self.client),
-            ),
+            DNS.CONFIG: nm_dns.get_running_config(self._applied_configs),
         }
 
     def refresh_content(self):
+        self.__applied_configs = None
         self._ctx.refresh_content()
 
     def apply_changes(self, net_state, save_to_disk):
