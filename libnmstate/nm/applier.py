@@ -73,8 +73,7 @@ def apply_changes(context, net_state, save_to_disk):
     )
 
     for iface_desired_state in filter(
-        lambda s: s.get(Interface.STATE)
-        not in (InterfaceState.ABSENT, InterfaceState.DOWN),
+        lambda s: s.get(Interface.STATE) != InterfaceState.ABSENT,
         ifaces_desired_state,
     ):
         ifname = iface_desired_state[Interface.NAME]
@@ -167,6 +166,7 @@ def _set_ifaces_admin_state(context, ifaces_desired_state, con_profiles):
     devs_to_delete = {}
     devs_to_deactivate_beforehand = []
     profiles_to_delete = []
+    devs_to_activate_beforehand = []
 
     current_profiles = context.client.get_connections()
 
@@ -211,6 +211,10 @@ def _set_ifaces_admin_state(context, ifaces_desired_state, con_profiles):
                         profiles_to_delete.append(profile)
 
         else:
+            if not nmdev.get_managed():
+                nmdev.set_managed(True)
+                if iface_desired_state[Interface.STATE] == InterfaceState.DOWN:
+                    devs_to_activate_beforehand.append(nmdev)
             if iface_desired_state[Interface.STATE] == InterfaceState.UP:
                 if (
                     iface_desired_state.get(Interface.TYPE)
@@ -267,6 +271,12 @@ def _set_ifaces_admin_state(context, ifaces_desired_state, con_profiles):
                         iface_desired_state[Interface.NAME],
                     )
                 )
+
+    for nmdev in devs_to_activate_beforehand:
+        profile = connection.ConnectionProfile(context)
+        profile.con_id = nmdev.get_iface()
+        profile.activate()
+    context.wait_all_finish()
 
     for dev in devs_to_deactivate_beforehand:
         device.deactivate(context, dev)
