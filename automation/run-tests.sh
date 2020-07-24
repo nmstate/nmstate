@@ -19,6 +19,7 @@ TEST_TYPE_INTEG_SLOW="integ_slow"
 
 FEDORA_IMAGE_DEV="docker.io/nmstate/fedora-nmstate-dev"
 CENTOS_IMAGE_DEV="docker.io/nmstate/centos8-nmstate-dev"
+CENTOS_STREAM_IMAGE_DEV="docker.io/nmstate/centos-stream-nmstate-dev"
 
 CREATED_INTERFACES=""
 INTERFACES="eth1 eth2"
@@ -297,6 +298,9 @@ while true; do
         ;;
     --el8)
         CONTAINER_IMAGE=$CENTOS_IMAGE_DEV
+        ;;
+    --centos-stream)
+        CONTAINER_IMAGE=$CENTOS_STREAM_IMAGE_DEV
         ;;
     --artifacts-dir)
         shift

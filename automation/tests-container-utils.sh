@@ -40,11 +40,8 @@ function is_file_changed {
 
 function rebuild_container_images {
     if is_file_changed "$PROJECT_PATH/packaging"; then
-        if [ $CONTAINER_IMAGE == $CENTOS_IMAGE_DEV ];then
-            ${PROJECT_PATH}/packaging/build-container.sh centos8-nmstate-dev
-        elif [ $CONTAINER_IMAGE == $FEDORA_IMAGE_DEV ];then
-            ${PROJECT_PATH}/packaging/build-container.sh fedora-nmstate-dev
-        fi
+        IMAGE_NAME=$(basename $CONTAINER_IMAGE)
+        ${PROJECT_PATH}/packaging/build-container.sh $IMAGE_NAME
     fi
 }
 
