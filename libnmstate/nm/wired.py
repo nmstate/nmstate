@@ -124,7 +124,9 @@ def get_info(device):
 
     iface = device.get_iface()
     try:
-        info[Interface.MTU] = int(device.get_mtu())
+        mtu = int(device.get_mtu())
+        if mtu:
+            info[Interface.MTU] = mtu
     except AttributeError:
         pass
 
