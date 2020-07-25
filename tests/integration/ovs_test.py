@@ -407,6 +407,24 @@ class TestOvsPatch:
         assertlib.assert_absent(PATCH0)
         assertlib.assert_absent(PATCH1)
 
+    def test_patch_interface_does_not_have_mtu(self):
+        patch0_state = {OVSInterface.Patch.PEER: "patch1"}
+        patch1_state = {OVSInterface.Patch.PEER: "patch0"}
+        bridge = Bridge(BRIDGE0)
+        bridge.add_internal_port(PATCH0, patch_state=patch0_state)
+        desired_state = bridge.state
+        bridge = Bridge(BRIDGE1)
+        bridge.add_internal_port(PATCH1, patch_state=patch1_state)
+        desired_state[Interface.KEY].extend(bridge.state[Interface.KEY])
+        try:
+            libnmstate.apply(desired_state)
+            patch0_state = statelib.show_only((PATCH0,))
+            assert not patch0_state[Interface.KEY][0].get(Interface.MTU)
+        finally:
+            for iface in desired_state[Interface.KEY]:
+                iface[Interface.STATE] = InterfaceState.ABSENT
+            libnmstate.apply(desired_state)
+
     def test_add_patch_to_existing_interface_invalid(self):
         patch0_state = {OVSInterface.Patch.PEER: "falsepatch"}
         bridge = Bridge(BRIDGE0)
