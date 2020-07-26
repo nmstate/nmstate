@@ -34,6 +34,7 @@ from libnmstate.error import NmstateConflictError
 from libnmstate.error import NmstatePermissionError
 from libnmstate.error import NmstateValueError
 from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceIP
 from libnmstate.schema import Route
 from libnmstate.schema import RouteRule
 from nmstatectl.nmstate_varlink import start_varlink_server
@@ -328,7 +329,7 @@ def _filter_state(state, whitelist):
         patterns = [p for p in whitelist.split(",")]
         state[Interface.KEY] = _filter_interfaces(state, patterns)
         state[Route.KEY] = _filter_routes(state, patterns)
-        state[RouteRule.KEY] = _filter_route_rule(state)
+        state[RouteRule.KEY] = _filter_route_rule(state, patterns)
     return state
 
 
@@ -446,7 +447,13 @@ def _filter_routes(state, patterns):
     return routes
 
 
-def _filter_route_rule(state):
+def _filter_route_rule(state, patterns):
+    route_rules = _filter_route_rule_by_table_id(state)
+    _filter_route_rule_by_autorule_table_id(state, patterns, route_rules)
+    return route_rules
+
+
+def _filter_route_rule_by_table_id(state):
     """
     return the rules for state's route rule that match the table_id of the
     filtered route of state by interface
@@ -461,3 +468,29 @@ def _filter_route_rule(state):
         if rule.get(RouteRule.ROUTE_TABLE) in table_ids:
             route_rules[RouteRule.CONFIG].append(rule)
     return route_rules
+
+
+def _filter_route_rule_by_autorule_table_id(state, patterns, route_rules):
+    """
+    return the rules that match the iface's name and AUTO_ROUTE_TABLE_ID
+    """
+    table_ids = []
+    for pattern in patterns:
+        for interface in state[Interface.KEY]:
+            if fnmatch.fnmatch(interface[Interface.NAME], pattern):
+                autotable = interface.get(Interface.IPV4, {}).get(
+                    InterfaceIP.AUTO_ROUTE_TABLE_ID
+                )
+                if autotable:
+                    table_ids.append(autotable)
+                autotable = interface.get(Interface.IPV6, {}).get(
+                    InterfaceIP.AUTO_ROUTE_TABLE_ID
+                )
+                if autotable:
+                    table_ids.append(autotable)
+    for rule in state.get(RouteRule.KEY, {}).get(RouteRule.CONFIG, []):
+        if (
+            rule.get(RouteRule.ROUTE_TABLE) in table_ids
+            and rule not in route_rules[RouteRule.CONFIG]
+        ):
+            route_rules[RouteRule.CONFIG].append(rule)
