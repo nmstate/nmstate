@@ -17,9 +17,11 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
+from distutils.version import StrictVersion
 import logging
 import itertools
 
+from libnmstate.error import NmstateNotSupportedError
 from libnmstate.error import NmstateValueError
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceState
@@ -64,6 +66,17 @@ MASTER_IFACE_TYPES = (
 
 def apply_changes(context, net_state, save_to_disk):
     con_profiles = []
+
+    if (
+        not save_to_disk
+        and _has_ovs_interface_desired_or_changed(net_state)
+        and StrictVersion(context.client.get_version())
+        < StrictVersion("1.28.0")
+    ):
+        raise NmstateNotSupportedError(
+            f"NetworkManager version {context.client.get_version()} does not "
+            f"support 'save_to_disk=False' against OpenvSwitch interface"
+        )
 
     _preapply_dns_fix(context, net_state)
 
@@ -602,3 +615,13 @@ def _preapply_dns_fix(context, net_state):
         for iface in net_state.ifaces.values():
             if iface.is_changed or iface.is_desired:
                 iface.remove_dns_metadata()
+
+
+def _has_ovs_interface_desired_or_changed(net_state):
+    for iface in net_state.ifaces.values():
+        if iface.type in (
+            InterfaceType.OVS_BRIDGE,
+            InterfaceType.OVS_INTERFACE,
+            InterfaceType.OVS_PORT,
+        ) and (iface.is_desired or iface.is_changed):
+            return True
