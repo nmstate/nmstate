@@ -30,6 +30,7 @@ from libnmstate.schema import OVSBridge
 from libnmstate.schema import OvsDB
 from libnmstate.schema import OVSInterface
 from libnmstate.error import NmstateDependencyError
+from libnmstate.error import NmstateNotSupportedError
 from libnmstate.error import NmstateValueError
 
 from .testlib import assertlib
@@ -533,3 +534,10 @@ def test_create_ovs_with_internal_ports_in_reverse_order():
     assertlib.assert_absent(BRIDGE1)
     assertlib.assert_absent(PORT1)
     assertlib.assert_absent(PORT2)
+
+
+def test_create_memory_only_ovs_bridge_not_supported():
+    bridge = Bridge(BRIDGE1)
+
+    with pytest.raises(NmstateNotSupportedError):
+        libnmstate.apply(bridge.state, save_to_disk=False)
