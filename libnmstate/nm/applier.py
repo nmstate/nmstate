@@ -79,6 +79,7 @@ def apply_changes(context, net_state, save_to_disk):
         )
 
     _preapply_dns_fix(context, net_state)
+    _mark_nm_external_subordinate_changed(context, net_state)
 
     ifaces_desired_state = net_state.ifaces.state_to_edit
     ifaces_desired_state.extend(
@@ -625,3 +626,26 @@ def _has_ovs_interface_desired_or_changed(net_state):
             InterfaceType.OVS_PORT,
         ) and (iface.is_desired or iface.is_changed):
             return True
+
+
+def _mark_nm_external_subordinate_changed(context, net_state):
+    """
+    When certain main interface contains subordinates is marked as
+    connected(externally), it means its profile is memory only and will lost
+    on next deactivation.
+    For this case, we should mark the subordinate as changed.
+    that subordinate should be marked as changed for NM to take over.
+    """
+    for iface in net_state.ifaces.values():
+        if iface.type in MASTER_IFACE_TYPES:
+            for subordinate in iface.slaves:
+                nmdev = context.get_nm_dev(subordinate)
+                if nmdev:
+                    nm_ac = nmdev.get_active_connection()
+                    if (
+                        nm_ac
+                        and NM.ActivationStateFlags.EXTERNAL
+                        & nm_ac.get_state_flags()
+                    ):
+                        subordinate_iface = net_state.ifaces[subordinate]
+                        subordinate_iface.mark_as_changed()
