@@ -53,6 +53,7 @@ from .testlib.env import is_ubuntu_kernel
 
 
 TEST_BRIDGE0 = "linux-br0"
+TEST_TAP0 = "tap0"
 
 
 BRIDGE_OPTIONS_YAML = """
@@ -698,3 +699,30 @@ def test_linux_bridge_replace_unmanaged_port(bridge_unmanaged_port, eth1_up):
         {LinuxBridge.Port.NAME: "eth1"}
     ]
     libnmstate.apply({Interface.KEY: [iface_state]})
+
+
+@pytest.fixture
+def bridge0_with_tap_port():
+    exec_cmd(f"ip tuntap add name {TEST_TAP0} mode tap".split(), check=True)
+    exec_cmd(f"ip link add {TEST_BRIDGE0} type bridge".split(), check=True)
+    exec_cmd(
+        f"ip link set {TEST_TAP0} master {TEST_BRIDGE0}".split(), check=True
+    )
+    exec_cmd(f"ip link set {TEST_TAP0} up".split(), check=True)
+    exec_cmd(f"ip link set {TEST_BRIDGE0} up".split(), check=True)
+    yield
+    exec_cmd(f"ip link del {TEST_TAP0}".split())
+    exec_cmd(f"ip link del {TEST_BRIDGE0}".split())
+    exec_cmd(f"nmcli c del {TEST_TAP0}".split())
+    exec_cmd(f"nmcli c del {TEST_BRIDGE0}".split())
+
+
+def test_ignore_unmanged_tap_as_bridge_port(bridge0_with_tap_port, port0_up):
+    """
+    The unknown interface should be still bridge port along with other ports
+    """
+    with _bridge0_with_port0(port0_up) as state:
+        state[Interface.KEY][0][LinuxBridge.CONFIG_SUBTREE][
+            LinuxBridge.PORT_SUBTREE
+        ].append({LinuxBridge.Port.NAME: TEST_TAP0})
+        assertlib.assert_state_match(state)

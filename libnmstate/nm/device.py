@@ -166,6 +166,4 @@ def get_device_common_info(dev):
 
 def is_externally_managed(nmdev):
     nm_ac = nmdev.get_active_connection()
-    return (
-        nm_ac and NM.ActivationStateFlags.EXTERNAL & nm_ac.get_state_flags()
-    )
+    return nm_ac and NM.ActivationStateFlags.EXTERNAL & nm_ac.get_state_flags()
