@@ -286,16 +286,16 @@ class Ifaces:
     def cur_ifaces(self):
         return self._cur_ifaces
 
-    def _remove_unmanaged_slaves(self):
+    def _remove_unknown_interface_type_slaves(self):
         """
-        When master containing unmanaged slaves, they should be removed from
-        master slave list.
+        When master containing slaves with unknown interface type, they should
+        be removed from master slave list before verifying.
         """
         for iface in self._ifaces.values():
             if iface.is_up and iface.is_master and iface.slaves:
                 for slave_name in iface.slaves:
                     slave_iface = self._ifaces[slave_name]
-                    if not slave_iface.is_up:
+                    if slave_iface.type == InterfaceType.UNKNOWN:
                         iface.remove_slave(slave_name)
 
     def verify(self, cur_iface_infos):
@@ -304,6 +304,7 @@ class Ifaces:
             cur_iface_infos=cur_iface_infos,
             save_to_disk=self._save_to_disk,
         )
+        cur_ifaces._remove_unknown_interface_type_slaves()
         for iface in self._ifaces.values():
             if iface.is_desired:
                 if iface.is_virtual and iface.original_dict.get(
