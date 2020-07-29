@@ -23,6 +23,7 @@ from libnmstate.error import NmstateLibnmError
 
 from . import active_connection as ac
 from . import connection
+from .common import NM
 
 
 def activate(context, dev=None, connection_id=None):
@@ -161,3 +162,10 @@ def get_device_common_info(dev):
         "type_name": dev.get_type_description(),
         "state": dev.get_state(),
     }
+
+
+def is_externally_managed(nmdev):
+    nm_ac = nmdev.get_active_connection()
+    return (
+        nm_ac and NM.ActivationStateFlags.EXTERNAL & nm_ac.get_state_flags()
+    )
