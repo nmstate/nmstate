@@ -637,7 +637,7 @@ def _mark_nm_external_subordinate_changed(context, net_state):
     that subordinate should be marked as changed for NM to take over.
     """
     for iface in net_state.ifaces.values():
-        if iface.type in MASTER_IFACE_TYPES:
+        if iface.is_desired or iface.is_changed and iface.is_master:
             for subordinate in iface.slaves:
                 nmdev = context.get_nm_dev(subordinate)
                 if nmdev:
@@ -647,5 +647,6 @@ def _mark_nm_external_subordinate_changed(context, net_state):
                         and NM.ActivationStateFlags.EXTERNAL
                         & nm_ac.get_state_flags()
                     ):
-                        subordinate_iface = net_state.ifaces[subordinate]
-                        subordinate_iface.mark_as_changed()
+                        subordinate_iface = net_state.ifaces.get(subordinate)
+                        if subordinate_iface:
+                            subordinate_iface.mark_as_changed()
