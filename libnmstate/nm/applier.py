@@ -50,6 +50,7 @@ from . import vxlan
 from . import wired
 from .common import NM
 from .dns import get_dns_config_iface_names
+from .device import is_externally_managed
 
 
 MAXIMUM_INTERFACE_LENGTH = 15
@@ -265,13 +266,14 @@ def _set_ifaces_admin_state(context, ifaces_desired_state, con_profiles):
                     == InterfaceState.ABSENT
                 )
                 for affected_nmdev in nmdevs:
-                    devs_to_deactivate[
-                        affected_nmdev.get_iface()
-                    ] = affected_nmdev
-                    if is_absent:
-                        devs_to_delete_profile[
+                    if not is_externally_managed(affected_nmdev):
+                        devs_to_deactivate[
                             affected_nmdev.get_iface()
                         ] = affected_nmdev
+                        if is_absent:
+                            devs_to_delete_profile[
+                                affected_nmdev.get_iface()
+                            ] = affected_nmdev
                 if (
                     is_absent
                     and nmdev.is_software()
@@ -640,13 +642,7 @@ def _mark_nm_external_subordinate_changed(context, net_state):
         if iface.is_desired or iface.is_changed and iface.is_master:
             for subordinate in iface.slaves:
                 nmdev = context.get_nm_dev(subordinate)
-                if nmdev:
-                    nm_ac = nmdev.get_active_connection()
-                    if (
-                        nm_ac
-                        and NM.ActivationStateFlags.EXTERNAL
-                        & nm_ac.get_state_flags()
-                    ):
-                        subordinate_iface = net_state.ifaces.get(subordinate)
-                        if subordinate_iface:
-                            subordinate_iface.mark_as_changed()
+                if nmdev and is_externally_managed(nmdev):
+                    subordinate_iface = net_state.ifaces.get(subordinate)
+                    if subordinate_iface:
+                        subordinate_iface.mark_as_changed()
