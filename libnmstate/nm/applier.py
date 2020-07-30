@@ -105,6 +105,15 @@ def apply_changes(context, net_state, save_to_disk):
                 cur_con_profile = connection.ConnectionProfile(
                     context, profile=con_profile
                 )
+
+        if save_to_disk:
+            # TODO: Need handle save_to_disk=False
+            connection.delete_iface_profiles_except(
+                context,
+                ifname,
+                cur_con_profile.profile if cur_con_profile else None,
+            )
+
         original_desired_iface_state = {}
         if net_state.ifaces.get(ifname):
             iface = net_state.ifaces[ifname]
@@ -137,7 +146,6 @@ def apply_changes(context, net_state, save_to_disk):
             con_profiles.append(new_con_profile)
         else:
             # Missing connection, attempting to create a new one.
-            connection.delete_iface_inactive_connections(context, ifname)
             new_con_profile.add(save_to_disk)
             con_profiles.append(new_con_profile)
     context.wait_all_finish()
