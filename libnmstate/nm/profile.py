@@ -29,9 +29,10 @@ from .device import list_devices
 def get_all_applied_configs(context):
     applied_configs = {}
     for nm_dev in list_devices(context.client):
-        if nm_dev.get_state() in (
-            NM.DeviceState.ACTIVATED,
-            NM.DeviceState.IP_CONFIG,
+        if (
+            nm_dev.get_state()
+            in (NM.DeviceState.ACTIVATED, NM.DeviceState.IP_CONFIG,)
+            and nm_dev.get_managed()
         ):
             iface_name = nm_dev.get_iface()
             if iface_name:

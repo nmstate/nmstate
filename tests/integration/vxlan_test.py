@@ -123,6 +123,7 @@ def test_show_vxlan_with_no_remote(eth1_up):
     try:
         ret = exec_cmd(add_vxlan_cmd)
         rc, _, _ = ret
+        exec_cmd(f"nmcli d set {vxlan.name} managed true".split(), check=True)
         assert rc == RC_SUCCESS, format_exec_cmd_result(ret)
         desired_state = vxlans_down([vxlan])
         assertlib.assert_state(desired_state)

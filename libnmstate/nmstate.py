@@ -34,6 +34,7 @@ from libnmstate.schema import Interface
 from libnmstate.schema import Route
 from libnmstate.schema import RouteRule
 
+from .nispor.plugin import NisporPlugin
 from .plugin import NmstatePlugin
 from .state import merge_dict
 
@@ -99,7 +100,7 @@ def plugins_capabilities(plugins):
 
 
 def _load_plugins():
-    plugins = [NetworkManagerPlugin()]
+    plugins = [NetworkManagerPlugin(), NisporPlugin()]
     plugins.extend(_load_external_py_plugins())
     return plugins
 

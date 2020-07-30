@@ -5,6 +5,7 @@ RUN dnf install -y centos-release-stream && \
     dnf -y install dnf-plugins-core epel-release && \
     dnf config-manager --set-enabled PowerTools && \
     dnf copr enable nmstate/ovs-el8 -y && \
+    dnf copr enable nmstate/nispor -y && \
     dnf -y install --setopt=install_weak_deps=False \
                    NetworkManager \
                    NetworkManager-ovs \
@@ -30,6 +31,7 @@ RUN dnf install -y centos-release-stream && \
                    python3-coveralls \
                    python3-requests \
                    python3-docopt \
+                   python3-nispor \
                    tcpreplay \
                    && \
     alternatives --set python /usr/bin/python3 && \

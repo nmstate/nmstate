@@ -21,6 +21,7 @@ import json
 import os
 import time
 
+import pytest
 
 from libnmstate import __version__
 from libnmstate.error import NmstateConflictError
@@ -43,14 +44,24 @@ LOOPBACK_JSON_CONFIG = """        {
             "type": "unknown",
             "state": "down",
             "ipv4": {
-                "enabled": false
+                "enabled": true,
+                "address": [
+                    {
+                        "ip": "127.0.0.1",
+                        "prefix-length": 8
+                    }
+                ]
             },
             "ipv6": {
-                "enabled": false
+                "enabled": true,
+                "address": [
+                    {
+                        "ip": "::1",
+                        "prefix-length": 128
+                    }
+                ]
             },
-            "lldp": {
-                "enabled": false
-            },
+            "mac-address": "00:00:00:00:00:00",
             "mtu": 65536
         }"""
 
@@ -58,11 +69,16 @@ LOOPBACK_YAML_CONFIG = """- name: lo
   type: unknown
   state: down
   ipv4:
-    enabled: false
+    enabled: true
+    address:
+    - ip: 127.0.0.1
+      prefix-length: 8
   ipv6:
-    enabled: false
-  lldp:
-    enabled: false
+    enabled: true
+    address:
+    - ip: ::1
+      prefix-length: 128
+  mac-address: 00:00:00:00:00:00
   mtu: 65536"""
 
 ETH1_YAML_CONFIG = b"""interfaces:
@@ -95,6 +111,17 @@ CONFIRMATION_TIMOUT_COMMAND = SET_CMD + [
     str(CONFIRMATION_TIMEOUT),
     os.path.join(EXAMPLES, CONFIRMATION_TEST),
 ]
+
+
+@pytest.fixture(scope="module", autouse=True)
+def enable_lo_ipv6():
+    with open(f"/proc/sys/net/ipv6/conf/lo/disable_ipv6") as fd:
+        old_state = fd.read().strip()
+    with open(f"/proc/sys/net/ipv6/conf/lo/disable_ipv6", "w") as fd:
+        fd.write("0")
+    yield
+    with open(f"/proc/sys/net/ipv6/conf/lo/disable_ipv6", "w") as fd:
+        fd.write(old_state)
 
 
 def test_missing_operation():

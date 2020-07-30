@@ -58,6 +58,10 @@ class NetworkManagerPlugin(NmstatePlugin):
         self._check_version_mismatch()
 
     @property
+    def priority(self):
+        return NmstatePlugin.DEFAULT_PRIORITY
+
+    @property
     def name(self):
         return "NetworkManager"
 
@@ -108,6 +112,9 @@ class NetworkManagerPlugin(NmstatePlugin):
         ]
 
         for dev, devinfo in devices_info:
+            if not dev.get_managed():
+                # Skip unmanaged interface
+                continue
             type_id = devinfo["type_id"]
 
             iface_info = nm_translator.Nm2Api.get_common_device_info(devinfo)

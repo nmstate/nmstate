@@ -20,6 +20,7 @@
 import pytest
 
 import libnmstate
+from libnmstate.iplib import is_ipv6_link_local_addr
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
@@ -27,7 +28,9 @@ from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
 
 from .testlib import assertlib
+from .testlib import cmdlib
 from .testlib import statelib
+from .testlib.dummy import nm_unmanaged_dummy
 from .testlib.iproutelib import ip_monitor_assert_stable_link_up
 
 # TEST-NET addresses: https://tools.ietf.org/html/rfc5737#section-3
@@ -41,6 +44,8 @@ IPV6_ADDRESS1 = "2001:db8:1::1"
 IPV6_ADDRESS2 = "2001:db8:2::1"
 IPV6_LINK_LOCAL_ADDRESS1 = "fe80::1"
 IPV6_LINK_LOCAL_ADDRESS2 = "fe80::2"
+
+DUMMY1 = "dummy1"
 
 
 @pytest.fixture
@@ -585,3 +590,47 @@ def test_modify_ipv6_with_reapply(setup_eth1_ipv6):
     libnmstate.apply(setup_eth1_ipv6)
 
     assertlib.assert_state(setup_eth1_ipv6)
+
+
+@pytest.mark.tier1
+def test_get_ip_address_from_unmanaged_dummy():
+    with nm_unmanaged_dummy(DUMMY1):
+        cmdlib.exec_cmd(
+            f"ip addr add {IPV4_ADDRESS1}/24 dev {DUMMY1}".split(), check=True
+        )
+        with open(f"/proc/sys/net/ipv6/conf/{DUMMY1}/disable_ipv6", "w") as fd:
+            fd.write("0")
+        cmdlib.exec_cmd(
+            f"ip -6 addr add {IPV6_ADDRESS2}/64 dev {DUMMY1}".split(),
+            check=True,
+        )
+        iface_state = statelib.show_only((DUMMY1,))[Interface.KEY][0]
+        # Remove IPv6 link local address
+        iface_state[Interface.IPV6][InterfaceIPv6.ADDRESS] = [
+            addr
+            for addr in iface_state[Interface.IPV6][InterfaceIPv6.ADDRESS]
+            if not is_ipv6_link_local_addr(
+                addr[InterfaceIPv6.ADDRESS_IP],
+                addr[InterfaceIPv6.ADDRESS_PREFIX_LENGTH],
+            )
+        ]
+
+        assert iface_state[Interface.IPV4] == {
+            InterfaceIPv4.ENABLED: True,
+            InterfaceIPv4.ADDRESS: [
+                {
+                    InterfaceIPv4.ADDRESS_IP: IPV4_ADDRESS1,
+                    InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+                }
+            ],
+        }
+
+        assert iface_state[Interface.IPV6] == {
+            InterfaceIPv6.ENABLED: True,
+            InterfaceIPv6.ADDRESS: [
+                {
+                    InterfaceIPv6.ADDRESS_IP: IPV6_ADDRESS2,
+                    InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
+                }
+            ],
+        }

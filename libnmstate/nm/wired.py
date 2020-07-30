@@ -123,20 +123,6 @@ def get_info(device):
     info = {}
 
     iface = device.get_iface()
-    try:
-        mtu = int(device.get_mtu())
-        if mtu:
-            info[Interface.MTU] = mtu
-    except AttributeError:
-        pass
-
-    mac = device.get_hw_address()
-    if not mac:
-        mac = _get_mac_address_from_sysfs(iface)
-
-    # A device may not have a MAC or it may not yet be "realized" (zeroed mac).
-    if mac and mac != ZEROED_MAC:
-        info[Interface.MAC] = mac
 
     if device.get_device_type() == NM.DeviceType.ETHERNET:
         ethernet = _get_ethernet_info(device, iface)
@@ -144,21 +130,6 @@ def get_info(device):
             info[Ethernet.CONFIG_SUBTREE] = ethernet
 
     return info
-
-
-def _get_mac_address_from_sysfs(ifname):
-    """
-    Fetch the mac address of an interface from sysfs.
-    This is a workaround for https://bugzilla.redhat.com/1786937.
-    """
-    mac = None
-    sysfs_path = f"/sys/class/net/{ifname}/address"
-    try:
-        with open(sysfs_path) as f:
-            mac = f.read().rstrip("\n").upper()
-    except FileNotFoundError:
-        pass
-    return mac
 
 
 def _get_ethernet_info(device, iface):

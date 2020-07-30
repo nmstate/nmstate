@@ -19,7 +19,6 @@
 
 from contextlib import contextmanager
 from operator import itemgetter
-import time
 
 import pytest
 
@@ -33,9 +32,9 @@ from libnmstate.schema import InterfaceState
 from libnmstate.schema import LinuxBridge as LB
 from libnmstate.nm.common import NM
 
-from ..testlib import cmdlib
 from ..testlib import iproutelib
 from ..testlib.bridgelib import linux_bridge
+from ..testlib.dummy import nm_unmanaged_dummy
 from .testlib import main_context
 
 
@@ -268,26 +267,8 @@ def _remove_read_only_properties(bridge_state):
 
 @pytest.fixture
 def nm_unmanaged_dummy1():
-    cmdlib.exec_cmd(
-        f"ip link add name {DUMMY1} type dummy".split(" "), check=True
-    )
-    cmdlib.exec_cmd(f"ip link set {DUMMY1} up".split(" "), check=True)
-    cmdlib.exec_cmd(
-        f"nmcli dev set {DUMMY1} managed yes".split(" "), check=True
-    )
-    time.sleep(1)  # Wait device became managed
-    yield
-    libnmstate.apply(
-        {
-            Interface.KEY: [
-                {
-                    Interface.NAME: DUMMY1,
-                    Interface.STATE: InterfaceState.ABSENT,
-                }
-            ]
-        },
-        verify_change=False,
-    )
+    with nm_unmanaged_dummy(DUMMY1):
+        yield
 
 
 @pytest.mark.tier1

@@ -81,6 +81,7 @@ def apply_changes(context, net_state, save_to_disk):
 
     _preapply_dns_fix(context, net_state)
     _mark_nm_external_subordinate_changed(context, net_state)
+    _mark_nm_unmanaged_ubordinate_changed(context, net_state)
 
     ifaces_desired_state = net_state.ifaces.state_to_edit
     ifaces_desired_state.extend(
@@ -655,3 +656,13 @@ def _mark_nm_external_subordinate_changed(context, net_state):
                     subordinate_iface = net_state.ifaces.get(subordinate)
                     if subordinate_iface:
                         subordinate_iface.mark_as_changed()
+
+
+def _mark_nm_unmanaged_ubordinate_changed(context, net_state):
+    for iface in net_state.ifaces.values():
+        if iface.is_master:
+            for subordinate in iface.slaves:
+                nmdev = context.get_nm_dev(subordinate)
+                if nmdev and not nmdev.get_managed():
+                    subordinate_iface = net_state.ifaces[subordinate]
+                    subordinate_iface.mark_as_changed()

@@ -33,6 +33,7 @@ Recommends:     NetworkManager-config-server
 # required for OVS and team support
 Suggests:       NetworkManager-ovs
 Suggests:       NetworkManager-team
+Requires:       python3-nispor
 
 %package -n nmstate-plugin-ovsdb
 Summary:        nmstate plugin for OVS database manipulation
