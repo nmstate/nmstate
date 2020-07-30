@@ -496,9 +496,14 @@ def get_device_active_connection(nm_device):
     return active_conn
 
 
-def delete_iface_inactive_connections(context, ifname):
+def delete_iface_profiles_except(context, ifname, excluded_profile):
     for con in list_connections_by_ifname(context, ifname):
-        con.delete()
+        if (
+            not excluded_profile
+            or not con.profile
+            or con.profile.get_uuid() != excluded_profile.get_uuid()
+        ):
+            con.delete()
 
 
 def list_connections_by_ifname(context, ifname):
