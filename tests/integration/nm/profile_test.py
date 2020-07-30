@@ -20,21 +20,23 @@
 from contextlib import contextmanager
 import os
 
-
 import pytest
 
 import libnmstate
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
+from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import InterfaceState
+from libnmstate.schema import LinuxBridge
 
-from .testlib import assertlib
-from .testlib import cmdlib
-from .testlib import statelib
+from ..testlib import assertlib
+from ..testlib import cmdlib
+from ..testlib import statelib
 
 
 DUMMY0_IFNAME = "dummy0"
+TEST_BRIDGE0 = "linux-br0"
 
 NMCLI_CON_ADD_DUMMY_CMD = [
     "nmcli",
@@ -326,3 +328,51 @@ def _nmcli_delete_connection(con_name):
 
 def _profile_exists(profile_name):
     return os.path.isfile(profile_name)
+
+
+@pytest.fixture
+def eth1_with_two_profiles(eth1_up):
+    # The newly profile should be activated, this is the key to reproduce
+    # the problem
+    cmdlib.exec_cmd(
+        "nmcli c add type ethernet ifname eth1 connection.id foo "
+        "ipv4.method disabled ipv6.method disabled ".split(),
+        check=True,
+    )
+    cmdlib.exec_cmd("nmcli c up foo".split())
+    yield
+    cmdlib.exec_cmd("nmcli c del foo".split())
+
+
+def test_linux_bridge_with_port_holding_two_profiles(eth1_with_two_profiles):
+    desired_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: "br0",
+                Interface.TYPE: InterfaceType.LINUX_BRIDGE,
+                Interface.STATE: InterfaceState.UP,
+                LinuxBridge.CONFIG_SUBTREE: {
+                    LinuxBridge.OPTIONS_SUBTREE: {
+                        LinuxBridge.STP_SUBTREE: {
+                            LinuxBridge.STP.ENABLED: False
+                        }
+                    },
+                    LinuxBridge.PORT_SUBTREE: [
+                        {LinuxBridge.Port.NAME: "eth1"}
+                    ],
+                },
+                Interface.IPV4: {InterfaceIPv4.ENABLED: False},
+                Interface.IPV6: {InterfaceIPv6.ENABLED: False},
+                Interface.MTU: 1500,
+            },
+            {
+                Interface.NAME: "eth1",
+                Interface.STATE: InterfaceState.UP,
+                Interface.IPV4: {InterfaceIPv4.ENABLED: False},
+                Interface.IPV6: {InterfaceIPv6.ENABLED: False},
+                Interface.MTU: 1500,
+            },
+        ]
+    }
+    libnmstate.apply(desired_state)
+    assertlib.assert_state_match(desired_state)
