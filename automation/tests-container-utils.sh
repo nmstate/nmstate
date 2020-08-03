@@ -57,7 +57,7 @@ function vdsm_tests {
     trap remove_tempdir EXIT
     git -C "$NMSTATE_TEMPDIR" clone --depth 1 https://gerrit.ovirt.org/vdsm
     cd "$NMSTATE_TEMPDIR/vdsm"
-    ./tests/network/functional/run-tests.sh --nmstate-source="$PROJECT_PATH"
+    ./tests/network/functional/run-tests.sh --nmstate-source="$PROJECT_PATH" --pytest-args="-x"
     cd -
 }
 
