@@ -376,3 +376,12 @@ def test_linux_bridge_with_port_holding_two_profiles(eth1_with_two_profiles):
     }
     libnmstate.apply(desired_state)
     assertlib.assert_state_match(desired_state)
+
+
+@pytest.mark.tier1
+def test_converting_memory_only_profile_to_persistent():
+    with dummy_interface(DUMMY0_IFNAME, save_to_disk=False) as dstate:
+        libnmstate.apply(dstate, save_to_disk=True)
+        assert _profile_exists(DUMMY_PROFILE_DIRECTORY + "dummy0.nmconnection")
+
+    assertlib.assert_absent(DUMMY0_IFNAME)
