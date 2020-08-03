@@ -217,7 +217,8 @@ class Ifaces:
                     self._ifaces[iface_name].mark_as_changed()
             if cur_iface:
                 for slave_name in iface.config_changed_slaves(cur_iface):
-                    self._ifaces[slave_name].mark_as_changed()
+                    if slave_name in self._ifaces:
+                        self._ifaces[slave_name].mark_as_changed()
 
     def _match_child_iface_state_with_parent(self):
         """
