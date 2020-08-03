@@ -163,6 +163,16 @@ class ConnectionProfile:
         self._con_profile = con_profile
 
     @property
+    def is_memory_only(self):
+        if self._con_profile:
+            profile_flags = self._con_profile.get_flags()
+            return (
+                NM.SettingsConnectionFlags.UNSAVED & profile_flags
+                or NM.SettingsConnectionFlags.VOLATILE & profile_flags
+            )
+        return False
+
+    @property
     def devname(self):
         if self._con_profile:
             return self._con_profile.get_interface_name()
