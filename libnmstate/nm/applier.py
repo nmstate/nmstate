@@ -125,6 +125,7 @@ def apply_changes(context, net_state, save_to_disk):
                 and cur_con_profile
                 and cur_con_profile.profile
                 and not net_state.ifaces[ifname].is_changed
+                and cur_con_profile.is_memory_only != save_to_disk
             ):
                 # Don't create new profile if original desire does not ask
                 # anything besides state:up and not been marked as changed.
