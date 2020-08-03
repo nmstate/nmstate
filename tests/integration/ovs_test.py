@@ -327,6 +327,16 @@ class TestOvsLinkAggregation:
             pretty_state = PrettyState(current_state)
             assert OVS_BOND_YAML_STATE in pretty_state.yaml
 
+    @pytest.mark.tier1
+    def test_add_ovs_lag_to_existing_ovs_bridge(self, port0_up, port1_up):
+        with Bridge(BRIDGE1).create():
+            port0_name = port0_up[Interface.KEY][0][Interface.NAME]
+            port1_name = port1_up[Interface.KEY][0][Interface.NAME]
+            bridge = Bridge(BRIDGE1)
+            bridge.add_link_aggregation_port(BOND1, (port1_name, port0_name))
+            libnmstate.apply(bridge.state)
+            assertlib.assert_state_match(bridge.state)
+
 
 @pytest.mark.tier1
 def test_ovs_vlan_access_tag():
