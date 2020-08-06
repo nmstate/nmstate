@@ -381,6 +381,15 @@ def test_ovsdb_new_bridge_with_external_id():
     )
     with bridge.create() as state:
         assertlib.assert_state_match(state)
+        new_state = statelib.show_only((PORT1,))
+        # The newly created OVS internal interface should also hold
+        # NM created external IDS.
+        assert (
+            "NM.connection.uuid"
+            in new_state[Interface.KEY][0][OvsDB.OVS_DB_SUBTREE][
+                OvsDB.EXTERNAL_IDS
+            ]
+        )
 
 
 def test_ovsdb_set_external_ids_for_existing_bridge(bridge_with_ports):
@@ -393,6 +402,62 @@ def test_ovsdb_set_external_ids_for_existing_bridge(bridge_with_ports):
     )
     bridge.apply()
     assertlib.assert_state_match(bridge.state)
+
+
+@pytest.fixture
+def ovs_bridge_with_custom_external_ids():
+    bridge = Bridge(BRIDGE1)
+    bridge.add_internal_port(
+        PORT1,
+        ipv4_state={InterfaceIPv4.ENABLED: False},
+        ovs_db={OvsDB.EXTERNAL_IDS: {"foo": "abcd", "bak": 2}},
+    )
+    with bridge.create() as state:
+        yield state
+
+
+def test_ovsdb_remove_external_ids(ovs_bridge_with_custom_external_ids):
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: PORT1,
+                    OvsDB.OVS_DB_SUBTREE: {OvsDB.EXTERNAL_IDS: {}},
+                }
+            ]
+        }
+    )
+    iface_info = statelib.show_only((PORT1,))[Interface.KEY][0]
+    external_ids = iface_info[OvsDB.OVS_DB_SUBTREE][OvsDB.EXTERNAL_IDS]
+    assert len(external_ids) == 1
+
+
+def test_ovsdb_override_external_ids(ovs_bridge_with_custom_external_ids):
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: PORT1,
+                    OvsDB.OVS_DB_SUBTREE: {
+                        OvsDB.EXTERNAL_IDS: {"new_ids": "haha"}
+                    },
+                }
+            ]
+        }
+    )
+    iface_info = statelib.show_only((PORT1,))[Interface.KEY][0]
+    external_ids = iface_info[OvsDB.OVS_DB_SUBTREE][OvsDB.EXTERNAL_IDS]
+    assert len(external_ids) == 2
+    assert external_ids["new_ids"] == "haha"
+
+
+def test_ovsdb_preserved_if_not_mentioned(ovs_bridge_with_custom_external_ids):
+    libnmstate.apply(
+        {Interface.KEY: [{Interface.NAME: PORT1, Interface.MTU: 1501}]}
+    )
+    iface_info = statelib.show_only((PORT1,))[Interface.KEY][0]
+    external_ids = iface_info[OvsDB.OVS_DB_SUBTREE][OvsDB.EXTERNAL_IDS]
+    assert len(external_ids) > 1
 
 
 class TestOvsPatch:

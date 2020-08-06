@@ -161,7 +161,14 @@ class NmstateOvsdbPlugin(NmstatePlugin):
         return ifaces
 
     def apply_changes(self, net_state, save_to_disk):
+        # State might changed after other plugin invoked apply_changes()
         self.refresh_content()
+        cur_iface_to_ext_ids = {}
+        for iface_info in self.get_interfaces():
+            cur_iface_to_ext_ids[iface_info[Interface.NAME]] = iface_info[
+                OvsDB.OVS_DB_SUBTREE
+            ][OvsDB.EXTERNAL_IDS]
+
         pending_changes = []
         for iface in net_state.ifaces.values():
             if not iface.is_changed and not iface.is_desired:
@@ -174,7 +181,34 @@ class NmstateOvsdbPlugin(NmstatePlugin):
                 table_name = "Interface"
             else:
                 continue
-            pending_changes.extend(_generate_db_change(table_name, iface))
+            ids_after_nm_applied = cur_iface_to_ext_ids.get(iface.name, {})
+            ids_before_nm_applied = (
+                iface.to_dict()
+                .get(OvsDB.OVS_DB_SUBTREE, {})
+                .get(OvsDB.EXTERNAL_IDS, {})
+            )
+            original_desire_ids = iface.original_dict.get(
+                OvsDB.OVS_DB_SUBTREE, {}
+            ).get(OvsDB.EXTERNAL_IDS)
+
+            desire_ids = []
+
+            if original_desire_ids is None:
+                desire_ids = ids_before_nm_applied
+            else:
+                desire_ids = original_desire_ids
+
+            # should include external_id created by NetworkManager.
+            if NM_EXTERNAL_ID in ids_after_nm_applied:
+                desire_ids[NM_EXTERNAL_ID] = ids_after_nm_applied[
+                    NM_EXTERNAL_ID
+                ]
+            if desire_ids != ids_after_nm_applied:
+                pending_changes.append(
+                    _generate_db_change_external_ids(
+                        table_name, iface.name, desire_ids
+                    )
+                )
         if pending_changes:
             if not save_to_disk:
                 raise NmstateNotImplementedError(
@@ -242,38 +276,15 @@ class NmstateOvsdbPlugin(NmstatePlugin):
             )
 
 
-def _generate_db_change(table_name, iface_state):
-    return _generate_db_change_external_ids(table_name, iface_state)
-
-
-def _generate_db_change_external_ids(table_name, iface_state):
-    pending_changes = []
-    desire_ids = iface_state.original_dict.get(OvsDB.OVS_DB_SUBTREE, {}).get(
-        OvsDB.EXTERNAL_IDS
-    )
+def _generate_db_change_external_ids(table_name, iface_name, desire_ids):
     if desire_ids and not isinstance(desire_ids, dict):
         raise NmstateValueError("Invalid external_ids, should be dictionary")
 
-    if desire_ids or desire_ids == {}:
-        # should include external_id required by NetworkManager.
-        merged_ids = (
-            iface_state.to_dict()
-            .get(OvsDB.OVS_DB_SUBTREE, {})
-            .get(OvsDB.EXTERNAL_IDS, {})
-        )
-        if NM_EXTERNAL_ID in merged_ids:
-            desire_ids[NM_EXTERNAL_ID] = merged_ids[NM_EXTERNAL_ID]
+    # Convert all value to string
+    for key, value in desire_ids.items():
+        desire_ids[key] = str(value)
 
-        # Convert all value to string
-        for key, value in desire_ids.items():
-            desire_ids[key] = str(value)
-
-        pending_changes.append(
-            _Changes(
-                table_name, OvsDB.EXTERNAL_IDS, iface_state.name, desire_ids
-            )
-        )
-    return pending_changes
+    return _Changes(table_name, OvsDB.EXTERNAL_IDS, iface_name, desire_ids)
 
 
 NMSTATE_PLUGIN = NmstateOvsdbPlugin
