@@ -25,6 +25,7 @@ import yaml
 
 import libnmstate
 from libnmstate.error import NmstateKernelIntegerRoundedError
+from libnmstate.error import NmstateValueError
 from libnmstate.error import NmstateVerificationError
 from libnmstate.prettystate import PrettyState
 from libnmstate.schema import Interface
@@ -33,9 +34,9 @@ from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import LinuxBridge
-from libnmstate.error import NmstateValueError
 
 from .testlib import assertlib
+from .testlib.assertlib import assert_mac_address
 from .testlib.bondlib import bond_interface
 from .testlib.bridgelib import add_port_to_bridge
 from .testlib.bridgelib import generate_vlan_filtering_config
@@ -43,13 +44,13 @@ from .testlib.bridgelib import generate_vlan_id_config
 from .testlib.bridgelib import generate_vlan_id_range_config
 from .testlib.bridgelib import linux_bridge
 from .testlib.cmdlib import exec_cmd
+from .testlib.env import is_fedora
+from .testlib.env import is_el8_kernel
+from .testlib.env import is_ubuntu_kernel
 from .testlib.ifacelib import get_mac_address
 from .testlib.iproutelib import ip_monitor_assert_stable_link_up
 from .testlib.statelib import show_only
-from .testlib.assertlib import assert_mac_address
 from .testlib.vlan import vlan_interface
-from .testlib.env import is_fedora
-from .testlib.env import is_ubuntu_kernel
 
 
 TEST_BRIDGE0 = "linux-br0"
@@ -727,3 +728,25 @@ def test_ignore_unmanged_tap_as_bridge_port(bridge0_with_tap_port, port0_up):
             LinuxBridge.PORT_SUBTREE
         ].append({LinuxBridge.Port.NAME: TEST_TAP0})
         assertlib.assert_state_match(state)
+
+
+@pytest.mark.xfail(
+    is_el8_kernel(),
+    reason="https://bugzilla.redhat.com/1855160",
+    raises=NmstateVerificationError,
+    strict=True,
+)
+def test_change_multicast_snooping_from_false_to_true(port0_up, port1_up):
+    bridge_name = TEST_BRIDGE0
+    port0_name = port0_up[Interface.KEY][0][Interface.NAME]
+    port1_name = port1_up[Interface.KEY][0][Interface.NAME]
+    bridge_state = _create_bridge_subtree_config((port0_name, port1_name))
+    bridge_state[LinuxBridge.OPTIONS_SUBTREE][
+        LinuxBridge.Options.MULTICAST_SNOOPING
+    ] = False
+    with linux_bridge(bridge_name, bridge_state, create=True) as lb_state:
+        bridge = lb_state[Interface.KEY][0][LinuxBridge.CONFIG_SUBTREE]
+        bridge[LinuxBridge.OPTIONS_SUBTREE][
+            LinuxBridge.Options.MULTICAST_SNOOPING
+        ] = True
+        libnmstate.apply(lb_state)
