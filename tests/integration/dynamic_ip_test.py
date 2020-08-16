@@ -643,12 +643,6 @@ def _setup_dhcp_nics():
 
     cmdlib.exec_cmd(
         f"ip netns exec {DHCP_SRV_NS} "
-        f"sysctl -w net.ipv6.conf.{DHCP_SRV_NIC}.disable_ipv6=0".split(),
-        check=True,
-    )
-
-    cmdlib.exec_cmd(
-        f"ip netns exec {DHCP_SRV_NS} "
         f"ip addr add {DHCP_SRV_IP6}/64 dev {DHCP_SRV_NIC}".split(),
         check=True,
     )

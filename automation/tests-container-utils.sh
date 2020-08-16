@@ -79,6 +79,8 @@ function container_pre_test_setup {
     container_exec "echo '$CONT_EXPORT_DIR/core.%h.%e.%t' > \
         /proc/sys/kernel/core_pattern"
     container_exec "ulimit -c unlimited"
+    # Enable IPv6 in container globally
+    container_exec "sysctl -w net.ipv6.conf.all.disable_ipv6=0"
 }
 
 function copy_workspace_container {
