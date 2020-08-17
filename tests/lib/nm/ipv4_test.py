@@ -111,52 +111,48 @@ def test_create_setting_with_static_addresses(NM_mock):
 def test_get_info_with_no_connection():
     info = nm.ipv4.get_info(active_connection=None, applied_config=None)
 
-    assert info == {InterfaceIPv4.ENABLED: False}
+    assert info == {}
 
 
-def test_get_info_with_no_ipv4_config():
+def test_get_info_with_no_applied_config():
     con_mock = mock.MagicMock()
-    con_mock.get_ip4_config.return_value = None
-    con_mock.get_connection.return_value = None
 
     info = nm.ipv4.get_info(active_connection=con_mock, applied_config=None)
 
-    assert info == {InterfaceIPv4.ENABLED: False}
+    assert info == {}
 
 
-def test_get_info_with_ipv4_config(NM_mock):
-    act_con_mock = mock.MagicMock()
-    config_mock = act_con_mock.get_ip4_config.return_value
-    address_mock = mock.MagicMock()
-    config_mock.get_addresses.return_value = [address_mock]
-    remote_conn_mock = mock.MagicMock()
-    act_con_mock.get_connection.return_value = remote_conn_mock
-    set_ip_conf = mock.MagicMock()
-    remote_conn_mock.get_setting_ip4_config.return_value = set_ip_conf
-    set_ip_conf.get_method.return_value = (
-        NM_mock.SETTING_IP4_CONFIG_METHOD_MANUAL
-    )
-    set_ip_conf.props.never_default = False
-    set_ip_conf.props.ignore_auto_dns = False
-    set_ip_conf.props.ignore_auto_routes = False
+def test_get_info_with_no_ip_profile():
+    con_mock = mock.MagicMock()
+    applied_config_mock = mock.MagicMock()
+    applied_config_mock.get_setting_ip4_config.return_value = None
 
     info = nm.ipv4.get_info(
-        active_connection=act_con_mock, applied_config=None
+        active_connection=con_mock, applied_config=applied_config_mock
+    )
+
+    assert info == {InterfaceIPv4.ENABLED: False, InterfaceIPv4.DHCP: False}
+
+
+def test_get_info_with_ip_profile(NM_mock):
+    act_con_mock = mock.MagicMock()
+    applied_config_mock = mock.MagicMock()
+    ip_profile = mock.MagicMock()
+    applied_config_mock.get_setting_ip4_config.return_value = ip_profile
+    ip_profile.get_method.return_value = (
+        NM_mock.SETTING_IP4_CONFIG_METHOD_MANUAL
+    )
+    ip_profile.props.never_default = False
+    ip_profile.props.ignore_auto_dns = False
+    ip_profile.props.ignore_auto_routes = False
+
+    info = nm.ipv4.get_info(
+        active_connection=act_con_mock, applied_config=applied_config_mock
     )
 
     assert info == {
         InterfaceIPv4.ENABLED: True,
         InterfaceIPv4.DHCP: False,
-        InterfaceIPv4.ADDRESS: [
-            {
-                InterfaceIPv4.ADDRESS_IP: (
-                    address_mock.get_address.return_value
-                ),
-                InterfaceIPv4.ADDRESS_PREFIX_LENGTH: int(
-                    address_mock.get_prefix.return_value
-                ),
-            }
-        ],
     }
 
 

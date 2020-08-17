@@ -21,6 +21,7 @@ from libnmstate import nm
 from libnmstate import schema
 
 from .testlib import main_context
+from ..testlib import statelib
 
 
 ETH1 = "eth1"
@@ -30,12 +31,12 @@ MTU0 = 1200
 
 
 def test_interface_mtu_change(eth1_up, nm_plugin):
-    wired_base_state = _get_wired_current_state(nm_plugin, ETH1)
+    wired_base_state = _get_wired_current_state(ETH1)
     _modify_interface(
         nm_plugin.context, wired_state={schema.Interface.MTU: MTU0}
     )
 
-    wired_current_state = _get_wired_current_state(nm_plugin, ETH1)
+    wired_current_state = _get_wired_current_state(ETH1)
 
     assert wired_current_state == {
         schema.Interface.MAC: wired_base_state[schema.Interface.MAC],
@@ -44,12 +45,12 @@ def test_interface_mtu_change(eth1_up, nm_plugin):
 
 
 def test_interface_mac_change_with_modify(eth1_up, nm_plugin):
-    wired_base_state = _get_wired_current_state(nm_plugin, ETH1)
+    wired_base_state = _get_wired_current_state(ETH1)
     _modify_interface(
         nm_plugin.context, wired_state={schema.Interface.MAC: MAC0}
     )
 
-    wired_current_state = _get_wired_current_state(nm_plugin, ETH1)
+    wired_current_state = _get_wired_current_state(ETH1)
 
     assert wired_current_state == {
         schema.Interface.MAC: MAC0,
@@ -70,10 +71,12 @@ def _modify_interface(ctx, wired_state):
         nm.device.modify(ctx, nmdev, new_conn.profile)
 
 
-def _get_wired_current_state(plugin, ifname):
-    plugin.refresh_content()
-    nmdev = plugin.context.get_nm_dev(ifname)
-    return nm.wired.get_info(nmdev) if nmdev else {}
+def _get_wired_current_state(ifname):
+    iface_state = statelib.show_only((ifname,))[schema.Interface.KEY][0]
+    return {
+        schema.Interface.MTU: iface_state[schema.Interface.MTU],
+        schema.Interface.MAC: iface_state[schema.Interface.MAC],
+    }
 
 
 def _create_iface_settings(wired_state, con_profile):

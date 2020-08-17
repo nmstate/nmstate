@@ -25,6 +25,7 @@ import yaml
 
 import libnmstate
 from libnmstate.error import NmstateKernelIntegerRoundedError
+from libnmstate.error import NmstateLibnmError
 from libnmstate.error import NmstateValueError
 from libnmstate.error import NmstateVerificationError
 from libnmstate.prettystate import PrettyState
@@ -694,6 +695,12 @@ def test_moving_ports_from_absent_interface(bridge0_with_port0):
     )
 
 
+@pytest.mark.xfail(
+    reason="https://bugzilla.redhat.com/1869063 and "
+    "https://bugzilla.redhat.com/1869079",
+    raises=(NmstateLibnmError, NmstateVerificationError),
+    strict=True,
+)
 def test_linux_bridge_replace_unmanaged_port(bridge_unmanaged_port, eth1_up):
     iface_state = bridge_unmanaged_port[Interface.KEY][0]
     iface_state[LinuxBridge.CONFIG_SUBTREE][LinuxBridge.PORT_SUBTREE] = [

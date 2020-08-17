@@ -154,10 +154,7 @@ def test_get_info_with_invalid_duplex(ethtool_mock, NM_mock):
 
     info = nm.wired.get_info(dev_mock)
 
-    assert info == {
-        schema.Interface.MAC: dev_mock.get_hw_address.return_value,
-        schema.Interface.MTU: dev_mock.get_mtu.return_value,
-    }
+    assert info == {}
 
 
 class TestWiredSetting:

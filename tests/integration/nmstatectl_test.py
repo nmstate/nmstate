@@ -21,7 +21,6 @@ import json
 import os
 import time
 
-
 from libnmstate import __version__
 from libnmstate.error import NmstateConflictError
 from libnmstate.schema import Constants
@@ -41,28 +40,43 @@ ROLLBACK_CMD = ["nmstatectl", "rollback"]
 LOOPBACK_JSON_CONFIG = """        {
             "name": "lo",
             "type": "unknown",
-            "state": "down",
+            "state": "up",
             "ipv4": {
-                "enabled": false
+                "enabled": true,
+                "address": [
+                    {
+                        "ip": "127.0.0.1",
+                        "prefix-length": 8
+                    }
+                ]
             },
             "ipv6": {
-                "enabled": false
+                "enabled": true,
+                "address": [
+                    {
+                        "ip": "::1",
+                        "prefix-length": 128
+                    }
+                ]
             },
-            "lldp": {
-                "enabled": false
-            },
+            "mac-address": "00:00:00:00:00:00",
             "mtu": 65536
         }"""
 
 LOOPBACK_YAML_CONFIG = """- name: lo
   type: unknown
-  state: down
+  state: up
   ipv4:
-    enabled: false
+    enabled: true
+    address:
+    - ip: 127.0.0.1
+      prefix-length: 8
   ipv6:
-    enabled: false
-  lldp:
-    enabled: false
+    enabled: true
+    address:
+    - ip: ::1
+      prefix-length: 128
+  mac-address: 00:00:00:00:00:00
   mtu: 65536"""
 
 ETH1_YAML_CONFIG = b"""interfaces:

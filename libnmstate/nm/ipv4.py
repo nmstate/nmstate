@@ -101,51 +101,32 @@ def _add_addresses(setting_ipv4, addresses):
 
 def get_info(active_connection, applied_config):
     """
-    Provides the current active values for an active connection.
-    It includes not only the configured values, but the consequences of the
-    configuration (as in the case of ipv4.method=auto, where the address is
-    not explicitly defined).
+    Provide information regarding:
+        * Enable status
+        * DHCP status
     """
-    info = {InterfaceIPv4.ENABLED: False}
-    if active_connection is None:
-        return info
+    if active_connection is None or applied_config is None:
+        # Neither unmanaged or not active, let nispor determine its state
+        return {}
 
+    info = {InterfaceIPv4.ENABLED: False, InterfaceIPv4.DHCP: False}
     ip_profile = (
         applied_config.get_setting_ip4_config() if applied_config else None
     )
     if ip_profile:
-        info[InterfaceIPv4.DHCP] = ip_profile.get_method() == (
-            NM.SETTING_IP4_CONFIG_METHOD_AUTO
-        )
-        props = ip_profile.props
-        if info["dhcp"]:
-            info[InterfaceIPv4.AUTO_ROUTES] = not props.ignore_auto_routes
-            info[InterfaceIPv4.AUTO_GATEWAY] = not props.never_default
-            info[InterfaceIPv4.AUTO_DNS] = not props.ignore_auto_dns
+        method = ip_profile.get_method()
+        if method == NM.SETTING_IP4_CONFIG_METHOD_DISABLED:
+            info[InterfaceIPv4.ENABLED] = False
+        else:
             info[InterfaceIPv4.ENABLED] = True
-            info[InterfaceIPv4.ADDRESS] = []
-            info[InterfaceIPv4.AUTO_ROUTE_TABLE_ID] = props.route_table
-    else:
-        info[InterfaceIPv4.DHCP] = False
+            if method == NM.SETTING_IP4_CONFIG_METHOD_AUTO:
+                info[InterfaceIPv4.DHCP] = True
+                props = ip_profile.props
+                info[InterfaceIPv4.AUTO_ROUTES] = not props.ignore_auto_routes
+                info[InterfaceIPv4.AUTO_GATEWAY] = not props.never_default
+                info[InterfaceIPv4.AUTO_DNS] = not props.ignore_auto_dns
+                info[InterfaceIPv4.AUTO_ROUTE_TABLE_ID] = props.route_table
 
-    ip4config = active_connection.get_ip4_config()
-    if ip4config is None:
-        if not info[InterfaceIPv4.DHCP]:
-            del info[InterfaceIPv4.DHCP]
-        return info
-
-    addresses = [
-        {
-            InterfaceIPv4.ADDRESS_IP: address.get_address(),
-            InterfaceIPv4.ADDRESS_PREFIX_LENGTH: int(address.get_prefix()),
-        }
-        for address in ip4config.get_addresses()
-    ]
-    if not addresses:
-        return info
-
-    info[InterfaceIPv4.ENABLED] = True
-    info[InterfaceIPv4.ADDRESS] = addresses
     return info
 
 
