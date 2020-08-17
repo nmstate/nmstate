@@ -2,6 +2,7 @@ FROM docker.io/library/fedora:32
 
 RUN dnf -y install dnf-plugins-core && \
     dnf copr enable networkmanager/NetworkManager-1.26 -y && \
+    dnf copr enable nmstate/nispor -y && \
     dnf -y install --setopt=install_weak_deps=False \
                    NetworkManager \
                    NetworkManager-ovs \
@@ -38,6 +39,7 @@ RUN dnf -y install dnf-plugins-core && \
                    glib2-devel \
                    gobject-introspection-devel \
                    python3-devel \
+                   python3-nispor \
                    make && \
                    \
     dnf clean all && \

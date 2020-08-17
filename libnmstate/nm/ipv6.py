@@ -35,18 +35,26 @@ INT32_MAX = 2 ** 31 - 1
 
 
 def get_info(active_connection, applied_config):
-    info = {InterfaceIPv6.ENABLED: False}
-    if active_connection is None:
-        return info
+    """
+    Provide information regarding:
+        * Enable status
+        * DHCP/Autoconf status
+    """
+    if active_connection is None or applied_config is None:
+        # Neither unmanaged or not active, let nispor determine its state
+        return {}
 
-    info[InterfaceIPv6.DHCP] = False
-    info[InterfaceIPv6.AUTOCONF] = False
+    info = {
+        InterfaceIPv6.ENABLED: False,
+        InterfaceIPv6.DHCP: False,
+        InterfaceIPv6.AUTOCONF: False,
+    }
 
-    is_link_local_method = False
     ip_profile = (
         applied_config.get_setting_ip6_config() if applied_config else None
     )
     if ip_profile:
+        info[InterfaceIPv6.ENABLED] = True
         method = ip_profile.get_method()
         if method == NM.SETTING_IP6_CONFIG_METHOD_AUTO:
             info[InterfaceIPv6.DHCP] = True
@@ -54,10 +62,8 @@ def get_info(active_connection, applied_config):
         elif method == NM.SETTING_IP6_CONFIG_METHOD_DHCP:
             info[InterfaceIPv6.DHCP] = True
             info[InterfaceIPv6.AUTOCONF] = False
-        elif method == NM.SETTING_IP6_CONFIG_METHOD_LINK_LOCAL:
-            is_link_local_method = True
         elif method == NM.SETTING_IP6_CONFIG_METHOD_DISABLED:
-            return info
+            info[InterfaceIPv6.ENABLED] = False
 
         if info[InterfaceIPv6.DHCP] or info[InterfaceIPv6.AUTOCONF]:
             props = ip_profile.props
@@ -66,35 +72,6 @@ def get_info(active_connection, applied_config):
             info[InterfaceIPv6.AUTO_DNS] = not props.ignore_auto_dns
             info[InterfaceIPv6.AUTO_ROUTE_TABLE_ID] = props.route_table
 
-    ipconfig = active_connection.get_ip6_config()
-    if ipconfig is None:
-        # When DHCP is enable, it might be possible, the active_connection does
-        # not got IP address yet. In that case, we still mark
-        # info[InterfaceIPv6.ENABLED] as True.
-        if (
-            info[InterfaceIPv6.DHCP]
-            or info[InterfaceIPv6.AUTOCONF]
-            or is_link_local_method
-        ):
-            info[InterfaceIPv6.ENABLED] = True
-            info[InterfaceIPv6.ADDRESS] = []
-        else:
-            del info[InterfaceIPv6.DHCP]
-            del info[InterfaceIPv6.AUTOCONF]
-        return info
-
-    addresses = [
-        {
-            InterfaceIPv6.ADDRESS_IP: address.get_address(),
-            InterfaceIPv6.ADDRESS_PREFIX_LENGTH: int(address.get_prefix()),
-        }
-        for address in ipconfig.get_addresses()
-    ]
-    if not addresses:
-        return info
-
-    info[InterfaceIPv6.ENABLED] = True
-    info[InterfaceIPv6.ADDRESS] = addresses
     return info
 
 

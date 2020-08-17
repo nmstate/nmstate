@@ -28,6 +28,7 @@ from libnmstate.schema import InterfaceType
 from libnmstate.schema import OVSBridge as OB
 
 from .testlib import main_context
+from ..testlib import statelib
 
 
 BRIDGE0 = "brtest0"
@@ -98,7 +99,7 @@ def test_bridge_with_internal_interface(bridge_default_config, nm_plugin):
     with _bridge_interface(nm_plugin.context, bridge_desired_state):
         bridge_current_state = _get_bridge_current_state(nm_plugin)
         assert bridge_desired_state == bridge_current_state
-        _assert_mac_exists(nm_plugin.context, port_name)
+        _assert_mac_exists(port_name)
 
     assert not _get_bridge_current_state(nm_plugin)
 
@@ -322,9 +323,6 @@ def _get_iface_bridge_settings(bridge_options):
     return bridge_con_setting.setting, bridge_setting
 
 
-def _assert_mac_exists(ctx, ifname):
-    state = {}
-    nmdev = ctx.get_nm_dev(ifname)
-    if nmdev:
-        state = nm.wired.get_info(nmdev)
-    assert state.get(Interface.MAC)
+def _assert_mac_exists(ifname):
+    iface_state = statelib.show_only((ifname,))[Interface.KEY][0]
+    assert iface_state.get(Interface.MAC)

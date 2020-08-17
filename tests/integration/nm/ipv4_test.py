@@ -40,10 +40,19 @@ IPV4_ADDRESS1 = "192.0.2.251"
 RETRY_TIMEOUT = 5
 
 
+def _dict_is_subset(superset, subset):
+    """
+    Code copied from Ignacio Vazquez-Abrams in
+    https://stackoverflow.com/questions/9323749
+    License is CC BY-SA 3.0
+    """
+    return all(item in superset.items() for item in subset.items())
+
+
 def _ip_state_is_expected(nm_plugin, expected_state):
     nm_plugin.refresh_content()
     ipv4_current_state = _get_ipv4_current_state(nm_plugin.context, TEST_IFACE)
-    return ipv4_current_state == expected_state
+    return _dict_is_subset(expected_state, ipv4_current_state)
 
 
 @iproutelib.ip_monitor_assert_stable_link_up(TEST_IFACE)
