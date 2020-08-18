@@ -616,3 +616,17 @@ def test_create_memory_only_ovs_bridge_not_supported():
 
     with pytest.raises(NmstateNotSupportedError):
         libnmstate.apply(bridge.state, save_to_disk=False)
+
+
+def test_remove_all_ovs_ports(bridge_with_ports):
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: BRIDGE1,
+                    OVSBridge.CONFIG_SUBTREE: {OVSBridge.PORT_SUBTREE: []},
+                }
+            ]
+        }
+    )
+    assertlib.assert_absent(PORT1)
