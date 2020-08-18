@@ -222,19 +222,11 @@ class NmstateOvsdbPlugin(NmstatePlugin):
     def _db_write(self, changes):
         changes_index = {change.row_name: change for change in changes}
         changed_tables = set(change.table_name for change in changes)
-        updated_names = []
         for changed_table in changed_tables:
             for row in self._idl.tables[changed_table].rows.values():
                 if row.name in changes_index:
                     change = changes_index[row.name]
                     setattr(row, change.column_name, change.column_value)
-                    updated_names.append(change.row_name)
-        new_rows = set(changes_index.keys()) - set(updated_names)
-        if new_rows:
-            raise NmstatePluginError(
-                f"BUG: row {new_rows} does not exists in OVS DB "
-                "and currently we don't create new row"
-            )
 
     def _start_transaction(self):
         self._transaction = Transaction(self._idl)
