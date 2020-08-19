@@ -345,37 +345,49 @@ def eth1_with_two_profiles(eth1_up):
 
 
 def test_linux_bridge_with_port_holding_two_profiles(eth1_with_two_profiles):
-    desired_state = {
-        Interface.KEY: [
-            {
-                Interface.NAME: "br0",
-                Interface.TYPE: InterfaceType.LINUX_BRIDGE,
-                Interface.STATE: InterfaceState.UP,
-                LinuxBridge.CONFIG_SUBTREE: {
-                    LinuxBridge.OPTIONS_SUBTREE: {
-                        LinuxBridge.STP_SUBTREE: {
-                            LinuxBridge.STP.ENABLED: False
-                        }
+    try:
+        desired_state = {
+            Interface.KEY: [
+                {
+                    Interface.NAME: "br0",
+                    Interface.TYPE: InterfaceType.LINUX_BRIDGE,
+                    Interface.STATE: InterfaceState.UP,
+                    LinuxBridge.CONFIG_SUBTREE: {
+                        LinuxBridge.OPTIONS_SUBTREE: {
+                            LinuxBridge.STP_SUBTREE: {
+                                LinuxBridge.STP.ENABLED: False
+                            }
+                        },
+                        LinuxBridge.PORT_SUBTREE: [
+                            {LinuxBridge.Port.NAME: "eth1"}
+                        ],
                     },
-                    LinuxBridge.PORT_SUBTREE: [
-                        {LinuxBridge.Port.NAME: "eth1"}
-                    ],
+                    Interface.IPV4: {InterfaceIPv4.ENABLED: False},
+                    Interface.IPV6: {InterfaceIPv6.ENABLED: False},
+                    Interface.MTU: 1500,
                 },
-                Interface.IPV4: {InterfaceIPv4.ENABLED: False},
-                Interface.IPV6: {InterfaceIPv6.ENABLED: False},
-                Interface.MTU: 1500,
-            },
+                {
+                    Interface.NAME: "eth1",
+                    Interface.STATE: InterfaceState.UP,
+                    Interface.IPV4: {InterfaceIPv4.ENABLED: False},
+                    Interface.IPV6: {InterfaceIPv6.ENABLED: False},
+                    Interface.MTU: 1500,
+                },
+            ]
+        }
+        libnmstate.apply(desired_state)
+        assertlib.assert_state_match(desired_state)
+    finally:
+        libnmstate.apply(
             {
-                Interface.NAME: "eth1",
-                Interface.STATE: InterfaceState.UP,
-                Interface.IPV4: {InterfaceIPv4.ENABLED: False},
-                Interface.IPV6: {InterfaceIPv6.ENABLED: False},
-                Interface.MTU: 1500,
-            },
-        ]
-    }
-    libnmstate.apply(desired_state)
-    assertlib.assert_state_match(desired_state)
+                Interface.KEY: [
+                    {
+                        Interface.NAME: "br0",
+                        Interface.STATE: InterfaceState.ABSENT,
+                    }
+                ]
+            }
+        )
 
 
 @pytest.mark.tier1
