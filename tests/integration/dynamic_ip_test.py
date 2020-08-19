@@ -534,6 +534,11 @@ def test_ipv6_dhcp_switch_on_to_off(dhcpcli_up):
     assert not _has_ipv6_auto_nameserver()
 
 
+def _check_ipv6_use_tempaddr_is_0():
+    with open("/proc/sys/net/ipv6/conf/default/use_tempaddr") as f:
+        return not int(f.read())
+
+
 @pytest.mark.tier1
 def test_dhcp_on_bridge0(dhcpcli_up_with_dynamic_ip):
     """
@@ -548,6 +553,7 @@ def test_dhcp_on_bridge0(dhcpcli_up_with_dynamic_ip):
         - IPv6 addresses are identical to the original ones which existed on
         the nic (dhcpcli interface).
     """
+    assert _check_ipv6_use_tempaddr_is_0()
     origin_port_state = dhcpcli_up_with_dynamic_ip
 
     port_name = origin_port_state[Interface.KEY][0][Interface.NAME]
