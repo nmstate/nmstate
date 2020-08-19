@@ -109,10 +109,7 @@ def test_dns_edit(eth1_up):
         assertlib.assert_state(desired_state)
 
     current_state = netinfo.show()
-    assert current_state.get(DNS.KEY, {}).get(DNS.CONFIG, {}) == {
-        DNS.SERVER: [],
-        DNS.SEARCH: [],
-    }
+    assert current_state.get(DNS.KEY, {}).get(DNS.CONFIG, {}) == {}
 
 
 @pytest.mark.tier1
