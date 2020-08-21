@@ -70,7 +70,11 @@ services:
 
 script:
     - sudo modprobe openvswitch
-    - sudo ./automation/run-tests.sh $testflags --customize="${customize}"
+    - sudo modprobe netdevsim
+    - echo '1 1' | sudo tee /sys/bus/netdevsim/new_device
+    - sleep 10
+    - sudo ip link
+    - sudo dmesg
 
 after_failure:
     - sudo ./automation/upload_test_artifacts.sh
