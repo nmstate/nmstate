@@ -18,12 +18,15 @@
 #
 import copy
 
+from operator import itemgetter
+
 import libnmstate
 from libnmstate.schema import Bond
 from libnmstate.schema import DNS
 from libnmstate.schema import Route
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceType
+from libnmstate.schema import LinuxBridge as LB
 from libnmstate.schema import OvsDB
 
 from . import statelib
@@ -92,6 +95,8 @@ def _prepare_state_for_verify(desired_state_data):
     _fix_ovsdb_external_ids(full_desired_state)
     _remove_iface_state_for_verify(full_desired_state)
     _remove_iface_state_for_verify(current_state)
+    _expand_vlan_filter_range(current_state)
+    _expand_vlan_filter_range(full_desired_state)
 
     return full_desired_state, current_state
 
@@ -138,3 +143,41 @@ def _fix_ovsdb_external_ids(state):
 def _remove_iface_state_for_verify(state):
     for iface_state in state.state[Interface.KEY]:
         iface_state.pop(Interface.STATE, None)
+
+
+def _expand_vlan_filter_range(state):
+    for iface_state in state.state[Interface.KEY]:
+        if (
+            iface_state.get(Interface.TYPE) != InterfaceType.LINUX_BRIDGE
+            or LB.CONFIG_SUBTREE not in iface_state
+            or LB.PORT_SUBTREE not in iface_state[LB.CONFIG_SUBTREE]
+        ):
+            continue
+        port_configs = iface_state[LB.CONFIG_SUBTREE][LB.PORT_SUBTREE]
+        for port_config in port_configs:
+            if LB.Port.VLAN_SUBTREE not in port_config:
+                continue
+            vlan_config = port_config[LB.Port.VLAN_SUBTREE]
+            if LB.Port.Vlan.TRUNK_TAGS not in vlan_config:
+                continue
+            new_trunk_tags = []
+            for trunk_tag in vlan_config[LB.Port.Vlan.TRUNK_TAGS]:
+                if LB.Port.Vlan.TrunkTags.ID_RANGE in trunk_tag:
+                    vid_range = trunk_tag[LB.Port.Vlan.TrunkTags.ID_RANGE]
+                    vid_min = vid_range[LB.Port.Vlan.TrunkTags.MIN_RANGE]
+                    vid_max = vid_range[LB.Port.Vlan.TrunkTags.MAX_RANGE]
+                    for vid in range(vid_min, vid_max + 1):
+                        new_trunk_tags.append({LB.Port.Vlan.TrunkTags.ID: vid})
+                elif LB.Port.Vlan.TrunkTags.ID in trunk_tag:
+                    new_trunk_tags.append(
+                        {
+                            LB.Port.Vlan.TrunkTags.ID: trunk_tag[
+                                LB.Port.Vlan.TrunkTags.ID
+                            ]
+                        }
+                    )
+
+            new_trunk_tags.sort(key=itemgetter(LB.Port.Vlan.TrunkTags.ID))
+            port_config[LB.Port.VLAN_SUBTREE][
+                LB.Port.Vlan.TRUNK_TAGS
+            ] = new_trunk_tags

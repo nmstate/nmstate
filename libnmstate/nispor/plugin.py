@@ -66,7 +66,13 @@ class NisporPlugin(NmstatePlugin):
             elif iface_type == "Vxlan":
                 ifaces.append(NisporPluginVxlanIface(np_iface).to_dict())
             elif iface_type == "Bridge":
-                ifaces.append(NisporPluginBridgeIface(np_iface).to_dict())
+                np_ports = []
+                for port_name in np_iface.ports:
+                    if port_name in np_state.ifaces.keys():
+                        np_ports.append(np_state.ifaces[port_name])
+                ifaces.append(
+                    NisporPluginBridgeIface(np_iface, np_ports).to_dict()
+                )
             else:
                 ifaces.append(NisporPluginBaseIface(np_iface).to_dict())
         return ifaces
