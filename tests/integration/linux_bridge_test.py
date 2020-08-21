@@ -88,9 +88,9 @@ VLAN_FILTER_PORT_YAML = """
         mode: trunk
         tag: 300
         trunk-tags:
-        - id: 100
-        - id: 101
-        - id: 102
+        - id-range:
+            max: 102
+            min: 100
 """
 
 

@@ -21,6 +21,7 @@ from libnmstate.error import NmstateValueError
 from libnmstate.schema import LinuxBridge
 
 from .bridge import BridgeIface
+from .linux_bridge_port_vlan import NmstateLinuxBridgePortVlan
 
 # The aging_time, forward_delay, hello_time, max_age options are multipled by
 # 100(USER_HZ) when apply to kernel(via NM), so they are not impacted by this
@@ -31,6 +32,11 @@ INTEGER_ROUNDED_OPTIONS = [
     LinuxBridge.Options.MULTICAST_QUERIER_INTERVAL,
     LinuxBridge.Options.MULTICAST_QUERY_RESPONSE_INTERVAL,
     LinuxBridge.Options.MULTICAST_STARTUP_QUERY_INTERVAL,
+]
+
+READ_ONLY_OPTIONS = [
+    LinuxBridge.Options.HELLO_TIMER,
+    LinuxBridge.Options.GC_TIMER,
 ]
 
 
@@ -131,6 +137,11 @@ class LinuxBridgeIface(BridgeIface):
             ]
         self.sort_slaves()
 
+    def state_for_verify(self):
+        self._normalize_bridge_port_vlan()
+        self._remove_read_only_bridge_options()
+        return super().state_for_verify()
+
     @staticmethod
     def is_integer_rounded(iface_state, current_iface_state):
         for key, value in iface_state._options.items():
@@ -162,6 +173,26 @@ class LinuxBridgeIface(BridgeIface):
                             return key, value, cur_value
 
         return None, None, None
+
+    def _normalize_bridge_port_vlan(self):
+        """
+        * Set Bridge.Port.VLAN_SUBTREE as {} when not defined.
+        * Expand VLAN ranges to single VLANs
+        """
+        for port_config in self.port_configs:
+            if not port_config.get(LinuxBridge.Port.VLAN_SUBTREE):
+                port_config[LinuxBridge.Port.VLAN_SUBTREE] = {}
+            else:
+                vlan_config = NmstateLinuxBridgePortVlan(
+                    port_config[LinuxBridge.Port.VLAN_SUBTREE]
+                ).to_dict(expand_vlan_range=True)
+                port_config[LinuxBridge.Port.VLAN_SUBTREE] = vlan_config
+
+    def _remove_read_only_bridge_options(self):
+        for key in READ_ONLY_OPTIONS:
+            self._bridge_config.get(LinuxBridge.OPTIONS_SUBTREE, {}).pop(
+                key, None
+            )
 
 
 def _assert_vlan_filtering_trunk_tag(trunk_tag_state):

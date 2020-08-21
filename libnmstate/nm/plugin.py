@@ -29,7 +29,6 @@ from libnmstate.schema import RouteRule
 from libnmstate.plugin import NmstatePlugin
 
 from . import bond as nm_bond
-from . import bridge as nm_bridge
 from . import connection as nm_connection
 from . import device as nm_device
 from . import ipv4 as nm_ipv4
@@ -135,7 +134,6 @@ class NetworkManagerPlugin(NmstatePlugin):
             iface_info.update(nm_wired.get_info(dev))
             iface_info.update(nm_user.get_info(self.context, dev))
             iface_info.update(nm_lldp.get_info(self.client, dev))
-            iface_info.update(nm_bridge.get_info(self.context, dev))
             iface_info.update(nm_team.get_info(dev))
 
             if nm_bond.is_bond_type_id(type_id):

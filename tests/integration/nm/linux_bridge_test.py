@@ -18,7 +18,6 @@
 #
 
 from contextlib import contextmanager
-from operator import itemgetter
 
 import pytest
 
@@ -33,6 +32,7 @@ from libnmstate.schema import LinuxBridge as LB
 from libnmstate.nm.common import NM
 
 from ..testlib import iproutelib
+from ..testlib import statelib
 from ..testlib.bridgelib import linux_bridge
 from ..testlib.dummy import nm_unmanaged_dummy
 from .testlib import main_context
@@ -47,7 +47,7 @@ def bridge0_with_port0(port0_up, nm_plugin):
     port_name = port0_up[schema.Interface.KEY][0][schema.Interface.NAME]
     bridge_desired_state = _create_bridge_config((port_name,))
     with _bridge_interface(nm_plugin.context, bridge_desired_state):
-        yield _get_bridge_current_state(nm_plugin)
+        yield _get_bridge_current_state()
 
 
 def test_create_and_remove_minimum_config_bridge(nm_plugin):
@@ -55,22 +55,22 @@ def test_create_and_remove_minimum_config_bridge(nm_plugin):
 
     with _bridge_interface(nm_plugin.context, bridge_desired_state):
 
-        bridge_current_state = _get_bridge_current_state(nm_plugin)
+        bridge_current_state = _get_bridge_current_state()
         assert bridge_current_state
         assert not bridge_current_state[LB.CONFIG_SUBTREE][LB.PORT_SUBTREE]
 
-    assert not _get_bridge_current_state(nm_plugin)
+    assert not _get_bridge_current_state()
 
 
 def test_create_and_remove_bridge(nm_plugin, port0_up):
     port_name = port0_up[schema.Interface.KEY][0][schema.Interface.NAME]
     bridge_desired_state = _create_bridge_config((port_name,))
     with _bridge_interface(nm_plugin.context, bridge_desired_state):
-        bridge_current_state = _get_bridge_current_state(nm_plugin)
+        bridge_current_state = _get_bridge_current_state()
         _remove_read_only_properties(bridge_current_state)
         assert bridge_desired_state == bridge_current_state
 
-    assert not _get_bridge_current_state(nm_plugin)
+    assert not _get_bridge_current_state()
 
 
 @iproutelib.ip_monitor_assert_stable_link_up(BRIDGE0)
@@ -80,7 +80,7 @@ def test_add_port_to_existing_bridge(bridge0_with_port0, port1_up, nm_plugin):
 
     _modify_bridge(nm_plugin.context, bridge0_with_port0)
 
-    current_state = _get_bridge_current_state(nm_plugin)
+    current_state = _get_bridge_current_state()
     _remove_read_only_properties(current_state)
     _remove_read_only_properties(bridge0_with_port0)
 
@@ -175,14 +175,12 @@ def _modify_ports(ctx, ports_state):
         _attach_port_to_bridge(ctx, port_state)
 
 
-def _get_bridge_current_state(nm_plugin):
-    nm_plugin.refresh_content()
-    nmdev = nm_plugin.context.get_nm_dev(BRIDGE0)
-    info = nm.bridge.get_info(nm_plugin.context, nmdev) if nmdev else {}
-    info.get(LB.CONFIG_SUBTREE, {}).get(LB.PORT_SUBTREE, []).sort(
-        key=itemgetter(LB.Port.NAME)
-    )
-    return info
+def _get_bridge_current_state():
+    iface_states = statelib.show_only((BRIDGE0,))[Interface.KEY]
+    if iface_states:
+        return {LB.CONFIG_SUBTREE: iface_states[0][LB.CONFIG_SUBTREE]}
+    else:
+        return {}
 
 
 def _create_bridge(ctx, bridge_desired_state):
