@@ -23,6 +23,7 @@ from libnmstate import nm
 from libnmstate.schema import Interface
 from libnmstate.schema import VXLAN
 
+from ..testlib import statelib
 from .testlib import main_context
 
 
@@ -30,10 +31,10 @@ def test_create_and_remove_vxlan(eth1_up, nm_plugin):
     vxlan_desired_state = _create_vxlan_state(eth1_up)
     with _vxlan_interface(nm_plugin.context, vxlan_desired_state):
         vxlan_name = _vxlan_ifname(vxlan_desired_state)
-        vxlan_current_state = _get_vxlan_current_state(nm_plugin, vxlan_name)
+        vxlan_current_state = _get_vxlan_current_state(vxlan_name)
         assert vxlan_desired_state == vxlan_current_state
 
-    assert not _get_vxlan_current_state(nm_plugin, vxlan_name)
+    assert not _get_vxlan_current_state(vxlan_name)
 
 
 def test_read_destination_port_from_libnm(eth1_up, nm_plugin):
@@ -101,10 +102,14 @@ def _delete_vxlan(ctx, devname):
         nm.device.delete_device(ctx, nmdev)
 
 
-def _get_vxlan_current_state(nm_plugin, ifname):
-    nm_plugin.refresh_content()
-    nmdev = _get_vxlan_device(nm_plugin.context, ifname)
-    return nm.vxlan.get_info(nmdev) if nmdev else {}
+def _get_vxlan_current_state(ifname):
+    state = statelib.show_only((ifname,))
+    vxlan_state = {}
+    if state[Interface.KEY]:
+        iface_state = state[Interface.KEY][0]
+        vxlan_state = {VXLAN.CONFIG_SUBTREE: iface_state[VXLAN.CONFIG_SUBTREE]}
+
+    return vxlan_state
 
 
 def _get_vxlan_device(context, ifname):
