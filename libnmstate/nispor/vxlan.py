@@ -18,6 +18,7 @@
 #
 
 from libnmstate.schema import InterfaceType
+from libnmstate.schema import VXLAN
 
 from .base_iface import NisporPluginBaseIface
 
@@ -26,3 +27,14 @@ class NisporPluginVxlanIface(NisporPluginBaseIface):
     @property
     def type(self):
         return InterfaceType.VXLAN
+
+    def to_dict(self):
+        info = super().to_dict()
+        info[VXLAN.CONFIG_SUBTREE] = {
+            VXLAN.ID: self._np_iface.vxlan_id,
+            VXLAN.BASE_IFACE: self._np_iface.base_iface,
+            VXLAN.REMOTE: self._np_iface.remote,
+            VXLAN.DESTINATION_PORT: self._np_iface.dst_port_min,
+        }
+
+        return info

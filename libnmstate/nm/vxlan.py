@@ -45,32 +45,3 @@ def create_setting(iface_state, base_con_profile):
         vxlan_setting.props.destination_port = vxlan_destination_port
 
     return vxlan_setting
-
-
-def get_info(device):
-    """
-    Provides the current active values for a device
-    """
-    if device.get_device_type() == NM.DeviceType.VXLAN:
-        base_iface = ""
-        if device.props.parent:
-            base_iface = device.props.parent.get_iface()
-        remote = device.props.group
-        if not remote:
-            remote = ""
-        return {
-            VXLAN.CONFIG_SUBTREE: {
-                VXLAN.ID: device.props.id,
-                VXLAN.BASE_IFACE: base_iface,
-                VXLAN.REMOTE: remote,
-                VXLAN.DESTINATION_PORT: _get_destination_port(device),
-            }
-        }
-    return {}
-
-
-def _get_destination_port(device):
-    """
-    Retrieve the destination port.
-    """
-    return device.get_dst_port()
