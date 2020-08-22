@@ -9,6 +9,7 @@ from libnmstate.iplib import is_ipv6_address
 from libnmstate.iplib import canonicalize_ip_network
 from libnmstate.prettystate import format_desired_current_state_diff
 from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceIP
 from libnmstate.schema import RouteRule
 from libnmstate.schema import Route
 
@@ -138,7 +139,7 @@ class RouteRuleState:
     def config_changed(self):
         return self._config_changed
 
-    def gen_metadata(self, route_state):
+    def gen_metadata(self, route_state, ifaces):
         """
         Generate metada which could used for storing into interface.
         Data structure returned is:
@@ -151,7 +152,9 @@ class RouteRuleState:
         """
         route_rule_metadata = {}
         for route_table, rules in self._rules.items():
-            iface_name = self._iface_for_route_table(route_state, route_table)
+            iface_name = self._iface_for_route_table(
+                route_state, route_table, ifaces
+            )
             route_rule_metadata[iface_name] = {
                 Interface.IPV4: [],
                 Interface.IPV6: [],
@@ -161,11 +164,26 @@ class RouteRuleState:
                 route_rule_metadata[iface_name][family].append(rule.to_dict())
         return route_rule_metadata
 
-    def _iface_for_route_table(self, route_state, route_table):
+    def _iface_for_route_table(self, route_state, route_table, ifaces):
         for routes in route_state.config_iface_routes.values():
             for route in routes:
                 if route.table_id == route_table:
                     return route.next_hop_interface
+
+        for iface in ifaces.values():
+            autotable_ipv4 = (
+                iface.to_dict()
+                .get(Interface.IPV4, {})
+                .get(InterfaceIP.AUTO_ROUTE_TABLE_ID)
+            )
+            autotable_ipv6 = (
+                iface.to_dict()
+                .get(Interface.IPV6, {})
+                .get(InterfaceIP.AUTO_ROUTE_TABLE_ID)
+            )
+            if autotable_ipv4 == route_table or autotable_ipv6 == route_table:
+                return iface.name
+
         raise NmstateValueError(
             "Failed to find interface to with route table ID "
             f"{route_table} to store route rules"
