@@ -363,7 +363,9 @@ class Ifaces:
             self._ifaces[iface_name].store_route_metadata(route_metadata)
 
     def gen_route_rule_metadata(self, route_rule_state, route_state):
-        iface_metadata = route_rule_state.gen_metadata(route_state)
+        iface_metadata = route_rule_state.gen_metadata(
+            route_state, self._ifaces
+        )
         for iface_name, route_rule_metadata in iface_metadata.items():
             self._ifaces[iface_name].store_route_rule_metadata(
                 route_rule_metadata

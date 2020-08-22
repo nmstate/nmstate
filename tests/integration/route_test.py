@@ -666,6 +666,21 @@ def test_route_rule_add_from_to_single_host(route_rule_test_env):
     _check_ip_rules(rules)
 
 
+def test_route_rule_add_with_auto_route_table_id(eth1_up):
+    state = eth1_up
+    rules = [
+        {RouteRule.IP_FROM: "192.168.3.2/32", RouteRule.ROUTE_TABLE: 200},
+    ]
+    state[RouteRule.KEY] = {RouteRule.CONFIG: rules}
+    ipv4_state = state[Interface.KEY][0][Interface.IPV4]
+    ipv4_state[InterfaceIPv4.ENABLED] = True
+    ipv4_state[InterfaceIPv4.DHCP] = True
+    ipv4_state[InterfaceIPv4.AUTO_ROUTE_TABLE_ID] = 200
+
+    libnmstate.apply(state)
+    _check_ip_rules(rules)
+
+
 def _check_ip_rules(rules):
     for rule in rules:
         iprule.ip_rule_exist_in_os(
