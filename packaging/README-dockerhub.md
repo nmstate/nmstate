@@ -1,6 +1,6 @@
 ## Docker Hub
 
-The images are automatically rebuilt on new GIT tags or pushes to the master branch:
+The images are automatically rebuilt on new GIT tags or pushes to the base branch:
 
 `Dockerfile.fedora-nmstate-dev` by https://cloud.docker.com/u/nmstate/repository/docker/nmstate/fedora-nmstate-dev
 
@@ -15,7 +15,7 @@ Autotest: Off
 Repository Links: Off
 Build rules:
 Branch:
-Source:master
+Source:base
 Docker Tag:latest
 Dockerfile location:Dockerfile.fedora-nmstate-dev
 Build Context:/packaging
@@ -32,7 +32,7 @@ Build Caching:off
 
 ## Manual Building
 
-The Nmstate user image builds the master master branch by default. To specify a
+The Nmstate user image builds the base branch by default. To specify a
 different commit or tag, specify the `SOURCE_COMMIT` build argument:
 
 ```shell

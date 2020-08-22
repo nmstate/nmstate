@@ -92,7 +92,7 @@ podman tag local/fedora-nmstate-dev docker.io/nmstate/fedora-nmstate-dev:latest
 ```
 
 ### Push local image to the docker hub
-The container images are automatically rebuilt for new commits to the master
+The container images are automatically rebuilt for new commits to the base
 branch or new tags. Therefore updates to the Docker Hub images should always
 happen with a pull request that is merged to ensure that the change is
 persistent. If this is not feasible, a new build could be pushed as follow to
@@ -109,4 +109,4 @@ podman push nmstate/fedora-nmstate-dev:latest \
     docker://docker.io/nmstate/fedora-nmstate-dev:latest
 ```
 
-It will be overwritten after the next commit to master, though.
+It will be overwritten after the next commit to base, though.

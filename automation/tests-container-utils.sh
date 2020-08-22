@@ -28,7 +28,7 @@ function is_file_changed {
     if [ -n "$TRAVIS_BRANCH" ]; then
         git diff --exit-code --name-only upstream/$TRAVIS_BRANCH -- $1
     else
-        git diff -exit-code --name-only upstream/master -- $1
+        git diff -exit-code --name-only upstream/base -- $1
     fi
 
     if [ $? -eq 0 ];then
