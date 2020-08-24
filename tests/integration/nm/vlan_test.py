@@ -21,9 +21,11 @@ from contextlib import contextmanager
 
 from libnmstate import nm
 from libnmstate.nm.common import NM
+from libnmstate.schema import Interface
 from libnmstate.schema import VLAN
 
 from ..testlib.retry import retry_till_true_or_timeout
+from ..testlib import statelib
 from .testlib import main_context
 
 
@@ -38,18 +40,14 @@ def test_create_and_remove_vlan(nm_plugin, eth1_up):
     }
 
     with _vlan_interface(nm_plugin.context, vlan_desired_state):
-        vlan_current_state = _get_vlan_current_state(
-            nm_plugin, vlan_desired_state
-        )
+        vlan_current_state = _get_vlan_current_state(vlan_desired_state)
         assert vlan_desired_state == vlan_current_state
 
-    assert retry_till_true_or_timeout(
-        5, _vlan_is_absent, nm_plugin, vlan_desired_state
-    )
+    assert retry_till_true_or_timeout(5, _vlan_is_absent, vlan_desired_state)
 
 
-def _vlan_is_absent(nm_plugin, vlan_desired_state):
-    return not _get_vlan_current_state(nm_plugin, vlan_desired_state)
+def _vlan_is_absent(vlan_desired_state):
+    return not _get_vlan_current_state(vlan_desired_state)
 
 
 @contextmanager
@@ -61,11 +59,15 @@ def _vlan_interface(ctx, state):
         _delete_vlan(ctx, _get_vlan_ifname(state))
 
 
-def _get_vlan_current_state(nm_plugin, vlan_desired_state):
-    nm_plugin.refresh_content()
+def _get_vlan_current_state(vlan_desired_state):
     ifname = _get_vlan_ifname(vlan_desired_state)
-    nmdev = nm_plugin.context.get_nm_dev(ifname)
-    return nm.vlan.get_info(nmdev) if nmdev else {}
+    state = statelib.show_only((ifname,))
+    vlan_state = {}
+    if state[Interface.KEY]:
+        iface_state = state[Interface.KEY][0]
+        vlan_state = {VLAN.CONFIG_SUBTREE: iface_state[VLAN.CONFIG_SUBTREE]}
+
+    return vlan_state
 
 
 def _create_vlan(ctx, vlan_desired_state):

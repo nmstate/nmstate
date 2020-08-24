@@ -42,16 +42,3 @@ def create_setting(iface_state, base_con_profile):
     vlan_setting.props.parent = vlan_base_iface
 
     return vlan_setting
-
-
-def get_info(device):
-    """
-    Provides the current active values for a device
-    """
-    info = {}
-    if device.get_device_type() == NM.DeviceType.VLAN:
-        info[VLAN.CONFIG_SUBTREE] = {
-            VLAN.ID: device.props.vlan_id,
-            VLAN.BASE_IFACE: device.props.parent.get_iface(),
-        }
-    return info

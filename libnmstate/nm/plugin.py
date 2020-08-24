@@ -39,7 +39,6 @@ from . import ovs as nm_ovs
 from . import translator as nm_translator
 from . import wired as nm_wired
 from . import user as nm_user
-from . import vlan as nm_vlan
 from . import team as nm_team
 from . import dns as nm_dns
 from . import applier as nm_applier
@@ -136,7 +135,6 @@ class NetworkManagerPlugin(NmstatePlugin):
             iface_info.update(nm_wired.get_info(dev))
             iface_info.update(nm_user.get_info(self.context, dev))
             iface_info.update(nm_lldp.get_info(self.client, dev))
-            iface_info.update(nm_vlan.get_info(dev))
             iface_info.update(nm_bridge.get_info(self.context, dev))
             iface_info.update(nm_team.get_info(dev))
 

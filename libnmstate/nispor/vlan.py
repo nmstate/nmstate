@@ -18,6 +18,7 @@
 #
 
 from libnmstate.schema import InterfaceType
+from libnmstate.schema import VLAN
 
 from .base_iface import NisporPluginBaseIface
 
@@ -26,3 +27,11 @@ class NisporPluginVlanIface(NisporPluginBaseIface):
     @property
     def type(self):
         return InterfaceType.VLAN
+
+    def to_dict(self):
+        info = super().to_dict()
+        info[VLAN.CONFIG_SUBTREE] = {
+            VLAN.ID: self._np_iface.vlan_id,
+            VLAN.BASE_IFACE: self._np_iface.base_iface,
+        }
+        return info
