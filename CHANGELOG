@@ -1,4 +1,12 @@
 # Changelog
+## [0.3.5] - 2020-08-28
+### Bug fixes
+ - Allowing remove all interfaces from OVS bridge.
+ - Fix converting memory-only profile to persistent.
+ - Fix adding OVS bond to existing OVS bridge.
+ - Remove inactive profile for desired interface.
+ - Do not report MTU if it is 0.
+
 ## [0.3.4] - 2020-07-24
 ### Bug fixes
  - Fix removing te DNS config.
