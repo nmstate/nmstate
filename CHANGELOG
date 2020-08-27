@@ -9,12 +9,13 @@
 
 ## [0.3.4] - 2020-07-24
 ### Bug fixes
- - Fix removing te DNS config.
+ - Fix removing the DNS config.
  - Fix Linux Bridge integer option round up/down on 250HZ kernel.
  - Fix removing child interface.
  - Linux Bridge: Fix support replacing unmanaged ports.
  - SR-IOV: Raise an exception if the driver does not support a parameter.
  - Fix moving subordination from removed interface to new main interface.
+ - Fix the failure when switching bond mode from 4(802.3ad) to 5(balance-tlb).
 
 ### Breaking changes
  - NetworkManager 1.26.0 or greater is now required.
