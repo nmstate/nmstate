@@ -1,4 +1,56 @@
 # Changelog
+## [0.4.0] - 2020-08-28
+### New features
+ - Providing varlink interface via nmstatectl.
+ - Support managing interfaces created by iproute tools.
+ - The nmstatectl show <interface_name> could filter route table learn from
+   DHCP/Autoconf.
+ - Support modifying the route table ID for DHCP/Autoconf.
+
+### Bug fixes
+ - Could add route rule targeting route table learn from DHCP/Autoconf.
+ - Fix verification failure on unknown interface.
+ - Fix the logging of checkpoint creation.
+ - Sort the OVS internal interfaces and OVS bond interfaces.
+ - Improve performance by skipping reapply call on deactivated interface.
+ - Default to `InterfaceState.UP` if not defined.
+
+### Breaking Changes
+ - New dependency introduced `python3-nispor` for querying kernel runtime
+   network state.
+
+## [0.3.5] - 2020-08-28
+### Bug fixes
+ - Allowing remove all interfaces from OVS bridge.
+ - Fix converting memory-only profile to persistent.
+ - Fix adding OVS bond to existing OVS bridge.
+ - Remove inactive profile for desired interface.
+ - Do not report MTU if it is 0.
+
+## [0.3.4] - 2020-07-24
+### Bug fixes
+ - Fix removing the DNS config.
+ - Fix Linux Bridge integer option round up/down on 250HZ kernel.
+ - Fix removing child interface.
+ - Linux Bridge: Fix support replacing unmanaged ports.
+ - SR-IOV: Raise an exception if the driver does not support a parameter.
+ - Fix moving subordination from removed interface to new main interface.
+ - Fix the failure when switching bond mode from 4(802.3ad) to 5(balance-tlb).
+
+### Breaking changes
+ - NetworkManager 1.26.0 or greater is now required.
+
+## [0.3.3] - 2020-07-02
+### Bug fixes
+ - VLAN: Raise an error when VLAN MTU is greater than the base interface MTU.
+ - Support IP network address with host bits(e.g. 192.0.2.251/24).
+ - Show the OVS bond name first in nmstatectl show.
+ - Fix random rollback timeout.
+ - Fix error due to activation of unknown interface.
+ - Fix the support of multiple state files when using nmstatectl.
+ - Fix remove DNS config.
+ - Improve the performance by eliminating the repeat check of ovs daemon status.
+
 ## [0.3.2] - 2020-06-15
 ### New features
  - Support third party plugin written in Python.
