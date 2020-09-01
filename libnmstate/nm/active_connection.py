@@ -116,6 +116,9 @@ class ActiveConnection:
                     "Connection is not active on {}, no need to "
                     "deactivate".format(self.devname)
                 )
+                if self._act_con:
+                    self._act_con.handler_disconnect(handler_id)
+                self._ctx.finish_async(action)
             else:
                 if self._act_con:
                     self._act_con.handler_disconnect(handler_id)
