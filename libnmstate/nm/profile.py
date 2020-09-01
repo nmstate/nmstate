@@ -239,12 +239,7 @@ class NmProfile:
         elif ACTION_DEACTIVATE in self._actions_needed:
             device.deactivate(self._ctx, self.nmdev)
         elif ACTION_DELETE_DEV_PROFILES in self._actions_needed:
-            remote_connections = self.nmdev.get_available_connections()
-            for remote_con in remote_connections:
-                nm_profile = NmProfile(self._ctx, None)
-                nm_profile.nmdev = self.nmdev
-                nm_profile.remote_conn = remote_con
-                nm_profile.delete()
+            self.delete()
         elif ACTION_DELETE_DEV in self._actions_needed:
             device.delete_device(self._ctx, self.nmdev)
         self._next_action()

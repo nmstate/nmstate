@@ -33,10 +33,13 @@ from libnmstate.schema import LinuxBridge
 from ..testlib import assertlib
 from ..testlib import cmdlib
 from ..testlib import statelib
+from ..testlib.ovslib import Bridge as OvsBridge
 
 
 DUMMY0_IFNAME = "dummy0"
 TEST_BRIDGE0 = "linux-br0"
+TEST_OVS_BRIDGE0 = "br0"
+TEST_OVS_PORT0 = "ovs0"
 
 NMCLI_CON_ADD_DUMMY_CMD = [
     "nmcli",
@@ -73,7 +76,7 @@ NMCLI_CON_UP_TEST_PROFILE_CMD = [
     "testProfile",
 ]
 
-DUMMY_PROFILE_DIRECTORY = "/etc/NetworkManager/system-connections/"
+NM_PROFILE_DIRECTORY = "/etc/NetworkManager/system-connections/"
 
 ETH_PROFILE_DIRECTORY = "/etc/sysconfig/network-scripts/"
 
@@ -86,7 +89,7 @@ MAC0 = "02:FF:FF:FF:FF:00"
 def test_delete_new_interface_inactive_profiles(dummy_inactive_profile):
     with dummy_interface(dummy_inactive_profile):
         profile_exists = _profile_exists(
-            DUMMY_PROFILE_DIRECTORY + "testProfile.nmconnection"
+            NM_PROFILE_DIRECTORY + "testProfile.nmconnection"
         )
         assert not profile_exists
 
@@ -136,7 +139,7 @@ def dummy_interface(ifname, save_to_disk=True):
 def dummy_inactive_profile():
     cmdlib.exec_cmd(NMCLI_CON_ADD_DUMMY_CMD)
     profile_exists = _profile_exists(
-        DUMMY_PROFILE_DIRECTORY + "testProfile.nmconnection"
+        NM_PROFILE_DIRECTORY + "testProfile.nmconnection"
     )
     assert profile_exists
     try:
@@ -280,7 +283,7 @@ def test_state_absent_can_remove_down_profiles(dummy0_with_down_profile):
 def test_create_memory_only_profile_new_interface():
     with dummy_interface(DUMMY0_IFNAME, save_to_disk=False):
         assert not _profile_exists(
-            DUMMY_PROFILE_DIRECTORY + "dummy0.nmconnection"
+            NM_PROFILE_DIRECTORY + "dummy0.nmconnection"
         )
         assert _profile_exists(
             MEMORY_ONLY_PROFILE_DIRECTORY + "dummy0.nmconnection"
@@ -298,7 +301,7 @@ def test_create_memory_only_profile_edit_interface():
         )
         dstate[Interface.KEY][0][Interface.MTU] = 2000
         libnmstate.apply(dstate, save_to_disk=False)
-        assert _profile_exists(DUMMY_PROFILE_DIRECTORY + "dummy0.nmconnection")
+        assert _profile_exists(NM_PROFILE_DIRECTORY + "dummy0.nmconnection")
         assert _profile_exists(
             MEMORY_ONLY_PROFILE_DIRECTORY + "dummy0.nmconnection"
         )
@@ -313,7 +316,7 @@ def test_memory_only_profile_absent_interface():
         dstate[Interface.KEY][0][Interface.STATE] = InterfaceState.ABSENT
         libnmstate.apply(dstate, save_to_disk=False)
         assertlib.assert_absent(DUMMY0_IFNAME)
-        assert _profile_exists(DUMMY_PROFILE_DIRECTORY + "dummy0.nmconnection")
+        assert _profile_exists(NM_PROFILE_DIRECTORY + "dummy0.nmconnection")
 
     assertlib.assert_absent(DUMMY0_IFNAME)
 
@@ -394,6 +397,31 @@ def test_linux_bridge_with_port_holding_two_profiles(eth1_with_two_profiles):
 def test_converting_memory_only_profile_to_persistent():
     with dummy_interface(DUMMY0_IFNAME, save_to_disk=False) as dstate:
         libnmstate.apply(dstate, save_to_disk=True)
-        assert _profile_exists(DUMMY_PROFILE_DIRECTORY + "dummy0.nmconnection")
+        assert _profile_exists(NM_PROFILE_DIRECTORY + "dummy0.nmconnection")
 
     assertlib.assert_absent(DUMMY0_IFNAME)
+
+
+@pytest.fixture
+def ovs_bridge_with_internal_port():
+    bridge = OvsBridge(TEST_OVS_BRIDGE0)
+    bridge.add_internal_port(TEST_OVS_PORT0)
+    with bridge.create():
+        yield bridge.state
+
+
+def test_ovs_profile_been_delete_by_state_absent(
+    ovs_bridge_with_internal_port,
+):
+    assert _profile_exists(NM_PROFILE_DIRECTORY + "ovs0.nmconnection")
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: TEST_OVS_PORT0,
+                    Interface.STATE: InterfaceState.ABSENT,
+                }
+            ]
+        }
+    )
+    assert not _profile_exists(NM_PROFILE_DIRECTORY + "ovs0.nmconnection")
