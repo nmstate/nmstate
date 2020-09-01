@@ -17,8 +17,6 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
-import time
-
 import pytest
 
 import libnmstate
@@ -54,6 +52,9 @@ def test_lot_of_vlans_with_bridges(eth1_up):
                 },
             ]
         )
-    checkpoint = libnmstate.apply({Interface.KEY: interfaces}, commit=False)
-    libnmstate.rollback(checkpoint=checkpoint)
-    time.sleep(5)
+    try:
+        libnmstate.apply({Interface.KEY: interfaces})
+    finally:
+        for iface in interfaces:
+            iface[Interface.STATE] = InterfaceState.ABSENT
+        libnmstate.apply({Interface.KEY: interfaces})
