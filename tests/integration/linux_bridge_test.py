@@ -56,7 +56,7 @@ from .testlib.vlan import vlan_interface
 
 TEST_BRIDGE0 = "linux-br0"
 TEST_TAP0 = "tap0"
-
+ETH1 = "eth1"
 
 BRIDGE_OPTIONS_YAML = """
 options:
@@ -734,6 +734,35 @@ def test_ignore_unmanged_tap_as_bridge_port(bridge0_with_tap_port, port0_up):
             LinuxBridge.PORT_SUBTREE
         ].append({LinuxBridge.Port.NAME: TEST_TAP0})
         assertlib.assert_state_match(state)
+
+
+def test_explicitly_ignore_a_bridge_port(bridge0_with_port0, port1_up):
+    """
+    The ignored interface should be still bridge port along with other ports
+    """
+    bridge_info = bridge0_with_port0[Interface.KEY][0]
+    port0_name = bridge_info[LinuxBridge.CONFIG_SUBTREE][
+        LinuxBridge.PORT_SUBTREE
+    ][0][LinuxBridge.Port.NAME]
+    port1_name = port1_up[Interface.KEY][0][Interface.NAME]
+    _add_port_to_bridge(bridge_info[LinuxBridge.CONFIG_SUBTREE], port1_name)
+    desired_state = {
+        Interface.KEY: [
+            bridge_info,
+            {
+                Interface.NAME: port0_name,
+                Interface.STATE: InterfaceState.IGNORE,
+            },
+        ]
+    }
+    print(desired_state)
+    libnmstate.apply(desired_state)
+    state = show_only((TEST_BRIDGE0,))
+    cur_port_config = state[Interface.KEY][0][LinuxBridge.CONFIG_SUBTREE][
+        LinuxBridge.PORT_SUBTREE
+    ]
+    assert cur_port_config[0][LinuxBridge.Port.NAME] == port0_name
+    assert cur_port_config[1][LinuxBridge.Port.NAME] == port1_name
 
 
 @pytest.mark.xfail(

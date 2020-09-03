@@ -86,7 +86,7 @@ class NmProfiles:
         self._profiles = [
             NmProfile(self._ctx, save_to_disk, iface)
             for iface in net_state.ifaces.values()
-            if iface.is_changed or iface.is_desired
+            if (iface.is_changed or iface.is_desired) and not iface.is_ignore
         ]
 
         for profile in self._profiles:
@@ -604,12 +604,12 @@ def get_all_applied_configs(context):
 
 def _preapply_dns_fix_for_profiles(context, net_state):
     """
-     * When DNS configuration does not changed and old interface hold DNS
-       configuration is not included in `ifaces_desired_state`, preserve
-       the old DNS configure by removing DNS metadata from
-       `ifaces_desired_state`.
-     * When DNS configuration changed, include old interface which is holding
-       DNS configuration, so it's DNS configure could be removed.
+    * When DNS configuration does not changed and old interface hold DNS
+      configuration is not included in `ifaces_desired_state`, preserve
+      the old DNS configure by removing DNS metadata from
+      `ifaces_desired_state`.
+    * When DNS configuration changed, include old interface which is holding
+      DNS configuration, so it's DNS configure could be removed.
     """
     cur_dns_iface_names = nm_dns.get_dns_config_iface_names(
         ipv4.acs_and_ip_profiles(context.client),

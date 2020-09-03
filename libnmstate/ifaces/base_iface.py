@@ -262,6 +262,10 @@ class BaseIface:
         return self.state == InterfaceState.UP
 
     @property
+    def is_ignore(self):
+        return self.state == InterfaceState.IGNORE
+
+    @property
     def is_down(self):
         return self.state == InterfaceState.DOWN
 

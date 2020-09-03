@@ -91,6 +91,7 @@ definitions:
             - absent
             - up
             - down
+            - ignore
         mac-address:
           $ref: "#/definitions/types/mac-address"
         mtu:

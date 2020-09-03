@@ -344,6 +344,37 @@ class TestIfaces:
             [i[Interface.NAME] for i in ifaces.state_to_edit]
         ) == sorted([FOO1_IFACE_NAME, FOO2_IFACE_NAME])
 
+    def test_state_to_edit_with_ignored_iface(self):
+        cur_iface_infos = self._gen_iface_infos()
+        des_iface_infos = self._gen_iface_infos()
+        des_iface_infos[0][Interface.STATE] = InterfaceState.IGNORE
+        ifaces = Ifaces(des_iface_infos, cur_iface_infos)
+
+        assert sorted([i[Interface.NAME] for i in ifaces.state_to_edit]) == [
+            FOO2_IFACE_NAME
+        ]
+
+    def test_state_to_edit_with_ignored_subordinate(self):
+        cur_iface_infos = self._gen_iface_infos()
+        cur_iface_infos[0][Interface.NAME] = SLAVE1_IFACE_NAME
+        cur_iface_infos[1][Interface.NAME] = SLAVE2_IFACE_NAME
+        cur_iface_infos.append(gen_bridge_iface_info())
+        des_iface_infos = self._gen_iface_infos()
+        des_iface_infos[0][Interface.NAME] = SLAVE1_IFACE_NAME
+        des_iface_infos[1][Interface.NAME] = SLAVE2_IFACE_NAME
+        des_iface_infos[1][Interface.STATE] = InterfaceState.IGNORE
+        des_bridge_info = gen_bridge_iface_info()
+        des_bridge_info[LinuxBridge.CONFIG_SUBTREE][
+            LinuxBridge.PORT_SUBTREE
+        ] = []
+        des_iface_infos.append(des_bridge_info)
+
+        ifaces = Ifaces(des_iface_infos, cur_iface_infos)
+
+        assert sorted(
+            [i[Interface.NAME] for i in ifaces.state_to_edit]
+        ) == sorted([LINUX_BRIDGE_IFACE_NAME, SLAVE1_IFACE_NAME])
+
     def test_verify_desire_iface_not_found_in_current(self):
         cur_iface_infos = self._gen_iface_infos()
         cur_iface_infos.pop()
@@ -372,3 +403,30 @@ class TestIfaces:
 
         with pytest.raises(NmstateVerificationError):
             des_ifaces.verify(cur_iface_infos)
+
+    def test_verify_with_ignored_interface(self):
+        cur_iface_infos = self._gen_iface_infos()
+        des_iface_infos = self._gen_iface_infos()
+        des_iface_infos[0][Interface.STATE] = InterfaceState.IGNORE
+        des_iface_infos[0]["foo"] = "bar"
+        ifaces = Ifaces(des_iface_infos, cur_iface_infos)
+
+        ifaces.verify(cur_iface_infos)
+
+    def test_verify_with_ignored_subordinate(self):
+        cur_iface_infos = [gen_foo_iface_info(), gen_foo_iface_info()]
+        cur_iface_infos[0][Interface.NAME] = SLAVE1_IFACE_NAME
+        cur_iface_infos[1][Interface.NAME] = SLAVE2_IFACE_NAME
+        cur_iface_infos.append(gen_bridge_iface_info())
+        des_iface_infos = [gen_foo_iface_info(), gen_foo_iface_info()]
+        des_iface_infos[0][Interface.NAME] = SLAVE1_IFACE_NAME
+        des_iface_infos[1][Interface.NAME] = SLAVE2_IFACE_NAME
+        des_iface_infos[1][Interface.STATE] = InterfaceState.IGNORE
+        des_bridge_info = gen_bridge_iface_info()
+        des_bridge_info[LinuxBridge.CONFIG_SUBTREE][
+            LinuxBridge.PORT_SUBTREE
+        ].pop()
+        des_iface_infos.append(des_bridge_info)
+
+        ifaces = Ifaces(des_iface_infos, cur_iface_infos)
+        ifaces.verify(cur_iface_infos)
