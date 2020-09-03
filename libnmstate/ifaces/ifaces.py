@@ -60,6 +60,7 @@ class Ifaces:
         self._des_iface_infos = des_iface_infos
         self._cur_ifaces = {}
         self._ifaces = {}
+        self._ignored_iface_names = set()
         if cur_iface_infos:
             for iface_info in cur_iface_infos:
                 cur_iface = _to_specific_iface_obj(iface_info, save_to_disk)
@@ -91,6 +92,8 @@ class Ifaces:
                 ):
                     # Ignore interface with unknown type
                     continue
+                if iface.is_ignore:
+                    self._ignored_iface_names.add(iface.name)
                 if cur_iface:
                     iface.merge(cur_iface)
                 iface.mark_as_desired()
@@ -284,7 +287,7 @@ class Ifaces:
         return [
             iface.to_dict()
             for iface in self._ifaces.values()
-            if iface.is_changed or iface.is_desired
+            if (iface.is_changed or iface.is_desired) and not iface.is_ignore
         ]
 
     @property
@@ -310,6 +313,8 @@ class Ifaces:
             save_to_disk=self._save_to_disk,
         )
         cur_ifaces._remove_unknown_interface_type_slaves()
+        cur_ifaces._remove_ignore_interfaces(self._ignored_iface_names)
+        self._remove_ignore_interfaces(self._ignored_iface_names)
         for iface in self._ifaces.values():
             if iface.is_desired:
                 if iface.is_virtual and iface.original_dict.get(
@@ -429,6 +434,16 @@ class Ifaces:
                         )
                 else:
                     slave_master_map[slave_name] = iface.name
+
+    def _remove_ignore_interfaces(self, ignored_iface_names):
+        # Remove ignored slaves
+        for iface in self._ifaces.values():
+            if iface.is_up and iface.is_master and iface.slaves:
+                for slave_name in iface.slaves:
+                    if slave_name in ignored_iface_names:
+                        iface.remove_slave(slave_name)
+        for ignored_iface_name in ignored_iface_names:
+            self._ifaces.pop(ignored_iface_name, None)
 
 
 def _to_specific_iface_obj(info, save_to_disk):

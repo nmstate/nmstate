@@ -93,6 +93,7 @@ class InterfaceState:
     DOWN = "down"
     UP = "up"
     ABSENT = "absent"
+    IGNORE = "ignore"
 
 
 class InterfaceType:
