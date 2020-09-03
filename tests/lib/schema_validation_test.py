@@ -31,6 +31,7 @@ from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import LinuxBridge as LB
+from libnmstate.schema import MacVlan
 from libnmstate.schema import OVSBridge
 from libnmstate.schema import OVSInterface
 from libnmstate.schema import Route
@@ -452,6 +453,48 @@ class TestIfaceTypeTeam:
         )
 
         libnmstate.validator.schema_validate(default_data)
+
+
+class TestIfaceTypeMacVlan:
+    @pytest.mark.parametrize(
+        "mode",
+        [
+            MacVlan.Mode.VEPA,
+            MacVlan.Mode.BRIDGE,
+            MacVlan.Mode.PRIVATE,
+            MacVlan.Mode.PASSTHRU,
+            MacVlan.Mode.SOURCE,
+        ],
+    )
+    def test_valid_mac_vlan_modes(self, default_data, mode):
+        default_data[Interface.KEY].append(
+            {
+                Interface.NAME: "macvlan0",
+                Interface.TYPE: MacVlan.TYPE,
+                MacVlan.CONFIG_SUBTREE: {
+                    MacVlan.BASE_IFACE: "eth1",
+                    MacVlan.MODE: mode,
+                    MacVlan.PROMISCUOUS: True,
+                },
+            }
+        )
+        libnmstate.validator.schema_validate(default_data)
+
+    def test_invalid_mac_vlan_mode(self, default_data):
+        default_data[Interface.KEY].append(
+            {
+                Interface.NAME: "macvlan0",
+                Interface.TYPE: MacVlan.TYPE,
+                MacVlan.CONFIG_SUBTREE: {
+                    MacVlan.BASE_IFACE: "eth1",
+                    MacVlan.MODE: "wrong-mode",
+                    MacVlan.PROMISCUOUS: True,
+                },
+            }
+        )
+
+        with pytest.raises(js.ValidationError):
+            libnmstate.validator.schema_validate(default_data)
 
 
 class TestRoutes:

@@ -105,6 +105,7 @@ class InterfaceType:
     DUMMY = "dummy"
     ETHERNET = "ethernet"
     LINUX_BRIDGE = "linux-bridge"
+    MAC_VLAN = "mac-vlan"
     OVS_BRIDGE = "ovs-bridge"
     OVS_INTERFACE = "ovs-interface"
     OVS_PORT = "ovs-port"
@@ -412,3 +413,19 @@ class InfiniBand:
     class Mode:
         DATAGRAM = "datagram"
         CONNECTED = "connected"
+
+
+class MacVlan:
+    TYPE = InterfaceType.MAC_VLAN
+    CONFIG_SUBTREE = "mac-vlan"
+    BASE_IFACE = "base-iface"
+    MODE = "mode"
+    PROMISCUOUS = "promiscuous"
+
+    class Mode:
+        UNKNOWN = "unknown"
+        VEPA = "vepa"
+        BRIDGE = "bridge"
+        PRIVATE = "private"
+        PASSTHRU = "passthru"
+        SOURCE = "source"

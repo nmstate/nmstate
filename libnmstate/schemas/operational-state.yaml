@@ -31,6 +31,7 @@ properties:
             - "$ref": "#/definitions/interface-team/rw"
             - "$ref": "#/definitions/interface-vrf/rw"
             - "$ref": "#/definitions/interface-infiniband/rw"
+            - "$ref": "#/definitions/interface-mac-vlan/rw"
             - "$ref": "#/definitions/interface-other/rw"
   routes:
     type: object
@@ -641,7 +642,29 @@ definitions:
                 type: string
             route-table-id:
               type: integer
-
+  interface-mac-vlan:
+    rw:
+      properties:
+        type:
+          type: string
+          enum:
+            - mac-vlan
+        mac-vlan:
+          type: object
+          properties:
+            base-iface:
+              type: string
+            mode:
+              type: string
+              enum:
+                - private
+                - vepa
+                - bridge
+                - passthru
+                - source
+                - unknown
+            promiscuous:
+              type: boolean
   interface-other:
     rw:
       properties:
