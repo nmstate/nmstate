@@ -17,9 +17,6 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
-import re
-import subprocess
-
 from libnmstate.error import NmstateNotSupportedError
 from libnmstate.schema import Ethernet
 from libnmstate.schema import Interface
@@ -49,16 +46,6 @@ SRIOV_NMSTATE_TO_NM_MAP = {
         NM.SRIOV_VF_ATTRIBUTE_MAX_TX_RATE,
         GLib.Variant.new_uint32,
     ),
-}
-
-SRIOV_NMSTATE_TO_REGEX = {
-    Ethernet.SRIOV.VFS.MAC_ADDRESS: re.compile(
-        r"[a-fA-F0-9:]{17}|[a-fA-F0-9]{12}"
-    ),
-    Ethernet.SRIOV.VFS.SPOOF_CHECK: re.compile(r"checking (on|off)"),
-    Ethernet.SRIOV.VFS.TRUST: re.compile(r"trust (on|off)"),
-    Ethernet.SRIOV.VFS.MIN_TX_RATE: re.compile(r"min_tx_rate ([0-9]+)"),
-    Ethernet.SRIOV.VFS.MAX_TX_RATE: re.compile(r"max_tx_rate ([0-9]+)"),
 }
 
 
@@ -135,77 +122,3 @@ def _remove_sriov_vfs_in_setting(vfs_config, sriov_setting, vf_ids_to_remove):
 def _has_sriov_capability(context, ifname):
     dev = context.get_nm_dev(ifname)
     return dev and (NM.DeviceCapabilities.SRIOV & dev.props.capabilities)
-
-
-def get_info(device):
-    """
-    Provide the current active SR-IOV runtime values
-    """
-    sriov_running_info = {}
-
-    ifname = device.get_iface()
-    numvf_path = f"/sys/class/net/{ifname}/device/sriov_numvfs"
-    try:
-        with open(numvf_path) as f:
-            sriov_running_info[Ethernet.SRIOV.TOTAL_VFS] = int(f.read())
-    except FileNotFoundError:
-        return sriov_running_info
-
-    if sriov_running_info[Ethernet.SRIOV.TOTAL_VFS]:
-        sriov_running_info[Ethernet.SRIOV.VFS_SUBTREE] = _get_sriov_vfs_info(
-            ifname
-        )
-    else:
-        sriov_running_info[Ethernet.SRIOV.VFS_SUBTREE] = []
-
-    return {Ethernet.SRIOV_SUBTREE: sriov_running_info}
-
-
-def _get_sriov_vfs_info(ifname):
-    """
-    This is a workaround to get the VFs configuration from runtime.
-    Ref: https://bugzilla.redhat.com/1777520
-    """
-    proc = subprocess.run(
-        ("ip", "link", "show", ifname),
-        stdout=subprocess.PIPE,
-        encoding="utf-8",
-    )
-    iplink_output = proc.stdout
-
-    # This is ignoring the first two line of the ip link output because they
-    # are about the PF and we don't need them.
-    vfs = iplink_output.splitlines(False)[2:]
-    vfs_config = [
-        vf_config for vf_config in _parse_ip_link_output_for_vfs(vfs)
-    ]
-
-    return vfs_config
-
-
-def _parse_ip_link_output_for_vfs(vfs):
-    for vf_id, vf in enumerate(vfs):
-        vf_config = _parse_ip_link_output_options_for_vf(vf)
-        vf_config[Ethernet.SRIOV.VFS.ID] = vf_id
-        yield vf_config
-
-
-def _parse_ip_link_output_options_for_vf(vf):
-    vf_options = {}
-    for option, expr in SRIOV_NMSTATE_TO_REGEX.items():
-        match_expr = expr.search(vf)
-        if match_expr:
-            if option == Ethernet.SRIOV.VFS.MAC_ADDRESS:
-                value = match_expr.group(0).upper()
-            else:
-                value = match_expr.group(1)
-
-            if value.isdigit():
-                value = int(value)
-            elif value == "on":
-                value = True
-            elif value == "off":
-                value = False
-            vf_options[option] = value
-
-    return vf_options
