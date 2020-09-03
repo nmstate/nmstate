@@ -68,18 +68,20 @@ def create_setting(context, iface_state, base_con_profile):
     sriov_config = iface_state.get(Ethernet.CONFIG_SUBTREE, {}).get(
         Ethernet.SRIOV_SUBTREE
     )
+
+    if base_con_profile:
+        sriov_setting = base_con_profile.get_setting_by_name(
+            NM.SETTING_SRIOV_SETTING_NAME
+        )
     if sriov_config:
         if not _has_sriov_capability(context, ifname):
             raise NmstateNotSupportedError(
                 f"Interface '{ifname}' does not support SR-IOV"
             )
 
-        sriov_setting = base_con_profile.get_setting_by_name(
-            NM.SETTING_SRIOV_SETTING_NAME
-        )
         if sriov_setting:
             sriov_setting = sriov_setting.duplicate()
-        if not sriov_setting:
+        else:
             sriov_setting = NM.SettingSriov.new()
 
         vfs_config = sriov_config.get(Ethernet.SRIOV.VFS_SUBTREE, [])
