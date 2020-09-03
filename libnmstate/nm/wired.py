@@ -18,7 +18,6 @@
 #
 
 from libnmstate.ethtool import minimal_ethtool
-from libnmstate.nm import sriov
 from libnmstate.schema import Ethernet
 from libnmstate.schema import Interface
 from .common import NM
@@ -157,9 +156,5 @@ def _get_ethernet_info(device, iface):
         ethernet[Ethernet.DUPLEX] = duplex_setting
     else:
         return None
-
-    sriov_info = sriov.get_info(device)
-    if sriov_info:
-        ethernet.update(sriov_info)
 
     return ethernet
