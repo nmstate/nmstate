@@ -17,7 +17,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
-import nispor
+from nispor import NisporNetState
 
 from libnmstate.plugin import NmstatePlugin
 
@@ -49,7 +49,7 @@ class NisporPlugin(NmstatePlugin):
         return NmstatePlugin.DEFAULT_PRIORITY - 1
 
     def get_interfaces(self):
-        np_state = nispor.get_state()
+        np_state = NisporNetState.retrieve()
         ifaces = []
         for np_iface in np_state.ifaces.values():
             iface_type = np_iface.type
