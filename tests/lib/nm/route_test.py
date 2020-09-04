@@ -22,11 +22,10 @@ from unittest import mock
 
 import pytest
 
-from libnmstate import iplib
-from libnmstate.error import NmstateNotImplementedError
+from libnmstate.nm import connection as nm_connection
 from libnmstate.nm import ipv4 as nm_ipv4
 from libnmstate.nm import ipv6 as nm_ipv6
-from libnmstate.nm import connection as nm_connection
+from libnmstate.nm.common import NM
 from libnmstate.ifaces import BaseIface
 from libnmstate.schema import InterfaceIP
 from libnmstate.schema import Route
@@ -205,40 +204,34 @@ def test_change_gateway(nm_ip, routes, gateways):
         },
         base_con_profile=None,
     )
-    assert [_nm_route_to_dict(r) for r in setting_ip.props.routes] == routes
-    assert _get_gateway(setting_ip) == gateways[0]
+    assert [
+        _nm_route_to_dict(r) for r in setting_ip.props.routes
+    ] == routes + gateways[:1]
+    assert _get_gateways(setting_ip)[0] == gateways[0]
 
 
-@pytest.mark.xfail(
-    raises=NmstateNotImplementedError,
-    strict=True,
-    reason="Network Manager Bug: https://bugzilla.redhat.com/1707396",
-)
 @parametrize_ip_ver_routes_gw
 def test_add_two_gateway(nm_ip, routes, gateways):
-    nm_ip.create_setting(
+    setting_ip = nm_ip.create_setting(
         {
             InterfaceIP.ENABLED: True,
             BaseIface.ROUTES_METADATA: routes + gateways,
         },
         base_con_profile=None,
     )
+    assert _get_gateways(setting_ip) == gateways
 
 
-@pytest.mark.xfail(
-    raises=NmstateNotImplementedError,
-    strict=True,
-    reason="Network Manager Bug: https://bugzilla.redhat.com/1707396",
-)
 @parametrize_ip_ver_routes_gw
 def test_add_duplicate_gateways(nm_ip, routes, gateways):
-    nm_ip.create_setting(
+    setting_ip = nm_ip.create_setting(
         {
             InterfaceIP.ENABLED: True,
             BaseIface.ROUTES_METADATA: routes + [gateways[0], gateways[0]],
         },
         base_con_profile=None,
     )
+    assert _get_gateways(setting_ip)[0] == gateways[0]
 
 
 @parametrize_ip_ver_routes_gw
@@ -251,9 +244,10 @@ def test_change_gateway_without_metric(nm_ip, routes, gateways):
         },
         base_con_profile=None,
     )
+    current_routes = [_nm_route_to_dict(r) for r in setting_ip.props.routes]
     gateways[0][Route.METRIC] = Route.USE_DEFAULT_METRIC
-    assert [_nm_route_to_dict(r) for r in setting_ip.props.routes] == routes
-    assert _get_gateway(setting_ip) == gateways[0]
+    assert current_routes == routes + [gateways[0]]
+    assert _get_gateways(setting_ip) == [gateways[0]]
 
 
 @parametrize_ip_ver_routes_gw
@@ -268,8 +262,10 @@ def test_change_gateway_without_table_id(nm_ip, routes, gateways):
     )
     gateways[0][Route.TABLE_ID] = Route.USE_DEFAULT_ROUTE_TABLE
 
-    assert [_nm_route_to_dict(r) for r in setting_ip.props.routes] == routes
-    assert _get_gateway(setting_ip) == gateways[0]
+    assert [
+        _nm_route_to_dict(r) for r in setting_ip.props.routes
+    ] == routes + [gateways[0]]
+    assert _get_gateways(setting_ip)[0] == gateways[0]
 
 
 @parametrize_ip_ver_routes_gw
@@ -299,7 +295,7 @@ def _nm_route_to_dict(nm_route):
     )
     next_hop = nm_route.get_next_hop() or ""
     metric = int(nm_route.get_metric())
-    table_id_variant = nm_route.get_attribute("table")
+    table_id_variant = nm_route.get_attribute(NM.IP_ROUTE_ATTRIBUTE_TABLE)
 
     return {
         Route.TABLE_ID: int(table_id_variant.get_uint32()),
@@ -309,15 +305,14 @@ def _nm_route_to_dict(nm_route):
     }
 
 
-def _get_gateway(setting_ip):
-    gateway = setting_ip.props.gateway
-    if iplib.is_ipv6_address(gateway):
-        destination = IPV6_DEFAULT_GATEWAY_DESTINATION
-    else:
-        destination = IPV4_DEFAULT_GATEWAY_DESTINATION
-    return {
-        Route.TABLE_ID: setting_ip.get_route_table(),
-        Route.DESTINATION: destination,
-        Route.NEXT_HOP_ADDRESS: gateway,
-        Route.METRIC: setting_ip.get_route_metric(),
-    }
+def _get_gateways(setting_ip):
+    gateways = []
+
+    for nm_route in setting_ip.props.routes:
+        route = _nm_route_to_dict(nm_route)
+        if route[Route.DESTINATION] in (
+            IPV6_DEFAULT_GATEWAY_DESTINATION,
+            IPV4_DEFAULT_GATEWAY_DESTINATION,
+        ):
+            gateways.append(route)
+    return gateways
