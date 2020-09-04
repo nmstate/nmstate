@@ -49,6 +49,7 @@ class Api2Nm:
                 InterfaceType.LINUX_BRIDGE: NM.SETTING_BRIDGE_SETTING_NAME,
                 InterfaceType.VRF: NM.SETTING_VRF_SETTING_NAME,
                 InterfaceType.INFINIBAND: NM.SETTING_INFINIBAND_SETTING_NAME,
+                InterfaceType.MAC_VLAN: NM.SETTING_MACVLAN_SETTING_NAME,
             }
             try:
                 ovs_types = {

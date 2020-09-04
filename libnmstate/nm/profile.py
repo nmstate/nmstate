@@ -45,6 +45,7 @@ from . import dns as nm_dns
 from . import ipv4
 from . import ipv6
 from . import lldp
+from . import macvlan
 from . import ovs as nm_ovs
 from . import profile_state
 from . import sriov
@@ -505,6 +506,12 @@ class NmProfile:
                 create_vrf_setting(self.iface_info[VRF.CONFIG_SUBTREE])
             )
 
+        macvlan_setting = macvlan.create_setting(
+            self.iface_info, self._remote_conn
+        )
+        if macvlan_setting:
+            settings.append(macvlan_setting)
+
         return settings
 
     def _import_existing_profile(self, ifname):
@@ -569,6 +576,9 @@ class NmProfile:
                             ACTION_DEACTIVATE_BEFOREHAND
                         )
                         groups["profiles_to_deactivate_beforehand"].add(self)
+                elif self.iface.type == InterfaceType.MAC_VLAN:
+                    self._actions_needed.append(ACTION_DEACTIVATE_BEFOREHAND)
+                    groups["profiles_to_deactivate_beforehand"].add(self)
                 self._actions_needed.append(ACTION_MODIFY)
                 if self.iface.type in CONTROLLER_IFACE_TYPES:
                     groups["controller_ifaces_to_edit"].add(self)
