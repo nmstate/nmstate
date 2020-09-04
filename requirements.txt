@@ -9,3 +9,4 @@ jsonschema
 PyGObject
 PyYAML
 setuptools
+varlink
