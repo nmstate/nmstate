@@ -21,7 +21,6 @@ import copy
 import pytest
 
 import libnmstate
-from libnmstate.error import NmstateNotImplementedError
 from libnmstate.error import NmstateValueError
 from libnmstate.schema import DNS
 from libnmstate.schema import Interface
@@ -133,11 +132,6 @@ def test_add_route_without_table_id(eth1_up):
     _assert_routes(routes, cur_state)
 
 
-@pytest.mark.xfail(
-    raises=NmstateNotImplementedError,
-    reason="https://bugzilla.redhat.com/1707396",
-    strict=True,
-)
 def test_multiple_gateway(eth1_up):
     libnmstate.apply(
         {
