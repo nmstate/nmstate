@@ -194,3 +194,12 @@ def test_add_ib_pkey_nic_and_remove():
         assertlib.assert_state(desired_state)
 
     assertlib.assert_absent(f"{test_nic}.80ff")
+
+
+def test_add_mac_vlan_and_remove():
+    with example_state(
+        "mac_vlan_create.yml", cleanup="mac_vlan_absent.yml"
+    ) as desired_state:
+        assertlib.assert_state(desired_state)
+
+    assertlib.assert_absent("macvlan0")

@@ -1,0 +1,5 @@
+---
+interfaces:
+  - name: macvlan0
+    type: mac-vlan
+    state: absent

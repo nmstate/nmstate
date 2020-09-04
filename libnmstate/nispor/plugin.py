@@ -23,12 +23,13 @@ from libnmstate.plugin import NmstatePlugin
 from libnmstate.schema import Route
 
 from .base_iface import NisporPluginBaseIface
+from .bond import NisporPluginBondIface
+from .bridge import NisporPluginBridgeIface
 from .dummy import NisporPluginDummyIface
 from .ethernet import NisporPluginEthernetIface
-from .bond import NisporPluginBondIface
+from .macvlan import NisporPluginMacVlanIface
 from .vlan import NisporPluginVlanIface
 from .vxlan import NisporPluginVxlanIface
-from .bridge import NisporPluginBridgeIface
 from .route import nispor_route_state_to_nmstate
 from .vrf import NisporPluginVrfIface
 
@@ -69,6 +70,8 @@ class NisporPlugin(NmstatePlugin):
                 ifaces.append(NisporPluginVlanIface(np_iface).to_dict())
             elif iface_type == "Vxlan":
                 ifaces.append(NisporPluginVxlanIface(np_iface).to_dict())
+            elif iface_type == "MacVlan":
+                ifaces.append(NisporPluginMacVlanIface(np_iface).to_dict())
             elif iface_type == "Bridge":
                 np_ports = []
                 for port_name in np_iface.ports:

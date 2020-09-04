@@ -1,0 +1,9 @@
+---
+interfaces:
+  - name: macvlan0
+    type: mac-vlan
+    state: up
+    mac-vlan:
+      base-iface: eth1
+      mode: passthru
+      promiscuous: true
