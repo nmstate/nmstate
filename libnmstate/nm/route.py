@@ -21,7 +21,6 @@ from operator import itemgetter
 import socket
 
 from libnmstate import iplib
-from libnmstate.error import NmstateNotImplementedError
 from libnmstate.error import NmstateValueError
 from libnmstate.nm import active_connection as nm_ac
 from libnmstate.schema import Interface
@@ -31,7 +30,6 @@ from libnmstate.schema import RouteRule
 from .common import GLib
 from .common import NM
 
-NM_ROUTE_TABLE_ATTRIBUTE = "table"
 IPV4_DEFAULT_GATEWAY_DESTINATION = "0.0.0.0/0"
 IPV6_DEFAULT_GATEWAY_DESTINATION = "::/0"
 
@@ -116,7 +114,7 @@ def get_config(acs_and_ip_profiles):
 
 
 def _get_per_route_table_id(nm_route, default_table_id):
-    table = nm_route.get_attribute(NM_ROUTE_TABLE_ATTRIBUTE)
+    table = nm_route.get_attribute(NM.IP_ROUTE_ATTRIBUTE_TABLE)
     return int(table.get_uint32()) if table else default_table_id
 
 
@@ -152,19 +150,7 @@ def _get_default_route_config(gateway, metric, default_table_id, iface_name):
 
 def add_routes(setting_ip, routes):
     for route in routes:
-        if route[Route.DESTINATION] in (
-            IPV4_DEFAULT_GATEWAY_DESTINATION,
-            IPV6_DEFAULT_GATEWAY_DESTINATION,
-        ):
-            if setting_ip.get_gateway():
-                raise NmstateNotImplementedError(
-                    "Only a single default gateway is supported due to a "
-                    "limitation of NetworkManager: "
-                    "https://bugzilla.redhat.com/1707396"
-                )
-            _add_route_gateway(setting_ip, route)
-        else:
-            _add_specfic_route(setting_ip, route)
+        _add_specfic_route(setting_ip, route)
 
 
 def _add_specfic_route(setting_ip, route):
@@ -181,20 +167,10 @@ def _add_specfic_route(setting_ip, route):
     )
     table_id = route.get(Route.TABLE_ID, Route.USE_DEFAULT_ROUTE_TABLE)
     ip_route.set_attribute(
-        NM_ROUTE_TABLE_ATTRIBUTE, GLib.Variant.new_uint32(table_id)
+        NM.IP_ROUTE_ATTRIBUTE_TABLE, GLib.Variant.new_uint32(table_id)
     )
     # Duplicate route entry will be ignored by libnm.
     setting_ip.add_route(ip_route)
-
-
-def _add_route_gateway(setting_ip, route):
-    setting_ip.props.gateway = route[Route.NEXT_HOP_ADDRESS]
-    setting_ip.props.route_table = route.get(
-        Route.TABLE_ID, Route.USE_DEFAULT_ROUTE_TABLE
-    )
-    setting_ip.props.route_metric = route.get(
-        Route.METRIC, Route.USE_DEFAULT_METRIC
-    )
 
 
 def get_static_gateway_iface(family, iface_routes):
