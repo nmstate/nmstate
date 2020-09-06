@@ -13,6 +13,61 @@ This project and everyone participating in it is governed by the
 By participating, you are expected to uphold this code.
 Please report unacceptable behavior to the nmstate team.
 
+## Code structure
+
+The repository is structured as follows:
+
+- `./automation/` - Contains the [automation enviroment](./automation/README.md), 
+serving the tests of Nmstate.
+
+- `./doc/` - Contains the documentation. 
+
+- `./examples/` - Contains YAML examples for different configurations.
+
+- `./libnmstate/ifaces/` Contains the classes including the attributes of the 
+interfaces.
+ 
+- `./libnmstate/nispor/` Contains the nmstate nispor plugin, currently for 
+querying kernel network status. 
+
+- `./libnmstate/nm/` Contains the nmstate NetworkManager plugin, currently for 
+querying network status and applying network states. 
+
+- `./libnmstate/plugins/` Contains the plugins supported by default (e.g. ovsdb). 
+
+- `./libnmstate/schemas/` Contains the API schema file.
+
+- `./nmstatectl/` - Contains command lines tools and varlink service.
+
+- `./packaging/` - Contains packaging utilities.
+
+- `./tests/` - Contains tests for unit and integration tests.
+
+## Configuring Git
+
+Before starting to contribute, make sure you have the basic git configuration: 
+Your name and email. This will be useful when signing your contributions. The 
+following commands will set your global name and email, althought you can 
+change it later for every repo:
+
+```
+git config --global user.name "Jane Doe"
+git config --global user.email janedoe@example.com`
+```
+
+The git editor is your system's default. If you feel more comfortable with a 
+different editor for writing your commits (such as Vim), change it with:
+
+```
+git config --global core.editor vim
+```
+
+If you want to check your settings, use `git config --list` to see all the 
+settings Git can find. 
+
+You can refer to [Pro Git](https://git-scm.com/book/en/v2) for further information.
+
+
 ## How to Contribute
 
 - Bugs: Tracked as ([GitHub issues](https://github.com/nmstate/nmstate/issues)).
@@ -20,6 +75,8 @@ Please report unacceptable behavior to the nmstate team.
 ([GitHub issues](https://github.com/nmstate/nmstate/issues)).
 - Code: Managed on [GitHub](https://github.com/nmstate/nmstate) through
   Pull Requests ([PR](https://github.com/nmstate/nmstate/pulls)).
+
+Please check the [developer guide](https://www.nmstate.io/devel/dev_guide.html).
 
 #### Pull Requests
 Please follow these steps to have your contribution considered by the maintainers:
@@ -32,6 +89,53 @@ this, please follow the steps in the [run-test.sh documentation](automation/READ
 4. After you submit your pull request, verify that all
 [status checks](https://help.github.com/articles/about-status-checks/) are passing.
 
+### Write a good commit message
+Here are a few rules to keep in mind while writing a commit message
+
+   1. Separate subject from body with a blank line
+   2. Limit the subject line to 50 characters
+   3. Capitalize the subject line
+   4. Do not end the subject line with a period
+   5. Use the imperative mood in the subject line
+   6. Wrap the body at 72 characters
+   7. Use the body to explain what and why vs. how
+
+ A good commit message looks something like this
+```
+  Summarize changes in around 50 characters or less
+
+ More detailed explanatory text, if necessary. Wrap it to about 72 characters 
+ or so. In some contexts, the first line is treated as the subject of the 
+ commit and the rest of the text as the body. The blank line separating the 
+ summary from the body is critical (unless you omit the body entirely); various 
+ tools like `log`, `shortlog` and `rebase` can get confused if you run the two 
+ together.
+
+ Explain the problem that this commit is solving. Focus on why you are making 
+ this change as opposed to how (the code explains that).
+ Are there side effects or other unintuitive consequences of this change? 
+ Here's the place to explain them.
+
+ Further paragraphs come after blank lines.
+
+  - Bullet points are okay, too
+
+  - Typically a hyphen or asterisk is used for the bullet, preceded by a single 
+    space, with blank lines in between, but conventions vary here
+
+ If you use an issue tracker, put references to them at the bottom, like this:
+
+ Resolves: #123
+ See also: #456, #789
+
+Do not forget to sign your commit! Use `git commit -s`
+
+```
+
+This is taken from [chris beams git commit](https://chris.beams.io/posts/git-commit/).
+You may want to read this for a more detailed explanation (and links to other 
+posts on how to write a good commit message). This content is licensed under 
+[CC-BY-SA](https://creativecommons.org/licenses/by-sa/4.0/).
 
 ## Coding and Style Guidelines
 
@@ -43,9 +147,6 @@ this, please follow the steps in the [run-test.sh documentation](automation/READ
   Production code must be covered by unit tests and/or basic integration tests.
   When too many mocks are required, it is often a smell that the tested code
   is not well structured or in some cases a candidate for integration tests.
-- Commit message should use the provided [commit-template](commit-template.txt):
-  Set the template for nmstate by configuring git:
-  `git config commit.template commit-template.txt`
 - Packages, modules, functions, methods and variables should use
   underscore_separated_names.
 - Class names are in CamelCase.
