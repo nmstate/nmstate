@@ -163,46 +163,49 @@ definitions:
           type: string
           enum:
             - ethernet
-        auto-negotiation:
-          type: boolean
-        duplex:
-          type: string
-          enum:
-            - full
-            - half
-        speed:
-          type: integer
-          minimum: 0
-        flow-control:
-          type: boolean
-        sr-iov:
+        ethernet:
           type: object
           properties:
-            total-vfs:
+            auto-negotiation:
+              type: boolean
+            duplex:
+              type: string
+              enum:
+                - full
+                - half
+            speed:
               type: integer
               minimum: 0
-            vfs:
-              type: array
-              items:
-                type: object
-                properties:
-                  id:
-                    type: integer
-                    minimum: 0
-                  mac-address:
-                    $ref: "#/definitions/types/mac-address"
-                  spoof-check:
-                    type: boolean
-                  trust:
-                    type: boolean
-                  min-tx-rate:
-                    type: integer
-                    minimum: 0
-                  max-tx-rate:
-                    type: integer
-                    minimum: 0
-                required:
-                  - id
+            flow-control:
+              type: boolean
+            sr-iov:
+              type: object
+              properties:
+                total-vfs:
+                  type: integer
+                  minimum: 0
+                vfs:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        minimum: 0
+                      mac-address:
+                        $ref: "#/definitions/types/mac-address"
+                      spoof-check:
+                        type: boolean
+                      trust:
+                        type: boolean
+                      min-tx-rate:
+                        type: integer
+                        minimum: 0
+                      max-tx-rate:
+                        type: integer
+                        minimum: 0
+                    required:
+                      - id
   interface-vlan:
     rw:
       properties:

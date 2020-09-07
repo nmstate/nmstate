@@ -214,7 +214,7 @@ class TestIfaceTypeEthernet:
         default_data[INTERFACES][0].update(
             {
                 Interface.TYPE: InterfaceType.ETHERNET,
-                Ethernet.AUTO_NEGOTIATION: True,
+                Ethernet.CONFIG_SUBTREE: {Ethernet.AUTO_NEGOTIATION: True},
             }
         )
         libnmstate.validator.schema_validate(default_data)
@@ -222,9 +222,11 @@ class TestIfaceTypeEthernet:
     def test_valid_ethernet_without_auto_neg(self, default_data):
         default_data[INTERFACES][0].update(
             {
-                Ethernet.AUTO_NEGOTIATION: False,
-                "link-speed": 1000,
-                Ethernet.DUPLEX: Ethernet.FULL_DUPLEX,
+                Ethernet.CONFIG_SUBTREE: {
+                    Ethernet.AUTO_NEGOTIATION: False,
+                    Ethernet.SPEED: 1000,
+                    Ethernet.DUPLEX: Ethernet.FULL_DUPLEX,
+                },
             }
         )
         libnmstate.validator.schema_validate(default_data)
@@ -238,7 +240,7 @@ class TestIfaceTypeEthernet:
         default_data[INTERFACES][0].update(
             {
                 Interface.TYPE: InterfaceType.ETHERNET,
-                Ethernet.AUTO_NEGOTIATION: False,
+                Ethernet.CONFIG_SUBTREE: {Ethernet.AUTO_NEGOTIATION: False},
             }
         )
         del default_data[INTERFACES][0]["link-speed"]
@@ -250,8 +252,10 @@ class TestIfaceTypeEthernet:
         default_data[Interface.KEY][0].update(
             {
                 Interface.TYPE: InterfaceType.ETHERNET,
-                Ethernet.SRIOV_SUBTREE: {
-                    Ethernet.SRIOV.TOTAL_VFS: valid_values
+                Ethernet.CONFIG_SUBTREE: {
+                    Ethernet.SRIOV_SUBTREE: {
+                        Ethernet.SRIOV.TOTAL_VFS: valid_values
+                    },
                 },
             }
         )
@@ -264,8 +268,10 @@ class TestIfaceTypeEthernet:
         default_data[Interface.KEY][0].update(
             {
                 Interface.TYPE: InterfaceType.ETHERNET,
-                Ethernet.SRIOV_SUBTREE: {
-                    Ethernet.SRIOV.TOTAL_VFS: invalid_values
+                Ethernet.CONFIG_SUBTREE: {
+                    Ethernet.SRIOV_SUBTREE: {
+                        Ethernet.SRIOV.TOTAL_VFS: invalid_values
+                    },
                 },
             }
         )
@@ -278,11 +284,13 @@ class TestIfaceTypeEthernet:
         default_data[Interface.KEY][0].update(
             {
                 Interface.TYPE: InterfaceType.ETHERNET,
-                Ethernet.SRIOV_SUBTREE: {
-                    Ethernet.SRIOV.TOTAL_VFS: 2,
-                    Ethernet.SRIOV.VFS_SUBTREE: [
-                        {Ethernet.SRIOV.VFS.ID: vf_id}
-                    ],
+                Ethernet.CONFIG_SUBTREE: {
+                    Ethernet.SRIOV_SUBTREE: {
+                        Ethernet.SRIOV.TOTAL_VFS: 2,
+                        Ethernet.SRIOV.VFS_SUBTREE: [
+                            {Ethernet.SRIOV.VFS.ID: vf_id}
+                        ],
+                    },
                 },
             }
         )
@@ -295,11 +303,13 @@ class TestIfaceTypeEthernet:
         default_data[Interface.KEY][0].update(
             {
                 Interface.TYPE: InterfaceType.ETHERNET,
-                Ethernet.SRIOV_SUBTREE: {
-                    Ethernet.SRIOV.TOTAL_VFS: 2,
-                    Ethernet.SRIOV.VFS_SUBTREE: [
-                        {Ethernet.SRIOV.VFS.ID: vf_id},
-                    ],
+                Ethernet.CONFIG_SUBTREE: {
+                    Ethernet.SRIOV_SUBTREE: {
+                        Ethernet.SRIOV.TOTAL_VFS: 2,
+                        Ethernet.SRIOV.VFS_SUBTREE: [
+                            {Ethernet.SRIOV.VFS.ID: vf_id},
+                        ],
+                    },
                 },
             }
         )
@@ -309,9 +319,11 @@ class TestIfaceTypeEthernet:
         default_data[Interface.KEY][0].update(
             {
                 Interface.TYPE: InterfaceType.ETHERNET,
-                Ethernet.SRIOV_SUBTREE: {
-                    Ethernet.SRIOV.TOTAL_VFS: 1,
-                    Ethernet.SRIOV.VFS_SUBTREE: [],
+                Ethernet.CONFIG_SUBTREE: {
+                    Ethernet.SRIOV_SUBTREE: {
+                        Ethernet.SRIOV.TOTAL_VFS: 1,
+                        Ethernet.SRIOV.VFS_SUBTREE: [],
+                    },
                 },
             }
         )
@@ -321,18 +333,20 @@ class TestIfaceTypeEthernet:
         default_data[Interface.KEY][0].update(
             {
                 Interface.TYPE: InterfaceType.ETHERNET,
-                Ethernet.SRIOV_SUBTREE: {
-                    Ethernet.SRIOV.TOTAL_VFS: 1,
-                    Ethernet.SRIOV.VFS_SUBTREE: [
-                        {
-                            Ethernet.SRIOV.VFS.ID: 1,
-                            Ethernet.SRIOV.VFS.MAC_ADDRESS: SRIOV_MAC,
-                            Ethernet.SRIOV.VFS.SPOOF_CHECK: True,
-                            Ethernet.SRIOV.VFS.TRUST: False,
-                            Ethernet.SRIOV.VFS.MIN_TX_RATE: 1000,
-                            Ethernet.SRIOV.VFS.MAX_TX_RATE: 2000,
-                        }
-                    ],
+                Ethernet.CONFIG_SUBTREE: {
+                    Ethernet.SRIOV_SUBTREE: {
+                        Ethernet.SRIOV.TOTAL_VFS: 1,
+                        Ethernet.SRIOV.VFS_SUBTREE: [
+                            {
+                                Ethernet.SRIOV.VFS.ID: 1,
+                                Ethernet.SRIOV.VFS.MAC_ADDRESS: SRIOV_MAC,
+                                Ethernet.SRIOV.VFS.SPOOF_CHECK: True,
+                                Ethernet.SRIOV.VFS.TRUST: False,
+                                Ethernet.SRIOV.VFS.MIN_TX_RATE: 1000,
+                                Ethernet.SRIOV.VFS.MAX_TX_RATE: 2000,
+                            }
+                        ],
+                    },
                 },
             }
         )
