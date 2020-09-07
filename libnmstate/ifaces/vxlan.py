@@ -42,7 +42,7 @@ class VxlanIface(BaseIface):
 
     @property
     def can_have_ip_when_enslaved(self):
-        return True
+        return False
 
     def pre_edit_validation_and_cleanup(self):
         self._validate_mandatory_properties()

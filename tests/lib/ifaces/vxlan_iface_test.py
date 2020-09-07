@@ -60,7 +60,7 @@ class TestVxlanIface:
         assert VxlanIface(self._gen_iface_info()).is_virtual
 
     def test_can_have_ip_when_enslaved(self):
-        assert VxlanIface(self._gen_iface_info()).can_have_ip_when_enslaved
+        assert not VxlanIface(self._gen_iface_info()).can_have_ip_when_enslaved
 
     @pytest.mark.parametrize(
         "required_field", [VXLAN.ID, VXLAN.REMOTE, VXLAN.BASE_IFACE]
