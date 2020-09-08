@@ -109,8 +109,10 @@ class CheckPoint:
                 self._checkpoint_destroy_callback,
                 userdata,
             )
-            self._ctx.wait_all_finish()
-            self.clean_up()
+            try:
+                self._ctx.wait_all_finish()
+            finally:
+                self.clean_up()
 
     def rollback(self):
         if self._dbuspath:
@@ -123,8 +125,10 @@ class CheckPoint:
                 self._checkpoint_rollback_callback,
                 userdata,
             )
-            self._ctx.wait_all_finish()
-            self.clean_up()
+            try:
+                self._ctx.wait_all_finish()
+            finally:
+                self.clean_up()
 
     def _checkpoint_create_callback(self, client, result, data):
         try:
