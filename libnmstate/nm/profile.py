@@ -430,7 +430,7 @@ class NmProfile:
         if bond_opts:
             settings.append(bond.create_setting(bond_opts, wired_setting))
         elif nm_iface_type == bridge.BRIDGE_TYPE:
-            bridge_config = self.original_iface_info.get(LB.CONFIG_SUBTREE, {})
+            bridge_config = self.iface_info.get(LB.CONFIG_SUBTREE, {})
             bridge_options = bridge_config.get(LB.OPTIONS_SUBTREE)
             bridge_ports = bridge_config.get(LB.PORT_SUBTREE)
             if bridge_options or bridge_ports:

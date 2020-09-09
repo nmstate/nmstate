@@ -97,6 +97,8 @@ def _prepare_state_for_verify(desired_state_data):
     _remove_iface_state_for_verify(current_state)
     _expand_vlan_filter_range(current_state)
     _expand_vlan_filter_range(full_desired_state)
+    _remove_linux_bridge_read_only_options(current_state)
+    _remove_linux_bridge_read_only_options(full_desired_state)
 
     return full_desired_state, current_state
 
@@ -181,3 +183,13 @@ def _expand_vlan_filter_range(state):
             port_config[LB.Port.VLAN_SUBTREE][
                 LB.Port.Vlan.TRUNK_TAGS
             ] = new_trunk_tags
+
+
+def _remove_linux_bridge_read_only_options(state):
+    for iface_state in state.state[Interface.KEY]:
+        bridge_options = iface_state.get(LB.CONFIG_SUBTREE, {}).get(
+            LB.OPTIONS_SUBTREE, {}
+        )
+        if bridge_options:
+            for key in (LB.Options.HELLO_TIMER, LB.Options.GC_TIMER):
+                bridge_options.pop(key, None)
