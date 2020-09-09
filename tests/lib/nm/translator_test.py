@@ -135,4 +135,4 @@ def test_iface_admin_state(NM_mock):
         NM_mock.DeviceState.IP_CHECK
     )
 
-    assert nm.translator.ApiIfaceAdminState.UP == admin_state
+    assert InterfaceState.UP == admin_state

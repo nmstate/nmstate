@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2019 Red Hat, Inc.
+# Copyright (c) 2018-2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -19,15 +19,12 @@
 
 import copy
 
+from libnmstate.schema import Bond
+from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceState
+from libnmstate.schema import InterfaceType
+
 from .common import NM
-
-
-IFACE_TYPE_UNKNOWN = "unknown"
-
-
-class ApiIfaceAdminState:
-    DOWN = "down"
-    UP = "up"
 
 
 class Api2Nm:
@@ -35,25 +32,27 @@ class Api2Nm:
 
     @staticmethod
     def get_iface_type(name):
-        return Api2Nm.get_iface_type_map().get(name, IFACE_TYPE_UNKNOWN)
+        return Api2Nm.get_iface_type_map().get(name, InterfaceType.UNKNOWN)
 
     @staticmethod
     def get_iface_type_map():
         if Api2Nm._iface_types_map is None:
+            ovs_bridge = InterfaceType.OVS_BRIDGE
+            ovs_interface = InterfaceType.OVS_INTERFACE
             Api2Nm._iface_types_map = {
-                "ethernet": NM.SETTING_WIRED_SETTING_NAME,
-                "bond": NM.SETTING_BOND_SETTING_NAME,
-                "dummy": NM.SETTING_DUMMY_SETTING_NAME,
-                "team": NM.SETTING_TEAM_SETTING_NAME,
-                "vlan": NM.SETTING_VLAN_SETTING_NAME,
-                "vxlan": NM.SETTING_VXLAN_SETTING_NAME,
-                "linux-bridge": NM.SETTING_BRIDGE_SETTING_NAME,
+                InterfaceType.ETHERNET: NM.SETTING_WIRED_SETTING_NAME,
+                InterfaceType.BOND: NM.SETTING_BOND_SETTING_NAME,
+                InterfaceType.DUMMY: NM.SETTING_DUMMY_SETTING_NAME,
+                InterfaceType.TEAM: NM.SETTING_TEAM_SETTING_NAME,
+                InterfaceType.VLAN: NM.SETTING_VLAN_SETTING_NAME,
+                InterfaceType.VXLAN: NM.SETTING_VXLAN_SETTING_NAME,
+                InterfaceType.LINUX_BRIDGE: NM.SETTING_BRIDGE_SETTING_NAME,
             }
             try:
                 ovs_types = {
-                    "ovs-bridge": NM.SETTING_OVS_BRIDGE_SETTING_NAME,
-                    "ovs-port": NM.SETTING_OVS_PORT_SETTING_NAME,
-                    "ovs-interface": NM.SETTING_OVS_INTERFACE_SETTING_NAME,
+                    ovs_bridge: NM.SETTING_OVS_BRIDGE_SETTING_NAME,
+                    InterfaceType.OVS_PORT: NM.SETTING_OVS_PORT_SETTING_NAME,
+                    ovs_interface: NM.SETTING_OVS_INTERFACE_SETTING_NAME,
                 }
                 Api2Nm._iface_types_map.update(ovs_types)
             except AttributeError:
@@ -63,12 +62,12 @@ class Api2Nm:
 
     @staticmethod
     def get_bond_options(iface_desired_state):
-        iface_type = Api2Nm.get_iface_type(iface_desired_state["type"])
-        if iface_type == "bond":
+        iface_type = Api2Nm.get_iface_type(iface_desired_state[Interface.TYPE])
+        if iface_type == InterfaceType.BOND:
             # Is the mode a must config parameter?
-            bond_conf = iface_desired_state["link-aggregation"]
-            bond_opts = {"mode": bond_conf["mode"]}
-            bond_opts.update(bond_conf.get("options", {}))
+            bond_conf = iface_desired_state[Bond.CONFIG_SUBTREE]
+            bond_opts = {Bond.MODE: bond_conf[Bond.MODE]}
+            bond_opts.update(bond_conf.get(Bond.OPTIONS_SUBTREE, {}))
         else:
             bond_opts = {}
 
@@ -81,28 +80,30 @@ class Nm2Api:
     @staticmethod
     def get_common_device_info(devinfo):
         type_name = devinfo["type_name"]
-        if type_name != "ethernet":
+        if type_name != InterfaceType.ETHERNET:
             type_name = Nm2Api.get_iface_type(type_name)
         return {
-            "name": devinfo["name"],
-            "type": type_name,
-            "state": Nm2Api.get_iface_admin_state(devinfo["state"]),
+            Interface.NAME: devinfo[Interface.NAME],
+            Interface.TYPE: type_name,
+            Interface.STATE: Nm2Api.get_iface_admin_state(
+                devinfo[Interface.STATE]
+            ),
         }
 
     @staticmethod
     def get_bond_info(bondinfo):
-        bond_options = copy.deepcopy(bondinfo.get("options"))
+        bond_options = copy.deepcopy(bondinfo.get(Bond.OPTIONS_SUBTREE))
         if not bond_options:
             return {}
-        bond_slaves = bondinfo["slaves"]
+        bond_slaves = bondinfo[Bond.SLAVES]
 
-        bond_mode = bond_options["mode"]
-        del bond_options["mode"]
+        bond_mode = bond_options[Bond.MODE]
+        del bond_options[Bond.MODE]
         return {
-            "link-aggregation": {
-                "mode": bond_mode,
-                "slaves": [slave.props.interface for slave in bond_slaves],
-                "options": bond_options,
+            Bond.CONFIG_SUBTREE: {
+                Bond.MODE: bond_mode,
+                Bond.SLAVES: [slave.props.interface for slave in bond_slaves],
+                Bond.OPTIONS_SUBTREE: bond_options,
             }
         }
 
@@ -112,13 +113,13 @@ class Nm2Api:
             Nm2Api._iface_types_map = Nm2Api._swap_dict_keyval(
                 Api2Nm.get_iface_type_map()
             )
-        return Nm2Api._iface_types_map.get(name, IFACE_TYPE_UNKNOWN)
+        return Nm2Api._iface_types_map.get(name, InterfaceType.UNKNOWN)
 
     @staticmethod
     def get_iface_admin_state(dev_state):
         if NM.DeviceState.IP_CONFIG <= dev_state <= NM.DeviceState.ACTIVATED:
-            return ApiIfaceAdminState.UP
-        return ApiIfaceAdminState.DOWN
+            return InterfaceState.UP
+        return InterfaceState.DOWN
 
     @staticmethod
     def _swap_dict_keyval(dictionary):
