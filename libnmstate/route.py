@@ -90,10 +90,14 @@ class RouteEntry(StateEntry):
             self.table_id or Route.USE_DEFAULT_ROUTE_TABLE,
             self.next_hop_interface or "",
             self.destination or "",
+            self.next_hop_address or "",
+            self.metric or Route.USE_DEFAULT_METRIC,
         ) < (
             other.table_id or Route.USE_DEFAULT_ROUTE_TABLE,
             other.next_hop_interface or "",
             other.destination or "",
+            other.next_hop_address or "",
+            other.metric or Route.USE_DEFAULT_METRIC,
         )
 
     @property
