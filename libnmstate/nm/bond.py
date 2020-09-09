@@ -68,7 +68,7 @@ def get_bond_info(nm_device):
     slaves = get_slaves(nm_device)
     options = _get_options(nm_device)
     if slaves or options:
-        return {"slaves": slaves, "options": options}
+        return {Bond.PORT: slaves, Bond.OPTIONS_SUBTREE: options}
     else:
         return {}
 

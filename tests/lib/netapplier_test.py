@@ -96,7 +96,7 @@ def test_add_new_bond(
                 Interface.STATE: InterfaceState.UP,
                 Bond.CONFIG_SUBTREE: {
                     Bond.MODE: BondMode.ROUND_ROBIN,
-                    Bond.SLAVES: [],
+                    Bond.PORT: [],
                     Bond.OPTIONS_SUBTREE: {"miimon": 200},
                 },
                 Interface.IPV4: {},
@@ -125,7 +125,7 @@ def test_edit_existing_bond(
                 Interface.STATE: InterfaceState.UP,
                 Bond.CONFIG_SUBTREE: {
                     Bond.MODE: BondMode.ROUND_ROBIN,
-                    Bond.SLAVES: [],
+                    Bond.PORT: [],
                     Bond.OPTIONS_SUBTREE: {"miimon": "100"},
                 },
                 Interface.IPV4: {InterfaceIPv4.ENABLED: False},

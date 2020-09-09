@@ -17,6 +17,8 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
+import warnings
+
 import pkgutil
 import yaml
 
@@ -145,12 +147,53 @@ class InterfaceIPv6(InterfaceIP):
     AUTOCONF = "autoconf"
 
 
-class Bond:
+OVS_BRIDGE = "OVSBridge.Port.LinkAggregation"
+
+
+DEPRECATED_CONSTANTS = {
+    "Bond.SLAVES": "Bond.PORT",
+    f"LinkAggregation.SLAVES_SUBTREE": f"{OVS_BRIDGE}.PORT_SUBTREE",
+    f"LinkAggregation.Slave": f"{OVS_BRIDGE}.Port",
+}
+
+
+class _DeprecatorType(type):
+    def __getattribute__(cls, attribute):
+        try:
+            return super().__getattribute__(attribute)
+        except AttributeError:
+            deprecated_class = cls
+            deprecated_classname = deprecated_class.__name__
+            deprecated_name = attribute
+
+            oldconstant = f"{deprecated_classname}.{deprecated_name}"
+            newconstant = DEPRECATED_CONSTANTS.get(oldconstant)
+
+            if newconstant:
+                warnings.warn(
+                    f"Using '{oldconstant}' is deprecated, "
+                    f"use '{newconstant}' instead.",
+                    FutureWarning,
+                    stacklevel=3,
+                )
+
+                attributes = newconstant.split(".")
+                new_classname = attributes.pop(0)
+                new_value = globals()[new_classname]
+                while attributes:
+                    new_value = getattr(new_value, attributes.pop(0))
+
+                return new_value
+
+            raise
+
+
+class Bond(metaclass=_DeprecatorType):
     KEY = InterfaceType.BOND
     CONFIG_SUBTREE = "link-aggregation"
 
     MODE = "mode"
-    SLAVES = "slaves"
+    PORT = "port"
     OPTIONS_SUBTREE = "options"
 
 
@@ -304,11 +347,11 @@ class OVSBridge(Bridge, OvsDB):
     class Port(Bridge.Port):
         LINK_AGGREGATION_SUBTREE = "link-aggregation"
 
-        class LinkAggregation:
+        class LinkAggregation(metaclass=_DeprecatorType):
             MODE = "mode"
-            SLAVES_SUBTREE = "slaves"
+            PORT_SUBTREE = "port"
 
-            class Slave:
+            class Port:
                 NAME = "name"
 
             class Options:

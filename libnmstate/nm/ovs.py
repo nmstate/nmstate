@@ -252,12 +252,12 @@ def _get_lag_info(port_name, port_setting, port_slave_names):
     port_info[OB.Port.NAME] = port_name
     port_info[OB.Port.LINK_AGGREGATION_SUBTREE] = {
         OB.Port.LinkAggregation.MODE: mode,
-        OB.Port.LinkAggregation.SLAVES_SUBTREE: sorted(
+        OB.Port.LinkAggregation.PORT_SUBTREE: sorted(
             [
-                {OB.Port.LinkAggregation.Slave.NAME: iface_name}
+                {OB.Port.LinkAggregation.Port.NAME: iface_name}
                 for iface_name in port_slave_names
             ],
-            key=itemgetter(OB.Port.LinkAggregation.Slave.NAME),
+            key=itemgetter(OB.Port.LinkAggregation.Port.NAME),
         ),
     }
     return port_info

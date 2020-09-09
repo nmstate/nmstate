@@ -63,7 +63,7 @@ OVS_BOND_YAML_STATE = f"""
     - name: {BOND1}
       link-aggregation:
         mode: active-backup
-        slaves:
+        port:
         - name: {ETH1}
         - name: {ETH2}
 """

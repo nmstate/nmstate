@@ -95,14 +95,14 @@ class Nm2Api:
         bond_options = copy.deepcopy(bondinfo.get(Bond.OPTIONS_SUBTREE))
         if not bond_options:
             return {}
-        bond_slaves = bondinfo[Bond.SLAVES]
+        bond_slaves = bondinfo[Bond.PORT]
 
         bond_mode = bond_options[Bond.MODE]
         del bond_options[Bond.MODE]
         return {
             Bond.CONFIG_SUBTREE: {
                 Bond.MODE: bond_mode,
-                Bond.SLAVES: [slave.props.interface for slave in bond_slaves],
+                Bond.PORT: [slave.props.interface for slave in bond_slaves],
                 Bond.OPTIONS_SUBTREE: bond_options,
             }
         }

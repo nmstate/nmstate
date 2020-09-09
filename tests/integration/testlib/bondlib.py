@@ -36,7 +36,7 @@ def bond_interface(name, slaves, extra_iface_state=None, create=True):
                 Interface.STATE: InterfaceState.UP,
                 Bond.CONFIG_SUBTREE: {
                     Bond.MODE: BondMode.ROUND_ROBIN,
-                    Bond.SLAVES: slaves,
+                    Bond.PORT: slaves,
                 },
             }
         ]
@@ -45,7 +45,7 @@ def bond_interface(name, slaves, extra_iface_state=None, create=True):
         desired_state[Interface.KEY][0].update(extra_iface_state)
         if slaves:
             desired_state[Interface.KEY][0][Bond.CONFIG_SUBTREE][
-                Bond.SLAVES
+                Bond.PORT
             ] = slaves
 
     if create:

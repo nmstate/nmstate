@@ -10,6 +10,6 @@ interfaces:
         - name: ovs-bond1
           link-aggregation:
             mode: balance-slb
-            slaves:
+            port:
               - name: eth1
               - name: eth2

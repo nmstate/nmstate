@@ -25,7 +25,7 @@ interfaces:
     state: up
     link-aggregation:
       mode: active-backup
-      slaves:
+      port:
         - eth1
         - eth2
   - name: eth1

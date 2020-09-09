@@ -62,7 +62,7 @@ class TestBondIface:
         iface_info = gen_foo_iface_info(iface_type=InterfaceType.BOND)
         iface_info[Bond.CONFIG_SUBTREE] = {
             Bond.MODE: TEST_BOND_MODE,
-            Bond.SLAVES: deepcopy(TEST_SLAVES),
+            Bond.PORT: deepcopy(TEST_SLAVES),
             Bond.OPTIONS_SUBTREE: {},
         }
         return iface_info
@@ -90,7 +90,7 @@ class TestBondIface:
     def test_bond_sort_slaves(self):
         iface_info1 = self._gen_iface_info()
         iface_info2 = self._gen_iface_info()
-        iface_info2[Bond.CONFIG_SUBTREE][Bond.SLAVES].reverse()
+        iface_info2[Bond.CONFIG_SUBTREE][Bond.PORT].reverse()
 
         assert iface_info2 != iface_info1
         assert (
@@ -339,7 +339,7 @@ class TestBondIface:
     def test_remove_slave(self):
         iface = BondIface(self._gen_iface_info())
         expected_iface_info = self._gen_iface_info()
-        expected_iface_info[Bond.CONFIG_SUBTREE][Bond.SLAVES] = [
+        expected_iface_info[Bond.CONFIG_SUBTREE][Bond.PORT] = [
             SLAVE2_IFACE_NAME
         ]
 

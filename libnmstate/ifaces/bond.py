@@ -19,6 +19,7 @@
 
 import contextlib
 import logging
+import warnings
 
 from libnmstate.error import NmstateValueError
 from libnmstate.schema import Bond
@@ -28,21 +29,25 @@ from libnmstate.schema import Interface
 from .base_iface import BaseIface
 
 
+DEPRECATED_SLAVES = "slaves"
+
+
 class BondIface(BaseIface):
     _MODE_CHANGE_METADATA = "_bond_mode_changed"
 
     def sort_slaves(self):
         if self.slaves:
-            self.raw[Bond.CONFIG_SUBTREE][Bond.SLAVES].sort()
+            self.raw[Bond.CONFIG_SUBTREE][Bond.PORT].sort()
 
     def __init__(self, info, save_to_disk=True):
         super().__init__(info, save_to_disk)
         self._normalize_options_values()
         self._fix_bond_option_arp_monitor()
+        self._replace_deprecated_terms()
 
     @property
     def slaves(self):
-        return self.raw.get(Bond.CONFIG_SUBTREE, {}).get(Bond.SLAVES, [])
+        return self.raw.get(Bond.CONFIG_SUBTREE, {}).get(Bond.PORT, [])
 
     @property
     def is_master(self):
@@ -125,6 +130,12 @@ class BondIface(BaseIface):
                 "please disable one of them by setting to 0"
             )
 
+    def _replace_deprecated_terms(self):
+        bond_cfg = self.raw.get(Bond.CONFIG_SUBTREE)
+        if bond_cfg and bond_cfg.get(DEPRECATED_SLAVES):
+            bond_cfg[Bond.PORT] = bond_cfg.pop(DEPRECATED_SLAVES)
+            warnings.warn("Using 'slaves' is deprecated, use 'port' instead.")
+
     @staticmethod
     def is_mac_restricted_mode(mode, bond_options):
         return (
@@ -175,7 +186,7 @@ class BondIface(BaseIface):
         return state
 
     def remove_slave(self, slave_name):
-        self.raw[Bond.CONFIG_SUBTREE][Bond.SLAVES] = [
+        self.raw[Bond.CONFIG_SUBTREE][Bond.PORT] = [
             s for s in self.slaves if s != slave_name
         ]
         self.sort_slaves()
