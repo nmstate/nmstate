@@ -756,3 +756,9 @@ def test_change_multicast_snooping_from_false_to_true(port0_up, port1_up):
             LinuxBridge.Options.MULTICAST_SNOOPING
         ] = True
         libnmstate.apply(lb_state)
+
+
+def test_empty_state_does_not_change_bridge_options(bridge0_with_port0):
+    original_state = show_only((TEST_BRIDGE0,))
+    libnmstate.apply({Interface.KEY: [{Interface.NAME: TEST_BRIDGE0}]})
+    assertlib.assert_state_match(original_state)
