@@ -126,9 +126,9 @@ def test_bridge_with_bond_and_two_slaves(
         OB.Port.NAME: port_name,
         OB.Port.LINK_AGGREGATION_SUBTREE: {
             LAG.MODE: mode,
-            LAG.SLAVES_SUBTREE: [
-                {LAG.Slave.NAME: slave0_name},
-                {LAG.Slave.NAME: slave1_name},
+            LAG.PORT_SUBTREE: [
+                {LAG.Port.NAME: slave0_name},
+                {LAG.Port.NAME: slave1_name},
             ],
         },
     }
@@ -198,8 +198,7 @@ def _attach_port_to_bridge(ctx, port_state):
     _create_proxy_port(ctx, port_profile_name, port_state)
     if lag_state:
         slaves = [
-            slave
-            for slave in lag_state[OB.Port.LinkAggregation.SLAVES_SUBTREE]
+            slave for slave in lag_state[OB.Port.LinkAggregation.PORT_SUBTREE]
         ]
         for slave in slaves:
             _connect_interface(ctx, port_profile_name, slave)

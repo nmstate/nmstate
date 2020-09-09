@@ -289,7 +289,7 @@ class TestIfaces:
         cur_iface_infos.append(child_iface_info)
 
         des_ovs_bridge_info = gen_ovs_bridge_info()
-        ovs_bridge_iface = OvsBridgeIface(des_ovs_bridge_info)
+        ovs_bridge_iface = OvsBridgeIface(des_ovs_bridge_info, True)
         ovs_bridge_iface.remove_slave(OVS_IFACE_NAME)
         des_iface_info = ovs_bridge_iface.to_dict()
 

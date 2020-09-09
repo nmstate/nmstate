@@ -150,7 +150,7 @@ class State:
 
     def _sort_iface_lag_slaves(self):
         for ifstate in self._state[Interface.KEY]:
-            ifstate.get(Bond.CONFIG_SUBTREE, {}).get(Bond.SLAVES, []).sort()
+            ifstate.get(Bond.CONFIG_SUBTREE, {}).get(Bond.PORT, []).sort()
 
     def _sort_iface_bridge_ports(self):
         for ifstate in self._state[Interface.KEY]:
@@ -253,8 +253,8 @@ class State:
             ).get(OVSBridge.PORT_SUBTREE, []):
                 port_config.get(
                     OVSBridge.Port.LINK_AGGREGATION_SUBTREE, {}
-                ).get(OVSBridge.Port.LinkAggregation.SLAVES_SUBTREE, []).sort(
-                    key=itemgetter(OVSBridge.Port.LinkAggregation.Slave.NAME)
+                ).get(OVSBridge.Port.LinkAggregation.PORT_SUBTREE, []).sort(
+                    key=itemgetter(OVSBridge.Port.LinkAggregation.Port.NAME)
                 )
 
 

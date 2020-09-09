@@ -46,7 +46,7 @@ def test_create_and_remove_bond(eth1_up, nm_plugin):
         )
 
         bond_desired_state = {
-            schema.Bond.SLAVES: [],
+            schema.Bond.PORT: [],
             schema.Bond.OPTIONS_SUBTREE: bond_options,
         }
         assert bond_current_state == bond_desired_state
@@ -61,7 +61,7 @@ def test_bond_with_a_slave(eth1_up, nm_plugin):
         nic_name = eth1_up[Interface.KEY][0][Interface.NAME]
         _attach_slave_to_bond(nm_plugin.context, BOND0, nic_name)
         bond_desired_state = {
-            schema.Bond.SLAVES: [nic_name],
+            schema.Bond.PORT: [nic_name],
             schema.Bond.OPTIONS_SUBTREE: bond_options,
         }
 
@@ -164,9 +164,7 @@ def _create_connection_setting(bond, port_con_profile):
 
 def _convert_slaves_devices_to_iface_names(info):
     if info:
-        info[Bond.SLAVES] = [
-            slave.props.interface for slave in info[Bond.SLAVES]
-        ]
+        info[Bond.PORT] = [slave.props.interface for slave in info[Bond.PORT]]
     return info
 
 

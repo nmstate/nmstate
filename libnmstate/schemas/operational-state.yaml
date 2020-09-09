@@ -263,6 +263,10 @@ definitions:
               type: array
               items:
                 type: string
+            port:
+              type: array
+              items:
+                type: string
             options:
               type: object
   interface-linux-bridge:
@@ -413,6 +417,13 @@ definitions:
                       mode:
                         type: string
                       slaves:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            name:
+                              type: string
+                      port:
                         type: array
                         items:
                           type: object

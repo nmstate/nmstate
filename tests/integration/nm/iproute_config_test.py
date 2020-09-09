@@ -68,7 +68,7 @@ def test_external_managed_subordnates(bond99_with_dummy_slaves_by_iproute):
                     Bond.CONFIG_SUBTREE: {
                         # Change the bond mode to force a reactivate
                         Bond.MODE: BondMode.ACTIVE_BACKUP,
-                        Bond.SLAVES: [DUMMY1, DUMMY2],
+                        Bond.PORT: [DUMMY1, DUMMY2],
                     },
                 }
             ]

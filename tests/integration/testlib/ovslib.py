@@ -58,8 +58,8 @@ class Bridge:
         self._add_port(name)
         port = self._get_port(name)
         port[OVSBridge.Port.LINK_AGGREGATION_SUBTREE] = {
-            OVSBridge.Port.LinkAggregation.SLAVES_SUBTREE: [
-                {OVSBridge.Port.LinkAggregation.Slave.NAME: slave}
+            OVSBridge.Port.LinkAggregation.PORT_SUBTREE: [
+                {OVSBridge.Port.LinkAggregation.Port.NAME: slave}
                 for slave in slaves
             ]
         }

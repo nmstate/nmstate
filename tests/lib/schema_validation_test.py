@@ -716,9 +716,9 @@ class TestOVSBridgeLinkAggregation:
             OVSBridge.Port.NAME: "bond",
             OVSBridge.Port.LINK_AGGREGATION_SUBTREE: {
                 OVSBridge.Port.LinkAggregation.MODE: "bond-mode",
-                OVSBridge.Port.LinkAggregation.SLAVES_SUBTREE: [
-                    {OVSBridge.Port.LinkAggregation.Slave.NAME: "iface1"},
-                    {OVSBridge.Port.LinkAggregation.Slave.NAME: "iface2"},
+                OVSBridge.Port.LinkAggregation.PORT_SUBTREE: [
+                    {OVSBridge.Port.LinkAggregation.Port.NAME: "iface1"},
+                    {OVSBridge.Port.LinkAggregation.Port.NAME: "iface2"},
                 ],
             },
         }

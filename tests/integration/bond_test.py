@@ -63,7 +63,7 @@ interfaces:
   state: up
   link-aggregation:
     mode: balance-rr
-    slaves:
+    port:
     - eth1
     - eth2
 """
@@ -157,7 +157,7 @@ def test_remove_bond_with_minimum_desired_state(eth1_up, eth2_up):
 def test_add_bond_without_slaves():
     with bond_interface(name=BOND99, slaves=[]) as state:
 
-        assert state[Interface.KEY][0][Bond.CONFIG_SUBTREE][Bond.SLAVES] == []
+        assert state[Interface.KEY][0][Bond.CONFIG_SUBTREE][Bond.PORT] == []
 
 
 @pytest.mark.tier1
@@ -179,7 +179,7 @@ def test_add_bond_with_slaves_and_ipv4(eth1_up, eth2_up, setup_remove_bond99):
                 },
                 Bond.CONFIG_SUBTREE: {
                     Bond.MODE: BondMode.ROUND_ROBIN,
-                    Bond.SLAVES: [
+                    Bond.PORT: [
                         eth1_up[Interface.KEY][0][Interface.NAME],
                         eth2_up[Interface.KEY][0][Interface.NAME],
                     ],
@@ -214,7 +214,7 @@ def test_rollback_for_bond(eth1_up, eth2_up):
                 },
                 Bond.CONFIG_SUBTREE: {
                     Bond.MODE: BondMode.ROUND_ROBIN,
-                    Bond.SLAVES: [
+                    Bond.PORT: [
                         eth1_up[Interface.KEY][0][Interface.NAME],
                         eth2_up[Interface.KEY][0][Interface.NAME],
                     ],
@@ -243,25 +243,25 @@ def test_add_slave_to_bond_without_slaves(eth1_up):
     slave_name = eth1_up[Interface.KEY][0][Interface.NAME]
     with bond_interface(name=BOND99, slaves=[]) as state:
         bond_state = state[Interface.KEY][0]
-        bond_state[Bond.CONFIG_SUBTREE][Bond.SLAVES] = [slave_name]
+        bond_state[Bond.CONFIG_SUBTREE][Bond.PORT] = [slave_name]
         libnmstate.apply(state)
 
         current_state = statelib.show_only((BOND99,))
         bond_cur_state = current_state[Interface.KEY][0]
 
-        assert bond_cur_state[Bond.CONFIG_SUBTREE][Bond.SLAVES] == [slave_name]
+        assert bond_cur_state[Bond.CONFIG_SUBTREE][Bond.PORT] == [slave_name]
 
 
 def test_remove_all_slaves_from_bond(bond99_with_2_slaves):
     state = bond99_with_2_slaves
-    state[Interface.KEY][0][Bond.CONFIG_SUBTREE][Bond.SLAVES] = []
+    state[Interface.KEY][0][Bond.CONFIG_SUBTREE][Bond.PORT] = []
 
     libnmstate.apply(state)
 
     current_state = statelib.show_only((BOND99,))
     bond_cur_state = current_state[Interface.KEY][0]
 
-    assert bond_cur_state[Bond.CONFIG_SUBTREE][Bond.SLAVES] == []
+    assert bond_cur_state[Bond.CONFIG_SUBTREE][Bond.PORT] == []
 
 
 @pytest.mark.tier1
@@ -270,16 +270,14 @@ def test_replace_bond_slave(eth1_up, eth2_up):
     slave2_name = eth2_up[Interface.KEY][0][Interface.NAME]
     with bond_interface(name=BOND99, slaves=[slave1_name]) as state:
         bond_state = state[Interface.KEY][0]
-        bond_state[Bond.CONFIG_SUBTREE][Bond.SLAVES] = [slave2_name]
+        bond_state[Bond.CONFIG_SUBTREE][Bond.PORT] = [slave2_name]
 
         libnmstate.apply(state)
 
         current_state = statelib.show_only((BOND99,))
         bond_cur_state = current_state[Interface.KEY][0]
 
-        assert bond_cur_state[Bond.CONFIG_SUBTREE][Bond.SLAVES] == [
-            slave2_name
-        ]
+        assert bond_cur_state[Bond.CONFIG_SUBTREE][Bond.PORT] == [slave2_name]
 
 
 @pytest.mark.tier1
@@ -290,14 +288,14 @@ def test_remove_one_of_the_bond_slaves(eth1_up, eth2_up):
         name=BOND99, slaves=[slave1_name, slave2_name]
     ) as state:
         bond_state = state[Interface.KEY][0]
-        bond_state[Bond.CONFIG_SUBTREE][Bond.SLAVES] = [slave2_name]
+        bond_state[Bond.CONFIG_SUBTREE][Bond.PORT] = [slave2_name]
 
         libnmstate.apply(state)
 
         current_state = statelib.show_only((BOND99,))
         bond_cur_state = current_state[Interface.KEY][0]
 
-    assert bond_cur_state[Bond.CONFIG_SUBTREE][Bond.SLAVES] == [slave2_name]
+    assert bond_cur_state[Bond.CONFIG_SUBTREE][Bond.PORT] == [slave2_name]
 
 
 @pytest.mark.tier1
@@ -305,9 +303,9 @@ def test_swap_slaves_between_bonds(bond88_with_slave, bond99_with_eth2):
     bonding88 = bond88_with_slave[Interface.KEY][0][Bond.CONFIG_SUBTREE]
     bonding99 = bond99_with_eth2[Interface.KEY][0][Bond.CONFIG_SUBTREE]
 
-    bonding88[Bond.SLAVES], bonding99[Bond.SLAVES] = (
-        bonding99[Bond.SLAVES],
-        bonding88[Bond.SLAVES],
+    bonding88[Bond.PORT], bonding99[Bond.PORT] = (
+        bonding99[Bond.PORT],
+        bonding88[Bond.PORT],
     )
 
     state = bond88_with_slave
@@ -337,7 +335,7 @@ def test_set_bond_mac_address(eth1_up):
 @pytest.mark.tier1
 def test_changing_slave_order_keeps_mac_of_existing_bond(bond99_with_2_slaves):
     bond_state = bond99_with_2_slaves[Interface.KEY][0]
-    bond_slaves = bond_state[Bond.CONFIG_SUBTREE][Bond.SLAVES]
+    bond_slaves = bond_state[Bond.CONFIG_SUBTREE][Bond.PORT]
     ifaces_names = [bond_state[Interface.NAME]] + bond_slaves
 
     current_state = statelib.show_only(ifaces_names)
@@ -356,7 +354,7 @@ def test_changing_slave_order_keeps_mac_of_existing_bond(bond99_with_2_slaves):
 def test_adding_a_slave_keeps_mac_of_existing_bond(bond99_with_eth2, eth1_up):
     desired_state = bond99_with_eth2
     bond_state = desired_state[Interface.KEY][0]
-    bond_slaves = bond_state[Bond.CONFIG_SUBTREE][Bond.SLAVES]
+    bond_slaves = bond_state[Bond.CONFIG_SUBTREE][Bond.PORT]
     bond_slaves.insert(0, eth1_up[Interface.KEY][0][Interface.NAME])
 
     current_state = statelib.show_only((bond_state[Interface.NAME],))
@@ -374,7 +372,7 @@ def test_adding_slaves_to_empty_bond_doesnt_keep_mac(eth1_up):
     with bond_interface(BOND99, []) as state:
         bond_state = state[Interface.KEY][0]
         eth1_name = eth1_up[Interface.KEY][0][Interface.NAME]
-        bond_state[Bond.CONFIG_SUBTREE][Bond.SLAVES] = [eth1_name]
+        bond_state[Bond.CONFIG_SUBTREE][Bond.PORT] = [eth1_name]
 
         current_state = statelib.show_only((bond_state[Interface.NAME],))
 
@@ -393,7 +391,7 @@ def test_replacing_slaves_keeps_mac_of_existing_bond(
     desired_state = bond99_with_eth2
     bond_state = desired_state[Interface.KEY][0]
     eth1_name = eth1_up[Interface.KEY][0][Interface.NAME]
-    bond_state[Bond.CONFIG_SUBTREE][Bond.SLAVES] = [eth1_name]
+    bond_state[Bond.CONFIG_SUBTREE][Bond.PORT] = [eth1_name]
 
     current_state = statelib.show_only((bond_state[Interface.NAME],))
 
@@ -411,7 +409,7 @@ def test_removing_slaves_keeps_mac_of_existing_bond(
     desired_state = bond99_with_2_slaves
     bond_state = desired_state[Interface.KEY][0]
     eth1_name = eth1_up[Interface.KEY][0][Interface.NAME]
-    bond_state[Bond.CONFIG_SUBTREE][Bond.SLAVES] = [eth1_name]
+    bond_state[Bond.CONFIG_SUBTREE][Bond.PORT] = [eth1_name]
 
     current_state = statelib.show_only((bond_state[Interface.NAME],))
 
@@ -443,7 +441,7 @@ def test_bond_with_empty_ipv6_static_address(eth1_up):
 @pytest.mark.tier1
 def test_create_vlan_over_a_bond_slave(bond99_with_eth2):
     bond_ifstate = bond99_with_eth2[Interface.KEY][0]
-    bond_slave_ifname = bond_ifstate[Bond.CONFIG_SUBTREE][Bond.SLAVES][0]
+    bond_slave_ifname = bond_ifstate[Bond.CONFIG_SUBTREE][Bond.PORT][0]
     vlan_id = 102
     vlan_iface_name = "{}.{}".format(bond_slave_ifname, vlan_id)
     with vlan_interface(
@@ -881,7 +879,7 @@ def test_remove_mode4_bond_and_create_mode5_with_the_same_slaves(
     )
     extra_iface_state = {Bond.CONFIG_SUBTREE: {Bond.MODE: BondMode.TLB}}
     slaves = bond99_mode4_with_2_slaves[Interface.KEY][0][Bond.CONFIG_SUBTREE][
-        Bond.SLAVES
+        Bond.PORT
     ]
     with bond_interface(
         BOND99, slaves, extra_iface_state=extra_iface_state
