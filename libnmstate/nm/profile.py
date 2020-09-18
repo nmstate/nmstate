@@ -55,6 +55,7 @@ from . import vxlan
 from . import wired
 
 from .common import NM
+from .device import mark_device_as_managed
 from .device import list_devices
 from .device import is_externally_managed
 
@@ -531,7 +532,7 @@ class NmProfile:
                 groups["profiles_to_delete"].add(self)
         else:
             if not self.nmdev.get_managed():
-                self.nmdev.set_managed(True)
+                mark_device_as_managed(self._ctx, self.nmdev)
             if self.iface.state == InterfaceState.UP:
                 if self.iface.type == InterfaceType.BOND:
                     iface = BondIface(self.iface_info)

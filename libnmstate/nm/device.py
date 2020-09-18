@@ -24,6 +24,11 @@ from libnmstate.error import NmstateLibnmError
 from . import active_connection as ac
 from . import profile_state
 from .common import NM
+from .common import GLib
+
+
+NM_DBUS_INTERFACE_DEVICE = f"{NM.DBUS_INTERFACE}.Device"
+NM_USE_DEFAULT_TIMEOUT_VALUE = -1
 
 
 def deactivate(context, dev):
@@ -97,7 +102,7 @@ def _modify_callback(src_object, result, user_data):
 def _activate_async(context, nm_profile):
     if nm_profile.nmdev:
         # Workaround of https://bugzilla.redhat.com/show_bug.cgi?id=1772470
-        nm_profile.nmdev.set_managed(True)
+        mark_device_as_managed(context, nm_profile.nmdev)
     nm_profile.activate()
 
 
@@ -149,3 +154,27 @@ def get_device_common_info(dev):
 def is_externally_managed(nmdev):
     nm_ac = nmdev.get_active_connection()
     return nm_ac and NM.ActivationStateFlags.EXTERNAL & nm_ac.get_state_flags()
+
+
+def mark_device_as_managed(context, nm_dev):
+    action = f"Set device as managed: {nm_dev.get_iface()}"
+    context.register_async(action, fast=True)
+    user_data = context, action
+    context.client.dbus_set_property(
+        NM.Object.get_path(nm_dev),
+        NM_DBUS_INTERFACE_DEVICE,
+        "Managed",
+        GLib.Variant.new_boolean(True),
+        NM_USE_DEFAULT_TIMEOUT_VALUE,
+        context.cancellable,
+        _set_managed_callback,
+        user_data,
+    )
+    context.wait_all_finish()
+
+
+def _set_managed_callback(_src_object, _result, user_data):
+    context, action = user_data
+    # There is no document mention this action might fail
+    # If anything goes wrong, we trust verifcation stage can detect it.
+    context.finish_async(action)
