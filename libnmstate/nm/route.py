@@ -22,7 +22,6 @@ import socket
 
 from libnmstate import iplib
 from libnmstate.error import NmstateValueError
-from libnmstate.nm import active_connection as nm_ac
 from libnmstate.schema import Interface
 from libnmstate.schema import Route
 from libnmstate.schema import RouteRule
@@ -38,73 +37,44 @@ IPV6_DEFAULT_GATEWAY_DESTINATION = "::/0"
 ROUTE_RULE_DEFAULT_PRIORIRY = 30000
 
 
-def get_running(acs_and_ip_cfgs):
+def get_running_config(applied_configs):
     """
-    Query running routes
-    The acs_and_ip_cfgs should be generate to generate a tuple:
-        NM.NM.ActiveConnection, NM.IPConfig
+    Query routes saved in running profile
     """
     routes = []
-    for (active_connection, ip_cfg) in acs_and_ip_cfgs:
-        if not ip_cfg.props.routes:
-            continue
-        iface_name = nm_ac.ActiveConnection(
-            nm_ac_con=active_connection
-        ).devname
-        if not iface_name:
-            continue
-        for nm_route in ip_cfg.props.routes:
-            table_id = _get_per_route_table_id(
-                nm_route, iplib.KERNEL_MAIN_ROUTE_TABLE_ID
-            )
-            route_entry = _nm_route_to_route(nm_route, table_id, iface_name)
-            if route_entry:
-                routes.append(route_entry)
-    routes.sort(
-        key=itemgetter(
-            Route.TABLE_ID, Route.NEXT_HOP_INTERFACE, Route.DESTINATION
-        )
-    )
-    return routes
-
-
-def get_config(acs_and_ip_profiles):
-    """
-    Query running routes
-    The acs_and_ip_profiles should be generate to generate a tuple:
-        NM.NM.ActiveConnection, NM.SettingIPConfig
-    """
-    routes = []
-    for (active_connection, ip_profile) in acs_and_ip_profiles:
-        nm_routes = ip_profile.props.routes
-        gateway = ip_profile.props.gateway
-        if not nm_routes and not gateway:
-            continue
-        iface_name = nm_ac.ActiveConnection(
-            nm_ac_con=active_connection
-        ).devname
-        if not iface_name:
-            continue
-        default_table_id = ip_profile.props.route_table
-        if gateway:
-            routes.append(
-                _get_default_route_config(
-                    gateway,
-                    ip_profile.props.route_metric,
-                    default_table_id,
-                    iface_name,
+    for iface_name, applied_config in applied_configs.items():
+        for ip_profile in (
+            applied_config.get_setting_ip6_config(),
+            applied_config.get_setting_ip4_config(),
+        ):
+            if not ip_profile:
+                continue
+            nm_routes = ip_profile.props.routes
+            gateway = ip_profile.props.gateway
+            if not nm_routes and not gateway:
+                continue
+            default_table_id = ip_profile.props.route_table
+            if gateway:
+                routes.append(
+                    _get_default_route_config(
+                        gateway,
+                        ip_profile.props.route_metric,
+                        default_table_id,
+                        iface_name,
+                    )
                 )
-            )
-        # NM supports multiple route table in single profile:
-        #   https://bugzilla.redhat.com/show_bug.cgi?id=1436531
-        # The `ipv4.route-table` and `ipv6.route-table` will be the default
-        # table id for static routes and auto routes. But each static route can
-        # still specify route table id.
-        for nm_route in nm_routes:
-            table_id = _get_per_route_table_id(nm_route, default_table_id)
-            route_entry = _nm_route_to_route(nm_route, table_id, iface_name)
-            if route_entry:
-                routes.append(route_entry)
+            # NM supports multiple route table in single profile:
+            # https://bugzilla.redhat.com/show_bug.cgi?id=1436531 The
+            # `ipv4.route-table` and `ipv6.route-table` will be the default
+            # table id for static routes and auto routes. But each static route
+            # can still specify route table id.
+            for nm_route in nm_routes:
+                table_id = _get_per_route_table_id(nm_route, default_table_id)
+                route_entry = _nm_route_to_route(
+                    nm_route, table_id, iface_name
+                )
+                if route_entry:
+                    routes.append(route_entry)
     routes.sort(
         key=itemgetter(
             Route.TABLE_ID, Route.NEXT_HOP_INTERFACE, Route.DESTINATION

@@ -20,6 +20,7 @@
 from nispor import NisporNetState
 
 from libnmstate.plugin import NmstatePlugin
+from libnmstate.schema import Route
 
 from .base_iface import NisporPluginBaseIface
 from .dummy import NisporPluginDummyIface
@@ -28,6 +29,7 @@ from .bond import NisporPluginBondIface
 from .vlan import NisporPluginVlanIface
 from .vxlan import NisporPluginVxlanIface
 from .bridge import NisporPluginBridgeIface
+from .route import nispor_route_state_to_nmstate
 
 
 class NisporPlugin(NmstatePlugin):
@@ -39,6 +41,7 @@ class NisporPlugin(NmstatePlugin):
     def plugin_capabilities(self):
         return [
             NmstatePlugin.PLUGIN_CAPABILITY_IFACE,
+            NmstatePlugin.PLUGIN_CAPABILITY_ROUTE,
         ]
 
     @property
@@ -76,3 +79,7 @@ class NisporPlugin(NmstatePlugin):
             else:
                 ifaces.append(NisporPluginBaseIface(np_iface).to_dict())
         return ifaces
+
+    def get_routes(self):
+        np_state = NisporNetState.retrieve()
+        return {Route.RUNNING: nispor_route_state_to_nmstate(np_state.routes)}
