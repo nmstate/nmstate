@@ -61,16 +61,16 @@ BAR_IFACE_STATES = [
     },
 ]
 
+TEST_ROUTE_ENTRY = {
+    Route.DESTINATION: "198.51.100.0/24",
+    Route.METRIC: 103,
+    Route.NEXT_HOP_ADDRESS: "192.0.2.1",
+    Route.NEXT_HOP_INTERFACE: FOO_IFACE_NAME,
+    Route.TABLE_ID: 100,
+}
+
 TEST_ROUTE_STATE = {
-    Route.RUNNING: [
-        {
-            Route.DESTINATION: "198.51.100.0/24",
-            Route.METRIC: 103,
-            Route.NEXT_HOP_ADDRESS: "192.0.2.1",
-            Route.NEXT_HOP_INTERFACE: FOO_IFACE_NAME,
-            Route.TABLE_ID: 100,
-        }
-    ],
+    Route.RUNNING: [TEST_ROUTE_ENTRY],
     Route.CONFIG: [],
 }
 
@@ -272,7 +272,7 @@ def test_two_plugins_with_merged_iface_by_priority(with_multiple_plugins):
 
 def test_load_external_route_plugin(with_route_plugin):
     state = libnmstate.show()
-    assert state[Route.KEY] == TEST_ROUTE_STATE
+    assert TEST_ROUTE_ENTRY in state[Route.KEY][Route.RUNNING]
 
 
 def test_load_external_route_rule_plugin(with_route_rule_plugin):

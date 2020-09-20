@@ -141,22 +141,6 @@ def get_ip_profile(active_connection):
     return None
 
 
-def get_route_running(context):
-    return nm_route.get_running(_acs_and_ip_cfgs(context))
-
-
-def get_route_config(context):
-    return nm_route.get_config(acs_and_ip_profiles(context))
-
-
-def _acs_and_ip_cfgs(nm_client):
-    for ac in nm_client.get_active_connections():
-        ip_cfg = ac.get_ip4_config()
-        if not ip_cfg:
-            continue
-        yield ac, ip_cfg
-
-
 def acs_and_ip_profiles(nm_client):
     for ac in nm_client.get_active_connections():
         ip_profile = get_ip_profile(ac)

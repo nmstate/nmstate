@@ -46,6 +46,7 @@ from .common import NM
 from .context import NmContext
 from .profile import get_all_applied_configs
 from .profile import NmProfiles
+from .route import get_running_config as get_route_running_config
 
 
 class NetworkManagerPlugin(NmstatePlugin):
@@ -159,16 +160,7 @@ class NetworkManagerPlugin(NmstatePlugin):
         return info
 
     def get_routes(self):
-        return {
-            Route.RUNNING: (
-                nm_ipv4.get_route_running(self.client)
-                + nm_ipv6.get_route_running(self.client)
-            ),
-            Route.CONFIG: (
-                nm_ipv4.get_route_config(self.client)
-                + nm_ipv6.get_route_config(self.client)
-            ),
-        }
+        return {Route.CONFIG: get_route_running_config(self._applied_configs)}
 
     def get_route_rules(self):
         return {

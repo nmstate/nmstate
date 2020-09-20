@@ -70,11 +70,7 @@ def show_with_plugins(plugins, include_status_data=None):
 
     report[Interface.KEY] = _get_interface_info_from_plugins(plugins)
 
-    route_plugin = _find_plugin_for_capability(
-        plugins, NmstatePlugin.PLUGIN_CAPABILITY_ROUTE
-    )
-    if route_plugin:
-        report[Route.KEY] = route_plugin.get_routes()
+    report[Route.KEY] = _get_routes_from_plugins(plugins)
 
     route_rule_plugin = _find_plugin_for_capability(
         plugins, NmstatePlugin.PLUGIN_CAPABILITY_ROUTE_RULE
@@ -238,3 +234,13 @@ def _parse_checkpoints(checkpoints):
     checkpoint_index = {}
     for plugin_name, checkpoint in zip(parsed[0::2], parsed[1::2]):
         checkpoint_index[plugin_name] = checkpoint
+
+
+def _get_routes_from_plugins(plugins):
+    ret = {Route.RUNNING: [], Route.CONFIG: []}
+    for plugin in plugins:
+        if NmstatePlugin.PLUGIN_CAPABILITY_ROUTE in plugin.plugin_capabilities:
+            plugin_routes = plugin.get_routes()
+            ret[Route.RUNNING].extend(plugin_routes.get(Route.RUNNING, []))
+            ret[Route.CONFIG].extend(plugin_routes.get(Route.CONFIG, []))
+    return ret
