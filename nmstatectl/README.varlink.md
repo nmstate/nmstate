@@ -28,7 +28,7 @@ Using libnmstate show function via varlink (query network state)
 Required for varlink stdin/out operation
 
 ```bash
-$ sudo dnf install libvarlink-utils
+$ sudo dnf install libvarlink-util
 ```
 
 Varlink stdin/out:
