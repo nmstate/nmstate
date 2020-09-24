@@ -104,7 +104,7 @@ class NmProfiles:
         groups = {
             "profiles_to_deactivate_beforehand": set(),
             "profiles_to_delete": set(),
-            "new_master_not_enslaved": set(),
+            "new_master_not_as_port": set(),
             "new_ifaces_to_activate": set(),
             "master_ifaces_to_edit": set(),
             "new_ovs_port_to_activate": set(),
@@ -514,7 +514,7 @@ class NmProfile:
                     self.iface.type in MASTER_IFACE_TYPES
                     and not self.iface_info.get(MASTER_METADATA)
                 ):
-                    groups["new_master_not_enslaved"].add(self)
+                    groups["new_master_not_as_port"].add(self)
                 elif self.iface.type == InterfaceType.OVS_INTERFACE:
                     groups["new_ovs_interface_to_activate"].add(self)
                 elif self.iface.type == InterfaceType.OVS_PORT:
@@ -654,7 +654,7 @@ def _mark_nm_external_subordinate_changed(context, net_state):
     """
     for iface in net_state.ifaces.values():
         if iface.type in MASTER_IFACE_TYPES:
-            for subordinate in iface.slaves:
+            for subordinate in iface.port:
                 nmdev = context.get_nm_dev(subordinate)
                 if nmdev:
                     if is_externally_managed(nmdev):

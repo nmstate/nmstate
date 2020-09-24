@@ -40,7 +40,7 @@ class NmstateValueError(NmstateError, ValueError):
     desired state. Example:
         * JSON/YAML syntax issue.
         * Nmstate schema issue.
-        * Invalid value of desired property, like bond missing slave.
+        * Invalid value of desired property, like bond missing port.
     """
 
     pass

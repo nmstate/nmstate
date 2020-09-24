@@ -271,7 +271,7 @@ def test_dhcp_with_addresses(dhcpcli_up):
 def test_ipv4_dhcp_on_bond(dhcpcli_up):
     ipv4_state = {Interface.IPV4: _create_ipv4_state(enabled=True, dhcp=True)}
     with bondlib.bond_interface(
-        "bond99", slaves=[DHCP_CLI_NIC], extra_iface_state=ipv4_state
+        "bond99", port=[DHCP_CLI_NIC], extra_iface_state=ipv4_state
     ) as desired_state:
         assertlib.assert_state(desired_state)
 
@@ -588,7 +588,7 @@ def test_dhcp_on_bridge0(dhcpcli_up_with_dynamic_ip):
 
 
 @pytest.mark.tier1
-def test_slave_ipaddr_learned_via_dhcp_added_as_static_to_linux_bridge(
+def test_port_ipaddr_learned_via_dhcp_added_as_static_to_linux_bridge(
     dhcpcli_up,
 ):
     dhcpcli_up[Interface.KEY][0][Interface.IPV4] = _create_ipv4_state(
@@ -599,13 +599,13 @@ def test_slave_ipaddr_learned_via_dhcp_added_as_static_to_linux_bridge(
 
     assert _poll(_has_dhcpv4_addr)
 
-    slave_ifname = dhcpcli_up[Interface.KEY][0][Interface.NAME]
-    slave_state = statelib.show_only((slave_ifname,))
-    slave_iface_state = slave_state[Interface.KEY][0]
-    dhcpcli_ip = slave_iface_state[Interface.IPV4][InterfaceIPv4.ADDRESS]
+    port_ifname = dhcpcli_up[Interface.KEY][0][Interface.NAME]
+    port_state = statelib.show_only((port_ifname,))
+    port_iface_state = port_state[Interface.KEY][0]
+    dhcpcli_ip = port_iface_state[Interface.IPV4][InterfaceIPv4.ADDRESS]
 
     bridge_state = add_port_to_bridge(
-        create_bridge_subtree_state(), slave_ifname
+        create_bridge_subtree_state(), port_ifname
     )
 
     ipv4_state = _create_ipv4_state(enabled=True, dhcp=False)
@@ -618,7 +618,7 @@ def test_slave_ipaddr_learned_via_dhcp_added_as_static_to_linux_bridge(
     ) as state:
         state[Interface.KEY].append(
             {
-                Interface.NAME: slave_ifname,
+                Interface.NAME: port_ifname,
                 Interface.IPV4: _create_ipv4_state(enabled=False),
                 Interface.IPV6: _create_ipv6_state(enabled=False),
             }

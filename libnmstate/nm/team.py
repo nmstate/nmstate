@@ -89,10 +89,10 @@ def get_info(device):
         teamd_json = device.get_config()
         if teamd_json:
             teamd_config = json.loads(teamd_json)
-            slave_names = [dev.get_iface() for dev in device.get_slaves()]
+            port_names = [dev.get_iface() for dev in device.get_slaves()]
             info[Team.CONFIG_SUBTREE] = {
                 Team.PORT_SUBTREE: [
-                    {Team.Port.NAME: n} for n in sorted(slave_names)
+                    {Team.Port.NAME: n} for n in sorted(port_names)
                 ],
             }
             runner = _get_runner_name(teamd_config)

@@ -26,7 +26,7 @@ from .base_iface import BaseIface
 
 class TeamIface(BaseIface):
     @property
-    def slaves(self):
+    def port(self):
         ports = self.raw.get(Team.CONFIG_SUBTREE, {}).get(
             Team.PORT_SUBTREE, []
         )
@@ -40,16 +40,16 @@ class TeamIface(BaseIface):
     def is_virtual(self):
         return True
 
-    def sort_slaves(self):
-        if self.slaves:
+    def sort_port(self):
+        if self.port:
             self.raw[Team.CONFIG_SUBTREE][Team.PORT_SUBTREE].sort(
                 key=itemgetter(Team.Port.NAME)
             )
 
-    def remove_slave(self, slave_name):
-        if self.slaves:
-            slaves_config = self.raw[Team.CONFIG_SUBTREE][Team.PORT_SUBTREE]
+    def remove_port(self, port_name):
+        if self.port:
+            port_config = self.raw[Team.CONFIG_SUBTREE][Team.PORT_SUBTREE]
             self.raw[Team.CONFIG_SUBTREE][Team.PORT_SUBTREE] = [
-                s for s in slaves_config if s[Team.Port.NAME] != slave_name
+                s for s in port_config if s[Team.Port.NAME] != port_name
             ]
-        self.sort_slaves()
+        self.sort_port()

@@ -65,10 +65,10 @@ def is_bond_type_id(type_id):
 
 
 def get_bond_info(nm_device):
-    slaves = get_slaves(nm_device)
+    port = get_port(nm_device)
     options = _get_options(nm_device)
-    if slaves or options:
-        return {Bond.PORT: slaves, Bond.OPTIONS_SUBTREE: options}
+    if port or options:
+        return {Bond.PORT: port, Bond.OPTIONS_SUBTREE: options}
     else:
         return {}
 
@@ -127,7 +127,7 @@ def _strip_sysfs_name_number_value(value):
     return re.sub(" [0-9]$", "", value)
 
 
-def get_slaves(nm_device):
+def get_port(nm_device):
     return nm_device.get_slaves()
 
 

@@ -50,5 +50,5 @@ IPV4_ADDRESSES = [
     },
 ]
 
-SLAVE1_IFACE_NAME = "slave1"
-SLAVE2_IFACE_NAME = "slave2"
+PORT1_IFACE_NAME = "port1"
+PORT2_IFACE_NAME = "port2"

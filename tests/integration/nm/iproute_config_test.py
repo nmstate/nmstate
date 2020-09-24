@@ -35,7 +35,7 @@ DUMMY2 = "dummy2"
 
 
 @pytest.fixture
-def bond99_with_dummy_slaves_by_iproute():
+def bond99_with_dummy_port_by_iproute():
     cmdlib.exec_cmd(f"ip link add {DUMMY1} type dummy".split(), check=True)
     cmdlib.exec_cmd(f"ip link add {DUMMY2} type dummy".split(), check=True)
     cmdlib.exec_cmd(f"ip link add {BOND99} type bond".split(), check=True)
@@ -58,7 +58,7 @@ def bond99_with_dummy_slaves_by_iproute():
     cmdlib.exec_cmd(f"ip link del {BOND99}".split())
 
 
-def test_external_managed_subordnates(bond99_with_dummy_slaves_by_iproute):
+def test_external_managed_subordnates(bond99_with_dummy_port_by_iproute):
     libnmstate.apply(
         {
             Interface.KEY: [

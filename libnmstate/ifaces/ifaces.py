@@ -48,7 +48,7 @@ class Ifaces:
         * Merging state.
         * Generating metadata.
     The class itself is focusing on tasks related to inter-interfaces changes:
-        * Mater/slave interfaces.
+        * Mater/port interfaces.
         * Parent/Child interfaces.
     The class is maitnaing a list of BaseIface(or its child classes) which does
     not know desire state and current state difference. Hence this class is
@@ -99,8 +99,8 @@ class Ifaces:
                 iface.mark_as_desired()
                 self._ifaces[iface.name] = iface
 
-            self._create_virtual_slaves()
-            self._validate_unknown_slaves()
+            self._create_virtual_port()
+            self._validate_unknown_port()
             self._validate_unknown_parent()
             self._gen_metadata()
             for iface in self._ifaces.values():
@@ -108,47 +108,47 @@ class Ifaces:
 
             self._pre_edit_validation_and_cleanup()
 
-    def _create_virtual_slaves(self):
+    def _create_virtual_port(self):
         """
-        Certain master interface could have virtual slaves which does not
+        Certain master interface could have virtual port which does not
         defined in desired state. Create it before generating metadata.
-        For example, OVS bridge could have slave defined as OVS internal
+        For example, OVS bridge could have port defined as OVS internal
         interface which could be created without defining in desire state but
-        only in slave list of OVS bridge.
+        only in port list of OVS bridge.
         """
         new_ifaces = []
         for iface in self._ifaces.values():
             if iface.is_up and iface.is_master:
-                for slave_name in iface.slaves:
-                    if slave_name not in self._ifaces.keys():
-                        new_slave = iface.create_virtual_slave(slave_name)
-                        if new_slave:
-                            new_ifaces.append(new_slave)
+                for port_name in iface.port:
+                    if port_name not in self._ifaces.keys():
+                        new_port = iface.create_virtual_port(port_name)
+                        if new_port:
+                            new_ifaces.append(new_port)
         for iface in new_ifaces:
             self._ifaces[iface.name] = iface
 
     def _pre_edit_validation_and_cleanup(self):
-        self._validate_over_booked_slaves()
+        self._validate_over_booked_port()
         self._validate_vlan_mtu()
-        self._handle_master_slave_list_change()
+        self._handle_master_port_list_change()
         self._match_child_iface_state_with_parent()
         self._mark_orphen_as_absent()
-        self._bring_slave_up_if_not_in_desire()
+        self._bring_port_up_if_not_in_desire()
         self._validate_ovs_patch_peers()
         self._remove_unknown_type_interfaces()
 
-    def _bring_slave_up_if_not_in_desire(self):
+    def _bring_port_up_if_not_in_desire(self):
         """
-        When slave been included in master, automactially set it as state UP
+        When port been included in master, automactially set it as state UP
         if not defiend in desire state
         """
         for iface in self._ifaces.values():
             if iface.is_up and iface.is_master:
-                for slave_name in iface.slaves:
-                    slave_iface = self._ifaces[slave_name]
-                    if not slave_iface.is_desired and not slave_iface.is_up:
-                        slave_iface.mark_as_up()
-                        slave_iface.mark_as_changed()
+                for port_name in iface.port:
+                    port_iface = self._ifaces[port_name]
+                    if not port_iface.is_desired and not port_iface.is_up:
+                        port_iface.mark_as_up()
+                        port_iface.mark_as_changed()
 
     def _validate_ovs_patch_peers(self):
         """
@@ -197,31 +197,29 @@ class Ifaces:
                         f"MTU({base_iface.mtu})"
                     )
 
-    def _handle_master_slave_list_change(self):
+    def _handle_master_port_list_change(self):
         """
-         * Mark slave interface as changed if master removed.
-         * Mark slave interface as changed if slave list of master changed.
-         * Mark slave interface as changed if slave config changed when master
+         * Mark port interface as changed if master removed.
+         * Mark port interface as changed if port list of master changed.
+         * Mark port interface as changed if port config changed when master
            said so.
         """
         for iface in self._ifaces.values():
             if not iface.is_desired or not iface.is_master:
                 continue
-            des_slaves = set(iface.slaves)
+            des_port = set(iface.port)
             if iface.is_absent:
-                des_slaves = set()
+                des_port = set()
             cur_iface = self._cur_ifaces.get(iface.name)
-            cur_slaves = set(cur_iface.slaves) if cur_iface else set()
-            if des_slaves != cur_slaves:
-                changed_slaves = (des_slaves | cur_slaves) - (
-                    des_slaves & cur_slaves
-                )
-                for iface_name in changed_slaves:
+            cur_port = set(cur_iface.port) if cur_iface else set()
+            if des_port != cur_port:
+                changed_port = (des_port | cur_port) - (des_port & cur_port)
+                for iface_name in changed_port:
                     self._ifaces[iface_name].mark_as_changed()
             if cur_iface:
-                for slave_name in iface.config_changed_slaves(cur_iface):
-                    if slave_name in self._ifaces:
-                        self._ifaces[slave_name].mark_as_changed()
+                for port_name in iface.config_changed_port(cur_iface):
+                    if port_name in self._ifaces:
+                        self._ifaces[port_name].mark_as_changed()
 
     def _match_child_iface_state_with_parent(self):
         """
@@ -294,17 +292,17 @@ class Ifaces:
     def cur_ifaces(self):
         return self._cur_ifaces
 
-    def _remove_unknown_interface_type_slaves(self):
+    def _remove_unknown_interface_type_port(self):
         """
-        When master containing slaves with unknown interface type, they should
-        be removed from master slave list before verifying.
+        When master containing port with unknown interface type, they should
+        be removed from master port list before verifying.
         """
         for iface in self._ifaces.values():
-            if iface.is_up and iface.is_master and iface.slaves:
-                for slave_name in iface.slaves:
-                    slave_iface = self._ifaces[slave_name]
-                    if slave_iface.type == InterfaceType.UNKNOWN:
-                        iface.remove_slave(slave_name)
+            if iface.is_up and iface.is_master and iface.port:
+                for port_name in iface.port:
+                    port_iface = self._ifaces[port_name]
+                    if port_iface.type == InterfaceType.UNKNOWN:
+                        iface.remove_port(port_name)
 
     def verify(self, cur_iface_infos):
         cur_ifaces = Ifaces(
@@ -312,7 +310,7 @@ class Ifaces:
             cur_iface_infos=cur_iface_infos,
             save_to_disk=self._save_to_disk,
         )
-        cur_ifaces._remove_unknown_interface_type_slaves()
+        cur_ifaces._remove_unknown_interface_type_port()
         cur_ifaces._remove_ignore_interfaces(self._ignored_iface_names)
         self._remove_ignore_interfaces(self._ignored_iface_names)
         for iface in self._ifaces.values():
@@ -382,16 +380,16 @@ class Ifaces:
             if route_rule_state.config_changed:
                 self._ifaces[iface_name].mark_as_changed()
 
-    def _validate_unknown_slaves(self):
+    def _validate_unknown_port(self):
         """
-        Check the existance of slave interface
+        Check the existance of port interface
         """
         for iface in self._ifaces.values():
-            for slave_name in iface.slaves:
-                if not self._ifaces.get(slave_name):
+            for port_name in iface.port:
+                if not self._ifaces.get(port_name):
                     raise NmstateValueError(
-                        f"Interface {iface.name} has unknown slave: "
-                        f"{slave_name}"
+                        f"Interface {iface.name} has unknown port: "
+                        f"{port_name}"
                     )
 
     def _validate_unknown_parent(self):
@@ -417,31 +415,31 @@ class Ifaces:
                     "will be ignored during the activation"
                 )
 
-    def _validate_over_booked_slaves(self):
+    def _validate_over_booked_port(self):
         """
-        Check whether any slave is used by more than one master
+        Check whether any port is used by more than one master
         """
-        slave_master_map = {}
+        port_master_map = {}
         for iface in self._ifaces.values():
-            for slave_name in iface.slaves:
-                cur_master = slave_master_map.get(slave_name)
+            for port_name in iface.port:
+                cur_master = port_master_map.get(port_name)
                 if cur_master:
                     cur_master_iface = self._ifaces.get(cur_master)
                     if cur_master_iface and not cur_master_iface.is_absent:
                         raise NmstateValueError(
-                            f"Interface {iface.name} slave {slave_name} is "
-                            f"already enslaved by interface {cur_master}"
+                            f"Interface {iface.name} port {port_name} is "
+                            f"already as port for interface {cur_master}"
                         )
                 else:
-                    slave_master_map[slave_name] = iface.name
+                    port_master_map[port_name] = iface.name
 
     def _remove_ignore_interfaces(self, ignored_iface_names):
-        # Remove ignored slaves
+        # Remove ignored port
         for iface in self._ifaces.values():
-            if iface.is_up and iface.is_master and iface.slaves:
-                for slave_name in iface.slaves:
-                    if slave_name in ignored_iface_names:
-                        iface.remove_slave(slave_name)
+            if iface.is_up and iface.is_master and iface.port:
+                for port_name in iface.port:
+                    if port_name in ignored_iface_names:
+                        iface.remove_port(port_name)
         for ignored_iface_name in ignored_iface_names:
             self._ifaces.pop(ignored_iface_name, None)
 

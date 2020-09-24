@@ -34,11 +34,11 @@ from ..testlib.constants import FOO_IFACE_NAME
 from ..testlib.constants import MAC_ADDRESS1
 from ..testlib.ifacelib import gen_foo_iface_info
 
-SLAVE1_IFACE_NAME = "slave1"
-SLAVE2_IFACE_NAME = "slave2"
+PORT1_IFACE_NAME = "port1"
+PORT2_IFACE_NAME = "port2"
 
 
-TEST_SLAVES = [SLAVE1_IFACE_NAME, SLAVE2_IFACE_NAME]
+TEST_PORT = [PORT1_IFACE_NAME, PORT2_IFACE_NAME]
 TEST_BOND_MODE = BondMode.ROUND_ROBIN
 
 parametrize_bond_named_options = pytest.mark.parametrize(
@@ -62,32 +62,32 @@ class TestBondIface:
         iface_info = gen_foo_iface_info(iface_type=InterfaceType.BOND)
         iface_info[Bond.CONFIG_SUBTREE] = {
             Bond.MODE: TEST_BOND_MODE,
-            Bond.PORT: deepcopy(TEST_SLAVES),
+            Bond.PORT: deepcopy(TEST_PORT),
             Bond.OPTIONS_SUBTREE: {},
         }
         return iface_info
 
-    def _gen_slave1_iface_info(self):
+    def _gen_port1_iface_info(self):
         iface_info = gen_foo_iface_info()
-        iface_info[Interface.NAME] = SLAVE1_IFACE_NAME
+        iface_info[Interface.NAME] = PORT1_IFACE_NAME
         return iface_info
 
-    def _gen_slave2_iface_info(self):
+    def _gen_port2_iface_info(self):
         iface_info = gen_foo_iface_info()
-        iface_info[Interface.NAME] = SLAVE2_IFACE_NAME
+        iface_info[Interface.NAME] = PORT2_IFACE_NAME
         return iface_info
 
     def _gen_ifaces(self, bond_iface_info):
         return Ifaces(
             des_iface_infos=[
                 bond_iface_info,
-                self._gen_slave1_iface_info(),
-                self._gen_slave2_iface_info(),
+                self._gen_port1_iface_info(),
+                self._gen_port2_iface_info(),
             ],
             cur_iface_infos=[],
         )
 
-    def test_bond_sort_slaves(self):
+    def test_bond_sort_port(self):
         iface_info1 = self._gen_iface_info()
         iface_info2 = self._gen_iface_info()
         iface_info2[Bond.CONFIG_SUBTREE][Bond.PORT].reverse()
@@ -178,8 +178,8 @@ class TestBondIface:
 
         assert BondIface(iface_info).state_for_verify() == expected_iface_info
 
-    def test_get_slaves(self):
-        assert BondIface(self._gen_iface_info()).slaves == TEST_SLAVES
+    def test_get_port(self):
+        assert BondIface(self._gen_iface_info()).port == TEST_PORT
 
     def test_is_master(self):
         assert BondIface(self._gen_iface_info()).is_master
@@ -198,22 +198,22 @@ class TestBondIface:
         ifaces = Ifaces(
             des_iface_infos=[
                 iface_info,
-                self._gen_slave1_iface_info(),
-                self._gen_slave2_iface_info(),
+                self._gen_port1_iface_info(),
+                self._gen_port2_iface_info(),
             ],
             cur_iface_infos=[
                 cur_iface_info,
-                self._gen_slave1_iface_info(),
-                self._gen_slave2_iface_info(),
+                self._gen_port1_iface_info(),
+                self._gen_port2_iface_info(),
             ],
         )
         bond_iface = ifaces[FOO_IFACE_NAME]
         bond_iface.gen_metadata(ifaces)
-        slave1_iface = ifaces[SLAVE1_IFACE_NAME]
-        slave2_iface = ifaces[SLAVE2_IFACE_NAME]
+        port1_iface = ifaces[PORT1_IFACE_NAME]
+        port2_iface = ifaces[PORT2_IFACE_NAME]
 
-        assert slave1_iface.master == FOO_IFACE_NAME
-        assert slave2_iface.master == FOO_IFACE_NAME
+        assert port1_iface.master == FOO_IFACE_NAME
+        assert port2_iface.master == FOO_IFACE_NAME
         assert bond_iface.is_bond_mode_changed
 
     def test_pre_edit_clean_up_discard_bond_options_when_mode_chagned(self):
@@ -231,13 +231,13 @@ class TestBondIface:
         ifaces = Ifaces(
             des_iface_infos=[
                 iface_info,
-                self._gen_slave1_iface_info(),
-                self._gen_slave2_iface_info(),
+                self._gen_port1_iface_info(),
+                self._gen_port2_iface_info(),
             ],
             cur_iface_infos=[
                 cur_iface_info,
-                self._gen_slave1_iface_info(),
-                self._gen_slave2_iface_info(),
+                self._gen_port1_iface_info(),
+                self._gen_port2_iface_info(),
             ],
         )
         bond_iface = ifaces[FOO_IFACE_NAME]
@@ -267,13 +267,13 @@ class TestBondIface:
         ifaces = Ifaces(
             des_iface_infos=[
                 iface_info,
-                self._gen_slave1_iface_info(),
-                self._gen_slave2_iface_info(),
+                self._gen_port1_iface_info(),
+                self._gen_port2_iface_info(),
             ],
             cur_iface_infos=[
                 cur_iface_info,
-                self._gen_slave1_iface_info(),
-                self._gen_slave2_iface_info(),
+                self._gen_port1_iface_info(),
+                self._gen_port2_iface_info(),
             ],
         )
         bond_iface = ifaces[FOO_IFACE_NAME]
@@ -336,14 +336,14 @@ class TestBondIface:
         with pytest.raises(NmstateValueError):
             iface.pre_edit_validation_and_cleanup()
 
-    def test_remove_slave(self):
+    def test_remove_port(self):
         iface = BondIface(self._gen_iface_info())
         expected_iface_info = self._gen_iface_info()
         expected_iface_info[Bond.CONFIG_SUBTREE][Bond.PORT] = [
-            SLAVE2_IFACE_NAME
+            PORT2_IFACE_NAME
         ]
 
-        iface.remove_slave(SLAVE1_IFACE_NAME)
+        iface.remove_port(PORT1_IFACE_NAME)
 
         assert iface.to_dict() == expected_iface_info
 

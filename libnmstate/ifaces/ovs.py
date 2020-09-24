@@ -36,7 +36,7 @@ from .base_iface import BaseIface
 
 
 SYSTEMCTL_TIMEOUT_SECONDS = 5
-DEPRECATED_SLAVES = "slaves"
+DEPRECATED_SLAVES = "port"
 
 
 class OvsBridgeIface(BridgeIface):
@@ -51,12 +51,12 @@ class OvsBridgeIface(BridgeIface):
                 return True
         return False
 
-    def sort_slaves(self):
-        super().sort_slaves()
-        self._sort_bond_slaves()
+    def sort_port(self):
+        super().sort_port()
+        self._sort_bond_port()
 
-    def _sort_bond_slaves(self):
-        # For slaves of ovs bond/link_aggregation
+    def _sort_bond_port(self):
+        # For port of ovs bond/link_aggregation
         for port in self.port_configs:
             port_cfg = port.get(OVSBridge.Port.LINK_AGGREGATION_SUBTREE)
             if port_cfg:
@@ -67,79 +67,77 @@ class OvsBridgeIface(BridgeIface):
                 )
 
     @property
-    def slaves(self):
-        slaves = []
+    def port(self):
+        port = []
         for port_config in self.port_configs:
             lag = port_config.get(OVSBridge.Port.LINK_AGGREGATION_SUBTREE)
             if lag:
-                lag_slaves = lag.get(
+                lag_port = lag.get(
                     OVSBridge.Port.LinkAggregation.PORT_SUBTREE, []
                 )
                 name_key = OVSBridge.Port.LinkAggregation.Port.NAME
-                slaves += [s[name_key] for s in lag_slaves]
+                port += [s[name_key] for s in lag_port]
             else:
-                slaves.append(port_config[OVSBridge.Port.NAME])
-        return slaves
+                port.append(port_config[OVSBridge.Port.NAME])
+        return port
 
     def gen_metadata(self, ifaces):
-        for slave_name in self.slaves:
-            slave_iface = ifaces[slave_name]
+        for port_name in self.port:
+            port_iface = ifaces[port_name]
             port_config = _lookup_ovs_port_by_interface(
-                self.port_configs, slave_iface.name
+                self.port_configs, port_iface.name
             )
-            slave_iface.update(
+            port_iface.update(
                 {BridgeIface.BRPORT_OPTIONS_METADATA: port_config}
             )
-            if slave_iface.type == InterfaceType.OVS_INTERFACE:
-                slave_iface.parent = self.name
+            if port_iface.type == InterfaceType.OVS_INTERFACE:
+                port_iface.parent = self.name
         super().gen_metadata(ifaces)
 
-    def create_virtual_slave(self, slave_name):
+    def create_virtual_port(self, port_name):
         """
-        When slave does not exists in merged desire state, it means it's an
+        When port does not exists in merged desire state, it means it's an
         OVS internal interface, create it.
         """
-        slave_iface = OvsInternalIface(
+        port_iface = OvsInternalIface(
             {
-                Interface.NAME: slave_name,
+                Interface.NAME: port_name,
                 Interface.TYPE: InterfaceType.OVS_INTERFACE,
                 Interface.STATE: InterfaceState.UP,
             }
         )
-        slave_iface.mark_as_changed()
-        slave_iface.set_master(self.name, self.type)
-        slave_iface.parent = self.name
-        return slave_iface
+        port_iface.mark_as_changed()
+        port_iface.set_master(self.name, self.type)
+        port_iface.parent = self.name
+        return port_iface
 
     def pre_edit_validation_and_cleanup(self):
         super().pre_edit_validation_and_cleanup()
-        self._validate_ovs_lag_slave_count()
+        self._validate_ovs_lag_port_count()
 
-    def _validate_ovs_lag_slave_count(self):
+    def _validate_ovs_lag_port_count(self):
         for port in self.port_configs:
-            slaves_subtree = OVSBridge.Port.LinkAggregation.PORT_SUBTREE
+            port_subtree = OVSBridge.Port.LinkAggregation.PORT_SUBTREE
             lag = port.get(OVSBridge.Port.LINK_AGGREGATION_SUBTREE)
-            if lag and len(lag.get(slaves_subtree, ())) < 2:
+            if lag and len(lag.get(port_subtree, ())) < 2:
                 raise NmstateValueError(
-                    f"OVS {self.name} LAG port {lag} has less than 2 slaves."
+                    f"OVS {self.name} LAG port {lag} has less than 2 port."
                 )
 
-    def remove_slave(self, slave_name):
+    def remove_port(self, port_name):
         new_port_configs = []
         for port in self.port_configs:
-            if port[OVSBridge.Port.NAME] == slave_name:
+            if port[OVSBridge.Port.NAME] == port_name:
                 continue
             lag = port.get(OVSBridge.Port.LINK_AGGREGATION_SUBTREE)
             if lag:
                 new_port = deepcopy(port)
                 new_lag = new_port[OVSBridge.Port.LINK_AGGREGATION_SUBTREE]
-                lag_slaves = lag.get(
-                    OVSBridge.Port.LinkAggregation.PORT_SUBTREE
-                )
-                if lag_slaves:
+                lag_port = lag.get(OVSBridge.Port.LinkAggregation.PORT_SUBTREE)
+                if lag_port:
                     name_key = OVSBridge.Port.LinkAggregation.Port.NAME
                     new_lag[OVSBridge.Port.LinkAggregation.PORT_SUBTREE] = [
-                        s for s in lag_slaves if s[name_key] != slave_name
+                        s for s in lag_port if s[name_key] != port_name
                     ]
                 new_port_configs.append(new_port)
             else:
@@ -147,7 +145,7 @@ class OvsBridgeIface(BridgeIface):
         self.raw[OVSBridge.CONFIG_SUBTREE][
             OVSBridge.PORT_SUBTREE
         ] = new_port_configs
-        self.sort_slaves()
+        self.sort_port()
 
     def state_for_verify(self):
         state = super().state_for_verify()
@@ -165,24 +163,24 @@ class OvsBridgeIface(BridgeIface):
                     OVSBridge.Port.LinkAggregation.PORT_SUBTREE
                 ] = lag_info.pop(DEPRECATED_SLAVES)
                 warnings.warn(
-                    "Using 'slaves' is deprecated use 'port'" " instead."
+                    "Using 'slaves' is deprecated use 'port' instead."
                 )
 
 
-def _lookup_ovs_port_by_interface(ports, slave_name):
+def _lookup_ovs_port_by_interface(ports, port_name):
     for port in ports:
         lag_state = port.get(OVSBridge.Port.LINK_AGGREGATION_SUBTREE)
-        if lag_state and _is_ovs_lag_slave(lag_state, slave_name):
+        if lag_state and _is_ovs_lag_port(lag_state, port_name):
             return port
-        elif port[OVSBridge.Port.NAME] == slave_name:
+        elif port[OVSBridge.Port.NAME] == port_name:
             return port
     return {}
 
 
-def _is_ovs_lag_slave(lag_state, iface_name):
-    slaves = lag_state.get(OVSBridge.Port.LinkAggregation.PORT_SUBTREE, ())
-    for slave in slaves:
-        if slave[OVSBridge.Port.LinkAggregation.Port.NAME] == iface_name:
+def _is_ovs_lag_port(lag_state, iface_name):
+    port = lag_state.get(OVSBridge.Port.LinkAggregation.PORT_SUBTREE, ())
+    for port_member in port:
+        if port_member[OVSBridge.Port.LinkAggregation.Port.NAME] == iface_name:
             return True
     return False
 
@@ -197,7 +195,7 @@ class OvsInternalIface(BaseIface):
         return True
 
     @property
-    def can_have_ip_when_enslaved(self):
+    def can_have_ip_as_port(self):
         return True
 
     @property

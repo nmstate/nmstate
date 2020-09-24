@@ -163,7 +163,7 @@ def test_create_and_remove_ovs_bridge_with_internal_port_same_name():
 
 
 @pytest.mark.tier1
-def test_vlan_as_ovs_bridge_slave(vlan_on_eth1):
+def test_vlan_as_ovs_bridge_port(vlan_on_eth1):
     bridge = Bridge(BRIDGE1)
     bridge.add_system_port(vlan_on_eth1)
     with bridge.create() as state:
@@ -359,7 +359,7 @@ def test_ovs_vlan_access_tag():
     assertlib.assert_absent(PORT1)
 
 
-def test_add_invalid_slave_ip_config(eth1_up):
+def test_add_invalid_port_ip_config(eth1_up):
     desired_state = eth1_up
     desired_state[Interface.KEY][0][Interface.IPV4][InterfaceIP.ENABLED] = True
     desired_state[Interface.KEY][0][Interface.IPV4][InterfaceIP.DHCP] = True

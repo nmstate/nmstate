@@ -109,7 +109,7 @@ class State:
 
     def normalize(self):
         self._convert_lag_numeric_value_options_to_integer()
-        self._sort_iface_lag_slaves()
+        self._sort_iface_lag_port()
         self._sort_iface_bridge_ports()
         self._ipv4_skeleton_canonicalization()
         self._ipv6_skeleton_canonicalization()
@@ -148,7 +148,7 @@ class State:
             if ifstate.get(Interface.STATE) != InterfaceState.ABSENT
         ]
 
-    def _sort_iface_lag_slaves(self):
+    def _sort_iface_lag_port(self):
         for ifstate in self._state[Interface.KEY]:
             ifstate.get(Bond.CONFIG_SUBTREE, {}).get(Bond.PORT, []).sort()
 

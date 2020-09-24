@@ -284,7 +284,7 @@ def nm_unmanaged_dummy1():
 
 
 @pytest.mark.tier1
-def test_bridge_enslave_unmanaged_interface(nm_unmanaged_dummy1):
+def test_bridge_as_port_unmanaged_interface(nm_unmanaged_dummy1):
     with linux_bridge(
         BRIDGE0,
         bridge_subtree_state={

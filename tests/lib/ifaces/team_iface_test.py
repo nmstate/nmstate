@@ -24,8 +24,8 @@ from libnmstate.ifaces.team import TeamIface
 
 from ..testlib.ifacelib import gen_foo_iface_info
 
-SLAVE1_IFACE_NAME = "slave1"
-SLAVE2_IFACE_NAME = "slave2"
+PORT1_IFACE_NAME = "port1"
+PORT2_IFACE_NAME = "port2"
 
 
 class TestTeamIface:
@@ -33,8 +33,8 @@ class TestTeamIface:
         iface_info = gen_foo_iface_info(iface_type=InterfaceType.TEAM)
         iface_info[Team.CONFIG_SUBTREE] = {
             Team.PORT_SUBTREE: [
-                {Team.Port.NAME: SLAVE1_IFACE_NAME},
-                {Team.Port.NAME: SLAVE2_IFACE_NAME},
+                {Team.Port.NAME: PORT1_IFACE_NAME},
+                {Team.Port.NAME: PORT2_IFACE_NAME},
             ],
             Team.RUNNER_SUBTREE: {
                 Team.Runner.NAME: Team.Runner.RunnerMode.LOAD_BALANCE
@@ -48,7 +48,7 @@ class TestTeamIface:
     def test_team_is_master(self):
         assert TeamIface(self._gen_iface_info()).is_master
 
-    def test_team_sort_slaves(self):
+    def test_team_sort_port(self):
         iface1_info = self._gen_iface_info()
         iface2_info = self._gen_iface_info()
         iface2_info[Team.CONFIG_SUBTREE][Team.PORT_SUBTREE].reverse()
@@ -58,9 +58,9 @@ class TestTeamIface:
 
         assert iface1.state_for_verify() == iface2.state_for_verify()
 
-    def test_team_remove_slave(self):
+    def test_team_remove_port(self):
         iface_info = self._gen_iface_info()
         iface_info[Team.CONFIG_SUBTREE][Team.PORT_SUBTREE].pop()
 
         iface = TeamIface(iface_info)
-        assert iface.slaves == [SLAVE1_IFACE_NAME]
+        assert iface.port == [PORT1_IFACE_NAME]

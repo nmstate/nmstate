@@ -24,15 +24,15 @@ from libnmstate.schema import InterfaceType
 from libnmstate.schema import OVSBridge
 
 from .ifacelib import gen_foo_iface_info
-from .constants import SLAVE1_IFACE_NAME
-from .constants import SLAVE2_IFACE_NAME
+from .constants import PORT1_IFACE_NAME
+from .constants import PORT2_IFACE_NAME
 
 OVS_BRIDGE_IFACE_NAME = "ovs-br0"
 OVS_IFACE_NAME = "ovs0"
 
-SLAVE_PORT_CONFIGS = [
-    {OVSBridge.Port.NAME: SLAVE1_IFACE_NAME},
-    {OVSBridge.Port.NAME: SLAVE2_IFACE_NAME},
+PORT_PORT_CONFIGS = [
+    {OVSBridge.Port.NAME: PORT1_IFACE_NAME},
+    {OVSBridge.Port.NAME: PORT2_IFACE_NAME},
     {OVSBridge.Port.NAME: OVS_IFACE_NAME},
 ]
 
@@ -41,7 +41,7 @@ def gen_ovs_bridge_info():
     iface_info = gen_foo_iface_info(iface_type=InterfaceType.OVS_BRIDGE)
     iface_info[Interface.NAME] = OVS_BRIDGE_IFACE_NAME
     iface_info[OVSBridge.CONFIG_SUBTREE] = {
-        OVSBridge.PORT_SUBTREE: deepcopy(SLAVE_PORT_CONFIGS),
+        OVSBridge.PORT_SUBTREE: deepcopy(PORT_PORT_CONFIGS),
         OVSBridge.OPTIONS_SUBTREE: {},
     }
     return iface_info

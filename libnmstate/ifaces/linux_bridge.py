@@ -53,7 +53,7 @@ class LinuxBridgeIface(BridgeIface):
         super().pre_edit_validation_and_cleanup()
 
     @property
-    def slaves(self):
+    def port(self):
         return [p[LinuxBridge.Port.NAME] for p in self.port_configs]
 
     def _validate(self):
@@ -128,14 +128,14 @@ class LinuxBridgeIface(BridgeIface):
                     {BridgeIface.BRPORT_OPTIONS_METADATA: port_config}
                 )
 
-    def remove_slave(self, slave_name):
+    def remove_port(self, port_name):
         if self._bridge_config:
             self.raw[LinuxBridge.CONFIG_SUBTREE][LinuxBridge.PORT_SUBTREE] = [
                 port_config
                 for port_config in self.port_configs
-                if port_config[LinuxBridge.Port.NAME] != slave_name
+                if port_config[LinuxBridge.Port.NAME] != port_name
             ]
-        self.sort_slaves()
+        self.sort_port()
 
     def state_for_verify(self):
         self._normalize_bridge_port_vlan()
