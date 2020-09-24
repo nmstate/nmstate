@@ -85,31 +85,31 @@ def setup_remove_bond99():
 
 
 @pytest.fixture
-def bond99_with_2_slaves(eth1_up, eth2_up):
-    slaves = [
+def bond99_with_2_port(eth1_up, eth2_up):
+    port = [
         eth1_up[Interface.KEY][0][Interface.NAME],
         eth2_up[Interface.KEY][0][Interface.NAME],
     ]
-    with bond_interface(BOND99, slaves) as state:
+    with bond_interface(BOND99, port) as state:
         yield state
 
 
 @pytest.fixture
-def bond88_with_slave(eth1_up):
-    slaves = [eth1_up[Interface.KEY][0][Interface.NAME]]
-    with bond_interface(BOND99, slaves) as state:
+def bond88_with_port(eth1_up):
+    port = [eth1_up[Interface.KEY][0][Interface.NAME]]
+    with bond_interface(BOND99, port) as state:
         yield state
 
 
 @pytest.fixture
 def bond99_with_eth2(eth2_up):
-    slaves = [eth2_up[Interface.KEY][0][Interface.NAME]]
-    with bond_interface(BOND99, slaves) as state:
+    port = [eth2_up[Interface.KEY][0][Interface.NAME]]
+    with bond_interface(BOND99, port) as state:
         yield state
 
 
 @pytest.mark.tier1
-def test_add_and_remove_bond_with_two_slaves(eth1_up, eth2_up):
+def test_add_and_remove_bond_with_two_port(eth1_up, eth2_up):
     state = yaml.load(BOND99_YAML_BASE, Loader=yaml.SafeLoader)
     libnmstate.apply(state)
 
@@ -154,14 +154,14 @@ def test_remove_bond_with_minimum_desired_state(eth1_up, eth2_up):
     assert not state[Interface.KEY]
 
 
-def test_add_bond_without_slaves():
-    with bond_interface(name=BOND99, slaves=[]) as state:
+def test_add_bond_without_port():
+    with bond_interface(name=BOND99, port=[]) as state:
 
         assert state[Interface.KEY][0][Bond.CONFIG_SUBTREE][Bond.PORT] == []
 
 
 @pytest.mark.tier1
-def test_add_bond_with_slaves_and_ipv4(eth1_up, eth2_up, setup_remove_bond99):
+def test_add_bond_with_port_and_ipv4(eth1_up, eth2_up, setup_remove_bond99):
     desired_bond_state = {
         Interface.KEY: [
             {
@@ -239,21 +239,21 @@ def test_rollback_for_bond(eth1_up, eth2_up):
 
 
 @pytest.mark.tier1
-def test_add_slave_to_bond_without_slaves(eth1_up):
-    slave_name = eth1_up[Interface.KEY][0][Interface.NAME]
-    with bond_interface(name=BOND99, slaves=[]) as state:
+def test_add_port_to_bond_without_port(eth1_up):
+    port_name = eth1_up[Interface.KEY][0][Interface.NAME]
+    with bond_interface(name=BOND99, port=[]) as state:
         bond_state = state[Interface.KEY][0]
-        bond_state[Bond.CONFIG_SUBTREE][Bond.PORT] = [slave_name]
+        bond_state[Bond.CONFIG_SUBTREE][Bond.PORT] = [port_name]
         libnmstate.apply(state)
 
         current_state = statelib.show_only((BOND99,))
         bond_cur_state = current_state[Interface.KEY][0]
 
-        assert bond_cur_state[Bond.CONFIG_SUBTREE][Bond.PORT] == [slave_name]
+        assert bond_cur_state[Bond.CONFIG_SUBTREE][Bond.PORT] == [port_name]
 
 
-def test_remove_all_slaves_from_bond(bond99_with_2_slaves):
-    state = bond99_with_2_slaves
+def test_remove_all_port_from_bond(bond99_with_2_port):
+    state = bond99_with_2_port
     state[Interface.KEY][0][Bond.CONFIG_SUBTREE][Bond.PORT] = []
 
     libnmstate.apply(state)
@@ -265,42 +265,40 @@ def test_remove_all_slaves_from_bond(bond99_with_2_slaves):
 
 
 @pytest.mark.tier1
-def test_replace_bond_slave(eth1_up, eth2_up):
-    slave1_name = eth1_up[Interface.KEY][0][Interface.NAME]
-    slave2_name = eth2_up[Interface.KEY][0][Interface.NAME]
-    with bond_interface(name=BOND99, slaves=[slave1_name]) as state:
+def test_replace_bond_port(eth1_up, eth2_up):
+    port1_name = eth1_up[Interface.KEY][0][Interface.NAME]
+    port2_name = eth2_up[Interface.KEY][0][Interface.NAME]
+    with bond_interface(name=BOND99, port=[port1_name]) as state:
         bond_state = state[Interface.KEY][0]
-        bond_state[Bond.CONFIG_SUBTREE][Bond.PORT] = [slave2_name]
+        bond_state[Bond.CONFIG_SUBTREE][Bond.PORT] = [port2_name]
 
         libnmstate.apply(state)
 
         current_state = statelib.show_only((BOND99,))
         bond_cur_state = current_state[Interface.KEY][0]
 
-        assert bond_cur_state[Bond.CONFIG_SUBTREE][Bond.PORT] == [slave2_name]
+        assert bond_cur_state[Bond.CONFIG_SUBTREE][Bond.PORT] == [port2_name]
 
 
 @pytest.mark.tier1
-def test_remove_one_of_the_bond_slaves(eth1_up, eth2_up):
-    slave1_name = eth1_up[Interface.KEY][0][Interface.NAME]
-    slave2_name = eth2_up[Interface.KEY][0][Interface.NAME]
-    with bond_interface(
-        name=BOND99, slaves=[slave1_name, slave2_name]
-    ) as state:
+def test_remove_one_of_the_bond_port(eth1_up, eth2_up):
+    port1_name = eth1_up[Interface.KEY][0][Interface.NAME]
+    port2_name = eth2_up[Interface.KEY][0][Interface.NAME]
+    with bond_interface(name=BOND99, port=[port1_name, port2_name]) as state:
         bond_state = state[Interface.KEY][0]
-        bond_state[Bond.CONFIG_SUBTREE][Bond.PORT] = [slave2_name]
+        bond_state[Bond.CONFIG_SUBTREE][Bond.PORT] = [port2_name]
 
         libnmstate.apply(state)
 
         current_state = statelib.show_only((BOND99,))
         bond_cur_state = current_state[Interface.KEY][0]
 
-    assert bond_cur_state[Bond.CONFIG_SUBTREE][Bond.PORT] == [slave2_name]
+    assert bond_cur_state[Bond.CONFIG_SUBTREE][Bond.PORT] == [port2_name]
 
 
 @pytest.mark.tier1
-def test_swap_slaves_between_bonds(bond88_with_slave, bond99_with_eth2):
-    bonding88 = bond88_with_slave[Interface.KEY][0][Bond.CONFIG_SUBTREE]
+def test_swap_port_between_bonds(bond88_with_port, bond99_with_eth2):
+    bonding88 = bond88_with_port[Interface.KEY][0][Bond.CONFIG_SUBTREE]
     bonding99 = bond99_with_eth2[Interface.KEY][0][Bond.CONFIG_SUBTREE]
 
     bonding88[Bond.PORT], bonding99[Bond.PORT] = (
@@ -308,7 +306,7 @@ def test_swap_slaves_between_bonds(bond88_with_slave, bond99_with_eth2):
         bonding88[Bond.PORT],
     )
 
-    state = bond88_with_slave
+    state = bond88_with_port
     state.update(bond99_with_eth2)
     libnmstate.apply(state)
 
@@ -317,32 +315,32 @@ def test_swap_slaves_between_bonds(bond88_with_slave, bond99_with_eth2):
 
 @pytest.mark.tier1
 def test_set_bond_mac_address(eth1_up):
-    slave_name = eth1_up[Interface.KEY][0][Interface.NAME]
-    with bond_interface(name=BOND99, slaves=[slave_name]) as state:
+    port_name = eth1_up[Interface.KEY][0][Interface.NAME]
+    with bond_interface(name=BOND99, port=[port_name]) as state:
         state[Interface.KEY][0][Interface.MAC] = MAC0
         libnmstate.apply(state)
 
-        current_state = statelib.show_only((BOND99, slave_name))
+        current_state = statelib.show_only((BOND99, port_name))
         assert_mac_address(current_state, MAC0)
 
         state[Interface.KEY][0][Interface.MAC] = MAC1
         libnmstate.apply(state)
 
-        current_state = statelib.show_only((BOND99, slave_name))
+        current_state = statelib.show_only((BOND99, port_name))
         assert_mac_address(current_state, MAC1)
 
 
 @pytest.mark.tier1
-def test_changing_slave_order_keeps_mac_of_existing_bond(bond99_with_2_slaves):
-    bond_state = bond99_with_2_slaves[Interface.KEY][0]
-    bond_slaves = bond_state[Bond.CONFIG_SUBTREE][Bond.PORT]
-    ifaces_names = [bond_state[Interface.NAME]] + bond_slaves
+def test_changing_port_order_keeps_mac_of_existing_bond(bond99_with_2_port):
+    bond_state = bond99_with_2_port[Interface.KEY][0]
+    bond_port = bond_state[Bond.CONFIG_SUBTREE][Bond.PORT]
+    ifaces_names = [bond_state[Interface.NAME]] + bond_port
 
     current_state = statelib.show_only(ifaces_names)
     assert_mac_address(current_state)
 
-    bond_slaves.reverse()
-    libnmstate.apply(bond99_with_2_slaves)
+    bond_port.reverse()
+    libnmstate.apply(bond99_with_2_port)
 
     modified_state = statelib.show_only(ifaces_names)
     assert_mac_address(
@@ -351,11 +349,11 @@ def test_changing_slave_order_keeps_mac_of_existing_bond(bond99_with_2_slaves):
 
 
 @pytest.mark.tier1
-def test_adding_a_slave_keeps_mac_of_existing_bond(bond99_with_eth2, eth1_up):
+def test_adding_a_port_keeps_mac_of_existing_bond(bond99_with_eth2, eth1_up):
     desired_state = bond99_with_eth2
     bond_state = desired_state[Interface.KEY][0]
-    bond_slaves = bond_state[Bond.CONFIG_SUBTREE][Bond.PORT]
-    bond_slaves.insert(0, eth1_up[Interface.KEY][0][Interface.NAME])
+    bond_port = bond_state[Bond.CONFIG_SUBTREE][Bond.PORT]
+    bond_port.insert(0, eth1_up[Interface.KEY][0][Interface.NAME])
 
     current_state = statelib.show_only((bond_state[Interface.NAME],))
 
@@ -368,7 +366,7 @@ def test_adding_a_slave_keeps_mac_of_existing_bond(bond99_with_eth2, eth1_up):
 
 
 @pytest.mark.tier1
-def test_adding_slaves_to_empty_bond_doesnt_keep_mac(eth1_up):
+def test_adding_port_to_empty_bond_doesnt_keep_mac(eth1_up):
     with bond_interface(BOND99, []) as state:
         bond_state = state[Interface.KEY][0]
         eth1_name = eth1_up[Interface.KEY][0][Interface.NAME]
@@ -385,9 +383,7 @@ def test_adding_slaves_to_empty_bond_doesnt_keep_mac(eth1_up):
 
 
 @pytest.mark.tier1
-def test_replacing_slaves_keeps_mac_of_existing_bond(
-    bond99_with_eth2, eth1_up
-):
+def test_replacing_port_keeps_mac_of_existing_bond(bond99_with_eth2, eth1_up):
     desired_state = bond99_with_eth2
     bond_state = desired_state[Interface.KEY][0]
     eth1_name = eth1_up[Interface.KEY][0][Interface.NAME]
@@ -403,10 +399,8 @@ def test_replacing_slaves_keeps_mac_of_existing_bond(
     )
 
 
-def test_removing_slaves_keeps_mac_of_existing_bond(
-    bond99_with_2_slaves, eth1_up
-):
-    desired_state = bond99_with_2_slaves
+def test_removing_port_keeps_mac_of_existing_bond(bond99_with_2_port, eth1_up):
+    desired_state = bond99_with_2_port
     bond_state = desired_state[Interface.KEY][0]
     eth1_name = eth1_up[Interface.KEY][0][Interface.NAME]
     bond_state[Bond.CONFIG_SUBTREE][Bond.PORT] = [eth1_name]
@@ -431,7 +425,7 @@ def test_bond_with_empty_ipv6_static_address(eth1_up):
         }
     }
     with bond_interface(
-        name=BOND99, slaves=["eth1"], extra_iface_state=extra_iface_state
+        name=BOND99, port=["eth1"], extra_iface_state=extra_iface_state
     ) as bond_state:
         assertlib.assert_state(bond_state)
 
@@ -439,13 +433,13 @@ def test_bond_with_empty_ipv6_static_address(eth1_up):
 
 
 @pytest.mark.tier1
-def test_create_vlan_over_a_bond_slave(bond99_with_eth2):
+def test_create_vlan_over_a_bond_port(bond99_with_eth2):
     bond_ifstate = bond99_with_eth2[Interface.KEY][0]
-    bond_slave_ifname = bond_ifstate[Bond.CONFIG_SUBTREE][Bond.PORT][0]
+    bond_port_ifname = bond_ifstate[Bond.CONFIG_SUBTREE][Bond.PORT][0]
     vlan_id = 102
-    vlan_iface_name = "{}.{}".format(bond_slave_ifname, vlan_id)
+    vlan_iface_name = "{}.{}".format(bond_port_ifname, vlan_id)
     with vlan_interface(
-        vlan_iface_name, vlan_id, bond_slave_ifname
+        vlan_iface_name, vlan_id, bond_port_ifname
     ) as desired_state:
         assertlib.assert_state(desired_state)
     assertlib.assert_state(bond99_with_eth2)
@@ -488,7 +482,7 @@ def test_create_vlan_over_a_bond(bond99_with_eth2):
 
 
 @pytest.mark.tier1
-def test_change_bond_option_miimon(bond99_with_2_slaves):
+def test_change_bond_option_miimon(bond99_with_2_port):
     desired_state = statelib.show_only((BOND99,))
     iface_state = desired_state[Interface.KEY][0]
     bond_options = iface_state[Bond.CONFIG_SUBTREE][Bond.OPTIONS_SUBTREE]
@@ -511,7 +505,7 @@ def test_change_bond_option_with_an_id_value(bond99_with_eth2):
 
 
 def test_create_bond_without_mode():
-    with bond_interface(name=BOND99, slaves=[], create=False) as state:
+    with bond_interface(name=BOND99, port=[], create=False) as state:
         state[Interface.KEY][0][Bond.CONFIG_SUBTREE].pop(Bond.MODE)
         with pytest.raises(NmstateValueError):
             libnmstate.apply(state)
@@ -521,7 +515,7 @@ def test_create_bond_without_mode():
 def test_bond_mac_restriction_without_mac_in_desire(eth1_up, eth2_up):
     with bond_interface(
         name=BOND99,
-        slaves=[ETH1, ETH2],
+        port=[ETH1, ETH2],
         extra_iface_state={
             Bond.CONFIG_SUBTREE: {
                 Bond.MODE: BondMode.ACTIVE_BACKUP,
@@ -535,7 +529,7 @@ def test_bond_mac_restriction_without_mac_in_desire(eth1_up, eth2_up):
 def test_bond_mac_restriction_with_mac_in_desire(eth1_up, eth2_up):
     with bond_interface(
         name=BOND99,
-        slaves=[ETH1, ETH2],
+        port=[ETH1, ETH2],
         extra_iface_state={
             Interface.MAC: MAC0,
             Bond.CONFIG_SUBTREE: {
@@ -550,10 +544,10 @@ def test_bond_mac_restriction_with_mac_in_desire(eth1_up, eth2_up):
 
 
 @pytest.mark.tier1
-def test_bond_mac_restriction_in_desire_mac_in_current(bond99_with_2_slaves):
+def test_bond_mac_restriction_in_desire_mac_in_current(bond99_with_2_port):
     with bond_interface(
         name=BOND99,
-        slaves=[ETH1, ETH2],
+        port=[ETH1, ETH2],
         extra_iface_state={
             Bond.CONFIG_SUBTREE: {
                 Bond.MODE: BondMode.ACTIVE_BACKUP,
@@ -567,7 +561,7 @@ def test_bond_mac_restriction_in_desire_mac_in_current(bond99_with_2_slaves):
 def test_bond_mac_restriction_in_current_mac_in_desire(eth1_up, eth2_up):
     with bond_interface(
         name=BOND99,
-        slaves=[ETH1, ETH2],
+        port=[ETH1, ETH2],
         extra_iface_state={
             Bond.CONFIG_SUBTREE: {
                 Bond.MODE: BondMode.ACTIVE_BACKUP,
@@ -590,7 +584,7 @@ def test_bond_mac_restriction_in_current_mac_in_desire(eth1_up, eth2_up):
 def test_create_bond_with_mac(eth1_up, eth2_up):
     with bond_interface(
         name=BOND99,
-        slaves=[ETH1, ETH2],
+        port=[ETH1, ETH2],
         extra_iface_state={Interface.MAC: MAC0},
     ) as state:
         assertlib.assert_state_match(state)
@@ -601,7 +595,7 @@ def test_create_bond_with_mac(eth1_up, eth2_up):
 def test_bond_with_arp_ip_target(eth1_up, eth2_up, ips):
     with bond_interface(
         name=BOND99,
-        slaves=[ETH1, ETH2],
+        port=[ETH1, ETH2],
         extra_iface_state={
             Bond.CONFIG_SUBTREE: {
                 Bond.MODE: BondMode.ACTIVE_BACKUP,
@@ -619,7 +613,7 @@ def test_bond_with_arp_ip_target(eth1_up, eth2_up, ips):
 def test_create_bond_with_default_miimon_explicitly():
     with bond_interface(
         name=BOND99,
-        slaves=[],
+        port=[],
         extra_iface_state={
             Bond.CONFIG_SUBTREE: {
                 Bond.MODE: BondMode.ACTIVE_BACKUP,
@@ -634,7 +628,7 @@ def test_create_bond_with_default_miimon_explicitly():
 def bond99_with_miimon():
     with bond_interface(
         name=BOND99,
-        slaves=[],
+        port=[],
         extra_iface_state={
             Bond.CONFIG_SUBTREE: {
                 Bond.MODE: BondMode.ACTIVE_BACKUP,
@@ -659,7 +653,7 @@ def test_change_bond_from_miimon_to_arp_internal(bond99_with_miimon):
 def bond99_with_arp_internal():
     with bond_interface(
         name=BOND99,
-        slaves=[],
+        port=[],
         extra_iface_state={
             Bond.CONFIG_SUBTREE: {
                 Bond.MODE: BondMode.ACTIVE_BACKUP,
@@ -686,7 +680,7 @@ def test_create_bond_with_both_miimon_and_arp_internal():
     with pytest.raises(NmstateValueError):
         with bond_interface(
             name=BOND99,
-            slaves=[],
+            port=[],
             extra_iface_state={
                 Bond.CONFIG_SUBTREE: {
                     Bond.MODE: BondMode.ACTIVE_BACKUP,
@@ -702,10 +696,10 @@ def test_create_bond_with_both_miimon_and_arp_internal():
 
 
 @pytest.mark.tier1
-def test_change_2_slaves_bond_mode_from_1_to_5():
+def test_change_2_port_bond_mode_from_1_to_5():
     with bond_interface(
         name=BOND99,
-        slaves=[ETH1, ETH2],
+        port=[ETH1, ETH2],
         extra_iface_state={
             Bond.CONFIG_SUBTREE: {Bond.MODE: BondMode.ACTIVE_BACKUP},
         },
@@ -715,8 +709,8 @@ def test_change_2_slaves_bond_mode_from_1_to_5():
 
 
 @pytest.mark.tier1
-def test_set_miimon_100_on_existing_bond(bond99_with_2_slaves):
-    state = bond99_with_2_slaves
+def test_set_miimon_100_on_existing_bond(bond99_with_2_port):
+    state = bond99_with_2_port
     bond_config = state[Interface.KEY][0][Bond.CONFIG_SUBTREE]
     bond_config[Bond.OPTIONS_SUBTREE] = {"miimon": 100}
     libnmstate.apply(state)
@@ -734,24 +728,24 @@ def _nmcli_simulate_boot(ifname):
     Use nmcli to reactivate the profile to simulate the server reboot.
     """
     cmdlib.exec_cmd(["nmcli", "connection", "down", ifname], check=True)
-    # Wait slave been deactivated
+    # Wait port been deactivated
     time.sleep(1)
     cmdlib.exec_cmd(["nmcli", "connection", "up", ifname], check=True)
-    # Wait slave been activated
+    # Wait port been activated
     time.sleep(1)
 
 
 @pytest.mark.tier1
-def test_new_bond_uses_mac_of_first_slave_by_name(eth1_eth2_with_no_profile):
+def test_new_bond_uses_mac_of_first_port_by_name(eth1_eth2_with_no_profile):
     """
-    On system boot, NetworkManager will by default activate slaves in the
+    On system boot, NetworkManager will by default activate port in the
     order of their name. Nmstate should provide the consistent MAC address for
-    bond regardless the order of slaves.
+    bond regardless the order of port.
     """
     eth1_mac = get_mac_address(ETH1)
     with bond_interface(
         name=BOND99,
-        slaves=[ETH2, ETH1],
+        port=[ETH2, ETH1],
         extra_iface_state={
             Bond.CONFIG_SUBTREE: {Bond.MODE: BondMode.ROUND_ROBIN}
         },
@@ -764,7 +758,7 @@ def test_new_bond_uses_mac_of_first_slave_by_name(eth1_eth2_with_no_profile):
 
     with bond_interface(
         name=BOND99,
-        slaves=[ETH1, ETH2],
+        port=[ETH1, ETH2],
         extra_iface_state={
             Bond.CONFIG_SUBTREE: {Bond.MODE: BondMode.ROUND_ROBIN}
         },
@@ -775,10 +769,10 @@ def test_new_bond_uses_mac_of_first_slave_by_name(eth1_eth2_with_no_profile):
 
 
 @pytest.fixture
-def bond99_with_2_slaves_and_arp_monitor(eth1_up, eth2_up):
+def bond99_with_2_port_and_arp_monitor(eth1_up, eth2_up):
     with bond_interface(
         name=BOND99,
-        slaves=[ETH1, ETH2],
+        port=[ETH1, ETH2],
         extra_iface_state={
             Bond.CONFIG_SUBTREE: {
                 Bond.MODE: BondMode.ACTIVE_BACKUP,
@@ -792,8 +786,8 @@ def bond99_with_2_slaves_and_arp_monitor(eth1_up, eth2_up):
         yield state
 
 
-def test_bond_disable_arp_interval(bond99_with_2_slaves_and_arp_monitor):
-    state = bond99_with_2_slaves_and_arp_monitor
+def test_bond_disable_arp_interval(bond99_with_2_port_and_arp_monitor):
+    state = bond99_with_2_port_and_arp_monitor
     bond_config = state[Interface.KEY][0][Bond.CONFIG_SUBTREE]
     bond_config[Bond.OPTIONS_SUBTREE]["arp_interval"] = 0
     bond_config[Bond.OPTIONS_SUBTREE]["arp_ip_target"] = ""
@@ -804,10 +798,10 @@ def test_bond_disable_arp_interval(bond99_with_2_slaves_and_arp_monitor):
 
 
 @pytest.fixture
-def bond99_with_2_slaves_and_lacp_rate(eth1_up, eth2_up):
+def bond99_with_2_port_and_lacp_rate(eth1_up, eth2_up):
     with bond_interface(
         name=BOND99,
-        slaves=[ETH1, ETH2],
+        port=[ETH1, ETH2],
         extra_iface_state={
             Bond.CONFIG_SUBTREE: {
                 Bond.MODE: BondMode.LACP,
@@ -820,10 +814,10 @@ def bond99_with_2_slaves_and_lacp_rate(eth1_up, eth2_up):
 
 @pytest.mark.tier1
 def test_bond_switch_mode_with_conflict_option(
-    bond99_with_2_slaves_and_lacp_rate,
+    bond99_with_2_port_and_lacp_rate,
 ):
 
-    state = bond99_with_2_slaves_and_lacp_rate
+    state = bond99_with_2_port_and_lacp_rate
     bond_config = state[Interface.KEY][0][Bond.CONFIG_SUBTREE]
     bond_config[Bond.MODE] = BondMode.ROUND_ROBIN
     bond_config[Bond.OPTIONS_SUBTREE] = {"miimon": "140"}
@@ -837,34 +831,34 @@ def test_bond_switch_mode_with_conflict_option(
     assert "lacp_rate" not in current_bond_config[Bond.OPTIONS_SUBTREE]
 
 
-def test_add_invalid_slave_ip_config(eth1_up):
+def test_add_invalid_port_ip_config(eth1_up):
     d_state = eth1_up
     d_state[Interface.KEY][0][Interface.IPV4][InterfaceIPv4.ENABLED] = True
     d_state[Interface.KEY][0][Interface.IPV4][InterfaceIP.DHCP] = True
     with pytest.raises(NmstateValueError):
         with bond_interface(
-            name=BOND99, slaves=[ETH1], create=False
+            name=BOND99, port=[ETH1], create=False
         ) as bond_state:
             d_state[Interface.KEY].append(bond_state[Interface.KEY][0])
             libnmstate.apply(d_state)
 
 
 @pytest.fixture
-def bond99_mode4_with_2_slaves(eth1_up, eth2_up):
-    slaves = [
+def bond99_mode4_with_2_port(eth1_up, eth2_up):
+    port = [
         eth1_up[Interface.KEY][0][Interface.NAME],
         eth2_up[Interface.KEY][0][Interface.NAME],
     ]
     extra_iface_state = {Bond.CONFIG_SUBTREE: {Bond.MODE: BondMode.LACP}}
     with bond_interface(
-        BOND99, slaves, extra_iface_state=extra_iface_state
+        BOND99, port, extra_iface_state=extra_iface_state
     ) as state:
         yield state
 
 
 @pytest.mark.tier1
-def test_remove_mode4_bond_and_create_mode5_with_the_same_slaves(
-    bond99_mode4_with_2_slaves,
+def test_remove_mode4_bond_and_create_mode5_with_the_same_port(
+    bond99_mode4_with_2_port,
 ):
     libnmstate.apply(
         {
@@ -878,10 +872,10 @@ def test_remove_mode4_bond_and_create_mode5_with_the_same_slaves(
         }
     )
     extra_iface_state = {Bond.CONFIG_SUBTREE: {Bond.MODE: BondMode.TLB}}
-    slaves = bond99_mode4_with_2_slaves[Interface.KEY][0][Bond.CONFIG_SUBTREE][
+    port = bond99_mode4_with_2_port[Interface.KEY][0][Bond.CONFIG_SUBTREE][
         Bond.PORT
     ]
     with bond_interface(
-        BOND99, slaves, extra_iface_state=extra_iface_state
+        BOND99, port, extra_iface_state=extra_iface_state
     ) as state:
         assertlib.assert_state_match(state)

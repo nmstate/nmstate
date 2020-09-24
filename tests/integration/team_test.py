@@ -49,16 +49,16 @@ pytestmark = pytest.mark.skipif(
 )
 
 
-def test_create_team_iface_without_slaves():
+def test_create_team_iface_without_port():
     with team_interface(TEAM0) as team_state:
         assertlib.assert_state(team_state)
 
 
 @pytest.mark.tier1
-def test_create_team_iface_with_slaves(eth1_up, eth2_up):
+def test_create_team_iface_with_port(eth1_up, eth2_up):
     with team_interface(TEAM0, [PORT1, PORT2]) as team_state:
         assertlib.assert_state_match(team_state)
-        assert [PORT1, PORT2] == _get_runtime_team_slaves(TEAM0)
+        assert [PORT1, PORT2] == _get_runtime_team_port(TEAM0)
     assertlib.assert_absent(TEAM0)
 
 
@@ -90,18 +90,18 @@ def test_nm_team_plugin_missing():
             )
 
 
-def test_add_invalid_slave_ip_config(eth1_up):
+def test_add_invalid_port_ip_config(eth1_up):
     desired_state = eth1_up
     desired_state[Interface.KEY][0][Interface.IPV4][InterfaceIP.ENABLED] = True
     desired_state[Interface.KEY][0][Interface.IPV4][InterfaceIP.DHCP] = True
     with pytest.raises(NmstateValueError):
-        with team_interface(TEAM0, slaves=("eth1",)) as state:
+        with team_interface(TEAM0, port=("eth1",)) as state:
             desired_state[Interface.KEY].append(state[Interface.KEY][0])
             libnmstate.apply(desired_state)
 
 
 @contextmanager
-def team_interface(ifname, slaves=None):
+def team_interface(ifname, port=None):
     desired_state = {
         Interface.KEY: [
             {
@@ -111,11 +111,11 @@ def team_interface(ifname, slaves=None):
             }
         ]
     }
-    if slaves:
+    if port:
         team_state = {Team.PORT_SUBTREE: []}
         desired_state[Interface.KEY][0][Team.CONFIG_SUBTREE] = team_state
-        for slave in slaves:
-            team_state[Team.PORT_SUBTREE].append({Team.Port.NAME: slave})
+        for port in port:
+            team_state[Team.PORT_SUBTREE].append({Team.Port.NAME: port})
     libnmstate.apply(desired_state)
     try:
         yield desired_state
@@ -132,7 +132,7 @@ def team_interface(ifname, slaves=None):
         )
 
 
-def _get_runtime_team_slaves(team_iface_name):
+def _get_runtime_team_port(team_iface_name):
     """
     Use `teamdctl team0 state dump` to check team runtime status
     """

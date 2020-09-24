@@ -181,7 +181,7 @@ def test_create_and_remove_linux_bridge_with_two_ports(port0_up, port1_up):
 
 
 @pytest.mark.tier1
-def test_remove_bridge_and_keep_slave_up(bridge0_with_port0, port0_up):
+def test_remove_bridge_and_keep_port_up(bridge0_with_port0, port0_up):
     bridge_name = bridge0_with_port0[Interface.KEY][0][Interface.NAME]
     port_name = port0_up[Interface.KEY][0][Interface.NAME]
 
@@ -214,7 +214,7 @@ def test_remove_bridge_and_keep_slave_up(bridge0_with_port0, port0_up):
 
 
 @pytest.mark.tier1
-def test_create_vlan_as_slave_of_linux_bridge(port0_vlan101):
+def test_create_vlan_as_port_of_linux_bridge(port0_vlan101):
     bridge_name = TEST_BRIDGE0
     port_name = port0_vlan101[Interface.KEY][0][Interface.NAME]
     bridge_state = _create_bridge_subtree_config((port_name,))
@@ -360,7 +360,7 @@ def test_replace_port_on_linux_bridge(port0_vlan101, port1_up):
         )
 
 
-def test_linux_bridge_over_bond_over_slave_in_one_transaction(bond0):
+def test_linux_bridge_over_bond_over_port_in_one_transaction(bond0):
     bridge_name = TEST_BRIDGE0
     bond_name = bond0[Interface.KEY][0][Interface.NAME]
     bridge_config_state = _create_bridge_subtree_config((bond_name,))
@@ -573,7 +573,7 @@ class TestVlanFiltering:
 def bridge_unmanaged_port():
     bridge_config = _create_bridge_subtree_config([])
     with linux_bridge(TEST_BRIDGE0, bridge_config):
-        with dummy0_as_slave(TEST_BRIDGE0):
+        with dummy0_as_port(TEST_BRIDGE0):
             current_state = show_only((TEST_BRIDGE0,))
             yield current_state
 
@@ -588,7 +588,7 @@ def test_bridge_with_unmanaged_ports(bridge_unmanaged_port):
 
 
 @contextmanager
-def dummy0_as_slave(master):
+def dummy0_as_port(master):
     exec_cmd(("ip", "link", "add", "dummy0", "type", "dummy"), check=True)
     try:
         exec_cmd(("ip", "link", "set", "dummy0", "up"), check=True)
@@ -602,7 +602,7 @@ def dummy0_as_slave(master):
         exec_cmd(("nmcli", "c", "del", "dummy0"))
 
 
-def test_add_invalid_slave_ip_config(eth1_up):
+def test_add_invalid_port_ip_config(eth1_up):
     desired_state = eth1_up
     desired_state[Interface.KEY][0][Interface.IPV4][InterfaceIP.ENABLED] = True
     desired_state[Interface.KEY][0][Interface.IPV4][InterfaceIP.DHCP] = True

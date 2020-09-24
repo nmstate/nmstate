@@ -34,8 +34,8 @@ from libnmstate.ifaces.ifaces import OvsBridgeIface
 from libnmstate.state import state_match
 
 from .testlib.bridgelib import LINUX_BRIDGE_IFACE_NAME
-from .testlib.bridgelib import SLAVE1_IFACE_NAME
-from .testlib.bridgelib import SLAVE2_IFACE_NAME
+from .testlib.bridgelib import PORT1_IFACE_NAME
+from .testlib.bridgelib import PORT2_IFACE_NAME
 from .testlib.bridgelib import gen_bridge_iface_info
 from .testlib.constants import MAC_ADDRESS1
 from .testlib.ifacelib import gen_foo_iface_info_static_ip
@@ -125,17 +125,17 @@ class TestIfaces:
         assert edit_iface.is_desired
         assert edit_iface.is_absent
 
-    def test_validate_unknown_slaves(self):
+    def test_validate_unknown_port(self):
         cur_iface_infos = self._gen_iface_infos()
         des_iface_info = gen_bridge_iface_info()
 
         with pytest.raises(NmstateValueError):
             Ifaces([des_iface_info], cur_iface_infos)
 
-    def test_validate_overbooked_slaves(self):
+    def test_validate_overbooked_port(self):
         cur_iface_infos = self._gen_iface_infos()
-        cur_iface_infos[0][Interface.NAME] = SLAVE1_IFACE_NAME
-        cur_iface_infos[1][Interface.NAME] = SLAVE2_IFACE_NAME
+        cur_iface_infos[0][Interface.NAME] = PORT1_IFACE_NAME
+        cur_iface_infos[1][Interface.NAME] = PORT2_IFACE_NAME
         des_iface_info1 = gen_bridge_iface_info()
         des_iface_info2 = gen_bridge_iface_info()
         des_iface_info2[Interface.NAME] = "another_bridge"
@@ -154,33 +154,33 @@ class TestIfaces:
         ifaces = Ifaces(des_iface_infos, [cur_iface_info])
         assert cur_iface_info not in ifaces.values()
 
-    def test_mark_slave_as_changed_if_master_marked_as_absent(self):
+    def test_mark_port_as_changed_if_master_marked_as_absent(self):
         cur_iface_infos = self._gen_iface_infos()
-        cur_iface_infos[0][Interface.NAME] = SLAVE1_IFACE_NAME
-        cur_iface_infos[1][Interface.NAME] = SLAVE2_IFACE_NAME
+        cur_iface_infos[0][Interface.NAME] = PORT1_IFACE_NAME
+        cur_iface_infos[1][Interface.NAME] = PORT2_IFACE_NAME
         cur_iface_infos.append(gen_bridge_iface_info())
         des_iface_info = gen_bridge_iface_info()
         des_iface_info[Interface.STATE] = InterfaceState.ABSENT
 
         ifaces = Ifaces([des_iface_info], cur_iface_infos)
 
-        slave_iface1 = ifaces[SLAVE1_IFACE_NAME]
-        slave_iface2 = ifaces[SLAVE2_IFACE_NAME]
+        port_iface1 = ifaces[PORT1_IFACE_NAME]
+        port_iface2 = ifaces[PORT2_IFACE_NAME]
         master_iface = ifaces[LINUX_BRIDGE_IFACE_NAME]
 
-        assert slave_iface1.is_changed
-        assert slave_iface2.is_changed
-        assert slave_iface1.is_up
-        assert slave_iface2.is_up
-        assert slave_iface1.master is None
-        assert slave_iface2.master is None
+        assert port_iface1.is_changed
+        assert port_iface2.is_changed
+        assert port_iface1.is_up
+        assert port_iface2.is_up
+        assert port_iface1.master is None
+        assert port_iface2.master is None
         assert master_iface.is_desired
         assert master_iface.is_absent
 
-    def test_mark_slave_as_changed_when_master_changed_slave_list(self):
+    def test_mark_port_as_changed_when_master_changed_port_list(self):
         cur_iface_infos = self._gen_iface_infos()
-        cur_iface_infos[0][Interface.NAME] = SLAVE1_IFACE_NAME
-        cur_iface_infos[1][Interface.NAME] = SLAVE2_IFACE_NAME
+        cur_iface_infos[0][Interface.NAME] = PORT1_IFACE_NAME
+        cur_iface_infos[1][Interface.NAME] = PORT2_IFACE_NAME
         cur_iface_infos.append(gen_bridge_iface_info())
         des_iface_info = gen_bridge_iface_info()
         des_iface_info[LinuxBridge.CONFIG_SUBTREE][
@@ -189,42 +189,42 @@ class TestIfaces:
 
         ifaces = Ifaces([des_iface_info], cur_iface_infos)
 
-        slave_iface1 = ifaces[SLAVE1_IFACE_NAME]
-        slave_iface2 = ifaces[SLAVE2_IFACE_NAME]
+        port_iface1 = ifaces[PORT1_IFACE_NAME]
+        port_iface2 = ifaces[PORT2_IFACE_NAME]
         master_iface = ifaces[LINUX_BRIDGE_IFACE_NAME]
 
-        assert not slave_iface1.is_changed
-        assert slave_iface2.is_changed
-        assert slave_iface1.is_up
-        assert slave_iface2.is_up
-        assert slave_iface1.master == LINUX_BRIDGE_IFACE_NAME
-        assert slave_iface2.master is None
+        assert not port_iface1.is_changed
+        assert port_iface2.is_changed
+        assert port_iface1.is_up
+        assert port_iface2.is_up
+        assert port_iface1.master == LINUX_BRIDGE_IFACE_NAME
+        assert port_iface2.master is None
         assert master_iface.is_desired
 
-    def test_mark_slave_as_changed_when_enslaved_to_new_master(self):
+    def test_mark_port_as_changed_when_a_port_to_new_master(self):
         cur_iface_infos = self._gen_iface_infos()
-        cur_iface_infos[0][Interface.NAME] = SLAVE1_IFACE_NAME
-        cur_iface_infos[1][Interface.NAME] = SLAVE2_IFACE_NAME
+        cur_iface_infos[0][Interface.NAME] = PORT1_IFACE_NAME
+        cur_iface_infos[1][Interface.NAME] = PORT2_IFACE_NAME
         des_iface_info = gen_bridge_iface_info()
 
         ifaces = Ifaces([des_iface_info], cur_iface_infos)
 
-        slave_iface1 = ifaces[SLAVE1_IFACE_NAME]
-        slave_iface2 = ifaces[SLAVE2_IFACE_NAME]
+        port_iface1 = ifaces[PORT1_IFACE_NAME]
+        port_iface2 = ifaces[PORT2_IFACE_NAME]
         master_iface = ifaces[LINUX_BRIDGE_IFACE_NAME]
 
-        assert slave_iface1.is_changed
-        assert slave_iface2.is_changed
-        assert slave_iface1.is_up
-        assert slave_iface2.is_up
-        assert slave_iface1.master == LINUX_BRIDGE_IFACE_NAME
-        assert slave_iface2.master == LINUX_BRIDGE_IFACE_NAME
+        assert port_iface1.is_changed
+        assert port_iface2.is_changed
+        assert port_iface1.is_up
+        assert port_iface2.is_up
+        assert port_iface1.master == LINUX_BRIDGE_IFACE_NAME
+        assert port_iface2.master == LINUX_BRIDGE_IFACE_NAME
         assert master_iface.is_desired
 
-    def test_mark_slave_as_changed_when_master_changed_slave_config(self):
+    def test_mark_port_as_changed_when_master_changed_port_config(self):
         cur_iface_infos = self._gen_iface_infos()
-        cur_iface_infos[0][Interface.NAME] = SLAVE1_IFACE_NAME
-        cur_iface_infos[1][Interface.NAME] = SLAVE2_IFACE_NAME
+        cur_iface_infos[0][Interface.NAME] = PORT1_IFACE_NAME
+        cur_iface_infos[1][Interface.NAME] = PORT2_IFACE_NAME
         cur_iface_infos.append(gen_bridge_iface_info())
         des_iface_info = gen_bridge_iface_info()
         des_iface_info[LinuxBridge.CONFIG_SUBTREE][LinuxBridge.PORT_SUBTREE][
@@ -233,16 +233,16 @@ class TestIfaces:
 
         ifaces = Ifaces([des_iface_info], cur_iface_infos)
 
-        slave_iface1 = ifaces[SLAVE1_IFACE_NAME]
-        slave_iface2 = ifaces[SLAVE2_IFACE_NAME]
+        port_iface1 = ifaces[PORT1_IFACE_NAME]
+        port_iface2 = ifaces[PORT2_IFACE_NAME]
         master_iface = ifaces[LINUX_BRIDGE_IFACE_NAME]
 
-        assert slave_iface1.is_changed
-        assert not slave_iface2.is_changed
-        assert slave_iface1.is_up
-        assert slave_iface2.is_up
-        assert slave_iface1.master == LINUX_BRIDGE_IFACE_NAME
-        assert slave_iface2.master == LINUX_BRIDGE_IFACE_NAME
+        assert port_iface1.is_changed
+        assert not port_iface2.is_changed
+        assert port_iface1.is_up
+        assert port_iface2.is_up
+        assert port_iface1.master == LINUX_BRIDGE_IFACE_NAME
+        assert port_iface2.master == LINUX_BRIDGE_IFACE_NAME
         assert master_iface.is_desired
 
     def test_mark_child_as_absent_when_parent_is_marked_as_absent(self):
@@ -275,12 +275,12 @@ class TestIfaces:
 
     def test_mark_orphen_as_absent(self):
         """
-        When OVS internal interface been removed from OVS bridge slave list,
+        When OVS internal interface been removed from OVS bridge port list,
         the orphen interface should be marked as absent.
         """
         cur_iface_infos = self._gen_iface_infos()
-        cur_iface_infos[0][Interface.NAME] = SLAVE1_IFACE_NAME
-        cur_iface_infos[1][Interface.NAME] = SLAVE2_IFACE_NAME
+        cur_iface_infos[0][Interface.NAME] = PORT1_IFACE_NAME
+        cur_iface_infos[1][Interface.NAME] = PORT2_IFACE_NAME
         cur_iface_infos.append(gen_ovs_bridge_info())
         child_iface_info = gen_foo_iface_info(
             iface_type=InterfaceType.OVS_INTERFACE
@@ -290,23 +290,23 @@ class TestIfaces:
 
         des_ovs_bridge_info = gen_ovs_bridge_info()
         ovs_bridge_iface = OvsBridgeIface(des_ovs_bridge_info, True)
-        ovs_bridge_iface.remove_slave(OVS_IFACE_NAME)
+        ovs_bridge_iface.remove_port(OVS_IFACE_NAME)
         des_iface_info = ovs_bridge_iface.to_dict()
 
         ifaces = Ifaces([des_iface_info], cur_iface_infos)
 
         ovs_iface = ifaces[OVS_IFACE_NAME]
         bridge_iface = ifaces[OVS_BRIDGE_IFACE_NAME]
-        slave1_iface = ifaces[SLAVE1_IFACE_NAME]
-        slave2_iface = ifaces[SLAVE2_IFACE_NAME]
+        port1_iface = ifaces[PORT1_IFACE_NAME]
+        port2_iface = ifaces[PORT2_IFACE_NAME]
 
         assert bridge_iface.is_desired
         assert ovs_iface.is_changed
-        assert not slave1_iface.is_changed
-        assert not slave2_iface.is_changed
+        assert not port1_iface.is_changed
+        assert not port2_iface.is_changed
         assert bridge_iface.is_up
-        assert slave1_iface.is_up
-        assert slave2_iface.is_up
+        assert port1_iface.is_up
+        assert port2_iface.is_up
         assert ovs_iface.is_absent
 
     def test_validate_unknown_parent(self):
@@ -356,12 +356,12 @@ class TestIfaces:
 
     def test_state_to_edit_with_ignored_subordinate(self):
         cur_iface_infos = self._gen_iface_infos()
-        cur_iface_infos[0][Interface.NAME] = SLAVE1_IFACE_NAME
-        cur_iface_infos[1][Interface.NAME] = SLAVE2_IFACE_NAME
+        cur_iface_infos[0][Interface.NAME] = PORT1_IFACE_NAME
+        cur_iface_infos[1][Interface.NAME] = PORT2_IFACE_NAME
         cur_iface_infos.append(gen_bridge_iface_info())
         des_iface_infos = self._gen_iface_infos()
-        des_iface_infos[0][Interface.NAME] = SLAVE1_IFACE_NAME
-        des_iface_infos[1][Interface.NAME] = SLAVE2_IFACE_NAME
+        des_iface_infos[0][Interface.NAME] = PORT1_IFACE_NAME
+        des_iface_infos[1][Interface.NAME] = PORT2_IFACE_NAME
         des_iface_infos[1][Interface.STATE] = InterfaceState.IGNORE
         des_bridge_info = gen_bridge_iface_info()
         des_bridge_info[LinuxBridge.CONFIG_SUBTREE][
@@ -373,7 +373,7 @@ class TestIfaces:
 
         assert sorted(
             [i[Interface.NAME] for i in ifaces.state_to_edit]
-        ) == sorted([LINUX_BRIDGE_IFACE_NAME, SLAVE1_IFACE_NAME])
+        ) == sorted([LINUX_BRIDGE_IFACE_NAME, PORT1_IFACE_NAME])
 
     def test_verify_desire_iface_not_found_in_current(self):
         cur_iface_infos = self._gen_iface_infos()
@@ -415,12 +415,12 @@ class TestIfaces:
 
     def test_verify_with_ignored_subordinate(self):
         cur_iface_infos = [gen_foo_iface_info(), gen_foo_iface_info()]
-        cur_iface_infos[0][Interface.NAME] = SLAVE1_IFACE_NAME
-        cur_iface_infos[1][Interface.NAME] = SLAVE2_IFACE_NAME
+        cur_iface_infos[0][Interface.NAME] = PORT1_IFACE_NAME
+        cur_iface_infos[1][Interface.NAME] = PORT2_IFACE_NAME
         cur_iface_infos.append(gen_bridge_iface_info())
         des_iface_infos = [gen_foo_iface_info(), gen_foo_iface_info()]
-        des_iface_infos[0][Interface.NAME] = SLAVE1_IFACE_NAME
-        des_iface_infos[1][Interface.NAME] = SLAVE2_IFACE_NAME
+        des_iface_infos[0][Interface.NAME] = PORT1_IFACE_NAME
+        des_iface_infos[1][Interface.NAME] = PORT2_IFACE_NAME
         des_iface_infos[1][Interface.STATE] = InterfaceState.IGNORE
         des_bridge_info = gen_bridge_iface_info()
         des_bridge_info[LinuxBridge.CONFIG_SUBTREE][

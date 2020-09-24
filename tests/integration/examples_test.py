@@ -130,9 +130,9 @@ def test_add_remove_routes(eth1_up):
     os.environ.get("CI") == "true",
     reason="Team kmod not available in Travis CI",
 )
-def test_add_remove_team_with_slaves(eth1_up, eth2_up):
+def test_add_remove_team_with_port(eth1_up, eth2_up):
     with example_state(
-        "team0_with_slaves.yml", cleanup="team0_absent.yml"
+        "team0_with_port.yml", cleanup="team0_absent.yml"
     ) as desired_state:
         assertlib.assert_state_match(desired_state)
 

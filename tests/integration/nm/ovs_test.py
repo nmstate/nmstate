@@ -113,11 +113,11 @@ def test_bridge_with_internal_interface(bridge_default_config, nm_plugin):
         OB.Port.LinkAggregation.Mode.LACP,
     ],
 )
-def test_bridge_with_bond_and_two_slaves(
+def test_bridge_with_bond_and_two_port(
     port0_up, port1_up, bridge_default_config, mode, nm_plugin
 ):
-    slave0_name = port0_up[Interface.KEY][0][Interface.NAME]
-    slave1_name = port1_up[Interface.KEY][0][Interface.NAME]
+    port0_name = port0_up[Interface.KEY][0][Interface.NAME]
+    port1_name = port1_up[Interface.KEY][0][Interface.NAME]
     bridge_desired_state = bridge_default_config
 
     port_name = "bond0"
@@ -127,8 +127,8 @@ def test_bridge_with_bond_and_two_slaves(
         OB.Port.LINK_AGGREGATION_SUBTREE: {
             LAG.MODE: mode,
             LAG.PORT_SUBTREE: [
-                {LAG.Port.NAME: slave0_name},
-                {LAG.Port.NAME: slave1_name},
+                {LAG.Port.NAME: port0_name},
+                {LAG.Port.NAME: port1_name},
             ],
         },
     }
@@ -197,11 +197,11 @@ def _attach_port_to_bridge(ctx, port_state):
 
     _create_proxy_port(ctx, port_profile_name, port_state)
     if lag_state:
-        slaves = [
-            slave for slave in lag_state[OB.Port.LinkAggregation.PORT_SUBTREE]
+        port = [
+            port for port in lag_state[OB.Port.LinkAggregation.PORT_SUBTREE]
         ]
-        for slave in slaves:
-            _connect_interface(ctx, port_profile_name, slave)
+        for port in port:
+            _connect_interface(ctx, port_profile_name, port)
     elif _is_internal_interface(ctx, port_name):
         iface_name = port_name
         internal_profile = _create_internal_interface(
@@ -236,11 +236,11 @@ def _create_internal_interface(ctx, iface_name, master_name):
 def _connect_interface(ctx, port_profile_name, port_state):
     curr_iface_con_profile = nm.profile.NmProfile(ctx, True)
     curr_iface_con_profile._import_existing_profile(port_state[OB.Port.NAME])
-    slave_iface_settings = _create_iface_settings(
+    port_iface_settings = _create_iface_settings(
         curr_iface_con_profile, port_profile_name
     )
     simple_conn = nm.connection.create_new_simple_connection(
-        slave_iface_settings
+        port_iface_settings
     )
     curr_iface_con_profile._simple_conn = simple_conn
     curr_iface_con_profile._update()

@@ -134,10 +134,10 @@ class BaseIface:
         self._save_to_disk = save_to_disk
 
     @property
-    def can_have_ip_when_enslaved(self):
+    def can_have_ip_as_port(self):
         return False
 
-    def sort_slaves(self):
+    def sort_port(self):
         pass
 
     @property
@@ -211,7 +211,7 @@ class BaseIface:
                 self.ip_state(family).validate(
                     IPState(family, self._origin_info.get(family, {}))
                 )
-            self._validate_slave_ip()
+            self._validate_port_ip()
             ip_state = self.ip_state(family)
             ip_state.remove_link_local_address()
             self._info[family] = ip_state.to_dict()
@@ -227,22 +227,22 @@ class BaseIface:
         ):
             self._info[Interface.STATE] = InterfaceState.UP
 
-    def _validate_slave_ip(self):
+    def _validate_port_ip(self):
         for family in (Interface.IPV4, Interface.IPV6):
             ip_state = IPState(family, self._origin_info.get(family, {}))
             if (
                 ip_state.is_enabled
                 and self.master
-                and not self.can_have_ip_when_enslaved
+                and not self.can_have_ip_as_port
             ):
                 raise NmstateValueError(
-                    f"Interface {self.name} is enslaved by {self.master_type} "
+                    f"Interface {self.name} is port of {self.master_type} "
                     f"interface {self.master} which does not allow "
-                    f"slaves to have {family} enabled"
+                    f"port to have {family} enabled"
                 )
 
     @property
-    def slaves(self):
+    def port(self):
         return []
 
     @property
@@ -279,7 +279,7 @@ class BaseIface:
     def set_master(self, master_iface_name, master_type):
         self._info[BaseIface.MASTER_METADATA] = master_iface_name
         self._info[BaseIface.MASTER_TYPE_METADATA] = master_type
-        if not self.can_have_ip_when_enslaved:
+        if not self.can_have_ip_as_port:
             for family in (Interface.IPV4, Interface.IPV6):
                 self._info[family] = {InterfaceIP.ENABLED: False}
 
@@ -293,9 +293,9 @@ class BaseIface:
 
     def gen_metadata(self, ifaces):
         if self.is_master and not self.is_absent:
-            for slave_name in self.slaves:
-                slave_iface = ifaces[slave_name]
-                slave_iface.set_master(self.name, self.type)
+            for port_name in self.port:
+                port_iface = ifaces[port_name]
+                port_iface.set_master(self.name, self.type)
 
     def update(self, info):
         self._info.update(info)
@@ -332,7 +332,7 @@ class BaseIface:
             * Remove empty description.
         """
         self._capitalize_mac()
-        self.sort_slaves()
+        self.sort_port()
         for family in (Interface.IPV4, Interface.IPV6):
             ip_state = self.ip_state(family)
             ip_state.remove_link_local_address()
@@ -348,11 +348,11 @@ class BaseIface:
 
         return state
 
-    def remove_slave(self, slave_name):
+    def remove_port(self, port_name):
         if not self.is_master:
             class_name = self.__class__.__name__
             raise NmstateInternalError(
-                f"Invalid invoke of {class_name}.remove_slave({slave_name}) "
+                f"Invalid invoke of {class_name}.remove_port({port_name}) "
                 f"as {class_name} is not a master interface"
             )
 
@@ -360,16 +360,16 @@ class BaseIface:
     def is_virtual(self):
         return False
 
-    def create_virtual_slave(self, slave_name):
+    def create_virtual_port(self, port_name):
         """
-        When master interface has non-exist slave interface, master should
-        create virtual slave for this name if possible, or else return None
+        When master interface has non-exist port interface, master should
+        create virtual port for this name if possible, or else return None
         """
         return None
 
-    def config_changed_slaves(self, _cur_iface):
+    def config_changed_port(self, _cur_iface):
         """
-        Return a list of slave interface name which has configuration changed
+        Return a list of port interface name which has configuration changed
         compareing to cur_iface.
         """
         return []

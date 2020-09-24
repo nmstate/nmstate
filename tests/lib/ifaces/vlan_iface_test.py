@@ -57,8 +57,8 @@ class TestVlanIface:
     def test_is_virtual(self):
         assert VlanIface(self._gen_iface_info()).is_virtual
 
-    def test_can_have_ip_when_enslaved(self):
-        assert not VlanIface(self._gen_iface_info()).can_have_ip_when_enslaved
+    def test_can_have_ip_as_port(self):
+        assert not VlanIface(self._gen_iface_info()).can_have_ip_as_port
 
     def test_validate_base_iface_missing(self):
         iface_info = self._gen_iface_info()

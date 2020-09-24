@@ -107,9 +107,9 @@ def test_nm2api_common_device_info(NM_mock):
 
 
 def test_nm2api_bond_info():
-    slaves_mock = [mock.MagicMock(), mock.MagicMock()]
+    port_mock = [mock.MagicMock(), mock.MagicMock()]
     bondinfo = {
-        Bond.PORT: slaves_mock,
+        Bond.PORT: port_mock,
         Bond.OPTIONS_SUBTREE: {Bond.MODE: BondMode.ROUND_ROBIN, "miimon": 120},
     }
     info = nm.translator.Nm2Api.get_bond_info(bondinfo)
@@ -118,8 +118,8 @@ def test_nm2api_bond_info():
         Bond.CONFIG_SUBTREE: {
             Bond.MODE: BondMode.ROUND_ROBIN,
             Bond.PORT: [
-                slaves_mock[0].props.interface,
-                slaves_mock[1].props.interface,
+                port_mock[0].props.interface,
+                port_mock[1].props.interface,
             ],
             Bond.OPTIONS_SUBTREE: {"miimon": 120},
         }

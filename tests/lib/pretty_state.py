@@ -24,7 +24,7 @@ TEST_STATE = {
     "type": "unknown",
     "name": "foo",
     "ipv4": {"abc": 1, "enabled": "false"},
-    "slaves": [{"a": 1, "name": "bar1"}, {"a": 2, "name": "bar2"}],
+    "port": [{"a": 1, "name": "bar1"}, {"a": 2, "name": "bar2"}],
     "state": "up",
 }
 
@@ -36,7 +36,7 @@ state: up
 ipv4:
   enabled: 'false'
   abc: 1
-slaves:
+port:
 - name: bar1
   a: 1
 - name: bar2
@@ -52,7 +52,7 @@ TEST_JSON_STATE = """{
         "enabled": "false",
         "abc": 1
     },
-    "slaves": [
+    "port": [
         {
             "name": "bar1",
             "a": 1

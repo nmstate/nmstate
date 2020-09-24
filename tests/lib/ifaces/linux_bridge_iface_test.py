@@ -30,12 +30,12 @@ from libnmstate.ifaces.linux_bridge import LinuxBridgeIface
 from libnmstate.ifaces.ifaces import Ifaces
 
 from ..testlib.bridgelib import LINUX_BRIDGE_IFACE_NAME
-from ..testlib.bridgelib import TEST_SLAVE_NAMES
-from ..testlib.bridgelib import SLAVE1_IFACE_NAME
-from ..testlib.bridgelib import SLAVE1_PORT_CONFIG
-from ..testlib.bridgelib import SLAVE2_IFACE_NAME
-from ..testlib.bridgelib import SLAVE2_PORT_CONFIG
-from ..testlib.bridgelib import SLAVE2_VLAN_CONFIG_TRUNK
+from ..testlib.bridgelib import TEST_PORT_NAMES
+from ..testlib.bridgelib import PORT1_IFACE_NAME
+from ..testlib.bridgelib import PORT1_PORT_CONFIG
+from ..testlib.bridgelib import PORT2_IFACE_NAME
+from ..testlib.bridgelib import PORT2_PORT_CONFIG
+from ..testlib.bridgelib import PORT2_VLAN_CONFIG_TRUNK
 from ..testlib.bridgelib import TRUNK_TAGS_ID_RANGES
 from ..testlib.bridgelib import gen_bridge_iface_info
 from ..testlib.bridgelib import gen_bridge_iface_info_with_vlan_filter
@@ -46,7 +46,7 @@ Vlan = LB.Port.Vlan
 
 
 class TestLinuxBridgeIface:
-    def test_linux_bridge_sort_slaves(self):
+    def test_linux_bridge_sort_port(self):
         iface_info1 = gen_bridge_iface_info()
         iface_info2 = gen_bridge_iface_info()
         iface_info2[LB.CONFIG_SUBTREE][LB.PORT_SUBTREE].reverse()
@@ -66,24 +66,24 @@ class TestLinuxBridgeIface:
 
         assert iface.is_virtual
 
-    def test_get_slaves(self):
+    def test_get_port(self):
         iface = LinuxBridgeIface(gen_bridge_iface_info())
 
-        assert iface.slaves == TEST_SLAVE_NAMES
+        assert iface.port == TEST_PORT_NAMES
 
     def test_desire_port_name_full_merge_from_current(self):
         cur_iface_info = gen_bridge_iface_info()
         des_iface_info = gen_bridge_iface_info()
         des_iface_info[LB.CONFIG_SUBTREE][LB.PORT_SUBTREE] = [
-            {Port.NAME: SLAVE2_IFACE_NAME},
-            {Port.NAME: SLAVE1_IFACE_NAME},
+            {Port.NAME: PORT2_IFACE_NAME},
+            {Port.NAME: PORT1_IFACE_NAME},
         ]
         des_iface = LinuxBridgeIface(des_iface_info)
         cur_iface = LinuxBridgeIface(cur_iface_info)
 
         des_iface.merge(cur_iface)
-        des_iface.sort_slaves()
-        cur_iface.sort_slaves()
+        des_iface.sort_port()
+        cur_iface.sort_port()
 
         assert des_iface.to_dict() == gen_bridge_iface_info()
 
@@ -92,10 +92,10 @@ class TestLinuxBridgeIface:
         des_iface_info = gen_bridge_iface_info()
         expected_iface_info = gen_bridge_iface_info()
         expected_iface_info[LB.CONFIG_SUBTREE][LB.PORT_SUBTREE] = [
-            deepcopy(SLAVE2_PORT_CONFIG)
+            deepcopy(PORT2_PORT_CONFIG)
         ]
         des_iface_info[LB.CONFIG_SUBTREE][LB.PORT_SUBTREE] = [
-            {Port.NAME: SLAVE2_IFACE_NAME},
+            {Port.NAME: PORT2_IFACE_NAME},
         ]
 
         des_iface = LinuxBridgeIface(des_iface_info)
@@ -134,14 +134,14 @@ class TestLinuxBridgeIface:
     ):
         cur_iface_info = gen_bridge_iface_info_with_vlan_filter()
         des_iface_info = gen_bridge_iface_info_with_vlan_filter()
-        expected_port_config = deepcopy(SLAVE2_PORT_CONFIG)
-        expected_port_config[Port.VLAN_SUBTREE] = SLAVE2_VLAN_CONFIG_TRUNK
+        expected_port_config = deepcopy(PORT2_PORT_CONFIG)
+        expected_port_config[Port.VLAN_SUBTREE] = PORT2_VLAN_CONFIG_TRUNK
         expected_iface_info = gen_bridge_iface_info()
         expected_iface_info[LB.CONFIG_SUBTREE][LB.PORT_SUBTREE] = [
             expected_port_config
         ]
         des_iface_info[LB.CONFIG_SUBTREE][LB.PORT_SUBTREE] = [
-            {Port.NAME: SLAVE2_IFACE_NAME},
+            {Port.NAME: PORT2_IFACE_NAME},
         ]
 
         des_iface = LinuxBridgeIface(des_iface_info)
@@ -206,66 +206,66 @@ class TestLinuxBridgeIface:
 
         assert des_iface.to_dict() == expected_iface_info
 
-    def test_gen_metadata_save_port_config_to_slave_iface(self):
+    def test_gen_metadata_save_port_config_to_port_iface(self):
         br_iface_info = gen_bridge_iface_info()
-        slave1_iface_info = gen_foo_iface_info()
-        slave1_iface_info[Interface.NAME] = SLAVE1_IFACE_NAME
-        slave2_iface_info = gen_foo_iface_info()
-        slave2_iface_info[Interface.NAME] = SLAVE2_IFACE_NAME
+        port1_iface_info = gen_foo_iface_info()
+        port1_iface_info[Interface.NAME] = PORT1_IFACE_NAME
+        port2_iface_info = gen_foo_iface_info()
+        port2_iface_info[Interface.NAME] = PORT2_IFACE_NAME
         ifaces = Ifaces(
             des_iface_infos=[
                 br_iface_info,
-                slave1_iface_info,
-                slave2_iface_info,
+                port1_iface_info,
+                port2_iface_info,
             ],
             cur_iface_infos=[],
         )
         br_iface = ifaces[LINUX_BRIDGE_IFACE_NAME]
         br_iface.gen_metadata(ifaces)
         br_iface.pre_edit_validation_and_cleanup()
-        slave1_iface = ifaces[SLAVE1_IFACE_NAME]
-        slave2_iface = ifaces[SLAVE2_IFACE_NAME]
+        port1_iface = ifaces[PORT1_IFACE_NAME]
+        port2_iface = ifaces[PORT2_IFACE_NAME]
 
-        assert slave1_iface.master == LINUX_BRIDGE_IFACE_NAME
-        assert slave2_iface.master == LINUX_BRIDGE_IFACE_NAME
+        assert port1_iface.master == LINUX_BRIDGE_IFACE_NAME
+        assert port2_iface.master == LINUX_BRIDGE_IFACE_NAME
         assert (
-            slave1_iface.to_dict()[LinuxBridgeIface.BRPORT_OPTIONS_METADATA]
-            == SLAVE1_PORT_CONFIG
+            port1_iface.to_dict()[LinuxBridgeIface.BRPORT_OPTIONS_METADATA]
+            == PORT1_PORT_CONFIG
         )
         assert (
-            slave2_iface.to_dict()[LinuxBridgeIface.BRPORT_OPTIONS_METADATA]
-            == SLAVE2_PORT_CONFIG
+            port2_iface.to_dict()[LinuxBridgeIface.BRPORT_OPTIONS_METADATA]
+            == PORT2_PORT_CONFIG
         )
 
     def test_gen_metadata_skip_on_absent_iface(self):
         br_iface_info = gen_bridge_iface_info()
         br_iface_info[Interface.STATE] = InterfaceState.ABSENT
-        slave1_iface_info = gen_foo_iface_info()
-        slave1_iface_info[Interface.NAME] = SLAVE1_IFACE_NAME
-        slave2_iface_info = gen_foo_iface_info()
-        slave2_iface_info[Interface.NAME] = SLAVE2_IFACE_NAME
+        port1_iface_info = gen_foo_iface_info()
+        port1_iface_info[Interface.NAME] = PORT1_IFACE_NAME
+        port2_iface_info = gen_foo_iface_info()
+        port2_iface_info[Interface.NAME] = PORT2_IFACE_NAME
         ifaces = Ifaces(
             des_iface_infos=[
                 br_iface_info,
-                slave1_iface_info,
-                slave2_iface_info,
+                port1_iface_info,
+                port2_iface_info,
             ],
             cur_iface_infos=[],
         )
         br_iface = ifaces[LINUX_BRIDGE_IFACE_NAME]
         br_iface.gen_metadata(ifaces)
         br_iface.pre_edit_validation_and_cleanup()
-        slave1_iface = ifaces[SLAVE1_IFACE_NAME]
-        slave2_iface = ifaces[SLAVE2_IFACE_NAME]
-        assert slave1_iface.master is None
-        assert slave2_iface.master is None
+        port1_iface = ifaces[PORT1_IFACE_NAME]
+        port2_iface = ifaces[PORT2_IFACE_NAME]
+        assert port1_iface.master is None
+        assert port2_iface.master is None
         assert (
             LinuxBridgeIface.BRPORT_OPTIONS_METADATA
-            not in slave1_iface.to_dict()
+            not in port1_iface.to_dict()
         )
         assert (
             LinuxBridgeIface.BRPORT_OPTIONS_METADATA
-            not in slave2_iface.to_dict()
+            not in port2_iface.to_dict()
         )
 
     def test_state_for_verify_normalize_port_vlan(self):
@@ -352,15 +352,15 @@ class TestLinuxBridgeIface:
         with pytest.raises(NmstateValueError):
             iface.pre_edit_validation_and_cleanup()
 
-    def test_remove_slave(self):
+    def test_remove_port(self):
         iface_info = gen_bridge_iface_info()
         expected_iface_info = gen_bridge_iface_info()
         expected_iface_info[LB.CONFIG_SUBTREE][LB.PORT_SUBTREE] = [
-            deepcopy(SLAVE1_PORT_CONFIG)
+            deepcopy(PORT1_PORT_CONFIG)
         ]
 
         iface = LinuxBridgeIface(iface_info)
-        iface.remove_slave(SLAVE2_IFACE_NAME)
+        iface.remove_port(PORT2_IFACE_NAME)
 
         assert iface.to_dict() == expected_iface_info
 
@@ -376,7 +376,7 @@ class TestLinuxBridgeIface:
 
         assert iface.state_for_verify() == expected_iface_info
 
-    def test_get_config_changed_slaves(self):
+    def test_get_config_changed_port(self):
         des_iface_info = gen_bridge_iface_info()
         des_port_config = des_iface_info[LB.CONFIG_SUBTREE][LB.PORT_SUBTREE][0]
         des_port_config[Port.STP_PATH_COST] += 1
@@ -385,38 +385,36 @@ class TestLinuxBridgeIface:
         des_iface = LinuxBridgeIface(des_iface_info)
         cur_iface = LinuxBridgeIface(cur_iface_info)
 
-        assert des_iface.config_changed_slaves(cur_iface) == [
-            SLAVE1_IFACE_NAME
-        ]
+        assert des_iface.config_changed_port(cur_iface) == [PORT1_IFACE_NAME]
 
     def test_skip_metadata_generation_when_is_absent(self):
         br_iface_info = gen_bridge_iface_info()
         br_iface_info[Interface.STATE] = InterfaceState.ABSENT
-        slave1_iface_info = gen_foo_iface_info()
-        slave1_iface_info[Interface.NAME] = SLAVE1_IFACE_NAME
-        slave2_iface_info = gen_foo_iface_info()
-        slave2_iface_info[Interface.NAME] = SLAVE2_IFACE_NAME
+        port1_iface_info = gen_foo_iface_info()
+        port1_iface_info[Interface.NAME] = PORT1_IFACE_NAME
+        port2_iface_info = gen_foo_iface_info()
+        port2_iface_info[Interface.NAME] = PORT2_IFACE_NAME
         ifaces = Ifaces(
             des_iface_infos=[
                 br_iface_info,
-                slave1_iface_info,
-                slave2_iface_info,
+                port1_iface_info,
+                port2_iface_info,
             ],
             cur_iface_infos=[],
         )
         br_iface = ifaces[LINUX_BRIDGE_IFACE_NAME]
         br_iface.gen_metadata(ifaces)
         br_iface.pre_edit_validation_and_cleanup()
-        slave1_iface = ifaces[SLAVE1_IFACE_NAME]
-        slave2_iface = ifaces[SLAVE2_IFACE_NAME]
+        port1_iface = ifaces[PORT1_IFACE_NAME]
+        port2_iface = ifaces[PORT2_IFACE_NAME]
 
-        assert slave1_iface.master is None
-        assert slave2_iface.master is None
+        assert port1_iface.master is None
+        assert port2_iface.master is None
         assert (
             LinuxBridgeIface.BRPORT_OPTIONS_METADATA
-            not in slave1_iface.to_dict()
+            not in port1_iface.to_dict()
         )
         assert (
             LinuxBridgeIface.BRPORT_OPTIONS_METADATA
-            not in slave2_iface.to_dict()
+            not in port2_iface.to_dict()
         )

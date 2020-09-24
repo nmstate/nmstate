@@ -35,8 +35,8 @@ DEPRECATED_SLAVES = "slaves"
 class BondIface(BaseIface):
     _MODE_CHANGE_METADATA = "_bond_mode_changed"
 
-    def sort_slaves(self):
-        if self.slaves:
+    def sort_port(self):
+        if self.port:
             self.raw[Bond.CONFIG_SUBTREE][Bond.PORT].sort()
 
     def __init__(self, info, save_to_disk=True):
@@ -46,7 +46,7 @@ class BondIface(BaseIface):
         self._replace_deprecated_terms()
 
     @property
-    def slaves(self):
+    def port(self):
         return self.raw.get(Bond.CONFIG_SUBTREE, {}).get(Bond.PORT, [])
 
     @property
@@ -185,11 +185,11 @@ class BondIface(BaseIface):
             )
         return state
 
-    def remove_slave(self, slave_name):
+    def remove_port(self, port_name):
         self.raw[Bond.CONFIG_SUBTREE][Bond.PORT] = [
-            s for s in self.slaves if s != slave_name
+            s for s in self.port if s != port_name
         ]
-        self.sort_slaves()
+        self.sort_port()
 
 
 class _BondNamedOptions:

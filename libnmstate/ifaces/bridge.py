@@ -38,8 +38,8 @@ class BridgeIface(BaseIface):
     def is_virtual(self):
         return True
 
-    def sort_slaves(self):
-        if self.slaves:
+    def sort_port(self):
+        if self.port:
             self.raw[Bridge.CONFIG_SUBTREE][Bridge.PORT_SUBTREE].sort(
                 key=itemgetter(Bridge.Port.NAME)
             )
@@ -88,18 +88,18 @@ class BridgeIface(BaseIface):
         )
 
     def pre_edit_validation_and_cleanup(self):
-        self.sort_slaves()
+        self.sort_port()
         super().pre_edit_validation_and_cleanup()
 
-    def config_changed_slaves(self, cur_iface):
-        changed_slaves = []
+    def config_changed_port(self, cur_iface):
+        changed_port = []
         cur_indexed_ports = _index_port_configs(cur_iface.port_configs)
         for port_config in self.port_configs:
             port_name = port_config[Bridge.Port.NAME]
             cur_port_config = cur_indexed_ports.get(port_name)
             if cur_port_config != port_config:
-                changed_slaves.append(port_name)
-        return changed_slaves
+                changed_port.append(port_name)
+        return changed_port
 
 
 def _index_port_configs(port_configs):

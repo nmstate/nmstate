@@ -31,25 +31,25 @@ from libnmstate.ifaces.ovs import OvsBridgeIface
 from libnmstate.ifaces.ovs import OvsInternalIface
 from libnmstate.ifaces.ifaces import Ifaces
 
-from ..testlib.constants import SLAVE1_IFACE_NAME
-from ..testlib.constants import SLAVE2_IFACE_NAME
+from ..testlib.constants import PORT1_IFACE_NAME
+from ..testlib.constants import PORT2_IFACE_NAME
 from ..testlib.ifacelib import gen_foo_iface_info
 from ..testlib.ovslib import OVS_BRIDGE_IFACE_NAME
 from ..testlib.ovslib import OVS_IFACE_NAME
-from ..testlib.ovslib import SLAVE_PORT_CONFIGS
+from ..testlib.ovslib import PORT_PORT_CONFIGS
 from ..testlib.ovslib import gen_ovs_bridge_info
 
 
-SLAVE_PORT_CONFIGS_VLAN_ACCESSS = [
+PORT_PORT_CONFIGS_VLAN_ACCESSS = [
     {
-        OVSBridge.Port.NAME: SLAVE1_IFACE_NAME,
+        OVSBridge.Port.NAME: PORT1_IFACE_NAME,
         OVSBridge.Port.VLAN_SUBTREE: {
             OVSBridge.Port.Vlan.MODE: OVSBridge.Port.Vlan.Mode.ACCESS,
             OVSBridge.Port.Vlan.TAG: 101,
         },
     },
     {
-        OVSBridge.Port.NAME: SLAVE2_IFACE_NAME,
+        OVSBridge.Port.NAME: PORT2_IFACE_NAME,
         OVSBridge.Port.VLAN_SUBTREE: {
             OVSBridge.Port.Vlan.MODE: OVSBridge.Port.Vlan.Mode.ACCESS,
             OVSBridge.Port.Vlan.TAG: 102,
@@ -66,22 +66,20 @@ BOND_PORT_CONFIG = {
     OVSBridge.Port.LINK_AGGREGATION_SUBTREE: {
         OVSBond.MODE: OVSBond.Mode.ACTIVE_BACKUP,
         OVSBond.PORT_SUBTREE: [
-            {OVSBond.Port.NAME: SLAVE1_IFACE_NAME},
-            {OVSBond.Port.NAME: SLAVE2_IFACE_NAME},
+            {OVSBond.Port.NAME: PORT1_IFACE_NAME},
+            {OVSBond.Port.NAME: PORT2_IFACE_NAME},
         ],
     },
 }
 
-SLAVE_IFACE_NAMES = sorted(
-    [s[OVSBridge.Port.NAME] for s in SLAVE_PORT_CONFIGS]
-)
+PORT_IFACE_NAMES = sorted([s[OVSBridge.Port.NAME] for s in PORT_PORT_CONFIGS])
 
 
 class TestOvsBrigeIface:
     def _gen_iface_info(self):
         iface_info = gen_foo_iface_info(iface_type=InterfaceType.OVS_BRIDGE)
         iface_info[OVSBridge.CONFIG_SUBTREE] = {
-            OVSBridge.PORT_SUBTREE: deepcopy(SLAVE_PORT_CONFIGS),
+            OVSBridge.PORT_SUBTREE: deepcopy(PORT_PORT_CONFIGS),
             OVSBridge.OPTIONS_SUBTREE: {},
         }
         return iface_info
@@ -107,7 +105,7 @@ class TestOvsBrigeIface:
 
         assert iface.is_virtual
 
-    def test_ovs_bridge_sort_slaves(self):
+    def test_ovs_bridge_sort_port(self):
         iface1_info = gen_ovs_bridge_info()
         iface2_info = gen_ovs_bridge_info()
         iface2_info[OVSBridge.CONFIG_SUBTREE][OVSBridge.PORT_SUBTREE].reverse()
@@ -116,10 +114,10 @@ class TestOvsBrigeIface:
         iface2 = OvsBridgeIface(iface2_info, True)
 
         assert iface1.state_for_verify() == iface2.state_for_verify()
-        assert iface1.slaves == SLAVE_IFACE_NAMES
-        assert iface2.slaves == SLAVE_IFACE_NAMES
+        assert iface1.port == PORT_IFACE_NAMES
+        assert iface2.port == PORT_IFACE_NAMES
 
-    def test_ovs_bridge_sort_bond_slaves(self):
+    def test_ovs_bridge_sort_bond_port(self):
         iface1_info = self._gen_iface_info_with_bond()
         iface2_info = self._gen_iface_info_with_bond()
         bond_config = iface2_info[OVSBridge.CONFIG_SUBTREE][
@@ -133,53 +131,49 @@ class TestOvsBrigeIface:
         iface2 = OvsBridgeIface(iface2_info, True)
 
         assert iface1.state_for_verify() == iface2.state_for_verify()
-        assert sorted(iface1.slaves) == SLAVE_IFACE_NAMES
-        assert sorted(iface2.slaves) == SLAVE_IFACE_NAMES
+        assert sorted(iface1.port) == PORT_IFACE_NAMES
+        assert sorted(iface2.port) == PORT_IFACE_NAMES
 
-    def test_gen_metadata_save_bond_port_config_to_slave_iface(self):
+    def test_gen_metadata_save_bond_port_config_to_port_iface(self):
         br_iface_info = self._gen_iface_info_with_bond()
-        slave1_iface_info = gen_foo_iface_info()
-        slave1_iface_info[Interface.NAME] = SLAVE1_IFACE_NAME
-        slave2_iface_info = gen_foo_iface_info()
-        slave2_iface_info[Interface.NAME] = SLAVE2_IFACE_NAME
+        port1_iface_info = gen_foo_iface_info()
+        port1_iface_info[Interface.NAME] = PORT1_IFACE_NAME
+        port2_iface_info = gen_foo_iface_info()
+        port2_iface_info[Interface.NAME] = PORT2_IFACE_NAME
         ifaces = Ifaces(
             des_iface_infos=[
                 br_iface_info,
-                slave1_iface_info,
-                slave2_iface_info,
+                port1_iface_info,
+                port2_iface_info,
             ],
-            cur_iface_infos=[slave1_iface_info, slave2_iface_info],
+            cur_iface_infos=[port1_iface_info, port2_iface_info],
         )
         br_iface = ifaces[OVS_BRIDGE_IFACE_NAME]
         br_iface.gen_metadata(ifaces)
         br_iface.pre_edit_validation_and_cleanup()
-        slave1_iface = ifaces[SLAVE1_IFACE_NAME]
-        slave2_iface = ifaces[SLAVE2_IFACE_NAME]
+        port1_iface = ifaces[PORT1_IFACE_NAME]
+        port2_iface = ifaces[PORT2_IFACE_NAME]
 
-        assert slave1_iface.master == OVS_BRIDGE_IFACE_NAME
-        assert slave2_iface.master == OVS_BRIDGE_IFACE_NAME
+        assert port1_iface.master == OVS_BRIDGE_IFACE_NAME
+        assert port2_iface.master == OVS_BRIDGE_IFACE_NAME
         assert (
-            slave1_iface.to_dict()[OvsBridgeIface.BRPORT_OPTIONS_METADATA]
+            port1_iface.to_dict()[OvsBridgeIface.BRPORT_OPTIONS_METADATA]
             == BOND_PORT_CONFIG
         )
         assert (
-            slave2_iface.to_dict()[OvsBridgeIface.BRPORT_OPTIONS_METADATA]
+            port2_iface.to_dict()[OvsBridgeIface.BRPORT_OPTIONS_METADATA]
             == BOND_PORT_CONFIG
         )
 
     def test_auto_create_ovs_interface(self):
         iface_info = gen_ovs_bridge_info()
-        slave1_iface_info = gen_foo_iface_info()
-        slave1_iface_info[Interface.NAME] = SLAVE1_IFACE_NAME
-        slave2_iface_info = gen_foo_iface_info()
-        slave2_iface_info[Interface.NAME] = SLAVE2_IFACE_NAME
+        port1_iface_info = gen_foo_iface_info()
+        port1_iface_info[Interface.NAME] = PORT1_IFACE_NAME
+        port2_iface_info = gen_foo_iface_info()
+        port2_iface_info[Interface.NAME] = PORT2_IFACE_NAME
         ifaces = Ifaces(
-            des_iface_infos=[
-                iface_info,
-                slave1_iface_info,
-                slave2_iface_info,
-            ],
-            cur_iface_infos=[slave1_iface_info, slave2_iface_info],
+            des_iface_infos=[iface_info, port1_iface_info, port2_iface_info],
+            cur_iface_infos=[port1_iface_info, port2_iface_info],
         )
 
         ovs_iface = ifaces[OVS_IFACE_NAME]
@@ -188,7 +182,7 @@ class TestOvsBrigeIface:
         assert ovs_iface.is_virtual
         assert ovs_iface.master == OVS_BRIDGE_IFACE_NAME
 
-    def test_validate_ovs_bond_with_single_slave(self):
+    def test_validate_ovs_bond_with_single_port(self):
         iface_info = self._gen_iface_info_with_bond()
         bond_config = iface_info[OVSBridge.CONFIG_SUBTREE][
             OVSBridge.PORT_SUBTREE
@@ -199,36 +193,32 @@ class TestOvsBrigeIface:
         with pytest.raises(NmstateValueError):
             iface.pre_edit_validation_and_cleanup()
 
-    def test_remove_slave_from_bridge_without_bond(self):
+    def test_remove_port_from_bridge_without_bond(self):
         iface = OvsBridgeIface(gen_ovs_bridge_info(), True)
-        iface.remove_slave(SLAVE1_IFACE_NAME)
+        iface.remove_port(PORT1_IFACE_NAME)
 
-        assert sorted(iface.slaves) == sorted(
-            [SLAVE2_IFACE_NAME, OVS_IFACE_NAME]
-        )
+        assert sorted(iface.port) == sorted([PORT2_IFACE_NAME, OVS_IFACE_NAME])
         assert iface.to_dict()[OVSBridge.CONFIG_SUBTREE][
             OVSBridge.PORT_SUBTREE
         ] == (
             sorted(
                 [
-                    {OVSBridge.Port.NAME: SLAVE2_IFACE_NAME},
+                    {OVSBridge.Port.NAME: PORT2_IFACE_NAME},
                     {OVSBridge.Port.NAME: OVS_IFACE_NAME},
                 ],
                 key=itemgetter(OVSBridge.Port.NAME),
             )
         )
 
-    def test_remove_slave_from_bridge_with_bond(self):
+    def test_remove_port_from_bridge_with_bond(self):
         iface = OvsBridgeIface(self._gen_iface_info_with_bond(), True)
-        iface.remove_slave(SLAVE1_IFACE_NAME)
+        iface.remove_port(PORT1_IFACE_NAME)
         expected_port_config = deepcopy(BOND_PORT_CONFIG)
         expected_port_config[OVSBridge.Port.LINK_AGGREGATION_SUBTREE][
             OVSBond.PORT_SUBTREE
         ].pop(0)
 
-        assert sorted(iface.slaves) == sorted(
-            [SLAVE2_IFACE_NAME, OVS_IFACE_NAME]
-        )
+        assert sorted(iface.port) == sorted([PORT2_IFACE_NAME, OVS_IFACE_NAME])
         assert iface.to_dict()[OVSBridge.CONFIG_SUBTREE][
             OVSBridge.PORT_SUBTREE
         ] == sorted(
@@ -247,9 +237,7 @@ class TestOvsInternalIface:
     def test_need_parent(self):
         assert OvsInternalIface(gen_ovs_bridge_info()).need_parent
 
-    def test_can_have_ip_when_enslaved(self):
-        assert OvsInternalIface(
-            gen_ovs_bridge_info()
-        ).can_have_ip_when_enslaved
+    def test_can_have_ip_as_port(self):
+        assert OvsInternalIface(gen_ovs_bridge_info()).can_have_ip_as_port
 
     # The 'parent' property is tested by `test_auto_create_ovs_interface`.

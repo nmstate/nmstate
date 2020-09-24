@@ -137,7 +137,7 @@ def is_ovs_interface_type_id(type_id):
     return type_id == NM.DeviceType.OVS_INTERFACE
 
 
-def get_port_by_slave(nmdev):
+def get_port_by_port(nmdev):
     active_con = connection.get_device_active_connection(nmdev)
     if active_con:
         master = active_con.get_master()
@@ -147,7 +147,7 @@ def get_port_by_slave(nmdev):
 
 
 def get_ovs_info(context, bridge_device, devices_info):
-    port_profiles = _get_slave_profiles(bridge_device, devices_info)
+    port_profiles = _get_port_profiles(bridge_device, devices_info)
     ports = _get_bridge_ports_info(context, port_profiles, devices_info)
     options = _get_bridge_options(context, bridge_device)
 
@@ -184,7 +184,7 @@ def _get_patch_setting(act_con):
     return None
 
 
-def get_slaves(nm_device):
+def get_port(nm_device):
     return nm_device.get_slaves()
 
 
@@ -211,16 +211,16 @@ def _get_bridge_port_info(context, port_profile, devices_info):
 
     port_name = port_profile.get_interface_name()
     port_device = context.get_nm_dev(port_name)
-    port_slave_profiles = _get_slave_profiles(port_device, devices_info)
-    port_slave_names = [c.get_interface_name() for c in port_slave_profiles]
+    port_port_profiles = _get_port_profiles(port_device, devices_info)
+    port_port_names = [c.get_interface_name() for c in port_port_profiles]
 
-    if port_slave_names:
-        number_of_interfaces = len(port_slave_names)
+    if port_port_names:
+        number_of_interfaces = len(port_port_names)
         if number_of_interfaces == 1:
-            port_info[OB.Port.NAME] = port_slave_names[0]
+            port_info[OB.Port.NAME] = port_port_names[0]
         else:
             port_lag_info = _get_lag_info(
-                port_name, port_setting, port_slave_names
+                port_name, port_setting, port_port_names
             )
             port_info.update(port_lag_info)
 
@@ -239,7 +239,7 @@ def _get_bridge_port_info(context, port_profile, devices_info):
     return port_info
 
 
-def _get_lag_info(port_name, port_setting, port_slave_names):
+def _get_lag_info(port_name, port_setting, port_names):
     port_info = {}
 
     lacp = port_setting.props.lacp
@@ -255,7 +255,7 @@ def _get_lag_info(port_name, port_setting, port_slave_names):
         OB.Port.LinkAggregation.PORT_SUBTREE: sorted(
             [
                 {OB.Port.LinkAggregation.Port.NAME: iface_name}
-                for iface_name in port_slave_names
+                for iface_name in port_names
             ],
             key=itemgetter(OB.Port.LinkAggregation.Port.NAME),
         ),
@@ -282,15 +282,15 @@ def _get_bridge_options(context, bridge_device):
     return bridge_options
 
 
-def _get_slave_profiles(master_device, devices_info):
-    slave_profiles = []
+def _get_port_profiles(master_device, devices_info):
+    port_profiles = []
     for dev, _ in devices_info:
         active_con = connection.get_device_active_connection(dev)
         if active_con:
             master = active_con.props.master
             if master and (master.get_iface() == master_device.get_iface()):
-                slave_profiles.append(active_con.props.connection)
-    return slave_profiles
+                port_profiles.append(active_con.props.connection)
+    return port_profiles
 
 
 def create_ovs_proxy_iface_info(iface):
@@ -312,7 +312,7 @@ def create_ovs_proxy_iface_info(iface):
     port_iface_desired_state = _create_ovs_port_iface_desired_state(
         port_opts_metadata, iface, iface_info
     )
-    # The "visible" slave/interface needs to point to the port profile
+    # The "visible" port/interface needs to point to the port profile
     iface.set_master(
         port_iface_desired_state[Interface.NAME], InterfaceType.OVS_PORT
     )

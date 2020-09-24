@@ -136,5 +136,5 @@ def create_port_setting(options, base_con_profile):
     return port_setting
 
 
-def get_slaves(nm_device):
+def get_port(nm_device):
     return nm_device.get_slaves()

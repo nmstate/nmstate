@@ -161,21 +161,21 @@ class TestBaseIface:
 
         assert iface.state_for_verify() == expected_iface_info
 
-    def test_remove_slave(self):
+    def test_remove_port(self):
         iface = BaseIface(gen_foo_iface_info())
 
         with pytest.raises(NmstateInternalError):
-            iface.remove_slave("slave_name")
+            iface.remove_port("port_name")
 
     def test_is_virtual(self):
         iface = BaseIface(gen_foo_iface_info())
         assert iface.is_virtual is False
 
-    def test_create_virtual_slave(self):
+    def test_create_virtual_port(self):
         iface = BaseIface(gen_foo_iface_info())
-        assert iface.create_virtual_slave("slave_name") is None
+        assert iface.create_virtual_port("port_name") is None
 
-    def test_config_changed_slaves(self):
+    def test_config_changed_port(self):
         iface = BaseIface(gen_foo_iface_info())
         iface2 = BaseIface(gen_foo_iface_info())
-        assert iface.config_changed_slaves(iface2) == []
+        assert iface.config_changed_port(iface2) == []

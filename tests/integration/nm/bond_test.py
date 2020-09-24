@@ -54,12 +54,12 @@ def test_create_and_remove_bond(eth1_up, nm_plugin):
     assert not _get_bond_current_state(nm_plugin, BOND0)
 
 
-def test_bond_with_a_slave(eth1_up, nm_plugin):
+def test_bond_with_a_port(eth1_up, nm_plugin):
     bond_options = {schema.Bond.MODE: schema.BondMode.ROUND_ROBIN}
 
     with _bond_interface(nm_plugin.context, BOND0, bond_options):
         nic_name = eth1_up[Interface.KEY][0][Interface.NAME]
-        _attach_slave_to_bond(nm_plugin.context, BOND0, nic_name)
+        _attach_port_to_bond(nm_plugin.context, BOND0, nic_name)
         bond_desired_state = {
             schema.Bond.PORT: [nic_name],
             schema.Bond.OPTIONS_SUBTREE: bond_options,
@@ -102,7 +102,7 @@ def _get_bond_current_state(plugin, name, option=None):
         nm_bond_info[schema.Bond.OPTIONS_SUBTREE][option] = bond_options[
             option
         ]
-    return _convert_slaves_devices_to_iface_names(nm_bond_info)
+    return _convert_port_devices_to_iface_names(nm_bond_info)
 
 
 def _create_bond(ctx, name, options):
@@ -139,18 +139,18 @@ def _delete_bond(ctx, profile):
             nm.device.delete_device(ctx, profile.nmdev)
 
 
-def _attach_slave_to_bond(ctx, bond, slave):
-    curr_slave_con_profile = nm.profile.NmProfile(ctx, True)
-    curr_slave_con_profile._import_existing_profile(slave)
+def _attach_port_to_bond(ctx, bond, port):
+    curr_port_con_profile = nm.profile.NmProfile(ctx, True)
+    curr_port_con_profile._import_existing_profile(port)
 
-    slave_settings = [_create_connection_setting(bond, curr_slave_con_profile)]
-    simple_conn = nm.connection.create_new_simple_connection(slave_settings)
-    curr_slave_con_profile._simple_conn = simple_conn
+    port_settings = [_create_connection_setting(bond, curr_port_con_profile)]
+    simple_conn = nm.connection.create_new_simple_connection(port_settings)
+    curr_port_con_profile._simple_conn = simple_conn
 
     with main_context(ctx):
-        curr_slave_con_profile._update()
+        curr_port_con_profile._update()
         ctx.wait_all_finish()
-        curr_slave_con_profile.activate()
+        curr_port_con_profile.activate()
         ctx.wait_all_finish()
 
 
@@ -162,9 +162,9 @@ def _create_connection_setting(bond, port_con_profile):
     return con_setting.setting
 
 
-def _convert_slaves_devices_to_iface_names(info):
+def _convert_port_devices_to_iface_names(info):
     if info:
-        info[Bond.PORT] = [slave.props.interface for slave in info[Bond.PORT]]
+        info[Bond.PORT] = [port.props.interface for port in info[Bond.PORT]]
     return info
 
 

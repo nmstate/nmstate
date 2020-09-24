@@ -24,28 +24,28 @@ from libnmstate.schema import InterfaceType
 from libnmstate.schema import LinuxBridge as LB
 
 from .ifacelib import gen_foo_iface_info
-from .constants import SLAVE1_IFACE_NAME
-from .constants import SLAVE2_IFACE_NAME
+from .constants import PORT1_IFACE_NAME
+from .constants import PORT2_IFACE_NAME
 
 Port = LB.Port
 Vlan = LB.Port.Vlan
 
 LINUX_BRIDGE_IFACE_NAME = "linux-br0"
 
-SLAVE1_PORT_CONFIG = {
-    Port.NAME: SLAVE1_IFACE_NAME,
+PORT1_PORT_CONFIG = {
+    Port.NAME: PORT1_IFACE_NAME,
     Port.STP_HAIRPIN_MODE: False,
     Port.STP_PATH_COST: 100,
     Port.STP_PRIORITY: 32,
 }
 
-SLAVE1_VLAN_CONFIG_ACCESS = {
+PORT1_VLAN_CONFIG_ACCESS = {
     Vlan.MODE: Vlan.Mode.ACCESS,
     Vlan.TAG: 305,
 }
 
-SLAVE2_PORT_CONFIG = {
-    Port.NAME: SLAVE2_IFACE_NAME,
+PORT2_PORT_CONFIG = {
+    Port.NAME: PORT2_IFACE_NAME,
     Port.STP_HAIRPIN_MODE: False,
     Port.STP_PATH_COST: 100,
     Port.STP_PRIORITY: 32,
@@ -67,32 +67,32 @@ TRUNK_TAGS_ID_RANGES = [
     },
 ]
 
-SLAVE2_VLAN_CONFIG_TRUNK_WITH_ID_RANGE = {
+PORT2_VLAN_CONFIG_TRUNK_WITH_ID_RANGE = {
     Vlan.MODE: Vlan.Mode.TRUNK,
     Vlan.TAG: 105,
     Vlan.ENABLE_NATIVE: True,
     Vlan.TRUNK_TAGS: TRUNK_TAGS_ID_RANGES,
 }
 
-SLAVE2_VLAN_CONFIG_TRUNK_WITH_ID = {
+PORT2_VLAN_CONFIG_TRUNK_WITH_ID = {
     Vlan.MODE: Vlan.Mode.TRUNK,
     Vlan.TAG: 105,
     Vlan.ENABLE_NATIVE: True,
     Vlan.TRUNK_TAGS: TRUNK_TAGS_IDS,
 }
 
-SLAVE2_VLAN_CONFIG_TRUNK = SLAVE2_VLAN_CONFIG_TRUNK_WITH_ID
+PORT2_VLAN_CONFIG_TRUNK = PORT2_VLAN_CONFIG_TRUNK_WITH_ID
 
-TEST_SLAVE_PORT_CONFIGS = [SLAVE1_PORT_CONFIG, SLAVE2_PORT_CONFIG]
+TEST_PORT_PORT_CONFIGS = [PORT1_PORT_CONFIG, PORT2_PORT_CONFIG]
 
-TEST_SLAVE_NAMES = [SLAVE1_IFACE_NAME, SLAVE2_IFACE_NAME]
+TEST_PORT_NAMES = [PORT1_IFACE_NAME, PORT2_IFACE_NAME]
 
 
 def gen_bridge_iface_info():
     iface_info = gen_foo_iface_info(iface_type=InterfaceType.LINUX_BRIDGE)
     iface_info[Interface.NAME] = LINUX_BRIDGE_IFACE_NAME
     iface_info[LB.CONFIG_SUBTREE] = {
-        LB.PORT_SUBTREE: deepcopy(TEST_SLAVE_PORT_CONFIGS),
+        LB.PORT_SUBTREE: deepcopy(TEST_PORT_PORT_CONFIGS),
         LB.OPTIONS_SUBTREE: {
             LB.Options.GROUP_FORWARD_MASK: 0,
             LB.Options.MAC_AGEING_TIME: 300,
@@ -113,9 +113,9 @@ def gen_bridge_iface_info_with_vlan_filter():
     iface_info = gen_bridge_iface_info()
     br_config = iface_info[LB.CONFIG_SUBTREE]
     br_config[LB.PORT_SUBTREE][0][Port.VLAN_SUBTREE] = deepcopy(
-        SLAVE1_VLAN_CONFIG_ACCESS
+        PORT1_VLAN_CONFIG_ACCESS
     )
     br_config[LB.PORT_SUBTREE][1][Port.VLAN_SUBTREE] = deepcopy(
-        SLAVE2_VLAN_CONFIG_TRUNK
+        PORT2_VLAN_CONFIG_TRUNK
     )
     return iface_info

@@ -41,7 +41,7 @@ class VxlanIface(BaseIface):
         return True
 
     @property
-    def can_have_ip_when_enslaved(self):
+    def can_have_ip_as_port(self):
         return False
 
     def pre_edit_validation_and_cleanup(self):
