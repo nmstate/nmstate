@@ -51,9 +51,9 @@ class ConnectionSetting:
 
         self._setting = new
 
-    def set_master(self, master, port_type):
-        if master is not None:
-            self._setting.props.master = master
+    def set_controller(self, controller, port_type):
+        if controller is not None:
+            self._setting.props.master = controller
             self._setting.props.slave_type = port_type
 
     def set_profile_name(self, con_name):

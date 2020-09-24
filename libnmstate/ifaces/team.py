@@ -33,7 +33,7 @@ class TeamIface(BaseIface):
         return [p[Team.Port.NAME] for p in ports]
 
     @property
-    def is_master(self):
+    def is_controller(self):
         return True
 
     @property

@@ -56,10 +56,10 @@ class TestLinuxBridgeIface:
             == LinuxBridgeIface(iface_info2).state_for_verify()
         )
 
-    def test_is_master(self):
+    def test_is_controller(self):
         iface = LinuxBridgeIface(gen_bridge_iface_info())
 
-        assert iface.is_master
+        assert iface.is_controller
 
     def test_is_virtual(self):
         iface = LinuxBridgeIface(gen_bridge_iface_info())
@@ -226,8 +226,8 @@ class TestLinuxBridgeIface:
         port1_iface = ifaces[PORT1_IFACE_NAME]
         port2_iface = ifaces[PORT2_IFACE_NAME]
 
-        assert port1_iface.master == LINUX_BRIDGE_IFACE_NAME
-        assert port2_iface.master == LINUX_BRIDGE_IFACE_NAME
+        assert port1_iface.controller == LINUX_BRIDGE_IFACE_NAME
+        assert port2_iface.controller == LINUX_BRIDGE_IFACE_NAME
         assert (
             port1_iface.to_dict()[LinuxBridgeIface.BRPORT_OPTIONS_METADATA]
             == PORT1_PORT_CONFIG
@@ -257,8 +257,8 @@ class TestLinuxBridgeIface:
         br_iface.pre_edit_validation_and_cleanup()
         port1_iface = ifaces[PORT1_IFACE_NAME]
         port2_iface = ifaces[PORT2_IFACE_NAME]
-        assert port1_iface.master is None
-        assert port2_iface.master is None
+        assert port1_iface.controller is None
+        assert port2_iface.controller is None
         assert (
             LinuxBridgeIface.BRPORT_OPTIONS_METADATA
             not in port1_iface.to_dict()
@@ -408,8 +408,8 @@ class TestLinuxBridgeIface:
         port1_iface = ifaces[PORT1_IFACE_NAME]
         port2_iface = ifaces[PORT2_IFACE_NAME]
 
-        assert port1_iface.master is None
-        assert port2_iface.master is None
+        assert port1_iface.controller is None
+        assert port2_iface.controller is None
         assert (
             LinuxBridgeIface.BRPORT_OPTIONS_METADATA
             not in port1_iface.to_dict()

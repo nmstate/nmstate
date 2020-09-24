@@ -232,7 +232,7 @@ def _create_bridge_iface(ctx, iface_bridge_settings):
 def _get_iface_port_settings(port_state, port_con_profile):
     con_setting = nm.connection.ConnectionSetting()
     con_setting.import_by_profile(port_con_profile.profile)
-    con_setting.set_master(BRIDGE0, "bridge")
+    con_setting.set_controller(BRIDGE0, "bridge")
 
     bridge_port_setting = nm.bridge.create_port_setting(
         port_state, port_con_profile.profile

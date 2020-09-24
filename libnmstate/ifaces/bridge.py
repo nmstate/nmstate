@@ -31,7 +31,7 @@ class BridgeIface(BaseIface):
     BRPORT_OPTIONS_METADATA = "_brport_options"
 
     @property
-    def is_master(self):
+    def is_controller(self):
         return True
 
     @property

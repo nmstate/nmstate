@@ -168,13 +168,13 @@ class ActiveConnection:
         self._nmdev = nmdev
 
 
-def _is_device_master_type(nmdev):
+def _is_device_controller_type(nmdev):
     if nmdev:
-        is_master_type = (
+        is_controller_type = (
             GObject.type_is_a(nmdev, NM.DeviceBond)
             or GObject.type_is_a(nmdev, NM.DeviceBridge)
             or GObject.type_is_a(nmdev, NM.DeviceTeam)
             or GObject.type_is_a(nmdev, NM.DeviceOvsBridge)
         )
-        return is_master_type
+        return is_controller_type
     return False

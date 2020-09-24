@@ -157,7 +157,7 @@ def _attach_port_to_bond(ctx, bond, port):
 def _create_connection_setting(bond, port_con_profile):
     con_setting = nm.connection.ConnectionSetting()
     con_setting.import_by_profile(port_con_profile.profile)
-    con_setting.set_master(bond, InterfaceType.BOND)
+    con_setting.set_controller(bond, InterfaceType.BOND)
 
     return con_setting.setting
 

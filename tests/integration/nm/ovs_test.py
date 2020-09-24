@@ -205,7 +205,7 @@ def _attach_port_to_bridge(ctx, port_state):
     elif _is_internal_interface(ctx, port_name):
         iface_name = port_name
         internal_profile = _create_internal_interface(
-            ctx, iface_name, master_name=port_profile_name
+            ctx, iface_name, controller_name=port_profile_name
         )
     else:
         _connect_interface(ctx, port_profile_name, port_state)
@@ -220,8 +220,10 @@ def _is_internal_interface(ctx, iface_name):
     return dev.get_device_type() == NM.DeviceType.OVS_INTERFACE
 
 
-def _create_internal_interface(ctx, iface_name, master_name):
-    iface_settings = _create_internal_iface_setting(iface_name, master_name)
+def _create_internal_interface(ctx, iface_name, controller_name):
+    iface_settings = _create_internal_iface_setting(
+        iface_name, controller_name
+    )
     iface_con_profile = nm.profile.NmProfile(ctx, True)
     simple_conn = nm.connection.create_new_simple_connection(iface_settings)
     iface_con_profile._simple_conn = simple_conn
@@ -276,10 +278,12 @@ def _create_bridge_iface(ctx, iface_bridge_settings):
     return br_con_profile
 
 
-def _create_iface_settings(iface_con_profile, port_master_name):
+def _create_iface_settings(iface_con_profile, port_controller_name):
     iface_con_setting = nm.connection.ConnectionSetting()
     iface_con_setting.import_by_profile(iface_con_profile.profile)
-    iface_con_setting.set_master(port_master_name, InterfaceType.OVS_PORT)
+    iface_con_setting.set_controller(
+        port_controller_name, InterfaceType.OVS_PORT
+    )
     return (iface_con_setting.setting,)
 
 
@@ -290,19 +294,19 @@ def _create_port_setting(port_state, port_profile_name):
         iface_name=port_profile_name,
         iface_type=InterfaceType.OVS_PORT,
     )
-    iface_con_setting.set_master(BRIDGE0, InterfaceType.OVS_BRIDGE)
+    iface_con_setting.set_controller(BRIDGE0, InterfaceType.OVS_BRIDGE)
     bridge_port_setting = nm.ovs.create_port_setting(port_state)
     return iface_con_setting.setting, bridge_port_setting
 
 
-def _create_internal_iface_setting(iface_name, master_name):
+def _create_internal_iface_setting(iface_name, controller_name):
     iface_con_setting = nm.connection.ConnectionSetting()
     iface_con_setting.create(
         con_name=iface_name,
         iface_name=iface_name,
         iface_type=InterfaceType.OVS_INTERFACE,
     )
-    iface_con_setting.set_master(master_name, InterfaceType.OVS_PORT)
+    iface_con_setting.set_controller(controller_name, InterfaceType.OVS_PORT)
     bridge_internal_iface_setting = nm.ovs.create_interface_setting(None)
     ipv4_setting = nm.ipv4.create_setting({}, None)
     ipv6_setting = nm.ipv6.create_setting({}, None)

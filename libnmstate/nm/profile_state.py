@@ -308,7 +308,7 @@ def is_activated(nm_ac, nm_dev):
         ):
             # For interface meet any condition below will be
             # treated as activated when reach IP_CONFIG state:
-            #   * Is master device.
+            #   * Is controller device.
             #   * DHCPv4 enabled with IP6_READY flag.
             #   * DHCPv6/Autoconf with IP4_READY flag.
             #   * DHCPv4 enabled with DHCPv6/Autoconf enabled.

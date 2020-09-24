@@ -119,8 +119,8 @@ class IPState:
 
 
 class BaseIface:
-    MASTER_METADATA = "_master"
-    MASTER_TYPE_METADATA = "_master_type"
+    CONTROLLER_METADATA = "_controller"
+    CONTROLLER_TYPE_METADATA = "_controller_type"
     DNS_METADATA = "_dns"
     ROUTES_METADATA = "_routes"
     ROUTE_RULES_METADATA = "_route_rules"
@@ -232,12 +232,12 @@ class BaseIface:
             ip_state = IPState(family, self._origin_info.get(family, {}))
             if (
                 ip_state.is_enabled
-                and self.master
+                and self.controller
                 and not self.can_have_ip_as_port
             ):
                 raise NmstateValueError(
-                    f"Interface {self.name} is port of {self.master_type} "
-                    f"interface {self.master} which does not allow "
+                    f"Interface {self.name} is port of {self.controller_type} "
+                    f"interface {self.controller} which does not allow "
                     f"port to have {family} enabled"
                 )
 
@@ -273,29 +273,29 @@ class BaseIface:
         self.raw[Interface.STATE] = InterfaceState.UP
 
     @property
-    def is_master(self):
+    def is_controller(self):
         return False
 
-    def set_master(self, master_iface_name, master_type):
-        self._info[BaseIface.MASTER_METADATA] = master_iface_name
-        self._info[BaseIface.MASTER_TYPE_METADATA] = master_type
+    def set_controller(self, controller_iface_name, controller_type):
+        self._info[BaseIface.CONTROLLER_METADATA] = controller_iface_name
+        self._info[BaseIface.CONTROLLER_TYPE_METADATA] = controller_type
         if not self.can_have_ip_as_port:
             for family in (Interface.IPV4, Interface.IPV6):
                 self._info[family] = {InterfaceIP.ENABLED: False}
 
     @property
-    def master(self):
-        return self._info.get(BaseIface.MASTER_METADATA)
+    def controller(self):
+        return self._info.get(BaseIface.CONTROLLER_METADATA)
 
     @property
-    def master_type(self):
-        return self._info.get(BaseIface.MASTER_TYPE_METADATA)
+    def controller_type(self):
+        return self._info.get(BaseIface.CONTROLLER_TYPE_METADATA)
 
     def gen_metadata(self, ifaces):
-        if self.is_master and not self.is_absent:
+        if self.is_controller and not self.is_absent:
             for port_name in self.port:
                 port_iface = ifaces[port_name]
-                port_iface.set_master(self.name, self.type)
+                port_iface.set_controller(self.name, self.type)
 
     def update(self, info):
         self._info.update(info)
@@ -349,11 +349,11 @@ class BaseIface:
         return state
 
     def remove_port(self, port_name):
-        if not self.is_master:
+        if not self.is_controller:
             class_name = self.__class__.__name__
             raise NmstateInternalError(
                 f"Invalid invoke of {class_name}.remove_port({port_name}) "
-                f"as {class_name} is not a master interface"
+                f"as {class_name} is not a controller interface"
             )
 
     @property
@@ -362,8 +362,9 @@ class BaseIface:
 
     def create_virtual_port(self, port_name):
         """
-        When master interface has non-exist port interface, master should
-        create virtual port for this name if possible, or else return None
+        When controller interface has non-exist port interface, controller
+        should create virtual port for this name if possible, or else return
+        None
         """
         return None
 

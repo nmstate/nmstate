@@ -49,9 +49,9 @@ def test_create_setting(NM_mock):
     )
 
 
-def test_set_master_setting():
+def test_set_controller_setting():
     con_setting = nm.connection.ConnectionSetting(mock.MagicMock())
-    con_setting.set_master("master0", "slave-type")
+    con_setting.set_controller("controller0", "slave-type")
 
-    assert con_setting.setting.props.master == "master0"
+    assert con_setting.setting.props.master == "controller0"
     assert con_setting.setting.props.slave_type == "slave-type"

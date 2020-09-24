@@ -50,7 +50,7 @@ class BondIface(BaseIface):
         return self.raw.get(Bond.CONFIG_SUBTREE, {}).get(Bond.PORT, [])
 
     @property
-    def is_master(self):
+    def is_controller(self):
         return True
 
     @property
