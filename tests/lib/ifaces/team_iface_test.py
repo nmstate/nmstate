@@ -45,8 +45,8 @@ class TestTeamIface:
     def test_team_is_virtual(self):
         assert TeamIface(self._gen_iface_info()).is_virtual
 
-    def test_team_is_master(self):
-        assert TeamIface(self._gen_iface_info()).is_master
+    def test_team_is_controller(self):
+        assert TeamIface(self._gen_iface_info()).is_controller
 
     def test_team_sort_port(self):
         iface1_info = self._gen_iface_info()

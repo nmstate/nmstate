@@ -33,8 +33,8 @@ from .common import NM
 
 PORT_PROFILE_PREFIX = "ovs-port-"
 
-MASTER_TYPE_METADATA = "_master_type"
-MASTER_METADATA = "_master"
+CONTROLLER_TYPE_METADATA = "_controller_type"
+CONTROLLER_METADATA = "_controller"
 
 NM_OVS_VLAN_MODE_MAP = {
     "trunk": OB.Port.Vlan.Mode.TRUNK,
@@ -140,9 +140,9 @@ def is_ovs_interface_type_id(type_id):
 def get_port_by_port(nmdev):
     active_con = connection.get_device_active_connection(nmdev)
     if active_con:
-        master = active_con.get_master()
-        if master and is_ovs_port_type_id(master.get_device_type()):
-            return master
+        controller = active_con.get_controller()
+        if controller and is_ovs_port_type_id(controller.get_device_type()):
+            return controller
     return None
 
 
@@ -282,13 +282,15 @@ def _get_bridge_options(context, bridge_device):
     return bridge_options
 
 
-def _get_port_profiles(master_device, devices_info):
+def _get_port_profiles(controller_device, devices_info):
     port_profiles = []
     for dev, _ in devices_info:
         active_con = connection.get_device_active_connection(dev)
         if active_con:
-            master = active_con.props.master
-            if master and (master.get_iface() == master_device.get_iface()):
+            controller = active_con.props.master
+            if controller and (
+                controller.get_iface() == controller_device.get_iface()
+            ):
                 port_profiles.append(active_con.props.connection)
     return port_profiles
 
@@ -303,8 +305,8 @@ def create_ovs_proxy_iface_info(iface):
         public state of the system, but internal to the NM provider.
         """
     iface_info = iface.to_dict()
-    master_type = iface_info.get(MASTER_TYPE_METADATA)
-    if master_type != InterfaceType.OVS_BRIDGE:
+    controller_type = iface_info.get(CONTROLLER_TYPE_METADATA)
+    if controller_type != InterfaceType.OVS_BRIDGE:
         return None
     port_opts_metadata = iface_info.get(BridgeIface.BRPORT_OPTIONS_METADATA)
     if port_opts_metadata is None:
@@ -313,7 +315,7 @@ def create_ovs_proxy_iface_info(iface):
         port_opts_metadata, iface, iface_info
     )
     # The "visible" port/interface needs to point to the port profile
-    iface.set_master(
+    iface.set_controller(
         port_iface_desired_state[Interface.NAME], InterfaceType.OVS_PORT
     )
 
@@ -331,6 +333,6 @@ def _create_ovs_port_iface_desired_state(port_options, iface, iface_info):
         Interface.TYPE: InterfaceType.OVS_PORT,
         Interface.STATE: iface_info[Interface.STATE],
         OB.OPTIONS_SUBTREE: port_options,
-        MASTER_METADATA: iface_info[MASTER_METADATA],
-        MASTER_TYPE_METADATA: iface_info[MASTER_TYPE_METADATA],
+        CONTROLLER_METADATA: iface_info[CONTROLLER_METADATA],
+        CONTROLLER_TYPE_METADATA: iface_info[CONTROLLER_TYPE_METADATA],
     }

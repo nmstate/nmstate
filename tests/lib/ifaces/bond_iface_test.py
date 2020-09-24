@@ -181,8 +181,8 @@ class TestBondIface:
     def test_get_port(self):
         assert BondIface(self._gen_iface_info()).port == TEST_PORT
 
-    def test_is_master(self):
-        assert BondIface(self._gen_iface_info()).is_master
+    def test_is_controller(self):
+        assert BondIface(self._gen_iface_info()).is_controller
 
     def test_is_virtual(self):
         assert BondIface(self._gen_iface_info()).is_virtual
@@ -212,8 +212,8 @@ class TestBondIface:
         port1_iface = ifaces[PORT1_IFACE_NAME]
         port2_iface = ifaces[PORT2_IFACE_NAME]
 
-        assert port1_iface.master == FOO_IFACE_NAME
-        assert port2_iface.master == FOO_IFACE_NAME
+        assert port1_iface.controller == FOO_IFACE_NAME
+        assert port2_iface.controller == FOO_IFACE_NAME
         assert bond_iface.is_bond_mode_changed
 
     def test_pre_edit_clean_up_discard_bond_options_when_mode_chagned(self):

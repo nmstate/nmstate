@@ -68,9 +68,9 @@ ACTION_DEACTIVATE = "deactivate"
 ACTION_DELETE_DEV_PROFILES = "delete-dev-profiles"
 ACTION_DELETE_DEV = "delete-dev"
 
-MASTER_METADATA = "_master"
-MASTER_TYPE_METADATA = "_master_type"
-MASTER_IFACE_TYPES = (
+CONTROLLER_METADATA = "_controller"
+CONTROLLER_TYPE_METADATA = "_controller_type"
+CONTROLLER_IFACE_TYPES = (
     InterfaceType.OVS_BRIDGE,
     bond.BOND_TYPE,
     LB.TYPE,
@@ -104,9 +104,9 @@ class NmProfiles:
         groups = {
             "profiles_to_deactivate_beforehand": set(),
             "profiles_to_delete": set(),
-            "new_master_not_as_port": set(),
+            "new_controller_not_as_port": set(),
             "new_ifaces_to_activate": set(),
-            "master_ifaces_to_edit": set(),
+            "controller_ifaces_to_edit": set(),
             "new_ovs_port_to_activate": set(),
             "new_ovs_interface_to_activate": set(),
             "ifaces_to_edit": set(),
@@ -404,12 +404,12 @@ class NmProfile:
 
         lldp.apply_lldp_setting(con_setting, self.iface_info)
 
-        master = self.iface_info.get(MASTER_METADATA)
-        master_type = self.iface_info.get(MASTER_TYPE_METADATA)
-        if master_type == LB.TYPE:
-            self.iface_info[MASTER_TYPE_METADATA] = bridge.BRIDGE_TYPE
-            master_type = bridge.BRIDGE_TYPE
-        con_setting.set_master(master, master_type)
+        controller = self.iface_info.get(CONTROLLER_METADATA)
+        controller_type = self.iface_info.get(CONTROLLER_TYPE_METADATA)
+        if controller_type == LB.TYPE:
+            self.iface_info[CONTROLLER_TYPE_METADATA] = bridge.BRIDGE_TYPE
+            controller_type = bridge.BRIDGE_TYPE
+        con_setting.set_controller(controller, controller_type)
         settings.append(con_setting.setting)
 
         # Only apply wired/ethernet configuration based on original desire
@@ -460,7 +460,7 @@ class NmProfile:
         bridge_port_options = self.iface_info.get(
             BridgeIface.BRPORT_OPTIONS_METADATA
         )
-        if bridge_port_options and master_type == bridge.BRIDGE_TYPE:
+        if bridge_port_options and controller_type == bridge.BRIDGE_TYPE:
             settings.append(
                 bridge.create_port_setting(
                     bridge_port_options, self._remote_conn
@@ -511,10 +511,10 @@ class NmProfile:
             if self.iface.state == InterfaceState.UP:
                 self._actions_needed.append(ACTION_ACTIVATE)
                 if (
-                    self.iface.type in MASTER_IFACE_TYPES
-                    and not self.iface_info.get(MASTER_METADATA)
+                    self.iface.type in CONTROLLER_IFACE_TYPES
+                    and not self.iface_info.get(CONTROLLER_METADATA)
                 ):
-                    groups["new_master_not_as_port"].add(self)
+                    groups["new_controller_not_as_port"].add(self)
                 elif self.iface.type == InterfaceType.OVS_INTERFACE:
                     groups["new_ovs_interface_to_activate"].add(self)
                 elif self.iface.type == InterfaceType.OVS_PORT:
@@ -552,8 +552,8 @@ class NmProfile:
                         )
                         groups["profiles_to_deactivate_beforehand"].add(self)
                 self._actions_needed.append(ACTION_MODIFY)
-                if self.iface.type in MASTER_IFACE_TYPES:
-                    groups["master_ifaces_to_edit"].add(self)
+                if self.iface.type in CONTROLLER_IFACE_TYPES:
+                    groups["controller_ifaces_to_edit"].add(self)
                 else:
                     groups["ifaces_to_edit"].add(self)
             elif self.iface.state in (
@@ -653,7 +653,7 @@ def _mark_nm_external_subordinate_changed(context, net_state):
     that subordinate should be marked as changed for NM to take over.
     """
     for iface in net_state.ifaces.values():
-        if iface.type in MASTER_IFACE_TYPES:
+        if iface.type in CONTROLLER_IFACE_TYPES:
             for subordinate in iface.port:
                 nmdev = context.get_nm_dev(subordinate)
                 if nmdev:

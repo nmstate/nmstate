@@ -110,7 +110,7 @@ class Ifaces:
 
     def _create_virtual_port(self):
         """
-        Certain master interface could have virtual port which does not
+        Certain controller interface could have virtual port which does not
         defined in desired state. Create it before generating metadata.
         For example, OVS bridge could have port defined as OVS internal
         interface which could be created without defining in desire state but
@@ -118,7 +118,7 @@ class Ifaces:
         """
         new_ifaces = []
         for iface in self._ifaces.values():
-            if iface.is_up and iface.is_master:
+            if iface.is_up and iface.is_controller:
                 for port_name in iface.port:
                     if port_name not in self._ifaces.keys():
                         new_port = iface.create_virtual_port(port_name)
@@ -130,7 +130,7 @@ class Ifaces:
     def _pre_edit_validation_and_cleanup(self):
         self._validate_over_booked_port()
         self._validate_vlan_mtu()
-        self._handle_master_port_list_change()
+        self._handle_controller_port_list_change()
         self._match_child_iface_state_with_parent()
         self._mark_orphen_as_absent()
         self._bring_port_up_if_not_in_desire()
@@ -139,11 +139,11 @@ class Ifaces:
 
     def _bring_port_up_if_not_in_desire(self):
         """
-        When port been included in master, automactially set it as state UP
+        When port been included in controller, automactially set it as state UP
         if not defiend in desire state
         """
         for iface in self._ifaces.values():
-            if iface.is_up and iface.is_master:
+            if iface.is_up and iface.is_controller:
                 for port_name in iface.port:
                     port_iface = self._ifaces[port_name]
                     if not port_iface.is_desired and not port_iface.is_up:
@@ -197,15 +197,15 @@ class Ifaces:
                         f"MTU({base_iface.mtu})"
                     )
 
-    def _handle_master_port_list_change(self):
+    def _handle_controller_port_list_change(self):
         """
-         * Mark port interface as changed if master removed.
-         * Mark port interface as changed if port list of master changed.
-         * Mark port interface as changed if port config changed when master
-           said so.
+         * Mark port interface as changed if controller removed.
+         * Mark port interface as changed if port list of controller changed.
+         * Mark port interface as changed if port config changed when
+           controller said so.
         """
         for iface in self._ifaces.values():
-            if not iface.is_desired or not iface.is_master:
+            if not iface.is_desired or not iface.is_controller:
                 continue
             des_port = set(iface.port)
             if iface.is_absent:
@@ -294,11 +294,11 @@ class Ifaces:
 
     def _remove_unknown_interface_type_port(self):
         """
-        When master containing port with unknown interface type, they should
-        be removed from master port list before verifying.
+        When controller containing port with unknown interface type, they
+        should be removed from controller port list before verifying.
         """
         for iface in self._ifaces.values():
-            if iface.is_up and iface.is_master and iface.port:
+            if iface.is_up and iface.is_controller and iface.port:
                 for port_name in iface.port:
                     port_iface = self._ifaces[port_name]
                     if port_iface.type == InterfaceType.UNKNOWN:
@@ -417,26 +417,29 @@ class Ifaces:
 
     def _validate_over_booked_port(self):
         """
-        Check whether any port is used by more than one master
+        Check whether any port is used by more than one controller
         """
-        port_master_map = {}
+        port_controller_map = {}
         for iface in self._ifaces.values():
             for port_name in iface.port:
-                cur_master = port_master_map.get(port_name)
-                if cur_master:
-                    cur_master_iface = self._ifaces.get(cur_master)
-                    if cur_master_iface and not cur_master_iface.is_absent:
+                cur_controller = port_controller_map.get(port_name)
+                if cur_controller:
+                    cur_controller_iface = self._ifaces.get(cur_controller)
+                    if (
+                        cur_controller_iface
+                        and not cur_controller_iface.is_absent
+                    ):
                         raise NmstateValueError(
                             f"Interface {iface.name} port {port_name} is "
-                            f"already as port for interface {cur_master}"
+                            f"already as port for interface {cur_controller}"
                         )
                 else:
-                    port_master_map[port_name] = iface.name
+                    port_controller_map[port_name] = iface.name
 
     def _remove_ignore_interfaces(self, ignored_iface_names):
         # Remove ignored port
         for iface in self._ifaces.values():
-            if iface.is_up and iface.is_master and iface.port:
+            if iface.is_up and iface.is_controller and iface.port:
                 for port_name in iface.port:
                     if port_name in ignored_iface_names:
                         iface.remove_port(port_name)

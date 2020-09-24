@@ -588,14 +588,16 @@ def test_bridge_with_unmanaged_ports(bridge_unmanaged_port):
 
 
 @contextmanager
-def dummy0_as_port(master):
+def dummy0_as_port(controller):
     exec_cmd(("ip", "link", "add", "dummy0", "type", "dummy"), check=True)
     try:
         exec_cmd(("ip", "link", "set", "dummy0", "up"), check=True)
         exec_cmd(
             ("nmcli", "dev", "set", "dummy0", "managed", "no"), check=True
         )
-        exec_cmd(("ip", "link", "set", "dummy0", "master", master), check=True)
+        exec_cmd(
+            ("ip", "link", "set", "dummy0", "master", controller), check=True
+        )
         yield
     finally:
         exec_cmd(("ip", "link", "delete", "dummy0"))

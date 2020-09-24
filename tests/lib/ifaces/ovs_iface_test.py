@@ -95,10 +95,10 @@ class TestOvsBrigeIface:
         }
         return iface_info
 
-    def test_is_master(self):
+    def test_is_controller(self):
         iface = OvsBridgeIface(gen_ovs_bridge_info(), True)
 
-        assert iface.is_master
+        assert iface.is_controller
 
     def test_is_virtual(self):
         iface = OvsBridgeIface(gen_ovs_bridge_info(), True)
@@ -154,8 +154,8 @@ class TestOvsBrigeIface:
         port1_iface = ifaces[PORT1_IFACE_NAME]
         port2_iface = ifaces[PORT2_IFACE_NAME]
 
-        assert port1_iface.master == OVS_BRIDGE_IFACE_NAME
-        assert port2_iface.master == OVS_BRIDGE_IFACE_NAME
+        assert port1_iface.controller == OVS_BRIDGE_IFACE_NAME
+        assert port2_iface.controller == OVS_BRIDGE_IFACE_NAME
         assert (
             port1_iface.to_dict()[OvsBridgeIface.BRPORT_OPTIONS_METADATA]
             == BOND_PORT_CONFIG
@@ -180,7 +180,7 @@ class TestOvsBrigeIface:
         assert ovs_iface.type == InterfaceType.OVS_INTERFACE
         assert ovs_iface.parent == OVS_BRIDGE_IFACE_NAME
         assert ovs_iface.is_virtual
-        assert ovs_iface.master == OVS_BRIDGE_IFACE_NAME
+        assert ovs_iface.controller == OVS_BRIDGE_IFACE_NAME
 
     def test_validate_ovs_bond_with_single_port(self):
         iface_info = self._gen_iface_info_with_bond()

@@ -154,7 +154,7 @@ class TestIfaces:
         ifaces = Ifaces(des_iface_infos, [cur_iface_info])
         assert cur_iface_info not in ifaces.values()
 
-    def test_mark_port_as_changed_if_master_marked_as_absent(self):
+    def test_mark_port_as_changed_if_controller_marked_as_absent(self):
         cur_iface_infos = self._gen_iface_infos()
         cur_iface_infos[0][Interface.NAME] = PORT1_IFACE_NAME
         cur_iface_infos[1][Interface.NAME] = PORT2_IFACE_NAME
@@ -166,18 +166,18 @@ class TestIfaces:
 
         port_iface1 = ifaces[PORT1_IFACE_NAME]
         port_iface2 = ifaces[PORT2_IFACE_NAME]
-        master_iface = ifaces[LINUX_BRIDGE_IFACE_NAME]
+        controller_iface = ifaces[LINUX_BRIDGE_IFACE_NAME]
 
         assert port_iface1.is_changed
         assert port_iface2.is_changed
         assert port_iface1.is_up
         assert port_iface2.is_up
-        assert port_iface1.master is None
-        assert port_iface2.master is None
-        assert master_iface.is_desired
-        assert master_iface.is_absent
+        assert port_iface1.controller is None
+        assert port_iface2.controller is None
+        assert controller_iface.is_desired
+        assert controller_iface.is_absent
 
-    def test_mark_port_as_changed_when_master_changed_port_list(self):
+    def test_mark_port_as_changed_when_controller_changed_port_list(self):
         cur_iface_infos = self._gen_iface_infos()
         cur_iface_infos[0][Interface.NAME] = PORT1_IFACE_NAME
         cur_iface_infos[1][Interface.NAME] = PORT2_IFACE_NAME
@@ -191,17 +191,17 @@ class TestIfaces:
 
         port_iface1 = ifaces[PORT1_IFACE_NAME]
         port_iface2 = ifaces[PORT2_IFACE_NAME]
-        master_iface = ifaces[LINUX_BRIDGE_IFACE_NAME]
+        controller_iface = ifaces[LINUX_BRIDGE_IFACE_NAME]
 
         assert not port_iface1.is_changed
         assert port_iface2.is_changed
         assert port_iface1.is_up
         assert port_iface2.is_up
-        assert port_iface1.master == LINUX_BRIDGE_IFACE_NAME
-        assert port_iface2.master is None
-        assert master_iface.is_desired
+        assert port_iface1.controller == LINUX_BRIDGE_IFACE_NAME
+        assert port_iface2.controller is None
+        assert controller_iface.is_desired
 
-    def test_mark_port_as_changed_when_a_port_to_new_master(self):
+    def test_mark_port_as_changed_when_a_port_to_new_controller(self):
         cur_iface_infos = self._gen_iface_infos()
         cur_iface_infos[0][Interface.NAME] = PORT1_IFACE_NAME
         cur_iface_infos[1][Interface.NAME] = PORT2_IFACE_NAME
@@ -211,17 +211,17 @@ class TestIfaces:
 
         port_iface1 = ifaces[PORT1_IFACE_NAME]
         port_iface2 = ifaces[PORT2_IFACE_NAME]
-        master_iface = ifaces[LINUX_BRIDGE_IFACE_NAME]
+        controller_iface = ifaces[LINUX_BRIDGE_IFACE_NAME]
 
         assert port_iface1.is_changed
         assert port_iface2.is_changed
         assert port_iface1.is_up
         assert port_iface2.is_up
-        assert port_iface1.master == LINUX_BRIDGE_IFACE_NAME
-        assert port_iface2.master == LINUX_BRIDGE_IFACE_NAME
-        assert master_iface.is_desired
+        assert port_iface1.controller == LINUX_BRIDGE_IFACE_NAME
+        assert port_iface2.controller == LINUX_BRIDGE_IFACE_NAME
+        assert controller_iface.is_desired
 
-    def test_mark_port_as_changed_when_master_changed_port_config(self):
+    def test_mark_port_as_changed_when_controller_changed_port_config(self):
         cur_iface_infos = self._gen_iface_infos()
         cur_iface_infos[0][Interface.NAME] = PORT1_IFACE_NAME
         cur_iface_infos[1][Interface.NAME] = PORT2_IFACE_NAME
@@ -235,15 +235,15 @@ class TestIfaces:
 
         port_iface1 = ifaces[PORT1_IFACE_NAME]
         port_iface2 = ifaces[PORT2_IFACE_NAME]
-        master_iface = ifaces[LINUX_BRIDGE_IFACE_NAME]
+        controller_iface = ifaces[LINUX_BRIDGE_IFACE_NAME]
 
         assert port_iface1.is_changed
         assert not port_iface2.is_changed
         assert port_iface1.is_up
         assert port_iface2.is_up
-        assert port_iface1.master == LINUX_BRIDGE_IFACE_NAME
-        assert port_iface2.master == LINUX_BRIDGE_IFACE_NAME
-        assert master_iface.is_desired
+        assert port_iface1.controller == LINUX_BRIDGE_IFACE_NAME
+        assert port_iface2.controller == LINUX_BRIDGE_IFACE_NAME
+        assert controller_iface.is_desired
 
     def test_mark_child_as_absent_when_parent_is_marked_as_absent(self):
         cur_iface_infos = self._gen_iface_infos()

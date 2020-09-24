@@ -107,7 +107,7 @@ class OvsBridgeIface(BridgeIface):
             }
         )
         port_iface.mark_as_changed()
-        port_iface.set_master(self.name, self.type)
+        port_iface.set_controller(self.name, self.type)
         port_iface.parent = self.name
         return port_iface
 
