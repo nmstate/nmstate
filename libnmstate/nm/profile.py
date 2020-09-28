@@ -124,6 +124,7 @@ class NmProfiles:
     def _prepare_state_for_profiles(self, net_state):
         _preapply_dns_fix_for_profiles(self._ctx, net_state)
         _mark_nm_external_subordinate_changed(self._ctx, net_state)
+        _mark_mode_changed_bond_child_interface_as_changed(net_state)
 
         proxy_ifaces = {}
         for iface in net_state.ifaces.values():
@@ -661,3 +662,22 @@ def _mark_nm_external_subordinate_changed(context, net_state):
                         subordinate_iface = net_state.ifaces.get(subordinate)
                         if subordinate_iface:
                             subordinate_iface.mark_as_changed()
+
+
+def _mark_mode_changed_bond_child_interface_as_changed(net_state):
+    """
+    When bond mode changed, due to NetworkManager bug
+    https://bugzilla.redhat.com/show_bug.cgi?id=1881318
+    the bond child will be deactivated.
+    This is workaround would be manually activate the childs.
+    """
+    for iface in net_state.ifaces.values():
+        if not iface.parent:
+            continue
+        parent_iface = net_state.ifaces[iface.parent]
+        if (
+            parent_iface.is_up
+            and parent_iface.type == InterfaceType.BOND
+            and parent_iface.is_bond_mode_changed
+        ):
+            iface.mark_as_changed()

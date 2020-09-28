@@ -33,6 +33,7 @@ from libnmstate.schema import InterfaceType
 from libnmstate.schema import InterfaceIP
 from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
+from libnmstate.schema import VLAN
 
 from .testlib import assertlib
 from .testlib import cmdlib
@@ -55,6 +56,9 @@ IPV4_ADDRESS1 = "192.0.2.251"
 
 MAC0 = "02:FF:FF:FF:FF:00"
 MAC1 = "02:FF:FF:FF:FF:01"
+
+TEST_VLAN_ID = 200
+TEST_VLAN = f"{BOND99}.{TEST_VLAN_ID}"
 
 BOND99_YAML_BASE = """
 interfaces:
@@ -879,3 +883,39 @@ def test_remove_mode4_bond_and_create_mode5_with_the_same_port(
         BOND99, port, extra_iface_state=extra_iface_state
     ) as state:
         assertlib.assert_state_match(state)
+
+
+@pytest.fixture
+def bond99_with_ports_and_vlans(bond99_with_2_port):
+    desired_state = bond99_with_2_port
+    vlan_iface_info = {
+        Interface.NAME: TEST_VLAN,
+        Interface.TYPE: InterfaceType.VLAN,
+        VLAN.CONFIG_SUBTREE: {VLAN.ID: TEST_VLAN_ID, VLAN.BASE_IFACE: BOND99},
+    }
+    libnmstate.apply({Interface.KEY: [vlan_iface_info]})
+    desired_state[Interface.KEY].append(vlan_iface_info)
+    yield desired_state
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: TEST_VLAN,
+                    Interface.STATE: InterfaceState.ABSENT,
+                },
+            ]
+        }
+    )
+
+
+@pytest.mark.tier1
+def test_change_bond_mode_does_not_remove_child(bond99_with_ports_and_vlans,):
+    # Due to bug https://bugzilla.redhat.com/show_bug.cgi?id=1881318
+    # Applying twice the desire state is the key to reproduce the problem
+    desired_state = bond99_with_ports_and_vlans
+    libnmstate.apply(desired_state)
+
+    bond_iface_info = desired_state[Interface.KEY][0]
+    bond_iface_info[Bond.CONFIG_SUBTREE][Bond.MODE] = BondMode.ACTIVE_BACKUP
+    libnmstate.apply({Interface.KEY: [bond_iface_info]})
+    assertlib.assert_state_match(desired_state)
