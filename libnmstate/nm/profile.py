@@ -32,6 +32,7 @@ from libnmstate.schema import LinuxBridge as LB
 from libnmstate.schema import OVSBridge as OvsB
 from libnmstate.schema import OVSInterface
 from libnmstate.schema import Team
+from libnmstate.schema import VRF
 from libnmstate.ifaces.base_iface import BaseIface
 from libnmstate.ifaces.bond import BondIface
 from libnmstate.ifaces.bridge import BridgeIface
@@ -58,6 +59,7 @@ from .common import NM
 from .device import mark_device_as_managed
 from .device import list_devices
 from .device import is_externally_managed
+from .vrf import create_vrf_setting
 
 
 ACTION_DEACTIVATE_BEFOREHAND = "deactivate-beforehand"
@@ -487,6 +489,11 @@ class NmProfile:
         team_setting = team.create_setting(self.iface_info, self._remote_conn)
         if team_setting:
             settings.append(team_setting)
+
+        if VRF.CONFIG_SUBTREE in self.iface_info:
+            settings.append(
+                create_vrf_setting(self.iface_info[VRF.CONFIG_SUBTREE])
+            )
 
         return settings
 

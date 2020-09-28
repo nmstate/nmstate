@@ -35,6 +35,7 @@ from libnmstate.schema import OVSInterface
 from libnmstate.schema import Route
 from libnmstate.schema import RouteRule
 from libnmstate.schema import Team
+from libnmstate.schema import VRF
 from libnmstate.schema import VXLAN
 
 
@@ -794,3 +795,20 @@ class TestOVSInterface:
         )
 
         libnmstate.validator.schema_validate(default_data)
+
+
+class TestIfaceTypeVrf:
+    def _gen_base_vrf_iface_info(self):
+        return {
+            Interface.NAME: "vrf0",
+            Interface.TYPE: InterfaceType.VRF,
+            VRF.CONFIG_SUBTREE: {
+                VRF.PORT_SUBTREE: ["foo1", "foo2"],
+                VRF.ROUTE_TABLE_ID: 100,
+            },
+        }
+
+    def test_valid_vrf_interface_with_ports(self):
+        libnmstate.validator.schema_validate(
+            {Interface.KEY: [self._gen_base_vrf_iface_info()]}
+        )

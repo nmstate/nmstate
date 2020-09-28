@@ -112,6 +112,7 @@ class InterfaceType:
     VLAN = "vlan"
     VXLAN = "vxlan"
     TEAM = "team"
+    VRF = "vrf"
     OTHER = "other"
 
     VIRT_TYPES = (
@@ -392,3 +393,9 @@ class LLDP:
         TLV_TYPE = "type"
         TLV_SUBTYPE = "subtype"
         ORGANIZATION_CODE = "oui"
+
+
+class VRF:
+    CONFIG_SUBTREE = "vrf"
+    PORT_SUBTREE = "port"
+    ROUTE_TABLE_ID = "route-table-id"

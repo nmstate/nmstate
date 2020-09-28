@@ -22,6 +22,7 @@ import logging
 from libnmstate.error import NmstateKernelIntegerRoundedError
 from libnmstate.error import NmstateValueError
 from libnmstate.error import NmstateVerificationError
+from libnmstate.error import NmstateNotSupportedError
 from libnmstate.prettystate import format_desired_current_state_diff
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceType
@@ -37,6 +38,7 @@ from .ovs import OvsInternalIface
 from .team import TeamIface
 from .vlan import VlanIface
 from .vxlan import VxlanIface
+from .vrf import VrfIface
 
 
 class Ifaces:
@@ -136,6 +138,7 @@ class Ifaces:
         self._bring_port_up_if_not_in_desire()
         self._validate_ovs_patch_peers()
         self._remove_unknown_type_interfaces()
+        self._validate_vrf_table_id_changes()
 
     def _bring_port_up_if_not_in_desire(self):
         """
@@ -220,6 +223,19 @@ class Ifaces:
                 for port_name in iface.config_changed_port(cur_iface):
                     if port_name in self._ifaces:
                         self._ifaces[port_name].mark_as_changed()
+
+    def _validate_vrf_table_id_changes(self):
+        for iface in self._ifaces.values():
+            if iface.is_desired and iface.type == InterfaceType.VRF:
+                cur_iface = self._cur_ifaces.get(iface.name)
+                if (
+                    cur_iface
+                    and cur_iface.route_table_id != iface.route_table_id
+                ):
+                    raise NmstateNotSupportedError(
+                        "Changing route table ID of existing VRF Interface "
+                        "is not supported yet"
+                    )
 
     def _match_child_iface_state_with_parent(self):
         """
@@ -467,5 +483,7 @@ def _to_specific_iface_obj(info, save_to_disk):
         return VxlanIface(info, save_to_disk)
     elif iface_type == InterfaceType.TEAM:
         return TeamIface(info, save_to_disk)
+    elif iface_type == InterfaceType.VRF:
+        return VrfIface(info, save_to_disk)
     else:
         return BaseIface(info, save_to_disk)
