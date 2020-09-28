@@ -152,8 +152,8 @@ OVS_BRIDGE = "OVSBridge.Port.LinkAggregation"
 
 DEPRECATED_CONSTANTS = {
     "Bond.SLAVES": "Bond.PORT",
-    f"LinkAggregation.SLAVES_SUBTREE": f"{OVS_BRIDGE}.PORT_SUBTREE",
-    f"LinkAggregation.Slave": f"{OVS_BRIDGE}.Port",
+    "LinkAggregation.SLAVES_SUBTREE": f"{OVS_BRIDGE}.PORT_SUBTREE",
+    "LinkAggregation.Slave": f"{OVS_BRIDGE}.Port",
 }
 
 
