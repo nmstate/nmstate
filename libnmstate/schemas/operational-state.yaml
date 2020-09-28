@@ -29,6 +29,7 @@ properties:
             - "$ref": "#/definitions/interface-vlan/rw"
             - "$ref": "#/definitions/interface-vxlan/rw"
             - "$ref": "#/definitions/interface-team/rw"
+            - "$ref": "#/definitions/interface-vrf/rw"
             - "$ref": "#/definitions/interface-other/rw"
   routes:
     type: object
@@ -623,6 +624,22 @@ definitions:
               properties:
                 name:
                   type: string
+  interface-vrf:
+    rw:
+      properties:
+        type:
+          type: string
+          enum:
+            - vrf
+        vrf:
+          type: object
+          properties:
+            ports:
+              type: array
+              items:
+                type: string
+            route-table-id:
+              type: integer
 
   interface-other:
     rw:

@@ -169,3 +169,12 @@ def test_add_ovs_patch_and_remove():
         assertlib.assert_state(desired_state)
 
     assertlib.assert_absent("patch0")
+
+
+def test_add_remove_vrf(eth1_up):
+    with example_state(
+        "vrf0_with_eth1.yml", cleanup="vrf0_absent.yml"
+    ) as desired_state:
+        assertlib.assert_state_match(desired_state)
+
+    assertlib.assert_absent("vrf0")

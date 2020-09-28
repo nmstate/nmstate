@@ -58,6 +58,7 @@ def test_api2nm_iface_type_map(NM_mock):
         InterfaceType.VLAN: NM_mock.SETTING_VLAN_SETTING_NAME,
         InterfaceType.LINUX_BRIDGE: NM_mock.SETTING_BRIDGE_SETTING_NAME,
         InterfaceType.VXLAN: NM_mock.SETTING_VXLAN_SETTING_NAME,
+        InterfaceType.VRF: NM_mock.SETTING_VRF_SETTING_NAME,
     }
 
     assert map == expected_map

@@ -1,0 +1,5 @@
+---
+interfaces:
+  - name: vrf0
+    type: vrf
+    state: absent
