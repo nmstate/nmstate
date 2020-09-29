@@ -36,7 +36,7 @@ from .base_iface import BaseIface
 
 
 SYSTEMCTL_TIMEOUT_SECONDS = 5
-DEPRECATED_SLAVES = "port"
+DEPRECATED_SLAVES = "slaves"
 
 
 class OvsBridgeIface(BridgeIface):

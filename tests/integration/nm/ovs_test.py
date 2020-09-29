@@ -197,10 +197,10 @@ def _attach_port_to_bridge(ctx, port_state):
 
     _create_proxy_port(ctx, port_profile_name, port_state)
     if lag_state:
-        port = [
+        ports = [
             port for port in lag_state[OB.Port.LinkAggregation.PORT_SUBTREE]
         ]
-        for port in port:
+        for port in ports:
             _connect_interface(ctx, port_profile_name, port)
     elif _is_internal_interface(ctx, port_name):
         iface_name = port_name
