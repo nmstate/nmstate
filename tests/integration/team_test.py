@@ -95,13 +95,13 @@ def test_add_invalid_port_ip_config(eth1_up):
     desired_state[Interface.KEY][0][Interface.IPV4][InterfaceIP.ENABLED] = True
     desired_state[Interface.KEY][0][Interface.IPV4][InterfaceIP.DHCP] = True
     with pytest.raises(NmstateValueError):
-        with team_interface(TEAM0, port=("eth1",)) as state:
+        with team_interface(TEAM0, ports=("eth1",)) as state:
             desired_state[Interface.KEY].append(state[Interface.KEY][0])
             libnmstate.apply(desired_state)
 
 
 @contextmanager
-def team_interface(ifname, port=None):
+def team_interface(ifname, ports=None):
     desired_state = {
         Interface.KEY: [
             {
@@ -111,10 +111,10 @@ def team_interface(ifname, port=None):
             }
         ]
     }
-    if port:
+    if ports:
         team_state = {Team.PORT_SUBTREE: []}
         desired_state[Interface.KEY][0][Team.CONFIG_SUBTREE] = team_state
-        for port in port:
+        for port in ports:
             team_state[Team.PORT_SUBTREE].append({Team.Port.NAME: port})
     libnmstate.apply(desired_state)
     try:
