@@ -20,6 +20,7 @@ from distutils.version import StrictVersion
 import logging
 from operator import itemgetter
 
+from libnmstate.error import NmstateDependencyError
 from libnmstate.error import NmstateValueError
 from libnmstate.ifaces.ovs import is_ovs_running
 from libnmstate.schema import DNS
@@ -226,7 +227,10 @@ class NetworkManagerPlugin(NmstatePlugin):
         nm_utils_version = _nm_utils_decode_version()
 
         if nm_client_version is None:
-            logging.warning("NetworkManager is not running")
+            raise NmstateDependencyError(
+                "NetworkManager daemon is not running which is required for "
+                "NetworkManager plugin"
+            )
         elif StrictVersion(nm_client_version) != StrictVersion(
             nm_utils_version
         ):

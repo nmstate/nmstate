@@ -28,7 +28,6 @@ import pkgutil
 from libnmstate import validator
 from libnmstate.error import NmstateError
 from libnmstate.error import NmstateValueError
-from libnmstate.nm import NetworkManagerPlugin
 from libnmstate.schema import DNS
 from libnmstate.schema import Interface
 from libnmstate.schema import Route
@@ -96,9 +95,23 @@ def plugins_capabilities(plugins):
 
 
 def _load_plugins():
-    plugins = [NetworkManagerPlugin(), NisporPlugin()]
+    plugins = [NisporPlugin()]
     plugins.extend(_load_external_py_plugins())
+    plugins.extend(_load_nm_plugin())
     return plugins
+
+
+def _load_nm_plugin():
+    """
+    Makin NetworkManager plugin as optional
+    """
+    try:
+        from libnmstate.nm import NetworkManagerPlugin
+
+        return [NetworkManagerPlugin()]
+    except Exception as e:
+        logging.warning(f"Failed to load NetworkManager plugin: {e}")
+        return []
 
 
 def _load_external_py_plugins():
@@ -133,12 +146,11 @@ def _find_plugin_for_capability(plugins, capability):
     """
     chose_plugin = None
     for plugin in plugins:
-        if (
-            chose_plugin
-            and capability in plugin.plugin_capabilities
-            and plugin.priority > chose_plugin.priority
-        ) or not chose_plugin:
-            chose_plugin = plugin
+        if capability in plugin.plugin_capabilities:
+            if (
+                chose_plugin and plugin.priority > chose_plugin.priority
+            ) or not chose_plugin:
+                chose_plugin = plugin
     return chose_plugin
 
 
