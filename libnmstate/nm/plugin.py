@@ -48,6 +48,7 @@ from .context import NmContext
 from .profile import get_all_applied_configs
 from .profile import NmProfiles
 from .route import get_running_config as get_route_running_config
+from .infiniband import get_info as get_infiniband_info
 
 
 class NetworkManagerPlugin(NmstatePlugin):
@@ -137,6 +138,7 @@ class NetworkManagerPlugin(NmstatePlugin):
             iface_info.update(nm_user.get_info(self.context, dev))
             iface_info.update(nm_lldp.get_info(self.client, dev))
             iface_info.update(nm_team.get_info(dev))
+            iface_info.update(get_infiniband_info(applied_config))
 
             if nm_bond.is_bond_type_id(type_id):
                 bondinfo = nm_bond.get_bond_info(dev)

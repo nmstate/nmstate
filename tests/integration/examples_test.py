@@ -178,3 +178,19 @@ def test_add_remove_vrf(eth1_up):
         assertlib.assert_state_match(desired_state)
 
     assertlib.assert_absent("vrf0")
+
+
+@pytest.mark.skipif(
+    not os.environ.get("TEST_REAL_NIC"),
+    reason="Need to define TEST_REAL_NIC for infiniband test",
+)
+def test_add_ib_pkey_nic_and_remove():
+    test_nic = os.environ["TEST_REAL_NIC"]
+    with example_state(
+        "infiniband_pkey_ipoib_create.yml",
+        cleanup="infiniband_pkey_ipoib_delete.yml",
+        substitute=("mlx5_ib0", test_nic),
+    ) as desired_state:
+        assertlib.assert_state(desired_state)
+
+    assertlib.assert_absent(f"{test_nic}.80ff")

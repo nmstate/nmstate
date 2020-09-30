@@ -113,6 +113,7 @@ class InterfaceType:
     VXLAN = "vxlan"
     TEAM = "team"
     VRF = "vrf"
+    INFINIBAND = "infiniband"
     OTHER = "other"
 
     VIRT_TYPES = (
@@ -399,3 +400,15 @@ class VRF:
     CONFIG_SUBTREE = "vrf"
     PORT_SUBTREE = "port"
     ROUTE_TABLE_ID = "route-table-id"
+
+
+class InfiniBand:
+    CONFIG_SUBTREE = "infiniband"
+    PKEY = "pkey"
+    MODE = "mode"
+    BASE_IFACE = "base-iface"
+    DEFAULT_PKEY = 0xFFFF
+
+    class Mode:
+        DATAGRAM = "datagram"
+        CONNECTED = "connected"

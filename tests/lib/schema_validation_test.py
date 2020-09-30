@@ -26,6 +26,7 @@ import libnmstate
 from libnmstate.schema import Constants
 from libnmstate.schema import DNS
 from libnmstate.schema import Ethernet
+from libnmstate.schema import InfiniBand
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
@@ -812,3 +813,74 @@ class TestIfaceTypeVrf:
         libnmstate.validator.schema_validate(
             {Interface.KEY: [self._gen_base_vrf_iface_info()]}
         )
+
+
+class TestInfiniBand:
+    def test_valid_base_interface_full_info(self, default_data):
+        default_data[Interface.KEY].append(
+            {
+                Interface.NAME: "ib0",
+                Interface.TYPE: InterfaceType.INFINIBAND,
+                InfiniBand.CONFIG_SUBTREE: {
+                    InfiniBand.MODE: InfiniBand.Mode.DATAGRAM,
+                    InfiniBand.PKEY: InfiniBand.DEFAULT_PKEY,
+                    InfiniBand.BASE_IFACE: "",
+                },
+            }
+        )
+        libnmstate.validator.schema_validate(default_data)
+
+    def test_valid_base_interface_minimum_info(self, default_data):
+        default_data[Interface.KEY].append(
+            {
+                Interface.NAME: "ib0",
+                Interface.TYPE: InterfaceType.INFINIBAND,
+                InfiniBand.CONFIG_SUBTREE: {
+                    InfiniBand.MODE: InfiniBand.Mode.DATAGRAM,
+                },
+            }
+        )
+        libnmstate.validator.schema_validate(default_data)
+
+    def test_valid_pkey_interface_using_integer_pkey(self, default_data):
+        default_data[Interface.KEY].append(
+            {
+                Interface.NAME: "ib0.80ff",
+                Interface.TYPE: InterfaceType.INFINIBAND,
+                InfiniBand.CONFIG_SUBTREE: {
+                    InfiniBand.MODE: InfiniBand.Mode.DATAGRAM,
+                    InfiniBand.PKEY: 0x80FF,
+                    InfiniBand.BASE_IFACE: "ib0",
+                },
+            }
+        )
+        libnmstate.validator.schema_validate(default_data)
+
+    def test_valid_pkey_interface_using_string_pkey(self, default_data):
+        default_data[Interface.KEY].append(
+            {
+                Interface.NAME: "ib0.80ff",
+                Interface.TYPE: InterfaceType.INFINIBAND,
+                InfiniBand.CONFIG_SUBTREE: {
+                    InfiniBand.MODE: InfiniBand.Mode.DATAGRAM,
+                    InfiniBand.PKEY: "0x80FF",
+                    InfiniBand.BASE_IFACE: "ib0",
+                },
+            }
+        )
+        libnmstate.validator.schema_validate(default_data)
+
+    def test_valid_pkey_interface_using_invalid_mode(self, default_data):
+        default_data[Interface.KEY].append(
+            {
+                Interface.NAME: "ib0.80ff",
+                Interface.TYPE: InterfaceType.INFINIBAND,
+                InfiniBand.CONFIG_SUBTREE: {
+                    InfiniBand.MODE: "invalid",
+                    InfiniBand.PKEY: "0x80FF",
+                    InfiniBand.BASE_IFACE: "ib0",
+                },
+            }
+        )
+        with pytest.raises(js.ValidationError):
+            libnmstate.validator.schema_validate(default_data)

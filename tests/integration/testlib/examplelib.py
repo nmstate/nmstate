@@ -29,12 +29,12 @@ PATH_MAX = 4096
 
 
 @contextmanager
-def example_state(initial, cleanup=None):
+def example_state(initial, cleanup=None, substitute=None):
     """
     Apply the initial state and optionally the cleanup state at the end
     """
 
-    desired_state = load_example(initial)
+    desired_state = load_example(initial, substitute)
 
     libnmstate.apply(desired_state)
     try:
@@ -42,13 +42,17 @@ def example_state(initial, cleanup=None):
     finally:
         if cleanup:
             try:
-                libnmstate.apply(load_example(cleanup), verify_change=True)
+                libnmstate.apply(
+                    load_example(cleanup, substitute), verify_change=True
+                )
             except libnmstate.error.NmstateVerificationError:
-                libnmstate.apply(load_example(cleanup), verify_change=False)
+                libnmstate.apply(
+                    load_example(cleanup, substitute), verify_change=False
+                )
                 raise
 
 
-def load_example(name):
+def load_example(name, substitute=None):
     """
     Load the state from an example yaml file
     """
@@ -56,7 +60,10 @@ def load_example(name):
     examples = find_examples_dir()
 
     with open(os.path.join(examples, name)) as yamlfile:
-        state = yaml.load(yamlfile, Loader=yaml.SafeLoader)
+        yaml_str = yamlfile.read()
+        if substitute:
+            yaml_str = yaml_str.replace(substitute[0], substitute[1])
+        state = yaml.load(yaml_str, Loader=yaml.SafeLoader)
 
     return state
 

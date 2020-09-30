@@ -30,6 +30,7 @@ properties:
             - "$ref": "#/definitions/interface-vxlan/rw"
             - "$ref": "#/definitions/interface-team/rw"
             - "$ref": "#/definitions/interface-vrf/rw"
+            - "$ref": "#/definitions/interface-infiniband/rw"
             - "$ref": "#/definitions/interface-other/rw"
   routes:
     type: object
@@ -710,3 +711,24 @@ definitions:
       properties:
         enabled:
           type: boolean
+  interface-infiniband:
+    rw:
+      properties:
+        type:
+          type: string
+          enum:
+            - infiniband
+        infiniband:
+          type: object
+          properties:
+            base-iface:
+              type: string
+            pkey:
+              type:
+                - string
+                - integer
+            mode:
+              type: string
+              enum:
+                - datagram
+                - connected

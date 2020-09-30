@@ -24,6 +24,7 @@ from libnmstate.error import NmstateValueError
 from libnmstate.error import NmstateVerificationError
 from libnmstate.error import NmstateNotSupportedError
 from libnmstate.prettystate import format_desired_current_state_diff
+from libnmstate.schema import BondMode
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import InterfaceState
@@ -32,6 +33,7 @@ from .base_iface import BaseIface
 from .bond import BondIface
 from .dummy import DummyIface
 from .ethernet import EthernetIface
+from .infiniband import InfiniBandIface
 from .linux_bridge import LinuxBridgeIface
 from .ovs import OvsBridgeIface
 from .ovs import OvsInternalIface
@@ -104,6 +106,8 @@ class Ifaces:
             self._create_virtual_port()
             self._validate_unknown_port()
             self._validate_unknown_parent()
+            self._validate_infiniband_as_bridge_port()
+            self._validate_infiniband_as_bond_port()
             self._gen_metadata()
             for iface in self._ifaces.values():
                 iface.pre_edit_validation_and_cleanup()
@@ -199,6 +203,46 @@ class Ifaces:
                         f"than its base interface: {iface.parent} "
                         f"MTU({base_iface.mtu})"
                     )
+
+    def _validate_infiniband_as_bridge_port(self):
+        """
+        The IPoIB NIC has no ethernet layer, hence is no way for adding a IPoIB
+        NIC to linux bridge or OVS bridge
+        """
+        for iface in self._ifaces.values():
+            if iface.is_desired and iface.type in (
+                InterfaceType.LINUX_BRIDGE,
+                InterfaceType.OVS_BRIDGE,
+            ):
+                for port_name in iface.port:
+                    port_iface = self._ifaces[port_name]
+                    if port_iface.type == InterfaceType.INFINIBAND:
+                        raise NmstateValueError(
+                            f"The bridge {iface.name} cannot use "
+                            f"IP over InfiniBand interface {port_iface.name} "
+                            f"as port. Please use RoCE interface instead."
+                        )
+
+    def _validate_infiniband_as_bond_port(self):
+        """
+        The IP over InfiniBand interface is only allowed to be port of
+        bond in "active-backup" mode.
+        """
+        for iface in self._ifaces.values():
+            if (
+                iface.is_desired
+                and iface.type == InterfaceType.BOND
+                and iface.bond_mode != BondMode.ACTIVE_BACKUP
+            ):
+                for port_name in iface.port:
+                    port_iface = self._ifaces[port_name]
+                    if port_iface.type == InterfaceType.INFINIBAND:
+                        raise NmstateValueError(
+                            "The IP over InfiniBand interface "
+                            f"{port_iface.name} is only allowed to be port of "
+                            "bond in active-backup mode, but requested bond "
+                            f"{iface.name} is in {iface.bond_mode} mode."
+                        )
 
     def _handle_controller_port_list_change(self):
         """
@@ -485,5 +529,7 @@ def _to_specific_iface_obj(info, save_to_disk):
         return TeamIface(info, save_to_disk)
     elif iface_type == InterfaceType.VRF:
         return VrfIface(info, save_to_disk)
+    elif iface_type == InterfaceType.INFINIBAND:
+        return InfiniBandIface(info, save_to_disk)
     else:
         return BaseIface(info, save_to_disk)

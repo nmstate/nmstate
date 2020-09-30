@@ -60,6 +60,7 @@ from .device import mark_device_as_managed
 from .device import list_devices
 from .device import is_externally_managed
 from .vrf import create_vrf_setting
+from .infiniband import create_setting as create_infiniband_setting
 
 
 ACTION_DEACTIVATE_BEFOREHAND = "deactivate-beforehand"
@@ -420,11 +421,14 @@ class NmProfile:
         original_state_wired = {}
         if self._iface.is_desired:
             original_state_wired = self.original_iface_info
-        wired_setting = wired.create_setting(
-            original_state_wired, self._remote_conn
-        )
-        if wired_setting:
-            settings.append(wired_setting)
+        if self.iface.type != InterfaceType.INFINIBAND:
+            # The IP over InfiniBand has its own setting for MTU and does not
+            # have ethernet layer.
+            wired_setting = wired.create_setting(
+                original_state_wired, self._remote_conn
+            )
+            if wired_setting:
+                settings.append(wired_setting)
 
         user_setting = user.create_setting(self.iface_info, self._remote_conn)
         if user_setting:
@@ -459,6 +463,12 @@ class NmProfile:
                 OVSInterface.PATCH_CONFIG_SUBTREE
             )
             settings.extend(nm_ovs.create_interface_setting(patch_state))
+        elif self.iface.type == InterfaceType.INFINIBAND:
+            ib_setting = create_infiniband_setting(
+                self.iface_info, self._remote_conn, self.original_iface_info,
+            )
+            if ib_setting:
+                settings.append(ib_setting)
 
         bridge_port_options = self.iface_info.get(
             BridgeIface.BRPORT_OPTIONS_METADATA
