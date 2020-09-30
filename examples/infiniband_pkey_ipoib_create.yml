@@ -1,0 +1,9 @@
+---
+interfaces:
+  - name: mlx5_ib0.80ff
+    type: infiniband
+    state: up
+    infiniband:
+      base-iface: mlx5_ib0
+      mode: datagram
+      pkey: '0x80ff'

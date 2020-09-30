@@ -110,3 +110,33 @@ podman push nmstate/fedora-nmstate-dev:latest \
 ```
 
 It will be overwritten after the next commit to base, though.
+
+
+### Test in bare-metal OS for InfiniBand
+
+In order to perform integration test cases against InfiniBand feature,
+running test in bare-metal OS is required.
+
+Assuming the InfiniBand card is listed in `ip link` as `mlx5_ib0` and been
+configured as `datagram` mode.
+
+```shell
+sudo dnf install `./packaging/make_rpm.sh|tail -1`
+
+sudo ip netns add tmp
+sudo ip link add eth1 type veth peer name eth1peer
+sudo ip link add eth2 type veth peer name eth2peer
+sudo ip link set eth1 up
+sudo ip link set eth2 up
+sudo ip link set eth1peer netns tmp
+sudo ip link set eth2peer netns tmp
+sudo ip netns exec tmp ip link set eth1peer up
+sudo ip netns exec tmp ip link set eth2peer up
+
+sudo nmcli device set eth1 managed yes
+sudo nmcli device set eth2 managed yes
+
+cd tests/integration
+# Set TEST_IB_CONNECTED_MODE=1 when cards are configured as connected mode
+sudo env TEST_REAL_NIC=mlx5_ib0 pytest-3 -vv  ./infiniband_test.py
+```

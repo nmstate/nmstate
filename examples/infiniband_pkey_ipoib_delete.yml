@@ -1,0 +1,5 @@
+---
+interfaces:
+  - name: mlx5_ib0.80ff
+    type: infiniband
+    state: absent

@@ -24,6 +24,7 @@ import libnmstate
 from libnmstate.schema import Bond
 from libnmstate.schema import DNS
 from libnmstate.schema import Route
+from libnmstate.schema import InfiniBand
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import LinuxBridge as LB
@@ -99,6 +100,8 @@ def _prepare_state_for_verify(desired_state_data):
     _expand_vlan_filter_range(full_desired_state)
     _remove_linux_bridge_read_only_options(current_state)
     _remove_linux_bridge_read_only_options(full_desired_state)
+    _cannonicalize_infiniband_pkey(current_state)
+    _cannonicalize_infiniband_pkey(full_desired_state)
 
     return full_desired_state, current_state
 
@@ -193,3 +196,18 @@ def _remove_linux_bridge_read_only_options(state):
         if bridge_options:
             for key in (LB.Options.HELLO_TIMER, LB.Options.GC_TIMER):
                 bridge_options.pop(key, None)
+
+
+def _cannonicalize_infiniband_pkey(state):
+    for iface_info in state.state[Interface.KEY]:
+        ib_config = iface_info.get(InfiniBand.CONFIG_SUBTREE)
+        if not ib_config:
+            continue
+        original_pkey = ib_config.get(InfiniBand.PKEY)
+        if original_pkey is None:
+            ib_config[InfiniBand.PKEY] = 0xFFFF
+        elif isinstance(original_pkey, str):
+            if original_pkey.startswith("0x"):
+                ib_config[InfiniBand.PKEY] = int(original_pkey, 16)
+            else:
+                ib_config[InfiniBand.PKEY] = int(original_pkey, 10)
