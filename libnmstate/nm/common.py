@@ -19,15 +19,15 @@
 
 import gi
 
-try:
-    gi.require_version("NM", "1.0")  # NOQA: F402
-    from gi.repository import NM  # pylint: disable=no-name-in-module
-except ValueError:
-    NM = None
+gi.require_version("NM", "1.0")
 
-from gi.repository import GLib
-from gi.repository import GObject
-from gi.repository import Gio
+# It is required to state the NM version before importing it
+# But this break the flak8 rule: https://www.flake8rules.com/rules/E402.html
+# Use NOQA: E402 to suppress it.
+from gi.repository import NM  # NOQA: E402
+from gi.repository import GLib  # NOQA: E402
+from gi.repository import GObject  # NOQA: E402
+from gi.repository import Gio  # NOQA: E402
 
 
 # To suppress the "import not used" error

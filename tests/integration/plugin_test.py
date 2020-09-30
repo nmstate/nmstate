@@ -24,7 +24,10 @@ import tempfile
 import pytest
 
 import libnmstate
+from libnmstate.error import NmstateDependencyError
 from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceIPv4
+from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import DNS
@@ -33,6 +36,7 @@ from libnmstate.schema import RouteRule
 from libnmstate.plugin import NmstatePlugin
 
 from .testlib import statelib
+from .testlib.servicelib import disable_service
 
 
 FOO_IFACE_NAME = "foo1"
@@ -118,6 +122,32 @@ GET_DNS_FORMAT = """
     def get_dns_client_config(self):
         return {dns_config}
 """
+
+LO_IFACE_INFO = {
+    Interface.NAME: "lo",
+    Interface.TYPE: InterfaceType.UNKNOWN,
+    Interface.STATE: InterfaceState.UP,
+    Interface.IPV4: {
+        InterfaceIPv4.ENABLED: True,
+        InterfaceIPv4.ADDRESS: [
+            {
+                InterfaceIPv4.ADDRESS_IP: "127.0.0.1",
+                InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 8,
+            }
+        ],
+    },
+    Interface.IPV6: {
+        InterfaceIPv6.ENABLED: True,
+        InterfaceIPv6.ADDRESS: [
+            {
+                InterfaceIPv6.ADDRESS_IP: "::1",
+                InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 128,
+            }
+        ],
+    },
+    Interface.MAC: "00:00:00:00:00:00",
+    Interface.MTU: 65536,
+}
 
 
 @pytest.fixture
@@ -283,3 +313,19 @@ def test_load_external_route_rule_plugin(with_route_rule_plugin):
 def test_load_external_dns_plugin(with_dns_plugin):
     state = libnmstate.show()
     assert state[DNS.KEY] == TEST_DNS_STATE
+
+
+@pytest.fixture
+def stop_nm_service():
+    with disable_service("NetworkManager"):
+        yield
+
+
+def test_network_manager_plugin_with_daemon_stopped(stop_nm_service):
+    with pytest.raises(NmstateDependencyError):
+        from libnmstate.nm import NetworkManagerPlugin
+
+        NetworkManagerPlugin()
+
+    state = statelib.show_only(("lo",))
+    assert state[Interface.KEY][0] == LO_IFACE_INFO
