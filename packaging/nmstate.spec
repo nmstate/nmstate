@@ -41,7 +41,7 @@ Summary:        nmstate plugin for OVS database manipulation
 Requires:       python3-%{libname} = %{?epoch:%{epoch}:}%{version}-%{release}
 # The python-openvswitch rpm pacakge is not in the same repo with nmstate,
 # hence state it as Recommends, no requires.
-Requires:     python3dist(ovs)
+Recommends:     python3dist(ovs)
 
 %description -n python3-%{libname}
 This package contains the Python 3 library for Nmstate.
