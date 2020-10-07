@@ -291,7 +291,9 @@ def _get_port_profiles(controller_device, devices_info):
             if controller and (
                 controller.get_iface() == controller_device.get_iface()
             ):
-                port_profiles.append(active_con.props.connection)
+                profile = active_con.props.connection
+                if profile:
+                    port_profiles.append(profile)
     return port_profiles
 
 
