@@ -260,9 +260,9 @@ def _get_slave_profiles_by_name(master_device):
     for dev in master_device.get_slaves():
         active_con = connection.get_device_active_connection(dev)
         if active_con:
-            slaves_profiles_by_name[
-                dev.get_iface()
-            ] = active_con.props.connection
+            profile = active_con.props.connection
+            if profile:
+                slaves_profiles_by_name[dev.get_iface()] = profile
     return slaves_profiles_by_name
 
 
