@@ -630,3 +630,79 @@ def test_remove_all_ovs_ports(bridge_with_ports):
         }
     )
     assertlib.assert_absent(PORT1)
+
+
+@pytest.fixture
+def ovs_bridge_with_internal_interface_and_identical_names():
+    device_name = "obridge0"
+
+    cmdlib.exec_cmd(
+        [
+            "nmcli",
+            "connection",
+            "add",
+            "type",
+            "ovs-bridge",
+            "conn.interface",
+            device_name,
+        ],
+        check=True,
+    )
+    cmdlib.exec_cmd(
+        [
+            "nmcli",
+            "connection",
+            "add",
+            "type",
+            "ovs-port",
+            "conn.interface",
+            device_name,
+            "master",
+            device_name,
+        ],
+        check=True,
+    )
+    cmdlib.exec_cmd(
+        [
+            "nmcli",
+            "connection",
+            "add",
+            "type",
+            "ovs-interface",
+            "slave-type",
+            "ovs-port",
+            "conn.interface",
+            device_name,
+            "master",
+            device_name,
+        ],
+        check=True,
+    )
+
+    try:
+        yield device_name
+    finally:
+        _, con_names, _ = cmdlib.exec_cmd(
+            ["nmcli", "-f", "NAME", "connection"], check=True,
+        )
+        con_to_delete = [
+            con_name.strip()
+            for con_name in con_names.splitlines()
+            if device_name in con_name
+        ]
+        cmdlib.exec_cmd(
+            ["nmcli", "connection", "delete"] + con_to_delete, check=True,
+        )
+
+        assertlib.assert_absent(device_name)
+
+
+def test_ovs_report_with_identical_inteface_names(
+    ovs_bridge_with_internal_interface_and_identical_names,
+):
+    name = ovs_bridge_with_internal_interface_and_identical_names
+    state = statelib.show_only((name,))
+
+    assert state
+    # The plugin infra only supports a single iface to be reported.
+    assert len(state[Interface.KEY]) == 1

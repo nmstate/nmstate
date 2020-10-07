@@ -147,7 +147,12 @@ def get_port_by_port(nmdev):
 
 
 def get_ovs_info(context, bridge_device, devices_info):
-    port_profiles = _get_port_profiles(bridge_device, devices_info)
+    ovs_ports_info = (
+        info
+        for info in devices_info
+        if is_ovs_port_type_id(info[1]["type_id"])
+    )
+    port_profiles = _get_port_profiles(bridge_device, ovs_ports_info)
     ports = _get_bridge_ports_info(context, port_profiles, devices_info)
     options = _get_bridge_options(context, bridge_device)
 
@@ -210,8 +215,21 @@ def _get_bridge_port_info(context, port_profile, devices_info):
     vlan_mode = port_setting.props.vlan_mode
 
     port_name = port_profile.get_interface_name()
-    port_device = context.get_nm_dev(port_name)
-    port_port_profiles = _get_port_profiles(port_device, devices_info)
+    port_device = next(
+        dev
+        for dev, devinfo in devices_info
+        if devinfo["name"] == port_name
+        and is_ovs_port_type_id(devinfo["type_id"])
+    )
+    devices_info_excluding_bridges_and_ports = (
+        info
+        for info in devices_info
+        if not is_ovs_bridge_type_id(info[1]["type_id"])
+        and not is_ovs_port_type_id(info[1]["type_id"])
+    )
+    port_port_profiles = _get_port_profiles(
+        port_device, devices_info_excluding_bridges_and_ports
+    )
     port_port_names = [c.get_interface_name() for c in port_port_profiles]
 
     if port_port_names:
