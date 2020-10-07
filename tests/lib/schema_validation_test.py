@@ -32,6 +32,7 @@ from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import LinuxBridge as LB
 from libnmstate.schema import MacVlan
+from libnmstate.schema import MacVtap
 from libnmstate.schema import OVSBridge
 from libnmstate.schema import OVSInterface
 from libnmstate.schema import Route
@@ -489,6 +490,48 @@ class TestIfaceTypeMacVlan:
                     MacVlan.BASE_IFACE: "eth1",
                     MacVlan.MODE: "wrong-mode",
                     MacVlan.PROMISCUOUS: True,
+                },
+            }
+        )
+
+        with pytest.raises(js.ValidationError):
+            libnmstate.validator.schema_validate(default_data)
+
+
+class TestIfaceTypeMacVtap:
+    @pytest.mark.parametrize(
+        "mode",
+        [
+            MacVtap.Mode.VEPA,
+            MacVtap.Mode.BRIDGE,
+            MacVtap.Mode.PRIVATE,
+            MacVtap.Mode.PASSTHRU,
+            MacVtap.Mode.SOURCE,
+        ],
+    )
+    def test_valid_mac_vtap_modes(self, default_data, mode):
+        default_data[Interface.KEY].append(
+            {
+                Interface.NAME: "macvtap0",
+                Interface.TYPE: MacVtap.TYPE,
+                MacVtap.CONFIG_SUBTREE: {
+                    MacVtap.BASE_IFACE: "eth1",
+                    MacVtap.MODE: mode,
+                    MacVtap.PROMISCUOUS: True,
+                },
+            }
+        )
+        libnmstate.validator.schema_validate(default_data)
+
+    def test_invalid_mac_vtap_mode(self, default_data):
+        default_data[Interface.KEY].append(
+            {
+                Interface.NAME: "macvtap0",
+                Interface.TYPE: MacVtap.TYPE,
+                MacVtap.CONFIG_SUBTREE: {
+                    MacVtap.BASE_IFACE: "eth1",
+                    MacVtap.MODE: "wrong-mode",
+                    MacVtap.PROMISCUOUS: True,
                 },
             }
         )

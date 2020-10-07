@@ -106,6 +106,7 @@ class InterfaceType:
     ETHERNET = "ethernet"
     LINUX_BRIDGE = "linux-bridge"
     MAC_VLAN = "mac-vlan"
+    MAC_VTAP = "mac-vtap"
     OVS_BRIDGE = "ovs-bridge"
     OVS_INTERFACE = "ovs-interface"
     OVS_PORT = "ovs-port"
@@ -429,3 +430,8 @@ class MacVlan:
         PRIVATE = "private"
         PASSTHRU = "passthru"
         SOURCE = "source"
+
+
+class MacVtap(MacVlan):
+    TYPE = InterfaceType.MAC_VTAP
+    CONFIG_SUBTREE = "mac-vtap"
