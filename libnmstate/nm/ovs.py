@@ -21,7 +21,6 @@ import logging
 from libnmstate.schema import OVSBridge as OB
 
 from . import connection
-from . import device
 from . import nmclient
 
 
@@ -137,7 +136,12 @@ def get_bridge_info(bridge_device, devices_info):
 
 
 def get_ovs_info(bridge_device, devices_info):
-    port_profiles = _get_slave_profiles(bridge_device, devices_info)
+    ovs_ports_info = (
+        info
+        for info in devices_info
+        if is_ovs_port_type_id(info[1]["type_id"])
+    )
+    port_profiles = _get_slave_profiles(bridge_device, ovs_ports_info)
     ports = _get_bridge_ports_info(port_profiles, devices_info)
     options = _get_bridge_options(bridge_device)
 
@@ -172,8 +176,21 @@ def _get_bridge_port_info(port_profile, devices_info):
     vlan_mode = port_setting.props.vlan_mode
 
     port_name = port_profile.get_interface_name()
-    port_device = device.get_device_by_name(port_name)
-    port_slave_profiles = _get_slave_profiles(port_device, devices_info)
+    port_device = next(
+        dev
+        for dev, devinfo in devices_info
+        if devinfo["name"] == port_name
+        and is_ovs_port_type_id(devinfo["type_id"])
+    )
+    devices_info_excluding_bridges_and_ports = (
+        info
+        for info in devices_info
+        if not is_ovs_bridge_type_id(info[1]["type_id"])
+        and not is_ovs_port_type_id(info[1]["type_id"])
+    )
+    port_slave_profiles = _get_slave_profiles(
+        port_device, devices_info_excluding_bridges_and_ports
+    )
     port_slave_names = [c.get_interface_name() for c in port_slave_profiles]
 
     if port_slave_names:
