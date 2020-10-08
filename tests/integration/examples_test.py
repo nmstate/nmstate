@@ -203,3 +203,12 @@ def test_add_mac_vlan_and_remove():
         assertlib.assert_state(desired_state)
 
     assertlib.assert_absent("macvlan0")
+
+
+def test_add_mac_vtap_and_remove():
+    with example_state(
+        "mac_vtap_create.yml", cleanup="mac_vtap_absent.yml"
+    ) as desired_state:
+        assertlib.assert_state(desired_state)
+
+    assertlib.assert_absent("macvtap0")

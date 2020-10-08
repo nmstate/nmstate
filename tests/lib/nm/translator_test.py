@@ -61,6 +61,7 @@ def test_api2nm_iface_type_map(NM_mock):
         InterfaceType.VRF: NM_mock.SETTING_VRF_SETTING_NAME,
         InterfaceType.INFINIBAND: NM_mock.SETTING_INFINIBAND_SETTING_NAME,
         InterfaceType.MAC_VLAN: NM_mock.SETTING_MACVLAN_SETTING_NAME,
+        InterfaceType.MAC_VTAP: NM_mock.SETTING_MACVLAN_SETTING_NAME,
     }
 
     assert map == expected_map

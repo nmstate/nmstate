@@ -29,6 +29,8 @@ from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import LinuxBridge as LB
+from libnmstate.schema import MacVlan
+from libnmstate.schema import MacVtap
 from libnmstate.schema import OVSBridge as OvsB
 from libnmstate.schema import OVSInterface
 from libnmstate.schema import Team
@@ -509,11 +511,17 @@ class NmProfile:
                 create_vrf_setting(self.iface_info[VRF.CONFIG_SUBTREE])
             )
 
-        macvlan_setting = macvlan.create_setting(
-            self.iface_info, self._remote_conn
-        )
-        if macvlan_setting:
-            settings.append(macvlan_setting)
+        if MacVlan.CONFIG_SUBTREE in self.iface_info:
+            settings.append(
+                macvlan.create_setting(self.iface_info, self._remote_conn)
+            )
+
+        if MacVtap.CONFIG_SUBTREE in self.iface_info:
+            settings.append(
+                macvlan.create_setting(
+                    self.iface_info, self._remote_conn, tap=True
+                )
+            )
 
         return settings
 
@@ -579,7 +587,14 @@ class NmProfile:
                             ACTION_DEACTIVATE_BEFOREHAND
                         )
                         groups["profiles_to_deactivate_beforehand"].add(self)
-                elif self.iface.type == InterfaceType.MAC_VLAN:
+                elif (
+                    self.iface.type == InterfaceType.MAC_VLAN
+                    or self.iface.type == InterfaceType.MAC_VTAP
+                ) and self.iface.is_changed:
+                    # NetworkManager requires the profile to be deactivated in
+                    # order to modify it. Therefore if the profile is modified
+                    # it needs to be deactivated beforehand in order to apply
+                    # the changes and activate it again.
                     self._actions_needed.append(ACTION_DEACTIVATE_BEFOREHAND)
                     groups["profiles_to_deactivate_beforehand"].add(self)
                 self._actions_needed.append(ACTION_MODIFY)
