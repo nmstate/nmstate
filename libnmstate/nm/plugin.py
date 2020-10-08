@@ -45,6 +45,7 @@ from .checkpoint import CheckPoint
 from .checkpoint import get_checkpoints
 from .common import NM
 from .context import NmContext
+from .macvlan import get_current_macvlan_type
 from .profile import get_all_applied_configs
 from .profile import NmProfiles
 from .route import get_running_config as get_route_running_config
@@ -139,6 +140,7 @@ class NetworkManagerPlugin(NmstatePlugin):
             iface_info.update(nm_lldp.get_info(self.client, dev))
             iface_info.update(nm_team.get_info(dev))
             iface_info.update(get_infiniband_info(applied_config))
+            iface_info.update(get_current_macvlan_type(applied_config))
 
             if NmstatePlugin.OVS_CAPABILITY in capabilities:
                 if iface_info[Interface.TYPE] == InterfaceType.OVS_BRIDGE:

@@ -26,14 +26,14 @@ from .base_iface import BaseIface
 class MacVlanIface(BaseIface):
     @property
     def parent(self):
-        return self._macvlan_config.get(MacVlan.BASE_IFACE)
+        return self.config_subtree.get(MacVlan.BASE_IFACE)
 
     @property
     def need_parent(self):
         return True
 
     @property
-    def _macvlan_config(self):
+    def config_subtree(self):
         return self.raw.get(MacVlan.CONFIG_SUBTREE, {})
 
     @property
@@ -50,15 +50,15 @@ class MacVlanIface(BaseIface):
         super().pre_edit_validation_and_cleanup()
 
     def _validate_mode(self):
-        if self._macvlan_config.get(
+        if self.config_subtree.get(
             MacVlan.MODE
-        ) != MacVlan.Mode.PASSTHRU and not self._macvlan_config.get(
+        ) != MacVlan.Mode.PASSTHRU and not self.config_subtree.get(
             MacVlan.PROMISCUOUS
         ):
             raise NmstateValueError(
                 "Disable promiscuous is only allowed on passthru mode"
             )
-        if self._macvlan_config.get(MacVlan.MODE) == MacVlan.Mode.UNKNOWN:
+        if self.config_subtree.get(MacVlan.MODE) == MacVlan.Mode.UNKNOWN:
             raise NmstateValueError(
                 "Mode unknown is not supported when appying the state"
             )
@@ -66,8 +66,8 @@ class MacVlanIface(BaseIface):
     def _validate_mandatory_properties(self):
         if self.is_up:
             for prop in (MacVlan.MODE, MacVlan.BASE_IFACE):
-                if prop not in self._macvlan_config:
+                if prop not in self.config_subtree:
                     raise NmstateValueError(
-                        f"MacVlan tunnel {self.name} has missing mandatory "
-                        f"property: {prop}"
+                        f"{self.type} tunnel {self.name} has missing mandatory"
+                        f" property: {prop}"
                     )

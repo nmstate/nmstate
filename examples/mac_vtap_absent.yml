@@ -1,0 +1,5 @@
+---
+interfaces:
+  - name: macvtap0
+    type: mac-vtap
+    state: absent

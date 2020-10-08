@@ -28,6 +28,7 @@ from .bridge import NisporPluginBridgeIface
 from .dummy import NisporPluginDummyIface
 from .ethernet import NisporPluginEthernetIface
 from .macvlan import NisporPluginMacVlanIface
+from .macvtap import NisporPluginMacVtapIface
 from .vlan import NisporPluginVlanIface
 from .vxlan import NisporPluginVxlanIface
 from .route import nispor_route_state_to_nmstate
@@ -73,6 +74,8 @@ class NisporPlugin(NmstatePlugin):
                 ifaces.append(NisporPluginVxlanIface(np_iface).to_dict())
             elif iface_type == "MacVlan":
                 ifaces.append(NisporPluginMacVlanIface(np_iface).to_dict())
+            elif iface_type == "MacVtap":
+                ifaces.append(NisporPluginMacVtapIface(np_iface).to_dict())
             elif iface_type == "Bridge":
                 np_ports = []
                 for port_name in np_iface.ports:

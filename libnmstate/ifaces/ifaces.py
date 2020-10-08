@@ -36,6 +36,7 @@ from .ethernet import EthernetIface
 from .infiniband import InfiniBandIface
 from .linux_bridge import LinuxBridgeIface
 from .macvlan import MacVlanIface
+from .macvtap import MacVtapIface
 from .ovs import OvsBridgeIface
 from .ovs import OvsInternalIface
 from .team import TeamIface
@@ -560,5 +561,7 @@ def _to_specific_iface_obj(info, save_to_disk):
         return InfiniBandIface(info, save_to_disk)
     elif iface_type == InterfaceType.MAC_VLAN:
         return MacVlanIface(info, save_to_disk)
+    elif iface_type == InterfaceType.MAC_VTAP:
+        return MacVtapIface(info, save_to_disk)
     else:
         return BaseIface(info, save_to_disk)

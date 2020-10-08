@@ -18,7 +18,10 @@
 #
 
 from libnmstate.error import NmstateValueError
+from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceType
 from libnmstate.schema import MacVlan
+from libnmstate.schema import MacVtap
 from .common import NM
 
 
@@ -31,11 +34,12 @@ NMSTATE_MODE_TO_NM_MODE = {
 }
 
 
-def create_setting(iface_state, base_con_profile):
-    macvlan = iface_state.get(MacVlan.CONFIG_SUBTREE)
-    if not macvlan:
-        return None
-
+def create_setting(iface_state, base_con_profile, tap=False):
+    macvlan = (
+        iface_state.get(MacVtap.CONFIG_SUBTREE)
+        if tap
+        else iface_state.get(MacVlan.CONFIG_SUBTREE)
+    )
     macvlan_setting = None
     if base_con_profile:
         macvlan_setting = base_con_profile.get_setting_by_name(
@@ -56,7 +60,27 @@ def create_setting(iface_state, base_con_profile):
 
     macvlan_setting.props.mode = nm_mode
     macvlan_setting.props.parent = macvlan[MacVlan.BASE_IFACE]
+    macvlan_setting.props.tap = tap
     if macvlan.get(MacVlan.PROMISCUOUS) is not None:
         macvlan_setting.props.promiscuous = macvlan[MacVlan.PROMISCUOUS]
 
     return macvlan_setting
+
+
+def get_current_macvlan_type(applied_config):
+    """
+    This is a workaround needed due to Nmstate gathering the interface type
+    from NetworkManager, as we are deciding the interface type using the
+    setting name. If the interface type is not adjusted, Nmstate will fail
+    during verification as NM and Nispor interfaces will not be merged
+    correctly.
+    """
+    if applied_config:
+        macvlan_setting = applied_config.get_setting_by_name(
+            NM.SETTING_MACVLAN_SETTING_NAME
+        )
+        if macvlan_setting:
+            tap = macvlan_setting.props.tap
+            if tap:
+                return {Interface.TYPE: InterfaceType.MAC_VTAP}
+    return {}
