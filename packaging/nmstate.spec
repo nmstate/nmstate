@@ -42,7 +42,7 @@ Requires:       python3-%{libname} = %{?epoch:%{epoch}:}%{version}-%{release}
 %if 0%{?rhel}
 # The python-openvswitch rpm pacakge is not in the same repo with nmstate,
 # hence state it as Recommends, no requires.
-Recommends:     python3dist(ovs)
+Requires:       (python3dist(ovs) if openvswitch)
 %else
 Requires:       python3dist(ovs)
 %endif
