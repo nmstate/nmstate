@@ -136,6 +136,7 @@ class Ifaces:
 
     def _pre_edit_validation_and_cleanup(self):
         self._validate_over_booked_port()
+        self._validate_vlan_not_over_infiniband()
         self._validate_vlan_mtu()
         self._handle_controller_port_list_change()
         self._match_child_iface_state_with_parent()
@@ -179,6 +180,23 @@ class Ifaces:
                             f"OVS patch port peer {iface.peer} must be an OVS"
                             " patch port"
                         )
+
+    def _validate_vlan_not_over_infiniband(self):
+        """
+        Validate that vlan is not being created over infiniband interface
+        """
+        for iface in self._ifaces.values():
+
+            if (
+                iface.type in [InterfaceType.VLAN, InterfaceType.VXLAN]
+                and iface.is_up
+            ):
+                if self._ifaces[iface.parent].type == InterfaceType.INFINIBAND:
+                    raise NmstateValueError(
+                        f"Interface {iface.name} of type {iface.type}"
+                        " is not supported over base interface of "
+                        "type Infiniband"
+                    )
 
     def _validate_vlan_mtu(self):
         """
