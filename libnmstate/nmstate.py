@@ -30,6 +30,7 @@ from libnmstate.error import NmstateError
 from libnmstate.error import NmstateValueError
 from libnmstate.schema import DNS
 from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceType
 from libnmstate.schema import Route
 from libnmstate.schema import RouteRule
 
@@ -166,17 +167,49 @@ def _get_interface_info_from_plugins(plugins):
         for iface in plugin.get_interfaces():
             iface[IFACE_PRIORITY_METADATA] = plugin.priority
             iface_name = iface[Interface.NAME]
-            if iface_name in all_ifaces:
-                existing_iface = all_ifaces[iface_name]
+            iface_type = iface.get(Interface.TYPE, InterfaceType.UNKNOWN)
+            iface_index = f"{iface_type}.{iface_name}"
+            if iface_index in all_ifaces:
+                existing_iface = all_ifaces[iface_index]
                 existing_priority = existing_iface[IFACE_PRIORITY_METADATA]
                 current_priority = plugin.priority
                 if current_priority > existing_priority:
                     merge_dict(iface, existing_iface)
-                    all_ifaces[iface_name] = iface
+                    all_ifaces[iface_index] = iface
                 else:
                     merge_dict(existing_iface, iface)
             else:
-                all_ifaces[iface_name] = iface
+                all_ifaces[iface_index] = iface
+
+    # For any unknown interface, we merge it when there is only one interface
+    # with the same name and valid type.
+    # This save plugin(e.g. ovsdb) from detecting interface type but still want
+    # data been merged.
+    to_be_removed_index = []
+    for iface in all_ifaces.values():
+        iface_type = iface.get(Interface.TYPE, InterfaceType.UNKNOWN)
+        iface_name = iface[Interface.NAME]
+        if iface_type == InterfaceType.UNKNOWN:
+            iface_types = _get_iface_types_by_name(
+                all_ifaces.values(), iface_name
+            )
+            if len(iface_types) == 1:
+                to_be_removed_index.append(
+                    f"{InterfaceType.UNKNOWN}.{iface_name}"
+                )
+                iface_index = f"{iface_types[0]}.{iface_name}"
+                existing_iface = all_ifaces[iface_index]
+                iface[Interface.TYPE] = existing_iface[Interface.TYPE]
+                current_priority = iface[IFACE_PRIORITY_METADATA]
+                existing_priority = existing_iface[IFACE_PRIORITY_METADATA]
+                if current_priority > existing_priority:
+                    merge_dict(iface, existing_iface)
+                    all_ifaces[iface_index] = iface
+                else:
+                    merge_dict(existing_iface, iface)
+
+    for iface_index in to_be_removed_index:
+        del all_ifaces[iface_index]
 
     # Remove metadata
     for iface in all_ifaces.values():
@@ -256,3 +289,19 @@ def _get_routes_from_plugins(plugins):
             ret[Route.RUNNING].extend(plugin_routes.get(Route.RUNNING, []))
             ret[Route.CONFIG].extend(plugin_routes.get(Route.CONFIG, []))
     return ret
+
+
+def _get_iface_types_by_name(iface_infos, name):
+    """
+    Return the type of all ifaces with valid type and specified name
+    """
+    iface_types = []
+    for iface_info in iface_infos:
+        iface_type = iface_info.get(Interface.TYPE, InterfaceType.UNKNOWN)
+        if (
+            iface_type != InterfaceType.UNKNOWN
+            and iface_info[Interface.NAME] == name
+        ):
+            iface_types.append(iface_type)
+
+    return iface_types

@@ -25,6 +25,7 @@ from ovs.db.idl import Transaction, Idl, SchemaHelper
 
 from libnmstate.plugin import NmstatePlugin
 from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceType
 from libnmstate.schema import OVSInterface
 from libnmstate.schema import OVSBridge
 from libnmstate.schema import OvsDB
@@ -86,7 +87,7 @@ class NmstateOvsdbPlugin(NmstatePlugin):
             )
         self._schema = SchemaHelper(schema_path)
         self._schema.register_columns(
-            "Interface", [OvsDB.EXTERNAL_IDS, "name"]
+            "Interface", [OvsDB.EXTERNAL_IDS, "name", "type"]
         )
         self._schema.register_columns("Bridge", [OvsDB.EXTERNAL_IDS, "name"])
 
@@ -147,12 +148,30 @@ class NmstateOvsdbPlugin(NmstatePlugin):
 
     def get_interfaces(self):
         ifaces = []
-        for row in list(self._idl.tables["Interface"].rows.values()) + list(
-            self._idl.tables["Bridge"].rows.values()
-        ):
+        for row in self._idl.tables["Interface"].rows.values():
+            if row.type in ("internal", "patch"):
+                iface_type = InterfaceType.OVS_INTERFACE
+            elif row.type == "system":
+                # Let other plugin decide the interface type
+                iface_type = InterfaceType.UNKNOWN
+            else:
+                continue
+
             ifaces.append(
                 {
                     Interface.NAME: row.name,
+                    Interface.TYPE: iface_type,
+                    OvsDB.OVS_DB_SUBTREE: {
+                        OvsDB.EXTERNAL_IDS: row.external_ids
+                    },
+                }
+            )
+
+        for row in self._idl.tables["Bridge"].rows.values():
+            ifaces.append(
+                {
+                    Interface.NAME: row.name,
+                    Interface.TYPE: InterfaceType.OVS_BRIDGE,
                     OvsDB.OVS_DB_SUBTREE: {
                         OvsDB.EXTERNAL_IDS: row.external_ids
                     },
