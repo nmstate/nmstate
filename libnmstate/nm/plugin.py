@@ -25,6 +25,7 @@ from libnmstate.error import NmstateValueError
 from libnmstate.ifaces.ovs import is_ovs_running
 from libnmstate.schema import DNS
 from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceType
 from libnmstate.schema import Route
 from libnmstate.schema import RouteRule
 from libnmstate.plugin import NmstatePlugin
@@ -144,14 +145,12 @@ class NetworkManagerPlugin(NmstatePlugin):
                 bondinfo = nm_bond.get_bond_info(dev)
                 iface_info.update(_ifaceinfo_bond(bondinfo))
             elif NmstatePlugin.OVS_CAPABILITY in capabilities:
-                if nm_ovs.is_ovs_bridge_type_id(type_id):
-                    iface_info["bridge"] = nm_ovs.get_ovs_info(
-                        self.context, dev, devices_info
-                    )
+                if iface_info[Interface.TYPE] == InterfaceType.OVS_BRIDGE:
+                    iface_info.update(nm_ovs.get_ovs_bridge_info(dev))
                     iface_info = _remove_ovs_bridge_unsupported_entries(
                         iface_info
                     )
-                elif nm_ovs.is_ovs_interface_type_id(type_id):
+                elif iface_info[Interface.TYPE] == InterfaceType.OVS_INTERFACE:
                     iface_info.update(nm_ovs.get_interface_info(act_con))
                 elif nm_ovs.is_ovs_port_type_id(type_id):
                     continue

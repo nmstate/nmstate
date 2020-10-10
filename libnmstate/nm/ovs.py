@@ -27,7 +27,6 @@ from libnmstate.schema import OVSInterface
 from libnmstate.ifaces import ovs
 from libnmstate.ifaces.bridge import BridgeIface
 
-from . import connection
 from .common import NM
 
 
@@ -125,36 +124,39 @@ def create_patch_setting(patch_state):
     return patch_setting
 
 
-def is_ovs_bridge_type_id(type_id):
-    return type_id == NM.DeviceType.OVS_BRIDGE
-
-
 def is_ovs_port_type_id(type_id):
     return type_id == NM.DeviceType.OVS_PORT
 
 
-def is_ovs_interface_type_id(type_id):
-    return type_id == NM.DeviceType.OVS_INTERFACE
+def get_ovs_bridge_info(nm_dev_ovs_br):
+    iface_info = {OB.CONFIG_SUBTREE: {}}
+    ports_info = _get_bridge_nmstate_ports_info(nm_dev_ovs_br)
+    options = _get_bridge_options(nm_dev_ovs_br)
+
+    if ports_info or options:
+        iface_info[OB.CONFIG_SUBTREE] = {
+            OB.PORT_SUBTREE: ports_info,
+            OB.OPTIONS_SUBTREE: options,
+        }
+    return iface_info
 
 
-def get_port_by_port(nmdev):
-    active_con = connection.get_device_active_connection(nmdev)
-    if active_con:
-        controller = active_con.get_controller()
-        if controller and is_ovs_port_type_id(controller.get_device_type()):
-            return controller
-    return None
-
-
-def get_ovs_info(context, bridge_device, devices_info):
-    port_profiles = _get_port_profiles(bridge_device, devices_info)
-    ports = _get_bridge_ports_info(context, port_profiles, devices_info)
-    options = _get_bridge_options(context, bridge_device)
-
-    if ports or options:
-        return {"port": ports, "options": options}
-    else:
-        return {}
+def _get_bridge_nmstate_ports_info(nm_dev_ovs_br):
+    ports_info = []
+    for nm_dev_ovs_port in nm_dev_ovs_br.get_slaves():
+        port_info = {}
+        nm_dev_ovs_ifaces = nm_dev_ovs_port.get_slaves()
+        if not nm_dev_ovs_ifaces:
+            continue
+        if len(nm_dev_ovs_ifaces) == 1:
+            port_info[OB.Port.NAME] = nm_dev_ovs_ifaces[0].get_iface()
+        else:
+            port_info = _get_lag_nmstate_port_info(nm_dev_ovs_port)
+        vlan_info = _get_vlan_info(nm_dev_ovs_port)
+        if vlan_info:
+            port_info[OB.Port.VLAN_SUBTREE] = vlan_info
+        ports_info.append(port_info)
+    return ports_info
 
 
 def get_interface_info(act_con):
@@ -184,46 +186,48 @@ def _get_patch_setting(act_con):
     return None
 
 
-def get_port(nm_device):
-    return nm_device.get_slaves()
+def _get_lag_nmstate_port_info(nm_dev_ovs_port):
+    OVS_LAG = OB.Port.LinkAggregation
+
+    lag = {
+        OVS_LAG.PORT_SUBTREE: sorted(
+            [
+                {OVS_LAG.Port.NAME: nm_dev_ovs_iface.get_iface()}
+                for nm_dev_ovs_iface in nm_dev_ovs_port.get_slaves()
+            ],
+            key=itemgetter(OVS_LAG.Port.NAME),
+        ),
+    }
+    mode = _get_lag_mode(nm_dev_ovs_port)
+    if mode:
+        lag[OVS_LAG.MODE] = mode
+    return {
+        OB.Port.NAME: nm_dev_ovs_port.get_iface(),
+        OB.Port.LINK_AGGREGATION_SUBTREE: lag,
+    }
 
 
-def _get_bridge_ports_info(context, port_profiles, devices_info):
-    ports_info = []
-    for p in port_profiles:
-        port_info = _get_bridge_port_info(context, p, devices_info)
-        if port_info:
-            ports_info.append(port_info)
-    ports_info.sort(key=itemgetter(OB.Port.NAME))
-    return ports_info
-
-
-def _get_bridge_port_info(context, port_profile, devices_info):
+def _get_lag_mode(nm_dev_ovs_port):
     """
-    Report port information.
-    Note: The current implementation supports only system OVS ports and
-    access vlan-mode (trunks are not supported).
+    TODO: Use applied profile instead of on-disk one.
     """
-    port_info = {}
+    mode = None
+    nm_setting = _get_nm_setting_ovs_port(nm_dev_ovs_port)
+    if nm_setting:
+        lacp = nm_setting.props.lacp
+        mode = nm_setting.props.bond_mode
+        if not mode:
+            if lacp == LacpValue.ACTIVE:
+                mode = OB.Port.LinkAggregation.Mode.LACP
+            else:
+                mode = OB.Port.LinkAggregation.Mode.ACTIVE_BACKUP
+    return mode
 
-    port_setting = port_profile.get_setting(NM.SettingOvsPort)
-    vlan_mode = port_setting.props.vlan_mode
 
-    port_name = port_profile.get_interface_name()
-    port_device = context.get_nm_dev(port_name)
-    port_port_profiles = _get_port_profiles(port_device, devices_info)
-    port_port_names = [c.get_interface_name() for c in port_port_profiles]
-
-    if port_port_names:
-        number_of_interfaces = len(port_port_names)
-        if number_of_interfaces == 1:
-            port_info[OB.Port.NAME] = port_port_names[0]
-        else:
-            port_lag_info = _get_lag_info(
-                port_name, port_setting, port_port_names
-            )
-            port_info.update(port_lag_info)
-
+def _get_vlan_info(nm_dev_ovs_port):
+    nm_setting = _get_nm_setting_ovs_port(nm_dev_ovs_port)
+    if nm_setting:
+        vlan_mode = nm_setting.props.vlan_mode
         if vlan_mode:
             nmstate_vlan_mode = NM_OVS_VLAN_MODE_MAP.get(
                 vlan_mode, OB.Port.Vlan.Mode.UNKNOWN
@@ -232,38 +236,25 @@ def _get_bridge_port_info(context, port_profile, devices_info):
                 logging.warning(
                     f"OVS Port VLAN mode '{vlan_mode}' is not supported yet"
                 )
-            port_info[OB.Port.VLAN_SUBTREE] = {
-                OB.Port.Vlan.MODE: nmstate_vlan_mode,
-                OB.Port.Vlan.TAG: port_setting.get_tag(),
-            }
-    return port_info
+                return {OB.Port.Vlan.MODE: OB.Port.Vlan.Mode.UNKNOWN}
+            else:
+                return {
+                    OB.Port.Vlan.MODE: nmstate_vlan_mode,
+                    OB.Port.Vlan.TAG: nm_setting.get_tag(),
+                }
+    return {}
 
 
-def _get_lag_info(port_name, port_setting, port_names):
-    port_info = {}
-
-    lacp = port_setting.props.lacp
-    mode = port_setting.props.bond_mode
-    if not mode:
-        if lacp == LacpValue.ACTIVE:
-            mode = OB.Port.LinkAggregation.Mode.LACP
-        else:
-            mode = OB.Port.LinkAggregation.Mode.ACTIVE_BACKUP
-    port_info[OB.Port.NAME] = port_name
-    port_info[OB.Port.LINK_AGGREGATION_SUBTREE] = {
-        OB.Port.LinkAggregation.MODE: mode,
-        OB.Port.LinkAggregation.PORT_SUBTREE: sorted(
-            [
-                {OB.Port.LinkAggregation.Port.NAME: iface_name}
-                for iface_name in port_names
-            ],
-            key=itemgetter(OB.Port.LinkAggregation.Port.NAME),
-        ),
-    }
-    return port_info
+def _get_nm_setting_ovs_port(nm_dev_ovs_port):
+    nm_ac = nm_dev_ovs_port.get_active_connection()
+    if nm_ac:
+        nm_profile = nm_ac.props.connection
+        if nm_profile:
+            return nm_profile.get_setting(NM.SettingOvsPort)
+    return None
 
 
-def _get_bridge_options(context, bridge_device):
+def _get_bridge_options(bridge_device):
     bridge_options = {}
     bridge_profile = None
     act_conn = bridge_device.get_active_connection()
@@ -280,21 +271,6 @@ def _get_bridge_options(context, bridge_device):
         ] = bridge_setting.props.mcast_snooping_enable
 
     return bridge_options
-
-
-def _get_port_profiles(controller_device, devices_info):
-    port_profiles = []
-    for dev, _ in devices_info:
-        active_con = connection.get_device_active_connection(dev)
-        if active_con:
-            controller = active_con.props.master
-            if controller and (
-                controller.get_iface() == controller_device.get_iface()
-            ):
-                profile = active_con.props.connection
-                if profile:
-                    port_profiles.append(profile)
-    return port_profiles
 
 
 def create_ovs_proxy_iface_info(iface):
