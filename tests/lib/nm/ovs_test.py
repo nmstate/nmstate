@@ -42,90 +42,72 @@ def nm_connection_mock():
         yield m
 
 
-def test_is_ovs_bridge_type_id(NM_mock):
-    type_id = NM_mock.DeviceType.OVS_BRIDGE
-    assert nm.ovs.is_ovs_bridge_type_id(type_id)
-
-
 def test_is_ovs_port_type_id(NM_mock):
     type_id = NM_mock.DeviceType.OVS_PORT
     assert nm.ovs.is_ovs_port_type_id(type_id)
 
 
-def test_is_ovs_interface_type_id(NM_mock):
-    type_id = NM_mock.DeviceType.OVS_INTERFACE
-    assert nm.ovs.is_ovs_interface_type_id(type_id)
-
-
-def test_get_ovs_info_without_ports(context_mock, NM_mock):
+def test_get_ovs_bridge_info_without_ports(NM_mock):
     bridge_device = mock.MagicMock()
-    _mock_port_profile(NM_mock, bridge_device)
+    _mock_ovs_bridge_profile(bridge_device)
 
-    device_info = [(bridge_device, None)]
-    info = nm.ovs.get_ovs_info(context_mock, bridge_device, device_info)
+    info = nm.ovs.get_ovs_bridge_info(bridge_device)
 
     expected_info = {
-        OVSBridge.PORT_SUBTREE: [],
-        OVSBridge.OPTIONS_SUBTREE: {
-            OVSBridge.Options.FAIL_MODE: "",
-            OVSBridge.Options.MCAST_SNOOPING_ENABLED: False,
-            OVSBridge.Options.RSTP: False,
-            OVSBridge.Options.STP: False,
-        },
+        OVSBridge.CONFIG_SUBTREE: {
+            OVSBridge.PORT_SUBTREE: [],
+            OVSBridge.OPTIONS_SUBTREE: {
+                OVSBridge.Options.FAIL_MODE: "",
+                OVSBridge.Options.MCAST_SNOOPING_ENABLED: False,
+                OVSBridge.Options.RSTP: False,
+                OVSBridge.Options.STP: False,
+            },
+        }
     }
     assert expected_info == info
 
 
-def test_get_ovs_info_with_ports_without_interfaces(
-    nm_connection_mock, NM_mock, context_mock
-):
+def test_get_ovs_bridge_info_without_interfaces(NM_mock):
     bridge_device = mock.MagicMock()
     port_device = mock.MagicMock()
-    _mock_port_profile(NM_mock, bridge_device)
-    active_con = nm_connection_mock.get_device_active_connection.return_value
-    active_con.props.master = bridge_device
+    _mock_ovs_bridge_profile(bridge_device)
+    bridge_device.get_slaves.return_value = [port_device]
+    port_device.get_slaves.return_value = []
 
-    device_info = [(bridge_device, None), (port_device, None)]
-    info = nm.ovs.get_ovs_info(context_mock, bridge_device, device_info)
+    info = nm.ovs.get_ovs_bridge_info(bridge_device)
 
     expected_info = {
-        OVSBridge.PORT_SUBTREE: [],
-        OVSBridge.OPTIONS_SUBTREE: {
-            OVSBridge.Options.FAIL_MODE: "",
-            OVSBridge.Options.MCAST_SNOOPING_ENABLED: False,
-            OVSBridge.Options.RSTP: False,
-            OVSBridge.Options.STP: False,
-        },
+        OVSBridge.CONFIG_SUBTREE: {
+            OVSBridge.PORT_SUBTREE: [],
+            OVSBridge.OPTIONS_SUBTREE: {
+                OVSBridge.Options.FAIL_MODE: "",
+                OVSBridge.Options.MCAST_SNOOPING_ENABLED: False,
+                OVSBridge.Options.RSTP: False,
+                OVSBridge.Options.STP: False,
+            },
+        }
     }
     assert expected_info == info
 
 
-def test_get_ovs_info_with_ports_with_interfaces(
-    nm_connection_mock, NM_mock, context_mock
-):
+def test_get_ovs_bridge_info_with_ports_with_interfaces(NM_mock):
     bridge_device = mock.MagicMock()
     port_device = mock.MagicMock()
-    bridge_active_con = mock.MagicMock()
-    port_active_con = mock.MagicMock()
-    context_mock.get_nm_dev.return_value = port_device
-    _mock_port_profile(NM_mock, bridge_device)
-    nm_connection_mock.get_device_active_connection = (
-        lambda dev: bridge_active_con
-        if dev == bridge_device
-        else port_active_con
-    )
-    bridge_active_con.props.master = bridge_device
-    port_active_con.props.master = port_device
+    iface_device = mock.MagicMock()
+    _mock_ovs_bridge_profile(bridge_device)
+    bridge_device.get_slaves.return_value = [port_device]
+    port_device.get_slaves.return_value = [iface_device]
 
-    device_info = [(bridge_device, None), (port_device, None)]
-    info = nm.ovs.get_ovs_info(context_mock, bridge_device, device_info)
+    ovs_info = nm.ovs.get_ovs_bridge_info(bridge_device)[
+        OVSBridge.CONFIG_SUBTREE
+    ]
 
-    assert len(info[OVSBridge.PORT_SUBTREE]) == 1
-    port_state = info[OVSBridge.PORT_SUBTREE][0]
+    assert len(ovs_info[OVSBridge.PORT_SUBTREE]) == 1
+    port_state = ovs_info[OVSBridge.PORT_SUBTREE][0]
     assert OVSBridge.Port.NAME in port_state
     vlan_state = port_state[OVSBridge.Port.VLAN_SUBTREE]
     assert OVSBridge.Port.Vlan.MODE in vlan_state
-    assert OVSBridge.Port.Vlan.TAG in vlan_state
+    assert OVSBridge.Port.Vlan.TAG not in vlan_state
 
 
 def test_create_bridge_setting(NM_mock):
@@ -175,7 +157,7 @@ def test_create_port_setting(NM_mock):
     assert port_setting.props.vlan_mode == vlan_mode
 
 
-def _mock_port_profile(NM_mock, bridge_device):
+def _mock_ovs_bridge_profile(bridge_device):
     act_con = bridge_device.get_active_connection.return_value
     conn = act_con.props.connection
     bridge_setting = conn.get_setting.return_value

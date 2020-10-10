@@ -159,13 +159,7 @@ def _get_bridge_current_state(nm_plugin):
     state = {}
     nmdev = nm_plugin.context.get_nm_dev(BRIDGE0)
     if nmdev:
-        devices_info = [
-            (dev, nm.device.get_device_common_info(dev))
-            for dev in nm.device.list_devices(nm_plugin.context.client)
-        ]
-        ovs_info = nm.ovs.get_ovs_info(nm_plugin.context, nmdev, devices_info)
-        if ovs_info:
-            state[OB.CONFIG_SUBTREE] = ovs_info
+        state = nm.ovs.get_ovs_bridge_info(nmdev)
     return state
 
 
