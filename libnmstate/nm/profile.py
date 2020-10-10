@@ -619,7 +619,10 @@ def get_all_applied_configs(context):
         ):
             iface_name = nm_dev.get_iface()
             if iface_name:
-                action = f"Retrieve applied config: {iface_name}"
+                iface_type_str = nm_dev.get_type_description()
+                action = (
+                    f"Retrieve applied config: {iface_type_str} {iface_name}"
+                )
                 context.register_async(action, fast=True)
                 nm_dev.get_applied_connection_async(
                     flags=0,

@@ -280,6 +280,7 @@ def get_applied_config_callback(nm_dev, result, user_data):
     context.finish_async(action)
     try:
         remote_conn, _ = nm_dev.get_applied_connection_finish(result)
+        # TODO: We should use both interface name and type as key below.
         applied_configs[nm_dev.get_iface()] = remote_conn
     except Exception as e:
         logging.warning(
