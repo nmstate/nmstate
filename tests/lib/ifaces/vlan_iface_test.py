@@ -22,6 +22,7 @@ import pytest
 from libnmstate.error import NmstateValueError
 from libnmstate.ifaces import Ifaces
 from libnmstate.schema import VLAN
+from libnmstate.schema import InfiniBand
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceType
 
@@ -93,3 +94,23 @@ class TestVlanIface:
         base_iface = ifaces.get(base_iface_info.get(Interface.NAME))
 
         assert base_iface.mtu == vlan_iface_info[Interface.MTU]
+
+    def test_add_vlan_with_base_iface_infiniband(self):
+        base_iface_info = gen_foo_iface_info(
+            iface_type=InterfaceType.INFINIBAND
+        )
+        base_iface_info[Interface.NAME] = "ib0"
+        base_iface_info[Interface.MTU] = 1500
+        base_iface_info[InfiniBand.CONFIG_SUBTREE] = {
+            InfiniBand.PKEY: InfiniBand.DEFAULT_PKEY,
+            InfiniBand.MODE: InfiniBand.Mode.DATAGRAM,
+        }
+
+        vlan_iface_info = self._gen_iface_info()
+        vlan_iface_info[VLAN.CONFIG_SUBTREE][VLAN.BASE_IFACE] = "ib0"
+
+        with pytest.raises(NmstateValueError):
+            Ifaces(
+                des_iface_infos=[base_iface_info, vlan_iface_info],
+                cur_iface_infos=[],
+            )
