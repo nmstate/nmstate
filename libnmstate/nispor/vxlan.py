@@ -34,7 +34,7 @@ class NisporPluginVxlanIface(NisporPluginBaseIface):
             VXLAN.ID: self._np_iface.vxlan_id,
             VXLAN.BASE_IFACE: self._np_iface.base_iface,
             VXLAN.REMOTE: self._np_iface.remote,
-            VXLAN.DESTINATION_PORT: self._np_iface.dst_port_min,
+            VXLAN.DESTINATION_PORT: self._np_iface.dst_port,
         }
 
         return info

@@ -10,4 +10,4 @@ PyGObject
 PyYAML
 setuptools
 varlink
-nispor>=0.5.1
+nispor>=0.6.1
