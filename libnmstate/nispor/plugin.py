@@ -32,6 +32,7 @@ from .vlan import NisporPluginVlanIface
 from .vxlan import NisporPluginVxlanIface
 from .route import nispor_route_state_to_nmstate
 from .vrf import NisporPluginVrfIface
+from .ovs import NisporPluginOvsInternalIface
 
 
 class NisporPlugin(NmstatePlugin):
@@ -82,6 +83,8 @@ class NisporPlugin(NmstatePlugin):
                 )
             elif iface_type == "Vrf":
                 ifaces.append(NisporPluginVrfIface(np_iface).to_dict())
+            elif iface_type == "OpenvSwitch":
+                ifaces.append(NisporPluginOvsInternalIface(np_iface).to_dict())
             else:
                 ifaces.append(NisporPluginBaseIface(np_iface).to_dict())
         return ifaces
