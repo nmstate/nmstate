@@ -40,8 +40,8 @@ Requires:       python3-nispor
 Summary:        nmstate plugin for OVS database manipulation
 Requires:       python3-%{libname} = %{?epoch:%{epoch}:}%{version}-%{release}
 %if 0%{?rhel}
-# The python-openvswitch rpm pacakge is not in the same repo with nmstate,
-# hence state it as Recommends, no requires.
+# The python-openvswitch rpm package is not in the same repo with nmstate,
+# require only if openvswitch is installed.
 Requires:       (python3dist(ovs) if openvswitch)
 %else
 Requires:       python3dist(ovs)
