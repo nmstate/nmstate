@@ -30,6 +30,7 @@ Requires:       NetworkManager-libnm >= 1:1.26.0
 Recommends:     NetworkManager
 # Avoid automatically generated profiles
 Recommends:     NetworkManager-config-server
+Recommends:     (nmstate-plugin-ovsdb if openvswitch)
 # Use Suggests for NetworkManager-ovs and NetworkManager-team since it is only
 # required for OVS and team support
 Suggests:       NetworkManager-ovs
@@ -43,6 +44,7 @@ Requires:       python3-%{libname} = %{?epoch:%{epoch}:}%{version}-%{release}
 # The python-openvswitch rpm package is not in the same repo with nmstate,
 # require only if openvswitch is installed.
 Requires:       (python3dist(ovs) if openvswitch)
+Recommends:     python3dist(ovs)
 %else
 Requires:       python3dist(ovs)
 %endif
