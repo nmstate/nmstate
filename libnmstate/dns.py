@@ -197,10 +197,11 @@ class DnsState:
             len(self._config_servers) > 2
             and any(is_ipv6_address(n) for n in self._config_servers)
             and any(not is_ipv6_address(n) for n in self._config_servers)
+            and _is_mixed_dns_servers(self._config_servers)
         ):
             raise NmstateNotImplementedError(
-                "Three or more nameservers are only supported when using "
-                "either IPv4 or IPv6 nameservers but not both."
+                "Placing IPv4/IPv6 nameserver in the middlfe of IPv6/IPv4 "
+                "nameservers is not supported yet"
             )
 
     @property
@@ -229,3 +230,18 @@ def _is_dns_config_changed(des_dns_state, cur_dns_state):
     ) or _get_config_searches(des_dns_state) != _get_config_searches(
         cur_dns_state
     )
+
+
+def _is_mixed_dns_servers(servers):
+    """
+    Return True when an IPv6 server is in the middle of two IPv4 namesevers or
+    an IPv4 server is in the middle of two IPv6 servers.
+    """
+    pattern = ""
+    for server in servers:
+        if is_ipv6_address(server):
+            pattern += "6"
+        else:
+            pattern += "4"
+
+    return "464" in pattern or "646" in pattern
