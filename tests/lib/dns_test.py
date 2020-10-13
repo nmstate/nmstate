@@ -203,12 +203,61 @@ class TestDnsState:
         with pytest.raises(NmstateVerificationError):
             dns_state.verify({DNS.CONFIG: DNS_CONFIG2})
 
-    def test_3_ipv4_ipv6_mixed_name_servers(self):
+    @pytest.mark.parametrize(
+        "dns_servers",
+        [
+            ([IPV4_DNS_SERVER1, IPV4_DNS_SERVER2, IPV4_DNS_SERVER3]),
+            ([IPV6_DNS_SERVER1, IPV6_DNS_SERVER2, IPV6_DNS_SERVER3]),
+            ([IPV4_DNS_SERVER1, IPV4_DNS_SERVER2, IPV6_DNS_SERVER1]),
+            ([IPV6_DNS_SERVER1, IPV6_DNS_SERVER2, IPV4_DNS_SERVER1]),
+            pytest.param(
+                ([IPV4_DNS_SERVER1, IPV6_DNS_SERVER1, IPV4_DNS_SERVER2]),
+                marks=pytest.mark.xfail(
+                    reason="Not supported",
+                    raises=NmstateNotImplementedError,
+                    strict=True,
+                ),
+            ),
+            pytest.param(
+                ([IPV6_DNS_SERVER1, IPV4_DNS_SERVER1, IPV6_DNS_SERVER2]),
+                marks=pytest.mark.xfail(
+                    reason="Not supported",
+                    raises=NmstateNotImplementedError,
+                    strict=True,
+                ),
+            ),
+            (
+                [
+                    IPV4_DNS_SERVER1,
+                    IPV4_DNS_SERVER2,
+                    IPV6_DNS_SERVER1,
+                    IPV6_DNS_SERVER2,
+                ]
+            ),
+            (
+                [
+                    IPV6_DNS_SERVER1,
+                    IPV6_DNS_SERVER2,
+                    IPV4_DNS_SERVER1,
+                    IPV4_DNS_SERVER2,
+                ]
+            ),
+        ],
+        ids=[
+            "3ipv4",
+            "3ipv6",
+            "2ipv4+ipv6",
+            "2ipv6+ipv4",
+            "ipv4+ipv6+ipv4",
+            "ipv6+ipv4+ipv6",
+            "2ipv4+2ipv6",
+            "2ipv6+2ipv4",
+        ],
+    )
+    def test_validate_3_more_name_servers(self, dns_servers):
         dns_config = deepcopy(DNS_CONFIG1)
-        dns_config[DNS.SERVER].append(IPV4_DNS_SERVER3)
-
-        with pytest.raises(NmstateNotImplementedError):
-            DnsState({DNS.CONFIG: dns_config}, {})
+        dns_config[DNS.SERVER] = dns_servers
+        DnsState({DNS.CONFIG: dns_config}, {})
 
     def test_3_dns_ipv4_servers(self):
         dns_config = deepcopy(DNS_CONFIG1)

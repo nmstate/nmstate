@@ -104,13 +104,22 @@ def test_dns_edit_ipv6_nameserver_before_ipv4():
     assert dns_config == current_state[DNS.KEY][DNS.CONFIG]
 
 
+@pytest.mark.tier1
 @pytest.mark.parametrize(
     "dns_servers",
     [
         (IPV4_DNS_NAMESERVERS + [EXTRA_IPV4_DNS_NAMESERVER]),
         (IPV6_DNS_NAMESERVERS + [EXTRA_IPV6_DNS_NAMESERVER]),
+        (IPV4_DNS_NAMESERVERS + [EXTRA_IPV6_DNS_NAMESERVER]),
+        (IPV6_DNS_NAMESERVERS + [EXTRA_IPV4_DNS_NAMESERVER]),
         pytest.param(
-            (IPV4_DNS_NAMESERVERS + [EXTRA_IPV6_DNS_NAMESERVER]),
+            (
+                [
+                    IPV4_DNS_NAMESERVERS[0],
+                    EXTRA_IPV6_DNS_NAMESERVER,
+                    IPV4_DNS_NAMESERVERS[1],
+                ]
+            ),
             marks=pytest.mark.xfail(
                 reason="Not supported",
                 raises=NmstateNotImplementedError,
@@ -118,17 +127,34 @@ def test_dns_edit_ipv6_nameserver_before_ipv4():
             ),
         ),
         pytest.param(
-            (IPV6_DNS_NAMESERVERS + [EXTRA_IPV4_DNS_NAMESERVER]),
+            (
+                [
+                    IPV6_DNS_NAMESERVERS[0],
+                    EXTRA_IPV4_DNS_NAMESERVER,
+                    IPV6_DNS_NAMESERVERS[1],
+                ]
+            ),
             marks=pytest.mark.xfail(
                 reason="Not supported",
                 raises=NmstateNotImplementedError,
                 strict=True,
             ),
         ),
+        (IPV4_DNS_NAMESERVERS + IPV6_DNS_NAMESERVERS),
+        (IPV6_DNS_NAMESERVERS + IPV4_DNS_NAMESERVERS),
     ],
-    ids=["ipv4", "ipv6", "ipv4+ipv6", "ipv6+ipv4"],
+    ids=[
+        "3ipv4",
+        "3ipv6",
+        "2ipv4+ipv6",
+        "2ipv6+ipv4",
+        "ipv4+ipv6+ipv4",
+        "ipv6+ipv4+ipv6",
+        "2ipv4+2ipv6",
+        "2ipv6+2ipv4",
+    ],
 )
-def test_dns_edit_three_nameservers(dns_servers):
+def test_dns_edit_3_more_nameservers(dns_servers):
     dns_config = {
         DNS.SERVER: dns_servers,
         DNS.SEARCH: [],
