@@ -30,7 +30,6 @@ from libnmstate.schema import Route
 from libnmstate.schema import RouteRule
 from libnmstate.plugin import NmstatePlugin
 
-from . import bond as nm_bond
 from . import connection as nm_connection
 from . import device as nm_device
 from . import ipv4 as nm_ipv4
@@ -141,10 +140,7 @@ class NetworkManagerPlugin(NmstatePlugin):
             iface_info.update(nm_team.get_info(dev))
             iface_info.update(get_infiniband_info(applied_config))
 
-            if nm_bond.is_bond_type_id(type_id):
-                bondinfo = nm_bond.get_bond_info(dev)
-                iface_info.update(_ifaceinfo_bond(bondinfo))
-            elif NmstatePlugin.OVS_CAPABILITY in capabilities:
+            if NmstatePlugin.OVS_CAPABILITY in capabilities:
                 if iface_info[Interface.TYPE] == InterfaceType.OVS_BRIDGE:
                     iface_info.update(nm_ovs.get_ovs_bridge_info(dev))
                     iface_info = _remove_ovs_bridge_unsupported_entries(
@@ -240,14 +236,6 @@ class NetworkManagerPlugin(NmstatePlugin):
                 nm_utils_version,
                 nm_client_version,
             )
-
-
-def _ifaceinfo_bond(devinfo):
-    # TODO: What about unmanaged devices?
-    bondinfo = nm_translator.Nm2Api.get_bond_info(devinfo)
-    if "link-aggregation" in bondinfo:
-        return bondinfo
-    return {}
 
 
 def _remove_ovs_bridge_unsupported_entries(iface_info):

@@ -20,13 +20,15 @@
 from contextlib import contextmanager
 
 from libnmstate import nm
-from libnmstate import schema
 from libnmstate.nm.common import NM
+from libnmstate.ifaces.bond import BondIface
 from libnmstate.schema import Bond
+from libnmstate.schema import BondMode
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceType
 
 from .testlib import main_context
+from ..testlib import statelib
 from ..testlib.retry import retry_till_true_or_timeout
 
 
@@ -34,85 +36,101 @@ BOND0 = "bondtest0"
 VERIFY_RETRY_TMO = 5
 
 
-def test_create_and_remove_bond(eth1_up, nm_plugin):
-    bond_options = {
-        schema.Bond.MODE: schema.BondMode.ROUND_ROBIN,
-        "miimon": "140",
-    }
+def _gen_bond_iface(bond_options, mode=BondMode.ROUND_ROBIN):
+    return BondIface(
+        {
+            Interface.NAME: "foo",
+            Interface.TYPE: InterfaceType.BOND,
+            Bond.CONFIG_SUBTREE: {
+                Bond.MODE: mode,
+                Bond.OPTIONS_SUBTREE: bond_options,
+            },
+        }
+    )
 
-    with _bond_interface(nm_plugin.context, BOND0, bond_options):
-        bond_current_state = _get_bond_current_state(
-            nm_plugin, BOND0, "miimon"
-        )
+
+def test_create_and_remove_bond(eth1_up, nm_plugin):
+    bond_options = {"miimon": 140}
+
+    with _bond_interface(
+        nm_plugin.context, BOND0, BondMode.ROUND_ROBIN, bond_options
+    ):
+        bond_current_state = _get_bond_current_state(BOND0, "miimon")
 
         bond_desired_state = {
-            schema.Bond.PORT: [],
-            schema.Bond.OPTIONS_SUBTREE: bond_options,
+            Bond.MODE: BondMode.ROUND_ROBIN,
+            Bond.PORT: [],
+            Bond.OPTIONS_SUBTREE: bond_options,
         }
         assert bond_current_state == bond_desired_state
 
-    assert not _get_bond_current_state(nm_plugin, BOND0)
+    assert not _get_bond_current_state(BOND0)
 
 
 def test_bond_with_a_port(eth1_up, nm_plugin):
-    bond_options = {schema.Bond.MODE: schema.BondMode.ROUND_ROBIN}
-
-    with _bond_interface(nm_plugin.context, BOND0, bond_options):
+    bond_options = {"miimon": 140}
+    with _bond_interface(
+        nm_plugin.context, BOND0, BondMode.ROUND_ROBIN, bond_options
+    ):
         nic_name = eth1_up[Interface.KEY][0][Interface.NAME]
         _attach_port_to_bond(nm_plugin.context, BOND0, nic_name)
         bond_desired_state = {
-            schema.Bond.PORT: [nic_name],
-            schema.Bond.OPTIONS_SUBTREE: bond_options,
+            Bond.MODE: BondMode.ROUND_ROBIN,
+            Bond.PORT: [nic_name],
+            Bond.OPTIONS_SUBTREE: bond_options,
         }
 
         assert retry_till_true_or_timeout(
-            VERIFY_RETRY_TMO, _verify_bond_state, nm_plugin, bond_desired_state
+            VERIFY_RETRY_TMO, _verify_bond_state, "miimon", bond_desired_state
         )
 
-    assert not _get_bond_current_state(nm_plugin, BOND0)
+    assert not _get_bond_current_state(BOND0)
 
 
 @contextmanager
-def _bond_interface(ctx, name, options):
+def _bond_interface(ctx, name, mode, options):
     con_profile = None
     try:
-        con_profile = _create_bond(ctx, name, options)
+        con_profile = _create_bond(ctx, name, mode, options)
         yield
     finally:
         _delete_bond(ctx, con_profile)
 
 
-def _get_bond_current_state(plugin, name, option=None):
+def _get_bond_current_state(name, option=None):
     """
     When option defined, the returned state will only contains the
     specified bond option and the bond mode.
     When option not defined, the return state will only contains bond mode.
     This is needed for assert check.
     """
-    plugin.refresh_content()
-    nmdev = plugin.context.get_nm_dev(name)
-    nm_bond_info = nm.bond.get_bond_info(nmdev) if nmdev else {}
-    if not nm_bond_info:
-        return {}
-    bond_options = nm_bond_info[schema.Bond.OPTIONS_SUBTREE]
-    nm_bond_info[schema.Bond.OPTIONS_SUBTREE] = {
-        schema.Bond.MODE: bond_options[schema.Bond.MODE]
-    }
+    state = statelib.show_only((name,))
+    if len(state[Interface.KEY]) < 1:
+        return None
+    bond_info = state[Interface.KEY][0][Bond.CONFIG_SUBTREE]
     if option:
-        nm_bond_info[schema.Bond.OPTIONS_SUBTREE][option] = bond_options[
-            option
-        ]
-    return _convert_port_devices_to_iface_names(nm_bond_info)
+        return {
+            Bond.MODE: bond_info[Bond.MODE],
+            Bond.PORT: bond_info[Bond.PORT],
+            Bond.OPTIONS_SUBTREE: {
+                option: bond_info[Bond.OPTIONS_SUBTREE][option]
+            },
+        }
+    else:
+        return bond_info
 
 
-def _create_bond(ctx, name, options):
+def _create_bond(ctx, name, mode, options):
     con_setting = nm.connection.ConnectionSetting()
     con_setting.create(
         con_name=name,
         iface_name=name,
         iface_type=NM.SETTING_BOND_SETTING_NAME,
     )
-    bond_setting = nm.bond.create_setting(options, wired_setting=None)
+    iface = _gen_bond_iface(options, mode)
+    bond_setting = nm.bond.create_setting(
+        iface, wired_setting=None, base_con_profile=None
+    )
     ipv4_setting = nm.ipv4.create_setting({}, None)
     ipv6_setting = nm.ipv6.create_setting({}, None)
 
@@ -162,11 +180,5 @@ def _create_connection_setting(bond, port_con_profile):
     return con_setting.setting
 
 
-def _convert_port_devices_to_iface_names(info):
-    if info:
-        info[Bond.PORT] = [port.props.interface for port in info[Bond.PORT]]
-    return info
-
-
-def _verify_bond_state(nm_plugin, expected_state):
-    return _get_bond_current_state(nm_plugin, BOND0) == expected_state
+def _verify_bond_state(option, expected_state):
+    return _get_bond_current_state(BOND0, option) == expected_state

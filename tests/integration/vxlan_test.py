@@ -107,7 +107,7 @@ def test_add_new_bond_iface_with_vxlan(eth1_up):
                 bond_desired_state[Interface.KEY][0]
             )
             libnmstate.apply(desired_state)
-            assertlib.assert_state(desired_state)
+            assertlib.assert_state_match(desired_state)
 
     assertlib.assert_absent(vxlan.name)
     assertlib.assert_absent(bond_name)
