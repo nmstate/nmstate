@@ -3,7 +3,7 @@ FROM docker.io/library/centos:8
 RUN dnf install -y centos-release-stream && \
     dnf update -y && \
     dnf -y install dnf-plugins-core epel-release && \
-    dnf config-manager --set-enabled Stream-PowerTools && \
+    dnf config-manager --set-enabled powertools && \
     dnf copr enable nmstate/ovs-el8 -y && \
     dnf copr enable nmstate/nispor -y && \
     dnf -y install --setopt=install_weak_deps=False \
