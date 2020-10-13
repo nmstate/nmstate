@@ -22,8 +22,11 @@ from unittest import mock
 
 from libnmstate import nm
 from libnmstate.error import NmstateValueError
+from libnmstate.ifaces.bond import BondIface
 from libnmstate.schema import Bond
 from libnmstate.schema import BondMode
+from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceType
 
 
 @pytest.fixture
@@ -32,12 +35,25 @@ def nm_mock():
         yield m
 
 
+def _gen_bond_iface(bond_options, mode=BondMode.ROUND_ROBIN):
+    return BondIface(
+        {
+            Interface.NAME: "foo",
+            Interface.TYPE: InterfaceType.BOND,
+            Bond.CONFIG_SUBTREE: {
+                Bond.MODE: mode,
+                Bond.OPTIONS_SUBTREE: bond_options,
+            },
+        }
+    )
+
+
 def test_create_setting(nm_mock):
     bond_setting_mock = nm_mock.SettingBond.new.return_value
     bond_setting_mock.add_option.return_value = True
 
-    options = {Bond.MODE: BondMode.ROUND_ROBIN, "miimon": "100"}
-    nm.bond.create_setting(options, wired_setting=None)
+    iface = _gen_bond_iface({"miimon": "100"})
+    nm.bond.create_setting(iface, wired_setting=None, base_con_profile=None)
 
     bond_setting_mock.add_option.assert_has_calls(
         [
@@ -52,26 +68,24 @@ def test_create_setting_with_invalid_bond_option(nm_mock):
     bond_setting_mock = nm_mock.SettingBond.new.return_value
     bond_setting_mock.add_option.return_value = False
 
-    options = {Bond.MODE: BondMode.ROUND_ROBIN, "foo": "100"}
+    iface = _gen_bond_iface({"foo": "100"})
 
     with pytest.raises(NmstateValueError):
-        nm.bond.create_setting(options, wired_setting=None)
-
-
-def test_is_bond_type_id(nm_mock):
-    type_id = nm_mock.DeviceType.BOND
-
-    assert nm.bond.is_bond_type_id(type_id)
+        nm.bond.create_setting(
+            iface, wired_setting=None, base_con_profile=None
+        )
 
 
 def test_create_setting_with_mac_restriction(nm_mock):
     bond_setting_mock = nm_mock.SettingBond.new.return_value
     bond_setting_mock.add_option.return_value = True
 
-    options = {Bond.MODE: BondMode.ACTIVE_BACKUP, "fail_over_mac": "active"}
+    iface = _gen_bond_iface(
+        {"fail_over_mac": "active"}, BondMode.ACTIVE_BACKUP
+    )
 
     wired_setting = mock.MagicMock()
     wired_setting.props.cloned_mac_address = "02:ff:ff:ff:ff:01"
 
-    nm.bond.create_setting(options, wired_setting)
+    nm.bond.create_setting(iface, wired_setting, base_con_profile=None)
     assert wired_setting.props.cloned_mac_address is None

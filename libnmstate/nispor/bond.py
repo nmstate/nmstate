@@ -17,12 +17,60 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
+from libnmstate.schema import Bond
 from libnmstate.schema import InterfaceType
 
 from .base_iface import NisporPluginBaseIface
+
+SUPPORTED_BOND_OPTIONS = (
+    "ad_actor_sys_prio",
+    "ad_actor_system",
+    "ad_select",
+    "ad_user_port_key",
+    "all_subordinates_active",
+    "arp_all_targets",
+    "arp_interval",
+    "arp_ip_target",
+    "arp_validate",
+    "downdelay",
+    "fail_over_mac",
+    "lacp_rate",
+    "lp_interval",
+    "miimon",
+    "min_links",
+    "num_grat_arp",
+    "num_unsol_na",
+    "packets_per_subordinate",
+    "primary",
+    "primary_reselect",
+    "resend_igmp",
+    "tlb_dynamic_lb",
+    "updelay",
+    "use_carrier",
+    "xmit_hash_policy",
+)
 
 
 class NisporPluginBondIface(NisporPluginBaseIface):
     @property
     def type(self):
         return InterfaceType.BOND
+
+    def to_dict(self):
+        info = super().to_dict()
+        info[Bond.CONFIG_SUBTREE] = {
+            Bond.MODE: self._np_iface.mode,
+            Bond.PORT: self._np_iface.subordinates,
+            Bond.OPTIONS_SUBTREE: {},
+        }
+        bond_opts = info[Bond.CONFIG_SUBTREE][Bond.OPTIONS_SUBTREE]
+        for opt_name in SUPPORTED_BOND_OPTIONS:
+            value = getattr(self._np_iface, opt_name)
+            if opt_name == "all_subordinates_active":
+                # The sysfs is using `all_slave_active` name
+                opt_name = "all_slaves_active"
+            elif opt_name == "packets_per_subordinate":
+                opt_name = "packets_per_slave"
+            if value is not None:
+                bond_opts[opt_name] = value
+        return info

@@ -117,7 +117,7 @@ def test_add_and_remove_bond_with_two_port(eth1_up, eth2_up):
     state = yaml.load(BOND99_YAML_BASE, Loader=yaml.SafeLoader)
     libnmstate.apply(state)
 
-    assertlib.assert_state(state)
+    assertlib.assert_state_match(state)
 
     state[Interface.KEY][0][Interface.STATE] = InterfaceState.ABSENT
 
@@ -431,7 +431,7 @@ def test_bond_with_empty_ipv6_static_address(eth1_up):
     with bond_interface(
         name=BOND99, port=["eth1"], extra_iface_state=extra_iface_state
     ) as bond_state:
-        assertlib.assert_state(bond_state)
+        assertlib.assert_state_match(bond_state)
 
     assertlib.assert_absent(BOND99)
 
@@ -445,8 +445,8 @@ def test_create_vlan_over_a_bond_port(bond99_with_eth2):
     with vlan_interface(
         vlan_iface_name, vlan_id, bond_port_ifname
     ) as desired_state:
-        assertlib.assert_state(desired_state)
-    assertlib.assert_state(bond99_with_eth2)
+        assertlib.assert_state_match(desired_state)
+    assertlib.assert_state_match(bond99_with_eth2)
 
 
 @pytest.mark.tier1
@@ -461,7 +461,7 @@ def test_create_linux_bridge_over_bond(bond99_with_eth2):
         create_bridge_subtree_state(), BOND99, port_state
     )
     with linux_bridge(bridge_name, bridge_state) as desired_state:
-        assertlib.assert_state(desired_state)
+        assertlib.assert_state_match(desired_state)
 
 
 @pytest.mark.tier1
@@ -481,8 +481,8 @@ def test_create_vlan_over_a_bond(bond99_with_eth2):
     with vlan_interface(
         vlan_iface_name, vlan_id, vlan_base_iface
     ) as desired_state:
-        assertlib.assert_state(desired_state)
-    assertlib.assert_state(bond99_with_eth2)
+        assertlib.assert_state_match(desired_state)
+    assertlib.assert_state_match(bond99_with_eth2)
 
 
 @pytest.mark.tier1
@@ -500,8 +500,8 @@ def test_change_bond_option_with_an_id_value(bond99_with_eth2):
     option_name = "xmit_hash_policy"
     desired_state = statelib.show_only((BOND99,))
     iface_state = desired_state[Interface.KEY][0]
-    bond_options = iface_state[Bond.CONFIG_SUBTREE][Bond.OPTIONS_SUBTREE]
-    bond_options[option_name] = "2"
+    iface_state[Bond.CONFIG_SUBTREE][Bond.MODE] = BondMode.XOR
+    iface_state[Bond.CONFIG_SUBTREE][Bond.OPTIONS_SUBTREE] = {option_name: "2"}
     libnmstate.apply(desired_state)
     new_iface_state = statelib.show_only((BOND99,))[Interface.KEY][0]
     new_options = new_iface_state[Bond.CONFIG_SUBTREE][Bond.OPTIONS_SUBTREE]
@@ -919,3 +919,44 @@ def test_change_bond_mode_does_not_remove_child(bond99_with_ports_and_vlans,):
     bond_iface_info[Bond.CONFIG_SUBTREE][Bond.MODE] = BondMode.ACTIVE_BACKUP
     libnmstate.apply({Interface.KEY: [bond_iface_info]})
     assertlib.assert_state_match(desired_state)
+
+
+def test_reset_bond_options_back_to_default(bond99_with_2_port):
+    state = statelib.show_only((BOND99,))
+    default_miimon = state[Interface.KEY][0][Bond.CONFIG_SUBTREE][
+        Bond.OPTIONS_SUBTREE
+    ]["miimon"]
+
+    state[Interface.KEY][0][Bond.CONFIG_SUBTREE][Bond.OPTIONS_SUBTREE][
+        "miimon"
+    ] = (default_miimon * 2)
+
+    # Change to non-default miimon value
+    libnmstate.apply(state)
+    state = statelib.show_only((BOND99,))
+    assert (
+        state[Interface.KEY][0][Bond.CONFIG_SUBTREE][Bond.OPTIONS_SUBTREE][
+            "miimon"
+        ]
+        == default_miimon * 2
+    )
+
+    # Revert to default
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: BOND99,
+                    Bond.CONFIG_SUBTREE: {Bond.OPTIONS_SUBTREE: {}},
+                }
+            ]
+        }
+    )
+
+    state = statelib.show_only((BOND99,))
+    assert (
+        default_miimon
+        == state[Interface.KEY][0][Bond.CONFIG_SUBTREE][Bond.OPTIONS_SUBTREE][
+            "miimon"
+        ]
+    )

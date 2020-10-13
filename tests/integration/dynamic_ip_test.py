@@ -273,7 +273,7 @@ def test_ipv4_dhcp_on_bond(dhcpcli_up):
     with bondlib.bond_interface(
         "bond99", port=[DHCP_CLI_NIC], extra_iface_state=ipv4_state
     ) as desired_state:
-        assertlib.assert_state(desired_state)
+        assertlib.assert_state_match(desired_state)
 
 
 def test_ipv4_dhcp_ignore_gateway(dhcpcli_up):

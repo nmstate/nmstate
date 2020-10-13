@@ -62,7 +62,7 @@ class BondIface(BaseIface):
         return self.raw.get(Bond.CONFIG_SUBTREE, {}).get(Bond.MODE)
 
     @property
-    def _bond_options(self):
+    def bond_options(self):
         return self.raw.get(Bond.CONFIG_SUBTREE, {}).get(
             Bond.OPTIONS_SUBTREE, {}
         )
@@ -123,7 +123,7 @@ class BondIface(BaseIface):
                 self.raw.pop(Interface.MAC, None)
 
     def _validate_miimon_conflict_with_arp_interval(self):
-        bond_options = self._bond_options
+        bond_options = self.bond_options
         if bond_options.get("miimon") and bond_options.get("arp_interval"):
             raise NmstateValueError(
                 "Bond option arp_interval is conflicting with miimon, "
@@ -152,27 +152,27 @@ class BondIface(BaseIface):
             Bond option "fail_over_mac" is active.
         """
         return BondIface.is_mac_restricted_mode(
-            self.bond_mode, self._bond_options
+            self.bond_mode, self.bond_options
         )
 
     def _normalize_options_values(self):
-        if self._bond_options:
+        if self.bond_options:
             normalized_options = {}
-            for option_name, option_value in self._bond_options.items():
+            for option_name, option_value in self.bond_options.items():
                 with contextlib.suppress(ValueError):
                     option_value = int(option_value)
                 option_value = _get_bond_named_option_value_by_id(
                     option_name, option_value
                 )
                 normalized_options[option_name] = option_value
-            self._bond_options.update(normalized_options)
+            self.bond_options.update(normalized_options)
 
     def _fix_bond_option_arp_monitor(self):
         """
         Adding 'arp_ip_target=""' when ARP monitor is disabled by
         `arp_interval=0`
         """
-        if self._bond_options:
+        if self.bond_options:
             _include_arp_ip_target_explictly_when_disable(
                 self.raw[Bond.CONFIG_SUBTREE][Bond.OPTIONS_SUBTREE]
             )
@@ -201,6 +201,7 @@ class _BondNamedOptions:
     MODE = "mode"
     PRIMARY_RESELECT = "primary_reselect"
     XMIT_HASH_POLICY = "xmit_hash_policy"
+    USE_CARRIER = "use_carrier"
 
 
 _BOND_OPTIONS_NUMERIC_TO_NAMED_MAP = {
@@ -227,6 +228,7 @@ _BOND_OPTIONS_NUMERIC_TO_NAMED_MAP = {
         "balance-alb",
     ),
     _BondNamedOptions.PRIMARY_RESELECT: ("always", "better", "failure"),
+    _BondNamedOptions.USE_CARRIER: (False, True),
     _BondNamedOptions.XMIT_HASH_POLICY: (
         "layer2",
         "layer3+4",

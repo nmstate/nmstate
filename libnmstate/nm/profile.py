@@ -435,9 +435,12 @@ class NmProfile:
         if user_setting:
             settings.append(user_setting)
 
-        bond_opts = translator.Api2Nm.get_bond_options(self.iface_info)
-        if bond_opts:
-            settings.append(bond.create_setting(bond_opts, wired_setting))
+        if self.iface.type == InterfaceType.BOND:
+            settings.append(
+                bond.create_setting(
+                    self.iface, wired_setting, self._remote_conn
+                )
+            )
         elif nm_iface_type == bridge.BRIDGE_TYPE:
             bridge_config = self.iface_info.get(LB.CONFIG_SUBTREE, {})
             bridge_options = bridge_config.get(LB.OPTIONS_SUBTREE)
