@@ -29,7 +29,7 @@ from libnmstate.schema import InterfaceState
 from libnmstate.ifaces.base_iface import BaseIface
 from ..testlib.constants import MAC_ADDRESS1
 from ..testlib.constants import IPV6_LINK_LOCAL_ADDRESS1
-from ..testlib.constants import IPV6_ADDRESSES
+from ..testlib.constants import get_test_ipv6_addrs
 from ..testlib.ifacelib import gen_foo_iface_info
 
 
@@ -127,7 +127,7 @@ class TestBaseIface:
         iface_info = gen_foo_iface_info()
         ipv6_info = {
             InterfaceIPv6.ENABLED: True,
-            InterfaceIPv6.ADDRESS: IPV6_ADDRESSES,
+            InterfaceIPv6.ADDRESS: get_test_ipv6_addrs(),
         }
         iface_info[Interface.IPV6] = ipv6_info
         expected_iface_info = deepcopy(iface_info)

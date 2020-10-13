@@ -28,11 +28,11 @@ from libnmstate.schema import InterfaceIPv6
 
 from libnmstate.ifaces.base_iface import IPState
 
-from ..testlib.constants import IPV4_ADDRESSES
 from ..testlib.constants import IPV6_ADDRESS1
 from ..testlib.constants import IPV6_ADDRESS1_FULL
 from ..testlib.constants import IPV6_LINK_LOCAL_ADDRESS1
-from ..testlib.constants import IPV6_ADDRESSES
+from ..testlib.constants import get_test_ipv4_addrs
+from ..testlib.constants import get_test_ipv6_addrs
 
 
 parametrize_ip_ver = pytest.mark.parametrize(
@@ -42,14 +42,14 @@ parametrize_ip_ver = pytest.mark.parametrize(
             Interface.IPV4,
             {
                 InterfaceIPv4.ENABLED: True,
-                InterfaceIPv4.ADDRESS: deepcopy(IPV4_ADDRESSES),
+                InterfaceIPv4.ADDRESS: get_test_ipv4_addrs(),
             },
         ),
         (
             Interface.IPV6,
             {
                 InterfaceIPv6.ENABLED: True,
-                InterfaceIPv6.ADDRESS: deepcopy(IPV6_ADDRESSES),
+                InterfaceIPv6.ADDRESS: get_test_ipv6_addrs(),
             },
         ),
     ],
@@ -178,7 +178,9 @@ class TestIPState:
         ip_info.update(dynamic_options)
         expected_ip_info = deepcopy(ip_info)
         ip_info[InterfaceIP.ADDRESS] = (
-            IPV4_ADDRESSES if family == InterfaceIPv4 else IPV6_ADDRESSES
+            get_test_ipv4_addrs()
+            if family == InterfaceIPv4
+            else get_test_ipv6_addrs()
         )
 
         ip_state = IPState(family, ip_info)

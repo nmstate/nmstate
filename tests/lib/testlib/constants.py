@@ -17,6 +17,8 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
+import copy
+
 from libnmstate.schema import InterfaceIP
 
 FOO_IFACE_NAME = "foo"
@@ -26,7 +28,7 @@ IPV6_ADDRESS1 = "2001:db8:1::1"
 IPV6_ADDRESS1_FULL = "2001:db8:1:0:0:0:0:1"
 IPV6_ADDRESS2 = "2001:db8:2::1"
 IPV6_LINK_LOCAL_ADDRESS1 = "fe80::1"
-IPV6_ADDRESSES = [
+_IPV6_ADDRESSES = [
     {
         InterfaceIP.ADDRESS_IP: IPV6_ADDRESS1,
         InterfaceIP.ADDRESS_PREFIX_LENGTH: 64,
@@ -39,7 +41,7 @@ IPV6_ADDRESSES = [
 
 IPV4_ADDRESS1 = "192.0.2.251"
 IPV4_ADDRESS2 = "192.0.2.252"
-IPV4_ADDRESSES = [
+_IPV4_ADDRESSES = [
     {
         InterfaceIP.ADDRESS_IP: IPV4_ADDRESS1,
         InterfaceIP.ADDRESS_PREFIX_LENGTH: 24,
@@ -52,3 +54,11 @@ IPV4_ADDRESSES = [
 
 PORT1_IFACE_NAME = "port1"
 PORT2_IFACE_NAME = "port2"
+
+
+def get_test_ipv4_addrs():
+    return copy.deepcopy(_IPV4_ADDRESSES)
+
+
+def get_test_ipv6_addrs():
+    return copy.deepcopy(_IPV6_ADDRESSES)

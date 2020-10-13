@@ -17,8 +17,6 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
-from copy import deepcopy
-
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import InterfaceState
@@ -28,8 +26,8 @@ from libnmstate.schema import InterfaceIPv6
 from libnmstate.ifaces.ifaces import Ifaces
 
 from .constants import FOO_IFACE_NAME
-from .constants import IPV4_ADDRESSES
-from .constants import IPV6_ADDRESSES
+from .constants import get_test_ipv4_addrs
+from .constants import get_test_ipv6_addrs
 
 
 def gen_foo_iface_info(iface_type=InterfaceType.ETHERNET):
@@ -49,12 +47,12 @@ def gen_foo_iface_info_static_ip(iface_type=InterfaceType.ETHERNET):
             Interface.IPV4: {
                 InterfaceIPv4.ENABLED: True,
                 InterfaceIPv4.DHCP: False,
-                InterfaceIPv4.ADDRESS: deepcopy(IPV4_ADDRESSES),
+                InterfaceIPv4.ADDRESS: get_test_ipv4_addrs(),
             },
             Interface.IPV6: {
                 InterfaceIPv6.ENABLED: True,
                 InterfaceIPv6.DHCP: False,
-                InterfaceIPv6.ADDRESS: deepcopy(IPV6_ADDRESSES),
+                InterfaceIPv6.ADDRESS: get_test_ipv6_addrs(),
                 InterfaceIPv6.AUTOCONF: False,
             },
         }
