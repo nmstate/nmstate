@@ -158,6 +158,7 @@ def _find_plugin_for_capability(plugins, capability):
 def _get_interface_info_from_plugins(plugins):
     all_ifaces = {}
     IFACE_PRIORITY_METADATA = "_plugin_priority"
+    IFACE_PLUGIN_SRC_METADATA = "_plugin_source"
     for plugin in plugins:
         if (
             NmstatePlugin.PLUGIN_CAPABILITY_IFACE
@@ -166,6 +167,7 @@ def _get_interface_info_from_plugins(plugins):
             continue
         for iface in plugin.get_interfaces():
             iface[IFACE_PRIORITY_METADATA] = plugin.priority
+            iface[IFACE_PLUGIN_SRC_METADATA] = [plugin.name]
             iface_name = iface[Interface.NAME]
             iface_type = iface.get(Interface.TYPE, InterfaceType.UNKNOWN)
             iface_index = f"{iface_type}.{iface_name}"
@@ -175,9 +177,15 @@ def _get_interface_info_from_plugins(plugins):
                 current_priority = plugin.priority
                 if current_priority > existing_priority:
                     merge_dict(iface, existing_iface)
+                    iface[IFACE_PLUGIN_SRC_METADATA].extend(
+                        existing_iface[IFACE_PLUGIN_SRC_METADATA]
+                    )
                     all_ifaces[iface_index] = iface
                 else:
                     merge_dict(existing_iface, iface)
+                    existing_iface[IFACE_PLUGIN_SRC_METADATA].extend(
+                        iface[IFACE_PLUGIN_SRC_METADATA]
+                    )
             else:
                 all_ifaces[iface_index] = iface
 
@@ -185,7 +193,7 @@ def _get_interface_info_from_plugins(plugins):
     # with the same name and valid type.
     # This save plugin(e.g. ovsdb) from detecting interface type but still want
     # data been merged.
-    to_be_removed_index = []
+    to_be_removed_index = set()
     for iface in all_ifaces.values():
         iface_type = iface.get(Interface.TYPE, InterfaceType.UNKNOWN)
         iface_name = iface[Interface.NAME]
@@ -194,7 +202,7 @@ def _get_interface_info_from_plugins(plugins):
                 all_ifaces.values(), iface_name
             )
             if len(iface_types) == 1:
-                to_be_removed_index.append(
+                to_be_removed_index.add(
                     f"{InterfaceType.UNKNOWN}.{iface_name}"
                 )
                 iface_index = f"{iface_types[0]}.{iface_name}"
@@ -204,9 +212,24 @@ def _get_interface_info_from_plugins(plugins):
                 existing_priority = existing_iface[IFACE_PRIORITY_METADATA]
                 if current_priority > existing_priority:
                     merge_dict(iface, existing_iface)
+                    iface[IFACE_PLUGIN_SRC_METADATA].extend(
+                        existing_iface[IFACE_PLUGIN_SRC_METADATA]
+                    )
                     all_ifaces[iface_index] = iface
                 else:
                     merge_dict(existing_iface, iface)
+                    existing_iface[IFACE_PLUGIN_SRC_METADATA].extend(
+                        iface[IFACE_PLUGIN_SRC_METADATA]
+                    )
+
+    supplemental_plugin_names = set(
+        [plugin.name for plugin in plugins if plugin.is_supplemental_only]
+    )
+
+    for iface_index, iface in all_ifaces.items():
+        cur_plugin_names = set(iface[IFACE_PLUGIN_SRC_METADATA])
+        if cur_plugin_names.issubset(supplemental_plugin_names):
+            to_be_removed_index.add(iface_index)
 
     for iface_index in to_be_removed_index:
         del all_ifaces[iface_index]
@@ -214,6 +237,7 @@ def _get_interface_info_from_plugins(plugins):
     # Remove metadata
     for iface in all_ifaces.values():
         iface.pop(IFACE_PRIORITY_METADATA)
+        iface.pop(IFACE_PLUGIN_SRC_METADATA)
 
     return sorted(all_ifaces.values(), key=itemgetter(Interface.NAME))
 

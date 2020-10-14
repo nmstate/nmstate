@@ -34,9 +34,11 @@ class TestPluginInfrastructure:
         plugin_a = mock.MagicMock()
         plugin_a.priority = 10
         plugin_a.plugin_capabilities = [NmstatePlugin.PLUGIN_CAPABILITY_IFACE]
+        plugin_a.is_supplemental_only = False
         plugin_b = mock.MagicMock()
         plugin_b.priority = 11
         plugin_b.plugin_capabilities = [NmstatePlugin.PLUGIN_CAPABILITY_IFACE]
+        plugin_b.is_supplemental_only = False
         return [plugin_a, plugin_b]
 
     def test_show_with_plugins_merge_by_type_and_name(self):
@@ -179,4 +181,32 @@ class TestPluginInfrastructure:
                 "foo3": "c",
             },
             {Interface.NAME: TEST_IFACE1, "foo2": "b"},
+        ]
+
+    def test_show_with_plugins_remove_new_iface_from_supplemental_plugin(self):
+        plugins = self._gen_plugin_mocks()
+        plugins[0].is_supplemental_only = True
+        plugins[0].get_interfaces.return_value = [
+            {
+                Interface.NAME: TEST_IFACE1,
+                Interface.TYPE: InterfaceType.OVS_BRIDGE,
+                "foo1": "a",
+            },
+            {
+                Interface.NAME: TEST_IFACE2,
+                Interface.TYPE: InterfaceType.OVS_INTERFACE,
+                "foo3": "c",
+            },
+        ]
+
+        plugins[1].get_interfaces.return_value = [
+            {Interface.NAME: TEST_IFACE1, "foo2": "b"},
+        ]
+        assert show_with_plugins(plugins)[Interface.KEY] == [
+            {
+                Interface.NAME: TEST_IFACE1,
+                Interface.TYPE: InterfaceType.OVS_BRIDGE,
+                "foo1": "a",
+                "foo2": "b",
+            },
         ]

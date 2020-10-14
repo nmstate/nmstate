@@ -92,3 +92,12 @@ class NmstatePlugin(metaclass=ABCMeta):
         raise NmstatePluginError(
             f"Plugin {self.name} BUG: get_dns_client_config() not implemented"
         )
+
+    @property
+    def is_supplemental_only(self):
+        """
+        Return True when plugin can only append information to
+        interfaces reported by other plugin.
+        Retrun False when plugin can report new interface.
+        """
+        return False
