@@ -63,6 +63,10 @@ class NmstateOvsdbPlugin(NmstatePlugin):
         self._load_schema()
         self._connect_to_ovs_db()
 
+    @property
+    def is_supplemental_only(self):
+        return True
+
     def unload(self):
         if self._transaction:
             self._transaction.abort()

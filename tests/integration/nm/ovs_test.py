@@ -29,6 +29,7 @@ from libnmstate.schema import OVSBridge as OB
 
 from .testlib import main_context
 from ..testlib import statelib
+from ..testlib import cmdlib
 
 
 BRIDGE0 = "brtest0"
@@ -348,3 +349,17 @@ def _get_iface_bridge_settings(bridge_options):
 def _assert_mac_exists(ifname):
     iface_state = statelib.show_only((ifname,))[Interface.KEY][0]
     assert iface_state.get(Interface.MAC)
+
+
+@pytest.fixture
+def ovs_unmanaged_bridge():
+    cmdlib.exec_cmd(f"ovs-vsctl add-br {BRIDGE0}".split())
+    yield
+    cmdlib.exec_cmd(f"ovs-vsctl del-br {BRIDGE0}".split())
+
+
+@pytest.mark.tier1
+def test_do_not_show_unmanaged_ovs_bridge(ovs_unmanaged_bridge):
+    # The output should only contains the OVS internal interface
+    ovs_internal_iface = statelib.show_only((BRIDGE0,))[Interface.KEY][0]
+    assert ovs_internal_iface[Interface.TYPE] == InterfaceType.OVS_INTERFACE
