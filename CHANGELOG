@@ -1,4 +1,9 @@
 # Changelog
+## [0.2.11] - 2020-10-21
+### Bug Fixes
+ - Fix report crash when OVS has duplicated interface names: https://bugzilla.redhat.com/1886334
+ - Fix bond default options querying
+
 ## [0.2.10] - 2020-04-21
 ### New features
  - Support Linux bridge VLAN filtering
