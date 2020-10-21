@@ -1,4 +1,11 @@
 # Changelog
+## [0.3.6] - 2020-10-21
+### New features
+ - Add varlink support
+
+### Bug fixes
+ - Fix report crash when OVS has duplicated interface names: https://bugzilla.redhat.com/1886334
+
 ## [0.3.5] - 2020-08-28
 ### Bug fixes
  - Allowing remove all interfaces from OVS bridge.
