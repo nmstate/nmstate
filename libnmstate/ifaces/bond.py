@@ -26,6 +26,7 @@ from libnmstate.schema import Bond
 from libnmstate.schema import BondMode
 from libnmstate.schema import Interface
 
+from ..state import state_match
 from .base_iface import BaseIface
 
 
@@ -190,6 +191,30 @@ class BondIface(BaseIface):
             s for s in self.port if s != port_name
         ]
         self.sort_port()
+
+    def match_ignore_bond_options(self, current):
+        self_state = self.state_for_verify()
+        self_bond_options = self_state.get(Bond.CONFIG_SUBTREE, {}).pop(
+            Bond.OPTIONS_SUBTREE, {}
+        )
+        current_state = current.state_for_verify()
+        current_bond_options = current_state.get(Bond.CONFIG_SUBTREE, {}).pop(
+            Bond.OPTIONS_SUBTREE, {}
+        )
+        for key, value in self_bond_options.items():
+            current_value = current_bond_options.get(key)
+            if current_value != value:
+                if current_value is None:
+                    logging.warning(
+                        f"Desire iface {self.name} bond option {key}={value} "
+                        f"is invalid in kernel for bond mode {self.bond_mode}"
+                    )
+                else:
+                    logging.warning(
+                        f"Desire iface {self.name} bond option {key}={value} "
+                        f"does not match with kernel value: {current_value}"
+                    )
+        return state_match(self_state, current_state)
 
 
 class _BondNamedOptions:

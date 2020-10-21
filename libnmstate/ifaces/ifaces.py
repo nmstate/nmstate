@@ -429,6 +429,14 @@ class Ifaces:
                                     f"bridge {iface.name} option '{key}' "
                                     f"from {value} to {cur_value}."
                                 )
+                        elif iface.type == InterfaceType.BOND:
+                            # oVirt who is using nmstate dislike nmstate
+                            # raise Exception on bond option mismatch and
+                            # they cannot use `verify_change=False` when
+                            # changing bond options.
+                            if iface.match_ignore_bond_options(cur_iface):
+                                continue
+
                         raise NmstateVerificationError(
                             format_desired_current_state_diff(
                                 iface.state_for_verify(),
