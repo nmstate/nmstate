@@ -909,7 +909,7 @@ def bond99_with_ports_and_vlans(bond99_with_2_port):
 
 
 @pytest.mark.tier1
-def test_change_bond_mode_does_not_remove_child(bond99_with_ports_and_vlans,):
+def test_change_bond_mode_does_not_remove_child(bond99_with_ports_and_vlans):
     # Due to bug https://bugzilla.redhat.com/show_bug.cgi?id=1881318
     # Applying twice the desire state is the key to reproduce the problem
     desired_state = bond99_with_ports_and_vlans
@@ -960,3 +960,29 @@ def test_reset_bond_options_back_to_default(bond99_with_2_port):
             "miimon"
         ]
     )
+
+
+@pytest.mark.tier1
+def test_ignore_verification_error_on_invalid_bond_option(eth1_up, eth2_up):
+    port = [
+        eth1_up[Interface.KEY][0][Interface.NAME],
+        eth2_up[Interface.KEY][0][Interface.NAME],
+    ]
+    extra_iface_state = {
+        Bond.CONFIG_SUBTREE: {
+            Bond.MODE: BondMode.ACTIVE_BACKUP,
+            Bond.OPTIONS_SUBTREE: {
+                # xmit_hash_policy is only valid in
+                # balance-xor, 802.3ad, and tlb modes.
+                "xmit_hash_policy": "layer2+3",
+            },
+        }
+    }
+    with bond_interface(BOND99, port, extra_iface_state=extra_iface_state):
+        state = statelib.show_only((BOND99,))
+        assert (
+            "xmit_hash_policy"
+            not in state[Interface.KEY][0][Bond.CONFIG_SUBTREE][
+                Bond.OPTIONS_SUBTREE
+            ]
+        )

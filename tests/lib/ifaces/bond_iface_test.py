@@ -347,6 +347,41 @@ class TestBondIface:
 
         assert iface.to_dict() == expected_iface_info
 
+    def test_match_ignore_bond_options(self):
+        cur_iface_info = self._gen_iface_info()
+        iface_info = self._gen_iface_info()
+        iface_info[Bond.CONFIG_SUBTREE][Bond.OPTIONS_SUBTREE]["foo"] = "bar"
+
+        iface = BondIface(iface_info)
+        cur_iface = BondIface(cur_iface_info)
+
+        assert not iface.match(cur_iface)
+        assert iface.match_ignore_bond_options(cur_iface)
+
+    def test_match_ignore_bond_options_with_mode_different_only(self):
+        cur_iface_info = self._gen_iface_info()
+        cur_iface_info[Bond.CONFIG_SUBTREE][Bond.MODE] = BondMode.ROUND_ROBIN
+        iface_info = self._gen_iface_info()
+        iface_info[Bond.CONFIG_SUBTREE][Bond.MODE] = BondMode.ACTIVE_BACKUP
+
+        iface = BondIface(iface_info)
+        cur_iface = BondIface(cur_iface_info)
+
+        assert not iface.match(cur_iface)
+        assert not iface.match_ignore_bond_options(cur_iface)
+
+    def test_match_ignore_bond_options_with_port_different_only(self):
+        cur_iface_info = self._gen_iface_info()
+        cur_iface_info[Bond.CONFIG_SUBTREE][Bond.PORT] = []
+        iface_info = self._gen_iface_info()
+        iface_info[Bond.CONFIG_SUBTREE][Bond.PORT] = ["foo"]
+
+        iface = BondIface(iface_info)
+        cur_iface = BondIface(cur_iface_info)
+
+        assert not iface.match(cur_iface)
+        assert not iface.match_ignore_bond_options(cur_iface)
+
 
 def _remove_metadata(bond_iface_info):
     remove_keys = [k for k in bond_iface_info.keys() if k.startswith("_")]
