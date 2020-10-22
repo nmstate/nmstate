@@ -27,6 +27,7 @@ from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceType
 
 from .testlib import main_context
+from ..testlib import cmdlib
 from ..testlib.retry import retry_till_true_or_timeout
 
 
@@ -166,3 +167,14 @@ def _convert_slaves_devices_to_iface_names(info):
 
 def _verify_bond_state(nm_plugin, expected_state):
     return _get_bond_current_state(nm_plugin, BOND0) == expected_state
+
+
+def test_bond_all_zero_ad_actor_system_been_ignored(nm_plugin):
+    bond_options = {"ad_actor_system": "00:00:00:00:00:00"}
+    with _bond_interface(nm_plugin.context, BOND0, bond_options):
+        _, output, _ = cmdlib.exec_cmd(
+            f"nmcli --fields bond.options c show {BOND0}".split(), check=True
+        )
+        assert "ad_actor_system" not in output
+
+    assert not _get_bond_current_state(plugin=nm_plugin, name=BOND0)
