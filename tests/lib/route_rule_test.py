@@ -289,6 +289,118 @@ class TestRouteRuleState:
             not in ipv6_iface.to_dict()[Interface.IPV6]
         )
 
+    def test_clear_rules_with_ip_from_using_wildcard(self):
+        ifaces = self._gen_ifaces()
+        route_state = RouteState(
+            ifaces, {}, {Route.CONFIG: [gen_ipv4_route().to_dict()]},
+        )
+        route_rule_state = RouteRuleState(
+            route_state,
+            {
+                RouteRule.CONFIG: [
+                    {
+                        RouteRule.IP_FROM: IPV4_ROUTE_RULE_FROM,
+                        RouteRule.STATE: RouteRule.STATE_ABSENT,
+                    }
+                ]
+            },
+            {
+                RouteRule.CONFIG: [
+                    {
+                        RouteRule.IP_FROM: IPV4_ROUTE_RULE_FROM,
+                        RouteRule.IP_TO: "192.0.2.1",
+                        RouteRule.PRIORITY: 5000,
+                    },
+                    {
+                        RouteRule.IP_FROM: IPV4_ROUTE_RULE_FROM,
+                        RouteRule.IP_TO: IPV4_ROUTE_RULE_TO,
+                        RouteRule.PRIORITY: 3000,
+                    },
+                ]
+            },
+        )
+        ifaces.gen_route_rule_metadata(route_rule_state, route_state)
+        ipv4_iface = ifaces[IPV4_ROUTE_IFACE_NAME]
+
+        assert (
+            BaseIface.ROUTE_RULES_METADATA
+            not in ipv4_iface.to_dict()[Interface.IPV4]
+        )
+
+    def test_clear_rules_with_ip_to_using_wildcard(self):
+        ifaces = self._gen_ifaces()
+        route_state = RouteState(
+            ifaces, {}, {Route.CONFIG: [gen_ipv4_route().to_dict()]},
+        )
+        route_rule_state = RouteRuleState(
+            route_state,
+            {
+                RouteRule.CONFIG: [
+                    {
+                        RouteRule.IP_TO: IPV4_ROUTE_RULE_TO,
+                        RouteRule.STATE: RouteRule.STATE_ABSENT,
+                    }
+                ]
+            },
+            {
+                RouteRule.CONFIG: [
+                    {
+                        RouteRule.IP_FROM: IPV4_ROUTE_RULE_FROM,
+                        RouteRule.IP_TO: IPV4_ROUTE_RULE_TO,
+                        RouteRule.PRIORITY: 5000,
+                    },
+                    {
+                        RouteRule.IP_FROM: "192.0.2.0/24",
+                        RouteRule.IP_TO: IPV4_ROUTE_RULE_TO,
+                        RouteRule.PRIORITY: 3000,
+                    },
+                ]
+            },
+        )
+        ifaces.gen_route_rule_metadata(route_rule_state, route_state)
+        ipv4_iface = ifaces[IPV4_ROUTE_IFACE_NAME]
+
+        assert (
+            BaseIface.ROUTE_RULES_METADATA
+            not in ipv4_iface.to_dict()[Interface.IPV4]
+        )
+
+    def test_clear_rules_with_priority_using_wildcard(self):
+        ifaces = self._gen_ifaces()
+        route_state = RouteState(
+            ifaces, {}, {Route.CONFIG: [gen_ipv4_route().to_dict()]},
+        )
+        route_rule_state = RouteRuleState(
+            route_state,
+            {
+                RouteRule.CONFIG: [
+                    {
+                        RouteRule.PRIORITY: 5000,
+                        RouteRule.STATE: RouteRule.STATE_ABSENT,
+                    }
+                ]
+            },
+            {
+                RouteRule.CONFIG: [
+                    {
+                        RouteRule.IP_TO: IPV4_ROUTE_RULE_TO,
+                        RouteRule.PRIORITY: 5000,
+                    },
+                    {
+                        RouteRule.IP_TO: IPV4_ROUTE_RULE_TO,
+                        RouteRule.PRIORITY: 5000,
+                    },
+                ]
+            },
+        )
+        ifaces.gen_route_rule_metadata(route_rule_state, route_state)
+        ipv4_iface = ifaces[IPV4_ROUTE_IFACE_NAME]
+
+        assert (
+            BaseIface.ROUTE_RULES_METADATA
+            not in ipv4_iface.to_dict()[Interface.IPV4]
+        )
+
 
 def _create_route_rule(ip_from, ip_to, priority, table):
     return RouteRuleEntry(

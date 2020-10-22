@@ -73,6 +73,8 @@ class RouteRule:
     ROUTE_TABLE = "route-table"
     USE_DEFAULT_PRIORITY = -1
     USE_DEFAULT_ROUTE_TABLE = 0
+    STATE = "state"
+    STATE_ABSENT = "absent"
 
 
 class DNS:

@@ -1,7 +1,25 @@
+#
+# Copyright (c) 2020 Red Hat, Inc.
+#
+# This file is part of nmstate
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, either version 2.1 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this program. If not, see <https://www.gnu.org/licenses/>.
+#
+
 from collections import defaultdict
 import logging
 
-from libnmstate.error import NmstateNotImplementedError
 from libnmstate.error import NmstateVerificationError
 from libnmstate.error import NmstateValueError
 from libnmstate.iplib import KERNEL_MAIN_ROUTE_TABLE_ID
@@ -13,6 +31,7 @@ from libnmstate.schema import InterfaceIP
 from libnmstate.schema import RouteRule
 from libnmstate.schema import Route
 
+from .ifaces.base_iface import BaseIface
 from .state import StateEntry
 from .state import state_match
 
@@ -23,21 +42,23 @@ class RouteRuleEntry(StateEntry):
         self.ip_to = route_rule.get(RouteRule.IP_TO)
         self.priority = route_rule.get(RouteRule.PRIORITY)
         self.route_table = route_rule.get(RouteRule.ROUTE_TABLE)
+        self.state = route_rule.get(RouteRule.STATE)
         self._complement_defaults()
         self._canonicalize_ip_network()
 
     def _complement_defaults(self):
-        if self.ip_from is None:
-            self.ip_from = ""
-        if self.ip_to is None:
-            self.ip_to = ""
-        if self.priority is None:
-            self.priority = RouteRule.USE_DEFAULT_PRIORITY
-        if (
-            self.route_table is None
-            or self.route_table == RouteRule.USE_DEFAULT_ROUTE_TABLE
-        ):
-            self.route_table = KERNEL_MAIN_ROUTE_TABLE_ID
+        if not self.absent:
+            if self.ip_from is None:
+                self.ip_from = ""
+            if self.ip_to is None:
+                self.ip_to = ""
+            if self.priority is None:
+                self.priority = RouteRule.USE_DEFAULT_PRIORITY
+            if (
+                self.route_table is None
+                or self.route_table == RouteRule.USE_DEFAULT_ROUTE_TABLE
+            ):
+                self.route_table = KERNEL_MAIN_ROUTE_TABLE_ID
 
     def _canonicalize_ip_network(self):
         if self.ip_from:
@@ -63,9 +84,7 @@ class RouteRuleEntry(StateEntry):
 
     @property
     def absent(self):
-        raise NmstateNotImplementedError(
-            "RouteRuleEntry does not support absent property"
-        )
+        return self.state == RouteRule.STATE_ABSENT
 
     def is_valid(self, config_iface_routes):
         """
@@ -89,27 +108,49 @@ class RouteRuleState:
         self._cur_rules = defaultdict(set)
         self._rules = defaultdict(set)
         if cur_rule_state:
-            for rule_dict in _get_config(cur_rule_state):
-                rule = RouteRuleEntry(rule_dict)
-                self._cur_rules[rule.route_table].add(rule)
+            for entry in _get_config(cur_rule_state):
+                rl = RouteRuleEntry(entry)
+                self._cur_rules[rl.route_table].add(rl)
+                if not route_state or rl.is_valid(
+                    route_state.config_iface_routes
+                ):
+                    self._rules[rl.route_table].add(rl)
         if des_rule_state:
-            for rule_dict in _get_config(des_rule_state):
-                rule = RouteRuleEntry(rule_dict)
-                self._rules[rule.route_table].add(rule)
-            if self._rules != self._cur_rules:
-                self._config_changed = True
-        else:
-            # Discard invalid route rule when merging from current
-            for rules in self._cur_rules.values():
-                for rule in rules:
-                    if not route_state or rule.is_valid(
-                        route_state.config_iface_routes
-                    ):
-                        self._rules[rule.route_table].add(rule)
+            self._merge_rules(des_rule_state, route_state)
 
     @property
     def _config(self):
         return _get_config(self._rules)
+
+    def _merge_rules(self, des_rule_state, route_state):
+        """
+        Handle absent rules before adding desired rule entries to make sure
+        absent rule does not delete rule defined in desired state.
+        """
+        for entry in _get_config(des_rule_state):
+            rl = RouteRuleEntry(entry)
+            if rl.absent:
+                self._apply_absent_rules(rl)
+        for entry in _get_config(des_rule_state):
+            rl = RouteRuleEntry(entry)
+            if not rl.absent:
+                self._rules[rl.route_table].add(rl)
+
+    def _apply_absent_rules(self, rl):
+        """
+        Remove rules based on absent rules and treat missing property as
+        wildcard match.
+        """
+        absent_iface_table = rl.route_table
+        for route_table, rule_set in self._rules.items():
+            if absent_iface_table and absent_iface_table != route_table:
+                continue
+            new_rules = set()
+            for rule in rule_set:
+                if not rl.match(rule):
+                    new_rules.add(rule)
+            if new_rules != rule_set:
+                self._rules[route_table] = new_rules
 
     def verify(self, cur_rule_state):
         current = RouteRuleState(
@@ -159,6 +200,10 @@ class RouteRuleState:
                 Interface.IPV4: [],
                 Interface.IPV6: [],
             }
+            if rules != self._cur_rules[route_table]:
+                route_rule_metadata[iface_name][
+                    BaseIface.RULE_CHANGED_METADATA
+                ] = True
             for rule in rules:
                 family = Interface.IPV6 if rule.is_ipv6 else Interface.IPV4
                 route_rule_metadata[iface_name][family].append(rule.to_dict())

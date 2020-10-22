@@ -462,11 +462,15 @@ class Ifaces:
             route_state, self._ifaces
         )
         for iface_name, route_rule_metadata in iface_metadata.items():
+            rule_state = route_rule_metadata.pop(
+                BaseIface.RULE_CHANGED_METADATA, None
+            )
+            if rule_state:
+                self._ifaces[iface_name].mark_as_changed()
+
             self._ifaces[iface_name].store_route_rule_metadata(
                 route_rule_metadata
             )
-            if route_rule_state.config_changed:
-                self._ifaces[iface_name].mark_as_changed()
 
     def _validate_unknown_port(self):
         """
