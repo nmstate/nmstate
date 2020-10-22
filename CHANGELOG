@@ -1,4 +1,37 @@
 # Changelog
+## [0.4.1] - 2020-10-06
+### New features
+ - Support MAC VLAN. (963a04d)
+ - Support IP over InfiniBand. (3ef8546)
+ - Support Virtual Routing and Forwarding. (29fda8c)
+ - Support of multiple gateways. (551df30)
+ - Support ignoring specific interface via `state:ignore`. (dc13851)
+
+### Bug fixes
+ - Plugin with `NmstatePlugin.is_supplemental_only == True` will not
+   add new interface to `libnmstate.show()` results. (fe2a0f9)
+ - Allowing multiple dual stack DNS name servers. (0c3a64b)
+ - Fix crash when OVS interface is using the same name of OVS bridge. (de3de71)
+ - Change NetworkManager plugin as optional. (fc3b311)
+ - Keep child interface when bond mode change. (4a7c174)
+ - Don't reset bridge options for empty bridge options. (83fd948)
+ - Sort routes base on metric and next_hop_address also. (da12b9b)
+ - Do clean up even checkpoint rollback/destroy failed. (cda87df)
+ - The vlan and vxlan interface cannot have ip when subordinated. (ff3b731)
+ - Fix None con_profile race condition on SR-IOV interface. (7584d46)
+ - Fix profile deletion on virtual interface. (b2ac0f4)
+ - Fix timeout on profile deactivation. (0d8940d)
+ - Ignore invalid bond optoin ad_actor_system=00:00:00:00:00:00. (1423258)
+
+### Breaking changes
+ - Make python3-varlink as hard requirement. (4637b60)
+ - Deprecate the `Bond.SLAVES`, please use `Bond.PORT` instead. (b9d01752e)
+ - Deprecate the `OVSBridge.Port.LinkAggregation.SLAVES_SUBTREE`, please use
+   `OVSBridge.Port.LinkAggregation.PORT_SUBTREE` instead. (b9d01752e)
+ - Deprecate the `OVSBridge.Port.LinkAggregation.Slave`, please use
+   `OVSBridge.Port.LinkAggregation.Port` instead. (b9d01752e)
+ - Do not raise `NmstateVerificationError` for bond option mismatch. (5b6f31f)
+
 ## [0.4.0] - 2020-08-28
 ### New features
  - Providing varlink interface via nmstatectl.
@@ -15,7 +48,7 @@
  - Improve performance by skipping reapply call on deactivated interface.
  - Default to `InterfaceState.UP` if not defined.
 
-### Breaking Changes
+### Breaking changes
  - New dependency introduced `python3-nispor` for querying kernel runtime
    network state.
 
