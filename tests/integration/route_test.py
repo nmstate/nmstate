@@ -675,6 +675,98 @@ def test_route_rule_add_with_auto_route_table_id(eth1_up):
     _check_ip_rules(rules)
 
 
+def test_route_rule_clear_state(route_rule_test_env):
+    state = route_rule_test_env
+    rules = [
+        {RouteRule.IP_FROM: "203.0.113.1", RouteRule.IP_TO: "192.0.2.0/24"},
+        {RouteRule.IP_FROM: "203.0.113.0/24", RouteRule.IP_TO: "192.0.2.1"},
+    ]
+    state[RouteRule.KEY] = {RouteRule.CONFIG: rules}
+    libnmstate.apply(state)
+    _check_ip_rules(rules)
+
+    rules = [{RouteRule.STATE: RouteRule.STATE_ABSENT}]
+    state[RouteRule.KEY] = {RouteRule.CONFIG: rules}
+    libnmstate.apply(state)
+
+    current_state = libnmstate.show()
+    assert len(current_state[RouteRule.KEY][RouteRule.CONFIG]) == 0
+
+
+def test_apply_empty_state_preserve_route_rules(route_rule_test_env):
+    state = route_rule_test_env
+    rules = [
+        {RouteRule.IP_FROM: "203.0.113.1", RouteRule.IP_TO: "192.0.2.0/24"},
+        {RouteRule.IP_FROM: "203.0.113.0/24", RouteRule.IP_TO: "192.0.2.1"},
+    ]
+    state[RouteRule.KEY] = {RouteRule.CONFIG: rules}
+    libnmstate.apply(state)
+    _check_ip_rules(rules)
+
+    libnmstate.apply({Interface.KEY: []})
+    _check_ip_rules(rules)
+
+
+def test_remove_route_rule_with_wildcard(route_rule_test_env):
+    state = route_rule_test_env
+    rules = [
+        {RouteRule.IP_FROM: "203.0.113.1", RouteRule.IP_TO: "192.0.2.0/24"},
+        {RouteRule.IP_FROM: "203.0.113.0/24", RouteRule.IP_TO: "192.0.2.1"},
+    ]
+    state[RouteRule.KEY] = {RouteRule.CONFIG: rules}
+    libnmstate.apply(state)
+    _check_ip_rules(rules)
+
+    rules = [
+        {RouteRule.ROUTE_TABLE: 254, RouteRule.STATE: RouteRule.STATE_ABSENT}
+    ]
+    state[RouteRule.KEY] = {RouteRule.CONFIG: rules}
+    libnmstate.apply(state)
+    current_state = libnmstate.show()
+    assert len(current_state[RouteRule.KEY][RouteRule.CONFIG]) == 0
+
+
+def test_route_rule_remove_specific_rule(route_rule_test_env):
+    state = route_rule_test_env
+    rules = [
+        {RouteRule.IP_FROM: "203.0.113.1/32", RouteRule.IP_TO: "192.0.2.0/24"},
+        {RouteRule.IP_FROM: "203.0.113.0/24", RouteRule.IP_TO: "192.0.2.1"},
+    ]
+    state[RouteRule.KEY] = {RouteRule.CONFIG: rules}
+    libnmstate.apply(state)
+    _check_ip_rules(rules)
+
+    rules = [
+        {
+            RouteRule.IP_FROM: "203.0.113.1/32",
+            RouteRule.IP_TO: "192.0.2.0/24",
+            RouteRule.STATE: RouteRule.STATE_ABSENT,
+        }
+    ]
+    state[RouteRule.KEY] = {RouteRule.CONFIG: rules}
+    libnmstate.apply(state)
+    current_state = libnmstate.show()
+    assert len(current_state[RouteRule.KEY][RouteRule.CONFIG]) == 1
+
+
+def test_route_rule_clear_state_with_minimum_iface_state(route_rule_test_env):
+    state = route_rule_test_env
+    rules = [
+        {RouteRule.IP_FROM: "203.0.113.1/32", RouteRule.IP_TO: "192.0.2.0/24"},
+        {RouteRule.IP_FROM: "203.0.113.0/24", RouteRule.IP_TO: "192.0.2.1"},
+    ]
+    state[RouteRule.KEY] = {RouteRule.CONFIG: rules}
+    libnmstate.apply(state)
+    _check_ip_rules(rules)
+
+    rules = [{RouteRule.STATE: RouteRule.STATE_ABSENT}]
+    state[RouteRule.KEY] = {RouteRule.CONFIG: rules}
+    state[Interface.KEY] = [{Interface.NAME: "eth1"}]
+    libnmstate.apply(state)
+    current_state = libnmstate.show()
+    assert len(current_state[RouteRule.KEY][RouteRule.CONFIG]) == 0
+
+
 def _check_ip_rules(rules):
     for rule in rules:
         iprule.ip_rule_exist_in_os(

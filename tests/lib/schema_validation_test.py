@@ -797,6 +797,14 @@ class TestRouteRules:
         with pytest.raises(js.ValidationError):
             libnmstate.validator.schema_validate(default_data)
 
+    def test_route_rule_state_absent(self, default_data):
+        route_rules = default_data[RouteRule.KEY]
+        route_rules[RouteRule.CONFIG] = [
+            {RouteRule.STATE: RouteRule.STATE_ABSENT}
+        ]
+
+        libnmstate.validator.schema_validate(default_data)
+
 
 class TestOVSBridgeLinkAggregation:
     def test_valid_link_aggregation_port(self, default_data):

@@ -124,6 +124,7 @@ class BaseIface:
     DNS_METADATA = "_dns"
     ROUTES_METADATA = "_routes"
     ROUTE_RULES_METADATA = "_route_rules"
+    RULE_CHANGED_METADATA = "_changed"
 
     def __init__(self, info, save_to_disk=True):
         self._origin_info = deepcopy(info)

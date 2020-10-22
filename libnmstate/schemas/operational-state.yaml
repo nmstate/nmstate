@@ -747,6 +747,10 @@ definitions:
         type: integer
       route-table:
         type: integer
+      state:
+        type: string
+        enum:
+          - absent
   lldp:
     ro:
       properties:
