@@ -18,13 +18,21 @@
 #
 
 from operator import itemgetter
+import warnings
 
 from libnmstate.schema import Team
 
 from .base_iface import BaseIface
 
 
+DEPRECATED_PORTS = "ports"
+
+
 class TeamIface(BaseIface):
+    def __init__(self, info, save_to_disk=True):
+        super().__init__(info, save_to_disk)
+        self._replace_deprecated_terms()
+
     @property
     def port(self):
         ports = self.raw.get(Team.CONFIG_SUBTREE, {}).get(
@@ -53,3 +61,9 @@ class TeamIface(BaseIface):
                 s for s in port_config if s[Team.Port.NAME] != port_name
             ]
         self.sort_port()
+
+    def _replace_deprecated_terms(self):
+        team_cfg = self.raw.get(Team.CONFIG_SUBTREE)
+        if team_cfg and team_cfg.get(DEPRECATED_PORTS):
+            team_cfg[Team.PORT_SUBTREE] = team_cfg.pop(DEPRECATED_PORTS)
+            warnings.warn("Using 'ports' is deprecated, use 'port' instead.")
