@@ -372,7 +372,7 @@ class Team:
     TYPE = InterfaceType.TEAM
     CONFIG_SUBTREE = InterfaceType.TEAM
 
-    PORT_SUBTREE = "ports"
+    PORT_SUBTREE = "port"
     RUNNER_SUBTREE = "runner"
 
     class Port:

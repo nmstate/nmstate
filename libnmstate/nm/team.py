@@ -63,12 +63,12 @@ def _convert_team_config_to_teamd_format(team_config, ifname):
     team_config = copy.deepcopy(team_config)
     team_config[TEAMD_JSON_DEVICE] = ifname
 
-    team_ports = team_config.get(Team.PORT_SUBTREE, ())
+    team_ports = team_config.pop(Team.PORT_SUBTREE, ())
     team_ports_formatted = {
         port[Team.Port.NAME]: _dict_key_filter(port, Team.Port.NAME)
         for port in team_ports
     }
-    team_config[Team.PORT_SUBTREE] = team_ports_formatted
+    team_config[TEAMD_JSON_PORTS] = team_ports_formatted
 
     return team_config
 

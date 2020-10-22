@@ -4,7 +4,7 @@ interfaces:
     type: team
     state: up
     team:
-      ports:
+      port:
         - name: eth1
         - name: eth2
       runner:
