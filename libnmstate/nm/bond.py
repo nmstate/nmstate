@@ -35,6 +35,8 @@ NM_SUPPORTED_BOND_OPTIONS = NM.SettingBond.get_valid_options(
 
 SYSFS_BOND_OPTION_FOLDER_FMT = "/sys/class/net/{ifname}/bonding"
 
+BOND_AD_ACTOR_SYSTEM_USE_BOND_MAC = "00:00:00:00:00:00"
+
 
 def create_setting(iface, wired_setting, base_con_profile):
     bond_setting = NM.SettingBond.new()
@@ -58,6 +60,13 @@ def create_setting(iface, wired_setting, base_con_profile):
         if wired_setting and BondIface.is_mac_restricted_mode(mode, options):
             # When in MAC restricted mode, MAC address should be unset.
             wired_setting.props.cloned_mac_address = None
+        if (
+            option_name == "ad_actor_system"
+            and option_value == BOND_AD_ACTOR_SYSTEM_USE_BOND_MAC
+        ):
+            # The all zero ad_actor_system is the kernel default value
+            # And it is invalid to set as all zero
+            continue
         if option_value != SYSFS_EMPTY_VALUE:
             option_value = _nm_fix_bond_options(option_name, option_value)
             success = bond_setting.add_option(option_name, option_value)
