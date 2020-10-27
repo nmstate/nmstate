@@ -8,5 +8,5 @@ markComment: >
   recently. To avoid pull requests to pile up, an automated process marked this
   pull request as stale. It will close this pull request if no further activity
   occurs. The current policy is available at:
-  https://github.com/nmstate/nmstate/blob/master/.github/stale.yml
+  https://github.com/nmstate/nmstate/blob/base/.github/stale.yml
 only: pulls
