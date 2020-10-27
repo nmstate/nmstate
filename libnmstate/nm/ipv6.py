@@ -106,6 +106,7 @@ def create_setting(config, base_con_profile):
             setting_ip.props.never_default = False
             setting_ip.props.ignore_auto_dns = False
             setting_ip.clear_routes()
+            setting_ip.clear_routing_rules()
             setting_ip.props.gateway = None
             setting_ip.props.route_table = Route.USE_DEFAULT_ROUTE_TABLE
             setting_ip.props.route_metric = Route.USE_DEFAULT_METRIC
