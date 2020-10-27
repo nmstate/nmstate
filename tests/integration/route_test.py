@@ -666,6 +666,21 @@ def test_route_rule_add_from_to_single_host(route_rule_test_env):
     _check_ip_rules(rules)
 
 
+def test_route_rule_clear_state_with_ipv6(route_rule_test_env):
+    state = route_rule_test_env
+    rules = [
+        {RouteRule.IP_FROM: "2001:db8:a::", RouteRule.IP_TO: "2001:db8:f::/64"}
+    ]
+    state[RouteRule.KEY] = {RouteRule.CONFIG: rules}
+    libnmstate.apply(state)
+    _check_ip_rules(rules)
+
+    state[RouteRule.KEY] = {RouteRule.CONFIG: []}
+    libnmstate.apply(state)
+    current_state = libnmstate.show()
+    assert len(current_state[RouteRule.KEY][RouteRule.CONFIG]) == 0
+
+
 def _check_ip_rules(rules):
     for rule in rules:
         iprule.ip_rule_exist_in_os(
