@@ -23,6 +23,8 @@ import libnmstate
 
 from libnmstate.error import NmstateNotSupportedError
 from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceIPv4
+from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import VRF
@@ -35,6 +37,8 @@ TEST_VRF_PORT0 = "eth1"
 TEST_VRF_PORT1 = "eth2"
 TEST_ROUTE_TABLE_ID0 = 100
 TEST_ROUTE_TABLE_ID1 = 101
+IPV4_ADDRESS1 = "192.0.2.251"
+IPV6_ADDRESS1 = "2001:db8:1::1"
 
 
 @pytest.fixture
@@ -162,5 +166,37 @@ class TestVrf:
         vrf0_iface[VRF.CONFIG_SUBTREE][VRF.PORT_SUBTREE] = [TEST_VRF_PORT1]
         vrf1_iface[VRF.CONFIG_SUBTREE][VRF.PORT_SUBTREE] = [TEST_VRF_PORT0]
         desired_state = {Interface.KEY: [vrf0_iface, vrf1_iface]}
+        libnmstate.apply(desired_state)
+        assertlib.assert_state_match(desired_state)
+
+    def test_port_holding_ip(self, vrf0_with_port0):
+        desired_state = {
+            Interface.KEY: [
+                {
+                    Interface.NAME: TEST_VRF_PORT0,
+                    Interface.IPV4: {
+                        InterfaceIPv4.ENABLED: True,
+                        InterfaceIPv4.DHCP: False,
+                        InterfaceIPv4.ADDRESS: [
+                            {
+                                InterfaceIPv4.ADDRESS_IP: IPV4_ADDRESS1,
+                                InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+                            }
+                        ],
+                    },
+                    Interface.IPV6: {
+                        InterfaceIPv6.ENABLED: True,
+                        InterfaceIPv6.DHCP: False,
+                        InterfaceIPv6.AUTOCONF: False,
+                        InterfaceIPv6.ADDRESS: [
+                            {
+                                InterfaceIPv6.ADDRESS_IP: IPV6_ADDRESS1,
+                                InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
+                            }
+                        ],
+                    },
+                }
+            ]
+        }
         libnmstate.apply(desired_state)
         assertlib.assert_state_match(desired_state)

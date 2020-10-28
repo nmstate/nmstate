@@ -233,6 +233,7 @@ class BaseIface:
             if (
                 ip_state.is_enabled
                 and self.controller
+                and self.controller_type != InterfaceType.VRF
                 and not self.can_have_ip_as_port
             ):
                 raise NmstateValueError(
@@ -279,7 +280,10 @@ class BaseIface:
     def set_controller(self, controller_iface_name, controller_type):
         self._info[BaseIface.CONTROLLER_METADATA] = controller_iface_name
         self._info[BaseIface.CONTROLLER_TYPE_METADATA] = controller_type
-        if not self.can_have_ip_as_port:
+        if (
+            not self.can_have_ip_as_port
+            and controller_type != InterfaceType.VRF
+        ):
             for family in (Interface.IPV4, Interface.IPV6):
                 self._info[family] = {InterfaceIP.ENABLED: False}
 
