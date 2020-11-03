@@ -275,13 +275,13 @@ def _get_bridge_options(bridge_device):
 
 def create_ovs_proxy_iface_info(iface):
     """
-        Prepare the state of the "proxy" interface. These are interfaces that
-        exist as NM entities/profiles, but are invisible to the API.
-        These proxy interfaces state is created as a side effect of other
-        ifaces definition.
-        In OVS case, the port profile is the proxy, it is not part of the
-        public state of the system, but internal to the NM provider.
-        """
+    Prepare the state of the "proxy" interface. These are interfaces that
+    exist as NM entities/profiles, but are invisible to the API.
+    These proxy interfaces state is created as a side effect of other
+    ifaces definition.
+    In OVS case, the port profile is the proxy, it is not part of the
+    public state of the system, but internal to the NM provider.
+    """
     iface_info = iface.to_dict()
     controller_type = iface_info.get(CONTROLLER_TYPE_METADATA)
     if controller_type != InterfaceType.OVS_BRIDGE:

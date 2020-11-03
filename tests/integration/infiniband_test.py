@@ -85,7 +85,9 @@ def _test_ib_mode():
 
 
 def _gen_ib_iface_info(
-    base_iface, pkey=InfiniBand.DEFAULT_PKEY, mode=InfiniBand.Mode.DATAGRAM,
+    base_iface,
+    pkey=InfiniBand.DEFAULT_PKEY,
+    mode=InfiniBand.Mode.DATAGRAM,
 ):
     if pkey == InfiniBand.DEFAULT_PKEY:
         iface_name = base_iface
@@ -111,7 +113,8 @@ def ib_base_nic():
     yield iface_info
     iface_info[Interface.STATE] = InterfaceState.ABSENT
     libnmstate.apply(
-        {Interface.KEY: [iface_info]}, verify_change=False,
+        {Interface.KEY: [iface_info]},
+        verify_change=False,
     )
 
 
@@ -124,7 +127,8 @@ def ib_pkey_nic1(ib_base_nic):
     yield iface_info
     iface_info[Interface.STATE] = InterfaceState.ABSENT
     libnmstate.apply(
-        {Interface.KEY: [iface_info]}, verify_change=False,
+        {Interface.KEY: [iface_info]},
+        verify_change=False,
     )
 
 
@@ -137,7 +141,8 @@ def ib_pkey_nic2(ib_base_nic):
     yield iface_info
     iface_info[Interface.STATE] = InterfaceState.ABSENT
     libnmstate.apply(
-        {Interface.KEY: [iface_info]}, verify_change=False,
+        {Interface.KEY: [iface_info]},
+        verify_change=False,
     )
 
 
@@ -294,7 +299,10 @@ class TestInfiniBand:
             assertlib.assert_state_match(desired_state)
 
     def test_add_pkey_nic_to_active_backup_bond(
-        self, empty_test_bond, ib_pkey_nic1, ib_pkey_nic2,
+        self,
+        empty_test_bond,
+        ib_pkey_nic1,
+        ib_pkey_nic2,
     ):
         port1_name = ib_pkey_nic1[Interface.NAME]
         port2_name = ib_pkey_nic2[Interface.NAME]
@@ -324,7 +332,10 @@ class TestInfiniBand:
                 libnmstate.apply(desired_state)
 
     def test_expect_exception_when_adding_pkey_nic_to_round_robin_bond(
-        self, empty_test_bond, ib_pkey_nic1, ib_pkey_nic2,
+        self,
+        empty_test_bond,
+        ib_pkey_nic1,
+        ib_pkey_nic2,
     ):
         """
         IP over InfiniBand interface is only allowd to be port of active-backup

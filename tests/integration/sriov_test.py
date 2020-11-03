@@ -33,7 +33,8 @@ SRIOV_CONFIG = {Ethernet.SRIOV_SUBTREE: {Ethernet.SRIOV.TOTAL_VFS: 2}}
 
 
 pytestmark = pytest.mark.skipif(
-    os.environ.get("CI") == "true", reason="CI devices do not support SR-IOV",
+    os.environ.get("CI") == "true",
+    reason="CI devices do not support SR-IOV",
 )
 
 

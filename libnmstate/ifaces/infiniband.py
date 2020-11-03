@@ -75,9 +75,9 @@ class InfiniBandIface(BaseIface):
 
 def _cannonicalize_pkey(iface_info):
     """
-     * Set as 0xffff if pkey not defined
-     * Convert pkey string to integer
-     * Raise NmstateValueError when out of range(16 bites)
+    * Set as 0xffff if pkey not defined
+    * Convert pkey string to integer
+    * Raise NmstateValueError when out of range(16 bites)
     """
     iface_name = iface_info[Interface.NAME]
     ib_config = iface_info.get(InfiniBand.CONFIG_SUBTREE, {})

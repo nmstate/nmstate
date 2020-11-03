@@ -132,8 +132,14 @@ class TestRouteRuleEntry:
     @pytest.mark.parametrize(
         "ip_ver_addrs",
         [
-            ("198.51.100.1/24", "198.51.100.0/24",),
-            ("2001:db8:a::1/64", "2001:db8:a::/64",),
+            (
+                "198.51.100.1/24",
+                "198.51.100.0/24",
+            ),
+            (
+                "2001:db8:a::1/64",
+                "2001:db8:a::/64",
+            ),
         ],
         ids=["ipv4", "ipv6"],
     )
@@ -149,8 +155,14 @@ class TestRouteRuleEntry:
     @pytest.mark.parametrize(
         "ip_ver_addrs",
         [
-            ("198.51.100.256/24", "198.51.100.2/33",),
-            ("2001:db8:a::ffff0/64", "2001:db8:a::/129",),
+            (
+                "198.51.100.256/24",
+                "198.51.100.2/33",
+            ),
+            (
+                "2001:db8:a::ffff0/64",
+                "2001:db8:a::/129",
+            ),
             ("invalid_ip_string", "invalid_ip_string2"),
         ],
         ids=["ipv4", "ipv6", "invalid_format"],
@@ -247,7 +259,9 @@ class TestRouteRuleState:
     def test_route_rule_to_unknow_route_table(self):
         ifaces = self._gen_ifaces()
         route_state = RouteState(
-            ifaces, {}, {Route.CONFIG: [gen_ipv4_route().to_dict()]},
+            ifaces,
+            {},
+            {Route.CONFIG: [gen_ipv4_route().to_dict()]},
         )
         route_rule_state = RouteRuleState(
             route_state,
@@ -265,7 +279,9 @@ class TestRouteRuleState:
     def test_discard_rule_to_unknown_table_when_merging(self):
         ifaces = self._gen_ifaces()
         route_state = RouteState(
-            ifaces, {}, {Route.CONFIG: [gen_ipv4_route().to_dict()]},
+            ifaces,
+            {},
+            {Route.CONFIG: [gen_ipv4_route().to_dict()]},
         )
         route_rule_state = RouteRuleState(
             route_state,
@@ -292,7 +308,9 @@ class TestRouteRuleState:
     def test_clear_rules_with_ip_from_using_wildcard(self):
         ifaces = self._gen_ifaces()
         route_state = RouteState(
-            ifaces, {}, {Route.CONFIG: [gen_ipv4_route().to_dict()]},
+            ifaces,
+            {},
+            {Route.CONFIG: [gen_ipv4_route().to_dict()]},
         )
         route_rule_state = RouteRuleState(
             route_state,
@@ -330,7 +348,9 @@ class TestRouteRuleState:
     def test_clear_rules_with_ip_to_using_wildcard(self):
         ifaces = self._gen_ifaces()
         route_state = RouteState(
-            ifaces, {}, {Route.CONFIG: [gen_ipv4_route().to_dict()]},
+            ifaces,
+            {},
+            {Route.CONFIG: [gen_ipv4_route().to_dict()]},
         )
         route_rule_state = RouteRuleState(
             route_state,
@@ -368,7 +388,9 @@ class TestRouteRuleState:
     def test_clear_rules_with_priority_using_wildcard(self):
         ifaces = self._gen_ifaces()
         route_state = RouteState(
-            ifaces, {}, {Route.CONFIG: [gen_ipv4_route().to_dict()]},
+            ifaces,
+            {},
+            {Route.CONFIG: [gen_ipv4_route().to_dict()]},
         )
         route_rule_state = RouteRuleState(
             route_state,

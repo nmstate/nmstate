@@ -180,7 +180,10 @@ class DnsState:
         return (ipv4_iface, ipv6_iface)
 
     def verify(self, cur_dns_state):
-        cur_dns = DnsState(des_dns_state=None, cur_dns_state=cur_dns_state,)
+        cur_dns = DnsState(
+            des_dns_state=None,
+            cur_dns_state=cur_dns_state,
+        )
         if self.config.get(DNS.SERVER, []) != cur_dns.config.get(
             DNS.SERVER, []
         ) or self.config.get(DNS.SEARCH, []) != cur_dns.config.get(
@@ -188,7 +191,8 @@ class DnsState:
         ):
             raise NmstateVerificationError(
                 format_desired_current_state_diff(
-                    {DNS.KEY: self.config}, {DNS.KEY: cur_dns.config},
+                    {DNS.KEY: self.config},
+                    {DNS.KEY: cur_dns.config},
                 )
             )
 

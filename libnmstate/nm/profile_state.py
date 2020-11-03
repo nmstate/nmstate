@@ -99,7 +99,9 @@ class NmProfileState:
         user_data = action, profile
         self._ac_handlers.add(
             profile.nm_ac.connect(
-                "state-changed", self._ac_state_change_callback, user_data,
+                "state-changed",
+                self._ac_state_change_callback,
+                user_data,
             )
         )
         self._ac_handlers.add(

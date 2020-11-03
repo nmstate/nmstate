@@ -94,7 +94,8 @@ class ActiveConnection:
             return
         if act_con.props.state == NM.ActiveConnectionState.DEACTIVATED:
             logging.debug(
-                "Connection deactivation succeeded on %s", self.devname,
+                "Connection deactivation succeeded on %s",
+                self.devname,
             )
             self._ctx.finish_async(action)
 

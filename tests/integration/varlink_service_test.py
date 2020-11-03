@@ -50,7 +50,8 @@ APPLY_STATE = {
 
 
 @pytest.fixture(
-    params=["/run/nmstate"], ids=["unix_socket_connection"],
+    params=["/run/nmstate"],
+    ids=["unix_socket_connection"],
 )
 def server(request):
     server = gen_varlink_server(request.param)
@@ -62,7 +63,8 @@ def server(request):
 
 
 @pytest.fixture(
-    params=["unix:/run/nmstate/nmstate.so"], ids=["systemd_unix_connection"],
+    params=["unix:/run/nmstate/nmstate.so"],
+    ids=["systemd_unix_connection"],
 )
 def systemd_service(request):
     if os.system("systemctl is-active nmstate-varlink.service") != 0:

@@ -46,7 +46,9 @@ def test_set_a_down_iface_down(eth1_up):
 
 
 @pytest.mark.xfail(
-    raises=AssertionError, reason="Some ifaces cannot be removed", strict=True,
+    raises=AssertionError,
+    reason="Some ifaces cannot be removed",
+    strict=True,
 )
 def test_removing_a_non_removable_iface(eth1_up):
     desired_state = {
