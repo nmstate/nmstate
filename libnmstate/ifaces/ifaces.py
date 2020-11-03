@@ -266,10 +266,10 @@ class Ifaces:
 
     def _handle_controller_port_list_change(self):
         """
-         * Mark port interface as changed if controller removed.
-         * Mark port interface as changed if port list of controller changed.
-         * Mark port interface as changed if port config changed when
-           controller said so.
+        * Mark port interface as changed if controller removed.
+        * Mark port interface as changed if port list of controller changed.
+        * Mark port interface as changed if port config changed when
+          controller said so.
         """
         for iface in self._ifaces.values():
             if not iface.is_desired or not iface.is_controller:

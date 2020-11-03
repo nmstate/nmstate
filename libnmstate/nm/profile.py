@@ -406,7 +406,9 @@ class NmProfile:
             con_setting.set_profile_name(ifname)
         else:
             con_setting.create(
-                con_name=ifname, iface_name=ifname, iface_type=nm_iface_type,
+                con_name=ifname,
+                iface_name=ifname,
+                iface_type=nm_iface_type,
             )
 
         lldp.apply_lldp_setting(con_setting, self.iface_info)
@@ -471,7 +473,9 @@ class NmProfile:
             settings.extend(nm_ovs.create_interface_setting(patch_state))
         elif self.iface.type == InterfaceType.INFINIBAND:
             ib_setting = create_infiniband_setting(
-                self.iface_info, self._remote_conn, self.original_iface_info,
+                self.iface_info,
+                self._remote_conn,
+                self.original_iface_info,
             )
             if ib_setting:
                 settings.append(ib_setting)
@@ -622,7 +626,8 @@ class NmProfile:
             else:
                 raise NmstateValueError(
                     "Invalid state {} for interface {}".format(
-                        self.iface.state, self.iface.name,
+                        self.iface.state,
+                        self.iface.name,
                     )
                 )
 
@@ -632,7 +637,10 @@ def get_all_applied_configs(context):
     for nm_dev in list_devices(context.client):
         if (
             nm_dev.get_state()
-            in (NM.DeviceState.ACTIVATED, NM.DeviceState.IP_CONFIG,)
+            in (
+                NM.DeviceState.ACTIVATED,
+                NM.DeviceState.IP_CONFIG,
+            )
             and nm_dev.get_managed()
         ):
             iface_name = nm_dev.get_iface()

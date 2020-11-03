@@ -203,7 +203,8 @@ def test_manual_rollback(eth1_up):
 
 
 def test_dual_change(eth1_up):
-    """ I cannot set a state without confirming/rolling back the state change.
+    """
+    I cannot set a state without confirming/rolling back the state change.
     """
 
     with example_state(CONFIRMATION_CLEAN, CONFIRMATION_CLEAN) as clean_state:

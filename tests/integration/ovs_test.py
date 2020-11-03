@@ -653,7 +653,8 @@ def ovs_bridge_with_internal_interface_and_identical_names():
         yield BRIDGE0
     finally:
         _, con_names, _ = cmdlib.exec_cmd(
-            "nmcli -f NAME connection".split(), check=True,
+            "nmcli -f NAME connection".split(),
+            check=True,
         )
         con_to_delete = " ".join(
             [

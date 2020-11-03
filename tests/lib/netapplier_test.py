@@ -57,7 +57,9 @@ def net_state_mock():
 
 
 def test_iface_admin_state_change(
-    show_with_plugins_mock, plugin_context_mock, net_state_mock,
+    show_with_plugins_mock,
+    plugin_context_mock,
+    net_state_mock,
 ):
     current_config = {
         Interface.KEY: [
@@ -84,7 +86,9 @@ def test_iface_admin_state_change(
 
 
 def test_add_new_bond(
-    plugin_context_mock, show_with_plugins_mock, net_state_mock,
+    plugin_context_mock,
+    show_with_plugins_mock,
+    net_state_mock,
 ):
     show_with_plugins_mock.return_value = {}
 
@@ -115,7 +119,9 @@ def test_add_new_bond(
 
 
 def test_edit_existing_bond(
-    show_with_plugins_mock, plugin_context_mock, net_state_mock,
+    show_with_plugins_mock,
+    plugin_context_mock,
+    net_state_mock,
 ):
     current_config = {
         Interface.KEY: [

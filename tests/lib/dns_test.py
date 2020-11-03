@@ -72,7 +72,8 @@ class TestDnsState:
 
     def test_merge_by_overriding_current(self):
         dns_state = DnsState(
-            {DNS.CONFIG: DNS_CONFIG2}, {DNS.CONFIG: DNS_CONFIG1},
+            {DNS.CONFIG: DNS_CONFIG2},
+            {DNS.CONFIG: DNS_CONFIG1},
         )
 
         assert dns_state.config == DNS_CONFIG2

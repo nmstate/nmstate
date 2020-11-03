@@ -45,7 +45,8 @@ class NetState:
             current_state.get(Route.KEY),
         )
         self._dns = DnsState(
-            desire_state.get(DNS.KEY), current_state.get(DNS.KEY),
+            desire_state.get(DNS.KEY),
+            current_state.get(DNS.KEY),
         )
         self._route_rule = RouteRuleState(
             self._route,

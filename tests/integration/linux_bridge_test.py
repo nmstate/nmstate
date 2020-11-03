@@ -547,7 +547,8 @@ class TestVlanFiltering:
             assertlib.assert_state_match(desired_state)
 
     def test_disable_vlan_filtering_on_bridge(
-        self, bridge_with_trunk_port_and_native_config,
+        self,
+        bridge_with_trunk_port_and_native_config,
     ):
         bridge_state = bridge_with_trunk_port_and_native_config[Interface.KEY][
             0
