@@ -455,6 +455,12 @@ class Ifaces:
     def gen_route_metadata(self, route_state):
         iface_metadata = route_state.gen_metadata(self)
         for iface_name, route_metadata in iface_metadata.items():
+            route_state = route_metadata.pop(
+                BaseIface.ROUTE_CHANGED_METADATA, None
+            )
+            if route_state:
+                self._ifaces[iface_name].mark_as_changed()
+
             self._ifaces[iface_name].store_route_metadata(route_metadata)
 
     def gen_route_rule_metadata(self, route_rule_state, route_state):

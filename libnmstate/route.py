@@ -28,6 +28,7 @@ from libnmstate.prettystate import format_desired_current_state_diff
 from libnmstate.schema import Interface
 from libnmstate.schema import Route
 
+from .ifaces.base_iface import BaseIface
 from .state import StateEntry
 from .state import state_match
 
@@ -209,7 +210,6 @@ class RouteState:
                 if not rt.match(route):
                     new_routes.add(route)
             if new_routes != route_set:
-                ifaces[iface_name].mark_as_changed()
                 self._routes[iface_name] = new_routes
 
     def gen_metadata(self, ifaces):
@@ -229,6 +229,10 @@ class RouteState:
                 Interface.IPV4: [],
                 Interface.IPV6: [],
             }
+            if route_set != self._cur_routes[iface_name]:
+                route_metadata[iface_name][
+                    BaseIface.ROUTE_CHANGED_METADATA
+                ] = True
             for route in route_set:
                 family = Interface.IPV6 if route.is_ipv6 else Interface.IPV4
                 route_metadata[iface_name][family].append(route.to_dict())
