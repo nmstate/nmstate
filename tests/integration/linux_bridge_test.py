@@ -46,7 +46,6 @@ from .testlib.bridgelib import generate_vlan_id_range_config
 from .testlib.bridgelib import linux_bridge
 from .testlib.cmdlib import exec_cmd
 from .testlib.env import is_fedora
-from .testlib.env import is_el8_kernel
 from .testlib.env import is_ubuntu_kernel
 from .testlib.ifacelib import get_mac_address
 from .testlib.iproutelib import ip_monitor_assert_stable_link_up
@@ -769,10 +768,8 @@ def test_explicitly_ignore_a_bridge_port(bridge0_with_port0, port1_up):
 
 
 @pytest.mark.xfail(
-    is_el8_kernel(),
     reason="https://bugzilla.redhat.com/1855160",
     raises=NmstateVerificationError,
-    strict=True,
 )
 def test_change_multicast_snooping_from_false_to_true(port0_up, port1_up):
     bridge_name = TEST_BRIDGE0
