@@ -26,7 +26,3 @@ def is_fedora():
 
 def is_ubuntu_kernel():
     return "Ubuntu" in os.uname().version
-
-
-def is_el8_kernel():
-    return "el8" in os.uname().release
