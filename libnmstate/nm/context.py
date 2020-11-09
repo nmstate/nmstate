@@ -55,6 +55,10 @@ class NmContext:
         self._init_queue()
         self._init_cancellable()
 
+    def _init_client(self):
+        self._client = NM.Client.new(cancellable=None)
+        self._context = self._client.get_main_context()
+
     def _init_queue(self):
         self._fast_queue = set()
         self._slow_queue = set()
@@ -208,6 +212,8 @@ class NmContext:
 
         if self._error:
             # The queue and error should be flush and perpare for another run
+            self._cancellable.cancel()
+            self.refresh_content()
             self._init_queue()
             self._init_cancellable()
             tmp_error = self._error
@@ -215,6 +221,3 @@ class NmContext:
             # pylint: disable=raising-bad-type
             raise tmp_error
             # pylint: enable=raising-bad-type
-
-    def get_nm_dev(self, iface_name):
-        return self.client.get_device_by_iface(iface_name)

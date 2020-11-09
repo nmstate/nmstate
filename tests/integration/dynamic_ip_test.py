@@ -1208,3 +1208,14 @@ def clean_state():
 
 def _sort_ip_addresses(addresses):
     addresses.sort(key=itemgetter(InterfaceIP.ADDRESS_IP))
+
+
+def test_enable_dhcp_with_no_server(dummy00):
+    iface_info = dummy00
+    iface_info[Interface.IPV4] = _create_ipv4_state(enabled=True, dhcp=True)
+    iface_info[Interface.IPV6] = _create_ipv6_state(
+        enabled=True, dhcp=True, autoconf=False
+    )
+    desired_state = {Interface.KEY: [iface_info]}
+    libnmstate.apply(desired_state)
+    assertlib.assert_state_match(desired_state)

@@ -22,11 +22,11 @@ import logging
 from libnmstate.error import NmstateConflictError
 from libnmstate.error import NmstateLibnmError
 from libnmstate.error import NmstatePermissionError
-from libnmstate.ifaces.base_iface import BaseIface
-from libnmstate.nm import profile
-from libnmstate.nm import common
-from libnmstate.schema import Interface
-from .profile_state import is_activated
+
+from .active_connection import is_activating
+from .active_connection import ProfileActivation
+from .common import GLib
+from .common import NM
 
 
 def get_checkpoints(nm_client):
@@ -54,8 +54,8 @@ class CheckPoint:
         devs = []
         timeout = self._timeout
         cp_flags = (
-            common.NM.CheckpointCreateFlags.DELETE_NEW_CONNECTIONS
-            | common.NM.CheckpointCreateFlags.DISCONNECT_NEW_DEVICES
+            NM.CheckpointCreateFlags.DELETE_NEW_CONNECTIONS
+            | NM.CheckpointCreateFlags.DISCONNECT_NEW_DEVICES
         )
 
         self._ctx.register_async("Create checkpoint")
@@ -71,9 +71,7 @@ class CheckPoint:
         self._add_checkpoint_refresh_timeout()
 
     def _add_checkpoint_refresh_timeout(self):
-        self._timeout_source = common.GLib.timeout_source_new(
-            self._timeout * 500
-        )
+        self._timeout_source = GLib.timeout_source_new(self._timeout * 500)
         self._timeout_source.set_callback(
             self._refresh_checkpoint_timeout, None
         )
@@ -94,9 +92,9 @@ class CheckPoint:
             self._ctx.client.checkpoint_adjust_rollback_timeout(
                 self._dbuspath, self._timeout, cancellable, cb, cb_data
             )
-            return common.GLib.SOURCE_CONTINUE
+            return GLib.SOURCE_CONTINUE
         else:
-            return common.GLib.SOURCE_REMOVE
+            return GLib.SOURCE_REMOVE
 
     def destroy(self):
         if self._dbuspath:
@@ -150,10 +148,10 @@ class CheckPoint:
                 self._ctx.fail(
                     NmstateLibnmError(f"Checkpoint create failed: {error_msg}")
                 )
-        except common.GLib.Error as e:
+        except GLib.Error as e:
             if e.matches(
-                common.NM.ManagerError.quark(),
-                common.NM.ManagerError.PERMISSIONDENIED,
+                NM.ManagerError.quark(),
+                NM.ManagerError.PERMISSIONDENIED,
             ):
                 self._ctx.fail(
                     NmstatePermissionError(
@@ -162,8 +160,8 @@ class CheckPoint:
                     )
                 )
             elif e.matches(
-                common.NM.ManagerError.quark(),
-                common.NM.ManagerError.INVALIDARGUMENTS,
+                NM.ManagerError.quark(),
+                NM.ManagerError.INVALIDARGUMENTS,
             ):
                 self._ctx.fail(
                     NmstateConflictError(
@@ -200,21 +198,13 @@ class CheckPoint:
             if nm_dev and (
                 (
                     nm_dev.get_state_reason()
-                    == common.NM.DeviceStateReason.NEW_ACTIVATION
+                    == NM.DeviceStateReason.NEW_ACTIVATION
                 )
-                or nm_dev.get_state() == common.NM.DeviceState.IP_CONFIG
+                or nm_dev.get_state() == NM.DeviceState.IP_CONFIG
             ):
                 nm_ac = nm_dev.get_active_connection()
-                if not is_activated(nm_ac, nm_dev):
-                    nm_profile = profile.NmProfile(
-                        self._ctx, None, BaseIface({Interface.NAME: iface})
-                    )
-                    nm_profile.nmdev = nm_dev
-                    action = f"Waiting for rolling back {iface}"
-                    self._ctx.register_async(action)
-                    nm_profile.profile_state.wait_dev_activation(
-                        action, nm_profile
-                    )
+                if is_activating(nm_ac, nm_dev):
+                    ProfileActivation.wait(self._ctx, nm_ac, nm_dev)
             if ret[path] != 0:
                 logging.error(f"Interface {iface} rollback failed")
             else:

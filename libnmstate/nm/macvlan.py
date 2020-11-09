@@ -67,6 +67,16 @@ def create_setting(iface_state, base_con_profile, tap=False):
     return macvlan_setting
 
 
+def is_macvtap(applied_config):
+    if applied_config:
+        macvlan_setting = applied_config.get_setting_by_name(
+            NM.SETTING_MACVLAN_SETTING_NAME
+        )
+        if macvlan_setting:
+            return macvlan_setting.props.tap
+    return False
+
+
 def get_current_macvlan_type(applied_config):
     """
     This is a workaround needed due to Nmstate gathering the interface type
@@ -75,12 +85,6 @@ def get_current_macvlan_type(applied_config):
     during verification as NM and Nispor interfaces will not be merged
     correctly.
     """
-    if applied_config:
-        macvlan_setting = applied_config.get_setting_by_name(
-            NM.SETTING_MACVLAN_SETTING_NAME
-        )
-        if macvlan_setting:
-            tap = macvlan_setting.props.tap
-            if tap:
-                return {Interface.TYPE: InterfaceType.MAC_VTAP}
+    if is_macvtap(applied_config):
+        return {Interface.TYPE: InterfaceType.MAC_VTAP}
     return {}

@@ -21,13 +21,12 @@ from unittest import mock
 
 import pytest
 
-import libnmstate.nm.connection as nm_connection
 import libnmstate.nm.dns as nm_dns
 import libnmstate.nm.ipv4 as nm_ipv4
 import libnmstate.nm.ipv6 as nm_ipv6
-import libnmstate.nm.profile as nm_profile
 from libnmstate.ifaces import BaseIface
 from libnmstate.dns import DnsState
+from libnmstate.nm.common import NM
 from libnmstate.schema import DNS
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIP
@@ -132,13 +131,12 @@ def test_clear_dns(client_mock, nm_ip, get_test_dns_func):
         {InterfaceIP.ENABLED: True, BaseIface.DNS_METADATA: dns_conf},
         base_con_profile=None,
     )
-    con_profile = nm_profile.NmProfile(client_mock, True)
-    con_profile._simple_conn = nm_connection.create_new_simple_connection(
-        [setting_ip]
-    )
+    nm_simple_conn = NM.SimpleConnection.new()
+    nm_simple_conn.add_setting(setting_ip)
+
     new_setting_ip = nm_ip.create_setting(
         {InterfaceIP.ENABLED: True, BaseIface.DNS_METADATA: {}},
-        base_con_profile=con_profile.profile,
+        base_con_profile=nm_simple_conn,
     )
 
     _assert_dns(new_setting_ip, {})

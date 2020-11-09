@@ -26,6 +26,7 @@ from libnmstate.schema import OVSBridge as OB
 from libnmstate.schema import OVSInterface
 from libnmstate.ifaces import ovs
 from libnmstate.ifaces.bridge import BridgeIface
+from libnmstate.ifaces.base_iface import BaseIface
 
 from .common import NM
 
@@ -122,10 +123,6 @@ def create_patch_setting(patch_state):
     patch_setting.props.peer = patch_state[OVSInterface.Patch.PEER]
 
     return patch_setting
-
-
-def is_ovs_port_type_id(type_id):
-    return type_id == NM.DeviceType.OVS_PORT
 
 
 def get_ovs_bridge_info(nm_dev_ovs_br):
@@ -273,44 +270,21 @@ def _get_bridge_options(bridge_device):
     return bridge_options
 
 
-def create_ovs_proxy_iface_info(iface):
-    """
-    Prepare the state of the "proxy" interface. These are interfaces that
-    exist as NM entities/profiles, but are invisible to the API.
-    These proxy interfaces state is created as a side effect of other
-    ifaces definition.
-    In OVS case, the port profile is the proxy, it is not part of the
-    public state of the system, but internal to the NM provider.
-    """
-    iface_info = iface.to_dict()
-    controller_type = iface_info.get(CONTROLLER_TYPE_METADATA)
-    if controller_type != InterfaceType.OVS_BRIDGE:
-        return None
-    port_opts_metadata = iface_info.get(BridgeIface.BRPORT_OPTIONS_METADATA)
-    if port_opts_metadata is None:
-        return None
-    port_iface_desired_state = _create_ovs_port_iface_desired_state(
-        port_opts_metadata, iface, iface_info
-    )
-    # The "visible" port/interface needs to point to the port profile
-    iface.set_controller(
-        port_iface_desired_state[Interface.NAME], InterfaceType.OVS_PORT
-    )
-
-    return port_iface_desired_state
-
-
-def _create_ovs_port_iface_desired_state(port_options, iface, iface_info):
+def create_iface_for_nm_ovs_port(iface):
     iface_name = iface.name
+    iface_info = iface.to_dict()
+    port_options = iface_info.get(BridgeIface.BRPORT_OPTIONS_METADATA)
     if ovs.is_ovs_lag_port(port_options):
         port_name = port_options[OB.Port.NAME]
     else:
         port_name = PORT_PROFILE_PREFIX + iface_name
-    return {
-        Interface.NAME: port_name,
-        Interface.TYPE: InterfaceType.OVS_PORT,
-        Interface.STATE: iface_info[Interface.STATE],
-        OB.OPTIONS_SUBTREE: port_options,
-        CONTROLLER_METADATA: iface_info[CONTROLLER_METADATA],
-        CONTROLLER_TYPE_METADATA: iface_info[CONTROLLER_TYPE_METADATA],
-    }
+    return BaseIface(
+        {
+            Interface.NAME: port_name,
+            Interface.TYPE: InterfaceType.OVS_PORT,
+            Interface.STATE: iface.state,
+            OB.OPTIONS_SUBTREE: port_options,
+            CONTROLLER_METADATA: iface_info[CONTROLLER_METADATA],
+            CONTROLLER_TYPE_METADATA: iface_info[CONTROLLER_TYPE_METADATA],
+        }
+    )
