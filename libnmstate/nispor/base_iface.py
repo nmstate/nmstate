@@ -40,7 +40,7 @@ class NisporPluginBaseIface:
 
     @property
     def mac(self):
-        mac = self._np_iface.mac_address
+        mac = self._np_iface.mac_address.upper()
         if not mac:
             mac = DEFAULT_MAC_ADDRESS
         return mac
@@ -57,9 +57,9 @@ class NisporPluginBaseIface:
     def state(self):
         np_state = self._np_iface.state
         np_flags = self._np_iface.flags
-        if np_state == "Up" or "Up" in np_flags or "Running" in np_flags:
+        if np_state == "up" or "up" in np_flags or "running" in np_flags:
             return InterfaceState.UP
-        elif np_state == "Down":
+        elif np_state == "down":
             return InterfaceState.DOWN
         else:
             logging.debug(

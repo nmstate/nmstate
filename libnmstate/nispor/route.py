@@ -28,7 +28,7 @@ def nispor_route_state_to_nmstate(np_routes):
     return [
         _nispor_route_to_nmstate(rt)
         for rt in np_routes
-        if rt.scope == "Universe"
+        if rt.scope == "universe"
     ]
 
 
@@ -38,7 +38,7 @@ def _nispor_route_to_nmstate(np_rt):
     elif np_rt.gateway:
         destination = (
             IPV6_DEFAULT_GATEWAY_DESTINATION
-            if np_rt.address_family == "IPv6"
+            if np_rt.address_family == "ipv6"
             else IPV4_DEFAULT_GATEWAY_DESTINATION
         )
     else:

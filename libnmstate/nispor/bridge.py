@@ -38,10 +38,10 @@ NISPOR_USER_HZ_KEYS = [
 
 
 NISPOR_MULTICAST_ROUTERS_INT_MAP = {
-    "Disabled": 0,
-    "TempQuery": 1,
-    "Perm": 2,
-    "Temp": 3,
+    "disabled": 0,
+    "temp_query": 1,
+    "perm": 2,
+    "temp": 3,
 }
 
 LSM_BRIDGE_OPTIONS_2_NISPOR = {
@@ -127,7 +127,9 @@ def _nispor_value_to_lsm(np_name, np_value):
     if np_name == "multicast_router":
         value = NISPOR_MULTICAST_ROUTERS_INT_MAP.get(np_value)
     elif np_name == "stp_state":
-        value = np_value in ("KernelStp", "UserStp")
+        value = np_value in ("kernel_stp", "user_stp")
+    elif np_name == "group_addr":
+        value = value.upper()
     return value
 
 
