@@ -69,6 +69,7 @@ def setup_eth1_ipv4(eth1_up):
         ]
     }
     libnmstate.apply(desired_state)
+    yield desired_state
 
 
 @pytest.fixture
@@ -579,6 +580,17 @@ def test_add_iface_with_static_ipv6_expanded_format(eth1_up):
     }
     libnmstate.apply(desired_state)
     assertlib.assert_state(desired_state)
+
+
+@pytest.mark.tier1
+@ip_monitor_assert_stable_link_up("eth1")
+def test_modify_ipv4_with_reapply(setup_eth1_ipv4):
+    ipv4_addr = IPV4_ADDRESS2
+    ipv4_state = setup_eth1_ipv4[Interface.KEY][0][Interface.IPV4]
+    ipv4_state[InterfaceIPv4.ADDRESS][0][InterfaceIPv4.ADDRESS_IP] = ipv4_addr
+    libnmstate.apply(setup_eth1_ipv4)
+
+    assertlib.assert_state(setup_eth1_ipv4)
 
 
 @pytest.mark.tier1

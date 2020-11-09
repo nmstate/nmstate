@@ -42,11 +42,6 @@ def nm_connection_mock():
         yield m
 
 
-def test_is_ovs_port_type_id(NM_mock):
-    type_id = NM_mock.DeviceType.OVS_PORT
-    assert nm.ovs.is_ovs_port_type_id(type_id)
-
-
 def test_get_ovs_bridge_info_without_ports(NM_mock):
     bridge_device = mock.MagicMock()
     _mock_ovs_bridge_profile(bridge_device)

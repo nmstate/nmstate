@@ -30,26 +30,33 @@ from libnmstate.schema import Route
 from libnmstate.schema import RouteRule
 from libnmstate.plugin import NmstatePlugin
 
-from . import connection as nm_connection
-from . import device as nm_device
-from . import ipv4 as nm_ipv4
-from . import ipv6 as nm_ipv6
-from . import lldp as nm_lldp
-from . import ovs as nm_ovs
-from . import translator as nm_translator
-from . import wired as nm_wired
-from . import user as nm_user
-from . import team as nm_team
-from . import dns as nm_dns
+
 from .checkpoint import CheckPoint
 from .checkpoint import get_checkpoints
 from .common import NM
 from .context import NmContext
-from .macvlan import get_current_macvlan_type
-from .profile import get_all_applied_configs
-from .profile import NmProfiles
-from .route import get_running_config as get_route_running_config
+from .device import get_device_common_info
+from .device import list_devices
+from .dns import get_running as get_dns_running
+from .dns import get_running_config as get_dns_running_config
 from .infiniband import get_info as get_infiniband_info
+from .ipv4 import get_info as get_ipv4_info
+from .ipv4 import get_routing_rule_config as get_ipv4_routing_rule_config
+from .ipv6 import get_info as get_ipv6_info
+from .ipv6 import get_routing_rule_config as get_ipv6_routing_rule_config
+from .lldp import get_info as get_lldp_info
+from .macvlan import get_current_macvlan_type
+from .ovs import get_interface_info as get_ovs_interface_info
+from .ovs import get_ovs_bridge_info
+from .ovs import has_ovs_capability
+from .profiles import NmProfiles
+from .profiles import get_all_applied_configs
+from .route import get_running_config as get_route_running_config
+from .team import get_info as get_team_info
+from .team import has_team_capability
+from .translator import Nm2Api
+from .user import get_info as get_user_info
+from .wired import get_info as get_wired_info
 
 
 class NetworkManagerPlugin(NmstatePlugin):
@@ -93,9 +100,9 @@ class NetworkManagerPlugin(NmstatePlugin):
     @property
     def capabilities(self):
         capabilities = []
-        if nm_ovs.has_ovs_capability(self.client) and is_ovs_running():
+        if has_ovs_capability(self.client) and is_ovs_running():
             capabilities.append(NmstatePlugin.OVS_CAPABILITY)
-        if nm_team.has_team_capability(self.client):
+        if has_team_capability(self.client):
             capabilities.append(NmstatePlugin.TEAM_CAPABILITY)
         return capabilities
 
@@ -115,42 +122,37 @@ class NetworkManagerPlugin(NmstatePlugin):
         applied_configs = self._applied_configs
 
         devices_info = [
-            (dev, nm_device.get_device_common_info(dev))
-            for dev in nm_device.list_devices(self.client)
+            (dev, get_device_common_info(dev))
+            for dev in list_devices(self.client)
         ]
 
         for dev, devinfo in devices_info:
             if not dev.get_managed():
                 # Skip unmanaged interface
                 continue
-            type_id = devinfo["type_id"]
 
-            iface_info = nm_translator.Nm2Api.get_common_device_info(devinfo)
+            iface_info = Nm2Api.get_common_device_info(devinfo)
             applied_config = applied_configs.get(iface_info[Interface.NAME])
 
-            act_con = nm_connection.get_device_active_connection(dev)
-            iface_info[Interface.IPV4] = nm_ipv4.get_info(
-                act_con, applied_config
-            )
-            iface_info[Interface.IPV6] = nm_ipv6.get_info(
-                act_con, applied_config
-            )
-            iface_info.update(nm_wired.get_info(dev))
-            iface_info.update(nm_user.get_info(self.context, dev))
-            iface_info.update(nm_lldp.get_info(self.client, dev))
-            iface_info.update(nm_team.get_info(dev))
+            act_con = dev.get_active_connection()
+            iface_info[Interface.IPV4] = get_ipv4_info(act_con, applied_config)
+            iface_info[Interface.IPV6] = get_ipv6_info(act_con, applied_config)
+            iface_info.update(get_wired_info(dev))
+            iface_info.update(get_user_info(self.context, dev))
+            iface_info.update(get_lldp_info(self.client, dev))
+            iface_info.update(get_team_info(dev))
             iface_info.update(get_infiniband_info(applied_config))
             iface_info.update(get_current_macvlan_type(applied_config))
 
             if NmstatePlugin.OVS_CAPABILITY in capabilities:
                 if iface_info[Interface.TYPE] == InterfaceType.OVS_BRIDGE:
-                    iface_info.update(nm_ovs.get_ovs_bridge_info(dev))
+                    iface_info.update(get_ovs_bridge_info(dev))
                     iface_info = _remove_ovs_bridge_unsupported_entries(
                         iface_info
                     )
                 elif iface_info[Interface.TYPE] == InterfaceType.OVS_INTERFACE:
-                    iface_info.update(nm_ovs.get_interface_info(act_con))
-                elif nm_ovs.is_ovs_port_type_id(type_id):
+                    iface_info.update(get_ovs_interface_info(act_con))
+                elif iface_info[Interface.TYPE] == InterfaceType.OVS_PORT:
                     continue
 
             info.append(iface_info)
@@ -165,15 +167,15 @@ class NetworkManagerPlugin(NmstatePlugin):
     def get_route_rules(self):
         return {
             RouteRule.CONFIG: (
-                nm_ipv4.get_routing_rule_config(self.client)
-                + nm_ipv6.get_routing_rule_config(self.client)
+                get_ipv4_routing_rule_config(self.client)
+                + get_ipv6_routing_rule_config(self.client)
             )
         }
 
     def get_dns_client_config(self):
         return {
-            DNS.RUNNING: nm_dns.get_running(self.client),
-            DNS.CONFIG: nm_dns.get_running_config(self._applied_configs),
+            DNS.RUNNING: get_dns_running(self.client),
+            DNS.CONFIG: get_dns_running_config(self._applied_configs),
         }
 
     def refresh_content(self):

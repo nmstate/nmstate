@@ -17,9 +17,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
-from libnmstate.error import NmstateNotSupportedError
 from libnmstate.schema import Ethernet
-from libnmstate.schema import Interface
 
 from .common import NM
 from .common import GLib
@@ -49,9 +47,8 @@ SRIOV_NMSTATE_TO_NM_MAP = {
 }
 
 
-def create_setting(context, iface_state, base_con_profile):
+def create_setting(iface_state, base_con_profile):
     sriov_setting = None
-    ifname = iface_state[Interface.NAME]
     sriov_config = iface_state.get(Ethernet.CONFIG_SUBTREE, {}).get(
         Ethernet.SRIOV_SUBTREE
     )
@@ -61,11 +58,6 @@ def create_setting(context, iface_state, base_con_profile):
             NM.SETTING_SRIOV_SETTING_NAME
         )
     if sriov_config:
-        if not _has_sriov_capability(context, ifname):
-            raise NmstateNotSupportedError(
-                f"Interface '{ifname}' does not support SR-IOV"
-            )
-
         if sriov_setting:
             sriov_setting = sriov_setting.duplicate()
         else:
@@ -117,8 +109,3 @@ def _set_nm_attribute(vf_object, key, value):
 def _remove_sriov_vfs_in_setting(vfs_config, sriov_setting, vf_ids_to_remove):
     for vf_id in vf_ids_to_remove:
         yield vf_id
-
-
-def _has_sriov_capability(context, ifname):
-    dev = context.get_nm_dev(ifname)
-    return dev and (NM.DeviceCapabilities.SRIOV & dev.props.capabilities)

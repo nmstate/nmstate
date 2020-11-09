@@ -36,7 +36,7 @@ def context_mock():
 
 
 def test_create_setting(NM_mock):
-    con_setting = nm.connection.ConnectionSetting()
+    con_setting = nm.connection._ConnectionSetting()
     con_setting.create("con-name", "iface-name", "iface-type")
 
     assert con_setting.setting.props.id == "con-name"
@@ -50,7 +50,7 @@ def test_create_setting(NM_mock):
 
 
 def test_set_controller_setting():
-    con_setting = nm.connection.ConnectionSetting(mock.MagicMock())
+    con_setting = nm.connection._ConnectionSetting(mock.MagicMock())
     con_setting.set_controller("controller0", "slave-type")
 
     assert con_setting.setting.props.master == "controller0"

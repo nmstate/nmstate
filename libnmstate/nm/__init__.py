@@ -17,35 +17,6 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
-from . import bond
-from . import bridge
-from . import checkpoint
-from . import connection
-from . import device
-from . import dns
-from . import ipv4
-from . import ipv6
-from . import ovs
-from . import profile
-from . import translator
-from . import user
-from . import vlan
-from . import wired
 from .plugin import NetworkManagerPlugin
 
-
-bond
-bridge
-checkpoint
-connection
-device
-dns
-ipv4
-ipv6
-ovs
-profile
-translator
-user
-vlan
-wired
 NetworkManagerPlugin

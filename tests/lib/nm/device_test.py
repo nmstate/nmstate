@@ -28,22 +28,6 @@ def client_mock():
     yield mock.MagicMock()
 
 
-@pytest.fixture()
-def act_con_mock():
-    with mock.patch.object(nm.device.ac, "ActiveConnection") as m:
-        yield m
-
-
-def test_deactivate(client_mock, act_con_mock):
-    dev = mock.MagicMock()
-    act_con = act_con_mock()
-
-    nm.device.deactivate(client_mock, dev)
-
-    assert act_con.nmdevice == dev
-    act_con.deactivate.assert_called_once()
-
-
 def test_list_devices(client_mock):
     nm.device.list_devices(client_mock)
 

@@ -21,325 +21,195 @@
 #   * NM.RemoteConnection, NM.SimpleConnection releated
 
 from distutils.version import StrictVersion
-import logging
 
+from libnmstate.error import NmstateLibnmError
 from libnmstate.error import NmstateNotSupportedError
-from libnmstate.error import NmstateValueError
+from libnmstate.error import NmstateInternalError
 from libnmstate.schema import Interface
-from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
-from libnmstate.schema import LinuxBridge as LB
-from libnmstate.schema import MacVlan
-from libnmstate.schema import MacVtap
-from libnmstate.schema import OVSBridge as OvsB
-from libnmstate.schema import OVSInterface
-from libnmstate.schema import Team
-from libnmstate.schema import VRF
-from libnmstate.ifaces.base_iface import BaseIface
-from libnmstate.ifaces.bond import BondIface
-from libnmstate.ifaces.bridge import BridgeIface
+from libnmstate.schema import Ethernet
 
-from . import bond
-from . import bridge
-from . import connection
-from . import device
-from . import dns as nm_dns
-from . import ipv4
-from . import ipv6
-from . import lldp
-from . import macvlan
-from . import ovs as nm_ovs
-from . import profile_state
-from . import sriov
-from . import team
-from . import translator
-from . import user
-from . import vlan
-from . import vxlan
-from . import wired
-
+from .active_connection import ActiveConnectionDeactivate
+from .active_connection import ProfileActivation
+from .active_connection import is_activated
 from .common import NM
-from .device import mark_device_as_managed
-from .device import list_devices
-from .device import is_externally_managed
-from .vrf import create_vrf_setting
-from .infiniband import create_setting as create_infiniband_setting
-
-
-ACTION_DEACTIVATE_BEFOREHAND = "deactivate-beforehand"
-ACTION_DELETE_PROFILE = "delete-profile"
-ACTION_ACTIVATE = "activate"
-ACTION_MODIFY = "modify"
-ACTION_DEACTIVATE = "deactivate"
-ACTION_DELETE_DEV_PROFILES = "delete-dev-profiles"
-ACTION_DELETE_DEV = "delete-dev"
-
-CONTROLLER_METADATA = "_controller"
-CONTROLLER_TYPE_METADATA = "_controller_type"
-CONTROLLER_IFACE_TYPES = (
-    InterfaceType.OVS_BRIDGE,
-    bond.BOND_TYPE,
-    LB.TYPE,
-    Team.TYPE,
-)
-
-
-class NmProfiles:
-    def __init__(self, context):
-        self._ctx = context
-
-    def apply_config(self, net_state, save_to_disk):
-        self._prepare_state_for_profiles(net_state)
-        self._profiles = [
-            NmProfile(self._ctx, save_to_disk, iface)
-            for iface in net_state.ifaces.values()
-            if (iface.is_changed or iface.is_desired) and not iface.is_ignore
-        ]
-
-        for profile in self._profiles:
-            profile.store_config()
-        self._ctx.wait_all_finish()
-
-        grouped_profiles = self._group_profile_by_action_order()
-        for profile_group in grouped_profiles:
-            for profile in profile_group:
-                profile.apply_config()
-            self._ctx.wait_all_finish()
-
-    def _group_profile_by_action_order(self):
-        groups = {
-            "profiles_to_deactivate_beforehand": set(),
-            "profiles_to_delete": set(),
-            "new_controller_not_as_port": set(),
-            "new_ifaces_to_activate": set(),
-            "controller_ifaces_to_edit": set(),
-            "new_ovs_port_to_activate": set(),
-            "new_ovs_interface_to_activate": set(),
-            "ifaces_to_edit": set(),
-            "new_vlan_x_to_activate": set(),
-            "profiles_to_deactivate": set(),
-            "devs_to_delete_profile": set(),
-            "devs_to_delete": set(),
-        }
-
-        for profile in self._profiles:
-            profile.classify_profile_for_actions(groups)
-
-        return groups.values()
-
-    def _prepare_state_for_profiles(self, net_state):
-        _preapply_dns_fix_for_profiles(self._ctx, net_state)
-        _mark_nm_external_subordinate_changed(self._ctx, net_state)
-        _mark_mode_changed_bond_child_interface_as_changed(net_state)
-
-        proxy_ifaces = {}
-        for iface in net_state.ifaces.values():
-            proxy_iface_info = nm_ovs.create_ovs_proxy_iface_info(iface)
-            if proxy_iface_info:
-                proxy_iface = BaseIface(proxy_iface_info)
-                proxy_iface.mark_as_changed()
-                proxy_ifaces[proxy_iface.name] = proxy_iface
-        net_state.ifaces.update(proxy_ifaces)
+from .connection import create_new_nm_simple_conn
+from .device import get_nm_dev
+from .device import DeviceReapply
+from .device import DeviceDelete
+from .translator import Api2Nm
 
 
 class NmProfile:
-    def __init__(self, context, save_to_disk, iface=None):
-        self._ctx = context
+    # For unmanged iface and desired to down
+    ACTION_ACTIVATE_FIRST = "activate_first"
+    ACTION_DEACTIVATE = "deactivate"
+    ACTION_DEACTIVATE_FIRST = "deactivate_first"
+    ACTION_DELETE_DEVICE = "delete_device"
+    ACTION_MODIFIED = "modified"
+    ACTION_NEW_IFACES = "new_ifaces"
+    ACTION_NEW_OVS_IFACE = "new_ovs_iface"
+    ACTION_NEW_OVS_PORT = "new_ovs_port"
+    ACTION_NEW_VLAN = "new_vlan"
+    ACTION_NEW_VXLAN = "new_vxlan"
+    ACTION_OTHER_MASTER = "other_master"
+    ACTION_DELETE_PROFILE = "delete_profile"
+    ACTION_TOP_MASTER = "top_master"
+
+    # This is order on group for activation/deactivation
+    ACTIONS = (
+        ACTION_ACTIVATE_FIRST,
+        ACTION_DEACTIVATE_FIRST,
+        ACTION_TOP_MASTER,
+        ACTION_NEW_IFACES,
+        ACTION_OTHER_MASTER,
+        ACTION_NEW_OVS_PORT,
+        ACTION_NEW_OVS_IFACE,
+        ACTION_MODIFIED,
+        ACTION_NEW_VLAN,
+        ACTION_NEW_VXLAN,
+        ACTION_DEACTIVATE,
+        ACTION_DELETE_PROFILE,
+        ACTION_DELETE_DEVICE,
+    )
+
+    def __init__(self, ctx, iface, save_to_disk):
+        self._ctx = ctx
         self._iface = iface
         self._save_to_disk = save_to_disk
-        self._nmdev = None
+        self._nm_iface_type = None
+        if self._iface.type != InterfaceType.UNKNOWN:
+            self._nm_iface_type = Api2Nm.get_iface_type(self._iface.type)
         self._nm_ac = None
-        self._nm_profile_state = profile_state.NmProfileState(context)
-        self._remote_conn = None
-        self._simple_conn = None
-        self._actions_needed = []
+        self._nm_dev = None
+        self._nm_profile = None
+        self._nm_simple_conn = None
+        self._actions = set()
+        self._activated = False
+        self._deactivated = False
+        self._profile_deleted = False
+        self._device_deleted = False
+        self._import_current()
+        self._gen_actions()
 
-    @property
-    def iface_info(self):
-        return self._iface.to_dict()
+    def _gen_actions(self):
+        if self._iface.is_absent:
+            self._add_action(NmProfile.ACTION_DELETE_PROFILE)
+            if self._iface.is_virtual and self._nm_dev:
+                self._add_action(NmProfile.ACTION_DELETE_DEVICE)
+        elif self._iface.is_up:
+            self._add_action(NmProfile.ACTION_MODIFIED)
+            if not self._nm_dev:
+                if self._iface.type == InterfaceType.OVS_PORT:
+                    self._add_action(NmProfile.ACTION_NEW_OVS_PORT)
+                elif self._iface.type == InterfaceType.OVS_INTERFACE:
+                    self._add_action(NmProfile.ACTION_NEW_OVS_IFACE)
+                elif self._iface.type == InterfaceType.VLAN:
+                    self._add_action(NmProfile.ACTION_NEW_VLAN)
+                elif self._iface.type == InterfaceType.VXLAN:
+                    self._add_action(NmProfile.ACTION_NEW_VXLAN)
+                else:
+                    self._add_action(NmProfile.ACTION_NEW_IFACES)
 
-    @property
-    def iface(self):
-        return self._iface
+        elif self._iface.is_down:
+            if self._nm_ac:
+                self._add_action(NmProfile.ACTION_DEACTIVATE)
+            elif self._iface.is_virtual and self._nm_dev:
+                self._add_action(NmProfile.ACTION_DELETE_DEVICE)
 
-    @property
-    def original_iface_info(self):
-        return self._iface.original_dict
+        if self._iface.is_controller and self._iface.is_up:
+            if self._iface.controller:
+                self._add_action(NmProfile.ACTION_OTHER_MASTER)
+            else:
+                self._add_action(NmProfile.ACTION_TOP_MASTER)
 
-    @property
-    def profile_state(self):
-        return self._nm_profile_state
+        if (
+            self._iface.is_up
+            and self._iface.type == InterfaceType.BOND
+            and self._iface.is_bond_mode_changed
+        ):
+            # NetworkManager leaves leftover in sysfs for bond
+            # options when changing bond mode, bug:
+            # https://bugzilla.redhat.com/show_bug.cgi?id=1819137
+            # Workaround: delete the bond interface from kernel and
+            # create again via full deactivation beforehand.
+            self._add_action(NmProfile.ACTION_DEACTIVATE_FIRST)
 
-    @property
-    def nmdev(self):
-        if self._nmdev:
-            return self._nmdev
-        elif self.devname:
-            return self._ctx.get_nm_dev(self.devname)
-        else:
-            return None
+        if self._iface.is_up and self._iface.type in (
+            InterfaceType.MAC_VLAN,
+            InterfaceType.MAC_VTAP,
+        ):
+            # NetworkManager requires the profile to be deactivated in
+            # order to modify it. Therefore if the profile is modified
+            # it needs to be deactivated beforehand in order to apply
+            # the changes and activate it again.
+            self._add_action(NmProfile.ACTION_DEACTIVATE_FIRST)
 
-    @nmdev.setter
-    def nmdev(self, dev):
-        self._nmdev = dev
+        if (
+            self._iface.is_down
+            and self._nm_dev
+            and not self._nm_dev.get_managed()
+        ):
+            # In order to deactivate an unmanaged interface, we have to
+            # activate the newly created profile to remove all kernel
+            # settings.
+            self._add_action(NmProfile.ACTION_ACTIVATE_FIRST)
 
-    @property
-    def nm_ac(self):
-        return self._nm_ac
+    def save_config(self):
+        if self._iface.is_absent or self._iface.is_down:
+            return
 
-    @nm_ac.setter
-    def nm_ac(self, ac):
-        self._nm_ac = ac
+        self._import_current()
+        self._check_sriov_support()
+        self._check_unsupported_memory_only()
+        # Don't create new profile if original desire does not ask
+        # anything besides state:up and not been marked as changed.
+        # We don't need to do this once we support querying on-disk
+        # configure
+        if (
+            self._nm_profile is None
+            and not self._iface.is_changed
+            and set(self._iface.original_dict)
+            <= set([Interface.STATE, Interface.NAME, Interface.TYPE])
+        ):
+            cur_nm_profile = self._get_first_nm_profile()
+            if (
+                cur_nm_profile
+                and _is_memory_only(cur_nm_profile) != self._save_to_disk
+            ):
+                self._nm_profile = cur_nm_profile
+                return
 
-    @property
-    def remote_conn(self):
-        return self._remote_conn
-
-    @remote_conn.setter
-    def remote_conn(self, con):
-        self._remote_conn = con
-
-    @property
-    def simple_conn(self):
-        return self._simple_conn
-
-    @property
-    def uuid(self):
-        if self._remote_conn:
-            return self._remote_conn.get_uuid()
-        elif self._simple_conn:
-            return self._simple_conn.get_uuid()
-        else:
-            return self.iface.name
-
-    @property
-    def devname(self):
-        if self._remote_conn:
-            return self._remote_conn.get_interface_name()
-        elif self._simple_conn:
-            return self._simple_conn.get_interface_name()
-        else:
-            return self.iface.name
-
-    @property
-    def profile(self):
-        return self._simple_conn if self._simple_conn else self._remote_conn
-
-    @property
-    def is_memory_only(self):
-        if self._remote_conn:
-            profile_flags = self._remote_conn.get_flags()
-            return (
-                NM.SettingsConnectionFlags.UNSAVED & profile_flags
-                or NM.SettingsConnectionFlags.VOLATILE & profile_flags
-            )
-        return False
-
-    def apply_config(self):
-        if ACTION_DEACTIVATE_BEFOREHAND in self._actions_needed:
-            device.deactivate(self._ctx, self.nmdev)
-        elif ACTION_DELETE_PROFILE in self._actions_needed:
-            self.delete()
-        elif ACTION_ACTIVATE in self._actions_needed:
-            self.activate()
-        elif ACTION_MODIFY in self._actions_needed:
-            device.modify(self._ctx, self)
-        elif ACTION_DEACTIVATE in self._actions_needed:
-            device.deactivate(self._ctx, self.nmdev)
-        elif ACTION_DELETE_DEV_PROFILES in self._actions_needed:
-            self.delete()
-        elif ACTION_DELETE_DEV in self._actions_needed:
-            device.delete_device(self._ctx, self.nmdev)
-        self._next_action()
-
-    def _next_action(self):
-        if self._actions_needed:
-            self._actions_needed.pop(0)
-
-    def activate(self):
-        specific_object = None
-        action = (
-            f"Activate profile uuid:{self.profile.get_uuid()} "
-            f"id:{self.profile.get_id()}"
+        # TODO: Use applied config as base profile
+        #       Or even better remove the base profile argument as top level
+        #       of nmstate should provide full/merged configure.
+        self._nm_simple_conn = create_new_nm_simple_conn(
+            self._iface, self._nm_profile
         )
-        user_data = action, self
-        self._ctx.register_async(action)
-        self._ctx.client.activate_connection_async(
-            self._remote_conn,
-            self.nmdev,
-            specific_object,
-            self._ctx.cancellable,
-            self._nm_profile_state.activate_connection_callback,
-            user_data,
-        )
-
-    def delete(self):
-        if self._remote_conn:
-            action = (
-                f"Delete profile: uuid:{self._remote_conn.get_uuid()} "
-                f"id:{self._remote_conn.get_id()}"
-            )
-            user_data = action
-            self._ctx.register_async(action, fast=True)
-            self._remote_conn.delete_async(
-                self._ctx.cancellable,
-                self._nm_profile_state.delete_profile_callback,
-                user_data,
-            )
-
-    def _update(self):
-        flags = NM.SettingsUpdate2Flags.BLOCK_AUTOCONNECT
-        if self._save_to_disk:
-            flags |= NM.SettingsUpdate2Flags.TO_DISK
+        if self._nm_profile:
+            ProfileUpdate(
+                self._ctx,
+                self._iface.name,
+                self._iface.type,
+                self._nm_simple_conn,
+                self._nm_profile,
+                self._save_to_disk,
+            ).run()
         else:
-            flags |= NM.SettingsUpdate2Flags.IN_MEMORY
-        action = (
-            f"Update profile uuid:{self._remote_conn.get_uuid()} "
-            f"id:{self._remote_conn.get_id()}"
-        )
-        user_data = action
-        args = None
+            ProfileAdd(
+                self._ctx,
+                self._iface.name,
+                self._iface.type,
+                self._nm_simple_conn,
+                self._save_to_disk,
+            ).run()
 
-        self._ctx.register_async(action, fast=True)
-        self._remote_conn.update2(
-            self._simple_conn.to_dbus(NM.ConnectionSerializationFlags.ALL),
-            flags,
-            args,
-            self._ctx.cancellable,
-            self._nm_profile_state.update2_callback,
-            user_data,
-        )
-
-    def _add(self):
-        nm_add_conn2_flags = NM.SettingsAddConnection2Flags
-        flags = nm_add_conn2_flags.BLOCK_AUTOCONNECT
-        if self._save_to_disk:
-            flags |= nm_add_conn2_flags.TO_DISK
-        else:
-            flags |= nm_add_conn2_flags.IN_MEMORY
-
-        action = f"Add profile: {self._simple_conn.get_uuid()}"
-        self._ctx.register_async(action, fast=True)
-
-        user_data = action, self
-        args = None
-        ignore_out_result = False  # Don't fall back to old AddConnection()
-        self._ctx.client.add_connection2(
-            self._simple_conn.to_dbus(NM.ConnectionSerializationFlags.ALL),
-            flags,
-            args,
-            ignore_out_result,
-            self._ctx.cancellable,
-            self._nm_profile_state.add_connection2_callback,
-            user_data,
-        )
-
-    def store_config(self):
+    def _check_unsupported_memory_only(self):
         if (
             not self._save_to_disk
             and StrictVersion(self._ctx.client.get_version())
             < StrictVersion("1.28.0")
-            and self.iface.type
+            and self._iface.type
             in (
                 InterfaceType.OVS_BRIDGE,
                 InterfaceType.OVS_INTERFACE,
@@ -352,388 +222,344 @@ class NmProfile:
                 " OpenvSwitch interface."
             )
 
-        ifname = self.iface.name
-        self._import_existing_profile(ifname)
+    def _check_sriov_support(self):
+        sriov_config = (
+            self._iface.to_dict()
+            .get(Ethernet.CONFIG_SUBTREE, {})
+            .get(Ethernet.SRIOV_SUBTREE)
+        )
 
-        if self._save_to_disk:
-            connections = connection.list_connections_by_ifname(
-                self._ctx, ifname
-            )
-            for con in connections:
-                if (
-                    not self._remote_conn
-                    or con.get_uuid() != self._remote_conn.get_uuid()
-                ):
-                    nmprofile = NmProfile(self._ctx, self._save_to_disk)
-                    nmprofile.remote_conn = con
-                    nmprofile.delete()
-        if not (
-            set(self.original_iface_info.keys())
-            <= set([Interface.STATE, Interface.NAME, Interface.TYPE])
-            and self._remote_conn
-            and not self._iface.is_changed
-            and self.is_memory_only != self._save_to_disk
-        ):
-            if self.iface.state not in (
-                InterfaceState.ABSENT,
-                InterfaceState.DOWN,
+        if self._nm_dev and sriov_config:
+            if (
+                not self._nm_dev.props.capabilities
+                & NM.DeviceCapabilities.SRIOV
             ):
-                settings = self._generate_connection_settings(ifname)
-                self._simple_conn = connection.create_new_simple_connection(
-                    settings
+                raise NmstateNotSupportedError(
+                    f"Interface {self._iface.name}  {self._iface.type} "
+                    "does not support SR-IOV"
                 )
-                set_conn = self._simple_conn.get_setting_connection()
-                set_conn.props.interface_name = ifname
-                if self._remote_conn:
-                    self._update()
-                else:
-                    self._add()
 
-    def _generate_connection_settings(self, ifname):
-        nm_iface_type = translator.Api2Nm.get_iface_type(self.iface.type)
-        settings = [
-            ipv4.create_setting(
-                self.iface_info.get(Interface.IPV4), self._remote_conn
-            ),
-            ipv6.create_setting(
-                self.iface_info.get(Interface.IPV6), self._remote_conn
-            ),
-        ]
+    def _activate(self):
+        if self._activated:
+            return
 
-        con_setting = connection.ConnectionSetting()
-        if self._remote_conn:
-            con_setting.import_by_profile(self._remote_conn)
-            con_setting.set_profile_name(ifname)
+        if not self._nm_profile:
+            self._import_nm_profile_by_simple_conn()
+
+        profile_activation = ProfileActivation(
+            self._ctx,
+            self._iface.name,
+            self._iface.type,
+            self._nm_profile,
+            self._nm_dev,
+        )
+        if is_activated(self._nm_ac, self._nm_dev):
+            # After ProfileUpdate(), the self._nm_profile is still hold
+            # the old settings, DeviceReapply should use the
+            # self._nm_simple_conn for updated settings.
+            DeviceReapply(
+                self._ctx,
+                self._iface.name,
+                self._iface.type,
+                self._nm_dev,
+                self._nm_simple_conn,
+                profile_activation,
+            ).run()
         else:
-            con_setting.create(
-                con_name=ifname,
-                iface_name=ifname,
-                iface_type=nm_iface_type,
+            profile_activation.run()
+        self._activated = True
+
+    def _deactivate(self):
+        if self._deactivated:
+            return
+        self._import_current()
+        if self._nm_ac:
+            ActiveConnectionDeactivate(
+                self._ctx, self._iface.name, self._iface.type, self._nm_ac
+            ).run()
+        self._deactivated = True
+
+    def _delete_profile(self):
+        if self._profile_deleted:
+            return
+        self._import_current()
+        if self._nm_profile:
+            ProfileDelete(
+                self._ctx, self._iface.name, self._iface.type, self._nm_profile
+            ).run()
+
+        self._profile_deleted = True
+
+    def _delete_device(self):
+        if self._device_deleted:
+            return
+        self._import_current()
+        if self._nm_dev:
+            DeviceDelete(
+                self._ctx, self._iface.name, self._iface.type, self._nm_dev
+            ).run()
+        self._device_deleted = True
+
+    def _add_action(self, action):
+        self._actions.add(action)
+
+    def has_action(self, action):
+        return action in self._actions
+
+    def do_action(self, action):
+        if action in (
+            NmProfile.ACTION_MODIFIED,
+            NmProfile.ACTION_ACTIVATE_FIRST,
+            NmProfile.ACTION_TOP_MASTER,
+            NmProfile.ACTION_NEW_IFACES,
+            NmProfile.ACTION_OTHER_MASTER,
+            NmProfile.ACTION_NEW_OVS_PORT,
+            NmProfile.ACTION_NEW_OVS_IFACE,
+            NmProfile.ACTION_NEW_VLAN,
+            NmProfile.ACTION_NEW_VXLAN,
+        ):
+            self._activate()
+        elif (
+            action
+            in (
+                NmProfile.ACTION_DELETE_PROFILE,
+                NmProfile.ACTION_DELETE_DEVICE,
+                NmProfile.ACTION_DEACTIVATE,
+                NmProfile.ACTION_DEACTIVATE_FIRST,
             )
-
-        lldp.apply_lldp_setting(con_setting, self.iface_info)
-
-        controller = self.iface_info.get(CONTROLLER_METADATA)
-        controller_type = self.iface_info.get(CONTROLLER_TYPE_METADATA)
-        if controller_type == LB.TYPE:
-            self.iface_info[CONTROLLER_TYPE_METADATA] = bridge.BRIDGE_TYPE
-            controller_type = bridge.BRIDGE_TYPE
-        con_setting.set_controller(controller, controller_type)
-        settings.append(con_setting.setting)
-
-        # Only apply wired/ethernet configuration based on original desire
-        # state rather than the merged one.
-        original_state_wired = {}
-        if self._iface.is_desired:
-            original_state_wired = self.original_iface_info
-        if self.iface.type != InterfaceType.INFINIBAND:
-            # The IP over InfiniBand has its own setting for MTU and does not
-            # have ethernet layer.
-            wired_setting = wired.create_setting(
-                original_state_wired, self._remote_conn
-            )
-            if wired_setting:
-                settings.append(wired_setting)
-
-        user_setting = user.create_setting(self.iface_info, self._remote_conn)
-        if user_setting:
-            settings.append(user_setting)
-
-        if self.iface.type == InterfaceType.BOND:
-            settings.append(
-                bond.create_setting(
-                    self.iface, wired_setting, self._remote_conn
-                )
-            )
-        elif nm_iface_type == bridge.BRIDGE_TYPE:
-            bridge_config = self.iface_info.get(LB.CONFIG_SUBTREE, {})
-            bridge_options = bridge_config.get(LB.OPTIONS_SUBTREE)
-            bridge_ports = bridge_config.get(LB.PORT_SUBTREE)
-            if bridge_options or bridge_ports:
-                linux_bridge_setting = bridge.create_setting(
-                    self.iface_info,
-                    self._remote_conn,
-                    self.original_iface_info,
-                )
-                settings.append(linux_bridge_setting)
-        elif nm_iface_type == InterfaceType.OVS_BRIDGE:
-            ovs_bridge_state = self.iface_info.get(OvsB.CONFIG_SUBTREE, {})
-            ovs_bridge_options = ovs_bridge_state.get(OvsB.OPTIONS_SUBTREE)
-            if ovs_bridge_options:
-                settings.append(
-                    nm_ovs.create_bridge_setting(ovs_bridge_options)
-                )
-        elif nm_iface_type == InterfaceType.OVS_PORT:
-            ovs_port_options = self.iface_info.get(OvsB.OPTIONS_SUBTREE)
-            settings.append(nm_ovs.create_port_setting(ovs_port_options))
-        elif nm_iface_type == InterfaceType.OVS_INTERFACE:
-            patch_state = self.iface_info.get(
-                OVSInterface.PATCH_CONFIG_SUBTREE
-            )
-            settings.extend(nm_ovs.create_interface_setting(patch_state))
-        elif self.iface.type == InterfaceType.INFINIBAND:
-            ib_setting = create_infiniband_setting(
-                self.iface_info,
-                self._remote_conn,
-                self.original_iface_info,
-            )
-            if ib_setting:
-                settings.append(ib_setting)
-
-        bridge_port_options = self.iface_info.get(
-            BridgeIface.BRPORT_OPTIONS_METADATA
-        )
-        if bridge_port_options and controller_type == bridge.BRIDGE_TYPE:
-            settings.append(
-                bridge.create_port_setting(
-                    bridge_port_options, self._remote_conn
-                )
-            )
-
-        vlan_setting = vlan.create_setting(self.iface_info, self._remote_conn)
-        if vlan_setting:
-            settings.append(vlan_setting)
-
-        vxlan_setting = vxlan.create_setting(
-            self.iface_info, self._remote_conn
-        )
-        if vxlan_setting:
-            settings.append(vxlan_setting)
-
-        sriov_setting = sriov.create_setting(
-            self._ctx, self.iface_info, self._remote_conn
-        )
-        if sriov_setting:
-            settings.append(sriov_setting)
-
-        team_setting = team.create_setting(self.iface_info, self._remote_conn)
-        if team_setting:
-            settings.append(team_setting)
-
-        if VRF.CONFIG_SUBTREE in self.iface_info:
-            settings.append(
-                create_vrf_setting(self.iface_info[VRF.CONFIG_SUBTREE])
-            )
-
-        if MacVlan.CONFIG_SUBTREE in self.iface_info:
-            settings.append(
-                macvlan.create_setting(self.iface_info, self._remote_conn)
-            )
-
-        if MacVtap.CONFIG_SUBTREE in self.iface_info:
-            settings.append(
-                macvlan.create_setting(
-                    self.iface_info, self._remote_conn, tap=True
-                )
-            )
-
-        return settings
-
-    def _import_existing_profile(self, ifname):
-        self._nmdev = self._ctx.get_nm_dev(ifname)
-        if self._nmdev:
-            self._remote_conn = self._import_remote_conn_by_device()
+            and not self._deactivated
+        ):
+            self._deactivate()
+        elif action == NmProfile.ACTION_DELETE_PROFILE:
+            self._delete_profile()
+        elif action == NmProfile.ACTION_DELETE_DEVICE:
+            self._delete_device()
         else:
-            # Profile for virtual interface does not have a NM.Device
-            # associated.
-            self._remote_conn = self._ctx.client.get_connection_by_id(ifname)
+            raise NmstateInternalError(
+                f"BUG: NmProfile.do_action() got unknown action {action}"
+            )
 
-    def _import_remote_conn_by_device(self):
-        act_conn = self._nmdev.get_active_connection()
-        if act_conn:
-            self._nm_ac = act_conn
-            return act_conn.get_connection()
+    def _import_current(self):
+        self._nm_dev = get_nm_dev(
+            self._ctx, self._iface.name, self._iface.type
+        )
+        self._nm_ac = (
+            self._nm_dev.get_active_connection() if self._nm_dev else None
+        )
+        self._nm_profile = (
+            self._nm_ac.get_connection() if self._nm_ac else None
+        )
 
+    def _import_nm_profile_by_simple_conn(self):
+        self._ctx.refresh_content()
+        for nm_profile in self._ctx.client.get_connections():
+            if nm_profile.get_uuid() == self._nm_simple_conn.get_uuid():
+                self._nm_profile = nm_profile
+
+    def _get_first_nm_profile(self):
+        for nm_profile in self._ctx.client.get_connections():
+            if nm_profile.get_interface_name() == self._iface.name and (
+                self._nm_iface_type is None
+                or nm_profile.get_connection_type() == self._nm_iface_type
+            ):
+                return nm_profile
         return None
 
-    def classify_profile_for_actions(self, groups):
-        if not self.nmdev:
-            if self.iface.state == InterfaceState.UP:
-                self._actions_needed.append(ACTION_ACTIVATE)
-                if (
-                    self.iface.type in CONTROLLER_IFACE_TYPES
-                    and not self.iface_info.get(CONTROLLER_METADATA)
-                ):
-                    groups["new_controller_not_as_port"].add(self)
-                elif self.iface.type == InterfaceType.OVS_INTERFACE:
-                    groups["new_ovs_interface_to_activate"].add(self)
-                elif self.iface.type == InterfaceType.OVS_PORT:
-                    groups["new_ovs_port_to_activate"].add(self)
-                elif self.iface.type in (
-                    InterfaceType.VLAN,
-                    InterfaceType.VXLAN,
-                ):
-                    groups["new_vlan_x_to_activate"].add(self)
-                else:
-                    groups["new_ifaces_to_activate"].add(self)
-            elif self.iface.state == InterfaceState.ABSENT:
-                # Delete absent profiles
-                self._actions_needed.append(ACTION_DELETE_PROFILE)
-                groups["profiles_to_delete"].add(self)
-        else:
-            if not self.nmdev.get_managed():
-                mark_device_as_managed(self._ctx, self.nmdev)
-            if self.iface.state == InterfaceState.UP:
-                if self.iface.type == InterfaceType.BOND:
-                    iface = BondIface(self.iface_info)
-                    # NetworkManager leaves leftover in sysfs for bond
-                    # options when changing bond mode, bug:
-                    # https://bugzilla.redhat.com/show_bug.cgi?id=1819137
-                    # Workaround: delete the bond interface from kernel and
-                    # create again via full deactivation beforehand.
-                    if iface.is_bond_mode_changed:
-                        logging.debug(
-                            f"Bond interface {self.iface.name} is changing "
-                            "bond mode, will do full deactivation before "
-                            "applying changes"
-                        )
-                        self._actions_needed.append(
-                            ACTION_DEACTIVATE_BEFOREHAND
-                        )
-                        groups["profiles_to_deactivate_beforehand"].add(self)
-                elif (
-                    self.iface.type == InterfaceType.MAC_VLAN
-                    or self.iface.type == InterfaceType.MAC_VTAP
-                ) and self.iface.is_changed:
-                    # NetworkManager requires the profile to be deactivated in
-                    # order to modify it. Therefore if the profile is modified
-                    # it needs to be deactivated beforehand in order to apply
-                    # the changes and activate it again.
-                    self._actions_needed.append(ACTION_DEACTIVATE_BEFOREHAND)
-                    groups["profiles_to_deactivate_beforehand"].add(self)
-                self._actions_needed.append(ACTION_MODIFY)
-                if self.iface.type in CONTROLLER_IFACE_TYPES:
-                    groups["controller_ifaces_to_edit"].add(self)
-                else:
-                    groups["ifaces_to_edit"].add(self)
-            elif self.iface.state in (
-                InterfaceState.DOWN,
-                InterfaceState.ABSENT,
+    def delete_other_profiles(self):
+        """
+        Remove all profiles except the NM.RemoteConnection used by current
+        NM.ActiveConnection if interface is marked as UP
+        """
+        if self._iface.is_down:
+            return
+        self._import_current()
+        for nm_profile in self._ctx.client.get_connections():
+            if (
+                nm_profile.get_interface_name() == self._iface.name
+                and (
+                    self._nm_iface_type is None
+                    or nm_profile.get_connection_type() == self._nm_iface_type
+                )
+                and (
+                    self._nm_profile is None
+                    or nm_profile.get_uuid() != self._nm_profile.get_uuid()
+                )
             ):
-                is_absent = self.iface.state == InterfaceState.ABSENT
-                self._actions_needed.append(ACTION_DEACTIVATE)
-                groups["profiles_to_deactivate"].add(self)
-                if is_absent:
-                    self._actions_needed.append(ACTION_DELETE_DEV_PROFILES)
-                    groups["devs_to_delete_profile"].add(self)
-                if (
-                    is_absent
-                    and self.nmdev.is_software()
-                    and self.nmdev.get_device_type() != NM.DeviceType.VETH
-                ):
-                    self._actions_needed.append(ACTION_DELETE_DEV)
-                    groups["devs_to_delete"].add(self)
-            else:
-                raise NmstateValueError(
-                    "Invalid state {} for interface {}".format(
-                        self.iface.state,
-                        self.iface.name,
-                    )
-                )
+                ProfileDelete(
+                    self._ctx, self._iface.name, self._iface.type, nm_profile
+                ).run()
 
 
-def get_all_applied_configs(context):
-    applied_configs = {}
-    for nm_dev in list_devices(context.client):
-        if (
-            nm_dev.get_state()
-            in (
-                NM.DeviceState.ACTIVATED,
-                NM.DeviceState.IP_CONFIG,
+class ProfileAdd:
+    def __init__(
+        self, ctx, iface_name, iface_type, nm_simple_conn, save_to_disk
+    ):
+        self._ctx = ctx
+        self._iface_name = iface_name
+        self._iface_type = iface_type
+        self._nm_simple_conn = nm_simple_conn
+        self._save_to_disk = save_to_disk
+
+    def run(self):
+        nm_add_conn2_flags = NM.SettingsAddConnection2Flags
+        flags = nm_add_conn2_flags.BLOCK_AUTOCONNECT
+        if self._save_to_disk:
+            flags |= nm_add_conn2_flags.TO_DISK
+        else:
+            flags |= nm_add_conn2_flags.IN_MEMORY
+
+        action = (
+            f"Add profile: {self._nm_simple_conn.get_uuid()}, "
+            f"iface:{self._iface_name}, type:{self._iface_type}"
+        )
+        self._ctx.register_async(action, fast=True)
+
+        user_data = action
+        args = None
+        ignore_out_result = False  # Don't fall back to old AddConnection()
+        self._ctx.client.add_connection2(
+            self._nm_simple_conn.to_dbus(NM.ConnectionSerializationFlags.ALL),
+            flags,
+            args,
+            ignore_out_result,
+            self._ctx.cancellable,
+            self._add_profile_callback,
+            user_data,
+        )
+
+    def _add_profile_callback(self, nm_client, result, user_data):
+        action = user_data
+        if self._ctx.is_cancelled():
+            return
+        try:
+            nm_profile = nm_client.add_connection2_finish(result)[0]
+        except Exception as e:
+            self._ctx.fail(
+                NmstateLibnmError(f"{action} failed with error: {e}")
             )
-            and nm_dev.get_managed()
-        ):
-            iface_name = nm_dev.get_iface()
-            if iface_name:
-                iface_type_str = nm_dev.get_type_description()
-                action = (
-                    f"Retrieve applied config: {iface_type_str} {iface_name}"
+            return
+
+        if nm_profile is None:
+            self._ctx.fail(
+                NmstateLibnmError(
+                    f"{action} failed with error: 'None returned from "
+                    "NM.Client.add_connection2_finish()'"
                 )
-                context.register_async(action, fast=True)
-                nm_dev.get_applied_connection_async(
-                    flags=0,
-                    cancellable=context.cancellable,
-                    callback=profile_state.get_applied_config_callback,
-                    user_data=(iface_name, action, applied_configs, context),
+            )
+        else:
+            self._ctx.finish_async(action)
+
+
+class ProfileUpdate:
+    def __init__(
+        self,
+        ctx,
+        iface_name,
+        iface_type,
+        nm_simple_conn,
+        nm_profile,
+        save_to_disk,
+    ):
+        self._ctx = ctx
+        self._iface_name = iface_name
+        self._iface_type = iface_type
+        self._nm_simple_conn = nm_simple_conn
+        self._nm_profile = nm_profile
+        self._save_to_disk = save_to_disk
+
+    def run(self):
+        flags = NM.SettingsUpdate2Flags.BLOCK_AUTOCONNECT
+        if self._save_to_disk:
+            flags |= NM.SettingsUpdate2Flags.TO_DISK
+        else:
+            flags |= NM.SettingsUpdate2Flags.IN_MEMORY
+        action = (
+            f"Update profile uuid:{self._nm_profile.get_uuid()} "
+            f"iface:{self._iface_name} type:{self._iface_type}"
+        )
+        user_data = action
+        args = None
+
+        self._ctx.register_async(action, fast=True)
+        self._nm_profile.update2(
+            self._nm_simple_conn.to_dbus(NM.ConnectionSerializationFlags.ALL),
+            flags,
+            args,
+            self._ctx.cancellable,
+            self._update_profile_callback,
+            user_data,
+        )
+
+    def _update_profile_callback(self, nm_profile, result, user_data):
+        action = user_data
+        if self._ctx.is_cancelled():
+            return
+        try:
+            ret = nm_profile.update2_finish(result)
+        except Exception as e:
+            self._ctx.fail(
+                NmstateLibnmError(f"{action} failed with error={e}")
+            )
+            return
+
+        if ret is None:
+            self._ctx.fail(
+                NmstateLibnmError(
+                    f"{action} failed with error='None returned from "
+                    "update2_finish()'"
                 )
-    context.wait_all_finish()
-    return applied_configs
+            )
+        else:
+            self._ctx.finish_async(action)
 
 
-def _preapply_dns_fix_for_profiles(context, net_state):
-    """
-    * When DNS configuration does not changed and old interface hold DNS
-      configuration is not included in `ifaces_desired_state`, preserve
-      the old DNS configure by removing DNS metadata from
-      `ifaces_desired_state`.
-    * When DNS configuration changed, include old interface which is holding
-      DNS configuration, so it's DNS configure could be removed.
-    """
-    cur_dns_iface_names = nm_dns.get_dns_config_iface_names(
-        ipv4.acs_and_ip_profiles(context.client),
-        ipv6.acs_and_ip_profiles(context.client),
-    )
+class ProfileDelete:
+    def __init__(self, ctx, iface_name, iface_type, nm_profile):
+        self._ctx = ctx
+        self._iface_name = iface_name
+        self._iface_type = iface_type
+        self._nm_profile = nm_profile
 
-    # Whether to mark interface as changed which is used for holding old DNS
-    # configurations
-    remove_existing_dns_config = False
-    # Whether to preserve old DNS config by DNS metadata to be removed from
-    # desired state
-    preserve_old_dns_config = False
-    if net_state.dns.config == net_state.dns.current_config:
-        for cur_dns_iface_name in cur_dns_iface_names:
-            iface = net_state.ifaces[cur_dns_iface_name]
-            if iface.is_changed or iface.is_desired:
-                remove_existing_dns_config = True
-        if not remove_existing_dns_config:
-            preserve_old_dns_config = True
-    else:
-        remove_existing_dns_config = True
+    def run(self):
+        action = (
+            f"Delete profile: uuid:{self._nm_profile.get_uuid()} "
+            f"id:{self._nm_profile.get_id()} "
+            f"iface:{self._iface_name} type:{self._iface_type}"
+        )
+        user_data = action
+        self._ctx.register_async(action, fast=True)
+        self._nm_profile.delete_async(
+            self._ctx.cancellable,
+            self._delete_profile_callback,
+            user_data,
+        )
 
-    if remove_existing_dns_config:
-        for cur_dns_iface_name in cur_dns_iface_names:
-            iface = net_state.ifaces[cur_dns_iface_name]
-            iface.mark_as_changed()
+    def _delete_profile_callback(self, nm_profile, result, user_data):
+        action = user_data
+        if self._ctx.is_cancelled():
+            return
+        try:
+            success = nm_profile.delete_finish(result)
+        except Exception as e:
+            self._ctx.fail(NmstateLibnmError(f"{action} failed: error={e}"))
+            return
 
-    if preserve_old_dns_config:
-        for iface in net_state.ifaces.values():
-            if iface.is_changed or iface.is_desired:
-                iface.remove_dns_metadata()
-
-
-def _mark_nm_external_subordinate_changed(context, net_state):
-    """
-    When certain main interface contains subordinates is marked as
-    connected(externally), it means its profile is memory only and will lost
-    on next deactivation.
-    For this case, we should mark the subordinate as changed.
-    that subordinate should be marked as changed for NM to take over.
-    """
-    for iface in net_state.ifaces.values():
-        if iface.type in CONTROLLER_IFACE_TYPES:
-            for subordinate in iface.port:
-                nmdev = context.get_nm_dev(subordinate)
-                if nmdev:
-                    if is_externally_managed(nmdev):
-                        subordinate_iface = net_state.ifaces.get(subordinate)
-                        if subordinate_iface:
-                            subordinate_iface.mark_as_changed()
+        if success:
+            self._ctx.finish_async(action)
+        else:
+            self._ctx.fail(
+                NmstateLibnmError(
+                    f"{action} failed: error='None returned from "
+                    "delete_finish'"
+                )
+            )
 
 
-def _mark_mode_changed_bond_child_interface_as_changed(net_state):
-    """
-    When bond mode changed, due to NetworkManager bug
-    https://bugzilla.redhat.com/show_bug.cgi?id=1881318
-    the bond child will be deactivated.
-    This is workaround would be manually activate the childs.
-    """
-    for iface in net_state.ifaces.values():
-        if not iface.parent:
-            continue
-        parent_iface = net_state.ifaces[iface.parent]
-        if (
-            parent_iface.is_up
-            and parent_iface.type == InterfaceType.BOND
-            and parent_iface.is_bond_mode_changed
-        ):
-            iface.mark_as_changed()
+def _is_memory_only(nm_profile):
+    if nm_profile:
+        profile_flags = nm_profile.get_flags()
+        return (
+            NM.SettingsConnectionFlags.UNSAVED & profile_flags
+            or NM.SettingsConnectionFlags.VOLATILE & profile_flags
+        )
+    return False

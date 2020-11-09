@@ -23,7 +23,6 @@ from operator import itemgetter
 from libnmstate import iplib
 from libnmstate.dns import DnsState
 from libnmstate.error import NmstateInternalError
-from libnmstate.nm import active_connection as nm_ac
 from libnmstate.schema import DNS
 from libnmstate.schema import Interface
 
@@ -131,7 +130,13 @@ def get_dns_config_iface_names(acs_and_ipv4_profiles, acs_and_ipv6_profiles):
     Return a list of interface names which hold static DNS configuration.
     """
     iface_names = []
-    for ac, ip_profile in chain(acs_and_ipv6_profiles, acs_and_ipv4_profiles):
+    for nm_ac, ip_profile in chain(
+        acs_and_ipv6_profiles, acs_and_ipv4_profiles
+    ):
         if ip_profile.props.dns or ip_profile.props.dns_search:
-            iface_names.append(nm_ac.ActiveConnection(nm_ac_con=ac).devname)
+            try:
+                iface_name = nm_ac.get_devices()[0].get_iface()
+                iface_names.append(iface_name)
+            except IndexError:
+                continue
     return iface_names

@@ -123,6 +123,8 @@ def dummy_interface(ifname, save_to_disk=True):
                 Interface.NAME: ifname,
                 Interface.TYPE: InterfaceType.DUMMY,
                 Interface.STATE: InterfaceState.UP,
+                Interface.IPV4: {InterfaceIPv4.ENABLED: False},
+                Interface.IPV6: {InterfaceIPv6.ENABLED: False},
             }
         ]
     }
