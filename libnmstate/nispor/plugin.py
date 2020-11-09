@@ -60,23 +60,23 @@ class NisporPlugin(NmstatePlugin):
         ifaces = []
         for np_iface in np_state.ifaces.values():
             iface_type = np_iface.type
-            if iface_type == "Dummy":
+            if iface_type == "dummy":
                 ifaces.append(NisporPluginDummyIface(np_iface).to_dict())
-            elif iface_type == "Veth":
+            elif iface_type == "veth":
                 ifaces.append(NisporPluginEthernetIface(np_iface).to_dict())
-            elif iface_type == "Ethernet":
+            elif iface_type == "ethernet":
                 ifaces.append(NisporPluginEthernetIface(np_iface).to_dict())
-            elif iface_type == "Bond":
+            elif iface_type == "bond":
                 ifaces.append(NisporPluginBondIface(np_iface).to_dict())
-            elif iface_type == "Vlan":
+            elif iface_type == "vlan":
                 ifaces.append(NisporPluginVlanIface(np_iface).to_dict())
-            elif iface_type == "Vxlan":
+            elif iface_type == "vxlan":
                 ifaces.append(NisporPluginVxlanIface(np_iface).to_dict())
-            elif iface_type == "MacVlan":
+            elif iface_type == "mac_vlan":
                 ifaces.append(NisporPluginMacVlanIface(np_iface).to_dict())
-            elif iface_type == "MacVtap":
+            elif iface_type == "mac_vtap":
                 ifaces.append(NisporPluginMacVtapIface(np_iface).to_dict())
-            elif iface_type == "Bridge":
+            elif iface_type == "bridge":
                 np_ports = []
                 for port_name in np_iface.ports:
                     if port_name in np_state.ifaces.keys():
@@ -84,9 +84,9 @@ class NisporPlugin(NmstatePlugin):
                 ifaces.append(
                     NisporPluginBridgeIface(np_iface, np_ports).to_dict()
                 )
-            elif iface_type == "Vrf":
+            elif iface_type == "vrf":
                 ifaces.append(NisporPluginVrfIface(np_iface).to_dict())
-            elif iface_type == "OpenvSwitch":
+            elif iface_type == "openv_switch":
                 ifaces.append(NisporPluginOvsInternalIface(np_iface).to_dict())
             else:
                 ifaces.append(NisporPluginBaseIface(np_iface).to_dict())
