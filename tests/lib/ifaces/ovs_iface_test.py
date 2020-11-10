@@ -148,11 +148,13 @@ class TestOvsBrigeIface:
             ],
             cur_iface_infos=[port1_iface_info, port2_iface_info],
         )
-        br_iface = ifaces[OVS_BRIDGE_IFACE_NAME]
+        br_iface = ifaces.get_iface(
+            OVS_BRIDGE_IFACE_NAME, InterfaceType.OVS_BRIDGE
+        )
         br_iface.gen_metadata(ifaces)
         br_iface.pre_edit_validation_and_cleanup()
-        port1_iface = ifaces[PORT1_IFACE_NAME]
-        port2_iface = ifaces[PORT2_IFACE_NAME]
+        port1_iface = ifaces.all_kernel_ifaces[PORT1_IFACE_NAME]
+        port2_iface = ifaces.all_kernel_ifaces[PORT2_IFACE_NAME]
 
         assert port1_iface.controller == OVS_BRIDGE_IFACE_NAME
         assert port2_iface.controller == OVS_BRIDGE_IFACE_NAME
@@ -176,7 +178,7 @@ class TestOvsBrigeIface:
             cur_iface_infos=[port1_iface_info, port2_iface_info],
         )
 
-        ovs_iface = ifaces[OVS_IFACE_NAME]
+        ovs_iface = ifaces.all_kernel_ifaces[OVS_IFACE_NAME]
         assert ovs_iface.type == InterfaceType.OVS_INTERFACE
         assert ovs_iface.parent == OVS_BRIDGE_IFACE_NAME
         assert ovs_iface.is_virtual

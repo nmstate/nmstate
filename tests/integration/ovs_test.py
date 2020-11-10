@@ -145,11 +145,7 @@ def test_create_and_remove_ovs_bridge_with_internal_port_static_ip_and_mac():
     assertlib.assert_absent(PORT1)
 
 
-@pytest.mark.xfail(
-    raises=NmstateValueError,
-    reason="https://nmstate.atlassian.net/browse/NMSTATE-286",
-    strict=True,
-)
+@pytest.mark.tier1
 def test_create_and_remove_ovs_bridge_with_internal_port_same_name():
     bridge = Bridge(BRIDGE1)
     bridge.add_internal_port(
@@ -157,7 +153,9 @@ def test_create_and_remove_ovs_bridge_with_internal_port_same_name():
     )
 
     with bridge.create() as state:
-        assertlib.assert_state_match(state)
+        state = statelib.show_only((BRIDGE1,))
+        assert state
+        assert len(state[Interface.KEY]) == 2
 
     assertlib.assert_absent(BRIDGE1)
 
@@ -231,12 +229,7 @@ class _OvsProfileStillExists(Exception):
 
 
 @pytest.mark.tier1
-@pytest.mark.xfail(
-    reason="https://bugzilla.redhat.com/show_bug.cgi?id=1857123",
-    raises=_OvsProfileStillExists,
-    strict=False,
-)
-def test_ovs_remove_port(bridge_with_ports):
+def test_remove_ovs_internal_iface_got_port_profile_removed(bridge_with_ports):
     for port_name in bridge_with_ports.ports_names:
         active_profiles = get_nm_active_profiles()
         assert port_name in active_profiles

@@ -26,7 +26,7 @@ from libnmstate.schema import OVSBridge as OB
 from libnmstate.schema import OVSInterface
 from libnmstate.ifaces import ovs
 from libnmstate.ifaces.bridge import BridgeIface
-from libnmstate.ifaces.base_iface import BaseIface
+from libnmstate.ifaces.ovs import OvsPortIface
 
 from .common import NM
 
@@ -278,7 +278,7 @@ def create_iface_for_nm_ovs_port(iface):
         port_name = port_options[OB.Port.NAME]
     else:
         port_name = PORT_PROFILE_PREFIX + iface_name
-    return BaseIface(
+    return OvsPortIface(
         {
             Interface.NAME: port_name,
             Interface.TYPE: InterfaceType.OVS_PORT,

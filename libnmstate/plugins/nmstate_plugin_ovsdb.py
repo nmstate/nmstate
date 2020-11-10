@@ -193,7 +193,7 @@ class NmstateOvsdbPlugin(NmstatePlugin):
             ][OvsDB.EXTERNAL_IDS]
 
         pending_changes = []
-        for iface in net_state.ifaces.values():
+        for iface in net_state.ifaces.all_ifaces():
             if not iface.is_changed and not iface.is_desired:
                 continue
             if not iface.is_up:

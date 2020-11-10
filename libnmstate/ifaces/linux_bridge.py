@@ -124,9 +124,9 @@ class LinuxBridgeIface(BridgeIface):
         super().gen_metadata(ifaces)
         if not self.is_absent:
             for port_config in self.port_configs:
-                ifaces[port_config[LinuxBridge.Port.NAME]].update(
-                    {BridgeIface.BRPORT_OPTIONS_METADATA: port_config}
-                )
+                ifaces.all_kernel_ifaces[
+                    port_config[LinuxBridge.Port.NAME]
+                ].update({BridgeIface.BRPORT_OPTIONS_METADATA: port_config})
 
     def remove_port(self, port_name):
         if self._bridge_config:

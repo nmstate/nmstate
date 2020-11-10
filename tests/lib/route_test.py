@@ -308,7 +308,9 @@ class TestRouteState:
 
     def test_validate_route_to_abent_iface(self):
         ifaces = self._gen_ifaces()
-        ifaces[IPV4_ROUTE_IFACE_NAME].state = InterfaceState.ABSENT
+        ifaces.all_kernel_ifaces[
+            IPV4_ROUTE_IFACE_NAME
+        ].state = InterfaceState.ABSENT
 
         ipv4_route = gen_ipv4_route()
         with pytest.raises(NmstateValueError):
@@ -316,7 +318,9 @@ class TestRouteState:
 
     def test_validate_route_to_down_iface(self):
         ifaces = self._gen_ifaces()
-        ifaces[IPV4_ROUTE_IFACE_NAME].state = InterfaceState.DOWN
+        ifaces.all_kernel_ifaces[
+            IPV4_ROUTE_IFACE_NAME
+        ].state = InterfaceState.DOWN
 
         ipv4_route = gen_ipv4_route()
         with pytest.raises(NmstateValueError):
@@ -324,7 +328,7 @@ class TestRouteState:
 
     def test_validate_route_to_ipv4_disabled(self):
         ifaces = self._gen_ifaces()
-        ifaces[IPV4_ROUTE_IFACE_NAME].raw[Interface.IPV4][
+        ifaces.all_kernel_ifaces[IPV4_ROUTE_IFACE_NAME].raw[Interface.IPV4][
             InterfaceIPv4.ENABLED
         ] = False
 
@@ -334,7 +338,7 @@ class TestRouteState:
 
     def test_validate_route_to_ipv6_disabled(self):
         ifaces = self._gen_ifaces()
-        ifaces[IPV6_ROUTE_IFACE_NAME].raw[Interface.IPV6][
+        ifaces.all_kernel_ifaces[IPV6_ROUTE_IFACE_NAME].raw[Interface.IPV6][
             InterfaceIPv6.ENABLED
         ] = False
 
@@ -362,7 +366,7 @@ class TestRouteState:
 
     def test_validate_route_next_hop_to_dhcpv4_ifce(self):
         ifaces = self._gen_ifaces()
-        ifaces[IPV4_ROUTE_IFACE_NAME].raw[Interface.IPV4][
+        ifaces.all_kernel_ifaces[IPV4_ROUTE_IFACE_NAME].raw[Interface.IPV4][
             InterfaceIPv4.DHCP
         ] = True
 
@@ -372,7 +376,7 @@ class TestRouteState:
 
     def test_validate_route_next_hop_to_dhcpv6_ifce(self):
         ifaces = self._gen_ifaces()
-        ifaces[IPV6_ROUTE_IFACE_NAME].raw[Interface.IPV6][
+        ifaces.all_kernel_ifaces[IPV6_ROUTE_IFACE_NAME].raw[Interface.IPV6][
             InterfaceIPv6.DHCP
         ] = True
 
@@ -382,7 +386,7 @@ class TestRouteState:
 
     def test_validate_route_next_hop_to_ipv6_autoconf_ifce(self):
         ifaces = self._gen_ifaces()
-        ifaces[IPV6_ROUTE_IFACE_NAME].raw[Interface.IPV6][
+        ifaces.all_kernel_ifaces[IPV6_ROUTE_IFACE_NAME].raw[Interface.IPV6][
             InterfaceIPv6.AUTOCONF
         ] = True
 
@@ -392,7 +396,9 @@ class TestRouteState:
 
     def test_discard_route_next_hop_absent_iface(self):
         ifaces = self._gen_ifaces()
-        ifaces[IPV4_ROUTE_IFACE_NAME].state = InterfaceState.ABSENT
+        ifaces.all_kernel_ifaces[
+            IPV4_ROUTE_IFACE_NAME
+        ].state = InterfaceState.ABSENT
 
         ipv4_route = gen_ipv4_route()
         ipv6_route = gen_ipv6_route()
@@ -410,7 +416,9 @@ class TestRouteState:
 
     def test_discard_route_next_hop_down_iface(self):
         ifaces = self._gen_ifaces()
-        ifaces[IPV4_ROUTE_IFACE_NAME].state = InterfaceState.DOWN
+        ifaces.all_kernel_ifaces[
+            IPV4_ROUTE_IFACE_NAME
+        ].state = InterfaceState.DOWN
 
         ipv4_route = gen_ipv4_route()
         ipv6_route = gen_ipv6_route()
@@ -428,7 +436,7 @@ class TestRouteState:
 
     def test_discard_route_next_hop_ipv4_disabled_iface(self):
         ifaces = self._gen_ifaces()
-        ifaces[IPV4_ROUTE_IFACE_NAME].raw[Interface.IPV4][
+        ifaces.all_kernel_ifaces[IPV4_ROUTE_IFACE_NAME].raw[Interface.IPV4][
             InterfaceIPv4.ENABLED
         ] = False
 
@@ -448,7 +456,7 @@ class TestRouteState:
 
     def test_discard_route_next_hop_ipv6_disabled_iface(self):
         ifaces = self._gen_ifaces()
-        ifaces[IPV6_ROUTE_IFACE_NAME].raw[Interface.IPV6][
+        ifaces.all_kernel_ifaces[IPV6_ROUTE_IFACE_NAME].raw[Interface.IPV6][
             InterfaceIPv6.ENABLED
         ] = False
 
@@ -468,7 +476,7 @@ class TestRouteState:
 
     def test_discard_route_next_hop_dhcpv4_iface(self):
         ifaces = self._gen_ifaces()
-        ifaces[IPV4_ROUTE_IFACE_NAME].raw[Interface.IPV4][
+        ifaces.all_kernel_ifaces[IPV4_ROUTE_IFACE_NAME].raw[Interface.IPV4][
             InterfaceIPv4.DHCP
         ] = True
 
@@ -488,7 +496,7 @@ class TestRouteState:
 
     def test_discard_route_next_hop_dhcpv6_iface(self):
         ifaces = self._gen_ifaces()
-        ifaces[IPV6_ROUTE_IFACE_NAME].raw[Interface.IPV6][
+        ifaces.all_kernel_ifaces[IPV6_ROUTE_IFACE_NAME].raw[Interface.IPV6][
             InterfaceIPv6.DHCP
         ] = True
 
@@ -508,7 +516,7 @@ class TestRouteState:
 
     def test_discard_route_next_hop_ipv6_autoconf_iface(self):
         ifaces = self._gen_ifaces()
-        ifaces[IPV6_ROUTE_IFACE_NAME].raw[Interface.IPV6][
+        ifaces.all_kernel_ifaces[IPV6_ROUTE_IFACE_NAME].raw[Interface.IPV6][
             InterfaceIPv6.AUTOCONF
         ] = True
 
@@ -537,8 +545,8 @@ class TestRouteState:
         )
         ifaces.gen_route_metadata(route_state)
 
-        ipv4_route_iface = ifaces[IPV4_ROUTE_IFACE_NAME]
-        ipv6_route_iface = ifaces[IPV6_ROUTE_IFACE_NAME]
+        ipv4_route_iface = ifaces.all_kernel_ifaces[IPV4_ROUTE_IFACE_NAME]
+        ipv6_route_iface = ifaces.all_kernel_ifaces[IPV6_ROUTE_IFACE_NAME]
 
         assert ipv4_route_iface.to_dict()[Interface.IPV4][
             BaseIface.ROUTES_METADATA

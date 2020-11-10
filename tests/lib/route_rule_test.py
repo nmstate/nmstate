@@ -246,8 +246,8 @@ class TestRouteRuleState:
         )
         ifaces.gen_route_rule_metadata(route_rule_state, route_state)
 
-        ipv4_iface = ifaces[IPV4_ROUTE_IFACE_NAME]
-        ipv6_iface = ifaces[IPV6_ROUTE_IFACE_NAME]
+        ipv4_iface = ifaces.all_kernel_ifaces[IPV4_ROUTE_IFACE_NAME]
+        ipv6_iface = ifaces.all_kernel_ifaces[IPV6_ROUTE_IFACE_NAME]
 
         assert ipv4_iface.to_dict()[Interface.IPV4][
             BaseIface.ROUTE_RULES_METADATA
@@ -294,8 +294,8 @@ class TestRouteRuleState:
             },
         )
         ifaces.gen_route_rule_metadata(route_rule_state, route_state)
-        ipv4_iface = ifaces[IPV4_ROUTE_IFACE_NAME]
-        ipv6_iface = ifaces[IPV6_ROUTE_IFACE_NAME]
+        ipv4_iface = ifaces.all_kernel_ifaces[IPV4_ROUTE_IFACE_NAME]
+        ipv6_iface = ifaces.all_kernel_ifaces[IPV6_ROUTE_IFACE_NAME]
 
         assert ipv4_iface.to_dict()[Interface.IPV4][
             BaseIface.ROUTE_RULES_METADATA
@@ -338,7 +338,7 @@ class TestRouteRuleState:
             },
         )
         ifaces.gen_route_rule_metadata(route_rule_state, route_state)
-        ipv4_iface = ifaces[IPV4_ROUTE_IFACE_NAME]
+        ipv4_iface = ifaces.all_kernel_ifaces[IPV4_ROUTE_IFACE_NAME]
 
         assert (
             BaseIface.ROUTE_RULES_METADATA
@@ -378,7 +378,7 @@ class TestRouteRuleState:
             },
         )
         ifaces.gen_route_rule_metadata(route_rule_state, route_state)
-        ipv4_iface = ifaces[IPV4_ROUTE_IFACE_NAME]
+        ipv4_iface = ifaces.all_kernel_ifaces[IPV4_ROUTE_IFACE_NAME]
 
         assert (
             BaseIface.ROUTE_RULES_METADATA
@@ -416,7 +416,7 @@ class TestRouteRuleState:
             },
         )
         ifaces.gen_route_rule_metadata(route_rule_state, route_state)
-        ipv4_iface = ifaces[IPV4_ROUTE_IFACE_NAME]
+        ipv4_iface = ifaces.all_kernel_ifaces[IPV4_ROUTE_IFACE_NAME]
 
         assert (
             BaseIface.ROUTE_RULES_METADATA

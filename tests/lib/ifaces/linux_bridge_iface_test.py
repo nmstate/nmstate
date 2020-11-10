@@ -220,11 +220,11 @@ class TestLinuxBridgeIface:
             ],
             cur_iface_infos=[],
         )
-        br_iface = ifaces[LINUX_BRIDGE_IFACE_NAME]
+        br_iface = ifaces.all_kernel_ifaces[LINUX_BRIDGE_IFACE_NAME]
         br_iface.gen_metadata(ifaces)
         br_iface.pre_edit_validation_and_cleanup()
-        port1_iface = ifaces[PORT1_IFACE_NAME]
-        port2_iface = ifaces[PORT2_IFACE_NAME]
+        port1_iface = ifaces.all_kernel_ifaces[PORT1_IFACE_NAME]
+        port2_iface = ifaces.all_kernel_ifaces[PORT2_IFACE_NAME]
 
         assert port1_iface.controller == LINUX_BRIDGE_IFACE_NAME
         assert port2_iface.controller == LINUX_BRIDGE_IFACE_NAME
@@ -252,11 +252,11 @@ class TestLinuxBridgeIface:
             ],
             cur_iface_infos=[],
         )
-        br_iface = ifaces[LINUX_BRIDGE_IFACE_NAME]
+        br_iface = ifaces.all_kernel_ifaces[LINUX_BRIDGE_IFACE_NAME]
         br_iface.gen_metadata(ifaces)
         br_iface.pre_edit_validation_and_cleanup()
-        port1_iface = ifaces[PORT1_IFACE_NAME]
-        port2_iface = ifaces[PORT2_IFACE_NAME]
+        port1_iface = ifaces.all_kernel_ifaces[PORT1_IFACE_NAME]
+        port2_iface = ifaces.all_kernel_ifaces[PORT2_IFACE_NAME]
         assert port1_iface.controller is None
         assert port2_iface.controller is None
         assert (
@@ -402,11 +402,11 @@ class TestLinuxBridgeIface:
             ],
             cur_iface_infos=[],
         )
-        br_iface = ifaces[LINUX_BRIDGE_IFACE_NAME]
+        br_iface = ifaces.all_kernel_ifaces[LINUX_BRIDGE_IFACE_NAME]
         br_iface.gen_metadata(ifaces)
         br_iface.pre_edit_validation_and_cleanup()
-        port1_iface = ifaces[PORT1_IFACE_NAME]
-        port2_iface = ifaces[PORT2_IFACE_NAME]
+        port1_iface = ifaces.all_kernel_ifaces[PORT1_IFACE_NAME]
+        port2_iface = ifaces.all_kernel_ifaces[PORT2_IFACE_NAME]
 
         assert port1_iface.controller is None
         assert port2_iface.controller is None

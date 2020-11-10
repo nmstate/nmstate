@@ -45,6 +45,10 @@ class OvsBridgeIface(BridgeIface):
         self._replace_deprecated_terms()
 
     @property
+    def is_user_space_only(self):
+        return True
+
+    @property
     def _has_bond_port(self):
         for port_config in self.port_configs:
             if port_config.get(OVSBridge.Port.LINK_AGGREGATION_SUBTREE):
@@ -82,16 +86,16 @@ class OvsBridgeIface(BridgeIface):
         return port
 
     def gen_metadata(self, ifaces):
-        for port_name in self.port:
-            port_iface = ifaces[port_name]
-            port_config = _lookup_ovs_port_by_interface(
-                self.port_configs, port_iface.name
+        for ovs_iface_name in self.port:
+            ovs_iface = ifaces.all_kernel_ifaces[ovs_iface_name]
+            ovs_iface_config = _lookup_ovs_iface_config(
+                self.port_configs, ovs_iface_name
             )
-            port_iface.update(
-                {BridgeIface.BRPORT_OPTIONS_METADATA: port_config}
+            ovs_iface.update(
+                {BridgeIface.BRPORT_OPTIONS_METADATA: ovs_iface_config}
             )
-            if port_iface.type == InterfaceType.OVS_INTERFACE:
-                port_iface.parent = self.name
+            if ovs_iface.type == InterfaceType.OVS_INTERFACE:
+                ovs_iface.parent = self.name
         super().gen_metadata(ifaces)
 
     def create_virtual_port(self, port_name):
@@ -167,13 +171,13 @@ class OvsBridgeIface(BridgeIface):
                 )
 
 
-def _lookup_ovs_port_by_interface(ports, port_name):
-    for port in ports:
-        lag_state = port.get(OVSBridge.Port.LINK_AGGREGATION_SUBTREE)
-        if lag_state and _is_ovs_lag_port(lag_state, port_name):
-            return port
-        elif port[OVSBridge.Port.NAME] == port_name:
-            return port
+def _lookup_ovs_iface_config(bridge_port_configs, ovs_iface_name):
+    for port_config in bridge_port_configs:
+        lag_state = port_config.get(OVSBridge.Port.LINK_AGGREGATION_SUBTREE)
+        if lag_state and _is_ovs_lag_port(lag_state, ovs_iface_name):
+            return port_config
+        elif port_config[OVSBridge.Port.NAME] == ovs_iface_name:
+            return port_config
     return {}
 
 
@@ -282,3 +286,13 @@ def _convert_external_ids_values_to_string(iface_info):
 
 def is_ovs_lag_port(port_state):
     return port_state.get(OVSBridge.Port.LINK_AGGREGATION_SUBTREE) is not None
+
+
+class OvsPortIface(BaseIface):
+    def __init__(self, info, save_to_disk=True):
+        super().__init__(info, save_to_disk)
+        self._parent = None
+
+    @property
+    def is_user_space_only(self):
+        return True
