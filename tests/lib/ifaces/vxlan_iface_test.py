@@ -96,7 +96,9 @@ class TestVxlanIface:
             cur_iface_infos=[],
         )
 
-        base_iface = ifaces.get(base_iface_info.get(Interface.NAME))
+        base_iface = ifaces.all_kernel_ifaces.get(
+            base_iface_info.get(Interface.NAME)
+        )
 
         assert base_iface.mtu == vxlan_iface_info[Interface.MTU]
 

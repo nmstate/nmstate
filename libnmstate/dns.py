@@ -166,7 +166,7 @@ class DnsState:
     def _find_ifaces_with_auto_dns_false(self, ifaces):
         ipv4_iface = None
         ipv6_iface = None
-        for iface in ifaces.values():
+        for iface in ifaces.all_kernel_ifaces.values():
             if ipv4_iface and ipv6_iface:
                 return (ipv4_iface, ipv6_iface)
             for family in (Interface.IPV4, Interface.IPV6):

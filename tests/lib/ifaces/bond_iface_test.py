@@ -207,10 +207,10 @@ class TestBondIface:
                 self._gen_port2_iface_info(),
             ],
         )
-        bond_iface = ifaces[FOO_IFACE_NAME]
+        bond_iface = ifaces.all_kernel_ifaces[FOO_IFACE_NAME]
         bond_iface.gen_metadata(ifaces)
-        port1_iface = ifaces[PORT1_IFACE_NAME]
-        port2_iface = ifaces[PORT2_IFACE_NAME]
+        port1_iface = ifaces.all_kernel_ifaces[PORT1_IFACE_NAME]
+        port2_iface = ifaces.all_kernel_ifaces[PORT2_IFACE_NAME]
 
         assert port1_iface.controller == FOO_IFACE_NAME
         assert port2_iface.controller == FOO_IFACE_NAME
@@ -240,7 +240,7 @@ class TestBondIface:
                 self._gen_port2_iface_info(),
             ],
         )
-        bond_iface = ifaces[FOO_IFACE_NAME]
+        bond_iface = ifaces.all_kernel_ifaces[FOO_IFACE_NAME]
         bond_iface.gen_metadata(ifaces)
         bond_iface.pre_edit_validation_and_cleanup()
 
@@ -276,7 +276,7 @@ class TestBondIface:
                 self._gen_port2_iface_info(),
             ],
         )
-        bond_iface = ifaces[FOO_IFACE_NAME]
+        bond_iface = ifaces.all_kernel_ifaces[FOO_IFACE_NAME]
         bond_iface.gen_metadata(ifaces)
         bond_iface.pre_edit_validation_and_cleanup()
 

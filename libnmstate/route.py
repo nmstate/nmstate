@@ -122,7 +122,7 @@ class RouteEntry(StateEntry):
         if not self.destination:
             self._invalid_reason = "Route entry does not have destination"
             return False
-        iface = ifaces.get(self.next_hop_interface)
+        iface = ifaces.all_kernel_ifaces.get(self.next_hop_interface)
         if not iface:
             self._invalid_reason = (
                 f"Route {self.to_dict()} next hop to unknown interface"
@@ -191,7 +191,9 @@ class RouteState:
             rt = RouteEntry(entry)
             if not rt.absent:
                 if rt.is_valid(ifaces):
-                    ifaces[rt.next_hop_interface].mark_as_changed()
+                    ifaces.all_kernel_ifaces[
+                        rt.next_hop_interface
+                    ].mark_as_changed()
                     self._routes[rt.next_hop_interface].add(rt)
                 else:
                     raise NmstateValueError(rt.invalid_reason)

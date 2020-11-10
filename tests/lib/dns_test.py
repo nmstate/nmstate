@@ -90,8 +90,8 @@ class TestDnsState:
         route_state = self._gen_route_state(ifaces)
         dns_state = DnsState({DNS.CONFIG: DNS_CONFIG1}, {})
         ifaces.gen_dns_metadata(dns_state, route_state)
-        ipv4_iface = ifaces[IPV4_ROUTE_IFACE_NAME]
-        ipv6_iface = ifaces[IPV6_ROUTE_IFACE_NAME]
+        ipv4_iface = ifaces.all_kernel_ifaces[IPV4_ROUTE_IFACE_NAME]
+        ipv6_iface = ifaces.all_kernel_ifaces[IPV6_ROUTE_IFACE_NAME]
 
         assert dns_state.config == DNS_CONFIG1
         assert ipv4_iface.to_dict()[Interface.IPV4][
@@ -114,8 +114,8 @@ class TestDnsState:
         route_state = self._gen_route_state(ifaces)
         dns_state = DnsState({DNS.CONFIG: DNS_CONFIG2}, {})
         ifaces.gen_dns_metadata(dns_state, route_state)
-        ipv4_iface = ifaces[IPV4_ROUTE_IFACE_NAME]
-        ipv6_iface = ifaces[IPV6_ROUTE_IFACE_NAME]
+        ipv4_iface = ifaces.all_kernel_ifaces[IPV4_ROUTE_IFACE_NAME]
+        ipv6_iface = ifaces.all_kernel_ifaces[IPV6_ROUTE_IFACE_NAME]
 
         assert dns_state.config == DNS_CONFIG2
         assert ipv4_iface.to_dict()[Interface.IPV4][
@@ -138,8 +138,8 @@ class TestDnsState:
         route_state = self._gen_route_state(ifaces)
         dns_state = DnsState({DNS.CONFIG: DNS_CONFIG1}, {})
         ifaces.gen_dns_metadata(dns_state, route_state)
-        ipv4_iface = ifaces[IPV4_ROUTE_IFACE_NAME]
-        ipv6_iface = ifaces[IPV6_ROUTE_IFACE_NAME]
+        ipv4_iface = ifaces.all_kernel_ifaces[IPV4_ROUTE_IFACE_NAME]
+        ipv6_iface = ifaces.all_kernel_ifaces[IPV6_ROUTE_IFACE_NAME]
 
         assert dns_state.config == DNS_CONFIG1
         assert ipv4_iface.to_dict()[Interface.IPV4][
@@ -163,8 +163,8 @@ class TestDnsState:
         route_state = self._gen_route_state(ifaces)
         dns_state = DnsState({}, {DNS.CONFIG: DNS_CONFIG1})
         ifaces.gen_dns_metadata(dns_state, route_state)
-        ipv4_iface = ifaces[IPV4_ROUTE_IFACE_NAME]
-        ipv6_iface = ifaces[IPV6_ROUTE_IFACE_NAME]
+        ipv4_iface = ifaces.all_kernel_ifaces[IPV4_ROUTE_IFACE_NAME]
+        ipv6_iface = ifaces.all_kernel_ifaces[IPV6_ROUTE_IFACE_NAME]
 
         assert dns_state.config == DNS_CONFIG1
         assert ipv4_iface.to_dict()[Interface.IPV4][
@@ -273,7 +273,7 @@ class TestDnsState:
         route_state = self._gen_route_state(ifaces)
         ifaces.gen_dns_metadata(dns_state, route_state)
 
-        ipv4_iface = ifaces[IPV4_ROUTE_IFACE_NAME]
+        ipv4_iface = ifaces.all_kernel_ifaces[IPV4_ROUTE_IFACE_NAME]
 
         assert dns_state.config == dns_config
         assert ipv4_iface.to_dict()[Interface.IPV4][
@@ -296,7 +296,7 @@ class TestDnsState:
         route_state = self._gen_route_state(ifaces)
         dns_state = DnsState({DNS.CONFIG: dns_config}, {})
         ifaces.gen_dns_metadata(dns_state, route_state)
-        ipv6_iface = ifaces[IPV6_ROUTE_IFACE_NAME]
+        ipv6_iface = ifaces.all_kernel_ifaces[IPV6_ROUTE_IFACE_NAME]
 
         assert dns_state.config == dns_config
         assert ipv6_iface.to_dict()[Interface.IPV6][

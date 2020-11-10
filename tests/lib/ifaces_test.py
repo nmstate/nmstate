@@ -71,9 +71,11 @@ class TestIfaces:
             des_iface_infos=[], cur_iface_infos=self._gen_iface_infos()
         )
 
-        assert [
-            i.original_dict for i in ifaces.current_ifaces.values()
-        ] == self._gen_iface_infos()
+        for iface_info in self._gen_iface_infos():
+            cur_iface = ifaces.get_cur_iface(
+                iface_info[Interface.NAME], iface_info[Interface.TYPE]
+            )
+            assert cur_iface.original_dict == iface_info
 
     def test_init_des_iface_infos_only(self):
         ifaces = Ifaces(
@@ -81,7 +83,7 @@ class TestIfaces:
         )
 
         assert [
-            i.original_dict for i in ifaces.values()
+            i.original_dict for i in ifaces.all_ifaces()
         ] == self._gen_iface_infos()
 
     def test_add_new_iface(self):
@@ -90,12 +92,14 @@ class TestIfaces:
         new_iface_info[Interface.NAME] = FOO3_IFACE_NAME
 
         ifaces = Ifaces([new_iface_info], cur_iface_infos)
-        new_iface = ifaces[FOO3_IFACE_NAME]
-        iface1 = ifaces[FOO1_IFACE_NAME]
-        iface2 = ifaces[FOO2_IFACE_NAME]
+        new_iface = ifaces.all_kernel_ifaces[FOO3_IFACE_NAME]
+        iface1 = ifaces.all_kernel_ifaces[FOO1_IFACE_NAME]
+        iface2 = ifaces.all_kernel_ifaces[FOO2_IFACE_NAME]
 
-        assert len(ifaces.current_ifaces) == len(self._gen_iface_infos())
-        assert len(list(ifaces.keys())) == len(self._gen_iface_infos()) + 1
+        assert (
+            len(list(ifaces.all_kernel_ifaces.keys()))
+            == len(self._gen_iface_infos()) + 1
+        )
         assert new_iface.is_desired
         assert not iface1.is_desired
         assert not iface2.is_desired
@@ -107,7 +111,9 @@ class TestIfaces:
         expected_iface_info = deepcopy(des_iface_infos[0])
 
         ifaces = Ifaces(des_iface_infos, cur_iface_infos)
-        edit_iface = ifaces[des_iface_infos[0][Interface.NAME]]
+        edit_iface = ifaces.all_kernel_ifaces[
+            des_iface_infos[0][Interface.NAME]
+        ]
 
         assert state_match(expected_iface_info, edit_iface.to_dict())
         assert edit_iface.is_desired
@@ -119,7 +125,9 @@ class TestIfaces:
         expected_iface_info = deepcopy(des_iface_infos[0])
 
         ifaces = Ifaces(des_iface_infos, cur_iface_infos)
-        edit_iface = ifaces[des_iface_infos[0][Interface.NAME]]
+        edit_iface = ifaces.all_kernel_ifaces[
+            des_iface_infos[0][Interface.NAME]
+        ]
 
         assert state_match(expected_iface_info, edit_iface.to_dict())
         assert edit_iface.is_desired
@@ -152,7 +160,7 @@ class TestIfaces:
         }
 
         ifaces = Ifaces(des_iface_infos, [cur_iface_info])
-        assert cur_iface_info not in ifaces.values()
+        assert cur_iface_info not in ifaces.all_ifaces()
 
     def test_mark_port_as_changed_if_controller_marked_as_absent(self):
         cur_iface_infos = self._gen_iface_infos()
@@ -164,9 +172,9 @@ class TestIfaces:
 
         ifaces = Ifaces([des_iface_info], cur_iface_infos)
 
-        port_iface1 = ifaces[PORT1_IFACE_NAME]
-        port_iface2 = ifaces[PORT2_IFACE_NAME]
-        controller_iface = ifaces[LINUX_BRIDGE_IFACE_NAME]
+        port_iface1 = ifaces.all_kernel_ifaces[PORT1_IFACE_NAME]
+        port_iface2 = ifaces.all_kernel_ifaces[PORT2_IFACE_NAME]
+        controller_iface = ifaces.all_kernel_ifaces[LINUX_BRIDGE_IFACE_NAME]
 
         assert port_iface1.is_changed
         assert port_iface2.is_changed
@@ -189,9 +197,9 @@ class TestIfaces:
 
         ifaces = Ifaces([des_iface_info], cur_iface_infos)
 
-        port_iface1 = ifaces[PORT1_IFACE_NAME]
-        port_iface2 = ifaces[PORT2_IFACE_NAME]
-        controller_iface = ifaces[LINUX_BRIDGE_IFACE_NAME]
+        port_iface1 = ifaces.all_kernel_ifaces[PORT1_IFACE_NAME]
+        port_iface2 = ifaces.all_kernel_ifaces[PORT2_IFACE_NAME]
+        controller_iface = ifaces.all_kernel_ifaces[LINUX_BRIDGE_IFACE_NAME]
 
         assert not port_iface1.is_changed
         assert port_iface2.is_changed
@@ -209,9 +217,9 @@ class TestIfaces:
 
         ifaces = Ifaces([des_iface_info], cur_iface_infos)
 
-        port_iface1 = ifaces[PORT1_IFACE_NAME]
-        port_iface2 = ifaces[PORT2_IFACE_NAME]
-        controller_iface = ifaces[LINUX_BRIDGE_IFACE_NAME]
+        port_iface1 = ifaces.all_kernel_ifaces[PORT1_IFACE_NAME]
+        port_iface2 = ifaces.all_kernel_ifaces[PORT2_IFACE_NAME]
+        controller_iface = ifaces.all_kernel_ifaces[LINUX_BRIDGE_IFACE_NAME]
 
         assert port_iface1.is_changed
         assert port_iface2.is_changed
@@ -233,9 +241,9 @@ class TestIfaces:
 
         ifaces = Ifaces([des_iface_info], cur_iface_infos)
 
-        port_iface1 = ifaces[PORT1_IFACE_NAME]
-        port_iface2 = ifaces[PORT2_IFACE_NAME]
-        controller_iface = ifaces[LINUX_BRIDGE_IFACE_NAME]
+        port_iface1 = ifaces.all_kernel_ifaces[PORT1_IFACE_NAME]
+        port_iface2 = ifaces.all_kernel_ifaces[PORT2_IFACE_NAME]
+        controller_iface = ifaces.all_kernel_ifaces[LINUX_BRIDGE_IFACE_NAME]
 
         assert port_iface1.is_changed
         assert not port_iface2.is_changed
@@ -262,9 +270,9 @@ class TestIfaces:
 
         ifaces = Ifaces([des_iface_info], cur_iface_infos)
 
-        child_iface = ifaces[CHILD_IFACE_NAME]
-        parent_iface = ifaces[PARENT_IFACE_NAME]
-        other_iface = ifaces[FOO2_IFACE_NAME]
+        child_iface = ifaces.all_kernel_ifaces[CHILD_IFACE_NAME]
+        parent_iface = ifaces.all_kernel_ifaces[PARENT_IFACE_NAME]
+        other_iface = ifaces.all_kernel_ifaces[FOO2_IFACE_NAME]
 
         assert parent_iface.is_desired
         assert child_iface.is_changed
@@ -295,10 +303,12 @@ class TestIfaces:
 
         ifaces = Ifaces([des_iface_info], cur_iface_infos)
 
-        ovs_iface = ifaces[OVS_IFACE_NAME]
-        bridge_iface = ifaces[OVS_BRIDGE_IFACE_NAME]
-        port1_iface = ifaces[PORT1_IFACE_NAME]
-        port2_iface = ifaces[PORT2_IFACE_NAME]
+        ovs_iface = ifaces.all_kernel_ifaces[OVS_IFACE_NAME]
+        bridge_iface = ifaces.get_iface(
+            OVS_BRIDGE_IFACE_NAME, InterfaceType.OVS_BRIDGE
+        )
+        port1_iface = ifaces.all_kernel_ifaces[PORT1_IFACE_NAME]
+        port2_iface = ifaces.all_kernel_ifaces[PORT2_IFACE_NAME]
 
         assert bridge_iface.is_desired
         assert ovs_iface.is_changed
@@ -337,7 +347,7 @@ class TestIfaces:
         cur_iface_infos = self._gen_iface_infos()
         ifaces = Ifaces([], cur_iface_infos)
 
-        for iface in ifaces.values():
+        for iface in ifaces.all_ifaces():
             iface.mark_as_changed()
 
         assert sorted(

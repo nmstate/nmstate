@@ -139,6 +139,19 @@ class BaseIface:
     def can_have_ip_as_port(self):
         return False
 
+    @property
+    def is_user_space_only(self):
+        """
+        Whether this interface is user space only.
+        User space network interface means:
+            * Can have duplicate interface name against kernel network
+              interfaces
+            * Cannot be used subordinate of other kernel interfaces.
+            * Due to limtation of nmstate, currently cannot be used as
+              subordinate of other user space interfaces.
+        """
+        return False
+
     def sort_port(self):
         pass
 
@@ -300,7 +313,7 @@ class BaseIface:
     def gen_metadata(self, ifaces):
         if self.is_controller and not self.is_absent:
             for port_name in self.port:
-                port_iface = ifaces[port_name]
+                port_iface = ifaces.all_kernel_ifaces[port_name]
                 port_iface.set_controller(self.name, self.type)
 
     def update(self, info):

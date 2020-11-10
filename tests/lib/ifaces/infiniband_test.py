@@ -175,8 +175,8 @@ class TestInfiniBandIface:
         base_iface_info = self._gen_base_iface_info()
         base_iface_info[Interface.STATE] = InterfaceState.ABSENT
         ifaces = Ifaces([base_iface_info, self._gen_iface_info()], [])
-        ifaces[PKEY_IFACE_NAME].state = InterfaceState.ABSENT
-        ifaces[BASE_IFACE_NAME].state = InterfaceState.ABSENT
+        ifaces.all_kernel_ifaces[PKEY_IFACE_NAME].state = InterfaceState.ABSENT
+        ifaces.all_kernel_ifaces[BASE_IFACE_NAME].state = InterfaceState.ABSENT
 
     def test_expect_exception_for_adding_ib_to_linux_bridge(self):
         base_iface_info = self._gen_base_iface_info()

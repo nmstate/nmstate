@@ -44,7 +44,7 @@ class NmProfiles:
         self._prepare_state_for_profiles(net_state)
         self._profiles = [
             NmProfile(self._ctx, iface, save_to_disk)
-            for iface in net_state.ifaces.values()
+            for iface in net_state.ifaces.all_ifaces()
             if (iface.is_changed or iface.is_desired) and not iface.is_ignore
         ]
 
@@ -79,7 +79,7 @@ def _append_nm_ovs_port_iface(net_state):
     """
     nm_ovs_port_ifaces = {}
 
-    for iface in net_state.ifaces.values():
+    for iface in net_state.ifaces.all_kernel_ifaces.values():
         if iface.controller_type == InterfaceType.OVS_BRIDGE:
             nm_ovs_port_iface = create_iface_for_nm_ovs_port(iface)
             iface.set_controller(
@@ -89,7 +89,7 @@ def _append_nm_ovs_port_iface(net_state):
                 nm_ovs_port_iface.mark_as_changed()
             nm_ovs_port_ifaces[nm_ovs_port_iface.name] = nm_ovs_port_iface
 
-    net_state.ifaces.update(nm_ovs_port_ifaces)
+    net_state.ifaces.add_ifaces(nm_ovs_port_ifaces.values())
 
 
 def get_all_applied_configs(context):
@@ -156,7 +156,7 @@ def _preapply_dns_fix_for_profiles(context, net_state):
     preserve_old_dns_config = False
     if net_state.dns.config == net_state.dns.current_config:
         for cur_dns_iface_name in cur_dns_iface_names:
-            iface = net_state.ifaces[cur_dns_iface_name]
+            iface = net_state.ifaces.all_kernel_ifaces[cur_dns_iface_name]
             if iface.is_changed or iface.is_desired:
                 remove_existing_dns_config = True
         if not remove_existing_dns_config:
@@ -166,11 +166,11 @@ def _preapply_dns_fix_for_profiles(context, net_state):
 
     if remove_existing_dns_config:
         for cur_dns_iface_name in cur_dns_iface_names:
-            iface = net_state.ifaces[cur_dns_iface_name]
+            iface = net_state.ifaces.all_kernel_ifaces[cur_dns_iface_name]
             iface.mark_as_changed()
 
     if preserve_old_dns_config:
-        for iface in net_state.ifaces.values():
+        for iface in net_state.ifaces.all_kernel_ifaces.values():
             if iface.is_changed or iface.is_desired:
                 iface.remove_dns_metadata()
 
@@ -183,10 +183,16 @@ def _mark_nm_external_subordinate_changed(context, net_state):
     For this case, we should mark the subordinate as changed.
     that subordinate should be marked as changed for NM to take over.
     """
-    for iface in net_state.ifaces.values():
-        if iface.is_controller:
+    for iface in net_state.ifaces.all_ifaces():
+        if (
+            iface.is_controller
+            and iface.is_up
+            and (iface.is_changed or iface.is_desired)
+        ):
             for subordinate in iface.port:
-                port_iface = net_state.ifaces.get(subordinate)
+                port_iface = net_state.ifaces.all_kernel_ifaces.get(
+                    subordinate
+                )
                 if port_iface:
                     nmdev = get_nm_dev(context, subordinate, port_iface.type)
                     if nmdev:
@@ -201,19 +207,27 @@ def _mark_mode_changed_bond_child_interface_as_changed(net_state):
     the bond child will be deactivated.
     This is workaround would be manually activate the childs.
     """
-    for iface in net_state.ifaces.values():
+    for iface in net_state.ifaces.all_kernel_ifaces.values():
         if not iface.parent:
             continue
-        parent_iface = net_state.ifaces[iface.parent]
+        parent_iface = net_state.ifaces.get_iface(
+            iface.parent, InterfaceType.BOND
+        )
         if (
-            parent_iface.is_up
-            and parent_iface.type == InterfaceType.BOND
+            parent_iface
+            and parent_iface.is_up
             and parent_iface.is_bond_mode_changed
         ):
             iface.mark_as_changed()
 
 
 def _delete_orphan_nm_ovs_port_profiles(context, net_state):
+    all_deleted_ovs_bridges = {}
+    for iface in net_state.ifaces.all_user_space_ifaces:
+        if iface.type == InterfaceType.OVS_BRIDGE and iface.is_absent:
+            all_deleted_ovs_bridges[iface.name] = iface
+    if not all_deleted_ovs_bridges:
+        return
     for nm_profile in context.client.get_connections():
         if nm_profile.get_connection_type() != InterfaceType.OVS_PORT:
             continue
@@ -222,7 +236,7 @@ def _delete_orphan_nm_ovs_port_profiles(context, net_state):
             continue
         ovs_port_name = nm_profile.get_interface_name()
         controller = conn_setting.get_master()
-        ovs_br_iface = net_state.ifaces.get(controller)
+        ovs_br_iface = all_deleted_ovs_bridges.get(controller)
         need_delete = False
         if ovs_br_iface:
             if ovs_br_iface.is_absent:
@@ -230,7 +244,7 @@ def _delete_orphan_nm_ovs_port_profiles(context, net_state):
             else:
                 has_ovs_interface = False
                 for port in ovs_br_iface.port:
-                    ovs_iface = net_state.ifaces.get(port)
+                    ovs_iface = net_state.ifaces.all_kernel_ifaces.get(port)
                     if (
                         ovs_iface
                         and ovs_iface.controller == ovs_port_name

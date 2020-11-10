@@ -77,7 +77,7 @@ class BondIface(BaseIface):
 
     def _generate_bond_mode_change_metadata(self, ifaces):
         if self.is_up:
-            cur_iface = ifaces.current_ifaces.get(self.name)
+            cur_iface = ifaces.get_cur_iface(self.name, self.type)
             if cur_iface and self.bond_mode != cur_iface.bond_mode:
                 self._set_bond_mode_changed_metadata(True)
 
