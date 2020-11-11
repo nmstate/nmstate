@@ -72,6 +72,8 @@ def show_with_plugins(plugins, include_status_data=None):
 
     report[Route.KEY] = _get_routes_from_plugins(plugins)
 
+    report[RouteRule.KEY] = _get_route_rules_from_plugins(plugins)
+
     route_rule_plugin = _find_plugin_for_capability(
         plugins, NmstatePlugin.PLUGIN_CAPABILITY_ROUTE_RULE
     )
@@ -312,6 +314,20 @@ def _get_routes_from_plugins(plugins):
             plugin_routes = plugin.get_routes()
             ret[Route.RUNNING].extend(plugin_routes.get(Route.RUNNING, []))
             ret[Route.CONFIG].extend(plugin_routes.get(Route.CONFIG, []))
+    return ret
+
+
+def _get_route_rules_from_plugins(plugins):
+    ret = {RouteRule.CONFIG: []}
+    for plugin in plugins:
+        if (
+            NmstatePlugin.PLUGIN_CAPABILITY_ROUTE_RULE
+            in plugin.plugin_capabilities
+        ):
+            plugin_route_rules = plugin.get_route_rules()
+            ret[RouteRule.CONFIG].extend(
+                plugin_route_rules.get(RouteRule.CONFIG, [])
+            )
     return ret
 
 
