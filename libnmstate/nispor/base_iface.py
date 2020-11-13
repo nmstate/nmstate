@@ -40,10 +40,9 @@ class NisporPluginBaseIface:
 
     @property
     def mac(self):
-        mac = self._np_iface.mac_address.upper()
-        if not mac:
-            mac = DEFAULT_MAC_ADDRESS
-        return mac
+        if self._np_iface.mac_address:
+            return self._np_iface.mac_address.upper()
+        return DEFAULT_MAC_ADDRESS
 
     @property
     def mtu(self):
