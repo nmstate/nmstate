@@ -154,7 +154,3 @@ def is_dynamic(active_connection):
     if ip_profile:
         return ip_profile.get_method() == NM.SETTING_IP4_CONFIG_METHOD_AUTO
     return False
-
-
-def get_routing_rule_config(nm_client):
-    return nm_route.get_routing_rule_config(acs_and_ip_profiles(nm_client))

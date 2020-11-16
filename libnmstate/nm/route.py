@@ -160,44 +160,6 @@ def get_static_gateway_iface(family, iface_routes):
     return None
 
 
-def get_routing_rule_config(acs_and_ip_profiles):
-    rules = []
-    for (_, ip_profile) in acs_and_ip_profiles:
-        for i in range(ip_profile.get_num_routing_rules()):
-            nm_rule = ip_profile.get_routing_rule(i)
-            rules.append(_nm_rule_to_info(nm_rule))
-
-    return rules
-
-
-def _nm_rule_to_info(nm_rule):
-    info = {
-        RouteRule.IP_FROM: _nm_rule_get_from(nm_rule),
-        RouteRule.IP_TO: _nm_rule_get_to(nm_rule),
-        RouteRule.PRIORITY: nm_rule.get_priority(),
-        RouteRule.ROUTE_TABLE: nm_rule.get_table(),
-    }
-    cleanup_keys = [key for key, val in info.items() if val is None]
-    for key in cleanup_keys:
-        del info[key]
-
-    return info
-
-
-def _nm_rule_get_from(nm_rule):
-    if nm_rule.get_from():
-        return iplib.to_ip_address_full(
-            nm_rule.get_from(), nm_rule.get_from_len()
-        )
-    return None
-
-
-def _nm_rule_get_to(nm_rule):
-    if nm_rule.get_to():
-        return iplib.to_ip_address_full(nm_rule.get_to(), nm_rule.get_to_len())
-    return None
-
-
 def add_route_rules(setting_ip, family, rules):
     for rule in rules:
         setting_ip.add_routing_rule(_rule_info_to_nm_rule(rule, family))
