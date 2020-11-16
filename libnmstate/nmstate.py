@@ -74,12 +74,6 @@ def show_with_plugins(plugins, include_status_data=None):
 
     report[RouteRule.KEY] = _get_route_rules_from_plugins(plugins)
 
-    route_rule_plugin = _find_plugin_for_capability(
-        plugins, NmstatePlugin.PLUGIN_CAPABILITY_ROUTE_RULE
-    )
-    if route_rule_plugin:
-        report[RouteRule.KEY] = route_rule_plugin.get_route_rules()
-
     dns_plugin = _find_plugin_for_capability(
         plugins, NmstatePlugin.PLUGIN_CAPABILITY_DNS
     )

@@ -32,13 +32,14 @@ def nispor_route_rule_state_to_nmstate(np_rules):
 
 
 def _nispor_route_rule_to_nmstate(np_rl):
-    priority = (
-        np_rl.priority if np_rl.priority else RouteRule.USE_DEFAULT_PRIORITY
-    )
-
-    return {
+    rule = {
         RouteRule.ROUTE_TABLE: np_rl.table,
-        RouteRule.PRIORITY: priority,
-        RouteRule.IP_FROM: np_rl.src if np_rl.src else "",
-        RouteRule.IP_TO: np_rl.dst if np_rl.dst else "",
+        RouteRule.PRIORITY: np_rl.priority
+        if np_rl.priority
+        else RouteRule.USE_DEFAULT_PRIORITY,
     }
+    if np_rl.src:
+        rule[RouteRule.IP_FROM] = np_rl.src
+    if np_rl.dst:
+        rule[RouteRule.IP_TO] = np_rl.dst
+    return rule

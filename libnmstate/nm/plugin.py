@@ -27,7 +27,6 @@ from libnmstate.schema import DNS
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import Route
-from libnmstate.schema import RouteRule
 from libnmstate.plugin import NmstatePlugin
 
 
@@ -41,9 +40,7 @@ from .dns import get_running as get_dns_running
 from .dns import get_running_config as get_dns_running_config
 from .infiniband import get_info as get_infiniband_info
 from .ipv4 import get_info as get_ipv4_info
-from .ipv4 import get_routing_rule_config as get_ipv4_routing_rule_config
 from .ipv6 import get_info as get_ipv6_info
-from .ipv6 import get_routing_rule_config as get_ipv6_routing_rule_config
 from .lldp import get_info as get_lldp_info
 from .macvlan import get_current_macvlan_type
 from .ovs import get_interface_info as get_ovs_interface_info
@@ -165,12 +162,10 @@ class NetworkManagerPlugin(NmstatePlugin):
         return {Route.CONFIG: get_route_running_config(self._applied_configs)}
 
     def get_route_rules(self):
-        return {
-            RouteRule.CONFIG: (
-                get_ipv4_routing_rule_config(self.client)
-                + get_ipv6_routing_rule_config(self.client)
-            )
-        }
+        """
+        Nispor will provide running config of route rule from kernel.
+        """
+        return {}
 
     def get_dns_client_config(self):
         return {
