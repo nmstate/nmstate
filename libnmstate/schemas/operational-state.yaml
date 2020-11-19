@@ -62,6 +62,13 @@ properties:
       running:
         items:
           $ref: "#/definitions/dns"
+  ovs-db:
+    type: object
+    properties:
+      external_ids:
+        type: object
+      other_config:
+        type: object
 
 definitions:
   types:
