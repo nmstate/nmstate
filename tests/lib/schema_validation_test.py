@@ -38,6 +38,7 @@ from libnmstate.schema import OVSInterface
 from libnmstate.schema import Route
 from libnmstate.schema import RouteRule
 from libnmstate.schema import Team
+from libnmstate.schema import Veth
 from libnmstate.schema import VRF
 from libnmstate.schema import VXLAN
 
@@ -974,6 +975,31 @@ class TestInfiniBand:
                     InfiniBand.PKEY: "0x80FF",
                     InfiniBand.BASE_IFACE: "ib0",
                 },
+            }
+        )
+        with pytest.raises(js.ValidationError):
+            libnmstate.validator.schema_validate(default_data)
+
+
+class TestVeth:
+    def test_valid_veth_peer(self, default_data):
+        default_data[Interface.KEY].append(
+            {
+                Interface.NAME: "veth1",
+                Interface.TYPE: InterfaceType.VETH,
+                Veth.CONFIG_SUBTREE: {
+                    Veth.PEER: "veth1peer",
+                },
+            }
+        )
+        libnmstate.validator.schema_validate(default_data)
+
+    def test_invalid_veth_without_peer(self, default_data):
+        default_data[Interface.KEY].append(
+            {
+                Interface.NAME: "veth1",
+                Interface.TYPE: InterfaceType.VETH,
+                Veth.CONFIG_SUBTREE: {},
             }
         )
         with pytest.raises(js.ValidationError):

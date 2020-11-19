@@ -118,6 +118,7 @@ class InterfaceType:
     TEAM = "team"
     VRF = "vrf"
     INFINIBAND = "infiniband"
+    VETH = "veth"
     OTHER = "other"
 
     VIRT_TYPES = (
@@ -128,6 +129,7 @@ class InterfaceType:
         OVS_PORT,
         OVS_INTERFACE,
         TEAM,
+        VETH,
         VLAN,
         VXLAN,
     )
@@ -307,6 +309,13 @@ class Ethernet:
             TRUST = "trust"
             MIN_TX_RATE = "min-tx-rate"
             MAX_TX_RATE = "max-tx-rate"
+
+
+class Veth:
+    TYPE = InterfaceType.VETH
+    CONFIG_SUBTREE = "veth"
+
+    PEER = "peer"
 
 
 class VLAN:
