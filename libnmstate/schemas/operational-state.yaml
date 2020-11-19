@@ -33,6 +33,7 @@ properties:
             - "$ref": "#/definitions/interface-infiniband/rw"
             - "$ref": "#/definitions/interface-mac-vlan/rw"
             - "$ref": "#/definitions/interface-mac-vtap/rw"
+            - "$ref": "#/definitions/interface-veth/rw"
             - "$ref": "#/definitions/interface-other/rw"
   routes:
     type: object
@@ -689,6 +690,20 @@ definitions:
                 - unknown
             promiscuous:
               type: boolean
+  interface-veth:
+    rw:
+      properties:
+        type:
+          type: string
+          enum:
+            - veth
+        veth:
+          type: object
+          properties:
+            peer:
+              type: string
+          required:
+            - peer
   interface-other:
     rw:
       properties:
