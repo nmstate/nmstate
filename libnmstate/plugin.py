@@ -106,6 +106,13 @@ class NmstatePlugin(metaclass=ABCMeta):
             f"Plugin {self.name} BUG: get_dns_client_config() not implemented"
         )
 
+    def get_global_state(self):
+        """
+        Allowing plugin to append global information to content of
+        `libnmstate.show()`.
+        """
+        return {}
+
     @property
     def is_supplemental_only(self):
         """

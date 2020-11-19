@@ -337,9 +337,11 @@ class VXLAN:
 
 
 class OvsDB:
+    KEY = "ovs-db"
     OVS_DB_SUBTREE = "ovs-db"
     # Don't use hypen as this is OVS data base entry
     EXTERNAL_IDS = "external_ids"
+    OTHER_CONFIG = "other_config"
 
 
 class OVSInterface(OvsDB):

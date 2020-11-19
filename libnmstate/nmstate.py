@@ -89,6 +89,9 @@ def show_with_plugins(
         if info_type != _INFO_TYPE_RUNNING:
             report[DNS.KEY].pop(DNS.RUNNING, None)
 
+    for plugin in plugins:
+        report.update(plugin.get_global_state())
+
     validator.schema_validate(report)
     return report
 

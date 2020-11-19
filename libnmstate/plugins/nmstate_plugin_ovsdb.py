@@ -28,6 +28,7 @@ from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import OVSBridge
 from libnmstate.schema import OvsDB
+from libnmstate.state import merge_dict
 from libnmstate.error import NmstateNotImplementedError
 from libnmstate.error import NmstateTimeoutError
 from libnmstate.error import NmstatePermissionError
@@ -40,6 +41,10 @@ DEFAULT_OVS_DB_SOCKET_PATH = "/run/openvswitch/db.sock"
 DEFAULT_OVS_SCHEMA_PATH = "/usr/share/openvswitch/vswitch.ovsschema"
 
 NM_EXTERNAL_ID = "NM.connection.uuid"
+
+GLOBAL_CONFIG_TABLE = "Open_vSwitch"
+
+ALL_SUPPORTED_GLOBAL_COLUMNS = [OvsDB.EXTERNAL_IDS, OvsDB.OTHER_CONFIG]
 
 
 class _Changes:
@@ -93,6 +98,10 @@ class NmstateOvsdbPlugin(NmstatePlugin):
             "Interface", [OvsDB.EXTERNAL_IDS, "name", "type"]
         )
         self._schema.register_columns("Bridge", [OvsDB.EXTERNAL_IDS, "name"])
+        self._schema.register_columns(
+            GLOBAL_CONFIG_TABLE,
+            ALL_SUPPORTED_GLOBAL_COLUMNS,
+        )
 
     def _connect_to_ovs_db(self):
         socket_path = os.environ.get(
@@ -231,6 +240,13 @@ class NmstateOvsdbPlugin(NmstatePlugin):
                         table_name, iface.name, desire_ids
                     )
                 )
+        global_config = net_state.desire_state.get(OvsDB.KEY)
+        if global_config is not None:
+            _merge_global_config(
+                global_config, net_state.current_state.get(OvsDB.KEY, {})
+            )
+            pending_changes.extend(self._apply_global_config(global_config))
+
         if pending_changes:
             if not save_to_disk:
                 raise NmstateNotImplementedError(
@@ -241,14 +257,29 @@ class NmstateOvsdbPlugin(NmstatePlugin):
                 self._db_write(pending_changes)
                 self._commit_transaction()
 
+    def _apply_global_config(self, global_config):
+        if global_config:
+            return [
+                _Changes(GLOBAL_CONFIG_TABLE, key, None, value)
+                for key, value in global_config.items()
+                if key in ALL_SUPPORTED_GLOBAL_COLUMNS
+            ]
+        else:
+            # Remove all settings, assuming type is dict
+            return [
+                _Changes(GLOBAL_CONFIG_TABLE, key, None, {})
+                for key in ALL_SUPPORTED_GLOBAL_COLUMNS
+            ]
+
     def _db_write(self, changes):
-        changes_index = {change.row_name: change for change in changes}
-        changed_tables = set(change.table_name for change in changes)
-        for changed_table in changed_tables:
-            for row in self._idl.tables[changed_table].rows.values():
-                if row.name in changes_index:
-                    change = changes_index[row.name]
+        for change in changes:
+            for row in self._idl.tables[change.table_name].rows.values():
+                if (
+                    change.table_name == GLOBAL_CONFIG_TABLE
+                    or row.name == change.row_name
+                ):
                     setattr(row, change.column_name, change.column_value)
+                    break
 
     def _start_transaction(self):
         self._transaction = Transaction(self._idl)
@@ -289,6 +320,19 @@ class NmstateOvsdbPlugin(NmstatePlugin):
                 "self._transaction is None"
             )
 
+    def get_global_state(self):
+        """
+        Provide database information of global config table
+        """
+        info = {}
+        for row in self._idl.tables[GLOBAL_CONFIG_TABLE].rows.values():
+            for column_name in self._idl.tables[GLOBAL_CONFIG_TABLE].columns:
+                info[column_name] = getattr(row, column_name)
+            # There is only one row in global config table
+            break
+
+        return {OvsDB.KEY: info}
+
 
 def _generate_db_change_external_ids(table_name, iface_name, desire_ids):
     if desire_ids and not isinstance(desire_ids, dict):
@@ -299,6 +343,24 @@ def _generate_db_change_external_ids(table_name, iface_name, desire_ids):
         desire_ids[key] = str(value)
 
     return _Changes(table_name, OvsDB.EXTERNAL_IDS, iface_name, desire_ids)
+
+
+def _merge_global_config(desire_global_config, current_global_config):
+    """
+    If any value been set to None, it means remove it.
+    """
+    # User can delete all global config by {OvsDB.KEY: {}}
+    if desire_global_config != {}:
+        merge_dict(desire_global_config, current_global_config)
+        for column_name in ALL_SUPPORTED_GLOBAL_COLUMNS:
+            if column_name in desire_global_config:
+                keys_to_delete = [
+                    key
+                    for key, value in desire_global_config[column_name].items()
+                    if value is None
+                ]
+                for key in keys_to_delete:
+                    del desire_global_config[column_name][key]
 
 
 NMSTATE_PLUGIN = NmstateOvsdbPlugin

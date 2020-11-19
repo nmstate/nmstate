@@ -30,6 +30,7 @@ from libnmstate.schema import InterfaceType
 from libnmstate.schema import OVSBridge
 from libnmstate.schema import OvsDB
 from libnmstate.schema import OVSInterface
+from libnmstate.state import state_match
 from libnmstate.error import NmstateDependencyError
 from libnmstate.error import NmstateNotSupportedError
 from libnmstate.error import NmstateValueError
@@ -71,6 +72,10 @@ OVS_BOND_YAML_STATE = f"""
 """
 
 RC_SUCCESS = 0
+TEST_EXTERNAL_IDS_KEY = "ovn-bridge-mappings"
+TEST_EXTERNAL_IDS_VALUE = "provider:br-provider"
+TEST_OTHER_CONFIG_KEY = "stats-update-interval"
+TEST_OTHER_CONFIG_VALUE = "1000"
 
 
 @pytest.fixture
@@ -469,6 +474,72 @@ def test_ovsdb_preserved_if_not_mentioned(ovs_bridge_with_custom_external_ids):
     iface_info = statelib.show_only((PORT1,))[Interface.KEY][0]
     external_ids = iface_info[OvsDB.OVS_DB_SUBTREE][OvsDB.EXTERNAL_IDS]
     assert len(external_ids) > 1
+
+
+def test_ovsdb_global_config_add_external_ids_and_remove():
+    desired_ovs_config = {
+        OvsDB.EXTERNAL_IDS: {TEST_EXTERNAL_IDS_KEY: TEST_EXTERNAL_IDS_VALUE}
+    }
+    libnmstate.apply({OvsDB.KEY: desired_ovs_config})
+    current_ovs_config = libnmstate.show()[OvsDB.KEY]
+
+    assert state_match(desired_ovs_config, current_ovs_config)
+
+    libnmstate.apply(
+        {OvsDB.KEY: {OvsDB.EXTERNAL_IDS: {TEST_EXTERNAL_IDS_KEY: None}}}
+    )
+    current_ovs_config = libnmstate.show()[OvsDB.KEY]
+
+    assert TEST_EXTERNAL_IDS_KEY not in current_ovs_config[OvsDB.EXTERNAL_IDS]
+
+
+def test_ovsdb_global_config_add_other_config_and_remove():
+    desired_ovs_config = {
+        OvsDB.OTHER_CONFIG: {TEST_OTHER_CONFIG_KEY: TEST_OTHER_CONFIG_VALUE}
+    }
+    libnmstate.apply({OvsDB.KEY: desired_ovs_config})
+    current_ovs_config = libnmstate.show()[OvsDB.KEY]
+
+    assert state_match(desired_ovs_config, current_ovs_config)
+
+    libnmstate.apply(
+        {OvsDB.KEY: {OvsDB.OTHER_CONFIG: {TEST_OTHER_CONFIG_KEY: None}}}
+    )
+    current_ovs_config = libnmstate.show()[OvsDB.KEY]
+
+    assert TEST_OTHER_CONFIG_KEY not in current_ovs_config[OvsDB.OTHER_CONFIG]
+
+
+def test_remove_all_ovsdb_global_config():
+    libnmstate.apply({OvsDB.KEY: {}})
+    current_ovs_config = libnmstate.show()[OvsDB.KEY]
+
+    assert current_ovs_config == {
+        OvsDB.EXTERNAL_IDS: {},
+        OvsDB.OTHER_CONFIG: {},
+    }
+
+
+@pytest.fixture
+def ovsdb_global_config_external_ids():
+    ovs_config = {
+        OvsDB.EXTERNAL_IDS: {TEST_EXTERNAL_IDS_KEY: TEST_EXTERNAL_IDS_VALUE}
+    }
+    libnmstate.apply({OvsDB.KEY: ovs_config})
+    yield ovs_config
+    libnmstate.apply(
+        {OvsDB.KEY: {OvsDB.EXTERNAL_IDS: {TEST_EXTERNAL_IDS_KEY: None}}}
+    )
+
+
+def test_ovsdb_global_config_untouched_if_not_defined(
+    ovsdb_global_config_external_ids,
+):
+    desired_ovs_config = ovsdb_global_config_external_ids
+    libnmstate.apply({})
+
+    current_ovs_config = libnmstate.show()[OvsDB.KEY]
+    assert state_match(desired_ovs_config, current_ovs_config)
 
 
 class TestOvsPatch:

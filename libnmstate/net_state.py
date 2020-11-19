@@ -19,6 +19,8 @@
 
 import copy
 
+from libnmstate.error import NmstateVerificationError
+from libnmstate.prettystate import format_desired_current_state_diff
 from libnmstate.schema import DNS
 from libnmstate.schema import Interface
 from libnmstate.schema import Route
@@ -28,6 +30,7 @@ from .ifaces import Ifaces
 from .dns import DnsState
 from .route import RouteState
 from .route_rule import RouteRuleState
+from .state import state_match
 
 
 class NetState:
@@ -65,6 +68,19 @@ class NetState:
         self._dns.verify(current_state.get(DNS.KEY))
         self._route.verify(current_state.get(Route.KEY))
         self._route_rule.verify(current_state.get(RouteRule.KEY))
+        self._verify_other_global_info(current_state)
+
+    def _verify_other_global_info(self, current_state):
+        for key, value in self.desire_state.items():
+            if key not in (Interface.KEY, DNS.KEY, Route.KEY, RouteRule.KEY):
+                cur_value = current_state.get(key)
+                if not state_match(value, cur_value):
+                    raise NmstateVerificationError(
+                        format_desired_current_state_diff(
+                            {key: value},
+                            {key: cur_value},
+                        )
+                    )
 
     @property
     def ifaces(self):
