@@ -96,9 +96,10 @@ libnmstate.apply(state)
 ```
 
 ```shell
-# use yaml or json formats
+# use yaml, toml or json formats
 nmstatectl set desired-state.yml
 nmstatectl set desired-state.json
+nmstatectl set desired-state.toml
 ```
 
 Edit the current state(python/shell):

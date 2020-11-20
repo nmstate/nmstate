@@ -20,6 +20,7 @@
 import json
 import os
 import time
+import toml
 
 from libnmstate import __version__
 from libnmstate.error import NmstateConflictError
@@ -79,6 +80,24 @@ LOOPBACK_YAML_CONFIG = """- name: lo
   mac-address: 00:00:00:00:00:00
   mtu: 65536"""
 
+LOOPBACK_TOML_CONFIG = """name = "lo"
+type = "unknown"
+state = "up"
+mac-address = "00:00:00:00:00:00"
+mtu = 65536
+
+[interfaces.ipv4]
+enabled = true
+[[interfaces.ipv4.address]]
+ip = "127.0.0.1"
+prefix-length = 8
+
+[interfaces.ipv6]
+enabled = true
+[[interfaces.ipv6.address]]
+ip = "::1"
+prefix-length = 128"""
+
 ETH1_YAML_CONFIG = b"""interfaces:
 - name: eth1
   state: up
@@ -91,6 +110,22 @@ ETH1_YAML_CONFIG = b"""interfaces:
   ipv6:
     enabled: false
   mtu: 1500
+"""
+
+ETH1_TOML_CONFIG = b"""[[interfaces]]
+name = "eth1"
+type = "ethernet"
+state = "up"
+mtu = 1500
+
+[interfaces.ipv4]
+enabled = true
+[[interfaces.ipv4.address]]
+ip = "192.0.2.250"
+prefix-length = 24
+
+[interfaces.ipv6]
+enabled = false
 """
 
 EXAMPLES = find_examples_dir()
@@ -131,6 +166,17 @@ def test_show_command_with_json():
     assert len(state[Constants.INTERFACES]) > 1
 
 
+def test_show_command_with_toml():
+    ret = cmdlib.exec_cmd(SHOW_CMD + ["--toml"])
+    rc, out, err = ret
+
+    assert rc == cmdlib.RC_SUCCESS, cmdlib.format_exec_cmd_result(ret)
+    assert LOOPBACK_TOML_CONFIG in out
+
+    state = toml.loads(out)
+    assert len(state[Constants.INTERFACES]) > 1
+
+
 def test_show_command_with_yaml_format():
     ret = cmdlib.exec_cmd(SHOW_CMD)
     rc, out, err = ret
@@ -162,6 +208,13 @@ def test_show_command_only_non_existing():
 
 def test_set_command_with_yaml_format():
     ret = cmdlib.exec_cmd(SET_CMD, stdin=ETH1_YAML_CONFIG)
+    rc, out, err = ret
+
+    assert rc == cmdlib.RC_SUCCESS, cmdlib.format_exec_cmd_result(ret)
+
+
+def test_set_command_with_toml_format():
+    ret = cmdlib.exec_cmd(SET_CMD, stdin=ETH1_TOML_CONFIG)
     rc, out, err = ret
 
     assert rc == cmdlib.RC_SUCCESS, cmdlib.format_exec_cmd_result(ret)

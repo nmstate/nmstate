@@ -22,6 +22,7 @@ from collections.abc import Sequence
 from copy import deepcopy
 import difflib
 import json
+import toml
 
 import yaml
 
@@ -83,6 +84,10 @@ class PrettyState:
     @property
     def json(self):
         return json.dumps(self.state, indent=4, separators=(",", ": "))
+
+    @property
+    def toml(self):
+        return toml.dumps(self.state)
 
 
 def represent_dict(dumper, data):

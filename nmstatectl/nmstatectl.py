@@ -27,6 +27,7 @@ import sys
 import tempfile
 
 import yaml
+import toml
 
 import libnmstate
 from libnmstate import PrettyState
@@ -89,6 +90,12 @@ def setup_subcommand_edit(subparsers):
         default=True,
         action="store_false",
         dest="yaml",
+    )
+    parser_edit.add_argument(
+        "--toml",
+        help="Edit as TOML file",
+        default=False,
+        action="store_true",
     )
     parser_edit.add_argument(
         "only",
@@ -174,6 +181,12 @@ def setup_subcommand_show(subparsers):
         dest="yaml",
     )
     parser_show.add_argument(
+        "--toml",
+        help="Edit as TOML",
+        default=False,
+        action="store_true",
+    )
+    parser_show.add_argument(
         "only",
         default="*",
         nargs="?",
@@ -220,19 +233,24 @@ def edit(args):
 
     pretty_state = PrettyState(state)
 
-    if args.yaml:
+    if args.toml:
+        suffix = ".toml"
+        txtstate = pretty_state.toml
+    elif args.yaml:
         suffix = ".yaml"
         txtstate = pretty_state.yaml
     else:
         suffix = ".json"
         txtstate = pretty_state.json
 
-    new_state = _get_edited_state(txtstate, suffix, args.yaml)
+    new_state = _get_edited_state(
+        txtstate, suffix, args.yaml, use_toml=args.toml
+    )
     if not new_state:
         return os.EX_DATAERR
 
     print("Applying the following state: ")
-    print_state(new_state, use_yaml=args.yaml)
+    print_state(new_state, use_yaml=args.yaml, use_toml=args.toml)
 
     libnmstate.apply(
         new_state, verify_change=args.verify, save_to_disk=args.save_to_disk
@@ -249,7 +267,7 @@ def rollback(args):
 
 def show(args):
     state = _filter_state(libnmstate.show(), args.only)
-    print_state(state, use_yaml=args.yaml)
+    print_state(state, use_yaml=args.yaml, use_toml=args.toml)
 
 
 def apply(args):
@@ -293,9 +311,13 @@ def run_varlink_server(args):
 
 def apply_state(statedata, verify_change, commit, timeout, save_to_disk):
     use_yaml = False
+    use_toml = False
     # JSON dictionaries start with a curly brace
     if statedata[0] == "{":
         state = json.loads(statedata)
+    elif statedata[1] == "[":
+        state = toml.loads(statedata)
+        use_toml = True
     else:
         state = yaml.load(statedata, Loader=yaml.SafeLoader)
         use_yaml = True
@@ -319,7 +341,7 @@ def apply_state(statedata, verify_change, commit, timeout, save_to_disk):
         return os.EX_UNAVAILABLE
 
     print("Desired state applied: ")
-    print_state(state, use_yaml=use_yaml)
+    print_state(state, use_yaml=use_yaml, use_toml=use_toml)
     if checkpoint:
         print("Checkpoint: {}".format(checkpoint))
 
@@ -348,14 +370,16 @@ def _filter_interfaces(state, patterns):
     return showinterfaces
 
 
-def _get_edited_state(txtstate, suffix, use_yaml):
+def _get_edited_state(txtstate, suffix, use_yaml, use_toml=False):
     while True:
         txtstate = _run_editor(txtstate, suffix)
 
         if txtstate is None:
             return None
 
-        new_state, error = _parse_state(txtstate, use_yaml)
+        new_state, error = _parse_state(
+            txtstate, use_yaml, parse_toml=use_toml
+        )
 
         if error:
             if not _try_edit_again(error):
@@ -382,10 +406,15 @@ def _run_editor(txtstate, suffix):
             return None
 
 
-def _parse_state(txtstate, parse_yaml):
+def _parse_state(txtstate, parse_yaml, parse_toml=False):
     error = ""
     state = {}
-    if parse_yaml:
+    if parse_toml:
+        try:
+            state = toml.loads(txtstate.decode())
+        except toml.TomlDecodeError as e:
+            error = "Invalid TOML syntax: %s\n" % e
+    elif parse_yaml:
         try:
             state = yaml.load(txtstate, Loader=yaml.SafeLoader)
         except yaml.parser.ParserError as e:
@@ -425,9 +454,11 @@ def _try_edit_again(error):
     return True
 
 
-def print_state(state, use_yaml=False):
+def print_state(state, use_yaml=False, use_toml=False):
     state = PrettyState(state)
-    if use_yaml:
+    if use_toml:
+        sys.stdout.write(state.toml)
+    elif use_yaml:
         sys.stdout.write(state.yaml)
     else:
         print(state.json)
