@@ -114,7 +114,6 @@ class NetworkManagerPlugin(NmstatePlugin):
 
     def get_interfaces(self):
         info = []
-        capabilities = self.capabilities
 
         applied_configs = self._applied_configs
 
@@ -141,16 +140,13 @@ class NetworkManagerPlugin(NmstatePlugin):
             iface_info.update(get_infiniband_info(applied_config))
             iface_info.update(get_current_macvlan_type(applied_config))
 
-            if NmstatePlugin.OVS_CAPABILITY in capabilities:
-                if iface_info[Interface.TYPE] == InterfaceType.OVS_BRIDGE:
-                    iface_info.update(get_ovs_bridge_info(dev))
-                    iface_info = _remove_ovs_bridge_unsupported_entries(
-                        iface_info
-                    )
-                elif iface_info[Interface.TYPE] == InterfaceType.OVS_INTERFACE:
-                    iface_info.update(get_ovs_interface_info(act_con))
-                elif iface_info[Interface.TYPE] == InterfaceType.OVS_PORT:
-                    continue
+            if iface_info[Interface.TYPE] == InterfaceType.OVS_BRIDGE:
+                iface_info.update(get_ovs_bridge_info(dev))
+                iface_info = _remove_ovs_bridge_unsupported_entries(iface_info)
+            elif iface_info[Interface.TYPE] == InterfaceType.OVS_INTERFACE:
+                iface_info.update(get_ovs_interface_info(act_con))
+            elif iface_info[Interface.TYPE] == InterfaceType.OVS_PORT:
+                continue
 
             info.append(iface_info)
 
