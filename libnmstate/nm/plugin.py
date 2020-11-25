@@ -97,7 +97,6 @@ class NetworkManagerPlugin(NmstatePlugin):
 
     def get_interfaces(self):
         info = []
-        capabilities = self.capabilities
 
         devices_info = [
             (dev, nm_device.get_device_common_info(dev))
@@ -123,18 +122,15 @@ class NetworkManagerPlugin(NmstatePlugin):
             if nm_bond.is_bond_type_id(type_id):
                 bondinfo = nm_bond.get_bond_info(dev)
                 iface_info.update(_ifaceinfo_bond(bondinfo))
+            elif nm_ovs.is_ovs_bridge_type_id(type_id):
+                iface_info["bridge"] = nm_ovs.get_ovs_info(
+                    self.context, dev, devices_info
+                )
+                iface_info = _remove_ovs_bridge_unsupported_entries(iface_info)
+            elif nm_ovs.is_ovs_interface_type_id(type_id):
+                iface_info.update(nm_ovs.get_interface_info(act_con))
             elif nm_ovs.is_ovs_port_type_id(type_id):
                 continue
-            elif NmstatePlugin.OVS_CAPABILITY in capabilities:
-                if nm_ovs.is_ovs_bridge_type_id(type_id):
-                    iface_info["bridge"] = nm_ovs.get_ovs_info(
-                        self.context, dev, devices_info
-                    )
-                    iface_info = _remove_ovs_bridge_unsupported_entries(
-                        iface_info
-                    )
-                elif nm_ovs.is_ovs_interface_type_id(type_id):
-                    iface_info.update(nm_ovs.get_interface_info(act_con))
 
             info.append(iface_info)
 
