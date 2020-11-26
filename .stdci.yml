@@ -1,0 +1,9 @@
+---
+Architectures:
+  - x86_64:
+      Distributions:
+        - el8
+      runtime-requirements:
+        host-distro: same
+script:
+  from-file: automation/run-tests.sh
