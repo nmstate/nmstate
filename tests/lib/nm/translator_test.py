@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2019 Red Hat, Inc.
+# Copyright (c) 2018-2021 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -62,9 +62,17 @@ def test_api2nm_iface_type_map(NM_mock):
         InterfaceType.INFINIBAND: NM_mock.SETTING_INFINIBAND_SETTING_NAME,
         InterfaceType.MAC_VLAN: NM_mock.SETTING_MACVLAN_SETTING_NAME,
         InterfaceType.MAC_VTAP: NM_mock.SETTING_MACVLAN_SETTING_NAME,
+        InterfaceType.VETH: _get_supported_veth_setting(NM_mock),
     }
 
     assert map == expected_map
+
+
+def _get_supported_veth_setting(NM_mock):
+    if nm.veth.is_nm_veth_supported():
+        return getattr(NM_mock, "SETTING_VETH_SETTING_NAME")
+    else:
+        return getattr(NM_mock, "SETTING_WIRED_SETTING_NAME")
 
 
 def test_api2nm_get_iface_type(NM_mock):

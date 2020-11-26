@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020 Red Hat, Inc.
+# Copyright (c) 2020-2021 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -34,6 +34,8 @@ from .ipv6 import acs_and_ip_profiles as acs_and_ip6_profiles
 from .ovs import create_iface_for_nm_ovs_port
 from .profile import NmProfile
 from .profile import ProfileDelete
+from .veth import create_iface_for_nm_veth_peer
+from .veth import is_nm_veth_supported
 
 
 class NmProfiles:
@@ -68,6 +70,8 @@ class NmProfiles:
         _mark_nm_external_subordinate_changed(self._ctx, net_state)
         _mark_mode_changed_bond_child_interface_as_changed(net_state)
         _append_nm_ovs_port_iface(net_state)
+        _consider_not_supported_veth_as_ethernet(net_state)
+        _create_veth_iface_for_missing_peers(net_state)
 
 
 def _append_nm_ovs_port_iface(net_state):
@@ -219,6 +223,36 @@ def _mark_mode_changed_bond_child_interface_as_changed(net_state):
             and parent_iface.is_bond_mode_changed
         ):
             iface.mark_as_changed()
+
+
+def _consider_not_supported_veth_as_ethernet(net_state):
+    for iface in net_state.ifaces.all_kernel_ifaces.values():
+        if iface.type == InterfaceType.VETH and not is_nm_veth_supported():
+            iface.raw[InterfaceType.KEY] = InterfaceType.ETHERNET
+
+
+def _create_veth_iface_for_missing_peers(net_state):
+    new_peers = []
+    for iface in net_state.ifaces.all_kernel_ifaces.values():
+        # Nmstate should check if there is a current interface with the same
+        # name and type veth or ethernet.
+        if (
+            iface.type == InterfaceType.VETH
+            and iface.is_up
+            and iface.is_desired
+            and not net_state.ifaces.get_cur_iface(iface.name, iface.type)
+            and not net_state.ifaces.get_cur_iface(iface.peer, iface.type)
+            and not net_state.ifaces.all_kernel_ifaces.get(iface.peer)
+        ):
+            peer = create_iface_for_nm_veth_peer(iface)
+            peer.mark_as_peer()
+            if not net_state.ifaces.get_cur_iface(
+                iface.name, InterfaceType.ETHERNET
+            ):
+                peer.mark_as_changed()
+            new_peers.append(peer)
+
+    net_state.ifaces.add_ifaces(new_peers)
 
 
 def _delete_orphan_nm_ovs_port_profiles(context, net_state):

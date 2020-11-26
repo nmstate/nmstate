@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020 Red Hat, Inc.
+# Copyright (c) 2020-2021 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -49,6 +49,8 @@ class NmProfile:
     ACTION_NEW_IFACES = "new_ifaces"
     ACTION_NEW_OVS_IFACE = "new_ovs_iface"
     ACTION_NEW_OVS_PORT = "new_ovs_port"
+    ACTION_NEW_VETH = "new_veth"
+    ACTION_NEW_VETH_PEER = "new_veth_peer"
     ACTION_NEW_VLAN = "new_vlan"
     ACTION_NEW_VXLAN = "new_vxlan"
     ACTION_OTHER_MASTER = "other_master"
@@ -65,9 +67,11 @@ class NmProfile:
         ACTION_NEW_OVS_PORT,
         ACTION_NEW_OVS_IFACE,
         ACTION_MODIFIED,
+        ACTION_NEW_VETH,
         ACTION_NEW_VLAN,
         ACTION_NEW_VXLAN,
         ACTION_DEACTIVATE,
+        ACTION_NEW_VETH_PEER,
         ACTION_DELETE_PROFILE,
         ACTION_DELETE_DEVICE,
     )
@@ -96,7 +100,7 @@ class NmProfile:
             self._add_action(NmProfile.ACTION_DELETE_PROFILE)
             if self._iface.is_virtual and self._nm_dev:
                 self._add_action(NmProfile.ACTION_DELETE_DEVICE)
-        elif self._iface.is_up:
+        elif self._iface.is_up and self._iface.type != InterfaceType.VETH:
             self._add_action(NmProfile.ACTION_MODIFIED)
             if not self._nm_dev:
                 if self._iface.type == InterfaceType.OVS_PORT:
@@ -122,6 +126,12 @@ class NmProfile:
             else:
                 self._add_action(NmProfile.ACTION_TOP_MASTER)
 
+        if self._iface.is_up and self._iface.type == InterfaceType.VETH:
+            if self._iface.is_peer:
+                self._add_action(NmProfile.ACTION_NEW_VETH_PEER)
+            else:
+                self._add_action(NmProfile.ACTION_NEW_VETH)
+
         if (
             self._iface.is_up
             and self._iface.type == InterfaceType.BOND
@@ -137,6 +147,7 @@ class NmProfile:
         if self._iface.is_up and self._iface.type in (
             InterfaceType.MAC_VLAN,
             InterfaceType.MAC_VTAP,
+            InterfaceType.VETH,
         ):
             # NetworkManager requires the profile to be deactivated in
             # order to modify it. Therefore if the profile is modified
@@ -314,6 +325,7 @@ class NmProfile:
             NmProfile.ACTION_NEW_OVS_IFACE,
             NmProfile.ACTION_NEW_VLAN,
             NmProfile.ACTION_NEW_VXLAN,
+            NmProfile.ACTION_NEW_VETH,
         ):
             self._activate()
         elif (
@@ -327,6 +339,9 @@ class NmProfile:
             and not self._deactivated
         ):
             self._deactivate()
+        elif action == NmProfile.ACTION_NEW_VETH_PEER:
+            self._import_current()
+            self._activate()
         elif action == NmProfile.ACTION_DELETE_PROFILE:
             self._delete_profile()
         elif action == NmProfile.ACTION_DELETE_DEVICE:

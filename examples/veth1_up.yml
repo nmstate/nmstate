@@ -1,0 +1,7 @@
+---
+interfaces:
+  - name: veth1
+    type: veth
+    state: up
+    veth:
+      peer: veth1peer

@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020 Red Hat, Inc.
+# Copyright (c) 2020-2021 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -40,6 +40,7 @@ from .macvtap import MacVtapIface
 from .ovs import OvsBridgeIface
 from .ovs import OvsInternalIface
 from .team import TeamIface
+from .veth import VethIface
 from .vlan import VlanIface
 from .vxlan import VxlanIface
 from .vrf import VrfIface
@@ -535,9 +536,12 @@ class Ifaces:
         self._remove_ignore_interfaces(self._ignored_ifaces)
         for iface in self.all_ifaces():
             if iface.is_desired:
-                if iface.is_virtual and iface.original_dict.get(
-                    Interface.STATE
-                ) in (InterfaceState.DOWN, InterfaceState.ABSENT):
+                if (
+                    iface.is_virtual
+                    and iface.type != InterfaceType.VETH
+                    and iface.original_dict.get(Interface.STATE)
+                    in (InterfaceState.DOWN, InterfaceState.ABSENT)
+                ):
                     cur_iface = cur_ifaces.get_iface(iface.name, iface.type)
                     if cur_iface:
                         raise NmstateVerificationError(
@@ -734,5 +738,7 @@ def _to_specific_iface_obj(info, save_to_disk):
         return MacVlanIface(info, save_to_disk)
     elif iface_type == InterfaceType.MAC_VTAP:
         return MacVtapIface(info, save_to_disk)
+    elif iface_type == InterfaceType.VETH:
+        return VethIface(info, save_to_disk)
     else:
         return BaseIface(info, save_to_disk)

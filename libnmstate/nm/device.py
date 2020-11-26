@@ -26,6 +26,7 @@ from .common import NM
 from .common import GLib
 from .macvlan import is_macvtap
 from .translator import Nm2Api
+from .veth import is_veth
 
 
 NM_DBUS_INTERFACE_DEVICE = f"{NM.DBUS_INTERFACE}.Device"
@@ -197,6 +198,14 @@ def get_iface_type(nm_dev):
             nm_profile = nm_ac.get_connection()
             if nm_profile and is_macvtap(nm_profile):
                 iface_type = InterfaceType.MAC_VTAP
+    elif iface_type == InterfaceType.ETHERNET:
+        # Check whether we are Veth as NM is treating both of them as
+        # Ethernet.
+        nm_ac = nm_dev.get_active_connection()
+        if nm_ac:
+            nm_profile = nm_ac.get_connection()
+            if nm_profile and is_veth(nm_profile):
+                iface_type = InterfaceType.VETH
     return iface_type
 
 

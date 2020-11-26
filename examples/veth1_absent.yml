@@ -1,0 +1,8 @@
+---
+interfaces:
+  - name: veth1
+    type: veth
+    state: absent
+  - name: veth1peer
+    type: veth
+    state: absent
