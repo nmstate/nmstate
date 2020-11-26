@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020 Red Hat, Inc.
+# Copyright (c) 2020-2021 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -179,6 +179,12 @@ def _get_interface_info_from_plugins(plugins, info_type):
             iface[IFACE_PLUGIN_SRC_METADATA] = [plugin.name]
             iface_name = iface[Interface.NAME]
             iface_type = iface.get(Interface.TYPE, InterfaceType.UNKNOWN)
+            # When NetworkManager does not support Veth interfaces will report
+            # them as Ethernet. Therefore, the information will not be merged
+            # correctly from Nispor and NetworkManager, in order to solve that,
+            # we are considering Veth as Ethernet when merging.
+            if iface_type == InterfaceType.VETH:
+                iface_type = InterfaceType.ETHERNET
             iface_index = f"{iface_type}.{iface_name}"
             if iface_index in all_ifaces:
                 existing_iface = all_ifaces[iface_index]
@@ -352,6 +358,8 @@ def _get_iface_types_by_name(iface_infos, name):
             iface_type != InterfaceType.UNKNOWN
             and iface_info[Interface.NAME] == name
         ):
+            if iface_type == InterfaceType.VETH:
+                iface_type = InterfaceType.ETHERNET
             iface_types.append(iface_type)
 
     return iface_types

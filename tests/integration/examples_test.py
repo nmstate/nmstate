@@ -28,6 +28,8 @@ from libnmstate import netinfo
 from libnmstate.error import NmstateNotSupportedError
 from libnmstate.schema import DNS
 
+from .testlib.env import nm_major_minor_version
+
 
 @pytest.mark.tier1
 def test_add_down_remove_vlan(eth1_up):
@@ -212,3 +214,17 @@ def test_add_mac_vtap_and_remove():
         assertlib.assert_state(desired_state)
 
     assertlib.assert_absent("macvtap0")
+
+
+@pytest.mark.skipif(
+    nm_major_minor_version() <= 1.28,
+    reason="Modifying veth is not supported on lower NetworkManager versions.",
+)
+def test_add_veth_and_remove():
+    with example_state(
+        "veth1_up.yml", cleanup="veth1_absent.yml"
+    ) as desired_state:
+        assertlib.assert_state(desired_state)
+
+    assertlib.assert_absent("veth1")
+    assertlib.assert_absent("veth1peer")

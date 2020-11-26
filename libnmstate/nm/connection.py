@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2020 Red Hat, Inc.
+# Copyright (c) 2018-2021 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -49,6 +49,7 @@ from .sriov import create_setting as create_sriov_setting
 from .team import create_setting as create_team_setting
 from .translator import Api2Nm
 from .user import create_setting as create_user_setting
+from .veth import create_setting as create_veth_setting
 from .vlan import create_setting as create_vlan_setting
 from .vrf import create_vrf_setting
 from .vxlan import create_setting as create_vxlan_setting
@@ -205,6 +206,11 @@ def create_new_nm_simple_conn(iface, nm_profile):
         settings.append(
             create_macvlan_setting(iface_info, nm_profile, tap=True)
         )
+
+    if iface.type == InterfaceType.VETH:
+        veth_setting = create_veth_setting(iface, nm_profile)
+        if veth_setting:
+            settings.append(veth_setting)
 
     nm_simple_conn = NM.SimpleConnection.new()
     for setting in settings:

@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020 Red Hat, Inc.
+# Copyright (c) 2020-2021 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -30,6 +30,7 @@ from .dummy import NisporPluginDummyIface
 from .ethernet import NisporPluginEthernetIface
 from .macvlan import NisporPluginMacVlanIface
 from .macvtap import NisporPluginMacVtapIface
+from .veth import NisporPluginVethIface
 from .vlan import NisporPluginVlanIface
 from .vxlan import NisporPluginVxlanIface
 from .route import nispor_route_state_to_nmstate
@@ -74,7 +75,7 @@ class NisporPlugin(NmstatePlugin):
                 )
             elif iface_type == "veth":
                 ifaces.append(
-                    NisporPluginEthernetIface(np_iface).to_dict(config_only)
+                    NisporPluginVethIface(np_iface).to_dict(config_only)
                 )
             elif iface_type == "ethernet":
                 ifaces.append(

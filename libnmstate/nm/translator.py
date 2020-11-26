@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2020 Red Hat, Inc.
+# Copyright (c) 2018-2021 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -25,6 +25,7 @@ from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
 
 from .common import NM
+from .veth import is_nm_veth_supported
 
 
 class Api2Nm:
@@ -51,6 +52,7 @@ class Api2Nm:
                 InterfaceType.INFINIBAND: NM.SETTING_INFINIBAND_SETTING_NAME,
                 InterfaceType.MAC_VTAP: NM.SETTING_MACVLAN_SETTING_NAME,
                 InterfaceType.MAC_VLAN: NM.SETTING_MACVLAN_SETTING_NAME,
+                InterfaceType.VETH: Api2Nm._veth_or_ethernet_setting(),
             }
             try:
                 ovs_types = {
@@ -76,6 +78,16 @@ class Api2Nm:
             bond_opts = {}
 
         return bond_opts
+
+    @staticmethod
+    def _veth_or_ethernet_setting():
+        SETTING_VETH_SETTING_NAME = "SETTING_VETH_SETTING_NAME"
+
+        setting = NM.SETTING_WIRED_SETTING_NAME
+        if is_nm_veth_supported():
+            setting = getattr(NM, SETTING_VETH_SETTING_NAME)
+
+        return setting
 
 
 class Nm2Api:
