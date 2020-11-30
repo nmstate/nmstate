@@ -1,4 +1,20 @@
 # Changelog
+## [1.0.0] - 2020-12-07
+### New features
+ - Manage state for route rules. (16c8fa9)
+ - Support MAC VTAP. (4ffffa0)
+
+### Bug fixes
+ - Allow VRF port to hold IP information. (1455181)
+ - Fix removing IPv6 route rules. (b14532c)
+ - Use default mac address when an interface does not have one. (0738427)
+ - Do not fail when reporting OVS interfaces using libnm through dbus. (8168645)
+ - Do not remove unmanaged orphan interfaces. (3f88096)
+
+### Breaking changes
+ - Deprecate the `ports` for team interfaces, please use `port` instead. (dbb712e)
+ - Nispor 1.0.0 or greater is now required. (6dec9a5)
+
 ## [0.4.1] - 2020-10-06
 ### New features
  - Support MAC VLAN. (963a04d)
