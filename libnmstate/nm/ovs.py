@@ -153,7 +153,7 @@ def _get_bridge_nmstate_ports_info(nm_dev_ovs_br):
         if vlan_info:
             port_info[OB.Port.VLAN_SUBTREE] = vlan_info
         ports_info.append(port_info)
-    return ports_info
+    return sorted(ports_info, key=itemgetter(OB.Port.NAME))
 
 
 def get_interface_info(act_con):
