@@ -378,7 +378,7 @@ class Ifaces:
 
     def _mark_orphan_as_absent(self):
         for iface in self._kernel_ifaces.values():
-            if iface.need_parent:
+            if iface.need_parent and (iface.is_desired or iface.is_changed):
                 parent_iface = self._get_parent_iface(iface)
                 if parent_iface is None or parent_iface.is_absent:
                     iface.mark_as_changed()
