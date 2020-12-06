@@ -242,8 +242,10 @@ class Ifaces:
 
     def _mark_orphen_as_absent(self):
         for iface in self._ifaces.values():
-            if iface.need_parent and (
-                not iface.parent or not self._ifaces.get(iface.parent)
+            if (
+                iface.need_parent
+                and (not iface.parent or not self._ifaces.get(iface.parent))
+                and (iface.is_desired or iface.is_changed)
             ):
                 iface.mark_as_changed()
                 iface.state = InterfaceState.ABSENT
