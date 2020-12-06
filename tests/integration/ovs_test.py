@@ -19,6 +19,7 @@
 
 import time
 
+from contextlib import contextmanager
 import pytest
 
 import libnmstate
@@ -69,6 +70,8 @@ OVS_BOND_YAML_STATE = f"""
         - name: {ETH1}
         - name: {ETH2}
 """
+
+RC_SUCCESS = 0
 
 
 @pytest.fixture
@@ -710,3 +713,26 @@ def test_ovs_report_with_identical_inteface_names(
     assert state
     # The plugin infra only supports a single iface to be reported.
     assert len(state[Interface.KEY]) == 1
+
+
+def test_modify_state_do_not_remove_unmanaged_ovs(eth1_up):
+    with unmanaged_ovs_bridge():
+        eth1_up[Interface.KEY][0][Interface.MTU] = 1400
+        libnmstate.apply(eth1_up)
+        current_state = statelib.show_only((BRIDGE0,))
+        assert len(current_state[Interface.KEY])
+        assert current_state[Interface.KEY][0][Interface.NAME] == BRIDGE0
+
+
+@contextmanager
+def unmanaged_ovs_bridge():
+    rc, _, _ = cmdlib.exec_cmd(
+        "ovs-vsctl add-br br0 -- set Bridge br0 fail-mode=secure".split(),
+        check=True,
+    )
+    assert rc == RC_SUCCESS
+    try:
+        yield
+    finally:
+        rc, _, _ = cmdlib.exec_cmd("ovs-vsctl del-br br0".split(), check=True)
+        assert rc == RC_SUCCESS
