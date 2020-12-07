@@ -1,0 +1,14 @@
+---
+stages:
+  - check-patch:
+      runtime-requirements:
+        host-distro: newer
+      distributions:
+        # The STDCI only has Fedora 30 enabeld for docker.
+        - fc30
+      archs:
+        - x86_64
+      substages:
+        - lint:
+            script:
+              from-file: automation/stdci/test_lint_el8.sh
