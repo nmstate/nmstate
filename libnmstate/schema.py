@@ -103,6 +103,7 @@ class InterfaceType:
     VLAN = "vlan"
     VXLAN = "vxlan"
     VRF = "vrf"
+    WIREGUARD = "wireguard"
     INFINIBAND = "infiniband"
     VETH = "veth"
     OTHER = "other"
@@ -117,6 +118,7 @@ class InterfaceType:
         VETH,
         VLAN,
         VXLAN,
+        WIREGUARD,
     )
 
 
@@ -430,3 +432,19 @@ class Ethtool:
         TX_USECS_HIGH = "tx-usecs-high"
         TX_USECS_IRQ = "tx-usecs-irq"
         TX_USECS_LOW = "tx-usecs-low"
+
+
+class Wireguard:
+    TYPE = InterfaceType.WIREGUARD
+    CONFIG_SUBTREE = "wireguard"
+    FWMARK = "fwmark"
+    LISTEN_PORT = "listen-port"
+    PRIVATE_KEY = "private-key"
+
+    class Peer:
+        CONFIG_SUBTREE = "peers"
+        ALLOWED_IPS = "allowed-ips"
+        ENDPOINT = "endpoint"
+        PERSISTENT_KEEPALIVE = "persistent-keepalive"
+        PRESHARED_KEY = "preshared-key"
+        PUBLIC_KEY = "public-key"
