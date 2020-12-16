@@ -204,7 +204,7 @@ class DnsState:
             and _is_mixed_dns_servers(self._config_servers)
         ):
             raise NmstateNotImplementedError(
-                "Placing IPv4/IPv6 nameserver in the middlfe of IPv6/IPv4 "
+                "Placing IPv4/IPv6 nameserver in the middle of IPv6/IPv4 "
                 "nameservers is not supported yet"
             )
 
