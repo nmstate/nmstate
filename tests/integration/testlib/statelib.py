@@ -120,6 +120,7 @@ class State:
         self._sort_interfaces_by_name()
         self._canonicalize_iface_ipv6_addresses()
         self._normalize_linux_bridge_port_vlan()
+        self._upper_linux_bridge_group_addr()
         self._sort_ovs_lag_ports()
 
     def match(self, other):
@@ -245,6 +246,23 @@ class State:
             for port in ports:
                 if not port.get(LinuxBridge.Port.VLAN_SUBTREE):
                     port[LinuxBridge.Port.VLAN_SUBTREE] = {}
+
+    def _upper_linux_bridge_group_addr(self):
+        linux_bridges = (
+            iface
+            for iface in self._state.get(Interface.KEY, [])
+            if iface[Interface.TYPE] == LinuxBridge.TYPE
+        )
+        for lb in linux_bridges:
+            cur_group_addr = (
+                lb.get(LinuxBridge.CONFIG_SUBTREE, {})
+                .get(LinuxBridge.OPTIONS_SUBTREE, {})
+                .get(LinuxBridge.Options.GROUP_ADDR)
+            )
+            if cur_group_addr:
+                lb[LinuxBridge.CONFIG_SUBTREE][LinuxBridge.OPTIONS_SUBTREE][
+                    LinuxBridge.Options.GROUP_ADDR
+                ] = cur_group_addr.upper()
 
     def _sort_ovs_lag_ports(self):
         for iface_state in self._state[Interface.KEY]:

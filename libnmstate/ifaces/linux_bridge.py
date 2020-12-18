@@ -140,6 +140,7 @@ class LinuxBridgeIface(BridgeIface):
     def state_for_verify(self):
         self._normalize_bridge_port_vlan()
         self._remove_read_only_bridge_options()
+        self._change_to_upper_group_addr()
         return super().state_for_verify()
 
     @staticmethod
@@ -193,6 +194,15 @@ class LinuxBridgeIface(BridgeIface):
             self._bridge_config.get(LinuxBridge.OPTIONS_SUBTREE, {}).pop(
                 key, None
             )
+
+    def _change_to_upper_group_addr(self):
+        cur_group_addr = self._bridge_config.get(
+            LinuxBridge.OPTIONS_SUBTREE, {}
+        ).get(LinuxBridge.Options.GROUP_ADDR)
+        if cur_group_addr:
+            self.raw[LinuxBridge.CONFIG_SUBTREE][LinuxBridge.OPTIONS_SUBTREE][
+                LinuxBridge.Options.GROUP_ADDR
+            ] = cur_group_addr.upper()
 
 
 def _assert_vlan_filtering_trunk_tag(trunk_tag_state):
