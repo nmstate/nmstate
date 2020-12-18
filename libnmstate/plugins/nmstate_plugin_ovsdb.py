@@ -26,7 +26,6 @@ from ovs.db.idl import Transaction, Idl, SchemaHelper
 from libnmstate.plugin import NmstatePlugin
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceType
-from libnmstate.schema import OVSInterface
 from libnmstate.schema import OVSBridge
 from libnmstate.schema import OvsDB
 from libnmstate.error import NmstateNotImplementedError
@@ -200,7 +199,7 @@ class NmstateOvsdbPlugin(NmstatePlugin):
                 continue
             if iface.type == OVSBridge.TYPE:
                 table_name = "Bridge"
-            elif iface.type == OVSInterface.TYPE:
+            elif OvsDB.OVS_DB_SUBTREE in iface.to_dict():
                 table_name = "Interface"
             else:
                 continue

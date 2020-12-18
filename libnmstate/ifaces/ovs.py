@@ -29,7 +29,6 @@ from libnmstate.schema import InterfaceType
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import OVSBridge
 from libnmstate.schema import OVSInterface
-from libnmstate.schema import OvsDB
 
 from .bridge import BridgeIface
 from .base_iface import BaseIface
@@ -151,11 +150,6 @@ class OvsBridgeIface(BridgeIface):
         ] = new_port_configs
         self.sort_port()
 
-    def state_for_verify(self):
-        state = super().state_for_verify()
-        _convert_external_ids_values_to_string(state)
-        return state
-
     def _replace_deprecated_terms(self):
         port_info = self.raw.get(OVSBridge.CONFIG_SUBTREE, {}).get(
             OVSBridge.PORT_SUBTREE, []
@@ -218,11 +212,6 @@ class OvsInternalIface(BaseIface):
     def patch_config(self):
         return self._info.get(OVSInterface.PATCH_CONFIG_SUBTREE)
 
-    def state_for_verify(self):
-        state = super().state_for_verify()
-        _convert_external_ids_values_to_string(state)
-        return state
-
     @property
     def is_patch_port(self):
         return self.patch_config and self.patch_config.get(
@@ -274,14 +263,6 @@ def is_ovs_running():
         return True
     except Exception:
         return False
-
-
-def _convert_external_ids_values_to_string(iface_info):
-    external_ids = iface_info.get(OvsDB.OVS_DB_SUBTREE, {}).get(
-        OvsDB.EXTERNAL_IDS, {}
-    )
-    for key, value in external_ids.items():
-        external_ids[key] = str(value)
 
 
 def is_ovs_lag_port(port_state):

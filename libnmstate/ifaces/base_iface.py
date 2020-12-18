@@ -32,6 +32,7 @@ from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import LLDP
+from libnmstate.schema import OvsDB
 
 from ..state import state_match
 from ..state import merge_dict
@@ -349,6 +350,7 @@ class BaseIface:
             * Explicitly set state as UP if not defined.
             * Remove IPv6 link local addresses.
             * Remove empty description.
+            * Change OVSDB value to string.
         """
         self._capitalize_mac()
         self.sort_port()
@@ -364,6 +366,7 @@ class BaseIface:
             state[Interface.STATE] = InterfaceState.UP
         if self.is_absent and not self._save_to_disk:
             state[Interface.STATE] = InterfaceState.DOWN
+        _convert_ovs_external_ids_values_to_string(state)
 
         return state
 
@@ -432,3 +435,11 @@ def _remove_undesired_data(state, desire):
             _remove_undesired_data(value, desire[key])
     for key in key_to_remove:
         state.pop(key)
+
+
+def _convert_ovs_external_ids_values_to_string(iface_info):
+    external_ids = iface_info.get(OvsDB.OVS_DB_SUBTREE, {}).get(
+        OvsDB.EXTERNAL_IDS, {}
+    )
+    for key, value in external_ids.items():
+        external_ids[key] = str(value)

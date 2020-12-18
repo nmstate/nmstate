@@ -388,6 +388,20 @@ def test_ovsdb_new_bridge_with_external_id():
         )
 
 
+def test_ovsdb_set_external_ids_for_ovs_system_interface(bridge_with_ports):
+    system_port_name = "eth1"
+    desired_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: system_port_name,
+                OvsDB.OVS_DB_SUBTREE: {OvsDB.EXTERNAL_IDS: {"foo": 1000}},
+            }
+        ]
+    }
+    libnmstate.apply(desired_state)
+    assertlib.assert_state_match(desired_state)
+
+
 def test_ovsdb_set_external_ids_for_existing_bridge(bridge_with_ports):
     bridge = bridge_with_ports
     bridge.set_ovs_db({OvsDB.EXTERNAL_IDS: {"foo": "abc", "bak": 1}})
