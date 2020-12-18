@@ -791,3 +791,14 @@ def test_empty_state_does_not_change_bridge_options(bridge0_with_port0):
     original_state = show_only((TEST_BRIDGE0,))
     libnmstate.apply({Interface.KEY: [{Interface.NAME: TEST_BRIDGE0}]})
     assertlib.assert_state_match(original_state)
+
+
+def test_create_bridge_with_mixed_case_group_addr():
+    bridge_state = _create_bridge_subtree_config([])
+
+    bridge_state[LinuxBridge.OPTIONS_SUBTREE][
+        LinuxBridge.Options.GROUP_ADDR
+    ] = "01:80:C2:00:00:0a"
+    print(bridge_state)
+    with linux_bridge(TEST_BRIDGE0, bridge_state) as lb_state:
+        assertlib.assert_state_match(lb_state)
