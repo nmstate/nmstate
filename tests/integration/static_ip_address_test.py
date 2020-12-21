@@ -644,3 +644,34 @@ def test_get_ip_address_from_unmanaged_dummy():
                 }
             ],
         }
+
+
+def test_ignore_invalid_ip_on_absent_interface(eth1_up):
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: "eth1",
+                    Interface.STATE: InterfaceState.ABSENT,
+                    Interface.IPV4: {
+                        InterfaceIPv4.ENABLED: True,
+                        InterfaceIPv4.ADDRESS: [
+                            {
+                                InterfaceIPv4.ADDRESS_IP: "a.a.a.a",
+                                InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+                            }
+                        ],
+                    },
+                    Interface.IPV6: {
+                        InterfaceIPv6.ENABLED: True,
+                        InterfaceIPv6.ADDRESS: [
+                            {
+                                InterfaceIPv6.ADDRESS_IP: "::g",
+                                InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
+                            }
+                        ],
+                    },
+                }
+            ]
+        }
+    )

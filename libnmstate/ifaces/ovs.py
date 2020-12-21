@@ -116,7 +116,8 @@ class OvsBridgeIface(BridgeIface):
 
     def pre_edit_validation_and_cleanup(self):
         super().pre_edit_validation_and_cleanup()
-        self._validate_ovs_lag_port_count()
+        if self.is_up:
+            self._validate_ovs_lag_port_count()
 
     def _validate_ovs_lag_port_count(self):
         for port in self.port_configs:

@@ -88,7 +88,8 @@ class BridgeIface(BaseIface):
         )
 
     def pre_edit_validation_and_cleanup(self):
-        self.sort_port()
+        if self.is_up:
+            self.sort_port()
         super().pre_edit_validation_and_cleanup()
 
     def config_changed_port(self, cur_iface):

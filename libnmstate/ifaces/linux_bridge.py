@@ -48,8 +48,9 @@ class LinuxBridgeIface(BridgeIface):
         )
 
     def pre_edit_validation_and_cleanup(self):
-        self._validate()
-        self._fix_vlan_filtering_mode()
+        if self.is_up:
+            self._validate()
+            self._fix_vlan_filtering_mode()
         super().pre_edit_validation_and_cleanup()
 
     @property
