@@ -378,11 +378,19 @@ class Ifaces:
 
     def _mark_orphan_as_absent(self):
         for iface in self._kernel_ifaces.values():
+            if not iface.is_up:
+                continue
             if iface.need_parent and (iface.is_desired or iface.is_changed):
                 parent_iface = self._get_parent_iface(iface)
-                if parent_iface is None or parent_iface.is_absent:
+                if (parent_iface and parent_iface.is_absent) or (
+                    parent_iface is None and not iface.is_desired
+                ):
                     iface.mark_as_changed()
                     iface.state = InterfaceState.ABSENT
+                elif parent_iface is None and iface.is_desired:
+                    raise NmstateValueError(
+                        f"Failed to find parent interface for {iface.name}"
+                    )
 
     def all_ifaces(self):
         for iface in self._kernel_ifaces.values():
