@@ -663,3 +663,18 @@ def unmanaged_ovs_bridge():
     finally:
         rc, _, _ = cmdlib.exec_cmd("ovs-vsctl del-br br0".split(), check=True)
         assert rc == RC_SUCCESS
+
+
+def test_expect_failure_when_create_ovs_interface_without_bridge():
+    with pytest.raises(NmstateValueError):
+        libnmstate.apply(
+            {
+                Interface.KEY: [
+                    {
+                        Interface.NAME: "ovs0",
+                        Interface.TYPE: InterfaceType.OVS_INTERFACE,
+                        Interface.STATE: InterfaceState.UP,
+                    }
+                ]
+            }
+        )
