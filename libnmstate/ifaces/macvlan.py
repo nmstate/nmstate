@@ -45,8 +45,9 @@ class MacVlanIface(BaseIface):
         return False
 
     def pre_edit_validation_and_cleanup(self):
-        self._validate_mode()
-        self._validate_mandatory_properties()
+        if self.is_up:
+            self._validate_mode()
+            self._validate_mandatory_properties()
         super().pre_edit_validation_and_cleanup()
 
     def _validate_mode(self):
@@ -64,10 +65,9 @@ class MacVlanIface(BaseIface):
             )
 
     def _validate_mandatory_properties(self):
-        if self.is_up:
-            for prop in (MacVlan.MODE, MacVlan.BASE_IFACE):
-                if prop not in self.config_subtree:
-                    raise NmstateValueError(
-                        f"{self.type} tunnel {self.name} has missing mandatory"
-                        f" property: {prop}"
-                    )
+        for prop in (MacVlan.MODE, MacVlan.BASE_IFACE):
+            if prop not in self.config_subtree:
+                raise NmstateValueError(
+                    f"{self.type} tunnel {self.name} has missing mandatory"
+                    f" property: {prop}"
+                )

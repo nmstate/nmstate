@@ -45,14 +45,14 @@ class VxlanIface(BaseIface):
         return False
 
     def pre_edit_validation_and_cleanup(self):
-        self._validate_mandatory_properties()
+        if self.is_up:
+            self._validate_mandatory_properties()
         super().pre_edit_validation_and_cleanup()
 
     def _validate_mandatory_properties(self):
-        if self.is_up:
-            for prop in (VXLAN.ID, VXLAN.BASE_IFACE, VXLAN.REMOTE):
-                if prop not in self._vxlan_config:
-                    raise NmstateValueError(
-                        f"Vxlan tunnel {self.name} has missing mandatory "
-                        f"property: {prop}"
-                    )
+        for prop in (VXLAN.ID, VXLAN.BASE_IFACE, VXLAN.REMOTE):
+            if prop not in self._vxlan_config:
+                raise NmstateValueError(
+                    f"Vxlan tunnel {self.name} has missing mandatory "
+                    f"property: {prop}"
+                )

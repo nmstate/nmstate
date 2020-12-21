@@ -223,14 +223,15 @@ class BaseIface:
         check code.
         """
         if self.is_desired:
-            for family in (Interface.IPV4, Interface.IPV6):
-                self.ip_state(family).validate(
-                    IPState(family, self._origin_info.get(family, {}))
-                )
-            self._validate_port_ip()
-            ip_state = self.ip_state(family)
-            ip_state.remove_link_local_address()
-            self._info[family] = ip_state.to_dict()
+            if not self.is_absent:
+                for family in (Interface.IPV4, Interface.IPV6):
+                    self.ip_state(family).validate(
+                        IPState(family, self._origin_info.get(family, {}))
+                    )
+                self._validate_port_ip()
+                ip_state = self.ip_state(family)
+                ip_state.remove_link_local_address()
+                self._info[family] = ip_state.to_dict()
             if self.is_absent and not self._save_to_disk:
                 self._info[Interface.STATE] = InterfaceState.DOWN
 

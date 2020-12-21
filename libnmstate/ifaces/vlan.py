@@ -45,14 +45,14 @@ class VlanIface(BaseIface):
         return False
 
     def pre_edit_validation_and_cleanup(self):
-        self._validate_mandatory_properties()
+        if self.is_up:
+            self._validate_mandatory_properties()
         super().pre_edit_validation_and_cleanup()
 
     def _validate_mandatory_properties(self):
-        if self.is_up:
-            for prop in (VLAN.ID, VLAN.BASE_IFACE):
-                if prop not in self._vlan_config:
-                    raise NmstateValueError(
-                        f"VLAN tunnel {self.name} has missing mandatory "
-                        f"property: {prop}"
-                    )
+        for prop in (VLAN.ID, VLAN.BASE_IFACE):
+            if prop not in self._vlan_config:
+                raise NmstateValueError(
+                    f"VLAN tunnel {self.name} has missing mandatory "
+                    f"property: {prop}"
+                )

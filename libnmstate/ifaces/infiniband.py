@@ -44,9 +44,10 @@ class InfiniBandIface(BaseIface):
         return self.raw.get(InfiniBand.CONFIG_SUBTREE, {})
 
     def pre_edit_validation_and_cleanup(self):
-        _cannonicalize_pkey(self.raw)
-        self._validate_mandatory_properties()
-        self._validate_interface_name_format_for_pkey_nic()
+        if self.is_up:
+            _cannonicalize_pkey(self.raw)
+            self._validate_mandatory_properties()
+            self._validate_interface_name_format_for_pkey_nic()
         super().pre_edit_validation_and_cleanup()
 
     def _validate_mandatory_properties(self):
