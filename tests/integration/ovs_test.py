@@ -37,6 +37,7 @@ from libnmstate.error import NmstateValueError
 from .testlib import assertlib
 from .testlib import cmdlib
 from .testlib import statelib
+from .testlib.env import nm_major_minor_version
 from .testlib.nmplugin import disable_nm_plugin
 from .testlib.ovslib import Bridge
 from .testlib.servicelib import disable_service
@@ -621,11 +622,27 @@ def test_create_ovs_with_internal_ports_in_reverse_order():
     assertlib.assert_absent(PORT2)
 
 
-def test_create_memory_only_ovs_bridge_not_supported():
+def test_create_memory_only_ovs_bridge():
     bridge = Bridge(BRIDGE1)
+    bridge.add_internal_port(PORT1)
 
-    with pytest.raises(NmstateNotSupportedError):
-        libnmstate.apply(bridge.state, save_to_disk=False)
+    if nm_major_minor_version() <= 1.28:
+        with pytest.raises(NmstateNotSupportedError):
+            libnmstate.apply(bridge.state, save_to_disk=False)
+    else:
+        try:
+            libnmstate.apply(bridge.state, save_to_disk=False)
+        finally:
+            libnmstate.apply(
+                {
+                    Interface.KEY: [
+                        {
+                            Interface.NAME: BRIDGE1,
+                            Interface.STATE: InterfaceState.ABSENT,
+                        }
+                    ]
+                }
+            )
 
 
 def test_remove_all_ovs_ports(bridge_with_ports):

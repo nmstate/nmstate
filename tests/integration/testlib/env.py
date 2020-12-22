@@ -19,6 +19,14 @@
 
 import os
 
+import gi
+
+gi.require_version("NM", "1.0")
+# It is required to state the NM version before importing it
+# But this break the flak8 rule: https://www.flake8rules.com/rules/E402.html
+# Use NOQA: E402 to suppress it.
+from gi.repository import NM  # NOQA: E402
+
 
 def is_fedora():
     return os.path.exists("/etc/fedora-release")
@@ -26,3 +34,7 @@ def is_fedora():
 
 def is_ubuntu_kernel():
     return "Ubuntu" in os.uname().version
+
+
+def nm_major_minor_version():
+    return float(f"{NM.MAJOR_VERSION}.{NM.MINOR_VERSION}")
