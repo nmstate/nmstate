@@ -67,17 +67,17 @@ class NisporPluginBaseIface:
             )
             return InterfaceState.DOWN
 
-    def ip_info(self):
+    def _ip_info(self, config_only):
         return {
             Interface.IPV4: NisporPlugintIpState(
                 Interface.IPV4, self.np_iface.ipv4
-            ).to_dict(),
+            ).to_dict(config_only),
             Interface.IPV6: NisporPlugintIpState(
                 Interface.IPV6, self.np_iface.ipv6
-            ).to_dict(),
+            ).to_dict(config_only),
         }
 
-    def to_dict(self):
+    def to_dict(self, config_only):
         iface_info = {
             Interface.NAME: self.np_iface.name,
             Interface.TYPE: self.type,
@@ -86,7 +86,7 @@ class NisporPluginBaseIface:
         }
         if self.mtu:
             iface_info[Interface.MTU] = self.mtu
-        ip_info = self.ip_info()
+        ip_info = self._ip_info(config_only)
         if ip_info:
             iface_info.update(ip_info)
 
@@ -108,24 +108,28 @@ class NisporPlugintIpState:
         return self._family == Interface.IPV6
 
     def _has_dhcp_address(self):
-        if self._is_ipv6:
-            return any(
-                addr.valid_lft != "forever" and addr.prefix_len == 128
-                for addr in self._addresses
-            )
-        else:
-            return any(addr.valid_lft != "forever" for addr in self._addresses)
+        return any(
+            _is_dhcp_addr(addr, self._is_ipv6) for addr in self._addresses
+        )
 
     def _has_autoconf_address(self):
         return self._is_ipv6 and any(
-            addr.valid_lft != "forever" and addr.prefix_len == 64
-            for addr in self._addresses
+            _is_autoconf_addr(addr) for addr in self._addresses
         )
 
-    def to_dict(self):
+    def to_dict(self, config_only):
         if not self._addresses or not self._np_ip_state:
             return {InterfaceIP.ENABLED: False, InterfaceIP.ADDRESS: []}
         else:
+            if config_only:
+                addresses = [
+                    addr
+                    for addr in self._addresses
+                    if not _is_autoconf_addr(addr)
+                    and not _is_dhcp_addr(addr, self._is_ipv6)
+                ]
+            else:
+                addresses = self._addresses
             info = {
                 InterfaceIP.ENABLED: True,
                 InterfaceIP.ADDRESS: [
@@ -133,7 +137,7 @@ class NisporPlugintIpState:
                         InterfaceIP.ADDRESS_IP: addr.address,
                         InterfaceIP.ADDRESS_PREFIX_LENGTH: addr.prefix_len,
                     }
-                    for addr in self._addresses
+                    for addr in addresses
                 ],
             }
             if self._has_dhcp_address():
@@ -141,3 +145,14 @@ class NisporPlugintIpState:
             if self._has_autoconf_address():
                 info[InterfaceIPv6.AUTOCONF] = True
             return info
+
+
+def _is_dhcp_addr(np_addr, is_ipv6):
+    if is_ipv6:
+        return np_addr.valid_lft != "forever" and np_addr.prefix_len == 128
+    else:
+        return np_addr.valid_lft != "forever"
+
+
+def _is_autoconf_addr(np_addr):
+    return np_addr.valid_lft != "forever" and np_addr.prefix_len == 64

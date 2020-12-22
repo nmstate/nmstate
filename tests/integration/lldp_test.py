@@ -318,6 +318,24 @@ def test_lldp_empty_neighbors(lldptest_up):
         assert not lldp_state.get(LLDP.NEIGHBORS_SUBTREE, [])
 
 
+def test_show_running_config_has_no_lldp_neighbor(lldptest_up):
+    with lldp_enabled(lldptest_up):
+        _send_lldp_packet()
+        dstate = statelib.show_only((LLDPTEST,))
+        lldp_config = dstate[Interface.KEY][0][LLDP.CONFIG_SUBTREE]
+        assert len(lldp_config[LLDP.NEIGHBORS_SUBTREE]) == 1
+        running_config = libnmstate.show_running_config()
+        for iface_config in running_config[Interface.KEY]:
+            if iface_config[Interface.NAME] == LLDPTEST:
+                lldp_iface_config = iface_config
+                break
+        assert lldp_iface_config[LLDP.CONFIG_SUBTREE][LLDP.ENABLED]
+        assert (
+            LLDP.NEIGHBORS_SUBTREE
+            not in lldp_iface_config[LLDP.CONFIG_SUBTREE]
+        )
+
+
 @contextmanager
 def lldp_enabled(ifstate):
     lldp_config = ifstate[Interface.KEY][0][LLDP.CONFIG_SUBTREE]

@@ -107,8 +107,8 @@ class NisporPluginBridgeIface(NisporPluginBaseIface):
             info.append(port_info)
         return info
 
-    def to_dict(self):
-        info = super().to_dict()
+    def to_dict(self, config_only):
+        info = super().to_dict(config_only)
         info[LB.CONFIG_SUBTREE] = {
             LB.OPTIONS_SUBTREE: self._options_to_dict(),
             LB.PORT_SUBTREE: self._ports_to_dict(),

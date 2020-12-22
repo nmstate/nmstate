@@ -28,8 +28,8 @@ class NisporPluginVlanIface(NisporPluginBaseIface):
     def type(self):
         return InterfaceType.VLAN
 
-    def to_dict(self):
-        info = super().to_dict()
+    def to_dict(self, config_only):
+        info = super().to_dict(config_only)
         info[VLAN.CONFIG_SUBTREE] = {
             VLAN.ID: self._np_iface.vlan_id,
             VLAN.BASE_IFACE: self._np_iface.base_iface,

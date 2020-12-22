@@ -28,8 +28,8 @@ class NisporPluginVxlanIface(NisporPluginBaseIface):
     def type(self):
         return InterfaceType.VXLAN
 
-    def to_dict(self):
-        info = super().to_dict()
+    def to_dict(self, config_only):
+        info = super().to_dict(config_only)
         info[VXLAN.CONFIG_SUBTREE] = {
             VXLAN.ID: self._np_iface.vxlan_id,
             VXLAN.BASE_IFACE: self._np_iface.base_iface,

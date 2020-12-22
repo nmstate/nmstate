@@ -26,6 +26,7 @@ from libnmstate.ifaces.ovs import is_ovs_running
 from libnmstate.schema import DNS
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceType
+from libnmstate.schema import LLDP
 from libnmstate.schema import Route
 from libnmstate.plugin import NmstatePlugin
 
@@ -153,6 +154,16 @@ class NetworkManagerPlugin(NmstatePlugin):
         info.sort(key=itemgetter("name"))
 
         return info
+
+    def get_running_config_interfaces(self):
+        iface_infos = self.get_interfaces()
+        # Remove LLDP neighber information
+        for iface_info in iface_infos:
+            if LLDP.CONFIG_SUBTREE in iface_info:
+                iface_info[LLDP.CONFIG_SUBTREE].pop(
+                    LLDP.NEIGHBORS_SUBTREE, None
+                )
+        return iface_infos
 
     def get_routes(self):
         return {Route.CONFIG: get_route_running_config(self._applied_configs)}

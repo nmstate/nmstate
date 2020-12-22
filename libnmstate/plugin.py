@@ -54,9 +54,22 @@ class NmstatePlugin(metaclass=ABCMeta):
         return NmstatePlugin.DEFAULT_PRIORITY
 
     def get_interfaces(self):
+        """
+        Return a list of dict with network interface running status with
+        mix of running status and running configure.
+        """
         raise NmstatePluginError(
             f"Plugin {self.name} BUG: get_interfaces() not implemented"
         )
+
+    def get_running_config_interfaces(self):
+        """
+        Return a list of dict with network interface running configuration.
+        Notes:
+            * the IP/DHCP/Route retrieved from DHCP/Autoconf are not running
+              configuration.
+        """
+        return []
 
     def apply_changes(self, net_state, save_to_disk):
         pass

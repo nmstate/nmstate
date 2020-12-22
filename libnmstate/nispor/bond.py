@@ -56,8 +56,8 @@ class NisporPluginBondIface(NisporPluginBaseIface):
     def type(self):
         return InterfaceType.BOND
 
-    def to_dict(self):
-        info = super().to_dict()
+    def to_dict(self, config_only):
+        info = super().to_dict(config_only)
         info[Bond.CONFIG_SUBTREE] = {
             Bond.MODE: self._np_iface.mode,
             Bond.PORT: self._np_iface.subordinates,

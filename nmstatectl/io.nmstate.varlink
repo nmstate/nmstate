@@ -33,6 +33,11 @@ method Show(arguments: [string]object) -> (
     log: []Logs
 )
 
+method ShowRunningConfig(arguments: [string]object) -> (
+    state: ?object,
+    log: []Logs
+)
+
 method Apply(arguments: [string]object) -> (
     log: []Logs
 )

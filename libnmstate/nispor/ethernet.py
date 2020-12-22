@@ -28,8 +28,8 @@ class NisporPluginEthernetIface(NisporPluginBaseIface):
     def type(self):
         return InterfaceType.ETHERNET
 
-    def to_dict(self):
-        info = super().to_dict()
+    def to_dict(self, config_only):
+        info = super().to_dict(config_only)
         if self.np_iface.sr_iov:
             vf_infos = []
             for vf in self.np_iface.sr_iov.vfs:
