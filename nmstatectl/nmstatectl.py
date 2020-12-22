@@ -174,6 +174,13 @@ def setup_subcommand_show(subparsers):
         dest="yaml",
     )
     parser_show.add_argument(
+        "-r, --running-config",
+        help="Show running configurations",
+        default=False,
+        action="store_true",
+        dest="running_config",
+    )
+    parser_show.add_argument(
         "only",
         default="*",
         nargs="?",
@@ -248,7 +255,11 @@ def rollback(args):
 
 
 def show(args):
-    state = _filter_state(libnmstate.show(), args.only)
+    if args.running_config:
+        full_state = libnmstate.show_running_config()
+    else:
+        full_state = libnmstate.show()
+    state = _filter_state(full_state, args.only)
     print_state(state, use_yaml=args.yaml)
 
 
@@ -438,8 +449,9 @@ def _filter_routes(state, patterns):
     return the states for all routes from `state` that match at least one
     of the provided patterns.
     """
-    routes = {Route.CONFIG: [], Route.RUNNING: []}
-    for route_type in (Route.RUNNING, Route.CONFIG):
+    routes = {}
+    for route_type in state.get(Route.KEY, {}).keys():
+        routes[route_type] = []
         for route in state.get(Route.KEY, {}).get(route_type, []):
             for pattern in patterns:
                 if fnmatch.fnmatch(route[Route.NEXT_HOP_INTERFACE], pattern):

@@ -17,8 +17,9 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
-from .nmstate import show_with_plugins
 from .nmstate import plugin_context
+from .nmstate import show_with_plugins
+from .nmstate import show_running_config_with_plugins
 
 
 def show(*, include_status_data=False):
@@ -33,3 +34,8 @@ def show(*, include_status_data=False):
     """
     with plugin_context() as plugins:
         return show_with_plugins(plugins, include_status_data)
+
+
+def show_running_config():
+    with plugin_context() as plugins:
+        return show_running_config_with_plugins(plugins)

@@ -38,8 +38,8 @@ class NisporPluginMacVtapIface(NisporPluginMacVlanIface):
     def type(self):
         return InterfaceType.MAC_VTAP
 
-    def to_dict(self):
-        info = super().to_dict()
+    def to_dict(self, config_only):
+        info = super().to_dict(config_only)
         info[MacVtap.CONFIG_SUBTREE] = {
             MacVtap.BASE_IFACE: self._np_iface.base_iface,
             MacVtap.MODE: MACVTAP_MODES.get(

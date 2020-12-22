@@ -38,6 +38,10 @@ from .vrf import NisporPluginVrfIface
 from .ovs import NisporPluginOvsInternalIface
 
 
+_INFO_TYPE_RUNNING = "running"
+_INFO_TYPE_RUNNING_CONFIG = "running_config"
+
+
 class NisporPlugin(NmstatePlugin):
     @property
     def name(self):
@@ -58,42 +62,73 @@ class NisporPlugin(NmstatePlugin):
         # yet.
         return NmstatePlugin.DEFAULT_PRIORITY - 1
 
-    def get_interfaces(self):
+    def _get_interfaces(self, info_type):
         np_state = NisporNetState.retrieve()
         ifaces = []
+        config_only = info_type == _INFO_TYPE_RUNNING_CONFIG
         for np_iface in np_state.ifaces.values():
             iface_type = np_iface.type
             if iface_type == "dummy":
-                ifaces.append(NisporPluginDummyIface(np_iface).to_dict())
+                ifaces.append(
+                    NisporPluginDummyIface(np_iface).to_dict(config_only)
+                )
             elif iface_type == "veth":
-                ifaces.append(NisporPluginEthernetIface(np_iface).to_dict())
+                ifaces.append(
+                    NisporPluginEthernetIface(np_iface).to_dict(config_only)
+                )
             elif iface_type == "ethernet":
-                ifaces.append(NisporPluginEthernetIface(np_iface).to_dict())
+                ifaces.append(
+                    NisporPluginEthernetIface(np_iface).to_dict(config_only)
+                )
             elif iface_type == "bond":
-                ifaces.append(NisporPluginBondIface(np_iface).to_dict())
+                ifaces.append(
+                    NisporPluginBondIface(np_iface).to_dict(config_only)
+                )
             elif iface_type == "vlan":
-                ifaces.append(NisporPluginVlanIface(np_iface).to_dict())
+                ifaces.append(
+                    NisporPluginVlanIface(np_iface).to_dict(config_only)
+                )
             elif iface_type == "vxlan":
-                ifaces.append(NisporPluginVxlanIface(np_iface).to_dict())
+                ifaces.append(
+                    NisporPluginVxlanIface(np_iface).to_dict(config_only)
+                )
             elif iface_type == "mac_vlan":
-                ifaces.append(NisporPluginMacVlanIface(np_iface).to_dict())
+                ifaces.append(
+                    NisporPluginMacVlanIface(np_iface).to_dict(config_only)
+                )
             elif iface_type == "mac_vtap":
-                ifaces.append(NisporPluginMacVtapIface(np_iface).to_dict())
+                ifaces.append(
+                    NisporPluginMacVtapIface(np_iface).to_dict(config_only)
+                )
             elif iface_type == "bridge":
                 np_ports = []
                 for port_name in np_iface.ports:
                     if port_name in np_state.ifaces.keys():
                         np_ports.append(np_state.ifaces[port_name])
                 ifaces.append(
-                    NisporPluginBridgeIface(np_iface, np_ports).to_dict()
+                    NisporPluginBridgeIface(np_iface, np_ports).to_dict(
+                        config_only
+                    )
                 )
             elif iface_type == "vrf":
-                ifaces.append(NisporPluginVrfIface(np_iface).to_dict())
+                ifaces.append(
+                    NisporPluginVrfIface(np_iface).to_dict(config_only)
+                )
             elif iface_type == "openv_switch":
-                ifaces.append(NisporPluginOvsInternalIface(np_iface).to_dict())
+                ifaces.append(
+                    NisporPluginOvsInternalIface(np_iface).to_dict(config_only)
+                )
             else:
-                ifaces.append(NisporPluginBaseIface(np_iface).to_dict())
+                ifaces.append(
+                    NisporPluginBaseIface(np_iface).to_dict(config_only)
+                )
         return ifaces
+
+    def get_interfaces(self):
+        return self._get_interfaces(_INFO_TYPE_RUNNING)
+
+    def get_running_config_interfaces(self):
+        return self._get_interfaces(_INFO_TYPE_RUNNING_CONFIG)
 
     def get_routes(self):
         np_state = NisporNetState.retrieve()

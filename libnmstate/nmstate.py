@@ -38,6 +38,9 @@ from .nispor.plugin import NisporPlugin
 from .plugin import NmstatePlugin
 from .state import merge_dict
 
+_INFO_TYPE_RUNNING = 1
+_INFO_TYPE_RUNNING_CONFIG = 2
+
 
 @contextmanager
 def plugin_context():
@@ -61,16 +64,20 @@ def plugin_context():
             plugin.unload()
 
 
-def show_with_plugins(plugins, include_status_data=None):
+def show_with_plugins(
+    plugins, include_status_data=None, info_type=_INFO_TYPE_RUNNING
+):
     for plugin in plugins:
         plugin.refresh_content()
     report = {}
-    if include_status_data:
+    if include_status_data and info_type == _INFO_TYPE_RUNNING:
         report["capabilities"] = plugins_capabilities(plugins)
 
-    report[Interface.KEY] = _get_interface_info_from_plugins(plugins)
+    report[Interface.KEY] = _get_interface_info_from_plugins(
+        plugins, info_type
+    )
 
-    report[Route.KEY] = _get_routes_from_plugins(plugins)
+    report[Route.KEY] = _get_routes_from_plugins(plugins, info_type)
 
     report[RouteRule.KEY] = _get_route_rules_from_plugins(plugins)
 
@@ -79,6 +86,8 @@ def show_with_plugins(plugins, include_status_data=None):
     )
     if dns_plugin:
         report[DNS.KEY] = dns_plugin.get_dns_client_config()
+        if info_type != _INFO_TYPE_RUNNING:
+            report[DNS.KEY].pop(DNS.RUNNING, None)
 
     validator.schema_validate(report)
     return report
@@ -151,7 +160,7 @@ def _find_plugin_for_capability(plugins, capability):
     return chose_plugin
 
 
-def _get_interface_info_from_plugins(plugins):
+def _get_interface_info_from_plugins(plugins, info_type):
     all_ifaces = {}
     IFACE_PRIORITY_METADATA = "_plugin_priority"
     IFACE_PLUGIN_SRC_METADATA = "_plugin_source"
@@ -161,7 +170,11 @@ def _get_interface_info_from_plugins(plugins):
             not in plugin.plugin_capabilities
         ):
             continue
-        for iface in plugin.get_interfaces():
+        if info_type == _INFO_TYPE_RUNNING_CONFIG:
+            ifaces = plugin.get_running_config_interfaces()
+        else:
+            ifaces = plugin.get_interfaces()
+        for iface in ifaces:
             iface[IFACE_PRIORITY_METADATA] = plugin.priority
             iface[IFACE_PLUGIN_SRC_METADATA] = [plugin.name]
             iface_name = iface[Interface.NAME]
@@ -301,13 +314,16 @@ def _parse_checkpoints(checkpoints):
         checkpoint_index[plugin_name] = checkpoint
 
 
-def _get_routes_from_plugins(plugins):
+def _get_routes_from_plugins(plugins, info_type):
     ret = {Route.RUNNING: [], Route.CONFIG: []}
     for plugin in plugins:
         if NmstatePlugin.PLUGIN_CAPABILITY_ROUTE in plugin.plugin_capabilities:
             plugin_routes = plugin.get_routes()
-            ret[Route.RUNNING].extend(plugin_routes.get(Route.RUNNING, []))
+            if info_type == _INFO_TYPE_RUNNING:
+                ret[Route.RUNNING].extend(plugin_routes.get(Route.RUNNING, []))
             ret[Route.CONFIG].extend(plugin_routes.get(Route.CONFIG, []))
+    if info_type != _INFO_TYPE_RUNNING:
+        ret.pop(Route.RUNNING)
     return ret
 
 
@@ -339,3 +355,7 @@ def _get_iface_types_by_name(iface_infos, name):
             iface_types.append(iface_type)
 
     return iface_types
+
+
+def show_running_config_with_plugins(plugins):
+    return show_with_plugins(plugins, info_type=_INFO_TYPE_RUNNING_CONFIG)

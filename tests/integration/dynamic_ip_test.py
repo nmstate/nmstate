@@ -19,6 +19,7 @@
 from contextlib import contextmanager
 from copy import deepcopy
 import logging
+import json
 from operator import itemgetter
 import os
 import time
@@ -37,6 +38,7 @@ from libnmstate.schema import InterfaceState
 from libnmstate.schema import Route as RT
 
 from libnmstate.error import NmstateNotImplementedError
+from libnmstate.iplib import is_ipv6_link_local_addr
 
 from .testlib import assertlib
 from .testlib import cmdlib
@@ -1219,3 +1221,32 @@ def test_enable_dhcp_with_no_server(dummy00):
     desired_state = {Interface.KEY: [iface_info]}
     libnmstate.apply(desired_state)
     assertlib.assert_state_match(desired_state)
+
+
+def test_show_running_config_does_not_include_auto_config(
+    dhcpcli_up_with_dynamic_ip,
+):
+    running_config = libnmstate.show_running_config()
+    dhcpcli_iface_config = None
+    for iface_config in running_config[Interface.KEY]:
+        if iface_config[Interface.NAME] == DHCP_CLI_NIC:
+            dhcpcli_iface_config = iface_config
+            break
+    nmstatectl_output = cmdlib.exec_cmd(
+        ["nmstatectl", "show", "-r", DHCP_CLI_NIC, "--json"]
+    )[1]
+    nmstatectl_iface_state = json.loads(nmstatectl_output)[Interface.KEY][0]
+
+    for iface_config in (dhcpcli_iface_config, nmstatectl_iface_state):
+        assert iface_config[Interface.IPV4][InterfaceIPv4.DHCP]
+        assert iface_config[Interface.IPV6][InterfaceIPv6.DHCP]
+        assert iface_config[Interface.IPV6][InterfaceIPv6.AUTOCONF]
+        assert not iface_config[Interface.IPV4][InterfaceIPv4.ADDRESS]
+        ipv6_addresses = iface_config[Interface.IPV6][InterfaceIPv6.ADDRESS]
+        assert len(ipv6_addresses) == 1
+        assert is_ipv6_link_local_addr(
+            ipv6_addresses[0][InterfaceIPv6.ADDRESS_IP],
+            ipv6_addresses[0][InterfaceIPv6.ADDRESS_PREFIX_LENGTH],
+        )
+    assert not running_config[DNS.KEY][DNS.CONFIG]
+    assert not running_config[RT.KEY][RT.CONFIG]

@@ -5,6 +5,8 @@ nmstatectl \- A nmstate command line tool
 .SH SYNOPSIS
 .B nmstatectl show \fR[\fIINTERFACE_NAME\fR] [\fB--json\fR]
 .br
+.B nmstatectl show [\fB-r, --running-config\fR]
+.br
 .B nmstatectl set \fISTATE_FILE_PATH\fR [\fIOPTIONS\fR]
 .br
 .B nmstatectl edit \fR[\fIINTERFACE_NAME\fR] [\fIOPTIONS\fR]
@@ -100,6 +102,12 @@ example: nmstatectl varlink /run/nmstate.so &
 .RS
 change the output format to \fIJSON\fR.
 .RE
+
+.B -r, --running-config
+.RS
+Showing the running network configuration.
+.RE
+
 .IP \fB--no-verify
 skip the desired network state verification.
 .IP \fB--no-commit

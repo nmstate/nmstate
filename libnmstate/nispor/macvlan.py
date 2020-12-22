@@ -41,8 +41,8 @@ class NisporPluginMacVlanIface(NisporPluginBaseIface):
     def type(self):
         return InterfaceType.MAC_VLAN
 
-    def to_dict(self):
-        info = super().to_dict()
+    def to_dict(self, config_only):
+        info = super().to_dict(config_only)
         info[MacVlan.CONFIG_SUBTREE] = {
             MacVlan.BASE_IFACE: self._np_iface.base_iface,
             MacVlan.MODE: MACVLAN_MODES.get(

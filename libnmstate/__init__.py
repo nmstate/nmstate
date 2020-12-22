@@ -26,6 +26,7 @@ from .netapplier import apply
 from .netapplier import commit
 from .netapplier import rollback
 from .netinfo import show
+from .netinfo import show_running_config
 
 from .prettystate import PrettyState
 
@@ -33,13 +34,14 @@ from .prettystate import PrettyState
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 __all__ = [
-    "show",
+    "PrettyState",
     "apply",
     "commit",
-    "rollback",
     "error",
+    "rollback",
     "schema",
-    "PrettyState",
+    "show",
+    "show_running_config",
 ]
 
 

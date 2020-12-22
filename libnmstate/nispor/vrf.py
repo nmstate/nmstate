@@ -28,8 +28,8 @@ class NisporPluginVrfIface(NisporPluginBaseIface):
     def type(self):
         return InterfaceType.VRF
 
-    def to_dict(self):
-        info = super().to_dict()
+    def to_dict(self, config_only):
+        info = super().to_dict(config_only)
         info[VRF.CONFIG_SUBTREE] = {
             VRF.PORT_SUBTREE: self._np_iface.subordinates,
             VRF.ROUTE_TABLE_ID: self._np_iface.table_id,

@@ -87,6 +87,15 @@ def test_varlink_show(server):
         assert varlink_state["state"] == lib_state
 
 
+def test_varlink_show_running_config(server):
+    lib_state = libnmstate.show_running_config()
+    with varlink.Client(_format_address(server.server_address)).open(
+        VARLINK_INTERFACE, namespaced=False
+    ) as con:
+        varlink_state = con._call("ShowRunningConfig")
+        assert varlink_state["state"] == lib_state
+
+
 def test_varlink_apply_state(server):
     with varlink.Client(_format_address(server.server_address)).open(
         VARLINK_INTERFACE, namespaced=False
