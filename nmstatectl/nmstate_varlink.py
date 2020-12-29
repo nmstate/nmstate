@@ -16,14 +16,14 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
-import os
-import libnmstate
-import logging
-import errno
-import io
-import json
-import libnmstate.error as libnmError
 
+from contextlib import contextmanager
+import errno
+import logging
+import os
+
+import libnmstate
+import libnmstate.error as libnmError
 
 try:
     import varlink
@@ -31,21 +31,50 @@ except ModuleNotFoundError:
     raise libnmError.NmstateDependencyError("python3 varlink module not found")
 
 
-def get_logger():
+class NmstateVarlinkLogHandler(logging.Handler):
+    def __init__(self):
+        self._log_records = list()
+        super().__init__()
+
+    def filter(self, record):
+        return True
+
+    def emit(self, record):
+        self._log_records.append(record)
+
+    @property
+    def logs(self):
+        """
+        Return a list of dict, example:
+            [
+                {
+                    "time": "2003-07-08 16:49:45,896",
+                    "level": "DEBUG",
+                    "message": "foo is changed",
+                }
+            ]
+        """
+        return [
+            {
+                "time": record.asctime,
+                "level": record.levelname,
+                "message": record.message,
+            }
+            for record in self._log_records
+        ]
+
+
+@contextmanager
+def nmstate_varlink_logger():
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
-    log_stringio = io.StringIO()
-    handler = logging.StreamHandler(log_stringio)
+    handler = NmstateVarlinkLogHandler()
     handler.setLevel(logging.DEBUG)
-    handler.setFormatter(
-        logging.Formatter(
-            '{"time": "%(asctime)s",'
-            + '"level": "%(levelname)s", "message": "%(message)s"}',
-            datefmt="%Y-%m-%d %H:%M:%S",
-        )
-    )
     logger.addHandler(handler)
-    return log_stringio
+    try:
+        yield handler
+    finally:
+        logger.removeHandler(handler)
 
 
 def validate_method_arguments(user_args, method_args):
@@ -59,19 +88,6 @@ def validate_method_arguments(user_args, method_args):
         if user_args[arg] is not None:
             kwargs[arg] = user_args[arg]
     return kwargs
-
-
-def get_logs(stringio):
-    """
-    Returns list of logs in dictionary.
-    """
-    log_list = list()
-    stringio.seek(0)
-    for log in stringio.getvalue().replace("x\00", "").split("\n")[:-1]:
-        log_list.append(json.loads(log))
-    stringio.seek(0)
-    stringio.truncate()
-    return log_list
 
 
 def gen_varlink_server(address):
@@ -116,15 +132,12 @@ def start_varlink_server(address):
 
 
 class NmstateError(varlink.VarlinkError):
-    def __init__(self, message, string_io):
+    def __init__(self, message, logs):
         varlink.VarlinkError.__init__(
             self,
             {
                 "error": self.__class__.__name__,
-                "parameters": {
-                    "error_message": message,
-                    "log": get_logs(string_io),
-                },
+                "parameters": {"error_message": message, "log": logs},
             },
         )
 
@@ -178,78 +191,80 @@ class NmstateVarlinkService:
         """
         Reports the state data on the system
         """
-        string_io = get_logger()
-        method_args = ["include_status_data"]
-        show_kwargs = validate_method_arguments(arguments, method_args)
-        try:
-            configured_state = libnmstate.show(**show_kwargs)
-            return {"state": configured_state, "log": get_logs(string_io)}
-        except libnmstate.error.NmstateValueError as exception:
-            logging.error(str(exception))
-            raise NmstateValueError(str(exception), string_io)
+        with nmstate_varlink_logger() as log_handler:
+            method_args = ["include_status_data"]
+            show_kwargs = validate_method_arguments(arguments, method_args)
+            try:
+                configured_state = libnmstate.show(**show_kwargs)
+                return {"state": configured_state, "log": log_handler.logs}
+            except libnmstate.error.NmstateValueError as exception:
+                logging.error(str(exception))
+                raise NmstateValueError(str(exception), log_handler.logs)
 
     def Apply(self, arguments):
         """
         Apply desired state declared in json format
         which is parsed as dictionary
         """
-        string_io = get_logger()
-        method_args = [
-            "desired_state",
-            "verify_change",
-            "commit",
-            "rollback_timeout",
-            "save_to_disk",
-        ]
-        apply_kwargs = validate_method_arguments(arguments, method_args)
-        if "desired_state" not in apply_kwargs.keys():
-            logging.error("Desired_state not specified")
-            raise NmstateValueError(
-                "desired_state: No state specified", string_io
-            )
-        try:
-            libnmstate.apply(**apply_kwargs)
-            return {"log": get_logs(string_io)}
-        except TypeError as exception:
-            logging.error(str(exception), string_io)
-            raise varlink.InvalidParameter(exception)
-        except libnmstate.error.NmstatePermissionError as exception:
-            logging.error(str(exception))
-            raise NmstatePermissionError(str(exception), string_io)
-        except libnmstate.error.NmstateValueError as exception:
-            logging.error(str(exception))
-            raise NmstateValueError(str(exception), string_io)
-        except libnmstate.error.NmstateConflictError as exception:
-            logging.error(str(exception))
-            raise NmstateConflictError(str(exception), string_io)
-        except libnmstate.error.NmstateVerificationError as exception:
-            logging.error(str(exception))
-            raise NmstateVerificationError(str(exception), string_io)
+        with nmstate_varlink_logger() as log_handler:
+            method_args = [
+                "desired_state",
+                "verify_change",
+                "commit",
+                "rollback_timeout",
+                "save_to_disk",
+            ]
+            apply_kwargs = validate_method_arguments(arguments, method_args)
+            if "desired_state" not in apply_kwargs.keys():
+                logging.error("Desired_state not specified")
+                raise NmstateValueError(
+                    "desired_state: No state specified", log_handler.logs
+                )
+            try:
+                libnmstate.apply(**apply_kwargs)
+                return {"log": log_handler.logs}
+            except TypeError as exception:
+                logging.error(str(exception), log_handler.logs)
+                raise varlink.InvalidParameter(exception)
+            except libnmstate.error.NmstatePermissionError as exception:
+                logging.error(str(exception))
+                raise NmstatePermissionError(str(exception), log_handler.logs)
+            except libnmstate.error.NmstateValueError as exception:
+                logging.error(str(exception))
+                raise NmstateValueError(str(exception), log_handler.logs)
+            except libnmstate.error.NmstateConflictError as exception:
+                logging.error(str(exception))
+                raise NmstateConflictError(str(exception), log_handler.logs)
+            except libnmstate.error.NmstateVerificationError as exception:
+                logging.error(str(exception))
+                raise NmstateVerificationError(
+                    str(exception), log_handler.logs
+                )
 
     def Commit(self, arguments):
         """
         Commits the checkpoint
         """
-        string_io = get_logger()
-        method_args = ["checkpoint"]
-        commit_kwargs = validate_method_arguments(arguments, method_args)
-        try:
-            libnmstate.commit(**commit_kwargs)
-            return {"log": get_logs(string_io)}
-        except libnmstate.error.NmstateValueError as exception:
-            logging.error(str(exception))
-            raise NmstateValueError(str(exception), string_io)
+        with nmstate_varlink_logger() as log_handler:
+            method_args = ["checkpoint"]
+            commit_kwargs = validate_method_arguments(arguments, method_args)
+            try:
+                libnmstate.commit(**commit_kwargs)
+                return {"log": log_handler.logs}
+            except libnmstate.error.NmstateValueError as exception:
+                logging.error(str(exception))
+                raise NmstateValueError(str(exception), log_handler.logs)
 
     def Rollback(self, arguments):
         """
         Roll back to the checkpoint
         """
-        string_io = get_logger()
-        method_args = ["checkpoint"]
-        rollback_kwargs = validate_method_arguments(arguments, method_args)
-        try:
-            libnmstate.rollback(**rollback_kwargs)
-            return {"log": get_logs(string_io)}
-        except libnmstate.error.NmstateValueError as exception:
-            logging.error(str(exception))
-            raise NmstateValueError(str(exception), string_io)
+        with nmstate_varlink_logger() as log_handler:
+            method_args = ["checkpoint"]
+            rollback_kwargs = validate_method_arguments(arguments, method_args)
+            try:
+                libnmstate.rollback(**rollback_kwargs)
+                return {"log": log_handler.logs}
+            except libnmstate.error.NmstateValueError as exception:
+                logging.error(str(exception))
+                raise NmstateValueError(str(exception), log_handler.logs)
