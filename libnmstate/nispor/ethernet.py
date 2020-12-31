@@ -36,7 +36,7 @@ class NisporPluginEthernetIface(NisporPluginBaseIface):
                 vf_infos.append(
                     {
                         Ethernet.SRIOV.VFS.ID: vf.vf_id,
-                        Ethernet.SRIOV.VFS.MAC_ADDRESS: vf.mac,
+                        Ethernet.SRIOV.VFS.MAC_ADDRESS: vf.mac.upper(),
                         Ethernet.SRIOV.VFS.SPOOF_CHECK: vf.spoof_check,
                         Ethernet.SRIOV.VFS.TRUST: vf.trust,
                         Ethernet.SRIOV.VFS.MIN_TX_RATE: vf.min_tx_rate,

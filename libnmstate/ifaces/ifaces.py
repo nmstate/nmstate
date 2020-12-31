@@ -144,6 +144,7 @@ class Ifaces:
                     self._kernel_ifaces[iface.name] = iface
 
             self._create_virtual_port()
+            self._create_sriov_vfs_when_changed()
             self._validate_unknown_port()
             self._validate_unknown_parent()
             self._validate_infiniband_as_bridge_port()
@@ -174,6 +175,28 @@ class Ifaces:
                             new_ifaces.append(new_port)
         for iface in new_ifaces:
             self._kernel_ifaces[iface.name] = iface
+
+    def _create_sriov_vfs_when_changed(self):
+        """
+        When plugin set the TOTAL_VFS of PF, it might take 1 seconds or
+        more to have the VFs to be ready.
+        Nmstate should use verification retry to make sure VFs are full ready.
+        To do that, we include VFs into desire state.
+        """
+        new_ifaces = []
+        for iface in self.all_ifaces():
+            if (
+                iface.is_up
+                and (iface.is_desired or iface.is_changed)
+                and iface.type == InterfaceType.ETHERNET
+                and iface.sriov_total_vfs > 0
+            ):
+                for new_iface in iface.create_sriov_vf_ifaces():
+                    if new_iface.name not in self._kernel_ifaces:
+                        new_iface.mark_as_desired()
+                        new_ifaces.append(new_iface)
+        for new_iface in new_ifaces:
+            self._kernel_ifaces[new_iface.name] = new_iface
 
     def _pre_edit_validation_and_cleanup(self):
         self._validate_over_booked_port()

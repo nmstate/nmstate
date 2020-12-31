@@ -23,6 +23,7 @@ import pytest
 
 from libnmstate.error import NmstateValueError
 from libnmstate.error import NmstateVerificationError
+from libnmstate.schema import Ethernet
 from libnmstate.schema import LinuxBridge
 from libnmstate.schema import VLAN
 from libnmstate.schema import Interface
@@ -440,3 +441,46 @@ class TestIfaces:
 
         ifaces = Ifaces(des_iface_infos, cur_iface_infos)
         ifaces.verify(cur_iface_infos)
+
+
+class TestIfacesSriov:
+    def test_vf_been_auto_include_as_desired(self):
+        des_iface_infos = [gen_foo_iface_info(InterfaceType.ETHERNET)]
+        des_iface_infos[0][Interface.NAME] = FOO1_IFACE_NAME
+        des_iface_infos[0][Ethernet.CONFIG_SUBTREE] = {
+            Ethernet.SRIOV_SUBTREE: {Ethernet.SRIOV.TOTAL_VFS: 2}
+        }
+        ifaces = Ifaces(des_iface_infos, [])
+        assert len(list(ifaces.all_ifaces())) == 3
+        assert ifaces.get_iface(
+            f"{FOO1_IFACE_NAME}v0", InterfaceType.ETHERNET
+        ).is_desired
+        assert ifaces.get_iface(
+            f"{FOO1_IFACE_NAME}v1", InterfaceType.ETHERNET
+        ).is_desired
+
+    def test_ignore_vf_when_pf_is_down(self):
+        des_iface_infos = [gen_foo_iface_info(InterfaceType.ETHERNET)]
+        des_iface_infos[0][Interface.NAME] = FOO1_IFACE_NAME
+        des_iface_infos[0][Interface.STATE] = InterfaceState.DOWN
+        des_iface_infos[0][Ethernet.CONFIG_SUBTREE] = {
+            Ethernet.SRIOV_SUBTREE: {Ethernet.SRIOV.TOTAL_VFS: 2}
+        }
+        ifaces = Ifaces(des_iface_infos, [])
+        assert len(list(ifaces.all_ifaces())) == 1
+        assert ifaces.get_iface(
+            FOO1_IFACE_NAME, InterfaceType.ETHERNET
+        ).is_desired
+
+    def test_ignore_vf_when_pf_is_absent(self):
+        des_iface_infos = [gen_foo_iface_info(InterfaceType.ETHERNET)]
+        des_iface_infos[0][Interface.NAME] = FOO1_IFACE_NAME
+        des_iface_infos[0][Interface.STATE] = InterfaceState.ABSENT
+        des_iface_infos[0][Ethernet.CONFIG_SUBTREE] = {
+            Ethernet.SRIOV_SUBTREE: {Ethernet.SRIOV.TOTAL_VFS: 2}
+        }
+        ifaces = Ifaces(des_iface_infos, [])
+        assert len(list(ifaces.all_ifaces())) == 1
+        assert ifaces.get_iface(
+            FOO1_IFACE_NAME, InterfaceType.ETHERNET
+        ).is_desired

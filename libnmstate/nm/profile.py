@@ -27,7 +27,6 @@ from libnmstate.error import NmstateNotSupportedError
 from libnmstate.error import NmstateInternalError
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceType
-from libnmstate.schema import Ethernet
 
 from .active_connection import ActiveConnectionDeactivate
 from .active_connection import ProfileActivation
@@ -223,13 +222,11 @@ class NmProfile:
             )
 
     def _check_sriov_support(self):
-        sriov_config = (
-            self._iface.to_dict()
-            .get(Ethernet.CONFIG_SUBTREE, {})
-            .get(Ethernet.SRIOV_SUBTREE)
-        )
-
-        if self._nm_dev and sriov_config:
+        if (
+            self._nm_dev
+            and self._iface.type == InterfaceType.ETHERNET
+            and self._iface.sriov_total_vfs
+        ):
             if (
                 not self._nm_dev.props.capabilities
                 & NM.DeviceCapabilities.SRIOV
