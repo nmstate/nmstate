@@ -300,6 +300,22 @@ def _checkpoint_action(plugins, checkpoint_index, action):
             )
 
 
+def _sort_route_rule_by_ip_address(route_rules):
+    """
+    Return the route rules list prioritizing ipv6 over ipv4
+    """
+    ipv6_route_rules = []
+    ipv4_route_rules = []
+    for rule in route_rules[RouteRule.CONFIG]:
+        if RouteRule.IP_FROM in rule.keys() and ":" in rule[RouteRule.IP_FROM]:
+            ipv6_route_rules.append(rule)
+        elif RouteRule.IP_TO in rule.keys() and ":" in rule[RouteRule.IP_TO]:
+            ipv6_route_rules.append(rule)
+        else:
+            ipv4_route_rules.append(rule)
+    return ipv6_route_rules + ipv4_route_rules
+
+
 def _parse_checkpoints(checkpoints):
     """
     Return a dict mapping plugin name to checkpoint
@@ -338,6 +354,7 @@ def _get_route_rules_from_plugins(plugins):
             ret[RouteRule.CONFIG].extend(
                 plugin_route_rules.get(RouteRule.CONFIG, [])
             )
+    ret[RouteRule.CONFIG] = _sort_route_rule_by_ip_address(ret)
     return ret
 
 
