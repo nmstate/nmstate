@@ -68,7 +68,7 @@ def create_setting(context, iface_state, base_con_profile):
     sriov_config = iface_state.get(Ethernet.CONFIG_SUBTREE, {}).get(
         Ethernet.SRIOV_SUBTREE
     )
-    if sriov_config:
+    if sriov_config and sriov_config.get(Ethernet.SRIOV.TOTAL_VFS):
         if not _has_sriov_capability(context, ifname):
             raise NmstateNotSupportedError(
                 f"Interface '{ifname}' does not support SR-IOV"

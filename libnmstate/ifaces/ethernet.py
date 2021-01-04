@@ -18,6 +18,9 @@
 #
 
 from libnmstate.schema import Ethernet
+from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceType
+from libnmstate.schema import InterfaceState
 
 from .base_iface import BaseIface
 
@@ -45,6 +48,31 @@ class EthernetIface(BaseIface):
         state = super().state_for_verify()
         _capitalize_sriov_vf_mac(state)
         return state
+
+    @property
+    def sriov_total_vfs(self):
+        return (
+            self.raw.get(Ethernet.CONFIG_SUBTREE, {})
+            .get(Ethernet.SRIOV_SUBTREE, {})
+            .get(Ethernet.SRIOV.TOTAL_VFS, 0)
+        )
+
+    def create_sriov_vf_ifaces(self):
+        return [
+            EthernetIface(
+                {
+                    # According to manpage of systemd.net-naming-scheme(7),
+                    # SRIOV VF interface will have v{slot} in device name.
+                    # Currently, nmstate has no intention to support
+                    # user-defined udev rule on SRIOV interface naming policy.
+                    Interface.NAME: f"{self.name}v{i}",
+                    Interface.TYPE: InterfaceType.ETHERNET,
+                    # VF will be in DOWN state initialy.
+                    Interface.STATE: InterfaceState.DOWN,
+                }
+            )
+            for i in range(0, self.sriov_total_vfs)
+        ]
 
 
 def _capitalize_sriov_vf_mac(state):
