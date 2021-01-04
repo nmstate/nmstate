@@ -162,15 +162,18 @@ def _get_mac_address_from_sysfs(ifname):
 
 
 def _get_ethernet_info(device, iface):
+
     ethernet = {}
+    sriov_info = sriov.get_info(device)
+    if sriov_info:
+        ethernet.update(sriov_info)
+
     try:
         speed = int(device.get_speed())
         if speed > 0:
             ethernet[Ethernet.SPEED] = speed
-        else:
-            return None
     except AttributeError:
-        return None
+        pass
 
     ethtool_results = minimal_ethtool(iface)
     auto_setting = ethtool_results[Ethernet.AUTO_NEGOTIATION]
@@ -178,17 +181,11 @@ def _get_ethernet_info(device, iface):
         ethernet[Ethernet.AUTO_NEGOTIATION] = True
     elif auto_setting is False:
         ethernet[Ethernet.AUTO_NEGOTIATION] = False
-    else:
-        return None
 
     duplex_setting = ethtool_results[Ethernet.DUPLEX]
     if duplex_setting in [Ethernet.HALF_DUPLEX, Ethernet.FULL_DUPLEX]:
         ethernet[Ethernet.DUPLEX] = duplex_setting
-    else:
+
+    if not ethernet:
         return None
-
-    sriov_info = sriov.get_info(device)
-    if sriov_info:
-        ethernet.update(sriov_info)
-
     return ethernet

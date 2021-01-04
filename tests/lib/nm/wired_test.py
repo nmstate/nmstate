@@ -150,6 +150,7 @@ def test_get_info_with_invalid_duplex(ethtool_mock, NM_mock):
     dev_mock.get_iface.return_value = "nmstate_test"
     dev_mock.get_hw_address.return_value = "ab:cd:ef:01:23:45"
     dev_mock.get_mtu.return_value = 1500
+    dev_mock.get_speed.return_value = 1000
     dev_mock.get_device_type.return_value = NM_mock.DeviceType.ETHERNET
 
     info = nm.wired.get_info(dev_mock)
@@ -157,6 +158,10 @@ def test_get_info_with_invalid_duplex(ethtool_mock, NM_mock):
     assert info == {
         schema.Interface.MAC: dev_mock.get_hw_address.return_value,
         schema.Interface.MTU: dev_mock.get_mtu.return_value,
+        schema.Ethernet.CONFIG_SUBTREE: {
+            schema.Ethernet.AUTO_NEGOTIATION: True,
+            schema.Ethernet.SPEED: 1000,
+        },
     }
 
 
