@@ -11,6 +11,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         include:
           - job_type: "el8:nm_stable:format"
@@ -24,6 +25,7 @@ jobs:
           - job_type: "el8:nm_master:integ_slow"
           - job_type: "stream:nm_master:integ_tier1"
           - job_type: "stream:nm_master:integ_slow"
+          - job_type: "ovs2_11:nm_stable:integ_tier1"
 
     steps:
       - uses: actions/checkout@v2

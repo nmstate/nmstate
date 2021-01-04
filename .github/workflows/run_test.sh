@@ -18,10 +18,19 @@ OS_TYPE="${array[0]}"
 NM_TYPE="${array[1]}"
 TEST_TYPE="${array[2]}"
 
+CUSTOMIZE_ARG=""
+COPR_ARG=""
+
 if [ $OS_TYPE == "el8" ];then
-    export CONTAINER_IMAGE="docker.io/nmstate/centos8-nmstate-dev"
+    CONTAINER_IMAGE="docker.io/nmstate/centos8-nmstate-dev"
 elif [ $OS_TYPE == "stream" ];then
-    export CONTAINER_IMAGE="docker.io/nmstate/centos-stream-nmstate-dev"
+    CONTAINER_IMAGE="docker.io/nmstate/centos-stream-nmstate-dev"
+elif [ $OS_TYPE == "ovs2_11" ];then
+    CONTAINER_IMAGE="docker.io/nmstate/centos8-nmstate-dev"
+    CUSTOMIZE_ARG='--customize=
+        dnf remove -y openvswitch2.11 python3-openvswitch2.11;
+        dnf install -y openvswitch2.13 python3-openvswitch2.13;
+        systemctl restart openvswitch'
 else
     echo "Invalid OS type ${OS_TYPE}"
     exit 1
@@ -29,8 +38,6 @@ fi
 
 if [ $NM_TYPE == "nm_master" ];then
     COPR_ARG="--copr networkmanager/NetworkManager-master"
-else
-    COPR_ARG=""
 fi
 
 mkdir $TEST_ARTIFACTS_DIR || exit 1
@@ -51,4 +58,4 @@ sudo env \
         --pytest-args='-x' \
         --test-type $TEST_TYPE \
         --artifacts-dir $TEST_ARTIFACTS_DIR \
-        $COPR_ARG
+        $COPR_ARG "$CUSTOMIZE_ARG"
