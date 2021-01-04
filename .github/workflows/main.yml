@@ -9,30 +9,25 @@ on:
 
 jobs:
   build:
-    run-on: ubuntu-latest
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         include:
-          - container-image: "docker.io/nmstate/centos8-nmstate-dev"
-            testflags: "--test-type integ_tier1 --pytest-args='-x'"
-          - container-image: "docker.io/nmstate/centos8-nmstate-dev"
-            testflags: "--test-type integ_tier2 --pytest-args='-x'"
-          - container-image: "docker.io/nmstate/centos8-nmstate-dev"
-            testflags: "--test-type integ_slow --pytest-args='-x'"
-          - container-image: "docker.io/nmstate/centos8-nmstate-dev"
-            testflags: "--test-type integ_tier2 --pytest-args='-x' --copr networkmanager/NetworkManager-master"
-          - container-image: "docker.io/nmstate/centos8-nmstate-dev"
-            testflags: "--test-type integ_tier1 --pytest-args='-x' --copr networkmanager/NetworkManager-master"
-          - container-image: "docker.io/nmstate/centos8-nmstate-dev"
-            testflags: "--test-type integ_slow --pytest-args='-x' --copr networkmanager/NetworkManager-master"
-          - container-image: "docker.io/nmstate/centos8-nmstate-dev"
-            testflags: "--test-type format"
-          - container-image: "docker.io/nmstate/centos8-nmstate-dev"
-            testflags: "--test-type lint"
-          - container-image: "docker.io/nmstate/centos8-nmstate-dev"
-            testflags: "--test-type unit_py36"
+          - job_type: "el8:nm_stable:format"
+          - job_type: "el8:nm_stable:lint"
+          - job_type: "el8:nm_stable:unit_py36"
+          - job_type: "el8:nm_stable:integ_tier1"
+          - job_type: "el8:nm_stable:integ_tier2"
+          - job_type: "el8:nm_stable:integ_slow"
+          - job_type: "el8:nm_master:integ_tier1"
+          - job_type: "el8:nm_master:integ_tier2"
+          - job_type: "el8:nm_master:integ_slow"
+          - job_type: "stream:nm_master:integ_tier1"
+          - job_type: "stream:nm_master:integ_slow"
 
     steps:
+      - uses: actions/checkout@v2
+
       - name: Install dependencies
         run: |
           sudo apt update
@@ -46,11 +41,12 @@ jobs:
 
       - name: Run tests
         env:
-          CONTAINER_CMD: "docker"
-          CONTAINER_IMAGE: ${{ matrix.container-image }} 
-          TESTFLAGS: ${{ matrix.testflags }}
-        run: sudo ./automation/run-tests.sh $TESTFLAGS
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        run: .github/workflows/run_test.sh ${{ matrix.job_type }}
 
-      - name: Upload logs from failure
+      - uses: actions/upload-artifact@v2
         if: ${{ failure() }}
-        run: sudo ./automation/upload_test_artifacts.sh
+        with:
+          name: nmstate-test-artifact
+          path: test_artifacts/
+          retention-days: 5
