@@ -1,0 +1,54 @@
+name: CI
+
+
+on:
+  pull_request:
+   types: [opened, synchronize, reopened]
+  push:
+    branches:
+      - base
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - job_type: "el8:nm_stable:format"
+          - job_type: "el8:nm_stable:lint"
+          - job_type: "el8:nm_stable:unit_py36"
+          - job_type: "el8:nm_stable:integ_tier1"
+          - job_type: "el8:nm_stable:integ_tier2"
+          - job_type: "el8:nm_stable:integ_slow"
+          - job_type: "el8:nm_master:integ_tier1"
+          - job_type: "el8:nm_master:integ_tier2"
+          - job_type: "el8:nm_master:integ_slow"
+          - job_type: "stream:nm_master:integ_tier1"
+          - job_type: "stream:nm_master:integ_slow"
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install git gnupg2 openssh-client python-tox xz-utils
+
+      - name: Start docker service
+        run: sudo service docker start
+
+      - name: Enable openvswitch kernel module
+        run: sudo modprobe openvswitch
+
+      - name: Run tests
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        run: .github/workflows/run_test.sh ${{ matrix.job_type }}
+
+      - uses: actions/upload-artifact@v2
+        if: ${{ failure() }}
+        with:
+          name: nmstate-test-artifact
+          path: test_artifacts/
+          retention-days: 5
