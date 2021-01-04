@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  pull_request:
+   types: [opened, synchronize, reopened]
+  push:
+    branches:
+      - base
+
+jobs:
+  build:
+    run-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - container-image: "docker.io/nmstate/centos8-nmstate-dev"
+            testflags: "--test-type integ_tier1 --pytest-args='-x'"
+          - container-image: "docker.io/nmstate/centos8-nmstate-dev"
+            testflags: "--test-type integ_tier2 --pytest-args='-x'"
+          - container-image: "docker.io/nmstate/centos8-nmstate-dev"
+            testflags: "--test-type integ_slow --pytest-args='-x'"
+          - container-image: "docker.io/nmstate/centos8-nmstate-dev"
+            testflags: "--test-type integ_tier2 --pytest-args='-x' --copr networkmanager/NetworkManager-master"
+          - container-image: "docker.io/nmstate/centos8-nmstate-dev"
+            testflags: "--test-type integ_tier1 --pytest-args='-x' --copr networkmanager/NetworkManager-master"
+          - container-image: "docker.io/nmstate/centos8-nmstate-dev"
+            testflags: "--test-type integ_slow --pytest-args='-x' --copr networkmanager/NetworkManager-master"
+          - container-image: "docker.io/nmstate/centos8-nmstate-dev"
+            testflags: "--test-type format"
+          - container-image: "docker.io/nmstate/centos8-nmstate-dev"
+            testflags: "--test-type lint"
+          - container-image: "docker.io/nmstate/centos8-nmstate-dev"
+            testflags: "--test-type unit_py36"
+
+    steps:
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install git gnupg2 openssh-client python-tox xz-utils
+
+      - name: Start docker service
+        run: sudo service docker start
+
+      - name: Enable openvswitch kernel module
+        run: sudo modprobe openvswitch
+
+      - name: Run tests
+        env:
+          CONTAINER_CMD: "docker"
+          CONTAINER_IMAGE: ${{ matrix.container-image }} 
+          TESTFLAGS: ${{ matrix.testflags }}
+        run: sudo ./automation/run-tests.sh $TESTFLAGS
+
+      - name: Upload logs from failure
+        if: ${{ failure() }}
+        run: sudo ./automation/upload_test_artifacts.sh
