@@ -25,10 +25,10 @@ function open_shell {
 function is_file_changed {
     git remote add upstream https://github.com/nmstate/nmstate.git
     git fetch upstream
-    if [ -n "$TRAVIS_BRANCH" ]; then
-        git diff --exit-code --name-only upstream/$TRAVIS_BRANCH -- $1
+    if [ -n "$BRANCH_NAME" ]; then
+        git diff --exit-code --name-only upstream/$BRANCH_NAME -- $1
     else
-        git diff -exit-code --name-only upstream/master -- $1
+        git diff --exit-code --name-only upstream/master -- $1
     fi
 
     if [ $? -eq 0 ];then
@@ -100,20 +100,11 @@ function copy_workspace_container {
 
 function create_container {
   mkdir -p $EXPORT_DIR
+  ci_env=`bash <(curl -s https://codecov.io/env)`
   # The podman support wildcard when passing enviroments, but docker does not.
-  CONTAINER_ID="$(${CONTAINER_CMD} run --privileged -d \
+  CONTAINER_ID="$(${CONTAINER_CMD} run $ci_env --privileged -d \
       -e CI \
       -e COVERALLS_REPO_TOKEN \
-      -e CODECOV_TOKEN \
-      -e TRAVIS \
-      -e TRAVIS_BRANCH \
-      -e TRAVIS_COMMIT \
-      -e TRAVIS_JOB_NUMBER \
-      -e TRAVIS_PULL_REQUEST \
-      -e TRAVIS_JOB_ID \
-      -e TRAVIS_REPO_SLUG \
-      -e TRAVIS_TAG \
-      -e TRAVIS_OS_NAME \
       -e SHIPPABLE \
       -v /sys/fs/cgroup:/sys/fs/cgroup:ro \
       -v $PROJECT_PATH:$CONTAINER_WORKSPACE \
