@@ -17,11 +17,10 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
-from libnmstate.schema import VRF
 from .common import NM
 
 
-def create_vrf_setting(vrf_config):
+def create_vrf_setting(vrf_iface):
     vrf_setting = NM.SettingVrf.new()
-    vrf_setting.props.table = vrf_config[VRF.ROUTE_TABLE_ID]
+    vrf_setting.props.table = vrf_iface.route_table_id
     return vrf_setting
