@@ -22,10 +22,12 @@ from libnmstate.schema import Veth
 from .ethernet import EthernetIface
 
 
-_IS_PEER_METADATA = "_is_peer"
-
-
 class VethIface(EthernetIface):
+    def __init__(self, info, save_to_disk=True):
+        super().__init__(info, save_to_disk)
+        self._is_peer = False
+        self._peer_changed = False
+
     @property
     def is_virtual(self):
         return True
@@ -36,12 +38,16 @@ class VethIface(EthernetIface):
 
     @property
     def is_peer(self):
-        return self.raw.get(_IS_PEER_METADATA) is True
+        return self._is_peer
+
+    @property
+    def is_peer_changed(self):
+        return self._peer_changed
 
     def mark_as_peer(self):
-        self.raw[_IS_PEER_METADATA] = True
+        self._is_peer = True
 
-    def gen_metadata(self, ifaces):
+    def _mark_iface_is_peer(self, ifaces):
         if (
             not self.is_absent
             and not ifaces.get_cur_iface(self.peer, self.type)
@@ -49,6 +55,16 @@ class VethIface(EthernetIface):
         ):
             for iface in ifaces.all_ifaces():
                 if iface.name == self.peer and iface.type == self.type:
-                    if not iface.raw.get(_IS_PEER_METADATA):
-                        self.raw[_IS_PEER_METADATA] = True
+                    if not iface.is_peer:
+                        self._is_peer = True
+
+    def _mark_peer_changed(self, ifaces):
+        if self.is_up:
+            cur_iface = ifaces.get_cur_iface(self.name, self.type)
+            if cur_iface and self.peer != cur_iface.peer:
+                self._peer_changed = True
+
+    def gen_metadata(self, ifaces):
+        self._mark_iface_is_peer(ifaces)
+        self._mark_peer_changed(ifaces)
         super().gen_metadata(ifaces)
