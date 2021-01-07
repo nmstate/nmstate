@@ -24,11 +24,8 @@ import uuid
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import LinuxBridge as LB
-from libnmstate.schema import MacVlan
-from libnmstate.schema import MacVtap
 from libnmstate.schema import OVSBridge as OvsB
 from libnmstate.schema import OVSInterface
-from libnmstate.schema import VRF
 
 from libnmstate.ifaces.bridge import BridgeIface
 
@@ -196,16 +193,14 @@ def create_new_nm_simple_conn(iface, nm_profile):
     if team_setting:
         settings.append(team_setting)
 
-    if VRF.CONFIG_SUBTREE in iface_info:
-        settings.append(create_vrf_setting(iface_info[VRF.CONFIG_SUBTREE]))
+    if iface.type == InterfaceType.VRF:
+        settings.append(create_vrf_setting(iface))
 
-    if MacVlan.CONFIG_SUBTREE in iface_info:
-        settings.append(create_macvlan_setting(iface_info, nm_profile))
+    if iface.type == InterfaceType.MAC_VLAN:
+        settings.append(create_macvlan_setting(iface, nm_profile))
 
-    if MacVtap.CONFIG_SUBTREE in iface_info:
-        settings.append(
-            create_macvlan_setting(iface_info, nm_profile, tap=True)
-        )
+    if iface.type == InterfaceType.MAC_VTAP:
+        settings.append(create_macvlan_setting(iface, nm_profile, tap=True))
 
     if iface.type == InterfaceType.VETH:
         veth_setting = create_veth_setting(iface, nm_profile)

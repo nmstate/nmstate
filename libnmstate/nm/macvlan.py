@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020 Red Hat, Inc.
+# Copyright (c) 2020-2021 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -21,7 +21,6 @@ from libnmstate.error import NmstateValueError
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import MacVlan
-from libnmstate.schema import MacVtap
 from .common import NM
 
 
@@ -34,12 +33,7 @@ NMSTATE_MODE_TO_NM_MODE = {
 }
 
 
-def create_setting(iface_state, base_con_profile, tap=False):
-    macvlan = (
-        iface_state.get(MacVtap.CONFIG_SUBTREE)
-        if tap
-        else iface_state.get(MacVlan.CONFIG_SUBTREE)
-    )
+def create_setting(iface, base_con_profile, tap=False):
     macvlan_setting = None
     if base_con_profile:
         macvlan_setting = base_con_profile.get_setting_by_name(
@@ -51,18 +45,17 @@ def create_setting(iface_state, base_con_profile, tap=False):
     if not macvlan_setting:
         macvlan_setting = NM.SettingMacvlan.new()
 
-    nm_mode = NMSTATE_MODE_TO_NM_MODE.get(macvlan[MacVlan.MODE])
+    nm_mode = NMSTATE_MODE_TO_NM_MODE.get(iface.mode)
     if not nm_mode or nm_mode == MacVlan.Mode.SOURCE:
         raise NmstateValueError(
-            f"{macvlan[MacVlan.MODE]} is not valid or supported by "
-            "NetworkManager"
+            f"{iface.mode} is not valid or supported by " "NetworkManager"
         )
 
     macvlan_setting.props.mode = nm_mode
-    macvlan_setting.props.parent = macvlan[MacVlan.BASE_IFACE]
+    macvlan_setting.props.parent = iface.base_iface
     macvlan_setting.props.tap = tap
-    if macvlan.get(MacVlan.PROMISCUOUS) is not None:
-        macvlan_setting.props.promiscuous = macvlan[MacVlan.PROMISCUOUS]
+    if iface.promiscuous is not None:
+        macvlan_setting.props.promiscuous = iface.promiscuous
 
     return macvlan_setting
 

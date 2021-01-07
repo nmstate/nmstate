@@ -44,6 +44,18 @@ class MacVlanIface(BaseIface):
     def can_have_ip_when_enslaved(self):
         return False
 
+    @property
+    def mode(self):
+        return self.config_subtree[MacVlan.MODE]
+
+    @property
+    def base_iface(self):
+        return self.config_subtree[MacVlan.BASE_IFACE]
+
+    @property
+    def promiscuous(self):
+        return self.config_subtree.get(MacVlan.PROMISCUOUS)
+
     def pre_edit_validation_and_cleanup(self):
         if self.is_up:
             self._validate_mode()

@@ -45,6 +45,7 @@ class TestMacVlanIface:
         iface_info[MacVlan.CONFIG_SUBTREE] = {
             MacVlan.BASE_IFACE: BASE_IFACE_NAME,
             MacVlan.MODE: MacVlan.Mode.PASSTHRU,
+            MacVlan.PROMISCUOUS: True,
         }
         return iface_info
 
@@ -61,6 +62,19 @@ class TestMacVlanIface:
         assert not MacVlanIface(
             self._gen_iface_info()
         ).can_have_ip_when_enslaved
+
+    def test_get_mode(self):
+        assert (
+            MacVlanIface(self._gen_iface_info()).mode == MacVlan.Mode.PASSTHRU
+        )
+
+    def test_get_base_iface(self):
+        assert (
+            MacVlanIface(self._gen_iface_info()).base_iface == BASE_IFACE_NAME
+        )
+
+    def test_get_promiscuous(self):
+        assert MacVlanIface(self._gen_iface_info()).promiscuous
 
     def test_add_macvlan_without_mode(self):
         iface_info = self._gen_iface_info()
