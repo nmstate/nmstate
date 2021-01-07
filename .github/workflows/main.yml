@@ -44,6 +44,7 @@ jobs:
       - name: Run tests
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+          FORCE_COLOR: 3
         run: .github/workflows/run_test.sh ${{ matrix.job_type }}
 
       - uses: actions/upload-artifact@v2
