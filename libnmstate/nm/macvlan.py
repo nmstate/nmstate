@@ -88,3 +88,18 @@ def get_current_macvlan_type(applied_config):
     if is_macvtap(applied_config):
         return {Interface.TYPE: InterfaceType.MAC_VTAP}
     return {}
+
+
+def get_macvtap_config(nm_profile):
+    nm_setting = nm_profile.get_setting_macvlan()
+    nm_mode_to_nmstate = {v: k for k, v in NMSTATE_MODE_TO_NM_MODE.items()}
+    if nm_setting:
+        return {
+            MacVlan.MODE: nm_mode_to_nmstate.get(
+                nm_setting.get_mode(), MacVlan.Mode.UNKNOWN
+            ),
+            MacVlan.BASE_IFACE: nm_setting.props.parent,
+            MacVlan.PROMISCUOUS: nm_setting.props.promiscuous,
+        }
+
+    return {}

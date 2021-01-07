@@ -32,6 +32,7 @@ from libnmstate.schema import Route
 from libnmstate.schema import RouteRule
 
 from .testlib import iprule
+from .testlib import statelib
 
 IPV4_ADDRESS1 = "192.0.2.251"
 IPV4_ROUTE_TABLE_ID1 = 50
@@ -791,3 +792,37 @@ def _check_ip_rules(rules):
             rule.get(RouteRule.PRIORITY),
             rule.get(RouteRule.ROUTE_TABLE),
         )
+
+
+def test_show_saved_config_with_route_interface_down(eth1_static_gateway_dns):
+    running_route_config = libnmstate.show()[Route.KEY][Route.CONFIG]
+    libnmstate.apply(
+        {
+            # Below are requred as we bring down the route/DNS interface,
+            # nmstate cannot find new interface for the old route/DNS config
+            DNS.KEY: {DNS.CONFIG: {}},
+            Route.KEY: {
+                Route.CONFIG: [
+                    {
+                        Route.STATE: Route.STATE_ABSENT,
+                        Route.NEXT_HOP_INTERFACE: "eth1",
+                    }
+                ]
+            },
+            Interface.KEY: [
+                {
+                    Interface.NAME: "eth1",
+                    Interface.STATE: InterfaceState.DOWN,
+                }
+            ],
+        }
+    )
+    saved_iface_state = statelib.show_saved_config_only(("eth1",))[
+        Interface.KEY
+    ][0]
+    saved_route_config = libnmstate.show_saved_config()[Route.KEY][
+        Route.CONFIG
+    ]
+
+    assert saved_iface_state[Interface.STATE] == InterfaceState.UP
+    assert saved_route_config == running_route_config

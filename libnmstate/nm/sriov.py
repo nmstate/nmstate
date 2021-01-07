@@ -109,3 +109,27 @@ def _set_nm_attribute(vf_object, key, value):
 def _remove_sriov_vfs_in_setting(vfs_config, sriov_setting, vf_ids_to_remove):
     for vf_id in vf_ids_to_remove:
         yield vf_id
+
+
+def get_sriov_config(nm_profile):
+    nm_setting = nm_profile.get_setting_by_name(NM.SETTING_SRIOV_SETTING_NAME)
+    if nm_setting:
+        vfs_info = []
+        for nm_vf in nm_setting.props.vfs:
+            vf_info = {Ethernet.SRIOV.VFS.ID: nm_vf.get_index()}
+            attributes = nm_vf.get_attribute_names()
+            for key in (
+                Ethernet.SRIOV.VFS.SPOOF_CHECK,
+                Ethernet.SRIOV.VFS.MAC_ADDRESS,
+                Ethernet.SRIOV.VFS.TRUST,
+            ):
+                if key in attributes:
+                    vf_info[key] = nm_vf.get_attribute(key)
+
+            vfs_info.append(vf_info)
+
+        return {
+            Ethernet.SRIOV.TOTAL_VFS: nm_setting.props.total_vfs,
+            Ethernet.SRIOV.VFS_SUBTREE: vfs_info,
+        }
+    return {}

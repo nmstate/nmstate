@@ -108,6 +108,12 @@ change the output format to \fIJSON\fR.
 Showing the running network configuration.
 .RE
 
+.B -s, --saved-config
+.RS
+Showing the saved network configuration which will be actived on next OS
+reboot.
+.RE
+
 .IP \fB--no-verify
 skip the desired network state verification.
 .IP \fB--no-commit

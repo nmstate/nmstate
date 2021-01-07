@@ -195,7 +195,13 @@ def _get_lag_nmstate_port_info(nm_dev_ovs_port):
             key=itemgetter(OVS_LAG.Port.NAME),
         ),
     }
-    mode = _get_lag_mode(nm_dev_ovs_port)
+    mode = None
+    nm_ac = nm_dev_ovs_port.get_active_connection()
+    if nm_ac:
+        # TODO: Use applied profile instead of on-disk one.
+        ovs_port_nm_profile = nm_ac.props.connection
+        if ovs_port_nm_profile:
+            mode = _get_lag_mode(ovs_port_nm_profile)
     if mode:
         lag[OVS_LAG.MODE] = mode
     return {
@@ -204,12 +210,9 @@ def _get_lag_nmstate_port_info(nm_dev_ovs_port):
     }
 
 
-def _get_lag_mode(nm_dev_ovs_port):
-    """
-    TODO: Use applied profile instead of on-disk one.
-    """
+def _get_lag_mode(ovs_port_nm_profile):
     mode = None
-    nm_setting = _get_nm_setting_ovs_port(nm_dev_ovs_port)
+    nm_setting = ovs_port_nm_profile.get_setting_ovs_port()
     if nm_setting:
         lacp = nm_setting.props.lacp
         mode = nm_setting.props.bond_mode
@@ -222,7 +225,14 @@ def _get_lag_mode(nm_dev_ovs_port):
 
 
 def _get_vlan_info(nm_dev_ovs_port):
-    nm_setting = _get_nm_setting_ovs_port(nm_dev_ovs_port)
+    nm_ac = nm_dev_ovs_port.get_active_connection()
+    if nm_ac:
+        ovs_port_nm_profile = nm_ac.props.connection
+    return _get_vlan_info_from_profile(ovs_port_nm_profile)
+
+
+def _get_vlan_info_from_profile(ovs_port_nm_profile):
+    nm_setting = ovs_port_nm_profile.get_setting_ovs_port()
     if nm_setting:
         vlan_mode = nm_setting.props.vlan_mode
         if vlan_mode:
@@ -247,24 +257,30 @@ def _get_nm_setting_ovs_port(nm_dev_ovs_port):
     if nm_ac:
         nm_profile = nm_ac.props.connection
         if nm_profile:
-            return nm_profile.get_setting(NM.SettingOvsPort)
+            return nm_profile.get_setting_ovs_port()
     return None
 
 
 def _get_bridge_options(bridge_device):
-    bridge_options = {}
-    bridge_profile = None
     act_conn = bridge_device.get_active_connection()
     if act_conn:
         bridge_profile = act_conn.props.connection
+        if bridge_profile:
+            return _get_bridge_options_from_nm_profile(bridge_profile)
+    return {}
 
-    if bridge_profile:
-        bridge_setting = bridge_profile.get_setting(NM.SettingOvsBridge)
-        bridge_options["stp"] = bridge_setting.props.stp_enable
-        bridge_options["rstp"] = bridge_setting.props.rstp_enable
-        bridge_options["fail-mode"] = bridge_setting.props.fail_mode or ""
+
+def _get_bridge_options_from_nm_profile(nm_profile):
+    bridge_options = {}
+    bridge_setting = nm_profile.get_setting_ovs_bridge()
+    if bridge_setting:
+        bridge_options[OB.Options.STP] = bridge_setting.props.stp_enable
+        bridge_options[OB.Options.RSTP] = bridge_setting.props.rstp_enable
+        bridge_options[OB.Options.FAIL_MODE] = (
+            bridge_setting.props.fail_mode or ""
+        )
         bridge_options[
-            "mcast-snooping-enable"
+            OB.Options.MCAST_SNOOPING_ENABLED
         ] = bridge_setting.props.mcast_snooping_enable
 
     return bridge_options
@@ -288,3 +304,56 @@ def create_iface_for_nm_ovs_port(iface):
             CONTROLLER_TYPE_METADATA: iface_info[CONTROLLER_TYPE_METADATA],
         }
     )
+
+
+def get_ovs_bridge_config(
+    nm_profile, ovs_port_nm_profiles, ovs_iface_nm_profiles
+):
+    info = {
+        OB.PORT_SUBTREE: get_ovs_bridge_port_config(
+            ovs_port_nm_profiles, ovs_iface_nm_profiles
+        ),
+        OB.OPTIONS_SUBTREE: _get_bridge_options_from_nm_profile(nm_profile),
+    }
+    return info
+
+
+def get_ovs_bridge_port_config(ovs_port_nm_profiles, ovs_iface_nm_profiles):
+    info = []
+    OVS_LAG = OB.Port.LinkAggregation
+    for ovs_port_nm_profile in ovs_port_nm_profiles:
+        port_info = {}
+        vlan_info = _get_vlan_info_from_profile(ovs_port_nm_profile)
+        if vlan_info:
+            port_info[OB.Port.VLAN_SUBTREE] = vlan_info
+        ovs_port_name = ovs_port_nm_profile.get_interface_name()
+        cur_ovs_iface_nm_profiles = ovs_iface_nm_profiles.get(ovs_port_name)
+        if cur_ovs_iface_nm_profiles:
+            if len(cur_ovs_iface_nm_profiles) == 1:
+                port_info[OB.Port.NAME] = cur_ovs_iface_nm_profiles[
+                    0
+                ].get_interface_name()
+            else:
+                mode = _get_lag_mode(ovs_port_nm_profile)
+                port_info[OB.Port.NAME] = ovs_port_name
+                lag_info = {
+                    OVS_LAG.PORT_SUBTREE: [
+                        {OVS_LAG.Port.NAME: p.get_interface_name()}
+                        for p in cur_ovs_iface_nm_profiles
+                    ]
+                }
+                if mode:
+                    lag_info[OVS_LAG.MODE] = mode
+                port_info[OB.Port.LINK_AGGREGATION_SUBTREE] = lag_info
+            info.append(port_info)
+
+    return info
+
+
+def get_ovs_patch_iface_config(nm_profile):
+    nm_setting = nm_profile.get_setting_ovs_patch()
+    if nm_setting:
+        return {
+            OVSInterface.Patch.PEER: nm_setting.props.peer,
+        }
+    return {}

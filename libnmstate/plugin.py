@@ -71,6 +71,17 @@ class NmstatePlugin(metaclass=ABCMeta):
         """
         return []
 
+    def get_saved_config_interfaces(self):
+        """
+        Return a list of dict with network interface saved(persistent after
+        reboot) configuration.
+        Notes:
+            * the IP/DHCP/Route retrieved from DHCP/Autoconf are not saved
+              configuration.
+            * Memory only configuration is not saved configration.
+        """
+        return []
+
     def apply_changes(self, net_state, save_to_disk):
         pass
 
@@ -96,15 +107,31 @@ class NmstatePlugin(metaclass=ABCMeta):
             f"Plugin {self.name} BUG: get_routes() not implemented"
         )
 
+    def get_saved_routes(self):
+        return []
+
     def get_route_rules(self):
         raise NmstatePluginError(
             f"Plugin {self.name} BUG: get_route_rules() not implemented"
         )
 
+    def get_saved_route_rules(self):
+        return []
+
     def get_dns_client_config(self):
         raise NmstatePluginError(
             f"Plugin {self.name} BUG: get_dns_client_config() not implemented"
         )
+
+    def get_global_state(self):
+        """
+        Allowing plugin to append global information to content of
+        `libnmstate.show()`.
+        """
+        return {}
+
+    def get_saved_dns_client_config(self):
+        return {}
 
     @property
     def is_supplemental_only(self):

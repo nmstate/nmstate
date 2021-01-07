@@ -986,3 +986,21 @@ def test_ignore_verification_error_on_invalid_bond_option(eth1_up, eth2_up):
                 Bond.OPTIONS_SUBTREE
             ]
         )
+
+
+def test_show_saved_config_with_bond_down(bond99_with_2_port):
+    running_state = statelib.show_only((BOND99,))
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: BOND99,
+                    Interface.STATE: InterfaceState.DOWN,
+                }
+            ]
+        }
+    )
+    saved_state = statelib.show_saved_config_only((BOND99,))
+
+    assert saved_state[Interface.KEY][0][Interface.STATE] == InterfaceState.UP
+    assertlib.assert_state_match_full(saved_state, running_state)

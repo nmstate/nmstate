@@ -83,25 +83,44 @@ def get_info(device):
     these values might be outdated due to the bug below.
     Ref: https://bugzilla.redhat.com/1792232
     """
-    info = {}
-
     if device.get_device_type() == NM.DeviceType.TEAM:
         teamd_json = device.get_config()
         if teamd_json:
-            teamd_config = json.loads(teamd_json)
             port_names = [dev.get_iface() for dev in device.get_slaves()]
-            info[Team.CONFIG_SUBTREE] = {
-                Team.PORT_SUBTREE: [
-                    {Team.Port.NAME: n} for n in sorted(port_names)
-                ],
+            return {
+                Team.CONFIG_SUBTREE: _teamd_config_to_nmstate(
+                    teamd_json, port_names
+                )
             }
-            runner = _get_runner_name(teamd_config)
-            if runner:
-                info[Team.CONFIG_SUBTREE][Team.RUNNER_SUBTREE] = {
-                    Team.Runner.NAME: runner
-                }
-    return info
+    return {}
 
 
 def _get_runner_name(teamd_config):
     return teamd_config.get("runner", {}).get("name")
+
+
+def _teamd_config_to_nmstate(teamd_json, port_names):
+    teamd_config = json.loads(teamd_json)
+    info = {
+        Team.PORT_SUBTREE: [{Team.Port.NAME: n} for n in sorted(port_names)],
+    }
+    runner = _get_runner_name(teamd_config)
+    if runner:
+        info[Team.RUNNER_SUBTREE] = {Team.Runner.NAME: runner}
+    return info
+
+
+def get_team_config(nm_profile, subordinate_nm_profiles):
+    if nm_profile:
+        nm_team_setting = nm_profile.get_setting_team()
+        if nm_team_setting:
+            teamd_json = nm_team_setting.get_config()
+            if teamd_json:
+                return _teamd_config_to_nmstate(
+                    teamd_json,
+                    port_names=[
+                        subordinate_nm_profile.get_interface_name()
+                        for subordinate_nm_profile in subordinate_nm_profiles
+                    ],
+                )
+    return {}

@@ -231,3 +231,28 @@ def test_wait_sriov_vf_been_created():
             Interface.STATE
         ] = InterfaceState.ABSENT
         libnmstate.apply(desired_state)
+
+
+@pytest.mark.skipif(
+    not os.environ.get("TEST_REAL_NIC"),
+    reason="Need to define TEST_REAL_NIC for SR-IOV test",
+)
+def test_show_saved_config_for_sriov_down(sriov_iface_vf):
+    pf_name = _test_nic_name()
+    running_state = statelib.show_only((pf_name,))
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: pf_name,
+                    Interface.STATE: InterfaceState.DOWN,
+                }
+            ]
+        }
+    )
+    saved_state = statelib.show_saved_config_only((pf_name,))
+    iface_state = saved_state[Interface.KEY][0]
+
+    assert saved_state[Interface.KEY][0][Interface.STATE] == InterfaceState.UP
+    assert iface_state[Ethernet.SRIOV_SUBTREE][Ethernet.SRIOV.TOTAL_VFS] == 2
+    assertlib.assert_state_match_full(saved_state, running_state)

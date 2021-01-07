@@ -105,22 +105,18 @@ def apply_lldp_setting(con_setting, iface_desired_state):
         con_setting.setting.props.lldp = lldp_status
 
 
-def get_info(nm_client, nmdev):
+def get_lldp_config(nm_profile, nmdev=None, config_only=False):
     """
     Provides the current LLDP neighbors information
     """
-    lldp_status = _get_lldp_status(nm_client, nmdev)
-    info = {}
-    if lldp_status == NM_LLDP_STATUS_DEFAULT or not lldp_status:
-        info[LLDP.ENABLED] = False
-    else:
-        info[LLDP.ENABLED] = True
+    info = {LLDP.ENABLED: _get_lldp_status(nm_profile)}
+    if info[LLDP.ENABLED] and not config_only and nmdev:
         _get_neighbors_info(info, nmdev)
 
-    return {LLDP.CONFIG_SUBTREE: info}
+    return info
 
 
-def _get_lldp_status(nm_client, nmdev):
+def _get_lldp_status(nm_profile):
     """
     Default means NM global config file value which is by default disabled.
     According to NM folks, there is no way from libnm to know if lldp is
@@ -131,15 +127,13 @@ def _get_lldp_status(nm_client, nmdev):
 
     Ref: https://bugzilla.redhat.com/1832273
     """
-    lldp_status = None
-    lldp_profile = None
-    act_conn = nmdev.get_active_connection()
-    if act_conn:
-        lldp_profile = act_conn.props.connection
-    if lldp_profile:
-        con_setting = lldp_profile.get_setting_connection()
+    lldp_status = False
+    if nm_profile:
+        con_setting = nm_profile.get_setting_connection()
         if con_setting:
-            lldp_status = con_setting.get_lldp()
+            lldp_status = (
+                con_setting.get_lldp() == NM.SettingConnectionLldp.ENABLE_RX
+            )
 
     return lldp_status
 

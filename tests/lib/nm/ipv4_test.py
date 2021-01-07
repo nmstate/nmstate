@@ -108,34 +108,21 @@ def test_create_setting_with_static_addresses(NM_mock):
     )
 
 
-def test_get_info_with_no_connection():
-    info = nm.ipv4.get_info(active_connection=None, applied_config=None)
-
-    assert info == {}
-
-
 def test_get_info_with_no_applied_config():
-    con_mock = mock.MagicMock()
-
-    info = nm.ipv4.get_info(active_connection=con_mock, applied_config=None)
-
+    info = nm.ipv4.get_ipv4_config(None)
     assert info == {}
 
 
 def test_get_info_with_no_ip_profile():
-    con_mock = mock.MagicMock()
     applied_config_mock = mock.MagicMock()
     applied_config_mock.get_setting_ip4_config.return_value = None
 
-    info = nm.ipv4.get_info(
-        active_connection=con_mock, applied_config=applied_config_mock
-    )
+    info = nm.ipv4.get_ipv4_config(applied_config_mock)
 
     assert info == {InterfaceIPv4.ENABLED: False, InterfaceIPv4.DHCP: False}
 
 
 def test_get_info_with_ip_profile(NM_mock):
-    act_con_mock = mock.MagicMock()
     applied_config_mock = mock.MagicMock()
     ip_profile = mock.MagicMock()
     applied_config_mock.get_setting_ip4_config.return_value = ip_profile
@@ -146,9 +133,7 @@ def test_get_info_with_ip_profile(NM_mock):
     ip_profile.props.ignore_auto_dns = False
     ip_profile.props.ignore_auto_routes = False
 
-    info = nm.ipv4.get_info(
-        active_connection=act_con_mock, applied_config=applied_config_mock
-    )
+    info = nm.ipv4.get_ipv4_config(applied_config_mock)
 
     assert info == {
         InterfaceIPv4.ENABLED: True,

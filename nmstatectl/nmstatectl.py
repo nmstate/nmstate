@@ -181,6 +181,13 @@ def setup_subcommand_show(subparsers):
         dest="running_config",
     )
     parser_show.add_argument(
+        "-s, --saved-config",
+        help="Show saved configurations",
+        default=False,
+        action="store_true",
+        dest="saved_config",
+    )
+    parser_show.add_argument(
         "only",
         default="*",
         nargs="?",
@@ -257,6 +264,8 @@ def rollback(args):
 def show(args):
     if args.running_config:
         full_state = libnmstate.show_running_config()
+    elif args.saved_config:
+        full_state = libnmstate.show_saved_config()
     else:
         full_state = libnmstate.show()
     state = _filter_state(full_state, args.only)

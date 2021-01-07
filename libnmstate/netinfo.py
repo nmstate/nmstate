@@ -18,8 +18,9 @@
 #
 
 from .nmstate import plugin_context
-from .nmstate import show_with_plugins
 from .nmstate import show_running_config_with_plugins
+from .nmstate import show_saved_config_with_plugins
+from .nmstate import show_with_plugins
 
 
 def show(*, include_status_data=False):
@@ -39,3 +40,11 @@ def show(*, include_status_data=False):
 def show_running_config():
     with plugin_context() as plugins:
         return show_running_config_with_plugins(plugins)
+
+
+def show_saved_config():
+    """
+    Reports configuration saved to persistent after reboot.
+    """
+    with plugin_context() as plugins:
+        return show_saved_config_with_plugins(plugins)

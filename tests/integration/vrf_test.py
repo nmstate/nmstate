@@ -30,6 +30,7 @@ from libnmstate.schema import InterfaceState
 from libnmstate.schema import VRF
 
 from .testlib import assertlib
+from .testlib import statelib
 
 TEST_VRF0 = "test-vrf0"
 TEST_VRF1 = "test-vrf1"
@@ -200,3 +201,27 @@ class TestVrf:
         }
         libnmstate.apply(desired_state)
         assertlib.assert_state_match(desired_state)
+
+    def test_show_saved_config_with_vrf_down(self, vrf0_with_port0):
+        running_state = statelib.show_only((TEST_VRF0,))
+        libnmstate.apply(
+            {
+                Interface.KEY: [
+                    {
+                        Interface.NAME: TEST_VRF0,
+                        Interface.STATE: InterfaceState.DOWN,
+                    }
+                ]
+            }
+        )
+        saved_state = statelib.show_saved_config_only((TEST_VRF0,))
+        iface_state = saved_state[Interface.KEY][0]
+
+        assert (
+            saved_state[Interface.KEY][0][Interface.STATE] == InterfaceState.UP
+        )
+        assert (
+            iface_state[VRF.CONFIG_SUBTREE][VRF.ROUTE_TABLE_ID]
+            == TEST_ROUTE_TABLE_ID0
+        )
+        assertlib.assert_state_match_full(saved_state, running_state)

@@ -20,6 +20,7 @@
 from libnmstate.schema import LinuxBridge as LB
 
 from .bridge_port_vlan import nmstate_port_vlan_to_nm
+from .bridge_port_vlan import get_linux_bridge_port_vlan_config
 from .common import NM
 
 
@@ -138,3 +139,65 @@ def create_port_setting(options, base_con_profile):
 
 def get_port(nm_device):
     return nm_device.get_slaves()
+
+
+def get_linux_bridge_config(nm_profile, port_nm_profiles):
+    nm_setting = nm_profile.get_setting_bridge()
+    if nm_setting:
+        info = {
+            LB.OPTIONS_SUBTREE: _get_bridge_options(nm_setting),
+            LB.PORT_SUBTREE: [
+                _get_port_config(port_nm_profile)
+                for port_nm_profile in port_nm_profiles
+            ],
+        }
+
+        return info
+
+    return {}
+
+
+def _get_bridge_options(nm_setting):
+    info = {
+        LB.Options.MAC_AGEING_TIME: nm_setting.get_ageing_time(),
+        LB.Options.GROUP_FORWARD_MASK: nm_setting.get_group_forward_mask(),
+        LB.Options.MULTICAST_SNOOPING: nm_setting.get_multicast_snooping(),
+        LB.STP_SUBTREE: _get_stp_options(nm_setting),
+    }
+    for key, nm_key in NM_BRIDGE_OPTIONS_MAP.items():
+        value = getattr(nm_setting.props, nm_key)
+        if value is not None:
+            if key == LB.Options.GROUP_ADDR:
+                value = value.upper()
+            info[key] = value
+    return info
+
+
+def _get_stp_options(nm_setting):
+    if nm_setting.get_stp():
+        return {
+            LB.STP.ENABLED: True,
+            LB.STP.HELLO_TIME: nm_setting.get_hello_time(),
+            LB.STP.MAX_AGE: nm_setting.get_max_age(),
+            LB.STP.FORWARD_DELAY: nm_setting.get_forward_delay(),
+            LB.STP.PRIORITY: nm_setting.get_priority(),
+        }
+    else:
+        return {LB.STP.ENABLED: False}
+
+
+def _get_port_config(nm_profile):
+    info = {
+        LB.Port.NAME: nm_profile.get_interface_name(),
+    }
+    nm_setting = nm_profile.get_setting_bridge_port()
+    if nm_setting:
+        info[LB.Port.STP_PRIORITY] = nm_setting.props.priority
+        info[LB.Port.STP_HAIRPIN_MODE] = nm_setting.props.hairpin_mode
+        info[LB.Port.STP_PATH_COST] = nm_setting.props.path_cost
+        if nm_setting.props.vlans:
+            info[LB.Port.VLAN_SUBTREE] = get_linux_bridge_port_vlan_config(
+                nm_setting
+            )
+
+    return info

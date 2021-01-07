@@ -40,6 +40,7 @@ from .state import merge_dict
 
 _INFO_TYPE_RUNNING = 1
 _INFO_TYPE_RUNNING_CONFIG = 2
+_INFO_TYPE_SAVED_CONFIG = 3
 
 
 @contextmanager
@@ -79,15 +80,20 @@ def show_with_plugins(
 
     report[Route.KEY] = _get_routes_from_plugins(plugins, info_type)
 
-    report[RouteRule.KEY] = _get_route_rules_from_plugins(plugins)
+    report[RouteRule.KEY] = _get_route_rules_from_plugins(plugins, info_type)
 
     dns_plugin = _find_plugin_for_capability(
         plugins, NmstatePlugin.PLUGIN_CAPABILITY_DNS
     )
     if dns_plugin:
-        report[DNS.KEY] = dns_plugin.get_dns_client_config()
-        if info_type != _INFO_TYPE_RUNNING:
-            report[DNS.KEY].pop(DNS.RUNNING, None)
+        if info_type == _INFO_TYPE_SAVED_CONFIG:
+            report[DNS.KEY] = {
+                DNS.CONFIG: dns_plugin.get_saved_dns_client_config()
+            }
+        else:
+            report[DNS.KEY] = dns_plugin.get_dns_client_config()
+            if info_type != _INFO_TYPE_RUNNING:
+                report[DNS.KEY].pop(DNS.RUNNING, None)
 
     validator.schema_validate(report)
     return report
@@ -172,6 +178,8 @@ def _get_interface_info_from_plugins(plugins, info_type):
             continue
         if info_type == _INFO_TYPE_RUNNING_CONFIG:
             ifaces = plugin.get_running_config_interfaces()
+        elif info_type == _INFO_TYPE_SAVED_CONFIG:
+            ifaces = plugin.get_saved_config_interfaces()
         else:
             ifaces = plugin.get_interfaces()
         for iface in ifaces:
@@ -324,26 +332,35 @@ def _get_routes_from_plugins(plugins, info_type):
     ret = {Route.RUNNING: [], Route.CONFIG: []}
     for plugin in plugins:
         if NmstatePlugin.PLUGIN_CAPABILITY_ROUTE in plugin.plugin_capabilities:
-            plugin_routes = plugin.get_routes()
-            if info_type == _INFO_TYPE_RUNNING:
-                ret[Route.RUNNING].extend(plugin_routes.get(Route.RUNNING, []))
-            ret[Route.CONFIG].extend(plugin_routes.get(Route.CONFIG, []))
+            if info_type == _INFO_TYPE_SAVED_CONFIG:
+                plugin_routes = plugin.get_saved_routes()
+                ret[Route.CONFIG].extend(plugin_routes)
+            else:
+                plugin_routes = plugin.get_routes()
+                if info_type == _INFO_TYPE_RUNNING:
+                    ret[Route.RUNNING].extend(
+                        plugin_routes.get(Route.RUNNING, [])
+                    )
+                ret[Route.CONFIG].extend(plugin_routes.get(Route.CONFIG, []))
     if info_type != _INFO_TYPE_RUNNING:
         ret.pop(Route.RUNNING)
     return ret
 
 
-def _get_route_rules_from_plugins(plugins):
+def _get_route_rules_from_plugins(plugins, info_type):
     ret = {RouteRule.CONFIG: []}
     for plugin in plugins:
         if (
             NmstatePlugin.PLUGIN_CAPABILITY_ROUTE_RULE
             in plugin.plugin_capabilities
         ):
-            plugin_route_rules = plugin.get_route_rules()
-            ret[RouteRule.CONFIG].extend(
-                plugin_route_rules.get(RouteRule.CONFIG, [])
-            )
+            if info_type == _INFO_TYPE_SAVED_CONFIG:
+                ret[RouteRule.CONFIG].extend(plugin.get_saved_route_rules())
+            else:
+                plugin_route_rules = plugin.get_route_rules()
+                ret[RouteRule.CONFIG].extend(
+                    plugin_route_rules.get(RouteRule.CONFIG, [])
+                )
     return ret
 
 
@@ -367,3 +384,7 @@ def _get_iface_types_by_name(iface_infos, name):
 
 def show_running_config_with_plugins(plugins):
     return show_with_plugins(plugins, info_type=_INFO_TYPE_RUNNING_CONFIG)
+
+
+def show_saved_config_with_plugins(plugins):
+    return show_with_plugins(plugins, info_type=_INFO_TYPE_SAVED_CONFIG)

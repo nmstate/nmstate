@@ -234,3 +234,32 @@ def create_two_vlans_state():
             },
         ]
     }
+
+
+@pytest.fixture
+def vlan_up(eth1_up):
+    with vlan_interface(VLAN_IFNAME, 101, "eth1"):
+        yield
+
+
+def test_show_saved_config_with_vlan_down(vlan_up):
+    running_state = statelib.show_only((VLAN_IFNAME,))
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: VLAN_IFNAME,
+                    Interface.STATE: InterfaceState.DOWN,
+                }
+            ]
+        }
+    )
+    saved_state = statelib.show_saved_config_only((VLAN_IFNAME,))
+    iface_state = saved_state[Interface.KEY][0]
+
+    assert saved_state[Interface.KEY][0][Interface.STATE] == InterfaceState.UP
+    assert iface_state[VLAN.CONFIG_SUBTREE] == {
+        VLAN.BASE_IFACE: "eth1",
+        VLAN.ID: 101,
+    }
+    assertlib.assert_state_match_full(saved_state, running_state)

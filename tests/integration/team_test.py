@@ -33,6 +33,7 @@ from libnmstate.schema import Team
 from libnmstate.error import NmstateValueError
 
 from .testlib import assertlib
+from .testlib import statelib
 from .testlib.cmdlib import exec_cmd
 from .testlib.cmdlib import RC_SUCCESS
 from .testlib.nmplugin import disable_nm_plugin
@@ -148,3 +149,27 @@ def test_team_change_port_order(eth1_up, eth2_up):
             Team.PORT_SUBTREE
         ].reverse()
         libnmstate.apply(desired_state)
+
+
+@pytest.fixture
+def team0_up(eth1_up, eth2_up):
+    with team_interface(TEAM0, [PORT1, PORT2]):
+        yield
+
+
+def test_show_saved_config_with_team_down(team0_up):
+    running_state = statelib.show_only((TEAM0,))
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: TEAM0,
+                    Interface.STATE: InterfaceState.DOWN,
+                }
+            ]
+        }
+    )
+    saved_state = statelib.show_saved_config_only((TEAM0,))
+
+    assert saved_state[Interface.KEY][0][Interface.STATE] == InterfaceState.UP
+    assertlib.assert_state_match_full(saved_state, running_state)

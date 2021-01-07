@@ -27,6 +27,8 @@ from libnmstate.error import NmstateNotSupportedError
 from libnmstate.error import NmstateInternalError
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceType
+from libnmstate.schema import InterfaceState
+from libnmstate.ifaces.base_iface import BaseIface
 
 from .active_connection import ActiveConnectionDeactivate
 from .active_connection import ProfileActivation
@@ -37,6 +39,7 @@ from .device import get_nm_dev
 from .device import DeviceReapply
 from .device import DeviceDelete
 from .translator import Api2Nm
+from .macvlan import is_macvtap
 
 
 class NmProfile:
@@ -575,3 +578,52 @@ def _is_memory_only(nm_profile):
             or NM.SettingsConnectionFlags.VOLATILE & profile_flags
         )
     return False
+
+
+_NM_TYPE_2_NMSTATE = {
+    NM.SETTING_WIRED_SETTING_NAME: InterfaceType.ETHERNET,
+    NM.SETTING_BOND_SETTING_NAME: InterfaceType.BOND,
+    NM.SETTING_DUMMY_SETTING_NAME: InterfaceType.DUMMY,
+    NM.SETTING_TEAM_SETTING_NAME: InterfaceType.TEAM,
+    NM.SETTING_VLAN_SETTING_NAME: InterfaceType.VLAN,
+    NM.SETTING_VXLAN_SETTING_NAME: InterfaceType.VXLAN,
+    NM.SETTING_BRIDGE_SETTING_NAME: InterfaceType.LINUX_BRIDGE,
+    NM.SETTING_VRF_SETTING_NAME: InterfaceType.VRF,
+    NM.SETTING_INFINIBAND_SETTING_NAME: InterfaceType.INFINIBAND,
+    NM.SETTING_MACVLAN_SETTING_NAME: InterfaceType.MAC_VLAN,
+    NM.SETTING_OVS_BRIDGE_SETTING_NAME: InterfaceType.OVS_BRIDGE,
+    NM.SETTING_OVS_PORT_SETTING_NAME: InterfaceType.OVS_PORT,
+    NM.SETTING_OVS_INTERFACE_SETTING_NAME: InterfaceType.OVS_INTERFACE,
+    NM.SETTING_VETH_SETTING_NAME: InterfaceType.VETH,
+}
+
+
+def _get_iface_type(nm_profile):
+    nm_iface_type = nm_profile.get_connection_type()
+    iface_type = _NM_TYPE_2_NMSTATE.get(nm_iface_type, InterfaceType.UNKNOWN)
+    if iface_type == InterfaceType.MAC_VLAN and is_macvtap(nm_profile):
+        iface_type = InterfaceType.MAC_VTAP
+    return iface_type
+
+
+def _get_controller_info(nm_profile):
+    nm_conn_setting = nm_profile.get_setting_connection()
+    if nm_conn_setting and nm_conn_setting.props.master:
+        return (
+            nm_conn_setting.props.master,
+            nm_conn_setting.props.slave_type,
+        )
+    return (None, None)
+
+
+def get_basic_iface_info(nm_profile):
+    info = {
+        Interface.NAME: nm_profile.get_interface_name(),
+        Interface.TYPE: _get_iface_type(nm_profile),
+        Interface.STATE: InterfaceState.UP,
+    }
+    (
+        info[BaseIface.CONTROLLER_METADATA],
+        info[BaseIface.CONTROLLER_TYPE_METADATA],
+    ) = _get_controller_info(nm_profile)
+    return info

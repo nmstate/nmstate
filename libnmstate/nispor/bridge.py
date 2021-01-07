@@ -62,6 +62,7 @@ LSM_BRIDGE_OPTIONS_2_NISPOR = {
     OPT.MULTICAST_QUERY_RESPONSE_INTERVAL: "multicast_query_response_interval",
     OPT.MULTICAST_STARTUP_QUERY_COUNT: "multicast_startup_query_count",
     OPT.MULTICAST_STARTUP_QUERY_INTERVAL: "multicast_startup_query_interval",
+    OPT.MULTICAST_MEMBERSHIP_INTERVAL: "multicast_membership_interval",
 }
 
 

@@ -27,6 +27,7 @@ from .netapplier import commit
 from .netapplier import rollback
 from .netinfo import show
 from .netinfo import show_running_config
+from .netinfo import show_saved_config
 
 from .prettystate import PrettyState
 
@@ -42,6 +43,7 @@ __all__ = [
     "schema",
     "show",
     "show_running_config",
+    "show_saved_config",
 ]
 
 

@@ -18,6 +18,7 @@
 #
 
 from libnmstate.ifaces import NmstateLinuxBridgePortVlan
+from libnmstate.ifaces import KernelBridgePortVlans
 
 from .common import NM
 
@@ -31,3 +32,20 @@ def nmstate_port_vlan_to_nm(nmstate_vlan_config):
         nm_vlan.set_pvid(kernel_vlan.is_pvid)
         nm_vlans.append(nm_vlan)
     return nm_vlans
+
+
+def get_linux_bridge_port_vlan_config(nm_setting):
+    kernel_vlans = []
+    for nm_vlan in nm_setting.props.vlans:
+        _, vid_min, vid_max = nm_vlan.get_vid_range()
+        kernel_vlans.append(
+            KernelBridgePortVlans(
+                vid_min,
+                vid_max,
+                nm_vlan.is_pvid(),
+                nm_vlan.is_untagged(),
+            )
+        )
+    return NmstateLinuxBridgePortVlan.new_from_kernel_vlans(
+        kernel_vlans
+    ).to_dict()

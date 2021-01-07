@@ -215,6 +215,17 @@ class NmstateVarlinkService:
                 logging.error(str(exception))
                 raise NmstateValueError(str(exception), log_handler.logs)
 
+    def ShowSavedConfig(self, arguments):
+        with nmstate_varlink_logger() as log_handler:
+            method_args = []
+            validate_method_arguments(arguments, method_args)
+            try:
+                configured_state = libnmstate.show_saved_config()
+                return {"state": configured_state, "log": log_handler.logs}
+            except libnmstate.error.NmstateValueError as exception:
+                logging.error(str(exception))
+                raise NmstateValueError(str(exception), log_handler.logs)
+
     def Apply(self, arguments):
         """
         Apply desired state declared in json format

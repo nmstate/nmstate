@@ -25,6 +25,7 @@ import pytest
 
 import libnmstate
 from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceState
 from libnmstate.schema import LLDP
 
 from .testlib import assertlib
@@ -357,3 +358,37 @@ def _send_lldp_packet():
         check=True,
     )
     time.sleep(1)
+
+
+@pytest.fixture
+def eth1_up_with_lldp(eth1_up):
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: "eth1",
+                    LLDP.CONFIG_SUBTREE: {LLDP.ENABLED: True},
+                }
+            ]
+        }
+    )
+
+
+def test_show_saved_config_ethernet_down_with_lldp(eth1_up_with_lldp):
+    running_state = statelib.show_only(("eth1",))
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: "eth1",
+                    Interface.STATE: InterfaceState.DOWN,
+                }
+            ]
+        }
+    )
+    saved_state = statelib.show_saved_config_only(("eth1",))
+
+    assert saved_state[Interface.KEY][0][LLDP.CONFIG_SUBTREE] == {
+        LLDP.ENABLED: True
+    }
+    assertlib.assert_state_match_full(saved_state, running_state)

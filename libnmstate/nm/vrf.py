@@ -25,3 +25,16 @@ def create_vrf_setting(vrf_config):
     vrf_setting = NM.SettingVrf.new()
     vrf_setting.props.table = vrf_config[VRF.ROUTE_TABLE_ID]
     return vrf_setting
+
+
+def get_vrf_config(nm_profile, subordinate_nm_profiles):
+    nm_setting = nm_profile.get_setting_by_name(NM.SETTING_VRF_SETTING_NAME)
+    if nm_setting:
+        return {
+            VRF.PORT_SUBTREE: [
+                port_profile.get_interface_name()
+                for port_profile in subordinate_nm_profiles
+            ],
+            VRF.ROUTE_TABLE_ID: nm_setting.props.table,
+        }
+    return {}

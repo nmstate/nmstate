@@ -35,8 +35,9 @@ from . import statelib
 
 def assert_state(desired_state_data):
     """Given a state, assert it against the current state."""
+    current_state = libnmstate.show()
     desired_state, current_state = _prepare_state_for_verify(
-        desired_state_data
+        desired_state_data, current_state
     )
 
     assert desired_state.state == current_state.state
@@ -54,10 +55,18 @@ def assert_state_match(desired_state_data):
     Given a state, assert it against the current state by treating missing
     value in desired_state as match.
     """
+    current_state = libnmstate.show()
     desired_state, current_state = _prepare_state_for_verify(
-        desired_state_data
+        desired_state_data, current_state
     )
     assert desired_state.match(current_state)
+
+
+def assert_state_match_full(partial_state_data, full_state_data):
+    partial_state, full_state = _prepare_state_for_verify(
+        partial_state_data, full_state_data
+    )
+    assert partial_state.match(full_state)
 
 
 def assert_mac_address(state, expected_mac=None):
@@ -74,8 +83,7 @@ def _iface_macs(state):
         yield ifstate[Interface.MAC]
 
 
-def _prepare_state_for_verify(desired_state_data):
-    current_state_data = libnmstate.show()
+def _prepare_state_for_verify(desired_state_data, current_state_data):
     # Ignore route and dns for assert check as the check are done in the test
     # case code.
     current_state_data.pop(Route.KEY, None)

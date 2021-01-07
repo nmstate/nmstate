@@ -158,3 +158,32 @@ def _get_ethernet_info(device, iface):
         return None
 
     return ethernet
+
+
+def get_wired_config(nm_profile):
+    nm_wired_profile = nm_profile.get_setting_wired()
+    if not nm_wired_profile:
+        return {}
+    info = {}
+    mac = nm_wired_profile.get_cloned_mac_address()
+    if mac:
+        info[Interface.MAC] = mac.upper()
+    mtu = nm_wired_profile.get_mtu()
+    if mtu:
+        info[Interface.MTU] = mtu
+
+    if nm_profile.get_connection_type() == NM.DeviceType.ETHERNET:
+        eth_info = {}
+        if nm_wired_profile.get_auto_negotiate():
+            eth_info[Ethernet.AUTO_NEGOTIATION] = True
+        else:
+            eth_info[Ethernet.AUTO_NEGOTIATION] = False
+
+            if nm_wired_profile.get_duplex():
+                eth_info[Ethernet.DUPLEX] = nm_wired_profile.get_duplex()
+            if nm_wired_profile.get_speed():
+                eth_info[Ethernet.SPEED] = nm_wired_profile.get_speed()
+        if eth_info:
+            info[Ethernet.CONFIG_SUBTREE] = eth_info
+
+    return info

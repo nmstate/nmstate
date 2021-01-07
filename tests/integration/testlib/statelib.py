@@ -47,6 +47,18 @@ def show_only(ifnames):
     return current_state.state
 
 
+def show_saved_config_only(ifnames):
+    """
+    Report the saved config, filtering based on the given interface names.
+    """
+    base_filter_state = {
+        Interface.KEY: [{Interface.NAME: ifname} for ifname in ifnames]
+    }
+    current_state = State(libnmstate.show_saved_config())
+    current_state.filter(base_filter_state)
+    return current_state.state
+
+
 class State:
     def __init__(self, state):
         self._state = copy.deepcopy(state)

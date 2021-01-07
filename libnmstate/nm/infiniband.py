@@ -28,16 +28,16 @@ _NM_IB_MODE_DATAGRAM = "datagram"
 _NM_IB_MODE_CONNECTED = "connected"
 
 
-def get_info(applied_config):
-    if applied_config:
-        ib_setting = applied_config.get_setting_infiniband()
+def get_infiniband_config(nm_profile):
+    if nm_profile:
+        ib_setting = nm_profile.get_setting_infiniband()
         if ib_setting:
             mode = _nm_ib_mode_to_nmstate(ib_setting.get_transport_mode())
             if not mode:
                 logging.warning(
                     "Unknown InfiniBand transport mode "
                     f"{ib_setting.get_transport_mode()} for interface "
-                    f"{applied_config.get_interface_name()}"
+                    f"{nm_profile.get_interface_name()}"
                 )
                 return {}
 

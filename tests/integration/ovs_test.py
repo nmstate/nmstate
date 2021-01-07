@@ -149,19 +149,24 @@ def test_create_and_remove_ovs_bridge_with_internal_port_static_ip_and_mac():
     assertlib.assert_absent(PORT1)
 
 
-@pytest.mark.tier1
-def test_create_and_remove_ovs_bridge_with_internal_port_same_name():
+@pytest.fixture
+def bridge_with_same_name_iface():
     bridge = Bridge(BRIDGE1)
     bridge.add_internal_port(
         BRIDGE1, ipv4_state={InterfaceIPv4.ENABLED: False}
     )
 
     with bridge.create() as state:
-        state = statelib.show_only((BRIDGE1,))
-        assert state
-        assert len(state[Interface.KEY]) == 2
+        yield state
 
-    assertlib.assert_absent(BRIDGE1)
+
+@pytest.mark.tier1
+def test_create_and_remove_ovs_bridge_with_internal_port_same_name(
+    bridge_with_same_name_iface,
+):
+    state = statelib.show_only((BRIDGE1,))
+    assert state
+    assert len(state[Interface.KEY]) == 2
 
 
 @pytest.mark.tier1
@@ -695,3 +700,43 @@ def test_expect_failure_when_create_ovs_interface_without_bridge():
                 ]
             }
         )
+
+
+def test_show_saved_config_with_ovs_bridge_down(bridge_with_ports):
+    running_state = statelib.show_only((BRIDGE1,))
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: BRIDGE1,
+                    Interface.STATE: InterfaceState.DOWN,
+                }
+            ]
+        }
+    )
+    saved_state = statelib.show_saved_config_only((BRIDGE1,))
+
+    assert saved_state[Interface.KEY][0][Interface.STATE] == InterfaceState.UP
+    assertlib.assert_state_match_full(saved_state, running_state)
+
+
+def test_show_saved_config_with_ovs_bridge_iface_same_name(
+    bridge_with_same_name_iface,
+):
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: BRIDGE1,
+                    Interface.TYPE: InterfaceType.OVS_BRIDGE,
+                    Interface.STATE: InterfaceState.DOWN,
+                }
+            ]
+        }
+    )
+    saved_state = statelib.show_saved_config_only((BRIDGE1,))
+
+    assert len(saved_state[Interface.KEY]) == 2
+    assert saved_state[Interface.KEY][0][Interface.STATE] == InterfaceState.UP
+    assert saved_state[Interface.KEY][1][Interface.STATE] == InterfaceState.UP
+    # TODO: assert_state_match_full() does not support same interface.

@@ -155,7 +155,7 @@ def test_create_port_setting(NM_mock):
 def _mock_ovs_bridge_profile(bridge_device):
     act_con = bridge_device.get_active_connection.return_value
     conn = act_con.props.connection
-    bridge_setting = conn.get_setting.return_value
+    bridge_setting = conn.get_setting_ovs_bridge.return_value
     bridge_setting.props.stp_enable = False
     bridge_setting.props.rstp_enable = False
     bridge_setting.props.fail_mode = None

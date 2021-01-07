@@ -106,3 +106,20 @@ def _get_bond_options_from_profiles(bond_setting):
             if name != "mode":
                 ret[name] = value
     return ret
+
+
+def get_bond_config(nm_profile, subordinate_nm_profiles):
+    nm_setting = nm_profile.get_setting_bond()
+    if nm_setting:
+        bond_options = _get_bond_options_from_profiles(nm_setting)
+        bond_mode = nm_setting.get_option_by_name("mode")
+        return {
+            Bond.MODE: bond_mode,
+            Bond.OPTIONS_SUBTREE: bond_options,
+            Bond.PORT: [
+                port_profile.get_interface_name()
+                for port_profile in subordinate_nm_profiles
+            ],
+        }
+
+    return {}

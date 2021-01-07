@@ -27,6 +27,7 @@ from libnmstate.schema import InterfaceState
 from libnmstate.schema import MacVlan
 
 from .testlib import assertlib
+from .testlib import statelib
 
 
 ETH1 = "eth1"
@@ -90,3 +91,27 @@ def macvlan_interface(ifname, mode, promiscuous):
     finally:
         d_state[Interface.KEY][0][Interface.STATE] = InterfaceState.ABSENT
         libnmstate.apply(d_state)
+
+
+@pytest.fixture
+def macvlan0_up(eth1_up):
+    with macvlan_interface(MACVLAN0, MacVlan.Mode.PASSTHRU, True):
+        yield
+
+
+def test_show_saved_config_with_macvlan_down(macvlan0_up):
+    running_state = statelib.show_only((MACVLAN0,))
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: MACVLAN0,
+                    Interface.STATE: InterfaceState.DOWN,
+                }
+            ]
+        }
+    )
+    saved_state = statelib.show_saved_config_only((MACVLAN0,))
+
+    assert saved_state[Interface.KEY][0][Interface.STATE] == InterfaceState.UP
+    assertlib.assert_state_match_full(saved_state, running_state)

@@ -66,10 +66,10 @@ def get_running(context):
     return dns_state
 
 
-def get_running_config(applied_configs):
+def get_dns_config_from_nm_profiles(nm_profiles):
     dns_conf = {DNS.SERVER: [], DNS.SEARCH: []}
-    tmp_dns_confs = _get_dns_config(applied_configs, Interface.IPV6)
-    tmp_dns_confs.extend(_get_dns_config(applied_configs, Interface.IPV4))
+    tmp_dns_confs = _get_dns_config(nm_profiles, Interface.IPV6)
+    tmp_dns_confs.extend(_get_dns_config(nm_profiles, Interface.IPV4))
     # NetworkManager sorts the DNS entries based on various criteria including
     # which profile was activated first when profiles are activated. Therefore
     # the configuration does not completely define the order. To define the

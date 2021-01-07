@@ -99,20 +99,18 @@ def _add_addresses(setting_ipv4, addresses):
         setting_ipv4.add_address(naddr)
 
 
-def get_info(active_connection, applied_config):
+def get_ipv4_config(nm_profile, full_config=False):
     """
-    Provide information regarding:
+    If full_config is False, only provides information regarding:
         * Enable status
         * DHCP status
     """
-    if active_connection is None or applied_config is None:
+    if nm_profile is None:
         # Neither unmanaged or not active, let nispor determine its state
         return {}
 
     info = {InterfaceIPv4.ENABLED: False, InterfaceIPv4.DHCP: False}
-    ip_profile = (
-        applied_config.get_setting_ip4_config() if applied_config else None
-    )
+    ip_profile = nm_profile.get_setting_ip4_config() if nm_profile else None
     if ip_profile:
         method = ip_profile.get_method()
         if method == NM.SETTING_IP4_CONFIG_METHOD_DISABLED:
@@ -126,6 +124,17 @@ def get_info(active_connection, applied_config):
                 info[InterfaceIPv4.AUTO_GATEWAY] = not props.never_default
                 info[InterfaceIPv4.AUTO_DNS] = not props.ignore_auto_dns
                 info[InterfaceIPv4.AUTO_ROUTE_TABLE_ID] = props.route_table
+        if full_config:
+            info[InterfaceIPv4.ADDRESS] = []
+            for nm_addr in ip_profile.props.addresses:
+                info[InterfaceIPv4.ADDRESS].append(
+                    {
+                        InterfaceIPv4.ADDRESS_IP: nm_addr.get_address(),
+                        InterfaceIPv4.ADDRESS_PREFIX_LENGTH: int(
+                            nm_addr.get_prefix()
+                        ),
+                    }
+                )
 
     return info
 

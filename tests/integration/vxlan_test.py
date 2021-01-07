@@ -25,8 +25,11 @@ import libnmstate
 
 from libnmstate.error import NmstateVerificationError
 from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceState
+from libnmstate.schema import VXLAN
 
 from .testlib import assertlib
+from .testlib import statelib
 from .testlib.bondlib import bond_interface
 from .testlib.cmdlib import RC_SUCCESS
 from .testlib.cmdlib import exec_cmd
@@ -39,6 +42,8 @@ from .testlib.vxlan import vxlans_up
 
 VXLAN1_ID = 201
 VXLAN2_ID = 202
+
+VXLAN1_IFNAME = f"eth1.{VXLAN1_ID}"
 
 
 def test_add_and_remove_vxlan(eth1_up):
@@ -129,3 +134,34 @@ def test_show_vxlan_with_no_remote(eth1_up):
     finally:
         libnmstate.apply(vxlans_absent([vxlan]))
         assertlib.assert_absent(vxlan.name)
+
+
+@pytest.fixture
+def vxlan1_up(eth1_up):
+    with vxlan_interfaces(
+        VxlanState(id=VXLAN1_ID, base_if="eth1", remote="192.168.100.1")
+    ):
+        yield
+
+
+def test_show_saved_config_with_vxlan_down(vxlan1_up):
+    running_state = statelib.show_only((VXLAN1_IFNAME,))
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: VXLAN1_IFNAME,
+                    Interface.STATE: InterfaceState.DOWN,
+                }
+            ]
+        }
+    )
+    saved_state = statelib.show_saved_config_only((VXLAN1_IFNAME,))
+    iface_state = saved_state[Interface.KEY][0]
+
+    assert saved_state[Interface.KEY][0][Interface.STATE] == InterfaceState.UP
+    assert iface_state[VXLAN.CONFIG_SUBTREE] == {
+        VXLAN.ID: VXLAN1_ID,
+        VXLAN.BASE_IFACE: "eth1",
+    }
+    assertlib.assert_state_match_full(saved_state, running_state)

@@ -34,13 +34,13 @@ IPV6_DEFAULT_ROUTE_METRIC = 1024
 INT32_MAX = 2 ** 31 - 1
 
 
-def get_info(active_connection, applied_config):
+def get_ipv6_config(nm_profile, full_config=False):
     """
-    Provide information regarding:
+    If full_config is False, only provides information regarding:
         * Enable status
         * DHCP/Autoconf status
     """
-    if active_connection is None or applied_config is None:
+    if nm_profile is None:
         # Neither unmanaged or not active, let nispor determine its state
         return {}
 
@@ -50,9 +50,7 @@ def get_info(active_connection, applied_config):
         InterfaceIPv6.AUTOCONF: False,
     }
 
-    ip_profile = (
-        applied_config.get_setting_ip6_config() if applied_config else None
-    )
+    ip_profile = nm_profile.get_setting_ip6_config() if nm_profile else None
     if ip_profile:
         info[InterfaceIPv6.ENABLED] = True
         method = ip_profile.get_method()
@@ -71,6 +69,17 @@ def get_info(active_connection, applied_config):
             info[InterfaceIPv6.AUTO_GATEWAY] = not props.never_default
             info[InterfaceIPv6.AUTO_DNS] = not props.ignore_auto_dns
             info[InterfaceIPv6.AUTO_ROUTE_TABLE_ID] = props.route_table
+        if full_config:
+            info[InterfaceIPv6.ADDRESS] = []
+            for nm_addr in ip_profile.props.addresses:
+                info[InterfaceIPv6.ADDRESS].append(
+                    {
+                        InterfaceIPv6.ADDRESS_IP: nm_addr.get_address(),
+                        InterfaceIPv6.ADDRESS_PREFIX_LENGTH: int(
+                            nm_addr.get_prefix()
+                        ),
+                    }
+                )
 
     return info
 

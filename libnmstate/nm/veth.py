@@ -89,3 +89,10 @@ def create_iface_for_nm_veth_peer(iface):
             Veth.CONFIG_SUBTREE: {Veth.PEER: iface.name},
         }
     )
+
+
+def get_veth_config(nm_profile):
+    nm_setting = nm_profile.get_setting_by_name(NM.SETTING_VETH_SETTING_NAME)
+    if nm_setting:
+        return {Veth.PEER: nm_setting.get_peer()}
+    return {}

@@ -29,6 +29,7 @@ from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import Route
 
+from .testlib import statelib
 
 IPV4_DNS_NAMESERVERS = ["8.8.8.8", "1.1.1.1"]
 EXTRA_IPV4_DNS_NAMESERVER = "9.9.9.9"
@@ -372,3 +373,29 @@ def _gen_default_gateway_route():
             Route.NEXT_HOP_INTERFACE: "eth1",
         },
     ]
+
+
+def test_show_saved_config_with_dns_interface_down(
+    setup_ipv4_ipv6_name_server,
+):
+    running_dns_config = libnmstate.show()[DNS.KEY][DNS.CONFIG]
+    libnmstate.apply(
+        {
+            # Below are requred as we bring down the DNS interface,
+            # nmstate cannot find new interface for the old DNS config.
+            DNS.KEY: {DNS.CONFIG: {}},
+            Interface.KEY: [
+                {
+                    Interface.NAME: "eth1",
+                    Interface.STATE: InterfaceState.DOWN,
+                }
+            ],
+        }
+    )
+    saved_iface_state = statelib.show_saved_config_only(("eth1",))[
+        Interface.KEY
+    ][0]
+    saved_dns_config = libnmstate.show_saved_config()[DNS.KEY][DNS.CONFIG]
+
+    assert saved_iface_state[Interface.STATE] == InterfaceState.UP
+    assert saved_dns_config == running_dns_config

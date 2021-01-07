@@ -52,26 +52,18 @@ def create_setting(iface_state, base_con_profile):
     return user_setting
 
 
-def get_info(context, device):
+def get_user_config(nm_profile, full_config=False):
     """
     Get description from user settings for a connection
     """
     info = {}
-    user_profile = None
-    act_conn = device.get_active_connection()
-    if act_conn:
-        user_profile = act_conn.props.connection
-    if not user_profile:
-        return info
-
-    try:
-        user_setting = user_profile.get_setting_by_name(
+    if nm_profile:
+        user_setting = nm_profile.get_setting_by_name(
             NM.SETTING_USER_SETTING_NAME
         )
-        description = user_setting.get_data(NMSTATE_DESCRIPTION)
-        if description:
-            info["description"] = description
-    except AttributeError:
-        pass
+        if user_setting:
+            description = user_setting.get_data(NMSTATE_DESCRIPTION)
+            if description:
+                info["description"] = description
 
     return info

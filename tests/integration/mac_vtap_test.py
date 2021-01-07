@@ -27,10 +27,12 @@ from libnmstate.schema import InterfaceState
 from libnmstate.schema import MacVtap
 
 from .testlib import assertlib
+from .testlib import statelib
 
 
 ETH1 = "eth1"
 MACVLAN0 = "macvtap0"
+MACVTAP0 = "macvtap0"
 
 
 @pytest.mark.parametrize(
@@ -90,3 +92,27 @@ def macvtap_interface(ifname, mode, promiscuous):
     finally:
         d_state[Interface.KEY][0][Interface.STATE] = InterfaceState.ABSENT
         libnmstate.apply(d_state)
+
+
+@pytest.fixture
+def macvtap0_up(eth1_up):
+    with macvtap_interface(MACVTAP0, MacVtap.Mode.PASSTHRU, True):
+        yield
+
+
+def test_show_saved_config_with_macvtap_down(macvtap0_up):
+    running_state = statelib.show_only((MACVTAP0,))
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: MACVTAP0,
+                    Interface.STATE: InterfaceState.DOWN,
+                }
+            ]
+        }
+    )
+    saved_state = statelib.show_saved_config_only((MACVTAP0,))
+
+    assert saved_state[Interface.KEY][0][Interface.STATE] == InterfaceState.UP
+    assertlib.assert_state_match_full(saved_state, running_state)

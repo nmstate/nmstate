@@ -98,3 +98,30 @@ def test_take_over_virtual_interface_and_rollback(ip_link_dummy):
 
         current_state = statelib.show_only((DUMMY_INTERFACE,))
         assert len(current_state[Interface.KEY]) == 1
+
+
+@pytest.mark.xfail(
+    raises=AssertionError,
+    reason="NM Bug: https://bugzilla.redhat.com/1913551",
+    strict=True,
+)
+def test_show_saved_config_with_memory_only_config(eth1_up):
+    saved_config = eth1_up[Interface.KEY][0]
+
+    memory_only_config = {
+        Interface.NAME: "eth1",
+        Interface.IPV4: {
+            InterfaceIPv4.ENABLED: True,
+            InterfaceIPv4.DHCP: True,
+        },
+    }
+
+    libnmstate.apply({Interface.KEY: [memory_only_config]}, save_to_disk=False)
+
+    current_saved_config = None
+    for iface_info in libnmstate.show_saved_config()[Interface.KEY]:
+        if iface_info[Interface.NAME] == "eth1":
+            current_saved_config = iface_info
+            break
+
+    assert current_saved_config == saved_config

@@ -351,3 +351,23 @@ class TestInfiniBand:
             ] = BondMode.ROUND_ROBIN
             with pytest.raises(NmstateValueError):
                 libnmstate.apply(desired_state)
+
+    def test_show_saved_config_with_pkey_nic_down(self, ib_pkey_nic1):
+        iface_name = ib_pkey_nic1[Interface.NAME]
+        running_state = statelib.show_only((iface_name,))
+        libnmstate.apply(
+            {
+                Interface.KEY: [
+                    {
+                        Interface.NAME: iface_name,
+                        Interface.STATE: InterfaceState.DOWN,
+                    }
+                ]
+            }
+        )
+        saved_state = statelib.show_saved_config_only((iface_name,))
+
+        assert (
+            saved_state[Interface.KEY][0][Interface.STATE] == InterfaceState.UP
+        )
+        assertlib.assert_state_match_full(saved_state, running_state)

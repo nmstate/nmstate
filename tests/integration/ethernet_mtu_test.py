@@ -25,6 +25,7 @@ import jsonschema as js
 import libnmstate
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv6
+from libnmstate.schema import InterfaceState
 from libnmstate.error import NmstateVerificationError
 
 from .testlib import assertlib
@@ -192,3 +193,22 @@ def test_empty_state_preserve_the_old_mtu(eth1_up_with_mtu_1900):
     libnmstate.apply({Interface.KEY: [{Interface.NAME: "eth1"}]})
 
     assertlib.assert_state(desired_state)
+
+
+def test_show_saved_config_on_ethernet_with_mtu(eth1_up_with_mtu_1900):
+    running_state = statelib.show_only(("eth1",))
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: "eth1",
+                    Interface.STATE: InterfaceState.DOWN,
+                }
+            ]
+        }
+    )
+    saved_state = statelib.show_saved_config_only(("eth1",))
+
+    assert saved_state[Interface.KEY][0][Interface.MTU] == 1900
+    assert saved_state[Interface.KEY][0][Interface.STATE] == InterfaceState.UP
+    assertlib.assert_state_match_full(saved_state, running_state)

@@ -44,3 +44,13 @@ def create_setting(iface_state, base_con_profile):
         vxlan_setting.props.destination_port = vxlan_destination_port
 
     return vxlan_setting
+
+
+def get_vxlan_config(nm_profile):
+    nm_setting = nm_profile.get_setting_vxlan()
+    if nm_setting:
+        return {
+            VXLAN.ID: nm_setting.props.id,
+            VXLAN.BASE_IFACE: nm_setting.props.parent,
+        }
+    return {}

@@ -42,3 +42,13 @@ def create_setting(iface_state, base_con_profile):
     vlan_setting.props.parent = vlan_base_iface
 
     return vlan_setting
+
+
+def get_vlan_config(nm_profile):
+    nm_setting = nm_profile.get_setting_vlan()
+    if nm_setting:
+        return {
+            VLAN.ID: nm_setting.props.id,
+            VLAN.BASE_IFACE: nm_setting.props.parent,
+        }
+    return {}

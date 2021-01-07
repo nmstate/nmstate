@@ -37,6 +37,7 @@ from libnmstate.schema import InterfaceState
 from libnmstate.schema import LinuxBridge
 
 from .testlib import assertlib
+from .testlib import statelib
 from .testlib.assertlib import assert_mac_address
 from .testlib.bondlib import bond_interface
 from .testlib.bridgelib import add_port_to_bridge
@@ -568,6 +569,28 @@ class TestVlanFiltering:
         pretty_state = PrettyState(current_state)
         assert VLAN_FILTER_PORT_YAML in pretty_state.yaml
 
+    def test_show_saved_config_with_vlan_filter_bridge_down(
+        self,
+        bridge_with_trunk_port_and_native_config,
+    ):
+        running_state = statelib.show_only((TEST_BRIDGE0,))
+        libnmstate.apply(
+            {
+                Interface.KEY: [
+                    {
+                        Interface.NAME: TEST_BRIDGE0,
+                        Interface.STATE: InterfaceState.DOWN,
+                    }
+                ]
+            }
+        )
+        saved_state = statelib.show_saved_config_only((TEST_BRIDGE0,))
+
+        assert (
+            saved_state[Interface.KEY][0][Interface.STATE] == InterfaceState.UP
+        )
+        assertlib.assert_state_match_full(saved_state, running_state)
+
 
 @pytest.fixture
 def bridge_unmanaged_port():
@@ -802,3 +825,21 @@ def test_create_bridge_with_mixed_case_group_addr():
     print(bridge_state)
     with linux_bridge(TEST_BRIDGE0, bridge_state) as lb_state:
         assertlib.assert_state_match(lb_state)
+
+
+def test_show_saved_config_with_bridge_down(bridge0_with_port0):
+    running_state = statelib.show_only((TEST_BRIDGE0,))
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: TEST_BRIDGE0,
+                    Interface.STATE: InterfaceState.DOWN,
+                }
+            ]
+        }
+    )
+    saved_state = statelib.show_saved_config_only((TEST_BRIDGE0,))
+
+    assert saved_state[Interface.KEY][0][Interface.STATE] == InterfaceState.UP
+    assertlib.assert_state_match_full(saved_state, running_state)
