@@ -147,12 +147,22 @@ class NmProfile:
         if self._iface.is_up and self._iface.type in (
             InterfaceType.MAC_VLAN,
             InterfaceType.MAC_VTAP,
-            InterfaceType.VETH,
         ):
             # NetworkManager requires the profile to be deactivated in
             # order to modify it. Therefore if the profile is modified
             # it needs to be deactivated beforehand in order to apply
             # the changes and activate it again.
+            self._add_action(NmProfile.ACTION_DEACTIVATE_FIRST)
+
+        if (
+            self._iface.is_up
+            and self._iface.type == InterfaceType.VETH
+            and self._iface.is_peer_changed
+        ):
+            # NetworkManager requires the profile to be deactivated in order to
+            # modify the peer. Therefore if the profile is modified it needs to
+            # deactivated beforehand in order to apply the changes and activate
+            # it again.
             self._add_action(NmProfile.ACTION_DEACTIVATE_FIRST)
 
         if (

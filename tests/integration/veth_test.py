@@ -36,6 +36,7 @@ from .testlib.env import nm_major_minor_version
 
 VETH1 = "veth1"
 VETH1PEER = "veth1peer"
+VETH2PEER = "veth2peer"
 
 
 @pytest.mark.skipif(
@@ -113,6 +114,28 @@ def test_add_veth_and_bring_both_up():
         )
         assert c_state[Interface.KEY][0][Interface.STATE] == InterfaceState.UP
         assert c_state[Interface.KEY][1][Interface.STATE] == InterfaceState.UP
+
+
+@pytest.mark.skipif(
+    nm_major_minor_version() <= 1.28,
+    reason="Modifying veth interfaces is not supported on NetworkManager.",
+)
+def test_modify_veth_peer():
+    with veth_interface(VETH1, VETH1PEER) as d_state:
+        d_state[Interface.KEY][0][Veth.CONFIG_SUBTREE][Veth.PEER] = VETH2PEER
+        libnmstate.apply(d_state)
+
+        c_state = statelib.show_only(
+            (
+                VETH1,
+                VETH2PEER,
+            )
+        )
+        assert (
+            c_state[Interface.KEY][0][Veth.CONFIG_SUBTREE][Veth.PEER]
+            == VETH2PEER
+        )
+        assert c_state[Interface.KEY][1][Interface.NAME] == VETH2PEER
 
 
 @contextmanager
