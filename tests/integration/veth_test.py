@@ -43,6 +43,7 @@ VETH2PEER = "veth2peer"
     nm_major_minor_version() >= 1.28,
     reason="Modifying veth interfaces is supported on NetworkManager.",
 )
+@pytest.mark.tier1
 def test_add_veth_not_supported():
     desired_state = {
         Interface.KEY: [
@@ -63,6 +64,7 @@ def test_add_veth_not_supported():
     nm_major_minor_version() <= 1.28,
     reason="Modifying veth interfaces is not supported on NetworkManager.",
 )
+@pytest.mark.tier1
 def test_add_and_remove_veth():
     with veth_interface(VETH1, VETH1PEER) as desired_state:
         assertlib.assert_state(desired_state)
@@ -75,6 +77,7 @@ def test_add_and_remove_veth():
     nm_major_minor_version() <= 1.28,
     reason="Modifying veth interfaces is not supported on NetworkManager.",
 )
+@pytest.mark.tier1
 def test_add_veth_both_up():
     with veth_interface(VETH1, VETH1PEER):
         c_state = statelib.show_only(
@@ -94,6 +97,7 @@ def test_add_veth_both_up():
     nm_major_minor_version() <= 1.28,
     reason="Modifying veth interfaces is not supported on NetworkManager.",
 )
+@pytest.mark.tier1
 def test_add_veth_as_bridge_port():
     with veth_interface(VETH1, VETH1PEER):
         with bridges_with_port() as desired_state:
@@ -104,6 +108,7 @@ def test_add_veth_as_bridge_port():
     nm_major_minor_version() <= 1.28,
     reason="Modifying veth interfaces is not supported on NetworkManager.",
 )
+@pytest.mark.tier1
 def test_add_veth_and_bring_both_up():
     with veth_interface_both_up(VETH1, VETH1PEER):
         c_state = statelib.show_only(
@@ -120,6 +125,7 @@ def test_add_veth_and_bring_both_up():
     nm_major_minor_version() <= 1.28,
     reason="Modifying veth interfaces is not supported on NetworkManager.",
 )
+@pytest.mark.tier1
 def test_modify_veth_peer():
     with veth_interface(VETH1, VETH1PEER) as d_state:
         d_state[Interface.KEY][0][Veth.CONFIG_SUBTREE][Veth.PEER] = VETH2PEER

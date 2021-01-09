@@ -22,6 +22,8 @@
 
 from distutils.version import StrictVersion
 
+import time
+
 from libnmstate.error import NmstateLibnmError
 from libnmstate.error import NmstateNotSupportedError
 from libnmstate.error import NmstateInternalError
@@ -37,6 +39,10 @@ from .device import get_nm_dev
 from .device import DeviceReapply
 from .device import DeviceDelete
 from .translator import Api2Nm
+
+
+IMPORT_NM_DEV_TIMEOUT = 5
+IMPORT_NM_DEV_RETRY_INTERNAL = 0.5
 
 
 class NmProfile:
@@ -350,7 +356,7 @@ class NmProfile:
         ):
             self._deactivate()
         elif action == NmProfile.ACTION_NEW_VETH_PEER:
-            self._import_current()
+            self._import_current_device()
             self._activate()
         elif action == NmProfile.ACTION_DELETE_PROFILE:
             self._delete_profile()
@@ -360,6 +366,22 @@ class NmProfile:
             raise NmstateInternalError(
                 f"BUG: NmProfile.do_action() got unknown action {action}"
             )
+
+    def _import_current_device(self):
+        """
+        NetworkManager takes some time to create the device for new veth
+        interface peer. In order to avoid error on activating an existing
+        interface without importing the device, Nmstate is retrying up to 5
+        times.
+        """
+        for _ in range(IMPORT_NM_DEV_TIMEOUT):
+            self._nm_dev = get_nm_dev(
+                self._ctx, self._iface.name, self._iface.type
+            )
+            if self._nm_dev:
+                break
+            else:
+                time.sleep(IMPORT_NM_DEV_RETRY_INTERNAL)
 
     def _import_current(self):
         self._nm_dev = get_nm_dev(
