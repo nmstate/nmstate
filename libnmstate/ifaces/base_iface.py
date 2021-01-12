@@ -236,6 +236,7 @@ class BaseIface:
                 self._info[Interface.STATE] = InterfaceState.DOWN
 
     def merge(self, other):
+        self._ovsdb_pre_merge_clean_up(other)
         merge_dict(self._info, other._info)
         # If down state is not from orignal state, set it as UP.
         if (
@@ -243,6 +244,31 @@ class BaseIface:
             and self.state == InterfaceState.DOWN
         ):
             self._info[Interface.STATE] = InterfaceState.UP
+
+    def _ovsdb_pre_merge_clean_up(self, other):
+        """
+        * When user not define ovsdb external_ids, we copy from other.
+        * When user define ovsdb external_ids, we don't merget from other and
+          expecting user to provider full picture.
+        """
+        desired_external_ids = self._info.get(OvsDB.OVS_DB_SUBTREE, {}).get(
+            OvsDB.EXTERNAL_IDS
+        )
+        current_external_ids = other._info.get(OvsDB.OVS_DB_SUBTREE, {}).get(
+            OvsDB.EXTERNAL_IDS
+        )
+        if desired_external_ids is None:
+            if current_external_ids:
+                self._info.update(
+                    {
+                        OvsDB.OVS_DB_SUBTREE: {
+                            OvsDB.EXTERNAL_IDS: current_external_ids
+                        }
+                    }
+                )
+        else:
+            if current_external_ids:
+                other._info[OvsDB.OVS_DB_SUBTREE].pop(OvsDB.EXTERNAL_IDS)
 
     def _validate_port_ip(self):
         for family in (Interface.IPV4, Interface.IPV6):
