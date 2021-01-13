@@ -21,7 +21,7 @@
 #   * NM.RemoteConnection, NM.SimpleConnection releated
 
 from distutils.version import StrictVersion
-
+import logging
 import time
 
 from libnmstate.error import NmstateLibnmError
@@ -33,6 +33,8 @@ from libnmstate.schema import InterfaceType
 from .active_connection import ActiveConnectionDeactivate
 from .active_connection import ProfileActivation
 from .active_connection import is_activated
+from .common import Gio
+from .common import GLib
 from .common import NM
 from .connection import create_new_nm_simple_conn
 from .device import get_nm_dev
@@ -43,6 +45,7 @@ from .translator import Api2Nm
 
 IMPORT_NM_DEV_TIMEOUT = 5
 IMPORT_NM_DEV_RETRY_INTERNAL = 0.5
+FALLBACK_CHECKER_INTERNAL = 15
 
 
 class NmProfile:
@@ -443,6 +446,7 @@ class ProfileAdd:
         self._iface_type = iface_type
         self._nm_simple_conn = nm_simple_conn
         self._save_to_disk = save_to_disk
+        self._fallback_checker = None
 
     def run(self):
         nm_add_conn2_flags = NM.SettingsAddConnection2Flags
@@ -470,6 +474,13 @@ class ProfileAdd:
             self._add_profile_callback,
             user_data,
         )
+        self._fallback_checker = GLib.timeout_source_new(
+            FALLBACK_CHECKER_INTERNAL * 1000
+        )
+        self._fallback_checker.set_callback(
+            self._fallback_checker_callback, action
+        )
+        self._fallback_checker.attach(self._ctx.context)
 
     def _add_profile_callback(self, nm_client, result, user_data):
         action = user_data
@@ -477,6 +488,18 @@ class ProfileAdd:
             return
         try:
             nm_profile = nm_client.add_connection2_finish(result)[0]
+        except GLib.Error as e:
+            if e.matches(Gio.io_error_quark(), Gio.IOErrorEnum.TIMED_OUT):
+                logging.debug(
+                    f"{action} timeout, using fallback method to "
+                    "wait profile creation"
+                )
+                return
+            else:
+                self._ctx.fail(
+                    NmstateLibnmError(f"{action} failed with error: {e}")
+                )
+                return
         except Exception as e:
             self._ctx.fail(
                 NmstateLibnmError(f"{action} failed with error: {e}")
@@ -491,7 +514,21 @@ class ProfileAdd:
                 )
             )
         else:
+            self._clean_up()
             self._ctx.finish_async(action)
+
+    def _clean_up(self):
+        if self._fallback_checker:
+            self._fallback_checker.destroy()
+            self._fallback_checker = None
+
+    def _fallback_checker_callback(self, action):
+        for nm_profile in self._ctx.client.get_connections():
+            if nm_profile.get_uuid() == self._nm_simple_conn.get_uuid():
+                self._clean_up()
+                self._ctx.finish_async(action)
+                return GLib.SOURCE_REMOVE
+        return GLib.SOURCE_CONTINUE
 
 
 class ProfileUpdate:

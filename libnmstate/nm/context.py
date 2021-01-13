@@ -31,8 +31,7 @@ from .common import Gio
 # last finish async action.
 IDLE_CHECK_INTERNAL = 5
 
-# libnm dbus connection has reply timeout 25 seconds.
-IDLE_TIMEOUT = 25
+IDLE_TIMEOUT = 60 * 5  # 5 minitues
 
 # NetworkManage is using dbus in libnm while the dbus has limitation on
 # maximum number of pending replies per connection.(RHEL/CentOS 8 is 1024)

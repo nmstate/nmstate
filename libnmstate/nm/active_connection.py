@@ -23,6 +23,7 @@ from libnmstate.error import NmstateLibnmError
 from libnmstate.error import NmstateInternalError
 
 from .common import GLib
+from .common import Gio
 from .common import NM
 from .device import get_nm_dev
 from .device import get_iface_type
@@ -32,6 +33,8 @@ from .ipv6 import is_dynamic as is_ipv6_dynamic
 
 
 NM_AC_STATE_CHANGED_SIGNAL = "state-changed"
+FALLBACK_CHECKER_INTERNAL = 15
+GIO_ERROR_DOMAIN = "g-io-error-quark"
 
 
 def is_activated(nm_ac, nm_dev):
@@ -89,6 +92,7 @@ class ProfileActivation:
         self._ac_handlers = set()
         self._dev_handlers = set()
         self._action = None
+        self._fallback_checker = None
 
     def run(self):
         specific_object = None
@@ -110,6 +114,13 @@ class ProfileActivation:
             self._activate_profile_callback,
             user_data,
         )
+        self._fallback_checker = GLib.timeout_source_new(
+            FALLBACK_CHECKER_INTERNAL * 1000
+        )
+        self._fallback_checker.set_callback(
+            self._fallback_checker_callback, None
+        )
+        self._fallback_checker.attach(self._ctx.context)
 
     @staticmethod
     def wait(ctx, nm_ac, nm_dev):
@@ -126,6 +137,13 @@ class ProfileActivation:
             f"{activation._iface_type}"
         )
         ctx.register_async(activation._action)
+        activation._fallback_checker = GLib.timeout_source_new(
+            FALLBACK_CHECKER_INTERNAL * 1000
+        )
+        activation._fallback_checker.set_callback(
+            activation._fallback_checker_callback, None
+        )
+        activation._fallback_checker.attach(ctx.context)
         activation._wait_profile_activation()
 
     def _activate_profile_callback(self, nm_client, result, _user_data):
@@ -135,10 +153,23 @@ class ProfileActivation:
             return
         try:
             nm_ac = nm_client.activate_connection_finish(result)
+        except GLib.Error as e:
+            if e.matches(Gio.io_error_quark(), Gio.IOErrorEnum.TIMED_OUT):
+                logging.debug(
+                    f"{self._action} timeout on activation, "
+                    "using fallback method to wait activation"
+                )
+                return
+            else:
+                self._ctx.fail(
+                    NmstateLibnmError(f"{self._action} failed: error={e}")
+                )
+                return
         except Exception as e:
             self._ctx.fail(
                 NmstateLibnmError(f"{self._action} failed: error={e}")
             )
+            return
 
         if nm_ac is None:
             self._ctx.fail(
@@ -204,6 +235,9 @@ class ProfileActivation:
     def _activation_clean_up(self):
         self._remove_ac_handlers()
         self._remove_dev_handlers()
+        if self._fallback_checker:
+            self._fallback_checker.destroy()
+            self._fallback_checker = None
 
     def _remove_ac_handlers(self):
         for handler_id in self._ac_handlers:
@@ -300,6 +334,14 @@ class ProfileActivation:
             self._ctx.fail(
                 NmstateLibnmError(f"{self._action} failed: reason={reason}")
             )
+
+    def _fallback_checker_callback(self, _user_data):
+        self._nm_dev = get_nm_dev(
+            self._ctx, self._iface_name, self._iface_type
+        )
+        if self._nm_dev:
+            self._activation_progress_check()
+        return GLib.SOURCE_CONTINUE
 
 
 class ActiveConnectionDeactivate:
