@@ -30,6 +30,12 @@ def NM_mock():
         yield m
 
 
+@pytest.fixture
+def GLib_mock():
+    with mock.patch.object(nm.connection, "GLib") as m:
+        yield m
+
+
 @pytest.fixture()
 def context_mock():
     yield mock.MagicMock()
@@ -48,7 +54,7 @@ def test_create_profile(NM_mock, context_mock):
     assert con_profile_mock == con_profile.profile
 
 
-def test_add_profile(NM_mock, context_mock):
+def test_add_profile(NM_mock, GLib_mock, context_mock):
     profile = mock.MagicMock()
     con_profile = nm.connection.ConnectionProfile(context_mock, profile)
     con_profile.add()

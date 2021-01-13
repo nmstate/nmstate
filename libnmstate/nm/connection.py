@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2020 Red Hat, Inc.
+# Copyright (c) 2018-2021 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -24,11 +24,14 @@ from libnmstate.error import NmstateLibnmError
 from libnmstate.error import NmstateInternalError
 from libnmstate.error import NmstateValueError
 
+from .common import GLib
+from .common import Gio
 from .common import NM
 from . import ipv4
 from . import ipv6
 
 ACTIVATION_TIMEOUT_FOR_BRIDGE = 35  # Bridge STP requires 30 seconds.
+FALLBACK_CHECKER_INTERNAL = 15
 
 
 class ConnectionProfile:
@@ -40,6 +43,7 @@ class ConnectionProfile:
         self._nm_ac = None
         self._ac_handlers = set()
         self._dev_handlers = set()
+        self._fallback_checker = None
 
     def create(self, settings):
         self.profile = NM.SimpleConnection.new()
@@ -102,6 +106,26 @@ class ConnectionProfile:
             self._add_connection2_callback,
             user_data,
         )
+        self._fallback_checker = GLib.timeout_source_new(
+            FALLBACK_CHECKER_INTERNAL * 1000
+        )
+        self._fallback_checker.set_callback(
+            self._profile_add_fallback_checker_callback, action
+        )
+        self._fallback_checker.attach(self._ctx.context)
+
+    def _profile_add_fallback_checker_callback(self, action):
+        for nm_profile in self._ctx.client.get_connections():
+            if nm_profile.get_uuid() == self.profile.get_uuid():
+                self._fallback_checker_cleanup()
+                self._ctx.finish_async(action)
+                return GLib.SOURCE_REMOVE
+        return GLib.SOURCE_CONTINUE
+
+    def _fallback_checker_cleanup(self):
+        if self._fallback_checker:
+            self._fallback_checker.destroy()
+            self._fallback_checker = None
 
     def delete(self):
         if not self.profile:
@@ -152,6 +176,26 @@ class ConnectionProfile:
             self._active_connection_callback,
             user_data,
         )
+        self._fallback_checker = GLib.timeout_source_new(
+            FALLBACK_CHECKER_INTERNAL * 1000
+        )
+        self._fallback_checker.set_callback(
+            self._activation_fallback_checker_callback, action
+        )
+        self._fallback_checker.attach(self._ctx.context)
+
+    def _activation_fallback_checker_callback(self, action):
+        if self.devname:
+            self._nm_dev = self._ctx.get_nm_dev(self.devname)
+            if self._nm_dev:
+                self._activation_progress_check(action)
+            return GLib.SOURCE_CONTINUE
+        else:
+            logging.warn(
+                "Failed to get interface name from profile, "
+                "can not perform flalback check on activation"
+            )
+            return GLib.SOURCE_REMOVE
 
     @property
     def profile(self):
@@ -213,6 +257,18 @@ class ConnectionProfile:
 
         try:
             nm_act_con = src_object.activate_connection_finish(result)
+        except GLib.Error as e:
+            if e.matches(Gio.io_error_quark(), Gio.IOErrorEnum.TIMED_OUT):
+                logging.debug(
+                    f"{action} timeout on activation, "
+                    "using fallback method to wait activation"
+                )
+                return
+            else:
+                self._ctx.fail(
+                    NmstateLibnmError(f"{action} failed: error={e}")
+                )
+                return
         except Exception as e:
             self._ctx.fail(NmstateLibnmError(f"{action} failed: error={e}"))
             return
@@ -366,6 +422,7 @@ class ConnectionProfile:
     def _activation_clean_up(self):
         self._remove_ac_handlers()
         self._remove_dev_handlers()
+        self._fallback_checker_cleanup()
 
     def _is_activating(self):
         if not self._nm_ac or not self._nm_dev:
@@ -396,6 +453,13 @@ class ConnectionProfile:
         action = user_data
         try:
             profile = src_object.add_connection2_finish(result)[0]
+        except GLib.Error as e:
+            if e.matches(Gio.io_error_quark(), Gio.IOErrorEnum.TIMED_OUT):
+                logging.debug(
+                    f"{action} timeout, using fallback method to "
+                    "wait profile creation"
+                )
+                return
         except Exception as e:
             self._ctx.fail(
                 NmstateLibnmError(f"{action} failed with error: {e}")
@@ -410,6 +474,7 @@ class ConnectionProfile:
                 )
             )
         else:
+            self._fallback_checker_cleanup()
             self._ctx.finish_async(action)
 
     def _update2_callback(self, src_object, result, user_data):
