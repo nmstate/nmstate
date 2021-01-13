@@ -33,7 +33,7 @@ from libnmstate.schema import VLAN
 @pytest.mark.slow
 def test_lot_of_vlans_with_bridges(eth1_up):
     interfaces = []
-    for i in range(100, 400):
+    for i in range(100, 600):
         interfaces.extend(
             [
                 {
