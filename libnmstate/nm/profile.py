@@ -188,7 +188,6 @@ class NmProfile:
         if self._iface.is_absent or self._iface.is_down:
             return
 
-        self._import_current()
         self._check_sriov_support()
         self._check_unsupported_memory_only()
         # Don't create new profile if original desire does not ask
@@ -299,7 +298,6 @@ class NmProfile:
     def _deactivate(self):
         if self._deactivated:
             return
-        self._import_current()
         if self._nm_ac:
             ActiveConnectionDeactivate(
                 self._ctx, self._iface.name, self._iface.type, self._nm_ac
@@ -309,7 +307,6 @@ class NmProfile:
     def _delete_profile(self):
         if self._profile_deleted:
             return
-        self._import_current()
         if self._nm_profile:
             ProfileDelete(
                 self._ctx, self._iface.name, self._iface.type, self._nm_profile
@@ -398,7 +395,6 @@ class NmProfile:
         )
 
     def _import_nm_profile_by_simple_conn(self):
-        self._ctx.refresh_content()
         for nm_profile in self._ctx.client.get_connections():
             if nm_profile.get_uuid() == self._nm_simple_conn.get_uuid():
                 self._nm_profile = nm_profile
