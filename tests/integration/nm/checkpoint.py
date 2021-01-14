@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019 Red Hat, Inc.
+# Copyright (c) 2019-2021 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -24,6 +24,7 @@ import pytest
 from libnmstate.nm.checkpoint import CheckPoint
 from libnmstate.nm.checkpoint import get_checkpoints
 from libnmstate.error import NmstateConflictError
+from libnmstate.error import NmstateLibnmError
 from libnmstate.error import NmstateValueError
 
 
@@ -63,7 +64,6 @@ def test_getting_a_checkpoint(nm_context):
 
     checkpoint = CheckPoint.create(nm_context)
 
-    nm_context.refresh_content()
     checkpoints = get_checkpoints(nm_context.client)
 
     assert len(checkpoints) == 1
@@ -132,6 +132,5 @@ def test_plugin_create_checkpoint_and_timeout(nm_plugin):
     plugin.create_checkpoint(timeout=1)
     time.sleep(2)
 
-    nm_plugin.refresh_content()
-    checkpoints = get_checkpoints(nm_plugin.context.client)
-    assert len(checkpoints) == 0
+    with pytest.raises(NmstateLibnmError):
+        plugin.rollback_checkpoint()
