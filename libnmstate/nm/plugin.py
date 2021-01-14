@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020 Red Hat, Inc.
+# Copyright (c) 2020-2021 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -184,7 +184,6 @@ class NetworkManagerPlugin(NmstatePlugin):
 
     def refresh_content(self):
         self.__applied_configs = None
-        self._ctx.refresh_content()
 
     def apply_changes(self, net_state, save_to_disk):
         NmProfiles(self.context).apply_config(net_state, save_to_disk)

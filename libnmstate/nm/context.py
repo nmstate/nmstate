@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020 Red Hat, Inc.
+# Copyright (c) 2020-2021 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -83,11 +83,6 @@ class NmContext:
             )
         return self._context
 
-    def refresh_content(self):
-        if self.context:
-            while self.context.iteration(False):
-                pass
-
     def clean_up(self):
         if self._cancellable:
             self._cancellable.cancel()
@@ -105,8 +100,6 @@ class NmContext:
             )
             self._client = None
             self._quitting = True
-
-            self.refresh_content()
 
             if not is_done:
                 timeout_source = GLib.timeout_source_new(50)
@@ -212,7 +205,6 @@ class NmContext:
         if self._error:
             # The queue and error should be flush and perpare for another run
             self._cancellable.cancel()
-            self.refresh_content()
             self._init_queue()
             self._init_cancellable()
             tmp_error = self._error
