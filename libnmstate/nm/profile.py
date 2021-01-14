@@ -596,6 +596,7 @@ class ProfileDelete:
         self._iface_name = iface_name
         self._iface_type = iface_type
         self._nm_profile = nm_profile
+        self._fallback_checker = None
 
     def run(self):
         action = (
@@ -610,6 +611,18 @@ class ProfileDelete:
             self._delete_profile_callback,
             user_data,
         )
+        self._fallback_checker = GLib.timeout_source_new(
+            FALLBACK_CHECKER_INTERNAL * 1000
+        )
+        self._fallback_checker.set_callback(
+            self._fallback_checker_callback, action
+        )
+        self._fallback_checker.attach(self._ctx.context)
+
+    def _clean_up(self):
+        if self._fallback_checker:
+            self._fallback_checker.destroy()
+            self._fallback_checker = None
 
     def _delete_profile_callback(self, nm_profile, result, user_data):
         action = user_data
@@ -617,11 +630,24 @@ class ProfileDelete:
             return
         try:
             success = nm_profile.delete_finish(result)
+        except GLib.Error as e:
+            if e.matches(Gio.io_error_quark(), Gio.IOErrorEnum.TIMED_OUT):
+                logging.debug(
+                    f"{action} timeout, using fallback method to "
+                    "wait profile deletion"
+                )
+                return
+            else:
+                self._ctx.fail(
+                    NmstateLibnmError(f"{action} failed with error: {e}")
+                )
+                return
         except Exception as e:
             self._ctx.fail(NmstateLibnmError(f"{action} failed: error={e}"))
             return
 
         if success:
+            self._clean_up()
             self._ctx.finish_async(action)
         else:
             self._ctx.fail(
@@ -630,6 +656,14 @@ class ProfileDelete:
                     "delete_finish'"
                 )
             )
+
+    def _fallback_checker_callback(self, action):
+        for nm_profile in self._ctx.client.get_connections():
+            if nm_profile.get_uuid() == self._nm_profile.get_uuid():
+                return GLib.SOURCE_CONTINUE
+        self._clean_up()
+        self._ctx.finish_async(action)
+        return GLib.SOURCE_REMOVE
 
 
 def _is_memory_only(nm_profile):
