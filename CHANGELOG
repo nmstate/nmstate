@@ -1,4 +1,21 @@
 # Changelog
+## [1.0.1] - 2021-01-15
+### New features
+ - Support changing external_ids of OVS system interfaces. (c76f32c)
+ - Support showing running config. (9ebb8d3)
+ - Support configuring veth interfaces. (c22e386)
+ - Support managing `Open_vSwitch` table. (e35c6f5)
+
+### Bug fixes
+ - Sort OVS ports by their name. (11243cc)
+ - Fix varlink logger for unexpected strings. (f178d89)
+ - Raise NmstateValueError when desired interface is orphan. (453f0b0)
+ - Fix error of mixed case for Linux bridge group address. (f460b01)
+ - Fix validation error for interfaces marked as absent. (1e4e956)
+ - Wait until SR-IOV VFs are created on kernel. (cda14e6)
+ - Fix timeout on activation/deactivation 1000 interfaces. (93a7da9)
+ - Fix error on finding the kernel interface index for an interface. (5bdd078)
+
 ## [1.0.0] - 2020-12-07
 ### New features
  - Manage state for route rules. (16c8fa9)
