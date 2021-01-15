@@ -28,6 +28,7 @@ from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import Veth
+from libnmstate.schema import VLAN
 
 from .testlib import assertlib
 from .testlib import statelib
@@ -37,6 +38,7 @@ from .testlib.env import nm_major_minor_version
 VETH1 = "veth1"
 VETH1PEER = "veth1peer"
 VETH2PEER = "veth2peer"
+VETH1_VLAN = "veth1.0"
 
 
 @pytest.mark.skipif(
@@ -142,6 +144,49 @@ def test_modify_veth_peer():
             == VETH2PEER
         )
         assert c_state[Interface.KEY][1][Interface.NAME] == VETH2PEER
+
+
+@pytest.mark.skipif(
+    nm_major_minor_version() <= 1.28,
+    reason="Modifying veth interfaces is not supported on NetworkManager.",
+)
+@pytest.mark.tier1
+def test_veth_as_vlan_base_iface():
+    d_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: VETH1,
+                Interface.TYPE: InterfaceType.VETH,
+                Interface.STATE: InterfaceState.UP,
+                Veth.CONFIG_SUBTREE: {
+                    Veth.PEER: VETH1PEER,
+                },
+            },
+            {
+                Interface.NAME: VETH1_VLAN,
+                Interface.TYPE: InterfaceType.VLAN,
+                Interface.STATE: InterfaceState.UP,
+                VLAN.CONFIG_SUBTREE: {
+                    VLAN.BASE_IFACE: VETH1,
+                    VLAN.ID: 0,
+                },
+            },
+        ]
+    }
+    libnmstate.apply(d_state)
+
+    c_state = statelib.show_only(
+        (
+            VETH1,
+            VETH1_VLAN,
+        )
+    )
+    assert c_state[Interface.KEY][0][Interface.STATE] == InterfaceState.UP
+    assert c_state[Interface.KEY][1][Interface.STATE] == InterfaceState.UP
+
+    d_state[Interface.KEY][0][Interface.STATE] = InterfaceState.ABSENT
+    d_state[Interface.KEY][1][Interface.STATE] = InterfaceState.ABSENT
+    libnmstate.apply(d_state)
 
 
 @contextmanager
