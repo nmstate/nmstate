@@ -144,6 +144,13 @@ class ConnectionProfile:
                 self._delete_connection_callback,
                 user_data,
             )
+            self._fallback_checker = GLib.timeout_source_new(
+                FALLBACK_CHECKER_INTERNAL * 1000
+            )
+            self._fallback_checker.set_callback(
+                self._delete_fallback_checker_callback, action
+            )
+            self._fallback_checker.attach(self._ctx.context)
 
     def activate(self):
         if self.con_id:
@@ -504,11 +511,24 @@ class ConnectionProfile:
         action = user_data
         try:
             success = src_object.delete_finish(result)
+        except GLib.Error as e:
+            if e.matches(Gio.io_error_quark(), Gio.IOErrorEnum.TIMED_OUT):
+                logging.debug(
+                    f"{action} timeout, using fallback method to wait profile "
+                    "deletion"
+                )
+                return
+            else:
+                self._ctx.fail(
+                    NmstateLibnmError(f"{action} failed with error: {e}")
+                )
+                return
         except Exception as e:
             self._ctx.fail(NmstateLibnmError(f"{action} failed: error={e}"))
             return
 
         if success:
+            self._fallback_checker_cleanup()
             self._ctx.finish_async(action)
         else:
             self._ctx.fail(
@@ -517,6 +537,16 @@ class ConnectionProfile:
                     "error='None returned from delete_finish()'"
                 )
             )
+
+    def _delete_fallback_checker_callback(self, action):
+        if self.profile:
+            for nm_profile in self._ctx.client.get_connections():
+                if nm_profile.get_uuid() == self.profile.get_uuid():
+                    return GLib.SOURCE_CONTINUE
+
+        self._fallback_checker_cleanup()
+        self._ctx.finish_async(action)
+        return GLib.SOURCE_REMOVE
 
     def _reset_profile(self):
         self._con_profile = None

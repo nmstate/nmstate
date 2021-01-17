@@ -21,12 +21,14 @@ import logging
 
 from libnmstate.error import NmstateLibnmError
 
+from .common import Gio
 from .common import GLib
 from .common import GObject
 from .common import NM
 
 
 NM_AC_STATE_CHANGED_SIGNAL = "state-changed"
+FALLBACK_CHECKER_INTERNAL = 15
 
 
 class ActivationError(Exception):
@@ -37,6 +39,8 @@ class ActiveConnection:
     def __init__(self, context=None, nm_ac_con=None):
         self._ctx = context
         self._act_con = nm_ac_con
+        self._signal_handler = None
+        self._fallback_checker = None
 
         nmdevs = None
         if nm_ac_con:
@@ -75,19 +79,35 @@ class ActiveConnection:
 
         action = f"Deactivate profile: {self.devname}"
         self._ctx.register_async(action)
-        handler_id = act_connection.connect(
+        self._signal_handler = act_connection.connect(
             NM_AC_STATE_CHANGED_SIGNAL,
             self._wait_state_changed_callback,
             action,
         )
         if act_connection.props.state != NM.ActiveConnectionState.DEACTIVATING:
-            user_data = (handler_id, action)
+            user_data = action
             self._ctx.client.deactivate_connection_async(
                 act_connection,
                 self._ctx.cancellable,
                 self._deactivate_connection_callback,
                 user_data,
             )
+        self._fallback_checker = GLib.timeout_source_new(
+            FALLBACK_CHECKER_INTERNAL * 1000
+        )
+        self._fallback_checker.set_callback(
+            self._deactivation_fallback_checker_callback, action
+        )
+        self._fallback_checker.attach(self._ctx.context)
+
+    def _clean_up(self):
+        if self._signal_handler:
+            if self._act_con:
+                self._act_con.handler_disconnect(self._signal_handler)
+            self._signal_handler = None
+        if self._fallback_checker:
+            self._fallback_checker.destroy()
+            self._fallback_checker = None
 
     def _wait_state_changed_callback(self, act_con, state, reason, action):
         if self._ctx.is_cancelled():
@@ -96,13 +116,13 @@ class ActiveConnection:
             logging.debug(
                 "Connection deactivation succeeded on %s", self.devname,
             )
+            self._clean_up()
             self._ctx.finish_async(action)
 
     def _deactivate_connection_callback(self, src_object, result, user_data):
-        handler_id, action = user_data
+        action = user_data
         if self._ctx.is_cancelled():
-            if self._act_con:
-                self._act_con.handler_disconnect(handler_id)
+            self._clean_up()
             return
 
         try:
@@ -116,16 +136,20 @@ class ActiveConnection:
                     "Connection is not active on {}, no need to "
                     "deactivate".format(self.devname)
                 )
+            elif e.matches(Gio.io_error_quark(), Gio.IOErrorEnum.TIMED_OUT):
+                logging.debug(
+                    f"{action} timeout, using fallback method to wait profile "
+                    "deactivation"
+                )
+                return
             else:
-                if self._act_con:
-                    self._act_con.handler_disconnect(handler_id)
+                self._clean_up()
                 self._ctx.fail(
                     NmstateLibnmError(f"{action} failed: error={e}")
                 )
                 return
         except Exception as e:
-            if self._act_con:
-                self._act_con.handler_disconnect(handler_id)
+            self._clean_up()
             self._ctx.fail(
                 NmstateLibnmError(
                     f"BUG: Unexpected error when activating {self.devname} "
@@ -135,14 +159,29 @@ class ActiveConnection:
             return
 
         if not success:
-            if self._act_con:
-                self._act_con.handler_disconnect(handler_id)
+            self._clean_up()
             self._ctx.fail(
                 NmstateLibnmError(
                     f"{action} failed: error='None returned from "
                     "deactivate_connection_finish()'"
                 )
             )
+
+    def _deactivation_fallback_checker_callback(self, action):
+        if self.devname:
+            self._nmdev = self._ctx.get_nm_dev(self.devname)
+            if self._nmdev:
+                self._act_con = self._nmdev.get_active_connection()
+                if (
+                    self._act_con
+                    and self._act_con.props.state
+                    != NM.ActiveConnectionState.DEACTIVATED
+                ):
+                    return GLib.SOURCE_CONTINUE
+
+        self._clean_up()
+        self._ctx.finish_async(action)
+        return GLib.SOURCE_REMOVE
 
     @property
     def nm_active_connection(self):
