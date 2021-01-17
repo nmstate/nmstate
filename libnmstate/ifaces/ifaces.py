@@ -389,8 +389,11 @@ class Ifaces:
                         or parent_iface.is_down
                         or parent_iface.is_absent
                     ):
-                        iface.state = parent_iface.state
-                        iface.mark_as_changed()
+                        # Nmstate should mark the interface as changed if the
+                        # state is being modified.
+                        if parent_iface.state != iface.state:
+                            iface.state = parent_iface.state
+                            iface.mark_as_changed()
 
     def _get_parent_iface(self, iface):
         if not iface.parent:
