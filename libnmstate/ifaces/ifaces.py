@@ -675,6 +675,12 @@ class Ifaces:
         """
         port_controller_map = {}
         for iface in self.all_ifaces():
+            if (
+                not (iface.is_changed or iface.is_desired)
+                or not iface.is_up
+                or iface.is_ignore
+            ):
+                continue
             for port_name in iface.port:
                 cur_controller = port_controller_map.get(port_name)
                 if cur_controller:

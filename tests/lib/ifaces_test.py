@@ -152,6 +152,18 @@ class TestIfaces:
         with pytest.raises(NmstateValueError):
             Ifaces([des_iface_info1, des_iface_info2], cur_iface_infos)
 
+    def test_ignore_overbooked_port_for_undesired_iface(self):
+        cur_iface_infos = self._gen_iface_infos()
+        cur_iface_infos[0][Interface.NAME] = PORT1_IFACE_NAME
+        cur_iface_infos[1][Interface.NAME] = PORT2_IFACE_NAME
+        cur_iface_info1 = gen_bridge_iface_info()
+        cur_iface_info2 = gen_bridge_iface_info()
+        cur_iface_info2[Interface.NAME] = "another_bridge"
+        cur_iface_infos.append(cur_iface_info1)
+        cur_iface_infos.append(cur_iface_info2)
+        des_iface_infos = self._gen_iface_infos()
+        Ifaces(des_iface_infos, cur_iface_infos)
+
     def test_remove_unknown_interfaces(self):
         des_iface_infos = self._gen_iface_infos()
         cur_iface_info = {
