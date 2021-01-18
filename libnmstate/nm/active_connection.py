@@ -336,10 +336,9 @@ class ProfileActivation:
             )
 
     def _fallback_checker_callback(self, _user_data):
-        self._nm_dev = get_nm_dev(
-            self._ctx, self._iface_name, self._iface_type
-        )
-        if self._nm_dev:
+        nm_dev = get_nm_dev(self._ctx, self._iface_name, self._iface_type)
+        if nm_dev:
+            self._nm_dev = nm_dev
             self._activation_progress_check()
         return GLib.SOURCE_CONTINUE
 
