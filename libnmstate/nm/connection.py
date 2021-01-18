@@ -21,6 +21,7 @@
 
 import uuid
 
+from libnmstate.error import NmstatePluginError
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import LinuxBridge as LB
@@ -212,3 +213,40 @@ def create_new_nm_simple_conn(iface, nm_profile):
         nm_simple_conn.add_setting(setting)
 
     return nm_simple_conn
+
+
+def nm_simple_conn_update_controller(nm_simple_conn, controller):
+    nm_conn_setting = nm_simple_conn.get_setting_connection()
+    if nm_conn_setting:
+        nm_conn_setting.props.master = controller
+    else:
+        raise NmstatePluginError(
+            f"BUG: NM.SimpleConnection {nm_simple_conn.get_id()}/"
+            f"{nm_simple_conn.get_uuid()} "
+            f"{nm_simple_conn.get_connection_type()} "
+            "has no NM.SettingConnection"
+        )
+
+
+def nm_simple_conn_update_parent(nm_simple_conn, iface_type, parent):
+    if iface_type == InterfaceType.VLAN:
+        nm_setting = nm_simple_conn.get_setting_vlan()
+    elif iface_type == InterfaceType.VXLAN:
+        nm_setting = nm_simple_conn.get_setting_vxlan()
+    elif iface_type in (InterfaceType.MAC_VLAN, InterfaceType.MAC_VTAP):
+        nm_setting = nm_simple_conn.get_setting_by_name(
+            NM.SETTING_MACVLAN_SETTING_NAME
+        )
+    elif iface_type == InterfaceType.INFINIBAND:
+        nm_setting = nm_simple_conn.get_setting_infiniband()
+    elif iface_type == InterfaceType.OVS_INTERFACE:
+        # OVS Interface is using master
+        return
+    else:
+        raise NmstatePluginError(
+            f"BUG: NM.SimpleConnection {nm_simple_conn.get_id()}/"
+            f"{nm_simple_conn.get_uuid()} "
+            f"{nm_simple_conn.get_connection_type()} "
+            f"shold not need parent"
+        )
+    nm_setting.props.parent = parent

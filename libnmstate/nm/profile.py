@@ -24,9 +24,9 @@ from distutils.version import StrictVersion
 import logging
 import time
 
+from libnmstate.error import NmstateInternalError
 from libnmstate.error import NmstateLibnmError
 from libnmstate.error import NmstateNotSupportedError
-from libnmstate.error import NmstateInternalError
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceType
 
@@ -37,6 +37,8 @@ from .common import Gio
 from .common import GLib
 from .common import NM
 from .connection import create_new_nm_simple_conn
+from .connection import nm_simple_conn_update_controller
+from .connection import nm_simple_conn_update_parent
 from .device import get_nm_dev
 from .device import DeviceReapply
 from .device import DeviceDelete
@@ -103,8 +105,38 @@ class NmProfile:
         self._device_deleted = False
         self._import_current()
         self._gen_actions()
+        self._gen_nm_sim_conn()
+
+    @property
+    def iface(self):
+        return self._iface
+
+    @property
+    def has_pending_change(self):
+        return (
+            self.iface.is_changed or self.iface.is_desired
+        ) and not self.iface.is_ignore
+
+    @property
+    def uuid(self):
+        if self._nm_simple_conn:
+            return self._nm_simple_conn.get_uuid()
+        elif self._nm_profile:
+            return self._nm_profile.get_uuid()
+        else:
+            return ""
+
+    def update_controller(self, controller):
+        nm_simple_conn_update_controller(self._nm_simple_conn, controller)
+
+    def update_parent(self, parent):
+        nm_simple_conn_update_parent(
+            self._nm_simple_conn, self.iface.type, parent
+        )
 
     def _gen_actions(self):
+        if not self.has_pending_change:
+            return
         if self._iface.is_absent:
             self._add_action(NmProfile.ACTION_DELETE_PROFILE)
             if self._iface.is_virtual and self._nm_dev:
@@ -184,7 +216,7 @@ class NmProfile:
             # settings.
             self._add_action(NmProfile.ACTION_ACTIVATE_FIRST)
 
-    def save_config(self):
+    def _gen_nm_sim_conn(self):
         if self._iface.is_absent or self._iface.is_down:
             return
 
@@ -206,6 +238,7 @@ class NmProfile:
                 and _is_memory_only(cur_nm_profile) != self._save_to_disk
             ):
                 self._nm_profile = cur_nm_profile
+                self._nm_simple_conn = cur_nm_profile
                 return
 
         # TODO: Use applied config as base profile
@@ -214,6 +247,25 @@ class NmProfile:
         self._nm_simple_conn = create_new_nm_simple_conn(
             self._iface, self._nm_profile
         )
+
+    def save_config(self):
+        if not self.has_pending_change:
+            return
+        if self._iface.is_absent or self._iface.is_down:
+            return
+        # Don't create new profile if original desire does not ask
+        # anything besides state:up and not been marked as changed.
+        # We don't need to do this once we support querying on-disk
+        # configure
+        if self._nm_simple_conn == self._nm_profile:
+            cur_nm_profile = self._get_first_nm_profile()
+            if (
+                cur_nm_profile
+                and _is_memory_only(cur_nm_profile) != self._save_to_disk
+            ):
+                self._nm_profile = cur_nm_profile
+                return
+
         if self._nm_profile:
             ProfileUpdate(
                 self._ctx,
@@ -413,6 +465,8 @@ class NmProfile:
         Remove all profiles except the NM.RemoteConnection used by current
         NM.ActiveConnection if interface is marked as UP
         """
+        if not self.has_pending_change:
+            return
         if self._iface.is_down:
             return
         self._import_current()

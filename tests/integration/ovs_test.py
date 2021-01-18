@@ -27,9 +27,13 @@ from libnmstate.schema import InterfaceIP
 from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
+from libnmstate.schema import MacVlan
+from libnmstate.schema import MacVtap
 from libnmstate.schema import OVSBridge
-from libnmstate.schema import OvsDB
 from libnmstate.schema import OVSInterface
+from libnmstate.schema import OvsDB
+from libnmstate.schema import VLAN
+from libnmstate.schema import VXLAN
 from libnmstate.state import state_match
 from libnmstate.error import NmstateDependencyError
 from libnmstate.error import NmstateNotSupportedError
@@ -42,8 +46,6 @@ from .testlib.env import nm_major_minor_version
 from .testlib.nmplugin import disable_nm_plugin
 from .testlib.ovslib import Bridge
 from .testlib.servicelib import disable_service
-from .testlib.ovslib import get_proxy_port_profile_name_of_ovs_interface
-from .testlib.ovslib import get_nm_active_profiles
 from .testlib.vlan import vlan_interface
 
 
@@ -154,19 +156,24 @@ def test_create_and_remove_ovs_bridge_with_internal_port_static_ip_and_mac():
     assertlib.assert_absent(PORT1)
 
 
-@pytest.mark.tier1
-def test_create_and_remove_ovs_bridge_with_internal_port_same_name():
+@pytest.fixture
+def ovs_bridge1_with_internal_port_same_name():
     bridge = Bridge(BRIDGE1)
     bridge.add_internal_port(
         BRIDGE1, ipv4_state={InterfaceIPv4.ENABLED: False}
     )
 
     with bridge.create() as state:
-        state = statelib.show_only((BRIDGE1,))
-        assert state
-        assert len(state[Interface.KEY]) == 2
+        yield state
 
-    assertlib.assert_absent(BRIDGE1)
+
+@pytest.mark.tier1
+def test_create_and_remove_ovs_bridge1_with_internal_port_same_name(
+    ovs_bridge1_with_internal_port_same_name,
+):
+    state = statelib.show_only((BRIDGE1,))
+    assert state
+    assert len(state[Interface.KEY]) == 2
 
 
 @pytest.mark.tier1
@@ -231,40 +238,6 @@ def test_ovs_service_missing():
             ]
         }
     )
-
-
-class _OvsProfileStillExists(Exception):
-    pass
-
-
-@pytest.mark.tier1
-def test_remove_ovs_internal_iface_got_port_profile_removed(bridge_with_ports):
-    for port_name in bridge_with_ports.ports_names:
-        active_profiles = get_nm_active_profiles()
-        assert port_name in active_profiles
-        proxy_port_profile = get_proxy_port_profile_name_of_ovs_interface(
-            port_name
-        )
-        assert proxy_port_profile
-        assert proxy_port_profile in active_profiles
-        libnmstate.apply(
-            {
-                Interface.KEY: [
-                    {
-                        Interface.NAME: port_name,
-                        Interface.STATE: InterfaceState.ABSENT,
-                    }
-                ]
-            }
-        )
-
-        rc, output, _ = cmdlib.exec_cmd(
-            f"nmcli connection show {proxy_port_profile}".split(" "),
-        )
-        if rc == 0:
-            raise _OvsProfileStillExists(
-                f"{proxy_port_profile} still exists: {output}"
-            )
 
 
 @pytest.fixture
@@ -766,3 +739,80 @@ def test_expect_failure_when_create_ovs_interface_without_bridge():
                 ]
             }
         )
+
+
+@pytest.mark.tier1
+def test_create_vlan_over_ovs_iface_with_use_same_name_as_bridge(
+    ovs_bridge1_with_internal_port_same_name,
+):
+    desired_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: "vlan101",
+                Interface.TYPE: InterfaceType.VLAN,
+                VLAN.CONFIG_SUBTREE: {VLAN.ID: 101, VLAN.BASE_IFACE: BRIDGE1},
+            }
+        ]
+    }
+    libnmstate.apply(desired_state)
+    assertlib.assert_state_match(desired_state)
+
+
+def test_create_vxlan_over_ovs_iface_with_use_same_name_as_bridge(
+    ovs_bridge1_with_internal_port_same_name,
+):
+    desired_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: "vlan101",
+                Interface.TYPE: InterfaceType.VXLAN,
+                VXLAN.CONFIG_SUBTREE: {
+                    VXLAN.ID: 101,
+                    VXLAN.BASE_IFACE: BRIDGE1,
+                    VXLAN.REMOTE: "192.0.2.251",
+                },
+            }
+        ]
+    }
+    libnmstate.apply(desired_state)
+    assertlib.assert_state_match(desired_state)
+
+
+def test_create_mac_vlan_over_ovs_iface_with_use_same_name_as_bridge(
+    ovs_bridge1_with_internal_port_same_name,
+):
+    desired_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: "mac_vlan101",
+                Interface.TYPE: InterfaceType.MAC_VLAN,
+                MacVlan.CONFIG_SUBTREE: {
+                    MacVlan.BASE_IFACE: BRIDGE1,
+                    MacVlan.MODE: MacVlan.Mode.PASSTHRU,
+                    MacVlan.PROMISCUOUS: False,
+                },
+            }
+        ]
+    }
+    libnmstate.apply(desired_state)
+    assertlib.assert_state_match(desired_state)
+
+
+def test_create_mac_tap_over_ovs_iface_with_use_same_name_as_bridge(
+    ovs_bridge1_with_internal_port_same_name,
+):
+    desired_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: "mac_tap0",
+                Interface.TYPE: InterfaceType.MAC_VTAP,
+                MacVtap.CONFIG_SUBTREE: {
+                    MacVtap.BASE_IFACE: BRIDGE1,
+                    MacVtap.MODE: MacVtap.Mode.PASSTHRU,
+                    MacVtap.PROMISCUOUS: False,
+                },
+            }
+        ]
+    }
+    libnmstate.apply(desired_state)
+    assertlib.assert_state_match(desired_state)

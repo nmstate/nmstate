@@ -44,26 +44,41 @@ class NmProfiles:
 
     def apply_config(self, net_state, save_to_disk):
         self._prepare_state_for_profiles(net_state)
-        self._profiles = [
+        all_profiles = [
             NmProfile(self._ctx, iface, save_to_disk)
             for iface in net_state.ifaces.all_ifaces()
-            if (iface.is_changed or iface.is_desired) and not iface.is_ignore
         ]
 
-        for profile in self._profiles:
-            profile.save_config()
+        _use_uuid_as_controller_and_parent(all_profiles)
+
+        changed_ovs_bridges_and_ifaces = {}
+        for profile in all_profiles:
+            if (
+                profile.iface.type
+                in (InterfaceType.OVS_BRIDGE, InterfaceType.OVS_INTERFACE)
+                and profile.has_pending_change
+            ):
+                changed_ovs_bridges_and_ifaces[profile.uuid] = profile
+
+        for profile in all_profiles:
+            if profile.has_pending_change:
+                profile.save_config()
         self._ctx.wait_all_finish()
 
         for action in NmProfile.ACTIONS:
-            for profile in self._profiles:
+            for profile in all_profiles:
                 if profile.has_action(action):
                     profile.do_action(action)
             self._ctx.wait_all_finish()
 
         if save_to_disk:
-            for profile in self._profiles:
-                profile.delete_other_profiles()
-            _delete_orphan_nm_ovs_port_profiles(self._ctx, net_state)
+            for profile in all_profiles:
+                if profile.has_pending_change:
+                    profile.delete_other_profiles()
+
+            _delete_orphan_nm_ovs_port_profiles(
+                self._ctx, changed_ovs_bridges_and_ifaces, net_state
+            )
 
     def _prepare_state_for_profiles(self, net_state):
         _preapply_dns_fix_for_profiles(self._ctx, net_state)
@@ -255,13 +270,21 @@ def _create_veth_iface_for_missing_peers(net_state):
     net_state.ifaces.add_ifaces(new_peers)
 
 
-def _delete_orphan_nm_ovs_port_profiles(context, net_state):
-    all_deleted_ovs_bridges = {}
-    for iface in net_state.ifaces.all_user_space_ifaces:
-        if iface.type == InterfaceType.OVS_BRIDGE and iface.is_absent:
-            all_deleted_ovs_bridges[iface.name] = iface
-    if not all_deleted_ovs_bridges:
+def _delete_orphan_nm_ovs_port_profiles(
+    context, changed_ovs_bridges_and_ifaces, net_state
+):
+    """
+    * When OVS port's master is gone, remove it.
+    * When OVS port's child is empty, remove it.
+    """
+    if not changed_ovs_bridges_and_ifaces:
         return
+
+    ovs_bridge_named_to_profile = {
+        profile.iface.name: profile
+        for profile in changed_ovs_bridges_and_ifaces.values()
+    }
+
     for nm_profile in context.client.get_connections():
         if nm_profile.get_connection_type() != InterfaceType.OVS_PORT:
             continue
@@ -270,30 +293,76 @@ def _delete_orphan_nm_ovs_port_profiles(context, net_state):
             continue
         ovs_port_name = nm_profile.get_interface_name()
         controller = conn_setting.get_master()
-        ovs_br_iface = all_deleted_ovs_bridges.get(controller)
-        need_delete = False
-        if ovs_br_iface:
-            if ovs_br_iface.is_absent:
-                need_delete = True
-            else:
-                has_ovs_interface = False
-                for port in ovs_br_iface.port:
-                    ovs_iface = net_state.ifaces.all_kernel_ifaces.get(port)
-                    if (
-                        ovs_iface
-                        and ovs_iface.controller == ovs_port_name
-                        and ovs_iface.controller_type == InterfaceType.OVS_PORT
-                    ):
-                        has_ovs_interface = True
-                        break
-                if not has_ovs_interface:
-                    need_delete = True
-        if need_delete:
-            ProfileDelete(
-                context,
-                ovs_port_name,
-                InterfaceType.OVS_PORT,
-                nm_profile,
-            ).run()
+        ovs_bridge_profile = changed_ovs_bridges_and_ifaces.get(
+            controller, ovs_bridge_named_to_profile.get(controller)
+        )
+
+        # When OVS bridge is deleted, so its ovs ports.
+        if ovs_bridge_profile:
+            if ovs_bridge_profile.iface.is_absent:
+                ProfileDelete(
+                    context,
+                    ovs_port_name,
+                    InterfaceType.OVS_PORT,
+                    nm_profile,
+                ).run()
+                continue
+            # When OVS port has no child, delete it
+            ovs_bridge_iface = ovs_bridge_profile.iface
+            if not _nm_ovs_port_has_child(
+                nm_profile, ovs_bridge_iface, net_state
+            ):
+                ProfileDelete(
+                    context,
+                    ovs_port_name,
+                    InterfaceType.OVS_PORT,
+                    nm_profile,
+                ).run()
+                continue
 
     context.wait_all_finish()
+
+
+def _use_uuid_as_controller_and_parent(nm_profiles):
+    iface_to_uuid = {}
+    kernel_iface_to_uuid = {}
+
+    for nm_profile in nm_profiles:
+        iface_to_uuid[
+            f"{nm_profile.iface.name}/{nm_profile.iface.type}"
+        ] = nm_profile.uuid
+        if not nm_profile.iface.is_user_space_only:
+            kernel_iface_to_uuid[nm_profile.iface.name] = nm_profile.uuid
+
+    for nm_profile in nm_profiles:
+        iface = nm_profile.iface
+        if not iface.is_up:
+            continue
+        if (
+            iface.controller
+            and (iface.is_changed or iface.is_desired)
+            and not iface.is_ignore
+        ):
+            uuid = iface_to_uuid.get(
+                f"{iface.controller}/{iface.controller_type}"
+            )
+            if uuid:
+                nm_profile.update_controller(uuid)
+        if iface.need_parent:
+            uuid = kernel_iface_to_uuid.get(iface.parent)
+            if uuid:
+                nm_profile.update_parent(uuid)
+
+
+def _nm_ovs_port_has_child(nm_profile, ovs_bridge_iface, net_state):
+    ovs_port_uuid = nm_profile.get_uuid()
+    ovs_port_name = nm_profile.get_interface_name()
+    for ovs_iface_name in ovs_bridge_iface.port:
+        ovs_iface = net_state.ifaces.all_kernel_ifaces.get(ovs_iface_name)
+        if (
+            ovs_iface
+            and ovs_iface.controller in (ovs_port_name, ovs_port_uuid)
+            and ovs_iface.controller_type == InterfaceType.OVS_PORT
+        ):
+            return True
+    return False

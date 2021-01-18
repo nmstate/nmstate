@@ -19,7 +19,6 @@
 
 from contextlib import contextmanager
 import copy
-import re
 
 import libnmstate
 from libnmstate.schema import Interface
@@ -27,8 +26,6 @@ from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import OVSBridge
 from libnmstate.schema import OVSInterface
-
-from . import cmdlib
 
 
 class Bridge:
@@ -152,27 +149,3 @@ def _set_ifaces_state(ifaces, state):
     for iface in ifaces:
         iface[Interface.STATE] = state
     return ifaces
-
-
-def get_nm_active_profiles():
-    all_profiles_output = cmdlib.exec_cmd(
-        "nmcli -g NAME connection show --active".split(" "), check=True
-    )[1]
-    return all_profiles_output.split("\n")
-
-
-def get_proxy_port_profile_name_of_ovs_interface(iface_name):
-    proxy_port_iface_name = cmdlib.exec_cmd(
-        f"nmcli -g connection.master connection show {iface_name}".split(" "),
-        check=True,
-    )[1].strip()
-    all_profiles_output = cmdlib.exec_cmd(
-        "nmcli -g NAME,DEVICE connection show".split(" "), check=True
-    )[1]
-    proxy_port_re = re.compile(
-        f"^(?P<profile_name>.+):{proxy_port_iface_name}$"
-    )
-    for line in all_profiles_output.split("\n"):
-        match = proxy_port_re.match(line)
-        if match:
-            return match.group("profile_name")
