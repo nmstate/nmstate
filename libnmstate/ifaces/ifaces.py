@@ -437,6 +437,8 @@ class Ifaces:
         """
         slave_master_map = {}
         for iface in self._ifaces.values():
+            if not (iface.is_changed or iface.is_desired) or not iface.is_up:
+                continue
             for slave_name in iface.slaves:
                 cur_master = slave_master_map.get(slave_name)
                 if cur_master:
