@@ -27,7 +27,6 @@ from .common import Gio
 from .common import NM
 from .device import get_nm_dev
 from .device import get_iface_type
-from .device import mark_device_as_managed
 from .ipv4 import is_dynamic as is_ipv4_dynamic
 from .ipv6 import is_dynamic as is_ipv6_dynamic
 
@@ -100,11 +99,8 @@ class ProfileActivation:
             f"Activate profile uuid:{self._nm_profile.get_uuid()} "
             f"iface:{self._iface_name} type: {self._iface_type}"
         )
-        if self._nm_dev:
-            # Workaround of https://bugzilla.redhat.com/1880420
-            mark_device_as_managed(self._ctx, self._nm_dev)
 
-        user_data = None
+        retry = True
         self._ctx.register_async(self._action)
         self._ctx.client.activate_connection_async(
             self._nm_profile,
@@ -112,7 +108,7 @@ class ProfileActivation:
             specific_object,
             self._ctx.cancellable,
             self._activate_profile_callback,
-            user_data,
+            retry,
         )
         self._fallback_checker = GLib.timeout_source_new(
             FALLBACK_CHECKER_INTERNAL * 1000
@@ -146,7 +142,7 @@ class ProfileActivation:
         activation._fallback_checker.attach(ctx.context)
         activation._wait_profile_activation()
 
-    def _activate_profile_callback(self, nm_client, result, _user_data):
+    def _activate_profile_callback(self, nm_client, result, retry):
         nm_ac = None
         if self._ctx.is_cancelled():
             self._activation_clean_up()
@@ -154,7 +150,20 @@ class ProfileActivation:
         try:
             nm_ac = nm_client.activate_connection_finish(result)
         except GLib.Error as e:
-            if e.matches(Gio.io_error_quark(), Gio.IOErrorEnum.TIMED_OUT):
+            if retry:
+                retry = False
+                specific_object = None
+                logging.debug(f"Action {self._action} failed, trying again.")
+                self._ctx.client.activate_connection_async(
+                    self._nm_profile,
+                    self._nm_dev,
+                    specific_object,
+                    self._ctx.cancellable,
+                    self._activate_profile_callback,
+                    retry,
+                )
+                return
+            elif e.matches(Gio.io_error_quark(), Gio.IOErrorEnum.TIMED_OUT):
                 logging.debug(
                     f"{self._action} timeout on activation, "
                     "using fallback method to wait activation"
