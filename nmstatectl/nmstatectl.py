@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2020 Red Hat, Inc.
+# Copyright (c) 2018-2021 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -25,6 +25,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import warnings
 
 import yaml
 
@@ -53,6 +54,7 @@ def main():
     setup_subcommand_edit(subparsers)
     setup_subcommand_rollback(subparsers)
     setup_subcommand_set(subparsers)
+    setup_subcommand_apply(subparsers)
     setup_subcommand_show(subparsers)
     setup_subcommand_version(subparsers)
     setup_subcommand_varlink(subparsers)
@@ -124,8 +126,8 @@ def setup_subcommand_rollback(subparsers):
     parser_rollback.set_defaults(func=rollback)
 
 
-def setup_subcommand_set(subparsers):
-    parser_set = subparsers.add_parser("set", help="Set network state")
+def setup_subcommand_apply(subparsers):
+    parser_set = subparsers.add_parser("apply", help="Apply network state")
     parser_set.add_argument(
         "file",
         help="File containing desired state. "
@@ -161,6 +163,51 @@ def setup_subcommand_set(subparsers):
         help="Do not make the state persistent.",
     )
     parser_set.set_defaults(func=apply)
+
+
+def setup_subcommand_set(subparsers):
+    parser_set = subparsers.add_parser(
+        "set",
+        help=(
+            "Set network state, deprecated please consider using"
+            "'apply' instead."
+        ),
+    )
+    parser_set.add_argument(
+        "file",
+        help="File containing desired state. "
+        "stdin is used when no file is specified.",
+        nargs="*",
+    )
+    parser_set.add_argument(
+        "--no-verify",
+        action="store_false",
+        dest="verify",
+        default=True,
+        help="Do not verify that the state was completely set and disable "
+        "rollback to previous state",
+    )
+    parser_set.add_argument(
+        "--no-commit",
+        action="store_false",
+        dest="commit",
+        default=True,
+        help="Do not commit new state after verification",
+    )
+    parser_set.add_argument(
+        "--timeout",
+        type=int,
+        default=60,
+        help="Timeout in seconds before reverting uncommited changes.",
+    )
+    parser_set.add_argument(
+        "--memory-only",
+        action="store_false",
+        dest="save_to_disk",
+        default=True,
+        help="Do not make the state persistent.",
+    )
+    parser_set.set_defaults(func=set)
 
 
 def setup_subcommand_show(subparsers):
@@ -261,6 +308,11 @@ def show(args):
         full_state = libnmstate.show()
     state = _filter_state(full_state, args.only)
     print_state(state, use_yaml=args.yaml)
+
+
+def set(args):
+    warnings.warn("Using 'set' is deprecated, use 'apply' instead.")
+    apply(args)
 
 
 def apply(args):

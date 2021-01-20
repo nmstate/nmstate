@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2020 Red Hat, Inc.
+# Copyright (c) 2018-2021 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -32,6 +32,7 @@ from .testlib.examplelib import find_examples_dir
 from .testlib.examplelib import load_example
 
 
+APPLY_CMD = ["nmstatectl", "apply"]
 SET_CMD = ["nmstatectl", "set"]
 SHOW_CMD = ["nmstatectl", "show"]
 CONFIRM_CMD = ["nmstatectl", "commit"]
@@ -93,17 +94,19 @@ ETH1_YAML_CONFIG = b"""interfaces:
   mtu: 1500
 """
 
+SET_WARNING = "Using 'set' is deprecated, use 'apply' instead."
+
 EXAMPLES = find_examples_dir()
 CONFIRMATION_INTERFACE = "eth1.101"
 CONFIRMATION_CLEAN = "vlan101_eth1_absent.yml"
 CONFIRMATION_TEST = "vlan101_eth1_up.yml"
 CONFIRMATION_TEST_STATE = load_example(CONFIRMATION_TEST)
-CONFIRMATION_SET = SET_CMD + [
+CONFIRMATION_APPLY = APPLY_CMD + [
     "--no-commit",
     os.path.join(EXAMPLES, CONFIRMATION_TEST),
 ]
 CONFIRMATION_TIMEOUT = 5
-CONFIRMATION_TIMOUT_COMMAND = SET_CMD + [
+CONFIRMATION_TIMOUT_COMMAND = APPLY_CMD + [
     "--no-commit",
     "--timeout",
     str(CONFIRMATION_TIMEOUT),
@@ -160,16 +163,24 @@ def test_show_command_only_non_existing():
     assert len(state[Constants.INTERFACES]) == 0
 
 
-def test_set_command_with_yaml_format():
-    ret = cmdlib.exec_cmd(SET_CMD, stdin=ETH1_YAML_CONFIG)
+def test_apply_command_with_yaml_format():
+    ret = cmdlib.exec_cmd(APPLY_CMD, stdin=ETH1_YAML_CONFIG)
     rc, out, err = ret
 
     assert rc == cmdlib.RC_SUCCESS, cmdlib.format_exec_cmd_result(ret)
 
 
-def test_set_command_with_two_states():
+def test_set_command_with_yaml_deprecated():
+    ret = cmdlib.exec_cmd(SET_CMD, stdin=ETH1_YAML_CONFIG)
+    rc, out, err = ret
+
+    assert rc == cmdlib.RC_SUCCESS, cmdlib.format_exec_cmd_result(ret)
+    assert SET_WARNING in err.rstrip()
+
+
+def test_apply_command_with_two_states():
     examples = find_examples_dir()
-    cmd = SET_CMD + [
+    cmd = APPLY_CMD + [
         os.path.join(examples, "linuxbrige_eth1_up.yml"),
         os.path.join(examples, "linuxbrige_eth1_absent.yml"),
     ]
@@ -185,7 +196,7 @@ def test_manual_confirmation(eth1_up):
 
     with example_state(CONFIRMATION_CLEAN, CONFIRMATION_CLEAN):
 
-        assert_command(CONFIRMATION_SET)
+        assert_command(CONFIRMATION_APPLY)
         assertlib.assert_state(CONFIRMATION_TEST_STATE)
         assert_command(CONFIRM_CMD)
         assertlib.assert_state(CONFIRMATION_TEST_STATE)
@@ -196,7 +207,7 @@ def test_manual_rollback(eth1_up):
 
     with example_state(CONFIRMATION_CLEAN, CONFIRMATION_CLEAN) as clean_state:
 
-        assert_command(CONFIRMATION_SET)
+        assert_command(CONFIRMATION_APPLY)
         assertlib.assert_state(CONFIRMATION_TEST_STATE)
         assert_command(ROLLBACK_CMD)
         assertlib.assert_state(clean_state)
@@ -204,16 +215,16 @@ def test_manual_rollback(eth1_up):
 
 def test_dual_change(eth1_up):
     """
-    I cannot set a state without confirming/rolling back the state change.
+    I cannot apply a state without confirming/rolling back the state change.
     """
 
     with example_state(CONFIRMATION_CLEAN, CONFIRMATION_CLEAN) as clean_state:
 
-        assert_command(CONFIRMATION_SET)
+        assert_command(CONFIRMATION_APPLY)
         assertlib.assert_state(CONFIRMATION_TEST_STATE)
 
         try:
-            cmdlib.exec_cmd(CONFIRMATION_SET)
+            cmdlib.exec_cmd(CONFIRMATION_APPLY)
         except Exception as e:
             assert isinstance(e, NmstateConflictError)
         finally:
