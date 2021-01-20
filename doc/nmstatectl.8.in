@@ -9,6 +9,8 @@ nmstatectl \- A nmstate command line tool
 .br
 .B nmstatectl set \fISTATE_FILE_PATH\fR [\fIOPTIONS\fR]
 .br
+.B nmstatectl apply \fISTATE_FILE_PATH\fR [\fIOPTIONS\fR]
+.br
 .B nmstatectl edit \fR[\fIINTERFACE_NAME\fR] [\fIOPTIONS\fR]
 .br
 .B nmstatectl rollback \fR[\fICHECKPOINT_PATH\fR]
@@ -50,6 +52,16 @@ nmstatectl show eth\\*
 .RE
 .PP
 .B set
+.RS
+"Set" command is deprecated. Please consider using "apply" instead.
+
+Apply the network state from specified file in \fIYAML\fR or \fIJSON\fR format.
+By default, if the network state after state applied is not identical to the
+desired state, \fBnmstatectl\fR rollbacks to the state before \fBset\fR
+command. Use the \fB--no-verify\fR argument to skip the verification.
+.RE
+.PP
+.B apply
 .RS
 Apply the network state from specified file in \fIYAML\fR or \fIJSON\fR format.
 By default, if the network state after state applied is not identical to the
