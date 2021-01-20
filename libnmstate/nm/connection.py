@@ -96,7 +96,7 @@ class _ConnectionSetting:
         return self._setting
 
 
-def create_new_nm_simple_conn(iface, nm_profile):
+def create_new_nm_simple_conn(iface, nm_profile, timestamp):
     nm_iface_type = Api2Nm.get_iface_type(iface.type)
     iface_info = iface.to_dict()
     settings = [
@@ -132,7 +132,7 @@ def create_new_nm_simple_conn(iface, nm_profile):
         if wired_setting:
             settings.append(wired_setting)
 
-    user_setting = create_user_setting(iface_info, nm_profile)
+    user_setting = create_user_setting(iface_info, nm_profile, timestamp)
     if user_setting:
         settings.append(user_setting)
 

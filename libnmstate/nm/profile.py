@@ -43,6 +43,7 @@ from .device import get_nm_dev
 from .device import DeviceReapply
 from .device import DeviceDelete
 from .translator import Api2Nm
+from .user import get_timestamp_of_profile
 
 
 IMPORT_NM_DEV_TIMEOUT = 5
@@ -105,6 +106,7 @@ class NmProfile:
         self._device_deleted = False
         self._import_current()
         self._gen_actions()
+        self._timestamp = _gen_timestamp()
         self._gen_nm_sim_conn()
 
     @property
@@ -245,7 +247,7 @@ class NmProfile:
         #       Or even better remove the base profile argument as top level
         #       of nmstate should provide full/merged configure.
         self._nm_simple_conn = create_new_nm_simple_conn(
-            self._iface, self._nm_profile
+            self._iface, self._nm_profile, self._timestamp
         )
 
     def save_config(self):
@@ -597,6 +599,7 @@ class ProfileUpdate:
         self._nm_simple_conn = nm_simple_conn
         self._nm_profile = nm_profile
         self._save_to_disk = save_to_disk
+        self._fallback_checker = None
 
     def run(self):
         flags = NM.SettingsUpdate2Flags.BLOCK_AUTOCONNECT
@@ -620,20 +623,42 @@ class ProfileUpdate:
             self._update_profile_callback,
             user_data,
         )
+        self._fallback_checker = GLib.timeout_source_new(
+            FALLBACK_CHECKER_INTERNAL * 1000
+        )
+        self._fallback_checker.set_callback(
+            self._fallback_checker_callback, action
+        )
+        self._fallback_checker.attach(self._ctx.context)
+
+    def _clean_up(self):
+        if self._fallback_checker:
+            self._fallback_checker.destroy()
+            self._fallback_checker = None
 
     def _update_profile_callback(self, nm_profile, result, user_data):
         action = user_data
         if self._ctx.is_cancelled():
+            self._clean_up()
             return
         try:
             ret = nm_profile.update2_finish(result)
+        except GLib.Error as e:
+            if e.matches(Gio.io_error_quark(), Gio.IOErrorEnum.TIMED_OUT):
+                logging.debug(
+                    f"{action} timeout, using fallback method to "
+                    "wait profile modification"
+                )
+                return
         except Exception as e:
+            self._clean_up()
             self._ctx.fail(
                 NmstateLibnmError(f"{action} failed with error={e}")
             )
             return
 
         if ret is None:
+            self._clean_up()
             self._ctx.fail(
                 NmstateLibnmError(
                     f"{action} failed with error='None returned from "
@@ -641,7 +666,19 @@ class ProfileUpdate:
                 )
             )
         else:
+            self._clean_up()
             self._ctx.finish_async(action)
+
+    def _fallback_checker_callback(self, action):
+        for nm_profile in self._ctx.client.get_connections():
+            if nm_profile.get_uuid() == self._nm_simple_conn.get_uuid():
+                if get_timestamp_of_profile(
+                    nm_profile
+                ) == get_timestamp_of_profile(self._nm_simple_conn):
+                    self._clean_up()
+                    self._ctx.finish_async(action)
+                    return GLib.SOURCE_REMOVE
+        return GLib.SOURCE_CONTINUE
 
 
 class ProfileDelete:
@@ -728,3 +765,7 @@ def _is_memory_only(nm_profile):
             or NM.SettingsConnectionFlags.VOLATILE & profile_flags
         )
     return False
+
+
+def _gen_timestamp():
+    return f"{time.time()}"

@@ -17,6 +17,8 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
+import time
+
 import pytest
 
 from unittest import mock
@@ -31,15 +33,15 @@ def NM_mock():
 
 
 def test_create_no_setting(NM_mock):
-    setting = nm.user.create_setting({}, None)
-    assert setting is None
+    setting = nm.user.create_setting({}, None, f"{time.time()}")
+    assert setting
 
 
 def test_create_setting_duplicate(NM_mock):
     base_profile = mock.MagicMock()
 
     setting = nm.user.create_setting(
-        {"description": "test_interface"}, base_profile
+        {"description": "test_interface"}, base_profile, f"{time.time()}"
     )
     base_profile.get_setting_by_name.assert_called_with(
         NM_mock.SETTING_USER_SETTING_NAME
@@ -51,8 +53,14 @@ def test_create_setting_duplicate(NM_mock):
 
 
 def test_create_setting_description(NM_mock):
-    setting = nm.user.create_setting({"description": "test_interface"}, None)
+    timestamp = f"{time.time()}"
+    setting = nm.user.create_setting(
+        {"description": "test_interface"}, None, timestamp
+    )
     assert setting == NM_mock.SettingUser.new.return_value
-    setting.set_data.assert_called_with(
+    setting.set_data.assert_any_call(
         "nmstate.interface.description", "test_interface"
+    )
+    setting.set_data.assert_any_call(
+        "nmstate.profile.timestamp", timestamp
     )

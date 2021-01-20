@@ -26,15 +26,13 @@ from libnmstate.error import NmstateValueError
 from .common import NM
 
 NMSTATE_DESCRIPTION = "nmstate.interface.description"
+NMSTATE_PROFILE_TIMESTAMP = "nmstate.profile.timestamp"
 
 
-def create_setting(iface_state, base_con_profile):
+def create_setting(iface_state, base_con_profile, timestamp):
     description = iface_state.get("description")
 
-    if not description:
-        return None
-
-    if not NM.SettingUser.check_val(description):
+    if description and not NM.SettingUser.check_val(description):
         raise NmstateValueError("Invalid description")
 
     user_setting = None
@@ -48,7 +46,9 @@ def create_setting(iface_state, base_con_profile):
     if not user_setting:
         user_setting = NM.SettingUser.new()
 
-    user_setting.set_data(NMSTATE_DESCRIPTION, description)
+    if description:
+        user_setting.set_data(NMSTATE_DESCRIPTION, description)
+    user_setting.set_data(NMSTATE_PROFILE_TIMESTAMP, timestamp)
     return user_setting
 
 
@@ -75,3 +75,11 @@ def get_info(context, device):
         pass
 
     return info
+
+
+def get_timestamp_of_profile(nm_profile):
+    nm_user_setting = nm_profile.get_setting_by_name(
+        NM.SETTING_USER_SETTING_NAME
+    )
+    if nm_user_setting:
+        return nm_user_setting.get_data(NMSTATE_PROFILE_TIMESTAMP)
