@@ -18,20 +18,28 @@
 #
 
 from contextlib import contextmanager
+import time
 
 import pytest
 
+import libnmstate
 from libnmstate import nm
 from libnmstate.nm.common import NM
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceType
+from libnmstate.schema import InterfaceState
 from libnmstate.schema import OVSBridge as OB
+from libnmstate.schema import VLAN
 
 from .testlib import main_context
+from ..testlib import cmdlib
+from ..testlib import assertlib
 
 
 BRIDGE0 = "brtest0"
 ETH1 = "eth1"
+ETH2 = "eth2"
+BOND0 = "bond0"
 
 
 @pytest.fixture
@@ -328,3 +336,73 @@ def _assert_mac_exists(ctx, ifname):
     if nmdev:
         state = nm.wired.get_info(nmdev)
     assert state.get(Interface.MAC)
+
+
+@pytest.fixture
+def ovs_bridge_over_bond_system_iface_with_same_name(eth1_up, eth2_up):
+    cmdlib.exec_cmd(
+        "nmcli c add type ovs-bridge connection.id "
+        f"{BRIDGE0} ifname {BRIDGE0}".split(),
+        check=True,
+    )
+    cmdlib.exec_cmd(
+        f"nmcli c add type ovs-port connection.id ovs-port-{BOND0} "
+        f"ifname {BOND0} connection.master {BRIDGE0} "
+        "connection.slave-type ovs-bridge".split(),
+        check=True,
+    )
+    cmdlib.exec_cmd(
+        f"nmcli c add type bond connection.id ovs-iface-{BOND0} "
+        f"ifname {BOND0} ipv4.method disabled ipv6.method disabled "
+        f"connection.master {BOND0} connection.slave-type ovs-port".split(),
+        check=True,
+    )
+    cmdlib.exec_cmd(
+        f"nmcli c add type ethernet connection.id {ETH1} ifname {ETH1} "
+        f"connection.master {BOND0} connection.slave-type bond".split(),
+        check=True,
+    )
+    cmdlib.exec_cmd(
+        f"nmcli c add type ethernet connection.id {ETH2} ifname {ETH2} "
+        f"connection.master {BOND0} connection.slave-type bond".split(),
+        check=True,
+    )
+    yield
+    cmdlib.exec_cmd(
+        f"nmcli c del ovs-port-{BOND0} {BRIDGE0} ovs-iface-{BOND0} "
+        f"{ETH1} {ETH2}".split(),
+        check=False,
+    )
+    # Wait a little bit for NM to remove above interfaces, so that
+    # later clean up function does not hit into race problem
+    time.sleep(1)
+
+
+@pytest.mark.tier1
+def test_create_vlan_over_ovs_system_interface_bond_with_same_name(
+    ovs_bridge_over_bond_system_iface_with_same_name,
+):
+    desired_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: "vlan101",
+                Interface.TYPE: InterfaceType.VLAN,
+                Interface.STATE: InterfaceState.UP,
+                VLAN.CONFIG_SUBTREE: {VLAN.ID: 101, VLAN.BASE_IFACE: BOND0},
+            }
+        ]
+    }
+    try:
+        libnmstate.apply(desired_state)
+        assertlib.assert_state_match(desired_state)
+    finally:
+        libnmstate.apply(
+            {
+                Interface.KEY: [
+                    {
+                        Interface.NAME: "vlan101",
+                        Interface.STATE: InterfaceState.ABSENT,
+                    }
+                ]
+            }
+        )

@@ -63,6 +63,13 @@ class ConnectionProfile:
         if self.con_id:
             self.profile = self._ctx.client.get_connection_by_id(self.con_id)
 
+    def import_by_uuid(self, uuid):
+        for nm_profile in self._ctx.client.get_connections():
+            if nm_profile.get_uuid() == uuid:
+                self.profile = nm_profile
+                return
+        logging.debug(f"Failed to find {uuid} profile")
+
     def update(self, con_profile, save_to_disk=True):
         flags = NM.SettingsUpdate2Flags.BLOCK_AUTOCONNECT
         if save_to_disk:
