@@ -66,8 +66,6 @@ MASTER_IFACE_TYPES = (
 
 
 def apply_changes(context, net_state, save_to_disk):
-    con_profiles = []
-
     if (
         not save_to_disk
         and _has_ovs_interface_desired_or_changed(net_state)
@@ -86,6 +84,10 @@ def apply_changes(context, net_state, save_to_disk):
     ifaces_desired_state.extend(
         _create_proxy_ifaces_desired_state(ifaces_desired_state)
     )
+
+    # A list of tuple holding both current ConnectionProfile and new/updated
+    # ConnectionProfile.
+    pending_con_profiles = []
 
     for iface_desired_state in filter(
         lambda s: s.get(Interface.STATE) != InterfaceState.ABSENT,
@@ -131,7 +133,7 @@ def apply_changes(context, net_state, save_to_disk):
                 # anything besides state:up and not been marked as changed.
                 # We don't need to do this once we support querying on-disk
                 # configure
-                con_profiles.append(cur_con_profile)
+                pending_con_profiles.append((cur_con_profile, None))
                 continue
         new_con_profile = _build_connection_profile(
             context,
@@ -143,12 +145,25 @@ def apply_changes(context, net_state, save_to_disk):
             set_conn = new_con_profile.profile.get_setting_connection()
             set_conn.props.interface_name = iface_desired_state[Interface.NAME]
         if cur_con_profile and cur_con_profile.profile:
-            cur_con_profile.update(new_con_profile, save_to_disk)
-            con_profiles.append(new_con_profile)
+            pending_con_profiles.append((cur_con_profile, new_con_profile))
         else:
             # Missing connection, attempting to create a new one.
+            pending_con_profiles.append((None, new_con_profile))
+
+    pending_con_profiles = _use_uuid_for_parent(
+        context, pending_con_profiles, save_to_disk
+    )
+
+    con_profiles = []
+    for cur_con_profile, new_con_profile in pending_con_profiles:
+        if cur_con_profile and new_con_profile:
+            cur_con_profile.update(new_con_profile, save_to_disk)
+            con_profiles.append(new_con_profile)
+        elif cur_con_profile is None and new_con_profile:
             new_con_profile.add(save_to_disk)
             con_profiles.append(new_con_profile)
+        elif cur_con_profile:
+            con_profiles.append(cur_con_profile)
     context.wait_all_finish()
 
     _set_ifaces_admin_state(context, ifaces_desired_state, con_profiles)
@@ -655,3 +670,76 @@ def _mark_nm_external_subordinate_changed(context, net_state):
                     subordinate_iface = net_state.ifaces.get(subordinate)
                     if subordinate_iface:
                         subordinate_iface.mark_as_changed()
+
+
+def _use_uuid_for_parent(context, pending_con_profiles, save_to_disk):
+    """
+    When parent of VLAN/VxLAN is holding the same name with
+    OVS bridge or OVS port, we should use UUID instead of interface name
+    """
+    new_pending_con_profiles = []
+    kernel_iface_name_to_uuid = {}
+    for cur_nm_profile in context.client.get_connections():
+        connection_type = cur_nm_profile.get_connection_type()
+        if connection_type not in (
+            NM.SETTING_OVS_BRIDGE_SETTING_NAME,
+            NM.SETTING_OVS_PORT_SETTING_NAME,
+        ):
+            kernel_iface_name_to_uuid[
+                cur_nm_profile.get_interface_name()
+            ] = cur_nm_profile.get_uuid()
+    # Override existing kernel_iface_name_to_uuid with pending changes.
+    for cur_con_profile, new_con_profile in pending_con_profiles:
+        if new_con_profile and new_con_profile.profile:
+            uuid = new_con_profile.profile.get_uuid()
+            connection_type = new_con_profile.profile.get_connection_type()
+            iface_name = new_con_profile.profile.get_interface_name()
+        elif cur_con_profile and cur_con_profile.profile:
+            uuid = cur_con_profile.profile.get_uuid()
+            connection_type = cur_con_profile.profile.get_connection_type()
+            iface_name = cur_con_profile.profile.get_interface_name()
+        else:
+            continue
+
+        if connection_type not in (
+            NM.SETTING_OVS_BRIDGE_SETTING_NAME,
+            NM.SETTING_OVS_PORT_SETTING_NAME,
+        ):
+            kernel_iface_name_to_uuid[iface_name] = uuid
+
+    for cur_con_profile, new_con_profile in pending_con_profiles:
+        new_pending_con_profiles.append((cur_con_profile, new_con_profile))
+        if not new_con_profile:
+            continue
+        nm_profile = new_con_profile.profile
+        if not nm_profile:
+            continue
+        connection_type = nm_profile.get_connection_type()
+        nm_setting = None
+        if connection_type == NM.SETTING_VLAN_SETTING_NAME:
+            nm_setting = nm_profile.get_setting_vlan()
+        elif connection_type == NM.SETTING_VXLAN_SETTING_NAME:
+            nm_setting = nm_profile.get_setting_vxlan()
+        else:
+            continue
+        if not nm_setting:
+            continue
+        parent_iface_name = nm_setting.props.parent
+        parent_uuid = kernel_iface_name_to_uuid.get(parent_iface_name)
+        if parent_uuid:
+            updated_con_profile = connection.ConnectionProfile(context)
+            new_nm_settings = []
+            for cur_nm_setting in nm_profile.get_settings():
+                new_nm_setting = cur_nm_setting.duplicate()
+                if new_nm_setting.get_name() in (
+                    NM.SETTING_VLAN_SETTING_NAME,
+                    NM.SETTING_VXLAN_SETTING_NAME,
+                ):
+                    new_nm_setting.props.parent = parent_uuid
+                new_nm_settings.append(new_nm_setting)
+            updated_con_profile.create(new_nm_settings)
+            new_pending_con_profiles.pop()
+            new_pending_con_profiles.append(
+                (cur_con_profile, updated_con_profile)
+            )
+    return new_pending_con_profiles
