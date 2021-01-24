@@ -18,8 +18,6 @@
 #
 
 import copy
-import os
-import tempfile
 
 import pytest
 
@@ -37,6 +35,7 @@ from libnmstate.plugin import NmstatePlugin
 
 from .testlib import statelib
 from .testlib.servicelib import disable_service
+from .testlib.plugin import tmp_plugin_dir
 
 
 FOO_IFACE_NAME = "foo1"
@@ -151,37 +150,39 @@ LO_IFACE_INFO = {
 
 
 @pytest.fixture
-def tmp_plugin_dir():
-    with tempfile.TemporaryDirectory() as plugin_dir:
-        os.environ["NMSTATE_PLUGIN_DIR"] = plugin_dir
-        yield plugin_dir
-        os.environ.pop("NMSTATE_PLUGIN_DIR")
+def with_foo_plugin():
+    with tmp_plugin_dir() as plugin_dir:
+        _gen_plugin_foo(plugin_dir)
+        yield
 
 
 @pytest.fixture
-def with_foo_plugin(tmp_plugin_dir):
-    _gen_plugin_foo(tmp_plugin_dir)
+def with_multiple_plugins():
+    with tmp_plugin_dir() as plugin_dir:
+        _gen_plugin_foo(plugin_dir)
+        _gen_plugin_bar(plugin_dir)
+        yield
 
 
 @pytest.fixture
-def with_multiple_plugins(tmp_plugin_dir):
-    _gen_plugin_foo(tmp_plugin_dir)
-    _gen_plugin_bar(tmp_plugin_dir)
+def with_route_plugin():
+    with tmp_plugin_dir() as plugin_dir:
+        _gen_plugin_route_foo(plugin_dir)
+        yield
 
 
 @pytest.fixture
-def with_route_plugin(tmp_plugin_dir):
-    _gen_plugin_route_foo(tmp_plugin_dir)
+def with_route_rule_plugin():
+    with tmp_plugin_dir() as plugin_dir:
+        _gen_plugin_route_rule_foo(plugin_dir)
+        yield
 
 
 @pytest.fixture
-def with_route_rule_plugin(tmp_plugin_dir):
-    _gen_plugin_route_rule_foo(tmp_plugin_dir)
-
-
-@pytest.fixture
-def with_dns_plugin(tmp_plugin_dir):
-    _gen_plugin_dns_foo(tmp_plugin_dir)
+def with_dns_plugin():
+    with tmp_plugin_dir() as plugin_dir:
+        _gen_plugin_dns_foo(plugin_dir)
+        yield
 
 
 def _gen_plugin(

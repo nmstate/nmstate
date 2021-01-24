@@ -20,13 +20,14 @@
 import logging
 from operator import itemgetter
 
+from libnmstate.ifaces import ovs
+from libnmstate.ifaces.bridge import BridgeIface
+from libnmstate.ifaces.ovs import OvsPortIface
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import OVSBridge as OB
 from libnmstate.schema import OVSInterface
-from libnmstate.ifaces import ovs
-from libnmstate.ifaces.bridge import BridgeIface
-from libnmstate.ifaces.ovs import OvsPortIface
+from libnmstate.schema import OvsDB
 
 from .common import NM
 
@@ -35,6 +36,8 @@ PORT_PROFILE_PREFIX = "ovs-port-"
 
 CONTROLLER_TYPE_METADATA = "_controller_type"
 CONTROLLER_METADATA = "_controller"
+SETTING_OVS_EXTERNALIDS = "SettingOvsExternalIDs"
+SETTING_OVS_EXTERNAL_IDS_SETTING_NAME = "ovs-external-ids"
 
 NM_OVS_VLAN_MODE_MAP = {
     "trunk": OB.Port.Vlan.Mode.TRUNK,
@@ -68,6 +71,21 @@ def create_bridge_setting(options_state):
             bridge_setting.props.stp_enable = option_value
 
     return bridge_setting
+
+
+def create_ovsdb_external_ids_setting(ovsdb_conf):
+    if _is_nm_support_ovs_external_ids():
+        nm_setting = getattr(NM, SETTING_OVS_EXTERNALIDS).new()
+        for key, value in ovsdb_conf.get(OvsDB.EXTERNAL_IDS, {}).items():
+            if not key.startswith("NM."):
+                nm_setting.set_data(key, str(value))
+        return nm_setting
+    else:
+        logging.warn(
+            "Please upgrade NetworkManger to 1.30+ "
+            "for the support OVS external ID modification"
+        )
+        return None
 
 
 def create_port_setting(port_state):
@@ -135,6 +153,22 @@ def get_ovs_bridge_info(nm_dev_ovs_br):
             OB.PORT_SUBTREE: ports_info,
             OB.OPTIONS_SUBTREE: options,
         }
+    return iface_info
+
+
+def get_ovsdb_external_ids(nm_profile):
+    iface_info = {}
+    if _is_nm_support_ovs_external_ids():
+        nm_setting = nm_profile.get_setting_by_name(
+            SETTING_OVS_EXTERNAL_IDS_SETTING_NAME
+        )
+        if nm_setting:
+            external_ids = {}
+            for key in nm_setting.get_data_keys():
+                external_ids[key] = nm_setting.get_data(key)
+            iface_info[OvsDB.OVS_DB_SUBTREE] = {
+                OvsDB.EXTERNAL_IDS: external_ids
+            }
     return iface_info
 
 
@@ -288,3 +322,7 @@ def create_iface_for_nm_ovs_port(iface):
             CONTROLLER_TYPE_METADATA: iface_info[CONTROLLER_TYPE_METADATA],
         }
     )
+
+
+def _is_nm_support_ovs_external_ids():
+    return hasattr(NM, SETTING_OVS_EXTERNALIDS)
