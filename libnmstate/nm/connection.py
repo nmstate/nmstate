@@ -27,6 +27,7 @@ from libnmstate.schema import InterfaceType
 from libnmstate.schema import LinuxBridge as LB
 from libnmstate.schema import OVSBridge as OvsB
 from libnmstate.schema import OVSInterface
+from libnmstate.schema import OvsDB
 
 from libnmstate.ifaces.bridge import BridgeIface
 
@@ -42,6 +43,7 @@ from .lldp import apply_lldp_setting
 from .macvlan import create_setting as create_macvlan_setting
 from .ovs import create_bridge_setting as create_ovs_bridge_setting
 from .ovs import create_interface_setting as create_ovs_interface_setting
+from .ovs import create_ovsdb_external_ids_setting
 from .ovs import create_port_setting as create_ovs_port_setting
 from .sriov import create_setting as create_sriov_setting
 from .team import create_setting as create_team_setting
@@ -151,7 +153,7 @@ def create_new_nm_simple_conn(iface, nm_profile):
             settings.append(linux_bridge_setting)
     elif iface.type == InterfaceType.OVS_BRIDGE:
         ovs_bridge_state = iface_info.get(OvsB.CONFIG_SUBTREE, {})
-        ovs_bridge_options = ovs_bridge_state.get(OvsB.OPTIONS_SUBTREE)
+        ovs_bridge_options = ovs_bridge_state.get(OvsB.OPTIONS_SUBTREE, {})
         if ovs_bridge_options:
             settings.append(create_ovs_bridge_setting(ovs_bridge_options))
     elif iface.type == InterfaceType.OVS_PORT:
@@ -207,6 +209,20 @@ def create_new_nm_simple_conn(iface, nm_profile):
         veth_setting = create_veth_setting(iface, nm_profile)
         if veth_setting:
             settings.append(veth_setting)
+
+    if (
+        iface.controller_type
+        in (
+            InterfaceType.OVS_BRIDGE,
+            InterfaceType.OVS_PORT,
+        )
+        or iface.type == InterfaceType.OVS_BRIDGE
+    ):
+        nm_setting = create_ovsdb_external_ids_setting(
+            iface_info.get(OvsDB.OVS_DB_SUBTREE, {})
+        )
+        if nm_setting:
+            settings.append(nm_setting)
 
     nm_simple_conn = NM.SimpleConnection.new()
     for setting in settings:

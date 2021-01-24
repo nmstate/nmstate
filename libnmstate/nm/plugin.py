@@ -46,6 +46,7 @@ from .lldp import get_info as get_lldp_info
 from .macvlan import get_current_macvlan_type
 from .ovs import get_interface_info as get_ovs_interface_info
 from .ovs import get_ovs_bridge_info
+from .ovs import get_ovsdb_external_ids
 from .ovs import has_ovs_capability
 from .profiles import NmProfiles
 from .profiles import get_all_applied_configs
@@ -150,6 +151,9 @@ class NetworkManagerPlugin(NmstatePlugin):
                 iface_info.update(get_ovs_interface_info(act_con))
             elif iface_info[Interface.TYPE] == InterfaceType.OVS_PORT:
                 continue
+
+            if applied_config:
+                iface_info.update(get_ovsdb_external_ids(applied_config))
 
             info.append(iface_info)
 
