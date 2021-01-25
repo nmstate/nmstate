@@ -260,6 +260,7 @@ _BOND_OPTIONS_NUMERIC_TO_NAMED_MAP = {
         "layer2+3",
         "encap2+3",
         "encap3+4",
+        "vlan+srcmac",
     ),
 }
 
