@@ -1,0 +1,4 @@
+---
+interfaces:
+  - name: wg0
+    state: absent

@@ -43,6 +43,7 @@ from .veth import VethIface
 from .vlan import VlanIface
 from .vxlan import VxlanIface
 from .vrf import VrfIface
+from .wireguard import WireguardIface
 
 
 class _UserSpaceIfaces:
@@ -865,5 +866,7 @@ def _to_specific_iface_obj(info, save_to_disk):
         return MacVtapIface(info, save_to_disk)
     elif iface_type == InterfaceType.VETH:
         return VethIface(info, save_to_disk)
+    elif iface_type == InterfaceType.WIREGUARD:
+        return WireguardIface(info, save_to_disk)
     else:
         return BaseIface(info, save_to_disk)

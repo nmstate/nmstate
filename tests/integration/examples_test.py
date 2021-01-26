@@ -230,6 +230,24 @@ def test_add_veth_and_remove():
     assertlib.assert_absent("veth1peer")
 
 
+def test_add_wireguard_and_remove():
+    with example_state(
+        "wireguard_up.yml", cleanup="wireguard_absent.yml"
+    ) as desired_state:
+        assertlib.assert_state(desired_state)
+
+    assertlib.assert_absent("wg0")
+
+
+def test_add_wireguard_with_peer_and_remove():
+    with example_state(
+        "wireguard_up_with_peer.yml", cleanup="wireguard_absent.yml"
+    ) as desired_state:
+        assertlib.assert_state_match(desired_state)
+
+    assertlib.assert_absent("wg0")
+
+
 @pytest.mark.skipif(
     nm_major_minor_version() <= 1.30,
     reason="Generating config is not supported on NetworkManager 1.30-",

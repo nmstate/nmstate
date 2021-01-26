@@ -52,6 +52,7 @@ class Api2Nm:
                 InterfaceType.MAC_VTAP: NM.SETTING_MACVLAN_SETTING_NAME,
                 InterfaceType.MAC_VLAN: NM.SETTING_MACVLAN_SETTING_NAME,
                 InterfaceType.VETH: Api2Nm._veth_or_ethernet_setting(),
+                InterfaceType.WIREGUARD: NM.SETTING_WIREGUARD_SETTING_NAME,
             }
             try:
                 ovs_types = {

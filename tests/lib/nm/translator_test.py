@@ -62,6 +62,7 @@ def test_api2nm_iface_type_map(NM_mock):
         InterfaceType.MAC_VLAN: NM_mock.SETTING_MACVLAN_SETTING_NAME,
         InterfaceType.MAC_VTAP: NM_mock.SETTING_MACVLAN_SETTING_NAME,
         InterfaceType.VETH: _get_supported_veth_setting(NM_mock),
+        InterfaceType.WIREGUARD: NM_mock.SETTING_WIREGUARD_SETTING_NAME,
     }
 
     assert map == expected_map

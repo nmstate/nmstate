@@ -1,0 +1,9 @@
+---
+interfaces:
+  - name: wg0
+    type: wireguard
+    state: up
+    wireguard:
+      fwmark: 0
+      listen-port: 9000
+      private-key: 'exampleZp5x87cNoRJaHdAOzxrxDfDUn7pGmrY/AmzI='

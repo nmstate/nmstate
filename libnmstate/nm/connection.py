@@ -55,6 +55,7 @@ from .vlan import create_setting as create_vlan_setting
 from .vrf import create_vrf_setting
 from .vxlan import create_setting as create_vxlan_setting
 from .wired import create_setting as create_wired_setting
+from .wireguard import create_wireguard_setting
 
 
 class _ConnectionSetting:
@@ -232,6 +233,8 @@ def create_new_nm_simple_conn(iface, nm_profile):
 
     if iface.ieee_802_1x_conf:
         settings.append(create_802_1x_setting(iface.ieee_802_1x_conf))
+    if iface.type == InterfaceType.WIREGUARD:
+        settings.append(create_wireguard_setting(iface, nm_profile))
 
     ethtool_setting = create_ethtool_setting(iface, nm_profile)
     if ethtool_setting:

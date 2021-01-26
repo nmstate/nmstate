@@ -17,6 +17,8 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
+from libnmstate.error import NmstateLibnmError
+
 from .common import GLib
 
 

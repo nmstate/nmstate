@@ -1,0 +1,14 @@
+---
+interfaces:
+  - name: wg0
+    type: wireguard
+    state: up
+    wireguard:
+      listen-port: 9000
+      private-key: 'exampleZp5x87cNoRJaHdAOzxrxDfDUn7pGmrY/AmzI='
+      peers:
+        - allowed-ips:
+            - 192.0.2.1
+          endpoint: 'my-wg.example.com:4001'
+          preshared-key: 'qoNbN/6ABe4wWyz4jh+uwX7vqRpNeGEtgAnUbwNjEug='
+          public-key: '2Gl0SATbfrrzxfrSkhNoRR9Jg56y533y07KtIVngAk0='
