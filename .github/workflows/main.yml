@@ -26,6 +26,7 @@ jobs:
           - job_type: "stream:nm_master:integ_tier1"
           - job_type: "stream:nm_master:integ_slow"
           - job_type: "ovs2_11:nm_stable:integ_tier1"
+          - job_type: "vdsm_el8:nm_master:vdsm"
 
     steps:
       - uses: actions/checkout@v2
