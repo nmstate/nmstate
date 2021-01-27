@@ -40,6 +40,9 @@ DUMMY0_IFNAME = "dummy0"
 TEST_BRIDGE0 = "linux-br0"
 TEST_OVS_BRIDGE0 = "br0"
 TEST_OVS_PORT0 = "ovs0"
+IPV4_ADDRESS1 = "192.0.2.251"
+IPV6_ADDRESS1 = "2001:db8:1::1"
+
 
 NMCLI_CON_ADD_DUMMY_CMD = [
     "nmcli",
@@ -427,3 +430,65 @@ def test_ovs_profile_been_delete_by_state_absent(
         }
     )
     assert not _profile_exists(NM_PROFILE_DIRECTORY + "ovs0.nmconnection")
+
+
+@pytest.fixture
+def multiconnect_profile_with_ip_disabled():
+    cmdlib.exec_cmd("nmcli c del eth1".split(), check=True)
+    cmdlib.exec_cmd(
+        "nmcli c add type ethernet connection.id nmstate-test-default "
+        "connection.multi-connect multiple "
+        "ipv4.method disabled ipv6.method disabled".split(),
+        check=True,
+    )
+    yield
+    cmdlib.exec_cmd("nmcli c del nmstate-test-default".split(), check=False)
+
+
+# We cannot use eth1_up which create a dedicate profile for eth1.
+# In order to test the multiconnect feature, we should do it manually.
+def test_set_static_ip_with_multiconnect_profile(
+    eth1_up,
+    multiconnect_profile_with_ip_disabled,
+):
+    desired_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: "eth1",
+                Interface.TYPE: InterfaceType.ETHERNET,
+                Interface.STATE: InterfaceState.UP,
+                Interface.IPV4: {
+                    InterfaceIPv4.ENABLED: True,
+                    InterfaceIPv4.ADDRESS: [
+                        {
+                            InterfaceIPv4.ADDRESS_IP: IPV4_ADDRESS1,
+                            InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+                        }
+                    ],
+                },
+                Interface.IPV6: {
+                    InterfaceIPv6.ENABLED: True,
+                    InterfaceIPv6.ADDRESS: [
+                        {
+                            InterfaceIPv6.ADDRESS_IP: IPV6_ADDRESS1,
+                            InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
+                        }
+                    ],
+                },
+            }
+        ]
+    }
+    libnmstate.apply(desired_state)
+    assertlib.assert_state_match(desired_state)
+    assert cmdlib.exec_cmd(
+        "nmcli -g ipv4.method c show nmstate-test-default".split()
+    ) == (
+        0,
+        "disabled\n",
+        "",
+    )
+    assert cmdlib.exec_cmd("nmcli -g ipv4.method c show eth1".split()) == (
+        0,
+        "manual\n",
+        "",
+    )

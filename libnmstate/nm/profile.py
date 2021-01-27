@@ -33,15 +33,16 @@ from libnmstate.schema import InterfaceType
 from .active_connection import ActiveConnectionDeactivate
 from .active_connection import ProfileActivation
 from .active_connection import is_activated
-from .common import Gio
 from .common import GLib
+from .common import Gio
 from .common import NM
 from .connection import create_new_nm_simple_conn
+from .connection import is_multiconnect_profile
 from .connection import nm_simple_conn_update_controller
 from .connection import nm_simple_conn_update_parent
-from .device import get_nm_dev
-from .device import DeviceReapply
 from .device import DeviceDelete
+from .device import DeviceReapply
+from .device import get_nm_dev
 from .translator import Api2Nm
 
 
@@ -256,7 +257,6 @@ class NmProfile:
         # Don't create new profile if original desire does not ask
         # anything besides state:up and not been marked as changed.
         # We don't need to do this once we support querying on-disk
-        # configure
         if self._nm_simple_conn == self._nm_profile:
             cur_nm_profile = self._get_first_nm_profile()
             if (
@@ -266,7 +266,7 @@ class NmProfile:
                 self._nm_profile = cur_nm_profile
                 return
 
-        if self._nm_profile:
+        if self._nm_profile and not is_multiconnect_profile(self._nm_profile):
             ProfileUpdate(
                 self._ctx,
                 self._iface.name,
@@ -276,6 +276,7 @@ class NmProfile:
                 self._save_to_disk,
             ).run()
         else:
+            self._nm_profile = None
             ProfileAdd(
                 self._ctx,
                 self._iface.name,
@@ -450,6 +451,7 @@ class NmProfile:
         for nm_profile in self._ctx.client.get_connections():
             if nm_profile.get_uuid() == self._nm_simple_conn.get_uuid():
                 self._nm_profile = nm_profile
+                break
 
     def _get_first_nm_profile(self):
         for nm_profile in self._ctx.client.get_connections():
@@ -471,6 +473,8 @@ class NmProfile:
             return
         self._import_current()
         for nm_profile in self._ctx.client.get_connections():
+            if is_multiconnect_profile(nm_profile):
+                continue
             if (
                 nm_profile.get_interface_name() == self._iface.name
                 and (
