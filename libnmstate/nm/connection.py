@@ -106,7 +106,7 @@ def create_new_nm_simple_conn(iface, nm_profile):
         create_ipv6_setting(iface_info.get(Interface.IPV6), nm_profile),
     ]
     con_setting = _ConnectionSetting()
-    if nm_profile:
+    if nm_profile and not is_multiconnect_profile(nm_profile):
         con_setting.import_by_profile(nm_profile)
         con_setting.set_profile_name(iface.name)
     else:
@@ -266,3 +266,12 @@ def nm_simple_conn_update_parent(nm_simple_conn, iface_type, parent):
             f"shold not need parent"
         )
     nm_setting.props.parent = parent
+
+
+def is_multiconnect_profile(nm_profile):
+    nm_setting = nm_profile.get_setting_connection()
+    return (
+        nm_setting
+        and nm_setting.get_multi_connect()
+        == NM.ConnectionMultiConnect.MULTIPLE
+    )
