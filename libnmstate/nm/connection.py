@@ -180,7 +180,8 @@ class ConnectionProfile:
                 "BUG: Cannot activate a profile with empty profile id and "
                 "empty NM.Device"
             )
-        user_data = action
+        retry = True
+        user_data = action, retry
         self._ctx.register_async(action)
         self._ctx.client.activate_connection_async(
             self.profile,
@@ -267,7 +268,7 @@ class ConnectionProfile:
         if self._ctx.is_cancelled():
             self._activation_clean_up()
             return
-        action = user_data
+        action, retry = user_data
 
         try:
             nm_act_con = src_object.activate_connection_finish(result)
@@ -279,6 +280,20 @@ class ConnectionProfile:
                 )
                 return
             else:
+                if retry:
+                    retry = False
+                    user_data = action, retry
+                    specific_object = None
+                    logging.debug(f"Action {action} failed, trying again.")
+                    self._ctx.client.activate_connection_async(
+                        self.profile,
+                        self.nmdevice,
+                        specific_object,
+                        self._ctx.cancellable,
+                        self._active_connection_callback,
+                        user_data,
+                    )
+                    return
                 self._ctx.fail(
                     NmstateLibnmError(f"{action} failed: error={e}")
                 )
