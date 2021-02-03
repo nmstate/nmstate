@@ -40,7 +40,7 @@ else
 fi
 
 if [ $NM_TYPE == "nm_master" ];then
-    COPR_ARG="--copr networkmanager/NetworkManager-master"
+    COPR_ARG="--copr ffmancera/NetworkManager-dev-custom"
 fi
 
 if [ $TEST_TYPE == "vdsm" ];then
