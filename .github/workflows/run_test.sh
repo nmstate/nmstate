@@ -12,7 +12,7 @@ if [ -z "$JOB_TYPE" ];then
 fi
 
 
-IFS=':' read -r -a array <<< "$JOB_TYPE"
+IFS='-' read -r -a array <<< "$JOB_TYPE"
 
 OS_TYPE="${array[0]}"
 NM_TYPE="${array[1]}"
