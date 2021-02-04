@@ -46,6 +46,10 @@ jobs:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         run: .github/workflows/run_test.sh ${{ matrix.job_type }}
 
+      - name: Set artifacts permissions
+        if: ${{ failure() }}
+        run: sudo chmod 777 test_artifacts/*
+
       - uses: actions/upload-artifact@v2
         if: ${{ failure() }}
         with:
