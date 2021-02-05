@@ -51,6 +51,7 @@ from . import wired
 from .common import NM
 from .dns import get_dns_config_iface_names
 from .device import is_externally_managed
+from .device import is_unknown_interface_type
 
 
 MAXIMUM_INTERFACE_LENGTH = 15
@@ -290,7 +291,9 @@ def _set_ifaces_admin_state(context, ifaces_desired_state, con_profiles):
                     == InterfaceState.ABSENT
                 )
                 for affected_nmdev in nmdevs:
-                    if not is_externally_managed(affected_nmdev):
+                    if not is_unknown_interface_type(
+                        affected_nmdev
+                    ) and not is_externally_managed(affected_nmdev):
                         devs_to_deactivate[
                             affected_nmdev.get_iface()
                         ] = affected_nmdev

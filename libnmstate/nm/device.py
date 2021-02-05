@@ -20,10 +20,12 @@
 import logging
 
 from libnmstate.error import NmstateLibnmError
+from libnmstate.schema import Interface
 
 from . import active_connection as ac
 from . import connection
 from .common import NM
+from .translator import Nm2Api
 
 
 def activate(context, dev=None, connection_id=None):
@@ -167,3 +169,9 @@ def get_device_common_info(dev):
 def is_externally_managed(nmdev):
     nm_ac = nmdev.get_active_connection()
     return nm_ac and NM.ActivationStateFlags.EXTERNAL & nm_ac.get_state_flags()
+
+
+def is_unknown_interface_type(nm_dev):
+    common_info = get_device_common_info(nm_dev)
+    iface_info = Nm2Api.get_common_device_info(common_info)
+    return iface_info[Interface.TYPE]

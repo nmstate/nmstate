@@ -129,7 +129,9 @@ def test_duplicate_settings(NM_mock):
     assert new.props.uuid == base.props.uuid
     assert new.props.type == base.props.type
     assert new.props.autoconnect is True
-    assert new.props.autoconnect_slaves == base.props.autoconnect_slaves
+    assert new.props.autoconnect_slaves == (
+        NM_mock.SettingConnectionAutoconnectSlaves.YES
+    )
 
 
 def test_set_master_setting():
