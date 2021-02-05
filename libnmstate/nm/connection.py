@@ -81,7 +81,9 @@ class _ConnectionSetting:
         new.props.uuid = base.props.uuid
         new.props.type = base.props.type
         new.props.autoconnect = True
-        new.props.autoconnect_slaves = True
+        new.props.autoconnect_slaves = (
+            NM.SettingConnectionAutoconnectSlaves.YES
+        )
 
         self._setting = new
 
