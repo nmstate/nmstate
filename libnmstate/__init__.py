@@ -27,7 +27,7 @@ from .netapplier import commit
 from .netapplier import rollback
 from .netinfo import show
 from .netinfo import show_running_config
-
+from .nmstate import generate_configurations
 from .prettystate import PrettyState
 
 
@@ -38,6 +38,7 @@ __all__ = [
     "apply",
     "commit",
     "error",
+    "generate_configurations",
     "rollback",
     "schema",
     "show",

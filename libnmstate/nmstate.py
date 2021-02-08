@@ -28,6 +28,7 @@ import pkgutil
 from libnmstate import validator
 from libnmstate.error import NmstateError
 from libnmstate.error import NmstateValueError
+from libnmstate.error import NmstateDependencyError
 from libnmstate.schema import DNS
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceType
@@ -37,6 +38,7 @@ from libnmstate.schema import RouteRule
 from .nispor.plugin import NisporPlugin
 from .plugin import NmstatePlugin
 from .state import merge_dict
+from .net_state import NetState
 
 _INFO_TYPE_RUNNING = 1
 _INFO_TYPE_RUNNING_CONFIG = 2
@@ -173,10 +175,15 @@ def _get_interface_info_from_plugins(plugins, info_type):
             not in plugin.plugin_capabilities
         ):
             continue
-        if info_type == _INFO_TYPE_RUNNING_CONFIG:
-            ifaces = plugin.get_running_config_interfaces()
-        else:
-            ifaces = plugin.get_interfaces()
+        try:
+            if info_type == _INFO_TYPE_RUNNING_CONFIG:
+                ifaces = plugin.get_running_config_interfaces()
+            else:
+                ifaces = plugin.get_interfaces()
+        except NmstateDependencyError as e:
+            logging.warning(f"Plugin {plugin.name} error: {e}")
+            continue
+
         for iface in ifaces:
             iface[IFACE_PRIORITY_METADATA] = plugin.priority
             iface[IFACE_PLUGIN_SRC_METADATA] = [plugin.name]
@@ -370,3 +377,22 @@ def _get_iface_types_by_name(iface_infos, name):
 
 def show_running_config_with_plugins(plugins):
     return show_with_plugins(plugins, info_type=_INFO_TYPE_RUNNING_CONFIG)
+
+
+def generate_configurations(desire_state):
+    """
+    Return a dictionary with:
+        * key: plugin name
+        * vlaue: list of strings for configruations
+    This function will not merge or verify desire state with current state, so
+    you may run this function on different system.
+    """
+    configs = {}
+    net_state = NetState(desire_state, gen_conf_mode=True)
+
+    with plugin_context() as plugins:
+        for plugin in plugins:
+            config = plugin.generate_configurations(net_state)
+            if config:
+                configs[plugin.name] = config
+    return configs

@@ -81,9 +81,16 @@ class Ifaces:
     also responsible to handle desire vs current state related tasks.
     """
 
-    def __init__(self, des_iface_infos, cur_iface_infos, save_to_disk=True):
+    def __init__(
+        self,
+        des_iface_infos,
+        cur_iface_infos,
+        save_to_disk=True,
+        gen_conf_mode=False,
+    ):
         self._save_to_disk = save_to_disk
         self._des_iface_infos = des_iface_infos
+        self._gen_conf_mode = gen_conf_mode
         self._cur_kernel_ifaces = {}
         self._kernel_ifaces = {}
         self._user_space_ifaces = _UserSpaceIfaces()
@@ -102,6 +109,8 @@ class Ifaces:
         if des_iface_infos:
             for iface_info in des_iface_infos:
                 iface = BaseIface(iface_info, save_to_disk)
+                if not iface.is_up and self._gen_conf_mode:
+                    continue
                 if iface.type == InterfaceType.UNKNOWN:
                     cur_ifaces = self._get_cur_ifaces(iface.name)
                     if len(cur_ifaces) > 1:
@@ -119,6 +128,8 @@ class Ifaces:
                 if iface_info.get(Interface.TYPE) is None:
                     if cur_iface:
                         iface_info[Interface.TYPE] = cur_iface.type
+                    elif gen_conf_mode:
+                        iface_info[Interface.TYPE] = InterfaceType.ETHERNET
                     elif iface.is_up:
                         raise NmstateValueError(
                             f"Interface {iface.name} has no type defined "
@@ -634,26 +645,59 @@ class Ifaces:
         # All the user space interface already has interface type defined.
         # And user space interface cannot be port of other interface.
         # Hence no need to check `self._user_space_ifaces`
+        new_ifaces = {}
         for iface in self._kernel_ifaces.values():
             for port_name in iface.port:
                 if not self._kernel_ifaces.get(port_name):
-                    raise NmstateValueError(
-                        f"Interface {iface.name} has unknown port: {port_name}"
-                    )
+                    if self._gen_conf_mode:
+                        logging.warning(
+                            f"Interface {port_name} does not exit in "
+                            "desire state, assuming it is ethernet"
+                        )
+                        new_ifaces[port_name] = _to_specific_iface_obj(
+                            {
+                                Interface.NAME: port_name,
+                                Interface.TYPE: InterfaceType.ETHERNET,
+                                Interface.STATE: InterfaceState.UP,
+                            },
+                            self._save_to_disk,
+                        )
+                    else:
+                        raise NmstateValueError(
+                            f"Interface {iface.name} has unknown port: "
+                            f"{port_name}"
+                        )
+        self._kernel_ifaces.update(new_ifaces)
 
     def _validate_unknown_parent(self):
         """
         Check the existance of parent interface
         """
         # All child interface should be in kernel space.
+        new_ifaces = {}
         for iface in self._kernel_ifaces.values():
             if iface.parent:
                 parent_iface = self._get_parent_iface(iface)
                 if not parent_iface:
-                    raise NmstateValueError(
-                        f"Interface {iface.name} has unknown parent: "
-                        f"{iface.parent}"
-                    )
+                    if self._gen_conf_mode:
+                        logging.warning(
+                            f"Interface {iface.parent} does not exit in "
+                            "desire state, assuming it is ethernet"
+                        )
+                        new_ifaces[iface.parent] = _to_specific_iface_obj(
+                            {
+                                Interface.NAME: iface.parent,
+                                Interface.TYPE: InterfaceType.ETHERNET,
+                                Interface.STATE: InterfaceState.UP,
+                            },
+                            self._save_to_disk,
+                        )
+                    else:
+                        raise NmstateValueError(
+                            f"Interface {iface.name} has unknown parent: "
+                            f"{iface.parent}"
+                        )
+        self._kernel_ifaces.update(new_ifaces)
 
     def _remove_unknown_type_interfaces(self):
         """

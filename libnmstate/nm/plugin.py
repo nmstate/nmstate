@@ -21,6 +21,7 @@ import logging
 from operator import itemgetter
 
 from libnmstate.error import NmstateDependencyError
+from libnmstate.error import NmstateNotSupportedError
 from libnmstate.error import NmstateValueError
 from libnmstate.ifaces.ovs import is_ovs_running
 from libnmstate.schema import DNS
@@ -61,9 +62,8 @@ from .wired import get_info as get_wired_info
 
 class NetworkManagerPlugin(NmstatePlugin):
     def __init__(self):
-        self._ctx = NmContext()
+        self._ctx = None
         self._checkpoint = None
-        self._check_version_mismatch()
         self.__applied_configs = None
 
     @property
@@ -91,10 +91,13 @@ class NetworkManagerPlugin(NmstatePlugin):
 
     @property
     def client(self):
-        return self._ctx.client if self._ctx else None
+        return self.context.client if self.context else None
 
     @property
     def context(self):
+        if not self._ctx:
+            self._ctx = NmContext()
+            self._check_version_mismatch()
         return self._ctx
 
     @property
@@ -198,26 +201,26 @@ class NetworkManagerPlugin(NmstatePlugin):
                 # Old checkpoint might timeout, hence it's legal to load
                 # another one.
                 self._checkpoint.clean_up()
-            candidates = get_checkpoints(self._ctx.client)
+            candidates = get_checkpoints(self.client)
             if checkpoint_path in candidates:
                 self._checkpoint = CheckPoint(
-                    nm_context=self._ctx, dbuspath=checkpoint_path
+                    nm_context=self.context, dbuspath=checkpoint_path
                 )
             else:
                 raise NmstateValueError("No checkpoint specified or found")
         else:
             if not self._checkpoint:
                 # Get latest one
-                candidates = get_checkpoints(self._ctx.client)
+                candidates = get_checkpoints(self.client)
                 if candidates:
                     self._checkpoint = CheckPoint(
-                        nm_context=self._ctx, dbuspath=candidates[0]
+                        nm_context=self.context, dbuspath=candidates[0]
                     )
                 else:
                     raise NmstateValueError("No checkpoint specified or found")
 
     def create_checkpoint(self, timeout=60):
-        self._checkpoint = CheckPoint.create(self._ctx, timeout)
+        self._checkpoint = CheckPoint.create(self.context, timeout)
         return str(self._checkpoint)
 
     def rollback_checkpoint(self, checkpoint=None):
@@ -231,7 +234,7 @@ class NetworkManagerPlugin(NmstatePlugin):
         self._checkpoint = None
 
     def _check_version_mismatch(self):
-        nm_client_version = self._ctx.client.get_version()
+        nm_client_version = self.client.get_version()
         nm_utils_version = _nm_utils_decode_version()
 
         if nm_client_version is None:
@@ -247,6 +250,14 @@ class NetworkManagerPlugin(NmstatePlugin):
                 nm_utils_version,
                 nm_client_version,
             )
+
+    def generate_configurations(self, net_state):
+        if not hasattr(NM, "keyfile_write"):
+            raise NmstateNotSupportedError(
+                f"Current NetworkManager version does not support generating "
+                "configurations, please upgrade to 1.30 or later versoin."
+            )
+        return NmProfiles(None).generate_config_strings(net_state)
 
 
 def _remove_ovs_bridge_unsupported_entries(iface_info):

@@ -58,6 +58,7 @@ def main():
     setup_subcommand_show(subparsers)
     setup_subcommand_version(subparsers)
     setup_subcommand_varlink(subparsers)
+    setup_subcommand_gen_config(subparsers)
     parser.add_argument(
         "--version", action="store_true", help="Display nmstate version"
     )
@@ -253,6 +254,16 @@ def setup_subcommand_varlink(subparsers):
     parser_varlink.set_defaults(func=run_varlink_server)
 
 
+def setup_subcommand_gen_config(subparsers):
+    parser_gc = subparsers.add_parser("gc", help="Generate configurations")
+    parser_gc.add_argument(
+        "file",
+        help="File containing desired state. ",
+        nargs="*",
+    )
+    parser_gc.set_defaults(func=run_gen_config)
+
+
 def version(args):
     print(libnmstate.__version__)
 
@@ -352,6 +363,30 @@ def run_varlink_server(args):
         start_varlink_server(args.address)
     except Exception as exception:
         logging.exception(exception)
+
+
+def run_gen_config(args):
+    if args.file:
+        for statefile in args.file:
+            if statefile == "-" and not os.path.isfile(statefile):
+                statedata = sys.stdin.read()
+            else:
+                with open(statefile) as statefile:
+                    statedata = statefile.read()
+
+            # JSON dictionaries start with a curly brace
+            if statedata[0] == "{":
+                state = json.loads(statedata)
+                use_yaml = False
+            else:
+                state = yaml.load(statedata, Loader=yaml.SafeLoader)
+                use_yaml = True
+            print_state(
+                libnmstate.generate_configurations(state), use_yaml=use_yaml
+            )
+    else:
+        sys.stderr.write("ERROR: No state specified\n")
+        return 1
 
 
 def apply_state(statedata, verify_change, commit, timeout, save_to_disk):

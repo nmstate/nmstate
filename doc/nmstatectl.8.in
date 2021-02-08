@@ -13,6 +13,8 @@ nmstatectl \- A nmstate command line tool
 .br
 .B nmstatectl edit \fR[\fIINTERFACE_NAME\fR] [\fIOPTIONS\fR]
 .br
+.B nmstatectl gc \fR[\fISTATE_FILE_PATH\fR] [\fIOPTIONS\fR]
+.br
 .B nmstatectl rollback \fR[\fICHECKPOINT_PATH\fR]
 .br
 .B nmstatectl commit \fR[\fICHECKPOINT_PATH\fR]
@@ -89,6 +91,18 @@ decide whether rollback to previous (before \fB"nmstatectl set/edit"\fR) state.
 rollback the network state from specified checkpoint file. \fBnmstatectl\fR
 will take the latest checkpoint if not defined as argument.
 .PP
+
+.B gc
+
+.RS
+Generates configuration files for specified network state file(s). The output
+will be dictinary with plugin name as key and an tuple as value.
+The tuple will holding configuration file name and configuration content.
+
+The generated configuration is not saved into system, users have to do it
+by themselves after refering to the network backend.
+.RE
+
 .B commit
 .RS
 commit the current network state. \fBnmstatectl\fR will take the latest

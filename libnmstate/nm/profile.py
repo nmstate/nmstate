@@ -89,10 +89,9 @@ class NmProfile:
         ACTION_DELETE_DEVICE,
     )
 
-    def __init__(self, ctx, iface, save_to_disk):
+    def __init__(self, ctx, iface):
         self._ctx = ctx
         self._iface = iface
-        self._save_to_disk = save_to_disk
         self._nm_iface_type = None
         if self._iface.type != InterfaceType.UNKNOWN:
             self._nm_iface_type = Api2Nm.get_iface_type(self._iface.type)
@@ -105,9 +104,6 @@ class NmProfile:
         self._deactivated = False
         self._profile_deleted = False
         self._device_deleted = False
-        self._import_current()
-        self._gen_actions()
-        self._gen_nm_sim_conn()
 
     @property
     def iface(self):
@@ -118,6 +114,18 @@ class NmProfile:
         return (
             self.iface.is_changed or self.iface.is_desired
         ) and not self.iface.is_ignore
+
+    @property
+    def config_file_name(self):
+        """
+        Return the profile file name used NetworkManager for key-file mode.
+        """
+        if self._nm_simple_conn:
+            return f"{self._nm_simple_conn.get_id()}.nmconnection"
+        elif self._nm_profile:
+            return f"{self._nm_profile.get_id()}.nmconnection"
+        else:
+            return ""
 
     @property
     def uuid(self):
@@ -135,6 +143,18 @@ class NmProfile:
         nm_simple_conn_update_parent(
             self._nm_simple_conn, self.iface.type, parent
         )
+
+    def to_key_file_string(self):
+        nm_simple_conn = create_new_nm_simple_conn(
+            self._iface, nm_profile=None
+        )
+        nm_simple_conn.normalize()
+        # pylint: disable=no-member
+        key_file = NM.keyfile_write(
+            nm_simple_conn, NM.KeyfileHandlerFlags.NONE, None, None
+        )
+        # pylint: enable=no-member
+        return key_file.to_data()[0]
 
     def _gen_actions(self):
         if not self.has_pending_change:
@@ -223,18 +243,17 @@ class NmProfile:
             # settings.
             self._add_action(NmProfile.ACTION_ACTIVATE_FIRST)
 
-    def _gen_nm_sim_conn(self):
+    def prepare_config(self, save_to_disk, gen_conf_mode=False):
         if self._iface.is_absent or self._iface.is_down:
             return
 
-        self._check_sriov_support()
-        self._check_unsupported_memory_only()
         # Don't create new profile if original desire does not ask
         # anything besides state:up and not been marked as changed.
         # We don't need to do this once we support querying on-disk
         # configure
         if (
-            self._nm_profile is None
+            not gen_conf_mode
+            and self._nm_profile is None
             and not self._iface.is_changed
             and set(self._iface.original_dict)
             <= set([Interface.STATE, Interface.NAME, Interface.TYPE])
@@ -242,7 +261,7 @@ class NmProfile:
             cur_nm_profile = self._get_first_nm_profile()
             if (
                 cur_nm_profile
-                and _is_memory_only(cur_nm_profile) != self._save_to_disk
+                and _is_memory_only(cur_nm_profile) != save_to_disk
             ):
                 self._nm_profile = cur_nm_profile
                 self._nm_simple_conn = cur_nm_profile
@@ -255,7 +274,10 @@ class NmProfile:
             self._iface, self._nm_profile
         )
 
-    def save_config(self):
+    def save_config(self, save_to_disk):
+        self._check_sriov_support()
+        self._check_unsupported_memory_only(save_to_disk)
+        self._gen_actions()
         if not self.has_pending_change:
             return
         if self._iface.is_absent or self._iface.is_down:
@@ -267,7 +289,7 @@ class NmProfile:
             cur_nm_profile = self._get_first_nm_profile()
             if (
                 cur_nm_profile
-                and _is_memory_only(cur_nm_profile) != self._save_to_disk
+                and _is_memory_only(cur_nm_profile) != save_to_disk
             ):
                 self._nm_profile = cur_nm_profile
                 return
@@ -279,7 +301,7 @@ class NmProfile:
                 self._iface.type,
                 self._nm_simple_conn,
                 self._nm_profile,
-                self._save_to_disk,
+                save_to_disk,
             ).run()
         else:
             self._nm_profile = None
@@ -288,12 +310,12 @@ class NmProfile:
                 self._iface.name,
                 self._iface.type,
                 self._nm_simple_conn,
-                self._save_to_disk,
+                save_to_disk,
             ).run()
 
-    def _check_unsupported_memory_only(self):
+    def _check_unsupported_memory_only(self, save_to_disk):
         if (
-            not self._save_to_disk
+            not save_to_disk
             and StrictVersion(self._ctx.client.get_version())
             < StrictVersion("1.28.0")
             and self._iface.type
@@ -376,7 +398,7 @@ class NmProfile:
     def _delete_device(self):
         if self._device_deleted:
             return
-        self._import_current()
+        self.import_current()
         if self._nm_dev:
             DeviceDelete(
                 self._ctx, self._iface.name, self._iface.type, self._nm_dev
@@ -442,7 +464,7 @@ class NmProfile:
             else:
                 time.sleep(IMPORT_NM_DEV_RETRY_INTERNAL)
 
-    def _import_current(self):
+    def import_current(self):
         self._nm_dev = get_nm_dev(
             self._ctx, self._iface.name, self._iface.type
         )
@@ -477,7 +499,7 @@ class NmProfile:
             return
         if self._iface.is_down:
             return
-        self._import_current()
+        self.import_current()
         for nm_profile in self._ctx.client.get_connections():
             if is_multiconnect_profile(nm_profile):
                 continue

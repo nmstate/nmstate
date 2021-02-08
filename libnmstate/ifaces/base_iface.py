@@ -434,7 +434,10 @@ class BaseIface:
 
     def store_route_metadata(self, route_metadata):
         for family, routes in route_metadata.items():
-            self.raw[family][BaseIface.ROUTES_METADATA] = routes
+            try:
+                self.raw[family][BaseIface.ROUTES_METADATA] = routes
+            except KeyError:
+                self.raw[family] = {BaseIface.ROUTES_METADATA: routes}
 
     def store_route_rule_metadata(self, route_rule_metadata):
         for family, rules in route_rule_metadata.items():

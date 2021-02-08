@@ -23,7 +23,10 @@ import pytest
 
 from .testlib import assertlib
 from .testlib.examplelib import example_state
+from .testlib.examplelib import find_examples_dir
+from .testlib.examplelib import load_example
 
+import libnmstate
 from libnmstate import netinfo
 from libnmstate.error import NmstateNotSupportedError
 from libnmstate.schema import DNS
@@ -228,3 +231,17 @@ def test_add_veth_and_remove():
 
     assertlib.assert_absent("veth1")
     assertlib.assert_absent("veth1peer")
+
+
+@pytest.mark.skipif(
+    nm_major_minor_version() <= 1.30,
+    reason="Generating config is not supported on NetworkManager 1.30-",
+)
+def test_gen_conf_for_examples():
+    example_dir = find_examples_dir()
+    with os.scandir(example_dir) as example_dir_fd:
+        for example_file in example_dir_fd:
+            if example_file.name.endswith(".yml"):
+                libnmstate.generate_configurations(
+                    load_example(example_file.name)
+                )
