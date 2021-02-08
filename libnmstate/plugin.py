@@ -121,3 +121,10 @@ class NmstatePlugin(metaclass=ABCMeta):
         Retrun False when plugin can report new interface.
         """
         return False
+
+    def generate_configurations(self, net_state):
+        """
+        Returning a list of strings for configurations which could be save
+        persistently.
+        """
+        return []

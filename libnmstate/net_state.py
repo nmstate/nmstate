@@ -34,13 +34,20 @@ from .state import state_match
 
 
 class NetState:
-    def __init__(self, desire_state, current_state=None, save_to_disk=True):
+    def __init__(
+        self,
+        desire_state,
+        current_state=None,
+        save_to_disk=True,
+        gen_conf_mode=False,
+    ):
         if current_state is None:
             current_state = {}
         self._ifaces = Ifaces(
             desire_state.get(Interface.KEY),
             current_state.get(Interface.KEY),
             save_to_disk,
+            gen_conf_mode,
         )
         self._route = RouteState(
             self._ifaces,

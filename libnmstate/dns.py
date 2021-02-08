@@ -40,9 +40,10 @@ class DnsState:
         else:
             self._dns_state = des_dns_state
             self._validate()
-            self._config_changed = _is_dns_config_changed(
-                des_dns_state, cur_dns_state
-            )
+            if cur_dns_state:
+                self._config_changed = _is_dns_config_changed(
+                    des_dns_state, cur_dns_state
+                )
         self._cur_dns_state = deepcopy(cur_dns_state) if cur_dns_state else {}
 
     @property

@@ -42,13 +42,30 @@ class NmProfiles:
     def __init__(self, context):
         self._ctx = context
 
+    def generate_config_strings(self, net_state):
+        _append_nm_ovs_port_iface(net_state)
+        all_profiles = []
+        for iface in net_state.ifaces.all_ifaces():
+            if iface.is_up:
+                profile = NmProfile(self._ctx, iface)
+                profile.prepare_config(save_to_disk=False, gen_conf_mode=True)
+                all_profiles.append(profile)
+
+        return [
+            (profile.config_file_name, profile.to_key_file_string())
+            for profile in all_profiles
+        ]
+
     def apply_config(self, net_state, save_to_disk):
         self._prepare_state_for_profiles(net_state)
         all_profiles = [
-            NmProfile(self._ctx, iface, save_to_disk)
+            NmProfile(self._ctx, iface)
             for iface in net_state.ifaces.all_ifaces()
         ]
 
+        for profile in all_profiles:
+            profile.import_current()
+            profile.prepare_config(save_to_disk, gen_conf_mode=False)
         _use_uuid_as_controller_and_parent(all_profiles)
 
         changed_ovs_bridges_and_ifaces = {}
@@ -62,7 +79,7 @@ class NmProfiles:
 
         for profile in all_profiles:
             if profile.has_pending_change:
-                profile.save_config()
+                profile.save_config(save_to_disk)
         self._ctx.wait_all_finish()
 
         for action in NmProfile.ACTIONS:
