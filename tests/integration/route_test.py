@@ -31,6 +31,7 @@ from libnmstate.schema import InterfaceType
 from libnmstate.schema import Route
 from libnmstate.schema import RouteRule
 
+from .testlib import cmdlib
 from .testlib import iprule
 
 IPV4_ADDRESS1 = "192.0.2.251"
@@ -45,6 +46,8 @@ IPV4_DNS_NAMESERVER = "8.8.8.8"
 IPV6_DNS_NAMESERVER = "2001:4860:4860::8888"
 DNS_SEARCHES = ["example.org", "example.com"]
 
+IPV6_GATEWAY1 = "2001:db8:1::f"
+IPV6_GATEWAY2 = "2001:db8:1::e"
 
 ETH1_INTERFACE_STATE = {
     Interface.NAME: "eth1",
@@ -290,14 +293,14 @@ def _get_ipv6_gateways():
         {
             Route.DESTINATION: "::/0",
             Route.METRIC: 103,
-            Route.NEXT_HOP_ADDRESS: "2001:db8:1::f",
+            Route.NEXT_HOP_ADDRESS: IPV6_GATEWAY1,
             Route.NEXT_HOP_INTERFACE: "eth1",
             Route.TABLE_ID: 254,
         },
         {
             Route.DESTINATION: "::/0",
             Route.METRIC: 101,
-            Route.NEXT_HOP_ADDRESS: "2001:db8:1::e",
+            Route.NEXT_HOP_ADDRESS: IPV6_GATEWAY2,
             Route.NEXT_HOP_INTERFACE: "eth1",
             Route.TABLE_ID: 254,
         },
@@ -500,6 +503,44 @@ def test_apply_empty_state_preserve_routes(eth1_static_gateway_dns):
         == state[Route.KEY][Route.CONFIG]
     )
     assert current_state[DNS.KEY][DNS.CONFIG] == state[DNS.KEY][DNS.CONFIG]
+
+
+def _get_routes_from_iproute():
+    _, out, _ = cmdlib.exec_cmd("ip -6 route".split(), check=True)
+    return out
+
+
+def test_remove_default_ipv6_gateway_and_revert():
+    gateway1 = {
+        Route.DESTINATION: "::/0",
+        Route.METRIC: -1,
+        Route.NEXT_HOP_ADDRESS: IPV6_GATEWAY1,
+        Route.NEXT_HOP_INTERFACE: "eth1",
+        Route.TABLE_ID: 0,
+    }
+    gateway2 = {
+        Route.DESTINATION: "::/0",
+        Route.METRIC: -1,
+        Route.NEXT_HOP_ADDRESS: IPV6_GATEWAY2,
+        Route.NEXT_HOP_INTERFACE: "eth1",
+        Route.TABLE_ID: 0,
+    }
+
+    eth1 = copy.deepcopy(ETH1_INTERFACE_STATE)
+    d_state = {Interface.KEY: [eth1], Route.KEY: {Route.CONFIG: [gateway1]}}
+    libnmstate.apply(d_state)
+
+    gateway1[Route.STATE] = Route.STATE_ABSENT
+    d_state[Route.KEY][Route.CONFIG] = [gateway1, gateway2]
+    libnmstate.apply(d_state)
+
+    gateway1.pop(Route.STATE)
+    gateway2[Route.STATE] = Route.STATE_ABSENT
+    libnmstate.apply(d_state)
+
+    routes_output = _get_routes_from_iproute()
+    assert IPV6_GATEWAY1 in routes_output
+    assert IPV6_GATEWAY2 not in routes_output
 
 
 @pytest.fixture(scope="function")
