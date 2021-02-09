@@ -33,6 +33,9 @@ from .state import StateEntry
 from .state import state_match
 
 
+IPV6_ROUTE_REMOVED = "_ipv6_route_removed"
+
+
 class RouteEntry(StateEntry):
     IPV4_DEFAULT_GATEWAY_DESTINATION = "0.0.0.0/0"
     IPV6_DEFAULT_GATEWAY_DESTINATION = "::/0"
@@ -211,6 +214,16 @@ class RouteState:
             for route in route_set:
                 if not rt.match(route):
                     new_routes.add(route)
+                if route.is_ipv6:
+                    # The routes match and therefore it is being removed.
+                    # Nmstate will check if it is an IPv6 route and if so,
+                    # marking the interface as deactivate first.
+                    #
+                    # This is a workaround for NM bug:
+                    # https://bugzilla.redhat.com/1837254
+                    ifaces.all_kernel_ifaces[iface_name].raw[
+                        IPV6_ROUTE_REMOVED
+                    ] = True
             if new_routes != route_set:
                 self._routes[iface_name] = new_routes
 
