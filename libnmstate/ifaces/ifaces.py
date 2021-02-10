@@ -161,11 +161,41 @@ class Ifaces:
             self._validate_unknown_parent()
             self._validate_infiniband_as_bridge_port()
             self._validate_infiniband_as_bond_port()
+            self._apply_copy_mac_from()
             self._gen_metadata()
             for iface in self.all_ifaces():
                 iface.pre_edit_validation_and_cleanup()
 
             self._pre_edit_validation_and_cleanup()
+
+    def _apply_copy_mac_from(self):
+        for iface in self.all_kernel_ifaces.values():
+            if iface.type not in (
+                InterfaceType.LINUX_BRIDGE,
+                InterfaceType.BOND,
+            ):
+                continue
+            if not iface.copy_mac_from:
+                continue
+
+            if iface.copy_mac_from not in iface.port:
+                raise NmstateValueError(
+                    f"The interface {iface.name} is holding invalid "
+                    f"{Interface.COPY_MAC_FROM} property "
+                    f"as {iface.copy_mac_from} is not in the port "
+                    f"list: {iface.port}"
+                )
+            port_iface = self.all_kernel_ifaces.get(iface.copy_mac_from)
+            # TODO: bridge/bond might refering the mac from new veth in the
+            #       same desire state, it too complex to support that.
+            if not port_iface:
+                raise NmstateValueError(
+                    f"The interface {iface.name} is holding invalid "
+                    f"{Interface.COPY_MAC_FROM} property "
+                    f"as the port {iface.copy_mac_from} does not exists yet"
+                )
+
+            iface.apply_copy_mac_from(port_iface.mac)
 
     def _create_virtual_port(self):
         """
