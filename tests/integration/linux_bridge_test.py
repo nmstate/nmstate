@@ -751,3 +751,17 @@ def test_change_multicast_snooping_from_false_to_true(port0_up, port1_up):
             LinuxBridge.Options.MULTICAST_SNOOPING
         ] = True
         libnmstate.apply(lb_state)
+
+
+@pytest.mark.tier1
+def test_create_linux_bridge_with_copy_mac_from(eth1_up, eth2_up):
+    eth2_mac = eth2_up[Interface.KEY][0][Interface.MAC]
+    bridge_state = _create_bridge_subtree_config(["eth1", "eth2"])
+
+    with linux_bridge(
+        TEST_BRIDGE0,
+        bridge_state,
+        extra_iface_state={Interface.COPY_MAC_FROM: "eth2"},
+    ):
+        current_state = show_only((TEST_BRIDGE0,))
+        assert_mac_address(current_state, eth2_mac)

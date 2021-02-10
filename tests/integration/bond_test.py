@@ -887,3 +887,16 @@ def test_remove_mode4_bond_and_create_mode5_with_the_same_slaves(
         BOND99, slaves, extra_iface_state=extra_iface_state
     ) as state:
         assertlib.assert_state_match(state)
+
+
+@pytest.mark.tier1
+def test_create_bond_with_copy_mac_from(eth1_up, eth2_up):
+    eth2_mac = eth2_up[Interface.KEY][0][Interface.MAC]
+
+    with bond_interface(
+        BOND99,
+        ["eth1", "eth2"],
+        extra_iface_state={Interface.COPY_MAC_FROM: "eth2"},
+    ):
+        current_state = statelib.show_only((BOND99,))
+        assert_mac_address(current_state, eth2_mac)
