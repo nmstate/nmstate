@@ -266,6 +266,8 @@ definitions:
           type: string
           enum:
             - bond
+        copy-mac-from:
+          type: string
         link-aggregation:
           type: object
           properties:
@@ -288,6 +290,8 @@ definitions:
         - $ref: "#/definitions/interface-linux-bridge/ro"
     ro:
       properties:
+        copy-mac-from:
+          type: string
         bridge:
           type: object
           properties:
