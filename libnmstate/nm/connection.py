@@ -60,7 +60,7 @@ class _ConnectionSetting:
     def __init__(self, con_setting=None):
         self._setting = con_setting
 
-    def create(self, con_name, iface_name, iface_type):
+    def create(self, con_name, iface_name, iface_type, is_controller):
         con_setting = NM.SettingConnection.new()
         con_setting.props.id = con_name
         con_setting.props.interface_name = iface_name
@@ -69,11 +69,13 @@ class _ConnectionSetting:
         con_setting.props.autoconnect = True
         con_setting.props.autoconnect_slaves = (
             NM.SettingConnectionAutoconnectSlaves.YES
+            if is_controller
+            else NM.SettingConnectionAutoconnectSlaves.DEFAULT
         )
 
         self._setting = con_setting
 
-    def import_by_profile(self, profile):
+    def import_by_profile(self, profile, is_controller):
         base = profile.get_setting_connection()
         new = NM.SettingConnection.new()
         new.props.id = base.props.id
@@ -83,6 +85,8 @@ class _ConnectionSetting:
         new.props.autoconnect = True
         new.props.autoconnect_slaves = (
             NM.SettingConnectionAutoconnectSlaves.YES
+            if is_controller
+            else NM.SettingConnectionAutoconnectSlaves.DEFAULT
         )
 
         self._setting = new
@@ -109,10 +113,12 @@ def create_new_nm_simple_conn(iface, nm_profile):
     ]
     con_setting = _ConnectionSetting()
     if nm_profile and not is_multiconnect_profile(nm_profile):
-        con_setting.import_by_profile(nm_profile)
+        con_setting.import_by_profile(nm_profile, iface.is_controller)
         con_setting.set_profile_name(iface.name)
     else:
-        con_setting.create(iface.name, iface.name, nm_iface_type)
+        con_setting.create(
+            iface.name, iface.name, nm_iface_type, iface.is_controller
+        )
 
     apply_lldp_setting(con_setting, iface_info)
 

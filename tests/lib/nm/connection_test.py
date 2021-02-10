@@ -37,7 +37,7 @@ def context_mock():
 
 def test_create_setting(NM_mock):
     con_setting = nm.connection._ConnectionSetting()
-    con_setting.create("con-name", "iface-name", "iface-type")
+    con_setting.create("con-name", "iface-name", "iface-type", True)
 
     assert con_setting.setting.props.id == "con-name"
     assert con_setting.setting.props.interface_name == "iface-name"
@@ -46,6 +46,20 @@ def test_create_setting(NM_mock):
     assert con_setting.setting.props.autoconnect is True
     assert con_setting.setting.props.autoconnect_slaves == (
         NM_mock.SettingConnectionAutoconnectSlaves.YES
+    )
+
+
+def test_create_setting_is_not_controller(NM_mock):
+    con_setting = nm.connection._ConnectionSetting()
+    con_setting.create("con-name", "iface-name", "iface-type", False)
+
+    assert con_setting.setting.props.id == "con-name"
+    assert con_setting.setting.props.interface_name == "iface-name"
+    assert con_setting.setting.props.uuid
+    assert con_setting.setting.props.type == "iface-type"
+    assert con_setting.setting.props.autoconnect is True
+    assert con_setting.setting.props.autoconnect_slaves == (
+        NM_mock.SettingConnectionAutoconnectSlaves.DEFAULT
     )
 
 
