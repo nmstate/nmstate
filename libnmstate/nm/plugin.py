@@ -28,7 +28,6 @@ from libnmstate.schema import DNS
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import LLDP
-from libnmstate.schema import Route
 from libnmstate.plugin import NmstatePlugin
 
 
@@ -51,7 +50,6 @@ from .ovs import get_ovsdb_external_ids
 from .ovs import has_ovs_capability
 from .profiles import NmProfiles
 from .profiles import get_all_applied_configs
-from .route import get_running_config as get_route_running_config
 from .team import get_info as get_team_info
 from .team import has_team_capability
 from .translator import Nm2Api
@@ -132,6 +130,13 @@ class NetworkManagerPlugin(NmstatePlugin):
             if not dev.get_managed():
                 # Skip unmanaged interface
                 continue
+            nm_ac = dev.get_active_connection()
+            if (
+                nm_ac
+                and nm_ac.get_state_flags() & NM.ActivationStateFlags.EXTERNAL
+            ):
+                # Skip external managed interface
+                continue
 
             iface_info = Nm2Api.get_common_device_info(devinfo)
             applied_config = applied_configs.get(iface_info[Interface.NAME])
@@ -175,7 +180,7 @@ class NetworkManagerPlugin(NmstatePlugin):
         return iface_infos
 
     def get_routes(self):
-        return {Route.CONFIG: get_route_running_config(self._applied_configs)}
+        return {}
 
     def get_route_rules(self):
         """

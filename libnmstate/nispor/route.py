@@ -23,12 +23,27 @@ from libnmstate.schema import Route
 IPV4_DEFAULT_GATEWAY_DESTINATION = "0.0.0.0/0"
 IPV6_DEFAULT_GATEWAY_DESTINATION = "::/0"
 
+LOCAL_ROUTE_TABLE = 255
+
 
 def nispor_route_state_to_nmstate(np_routes):
     return [
         _nispor_route_to_nmstate(rt)
         for rt in np_routes
-        if rt.scope == "universe"
+        if rt.scope in ["universe", "link"]
+        and rt.oif != "lo"
+        and rt.table != LOCAL_ROUTE_TABLE
+    ]
+
+
+def nispor_route_state_to_nmstate_static(np_routes):
+    return [
+        _nispor_route_to_nmstate(rt)
+        for rt in np_routes
+        if rt.scope in ["universe", "link"]
+        and rt.protocol not in ["kernel", "ra", "dhcp"]
+        and rt.oif != "lo"
+        and rt.table != LOCAL_ROUTE_TABLE
     ]
 
 

@@ -34,6 +34,7 @@ from .veth import NisporPluginVethIface
 from .vlan import NisporPluginVlanIface
 from .vxlan import NisporPluginVxlanIface
 from .route import nispor_route_state_to_nmstate
+from .route import nispor_route_state_to_nmstate_static
 from .route_rule import nispor_route_rule_state_to_nmstate
 from .vrf import NisporPluginVrfIface
 from .ovs import NisporPluginOvsInternalIface
@@ -133,7 +134,12 @@ class NisporPlugin(NmstatePlugin):
 
     def get_routes(self):
         np_state = NisporNetState.retrieve()
-        return {Route.RUNNING: nispor_route_state_to_nmstate(np_state.routes)}
+        return {
+            Route.RUNNING: nispor_route_state_to_nmstate(np_state.routes),
+            Route.CONFIG: nispor_route_state_to_nmstate_static(
+                np_state.routes
+            ),
+        }
 
     def get_route_rules(self):
         np_state = NisporNetState.retrieve()

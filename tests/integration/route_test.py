@@ -202,33 +202,33 @@ def _assert_routes(routes, state):
         if config_route[Route.NEXT_HOP_INTERFACE] == "eth1":
             config_routes.append(config_route)
 
-    config_routes.sort(key=_route_sort_key)
-    assert routes == config_routes
-
-    # The running routes contains more route entries than desired config
-    # The running routes also has different metric and table id for
+    # The kernel routes contains more route entries than desired config
+    # The kernel routes also has different metric and table id for
     # USE_DEFAULT_ROUTE_TABLE and USE_DEFAULT_METRIC
+    config_routes.sort(key=_route_sort_key)
+    for route in routes:
+        _assert_in_current_route(route, config_routes)
     running_routes = state[Route.KEY][Route.RUNNING]
     for route in routes:
-        _assert_in_running_route(route, running_routes)
+        _assert_in_current_route(route, running_routes)
 
 
-def _assert_in_running_route(route, running_routes):
-    route_in_running_routes = False
-    for running_route in running_routes:
+def _assert_in_current_route(route, current_routes):
+    route_in_current_routes = False
+    for current_route in current_routes:
         metric = route.get(Route.METRIC, Route.USE_DEFAULT_METRIC)
         table_id = route.get(Route.TABLE_ID, Route.USE_DEFAULT_ROUTE_TABLE)
         if metric == Route.USE_DEFAULT_METRIC:
-            running_route = copy.deepcopy(running_route)
-            running_route[Route.METRIC] = Route.USE_DEFAULT_METRIC
+            current_route = copy.deepcopy(current_route)
+            current_route[Route.METRIC] = Route.USE_DEFAULT_METRIC
         if table_id == Route.USE_DEFAULT_ROUTE_TABLE:
-            running_route = copy.deepcopy(running_route)
-            running_route[Route.TABLE_ID] = Route.USE_DEFAULT_ROUTE_TABLE
+            current_route = copy.deepcopy(current_route)
+            current_route[Route.TABLE_ID] = Route.USE_DEFAULT_ROUTE_TABLE
 
-        if route == running_route:
-            route_in_running_routes = True
+        if route == current_route:
+            route_in_current_routes = True
             break
-    assert route_in_running_routes
+    assert route_in_current_routes
 
 
 def _get_ipv4_test_routes():
