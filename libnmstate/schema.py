@@ -44,6 +44,7 @@ class Interface:
 
     MAC = "mac-address"
     MTU = "mtu"
+    COPY_MAC_FROM = "copy-mac-from"
 
 
 class Route:

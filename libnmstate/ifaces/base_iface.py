@@ -391,6 +391,20 @@ class BaseIface:
         for family, rules in route_rule_metadata.items():
             self.raw[family][BaseIface.ROUTE_RULES_METADATA] = rules
 
+    @property
+    def copy_mac_from(self):
+        return self._info.get(Interface.COPY_MAC_FROM)
+
+    def apply_copy_mac_from(self, mac):
+        """
+        * Add MAC to original desire.
+        * Remove Interface.COPY_MAC_FROM from original desire.
+        * Update MAC of merge iface
+        """
+        self.raw[Interface.MAC] = mac
+        self._origin_info[Interface.MAC] = mac
+        self._origin_info.pop(Interface.COPY_MAC_FROM, None)
+
 
 def _remove_empty_description(state):
     if state.get(Interface.DESCRIPTION) == "":
