@@ -67,6 +67,38 @@ def test_add_veth_not_supported():
     reason="Modifying veth interfaces is not supported on NetworkManager.",
 )
 @pytest.mark.tier1
+def test_add_veth_with_ethernet_peer():
+    d_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: VETH1,
+                Interface.TYPE: Veth.TYPE,
+                Interface.STATE: InterfaceState.UP,
+                Veth.CONFIG_SUBTREE: {
+                    Veth.PEER: VETH1PEER,
+                },
+            },
+            {
+                Interface.NAME: VETH1PEER,
+                Interface.TYPE: InterfaceType.ETHERNET,
+                Interface.STATE: InterfaceState.UP,
+            },
+        ]
+    }
+    try:
+        libnmstate.apply(d_state)
+        assertlib.assert_state_match(d_state)
+    finally:
+        d_state[Interface.KEY][0][Interface.STATE] = InterfaceState.ABSENT
+        d_state[Interface.KEY][1][Interface.STATE] = InterfaceState.ABSENT
+        libnmstate.apply(d_state)
+
+
+@pytest.mark.skipif(
+    nm_major_minor_version() <= 1.28,
+    reason="Modifying veth interfaces is not supported on NetworkManager.",
+)
+@pytest.mark.tier1
 def test_add_and_remove_veth():
     with veth_interface(VETH1, VETH1PEER) as desired_state:
         assertlib.assert_state(desired_state)
