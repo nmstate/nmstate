@@ -17,6 +17,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
+from libnmstate.schema import InterfaceType
 from libnmstate.schema import Veth
 
 from .ethernet import EthernetIface
@@ -25,7 +26,6 @@ from .ethernet import EthernetIface
 class VethIface(EthernetIface):
     def __init__(self, info, save_to_disk=True):
         super().__init__(info, save_to_disk)
-        self._is_peer = False
         self._peer_changed = False
 
     @property
@@ -35,10 +35,6 @@ class VethIface(EthernetIface):
     @property
     def peer(self):
         return self.raw.get(Veth.CONFIG_SUBTREE, {}).get(Veth.PEER)
-
-    @property
-    def is_peer(self):
-        return self._is_peer
 
     @property
     def is_peer_changed(self):
@@ -54,9 +50,12 @@ class VethIface(EthernetIface):
             and not ifaces.get_cur_iface(self.name, self.type)
         ):
             for iface in ifaces.all_ifaces():
-                if iface.name == self.peer and iface.type == self.type:
-                    if not iface.is_peer:
-                        self._is_peer = True
+                if iface.name == self.peer and (
+                    self.type == iface.type
+                    or iface.type == InterfaceType.ETHERNET
+                ):
+                    if not self.is_peer:
+                        iface._is_peer = True
 
     def _mark_peer_changed(self, ifaces):
         if self.is_up:

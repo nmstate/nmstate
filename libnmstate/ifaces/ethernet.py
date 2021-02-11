@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020 Red Hat, Inc.
+# Copyright (c) 2020-2021 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -26,6 +26,10 @@ from .base_iface import BaseIface
 
 
 class EthernetIface(BaseIface):
+    def __init__(self, info, save_to_disk=True):
+        super().__init__(info, save_to_disk)
+        self._is_peer = False
+
     def merge(self, other):
         """
         Given the other_state, update the ethernet interfaces state base on
@@ -56,6 +60,10 @@ class EthernetIface(BaseIface):
             .get(Ethernet.SRIOV_SUBTREE, {})
             .get(Ethernet.SRIOV.TOTAL_VFS, 0)
         )
+
+    @property
+    def is_peer(self):
+        return self._is_peer
 
     def create_sriov_vf_ifaces(self):
         return [

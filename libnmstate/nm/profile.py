@@ -163,7 +163,7 @@ class NmProfile:
             self._add_action(NmProfile.ACTION_DELETE_PROFILE)
             if self._iface.is_virtual and self._nm_dev:
                 self._add_action(NmProfile.ACTION_DELETE_DEVICE)
-        elif self._iface.is_up and self._iface.type != InterfaceType.VETH:
+        elif self._iface.is_up and not self._needs_veth_activation():
             self._add_action(NmProfile.ACTION_MODIFIED)
             if not self._nm_dev:
                 if self._iface.type == InterfaceType.OVS_PORT:
@@ -194,7 +194,7 @@ class NmProfile:
             else:
                 self._add_action(NmProfile.ACTION_TOP_MASTER)
 
-        if self._iface.is_up and self._iface.type == InterfaceType.VETH:
+        if self._iface.is_up and self._needs_veth_activation():
             if self._iface.is_peer:
                 self._add_action(NmProfile.ACTION_NEW_VETH_PEER)
             else:
@@ -242,6 +242,11 @@ class NmProfile:
             # activate the newly created profile to remove all kernel
             # settings.
             self._add_action(NmProfile.ACTION_ACTIVATE_FIRST)
+
+    def _needs_veth_activation(self):
+        return self._iface.type == InterfaceType.VETH or (
+            self._iface.type == InterfaceType.ETHERNET and self._iface.is_peer
+        )
 
     def prepare_config(self, save_to_disk, gen_conf_mode=False):
         if self._iface.is_absent or self._iface.is_down:
