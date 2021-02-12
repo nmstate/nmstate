@@ -449,3 +449,13 @@ class MacVlan:
 class MacVtap(MacVlan):
     TYPE = InterfaceType.MAC_VTAP
     CONFIG_SUBTREE = "mac-vtap"
+
+
+class Ieee8021X:
+    CONFIG_SUBTREE = "802.1x"
+    IDENTITY = "identity"
+    EAP_METHODS = "eap-methods"
+    PRIVATE_KEY = "private-key"
+    PRIVATE_KEY_PASSWORD = "private-key-password"
+    CLIENT_CERT = "client-cert"
+    CA_CERT = "ca-cert"

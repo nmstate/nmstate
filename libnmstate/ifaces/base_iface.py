@@ -33,6 +33,7 @@ from libnmstate.schema import InterfaceType
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import LLDP
 from libnmstate.schema import OvsDB
+from libnmstate.schema import Ieee8021X
 
 from ..state import state_match
 from ..state import merge_dict
@@ -456,6 +457,10 @@ class BaseIface:
         self.raw[Interface.MAC] = mac
         self._origin_info[Interface.MAC] = mac
         self._origin_info.pop(Interface.COPY_MAC_FROM, None)
+
+    @property
+    def ieee_802_1x_conf(self):
+        return self.raw.get(Ieee8021X.CONFIG_SUBTREE, {})
 
 
 def _remove_empty_description(state):

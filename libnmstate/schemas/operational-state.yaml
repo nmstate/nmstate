@@ -18,6 +18,7 @@ properties:
         - $ref: "#/definitions/interface-ip/all"
         - $ref: "#/definitions/lldp/rw"
         - $ref: "#/definitions/lldp/ro"
+        - $ref: "#/definitions/802.1x/rw"
         - oneOf:
             - "$ref": "#/definitions/interface-unknown/rw"
             - "$ref": "#/definitions/interface-ethernet/rw"
@@ -788,6 +789,23 @@ definitions:
       properties:
         enabled:
           type: boolean
+  802.1x:
+    rw:
+      properties:
+        identity:
+          type: string
+        eap-methods:
+          type: array
+          items:
+            type: string
+        private-key:
+          type: string
+        private-key-password:
+          type: string
+        client-cert:
+          type: string
+        ca-cert:
+          type: string
   interface-infiniband:
     rw:
       properties:
