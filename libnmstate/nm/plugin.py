@@ -56,6 +56,7 @@ from .translator import Nm2Api
 from .user import get_info as get_user_info
 from .veth import get_current_veth_type
 from .wired import get_info as get_wired_info
+from .ieee_802_1x import get_802_1x_info
 
 
 class NetworkManagerPlugin(NmstatePlugin):
@@ -151,6 +152,7 @@ class NetworkManagerPlugin(NmstatePlugin):
             iface_info.update(get_infiniband_info(applied_config))
             iface_info.update(get_current_macvlan_type(applied_config))
             iface_info.update(get_current_veth_type(applied_config))
+            iface_info.update(get_802_1x_info(self.context, act_con))
 
             if iface_info[Interface.TYPE] == InterfaceType.OVS_BRIDGE:
                 iface_info.update(get_ovs_bridge_info(dev))

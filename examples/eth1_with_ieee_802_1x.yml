@@ -1,0 +1,13 @@
+---
+interfaces:
+  - name: eth1
+    type: ethernet
+    state: up
+    802.1x:
+      ca-cert: /etc/pki/802-1x-test/ca.crt
+      client-cert: /etc/pki/802-1x-test/client.example.org.crt
+      eap-methods:
+        - tls
+      identity: client.example.org
+      private-key: /etc/pki/802-1x-test/client.example.org.key
+      private-key-password: password
