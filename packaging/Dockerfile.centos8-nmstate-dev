@@ -1,7 +1,7 @@
 FROM docker.io/library/centos:8
 
 RUN dnf -y install dnf-plugins-core epel-release && \
-    dnf config-manager --set-enabled PowerTools && \
+    dnf config-manager --set-enabled powertools && \
     dnf copr enable nmstate/ovs-el8 -y && \
     dnf copr enable networkmanager/NetworkManager-1.26 -y && \
     dnf copr enable nmstate/nispor -y && \
@@ -34,6 +34,8 @@ RUN dnf -y install dnf-plugins-core epel-release && \
                    python3-varlink \
                    tcpreplay \
                    libvarlink-util \
+                   wpa_supplicant \
+                   hostapd \
                    && \
     alternatives --set python /usr/bin/python3 && \
     ln -s /usr/bin/pytest-3 /usr/bin/pytest && \

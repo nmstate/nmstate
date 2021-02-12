@@ -35,6 +35,8 @@ RUN dnf install -y centos-release-stream && \
                    python3-varlink \
                    libvarlink-util \
                    tcpreplay \
+                   wpa_supplicant \
+                   hostapd \
                    && \
     alternatives --set python /usr/bin/python3 && \
     ln -s /usr/bin/pytest-3 /usr/bin/pytest && \
