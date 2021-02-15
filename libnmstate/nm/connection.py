@@ -78,6 +78,8 @@ class _ConnectionSetting:
 
     def import_by_profile(self, profile, is_controller):
         base = profile.get_setting_connection()
+        if not base:
+            self._setting = None
         new = NM.SettingConnection.new()
         new.props.id = base.props.id
         new.props.interface_name = base.props.interface_name
@@ -115,7 +117,12 @@ def create_new_nm_simple_conn(iface, nm_profile):
     con_setting = _ConnectionSetting()
     if nm_profile and not is_multiconnect_profile(nm_profile):
         con_setting.import_by_profile(nm_profile, iface.is_controller)
-        con_setting.set_profile_name(iface.name)
+        if not con_setting.setting:
+            con_setting.create(
+                iface.name, iface.name, nm_iface_type, iface.is_controller
+            )
+        else:
+            con_setting.set_profile_name(iface.name)
     else:
         con_setting.create(
             iface.name, iface.name, nm_iface_type, iface.is_controller
