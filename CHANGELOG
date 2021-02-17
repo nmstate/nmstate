@@ -1,4 +1,23 @@
 # Changelog
+## [1.0.2] - 2021-02-18
+### New features
+ - Support multiconnect profiles. (2c60c834)
+ - Support bond vlan+srcmac tx hashing option. (ebf5777)
+ - Support routes created by iproute command. (f39f763)
+ - New property `Inetrface.COPY_FROM_MAC` on bridge and bond interfaces. (b089323)
+ - Support IEEE 802.1X authentication. (f9a1da3)
+
+### Bug fixes
+ - Fix removing OVS `external_ids` settings. (57e2547)
+ - Fix modification of OVS `external_ids` settings. (c99e708)
+ - Fix removing IPv6 default gateway. (fd21172)
+ - Improved the reliability on activating large amount of interfaces. (cbe5b57)
+ - Fix creating a veth interface with an ethernet peer. (e17e70e)
+ - Remove SR-IOV VF profiles when reducing `Ethernet.SRIOV.TOTAL_VFS` in the PF. (f5f636f)
+
+### Breaking changes
+ - Deprecate the nmstatectl `set` argument in favor of `apply`. (be8af16)
+
 ## [1.0.1] - 2021-01-15
 ### New features
  - Support changing external_ids of OVS system interfaces. (c76f32c)
