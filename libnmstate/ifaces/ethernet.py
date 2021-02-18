@@ -74,6 +74,26 @@ class EthernetIface(BaseIface):
             for i in range(0, self.sriov_total_vfs)
         ]
 
+    def remove_vfs_entry_when_total_vfs_decreased(self):
+        vfs_count = len(
+            self._info[Ethernet.CONFIG_SUBTREE]
+            .get(Ethernet.SRIOV_SUBTREE, {})
+            .get(Ethernet.SRIOV.VFS_SUBTREE, [])
+        )
+        if vfs_count > self.sriov_total_vfs:
+            [
+                self._info[Ethernet.CONFIG_SUBTREE][Ethernet.SRIOV_SUBTREE][
+                    Ethernet.SRIOV.VFS_SUBTREE
+                ].pop()
+                for _ in range(self.sriov_total_vfs, vfs_count)
+            ]
+
+    def get_delete_vf_interface_names(self, old_sriov_total_vfs):
+        return [
+            f"{self.name}v{i}"
+            for i in range(self.sriov_total_vfs, old_sriov_total_vfs)
+        ]
+
 
 def _capitalize_sriov_vf_mac(state):
     vfs = (
