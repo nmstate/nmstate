@@ -177,6 +177,11 @@ class BaseIface:
     def mark_as_desired(self):
         self._is_desired = True
 
+    def mark_as_absent_by_desire(self):
+        self.mark_as_desired()
+        self._info[Interface.STATE] = InterfaceState.ABSENT
+        self._origin_info[Interface.STATE] = InterfaceState.ABSENT
+
     def to_dict(self):
         return deepcopy(self._info)
 
