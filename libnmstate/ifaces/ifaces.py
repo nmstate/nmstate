@@ -157,6 +157,7 @@ class Ifaces:
 
             self._create_virtual_port()
             self._create_sriov_vfs_when_changed()
+            self._mark_vf_interface_as_absent_when_sriov_vf_decrease()
             self._validate_unknown_port()
             self._validate_unknown_parent()
             self._validate_infiniband_as_bridge_port()
@@ -239,6 +240,29 @@ class Ifaces:
                         new_ifaces.append(new_iface)
         for new_iface in new_ifaces:
             self._kernel_ifaces[new_iface.name] = new_iface
+
+    def _mark_vf_interface_as_absent_when_sriov_vf_decrease(self):
+        """
+        When SRIOV TOTAL_VFS decreased, we should mark certain VF interfaces
+        as absent and also remove the entry in `Ethernet.SRIOV.VFS_SUBTREE`.
+        """
+        for iface_name, iface in self._kernel_ifaces.items():
+            if iface.type != InterfaceType.ETHERNET or not iface.is_up:
+                continue
+            if iface_name not in self._cur_kernel_ifaces:
+                continue
+            cur_iface = self._cur_kernel_ifaces[iface_name]
+            if (
+                cur_iface.sriov_total_vfs != 0
+                and iface.sriov_total_vfs < cur_iface.sriov_total_vfs
+            ):
+                iface.remove_vfs_entry_when_total_vfs_decreased()
+                for vf_name in iface.get_delete_vf_interface_names(
+                    cur_iface.sriov_total_vfs
+                ):
+                    vf_iface = self._kernel_ifaces.get(vf_name)
+                    if vf_iface:
+                        vf_iface.mark_as_absent_by_desire()
 
     def _pre_edit_validation_and_cleanup(self):
         self._validate_over_booked_port()
