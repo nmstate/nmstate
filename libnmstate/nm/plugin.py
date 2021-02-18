@@ -258,6 +258,8 @@ class NetworkManagerPlugin(NmstatePlugin):
                 nm_client_version,
             )
 
+        logging.debug(f"NetworkManager version {nm_client_version}")
+
     def generate_configurations(self, net_state):
         if not hasattr(NM, "keyfile_write"):
             raise NmstateNotSupportedError(

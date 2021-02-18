@@ -17,6 +17,8 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
+import logging
+
 from nispor import NisporNetState
 
 from libnmstate.plugin import NmstatePlugin
@@ -148,3 +150,20 @@ class NisporPlugin(NmstatePlugin):
                 np_state.route_rules
             )
         }
+
+    def apply_changes(self, net_state, _save_to_disk):
+        """
+        Simply provide debug message on current network status and desired
+        status.
+        """
+        np_state = NisporNetState.retrieve()
+        logging.debug(f"Nispor: current network state {np_state}")
+        for iface in net_state.ifaces.all_ifaces():
+            if iface.is_desired:
+                logging.debug(
+                    f"Nispor: desired network state {iface.to_dict()}"
+                )
+            elif iface.is_changed:
+                logging.debug(
+                    f"Nispor: changed network state {iface.to_dict()}"
+                )
