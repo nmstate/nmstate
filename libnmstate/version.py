@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2020 Red Hat, Inc.
+# Copyright (c) 2018-2021 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -17,28 +17,11 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
-from . import error
-from . import schema
+import os
 
-from .netapplier import apply
-from .netapplier import commit
-from .netapplier import rollback
-from .netinfo import show
-from .netinfo import show_running_config
-from .nmstate import generate_configurations
-from .prettystate import PrettyState
-from .version import get_version as _get_version
 
-__all__ = [
-    "PrettyState",
-    "apply",
-    "commit",
-    "error",
-    "generate_configurations",
-    "rollback",
-    "schema",
-    "show",
-    "show_running_config",
-]
-
-__version__ = _get_version()
+def get_version():
+    root_dir = os.path.dirname(os.path.abspath(__file__))
+    with open(os.path.join(root_dir, "VERSION")) as f:
+        version = f.read().strip()
+    return version

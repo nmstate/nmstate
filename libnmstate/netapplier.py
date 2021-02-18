@@ -18,6 +18,7 @@
 #
 
 import copy
+import logging
 import time
 
 
@@ -31,6 +32,7 @@ from .nmstate import plugins_capabilities
 from .nmstate import rollback_checkpoints
 from .nmstate import show_with_plugins
 from .net_state import NetState
+from .version import get_version
 
 MAINLOOP_TIMEOUT = 35
 VERIFY_RETRY_INTERNAL = 1
@@ -59,6 +61,9 @@ def apply(
     :returns: Checkpoint identifier
     :rtype: str
     """
+    logging.debug(f"Nmstate version: {get_version()}")
+    logging.debug(f"Applying desire state: {desired_state}")
+
     desired_state = copy.deepcopy(desired_state)
     with plugin_context() as plugins:
         validator.schema_validate(desired_state)
