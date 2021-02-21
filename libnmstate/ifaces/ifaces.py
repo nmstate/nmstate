@@ -144,6 +144,7 @@ class Ifaces:
                 for new_iface in iface.create_sriov_vf_ifaces():
                     if new_iface.name not in self._ifaces:
                         new_iface.mark_as_desired()
+                        new_iface.mark_as_new_sr_iov_vf()
                         new_ifaces.append(new_iface)
         for new_iface in new_ifaces:
             self._ifaces[new_iface.name] = new_iface
