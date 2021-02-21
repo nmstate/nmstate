@@ -25,6 +25,9 @@ from libnmstate.schema import InterfaceState
 from .base_iface import BaseIface
 
 
+IS_NEW_SR_IOV_VF = "_is_new_sr_iov_vf"
+
+
 class EthernetIface(BaseIface):
     def merge(self, other):
         """
@@ -56,6 +59,13 @@ class EthernetIface(BaseIface):
             .get(Ethernet.SRIOV_SUBTREE, {})
             .get(Ethernet.SRIOV.TOTAL_VFS, 0)
         )
+
+    @property
+    def is_new_sr_iov_vf(self):
+        return self.raw.get(IS_NEW_SR_IOV_VF)
+
+    def mark_as_new_sr_iov_vf(self):
+        self.raw[IS_NEW_SR_IOV_VF] = True
 
     def create_sriov_vf_ifaces(self):
         return [

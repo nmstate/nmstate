@@ -119,6 +119,11 @@ def apply_changes(context, net_state, save_to_disk):
         original_desired_iface_state = {}
         if net_state.ifaces.get(ifname):
             iface = net_state.ifaces[ifname]
+            if iface.type == InterfaceType.ETHERNET and iface.is_new_sr_iov_vf:
+                # For new vfs automatically added to the desired state is just
+                # for verification, Nmstate should not create a profile for
+                # them.
+                continue
             if iface.is_desired:
                 original_desired_iface_state = iface.original_dict
             if (
