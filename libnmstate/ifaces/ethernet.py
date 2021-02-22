@@ -67,6 +67,11 @@ class EthernetIface(BaseIface):
     def mark_as_new_sr_iov_vf(self):
         self.raw[IS_NEW_SR_IOV_VF] = True
 
+    def is_sriov(self):
+        return self.raw.get(Ethernet.CONFIG_SUBTREE, {}).get(
+            Ethernet.SRIOV_SUBTREE, {}
+        )
+
     def create_sriov_vf_ifaces(self):
         return [
             EthernetIface(

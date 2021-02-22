@@ -23,6 +23,7 @@ import time
 
 from libnmstate import validator
 from libnmstate.error import NmstateVerificationError
+from libnmstate.schema import InterfaceType
 
 from .nmstate import create_checkpoints
 from .nmstate import destroy_checkpoints
@@ -35,6 +36,7 @@ from .net_state import NetState
 MAINLOOP_TIMEOUT = 35
 VERIFY_RETRY_INTERNAL = 1
 VERIFY_RETRY_TIMEOUT = 5
+VERIFY_RETRY_TIMEOUT_INCREASE = 4
 
 
 def apply(
@@ -104,7 +106,13 @@ def _apply_ifaces_state(plugins, net_state, verify_change, save_to_disk):
         plugin.apply_changes(net_state, save_to_disk)
     verified = False
     if verify_change:
-        for _ in range(VERIFY_RETRY_TIMEOUT):
+        if _net_state_contains_sriov_interface(net_state):
+            # If SR-IOV is present, the verification timeout is being increased
+            # to avoid timeouts due to slow drivers like i40e.
+            verify_retry = VERIFY_RETRY_TIMEOUT * VERIFY_RETRY_TIMEOUT_INCREASE
+        else:
+            verify_retry = VERIFY_RETRY_TIMEOUT
+        for _ in range(verify_retry):
             try:
                 _verify_change(plugins, net_state)
                 verified = True
@@ -113,6 +121,14 @@ def _apply_ifaces_state(plugins, net_state, verify_change, save_to_disk):
                 time.sleep(VERIFY_RETRY_INTERNAL)
         if not verified:
             _verify_change(plugins, net_state)
+
+
+def _net_state_contains_sriov_interface(net_state):
+    for iface in net_state.ifaces.all_ifaces.values():
+        if iface.type == InterfaceType.ETHERNET and iface.is_sriov:
+            return True
+
+    return False
 
 
 def _verify_change(plugins, net_state):
