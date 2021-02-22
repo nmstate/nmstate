@@ -326,6 +326,10 @@ class Ifaces:
         return self._cur_ifaces
 
     @property
+    def all_ifaces(self):
+        return self._ifaces
+
+    @property
     def state_to_edit(self):
         return [
             iface.to_dict()
