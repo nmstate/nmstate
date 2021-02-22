@@ -238,6 +238,8 @@ class Ifaces:
                     if new_iface.name not in self._kernel_ifaces:
                         new_iface.mark_as_desired()
                         new_ifaces.append(new_iface)
+                    else:
+                        self._kernel_ifaces[new_iface.name].mark_as_desired()
         for new_iface in new_ifaces:
             self._kernel_ifaces[new_iface.name] = new_iface
 
@@ -656,6 +658,18 @@ class Ifaces:
                                 cur_iface.state_for_verify(),
                             )
                         )
+                    elif (
+                        iface.type == InterfaceType.ETHERNET and iface.is_sriov
+                    ):
+                        if not cur_iface.check_total_vfs_matches_vf_list(
+                            iface.sriov_total_vfs
+                        ):
+                            raise NmstateVerificationError(
+                                "The NIC exceeded the waiting time for "
+                                "verification and it is failing because "
+                                "the `total_vfs` does not match the VF "
+                                "list length."
+                            )
 
     def gen_dns_metadata(self, dns_state, route_state):
         iface_metadata = dns_state.gen_metadata(self, route_state)
