@@ -62,6 +62,14 @@ class EthernetIface(BaseIface):
         )
 
     @property
+    def sriov_vfs(self):
+        return (
+            self.raw.get(Ethernet.CONFIG_SUBTREE, {})
+            .get(Ethernet.SRIOV_SUBTREE, {})
+            .get(Ethernet.SRIOV.VFS_SUBTREE, [])
+        )
+
+    @property
     def is_peer(self):
         return self._is_peer
 
@@ -107,6 +115,9 @@ class EthernetIface(BaseIface):
             f"{self.name}v{i}"
             for i in range(self.sriov_total_vfs, old_sriov_total_vfs)
         ]
+
+    def check_total_vfs_matches_vf_list(self, total_vfs):
+        return total_vfs == len(self.sriov_vfs)
 
 
 def _capitalize_sriov_vf_mac(state):
