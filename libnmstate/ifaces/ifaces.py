@@ -146,6 +146,11 @@ class Ifaces:
                         new_iface.mark_as_desired()
                         new_iface.mark_as_new_sr_iov_vf()
                         new_ifaces.append(new_iface)
+                    else:
+                        # When the VFs are being modified, all VFs link are
+                        # being removed from kernel and created again. Nmstate
+                        # must verify they have been created.
+                        self._ifaces[new_iface.name].mark_as_desired()
         for new_iface in new_ifaces:
             self._ifaces[new_iface.name] = new_iface
 
@@ -403,6 +408,18 @@ class Ifaces:
                                 cur_iface.state_for_verify(),
                             )
                         )
+                    elif (
+                        iface.type == InterfaceType.ETHERNET and iface.is_sriov
+                    ):
+                        if not cur_iface.check_total_vfs_matches_vf_list(
+                            iface.sriov_total_vfs
+                        ):
+                            raise NmstateVerificationError(
+                                "The NIC exceeded the waiting time for "
+                                "verification and it is failing because "
+                                "the `total_vfs` does not match the VF "
+                                "list length."
+                            )
 
     def gen_dns_metadata(self, dns_state, route_state):
         iface_metadata = dns_state.gen_metadata(self, route_state)
