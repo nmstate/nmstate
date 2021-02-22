@@ -65,6 +65,12 @@ class EthernetIface(BaseIface):
     def is_peer(self):
         return self._is_peer
 
+    @property
+    def is_sriov(self):
+        return self.raw.get(Ethernet.CONFIG_SUBTREE, {}).get(
+            Ethernet.SRIOV_SUBTREE
+        )
+
     def create_sriov_vf_ifaces(self):
         return [
             EthernetIface(
