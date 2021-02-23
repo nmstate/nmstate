@@ -323,7 +323,7 @@ def show(args):
 
 def set(args):
     warnings.warn("Using 'set' is deprecated, use 'apply' instead.")
-    apply(args)
+    return apply(args)
 
 
 def apply(args):
