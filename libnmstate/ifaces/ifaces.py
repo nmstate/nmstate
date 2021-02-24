@@ -194,7 +194,12 @@ class Ifaces:
         """
         for iface in self._ifaces.values():
             if iface.is_up and iface.is_master:
+                cur_iface = self.current_ifaces.get(iface.name)
                 for slave_name in iface.slaves:
+                    if cur_iface and slave_name in cur_iface.slaves:
+                        # Nmstate should not touch the port interface which has
+                        # already been included in current interface.
+                        continue
                     slave_iface = self._ifaces[slave_name]
                     if not slave_iface.is_desired and not slave_iface.is_up:
                         slave_iface.mark_as_up()

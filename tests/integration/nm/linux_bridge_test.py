@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2020 Red Hat, Inc.
+# Copyright (c) 2018-2021 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -26,6 +26,7 @@ import pytest
 import libnmstate
 from libnmstate import nm
 from libnmstate import schema
+from libnmstate.schema import Bridge
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
@@ -41,6 +42,7 @@ from .testlib import main_context
 
 BRIDGE0 = "brtest0"
 DUMMY1 = "dummy1"
+ETH1 = "eth1"
 
 
 @pytest.fixture
@@ -313,3 +315,111 @@ def test_bridge_enslave_unmanaged_interface(nm_unmanaged_dummy1):
             }
         )
         libnmstate.apply(desired_state)
+
+
+@pytest.fixture
+def nm_down_unmanaged_dummy1():
+    cmdlib.exec_cmd(
+        f"ip link add name {DUMMY1} type dummy".split(" "), check=True
+    )
+    yield
+    cmdlib.exec_cmd(
+        f"nmcli dev set {DUMMY1} managed yes".split(" "), check=True
+    )
+    time.sleep(1)  # Wait device became managed
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: DUMMY1,
+                    Interface.STATE: InterfaceState.ABSENT,
+                }
+            ]
+        },
+        verify_change=False,
+    )
+
+
+@pytest.mark.tier1
+def test_reapply_bridge_state_does_not_managed_ports(nm_down_unmanaged_dummy1):
+    with linux_bridge(
+        BRIDGE0,
+        bridge_subtree_state={
+            LB.OPTIONS_SUBTREE: {LB.STP_SUBTREE: {LB.STP.ENABLED: False}}
+        },
+    ) as desired_state:
+        cmdlib.exec_cmd(
+            f"ip link set {DUMMY1} master {BRIDGE0}".split(), check=True
+        )
+        libnmstate.apply(desired_state)
+        _, out, _ = cmdlib.exec_cmd(
+            f"nmcli -f GENERAL.STATE d show {DUMMY1}".split(), check=True
+        )
+
+        assert "unmanaged" in out
+
+
+@pytest.mark.tier1
+def test_remove_unmanaged_bridge_port_managed_it(nm_down_unmanaged_dummy1):
+    with linux_bridge(
+        BRIDGE0,
+        bridge_subtree_state={
+            LB.OPTIONS_SUBTREE: {LB.STP_SUBTREE: {LB.STP.ENABLED: False}}
+        },
+    ) as desired_state:
+        cmdlib.exec_cmd(
+            f"ip link set {DUMMY1} master {BRIDGE0}".split(), check=True
+        )
+        bridge_iface_state = desired_state[Interface.KEY][0]
+        bridge_iface_state[LB.CONFIG_SUBTREE] = {LB.PORT_SUBTREE: []}
+        libnmstate.apply(desired_state)
+        _, out, _ = cmdlib.exec_cmd(
+            f"nmcli -f GENERAL.STATE d show {DUMMY1}".split(), check=True
+        )
+
+        assert "unmanaged" not in out
+
+
+@pytest.mark.tier1
+def test_remove_bridge_manage_unmanaged_port(nm_down_unmanaged_dummy1):
+    with linux_bridge(
+        BRIDGE0,
+        bridge_subtree_state={
+            LB.OPTIONS_SUBTREE: {LB.STP_SUBTREE: {LB.STP.ENABLED: False}}
+        },
+    ):
+        cmdlib.exec_cmd(
+            f"ip link set {DUMMY1} master {BRIDGE0}".split(), check=True
+        )
+
+    _, out, _ = cmdlib.exec_cmd(
+        f"nmcli -f GENERAL.STATE d show {DUMMY1}".split(), check=True
+    )
+
+    assert "unmanaged" not in out
+
+
+@pytest.mark.tier1
+def test_attach_port_does_not_manage_unmanage_ports(nm_down_unmanaged_dummy1):
+    with linux_bridge(
+        BRIDGE0,
+        bridge_subtree_state={
+            LB.OPTIONS_SUBTREE: {LB.STP_SUBTREE: {LB.STP.ENABLED: False}}
+        },
+    ) as desired_state:
+        cmdlib.exec_cmd(
+            f"ip link set {DUMMY1} master {BRIDGE0}".split(), check=True
+        )
+        bridge_iface_state = desired_state[Interface.KEY][0]
+        bridge_iface_state[LB.CONFIG_SUBTREE] = {
+            LB.PORT_SUBTREE: [
+                {Bridge.Port.NAME: DUMMY1},
+                {Bridge.Port.NAME: ETH1},
+            ]
+        }
+        libnmstate.apply(desired_state)
+        _, out, _ = cmdlib.exec_cmd(
+            f"nmcli -f GENERAL.STATE d show {DUMMY1}".split(), check=True
+        )
+
+        assert "unmanaged" in out
