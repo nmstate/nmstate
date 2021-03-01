@@ -193,7 +193,7 @@ class Ifaces:
         if not defiend in desire state
         """
         for iface in self._ifaces.values():
-            if iface.is_up and iface.is_master:
+            if iface.is_desired and iface.is_up and iface.is_master:
                 cur_iface = self.current_ifaces.get(iface.name)
                 for slave_name in iface.slaves:
                     if cur_iface and slave_name in cur_iface.slaves:
@@ -353,14 +353,17 @@ class Ifaces:
 
     def _remove_unknown_interface_type_slaves(self):
         """
-        When master containing slaves with unknown interface type, they should
-        be removed from master slave list before verifying.
+        When master containing slaves with unknown interface type or down
+        state, they should be removed from master slave list before verifying.
         """
         for iface in self._ifaces.values():
             if iface.is_up and iface.is_master and iface.slaves:
                 for slave_name in iface.slaves:
                     slave_iface = self._ifaces[slave_name]
-                    if slave_iface.type == InterfaceType.UNKNOWN:
+                    if (
+                        slave_iface.type == InterfaceType.UNKNOWN
+                        or slave_iface.state != InterfaceState.UP
+                    ):
                         iface.remove_slave(slave_name)
 
     def verify(self, cur_iface_infos):

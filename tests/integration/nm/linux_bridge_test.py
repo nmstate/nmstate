@@ -360,28 +360,7 @@ def test_reapply_bridge_state_does_not_managed_ports(nm_down_unmanaged_dummy1):
 
 
 @pytest.mark.tier1
-def test_remove_unmanaged_bridge_port_managed_it(nm_down_unmanaged_dummy1):
-    with linux_bridge(
-        BRIDGE0,
-        bridge_subtree_state={
-            LB.OPTIONS_SUBTREE: {LB.STP_SUBTREE: {LB.STP.ENABLED: False}}
-        },
-    ) as desired_state:
-        cmdlib.exec_cmd(
-            f"ip link set {DUMMY1} master {BRIDGE0}".split(), check=True
-        )
-        bridge_iface_state = desired_state[Interface.KEY][0]
-        bridge_iface_state[LB.CONFIG_SUBTREE] = {LB.PORT_SUBTREE: []}
-        libnmstate.apply(desired_state)
-        _, out, _ = cmdlib.exec_cmd(
-            f"nmcli -f GENERAL.STATE d show {DUMMY1}".split(), check=True
-        )
-
-        assert "unmanaged" not in out
-
-
-@pytest.mark.tier1
-def test_remove_bridge_manage_unmanaged_port(nm_down_unmanaged_dummy1):
+def test_remove_bridge_manage_not_managed_port(nm_down_unmanaged_dummy1):
     with linux_bridge(
         BRIDGE0,
         bridge_subtree_state={
@@ -396,7 +375,7 @@ def test_remove_bridge_manage_unmanaged_port(nm_down_unmanaged_dummy1):
         f"nmcli -f GENERAL.STATE d show {DUMMY1}".split(), check=True
     )
 
-    assert "unmanaged" not in out
+    assert "unmanaged" in out
 
 
 @pytest.mark.tier1
@@ -412,10 +391,7 @@ def test_attach_port_does_not_manage_unmanage_ports(nm_down_unmanaged_dummy1):
         )
         bridge_iface_state = desired_state[Interface.KEY][0]
         bridge_iface_state[LB.CONFIG_SUBTREE] = {
-            LB.PORT_SUBTREE: [
-                {Bridge.Port.NAME: DUMMY1},
-                {Bridge.Port.NAME: ETH1},
-            ]
+            LB.PORT_SUBTREE: [{Bridge.Port.NAME: ETH1}]
         }
         libnmstate.apply(desired_state)
         _, out, _ = cmdlib.exec_cmd(
