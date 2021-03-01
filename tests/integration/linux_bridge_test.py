@@ -700,6 +700,7 @@ def test_linux_bridge_replace_unmanaged_port(bridge_unmanaged_port, eth1_up):
     iface_state[LinuxBridge.CONFIG_SUBTREE][LinuxBridge.PORT_SUBTREE] = [
         {LinuxBridge.Port.NAME: "eth1"}
     ]
+    iface_state.pop(Interface.MAC)
     libnmstate.apply({Interface.KEY: [iface_state]})
 
 

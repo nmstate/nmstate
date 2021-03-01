@@ -80,7 +80,16 @@ def apply_changes(context, net_state, save_to_disk):
     _preapply_dns_fix(context, net_state)
     _mark_nm_external_subordinate_changed(context, net_state)
 
-    ifaces_desired_state = net_state.ifaces.state_to_edit
+    ifaces_desired_state = []
+    for iface in net_state.ifaces.all_ifaces.values():
+        nm_dev = context.get_nm_dev(iface.name)
+        if nm_dev and not nm_dev.get_managed() and not iface.is_desired:
+            # We don't change NM.Device from unmanaged to managed unless
+            # been asked explicitly in desire state
+            continue
+        if iface.is_changed or iface.is_desired:
+            ifaces_desired_state.append(iface.to_dict())
+
     ifaces_desired_state.extend(
         _create_proxy_ifaces_desired_state(ifaces_desired_state)
     )
