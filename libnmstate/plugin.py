@@ -128,3 +128,10 @@ class NmstatePlugin(metaclass=ABCMeta):
         persistently.
         """
         return []
+
+    def get_ignored_kernel_interface_names(self):
+        """
+        Return a list of kernel interface names which should be ignored
+        during verification stage.
+        """
+        return []

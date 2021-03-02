@@ -95,7 +95,6 @@ class Ifaces:
         self._kernel_ifaces = {}
         self._user_space_ifaces = _UserSpaceIfaces()
         self._cur_user_space_ifaces = _UserSpaceIfaces()
-        self._ignored_ifaces = set()
         if cur_iface_infos:
             for iface_info in cur_iface_infos:
                 cur_iface = _to_specific_iface_obj(iface_info, save_to_disk)
@@ -143,10 +142,6 @@ class Ifaces:
                 ):
                     # Ignore interface with unknown type
                     continue
-                if iface.is_ignore:
-                    self._ignored_ifaces.add(
-                        (iface.name, iface.type, iface.is_user_space_only)
-                    )
                 if cur_iface:
                     iface.merge(cur_iface)
                 iface.mark_as_desired()
@@ -168,6 +163,10 @@ class Ifaces:
                 iface.pre_edit_validation_and_cleanup()
 
             self._pre_edit_validation_and_cleanup()
+
+    @property
+    def _ignored_ifaces(self):
+        return [iface for iface in self.all_ifaces() if iface.is_ignore]
 
     def _apply_copy_mac_from(self):
         for iface in self.all_kernel_ifaces.values():
@@ -284,7 +283,7 @@ class Ifaces:
         if not defiend in desire state
         """
         for iface in self.all_ifaces():
-            if iface.is_up and iface.is_controller:
+            if iface.is_desired and iface.is_up and iface.is_controller:
                 for port_name in iface.port:
                     port_iface = self._kernel_ifaces[port_name]
                     if not port_iface.is_desired and not port_iface.is_up:
@@ -550,13 +549,14 @@ class Ifaces:
         return None
 
     def _remove_iface(self, iface_name, iface_type):
-        cur_iface = self._cur_kernel_ifaces.get(iface_name, iface_type)
+        cur_iface = self._user_space_ifaces.get(iface_name, iface_type)
         if cur_iface:
             self._user_space_ifaces.remove(cur_iface)
         else:
             cur_iface = self._kernel_ifaces.get(iface_name)
             if (
-                iface_type
+                cur_iface
+                and iface_type
                 and iface_type != InterfaceType.UNKNOWN
                 and iface_type == cur_iface.type
             ):
@@ -813,14 +813,14 @@ class Ifaces:
                     port_controller_map[port_name] = iface.name
 
     def _remove_ignore_interfaces(self, ignored_ifaces):
-        for iface_name, iface_type, _ in ignored_ifaces:
-            self._remove_iface(iface_name, iface_type)
+        for iface in ignored_ifaces:
+            self._remove_iface(iface.name, iface.type)
 
         # Only kernel interface can be used as port
         ignored_kernel_iface_names = set(
-            iface_name
-            for iface_name, _, is_user_space_only in ignored_ifaces
-            if not is_user_space_only
+            iface.name
+            for iface in ignored_ifaces
+            if not iface.is_user_space_only
         )
 
         # Remove ignored port

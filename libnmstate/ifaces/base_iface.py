@@ -322,6 +322,9 @@ class BaseIface:
     def mark_as_up(self):
         self.raw[Interface.STATE] = InterfaceState.UP
 
+    def mark_as_ignored(self):
+        self.raw[Interface.STATE] = InterfaceState.IGNORE
+
     @property
     def is_controller(self):
         return False
