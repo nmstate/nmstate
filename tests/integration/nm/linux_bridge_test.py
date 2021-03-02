@@ -27,6 +27,7 @@ from libnmstate.schema import InterfaceState
 from libnmstate.schema import LinuxBridge as LB
 
 from ..testlib.bridgelib import linux_bridge
+from ..testlib.cmdlib import exec_cmd
 from ..testlib.dummy import nm_unmanaged_dummy
 
 
@@ -41,7 +42,7 @@ def nm_unmanaged_dummy1():
 
 
 @pytest.mark.tier1
-def test_bridge_as_port_unmanaged_interface(nm_unmanaged_dummy1):
+def test_bridge_consume_unmanaged_interface_as_port(nm_unmanaged_dummy1):
     with linux_bridge(
         BRIDGE0,
         bridge_subtree_state={
@@ -54,6 +55,7 @@ def test_bridge_as_port_unmanaged_interface(nm_unmanaged_dummy1):
         }
         # To reproduce bug https://bugzilla.redhat.com/1816517
         # explitly define dummy1 as IPv4/IPv6 disabled is required.
+        # explitly define dummy1 in desire is required for unmanaged interface.
         desired_state[Interface.KEY].append(
             {
                 Interface.NAME: DUMMY1,
@@ -63,3 +65,35 @@ def test_bridge_as_port_unmanaged_interface(nm_unmanaged_dummy1):
             }
         )
         libnmstate.apply(desired_state)
+
+
+@pytest.mark.tier1
+def test_add_new_port_to_bridge_with_unmanged_port(
+    nm_unmanaged_dummy1, eth1_up, eth2_up
+):
+    bridge_subtree_state = {
+        LB.PORT_SUBTREE: [{LB.Port.NAME: "eth1"}],
+        LB.OPTIONS_SUBTREE: {LB.STP_SUBTREE: {LB.STP.ENABLED: False}},
+    }
+
+    with linux_bridge(BRIDGE0, bridge_subtree_state=bridge_subtree_state):
+        exec_cmd(f"ip link set {DUMMY1} master {BRIDGE0}".split(), check=True)
+        libnmstate.apply(
+            {
+                Interface.KEY: [
+                    {
+                        Interface.NAME: BRIDGE0,
+                        LB.CONFIG_SUBTREE: {
+                            LB.PORT_SUBTREE: [
+                                {LB.Port.NAME: "eth1"},
+                                {LB.Port.NAME: "eth2"},
+                            ]
+                        },
+                    }
+                ]
+            }
+        )
+
+        # dummy1 should still be the bridge port
+        output = exec_cmd(f"npc {DUMMY1}".split(), check=True)[1]
+        assert f"controller: {BRIDGE0}" in output

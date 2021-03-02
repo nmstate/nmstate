@@ -159,7 +159,11 @@ class NisporPlugin(NmstatePlugin):
         np_state = NisporNetState.retrieve()
         logging.debug(f"Nispor: current network state {np_state}")
         for iface in net_state.ifaces.all_ifaces():
-            if iface.is_desired:
+            if iface.is_ignore:
+                logging.debug(
+                    f"Nispor: Interface {iface.name} {iface.type} ignored"
+                )
+            elif iface.is_desired:
                 logging.debug(
                     f"Nispor: desired network state {iface.to_dict()}"
                 )

@@ -36,6 +36,7 @@ from .checkpoint import get_checkpoints
 from .common import NM
 from .context import NmContext
 from .device import get_device_common_info
+from .device import get_iface_type
 from .device import list_devices
 from .dns import get_running as get_dns_running
 from .dns import get_running_config as get_dns_running_config
@@ -268,6 +269,21 @@ class NetworkManagerPlugin(NmstatePlugin):
             )
         return NmProfiles(None).generate_config_strings(net_state)
 
+    def get_ignored_kernel_interface_names(self):
+        """
+        Return a list of unmanged kernel interface names.
+        """
+        ignored_ifaces = set()
+        for nm_dev in list_devices(self.client):
+            if (
+                nm_dev
+                and nm_dev.get_iface()
+                and not nm_dev.get_managed()
+                and _is_kernel_iface(nm_dev)
+            ):
+                ignored_ifaces.add(nm_dev.get_iface())
+        return list(ignored_ifaces)
+
 
 def _remove_ovs_bridge_unsupported_entries(iface_info):
     """
@@ -283,3 +299,12 @@ def _remove_ovs_bridge_unsupported_entries(iface_info):
 
 def _nm_utils_decode_version():
     return f"{NM.MAJOR_VERSION}.{NM.MINOR_VERSION}.{NM.MICRO_VERSION}"
+
+
+def _is_kernel_iface(nm_dev):
+    iface_type = get_iface_type(nm_dev)
+    return iface_type != InterfaceType.UNKNOWN and iface_type not in (
+        InterfaceType.OVS_BRIDGE,
+        InterfaceType.OVS_INTERFACE,
+        InterfaceType.OVS_PORT,
+    )
