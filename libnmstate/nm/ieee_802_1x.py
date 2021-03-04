@@ -22,6 +22,7 @@ from libnmstate.schema import Ieee8021X
 
 from .common import NM
 from .common import GLib
+from .secrets import get_secrets
 
 _NM_PROP_MAP = {
     NM.SETTING_802_1X_IDENTITY: Ieee8021X.IDENTITY,
@@ -42,7 +43,12 @@ def get_802_1x_info(context, nm_ac):
     if not nm_setting:
         return {}
 
-    secrets = _get_secrets(context, nm_profile)
+    secrets = get_secrets(
+        context,
+        nm_profile,
+        f"Retrieve 802.1x secrets of profile {nm_profile.get_uuid()}",
+        NM.SETTING_802_1X_SETTING_NAME,
+    )
 
     info = {}
     for nm_prop, key_name in _NM_PROP_MAP.items():
@@ -102,30 +108,3 @@ def _file_path_to_glib_bytes(file_path):
     file_path_bytes = bytearray(f"file://{file_path}".encode("utf8"))
     file_path_bytes.append(0)
     return GLib.Bytes.new(file_path_bytes)
-
-
-def _get_secrets(context, nm_profile):
-    secrets = {}
-    action = f"Retrieve 802.1x secrets of profile {nm_profile.get_uuid()}"
-    context.register_async(action, fast=True)
-    user_data = (context, secrets, action)
-    nm_profile.get_secrets_async(
-        NM.SETTING_802_1X_SETTING_NAME,
-        context.cancellable,
-        _get_secrets_callback,
-        user_data,
-    )
-    context.wait_all_finish()
-    return secrets
-
-
-def _get_secrets_callback(nm_profile, result, user_data):
-    context, secrets, action = user_data
-
-    try:
-        nm_secrets = nm_profile.get_secrets_finish(result)
-    except GLib.Error as e:
-        context.fail(NmstateLibnmError(f"{action} failed: error={e}"))
-
-    context.finish_async(action)
-    secrets.update(nm_secrets[NM.SETTING_802_1X_SETTING_NAME])
