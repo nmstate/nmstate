@@ -1,4 +1,18 @@
 # Changelog
+## [0.3.7] - 2021-03-04
+### New features
+ - Add support for multiple gateways. (47bd6db)
+ - New property `Interface.COPY_FROM_MAC` on bridge and bond interfaces. (34b689a)
+
+### Bug fixes
+ - Ignore bonding ad_actor_system=00:00:00:00:00:00. (8a7f175)
+ - Fix removing IPv6 routing rules. (143680c)
+ - Ignore ovs-port interfaces always. (2595c75)
+ - Do not remove unmanaged orphan interfaces. (9ef6619)
+ - Wait until SR-IOV VFs are being created. (1d0656c)
+ - Improved the reliability on activating large amount of interfaces. (b125625)
+ - Ignore unmanaged ports when not included on desired state. (fb9352b)
+
 ## [0.3.6] - 2020-10-21
 ### New features
  - Add varlink support
