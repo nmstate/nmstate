@@ -24,10 +24,13 @@ import pytest
 
 import libnmstate
 from libnmstate.error import NmstateVerificationError
+from libnmstate.error import NmstateLibnmError
 from libnmstate.schema import VLAN
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
+from libnmstate.schema import InterfaceIPv4
+from libnmstate.schema import InterfaceIPv6
 
 from .testlib import assertlib
 from .testlib import statelib
@@ -234,3 +237,91 @@ def create_two_vlans_state():
             },
         ]
     }
+
+
+@pytest.mark.xfail(
+    reason="https://bugzilla.redhat.com/1722352",
+    strict=True,
+    raises=NmstateLibnmError,
+)
+def test_change_vlan_id(eth1_up):
+    vlana_name = "vlan.a"
+    vlanb_name = "vlan.b"
+    with vlan_interface(
+        vlana_name, 201, eth1_up[Interface.KEY][0][Interface.NAME]
+    ), vlan_interface(
+        vlanb_name, 202, eth1_up[Interface.KEY][0][Interface.NAME]
+    ):
+        # modify full options to check if all of they will be preserved
+        desired_state = {
+            Interface.KEY: [
+                {
+                    Interface.NAME: vlana_name,
+                    Interface.MTU: 1280,
+                    Interface.MAC: "d4:ee:07:25:42:5a",
+                    Interface.IPV4: {
+                        InterfaceIPv4.ENABLED: True,
+                        InterfaceIPv4.ADDRESS: [
+                            {
+                                InterfaceIPv4.ADDRESS_IP: "192.0.2.251",
+                                InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+                            }
+                        ],
+                    },
+                    Interface.IPV6: {
+                        InterfaceIPv6.ENABLED: True,
+                        InterfaceIPv6.ADDRESS: [
+                            {
+                                InterfaceIPv6.ADDRESS_IP: "2001:db8:1::1",
+                                InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
+                            }
+                        ],
+                    },
+                },
+                {
+                    Interface.NAME: vlanb_name,
+                    Interface.MTU: 1280,
+                    Interface.IPV4: {
+                        InterfaceIPv4.ENABLED: True,
+                        InterfaceIPv4.DHCP: True,
+                        InterfaceIPv4.AUTO_DNS: False,
+                        InterfaceIPv4.AUTO_GATEWAY: False,
+                        InterfaceIPv4.AUTO_ROUTES: False,
+                        InterfaceIPv4.AUTO_ROUTE_TABLE_ID: 100,
+                    },
+                    Interface.IPV6: {
+                        InterfaceIPv6.ENABLED: True,
+                        InterfaceIPv6.DHCP: True,
+                        InterfaceIPv6.AUTOCONF: True,
+                        InterfaceIPv6.AUTO_DNS: True,
+                        InterfaceIPv6.AUTO_GATEWAY: True,
+                        InterfaceIPv6.AUTO_ROUTES: True,
+                        InterfaceIPv6.AUTO_ROUTE_TABLE_ID: 100,
+                    },
+                },
+            ]
+        }
+
+        libnmstate.apply(desired_state)
+        base_state = {}
+        base_state[Interface.KEY] = libnmstate.show().pop(Interface.KEY)
+        for iface in base_state[Interface.KEY]:
+            if iface[Interface.NAME] == vlana_name:
+                iface[VLAN.CONFIG_SUBTREE][VLAN.ID] = 1001
+            elif iface[Interface.NAME] == vlanb_name:
+                iface[VLAN.CONFIG_SUBTREE][VLAN.ID] = 1002
+
+        desired_state = {
+            Interface.KEY: [
+                {
+                    Interface.NAME: vlana_name,
+                    VLAN.CONFIG_SUBTREE: {VLAN.ID: 1001},
+                },
+                {
+                    Interface.NAME: vlanb_name,
+                    VLAN.CONFIG_SUBTREE: {VLAN.ID: 1002},
+                },
+            ]
+        }
+        libnmstate.apply(desired_state)
+        assertlib.assert_state_match(base_state)
