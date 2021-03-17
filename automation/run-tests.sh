@@ -40,10 +40,12 @@ NMSTATE_TEMPDIR=$(mktemp -d /tmp/nmstate-test-XXXX)
 VETH_PEER_NS="nmstate_test"
 
 : ${CONTAINER_CMD:=podman}
+: ${KUBECTL_CMD:=k8s/kubectl.sh}
 
 test -t 1 && USE_TTY="-t"
 source automation/tests-container-utils.sh
 source automation/tests-machine-utils.sh
+source automation/tests-k8s-utils.sh
 
 function pyclean {
     exec_cmd '
@@ -53,10 +55,12 @@ function pyclean {
 }
 
 function exec_cmd {
-    if [ -z ${RUN_BAREMETAL} ];then
-        container_exec "$1"
-    else
+    if [ ! -z ${RUN_BAREMETAL} ];then
         bash -c "$1"
+    elif [ ! -z ${RUN_K8S} ]; then
+        k8s::kubectl_exec "$1"
+    else
+        container_exec "$1"
     fi
 }
 
@@ -121,6 +125,7 @@ function run_tests {
         exec_cmd "
             pytest \
             $PYTEST_OPTIONS \
+            --junitxml=junit.integ.xml \
             --cov-report=html:htmlcov-integ \
             tests/integration \
             ${nmstate_pytest_extra_args}"
@@ -132,6 +137,7 @@ function run_tests {
           pytest \
             $PYTEST_OPTIONS \
             --cov-report=html:htmlcov-integ_tier1 \
+            --junitxml=junit.integ_tier1.xml \
             -m tier1 \
             tests/integration \
             ${nmstate_pytest_extra_args}"
@@ -143,6 +149,7 @@ function run_tests {
           pytest \
             $PYTEST_OPTIONS \
             --cov-report=html:htmlcov-integ_tier2 \
+            --junitxml=junit.integ_tier2.xml \
             -m tier2 \
             tests/integration \
             ${nmstate_pytest_extra_args}"
@@ -155,6 +162,7 @@ function run_tests {
           pytest \
             $PYTEST_OPTIONS \
             --cov-report=html:htmlcov-integ_slow \
+            --junitxml=junit.integ_slow.xml \
             -m slow --runslow \
             tests/integration \
             ${nmstate_pytest_extra_args}"
@@ -181,17 +189,23 @@ function write_separator {
 function run_exit {
     write_separator "TEARDOWN"
     dump_network_info
-    if [ -z ${RUN_BAREMETAL} ];then
+    if [ -n "${RUN_BAREMETAL}" ]; then
+        teardown_network_environment
+    elif [ -n "${RUN_K8S}" ]; then
+        k8s::collect_artifacts
+        k8s::cleanup
+    else
         collect_artifacts
         remove_container
         remove_tempdir
-    else
-        teardown_network_environment
     fi
 }
 
 function modprobe_ovs {
-    lsmod | grep -q ^openvswitch || modprobe openvswitch || { echo 1>&2 "Please run 'modprobe openvswitch' as root"; exit 1; }
+    if [ -z "${RUN_K8S}" ]; then
+        lsmod | grep -q ^openvswitch || modprobe openvswitch || { echo 1>&2 "Please run 'modprobe openvswitch' as root"; exit 1; }
+    fi
+    #TODO: Install ovs on k8s cluster
 }
 
 function check_services {
@@ -279,7 +293,7 @@ function run_customize_command {
 }
 
 options=$(getopt --options "" \
-    --long customize:,pytest-args:,help,debug-shell,test-type:,el8,copr:,artifacts-dir:,test-vdsm,machine,use-installed-nmstate\
+    --long customize:,pytest-args:,help,debug-shell,test-type:,el8,centos-stream,copr:,artifacts-dir:,test-vdsm,machine,k8s,use-installed-nmstate\
     -- "${@}")
 eval set -- "$options"
 while true; do
@@ -319,6 +333,9 @@ while true; do
         ;;
     --machine)
         RUN_BAREMETAL="true"
+        ;;
+    --k8s)
+        RUN_K8S="true"
         ;;
     --use-installed-nmstate)
         INSTALL_NMSTATE="false"
@@ -361,6 +378,11 @@ if [ -n "${RUN_BAREMETAL}" ];then
     CONTAINER_WORKSPACE="."
     run_customize_command
     start_machine_services
+elif [ -n "${RUN_K8S}" ]; then
+    run_customize_command
+    #start_machine_services
+    k8s::start_cluster
+    k8s::pre_test_setup
 else
     container_pre_test_setup
     run_customize_command
@@ -370,7 +392,9 @@ if [[ -v copr_repo ]];then
     upgrade_nm_from_copr "${copr_repo}"
 fi
 
-check_services
+if [ -z "${RUN_K8S}" ]; then
+    check_services
+fi
 prepare_network_environment
 
 if [ -n "$RUN_BAREMETAL" ];then
@@ -382,7 +406,7 @@ exec_cmd '(source /etc/os-release; echo $PRETTY_NAME); rpm -q NetworkManager'
 dump_network_info
 
 pyclean
-if [ -z ${RUN_BAREMETAL} ];then
+if [ -z "${RUN_BAREMETAL}" ] && [ -z "${RUN_K8S}" ];then
     copy_workspace_container
 fi
 
