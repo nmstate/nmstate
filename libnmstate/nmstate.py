@@ -158,6 +158,10 @@ def _get_interface_info_from_plugins(plugins):
             iface[IFACE_PRIORITY_METADATA] = plugin.priority
             iface_name = iface[Interface.NAME]
             if iface_name in all_ifaces:
+                logging.debug(
+                    f"Interface {iface_name} found. Merging the interface "
+                    "information."
+                )
                 existing_iface = all_ifaces[iface_name]
                 existing_priority = existing_iface[IFACE_PRIORITY_METADATA]
                 current_priority = plugin.priority
