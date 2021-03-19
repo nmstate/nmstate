@@ -34,7 +34,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt install git gnupg2 openssh-client python-tox xz-utils
+          sudo apt install git gnupg2 openssh-client tox xz-utils
 
       - name: Start docker service
         run: sudo service docker start
