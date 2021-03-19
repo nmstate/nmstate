@@ -295,8 +295,15 @@ class BaseIface:
     def gen_metadata(self, ifaces):
         if self.is_master and not self.is_absent:
             for slave_name in self.slaves:
-                slave_iface = ifaces[slave_name]
-                slave_iface.set_master(self.name, self.type)
+                if slave_name != self.name:
+                    slave_iface = ifaces[slave_name]
+                    slave_iface.set_master(self.name, self.type)
+                else:
+                    logging.warning(
+                        f"The interface {self.name} is setting {slave_name} as"
+                        " port. Multiple interfaces with names are not"
+                        " supported and unexpected errors may occur."
+                    )
 
     def update(self, info):
         self._info.update(info)

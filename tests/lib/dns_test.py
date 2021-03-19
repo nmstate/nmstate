@@ -27,6 +27,8 @@ from libnmstate.schema import DNS
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
+from libnmstate.schema import InterfaceType
+from libnmstate.schema import OVSBridge
 from libnmstate.schema import Route
 
 from libnmstate.ifaces import BaseIface
@@ -61,6 +63,13 @@ DNS_CONFIG2 = {
     DNS.SERVER: [IPV6_DNS_SERVER2, IPV4_DNS_SERVER2],
     DNS.SEARCH: DNS_SEARCHES_2,
 }
+
+DNS_OVS_CONFIG = {
+    DNS.SERVER: [IPV4_DNS_SERVER1],
+}
+
+OVS_IFACE_NAME = "br-ex"
+ETH1 = "eth1"
 
 
 class TestDnsState:
@@ -153,6 +162,34 @@ class TestDnsState:
         ] == {
             DnsState.PRIORITY_METADATA: 1,
             DNS.SERVER: [IPV6_DNS_SERVER1],
+            DNS.SEARCH: [],
+        }
+
+    def test_gen_dns_metadata_use_dup_ovs_names(self):
+        ifaces = self._gen_ovs_dup_names_iface()
+        route_state = RouteState(
+            ifaces,
+            {},
+            {
+                Route.CONFIG: [
+                    {
+                        Route.DESTINATION: "0.0.0.0/0",
+                        Route.NEXT_HOP_ADDRESS: "192.0.2.1",
+                        Route.NEXT_HOP_INTERFACE: OVS_IFACE_NAME,
+                    },
+                ]
+            },
+        )
+        dns_state = DnsState({}, {DNS.CONFIG: DNS_OVS_CONFIG})
+        ifaces.gen_dns_metadata(dns_state, route_state)
+        ipv4_iface = ifaces[OVS_IFACE_NAME]
+
+        assert dns_state.config == DNS_OVS_CONFIG
+        assert ipv4_iface.to_dict()[Interface.IPV4][
+            BaseIface.DNS_METADATA
+        ] == {
+            DnsState.PRIORITY_METADATA: 0,
+            DNS.SERVER: [IPV4_DNS_SERVER1],
             DNS.SEARCH: [],
         }
 
@@ -274,6 +311,28 @@ class TestDnsState:
             InterfaceIPv6.AUTO_DNS: False,
         }
         return Ifaces([], [ipv4_iface_info, ipv6_iface_info])
+
+    def _gen_ovs_dup_names_iface(self):
+        ovs_bridge_iface_info = gen_foo_iface_info()
+        ovs_bridge_iface_info[Interface.NAME] = OVS_IFACE_NAME
+        ovs_bridge_iface_info[Interface.TYPE] = InterfaceType.OVS_BRIDGE
+        ovs_bridge_iface_info[OVSBridge.CONFIG_SUBTREE] = {
+            OVSBridge.PORT_SUBTREE: [{OVSBridge.Port.NAME: OVS_IFACE_NAME}],
+        }
+        ovs_bridge_iface_info[Interface.IPV4] = {
+            InterfaceIPv4.ENABLED: True,
+            InterfaceIPv4.DHCP: False,
+            InterfaceIPv4.ADDRESS: [
+                {
+                    InterfaceIPv4.ADDRESS_IP: "192.0.2.100",
+                    InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+                }
+            ],
+        }
+
+        basic_iface_info = gen_foo_iface_info()
+        basic_iface_info[Interface.NAME] = ETH1
+        return Ifaces([basic_iface_info], [ovs_bridge_iface_info])
 
     def _gen_static_ifaces(self):
         return gen_two_static_ip_ifaces(

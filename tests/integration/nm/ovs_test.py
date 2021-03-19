@@ -34,12 +34,16 @@ from libnmstate.schema import VLAN
 from .testlib import main_context
 from ..testlib import cmdlib
 from ..testlib import assertlib
+from ..testlib.retry import retry_till_true_or_timeout
 
 
 BRIDGE0 = "brtest0"
 ETH1 = "eth1"
 ETH2 = "eth2"
 BOND0 = "bond0"
+OVS_DUP_NAME = "br-ex"
+
+VERIFY_RETRY_TMO = 5
 
 
 @pytest.fixture
@@ -378,6 +382,105 @@ def ovs_bridge_over_bond_system_iface_with_same_name(eth1_up, eth2_up):
     time.sleep(1)
 
 
+def _nmcli_ovs_bridge_with_ipv4_dns():
+    nmcli_ovs_interface = (
+        "nmcli",
+        "connection",
+        "add",
+        "type",
+        "ovs-interface",
+        "slave-type",
+        "ovs-port",
+        "conn.interface",
+        "br-ex",
+        "master",
+        "ovs-port-br-ex",
+        "con-name",
+        "ovs-if-br-ex",
+        "ipv4.method",
+        "manual",
+        "ipv4.addr",
+        "192.0.2.2/24",
+        "ipv4.dns",
+        "192.0.2.1",
+        "ipv4.routes",
+        "0.0.0.0/0 192.0.2.1",
+    )
+    cmdlib.exec_cmd(nmcli_ovs_interface, check=True)
+
+
+def _verify_ovs_activated(ovs_name):
+    ret, out, err = cmdlib.exec_cmd(
+        f"nmcli --field GENERAL.STATE device show {ovs_name}".split(),
+        check=True,
+    )
+    connected = "connected" in out
+    ret, out, err = cmdlib.exec_cmd(
+        f"nmcli --field IP4.ADDRESS device show {ovs_name}".split(),
+        check=True,
+    )
+    ipv4_configured = "192.0.2.2/24" in out
+    ret, out, err = cmdlib.exec_cmd(
+        f"nmcli --field IP4.ROUTE device show {ovs_name}".split(), check=True,
+    )
+    route_configured = "0.0.0.0/0" in out
+    return connected and ipv4_configured and route_configured
+
+
+@pytest.fixture
+def ovs_bridge_first_and_ovs_interface_with_same_name_ipv4():
+    # The order on this function is important. The OVS bridge must be defined
+    # before the OVS interface.
+    cmdlib.exec_cmd(
+        "nmcli connection add type ovs-port conn.interface br-ex master br-ex "
+        "con-name ovs-port-br-ex".split(),
+        check=True,
+    )
+    cmdlib.exec_cmd(
+        "nmcli connection add type ovs-bridge con-name br-ex conn.interface "
+        "br-ex".split(),
+        check=True,
+    )
+    _nmcli_ovs_bridge_with_ipv4_dns()
+    # Wait a little bit for NM to activate above interfaces to do not hit race
+    # problems.
+    assert retry_till_true_or_timeout(
+        VERIFY_RETRY_TMO, _verify_ovs_activated, OVS_DUP_NAME
+    )
+    yield
+    cmdlib.exec_cmd(
+        "nmcli connection del ovs-port-br-ex br-ex ovs-if-br-ex".split(),
+        check=True,
+    )
+
+
+@pytest.fixture
+def ovs_interface_first_and_ovs_bridge_with_same_name_ipv4():
+    # The order on this function is important. The OVS interface must be
+    # defined before the OVS bridge.
+    cmdlib.exec_cmd(
+        "nmcli connection add type ovs-port conn.interface br-ex master br-ex "
+        "con-name ovs-port-br-ex".split(),
+        check=True,
+    )
+    _nmcli_ovs_bridge_with_ipv4_dns()
+    cmdlib.exec_cmd(
+        "nmcli connection add type ovs-bridge con-name br-ex conn.interface "
+        "br-ex".split(),
+        check=True,
+    )
+    # Wait a little bit for NM to activate above interfaces to do not hit race
+    # problems.
+    assert retry_till_true_or_timeout(
+        VERIFY_RETRY_TMO, _verify_ovs_activated, OVS_DUP_NAME
+    )
+    yield
+    cmdlib.exec_cmd(
+        "nmcli connection del ovs-port-br-ex br-ex ovs-if-br-ex".split(),
+        check=True,
+    )
+
+
 @pytest.mark.tier1
 def test_create_vlan_over_ovs_system_interface_bond_with_same_name(
     ovs_bridge_over_bond_system_iface_with_same_name,
@@ -406,3 +509,36 @@ def test_create_vlan_over_ovs_system_interface_bond_with_same_name(
                 ]
             }
         )
+
+
+@pytest.mark.tier1
+def test_modify_state_with_ovs_dup_name_ovs_bridge_first_with_ipv4_dns(
+    ovs_bridge_first_and_ovs_interface_with_same_name_ipv4,
+):
+    desired_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: ETH1,
+                Interface.TYPE: InterfaceType.ETHERNET,
+                Interface.STATE: InterfaceState.UP,
+            }
+        ]
+    }
+    libnmstate.apply(desired_state)
+
+
+@pytest.mark.tier1
+def test_modify_state_with_ovs_dup_name_ovs_interface_first_with_ipv4_dns(
+    ovs_interface_first_and_ovs_bridge_with_same_name_ipv4,
+):
+    desired_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: ETH1,
+                Interface.TYPE: InterfaceType.ETHERNET,
+                Interface.STATE: InterfaceState.UP,
+            }
+        ]
+    }
+    libnmstate.apply(desired_state)
+    assertlib.assert_state(desired_state)
