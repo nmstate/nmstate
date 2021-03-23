@@ -2,10 +2,13 @@
 specfile_path: nmstate.spec
 upstream_package_name: nmstate
 upstream_project_url: http://nmstate.io
-create_tarball_command: ["python3", "setup.py", "sdist", "--dist-dir", "."]
-current_version_command: ["python3", "setup.py", "--version"]
 actions:
   post-upstream-clone: "bash -c './packaging/make_spec.sh > nmstate.spec'"
+  create-archive:
+    - "python3 setup.py sdist --dist-dir ."
+    - "sh -c 'echo nmstate-$(python3 setup.py --version).tar.gz'"
+  get-current-version:
+    - "python3 setup.py --version"
 jobs:
   - job: copr_build
     trigger: pull_request
