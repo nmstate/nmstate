@@ -118,12 +118,16 @@ function k8s::pre_test_setup {
 
 }
 function k8s::start_cluster {
-    KUBEVIRT_NUM_SECONDARY_NICS=2
-    k8s/up.sh
+    if [ "${KUBEVIRT_PROVIDER}" != "external" ]; then
+        KUBEVIRT_NUM_SECONDARY_NICS=2
+        k8s/up.sh
+    fi
 }
 
 function k8s::stop_cluster {
-    k8s/down.sh
+    if [ "${KUBEVIRT_PROVIDER}" != "external" ]; then
+        k8s/down.sh
+    fi
 }
 
 function k8s::cleanup {
@@ -133,12 +137,15 @@ function k8s::cleanup {
 function k8s::collect_artifacts {
     rm -rf ${EXPORT_DIR}
     mkdir -p ${EXPORT_DIR}
-    k8s::cli ssh node01 -- sudo journalctl > ${EXPORT_DIR}/journalctl.log
-    k8s::cli ssh node01 -- sudo dmesg > ${EXPORT_DIR}/dmesg.log
-    k8s::cli ssh node01 -- sudo cat /var/log/openvswitch/ovsdb-server.log  > ${EXPORT_DIR}/ovsdb-server.log
+    # TODO: Parameterize how to do SSH to external providers
+    if [ "${KUBEVIRT_PROVIDER}" != "external" ]; then
+        k8s::cli ssh node01 -- sudo journalctl > ${EXPORT_DIR}/journalctl.log
+       k8s::cli ssh node01 -- sudo dmesg > ${EXPORT_DIR}/dmesg.log
+       k8s::cli ssh node01 -- sudo cat /var/log/openvswitch/ovsdb-server.log  > ${EXPORT_DIR}/ovsdb-server.log
+    fi
     ${KUBECTL_CMD} cp -n nmstate conformance:${CONTAINER_WORKSPACE}/pytest-run.log $EXPORT_DIR/pytest-run.log
     # To use wildcard we have to use exec
-    ./k8s/kubectl.sh exec -i -n nmstate conformance -- bash -c "cd ${CONTAINER_WORKSPACE} && tar cf - *.xml" | tar xf - -C $EXPORT_DIR
+    ${KUBECTL_CMD} exec -i -n nmstate conformance -- bash -c "cd ${CONTAINER_WORKSPACE} && tar cf - *.xml" | tar xf - -C $EXPORT_DIR
 
 }
 

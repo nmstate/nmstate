@@ -140,3 +140,16 @@ cd tests/integration
 # Set TEST_IB_CONNECTED_MODE=1 when cards are configured as connected mode
 sudo env TEST_REAL_NIC=mlx5_ib0 pytest-3 -vv  ./infiniband_test.py
 ```
+
+### Run tests at a Kubernetes cluster
+
+By default if `automation/run-tests.sh` is call with `--k8s` option it will
+startup an internal k8s cluster running in top of qemu with one node, it
+will install a pod that wraps the nmstate-dev image selected and will run the
+selected tests inside of the pod.
+
+The pod mounts the NetworkManager and ovs sockets from nodes so nmstate tests
+are running over node network configuration.
+
+For external clusters the env vars KUBEVIRT_PROVIDER=external and KUBECONFIG
+need to be set, the rest works the same.
