@@ -387,23 +387,6 @@ def test_adding_port_to_empty_bond_doesnt_keep_mac(eth1_up):
         )
 
 
-@pytest.mark.tier1
-def test_replacing_port_keeps_mac_of_existing_bond(bond99_with_eth2, eth1_up):
-    desired_state = bond99_with_eth2
-    bond_state = desired_state[Interface.KEY][0]
-    eth1_name = eth1_up[Interface.KEY][0][Interface.NAME]
-    bond_state[Bond.CONFIG_SUBTREE][Bond.PORT] = [eth1_name]
-
-    current_state = statelib.show_only((bond_state[Interface.NAME],))
-
-    libnmstate.apply(desired_state)
-    modified_state = statelib.show_only((bond_state[Interface.NAME],))
-    assert (
-        modified_state[Interface.KEY][0][Interface.MAC]
-        == current_state[Interface.KEY][0][Interface.MAC]
-    )
-
-
 def test_removing_port_keeps_mac_of_existing_bond(bond99_with_2_port, eth1_up):
     desired_state = bond99_with_2_port
     bond_state = desired_state[Interface.KEY][0]
