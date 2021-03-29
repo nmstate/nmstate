@@ -41,6 +41,7 @@ from .testlib import cmdlib
 from .testlib import statelib
 from .testlib.assertlib import assert_mac_address
 from .testlib.bondlib import bond_interface
+from .testlib.env import nm_major_minor_version
 from .testlib.ifacelib import get_mac_address
 from .testlib.ifacelib import ifaces_init
 from .testlib.vlan import vlan_interface
@@ -1012,3 +1013,26 @@ def test_create_bond_with_copy_mac_from(eth1_up, eth2_up):
     ):
         current_state = statelib.show_only((BOND99,))
         assert_mac_address(current_state, eth2_mac)
+
+
+@pytest.mark.xfail(
+    nm_major_minor_version() < 1.30,
+    reason=(
+        "Before 1.30 the bond was keeping the mac"
+        "RHBZ: https://bugzilla.redhat.com/1933292",
+    ),
+    raises=AssertionError,
+    strict=True,
+)
+def test_replacing_port_set_mac_of_new_port_on_bond(bond99_with_eth2, eth1_up):
+    desired_state = bond99_with_eth2
+    bond_state = desired_state[Interface.KEY][0]
+    eth1_name = eth1_up[Interface.KEY][0][Interface.NAME]
+    bond_state[Bond.CONFIG_SUBTREE][Bond.PORT] = [eth1_name]
+
+    libnmstate.apply(desired_state)
+    current_state = statelib.show_only((bond_state[Interface.NAME],))
+    assert (
+        eth1_up[Interface.KEY][0][Interface.MAC]
+        == current_state[Interface.KEY][0][Interface.MAC]
+    )
