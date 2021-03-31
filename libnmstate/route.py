@@ -18,6 +18,7 @@
 #
 
 from collections import defaultdict
+import logging
 
 from libnmstate.error import NmstateValueError
 from libnmstate.error import NmstateVerificationError
@@ -194,6 +195,11 @@ class RouteState:
                 self._cur_routes[rt.next_hop_interface].add(rt)
                 if not ifaces or rt.is_valid(ifaces):
                     self._routes[rt.next_hop_interface].add(rt)
+                else:
+                    logging.debug(
+                        f"The current route {entry} has been discarded due"
+                        f" to {rt.invalid_reason}"
+                    )
         if des_route_state:
             self._merge_routes(des_route_state, ifaces)
 
