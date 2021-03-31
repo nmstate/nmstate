@@ -197,6 +197,10 @@ def _get_interface_info_from_plugins(plugins, info_type):
                 iface_type = InterfaceType.ETHERNET
             iface_index = f"{iface_type}.{iface_name}"
             if iface_index in all_ifaces:
+                logging.debug(
+                    f"Interface {iface_index} found. Merging the interface "
+                    "information."
+                )
                 existing_iface = all_ifaces[iface_index]
                 existing_priority = existing_iface[IFACE_PRIORITY_METADATA]
                 current_priority = plugin.priority
