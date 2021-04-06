@@ -33,6 +33,7 @@ from libnmstate.schema import LinuxBridge
 from ..testlib import assertlib
 from ..testlib import cmdlib
 from ..testlib import statelib
+from ..testlib.env import is_k8s
 from ..testlib.ovslib import Bridge as OvsBridge
 
 
@@ -72,12 +73,7 @@ NMCLI_CON_ADD_ETH_CMD = [
     "eth1",
 ]
 
-NMCLI_CON_UP_TEST_PROFILE_CMD = [
-    "nmcli",
-    "con",
-    "up",
-    "testProfile",
-]
+NMCLI_CON_UP_TEST_PROFILE_CMD = ["nmcli", "con", "up", "testProfile"]
 
 NM_PROFILE_DIRECTORY = "/etc/NetworkManager/system-connections/"
 
@@ -98,6 +94,12 @@ def test_delete_new_interface_inactive_profiles(dummy_inactive_profile):
 
 
 @pytest.mark.tier1
+@pytest.mark.xfail(
+    is_k8s(),
+    reason=("Test not fixed for k8s yet"),
+    raises=AssertionError,
+    strict=False,
+)
 def test_delete_existing_interface_inactive_profiles(eth1_up):
     with create_inactive_profile(eth1_up[Interface.KEY][0][Interface.NAME]):
         eth1_up[Interface.KEY][0][Interface.MTU] = 2000
@@ -448,8 +450,7 @@ def multiconnect_profile_with_ip_disabled():
 # We cannot use eth1_up which create a dedicate profile for eth1.
 # In order to test the multiconnect feature, we should do it manually.
 def test_set_static_ip_with_multiconnect_profile(
-    eth1_up,
-    multiconnect_profile_with_ip_disabled,
+    eth1_up, multiconnect_profile_with_ip_disabled
 ):
     desired_state = {
         Interface.KEY: [
@@ -482,11 +483,7 @@ def test_set_static_ip_with_multiconnect_profile(
     assertlib.assert_state_match(desired_state)
     assert cmdlib.exec_cmd(
         "nmcli -g ipv4.method c show nmstate-test-default".split()
-    ) == (
-        0,
-        "disabled\n",
-        "",
-    )
+    ) == (0, "disabled\n", "")
     assert cmdlib.exec_cmd("nmcli -g ipv4.method c show eth1".split()) == (
         0,
         "manual\n",

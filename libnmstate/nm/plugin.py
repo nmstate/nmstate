@@ -103,7 +103,7 @@ class NetworkManagerPlugin(NmstatePlugin):
     @property
     def capabilities(self):
         capabilities = []
-        if has_ovs_capability(self.client) and is_ovs_running():
+        if has_ovs_capability(self.client):
             capabilities.append(NmstatePlugin.OVS_CAPABILITY)
         if has_team_capability(self.client):
             capabilities.append(NmstatePlugin.TEAM_CAPABILITY)

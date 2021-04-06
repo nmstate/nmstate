@@ -45,6 +45,7 @@ from .testlib import cmdlib
 from .testlib import bondlib
 from .testlib import ifacelib
 from .testlib import statelib
+from .testlib.env import is_k8s
 from .testlib.ifacelib import get_mac_address
 from .testlib.bridgelib import add_port_to_bridge
 from .testlib.bridgelib import create_bridge_subtree_state
@@ -270,6 +271,12 @@ def test_dhcp_with_addresses(dhcpcli_up):
 
 
 @pytest.mark.tier1
+@pytest.mark.xfail(
+    is_k8s(),
+    reason=("Test not fixed for k8s yet"),
+    raises=AssertionError,
+    strict=False,
+)
 def test_ipv4_dhcp_on_bond(dhcpcli_up):
     ipv4_state = {Interface.IPV4: _create_ipv4_state(enabled=True, dhcp=True)}
     with bondlib.bond_interface(
@@ -426,7 +433,7 @@ def test_ipv4_dhcp_off_and_option_on(dhcpcli_up):
         auto_routes=False,
     )
     ipv4_state[InterfaceIPv4.ADDRESS] = [
-        create_ipv4_address_state(IPV4_ADDRESS2, 24),
+        create_ipv4_address_state(IPV4_ADDRESS2, 24)
     ]
 
     dhcp_cli_desired_state[Interface.IPV4] = ipv4_state
@@ -462,7 +469,7 @@ def test_ipv6_dhcp_off_and_option_on(dhcpcli_up):
         auto_routes=False,
     )
     ipv6_state[InterfaceIPv6.ADDRESS] = [
-        create_ipv6_address_state(IPV6_ADDRESS2, 64),
+        create_ipv6_address_state(IPV6_ADDRESS2, 64)
     ]
     dhcp_cli_desired_state[Interface.IPV6] = ipv6_state
 

@@ -69,6 +69,8 @@ spec:
         value: "${COVERALLS_REPO_TOKEN}"
       - name: SHIPPABLE
         value: "${SHIPPABLE}"
+      - name: RUN_K8S
+        value: "true"
       volumeMounts:
       - name: dbus-socket
         mountPath: /run/dbus/system_bus_socket
@@ -77,6 +79,8 @@ spec:
       - name: cgroup
         mountPath: /sys/fs/cgroup
         readOnly: true
+      - name: nm-profiles
+        mountPath: /etc/NetworkManager/system-connections/
       securityContext:
         privileged: true
   volumes:
@@ -91,6 +95,9 @@ spec:
       hostPath:
         path: /run/openvswitch/db.sock
         type: Socket
+    - name: nm-profiles
+      hostPath:
+        path: /etc/NetworkManager/system-connections/
 EOF
 export POD_ID=conformance
 
@@ -114,7 +121,7 @@ function k8s::pre_test_setup {
         /proc/sys/kernel/core_pattern"
     k8s::kubectl_exec "ulimit -c unlimited"
     # Enable IPv6 in container globally
-    k8s::kubectl_exec  "sysctl -w net.ipv6.conf.all.disable_ipv6=0"
+    k8s::kubectl_exec  "echo 0 > /proc/sys/net/ipv6/conf/all/disable_ipv6"
 
 }
 function k8s::start_cluster {

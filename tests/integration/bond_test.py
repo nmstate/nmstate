@@ -42,6 +42,7 @@ from .testlib import statelib
 from .testlib.assertlib import assert_mac_address
 from .testlib.bondlib import bond_interface
 from .testlib.env import nm_major_minor_version
+from .testlib.env import is_k8s
 from .testlib.ifacelib import get_mac_address
 from .testlib.ifacelib import ifaces_init
 from .testlib.vlan import vlan_interface
@@ -201,6 +202,12 @@ def test_add_bond_with_port_and_ipv4(eth1_up, eth2_up, setup_remove_bond99):
 
 
 @pytest.mark.tier1
+@pytest.mark.xfail(
+    is_k8s(),
+    reason=("Test not fixed for k8s yet"),
+    raises=AssertionError,
+    strict=False,
+)
 def test_rollback_for_bond(eth1_up, eth2_up):
     current_state = libnmstate.show()
     desired_state = {
@@ -509,7 +516,7 @@ def test_bond_mac_restriction_without_mac_in_desire(eth1_up, eth2_up):
             Bond.CONFIG_SUBTREE: {
                 Bond.MODE: BondMode.ACTIVE_BACKUP,
                 Bond.OPTIONS_SUBTREE: {"fail_over_mac": "active"},
-            },
+            }
         },
     ) as state:
         assertlib.assert_state_match(state)
@@ -541,7 +548,7 @@ def test_bond_mac_restriction_in_desire_mac_in_current(bond99_with_2_port):
             Bond.CONFIG_SUBTREE: {
                 Bond.MODE: BondMode.ACTIVE_BACKUP,
                 Bond.OPTIONS_SUBTREE: {"fail_over_mac": "active"},
-            },
+            }
         },
     ) as state:
         assertlib.assert_state_match(state)
@@ -555,7 +562,7 @@ def test_bond_mac_restriction_in_current_mac_in_desire(eth1_up, eth2_up):
             Bond.CONFIG_SUBTREE: {
                 Bond.MODE: BondMode.ACTIVE_BACKUP,
                 Bond.OPTIONS_SUBTREE: {"fail_over_mac": "active"},
-            },
+            }
         },
     ) as state:
         assertlib.assert_state_match(state)
@@ -572,9 +579,7 @@ def test_bond_mac_restriction_in_current_mac_in_desire(eth1_up, eth2_up):
 @pytest.mark.tier1
 def test_create_bond_with_mac(eth1_up, eth2_up):
     with bond_interface(
-        name=BOND99,
-        port=[ETH1, ETH2],
-        extra_iface_state={Interface.MAC: MAC0},
+        name=BOND99, port=[ETH1, ETH2], extra_iface_state={Interface.MAC: MAC0}
     ) as state:
         assertlib.assert_state_match(state)
 
@@ -592,7 +597,7 @@ def test_bond_with_arp_ip_target(eth1_up, eth2_up, ips):
                     "arp_interval": 1000,
                     "arp_ip_target": ips,
                 },
-            },
+            }
         },
     ) as desired_state:
         assertlib.assert_state_match(desired_state)
@@ -607,7 +612,7 @@ def test_create_bond_with_default_miimon_explicitly():
             Bond.CONFIG_SUBTREE: {
                 Bond.MODE: BondMode.ACTIVE_BACKUP,
                 Bond.OPTIONS_SUBTREE: {"miimon": 100},
-            },
+            }
         },
     ) as state:
         assertlib.assert_state_match(state)
@@ -622,7 +627,7 @@ def bond99_with_miimon():
             Bond.CONFIG_SUBTREE: {
                 Bond.MODE: BondMode.ACTIVE_BACKUP,
                 Bond.OPTIONS_SUBTREE: {"miimon": 101},
-            },
+            }
         },
     ) as state:
         yield state
@@ -650,7 +655,7 @@ def bond99_with_arp_internal():
                     "arp_interval": 10,
                     "arp_ip_target": IPV4_ADDRESS1,
                 },
-            },
+            }
         },
     ) as state:
         yield state
@@ -659,10 +664,7 @@ def bond99_with_arp_internal():
 def test_change_bond_from_arp_internal_to_miimon(bond99_with_miimon):
     state = bond99_with_miimon
     bond_config = state[Interface.KEY][0][Bond.CONFIG_SUBTREE]
-    bond_config[Bond.OPTIONS_SUBTREE] = {
-        "miimon": 100,
-        "arp_interval": 0,
-    }
+    bond_config[Bond.OPTIONS_SUBTREE] = {"miimon": 100, "arp_interval": 0}
 
 
 def test_create_bond_with_both_miimon_and_arp_internal():
@@ -678,7 +680,7 @@ def test_create_bond_with_both_miimon_and_arp_internal():
                         "arp_interval": 10,
                         "arp_ip_target": IPV4_ADDRESS1,
                     },
-                },
+                }
             },
         ) as state:
             assertlib.assert_state_match(state)
@@ -690,7 +692,7 @@ def test_change_2_port_bond_mode_from_1_to_5():
         name=BOND99,
         port=[ETH1, ETH2],
         extra_iface_state={
-            Bond.CONFIG_SUBTREE: {Bond.MODE: BondMode.ACTIVE_BACKUP},
+            Bond.CONFIG_SUBTREE: {Bond.MODE: BondMode.ACTIVE_BACKUP}
         },
     ) as state:
         state[Interface.KEY][0][Bond.CONFIG_SUBTREE][Bond.MODE] = BondMode.TLB
@@ -769,7 +771,7 @@ def bond99_with_2_port_and_arp_monitor(eth1_up, eth2_up):
                     "arp_interval": 60,
                     "arp_ip_target": IPV4_ADDRESS1,
                 },
-            },
+            }
         },
     ) as state:
         yield state
@@ -795,7 +797,7 @@ def bond99_with_2_port_and_lacp_rate(eth1_up, eth2_up):
             Bond.CONFIG_SUBTREE: {
                 Bond.MODE: BondMode.LACP,
                 Bond.OPTIONS_SUBTREE: {"lacp_rate": "fast"},
-            },
+            }
         },
     ) as state:
         yield state
@@ -887,7 +889,7 @@ def bond99_with_ports_and_vlans(bond99_with_2_port):
                 {
                     Interface.NAME: TEST_VLAN,
                     Interface.STATE: InterfaceState.ABSENT,
-                },
+                }
             ]
         }
     )
@@ -959,7 +961,7 @@ def test_ignore_verification_error_on_invalid_bond_option(eth1_up, eth2_up):
             Bond.OPTIONS_SUBTREE: {
                 # xmit_hash_policy is only valid in
                 # balance-xor, 802.3ad, and tlb modes.
-                "xmit_hash_policy": "layer2+3",
+                "xmit_hash_policy": "layer2+3"
             },
         }
     }
@@ -992,9 +994,7 @@ def test_set_xmit_hash_policy_to_vlan_srcmac(eth1_up, eth2_up):
     extra_iface_state = {
         Bond.CONFIG_SUBTREE: {
             Bond.MODE: BondMode.XOR,
-            Bond.OPTIONS_SUBTREE: {
-                "xmit_hash_policy": "vlan+srcmac",
-            },
+            Bond.OPTIONS_SUBTREE: {"xmit_hash_policy": "vlan+srcmac"},
         }
     }
     with bond_interface(BOND99, port, extra_iface_state=extra_iface_state):

@@ -27,6 +27,7 @@ from libnmstate.schema import InterfaceState
 
 from ..testlib import cmdlib
 from ..testlib import assertlib
+from ..testlib.env import is_k8s
 from ..testlib.veth import create_veth_pair
 from ..testlib.veth import remove_veth_pair
 
@@ -105,6 +106,12 @@ def _stop_802_1x_authenticator():
 
 
 @pytest.mark.tier1
+@pytest.mark.xfail(
+    is_k8s(),
+    reason=("Test not fixed for k8s yet"),
+    raises=AssertionError,
+    strict=False,
+)
 def test_eth_with_802_1x(ieee_802_1x_env):
     desire_state = {
         Interface.KEY: [
