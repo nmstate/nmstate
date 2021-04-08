@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2020 Red Hat, Inc.
+# Copyright (c) 2018-2021 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -212,6 +212,14 @@ class TestIfaceMacAddress:
         default_data[INTERFACES][0][Interface.MAC] = mac_address
         with pytest.raises(js.ValidationError, match=str(mac_address)):
             libnmstate.validator.schema_validate(default_data)
+
+
+class TestIfaceAcceptAllMacAddresses:
+    @pytest.mark.parametrize("valid_values", [True, False])
+    def test_valid_accept_all_mac_addresses(self, default_data, valid_values):
+        ACCEPT_MAC_ADDRS = Interface.ACCEPT_ALL_MAC_ADDRESSES
+        default_data[Interface.KEY][0][ACCEPT_MAC_ADDRS] = valid_values
+        libnmstate.validator.schema_validate(default_data)
 
 
 class TestIfaceTypeEthernet:
