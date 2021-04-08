@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020 Red Hat, Inc.
+# Copyright (c) 2020-2021 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -28,6 +28,7 @@ from libnmstate.schema import InterfaceType
 
 
 DEFAULT_MAC_ADDRESS = "00:00:00:00:00:00"
+PROMISC_FLAG = "promisc"
 
 
 class NisporPluginBaseIface:
@@ -67,6 +68,10 @@ class NisporPluginBaseIface:
             )
             return InterfaceState.DOWN
 
+    @property
+    def accept_all_mac_addresses(self):
+        return PROMISC_FLAG in self._np_iface.flags
+
     def _ip_info(self, config_only):
         return {
             Interface.IPV4: NisporPlugintIpState(
@@ -83,6 +88,7 @@ class NisporPluginBaseIface:
             Interface.TYPE: self.type,
             Interface.STATE: self.state,
             Interface.MAC: self.mac,
+            Interface.ACCEPT_ALL_MAC_ADDRESSES: self.accept_all_mac_addresses,
         }
         if self.mtu:
             iface_info[Interface.MTU] = self.mtu

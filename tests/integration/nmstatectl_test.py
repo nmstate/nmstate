@@ -42,6 +42,7 @@ LOOPBACK_JSON_CONFIG = """        {
             "name": "lo",
             "type": "unknown",
             "state": "up",
+            "accept-all-mac-addresses": false,
             "ipv4": {
                 "enabled": true,
                 "address": [
@@ -67,6 +68,7 @@ LOOPBACK_JSON_CONFIG = """        {
 LOOPBACK_YAML_CONFIG = """- name: lo
   type: unknown
   state: up
+  accept-all-mac-addresses: false
   ipv4:
     enabled: true
     address:
@@ -84,6 +86,7 @@ ETH1_YAML_CONFIG = b"""interfaces:
 - name: eth1
   state: up
   type: ethernet
+  accept-all-mac-addresses: false
   ipv4:
     address:
     - ip: 192.0.2.250
