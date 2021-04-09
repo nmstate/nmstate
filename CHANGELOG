@@ -1,4 +1,10 @@
 # Changelog
+## [1.0.3] - 2021-04-09
+### Bug fixes
+ - SR-IOV: Wait for VFs to be deleted on kernel. (80c97b2)
+ - Fix return code of set command. (a95b3e8)
+ - Don't touch unmanaged interfaces unless included on desired state. (ccdcd8f)
+
 ## [1.0.2] - 2021-02-18
 ### New features
  - Support multiconnect profiles. (2c60c834)
