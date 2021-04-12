@@ -17,6 +17,13 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
+from contextlib import contextmanager
+
+import libnmstate
+from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceState
+from libnmstate.schema import InterfaceType
+from libnmstate.schema import Veth
 
 from .cmdlib import exec_cmd
 
@@ -43,3 +50,32 @@ def create_veth_pair(nic, nic_peer, peer_ns):
 def remove_veth_pair(nic, peer_ns):
     exec_cmd(f"ip link del {nic}".split())
     exec_cmd(f"ip netns del {peer_ns}".split())
+
+
+@contextmanager
+def veth_interface(ifname, peer):
+    d_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: ifname,
+                Interface.TYPE: Veth.TYPE,
+                Interface.STATE: InterfaceState.UP,
+                Veth.CONFIG_SUBTREE: {
+                    Veth.PEER: peer,
+                },
+            }
+        ]
+    }
+    try:
+        libnmstate.apply(d_state)
+        yield d_state
+    finally:
+        d_state[Interface.KEY][0][Interface.STATE] = InterfaceState.ABSENT
+        d_state[Interface.KEY].append(
+            {
+                Interface.NAME: peer,
+                Interface.TYPE: InterfaceType.VETH,
+                Interface.STATE: InterfaceState.ABSENT,
+            }
+        )
+        libnmstate.apply(d_state)
