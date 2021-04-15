@@ -66,17 +66,17 @@ class NmProfile:
     ACTION_NEW_VETH_PEER = "new_veth_peer"
     ACTION_NEW_VLAN = "new_vlan"
     ACTION_NEW_VXLAN = "new_vxlan"
-    ACTION_OTHER_MASTER = "other_master"
+    ACTION_OTHER_CONTROLLER = "other_controller"
     ACTION_DELETE_PROFILE = "delete_profile"
-    ACTION_TOP_MASTER = "top_master"
+    ACTION_TOP_CONTROLLER = "top_controller"
 
     # This is order on group for activation/deactivation
     ACTIONS = (
         ACTION_ACTIVATE_FIRST,
         ACTION_DEACTIVATE_FIRST,
-        ACTION_TOP_MASTER,
+        ACTION_TOP_CONTROLLER,
         ACTION_NEW_IFACES,
-        ACTION_OTHER_MASTER,
+        ACTION_OTHER_CONTROLLER,
         ACTION_NEW_OVS_PORT,
         ACTION_NEW_OVS_IFACE,
         ACTION_NEW_VETH,
@@ -190,9 +190,9 @@ class NmProfile:
 
         if self._iface.is_controller and self._iface.is_up:
             if self._iface.controller:
-                self._add_action(NmProfile.ACTION_OTHER_MASTER)
+                self._add_action(NmProfile.ACTION_OTHER_CONTROLLER)
             else:
-                self._add_action(NmProfile.ACTION_TOP_MASTER)
+                self._add_action(NmProfile.ACTION_TOP_CONTROLLER)
 
         if self._iface.is_up and self._needs_veth_activation():
             if self._iface.is_peer:
@@ -420,9 +420,9 @@ class NmProfile:
         if action in (
             NmProfile.ACTION_MODIFIED,
             NmProfile.ACTION_ACTIVATE_FIRST,
-            NmProfile.ACTION_TOP_MASTER,
+            NmProfile.ACTION_TOP_CONTROLLER,
             NmProfile.ACTION_NEW_IFACES,
-            NmProfile.ACTION_OTHER_MASTER,
+            NmProfile.ACTION_OTHER_CONTROLLER,
             NmProfile.ACTION_NEW_OVS_PORT,
             NmProfile.ACTION_NEW_OVS_IFACE,
             NmProfile.ACTION_NEW_VLAN,
