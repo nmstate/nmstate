@@ -39,8 +39,8 @@ else
     exit 1
 fi
 
-if [ $NM_TYPE == "nm_master" ];then
-    COPR_ARG="--copr networkmanager/NetworkManager-master"
+if [ $NM_TYPE == "nm_main" ];then
+    COPR_ARG="--copr networkmanager/NetworkManager-main"
 fi
 
 if [ $TEST_TYPE == "vdsm" ];then
