@@ -31,6 +31,7 @@ from .testlib.bondlib import bond_interface
 from .testlib.cmdlib import RC_SUCCESS
 from .testlib.cmdlib import exec_cmd
 from .testlib.cmdlib import format_exec_cmd_result
+from .testlib.env import is_k8s
 from .testlib.vxlan import VxlanState
 from .testlib.vxlan import vxlan_interfaces
 from .testlib.vxlan import vxlans_absent
@@ -68,6 +69,15 @@ def test_add_and_remove_two_vxlans_on_same_iface(eth1_up):
 
 
 @pytest.mark.tier1
+@pytest.mark.xfail(
+    is_k8s(),
+    reason=(
+        "Requires adjusts for k8s. Ref:"
+        "https://github.com/nmstate/nmstate/issues/1579"
+    ),
+    raises=AssertionError,
+    strict=False,
+)
 def test_rollback_for_vxlans(eth1_up):
     ifname = eth1_up[Interface.KEY][0][Interface.NAME]
     current_state = libnmstate.show()

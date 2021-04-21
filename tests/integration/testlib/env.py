@@ -38,3 +38,7 @@ def is_ubuntu_kernel():
 
 def nm_major_minor_version():
     return float(f"{NM.MAJOR_VERSION}.{NM.MINOR_VERSION}")
+
+
+def is_k8s():
+    return os.getenv("RUN_K8S") == "true"
