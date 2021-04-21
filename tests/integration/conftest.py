@@ -29,6 +29,7 @@ from libnmstate.schema import Route
 from libnmstate.schema import RouteRule
 
 from .testlib import ifacelib
+from .testlib.env import is_k8s
 
 
 REPORT_HEADER = """RPMs: {rpms}
@@ -71,7 +72,8 @@ def _mark_tier2_tests(items):
 def test_env_setup():
     _logging_setup()
     old_state = libnmstate.show()
-    _empty_net_state()
+    if not is_k8s():
+        _empty_net_state()
     _ethx_init()
     yield
     libnmstate.apply(old_state, verify_change=False)
