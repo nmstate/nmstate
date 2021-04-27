@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020 Red Hat, Inc.
+# Copyright (c) 2020-2021 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -26,8 +26,8 @@ from libnmstate.schema import Interface
 from libnmstate.schema import Route
 from libnmstate.schema import RouteRule
 
-from .ifaces import Ifaces
 from .dns import DnsState
+from .ifaces import Ifaces
 from .route import RouteState
 from .route_rule import RouteRuleState
 from .state import state_match
@@ -37,6 +37,7 @@ class NetState:
     def __init__(
         self,
         desire_state,
+        ignored_ifnames=[],
         current_state=None,
         save_to_disk=True,
         gen_conf_mode=False,
@@ -49,6 +50,8 @@ class NetState:
             save_to_disk,
             gen_conf_mode,
         )
+        if not gen_conf_mode:
+            self._mark_ignored_kernel_ifaces(ignored_ifnames)
         self._route = RouteState(
             self._ifaces,
             desire_state.get(Route.KEY),
@@ -69,6 +72,12 @@ class NetState:
             self._ifaces.gen_dns_metadata(self._dns, self._route)
             self._ifaces.gen_route_metadata(self._route)
             self._ifaces.gen_route_rule_metadata(self._route_rule, self._route)
+
+    def _mark_ignored_kernel_ifaces(self, ignored_ifnames):
+        for iface_name in ignored_ifnames:
+            iface = self._ifaces.all_kernel_ifaces.get(iface_name)
+            if iface and not iface.is_desired:
+                iface.mark_as_ignored()
 
     def verify(self, current_state):
         self._ifaces.verify(current_state.get(Interface.KEY))
