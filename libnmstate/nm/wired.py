@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2021 Red Hat, Inc.
+# Copyright (c) 2018-2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -30,9 +30,6 @@ class WiredSetting:
     def __init__(self, state):
         self.mtu = state.get(Interface.MTU)
         self.mac = state.get(Interface.MAC)
-        self.accept_all_mac_addrs = state.get(
-            Interface.ACCEPT_ALL_MAC_ADDRESSES
-        )
 
         ethernet = state.get(Ethernet.CONFIG_SUBTREE, {})
         self.speed = ethernet.get(Ethernet.SPEED)
@@ -52,7 +49,6 @@ class WiredSetting:
         return bool(
             self.mac
             or self.mtu
-            or (self.accept_all_mac_addrs is not None)
             or self.speed
             or self.duplex
             or (self.auto_negotiation is not None)
@@ -62,7 +58,6 @@ class WiredSetting:
         return (
             self.mtu,
             self.mac,
-            self.accept_all_mac_addrs,
             self.speed,
             self.duplex,
             self.auto_negotiation,
@@ -89,13 +84,6 @@ def create_setting(iface_state, base_con_profile):
 
     if setting.mtu:
         nm_wired_setting.props.mtu = setting.mtu
-
-    if setting.accept_all_mac_addrs is not None and hasattr(
-        nm_wired_setting.props, "accept_all_mac_addresses"
-    ):
-        nm_wired_setting.props.accept_all_mac_addresses = (
-            setting.accept_all_mac_addrs
-        )
 
     if setting.auto_negotiation:
         nm_wired_setting.props.auto_negotiate = True

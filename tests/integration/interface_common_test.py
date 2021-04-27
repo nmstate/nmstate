@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019-2021 Red Hat, Inc.
+# Copyright (c) 2019-2020 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -31,9 +31,6 @@ from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import InterfaceState
-
-from .testlib.env import nm_major_minor_version
-
 
 DUMMY_INTERFACE = "dummy_test"
 
@@ -101,21 +98,3 @@ def test_take_over_virtual_interface_and_rollback(ip_link_dummy):
 
         current_state = statelib.show_only((DUMMY_INTERFACE,))
         assert len(current_state[Interface.KEY]) == 1
-
-
-@pytest.mark.skipif(
-    nm_major_minor_version() < 1.31,
-    reason="Modifying accept-all-mac-addresses is not supported on NM.",
-)
-def test_enable_and_disable_accept_all_mac_addresses(eth1_up):
-    desired_state = eth1_up
-    desired_state[Interface.KEY][0][Interface.ACCEPT_ALL_MAC_ADDRESSES] = True
-    libnmstate.apply(desired_state)
-    current_state = statelib.show_only(("eth1",))
-    assert current_state[Interface.KEY][0][Interface.ACCEPT_ALL_MAC_ADDRESSES]
-
-    desired_state[Interface.KEY][0][Interface.ACCEPT_ALL_MAC_ADDRESSES] = False
-    libnmstate.apply(desired_state)
-    current_state = statelib.show_only(("eth1",))
-    eth1_state = current_state[Interface.KEY][0]
-    assert not eth1_state[Interface.ACCEPT_ALL_MAC_ADDRESSES]
