@@ -133,7 +133,7 @@ class DnsState:
         Return tuple: (ipv4_iface, ipv6_iface)
         """
         ipv4_iface, ipv6_iface = self._find_ifaces_with_static_gateways(
-            route_state
+            ifaces, route_state
         )
         if not (ipv4_iface and ipv6_iface):
             (
@@ -147,7 +147,7 @@ class DnsState:
 
         return ipv4_iface, ipv6_iface
 
-    def _find_ifaces_with_static_gateways(self, route_state):
+    def _find_ifaces_with_static_gateways(self, ifaces, route_state):
         """
         Return tuple of interfaces with IPv4 and IPv6 static gateways.
         """
@@ -158,6 +158,11 @@ class DnsState:
                 if ipv4_iface and ipv6_iface:
                     return (ipv4_iface, ipv6_iface)
                 if route.is_gateway:
+                    # Only interfaces not ignored can be considered as valid
+                    # static gateway for nameservers.
+                    iface = ifaces.all_kernel_ifaces.get(iface_name)
+                    if iface and iface.is_ignore:
+                        continue
                     if route.is_ipv6:
                         ipv6_iface = iface_name
                     else:
@@ -168,6 +173,8 @@ class DnsState:
         ipv4_iface = None
         ipv6_iface = None
         for iface in ifaces.all_kernel_ifaces.values():
+            if iface.is_ignore:
+                continue
             if ipv4_iface and ipv6_iface:
                 return (ipv4_iface, ipv6_iface)
             for family in (Interface.IPV4, Interface.IPV6):
