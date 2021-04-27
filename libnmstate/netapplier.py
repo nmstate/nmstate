@@ -73,7 +73,10 @@ def apply(
         validator.validate_capabilities(
             desired_state, plugins_capabilities(plugins)
         )
-        net_state = NetState(desired_state, current_state, save_to_disk)
+        ignored_ifnames = _get_ignored_interface_names(plugins)
+        net_state = NetState(
+            desired_state, ignored_ifnames, current_state, save_to_disk
+        )
         checkpoints = create_checkpoints(plugins, rollback_timeout)
         _apply_ifaces_state(plugins, net_state, verify_change, save_to_disk)
         if commit:
@@ -108,11 +111,6 @@ def rollback(*, checkpoint=None):
 
 def _apply_ifaces_state(plugins, net_state, verify_change, save_to_disk):
     for plugin in plugins:
-        for iface_name in plugin.get_ignored_kernel_interface_names():
-            iface = net_state.ifaces.all_kernel_ifaces.get(iface_name)
-            if iface and not iface.is_desired:
-                iface.mark_as_ignored()
-    for plugin in plugins:
         plugin.apply_changes(net_state, save_to_disk)
 
     verified = False
@@ -145,3 +143,12 @@ def _net_state_contains_sriov_interface(net_state):
 def _verify_change(plugins, net_state):
     current_state = show_with_plugins(plugins)
     net_state.verify(current_state)
+
+
+def _get_ignored_interface_names(plugins):
+    ifaces = set()
+    for plugin in plugins:
+        for iface_name in plugin.get_ignored_kernel_interface_names():
+            ifaces.add(iface_name)
+
+    return ifaces
