@@ -164,7 +164,6 @@ class NmProfile:
             if self._iface.is_virtual and self._nm_dev:
                 self._add_action(NmProfile.ACTION_DELETE_DEVICE)
         elif self._iface.is_up and not self._needs_veth_activation():
-            self._add_action(NmProfile.ACTION_MODIFIED)
             if not self._nm_dev:
                 if self._iface.type == InterfaceType.OVS_PORT:
                     self._add_action(NmProfile.ACTION_NEW_OVS_PORT)
@@ -176,6 +175,8 @@ class NmProfile:
                     self._add_action(NmProfile.ACTION_NEW_VXLAN)
                 else:
                     self._add_action(NmProfile.ACTION_NEW_IFACES)
+            else:
+                self._add_action(NmProfile.ACTION_MODIFIED)
 
         elif self._iface.is_down:
             if self._nm_ac:
