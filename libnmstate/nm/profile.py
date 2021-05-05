@@ -69,6 +69,8 @@ class NmProfile:
     ACTION_OTHER_CONTROLLER = "other_controller"
     ACTION_DELETE_PROFILE = "delete_profile"
     ACTION_TOP_CONTROLLER = "top_controller"
+    ACTION_MODIFIED_OVS_PORT = "modified_ovs_port"
+    ACTION_MODIFIED_OVS_IFACE = "modified_ovs_iface"
 
     # This is order on group for activation/deactivation
     ACTIONS = (
@@ -81,6 +83,8 @@ class NmProfile:
         ACTION_NEW_OVS_IFACE,
         ACTION_NEW_VETH,
         ACTION_NEW_VETH_PEER,
+        ACTION_MODIFIED_OVS_PORT,
+        ACTION_MODIFIED_OVS_IFACE,
         ACTION_MODIFIED,
         ACTION_NEW_VLAN,
         ACTION_NEW_VXLAN,
@@ -176,7 +180,12 @@ class NmProfile:
                 else:
                     self._add_action(NmProfile.ACTION_NEW_IFACES)
             else:
-                self._add_action(NmProfile.ACTION_MODIFIED)
+                if self._iface.type == InterfaceType.OVS_PORT:
+                    self._add_action(NmProfile.ACTION_MODIFIED_OVS_PORT)
+                if self._iface.type == InterfaceType.OVS_INTERFACE:
+                    self._add_action(NmProfile.ACTION_MODIFIED_OVS_IFACE)
+                else:
+                    self._add_action(NmProfile.ACTION_MODIFIED)
 
         elif self._iface.is_down:
             if self._nm_ac:
@@ -420,6 +429,8 @@ class NmProfile:
     def do_action(self, action):
         if action in (
             NmProfile.ACTION_MODIFIED,
+            NmProfile.ACTION_MODIFIED_OVS_PORT,
+            NmProfile.ACTION_MODIFIED_OVS_IFACE,
             NmProfile.ACTION_ACTIVATE_FIRST,
             NmProfile.ACTION_TOP_CONTROLLER,
             NmProfile.ACTION_NEW_IFACES,
