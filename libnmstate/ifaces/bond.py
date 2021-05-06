@@ -202,19 +202,37 @@ class BondIface(BaseIface):
             Bond.OPTIONS_SUBTREE, {}
         )
         for key, value in self_bond_options.items():
-            current_value = current_bond_options.get(key)
-            if current_value != value:
+            (
+                current_value,
+                value_set,
+            ) = self._normalize_bond_option_for_matching(
+                current_bond_options.get(key), value
+            )
+            if current_value != value_set:
                 if current_value is None:
                     logging.warning(
-                        f"Desire iface {self.name} bond option {key}={value} "
-                        f"is invalid in kernel for bond mode {self.bond_mode}"
+                        f"Desire iface {self.name} bond option "
+                        f"{key}={value_set} is invalid in kernel for bond mode"
+                        f" {self.bond_mode}"
                     )
                 else:
                     logging.warning(
-                        f"Desire iface {self.name} bond option {key}={value} "
-                        f"does not match with kernel value: {current_value}"
+                        f"Desire iface {self.name} bond option "
+                        f"{key}={value_set} does not match with kernel value:"
+                        f" {current_value}"
                     )
         return state_match(self_state, current_state)
+
+    def _normalize_bond_option_for_matching(self, current_value, value):
+        """
+        This is normalizing the values just for matching. This is required in
+        order to avoid false warnings like:
+            * Uppercase vs Lowercase
+        """
+        if isinstance(current_value, str) and isinstance(value, str):
+            return current_value.lower(), value.lower()
+        else:
+            return current_value, value
 
 
 class _BondNamedOptions:
