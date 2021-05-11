@@ -243,14 +243,19 @@ class NmProfile:
             # it again.
             self._add_action(NmProfile.ACTION_DEACTIVATE_FIRST)
 
-        if (
-            self._iface.is_up
-            and self._iface.type == InterfaceType.VLAN
-            and self._iface.is_vlan_id_changed
+        if self._iface.is_up and (
+            (
+                self._iface.type == InterfaceType.VLAN
+                and self._iface.is_vlan_id_changed
+            )
+            or (
+                self._iface.type == InterfaceType.VXLAN
+                and self._iface.is_vxlan_id_changed
+            )
         ):
-            # NetworkManager does not allow to modify the vlan id of an
-            # existing VLAN. In order to support it, Nmstate is removing the
-            # interface and creating it again.
+            # NetworkManager does not allow to modify the vlan/vxlan id of an
+            # existing VLAN/VXLAN. In order to support it, Nmstate is removing
+            # the interface and creating it again.
             self._add_action(NmProfile.ACTION_DEACTIVATE_FIRST)
 
         if (

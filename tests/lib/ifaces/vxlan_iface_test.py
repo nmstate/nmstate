@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020 Red Hat, Inc.
+# Copyright (c) 2020-2021 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -32,6 +32,7 @@ from ..testlib.constants import IPV4_ADDRESS1
 from ..testlib.ifacelib import gen_foo_iface_info
 
 BASE_IFACE_NAME = "base1"
+VXLAN_ID101 = 101
 
 
 class TestVxlanIface:
@@ -45,7 +46,7 @@ class TestVxlanIface:
     def _gen_iface_info(self):
         iface_info = gen_foo_iface_info(iface_type=InterfaceType.VXLAN)
         iface_info[VXLAN.CONFIG_SUBTREE] = {
-            VXLAN.ID: 101,
+            VXLAN.ID: VXLAN_ID101,
             VXLAN.BASE_IFACE: BASE_IFACE_NAME,
             VXLAN.REMOTE: IPV4_ADDRESS1,
         }
@@ -62,6 +63,18 @@ class TestVxlanIface:
 
     def test_can_have_ip_as_port(self):
         assert not VxlanIface(self._gen_iface_info()).can_have_ip_as_port
+
+    def test_vxlan_id(self):
+        assert VxlanIface(self._gen_iface_info()).vxlan_id == VXLAN_ID101
+
+    def test_is_vxlan_id_changed(self):
+        vxlan101 = VxlanIface(self._gen_iface_info())
+        assert not vxlan101.is_vxlan_id_changed
+
+        vxlan200_info = self._gen_iface_info()
+        vxlan200_info[VXLAN.CONFIG_SUBTREE][VXLAN.ID] = 200
+        vxlan101.gen_metadata(Ifaces([], [vxlan200_info]))
+        assert vxlan101.is_vxlan_id_changed
 
     @pytest.mark.parametrize(
         "required_field", [VXLAN.ID, VXLAN.REMOTE, VXLAN.BASE_IFACE]
