@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020 Red Hat, Inc.
+# Copyright (c) 2020-2021 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -24,6 +24,10 @@ from .base_iface import BaseIface
 
 
 class VxlanIface(BaseIface):
+    def __init__(self, info, save_to_disk=True):
+        super().__init__(info, save_to_disk)
+        self._vxlan_id_changed = False
+
     @property
     def parent(self):
         return self._vxlan_config.get(VXLAN.BASE_IFACE)
@@ -37,12 +41,30 @@ class VxlanIface(BaseIface):
         return self.raw.get(VXLAN.CONFIG_SUBTREE, {})
 
     @property
+    def vxlan_id(self):
+        return self._vxlan_config.get(VXLAN.ID)
+
+    @property
+    def is_vxlan_id_changed(self):
+        return self._vxlan_id_changed
+
+    @property
     def is_virtual(self):
         return True
 
     @property
     def can_have_ip_as_port(self):
         return False
+
+    def _mark_vxlan_id_changed(self, ifaces):
+        if self.is_up:
+            cur_iface = ifaces.get_cur_iface(self.name, self.type)
+            if cur_iface and self.vxlan_id != cur_iface.vxlan_id:
+                self._vxlan_id_changed = True
+
+    def gen_metadata(self, ifaces):
+        self._mark_vxlan_id_changed(ifaces)
+        super().gen_metadata(ifaces)
 
     def pre_edit_validation_and_cleanup(self):
         if self.is_up:
