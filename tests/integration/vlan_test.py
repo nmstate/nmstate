@@ -225,6 +225,26 @@ def test_add_vlan_and_modify_vlan_id(eth1_up):
     assertlib.assert_absent(VLAN_IFNAME)
 
 
+@pytest.mark.tier1
+@pytest.mark.skipif(
+    nm_major_minor_version() < 1.31,
+    reason="Modifying accept-all-mac-addresses is not supported on NM.",
+)
+def test_vlan_enable_and_disable_accept_all_mac_addresses(eth1_up):
+    with vlan_interface(
+        VLAN_IFNAME, 101, eth1_up[Interface.KEY][0][Interface.NAME]
+    ) as d_state:
+        d_state[Interface.KEY][0][Interface.ACCEPT_ALL_MAC_ADDRESSES] = True
+        libnmstate.apply(d_state)
+        assertlib.assert_state(d_state)
+
+        d_state[Interface.KEY][0][Interface.ACCEPT_ALL_MAC_ADDRESSES] = False
+        libnmstate.apply(d_state)
+        assertlib.assert_state(d_state)
+
+    assertlib.assert_absent(VLAN_IFNAME)
+
+
 @contextmanager
 def two_vlans_on_eth1():
     desired_state = create_two_vlans_state()

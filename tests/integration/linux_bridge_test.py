@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019-2020 Red Hat, Inc.
+# Copyright (c) 2019-2021 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -46,6 +46,7 @@ from .testlib.bridgelib import linux_bridge
 from .testlib.cmdlib import exec_cmd
 from .testlib.env import is_fedora
 from .testlib.env import is_ubuntu_kernel
+from .testlib.env import nm_major_minor_version
 from .testlib.ifacelib import get_mac_address
 from .testlib.iproutelib import ip_monitor_assert_stable_link_up
 from .testlib.statelib import show_only
@@ -810,3 +811,21 @@ def test_create_linux_bridge_with_copy_mac_from(eth1_up, eth2_up):
     ):
         current_state = show_only((TEST_BRIDGE0,))
         assert_mac_address(current_state, eth2_mac)
+
+
+@pytest.mark.tier1
+@pytest.mark.skipif(
+    nm_major_minor_version() < 1.31,
+    reason="Modifying accept-all-mac-addresses is not supported on NM.",
+)
+def test_linux_bridge_enable_and_disable_accept_all_mac_addresses(
+    bridge0_with_port0,
+):
+    desired_state = bridge0_with_port0
+    desired_state[Interface.KEY][0][Interface.ACCEPT_ALL_MAC_ADDRESSES] = True
+    libnmstate.apply(desired_state)
+    assertlib.assert_state_match(desired_state)
+
+    desired_state[Interface.KEY][0][Interface.ACCEPT_ALL_MAC_ADDRESSES] = False
+    libnmstate.apply(desired_state)
+    assertlib.assert_state_match(desired_state)

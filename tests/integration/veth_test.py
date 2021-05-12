@@ -221,6 +221,26 @@ def test_veth_as_vlan_base_iface():
     libnmstate.apply(d_state)
 
 
+@pytest.mark.tier1
+@pytest.mark.skipif(
+    nm_major_minor_version() < 1.31,
+    reason="Modifying accept-all-mac-addresses is not supported on NM.",
+)
+@pytest.mark.tier1
+def test_veth_enable_and_disable_accept_all_mac_addresses():
+    with veth_interface(VETH1, VETH1PEER) as d_state:
+        d_state[Interface.KEY][0][Interface.ACCEPT_ALL_MAC_ADDRESSES] = True
+        libnmstate.apply(d_state)
+        assertlib.assert_state(d_state)
+
+        d_state[Interface.KEY][0][Interface.ACCEPT_ALL_MAC_ADDRESSES] = False
+        libnmstate.apply(d_state)
+        assertlib.assert_state(d_state)
+
+    assertlib.assert_absent(VETH1)
+    assertlib.assert_absent(VETH1PEER)
+
+
 @contextmanager
 def bridges_with_port():
     d_state = {
