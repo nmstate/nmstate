@@ -1046,3 +1046,19 @@ def test_replacing_port_set_mac_of_new_port_on_bond(bond99_with_eth2, eth1_up):
         eth1_up[Interface.KEY][0][Interface.MAC]
         == current_state[Interface.KEY][0][Interface.MAC]
     )
+
+
+@pytest.mark.tier1
+@pytest.mark.skipif(
+    nm_major_minor_version() < 1.31,
+    reason="Modifying accept-all-mac-addresses is not supported on NM.",
+)
+def test_bond_enable_and_disable_accept_all_mac_addresses(bond88_with_port):
+    desired_state = bond88_with_port
+    desired_state[Interface.KEY][0][Interface.ACCEPT_ALL_MAC_ADDRESSES] = True
+    libnmstate.apply(desired_state)
+    assertlib.assert_state_match(desired_state)
+
+    desired_state[Interface.KEY][0][Interface.ACCEPT_ALL_MAC_ADDRESSES] = False
+    libnmstate.apply(desired_state)
+    assertlib.assert_state_match(desired_state)
