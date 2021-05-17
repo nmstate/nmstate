@@ -1,7 +1,6 @@
-FROM docker.io/library/centos:8
+FROM quay.io/centos/centos:stream8
 
-RUN dnf install -y centos-release-stream && \
-    dnf update -y && \
+RUN dnf update -y && \
     dnf -y install dnf-plugins-core epel-release && \
     dnf config-manager --set-enabled powertools && \
     dnf copr enable nmstate/ovs-el8 -y && \
