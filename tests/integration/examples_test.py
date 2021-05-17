@@ -29,7 +29,7 @@ from .testlib.examplelib import load_example
 import libnmstate
 from libnmstate import netinfo
 from libnmstate.error import NmstateNotSupportedError
-from libnmstate.error import NmstateTimeoutError
+from libnmstate.error import NmstateDependencyError
 from libnmstate.schema import DNS
 
 from .testlib.env import is_k8s
@@ -60,7 +60,7 @@ def test_add_down_remove_vlan(eth1_up):
         "Requires adjusts for k8s. Ref:"
         "https://github.com/nmstate/nmstate/issues/1579"
     ),
-    raises=NmstateTimeoutError,
+    raises=NmstateDependencyError,
     strict=False,
 )
 def test_add_remove_ovs_bridge(eth1_up):
