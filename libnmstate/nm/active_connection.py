@@ -20,6 +20,7 @@
 import logging
 
 from libnmstate.error import NmstateLibnmError
+from libnmstate.error import NmstateDependencyError
 from libnmstate.error import NmstateInternalError
 
 from .common import GLib
@@ -33,6 +34,7 @@ from .ipv6 import is_dynamic as is_ipv6_dynamic
 
 NM_AC_STATE_CHANGED_SIGNAL = "state-changed"
 FALLBACK_CHECKER_INTERNAL = 15
+MAX_OVS_IFACE_PREPARE_TIME = FALLBACK_CHECKER_INTERNAL * 2
 GIO_ERROR_DOMAIN = "g-io-error-quark"
 
 
@@ -92,6 +94,7 @@ class ProfileActivation:
         self._dev_handlers = set()
         self._action = None
         self._fallback_checker = None
+        self._fallback_checker_counter = 0
 
     def run(self):
         specific_object = None
@@ -336,19 +339,53 @@ class ProfileActivation:
             self._activation_clean_up()
             self._ctx.finish_async(self._action)
         elif not is_activating(self._nm_ac, self._nm_dev):
-            reason = f"{self._nm_ac.get_state_reason()}"
+            nm_ac_reason = f"{self._nm_ac.get_state_reason()}"
+            nm_dev_reason = None
             if self._nm_dev:
-                reason += f" {self._nm_dev.get_state_reason()}"
+                nm_dev_reason = self._nm_dev.get_state_reason()
+
+            if nm_dev_reason == NM.DeviceStateReason.OVSDB_FAILED:
+                error = NmstateDependencyError(
+                    f"{self._action} failed: failed to communicating with "
+                    f"Open vSwitch database, {nm_dev_reason}"
+                )
+            else:
+                reason = nm_ac_reason + (
+                    str(nm_dev_reason) if nm_dev_reason else ""
+                )
+                error = NmstateLibnmError(
+                    f"{self._action} failed: reason={reason}"
+                )
             self._activation_clean_up()
-            self._ctx.fail(
-                NmstateLibnmError(f"{self._action} failed: reason={reason}")
-            )
+            self._ctx.fail(error)
 
     def _fallback_checker_callback(self, _user_data):
+        self._fallback_checker_counter += 1
         nm_dev = get_nm_dev(self._ctx, self._iface_name, self._iface_type)
         if nm_dev:
             self._nm_dev = nm_dev
             self._activation_progress_check()
+            # When OVSDB connection is invalid(such as been mounted as
+            # /dev/null), NM will hang on the activation of ovs internal
+            # interface with state ACITVATING with reason UNKNOWN forever with
+            # no state change signal. The fallback check only found it
+            # as activating which lead us hang till killed by idle timeout.
+            # To prevent that, when we found OVS interface interface in
+            # `NM.DeviceState.PREPARE` on in second call of fallbacker,
+            # we fail the action as NmstateDependencyError.
+            if (
+                self._fallback_checker_counter
+                >= MAX_OVS_IFACE_PREPARE_TIME / FALLBACK_CHECKER_INTERNAL
+                and nm_dev.get_device_type() == NM.DeviceType.OVS_INTERFACE
+                and nm_dev.get_state() == NM.DeviceState.PREPARE
+            ):
+                self._ctx.fail(
+                    NmstateDependencyError(
+                        f"{self._action} failed: timeout on creating OVS "
+                        "interface, please check Open vSwitch daemon"
+                    )
+                )
+
         return GLib.SOURCE_CONTINUE
 
 

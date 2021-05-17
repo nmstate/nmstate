@@ -19,7 +19,6 @@
 
 from copy import deepcopy
 from operator import itemgetter
-import subprocess
 import warnings
 
 from libnmstate.error import NmstateValueError
@@ -250,20 +249,6 @@ class OvsInternalIface(BaseIface):
             else:
                 self._info.pop(Interface.MTU, None)
                 self._info.pop(Interface.MAC, None)
-
-
-def is_ovs_running():
-    try:
-        subprocess.run(
-            ("systemctl", "status", "openvswitch"),
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            check=True,
-            timeout=SYSTEMCTL_TIMEOUT_SECONDS,
-        )
-        return True
-    except Exception:
-        return False
 
 
 def is_ovs_lag_port(port_state):
