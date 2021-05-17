@@ -22,7 +22,6 @@ import logging
 
 import jsonschema as js
 
-from libnmstate.ifaces.ovs import is_ovs_running
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceType
 from libnmstate.error import NmstateDependencyError
@@ -50,7 +49,6 @@ def validate_interface_capabilities(ifaces_state, capabilities):
     ifaces_types = {iface_state.get("type") for iface_state in ifaces_state}
     has_ovs_capability = NmstatePlugin.OVS_CAPABILITY in capabilities
     has_team_capability = NmstatePlugin.TEAM_CAPABILITY in capabilities
-    ovs_is_running = is_ovs_running()
     for iface_type in ifaces_types:
         is_ovs_type = iface_type in (
             InterfaceType.OVS_BRIDGE,
@@ -58,18 +56,12 @@ def validate_interface_capabilities(ifaces_state, capabilities):
             InterfaceType.OVS_PORT,
         )
         if is_ovs_type and not has_ovs_capability:
-            if not ovs_is_running:
-                raise NmstateDependencyError(
-                    "openvswitch service is not started."
-                )
-            else:
-                raise NmstateDependencyError(
-                    "Open vSwitch NetworkManager support not installed "
-                    "and started"
-                )
+            raise NmstateDependencyError(
+                "Open vSwitch support not properly installed or started"
+            )
         elif iface_type == InterfaceType.TEAM and not has_team_capability:
             raise NmstateDependencyError(
-                "NetworkManager-team plugin not installed and started"
+                "Team support not properly installed or started"
             )
 
 

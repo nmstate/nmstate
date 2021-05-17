@@ -44,8 +44,8 @@ from .testlib import cmdlib
 from .testlib import statelib
 from .testlib.env import nm_major_minor_version
 from .testlib.nmplugin import disable_nm_plugin
+from .testlib.nmplugin import mount_devnull_to_path
 from .testlib.ovslib import Bridge
-from .testlib.servicelib import disable_service
 from .testlib.vlan import vlan_interface
 
 
@@ -213,31 +213,24 @@ def test_nm_ovs_plugin_missing():
             )
 
 
-def test_ovs_service_missing():
-    with disable_service("openvswitch"):
-        with pytest.raises(NmstateDependencyError):
-            libnmstate.apply(
-                {
-                    Interface.KEY: [
-                        {
-                            Interface.NAME: BRIDGE1,
-                            Interface.TYPE: InterfaceType.OVS_BRIDGE,
-                            Interface.STATE: InterfaceState.UP,
-                        }
-                    ]
-                }
-            )
+def test_ovs_service_missing_with_system_port_only(eth1_up):
+    bridge = Bridge(BRIDGE1)
+    bridge.add_system_port(ETH1)
 
-    libnmstate.apply(
-        {
-            Interface.KEY: [
-                {
-                    Interface.NAME: BRIDGE1,
-                    Interface.STATE: InterfaceState.ABSENT,
-                }
-            ]
-        }
-    )
+    with mount_devnull_to_path("/var/run/openvswitch/db.sock"):
+        with pytest.raises(NmstateDependencyError):
+            with bridge.create():
+                pass
+
+
+def test_ovs_service_missing_with_internal_port_only():
+    bridge = Bridge(BRIDGE1)
+    bridge.add_internal_port(PORT1)
+
+    with mount_devnull_to_path("/var/run/openvswitch/db.sock"):
+        with pytest.raises(NmstateDependencyError):
+            with bridge.create():
+                pass
 
 
 @pytest.fixture
