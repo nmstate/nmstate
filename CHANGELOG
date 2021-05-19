@@ -1,4 +1,15 @@
 # Changelog
+## [1.1.0] - 2021-05-19
+### New features
+ - Support accept-all-mac-addresses. (2df9c6a)
+ - Support modify VLAN/VXLAN ID. (4831c2d, a673459)
+
+### Bug fixes
+ - Fix DNS failure due to unmanaged interfaces. (08d3874)
+ - Improve the performace when creating new interfaces. (de4ec3a)
+ - Fix failure when modifying ovs-bridge and ovs-interface in one transaction. (825f604)
+ - Suppress wrong warning due to mismatching bond options. (3463c8e)
+
 ## [1.0.2] - 2021-02-18
 ### New features
  - Support multiconnect profiles. (2c60c834)
