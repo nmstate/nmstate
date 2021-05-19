@@ -24,19 +24,21 @@ from operator import itemgetter
 
 from libnmstate.error import NmstateInternalError
 from libnmstate.error import NmstateValueError
-from libnmstate.iplib import is_ipv6_link_local_addr
 from libnmstate.iplib import canonicalize_ip_address
+from libnmstate.iplib import is_ipv6_link_local_addr
+from libnmstate.schema import Ethtool
+from libnmstate.schema import Ieee8021X
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIP
 from libnmstate.schema import InterfaceIPv6
-from libnmstate.schema import InterfaceType
 from libnmstate.schema import InterfaceState
+from libnmstate.schema import InterfaceType
 from libnmstate.schema import LLDP
 from libnmstate.schema import OvsDB
-from libnmstate.schema import Ieee8021X
 
 from ..state import state_match
 from ..state import merge_dict
+from .ethtool import IfaceEthtool
 
 
 class IPState:
@@ -136,6 +138,13 @@ class BaseIface:
         self._is_changed = False
         self._name = self._info[Interface.NAME]
         self._save_to_disk = save_to_disk
+        self._ethtool = None
+        if info.get(Ethtool.CONFIG_SUBTREE):
+            self._ethtool = IfaceEthtool(info[Ethtool.CONFIG_SUBTREE])
+
+    @property
+    def ethtool(self):
+        return self._ethtool
 
     @property
     def can_have_ip_as_port(self):
@@ -238,6 +247,12 @@ class BaseIface:
                 ip_state = self.ip_state(family)
                 ip_state.remove_link_local_address()
                 self._info[family] = ip_state.to_dict()
+                if self.ethtool:
+                    self.ethtool.pre_edit_validation_and_cleanup(
+                        self._origin_info.get(Ethtool.CONFIG_SUBTREE, {})
+                    )
+                    self._info[Ethtool.CONFIG_SUBTREE] = self.ethtool.to_dict()
+
             if self.is_absent and not self._save_to_disk:
                 self._info[Interface.STATE] = InterfaceState.DOWN
 
@@ -387,8 +402,12 @@ class BaseIface:
             * Remove IPv6 link local addresses.
             * Remove empty description.
             * Change OVSDB value to string.
+            * Remove RX/TX when Ethtool.Pause.AUTO_NEGOTIATION is True
         """
         self._capitalize_mac()
+        if self.ethtool:
+            self.ethtool.canonicalize()
+            self._info[Ethtool.CONFIG_SUBTREE] = self.ethtool.to_dict()
         self.sort_port()
         for family in (Interface.IPV4, Interface.IPV6):
             ip_state = self.ip_state(family)
