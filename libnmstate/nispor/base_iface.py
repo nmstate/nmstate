@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020 Red Hat, Inc.
+# Copyright (c) 2020-2021 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -25,9 +25,11 @@ from libnmstate.schema import InterfaceIP
 from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
+from libnmstate.schema import Ethtool
 
 
 DEFAULT_MAC_ADDRESS = "00:00:00:00:00:00"
+PROMISC_FLAG = "promisc"
 
 
 class NisporPluginBaseIface:
@@ -67,6 +69,10 @@ class NisporPluginBaseIface:
             )
             return InterfaceState.DOWN
 
+    @property
+    def accept_all_mac_addresses(self):
+        return PROMISC_FLAG in self._np_iface.flags
+
     def _ip_info(self, config_only):
         return {
             Interface.IPV4: NisporPlugintIpState(
@@ -83,12 +89,17 @@ class NisporPluginBaseIface:
             Interface.TYPE: self.type,
             Interface.STATE: self.state,
             Interface.MAC: self.mac,
+            Interface.ACCEPT_ALL_MAC_ADDRESSES: self.accept_all_mac_addresses,
         }
         if self.mtu:
             iface_info[Interface.MTU] = self.mtu
         ip_info = self._ip_info(config_only)
         if ip_info:
             iface_info.update(ip_info)
+        if self.np_iface.ethtool:
+            ethtool_info_dict = EthtoolInfo(self.np_iface.ethtool).to_dict()
+            if ethtool_info_dict:
+                iface_info[Ethtool.CONFIG_SUBTREE] = ethtool_info_dict
 
         return iface_info
 
@@ -156,3 +167,20 @@ def _is_dhcp_addr(np_addr, is_ipv6):
 
 def _is_autoconf_addr(np_addr):
     return np_addr.valid_lft != "forever" and np_addr.prefix_len == 64
+
+
+class EthtoolInfo:
+    def __init__(self, np_ethtool):
+        self._np_ethtool = np_ethtool
+
+    def to_dict(self):
+        np_pause = self._np_ethtool.pause
+        if np_pause:
+            return {
+                Ethtool.Pause.CONFIG_SUBTREE: {
+                    Ethtool.Pause.AUTO_NEGOTIATION: np_pause.auto_negotiate,
+                    Ethtool.Pause.TX: np_pause.tx,
+                    Ethtool.Pause.RX: np_pause.rx,
+                }
+            }
+        return {}

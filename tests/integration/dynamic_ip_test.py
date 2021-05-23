@@ -45,6 +45,7 @@ from .testlib import cmdlib
 from .testlib import bondlib
 from .testlib import ifacelib
 from .testlib import statelib
+from .testlib.env import is_k8s
 from .testlib.ifacelib import get_mac_address
 from .testlib.bridgelib import add_port_to_bridge
 from .testlib.bridgelib import create_bridge_subtree_state
@@ -270,6 +271,15 @@ def test_dhcp_with_addresses(dhcpcli_up):
 
 
 @pytest.mark.tier1
+@pytest.mark.xfail(
+    is_k8s(),
+    reason=(
+        "Requires adjusts for k8s. Ref:"
+        "https://github.com/nmstate/nmstate/issues/1579"
+    ),
+    raises=AssertionError,
+    strict=False,
+)
 def test_ipv4_dhcp_on_bond(dhcpcli_up):
     ipv4_state = {Interface.IPV4: _create_ipv4_state(enabled=True, dhcp=True)}
     with bondlib.bond_interface(

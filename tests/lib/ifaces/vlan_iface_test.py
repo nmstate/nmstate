@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020 Red Hat, Inc.
+# Copyright (c) 2020-2021 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -31,6 +31,7 @@ from libnmstate.ifaces.vlan import VlanIface
 from ..testlib.ifacelib import gen_foo_iface_info
 
 BASE_IFACE_NAME = "base1"
+VLAN_ID101 = 101
 
 
 class TestVlanIface:
@@ -44,7 +45,7 @@ class TestVlanIface:
     def _gen_iface_info(self):
         iface_info = gen_foo_iface_info(iface_type=InterfaceType.VLAN)
         iface_info[VLAN.CONFIG_SUBTREE] = {
-            VLAN.ID: 101,
+            VLAN.ID: VLAN_ID101,
             VLAN.BASE_IFACE: BASE_IFACE_NAME,
         }
         return iface_info
@@ -60,6 +61,18 @@ class TestVlanIface:
 
     def test_can_have_ip_as_port(self):
         assert not VlanIface(self._gen_iface_info()).can_have_ip_as_port
+
+    def test_vlan_id(self):
+        assert VlanIface(self._gen_iface_info()).vlan_id == 101
+
+    def test_is_vlan_id_changed(self):
+        vlan101 = VlanIface(self._gen_iface_info())
+        assert not vlan101.is_vlan_id_changed
+
+        vlan200_info = self._gen_iface_info()
+        vlan200_info[VLAN.CONFIG_SUBTREE][VLAN.ID] = 200
+        vlan101.gen_metadata(Ifaces([], [vlan200_info]))
+        assert vlan101.is_vlan_id_changed
 
     def test_validate_base_iface_missing(self):
         iface_info = self._gen_iface_info()

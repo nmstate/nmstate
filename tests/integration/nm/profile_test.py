@@ -23,6 +23,7 @@ import os
 import pytest
 
 import libnmstate
+from libnmstate.error import NmstateValueError
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
@@ -33,6 +34,7 @@ from libnmstate.schema import LinuxBridge
 from ..testlib import assertlib
 from ..testlib import cmdlib
 from ..testlib import statelib
+from ..testlib.env import is_k8s
 from ..testlib.ovslib import Bridge as OvsBridge
 
 
@@ -98,6 +100,15 @@ def test_delete_new_interface_inactive_profiles(dummy_inactive_profile):
 
 
 @pytest.mark.tier1
+@pytest.mark.xfail(
+    is_k8s(),
+    reason=(
+        "Requires adjusts for k8s. Ref:"
+        "https://github.com/nmstate/nmstate/issues/1579"
+    ),
+    raises=AssertionError,
+    strict=False,
+)
 def test_delete_existing_interface_inactive_profiles(eth1_up):
     with create_inactive_profile(eth1_up[Interface.KEY][0][Interface.NAME]):
         eth1_up[Interface.KEY][0][Interface.MTU] = 2000
@@ -399,6 +410,15 @@ def test_linux_bridge_with_port_holding_two_profiles(eth1_with_two_profiles):
 
 
 @pytest.mark.tier1
+@pytest.mark.xfail(
+    is_k8s(),
+    reason=(
+        "Requires adjusts for k8s. Ref:"
+        "https://github.com/nmstate/nmstate/issues/1579"
+    ),
+    raises=NmstateValueError,
+    strict=False,
+)
 def test_converting_memory_only_profile_to_persistent():
     with dummy_interface(DUMMY0_IFNAME, save_to_disk=False) as dstate:
         libnmstate.apply(dstate, save_to_disk=True)

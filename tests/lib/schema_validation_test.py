@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2020 Red Hat, Inc.
+# Copyright (c) 2018-2021 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -26,6 +26,7 @@ import libnmstate
 from libnmstate.schema import Constants
 from libnmstate.schema import DNS
 from libnmstate.schema import Ethernet
+from libnmstate.schema import Ethtool
 from libnmstate.schema import InfiniBand
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceState
@@ -212,6 +213,14 @@ class TestIfaceMacAddress:
         default_data[INTERFACES][0][Interface.MAC] = mac_address
         with pytest.raises(js.ValidationError, match=str(mac_address)):
             libnmstate.validator.schema_validate(default_data)
+
+
+class TestIfaceAcceptAllMacAddresses:
+    @pytest.mark.parametrize("valid_values", [True, False])
+    def test_valid_accept_all_mac_addresses(self, default_data, valid_values):
+        ACCEPT_MAC_ADDRS = Interface.ACCEPT_ALL_MAC_ADDRESSES
+        default_data[Interface.KEY][0][ACCEPT_MAC_ADDRS] = valid_values
+        libnmstate.validator.schema_validate(default_data)
 
 
 class TestIfaceTypeEthernet:
@@ -1000,6 +1009,37 @@ class TestVeth:
                 Interface.NAME: "veth1",
                 Interface.TYPE: InterfaceType.VETH,
                 Veth.CONFIG_SUBTREE: {},
+            }
+        )
+        with pytest.raises(js.ValidationError):
+            libnmstate.validator.schema_validate(default_data)
+
+
+class TestEthtool:
+    def test_valid_ethtool(self, default_data):
+        default_data[Interface.KEY][0].update(
+            {
+                Ethtool.CONFIG_SUBTREE: {
+                    Ethtool.Pause.CONFIG_SUBTREE: {
+                        Ethtool.Pause.AUTO_NEGOTIATION: False,
+                        Ethtool.Pause.TX: True,
+                        Ethtool.Pause.RX: True,
+                    }
+                }
+            }
+        )
+        libnmstate.validator.schema_validate(default_data)
+
+    def test_invalid_ethtool_with_interger_value(self, default_data):
+        default_data[Interface.KEY][0].update(
+            {
+                Ethtool.CONFIG_SUBTREE: {
+                    Ethtool.Pause.CONFIG_SUBTREE: {
+                        Ethtool.Pause.AUTO_NEGOTIATION: 1,
+                        Ethtool.Pause.TX: 0,
+                        Ethtool.Pause.RX: 0,
+                    }
+                }
             }
         )
         with pytest.raises(js.ValidationError):

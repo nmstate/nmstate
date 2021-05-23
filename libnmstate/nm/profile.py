@@ -69,6 +69,8 @@ class NmProfile:
     ACTION_OTHER_CONTROLLER = "other_controller"
     ACTION_DELETE_PROFILE = "delete_profile"
     ACTION_TOP_CONTROLLER = "top_controller"
+    ACTION_MODIFIED_OVS_PORT = "modified_ovs_port"
+    ACTION_MODIFIED_OVS_IFACE = "modified_ovs_iface"
 
     # This is order on group for activation/deactivation
     ACTIONS = (
@@ -81,6 +83,8 @@ class NmProfile:
         ACTION_NEW_OVS_IFACE,
         ACTION_NEW_VETH,
         ACTION_NEW_VETH_PEER,
+        ACTION_MODIFIED_OVS_PORT,
+        ACTION_MODIFIED_OVS_IFACE,
         ACTION_MODIFIED,
         ACTION_NEW_VLAN,
         ACTION_NEW_VXLAN,
@@ -164,7 +168,6 @@ class NmProfile:
             if self._iface.is_virtual and self._nm_dev:
                 self._add_action(NmProfile.ACTION_DELETE_DEVICE)
         elif self._iface.is_up and not self._needs_veth_activation():
-            self._add_action(NmProfile.ACTION_MODIFIED)
             if not self._nm_dev:
                 if self._iface.type == InterfaceType.OVS_PORT:
                     self._add_action(NmProfile.ACTION_NEW_OVS_PORT)
@@ -176,6 +179,13 @@ class NmProfile:
                     self._add_action(NmProfile.ACTION_NEW_VXLAN)
                 else:
                     self._add_action(NmProfile.ACTION_NEW_IFACES)
+            else:
+                if self._iface.type == InterfaceType.OVS_PORT:
+                    self._add_action(NmProfile.ACTION_MODIFIED_OVS_PORT)
+                if self._iface.type == InterfaceType.OVS_INTERFACE:
+                    self._add_action(NmProfile.ACTION_MODIFIED_OVS_IFACE)
+                else:
+                    self._add_action(NmProfile.ACTION_MODIFIED)
 
         elif self._iface.is_down:
             if self._nm_ac:
@@ -231,6 +241,21 @@ class NmProfile:
             # modify the peer. Therefore if the profile is modified it needs to
             # deactivated beforehand in order to apply the changes and activate
             # it again.
+            self._add_action(NmProfile.ACTION_DEACTIVATE_FIRST)
+
+        if self._iface.is_up and (
+            (
+                self._iface.type == InterfaceType.VLAN
+                and self._iface.is_vlan_id_changed
+            )
+            or (
+                self._iface.type == InterfaceType.VXLAN
+                and self._iface.is_vxlan_id_changed
+            )
+        ):
+            # NetworkManager does not allow to modify the vlan/vxlan id of an
+            # existing VLAN/VXLAN. In order to support it, Nmstate is removing
+            # the interface and creating it again.
             self._add_action(NmProfile.ACTION_DEACTIVATE_FIRST)
 
         if (
@@ -419,6 +444,8 @@ class NmProfile:
     def do_action(self, action):
         if action in (
             NmProfile.ACTION_MODIFIED,
+            NmProfile.ACTION_MODIFIED_OVS_PORT,
+            NmProfile.ACTION_MODIFIED_OVS_IFACE,
             NmProfile.ACTION_ACTIVATE_FIRST,
             NmProfile.ACTION_TOP_CONTROLLER,
             NmProfile.ACTION_NEW_IFACES,

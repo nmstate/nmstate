@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2019 Red Hat, Inc.
+# Copyright (c) 2018-2021 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -32,6 +32,7 @@ from libnmstate.schema import InterfaceType
 from .testlib import assertlib
 from .testlib import statelib
 from .testlib.assertlib import assert_mac_address
+from .testlib.env import nm_major_minor_version
 from .testlib.vlan import vlan_interface
 
 VLAN_IFNAME = "eth1.101"
@@ -190,6 +191,38 @@ def test_add_new_base_iface_with_vlan():
         for ifstate in desired_state[Interface.KEY]:
             ifstate[Interface.STATE] = InterfaceState.ABSENT
         libnmstate.apply(desired_state, verify_change=False)
+
+
+@pytest.mark.xfail(
+    nm_major_minor_version() < 1.31,
+    reason="Ref: https://bugzilla.redhat.com/1902976",
+    raises=NmstateVerificationError,
+    strict=True,
+)
+def test_add_vlan_with_mismatching_name_and_id(eth1_up):
+    with vlan_interface(
+        VLAN_IFNAME, 200, eth1_up[Interface.KEY][0][Interface.NAME]
+    ) as desired_state:
+        assertlib.assert_state(desired_state)
+
+
+@pytest.mark.tier1
+@pytest.mark.xfail(
+    nm_major_minor_version() < 1.31,
+    reason="Ref: https://bugzilla.redhat.com/1907960",
+    raises=NmstateVerificationError,
+    strict=True,
+)
+def test_add_vlan_and_modify_vlan_id(eth1_up):
+    with vlan_interface(
+        VLAN_IFNAME, 101, eth1_up[Interface.KEY][0][Interface.NAME]
+    ) as desired_state:
+        assertlib.assert_state(desired_state)
+        desired_state[Interface.KEY][0][VLAN.CONFIG_SUBTREE][VLAN.ID] = 200
+        libnmstate.apply(desired_state)
+        assertlib.assert_state(desired_state)
+
+    assertlib.assert_absent(VLAN_IFNAME)
 
 
 @contextmanager

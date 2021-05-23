@@ -36,6 +36,7 @@ from .bridge import BRIDGE_TYPE as NM_LINUX_BRIDGE_TYPE
 from .bridge import create_port_setting as create_linux_bridge_port_setting
 from .bridge import create_setting as create_linux_bridge_setting
 from .common import NM
+from .ethtool import create_ethtool_setting
 from .ieee_802_1x import create_802_1x_setting
 from .infiniband import create_setting as create_infiniband_setting
 from .ipv4 import create_setting as create_ipv4_setting
@@ -235,6 +236,11 @@ def create_new_nm_simple_conn(iface, nm_profile):
 
     if iface.ieee_802_1x_conf:
         settings.append(create_802_1x_setting(iface.ieee_802_1x_conf))
+
+    if iface.ethtool:
+        setting = create_ethtool_setting(iface.ethtool, nm_profile)
+        if setting:
+            settings.append(setting)
 
     nm_simple_conn = NM.SimpleConnection.new()
     for setting in settings:

@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019-2020 Red Hat, Inc.
+# Copyright (c) 2019-2021 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -25,12 +25,14 @@ import libnmstate
 
 from libnmstate.error import NmstateVerificationError
 from libnmstate.schema import Interface
+from libnmstate.schema import VXLAN
 
 from .testlib import assertlib
 from .testlib.bondlib import bond_interface
 from .testlib.cmdlib import RC_SUCCESS
 from .testlib.cmdlib import exec_cmd
 from .testlib.cmdlib import format_exec_cmd_result
+from .testlib.env import is_k8s
 from .testlib.vxlan import VxlanState
 from .testlib.vxlan import vxlan_interfaces
 from .testlib.vxlan import vxlans_absent
@@ -68,6 +70,15 @@ def test_add_and_remove_two_vxlans_on_same_iface(eth1_up):
 
 
 @pytest.mark.tier1
+@pytest.mark.xfail(
+    is_k8s(),
+    reason=(
+        "Requires adjusts for k8s. Ref:"
+        "https://github.com/nmstate/nmstate/issues/1579"
+    ),
+    raises=AssertionError,
+    strict=False,
+)
 def test_rollback_for_vxlans(eth1_up):
     ifname = eth1_up[Interface.KEY][0][Interface.NAME]
     current_state = libnmstate.show()
@@ -129,3 +140,18 @@ def test_show_vxlan_with_no_remote(eth1_up):
     finally:
         libnmstate.apply(vxlans_absent([vxlan]))
         assertlib.assert_absent(vxlan.name)
+
+
+@pytest.mark.tier1
+def test_add_vxlan_and_modify_vxlan_id(eth1_up):
+    ifname = eth1_up[Interface.KEY][0][Interface.NAME]
+    with vxlan_interfaces(
+        VxlanState(id=VXLAN1_ID, base_if=ifname, remote="192.168.100.1")
+    ) as desired_state:
+        assertlib.assert_state(desired_state)
+        desired_state[Interface.KEY][0][VXLAN.CONFIG_SUBTREE][VXLAN.ID] = 200
+        libnmstate.apply(desired_state)
+        assertlib.assert_state(desired_state)
+
+    vxlan1_ifname = desired_state[Interface.KEY][0][Interface.NAME]
+    assertlib.assert_absent(vxlan1_ifname)
