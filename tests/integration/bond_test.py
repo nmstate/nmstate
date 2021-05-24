@@ -42,6 +42,7 @@ from .testlib import statelib
 from .testlib.assertlib import assert_mac_address
 from .testlib.bondlib import bond_interface
 from .testlib.env import nm_major_minor_version
+from .testlib.env import is_k8s
 from .testlib.ifacelib import get_mac_address
 from .testlib.ifacelib import ifaces_init
 from .testlib.vlan import vlan_interface
@@ -201,6 +202,15 @@ def test_add_bond_with_port_and_ipv4(eth1_up, eth2_up, setup_remove_bond99):
 
 
 @pytest.mark.tier1
+@pytest.mark.xfail(
+    is_k8s(),
+    reason=(
+        "Requires adjusts for k8s. Ref:"
+        "https://github.com/nmstate/nmstate/issues/1579"
+    ),
+    raises=AssertionError,
+    strict=False,
+)
 def test_rollback_for_bond(eth1_up, eth2_up):
     current_state = libnmstate.show()
     desired_state = {
@@ -1036,3 +1046,19 @@ def test_replacing_port_set_mac_of_new_port_on_bond(bond99_with_eth2, eth1_up):
         eth1_up[Interface.KEY][0][Interface.MAC]
         == current_state[Interface.KEY][0][Interface.MAC]
     )
+
+
+@pytest.mark.tier1
+@pytest.mark.skipif(
+    nm_major_minor_version() < 1.31,
+    reason="Modifying accept-all-mac-addresses is not supported on NM.",
+)
+def test_bond_enable_and_disable_accept_all_mac_addresses(bond88_with_port):
+    desired_state = bond88_with_port
+    desired_state[Interface.KEY][0][Interface.ACCEPT_ALL_MAC_ADDRESSES] = True
+    libnmstate.apply(desired_state)
+    assertlib.assert_state_match(desired_state)
+
+    desired_state[Interface.KEY][0][Interface.ACCEPT_ALL_MAC_ADDRESSES] = False
+    libnmstate.apply(desired_state)
+    assertlib.assert_state_match(desired_state)

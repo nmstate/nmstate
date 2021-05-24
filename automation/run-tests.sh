@@ -233,7 +233,7 @@ function upload_coverage {
 }
 
 function check_iface_exist {
-    exec_cmd "ip link | grep -q $1"
+    exec_cmd "ip link | grep -q ' $1'"
 }
 
 function prepare_network_environment {

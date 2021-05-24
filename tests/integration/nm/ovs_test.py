@@ -24,6 +24,7 @@ from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
+from libnmstate.schema import OVSBridge
 from libnmstate.schema import OvsDB
 from libnmstate.schema import VLAN
 
@@ -37,6 +38,7 @@ from ..testlib.retry import retry_till_true_or_timeout
 
 
 BRIDGE0 = "brtest0"
+BRIDGE1 = "brtest1"
 IFACE0 = "ovstest0"
 OVSDB_EXT_IDS_CONF1 = {"foo": "abc", "bak": 1}
 OVSDB_EXT_IDS_CONF1_STR = {"foo": "abc", "bak": "1"}
@@ -397,3 +399,42 @@ def test_modify_state_with_ovs_dup_name_ovs_interface_first_with_ipv4_dns(
     }
     libnmstate.apply(desired_state)
     assertlib.assert_state(desired_state)
+
+
+@pytest.mark.tier1
+def test_remove_ovs_bridge_and_modify_ports(bridge_with_ports):
+    desired_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: BRIDGE0,
+                Interface.STATE: InterfaceState.ABSENT,
+            },
+            {
+                Interface.NAME: IFACE0,
+                Interface.TYPE: InterfaceType.OVS_INTERFACE,
+                Interface.STATE: InterfaceState.UP,
+                Interface.MTU: 2000,
+            },
+            {
+                Interface.NAME: BRIDGE1,
+                Interface.TYPE: InterfaceType.OVS_BRIDGE,
+                Interface.STATE: InterfaceState.UP,
+                OVSBridge.CONFIG_SUBTREE: {
+                    OVSBridge.PORT_SUBTREE: [{OVSBridge.Port.NAME: IFACE0}]
+                },
+            },
+        ]
+    }
+    try:
+        libnmstate.apply(desired_state)
+        assertlib.assert_state(desired_state)
+    finally:
+        absent_state = {
+            Interface.KEY: [
+                {
+                    Interface.NAME: BRIDGE1,
+                    Interface.STATE: InterfaceState.ABSENT,
+                }
+            ]
+        }
+        libnmstate.apply(absent_state)

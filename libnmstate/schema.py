@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2020 Red Hat, Inc.
+# Copyright (c) 2018-2021 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -47,6 +47,7 @@ class Interface:
     MAC = "mac-address"
     MTU = "mtu"
     COPY_MAC_FROM = "copy-mac-from"
+    ACCEPT_ALL_MAC_ADDRESSES = "accept-all-mac-addresses"
 
 
 class Route:
@@ -459,3 +460,13 @@ class Ieee8021X:
     PRIVATE_KEY_PASSWORD = "private-key-password"
     CLIENT_CERT = "client-cert"
     CA_CERT = "ca-cert"
+
+
+class Ethtool:
+    CONFIG_SUBTREE = "ethtool"
+
+    class Pause:
+        CONFIG_SUBTREE = "pause"
+        AUTO_NEGOTIATION = "autoneg"
+        RX = "rx"
+        TX = "tx"

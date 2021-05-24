@@ -15,7 +15,8 @@ properties:
       allOf:
         - $ref: "#/definitions/interface-base/rw"
         - $ref: "#/definitions/interface-base/ro"
-        - $ref: "#/definitions/interface-ip/all"
+        - $ref: "#/definitions/interface-ip/rw"
+        - $ref: "#/definitions/interface-ethtool/rw"
         - $ref: "#/definitions/lldp/rw"
         - $ref: "#/definitions/lldp/ro"
         - $ref: "#/definitions/802.1x/rw"
@@ -110,6 +111,8 @@ definitions:
         mtu:
           type: integer
           minimum: 0
+        accept-all-mac-addresses:
+          type: boolean
     ro:
       properties:
         if-index:
@@ -618,6 +621,21 @@ definitions:
                     type: boolean
                   state:
                     type: string
+  interface-ethtool:
+    rw:
+      properties:
+        ethtool:
+          type: object
+          properties:
+            pause:
+              type: object
+              properties:
+                autoneg:
+                  type: boolean
+                rx:
+                  type: boolean
+                tx:
+                  type: boolean
   interface-team:
     rw:
       properties:

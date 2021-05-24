@@ -126,6 +126,7 @@ LO_IFACE_INFO = {
     Interface.NAME: "lo",
     Interface.TYPE: InterfaceType.UNKNOWN,
     Interface.STATE: InterfaceState.UP,
+    Interface.ACCEPT_ALL_MAC_ADDRESSES: False,
     Interface.IPV4: {
         InterfaceIPv4.ENABLED: True,
         InterfaceIPv4.ADDRESS: [

@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020 Red Hat, Inc.
+# Copyright (c) 2020-2021 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -24,6 +24,10 @@ from .base_iface import BaseIface
 
 
 class VlanIface(BaseIface):
+    def __init__(self, info, save_to_disk=True):
+        super().__init__(info, save_to_disk)
+        self._vlan_id_changed = False
+
     @property
     def parent(self):
         return self._vlan_config.get(VLAN.BASE_IFACE)
@@ -35,6 +39,14 @@ class VlanIface(BaseIface):
     @property
     def _vlan_config(self):
         return self.raw.get(VLAN.CONFIG_SUBTREE, {})
+
+    @property
+    def vlan_id(self):
+        return self._vlan_config.get(VLAN.ID)
+
+    @property
+    def is_vlan_id_changed(self):
+        return self._vlan_id_changed
 
     @property
     def is_virtual(self):
@@ -56,3 +68,13 @@ class VlanIface(BaseIface):
                     f"VLAN tunnel {self.name} has missing mandatory "
                     f"property: {prop}"
                 )
+
+    def _mark_vlan_id_changed(self, ifaces):
+        if self.is_up:
+            cur_iface = ifaces.get_cur_iface(self.name, self.type)
+            if cur_iface and self.vlan_id != cur_iface.vlan_id:
+                self._vlan_id_changed = True
+
+    def gen_metadata(self, ifaces):
+        self._mark_vlan_id_changed(ifaces)
+        super().gen_metadata(ifaces)
