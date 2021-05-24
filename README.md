@@ -129,7 +129,7 @@ Sprint tracking happens in
 ([Github projects](https://github.com/nmstate/nmstate/projects)).
 
 There is also `#nmstate` on
-[Freenode IRC](https://freenode.net/kb/answer/chat).
+[Libera IRC](https://libera.chat/).
 
 ## Contributing
 
