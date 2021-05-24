@@ -39,7 +39,9 @@ nmstate: {nmstate_version}
 
 
 def pytest_configure(config):
-    config.addinivalue_line("markers", "slow tier1 tier2")
+    config.addinivalue_line("markers", "slow: mark time consuming test")
+    config.addinivalue_line("markers", "tier2")
+    config.addinivalue_line("markers", "tier1")
 
 
 def pytest_addoption(parser):

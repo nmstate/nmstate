@@ -23,7 +23,6 @@ from operator import itemgetter
 from libnmstate.error import NmstateDependencyError
 from libnmstate.error import NmstateNotSupportedError
 from libnmstate.error import NmstateValueError
-from libnmstate.ifaces.ovs import is_ovs_running
 from libnmstate.schema import DNS
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceType
@@ -103,7 +102,7 @@ class NetworkManagerPlugin(NmstatePlugin):
     @property
     def capabilities(self):
         capabilities = []
-        if has_ovs_capability(self.client) and is_ovs_running():
+        if has_ovs_capability(self.client):
             capabilities.append(NmstatePlugin.OVS_CAPABILITY)
         if has_team_capability(self.client):
             capabilities.append(NmstatePlugin.TEAM_CAPABILITY)

@@ -460,3 +460,13 @@ class Ieee8021X:
     PRIVATE_KEY_PASSWORD = "private-key-password"
     CLIENT_CERT = "client-cert"
     CA_CERT = "ca-cert"
+
+
+class Ethtool:
+    CONFIG_SUBTREE = "ethtool"
+
+    class Pause:
+        CONFIG_SUBTREE = "pause"
+        AUTO_NEGOTIATION = "autoneg"
+        RX = "rx"
+        TX = "tx"
