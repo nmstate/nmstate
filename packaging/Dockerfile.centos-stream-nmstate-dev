@@ -36,6 +36,7 @@ RUN dnf update -y && \
                    tcpreplay \
                    wpa_supplicant \
                    hostapd \
+                   libndp \
                    && \
     alternatives --set python /usr/bin/python3 && \
     ln -s /usr/bin/pytest-3 /usr/bin/pytest && \
