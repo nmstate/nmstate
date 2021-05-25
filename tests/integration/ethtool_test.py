@@ -125,3 +125,19 @@ def test_ethtool_invalid_feature(eth1_up):
     }
     with pytest.raises(NmstateValueError):
         libnmstate.apply({Interface.KEY: [desire_iface_state]})
+
+
+@pytest.mark.skipif(
+    not os.environ.get("TEST_REAL_NIC"),
+    reason="Need to define TEST_REAL_NIC for ethtool ring test",
+)
+def test_ethtool_ring_set_rx():
+    desire_iface_state = {
+        Interface.NAME: os.environ.get("TEST_REAL_NIC"),
+        Ethtool.CONFIG_SUBTREE: {
+            Ethtool.Ring.CONFIG_SUBTREE: {Ethtool.Ring.RX: 256}
+        },
+    }
+    libnmstate.apply({Interface.KEY: [desire_iface_state]})
+
+    assertlib.assert_state_match({Interface.KEY: [desire_iface_state]})

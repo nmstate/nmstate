@@ -90,3 +90,31 @@ def test_create_setting_pause_autoneg_off(nm_mock):
         ],
         any_order=False,
     )
+
+
+def test_create_setting_ring(nm_mock):
+    iface_ethtool = IfaceEthtool(
+        {
+            Ethtool.Ring.CONFIG_SUBTREE: {
+                Ethtool.Ring.RX: 256,
+                Ethtool.Ring.TX: 1024,
+            }
+        }
+    )
+    nm_ethtool_setting_mock = nm_mock.SettingEthtool.new.return_value
+
+    nm_ethtool.create_ethtool_setting(iface_ethtool, base_con_profile=None)
+
+    nm_ethtool_setting_mock.option_set.assert_has_calls(
+        [
+            mock.call(
+                "ring-rx",
+                GLib.Variant.new_uint32(256),
+            ),
+            mock.call(
+                "ring-tx",
+                GLib.Variant.new_uint32(1024),
+            ),
+        ],
+        any_order=True,
+    )

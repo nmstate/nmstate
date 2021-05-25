@@ -1068,3 +1068,44 @@ class TestEthtool:
         )
         with pytest.raises(js.ValidationError):
             libnmstate.validator.schema_validate(default_data)
+
+    def test_valid_ethtool_ring(self, default_data):
+        default_data[Interface.KEY][0].update(
+            {
+                Ethtool.CONFIG_SUBTREE: {
+                    Ethtool.Ring.CONFIG_SUBTREE: {
+                        Ethtool.Ring.RX: 256,
+                        Ethtool.Ring.RX_JUMBO: 4096,
+                        Ethtool.Ring.RX_MINI: 256,
+                        Ethtool.Ring.TX: 256,
+                    }
+                }
+            }
+        )
+        libnmstate.validator.schema_validate(default_data)
+
+    def test_invalid_ethtool_ring_out_of_range(self, default_data):
+        default_data[Interface.KEY][0].update(
+            {
+                Ethtool.CONFIG_SUBTREE: {
+                    Ethtool.Ring.CONFIG_SUBTREE: {
+                        Ethtool.Ring.RX: -1,
+                    }
+                }
+            }
+        )
+        with pytest.raises(js.ValidationError):
+            libnmstate.validator.schema_validate(default_data)
+
+    def test_invalid_ethtool_ring_not_integer(self, default_data):
+        default_data[Interface.KEY][0].update(
+            {
+                Ethtool.CONFIG_SUBTREE: {
+                    Ethtool.Ring.CONFIG_SUBTREE: {
+                        Ethtool.Ring.RX: False,
+                    }
+                }
+            }
+        )
+        with pytest.raises(js.ValidationError):
+            libnmstate.validator.schema_validate(default_data)

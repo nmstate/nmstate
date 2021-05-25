@@ -185,4 +185,22 @@ class EthtoolInfo:
         np_features = self._np_ethtool.features
         if np_features:
             info[Ethtool.Feature.CONFIG_SUBTREE] = np_features.changeable
+
+        np_ring = self._np_ethtool.ring
+        if np_ring:
+            ring_info = {}
+            if np_ring.tx is not None:
+                ring_info[Ethtool.Ring.TX] = np_ring.tx
+
+            if np_ring.rx is not None:
+                ring_info[Ethtool.Ring.RX] = np_ring.rx
+
+            if np_ring.rx_jumbo is not None:
+                ring_info[Ethtool.Ring.RX_JUMBO] = np_ring.rx_jumbo
+
+            if np_ring.rx_mini is not None:
+                ring_info[Ethtool.Ring.RX_MINI] = np_ring.rx_mini
+
+            if ring_info:
+                info[Ethtool.Ring.CONFIG_SUBTREE] = ring_info
         return info
