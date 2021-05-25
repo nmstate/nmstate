@@ -640,6 +640,21 @@ definitions:
               type: object
               additionalProperties:
                 type: boolean
+            ring:
+              type: object
+              properties:
+                tx:
+                  type: integer
+                  minimum: 0
+                rx:
+                  type: integer
+                  minimum: 0
+                rx-jumbo:
+                  type: integer
+                  minimum: 0
+                rx-mini:
+                  type: integer
+                  minimum: 0
   interface-team:
     rw:
       properties:

@@ -473,3 +473,10 @@ class Ethtool:
 
     class Feature:
         CONFIG_SUBTREE = "feature"
+
+    class Ring:
+        CONFIG_SUBTREE = "ring"
+        RX = "rx"
+        RX_JUMBO = "rx-jumbo"
+        RX_MINI = "rx-mini"
+        TX = "tx"

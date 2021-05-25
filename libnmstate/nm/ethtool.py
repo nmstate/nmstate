@@ -22,6 +22,16 @@ from libnmstate.error import NmstateValueError
 from .common import NM
 from .common import GLib
 
+from libnmstate.schema import Ethtool
+
+
+_NM_RING_OPT_NAME_MAP = {
+    Ethtool.Ring.RX: NM.ETHTOOL_OPTNAME_RING_RX,
+    Ethtool.Ring.RX_JUMBO: NM.ETHTOOL_OPTNAME_RING_RX_JUMBO,
+    Ethtool.Ring.RX_MINI: NM.ETHTOOL_OPTNAME_RING_RX_MINI,
+    Ethtool.Ring.TX: NM.ETHTOOL_OPTNAME_RING_TX,
+}
+
 
 def create_ethtool_setting(iface_ethtool, base_con_profile):
     nm_setting = None
@@ -50,6 +60,15 @@ def create_ethtool_setting(iface_ethtool, base_con_profile):
     if iface_ethtool.feature:
         for kernel_feature_name, value in iface_ethtool.feature.items():
             nm_set_feature(nm_setting, kernel_feature_name, value)
+
+    if iface_ethtool.ring:
+        ring_info = iface_ethtool.ring.to_dict()
+        for prop_name, nm_prop_name in _NM_RING_OPT_NAME_MAP.items():
+            if prop_name in ring_info:
+                nm_setting.option_set(
+                    nm_prop_name,
+                    GLib.Variant.new_uint32(ring_info[prop_name]),
+                )
 
     return nm_setting
 
