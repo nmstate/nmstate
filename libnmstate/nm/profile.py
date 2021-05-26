@@ -49,7 +49,7 @@ from .translator import Api2Nm
 IMPORT_NM_DEV_TIMEOUT = 5
 IMPORT_NM_DEV_RETRY_INTERNAL = 0.5
 FALLBACK_CHECKER_INTERNAL = 15
-IPV6_ROUTE_REMOVED = "_ipv6_route_removed"
+ROUTE_REMOVED = "_route_removed"
 
 
 class NmProfile:
@@ -193,9 +193,10 @@ class NmProfile:
             elif self._iface.is_virtual and self._nm_dev:
                 self._add_action(NmProfile.ACTION_DELETE_DEVICE)
 
-        if self._iface.raw.get(IPV6_ROUTE_REMOVED):
+        if self._iface.raw.get(ROUTE_REMOVED):
             # This is a workaround for NM bug:
             # https://bugzilla.redhat.com/1837254
+            # https://bugzilla.redhat.com/1962551
             self._add_action(NmProfile.ACTION_DEACTIVATE_FIRST)
 
         if self._iface.is_controller and self._iface.is_up:

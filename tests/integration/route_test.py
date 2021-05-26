@@ -35,6 +35,9 @@ from .testlib import cmdlib
 from .testlib import iprule
 
 IPV4_ADDRESS1 = "192.0.2.251"
+IPV4_ADDRESS2 = "192.0.2.252"
+IPV4_ADDRESS3 = "192.0.2.253"
+IPV4_LINK_LOCAL_ROUTE = "192.0.2.0/24"
 IPV4_ROUTE_TABLE_ID1 = 50
 IPV4_ROUTE_TABLE_ID2 = 51
 
@@ -505,8 +508,10 @@ def test_apply_empty_state_preserve_routes(eth1_static_gateway_dns):
     assert current_state[DNS.KEY][DNS.CONFIG] == state[DNS.KEY][DNS.CONFIG]
 
 
-def _get_routes_from_iproute():
-    _, out, _ = cmdlib.exec_cmd("ip -6 route".split(), check=True)
+def _get_routes_from_iproute(family, table):
+    _, out, _ = cmdlib.exec_cmd(
+        f"ip -{family} route show table {table}".split(), check=True
+    )
     return out
 
 
@@ -538,9 +543,35 @@ def test_remove_default_ipv6_gateway_and_revert():
     gateway2[Route.STATE] = Route.STATE_ABSENT
     libnmstate.apply(d_state)
 
-    routes_output = _get_routes_from_iproute()
+    routes_output = _get_routes_from_iproute(6, "main")
     assert IPV6_GATEWAY1 in routes_output
     assert IPV6_GATEWAY2 not in routes_output
+
+
+def test_add_and_remove_ipv4_link_local_route(eth1_static_gateway_dns):
+    route2 = {
+        Route.DESTINATION: IPV4_LINK_LOCAL_ROUTE,
+        Route.NEXT_HOP_ADDRESS: IPV4_ADDRESS2,
+        Route.NEXT_HOP_INTERFACE: "eth1",
+        Route.TABLE_ID: 100,
+    }
+    route3 = {
+        Route.DESTINATION: IPV4_LINK_LOCAL_ROUTE,
+        Route.NEXT_HOP_ADDRESS: IPV4_ADDRESS3,
+        Route.NEXT_HOP_INTERFACE: "eth1",
+        Route.TABLE_ID: 100,
+    }
+
+    d_state = {Route.KEY: {Route.CONFIG: [route2]}}
+    libnmstate.apply(d_state)
+
+    route2[Route.STATE] = Route.STATE_ABSENT
+    d_state[Route.KEY][Route.CONFIG] = [route2, route3]
+    libnmstate.apply(d_state)
+
+    routes_output = _get_routes_from_iproute(4, 100)
+    assert IPV4_ADDRESS3 in routes_output
+    assert IPV4_ADDRESS2 not in routes_output
 
 
 @pytest.fixture(scope="function")
