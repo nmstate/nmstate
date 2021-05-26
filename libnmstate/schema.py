@@ -334,6 +334,8 @@ class VXLAN:
 
     ID = "id"
     BASE_IFACE = "base-iface"
+    LEARNING = "learning"
+    LOCAL = "local"
     REMOTE = "remote"
     DESTINATION_PORT = "destination-port"
 

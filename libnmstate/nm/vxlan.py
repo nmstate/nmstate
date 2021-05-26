@@ -37,6 +37,9 @@ def create_setting(iface_state, base_con_profile):
 
     vxlan_setting.props.id = vxlan[VXLAN.ID]
     vxlan_setting.props.parent = vxlan[VXLAN.BASE_IFACE]
+    vxlan_setting.props.learning = vxlan.get(VXLAN.LEARNING)
+    vxlan_local = vxlan.get(VXLAN.LOCAL)
+    vxlan_setting.props.local = vxlan_local if vxlan_local else None
     vxlan_remote = vxlan.get(VXLAN.REMOTE)
     vxlan_setting.props.remote = vxlan_remote if vxlan_remote else None
     vxlan_destination_port = vxlan.get(VXLAN.DESTINATION_PORT)

@@ -256,6 +256,10 @@ definitions:
               type: integer
               minimum: 0
               maximum: 16777215
+            learning:
+              type: boolean
+            local:
+              type: string
             remote:
               type: string
             destination-port:

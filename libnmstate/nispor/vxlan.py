@@ -33,6 +33,8 @@ class NisporPluginVxlanIface(NisporPluginBaseIface):
         info[VXLAN.CONFIG_SUBTREE] = {
             VXLAN.ID: self._np_iface.vxlan_id,
             VXLAN.BASE_IFACE: self._np_iface.base_iface,
+            VXLAN.LEARNING: self._np_iface.learning,
+            VXLAN.LOCAL: self._np_iface.local,
             VXLAN.REMOTE: self._np_iface.remote,
             VXLAN.DESTINATION_PORT: self._np_iface.dst_port,
         }
