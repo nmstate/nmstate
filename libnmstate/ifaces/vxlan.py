@@ -34,7 +34,10 @@ class VxlanIface(BaseIface):
 
     @property
     def need_parent(self):
-        return True
+        # TODO: Do we want to return a value conditional to
+        # if BASE_IF is defined or just a static False since
+        # all configurations don't need one?
+        return False
 
     @property
     def _vxlan_config(self):
@@ -72,8 +75,9 @@ class VxlanIface(BaseIface):
         super().pre_edit_validation_and_cleanup()
 
     def _validate_mandatory_properties(self):
-        # TODO: Figure out
-        for prop in (VXLAN.ID): #, VXLAN.BASE_IFACE, VXLAN.REMOTE):
+        # TODO: Do we want to validate alternative working configurations, 
+        # or the minimum shared by all configurations? (What even is *actually* required?)
+        for prop in (VXLAN.ID,): #, VXLAN.BASE_IFACE, VXLAN.REMOTE):
             if prop not in self._vxlan_config:
                 raise NmstateValueError(
                     f"Vxlan tunnel {self.name} has missing mandatory "

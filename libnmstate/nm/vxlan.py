@@ -36,7 +36,7 @@ def create_setting(iface_state, base_con_profile):
         vxlan_setting = NM.SettingVxlan.new()
 
     vxlan_setting.props.id = vxlan[VXLAN.ID]
-    vxlan_setting.props.parent = vxlan[VXLAN.BASE_IFACE]
+    vxlan_setting.props.parent = vxlan.get(VXLAN.BASE_IFACE)
     vxlan_setting.props.learning = vxlan.get(VXLAN.LEARNING)
     vxlan_local = vxlan.get(VXLAN.LOCAL)
     vxlan_setting.props.local = vxlan_local if vxlan_local else None
