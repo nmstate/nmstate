@@ -55,7 +55,6 @@ from .team import has_team_capability
 from .translator import Nm2Api
 from .user import get_info as get_user_info
 from .veth import get_current_veth_type
-from .wired import get_info as get_wired_info
 from .ieee_802_1x import get_802_1x_info
 
 
@@ -145,7 +144,6 @@ class NetworkManagerPlugin(NmstatePlugin):
             act_con = dev.get_active_connection()
             iface_info[Interface.IPV4] = get_ipv4_info(act_con, applied_config)
             iface_info[Interface.IPV6] = get_ipv6_info(act_con, applied_config)
-            iface_info.update(get_wired_info(dev))
             iface_info.update(get_user_info(self.context, dev))
             iface_info.update(get_lldp_info(self.client, dev))
             iface_info.update(get_team_info(dev))

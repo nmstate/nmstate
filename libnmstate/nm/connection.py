@@ -131,15 +131,12 @@ def create_new_nm_simple_conn(iface, nm_profile):
     con_setting.set_controller(controller, controller_type)
     settings.append(con_setting.setting)
 
-    # Only apply wired/ethernet configuration based on original desire
-    # state rather than the merged one.
-    original_state_wired = {}
-    if iface.is_desired:
-        original_state_wired = iface.original_dict
-    if iface.type != InterfaceType.INFINIBAND:
-        # The IP over InfiniBand has its own setting for MTU and does not
-        # have ethernet layer.
-        wired_setting = create_wired_setting(original_state_wired, nm_profile)
+    # Only apply wired/ethernet configuration if desired.
+    # The IP over InfiniBand has its own setting for MTU and does not
+    # have ethernet layer.
+    wired_setting = None
+    if iface.is_desired and iface.type != InterfaceType.INFINIBAND:
+        wired_setting = create_wired_setting(iface, nm_profile)
 
         if wired_setting:
             settings.append(wired_setting)

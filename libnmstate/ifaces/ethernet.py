@@ -31,26 +31,25 @@ class EthernetIface(BaseIface):
         self._is_peer = False
 
     def merge(self, other):
-        """
-        Given the other_state, update the ethernet interfaces state base on
-        the other_state ethernet interfaces data.
-        Usually the other_state represents the current state.
-        If auto-negotiation, speed and duplex settings are not provided,
-        but exist in the current state, they need to be set to None
-        to not override them with the values from the current settings
-        since the current settings are read from the device state and not
-        from the actual configuration.  This makes it possible to distinguish
-        whether a user specified these values in the later configuration step.
-        """
-        eth_conf = self._info.setdefault(Ethernet.CONFIG_SUBTREE, {})
-        eth_conf.setdefault(Ethernet.AUTO_NEGOTIATION, None)
-        eth_conf.setdefault(Ethernet.SPEED, None)
-        eth_conf.setdefault(Ethernet.DUPLEX, None)
         super().merge(other)
+        EthernetIface._canonicalize(self._info)
+
+    @staticmethod
+    def _canonicalize(state):
+        """
+        * AUTO_NEGOTIATION: true: Remove speed and duplex
+        * AUTO_NEGOTIATION: false: copy speed/duplex from other if not defined
+        """
+        if state.get(Ethernet.CONFIG_SUBTREE, {}).get(
+            Ethernet.AUTO_NEGOTIATION
+        ):
+            state.get(Ethernet.CONFIG_SUBTREE, {}).pop(Ethernet.SPEED, None)
+            state.get(Ethernet.CONFIG_SUBTREE, {}).pop(Ethernet.DUPLEX, None)
 
     def state_for_verify(self):
         state = super().state_for_verify()
         _capitalize_sriov_vf_mac(state)
+        EthernetIface._canonicalize(state)
         return state
 
     @property
@@ -78,6 +77,20 @@ class EthernetIface(BaseIface):
         return self.raw.get(Ethernet.CONFIG_SUBTREE, {}).get(
             Ethernet.SRIOV_SUBTREE
         )
+
+    @property
+    def speed(self):
+        return self.raw.get(Ethernet.CONFIG_SUBTREE, {}).get(Ethernet.SPEED)
+
+    @property
+    def auto_negotiation(self):
+        return self.raw.get(Ethernet.CONFIG_SUBTREE, {}).get(
+            Ethernet.AUTO_NEGOTIATION
+        )
+
+    @property
+    def duplex(self):
+        return self.raw.get(Ethernet.CONFIG_SUBTREE, {}).get(Ethernet.DUPLEX)
 
     def create_sriov_vf_ifaces(self):
         return [

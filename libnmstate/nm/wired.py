@@ -17,7 +17,6 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
-from libnmstate.ethtool import minimal_ethtool
 from libnmstate.schema import Ethernet
 from libnmstate.schema import Interface
 from .common import NM
@@ -69,8 +68,8 @@ class WiredSetting:
         )
 
 
-def create_setting(iface_state, base_con_profile):
-    setting = WiredSetting(iface_state)
+def create_setting(iface, base_con_profile):
+    setting = WiredSetting(iface.original_dict)
 
     nm_wired_setting = None
     if base_con_profile:
@@ -78,6 +77,8 @@ def create_setting(iface_state, base_con_profile):
         if nm_wired_setting:
             nm_wired_setting = nm_wired_setting.duplicate()
 
+    # Don't create new wire setting when orignal desire state does not
+    # required so.
     if not setting:
         return nm_wired_setting
 
@@ -97,76 +98,15 @@ def create_setting(iface_state, base_con_profile):
             setting.accept_all_mac_addrs
         )
 
-    if setting.auto_negotiation:
+    if setting.auto_negotiation is True:
         nm_wired_setting.props.auto_negotiate = True
-        if not setting.speed and not setting.duplex:
-            nm_wired_setting.props.speed = 0
-            nm_wired_setting.props.duplex = None
-
-        elif not setting.speed:
-            ethtool_results = minimal_ethtool(str(iface_state[Interface.NAME]))
-            setting.speed = ethtool_results[Ethernet.SPEED]
-        elif not setting.duplex:
-            ethtool_results = minimal_ethtool(str(iface_state[Interface.NAME]))
-            setting.duplex = ethtool_results[Ethernet.DUPLEX]
-
+        nm_wired_setting.props.speed = 0
+        nm_wired_setting.props.duplex = None
     elif setting.auto_negotiation is False:
         nm_wired_setting.props.auto_negotiate = False
-        ethtool_results = minimal_ethtool(str(iface_state[Interface.NAME]))
-        if not setting.speed:
-            setting.speed = ethtool_results[Ethernet.SPEED]
-        if not setting.duplex:
-            setting.duplex = ethtool_results[Ethernet.DUPLEX]
-
-    if setting.speed:
-        nm_wired_setting.props.speed = setting.speed
-
-    if setting.duplex in [Ethernet.HALF_DUPLEX, Ethernet.FULL_DUPLEX]:
-        nm_wired_setting.props.duplex = setting.duplex
+        if iface.speed is not None:
+            nm_wired_setting.props.speed = iface.speed
+        if iface.duplex in (Ethernet.FULL_DUPLEX, Ethernet.HALF_DUPLEX):
+            nm_wired_setting.props.duplex = iface.duplex
 
     return nm_wired_setting
-
-
-def get_info(device):
-    """
-    Provides the current active values for a device
-    """
-    info = {}
-
-    iface = device.get_iface()
-
-    if device.get_device_type() == NM.DeviceType.ETHERNET:
-        ethernet = _get_ethernet_info(device, iface)
-        if ethernet:
-            info[Ethernet.CONFIG_SUBTREE] = ethernet
-
-    return info
-
-
-def _get_ethernet_info(device, iface):
-    ethernet = {}
-    try:
-        speed = int(device.get_speed())
-        if speed > 0:
-            ethernet[Ethernet.SPEED] = speed
-        else:
-            return None
-    except AttributeError:
-        return None
-
-    ethtool_results = minimal_ethtool(iface)
-    auto_setting = ethtool_results[Ethernet.AUTO_NEGOTIATION]
-    if auto_setting is True:
-        ethernet[Ethernet.AUTO_NEGOTIATION] = True
-    elif auto_setting is False:
-        ethernet[Ethernet.AUTO_NEGOTIATION] = False
-    else:
-        return None
-
-    duplex_setting = ethtool_results[Ethernet.DUPLEX]
-    if duplex_setting in [Ethernet.HALF_DUPLEX, Ethernet.FULL_DUPLEX]:
-        ethernet[Ethernet.DUPLEX] = duplex_setting
-    else:
-        return None
-
-    return ethernet

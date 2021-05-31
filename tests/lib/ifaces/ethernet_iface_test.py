@@ -30,13 +30,13 @@ FOO_IFACE_NAME = "foo"
 
 
 class TestEthernetIface:
-    def test_merge_speed_duplex(self):
+    def test_merge_speed_duplex_autoneg_true(self):
         iface_info = {
             Interface.NAME: FOO_IFACE_NAME,
             Interface.STATE: InterfaceState.UP,
             Interface.TYPE: InterfaceType.ETHERNET,
             Ethernet.CONFIG_SUBTREE: {
-                Ethernet.AUTO_NEGOTIATION: False,
+                Ethernet.AUTO_NEGOTIATION: True,
                 Ethernet.SPEED: 1000,
                 Ethernet.DUPLEX: Ethernet.FULL_DUPLEX,
             },
@@ -57,12 +57,51 @@ class TestEthernetIface:
             Interface.STATE: InterfaceState.UP,
             Interface.TYPE: InterfaceType.ETHERNET,
             Ethernet.CONFIG_SUBTREE: {
-                Ethernet.AUTO_NEGOTIATION: None,
-                Ethernet.SPEED: None,
-                Ethernet.DUPLEX: None,
+                Ethernet.AUTO_NEGOTIATION: True,
             },
             Interface.MAC: MAC_ADDRESS1,
         }
+        assert des_iface.auto_negotiation
+
+    def test_merge_speed_duplex_autoneg_false(self):
+        iface_info = {
+            Interface.NAME: FOO_IFACE_NAME,
+            Interface.STATE: InterfaceState.UP,
+            Interface.TYPE: InterfaceType.ETHERNET,
+            Ethernet.CONFIG_SUBTREE: {
+                Ethernet.AUTO_NEGOTIATION: True,
+                Ethernet.SPEED: 1000,
+                Ethernet.DUPLEX: Ethernet.FULL_DUPLEX,
+            },
+            Interface.MAC: MAC_ADDRESS1,
+        }
+        des_iface_info = {
+            Interface.NAME: FOO_IFACE_NAME,
+            Interface.TYPE: InterfaceType.ETHERNET,
+            Ethernet.CONFIG_SUBTREE: {
+                Ethernet.AUTO_NEGOTIATION: False,
+            },
+        }
+
+        cur_iface = EthernetIface(iface_info)
+        des_iface = EthernetIface(des_iface_info)
+
+        des_iface.merge(cur_iface)
+
+        assert des_iface.to_dict() == {
+            Interface.NAME: FOO_IFACE_NAME,
+            Interface.STATE: InterfaceState.UP,
+            Interface.TYPE: InterfaceType.ETHERNET,
+            Ethernet.CONFIG_SUBTREE: {
+                Ethernet.AUTO_NEGOTIATION: False,
+                Ethernet.SPEED: 1000,
+                Ethernet.DUPLEX: Ethernet.FULL_DUPLEX,
+            },
+            Interface.MAC: MAC_ADDRESS1,
+        }
+        assert des_iface.auto_negotiation is False
+        assert des_iface.speed == 1000
+        assert des_iface.duplex == Ethernet.FULL_DUPLEX
 
     def test_mix_cases_of_vf_mac_address(self):
         mac_addr = "FF:EE:dd:CC:BB:aa"
