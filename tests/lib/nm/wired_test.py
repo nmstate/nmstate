@@ -23,6 +23,7 @@ from unittest import mock
 
 from libnmstate import nm
 from libnmstate import schema
+from libnmstate.ifaces.ethernet import EthernetIface
 
 
 @pytest.fixture
@@ -32,7 +33,14 @@ def NM_mock():
 
 
 def test_create_setting_None(NM_mock):
-    setting = nm.wired.create_setting({}, None)
+    setting = nm.wired.create_setting(
+        EthernetIface(
+            {
+                schema.Interface.NAME: "foo",
+            }
+        ),
+        None,
+    )
     assert setting is None
 
 
@@ -40,7 +48,12 @@ def test_create_setting_duplicate(NM_mock):
     base_profile = mock.MagicMock()
 
     setting = nm.wired.create_setting(
-        {schema.Ethernet.CONFIG_SUBTREE: {schema.Ethernet.SPEED: 1000}},
+        EthernetIface(
+            {
+                schema.Interface.NAME: "foo",
+                schema.Ethernet.CONFIG_SUBTREE: {schema.Ethernet.SPEED: 1000},
+            }
+        ),
         base_profile,
     )
     assert (
@@ -51,51 +64,70 @@ def test_create_setting_duplicate(NM_mock):
 
 def test_create_setting_mac(NM_mock):
     setting = nm.wired.create_setting(
-        {schema.Interface.MAC: "01:23:45:67:89:ab"}, None
+        EthernetIface(
+            {
+                schema.Interface.NAME: "foo",
+                schema.Interface.MAC: "01:23:45:67:89:ab",
+            }
+        ),
+        None,
     )
     assert setting == NM_mock.SettingWired.new.return_value
     assert setting.props.cloned_mac_address == "01:23:45:67:89:ab"
 
 
 def test_create_setting_mtu(NM_mock):
-    setting = nm.wired.create_setting({schema.Interface.MTU: 1500}, None)
+    setting = nm.wired.create_setting(
+        EthernetIface(
+            {schema.Interface.NAME: "foo", schema.Interface.MTU: 1500}
+        ),
+        None,
+    )
     assert setting == NM_mock.SettingWired.new.return_value
     assert setting.props.mtu == 1500
 
 
-@mock.patch.object(
-    nm.wired,
-    "minimal_ethtool",
-    return_value={
-        "speed": 1337,
-        "duplex": "full",
-        "auto-negotiation": "mocked",
-    },
-)
-def test_create_setting_auto_negotiation_False(ethtool_mock, NM_mock):
-    setting = nm.wired.create_setting(
+def test_create_setting_auto_negotiation_False(NM_mock):
+    iface = EthernetIface(
         {
-            schema.Interface.NAME: "nmstate_test",
+            schema.Interface.NAME: "foo",
             schema.Ethernet.CONFIG_SUBTREE: {
                 schema.Ethernet.AUTO_NEGOTIATION: False
             },
-        },
+        }
+    )
+    iface.merge(
+        EthernetIface(
+            {
+                schema.Interface.NAME: "foo",
+                schema.Ethernet.CONFIG_SUBTREE: {
+                    schema.Ethernet.AUTO_NEGOTIATION: False,
+                    schema.Ethernet.SPEED: 1000,
+                    schema.Ethernet.DUPLEX: schema.Ethernet.FULL_DUPLEX,
+                },
+            }
+        )
+    )
+    setting = nm.wired.create_setting(
+        iface,
         None,
     )
     assert setting == NM_mock.SettingWired.new.return_value
     assert setting.props.auto_negotiate is False
-    assert setting.props.speed == 1337
+    assert setting.props.speed == 1000
     assert setting.props.duplex == schema.Ethernet.FULL_DUPLEX
-    assert ethtool_mock.called_with("nmstate_test")
 
 
 def test_create_setting_only_auto_negotiation_True(NM_mock):
     setting = nm.wired.create_setting(
-        {
-            schema.Ethernet.CONFIG_SUBTREE: {
-                schema.Ethernet.AUTO_NEGOTIATION: True
+        EthernetIface(
+            {
+                schema.Interface.NAME: "foo",
+                schema.Ethernet.CONFIG_SUBTREE: {
+                    schema.Ethernet.AUTO_NEGOTIATION: True
+                },
             }
-        },
+        ),
         None,
     )
     assert setting == NM_mock.SettingWired.new.return_value
@@ -106,55 +138,41 @@ def test_create_setting_only_auto_negotiation_True(NM_mock):
 
 def test_create_setting_auto_negotiation_speed_duplex(NM_mock):
     setting = nm.wired.create_setting(
-        {
-            schema.Ethernet.CONFIG_SUBTREE: {
-                schema.Ethernet.AUTO_NEGOTIATION: True,
-                schema.Ethernet.SPEED: 1000,
-                schema.Ethernet.DUPLEX: schema.Ethernet.FULL_DUPLEX,
+        EthernetIface(
+            {
+                schema.Interface.NAME: "foo",
+                schema.Ethernet.CONFIG_SUBTREE: {
+                    schema.Ethernet.AUTO_NEGOTIATION: True,
+                    schema.Ethernet.SPEED: 1000,
+                    schema.Ethernet.DUPLEX: schema.Ethernet.FULL_DUPLEX,
+                },
             }
-        },
+        ),
         None,
     )
     assert setting == NM_mock.SettingWired.new.return_value
     assert setting.props.auto_negotiate is True
-    assert setting.props.speed == 1000
-    assert setting.props.duplex == schema.Ethernet.FULL_DUPLEX
+    assert setting.props.speed == 0
+    assert setting.props.duplex is None
 
 
 def test_create_setting_speed_duplex(NM_mock):
     setting = nm.wired.create_setting(
-        {
-            schema.Ethernet.CONFIG_SUBTREE: {
-                schema.Ethernet.SPEED: 1000,
-                schema.Ethernet.DUPLEX: schema.Ethernet.FULL_DUPLEX,
+        EthernetIface(
+            {
+                schema.Interface.NAME: "foo",
+                schema.Ethernet.CONFIG_SUBTREE: {
+                    schema.Ethernet.AUTO_NEGOTIATION: False,
+                    schema.Ethernet.SPEED: 1000,
+                    schema.Ethernet.DUPLEX: schema.Ethernet.FULL_DUPLEX,
+                },
             }
-        },
+        ),
         None,
     )
     assert setting == NM_mock.SettingWired.new.return_value
     assert setting.props.speed == 1000
     assert setting.props.duplex == schema.Ethernet.FULL_DUPLEX
-
-
-@mock.patch.object(
-    nm.wired,
-    "minimal_ethtool",
-    return_value={
-        "speed": 1500,
-        "duplex": "unknown",
-        "auto-negotiation": True,
-    },
-)
-def test_get_info_with_invalid_duplex(ethtool_mock, NM_mock):
-    dev_mock = mock.MagicMock()
-    dev_mock.get_iface.return_value = "nmstate_test"
-    dev_mock.get_hw_address.return_value = "ab:cd:ef:01:23:45"
-    dev_mock.get_mtu.return_value = 1500
-    dev_mock.get_device_type.return_value = NM_mock.DeviceType.ETHERNET
-
-    info = nm.wired.get_info(dev_mock)
-
-    assert info == {}
 
 
 class TestWiredSetting:

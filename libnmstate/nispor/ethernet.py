@@ -51,5 +51,28 @@ class NisporPluginEthernetIface(NisporPluginBaseIface):
             info[Ethernet.CONFIG_SUBTREE] = {
                 Ethernet.SRIOV_SUBTREE: sriov_info
             }
+        if self.np_iface.ethtool and self.np_iface.ethtool.link_mode:
+            if Ethernet.CONFIG_SUBTREE not in info:
+                info[Ethernet.CONFIG_SUBTREE] = {}
+            info[Ethernet.CONFIG_SUBTREE].update(
+                np_ethtool_link_mode_to_nmstate(
+                    self.np_iface.ethtool.link_mode
+                )
+            )
 
         return info
+
+
+def np_ethtool_link_mode_to_nmstate(np_link_mode):
+    info = {
+        Ethernet.AUTO_NEGOTIATION: np_link_mode.auto_negotiate,
+    }
+    if np_link_mode.duplex == "full":
+        info[Ethernet.DUPLEX] = Ethernet.FULL_DUPLEX
+    elif np_link_mode.duplex == "half":
+        info[Ethernet.DUPLEX] = Ethernet.HALF_DUPLEX
+
+    if np_link_mode.speed != 0:
+        info[Ethernet.SPEED] = np_link_mode.speed
+
+    return info
