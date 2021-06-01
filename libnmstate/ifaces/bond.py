@@ -32,6 +32,8 @@ from .base_iface import BaseIface
 
 DEPRECATED_SLAVES = "slaves"
 
+IANA_MULTICAST_MAC_ADDRESS_PREFIX = "01:00:5E"
+
 
 class BondIface(BaseIface):
     _MODE_CHANGE_METADATA = "_bond_mode_changed"
@@ -93,6 +95,7 @@ class BondIface(BaseIface):
             self._validate_bond_mode()
             self._fix_mac_restriced_mode()
             self._validate_miimon_conflict_with_arp_interval()
+            self._validate_ad_actor_system_mac_address()
 
     def _discard_bond_option_when_mode_change(self):
         if self.is_bond_mode_changed:
@@ -233,6 +236,21 @@ class BondIface(BaseIface):
             return current_value.lower(), value.lower()
         else:
             return current_value, value
+
+    def _validate_ad_actor_system_mac_address(self):
+        desire_mac = (
+            self.original_dict.get(Bond.CONFIG_SUBTREE, {})
+            .get(Bond.OPTIONS_SUBTREE, {})
+            .get("ad_actor_system")
+        )
+        if desire_mac and desire_mac.upper().startswith(
+            IANA_MULTICAST_MAC_ADDRESS_PREFIX
+        ):
+            raise NmstateValueError(
+                "The ad_actor_system bond option cannot be an IANA "
+                "multicast address(prefix with "
+                f"{IANA_MULTICAST_MAC_ADDRESS_PREFIX})"
+            )
 
 
 class _BondNamedOptions:
