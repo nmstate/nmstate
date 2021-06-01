@@ -24,6 +24,7 @@ import time
 import pytest
 
 import libnmstate
+from libnmstate.error import NmstateValueError
 from libnmstate.schema import Interface
 from libnmstate.schema import Ethtool
 
@@ -91,3 +92,36 @@ def test_ethtool_pause_on_netdevsim():
         libnmstate.apply({Interface.KEY: [desire_iface_state]})
         assertlib.assert_state_match({Interface.KEY: [desire_iface_state]})
     assertlib.assert_absent(TEST_NETDEVSIM_NIC)
+
+
+@pytest.mark.skipif(
+    os.environ.get("CI") == "true",
+    reason=("CI does not have ethtool kernel option enabled"),
+)
+def test_ethtool_feature_using_ethtool_cli_alias_rx_checksumming(eth1_up):
+    desire_iface_state = {
+        Interface.NAME: "eth1",
+        Ethtool.CONFIG_SUBTREE: {
+            Ethtool.Feature.CONFIG_SUBTREE: {"rx-checksumming": False}
+        },
+    }
+    libnmstate.apply({Interface.KEY: [desire_iface_state]})
+
+    desire_feature = desire_iface_state[Ethtool.CONFIG_SUBTREE][
+        Ethtool.Feature.CONFIG_SUBTREE
+    ]
+    desire_feature.pop("rx-checksumming")
+    desire_feature["rx-checksum"] = False
+
+    assertlib.assert_state_match({Interface.KEY: [desire_iface_state]})
+
+
+def test_ethtool_invalid_feature(eth1_up):
+    desire_iface_state = {
+        Interface.NAME: "eth1",
+        Ethtool.CONFIG_SUBTREE: {
+            Ethtool.Feature.CONFIG_SUBTREE: {"no_exist_feature": False}
+        },
+    }
+    with pytest.raises(NmstateValueError):
+        libnmstate.apply({Interface.KEY: [desire_iface_state]})

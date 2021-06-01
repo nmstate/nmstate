@@ -470,3 +470,6 @@ class Ethtool:
         AUTO_NEGOTIATION = "autoneg"
         RX = "rx"
         TX = "tx"
+
+    class Feature:
+        CONFIG_SUBTREE = "feature"

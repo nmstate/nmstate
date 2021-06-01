@@ -1044,3 +1044,27 @@ class TestEthtool:
         )
         with pytest.raises(js.ValidationError):
             libnmstate.validator.schema_validate(default_data)
+
+    def test_valid_ethtool_feature(self, default_data):
+        default_data[Interface.KEY][0].update(
+            {
+                Ethtool.CONFIG_SUBTREE: {
+                    Ethtool.Feature.CONFIG_SUBTREE: {"rx-all": False}
+                }
+            }
+        )
+        libnmstate.validator.schema_validate(default_data)
+
+    def test_invalid_ethtool_feature_with_interger_value(self, default_data):
+        default_data[Interface.KEY][0].update(
+            {
+                Ethtool.CONFIG_SUBTREE: {
+                    Ethtool.Feature.CONFIG_SUBTREE: {
+                        "rx-all": False,
+                        "invalid-option": 100,
+                    }
+                }
+            }
+        )
+        with pytest.raises(js.ValidationError):
+            libnmstate.validator.schema_validate(default_data)
