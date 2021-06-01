@@ -907,3 +907,27 @@ def test_replacing_slave_set_mac_of_new_slave_on_bond(
         eth1_up[Interface.KEY][0][Interface.MAC]
         == current_state[Interface.KEY][0][Interface.MAC]
     )
+
+
+@pytest.mark.tier1
+def test_bond_mac_restriction_check_only_impact_desired(eth1_up, eth2_up):
+    with bond_interface(
+        name=BOND99,
+        slaves=[ETH1, ETH2],
+        extra_iface_state={
+            Bond.CONFIG_SUBTREE: {
+                Bond.MODE: BondMode.ACTIVE_BACKUP,
+                Bond.OPTIONS_SUBTREE: {"fail_over_mac": "active"},
+            },
+        },
+    ):
+        dummy_iface_state = {
+            Interface.NAME: "dummy0",
+            Interface.TYPE: InterfaceType.DUMMY,
+            Interface.STATE: InterfaceState.UP,
+        }
+        try:
+            libnmstate.apply({Interface.KEY: [dummy_iface_state]})
+        finally:
+            dummy_iface_state[Interface.STATE] = InterfaceState.ABSENT
+            libnmstate.apply({Interface.KEY: [dummy_iface_state]})
