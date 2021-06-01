@@ -1062,3 +1062,26 @@ def test_bond_enable_and_disable_accept_all_mac_addresses(bond88_with_port):
     desired_state[Interface.KEY][0][Interface.ACCEPT_ALL_MAC_ADDRESSES] = False
     libnmstate.apply(desired_state)
     assertlib.assert_state_match(desired_state)
+
+
+@pytest.mark.tier1
+@pytest.mark.skipif(
+    nm_major_minor_version() < 1.31,
+    reason="https://bugzilla.redhat.com/1959934",
+)
+def test_bond_flip_tlb_dynamic_lbs(bond99_with_2_port):
+    desired_state = bond99_with_2_port
+    bond_state = desired_state[Interface.KEY][0]
+    bond_state[Bond.CONFIG_SUBTREE][Bond.MODE] = BondMode.TLB
+    bond_state[Bond.CONFIG_SUBTREE][Bond.OPTIONS_SUBTREE] = {
+        "tlb_dynamic_lb": True
+    }
+
+    libnmstate.apply(desired_state)
+    assertlib.assert_state_match(desired_state)
+
+    bond_state[Bond.CONFIG_SUBTREE][Bond.OPTIONS_SUBTREE] = {
+        "tlb_dynamic_lb": False
+    }
+    libnmstate.apply(desired_state)
+    assertlib.assert_state_match(desired_state)
