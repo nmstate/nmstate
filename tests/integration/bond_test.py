@@ -1036,3 +1036,26 @@ def test_replacing_port_set_mac_of_new_port_on_bond(bond99_with_eth2, eth1_up):
         eth1_up[Interface.KEY][0][Interface.MAC]
         == current_state[Interface.KEY][0][Interface.MAC]
     )
+
+
+@pytest.mark.tier1
+@pytest.mark.skipif(
+    nm_major_minor_version() < 1.31,
+    reason="https://bugzilla.redhat.com/1959934",
+)
+def test_bond_flip_tlb_dynamic_lbs(bond99_with_2_port):
+    desired_state = bond99_with_2_port
+    bond_state = desired_state[Interface.KEY][0]
+    bond_state[Bond.CONFIG_SUBTREE][Bond.MODE] = BondMode.TLB
+    bond_state[Bond.CONFIG_SUBTREE][Bond.OPTIONS_SUBTREE] = {
+        "tlb_dynamic_lb": True
+    }
+
+    libnmstate.apply(desired_state)
+    assertlib.assert_state_match(desired_state)
+
+    bond_state[Bond.CONFIG_SUBTREE][Bond.OPTIONS_SUBTREE] = {
+        "tlb_dynamic_lb": False
+    }
+    libnmstate.apply(desired_state)
+    assertlib.assert_state_match(desired_state)
