@@ -1134,3 +1134,15 @@ def test_bond_mac_restriction_check_only_impact_desired(eth1_up, eth2_up):
         finally:
             dummy_iface_state[Interface.STATE] = InterfaceState.ABSENT
             libnmstate.apply({Interface.KEY: [dummy_iface_state]})
+
+
+def test_bond_ad_actor_system_with_multicast_mac_address(bond99_with_2_port):
+    desired_state = bond99_with_2_port
+    bond_state = desired_state[Interface.KEY][0]
+    bond_state[Bond.CONFIG_SUBTREE][Bond.MODE] = BondMode.LACP
+    bond_state[Bond.CONFIG_SUBTREE][Bond.OPTIONS_SUBTREE] = {
+        "ad_actor_system": "01:00:5E:00:0f:01"
+    }
+
+    with pytest.raises(NmstateValueError):
+        libnmstate.apply(desired_state)
