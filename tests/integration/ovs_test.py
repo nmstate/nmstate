@@ -809,3 +809,7 @@ def test_create_mac_tap_over_ovs_iface_with_use_same_name_as_bridge(
     }
     libnmstate.apply(desired_state)
     assertlib.assert_state_match(desired_state)
+
+
+def test_ignore_ovs_system_kernel_nic(bridge_with_ports):
+    assert not statelib.show_only(("ovs-system",))[Interface.KEY]

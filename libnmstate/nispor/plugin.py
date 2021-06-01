@@ -119,6 +119,10 @@ class NisporPlugin(NmstatePlugin):
                     NisporPluginVrfIface(np_iface).to_dict(config_only)
                 )
             elif iface_type == "openv_switch":
+                # The `ovs-system` is reserved for OVS kernel datapath
+                if np_iface.name == "ovs-system":
+                    continue
+
                 ifaces.append(
                     NisporPluginOvsInternalIface(np_iface).to_dict(config_only)
                 )
