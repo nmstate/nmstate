@@ -82,9 +82,9 @@ def create_setting(iface, wired_setting, base_con_profile):
 
 def _nm_fix_bond_options(option_name, option_value):
     if option_name == "all_slaves_active":
-        if option_value == "delivered":
+        if option_value in ("delivered", "1"):
             option_value = 1
-        elif option_value == "dropped":
+        elif option_value in ("dropped", "0"):
             option_value = 0
         else:
             raise NmstateNotImplementedError(
