@@ -82,7 +82,7 @@ class BondIface(BaseIface):
 
     def pre_edit_validation_and_cleanup(self):
         super().pre_edit_validation_and_cleanup()
-        if self.is_up:
+        if self.is_up and self.is_desired:
             self._discard_bond_option_when_mode_change()
             self._validate_bond_mode()
             self._fix_mac_restriced_mode()

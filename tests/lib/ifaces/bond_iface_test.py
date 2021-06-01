@@ -285,9 +285,11 @@ class TestBondIface:
     def test_validate_bond_mode_undefined(self):
         iface_info = self._gen_iface_info()
         iface_info[Bond.CONFIG_SUBTREE].pop(Bond.MODE)
+        iface = BondIface(iface_info)
+        iface.mark_as_desired()
 
         with pytest.raises(NmstateValueError):
-            BondIface(iface_info).pre_edit_validation_and_cleanup()
+            iface.pre_edit_validation_and_cleanup()
 
     def test_validate_mac_restriced_mode_with_desire_has_no_mac(self):
         cur_iface_info = self._gen_iface_info()
@@ -299,6 +301,7 @@ class TestBondIface:
             "fail_over_mac": "active"
         }
         iface = BondIface(iface_info)
+        iface.mark_as_desired()
 
         iface.merge(cur_iface)
         iface.pre_edit_validation_and_cleanup()
@@ -314,6 +317,7 @@ class TestBondIface:
             "fail_over_mac": "active"
         }
         iface = BondIface(iface_info)
+        iface.mark_as_desired()
 
         iface.merge(cur_iface)
         with pytest.raises(NmstateValueError):
@@ -331,6 +335,7 @@ class TestBondIface:
         iface_info[Bond.CONFIG_SUBTREE].pop(Bond.OPTIONS_SUBTREE)
         iface_info[Interface.MAC] = MAC_ADDRESS1
         iface = BondIface(iface_info)
+        iface.mark_as_desired()
 
         iface.merge(cur_iface)
         with pytest.raises(NmstateValueError):
