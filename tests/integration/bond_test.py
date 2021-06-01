@@ -1085,3 +1085,28 @@ def test_bond_flip_tlb_dynamic_lbs(bond99_with_2_port):
     }
     libnmstate.apply(desired_state)
     assertlib.assert_state_match(desired_state)
+
+
+def test_bond_preserve_existing_all_slaves_active_setting(bond99_with_2_port):
+    desired_state = bond99_with_2_port
+    bond_state = desired_state[Interface.KEY][0]
+    bond_state[Bond.CONFIG_SUBTREE][Bond.MODE] = BondMode.TLB
+    bond_state[Bond.CONFIG_SUBTREE][Bond.OPTIONS_SUBTREE] = {
+        "all_slaves_active": "dropped",
+    }
+
+    libnmstate.apply(desired_state)
+    assertlib.assert_state_match(desired_state)
+
+    bond_state[Bond.CONFIG_SUBTREE][Bond.OPTIONS_SUBTREE] = {
+        "tlb_dynamic_lb": False
+    }
+    libnmstate.apply(desired_state)
+    assertlib.assert_state_match(desired_state)
+    current_state = statelib.show_only((BOND99,))
+    assert (
+        current_state[Interface.KEY][0][Bond.CONFIG_SUBTREE][
+            Bond.OPTIONS_SUBTREE
+        ]["all_slaves_active"]
+        == "dropped"
+    )
