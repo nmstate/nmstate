@@ -92,7 +92,7 @@ def _nm_fix_bond_options(option_name, option_value):
                     option_name, option_value
                 )
             )
-    elif option_name == "use_carrier":
+    elif option_name in ("use_carrier", "tlb_dynamic_lb"):
         option_value = 1 if option_value else 0
 
     return str(option_value)
