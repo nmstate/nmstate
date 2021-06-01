@@ -174,13 +174,15 @@ class EthtoolInfo:
         self._np_ethtool = np_ethtool
 
     def to_dict(self):
+        info = {}
         np_pause = self._np_ethtool.pause
         if np_pause:
-            return {
-                Ethtool.Pause.CONFIG_SUBTREE: {
-                    Ethtool.Pause.AUTO_NEGOTIATION: np_pause.auto_negotiate,
-                    Ethtool.Pause.TX: np_pause.tx,
-                    Ethtool.Pause.RX: np_pause.rx,
-                }
+            info[Ethtool.Pause.CONFIG_SUBTREE] = {
+                Ethtool.Pause.AUTO_NEGOTIATION: np_pause.auto_negotiate,
+                Ethtool.Pause.TX: np_pause.tx,
+                Ethtool.Pause.RX: np_pause.rx,
             }
-        return {}
+        np_features = self._np_ethtool.features
+        if np_features:
+            info[Ethtool.Feature.CONFIG_SUBTREE] = np_features.changeable
+        return info

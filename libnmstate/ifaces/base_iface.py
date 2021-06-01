@@ -248,7 +248,7 @@ class BaseIface:
                 ip_state.remove_link_local_address()
                 self._info[family] = ip_state.to_dict()
                 if self.ethtool:
-                    self.ethtool.pre_edit_validation_and_cleanup(
+                    self.ethtool.canonicalize(
                         self._origin_info.get(Ethtool.CONFIG_SUBTREE, {})
                     )
                     self._info[Ethtool.CONFIG_SUBTREE] = self.ethtool.to_dict()
@@ -406,7 +406,9 @@ class BaseIface:
         """
         self._capitalize_mac()
         if self.ethtool:
-            self.ethtool.canonicalize()
+            self.ethtool.canonicalize(
+                self.original_dict.get(Ethtool.CONFIG_SUBTREE, {})
+            )
             self._info[Ethtool.CONFIG_SUBTREE] = self.ethtool.to_dict()
         self.sort_port()
         for family in (Interface.IPV4, Interface.IPV6):

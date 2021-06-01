@@ -31,28 +31,37 @@ class IfaceEthtool:
             self._pause = IfaceEthtoolPause(
                 self._info[Ethtool.Pause.CONFIG_SUBTREE]
             )
+        self._feature = None
+        if self._info.get(Ethtool.Feature.CONFIG_SUBTREE):
+            self._feature = IfaceEthtoolFeature(
+                self._info[Ethtool.Feature.CONFIG_SUBTREE]
+            )
 
     @property
     def pause(self):
         return self._pause
 
-    def pre_edit_validation_and_cleanup(self, original_desire):
+    @property
+    def feature(self):
+        return self._feature
+
+    def canonicalize(self, original_desire):
         if self.pause:
-            self.pause.pre_edit_validation_and_cleanup(
-                IfaceEthtoolPause(
-                    original_desire.get(Ethtool.Pause.CONFIG_SUBTREE, {})
-                )
+            self.pause.canonicalize(
+                original_desire.get(Ethtool.Pause.CONFIG_SUBTREE, {})
+            )
+        if self.feature:
+            self.feature.canonicalize(
+                original_desire.get(Ethtool.Feature.CONFIG_SUBTREE, {})
             )
 
-    def canonicalize(self):
-        if self.pause:
-            self.pause.canonicalize()
-
     def to_dict(self):
+        info = {}
         if self.pause:
-            return {Ethtool.Pause.CONFIG_SUBTREE: self.pause.to_dict()}
-        else:
-            return {}
+            info[Ethtool.Pause.CONFIG_SUBTREE] = self.pause.to_dict()
+        if self.feature:
+            info[Ethtool.Feature.CONFIG_SUBTREE] = self.feature.to_dict()
+        return info
 
 
 class IfaceEthtoolPause:
@@ -71,28 +80,70 @@ class IfaceEthtoolPause:
     def tx(self):
         return self._info.get(Ethtool.Pause.TX)
 
-    def pre_edit_validation_and_cleanup(self, original_desire):
+    def canonicalize(self, original_desire):
         """
         When AUTO_NEGOTIATION is enabled, RX and TX should be ignored.
         Log warnning if desired has AUTO_NEGOTIATION: True and RX/TX
         configured.
+        Remove RX/TX when AUTO_NEGOTIATION is enabled.
         """
         if self.autoneg and (
-            original_desire.rx is not None or original_desire.tx is not None
+            original_desire.get(Ethtool.Pause.RX) is not None
+            or original_desire.get(Ethtool.Pause.TX) is not None
         ):
             logging.warn(
                 "Ignoring RX/TX configure of ethtool PAUSE when "
                 "AUTO_NEGOTIATION enabled"
             )
-        self.canonicalize()
-
-    def canonicalize(self):
-        """
-        Remove RX/TX when AUTO_NEGOTIATION is enabled.
-        """
         if self.autoneg:
             self._info.pop(Ethtool.Pause.RX, None)
             self._info.pop(Ethtool.Pause.TX, None)
+
+    def to_dict(self):
+        return deepcopy(self._info)
+
+
+class IfaceEthtoolFeature:
+    _ETHTOOL_CLI_ALIASES = {
+        "rx": "rx-checksum",
+        "rx-checksumming": "rx-checksum",
+        "ufo": "tx-udp-fragmentation",
+        "gso": "tx-generic-segmentation",
+        "generic-segmentation-offload": "tx-generic-segmentation",
+        "gro": "rx-gro",
+        "generic-receive-offload": "rx-gro",
+        "lro": "rx-lro",
+        "large-receive-offload": "rx-lro",
+        "rxvlan": "rx-vlan-hw-parse",
+        "rx-vlan-offload": "rx-vlan-hw-parse",
+        "txvlan": "tx-vlan-hw-insert",
+        "tx-vlan-offload": "tx-vlan-hw-insert",
+        "ntuple": "rx-ntuple-filter",
+        "ntuple-filters": "rx-ntuple-filter",
+        "rxhash": "rx-hashing",
+        "receive-hashing": "rx-hashing",
+    }
+
+    def __init__(self, feature_info):
+        self._info = feature_info
+
+    def canonicalize(self, original_desire):
+        """
+        * Convert ethtool CLI alias to kernel names both in self and
+        original_desire
+        """
+        saved_keys = list(self._info.keys())
+        for key in saved_keys:
+            if key in IfaceEthtoolFeature._ETHTOOL_CLI_ALIASES:
+                kernel_key_name = IfaceEthtoolFeature._ETHTOOL_CLI_ALIASES[key]
+                self._info[kernel_key_name] = self._info[key]
+                original_desire[kernel_key_name] = self._info[key]
+                self._info.pop(key)
+                original_desire.pop(key, None)
+
+    def items(self):
+        for k, v in self._info.items():
+            yield k, v
 
     def to_dict(self):
         return deepcopy(self._info)

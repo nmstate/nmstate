@@ -636,6 +636,10 @@ definitions:
                   type: boolean
                 tx:
                   type: boolean
+            feature:
+              type: object
+              additionalProperties:
+                type: boolean
   interface-team:
     rw:
       properties:
