@@ -37,26 +37,14 @@ def create_ethtool_setting(iface_ethtool, base_con_profile):
         nm_setting = NM.SettingEthtool.new()
 
     if iface_ethtool.pause and hasattr(NM, "ETHTOOL_OPTNAME_PAUSE_AUTONEG"):
-        if iface_ethtool.pause.autoneg is not None:
-            nm_setting.option_set(
-                # pylint: disable=no-member
-                NM.ETHTOOL_OPTNAME_PAUSE_AUTONEG,
-                # pylint: enable=no-member
-                GLib.Variant.new_boolean(iface_ethtool.pause.autoneg),
-            )
-        if iface_ethtool.pause.rx is not None:
-            nm_setting.option_set(
-                # pylint: disable=no-member
-                NM.ETHTOOL_OPTNAME_PAUSE_RX,
-                # pylint: enable=no-member
-                GLib.Variant.new_boolean(iface_ethtool.pause.rx),
-            )
-        if iface_ethtool.pause.tx is not None:
-            nm_setting.option_set(
-                # pylint: disable=no-member
-                NM.ETHTOOL_OPTNAME_PAUSE_TX,
-                # pylint: enable=no-member
-                GLib.Variant.new_boolean(iface_ethtool.pause.tx),
+        if iface_ethtool.pause.autoneg is True:
+            nm_set_pause(nm_setting, True, None, None)
+        elif iface_ethtool.pause.autoneg is False:
+            nm_set_pause(
+                nm_setting,
+                False,
+                iface_ethtool.pause.rx,
+                iface_ethtool.pause.tx,
             )
 
     if iface_ethtool.feature:
@@ -94,3 +82,22 @@ def nm_set_feature(nm_setting, kernel_feature_name, value):
             f"Ethtool feature {kernel_feature_name} is invalid "
             "or not supported by current NetworkManager"
         )
+
+
+def nm_set_pause(nm_setting, autoneg, rx, tx):
+    rx_value = None if rx is None else GLib.Variant.new_boolean(rx)
+    tx_value = None if tx is None else GLib.Variant.new_boolean(tx)
+    # pylint: disable=no-member
+    nm_setting.option_set(
+        NM.ETHTOOL_OPTNAME_PAUSE_AUTONEG,
+        GLib.Variant.new_boolean(autoneg),
+    )
+    nm_setting.option_set(
+        NM.ETHTOOL_OPTNAME_PAUSE_RX,
+        rx_value,
+    )
+    nm_setting.option_set(
+        NM.ETHTOOL_OPTNAME_PAUSE_TX,
+        tx_value,
+    )
+    # pylint: enable=no-member
