@@ -22,6 +22,8 @@
 import uuid
 
 from libnmstate.error import NmstatePluginError
+from libnmstate.ifaces import IfaceEthtool
+from libnmstate.schema import Ethtool
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import LinuxBridge as LB
@@ -234,8 +236,15 @@ def create_new_nm_simple_conn(iface, nm_profile):
     if iface.ieee_802_1x_conf:
         settings.append(create_802_1x_setting(iface.ieee_802_1x_conf))
 
-    if iface.ethtool:
-        setting = create_ethtool_setting(iface.ethtool, nm_profile)
+    if Ethtool.CONFIG_SUBTREE in iface.original_dict and iface.is_desired:
+        iface_ethtool = IfaceEthtool(
+            iface.original_dict[Ethtool.CONFIG_SUBTREE]
+        )
+        iface_ethtool.canonicalize(iface.original_dict[Ethtool.CONFIG_SUBTREE])
+        setting = create_ethtool_setting(
+            iface_ethtool,
+            nm_profile,
+        )
         if setting:
             settings.append(setting)
 
