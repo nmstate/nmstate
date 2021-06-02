@@ -21,6 +21,7 @@
 #   * Actions required the knownldege of multiple NmProfile
 
 import logging
+from operator import attrgetter
 
 from libnmstate.schema import InterfaceType
 
@@ -58,9 +59,14 @@ class NmProfiles:
 
     def apply_config(self, net_state, save_to_disk):
         self._prepare_state_for_profiles(net_state)
+        # The activation order on bridge/bond ports determins their controler's
+        # MAC address. The default NetworkManager is using alphabet order on
+        # boot. So we should to the same here.
         all_profiles = [
             NmProfile(self._ctx, iface)
-            for iface in net_state.ifaces.all_ifaces()
+            for iface in sorted(
+                list(net_state.ifaces.all_ifaces()), key=attrgetter("name")
+            )
         ]
 
         for profile in all_profiles:
