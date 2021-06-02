@@ -32,7 +32,7 @@ def nm_mock():
         yield m
 
 
-def test_create_setting_pause(nm_mock):
+def test_create_setting_pause_autoneg(nm_mock):
     iface_ethtool = IfaceEthtool(
         {
             Ethtool.Pause.CONFIG_SUBTREE: {
@@ -51,6 +51,33 @@ def test_create_setting_pause(nm_mock):
             mock.call(
                 nm_mock.ETHTOOL_OPTNAME_PAUSE_AUTONEG,
                 GLib.Variant.new_boolean(True),
+            ),
+            mock.call(nm_mock.ETHTOOL_OPTNAME_PAUSE_RX, None),
+            mock.call(nm_mock.ETHTOOL_OPTNAME_PAUSE_TX, None),
+        ],
+        any_order=False,
+    )
+
+
+def test_create_setting_pause_autoneg_off(nm_mock):
+    iface_ethtool = IfaceEthtool(
+        {
+            Ethtool.Pause.CONFIG_SUBTREE: {
+                Ethtool.Pause.AUTO_NEGOTIATION: False,
+                Ethtool.Pause.RX: True,
+                Ethtool.Pause.TX: True,
+            }
+        }
+    )
+    nm_ethtool_setting_mock = nm_mock.SettingEthtool.new.return_value
+
+    nm_ethtool.create_ethtool_setting(iface_ethtool, base_con_profile=None)
+
+    nm_ethtool_setting_mock.option_set.assert_has_calls(
+        [
+            mock.call(
+                nm_mock.ETHTOOL_OPTNAME_PAUSE_AUTONEG,
+                GLib.Variant.new_boolean(False),
             ),
             mock.call(
                 nm_mock.ETHTOOL_OPTNAME_PAUSE_RX,

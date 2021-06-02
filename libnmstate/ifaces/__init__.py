@@ -17,12 +17,14 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
-from .ifaces import Ifaces
 from .base_iface import BaseIface
-from .linux_bridge_port_vlan import NmstateLinuxBridgePortVlan
+from .ethtool import IfaceEthtool
+from .ifaces import Ifaces
 from .linux_bridge_port_vlan import KernelBridgePortVlans
+from .linux_bridge_port_vlan import NmstateLinuxBridgePortVlan
 
-Ifaces
 BaseIface
-NmstateLinuxBridgePortVlan
+IfaceEthtool
+Ifaces
 KernelBridgePortVlans
+NmstateLinuxBridgePortVlan
