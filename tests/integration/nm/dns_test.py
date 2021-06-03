@@ -44,7 +44,7 @@ def unmanaged_eth1_with_static_gw():
         )
         cmdlib.exec_cmd(
             f"ip route add default via 192.0.2.1 dev {ETH1} proto "
-            "static".split(),
+            "static metric 101".split(),
             check=True,
         )
         cmdlib.exec_cmd(f"ip link set {ETH1} up".split(), check=True)

@@ -29,7 +29,6 @@ from libnmstate.schema import Route
 from libnmstate.schema import RouteRule
 
 from .testlib import ifacelib
-from .testlib.env import is_k8s
 
 
 REPORT_HEADER = """RPMs: {rpms}
@@ -74,26 +73,26 @@ def _mark_tier2_tests(items):
 def test_env_setup():
     _logging_setup()
     old_state = libnmstate.show()
-    if not is_k8s():
-        _empty_net_state()
+    _remove_dns_route_route_rule()
     _ethx_init()
     yield
     libnmstate.apply(old_state, verify_change=False)
     _diff_initial_state(old_state)
 
 
-def _empty_net_state():
+def _remove_dns_route_route_rule():
     """
     Remove existing DNS, routes, route rules in case it interference tests.
     """
-    desired_state = libnmstate.show()
-    desired_state[DNS.KEY] = {DNS.CONFIG: {}}
-    desired_state[Route.KEY] = {
-        Route.CONFIG: [{Route.STATE: Route.STATE_ABSENT}]
-    }
-    desired_state[RouteRule.KEY] = {RouteRule.CONFIG: []}
-
-    libnmstate.apply(desired_state)
+    libnmstate.apply(
+        {
+            DNS.KEY: {DNS.CONFIG: {}},
+            Route.KEY: {
+                Route.CONFIG: [{Route.STATE: Route.STATE_ABSENT}],
+            },
+            RouteRule.KEY: {RouteRule.CONFIG: []},
+        }
+    )
 
 
 def _logging_setup():
