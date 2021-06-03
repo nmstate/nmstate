@@ -580,8 +580,21 @@ def route_rule_test_env(eth1_static_gateway_dns):
     libnmstate.apply(
         {
             Interface.KEY: [ETH1_INTERFACE_STATE],
-            Route.KEY: {Route.CONFIG: []},
-            RouteRule.KEY: {RouteRule.CONFIG: []},
+            Route.KEY: {
+                Route.CONFIG: [
+                    {
+                        Route.NEXT_HOP_INTERFACE: "eth1",
+                        Route.STATE: Route.STATE_ABSENT,
+                    }
+                ]
+            },
+            RouteRule.KEY: {
+                RouteRule.CONFIG: [
+                    {
+                        RouteRule.STATE: RouteRule.STATE_ABSENT,
+                    }
+                ]
+            },
             DNS.KEY: {DNS.CONFIG: {}},
         },
         verify_change=False,

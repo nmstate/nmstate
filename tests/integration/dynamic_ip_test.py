@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2020 Red Hat, Inc.
+# Copyright (c) 2018-2021 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -1258,5 +1258,10 @@ def test_show_running_config_does_not_include_auto_config(
             ipv6_addresses[0][InterfaceIPv6.ADDRESS_IP],
             ipv6_addresses[0][InterfaceIPv6.ADDRESS_PREFIX_LENGTH],
         )
-    assert not running_config[DNS.KEY][DNS.CONFIG]
-    assert not running_config[RT.KEY][RT.CONFIG]
+    assert DHCP_SRV_IP4 not in running_config[DNS.KEY][DNS.CONFIG]
+    assert DHCP_SRV_IP6 not in running_config[DNS.KEY][DNS.CONFIG]
+    assert not any(
+        rt
+        for rt in running_config[RT.KEY][RT.CONFIG]
+        if rt[RT.NEXT_HOP_INTERFACE] == DHCP_CLI_NIC
+    )
