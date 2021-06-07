@@ -31,6 +31,7 @@ from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
 
 from libnmstate.ifaces.ifaces import Ifaces
+from libnmstate.ifaces.ifaces import BaseIface
 from libnmstate.ifaces.ifaces import OvsBridgeIface
 from libnmstate.state import state_match
 
@@ -39,6 +40,7 @@ from .testlib.bridgelib import PORT1_IFACE_NAME
 from .testlib.bridgelib import PORT2_IFACE_NAME
 from .testlib.bridgelib import gen_bridge_iface_info
 from .testlib.constants import MAC_ADDRESS1
+from .testlib.constants import MAC_ADDRESS2
 from .testlib.ifacelib import gen_foo_iface_info_static_ip
 from .testlib.ifacelib import gen_foo_iface_info
 from .testlib.ovslib import OVS_BRIDGE_IFACE_NAME
@@ -453,6 +455,49 @@ class TestIfaces:
 
         ifaces = Ifaces(des_iface_infos, cur_iface_infos)
         ifaces.verify(cur_iface_infos)
+
+    def test_copy_mac_from_permanent_mac_address(self):
+        cur_iface_infos = [gen_foo_iface_info(), gen_foo_iface_info()]
+        cur_iface_infos[0][Interface.NAME] = PORT1_IFACE_NAME
+        cur_iface_infos[1][Interface.NAME] = PORT2_IFACE_NAME
+        cur_iface_infos[1][Interface.MAC] = MAC_ADDRESS1
+        cur_iface_infos[1][
+            BaseIface.PERMANENT_MAC_ADDRESS_METADATA
+        ] = MAC_ADDRESS2
+        cur_iface_infos.append(gen_bridge_iface_info())
+        des_iface_infos = [gen_foo_iface_info(), gen_foo_iface_info()]
+        des_iface_infos[0][Interface.NAME] = PORT1_IFACE_NAME
+        des_iface_infos[1][Interface.NAME] = PORT2_IFACE_NAME
+        des_bridge_info = gen_bridge_iface_info()
+        des_bridge_info[Interface.NAME] = LINUX_BRIDGE_IFACE_NAME
+        des_bridge_info[Interface.COPY_MAC_FROM] = PORT2_IFACE_NAME
+        des_iface_infos.append(des_bridge_info)
+
+        ifaces = Ifaces(des_iface_infos, cur_iface_infos)
+        assert (
+            ifaces.all_kernel_ifaces[LINUX_BRIDGE_IFACE_NAME].mac
+            == MAC_ADDRESS2
+        )
+
+    def test_copy_mac_from(self):
+        cur_iface_infos = [gen_foo_iface_info(), gen_foo_iface_info()]
+        cur_iface_infos[0][Interface.NAME] = PORT1_IFACE_NAME
+        cur_iface_infos[1][Interface.NAME] = PORT2_IFACE_NAME
+        cur_iface_infos[1][Interface.MAC] = MAC_ADDRESS1
+        cur_iface_infos.append(gen_bridge_iface_info())
+        des_iface_infos = [gen_foo_iface_info(), gen_foo_iface_info()]
+        des_iface_infos[0][Interface.NAME] = PORT1_IFACE_NAME
+        des_iface_infos[1][Interface.NAME] = PORT2_IFACE_NAME
+        des_bridge_info = gen_bridge_iface_info()
+        des_bridge_info[Interface.NAME] = LINUX_BRIDGE_IFACE_NAME
+        des_bridge_info[Interface.COPY_MAC_FROM] = PORT2_IFACE_NAME
+        des_iface_infos.append(des_bridge_info)
+
+        ifaces = Ifaces(des_iface_infos, cur_iface_infos)
+        assert (
+            ifaces.all_kernel_ifaces[LINUX_BRIDGE_IFACE_NAME].mac
+            == MAC_ADDRESS1
+        )
 
 
 class TestIfacesSriov:

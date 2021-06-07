@@ -103,7 +103,7 @@ def _logging_setup():
 
 
 def _ethx_init():
-    """ Remove any existing definitions on the ethX interfaces. """
+    """Remove any existing definitions on the ethX interfaces."""
     ifacelib.ifaces_init("eth1", "eth2")
 
 

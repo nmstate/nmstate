@@ -18,10 +18,12 @@
 #
 from contextlib import contextmanager
 from copy import deepcopy
-
+import os
 import time
+
 import pytest
 import yaml
+import json
 
 import libnmstate
 from libnmstate.error import NmstateKernelIntegerRoundedError
@@ -56,6 +58,8 @@ from .testlib.vlan import vlan_interface
 TEST_BRIDGE0 = "linux-br0"
 TEST_TAP0 = "tap0"
 ETH1 = "eth1"
+# RFC 7042 reserved EUI-48 MAC range for document
+TEST_MAC_ADDRESS = "00:00:5E:00:53:01"
 
 BRIDGE_OPTIONS_YAML = """
 options:
@@ -811,6 +815,60 @@ def test_create_linux_bridge_with_copy_mac_from(eth1_up, eth2_up):
     ):
         current_state = show_only((TEST_BRIDGE0,))
         assert_mac_address(current_state, eth2_mac)
+
+
+def _get_permanent_mac(iface_name):
+    np_iface = json.loads(exec_cmd(f"npc {iface_name} --json".split())[1])
+    return np_iface[0].get("permanent_mac_address")
+
+
+@pytest.fixture
+def real_nic_with_mac_differ_from_permanent():
+    test_nic = os.environ.get("TEST_REAL_NIC")
+    permanent_mac = _get_permanent_mac(test_nic)
+    assert permanent_mac
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: test_nic,
+                    Interface.MAC: TEST_MAC_ADDRESS,
+                }
+            ]
+        }
+    )
+    yield permanent_mac
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: test_nic,
+                    Interface.STATE: InterfaceState.ABSENT,
+                }
+            ]
+        }
+    )
+
+
+@pytest.mark.skipif(
+    not os.environ.get("TEST_REAL_NIC"),
+    reason="Need to define TEST_REAL_NIC for SR-IOV test",
+)
+def test_create_linux_bridge_with_copy_mac_from_permanent_mac(
+    real_nic_with_mac_differ_from_permanent,
+):
+    permanent_mac = real_nic_with_mac_differ_from_permanent
+    test_nic = os.environ.get("TEST_REAL_NIC")
+
+    # Create bridge use this nic
+    bridge_state = _create_bridge_subtree_config([test_nic])
+    with linux_bridge(
+        TEST_BRIDGE0,
+        bridge_state,
+        extra_iface_state={Interface.COPY_MAC_FROM: test_nic},
+    ):
+        current_state = show_only((TEST_BRIDGE0,))
+        assert_mac_address(current_state, permanent_mac)
 
 
 @pytest.mark.tier1
