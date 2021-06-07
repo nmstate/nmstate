@@ -17,6 +17,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
+import time
 import logging
 
 from libnmstate.error import NmstateLibnmError
@@ -36,6 +37,7 @@ NM_AC_STATE_CHANGED_SIGNAL = "state-changed"
 FALLBACK_CHECKER_INTERNAL = 15
 MAX_OVS_IFACE_PREPARE_TIME = FALLBACK_CHECKER_INTERNAL * 2
 GIO_ERROR_DOMAIN = "g-io-error-quark"
+ACTIVATION_RETRY_SLEEP = 5
 
 
 def is_activated(nm_ac, nm_dev):
@@ -156,7 +158,11 @@ class ProfileActivation:
             if retry:
                 retry = False
                 specific_object = None
-                logging.debug(f"Action {self._action} failed, trying again.")
+                logging.debug(
+                    f"Action {self._action} failed, trying again in "
+                    f"{ACTIVATION_RETRY_SLEEP} seconds."
+                )
+                time.sleep(ACTIVATION_RETRY_SLEEP)
                 self._ctx.client.activate_connection_async(
                     self._nm_profile,
                     self._nm_dev,
