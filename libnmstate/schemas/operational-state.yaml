@@ -655,6 +655,73 @@ definitions:
                 rx-mini:
                   type: integer
                   minimum: 0
+            coalesce:
+              type: object
+              properties:
+                adaptive-rx:
+                  type: boolean
+                adaptive-tx:
+                  type: boolean
+                pkt-rate-high:
+                  type: integer
+                  minimum: 0
+                pkt-rate-low:
+                  type: integer
+                  minimum: 0
+                rx-frames:
+                  type: integer
+                  minimum: 0
+                rx-frames-high:
+                  type: integer
+                  minimum: 0
+                rx-frames-irq:
+                  type: integer
+                  minimum: 0
+                rx-frames-low:
+                  type: integer
+                  minimum: 0
+                rx-usecs:
+                  type: integer
+                  minimum: 0
+                rx-usecs-high:
+                  type: integer
+                  minimum: 0
+                rx-usecs-irq:
+                  type: integer
+                  minimum: 0
+                rx-usecs-low:
+                  type: integer
+                  minimum: 0
+                sample-interval:
+                  type: integer
+                  minimum: 0
+                stats-block-usecs:
+                  type: integer
+                  minimum: 0
+                tx-frames:
+                  type: integer
+                  minimum: 0
+                tx-frames-high:
+                  type: integer
+                  minimum: 0
+                tx-frames-irq:
+                  type: integer
+                  minimum: 0
+                tx-frames-low:
+                  type: integer
+                  minimum: 0
+                tx-usecs:
+                  type: integer
+                  minimum: 0
+                tx-usecs-high:
+                  type: integer
+                  minimum: 0
+                tx-usecs-irq:
+                  type: integer
+                  minimum: 0
+                tx-usecs-low:
+                  type: integer
+                  minimum: 0
   interface-team:
     rw:
       properties:

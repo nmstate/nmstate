@@ -32,6 +32,32 @@ _NM_RING_OPT_NAME_MAP = {
     Ethtool.Ring.TX: NM.ETHTOOL_OPTNAME_RING_TX,
 }
 
+_EC = Ethtool.Coalesce
+_NM_COALESCE_OPT_NAME_MAP = {
+    _EC.ADAPTIVE_RX: NM.ETHTOOL_OPTNAME_COALESCE_ADAPTIVE_RX,
+    _EC.ADAPTIVE_TX: NM.ETHTOOL_OPTNAME_COALESCE_ADAPTIVE_TX,
+    _EC.PKT_RATE_HIGH: NM.ETHTOOL_OPTNAME_COALESCE_PKT_RATE_HIGH,
+    _EC.PKT_RATE_LOW: NM.ETHTOOL_OPTNAME_COALESCE_PKT_RATE_LOW,
+    _EC.RX_FRAMES: NM.ETHTOOL_OPTNAME_COALESCE_RX_FRAMES,
+    _EC.RX_FRAMES_HIGH: NM.ETHTOOL_OPTNAME_COALESCE_RX_FRAMES_HIGH,
+    _EC.RX_FRAMES_IRQ: NM.ETHTOOL_OPTNAME_COALESCE_RX_FRAMES_IRQ,
+    _EC.RX_FRAMES_LOW: NM.ETHTOOL_OPTNAME_COALESCE_RX_FRAMES_LOW,
+    _EC.RX_USECS: NM.ETHTOOL_OPTNAME_COALESCE_RX_USECS,
+    _EC.RX_USECS_HIGH: NM.ETHTOOL_OPTNAME_COALESCE_RX_USECS_HIGH,
+    _EC.RX_USECS_IRQ: NM.ETHTOOL_OPTNAME_COALESCE_RX_USECS_IRQ,
+    _EC.RX_USECS_LOW: NM.ETHTOOL_OPTNAME_COALESCE_RX_USECS_LOW,
+    _EC.SAMPLE_INTERVAL: NM.ETHTOOL_OPTNAME_COALESCE_SAMPLE_INTERVAL,
+    _EC.STATS_BLOCK_USECS: NM.ETHTOOL_OPTNAME_COALESCE_STATS_BLOCK_USECS,
+    _EC.TX_FRAMES: NM.ETHTOOL_OPTNAME_COALESCE_TX_FRAMES,
+    _EC.TX_FRAMES_HIGH: NM.ETHTOOL_OPTNAME_COALESCE_TX_FRAMES_HIGH,
+    _EC.TX_FRAMES_IRQ: NM.ETHTOOL_OPTNAME_COALESCE_TX_FRAMES_IRQ,
+    _EC.TX_FRAMES_LOW: NM.ETHTOOL_OPTNAME_COALESCE_TX_FRAMES_LOW,
+    _EC.TX_USECS: NM.ETHTOOL_OPTNAME_COALESCE_TX_USECS,
+    _EC.TX_USECS_HIGH: NM.ETHTOOL_OPTNAME_COALESCE_TX_USECS_HIGH,
+    _EC.TX_USECS_IRQ: NM.ETHTOOL_OPTNAME_COALESCE_TX_USECS_IRQ,
+    _EC.TX_USECS_LOW: NM.ETHTOOL_OPTNAME_COALESCE_TX_USECS_LOW,
+}
+
 
 def create_ethtool_setting(iface_ethtool, base_con_profile):
     nm_setting = None
@@ -68,6 +94,19 @@ def create_ethtool_setting(iface_ethtool, base_con_profile):
                 nm_setting.option_set(
                     nm_prop_name,
                     GLib.Variant.new_uint32(ring_info[prop_name]),
+                )
+
+    if iface_ethtool.coalesce:
+        coalesce_info = iface_ethtool.coalesce.to_dict()
+        for prop_name, nm_prop_name in _NM_COALESCE_OPT_NAME_MAP.items():
+            if prop_name in coalesce_info:
+                value = coalesce_info[prop_name]
+                if value is True:
+                    value = 1
+                elif value is False:
+                    value = 0
+                nm_setting.option_set(
+                    nm_prop_name, GLib.Variant.new_uint32(value)
                 )
 
     return nm_setting

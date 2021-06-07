@@ -175,6 +175,31 @@ def _is_autoconf_addr(np_addr):
 
 
 class EthtoolInfo:
+    _NISPOR_COALESCE_OPT_NAME_MAP = {
+        Ethtool.Coalesce.ADAPTIVE_RX: "use_adaptive_rx",
+        Ethtool.Coalesce.ADAPTIVE_TX: "use_adaptive_tx",
+        Ethtool.Coalesce.PKT_RATE_HIGH: "pkt_rate_high",
+        Ethtool.Coalesce.PKT_RATE_LOW: "pkt_rate_low",
+        Ethtool.Coalesce.RX_FRAMES: "rx_max_frames",
+        Ethtool.Coalesce.RX_FRAMES_HIGH: "rx_max_frames_high",
+        Ethtool.Coalesce.RX_FRAMES_IRQ: "rx_max_frames_irq",
+        Ethtool.Coalesce.RX_FRAMES_LOW: "rx_max_frames_low",
+        Ethtool.Coalesce.RX_USECS: "rx_usecs",
+        Ethtool.Coalesce.RX_USECS_HIGH: "rx_usecs_high",
+        Ethtool.Coalesce.RX_USECS_IRQ: "rx_usecs_irq",
+        Ethtool.Coalesce.RX_USECS_LOW: "rx_usecs_low",
+        Ethtool.Coalesce.SAMPLE_INTERVAL: "rate_sample_interval",
+        Ethtool.Coalesce.STATS_BLOCK_USECS: "stats_block_usecs",
+        Ethtool.Coalesce.TX_FRAMES: "tx_max_frames",
+        Ethtool.Coalesce.TX_FRAMES_HIGH: "tx_max_frames_high",
+        Ethtool.Coalesce.TX_FRAMES_IRQ: "tx_max_frames_irq",
+        Ethtool.Coalesce.TX_FRAMES_LOW: "tx_max_frames_low",
+        Ethtool.Coalesce.TX_USECS: "tx_usecs",
+        Ethtool.Coalesce.TX_USECS_HIGH: "tx_usecs_high",
+        Ethtool.Coalesce.TX_USECS_IRQ: "tx_usecs_irq",
+        Ethtool.Coalesce.TX_USECS_LOW: "tx_usecs_low",
+    }
+
     def __init__(self, np_ethtool):
         self._np_ethtool = np_ethtool
 
@@ -208,4 +233,17 @@ class EthtoolInfo:
 
             if ring_info:
                 info[Ethtool.Ring.CONFIG_SUBTREE] = ring_info
+        np_coalesce = self._np_ethtool.coalesce
+        if np_coalesce:
+            coalesce_info = {}
+            for (
+                nmstate_name,
+                nispor_name,
+            ) in EthtoolInfo._NISPOR_COALESCE_OPT_NAME_MAP.items():
+                if getattr(np_coalesce, nispor_name) is not None:
+                    coalesce_info[nmstate_name] = getattr(
+                        np_coalesce, nispor_name
+                    )
+            if coalesce_info:
+                info[Ethtool.Coalesce.CONFIG_SUBTREE] = coalesce_info
         return info

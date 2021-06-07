@@ -118,3 +118,36 @@ def test_create_setting_ring(nm_mock):
         ],
         any_order=True,
     )
+
+
+def test_create_setting_coalesce(nm_mock):
+    iface_ethtool = IfaceEthtool(
+        {
+            Ethtool.Coalesce.CONFIG_SUBTREE: {
+                Ethtool.Coalesce.ADAPTIVE_RX: True,
+                Ethtool.Coalesce.ADAPTIVE_TX: False,
+                Ethtool.Coalesce.RX_FRAMES: 100,
+            }
+        }
+    )
+    nm_ethtool_setting_mock = nm_mock.SettingEthtool.new.return_value
+
+    nm_ethtool.create_ethtool_setting(iface_ethtool, base_con_profile=None)
+
+    nm_ethtool_setting_mock.option_set.assert_has_calls(
+        [
+            mock.call(
+                "coalesce-rx-frames",
+                GLib.Variant.new_uint32(100),
+            ),
+            mock.call(
+                "coalesce-adaptive-rx",
+                GLib.Variant.new_uint32(1),
+            ),
+            mock.call(
+                "coalesce-adaptive-tx",
+                GLib.Variant.new_uint32(0),
+            ),
+        ],
+        any_order=True,
+    )
