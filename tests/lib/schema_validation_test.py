@@ -1109,3 +1109,50 @@ class TestEthtool:
         )
         with pytest.raises(js.ValidationError):
             libnmstate.validator.schema_validate(default_data)
+
+    def test_valid_ethtool_coalesce(self, default_data):
+        default_data[Interface.KEY][0].update(
+            {
+                Ethtool.CONFIG_SUBTREE: {
+                    Ethtool.Coalesce.CONFIG_SUBTREE: {
+                        Ethtool.Coalesce.ADAPTIVE_RX: True,
+                        Ethtool.Coalesce.ADAPTIVE_TX: True,
+                        Ethtool.Coalesce.PKT_RATE_HIGH: 100,
+                        Ethtool.Coalesce.PKT_RATE_LOW: 100,
+                        Ethtool.Coalesce.RX_FRAMES: 100,
+                        Ethtool.Coalesce.RX_FRAMES_HIGH: 100,
+                        Ethtool.Coalesce.RX_FRAMES_IRQ: 100,
+                        Ethtool.Coalesce.RX_FRAMES_LOW: 100,
+                        Ethtool.Coalesce.RX_USECS: 100,
+                        Ethtool.Coalesce.RX_USECS_HIGH: 100,
+                        Ethtool.Coalesce.RX_USECS_IRQ: 100,
+                        Ethtool.Coalesce.RX_USECS_LOW: 100,
+                        Ethtool.Coalesce.SAMPLE_INTERVAL: 100,
+                        Ethtool.Coalesce.STATS_BLOCK_USECS: 100,
+                        Ethtool.Coalesce.TX_FRAMES: 100,
+                        Ethtool.Coalesce.TX_FRAMES_HIGH: 100,
+                        Ethtool.Coalesce.TX_FRAMES_IRQ: 100,
+                        Ethtool.Coalesce.TX_FRAMES_LOW: 100,
+                        Ethtool.Coalesce.TX_USECS: 100,
+                        Ethtool.Coalesce.TX_USECS_HIGH: 100,
+                        Ethtool.Coalesce.TX_USECS_IRQ: 100,
+                        Ethtool.Coalesce.TX_USECS_LOW: 100,
+                    }
+                }
+            }
+        )
+        libnmstate.validator.schema_validate(default_data)
+
+    def test_invalid_ethtool_coalesce_invalid_value_type(self, default_data):
+        default_data[Interface.KEY][0].update(
+            {
+                Ethtool.CONFIG_SUBTREE: {
+                    Ethtool.Coalesce.CONFIG_SUBTREE: {
+                        Ethtool.Coalesce.ADAPTIVE_RX: 1,
+                        Ethtool.Coalesce.ADAPTIVE_TX: 0,
+                    }
+                }
+            }
+        )
+        with pytest.raises(js.ValidationError):
+            libnmstate.validator.schema_validate(default_data)

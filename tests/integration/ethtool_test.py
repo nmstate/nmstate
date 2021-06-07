@@ -30,6 +30,7 @@ from libnmstate.schema import Ethtool
 
 from .testlib import assertlib
 from .testlib import cmdlib
+from .testlib.env import is_fedora
 from .testlib.env import nm_major_minor_version
 
 MAX_NETDEVSIM_WAIT_TIME = 5
@@ -141,3 +142,27 @@ def test_ethtool_ring_set_rx():
     libnmstate.apply({Interface.KEY: [desire_iface_state]})
 
     assertlib.assert_state_match({Interface.KEY: [desire_iface_state]})
+
+
+@pytest.mark.skipif(
+    nm_major_minor_version() < 1.31
+    or os.environ.get("CI") == "true"
+    or not is_fedora(),
+    reason=(
+        "Ethtool pause test need NetworkManager 1.31+ and netdevsim kernel "
+        "module in Fedora 34+"
+    ),
+)
+def test_ethtool_coalesce_on_netdevsim():
+    desire_iface_state = {
+        Interface.NAME: TEST_NETDEVSIM_NIC,
+        Ethtool.CONFIG_SUBTREE: {
+            Ethtool.Coalesce.CONFIG_SUBTREE: {
+                Ethtool.Coalesce.TX_USECS: 100,
+            }
+        },
+    }
+    with netdevsim_interface(TEST_NETDEVSIM_NIC):
+        libnmstate.apply({Interface.KEY: [desire_iface_state]})
+        assertlib.assert_state_match({Interface.KEY: [desire_iface_state]})
+    assertlib.assert_absent(TEST_NETDEVSIM_NIC)

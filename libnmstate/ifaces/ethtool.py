@@ -41,6 +41,11 @@ class IfaceEthtool:
             self._ring = IfaceEthtoolRing(
                 self._info[Ethtool.Ring.CONFIG_SUBTREE]
             )
+        self._coalesce = None
+        if self._info.get(Ethtool.Coalesce.CONFIG_SUBTREE):
+            self._coalesce = IfaceEthtoolCoalesce(
+                self._info[Ethtool.Coalesce.CONFIG_SUBTREE]
+            )
 
     @property
     def pause(self):
@@ -53,6 +58,10 @@ class IfaceEthtool:
     @property
     def ring(self):
         return self._ring
+
+    @property
+    def coalesce(self):
+        return self._coalesce
 
     def canonicalize(self, original_desire):
         if self.pause:
@@ -67,6 +76,10 @@ class IfaceEthtool:
             self.ring.canonicalize(
                 original_desire.get(Ethtool.Ring.CONFIG_SUBTREE, {})
             )
+        if self.coalesce:
+            self.coalesce.canonicalize(
+                original_desire.get(Ethtool.Coalesce.CONFIG_SUBTREE, {})
+            )
 
     def to_dict(self):
         info = {}
@@ -76,6 +89,8 @@ class IfaceEthtool:
             info[Ethtool.Feature.CONFIG_SUBTREE] = self.feature.to_dict()
         if self.ring:
             info[Ethtool.Ring.CONFIG_SUBTREE] = self.ring.to_dict()
+        if self.coalesce:
+            info[Ethtool.Coalesce.CONFIG_SUBTREE] = self.coalesce.to_dict()
         return info
 
 
@@ -167,6 +182,17 @@ class IfaceEthtoolFeature:
 class IfaceEthtoolRing:
     def __init__(self, ring_info):
         self._info = ring_info
+
+    def canonicalize(self, _original_desire):
+        pass
+
+    def to_dict(self):
+        return deepcopy(self._info)
+
+
+class IfaceEthtoolCoalesce:
+    def __init__(self, coalesce_info):
+        self._info = coalesce_info
 
     def canonicalize(self, _original_desire):
         pass
