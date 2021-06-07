@@ -20,6 +20,7 @@
 import logging
 from operator import attrgetter
 
+from libnmstate.ifaces import BaseIface
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIP
 from libnmstate.schema import InterfaceIPv6
@@ -91,6 +92,10 @@ class NisporPluginBaseIface:
             Interface.MAC: self.mac,
             Interface.ACCEPT_ALL_MAC_ADDRESSES: self.accept_all_mac_addresses,
         }
+        if self._np_iface.permanent_mac_address:
+            iface_info[
+                BaseIface.PERMANENT_MAC_ADDRESS_METADATA
+            ] = self._np_iface.permanent_mac_address
         if self.mtu:
             iface_info[Interface.MTU] = self.mtu
         ip_info = self._ip_info(config_only)

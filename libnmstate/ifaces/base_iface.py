@@ -130,6 +130,7 @@ class BaseIface:
     ROUTE_RULES_METADATA = "_route_rules"
     RULE_CHANGED_METADATA = "_changed"
     ROUTE_CHANGED_METADATA = "_changed"
+    PERMANENT_MAC_ADDRESS_METADATA = "_permanent_mac_address"
 
     def __init__(self, info, save_to_disk=True):
         self._origin_info = deepcopy(info)
@@ -214,6 +215,10 @@ class BaseIface:
     @property
     def original_dict(self):
         return self._origin_info
+
+    @property
+    def permanent_mac_address(self):
+        return self._info.get(BaseIface.PERMANENT_MAC_ADDRESS_METADATA)
 
     def ip_state(self, family):
         return IPState(family, self._info.get(family, {}))

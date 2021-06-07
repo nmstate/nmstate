@@ -21,6 +21,7 @@ from libnmstate.schema import InterfaceIP
 
 FOO_IFACE_NAME = "foo"
 MAC_ADDRESS1 = "01:23:45:67:89:AB"
+MAC_ADDRESS2 = "01:23:45:67:89:AC"
 
 IPV6_ADDRESS1 = "2001:db8:1::1"
 IPV6_ADDRESS1_FULL = "2001:db8:1:0:0:0:0:1"

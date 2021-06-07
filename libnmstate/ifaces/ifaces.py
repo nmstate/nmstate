@@ -194,8 +194,10 @@ class Ifaces:
                     f"{Interface.COPY_MAC_FROM} property "
                     f"as the port {iface.copy_mac_from} does not exists yet"
                 )
-
-            iface.apply_copy_mac_from(port_iface.mac)
+            if port_iface.permanent_mac_address:
+                iface.apply_copy_mac_from(port_iface.permanent_mac_address)
+            else:
+                iface.apply_copy_mac_from(port_iface.mac)
 
     def _create_virtual_port(self):
         """
