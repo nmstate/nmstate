@@ -17,7 +17,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
-from libnmstate.error import NmstateValueError
+import logging
 
 from .common import NM
 from .common import GLib
@@ -136,7 +136,7 @@ def nm_set_feature(nm_setting, kernel_feature_name, value):
     if NM.ethtool_optname_is_feature(nm_feature_name):
         nm_setting.option_set_boolean(nm_feature_name, value)
     else:
-        raise NmstateValueError(
+        logging.warning(
             f"Ethtool feature {kernel_feature_name} is invalid "
             "or not supported by current NetworkManager"
         )
