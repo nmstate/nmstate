@@ -24,8 +24,12 @@ from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import InterfaceState
+from libnmstate.schema import InterfaceType
 from libnmstate.schema import LinuxBridge as LB
+from libnmstate.schema import VLAN
 
+from ..testlib import assertlib
+from ..testlib.bondlib import bond_interface
 from ..testlib.bridgelib import linux_bridge
 from ..testlib.cmdlib import exec_cmd
 from ..testlib.dummy import nm_unmanaged_dummy
@@ -97,3 +101,49 @@ def test_add_new_port_to_bridge_with_unmanged_port(
         # dummy1 should still be the bridge port
         output = exec_cmd(f"npc {DUMMY1}".split(), check=True)[1]
         assert f"controller: {BRIDGE0}" in output
+
+
+@pytest.fixture
+def bond0_with_multiple_profile(eth1_up, eth2_up):
+    bond_ifname = "testbond0"
+    new_connection_name = f"{bond_ifname}_dup"
+    with bond_interface(bond_ifname, ["eth1", "eth2"]):
+        exec_cmd(
+            f"nmcli c add connection.id {new_connection_name} type bond "
+            f"ifname {bond_ifname} ipv4.method disabled ipv6.method disabled "
+            "connection.autoconnect false".split(),
+            check=True,
+        )
+        yield bond_ifname
+    exec_cmd(f"nmcli c del {new_connection_name}".split(), check=False)
+
+
+@pytest.mark.tier1
+def test_linux_bridge_over_vlan_of_bond_with_multiple_profile(
+    bond0_with_multiple_profile,
+):
+    bond_ifname = bond0_with_multiple_profile
+    vlan_id = 400
+    vlan_ifname = f"{bond_ifname}.{vlan_id}"
+    with linux_bridge(
+        BRIDGE0,
+        bridge_subtree_state={
+            LB.OPTIONS_SUBTREE: {LB.STP_SUBTREE: {LB.STP.ENABLED: False}},
+            LB.PORT_SUBTREE: [{LB.Port.NAME: vlan_ifname}],
+        },
+        create=False,
+    ) as state:
+        state[Interface.KEY].append(
+            {
+                Interface.NAME: vlan_ifname,
+                Interface.STATE: InterfaceState.UP,
+                Interface.TYPE: InterfaceType.VLAN,
+                VLAN.CONFIG_SUBTREE: {
+                    VLAN.ID: vlan_id,
+                    VLAN.BASE_IFACE: bond_ifname,
+                },
+            }
+        )
+
+        libnmstate.apply(state)
+        assertlib.assert_state_match(state)
