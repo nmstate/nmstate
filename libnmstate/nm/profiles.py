@@ -39,6 +39,9 @@ from .veth import create_iface_for_nm_veth_peer
 from .veth import is_nm_veth_supported
 
 
+IS_GENERATED_VF_METADATA = "_is_generated_vf"
+
+
 class NmProfiles:
     def __init__(self, context):
         self._ctx = context
@@ -67,6 +70,7 @@ class NmProfiles:
             for iface in sorted(
                 list(net_state.ifaces.all_ifaces()), key=attrgetter("name")
             )
+            if not _is_only_for_verify(iface)
         ]
 
         for profile in all_profiles:
@@ -389,3 +393,7 @@ def _nm_ovs_port_has_child(nm_profile, ovs_bridge_iface, net_state):
         ):
             return True
     return False
+
+
+def _is_only_for_verify(iface):
+    return iface.to_dict().get(IS_GENERATED_VF_METADATA)

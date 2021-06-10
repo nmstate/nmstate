@@ -25,6 +25,11 @@ from libnmstate.schema import InterfaceState
 from .base_iface import BaseIface
 
 
+BNXT_DRIVER_PHYS_PORT_PREFIX = "p"
+MULTIPORT_PCI_DEVICE_PREFIX = "n"
+IS_GENERATED_VF_METADATA = "_is_generated_vf"
+
+
 class EthernetIface(BaseIface):
     def __init__(self, info, save_to_disk=True):
         super().__init__(info, save_to_disk)
@@ -93,21 +98,48 @@ class EthernetIface(BaseIface):
         return self.raw.get(Ethernet.CONFIG_SUBTREE, {}).get(Ethernet.DUPLEX)
 
     def create_sriov_vf_ifaces(self):
-        return [
+        # Currently there is not a way to see the relation between a SR-IOV PF
+        # and its VFs. Broadcom BCM57416 follows a different name pattern for
+        # PF and VF, therefore it needs to be parsed if present.
+        #
+        # PF name: ens2f0np0
+        # VF name: ens2f0v0
+        #
+        # The different name pattern is due to:
+        #  1. The `n` is for `multi-port PCI device` support.
+        #  2. The `p*` is `phys_port_name` provided by the BCM driver
+        #  `bnxt_en`.
+        #
+        # If the NIC is following the standard pattern "pfname+v+vfid", this
+        # split will not touch it and the vf_pattern will be the PF name.
+        # Ref: https://bugzilla.redhat.com/1959679
+        vf_pattern = self.name
+        multiport_pattern = (
+            MULTIPORT_PCI_DEVICE_PREFIX + BNXT_DRIVER_PHYS_PORT_PREFIX
+        )
+        if len(self.name.split(multiport_pattern)) == 2:
+            vf_pattern = self.name.split(multiport_pattern)[0]
+
+        vf_ifaces = [
             EthernetIface(
                 {
                     # According to manpage of systemd.net-naming-scheme(7),
                     # SRIOV VF interface will have v{slot} in device name.
                     # Currently, nmstate has no intention to support
                     # user-defined udev rule on SRIOV interface naming policy.
-                    Interface.NAME: f"{self.name}v{i}",
+                    Interface.NAME: f"{vf_pattern}v{i}",
                     Interface.TYPE: InterfaceType.ETHERNET,
-                    # VF will be in DOWN state initialy.
+                    # VF will be in DOWN state initialy
                     Interface.STATE: InterfaceState.DOWN,
                 }
             )
             for i in range(0, self.sriov_total_vfs)
         ]
+        # The generated vf metadata cannot be part of the original dict.
+        for vf in vf_ifaces:
+            vf._info[IS_GENERATED_VF_METADATA] = True
+
+        return vf_ifaces
 
     def remove_vfs_entry_when_total_vfs_decreased(self):
         vfs_count = len(
