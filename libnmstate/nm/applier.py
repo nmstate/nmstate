@@ -693,9 +693,24 @@ def _use_uuid_for_parent(context, pending_con_profiles, save_to_disk):
     """
     new_pending_con_profiles = []
     kernel_iface_name_to_uuid = {}
+    # Prefer active profile over inactive profile
+    for nm_ac in context.client.get_active_connections():
+        cur_nm_profile = nm_ac.get_connection()
+        if cur_nm_profile:
+            connection_type = cur_nm_profile.get_connection_type()
+            if connection_type not in (
+                NM.SETTING_OVS_BRIDGE_SETTING_NAME,
+                NM.SETTING_OVS_PORT_SETTING_NAME,
+            ):
+                kernel_iface_name_to_uuid[
+                    cur_nm_profile.get_interface_name()
+                ] = cur_nm_profile.get_uuid()
     for cur_nm_profile in context.client.get_connections():
         connection_type = cur_nm_profile.get_connection_type()
-        if connection_type not in (
+        if (
+            cur_nm_profile.get_interface_name()
+            not in kernel_iface_name_to_uuid
+        ) and connection_type not in (
             NM.SETTING_OVS_BRIDGE_SETTING_NAME,
             NM.SETTING_OVS_PORT_SETTING_NAME,
         ):
