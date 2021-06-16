@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2020 Red Hat, Inc.
+# Copyright (c) 2018-2021 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -18,6 +18,7 @@
 #
 
 from .nmstate import plugin_context
+from .nmstate import remove_metadata_leftover
 from .nmstate import show_with_plugins
 from .nmstate import show_running_config_with_plugins
 
@@ -33,7 +34,9 @@ def show(*, include_status_data=False):
     configuration data is reported.
     """
     with plugin_context() as plugins:
-        return show_with_plugins(plugins, include_status_data)
+        return remove_metadata_leftover(
+            show_with_plugins(plugins, include_status_data)
+        )
 
 
 def show_running_config():
