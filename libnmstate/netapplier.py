@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2020 Red Hat, Inc.
+# Copyright (c) 2018-2021 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -30,6 +30,7 @@ from .nmstate import create_checkpoints
 from .nmstate import destroy_checkpoints
 from .nmstate import plugin_context
 from .nmstate import plugins_capabilities
+from .nmstate import remove_metadata_leftover
 from .nmstate import rollback_checkpoints
 from .nmstate import show_with_plugins
 from .net_state import NetState
@@ -141,7 +142,7 @@ def _net_state_contains_sriov_interface(net_state):
 
 
 def _verify_change(plugins, net_state):
-    current_state = show_with_plugins(plugins)
+    current_state = remove_metadata_leftover(show_with_plugins(plugins))
     net_state.verify(current_state)
 
 
