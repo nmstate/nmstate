@@ -29,6 +29,7 @@ from libnmstate import validator
 from libnmstate.error import NmstateError
 from libnmstate.error import NmstateValueError
 from libnmstate.error import NmstateDependencyError
+from libnmstate.ifaces import BaseIface
 from libnmstate.schema import DNS
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceType
@@ -103,6 +104,18 @@ def plugins_capabilities(plugins):
     for plugin in plugins:
         capabilities.update(set(plugin.capabilities))
     return list(capabilities)
+
+
+def remove_metadata_leftover(info):
+    """
+    Remove the metadata introduced on the original state. Nmstate should not
+    report metadata to the users.
+    """
+    for iface_info in info.get(Interface.KEY, []):
+        # Remove _perm_mac_address metadata from Nispor
+        iface_info.pop(BaseIface.PERMANENT_MAC_ADDRESS_METADATA, None)
+
+    return info
 
 
 def _load_plugins():
