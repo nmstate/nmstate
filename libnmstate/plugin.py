@@ -52,7 +52,7 @@ class NmstatePlugin(metaclass=ABCMeta):
     def priority(self):
         return NmstatePlugin.DEFAULT_PRIORITY
 
-    def get_interfaces(self):
+    def get_interfaces(self, show_secrets=False):
         """
         Return a list of dict with network interface running status with
         mix of running status and running configure.
@@ -61,7 +61,7 @@ class NmstatePlugin(metaclass=ABCMeta):
             f"Plugin {self.name} BUG: get_interfaces() not implemented"
         )
 
-    def get_running_config_interfaces(self):
+    def get_running_config_interfaces(self, show_secrets=False):
         """
         Return a list of dict with network interface running configuration.
         Notes:

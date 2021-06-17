@@ -17,6 +17,8 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
+import logging
+
 from libnmstate.error import NmstateLibnmError
 from libnmstate.schema import Ieee8021X
 
@@ -31,8 +33,10 @@ _NM_PROP_MAP = {
     NM.SETTING_802_1X_CA_CERT: Ieee8021X.CA_CERT,
 }
 
+NMSTATE_HIDDEN_SECRETS = "<_nmstate_hidden>"
 
-def get_802_1x_info(context, nm_ac):
+
+def get_802_1x_info(context, nm_ac, show_secrets=False):
     if not nm_ac:
         return {}
     nm_profile = nm_ac.get_connection()
@@ -52,9 +56,17 @@ def get_802_1x_info(context, nm_ac):
         info[key_name] = value
 
     if secrets.get(NM.SETTING_802_1X_PRIVATE_KEY_PASSWORD):
-        info[Ieee8021X.PRIVATE_KEY_PASSWORD] = secrets[
-            NM.SETTING_802_1X_PRIVATE_KEY_PASSWORD
-        ]
+        if show_secrets:
+            info[Ieee8021X.PRIVATE_KEY_PASSWORD] = secrets[
+                NM.SETTING_802_1X_PRIVATE_KEY_PASSWORD
+            ]
+        else:
+            logging.warning(
+                f"{Ieee8021X.PRIVATE_KEY_PASSWORD} is being hidden, please "
+                "use `--show-secrets` or `show_secrets=True` in order to "
+                "report it."
+            )
+            info[Ieee8021X.PRIVATE_KEY_PASSWORD] = NMSTATE_HIDDEN_SECRETS
 
     return {Ieee8021X.CONFIG_SUBTREE: info}
 

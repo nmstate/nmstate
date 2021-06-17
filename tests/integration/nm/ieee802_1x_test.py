@@ -26,8 +26,9 @@ from libnmstate.schema import Ieee8021X
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceState
 
-from ..testlib import cmdlib
 from ..testlib import assertlib
+from ..testlib import cmdlib
+from ..testlib import statelib
 from ..testlib.env import is_k8s
 from ..testlib.veth import create_veth_pair
 from ..testlib.veth import remove_veth_pair
@@ -63,6 +64,7 @@ TEST_CA_CERT = f"{CONF_DIR}/ca.crt"
 TEST_CLIENT_CERT = f"{CONF_DIR}/client.example.org.crt"
 TEST_PRIVATE_KEY = f"{CONF_DIR}/client.example.org.key"
 TEST_PRIVATE_KEY_PASSWORD = "password"
+NMSTATE_HIDDEN_SECRETS = "<_nmstate_hidden>"
 
 
 @pytest.fixture
@@ -75,6 +77,7 @@ def ieee_802_1x_env():
     create_veth_pair(TEST_1X_CLI_NIC, TEST_1X_SRV_NIC, TEST_1X_NET_NAME_SPACE)
     _start_802_1x_authenticator()
     yield
+
     libnmstate.apply(
         {
             Interface.KEY: [
@@ -141,4 +144,49 @@ def test_eth_with_802_1x(ieee_802_1x_env):
         cmdlib.exec_cmd(
             f"nmcli -g 802-1x c  show {TEST_1X_CLI_NIC}".split(), check=True
         )[1]
+    )
+
+
+@pytest.mark.tier1
+@pytest.mark.xfail(
+    is_k8s(),
+    reason=(
+        "Requires adjusts for k8s. Ref:"
+        "https://github.com/nmstate/nmstate/issues/1579"
+    ),
+    raises=NmstateLibnmError,
+    strict=False,
+)
+def test_report_show_secrets_option(ieee_802_1x_env):
+    desire_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: TEST_1X_CLI_NIC,
+                Ieee8021X.CONFIG_SUBTREE: {
+                    Ieee8021X.IDENTITY: TEST_IDENTITY,
+                    Ieee8021X.EAP_METHODS: ["tls"],
+                    Ieee8021X.PRIVATE_KEY: TEST_PRIVATE_KEY,
+                    Ieee8021X.PRIVATE_KEY_PASSWORD: TEST_PRIVATE_KEY_PASSWORD,
+                    Ieee8021X.CLIENT_CERT: TEST_CLIENT_CERT,
+                    Ieee8021X.CA_CERT: TEST_CA_CERT,
+                },
+            }
+        ]
+    }
+
+    libnmstate.apply(desire_state)
+    cli_iface = statelib.show_only((TEST_1X_CLI_NIC,), True)
+    assert (
+        cli_iface[Interface.KEY][0][Ieee8021X.CONFIG_SUBTREE].get(
+            Ieee8021X.PRIVATE_KEY_PASSWORD
+        )
+        == TEST_PRIVATE_KEY_PASSWORD
+    )
+
+    cli_iface = statelib.show_only((TEST_1X_CLI_NIC,), False)
+    assert (
+        cli_iface[Interface.KEY][0][Ieee8021X.CONFIG_SUBTREE].get(
+            Ieee8021X.PRIVATE_KEY_PASSWORD
+        )
+        == NMSTATE_HIDDEN_SECRETS
     )

@@ -68,7 +68,10 @@ def plugin_context():
 
 
 def show_with_plugins(
-    plugins, include_status_data=None, info_type=_INFO_TYPE_RUNNING
+    plugins,
+    include_status_data=None,
+    info_type=_INFO_TYPE_RUNNING,
+    show_secrets=False,
 ):
     for plugin in plugins:
         plugin.refresh_content()
@@ -77,7 +80,7 @@ def show_with_plugins(
         report["capabilities"] = plugins_capabilities(plugins)
 
     report[Interface.KEY] = _get_interface_info_from_plugins(
-        plugins, info_type
+        plugins, info_type, show_secrets
     )
 
     report[Route.KEY] = _get_routes_from_plugins(plugins, info_type)
@@ -178,7 +181,7 @@ def _find_plugin_for_capability(plugins, capability):
     return chose_plugin
 
 
-def _get_interface_info_from_plugins(plugins, info_type):
+def _get_interface_info_from_plugins(plugins, info_type, show_secrets=False):
     all_ifaces = {}
     IFACE_PRIORITY_METADATA = "_plugin_priority"
     IFACE_PLUGIN_SRC_METADATA = "_plugin_source"
@@ -190,9 +193,9 @@ def _get_interface_info_from_plugins(plugins, info_type):
             continue
         try:
             if info_type == _INFO_TYPE_RUNNING_CONFIG:
-                ifaces = plugin.get_running_config_interfaces()
+                ifaces = plugin.get_running_config_interfaces(show_secrets)
             else:
-                ifaces = plugin.get_interfaces()
+                ifaces = plugin.get_interfaces(show_secrets)
         except NmstateDependencyError as e:
             logging.warning(f"Plugin {plugin.name} error: {e}")
             continue
@@ -392,8 +395,10 @@ def _get_iface_types_by_name(iface_infos, name):
     return iface_types
 
 
-def show_running_config_with_plugins(plugins):
-    return show_with_plugins(plugins, info_type=_INFO_TYPE_RUNNING_CONFIG)
+def show_running_config_with_plugins(plugins, show_secrets=False):
+    return show_with_plugins(
+        plugins, info_type=_INFO_TYPE_RUNNING_CONFIG, show_secrets=show_secrets
+    )
 
 
 def generate_configurations(desire_state):

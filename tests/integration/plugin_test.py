@@ -103,7 +103,7 @@ TEST_ROUTE_RULE_STATE = {
 }
 
 GET_IFACES_FORMAT = """
-    def get_interfaces(self):
+    def get_interfaces(self, show_secrets):
         return {ifaces}
 """
 

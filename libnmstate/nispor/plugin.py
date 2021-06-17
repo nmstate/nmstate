@@ -132,10 +132,10 @@ class NisporPlugin(NmstatePlugin):
                 )
         return ifaces
 
-    def get_interfaces(self):
+    def get_interfaces(self, show_secrets=False):
         return self._get_interfaces(_INFO_TYPE_RUNNING)
 
-    def get_running_config_interfaces(self):
+    def get_running_config_interfaces(self, show_secrets=False):
         return self._get_interfaces(_INFO_TYPE_RUNNING_CONFIG)
 
     def get_routes(self):

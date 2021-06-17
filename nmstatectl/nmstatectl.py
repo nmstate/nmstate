@@ -233,6 +233,13 @@ def setup_subcommand_show(subparsers):
         metavar=Interface.KEY,
         help="Show only specified interfaces (comma-separated)",
     )
+    parser_show.add_argument(
+        "--show-secrets",
+        help="Show sensitive information",
+        default=False,
+        action="store_true",
+        dest="show_secrets",
+    )
 
 
 def setup_subcommand_version(subparsers):
@@ -265,7 +272,7 @@ def commit(args):
 
 
 def edit(args):
-    state = _filter_state(libnmstate.show(), args.only)
+    state = _filter_state(libnmstate.show(show_secrets=True), args.only)
 
     if not state[Interface.KEY]:
         sys.stderr.write("ERROR: No such interface\n")
@@ -301,10 +308,7 @@ def rollback(args):
 
 
 def show(args):
-    if args.running_config:
-        full_state = libnmstate.show_running_config()
-    else:
-        full_state = libnmstate.show()
+    full_state = _show_state(args.running_config, args.show_secrets)
     state = _filter_state(full_state, args.only)
     print_state(state, use_yaml=args.yaml)
 
@@ -459,6 +463,13 @@ def _run_editor(txtstate, suffix):
         except subprocess.CalledProcessError:
             sys.stderr.write("Error running editor, aborting...\n")
             return None
+
+
+def _show_state(running_config, show_secrets):
+    if running_config:
+        return libnmstate.show_running_config(show_secrets=show_secrets)
+
+    return libnmstate.show(show_secrets=show_secrets)
 
 
 def _parse_state(txtstate, parse_yaml):

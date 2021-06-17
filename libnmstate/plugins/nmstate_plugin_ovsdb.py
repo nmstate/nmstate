@@ -158,7 +158,7 @@ class NmstateOvsdbPlugin(NmstatePlugin):
     def plugin_capabilities(self):
         return NmstatePlugin.PLUGIN_CAPABILITY_IFACE
 
-    def get_interfaces(self):
+    def get_interfaces(self, show_secrets=False):
         ifaces = []
         for row in self._idl.tables["Interface"].rows.values():
             if row.type in ("internal", "patch"):

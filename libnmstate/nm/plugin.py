@@ -112,7 +112,7 @@ class NetworkManagerPlugin(NmstatePlugin):
             NmstatePlugin.PLUGIN_CAPABILITY_DNS,
         ]
 
-    def get_interfaces(self):
+    def get_interfaces(self, show_secrets=False):
         info = []
 
         applied_configs = self._applied_configs
@@ -145,7 +145,9 @@ class NetworkManagerPlugin(NmstatePlugin):
             iface_info.update(get_infiniband_info(applied_config))
             iface_info.update(get_current_macvlan_type(applied_config))
             iface_info.update(get_current_veth_type(applied_config))
-            iface_info.update(get_802_1x_info(self.context, act_con))
+            iface_info.update(
+                get_802_1x_info(self.context, act_con, show_secrets)
+            )
 
             if iface_info[Interface.TYPE] == InterfaceType.OVS_BRIDGE:
                 iface_info.update(get_ovs_bridge_info(dev))
@@ -164,8 +166,8 @@ class NetworkManagerPlugin(NmstatePlugin):
 
         return info
 
-    def get_running_config_interfaces(self):
-        iface_infos = self.get_interfaces()
+    def get_running_config_interfaces(self, show_secrets=False):
+        iface_infos = self.get_interfaces(show_secrets)
         # Remove LLDP neighber information
         for iface_info in iface_infos:
             if LLDP.CONFIG_SUBTREE in iface_info:

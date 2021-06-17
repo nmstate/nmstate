@@ -3,7 +3,7 @@
 .SH NAME
 nmstatectl \- A nmstate command line tool
 .SH SYNOPSIS
-.B nmstatectl show \fR[\fIINTERFACE_NAME\fR] [\fB--json\fR]
+.B nmstatectl show \fR[\fIINTERFACE_NAME\fR] [\fB--json\fR] [\fB--show-secrets\fR]
 .br
 .B nmstatectl show [\fB-r, --running-config\fR]
 .br
@@ -28,8 +28,12 @@ nmstatectl \- A nmstate command line tool
 .B show
 .RS
 Query the current network state. \fIYAML\fR is the default output format. Use
-the \fB--json\fR argument to change the output format to \fIJSON\fR. To limit
-the output state to include certain interfaces only, please specify the
+the \fB--json\fR argument to change the output format to \fIJSON\fR.
+.PP
+By default \fInmstatectl\fR does not include sensitive data in the report. Use
+\fB--show-secrets\fR in order to report sensitive data.
+.PP
+To limit the output state to include certain interfaces only, please specify the
 interface name. Please be advised, global config like DNS will be included.
 .PP
 For multiple interface names, use comma to separate them. You can also use

@@ -96,14 +96,16 @@ def test_run_ctl_directly_set():
 
 
 @mock.patch("sys.argv", ["nmstatectl", "show"])
-@mock.patch.object(nmstatectl.libnmstate, "show", lambda: {})
+@mock.patch.object(nmstatectl.libnmstate, "show", lambda show_secrets: {})
 def test_run_ctl_directly_show_empty():
     nmstatectl.main()
 
 
 @mock.patch("sys.argv", ["nmstatectl", "show", "non_existing_interface"])
 @mock.patch.object(
-    nmstatectl.libnmstate, "show", lambda: json.loads(LO_JSON_STATE)
+    nmstatectl.libnmstate,
+    "show",
+    lambda show_secrets: json.loads(LO_JSON_STATE),
 )
 @mock.patch("nmstatectl.nmstatectl.sys.stdout", new_callable=io.StringIO)
 def test_run_ctl_directly_show_only_empty(mock_stdout):
@@ -113,7 +115,9 @@ def test_run_ctl_directly_show_only_empty(mock_stdout):
 
 @mock.patch("sys.argv", ["nmstatectl", "show", "lo"])
 @mock.patch.object(
-    nmstatectl.libnmstate, "show", lambda: json.loads(LO_JSON_STATE)
+    nmstatectl.libnmstate,
+    "show",
+    lambda show_secrets: json.loads(LO_JSON_STATE),
 )
 @mock.patch("nmstatectl.nmstatectl.sys.stdout", new_callable=io.StringIO)
 def test_run_ctl_directly_show_only(mock_stdout):
@@ -125,7 +129,9 @@ def test_run_ctl_directly_show_only(mock_stdout):
     "sys.argv", ["nmstatectl", "show", "--json", "non_existing_interface"]
 )
 @mock.patch.object(
-    nmstatectl.libnmstate, "show", lambda: json.loads(LO_JSON_STATE)
+    nmstatectl.libnmstate,
+    "show",
+    lambda show_secrets: json.loads(LO_JSON_STATE),
 )
 @mock.patch("nmstatectl.nmstatectl.sys.stdout", new_callable=io.StringIO)
 def test_run_ctl_directly_show_json_only_empty(mock_stdout):
@@ -135,7 +141,9 @@ def test_run_ctl_directly_show_json_only_empty(mock_stdout):
 
 @mock.patch("sys.argv", ["nmstatectl", "show", "--json", "lo"])
 @mock.patch.object(
-    nmstatectl.libnmstate, "show", lambda: json.loads(LO_JSON_STATE)
+    nmstatectl.libnmstate,
+    "show",
+    lambda show_secrets: json.loads(LO_JSON_STATE),
 )
 @mock.patch("nmstatectl.nmstatectl.sys.stdout", new_callable=io.StringIO)
 def test_run_ctl_directly_show_json_only(mock_stdout):

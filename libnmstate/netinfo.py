@@ -23,7 +23,7 @@ from .nmstate import show_with_plugins
 from .nmstate import show_running_config_with_plugins
 
 
-def show(*, include_status_data=False):
+def show(*, include_status_data=False, show_secrets=False):
     """
     Reports configuration and status data on the system.
     Configuration data is the set of writable data which can change the system
@@ -35,10 +35,14 @@ def show(*, include_status_data=False):
     """
     with plugin_context() as plugins:
         return remove_metadata_leftover(
-            show_with_plugins(plugins, include_status_data)
+            show_with_plugins(
+                plugins, include_status_data, show_secrets=show_secrets
+            )
         )
 
 
-def show_running_config():
+def show_running_config(show_secrets=False):
     with plugin_context() as plugins:
-        return show_running_config_with_plugins(plugins)
+        return show_running_config_with_plugins(
+            plugins, show_secrets=show_secrets
+        )

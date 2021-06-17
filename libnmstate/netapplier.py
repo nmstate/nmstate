@@ -24,6 +24,7 @@ import time
 
 from libnmstate import validator
 from libnmstate.error import NmstateVerificationError
+from libnmstate.schema import Ieee8021X
 from libnmstate.schema import InterfaceType
 
 from .nmstate import create_checkpoints
@@ -70,7 +71,7 @@ def apply(
     desired_state = copy.deepcopy(desired_state)
     with plugin_context() as plugins:
         validator.schema_validate(desired_state)
-        current_state = show_with_plugins(plugins, include_status_data=True)
+        current_state = show_with_plugins(plugins)
         validator.validate_capabilities(
             desired_state, plugins_capabilities(plugins)
         )
@@ -142,8 +143,29 @@ def _net_state_contains_sriov_interface(net_state):
 
 
 def _verify_change(plugins, net_state):
-    current_state = remove_metadata_leftover(show_with_plugins(plugins))
+    current_state = remove_metadata_leftover(
+        show_with_plugins(
+            plugins, show_secrets=_desired_state_contains_secrets(net_state)
+        )
+    )
     net_state.verify(current_state)
+
+
+def _desired_state_contains_secrets(net_state):
+    """
+    Nmstate needs to check if the interface contains secrets in order to show
+    them on verification or not.
+    """
+    for iface in net_state.ifaces.all_kernel_ifaces.values():
+        # Check if any desired interface contains IEEE 802.1X
+        # private-key-password configuration
+        ieee_8021x = iface.original_desire_dict.get(
+            Ieee8021X.CONFIG_SUBTREE, {}
+        )
+        if ieee_8021x and ieee_8021x.get(Ieee8021X.PRIVATE_KEY_PASSWORD):
+            return True
+
+    return False
 
 
 def _get_ignored_interface_names(plugins):
