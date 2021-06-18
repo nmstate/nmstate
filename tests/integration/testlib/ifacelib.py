@@ -26,7 +26,7 @@ from . import statelib
 
 
 def ifaces_init(*ifnames):
-    """ Remove any existing definitions on the interfaces. """
+    """Remove any existing definitions on the interfaces."""
     for ifname in ifnames:
         _set_eth_admin_state(ifname, schema.InterfaceState.ABSENT)
 

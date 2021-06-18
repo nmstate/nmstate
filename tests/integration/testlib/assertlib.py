@@ -43,7 +43,7 @@ def assert_state(desired_state_data):
 
 
 def assert_absent(*ifnames):
-    """ Assert that a interface is not present in the current state """
+    """Assert that a interface is not present in the current state"""
 
     current_state = statelib.show_only(ifnames)
     assert not current_state[Interface.KEY]
@@ -61,7 +61,7 @@ def assert_state_match(desired_state_data):
 
 
 def assert_mac_address(state, expected_mac=None):
-    """ Asserts that all MAC addresses of ifaces in a state are the same """
+    """Asserts that all MAC addresses of ifaces in a state are the same"""
     macs = _iface_macs(state)
     if not expected_mac:
         expected_mac = next(macs)
