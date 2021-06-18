@@ -30,6 +30,7 @@ from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import LinuxBridge
+from libnmstate.schema import Route
 
 from ..testlib import assertlib
 from ..testlib import cmdlib
@@ -43,6 +44,7 @@ TEST_BRIDGE0 = "linux-br0"
 TEST_OVS_BRIDGE0 = "br0"
 TEST_OVS_PORT0 = "ovs0"
 IPV4_ADDRESS1 = "192.0.2.251"
+IPV4_ADDRESS2 = "192.0.2.252"
 IPV6_ADDRESS1 = "2001:db8:1::1"
 
 
@@ -510,5 +512,55 @@ def test_set_static_ip_with_multiconnect_profile(
     assert cmdlib.exec_cmd("nmcli -g ipv4.method c show eth1".split()) == (
         0,
         "manual\n",
+        "",
+    )
+
+
+@pytest.fixture
+def eth1_up_static_ipv4_mtu_1400(eth1_up):
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: "eth1",
+                    Interface.TYPE: InterfaceType.ETHERNET,
+                    Interface.STATE: InterfaceState.UP,
+                    Interface.MTU: 1400,
+                    Interface.IPV4: {
+                        InterfaceIPv4.ENABLED: True,
+                        InterfaceIPv4.ADDRESS: [
+                            {
+                                InterfaceIPv4.ADDRESS_IP: IPV4_ADDRESS1,
+                                InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+                            }
+                        ],
+                    },
+                }
+            ]
+        }
+    )
+    yield
+
+
+def test_preserve_existing_wire_setting(eth1_up_static_ipv4_mtu_1400):
+    libnmstate.apply(
+        {
+            Route.KEY: {
+                Route.CONFIG: [
+                    {
+                        Route.DESTINATION: "198.51.100.0/24",
+                        Route.NEXT_HOP_ADDRESS: IPV4_ADDRESS2,
+                        Route.NEXT_HOP_INTERFACE: "eth1",
+                    }
+                ]
+            }
+        }
+    )
+
+    assert cmdlib.exec_cmd(
+        "nmcli -g 802-3-ethernet.mtu c show eth1".split()
+    ) == (
+        0,
+        "1400\n",
         "",
     )
