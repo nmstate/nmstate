@@ -140,8 +140,12 @@ def create_new_nm_simple_conn(iface, nm_profile):
     if iface.is_desired and iface.type != InterfaceType.INFINIBAND:
         wired_setting = create_wired_setting(iface, nm_profile)
 
-        if wired_setting:
-            settings.append(wired_setting)
+    # Preserv the old wire setting
+    if wired_setting is None and nm_profile:
+        wired_setting = nm_profile.get_setting_wired()
+
+    if wired_setting:
+        settings.append(wired_setting)
 
     user_setting = create_user_setting(iface_info, nm_profile)
     if user_setting:
