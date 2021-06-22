@@ -30,7 +30,6 @@ properties:
             - "$ref": "#/definitions/interface-dummy/rw"
             - "$ref": "#/definitions/interface-vlan/rw"
             - "$ref": "#/definitions/interface-vxlan/rw"
-            - "$ref": "#/definitions/interface-team/rw"
             - "$ref": "#/definitions/interface-vrf/rw"
             - "$ref": "#/definitions/interface-infiniband/rw"
             - "$ref": "#/definitions/interface-mac-vlan/rw"
@@ -722,28 +721,6 @@ definitions:
                 tx-usecs-low:
                   type: integer
                   minimum: 0
-  interface-team:
-    rw:
-      properties:
-        type:
-          type: string
-          enum:
-            - team
-        team:
-          type: object
-          properties:
-            ports:
-              type: array
-              items:
-                type: object
-                properties:
-                  name:
-                    type: string
-            runner:
-              type: object
-              properties:
-                name:
-                  type: string
   interface-vrf:
     rw:
       properties:

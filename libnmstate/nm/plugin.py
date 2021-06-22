@@ -50,8 +50,6 @@ from .ovs import get_ovsdb_external_ids
 from .ovs import has_ovs_capability
 from .profiles import NmProfiles
 from .profiles import get_all_applied_configs
-from .team import get_info as get_team_info
-from .team import has_team_capability
 from .translator import Nm2Api
 from .user import get_info as get_user_info
 from .veth import get_current_veth_type
@@ -103,8 +101,6 @@ class NetworkManagerPlugin(NmstatePlugin):
         capabilities = []
         if has_ovs_capability(self.client):
             capabilities.append(NmstatePlugin.OVS_CAPABILITY)
-        if has_team_capability(self.client):
-            capabilities.append(NmstatePlugin.TEAM_CAPABILITY)
         return capabilities
 
     @property
@@ -146,7 +142,6 @@ class NetworkManagerPlugin(NmstatePlugin):
             iface_info[Interface.IPV6] = get_ipv6_info(act_con, applied_config)
             iface_info.update(get_user_info(self.context, dev))
             iface_info.update(get_lldp_info(self.client, dev))
-            iface_info.update(get_team_info(dev))
             iface_info.update(get_infiniband_info(applied_config))
             iface_info.update(get_current_macvlan_type(applied_config))
             iface_info.update(get_current_veth_type(applied_config))

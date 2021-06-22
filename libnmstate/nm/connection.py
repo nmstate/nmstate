@@ -50,7 +50,6 @@ from .ovs import create_interface_setting as create_ovs_interface_setting
 from .ovs import create_ovsdb_external_ids_setting
 from .ovs import create_port_setting as create_ovs_port_setting
 from .sriov import create_setting as create_sriov_setting
-from .team import create_setting as create_team_setting
 from .translator import Api2Nm
 from .user import create_setting as create_user_setting
 from .veth import create_setting as create_veth_setting
@@ -204,10 +203,6 @@ def create_new_nm_simple_conn(iface, nm_profile):
     sriov_setting = create_sriov_setting(iface_info, nm_profile)
     if sriov_setting:
         settings.append(sriov_setting)
-
-    team_setting = create_team_setting(iface_info, nm_profile)
-    if team_setting:
-        settings.append(team_setting)
 
     if iface.type == InterfaceType.VRF:
         settings.append(create_vrf_setting(iface))

@@ -48,7 +48,6 @@ def validate_capabilities(state, capabilities):
 def validate_interface_capabilities(ifaces_state, capabilities):
     ifaces_types = {iface_state.get("type") for iface_state in ifaces_state}
     has_ovs_capability = NmstatePlugin.OVS_CAPABILITY in capabilities
-    has_team_capability = NmstatePlugin.TEAM_CAPABILITY in capabilities
     for iface_type in ifaces_types:
         is_ovs_type = iface_type in (
             InterfaceType.OVS_BRIDGE,
@@ -58,10 +57,6 @@ def validate_interface_capabilities(ifaces_state, capabilities):
         if is_ovs_type and not has_ovs_capability:
             raise NmstateDependencyError(
                 "Open vSwitch support not properly installed or started"
-            )
-        elif iface_type == InterfaceType.TEAM and not has_team_capability:
-            raise NmstateDependencyError(
-                "Team support not properly installed or started"
             )
 
 

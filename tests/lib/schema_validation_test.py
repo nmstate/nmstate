@@ -38,7 +38,6 @@ from libnmstate.schema import OVSBridge
 from libnmstate.schema import OVSInterface
 from libnmstate.schema import Route
 from libnmstate.schema import RouteRule
-from libnmstate.schema import Team
 from libnmstate.schema import Veth
 from libnmstate.schema import VRF
 from libnmstate.schema import VXLAN
@@ -48,7 +47,6 @@ INTERFACES = Constants.INTERFACES
 ROUTES = Constants.ROUTES
 THE_BRIDGE = "br0"
 VXLAN0 = "vxlan0"
-TEAM0 = "team0"
 SRIOV_MAC = "12:34:56:78:90:ab"
 
 COMMON_DATA = {
@@ -403,64 +401,6 @@ class TestIfaceTypeVxlan:
     def test_no_config_is_valid(self, default_data):
         default_data[Interface.KEY].append(
             {Interface.NAME: VXLAN0, Interface.TYPE: VXLAN.TYPE}
-        )
-
-        libnmstate.validator.schema_validate(default_data)
-
-
-class TestIfaceTypeTeam:
-    def test_valid_team_without_options(self, default_data):
-        default_data[Interface.KEY].append(
-            {
-                Interface.NAME: TEAM0,
-                Interface.TYPE: Team.TYPE,
-                Team.CONFIG_SUBTREE: {},
-            }
-        )
-
-        libnmstate.validator.schema_validate(default_data)
-
-    def test_valid_team_with_ports(self, default_data):
-        default_data[Interface.KEY].append(
-            {
-                Interface.NAME: TEAM0,
-                Interface.TYPE: Team.TYPE,
-                Team.CONFIG_SUBTREE: {
-                    Team.PORT_SUBTREE: [{Team.Port.NAME: "eth1"}]
-                },
-            }
-        )
-
-        libnmstate.validator.schema_validate(default_data)
-
-    def test_valid_team_with_runner(self, default_data):
-        default_data[Interface.KEY].append(
-            {
-                Interface.NAME: TEAM0,
-                Interface.TYPE: Team.TYPE,
-                Team.CONFIG_SUBTREE: {
-                    Team.PORT_SUBTREE: [],
-                    Team.RUNNER_SUBTREE: {
-                        Team.Runner.NAME: Team.Runner.RunnerMode.LOAD_BALANCE
-                    },
-                },
-            }
-        )
-
-        libnmstate.validator.schema_validate(default_data)
-
-    def test_valid_team_with_ports_and_runner(self, default_data):
-        default_data[Interface.KEY].append(
-            {
-                Interface.NAME: TEAM0,
-                Interface.TYPE: Team.TYPE,
-                Team.CONFIG_SUBTREE: {
-                    Team.PORT_SUBTREE: [{Team.Port.NAME: "eth1"}],
-                    Team.RUNNER_SUBTREE: {
-                        Team.Runner.NAME: Team.Runner.RunnerMode.LOAD_BALANCE
-                    },
-                },
-            }
         )
 
         libnmstate.validator.schema_validate(default_data)
