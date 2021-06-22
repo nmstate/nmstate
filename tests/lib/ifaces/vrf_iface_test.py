@@ -33,7 +33,7 @@ PORT2_IFACE_NAME = "port2"
 
 class TestVrfIface:
     def _gen_iface_info(self):
-        iface_info = gen_foo_iface_info(iface_type=InterfaceType.TEAM)
+        iface_info = gen_foo_iface_info(iface_type=InterfaceType.VRF)
         iface_info[VRF.CONFIG_SUBTREE] = {
             VRF.PORT_SUBTREE: [PORT1_IFACE_NAME, PORT2_IFACE_NAME],
             VRF.ROUTE_TABLE_ID: 100,

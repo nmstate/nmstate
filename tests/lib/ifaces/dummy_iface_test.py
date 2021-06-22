@@ -28,5 +28,5 @@ class TestDummyIface:
     def _gen_iface_info(self):
         return gen_foo_iface_info(iface_type=InterfaceType.DUMMY)
 
-    def test_team_is_virtual(self):
+    def test_dummy_is_virtual(self):
         assert DummyIface(self._gen_iface_info()).is_virtual
