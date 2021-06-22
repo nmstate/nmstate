@@ -213,8 +213,11 @@ class BaseIface:
         return deepcopy(self._info)
 
     @property
-    def original_dict(self):
-        return self._origin_info
+    def original_desire_dict(self):
+        if self.is_desired:
+            return self._origin_info
+        else:
+            return {}
 
     @property
     def permanent_mac_address(self):
@@ -236,8 +239,8 @@ class BaseIface:
         """
         This function is called after metadata generation finished.
         Will do
-         * Raise NmstateValueError when user desire(self.original_dict) is
-           illegal.
+         * Raise NmstateValueError when user desire(self.original_desire_dict)
+           is illegal.
          * Clean up illegal setting introduced by merging.
         We don't split validation from clean up as they might sharing the same
         check code.
@@ -412,7 +415,7 @@ class BaseIface:
         self._capitalize_mac()
         if self.ethtool:
             self.ethtool.canonicalize(
-                self.original_dict.get(Ethtool.CONFIG_SUBTREE, {})
+                self.original_desire_dict.get(Ethtool.CONFIG_SUBTREE, {})
             )
             self._info[Ethtool.CONFIG_SUBTREE] = self.ethtool.to_dict()
         self.sort_port()
@@ -422,7 +425,8 @@ class BaseIface:
             self._info[family] = ip_state.to_dict()
         state = self.to_dict()
         _remove_empty_description(state)
-        _remove_undesired_data(state, self.original_dict)
+        if self.is_desired:
+            _remove_undesired_data(state, self.original_desire_dict)
         _remove_lldp_neighbors(state)
         if Interface.STATE not in state:
             state[Interface.STATE] = InterfaceState.UP

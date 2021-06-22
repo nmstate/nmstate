@@ -78,7 +78,7 @@ class TestIfaces:
             cur_iface = ifaces.get_cur_iface(
                 iface_info[Interface.NAME], iface_info[Interface.TYPE]
             )
-            assert cur_iface.original_dict == iface_info
+            assert cur_iface.to_dict() == iface_info
 
     def test_init_des_iface_infos_only(self):
         ifaces = Ifaces(
@@ -86,7 +86,7 @@ class TestIfaces:
         )
 
         assert [
-            i.original_dict for i in ifaces.all_ifaces()
+            i.original_desire_dict for i in ifaces.all_ifaces()
         ] == self._gen_iface_infos()
 
     def test_add_new_iface(self):

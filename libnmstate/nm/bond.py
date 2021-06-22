@@ -40,7 +40,7 @@ BOND_AD_ACTOR_SYSTEM_USE_BOND_MAC = "00:00:00:00:00:00"
 
 def create_setting(iface, wired_setting, base_con_profile):
     bond_setting = NM.SettingBond.new()
-    options = iface.original_dict.get(Bond.CONFIG_SUBTREE, {}).get(
+    options = iface.original_desire_dict.get(Bond.CONFIG_SUBTREE, {}).get(
         Bond.OPTIONS_SUBTREE
     )
     mode = iface.bond_mode

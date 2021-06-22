@@ -453,7 +453,7 @@ class Ifaces:
                     or parent_iface.is_changed
                 ):
                     if (
-                        Interface.STATE not in iface.original_dict
+                        Interface.STATE not in iface.original_desire_dict
                         or parent_iface.is_down
                         or parent_iface.is_absent
                     ):
@@ -611,14 +611,14 @@ class Ifaces:
                 if (
                     iface.is_virtual
                     and iface.type != InterfaceType.VETH
-                    and iface.original_dict.get(Interface.STATE)
+                    and iface.original_desire_dict.get(Interface.STATE)
                     in (InterfaceState.DOWN, InterfaceState.ABSENT)
                 ):
                     cur_iface = cur_ifaces.get_iface(iface.name, iface.type)
                     if cur_iface:
                         raise NmstateVerificationError(
                             format_desired_current_state_diff(
-                                iface.original_dict,
+                                iface.original_desire_dict,
                                 cur_iface.state_for_verify(),
                             )
                         )
@@ -627,7 +627,7 @@ class Ifaces:
                     if not cur_iface:
                         raise NmstateVerificationError(
                             format_desired_current_state_diff(
-                                iface.original_dict, {}
+                                iface.original_desire_dict, {}
                             )
                         )
                     elif not iface.match(cur_iface):
