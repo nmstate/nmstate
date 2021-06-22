@@ -130,4 +130,5 @@ class TestEthernetIface:
         ][0][Ethernet.SRIOV.VFS.MAC_ADDRESS] = expected_mac_addr
 
         iface = EthernetIface(iface_info)
+        iface.mark_as_desired()
         assert iface.state_for_verify() == expected_iface_info

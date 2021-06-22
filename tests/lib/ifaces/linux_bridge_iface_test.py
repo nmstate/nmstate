@@ -286,6 +286,7 @@ class TestLinuxBridgeIface:
         ]
 
         iface = LinuxBridgeIface(iface_info)
+        iface.mark_as_desired()
         with pytest.raises(NmstateValueError):
             iface.pre_edit_validation_and_cleanup()
 
@@ -295,6 +296,7 @@ class TestLinuxBridgeIface:
         port_config[Port.VLAN_SUBTREE].pop(Vlan.TRUNK_TAGS)
 
         iface = LinuxBridgeIface(iface_info)
+        iface.mark_as_desired()
         with pytest.raises(NmstateValueError):
             iface.pre_edit_validation_and_cleanup()
 
@@ -306,6 +308,7 @@ class TestLinuxBridgeIface:
         )
 
         iface = LinuxBridgeIface(iface_info)
+        iface.mark_as_desired()
         with pytest.raises(NmstateValueError):
             iface.pre_edit_validation_and_cleanup()
 
@@ -317,6 +320,7 @@ class TestLinuxBridgeIface:
         }
 
         iface = LinuxBridgeIface(iface_info)
+        iface.mark_as_desired()
         with pytest.raises(NmstateValueError):
             iface.pre_edit_validation_and_cleanup()
 
@@ -325,12 +329,14 @@ class TestLinuxBridgeIface:
         }
 
         iface = LinuxBridgeIface(iface_info)
+        iface.mark_as_desired()
         with pytest.raises(NmstateValueError):
             iface.pre_edit_validation_and_cleanup()
 
     def test_validate_tag_in_access_mode_and_native_trunk(self):
         iface_info = gen_bridge_iface_info_with_vlan_filter()
         iface = LinuxBridgeIface(iface_info)
+        iface.mark_as_desired()
 
         iface.pre_edit_validation_and_cleanup()
 
@@ -339,6 +345,7 @@ class TestLinuxBridgeIface:
         port_conf = iface_info[LB.CONFIG_SUBTREE][LB.PORT_SUBTREE][1]
         port_conf[Port.VLAN_SUBTREE][Vlan.ENABLE_NATIVE] = False
         iface = LinuxBridgeIface(iface_info)
+        iface.mark_as_desired()
 
         with pytest.raises(NmstateValueError):
             iface.pre_edit_validation_and_cleanup()
@@ -348,6 +355,7 @@ class TestLinuxBridgeIface:
         port_conf = iface_info[LB.CONFIG_SUBTREE][LB.PORT_SUBTREE][0]
         port_conf[Port.VLAN_SUBTREE][Vlan.ENABLE_NATIVE] = True
         iface = LinuxBridgeIface(iface_info)
+        iface.mark_as_desired()
 
         with pytest.raises(NmstateValueError):
             iface.pre_edit_validation_and_cleanup()
@@ -361,6 +369,7 @@ class TestLinuxBridgeIface:
 
         iface = LinuxBridgeIface(iface_info)
         iface.remove_port(PORT2_IFACE_NAME)
+        iface.mark_as_desired()
 
         assert iface.to_dict() == expected_iface_info
 

@@ -32,9 +32,15 @@ def NM_mock():
         yield m
 
 
+def _create_ethernet_iface(info):
+    iface = EthernetIface(info)
+    iface.mark_as_desired()
+    return iface
+
+
 def test_create_setting_None(NM_mock):
     setting = nm.wired.create_setting(
-        EthernetIface(
+        _create_ethernet_iface(
             {
                 schema.Interface.NAME: "foo",
             }
@@ -48,7 +54,7 @@ def test_create_setting_duplicate(NM_mock):
     base_profile = mock.MagicMock()
 
     setting = nm.wired.create_setting(
-        EthernetIface(
+        _create_ethernet_iface(
             {
                 schema.Interface.NAME: "foo",
                 schema.Ethernet.CONFIG_SUBTREE: {schema.Ethernet.SPEED: 1000},
@@ -64,7 +70,7 @@ def test_create_setting_duplicate(NM_mock):
 
 def test_create_setting_mac(NM_mock):
     setting = nm.wired.create_setting(
-        EthernetIface(
+        _create_ethernet_iface(
             {
                 schema.Interface.NAME: "foo",
                 schema.Interface.MAC: "01:23:45:67:89:ab",
@@ -78,7 +84,7 @@ def test_create_setting_mac(NM_mock):
 
 def test_create_setting_mtu(NM_mock):
     setting = nm.wired.create_setting(
-        EthernetIface(
+        _create_ethernet_iface(
             {schema.Interface.NAME: "foo", schema.Interface.MTU: 1500}
         ),
         None,
@@ -88,7 +94,7 @@ def test_create_setting_mtu(NM_mock):
 
 
 def test_create_setting_auto_negotiation_False(NM_mock):
-    iface = EthernetIface(
+    iface = _create_ethernet_iface(
         {
             schema.Interface.NAME: "foo",
             schema.Ethernet.CONFIG_SUBTREE: {
@@ -120,7 +126,7 @@ def test_create_setting_auto_negotiation_False(NM_mock):
 
 def test_create_setting_only_auto_negotiation_True(NM_mock):
     setting = nm.wired.create_setting(
-        EthernetIface(
+        _create_ethernet_iface(
             {
                 schema.Interface.NAME: "foo",
                 schema.Ethernet.CONFIG_SUBTREE: {
@@ -138,7 +144,7 @@ def test_create_setting_only_auto_negotiation_True(NM_mock):
 
 def test_create_setting_auto_negotiation_speed_duplex(NM_mock):
     setting = nm.wired.create_setting(
-        EthernetIface(
+        _create_ethernet_iface(
             {
                 schema.Interface.NAME: "foo",
                 schema.Ethernet.CONFIG_SUBTREE: {
@@ -158,7 +164,7 @@ def test_create_setting_auto_negotiation_speed_duplex(NM_mock):
 
 def test_create_setting_speed_duplex(NM_mock):
     setting = nm.wired.create_setting(
-        EthernetIface(
+        _create_ethernet_iface(
             {
                 schema.Interface.NAME: "foo",
                 schema.Ethernet.CONFIG_SUBTREE: {

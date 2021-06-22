@@ -36,7 +36,7 @@ def nm_mock():
 
 
 def _gen_bond_iface(bond_options, mode=BondMode.ROUND_ROBIN):
-    return BondIface(
+    iface = BondIface(
         {
             Interface.NAME: "foo",
             Interface.TYPE: InterfaceType.BOND,
@@ -46,6 +46,8 @@ def _gen_bond_iface(bond_options, mode=BondMode.ROUND_ROBIN):
             },
         }
     )
+    iface.mark_as_desired()
+    return iface
 
 
 def test_create_setting(nm_mock):

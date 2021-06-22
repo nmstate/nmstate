@@ -69,7 +69,7 @@ class WiredSetting:
 
 
 def create_setting(iface, base_con_profile):
-    setting = WiredSetting(iface.original_dict)
+    setting = WiredSetting(iface.original_desire_dict)
 
     nm_wired_setting = None
     if base_con_profile:
