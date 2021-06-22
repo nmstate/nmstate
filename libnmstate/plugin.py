@@ -26,7 +26,6 @@ from .error import NmstatePluginError
 
 class NmstatePlugin(metaclass=ABCMeta):
     OVS_CAPABILITY = "openvswitch"
-    TEAM_CAPABILITY = "team"
 
     PLUGIN_CAPABILITY_IFACE = "interface"
     PLUGIN_CAPABILITY_ROUTE = "route"

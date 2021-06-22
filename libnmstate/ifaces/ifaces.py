@@ -39,7 +39,6 @@ from .macvlan import MacVlanIface
 from .macvtap import MacVtapIface
 from .ovs import OvsBridgeIface
 from .ovs import OvsInternalIface
-from .team import TeamIface
 from .veth import VethIface
 from .vlan import VlanIface
 from .vxlan import VxlanIface
@@ -851,8 +850,6 @@ def _to_specific_iface_obj(info, save_to_disk):
         return VlanIface(info, save_to_disk)
     elif iface_type == InterfaceType.VXLAN:
         return VxlanIface(info, save_to_disk)
-    elif iface_type == InterfaceType.TEAM:
-        return TeamIface(info, save_to_disk)
     elif iface_type == InterfaceType.VRF:
         return VrfIface(info, save_to_disk)
     elif iface_type == InterfaceType.INFINIBAND:

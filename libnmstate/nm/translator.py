@@ -44,7 +44,6 @@ class Api2Nm:
                 InterfaceType.ETHERNET: NM.SETTING_WIRED_SETTING_NAME,
                 InterfaceType.BOND: NM.SETTING_BOND_SETTING_NAME,
                 InterfaceType.DUMMY: NM.SETTING_DUMMY_SETTING_NAME,
-                InterfaceType.TEAM: NM.SETTING_TEAM_SETTING_NAME,
                 InterfaceType.VLAN: NM.SETTING_VLAN_SETTING_NAME,
                 InterfaceType.VXLAN: NM.SETTING_VXLAN_SETTING_NAME,
                 InterfaceType.LINUX_BRIDGE: NM.SETTING_BRIDGE_SETTING_NAME,

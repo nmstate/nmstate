@@ -117,7 +117,6 @@ class InterfaceType:
     UNKNOWN = "unknown"
     VLAN = "vlan"
     VXLAN = "vxlan"
-    TEAM = "team"
     VRF = "vrf"
     INFINIBAND = "infiniband"
     VETH = "veth"
@@ -130,7 +129,6 @@ class InterfaceType:
         OVS_BRIDGE,
         OVS_PORT,
         OVS_INTERFACE,
-        TEAM,
         VETH,
         VLAN,
         VXLAN,
@@ -382,23 +380,6 @@ class OVSBridge(Bridge, OvsDB):
                 BALANCE_SLB = "balance-slb"
                 BALANCE_TCP = "balance-tcp"
                 LACP = "lacp"
-
-
-class Team:
-    TYPE = InterfaceType.TEAM
-    CONFIG_SUBTREE = InterfaceType.TEAM
-
-    PORT_SUBTREE = "port"
-    RUNNER_SUBTREE = "runner"
-
-    class Port:
-        NAME = "name"
-
-    class Runner:
-        NAME = "name"
-
-        class RunnerMode:
-            LOAD_BALANCE = "loadbalance"
 
 
 class LLDP:
