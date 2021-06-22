@@ -233,14 +233,14 @@ class OvsInternalIface(BaseIface):
     def _validate_ovs_mtu_mac_confliction(self):
         if self.is_patch_port:
             if (
-                self.original_dict.get(Interface.IPV4, {}).get(
+                self.original_desire_dict.get(Interface.IPV4, {}).get(
                     InterfaceIP.ENABLED
                 )
-                or self.original_dict.get(Interface.IPV6, {}).get(
+                or self.original_desire_dict.get(Interface.IPV6, {}).get(
                     InterfaceIP.ENABLED
                 )
-                or self.original_dict.get(Interface.MTU)
-                or self.original_dict.get(Interface.MAC)
+                or self.original_desire_dict.get(Interface.MTU)
+                or self.original_desire_dict.get(Interface.MAC)
             ):
                 raise NmstateValueError(
                     "OVS Patch interface cannot contain MAC address, MTU"

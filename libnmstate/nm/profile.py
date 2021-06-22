@@ -286,7 +286,7 @@ class NmProfile:
             not gen_conf_mode
             and self._nm_profile is None
             and not self._iface.is_changed
-            and set(self._iface.original_dict)
+            and set(self._iface.original_desire_dict)
             <= set([Interface.STATE, Interface.NAME, Interface.TYPE])
         ):
             cur_nm_profile = self._get_first_nm_profile()

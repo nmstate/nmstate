@@ -158,6 +158,7 @@ class TestBaseIface:
 
         iface = BaseIface(iface_info)
         iface.raw["foo_a"] = "b"
+        iface.mark_as_desired()
 
         assert iface.state_for_verify() == expected_iface_info
 
@@ -179,3 +180,15 @@ class TestBaseIface:
         iface = BaseIface(gen_foo_iface_info())
         iface2 = BaseIface(gen_foo_iface_info())
         assert iface.config_changed_port(iface2) == []
+
+    def test_original_desire_dict(self):
+        iface = BaseIface(gen_foo_iface_info())
+
+        assert iface.original_desire_dict == {}
+
+        iface.mark_as_changed()
+        assert iface.original_desire_dict == {}
+
+        iface.mark_as_desired()
+        iface.raw["foo_a"] = "b"
+        assert iface.original_desire_dict == gen_foo_iface_info()
