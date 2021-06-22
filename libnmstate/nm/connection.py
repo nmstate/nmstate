@@ -161,7 +161,7 @@ def create_new_nm_simple_conn(iface, nm_profile):
             linux_bridge_setting = create_linux_bridge_setting(
                 iface_info,
                 nm_profile,
-                iface.original_dict,
+                iface.original_desire_dict,
             )
             settings.append(linux_bridge_setting)
     elif iface.type == InterfaceType.OVS_BRIDGE:
@@ -179,7 +179,7 @@ def create_new_nm_simple_conn(iface, nm_profile):
         ib_setting = create_infiniband_setting(
             iface_info,
             nm_profile,
-            iface.original_dict,
+            iface.original_desire_dict,
         )
         if ib_setting:
             settings.append(ib_setting)
@@ -240,11 +240,13 @@ def create_new_nm_simple_conn(iface, nm_profile):
     if iface.ieee_802_1x_conf:
         settings.append(create_802_1x_setting(iface.ieee_802_1x_conf))
 
-    if Ethtool.CONFIG_SUBTREE in iface.original_dict and iface.is_desired:
+    if Ethtool.CONFIG_SUBTREE in iface.original_desire_dict:
         iface_ethtool = IfaceEthtool(
-            iface.original_dict[Ethtool.CONFIG_SUBTREE]
+            iface.original_desire_dict[Ethtool.CONFIG_SUBTREE]
         )
-        iface_ethtool.canonicalize(iface.original_dict[Ethtool.CONFIG_SUBTREE])
+        iface_ethtool.canonicalize(
+            iface.original_desire_dict[Ethtool.CONFIG_SUBTREE]
+        )
         setting = create_ethtool_setting(
             iface_ethtool,
             nm_profile,

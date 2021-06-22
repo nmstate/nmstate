@@ -105,7 +105,7 @@ class BondIface(BaseIface):
             )
             self.raw[Bond.CONFIG_SUBTREE][
                 Bond.OPTIONS_SUBTREE
-            ] = self.original_dict.get(Bond.CONFIG_SUBTREE, {}).get(
+            ] = self.original_desire_dict.get(Bond.CONFIG_SUBTREE, {}).get(
                 Bond.OPTIONS_SUBTREE, {}
             )
             self._normalize_options_values()
@@ -118,7 +118,7 @@ class BondIface(BaseIface):
 
     def _fix_mac_restriced_mode(self):
         if self.is_in_mac_restricted_mode:
-            if self.original_dict.get(Interface.MAC):
+            if self.original_desire_dict.get(Interface.MAC):
                 raise NmstateValueError(
                     "MAC address cannot be specified in bond interface along "
                     "with fail_over_mac active on active backup mode"
@@ -239,7 +239,7 @@ class BondIface(BaseIface):
 
     def _validate_ad_actor_system_mac_address(self):
         desire_mac = (
-            self.original_dict.get(Bond.CONFIG_SUBTREE, {})
+            self.original_desire_dict.get(Bond.CONFIG_SUBTREE, {})
             .get(Bond.OPTIONS_SUBTREE, {})
             .get("ad_actor_system")
         )

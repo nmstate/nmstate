@@ -63,7 +63,7 @@ class LinuxBridgeIface(BridgeIface):
         self._validate_vlan_filtering_enable_native()
 
     def _validate_vlan_filtering_trunk_tags(self):
-        for port_config in self.original_dict.get(
+        for port_config in self.original_desire_dict.get(
             LinuxBridge.CONFIG_SUBTREE, {}
         ).get(LinuxBridge.PORT_SUBTREE, []):
             port_vlan_state = port_config.get(
@@ -92,7 +92,7 @@ class LinuxBridgeIface(BridgeIface):
         The "tag" is valid in access mode or tunk mode with
         "enable-native:True".
         """
-        for port_config in self.original_dict.get(
+        for port_config in self.original_desire_dict.get(
             LinuxBridge.CONFIG_SUBTREE, {}
         ).get(LinuxBridge.PORT_SUBTREE, []):
             vlan_config = _get_port_vlan_config(port_config)
@@ -106,7 +106,7 @@ class LinuxBridgeIface(BridgeIface):
                 )
 
     def _validate_vlan_filtering_enable_native(self):
-        for port_config in self.original_dict.get(
+        for port_config in self.original_desire_dict.get(
             LinuxBridge.CONFIG_SUBTREE, {}
         ).get(LinuxBridge.PORT_SUBTREE, []):
             vlan_config = _get_port_vlan_config(port_config)

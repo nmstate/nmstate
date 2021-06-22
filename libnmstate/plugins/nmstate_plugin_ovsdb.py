@@ -218,7 +218,7 @@ class NmstateOvsdbPlugin(NmstatePlugin):
                 .get(OvsDB.OVS_DB_SUBTREE, {})
                 .get(OvsDB.EXTERNAL_IDS, {})
             )
-            original_desire_ids = iface.original_dict.get(
+            original_desire_ids = iface.original_desire_dict.get(
                 OvsDB.OVS_DB_SUBTREE, {}
             ).get(OvsDB.EXTERNAL_IDS)
 
