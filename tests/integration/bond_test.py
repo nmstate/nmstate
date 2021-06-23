@@ -1146,3 +1146,26 @@ def test_bond_ad_actor_system_with_multicast_mac_address(bond99_with_2_port):
 
     with pytest.raises(NmstateValueError):
         libnmstate.apply(desired_state)
+
+
+@pytest.mark.tier1
+def test_create_bond_with_copy_mac_from_bond_port_perm_hwaddr(
+    eth1_up, eth2_up
+):
+    eth1_mac = eth1_up[Interface.KEY][0][Interface.MAC]
+    eth2_mac = eth2_up[Interface.KEY][0][Interface.MAC]
+
+    with bond_interface(
+        BOND99,
+        ["eth1", "eth2"],
+        extra_iface_state={Interface.COPY_MAC_FROM: "eth2"},
+    ):
+        current_state = statelib.show_only((BOND99,))
+        assert_mac_address(current_state, eth2_mac)
+        with bond_interface(
+            BOND99,
+            ["eth1", "eth2"],
+            extra_iface_state={Interface.COPY_MAC_FROM: "eth1"},
+        ):
+            current_state = statelib.show_only((BOND99,))
+            assert_mac_address(current_state, eth1_mac)
