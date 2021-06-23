@@ -236,11 +236,16 @@ class Ifaces:
                 and iface.sriov_total_vfs > 0
             ):
                 for new_iface in iface.create_sriov_vf_ifaces():
-                    if new_iface.name not in self._kernel_ifaces:
+                    cur_iface = self._kernel_ifaces.get(new_iface.name)
+                    if cur_iface and cur_iface.is_desired:
+                        raise NmstateNotSupportedError(
+                            "Does not support changing SR-IOV PF interface "
+                            "along with VF interface in the single desire "
+                            f"state: PF {iface.name}, VF {cur_iface.name}"
+                        )
+                    else:
                         new_iface.mark_as_desired()
                         new_ifaces.append(new_iface)
-                    else:
-                        self._kernel_ifaces[new_iface.name].mark_as_desired()
         for new_iface in new_ifaces:
             self._kernel_ifaces[new_iface.name] = new_iface
 

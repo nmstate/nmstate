@@ -27,10 +27,11 @@ from .base_iface import BaseIface
 
 BNXT_DRIVER_PHYS_PORT_PREFIX = "p"
 MULTIPORT_PCI_DEVICE_PREFIX = "n"
-IS_GENERATED_VF_METADATA = "_is_generated_vf"
 
 
 class EthernetIface(BaseIface):
+    IS_GENERATED_VF_METADATA = "_is_generated_vf"
+
     def __init__(self, info, save_to_disk=True):
         super().__init__(info, save_to_disk)
         self._is_peer = False
@@ -55,6 +56,10 @@ class EthernetIface(BaseIface):
         state = super().state_for_verify()
         _capitalize_sriov_vf_mac(state)
         EthernetIface._canonicalize(state)
+        if self.is_generated_vf:
+            # The VF state is unpredictable when PF is changing total_vfs count
+            # Just don't verify generated VF state.
+            state.pop(Interface.STATE, None)
         return state
 
     @property
@@ -137,9 +142,13 @@ class EthernetIface(BaseIface):
         ]
         # The generated vf metadata cannot be part of the original dict.
         for vf in vf_ifaces:
-            vf._info[IS_GENERATED_VF_METADATA] = True
+            vf._info[EthernetIface.IS_GENERATED_VF_METADATA] = True
 
         return vf_ifaces
+
+    @property
+    def is_generated_vf(self):
+        return self._info.get(EthernetIface.IS_GENERATED_VF_METADATA) is True
 
     def remove_vfs_entry_when_total_vfs_decreased(self):
         vfs_count = len(
