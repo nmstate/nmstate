@@ -192,3 +192,13 @@ class TestBaseIface:
         iface.mark_as_desired()
         iface.raw["foo_a"] = "b"
         assert iface.original_desire_dict == gen_foo_iface_info()
+
+    def test_state_for_verify_remove_metadata(self):
+        iface_info = gen_foo_iface_info()
+        iface_info[BaseIface.PERMANENT_MAC_ADDRESS_METADATA] = MAC_ADDRESS1
+        iface = BaseIface(iface_info)
+
+        assert (
+            BaseIface.PERMANENT_MAC_ADDRESS_METADATA
+            not in iface.state_for_verify()
+        )
