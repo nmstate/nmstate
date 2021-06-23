@@ -96,6 +96,15 @@ class NisporPluginBaseIface:
             iface_info[
                 BaseIface.PERMANENT_MAC_ADDRESS_METADATA
             ] = self._np_iface.permanent_mac_address
+        elif (
+            self._np_iface.controller_type == "bond"
+            and self._np_iface.subordinate_state.perm_hwaddr
+        ):
+            # Bond port also hold perm_hwaddr which is the mac address before
+            # this interface been assgined to bond as subordinate.
+            iface_info[
+                BaseIface.PERMANENT_MAC_ADDRESS_METADATA
+            ] = self._np_iface.subordinate_state.perm_hwaddr
         if self.mtu:
             iface_info[Interface.MTU] = self.mtu
         ip_info = self._ip_info(config_only)
