@@ -21,6 +21,7 @@ from copy import deepcopy
 
 import pytest
 
+from libnmstate.error import NmstateNotSupportedError
 from libnmstate.error import NmstateValueError
 from libnmstate.error import NmstateVerificationError
 from libnmstate.schema import Ethernet
@@ -604,3 +605,20 @@ class TestIfacesSriov:
             )
             == 2
         )
+
+    def test_not_support_changing_pf_along_with_vfs_in_single_desire(self):
+        cur_iface_infos = [
+            gen_foo_iface_info(InterfaceType.ETHERNET),
+            gen_foo_iface_info(InterfaceType.ETHERNET),
+        ]
+        cur_iface_infos[0][Interface.NAME] = FOO1_IFACE_NAME
+        cur_iface_infos[0][Ethernet.CONFIG_SUBTREE] = {
+            Ethernet.SRIOV_SUBTREE: {
+                Ethernet.SRIOV.TOTAL_VFS: 1,
+            }
+        }
+        cur_iface_infos[1][Interface.NAME] = f"{FOO1_IFACE_NAME}v0"
+
+        des_iface_infos = deepcopy(cur_iface_infos)
+        with pytest.raises(NmstateNotSupportedError):
+            Ifaces(des_iface_infos, cur_iface_infos)
