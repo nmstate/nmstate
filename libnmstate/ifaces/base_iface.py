@@ -411,6 +411,7 @@ class BaseIface:
             * Remove empty description.
             * Change OVSDB value to string.
             * Remove RX/TX when Ethtool.Pause.AUTO_NEGOTIATION is True
+            * Remove metadata of PERMANENT_MAC_ADDRESS_METADATA
         """
         self._capitalize_mac()
         if self.ethtool:
@@ -433,6 +434,7 @@ class BaseIface:
         if self.is_absent and not self._save_to_disk:
             state[Interface.STATE] = InterfaceState.DOWN
         _convert_ovs_external_ids_values_to_string(state)
+        state.pop(BaseIface.PERMANENT_MAC_ADDRESS_METADATA, None)
 
         return state
 
