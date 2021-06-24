@@ -17,7 +17,10 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
+import logging
+
 from libnmstate.error import NmstateValueError
+from libnmstate.schema import Interface
 from libnmstate.schema import VRF
 
 from .base_iface import BaseIface
@@ -46,8 +49,10 @@ class VrfIface(BaseIface):
 
     def pre_edit_validation_and_cleanup(self):
         super().pre_edit_validation_and_cleanup()
-        if self.is_up:
+        if self.is_up and (self.is_desired or self.is_changed):
             self._validate_route_table_id()
+            self._remove_mac_address()
+            self._remove_accept_all_mac_addresses_false()
 
     def _validate_route_table_id(self):
         """
@@ -57,6 +62,26 @@ class VrfIface(BaseIface):
             raise NmstateValueError(
                 f"Invalid route table ID for VRF interface {self.name}"
             )
+
+    def _remove_mac_address(self):
+        if self.original_desire_dict.get(Interface.MAC):
+            logging.warn(
+                "Applying MAC address of VRF interface is not supported yet. "
+                "Ignoring"
+            )
+        self.original_desire_dict.pop(Interface.MAC, None)
+        self.raw.pop(Interface.MAC, None)
+
+    def _remove_accept_all_mac_addresses_false(self):
+        if (
+            self.original_desire_dict.get(Interface.ACCEPT_ALL_MAC_ADDRESSES)
+            is False
+        ):
+            self.original_desire_dict.pop(
+                Interface.ACCEPT_ALL_MAC_ADDRESSES, None
+            )
+        if self.raw.get(Interface.ACCEPT_ALL_MAC_ADDRESSES) is False:
+            self.raw.pop(Interface.ACCEPT_ALL_MAC_ADDRESSES, None)
 
     def remove_port(self, port_name):
         self.raw[VRF.CONFIG_SUBTREE][VRF.PORT_SUBTREE] = [
