@@ -21,10 +21,12 @@ import pytest
 
 from libnmstate.error import NmstateValueError
 from libnmstate.schema import VRF
+from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceType
 
 from libnmstate.ifaces.vrf import VrfIface
 
+from ..testlib.constants import MAC_ADDRESS1
 from ..testlib.ifacelib import gen_foo_iface_info
 
 PORT1_IFACE_NAME = "port1"
@@ -67,5 +69,28 @@ class TestVrfIface:
         iface_info = self._gen_iface_info()
         iface_info[VRF.CONFIG_SUBTREE].pop(VRF.ROUTE_TABLE_ID)
         iface = VrfIface(iface_info)
+        iface.mark_as_desired()
         with pytest.raises(NmstateValueError):
             iface.pre_edit_validation_and_cleanup()
+
+    def test_remove_mac_address(self):
+        iface_info = self._gen_iface_info()
+        iface_info[Interface.MAC] = MAC_ADDRESS1
+        iface = VrfIface(iface_info)
+        iface.mark_as_desired()
+        iface.pre_edit_validation_and_cleanup()
+        assert Interface.MAC not in iface.original_desire_dict
+        assert Interface.MAC not in iface.to_dict()
+
+    def test_remove_accept_all_mac_addresses_false(self):
+        iface_info = self._gen_iface_info()
+        iface_info[Interface.ACCEPT_ALL_MAC_ADDRESSES] = False
+        iface = VrfIface(iface_info)
+        iface.mark_as_desired()
+        iface.pre_edit_validation_and_cleanup()
+
+        assert (
+            Interface.ACCEPT_ALL_MAC_ADDRESSES
+            not in iface.original_desire_dict
+        )
+        assert Interface.ACCEPT_ALL_MAC_ADDRESSES not in iface.to_dict()
