@@ -43,6 +43,7 @@ TEST_ROUTE_TABLE_ID0 = 100
 TEST_ROUTE_TABLE_ID1 = 101
 IPV4_ADDRESS1 = "192.0.2.251"
 IPV6_ADDRESS1 = "2001:db8:1::1"
+TEST_MAC_ADDRESS = "00:00:5E:00:53:01"
 
 
 @pytest.fixture
@@ -251,3 +252,27 @@ class TestVrf:
 
     def test_takes_over_unmanaged_vrf(self, vrf1_with_unmanaged_port):
         pass
+
+    def test_vrf_ignore_mac_address(self, vrf0_with_port0):
+        libnmstate.apply(
+            {
+                Interface.KEY: [
+                    {
+                        Interface.NAME: TEST_VRF0,
+                        Interface.MAC: TEST_MAC_ADDRESS,
+                    }
+                ]
+            }
+        )
+
+    def test_vrf_ignore_accept_all_mac_addresses_false(self, vrf0_with_port0):
+        libnmstate.apply(
+            {
+                Interface.KEY: [
+                    {
+                        Interface.NAME: TEST_VRF0,
+                        Interface.ACCEPT_ALL_MAC_ADDRESSES: False,
+                    }
+                ]
+            }
+        )
