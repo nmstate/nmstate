@@ -191,6 +191,8 @@ class NetworkManagerPlugin(NmstatePlugin):
 
     def refresh_content(self):
         self.__applied_configs = None
+        if self._ctx:
+            self._ctx.refresh()
 
     def apply_changes(self, net_state, save_to_disk):
         NmProfiles(self.context).apply_config(net_state, save_to_disk)
