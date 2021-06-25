@@ -37,7 +37,7 @@ querying network status and applying network states.
 
 - `./libnmstate/schemas/` Contains the API schema file.
 
-- `./nmstatectl/` - Contains command lines tools and varlink service.
+- `./nmstatectl/` - Contains command lines tools.
 
 - `./packaging/` - Contains packaging utilities.
 

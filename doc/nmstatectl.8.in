@@ -21,7 +21,6 @@ nmstatectl \- A nmstate command line tool
 .br
 .B nmstatectl version
 .br
-.B nmstatectl varlink \fR[\fIUNIX_FILE_SOCKET_PATH\fR]
 .SH DESCRIPTION
 .B nmstatectl\fR is created for users who want to try out nmstate without using
 \fIlibnmstate\fR.
@@ -112,15 +111,6 @@ checkpoint if not defined as argument.
 .RS
 displays nmstate version.
 .RE
-.PP
-.B varlink
-.RS
-Initates the nmstate-varlink service in the specified unix file socket path
-supporting the libnmstate functions (Show, Apply, Commit and Rollback).
-This enables functions to be accessed via varlink command-line tool and client implementations.
-Currently the service is limited to using unix file socket address only.
-.PP
-example: nmstatectl varlink /run/nmstate.so &
 .PP
 .RE
 .SH OPTIONS

@@ -9,5 +9,4 @@ jsonschema
 PyGObject
 PyYAML
 setuptools
-varlink
 nispor>=1.1.0
