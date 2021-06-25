@@ -69,6 +69,10 @@ class NmContext:
     def cancellable(self):
         return self._cancellable
 
+    def refresh(self):
+        while self.context.iteration(False):
+            pass
+
     @property
     def client(self):
         if self._quitting:
