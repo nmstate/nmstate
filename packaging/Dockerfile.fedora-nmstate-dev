@@ -37,8 +37,6 @@ RUN dnf -y install dnf-plugins-core && \
                    gobject-introspection-devel \
                    python3-devel \
                    python3-nispor \
-                   python3-varlink \
-                   libvarlink-util \
                    make && \
                    \
     dnf clean all && \

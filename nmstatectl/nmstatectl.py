@@ -38,7 +38,6 @@ from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIP
 from libnmstate.schema import Route
 from libnmstate.schema import RouteRule
-from nmstatectl.nmstate_varlink import start_varlink_server
 
 
 def main():
@@ -57,7 +56,6 @@ def main():
     setup_subcommand_apply(subparsers)
     setup_subcommand_show(subparsers)
     setup_subcommand_version(subparsers)
-    setup_subcommand_varlink(subparsers)
     setup_subcommand_gen_config(subparsers)
     parser.add_argument(
         "--version", action="store_true", help="Display nmstate version"
@@ -244,16 +242,6 @@ def setup_subcommand_version(subparsers):
     parser_version.set_defaults(func=version)
 
 
-def setup_subcommand_varlink(subparsers):
-    parser_varlink = subparsers.add_parser(
-        "varlink", help="Varlink support for libnmstate"
-    )
-    parser_varlink.add_argument(
-        "address", type=str, help="Unix socket address e.g: /run/nmstate"
-    )
-    parser_varlink.set_defaults(func=run_varlink_server)
-
-
 def setup_subcommand_gen_config(subparsers):
     parser_gc = subparsers.add_parser("gc", help="Generate configurations")
     parser_gc.add_argument(
@@ -356,13 +344,6 @@ def apply(args):
     else:
         sys.stderr.write("ERROR: No state specified\n")
         return 1
-
-
-def run_varlink_server(args):
-    try:
-        start_varlink_server(args.address)
-    except Exception as exception:
-        logging.exception(exception)
 
 
 def run_gen_config(args):

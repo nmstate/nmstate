@@ -58,20 +58,11 @@ This package contains the nmstate plugin for OVS database manipulation.
 %prep
 %setup -q
 
-%preun
-%systemd_preun nmstate-varlink.service
-
 %build
 %py3_build
 
 %install
 %py3_install
-mkdir -p %{buildroot}%{_unitdir}
-install -p -m 644 %{buildroot}%{python3_sitelib}/nmstatectl/nmstate-varlink.service \
-         %{buildroot}%{_unitdir}/nmstate-varlink.service
-
-%post
-%systemd_post nmstate-varlink.service
 
 %files
 %doc README.md
@@ -86,7 +77,6 @@ install -p -m 644 %{buildroot}%{python3_sitelib}/nmstatectl/nmstate-varlink.serv
 %{python3_sitelib}/%{libname}
 %exclude %{python3_sitelib}/%{libname}/plugins/nmstate_plugin_*
 %exclude %{python3_sitelib}/%{libname}/plugins/__pycache__/nmstate_plugin_*
-%{_unitdir}/nmstate-varlink.service
 
 %files -n nmstate-plugin-ovsdb
 %{python3_sitelib}/%{libname}/plugins/nmstate_plugin_ovsdb*

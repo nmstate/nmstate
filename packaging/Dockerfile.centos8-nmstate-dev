@@ -31,9 +31,7 @@ RUN dnf -y install dnf-plugins-core epel-release && \
                    python3-requests \
                    python3-docopt \
                    python3-nispor \
-                   python3-varlink \
                    tcpreplay \
-                   libvarlink-util \
                    wpa_supplicant \
                    hostapd \
                    && \
