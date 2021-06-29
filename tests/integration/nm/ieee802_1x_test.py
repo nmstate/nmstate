@@ -31,6 +31,7 @@ from ..testlib import assertlib
 from ..testlib.env import is_k8s
 from ..testlib.veth import create_veth_pair
 from ..testlib.veth import remove_veth_pair
+from ..testlib.statelib import show_only
 
 
 TEST_1X_CLI_NIC = "1x_cli"
@@ -134,11 +135,82 @@ def test_eth_with_802_1x(ieee_802_1x_env):
     }
 
     libnmstate.apply(desire_state)
+
     # Even without 802.1x authenticated, the veth peer is still pingable.
     # So we just check NetworkManager has the 802.1x config
     assertlib.assert_state_match(desire_state)
+
+    current_iface_state = show_only((TEST_1X_CLI_NIC,), include_secrets=True)[
+        Interface.KEY
+    ][0]
+
+    assert (
+        TEST_PRIVATE_KEY_PASSWORD
+        == current_iface_state[Ieee8021X.CONFIG_SUBTREE][
+            Ieee8021X.PRIVATE_KEY_PASSWORD
+        ]
+    )
+
+    current_iface_state = show_only((TEST_1X_CLI_NIC,), include_secrets=False)[
+        Interface.KEY
+    ][0]
+    assert (
+        TEST_PRIVATE_KEY_PASSWORD
+        != current_iface_state[Ieee8021X.CONFIG_SUBTREE][
+            Ieee8021X.PRIVATE_KEY_PASSWORD
+        ]
+    )
+
     assert len(
         cmdlib.exec_cmd(
             f"nmcli -g 802-1x c  show {TEST_1X_CLI_NIC}".split(), check=True
         )[1]
+    )
+
+
+@pytest.fixture
+def ieee_1x_cli_up(ieee_802_1x_env):
+    desire_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: TEST_1X_CLI_NIC,
+                Ieee8021X.CONFIG_SUBTREE: {
+                    Ieee8021X.IDENTITY: TEST_IDENTITY,
+                    Ieee8021X.EAP_METHODS: ["tls"],
+                    Ieee8021X.PRIVATE_KEY: TEST_PRIVATE_KEY,
+                    Ieee8021X.PRIVATE_KEY_PASSWORD: TEST_PRIVATE_KEY_PASSWORD,
+                    Ieee8021X.CLIENT_CERT: TEST_CLIENT_CERT,
+                    Ieee8021X.CA_CERT: TEST_CA_CERT,
+                },
+            }
+        ]
+    }
+
+    libnmstate.apply(desire_state)
+
+
+@pytest.mark.tier1
+@pytest.mark.xfail(
+    is_k8s(),
+    reason=(
+        "Requires adjusts for k8s. Ref:"
+        "https://github.com/nmstate/nmstate/issues/1579"
+    ),
+    raises=NmstateLibnmError,
+    strict=False,
+)
+def test_apply_ieee_802_1x_with_reserved_password(ieee_1x_cli_up):
+    desire_state = show_only((TEST_1X_CLI_NIC,), include_secrets=False)
+
+    libnmstate.apply(desire_state)
+
+    current_iface_state = show_only((TEST_1X_CLI_NIC,), include_secrets=True)[
+        Interface.KEY
+    ][0]
+
+    assert (
+        TEST_PRIVATE_KEY_PASSWORD
+        == current_iface_state[Ieee8021X.CONFIG_SUBTREE][
+            Ieee8021X.PRIVATE_KEY_PASSWORD
+        ]
     )

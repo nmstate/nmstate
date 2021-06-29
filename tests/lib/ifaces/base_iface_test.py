@@ -202,3 +202,10 @@ class TestBaseIface:
             BaseIface.PERMANENT_MAC_ADDRESS_METADATA
             not in iface.state_for_verify()
         )
+
+    def test_to_dict_hide_the_password(self):
+        iface_info = gen_foo_iface_info()
+        iface_info["password"] = "foo"
+        iface = BaseIface(iface_info)
+
+        assert iface.to_dict()["password"] != "foo"

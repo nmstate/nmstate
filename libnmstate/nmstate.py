@@ -18,10 +18,10 @@
 #
 
 from contextlib import contextmanager
+from operator import attrgetter
+from operator import itemgetter
 import importlib
 import logging
-from operator import itemgetter
-from operator import attrgetter
 import os
 import pkgutil
 
@@ -36,10 +36,11 @@ from libnmstate.schema import InterfaceType
 from libnmstate.schema import Route
 from libnmstate.schema import RouteRule
 
+from .net_state import NetState
 from .nispor.plugin import NisporPlugin
 from .plugin import NmstatePlugin
+from .state import hide_the_secrets
 from .state import merge_dict
-from .net_state import NetState
 
 _INFO_TYPE_RUNNING = 1
 _INFO_TYPE_RUNNING_CONFIG = 2
@@ -68,7 +69,10 @@ def plugin_context():
 
 
 def show_with_plugins(
-    plugins, include_status_data=None, info_type=_INFO_TYPE_RUNNING
+    plugins,
+    include_status_data=None,
+    info_type=_INFO_TYPE_RUNNING,
+    include_secrets=False,
 ):
     for plugin in plugins:
         plugin.refresh_content()
@@ -96,6 +100,9 @@ def show_with_plugins(
         report.update(plugin.get_global_state())
 
     validator.schema_validate(report)
+
+    if not include_secrets:
+        hide_the_secrets(report)
     return report
 
 
@@ -392,8 +399,12 @@ def _get_iface_types_by_name(iface_infos, name):
     return iface_types
 
 
-def show_running_config_with_plugins(plugins):
-    return show_with_plugins(plugins, info_type=_INFO_TYPE_RUNNING_CONFIG)
+def show_running_config_with_plugins(plugins, include_secrets):
+    return show_with_plugins(
+        plugins,
+        info_type=_INFO_TYPE_RUNNING_CONFIG,
+        include_secrets=include_secrets,
+    )
 
 
 def generate_configurations(desire_state):

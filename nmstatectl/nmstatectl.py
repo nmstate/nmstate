@@ -38,6 +38,7 @@ from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIP
 from libnmstate.schema import Route
 from libnmstate.schema import RouteRule
+from libnmstate.state import hide_the_secrets
 from nmstatectl.nmstate_varlink import start_varlink_server
 
 
@@ -229,6 +230,13 @@ def setup_subcommand_show(subparsers):
         dest="running_config",
     )
     parser_show.add_argument(
+        "-s, --show-secrets",
+        help="Show secrets also",
+        default=False,
+        action="store_true",
+        dest="include_secrets",
+    )
+    parser_show.add_argument(
         "only",
         default="*",
         nargs="?",
@@ -314,9 +322,11 @@ def rollback(args):
 
 def show(args):
     if args.running_config:
-        full_state = libnmstate.show_running_config()
+        full_state = libnmstate.show_running_config(
+            include_secrets=args.include_secrets
+        )
     else:
-        full_state = libnmstate.show()
+        full_state = libnmstate.show(include_secrets=args.include_secrets)
     state = _filter_state(full_state, args.only)
     print_state(state, use_yaml=args.yaml)
 
@@ -416,6 +426,7 @@ def apply_state(statedata, verify_change, commit, timeout, save_to_disk):
         )
         return os.EX_UNAVAILABLE
 
+    hide_the_secrets(state)
     print("Desired state applied: ")
     print_state(state, use_yaml=use_yaml)
     if checkpoint:

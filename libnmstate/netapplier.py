@@ -26,6 +26,7 @@ from libnmstate import validator
 from libnmstate.error import NmstateVerificationError
 from libnmstate.schema import InterfaceType
 
+from .net_state import NetState
 from .nmstate import create_checkpoints
 from .nmstate import destroy_checkpoints
 from .nmstate import plugin_context
@@ -33,7 +34,8 @@ from .nmstate import plugins_capabilities
 from .nmstate import remove_metadata_leftover
 from .nmstate import rollback_checkpoints
 from .nmstate import show_with_plugins
-from .net_state import NetState
+from .state import hide_the_secrets
+from .state import remove_the_reserved_secrets
 from .version import get_version
 
 MAINLOOP_TIMEOUT = 35
@@ -65,12 +67,18 @@ def apply(
     :rtype: str
     """
     logging.debug(f"Nmstate version: {get_version()}")
-    logging.debug(f"Applying desire state: {desired_state}")
+
+    desired_state_without_secrets = copy.deepcopy(desired_state)
+    hide_the_secrets(desired_state_without_secrets)
+    logging.debug(f"Applying desire state: {desired_state_without_secrets}")
 
     desired_state = copy.deepcopy(desired_state)
+    remove_the_reserved_secrets(desired_state)
     with plugin_context() as plugins:
         validator.schema_validate(desired_state)
-        current_state = show_with_plugins(plugins, include_status_data=True)
+        current_state = show_with_plugins(
+            plugins, include_status_data=True, include_secrets=True
+        )
         validator.validate_capabilities(
             desired_state, plugins_capabilities(plugins)
         )
@@ -142,7 +150,9 @@ def _net_state_contains_sriov_interface(net_state):
 
 
 def _verify_change(plugins, net_state):
-    current_state = remove_metadata_leftover(show_with_plugins(plugins))
+    current_state = remove_metadata_leftover(
+        show_with_plugins(plugins, include_secrets=True)
+    )
     net_state.verify(current_state)
 
 

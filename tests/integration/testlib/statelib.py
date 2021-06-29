@@ -35,14 +35,17 @@ from libnmstate.schema import LinuxBridge
 from libnmstate.schema import OVSBridge
 
 
-def show_only(ifnames):
+def show_only(ifnames, include_secrets=False):
     """
     Report the current state, filtering based on the given interface names.
     """
     base_filter_state = {
         Interface.KEY: [{Interface.NAME: ifname} for ifname in ifnames]
     }
-    current_state = State(libnmstate.show())
+    if include_secrets:
+        current_state = State(libnmstate.show(include_secrets=True))
+    else:
+        current_state = State(libnmstate.show())
     current_state.filter(base_filter_state)
     return current_state.state
 
