@@ -124,6 +124,12 @@ change the output format to \fIJSON\fR.
 Showing the running network configuration.
 .RE
 
+.B -s, --show-secrets
+.RS
+Showing with the secrets. By default, nmstate is masking the passwords by
+\fI<_password_hid_by_nmstate>\fR.
+.RE
+
 .IP \fB--no-verify
 skip the desired network state verification.
 .IP \fB--no-commit
