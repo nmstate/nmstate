@@ -19,9 +19,13 @@
 
 from abc import ABCMeta
 from abc import abstractmethod
-from collections.abc import Sequence
 from collections.abc import Mapping
+from collections.abc import Sequence
 from functools import total_ordering
+import logging
+
+
+PASSWORD_HID_BY_NMSTATE = "<_password_hid_by_nmstate>"
 
 
 @total_ordering
@@ -102,3 +106,36 @@ def merge_dict(dict_to, dict_from):
             dict_to[key] = from_value
         elif isinstance(dict_to[key], Mapping):
             merge_dict(dict_to[key], from_value)
+
+
+def hide_the_secrets(state):
+    if isinstance(state, Mapping):
+        for key, value in state.items():
+            if isinstance(value, Mapping) or isinstance(value, list):
+                hide_the_secrets(value)
+            elif key.endswith("password") and isinstance(value, str):
+                state[key] = PASSWORD_HID_BY_NMSTATE
+    elif isinstance(state, list):
+        for value in state:
+            hide_the_secrets(value)
+
+
+def remove_the_reserved_secrets(state):
+    if isinstance(state, Mapping):
+        keys_to_remove = []
+        for key, value in state.items():
+            if isinstance(value, Mapping) or isinstance(value, list):
+                remove_the_reserved_secrets(value)
+            elif key.endswith("password") and value == PASSWORD_HID_BY_NMSTATE:
+                logging.warn(
+                    "Got nmstate reserved password"
+                    f"({PASSWORD_HID_BY_NMSTATE}) for key: {key}, "
+                    "will use current password if available."
+                )
+                keys_to_remove.append(key)
+        for key in keys_to_remove:
+            state.pop(key)
+
+    elif isinstance(state, list):
+        for value in state:
+            remove_the_reserved_secrets(value)
