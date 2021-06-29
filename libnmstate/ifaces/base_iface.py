@@ -36,8 +36,9 @@ from libnmstate.schema import InterfaceType
 from libnmstate.schema import LLDP
 from libnmstate.schema import OvsDB
 
-from ..state import state_match
+from ..state import hide_the_secrets
 from ..state import merge_dict
+from ..state import state_match
 from .ethtool import IfaceEthtool
 
 
@@ -210,7 +211,9 @@ class BaseIface:
         self._origin_info[Interface.STATE] = InterfaceState.ABSENT
 
     def to_dict(self):
-        return deepcopy(self._info)
+        info = deepcopy(self._info)
+        hide_the_secrets(info)
+        return info
 
     @property
     def original_desire_dict(self):
