@@ -77,8 +77,10 @@ install -p -m 644 %{buildroot}%{python3_sitelib}/nmstatectl/nmstate-varlink.serv
 %doc README.md
 %doc examples/
 %{_mandir}/man8/nmstatectl.8*
+%{_mandir}/man8/nmstate-autoconf.8*
 %{python3_sitelib}/nmstatectl
 %{_bindir}/nmstatectl
+%{_bindir}/nmstate-autoconf
 
 %files -n python3-%{libname}
 %license LICENSE

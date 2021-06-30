@@ -3,5 +3,6 @@ include README.md
 include pyproject.toml
 include requirements.txt
 include doc/nmstatectl.8.in
+include doc/nmstate-autoconf.8.in
 recursive-include examples *.yml
 exclude packaging/nmstate.spec
