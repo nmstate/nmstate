@@ -68,8 +68,10 @@ This package contains the nmstate plugin for OVS database manipulation.
 %doc README.md
 %doc examples/
 %{_mandir}/man8/nmstatectl.8*
+%{_mandir}/man8/nmstate-autoconf.8*
 %{python3_sitelib}/nmstatectl
 %{_bindir}/nmstatectl
+%{_bindir}/nmstate-autoconf
 
 %files -n python3-%{libname}
 %license LICENSE

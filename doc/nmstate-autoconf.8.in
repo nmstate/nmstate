@@ -1,0 +1,73 @@
+.\" Manpage for nmstate-autoconf.
+.TH nmstate-autoconf 8 "@DATE@" "@VERSION@" "nmstate-autoconf man page"
+.SH NAME
+nmstate-autoconf \- A nmstate command line tool to automatically configure the
+network state using LLDP information
+.SH SYNOPSIS
+.B nmstate-autoconf \fR[\fIINTERFACE_NAME\fR] [\fB--dry-run\fR]
+.br
+.SH DESCRIPTION
+.B nmstate-autoconf\fR is a command line tool that uses \fIlibnmstate\fR in order to
+confgure the network state automatically using LLDP information. This tool is
+experimental only.
+
+\fInmstate-autoconf\fR will identify the interfaces connected to a VLAN and
+unify them in a bond interface.  In addition, a vlan interface will be created
+in top of the bond.
+
+The bond state will be the following one:
+
+- name: bond50
+  type: bond
+  state: up
+  link-aggregation:
+    mode: balance-rr
+    port:
+    - enp4s0
+    - enp4s0d1
+
+The host VLAN state will be the following one:
+
+- name: prod-net
+  type: vlan
+  state: up
+  vlan:
+    base-iface: bond50
+    id: 50
+
+.PP
+For multiple interface names, use comma to separate them. You can also use
+patterns for interface names:
+.RS
+.B *\fR matches everything
+.br
+.B ?\fR matches any single character
+.br
+.B [seq]\fR matches any character in seq
+.br
+.B [!seq]\fR matches any character not in seq
+.RE
+.PP
+For example, to enable LLDP auto configuration on all interfaces starts with
+eth:
+.RS
+nmstate-autoconf eth\\*
+.br
+# The backslash is required to stop shell expanding '*' to file names.
+.RE
+.SH OPTIONS
+.B --dry-run, -d
+.RS
+Generate the network state that is going to be applied and print it out. It
+won't apply any changes in the host.
+.RE
+.SH LIMITATIONS
+*\fR This tool is experimental only.
+*\fR It is not possible to configure automatically bond or vlan options.
+.SH BUG REPORTS
+Report bugs on nmstate GitHub issues <https://github.com/nmstate/nmstate>.
+.SH COPYRIGHT
+License LGPL-2.1 or any later version
+<https://www.gnu.org/licenses/old-licenses/lgpl-2.1.txt>.
+.SH SEE ALSO
+.B NetworkManager\fP(8)
