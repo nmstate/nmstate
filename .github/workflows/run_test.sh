@@ -24,11 +24,16 @@ COPR_ARG=""
 
 if [ $OS_TYPE == "el8" ];then
     CONTAINER_IMAGE="docker.io/nmstate/centos8-nmstate-dev"
+    CUSTOMIZE_ARG='--customize=
+        dnf install -y python3-varlink libvarlink-util;'
 elif [ $OS_TYPE == "stream" ];then
     CONTAINER_IMAGE="docker.io/nmstate/centos-stream-nmstate-dev"
+    CUSTOMIZE_ARG='--customize=
+        dnf install -y python3-varlink libvarlink-util;'
 elif [ $OS_TYPE == "ovs2_11" ];then
     CONTAINER_IMAGE="docker.io/nmstate/centos8-nmstate-dev"
     CUSTOMIZE_ARG='--customize=
+        dnf install -y python3-varlink libvarlink-util;
         dnf remove -y openvswitch2.11 python3-openvswitch2.11;
         dnf install -y openvswitch2.13 python3-openvswitch2.13;
         systemctl restart openvswitch'
