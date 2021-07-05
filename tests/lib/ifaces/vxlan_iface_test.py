@@ -134,3 +134,27 @@ class TestVxlanIface:
                 des_iface_infos=[base_iface_info, vxlan_iface_info],
                 cur_iface_infos=[],
             )
+
+    def test_bad_vxlan_id_type(self):
+        iface_info = self._gen_iface_info()
+        iface_info[VXLAN.CONFIG_SUBTREE][VXLAN.ID] = "badidtype"
+
+        iface = VxlanIface(iface_info)
+        with pytest.raises(NmstateValueError):
+            iface.pre_edit_validation_and_cleanup()
+
+    def test_vxlan_id_too_great(self):
+        iface_info = self._gen_iface_info()
+        iface_info[VXLAN.CONFIG_SUBTREE][VXLAN.ID] = 16777216
+
+        iface = VxlanIface(iface_info)
+        with pytest.raises(NmstateValueError):
+            iface.pre_edit_validation_and_cleanup()
+
+    def test_vxlan_id_too_low(self):
+        iface_info = self._gen_iface_info()
+        iface_info[VXLAN.CONFIG_SUBTREE][VXLAN.ID] = -1
+
+        iface = VxlanIface(iface_info)
+        with pytest.raises(NmstateValueError):
+            iface.pre_edit_validation_and_cleanup()

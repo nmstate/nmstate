@@ -25,7 +25,6 @@ import logging
 import os
 import pkgutil
 
-from libnmstate import validator
 from libnmstate.error import NmstateError
 from libnmstate.error import NmstateValueError
 from libnmstate.error import NmstateDependencyError
@@ -98,8 +97,6 @@ def show_with_plugins(
 
     for plugin in plugins:
         report.update(plugin.get_global_state())
-
-    validator.schema_validate(report)
 
     if not include_secrets:
         hide_the_secrets(report)

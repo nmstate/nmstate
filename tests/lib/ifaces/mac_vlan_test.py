@@ -100,3 +100,34 @@ class TestMacVlanIface:
         iface = MacVlanIface(iface_info)
         with pytest.raises(NmstateValueError):
             iface.pre_edit_validation_and_cleanup()
+
+    @pytest.mark.parametrize(
+        "mode",
+        [
+            MacVlan.Mode.VEPA,
+            MacVlan.Mode.BRIDGE,
+            MacVlan.Mode.PRIVATE,
+            MacVlan.Mode.PASSTHRU,
+            MacVlan.Mode.SOURCE,
+        ],
+    )
+    def test_valid_mac_vlan_modes(self, mode):
+        iface_info = self._gen_iface_info()
+        iface_info[MacVlan.CONFIG_SUBTREE] = {
+            MacVlan.BASE_IFACE: "eth1",
+            MacVlan.MODE: mode,
+            MacVlan.PROMISCUOUS: True,
+        }
+        iface = MacVlanIface(iface_info)
+        iface.pre_edit_validation_and_cleanup()
+
+    def test_invalid_mac_vlan_mode(self):
+        iface_info = self._gen_iface_info()
+        iface_info[MacVlan.CONFIG_SUBTREE] = {
+            MacVlan.BASE_IFACE: "eth1",
+            MacVlan.MODE: "wrongmode",
+            MacVlan.PROMISCUOUS: True,
+        }
+        iface = MacVlanIface(iface_info)
+        with pytest.raises(NmstateValueError):
+            iface.pre_edit_validation_and_cleanup()

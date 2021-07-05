@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020 Red Hat, Inc.
+# Copyright (c) 2020-2021 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -20,8 +20,15 @@
 from libnmstate.error import NmstateValueError
 from libnmstate.schema import InfiniBand
 from libnmstate.schema import Interface
+from libnmstate.validator import validate_string
 
 from .base_iface import BaseIface
+
+
+VALID_IB_MODES = [
+    InfiniBand.Mode.DATAGRAM,
+    InfiniBand.Mode.CONNECTED,
+]
 
 
 class InfiniBandIface(BaseIface):
@@ -44,11 +51,20 @@ class InfiniBandIface(BaseIface):
         return self.raw.get(InfiniBand.CONFIG_SUBTREE, {})
 
     def pre_edit_validation_and_cleanup(self):
+        self._validate_properties()
         if self.is_up:
             _cannonicalize_pkey(self.raw)
             self._validate_mandatory_properties()
             self._validate_interface_name_format_for_pkey_nic()
         super().pre_edit_validation_and_cleanup()
+
+    def _validate_properties(self):
+        validate_string(
+            self._ib_config.get(InfiniBand.MODE),
+            InfiniBand.MODE,
+            VALID_IB_MODES,
+        )
+        validate_string(self.parent, InfiniBand.BASE_IFACE)
 
     def _validate_mandatory_properties(self):
         if self.is_up:

@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020 Red Hat, Inc.
+# Copyright (c) 2020-2021 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -25,6 +25,8 @@ from libnmstate.error import NmstateValueError
 from libnmstate.schema import Bond
 from libnmstate.schema import BondMode
 from libnmstate.schema import Interface
+from libnmstate.validator import validate_list
+from libnmstate.validator import validate_string
 
 from ..state import state_match
 from .base_iface import BaseIface
@@ -89,6 +91,7 @@ class BondIface(BaseIface):
             self._generate_bond_mode_change_metadata(ifaces)
 
     def pre_edit_validation_and_cleanup(self):
+        self._validate_properties()
         super().pre_edit_validation_and_cleanup()
         if self.is_up and self.is_desired:
             self._discard_bond_option_when_mode_change()
@@ -96,6 +99,13 @@ class BondIface(BaseIface):
             self._fix_mac_restriced_mode()
             self._validate_miimon_conflict_with_arp_interval()
             self._validate_ad_actor_system_mac_address()
+
+    def _validate_properties(self):
+        validate_string(
+            self._info.get(Interface.COPY_MAC_FROM), Interface.COPY_MAC_FROM
+        )
+        validate_string(self.bond_mode, Bond.MODE)
+        validate_list(self.port, Bond.PORT, elem_type=str)
 
     def _discard_bond_option_when_mode_change(self):
         if self.is_bond_mode_changed:

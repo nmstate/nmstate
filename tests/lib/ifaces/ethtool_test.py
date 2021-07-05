@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020 Red Hat, Inc.
+# Copyright (c) 2020-2021 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -21,6 +21,7 @@ from copy import deepcopy
 
 import pytest
 
+from libnmstate.error import NmstateValueError
 from libnmstate.schema import Ethtool
 
 from libnmstate.ifaces.base_iface import BaseIface
@@ -137,3 +138,123 @@ class TestIfaceEthtool:
         des_iface = BaseIface(des_info)
         cur_iface = BaseIface(cur_info)
         assert des_iface.state_for_verify() == cur_iface.state_for_verify()
+
+    def test_valid_ethtool(self):
+        iface_info = gen_foo_iface_info()
+        iface_info[Ethtool.CONFIG_SUBTREE] = {
+            Ethtool.Pause.CONFIG_SUBTREE: {
+                Ethtool.Pause.AUTO_NEGOTIATION: False,
+                Ethtool.Pause.TX: True,
+                Ethtool.Pause.RX: True,
+            }
+        }
+        iface = BaseIface(iface_info)
+        iface.mark_as_desired()
+        iface.pre_edit_validation_and_cleanup()
+
+    def test_invalid_ethtool_with_interger_value(self):
+        iface_info = gen_foo_iface_info()
+        iface_info[Ethtool.CONFIG_SUBTREE] = {
+            Ethtool.Pause.CONFIG_SUBTREE: {
+                Ethtool.Pause.AUTO_NEGOTIATION: 1,
+                Ethtool.Pause.TX: 0,
+                Ethtool.Pause.RX: 0,
+            }
+        }
+        iface = BaseIface(iface_info)
+        iface.mark_as_desired()
+
+        with pytest.raises(NmstateValueError):
+            iface.pre_edit_validation_and_cleanup()
+
+    def test_valid_ethtool_feature(self):
+        iface_info = gen_foo_iface_info()
+        iface_info[Ethtool.CONFIG_SUBTREE] = {
+            Ethtool.Feature.CONFIG_SUBTREE: {"rx-all": False}
+        }
+        iface = BaseIface(iface_info)
+        iface.mark_as_desired()
+        iface.pre_edit_validation_and_cleanup()
+
+    def test_valid_ethtool_ring(self):
+        iface_info = gen_foo_iface_info()
+        iface_info[Ethtool.CONFIG_SUBTREE] = {
+            Ethtool.Ring.CONFIG_SUBTREE: {
+                Ethtool.Ring.RX: 256,
+                Ethtool.Ring.RX_JUMBO: 4096,
+                Ethtool.Ring.RX_MINI: 256,
+                Ethtool.Ring.TX: 256,
+            }
+        }
+        iface = BaseIface(iface_info)
+        iface.mark_as_desired()
+        iface.pre_edit_validation_and_cleanup()
+
+    def test_invalid_ethtool_ring_out_of_range(self):
+        iface_info = gen_foo_iface_info()
+        iface_info[Ethtool.CONFIG_SUBTREE] = {
+            Ethtool.Ring.CONFIG_SUBTREE: {
+                Ethtool.Ring.RX: -1,
+            }
+        }
+        iface = BaseIface(iface_info)
+        iface.mark_as_desired()
+        with pytest.raises(NmstateValueError):
+            iface.pre_edit_validation_and_cleanup()
+
+    def test_invalid_ethtool_ring_not_integer(self):
+        iface_info = gen_foo_iface_info()
+        iface_info[Ethtool.CONFIG_SUBTREE] = {
+            Ethtool.Ring.CONFIG_SUBTREE: {
+                Ethtool.Ring.RX: False,
+            }
+        }
+        iface = BaseIface(iface_info)
+        iface.mark_as_desired()
+        with pytest.raises(NmstateValueError):
+            iface.pre_edit_validation_and_cleanup()
+
+    def test_valid_ethtool_coalesce(self):
+        iface_info = gen_foo_iface_info()
+        iface_info[Ethtool.CONFIG_SUBTREE] = {
+            Ethtool.Coalesce.CONFIG_SUBTREE: {
+                Ethtool.Coalesce.ADAPTIVE_RX: True,
+                Ethtool.Coalesce.ADAPTIVE_TX: True,
+                Ethtool.Coalesce.PKT_RATE_HIGH: 100,
+                Ethtool.Coalesce.PKT_RATE_LOW: 100,
+                Ethtool.Coalesce.RX_FRAMES: 100,
+                Ethtool.Coalesce.RX_FRAMES_HIGH: 100,
+                Ethtool.Coalesce.RX_FRAMES_IRQ: 100,
+                Ethtool.Coalesce.RX_FRAMES_LOW: 100,
+                Ethtool.Coalesce.RX_USECS: 100,
+                Ethtool.Coalesce.RX_USECS_HIGH: 100,
+                Ethtool.Coalesce.RX_USECS_IRQ: 100,
+                Ethtool.Coalesce.RX_USECS_LOW: 100,
+                Ethtool.Coalesce.SAMPLE_INTERVAL: 100,
+                Ethtool.Coalesce.STATS_BLOCK_USECS: 100,
+                Ethtool.Coalesce.TX_FRAMES: 100,
+                Ethtool.Coalesce.TX_FRAMES_HIGH: 100,
+                Ethtool.Coalesce.TX_FRAMES_IRQ: 100,
+                Ethtool.Coalesce.TX_FRAMES_LOW: 100,
+                Ethtool.Coalesce.TX_USECS: 100,
+                Ethtool.Coalesce.TX_USECS_HIGH: 100,
+                Ethtool.Coalesce.TX_USECS_IRQ: 100,
+                Ethtool.Coalesce.TX_USECS_LOW: 100,
+            }
+        }
+        iface = BaseIface(iface_info)
+        iface.mark_as_desired()
+        iface.pre_edit_validation_and_cleanup()
+
+    def test_invalid_ethtool_coalesce_invalid_value_type(self):
+        iface_info = gen_foo_iface_info()
+        iface_info[Ethtool.CONFIG_SUBTREE] = {
+            Ethtool.Coalesce.CONFIG_SUBTREE: {
+                Ethtool.Coalesce.ADAPTIVE_RX: 1,
+                Ethtool.Coalesce.ADAPTIVE_TX: 0,
+            }
+        }
+        iface = BaseIface(iface_info)
+        iface.mark_as_desired()
+        with pytest.raises(NmstateValueError):
+            iface.pre_edit_validation_and_cleanup()

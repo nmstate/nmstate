@@ -20,7 +20,6 @@ import copy
 import time
 
 import pytest
-import jsonschema as js
 
 import libnmstate
 from libnmstate.schema import Interface
@@ -99,18 +98,6 @@ def test_decrease_to_zero_iface_mtu():
     assert "-mtu: 0" in err.value.args[0]
     # FIXME: Drop the sleep when the waiting logic is implemented.
     time.sleep(2)
-    assertlib.assert_state(origin_desired_state)
-
-
-def test_decrease_to_negative_iface_mtu():
-    desired_state = statelib.show_only(("eth1",))
-    origin_desired_state = copy.deepcopy(desired_state)
-    eth1_desired_state = desired_state[Interface.KEY][0]
-    eth1_desired_state[Interface.MTU] = -1
-
-    with pytest.raises(js.ValidationError) as err:
-        libnmstate.apply(desired_state)
-    assert "-1" in err.value.args[0]
     assertlib.assert_state(origin_desired_state)
 
 

@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020 Red Hat, Inc.
+# Copyright (c) 2020-2021 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -22,6 +22,7 @@ from copy import deepcopy
 import pytest
 
 from libnmstate.error import NmstateInternalError
+from libnmstate.error import NmstateValueError
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import InterfaceState
@@ -209,3 +210,51 @@ class TestBaseIface:
         iface = BaseIface(iface_info)
 
         assert iface.to_dict()["password"] != "foo"
+
+    def test_invalid_state(self):
+        iface_info = gen_foo_iface_info()
+        iface_info[Interface.STATE] = "badstate"
+        iface = BaseIface(iface_info)
+
+        with pytest.raises(NmstateValueError):
+            iface.pre_edit_validation_and_cleanup()
+
+    @pytest.mark.parametrize(
+        "mac_address",
+        [
+            "00:11:22:33",
+            "00:11:22:33:44:55",
+            "80:00:02:08:fe:80:00:00:00:00:00:00:f4:52:14:03:00:8d:52:11",
+        ],
+    )
+    def test_valid_mac_address(self, mac_address):
+        iface_info = gen_foo_iface_info()
+        iface_info[Interface.MAC] = mac_address
+        iface = BaseIface(iface_info)
+
+        iface.pre_edit_validation_and_cleanup()
+
+    @pytest.mark.parametrize(
+        "mac_address",
+        [
+            "00:11:22",
+            "00:xx:xx:yy:100",
+            "90:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00"
+            "00:00:00:00:00:00:00:00:00:00:00",
+        ],
+    )
+    def test_invalid_mac_address(self, mac_address):
+        iface_info = gen_foo_iface_info()
+        iface_info[Interface.MAC] = mac_address
+        iface = BaseIface(iface_info)
+
+        with pytest.raises(NmstateValueError):
+            iface.pre_edit_validation_and_cleanup()
+
+    @pytest.mark.parametrize("valid_values", [True, False])
+    def test_valid_accept_all_mac_addresses(self, valid_values):
+        iface_info = gen_foo_iface_info()
+        iface_info[Interface.ACCEPT_ALL_MAC_ADDRESSES] = valid_values
+        iface = BaseIface(iface_info)
+
+        iface.pre_edit_validation_and_cleanup()

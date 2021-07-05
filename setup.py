@@ -50,7 +50,7 @@ setup(
         "console_scripts": ["nmstatectl = nmstatectl.nmstatectl:main"]
     },
     package_data={
-        "libnmstate": ["schemas/operational-state.yaml", "VERSION"],
+        "libnmstate": ["VERSION"],
     },
     data_files=gen_manpage(),
 )

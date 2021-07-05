@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020 Red Hat, Inc.
+# Copyright (c) 2020-2021 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -224,3 +224,31 @@ class TestInfiniBandIface:
         }
 
         Ifaces([base_iface_info, ib_iface_info, bond_iface_info], [])
+
+    def test_valid_base_interface_full_info(self):
+        ib_iface_info = self._gen_iface_info()
+        iface = InfiniBandIface(ib_iface_info)
+
+        iface.pre_edit_validation_and_cleanup()
+
+    def test_valid_pkey_interface_using_integer_pkey(self):
+        ib_iface_info = self._gen_iface_info()
+        ib_iface_info[InfiniBand.CONFIG_SUBTREE][InfiniBand.PKEY] = 0x8001
+        iface = InfiniBandIface(ib_iface_info)
+
+        iface.pre_edit_validation_and_cleanup()
+
+    def test_valid_pkey_interface_using_string_pkey(self):
+        ib_iface_info = self._gen_iface_info()
+        ib_iface_info[InfiniBand.CONFIG_SUBTREE][InfiniBand.PKEY] = "0x8001"
+        iface = InfiniBandIface(ib_iface_info)
+
+        iface.pre_edit_validation_and_cleanup()
+
+    def test_valid_pkey_interface_using_invalid_mode(self):
+        ib_iface_info = self._gen_iface_info()
+        ib_iface_info[InfiniBand.CONFIG_SUBTREE][InfiniBand.MODE] = "wrongmode"
+        iface = InfiniBandIface(ib_iface_info)
+
+        with pytest.raises(NmstateValueError):
+            iface.pre_edit_validation_and_cleanup()

@@ -19,6 +19,7 @@
 
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import Veth
+from libnmstate.validator import validate_string
 
 from .ethernet import EthernetIface
 
@@ -67,3 +68,7 @@ class VethIface(EthernetIface):
         self._mark_iface_is_peer(ifaces)
         self._mark_peer_changed(ifaces)
         super().gen_metadata(ifaces)
+
+    def pre_edit_validation_and_cleanup(self):
+        validate_string(self.peer, Veth.PEER)
+        super().pre_edit_validation_and_cleanup()

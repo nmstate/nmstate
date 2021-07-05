@@ -19,6 +19,8 @@
 
 from libnmstate.error import NmstateValueError
 from libnmstate.schema import VLAN
+from libnmstate.validator import validate_integer
+from libnmstate.validator import validate_string
 
 from .base_iface import BaseIface
 
@@ -45,6 +47,10 @@ class VlanIface(BaseIface):
         return self._vlan_config.get(VLAN.ID)
 
     @property
+    def base_iface(self):
+        return self._vlan_config.get(VLAN.BASE_IFACE)
+
+    @property
     def is_vlan_id_changed(self):
         return self._vlan_id_changed
 
@@ -57,9 +63,14 @@ class VlanIface(BaseIface):
         return False
 
     def pre_edit_validation_and_cleanup(self):
+        self._validate_properties()
         if self.is_up:
             self._validate_mandatory_properties()
         super().pre_edit_validation_and_cleanup()
+
+    def _validate_properties(self):
+        validate_string(self.base_iface, VLAN.BASE_IFACE)
+        validate_integer(self.vlan_id, VLAN.ID, minimum=0, maximum=4095)
 
     def _validate_mandatory_properties(self):
         for prop in (VLAN.ID, VLAN.BASE_IFACE):

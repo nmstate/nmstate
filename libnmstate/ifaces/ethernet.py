@@ -21,12 +21,16 @@ from libnmstate.schema import Ethernet
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import InterfaceState
+from libnmstate.validator import validate_boolean
+from libnmstate.validator import validate_integer
+from libnmstate.validator import validate_string
 
 from .base_iface import BaseIface
 
-
 BNXT_DRIVER_PHYS_PORT_PREFIX = "p"
 MULTIPORT_PCI_DEVICE_PREFIX = "n"
+
+DUPLEX_VALID_VALUES = ["full", "half"]
 
 
 class EthernetIface(BaseIface):
@@ -101,6 +105,44 @@ class EthernetIface(BaseIface):
     @property
     def duplex(self):
         return self.raw.get(Ethernet.CONFIG_SUBTREE, {}).get(Ethernet.DUPLEX)
+
+    def pre_edit_validation_and_cleanup(self):
+        self._validate_properties()
+        super().pre_edit_validation_and_cleanup()
+
+    def _validate_properties(self):
+        validate_boolean(self.auto_negotiation, Ethernet.AUTO_NEGOTIATION)
+        validate_string(self.duplex, Ethernet.DUPLEX, DUPLEX_VALID_VALUES)
+        validate_integer(self.speed, Ethernet.SPEED, minimum=0)
+        validate_integer(
+            self.sriov_total_vfs, Ethernet.SRIOV.TOTAL_VFS, minimum=0
+        )
+        for vf in self.sriov_vfs:
+            validate_integer(
+                vf.get(Ethernet.SRIOV.VFS.ID), Ethernet.SRIOV.VFS.ID, minimum=0
+            )
+            validate_string(
+                vf.get(Ethernet.SRIOV.VFS.MAC_ADDRESS),
+                Ethernet.SRIOV.VFS.MAC_ADDRESS,
+                pattern="^([a-fA-F0-9]{2}:){3,31}[a-fA-F0-9]{2}$",
+            )
+            validate_boolean(
+                vf.get(Ethernet.SRIOV.VFS.SPOOF_CHECK),
+                Ethernet.SRIOV.VFS.SPOOF_CHECK,
+            )
+            validate_boolean(
+                vf.get(Ethernet.SRIOV.VFS.TRUST), Ethernet.SRIOV.VFS.TRUST
+            )
+            validate_integer(
+                vf.get(Ethernet.SRIOV.VFS.MAX_TX_RATE),
+                Ethernet.SRIOV.VFS.MAX_TX_RATE,
+                minimum=0,
+            )
+            validate_integer(
+                vf.get(Ethernet.SRIOV.VFS.MIN_TX_RATE),
+                Ethernet.SRIOV.VFS.MIN_TX_RATE,
+                minimum=0,
+            )
 
     def create_sriov_vf_ifaces(self):
         # Currently there is not a way to see the relation between a SR-IOV PF

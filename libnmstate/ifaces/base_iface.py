@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020 Red Hat, Inc.
+# Copyright (c) 2020-2021 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -35,6 +35,9 @@ from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import LLDP
 from libnmstate.schema import OvsDB
+from libnmstate.validator import validate_boolean
+from libnmstate.validator import validate_integer
+from libnmstate.validator import validate_string
 
 from ..state import hide_the_secrets
 from ..state import merge_dict
@@ -111,6 +114,32 @@ class IPState:
                 "are ignored when dynamic IP is enabled"
             )
 
+    def validate_properties(self):
+        validate_boolean(
+            self._info.get(InterfaceIP.ENABLED), InterfaceIP.ENABLED
+        )
+        validate_boolean(self._info.get(InterfaceIP.DHCP), InterfaceIP.DHCP)
+        validate_boolean(
+            self._info.get(InterfaceIP.AUTO_ROUTES), InterfaceIP.AUTO_ROUTES
+        )
+        validate_boolean(
+            self._info.get(InterfaceIP.AUTO_GATEWAY), InterfaceIP.AUTO_GATEWAY
+        )
+        validate_boolean(
+            self._info.get(InterfaceIP.AUTO_DNS), InterfaceIP.AUTO_DNS
+        )
+        validate_boolean(
+            self._info.get(InterfaceIPv6.AUTOCONF), InterfaceIPv6.AUTOCONF
+        )
+        for address in self.addresses:
+            validate_integer(
+                address.get(InterfaceIP.ADDRESS_PREFIX_LENGTH),
+                InterfaceIP.ADDRESS_PREFIX_LENGTH,
+            )
+            validate_string(
+                address.get(InterfaceIP.ADDRESS_IP), InterfaceIP.ADDRESS_IP
+            )
+
     def remove_link_local_address(self):
         if self.addresses:
             self._info[InterfaceIP.ADDRESS] = [
@@ -121,6 +150,14 @@ class IPState:
                     addr[InterfaceIP.ADDRESS_PREFIX_LENGTH],
                 )
             ]
+
+
+VALID_STATES = [
+    InterfaceState.ABSENT,
+    InterfaceState.UP,
+    InterfaceState.DOWN,
+    InterfaceState.IGNORE,
+]
 
 
 class BaseIface:
@@ -226,6 +263,10 @@ class BaseIface:
     def permanent_mac_address(self):
         return self._info.get(BaseIface.PERMANENT_MAC_ADDRESS_METADATA)
 
+    @property
+    def accept_all_mac_addresses(self):
+        return self._info.get(Interface.ACCEPT_ALL_MAC_ADDRESSES)
+
     def ip_state(self, family):
         return IPState(family, self._info.get(family, {}))
 
@@ -248,6 +289,7 @@ class BaseIface:
         We don't split validation from clean up as they might sharing the same
         check code.
         """
+        self._validate_properties()
         if self.is_desired:
             if not self.is_absent:
                 for family in (Interface.IPV4, Interface.IPV6):
@@ -259,6 +301,7 @@ class BaseIface:
                 ip_state.remove_link_local_address()
                 self._info[family] = ip_state.to_dict()
                 if self.ethtool:
+                    self.ethtool.pre_edit_validation_and_cleanup()
                     self.ethtool.canonicalize(
                         self._origin_info.get(Ethtool.CONFIG_SUBTREE, {})
                     )
@@ -266,6 +309,22 @@ class BaseIface:
 
             if self.is_absent and not self._save_to_disk:
                 self._info[Interface.STATE] = InterfaceState.DOWN
+
+    def _validate_properties(self):
+        validate_string(self.name, Interface.NAME)
+        validate_string(self.state, Interface.STATE, VALID_STATES)
+        validate_integer(self.mtu, Interface.MTU, minimum=0)
+        validate_boolean(
+            self.accept_all_mac_addresses, Interface.ACCEPT_ALL_MAC_ADDRESSES
+        )
+        validate_string(
+            self.mac,
+            Interface.MAC,
+            pattern="^([a-fA-F0-9]{2}:){3,31}[a-fA-F0-9]{2}$",
+        )
+        for family in (Interface.IPV4, Interface.IPV6):
+            ip_state = IPState(family, self._origin_info.get(family, {}))
+            ip_state.validate_properties()
 
     def merge(self, other):
         self._ovsdb_pre_merge_clean_up(other)

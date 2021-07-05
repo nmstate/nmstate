@@ -582,7 +582,7 @@ class TestIfacesSriov:
         cur_iface_infos[0][Ethernet.CONFIG_SUBTREE] = {
             Ethernet.SRIOV_SUBTREE: {
                 Ethernet.SRIOV.TOTAL_VFS: 3,
-                Ethernet.SRIOV.VFS_SUBTREE: [1, 2, 3],
+                Ethernet.SRIOV.VFS_SUBTREE: [{}, {}, {}],
             }
         }
         cur_iface_infos[1][Interface.NAME] = f"{FOO1_IFACE_NAME}v0"
