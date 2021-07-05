@@ -813,3 +813,42 @@ def test_create_mac_tap_over_ovs_iface_with_use_same_name_as_bridge(
 
 def test_ignore_ovs_system_kernel_nic(bridge_with_ports):
     assert not statelib.show_only(("ovs-system",))[Interface.KEY]
+
+
+@pytest.mark.tier1
+def test_set_static_to_ovs_interface_with_the_same_name_bridge(
+    ovs_bridge1_with_internal_port_same_name,
+):
+    desired_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: BRIDGE1,
+                Interface.TYPE: InterfaceType.OVS_INTERFACE,
+                Interface.IPV4: {
+                    InterfaceIPv4.ENABLED: True,
+                    InterfaceIPv4.ADDRESS: [
+                        {
+                            InterfaceIPv4.ADDRESS_IP: "192.0.2.1",
+                            InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+                        }
+                    ],
+                },
+            }
+        ]
+    }
+    libnmstate.apply(desired_state)
+
+    state = statelib.show_only((BRIDGE1,))
+    assert len(state[Interface.KEY]) == 2
+    cur_iface_state = None
+    for iface in state[Interface.KEY]:
+        if iface[Interface.TYPE] == InterfaceType.OVS_INTERFACE:
+            cur_iface_state = iface
+            break
+    assert cur_iface_state
+    assert cur_iface_state[Interface.IPV4][InterfaceIPv4.ADDRESS] == [
+        {
+            InterfaceIPv4.ADDRESS_IP: "192.0.2.1",
+            InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+        }
+    ]
