@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020 Red Hat, Inc.
+# Copyright (c) 2020-2021 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -23,13 +23,14 @@ from operator import itemgetter
 import pytest
 
 from libnmstate.error import NmstateValueError
-from libnmstate.schema import OVSBridge
-from libnmstate.schema import Interface
-from libnmstate.schema import InterfaceType
-
 from libnmstate.ifaces.ovs import OvsBridgeIface
 from libnmstate.ifaces.ovs import OvsInternalIface
 from libnmstate.ifaces.ifaces import Ifaces
+from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceState
+from libnmstate.schema import InterfaceType
+from libnmstate.schema import OVSBridge
+from libnmstate.schema import OVSInterface
 
 from ..testlib.constants import PORT1_IFACE_NAME
 from ..testlib.constants import PORT2_IFACE_NAME
@@ -73,6 +74,26 @@ BOND_PORT_CONFIG = {
 }
 
 PORT_IFACE_NAMES = sorted([s[OVSBridge.Port.NAME] for s in PORT_PORT_CONFIGS])
+
+
+@pytest.fixture
+def portless_ovs_bridge_state():
+    return {
+        Interface.NAME: "ovs-br0",
+        Interface.STATE: InterfaceState.UP,
+        Interface.TYPE: OVSBridge.TYPE,
+        OVSBridge.CONFIG_SUBTREE: {OVSBridge.PORT_SUBTREE: []},
+    }
+
+
+@pytest.fixture
+def ovs_bridge_state(portless_ovs_bridge_state):
+    port = {OVSBridge.Port.NAME: "eth1", OVSBridge.Port.VLAN_SUBTREE: {}}
+    ovs_bridge_state_config = portless_ovs_bridge_state[
+        OVSBridge.CONFIG_SUBTREE
+    ]
+    ovs_bridge_state_config[OVSBridge.PORT_SUBTREE].append(port)
+    return portless_ovs_bridge_state
 
 
 class TestOvsBrigeIface:
@@ -228,6 +249,150 @@ class TestOvsBrigeIface:
             key=itemgetter(OVSBridge.Port.NAME),
         )
 
+    @pytest.mark.parametrize(
+        "vlan_mode",
+        argvalues=[
+            OVSBridge.Port.Vlan.Mode.TRUNK,
+            OVSBridge.Port.Vlan.Mode.ACCESS,
+        ],
+    )
+    def test_vlan_port_modes(self, ovs_bridge_state, vlan_mode):
+        valid_vlan_mode = self._generate_vlan_config(vlan_mode)
+        bridge_state_config = ovs_bridge_state[OVSBridge.CONFIG_SUBTREE]
+        the_port = bridge_state_config[OVSBridge.PORT_SUBTREE][0]
+        the_port.update(valid_vlan_mode)
+        iface = OvsBridgeIface(ovs_bridge_state, True)
+
+        iface.pre_edit_validation_and_cleanup()
+
+    def test_invalid_vlan_port_mode(self, ovs_bridge_state):
+        invalid_vlan_mode = self._generate_vlan_config("fake-mode")
+        bridge_state_config = ovs_bridge_state[OVSBridge.CONFIG_SUBTREE]
+        the_port = bridge_state_config[OVSBridge.PORT_SUBTREE][0]
+        the_port.update(invalid_vlan_mode)
+        iface = OvsBridgeIface(ovs_bridge_state, True)
+
+        with pytest.raises(NmstateValueError):
+            iface.pre_edit_validation_and_cleanup()
+
+    def test_access_port_accepted(self, ovs_bridge_state):
+        vlan_access_port_state = self._generate_vlan_config(
+            OVSBridge.Port.Vlan.Mode.ACCESS, access_tag=101
+        )
+        bridge_state_config = ovs_bridge_state[OVSBridge.CONFIG_SUBTREE]
+        the_port = bridge_state_config[OVSBridge.PORT_SUBTREE][0]
+        the_port.update(vlan_access_port_state)
+        iface = OvsBridgeIface(ovs_bridge_state, True)
+
+        iface.pre_edit_validation_and_cleanup()
+
+    def test_wrong_access_port_tag_mode(self, ovs_bridge_state):
+        invalid_access_port_tag_mode = self._generate_vlan_config(
+            OVSBridge.Port.Vlan.Mode.ACCESS, access_tag="holy-guacamole!"
+        )
+        bridge_state_config = ovs_bridge_state[OVSBridge.CONFIG_SUBTREE]
+        the_port = bridge_state_config[OVSBridge.PORT_SUBTREE][0]
+        the_port.update(invalid_access_port_tag_mode)
+        iface = OvsBridgeIface(ovs_bridge_state, True)
+
+        with pytest.raises(NmstateValueError):
+            iface.pre_edit_validation_and_cleanup()
+
+    def test_wrong_access_tag_range(self, ovs_bridge_state):
+        invalid_vlan_id_range = self._generate_vlan_config(
+            OVSBridge.Port.Vlan.Mode.ACCESS, access_tag=48000
+        )
+        bridge_state_config = ovs_bridge_state[OVSBridge.CONFIG_SUBTREE]
+        the_port = bridge_state_config[OVSBridge.PORT_SUBTREE][0]
+        the_port.update(invalid_vlan_id_range)
+        iface = OvsBridgeIface(ovs_bridge_state, True)
+
+        with pytest.raises(NmstateValueError):
+            iface.pre_edit_validation_and_cleanup()
+
+    @pytest.mark.parametrize(
+        "is_native_vlan", argvalues=[True, False], ids=["native", "not-native"]
+    )
+    def test_trunk_port_native_vlan(self, ovs_bridge_state, is_native_vlan):
+        vlan_access_port_state = self._generate_vlan_config(
+            OVSBridge.Port.Vlan.Mode.TRUNK,
+            access_tag=101 if is_native_vlan else None,
+            native_vlan=is_native_vlan,
+        )
+        bridge_state_config = ovs_bridge_state[OVSBridge.CONFIG_SUBTREE]
+        the_port = bridge_state_config[OVSBridge.PORT_SUBTREE][0]
+        the_port.update(vlan_access_port_state)
+        iface = OvsBridgeIface(ovs_bridge_state, True)
+
+        iface.pre_edit_validation_and_cleanup()
+
+    def test_trunk_ports(self, ovs_bridge_state):
+        trunk_tags = self._generate_vlan_id_config(101, 102, 103)
+        trunk_tags.append(self._generate_vlan_id_range_config(500, 1000))
+        vlan_trunk_tags_port_state = self._generate_vlan_config(
+            OVSBridge.Port.Vlan.Mode.TRUNK, trunk_tags=trunk_tags
+        )
+        bridge_state_config = ovs_bridge_state[OVSBridge.CONFIG_SUBTREE]
+        the_port = bridge_state_config[OVSBridge.PORT_SUBTREE][0]
+        the_port.update(vlan_trunk_tags_port_state)
+        iface = OvsBridgeIface(ovs_bridge_state, True)
+
+        iface.pre_edit_validation_and_cleanup()
+
+    @staticmethod
+    def _generate_vlan_config(
+        vlan_mode, trunk_tags=None, access_tag=None, native_vlan=None
+    ):
+        vlan_state = {
+            OVSBridge.Port.Vlan.MODE: vlan_mode,
+            OVSBridge.Port.Vlan.TRUNK_TAGS: trunk_tags or [],
+        }
+
+        if access_tag:
+            vlan_state[OVSBridge.Port.Vlan.TAG] = access_tag
+        if native_vlan:
+            enable_native = OVSBridge.Port.Vlan.ENABLE_NATIVE
+            vlan_state[enable_native] = native_vlan
+
+        return {OVSBridge.Port.VLAN_SUBTREE: vlan_state}
+
+    def test_valid_link_aggregation_port(self):
+        link_aggregation_port = {
+            OVSBridge.Port.NAME: "bond",
+            OVSBridge.Port.LINK_AGGREGATION_SUBTREE: {
+                OVSBridge.Port.LinkAggregation.MODE: "bond-mode",
+                OVSBridge.Port.LinkAggregation.PORT_SUBTREE: [
+                    {OVSBridge.Port.LinkAggregation.Port.NAME: "iface1"},
+                    {OVSBridge.Port.LinkAggregation.Port.NAME: "iface2"},
+                ],
+            },
+        }
+        iface_info = {
+            Interface.NAME: "bridge",
+            Interface.TYPE: InterfaceType.OVS_BRIDGE,
+            OVSBridge.CONFIG_SUBTREE: {
+                OVSBridge.PORT_SUBTREE: [link_aggregation_port]
+            },
+        }
+        iface = OvsBridgeIface(iface_info, True)
+
+        iface.pre_edit_validation_and_cleanup()
+
+    @staticmethod
+    def _generate_vlan_id_config(*vlan_ids):
+        return [
+            {OVSBridge.Port.Vlan.TrunkTags.ID: vlan_id} for vlan_id in vlan_ids
+        ]
+
+    @staticmethod
+    def _generate_vlan_id_range_config(min_vlan_id, max_vlan_id):
+        return {
+            OVSBridge.Port.Vlan.TrunkTags.ID_RANGE: {
+                OVSBridge.Port.Vlan.TrunkTags.MIN_RANGE: min_vlan_id,
+                OVSBridge.Port.Vlan.TrunkTags.MAX_RANGE: max_vlan_id,
+            }
+        }
+
 
 class TestOvsInternalIface:
     def _gen_iface_info(self):
@@ -241,5 +406,36 @@ class TestOvsInternalIface:
 
     def test_can_have_ip_as_port(self):
         assert OvsInternalIface(gen_ovs_bridge_info()).can_have_ip_as_port
+
+    def test_valid_ovs_interface_with_peer(self):
+        iface_info = {
+            Interface.NAME: "ovs0",
+            Interface.TYPE: InterfaceType.OVS_INTERFACE,
+            OVSInterface.PATCH_CONFIG_SUBTREE: {
+                OVSInterface.Patch.PEER: "ovs1"
+            },
+        }
+        iface = OvsInternalIface(iface_info)
+
+        iface.pre_edit_validation_and_cleanup()
+
+    def test_invalid_ovs_interface_with_peer(self):
+        iface_info = {
+            Interface.NAME: "ovs0",
+            Interface.TYPE: InterfaceType.OVS_INTERFACE,
+            OVSInterface.PATCH_CONFIG_SUBTREE: {
+                OVSInterface.Patch.PEER: 233132
+            },
+        }
+        iface = OvsInternalIface(iface_info)
+
+        with pytest.raises(NmstateValueError):
+            iface.pre_edit_validation_and_cleanup()
+
+    def test_valid_ovs_interface_without_peer(self):
+        iface_info = self._gen_iface_info()
+        iface = OvsInternalIface(iface_info)
+
+        iface.pre_edit_validation_and_cleanup()
 
     # The 'parent' property is tested by `test_auto_create_ovs_interface`.

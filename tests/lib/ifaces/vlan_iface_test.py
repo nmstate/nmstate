@@ -129,3 +129,27 @@ class TestVlanIface:
                 des_iface_infos=[base_iface_info, vlan_iface_info],
                 cur_iface_infos=[],
             )
+
+    def test_bad_vlan_id_type(self):
+        iface_info = self._gen_iface_info()
+        iface_info[VLAN.CONFIG_SUBTREE][VLAN.ID] = "badidtype"
+
+        iface = VlanIface(iface_info)
+        with pytest.raises(NmstateValueError):
+            iface.pre_edit_validation_and_cleanup()
+
+    def test_vlan_id_too_great(self):
+        iface_info = self._gen_iface_info()
+        iface_info[VLAN.CONFIG_SUBTREE][VLAN.ID] = 4096
+
+        iface = VlanIface(iface_info)
+        with pytest.raises(NmstateValueError):
+            iface.pre_edit_validation_and_cleanup()
+
+    def test_vlan_id_too_low(self):
+        iface_info = self._gen_iface_info()
+        iface_info[VLAN.CONFIG_SUBTREE][VLAN.ID] = -1
+
+        iface = VlanIface(iface_info)
+        with pytest.raises(NmstateValueError):
+            iface.pre_edit_validation_and_cleanup()

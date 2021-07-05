@@ -41,3 +41,10 @@ class TestVethIface:
 
     def test_veth_peer(self):
         assert VethIface(self._gen_iface_info()).peer == VETHTEST_PEER_IFACE
+
+    def test_valid_veth_peer(self):
+        iface_info = self._gen_iface_info()
+        iface_info[Veth.CONFIG_SUBTREE] = {Veth.PEER: "veth1peer"}
+        iface = VethIface(iface_info)
+
+        iface.pre_edit_validation_and_cleanup()

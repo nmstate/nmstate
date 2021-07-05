@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020 Red Hat, Inc.
+# Copyright (c) 2020-2021 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -30,6 +30,8 @@ from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIP
 from libnmstate.schema import RouteRule
 from libnmstate.schema import Route
+from libnmstate.validator import validate_integer
+from libnmstate.validator import validate_string
 
 from .ifaces.base_iface import BaseIface
 from .state import StateEntry
@@ -68,6 +70,13 @@ class RouteRuleEntry(StateEntry):
 
     def _keys(self):
         return (self.ip_from, self.ip_to, self.priority, self.route_table)
+
+    def validate_properties(self):
+        validate_string(self.ip_from, RouteRule.IP_FROM)
+        validate_string(self.ip_to, RouteRule.IP_TO)
+        validate_string(self.state, RouteRule.STATE, [RouteRule.STATE_ABSENT])
+        validate_integer(self.priority, RouteRule.PRIORITY)
+        validate_integer(self.route_table, RouteRule.ROUTE_TABLE)
 
     @property
     def is_ipv6(self):
@@ -129,6 +138,7 @@ class RouteRuleState:
         """
         for entry in _get_config(des_rule_state):
             rl = RouteRuleEntry(entry)
+            rl.validate_properties()
             if rl.absent:
                 self._apply_absent_rules(rl)
         for entry in _get_config(des_rule_state):

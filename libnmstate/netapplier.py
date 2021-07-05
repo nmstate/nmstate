@@ -75,7 +75,6 @@ def apply(
     desired_state = copy.deepcopy(desired_state)
     remove_the_reserved_secrets(desired_state)
     with plugin_context() as plugins:
-        validator.schema_validate(desired_state)
         current_state = show_with_plugins(
             plugins, include_status_data=True, include_secrets=True
         )

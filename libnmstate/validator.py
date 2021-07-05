@@ -17,28 +17,17 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
-import copy
 import logging
+import re
 
-import jsonschema as js
-
+from libnmstate.error import NmstateDependencyError
+from libnmstate.error import NmstateValueError
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceType
-from libnmstate.error import NmstateDependencyError
 
-from . import schema
 from .plugin import NmstatePlugin
 
 MAX_SUPPORTED_INTERFACES = 1000
-
-
-def schema_validate(data, validation_schema=schema.ifaces_schema):
-    data = copy.deepcopy(data)
-    _validate_max_supported_intface_count(data)
-    for ifstate in data.get(schema.Interface.KEY, ()):
-        if not ifstate.get(schema.Interface.TYPE):
-            ifstate[schema.Interface.TYPE] = schema.InterfaceType.UNKNOWN
-    js.validate(data, validation_schema)
 
 
 def validate_capabilities(state, capabilities):
@@ -66,10 +55,82 @@ def _validate_max_supported_intface_count(data):
     exceeds the limit specified in MAX_SUPPORTED_INTERFACES
     """
     num_of_interfaces = len(
-        [intface for intface in data.get(schema.Interface.KEY, ())]
+        [intface for intface in data.get(Interface.KEY, ())]
     )
     if num_of_interfaces > MAX_SUPPORTED_INTERFACES:
         logging.warning(
             "Interfaces count exceeds the limit %s in desired state",
             MAX_SUPPORTED_INTERFACES,
         )
+
+
+def validate_string(value, name, valid_values=None, pattern=None):
+    if value is None:
+        return
+
+    if not isinstance(value, str):
+        raise NmstateValueError(
+            f"Property {name} with value {value} must be a "
+            f"string but is {type(value)}"
+        )
+    elif valid_values and value not in valid_values:
+        raise NmstateValueError(
+            f"Property {name} with value {value} is not a valid value from "
+            f"the list {valid_values}"
+        )
+    elif pattern and not re.match(pattern, value):
+        raise NmstateValueError(
+            f"Property {name} with value {value} does not match the required "
+            f"pattern {pattern}"
+        )
+
+
+def validate_boolean(value, name):
+    if value is None:
+        return
+
+    if not isinstance(value, bool):
+        raise NmstateValueError(
+            f"Property {name} with value {value} must be a "
+            f"boolean but is {type(value)}"
+        )
+
+
+def validate_integer(value, name, minimum=None, maximum=None):
+    if value is None:
+        return
+
+    # This is required a bool is instance of int.
+    if type(value) != int:
+        raise NmstateValueError(
+            f"Property {name} with value {value} must be an "
+            f"integer but is {type(value)}"
+        )
+    elif minimum is not None and value < minimum:
+        raise NmstateValueError(
+            f"Property {name} with value {value} must be greater "
+            f"than {minimum}"
+        )
+    elif maximum is not None and value > maximum:
+        raise NmstateValueError(
+            f"Property {name} with value {value} must be lower "
+            f"than {maximum}"
+        )
+
+
+def validate_list(value, name, elem_type=None):
+    if value is None:
+        return
+
+    if not isinstance(value, list):
+        raise NmstateValueError(
+            f"Property {name} with value {value} must be a "
+            f"list but is {type(value)}"
+        )
+    elif elem_type is not None:
+        match_type = all([isinstance(elem, elem_type) for elem in value])
+        if not match_type:
+            raise NmstateValueError(
+                f"Property {name} with value {value}, all the element must "
+                f"be type {elem_type}"
+            )

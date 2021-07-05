@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020 Red Hat, Inc.
+# Copyright (c) 2020-2021 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -22,12 +22,16 @@ from operator import itemgetter
 import warnings
 
 from libnmstate.error import NmstateValueError
+from libnmstate.schema import Bridge
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIP
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import OVSBridge
 from libnmstate.schema import OVSInterface
+from libnmstate.validator import validate_boolean
+from libnmstate.validator import validate_integer
+from libnmstate.validator import validate_string
 
 from .bridge import BridgeIface
 from .base_iface import BaseIface
@@ -35,6 +39,12 @@ from .base_iface import BaseIface
 
 SYSTEMCTL_TIMEOUT_SECONDS = 5
 DEPRECATED_SLAVES = "slaves"
+
+VALID_VLAN_FILTERING_MODES = [
+    Bridge.Port.Vlan.Mode.ACCESS,
+    Bridge.Port.Vlan.Mode.TRUNK,
+    Bridge.Port.Vlan.Mode.UNKNOWN,
+]
 
 
 class OvsBridgeIface(BridgeIface):
@@ -114,9 +124,57 @@ class OvsBridgeIface(BridgeIface):
         return port_iface
 
     def pre_edit_validation_and_cleanup(self):
+        self._validate_properties()
         super().pre_edit_validation_and_cleanup()
         if self.is_up:
             self._validate_ovs_lag_port_count()
+
+    def _validate_properties(self):
+        for port_info in self.port_configs:
+            validate_string(port_info.get(Bridge.Port.NAME), Bridge.Port.NAME)
+            vlan_filtering_info = port_info.get(Bridge.Port.VLAN_SUBTREE)
+            if vlan_filtering_info:
+                validate_string(
+                    vlan_filtering_info.get(Bridge.Port.Vlan.MODE),
+                    Bridge.Port.Vlan.MODE,
+                    VALID_VLAN_FILTERING_MODES,
+                )
+                validate_boolean(
+                    vlan_filtering_info.get(Bridge.Port.Vlan.ENABLE_NATIVE),
+                    Bridge.Port.Vlan.ENABLE_NATIVE,
+                )
+                validate_integer(
+                    vlan_filtering_info.get(Bridge.Port.Vlan.TAG),
+                    Bridge.Port.Vlan.TAG,
+                    minimum=0,
+                    maximum=4095,
+                )
+            link_aggregation = port_info.get(
+                OVSBridge.Port.LINK_AGGREGATION_SUBTREE
+            )
+            if link_aggregation:
+                validate_string(
+                    link_aggregation.get(OVSBridge.Port.LinkAggregation.MODE),
+                    OVSBridge.Port.LinkAggregation.MODE,
+                )
+
+        options_info = self._info.get(Bridge.OPTIONS_SUBTREE)
+        if options_info:
+            validate_boolean(
+                options_info.get(OVSBridge.Options.STP), OVSBridge.Options.STP
+            )
+            validate_boolean(
+                options_info.get(OVSBridge.Options.RSTP),
+                OVSBridge.Options.RSTP,
+            )
+            validate_boolean(
+                options_info.get(OVSBridge.Options.MCAST_SNOOPING_ENABLED),
+                OVSBridge.Options.MCAST_SNOOPING_ENABLED,
+            )
+            validate_string(
+                options_info.get(OVSBridge.Options.FAIL_MODE),
+                OVSBridge.Options.FAIL_MODE,
+            )
 
     def _validate_ovs_lag_port_count(self):
         for port in self.port_configs:
@@ -210,7 +268,7 @@ class OvsInternalIface(BaseIface):
 
     @property
     def patch_config(self):
-        return self._info.get(OVSInterface.PATCH_CONFIG_SUBTREE)
+        return self._info.get(OVSInterface.PATCH_CONFIG_SUBTREE, {})
 
     @property
     def is_patch_port(self):
@@ -227,6 +285,10 @@ class OvsInternalIface(BaseIface):
         )
 
     def pre_edit_validation_and_cleanup(self):
+        validate_string(
+            self.patch_config.get(OVSInterface.Patch.PEER),
+            OVSInterface.Patch.PEER,
+        )
         super().pre_edit_validation_and_cleanup()
         self._validate_ovs_mtu_mac_confliction()
 

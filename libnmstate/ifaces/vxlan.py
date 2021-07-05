@@ -19,6 +19,8 @@
 
 from libnmstate.error import NmstateValueError
 from libnmstate.schema import VXLAN
+from libnmstate.validator import validate_integer
+from libnmstate.validator import validate_string
 
 from .base_iface import BaseIface
 
@@ -45,6 +47,18 @@ class VxlanIface(BaseIface):
         return self._vxlan_config.get(VXLAN.ID)
 
     @property
+    def base_iface(self):
+        return self._vxlan_config.get(VXLAN.BASE_IFACE)
+
+    @property
+    def remote(self):
+        return self._vxlan_config.get(VXLAN.REMOTE)
+
+    @property
+    def destination_port(self):
+        return self._vxlan_config.get(VXLAN.DESTINATION_PORT)
+
+    @property
     def is_vxlan_id_changed(self):
         return self._vxlan_id_changed
 
@@ -67,9 +81,16 @@ class VxlanIface(BaseIface):
         super().gen_metadata(ifaces)
 
     def pre_edit_validation_and_cleanup(self):
+        self._validate_properties()
         if self.is_up:
             self._validate_mandatory_properties()
         super().pre_edit_validation_and_cleanup()
+
+    def _validate_properties(self):
+        validate_string(self.base_iface, VXLAN.BASE_IFACE)
+        validate_integer(self.vxlan_id, VXLAN.ID, minimum=0, maximum=16777215)
+        validate_string(self.remote, VXLAN.REMOTE)
+        validate_integer(self.destination_port, VXLAN.DESTINATION_PORT)
 
     def _validate_mandatory_properties(self):
         for prop in (VXLAN.ID, VXLAN.BASE_IFACE, VXLAN.REMOTE):

@@ -17,19 +17,6 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
-import pkgutil
-import yaml
-
-
-def load(schema_name):
-    return yaml.load(
-        pkgutil.get_data("libnmstate", "schemas/" + schema_name + ".yaml"),
-        Loader=yaml.SafeLoader,
-    )
-
-
-ifaces_schema = load("operational-state")
-
 
 class Interface:
     KEY = "interfaces"

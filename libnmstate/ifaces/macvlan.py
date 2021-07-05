@@ -19,8 +19,20 @@
 
 from libnmstate.error import NmstateValueError
 from libnmstate.schema import MacVlan
+from libnmstate.validator import validate_boolean
+from libnmstate.validator import validate_string
 
 from .base_iface import BaseIface
+
+
+VALID_MODES = [
+    MacVlan.Mode.UNKNOWN,
+    MacVlan.Mode.VEPA,
+    MacVlan.Mode.BRIDGE,
+    MacVlan.Mode.PRIVATE,
+    MacVlan.Mode.PASSTHRU,
+    MacVlan.Mode.SOURCE,
+]
 
 
 class MacVlanIface(BaseIface):
@@ -46,21 +58,27 @@ class MacVlanIface(BaseIface):
 
     @property
     def mode(self):
-        return self.config_subtree[MacVlan.MODE]
+        return self.config_subtree.get(MacVlan.MODE)
 
     @property
     def base_iface(self):
-        return self.config_subtree[MacVlan.BASE_IFACE]
+        return self.config_subtree.get(MacVlan.BASE_IFACE)
 
     @property
     def promiscuous(self):
         return self.config_subtree.get(MacVlan.PROMISCUOUS)
 
     def pre_edit_validation_and_cleanup(self):
+        self._validate_properties()
         if self.is_up:
             self._validate_mode()
             self._validate_mandatory_properties()
         super().pre_edit_validation_and_cleanup()
+
+    def _validate_properties(self):
+        validate_string(self.base_iface, MacVlan.BASE_IFACE)
+        validate_string(self.mode, MacVlan.MODE, VALID_MODES)
+        validate_boolean(self.promiscuous, MacVlan.PROMISCUOUS)
 
     def _validate_mode(self):
         if self.config_subtree.get(

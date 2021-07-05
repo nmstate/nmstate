@@ -94,3 +94,25 @@ class TestVrfIface:
             not in iface.original_desire_dict
         )
         assert Interface.ACCEPT_ALL_MAC_ADDRESSES not in iface.to_dict()
+
+    def test_valid_vrf_interface_with_ports(self):
+        iface_info = self._gen_iface_info()
+
+        iface = VrfIface(iface_info)
+        iface.pre_edit_validation_and_cleanup()
+
+    def test_invalid_vrf_ports(self):
+        iface_info = self._gen_iface_info()
+        iface_info[VRF.CONFIG_SUBTREE][VRF.PORT_SUBTREE] = ["foo1", 34, []]
+
+        iface = VrfIface(iface_info)
+        with pytest.raises(NmstateValueError):
+            iface.pre_edit_validation_and_cleanup()
+
+    def test_invalid_vrf_route_table_id(self):
+        iface_info = self._gen_iface_info()
+        iface_info[VRF.CONFIG_SUBTREE][VRF.ROUTE_TABLE_ID] = "wrongtype"
+
+        iface = VrfIface(iface_info)
+        with pytest.raises(NmstateValueError):
+            iface.pre_edit_validation_and_cleanup()

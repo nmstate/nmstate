@@ -21,6 +21,32 @@ from copy import deepcopy
 import logging
 
 from libnmstate.schema import Ethtool
+from libnmstate.validator import validate_boolean
+from libnmstate.validator import validate_integer
+
+
+ETHTOOL_COALESCE_INTEGER = [
+    Ethtool.Coalesce.PKT_RATE_HIGH,
+    Ethtool.Coalesce.PKT_RATE_LOW,
+    Ethtool.Coalesce.RX_FRAMES,
+    Ethtool.Coalesce.RX_FRAMES_HIGH,
+    Ethtool.Coalesce.RX_FRAMES_IRQ,
+    Ethtool.Coalesce.RX_FRAMES_LOW,
+    Ethtool.Coalesce.RX_USECS,
+    Ethtool.Coalesce.RX_USECS_HIGH,
+    Ethtool.Coalesce.RX_USECS_IRQ,
+    Ethtool.Coalesce.RX_USECS_LOW,
+    Ethtool.Coalesce.SAMPLE_INTERVAL,
+    Ethtool.Coalesce.STATS_BLOCK_USECS,
+    Ethtool.Coalesce.TX_FRAMES,
+    Ethtool.Coalesce.TX_FRAMES_HIGH,
+    Ethtool.Coalesce.TX_FRAMES_IRQ,
+    Ethtool.Coalesce.TX_FRAMES_LOW,
+    Ethtool.Coalesce.TX_USECS,
+    Ethtool.Coalesce.TX_USECS_HIGH,
+    Ethtool.Coalesce.TX_USECS_IRQ,
+    Ethtool.Coalesce.TX_USECS_LOW,
+]
 
 
 class IfaceEthtool:
@@ -92,6 +118,53 @@ class IfaceEthtool:
         if self.coalesce:
             info[Ethtool.Coalesce.CONFIG_SUBTREE] = self.coalesce.to_dict()
         return info
+
+    def pre_edit_validation_and_cleanup(self):
+        self._validate_properties()
+
+    def _validate_properties(self):
+        if self.pause:
+            validate_boolean(
+                self.pause.autoneg, Ethtool.Pause.AUTO_NEGOTIATION
+            )
+            validate_boolean(self.pause.rx, Ethtool.Pause.RX)
+            validate_boolean(self.pause.tx, Ethtool.Pause.TX)
+        if self.ring:
+            validate_integer(
+                self.ring.to_dict().get(Ethtool.Ring.TX),
+                Ethtool.Ring.TX,
+                minimum=0,
+            )
+            validate_integer(
+                self.ring.to_dict().get(Ethtool.Ring.RX),
+                Ethtool.Ring.RX,
+                minimum=0,
+            )
+            validate_integer(
+                self.ring.to_dict().get(Ethtool.Ring.RX_JUMBO),
+                Ethtool.Ring.RX_JUMBO,
+                minimum=0,
+            )
+            validate_integer(
+                self.ring.to_dict().get(Ethtool.Ring.RX_MINI),
+                Ethtool.Ring.RX_MINI,
+                minimum=0,
+            )
+        if self.coalesce:
+            validate_boolean(
+                self.coalesce.to_dict().get(Ethtool.Coalesce.ADAPTIVE_RX),
+                Ethtool.Coalesce.ADAPTIVE_RX,
+            )
+            validate_boolean(
+                self.coalesce.to_dict().get(Ethtool.Coalesce.ADAPTIVE_TX),
+                Ethtool.Coalesce.ADAPTIVE_TX,
+            )
+            for coalesce_prop in ETHTOOL_COALESCE_INTEGER:
+                validate_integer(
+                    self.coalesce.to_dict().get(coalesce_prop),
+                    coalesce_prop,
+                    minimum=0,
+                )
 
 
 class IfaceEthtoolPause:

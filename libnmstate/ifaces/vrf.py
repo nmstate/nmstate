@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020 Red Hat, Inc.
+# Copyright (c) 2020-2021 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -22,6 +22,8 @@ import logging
 from libnmstate.error import NmstateValueError
 from libnmstate.schema import Interface
 from libnmstate.schema import VRF
+from libnmstate.validator import validate_integer
+from libnmstate.validator import validate_list
 
 from .base_iface import BaseIface
 
@@ -48,11 +50,16 @@ class VrfIface(BaseIface):
         return True
 
     def pre_edit_validation_and_cleanup(self):
+        self._validate_properties()
         super().pre_edit_validation_and_cleanup()
         if self.is_up and (self.is_desired or self.is_changed):
             self._validate_route_table_id()
             self._remove_mac_address()
             self._remove_accept_all_mac_addresses_false()
+
+    def _validate_properties(self):
+        validate_list(self.port, VRF.PORT_SUBTREE, elem_type=str)
+        validate_integer(self.route_table_id, VRF.ROUTE_TABLE_ID)
 
     def _validate_route_table_id(self):
         """

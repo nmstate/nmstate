@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020 Red Hat, Inc.
+# Copyright (c) 2020-2021 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -18,7 +18,11 @@
 #
 
 from libnmstate.error import NmstateValueError
+from libnmstate.schema import Bridge
 from libnmstate.schema import LinuxBridge
+from libnmstate.validator import validate_boolean
+from libnmstate.validator import validate_integer
+from libnmstate.validator import validate_string
 
 from .bridge import BridgeIface
 from .linux_bridge_port_vlan import NmstateLinuxBridgePortVlan
@@ -39,6 +43,30 @@ READ_ONLY_OPTIONS = [
     LinuxBridge.Options.GC_TIMER,
 ]
 
+INTEGER_OPTIONS = [
+    LinuxBridge.Options.MULTICAST_LAST_MEMBER_INTERVAL,
+    LinuxBridge.Options.MULTICAST_MEMBERSHIP_INTERVAL,
+    LinuxBridge.Options.MULTICAST_QUERIER_INTERVAL,
+    LinuxBridge.Options.MULTICAST_QUERY_RESPONSE_INTERVAL,
+    LinuxBridge.Options.MULTICAST_STARTUP_QUERY_INTERVAL,
+    LinuxBridge.Options.HASH_MAX,
+    LinuxBridge.Options.MULTICAST_LAST_MEMBER_COUNT,
+    LinuxBridge.Options.MULTICAST_QUERY_INTERVAL,
+    LinuxBridge.Options.MULTICAST_STARTUP_QUERY_COUNT,
+]
+
+BOOLEAN_OPTIONS = [
+    LinuxBridge.Options.MULTICAST_SNOOPING,
+    LinuxBridge.Options.MULTICAST_QUERIER,
+    LinuxBridge.Options.MULTICAST_QUERY_USE_IFADDR,
+]
+
+VALID_VLAN_FILTERING_MODES = [
+    Bridge.Port.Vlan.Mode.ACCESS,
+    Bridge.Port.Vlan.Mode.TRUNK,
+    Bridge.Port.Vlan.Mode.UNKNOWN,
+]
+
 
 class LinuxBridgeIface(BridgeIface):
     @property
@@ -48,10 +76,50 @@ class LinuxBridgeIface(BridgeIface):
         )
 
     def pre_edit_validation_and_cleanup(self):
+        self._validate_properties()
         if self.is_up:
             self._validate()
             self._fix_vlan_filtering_mode()
         super().pre_edit_validation_and_cleanup()
+
+    def _validate_properties(self):
+        for port_info in self.port_configs:
+            validate_string(port_info.get(Bridge.Port.NAME), Bridge.Port.NAME)
+            validate_integer(
+                port_info.get(LinuxBridge.Port.STP_PRIORITY),
+                LinuxBridge.Port.STP_PRIORITY,
+            )
+            validate_integer(
+                port_info.get(LinuxBridge.Port.STP_PATH_COST),
+                LinuxBridge.Port.STP_PATH_COST,
+            )
+            validate_boolean(
+                port_info.get(LinuxBridge.Port.STP_HAIRPIN_MODE),
+                LinuxBridge.Port.STP_HAIRPIN_MODE,
+            )
+            vlan_filtering_info = port_info.get(Bridge.Port.VLAN_SUBTREE)
+            if vlan_filtering_info:
+                validate_string(
+                    vlan_filtering_info.get(Bridge.Port.Vlan.MODE),
+                    Bridge.Port.Vlan.MODE,
+                    VALID_VLAN_FILTERING_MODES,
+                )
+                validate_boolean(
+                    vlan_filtering_info.get(Bridge.Port.Vlan.ENABLE_NATIVE),
+                    Bridge.Port.Vlan.ENABLE_NATIVE,
+                )
+                validate_integer(
+                    vlan_filtering_info.get(Bridge.Port.Vlan.TAG),
+                    Bridge.Port.Vlan.TAG,
+                    minimum=0,
+                    maximum=4095,
+                )
+
+        for option in INTEGER_OPTIONS:
+            validate_integer(self._options.get(option), option)
+
+        for option in BOOLEAN_OPTIONS:
+            validate_boolean(self._options.get(option), option)
 
     @property
     def port(self):

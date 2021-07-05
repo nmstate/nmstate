@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020 Red Hat, Inc.
+# Copyright (c) 2020-2021 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -28,6 +28,8 @@ from libnmstate.iplib import canonicalize_ip_address
 from libnmstate.prettystate import format_desired_current_state_diff
 from libnmstate.schema import Interface
 from libnmstate.schema import Route
+from libnmstate.validator import validate_integer
+from libnmstate.validator import validate_string
 
 from .ifaces.base_iface import BaseIface
 from .state import StateEntry
@@ -73,6 +75,14 @@ class RouteEntry(StateEntry):
     @property
     def invalid_reason(self):
         return self._invalid_reason
+
+    def validate_properties(self):
+        validate_string(self.state, Route.STATE, [Route.STATE_ABSENT])
+        validate_integer(self.table_id, Route.TABLE_ID)
+        validate_integer(self.metric, Route.METRIC)
+        validate_string(self.destination, Route.DESTINATION)
+        validate_string(self.next_hop_interface, Route.NEXT_HOP_INTERFACE)
+        validate_string(self.next_hop_address, Route.NEXT_HOP_ADDRESS)
 
     def complement_defaults(self):
         if self.absent:
@@ -209,6 +219,7 @@ class RouteState:
         # desire state
         for entry in des_route_state.get(Route.CONFIG, []):
             rt = RouteEntry(entry)
+            rt.validate_properties()
             if rt.absent:
                 self._apply_absent_routes(rt, ifaces)
         for entry in des_route_state.get(Route.CONFIG, []):
