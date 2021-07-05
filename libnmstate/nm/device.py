@@ -198,3 +198,11 @@ def get_nm_dev(ctx, iface_name, iface_type):
         ):
             return nm_dev
     return None
+
+
+def is_kernel_iface(nm_dev):
+    iface_type = get_iface_type(nm_dev)
+    return iface_type != InterfaceType.UNKNOWN and iface_type not in (
+        InterfaceType.OVS_BRIDGE,
+        InterfaceType.OVS_PORT,
+    )

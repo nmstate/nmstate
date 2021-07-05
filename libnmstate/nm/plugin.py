@@ -36,6 +36,7 @@ from .common import NM
 from .context import NmContext
 from .device import get_device_common_info
 from .device import get_iface_type
+from .device import is_kernel_iface
 from .device import list_devices
 from .dns import get_running as get_dns_running
 from .dns import get_running_config as get_dns_running_config
@@ -60,7 +61,8 @@ class NetworkManagerPlugin(NmstatePlugin):
     def __init__(self):
         self._ctx = None
         self._checkpoint = None
-        self.__applied_configs = None
+        self.__kernel_nic_applied_configs = None
+        self.__userspace_nic_applied_configs = None
 
     @property
     def priority(self):
@@ -76,10 +78,28 @@ class NetworkManagerPlugin(NmstatePlugin):
             self._ctx = None
 
     @property
-    def _applied_configs(self):
-        if self.__applied_configs is None:
-            self.__applied_configs = get_all_applied_configs(self.context)
-        return self.__applied_configs
+    def _kernel_nic_applied_configs(self):
+        if (
+            self.__kernel_nic_applied_configs is None
+            or self.__userspace_nic_applied_configs is None
+        ):
+            (
+                self.__kernel_nic_applied_configs,
+                self.__userspace_nic_applied_configs,
+            ) = get_all_applied_configs(self.context)
+        return self.__kernel_nic_applied_configs
+
+    @property
+    def _userspace_nic_applied_configs(self):
+        if (
+            self.__kernel_nic_applied_configs is None
+            or self.__userspace_nic_applied_configs is None
+        ):
+            (
+                self.__kernel_nic_applied_configs,
+                self.__userspace_nic_applied_configs,
+            ) = get_all_applied_configs(self.context)
+        return self.__userspace_nic_applied_configs
 
     @property
     def checkpoint(self):
@@ -115,8 +135,6 @@ class NetworkManagerPlugin(NmstatePlugin):
     def get_interfaces(self):
         info = []
 
-        applied_configs = self._applied_configs
-
         devices_info = [
             (dev, get_device_common_info(dev))
             for dev in list_devices(self.client)
@@ -126,6 +144,16 @@ class NetworkManagerPlugin(NmstatePlugin):
             if not dev.get_managed():
                 # Skip unmanaged interface
                 continue
+            if is_kernel_iface(dev):
+                applied_config = self._kernel_nic_applied_configs.get(
+                    dev.get_iface()
+                )
+            else:
+                iface_type = get_iface_type(dev)
+                applied_config = self._userspace_nic_applied_configs.get(
+                    f"{dev.get_iface()}{iface_type}"
+                )
+
             nm_ac = dev.get_active_connection()
             if (
                 nm_ac
@@ -135,7 +163,6 @@ class NetworkManagerPlugin(NmstatePlugin):
                 continue
 
             iface_info = Nm2Api.get_common_device_info(devinfo)
-            applied_config = applied_configs.get(iface_info[Interface.NAME])
 
             act_con = dev.get_active_connection()
             iface_info[Interface.IPV4] = get_ipv4_info(act_con, applied_config)
@@ -186,11 +213,14 @@ class NetworkManagerPlugin(NmstatePlugin):
     def get_dns_client_config(self):
         return {
             DNS.RUNNING: get_dns_running(self.client),
-            DNS.CONFIG: get_dns_running_config(self._applied_configs),
+            DNS.CONFIG: get_dns_running_config(
+                self._kernel_nic_applied_configs
+            ),
         }
 
     def refresh_content(self):
-        self.__applied_configs = None
+        self.__kernel_nic_applied_configs = None
+        self.__userspace_nic_applied_configs = None
         if self._ctx:
             self._ctx.refresh()
 
@@ -273,7 +303,7 @@ class NetworkManagerPlugin(NmstatePlugin):
                 nm_dev
                 and nm_dev.get_iface()
                 and not nm_dev.get_managed()
-                and _is_kernel_iface(nm_dev)
+                and is_kernel_iface(nm_dev)
             ):
                 ignored_ifaces.add(nm_dev.get_iface())
         return list(ignored_ifaces)
@@ -293,12 +323,3 @@ def _remove_ovs_bridge_unsupported_entries(iface_info):
 
 def _nm_utils_decode_version():
     return f"{NM.MAJOR_VERSION}.{NM.MINOR_VERSION}.{NM.MICRO_VERSION}"
-
-
-def _is_kernel_iface(nm_dev):
-    iface_type = get_iface_type(nm_dev)
-    return iface_type != InterfaceType.UNKNOWN and iface_type not in (
-        InterfaceType.OVS_BRIDGE,
-        InterfaceType.OVS_INTERFACE,
-        InterfaceType.OVS_PORT,
-    )
