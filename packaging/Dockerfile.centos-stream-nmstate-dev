@@ -37,6 +37,7 @@ RUN dnf update -y && \
                    wpa_supplicant \
                    hostapd \
                    libndp \
+                   procps-ng \
                    && \
     alternatives --set python /usr/bin/python3 && \
     ln -s /usr/bin/pytest-3 /usr/bin/pytest && \
