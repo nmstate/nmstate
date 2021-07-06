@@ -27,7 +27,9 @@ from libnmstate.schema import InterfaceType
 from .common import NM
 from .device import is_externally_managed
 from .device import list_devices
+from .device import get_iface_type
 from .device import get_nm_dev
+from .device import is_kernel_iface
 from .dns import get_dns_config_iface_names
 from .ipv4 import acs_and_ip_profiles as acs_and_ip4_profiles
 from .ipv6 import acs_and_ip_profiles as acs_and_ip6_profiles
@@ -129,7 +131,13 @@ def _append_nm_ovs_port_iface(net_state):
 
 
 def get_all_applied_configs(context):
-    applied_configs = {}
+    """
+    Return two dictionaries.
+    First one for kernel interface with interface name as key.
+    Second one for user space interface with interface name and type as key.
+    """
+    kernel_nic_applied_configs = {}
+    userspace_nic_applid_configs = {}
     for nm_dev in list_devices(context.client):
         if (
             nm_dev.get_state()
@@ -150,19 +158,37 @@ def get_all_applied_configs(context):
                     flags=0,
                     cancellable=context.cancellable,
                     callback=_get_applied_config_callback,
-                    user_data=(iface_name, action, applied_configs, context),
+                    user_data=(
+                        iface_name,
+                        action,
+                        kernel_nic_applied_configs,
+                        userspace_nic_applid_configs,
+                        context,
+                    ),
                 )
     context.wait_all_finish()
-    return applied_configs
+    return kernel_nic_applied_configs, userspace_nic_applid_configs
 
 
 def _get_applied_config_callback(nm_dev, result, user_data):
-    iface_name, action, applied_configs, context = user_data
+    (
+        iface_name,
+        action,
+        kernel_nic_applied_configs,
+        userspace_nic_applid_configs,
+        context,
+    ) = user_data
     context.finish_async(action)
     try:
+        iface_name = nm_dev.get_iface()
         remote_conn, _ = nm_dev.get_applied_connection_finish(result)
-        # TODO: We should use both interface name and type as key below.
-        applied_configs[nm_dev.get_iface()] = remote_conn
+        if is_kernel_iface(nm_dev):
+            kernel_nic_applied_configs[iface_name] = remote_conn
+        else:
+            iface_type = get_iface_type(nm_dev)
+            userspace_nic_applid_configs[
+                f"{iface_name}{iface_type}"
+            ] = remote_conn
     except Exception as e:
         logging.warning(
             "Failed to retrieve applied config for device "
