@@ -72,6 +72,9 @@ class NetState:
             self._ifaces.gen_dns_metadata(self._dns, self._route)
             self._ifaces.gen_route_metadata(self._route)
             self._ifaces.gen_route_rule_metadata(self._route_rule, self._route)
+            # DND/Route/RouteRule might introduced new changed interface
+            # Regnerate new interface metadata
+            self._ifaces.gen_metadata()
 
     def _mark_ignored_kernel_ifaces(self, ignored_ifnames):
         for iface_name in ignored_ifnames:
