@@ -32,6 +32,7 @@ from libnmstate.schema import MacVtap
 from libnmstate.schema import OVSBridge
 from libnmstate.schema import OVSInterface
 from libnmstate.schema import OvsDB
+from libnmstate.schema import RouteRule
 from libnmstate.schema import VLAN
 from libnmstate.schema import VXLAN
 from libnmstate.state import state_match
@@ -41,6 +42,7 @@ from libnmstate.error import NmstateValueError
 
 from .testlib import assertlib
 from .testlib import cmdlib
+from .testlib import iprule
 from .testlib import statelib
 from .testlib.env import nm_major_minor_version
 from .testlib.nmplugin import disable_nm_plugin
@@ -848,3 +850,41 @@ def test_set_static_to_ovs_interface_with_the_same_name_bridge(
             InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
         }
     ]
+
+
+@pytest.fixture
+def ovs_bridge_with_dhcp_route_table_500(bridge_with_ports):
+    desired_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: PORT1,
+                Interface.TYPE: InterfaceType.OVS_INTERFACE,
+                Interface.IPV4: {
+                    InterfaceIPv4.ENABLED: True,
+                    InterfaceIPv4.DHCP: True,
+                    InterfaceIPv4.AUTO_ROUTE_TABLE_ID: 500,
+                },
+            }
+        ]
+    }
+    libnmstate.apply(desired_state)
+    yield
+
+
+@pytest.mark.tier1
+def test_add_route_rule_to_ovs_interface_dhcp_auto_route_table(
+    ovs_bridge_with_dhcp_route_table_500,
+):
+    route_rule = {
+        RouteRule.IP_FROM: "192.0.2.0/24",
+        RouteRule.ROUTE_TABLE: 500,
+    }
+    desired_state = {RouteRule.KEY: {RouteRule.CONFIG: [route_rule]}}
+    libnmstate.apply(desired_state)
+
+    iprule.ip_rule_exist_in_os(
+        route_rule.get(RouteRule.IP_FROM),
+        route_rule.get(RouteRule.IP_TO),
+        route_rule.get(RouteRule.PRIORITY),
+        route_rule.get(RouteRule.ROUTE_TABLE),
+    )

@@ -158,7 +158,7 @@ class Ifaces:
             self._validate_infiniband_as_bridge_port()
             self._validate_infiniband_as_bond_port()
             self._apply_copy_mac_from()
-            self._gen_metadata()
+            self.gen_metadata()
             for iface in self.all_ifaces():
                 iface.pre_edit_validation_and_cleanup()
 
@@ -569,7 +569,7 @@ class Ifaces:
             else:
                 self._kernel_ifaces[iface.name] = iface
 
-    def _gen_metadata(self):
+    def gen_metadata(self):
         for iface in self.all_ifaces():
             # Generate metadata for all interface in case any of them
             # been marked as changed by DNS/Route/RouteRule.
