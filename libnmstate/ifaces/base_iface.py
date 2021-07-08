@@ -376,8 +376,9 @@ class BaseIface:
     def gen_metadata(self, ifaces):
         if self.is_controller and not self.is_absent:
             for port_name in self.port:
-                port_iface = ifaces.all_kernel_ifaces[port_name]
-                port_iface.set_controller(self.name, self.type)
+                port_iface = ifaces.all_kernel_ifaces.get(port_name)
+                if port_iface:
+                    port_iface.set_controller(self.name, self.type)
 
     def update(self, info):
         self._info.update(info)
