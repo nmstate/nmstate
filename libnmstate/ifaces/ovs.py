@@ -19,7 +19,6 @@
 
 from copy import deepcopy
 from operator import itemgetter
-import warnings
 
 from libnmstate.error import NmstateValueError
 from libnmstate.schema import Bridge
@@ -38,7 +37,6 @@ from .base_iface import BaseIface
 
 
 SYSTEMCTL_TIMEOUT_SECONDS = 5
-DEPRECATED_SLAVES = "slaves"
 
 VALID_VLAN_FILTERING_MODES = [
     Bridge.Port.Vlan.Mode.ACCESS,
@@ -48,10 +46,6 @@ VALID_VLAN_FILTERING_MODES = [
 
 
 class OvsBridgeIface(BridgeIface):
-    def __init__(self, info, save_to_disk):
-        super().__init__(info, save_to_disk)
-        self._replace_deprecated_terms()
-
     @property
     def is_user_space_only(self):
         return True
@@ -207,20 +201,6 @@ class OvsBridgeIface(BridgeIface):
             OVSBridge.PORT_SUBTREE
         ] = new_port_configs
         self.sort_port()
-
-    def _replace_deprecated_terms(self):
-        port_info = self.raw.get(OVSBridge.CONFIG_SUBTREE, {}).get(
-            OVSBridge.PORT_SUBTREE, []
-        )
-        for port in port_info:
-            lag_info = port.get(OVSBridge.Port.LINK_AGGREGATION_SUBTREE, {})
-            if lag_info and lag_info.get(DEPRECATED_SLAVES):
-                lag_info[
-                    OVSBridge.Port.LinkAggregation.PORT_SUBTREE
-                ] = lag_info.pop(DEPRECATED_SLAVES)
-                warnings.warn(
-                    "Using 'slaves' is deprecated use 'port' instead."
-                )
 
 
 def _lookup_ovs_iface_config(bridge_port_configs, ovs_iface_name):
