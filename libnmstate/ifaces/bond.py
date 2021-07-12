@@ -19,7 +19,6 @@
 
 import contextlib
 import logging
-import warnings
 
 from libnmstate.error import NmstateValueError
 from libnmstate.schema import Bond
@@ -31,8 +30,6 @@ from libnmstate.validator import validate_string
 from ..state import state_match
 from .base_iface import BaseIface
 
-
-DEPRECATED_SLAVES = "slaves"
 
 IANA_MULTICAST_MAC_ADDRESS_PREFIX = "01:00:5E"
 
@@ -48,7 +45,6 @@ class BondIface(BaseIface):
         super().__init__(info, save_to_disk)
         self._normalize_options_values()
         self._fix_bond_option_arp_monitor()
-        self._replace_deprecated_terms()
 
     @property
     def port(self):
@@ -143,12 +139,6 @@ class BondIface(BaseIface):
                 "Bond option arp_interval is conflicting with miimon, "
                 "please disable one of them by setting to 0"
             )
-
-    def _replace_deprecated_terms(self):
-        bond_cfg = self.raw.get(Bond.CONFIG_SUBTREE)
-        if bond_cfg and bond_cfg.get(DEPRECATED_SLAVES):
-            bond_cfg[Bond.PORT] = bond_cfg.pop(DEPRECATED_SLAVES)
-            warnings.warn("Using 'slaves' is deprecated, use 'port' instead.")
 
     @staticmethod
     def is_mac_restricted_mode(mode, bond_options):
