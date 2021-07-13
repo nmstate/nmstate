@@ -114,7 +114,7 @@ class IPState:
                 "are ignored when dynamic IP is enabled"
             )
 
-    def validate_properties(self):
+    def validate_base_properties(self):
         validate_boolean(
             self._info.get(InterfaceIP.ENABLED), InterfaceIP.ENABLED
         )
@@ -289,7 +289,7 @@ class BaseIface:
         We don't split validation from clean up as they might sharing the same
         check code.
         """
-        self._validate_properties()
+        self._validate_base_properties()
         if self.is_desired:
             if not self.is_absent:
                 for family in (Interface.IPV4, Interface.IPV6):
@@ -310,7 +310,7 @@ class BaseIface:
             if self.is_absent and not self._save_to_disk:
                 self._info[Interface.STATE] = InterfaceState.DOWN
 
-    def _validate_properties(self):
+    def _validate_base_properties(self):
         validate_string(self.name, Interface.NAME)
         validate_string(self.state, Interface.STATE, VALID_STATES)
         validate_integer(self.mtu, Interface.MTU, minimum=0)
@@ -322,9 +322,11 @@ class BaseIface:
             Interface.MAC,
             pattern="^([a-fA-F0-9]{2}:){3,31}[a-fA-F0-9]{2}$",
         )
-        for family in (Interface.IPV4, Interface.IPV6):
-            ip_state = IPState(family, self._origin_info.get(family, {}))
-            ip_state.validate_properties()
+        # IPv4/6 state should be validated only if it is not absent
+        if not self.is_absent:
+            for family in (Interface.IPV4, Interface.IPV6):
+                ip_state = IPState(family, self._origin_info.get(family, {}))
+                ip_state.validate_base_properties()
 
     def merge(self, other):
         self._ovsdb_pre_merge_clean_up(other)

@@ -87,7 +87,7 @@ class BondIface(BaseIface):
             self._generate_bond_mode_change_metadata(ifaces)
 
     def pre_edit_validation_and_cleanup(self):
-        self._validate_properties()
+        self._validate_bond_properties()
         super().pre_edit_validation_and_cleanup()
         if self.is_up and self.is_desired:
             self._discard_bond_option_when_mode_change()
@@ -96,7 +96,7 @@ class BondIface(BaseIface):
             self._validate_miimon_conflict_with_arp_interval()
             self._validate_ad_actor_system_mac_address()
 
-    def _validate_properties(self):
+    def _validate_bond_properties(self):
         validate_string(
             self._info.get(Interface.COPY_MAC_FROM), Interface.COPY_MAC_FROM
         )

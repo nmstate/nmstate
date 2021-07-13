@@ -81,12 +81,12 @@ class VxlanIface(BaseIface):
         super().gen_metadata(ifaces)
 
     def pre_edit_validation_and_cleanup(self):
-        self._validate_properties()
+        self._validate_vxlan_properties()
         if self.is_up:
             self._validate_mandatory_properties()
         super().pre_edit_validation_and_cleanup()
 
-    def _validate_properties(self):
+    def _validate_vxlan_properties(self):
         validate_string(self.base_iface, VXLAN.BASE_IFACE)
         validate_integer(self.vxlan_id, VXLAN.ID, minimum=0, maximum=16777215)
         validate_string(self.remote, VXLAN.REMOTE)

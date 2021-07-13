@@ -118,12 +118,12 @@ class OvsBridgeIface(BridgeIface):
         return port_iface
 
     def pre_edit_validation_and_cleanup(self):
-        self._validate_properties()
+        self._validate_ovs_properties()
         super().pre_edit_validation_and_cleanup()
         if self.is_up:
             self._validate_ovs_lag_port_count()
 
-    def _validate_properties(self):
+    def _validate_ovs_properties(self):
         for port_info in self.port_configs:
             validate_string(port_info.get(Bridge.Port.NAME), Bridge.Port.NAME)
             vlan_filtering_info = port_info.get(Bridge.Port.VLAN_SUBTREE)

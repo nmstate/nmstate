@@ -50,14 +50,14 @@ class VrfIface(BaseIface):
         return True
 
     def pre_edit_validation_and_cleanup(self):
-        self._validate_properties()
+        self._validate_vrf_properties()
         super().pre_edit_validation_and_cleanup()
         if self.is_up and (self.is_desired or self.is_changed):
             self._validate_route_table_id()
             self._remove_mac_address()
             self._remove_accept_all_mac_addresses_false()
 
-    def _validate_properties(self):
+    def _validate_vrf_properties(self):
         validate_list(self.port, VRF.PORT_SUBTREE, elem_type=str)
         validate_integer(self.route_table_id, VRF.ROUTE_TABLE_ID)
 

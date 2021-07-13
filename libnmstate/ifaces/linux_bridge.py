@@ -76,13 +76,13 @@ class LinuxBridgeIface(BridgeIface):
         )
 
     def pre_edit_validation_and_cleanup(self):
-        self._validate_properties()
+        self._validate_bridge_properties()
         if self.is_up:
             self._validate()
             self._fix_vlan_filtering_mode()
         super().pre_edit_validation_and_cleanup()
 
-    def _validate_properties(self):
+    def _validate_bridge_properties(self):
         for port_info in self.port_configs:
             validate_string(port_info.get(Bridge.Port.NAME), Bridge.Port.NAME)
             validate_integer(

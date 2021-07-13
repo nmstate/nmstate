@@ -120,9 +120,9 @@ class IfaceEthtool:
         return info
 
     def pre_edit_validation_and_cleanup(self):
-        self._validate_properties()
+        self._validate_ethtool_properties()
 
-    def _validate_properties(self):
+    def _validate_ethtool_properties(self):
         if self.pause:
             validate_boolean(
                 self.pause.autoneg, Ethtool.Pause.AUTO_NEGOTIATION
