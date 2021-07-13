@@ -69,13 +69,13 @@ class MacVlanIface(BaseIface):
         return self.config_subtree.get(MacVlan.PROMISCUOUS)
 
     def pre_edit_validation_and_cleanup(self):
-        self._validate_properties()
+        self._validate_macvlan_properties()
         if self.is_up:
             self._validate_mode()
             self._validate_mandatory_properties()
         super().pre_edit_validation_and_cleanup()
 
-    def _validate_properties(self):
+    def _validate_macvlan_properties(self):
         validate_string(self.base_iface, MacVlan.BASE_IFACE)
         validate_string(self.mode, MacVlan.MODE, VALID_MODES)
         validate_boolean(self.promiscuous, MacVlan.PROMISCUOUS)

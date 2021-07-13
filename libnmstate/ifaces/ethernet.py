@@ -107,10 +107,10 @@ class EthernetIface(BaseIface):
         return self.raw.get(Ethernet.CONFIG_SUBTREE, {}).get(Ethernet.DUPLEX)
 
     def pre_edit_validation_and_cleanup(self):
-        self._validate_properties()
+        self._validate_ethernet_properties()
         super().pre_edit_validation_and_cleanup()
 
-    def _validate_properties(self):
+    def _validate_ethernet_properties(self):
         validate_boolean(self.auto_negotiation, Ethernet.AUTO_NEGOTIATION)
         validate_string(self.duplex, Ethernet.DUPLEX, DUPLEX_VALID_VALUES)
         validate_integer(self.speed, Ethernet.SPEED, minimum=0)

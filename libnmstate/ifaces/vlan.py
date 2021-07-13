@@ -63,12 +63,12 @@ class VlanIface(BaseIface):
         return False
 
     def pre_edit_validation_and_cleanup(self):
-        self._validate_properties()
+        self._validate_vlan_properties()
         if self.is_up:
             self._validate_mandatory_properties()
         super().pre_edit_validation_and_cleanup()
 
-    def _validate_properties(self):
+    def _validate_vlan_properties(self):
         validate_string(self.base_iface, VLAN.BASE_IFACE)
         validate_integer(self.vlan_id, VLAN.ID, minimum=0, maximum=4095)
 
