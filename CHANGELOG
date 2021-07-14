@@ -1,4 +1,24 @@
 # Changelog
+## [1.1.0] - 2021-07-15
+### New features
+ - Support `accept-all-mac-addresses` property. (2df9c6a)
+ - Support ethtool pause, feature, ring and coalesce options. (4e118b1, 258a280, 1ea97bf, b65ab5a)
+ - Introduce `include_secrets` on libnmstate and `--show-secrets` in nmstatectl. (a310862)
+ - Introduce `nmstate-autoconf` cli tool. (a463a3c)
+
+### Bug fixes
+ - Fix error when configuring DNS without desired interfaces. (08d3874)
+ - Fix wrong warning about mismatching MAC address in bond options. (3463c8e)
+ - Fix failure when modifying VLAN/VXLAN ID. (a673459)
+ - Fix failure when removing route from different table than default. (73f5230)
+ - Fix bond `tlb_dynamic_lb` option. (8915f5c)
+ - Fix bond preserving `all_slaves_active` option. (94c036b)
+ - Fix bond validation error when `fail_over_mac` is enabled. (404294a)
+ - Use permanent MAC address for `Interface.COPY_MAC_FROM`. (e873491)
+ - Fix error when creating SR-IOV VFs with the `bnxt_en` driver. (ea9c6d2)
+ - Fix modifying OVS interface using the same name as OVS bridge. (84b2e90)
+ - Fix adding a route rule for a OVS interface. (76db7c2)
+
 ## [1.0.2] - 2021-02-18
 ### New features
  - Support multiconnect profiles. (2c60c834)
