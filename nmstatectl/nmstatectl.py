@@ -50,14 +50,14 @@ def main():
     parser = argparse.ArgumentParser()
 
     subparsers = parser.add_subparsers()
-    setup_subcommand_commit(subparsers)
-    setup_subcommand_edit(subparsers)
-    setup_subcommand_rollback(subparsers)
-    setup_subcommand_set(subparsers)
-    setup_subcommand_apply(subparsers)
-    setup_subcommand_show(subparsers)
-    setup_subcommand_version(subparsers)
-    setup_subcommand_gen_config(subparsers)
+    _setup_subcommand_commit(subparsers)
+    _setup_subcommand_edit(subparsers)
+    _setup_subcommand_rollback(subparsers)
+    _setup_subcommand_set(subparsers)
+    _setup_subcommand_apply(subparsers)
+    _setup_subcommand_show(subparsers)
+    _setup_subcommand_version(subparsers)
+    _setup_subcommand_gen_config(subparsers)
     parser.add_argument(
         "--version", action="store_true", help="Display nmstate version"
     )
@@ -72,7 +72,7 @@ def main():
         return args.func(args)
 
 
-def setup_subcommand_commit(subparsers):
+def _setup_subcommand_commit(subparsers):
     parser_commit = subparsers.add_parser("commit", help="Commit a change")
     parser_commit.add_argument(
         "checkpoint", nargs="?", default=None, help="checkpoint to commit"
@@ -80,7 +80,7 @@ def setup_subcommand_commit(subparsers):
     parser_commit.set_defaults(func=commit)
 
 
-def setup_subcommand_edit(subparsers):
+def _setup_subcommand_edit(subparsers):
     parser_edit = subparsers.add_parser(
         "edit", help="Edit network state in EDITOR"
     )
@@ -116,7 +116,7 @@ def setup_subcommand_edit(subparsers):
     )
 
 
-def setup_subcommand_rollback(subparsers):
+def _setup_subcommand_rollback(subparsers):
     parser_rollback = subparsers.add_parser(
         "rollback", help="Rollback a change"
     )
@@ -126,7 +126,7 @@ def setup_subcommand_rollback(subparsers):
     parser_rollback.set_defaults(func=rollback)
 
 
-def setup_subcommand_apply(subparsers):
+def _setup_subcommand_apply(subparsers):
     parser_set = subparsers.add_parser("apply", help="Apply network state")
     parser_set.add_argument(
         "file",
@@ -165,7 +165,7 @@ def setup_subcommand_apply(subparsers):
     parser_set.set_defaults(func=apply)
 
 
-def setup_subcommand_set(subparsers):
+def _setup_subcommand_set(subparsers):
     parser_set = subparsers.add_parser(
         "set",
         help=(
@@ -210,7 +210,7 @@ def setup_subcommand_set(subparsers):
     parser_set.set_defaults(func=set)
 
 
-def setup_subcommand_show(subparsers):
+def _setup_subcommand_show(subparsers):
     parser_show = subparsers.add_parser("show", help="Show network state")
     parser_show.set_defaults(func=show)
     parser_show.add_argument(
@@ -245,21 +245,21 @@ def setup_subcommand_show(subparsers):
     )
 
 
-def setup_subcommand_version(subparsers):
+def _setup_subcommand_version(subparsers):
     parser_version = subparsers.add_parser(
         "version", help="Display nmstate version"
     )
     parser_version.set_defaults(func=version)
 
 
-def setup_subcommand_gen_config(subparsers):
+def _setup_subcommand_gen_config(subparsers):
     parser_gc = subparsers.add_parser("gc", help="Generate configurations")
     parser_gc.add_argument(
         "file",
         help="File containing desired state. ",
         nargs="*",
     )
-    parser_gc.set_defaults(func=run_gen_config)
+    parser_gc.set_defaults(func=_run_gen_config)
 
 
 def version(args):
@@ -295,7 +295,7 @@ def edit(args):
         return os.EX_DATAERR
 
     print("Applying the following state: ")
-    print_state(new_state, use_yaml=args.yaml)
+    _print_state(new_state, use_yaml=args.yaml)
 
     libnmstate.apply(
         new_state, verify_change=args.verify, save_to_disk=args.save_to_disk
@@ -318,7 +318,7 @@ def show(args):
     else:
         full_state = libnmstate.show(include_secrets=args.include_secrets)
     state = _filter_state(full_state, args.only)
-    print_state(state, use_yaml=args.yaml)
+    _print_state(state, use_yaml=args.yaml)
 
 
 def set(args):
@@ -335,7 +335,7 @@ def apply(args):
                 with open(statefile) as statefile:
                     statedata = statefile.read()
 
-            ret = apply_state(
+            ret = _apply_state(
                 statedata,
                 args.verify,
                 args.commit,
@@ -346,7 +346,7 @@ def apply(args):
                 return ret
     elif not sys.stdin.isatty():
         statedata = sys.stdin.read()
-        return apply_state(
+        return _apply_state(
             statedata,
             args.verify,
             args.commit,
@@ -358,7 +358,7 @@ def apply(args):
         return 1
 
 
-def run_gen_config(args):
+def _run_gen_config(args):
     if args.file:
         for statefile in args.file:
             if statefile == "-" and not os.path.isfile(statefile):
@@ -374,7 +374,7 @@ def run_gen_config(args):
             else:
                 state = yaml.load(statedata, Loader=yaml.SafeLoader)
                 use_yaml = True
-            print_state(
+            _print_state(
                 libnmstate.generate_configurations(state), use_yaml=use_yaml
             )
     else:
@@ -382,7 +382,7 @@ def run_gen_config(args):
         return 1
 
 
-def apply_state(statedata, verify_change, commit, timeout, save_to_disk):
+def _apply_state(statedata, verify_change, commit, timeout, save_to_disk):
     use_yaml = False
     # JSON dictionaries start with a curly brace
     if statedata[0] == "{":
@@ -411,14 +411,14 @@ def apply_state(statedata, verify_change, commit, timeout, save_to_disk):
 
     hide_the_secrets(state)
     print("Desired state applied: ")
-    print_state(state, use_yaml=use_yaml)
+    _print_state(state, use_yaml=use_yaml)
     if checkpoint:
         print("Checkpoint: {}".format(checkpoint))
 
 
-def _filter_state(state, whitelist):
-    if whitelist != "*":
-        patterns = [p for p in whitelist.split(",")]
+def _filter_state(state, allowlist):
+    if allowlist != "*":
+        patterns = [p for p in allowlist.split(",")]
         state[Interface.KEY] = _filter_interfaces(state, patterns)
         state[Route.KEY] = _filter_routes(state, patterns)
         state[RouteRule.KEY] = _filter_route_rule(state, patterns)
@@ -517,7 +517,7 @@ def _try_edit_again(error):
     return True
 
 
-def print_state(state, use_yaml=False):
+def _print_state(state, use_yaml=False):
     state = PrettyState(state)
     if use_yaml:
         sys.stdout.write(state.yaml)
