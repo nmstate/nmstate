@@ -166,6 +166,38 @@ def test_show_command_only_non_existing():
     assert len(state[Constants.INTERFACES]) == 0
 
 
+def test_show_command_with_long_running_config():
+    ret = cmdlib.exec_cmd(SHOW_CMD + ["--running-config"])
+    rc, out, err = ret
+
+    assert rc == cmdlib.RC_SUCCESS, cmdlib.format_exec_cmd_result(ret)
+    assert LOOPBACK_YAML_CONFIG in out
+
+
+def test_show_command_with_long_show_secrets():
+    ret = cmdlib.exec_cmd(SHOW_CMD + ["--show-secrets"])
+    rc, out, err = ret
+
+    assert rc == cmdlib.RC_SUCCESS, cmdlib.format_exec_cmd_result(ret)
+    assert LOOPBACK_YAML_CONFIG in out
+
+
+def test_show_command_with_short_running_config():
+    ret = cmdlib.exec_cmd(SHOW_CMD + ["-r"])
+    rc, out, err = ret
+
+    assert rc == cmdlib.RC_SUCCESS, cmdlib.format_exec_cmd_result(ret)
+    assert LOOPBACK_YAML_CONFIG in out
+
+
+def test_show_command_with_short_show_secrets():
+    ret = cmdlib.exec_cmd(SHOW_CMD + ["-s"])
+    rc, out, err = ret
+
+    assert rc == cmdlib.RC_SUCCESS, cmdlib.format_exec_cmd_result(ret)
+    assert LOOPBACK_YAML_CONFIG in out
+
+
 def test_apply_command_with_yaml_format():
     ret = cmdlib.exec_cmd(APPLY_CMD, stdin=ETH1_YAML_CONFIG)
     rc, out, err = ret
