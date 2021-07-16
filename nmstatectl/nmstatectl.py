@@ -221,14 +221,16 @@ def setup_subcommand_show(subparsers):
         dest="yaml",
     )
     parser_show.add_argument(
-        "-r, --running-config",
+        "-r",
+        "--running-config",
         help="Show running configurations",
         default=False,
         action="store_true",
         dest="running_config",
     )
     parser_show.add_argument(
-        "-s, --show-secrets",
+        "-s",
+        "--show-secrets",
         help="Show secrets also",
         default=False,
         action="store_true",
