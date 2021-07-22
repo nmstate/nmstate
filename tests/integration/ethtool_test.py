@@ -25,8 +25,10 @@ import pytest
 
 import libnmstate
 from libnmstate.error import NmstateVerificationError
-from libnmstate.schema import Interface
 from libnmstate.schema import Ethtool
+from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceState
+from libnmstate.schema import Veth
 
 from .testlib import assertlib
 from .testlib import cmdlib
@@ -166,3 +168,60 @@ def test_ethtool_coalesce_on_netdevsim():
         libnmstate.apply({Interface.KEY: [desire_iface_state]})
         assertlib.assert_state_match({Interface.KEY: [desire_iface_state]})
     assertlib.assert_absent(TEST_NETDEVSIM_NIC)
+
+
+@pytest.fixture
+def veth1_with_ethtool_feature_highdma_false():
+    interface_name = "veth1"
+    peer_interface_name = f"{interface_name}.ep"
+    iface_state = {
+        Interface.NAME: interface_name,
+        Interface.TYPE: Veth.TYPE,
+        Interface.STATE: InterfaceState.UP,
+        Veth.CONFIG_SUBTREE: {Veth.PEER: peer_interface_name},
+        Ethtool.CONFIG_SUBTREE: {
+            Ethtool.Feature.CONFIG_SUBTREE: {
+                "highdma": False,
+            }
+        },
+    }
+    libnmstate.apply({Interface.KEY: [iface_state]})
+    yield iface_state
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: interface_name,
+                    Interface.STATE: InterfaceState.ABSENT,
+                },
+                {
+                    Interface.NAME: peer_interface_name,
+                    Interface.STATE: InterfaceState.ABSENT,
+                },
+            ],
+        },
+        verify_change=False,
+    )
+
+
+@pytest.mark.skipif(
+    os.environ.get("CI") == "true",
+    reason=("CI environment does not support ethtool via netlink yet"),
+)
+def test_ethtool_preserve_existing_ethtool_feature_setting(
+    veth1_with_ethtool_feature_highdma_false,
+):
+    iface_state = veth1_with_ethtool_feature_highdma_false
+
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: iface_state[Interface.NAME],
+                    Interface.MTU: 1400,
+                }
+            ]
+        }
+    )
+    iface_state[Interface.MTU] = 1400
+    assertlib.assert_state_match({Interface.KEY: [iface_state]})

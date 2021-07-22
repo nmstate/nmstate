@@ -22,7 +22,8 @@ from unittest import mock
 
 import libnmstate.nm.ethtool as nm_ethtool
 from libnmstate.schema import Ethtool
-from libnmstate.ifaces.ethtool import IfaceEthtool
+from libnmstate.schema import Interface
+from libnmstate.ifaces.ethernet import EthernetIface
 from libnmstate.nm.common import GLib
 
 
@@ -33,18 +34,22 @@ def nm_mock():
 
 
 def test_create_setting_pause_autoneg(nm_mock):
-    iface_ethtool = IfaceEthtool(
+    iface = EthernetIface(
         {
-            Ethtool.Pause.CONFIG_SUBTREE: {
-                Ethtool.Pause.AUTO_NEGOTIATION: True,
-                Ethtool.Pause.RX: True,
-                Ethtool.Pause.TX: True,
-            }
+            Interface.NAME: "foo",
+            Ethtool.CONFIG_SUBTREE: {
+                Ethtool.Pause.CONFIG_SUBTREE: {
+                    Ethtool.Pause.AUTO_NEGOTIATION: True,
+                    Ethtool.Pause.RX: True,
+                    Ethtool.Pause.TX: True,
+                }
+            },
         }
     )
+    iface.mark_as_desired()
     nm_ethtool_setting_mock = nm_mock.SettingEthtool.new.return_value
 
-    nm_ethtool.create_ethtool_setting(iface_ethtool, base_con_profile=None)
+    nm_ethtool.create_ethtool_setting(iface, base_con_profile=None)
 
     nm_ethtool_setting_mock.option_set.assert_has_calls(
         [
@@ -60,18 +65,22 @@ def test_create_setting_pause_autoneg(nm_mock):
 
 
 def test_create_setting_pause_autoneg_off(nm_mock):
-    iface_ethtool = IfaceEthtool(
+    iface = EthernetIface(
         {
-            Ethtool.Pause.CONFIG_SUBTREE: {
-                Ethtool.Pause.AUTO_NEGOTIATION: False,
-                Ethtool.Pause.RX: True,
-                Ethtool.Pause.TX: True,
-            }
+            Interface.NAME: "foo",
+            Ethtool.CONFIG_SUBTREE: {
+                Ethtool.Pause.CONFIG_SUBTREE: {
+                    Ethtool.Pause.AUTO_NEGOTIATION: False,
+                    Ethtool.Pause.RX: True,
+                    Ethtool.Pause.TX: True,
+                }
+            },
         }
     )
+    iface.mark_as_desired()
     nm_ethtool_setting_mock = nm_mock.SettingEthtool.new.return_value
 
-    nm_ethtool.create_ethtool_setting(iface_ethtool, base_con_profile=None)
+    nm_ethtool.create_ethtool_setting(iface, base_con_profile=None)
 
     nm_ethtool_setting_mock.option_set.assert_has_calls(
         [
@@ -93,17 +102,21 @@ def test_create_setting_pause_autoneg_off(nm_mock):
 
 
 def test_create_setting_ring(nm_mock):
-    iface_ethtool = IfaceEthtool(
+    iface = EthernetIface(
         {
-            Ethtool.Ring.CONFIG_SUBTREE: {
-                Ethtool.Ring.RX: 256,
-                Ethtool.Ring.TX: 1024,
-            }
+            Interface.NAME: "foo",
+            Ethtool.CONFIG_SUBTREE: {
+                Ethtool.Ring.CONFIG_SUBTREE: {
+                    Ethtool.Ring.RX: 256,
+                    Ethtool.Ring.TX: 1024,
+                }
+            },
         }
     )
+    iface.mark_as_desired()
     nm_ethtool_setting_mock = nm_mock.SettingEthtool.new.return_value
 
-    nm_ethtool.create_ethtool_setting(iface_ethtool, base_con_profile=None)
+    nm_ethtool.create_ethtool_setting(iface, base_con_profile=None)
 
     nm_ethtool_setting_mock.option_set.assert_has_calls(
         [
@@ -121,18 +134,22 @@ def test_create_setting_ring(nm_mock):
 
 
 def test_create_setting_coalesce(nm_mock):
-    iface_ethtool = IfaceEthtool(
+    iface = EthernetIface(
         {
-            Ethtool.Coalesce.CONFIG_SUBTREE: {
-                Ethtool.Coalesce.ADAPTIVE_RX: True,
-                Ethtool.Coalesce.ADAPTIVE_TX: False,
-                Ethtool.Coalesce.RX_FRAMES: 100,
-            }
+            Interface.NAME: "foo",
+            Ethtool.CONFIG_SUBTREE: {
+                Ethtool.Coalesce.CONFIG_SUBTREE: {
+                    Ethtool.Coalesce.ADAPTIVE_RX: True,
+                    Ethtool.Coalesce.ADAPTIVE_TX: False,
+                    Ethtool.Coalesce.RX_FRAMES: 100,
+                }
+            },
         }
     )
+    iface.mark_as_desired()
     nm_ethtool_setting_mock = nm_mock.SettingEthtool.new.return_value
 
-    nm_ethtool.create_ethtool_setting(iface_ethtool, base_con_profile=None)
+    nm_ethtool.create_ethtool_setting(iface, base_con_profile=None)
 
     nm_ethtool_setting_mock.option_set.assert_has_calls(
         [
