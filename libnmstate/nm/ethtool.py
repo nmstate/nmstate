@@ -22,6 +22,7 @@ import logging
 from .common import NM
 from .common import GLib
 
+from libnmstate.ifaces import IfaceEthtool
 from libnmstate.schema import Ethtool
 
 
@@ -59,7 +60,7 @@ _NM_COALESCE_OPT_NAME_MAP = {
 }
 
 
-def create_ethtool_setting(iface_ethtool, base_con_profile):
+def _create_ethtool_setting(iface_ethtool, base_con_profile):
     nm_setting = None
 
     if base_con_profile:
@@ -159,3 +160,26 @@ def nm_set_pause(nm_setting, autoneg, rx, tx):
         tx_value,
     )
     # pylint: enable=no-member
+
+
+def create_ethtool_setting(iface, base_con_profile):
+    if Ethtool.CONFIG_SUBTREE in iface.original_desire_dict:
+        iface_ethtool = IfaceEthtool(
+            iface.original_desire_dict[Ethtool.CONFIG_SUBTREE]
+        )
+        iface_ethtool.canonicalize(
+            iface.original_desire_dict[Ethtool.CONFIG_SUBTREE]
+        )
+        return _create_ethtool_setting(
+            iface_ethtool,
+            base_con_profile,
+        )
+    else:
+        # Preserve existing setting but not create new
+        if base_con_profile:
+            ethtool_setting = base_con_profile.get_setting_by_name(
+                NM.SETTING_ETHTOOL_SETTING_NAME
+            )
+            if ethtool_setting:
+                return ethtool_setting.duplicate()
+        return None
