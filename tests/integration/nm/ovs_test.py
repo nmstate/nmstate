@@ -52,7 +52,7 @@ VERIFY_RETRY_TMO = 5
 @pytest.fixture
 def bridge_with_ports(eth1_up):
     bridge = Bridge(BRIDGE0)
-    bridge.add_system_port("eth1")
+    bridge.add_system_port(ETH1)
     bridge.add_internal_port(IFACE0, ipv4_state={InterfaceIPv4.ENABLED: False})
     with bridge.create():
         yield bridge
@@ -145,6 +145,29 @@ def test_remove_ovs_internal_iface_got_port_profile_removed(bridge_with_ports):
             raise _OvsProfileStillExists(
                 f"{ovs_port_profile_uuid} still exists: {output}"
             )
+
+
+@pytest.mark.tier1
+def test_remove_ovs_bridge_ignored_port_keeps_it(bridge_with_ports):
+    d_state = bridge_with_ports.state
+    ovs_config = d_state[Interface.KEY][0][OVSBridge.CONFIG_SUBTREE]
+    ovs_config[OVSBridge.PORT_SUBTREE] = [{OVSBridge.Port.NAME: IFACE0}]
+    d_state[Interface.KEY].append(
+        {Interface.NAME: ETH1, Interface.STATE: InterfaceState.IGNORE}
+    )
+
+    libnmstate.apply(d_state)
+
+    current_state = statelib.show_only((ETH1, BRIDGE0))
+    current_ovs = current_state[Interface.KEY][0][OVSBridge.CONFIG_SUBTREE]
+    ovs_port_names = [
+        ovs_port[OVSBridge.Port.NAME]
+        for ovs_port in current_ovs[OVSBridge.PORT_SUBTREE]
+    ]
+    assert (
+        current_state[Interface.KEY][0][Interface.STATE] == InterfaceState.UP
+    )
+    assert ETH1 in ovs_port_names
 
 
 def _get_nm_active_profiles():
