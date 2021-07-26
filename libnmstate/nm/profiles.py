@@ -23,6 +23,8 @@
 import logging
 from operator import attrgetter
 
+from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
 
 from .common import NM
@@ -359,7 +361,7 @@ def _delete_orphan_nm_ovs_port_profiles(
                 continue
             # When OVS port has no child, delete it
             ovs_bridge_iface = ovs_bridge_profile.iface
-            if not _nm_ovs_port_has_child(
+            if not _nm_ovs_port_has_child_or_is_ignored(
                 nm_profile, ovs_bridge_iface, net_state
             ):
                 ProfileDelete(
@@ -404,7 +406,9 @@ def _use_uuid_as_controller_and_parent(nm_profiles):
                 nm_profile.update_parent(uuid)
 
 
-def _nm_ovs_port_has_child(nm_profile, ovs_bridge_iface, net_state):
+def _nm_ovs_port_has_child_or_is_ignored(
+    nm_profile, ovs_bridge_iface, net_state
+):
     ovs_port_uuid = nm_profile.get_uuid()
     ovs_port_name = nm_profile.get_interface_name()
     for ovs_iface_name in ovs_bridge_iface.port:
@@ -415,4 +419,18 @@ def _nm_ovs_port_has_child(nm_profile, ovs_bridge_iface, net_state):
             and ovs_iface.controller_type == InterfaceType.OVS_PORT
         ):
             return True
+    # Gather the ovs bridge interface from the current state in order to check
+    # if any port is ignored in the original desired state.
+    current_ovs_bridge = net_state.ifaces.get_cur_iface(
+        ovs_bridge_iface.name, InterfaceType.OVS_BRIDGE
+    )
+    if current_ovs_bridge:
+        for port_name in current_ovs_bridge.port:
+            port_iface = net_state.ifaces.all_kernel_ifaces.get(port_name)
+            if (
+                port_iface
+                and port_iface.original_desire_dict.get(Interface.STATE)
+                == InterfaceState.IGNORE
+            ):
+                return True
     return False
