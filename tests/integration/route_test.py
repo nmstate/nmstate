@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019 Red Hat, Inc.
+# Copyright (c) 2019-2021 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -40,8 +40,12 @@ IPV4_ADDRESS3 = "192.0.2.253"
 IPV4_LINK_LOCAL_ROUTE = "192.0.2.0/24"
 IPV4_ROUTE_TABLE_ID1 = 50
 IPV4_ROUTE_TABLE_ID2 = 51
+IPV4_EMPTY_ADDRESS = "0.0.0.0"
+IPV4_DEFAULT_GATEWAY = "0.0.0.0/0"
 
 IPV6_ADDRESS1 = "2001:db8:1::1"
+IPV6_EMPTY_ADDRESS = "::"
+IPV6_DEFAULT_GATEWAY = "::/0"
 IPV6_ROUTE_TABLE_ID1 = 50
 IPV6_ROUTE_TABLE_ID2 = 51
 
@@ -83,6 +87,30 @@ ETH1_INTERFACE_STATE = {
 @pytest.mark.tier1
 def test_add_static_routes(eth1_up):
     routes = _get_ipv4_test_routes() + _get_ipv6_test_routes()
+    libnmstate.apply(
+        {
+            Interface.KEY: [ETH1_INTERFACE_STATE],
+            Route.KEY: {Route.CONFIG: routes},
+        }
+    )
+    cur_state = libnmstate.show()
+    _assert_routes(routes, cur_state)
+
+
+@pytest.mark.tier1
+def test_add_static_route_without_next_hop_address(eth1_up):
+    routes = [
+        {
+            Route.NEXT_HOP_INTERFACE: "eth1",
+            Route.DESTINATION: IPV4_DEFAULT_GATEWAY,
+            Route.NEXT_HOP_ADDRESS: IPV4_EMPTY_ADDRESS,
+        },
+        {
+            Route.NEXT_HOP_INTERFACE: "eth1",
+            Route.DESTINATION: IPV6_DEFAULT_GATEWAY,
+            Route.NEXT_HOP_ADDRESS: IPV6_EMPTY_ADDRESS,
+        },
+    ]
     libnmstate.apply(
         {
             Interface.KEY: [ETH1_INTERFACE_STATE],
