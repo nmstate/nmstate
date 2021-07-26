@@ -23,6 +23,9 @@ from libnmstate.schema import Route
 IPV4_DEFAULT_GATEWAY_DESTINATION = "0.0.0.0/0"
 IPV6_DEFAULT_GATEWAY_DESTINATION = "::/0"
 
+IPV4_EMPTY_NEXT_HOP_ADDRESS = "0.0.0.0"
+IPV6_EMPTY_NEXT_HOP_ADDRESS = "::"
+
 LOCAL_ROUTE_TABLE = 255
 
 
@@ -50,21 +53,23 @@ def nispor_route_state_to_nmstate_static(np_routes):
 def _nispor_route_to_nmstate(np_rt):
     if np_rt.dst:
         destination = np_rt.dst
-    elif np_rt.gateway:
+    else:
         destination = (
             IPV6_DEFAULT_GATEWAY_DESTINATION
             if np_rt.address_family == "ipv6"
             else IPV4_DEFAULT_GATEWAY_DESTINATION
         )
-    else:
-        destination = ""
 
     if np_rt.via:
         next_hop = np_rt.via
     elif np_rt.gateway:
         next_hop = np_rt.gateway
     else:
-        next_hop = ""
+        next_hop = (
+            IPV6_EMPTY_NEXT_HOP_ADDRESS
+            if np_rt.address_family == "ipv6"
+            else IPV4_EMPTY_NEXT_HOP_ADDRESS
+        )
 
     return {
         Route.TABLE_ID: np_rt.table,
