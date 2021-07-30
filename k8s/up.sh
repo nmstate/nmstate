@@ -17,6 +17,7 @@ fi
 for node in $(./k8s/kubectl.sh get nodes --no-headers | awk '{print $1}'); do
     ./k8s/ssh.sh $node -- \
         "sudo dnf copr enable nmstate/ovs-el8 -y && \
+        sudo dnf upgrade -y --nobest && \
         sudo dnf install -y \
             NetworkManager \
             NetworkManager-ovs \

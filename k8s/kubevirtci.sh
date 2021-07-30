@@ -1,10 +1,10 @@
 export KUBEVIRT_PROVIDER=${KUBEVIRT_PROVIDER:-'k8s-1.20'}
 
-KUBEVIRTCI_VERSION='4a15921fbd605363b4a0dc893f8d19f8ac124b55'
+KUBEVIRTCI_VERSION='b341c79efc15294be7a41f95229135f109304e06'
 KUBEVIRTCI_REPO='https://github.com/kubevirt/kubevirtci.git'
 KUBEVIRTCI_PATH="${PWD}/_kubevirtci"
 
-export KUBEVIRTCI_TAG='2102030941-4a15921'
+export KUBEVIRTCI_TAG='2107291018-b341c79'
 
 function kubevirtci::_get_repo() {
     git --git-dir ${KUBEVIRTCI_PATH}/.git remote get-url origin
