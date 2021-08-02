@@ -385,10 +385,10 @@ if [ -n "${RUN_BAREMETAL}" ];then
     run_customize_command
     start_machine_services
 elif [ -n "${RUN_K8S}" ]; then
-    run_customize_command
     #start_machine_services
     k8s::start_cluster
     k8s::pre_test_setup
+    run_customize_command
 else
     container_pre_test_setup
     run_customize_command
