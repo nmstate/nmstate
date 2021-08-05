@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2020 Red Hat, Inc.
+# Copyright (c) 2018-2021 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -18,6 +18,7 @@
 #
 
 import pytest
+from contextlib import contextmanager
 
 import libnmstate
 from libnmstate.schema import Interface
@@ -33,9 +34,11 @@ from ..testlib.bondlib import bond_interface
 from ..testlib.bridgelib import linux_bridge
 from ..testlib.cmdlib import exec_cmd
 from ..testlib.dummy import nm_unmanaged_dummy
+from ..testlib.statelib import show_only
 
 
 BRIDGE0 = "brtest0"
+DUMMY0 = "dummy0"
 DUMMY1 = "dummy1"
 
 
@@ -43,6 +46,17 @@ DUMMY1 = "dummy1"
 def nm_unmanaged_dummy1():
     with nm_unmanaged_dummy(DUMMY1):
         yield
+
+
+@pytest.fixture
+def external_managed_bridge_with_unmanaged_ports():
+    exec_cmd(f"ip link add {BRIDGE0} type bridge".split(), check=True)
+    try:
+        with dummy_as_port(BRIDGE0, DUMMY0), dummy_as_port(BRIDGE0, DUMMY1):
+            yield
+    finally:
+        exec_cmd(f"ip link delete {BRIDGE0}".split())
+        exec_cmd(f"nmcli c del {BRIDGE0}".split())
 
 
 @pytest.mark.tier1
@@ -147,3 +161,48 @@ def test_linux_bridge_over_vlan_of_bond_with_multiple_profile(
 
         libnmstate.apply(state)
         assertlib.assert_state_match(state)
+
+
+@contextmanager
+def dummy_as_port(controller, dummy_iface):
+    exec_cmd(("ip", "link", "add", dummy_iface, "type", "dummy"), check=True)
+    try:
+        exec_cmd(("ip", "link", "set", dummy_iface, "up"), check=True)
+        exec_cmd(
+            ("nmcli", "dev", "set", dummy_iface, "managed", "no"), check=True
+        )
+        exec_cmd(
+            ("ip", "link", "set", dummy_iface, "master", controller),
+            check=True,
+        )
+        yield
+    finally:
+        exec_cmd(("ip", "link", "delete", dummy_iface))
+        exec_cmd(("nmcli", "c", "del", dummy_iface))
+
+
+def test_linux_manage_bridge_keeps_unmanaged_port(
+    external_managed_bridge_with_unmanaged_ports,
+):
+    desired_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: BRIDGE0,
+                Interface.STATE: InterfaceState.UP,
+                Interface.TYPE: InterfaceType.LINUX_BRIDGE,
+            },
+            {
+                Interface.NAME: DUMMY1,
+                Interface.STATE: InterfaceState.UP,
+                Interface.TYPE: InterfaceType.DUMMY,
+            },
+        ]
+    }
+    libnmstate.apply(desired_state)
+
+    current_state = show_only((BRIDGE0,))
+    bridge_state = current_state[Interface.KEY][0][LB.CONFIG_SUBTREE]
+    port_names = [port[LB.Port.NAME] for port in bridge_state[LB.PORT_SUBTREE]]
+
+    assert DUMMY0 in port_names
+    assert DUMMY1 in port_names
