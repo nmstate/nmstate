@@ -23,6 +23,7 @@ import pytest
 
 import libnmstate
 from libnmstate.error import NmstateLibnmError
+from libnmstate.error import NmstateValueError
 from libnmstate.schema import Bridge
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceState
@@ -239,6 +240,26 @@ def test_veth_enable_and_disable_accept_all_mac_addresses():
 
     assertlib.assert_absent(VETH1)
     assertlib.assert_absent(VETH1PEER)
+
+
+@pytest.mark.skipif(
+    nm_major_minor_version() <= 1.28,
+    reason="Modifying veth interfaces is not supported on NetworkManager.",
+)
+@pytest.mark.tier1
+def test_veth_without_peer_fails():
+    d_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: VETH1,
+                Interface.TYPE: InterfaceType.VETH,
+                Interface.STATE: InterfaceState.UP,
+            }
+        ]
+    }
+
+    with pytest.raises(NmstateValueError):
+        libnmstate.apply(d_state)
 
 
 @contextmanager
