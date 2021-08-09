@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019-2020 Red Hat, Inc.
+# Copyright (c) 2019-2021 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -33,6 +33,7 @@ from libnmstate.schema import Route
 IPV4_DNS_NAMESERVERS = ["8.8.8.8", "1.1.1.1"]
 EXTRA_IPV4_DNS_NAMESERVER = "9.9.9.9"
 IPV6_DNS_NAMESERVERS = ["2001:4860:4860::8888", "2606:4700:4700::1111"]
+IPV6_DNS_LONG_NAMESERVER = ["0000:0000:0000:0000:0000:0000:0000:0100"]
 EXTRA_IPV6_DNS_NAMESERVER = "2620:fe::9"
 EXAMPLE_SEARCHES = ["example.org", "example.com"]
 
@@ -298,6 +299,24 @@ def test_preserve_dns_config_with_empty_state(setup_ipv4_ipv6_name_server):
     current_state = libnmstate.show()
 
     assert old_state[DNS.KEY][DNS.CONFIG] == current_state[DNS.KEY][DNS.CONFIG]
+
+
+def test_add_non_canonicalized_ipv6_nameserver():
+    dns_config = {
+        DNS.SERVER: IPV6_DNS_LONG_NAMESERVER,
+        DNS.SEARCH: [],
+    }
+    desired_state = {
+        Interface.KEY: _get_test_iface_states(),
+        Route.KEY: {Route.CONFIG: _gen_default_gateway_route()},
+        DNS.KEY: {
+            DNS.CONFIG: dns_config,
+        },
+    }
+    libnmstate.apply(desired_state)
+
+    current_state = libnmstate.show()
+    assert "::100" in current_state[DNS.KEY][DNS.CONFIG][DNS.SERVER]
 
 
 def _get_test_iface_states():
