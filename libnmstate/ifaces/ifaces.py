@@ -283,6 +283,7 @@ class Ifaces:
         self._validate_ovs_patch_peers()
         self._remove_unknown_type_interfaces()
         self._validate_vrf_table_id_changes()
+        self._validate_veth_peers()
 
     def _bring_port_up_if_not_in_desire(self):
         """
@@ -439,6 +440,19 @@ class Ifaces:
                     raise NmstateNotSupportedError(
                         "Changing route table ID of existing VRF Interface "
                         "is not supported yet"
+                    )
+
+    def _validate_veth_peers(self):
+        for ifname, iface in self._kernel_ifaces.items():
+            if (
+                iface.type == InterfaceType.VETH
+                and iface.is_up
+                and not iface.peer
+            ):
+                if not self._cur_kernel_ifaces.get(iface.name):
+                    raise NmstateValueError(
+                        f"Veth interface {iface.name} does not exists,"
+                        "peer name is required for creating it"
                     )
 
     def _match_child_iface_state_with_parent(self):
