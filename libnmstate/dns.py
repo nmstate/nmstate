@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020 Red Hat, Inc.
+# Copyright (c) 2020-2021 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -22,6 +22,7 @@ from copy import deepcopy
 from libnmstate.error import NmstateValueError
 from libnmstate.error import NmstateVerificationError
 from libnmstate.error import NmstateNotImplementedError
+from libnmstate.iplib import canonicalize_ip_address
 from libnmstate.iplib import is_ipv6_address
 from libnmstate.prettystate import format_desired_current_state_diff
 from libnmstate.schema import DNS
@@ -45,6 +46,14 @@ class DnsState:
                     des_dns_state, cur_dns_state
                 )
         self._cur_dns_state = deepcopy(cur_dns_state) if cur_dns_state else {}
+        self._canonicalize_ip_address()
+
+    def _canonicalize_ip_address(self):
+        canonicalized_addrs = [
+            canonicalize_ip_address(address)
+            for address in self._config_servers
+        ]
+        self.config[DNS.SERVER] = canonicalized_addrs
 
     @property
     def current_config(self):
