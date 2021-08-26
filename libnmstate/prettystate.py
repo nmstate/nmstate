@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2020 Red Hat, Inc.
+# Copyright (c) 2018-2021 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -23,7 +23,7 @@ from copy import deepcopy
 import difflib
 import json
 
-import yaml
+from ruamel import yaml
 
 from .schema import DNS
 from .schema import Route

@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019-2020 Red Hat, Inc.
+# Copyright (c) 2019-2021 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -20,7 +20,7 @@
 from contextlib import contextmanager
 import os
 
-import yaml
+from ruamel.yaml import YAML
 
 import libnmstate
 
@@ -63,7 +63,7 @@ def load_example(name, substitute=None):
         yaml_str = yamlfile.read()
         if substitute:
             yaml_str = yaml_str.replace(substitute[0], substitute[1])
-        state = yaml.load(yaml_str, Loader=yaml.SafeLoader)
+        state = YAML(typ="safe").load(yaml_str)
 
     return state
 

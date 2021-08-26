@@ -6,6 +6,6 @@
 #packageD!=0.13.0,<0.14,>=0.12.0
 
 PyGObject
-PyYAML
+ruamel.yaml
 setuptools
 nispor>=1.1.0

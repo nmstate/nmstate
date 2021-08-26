@@ -27,7 +27,9 @@ import sys
 import tempfile
 import warnings
 
-import yaml
+from ruamel.yaml import parser
+from ruamel.yaml import scanner
+from ruamel.yaml import YAML
 
 import libnmstate
 from libnmstate import PrettyState
@@ -372,7 +374,7 @@ def _run_gen_config(args):
                 state = json.loads(statedata)
                 use_yaml = False
             else:
-                state = yaml.load(statedata, Loader=yaml.SafeLoader)
+                state = YAML(typ="safe").load(statedata)
                 use_yaml = True
             _print_state(
                 libnmstate.generate_configurations(state), use_yaml=use_yaml
@@ -388,7 +390,7 @@ def _apply_state(statedata, verify_change, commit, timeout, save_to_disk):
     if statedata[0] == "{":
         state = json.loads(statedata)
     else:
-        state = yaml.load(statedata, Loader=yaml.SafeLoader)
+        state = YAML(typ="safe").load(statedata)
         use_yaml = True
 
     try:
@@ -479,10 +481,10 @@ def _parse_state(txtstate, parse_yaml):
     state = {}
     if parse_yaml:
         try:
-            state = yaml.load(txtstate, Loader=yaml.SafeLoader)
-        except yaml.parser.ParserError as e:
+            state = YAML(typ="safe").load(txtstate)
+        except parser.ParserError as e:
             error = "Invalid YAML syntax: %s\n" % e
-        except yaml.parser.ScannerError as e:
+        except scanner.ScannerError as e:
             error = "Invalid YAML syntax: %s\n" % e
     else:
         try:

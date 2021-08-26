@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020 Red Hat, Inc.
+# Copyright (c) 2020-2021 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -19,7 +19,8 @@
 from contextlib import contextmanager
 import os
 import time
-import yaml
+
+from ruamel.yaml import YAML
 
 import pytest
 
@@ -147,7 +148,7 @@ def test_lldp_yaml(lldptest_up):
         lldp_config = dstate[Interface.KEY][0][LLDP.CONFIG_SUBTREE]
         assert len(lldp_config[LLDP.NEIGHBORS_SUBTREE]) == 1
         test_neighbor = lldp_config[LLDP.NEIGHBORS_SUBTREE][0]
-        assert test_neighbor == yaml.safe_load(EXPECTED_LLDP_NEIGHBOR)
+        assert test_neighbor == YAML(typ="safe").load(EXPECTED_LLDP_NEIGHBOR)
 
 
 def test_lldp_system(lldptest_up):

@@ -21,7 +21,8 @@ import os
 import time
 
 import pytest
-import yaml
+
+from ruamel.yaml import YAML
 
 import libnmstate
 from libnmstate.error import NmstateVerificationError
@@ -117,7 +118,7 @@ def bond99_with_eth2(eth2_up):
 
 @pytest.mark.tier1
 def test_add_and_remove_bond_with_two_port(eth1_up, eth2_up):
-    state = yaml.load(BOND99_YAML_BASE, Loader=yaml.SafeLoader)
+    state = YAML(typ="safe").load(BOND99_YAML_BASE)
     libnmstate.apply(state)
 
     assertlib.assert_state_match(state)
@@ -142,7 +143,7 @@ def test_add_and_remove_bond_with_two_port(eth1_up, eth2_up):
 
 @pytest.mark.tier1
 def test_remove_bond_with_minimum_desired_state(eth1_up, eth2_up):
-    state = yaml.load(BOND99_YAML_BASE, Loader=yaml.SafeLoader)
+    state = YAML(typ="safe").load(BOND99_YAML_BASE)
     bond_name = state[Interface.KEY][0][Interface.NAME]
 
     libnmstate.apply(state)

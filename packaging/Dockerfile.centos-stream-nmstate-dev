@@ -15,7 +15,7 @@ RUN dnf update -y && \
                    systemd-udev \
                    python3-devel \
                    python3-gobject-base \
-                   python3-pyyaml \
+                   python3-ruamel-yaml \
                    python3-setuptools \
                    python36 \
                    dnsmasq \

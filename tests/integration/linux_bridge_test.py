@@ -22,8 +22,9 @@ import os
 import time
 
 import pytest
-import yaml
 import json
+
+from ruamel.yaml import YAML
 
 import libnmstate
 from libnmstate.error import NmstateKernelIntegerRoundedError
@@ -622,15 +623,15 @@ def test_add_invalid_port_ip_config(eth1_up):
 
 
 def _add_port_to_bridge(bridge_state, ifname):
-    port_state = yaml.load(BRIDGE_PORT_YAML, Loader=yaml.SafeLoader)
+    port_state = YAML(typ="safe").load(BRIDGE_PORT_YAML)
     add_port_to_bridge(bridge_state, ifname, port_state)
 
 
 def _create_bridge_subtree_config(port_names):
-    bridge_state = yaml.load(BRIDGE_OPTIONS_YAML, Loader=yaml.SafeLoader)
+    bridge_state = YAML(typ="safe").load(BRIDGE_OPTIONS_YAML)
 
     for port in port_names:
-        port_state = yaml.load(BRIDGE_PORT_YAML, Loader=yaml.SafeLoader)
+        port_state = YAML(typ="safe").load(BRIDGE_PORT_YAML)
         add_port_to_bridge(bridge_state, port, port_state)
 
     return bridge_state
