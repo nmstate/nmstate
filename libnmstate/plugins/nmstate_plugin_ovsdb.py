@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020 Red Hat, Inc.
+# Copyright (c) 2020-2021 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -17,6 +17,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
+import copy
 import os
 import time
 
@@ -169,27 +170,39 @@ class NmstateOvsdbPlugin(NmstatePlugin):
             else:
                 continue
 
+            modified_external_ids = self._drop_nm_external_ids(
+                row.external_ids
+            )
             ifaces.append(
                 {
                     Interface.NAME: row.name,
                     Interface.TYPE: iface_type,
                     OvsDB.OVS_DB_SUBTREE: {
-                        OvsDB.EXTERNAL_IDS: row.external_ids
+                        OvsDB.EXTERNAL_IDS: modified_external_ids,
                     },
                 }
             )
 
         for row in self._idl.tables["Bridge"].rows.values():
+            modified_external_ids = self._drop_nm_external_ids(
+                row.external_ids
+            )
             ifaces.append(
                 {
                     Interface.NAME: row.name,
                     Interface.TYPE: InterfaceType.OVS_BRIDGE,
                     OvsDB.OVS_DB_SUBTREE: {
-                        OvsDB.EXTERNAL_IDS: row.external_ids
+                        OvsDB.EXTERNAL_IDS: modified_external_ids,
                     },
                 }
             )
         return ifaces
+
+    def _drop_nm_external_ids(self, external_ids):
+        modified_external_ids = copy.deepcopy(external_ids)
+        modified_external_ids.pop(NM_EXTERNAL_ID, None)
+
+        return modified_external_ids
 
     def apply_changes(self, net_state, save_to_disk):
         # State might changed after other plugin invoked apply_changes()
@@ -229,11 +242,6 @@ class NmstateOvsdbPlugin(NmstatePlugin):
             else:
                 desire_ids = original_desire_ids
 
-            # should include external_id created by NetworkManager.
-            if NM_EXTERNAL_ID in ids_after_nm_applied:
-                desire_ids[NM_EXTERNAL_ID] = ids_after_nm_applied[
-                    NM_EXTERNAL_ID
-                ]
             if desire_ids != ids_after_nm_applied:
                 pending_changes.append(
                     _generate_db_change_external_ids(

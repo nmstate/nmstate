@@ -101,6 +101,21 @@ def test_create_and_remove_ovs_bridge_with_min_desired_state():
     assertlib.assert_absent(BRIDGE1)
 
 
+@pytest.mark.tier1
+def test_create_and_save_ovs_bridge_then_remove_and_apply_again():
+    desired_state = {}
+    with Bridge(BRIDGE1).create():
+        desired_state = statelib.show_only((BRIDGE1,))
+
+    assertlib.assert_absent(BRIDGE1)
+
+    libnmstate.apply(desired_state)
+    desired_state[Interface.KEY][0][Interface.STATE] = InterfaceState.ABSENT
+
+    libnmstate.apply(desired_state)
+    assertlib.assert_absent(BRIDGE1)
+
+
 def test_create_and_remove_ovs_bridge_options_specified():
     bridge = Bridge(BRIDGE1)
     bridge.set_options(
@@ -367,11 +382,11 @@ def test_ovsdb_new_bridge_with_external_id():
     with bridge.create() as state:
         assertlib.assert_state_match(state)
         new_state = statelib.show_only((PORT1,))
-        # The newly created OVS internal interface should also hold
+        # The newly created OVS internal interface should not hold
         # NM created external IDS.
         assert (
             "NM.connection.uuid"
-            in new_state[Interface.KEY][0][OvsDB.OVS_DB_SUBTREE][
+            not in new_state[Interface.KEY][0][OvsDB.OVS_DB_SUBTREE][
                 OvsDB.EXTERNAL_IDS
             ]
         )
@@ -428,7 +443,7 @@ def test_ovsdb_remove_external_ids(ovs_bridge_with_custom_external_ids):
     )
     iface_info = statelib.show_only((PORT1,))[Interface.KEY][0]
     external_ids = iface_info[OvsDB.OVS_DB_SUBTREE][OvsDB.EXTERNAL_IDS]
-    assert len(external_ids) == 1
+    assert len(external_ids) == 0
 
 
 def test_ovsdb_override_external_ids(ovs_bridge_with_custom_external_ids):
@@ -446,7 +461,7 @@ def test_ovsdb_override_external_ids(ovs_bridge_with_custom_external_ids):
     )
     iface_info = statelib.show_only((PORT1,))[Interface.KEY][0]
     external_ids = iface_info[OvsDB.OVS_DB_SUBTREE][OvsDB.EXTERNAL_IDS]
-    assert len(external_ids) == 2
+    assert len(external_ids) == 1
     assert external_ids["new_ids"] == "haha"
 
 
