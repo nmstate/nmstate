@@ -98,9 +98,6 @@ class _ConnectionSetting:
             self._setting.props.master = controller
             self._setting.props.slave_type = port_type
 
-    def set_profile_name(self, con_name):
-        self._setting.props.id = con_name
-
     @property
     def setting(self):
         return self._setting
@@ -116,7 +113,6 @@ def create_new_nm_simple_conn(iface, nm_profile):
     con_setting = _ConnectionSetting()
     if nm_profile and not is_multiconnect_profile(nm_profile):
         con_setting.import_by_profile(nm_profile, iface.is_controller)
-        con_setting.set_profile_name(iface.name)
     else:
         con_setting.create(
             iface.name, iface.name, nm_iface_type, iface.is_controller
