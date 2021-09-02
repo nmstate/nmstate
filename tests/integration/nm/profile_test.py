@@ -467,7 +467,7 @@ def ovs_bridge_with_internal_port():
 def test_ovs_profile_been_delete_by_state_absent(
     ovs_bridge_with_internal_port,
 ):
-    assert _profile_exists(NM_PROFILE_DIRECTORY + "ovs0.nmconnection")
+    assert _profile_exists(NM_PROFILE_DIRECTORY + "ovs0-if.nmconnection")
     libnmstate.apply(
         {
             Interface.KEY: [
@@ -478,7 +478,7 @@ def test_ovs_profile_been_delete_by_state_absent(
             ]
         }
     )
-    assert not _profile_exists(NM_PROFILE_DIRECTORY + "ovs0.nmconnection")
+    assert not _profile_exists(NM_PROFILE_DIRECTORY + "ovs0-if.nmconnection")
 
 
 @pytest.fixture
@@ -612,3 +612,19 @@ def test_nmstate_do_not_modify_conn_name(dummy_active_profile):
         "nmcli -g 802-3-ethernet.mtu c show testProfile".split(), check=True
     )
     assert "1400" in out
+
+
+@pytest.fixture
+def ovs_bridge_internal_dup_name():
+    bridge = OvsBridge(TEST_OVS_BRIDGE0)
+    bridge.add_internal_port(TEST_OVS_BRIDGE0)
+    with bridge.create():
+        yield bridge.state
+
+
+@pytest.mark.tier1
+def test_ovs_dup_name_different_conn_name(ovs_bridge_internal_dup_name):
+    _, out, _ = cmdlib.exec_cmd("nmcli -g name c show".split(), check=True)
+
+    assert "br0-br" in out
+    assert "br0-if" in out
