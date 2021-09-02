@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019-2020 Red Hat, Inc.
+# Copyright (c) 2019-2021 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -56,6 +56,20 @@ NMCLI_CON_ADD_DUMMY_CMD = [
     "testProfile",
     "connection.autoconnect",
     "no",
+    "ifname",
+    DUMMY0_IFNAME,
+]
+
+NMCLI_CON_ADD_AUTOCONNECT_DUMMY_CMD = [
+    "nmcli",
+    "con",
+    "add",
+    "type",
+    "dummy",
+    "con-name",
+    "testProfile",
+    "connection.autoconnect",
+    "yes",
     "ifname",
     DUMMY0_IFNAME,
 ]
@@ -145,6 +159,19 @@ def dummy_interface(ifname, save_to_disk=True):
 @pytest.fixture
 def dummy_inactive_profile():
     cmdlib.exec_cmd(NMCLI_CON_ADD_DUMMY_CMD)
+    profile_exists = _profile_exists(
+        NM_PROFILE_DIRECTORY + "testProfile.nmconnection"
+    )
+    assert profile_exists
+    try:
+        yield DUMMY0_IFNAME
+    finally:
+        cmdlib.exec_cmd(_nmcli_delete_connection("testProfile"))
+
+
+@pytest.fixture
+def dummy_active_profile():
+    cmdlib.exec_cmd(NMCLI_CON_ADD_AUTOCONNECT_DUMMY_CMD)
     profile_exists = _profile_exists(
         NM_PROFILE_DIRECTORY + "testProfile.nmconnection"
     )
@@ -544,3 +571,24 @@ def test_preserve_existing_wire_setting(eth1_up_static_ipv4_mtu_1400):
         "1400\n",
         "",
     )
+
+
+@pytest.mark.tier1
+def test_nmstate_do_not_modify_conn_name(dummy_active_profile):
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: DUMMY0_IFNAME,
+                    Interface.TYPE: InterfaceType.DUMMY,
+                    Interface.STATE: InterfaceState.UP,
+                    Interface.MTU: 1400,
+                },
+            ]
+        }
+    )
+
+    _, out, _ = cmdlib.exec_cmd(
+        "nmcli -g 802-3-ethernet.mtu c show testProfile".split(), check=True
+    )
+    assert "1400" in out
