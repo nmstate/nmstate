@@ -114,8 +114,20 @@ def create_new_nm_simple_conn(iface, nm_profile):
     if nm_profile and not is_multiconnect_profile(nm_profile):
         con_setting.import_by_profile(nm_profile, iface.is_controller)
     else:
+        # OVS bridge and interfaces could sharing the same interface name, to
+        # distinguish them at NM connection level, instead of using interface
+        # name as connection name, we append a postfix.
+        con_name = iface.name
+        if iface.type == InterfaceType.OVS_BRIDGE:
+            con_name = con_name + "-br"
+        elif iface.type == InterfaceType.OVS_INTERFACE:
+            con_name = con_name + "-if"
+
         con_setting.create(
-            iface.name, iface.name, nm_iface_type, iface.is_controller
+            con_name,
+            iface.name,
+            nm_iface_type,
+            iface.is_controller,
         )
 
     apply_lldp_setting(con_setting, iface_info)
