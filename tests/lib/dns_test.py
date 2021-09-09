@@ -21,8 +21,9 @@ from copy import deepcopy
 
 import pytest
 
-from libnmstate.error import NmstateVerificationError
 from libnmstate.error import NmstateNotImplementedError
+from libnmstate.error import NmstateValueError
+from libnmstate.error import NmstateVerificationError
 from libnmstate.schema import DNS
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
@@ -134,8 +135,8 @@ class TestDnsState:
         }
 
     def test_gen_metadata_use_dynamic_interface(self):
-        ifaces = self._gen_dynamic_ifaces()
-        route_state = self._gen_route_state(ifaces)
+        ifaces = self._gen_dynamic_ifaces_with_no_auto_dns()
+        route_state = self._gen_empty_route_state()
         dns_state = DnsState({DNS.CONFIG: DNS_CONFIG1}, {})
         ifaces.gen_dns_metadata(dns_state, route_state)
         ipv4_iface = ifaces.all_kernel_ifaces[IPV4_ROUTE_IFACE_NAME]
@@ -156,6 +157,13 @@ class TestDnsState:
             DNS.SERVER: [IPV6_DNS_SERVER1],
             DNS.SEARCH: [],
         }
+
+    def test_gen_metadata_with_auto_interface_only(self):
+        ifaces = self._gen_dynamic_ifaces()
+        route_state = self._gen_empty_route_state()
+        dns_state = DnsState({DNS.CONFIG: DNS_CONFIG1}, {})
+        with pytest.raises(NmstateValueError):
+            ifaces.gen_dns_metadata(dns_state, route_state)
 
     @pytest.fixture
     def with_dns_metadata(self):
@@ -307,7 +315,7 @@ class TestDnsState:
             DNS.SEARCH: DNS_SEARCHES_1,
         }
 
-    def _gen_dynamic_ifaces(self):
+    def _gen_dynamic_ifaces_with_no_auto_dns(self):
         ipv4_iface_info = gen_foo_iface_info()
         ipv4_iface_info[Interface.NAME] = IPV4_ROUTE_IFACE_NAME
         ipv4_iface_info[Interface.IPV4] = {
@@ -325,10 +333,31 @@ class TestDnsState:
         }
         return Ifaces([], [ipv4_iface_info, ipv6_iface_info])
 
+    def _gen_dynamic_ifaces(self):
+        ipv4_iface_info = gen_foo_iface_info()
+        ipv4_iface_info[Interface.NAME] = IPV4_ROUTE_IFACE_NAME
+        ipv4_iface_info[Interface.IPV4] = {
+            InterfaceIPv4.ENABLED: True,
+            InterfaceIPv4.DHCP: True,
+            InterfaceIPv4.AUTO_DNS: True,
+        }
+        ipv6_iface_info = gen_foo_iface_info()
+        ipv6_iface_info[Interface.NAME] = IPV6_ROUTE_IFACE_NAME
+        ipv6_iface_info[Interface.IPV6] = {
+            InterfaceIPv6.ENABLED: True,
+            InterfaceIPv6.DHCP: True,
+            InterfaceIPv6.AUTOCONF: True,
+            InterfaceIPv6.AUTO_DNS: True,
+        }
+        return Ifaces([], [ipv4_iface_info, ipv6_iface_info])
+
     def _gen_static_ifaces(self):
         return gen_two_static_ip_ifaces(
             IPV4_ROUTE_IFACE_NAME, IPV6_ROUTE_IFACE_NAME
         )
+
+    def _gen_empty_route_state(self):
+        return RouteState(Ifaces({}, {}), {}, {})
 
     def _gen_route_state(self, ifaces):
         return RouteState(
