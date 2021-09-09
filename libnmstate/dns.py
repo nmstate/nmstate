@@ -123,7 +123,9 @@ class DnsState:
             if not iface_name:
                 raise NmstateValueError(
                     "Failed to find suitable interface for saving DNS "
-                    "name servers: %s" % server
+                    "name servers: %s, nmstate only support saving DNS to "
+                    "interface with static gateway or auto interface with "
+                    "auto-dns:false" % server
                 )
             iface_dns_metada = iface_metadata[iface_name][family]
             iface_dns_metada[DNS.SERVER].append(server)
