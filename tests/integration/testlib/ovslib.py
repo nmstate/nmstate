@@ -70,6 +70,7 @@ class Bridge:
         name,
         *,
         mac=None,
+        copy_mac_from=None,
         ipv4_state=None,
         ovs_db=None,
         patch_state=None,
@@ -81,6 +82,8 @@ class Bridge:
         }
         if mac:
             ifstate[Interface.MAC] = mac
+        if copy_mac_from:
+            ifstate[Interface.COPY_MAC_FROM] = copy_mac_from
         if mtu:
             ifstate[Interface.MTU] = mtu
         if ipv4_state:

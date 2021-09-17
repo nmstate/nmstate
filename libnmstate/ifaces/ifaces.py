@@ -172,12 +172,13 @@ class Ifaces:
             if iface.type not in (
                 InterfaceType.LINUX_BRIDGE,
                 InterfaceType.BOND,
+                InterfaceType.OVS_INTERFACE,
             ):
                 continue
             if not iface.copy_mac_from:
                 continue
 
-            if iface.copy_mac_from not in iface.port:
+            if iface.type != InterfaceType.OVS_INTERFACE and iface.copy_mac_from not in iface.port:
                 raise NmstateValueError(
                     f"The interface {iface.name} is holding invalid "
                     f"{Interface.COPY_MAC_FROM} property "
