@@ -38,10 +38,9 @@ from .state import hide_the_secrets
 from .state import remove_the_reserved_secrets
 from .version import get_version
 
-MAINLOOP_TIMEOUT = 35
 VERIFY_RETRY_INTERNAL = 1
-VERIFY_RETRY_TIMEOUT = 5
-VERIFY_RETRY_TIMEOUT_INCREASE = 4
+VERIFY_RETRY_COUNT = 5
+VERIFY_RETRY_COUNT_SRIOV = 60
 
 
 def apply(
@@ -126,9 +125,9 @@ def _apply_ifaces_state(plugins, net_state, verify_change, save_to_disk):
         if _net_state_contains_sriov_interface(net_state):
             # If SR-IOV is present, the verification timeout is being increased
             # to avoid timeouts due to slow drivers like i40e.
-            verify_retry = VERIFY_RETRY_TIMEOUT * VERIFY_RETRY_TIMEOUT_INCREASE
+            verify_retry = VERIFY_RETRY_COUNT_SRIOV
         else:
-            verify_retry = VERIFY_RETRY_TIMEOUT
+            verify_retry = VERIFY_RETRY_COUNT
         for _ in range(verify_retry):
             try:
                 _verify_change(plugins, net_state)
