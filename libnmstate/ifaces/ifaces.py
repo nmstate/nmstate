@@ -179,13 +179,7 @@ class Ifaces:
             if not iface.copy_mac_from:
                 continue
 
-            if iface.type != InterfaceType.OVS_INTERFACE and iface.copy_mac_from not in iface.port:
-                raise NmstateValueError(
-                    f"The interface {iface.name} is holding invalid "
-                    f"{Interface.COPY_MAC_FROM} property "
-                    f"as {iface.copy_mac_from} is not in the port "
-                    f"list: {iface.port}"
-                )
+            self._validate_copy_mac_from_iface_is_in_port(iface)
             port_iface = self.all_kernel_ifaces.get(iface.copy_mac_from)
             # TODO: bridge/bond might refering the mac from new veth in the
             #       same desire state, it too complex to support that.
@@ -199,6 +193,32 @@ class Ifaces:
                 iface.apply_copy_mac_from(port_iface.permanent_mac_address)
             else:
                 iface.apply_copy_mac_from(port_iface.mac)
+
+    def _validate_copy_mac_from_iface_is_in_port(self, iface):
+        iface_port = self._port_for_interface(iface)
+        if iface.copy_mac_from not in iface_port:
+            raise NmstateValueError(
+                f"The interface {iface.name} is holding invalid "
+                f"{Interface.COPY_MAC_FROM} property "
+                f"as {iface.copy_mac_from} is not in the port "
+                f"list: {iface.port}"
+            )
+
+    def _port_for_interface(self, iface):
+        if iface.type == InterfaceType.OVS_INTERFACE:
+            ovs_bridges = (
+                x
+                for x in self.all_user_space_ifaces
+                if x.type == InterfaceType.OVS_BRIDGE and iface.name in x.port
+            )
+            ovs_bridge = next(ovs_bridges, None)
+            if ovs_bridge is None:
+                raise NmstateValueError(
+                    f"The ovs-interface {iface.name} is not attached "
+                    f"to any bridge"
+                )
+            return ovs_bridge.port
+        return iface.port
 
     def _create_virtual_port(self):
         """
