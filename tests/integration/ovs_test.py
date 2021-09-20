@@ -172,16 +172,21 @@ def test_create_and_remove_ovs_bridge_with_internal_port_static_ip_and_mac():
     assertlib.assert_absent(BRIDGE1)
     assertlib.assert_absent(PORT1)
 
+
 @pytest.mark.tier1
 def test_create_ovs_bridge_with_internal_port_with_copy_mac_from(eth1_up):
     eth1_mac = eth1_up[Interface.KEY][0][Interface.MAC]
 
     bridge = Bridge(BRIDGE1)
-    bridge.add_internal_port(PORT1, copy_mac_from=eth1_up[Interface.KEY][0][Interface.NAME])
+    bridge.add_internal_port(
+        PORT1, copy_mac_from=eth1_up[Interface.KEY][0][Interface.NAME]
+    )
+    bridge.add_system_port(ETH1)
 
     with bridge.create():
-        current_state = statelib.show_only((BRIDGE1,))
-        assert_mac_address(current_state, eth1_mac)
+        current_state = statelib.show_only((PORT1,))
+        assertlib.assert_mac_address(current_state, eth1_mac)
+
 
 @pytest.fixture
 def ovs_bridge1_with_internal_port_same_name():
