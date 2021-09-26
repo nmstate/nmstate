@@ -1,4 +1,16 @@
 # Changelog
+## [1.0.4] - 2021-09-26
+### Bug fixes
+ - Fix error when configuring DNS without desired interfaces. (38e9ae5d)
+ - Fix error when moving ovs-port to another ovs-bridge. (fe3e2ff8)
+ - Fix bond `tlb_dynamic_lb` option. (e503eb82)
+ - Fix bond preserving `all_slaves_active` option. (b34412b5)
+ - Fix bond validation error when `fail_over_mac` is enabled. (b1e94d1a)
+ - Fix modifying OVS interface using the same name as OVS bridge. (9f505f21)
+ - Fix error when creating SR-IOV VFs with the `bnxt_en` driver. (61e775a1)
+ - Fix adding a route rule for a OVS interface. (55d5092c)
+ - Fix showing of empty next_hop_address and destination. (ab55d90e)
+
 ## [1.0.3] - 2021-04-09
 ### Bug fixes
  - SR-IOV: Wait for VFs to be deleted on kernel. (80c97b2)
