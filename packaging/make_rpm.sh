@@ -19,7 +19,8 @@ TAR_FILE="${TMP_DIR}/nmstate-${VERSION}.tar"
     rpmbuild --define "_rpmdir $TMP_DIR/" --define "_srcrpmdir $TMP_DIR/" \
     --rebuild "${SRPM_FILE}"
 ) > /dev/stderr
-RPMS=$(find $TMP_DIR -type f -name \*.noarch.rpm -exec basename {} \;)
+RPMS=`find $TMP_DIR -type f \
+    \(-name \*.noarch.rpm -o -name \*.x86_64.rpm\) -exec basename {} \;`
 find $TMP_DIR -type f -name \*.rpm -exec mv {} $OLD_PWD \;
 for RPM in $RPMS; do
     echo -n "$OLD_PWD/$RPM "

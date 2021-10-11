@@ -16,6 +16,7 @@ TEST_TYPE_INTEG="integ"
 TEST_TYPE_INTEG_TIER1="integ_tier1"
 TEST_TYPE_INTEG_TIER2="integ_tier2"
 TEST_TYPE_INTEG_SLOW="integ_slow"
+TEST_TYPE_INTEG_RUST="integ_rust"
 
 FEDORA_IMAGE_DEV="docker.io/nmstate/fedora-nmstate-dev"
 CENTOS_IMAGE_DEV="docker.io/nmstate/centos8-nmstate-dev"
@@ -165,6 +166,20 @@ function run_tests {
             --junitxml=junit.integ_slow.xml \
             -m slow --runslow \
             tests/integration \
+            ${nmstate_pytest_extra_args}"
+    fi
+
+    if [ $TEST_TYPE == $TEST_TYPE_ALL ] || \
+       [ $TEST_TYPE == $TEST_TYPE_INTEG_RUST ];then
+        exec_cmd "cd $CONTAINER_WORKSPACE"
+        exec_cmd "
+          env  \
+          PYTHONPATH=$CONTAINER_WORKSPACE/nmstate-rs/src/python \
+          pytest \
+            $PYTEST_OPTIONS \
+            --cov-report=html:htmlcov-integ_rust \
+            --junitxml=junit.integ_rust.xml \
+            tests/integration/static_ip_address_test.py \
             ${nmstate_pytest_extra_args}"
     fi
 }
@@ -359,6 +374,7 @@ while true; do
         echo "     * $TEST_TYPE_INTEG_TIER1"
         echo "     * $TEST_TYPE_INTEG_TIER2"
         echo "     * $TEST_TYPE_INTEG_SLOW"
+        echo "     * $TEST_TYPE_INTEG_RUST"
         echo "     * $TEST_TYPE_UNIT_PY36"
         echo "     * $TEST_TYPE_UNIT_PY38"
         echo -n "--customize allows to specify a command to customize the "
