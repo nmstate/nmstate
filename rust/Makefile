@@ -58,10 +58,12 @@ check:
 		cargo test -- --test-threads=1 --show-output --ignored; \
 	fi
 	make check -C src/clib/test
+	make check -C $(GO_MODULE_SRC)
 
 clean:
 	cargo clean
 	make clean -C src/clib/test
+	make clean -C $(GO_MODULE_SRC)
 
 install: $(CLI_EXEC_RELEASE)
 	install -p -v -D -m755 $(CLI_EXEC_RELEASE) \
