@@ -1,0 +1,17 @@
+[package]
+name = "nmstate-clib"
+description = "Nmstate C binding"
+version = "2.0.0"
+authors = ["Gris Ge <fge@redhat.com>"]
+license = "Apache-2.0"
+edition = "2018"
+
+[lib]
+name = "nmstate"
+path = "lib.rs"
+crate-type = ["cdylib"]
+
+[dependencies]
+nmstate = { path = "../lib" }
+libc = "0.2.74"
+serde_json = "1.0"
