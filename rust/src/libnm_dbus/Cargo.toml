@@ -1,0 +1,14 @@
+[package]
+name = "nm-dbus"
+version = "0.1.0"
+authors = ["Gris Ge <fge@redhat.com>"]
+edition = "2018"
+
+[lib]
+path = "lib.rs"
+
+[dependencies]
+zbus = "1.9.1"
+zvariant = "2.7.0"
+uuid = { version = "0.8", features = ["v4"] }
+log = "0.4.14"
