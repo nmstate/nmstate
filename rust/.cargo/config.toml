@@ -1,0 +1,5 @@
+[build]
+rustflags = "-Clink-arg=-Wl,-soname=libnmstate.so.2.0.0"
+
+[target.x86_64-unknown-linux-gnu]
+runner = 'sudo -E'
