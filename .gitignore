@@ -23,3 +23,6 @@ doc/nmstatectl.8
 /Vagrantfile
 
 _kubevirtci
+
+rust/Cargo.lock
+rust/target

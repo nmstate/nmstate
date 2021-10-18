@@ -1,0 +1,42 @@
+name: Rust build and lint check
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches:
+      - main
+
+jobs:
+  ci:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - rust_version: "stable"
+          - rust_version: "nightly"
+          - rust_version: "beta"
+
+    name: CI
+    runs-on: ubuntu-20.04
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Install Rust ${{ matrix.rust_version }}
+      uses: actions-rs/toolchain@v1
+      with:
+          toolchain: ${{ matrix.rust_version }}
+          override: true
+          components: rustfmt, clippy
+
+    - name: Check fmt
+      if: matrix.rust_version == 'stable'
+      run: cd rust && cargo fmt -- --check
+
+    - name: Check clippy
+      if: matrix.rust_version == 'nightly'
+      run: cd rust && cargo clippy -- -D warnings
+
+    - name: Build
+      run: cd rust && cargo build --verbose --all

@@ -20,6 +20,7 @@ jobs:
           - job_type: "el8-nm_stable-integ_tier1"
           - job_type: "el8-nm_stable-integ_tier2"
           - job_type: "el8-nm_stable-integ_slow"
+          - job_type: "el8-nm_stable-integ_rust"
           - job_type: "stream-nm_main-integ_tier1"
           - job_type: "stream-nm_main-integ_tier2"
           - job_type: "stream-nm_main-integ_slow"

@@ -6,6 +6,8 @@ RUN dnf -y install dnf-plugins-core epel-release && \
     dnf copr enable networkmanager/NetworkManager-1.30 -y && \
     dnf copr enable nmstate/nispor -y && \
     dnf -y install --setopt=install_weak_deps=False \
+                   make \
+                   rust-toolset \
                    NetworkManager \
                    NetworkManager-ovs \
                    NetworkManager-team \

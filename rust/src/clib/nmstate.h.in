@@ -1,0 +1,190 @@
+/*
+ * Copyright 2021 Red Hat
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+
+#ifndef _LIBNMSTATE_H_
+#define _LIBNMSTATE_H_
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include <stdint.h>
+
+#define NMSTATE_VERSION_MAJOR        @_VERSION_MAJOR@
+#define NMSTATE_VERSION_MINOR        @_VERSION_MINOR@
+#define NMSTATE_VERSION_MICRO        @_VERSION_MICRO@
+
+#define NMSTATE_VERSION              \
+    ((NMSTATE_VERSION_MAJOR * 10000) + \
+     (NMSTATE_VERSION_MINOR * 100) + \
+     NMSTATE_VERSION_MICRO)
+
+#define NMSTATE_PASS                 0
+#define NMSTATE_FAIL                 1
+
+#define NMSTATE_FLAG_NONE            0
+#define NMSTATE_FLAG_KERNEL_ONLY     1 << 1
+
+/**
+ * nmstate_net_state_retrieve - Retrieve network state
+ *
+ * Version:
+ *      0.1
+ *
+ * Description:
+ *      Retrieve network state in the format of JSON.
+ *
+ * @flags:
+ *      Flags for special use cases:
+ *          * NMSTATE_FLAG_NONE
+ *              No flag
+ *          * NMSTATE_FLAG_KERNEL_ONLY
+ *              Do not use external plugins, show kernel status only.
+ * @state:
+ *      Output pointer of char array for network state in json format.
+ *      The memory should be freed by nmstate_net_state_free().
+ * @log:
+ *      Output pointer of char array for logging.
+ *      The memory should be freed by nmstate_log_free().
+ * @err_kind:
+ *      Output pointer of char array for error kind.
+ *      The memory should be freed by nmstate_err_kind_free().
+ * @err_msg:
+ *      Output pointer of char array for error message.
+ *      The memory should be freed by nmstate_err_msg_free().
+ *
+ * Return:
+ *      Error code:
+ *          * NMSTATE_PASS
+ *              On success.
+ *          * NMSTATE_FAIL
+ *              On failure.
+ */
+int nmstate_net_state_retrieve(uint32_t flags, char **state, char **log,
+                               char **err_kind, char **err_msg);
+
+/**
+ * nmstate_net_state_apply - Apply network state
+ *
+ * Version:
+ *      0.1
+ *
+ * Description:
+ *      Apply network state in the format of JSON.
+ *
+ * @flags:
+ *      Flags for special use cases:
+ *          * NMSTATE_FLAG_NONE
+ *              No flag
+ *          * NMSTATE_FLAG_KERNEL_ONLY
+ *              Do not use external plugins, apply to kernel only.
+ * @state:
+ *      Pointer of char array for network state in json format.
+ *      The memory should be freed by nmstate_net_state_free().
+ * @log:
+ *      Output pointer of char array for logging.
+ *      The memory should be freed by nmstate_log_free().
+ * @err_kind:
+ *      Output pointer of char array for error kind.
+ *      The memory should be freed by nmstate_err_kind_free().
+ * @err_msg:
+ *      Output pointer of char array for error message.
+ *      The memory should be freed by nmstate_err_msg_free().
+ *
+ * Return:
+ *      Error code:
+ *          * NMSTATE_PASS
+ *              On success.
+ *          * NMSTATE_FAIL
+ *              On failure.
+ */
+int nmstate_net_state_apply(uint32_t flags, const char *state, char **log,
+                            char **err_kind, char **err_msg);
+
+/**
+ * nmstate_net_state_free - free the network state memory
+ *
+ * Version:
+ *      0.1
+ *
+ * Description:
+ *      Free the memory of network state.
+ *
+ * @state:
+ *      Pointer of char array for network state in json format.
+ *
+ * Return:
+ *      void
+ */
+void nmstate_net_state_free(char *state);
+
+/**
+ * nmstate_err_msg_free - free the error message memory
+ *
+ * Version:
+ *      0.1
+ *
+ * Description:
+ *      Free the memory of error message.
+ *
+ * @state:
+ *      Pointer of char array for error message.
+ *
+ * Return:
+ *      void
+ */
+void nmstate_err_msg_free(char *err_msg);
+
+/**
+ * nmstate_err_kind_free - free the error kind memory
+ *
+ * Version:
+ *      0.1
+ *
+ * Description:
+ *      Free the memory of error kind memory.
+ *
+ * @state:
+ *      Pointer of char array for error kind.
+ *
+ * Return:
+ *      void
+ */
+void nmstate_err_kind_free(char *err_kind);
+
+/**
+ * nmstate_log_free - free the log memory
+ *
+ * Version:
+ *      0.1
+ *
+ * Description:
+ *      Free the memory of log.
+ *
+ * @state:
+ *      Pointer of char array for log.
+ *
+ * Return:
+ *      void
+ */
+void nmstate_log_free(char *log);
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif
+
+#endif /* End of _LIBNMSTATE_H_ */

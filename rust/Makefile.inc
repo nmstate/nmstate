@@ -1,0 +1,7 @@
+CLIB_VERSION=2.0.0
+CLIB_VERSION_MAJOR=$(shell echo $(CLIB_VERSION) | cut -f1 -d.)
+CLIB_VERSION_MINOR=$(shell echo $(CLIB_VERSION) | cut -f2 -d.)
+CLIB_VERSION_MICRO=$(shell echo $(CLIB_VERSION) | cut -f3 -d.)
+CLIB_SO_DEV=libnmstate.so
+CLIB_SO_MAN=$(CLIB_SO_DEV).$(CLIB_VERSION_MAJOR)
+CLIB_SO_FULL=$(CLIB_SO_DEV).$(CLIB_VERSION)
