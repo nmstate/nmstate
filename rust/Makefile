@@ -57,11 +57,11 @@ check:
 	if [ "CHK$(CI)" != "CHKtrue" ]; then \
 		cargo test -- --test-threads=1 --show-output --ignored; \
 	fi
-	make check -C test/clib
+	make check -C src/clib/test
 
 clean:
 	cargo clean
-	make clean -C test/clib
+	make clean -C src/clib/test
 
 install: $(CLI_EXEC_RELEASE)
 	install -p -v -D -m755 $(CLI_EXEC_RELEASE) \
