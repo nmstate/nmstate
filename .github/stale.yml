@@ -1,7 +1,7 @@
 ---
 # Configuration for probot-stale - https://github.com/probot/stale
 daysUntilStale: 14
-daysUntilClose: 14
+daysUntilClose: false
 staleLabel: stale
 markComment: >
   Thank you for your contribution! There was no activity in this pull request
