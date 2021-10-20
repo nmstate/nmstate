@@ -2,6 +2,7 @@ mod base;
 mod dummy;
 mod ethernet;
 mod inter_ifaces;
+mod inter_ifaces_controller;
 mod linux_bridge;
 mod vlan;
 
