@@ -238,6 +238,7 @@ impl Interface {
         }
     }
 
+    // Return None if its is not controller
     pub fn ports(&self) -> Option<Vec<&str>> {
         match self {
             Self::LinuxBridge(iface) => iface.ports(),

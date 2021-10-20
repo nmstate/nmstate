@@ -27,6 +27,12 @@ pub struct BaseInterface {
     pub controller: Option<String>,
     #[serde(skip)]
     pub controller_type: Option<InterfaceType>,
+    // The interface lowest up_priority will be activated first.
+    // The up_priority should be its controller's up_priority
+    // plus one.
+    // The 0 means top controller or no controller.
+    #[serde(skip)]
+    pub(crate) up_priority: u32,
     #[serde(flatten)]
     pub _other: serde_json::Map<String, serde_json::Value>,
 }
@@ -96,6 +102,21 @@ impl BaseInterface {
 
     pub fn can_have_ip(&self) -> bool {
         self.controller == None
+    }
+
+    pub(crate) fn is_up_priority_valid(&self) -> bool {
+        if self.controller.is_some() {
+            self.up_priority != 0
+        } else {
+            true
+        }
+    }
+
+    pub fn new() -> Self {
+        Self {
+            state: InterfaceState::Up,
+            ..Default::default()
+        }
     }
 }
 

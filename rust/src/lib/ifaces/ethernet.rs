@@ -14,11 +14,10 @@ pub struct EthernetInterface {
 
 impl Default for EthernetInterface {
     fn default() -> Self {
+        let mut base = BaseInterface::new();
+        base.iface_type = InterfaceType::Ethernet;
         Self {
-            base: BaseInterface {
-                iface_type: InterfaceType::Ethernet,
-                ..Default::default()
-            },
+            base,
             ethernet: None,
             veth: None,
         }
@@ -44,6 +43,10 @@ impl EthernetInterface {
 
     pub(crate) fn pre_verify_cleanup(&mut self) {
         self.base.pre_verify_cleanup();
+    }
+
+    pub fn new() -> Self {
+        Self::default()
     }
 }
 

@@ -95,14 +95,13 @@ impl NetworkState {
     }
 
     pub fn apply(&self) -> Result<(), NmstateError> {
-        let desire_state_to_edit = self.clone();
         let desire_state_to_verify = self.clone();
         let mut cur_net_state = NetworkState::new();
         cur_net_state.set_kernel_only(self.kernel_only);
         cur_net_state.retrieve()?;
 
         let (add_net_state, chg_net_state, del_net_state) =
-            desire_state_to_edit.gen_state_for_apply(&cur_net_state)?;
+            self.gen_state_for_apply(&cur_net_state)?;
 
         debug!("Adding net state {:?}", &add_net_state);
         debug!("Changing net state {:?}", &chg_net_state);
@@ -198,8 +197,10 @@ impl NetworkState {
         let mut chg_net_state = NetworkState::new();
         let mut del_net_state = NetworkState::new();
 
+        let mut ifaces = self.interfaces.clone();
+
         let (add_ifaces, chg_ifaces, del_ifaces) =
-            self.interfaces.gen_state_for_apply(&current.interfaces)?;
+            ifaces.gen_state_for_apply(&current.interfaces)?;
 
         add_net_state.interfaces = add_ifaces;
         add_net_state.prop_list = vec!["interfaces"];
