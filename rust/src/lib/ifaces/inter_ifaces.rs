@@ -1,18 +1,30 @@
-use std::collections::{hash_map::Entry, HashMap, HashSet};
+use std::collections::HashMap;
 
-use log::{debug, error, warn};
+use log::{debug, error, info, warn};
 use serde::{
     ser::SerializeSeq, Deserialize, Deserializer, Serialize, Serializer,
 };
 
 use crate::{
+    ifaces::inter_ifaces_controller::{
+        handle_changed_ports, set_ifaces_up_priority,
+    },
     ErrorKind, Interface, InterfaceState, InterfaceType, NmstateError,
 };
+
+// The max loop count for Interfaces.set_up_priority()
+// This allows interface with 4 nested levels in any order.
+// To support more nested level, user could place top controller at the
+// beginning of desire state
+const INTERFACES_SET_PRIORITY_MAX_RETRY: u32 = 4;
 
 #[derive(Clone, Debug, Default)]
 pub struct Interfaces {
     pub(crate) kernel_ifaces: HashMap<String, Interface>,
     pub(crate) user_ifaces: HashMap<(String, InterfaceType), Interface>,
+    // The insert_order is allowing user to provided ordered interface
+    // to support 5+ nested dependency.
+    pub(crate) insert_order: Vec<(String, InterfaceType)>,
 }
 
 impl<'de> Deserialize<'de> for Interfaces {
@@ -55,6 +67,10 @@ impl Interfaces {
         for iface in self.kernel_ifaces.values() {
             ifaces.push(iface);
         }
+        ifaces.sort_unstable_by_key(|iface| iface.name());
+        // Use sort_by_key() instead of unstable one, do we can alphabet
+        // activation order which is required to simulate the OS boot-up.
+        ifaces.sort_by_key(|iface| iface.base_iface().up_priority);
 
         for iface in self.user_ifaces.values() {
             ifaces.push(iface);
@@ -63,6 +79,8 @@ impl Interfaces {
     }
 
     pub fn push(&mut self, iface: Interface) {
+        self.insert_order
+            .push((iface.name().to_string(), iface.iface_type()));
         if iface.is_userspace() {
             self.user_ifaces
                 .insert((iface.name().to_string(), iface.iface_type()), iface);
@@ -149,12 +167,15 @@ impl Interfaces {
     }
 
     pub(crate) fn gen_state_for_apply(
-        &self,
+        &mut self,
         current: &Self,
     ) -> Result<(Self, Self, Self), NmstateError> {
         let mut add_ifaces = Self::new();
         let mut chg_ifaces = Self::new();
         let mut del_ifaces = Self::new();
+
+        handle_changed_ports(self, current)?;
+        self.set_up_priority()?;
 
         for iface in self.to_vec() {
             if !iface.is_absent() {
@@ -163,11 +184,21 @@ impl Interfaces {
                         let mut chg_iface = iface.clone();
                         chg_iface.set_iface_type(cur_iface.iface_type());
                         chg_iface.pre_edit_cleanup()?;
+                        info!(
+                            "Changing interface {} with type {}",
+                            chg_iface.name(),
+                            chg_iface.iface_type()
+                        );
                         chg_ifaces.push(chg_iface);
                     }
                     None => {
                         let mut new_iface = iface.clone();
                         new_iface.pre_edit_cleanup()?;
+                        info!(
+                            "Adding interface {} with type {}",
+                            new_iface.name(),
+                            new_iface.iface_type()
+                        );
                         add_ifaces.push(new_iface);
                     }
                 }
@@ -189,148 +220,36 @@ impl Interfaces {
                 } else {
                     let mut del_iface = cur_iface.clone();
                     del_iface.base_iface_mut().state = InterfaceState::Absent;
+                    info!(
+                        "Deleting interface {} with type {}",
+                        del_iface.name(),
+                        del_iface.iface_type()
+                    );
                     del_ifaces.push(del_iface);
                 }
             }
         }
 
-        handle_changed_ports(&mut add_ifaces, &mut chg_ifaces, current)?;
-
-        //
-        // * Set priority to interface base on their child/parent or
-        //   subordinate/controller relationships.
         Ok((add_ifaces, chg_ifaces, del_ifaces))
     }
-}
 
-// Include changed subordinates to chg_ifaces
-// TODO: Support nested bridge/bond/etc
-fn handle_changed_ports(
-    add_ifaces: &mut Interfaces,
-    chg_ifaces: &mut Interfaces,
-    cur_ifaces: &Interfaces,
-) -> Result<(), NmstateError> {
-    let mut changed_ports_to_ctrl: HashMap<String, (String, InterfaceType)> =
-        HashMap::new();
-    let mut detaching_port_names: Vec<String> = Vec::new();
-
-    for iface in add_ifaces.to_vec() {
-        if let Some(port_names) = iface.ports() {
-            for port_name in port_names {
-                changed_ports_to_ctrl.insert(
-                    port_name.to_string(),
-                    (iface.name().to_string(), iface.iface_type()),
-                );
+    pub fn set_up_priority(&mut self) -> Result<(), NmstateError> {
+        for _ in 0..INTERFACES_SET_PRIORITY_MAX_RETRY {
+            if set_ifaces_up_priority(self) {
+                return Ok(());
             }
         }
+        error!(
+            "Failed to set up priority: please order the interfaces in desire \
+            state to place controller before its ports"
+        );
+        Err(NmstateError::new(
+            ErrorKind::InvalidArgument,
+            "Failed to set up priority: nmstate only support nested interface \
+            up to 4 levels. To support more nest level, \
+            please order the interfaces in desire \
+            state to place controller before its ports"
+                .to_string(),
+        ))
     }
-
-    for iface in chg_ifaces.to_vec() {
-        if let Some(port_names) = iface.ports() {
-            let mut desire_port_names: HashSet<String> = HashSet::new();
-            for port_name in port_names {
-                desire_port_names.insert(port_name.to_string());
-            }
-            let mut current_port_names: HashSet<String> = HashSet::new();
-            if let Some(cur_iface) = cur_ifaces.kernel_ifaces.get(iface.name())
-            {
-                if let Some(cur_port_names) = cur_iface.ports() {
-                    for port_name in cur_port_names {
-                        current_port_names.insert(port_name.to_string());
-                    }
-                }
-            }
-
-            // Attaching new port to controller
-            for port_name in desire_port_names.difference(&current_port_names) {
-                if let Some((ctrl_name, _)) =
-                    changed_ports_to_ctrl.get(port_name)
-                {
-                    return Err(NmstateError::new(
-                        ErrorKind::InvalidArgument,
-                        format!(
-                            "Port {} cannot be assigned to \
-                                two controller: {} {}",
-                            port_name,
-                            ctrl_name,
-                            iface.name()
-                        ),
-                    ));
-                } else {
-                    changed_ports_to_ctrl.insert(
-                        port_name.to_string(),
-                        (iface.name().to_string(), iface.iface_type()),
-                    );
-                }
-            }
-
-            // Detaching port from current controller
-            for port_name in current_port_names.difference(&desire_port_names) {
-                // This port might move from controller to another,
-                // we have to process it later after this stage
-                detaching_port_names.push(port_name.to_string());
-            }
-        }
-    }
-
-    for detach_port_name in &detaching_port_names {
-        if !changed_ports_to_ctrl.contains_key(detach_port_name) {
-            // Port is detached from any controller
-            match chg_ifaces.kernel_ifaces.entry(detach_port_name.to_string()) {
-                Entry::Occupied(o) => {
-                    let iface = o.into_mut();
-                    iface.base_iface_mut().controller = None;
-                    iface.base_iface_mut().controller_type = None;
-                }
-                Entry::Vacant(v) => {
-                    if let Some(cur_iface) =
-                        cur_ifaces.kernel_ifaces.get(detach_port_name)
-                    {
-                        if cur_iface.base_iface().controller != None {
-                            let mut iface = cur_iface.clone();
-                            iface.base_iface_mut().controller = None;
-                            iface.base_iface_mut().controller_type = None;
-                            v.insert(iface);
-                        }
-                    }
-                }
-            };
-        }
-    }
-
-    for (port_name, (ctrl_name, ctrl_type)) in changed_ports_to_ctrl.iter() {
-        if let Some(cur_iface) = cur_ifaces.kernel_ifaces.get(port_name) {
-            match chg_ifaces.kernel_ifaces.entry(port_name.to_string()) {
-                Entry::Occupied(o) => {
-                    let iface = o.into_mut();
-                    iface.base_iface_mut().controller =
-                        Some(ctrl_name.to_string());
-                    iface.base_iface_mut().controller_type =
-                        Some(ctrl_type.clone());
-                }
-                Entry::Vacant(v) => {
-                    let mut iface = cur_iface.clone();
-                    iface.base_iface_mut().controller =
-                        Some(ctrl_name.to_string());
-                    iface.base_iface_mut().controller_type =
-                        Some(ctrl_type.clone());
-                    v.insert(iface);
-                }
-            }
-        } else if let Some(iface) = add_ifaces.kernel_ifaces.get_mut(port_name)
-        {
-            iface.base_iface_mut().controller = Some(ctrl_name.to_string());
-            iface.base_iface_mut().controller_type = Some(ctrl_type.clone());
-        } else {
-            return Err(NmstateError::new(
-                ErrorKind::InvalidArgument,
-                format!(
-                    "Port {} of {} interface {} not found in system or \
-                            new desire state",
-                    port_name, ctrl_type, ctrl_name
-                ),
-            ));
-        }
-    }
-    Ok(())
 }

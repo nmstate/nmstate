@@ -12,13 +12,9 @@ pub struct LinuxBridgeInterface {
 
 impl Default for LinuxBridgeInterface {
     fn default() -> Self {
-        Self {
-            base: BaseInterface {
-                iface_type: InterfaceType::LinuxBridge,
-                ..Default::default()
-            },
-            bridge: None,
-        }
+        let mut base = BaseInterface::new();
+        base.iface_type = InterfaceType::LinuxBridge;
+        Self { base, bridge: None }
     }
 }
 
@@ -45,6 +41,10 @@ impl LinuxBridgeInterface {
 
     pub(crate) fn pre_verify_cleanup(&mut self) {
         self.base.pre_verify_cleanup();
+    }
+
+    pub fn new() -> Self {
+        Self::default()
     }
 }
 

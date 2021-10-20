@@ -10,12 +10,9 @@ pub struct DummyInterface {
 
 impl Default for DummyInterface {
     fn default() -> Self {
-        Self {
-            base: BaseInterface {
-                iface_type: InterfaceType::Dummy,
-                ..Default::default()
-            },
-        }
+        let mut base = BaseInterface::new();
+        base.iface_type = InterfaceType::Dummy;
+        Self { base }
     }
 }
 
