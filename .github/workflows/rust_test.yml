@@ -1,4 +1,4 @@
-name: rust-unit
+name: rust-test
 
 on:
   pull_request:
