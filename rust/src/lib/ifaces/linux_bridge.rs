@@ -41,10 +41,19 @@ impl LinuxBridgeInterface {
 
     pub(crate) fn pre_verify_cleanup(&mut self) {
         self.base.pre_verify_cleanup();
+        self.sort_ports()
     }
 
     pub fn new() -> Self {
         Self::default()
+    }
+
+    fn sort_ports(&mut self) {
+        if let Some(ref mut br_conf) = self.bridge {
+            if let Some(ref mut port_confs) = &mut br_conf.port {
+                port_confs.sort_unstable_by_key(|p| p.name.clone())
+            }
+        }
     }
 }
 
