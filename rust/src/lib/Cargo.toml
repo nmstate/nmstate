@@ -14,3 +14,6 @@ nm-dbus = {path = "../libnm_dbus"}
 #nispor = "1.2"
 nispor = { git = "https://github.com/nispor/nispor", branch = "base" }
 log = "0.4.14"
+
+[dev-dependencies]
+serde_yaml = "0.8"
