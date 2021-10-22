@@ -43,6 +43,7 @@ impl EthernetInterface {
 
     pub(crate) fn pre_verify_cleanup(&mut self) {
         self.base.pre_verify_cleanup();
+        self.base.iface_type = InterfaceType::Ethernet;
     }
 
     pub fn new() -> Self {
