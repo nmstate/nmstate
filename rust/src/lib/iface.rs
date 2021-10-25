@@ -329,7 +329,7 @@ impl Interface {
         ) {
             Err(NmstateError::new(
                 ErrorKind::VerificationError,
-                format!("Verification failure: {}", diff_value.to_string()),
+                format!("Verification failure: {}", diff_value),
             ))
         } else {
             Ok(())
