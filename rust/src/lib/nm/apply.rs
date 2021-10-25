@@ -155,9 +155,12 @@ fn apply_single_state(
             TIMEOUT_SECONDS_FOR_PROFILE_ACTIVATION,
         )?;
         info!("Activating connection {}", nm_conn_uuid);
-        nm_api
-            .connection_activate(nm_conn_uuid)
-            .map_err(nm_error_to_nmstate)?;
+        if let Err(e) = nm_api.connection_reapply(nm_conn_uuid) {
+            info!("Reapply operation failed trying activation, reason: {}", e);
+            nm_api
+                .connection_activate(nm_conn_uuid)
+                .map_err(nm_error_to_nmstate)?;
+        }
     }
     Ok(())
 }
