@@ -44,8 +44,8 @@ pub(crate) fn get_json_value_difference(
                     &reference,
                     des.len(),
                     cur.len(),
-                    desire.to_string(),
-                    current.to_string()
+                    desire,
+                    current
                 )))
             } else {
                 for (index, des_element) in des.iter().enumerate() {
@@ -76,8 +76,7 @@ pub(crate) fn get_json_value_difference(
                 } else {
                     return Some(Value::String(format!(
                         "{}: desire: {}, current: None",
-                        &reference,
-                        des_value.to_string()
+                        &reference, des_value
                     )));
                 }
             }
@@ -86,9 +85,7 @@ pub(crate) fn get_json_value_difference(
         (Value::Null, _) => None,
         (_, _) => Some(Value::String(format!(
             "{}: type miss match, desire: {} current: {}",
-            &reference,
-            desire.to_string(),
-            current.to_string()
+            &reference, desire, current
         ))),
     }
 }
