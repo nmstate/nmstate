@@ -100,7 +100,6 @@ uninstall:
 	- rm -fv $(DESTDIR)$(PREFIX)/bin/$(CLI_EXEC)
 	- rm -fv $(DESTDIR)$(LIBDIR)/$(CLIB_SO_DEV)
 	- rm -fv $(DESTDIR)$(LIBDIR)/$(CLIB_SO_MAN)
-	- rm -fv $(DESTDIR)$(LIBDIR)/$(CLIB_SO_MIN)
 	- rm -fv $(DESTDIR)$(LIBDIR)/$(CLIB_SO_FULL)
 	- rm -fv $(DESTDIR)$(INCLUDE_DIR)/$(CLIB_HEADER)
 	- if [ $(SKIP_PYTHON_INSTALL) != 1 ];then \
