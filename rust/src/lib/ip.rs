@@ -1,19 +1,17 @@
+use std::fmt;
 use std::str::FromStr;
 
 use log::{debug, warn};
+use serde::de::{self, Deserializer, MapAccess, Visitor};
 use serde::{ser::SerializeStruct, Deserialize, Serialize, Serializer};
 
 use crate::NmstateError;
 
-#[derive(Debug, Clone, PartialEq, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct InterfaceIpv4 {
-    #[serde(default)]
     pub enabled: bool,
-    #[serde(skip)]
     pub prop_list: Vec<&'static str>,
-    #[serde(default)]
     pub dhcp: bool,
-    #[serde(rename = "address", default)]
     pub addresses: Vec<InterfaceIpAddr>,
 }
 
@@ -25,9 +23,9 @@ impl Serialize for InterfaceIpv4 {
         let mut serial_struct = serializer.serialize_struct(
             "ipv4",
             if self.enabled {
-                1
-            } else {
                 self.prop_list.len()
+            } else {
+                1
             },
         )?;
         serial_struct.serialize_field("enabled", &self.enabled)?;
@@ -40,6 +38,114 @@ impl Serialize for InterfaceIpv4 {
             }
         }
         serial_struct.end()
+    }
+}
+
+impl<'de> Deserialize<'de> for InterfaceIpv4 {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        enum Field {
+            Enabled,
+            Dhcp,
+            Address,
+        }
+
+        impl<'de> Deserialize<'de> for Field {
+            fn deserialize<D>(deserializer: D) -> Result<Field, D::Error>
+            where
+                D: Deserializer<'de>,
+            {
+                struct FieldVisitor;
+
+                impl<'de> Visitor<'de> for FieldVisitor {
+                    type Value = Field;
+
+                    fn expecting(
+                        &self,
+                        formatter: &mut fmt::Formatter,
+                    ) -> fmt::Result {
+                        formatter.write_str("`enabled`, `dhcp` or `address`")
+                    }
+
+                    fn visit_str<E>(self, value: &str) -> Result<Field, E>
+                    where
+                        E: de::Error,
+                    {
+                        match value {
+                            "enabled" => Ok(Field::Enabled),
+                            "dhcp" => Ok(Field::Dhcp),
+                            "address" => Ok(Field::Address),
+                            _ => Err(de::Error::unknown_field(value, FIELDS)),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(FieldVisitor)
+            }
+        }
+
+        struct InterfaceIpv4Visitor;
+
+        impl<'de> Visitor<'de> for InterfaceIpv4Visitor {
+            type Value = InterfaceIpv4;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("struct InterfaceIpv4")
+            }
+
+            fn visit_map<V>(self, mut map: V) -> Result<InterfaceIpv4, V::Error>
+            where
+                V: MapAccess<'de>,
+            {
+                let mut enabled = false;
+                let mut dhcp = false;
+                let mut prop_list: Vec<&'static str> = Vec::new();
+                let mut addresses: Vec<InterfaceIpAddr> = Vec::new();
+
+                while let Some(key) = map.next_key()? {
+                    match key {
+                        Field::Enabled => {
+                            if prop_list.contains(&"enabled") {
+                                return Err(de::Error::duplicate_field(
+                                    "enabled",
+                                ));
+                            }
+                            enabled = map.next_value()?;
+                            prop_list.push("enabled");
+                        }
+                        Field::Dhcp => {
+                            if prop_list.contains(&"dhcp") {
+                                return Err(de::Error::duplicate_field("dhcp"));
+                            }
+                            dhcp = map.next_value()?;
+                            prop_list.push("dhcp");
+                        }
+                        Field::Address => {
+                            if prop_list.contains(&"addresses") {
+                                return Err(de::Error::duplicate_field(
+                                    "address",
+                                ));
+                            }
+                            addresses = map.next_value()?;
+                            prop_list.push("addresses");
+                        }
+                    }
+                }
+                Ok(InterfaceIpv4 {
+                    enabled,
+                    prop_list,
+                    dhcp,
+                    addresses,
+                })
+            }
+        }
+        const FIELDS: &[&str] = &["enabled", "dhcp", "address"];
+        deserializer.deserialize_struct(
+            "InterfaceIpv4",
+            FIELDS,
+            InterfaceIpv4Visitor,
+        )
     }
 }
 
@@ -86,17 +192,12 @@ impl InterfaceIpv4 {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct InterfaceIpv6 {
-    #[serde(default)]
     pub enabled: bool,
-    #[serde(skip)]
     pub prop_list: Vec<&'static str>,
-    #[serde(default)]
     pub dhcp: bool,
-    #[serde(default)]
     pub autoconf: bool,
-    #[serde(rename = "address", default)]
     pub addresses: Vec<InterfaceIpAddr>,
 }
 
@@ -126,6 +227,129 @@ impl Serialize for InterfaceIpv6 {
             }
         }
         serial_struct.end()
+    }
+}
+
+impl<'de> Deserialize<'de> for InterfaceIpv6 {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        enum Field {
+            Enabled,
+            Dhcp,
+            Autoconf,
+            Address,
+        }
+
+        impl<'de> Deserialize<'de> for Field {
+            fn deserialize<D>(deserializer: D) -> Result<Field, D::Error>
+            where
+                D: Deserializer<'de>,
+            {
+                struct FieldVisitor;
+
+                impl<'de> Visitor<'de> for FieldVisitor {
+                    type Value = Field;
+
+                    fn expecting(
+                        &self,
+                        formatter: &mut fmt::Formatter,
+                    ) -> fmt::Result {
+                        formatter.write_str(
+                            "`enabled`, `dhcp`, `autoconf` or `address`",
+                        )
+                    }
+
+                    fn visit_str<E>(self, value: &str) -> Result<Field, E>
+                    where
+                        E: de::Error,
+                    {
+                        match value {
+                            "enabled" => Ok(Field::Enabled),
+                            "dhcp" => Ok(Field::Dhcp),
+                            "autoconf" => Ok(Field::Autoconf),
+                            "address" => Ok(Field::Address),
+                            _ => Err(de::Error::unknown_field(value, FIELDS)),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(FieldVisitor)
+            }
+        }
+
+        struct InterfaceIpv6Visitor;
+
+        impl<'de> Visitor<'de> for InterfaceIpv6Visitor {
+            type Value = InterfaceIpv6;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("struct InterfaceIpv6")
+            }
+
+            fn visit_map<V>(self, mut map: V) -> Result<InterfaceIpv6, V::Error>
+            where
+                V: MapAccess<'de>,
+            {
+                let mut enabled = false;
+                let mut dhcp = false;
+                let mut autoconf = false;
+                let mut prop_list: Vec<&'static str> = Vec::new();
+                let mut addresses: Vec<InterfaceIpAddr> = Vec::new();
+
+                while let Some(key) = map.next_key()? {
+                    match key {
+                        Field::Enabled => {
+                            if prop_list.contains(&"enabled") {
+                                return Err(de::Error::duplicate_field(
+                                    "enabled",
+                                ));
+                            }
+                            enabled = map.next_value()?;
+                            prop_list.push("enabled");
+                        }
+                        Field::Dhcp => {
+                            if prop_list.contains(&"dhcp") {
+                                return Err(de::Error::duplicate_field("dhcp"));
+                            }
+                            dhcp = map.next_value()?;
+                            prop_list.push("dhcp");
+                        }
+                        Field::Autoconf => {
+                            if prop_list.contains(&"autoconf") {
+                                return Err(de::Error::duplicate_field(
+                                    "autoconf",
+                                ));
+                            }
+                            autoconf = map.next_value()?;
+                            prop_list.push("autoconf");
+                        }
+                        Field::Address => {
+                            if prop_list.contains(&"addresses") {
+                                return Err(de::Error::duplicate_field(
+                                    "address",
+                                ));
+                            }
+                            addresses = map.next_value()?;
+                            prop_list.push("addresses");
+                        }
+                    }
+                }
+                Ok(InterfaceIpv6 {
+                    enabled,
+                    prop_list,
+                    dhcp,
+                    autoconf,
+                    addresses,
+                })
+            }
+        }
+        const FIELDS: &[&str] = &["enabled", "dhcp", "autoconf", "address"];
+        deserializer.deserialize_struct(
+            "InterfaceIpv6",
+            FIELDS,
+            InterfaceIpv6Visitor,
+        )
     }
 }
 
