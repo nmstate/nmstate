@@ -61,7 +61,11 @@ pub(crate) fn iface_to_nm_connection(
         iface_type: Some(iface_type_to_nm(&base_iface.iface_type)?),
         iface_name: Some(base_iface.name.clone()),
         autoconnect: Some(true),
-        autoconnect_ports: Some(true),
+        autoconnect_ports: if iface.is_controller() {
+            Some(true)
+        } else {
+            None
+        },
         ..Default::default()
     };
     if let Some(ctrl_name) = &base_iface.controller {
