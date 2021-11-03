@@ -13,7 +13,7 @@ pub(crate) fn nispor_apply(
     add_net_state: &NetworkState,
     chg_net_state: &NetworkState,
     del_net_state: &NetworkState,
-    _cur_net_state: &NetworkState,
+    _full_net_state: &NetworkState,
 ) -> Result<(), NmstateError> {
     apply_single_state(del_net_state)?;
     apply_single_state(add_net_state)?;

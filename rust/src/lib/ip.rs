@@ -150,6 +150,10 @@ impl<'de> Deserialize<'de> for InterfaceIpv4 {
 }
 
 impl InterfaceIpv4 {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
     pub(crate) fn update(&mut self, other: &Self) {
         if other.prop_list.contains(&"enabled") {
             self.enabled = other.enabled;
@@ -356,6 +360,10 @@ impl<'de> Deserialize<'de> for InterfaceIpv6 {
 }
 
 impl InterfaceIpv6 {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
     pub(crate) fn update(&mut self, other: &Self) {
         if other.prop_list.contains(&"enabled") {
             self.enabled = other.enabled;

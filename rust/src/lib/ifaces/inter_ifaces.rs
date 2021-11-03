@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use log::{debug, error, info, warn};
+use log::{debug, error, info};
 use serde::{
     ser::SerializeSeq, Deserialize, Deserializer, Serialize, Serializer,
 };
@@ -67,15 +67,49 @@ impl Interfaces {
         for iface in self.kernel_ifaces.values() {
             ifaces.push(iface);
         }
+        for iface in self.user_ifaces.values() {
+            ifaces.push(iface);
+        }
         ifaces.sort_unstable_by_key(|iface| iface.name());
         // Use sort_by_key() instead of unstable one, do we can alphabet
         // activation order which is required to simulate the OS boot-up.
         ifaces.sort_by_key(|iface| iface.base_iface().up_priority);
 
-        for iface in self.user_ifaces.values() {
-            ifaces.push(iface);
-        }
         ifaces
+    }
+
+    pub(crate) fn get_iface<'a, 'b>(
+        &'a self,
+        iface_name: &'b str,
+        iface_type: InterfaceType,
+    ) -> Option<&'a Interface> {
+        if iface_type == InterfaceType::Unknown {
+            self.kernel_ifaces.get(&iface_name.to_string()).or_else(|| {
+                for iface in self.user_ifaces.values() {
+                    if iface.name() == iface_name {
+                        return Some(iface);
+                    }
+                }
+                None
+            })
+        } else if iface_type.is_userspace() {
+            self.user_ifaces.get(&(iface_name.to_string(), iface_type))
+        } else {
+            self.kernel_ifaces.get(&iface_name.to_string())
+        }
+    }
+
+    fn get_iface_mut<'a, 'b>(
+        &'a mut self,
+        iface_name: &'b str,
+        iface_type: InterfaceType,
+    ) -> Option<&'a mut Interface> {
+        if iface_type.is_userspace() {
+            self.user_ifaces
+                .get_mut(&(iface_name.to_string(), iface_type))
+        } else {
+            self.kernel_ifaces.get_mut(&iface_name.to_string())
+        }
     }
 
     pub fn push(&mut self, iface: Interface) {
@@ -89,12 +123,13 @@ impl Interfaces {
         }
     }
 
-    pub fn update(&mut self, other: &Self) -> Result<(), NmstateError> {
+    pub fn update(&mut self, other: &Self) {
         let mut new_ifaces: Vec<&Interface> = Vec::new();
         let other_ifaces = other.to_vec();
         for other_iface in &other_ifaces {
-            // TODO: Handle user space interface
-            match self.kernel_ifaces.get_mut(other_iface.name()) {
+            match self
+                .get_iface_mut(other_iface.name(), other_iface.iface_type())
+            {
                 Some(self_iface) => {
                     debug!(
                         "Merging interface {:?} into {:?}",
@@ -108,59 +143,34 @@ impl Interfaces {
                 }
             }
         }
-        Ok(())
+        for new_iface in new_ifaces {
+            self.push(new_iface.clone());
+        }
     }
 
-    pub(crate) fn verify(
-        &self,
-        current_ifaces: &Self,
-    ) -> Result<(), NmstateError> {
+    pub(crate) fn verify(&self, cur_ifaces: &Self) -> Result<(), NmstateError> {
         for iface in self.to_vec() {
             if iface.is_absent() {
                 if let Some(cur_iface) =
-                    current_ifaces.kernel_ifaces.get(iface.name())
+                    cur_ifaces.get_iface(iface.name(), iface.iface_type())
                 {
-                    if cur_iface.is_virtual() {
-                        return Err(NmstateError::new(
-                            ErrorKind::VerificationError,
-                            format!(
-                                "Absent interface {}/{} still found as {:?}",
-                                iface.name(),
-                                iface.iface_type(),
-                                cur_iface
-                            ),
-                        ));
-                    } else if cur_iface.is_up() {
-                        let e = NmstateError::new(
-                            ErrorKind::VerificationError,
-                            format!(
-                                "Absent interface {}/{} still found as \
-                                state up: {:?}",
-                                iface.name(),
-                                iface.iface_type(),
-                                cur_iface
-                            ),
-                        );
-                        error!("{}", e);
-                        return Err(e);
-                    }
+                    verify_desire_absent_but_found_in_current(
+                        iface, cur_iface,
+                    )?;
                 }
+            } else if let Some(cur_iface) =
+                cur_ifaces.get_iface(iface.name(), iface.iface_type())
+            {
+                iface.verify(cur_iface)?;
             } else {
-                // TODO: Support user space interface
-                if let Some(cur_iface) =
-                    current_ifaces.kernel_ifaces.get(iface.name())
-                {
-                    iface.verify(cur_iface)?;
-                } else {
-                    return Err(NmstateError::new(
-                        ErrorKind::VerificationError,
-                        format!(
-                            "Failed to find desired interface {} {:?}",
-                            iface.name(),
-                            iface.iface_type()
-                        ),
-                    ));
-                }
+                return Err(NmstateError::new(
+                    ErrorKind::VerificationError,
+                    format!(
+                        "Failed to find desired interface {} {:?}",
+                        iface.name(),
+                        iface.iface_type()
+                    ),
+                ));
             }
         }
         Ok(())
@@ -174,11 +184,16 @@ impl Interfaces {
         let mut chg_ifaces = Self::new();
         let mut del_ifaces = Self::new();
 
+        resolve_unknown_ifaces(self, current)?;
         handle_changed_ports(self, current)?;
         self.set_up_priority()?;
 
         for iface in self.to_vec() {
-            if !iface.is_absent() {
+            if iface.is_absent() {
+                for del_iface in gen_ifaces_to_del(iface, current) {
+                    del_ifaces.push(del_iface);
+                }
+            } else {
                 match current.kernel_ifaces.get(iface.name()) {
                     Some(cur_iface) => {
                         let mut chg_iface = iface.clone();
@@ -201,31 +216,6 @@ impl Interfaces {
                         );
                         add_ifaces.push(new_iface);
                     }
-                }
-            } else if let Some(cur_iface) =
-                current.kernel_ifaces.get(iface.name())
-            {
-                if iface.iface_type() != InterfaceType::Unknown
-                    && iface.iface_type() != cur_iface.iface_type()
-                    && !(cur_iface.iface_type() == InterfaceType::Veth
-                        && iface.iface_type() == InterfaceType::Ethernet)
-                {
-                    warn!(
-                        "Interface {} in desire state has different \
-                            interface type '{}' than current status '{}'",
-                        iface.name(),
-                        iface.iface_type(),
-                        cur_iface.iface_type()
-                    );
-                } else {
-                    let mut del_iface = cur_iface.clone();
-                    del_iface.base_iface_mut().state = InterfaceState::Absent;
-                    info!(
-                        "Deleting interface {} with type {}",
-                        del_iface.name(),
-                        del_iface.iface_type()
-                    );
-                    del_ifaces.push(del_iface);
                 }
             }
         }
@@ -252,4 +242,137 @@ impl Interfaces {
                 .to_string(),
         ))
     }
+}
+
+fn verify_desire_absent_but_found_in_current(
+    des_iface: &Interface,
+    cur_iface: &Interface,
+) -> Result<(), NmstateError> {
+    if cur_iface.is_virtual() {
+        // Virtual interface should be deleted by absent action
+        let e = NmstateError::new(
+            ErrorKind::VerificationError,
+            format!(
+                "Absent interface {}/{} still found as {:?}",
+                des_iface.name(),
+                des_iface.iface_type(),
+                cur_iface
+            ),
+        );
+        error!("{}", e);
+        Err(e)
+    } else if cur_iface.is_up() {
+        // Real hardware should be marked as down by absent action
+        let e = NmstateError::new(
+            ErrorKind::VerificationError,
+            format!(
+                "Absent interface {}/{} still found as \
+                state up: {:?}",
+                des_iface.name(),
+                des_iface.iface_type(),
+                cur_iface
+            ),
+        );
+        error!("{}", e);
+        Err(e)
+    } else {
+        Ok(())
+    }
+}
+
+fn gen_ifaces_to_del(
+    del_iface: &Interface,
+    cur_ifaces: &Interfaces,
+) -> Vec<Interface> {
+    let mut del_ifaces = Vec::new();
+    let cur_ifaces = cur_ifaces.to_vec();
+    for cur_iface in cur_ifaces {
+        if cur_iface.name() == del_iface.name()
+            && (del_iface.iface_type() == InterfaceType::Unknown
+                || del_iface.iface_type() == cur_iface.iface_type())
+        {
+            let mut tmp_iface = del_iface.clone();
+            tmp_iface.base_iface_mut().iface_type = cur_iface.iface_type();
+            info!(
+                "Deleting interface {}/{}",
+                tmp_iface.name(),
+                tmp_iface.iface_type()
+            );
+            del_ifaces.push(tmp_iface);
+        }
+    }
+    del_ifaces
+}
+
+fn resolve_unknown_ifaces(
+    ifaces: &mut Interfaces,
+    cur_ifaces: &Interfaces,
+) -> Result<(), NmstateError> {
+    let mut resolved_ifaces: Vec<Interface> = Vec::new();
+    for ((iface_name, iface_type), iface) in ifaces.user_ifaces.iter() {
+        if iface_type != &InterfaceType::Unknown {
+            continue;
+        }
+
+        if iface.is_absent() {
+            for cur_iface in cur_ifaces.to_vec() {
+                if cur_iface.name() == iface_name {
+                    let mut new_iface = cur_iface.clone();
+                    new_iface.base_iface_mut().state = InterfaceState::Absent;
+                    resolved_ifaces.push(new_iface);
+                }
+            }
+        } else {
+            let mut found_iface = Vec::new();
+            for cur_iface in cur_ifaces.to_vec() {
+                if cur_iface.name() == iface_name {
+                    let mut new_iface = iface.clone();
+                    new_iface.base_iface_mut().iface_type =
+                        cur_iface.iface_type().clone();
+                    found_iface.push(new_iface);
+                }
+            }
+            match found_iface.len() {
+                0 => {
+                    let e = NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        format!(
+                            "Failed to find unknown type interface {} \
+                            in current state",
+                            iface_name
+                        ),
+                    );
+                    error!("{}", e);
+                    return Err(e);
+                }
+                1 => {
+                    let new_iface = Interface::deserialize(
+                        serde_json::to_value(&found_iface[0])?,
+                    )?;
+
+                    resolved_ifaces.push(new_iface);
+                }
+                _ => {
+                    let e = NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        format!(
+                            "Found 2+ interface matching desired unknown \
+                            type interface {}: {:?}",
+                            iface_name, &found_iface
+                        ),
+                    );
+                    error!("{}", e);
+                    return Err(e);
+                }
+            }
+        }
+    }
+
+    for new_iface in resolved_ifaces {
+        ifaces
+            .user_ifaces
+            .remove(&(new_iface.name().to_string(), InterfaceType::Unknown));
+        ifaces.push(new_iface);
+    }
+    Ok(())
 }

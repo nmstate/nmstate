@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use log::{debug, info, warn};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::{
     nispor::{nispor_apply, nispor_retrieve},
@@ -17,7 +17,7 @@ const VERIFY_RETRY_INTERVAL_MILLISECONDS: u64 = 1000;
 const VERIFY_RETRY_COUNT: usize = 5;
 const VERIFY_RETRY_COUNT_KERNEL_MODE: usize = 5;
 
-#[derive(Clone, Debug, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, Serialize, Default)]
 #[serde(deny_unknown_fields)]
 pub struct NetworkState {
     #[serde(default)]
@@ -41,6 +41,37 @@ pub struct NetworkState {
     pub routes: serde_json::Map<String, serde_json::Value>,
     #[serde(rename = "route-rules", default)]
     pub rules: serde_json::Map<String, serde_json::Value>,
+}
+
+impl<'de> Deserialize<'de> for NetworkState {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let mut net_state = NetworkState::new();
+        let v = serde_json::Value::deserialize(deserializer)?;
+        if let Some(ifaces_value) = v.get("interfaces") {
+            net_state.prop_list.push("interfaces");
+            net_state.interfaces = Interfaces::deserialize(ifaces_value)
+                .map_err(serde::de::Error::custom)?;
+        }
+        if let Some(dns_value) = v.get("dns-resolver") {
+            net_state.prop_list.push("dns");
+            net_state.dns = serde_json::Map::deserialize(dns_value)
+                .map_err(serde::de::Error::custom)?;
+        }
+        if let Some(route_value) = v.get("routes") {
+            net_state.prop_list.push("routes");
+            net_state.routes = serde_json::Map::deserialize(route_value)
+                .map_err(serde::de::Error::custom)?;
+        }
+        if let Some(rule_value) = v.get("route-rules") {
+            net_state.prop_list.push("rules");
+            net_state.rules = serde_json::Map::deserialize(rule_value)
+                .map_err(serde::de::Error::custom)?;
+        }
+        Ok(net_state)
+    }
 }
 
 impl NetworkState {
@@ -89,7 +120,7 @@ impl NetworkState {
         if !self.kernel_only {
             let nm_state = nm_retrieve()?;
             // TODO: Priority handling
-            self.update_state(&nm_state)?;
+            self.update_state(&nm_state);
         }
         Ok(self)
     }
@@ -115,7 +146,10 @@ impl NetworkState {
                     &add_net_state,
                     &chg_net_state,
                     &del_net_state,
+                    // TODO: Passing full(desire + current) network state
+                    // instead of current,
                     &cur_net_state,
+                    self,
                     &checkpoint,
                 )?;
                 nm_checkpoint_timeout_extend(
@@ -162,11 +196,9 @@ impl NetworkState {
         }
     }
 
-    fn update_state(&mut self, other: &Self) -> Result<(), NmstateError> {
+    fn update_state(&mut self, other: &Self) {
         if other.prop_list.contains(&"interfaces") {
-            self.interfaces.update(&other.interfaces)
-        } else {
-            Ok(())
+            self.interfaces.update(&other.interfaces);
         }
     }
 
