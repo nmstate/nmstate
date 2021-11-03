@@ -4,7 +4,8 @@ use std::iter::FromIterator;
 use log::{debug, error, info};
 
 use crate::{
-    ErrorKind, InterfaceState, InterfaceType, Interfaces, NmstateError,
+    BaseInterface, ErrorKind, Interface, InterfaceState, InterfaceType,
+    Interfaces, NmstateError, OvsInterface,
 };
 
 pub(crate) fn handle_changed_ports(
@@ -15,52 +16,40 @@ pub(crate) fn handle_changed_ports(
         String,
         (Option<String>, Option<InterfaceType>),
     > = HashMap::new();
-    for (iface_name, iface) in ifaces.kernel_ifaces.iter() {
-        if !iface.is_up() {
+    for iface in ifaces.kernel_ifaces.values() {
+        if !iface.is_controller() {
             continue;
         }
-        let desire_port_names = match iface.ports() {
-            Some(p) => HashSet::from_iter(p.iter().cloned()),
-            None => continue,
-        };
-        let current_port_names = match cur_ifaces.kernel_ifaces.get(iface_name)
-        {
-            Some(cur_iface) => match cur_iface.ports() {
-                Some(p) => HashSet::from_iter(p.iter().cloned()),
-                None => HashSet::new(),
-            },
-            None => HashSet::new(),
-        };
+        handle_changed_ports_of_iface(
+            iface,
+            ifaces,
+            cur_ifaces,
+            &mut pending_changes,
+        )?;
+    }
 
-        // Attaching new port to controller
-        for port_name in desire_port_names.difference(&current_port_names) {
-            pending_changes.insert(
-                port_name.to_string(),
-                (Some(iface_name.to_string()), Some(iface.iface_type())),
-            );
+    for iface in ifaces.user_ifaces.values() {
+        if !iface.is_controller() {
+            continue;
         }
-
-        // Detaching port from current controller
-        for port_name in current_port_names.difference(&desire_port_names) {
-            pending_changes.insert(port_name.to_string(), (None, None));
-        }
-
-        // Set controller property if port in desire
-        for port_name in current_port_names.intersection(&desire_port_names) {
-            if ifaces.kernel_ifaces.contains_key(&port_name.to_string()) {
-                pending_changes.insert(
-                    port_name.to_string(),
-                    (Some(iface_name.to_string()), Some(iface.iface_type())),
-                );
-            }
-        }
+        handle_changed_ports_of_iface(
+            iface,
+            ifaces,
+            cur_ifaces,
+            &mut pending_changes,
+        )?;
     }
 
     for (iface_name, (ctrl_name, ctrl_type)) in pending_changes.drain() {
         match ifaces.kernel_ifaces.get_mut(&iface_name) {
             Some(iface) => {
-                iface.base_iface_mut().controller = ctrl_name;
-                iface.base_iface_mut().controller_type = ctrl_type;
+                // Some interface cannot live without controller
+                if iface.need_controller() && ctrl_name.is_none() {
+                    iface.base_iface_mut().state = InterfaceState::Absent;
+                } else {
+                    iface.base_iface_mut().controller = ctrl_name;
+                    iface.base_iface_mut().controller_type = ctrl_type;
+                }
             }
             None => {
                 // Port not found in desired state
@@ -71,7 +60,13 @@ pub(crate) fn handle_changed_ports(
                         || cur_iface.base_iface().controller_type != ctrl_type
                     {
                         let mut iface = cur_iface.clone();
-                        iface.base_iface_mut().state = InterfaceState::Up;
+                        // Some interface cannot live without controller
+                        if iface.need_controller() && ctrl_name.is_none() {
+                            iface.base_iface_mut().state =
+                                InterfaceState::Absent;
+                        } else {
+                            iface.base_iface_mut().state = InterfaceState::Up;
+                        }
                         iface.base_iface_mut().controller = ctrl_name;
                         iface.base_iface_mut().controller_type = ctrl_type;
                         info!(
@@ -84,16 +79,94 @@ pub(crate) fn handle_changed_ports(
                 } else {
                     // Do not raise error if detach port
                     if let Some(ctrl_name) = ctrl_name {
-                        return Err(NmstateError::new(
-                            ErrorKind::InvalidArgument,
-                            format!(
-                                "Interface {} is holding unknown port {}",
-                                ctrl_name, iface_name
-                            ),
-                        ));
+                        // OVS internal interface could be created without
+                        // been defined in desire or current state
+                        if let Some(InterfaceType::OvsBridge) = ctrl_type {
+                            ifaces.push(gen_ovs_interface(
+                                &iface_name,
+                                &ctrl_name,
+                            ));
+                            info!(
+                                "Include OVS internal interface {} to edit \
+                                as its controller required so",
+                                iface_name
+                            );
+                        } else {
+                            return Err(NmstateError::new(
+                                ErrorKind::InvalidArgument,
+                                format!(
+                                    "Interface {} is holding unknown port {}",
+                                    ctrl_name, iface_name
+                                ),
+                            ));
+                        }
                     }
                 }
             }
+        }
+    }
+    Ok(())
+}
+
+fn gen_ovs_interface(iface_name: &str, ctrl_name: &str) -> Interface {
+    let mut base_iface = BaseInterface::new();
+    base_iface.name = iface_name.to_string();
+    base_iface.iface_type = InterfaceType::OvsInterface;
+    base_iface.controller = Some(ctrl_name.to_string());
+    base_iface.controller_type = Some(InterfaceType::OvsBridge);
+    Interface::OvsInterface({
+        let mut iface = OvsInterface::new();
+        iface.base = base_iface;
+        iface
+    })
+}
+
+fn handle_changed_ports_of_iface(
+    iface: &Interface,
+    ifaces: &Interfaces,
+    cur_ifaces: &Interfaces,
+    pending_changes: &mut HashMap<
+        String,
+        (Option<String>, Option<InterfaceType>),
+    >,
+) -> Result<(), NmstateError> {
+    let desire_port_names = match iface.ports() {
+        Some(p) => HashSet::from_iter(p.iter().cloned()),
+        None => return Ok(()),
+    };
+    let current_port_names =
+        match cur_ifaces.kernel_ifaces.get(iface.name()).or_else(|| {
+            cur_ifaces
+                .user_ifaces
+                .get(&(iface.name().to_string(), iface.iface_type()))
+        }) {
+            Some(cur_iface) => match cur_iface.ports() {
+                Some(p) => HashSet::from_iter(p.iter().cloned()),
+                None => HashSet::new(),
+            },
+            None => HashSet::new(),
+        };
+
+    // Attaching new port to controller
+    for port_name in desire_port_names.difference(&current_port_names) {
+        pending_changes.insert(
+            port_name.to_string(),
+            (Some(iface.name().to_string()), Some(iface.iface_type())),
+        );
+    }
+
+    // Detaching port from current controller
+    for port_name in current_port_names.difference(&desire_port_names) {
+        pending_changes.insert(port_name.to_string(), (None, None));
+    }
+
+    // Set controller property if port in desire
+    for port_name in current_port_names.intersection(&desire_port_names) {
+        if ifaces.kernel_ifaces.contains_key(&port_name.to_string()) {
+            pending_changes.insert(
+                port_name.to_string(),
+                (Some(iface.name().to_string()), Some(iface.iface_type())),
+            );
         }
     }
     Ok(())
@@ -105,8 +178,8 @@ pub(crate) fn set_ifaces_up_priority(ifaces: &mut Interfaces) -> bool {
     let mut ret = true;
     let mut pending_changes: HashMap<String, u32> = HashMap::new();
     // Use the push order to allow user providing help on dependency order
-    for (iface_name, _) in &ifaces.insert_order {
-        let iface = match ifaces.kernel_ifaces.get(iface_name) {
+    for (iface_name, iface_type) in &ifaces.insert_order {
+        let iface = match ifaces.get_iface(iface_name, iface_type.clone()) {
             Some(i) => i,
             None => continue,
         };
@@ -117,9 +190,15 @@ pub(crate) fn set_ifaces_up_priority(ifaces: &mut Interfaces) -> bool {
             continue;
         }
         if let Some(ref ctrl_name) = iface.base_iface().controller {
-            if let Some(ctrl_iface) =
-                ifaces.kernel_ifaces.get(ctrl_name.as_str())
-            {
+            let ctrl_iface = ifaces.get_iface(
+                ctrl_name,
+                iface
+                    .base_iface()
+                    .controller_type
+                    .clone()
+                    .unwrap_or_default(),
+            );
+            if let Some(ctrl_iface) = ctrl_iface {
                 if let Some(ctrl_pri) = pending_changes.remove(ctrl_name) {
                     pending_changes.insert(ctrl_name.to_string(), ctrl_pri);
                     pending_changes
@@ -154,169 +233,4 @@ pub(crate) fn set_ifaces_up_priority(ifaces: &mut Interfaces) -> bool {
         }
     }
     ret
-}
-
-// Instead of placing tests in `tests` folder, we can test pub(crate) functions
-// here
-#[cfg(test)]
-mod tests {
-    use crate::{
-        ErrorKind, EthernetInterface, Interface, InterfaceType, Interfaces,
-        LinuxBridgeInterface,
-    };
-
-    #[test]
-    fn test_ifaces_up_order_no_ctrler_reserse_order() {
-        let mut ifaces = Interfaces::new();
-        ifaces.push(new_eth_iface("eth2"));
-        ifaces.push(new_eth_iface("eth1"));
-
-        let (add_ifaces, _, _) =
-            ifaces.gen_state_for_apply(&Interfaces::new()).unwrap();
-
-        assert_eq!(ifaces.kernel_ifaces["eth1"].base_iface().up_priority, 0);
-        assert_eq!(ifaces.kernel_ifaces["eth2"].base_iface().up_priority, 0);
-
-        let ordered_ifaces = add_ifaces.to_vec();
-        assert_eq!(ordered_ifaces[0].name(), "eth1".to_string());
-        assert_eq!(ordered_ifaces[1].name(), "eth2".to_string());
-    }
-
-    #[test]
-    fn test_ifaces_up_order_nested_4_depth_worst_case() {
-        let mut ifaces = Interfaces::new();
-
-        let [br0, br1, br2, br3, p1, p2] = new_nested_4_ifaces();
-
-        // Push with reverse order which is the worst case
-        ifaces.push(p2);
-        ifaces.push(p1);
-        ifaces.push(br3);
-        ifaces.push(br2);
-        ifaces.push(br1);
-        ifaces.push(br0);
-
-        let (add_ifaces, _, _) =
-            ifaces.gen_state_for_apply(&Interfaces::new()).unwrap();
-
-        assert_eq!(ifaces.kernel_ifaces["br0"].base_iface().up_priority, 0);
-        assert_eq!(ifaces.kernel_ifaces["br1"].base_iface().up_priority, 1);
-        assert_eq!(ifaces.kernel_ifaces["br2"].base_iface().up_priority, 2);
-        assert_eq!(ifaces.kernel_ifaces["br3"].base_iface().up_priority, 3);
-        assert_eq!(ifaces.kernel_ifaces["p1"].base_iface().up_priority, 4);
-        assert_eq!(ifaces.kernel_ifaces["p2"].base_iface().up_priority, 4);
-
-        let ordered_ifaces = add_ifaces.to_vec();
-
-        assert_eq!(ordered_ifaces[0].name(), "br0".to_string());
-        assert_eq!(ordered_ifaces[1].name(), "br1".to_string());
-        assert_eq!(ordered_ifaces[2].name(), "br2".to_string());
-        assert_eq!(ordered_ifaces[3].name(), "br3".to_string());
-        assert_eq!(ordered_ifaces[4].name(), "p1".to_string());
-        assert_eq!(ordered_ifaces[5].name(), "p2".to_string());
-    }
-
-    #[test]
-    fn test_ifaces_up_order_nested_5_depth_worst_case() {
-        let mut ifaces = Interfaces::new();
-        let [_, br1, br2, br3, p1, p2] = new_nested_4_ifaces();
-
-        let br4 = new_br_ifaces("br4");
-        let mut br0 = new_br_ifaces("br0");
-
-        br0.base_iface_mut().controller = Some("br4".to_string());
-        br0.base_iface_mut().controller_type = Some(InterfaceType::LinuxBridge);
-
-        // Push with reverse order which is the worst case
-        ifaces.push(p1);
-        ifaces.push(p2);
-        ifaces.push(br3);
-        ifaces.push(br2);
-        ifaces.push(br1);
-        ifaces.push(br0);
-        ifaces.push(br4);
-
-        let result = ifaces.gen_state_for_apply(&Interfaces::new());
-        assert!(result.is_err());
-
-        if let Err(e) = result {
-            assert_eq!(e.kind(), ErrorKind::InvalidArgument);
-        }
-    }
-
-    #[test]
-    fn test_ifaces_up_order_nested_5_depth_good_case() {
-        let mut ifaces = Interfaces::new();
-        let [_, br1, br2, br3, p1, p2] = new_nested_4_ifaces();
-
-        let br4 = new_br_ifaces("br4");
-        let mut br0 = new_br_ifaces("br0");
-
-        br0.base_iface_mut().controller = Some("br4".to_string());
-        br0.base_iface_mut().controller_type = Some(InterfaceType::LinuxBridge);
-
-        ifaces.push(br4);
-        ifaces.push(br0);
-        ifaces.push(br1);
-        ifaces.push(br2);
-        ifaces.push(br3);
-        ifaces.push(p2);
-        ifaces.push(p1);
-
-        let (add_ifaces, _, _) =
-            ifaces.gen_state_for_apply(&Interfaces::new()).unwrap();
-
-        assert_eq!(ifaces.kernel_ifaces["br4"].base_iface().up_priority, 0);
-        assert_eq!(ifaces.kernel_ifaces["br0"].base_iface().up_priority, 1);
-        assert_eq!(ifaces.kernel_ifaces["br1"].base_iface().up_priority, 2);
-        assert_eq!(ifaces.kernel_ifaces["br2"].base_iface().up_priority, 3);
-        assert_eq!(ifaces.kernel_ifaces["br3"].base_iface().up_priority, 4);
-        assert_eq!(ifaces.kernel_ifaces["p1"].base_iface().up_priority, 5);
-        assert_eq!(ifaces.kernel_ifaces["p2"].base_iface().up_priority, 5);
-
-        let ordered_ifaces = add_ifaces.to_vec();
-
-        assert_eq!(ordered_ifaces[0].name(), "br4".to_string());
-        assert_eq!(ordered_ifaces[1].name(), "br0".to_string());
-        assert_eq!(ordered_ifaces[2].name(), "br1".to_string());
-        assert_eq!(ordered_ifaces[3].name(), "br2".to_string());
-        assert_eq!(ordered_ifaces[4].name(), "br3".to_string());
-        assert_eq!(ordered_ifaces[5].name(), "p1".to_string());
-        assert_eq!(ordered_ifaces[6].name(), "p2".to_string());
-    }
-
-    fn new_eth_iface(name: &str) -> Interface {
-        let mut iface = EthernetInterface::new();
-        iface.base.name = name.to_string();
-        Interface::Ethernet(iface)
-    }
-
-    fn new_br_ifaces(name: &str) -> Interface {
-        let mut iface = LinuxBridgeInterface::new();
-        iface.base.name = name.to_string();
-        Interface::LinuxBridge(iface)
-    }
-
-    fn new_nested_4_ifaces() -> [Interface; 6] {
-        let br0 = new_br_ifaces("br0");
-        let mut br1 = new_br_ifaces("br1");
-        let mut br2 = new_br_ifaces("br2");
-        let mut br3 = new_br_ifaces("br3");
-        let mut p1 = new_eth_iface("p1");
-        let mut p2 = new_eth_iface("p2");
-
-        br1.base_iface_mut().controller = Some("br0".to_string());
-        br1.base_iface_mut().controller_type = Some(InterfaceType::LinuxBridge);
-        br2.base_iface_mut().controller = Some("br1".to_string());
-        br2.base_iface_mut().controller_type = Some(InterfaceType::LinuxBridge);
-        br3.base_iface_mut().controller = Some("br2".to_string());
-        br3.base_iface_mut().controller_type = Some(InterfaceType::LinuxBridge);
-        p1.base_iface_mut().controller = Some("br3".to_string());
-        p1.base_iface_mut().controller_type = Some(InterfaceType::LinuxBridge);
-        p2.base_iface_mut().controller = Some("br3".to_string());
-        p2.base_iface_mut().controller_type = Some(InterfaceType::LinuxBridge);
-
-        // Place the ifaces in mixed order to complex the work
-        [br0, br1, br2, br3, p1, p2]
-    }
 }

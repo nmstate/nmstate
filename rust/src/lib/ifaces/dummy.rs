@@ -17,7 +17,7 @@ impl Default for DummyInterface {
 }
 
 impl DummyInterface {
-    pub fn new(base: BaseInterface) -> Self {
-        Self { base }
+    pub fn new() -> Self {
+        Self::default()
     }
 }

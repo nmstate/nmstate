@@ -48,10 +48,14 @@ impl BaseInterface {
         {
             self.iface_type = other.iface_type.clone();
         }
-        if other.prop_list.contains(&"iface_type")
-            && other.state != InterfaceState::Unknown
-        {
+        if other.prop_list.contains(&"state") {
             self.state = other.state.clone();
+        }
+        if other.prop_list.contains(&"controller") {
+            self.controller = other.controller.clone();
+        }
+        if other.prop_list.contains(&"controller_type") {
+            self.controller_type = other.controller_type.clone();
         }
 
         if other.prop_list.contains(&"ipv4") {
@@ -102,6 +106,7 @@ impl BaseInterface {
 
     pub fn can_have_ip(&self) -> bool {
         self.controller == None
+            || self.iface_type == InterfaceType::OvsInterface
     }
 
     pub(crate) fn is_up_priority_valid(&self) -> bool {
