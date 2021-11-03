@@ -192,6 +192,10 @@ impl Interface {
         false
     }
 
+    pub(crate) fn is_controller(&self) -> bool {
+        matches!(self, Self::LinuxBridge(_))
+    }
+
     pub(crate) fn set_iface_type(&mut self, iface_type: InterfaceType) {
         self.base_iface_mut().iface_type = iface_type;
     }

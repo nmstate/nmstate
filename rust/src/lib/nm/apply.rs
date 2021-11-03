@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use log::info;
-use nm_dbus::{NmApi, NmDeviceState};
+use nm_dbus::{NmApi, NmConnection, NmDeviceState};
 
 use crate::{
     nm::checkpoint::nm_checkpoint_timeout_extend,
@@ -98,6 +98,7 @@ fn apply_single_state(
     checkpoint: &str,
 ) -> Result<(), NmstateError> {
     let mut nm_conn_uuids: Vec<String> = Vec::new();
+    let mut new_nm_conns: Vec<NmConnection> = Vec::new();
     let mut ports: HashMap<String, (String, InterfaceType)> = HashMap::new();
 
     let exist_nm_conns =
@@ -147,19 +148,31 @@ fn apply_single_state(
                 &uuid,
             )?;
             nm_conn_uuids.push(uuid);
+            new_nm_conns.push(nm_conn);
         }
     }
-    for nm_conn_uuid in &nm_conn_uuids {
-        nm_checkpoint_timeout_extend(
-            checkpoint,
-            TIMEOUT_SECONDS_FOR_PROFILE_ACTIVATION,
-        )?;
-        info!("Activating connection {}", nm_conn_uuid);
-        if let Err(e) = nm_api.connection_reapply(nm_conn_uuid) {
-            info!("Reapply operation failed trying activation, reason: {}", e);
-            nm_api
-                .connection_activate(nm_conn_uuid)
-                .map_err(nm_error_to_nmstate)?;
+    for nm_conn in &new_nm_conns {
+        if let Some(uuid) = nm_conn.uuid() {
+            nm_checkpoint_timeout_extend(
+                checkpoint,
+                TIMEOUT_SECONDS_FOR_PROFILE_ACTIVATION,
+            )?;
+            info!(
+                "Activating connection {}/{}(uuid: {})",
+                nm_conn.iface_name().unwrap_or(""),
+                nm_conn.iface_type().unwrap_or(""),
+                uuid
+            );
+            if let Err(e) = nm_api.connection_reapply(nm_conn) {
+                info!(
+                    "Reapply operation failed trying activation, reason: {}, \
+                    retrying normal activation",
+                    e
+                );
+                nm_api
+                    .connection_activate(uuid)
+                    .map_err(nm_error_to_nmstate)?;
+            }
         }
     }
     Ok(())
