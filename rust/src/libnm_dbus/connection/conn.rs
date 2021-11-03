@@ -21,6 +21,10 @@ use log::warn;
 use crate::{
     connection::bridge::{NmSettingBridge, NmSettingBridgePort},
     connection::ip::NmSettingIp,
+    connection::ovs::{
+        NmSettingOvsBridge, NmSettingOvsIface, NmSettingOvsPort,
+    },
+    connection::wired::NmSettingWired,
     dbus::{NM_DBUS_INTERFACE_ROOT, NM_DBUS_INTERFACE_SETTING},
     dbus_value::{
         value_hash_get_bool, value_hash_get_i32, value_hash_get_string,
@@ -47,6 +51,10 @@ pub struct NmConnection {
     pub bridge_port: Option<NmSettingBridgePort>,
     pub ipv4: Option<NmSettingIp>,
     pub ipv6: Option<NmSettingIp>,
+    pub ovs_bridge: Option<NmSettingOvsBridge>,
+    pub ovs_port: Option<NmSettingOvsPort>,
+    pub ovs_iface: Option<NmSettingOvsIface>,
+    pub wired: Option<NmSettingWired>,
     pub(crate) obj_path: String,
 }
 
@@ -72,6 +80,20 @@ impl TryFrom<NmConnectionDbusOwnedValue> for NmConnection {
         if let Some(br_port_value) = value.get("bridge-port") {
             nm_con.bridge_port =
                 Some(NmSettingBridgePort::try_from(br_port_value)?);
+        }
+        if let Some(ovs_br_value) = value.get("ovs-bridge") {
+            nm_con.ovs_bridge =
+                Some(NmSettingOvsBridge::try_from(ovs_br_value)?);
+        }
+        if let Some(ovs_port_value) = value.get("ovs-port") {
+            nm_con.ovs_port = Some(NmSettingOvsPort::try_from(ovs_port_value)?);
+        }
+        if let Some(ovs_iface_value) = value.get("ovs-interface") {
+            nm_con.ovs_iface =
+                Some(NmSettingOvsIface::try_from(ovs_iface_value)?);
+        }
+        if let Some(wired_value) = value.get("802-3-ethernet") {
+            nm_con.wired = Some(NmSettingWired::try_from(wired_value)?);
         }
         Ok(nm_con)
     }
@@ -101,6 +123,30 @@ impl NmConnection {
         }) = &self.connection
         {
             Some(iface_type.as_str())
+        } else {
+            None
+        }
+    }
+
+    pub fn controller(&self) -> Option<&str> {
+        if let Some(NmSettingConnection {
+            controller: Some(ctrl),
+            ..
+        }) = &self.connection
+        {
+            Some(ctrl.as_str())
+        } else {
+            None
+        }
+    }
+
+    pub fn controller_type(&self) -> Option<&str> {
+        if let Some(NmSettingConnection {
+            controller_type: Some(ctrl),
+            ..
+        }) = &self.connection
+        {
+            Some(ctrl.as_str())
         } else {
             None
         }
@@ -147,6 +193,18 @@ impl NmConnection {
         }
         if let Some(ipv6_set) = &self.ipv6 {
             ret.insert("ipv6", ipv6_set.to_value()?);
+        }
+        if let Some(ovs_bridge_set) = &self.ovs_bridge {
+            ret.insert("ovs-bridge", ovs_bridge_set.to_value()?);
+        }
+        if let Some(ovs_port_set) = &self.ovs_port {
+            ret.insert("ovs-port", ovs_port_set.to_value()?);
+        }
+        if let Some(ovs_iface_set) = &self.ovs_iface {
+            ret.insert("ovs-interface", ovs_iface_set.to_value()?);
+        }
+        if let Some(wired_set) = &self.wired {
+            ret.insert("802-3-ethernet", wired_set.to_value()?);
         }
         Ok(ret)
     }
@@ -202,6 +260,10 @@ impl TryFrom<&HashMap<String, zvariant::OwnedValue>> for NmSettingConnection {
 }
 
 impl NmSettingConnection {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
     pub(crate) fn to_value(
         &self,
     ) -> Result<HashMap<&str, zvariant::Value>, NmError> {

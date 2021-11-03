@@ -211,10 +211,20 @@ impl<'a> NmApi<'a> {
         debug!("devices_get");
         let mut ret = Vec::new();
         for nm_dev_obj_path in &self.dbus.nm_dev_obj_paths_get()? {
-            let nm_dev =
-                nm_dev_from_obj_path(&self.dbus.connection, nm_dev_obj_path)?;
-            debug!("Got Device {:?}", nm_dev);
-            ret.push(nm_dev);
+            match nm_dev_from_obj_path(&self.dbus.connection, nm_dev_obj_path) {
+                Ok(nm_dev) => {
+                    debug!("Got Device {:?}", nm_dev);
+                    ret.push(nm_dev);
+                }
+                Err(e) => {
+                    // We might have race when relieve device list along with
+                    // deleting device
+                    debug!(
+                        "Failed to retrieve device {} {}",
+                        nm_dev_obj_path, e
+                    )
+                }
+            }
         }
         Ok(ret)
     }
