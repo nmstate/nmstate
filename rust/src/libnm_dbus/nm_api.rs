@@ -21,7 +21,7 @@ use crate::{
     active_connection::{
         get_nm_ac_by_obj_path, nm_ac_obj_path_uuid_get, NmActiveConnection,
     },
-    connection::{nm_con_get_from_obj_path, NmConnection, NmSettingConnection},
+    connection::{nm_con_get_from_obj_path, NmConnection},
     dbus::NmDbus,
     device::{
         nm_dev_delete, nm_dev_from_obj_path, NmDevice, NmDeviceState,
@@ -134,15 +134,7 @@ impl<'a> NmApi<'a> {
         nm_conn: &NmConnection,
     ) -> Result<(), NmError> {
         debug!("connection_add: {:?}", nm_conn);
-        if let NmConnection {
-            connection:
-                Some(NmSettingConnection {
-                    uuid: Some(ref uuid),
-                    ..
-                }),
-            ..
-        } = nm_conn
-        {
+        if let Some(uuid) = nm_conn.uuid() {
             if let Ok(con_obj_path) = self.dbus.get_connection_by_uuid(uuid) {
                 return self.dbus.connection_update(&con_obj_path, nm_conn);
             }
@@ -161,28 +153,20 @@ impl<'a> NmApi<'a> {
         }
     }
 
-    pub fn connection_reapply(&self, uuid: &str) -> Result<(), NmError> {
-        debug!("connection_reapply: {}", uuid);
-        let obj_path = &self.dbus.get_connection_by_uuid(uuid)?;
-        let nm_conn =
-            nm_con_get_from_obj_path(&self.dbus.connection, obj_path)?;
-        if let NmConnection {
-            connection:
-                Some(NmSettingConnection {
-                    iface_name: Some(ref iface_name),
-                    ..
-                }),
-            ..
-        } = nm_conn
-        {
+    pub fn connection_reapply(
+        &self,
+        nm_conn: &NmConnection,
+    ) -> Result<(), NmError> {
+        debug!("connection_reapply: {:?}", nm_conn);
+        if let Some(iface_name) = nm_conn.iface_name() {
             let nm_dev_obj_path = self.dbus.nm_dev_obj_path_get(iface_name)?;
-            self.dbus.nm_dev_reapply(&nm_dev_obj_path, &nm_conn)
+            self.dbus.nm_dev_reapply(&nm_dev_obj_path, nm_conn)
         } else {
             Err(NmError::new(
                 ErrorKind::InvalidArgument,
                 format!(
-                    "Failed to extract interface name from connection {}",
-                    uuid
+                    "Failed to extract interface name from connection {:?}",
+                    nm_conn
                 ),
             ))
         }
