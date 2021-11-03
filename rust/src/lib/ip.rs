@@ -179,6 +179,7 @@ impl InterfaceIpv4 {
     // Clean up before verification
     // * Sort IP address
     // * Convert expanded IP address to compacted
+    // * Add optional properties to prop_list
     pub(crate) fn pre_verify_cleanup(&mut self) {
         self.addresses.sort_unstable_by(|a, b| {
             (&a.ip, a.prefix_length).cmp(&(&b.ip, b.prefix_length))
@@ -189,6 +190,7 @@ impl InterfaceIpv4 {
             }
         }
         debug!("IPv4 after pre_verify_cleanup: {:?}", self);
+        self.prop_list.push("dhcp");
     }
 }
 
@@ -377,6 +379,7 @@ impl InterfaceIpv6 {
     // Clean up before verification
     // * Remove link-local address
     // * Sanitize the expanded IP address
+    // * Add optional properties to prop_list
     pub(crate) fn pre_verify_cleanup(&mut self) {
         self.addresses.retain(|addr| {
             !is_ipv6_unicast_link_local(&addr.ip, addr.prefix_length)
@@ -390,6 +393,8 @@ impl InterfaceIpv6 {
             }
         }
         debug!("IPv6 after pre_verify_cleanup: {:?}", self);
+        self.prop_list.push("dhcp");
+        self.prop_list.push("autoconf");
     }
 
     // Clean up before Apply
