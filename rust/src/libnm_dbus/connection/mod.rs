@@ -16,10 +16,16 @@
 mod bridge;
 mod conn;
 mod ip;
+mod ovs;
+mod wired;
 
 pub use crate::connection::bridge::NmSettingBridge;
 pub use crate::connection::conn::{NmConnection, NmSettingConnection};
 pub use crate::connection::ip::{NmSettingIp, NmSettingIpMethod};
+pub use crate::connection::ovs::{
+    NmSettingOvsBridge, NmSettingOvsIface, NmSettingOvsPort,
+};
+pub use crate::connection::wired::NmSettingWired;
 
 pub(crate) use crate::connection::conn::{
     nm_con_get_from_obj_path, NmConnectionDbusOwnedValue, NmConnectionDbusValue,

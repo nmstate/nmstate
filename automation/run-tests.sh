@@ -180,6 +180,19 @@ function run_tests {
             $PYTEST_OPTIONS \
             tests/integration/static_ip_address_test.py \
             ${nmstate_pytest_extra_args}"
+        exec_cmd "
+          env  \
+          PYTHONPATH=$CONTAINER_WORKSPACE/rust/src/python \
+          pytest \
+            $PYTEST_OPTIONS \
+            tests/integration/ovs_test.py \
+            -k '\
+            test_create_and_remove_ovs_bridge_with_min_desired_state or \
+            test_create_and_save_ovs_bridge_then_remove_and_apply_again or \
+            test_create_and_remove_ovs_bridge_options_specified or \
+            test_create_and_remove_ovs_bridge_with_a_system_port or \
+            test_create_and_remove_ovs_bridge_with_internal_port_static_ip_and_mac' \
+            ${nmstate_pytest_extra_args}"
     fi
 }
 

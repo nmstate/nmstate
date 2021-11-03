@@ -35,7 +35,6 @@ from libnmstate.schema import OvsDB
 from libnmstate.schema import RouteRule
 from libnmstate.schema import VLAN
 from libnmstate.schema import VXLAN
-from libnmstate.state import state_match
 from libnmstate.error import NmstateDependencyError
 from libnmstate.error import NmstateNotSupportedError
 from libnmstate.error import NmstateValueError
@@ -47,6 +46,7 @@ from .testlib import statelib
 from .testlib.env import nm_major_minor_version
 from .testlib.nmplugin import disable_nm_plugin
 from .testlib.nmplugin import mount_devnull_to_path
+from .testlib.statelib import state_match
 from .testlib.ovslib import Bridge
 from .testlib.vlan import vlan_interface
 

@@ -3,7 +3,8 @@ use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::{
     state::get_json_value_difference, BaseInterface, DummyInterface, ErrorKind,
-    EthernetInterface, LinuxBridgeInterface, NmstateError, VlanInterface,
+    EthernetInterface, LinuxBridgeInterface, NmstateError, OvsBridgeInterface,
+    OvsInterface, VlanInterface,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -16,6 +17,7 @@ pub enum InterfaceType {
     Loopback,
     MacVlan,
     MacVtap,
+    OvsBridge,
     OvsInterface,
     Tun,
     Veth,
@@ -42,6 +44,7 @@ impl From<&str> for InterfaceType {
             "loopback" => InterfaceType::Loopback,
             "macvlan" => InterfaceType::MacVlan,
             "macvtap" => InterfaceType::MacVtap,
+            "ovs-bridge" => InterfaceType::OvsBridge,
             "ovs-interface" => InterfaceType::OvsInterface,
             "tun" => InterfaceType::Tun,
             "veth" => InterfaceType::Veth,
@@ -61,13 +64,14 @@ impl std::fmt::Display for InterfaceType {
             "{}",
             match self {
                 InterfaceType::Bond => "bond",
-                InterfaceType::LinuxBridge => "linuxbridge",
+                InterfaceType::LinuxBridge => "linux-bridge",
                 InterfaceType::Dummy => "dummy",
                 InterfaceType::Ethernet => "ethernet",
                 InterfaceType::Loopback => "loopback",
                 InterfaceType::MacVlan => "macvlan",
                 InterfaceType::MacVtap => "macvtap",
-                InterfaceType::OvsInterface => "ovsinterface",
+                InterfaceType::OvsBridge => "ovs-bridge",
+                InterfaceType::OvsInterface => "ovs-interface",
                 InterfaceType::Tun => "tun",
                 InterfaceType::Veth => "veth",
                 InterfaceType::Vlan => "vlan",
@@ -77,6 +81,25 @@ impl std::fmt::Display for InterfaceType {
                 InterfaceType::Other(ref s) => s,
             }
         )
+    }
+}
+
+impl InterfaceType {
+    const USERSPACE_IFACE_TYPES: [Self; 2] = [Self::OvsBridge, Self::Unknown];
+    const CONTROLLER_IFACES_TYPES: [Self; 3] =
+        [Self::Bond, Self::LinuxBridge, Self::OvsBridge];
+
+    // Unknown and other interfaces are also considered as userspace
+    pub(crate) fn is_userspace(&self) -> bool {
+        self.is_other() || Self::USERSPACE_IFACE_TYPES.contains(self)
+    }
+
+    pub(crate) fn is_other(&self) -> bool {
+        matches!(self, Self::Other(_))
+    }
+
+    pub(crate) fn is_controller(&self) -> bool {
+        Self::CONTROLLER_IFACES_TYPES.contains(self)
     }
 }
 
@@ -113,19 +136,21 @@ pub struct UnknownInterface {
 }
 
 impl UnknownInterface {
-    pub fn new(base: BaseInterface) -> Self {
-        Self { base }
+    pub fn new() -> Self {
+        Self::default()
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "kebab-case", untagged)]
 pub enum Interface {
-    LinuxBridge(LinuxBridgeInterface),
-    Ethernet(EthernetInterface),
-    Vlan(VlanInterface),
     Dummy(DummyInterface),
+    Ethernet(EthernetInterface),
+    LinuxBridge(LinuxBridgeInterface),
+    OvsBridge(OvsBridgeInterface),
+    OvsInterface(OvsInterface),
     Unknown(UnknownInterface),
+    Vlan(VlanInterface),
 }
 
 impl<'de> Deserialize<'de> for Interface {
@@ -162,6 +187,16 @@ impl<'de> Deserialize<'de> for Interface {
                     .map_err(serde::de::Error::custom)?;
                 Ok(Interface::Dummy(inner))
             }
+            Some(InterfaceType::OvsInterface) => {
+                let inner = OvsInterface::deserialize(v)
+                    .map_err(serde::de::Error::custom)?;
+                Ok(Interface::OvsInterface(inner))
+            }
+            Some(InterfaceType::OvsBridge) => {
+                let inner = OvsBridgeInterface::deserialize(v)
+                    .map_err(serde::de::Error::custom)?;
+                Ok(Interface::OvsBridge(inner))
+            }
             Some(iface_type) => {
                 warn!("Unsupported interface type {}", iface_type);
                 let inner = UnknownInterface::deserialize(v)
@@ -184,16 +219,18 @@ impl Interface {
             Self::Ethernet(iface) => iface.base.name.as_str(),
             Self::Vlan(iface) => iface.base.name.as_str(),
             Self::Dummy(iface) => iface.base.name.as_str(),
+            Self::OvsInterface(iface) => iface.base.name.as_str(),
+            Self::OvsBridge(iface) => iface.base.name.as_str(),
             Self::Unknown(iface) => iface.base.name.as_str(),
         }
     }
 
     pub(crate) fn is_userspace(&self) -> bool {
-        false
+        self.base_iface().iface_type.is_userspace()
     }
 
     pub(crate) fn is_controller(&self) -> bool {
-        matches!(self, Self::LinuxBridge(_))
+        self.base_iface().iface_type.is_controller()
     }
 
     pub(crate) fn set_iface_type(&mut self, iface_type: InterfaceType) {
@@ -206,6 +243,8 @@ impl Interface {
             Self::Ethernet(iface) => iface.base.iface_type.clone(),
             Self::Vlan(iface) => iface.base.iface_type.clone(),
             Self::Dummy(iface) => iface.base.iface_type.clone(),
+            Self::OvsInterface(iface) => iface.base.iface_type.clone(),
+            Self::OvsBridge(iface) => iface.base.iface_type.clone(),
             Self::Unknown(iface) => iface.base.iface_type.clone(),
         }
     }
@@ -219,7 +258,12 @@ impl Interface {
     }
 
     pub fn is_virtual(&self) -> bool {
-        !matches!(self, Self::Ethernet(_))
+        !matches!(self, Self::Ethernet(_) | Self::Unknown(_))
+    }
+
+    // OVS Interface should be deleted along with its controller
+    pub fn need_controller(&self) -> bool {
+        matches!(self, Self::OvsInterface(_))
     }
 
     pub fn base_iface(&self) -> &BaseInterface {
@@ -228,6 +272,8 @@ impl Interface {
             Self::Ethernet(iface) => &iface.base,
             Self::Vlan(iface) => &iface.base,
             Self::Dummy(iface) => &iface.base,
+            Self::OvsBridge(iface) => &iface.base,
+            Self::OvsInterface(iface) => &iface.base,
             Self::Unknown(iface) => &iface.base,
         }
     }
@@ -238,15 +284,26 @@ impl Interface {
             Self::Ethernet(iface) => &mut iface.base,
             Self::Vlan(iface) => &mut iface.base,
             Self::Dummy(iface) => &mut iface.base,
+            Self::OvsInterface(iface) => &mut iface.base,
+            Self::OvsBridge(iface) => &mut iface.base,
             Self::Unknown(iface) => &mut iface.base,
         }
     }
 
     // Return None if its is not controller
     pub fn ports(&self) -> Option<Vec<&str>> {
-        match self {
-            Self::LinuxBridge(iface) => iface.ports(),
-            _ => None,
+        if self.is_absent() {
+            match self {
+                Self::LinuxBridge(_) => Some(Vec::new()),
+                Self::OvsBridge(_) => Some(Vec::new()),
+                _ => None,
+            }
+        } else {
+            match self {
+                Self::LinuxBridge(iface) => iface.ports(),
+                Self::OvsBridge(iface) => iface.ports(),
+                _ => None,
+            }
         }
     }
 
@@ -287,7 +344,17 @@ impl Interface {
                     );
                 }
             }
-            Self::Unknown(_) | Self::Dummy(_) => (),
+            Self::OvsBridge(iface) => {
+                if let Self::OvsBridge(other_iface) = other {
+                    iface.update_ovs_bridge(other_iface);
+                } else {
+                    warn!(
+                        "Don't know how to update iface {:?} with {:?}",
+                        iface, other
+                    );
+                }
+            }
+            Self::Unknown(_) | Self::Dummy(_) | Self::OvsInterface(_) => (),
         }
     }
 
@@ -307,6 +374,12 @@ impl Interface {
             }
             Self::Dummy(ref mut iface) => {
                 iface.base.pre_verify_cleanup();
+            }
+            Self::OvsInterface(ref mut iface) => {
+                iface.base.pre_verify_cleanup();
+            }
+            Self::OvsBridge(ref mut iface) => {
+                iface.pre_verify_cleanup();
             }
         }
     }

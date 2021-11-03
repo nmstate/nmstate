@@ -79,7 +79,7 @@ class State:
         """
         base_iface_names = {
             ifstate[Interface.NAME]
-            for ifstate in based_on_state[Interface.KEY]
+            for ifstate in based_on_state.get(Interface.KEY, [])
         }
 
         if not base_iface_names:
@@ -97,7 +97,7 @@ class State:
         Given the other_state, update the state with the other_state data.
         """
         other_state = copy.deepcopy(other_state)
-        other_interfaces_state = other_state[Interface.KEY]
+        other_interfaces_state = other_state.get(Interface.KEY, [])
 
         for base_iface_state in self._state[Interface.KEY]:
             ifname = base_iface_state[Interface.NAME]
@@ -127,7 +127,7 @@ class State:
         self._sort_ovs_lag_ports()
 
     def match(self, other):
-        return _state_match(self.state, other.state)
+        return state_match(self.state, other.state)
 
     def _sort_interfaces_by_name(self):
         self._state[Interface.KEY].sort(key=lambda d: d[Interface.NAME])
@@ -148,7 +148,7 @@ class State:
     def remove_absent_entries(self):
         self._state[Interface.KEY] = [
             ifstate
-            for ifstate in self._state[Interface.KEY]
+            for ifstate in self._state.get(Interface.KEY, [])
             if ifstate.get(Interface.STATE) != InterfaceState.ABSENT
         ]
 
@@ -333,17 +333,17 @@ def _is_ipv6_link_local(ip, prefix):
     return ip[:3] in ["fe8", "fe9", "fea", "feb"] and prefix >= 10
 
 
-def _state_match(desire, current):
+def state_match(desire, current):
     if isinstance(desire, Mapping):
         return isinstance(current, Mapping) and all(
-            _state_match(val, current.get(key)) for key, val in desire.items()
+            state_match(val, current.get(key)) for key, val in desire.items()
         )
     elif isinstance(desire, Sequence) and not isinstance(desire, str):
         return (
             isinstance(current, Sequence)
             and not isinstance(current, str)
             and len(current) == len(desire)
-            and all(_state_match(d, c) for d, c in zip(desire, current))
+            and all(state_match(d, c) for d, c in zip(desire, current))
         )
     else:
         return desire == current
