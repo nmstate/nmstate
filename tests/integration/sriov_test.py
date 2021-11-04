@@ -117,6 +117,18 @@ def sriov_iface_vf(disable_sriov):
     yield desired_state
 
 
+@pytest.fixture
+def sriov_iface_vf_vlan_qos(sriov_iface_vf):
+    desired_state = sriov_iface_vf
+    eth_config = desired_state[Interface.KEY][0][Ethernet.CONFIG_SUBTREE]
+    vf0 = eth_config[Ethernet.SRIOV_SUBTREE][Ethernet.SRIOV.VFS_SUBTREE][0]
+    vf0[Ethernet.SRIOV.VFS.VLAN] = 100
+    vf0[Ethernet.SRIOV.VFS.QOS] = 10
+    libnmstate.apply(desired_state)
+
+    yield desired_state
+
+
 @pytest.mark.skipif(
     not os.environ.get("TEST_REAL_NIC"),
     reason="Need to define TEST_REAL_NIC for SR-IOV test",
@@ -201,6 +213,43 @@ def test_sriov_vf_mac_mixed_case(sriov_iface_vf):
     libnmstate.apply(desired_state)
 
     vf0[Ethernet.SRIOV.VFS.MAC_ADDRESS] = MAC_MIX_CASE.upper()
+    assertlib.assert_state_match(desired_state)
+
+
+@pytest.mark.skipif(
+    not os.environ.get("TEST_REAL_NIC"),
+    reason="Need to define TEST_REAL_NIC for SR-IOV test",
+)
+def test_sriov_vf_set_vlan_and_qos(sriov_iface_vf_vlan_qos):
+    assertlib.assert_state_match(sriov_iface_vf_vlan_qos)
+
+
+@pytest.mark.skipif(
+    not os.environ.get("TEST_REAL_NIC"),
+    reason="Need to define TEST_REAL_NIC for SR-IOV test",
+)
+def test_sriov_vf_remove_vlan_and_qos(sriov_iface_vf_vlan_qos):
+    desired_state = sriov_iface_vf_vlan_qos
+    eth_config = desired_state[Interface.KEY][0][Ethernet.CONFIG_SUBTREE]
+    vf0 = eth_config[Ethernet.SRIOV_SUBTREE][Ethernet.SRIOV.VFS_SUBTREE][0]
+    vf0[Ethernet.SRIOV.VFS.VLAN] = 0
+    vf0[Ethernet.SRIOV.VFS.QOS] = 0
+    libnmstate.apply(desired_state)
+
+    assertlib.assert_state_match(desired_state)
+
+
+@pytest.mark.skipif(
+    not os.environ.get("TEST_REAL_NIC"),
+    reason="Need to define TEST_REAL_NIC for SR-IOV test",
+)
+def test_sriov_vf_set_only_vlan(sriov_iface_vf):
+    desired_state = sriov_iface_vf
+    eth_config = desired_state[Interface.KEY][0][Ethernet.CONFIG_SUBTREE]
+    vf0 = eth_config[Ethernet.SRIOV_SUBTREE][Ethernet.SRIOV.VFS_SUBTREE][0]
+    vf0[Ethernet.SRIOV.VFS.VLAN] = 100
+    libnmstate.apply(desired_state)
+
     assertlib.assert_state_match(desired_state)
 
 
