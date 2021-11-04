@@ -38,7 +38,7 @@ elif [ $OS_TYPE == "ovs2_11" ];then
         dnf install -y openvswitch2.13 python3-openvswitch2.13;
         systemctl restart openvswitch'
 elif [ $OS_TYPE == "vdsm_el8" ]; then
-    CONTAINER_IMAGE="quay.io/ovirt/vdsm-test-func-network-centos-8"
+    CONTAINER_IMAGE="quay.io/ovirt/vdsm-network-tests-functional"
 else
     echo "Invalid OS type ${OS_TYPE}"
     exit 1
