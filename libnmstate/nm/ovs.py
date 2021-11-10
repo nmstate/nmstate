@@ -32,8 +32,6 @@ from libnmstate.schema import OvsDB
 from .common import NM
 
 
-PORT_PROFILE_PREFIX = "ovs-port-"
-
 CONTROLLER_TYPE_METADATA = "_controller_type"
 CONTROLLER_METADATA = "_controller"
 SETTING_OVS_EXTERNALIDS = "SettingOvsExternalIDs"
@@ -311,7 +309,7 @@ def create_iface_for_nm_ovs_port(iface):
     if ovs.is_ovs_lag_port(port_options):
         port_name = port_options[OB.Port.NAME]
     else:
-        port_name = PORT_PROFILE_PREFIX + iface_name
+        port_name = iface_name
     return OvsPortIface(
         {
             Interface.NAME: port_name,
