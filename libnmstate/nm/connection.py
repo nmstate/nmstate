@@ -121,6 +121,8 @@ def create_new_nm_simple_conn(iface, nm_profile):
             con_name = con_name + "-br"
         elif iface.type == InterfaceType.OVS_INTERFACE:
             con_name = con_name + "-if"
+        elif iface.type == InterfaceType.OVS_PORT:
+            con_name = con_name + "-port"
 
         con_setting.create(
             con_name,
