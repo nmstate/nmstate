@@ -22,75 +22,76 @@ const DBUS_SIGNATURE_U32: &str = "u";
 const DBUS_SIGNATURE_ARRAY: &str = "a";
 const DBUS_SIGNATURE_BYTES_ARRAY: &str = "ay";
 
-fn own_value_to_string(
-    value: &zvariant::OwnedValue,
+pub(crate) fn own_value_to_string(
+    value: zvariant::OwnedValue,
 ) -> Result<String, NmError> {
-    check_value_is_string(value)?;
-    match <&str>::try_from(value) {
-        Ok(s) => Ok(s.to_string()),
-        Err(e) => Err(NmError::new(
-            ErrorKind::Bug,
-            format!("Failed to convert {:?} to string: {}", &value, e),
-        )),
-    }
+    check_value_is_string(&value)?;
+    let err_msg = format!("Failed to convert {:?} to string", &value);
+    <String>::try_from(value).map_err(|e| {
+        NmError::new(ErrorKind::Bug, format!("{}: {}", err_msg, e))
+    })
 }
 
 // TODO: Use macro instead
-fn own_value_to_bool(value: &zvariant::OwnedValue) -> Result<bool, NmError> {
-    check_value_is_bool(value)?;
+pub(crate) fn own_value_to_bool(
+    value: zvariant::OwnedValue,
+) -> Result<bool, NmError> {
+    check_value_is_bool(&value)?;
+    let err_msg = format!("Failed to convert {:?} to bool", &value);
     match <bool>::try_from(value) {
         Ok(s) => Ok(s),
-        Err(e) => Err(NmError::new(
-            ErrorKind::Bug,
-            format!("Failed to convert {:?} to bool: {}", &value, e),
-        )),
+        Err(e) => {
+            Err(NmError::new(ErrorKind::Bug, format!("{}: {}", err_msg, e)))
+        }
     }
 }
 
 // TODO: Use macro instead
-fn own_value_to_i32(value: &zvariant::OwnedValue) -> Result<i32, NmError> {
-    check_value_is_i32(value)?;
+pub(crate) fn own_value_to_i32(
+    value: zvariant::OwnedValue,
+) -> Result<i32, NmError> {
+    check_value_is_i32(&value)?;
+    let err_msg = format!("Failed to convert {:?} to i32", &value);
     match <i32>::try_from(value) {
         Ok(s) => Ok(s),
-        Err(e) => Err(NmError::new(
-            ErrorKind::Bug,
-            format!("Failed to convert {:?} to i32: {}", &value, e),
-        )),
+        Err(e) => {
+            Err(NmError::new(ErrorKind::Bug, format!("{}: {}", err_msg, e)))
+        }
     }
 }
 
 // TODO: Use macro instead
-fn own_value_to_u32(value: &zvariant::OwnedValue) -> Result<u32, NmError> {
-    check_value_is_u32(value)?;
+pub(crate) fn own_value_to_u32(
+    value: zvariant::OwnedValue,
+) -> Result<u32, NmError> {
+    check_value_is_u32(&value)?;
+    let err_msg = format!("Failed to convert {:?} to u32", &value);
     match <u32>::try_from(value) {
         Ok(s) => Ok(s),
-        Err(e) => Err(NmError::new(
-            ErrorKind::Bug,
-            format!("Failed to convert {:?} to u32: {}", &value, e),
-        )),
+        Err(e) => {
+            Err(NmError::new(ErrorKind::Bug, format!("{}: {}", err_msg, e)))
+        }
     }
 }
 
 // TODO: Use macro instead
-fn own_value_to_array(
-    value: &zvariant::OwnedValue,
-) -> Result<&zvariant::Array, NmError> {
-    check_value_is_array(value)?;
-    match <&zvariant::Array>::try_from(value) {
-        Ok(s) => Ok(s),
-        Err(e) => Err(NmError::new(
-            ErrorKind::Bug,
-            format!("Failed to convert {:?} to array: {}", &value, e),
-        )),
-    }
+pub(crate) fn own_value_to_array(
+    value: zvariant::OwnedValue,
+) -> Result<Vec<zvariant::OwnedValue>, NmError> {
+    check_value_is_array(&value)?;
+    let err_msg = format!("Failed to convert {:?} to array", &value);
+    <Vec<zvariant::OwnedValue>>::try_from(value).map_err(|e| {
+        NmError::new(ErrorKind::Bug, format!("{}: {}", err_msg, e))
+    })
 }
 
 // TODO: Use macro instead
-fn own_value_to_bytes_array(
-    value: &zvariant::OwnedValue,
+pub(crate) fn own_value_to_bytes_array(
+    value: zvariant::OwnedValue,
 ) -> Result<Vec<u8>, NmError> {
-    check_value_is_bytes_array(value)?;
-    match <&zvariant::Array>::try_from(value) {
+    check_value_is_bytes_array(&value)?;
+    let err_msg = format!("Failed to convert {:?} to bytes array", &value);
+    match <zvariant::Array>::try_from(value) {
         Ok(s) => {
             let mut bytes_array: Vec<u8> = Vec::new();
             for item in s.iter() {
@@ -100,10 +101,9 @@ fn own_value_to_bytes_array(
             }
             Ok(bytes_array)
         }
-        Err(e) => Err(NmError::new(
-            ErrorKind::Bug,
-            format!("Failed to convert {:?} to bytes array: {}", &value, e),
-        )),
+        Err(e) => {
+            Err(NmError::new(ErrorKind::Bug, format!("{}: {}", err_msg, e)))
+        }
     }
 }
 
@@ -180,111 +180,5 @@ fn check_value_is_bytes_array(
         ))
     } else {
         Ok(())
-    }
-}
-
-pub(crate) fn value_hash_get_string(
-    value_hashmap: &std::collections::HashMap<String, zvariant::OwnedValue>,
-    key: &str,
-) -> Result<Option<String>, NmError> {
-    if let Some(value) = value_hashmap.get(key) {
-        Ok(Some(own_value_to_string(value)?))
-    } else {
-        Ok(None)
-    }
-}
-
-pub(crate) fn value_hash_get_bool(
-    value_hashmap: &std::collections::HashMap<String, zvariant::OwnedValue>,
-    key: &str,
-) -> Result<Option<bool>, NmError> {
-    if let Some(value) = value_hashmap.get(key) {
-        Ok(Some(own_value_to_bool(value)?))
-    } else {
-        Ok(None)
-    }
-}
-
-pub(crate) fn value_hash_get_i32(
-    value_hashmap: &std::collections::HashMap<String, zvariant::OwnedValue>,
-    key: &str,
-) -> Result<Option<i32>, NmError> {
-    if let Some(value) = value_hashmap.get(key) {
-        Ok(Some(own_value_to_i32(value)?))
-    } else {
-        Ok(None)
-    }
-}
-
-pub(crate) fn value_hash_get_u32(
-    value_hashmap: &std::collections::HashMap<String, zvariant::OwnedValue>,
-    key: &str,
-) -> Result<Option<u32>, NmError> {
-    if let Some(value) = value_hashmap.get(key) {
-        Ok(Some(own_value_to_u32(value)?))
-    } else {
-        Ok(None)
-    }
-}
-
-pub(crate) fn value_hash_get_array<'a>(
-    value_hashmap: &'a std::collections::HashMap<String, zvariant::OwnedValue>,
-    key: &str,
-) -> Result<Option<&'a zvariant::Array<'a>>, NmError> {
-    if let Some(value) = value_hashmap.get(key) {
-        Ok(Some(own_value_to_array(value)?))
-    } else {
-        Ok(None)
-    }
-}
-
-pub(crate) fn value_dict_get_string(
-    value_dict: &zvariant::Dict,
-    key: &str,
-) -> Result<Option<String>, NmError> {
-    match value_dict.get::<str, zvariant::Value>(key) {
-        Ok(Some(value)) => match <&str>::try_from(value) {
-            Ok(v) => Ok(Some(v.to_string())),
-            Err(e) => Err(NmError::new(
-                ErrorKind::Bug,
-                format!("Failed to convert {:?} to string: {}", &value, e),
-            )),
-        },
-        Ok(None) => Ok(None),
-        Err(e) => Err(NmError::new(
-            ErrorKind::Bug,
-            format!("Failed to get {} from {:?}: {}", key, value_dict, e),
-        )),
-    }
-}
-
-pub(crate) fn value_hash_get_bytes_array(
-    value_hashmap: &std::collections::HashMap<String, zvariant::OwnedValue>,
-    key: &str,
-) -> Result<Option<Vec<u8>>, NmError> {
-    if let Some(value) = value_hashmap.get(key) {
-        Ok(Some(own_value_to_bytes_array(value)?))
-    } else {
-        Ok(None)
-    }
-}
-
-pub(crate) fn value_dict_get_u32(
-    value_dict: &zvariant::Dict,
-    key: &str,
-) -> Result<Option<u32>, NmError> {
-    match value_dict.get::<str, zvariant::Value>(key) {
-        Ok(Some(value)) => match <u32>::try_from(value) {
-            Ok(v) => Ok(Some(v)),
-            Err(e) => Err(NmError::new(
-                ErrorKind::Bug,
-                format!("Failed to convert {:?} to u32: {}", &value, e),
-            )),
-        },
-        Ok(None) => Ok(None),
-        Err(e) => Err(NmError::new(
-            ErrorKind::Bug,
-            format!("Failed to get {} from {:?}: {}", key, value_dict, e),
-        )),
     }
 }

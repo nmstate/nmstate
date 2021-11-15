@@ -270,15 +270,14 @@ pub(crate) fn gen_nm_connection(
         iface_name.to_string()
     };
 
-    let mut nm_conn_set = NmSettingConnection {
-        id: Some(conn_name),
-        uuid: Some(uuid.to_string()),
-        iface_type: Some(nm_iface_type.to_string()),
-        iface_name: Some(iface_name.to_string()),
-        autoconnect: Some(true),
-        autoconnect_ports: if is_controller { Some(true) } else { None },
-        ..Default::default()
-    };
+    let mut nm_conn_set = NmSettingConnection::new();
+    nm_conn_set.id = Some(conn_name);
+    nm_conn_set.uuid = Some(uuid.to_string());
+    nm_conn_set.iface_type = Some(nm_iface_type.to_string());
+    nm_conn_set.iface_name = Some(iface_name.to_string());
+    nm_conn_set.autoconnect = Some(true);
+    nm_conn_set.autoconnect_ports =
+        if is_controller { Some(true) } else { None };
 
     if let Some(ctrl_name) = ctrl_name {
         if let Some(nm_ctrl_type) = nm_ctrl_type {

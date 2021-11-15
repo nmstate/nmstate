@@ -19,6 +19,7 @@ mod dbus_proxy;
 mod dbus_value;
 mod device;
 mod error;
+mod keyfile;
 mod nm_api;
 
 pub use crate::active_connection::NmActiveConnection;

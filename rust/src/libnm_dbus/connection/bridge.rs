@@ -16,25 +16,34 @@
 use std::collections::HashMap;
 use std::convert::TryFrom;
 
-use crate::{dbus_value::value_hash_get_bool, error::NmError};
+use crate::{dbus_value::own_value_to_bool, error::NmError};
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct NmSettingBridge {
     pub stp: Option<bool>,
+    _other: HashMap<String, zvariant::OwnedValue>,
 }
 
-impl TryFrom<&HashMap<String, zvariant::OwnedValue>> for NmSettingBridge {
+impl TryFrom<HashMap<String, zvariant::OwnedValue>> for NmSettingBridge {
     type Error = NmError;
     fn try_from(
-        value: &HashMap<String, zvariant::OwnedValue>,
+        mut setting_value: HashMap<String, zvariant::OwnedValue>,
     ) -> Result<Self, Self::Error> {
-        Ok(Self {
-            stp: value_hash_get_bool(value, "stp")?,
-        })
+        let mut setting = Self::new();
+        setting.stp = setting_value
+            .remove("stp")
+            .map(own_value_to_bool)
+            .transpose()?;
+        setting._other = setting_value;
+        Ok(setting)
     }
 }
 
 impl NmSettingBridge {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
     pub(crate) fn to_value(
         &self,
     ) -> Result<HashMap<&str, zvariant::Value>, NmError> {
@@ -42,28 +51,41 @@ impl NmSettingBridge {
         if let Some(v) = self.stp {
             ret.insert("stp", zvariant::Value::new(v));
         }
+        ret.extend(self._other.iter().map(|(key, value)| {
+            (key.as_str(), zvariant::Value::from(value.clone()))
+        }));
         Ok(ret)
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct NmSettingBridgePort {
-    // TODO: bridge port vlan filter.
+    _other: HashMap<String, zvariant::OwnedValue>,
 }
 
-impl TryFrom<&HashMap<String, zvariant::OwnedValue>> for NmSettingBridgePort {
+impl TryFrom<HashMap<String, zvariant::OwnedValue>> for NmSettingBridgePort {
     type Error = NmError;
     fn try_from(
-        _value: &HashMap<String, zvariant::OwnedValue>,
+        setting_value: HashMap<String, zvariant::OwnedValue>,
     ) -> Result<Self, Self::Error> {
-        Ok(Self {})
+        let mut setting = Self::new();
+        setting._other = setting_value;
+        Ok(setting)
     }
 }
 
 impl NmSettingBridgePort {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
     pub(crate) fn to_value(
         &self,
     ) -> Result<HashMap<&str, zvariant::Value>, NmError> {
-        Ok(HashMap::new())
+        let mut ret = HashMap::new();
+        ret.extend(self._other.iter().map(|(key, value)| {
+            (key.as_str(), zvariant::Value::from(value.clone()))
+        }));
+        Ok(ret)
     }
 }

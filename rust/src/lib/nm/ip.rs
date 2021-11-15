@@ -20,10 +20,10 @@ pub(crate) fn iface_ipv4_to_nm(
     } else {
         NmSettingIpMethod::Disabled
     };
-    Ok(NmSettingIp {
-        method: Some(method),
-        addresses,
-    })
+    let mut nm_setting = NmSettingIp::new();
+    nm_setting.method = Some(method);
+    nm_setting.addresses = addresses;
+    Ok(nm_setting)
 }
 
 pub(crate) fn iface_ipv6_to_nm(
@@ -57,8 +57,8 @@ pub(crate) fn iface_ipv6_to_nm(
     } else {
         NmSettingIpMethod::Disabled
     };
-    Ok(NmSettingIp {
-        method: Some(method),
-        addresses,
-    })
+    let mut nm_setting = NmSettingIp::new();
+    nm_setting.method = Some(method);
+    nm_setting.addresses = addresses;
+    Ok(nm_setting)
 }
