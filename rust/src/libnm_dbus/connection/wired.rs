@@ -19,25 +19,27 @@ use std::fmt::Write;
 
 use log::error;
 
-use crate::{dbus_value::value_hash_get_bytes_array, error::NmError};
+use crate::{dbus_value::own_value_to_bytes_array, error::NmError};
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct NmSettingWired {
     pub cloned_mac_address: Option<String>,
+    _other: HashMap<String, zvariant::OwnedValue>,
 }
 
-impl TryFrom<&HashMap<String, zvariant::OwnedValue>> for NmSettingWired {
+impl TryFrom<HashMap<String, zvariant::OwnedValue>> for NmSettingWired {
     type Error = NmError;
     fn try_from(
-        value: &HashMap<String, zvariant::OwnedValue>,
+        mut setting_value: HashMap<String, zvariant::OwnedValue>,
     ) -> Result<Self, Self::Error> {
-        Ok(Self {
-            cloned_mac_address: value_hash_get_bytes_array(
-                value,
-                "cloned-mac-address",
-            )?
-            .map(|s| u8_array_to_mac_string(&s)),
-        })
+        let mut setting = Self::new();
+        setting.cloned_mac_address = setting_value
+            .remove("cloned-mac-address")
+            .map(own_value_to_bytes_array)
+            .transpose()?
+            .map(u8_array_to_mac_string);
+        setting._other = setting_value;
+        Ok(setting)
     }
 }
 
@@ -52,6 +54,9 @@ impl NmSettingWired {
                 zvariant::Value::new(mac_str_to_u8_array(v)),
             );
         }
+        ret.extend(self._other.iter().map(|(key, value)| {
+            (key.as_str(), zvariant::Value::from(value.clone()))
+        }));
         Ok(ret)
     }
 
@@ -60,9 +65,9 @@ impl NmSettingWired {
     }
 }
 
-fn u8_array_to_mac_string(data: &[u8]) -> String {
+fn u8_array_to_mac_string(data: Vec<u8>) -> String {
     let mut mac_addr = String::new();
-    for byte in data {
+    for byte in &data {
         if let Err(e) = write!(&mut mac_addr, "{:02X}:", byte) {
             error!(
                 "Failed to convert bytes array to MAC address {:?}: {}",
