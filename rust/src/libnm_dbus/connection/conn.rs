@@ -26,20 +26,17 @@ use crate::{
     },
     connection::wired::NmSettingWired,
     dbus::{NM_DBUS_INTERFACE_ROOT, NM_DBUS_INTERFACE_SETTING},
-    dbus_value::{
-        value_hash_get_bool, value_hash_get_i32, value_hash_get_string,
-    },
-    ErrorKind, NmError,
+    dbus_value::{own_value_to_bool, own_value_to_i32, own_value_to_string},
+    keyfile::zvariant_value_to_keyfile,
+    NmError,
 };
 
 const NM_AUTOCONENCT_PORT_DEFAULT: i32 = -1;
 const NM_AUTOCONENCT_PORT_YES: i32 = 1;
 const NM_AUTOCONENCT_PORT_NO: i32 = 0;
 
-pub(crate) type NmConnectionDbusOwnedValue = std::collections::HashMap<
-    String,
-    std::collections::HashMap<String, zvariant::OwnedValue>,
->;
+pub(crate) type NmConnectionDbusOwnedValue =
+    HashMap<String, HashMap<String, zvariant::OwnedValue>>;
 
 pub(crate) type NmConnectionDbusValue<'a> =
     HashMap<&'a str, HashMap<&'a str, zvariant::Value<'a>>>;
@@ -56,46 +53,54 @@ pub struct NmConnection {
     pub ovs_iface: Option<NmSettingOvsIface>,
     pub wired: Option<NmSettingWired>,
     pub(crate) obj_path: String,
+    _other: HashMap<String, HashMap<String, zvariant::OwnedValue>>,
 }
 
 impl TryFrom<NmConnectionDbusOwnedValue> for NmConnection {
     type Error = NmError;
     fn try_from(
-        value: NmConnectionDbusOwnedValue,
+        mut value: NmConnectionDbusOwnedValue,
     ) -> Result<Self, Self::Error> {
-        //eprintln!("connection keys: {:?}", value.keys());
-        let mut nm_con: Self = Default::default();
-        if let Some(con_value) = value.get("connection") {
-            nm_con.connection = Some(NmSettingConnection::try_from(con_value)?);
-        }
-        if let Some(ipv4_set) = value.get("ipv4") {
-            nm_con.ipv4 = Some(NmSettingIp::try_from(ipv4_set)?);
-        }
-        if let Some(ipv6_set) = value.get("ipv6") {
-            nm_con.ipv6 = Some(NmSettingIp::try_from(ipv6_set)?);
-        }
-        if let Some(br_value) = value.get("bridge") {
-            nm_con.bridge = Some(NmSettingBridge::try_from(br_value)?);
-        }
-        if let Some(br_port_value) = value.get("bridge-port") {
-            nm_con.bridge_port =
-                Some(NmSettingBridgePort::try_from(br_port_value)?);
-        }
-        if let Some(ovs_br_value) = value.get("ovs-bridge") {
-            nm_con.ovs_bridge =
-                Some(NmSettingOvsBridge::try_from(ovs_br_value)?);
-        }
-        if let Some(ovs_port_value) = value.get("ovs-port") {
-            nm_con.ovs_port = Some(NmSettingOvsPort::try_from(ovs_port_value)?);
-        }
-        if let Some(ovs_iface_value) = value.get("ovs-interface") {
-            nm_con.ovs_iface =
-                Some(NmSettingOvsIface::try_from(ovs_iface_value)?);
-        }
-        if let Some(wired_value) = value.get("802-3-ethernet") {
-            nm_con.wired = Some(NmSettingWired::try_from(wired_value)?);
-        }
-        Ok(nm_con)
+        Ok(Self {
+            connection: value
+                .remove("connection")
+                .map(NmSettingConnection::try_from)
+                .transpose()?,
+            ipv4: value
+                .remove("ipv4")
+                .map(NmSettingIp::try_from)
+                .transpose()?,
+            ipv6: value
+                .remove("ipv6")
+                .map(NmSettingIp::try_from)
+                .transpose()?,
+            bridge: value
+                .remove("bridge")
+                .map(NmSettingBridge::try_from)
+                .transpose()?,
+            bridge_port: value
+                .remove("bridge-port")
+                .map(NmSettingBridgePort::try_from)
+                .transpose()?,
+            ovs_bridge: value
+                .remove("ovs-bridge")
+                .map(NmSettingOvsBridge::try_from)
+                .transpose()?,
+            ovs_port: value
+                .remove("ovs-port")
+                .map(NmSettingOvsPort::try_from)
+                .transpose()?,
+            ovs_iface: value
+                .remove("ovs-interface")
+                .map(NmSettingOvsIface::try_from)
+                .transpose()?,
+            wired: value
+                .remove("802-3-ethernet")
+                .map(NmSettingWired::try_from)
+                .transpose()?,
+            _other: value,
+            ..Default::default()
+        })
     }
 }
 
@@ -153,28 +158,17 @@ impl NmConnection {
     }
 
     pub fn to_keyfile(&self) -> Result<String, NmError> {
-        let mut ret = String::new();
-        let nm_conn_value = self.to_value()?;
-        let mut section_names: Vec<&str> =
-            nm_conn_value.keys().cloned().collect();
-        section_names.sort_unstable();
+        let mut nm_conn_dbus_value = self.to_value()?;
 
-        // TODO: Sort the sections
-        for section_name in section_names {
-            if let Some(nm_setting) = nm_conn_value.get(section_name) {
-                ret += &format!("[{}]\n", section_name);
-                for (prop_name, prop_value) in nm_setting.iter() {
-                    ret += &format!(
-                        "{}={}\n",
-                        prop_name,
-                        zvariant_value_to_string(prop_value)?
-                    );
-                }
-                ret += "\n";
-            }
+        // section name `802-3-ethernet` should renamed to `ethernet`
+        if let Some(wire_setting) = nm_conn_dbus_value.remove("802-3-ethernet")
+        {
+            nm_conn_dbus_value.insert("ethernet", wire_setting);
         }
 
-        Ok(ret)
+        let nm_conn_value = zvariant::Dict::from(nm_conn_dbus_value);
+
+        zvariant_value_to_keyfile(&zvariant::Value::Dict(nm_conn_value), "")
     }
 
     pub(crate) fn to_value(&self) -> Result<NmConnectionDbusValue, NmError> {
@@ -206,6 +200,17 @@ impl NmConnection {
         if let Some(wired_set) = &self.wired {
             ret.insert("802-3-ethernet", wired_set.to_value()?);
         }
+        for (key, setting_value) in &self._other {
+            let mut other_setting_value: HashMap<&str, zvariant::Value> =
+                HashMap::new();
+            for (sub_key, sub_value) in setting_value {
+                other_setting_value.insert(
+                    sub_key.as_str(),
+                    zvariant::Value::from(sub_value.clone()),
+                );
+            }
+            ret.insert(key, other_setting_value);
+        }
         Ok(ret)
     }
 
@@ -229,33 +234,65 @@ pub struct NmSettingConnection {
     pub controller_type: Option<String>,
     pub autoconnect: Option<bool>,
     pub autoconnect_ports: Option<bool>,
+    _other: HashMap<String, zvariant::OwnedValue>,
 }
 
-impl TryFrom<&HashMap<String, zvariant::OwnedValue>> for NmSettingConnection {
+impl TryFrom<HashMap<String, zvariant::OwnedValue>> for NmSettingConnection {
     type Error = NmError;
     fn try_from(
-        value: &HashMap<String, zvariant::OwnedValue>,
+        mut setting_value: HashMap<String, zvariant::OwnedValue>,
     ) -> Result<Self, Self::Error> {
-        let autoconnect_ports =
-            match value_hash_get_i32(value, "autoconnect-slaves")? {
-                Some(NM_AUTOCONENCT_PORT_YES) => Some(true),
-                Some(NM_AUTOCONENCT_PORT_NO) => Some(false),
-                _ => None,
-            };
-        Ok(Self {
-            id: value_hash_get_string(value, "id")?,
-            uuid: value_hash_get_string(value, "uuid")?,
-            iface_type: value_hash_get_string(value, "type")?,
-            iface_name: value_hash_get_string(value, "interface-name")?,
-            controller: value_hash_get_string(value, "master")?,
-            controller_type: value_hash_get_string(value, "slave-type")?,
-            autoconnect: match value_hash_get_bool(value, "autoconnect")? {
-                Some(v) => Some(v),
-                // For autoconnect, None means true
-                None => Some(true),
-            },
-            autoconnect_ports,
-        })
+        let mut setting = Self::new();
+        setting.id = setting_value
+            .remove("id")
+            .map(own_value_to_string)
+            .transpose()?;
+        setting.uuid = setting_value
+            .remove("uuid")
+            .map(own_value_to_string)
+            .transpose()?;
+        setting.iface_type = setting_value
+            .remove("type")
+            .map(own_value_to_string)
+            .transpose()?;
+        setting.iface_name = setting_value
+            .remove("interface-name")
+            .map(own_value_to_string)
+            .transpose()?;
+        setting.controller = setting_value
+            .remove("master")
+            .map(own_value_to_string)
+            .transpose()?;
+        setting.controller_type = setting_value
+            .remove("slave-type")
+            .map(own_value_to_string)
+            .transpose()?;
+        setting.autoconnect = setting_value
+            .remove("autoconnect")
+            .map(own_value_to_bool)
+            .transpose()?;
+        setting.autoconnect_ports = match setting_value
+            .remove("autoconnect-slaves")
+            .map(own_value_to_i32)
+            .transpose()?
+        {
+            Some(NM_AUTOCONENCT_PORT_YES) => Some(true),
+            Some(NM_AUTOCONENCT_PORT_NO) => Some(false),
+            Some(v) => {
+                warn!("Unknown autoconnect-ports value {}", v);
+                None
+            }
+            // For autoconnect, None means true
+            None => Some(true),
+        };
+        setting._other = setting_value;
+
+        if setting.autoconnect == None {
+            // For autoconnect, None means true
+            setting.autoconnect = Some(true)
+        }
+
+        Ok(setting)
     }
 }
 
@@ -286,6 +323,7 @@ impl NmSettingConnection {
         if let Some(v) = &self.controller_type {
             ret.insert("slave-type", zvariant::Value::new(v.as_str()));
         }
+
         ret.insert(
             "autoconnect",
             if let Some(false) = &self.autoconnect {
@@ -302,61 +340,10 @@ impl NmSettingConnection {
                 None => zvariant::Value::new(NM_AUTOCONENCT_PORT_DEFAULT),
             },
         );
+        ret.extend(self._other.iter().map(|(key, value)| {
+            (key.as_str(), zvariant::Value::from(value.clone()))
+        }));
         Ok(ret)
-    }
-}
-
-fn zvariant_value_to_string(
-    value: &zvariant::Value,
-) -> Result<String, NmError> {
-    match value {
-        zvariant::Value::Bool(b) => Ok(if *b {
-            "true".to_string()
-        } else {
-            "false".to_string()
-        }),
-        zvariant::Value::I32(d) => Ok(format!("{}", d)),
-        zvariant::Value::U32(d) => Ok(format!("{}", d)),
-        zvariant::Value::U8(d) => Ok(format!("{}", d)),
-        zvariant::Value::U16(d) => Ok(format!("{}", d)),
-        zvariant::Value::I16(d) => Ok(format!("{}", d)),
-        zvariant::Value::U64(d) => Ok(format!("{}", d)),
-        zvariant::Value::I64(d) => Ok(format!("{}", d)),
-        zvariant::Value::Dict(d) => {
-            let address = d.get("address");
-            let prefix = d.get("prefix");
-            if let Ok(Some(address)) = address {
-                if let Ok(Some(prefix)) = prefix {
-                    return Ok(format!(
-                        "{}/{}",
-                        zvariant_value_to_string(address)?,
-                        zvariant_value_to_string(prefix)?,
-                    ));
-                }
-            }
-            return Err(NmError::new(
-                ErrorKind::Bug,
-                format!("BUG: Unknown dict data {:?}", d),
-            ));
-        }
-        zvariant::Value::Array(a) => {
-            let mut ret = String::new();
-            for item in a.get() {
-                ret += &zvariant_value_to_string(item)?;
-                ret += ";";
-                //ret += &format!("{}={}\n", prop_name, d);
-            }
-            ret.pop();
-            Ok(ret)
-        }
-        zvariant::Value::Str(s) => Ok(s.as_str().to_string()),
-        _ => {
-            warn!("unknown value type {:?}", value);
-            return Err(NmError::new(
-                ErrorKind::Bug,
-                format!("BUG: Unknown value type: {:?}", value),
-            ));
-        }
     }
 }
 
