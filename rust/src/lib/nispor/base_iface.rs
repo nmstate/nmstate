@@ -56,6 +56,14 @@ pub(crate) fn np_iface_to_base_iface(
         } else {
             Some(0u64)
         },
+        accept_all_mac_addresses: if np_iface
+            .flags
+            .contains(&nispor::IfaceFlags::Promisc)
+        {
+            Some(true)
+        } else {
+            Some(false)
+        },
         prop_list: vec![
             "name",
             "state",
@@ -65,6 +73,7 @@ pub(crate) fn np_iface_to_base_iface(
             "mac_address",
             "controller",
             "mtu",
+            "accept_all_mac_addresses",
         ],
         ..Default::default()
     };

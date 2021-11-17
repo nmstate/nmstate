@@ -30,6 +30,7 @@ use crate::{
 pub struct NmSettingWired {
     pub cloned_mac_address: Option<String>,
     pub mtu: Option<u32>,
+    pub accept_all_mac_addresses: Option<i32>,
     _other: HashMap<String, zvariant::OwnedValue>,
 }
 
@@ -44,6 +45,11 @@ impl TryFrom<DbusDictionary> for NmSettingWired {
             )?
             .map(u8_array_to_mac_string),
             mtu: _from_map!(v, "mtu", u32::try_from)?,
+            accept_all_mac_addresses: _from_map!(
+                v,
+                "accept-all-mac-addresses",
+                i32::try_from
+            )?,
             _other: v,
         })
     }
@@ -62,6 +68,9 @@ impl NmSettingWired {
         }
         if let Some(v) = &self.mtu {
             ret.insert("mtu", zvariant::Value::new(v));
+        }
+        if let Some(v) = &self.accept_all_mac_addresses {
+            ret.insert("accept-all-mac-addresses", zvariant::Value::new(v));
         }
         ret.extend(self._other.iter().map(|(key, value)| {
             (key.as_str(), zvariant::Value::from(value.clone()))

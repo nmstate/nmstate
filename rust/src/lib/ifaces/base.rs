@@ -27,6 +27,8 @@ pub struct BaseInterface {
     pub ipv6: Option<InterfaceIpv6>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub controller: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub accept_all_mac_addresses: Option<bool>,
     #[serde(skip)]
     pub controller_type: Option<InterfaceType>,
     // The interface lowest up_priority will be activated first.
@@ -61,6 +63,9 @@ impl BaseInterface {
         }
         if other.prop_list.contains(&"controller_type") {
             self.controller_type = other.controller_type.clone();
+        }
+        if other.prop_list.contains(&"accept_all_mac_addresses") {
+            self.accept_all_mac_addresses = other.accept_all_mac_addresses;
         }
 
         if other.prop_list.contains(&"ipv4") {
