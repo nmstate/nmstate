@@ -51,6 +51,9 @@ impl BaseInterface {
         if other.prop_list.contains(&"state") {
             self.state = other.state.clone();
         }
+        if other.prop_list.contains(&"mtu") {
+            self.mtu = other.mtu;
+        }
         if other.prop_list.contains(&"controller") {
             self.controller = other.controller.clone();
         }

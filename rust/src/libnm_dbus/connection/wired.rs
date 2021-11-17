@@ -19,12 +19,16 @@ use std::fmt::Write;
 
 use log::error;
 
-use crate::{dbus_value::own_value_to_bytes_array, error::NmError};
+use crate::{
+    dbus_value::own_value_to_bytes_array, dbus_value::own_value_to_u32,
+    error::NmError,
+};
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct NmSettingWired {
     pub cloned_mac_address: Option<String>,
     _other: HashMap<String, zvariant::OwnedValue>,
+    pub mtu: Option<u32>,
 }
 
 impl TryFrom<HashMap<String, zvariant::OwnedValue>> for NmSettingWired {
@@ -38,6 +42,10 @@ impl TryFrom<HashMap<String, zvariant::OwnedValue>> for NmSettingWired {
             .map(own_value_to_bytes_array)
             .transpose()?
             .map(u8_array_to_mac_string);
+        setting.mtu = setting_value
+            .remove("mtu")
+            .map(own_value_to_u32)
+            .transpose()?;
         setting._other = setting_value;
         Ok(setting)
     }
@@ -53,6 +61,9 @@ impl NmSettingWired {
                 "cloned-mac-address",
                 zvariant::Value::new(mac_str_to_u8_array(v)),
             );
+        }
+        if let Some(v) = &self.mtu {
+            ret.insert("mtu", zvariant::Value::new(v));
         }
         ret.extend(self._other.iter().map(|(key, value)| {
             (key.as_str(), zvariant::Value::from(value.clone()))

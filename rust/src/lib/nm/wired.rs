@@ -15,6 +15,10 @@ pub(crate) fn gen_nm_wired_setting(
         nm_wired_set.cloned_mac_address = Some(mac.to_string());
         flag_need_wired = true;
     }
+    if let Some(mtu) = &base_iface.mtu {
+        nm_wired_set.mtu = Some(*mtu as u32);
+        flag_need_wired = true;
+    }
 
     if flag_need_wired {
         nm_conn.wired = Some(nm_wired_set);

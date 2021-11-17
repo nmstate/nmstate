@@ -194,6 +194,23 @@ function run_tests {
             test_create_and_remove_ovs_bridge_with_a_system_port or \
             test_create_and_remove_ovs_bridge_with_internal_port_static_ip_and_mac' \
             ${nmstate_pytest_extra_args}"
+        exec_cmd "
+          env  \
+          PYTHONPATH=$CONTAINER_WORKSPACE/rust/src/python \
+          pytest \
+            $PYTEST_OPTIONS \
+            tests/integration/ethernet_mtu_test.py \
+            -k '\
+            test_increase_iface_mtu or \
+            test_decrease_iface_mtu or \
+            test_upper_limit_jumbo_iface_mtu or \
+            test_increse_more_than_jumbo_iface_mtu or \
+            test_decrease_to_ipv6_min_ethernet_frame_size_iface_mtu or \
+            test_decrease_to_lower_than_min_ipv6_iface_mtu or \
+            test_mtu_without_ipv6 or \
+            test_change_mtu_with_stable_link_up or \
+            test_empty_state_preserve_the_old_mtu' \
+            ${nmstate_pytest_extra_args}"
     fi
 }
 
