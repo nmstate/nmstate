@@ -236,8 +236,16 @@ function run_tests {
             -k '\
             not test_linux_bridge_over_bond_over_port_in_one_transaction and \
             not test_explicitly_ignore_a_bridge_port and \
-            not test_create_linux_bridge_with_copy_mac_from and \
-            not test_linux_bridge_enable_and_disable_accept_all_mac_addresses' \
+            not test_create_linux_bridge_with_copy_mac_from' \
+            ${nmstate_pytest_extra_args}"
+        exec_cmd "
+          env  \
+          PYTHONPATH=$CONTAINER_WORKSPACE/rust/src/python \
+          pytest \
+            $PYTEST_OPTIONS \
+            tests/integration/interface_common_test.py \
+            -k '\
+            test_enable_and_disable_accept_all_mac_addresses' \
             ${nmstate_pytest_extra_args}"
     fi
 }
