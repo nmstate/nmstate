@@ -1,16 +1,17 @@
 use std::collections::{hash_map::Entry, HashMap};
 
-use nm_dbus::{NmApi, NmConnection, NmSettingConnection, NmSettingWired};
+use nm_dbus::{NmApi, NmConnection, NmSettingConnection};
 
 use crate::{
-    nm::bridge::linux_bridge_conf_to_nm,
-    nm::ip::{iface_ipv4_to_nm, iface_ipv6_to_nm},
+    nm::bridge::gen_nm_br_setting,
+    nm::ip::gen_nm_ip_setting,
     nm::ovs::{
-        create_nm_ovs_br_set, create_nm_ovs_iface_set, create_ovs_port_nm_conn,
+        create_ovs_port_nm_conn, gen_nm_ovs_br_setting,
+        gen_nm_ovs_iface_setting,
     },
     nm::profile::get_exist_profile,
-    ErrorKind, Interface, InterfaceIpv4, InterfaceIpv6, InterfaceType,
-    NetworkState, NmstateError,
+    nm::wired::gen_nm_wired_setting,
+    ErrorKind, Interface, InterfaceType, NetworkState, NmstateError,
 };
 
 pub(crate) const NM_SETTING_BRIDGE_SETTING_NAME: &str = "bridge";
@@ -58,80 +59,47 @@ pub(crate) fn iface_to_nm_connections(
         nm_ac_uuids,
     );
 
-    let uuid = if let Some(exist_nm_conn) = exist_nm_conn {
-        if let Some(exist_uuid) = exist_nm_conn.uuid() {
-            exist_uuid.to_string()
-        } else {
-            NmApi::uuid_gen()
-        }
-    } else {
-        NmApi::uuid_gen()
-    };
-    let nm_ctrl_type = if let Some(ctrl_type) = &base_iface.controller_type {
-        Some(iface_type_to_nm(ctrl_type)?)
-    } else {
-        None
-    };
-    let nm_ctrl_type = nm_ctrl_type.as_deref();
-    let ctrl_name = base_iface.controller.as_deref();
-    let mut nm_conn = gen_nm_connection(
-        &base_iface.name,
-        &uuid,
-        &iface_type_to_nm(&base_iface.iface_type)?,
-        ctrl_name,
-        nm_ctrl_type,
-        iface.is_controller(),
-    );
+    let mut nm_conn = exist_nm_conn.cloned().unwrap_or_default();
 
-    if base_iface.can_have_ip() {
-        if let Some(iface_ip) = &base_iface.ipv4 {
-            nm_conn.ipv4 = Some(iface_ipv4_to_nm(iface_ip)?);
-        } else {
-            nm_conn.ipv4 = Some(iface_ipv4_to_nm(&InterfaceIpv4 {
-                enabled: false,
-                ..Default::default()
-            })?);
+    gen_nm_conn_setting(iface, &mut nm_conn)?;
+    gen_nm_ip_setting(iface, &mut nm_conn)?;
+    gen_nm_wired_setting(iface, &mut nm_conn);
+
+    match iface {
+        Interface::OvsBridge(ovs_br_iface) => {
+            gen_nm_ovs_br_setting(ovs_br_iface, &mut nm_conn);
+            // For OVS Bridge, we should create its OVS port also
+            for ovs_port_conf in ovs_br_iface.port_confs() {
+                let exist_nm_ovs_port_conn = get_exist_profile(
+                    exist_nm_conns,
+                    &ovs_port_conf.name,
+                    &InterfaceType::Other("ovs-port".to_string()),
+                    nm_ac_uuids,
+                );
+                ret.push(create_ovs_port_nm_conn(
+                    &ovs_br_iface.base.name,
+                    ovs_port_conf,
+                    exist_nm_ovs_port_conn,
+                )?)
+            }
         }
-        if let Some(iface_ip) = &base_iface.ipv6 {
-            nm_conn.ipv6 = Some(iface_ipv6_to_nm(iface_ip)?);
-        } else {
-            nm_conn.ipv6 = Some(iface_ipv6_to_nm(&InterfaceIpv6 {
-                enabled: false,
-                ..Default::default()
-            })?);
+        Interface::LinuxBridge(br_iface) => {
+            gen_nm_br_setting(br_iface, &mut nm_conn);
         }
-    }
-    let mut nm_wired_set = NmSettingWired::new();
-    let mut flag_need_wired = false;
-    if let Some(mac) = &base_iface.mac_address {
-        flag_need_wired = true;
-        nm_wired_set.cloned_mac_address = Some(mac.to_string());
-    }
-    if flag_need_wired {
-        nm_conn.wired = Some(nm_wired_set);
+        Interface::OvsInterface(_) => {
+            // TODO Support OVS Patch interface
+            gen_nm_ovs_iface_setting(&mut nm_conn);
+        }
+        _ => (),
+    };
+
+    // When detaching a OVS system interface from OVS bridge, we should remove
+    // its NmSettingOvsIface setting
+    if base_iface.controller.is_none() {
+        nm_conn.ovs_iface = None;
     }
 
-    if let Interface::OvsBridge(ovs_br_iface) = iface {
-        nm_conn.ovs_bridge = Some(create_nm_ovs_br_set(ovs_br_iface));
-    }
-    if let Interface::LinuxBridge(br_iface) = iface {
-        if let Some(br_conf) = &br_iface.bridge {
-            nm_conn.bridge = Some(linux_bridge_conf_to_nm(br_conf)?);
-        }
-    }
-    if let Interface::OvsInterface(ovs_iface) = iface {
-        nm_conn.ovs_iface = Some(create_nm_ovs_iface_set(ovs_iface));
-    }
-    ret.push(nm_conn);
-    if let Interface::OvsBridge(ovs_br_iface) = iface {
-        // For OVS Bridge, we should create its OVS port also
-        for ovs_port_conf in ovs_br_iface.port_confs() {
-            ret.push(create_ovs_port_nm_conn(
-                &ovs_br_iface.base.name,
-                ovs_port_conf,
-            ))
-        }
-    }
+    ret.insert(0, nm_conn);
 
     Ok(ret)
 }
@@ -251,40 +219,60 @@ pub(crate) fn get_port_nm_conns<'a>(
     ret
 }
 
-pub(crate) fn gen_nm_connection(
-    iface_name: &str,
-    uuid: &str,
-    nm_iface_type: &str,
-    ctrl_name: Option<&str>,
-    nm_ctrl_type: Option<&str>,
-    is_controller: bool,
-) -> NmConnection {
-    let mut nm_conn = NmConnection::new();
-
-    // OVS port already has it own prefix
-    let conn_name = if nm_iface_type == "ovs-bridge" {
-        format!("ovs-br-{}", iface_name)
-    } else if nm_iface_type == "ovs-interface" {
-        format!("ovs-iface-{}", iface_name)
+pub(crate) fn gen_nm_conn_setting(
+    iface: &Interface,
+    nm_conn: &mut NmConnection,
+) -> Result<(), NmstateError> {
+    let mut nm_conn_set = if let Some(cur_nm_conn_set) = &nm_conn.connection {
+        cur_nm_conn_set.clone()
     } else {
-        iface_name.to_string()
+        let mut new_nm_conn_set = NmSettingConnection::new();
+        let conn_name = match iface.iface_type() {
+            InterfaceType::OvsBridge => {
+                format!("ovs-br-{}", iface.name())
+            }
+            InterfaceType::Other(ref other_type)
+                if other_type == "ovs-port" =>
+            {
+                format!("ovs-port-{}", iface.name())
+            }
+            InterfaceType::OvsInterface => {
+                format!("ovs-iface-{}", iface.name())
+            }
+            _ => iface.name().to_string(),
+        };
+
+        new_nm_conn_set.id = Some(conn_name);
+        new_nm_conn_set.uuid = Some(NmApi::uuid_gen());
+        new_nm_conn_set.iface_type =
+            Some(iface_type_to_nm(&iface.iface_type())?);
+        new_nm_conn_set
     };
 
-    let mut nm_conn_set = NmSettingConnection {
-        id: Some(conn_name),
-        uuid: Some(uuid.to_string()),
-        iface_type: Some(nm_iface_type.to_string()),
-        iface_name: Some(iface_name.to_string()),
-        autoconnect: Some(true),
-        autoconnect_ports: if is_controller { Some(true) } else { None },
-        ..Default::default()
+    nm_conn_set.iface_name = Some(iface.name().to_string());
+    nm_conn_set.autoconnect = Some(true);
+    nm_conn_set.autoconnect_ports = if iface.is_controller() {
+        Some(true)
+    } else {
+        None
     };
 
+    nm_conn_set.controller = None;
+    nm_conn_set.controller_type = None;
+    let nm_ctrl_type = iface
+        .base_iface()
+        .controller_type
+        .as_ref()
+        .map(iface_type_to_nm)
+        .transpose()?;
+    let nm_ctrl_type = nm_ctrl_type.as_deref();
+    let ctrl_name = iface.base_iface().controller.as_deref();
     if let Some(ctrl_name) = ctrl_name {
         if let Some(nm_ctrl_type) = nm_ctrl_type {
             nm_conn_set.controller = Some(ctrl_name.to_string());
             nm_conn_set.controller_type = if nm_ctrl_type == "ovs-bridge"
-                && nm_iface_type != "ovs-port"
+                && iface.iface_type()
+                    != InterfaceType::Other("ovs-port".to_string())
             {
                 Some("ovs-port".to_string())
             } else {
@@ -293,6 +281,5 @@ pub(crate) fn gen_nm_connection(
         }
     }
     nm_conn.connection = Some(nm_conn_set);
-
-    nm_conn
+    Ok(())
 }

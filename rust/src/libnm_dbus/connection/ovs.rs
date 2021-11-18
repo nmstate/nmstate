@@ -17,9 +17,7 @@ use std::collections::HashMap;
 use std::convert::TryFrom;
 
 use crate::{
-    dbus_value::{
-        value_hash_get_bool, value_hash_get_string, value_hash_get_u32,
-    },
+    dbus_value::{own_value_to_bool, own_value_to_string, own_value_to_u32},
     error::NmError,
 };
 
@@ -29,22 +27,33 @@ pub struct NmSettingOvsBridge {
     pub mcast_snooping_enable: Option<bool>,
     pub rstp: Option<bool>,
     pub fail_mode: Option<String>,
+    _other: HashMap<String, zvariant::OwnedValue>,
 }
 
-impl TryFrom<&HashMap<String, zvariant::OwnedValue>> for NmSettingOvsBridge {
+impl TryFrom<HashMap<String, zvariant::OwnedValue>> for NmSettingOvsBridge {
     type Error = NmError;
     fn try_from(
-        value: &HashMap<String, zvariant::OwnedValue>,
+        mut setting_value: HashMap<String, zvariant::OwnedValue>,
     ) -> Result<Self, Self::Error> {
-        Ok(Self {
-            stp: value_hash_get_bool(value, "stp-enable")?,
-            mcast_snooping_enable: value_hash_get_bool(
-                value,
-                "mcast-snooping-enable",
-            )?,
-            rstp: value_hash_get_bool(value, "rstp-enable")?,
-            fail_mode: value_hash_get_string(value, "fail-mode")?,
-        })
+        let mut setting = Self::new();
+        setting.stp = setting_value
+            .remove("stp-enable")
+            .map(own_value_to_bool)
+            .transpose()?;
+        setting.mcast_snooping_enable = setting_value
+            .remove("mcast-snooping-enable")
+            .map(own_value_to_bool)
+            .transpose()?;
+        setting.rstp = setting_value
+            .remove("rstp-enable")
+            .map(own_value_to_bool)
+            .transpose()?;
+        setting.fail_mode = setting_value
+            .remove("fail-mode")
+            .map(own_value_to_string)
+            .transpose()?;
+        setting._other = setting_value;
+        Ok(setting)
     }
 }
 
@@ -65,6 +74,9 @@ impl NmSettingOvsBridge {
         if let Some(v) = &self.fail_mode {
             ret.insert("fail-mode", zvariant::Value::new(v));
         }
+        ret.extend(self._other.iter().map(|(key, value)| {
+            (key.as_str(), zvariant::Value::from(value.clone()))
+        }));
         Ok(ret)
     }
 
@@ -78,18 +90,29 @@ pub struct NmSettingOvsPort {
     pub mode: Option<String>,
     pub up_delay: Option<u32>,
     pub down_delay: Option<u32>,
+    _other: HashMap<String, zvariant::OwnedValue>,
 }
 
-impl TryFrom<&HashMap<String, zvariant::OwnedValue>> for NmSettingOvsPort {
+impl TryFrom<HashMap<String, zvariant::OwnedValue>> for NmSettingOvsPort {
     type Error = NmError;
     fn try_from(
-        value: &HashMap<String, zvariant::OwnedValue>,
+        mut setting_value: HashMap<String, zvariant::OwnedValue>,
     ) -> Result<Self, Self::Error> {
-        Ok(Self {
-            mode: value_hash_get_string(value, "bond-mode")?,
-            up_delay: value_hash_get_u32(value, "bond-updelay")?,
-            down_delay: value_hash_get_u32(value, "bond-downdelay")?,
-        })
+        let mut setting = Self::new();
+        setting.mode = setting_value
+            .remove("bond-mode")
+            .map(own_value_to_string)
+            .transpose()?;
+        setting.up_delay = setting_value
+            .remove("bond-updelay")
+            .map(own_value_to_u32)
+            .transpose()?;
+        setting.down_delay = setting_value
+            .remove("bond-downdelay")
+            .map(own_value_to_u32)
+            .transpose()?;
+        setting._other = setting_value;
+        Ok(setting)
     }
 }
 
@@ -111,6 +134,9 @@ impl NmSettingOvsPort {
         if let Some(v) = self.down_delay {
             ret.insert("bond-downdelay", zvariant::Value::new(v));
         }
+        ret.extend(self._other.iter().map(|(key, value)| {
+            (key.as_str(), zvariant::Value::from(value.clone()))
+        }));
         Ok(ret)
     }
 }
@@ -118,16 +144,21 @@ impl NmSettingOvsPort {
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct NmSettingOvsIface {
     pub iface_type: Option<String>,
+    _other: HashMap<String, zvariant::OwnedValue>,
 }
 
-impl TryFrom<&HashMap<String, zvariant::OwnedValue>> for NmSettingOvsIface {
+impl TryFrom<HashMap<String, zvariant::OwnedValue>> for NmSettingOvsIface {
     type Error = NmError;
     fn try_from(
-        value: &HashMap<String, zvariant::OwnedValue>,
+        mut setting_value: HashMap<String, zvariant::OwnedValue>,
     ) -> Result<Self, Self::Error> {
-        Ok(Self {
-            iface_type: value_hash_get_string(value, "type")?,
-        })
+        let mut setting = Self::new();
+        setting.iface_type = setting_value
+            .remove("type")
+            .map(own_value_to_string)
+            .transpose()?;
+        setting._other = setting_value;
+        Ok(setting)
     }
 }
 
@@ -139,6 +170,9 @@ impl NmSettingOvsIface {
         if let Some(v) = &self.iface_type {
             ret.insert("type", zvariant::Value::new(v));
         }
+        ret.extend(self._other.iter().map(|(key, value)| {
+            (key.as_str(), zvariant::Value::from(value.clone()))
+        }));
         Ok(ret)
     }
 
