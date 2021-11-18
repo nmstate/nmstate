@@ -18,6 +18,7 @@ use std::convert::TryFrom;
 
 use log::warn;
 
+use crate::connection::vlan::NmSettingVlan;
 use crate::{
     connection::bridge::{NmSettingBridge, NmSettingBridgePort},
     connection::ip::NmSettingIp,
@@ -52,6 +53,7 @@ pub struct NmConnection {
     pub ovs_port: Option<NmSettingOvsPort>,
     pub ovs_iface: Option<NmSettingOvsIface>,
     pub wired: Option<NmSettingWired>,
+    pub vlan: Option<NmSettingVlan>,
     pub(crate) obj_path: String,
     _other: HashMap<String, HashMap<String, zvariant::OwnedValue>>,
 }
@@ -97,6 +99,10 @@ impl TryFrom<NmConnectionDbusOwnedValue> for NmConnection {
             wired: value
                 .remove("802-3-ethernet")
                 .map(NmSettingWired::try_from)
+                .transpose()?,
+            vlan: value
+                .remove("vlan")
+                .map(NmSettingVlan::try_from)
                 .transpose()?,
             _other: value,
             ..Default::default()
@@ -199,6 +205,9 @@ impl NmConnection {
         }
         if let Some(wired_set) = &self.wired {
             ret.insert("802-3-ethernet", wired_set.to_value()?);
+        }
+        if let Some(vlan) = &self.vlan {
+            ret.insert("vlan", vlan.to_value()?);
         }
         for (key, setting_value) in &self._other {
             let mut other_setting_value: HashMap<&str, zvariant::Value> =
