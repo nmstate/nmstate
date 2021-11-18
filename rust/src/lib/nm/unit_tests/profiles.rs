@@ -27,7 +27,7 @@ fn test_use_uuid_for_controller_reference_with_ovs_bond() {
     nm_conn_set.id = Some("ovs-port-bond1".to_string());
     nm_conn_set.uuid = Some(UUID2.to_string());
     nm_conn_set.iface_type = Some("ovs-port".to_string());
-    nm_conn_set.iface_name = Some("ovs-port-bond1".to_string());
+    nm_conn_set.iface_name = Some("bond1".to_string());
     nm_conn_set.controller = Some("br0".into());
     nm_conn_set.controller_type = Some("ovs-bridge".into());
     nm_conn.connection = Some(nm_conn_set);
@@ -97,7 +97,7 @@ fn test_use_uuid_for_controller_reference_with_ovs_bond() {
     let bond1_nm_con_set = nm_conns[1].connection.as_ref().unwrap();
     println!("bond1 {:?}", bond1_nm_con_set);
     assert!(bond1_nm_con_set.id == Some("ovs-port-bond1".to_string()));
-    assert!(bond1_nm_con_set.iface_name == Some("ovs-port-bond1".to_string()));
+    assert!(bond1_nm_con_set.iface_name == Some("bond1".to_string()));
     assert!(bond1_nm_con_set.iface_type == Some("ovs-port".to_string()));
     assert!(bond1_nm_con_set.controller == Some(UUID1.to_string()));
     assert!(bond1_nm_con_set.controller_type == Some("ovs-bridge".to_string()));
