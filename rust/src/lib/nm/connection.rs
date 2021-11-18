@@ -1,6 +1,6 @@
 use std::collections::{hash_map::Entry, HashMap};
 
-use nm_dbus::{NmApi, NmConnection, NmSettingConnection};
+use nm_dbus::{NmApi, NmConnection, NmSettingConnection, NmSettingVlan};
 
 use crate::{
     nm::bridge::gen_nm_br_setting,
@@ -90,6 +90,9 @@ pub(crate) fn iface_to_nm_connections(
             // TODO Support OVS Patch interface
             gen_nm_ovs_iface_setting(&mut nm_conn);
         }
+        Interface::Vlan(vlan_iface) => {
+            nm_conn.vlan = vlan_iface.vlan.as_ref().map(NmSettingVlan::from)
+        }
         _ => (),
     };
 
@@ -112,6 +115,7 @@ pub(crate) fn iface_type_to_nm(
         InterfaceType::Ethernet => Ok("802-3-ethernet".into()),
         InterfaceType::OvsBridge => Ok("ovs-bridge".into()),
         InterfaceType::OvsInterface => Ok("ovs-interface".into()),
+        InterfaceType::Vlan => Ok("vlan".to_string()),
         InterfaceType::Other(s) => Ok(s.to_string()),
         _ => Err(NmstateError::new(
             ErrorKind::NotImplementedError,

@@ -211,6 +211,20 @@ function run_tests {
             test_change_mtu_with_stable_link_up or \
             test_empty_state_preserve_the_old_mtu' \
             ${nmstate_pytest_extra_args}"
+        exec_cmd "
+          env  \
+          PYTHONPATH=$CONTAINER_WORKSPACE/rust/src/python \
+          pytest \
+            $PYTEST_OPTIONS \
+            tests/integration/vlan_test.py \
+            -k '\
+            test_add_and_remove_vlan or \
+            test_vlan_iface_uses_the_mac_of_base_iface or \
+            test_add_and_remove_two_vlans_on_same_iface or \
+            test_two_vlans_on_eth1_change_base_iface_mtu or \
+            (test_two_vlans_on_eth1_change_mtu and not test_two_vlans_on_eth1_change_mtu_rollback) or \
+            test_rollback_for_vlans' \
+            ${nmstate_pytest_extra_args}"
     fi
 }
 
