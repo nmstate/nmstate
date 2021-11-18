@@ -1,17 +1,14 @@
 use std::convert::TryFrom;
 
 use log::warn;
-use nm_dbus::{
-    NmConnection, NmSettingOvsBridge, NmSettingOvsIface, NmSettingOvsPort,
-};
+use nm_dbus::NmConnection;
 
 use crate::{
-    nm::connection::gen_nm_connection, NmstateError, OvsBridgeBondConfig,
-    OvsBridgeBondMode, OvsBridgeBondPortConfig, OvsBridgeConfig,
-    OvsBridgeInterface, OvsBridgeOptions, OvsBridgePortConfig, OvsInterface,
+    nm::connection::gen_nm_conn_setting, BaseInterface, Interface,
+    InterfaceType, NmstateError, OvsBridgeBondConfig, OvsBridgeBondMode,
+    OvsBridgeBondPortConfig, OvsBridgeConfig, OvsBridgeInterface,
+    OvsBridgeOptions, OvsBridgePortConfig, UnknownInterface,
 };
-
-pub(crate) const OVS_PORT_PREFIX: &str = "ovs-port-";
 
 pub(crate) fn nm_ovs_bridge_conf_get(
     nm_conn: &NmConnection,
@@ -84,7 +81,7 @@ fn get_ovs_port_config_for_bond(
 ) -> Option<OvsBridgePortConfig> {
     let mut port_conf = OvsBridgePortConfig::new();
     if let Some(n) = nm_ovs_port_conn.iface_name() {
-        port_conf.name = remove_ovs_port_name_prefix(n).to_string();
+        port_conf.name = n.to_string();
     } else {
         return None;
     }
@@ -161,32 +158,23 @@ fn get_nm_ovs_iface_conns<'a>(
     ret
 }
 
-pub(crate) fn gen_ovs_port_name(port_name: &str) -> String {
-    format!("{}{}", OVS_PORT_PREFIX, port_name)
-}
-
-fn remove_ovs_port_name_prefix(nm_port_name: &str) -> &str {
-    if nm_port_name.len() > OVS_PORT_PREFIX.len() {
-        &nm_port_name[OVS_PORT_PREFIX.len()..]
-    } else {
-        nm_port_name
-    }
-}
-
 pub(crate) fn create_ovs_port_nm_conn(
     br_name: &str,
     port_conf: &OvsBridgePortConfig,
-) -> NmConnection {
-    let port_name = gen_ovs_port_name(&port_conf.name);
-    let mut nm_conn = gen_nm_connection(
-        &port_name,
-        &nm_dbus::NmApi::uuid_gen(),
-        "ovs-port",
-        Some(br_name),
-        Some("ovs-bridge"),
-        true, // is controller
-    );
-    let mut nm_ovs_port_set = NmSettingOvsPort::new();
+    exist_nm_conn: Option<&NmConnection>,
+) -> Result<NmConnection, NmstateError> {
+    let mut nm_conn = exist_nm_conn.cloned().unwrap_or_default();
+    let mut base_iface = BaseInterface::new();
+    base_iface.name = port_conf.name.clone();
+    base_iface.iface_type = InterfaceType::Other("ovs-port".to_string());
+    base_iface.controller = Some(br_name.to_string());
+    base_iface.controller_type = Some(InterfaceType::OvsBridge);
+    let mut iface = UnknownInterface::new();
+    iface.base = base_iface;
+    gen_nm_conn_setting(&Interface::Unknown(iface), &mut nm_conn)?;
+
+    let mut nm_ovs_port_set =
+        nm_conn.ovs_port.as_ref().cloned().unwrap_or_default();
     if let Some(bond_conf) = &port_conf.bond {
         if let Some(bond_mode) = &bond_conf.mode {
             nm_ovs_port_set.mode = Some(format!("{}", bond_mode));
@@ -201,7 +189,7 @@ pub(crate) fn create_ovs_port_nm_conn(
         }
     }
     nm_conn.ovs_port = Some(nm_ovs_port_set);
-    nm_conn
+    Ok(nm_conn)
 }
 
 pub(crate) fn get_ovs_port_name(
@@ -212,20 +200,23 @@ pub(crate) fn get_ovs_port_name(
         if let Some(bond_conf) = &port_conf.bond {
             for bond_port_name in bond_conf.ports() {
                 if bond_port_name == ovs_iface_name {
-                    return Some(gen_ovs_port_name(&port_conf.name));
+                    return Some(port_conf.name.as_str().to_string());
                 }
             }
         } else if ovs_iface_name == port_conf.name {
-            return Some(gen_ovs_port_name(ovs_iface_name));
+            return Some(ovs_iface_name.to_string());
         }
     }
     None
 }
 
-pub(crate) fn create_nm_ovs_br_set(
+pub(crate) fn gen_nm_ovs_br_setting(
     ovs_br_iface: &OvsBridgeInterface,
-) -> NmSettingOvsBridge {
-    let mut nm_ovs_br_set = NmSettingOvsBridge::new();
+    nm_conn: &mut NmConnection,
+) {
+    let mut nm_ovs_br_set =
+        nm_conn.ovs_bridge.as_ref().cloned().unwrap_or_default();
+
     if let Some(br_conf) = &ovs_br_iface.bridge {
         if let Some(br_opts) = &br_conf.options {
             nm_ovs_br_set.stp = br_opts.stp;
@@ -238,13 +229,12 @@ pub(crate) fn create_nm_ovs_br_set(
             }
         }
     }
-    nm_ovs_br_set
+    nm_conn.ovs_bridge = Some(nm_ovs_br_set);
 }
 
-pub(crate) fn create_nm_ovs_iface_set(
-    _ovs_iface: &OvsInterface,
-) -> NmSettingOvsIface {
-    let mut nm_ovs_iface_set = NmSettingOvsIface::new();
+pub(crate) fn gen_nm_ovs_iface_setting(nm_conn: &mut NmConnection) {
+    let mut nm_ovs_iface_set =
+        nm_conn.ovs_iface.as_ref().cloned().unwrap_or_default();
     nm_ovs_iface_set.iface_type = Some("internal".to_string());
-    nm_ovs_iface_set
+    nm_conn.ovs_iface = Some(nm_ovs_iface_set);
 }
