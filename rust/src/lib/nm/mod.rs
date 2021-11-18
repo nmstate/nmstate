@@ -11,6 +11,7 @@ mod profile;
 mod show;
 #[cfg(test)]
 mod unit_tests;
+mod vlan;
 mod wired;
 
 pub(crate) use apply::nm_apply;

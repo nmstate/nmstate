@@ -17,6 +17,7 @@ mod bridge;
 mod conn;
 mod ip;
 mod ovs;
+mod vlan;
 mod wired;
 
 pub use crate::connection::bridge::NmSettingBridge;
@@ -25,6 +26,7 @@ pub use crate::connection::ip::{NmSettingIp, NmSettingIpMethod};
 pub use crate::connection::ovs::{
     NmSettingOvsBridge, NmSettingOvsIface, NmSettingOvsPort,
 };
+pub use crate::connection::vlan::NmSettingVlan;
 pub use crate::connection::wired::NmSettingWired;
 
 pub(crate) use crate::connection::conn::{

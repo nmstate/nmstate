@@ -26,7 +26,7 @@ pub use crate::active_connection::NmActiveConnection;
 pub use crate::connection::{
     NmConnection, NmSettingBridge, NmSettingConnection, NmSettingIp,
     NmSettingIpMethod, NmSettingOvsBridge, NmSettingOvsIface, NmSettingOvsPort,
-    NmSettingWired,
+    NmSettingVlan, NmSettingWired,
 };
 pub use crate::device::{NmDevice, NmDeviceState, NmDeviceStateReason};
 pub use crate::error::{ErrorKind, NmError};
