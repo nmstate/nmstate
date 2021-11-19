@@ -3,6 +3,7 @@ use std::collections::{HashMap, HashSet};
 use log::info;
 use nm_dbus::{NmApi, NmConnection, NmDeviceState};
 
+use crate::nm::profile::{deactivate_nm_profiles, get_exist_profile};
 use crate::{
     nm::connection::{
         create_index_for_nm_conns_by_name_type, iface_to_nm_connections,
@@ -113,7 +114,7 @@ fn apply_single_state(
     des_net_state: &NetworkState,
     checkpoint: &str,
 ) -> Result<(), NmstateError> {
-    let mut nm_conns: Vec<NmConnection> = Vec::new();
+    let mut nm_conns_to_activate: Vec<NmConnection> = Vec::new();
     let mut ports: HashMap<String, (String, InterfaceType)> = HashMap::new();
 
     let exist_nm_conns =
@@ -138,13 +139,24 @@ fn apply_single_state(
 
     for iface in ifaces.iter() {
         if iface.iface_type() != InterfaceType::Unknown && iface.is_up() {
-            for nm_conn in
+            nm_conns_to_activate.extend(
                 iface_to_nm_connections(iface, &exist_nm_conns, &nm_ac_uuids)?
-            {
-                nm_conns.push(nm_conn);
-            }
+                    .into_iter(),
+            );
         }
     }
+    let nm_conns_to_deactivate = ifaces
+        .into_iter()
+        .filter(|iface| iface.is_down())
+        .filter_map(|iface| {
+            get_exist_profile(
+                &exist_nm_conns,
+                &iface.base_iface().name,
+                &iface.base_iface().iface_type,
+                &nm_ac_uuids,
+            )
+        })
+        .collect::<Vec<_>>();
 
     let mut ovs_br_ifaces: Vec<&OvsBridgeInterface> = Vec::new();
     for iface in net_state.interfaces.user_ifaces.values() {
@@ -154,15 +166,20 @@ fn apply_single_state(
     }
 
     use_uuid_for_controller_reference(
-        &mut nm_conns,
+        &mut nm_conns_to_activate,
         &des_net_state.interfaces.user_ifaces,
         &cur_net_state.interfaces.user_ifaces,
         &exist_nm_conns,
     )?;
-    save_nm_profiles(nm_api, nm_conns.as_slice(), checkpoint)?;
-    delete_exist_profiles(nm_api, &exist_nm_conns, &nm_conns)?;
+    save_nm_profiles(nm_api, nm_conns_to_activate.as_slice(), checkpoint)?;
+    delete_exist_profiles(nm_api, &exist_nm_conns, &nm_conns_to_activate)?;
 
-    activate_nm_profiles(nm_api, nm_conns.as_slice(), checkpoint)?;
+    activate_nm_profiles(nm_api, nm_conns_to_activate.as_slice(), checkpoint)?;
+    deactivate_nm_profiles(
+        nm_api,
+        nm_conns_to_deactivate.as_slice(),
+        checkpoint,
+    )?;
     Ok(())
 }
 

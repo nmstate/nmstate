@@ -223,7 +223,8 @@ function run_tests {
             test_add_and_remove_two_vlans_on_same_iface or \
             test_two_vlans_on_eth1_change_base_iface_mtu or \
             (test_two_vlans_on_eth1_change_mtu and not test_two_vlans_on_eth1_change_mtu_rollback) or \
-            test_rollback_for_vlans' \
+            test_rollback_for_vlans or \
+            test_set_vlan_iface_down' \
             ${nmstate_pytest_extra_args}"
     fi
 }
