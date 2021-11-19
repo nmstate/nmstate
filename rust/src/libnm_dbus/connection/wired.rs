@@ -36,21 +36,17 @@ pub struct NmSettingWired {
 
 impl TryFrom<DbusDictionary> for NmSettingWired {
     type Error = NmError;
-    fn try_from(
-        mut setting_value: DbusDictionary,
-    ) -> Result<Self, Self::Error> {
-        let mut setting = Self::new();
-        setting.cloned_mac_address = setting_value
-            .remove("cloned-mac-address")
-            .map(own_value_to_bytes_array)
-            .transpose()?
-            .map(u8_array_to_mac_string);
-        setting.mtu = setting_value
-            .remove("mtu")
-            .map(own_value_to_u32)
-            .transpose()?;
-        setting._other = setting_value;
-        Ok(setting)
+    fn try_from(mut v: DbusDictionary) -> Result<Self, Self::Error> {
+        Ok(Self {
+            cloned_mac_address: _from_map!(
+                v,
+                "cloned-mac-address",
+                own_value_to_bytes_array
+            )?
+            .map(u8_array_to_mac_string),
+            mtu: _from_map!(v, "mtu", own_value_to_u32)?,
+            _other: v,
+        })
     }
 }
 
