@@ -150,7 +150,7 @@ impl Interfaces {
 
     pub(crate) fn verify(&self, cur_ifaces: &Self) -> Result<(), NmstateError> {
         for iface in self.to_vec() {
-            if iface.is_absent() {
+            if iface.is_absent() || (iface.is_virtual() && iface.is_down()) {
                 if let Some(cur_iface) =
                     cur_ifaces.get_iface(iface.name(), iface.iface_type())
                 {

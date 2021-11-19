@@ -11,9 +11,10 @@ use crate::{
 };
 
 // We only adjust timeout for every 20 profile additions.
-const TIMEOUT_ADJUST_PROFILE_ADDTION_GROUP_SIZE: usize = 20;
+const TIMEOUT_ADJUST_PROFILE_GROUP_SIZE: usize = 20;
 const TIMEOUT_SECONDS_FOR_PROFILE_ADDTION: u32 = 60;
 const TIMEOUT_SECONDS_FOR_PROFILE_ACTIVATION: u32 = 60;
+const TIMEOUT_SECONDS_FOR_PROFILE_DEACTIVATION: u32 = 60;
 
 // Found existing profile, prefer the activated one
 pub(crate) fn get_exist_profile<'a>(
@@ -97,8 +98,8 @@ pub(crate) fn save_nm_profiles(
     for (index, nm_conn) in nm_conns.iter().enumerate() {
         // Only extend the timeout every
         // TIMEOUT_ADJUST_PROFILE_ADDTION_GROUP_SIZE profile addition.
-        if index % TIMEOUT_ADJUST_PROFILE_ADDTION_GROUP_SIZE
-            == TIMEOUT_ADJUST_PROFILE_ADDTION_GROUP_SIZE - 1
+        if index % TIMEOUT_ADJUST_PROFILE_GROUP_SIZE
+            == TIMEOUT_ADJUST_PROFILE_GROUP_SIZE - 1
         {
             nm_checkpoint_timeout_extend(
                 checkpoint,
@@ -140,6 +141,33 @@ pub(crate) fn activate_nm_profiles(
                     .connection_activate(uuid)
                     .map_err(nm_error_to_nmstate)?;
             }
+        }
+    }
+    Ok(())
+}
+
+pub(crate) fn deactivate_nm_profiles(
+    nm_api: &nm_dbus::NmApi,
+    nm_conns: &[&NmConnection],
+    checkpoint: &str,
+) -> Result<(), NmstateError> {
+    for (index, nm_conn) in nm_conns.iter().enumerate() {
+        if (index + 1) % TIMEOUT_ADJUST_PROFILE_GROUP_SIZE == 0 {
+            nm_checkpoint_timeout_extend(
+                checkpoint,
+                TIMEOUT_SECONDS_FOR_PROFILE_DEACTIVATION,
+            )?;
+        }
+        if let Some(uuid) = nm_conn.uuid() {
+            info!(
+                "Deactivating connection {}: {}/{}",
+                uuid,
+                nm_conn.iface_name().unwrap_or(""),
+                nm_conn.iface_type().unwrap_or("")
+            );
+            nm_api
+                .connection_deactivate(uuid)
+                .map_err(nm_error_to_nmstate)?;
         }
     }
     Ok(())
