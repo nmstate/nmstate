@@ -12,6 +12,7 @@ mod show;
 mod sriov;
 #[cfg(test)]
 mod unit_tests;
+mod version;
 mod vlan;
 mod wired;
 
