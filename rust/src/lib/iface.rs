@@ -257,6 +257,10 @@ impl Interface {
         self.base_iface().state == InterfaceState::Absent
     }
 
+    pub fn is_down(&self) -> bool {
+        self.base_iface().state == InterfaceState::Down
+    }
+
     pub fn is_virtual(&self) -> bool {
         !matches!(self, Self::Ethernet(_) | Self::Unknown(_))
     }
