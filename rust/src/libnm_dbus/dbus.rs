@@ -18,9 +18,7 @@ use std::convert::TryFrom;
 use log::debug;
 
 use crate::{
-    connection::{
-        NmConnection, NmConnectionDbusOwnedValue, NmConnectionDbusValue,
-    },
+    connection::{NmConnection, NmConnectionDbusValue},
     dbus_proxy::{NetworkManagerProxy, NetworkManagerSettingProxy},
     error::{ErrorKind, NmError},
 };
@@ -254,21 +252,20 @@ impl<'a> NmDbus<'a> {
     pub(crate) fn nm_dev_applied_connection_get(
         &self,
         nm_dev_obj_path: &str,
-    ) -> Result<NmConnectionDbusOwnedValue, NmError> {
+    ) -> Result<NmConnection, NmError> {
         let proxy = zbus::Proxy::new(
             &self.connection,
             NM_DBUS_INTERFACE_ROOT,
             nm_dev_obj_path,
             NM_DBUS_INTERFACE_DEVICE,
         )?;
-        let (nm_conn, _) = proxy
-            .call::<u32, (NmConnectionDbusOwnedValue, u64)>(
-                "GetAppliedConnection",
-                &(
-                    0
-                    // NM document require it to be zero
-                ),
-            )?;
+        let (nm_conn, _) = proxy.call::<u32, (NmConnection, u64)>(
+            "GetAppliedConnection",
+            &(
+                0
+                // NM document require it to be zero
+            ),
+        )?;
         Ok(nm_conn)
     }
 
