@@ -11,4 +11,5 @@ path = "lib.rs"
 zbus = "1.9.1"
 zvariant = "2.7.0"
 uuid = { version = "0.8", features = ["v4"] }
+serde = { version = "1.0.130", features = ["derive"] }
 log = "0.4.14"

@@ -1,19 +1,22 @@
+use crate::connection::DbusDictionary;
 use crate::dbus_value::{own_value_to_string, own_value_to_u32};
 use crate::NmError;
+use serde::Deserialize;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Default, Deserialize)]
+#[serde(try_from = "DbusDictionary")]
 pub struct NmSettingVlan {
     pub parent: Option<String>,
     pub id: Option<u32>,
     _other: HashMap<String, zvariant::OwnedValue>,
 }
 
-impl TryFrom<HashMap<String, zvariant::OwnedValue>> for NmSettingVlan {
+impl TryFrom<DbusDictionary> for NmSettingVlan {
     type Error = NmError;
     fn try_from(
-        mut setting_value: HashMap<String, zvariant::OwnedValue>,
+        mut setting_value: DbusDictionary,
     ) -> Result<Self, Self::Error> {
         let mut setting = Self::new();
         setting.parent = setting_value

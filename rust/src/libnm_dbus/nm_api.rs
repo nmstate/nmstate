@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::convert::TryFrom;
 use std::time::{Duration, Instant};
 
 use log::debug;
@@ -110,22 +109,20 @@ impl<'a> NmApi<'a> {
         &self,
     ) -> Result<Vec<NmConnection>, NmError> {
         debug!("applied_connections_get");
-        let mut nm_conns = Vec::new();
         let nm_devs = self.dbus.nm_dev_obj_paths_get()?;
-        for nm_dev in &nm_devs {
-            nm_conns.push(
-                match self.dbus.nm_dev_applied_connection_get(nm_dev) {
-                    Ok(n) => {
-                        let nm_con = NmConnection::try_from(n)?;
-                        debug!("Get Applied connection {:?}", &nm_con);
-                        nm_con
-                    }
-                    Err(_) => {
-                        continue;
-                    }
-                },
-            );
-        }
+        let nm_conns = nm_devs
+            .iter()
+            .map(|nm_dev| self.dbus.nm_dev_applied_connection_get(nm_dev))
+            // Ignore dbus errors
+            .filter(|result| {
+                !matches!(result, Err(NmError {
+                    dbus_error, ..
+                    }) if dbus_error.is_some())
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        nm_conns
+            .iter()
+            .for_each(|conn| debug!("Get Applied connection {:?}", conn));
         Ok(nm_conns)
     }
 
