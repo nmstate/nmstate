@@ -16,12 +16,16 @@
 use std::collections::HashMap;
 use std::convert::TryFrom;
 
+use serde::Deserialize;
+
 use crate::{
+    connection::DbusDictionary,
     dbus_value::{own_value_to_bool, own_value_to_string, own_value_to_u32},
     error::NmError,
 };
 
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Default, Deserialize)]
+#[serde(try_from = "DbusDictionary")]
 pub struct NmSettingOvsBridge {
     pub stp: Option<bool>,
     pub mcast_snooping_enable: Option<bool>,
@@ -30,10 +34,10 @@ pub struct NmSettingOvsBridge {
     _other: HashMap<String, zvariant::OwnedValue>,
 }
 
-impl TryFrom<HashMap<String, zvariant::OwnedValue>> for NmSettingOvsBridge {
+impl TryFrom<DbusDictionary> for NmSettingOvsBridge {
     type Error = NmError;
     fn try_from(
-        mut setting_value: HashMap<String, zvariant::OwnedValue>,
+        mut setting_value: DbusDictionary,
     ) -> Result<Self, Self::Error> {
         let mut setting = Self::new();
         setting.stp = setting_value
@@ -85,7 +89,8 @@ impl NmSettingOvsBridge {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Default, Deserialize)]
+#[serde(try_from = "DbusDictionary")]
 pub struct NmSettingOvsPort {
     pub mode: Option<String>,
     pub up_delay: Option<u32>,
@@ -93,10 +98,10 @@ pub struct NmSettingOvsPort {
     _other: HashMap<String, zvariant::OwnedValue>,
 }
 
-impl TryFrom<HashMap<String, zvariant::OwnedValue>> for NmSettingOvsPort {
+impl TryFrom<DbusDictionary> for NmSettingOvsPort {
     type Error = NmError;
     fn try_from(
-        mut setting_value: HashMap<String, zvariant::OwnedValue>,
+        mut setting_value: DbusDictionary,
     ) -> Result<Self, Self::Error> {
         let mut setting = Self::new();
         setting.mode = setting_value
@@ -141,16 +146,17 @@ impl NmSettingOvsPort {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Default, Deserialize)]
+#[serde(try_from = "DbusDictionary")]
 pub struct NmSettingOvsIface {
     pub iface_type: Option<String>,
     _other: HashMap<String, zvariant::OwnedValue>,
 }
 
-impl TryFrom<HashMap<String, zvariant::OwnedValue>> for NmSettingOvsIface {
+impl TryFrom<DbusDictionary> for NmSettingOvsIface {
     type Error = NmError;
     fn try_from(
-        mut setting_value: HashMap<String, zvariant::OwnedValue>,
+        mut setting_value: DbusDictionary,
     ) -> Result<Self, Self::Error> {
         let mut setting = Self::new();
         setting.iface_type = setting_value

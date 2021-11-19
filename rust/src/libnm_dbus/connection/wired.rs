@@ -19,22 +19,25 @@ use std::fmt::Write;
 
 use log::error;
 
+use serde::Deserialize;
+
 use crate::{
-    dbus_value::own_value_to_bytes_array, dbus_value::own_value_to_u32,
-    error::NmError,
+    connection::DbusDictionary, dbus_value::own_value_to_bytes_array,
+    dbus_value::own_value_to_u32, error::NmError,
 };
 
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Default, Deserialize)]
+#[serde(try_from = "DbusDictionary")]
 pub struct NmSettingWired {
     pub cloned_mac_address: Option<String>,
-    _other: HashMap<String, zvariant::OwnedValue>,
     pub mtu: Option<u32>,
+    _other: HashMap<String, zvariant::OwnedValue>,
 }
 
-impl TryFrom<HashMap<String, zvariant::OwnedValue>> for NmSettingWired {
+impl TryFrom<DbusDictionary> for NmSettingWired {
     type Error = NmError;
     fn try_from(
-        mut setting_value: HashMap<String, zvariant::OwnedValue>,
+        mut setting_value: DbusDictionary,
     ) -> Result<Self, Self::Error> {
         let mut setting = Self::new();
         setting.cloned_mac_address = setting_value

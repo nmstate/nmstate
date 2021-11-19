@@ -18,12 +18,16 @@ use std::convert::TryFrom;
 
 use log::warn;
 
+use serde::Deserialize;
+
 use crate::{
+    connection::DbusDictionary,
     dbus_value::{own_value_to_array, own_value_to_string, own_value_to_u32},
     error::{ErrorKind, NmError},
 };
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[serde(try_from = "zvariant::OwnedValue")]
 pub enum NmSettingIpMethod {
     Auto,
     Disabled,
@@ -58,10 +62,11 @@ impl std::fmt::Display for NmSettingIpMethod {
     }
 }
 
-impl TryFrom<&str> for NmSettingIpMethod {
+impl TryFrom<zvariant::OwnedValue> for NmSettingIpMethod {
     type Error = NmError;
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        match value {
+    fn try_from(value: zvariant::OwnedValue) -> Result<Self, Self::Error> {
+        let str_value = own_value_to_string(value)?;
+        match str_value.as_str() {
             "auto" => Ok(Self::Auto),
             "disabled" => Ok(Self::Disabled),
             "link-local" => Ok(Self::LinkLocal),
@@ -71,31 +76,30 @@ impl TryFrom<&str> for NmSettingIpMethod {
             "ignore" => Ok(Self::Ignore),
             _ => Err(NmError::new(
                 ErrorKind::InvalidArgument,
-                format!("Invalid IP method {}", value),
+                format!("Invalid IP method {}", str_value),
             )),
         }
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Default, Deserialize)]
+#[serde(try_from = "DbusDictionary")]
 pub struct NmSettingIp {
     pub method: Option<NmSettingIpMethod>,
     pub addresses: Vec<String>,
     _other: HashMap<String, zvariant::OwnedValue>,
 }
 
-impl TryFrom<HashMap<String, zvariant::OwnedValue>> for NmSettingIp {
+impl TryFrom<DbusDictionary> for NmSettingIp {
     type Error = NmError;
     fn try_from(
-        mut setting_value: HashMap<String, zvariant::OwnedValue>,
+        mut setting_value: DbusDictionary,
     ) -> Result<Self, Self::Error> {
         let mut setting = Self::new();
 
         setting.method = setting_value
             .remove("method")
-            .map(own_value_to_string)
-            .transpose()?
-            .map(|m| NmSettingIpMethod::try_from(m.as_str()))
+            .map(NmSettingIpMethod::try_from)
             .transpose()?;
 
         setting.addresses = setting_value

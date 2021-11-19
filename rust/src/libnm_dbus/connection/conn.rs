@@ -18,13 +18,17 @@ use std::convert::TryFrom;
 
 use log::warn;
 
-use crate::connection::vlan::NmSettingVlan;
+use serde::Deserialize;
+use zbus::export::zvariant::Signature;
+use zvariant::Type;
+
 use crate::{
     connection::bridge::{NmSettingBridge, NmSettingBridgePort},
     connection::ip::NmSettingIp,
     connection::ovs::{
         NmSettingOvsBridge, NmSettingOvsIface, NmSettingOvsPort,
     },
+    connection::vlan::NmSettingVlan,
     connection::wired::NmSettingWired,
     dbus::{NM_DBUS_INTERFACE_ROOT, NM_DBUS_INTERFACE_SETTING},
     dbus_value::{own_value_to_bool, own_value_to_i32, own_value_to_string},
@@ -39,10 +43,13 @@ const NM_AUTOCONENCT_PORT_NO: i32 = 0;
 pub(crate) type NmConnectionDbusOwnedValue =
     HashMap<String, HashMap<String, zvariant::OwnedValue>>;
 
+pub(crate) type DbusDictionary = HashMap<String, zvariant::OwnedValue>;
+
 pub(crate) type NmConnectionDbusValue<'a> =
     HashMap<&'a str, HashMap<&'a str, zvariant::Value<'a>>>;
 
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Default, Deserialize)]
+#[serde(try_from = "NmConnectionDbusOwnedValue")]
 pub struct NmConnection {
     pub connection: Option<NmSettingConnection>,
     pub bridge: Option<NmSettingBridge>,
@@ -54,8 +61,17 @@ pub struct NmConnection {
     pub ovs_iface: Option<NmSettingOvsIface>,
     pub wired: Option<NmSettingWired>,
     pub vlan: Option<NmSettingVlan>,
+    #[serde(skip)]
     pub(crate) obj_path: String,
     _other: HashMap<String, HashMap<String, zvariant::OwnedValue>>,
+}
+
+// The signature is the same as the NmConnectionDbusOwnedValue because we are going through the
+// try_from
+impl Type for NmConnection {
+    fn signature() -> Signature<'static> {
+        NmConnectionDbusOwnedValue::signature()
+    }
 }
 
 impl TryFrom<NmConnectionDbusOwnedValue> for NmConnection {
@@ -233,7 +249,8 @@ impl NmConnection {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Default, Deserialize)]
+#[serde(try_from = "DbusDictionary")]
 pub struct NmSettingConnection {
     pub id: Option<String>,
     pub uuid: Option<String>,
@@ -246,10 +263,10 @@ pub struct NmSettingConnection {
     _other: HashMap<String, zvariant::OwnedValue>,
 }
 
-impl TryFrom<HashMap<String, zvariant::OwnedValue>> for NmSettingConnection {
+impl TryFrom<DbusDictionary> for NmSettingConnection {
     type Error = NmError;
     fn try_from(
-        mut setting_value: HashMap<String, zvariant::OwnedValue>,
+        mut setting_value: DbusDictionary,
     ) -> Result<Self, Self::Error> {
         let mut setting = Self::new();
         setting.id = setting_value
@@ -366,9 +383,7 @@ pub(crate) fn nm_con_get_from_obj_path(
         con_obj_path,
         NM_DBUS_INTERFACE_SETTING,
     )?;
-    let nm_conn_raw: NmConnectionDbusOwnedValue =
-        proxy.call::<(), NmConnectionDbusOwnedValue>("GetSettings", &())?;
-    let mut nm_conn = NmConnection::try_from(nm_conn_raw)?;
+    let mut nm_conn = proxy.call::<(), NmConnection>("GetSettings", &())?;
     nm_conn.obj_path = con_obj_path.to_string();
     Ok(nm_conn)
 }
