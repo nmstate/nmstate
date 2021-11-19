@@ -15,20 +15,12 @@ pub struct NmSettingVlan {
 
 impl TryFrom<DbusDictionary> for NmSettingVlan {
     type Error = NmError;
-    fn try_from(
-        mut setting_value: DbusDictionary,
-    ) -> Result<Self, Self::Error> {
-        let mut setting = Self::new();
-        setting.parent = setting_value
-            .remove("parent")
-            .map(own_value_to_string)
-            .transpose()?;
-        setting.id = setting_value
-            .remove("id")
-            .map(own_value_to_u32)
-            .transpose()?;
-        setting._other = setting_value;
-        Ok(setting)
+    fn try_from(mut v: DbusDictionary) -> Result<Self, Self::Error> {
+        Ok(Self {
+            parent: _from_map!(v, "parent", own_value_to_string)?,
+            id: _from_map!(v, "id", own_value_to_u32)?,
+            _other: v,
+        })
     }
 }
 
