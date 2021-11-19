@@ -4,7 +4,10 @@ use std::io::{self, Read};
 
 use env_logger::Builder;
 use log::LevelFilter;
-use nmstate::{DnsState, NetworkState, RouteRules, Routes};
+use nmstate::{
+    checkpoint_commit, checkpoint_rollback, DnsState, NetworkState, RouteRules,
+    Routes,
+};
 use serde::Serialize;
 use serde_yaml::{self, Value};
 
@@ -13,6 +16,8 @@ use crate::error::CliError;
 const SUB_CMD_GEN_CONF: &str = "gc";
 const SUB_CMD_SHOW: &str = "show";
 const SUB_CMD_APPLY: &str = "apply";
+const SUB_CMD_COMMIT: &str = "commit";
+const SUB_CMD_ROLLBACK: &str = "rollback";
 
 fn main() {
     let matches = clap::App::new("nmstatectl")
@@ -68,6 +73,12 @@ fn main() {
                         .long("kernel")
                         .takes_value(false)
                         .help("Apply network state to kernel only"),
+                )
+                .arg(
+                    clap::Arg::with_name("NO_COMMIT")
+                        .long("no-commit")
+                        .takes_value(false)
+                        .help("Do not commit new state after verification"),
                 ),
         )
         .subcommand(
@@ -78,6 +89,26 @@ fn main() {
                         .required(true)
                         .index(1)
                         .help("Network state file"),
+                ),
+        )
+        .subcommand(
+            clap::SubCommand::with_name(SUB_CMD_COMMIT)
+                .about("Commit a change")
+                .arg(
+                    clap::Arg::with_name("CHECKPOINT")
+                        .required(false)
+                        .index(1)
+                        .help("checkpoint to commit"),
+                ),
+        )
+        .subcommand(
+            clap::SubCommand::with_name(SUB_CMD_ROLLBACK)
+                .about("Commit a change")
+                .arg(
+                    clap::Arg::with_name("CHECKPOINT")
+                        .required(false)
+                        .index(1)
+                        .help("checkpoint to rollback"),
                 ),
         )
         .get_matches();
@@ -108,12 +139,27 @@ fn main() {
     } else if let Some(matches) = matches.subcommand_matches(SUB_CMD_APPLY) {
         let is_kernel = matches.is_present("KERNEL");
         let no_verify = matches.is_present("NO_VERIFY");
+        let no_commit = matches.is_present("NO_COMMIT");
         if let Some(file_path) = matches.value_of("STATE_FILE") {
             print_result_and_exit(apply_from_file(
-                file_path, is_kernel, no_verify,
+                file_path, is_kernel, no_verify, no_commit,
             ));
         } else {
-            print_result_and_exit(apply_from_stdin(is_kernel, no_verify));
+            print_result_and_exit(apply_from_stdin(
+                is_kernel, no_verify, no_commit,
+            ));
+        }
+    } else if let Some(matches) = matches.subcommand_matches(SUB_CMD_COMMIT) {
+        if let Some(checkpoint) = matches.value_of("CHECKPOINT") {
+            print_result_and_exit(commit(checkpoint));
+        } else {
+            print_result_and_exit(commit(""))
+        }
+    } else if let Some(matches) = matches.subcommand_matches(SUB_CMD_ROLLBACK) {
+        if let Some(checkpoint) = matches.value_of("CHECKPOINT") {
+            print_result_and_exit(rollback(checkpoint));
+        } else {
+            print_result_and_exit(rollback(""))
         }
     }
 }
@@ -222,22 +268,30 @@ fn show(matches: &clap::ArgMatches) -> Result<String, CliError> {
 fn apply_from_stdin(
     kernel_only: bool,
     no_verify: bool,
+    no_commit: bool,
 ) -> Result<String, CliError> {
-    apply(io::stdin(), kernel_only, no_verify)
+    apply(io::stdin(), kernel_only, no_verify, no_commit)
 }
 
 fn apply_from_file(
     file_path: &str,
     kernel_only: bool,
     no_verify: bool,
+    no_commit: bool,
 ) -> Result<String, CliError> {
-    apply(std::fs::File::open(file_path)?, kernel_only, no_verify)
+    apply(
+        std::fs::File::open(file_path)?,
+        kernel_only,
+        no_verify,
+        no_commit,
+    )
 }
 
 fn apply<R>(
     reader: R,
     kernel_only: bool,
     no_verify: bool,
+    no_commit: bool,
 ) -> Result<String, CliError>
 where
     R: Read,
@@ -245,7 +299,22 @@ where
     let mut net_state: NetworkState = serde_yaml::from_reader(reader)?;
     net_state.set_kernel_only(kernel_only);
     net_state.set_verify_change(!no_verify);
+    net_state.set_commit(!no_commit);
     net_state.apply()?;
     let sorted_net_state = sort_netstate(net_state)?;
     Ok(serde_yaml::to_string(&sorted_net_state)?)
+}
+
+fn commit(checkpoint: &str) -> Result<String, CliError> {
+    match checkpoint_commit(checkpoint) {
+        Ok(()) => Ok(checkpoint.to_string()),
+        Err(e) => Err(CliError::from(e)),
+    }
+}
+
+fn rollback(checkpoint: &str) -> Result<String, CliError> {
+    match checkpoint_rollback(checkpoint) {
+        Ok(()) => Ok(checkpoint.to_string()),
+        Err(e) => Err(CliError::from(e)),
+    }
 }
