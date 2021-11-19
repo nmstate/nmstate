@@ -16,18 +16,23 @@
 use std::collections::HashMap;
 use std::convert::TryFrom;
 
-use crate::{dbus_value::own_value_to_bool, error::NmError};
+use serde::Deserialize;
 
-#[derive(Debug, Clone, PartialEq, Default)]
+use crate::{
+    connection::DbusDictionary, dbus_value::own_value_to_bool, error::NmError,
+};
+
+#[derive(Debug, Clone, PartialEq, Default, Deserialize)]
+#[serde(try_from = "DbusDictionary")]
 pub struct NmSettingBridge {
     pub stp: Option<bool>,
     _other: HashMap<String, zvariant::OwnedValue>,
 }
 
-impl TryFrom<HashMap<String, zvariant::OwnedValue>> for NmSettingBridge {
+impl TryFrom<DbusDictionary> for NmSettingBridge {
     type Error = NmError;
     fn try_from(
-        mut setting_value: HashMap<String, zvariant::OwnedValue>,
+        mut setting_value: DbusDictionary,
     ) -> Result<Self, Self::Error> {
         let mut setting = Self::new();
         setting.stp = setting_value
@@ -58,16 +63,15 @@ impl NmSettingBridge {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Default, Deserialize)]
+#[serde(try_from = "DbusDictionary")]
 pub struct NmSettingBridgePort {
     _other: HashMap<String, zvariant::OwnedValue>,
 }
 
-impl TryFrom<HashMap<String, zvariant::OwnedValue>> for NmSettingBridgePort {
+impl TryFrom<DbusDictionary> for NmSettingBridgePort {
     type Error = NmError;
-    fn try_from(
-        setting_value: HashMap<String, zvariant::OwnedValue>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(setting_value: DbusDictionary) -> Result<Self, Self::Error> {
         let mut setting = Self::new();
         setting._other = setting_value;
         Ok(setting)

@@ -30,5 +30,5 @@ pub use crate::connection::vlan::NmSettingVlan;
 pub use crate::connection::wired::NmSettingWired;
 
 pub(crate) use crate::connection::conn::{
-    nm_con_get_from_obj_path, NmConnectionDbusOwnedValue, NmConnectionDbusValue,
+    nm_con_get_from_obj_path, DbusDictionary, NmConnectionDbusValue,
 };
