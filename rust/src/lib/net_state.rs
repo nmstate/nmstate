@@ -44,6 +44,8 @@ pub struct NetworkState {
     #[serde(skip)]
     no_verify: bool,
     #[serde(skip)]
+    no_commit: bool,
+    #[serde(skip)]
     include_secrets: bool,
     #[serde(skip)]
     include_status_data: bool,
@@ -88,6 +90,11 @@ impl NetworkState {
 
     pub fn set_verify_change(&mut self, value: bool) -> &mut Self {
         self.no_verify = !value;
+        self
+    }
+
+    pub fn set_commit(&mut self, value: bool) -> &mut Self {
+        self.no_commit = !value;
         self
     }
 
@@ -172,7 +179,7 @@ impl NetworkState {
             let checkpoint = nm_checkpoint_create()?;
             info!("Created checkpoint {}", &checkpoint);
 
-            with_nm_checkpoint(&checkpoint, || {
+            with_nm_checkpoint(&checkpoint, self.no_commit, || {
                 nm_apply(
                     &add_net_state,
                     &chg_net_state,
@@ -529,15 +536,23 @@ impl NetworkState {
     }
 }
 
-fn with_nm_checkpoint<T>(checkpoint: &str, func: T) -> Result<(), NmstateError>
+fn with_nm_checkpoint<T>(
+    checkpoint: &str,
+    no_commit: bool,
+    func: T,
+) -> Result<(), NmstateError>
 where
     T: FnOnce() -> Result<(), NmstateError>,
 {
     match func() {
         Ok(()) => {
-            nm_checkpoint_destroy(checkpoint)?;
+            if !no_commit {
+                nm_checkpoint_destroy(checkpoint)?;
 
-            info!("Destroyed checkpoint {}", checkpoint);
+                info!("Destroyed checkpoint {}", checkpoint);
+            } else {
+                info!("Skipping commit for checkpoint {}", checkpoint);
+            }
             Ok(())
         }
         Err(e) => {

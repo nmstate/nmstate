@@ -1,3 +1,4 @@
+mod checkpoint;
 mod dns;
 mod error;
 mod iface;
@@ -11,6 +12,7 @@ mod route_rule;
 mod state;
 mod unit_tests;
 
+pub use crate::checkpoint::{checkpoint_commit, checkpoint_rollback};
 pub use crate::dns::{DnsClientState, DnsState};
 pub use crate::error::{ErrorKind, NmstateError};
 pub use crate::iface::{
