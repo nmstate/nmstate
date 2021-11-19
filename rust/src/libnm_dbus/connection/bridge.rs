@@ -31,16 +31,11 @@ pub struct NmSettingBridge {
 
 impl TryFrom<DbusDictionary> for NmSettingBridge {
     type Error = NmError;
-    fn try_from(
-        mut setting_value: DbusDictionary,
-    ) -> Result<Self, Self::Error> {
-        let mut setting = Self::new();
-        setting.stp = setting_value
-            .remove("stp")
-            .map(own_value_to_bool)
-            .transpose()?;
-        setting._other = setting_value;
-        Ok(setting)
+    fn try_from(mut v: DbusDictionary) -> Result<Self, Self::Error> {
+        Ok(Self {
+            stp: _from_map!(v, "stp", own_value_to_bool)?,
+            _other: v,
+        })
     }
 }
 
@@ -72,9 +67,9 @@ pub struct NmSettingBridgePort {
 impl TryFrom<DbusDictionary> for NmSettingBridgePort {
     type Error = NmError;
     fn try_from(setting_value: DbusDictionary) -> Result<Self, Self::Error> {
-        let mut setting = Self::new();
-        setting._other = setting_value;
-        Ok(setting)
+        Ok(Self {
+            _other: setting_value,
+        })
     }
 }
 
