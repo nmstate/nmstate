@@ -36,28 +36,18 @@ pub struct NmSettingOvsBridge {
 
 impl TryFrom<DbusDictionary> for NmSettingOvsBridge {
     type Error = NmError;
-    fn try_from(
-        mut setting_value: DbusDictionary,
-    ) -> Result<Self, Self::Error> {
-        let mut setting = Self::new();
-        setting.stp = setting_value
-            .remove("stp-enable")
-            .map(own_value_to_bool)
-            .transpose()?;
-        setting.mcast_snooping_enable = setting_value
-            .remove("mcast-snooping-enable")
-            .map(own_value_to_bool)
-            .transpose()?;
-        setting.rstp = setting_value
-            .remove("rstp-enable")
-            .map(own_value_to_bool)
-            .transpose()?;
-        setting.fail_mode = setting_value
-            .remove("fail-mode")
-            .map(own_value_to_string)
-            .transpose()?;
-        setting._other = setting_value;
-        Ok(setting)
+    fn try_from(mut v: DbusDictionary) -> Result<Self, Self::Error> {
+        Ok(Self {
+            stp: _from_map!(v, "stp-enable", own_value_to_bool)?,
+            mcast_snooping_enable: _from_map!(
+                v,
+                "mcast-snooping-enable",
+                own_value_to_bool
+            )?,
+            rstp: _from_map!(v, "rstp-enable", own_value_to_bool)?,
+            fail_mode: _from_map!(v, "fail-mode", own_value_to_string)?,
+            _other: v,
+        })
     }
 }
 
@@ -100,24 +90,13 @@ pub struct NmSettingOvsPort {
 
 impl TryFrom<DbusDictionary> for NmSettingOvsPort {
     type Error = NmError;
-    fn try_from(
-        mut setting_value: DbusDictionary,
-    ) -> Result<Self, Self::Error> {
-        let mut setting = Self::new();
-        setting.mode = setting_value
-            .remove("bond-mode")
-            .map(own_value_to_string)
-            .transpose()?;
-        setting.up_delay = setting_value
-            .remove("bond-updelay")
-            .map(own_value_to_u32)
-            .transpose()?;
-        setting.down_delay = setting_value
-            .remove("bond-downdelay")
-            .map(own_value_to_u32)
-            .transpose()?;
-        setting._other = setting_value;
-        Ok(setting)
+    fn try_from(mut v: DbusDictionary) -> Result<Self, Self::Error> {
+        Ok(Self {
+            mode: _from_map!(v, "bond-mode", own_value_to_string)?,
+            up_delay: _from_map!(v, "bond-updelay", own_value_to_u32)?,
+            down_delay: _from_map!(v, "bond-downdelay", own_value_to_u32)?,
+            _other: v,
+        })
     }
 }
 
@@ -155,16 +134,11 @@ pub struct NmSettingOvsIface {
 
 impl TryFrom<DbusDictionary> for NmSettingOvsIface {
     type Error = NmError;
-    fn try_from(
-        mut setting_value: DbusDictionary,
-    ) -> Result<Self, Self::Error> {
-        let mut setting = Self::new();
-        setting.iface_type = setting_value
-            .remove("type")
-            .map(own_value_to_string)
-            .transpose()?;
-        setting._other = setting_value;
-        Ok(setting)
+    fn try_from(mut v: DbusDictionary) -> Result<Self, Self::Error> {
+        Ok(Self {
+            iface_type: _from_map!(v, "type", own_value_to_string)?,
+            _other: v,
+        })
     }
 }
 

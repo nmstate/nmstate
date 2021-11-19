@@ -77,50 +77,36 @@ impl Type for NmConnection {
 impl TryFrom<NmConnectionDbusOwnedValue> for NmConnection {
     type Error = NmError;
     fn try_from(
-        mut value: NmConnectionDbusOwnedValue,
+        mut v: NmConnectionDbusOwnedValue,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
-            connection: value
-                .remove("connection")
-                .map(NmSettingConnection::try_from)
-                .transpose()?,
-            ipv4: value
-                .remove("ipv4")
-                .map(NmSettingIp::try_from)
-                .transpose()?,
-            ipv6: value
-                .remove("ipv6")
-                .map(NmSettingIp::try_from)
-                .transpose()?,
-            bridge: value
-                .remove("bridge")
-                .map(NmSettingBridge::try_from)
-                .transpose()?,
-            bridge_port: value
-                .remove("bridge-port")
-                .map(NmSettingBridgePort::try_from)
-                .transpose()?,
-            ovs_bridge: value
-                .remove("ovs-bridge")
-                .map(NmSettingOvsBridge::try_from)
-                .transpose()?,
-            ovs_port: value
-                .remove("ovs-port")
-                .map(NmSettingOvsPort::try_from)
-                .transpose()?,
-            ovs_iface: value
-                .remove("ovs-interface")
-                .map(NmSettingOvsIface::try_from)
-                .transpose()?,
-            wired: value
-                .remove("802-3-ethernet")
-                .map(NmSettingWired::try_from)
-                .transpose()?,
-            vlan: value
-                .remove("vlan")
-                .map(NmSettingVlan::try_from)
-                .transpose()?,
-            _other: value,
+            connection: _from_map!(
+                v,
+                "connection",
+                NmSettingConnection::try_from
+            )?,
+            ipv4: _from_map!(v, "ipv4", NmSettingIp::try_from)?,
+            ipv6: _from_map!(v, "ipv6", NmSettingIp::try_from)?,
+            bridge: _from_map!(v, "bridge", NmSettingBridge::try_from)?,
+            bridge_port: _from_map!(
+                v,
+                "bridge-port",
+                NmSettingBridgePort::try_from
+            )?,
+            ovs_bridge: _from_map!(
+                v,
+                "ovs-bridge",
+                NmSettingOvsBridge::try_from
+            )?,
+            ovs_port: _from_map!(v, "ovs-port", NmSettingOvsPort::try_from)?,
+            ovs_iface: _from_map!(
+                v,
+                "ovs-interface",
+                NmSettingOvsIface::try_from
+            )?,
+            wired: _from_map!(v, "802-3-ethernet", NmSettingWired::try_from)?,
+            vlan: _from_map!(v, "vlan", NmSettingVlan::try_from)?,
+            _other: v,
             ..Default::default()
         })
     }
@@ -132,51 +118,19 @@ impl NmConnection {
     }
 
     pub fn iface_name(&self) -> Option<&str> {
-        if let Some(NmSettingConnection {
-            iface_name: Some(iface_name),
-            ..
-        }) = &self.connection
-        {
-            Some(iface_name.as_str())
-        } else {
-            None
-        }
+        _connection_inner_string_member!(self, iface_name)
     }
 
     pub fn iface_type(&self) -> Option<&str> {
-        if let Some(NmSettingConnection {
-            iface_type: Some(iface_type),
-            ..
-        }) = &self.connection
-        {
-            Some(iface_type.as_str())
-        } else {
-            None
-        }
+        _connection_inner_string_member!(self, iface_type)
     }
 
     pub fn controller(&self) -> Option<&str> {
-        if let Some(NmSettingConnection {
-            controller: Some(ctrl),
-            ..
-        }) = &self.connection
-        {
-            Some(ctrl.as_str())
-        } else {
-            None
-        }
+        _connection_inner_string_member!(self, controller)
     }
 
     pub fn controller_type(&self) -> Option<&str> {
-        if let Some(NmSettingConnection {
-            controller_type: Some(ctrl),
-            ..
-        }) = &self.connection
-        {
-            Some(ctrl.as_str())
-        } else {
-            None
-        }
+        _connection_inner_string_member!(self, controller_type)
     }
 
     pub fn to_keyfile(&self) -> Result<String, NmError> {
@@ -265,43 +219,31 @@ pub struct NmSettingConnection {
 
 impl TryFrom<DbusDictionary> for NmSettingConnection {
     type Error = NmError;
-    fn try_from(
-        mut setting_value: DbusDictionary,
-    ) -> Result<Self, Self::Error> {
-        let mut setting = Self::new();
-        setting.id = setting_value
-            .remove("id")
-            .map(own_value_to_string)
-            .transpose()?;
-        setting.uuid = setting_value
-            .remove("uuid")
-            .map(own_value_to_string)
-            .transpose()?;
-        setting.iface_type = setting_value
-            .remove("type")
-            .map(own_value_to_string)
-            .transpose()?;
-        setting.iface_name = setting_value
-            .remove("interface-name")
-            .map(own_value_to_string)
-            .transpose()?;
-        setting.controller = setting_value
-            .remove("master")
-            .map(own_value_to_string)
-            .transpose()?;
-        setting.controller_type = setting_value
-            .remove("slave-type")
-            .map(own_value_to_string)
-            .transpose()?;
-        setting.autoconnect = setting_value
-            .remove("autoconnect")
-            .map(own_value_to_bool)
-            .transpose()?;
-        setting.autoconnect_ports = match setting_value
-            .remove("autoconnect-slaves")
-            .map(own_value_to_i32)
-            .transpose()?
-        {
+    fn try_from(mut v: DbusDictionary) -> Result<Self, Self::Error> {
+        Ok(Self {
+            id: _from_map!(v, "id", own_value_to_string)?,
+            uuid: _from_map!(v, "uuid", own_value_to_string)?,
+            iface_type: _from_map!(v, "type", own_value_to_string)?,
+            iface_name: _from_map!(v, "interface-name", own_value_to_string)?,
+            controller: _from_map!(v, "master", own_value_to_string)?,
+            controller_type: _from_map!(v, "slave-type", own_value_to_string)?,
+            autoconnect: _from_map!(v, "autoconnect", own_value_to_bool)?
+                .or(Some(true)),
+            autoconnect_ports: NmSettingConnection::i32_to_autoconnect_ports(
+                _from_map!(v, "autoconnect-slaves", own_value_to_i32)?,
+            ),
+            _other: v,
+        })
+    }
+}
+
+impl NmSettingConnection {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    fn i32_to_autoconnect_ports(val: Option<i32>) -> Option<bool> {
+        match val {
             Some(NM_AUTOCONENCT_PORT_YES) => Some(true),
             Some(NM_AUTOCONENCT_PORT_NO) => Some(false),
             Some(v) => {
@@ -310,21 +252,7 @@ impl TryFrom<DbusDictionary> for NmSettingConnection {
             }
             // For autoconnect, None means true
             None => Some(true),
-        };
-        setting._other = setting_value;
-
-        if setting.autoconnect == None {
-            // For autoconnect, None means true
-            setting.autoconnect = Some(true)
         }
-
-        Ok(setting)
-    }
-}
-
-impl NmSettingConnection {
-    pub fn new() -> Self {
-        Self::default()
     }
 
     pub(crate) fn to_value(

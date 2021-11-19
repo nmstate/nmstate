@@ -13,6 +13,9 @@
 // limitations under the License.
 //
 
+#[macro_use]
+mod macros;
+
 mod bridge;
 mod conn;
 mod ip;

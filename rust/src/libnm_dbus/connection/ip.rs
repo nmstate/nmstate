@@ -92,25 +92,16 @@ pub struct NmSettingIp {
 
 impl TryFrom<DbusDictionary> for NmSettingIp {
     type Error = NmError;
-    fn try_from(
-        mut setting_value: DbusDictionary,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(mut v: DbusDictionary) -> Result<Self, Self::Error> {
         let mut setting = Self::new();
-
-        setting.method = setting_value
-            .remove("method")
-            .map(NmSettingIpMethod::try_from)
-            .transpose()?;
-
-        setting.addresses = setting_value
-            .remove("address-data")
-            .map(parse_nm_ip_address_data)
-            .transpose()?
-            .unwrap_or_default();
+        setting.method = _from_map!(v, "method", NmSettingIpMethod::try_from)?;
+        setting.addresses =
+            _from_map!(v, "address-data", parse_nm_ip_address_data)?
+                .unwrap_or_default();
 
         // NM deprecated `addresses` property in the favor of `addresss-data`
-        setting_value.remove("addresses");
-        setting._other = setting_value;
+        v.remove("addresses");
+        setting._other = v;
         Ok(setting)
     }
 }
