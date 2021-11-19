@@ -162,11 +162,12 @@ impl<'a> NmDbus<'a> {
     }
 
     pub(crate) fn active_connections(&self) -> Result<Vec<String>, NmError> {
-        let mut ret = Vec::new();
-        for nm_ac in self.proxy.active_connections()? {
-            ret.push(obj_path_to_string(nm_ac))
-        }
-        Ok(ret)
+        Ok(self
+            .proxy
+            .active_connections()?
+            .into_iter()
+            .map(obj_path_to_string)
+            .collect())
     }
 
     pub(crate) fn connection_deactivate(
@@ -245,8 +246,8 @@ impl<'a> NmDbus<'a> {
         Ok(self
             .proxy
             .get_all_devices()?
-            .iter()
-            .map(|o| obj_path_to_string(o.clone()))
+            .into_iter()
+            .map(obj_path_to_string)
             .collect())
     }
 
@@ -322,8 +323,8 @@ impl<'a> NmDbus<'a> {
         Ok(self
             .setting_proxy
             .list_connections()?
-            .iter()
-            .map(|o| obj_path_to_string(o.clone()))
+            .into_iter()
+            .map(obj_path_to_string)
             .collect())
     }
 
@@ -340,17 +341,16 @@ impl<'a> NmDbus<'a> {
 }
 
 fn str_to_obj_path(obj_path: &str) -> Result<zvariant::ObjectPath, NmError> {
-    match zvariant::ObjectPath::try_from(obj_path) {
-        Ok(o) => Ok(o),
-        Err(e) => Err(NmError::new(
+    zvariant::ObjectPath::try_from(obj_path).map_err(|e| {
+        NmError::new(
             ErrorKind::InvalidArgument,
             format!("Invalid object path: {}", e),
-        )),
-    }
+        )
+    })
 }
 
 pub(crate) fn obj_path_to_string(
     obj_path: zvariant::OwnedObjectPath,
 ) -> String {
-    obj_path.into_inner().as_str().to_string()
+    obj_path.into_inner().to_string()
 }
