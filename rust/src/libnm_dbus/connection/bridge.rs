@@ -18,9 +18,7 @@ use std::convert::TryFrom;
 
 use serde::Deserialize;
 
-use crate::{
-    connection::DbusDictionary, dbus_value::own_value_to_bool, error::NmError,
-};
+use crate::{connection::DbusDictionary, error::NmError};
 
 #[derive(Debug, Clone, PartialEq, Default, Deserialize)]
 #[serde(try_from = "DbusDictionary")]
@@ -33,7 +31,7 @@ impl TryFrom<DbusDictionary> for NmSettingBridge {
     type Error = NmError;
     fn try_from(mut v: DbusDictionary) -> Result<Self, Self::Error> {
         Ok(Self {
-            stp: _from_map!(v, "stp", own_value_to_bool)?,
+            stp: _from_map!(v, "stp", bool::try_from)?,
             _other: v,
         })
     }

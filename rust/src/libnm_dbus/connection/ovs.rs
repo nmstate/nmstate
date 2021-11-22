@@ -18,11 +18,7 @@ use std::convert::TryFrom;
 
 use serde::Deserialize;
 
-use crate::{
-    connection::DbusDictionary,
-    dbus_value::{own_value_to_bool, own_value_to_string, own_value_to_u32},
-    error::NmError,
-};
+use crate::{connection::DbusDictionary, error::NmError};
 
 #[derive(Debug, Clone, PartialEq, Default, Deserialize)]
 #[serde(try_from = "DbusDictionary")]
@@ -38,14 +34,14 @@ impl TryFrom<DbusDictionary> for NmSettingOvsBridge {
     type Error = NmError;
     fn try_from(mut v: DbusDictionary) -> Result<Self, Self::Error> {
         Ok(Self {
-            stp: _from_map!(v, "stp-enable", own_value_to_bool)?,
+            stp: _from_map!(v, "stp-enable", bool::try_from)?,
             mcast_snooping_enable: _from_map!(
                 v,
                 "mcast-snooping-enable",
-                own_value_to_bool
+                bool::try_from
             )?,
-            rstp: _from_map!(v, "rstp-enable", own_value_to_bool)?,
-            fail_mode: _from_map!(v, "fail-mode", own_value_to_string)?,
+            rstp: _from_map!(v, "rstp-enable", bool::try_from)?,
+            fail_mode: _from_map!(v, "fail-mode", String::try_from)?,
             _other: v,
         })
     }
@@ -92,9 +88,9 @@ impl TryFrom<DbusDictionary> for NmSettingOvsPort {
     type Error = NmError;
     fn try_from(mut v: DbusDictionary) -> Result<Self, Self::Error> {
         Ok(Self {
-            mode: _from_map!(v, "bond-mode", own_value_to_string)?,
-            up_delay: _from_map!(v, "bond-updelay", own_value_to_u32)?,
-            down_delay: _from_map!(v, "bond-downdelay", own_value_to_u32)?,
+            mode: _from_map!(v, "bond-mode", String::try_from)?,
+            up_delay: _from_map!(v, "bond-updelay", u32::try_from)?,
+            down_delay: _from_map!(v, "bond-downdelay", u32::try_from)?,
             _other: v,
         })
     }
@@ -136,7 +132,7 @@ impl TryFrom<DbusDictionary> for NmSettingOvsIface {
     type Error = NmError;
     fn try_from(mut v: DbusDictionary) -> Result<Self, Self::Error> {
         Ok(Self {
-            iface_type: _from_map!(v, "type", own_value_to_string)?,
+            iface_type: _from_map!(v, "type", String::try_from)?,
             _other: v,
         })
     }

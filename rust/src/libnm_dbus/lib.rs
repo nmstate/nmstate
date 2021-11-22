@@ -14,9 +14,9 @@
 
 mod active_connection;
 mod connection;
+mod convert;
 mod dbus;
 mod dbus_proxy;
-mod dbus_value;
 mod device;
 mod error;
 mod keyfile;

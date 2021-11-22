@@ -22,7 +22,6 @@ use serde::Deserialize;
 
 use crate::{
     connection::DbusDictionary,
-    dbus_value::{own_value_to_array, own_value_to_string, own_value_to_u32},
     error::{ErrorKind, NmError},
 };
 
@@ -65,7 +64,7 @@ impl std::fmt::Display for NmSettingIpMethod {
 impl TryFrom<zvariant::OwnedValue> for NmSettingIpMethod {
     type Error = NmError;
     fn try_from(value: zvariant::OwnedValue) -> Result<Self, Self::Error> {
-        let str_value = own_value_to_string(value)?;
+        let str_value = String::try_from(value)?;
         match str_value.as_str() {
             "auto" => Ok(Self::Auto),
             "disabled" => Ok(Self::Disabled),
@@ -166,7 +165,7 @@ fn parse_nm_ip_address_data(
     value: zvariant::OwnedValue,
 ) -> Result<Vec<String>, NmError> {
     let mut addresses = Vec::new();
-    for nm_addr in own_value_to_array(value)? {
+    for nm_addr in <Vec<zvariant::OwnedValue>>::try_from(value)? {
         let nm_addr_display = format!("{:?}", nm_addr);
         let mut nm_addr =
             match <HashMap<String, zvariant::OwnedValue>>::try_from(nm_addr) {
@@ -181,7 +180,7 @@ fn parse_nm_ip_address_data(
             };
         let address = if let Some(a) = nm_addr
             .remove("address")
-            .and_then(|a| own_value_to_string(a).ok())
+            .and_then(|a| String::try_from(a).ok())
         {
             a
         } else {
@@ -189,9 +188,8 @@ fn parse_nm_ip_address_data(
 
             continue;
         };
-        let prefix = if let Some(a) = nm_addr
-            .remove("prefix")
-            .and_then(|a| own_value_to_u32(a).ok())
+        let prefix = if let Some(a) =
+            nm_addr.remove("prefix").and_then(|a| u32::try_from(a).ok())
         {
             a
         } else {
