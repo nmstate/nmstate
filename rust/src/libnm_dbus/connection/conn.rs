@@ -31,7 +31,6 @@ use crate::{
     connection::vlan::NmSettingVlan,
     connection::wired::NmSettingWired,
     dbus::{NM_DBUS_INTERFACE_ROOT, NM_DBUS_INTERFACE_SETTING},
-    dbus_value::{own_value_to_bool, own_value_to_i32, own_value_to_string},
     keyfile::zvariant_value_to_keyfile,
     NmError,
 };
@@ -221,16 +220,16 @@ impl TryFrom<DbusDictionary> for NmSettingConnection {
     type Error = NmError;
     fn try_from(mut v: DbusDictionary) -> Result<Self, Self::Error> {
         Ok(Self {
-            id: _from_map!(v, "id", own_value_to_string)?,
-            uuid: _from_map!(v, "uuid", own_value_to_string)?,
-            iface_type: _from_map!(v, "type", own_value_to_string)?,
-            iface_name: _from_map!(v, "interface-name", own_value_to_string)?,
-            controller: _from_map!(v, "master", own_value_to_string)?,
-            controller_type: _from_map!(v, "slave-type", own_value_to_string)?,
-            autoconnect: _from_map!(v, "autoconnect", own_value_to_bool)?
+            id: _from_map!(v, "id", String::try_from)?,
+            uuid: _from_map!(v, "uuid", String::try_from)?,
+            iface_type: _from_map!(v, "type", String::try_from)?,
+            iface_name: _from_map!(v, "interface-name", String::try_from)?,
+            controller: _from_map!(v, "master", String::try_from)?,
+            controller_type: _from_map!(v, "slave-type", String::try_from)?,
+            autoconnect: _from_map!(v, "autoconnect", bool::try_from)?
                 .or(Some(true)),
             autoconnect_ports: NmSettingConnection::i32_to_autoconnect_ports(
-                _from_map!(v, "autoconnect-slaves", own_value_to_i32)?,
+                _from_map!(v, "autoconnect-slaves", i32::try_from)?,
             ),
             _other: v,
         })
