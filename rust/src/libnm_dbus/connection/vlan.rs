@@ -1,5 +1,4 @@
 use crate::connection::DbusDictionary;
-use crate::dbus_value::{own_value_to_string, own_value_to_u32};
 use crate::NmError;
 use serde::Deserialize;
 use std::collections::HashMap;
@@ -17,8 +16,8 @@ impl TryFrom<DbusDictionary> for NmSettingVlan {
     type Error = NmError;
     fn try_from(mut v: DbusDictionary) -> Result<Self, Self::Error> {
         Ok(Self {
-            parent: _from_map!(v, "parent", own_value_to_string)?,
-            id: _from_map!(v, "id", own_value_to_u32)?,
+            parent: _from_map!(v, "parent", String::try_from)?,
+            id: _from_map!(v, "id", u32::try_from)?,
             _other: v,
         })
     }
