@@ -24,13 +24,19 @@ fn np_iface_type_to_nmstate(
     }
 }
 
-fn np_iface_state_to_nmstate(
-    np_iface_state: &nispor::IfaceState,
-) -> InterfaceState {
-    match np_iface_state {
-        nispor::IfaceState::Up => InterfaceState::Up,
-        nispor::IfaceState::Down => InterfaceState::Down,
-        _ => InterfaceState::Unknown,
+impl From<(&nispor::IfaceState, &[nispor::IfaceFlags])> for InterfaceState {
+    fn from(tuple: (&nispor::IfaceState, &[nispor::IfaceFlags])) -> Self {
+        let (state, flags) = tuple;
+        if *state == nispor::IfaceState::Up
+            || flags.contains(&nispor::IfaceFlags::Up)
+            || flags.contains(&nispor::IfaceFlags::Running)
+        {
+            InterfaceState::Up
+        } else if *state == nispor::IfaceState::Down {
+            InterfaceState::Down
+        } else {
+            InterfaceState::Unknown
+        }
     }
 }
 
@@ -39,7 +45,7 @@ pub(crate) fn np_iface_to_base_iface(
 ) -> BaseInterface {
     let base_iface = BaseInterface {
         name: np_iface.name.to_string(),
-        state: np_iface_state_to_nmstate(&np_iface.state),
+        state: (&np_iface.state, np_iface.flags.as_slice()).into(),
         iface_type: np_iface_type_to_nmstate(&np_iface.iface_type),
         ipv4: np_ipv4_to_nmstate(np_iface),
         ipv6: np_ipv6_to_nmstate(np_iface),
