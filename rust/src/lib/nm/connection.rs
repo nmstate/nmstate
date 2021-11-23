@@ -116,6 +116,7 @@ pub(crate) fn iface_type_to_nm(
         InterfaceType::OvsBridge => Ok("ovs-bridge".into()),
         InterfaceType::OvsInterface => Ok("ovs-interface".into()),
         InterfaceType::Vlan => Ok("vlan".to_string()),
+        InterfaceType::Dummy => Ok("dummy".to_string()),
         InterfaceType::Other(s) => Ok(s.to_string()),
         _ => Err(NmstateError::new(
             ErrorKind::NotImplementedError,
