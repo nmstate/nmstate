@@ -1,52 +1,35 @@
 use serde_json::Value;
 
-pub(crate) fn get_json_value_difference(
+pub(crate) fn get_json_value_difference<'a, 'b>(
     reference: String,
-    desire: &Value,
-    current: &Value,
-) -> Option<Value> {
+    desire: &'a Value,
+    current: &'b Value,
+) -> Option<(String, &'a Value, &'b Value)> {
     match (desire, current) {
         (Value::Bool(des), Value::Bool(cur)) => {
             if des != cur {
-                Some(Value::String(format!(
-                    "{}: desire bool: {}, current: {}",
-                    &reference, des, cur
-                )))
+                Some((reference, desire, current))
             } else {
                 None
             }
         }
         (Value::Number(des), Value::Number(cur)) => {
             if des != cur {
-                Some(Value::String(format!(
-                    "{}: desire number: {}, current: {}",
-                    &reference, des, cur
-                )))
+                Some((reference, desire, current))
             } else {
                 None
             }
         }
         (Value::String(des), Value::String(cur)) => {
             if des != cur {
-                Some(Value::String(format!(
-                    "{}: desire string: {}, current: {}",
-                    &reference, des, cur
-                )))
+                Some((reference, desire, current))
             } else {
                 None
             }
         }
         (Value::Array(des), Value::Array(cur)) => {
             if des.len() != cur.len() {
-                Some(Value::String(format!(
-                    "{} different array length {} vs {}: \
-                    desire {}, current: {}",
-                    &reference,
-                    des.len(),
-                    cur.len(),
-                    desire,
-                    current
-                )))
+                Some((reference, desire, current))
             } else {
                 for (index, des_element) in des.iter().enumerate() {
                     // The [] is safe as we already checked the length
@@ -74,18 +57,12 @@ pub(crate) fn get_json_value_difference(
                         return Some(difference);
                     }
                 } else {
-                    return Some(Value::String(format!(
-                        "{}: desire: {}, current: None",
-                        &reference, des_value
-                    )));
+                    return Some((reference, des_value, &Value::Null));
                 }
             }
             None
         }
         (Value::Null, _) => None,
-        (_, _) => Some(Value::String(format!(
-            "{}: type miss match, desire: {} current: {}",
-            &reference, desire, current
-        ))),
+        (_, _) => Some((reference, desire, current)),
     }
 }

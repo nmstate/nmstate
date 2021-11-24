@@ -1,7 +1,9 @@
+use log::error;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    InterfaceIpv4, InterfaceIpv6, InterfaceState, InterfaceType, NmstateError,
+    ErrorKind, InterfaceIpv4, InterfaceIpv6, InterfaceState, InterfaceType,
+    NmstateError,
 };
 
 // TODO: Use prop_list to Serialize like InterfaceIpv4 did
@@ -88,6 +90,22 @@ impl BaseInterface {
     }
 
     pub(crate) fn pre_edit_cleanup(&mut self) -> Result<(), NmstateError> {
+        if !self.can_have_ip()
+            && (self.ipv4.as_ref().map(|ipv4| ipv4.enabled) == Some(true)
+                || self.ipv6.as_ref().map(|ipv6| ipv6.enabled) == Some(true))
+        {
+            let e = NmstateError::new(
+                ErrorKind::InvalidArgument,
+                format!(
+                    "Interface {} cannot have IP enabled as it is \
+                    attached to a controller",
+                    self.name
+                ),
+            );
+            error!("{}", e);
+            return Err(e);
+        }
+
         if let Some(ref mut ipv4) = self.ipv4 {
             ipv4.pre_edit_cleanup()?
         }
@@ -125,6 +143,11 @@ impl BaseInterface {
             state: InterfaceState::Up,
             ..Default::default()
         }
+    }
+
+    // TODO: Validate IP, controller and etc
+    pub(crate) fn validate(&self) -> Result<(), NmstateError> {
+        Ok(())
     }
 }
 

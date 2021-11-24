@@ -11,7 +11,12 @@ pub use base::*;
 pub use dummy::DummyInterface;
 pub use ethernet::{EthernetConfig, EthernetInterface, VethConfig};
 pub use inter_ifaces::*;
-pub use linux_bridge::*;
+pub use linux_bridge::{
+    LinuxBridgeConfig, LinuxBridgeInterface, LinuxBridgeMulticastRouterType,
+    LinuxBridgeOptions, LinuxBridgePortConfig, LinuxBridgePortTunkTag,
+    LinuxBridgePortVlanConfig, LinuxBridgePortVlanMode,
+    LinuxBridgePortVlanRange, LinuxBridgeStpOptions,
+};
 pub use ovs::{
     OvsBridgeBondConfig, OvsBridgeBondMode, OvsBridgeBondPortConfig,
     OvsBridgeConfig, OvsBridgeInterface, OvsBridgeOptions, OvsBridgePortConfig,

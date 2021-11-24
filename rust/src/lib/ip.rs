@@ -372,7 +372,7 @@ impl InterfaceIpv6 {
             self.dhcp = other.dhcp;
         }
         if other.prop_list.contains(&"autoconf") {
-            self.dhcp = other.dhcp;
+            self.autoconf = other.autoconf;
         }
         if other.prop_list.contains(&"addresses") {
             self.addresses = other.addresses.clone();

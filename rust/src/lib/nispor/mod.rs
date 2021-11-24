@@ -4,6 +4,7 @@ mod error;
 mod ethernet;
 mod ip;
 mod linux_bridge;
+mod linux_bridge_port_vlan;
 mod show;
 mod veth;
 mod vlan;

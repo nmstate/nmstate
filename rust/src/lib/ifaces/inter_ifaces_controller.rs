@@ -4,8 +4,8 @@ use std::iter::FromIterator;
 use log::{debug, error, info};
 
 use crate::{
-    BaseInterface, ErrorKind, Interface, InterfaceState, InterfaceType,
-    Interfaces, NmstateError, OvsInterface,
+    BaseInterface, ErrorKind, Interface, InterfaceIpv4, InterfaceIpv6,
+    InterfaceState, InterfaceType, Interfaces, NmstateError, OvsInterface,
 };
 
 pub(crate) fn handle_changed_ports(
@@ -40,6 +40,32 @@ pub(crate) fn handle_changed_ports(
         )?;
     }
 
+    // Linux Bridge might have changed configure its port configuration with
+    // port name list unchanged.
+    // In this case, we should ask LinuxBridgeInterface to generate a list
+    // of configure changed port.
+    for iface in ifaces
+        .kernel_ifaces
+        .values()
+        .filter(|i| i.is_up() && i.iface_type() == InterfaceType::LinuxBridge)
+    {
+        if let Some(Interface::LinuxBridge(cur_iface)) =
+            cur_ifaces.get_iface(iface.name(), InterfaceType::LinuxBridge)
+        {
+            if let Interface::LinuxBridge(br_iface) = iface {
+                for port_name in br_iface.get_config_changed_ports(cur_iface) {
+                    pending_changes.insert(
+                        port_name.to_string(),
+                        (
+                            Some(iface.name().to_string()),
+                            Some(InterfaceType::LinuxBridge),
+                        ),
+                    );
+                }
+            }
+        }
+    }
+
     for (iface_name, (ctrl_name, ctrl_type)) in pending_changes.drain() {
         match ifaces.kernel_ifaces.get_mut(&iface_name) {
             Some(iface) => {
@@ -69,6 +95,12 @@ pub(crate) fn handle_changed_ports(
                         }
                         iface.base_iface_mut().controller = ctrl_name;
                         iface.base_iface_mut().controller_type = ctrl_type;
+                        if !iface.base_iface().can_have_ip() {
+                            iface.base_iface_mut().ipv4 =
+                                Some(InterfaceIpv4::new());
+                            iface.base_iface_mut().ipv6 =
+                                Some(InterfaceIpv6::new());
+                        }
                         info!(
                             "Include interface {} to edit as its \
                             controller required so",
@@ -157,7 +189,11 @@ fn handle_changed_ports_of_iface(
 
     // Detaching port from current controller
     for port_name in current_port_names.difference(&desire_port_names) {
-        pending_changes.insert(port_name.to_string(), (None, None));
+        // Port might move from one controller to another, if there is already a
+        // pending action for this port, we don't override it.
+        pending_changes
+            .entry(port_name.to_string())
+            .or_insert_with(|| (None, None));
     }
 
     // Set controller property if port in desire
@@ -230,6 +266,28 @@ pub(crate) fn set_ifaces_up_priority(ifaces: &mut Interfaces) -> bool {
     for (iface_name, priority) in pending_changes.iter() {
         if let Some(iface) = ifaces.kernel_ifaces.get_mut(iface_name) {
             iface.base_iface_mut().up_priority = *priority;
+        }
+    }
+    ret
+}
+
+pub(crate) fn find_unknown_type_port<'a>(
+    iface: &'a Interface,
+    cur_ifaces: &Interfaces,
+) -> Vec<&'a str> {
+    let mut ret: Vec<&str> = Vec::new();
+    if let Some(port_names) = iface.ports() {
+        for port_name in port_names {
+            if let Some(port_iface) =
+                cur_ifaces.get_iface(port_name, InterfaceType::Unknown)
+            {
+                if port_iface.iface_type() == InterfaceType::Unknown {
+                    ret.push(port_name);
+                }
+            } else {
+                // Remove not found interface also
+                ret.push(port_name);
+            }
         }
     }
     ret

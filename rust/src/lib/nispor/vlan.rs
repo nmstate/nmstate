@@ -1,16 +1,14 @@
 use crate::{BaseInterface, VlanConfig, VlanInterface};
 
 pub(crate) fn np_vlan_to_nmstate(
-    np_iface: nispor::Iface,
+    np_iface: &nispor::Iface,
     base_iface: BaseInterface,
 ) -> VlanInterface {
-    let vlan_conf = match np_iface.vlan {
-        Some(np_vlan_info) => Some(VlanConfig {
-            id: np_vlan_info.vlan_id,
-            base_iface: np_vlan_info.base_iface,
-        }),
-        None => None,
-    };
+    let vlan_conf = np_iface.vlan.as_ref().map(|np_vlan_info| VlanConfig {
+        id: np_vlan_info.vlan_id,
+        base_iface: np_vlan_info.base_iface.clone(),
+    });
+
     VlanInterface {
         base: base_iface,
         vlan: vlan_conf,
