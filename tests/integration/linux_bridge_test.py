@@ -160,7 +160,6 @@ def test_create_and_remove_linux_bridge_with_one_port(port0_up):
     port_name = port0_up[Interface.KEY][0][Interface.NAME]
     bridge_state = _create_bridge_subtree_config((port_name,))
     with linux_bridge(bridge_name, bridge_state) as desired_state:
-
         assertlib.assert_state(desired_state)
 
     assertlib.assert_absent(bridge_name)

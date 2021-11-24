@@ -2,9 +2,12 @@ use log::{debug, warn};
 
 use crate::{
     nispor::{
-        base_iface::np_iface_to_base_iface, error::np_error_to_nmstate,
-        ethernet::np_ethernet_to_nmstate, linux_bridge::np_bridge_to_nmstate,
-        veth::np_veth_to_nmstate, vlan::np_vlan_to_nmstate,
+        base_iface::np_iface_to_base_iface,
+        error::np_error_to_nmstate,
+        ethernet::np_ethernet_to_nmstate,
+        linux_bridge::{append_bridge_port_config, np_bridge_to_nmstate},
+        veth::np_veth_to_nmstate,
+        vlan::np_vlan_to_nmstate,
     },
     DummyInterface, Interface, InterfaceType, NetworkState, NmstateError,
     OvsInterface, UnknownInterface,
@@ -13,20 +16,31 @@ use crate::{
 pub(crate) fn nispor_retrieve() -> Result<NetworkState, NmstateError> {
     let mut net_state = NetworkState::new();
     net_state.prop_list.push("interfaces");
-    let mut np_state =
-        nispor::NetState::retrieve().map_err(np_error_to_nmstate)?;
+    let np_state = nispor::NetState::retrieve().map_err(np_error_to_nmstate)?;
 
-    for (_, np_iface) in np_state.ifaces.drain() {
-        let mut base_iface = np_iface_to_base_iface(&np_iface);
+    for (_, np_iface) in np_state.ifaces.iter() {
+        let mut base_iface = np_iface_to_base_iface(np_iface);
         // The `ovs-system` is reserved for OVS kernel datapath
         if np_iface.name == "ovs-system" {
             continue;
         }
 
         let iface = match &base_iface.iface_type {
-            InterfaceType::LinuxBridge => Interface::LinuxBridge(
-                np_bridge_to_nmstate(np_iface, base_iface),
-            ),
+            InterfaceType::LinuxBridge => {
+                let mut br_iface = np_bridge_to_nmstate(np_iface, base_iface);
+                let mut port_np_ifaces = Vec::new();
+                for port_name in br_iface.ports().unwrap_or_default() {
+                    if let Some(p) = np_state.ifaces.get(port_name) {
+                        port_np_ifaces.push(p)
+                    }
+                }
+                append_bridge_port_config(
+                    &mut br_iface,
+                    np_iface,
+                    port_np_ifaces,
+                );
+                Interface::LinuxBridge(br_iface)
+            }
             InterfaceType::Ethernet => Interface::Ethernet(
                 np_ethernet_to_nmstate(np_iface, base_iface),
             ),

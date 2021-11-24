@@ -7,7 +7,7 @@ use serde::{
 
 use crate::{
     ifaces::inter_ifaces_controller::{
-        handle_changed_ports, set_ifaces_up_priority,
+        find_unknown_type_port, handle_changed_ports, set_ifaces_up_priority,
     },
     ErrorKind, Interface, InterfaceState, InterfaceType, NmstateError,
 };
@@ -149,17 +149,20 @@ impl Interfaces {
     }
 
     pub(crate) fn verify(&self, cur_ifaces: &Self) -> Result<(), NmstateError> {
+        let mut cur_clone = cur_ifaces.clone();
+        cur_clone.remove_unknown_type_port();
+
         for iface in self.to_vec() {
             if iface.is_absent() || (iface.is_virtual() && iface.is_down()) {
                 if let Some(cur_iface) =
-                    cur_ifaces.get_iface(iface.name(), iface.iface_type())
+                    cur_clone.get_iface(iface.name(), iface.iface_type())
                 {
                     verify_desire_absent_but_found_in_current(
                         iface, cur_iface,
                     )?;
                 }
             } else if let Some(cur_iface) =
-                cur_ifaces.get_iface(iface.name(), iface.iface_type())
+                cur_clone.get_iface(iface.name(), iface.iface_type())
             {
                 iface.verify(cur_iface)?;
             } else {
@@ -174,6 +177,37 @@ impl Interfaces {
             }
         }
         Ok(())
+    }
+
+    fn remove_unknown_type_port(&mut self) {
+        let mut pending_actions: Vec<(String, InterfaceType, String)> =
+            Vec::new();
+        for iface in
+            self.kernel_ifaces.values().chain(self.user_ifaces.values())
+        {
+            if !iface.is_controller() {
+                continue;
+            }
+            for port_name in find_unknown_type_port(iface, self) {
+                pending_actions.push((
+                    iface.name().to_string(),
+                    iface.iface_type(),
+                    port_name.to_string(),
+                ));
+            }
+        }
+
+        for (ctrl_name, ctrl_type, port_name) in pending_actions {
+            if ctrl_type.is_userspace() {
+                if let Some(iface) =
+                    self.user_ifaces.get_mut(&(ctrl_name, ctrl_type))
+                {
+                    iface.remove_port(&port_name)
+                }
+            } else if let Some(iface) = self.kernel_ifaces.get_mut(&ctrl_name) {
+                iface.remove_port(&port_name)
+            }
+        }
     }
 
     pub(crate) fn gen_state_for_apply(
@@ -194,6 +228,9 @@ impl Interfaces {
                     del_ifaces.push(del_iface);
                 }
             } else {
+                if iface.is_up() {
+                    iface.validate()?;
+                }
                 match current.kernel_ifaces.get(iface.name()) {
                     Some(cur_iface) => {
                         let mut chg_iface = iface.clone();

@@ -14,8 +14,10 @@ pub use crate::iface::{
 };
 pub use crate::ifaces::{
     BaseInterface, DummyInterface, EthernetConfig, EthernetInterface,
-    Interfaces, LinuxBridgeConfig, LinuxBridgeInterface, LinuxBridgeOptions,
-    LinuxBridgePortConfig, LinuxBridgeStpOptions, OvsBridgeBondConfig,
+    Interfaces, LinuxBridgeConfig, LinuxBridgeInterface,
+    LinuxBridgeMulticastRouterType, LinuxBridgeOptions, LinuxBridgePortConfig,
+    LinuxBridgePortTunkTag, LinuxBridgePortVlanConfig, LinuxBridgePortVlanMode,
+    LinuxBridgePortVlanRange, LinuxBridgeStpOptions, OvsBridgeBondConfig,
     OvsBridgeBondMode, OvsBridgeBondPortConfig, OvsBridgeConfig,
     OvsBridgeInterface, OvsBridgeOptions, OvsBridgePortConfig, OvsInterface,
     VethConfig, VlanConfig, VlanInterface,
