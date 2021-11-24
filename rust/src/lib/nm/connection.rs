@@ -3,7 +3,7 @@ use std::collections::{hash_map::Entry, HashMap};
 use nm_dbus::{NmApi, NmConnection, NmSettingConnection, NmSettingVlan};
 
 use crate::{
-    nm::bridge::gen_nm_br_setting,
+    nm::bridge::{gen_nm_br_port_setting, gen_nm_br_setting},
     nm::ip::gen_nm_ip_setting,
     nm::ovs::{
         create_ovs_port_nm_conn, gen_nm_ovs_br_setting,
@@ -27,7 +27,15 @@ pub(crate) fn nm_gen_conf(
     let mut ret = Vec::new();
     let ifaces = net_state.interfaces.to_vec();
     for iface in &ifaces {
-        for nm_conn in iface_to_nm_connections(iface, &[], &[])? {
+        let mut ctrl_iface: Option<&Interface> = None;
+        if let Some(ctrl_iface_name) = &iface.base_iface().controller {
+            if let Some(ctrl_type) = &iface.base_iface().controller_type {
+                ctrl_iface = net_state
+                    .interfaces
+                    .get_iface(ctrl_iface_name, ctrl_type.clone());
+            }
+        }
+        for nm_conn in iface_to_nm_connections(iface, ctrl_iface, &[], &[])? {
             ret.push(match nm_conn.to_keyfile() {
                 Ok(s) => s,
                 Err(e) => {
@@ -47,6 +55,7 @@ pub(crate) fn nm_gen_conf(
 
 pub(crate) fn iface_to_nm_connections(
     iface: &Interface,
+    ctrl_iface: Option<&Interface>,
     exist_nm_conns: &[NmConnection],
     nm_ac_uuids: &[&str],
 ) -> Result<Vec<NmConnection>, NmstateError> {
@@ -95,6 +104,10 @@ pub(crate) fn iface_to_nm_connections(
         }
         _ => (),
     };
+
+    if let Some(Interface::LinuxBridge(br_iface)) = ctrl_iface {
+        gen_nm_br_port_setting(br_iface, &mut nm_conn);
+    }
 
     // When detaching a OVS system interface from OVS bridge, we should remove
     // its NmSettingOvsIface setting

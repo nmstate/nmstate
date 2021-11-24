@@ -65,8 +65,8 @@ pub struct NmConnection {
     _other: HashMap<String, HashMap<String, zvariant::OwnedValue>>,
 }
 
-// The signature is the same as the NmConnectionDbusOwnedValue because we are going through the
-// try_from
+// The signature is the same as the NmConnectionDbusOwnedValue because we are
+// going through the try_from
 impl Type for NmConnection {
     fn signature() -> Signature<'static> {
         NmConnectionDbusOwnedValue::signature()

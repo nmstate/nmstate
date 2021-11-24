@@ -34,7 +34,8 @@ pub(crate) fn own_value_to_bytes_array(
 }
 
 pub(crate) fn u8_array_to_mac_string(data: Vec<u8>) -> String {
-    // TODO replace collect().join(":") with intersperse(":").collect() once it is stabilized
+    // TODO replace collect().join(":") with intersperse(":").collect() once it
+    // is stabilized
     data.iter()
         .map(|byte| format!("{:02X}", byte))
         .collect::<Vec<_>>()

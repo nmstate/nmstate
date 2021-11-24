@@ -91,16 +91,18 @@ impl<'a> NmApi<'a> {
     }
 
     pub fn connections_get(&self) -> Result<Vec<NmConnection>, NmError> {
-        // Race: Connection might just been deleted
         debug!("connections_get");
         let mut nm_conns = Vec::new();
         for nm_conn_obj_path in self.dbus.nm_conn_obj_paths_get()? {
-            let nm_conn = nm_con_get_from_obj_path(
+            // Race: Connection might just been deleted, hence we ignore error
+            // here
+            if let Ok(c) = nm_con_get_from_obj_path(
                 &self.dbus.connection,
                 &nm_conn_obj_path,
-            )?;
-            debug!("Got connection {:?}", nm_conn);
-            nm_conns.push(nm_conn);
+            ) {
+                debug!("Got connection {:?}", c);
+                nm_conns.push(c);
+            }
         }
         Ok(nm_conns)
     }
@@ -181,8 +183,10 @@ impl<'a> NmApi<'a> {
         let mut nm_acs = Vec::new();
         let nm_ac_obj_paths = self.dbus.active_connections()?;
         for nm_ac_obj_path in nm_ac_obj_paths {
-            if let Some(nm_ac) =
-                get_nm_ac_by_obj_path(&self.dbus.connection, &nm_ac_obj_path)?
+            // Race condition: Active connection might just been deleted,
+            // we ignore error here
+            if let Ok(Some(nm_ac)) =
+                get_nm_ac_by_obj_path(&self.dbus.connection, &nm_ac_obj_path)
             {
                 debug!("Got active connection {:?}", nm_ac);
                 nm_acs.push(nm_ac);

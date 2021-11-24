@@ -1,15 +1,13 @@
 use crate::{BaseInterface, EthernetInterface, VethConfig};
 
 pub(crate) fn np_veth_to_nmstate(
-    np_iface: nispor::Iface,
+    np_iface: &nispor::Iface,
     base_iface: BaseInterface,
 ) -> EthernetInterface {
-    let veth_conf = match np_iface.veth {
-        Some(np_veth_info) => Some(VethConfig {
-            peer: np_veth_info.peer,
-        }),
-        None => None,
-    };
+    let veth_conf = np_iface.veth.as_ref().map(|np_veth_info| VethConfig {
+        peer: np_veth_info.peer.clone(),
+    });
+
     EthernetInterface {
         base: base_iface,
         veth: veth_conf,

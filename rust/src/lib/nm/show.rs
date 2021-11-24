@@ -209,10 +209,10 @@ fn nm_ip_setting_to_nmstate6(nm_ip_setting: &NmSettingIp) -> InterfaceIpv6 {
             NmSettingIpMethod::Disabled => (false, false, false),
             NmSettingIpMethod::LinkLocal
             | NmSettingIpMethod::Manual
-            | NmSettingIpMethod::Shared => (true, false, true),
+            | NmSettingIpMethod::Shared => (true, false, false),
             NmSettingIpMethod::Auto => (true, true, true),
             NmSettingIpMethod::Dhcp => (true, true, false),
-            NmSettingIpMethod::Ignore => (true, false, true),
+            NmSettingIpMethod::Ignore => (true, false, false),
         };
         InterfaceIpv6 {
             enabled,

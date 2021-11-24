@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 use log::info;
 use nm_dbus::{NmApi, NmConnection, NmDeviceState};
@@ -115,7 +115,6 @@ fn apply_single_state(
     checkpoint: &str,
 ) -> Result<(), NmstateError> {
     let mut nm_conns_to_activate: Vec<NmConnection> = Vec::new();
-    let mut ports: HashMap<String, (String, InterfaceType)> = HashMap::new();
 
     let exist_nm_conns =
         nm_api.connections_get().map_err(nm_error_to_nmstate)?;
@@ -126,23 +125,25 @@ fn apply_single_state(
         nm_acs.iter().map(|nm_ac| &nm_ac.uuid as &str).collect();
 
     let ifaces = net_state.interfaces.to_vec();
-    for iface in &ifaces {
-        if let Some(iface_ports) = iface.ports() {
-            for port_name in iface_ports {
-                ports.insert(
-                    port_name.to_string(),
-                    (iface.name().to_string(), iface.iface_type().clone()),
-                );
-            }
-        }
-    }
 
     for iface in ifaces.iter() {
         if iface.iface_type() != InterfaceType::Unknown && iface.is_up() {
-            nm_conns_to_activate.extend(
-                iface_to_nm_connections(iface, &exist_nm_conns, &nm_ac_uuids)?
-                    .into_iter(),
-            );
+            let mut ctrl_iface: Option<&Interface> = None;
+            if let Some(ctrl_iface_name) = &iface.base_iface().controller {
+                if let Some(ctrl_type) = &iface.base_iface().controller_type {
+                    ctrl_iface = des_net_state
+                        .interfaces
+                        .get_iface(ctrl_iface_name, ctrl_type.clone());
+                }
+            }
+            for nm_conn in iface_to_nm_connections(
+                iface,
+                ctrl_iface,
+                &exist_nm_conns,
+                &nm_ac_uuids,
+            )? {
+                nm_conns_to_activate.push(nm_conn);
+            }
         }
     }
     let nm_conns_to_deactivate = ifaces

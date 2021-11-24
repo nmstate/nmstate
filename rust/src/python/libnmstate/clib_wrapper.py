@@ -22,6 +22,7 @@ from .error import (
     NmstateInternalError,
     NmstatePluginError,
     NmstateNotImplementedError,
+    NmstateKernelIntegerRoundedError,
 )
 
 lib = cdll.LoadLibrary("libnmstate.so.2")
@@ -129,5 +130,7 @@ def apply_net_state(
             raise NmstatePluginError(err_msg)
         elif err_kind == "NotImplementedError":
             raise NmstateNotImplementedError(err_msg)
+        elif err_kind == "KernelIntegerRoundedError":
+            raise NmstateKernelIntegerRoundedError(err_msg)
         else:
             raise NmstateError(f"{err_kind}: {err_msg}")
