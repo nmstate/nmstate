@@ -1,4 +1,4 @@
-use log::warn;
+use log::{error, warn};
 use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::{
@@ -404,17 +404,60 @@ impl Interface {
         }
         let current_value = serde_json::to_value(&current_clone)?;
 
-        if let Some(diff_value) = get_json_value_difference(
+        if let Some((reference, desire, current)) = get_json_value_difference(
             format!("{}.interface", self.name()),
             &self_value,
             &current_value,
         ) {
+            // Linux Bridge on 250 kernel HZ and 100 user HZ system(e.g.
+            // Ubuntu) will have round up which lead to 1 difference.
+            if let (
+                serde_json::Value::Number(des),
+                serde_json::Value::Number(cur),
+            ) = (desire, current)
+            {
+                if desire.as_u64().unwrap_or(0) - cur.as_u64().unwrap_or(0) == 1
+                    && LinuxBridgeInterface::is_interger_rounded_up(&reference)
+                {
+                    let e = NmstateError::new(
+                        ErrorKind::KernelIntegerRoundedError,
+                        format!(
+                            "Linux kernel configured with 250 HZ \
+                                will round up/down the integer in linux \
+                                bridge {} option '{}' from {:?} to {:?}.",
+                            self.name(),
+                            reference,
+                            des,
+                            cur
+                        ),
+                    );
+                    error!("{}", e);
+                    return Err(e);
+                }
+            }
+
             Err(NmstateError::new(
                 ErrorKind::VerificationError,
-                format!("Verification failure: {}", diff_value),
+                format!(
+                    "Verification failure: {} desire '{}', current '{}'",
+                    reference, desire, current
+                ),
             ))
         } else {
             Ok(())
+        }
+    }
+
+    pub(crate) fn validate(&self) -> Result<(), NmstateError> {
+        if let Interface::LinuxBridge(iface) = self {
+            iface.validate()?;
+        }
+        Ok(())
+    }
+
+    pub(crate) fn remove_port(&mut self, port_name: &str) {
+        if let Interface::LinuxBridge(br_iface) = self {
+            br_iface.remove_port(port_name);
         }
     }
 }

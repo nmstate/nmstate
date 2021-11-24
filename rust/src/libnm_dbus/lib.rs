@@ -24,9 +24,10 @@ mod nm_api;
 
 pub use crate::active_connection::NmActiveConnection;
 pub use crate::connection::{
-    NmConnection, NmSettingBridge, NmSettingConnection, NmSettingIp,
-    NmSettingIpMethod, NmSettingOvsBridge, NmSettingOvsIface, NmSettingOvsPort,
-    NmSettingVlan, NmSettingWired,
+    NmConnection, NmSettingBridge, NmSettingBridgeVlanRange,
+    NmSettingConnection, NmSettingIp, NmSettingIpMethod, NmSettingOvsBridge,
+    NmSettingOvsIface, NmSettingOvsPort, NmSettingVlan, NmSettingWired,
+    NmVlanProtocol,
 };
 pub use crate::device::{NmDevice, NmDeviceState, NmDeviceStateReason};
 pub use crate::error::{ErrorKind, NmError};
