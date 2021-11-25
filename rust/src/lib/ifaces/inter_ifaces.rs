@@ -370,6 +370,45 @@ impl Interfaces {
     }
 }
 
+pub(crate) struct MergedInterfaces<'a> {
+    inner: Vec<&'a Interface>,
+}
+
+impl<'a> MergedInterfaces<'a> {
+    pub(crate) fn merge(
+        current: &'a Interfaces,
+        add: &'a Interfaces,
+        update: &'a Interfaces,
+        delete: &'a Interfaces,
+    ) -> Self {
+        let mut merged = Vec::new();
+        for current in current.to_vec().into_iter() {
+            if delete
+                .get_iface(current.name(), current.iface_type())
+                .is_none()
+            {
+                merged.push(current);
+            }
+        }
+        for iface in merged.iter_mut() {
+            if let Some(updated) =
+                update.get_iface(iface.name(), iface.iface_type())
+            {
+                *iface = updated;
+            }
+        }
+        merged.extend(add.to_vec().iter());
+        MergedInterfaces { inner: merged }
+    }
+
+    pub(crate) fn find_by_name(&self, name: &str) -> Option<&'a Interface> {
+        self.inner
+            .iter()
+            .find(|iface| iface.name() == name)
+            .copied()
+    }
+}
+
 fn verify_desire_absent_but_found_in_current(
     des_iface: &Interface,
     cur_iface: &Interface,
