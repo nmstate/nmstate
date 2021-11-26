@@ -430,6 +430,20 @@ impl<'a> MergedInterfaces<'a> {
         }
         Ok(())
     }
+
+    pub(crate) fn orphaned_interfaces(&self) -> Vec<String> {
+        let mut orphaned = Vec::new();
+        for kernel_iface in
+            self.inner.iter().filter(|iface| !iface.is_userspace())
+        {
+            if let Some(parent) = kernel_iface.parent() {
+                if self.find_by_name(parent).is_none() {
+                    orphaned.push(kernel_iface.name().to_string());
+                }
+            }
+        }
+        orphaned
+    }
 }
 
 fn verify_desire_absent_but_found_in_current(

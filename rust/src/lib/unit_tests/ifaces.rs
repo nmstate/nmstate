@@ -2,6 +2,7 @@ use crate::{
     ifaces::MergedInterfaces,
     unit_tests::testlib::{
         new_eth_iface, new_ovs_br_iface, new_ovs_iface, new_unknown_iface,
+        new_vlan_iface,
     },
     InterfaceState, InterfaceType, Interfaces,
 };
@@ -79,4 +80,21 @@ fn test_merge_interfaces() {
     assert!(desired.find_by_name("eth2").is_none());
 
     assert!(desired.find_by_name("eth3").is_some());
+}
+
+#[test]
+fn test_orphaned_vlan() {
+    let mut current = Interfaces::new();
+    current.push(new_eth_iface("eth0"));
+    current.push(new_vlan_iface("eth0.10", "eth0", 10));
+
+    let mut delete = Interfaces::new();
+    delete.push(new_eth_iface("eth0"));
+
+    let empty = Interfaces::new();
+
+    let desired = MergedInterfaces::merge(&current, &empty, &empty, &delete);
+    let orphaned = desired.orphaned_interfaces();
+    assert_eq!(orphaned.len(), 1);
+    assert_eq!(orphaned[0].as_str(), "eth0.10");
 }
