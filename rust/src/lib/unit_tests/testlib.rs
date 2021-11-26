@@ -2,6 +2,7 @@ use crate::{
     EthernetInterface, Interface, InterfaceType, LinuxBridgeConfig,
     LinuxBridgeInterface, LinuxBridgePortConfig, OvsBridgeConfig,
     OvsBridgeInterface, OvsBridgePortConfig, OvsInterface, UnknownInterface,
+    VlanConfig, VlanInterface,
 };
 
 pub(crate) fn new_eth_iface(name: &str) -> Interface {
@@ -45,6 +46,17 @@ pub(crate) fn new_ovs_iface(name: &str, ctrl_name: &str) -> Interface {
     iface.base.controller = Some(ctrl_name.to_string());
     iface.base.controller_type = Some(InterfaceType::OvsBridge);
     Interface::OvsInterface(iface)
+}
+
+pub(crate) fn new_vlan_iface(name: &str, parent: &str, id: u16) -> Interface {
+    let mut iface = VlanInterface::new();
+    iface.base.name = name.to_string();
+    iface.base.iface_type = InterfaceType::Vlan;
+    iface.vlan = Some(VlanConfig {
+        base_iface: parent.to_string(),
+        id,
+    });
+    Interface::Vlan(iface)
 }
 
 pub(crate) fn new_nested_4_ifaces() -> [Interface; 6] {

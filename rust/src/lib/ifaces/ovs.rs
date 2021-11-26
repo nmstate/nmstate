@@ -161,6 +161,10 @@ impl OvsInterface {
     pub fn new() -> Self {
         Self::default()
     }
+
+    pub(crate) fn parent(&self) -> Option<&str> {
+        self.base.controller.as_deref()
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
