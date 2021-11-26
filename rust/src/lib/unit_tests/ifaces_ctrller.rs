@@ -1,7 +1,8 @@
 use crate::{
+    ifaces::MergedInterfaces,
     unit_tests::testlib::{
-        new_br_iface, new_eth_iface, new_nested_4_ifaces, new_ovs_br_iface,
-        new_ovs_iface,
+        bridge_with_ports, new_br_iface, new_eth_iface, new_nested_4_ifaces,
+        new_ovs_br_iface, new_ovs_iface,
     },
     ErrorKind, Interface, InterfaceState, InterfaceType, Interfaces,
     OvsBridgeInterface,
@@ -226,4 +227,66 @@ fn test_auto_absent_ovs_interface() {
     assert_eq!(del_ifaces[0].base_iface().name, "br0");
     assert_eq!(del_ifaces[1].base_iface().name, "p1");
     assert_eq!(del_ifaces[2].base_iface().name, "p2");
+}
+
+#[test]
+fn test_overbook_port_in_single_bridge() {
+    let mut add = Interfaces::new();
+
+    add.push(bridge_with_ports("br0", &["eth0"]));
+    add.push(new_eth_iface("eth0"));
+
+    let empty = Interfaces::new();
+
+    let desired = MergedInterfaces::merge(&empty, &add, &empty, &empty);
+    assert!(desired.check_overbooked_port().is_ok());
+}
+
+#[test]
+fn test_overbook_port_in_two_bridges() {
+    let mut add = Interfaces::new();
+
+    add.push(bridge_with_ports("br0", &["eth0"]));
+    add.push(bridge_with_ports("br1", &["eth0"]));
+    add.push(new_eth_iface("eth0"));
+
+    let empty = Interfaces::new();
+
+    let desired = MergedInterfaces::merge(&empty, &add, &empty, &empty);
+    let result = desired.check_overbooked_port();
+    assert!(result.is_err());
+    assert_eq!(result.err().unwrap().kind(), ErrorKind::InvalidArgument);
+}
+
+#[test]
+fn test_overbook_port_moves_between_bridges() {
+    let mut current = Interfaces::new();
+    current.push(bridge_with_ports("br0", &["eth0"]));
+
+    let mut update = Interfaces::new();
+    update.push(bridge_with_ports("br0", &[]));
+
+    let mut add = Interfaces::new();
+    add.push(bridge_with_ports("br1", &["eth0"]));
+
+    let emtpy = Interfaces::new();
+
+    let desired = MergedInterfaces::merge(&current, &add, &update, &emtpy);
+    assert!(desired.check_overbooked_port().is_ok());
+}
+
+#[test]
+fn test_overbook_current_bridge_is_deleted() {
+    let mut current = Interfaces::new();
+    current.push(bridge_with_ports("br0", &["eth0"]));
+
+    let mut add = Interfaces::new();
+    add.push(bridge_with_ports("br1", &["eth0"]));
+
+    let mut delete = Interfaces::new();
+    delete.push(new_br_iface("br0"));
+
+    let empty = Interfaces::new();
+    let desired = MergedInterfaces::merge(&current, &add, &empty, &delete);
+    assert!(desired.check_overbooked_port().is_ok());
 }
