@@ -460,6 +460,14 @@ impl Interface {
             br_iface.remove_port(port_name);
         }
     }
+
+    pub(crate) fn parent(&self) -> Option<&str> {
+        match self {
+            Interface::Vlan(vlan) => vlan.parent(),
+            Interface::OvsInterface(ovs) => ovs.parent(),
+            _ => None,
+        }
+    }
 }
 
 // The default on enum is experimental, but clippy is suggestion we use
