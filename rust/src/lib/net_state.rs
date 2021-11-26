@@ -4,6 +4,7 @@ use log::{debug, info, warn};
 use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::{
+    ifaces::MergedInterfaces,
     nispor::{nispor_apply, nispor_retrieve},
     nm::{
         nm_apply, nm_checkpoint_create, nm_checkpoint_destroy,
@@ -233,6 +234,14 @@ impl NetworkState {
 
         let (add_ifaces, chg_ifaces, del_ifaces) =
             ifaces.gen_state_for_apply(&current.interfaces)?;
+
+        let desired = MergedInterfaces::merge(
+            &current.interfaces,
+            &add_ifaces,
+            &chg_ifaces,
+            &del_ifaces,
+        );
+        desired.check_overbooked_port()?;
 
         add_net_state.interfaces = add_ifaces;
         add_net_state.prop_list = vec!["interfaces"];

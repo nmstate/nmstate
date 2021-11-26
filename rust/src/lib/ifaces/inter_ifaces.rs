@@ -318,6 +318,29 @@ impl<'a> MergedInterfaces<'a> {
             .find(|iface| iface.name() == name)
             .copied()
     }
+
+    pub(crate) fn check_overbooked_port(&self) -> Result<(), NmstateError> {
+        let mut controller_by_port = HashMap::new();
+        for iface in self.inner.iter() {
+            let iface_name = iface.name();
+            for port in iface.ports().unwrap_or_default() {
+                if let Some(current) =
+                    controller_by_port.insert(port, iface_name)
+                {
+                    return Err(NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        format!(
+                            "Interface {}: Port {} is already assigned to different interface {}",
+                            iface.name(),
+                            port,
+                            current
+                        )
+                    ));
+                }
+            }
+        }
+        Ok(())
+    }
 }
 
 fn verify_desire_absent_but_found_in_current(
