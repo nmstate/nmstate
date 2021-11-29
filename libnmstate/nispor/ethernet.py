@@ -21,6 +21,7 @@ from libnmstate.schema import Ethernet
 from libnmstate.schema import InterfaceType
 
 from .base_iface import NisporPluginBaseIface
+from libnmstate.ifaces.ethernet import EthernetIface
 
 
 class NisporPluginEthernetIface(NisporPluginBaseIface):
@@ -35,6 +36,7 @@ class NisporPluginEthernetIface(NisporPluginBaseIface):
             for vf in self.np_iface.sr_iov.vfs:
                 vf_infos.append(
                     {
+                        EthernetIface.VF_IFACE_NAME_METADATA: vf.iface_name,
                         Ethernet.SRIOV.VFS.ID: vf.vf_id,
                         Ethernet.SRIOV.VFS.MAC_ADDRESS: vf.mac.upper(),
                         Ethernet.SRIOV.VFS.SPOOF_CHECK: vf.spoof_check,
