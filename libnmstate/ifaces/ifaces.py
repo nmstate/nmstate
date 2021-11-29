@@ -33,6 +33,7 @@ from .base_iface import BaseIface
 from .bond import BondIface
 from .dummy import DummyIface
 from .ethernet import EthernetIface
+from .ethernet import verify_sriov_vf
 from .infiniband import InfiniBandIface
 from .linux_bridge import LinuxBridgeIface
 from .macvlan import MacVlanIface
@@ -150,7 +151,6 @@ class Ifaces:
                     self._kernel_ifaces[iface.name] = iface
 
             self._create_virtual_port()
-            self._create_sriov_vfs_when_changed()
             self._mark_vf_interface_as_absent_when_sriov_vf_decrease()
             self._validate_unknown_port()
             self._validate_unknown_parent()
@@ -239,35 +239,6 @@ class Ifaces:
                             new_ifaces.append(new_port)
         for iface in new_ifaces:
             self._kernel_ifaces[iface.name] = iface
-
-    def _create_sriov_vfs_when_changed(self):
-        """
-        When plugin set the TOTAL_VFS of PF, it might take 1 seconds or
-        more to have the VFs to be ready.
-        Nmstate should use verification retry to make sure VFs are full ready.
-        To do that, we include VFs into desire state.
-        """
-        new_ifaces = []
-        for iface in self.all_ifaces():
-            if (
-                iface.is_up
-                and (iface.is_desired or iface.is_changed)
-                and iface.type == InterfaceType.ETHERNET
-                and iface.sriov_total_vfs > 0
-            ):
-                for new_iface in iface.create_sriov_vf_ifaces():
-                    cur_iface = self._kernel_ifaces.get(new_iface.name)
-                    if cur_iface and cur_iface.is_desired:
-                        raise NmstateNotSupportedError(
-                            "Does not support changing SR-IOV PF interface "
-                            "along with VF interface in the single desire "
-                            f"state: PF {iface.name}, VF {cur_iface.name}"
-                        )
-                    else:
-                        new_iface.mark_as_desired()
-                        new_ifaces.append(new_iface)
-        for new_iface in new_ifaces:
-            self._kernel_ifaces[new_iface.name] = new_iface
 
     def _mark_vf_interface_as_absent_when_sriov_vf_decrease(self):
         """
@@ -646,6 +617,7 @@ class Ifaces:
         cur_ifaces._remove_ignore_interfaces(self._ignored_ifaces)
         self._remove_ignore_interfaces(self._ignored_ifaces)
         for iface in self.all_ifaces():
+            verify_sriov_vf(iface, cur_ifaces)
             if iface.is_desired:
                 if (
                     iface.is_virtual
@@ -699,18 +671,6 @@ class Ifaces:
                                 cur_iface.state_for_verify(),
                             )
                         )
-                    elif (
-                        iface.type == InterfaceType.ETHERNET and iface.is_sriov
-                    ):
-                        if not cur_iface.check_total_vfs_matches_vf_list(
-                            iface.sriov_total_vfs
-                        ):
-                            raise NmstateVerificationError(
-                                "The NIC exceeded the waiting time for "
-                                "verification and it is failing because "
-                                "the `total_vfs` does not match the VF "
-                                "list length."
-                            )
 
     def gen_dns_metadata(self, dns_state, route_state):
         iface_metadata = dns_state.gen_metadata(self, route_state)
