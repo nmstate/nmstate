@@ -127,6 +127,15 @@ impl<'a> NmDbus<'a> {
         Ok(())
     }
 
+    pub(crate) fn checkpoints(&self) -> Result<Vec<String>, NmError> {
+        Ok(self
+            .proxy
+            .checkpoints()?
+            .into_iter()
+            .map(obj_path_to_string)
+            .collect())
+    }
+
     pub(crate) fn get_connection_by_uuid(
         &self,
         uuid: &str,
