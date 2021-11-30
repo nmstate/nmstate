@@ -33,3 +33,11 @@ impl From<serde_yaml::Error> for CliError {
         }
     }
 }
+
+impl From<clap::Error> for CliError {
+    fn from(e: clap::Error) -> Self {
+        Self {
+            msg: format!("clap::Error {}", e),
+        }
+    }
+}
