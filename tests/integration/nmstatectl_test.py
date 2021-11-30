@@ -20,6 +20,7 @@
 import json
 import os
 import time
+import yaml
 
 from libnmstate import __version__
 from libnmstate.error import NmstateConflictError
@@ -30,6 +31,7 @@ from .testlib import cmdlib
 from .testlib.examplelib import example_state
 from .testlib.examplelib import find_examples_dir
 from .testlib.examplelib import load_example
+from .testlib.statelib import state_match
 
 
 APPLY_CMD = ["nmstatectl", "apply"]
@@ -38,49 +40,22 @@ SHOW_CMD = ["nmstatectl", "show"]
 CONFIRM_CMD = ["nmstatectl", "commit"]
 ROLLBACK_CMD = ["nmstatectl", "rollback"]
 
-LOOPBACK_JSON_CONFIG = """        {
-            "name": "lo",
-            "type": "unknown",
-            "state": "up",
-            "accept-all-mac-addresses": false,
-            "ipv4": {
-                "enabled": true,
-                "address": [
-                    {
-                        "ip": "127.0.0.1",
-                        "prefix-length": 8
-                    }
-                ]
-            },
-            "ipv6": {
-                "enabled": true,
-                "address": [
-                    {
-                        "ip": "::1",
-                        "prefix-length": 128
-                    }
-                ]
-            },
-            "mac-address": "00:00:00:00:00:00",
-            "mtu": 65536
-        }"""
-
-LOOPBACK_YAML_CONFIG = """- name: lo
-  type: unknown
-  state: up
-  accept-all-mac-addresses: false
-  ipv4:
-    enabled: true
-    address:
-    - ip: 127.0.0.1
-      prefix-length: 8
-  ipv6:
-    enabled: true
-    address:
-    - ip: ::1
-      prefix-length: 128
-  mac-address: 00:00:00:00:00:00
-  mtu: 65536"""
+LOOPBACK_CONFIG = {
+    "name": "lo",
+    "type": "unknown",
+    "state": "up",
+    "accept-all-mac-addresses": False,
+    "ipv4": {
+        "enabled": True,
+        "address": [{"ip": "127.0.0.1", "prefix-length": 8}],
+    },
+    "ipv6": {
+        "enabled": True,
+        "address": [{"ip": "::1", "prefix-length": 128}],
+    },
+    "mac-address": "00:00:00:00:00:00",
+    "mtu": 65536,
+}
 
 ETH1_YAML_CONFIG = b"""interfaces:
 - name: eth1
@@ -131,10 +106,9 @@ def test_show_command_with_json():
     rc, out, err = ret
 
     assert rc == cmdlib.RC_SUCCESS, cmdlib.format_exec_cmd_result(ret)
-    assert LOOPBACK_JSON_CONFIG in out
-
-    state = json.loads(out)
-    assert len(state[Constants.INTERFACES]) > 1
+    current_state = json.loads(out)
+    state_match(LOOPBACK_CONFIG, current_state)
+    assert len(current_state[Constants.INTERFACES]) > 1
 
 
 def test_show_command_with_yaml_format():
@@ -142,7 +116,8 @@ def test_show_command_with_yaml_format():
     rc, out, err = ret
 
     assert rc == cmdlib.RC_SUCCESS, cmdlib.format_exec_cmd_result(ret)
-    assert LOOPBACK_YAML_CONFIG in out
+    current_state = yaml.load(out)
+    state_match(LOOPBACK_CONFIG, current_state)
 
 
 def test_show_command_json_only_lo():
@@ -171,7 +146,8 @@ def test_show_command_with_long_running_config():
     rc, out, err = ret
 
     assert rc == cmdlib.RC_SUCCESS, cmdlib.format_exec_cmd_result(ret)
-    assert LOOPBACK_YAML_CONFIG in out
+    current_state = yaml.load(out)
+    state_match(LOOPBACK_CONFIG, current_state)
 
 
 def test_show_command_with_long_show_secrets():
@@ -179,7 +155,8 @@ def test_show_command_with_long_show_secrets():
     rc, out, err = ret
 
     assert rc == cmdlib.RC_SUCCESS, cmdlib.format_exec_cmd_result(ret)
-    assert LOOPBACK_YAML_CONFIG in out
+    current_state = yaml.load(out)
+    state_match(LOOPBACK_CONFIG, current_state)
 
 
 def test_show_command_with_short_running_config():
@@ -187,7 +164,8 @@ def test_show_command_with_short_running_config():
     rc, out, err = ret
 
     assert rc == cmdlib.RC_SUCCESS, cmdlib.format_exec_cmd_result(ret)
-    assert LOOPBACK_YAML_CONFIG in out
+    current_state = yaml.load(out)
+    state_match(LOOPBACK_CONFIG, current_state)
 
 
 def test_show_command_with_short_show_secrets():
@@ -195,7 +173,8 @@ def test_show_command_with_short_show_secrets():
     rc, out, err = ret
 
     assert rc == cmdlib.RC_SUCCESS, cmdlib.format_exec_cmd_result(ret)
-    assert LOOPBACK_YAML_CONFIG in out
+    current_state = yaml.load(out)
+    state_match(LOOPBACK_CONFIG, current_state)
 
 
 def test_apply_command_with_yaml_format():
