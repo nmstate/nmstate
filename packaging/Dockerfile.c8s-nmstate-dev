@@ -1,9 +1,15 @@
-FROM docker.io/library/centos:8
+FROM quay.io/centos/centos:stream8
 
-RUN dnf -y install dnf-plugins-core epel-release && \
+RUN echo "2021-11-29" > /build_time
+
+RUN sed -i -e 's/^#RateLimitInterval=.*/RateLimitInterval=0/' \
+    -e 's/^#RateLimitBurst=.*/RateLimitBurst=0/' \
+    /etc/systemd/journald.conf
+
+RUN dnf update -y && \
+    dnf -y install dnf-plugins-core epel-release && \
     dnf config-manager --set-enabled powertools && \
     dnf copr enable nmstate/ovs-el8 -y && \
-    dnf copr enable networkmanager/NetworkManager-1.30 -y && \
     dnf copr enable nmstate/nispor -y && \
     dnf -y install --setopt=install_weak_deps=False \
                    make \
@@ -34,23 +40,22 @@ RUN dnf -y install dnf-plugins-core epel-release && \
                    python3-docopt \
                    python3-nispor \
                    python3-varlink \
-                   tcpreplay \
                    libvarlink-util \
+                   tcpreplay \
                    wpa_supplicant \
                    hostapd \
+                   libndp \
+                   procps-ng \
                    && \
     alternatives --set python /usr/bin/python3 && \
     ln -s /usr/bin/pytest-3 /usr/bin/pytest && \
     dnf clean all && \
-    systemctl enable openvswitch && \
-    sed -i -e 's/^#RateLimitInterval=.*/RateLimitInterval=0/' \
-    -e 's/^#RateLimitBurst=.*/RateLimitBurst=0/' \
-    /etc/systemd/journald.conf
-
-RUN rpm --verifydb
+    systemctl enable openvswitch
 
 COPY network_manager_enable_trace.conf \
      /etc/NetworkManager/conf.d/97-trace-logging.conf
+
+RUN systemctl enable dbus systemd-udevd NetworkManager
 
 VOLUME [ "/sys/fs/cgroup" ]
 
