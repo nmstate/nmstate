@@ -330,4 +330,6 @@ def test_network_manager_plugin_with_daemon_stopped(stop_nm_service):
         NetworkManagerPlugin().context
 
     state = statelib.show_only(("lo",))
+    # Ignore ethtool output
+    state[Interface.KEY][0].pop("ethtool", None)
     assert state[Interface.KEY][0] == LO_IFACE_INFO
