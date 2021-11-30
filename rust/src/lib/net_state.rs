@@ -1,3 +1,4 @@
+use std::cmp;
 use std::collections::HashMap;
 
 use log::{debug, info, warn};
@@ -18,6 +19,7 @@ use crate::{
     RouteRules, Routes,
 };
 
+const DEFAULT_ROLLBACK_TIMEOUT: u32 = 60;
 const VERIFY_RETRY_INTERVAL_MILLISECONDS: u64 = 1000;
 const VERIFY_RETRY_COUNT: usize = 5;
 const VERIFY_RETRY_COUNT_SRIOV: usize = 60;
@@ -45,6 +47,8 @@ pub struct NetworkState {
     no_verify: bool,
     #[serde(skip)]
     no_commit: bool,
+    #[serde(skip)]
+    timeout: u32,
     #[serde(skip)]
     include_secrets: bool,
     #[serde(skip)]
@@ -95,6 +99,11 @@ impl NetworkState {
 
     pub fn set_commit(&mut self, value: bool) -> &mut Self {
         self.no_commit = !value;
+        self
+    }
+
+    pub fn set_timeout(&mut self, value: u32) -> &mut Self {
+        self.timeout = value;
         self
     }
 
@@ -192,8 +201,7 @@ impl NetworkState {
                 )?;
                 nm_checkpoint_timeout_extend(
                     &checkpoint,
-                    (VERIFY_RETRY_INTERVAL_MILLISECONDS * retry_count as u64
-                        / 1000) as u32,
+                    cmp::max(DEFAULT_ROLLBACK_TIMEOUT, self.timeout),
                 )?;
                 if !self.no_verify {
                     with_retry(

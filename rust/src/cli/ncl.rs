@@ -76,9 +76,20 @@ fn main() {
                 )
                 .arg(
                     clap::Arg::with_name("NO_COMMIT")
-                        .long("no-commit")
-                        .takes_value(false)
-                        .help("Do not commit new state after verification"),
+                      .long("no-commit")
+                      .takes_value(false)
+                      .help(
+                        "Do not commit new state after verification"
+                      ),
+                )
+                .arg(
+                    clap::Arg::with_name("TIMEOUT")
+                      .long("timeout")
+                      .takes_value(true)
+                      .default_value("60")
+                      .help(
+                        "Timeout in seconds before reverting uncommited changes."
+                      ),
                 ),
         )
         .subcommand(
@@ -140,13 +151,18 @@ fn main() {
         let is_kernel = matches.is_present("KERNEL");
         let no_verify = matches.is_present("NO_VERIFY");
         let no_commit = matches.is_present("NO_COMMIT");
+        let mut timeout: u32 = 0;
+        match clap::value_t!(matches.value_of("TIMEOUT"), u32) {
+            Ok(t) => timeout = t,
+            Err(e) => print_error_and_exit(CliError::from(e)),
+        }
         if let Some(file_path) = matches.value_of("STATE_FILE") {
             print_result_and_exit(apply_from_file(
-                file_path, is_kernel, no_verify, no_commit,
+                file_path, is_kernel, no_verify, no_commit, timeout,
             ));
         } else {
             print_result_and_exit(apply_from_stdin(
-                is_kernel, no_verify, no_commit,
+                is_kernel, no_verify, no_commit, timeout,
             ));
         }
     } else if let Some(matches) = matches.subcommand_matches(SUB_CMD_COMMIT) {
@@ -167,15 +183,19 @@ fn main() {
 // Use T instead of String where T has Serialize
 fn print_result_and_exit(result: Result<String, CliError>) {
     match result {
-        Ok(s) => {
-            println!("{}", s);
-            std::process::exit(0);
-        }
-        Err(e) => {
-            eprintln!("{}", e);
-            std::process::exit(1);
-        }
+        Ok(s) => print_string_and_exit(s),
+        Err(e) => print_error_and_exit(e),
     }
+}
+
+fn print_error_and_exit(e: CliError) {
+    eprintln!("{}", e);
+    std::process::exit(1);
+}
+
+fn print_string_and_exit(s: String) {
+    println!("{}", s);
+    std::process::exit(0);
 }
 
 fn gen_conf(file_path: &str) -> Result<String, CliError> {
@@ -269,8 +289,9 @@ fn apply_from_stdin(
     kernel_only: bool,
     no_verify: bool,
     no_commit: bool,
+    timeout: u32,
 ) -> Result<String, CliError> {
-    apply(io::stdin(), kernel_only, no_verify, no_commit)
+    apply(io::stdin(), kernel_only, no_verify, no_commit, timeout)
 }
 
 fn apply_from_file(
@@ -278,12 +299,14 @@ fn apply_from_file(
     kernel_only: bool,
     no_verify: bool,
     no_commit: bool,
+    timeout: u32,
 ) -> Result<String, CliError> {
     apply(
         std::fs::File::open(file_path)?,
         kernel_only,
         no_verify,
         no_commit,
+        timeout,
     )
 }
 
@@ -292,6 +315,7 @@ fn apply<R>(
     kernel_only: bool,
     no_verify: bool,
     no_commit: bool,
+    timeout: u32,
 ) -> Result<String, CliError>
 where
     R: Read,
@@ -300,6 +324,7 @@ where
     net_state.set_kernel_only(kernel_only);
     net_state.set_verify_change(!no_verify);
     net_state.set_commit(!no_commit);
+    net_state.set_timeout(timeout);
     net_state.apply()?;
     let sorted_net_state = sort_netstate(net_state)?;
     Ok(serde_yaml::to_string(&sorted_net_state)?)
