@@ -30,6 +30,9 @@ trait NetworkManager {
         &self,
     ) -> zbus::Result<Vec<zvariant::OwnedObjectPath>>;
 
+    #[dbus_proxy(property)]
+    fn checkpoints(&self) -> zbus::Result<Vec<zvariant::OwnedObjectPath>>;
+
     /// CheckpointCreate method
     fn checkpoint_create(
         &self,

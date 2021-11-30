@@ -57,13 +57,35 @@ impl<'a> NmApi<'a> {
     }
 
     pub fn checkpoint_destroy(&self, checkpoint: &str) -> Result<(), NmError> {
-        debug!("checkpoint_destroy: {}", checkpoint);
-        self.dbus.checkpoint_destroy(checkpoint)
+        let mut checkpoint_to_destroy: String = checkpoint.to_string();
+        if checkpoint_to_destroy.is_empty() {
+            checkpoint_to_destroy = self.last_active_checkpoint()?
+        }
+        debug!("checkpoint_destroy: {}", checkpoint_to_destroy);
+        self.dbus.checkpoint_destroy(checkpoint_to_destroy.as_str())
     }
 
     pub fn checkpoint_rollback(&self, checkpoint: &str) -> Result<(), NmError> {
-        debug!("checkpoint_rollback: {}", checkpoint);
-        self.dbus.checkpoint_rollback(checkpoint)
+        let mut checkpoint_to_rollback: String = checkpoint.to_string();
+        if checkpoint_to_rollback.is_empty() {
+            checkpoint_to_rollback = self.last_active_checkpoint()?
+        }
+        debug!("checkpoint_rollback: {}", checkpoint_to_rollback);
+        self.dbus
+            .checkpoint_rollback(checkpoint_to_rollback.as_str())
+    }
+
+    fn last_active_checkpoint(&self) -> Result<String, NmError> {
+        debug!("last_active_checkpoint");
+        let mut checkpoints = self.dbus.checkpoints()?;
+        if !checkpoints.is_empty() {
+            Ok(checkpoints.remove(0))
+        } else {
+            Err(NmError::new(
+                ErrorKind::NotFound,
+                "Not active checkpoints".to_string(),
+            ))
+        }
     }
 
     pub fn connection_activate(&self, uuid: &str) -> Result<(), NmError> {
