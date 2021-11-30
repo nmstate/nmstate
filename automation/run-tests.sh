@@ -19,8 +19,8 @@ TEST_TYPE_INTEG_SLOW="integ_slow"
 TEST_TYPE_INTEG_RUST="integ_rust"
 
 FEDORA_IMAGE_DEV="docker.io/nmstate/fedora-nmstate-dev"
-CENTOS_IMAGE_DEV="docker.io/nmstate/centos8-nmstate-dev"
-CENTOS_STREAM_IMAGE_DEV="docker.io/nmstate/centos-stream-nmstate-dev"
+CENTOS_IMAGE_DEV="quay.io/nmstate/c8s-nmstate-dev"
+CENTOS_STREAM_IMAGE_DEV="quay.io/nmstate/c8s-nmstate-dev"
 
 CREATED_INTERFACES=""
 INTERFACES="eth1 eth2"
@@ -99,7 +99,7 @@ function run_tests {
 
     if [ $TEST_TYPE == $TEST_TYPE_ALL ] || \
        [ $TEST_TYPE == $TEST_TYPE_UNIT_PY36 ];then
-        if [[ $CONTAINER_IMAGE == *"centos"* ]]; then
+        if [[ $CONTAINER_IMAGE == $CENTOS_STREAM_IMAGE_DEV ]]; then
             # Due to https://github.com/pypa/virtualenv/issues/1009
             # Instruct virtualenv not to upgrade to the latest versions of pip,
             # setuptools, wheel and etc

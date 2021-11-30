@@ -4,8 +4,8 @@ It may be used both locally and through CI.
 
 ## Components
 - Container specifications to be used for the tests are in the `packaging`
-  directory. The images are published on docker hub:
-  https://hub.docker.com/r/nmstate/
+  directory. The images are published on quay:
+  https://quay.io/organization/nmstate
 
 - run-tests.sh: Execute the tests in a container using
   'nmstate/fedora-nmstate-dev' container image.
@@ -29,7 +29,7 @@ You may change the test type by specifying the `--test-type` flag, for example:
 
  * `./automation/run-tests.sh --test-type integ --el8`:
    Integration tests (without slow test cases) using
-   'nmstate/centos8-nmstate-dev' container image.
+   'nmstate/c8s-nmstate-dev' container image.
 
  * `./automation/run-tests.sh --test-type integ`:
    Integration tests (without slow test cases) using
@@ -65,7 +65,7 @@ possible to provide the `--debug-shell` command-line option.
 To specify a different container image for the tests, specify it with the
 `CONTAINER_IMAGE` variable:
 
-`CONTAINER_IMAGE=local/centos8-nmstate-dev debug_exit_shell=1 ./automation/run-tests.sh`
+`CONTAINER_IMAGE=local/c8s-nmstate-dev debug_exit_shell=1 ./automation/run-tests.sh`
 
 It is also possible to pass extra arguments to PDB using the
 `nmstate_pytest_extra_args` variable or via `--pytest-args` command-line
@@ -80,33 +80,33 @@ or:
 ### Build a new container image
 
 ```
-../packaging/build-container.sh local/centos8-nmstate-dev
+../packaging/build-container.sh local/c8s-nmstate-dev
 ../packaging/build-container.sh local/fedora-nmstate-dev
 ```
 
 To test the image, either specify it manually as described above or tag it locally:
 
 ```
-podman tag local/centos8-nmstate-dev docker.io/nmstate/centos8-nmstate-dev:latest
-podman tag local/fedora-nmstate-dev docker.io/nmstate/fedora-nmstate-dev:latest
+podman tag local/c8s-nmstate-dev quay.io/nmstate/c8s-nmstate-dev:latest
+podman tag local/fedora-nmstate-dev quay.io/nmstate/fedora-nmstate-dev:latest
 ```
 
 ### Push local image to the docker hub
 The container images are automatically rebuilt for new commits to the base
-branch or new tags. Therefore updates to the Docker Hub images should always
+branch or new tags. Therefore updates to the quay images should always
 happen with a pull request that is merged to ensure that the change is
 persistent. If this is not feasible, a new build could be pushed as follow to
 the Docker Hub:
 
 ```shell
-podman login docker.io
-podman tag local/centos8-nmstate-dev nmstate/centos8-nmstate-dev:latest
-podman push nmstate/centos8-nmstate-dev:latest \
-    docker://docker.io/nmstate/centos8-nmstate-dev:latest
+podman login quay.io
+podman tag local/c8s-nmstate-dev nmstate/c8s-nmstate-dev:latest
+podman push nmstate/c8s-nmstate-dev:latest \
+    quay.io/nmstate/c8s-nmstate-dev:latest
 
 podman tag local/fedora-nmstate-dev nmstate/fedora-nmstate-dev:latest
 podman push nmstate/fedora-nmstate-dev:latest \
-    docker://docker.io/nmstate/fedora-nmstate-dev:latest
+    quay.io/nmstate/fedora-nmstate-dev:latest
 ```
 
 It will be overwritten after the next commit to base, though.
