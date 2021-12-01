@@ -16,6 +16,7 @@
 #[macro_use]
 mod macros;
 
+mod bond;
 mod bridge;
 mod conn;
 mod ip;
@@ -25,6 +26,7 @@ mod sriov;
 mod vlan;
 mod wired;
 
+pub use crate::connection::bond::NmSettingBond;
 pub use crate::connection::bridge::{
     NmSettingBridge, NmSettingBridgePort, NmSettingBridgeVlanRange,
 };

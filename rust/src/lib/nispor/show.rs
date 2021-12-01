@@ -3,6 +3,7 @@ use log::{debug, warn};
 use crate::{
     nispor::{
         base_iface::np_iface_to_base_iface,
+        bond::np_bond_to_nmstate,
         error::np_error_to_nmstate,
         ethernet::np_ethernet_to_nmstate,
         linux_bridge::{append_bridge_port_config, np_bridge_to_nmstate},
@@ -42,6 +43,9 @@ pub(crate) fn nispor_retrieve() -> Result<NetworkState, NmstateError> {
                     port_np_ifaces,
                 );
                 Interface::LinuxBridge(br_iface)
+            }
+            InterfaceType::Bond => {
+                Interface::Bond(np_bond_to_nmstate(np_iface, base_iface))
             }
             InterfaceType::Ethernet => Interface::Ethernet(
                 np_ethernet_to_nmstate(np_iface, base_iface),

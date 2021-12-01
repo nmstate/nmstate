@@ -23,6 +23,7 @@ use zbus::export::zvariant::Signature;
 use zvariant::Type;
 
 use crate::{
+    connection::bond::NmSettingBond,
     connection::bridge::{NmSettingBridge, NmSettingBridgePort},
     connection::ip::NmSettingIp,
     connection::ovs::{
@@ -52,6 +53,7 @@ pub(crate) type NmConnectionDbusValue<'a> =
 #[serde(try_from = "NmConnectionDbusOwnedValue")]
 pub struct NmConnection {
     pub connection: Option<NmSettingConnection>,
+    pub bond: Option<NmSettingBond>,
     pub bridge: Option<NmSettingBridge>,
     pub bridge_port: Option<NmSettingBridgePort>,
     pub ipv4: Option<NmSettingIp>,
@@ -88,6 +90,7 @@ impl TryFrom<NmConnectionDbusOwnedValue> for NmConnection {
             )?,
             ipv4: _from_map!(v, "ipv4", NmSettingIp::try_from)?,
             ipv6: _from_map!(v, "ipv6", NmSettingIp::try_from)?,
+            bond: _from_map!(v, "bond", NmSettingBond::try_from)?,
             bridge: _from_map!(v, "bridge", NmSettingBridge::try_from)?,
             bridge_port: _from_map!(
                 v,
@@ -153,6 +156,9 @@ impl NmConnection {
         let mut ret = HashMap::new();
         if let Some(con_set) = &self.connection {
             ret.insert("connection", con_set.to_value()?);
+        }
+        if let Some(bond_set) = &self.bond {
+            ret.insert("bond", bond_set.to_value()?);
         }
         if let Some(br_set) = &self.bridge {
             ret.insert("bridge", br_set.to_value()?);

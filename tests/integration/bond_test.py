@@ -942,7 +942,10 @@ def test_reset_bond_options_back_to_default(bond99_with_2_port):
             Interface.KEY: [
                 {
                     Interface.NAME: BOND99,
-                    Bond.CONFIG_SUBTREE: {Bond.OPTIONS_SUBTREE: {}},
+                    Bond.CONFIG_SUBTREE: {
+                        Bond.MODE: BondMode.ROUND_ROBIN,
+                        Bond.OPTIONS_SUBTREE: {},
+                    },
                 }
             ]
         }

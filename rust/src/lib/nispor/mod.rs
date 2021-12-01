@@ -1,5 +1,6 @@
 mod apply;
 mod base_iface;
+mod bond;
 mod error;
 mod ethernet;
 mod ip;
