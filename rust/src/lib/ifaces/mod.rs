@@ -1,4 +1,5 @@
 mod base;
+mod bond;
 mod dummy;
 mod ethernet;
 mod inter_ifaces;
@@ -9,6 +10,11 @@ mod sriov;
 mod vlan;
 
 pub use base::*;
+pub use bond::{
+    BondAdSelect, BondAllPortsActive, BondArpAllTargets, BondArpValidate,
+    BondConfig, BondFailOverMac, BondInterface, BondLacpRate, BondMode,
+    BondOptions, BondPrimaryReselect, BondXmitHashPolicy,
+};
 pub use dummy::DummyInterface;
 pub use ethernet::{EthernetConfig, EthernetInterface, VethConfig};
 pub use inter_ifaces::*;

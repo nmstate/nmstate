@@ -1,5 +1,6 @@
 mod active_connection;
 mod apply;
+mod bond;
 mod bridge;
 mod checkpoint;
 mod connection;

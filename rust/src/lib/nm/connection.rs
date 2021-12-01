@@ -3,6 +3,7 @@ use std::collections::{hash_map::Entry, HashMap};
 use nm_dbus::{NmApi, NmConnection, NmSettingConnection, NmSettingVlan};
 
 use crate::{
+    nm::bond::gen_nm_bond_setting,
     nm::bridge::{gen_nm_br_port_setting, gen_nm_br_setting},
     nm::ip::gen_nm_ip_setting,
     nm::ovs::{
@@ -101,6 +102,9 @@ pub(crate) fn iface_to_nm_connections(
         Interface::LinuxBridge(br_iface) => {
             gen_nm_br_setting(br_iface, &mut nm_conn);
         }
+        Interface::Bond(bond_iface) => {
+            gen_nm_bond_setting(bond_iface, &mut nm_conn);
+        }
         Interface::OvsInterface(_) => {
             // TODO Support OVS Patch interface
             gen_nm_ovs_iface_setting(&mut nm_conn);
@@ -134,6 +138,7 @@ pub(crate) fn iface_type_to_nm(
 ) -> Result<String, NmstateError> {
     match iface_type {
         InterfaceType::LinuxBridge => Ok("bridge".into()),
+        InterfaceType::Bond => Ok("bond".into()),
         InterfaceType::Ethernet => Ok("802-3-ethernet".into()),
         InterfaceType::OvsBridge => Ok("ovs-bridge".into()),
         InterfaceType::OvsInterface => Ok("ovs-interface".into()),
