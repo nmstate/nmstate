@@ -14,10 +14,13 @@ pub use crate::iface::{
     Interface, InterfaceState, InterfaceType, UnknownInterface,
 };
 pub use crate::ifaces::{
-    BaseInterface, DummyInterface, EthernetConfig, EthernetInterface,
-    Interfaces, LinuxBridgeConfig, LinuxBridgeInterface,
-    LinuxBridgeMulticastRouterType, LinuxBridgeOptions, LinuxBridgePortConfig,
-    LinuxBridgePortTunkTag, LinuxBridgePortVlanConfig, LinuxBridgePortVlanMode,
+    BaseInterface, BondAdSelect, BondAllPortsActive, BondArpAllTargets,
+    BondArpValidate, BondConfig, BondFailOverMac, BondInterface, BondLacpRate,
+    BondMode, BondOptions, BondPrimaryReselect, BondXmitHashPolicy,
+    DummyInterface, EthernetConfig, EthernetInterface, Interfaces,
+    LinuxBridgeConfig, LinuxBridgeInterface, LinuxBridgeMulticastRouterType,
+    LinuxBridgeOptions, LinuxBridgePortConfig, LinuxBridgePortTunkTag,
+    LinuxBridgePortVlanConfig, LinuxBridgePortVlanMode,
     LinuxBridgePortVlanRange, LinuxBridgeStpOptions, OvsBridgeBondConfig,
     OvsBridgeBondMode, OvsBridgeBondPortConfig, OvsBridgeConfig,
     OvsBridgeInterface, OvsBridgeOptions, OvsBridgePortConfig, OvsInterface,

@@ -6,6 +6,7 @@ pub enum ErrorKind {
     VerificationError,
     NotImplementedError,
     KernelIntegerRoundedError,
+    ValueError,
 }
 
 impl std::fmt::Display for ErrorKind {
