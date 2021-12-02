@@ -5,6 +5,7 @@ mod inter_ifaces;
 mod inter_ifaces_controller;
 mod linux_bridge;
 mod ovs;
+mod sriov;
 mod vlan;
 
 pub use base::*;
@@ -22,4 +23,5 @@ pub use ovs::{
     OvsBridgeConfig, OvsBridgeInterface, OvsBridgeOptions, OvsBridgePortConfig,
     OvsInterface,
 };
+pub use sriov::{SrIovConfig, SrIovVfConfig};
 pub use vlan::{VlanConfig, VlanInterface};

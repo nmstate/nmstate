@@ -26,8 +26,8 @@ pub use crate::active_connection::NmActiveConnection;
 pub use crate::connection::{
     NmConnection, NmSettingBridge, NmSettingBridgeVlanRange,
     NmSettingConnection, NmSettingIp, NmSettingIpMethod, NmSettingOvsBridge,
-    NmSettingOvsIface, NmSettingOvsPort, NmSettingVlan, NmSettingWired,
-    NmVlanProtocol,
+    NmSettingOvsIface, NmSettingOvsPort, NmSettingSriov, NmSettingSriovVf,
+    NmSettingSriovVfVlan, NmSettingVlan, NmSettingWired, NmVlanProtocol,
 };
 pub use crate::device::{NmDevice, NmDeviceState, NmDeviceStateReason};
 pub use crate::error::{ErrorKind, NmError};

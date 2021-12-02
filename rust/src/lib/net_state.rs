@@ -15,6 +15,7 @@ use crate::{
 
 const VERIFY_RETRY_INTERVAL_MILLISECONDS: u64 = 1000;
 const VERIFY_RETRY_COUNT: usize = 5;
+const VERIFY_RETRY_COUNT_SRIOV: usize = 60;
 const VERIFY_RETRY_COUNT_KERNEL_MODE: usize = 5;
 
 #[derive(Clone, Debug, Serialize, Default)]
@@ -126,21 +127,37 @@ impl NetworkState {
     }
 
     pub fn apply(&self) -> Result<(), NmstateError> {
-        let desire_state_to_verify = self.clone();
+        let mut desire_state_to_verify = self.clone();
+        let mut desire_state_to_apply = self.clone();
         let mut cur_net_state = NetworkState::new();
         cur_net_state.set_kernel_only(self.kernel_only);
         cur_net_state.retrieve()?;
 
+        desire_state_to_verify
+            .interfaces
+            .resolve_unknown_ifaces(&cur_net_state.interfaces)?;
+        desire_state_to_apply
+            .interfaces
+            .resolve_unknown_ifaces(&cur_net_state.interfaces)?;
+
         let (add_net_state, chg_net_state, del_net_state) =
-            self.gen_state_for_apply(&cur_net_state)?;
+            desire_state_to_apply.gen_state_for_apply(&cur_net_state)?;
 
         debug!("Adding net state {:?}", &add_net_state);
         debug!("Changing net state {:?}", &chg_net_state);
         debug!("Deleting net state {:?}", &del_net_state);
 
         if !self.kernel_only {
+            let retry_count =
+                if desire_state_to_apply.interfaces.has_sriov_enabled() {
+                    VERIFY_RETRY_COUNT_SRIOV
+                } else {
+                    VERIFY_RETRY_COUNT
+                };
+
             let checkpoint = nm_checkpoint_create()?;
             info!("Created checkpoint {}", &checkpoint);
+
             with_nm_checkpoint(&checkpoint, || {
                 nm_apply(
                     &add_net_state,
@@ -154,14 +171,13 @@ impl NetworkState {
                 )?;
                 nm_checkpoint_timeout_extend(
                     &checkpoint,
-                    (VERIFY_RETRY_INTERVAL_MILLISECONDS
-                        * VERIFY_RETRY_COUNT as u64
+                    (VERIFY_RETRY_INTERVAL_MILLISECONDS * retry_count as u64
                         / 1000) as u32,
                 )?;
                 if !self.no_verify {
                     with_retry(
                         VERIFY_RETRY_INTERVAL_MILLISECONDS,
-                        VERIFY_RETRY_COUNT,
+                        retry_count,
                         || {
                             let mut new_cur_net_state = cur_net_state.clone();
                             new_cur_net_state.retrieve()?;
