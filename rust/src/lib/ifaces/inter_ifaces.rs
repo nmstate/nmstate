@@ -165,6 +165,11 @@ impl Interfaces {
                 cur_clone.get_iface(iface.name(), iface.iface_type())
             {
                 iface.verify(cur_iface)?;
+                if let Interface::Ethernet(eth_iface) = iface {
+                    if eth_iface.sriov_is_enabled() {
+                        eth_iface.verify_sriov(cur_ifaces)?;
+                    }
+                }
             } else {
                 return Err(NmstateError::new(
                     ErrorKind::VerificationError,
@@ -218,7 +223,6 @@ impl Interfaces {
         let mut chg_ifaces = Self::new();
         let mut del_ifaces = Self::new();
 
-        resolve_unknown_ifaces(self, current)?;
         handle_changed_ports(self, current)?;
         self.set_up_priority()?;
 
@@ -278,6 +282,91 @@ impl Interfaces {
             state to place controller before its ports"
                 .to_string(),
         ))
+    }
+
+    pub(crate) fn has_sriov_enabled(&self) -> bool {
+        self.kernel_ifaces.values().any(|i| {
+            if let Interface::Ethernet(eth_iface) = i {
+                eth_iface.sriov_is_enabled()
+            } else {
+                false
+            }
+        })
+    }
+
+    pub(crate) fn resolve_unknown_ifaces(
+        &mut self,
+        cur_ifaces: &Self,
+    ) -> Result<(), NmstateError> {
+        let mut resolved_ifaces: Vec<Interface> = Vec::new();
+        for ((iface_name, iface_type), iface) in self.user_ifaces.iter() {
+            if iface_type != &InterfaceType::Unknown {
+                continue;
+            }
+
+            if iface.is_absent() {
+                for cur_iface in cur_ifaces.to_vec() {
+                    if cur_iface.name() == iface_name {
+                        let mut new_iface = cur_iface.clone();
+                        new_iface.base_iface_mut().state =
+                            InterfaceState::Absent;
+                        resolved_ifaces.push(new_iface);
+                    }
+                }
+            } else {
+                let mut found_iface = Vec::new();
+                for cur_iface in cur_ifaces.to_vec() {
+                    if cur_iface.name() == iface_name {
+                        let mut new_iface = iface.clone();
+                        new_iface.base_iface_mut().iface_type =
+                            cur_iface.iface_type().clone();
+                        found_iface.push(new_iface);
+                    }
+                }
+                match found_iface.len() {
+                    0 => {
+                        let e = NmstateError::new(
+                            ErrorKind::InvalidArgument,
+                            format!(
+                                "Failed to find unknown type interface {} \
+                            in current state",
+                                iface_name
+                            ),
+                        );
+                        error!("{}", e);
+                        return Err(e);
+                    }
+                    1 => {
+                        let new_iface = Interface::deserialize(
+                            serde_json::to_value(&found_iface[0])?,
+                        )?;
+
+                        resolved_ifaces.push(new_iface);
+                    }
+                    _ => {
+                        let e = NmstateError::new(
+                            ErrorKind::InvalidArgument,
+                            format!(
+                                "Found 2+ interface matching desired unknown \
+                            type interface {}: {:?}",
+                                iface_name, &found_iface
+                            ),
+                        );
+                        error!("{}", e);
+                        return Err(e);
+                    }
+                }
+            }
+        }
+
+        for new_iface in resolved_ifaces {
+            self.user_ifaces.remove(&(
+                new_iface.name().to_string(),
+                InterfaceType::Unknown,
+            ));
+            self.push(new_iface);
+        }
+        Ok(())
     }
 }
 
@@ -339,77 +428,4 @@ fn gen_ifaces_to_del(
         }
     }
     del_ifaces
-}
-
-fn resolve_unknown_ifaces(
-    ifaces: &mut Interfaces,
-    cur_ifaces: &Interfaces,
-) -> Result<(), NmstateError> {
-    let mut resolved_ifaces: Vec<Interface> = Vec::new();
-    for ((iface_name, iface_type), iface) in ifaces.user_ifaces.iter() {
-        if iface_type != &InterfaceType::Unknown {
-            continue;
-        }
-
-        if iface.is_absent() {
-            for cur_iface in cur_ifaces.to_vec() {
-                if cur_iface.name() == iface_name {
-                    let mut new_iface = cur_iface.clone();
-                    new_iface.base_iface_mut().state = InterfaceState::Absent;
-                    resolved_ifaces.push(new_iface);
-                }
-            }
-        } else {
-            let mut found_iface = Vec::new();
-            for cur_iface in cur_ifaces.to_vec() {
-                if cur_iface.name() == iface_name {
-                    let mut new_iface = iface.clone();
-                    new_iface.base_iface_mut().iface_type =
-                        cur_iface.iface_type().clone();
-                    found_iface.push(new_iface);
-                }
-            }
-            match found_iface.len() {
-                0 => {
-                    let e = NmstateError::new(
-                        ErrorKind::InvalidArgument,
-                        format!(
-                            "Failed to find unknown type interface {} \
-                            in current state",
-                            iface_name
-                        ),
-                    );
-                    error!("{}", e);
-                    return Err(e);
-                }
-                1 => {
-                    let new_iface = Interface::deserialize(
-                        serde_json::to_value(&found_iface[0])?,
-                    )?;
-
-                    resolved_ifaces.push(new_iface);
-                }
-                _ => {
-                    let e = NmstateError::new(
-                        ErrorKind::InvalidArgument,
-                        format!(
-                            "Found 2+ interface matching desired unknown \
-                            type interface {}: {:?}",
-                            iface_name, &found_iface
-                        ),
-                    );
-                    error!("{}", e);
-                    return Err(e);
-                }
-            }
-        }
-    }
-
-    for new_iface in resolved_ifaces {
-        ifaces
-            .user_ifaces
-            .remove(&(new_iface.name().to_string(), InterfaceType::Unknown));
-        ifaces.push(new_iface);
-    }
-    Ok(())
 }
