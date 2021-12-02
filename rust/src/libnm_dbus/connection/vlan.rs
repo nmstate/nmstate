@@ -1,8 +1,10 @@
-use crate::connection::DbusDictionary;
-use crate::NmError;
-use serde::Deserialize;
 use std::collections::HashMap;
 use std::convert::TryFrom;
+
+use log::error;
+use serde::Deserialize;
+
+use crate::{connection::DbusDictionary, ErrorKind, NmError};
 
 #[derive(Debug, Clone, PartialEq, Default, Deserialize)]
 #[serde(try_from = "DbusDictionary")]
@@ -42,5 +44,52 @@ impl NmSettingVlan {
 
     pub fn new() -> Self {
         Self::default()
+    }
+}
+
+const NM_VLAN_PROTOCOL_802_1Q: &str = "802.1Q";
+const NM_VLAN_PROTOCOL_802_1AD: &str = "802.1AD";
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum NmVlanProtocol {
+    Dot1Q,
+    Dot1Ad,
+}
+
+impl Default for NmVlanProtocol {
+    fn default() -> Self {
+        Self::Dot1Q
+    }
+}
+
+impl TryFrom<String> for NmVlanProtocol {
+    type Error = NmError;
+    fn try_from(vlan_protocol: String) -> Result<Self, Self::Error> {
+        match vlan_protocol.as_str() {
+            NM_VLAN_PROTOCOL_802_1Q => Ok(Self::Dot1Q),
+            NM_VLAN_PROTOCOL_802_1AD => Ok(Self::Dot1Ad),
+            _ => {
+                let e = NmError::new(
+                    ErrorKind::InvalidArgument,
+                    format!(
+                        "Invalid VLAN protocol {}, only support: {} and {}",
+                        vlan_protocol,
+                        NM_VLAN_PROTOCOL_802_1Q,
+                        NM_VLAN_PROTOCOL_802_1AD
+                    ),
+                );
+                error!("{}", e);
+                Err(e)
+            }
+        }
+    }
+}
+
+impl NmVlanProtocol {
+    pub fn to_str(self) -> &'static str {
+        match self {
+            Self::Dot1Q => NM_VLAN_PROTOCOL_802_1Q,
+            Self::Dot1Ad => NM_VLAN_PROTOCOL_802_1AD,
+        }
     }
 }
