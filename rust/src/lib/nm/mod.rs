@@ -9,6 +9,7 @@ mod ip;
 mod ovs;
 mod profile;
 mod show;
+mod sriov;
 #[cfg(test)]
 mod unit_tests;
 mod vlan;

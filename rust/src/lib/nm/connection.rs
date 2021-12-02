@@ -10,6 +10,7 @@ use crate::{
         gen_nm_ovs_iface_setting,
     },
     nm::profile::get_exist_profile,
+    nm::sriov::gen_nm_sriov_setting,
     nm::wired::gen_nm_wired_setting,
     ErrorKind, Interface, InterfaceType, NetworkState, NmstateError,
 };
@@ -101,6 +102,9 @@ pub(crate) fn iface_to_nm_connections(
         }
         Interface::Vlan(vlan_iface) => {
             nm_conn.vlan = vlan_iface.vlan.as_ref().map(NmSettingVlan::from)
+        }
+        Interface::Ethernet(eth_iface) => {
+            gen_nm_sriov_setting(eth_iface, &mut nm_conn);
         }
         _ => (),
     };

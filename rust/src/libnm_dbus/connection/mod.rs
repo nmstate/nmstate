@@ -20,19 +20,22 @@ mod bridge;
 mod conn;
 mod ip;
 mod ovs;
+mod sriov;
 mod vlan;
 mod wired;
 
 pub use crate::connection::bridge::{
     NmSettingBridge, NmSettingBridgePort, NmSettingBridgeVlanRange,
-    NmVlanProtocol,
 };
 pub use crate::connection::conn::{NmConnection, NmSettingConnection};
 pub use crate::connection::ip::{NmSettingIp, NmSettingIpMethod};
 pub use crate::connection::ovs::{
     NmSettingOvsBridge, NmSettingOvsIface, NmSettingOvsPort,
 };
-pub use crate::connection::vlan::NmSettingVlan;
+pub use crate::connection::sriov::{
+    NmSettingSriov, NmSettingSriovVf, NmSettingSriovVfVlan,
+};
+pub use crate::connection::vlan::{NmSettingVlan, NmVlanProtocol};
 pub use crate::connection::wired::NmSettingWired;
 
 pub(crate) use crate::connection::conn::{
