@@ -13,14 +13,30 @@
 # limitations under the License.
 
 from .clib_wrapper import apply_net_state
+from .clib_wrapper import commit_checkpoint
+from .clib_wrapper import rollback_checkpoint
 
 
 def apply(
-    desired_state, *, kernel_only=False, verify_change=True, save_to_disk=True
+    desired_state,
+    *,
+    kernel_only=False,
+    verify_change=True,
+    save_to_disk=True,
+    commit=True,
 ):
     return apply_net_state(
         desired_state,
         kernel_only=kernel_only,
         verify_change=verify_change,
         save_to_disk=save_to_disk,
+        commit=commit,
     )
+
+
+def commit(*, checkpoint=None):
+    commit_checkpoint(checkpoint)
+
+
+def rollback(*, checkpoint=None):
+    rollback_checkpoint(checkpoint)

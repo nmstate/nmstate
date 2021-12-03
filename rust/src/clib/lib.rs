@@ -19,8 +19,9 @@ const NMSTATE_FLAG_KERNEL_ONLY: u32 = 1 << 1;
 const NMSTATE_FLAG_NO_VERIFY: u32 = 1 << 2;
 const NMSTATE_FLAG_INCLUDE_STATUS_DATA: u32 = 1 << 3;
 const NMSTATE_FLAG_INCLUDE_SECRETS: u32 = 1 << 4;
+const NMSTATE_FLAG_NO_COMMIT: u32 = 1 << 5;
 // TODO
-// const NMSTATE_FLAG_MEMORY_ONLY: u32 = 1 << 5;
+// const NMSTATE_FLAG_MEMORY_ONLY: u32 = 1 << 6;
 
 const NMSTATE_PASS: c_int = 0;
 const NMSTATE_FAIL: c_int = 1;
@@ -97,6 +98,7 @@ pub extern "C" fn nmstate_net_state_retrieve(
 pub extern "C" fn nmstate_net_state_apply(
     flags: u32,
     state: *const c_char,
+    rollback_timeout: u32,
     log: *mut *mut c_char,
     err_kind: *mut *mut c_char,
     err_msg: *mut *mut c_char,
@@ -159,9 +161,129 @@ pub extern "C" fn nmstate_net_state_apply(
         net_state.set_verify_change(false);
     }
 
+    if (flags & NMSTATE_FLAG_NO_COMMIT) > 0 {
+        net_state.set_commit(false);
+    }
+
+    net_state.set_timeout(rollback_timeout);
+
     // TODO: save log to the output pointer
 
     if let Err(e) = net_state.apply() {
+        unsafe {
+            *err_msg = CString::new(e.msg()).unwrap().into_raw();
+            *err_kind =
+                CString::new(format!("{}", &e.kind())).unwrap().into_raw();
+        }
+        NMSTATE_FAIL
+    } else {
+        NMSTATE_PASS
+    }
+}
+
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
+#[no_mangle]
+pub extern "C" fn nmstate_checkpoint_commit(
+    checkpoint: *const c_char,
+    log: *mut *mut c_char,
+    err_kind: *mut *mut c_char,
+    err_msg: *mut *mut c_char,
+) -> c_int {
+    assert!(!log.is_null());
+    assert!(!err_kind.is_null());
+    assert!(!err_msg.is_null());
+
+    unsafe {
+        *log = std::ptr::null_mut();
+        *err_kind = std::ptr::null_mut();
+        *err_msg = std::ptr::null_mut();
+    }
+
+    let mut checkpoint_str = "";
+    if !checkpoint.is_null() {
+        let checkpoint_cstr = unsafe { CStr::from_ptr(checkpoint) };
+        checkpoint_str = match checkpoint_cstr.to_str() {
+            Ok(s) => s,
+            Err(e) => {
+                unsafe {
+                    *err_msg = CString::new(format!(
+                        "Error on converting C char to rust str: {}",
+                        e
+                    ))
+                    .unwrap()
+                    .into_raw();
+                    *err_kind = CString::new(format!(
+                        "{}",
+                        nmstate::ErrorKind::InvalidArgument
+                    ))
+                    .unwrap()
+                    .into_raw();
+                }
+                return NMSTATE_FAIL;
+            }
+        }
+    }
+
+    // TODO: save log to the output pointer
+
+    if let Err(e) = nmstate::checkpoint_commit(checkpoint_str) {
+        unsafe {
+            *err_msg = CString::new(e.msg()).unwrap().into_raw();
+            *err_kind =
+                CString::new(format!("{}", &e.kind())).unwrap().into_raw();
+        }
+        NMSTATE_FAIL
+    } else {
+        NMSTATE_PASS
+    }
+}
+
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
+#[no_mangle]
+pub extern "C" fn nmstate_checkpoint_rollback(
+    checkpoint: *const c_char,
+    log: *mut *mut c_char,
+    err_kind: *mut *mut c_char,
+    err_msg: *mut *mut c_char,
+) -> c_int {
+    assert!(!log.is_null());
+    assert!(!err_kind.is_null());
+    assert!(!err_msg.is_null());
+
+    unsafe {
+        *log = std::ptr::null_mut();
+        *err_kind = std::ptr::null_mut();
+        *err_msg = std::ptr::null_mut();
+    }
+
+    let mut checkpoint_str = "";
+    if !checkpoint.is_null() {
+        let checkpoint_cstr = unsafe { CStr::from_ptr(checkpoint) };
+        checkpoint_str = match checkpoint_cstr.to_str() {
+            Ok(s) => s,
+            Err(e) => {
+                unsafe {
+                    *err_msg = CString::new(format!(
+                        "Error on converting C char to rust str: {}",
+                        e
+                    ))
+                    .unwrap()
+                    .into_raw();
+                    *err_kind = CString::new(format!(
+                        "{}",
+                        nmstate::ErrorKind::InvalidArgument
+                    ))
+                    .unwrap()
+                    .into_raw();
+                }
+                return NMSTATE_FAIL;
+            }
+        }
+    }
+
+    // TODO: save log to the output pointer
+
+    if let Err(e) = nmstate::checkpoint_rollback(checkpoint_str) {
         unsafe {
             *err_msg = CString::new(e.msg()).unwrap().into_raw();
             *err_kind =
