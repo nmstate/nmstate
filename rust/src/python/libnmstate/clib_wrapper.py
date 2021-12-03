@@ -50,7 +50,8 @@ NMSTATE_FLAG_KERNEL_ONLY = 1 << 1
 NMSTATE_FLAG_NO_VERIFY = 1 << 2
 NMSTATE_FLAG_INCLUDE_STATUS_DATA = 1 << 3
 NMSTATE_FLAG_INCLUDE_SECRETS = 1 << 4
-NMSTATE_FLAG_MEMORY_ONLY = 1 << 5
+NMSTATE_FLAG_NO_COMMIT = 1 << 5
+# NMSTATE_FLAG_MEMORY_ONLY = 1 << 6
 NMSTATE_PASS = 0
 
 
@@ -89,7 +90,12 @@ def retrieve_net_state_json(
 
 
 def apply_net_state(
-    state, kernel_only=False, verify_change=True, save_to_disk=True
+    state,
+    kernel_only=False,
+    verify_change=True,
+    save_to_disk=True,
+    commit=True,
+    rollback_timeout=60,
 ):
     c_err_msg = c_char_p()
     c_err_kind = c_char_p()
@@ -102,12 +108,13 @@ def apply_net_state(
     if not verify_change:
         flags |= NMSTATE_FLAG_NO_VERIFY
 
-    if not save_to_disk:
-        flags |= NMSTATE_FLAG_MEMORY_ONLY
+    if not commit:
+        flags |= NMSTATE_FLAG_NO_COMMIT
 
     rc = lib.nmstate_net_state_apply(
         flags,
         c_state,
+        rollback_timeout,
         byref(c_log),
         byref(c_err_kind),
         byref(c_err_msg),
@@ -118,19 +125,67 @@ def apply_net_state(
     lib.nmstate_err_kind_free(c_err_kind)
     lib.nmstate_err_msg_free(c_err_msg)
     if rc != NMSTATE_PASS:
-        err_msg = err_msg.decode("utf-8")
-        err_kind = err_kind.decode("utf-8")
-        if err_kind == "VerificationError":
-            raise NmstateVerificationError(err_msg)
-        elif err_kind == "InvalidArgument":
-            raise NmstateValueError(err_msg)
-        elif err_kind == "Bug":
-            raise NmstateInternalError(err_msg)
-        elif err_kind == "PluginFailure":
-            raise NmstatePluginError(err_msg)
-        elif err_kind == "NotImplementedError":
-            raise NmstateNotImplementedError(err_msg)
-        elif err_kind == "KernelIntegerRoundedError":
-            raise NmstateKernelIntegerRoundedError(err_msg)
-        else:
-            raise NmstateError(f"{err_kind}: {err_msg}")
+        raise map_error(err_kind, err_msg)
+
+
+def commit_checkpoint(checkpoint):
+    c_err_msg = c_char_p()
+    c_err_kind = c_char_p()
+    c_checkpoint = c_char_p(checkpoint)
+    c_log = c_char_p()
+
+    rc = lib.nmstate_checkpoint_commit(
+        c_checkpoint,
+        byref(c_log),
+        byref(c_err_kind),
+        byref(c_err_msg),
+    )
+
+    err_msg = c_err_msg.value
+    err_kind = c_err_kind.value
+    lib.nmstate_log_free(c_log)
+    lib.nmstate_err_kind_free(c_err_kind)
+    lib.nmstate_err_msg_free(c_err_msg)
+    if rc != NMSTATE_PASS:
+        raise map_error(err_kind, err_msg)
+
+
+def rollback_checkpoint(checkpoint):
+    c_err_msg = c_char_p()
+    c_err_kind = c_char_p()
+    c_checkpoint = c_char_p(checkpoint)
+    c_log = c_char_p()
+
+    rc = lib.nmstate_checkpoint_rollback(
+        c_checkpoint,
+        byref(c_log),
+        byref(c_err_kind),
+        byref(c_err_msg),
+    )
+
+    err_msg = c_err_msg.value
+    err_kind = c_err_kind.value
+    lib.nmstate_log_free(c_log)
+    lib.nmstate_err_kind_free(c_err_kind)
+    lib.nmstate_err_msg_free(c_err_msg)
+    if rc != NMSTATE_PASS:
+        raise map_error(err_kind, err_msg)
+
+
+def map_error(err_kind, err_msg):
+    err_msg = err_msg.decode("utf-8")
+    err_kind = err_kind.decode("utf-8")
+    if err_kind == "VerificationError":
+        return NmstateVerificationError(err_msg)
+    elif err_kind == "InvalidArgument":
+        return NmstateValueError(err_msg)
+    elif err_kind == "Bug":
+        return NmstateInternalError(err_msg)
+    elif err_kind == "PluginFailure":
+        return NmstatePluginError(err_msg)
+    elif err_kind == "NotImplementedError":
+        return NmstateNotImplementedError(err_msg)
+    elif err_kind == "KernelIntegerRoundedError":
+        return NmstateKernelIntegerRoundedError(err_msg)
+    else:
+        return NmstateError(f"{err_kind}: {err_msg}")
