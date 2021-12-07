@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2020 Red Hat, Inc.
+# Copyright (c) 2018-2021 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -26,7 +26,7 @@ from .testlib import cmdlib
 RC_SUCCESS = 0
 
 
-def test_edit_abort():
+def test_edit_cancel():
     runenv = dict(os.environ)
     env = {"EDITOR": "false"}
 
