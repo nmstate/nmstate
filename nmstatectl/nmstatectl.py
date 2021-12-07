@@ -470,7 +470,7 @@ def _run_editor(txtstate, suffix):
             return statefile.read()
 
         except subprocess.CalledProcessError:
-            sys.stderr.write("Error running editor, aborting...\n")
+            sys.stderr.write("Error running editor, exiting...\n")
             return None
 
 
