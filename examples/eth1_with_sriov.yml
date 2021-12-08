@@ -11,3 +11,5 @@ interfaces:
             mac-address: ee:2a:4e:8e:71:f5
             spoof-check: true
             trust: false
+            vlan-id: 102
+            qos: 5

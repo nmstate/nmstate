@@ -43,6 +43,8 @@ class NisporPluginEthernetIface(NisporPluginBaseIface):
                         Ethernet.SRIOV.VFS.TRUST: vf.trust,
                         Ethernet.SRIOV.VFS.MIN_TX_RATE: vf.min_tx_rate,
                         Ethernet.SRIOV.VFS.MAX_TX_RATE: vf.max_tx_rate,
+                        Ethernet.SRIOV.VFS.VLAN_ID: vf.vlan_id,
+                        Ethernet.SRIOV.VFS.QOS: vf.qos,
                     }
                 )
 

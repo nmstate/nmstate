@@ -1,5 +1,5 @@
 use crate::{EthernetInterface, SrIovVfConfig};
-use nm_dbus::{NmConnection, NmSettingSriovVf};
+use nm_dbus::{NmConnection, NmSettingSriovVf, NmSettingSriovVfVlan};
 
 pub(crate) fn gen_nm_sriov_setting(
     iface: &EthernetInterface,
@@ -51,6 +51,12 @@ fn gen_nm_vfs(vfs: &[SrIovVfConfig]) -> Vec<NmSettingSriovVf> {
         }
         if let Some(v) = vf.max_tx_rate {
             nm_vf.max_tx_rate = Some(v);
+        }
+        if let Some(v) = vf.vlan_id {
+            let mut nm_vf_vlan = NmSettingSriovVfVlan::new();
+            nm_vf_vlan.id = v;
+            nm_vf_vlan.qos = vf.qos.unwrap_or_default();
+            nm_vf.vlans = Some(vec![nm_vf_vlan]);
         }
         ret.push(nm_vf);
     }

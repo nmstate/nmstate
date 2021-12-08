@@ -124,6 +124,10 @@ pub struct SrIovVfConfig {
     pub min_tx_rate: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub max_tx_rate: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub vlan_id: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub qos: Option<u32>,
 }
 
 impl SrIovVfConfig {

@@ -35,6 +35,8 @@ fn gen_sriov_conf(sriov_info: &nispor::SriovInfo) -> SrIovConfig {
         vf.trust = Some(vf_info.trust);
         vf.min_tx_rate = Some(vf_info.min_tx_rate);
         vf.max_tx_rate = Some(vf_info.max_tx_rate);
+        vf.vlan_id = Some(vf_info.vlan_id);
+        vf.qos = Some(vf_info.qos);
         vfs.push(vf);
     }
     ret.total_vfs = Some(vfs.len() as u32);
