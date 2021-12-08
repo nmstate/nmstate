@@ -311,6 +311,8 @@ class Ethernet:
             TRUST = "trust"
             MIN_TX_RATE = "min-tx-rate"
             MAX_TX_RATE = "max-tx-rate"
+            VLAN_ID = "vlan-id"
+            QOS = "qos"
 
 
 class Veth:
