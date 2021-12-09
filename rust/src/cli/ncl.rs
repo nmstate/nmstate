@@ -15,7 +15,7 @@ const SUB_CMD_SHOW: &str = "show";
 const SUB_CMD_APPLY: &str = "apply";
 
 fn main() {
-    let matches = clap::App::new("ncl")
+    let matches = clap::App::new("nmstatectl")
         .version("1.0")
         .author("Gris Ge <fge@redhat.com>")
         .about("Command line of nmstate")
