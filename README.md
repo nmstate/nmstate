@@ -4,18 +4,14 @@ A declarative network manager API for hosts.
 ![CI](https://github.com/nmstate/nmstate/workflows/CI/badge.svg?branch=base)
 [![Coverage Status](https://coveralls.io/repos/github/nmstate/nmstate/badge.svg?branch=base)](https://coveralls.io/github/nmstate/nmstate?branch=base)
 [![PyPI version](https://badge.fury.io/py/nmstate.svg)](https://badge.fury.io/py/nmstate)
-[![Fedora Rawhide version](https://img.shields.io/badge/dynamic/json.svg?label=Fedora%20Rawhide&url=https%3A%2F%2Fapps.fedoraproject.org%2Fmdapi%2Frawhide%2Fpkg%2Fnmstate&query=%24.version&colorB=blue)](https://apps.fedoraproject.org/packages/nmstate)
+[![Fedora Rawhide version](https://img.shields.io/badge/dynamic/json.svg?label=Fedora%20Rawhide&url=https%3A%2F%2Fapps.fedoraproject.org%2Fmdapi%2Frawhide%2Fpkg%2Fnmstate&query=%24.version&colorB=blue)](https://src.fedoraproject.org/rpms/nmstate)
 [![Code Style](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/python/black)
 [![Language grade: Python](https://img.shields.io/lgtm/grade/python/g/nmstate/nmstate.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/nmstate/nmstate/context:python)
 
-Copr build status, all repos are built for Fedora 31+ and RHEL/CentOS/EPEL 8:
+Copr build status, all repos are built for Fedora Linux and RHEL/CentOS Stream/EPEL 8+:
 
 * Latest release: [![Latest release Copr build status](https://copr.fedorainfracloud.org/coprs/nmstate/nmstate/package/nmstate/status_image/last_build.png)](https://copr.fedorainfracloud.org/coprs/nmstate/nmstate/package/nmstate/)
 * Git base: [![Git base Copr build status](https://copr.fedorainfracloud.org/coprs/nmstate/nmstate-git/package/nmstate/status_image/last_build.png)](https://copr.fedorainfracloud.org/coprs/nmstate/nmstate-git/package/nmstate/)
-* Latest 0.2 release: [![Latest 0.2 release Copr build status](https://copr.fedorainfracloud.org/coprs/nmstate/nmstate-0.2/package/nmstate/status_image/last_build.png)](https://copr.fedorainfracloud.org/coprs/nmstate/nmstate-0.2/package/nmstate/)
-* Git nmstate-0.2: [![Git nmstate-0.2 Copr build status](https://copr.fedorainfracloud.org/coprs/nmstate/nmstate-0.2-git/package/nmstate/status_image/last_build.png)](https://copr.fedorainfracloud.org/coprs/nmstate/nmstate-0.2-git/package/nmstate/)
-* Latest 0.3 release: [![Latest 0.3 release Copr build status](https://copr.fedorainfracloud.org/coprs/nmstate/nmstate-0.3/package/nmstate/status_image/last_build.png)](https://copr.fedorainfracloud.org/coprs/nmstate/nmstate-0.3/package/nmstate/)
-* Git nmstate-0.3: [![Git nmstate-0.3 Copr build status](https://copr.fedorainfracloud.org/coprs/nmstate/nmstate-0.3-git/package/nmstate/status_image/last_build.png)](https://copr.fedorainfracloud.org/coprs/nmstate/nmstate-0.3-git/package/nmstate/)
 
 ## What is it?
 Nmstate is a library with an accompanying command line tool that manages
