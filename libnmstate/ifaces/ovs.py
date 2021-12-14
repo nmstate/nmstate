@@ -219,6 +219,24 @@ class OvsInternalIface(BaseIface):
         )
 
     @property
+    def dpdk_config(self):
+        return self._info.get(OVSInterface.DPDK_CONFIG_SUBTREE, {})
+
+    @property
+    def is_dpdk(self):
+        return self.dpdk_config and self.dpdk_config.get(
+            OVSInterface.Dpdk.DEVARGS
+        )
+
+    @property
+    def devargs(self):
+        return (
+            self.dpdk_config.get(OVSInterface.Dpdk.DEVARGS)
+            if self.dpdk_config
+            else None
+        )
+
+    @property
     def peer(self):
         return (
             self.patch_config.get(OVSInterface.Patch.PEER)

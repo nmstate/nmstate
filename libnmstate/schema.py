@@ -351,9 +351,13 @@ class OvsDB:
 class OVSInterface(OvsDB):
     TYPE = InterfaceType.OVS_INTERFACE
     PATCH_CONFIG_SUBTREE = "patch"
+    DPDK_CONFIG_SUBTREE = "dpdk"
 
     class Patch:
         PEER = "peer"
+
+    class Dpdk:
+        DEVARGS = "devargs"
 
 
 class OVSBridge(Bridge, OvsDB):
