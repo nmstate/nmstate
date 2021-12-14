@@ -181,7 +181,8 @@ def create_new_nm_simple_conn(iface, nm_profile):
         settings.append(create_ovs_port_setting(ovs_port_options))
     elif iface.type == InterfaceType.OVS_INTERFACE:
         patch_state = iface_info.get(OVSInterface.PATCH_CONFIG_SUBTREE)
-        settings.extend(create_ovs_interface_setting(patch_state))
+        dpdk_state = iface_info.get(OVSInterface.DPDK_CONFIG_SUBTREE)
+        settings.extend(create_ovs_interface_setting(patch_state, dpdk_state))
     elif iface.type == InterfaceType.INFINIBAND:
         ib_setting = create_infiniband_setting(
             iface_info,

@@ -121,13 +121,16 @@ def create_port_setting(port_state):
     return port_setting
 
 
-def create_interface_setting(patch_state):
+def create_interface_setting(patch_state, dpdk_state):
     interface_setting = NM.SettingOvsInterface.new()
     settings = [interface_setting]
 
     if patch_state and patch_state.get(OVSInterface.Patch.PEER):
         interface_setting.props.type = "patch"
         settings.append(create_patch_setting(patch_state))
+    elif dpdk_state and dpdk_state.get(OVSInterface.Dpdk.DEVARGS):
+        interface_setting.props.type = "dpdk"
+        settings.append(create_dpdk_setting(dpdk_state))
     else:
         interface_setting.props.type = "internal"
 
@@ -140,6 +143,11 @@ def create_patch_setting(patch_state):
 
     return patch_setting
 
+def create_dpdk_setting(dpdk_state):
+    dpdk_setting = NM.SettingOvsDpdk.new()
+    dpdk_setting.props.devargs = dpdk_state[OVSInterface.Dpdk.DEVARGS]
+
+    return dpdk_setting
 
 def get_ovs_bridge_info(nm_dev_ovs_br):
     iface_info = {OB.CONFIG_SUBTREE: {}}
@@ -199,6 +207,11 @@ def get_interface_info(act_con):
             info[OVSInterface.PATCH_CONFIG_SUBTREE] = {
                 OVSInterface.Patch.PEER: patch_setting.props.peer,
             }
+        dpdk_setting = _get_dpdk_setting(act_con)
+        if dpdk_setting:
+            info[OVSInterface.DPDK_CONFIG_SUBTREE] = {
+                OVSInterface.Dpdk.DEVARGS: dpdk_setting.props.devargs,
+            }
 
     return info
 
@@ -211,6 +224,18 @@ def _get_patch_setting(act_con):
     remote_con = act_con.get_connection()
     if remote_con:
         return remote_con.get_setting_ovs_patch()
+
+    return None
+
+
+def _get_dpdk_setting(act_con):
+    """
+    Get NM.SettingOvsDpdk from NM.ActiveConnection.
+    For any error, return None.
+    """
+    remote_con = act_con.get_connection()
+    if remote_con:
+        return remote_con.get_setting_by_name(NM.SETTING_OVS_DPDK_SETTING_NAME)
 
     return None
 
