@@ -24,6 +24,7 @@ import pytest
 
 from libnmstate.error import NmstateValueError
 from libnmstate.schema import OVSBridge
+from libnmstate.schema import OVSInterface
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceType
 
@@ -241,5 +242,83 @@ class TestOvsInternalIface:
 
     def test_can_have_ip_as_port(self):
         assert OvsInternalIface(gen_ovs_bridge_info()).can_have_ip_as_port
+
+    def test_is_dpdk(self):
+        iface_info = {
+            Interface.NAME: "ovs0",
+            Interface.TYPE: InterfaceType.OVS_INTERFACE,
+            OVSInterface.DPDK_CONFIG_SUBTREE: {
+                OVSInterface.Dpdk.DEVARGS: "000:18:00.2"
+            },
+        }
+        iface = OvsInternalIface(iface_info)
+
+        assert iface.is_dpdk
+
+    def test_devargs(self):
+        iface_info = {
+            Interface.NAME: "ovs0",
+            Interface.TYPE: InterfaceType.OVS_INTERFACE,
+            OVSInterface.DPDK_CONFIG_SUBTREE: {
+                OVSInterface.Dpdk.DEVARGS: "000:18:00.2"
+            },
+        }
+        iface = OvsInternalIface(iface_info)
+
+        assert iface.devargs == "000:18:00.2"
+
+    def test_dpdk_config(self):
+        iface_info = {
+            Interface.NAME: "ovs0",
+            Interface.TYPE: InterfaceType.OVS_INTERFACE,
+            OVSInterface.DPDK_CONFIG_SUBTREE: {
+                OVSInterface.Dpdk.DEVARGS: "000:18:00.2"
+            },
+        }
+        iface = OvsInternalIface(iface_info)
+
+        assert iface.dpdk_config == {OVSInterface.Dpdk.DEVARGS: "000:18:00.2"}
+
+    def test_valid_ovs_interface_with_devargs(self):
+        iface_info = {
+            Interface.NAME: "ovs0",
+            Interface.TYPE: InterfaceType.OVS_INTERFACE,
+            OVSInterface.DPDK_CONFIG_SUBTREE: {
+                OVSInterface.Dpdk.DEVARGS: "000:18:00.2"
+            },
+        }
+        iface = OvsInternalIface(iface_info)
+
+        iface.pre_edit_validation_and_cleanup()
+
+    def test_invalid_ovs_interface_with_devargs(self):
+        iface_info = {
+            Interface.NAME: "ovs0",
+            Interface.TYPE: InterfaceType.OVS_INTERFACE,
+            OVSInterface.DPDK_CONFIG_SUBTREE: {
+            OVSInterface.Dpdk.DEVARGS: 23232
+            },
+        }
+        iface = OvsInternalIface(iface_info)
+
+        iface.pre_edit_validation_and_cleanup()
+
+    def test_valid_ovs_interface_with_peer(self):
+        iface_info = {
+            Interface.NAME: "ovs0",
+            Interface.TYPE: InterfaceType.OVS_INTERFACE,
+            OVSInterface.PATCH_CONFIG_SUBTREE: {
+                OVSInterface.Patch.PEER: "ovs1"
+            },
+        }
+        iface = OvsInternalIface(iface_info)
+
+        iface.pre_edit_validation_and_cleanup()
+
+    def test_valid_ovs_interface_without_peer(self):
+        iface_info = self._gen_iface_info()
+        iface = OvsInternalIface(iface_info)
+
+        iface.pre_edit_validation_and_cleanup()
 
     # The 'parent' property is tested by `test_auto_create_ovs_interface`.
