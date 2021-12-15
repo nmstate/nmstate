@@ -25,7 +25,7 @@ from .error import (
     NmstateKernelIntegerRoundedError,
 )
 
-lib = cdll.LoadLibrary("libnmstate.so.2")
+lib = cdll.LoadLibrary("libnmstate.so.1")
 
 lib.nmstate_net_state_retrieve.restype = c_int
 lib.nmstate_net_state_retrieve.argtypes = (
