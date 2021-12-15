@@ -1,4 +1,19 @@
 # Changelog
+## [1.2.0] - 2021-12-15
+### New features
+
+ - Introduce experimental support for a rust rewrite. This includes support for
+   linux-bridge, ovs, vlan, ethernet, dummy and veth interfaces.
+ - Add support of copy-mac-from to OVS bridges. (238f48f)
+
+### Bug fixes
+ - Fix verification error when modifying SR-IOV VFs number. (3693aa6)
+ - Fix error message when no suitable interface can be found for name servers. (de01481)
+ - Fix verification error due to NM.connection.uuid ovsdb entry. (5954f91)
+ - Fix error when setting IPv6 canonical addresses for DNS nameservers. (a0906ee)
+ - Fix verification error on IPv4/IPv6 route empty next-hop-address. (33e7272)
+ - Preserve existing ethtool configuration when not specified in desired state. (b1cb57d)
+
 ## [1.1.0] - 2021-07-15
 ### New features
  - Support `accept-all-mac-addresses` property. (2df9c6a)
