@@ -1,6 +1,6 @@
 [package]
 name = "nmstate"
-version = "1.2.0"
+version = "1.2.1"
 authors = ["Gris Ge <fge@redhat.com>"]
 edition = "2018"
 
