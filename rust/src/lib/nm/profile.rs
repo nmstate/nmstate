@@ -30,7 +30,7 @@ pub(crate) fn get_exist_profile<'a>(
         } else {
             continue;
         };
-        if exist_nm_conn.iface_name() == Some(&iface_name.to_string())
+        if exist_nm_conn.iface_name() == Some(iface_name)
             && exist_nm_conn.iface_type() == Some(&nm_iface_type)
         {
             if let Some(uuid) = exist_nm_conn.uuid() {
