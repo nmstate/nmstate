@@ -59,6 +59,14 @@ def bridge_with_ports(eth1_up):
 
 
 @pytest.fixture
+def bridge_port_types():
+    yield {
+        ETH1: InterfaceType.ETHERNET,
+        IFACE0: InterfaceType.OVS_INTERFACE,
+    }
+
+
+@pytest.fixture
 def ovs_unmanaged_bridge():
     cmdlib.exec_cmd(f"ovs-vsctl add-br {BRIDGE0}".split())
     yield
@@ -118,13 +126,20 @@ class _OvsProfileStillExists(Exception):
 
 
 @pytest.mark.tier1
-def test_remove_ovs_internal_iface_got_port_profile_removed(bridge_with_ports):
+def test_remove_ovs_internal_iface_got_port_profile_removed(
+    bridge_with_ports, bridge_port_types
+):
     for ovs_iface_name in bridge_with_ports.ports_names:
         active_profile_names, active_profile_uuids = _get_nm_active_profiles()
         assert ovs_iface_name in active_profile_names
-        ovs_port_profile_uuid = _get_ovs_port_profile_uuid_of_ovs_interface(
-            ovs_iface_name
-        )
+        if bridge_port_types[ovs_iface_name] == InterfaceType.OVS_INTERFACE:
+            ovs_port_profile_uuid = (
+                _get_ovs_port_profile_uuid_of_ovs_interface(ovs_iface_name)
+            )
+        else:
+            ovs_port_profile_uuid = _get_parent_uuid_of_interface(
+                ovs_iface_name
+            )
         assert ovs_port_profile_uuid
         assert ovs_port_profile_uuid in active_profile_uuids
         libnmstate.apply(
@@ -161,15 +176,34 @@ def _get_nm_active_profiles():
 
 
 def _get_ovs_port_profile_uuid_of_ovs_interface(iface_name):
-    ovs_port_uuid = cmdlib.exec_cmd(
-        f"nmcli -g connection.master connection show {iface_name}".split(" "),
-        check=True,
-    )[1].strip()
+    ovs_iface_uuid = _get_uuid_of_ovs_interface(iface_name)
+    ovs_port_uuid = _get_parent_uuid_of_interface(ovs_iface_uuid)
     cmdlib.exec_cmd(
         f"nmcli -g connection.id connection show {ovs_port_uuid}".split(" "),
         check=True,
     )
     return ovs_port_uuid
+
+
+def _get_uuid_of_ovs_interface(iface_name):
+    conns = cmdlib.exec_cmd(
+        f"nmcli -g name,uuid,type connection show".split(" "),
+        check=True,
+    )[1].split("\n")
+    ovs_iface_conns = [
+        x for x in conns if "ovs-interface" in x and iface_name in x
+    ]
+    if len(ovs_iface_conns) == 0:
+        return ""
+    else:
+        return ovs_iface_conns[0].split(":")[1]
+
+
+def _get_parent_uuid_of_interface(iface_name):
+    return cmdlib.exec_cmd(
+        f"nmcli -g connection.master connection show {iface_name}".split(" "),
+        check=True,
+    )[1].strip()
 
 
 @pytest.fixture
