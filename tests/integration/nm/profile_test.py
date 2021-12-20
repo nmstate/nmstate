@@ -420,7 +420,7 @@ def ovs_bridge_with_internal_port():
 def test_ovs_profile_been_delete_by_state_absent(
     ovs_bridge_with_internal_port,
 ):
-    assert _profile_exists(NM_PROFILE_DIRECTORY + "ovs0.nmconnection")
+    assert _profile_exists(NM_PROFILE_DIRECTORY + "ovs0-if.nmconnection")
     libnmstate.apply(
         {
             Interface.KEY: [
@@ -431,7 +431,7 @@ def test_ovs_profile_been_delete_by_state_absent(
             ]
         }
     )
-    assert not _profile_exists(NM_PROFILE_DIRECTORY + "ovs0.nmconnection")
+    assert not _profile_exists(NM_PROFILE_DIRECTORY + "ovs0-if.nmconnection")
 
 
 @pytest.fixture
