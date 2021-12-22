@@ -169,6 +169,11 @@ class OvsBridgeIface(BridgeIface):
                 options_info.get(OVSBridge.Options.FAIL_MODE),
                 OVSBridge.Options.FAIL_MODE,
             )
+            validate_string(
+                options_info.get(OVSBridge.Options.DATAPATH),
+                OVSBridge.Options.DATAPATH,
+                ("system", "netdev", ""),
+            )
 
     def _validate_ovs_lag_port_count(self):
         for port in self.port_configs:
