@@ -67,6 +67,8 @@ def create_bridge_setting(options_state):
             bridge_setting.props.rstp_enable = option_value
         elif option_name == "stp":
             bridge_setting.props.stp_enable = option_value
+        elif option_name == "datapath":
+            bridge_setting.props.datapath_type = option_value
 
     return bridge_setting
 
@@ -143,11 +145,13 @@ def create_patch_setting(patch_state):
 
     return patch_setting
 
+
 def create_dpdk_setting(dpdk_state):
     dpdk_setting = NM.SettingOvsDpdk.new()
     dpdk_setting.props.devargs = dpdk_state[OVSInterface.Dpdk.DEVARGS]
 
     return dpdk_setting
+
 
 def get_ovs_bridge_info(nm_dev_ovs_br):
     iface_info = {OB.CONFIG_SUBTREE: {}}
@@ -323,6 +327,7 @@ def _get_bridge_options(bridge_device):
         bridge_options[
             "mcast-snooping-enable"
         ] = bridge_setting.props.mcast_snooping_enable
+        bridge_options["datapath"] = bridge_setting.props.datapath_type
 
     return bridge_options
 

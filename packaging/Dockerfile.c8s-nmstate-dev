@@ -43,6 +43,7 @@ RUN dnf update -y && \
                    hostapd \
                    libndp \
                    procps-ng \
+                   dpdk \
                    && \
     alternatives --set python /usr/bin/python3 && \
     ln -s /usr/bin/pytest-3 /usr/bin/pytest && \
