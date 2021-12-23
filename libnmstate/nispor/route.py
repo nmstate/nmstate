@@ -44,7 +44,7 @@ def nispor_route_state_to_nmstate_static(np_routes):
         _nispor_route_to_nmstate(rt)
         for rt in np_routes
         if rt.scope in ["universe", "link"]
-        and rt.protocol not in ["kernel", "ra", "dhcp"]
+        and rt.protocol in ["static", "boot"]
         and rt.oif != "lo"
         and rt.table != LOCAL_ROUTE_TABLE
     ]

@@ -5,6 +5,9 @@ use crate::{RouteEntry, Routes};
 const SUPPORTED_ROUTE_SCOPE: [nispor::RouteScope; 2] =
     [nispor::RouteScope::Universe, nispor::RouteScope::Link];
 
+const SUPPORTED_STATIC_ROUTE_PROTOCOL: [nispor::RouteProtocol; 2] =
+    [nispor::RouteProtocol::Boot, nispor::RouteProtocol::Static];
+
 const LOCAL_ROUTE_TABLE: u32 = 255;
 const IPV4_DEFAULT_GATEWAY: &str = "0.0.0.0/0";
 const IPV6_DEFAULT_GATEWAY: &str = "::/0";
@@ -31,7 +34,8 @@ pub(crate) fn get_routes(np_routes: &[nispor::Route]) -> Routes {
             .iter()
             .filter(|np_route| {
                 SUPPORTED_ROUTE_SCOPE.contains(&np_route.scope)
-                    && np_route.protocol == nispor::RouteProtocol::Static
+                    && SUPPORTED_STATIC_ROUTE_PROTOCOL
+                        .contains(&np_route.protocol)
                     && np_route.table != LOCAL_ROUTE_TABLE
                     && np_route.oif.as_ref() != Some(&"lo".to_string())
             })
