@@ -18,6 +18,7 @@ fn test_resolve_unknown_type_absent_eth() {
     let mut ifaces = Interfaces::new();
     ifaces.push(absent_iface);
 
+    ifaces.resolve_unknown_ifaces(&cur_ifaces).unwrap();
     let (_, _, del_ifaces) = ifaces.gen_state_for_apply(&cur_ifaces).unwrap();
 
     let del_ifaces = del_ifaces.to_vec();

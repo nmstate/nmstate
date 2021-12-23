@@ -100,7 +100,7 @@ popd
 %{_mandir}/man8/nmstate-autoconf.8*
 %{python3_sitelib}/nmstatectl
 %{_bindir}/nmstatectl
-%{_bindir}/ncl
+%{_bindir}/nmstatectl-rust
 %{_bindir}/nmstate-autoconf
 
 %files libs

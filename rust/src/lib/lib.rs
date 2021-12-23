@@ -20,7 +20,7 @@ pub use crate::ifaces::{
     LinuxBridgePortVlanRange, LinuxBridgeStpOptions, OvsBridgeBondConfig,
     OvsBridgeBondMode, OvsBridgeBondPortConfig, OvsBridgeConfig,
     OvsBridgeInterface, OvsBridgeOptions, OvsBridgePortConfig, OvsInterface,
-    VethConfig, VlanConfig, VlanInterface,
+    SrIovConfig, SrIovVfConfig, VethConfig, VlanConfig, VlanInterface,
 };
 pub use crate::ip::{InterfaceIpAddr, InterfaceIpv4, InterfaceIpv6};
 pub use crate::net_state::NetworkState;

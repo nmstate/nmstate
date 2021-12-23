@@ -817,7 +817,9 @@ def test_create_linux_bridge_with_copy_mac_from(eth1_up, eth2_up):
 
 
 def _get_permanent_mac(iface_name):
-    np_iface = json.loads(exec_cmd(f"npc {iface_name} --json".split())[1])
+    np_iface = json.loads(
+        exec_cmd(f"npc iface {iface_name} --json".split())[1]
+    )
     return np_iface[0].get("permanent_mac_address")
 
 
