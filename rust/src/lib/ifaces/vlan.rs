@@ -24,7 +24,7 @@ impl Default for VlanInterface {
 
 impl VlanInterface {
     pub fn new() -> Self {
-        Default::default()
+        Self::default()
     }
 
     pub(crate) fn parent(&self) -> Option<&str> {
