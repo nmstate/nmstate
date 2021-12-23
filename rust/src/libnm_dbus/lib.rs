@@ -24,7 +24,7 @@ mod nm_api;
 
 pub use crate::active_connection::NmActiveConnection;
 pub use crate::connection::{
-    NmConnection, NmSettingBridge, NmSettingBridgeVlanRange,
+    NmConnection, NmIpRoute, NmSettingBridge, NmSettingBridgeVlanRange,
     NmSettingConnection, NmSettingIp, NmSettingIpMethod, NmSettingOvsBridge,
     NmSettingOvsIface, NmSettingOvsPort, NmSettingSriov, NmSettingSriovVf,
     NmSettingSriovVfVlan, NmSettingVlan, NmSettingWired, NmVlanProtocol,
