@@ -249,6 +249,46 @@ impl Interface {
         }
     }
 
+    pub(crate) fn clone_name_type_only(&self) -> Self {
+        match self {
+            Self::LinuxBridge(iface) => {
+                let mut new_iface = LinuxBridgeInterface::new();
+                new_iface.base = iface.base.clone_name_type_only();
+                Self::LinuxBridge(new_iface)
+            }
+            Self::Ethernet(iface) => {
+                let mut new_iface = EthernetInterface::new();
+                new_iface.base = iface.base.clone_name_type_only();
+                Self::Ethernet(new_iface)
+            }
+            Self::Vlan(iface) => {
+                let mut new_iface = VlanInterface::new();
+                new_iface.base = iface.base.clone_name_type_only();
+                Self::Vlan(new_iface)
+            }
+            Self::Dummy(iface) => {
+                let mut new_iface = DummyInterface::new();
+                new_iface.base = iface.base.clone_name_type_only();
+                Self::Dummy(new_iface)
+            }
+            Self::OvsInterface(iface) => {
+                let mut new_iface = OvsInterface::new();
+                new_iface.base = iface.base.clone_name_type_only();
+                Self::OvsInterface(new_iface)
+            }
+            Self::OvsBridge(iface) => {
+                let mut new_iface = OvsBridgeInterface::new();
+                new_iface.base = iface.base.clone_name_type_only();
+                Self::OvsBridge(new_iface)
+            }
+            Self::Unknown(iface) => {
+                let mut new_iface = UnknownInterface::new();
+                new_iface.base = iface.base.clone_name_type_only();
+                Self::Unknown(new_iface)
+            }
+        }
+    }
+
     pub fn is_up(&self) -> bool {
         self.base_iface().state == InterfaceState::Up
     }

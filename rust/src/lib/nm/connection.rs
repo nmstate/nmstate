@@ -36,6 +36,7 @@ pub(crate) fn nm_gen_conf(
                     .get_iface(ctrl_iface_name, ctrl_type.clone());
             }
         }
+
         for nm_conn in iface_to_nm_connections(iface, ctrl_iface, &[], &[])? {
             ret.push(match nm_conn.to_keyfile() {
                 Ok(s) => s,
@@ -72,7 +73,11 @@ pub(crate) fn iface_to_nm_connections(
     let mut nm_conn = exist_nm_conn.cloned().unwrap_or_default();
 
     gen_nm_conn_setting(iface, &mut nm_conn)?;
-    gen_nm_ip_setting(iface, &mut nm_conn)?;
+    gen_nm_ip_setting(
+        iface,
+        iface.base_iface().routes.as_deref(),
+        &mut nm_conn,
+    )?;
     gen_nm_wired_setting(iface, &mut nm_conn);
 
     match iface {

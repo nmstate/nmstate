@@ -11,7 +11,8 @@ use crate::{
         nm_checkpoint_rollback, nm_checkpoint_timeout_extend, nm_gen_conf,
         nm_retrieve,
     },
-    ErrorKind, Interface, InterfaceState, Interfaces, NmstateError,
+    ErrorKind, Interface, InterfaceState, InterfaceType, Interfaces,
+    NmstateError, Routes,
 };
 
 const VERIFY_RETRY_INTERVAL_MILLISECONDS: u64 = 1000;
@@ -19,9 +20,11 @@ const VERIFY_RETRY_COUNT: usize = 5;
 const VERIFY_RETRY_COUNT_SRIOV: usize = 60;
 const VERIFY_RETRY_COUNT_KERNEL_MODE: usize = 5;
 
-#[derive(Clone, Debug, Serialize, Default)]
+#[derive(Clone, Debug, Serialize, Default, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct NetworkState {
+    #[serde(default)]
+    pub routes: Routes,
     #[serde(default)]
     pub interfaces: Interfaces,
     #[serde(skip)]
@@ -39,8 +42,6 @@ pub struct NetworkState {
     include_status_data: bool,
     #[serde(rename = "dns-resolver", default)]
     pub dns: serde_json::Map<String, serde_json::Value>,
-    #[serde(default)]
-    pub routes: serde_json::Map<String, serde_json::Value>,
     #[serde(rename = "route-rules", default)]
     pub rules: serde_json::Map<String, serde_json::Value>,
 }
@@ -64,7 +65,7 @@ impl<'de> Deserialize<'de> for NetworkState {
         }
         if let Some(route_value) = v.get("routes") {
             net_state.prop_list.push("routes");
-            net_state.routes = serde_json::Map::deserialize(route_value)
+            net_state.routes = Routes::deserialize(route_value)
                 .map_err(serde::de::Error::custom)?;
         }
         if let Some(rule_value) = v.get("route-rules") {
@@ -118,7 +119,13 @@ impl NetworkState {
     }
 
     pub fn retrieve(&mut self) -> Result<&mut Self, NmstateError> {
-        self.interfaces = nispor_retrieve()?.interfaces;
+        let state = nispor_retrieve()?;
+        if state.prop_list.contains(&"interfaces") {
+            self.interfaces = state.interfaces;
+        }
+        if state.prop_list.contains(&"routes") {
+            self.routes = state.routes;
+        }
         if !self.kernel_only {
             let nm_state = nm_retrieve()?;
             // TODO: Priority handling
@@ -229,7 +236,8 @@ impl NetworkState {
     }
 
     fn verify(&self, current: &Self) -> Result<(), NmstateError> {
-        self.interfaces.verify(&current.interfaces)
+        self.interfaces.verify(&current.interfaces)?;
+        self.routes.verify(&current.routes)
     }
 
     // Return three NetworkState:
@@ -238,10 +246,12 @@ impl NetworkState {
     //  * State for deletion.
     // This function is the entry point for decision making which
     // expanding complex desire network layout to flat network layout.
-    fn gen_state_for_apply(
+    pub(crate) fn gen_state_for_apply(
         &self,
         current: &Self,
     ) -> Result<(Self, Self, Self), NmstateError> {
+        self.routes.validate()?;
+
         let mut add_net_state = NetworkState::new();
         let mut chg_net_state = NetworkState::new();
         let mut del_net_state = NetworkState::new();
@@ -266,15 +276,68 @@ impl NetworkState {
         );
 
         add_net_state.interfaces = add_ifaces;
-        add_net_state.prop_list = vec!["interfaces"];
-
         chg_net_state.interfaces = chg_ifaces;
-        chg_net_state.prop_list = vec!["interfaces"];
-
         del_net_state.interfaces = del_ifaces;
-        del_net_state.prop_list = vec!["interfaces"];
+
+        self.include_route_changes(
+            &mut add_net_state,
+            &mut chg_net_state,
+            current,
+        );
 
         Ok((add_net_state, chg_net_state, del_net_state))
+    }
+
+    fn include_route_changes(
+        &self,
+        add_net_state: &mut Self,
+        chg_net_state: &mut Self,
+        current: &Self,
+    ) {
+        let mut changed_iface_routes =
+            self.routes.gen_changed_ifaces_and_routes(&current.routes);
+
+        for (iface_name, routes) in changed_iface_routes.drain() {
+            let cur_iface = current
+                .interfaces
+                .get_iface(&iface_name, InterfaceType::Unknown);
+            if let Some(iface) =
+                add_net_state.interfaces.kernel_ifaces.get_mut(&iface_name)
+            {
+                // Desire interface might not have IP information defined
+                // in that case, we copy from current
+                iface.base_iface_mut().routes = Some(routes);
+                if let Some(cur_iface) = cur_iface {
+                    iface
+                        .base_iface_mut()
+                        .copy_ip_config_if_none(cur_iface.base_iface());
+                }
+            } else if let Some(iface) =
+                chg_net_state.interfaces.kernel_ifaces.get_mut(&iface_name)
+            {
+                iface.base_iface_mut().routes = Some(routes);
+                if let Some(cur_iface) = cur_iface {
+                    iface
+                        .base_iface_mut()
+                        .copy_ip_config_if_none(cur_iface.base_iface());
+                }
+            } else if let Some(cur_iface) = cur_iface {
+                // Interface not mentioned in desire state but impacted by
+                // wildcard absent route
+                let mut new_iface = cur_iface.clone_name_type_only();
+                new_iface
+                    .base_iface_mut()
+                    .copy_ip_config_if_none(cur_iface.base_iface());
+                new_iface.base_iface_mut().routes = Some(routes);
+                chg_net_state.append_interface_data(new_iface);
+            } else {
+                warn!(
+                    "The next hop interface of desired routes {:?} \
+                        does not exist",
+                    routes
+                );
+            }
+        }
     }
 }
 
