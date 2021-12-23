@@ -5,6 +5,7 @@ mod ip;
 mod net_state;
 mod nispor;
 mod nm;
+mod route;
 mod state;
 mod unit_tests;
 
@@ -24,3 +25,4 @@ pub use crate::ifaces::{
 };
 pub use crate::ip::{InterfaceIpAddr, InterfaceIpv4, InterfaceIpv6};
 pub use crate::net_state::NetworkState;
+pub use crate::route::{RouteEntry, RouteState, Routes};

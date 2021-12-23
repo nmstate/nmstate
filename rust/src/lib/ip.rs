@@ -443,7 +443,7 @@ impl InterfaceIpAddr {
     }
 }
 
-fn is_ipv6_addr(addr: &str) -> bool {
+pub(crate) fn is_ipv6_addr(addr: &str) -> bool {
     addr.contains(':')
 }
 

@@ -247,6 +247,14 @@ function run_tests {
             -k '\
             test_enable_and_disable_accept_all_mac_addresses' \
             ${nmstate_pytest_extra_args}"
+        exec_cmd "
+          env  \
+          PYTHONPATH=$CONTAINER_WORKSPACE/rust/src/python \
+          pytest \
+            $PYTEST_OPTIONS \
+            tests/integration/route_test.py \
+            -k 'not rule' \
+            ${nmstate_pytest_extra_args}"
     fi
 }
 
