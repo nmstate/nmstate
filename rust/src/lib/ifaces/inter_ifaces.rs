@@ -18,7 +18,7 @@ use crate::{
 // beginning of desire state
 const INTERFACES_SET_PRIORITY_MAX_RETRY: u32 = 4;
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct Interfaces {
     pub(crate) kernel_ifaces: HashMap<String, Interface>,
     pub(crate) user_ifaces: HashMap<(String, InterfaceType), Interface>,

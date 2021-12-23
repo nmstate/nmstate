@@ -20,6 +20,7 @@ mod bridge;
 mod conn;
 mod ip;
 mod ovs;
+mod route;
 mod sriov;
 mod vlan;
 mod wired;
@@ -41,3 +42,4 @@ pub use crate::connection::wired::NmSettingWired;
 pub(crate) use crate::connection::conn::{
     nm_con_get_from_obj_path, DbusDictionary, NmConnectionDbusValue,
 };
+pub use crate::connection::route::NmIpRoute;

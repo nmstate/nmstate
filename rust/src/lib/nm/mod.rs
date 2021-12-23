@@ -8,6 +8,7 @@ mod error;
 mod ip;
 mod ovs;
 mod profile;
+mod route;
 mod show;
 mod sriov;
 #[cfg(test)]
