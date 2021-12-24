@@ -17,20 +17,20 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
+from libnmstate.error import NmstateVerificationError
 from libnmstate.schema import Ethernet
-from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceType
-from libnmstate.schema import InterfaceState
 
 from .base_iface import BaseIface
 
 
 BNXT_DRIVER_PHYS_PORT_PREFIX = "p"
 MULTIPORT_PCI_DEVICE_PREFIX = "n"
-IS_GENERATED_VF_METADATA = "_is_generated_vf"
 
 
 class EthernetIface(BaseIface):
+    VF_IFACE_NAME_METADATA = "_vf_iface_name"
+
     def __init__(self, info, save_to_disk=True):
         super().__init__(info, save_to_disk)
         self._is_peer = False
@@ -84,50 +84,6 @@ class EthernetIface(BaseIface):
             Ethernet.SRIOV_SUBTREE
         )
 
-    def create_sriov_vf_ifaces(self):
-        # Currently there is not a way to see the relation between a SR-IOV PF
-        # and its VFs. Broadcom BCM57416 follows a different name pattern for
-        # PF and VF, therefore it needs to be parsed if present.
-        #
-        # PF name: ens2f0np0
-        # VF name: ens2f0v0
-        #
-        # The different name pattern is due to:
-        #  1. The `n` is for `multi-port PCI device` support.
-        #  2. The `p*` is `phys_port_name` provided by the BCM driver
-        #  `bnxt_en`.
-        #
-        # If the NIC is following the standard pattern "pfname+v+vfid", this
-        # split will not touch it and the vf_pattern will be the PF name.
-        # Ref: https://bugzilla.redhat.com/1959679
-        vf_pattern = self.name
-        multiport_pattern = (
-            MULTIPORT_PCI_DEVICE_PREFIX + BNXT_DRIVER_PHYS_PORT_PREFIX
-        )
-        if len(self.name.split(multiport_pattern)) == 2:
-            vf_pattern = self.name.split(multiport_pattern)[0]
-
-        vf_ifaces = [
-            EthernetIface(
-                {
-                    # According to manpage of systemd.net-naming-scheme(7),
-                    # SRIOV VF interface will have v{slot} in device name.
-                    # Currently, nmstate has no intention to support
-                    # user-defined udev rule on SRIOV interface naming policy.
-                    Interface.NAME: f"{vf_pattern}v{i}",
-                    Interface.TYPE: InterfaceType.ETHERNET,
-                    # VF will be in DOWN state initialy
-                    Interface.STATE: InterfaceState.DOWN,
-                }
-            )
-            for i in range(0, self.sriov_total_vfs)
-        ]
-        # The generated vf metadata cannot be part of the original dict.
-        for vf in vf_ifaces:
-            vf._info[IS_GENERATED_VF_METADATA] = True
-
-        return vf_ifaces
-
     def remove_vfs_entry_when_total_vfs_decreased(self):
         vfs_count = len(
             self._info[Ethernet.CONFIG_SUBTREE]
@@ -151,6 +107,16 @@ class EthernetIface(BaseIface):
     def check_total_vfs_matches_vf_list(self, total_vfs):
         return total_vfs == len(self.sriov_vfs)
 
+    def to_dict(self):
+        info = super().to_dict()
+        for vf_info in (
+            info.get(Ethernet.CONFIG_SUBTREE, {})
+            .get(Ethernet.SRIOV_SUBTREE, {})
+            .get(Ethernet.SRIOV.VFS_SUBTREE, [])
+        ):
+            vf_info.pop(EthernetIface.VF_IFACE_NAME_METADATA, None)
+        return info
+
 
 def _capitalize_sriov_vf_mac(state):
     vfs = (
@@ -162,3 +128,36 @@ def _capitalize_sriov_vf_mac(state):
         vf_mac = vf.get(Ethernet.SRIOV.VFS.MAC_ADDRESS)
         if vf_mac:
             vf[Ethernet.SRIOV.VFS.MAC_ADDRESS] = vf_mac.upper()
+
+
+def verify_sriov_vf(iface, cur_ifaces):
+    """
+    Checking whether VF interface is been created
+    """
+    if not (
+        iface.is_up
+        and (iface.is_desired or iface.is_changed)
+        and iface.type == InterfaceType.ETHERNET
+        and iface.sriov_total_vfs > 0
+    ):
+        return
+    cur_iface = cur_ifaces.get_iface(iface.name, iface.type)
+    if not cur_iface:
+        # Other verification will raise proper exception when current interface
+        # is missing
+        return
+    cur_vf_names = []
+    for sriov_vf in cur_iface.sriov_vfs:
+        if sriov_vf.get(EthernetIface.VF_IFACE_NAME_METADATA):
+            cur_vf_names.append(sriov_vf[EthernetIface.VF_IFACE_NAME_METADATA])
+
+    if len(cur_vf_names) != iface.sriov_total_vfs:
+        raise NmstateVerificationError(
+            f"Found VF ports count does not match desired "
+            f"{iface.sriov_total_vfs}, current is: {','.join(cur_vf_names)}"
+        )
+    for cur_vf_name in cur_vf_names:
+        if not cur_ifaces.get_iface(cur_vf_name, InterfaceType.ETHERNET):
+            raise NmstateVerificationError(
+                f"VF interface {cur_vf_name} of PF {iface.name} not found"
+            )
