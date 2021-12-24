@@ -102,8 +102,9 @@ def _create_sriov_vfs_from_config(vfs_config, sriov_setting, vf_ids_to_add):
 
 
 def _set_nm_attribute(vf_object, key, value):
-    nm_attr, nm_variant = SRIOV_NMSTATE_TO_NM_MAP[key]
-    vf_object.set_attribute(nm_attr, nm_variant(value))
+    if key in SRIOV_NMSTATE_TO_NM_MAP:
+        nm_attr, nm_variant = SRIOV_NMSTATE_TO_NM_MAP[key]
+        vf_object.set_attribute(nm_attr, nm_variant(value))
 
 
 def _remove_sriov_vfs_in_setting(vfs_config, sriov_setting, vf_ids_to_remove):

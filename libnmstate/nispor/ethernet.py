@@ -17,10 +17,13 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
+import os
+
 from libnmstate.schema import Ethernet
 from libnmstate.schema import InterfaceType
 
 from .base_iface import NisporPluginBaseIface
+from libnmstate.ifaces.ethernet import EthernetIface
 
 
 class NisporPluginEthernetIface(NisporPluginBaseIface):
@@ -35,6 +38,9 @@ class NisporPluginEthernetIface(NisporPluginBaseIface):
             for vf in self.np_iface.sr_iov.vfs:
                 vf_infos.append(
                     {
+                        EthernetIface.VF_IFACE_NAME_METADATA: _get_vf_name(
+                            self.np_iface.name, vf.vf_id
+                        ),
                         Ethernet.SRIOV.VFS.ID: vf.vf_id,
                         Ethernet.SRIOV.VFS.MAC_ADDRESS: vf.mac.upper(),
                         Ethernet.SRIOV.VFS.SPOOF_CHECK: vf.spoof_check,
@@ -76,3 +82,14 @@ def np_ethtool_link_mode_to_nmstate(np_link_mode):
         info[Ethernet.SPEED] = np_link_mode.speed
 
     return info
+
+
+def _get_vf_name(pf_name, vf_id):
+    try:
+        vf_names = os.listdir(
+            f"/sys/class/net/{pf_name}/device/virtfn{vf_id}/net/"
+        )
+        if len(vf_names) >= 1:
+            return vf_names[0]
+    except Exception:
+        return ""
