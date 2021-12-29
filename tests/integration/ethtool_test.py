@@ -24,7 +24,7 @@ import time
 import pytest
 
 import libnmstate
-from libnmstate.error import NmstateVerificationError
+from libnmstate.error import NmstateValueError
 from libnmstate.schema import Ethtool
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceState
@@ -126,7 +126,7 @@ def test_ethtool_invalid_feature(eth1_up):
             Ethtool.Feature.CONFIG_SUBTREE: {"no_exist_feature": False}
         },
     }
-    with pytest.raises(NmstateVerificationError):
+    with pytest.raises(NmstateValueError):
         libnmstate.apply({Interface.KEY: [desire_iface_state]})
 
 
