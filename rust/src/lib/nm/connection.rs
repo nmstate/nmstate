@@ -22,6 +22,8 @@ pub(crate) const NM_SETTING_OVS_BRIDGE_SETTING_NAME: &str = "ovs-bridge";
 pub(crate) const NM_SETTING_OVS_PORT_SETTING_NAME: &str = "ovs-port";
 pub(crate) const NM_SETTING_OVS_IFACE_SETTING_NAME: &str = "ovs-interface";
 pub(crate) const NM_SETTING_VETH_SETTING_NAME: &str = "veth";
+pub(crate) const NM_SETTING_BOND_SETTING_NAME: &str = "bond";
+pub(crate) const NM_SETTING_DUMMY_SETTING_NAME: &str = "dummy";
 
 pub(crate) fn nm_gen_conf(
     net_state: &NetworkState,
