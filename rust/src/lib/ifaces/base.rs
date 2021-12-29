@@ -2,9 +2,9 @@ use log::error;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    ErrorKind, Ieee8021XConfig, InterfaceIpv4, InterfaceIpv6, InterfaceState,
-    InterfaceType, LldpConfig, NmstateError, OvsDbIfaceConfig, RouteEntry,
-    RouteRuleEntry,
+    ErrorKind, EthtoolConfig, Ieee8021XConfig, InterfaceIpv4, InterfaceIpv6,
+    InterfaceState, InterfaceType, LldpConfig, NmstateError, OvsDbIfaceConfig,
+    RouteEntry, RouteRuleEntry,
 };
 
 // TODO: Use prop_list to Serialize like InterfaceIpv4 did
@@ -43,6 +43,8 @@ pub struct BaseInterface {
     pub ieee8021x: Option<Ieee8021XConfig>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub lldp: Option<LldpConfig>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ethtool: Option<EthtoolConfig>,
     #[serde(skip)]
     pub controller_type: Option<InterfaceType>,
     // The interface lowest up_priority will be activated first.
@@ -95,6 +97,9 @@ impl BaseInterface {
         }
         if other.prop_list.contains(&"lldp") {
             self.lldp = other.lldp.clone();
+        }
+        if other.prop_list.contains(&"ethtool") {
+            self.ethtool = other.ethtool.clone();
         }
 
         if other.prop_list.contains(&"ipv4") {
