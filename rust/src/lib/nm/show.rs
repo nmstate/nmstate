@@ -8,7 +8,8 @@ use crate::{
     nm::connection::{
         create_index_for_nm_conns_by_ctrler_type,
         create_index_for_nm_conns_by_name_type, get_port_nm_conns,
-        NM_SETTING_BRIDGE_SETTING_NAME, NM_SETTING_OVS_BRIDGE_SETTING_NAME,
+        NM_SETTING_BOND_SETTING_NAME, NM_SETTING_BRIDGE_SETTING_NAME,
+        NM_SETTING_DUMMY_SETTING_NAME, NM_SETTING_OVS_BRIDGE_SETTING_NAME,
         NM_SETTING_OVS_IFACE_SETTING_NAME, NM_SETTING_VETH_SETTING_NAME,
         NM_SETTING_WIRED_SETTING_NAME,
     },
@@ -16,9 +17,10 @@ use crate::{
     nm::error::nm_error_to_nmstate,
     nm::ip::{nm_ip_setting_to_nmstate4, nm_ip_setting_to_nmstate6},
     nm::ovs::nm_ovs_bridge_conf_get,
-    BaseInterface, EthernetInterface, Interface, InterfaceState, InterfaceType,
-    Interfaces, LinuxBridgeInterface, NetworkState, NmstateError,
-    OvsBridgeInterface, OvsInterface, UnknownInterface,
+    BaseInterface, BondInterface, DummyInterface, EthernetInterface, Interface,
+    InterfaceState, InterfaceType, Interfaces, LinuxBridgeInterface,
+    NetworkState, NmstateError, OvsBridgeInterface, OvsInterface,
+    UnknownInterface,
 };
 
 pub(crate) fn nm_retrieve() -> Result<NetworkState, NmstateError> {
@@ -67,6 +69,11 @@ pub(crate) fn nm_retrieve() -> Result<NetworkState, NmstateError> {
                         iface.base = base_iface;
                         iface
                     }),
+                    InterfaceType::Dummy => Interface::Dummy({
+                        let mut iface = DummyInterface::new();
+                        iface.base = base_iface;
+                        iface
+                    }),
                     InterfaceType::LinuxBridge => Interface::LinuxBridge({
                         let mut iface = LinuxBridgeInterface::new();
                         iface.base = base_iface;
@@ -74,6 +81,11 @@ pub(crate) fn nm_retrieve() -> Result<NetworkState, NmstateError> {
                     }),
                     InterfaceType::OvsInterface => Interface::OvsInterface({
                         let mut iface = OvsInterface::new();
+                        iface.base = base_iface;
+                        iface
+                    }),
+                    InterfaceType::Bond => Interface::Bond({
+                        let mut iface = BondInterface::new();
                         iface.base = base_iface;
                         iface
                     }),
@@ -147,6 +159,8 @@ fn nm_iface_type_to_nmstate(nm_iface_type: &str) -> InterfaceType {
     match nm_iface_type {
         NM_SETTING_WIRED_SETTING_NAME => InterfaceType::Ethernet,
         NM_SETTING_VETH_SETTING_NAME => InterfaceType::Ethernet,
+        NM_SETTING_BOND_SETTING_NAME => InterfaceType::Bond,
+        NM_SETTING_DUMMY_SETTING_NAME => InterfaceType::Dummy,
         NM_SETTING_BRIDGE_SETTING_NAME => InterfaceType::LinuxBridge,
         NM_SETTING_OVS_BRIDGE_SETTING_NAME => InterfaceType::OvsBridge,
         NM_SETTING_OVS_IFACE_SETTING_NAME => InterfaceType::OvsInterface,
@@ -198,8 +212,18 @@ fn iface_get(
                 iface.base = base_iface;
                 iface
             }),
+            InterfaceType::Bond => Interface::Bond({
+                let mut iface = BondInterface::new();
+                iface.base = base_iface;
+                iface
+            }),
             InterfaceType::OvsInterface => Interface::OvsInterface({
                 let mut iface = OvsInterface::new();
+                iface.base = base_iface;
+                iface
+            }),
+            InterfaceType::Dummy => Interface::Dummy({
+                let mut iface = DummyInterface::new();
                 iface.base = base_iface;
                 iface
             }),
