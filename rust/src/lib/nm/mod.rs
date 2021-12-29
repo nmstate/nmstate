@@ -7,6 +7,7 @@ mod connection;
 mod device;
 mod dns;
 mod error;
+mod ethtool;
 mod ieee8021x;
 mod ip;
 mod lldp;

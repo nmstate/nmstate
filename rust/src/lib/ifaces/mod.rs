@@ -2,6 +2,7 @@ mod base;
 mod bond;
 mod dummy;
 mod ethernet;
+mod ethtool;
 mod inter_ifaces;
 mod vrf;
 mod vxlan;
@@ -23,6 +24,10 @@ pub use bond::{
 pub use dummy::DummyInterface;
 pub use ethernet::{
     EthernetConfig, EthernetDuplex, EthernetInterface, VethConfig,
+};
+pub use ethtool::{
+    EthtoolCoalesceConfig, EthtoolConfig, EthtoolFeatureConfig,
+    EthtoolPauseConfig, EthtoolRingConfig,
 };
 pub use inter_ifaces::*;
 pub use linux_bridge::{

@@ -1,4 +1,5 @@
 use crate::{
+    nispor::ethtool::np_ethtool_to_nmstate,
     nispor::ip::{np_ipv4_to_nmstate, np_ipv6_to_nmstate},
     BaseInterface, InterfaceState, InterfaceType,
 };
@@ -66,6 +67,7 @@ pub(crate) fn np_iface_to_base_iface(
         } else {
             Some(false)
         },
+        ethtool: np_ethtool_to_nmstate(np_iface),
         prop_list: vec![
             "name",
             "state",
@@ -76,6 +78,7 @@ pub(crate) fn np_iface_to_base_iface(
             "controller",
             "mtu",
             "accept_all_mac_addresses",
+            "ethtool",
         ],
         ..Default::default()
     };
