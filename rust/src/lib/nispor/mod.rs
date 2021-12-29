@@ -3,6 +3,7 @@ mod base_iface;
 mod bond;
 mod error;
 mod ethernet;
+mod ethtool;
 mod ip;
 mod linux_bridge;
 mod linux_bridge_port_vlan;

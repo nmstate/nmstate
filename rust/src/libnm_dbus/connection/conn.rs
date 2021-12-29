@@ -25,6 +25,7 @@ use zvariant::Type;
 use crate::{
     connection::bond::NmSettingBond,
     connection::bridge::{NmSettingBridge, NmSettingBridgePort},
+    connection::ethtool::NmSettingEthtool,
     connection::ieee8021x::NmSetting8021X,
     connection::ip::NmSettingIp,
     connection::mac_vlan::NmSettingMacVlan,
@@ -79,6 +80,7 @@ pub struct NmConnection {
     pub veth: Option<NmSettingVeth>,
     pub ieee8021x: Option<NmSetting8021X>,
     pub user: Option<NmSettingUser>,
+    pub ethtool: Option<NmSettingEthtool>,
     #[serde(skip)]
     pub(crate) obj_path: String,
     _other: HashMap<String, HashMap<String, zvariant::OwnedValue>>,
@@ -137,6 +139,7 @@ impl TryFrom<NmConnectionDbusOwnedValue> for NmConnection {
             veth: _from_map!(v, "veth", NmSettingVeth::try_from)?,
             ieee8021x: _from_map!(v, "802-1x", NmSetting8021X::try_from)?,
             user: _from_map!(v, "user", NmSettingUser::try_from)?,
+            ethtool: _from_map!(v, "ethtool", NmSettingEthtool::try_from)?,
             _other: v,
             ..Default::default()
         })
@@ -221,6 +224,9 @@ impl NmConnection {
         if let Some(ieee8021x) = &self.ieee8021x {
             sections.push(("802-1x", ieee8021x.to_keyfile()?));
         }
+        if let Some(ethtool) = &self.ethtool {
+            sections.push(("ethtool", ethtool.to_keyfile()?));
+        }
 
         keyfile_sections_to_string(&sections)
     }
@@ -283,6 +289,9 @@ impl NmConnection {
         }
         if let Some(v) = &self.user {
             ret.insert("user", v.to_value()?);
+        }
+        if let Some(v) = &self.ethtool {
+            ret.insert("ethtool", v.to_value()?);
         }
         for (key, setting_value) in &self._other {
             let mut other_setting_value: HashMap<&str, zvariant::Value> =

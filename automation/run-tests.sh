@@ -199,6 +199,7 @@ function run_tests {
             tests/integration/nm/ieee802_1x_test.py \
             tests/integration/lldp_test.py \
             tests/integration/bond_test.py \
+            tests/integration/ethtool_test.py \
             ${nmstate_pytest_extra_args}"
         exec_cmd "
           env  \

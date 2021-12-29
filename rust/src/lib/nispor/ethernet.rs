@@ -18,7 +18,6 @@ fn gen_eth_conf(np_iface: &nispor::Iface) -> EthernetConfig {
     if let Some(sriov_info) = &np_iface.sriov {
         eth_conf.sr_iov = Some(gen_sriov_conf(sriov_info));
     }
-
     if let Some(ethtool_info) = &np_iface.ethtool {
         if let Some(link_mode_info) = &ethtool_info.link_mode {
             if link_mode_info.speed > 0 {
