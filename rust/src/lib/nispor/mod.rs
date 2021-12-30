@@ -7,6 +7,7 @@ mod ip;
 mod linux_bridge;
 mod linux_bridge_port_vlan;
 mod route;
+mod route_rule;
 mod show;
 mod veth;
 mod vlan;

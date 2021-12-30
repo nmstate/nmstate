@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     ErrorKind, InterfaceIpv4, InterfaceIpv6, InterfaceState, InterfaceType,
-    NmstateError, RouteEntry,
+    NmstateError, RouteEntry, RouteRuleEntry,
 };
 
 // TODO: Use prop_list to Serialize like InterfaceIpv4 did
@@ -39,6 +39,8 @@ pub struct BaseInterface {
     pub(crate) up_priority: u32,
     #[serde(skip)]
     pub(crate) routes: Option<Vec<RouteEntry>>,
+    #[serde(skip)]
+    pub(crate) rules: Option<Vec<RouteRuleEntry>>,
     #[serde(flatten)]
     pub _other: serde_json::Map<String, serde_json::Value>,
 }

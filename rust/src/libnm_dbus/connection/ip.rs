@@ -24,6 +24,9 @@ use crate::{
     connection::route::{
         nm_ip_routes_to_value, parse_nm_ip_route_data, NmIpRoute,
     },
+    connection::route_rule::{
+        nm_ip_rules_to_value, parse_nm_ip_rule_data, NmIpRouteRule,
+    },
     connection::DbusDictionary,
     error::{ErrorKind, NmError},
 };
@@ -90,6 +93,7 @@ pub struct NmSettingIp {
     pub method: Option<NmSettingIpMethod>,
     pub addresses: Vec<String>,
     pub routes: Vec<NmIpRoute>,
+    pub route_rules: Vec<NmIpRouteRule>,
     _other: HashMap<String, zvariant::OwnedValue>,
 }
 
@@ -103,6 +107,9 @@ impl TryFrom<DbusDictionary> for NmSettingIp {
                 .unwrap_or_default();
         setting.routes = _from_map!(v, "route-data", parse_nm_ip_route_data)?
             .unwrap_or_default();
+        setting.route_rules =
+            _from_map!(v, "routing-rules", parse_nm_ip_rule_data)?
+                .unwrap_or_default();
 
         // NM deprecated `addresses` property in the favor of `addresss-data`
         v.remove("addresses");
@@ -163,6 +170,7 @@ impl NmSettingIp {
         }
         ret.insert("address-data", zvariant::Value::Array(addresss_data));
         ret.insert("route-data", nm_ip_routes_to_value(&self.routes)?);
+        ret.insert("routing-rules", nm_ip_rules_to_value(&self.route_rules)?);
         ret.extend(self._other.iter().map(|(key, value)| {
             (key.as_str(), zvariant::Value::from(value.clone()))
         }));

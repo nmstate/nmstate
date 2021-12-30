@@ -8,6 +8,7 @@ use crate::{
         ethernet::np_ethernet_to_nmstate,
         linux_bridge::{append_bridge_port_config, np_bridge_to_nmstate},
         route::get_routes,
+        route_rule::get_route_rules,
         veth::np_veth_to_nmstate,
         vlan::np_vlan_to_nmstate,
     },
@@ -19,6 +20,7 @@ pub(crate) fn nispor_retrieve() -> Result<NetworkState, NmstateError> {
     let mut net_state = NetworkState::new();
     net_state.prop_list.push("interfaces");
     net_state.prop_list.push("routes");
+    net_state.prop_list.push("rules");
     let np_state = nispor::NetState::retrieve().map_err(np_error_to_nmstate)?;
 
     for (_, np_iface) in np_state.ifaces.iter() {
@@ -87,6 +89,7 @@ pub(crate) fn nispor_retrieve() -> Result<NetworkState, NmstateError> {
         net_state.append_interface_data(iface);
     }
     net_state.routes = get_routes(&np_state.routes);
+    net_state.rules = get_route_rules(&np_state.rules);
 
     Ok(net_state)
 }
