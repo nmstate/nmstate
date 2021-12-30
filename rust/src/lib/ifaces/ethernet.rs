@@ -78,11 +78,40 @@ impl EthernetInterface {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum EthernetDuplex {
+    Full,
+    Half,
+}
+
+impl std::fmt::Display for EthernetDuplex {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Self::Full => "full",
+                Self::Half => "half",
+            }
+        )
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "kebab-case")]
 pub struct EthernetConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sr_iov: Option<SrIovConfig>,
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "auto-negotiation"
+    )]
+    pub auto_neg: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub speed: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub duplex: Option<EthernetDuplex>,
 }
 
 impl EthernetConfig {
@@ -101,6 +130,10 @@ impl EthernetConfig {
     }
 
     pub(crate) fn pre_verify_cleanup(&mut self) {
+        if self.auto_neg == Some(true) {
+            self.speed = None;
+            self.duplex = None;
+        }
         if let Some(sriov_conf) = self.sr_iov.as_mut() {
             sriov_conf.pre_verify_cleanup()
         }
