@@ -5,7 +5,7 @@ use log::{debug, warn};
 use serde::de::{self, Deserializer, MapAccess, Visitor};
 use serde::{ser::SerializeStruct, Deserialize, Serialize, Serializer};
 
-use crate::NmstateError;
+use crate::{ErrorKind, NmstateError};
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct InterfaceIpv4 {
@@ -431,7 +431,7 @@ impl InterfaceIpv6 {
 #[serde(rename_all = "kebab-case")]
 pub struct InterfaceIpAddr {
     pub ip: String,
-    pub prefix_length: u32,
+    pub prefix_length: u8,
 }
 
 impl InterfaceIpAddr {
@@ -449,10 +449,42 @@ pub(crate) fn is_ipv6_addr(addr: &str) -> bool {
 
 // TODO: Rust offical has std::net::Ipv6Addr::is_unicast_link_local() in
 // experimental.
-fn is_ipv6_unicast_link_local(ip: &str, prefix: u32) -> bool {
+fn is_ipv6_unicast_link_local(ip: &str, prefix: u8) -> bool {
     // The unicast link local address range is fe80::/10.
     is_ipv6_addr(ip)
         && ip.len() >= 3
         && ["fe8", "fe9", "fea", "feb"].contains(&&ip[..3])
         && prefix >= 10
+}
+
+impl std::convert::TryFrom<&str> for InterfaceIpAddr {
+    type Error = NmstateError;
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        let mut addr: Vec<&str> = value.split('/').collect();
+        addr.resize(2, "");
+        let ip = addr[0].to_string();
+        let prefix_length = if addr[1].is_empty() {
+            if is_ipv6_addr(&ip) {
+                128
+            } else {
+                32
+            }
+        } else {
+            addr[1].parse::<u8>().map_err(|parse_error| {
+                let e = NmstateError::new(
+                    ErrorKind::InvalidArgument,
+                    format!("Invalid IP address {}: {}", value, parse_error),
+                );
+                log::error!("{}", e);
+                e
+            })?
+        };
+        Ok(Self { ip, prefix_length })
+    }
+}
+
+impl std::convert::From<&InterfaceIpAddr> for String {
+    fn from(v: &InterfaceIpAddr) -> String {
+        format!("{}/{}", &v.ip, v.prefix_length)
+    }
 }

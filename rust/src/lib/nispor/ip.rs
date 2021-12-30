@@ -17,7 +17,7 @@ pub(crate) fn np_ipv4_to_nmstate(
             }
             ip.addresses.push(InterfaceIpAddr {
                 ip: np_addr.address.clone(),
-                prefix_length: np_addr.prefix_len as u32,
+                prefix_length: np_addr.prefix_len,
             });
         }
         Some(ip)
@@ -52,7 +52,7 @@ pub(crate) fn np_ipv6_to_nmstate(
             }
             ip.addresses.push(InterfaceIpAddr {
                 ip: np_addr.address.clone(),
-                prefix_length: np_addr.prefix_len as u32,
+                prefix_length: np_addr.prefix_len,
             });
         }
         Some(ip)

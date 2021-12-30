@@ -77,6 +77,7 @@ pub(crate) fn iface_to_nm_connections(
     gen_nm_ip_setting(
         iface,
         iface.base_iface().routes.as_deref(),
+        iface.base_iface().rules.as_deref(),
         &mut nm_conn,
     )?;
     gen_nm_wired_setting(iface, &mut nm_conn);

@@ -253,7 +253,7 @@ function run_tests {
           pytest \
             $PYTEST_OPTIONS \
             tests/integration/route_test.py \
-            -k 'not rule' \
+            -k 'not test_route_rule_add_with_auto_route_table_id ' \
             ${nmstate_pytest_extra_args}"
         exec_cmd "
           env  \
