@@ -4,7 +4,7 @@ use std::io::{self, Read};
 
 use env_logger::Builder;
 use log::LevelFilter;
-use nmstate::{NetworkState, Routes};
+use nmstate::{NetworkState, RouteRules, Routes};
 use serde::Serialize;
 use serde_yaml::{self, Value};
 
@@ -142,6 +142,7 @@ fn gen_conf(file_path: &str) -> Result<String, CliError> {
 #[derive(Clone, Debug, PartialEq, Serialize)]
 struct SortedNetworkState {
     routes: Routes,
+    rules: RouteRules,
     interfaces: Vec<Value>,
 }
 
@@ -183,12 +184,14 @@ fn sort_netstate(
         return Ok(SortedNetworkState {
             interfaces: new_ifaces,
             routes: net_state.routes,
+            rules: net_state.rules,
         });
     }
 
     Ok(SortedNetworkState {
         interfaces: Vec::new(),
         routes: net_state.routes,
+        rules: net_state.rules,
     })
 }
 

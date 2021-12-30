@@ -22,6 +22,7 @@ mod conn;
 mod ip;
 mod ovs;
 mod route;
+mod route_rule;
 mod sriov;
 mod vlan;
 mod wired;
@@ -45,3 +46,4 @@ pub(crate) use crate::connection::conn::{
     nm_con_get_from_obj_path, DbusDictionary, NmConnectionDbusValue,
 };
 pub use crate::connection::route::NmIpRoute;
+pub use crate::connection::route_rule::NmIpRouteRule;

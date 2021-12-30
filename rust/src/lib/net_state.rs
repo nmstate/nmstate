@@ -12,7 +12,7 @@ use crate::{
         nm_retrieve,
     },
     ErrorKind, Interface, InterfaceState, InterfaceType, Interfaces,
-    NmstateError, Routes,
+    NmstateError, RouteRules, Routes,
 };
 
 const VERIFY_RETRY_INTERVAL_MILLISECONDS: u64 = 1000;
@@ -23,6 +23,8 @@ const VERIFY_RETRY_COUNT_KERNEL_MODE: usize = 5;
 #[derive(Clone, Debug, Serialize, Default, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct NetworkState {
+    #[serde(rename = "route-rules", default)]
+    pub rules: RouteRules,
     #[serde(default)]
     pub routes: Routes,
     #[serde(default)]
@@ -42,8 +44,6 @@ pub struct NetworkState {
     include_status_data: bool,
     #[serde(rename = "dns-resolver", default)]
     pub dns: serde_json::Map<String, serde_json::Value>,
-    #[serde(rename = "route-rules", default)]
-    pub rules: serde_json::Map<String, serde_json::Value>,
 }
 
 impl<'de> Deserialize<'de> for NetworkState {
@@ -70,7 +70,7 @@ impl<'de> Deserialize<'de> for NetworkState {
         }
         if let Some(rule_value) = v.get("route-rules") {
             net_state.prop_list.push("rules");
-            net_state.rules = serde_json::Map::deserialize(rule_value)
+            net_state.rules = RouteRules::deserialize(rule_value)
                 .map_err(serde::de::Error::custom)?;
         }
         Ok(net_state)
@@ -125,6 +125,9 @@ impl NetworkState {
         }
         if state.prop_list.contains(&"routes") {
             self.routes = state.routes;
+        }
+        if state.prop_list.contains(&"rules") {
+            self.rules = state.rules;
         }
         if !self.kernel_only {
             let nm_state = nm_retrieve()?;
@@ -237,7 +240,8 @@ impl NetworkState {
 
     fn verify(&self, current: &Self) -> Result<(), NmstateError> {
         self.interfaces.verify(&current.interfaces)?;
-        self.routes.verify(&current.routes)
+        self.routes.verify(&current.routes)?;
+        self.rules.verify(&current.rules)
     }
 
     // Return three NetworkState:
@@ -251,6 +255,7 @@ impl NetworkState {
         current: &Self,
     ) -> Result<(Self, Self, Self), NmstateError> {
         self.routes.validate()?;
+        self.rules.validate()?;
 
         let mut add_net_state = NetworkState::new();
         let mut chg_net_state = NetworkState::new();
@@ -284,6 +289,12 @@ impl NetworkState {
             &mut chg_net_state,
             current,
         );
+
+        self.include_rule_changes(
+            &mut add_net_state,
+            &mut chg_net_state,
+            current,
+        )?;
 
         Ok((add_net_state, chg_net_state, del_net_state))
     }
@@ -336,6 +347,122 @@ impl NetworkState {
                         does not exist",
                     routes
                 );
+            }
+        }
+    }
+
+    fn include_rule_changes(
+        &self,
+        add_net_state: &mut Self,
+        chg_net_state: &mut Self,
+        current: &Self,
+    ) -> Result<(), NmstateError> {
+        let mut changed_rules =
+            self.rules.gen_rule_changed_table_ids(&current.rules);
+
+        // Convert table id to interface name
+        for (table_id, rules) in changed_rules.drain() {
+            // We does not differentiate the IPv4 and IPv6 route table ID.
+            // The verification process will find out the error.
+            // We did not head any use case been limited by this.
+            let iface_name =
+                self.get_iface_name_for_route_table(current, table_id)?;
+            let cur_iface = current
+                .interfaces
+                .get_iface(&iface_name, InterfaceType::Unknown);
+            if let Some(iface) =
+                add_net_state.interfaces.kernel_ifaces.get_mut(&iface_name)
+            {
+                if let Some(ex_rules) = iface.base_iface_mut().rules.as_mut() {
+                    ex_rules.extend(rules);
+                    ex_rules.sort_unstable();
+                    ex_rules.dedup();
+                } else {
+                    iface.base_iface_mut().rules = Some(rules);
+                }
+                if let Some(cur_iface) = cur_iface {
+                    iface
+                        .base_iface_mut()
+                        .copy_ip_config_if_none(cur_iface.base_iface());
+                }
+            } else if let Some(iface) =
+                chg_net_state.interfaces.kernel_ifaces.get_mut(&iface_name)
+            {
+                if let Some(ex_rules) = iface.base_iface_mut().rules.as_mut() {
+                    ex_rules.extend(rules);
+                    ex_rules.sort_unstable();
+                    ex_rules.dedup();
+                } else {
+                    iface.base_iface_mut().rules = Some(rules);
+                }
+                if let Some(cur_iface) = cur_iface {
+                    iface
+                        .base_iface_mut()
+                        .copy_ip_config_if_none(cur_iface.base_iface());
+                }
+            } else if let Some(cur_iface) = cur_iface {
+                // Interface not mentioned in desire state but impacted by
+                // wildcard absent route rule
+                let mut new_iface = cur_iface.clone_name_type_only();
+                new_iface
+                    .base_iface_mut()
+                    .copy_ip_config_if_none(cur_iface.base_iface());
+                new_iface.base_iface_mut().rules = Some(rules);
+                chg_net_state.append_interface_data(new_iface);
+            } else {
+                let e = NmstateError::new(
+                    ErrorKind::InvalidArgument,
+                    format!(
+                    "Failed to find a interface for desired routes rules {:?} ",
+                    rules
+                ),
+                );
+                log::error!("{}", e);
+                return Err(e);
+            }
+        }
+        Ok(())
+    }
+
+    fn _get_iface_name_for_route_table(&self, table_id: u32) -> Option<String> {
+        if let Some(routes) = self.routes.config.as_ref() {
+            for route in routes {
+                if route.table_id == Some(table_id) {
+                    if let Some(iface_name) = route.next_hop_iface.as_ref() {
+                        return Some(iface_name.to_string());
+                    }
+                }
+            }
+        }
+        // TODO: search interface with auto-route-table-id
+        None
+    }
+
+    // * Find desired interface with static route to given table ID.
+    // * Find desired interface with dynamic route to given table ID.
+    // * Find current interface with static route to given table ID.
+    // * Find current interface with dynamic route to given table ID.
+    fn get_iface_name_for_route_table(
+        &self,
+        current: &Self,
+        table_id: u32,
+    ) -> Result<String, NmstateError> {
+        match self
+            ._get_iface_name_for_route_table(table_id)
+            .or_else(|| current._get_iface_name_for_route_table(table_id))
+        {
+            Some(iface_name) => Ok(iface_name),
+            None => {
+                let e = NmstateError::new(
+                    ErrorKind::InvalidArgument,
+                    format!(
+                        "Route table {} for route rule is not defined by \
+                        any routes",
+                        table_id
+                    ),
+                );
+                log::error!("{}", e);
+                Err(e)
             }
         }
     }

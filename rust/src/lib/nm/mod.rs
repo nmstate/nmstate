@@ -10,6 +10,7 @@ mod ip;
 mod ovs;
 mod profile;
 mod route;
+mod route_rule;
 mod show;
 mod sriov;
 #[cfg(test)]

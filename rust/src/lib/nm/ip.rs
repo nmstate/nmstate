@@ -1,12 +1,14 @@
 use crate::{
-    nm::route::gen_nm_ip_routes, ErrorKind, Interface, InterfaceIpv4,
-    InterfaceIpv6, NmstateError, RouteEntry,
+    nm::route::gen_nm_ip_routes, nm::route_rule::gen_nm_ip_rules, ErrorKind,
+    Interface, InterfaceIpv4, InterfaceIpv6, NmstateError, RouteEntry,
+    RouteRuleEntry,
 };
 use nm_dbus::{NmConnection, NmSettingIpMethod};
 
 fn gen_nm_ipv4_setting(
     iface_ip: &InterfaceIpv4,
     routes: Option<&[RouteEntry]>,
+    rules: Option<&[RouteRuleEntry]>,
     nm_conn: &mut NmConnection,
 ) -> Result<(), NmstateError> {
     let mut addresses: Vec<String> = Vec::new();
@@ -32,6 +34,9 @@ fn gen_nm_ipv4_setting(
     if let Some(routes) = routes {
         nm_setting.routes = gen_nm_ip_routes(routes, false)?;
     }
+    if let Some(rules) = rules {
+        nm_setting.route_rules = gen_nm_ip_rules(rules, false)?;
+    }
     nm_conn.ipv4 = Some(nm_setting);
     Ok(())
 }
@@ -39,6 +44,7 @@ fn gen_nm_ipv4_setting(
 fn gen_nm_ipv6_setting(
     iface_ip: &InterfaceIpv6,
     routes: Option<&[RouteEntry]>,
+    rules: Option<&[RouteRuleEntry]>,
     nm_conn: &mut NmConnection,
 ) -> Result<(), NmstateError> {
     let mut addresses: Vec<String> = Vec::new();
@@ -75,6 +81,9 @@ fn gen_nm_ipv6_setting(
     if let Some(routes) = routes {
         nm_setting.routes = gen_nm_ip_routes(routes, true)?;
     }
+    if let Some(rules) = rules {
+        nm_setting.route_rules = gen_nm_ip_rules(rules, true)?;
+    }
     nm_conn.ipv6 = Some(nm_setting);
     Ok(())
 }
@@ -82,6 +91,7 @@ fn gen_nm_ipv6_setting(
 pub(crate) fn gen_nm_ip_setting(
     iface: &Interface,
     routes: Option<&[RouteEntry]>,
+    rules: Option<&[RouteRuleEntry]>,
     nm_conn: &mut NmConnection,
 ) -> Result<(), NmstateError> {
     let base_iface = iface.base_iface();
@@ -100,8 +110,8 @@ pub(crate) fn gen_nm_ip_setting(
             ipv6_conf.enabled = false;
             ipv6_conf
         };
-        gen_nm_ipv4_setting(&ipv4_conf, routes, nm_conn)?;
-        gen_nm_ipv6_setting(&ipv6_conf, routes, nm_conn)?;
+        gen_nm_ipv4_setting(&ipv4_conf, routes, rules, nm_conn)?;
+        gen_nm_ipv6_setting(&ipv6_conf, routes, rules, nm_conn)?;
     } else {
         nm_conn.ipv4 = None;
         nm_conn.ipv6 = None;

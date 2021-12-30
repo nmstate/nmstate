@@ -1,7 +1,8 @@
-use log::error;
+use std::convert::TryFrom;
+
 use nm_dbus::{NmConnection, NmIpRoute};
 
-use crate::{ip::is_ipv6_addr, ErrorKind, NmstateError, RouteEntry};
+use crate::{ip::is_ipv6_addr, InterfaceIpAddr, NmstateError, RouteEntry};
 
 pub(crate) fn gen_nm_ip_routes(
     routes: &[RouteEntry],
@@ -10,34 +11,13 @@ pub(crate) fn gen_nm_ip_routes(
     let mut ret = Vec::new();
     for route in routes {
         let mut nm_route = NmIpRoute::new();
-        if let Some(v) = route.destination.as_ref() {
+        if let Some(v) = route.destination.as_deref() {
             if (is_ipv6 && !is_ipv6_addr(v)) || (!is_ipv6 && is_ipv6_addr(v)) {
                 continue;
             }
-            let mut splited_des: Vec<&str> = v.split('/').collect();
-            splited_des.resize(2, "");
-            let dest = splited_des[0];
-            let prefix = if splited_des[1].is_empty() {
-                if is_ipv6_addr(dest) {
-                    128
-                } else {
-                    32
-                }
-            } else {
-                splited_des[1].parse::<u32>().map_err(|parse_error| {
-                    let e = NmstateError::new(
-                        ErrorKind::InvalidArgument,
-                        format!(
-                            "Invalid route destination {}: {}",
-                            v, parse_error
-                        ),
-                    );
-                    error!("{}", e);
-                    e
-                })?
-            };
-            nm_route.dest = Some(dest.to_string());
-            nm_route.prefix = Some(prefix);
+            let ip_addr = InterfaceIpAddr::try_from(v)?;
+            nm_route.prefix = Some(ip_addr.prefix_length as u32);
+            nm_route.dest = Some(ip_addr.ip);
         }
         nm_route.metric = match route.metric {
             Some(RouteEntry::USE_DEFAULT_METRIC) => None,
