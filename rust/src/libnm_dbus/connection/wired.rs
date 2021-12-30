@@ -31,6 +31,9 @@ pub struct NmSettingWired {
     pub cloned_mac_address: Option<String>,
     pub mtu: Option<u32>,
     pub accept_all_mac_addresses: Option<i32>,
+    pub speed: Option<u32>,
+    pub duplex: Option<String>,
+    pub auto_negotiate: Option<bool>,
     _other: HashMap<String, zvariant::OwnedValue>,
 }
 
@@ -50,6 +53,9 @@ impl TryFrom<DbusDictionary> for NmSettingWired {
                 "accept-all-mac-addresses",
                 i32::try_from
             )?,
+            speed: _from_map!(v, "speed", u32::try_from)?,
+            duplex: _from_map!(v, "duplex", String::try_from)?,
+            auto_negotiate: _from_map!(v, "auto-negotiate", bool::try_from)?,
             _other: v,
         })
     }
@@ -71,6 +77,15 @@ impl NmSettingWired {
         }
         if let Some(v) = &self.accept_all_mac_addresses {
             ret.insert("accept-all-mac-addresses", zvariant::Value::new(v));
+        }
+        if let Some(v) = &self.speed {
+            ret.insert("speed", zvariant::Value::new(v));
+        }
+        if let Some(v) = &self.auto_negotiate {
+            ret.insert("auto-negotiate", zvariant::Value::new(v));
+        }
+        if let Some(v) = &self.duplex {
+            ret.insert("duplex", zvariant::Value::new(v));
         }
         ret.extend(self._other.iter().map(|(key, value)| {
             (key.as_str(), zvariant::Value::from(value.clone()))
