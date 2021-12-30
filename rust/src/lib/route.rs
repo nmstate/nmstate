@@ -46,6 +46,7 @@ impl Routes {
     //   added.
     // * desired static route exists.
     pub fn verify(&self, current: &Self) -> Result<(), NmstateError> {
+        println!("desired {:?}\ncurrent {:?}", self, current);
         if let Some(config_routes) = self.config.as_ref() {
             let cur_config_routes = match current.config.as_ref() {
                 Some(c) => c.to_vec(),
