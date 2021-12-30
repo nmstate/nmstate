@@ -50,6 +50,7 @@ pub(crate) fn np_iface_to_base_iface(
         ipv4: np_ipv4_to_nmstate(np_iface),
         ipv6: np_ipv6_to_nmstate(np_iface),
         mac_address: Some(np_iface.mac_address.to_uppercase()),
+        permanent_mac_address: get_permanent_mac_address(np_iface),
         controller: np_iface.controller.as_ref().map(|c| c.to_string()),
         mtu: if np_iface.mtu >= 0 {
             Some(np_iface.mtu as u64)
@@ -78,4 +79,22 @@ pub(crate) fn np_iface_to_base_iface(
         ..Default::default()
     };
     base_iface
+}
+
+fn get_permanent_mac_address(iface: &nispor::Iface) -> Option<String> {
+    if iface.permanent_mac_address.is_empty() {
+        // Bond port also hold perm_hwaddr which is the mac address before
+        // this interface been assgined to bond as subordinate.
+        if let Some(bond_port_info) = &iface.bond_subordinate {
+            if bond_port_info.perm_hwaddr.is_empty() {
+                None
+            } else {
+                Some(bond_port_info.perm_hwaddr.clone())
+            }
+        } else {
+            None
+        }
+    } else {
+        Some(iface.permanent_mac_address.clone())
+    }
 }
