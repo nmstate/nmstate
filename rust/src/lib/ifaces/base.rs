@@ -19,6 +19,8 @@ pub struct BaseInterface {
     pub state: InterfaceState,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub mac_address: Option<String>,
+    #[serde(skip)]
+    pub permanent_mac_address: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub mtu: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -29,6 +31,8 @@ pub struct BaseInterface {
     pub controller: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub accept_all_mac_addresses: Option<bool>,
+    #[serde(skip_serializing)]
+    pub copy_mac_from: Option<String>,
     #[serde(skip)]
     pub controller_type: Option<InterfaceType>,
     // The interface lowest up_priority will be activated first.

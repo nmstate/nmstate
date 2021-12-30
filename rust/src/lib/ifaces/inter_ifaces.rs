@@ -19,6 +19,12 @@ use crate::{
 // beginning of desire state
 const INTERFACES_SET_PRIORITY_MAX_RETRY: u32 = 4;
 
+const COPY_MAC_ALLOWED_IFACE_TYPES: [InterfaceType; 3] = [
+    InterfaceType::Bond,
+    InterfaceType::LinuxBridge,
+    InterfaceType::OvsInterface,
+];
+
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Interfaces {
     pub(crate) kernel_ifaces: HashMap<String, Interface>,
@@ -224,6 +230,7 @@ impl Interfaces {
         let mut chg_ifaces = Self::new();
         let mut del_ifaces = Self::new();
 
+        self.apply_copy_mac_from(current)?;
         handle_changed_ports(self, current)?;
         self.set_up_priority()?;
 
@@ -375,6 +382,64 @@ impl Interfaces {
         }
         Ok(())
     }
+
+    fn apply_copy_mac_from(
+        &mut self,
+        current: &Self,
+    ) -> Result<(), NmstateError> {
+        for (iface_name, iface) in self.kernel_ifaces.iter_mut() {
+            if !COPY_MAC_ALLOWED_IFACE_TYPES.contains(&iface.iface_type()) {
+                continue;
+            }
+            if let Some(src_iface_name) = &iface.base_iface().copy_mac_from {
+                if let Some(cur_iface) =
+                    current.kernel_ifaces.get(src_iface_name)
+                {
+                    println!(
+                        "per {:?} mac {:?}",
+                        cur_iface.base_iface().permanent_mac_address,
+                        cur_iface.base_iface().mac_address
+                    );
+                    if !is_opt_str_empty(
+                        &cur_iface.base_iface().permanent_mac_address,
+                    ) {
+                        iface.base_iface_mut().mac_address = cur_iface
+                            .base_iface()
+                            .permanent_mac_address
+                            .clone();
+                    } else if !is_opt_str_empty(
+                        &cur_iface.base_iface().mac_address,
+                    ) {
+                        iface.base_iface_mut().mac_address =
+                            cur_iface.base_iface().mac_address.clone();
+                    } else {
+                        let e = NmstateError::new(
+                            ErrorKind::InvalidArgument,
+                            format!(
+                                "Failed to find mac address of interface {} \
+                                for copy-mac-from of iface {}",
+                                src_iface_name, iface_name
+                            ),
+                        );
+                        log::error!("{}", e);
+                        return Err(e);
+                    }
+                } else {
+                    let e = NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        format!(
+                            "Failed to find interface {} for \
+                            copy-mac-from of iface {}",
+                            src_iface_name, iface_name
+                        ),
+                    );
+                    log::error!("{}", e);
+                    return Err(e);
+                }
+            }
+        }
+        Ok(())
+    }
 }
 
 pub(crate) struct MergedInterfaces<'a> {
@@ -511,4 +576,12 @@ fn gen_ifaces_to_del(
         }
     }
     del_ifaces
+}
+
+fn is_opt_str_empty(opt_string: &Option<String>) -> bool {
+    if let Some(s) = opt_string {
+        s.is_empty()
+    } else {
+        true
+    }
 }
