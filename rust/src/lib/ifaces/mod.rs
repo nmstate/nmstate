@@ -16,7 +16,9 @@ pub use bond::{
     BondOptions, BondPrimaryReselect, BondXmitHashPolicy,
 };
 pub use dummy::DummyInterface;
-pub use ethernet::{EthernetConfig, EthernetInterface, VethConfig};
+pub use ethernet::{
+    EthernetConfig, EthernetDuplex, EthernetInterface, VethConfig,
+};
 pub use inter_ifaces::*;
 pub use linux_bridge::{
     LinuxBridgeConfig, LinuxBridgeInterface, LinuxBridgeMulticastRouterType,

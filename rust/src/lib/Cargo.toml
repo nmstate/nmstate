@@ -11,7 +11,8 @@ path = "lib.rs"
 serde = { version = "1.0.130", features = ["derive"] }
 serde_json = "1.0.68"
 nm-dbus = {path = "../libnm_dbus"}
-nispor = "1.2.2"
+#nispor = "1.2.2"
+nispor = {git = "https://github.com/nispor/nispor.git"}
 log = "0.4.14"
 libc = "0.2.106"
 
