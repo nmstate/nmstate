@@ -23,6 +23,14 @@ impl Default for VlanInterface {
 }
 
 impl VlanInterface {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub(crate) fn parent(&self) -> Option<&str> {
+        self.vlan.as_ref().map(|cfg| cfg.base_iface.as_str())
+    }
+
     pub(crate) fn update_vlan(&mut self, other: &VlanInterface) {
         // TODO: this should be done by Trait
         if let Some(vlan_conf) = &mut self.vlan {

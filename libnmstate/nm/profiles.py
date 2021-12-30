@@ -71,7 +71,6 @@ class NmProfiles:
             for iface in sorted(
                 list(net_state.ifaces.all_ifaces()), key=attrgetter("name")
             )
-            if not getattr(iface, "is_generated_vf", None)
         ]
 
         for profile in all_profiles:

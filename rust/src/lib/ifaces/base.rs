@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     ErrorKind, InterfaceIpv4, InterfaceIpv6, InterfaceState, InterfaceType,
-    NmstateError,
+    NmstateError, RouteEntry,
 };
 
 // TODO: Use prop_list to Serialize like InterfaceIpv4 did
@@ -27,6 +27,8 @@ pub struct BaseInterface {
     pub ipv6: Option<InterfaceIpv6>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub controller: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub accept_all_mac_addresses: Option<bool>,
     #[serde(skip)]
     pub controller_type: Option<InterfaceType>,
     // The interface lowest up_priority will be activated first.
@@ -35,6 +37,8 @@ pub struct BaseInterface {
     // The 0 means top controller or no controller.
     #[serde(skip)]
     pub(crate) up_priority: u32,
+    #[serde(skip)]
+    pub(crate) routes: Option<Vec<RouteEntry>>,
     #[serde(flatten)]
     pub _other: serde_json::Map<String, serde_json::Value>,
 }
@@ -61,6 +65,9 @@ impl BaseInterface {
         }
         if other.prop_list.contains(&"controller_type") {
             self.controller_type = other.controller_type.clone();
+        }
+        if other.prop_list.contains(&"accept_all_mac_addresses") {
+            self.accept_all_mac_addresses = other.accept_all_mac_addresses;
         }
 
         if other.prop_list.contains(&"ipv4") {
@@ -148,6 +155,24 @@ impl BaseInterface {
     // TODO: Validate IP, controller and etc
     pub(crate) fn validate(&self) -> Result<(), NmstateError> {
         Ok(())
+    }
+
+    pub(crate) fn clone_name_type_only(&self) -> Self {
+        Self {
+            name: self.name.clone(),
+            iface_type: self.iface_type.clone(),
+            state: InterfaceState::Up,
+            ..Default::default()
+        }
+    }
+
+    pub(crate) fn copy_ip_config_if_none(&mut self, current: &Self) {
+        if self.ipv4.is_none() {
+            self.ipv4 = current.ipv4.clone();
+        }
+        if self.ipv6.is_none() {
+            self.ipv6 = current.ipv6.clone();
+        }
     }
 }
 

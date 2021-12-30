@@ -1,8 +1,12 @@
-use crate::{ErrorKind, Interface, InterfaceIpv4, InterfaceIpv6, NmstateError};
+use crate::{
+    nm::route::gen_nm_ip_routes, ErrorKind, Interface, InterfaceIpv4,
+    InterfaceIpv6, NmstateError, RouteEntry,
+};
 use nm_dbus::{NmConnection, NmSettingIpMethod};
 
 fn gen_nm_ipv4_setting(
     iface_ip: &InterfaceIpv4,
+    routes: Option<&[RouteEntry]>,
     nm_conn: &mut NmConnection,
 ) -> Result<(), NmstateError> {
     let mut addresses: Vec<String> = Vec::new();
@@ -25,12 +29,16 @@ fn gen_nm_ipv4_setting(
     let mut nm_setting = nm_conn.ipv4.as_ref().cloned().unwrap_or_default();
     nm_setting.method = Some(method);
     nm_setting.addresses = addresses;
+    if let Some(routes) = routes {
+        nm_setting.routes = gen_nm_ip_routes(routes, false)?;
+    }
     nm_conn.ipv4 = Some(nm_setting);
     Ok(())
 }
 
 fn gen_nm_ipv6_setting(
     iface_ip: &InterfaceIpv6,
+    routes: Option<&[RouteEntry]>,
     nm_conn: &mut NmConnection,
 ) -> Result<(), NmstateError> {
     let mut addresses: Vec<String> = Vec::new();
@@ -64,12 +72,16 @@ fn gen_nm_ipv6_setting(
     let mut nm_setting = nm_conn.ipv6.as_ref().cloned().unwrap_or_default();
     nm_setting.method = Some(method);
     nm_setting.addresses = addresses;
+    if let Some(routes) = routes {
+        nm_setting.routes = gen_nm_ip_routes(routes, true)?;
+    }
     nm_conn.ipv6 = Some(nm_setting);
     Ok(())
 }
 
 pub(crate) fn gen_nm_ip_setting(
     iface: &Interface,
+    routes: Option<&[RouteEntry]>,
     nm_conn: &mut NmConnection,
 ) -> Result<(), NmstateError> {
     let base_iface = iface.base_iface();
@@ -88,8 +100,8 @@ pub(crate) fn gen_nm_ip_setting(
             ipv6_conf.enabled = false;
             ipv6_conf
         };
-        gen_nm_ipv4_setting(&ipv4_conf, nm_conn)?;
-        gen_nm_ipv6_setting(&ipv6_conf, nm_conn)?;
+        gen_nm_ipv4_setting(&ipv4_conf, routes, nm_conn)?;
+        gen_nm_ipv6_setting(&ipv6_conf, routes, nm_conn)?;
     } else {
         nm_conn.ipv4 = None;
         nm_conn.ipv6 = None;

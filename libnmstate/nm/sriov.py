@@ -98,12 +98,20 @@ def _create_sriov_vfs_from_config(vfs_config, sriov_setting, vf_ids_to_add):
         for key, val in vf_config.items():
             _set_nm_attribute(vf_object, key, val)
 
+        vlan_id = vf_config.get(Ethernet.SRIOV.VFS.VLAN_ID)
+        vlan_qos = vf_config.get(Ethernet.SRIOV.VFS.QOS)
+        if vlan_id:
+            vf_object.add_vlan(vlan_id)
+            if vlan_qos:
+                vf_object.set_vlan_qos(vlan_id, vlan_qos)
+
         yield vf_object
 
 
 def _set_nm_attribute(vf_object, key, value):
-    nm_attr, nm_variant = SRIOV_NMSTATE_TO_NM_MAP[key]
-    vf_object.set_attribute(nm_attr, nm_variant(value))
+    if key in SRIOV_NMSTATE_TO_NM_MAP:
+        nm_attr, nm_variant = SRIOV_NMSTATE_TO_NM_MAP[key]
+        vf_object.set_attribute(nm_attr, nm_variant(value))
 
 
 def _remove_sriov_vfs_in_setting(vfs_config, sriov_setting, vf_ids_to_remove):

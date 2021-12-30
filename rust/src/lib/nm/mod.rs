@@ -1,5 +1,6 @@
 mod active_connection;
 mod apply;
+mod bond;
 mod bridge;
 mod checkpoint;
 mod connection;
@@ -8,9 +9,12 @@ mod error;
 mod ip;
 mod ovs;
 mod profile;
+mod route;
 mod show;
+mod sriov;
 #[cfg(test)]
 mod unit_tests;
+mod version;
 mod vlan;
 mod wired;
 

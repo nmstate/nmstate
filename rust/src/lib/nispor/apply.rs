@@ -58,6 +58,7 @@ fn nmstate_iface_type_to_np(
 ) -> nispor::IfaceType {
     match nms_iface_type {
         InterfaceType::LinuxBridge => nispor::IfaceType::Bridge,
+        InterfaceType::Bond => nispor::IfaceType::Bond,
         InterfaceType::Ethernet => nispor::IfaceType::Ethernet,
         InterfaceType::Veth => nispor::IfaceType::Veth,
         InterfaceType::Vlan => nispor::IfaceType::Vlan,

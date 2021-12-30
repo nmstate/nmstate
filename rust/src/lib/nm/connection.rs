@@ -3,6 +3,7 @@ use std::collections::{hash_map::Entry, HashMap};
 use nm_dbus::{NmApi, NmConnection, NmSettingConnection, NmSettingVlan};
 
 use crate::{
+    nm::bond::gen_nm_bond_setting,
     nm::bridge::{gen_nm_br_port_setting, gen_nm_br_setting},
     nm::ip::gen_nm_ip_setting,
     nm::ovs::{
@@ -10,6 +11,7 @@ use crate::{
         gen_nm_ovs_iface_setting,
     },
     nm::profile::get_exist_profile,
+    nm::sriov::gen_nm_sriov_setting,
     nm::wired::gen_nm_wired_setting,
     ErrorKind, Interface, InterfaceType, NetworkState, NmstateError,
 };
@@ -35,6 +37,7 @@ pub(crate) fn nm_gen_conf(
                     .get_iface(ctrl_iface_name, ctrl_type.clone());
             }
         }
+
         for nm_conn in iface_to_nm_connections(iface, ctrl_iface, &[], &[])? {
             ret.push(match nm_conn.to_keyfile() {
                 Ok(s) => s,
@@ -71,7 +74,11 @@ pub(crate) fn iface_to_nm_connections(
     let mut nm_conn = exist_nm_conn.cloned().unwrap_or_default();
 
     gen_nm_conn_setting(iface, &mut nm_conn)?;
-    gen_nm_ip_setting(iface, &mut nm_conn)?;
+    gen_nm_ip_setting(
+        iface,
+        iface.base_iface().routes.as_deref(),
+        &mut nm_conn,
+    )?;
     gen_nm_wired_setting(iface, &mut nm_conn);
 
     match iface {
@@ -95,12 +102,18 @@ pub(crate) fn iface_to_nm_connections(
         Interface::LinuxBridge(br_iface) => {
             gen_nm_br_setting(br_iface, &mut nm_conn);
         }
+        Interface::Bond(bond_iface) => {
+            gen_nm_bond_setting(bond_iface, &mut nm_conn);
+        }
         Interface::OvsInterface(_) => {
             // TODO Support OVS Patch interface
             gen_nm_ovs_iface_setting(&mut nm_conn);
         }
         Interface::Vlan(vlan_iface) => {
             nm_conn.vlan = vlan_iface.vlan.as_ref().map(NmSettingVlan::from)
+        }
+        Interface::Ethernet(eth_iface) => {
+            gen_nm_sriov_setting(eth_iface, &mut nm_conn);
         }
         _ => (),
     };
@@ -125,6 +138,7 @@ pub(crate) fn iface_type_to_nm(
 ) -> Result<String, NmstateError> {
     match iface_type {
         InterfaceType::LinuxBridge => Ok("bridge".into()),
+        InterfaceType::Bond => Ok("bond".into()),
         InterfaceType::Ethernet => Ok("802-3-ethernet".into()),
         InterfaceType::OvsBridge => Ok("ovs-bridge".into()),
         InterfaceType::OvsInterface => Ok("ovs-interface".into()),

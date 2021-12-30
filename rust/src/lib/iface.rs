@@ -2,9 +2,9 @@ use log::{error, warn};
 use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::{
-    state::get_json_value_difference, BaseInterface, DummyInterface, ErrorKind,
-    EthernetInterface, LinuxBridgeInterface, NmstateError, OvsBridgeInterface,
-    OvsInterface, VlanInterface,
+    state::get_json_value_difference, BaseInterface, BondInterface,
+    DummyInterface, ErrorKind, EthernetInterface, LinuxBridgeInterface,
+    NmstateError, OvsBridgeInterface, OvsInterface, VlanInterface,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -144,6 +144,7 @@ impl UnknownInterface {
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "kebab-case", untagged)]
 pub enum Interface {
+    Bond(BondInterface),
     Dummy(DummyInterface),
     Ethernet(EthernetInterface),
     LinuxBridge(LinuxBridgeInterface),
@@ -171,6 +172,11 @@ impl<'de> Deserialize<'de> for Interface {
                 let inner = LinuxBridgeInterface::deserialize(v)
                     .map_err(serde::de::Error::custom)?;
                 Ok(Interface::LinuxBridge(inner))
+            }
+            Some(InterfaceType::Bond) => {
+                let inner = BondInterface::deserialize(v)
+                    .map_err(serde::de::Error::custom)?;
+                Ok(Interface::Bond(inner))
             }
             Some(InterfaceType::Veth) => {
                 let inner = EthernetInterface::deserialize(v)
@@ -216,6 +222,7 @@ impl Interface {
     pub fn name(&self) -> &str {
         match self {
             Self::LinuxBridge(iface) => iface.base.name.as_str(),
+            Self::Bond(iface) => iface.base.name.as_str(),
             Self::Ethernet(iface) => iface.base.name.as_str(),
             Self::Vlan(iface) => iface.base.name.as_str(),
             Self::Dummy(iface) => iface.base.name.as_str(),
@@ -240,12 +247,58 @@ impl Interface {
     pub fn iface_type(&self) -> InterfaceType {
         match self {
             Self::LinuxBridge(iface) => iface.base.iface_type.clone(),
+            Self::Bond(iface) => iface.base.iface_type.clone(),
             Self::Ethernet(iface) => iface.base.iface_type.clone(),
             Self::Vlan(iface) => iface.base.iface_type.clone(),
             Self::Dummy(iface) => iface.base.iface_type.clone(),
             Self::OvsInterface(iface) => iface.base.iface_type.clone(),
             Self::OvsBridge(iface) => iface.base.iface_type.clone(),
             Self::Unknown(iface) => iface.base.iface_type.clone(),
+        }
+    }
+
+    pub(crate) fn clone_name_type_only(&self) -> Self {
+        match self {
+            Self::LinuxBridge(iface) => {
+                let mut new_iface = LinuxBridgeInterface::new();
+                new_iface.base = iface.base.clone_name_type_only();
+                Self::LinuxBridge(new_iface)
+            }
+            Self::Ethernet(iface) => {
+                let mut new_iface = EthernetInterface::new();
+                new_iface.base = iface.base.clone_name_type_only();
+                Self::Ethernet(new_iface)
+            }
+            Self::Vlan(iface) => {
+                let mut new_iface = VlanInterface::new();
+                new_iface.base = iface.base.clone_name_type_only();
+                Self::Vlan(new_iface)
+            }
+            Self::Dummy(iface) => {
+                let mut new_iface = DummyInterface::new();
+                new_iface.base = iface.base.clone_name_type_only();
+                Self::Dummy(new_iface)
+            }
+            Self::OvsInterface(iface) => {
+                let mut new_iface = OvsInterface::new();
+                new_iface.base = iface.base.clone_name_type_only();
+                Self::OvsInterface(new_iface)
+            }
+            Self::OvsBridge(iface) => {
+                let mut new_iface = OvsBridgeInterface::new();
+                new_iface.base = iface.base.clone_name_type_only();
+                Self::OvsBridge(new_iface)
+            }
+            Self::Bond(iface) => {
+                let mut new_iface = BondInterface::new();
+                new_iface.base = iface.base.clone_name_type_only();
+                Self::Bond(new_iface)
+            }
+            Self::Unknown(iface) => {
+                let mut new_iface = UnknownInterface::new();
+                new_iface.base = iface.base.clone_name_type_only();
+                Self::Unknown(new_iface)
+            }
         }
     }
 
@@ -273,6 +326,7 @@ impl Interface {
     pub fn base_iface(&self) -> &BaseInterface {
         match self {
             Self::LinuxBridge(iface) => &iface.base,
+            Self::Bond(iface) => &iface.base,
             Self::Ethernet(iface) => &iface.base,
             Self::Vlan(iface) => &iface.base,
             Self::Dummy(iface) => &iface.base,
@@ -285,6 +339,7 @@ impl Interface {
     pub(crate) fn base_iface_mut(&mut self) -> &mut BaseInterface {
         match self {
             Self::LinuxBridge(iface) => &mut iface.base,
+            Self::Bond(iface) => &mut iface.base,
             Self::Ethernet(iface) => &mut iface.base,
             Self::Vlan(iface) => &mut iface.base,
             Self::Dummy(iface) => &mut iface.base,
@@ -300,12 +355,14 @@ impl Interface {
             match self {
                 Self::LinuxBridge(_) => Some(Vec::new()),
                 Self::OvsBridge(_) => Some(Vec::new()),
+                Self::Bond(_) => Some(Vec::new()),
                 _ => None,
             }
         } else {
             match self {
                 Self::LinuxBridge(iface) => iface.ports(),
                 Self::OvsBridge(iface) => iface.ports(),
+                Self::Bond(iface) => iface.ports(),
                 _ => None,
             }
         }
@@ -320,6 +377,16 @@ impl Interface {
             Self::LinuxBridge(iface) => {
                 if let Self::LinuxBridge(other_iface) = other {
                     iface.update_bridge(other_iface);
+                } else {
+                    warn!(
+                        "Don't know how to update iface {:?} with {:?}",
+                        iface, other
+                    );
+                }
+            }
+            Self::Bond(iface) => {
+                if let Self::Bond(other_iface) = other {
+                    iface.update_bond(other_iface);
                 } else {
                     warn!(
                         "Don't know how to update iface {:?} with {:?}",
@@ -365,6 +432,9 @@ impl Interface {
     pub(crate) fn pre_verify_cleanup(&mut self) {
         match self {
             Self::LinuxBridge(ref mut iface) => {
+                iface.pre_verify_cleanup();
+            }
+            Self::Bond(ref mut iface) => {
                 iface.pre_verify_cleanup();
             }
             Self::Ethernet(ref mut iface) => {
@@ -436,6 +506,10 @@ impl Interface {
                 }
             }
 
+            if reference.contains("link-aggregation.options") {
+                return Ok(());
+            }
+
             Err(NmstateError::new(
                 ErrorKind::VerificationError,
                 format!(
@@ -451,6 +525,8 @@ impl Interface {
     pub(crate) fn validate(&self) -> Result<(), NmstateError> {
         if let Interface::LinuxBridge(iface) = self {
             iface.validate()?;
+        } else if let Interface::Bond(iface) = self {
+            iface.validate()?;
         }
         Ok(())
     }
@@ -458,6 +534,16 @@ impl Interface {
     pub(crate) fn remove_port(&mut self, port_name: &str) {
         if let Interface::LinuxBridge(br_iface) = self {
             br_iface.remove_port(port_name);
+        } else if let Interface::Bond(iface) = self {
+            iface.remove_port(port_name);
+        }
+    }
+
+    pub(crate) fn parent(&self) -> Option<&str> {
+        match self {
+            Interface::Vlan(vlan) => vlan.parent(),
+            Interface::OvsInterface(ovs) => ovs.parent(),
+            _ => None,
         }
     }
 }

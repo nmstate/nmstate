@@ -236,8 +236,44 @@ function run_tests {
             -k '\
             not test_linux_bridge_over_bond_over_port_in_one_transaction and \
             not test_explicitly_ignore_a_bridge_port and \
-            not test_create_linux_bridge_with_copy_mac_from and \
-            not test_linux_bridge_enable_and_disable_accept_all_mac_addresses' \
+            not test_create_linux_bridge_with_copy_mac_from' \
+            ${nmstate_pytest_extra_args}"
+        exec_cmd "
+          env  \
+          PYTHONPATH=$CONTAINER_WORKSPACE/rust/src/python \
+          pytest \
+            $PYTEST_OPTIONS \
+            tests/integration/interface_common_test.py \
+            -k '\
+            test_enable_and_disable_accept_all_mac_addresses' \
+            ${nmstate_pytest_extra_args}"
+        exec_cmd "
+          env  \
+          PYTHONPATH=$CONTAINER_WORKSPACE/rust/src/python \
+          pytest \
+            $PYTEST_OPTIONS \
+            tests/integration/route_test.py \
+            -k 'not rule' \
+            ${nmstate_pytest_extra_args}"
+        exec_cmd "
+          env  \
+          PYTHONPATH=$CONTAINER_WORKSPACE/rust/src/python \
+          pytest \
+            $PYTEST_OPTIONS \
+            tests/integration/bond_test.py \
+            -k '\
+            not test_preserve_bond_after_bridge_removal and \
+            not test_bond_mac_restriction_without_mac_in_desire and \
+            not test_bond_mac_restriction_with_mac_in_desire and \
+            not test_bond_mac_restriction_in_desire_mac_in_current and \
+            not test_bond_mac_restriction_in_current_mac_in_desire and \
+            not test_create_bond_with_both_miimon_and_arp_internal and \
+            not test_create_bond_with_copy_mac_from and \
+            not test_create_bond_with_copy_mac_from_bond_port_perm_hwaddr and \
+            not test_remove_mode4_bond_and_create_mode5_with_the_same_port and \
+            not test_create_bond_without_mode and \
+            not test_ignore_verification_error_on_invalid_bond_option and \
+            not test_bond_ad_actor_system_with_multicast_mac_address' \
             ${nmstate_pytest_extra_args}"
     fi
 }

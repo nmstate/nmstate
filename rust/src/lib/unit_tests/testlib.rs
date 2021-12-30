@@ -1,7 +1,8 @@
 use crate::{
-    EthernetInterface, Interface, InterfaceType, LinuxBridgeInterface,
-    OvsBridgeConfig, OvsBridgeInterface, OvsBridgePortConfig, OvsInterface,
-    UnknownInterface,
+    EthernetInterface, Interface, InterfaceType, LinuxBridgeConfig,
+    LinuxBridgeInterface, LinuxBridgePortConfig, OvsBridgeConfig,
+    OvsBridgeInterface, OvsBridgePortConfig, OvsInterface, UnknownInterface,
+    VlanConfig, VlanInterface,
 };
 
 pub(crate) fn new_eth_iface(name: &str) -> Interface {
@@ -47,6 +48,17 @@ pub(crate) fn new_ovs_iface(name: &str, ctrl_name: &str) -> Interface {
     Interface::OvsInterface(iface)
 }
 
+pub(crate) fn new_vlan_iface(name: &str, parent: &str, id: u16) -> Interface {
+    let mut iface = VlanInterface::new();
+    iface.base.name = name.to_string();
+    iface.base.iface_type = InterfaceType::Vlan;
+    iface.vlan = Some(VlanConfig {
+        base_iface: parent.to_string(),
+        id,
+    });
+    Interface::Vlan(iface)
+}
+
 pub(crate) fn new_nested_4_ifaces() -> [Interface; 6] {
     let br0 = new_br_iface("br0");
     let mut br1 = new_br_iface("br1");
@@ -68,4 +80,23 @@ pub(crate) fn new_nested_4_ifaces() -> [Interface; 6] {
 
     // Place the ifaces in mixed order to complex the work
     [br0, br1, br2, br3, p1, p2]
+}
+
+pub(crate) fn bridge_with_ports(name: &str, ports: &[&str]) -> Interface {
+    let ports = ports
+        .iter()
+        .map(|port| LinuxBridgePortConfig {
+            name: port.to_string(),
+            ..Default::default()
+        })
+        .collect::<Vec<_>>();
+
+    let mut br0 = new_br_iface(name);
+    if let Interface::LinuxBridge(br) = &mut br0 {
+        br.bridge = Some(LinuxBridgeConfig {
+            port: Some(ports),
+            ..Default::default()
+        })
+    };
+    br0
 }

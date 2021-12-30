@@ -1,6 +1,8 @@
 use crate::{
+    ifaces::MergedInterfaces,
     unit_tests::testlib::{
         new_eth_iface, new_ovs_br_iface, new_ovs_iface, new_unknown_iface,
+        new_vlan_iface,
     },
     InterfaceState, InterfaceType, Interfaces,
 };
@@ -16,6 +18,7 @@ fn test_resolve_unknown_type_absent_eth() {
     let mut ifaces = Interfaces::new();
     ifaces.push(absent_iface);
 
+    ifaces.resolve_unknown_ifaces(&cur_ifaces).unwrap();
     let (_, _, del_ifaces) = ifaces.gen_state_for_apply(&cur_ifaces).unwrap();
 
     let del_ifaces = del_ifaces.to_vec();
@@ -48,4 +51,50 @@ fn test_resolve_unknown_type_absent_multiple() {
     assert_eq!(del_ifaces[1].name(), "br0");
     assert_eq!(del_ifaces[1].iface_type(), InterfaceType::OvsBridge);
     assert!(del_ifaces[1].is_absent());
+}
+
+#[test]
+fn test_merge_interfaces() {
+    let mut current = Interfaces::new();
+    current.push(new_eth_iface("eth1"));
+    current.push(new_eth_iface("eth2"));
+
+    let mut add = Interfaces::new();
+    add.push(new_eth_iface("eth3"));
+
+    let mut update = Interfaces::new();
+    // Set eth1 down
+    let mut eth1 = new_eth_iface("eth1");
+    eth1.base_iface_mut().state = InterfaceState::Down;
+    update.push(eth1);
+
+    let mut delete = Interfaces::new();
+    delete.push(new_eth_iface("eth2"));
+
+    let desired = MergedInterfaces::merge(&current, &add, &update, &delete);
+
+    let eth1 = desired.find_by_name("eth1");
+    assert!(eth1.is_some());
+    assert_eq!(eth1.unwrap().base_iface().state, InterfaceState::Down);
+
+    assert!(desired.find_by_name("eth2").is_none());
+
+    assert!(desired.find_by_name("eth3").is_some());
+}
+
+#[test]
+fn test_orphaned_vlan() {
+    let mut current = Interfaces::new();
+    current.push(new_eth_iface("eth0"));
+    current.push(new_vlan_iface("eth0.10", "eth0", 10));
+
+    let mut delete = Interfaces::new();
+    delete.push(new_eth_iface("eth0"));
+
+    let empty = Interfaces::new();
+
+    let desired = MergedInterfaces::merge(&current, &empty, &empty, &delete);
+    let orphaned = desired.orphaned_interfaces();
+    assert_eq!(orphaned.len(), 1);
+    assert_eq!(orphaned[0].as_str(), "eth0.10");
 }

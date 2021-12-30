@@ -3,7 +3,6 @@ use std::collections::HashSet;
 use log::info;
 use nm_dbus::{NmApi, NmConnection, NmDeviceState};
 
-use crate::nm::profile::{deactivate_nm_profiles, get_exist_profile};
 use crate::{
     nm::connection::{
         create_index_for_nm_conns_by_name_type, iface_to_nm_connections,
@@ -12,10 +11,12 @@ use crate::{
     nm::device::create_index_for_nm_devs,
     nm::error::nm_error_to_nmstate,
     nm::profile::{
-        activate_nm_profiles, delete_exist_profiles, save_nm_profiles,
-        use_uuid_for_controller_reference,
+        activate_nm_profiles, deactivate_nm_profiles, delete_exist_profiles,
+        get_exist_profile, save_nm_profiles, use_uuid_for_controller_reference,
     },
+    nm::route::is_route_removed,
     Interface, InterfaceType, NetworkState, NmstateError, OvsBridgeInterface,
+    RouteEntry,
 };
 
 pub(crate) fn nm_apply(
@@ -123,6 +124,16 @@ fn apply_single_state(
         .map_err(nm_error_to_nmstate)?;
     let nm_ac_uuids: Vec<&str> =
         nm_acs.iter().map(|nm_ac| &nm_ac.uuid as &str).collect();
+    let activated_nm_conns: Vec<&NmConnection> = exist_nm_conns
+        .iter()
+        .filter(|c| {
+            if let Some(uuid) = c.uuid() {
+                nm_ac_uuids.contains(&uuid)
+            } else {
+                false
+            }
+        })
+        .collect();
 
     let ifaces = net_state.interfaces.to_vec();
 
@@ -134,6 +145,16 @@ fn apply_single_state(
                     ctrl_iface = des_net_state
                         .interfaces
                         .get_iface(ctrl_iface_name, ctrl_type.clone());
+                }
+            }
+            let mut routes: Vec<&RouteEntry> = Vec::new();
+            if let Some(config_routes) = net_state.routes.config.as_ref() {
+                for route in config_routes {
+                    if let Some(i) = route.next_hop_iface.as_ref() {
+                        if i == iface.name() {
+                            routes.push(route);
+                        }
+                    }
                 }
             }
             for nm_conn in iface_to_nm_connections(
@@ -171,6 +192,16 @@ fn apply_single_state(
         &des_net_state.interfaces.user_ifaces,
         &cur_net_state.interfaces.user_ifaces,
         &exist_nm_conns,
+    )?;
+
+    let nm_conns_to_deactivate_first = gen_nm_conn_need_to_deactivate_first(
+        nm_conns_to_activate.as_slice(),
+        activated_nm_conns.as_slice(),
+    );
+    deactivate_nm_profiles(
+        nm_api,
+        nm_conns_to_deactivate_first.as_slice(),
+        checkpoint,
     )?;
     save_nm_profiles(nm_api, nm_conns_to_activate.as_slice(), checkpoint)?;
     delete_exist_profiles(nm_api, &exist_nm_conns, &nm_conns_to_activate)?;
@@ -248,4 +279,31 @@ fn delete_orphan_ports(
             .map_err(nm_error_to_nmstate)?;
     }
     Ok(())
+}
+
+// NM has problem on remove routes, we need to deactivate it first
+//  https://bugzilla.redhat.com/1837254
+fn gen_nm_conn_need_to_deactivate_first<'a>(
+    nm_conns_to_activate: &[NmConnection],
+    activated_nm_conns: &[&'a NmConnection],
+) -> Vec<&'a NmConnection> {
+    let mut ret: Vec<&NmConnection> = Vec::new();
+    for nm_conn in nm_conns_to_activate {
+        if let Some(uuid) = nm_conn.uuid() {
+            if let Some(activated_nm_con) =
+                activated_nm_conns.iter().find(|c| {
+                    if let Some(cur_uuid) = c.uuid() {
+                        cur_uuid == uuid
+                    } else {
+                        false
+                    }
+                })
+            {
+                if is_route_removed(nm_conn, activated_nm_con) {
+                    ret.push(activated_nm_con);
+                }
+            }
+        }
+    }
+    ret
 }

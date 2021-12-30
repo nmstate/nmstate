@@ -2,7 +2,7 @@ include ./Makefile.inc
 
 RUST_DEBUG_BIN_DIR=./target/debug
 RUST_RELEASE_BIN_DIR=./target/release
-CLI_EXEC=ncl
+CLI_EXEC=nmstatectl-rust
 CLI_EXEC_DEBUG=$(RUST_DEBUG_BIN_DIR)/$(CLI_EXEC)
 CLIB_HEADER=nmstate.h
 CLIB_HEADER_IN=src/clib/$(CLIB_HEADER).in

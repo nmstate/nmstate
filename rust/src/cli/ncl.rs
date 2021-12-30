@@ -4,7 +4,7 @@ use std::io::{self, Read};
 
 use env_logger::Builder;
 use log::LevelFilter;
-use nmstate::NetworkState;
+use nmstate::{NetworkState, Routes};
 use serde::Serialize;
 use serde_yaml::{self, Value};
 
@@ -15,7 +15,7 @@ const SUB_CMD_SHOW: &str = "show";
 const SUB_CMD_APPLY: &str = "apply";
 
 fn main() {
-    let matches = clap::App::new("ncl")
+    let matches = clap::App::new("nmstatectl")
         .version("1.0")
         .author("Gris Ge <fge@redhat.com>")
         .about("Command line of nmstate")
@@ -141,6 +141,7 @@ fn gen_conf(file_path: &str) -> Result<String, CliError> {
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
 struct SortedNetworkState {
+    routes: Routes,
     interfaces: Vec<Value>,
 }
 
@@ -181,11 +182,13 @@ fn sort_netstate(
         }
         return Ok(SortedNetworkState {
             interfaces: new_ifaces,
+            routes: net_state.routes,
         });
     }
 
     Ok(SortedNetworkState {
         interfaces: Vec::new(),
+        routes: net_state.routes,
     })
 }
 

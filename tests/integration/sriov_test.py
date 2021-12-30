@@ -268,3 +268,42 @@ def test_wait_sriov_vf_been_deleted_when_total_vfs_decrease():
             Interface.STATE
         ] = InterfaceState.ABSENT
         libnmstate.apply(desired_state)
+
+
+@pytest.mark.skipif(
+    not os.environ.get("TEST_REAL_NIC"),
+    reason="Need to define TEST_REAL_NIC for SR-IOV test",
+)
+def test_sriov_vf_vlan_id_and_qos():
+    pf_name = _test_nic_name()
+    desired_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: pf_name,
+                Ethernet.CONFIG_SUBTREE: {
+                    Ethernet.SRIOV_SUBTREE: {
+                        Ethernet.SRIOV.TOTAL_VFS: 2,
+                        Ethernet.SRIOV.VFS_SUBTREE: [
+                            {
+                                Ethernet.SRIOV.VFS.ID: 0,
+                                Ethernet.SRIOV.VFS.VLAN_ID: 100,
+                                Ethernet.SRIOV.VFS.QOS: 5,
+                            },
+                            {
+                                Ethernet.SRIOV.VFS.ID: 1,
+                                Ethernet.SRIOV.VFS.VLAN_ID: 102,
+                                Ethernet.SRIOV.VFS.QOS: 6,
+                            },
+                        ],
+                    }
+                },
+            }
+        ]
+    }
+    try:
+        libnmstate.apply(desired_state)
+    finally:
+        desired_state[Interface.KEY][0][
+            Interface.STATE
+        ] = InterfaceState.ABSENT
+        libnmstate.apply(desired_state)
