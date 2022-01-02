@@ -161,7 +161,7 @@ impl BondConfig {
                 opts.validate(mode, base)?;
             } else {
                 return Err(NmstateError::new(
-                    ErrorKind::ValueError,
+                    ErrorKind::InvalidArgument,
                     "Bond mode is mandatory".to_string(),
                 ));
             }
@@ -484,13 +484,13 @@ where
                     str_value.parse::<u32>().map_err(D::Error::custom)?
                 } else {
                     return Err(NmstateError::new(
-                            ErrorKind::ValueError,
+                            ErrorKind::InvalidArgument,
                             format!("Property value: {} is not valid, only numeric values are allowed.", str_value)))
                     .map_err(D::Error::custom);
                 }
             } else {
                 return Err(NmstateError::new(
-                        ErrorKind::ValueError,
+                        ErrorKind::InvalidArgument,
                         format!("Property value: {} is not valid, only numeric values are allowed.", json_value)))
                 .map_err(D::Error::custom);
             }
@@ -549,7 +549,7 @@ impl BondOptions {
                 && base.mac_address.is_some()
             {
                 return Err(NmstateError::new(
-                        ErrorKind::ValueError,
+                        ErrorKind::InvalidArgument,
                             "MAC address cannot be specified in bond interface along with fail_over_mac active on active backup mode".to_string()
                     ));
             }
@@ -561,7 +561,7 @@ impl BondOptions {
         if let Some(ad_actor_system) = &self.ad_actor_system {
             if ad_actor_system.to_uppercase().starts_with("01:00:5E") {
                 return Err(NmstateError::new(
-                        ErrorKind::ValueError,
+                        ErrorKind::InvalidArgument,
                             "The ad_actor_system bond option cannot be an IANA multicast address(prefix with 01:00:5E)".to_string()
                     ));
             }

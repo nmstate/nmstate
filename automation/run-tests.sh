@@ -266,12 +266,8 @@ function run_tests {
             not test_bond_mac_restriction_without_mac_in_desire and \
             not test_bond_mac_restriction_with_mac_in_desire and \
             not test_bond_mac_restriction_in_desire_mac_in_current and \
-            not test_bond_mac_restriction_in_current_mac_in_desire and \
-            not test_create_bond_with_both_miimon_and_arp_internal and \
             not test_remove_mode4_bond_and_create_mode5_with_the_same_port and \
-            not test_create_bond_without_mode and \
-            not test_ignore_verification_error_on_invalid_bond_option and \
-            not test_bond_ad_actor_system_with_multicast_mac_address' \
+            not test_bond_mac_restriction_in_current_mac_in_desire' \
             ${nmstate_pytest_extra_args}"
         exec_cmd "
           env  \
