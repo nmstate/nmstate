@@ -1,5 +1,4 @@
 use crate::{
-    ifaces::MergedInterfaces,
     unit_tests::testlib::{
         new_eth_iface, new_ovs_br_iface, new_ovs_iface, new_unknown_iface,
         new_vlan_iface,
@@ -54,47 +53,38 @@ fn test_resolve_unknown_type_absent_multiple() {
 }
 
 #[test]
-fn test_merge_interfaces() {
-    let mut current = Interfaces::new();
-    current.push(new_eth_iface("eth1"));
-    current.push(new_eth_iface("eth2"));
-
-    let mut add = Interfaces::new();
-    add.push(new_eth_iface("eth3"));
-
-    let mut update = Interfaces::new();
-    // Set eth1 down
-    let mut eth1 = new_eth_iface("eth1");
-    eth1.base_iface_mut().state = InterfaceState::Down;
-    update.push(eth1);
-
-    let mut delete = Interfaces::new();
-    delete.push(new_eth_iface("eth2"));
-
-    let desired = MergedInterfaces::merge(&current, &add, &update, &delete);
-
-    let eth1 = desired.find_by_name("eth1");
-    assert!(eth1.is_some());
-    assert_eq!(eth1.unwrap().base_iface().state, InterfaceState::Down);
-
-    assert!(desired.find_by_name("eth2").is_none());
-
-    assert!(desired.find_by_name("eth3").is_some());
-}
-
-#[test]
-fn test_orphaned_vlan() {
+fn test_mark_orphan_vlan_as_absent() {
     let mut current = Interfaces::new();
     current.push(new_eth_iface("eth0"));
     current.push(new_vlan_iface("eth0.10", "eth0", 10));
 
-    let mut delete = Interfaces::new();
-    delete.push(new_eth_iface("eth0"));
+    let mut desired = Interfaces::new();
+    let mut eth0 = new_eth_iface("eth0");
+    eth0.base_iface_mut().state = InterfaceState::Absent;
+    desired.push(eth0);
 
-    let empty = Interfaces::new();
+    let (_, _, del_ifaces) = desired.gen_state_for_apply(&current).unwrap();
+    assert_eq!(del_ifaces.to_vec().len(), 2);
+    assert!(del_ifaces.kernel_ifaces["eth0"].is_absent());
+    assert!(del_ifaces.kernel_ifaces["eth0.10"].is_absent());
+}
 
-    let desired = MergedInterfaces::merge(&current, &empty, &empty, &delete);
-    let orphaned = desired.orphaned_interfaces();
-    assert_eq!(orphaned.len(), 1);
-    assert_eq!(orphaned[0].as_str(), "eth0.10");
+#[test]
+fn test_check_orphan_vlan_change_parent() {
+    let mut current = Interfaces::new();
+    current.push(new_eth_iface("eth0"));
+    current.push(new_vlan_iface("eth0.10", "eth0", 10));
+
+    let mut desired = Interfaces::new();
+    let mut eth0 = new_eth_iface("eth0");
+    eth0.base_iface_mut().state = InterfaceState::Absent;
+    desired.push(eth0);
+    desired.push(new_vlan_iface("eth0.10", "eth1", 10));
+    desired.push(new_eth_iface("eth1"));
+
+    let (_, chg_ifaces, del_ifaces) =
+        desired.gen_state_for_apply(&current).unwrap();
+    assert_eq!(del_ifaces.to_vec().len(), 1);
+    assert!(del_ifaces.kernel_ifaces["eth0"].is_absent());
+    assert!(!chg_ifaces.kernel_ifaces["eth0.10"].is_absent());
 }
