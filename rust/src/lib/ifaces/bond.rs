@@ -584,7 +584,7 @@ impl BondOptions {
                 if miimon > &0 && arp_interval > &0 {
                     return Err(NmstateError::new(
                         ErrorKind::InvalidArgument,
-                            "The ad_actor_system bond option cannot be an IANA multicast address(prefix with 01:00:5E)".to_string()
+                            "Bond miimon and arp interval are not compatible options.".to_string()
                     ));
                 }
             }
