@@ -101,6 +101,20 @@ pub struct NmSettingIp {
     pub dns_priority: Option<i32>,
     pub dns_search: Option<Vec<String>>,
     pub dns: Option<Vec<String>>,
+    pub ignore_auto_dns: Option<bool>,
+    pub never_default: Option<bool>,
+    pub ignore_auto_routes: Option<bool>,
+    pub route_table: Option<u32>,
+    pub dhcp_client_id: Option<String>,
+    pub dhcp_timeout: Option<i32>,
+    // IPv6 only
+    pub ra_timeout: Option<i32>,
+    // IPv6 only
+    pub addr_gen_mode: Option<i32>,
+    // IPv6 only
+    pub dhcp_duid: Option<String>,
+    // IPv6 only
+    pub dhcp_iaid: Option<String>,
     _other: HashMap<String, zvariant::OwnedValue>,
 }
 
@@ -120,6 +134,19 @@ impl TryFrom<DbusDictionary> for NmSettingIp {
         setting.dns = _from_map!(v, "dns", parse_nm_dns)?;
         setting.dns_search = _from_map!(v, "dns-search", parse_nm_dns_search)?;
         setting.dns_priority = _from_map!(v, "dns-priority", i32::try_from)?;
+        setting.ignore_auto_dns =
+            _from_map!(v, "ignore-auto-dns", bool::try_from)?;
+        setting.never_default = _from_map!(v, "never-default", bool::try_from)?;
+        setting.ignore_auto_routes =
+            _from_map!(v, "ignore-auto-routes", bool::try_from)?;
+        setting.dhcp_client_id =
+            _from_map!(v, "dhcp-client-id", String::try_from)?;
+        setting.dhcp_timeout = _from_map!(v, "dhcp-timeout", i32::try_from)?;
+        setting.ra_timeout = _from_map!(v, "ra-timeout", i32::try_from)?;
+        setting.addr_gen_mode = _from_map!(v, "addr-gen-mode", i32::try_from)?;
+        setting.dhcp_duid = _from_map!(v, "dhcp-duid", String::try_from)?;
+        setting.dhcp_iaid = _from_map!(v, "dhcp-iaid", String::try_from)?;
+        setting.route_table = _from_map!(v, "route-table", u32::try_from)?;
 
         // NM deprecated `addresses` property in the favor of `addresss-data`
         v.remove("addresses");
@@ -191,6 +218,36 @@ impl NmSettingIp {
         }
         if let Some(dns_priority) = self.dns_priority {
             ret.insert("dns-priority", zvariant::Value::new(dns_priority));
+        }
+        if let Some(v) = self.ignore_auto_dns {
+            ret.insert("ignore-auto-dns", zvariant::Value::new(v));
+        }
+        if let Some(v) = self.ignore_auto_routes {
+            ret.insert("ignore-auto-routes", zvariant::Value::new(v));
+        }
+        if let Some(v) = self.never_default {
+            ret.insert("never-default", zvariant::Value::new(v));
+        }
+        if let Some(v) = &self.dhcp_client_id {
+            ret.insert("dhcp-client-id", zvariant::Value::new(v));
+        }
+        if let Some(v) = self.dhcp_timeout {
+            ret.insert("dhcp-timeout", zvariant::Value::new(v));
+        }
+        if let Some(v) = self.ra_timeout {
+            ret.insert("ra-timeout", zvariant::Value::new(v));
+        }
+        if let Some(v) = self.addr_gen_mode {
+            ret.insert("addr-gen-mode", zvariant::Value::new(v));
+        }
+        if let Some(v) = &self.dhcp_duid {
+            ret.insert("dhcp-duid", zvariant::Value::new(v));
+        }
+        if let Some(v) = &self.dhcp_iaid {
+            ret.insert("dhcp-iaid", zvariant::Value::new(v));
+        }
+        if let Some(v) = &self.route_table {
+            ret.insert("route-table", zvariant::Value::new(v));
         }
         ret.extend(self._other.iter().map(|(key, value)| {
             (key.as_str(), zvariant::Value::from(value.clone()))
