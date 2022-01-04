@@ -5,7 +5,7 @@ use log::{debug, warn};
 use serde::de::{self, Deserializer, MapAccess, Visitor};
 use serde::{ser::SerializeStruct, Deserialize, Serialize, Serializer};
 
-use crate::{ErrorKind, NmstateError};
+use crate::{DnsClientState, ErrorKind, NmstateError};
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct InterfaceIpv4 {
@@ -13,6 +13,7 @@ pub struct InterfaceIpv4 {
     pub prop_list: Vec<&'static str>,
     pub dhcp: bool,
     pub addresses: Vec<InterfaceIpAddr>,
+    pub(crate) dns: Option<DnsClientState>,
 }
 
 impl Serialize for InterfaceIpv4 {
@@ -137,6 +138,7 @@ impl<'de> Deserialize<'de> for InterfaceIpv4 {
                     prop_list,
                     dhcp,
                     addresses,
+                    dns: None,
                 })
             }
         }
@@ -163,6 +165,9 @@ impl InterfaceIpv4 {
         }
         if other.prop_list.contains(&"addresses") {
             self.addresses = other.addresses.clone();
+        }
+        if other.prop_list.contains(&"dns") {
+            self.dns = other.dns.clone();
         }
         for other_prop_name in &other.prop_list {
             if !self.prop_list.contains(other_prop_name) {
@@ -205,6 +210,7 @@ pub struct InterfaceIpv6 {
     pub dhcp: bool,
     pub autoconf: bool,
     pub addresses: Vec<InterfaceIpAddr>,
+    pub(crate) dns: Option<DnsClientState>,
 }
 
 impl Serialize for InterfaceIpv6 {
@@ -347,6 +353,7 @@ impl<'de> Deserialize<'de> for InterfaceIpv6 {
                     dhcp,
                     autoconf,
                     addresses,
+                    dns: None,
                 })
             }
         }
@@ -376,6 +383,9 @@ impl InterfaceIpv6 {
         }
         if other.prop_list.contains(&"addresses") {
             self.addresses = other.addresses.clone();
+        }
+        if other.prop_list.contains(&"dns") {
+            self.dns = other.dns.clone();
         }
         for other_prop_name in &other.prop_list {
             if !self.prop_list.contains(other_prop_name) {

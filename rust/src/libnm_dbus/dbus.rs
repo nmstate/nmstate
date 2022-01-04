@@ -19,7 +19,9 @@ use log::debug;
 
 use crate::{
     connection::{NmConnection, NmConnectionDbusValue},
-    dbus_proxy::{NetworkManagerProxy, NetworkManagerSettingProxy},
+    dbus_proxy::{
+        NetworkManagerDnsProxy, NetworkManagerProxy, NetworkManagerSettingProxy,
+    },
     error::{ErrorKind, NmError},
 };
 
@@ -54,6 +56,7 @@ pub(crate) struct NmDbus<'a> {
     pub(crate) connection: zbus::Connection,
     proxy: NetworkManagerProxy<'a>,
     setting_proxy: NetworkManagerSettingProxy<'a>,
+    dns_proxy: NetworkManagerDnsProxy<'a>,
 }
 
 impl<'a> NmDbus<'a> {
@@ -61,11 +64,13 @@ impl<'a> NmDbus<'a> {
         let connection = zbus::Connection::new_system()?;
         let proxy = NetworkManagerProxy::new(&connection)?;
         let setting_proxy = NetworkManagerSettingProxy::new(&connection)?;
+        let dns_proxy = NetworkManagerDnsProxy::new(&connection)?;
 
         Ok(Self {
             connection,
             proxy,
             setting_proxy,
+            dns_proxy,
         })
     }
 
@@ -337,6 +342,12 @@ impl<'a> NmDbus<'a> {
             &str_to_obj_path(checkpoint)?,
             added_time_sec,
         )?)
+    }
+
+    pub(crate) fn get_dns_configuration(
+        &self,
+    ) -> Result<Vec<HashMap<String, zvariant::OwnedValue>>, NmError> {
+        Ok(self.dns_proxy.configuration()?)
     }
 }
 

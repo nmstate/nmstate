@@ -5,6 +5,7 @@ mod bridge;
 mod checkpoint;
 mod connection;
 mod device;
+mod dns;
 mod error;
 mod ip;
 mod ovs;
