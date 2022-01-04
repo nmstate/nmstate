@@ -1,8 +1,8 @@
 use crate::{
-    ifaces::MergedInterfaces,
+    ifaces::inter_ifaces_controller::check_overbook_ports,
     unit_tests::testlib::{
-        bridge_with_ports, new_br_iface, new_eth_iface, new_nested_4_ifaces,
-        new_ovs_br_iface, new_ovs_iface,
+        bond_with_ports, bridge_with_ports, new_br_iface, new_eth_iface,
+        new_nested_4_ifaces, new_ovs_br_iface, new_ovs_iface,
     },
     ErrorKind, Interface, InterfaceState, InterfaceType, Interfaces,
     OvsBridgeInterface,
@@ -231,29 +231,27 @@ fn test_auto_absent_ovs_interface() {
 
 #[test]
 fn test_overbook_port_in_single_bridge() {
-    let mut add = Interfaces::new();
+    let mut desired = Interfaces::new();
 
-    add.push(bridge_with_ports("br0", &["eth0"]));
-    add.push(new_eth_iface("eth0"));
+    desired.push(bridge_with_ports("br0", &["eth0"]));
+    desired.push(new_eth_iface("eth0"));
 
-    let empty = Interfaces::new();
+    let current = Interfaces::new();
 
-    let desired = MergedInterfaces::merge(&empty, &add, &empty, &empty);
-    assert!(desired.check_overbooked_port().is_ok());
+    assert!(check_overbook_ports(&desired, &current).is_ok());
 }
 
 #[test]
 fn test_overbook_port_in_two_bridges() {
-    let mut add = Interfaces::new();
+    let mut desired = Interfaces::new();
 
-    add.push(bridge_with_ports("br0", &["eth0"]));
-    add.push(bridge_with_ports("br1", &["eth0"]));
-    add.push(new_eth_iface("eth0"));
+    desired.push(bridge_with_ports("br0", &["eth0"]));
+    desired.push(bridge_with_ports("br1", &["eth0"]));
 
-    let empty = Interfaces::new();
+    let mut current = Interfaces::new();
+    current.push(new_eth_iface("eth0"));
 
-    let desired = MergedInterfaces::merge(&empty, &add, &empty, &empty);
-    let result = desired.check_overbooked_port();
+    let result = check_overbook_ports(&desired, &current);
     assert!(result.is_err());
     assert_eq!(result.err().unwrap().kind(), ErrorKind::InvalidArgument);
 }
@@ -262,17 +260,16 @@ fn test_overbook_port_in_two_bridges() {
 fn test_overbook_port_moves_between_bridges() {
     let mut current = Interfaces::new();
     current.push(bridge_with_ports("br0", &["eth0"]));
+    let mut eth0 = new_eth_iface("eth0");
+    eth0.base_iface_mut().controller = Some("br0".to_string());
+    eth0.base_iface_mut().controller_type = Some(InterfaceType::LinuxBridge);
+    current.push(eth0);
 
-    let mut update = Interfaces::new();
-    update.push(bridge_with_ports("br0", &[]));
+    let mut desired = Interfaces::new();
+    desired.push(bridge_with_ports("br0", &[]));
+    desired.push(bridge_with_ports("br1", &["eth0"]));
 
-    let mut add = Interfaces::new();
-    add.push(bridge_with_ports("br1", &["eth0"]));
-
-    let emtpy = Interfaces::new();
-
-    let desired = MergedInterfaces::merge(&current, &add, &update, &emtpy);
-    assert!(desired.check_overbooked_port().is_ok());
+    assert!(check_overbook_ports(&desired, &current).is_ok());
 }
 
 #[test]
@@ -280,13 +277,66 @@ fn test_overbook_current_bridge_is_deleted() {
     let mut current = Interfaces::new();
     current.push(bridge_with_ports("br0", &["eth0"]));
 
-    let mut add = Interfaces::new();
-    add.push(bridge_with_ports("br1", &["eth0"]));
+    let mut desired = Interfaces::new();
+    desired.push(bridge_with_ports("br1", &["eth0"]));
+    let mut absent_iface = new_br_iface("br0");
+    absent_iface.base_iface_mut().state = InterfaceState::Absent;
+    desired.push(absent_iface);
 
-    let mut delete = Interfaces::new();
-    delete.push(new_br_iface("br0"));
+    assert!(check_overbook_ports(&desired, &current).is_ok());
+}
 
-    let empty = Interfaces::new();
-    let desired = MergedInterfaces::merge(&current, &add, &empty, &delete);
-    assert!(desired.check_overbooked_port().is_ok());
+#[test]
+fn test_overbook_port_used_in_current_bridge() {
+    let mut current = Interfaces::new();
+    current.push(bridge_with_ports("br0", &["eth0"]));
+    let mut eth0 = new_eth_iface("eth0");
+    eth0.base_iface_mut().controller = Some("br0".to_string());
+    eth0.base_iface_mut().controller_type = Some(InterfaceType::LinuxBridge);
+    current.push(eth0);
+
+    let mut desired = Interfaces::new();
+    desired.push(bridge_with_ports("br1", &["eth0"]));
+
+    let result = check_overbook_ports(&desired, &current);
+    assert!(result.is_err());
+    assert_eq!(result.err().unwrap().kind(), ErrorKind::InvalidArgument);
+}
+
+#[test]
+fn test_overbook_port_used_in_current_bond() {
+    let mut current = Interfaces::new();
+    current.push(bond_with_ports("bond0", &["eth0"]));
+    let mut eth0 = new_eth_iface("eth0");
+    eth0.base_iface_mut().controller = Some("bond0".to_string());
+    eth0.base_iface_mut().controller_type = Some(InterfaceType::Bond);
+    current.push(eth0);
+
+    let mut desired = Interfaces::new();
+    desired.push(bond_with_ports("bond1", &["eth0"]));
+
+    let result = check_overbook_ports(&desired, &current);
+    assert!(result.is_err());
+    assert_eq!(result.err().unwrap().kind(), ErrorKind::InvalidArgument);
+}
+
+#[test]
+fn test_overbook_swap_port_of_bond() {
+    let mut current = Interfaces::new();
+    current.push(bond_with_ports("bond0", &["eth0"]));
+    current.push(bond_with_ports("bond1", &["eth1"]));
+    let mut eth0 = new_eth_iface("eth0");
+    eth0.base_iface_mut().controller = Some("bond0".to_string());
+    eth0.base_iface_mut().controller_type = Some(InterfaceType::Bond);
+    current.push(eth0);
+    let mut eth1 = new_eth_iface("eth1");
+    eth1.base_iface_mut().controller = Some("bond1".to_string());
+    eth1.base_iface_mut().controller_type = Some(InterfaceType::Bond);
+    current.push(eth1);
+
+    let mut desired = Interfaces::new();
+    desired.push(bond_with_ports("bond1", &["eth0"]));
+    desired.push(bond_with_ports("bond0", &["eth1"]));
+
+    assert!(check_overbook_ports(&desired, &current).is_ok());
 }
