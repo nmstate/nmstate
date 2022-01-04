@@ -4,6 +4,10 @@ use log::{debug, info, warn};
 use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::{
+    dns::{
+        get_cur_dns_ifaces, is_dns_changed, purge_dns_config,
+        reselect_dns_ifaces,
+    },
     ifaces::MergedInterfaces,
     nispor::{nispor_apply, nispor_retrieve},
     nm::{
@@ -11,7 +15,7 @@ use crate::{
         nm_checkpoint_rollback, nm_checkpoint_timeout_extend, nm_gen_conf,
         nm_retrieve,
     },
-    ErrorKind, Interface, InterfaceState, InterfaceType, Interfaces,
+    DnsState, ErrorKind, Interface, InterfaceState, InterfaceType, Interfaces,
     NmstateError, RouteRules, Routes,
 };
 
@@ -23,6 +27,8 @@ const VERIFY_RETRY_COUNT_KERNEL_MODE: usize = 5;
 #[derive(Clone, Debug, Serialize, Default, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct NetworkState {
+    #[serde(rename = "dns-resolver", default)]
+    pub dns: DnsState,
     #[serde(rename = "route-rules", default)]
     pub rules: RouteRules,
     #[serde(default)]
@@ -42,8 +48,6 @@ pub struct NetworkState {
     include_secrets: bool,
     #[serde(skip)]
     include_status_data: bool,
-    #[serde(rename = "dns-resolver", default)]
-    pub dns: serde_json::Map<String, serde_json::Value>,
 }
 
 impl<'de> Deserialize<'de> for NetworkState {
@@ -60,7 +64,7 @@ impl<'de> Deserialize<'de> for NetworkState {
         }
         if let Some(dns_value) = v.get("dns-resolver") {
             net_state.prop_list.push("dns");
-            net_state.dns = serde_json::Map::deserialize(dns_value)
+            net_state.dns = DnsState::deserialize(dns_value)
                 .map_err(serde::de::Error::custom)?;
         }
         if let Some(route_value) = v.get("routes") {
@@ -227,6 +231,9 @@ impl NetworkState {
         if other.prop_list.contains(&"interfaces") {
             self.interfaces.update(&other.interfaces);
         }
+        if other.prop_list.contains(&"dns") {
+            self.dns = other.dns.clone();
+        }
     }
 
     pub fn gen_conf(
@@ -241,7 +248,8 @@ impl NetworkState {
     fn verify(&self, current: &Self) -> Result<(), NmstateError> {
         self.interfaces.verify(&current.interfaces)?;
         self.routes.verify(&current.routes)?;
-        self.rules.verify(&current.rules)
+        self.rules.verify(&current.rules)?;
+        self.dns.verify(&current.dns)
     }
 
     // Return three NetworkState:
@@ -256,6 +264,7 @@ impl NetworkState {
     ) -> Result<(Self, Self, Self), NmstateError> {
         self.routes.validate()?;
         self.rules.validate()?;
+        self.dns.validate()?;
 
         let mut add_net_state = NetworkState::new();
         let mut chg_net_state = NetworkState::new();
@@ -291,6 +300,12 @@ impl NetworkState {
         );
 
         self.include_rule_changes(
+            &mut add_net_state,
+            &mut chg_net_state,
+            current,
+        )?;
+
+        self.include_dns_changes(
             &mut add_net_state,
             &mut chg_net_state,
             current,
@@ -420,6 +435,67 @@ impl NetworkState {
                 log::error!("{}", e);
                 return Err(e);
             }
+        }
+        Ok(())
+    }
+
+    // The whole design of this DNS setting is matching NetworkManager
+    // design where DNS information is saved into each interface.
+    // When different network control backend nmstate supported, we need to
+    // move these code to NetworkManager plugin. Currently, we keep it
+    // here for consistency with route/route rule.
+    fn include_dns_changes(
+        &self,
+        add_net_state: &mut Self,
+        chg_net_state: &mut Self,
+        current: &Self,
+    ) -> Result<(), NmstateError> {
+        let mut self_clone = self.clone();
+        self_clone.dns.merge_current(&current.dns);
+
+        if is_dns_changed(&self_clone, current) {
+            let (v4_iface_name, v6_iface_name) =
+                reselect_dns_ifaces(&self_clone, current);
+            let (cur_v4_ifaces, cur_v6_ifaces) =
+                get_cur_dns_ifaces(&current.interfaces);
+            if let Some(dns_conf) = &self_clone.dns.config {
+                if dns_conf.is_purge() {
+                    purge_dns_config(
+                        false,
+                        cur_v4_ifaces.as_slice(),
+                        chg_net_state,
+                        current,
+                    );
+                    purge_dns_config(
+                        true,
+                        cur_v6_ifaces.as_slice(),
+                        chg_net_state,
+                        current,
+                    );
+                } else {
+                    purge_dns_config(
+                        false,
+                        &cur_v4_ifaces,
+                        chg_net_state,
+                        current,
+                    );
+                    purge_dns_config(
+                        true,
+                        &cur_v6_ifaces,
+                        chg_net_state,
+                        current,
+                    );
+                    dns_conf.save_dns_to_iface(
+                        &v4_iface_name,
+                        &v6_iface_name,
+                        add_net_state,
+                        chg_net_state,
+                        current,
+                    )?;
+                }
+            }
+        } else {
+            log::debug!("DNS configuration unchanged");
         }
         Ok(())
     }

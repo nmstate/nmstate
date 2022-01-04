@@ -33,7 +33,7 @@ from libnmstate.schema import Route
 IPV4_DNS_NAMESERVERS = ["8.8.8.8", "1.1.1.1"]
 EXTRA_IPV4_DNS_NAMESERVER = "9.9.9.9"
 IPV6_DNS_NAMESERVERS = ["2001:4860:4860::8888", "2606:4700:4700::1111"]
-IPV6_DNS_LONG_NAMESERVER = ["0000:0000:0000:0000:0000:0000:0000:0100"]
+IPV6_DNS_LONG_NAMESERVER = ["2000:0000:0000:0000:0000:0000:0000:0100"]
 EXTRA_IPV6_DNS_NAMESERVER = "2620:fe::9"
 EXAMPLE_SEARCHES = ["example.org", "example.com"]
 
@@ -316,7 +316,7 @@ def test_add_non_canonicalized_ipv6_nameserver():
     libnmstate.apply(desired_state)
 
     current_state = libnmstate.show()
-    assert "::100" in current_state[DNS.KEY][DNS.CONFIG][DNS.SERVER]
+    assert "2000::100" in current_state[DNS.KEY][DNS.CONFIG][DNS.SERVER]
 
 
 def _get_test_iface_states():

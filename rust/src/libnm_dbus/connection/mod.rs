@@ -19,6 +19,7 @@ mod macros;
 mod bond;
 mod bridge;
 mod conn;
+mod dns;
 mod ip;
 mod ovs;
 mod route;
@@ -47,3 +48,5 @@ pub(crate) use crate::connection::conn::{
 };
 pub use crate::connection::route::NmIpRoute;
 pub use crate::connection::route_rule::NmIpRouteRule;
+
+pub(crate) use crate::connection::macros::_from_map;

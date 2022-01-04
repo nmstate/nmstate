@@ -21,6 +21,10 @@ use log::warn;
 use serde::Deserialize;
 
 use crate::{
+    connection::dns::{
+        nm_ip_dns_search_to_value, nm_ip_dns_to_value, parse_nm_dns,
+        parse_nm_dns_search,
+    },
     connection::route::{
         nm_ip_routes_to_value, parse_nm_ip_route_data, NmIpRoute,
     },
@@ -94,6 +98,9 @@ pub struct NmSettingIp {
     pub addresses: Vec<String>,
     pub routes: Vec<NmIpRoute>,
     pub route_rules: Vec<NmIpRouteRule>,
+    pub dns_priority: Option<i32>,
+    pub dns_search: Option<Vec<String>>,
+    pub dns: Option<Vec<String>>,
     _other: HashMap<String, zvariant::OwnedValue>,
 }
 
@@ -110,6 +117,9 @@ impl TryFrom<DbusDictionary> for NmSettingIp {
         setting.route_rules =
             _from_map!(v, "routing-rules", parse_nm_ip_rule_data)?
                 .unwrap_or_default();
+        setting.dns = _from_map!(v, "dns", parse_nm_dns)?;
+        setting.dns_search = _from_map!(v, "dns-search", parse_nm_dns_search)?;
+        setting.dns_priority = _from_map!(v, "dns-priority", i32::try_from)?;
 
         // NM deprecated `addresses` property in the favor of `addresss-data`
         v.remove("addresses");
@@ -171,6 +181,17 @@ impl NmSettingIp {
         ret.insert("address-data", zvariant::Value::Array(addresss_data));
         ret.insert("route-data", nm_ip_routes_to_value(&self.routes)?);
         ret.insert("routing-rules", nm_ip_rules_to_value(&self.route_rules)?);
+        if let Some(dns_servers) = self.dns.as_ref() {
+            if !dns_servers.is_empty() {
+                ret.insert("dns", nm_ip_dns_to_value(dns_servers)?);
+            }
+        }
+        if let Some(dns_searches) = self.dns_search.as_ref() {
+            ret.insert("dns-search", nm_ip_dns_search_to_value(dns_searches)?);
+        }
+        if let Some(dns_priority) = self.dns_priority {
+            ret.insert("dns-priority", zvariant::Value::new(dns_priority));
+        }
         ret.extend(self._other.iter().map(|(key, value)| {
             (key.as_str(), zvariant::Value::from(value.clone()))
         }));

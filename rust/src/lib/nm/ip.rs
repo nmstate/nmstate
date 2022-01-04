@@ -1,9 +1,11 @@
 use crate::{
-    nm::route::gen_nm_ip_routes, nm::route_rule::gen_nm_ip_rules, ErrorKind,
-    Interface, InterfaceIpv4, InterfaceIpv6, NmstateError, RouteEntry,
-    RouteRuleEntry,
+    nm::dns::{apply_nm_dns_setting, nm_dns_to_nmstate},
+    nm::route::gen_nm_ip_routes,
+    nm::route_rule::gen_nm_ip_rules,
+    ErrorKind, Interface, InterfaceIpv4, InterfaceIpv6, NmstateError,
+    RouteEntry, RouteRuleEntry,
 };
-use nm_dbus::{NmConnection, NmSettingIpMethod};
+use nm_dbus::{NmConnection, NmSettingIp, NmSettingIpMethod};
 
 fn gen_nm_ipv4_setting(
     iface_ip: &InterfaceIpv4,
@@ -36,6 +38,9 @@ fn gen_nm_ipv4_setting(
     }
     if let Some(rules) = rules {
         nm_setting.route_rules = gen_nm_ip_rules(rules, false)?;
+    }
+    if let Some(dns) = &iface_ip.dns {
+        apply_nm_dns_setting(&mut nm_setting, dns);
     }
     nm_conn.ipv4 = Some(nm_setting);
     Ok(())
@@ -84,6 +89,9 @@ fn gen_nm_ipv6_setting(
     if let Some(rules) = rules {
         nm_setting.route_rules = gen_nm_ip_rules(rules, true)?;
     }
+    if let Some(dns) = &iface_ip.dns {
+        apply_nm_dns_setting(&mut nm_setting, dns);
+    }
     nm_conn.ipv6 = Some(nm_setting);
     Ok(())
 }
@@ -117,4 +125,57 @@ pub(crate) fn gen_nm_ip_setting(
         nm_conn.ipv6 = None;
     }
     Ok(())
+}
+
+pub(crate) fn nm_ip_setting_to_nmstate4(
+    nm_ip_setting: &NmSettingIp,
+) -> InterfaceIpv4 {
+    if let Some(nm_ip_method) = &nm_ip_setting.method {
+        let (enabled, dhcp) = match nm_ip_method {
+            NmSettingIpMethod::Disabled => (false, false),
+            NmSettingIpMethod::LinkLocal
+            | NmSettingIpMethod::Manual
+            | NmSettingIpMethod::Shared => (true, false),
+            NmSettingIpMethod::Auto => (true, true),
+            _ => {
+                log::warn!("Unexpected NM IP method {:?}", nm_ip_method);
+                (true, false)
+            }
+        };
+        InterfaceIpv4 {
+            enabled,
+            dhcp,
+            prop_list: vec!["enabled", "dhcp", "dns"],
+            dns: Some(nm_dns_to_nmstate(nm_ip_setting)),
+            ..Default::default()
+        }
+    } else {
+        InterfaceIpv4::default()
+    }
+}
+
+pub(crate) fn nm_ip_setting_to_nmstate6(
+    nm_ip_setting: &NmSettingIp,
+) -> InterfaceIpv6 {
+    if let Some(nm_ip_method) = &nm_ip_setting.method {
+        let (enabled, dhcp, autoconf) = match nm_ip_method {
+            NmSettingIpMethod::Disabled => (false, false, false),
+            NmSettingIpMethod::LinkLocal
+            | NmSettingIpMethod::Manual
+            | NmSettingIpMethod::Shared => (true, false, false),
+            NmSettingIpMethod::Auto => (true, true, true),
+            NmSettingIpMethod::Dhcp => (true, true, false),
+            NmSettingIpMethod::Ignore => (true, false, false),
+        };
+        InterfaceIpv6 {
+            enabled,
+            dhcp,
+            autoconf,
+            prop_list: vec!["enabled", "dhcp", "autoconf", "dns"],
+            dns: Some(nm_dns_to_nmstate(nm_ip_setting)),
+            ..Default::default()
+        }
+    } else {
+        InterfaceIpv6::default()
+    }
 }

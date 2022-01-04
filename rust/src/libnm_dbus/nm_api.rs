@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::convert::TryFrom;
 use std::time::{Duration, Instant};
 
 use log::debug;
@@ -26,6 +27,7 @@ use crate::{
         nm_dev_delete, nm_dev_from_obj_path, NmDevice, NmDeviceState,
         NmDeviceStateReason,
     },
+    dns::NmDnsEntry,
     error::{ErrorKind, NmError},
 };
 
@@ -268,6 +270,14 @@ impl<'a> NmApi<'a> {
             ErrorKind::Timeout,
             "Timeout on waiting rollback".to_string(),
         ))
+    }
+
+    pub fn get_dns_configuration(&self) -> Result<Vec<NmDnsEntry>, NmError> {
+        let mut ret: Vec<NmDnsEntry> = Vec::new();
+        for dns_value in self.dbus.get_dns_configuration()? {
+            ret.push(NmDnsEntry::try_from(dns_value)?);
+        }
+        Ok(ret)
     }
 }
 
