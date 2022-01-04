@@ -21,3 +21,5 @@ macro_rules! _from_map {
         })
     };
 }
+
+pub(crate) use _from_map;

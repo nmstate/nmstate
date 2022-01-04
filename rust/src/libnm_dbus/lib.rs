@@ -18,6 +18,7 @@ mod convert;
 mod dbus;
 mod dbus_proxy;
 mod device;
+mod dns;
 mod error;
 mod keyfile;
 mod nm_api;
@@ -31,5 +32,6 @@ pub use crate::connection::{
     NmSettingWired, NmVlanProtocol,
 };
 pub use crate::device::{NmDevice, NmDeviceState, NmDeviceStateReason};
+pub use crate::dns::NmDnsEntry;
 pub use crate::error::{ErrorKind, NmError};
 pub use crate::nm_api::NmApi;
