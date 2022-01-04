@@ -1,8 +1,9 @@
 use crate::{
-    EthernetInterface, Interface, InterfaceType, LinuxBridgeConfig,
-    LinuxBridgeInterface, LinuxBridgePortConfig, OvsBridgeConfig,
-    OvsBridgeInterface, OvsBridgePortConfig, OvsInterface, UnknownInterface,
-    VlanConfig, VlanInterface,
+    BondConfig, BondInterface, BondMode, EthernetInterface, Interface,
+    InterfaceType, LinuxBridgeConfig, LinuxBridgeInterface,
+    LinuxBridgePortConfig, OvsBridgeConfig, OvsBridgeInterface,
+    OvsBridgePortConfig, OvsInterface, UnknownInterface, VlanConfig,
+    VlanInterface,
 };
 
 pub(crate) fn new_eth_iface(name: &str) -> Interface {
@@ -21,6 +22,12 @@ pub(crate) fn new_br_iface(name: &str) -> Interface {
     let mut iface = LinuxBridgeInterface::new();
     iface.base.name = name.to_string();
     Interface::LinuxBridge(iface)
+}
+
+fn new_bond_iface(name: &str) -> Interface {
+    let mut iface = BondInterface::new();
+    iface.base.name = name.to_string();
+    Interface::Bond(iface)
 }
 
 pub(crate) fn new_ovs_br_iface(name: &str, port_names: &[&str]) -> Interface {
@@ -99,4 +106,17 @@ pub(crate) fn bridge_with_ports(name: &str, ports: &[&str]) -> Interface {
         })
     };
     br0
+}
+
+pub(crate) fn bond_with_ports(name: &str, ports: &[&str]) -> Interface {
+    let ports = ports.iter().map(|p| p.to_string()).collect::<Vec<String>>();
+    let mut iface = new_bond_iface(name);
+    if let Interface::Bond(bond_iface) = &mut iface {
+        bond_iface.bond = Some(BondConfig {
+            mode: Some(BondMode::RoundRobin),
+            port: Some(ports),
+            ..Default::default()
+        });
+    }
+    iface
 }

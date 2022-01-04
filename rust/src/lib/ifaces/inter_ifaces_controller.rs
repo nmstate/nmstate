@@ -292,3 +292,80 @@ pub(crate) fn find_unknown_type_port<'a>(
     }
     ret
 }
+
+pub(crate) fn check_overbook_ports(
+    desired: &Interfaces,
+    current: &Interfaces,
+) -> Result<(), NmstateError> {
+    let mut port_to_ctrl: HashMap<String, String> = HashMap::new();
+    let mut checked_ctrls: HashSet<&str> = HashSet::new();
+    for iface in desired
+        .kernel_ifaces
+        .values()
+        .chain(desired.user_ifaces.values())
+        .filter(|i| i.is_controller())
+    {
+        checked_ctrls.insert(iface.name());
+        let ports = match iface.ports() {
+            Some(p) => p,
+            None => {
+                // Check whether current interface has ports
+                if let Some(cur_iface) =
+                    current.get_iface(iface.name(), iface.iface_type())
+                {
+                    match cur_iface.ports() {
+                        Some(p) => p,
+                        None => continue,
+                    }
+                } else {
+                    continue;
+                }
+            }
+        };
+
+        for port in ports {
+            is_port_overbook(&mut port_to_ctrl, port, iface.name())?;
+        }
+    }
+
+    // Append controller interface only mentioned in current
+    // Use case: desire state would like eth1 assign to new bridge br1,
+    // but currently, eth1 is used by br0. In this case, we should fail as
+    // we cannot preserve unmentioned configuration.
+
+    for iface in current
+        .kernel_ifaces
+        .values()
+        .chain(current.user_ifaces.values())
+        .filter(|i| i.is_controller() && !checked_ctrls.contains(i.name()))
+    {
+        if let Some(ports) = iface.ports() {
+            for port in ports {
+                is_port_overbook(&mut port_to_ctrl, port, iface.name())?;
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn is_port_overbook(
+    port_to_ctrl: &mut HashMap<String, String>,
+    port: &str,
+    ctrl: &str,
+) -> Result<(), NmstateError> {
+    if let Some(cur_ctrl) = port_to_ctrl.get(port) {
+        let e = NmstateError::new(
+            ErrorKind::InvalidArgument,
+            format!(
+                "Port {} is overbooked by two controller: {}, {}",
+                port, ctrl, cur_ctrl
+            ),
+        );
+        log::error!("{}", e);
+        return Err(e);
+    } else {
+        port_to_ctrl.insert(port.to_string(), ctrl.to_string());
+    }
+    Ok(())
+}

@@ -7,7 +7,8 @@ use serde::{
 
 use crate::{
     ifaces::inter_ifaces_controller::{
-        find_unknown_type_port, handle_changed_ports, set_ifaces_up_priority,
+        check_overbook_ports, find_unknown_type_port, handle_changed_ports,
+        set_ifaces_up_priority,
     },
     ip::include_current_ip_address_if_dhcp_on_to_off,
     ErrorKind, Interface, InterfaceState, InterfaceType, NmstateError,
@@ -233,6 +234,7 @@ impl Interfaces {
         self.apply_copy_mac_from(current)?;
         handle_changed_ports(self, current)?;
         self.set_up_priority()?;
+        check_overbook_ports(self, current)?;
 
         for iface in self.to_vec() {
             if iface.is_absent() {
@@ -274,6 +276,7 @@ impl Interfaces {
         // of nmstate is expecting dynamic IP address goes static. This should
         // be done by top level code.
         include_current_ip_address_if_dhcp_on_to_off(&mut chg_ifaces, current);
+        mark_orphan_interface_as_absent(&mut del_ifaces, &chg_ifaces, current);
 
         Ok((add_ifaces, chg_ifaces, del_ifaces))
     }
@@ -442,82 +445,6 @@ impl Interfaces {
     }
 }
 
-pub(crate) struct MergedInterfaces<'a> {
-    inner: Vec<&'a Interface>,
-}
-
-impl<'a> MergedInterfaces<'a> {
-    pub(crate) fn merge(
-        current: &'a Interfaces,
-        add: &'a Interfaces,
-        update: &'a Interfaces,
-        delete: &'a Interfaces,
-    ) -> Self {
-        let mut merged = Vec::new();
-        for current in current.to_vec().into_iter() {
-            if delete
-                .get_iface(current.name(), current.iface_type())
-                .is_none()
-            {
-                merged.push(current);
-            }
-        }
-        for iface in merged.iter_mut() {
-            if let Some(updated) =
-                update.get_iface(iface.name(), iface.iface_type())
-            {
-                *iface = updated;
-            }
-        }
-        merged.extend(add.to_vec().iter());
-        MergedInterfaces { inner: merged }
-    }
-
-    pub(crate) fn find_by_name(&self, name: &str) -> Option<&'a Interface> {
-        self.inner
-            .iter()
-            .find(|iface| iface.name() == name)
-            .copied()
-    }
-
-    pub(crate) fn check_overbooked_port(&self) -> Result<(), NmstateError> {
-        let mut controller_by_port = HashMap::new();
-        for iface in self.inner.iter() {
-            let iface_name = iface.name();
-            for port in iface.ports().unwrap_or_default() {
-                if let Some(current) =
-                    controller_by_port.insert(port, iface_name)
-                {
-                    return Err(NmstateError::new(
-                        ErrorKind::InvalidArgument,
-                        format!(
-                            "Interface {}: Port {} is already assigned to different interface {}",
-                            iface.name(),
-                            port,
-                            current
-                        )
-                    ));
-                }
-            }
-        }
-        Ok(())
-    }
-
-    pub(crate) fn orphaned_interfaces(&self) -> Vec<String> {
-        let mut orphaned = Vec::new();
-        for kernel_iface in
-            self.inner.iter().filter(|iface| !iface.is_userspace())
-        {
-            if let Some(parent) = kernel_iface.parent() {
-                if self.find_by_name(parent).is_none() {
-                    orphaned.push(kernel_iface.name().to_string());
-                }
-            }
-        }
-        orphaned
-    }
-}
-
 fn verify_desire_absent_but_found_in_current(
     des_iface: &Interface,
     cur_iface: &Interface,
@@ -583,5 +510,35 @@ fn is_opt_str_empty(opt_string: &Option<String>) -> bool {
         s.is_empty()
     } else {
         true
+    }
+}
+
+fn mark_orphan_interface_as_absent(
+    del_ifaces: &mut Interfaces,
+    chg_ifaces: &Interfaces,
+    current: &Interfaces,
+) {
+    for cur_iface in current.kernel_ifaces.values() {
+        let parent = if let Some(chg_iface) =
+            chg_ifaces.kernel_ifaces.get(cur_iface.name())
+        {
+            chg_iface.parent()
+        } else {
+            cur_iface.parent()
+        };
+        if let Some(parent) = parent {
+            if del_ifaces.kernel_ifaces.get(parent).is_some()
+                && del_ifaces.kernel_ifaces.get(cur_iface.name()).is_none()
+            {
+                let mut new_iface = cur_iface.clone_name_type_only();
+                new_iface.base_iface_mut().state = InterfaceState::Absent;
+                log::info!(
+                    "Marking interface {} as absent as its parent {} is so",
+                    cur_iface.name(),
+                    parent
+                );
+                del_ifaces.push(new_iface);
+            }
+        }
     }
 }

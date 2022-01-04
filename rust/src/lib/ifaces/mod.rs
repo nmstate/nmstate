@@ -3,7 +3,8 @@ mod bond;
 mod dummy;
 mod ethernet;
 mod inter_ifaces;
-mod inter_ifaces_controller;
+// The pub(crate) is only for unit test
+pub(crate) mod inter_ifaces_controller;
 mod linux_bridge;
 mod mac_vlan;
 mod mac_vtap;
