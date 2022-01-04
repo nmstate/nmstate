@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::collections::HashMap;
+
 use zbus::dbus_proxy;
 
 #[dbus_proxy(
@@ -46,7 +48,7 @@ trait NetworkManager {
     fn checkpoint_rollback(
         &self,
         checkpoint: &zvariant::ObjectPath,
-    ) -> zbus::Result<std::collections::HashMap<String, u32>>;
+    ) -> zbus::Result<HashMap<String, u32>>;
 
     /// ActivateConnection method
     fn activate_connection(
@@ -94,15 +96,12 @@ trait NetworkManagerSetting {
     /// AddConnection2 method
     fn add_connection2(
         &self,
-        settings: std::collections::HashMap<
-            &str,
-            std::collections::HashMap<&str, zvariant::Value>,
-        >,
+        settings: HashMap<&str, HashMap<&str, zvariant::Value>>,
         flags: u32,
-        args: std::collections::HashMap<&str, zvariant::Value>,
+        args: HashMap<&str, zvariant::Value>,
     ) -> zbus::Result<(
         zvariant::OwnedObjectPath,
-        std::collections::HashMap<String, zvariant::OwnedValue>,
+        HashMap<String, zvariant::OwnedValue>,
     )>;
 
     /// ListConnections method
@@ -110,4 +109,17 @@ trait NetworkManagerSetting {
 
     /// GetAllDevices method
     fn get_all_devices(&self) -> zbus::Result<Vec<zvariant::OwnedObjectPath>>;
+}
+
+#[dbus_proxy(
+    interface = "org.freedesktop.NetworkManager.DnsManager",
+    default_service = "org.freedesktop.NetworkManager",
+    default_path = "/org/freedesktop/NetworkManager/DnsManager"
+)]
+trait NetworkManagerDns {
+    /// Configuration property
+    #[dbus_proxy(property)]
+    fn configuration(
+        &self,
+    ) -> zbus::Result<Vec<HashMap<String, zvariant::OwnedValue>>>;
 }

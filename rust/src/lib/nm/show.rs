@@ -1,10 +1,7 @@
 use std::collections::HashMap;
 
 use log::{debug, warn};
-use nm_dbus::{
-    NmActiveConnection, NmApi, NmConnection, NmDeviceState, NmSettingIp,
-    NmSettingIpMethod,
-};
+use nm_dbus::{NmActiveConnection, NmApi, NmConnection, NmDeviceState};
 
 use crate::{
     nm::active_connection::create_index_for_nm_acs_by_name_type,
@@ -15,17 +12,18 @@ use crate::{
         NM_SETTING_OVS_IFACE_SETTING_NAME, NM_SETTING_VETH_SETTING_NAME,
         NM_SETTING_WIRED_SETTING_NAME,
     },
+    nm::dns::retrieve_dns_info,
     nm::error::nm_error_to_nmstate,
+    nm::ip::{nm_ip_setting_to_nmstate4, nm_ip_setting_to_nmstate6},
     nm::ovs::nm_ovs_bridge_conf_get,
-    BaseInterface, EthernetInterface, Interface, InterfaceIpv4, InterfaceIpv6,
-    InterfaceState, InterfaceType, Interfaces, LinuxBridgeInterface,
-    NetworkState, NmstateError, OvsBridgeInterface, OvsInterface,
-    UnknownInterface,
+    BaseInterface, EthernetInterface, Interface, InterfaceState, InterfaceType,
+    Interfaces, LinuxBridgeInterface, NetworkState, NmstateError,
+    OvsBridgeInterface, OvsInterface, UnknownInterface,
 };
 
 pub(crate) fn nm_retrieve() -> Result<NetworkState, NmstateError> {
     let mut net_state = NetworkState::new();
-    net_state.prop_list = vec!["interfaces"];
+    net_state.prop_list = vec!["interfaces", "dns"];
     let nm_api = NmApi::new().map_err(nm_error_to_nmstate)?;
     let nm_conns = nm_api
         .applied_connections_get()
@@ -138,6 +136,8 @@ pub(crate) fn nm_retrieve() -> Result<NetworkState, NmstateError> {
         }
     }
 
+    net_state.dns = retrieve_dns_info(&nm_api, &net_state.interfaces)?;
+
     set_ovs_iface_controller_info(&mut net_state.interfaces);
 
     Ok(net_state)
@@ -177,53 +177,6 @@ fn nm_conn_to_base_iface(nm_conn: &NmConnection) -> Option<BaseInterface> {
         }
     }
     None
-}
-
-fn nm_ip_setting_to_nmstate4(nm_ip_setting: &NmSettingIp) -> InterfaceIpv4 {
-    if let Some(nm_ip_method) = &nm_ip_setting.method {
-        let (enabled, dhcp) = match nm_ip_method {
-            NmSettingIpMethod::Disabled => (false, false),
-            NmSettingIpMethod::LinkLocal
-            | NmSettingIpMethod::Manual
-            | NmSettingIpMethod::Shared => (true, false),
-            NmSettingIpMethod::Auto => (true, true),
-            _ => {
-                warn!("Unexpected NM IP method {:?}", nm_ip_method);
-                (true, false)
-            }
-        };
-        InterfaceIpv4 {
-            enabled,
-            dhcp,
-            prop_list: vec!["enabled", "dhcp"],
-            ..Default::default()
-        }
-    } else {
-        InterfaceIpv4::default()
-    }
-}
-
-fn nm_ip_setting_to_nmstate6(nm_ip_setting: &NmSettingIp) -> InterfaceIpv6 {
-    if let Some(nm_ip_method) = &nm_ip_setting.method {
-        let (enabled, dhcp, autoconf) = match nm_ip_method {
-            NmSettingIpMethod::Disabled => (false, false, false),
-            NmSettingIpMethod::LinkLocal
-            | NmSettingIpMethod::Manual
-            | NmSettingIpMethod::Shared => (true, false, false),
-            NmSettingIpMethod::Auto => (true, true, true),
-            NmSettingIpMethod::Dhcp => (true, true, false),
-            NmSettingIpMethod::Ignore => (true, false, false),
-        };
-        InterfaceIpv6 {
-            enabled,
-            dhcp,
-            autoconf,
-            prop_list: vec!["enabled", "dhcp", "autoconf"],
-            ..Default::default()
-        }
-    } else {
-        InterfaceIpv6::default()
-    }
 }
 
 // Applied connection does not hold OVS config, we need the NmConnection
