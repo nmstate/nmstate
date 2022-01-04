@@ -263,7 +263,7 @@ impl<'a> NmApi<'a> {
                     "Waiting rollback on these devices {:?}",
                     waiting_nm_dev
                 );
-                std::thread::sleep(Duration::from_millis(100));
+                std::thread::sleep(Duration::from_millis(500));
             }
         }
         Err(NmError::new(

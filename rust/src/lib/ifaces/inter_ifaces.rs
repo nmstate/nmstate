@@ -9,6 +9,7 @@ use crate::{
     ifaces::inter_ifaces_controller::{
         find_unknown_type_port, handle_changed_ports, set_ifaces_up_priority,
     },
+    ip::include_current_ip_address_if_dhcp_on_to_off,
     ErrorKind, Interface, InterfaceState, InterfaceType, NmstateError,
 };
 
@@ -260,6 +261,12 @@ impl Interfaces {
                 }
             }
         }
+
+        // Normally, we expect backend to preserve configuration which not
+        // mentioned in desire, but when DHCP switch from ON to OFF, the design
+        // of nmstate is expecting dynamic IP address goes static. This should
+        // be done by top level code.
+        include_current_ip_address_if_dhcp_on_to_off(&mut chg_ifaces, current);
 
         Ok((add_ifaces, chg_ifaces, del_ifaces))
     }
