@@ -8,15 +8,14 @@ use crate::{
         get_cur_dns_ifaces, is_dns_changed, purge_dns_config,
         reselect_dns_ifaces,
     },
-    ifaces::MergedInterfaces,
     nispor::{nispor_apply, nispor_retrieve},
     nm::{
         nm_apply, nm_checkpoint_create, nm_checkpoint_destroy,
         nm_checkpoint_rollback, nm_checkpoint_timeout_extend, nm_gen_conf,
         nm_retrieve,
     },
-    DnsState, ErrorKind, Interface, InterfaceState, InterfaceType, Interfaces,
-    NmstateError, RouteRules, Routes,
+    DnsState, ErrorKind, Interface, InterfaceType, Interfaces, NmstateError,
+    RouteRules, Routes,
 };
 
 const VERIFY_RETRY_INTERVAL_MILLISECONDS: u64 = 1000;
@@ -272,22 +271,8 @@ impl NetworkState {
 
         let mut ifaces = self.interfaces.clone();
 
-        let (add_ifaces, mut chg_ifaces, mut del_ifaces) =
+        let (add_ifaces, chg_ifaces, del_ifaces) =
             ifaces.gen_state_for_apply(&current.interfaces)?;
-
-        let desired = MergedInterfaces::merge(
-            &current.interfaces,
-            &add_ifaces,
-            &chg_ifaces,
-            &del_ifaces,
-        );
-        desired.check_overbooked_port()?;
-        mark_orphaned_as_absent(
-            &dbg!(desired.orphaned_interfaces()),
-            &current.interfaces,
-            &mut chg_ifaces,
-            &mut del_ifaces,
-        );
 
         add_net_state.interfaces = add_ifaces;
         chg_net_state.interfaces = chg_ifaces;
@@ -591,20 +576,4 @@ where
         }
     }
     Ok(())
-}
-
-fn mark_orphaned_as_absent(
-    orphaned: &[String],
-    current: &Interfaces,
-    update: &mut Interfaces,
-    delete: &mut Interfaces,
-) {
-    for orphan in orphaned {
-        if let Some(iface) = current.kernel_ifaces.get(orphan) {
-            let mut iface = iface.clone();
-            iface.base_iface_mut().state = InterfaceState::Absent;
-            delete.push(iface);
-        }
-        update.kernel_ifaces.remove(orphan);
-    }
 }
