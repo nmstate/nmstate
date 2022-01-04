@@ -276,6 +276,14 @@ function run_tests {
             not test_ignore_verification_error_on_invalid_bond_option and \
             not test_bond_ad_actor_system_with_multicast_mac_address' \
             ${nmstate_pytest_extra_args}"
+        exec_cmd "
+          env  \
+          PYTHONPATH=$CONTAINER_WORKSPACE/rust/src/python \
+          pytest \
+            $PYTEST_OPTIONS \
+            tests/integration/dynamic_ip_test.py \
+            -k 'not test_show_running_config_does_not_include_auto_config' \
+            ${nmstate_pytest_extra_args}"
     fi
 }
 
