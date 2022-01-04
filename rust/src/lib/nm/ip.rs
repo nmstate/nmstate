@@ -1,3 +1,5 @@
+use std::ops::BitXor;
+
 use crate::{
     nm::dns::{apply_nm_dns_setting, nm_dns_to_nmstate},
     nm::route::gen_nm_ip_routes,
@@ -6,6 +8,8 @@ use crate::{
     RouteEntry, RouteRuleEntry,
 };
 use nm_dbus::{NmConnection, NmSettingIp, NmSettingIpMethod};
+
+const NM_CONFIG_ADDR_GEN_MODE_EUI64: i32 = 0;
 
 fn gen_nm_ipv4_setting(
     iface_ip: &InterfaceIpv4,
@@ -29,12 +33,27 @@ fn gen_nm_ipv4_setting(
     } else {
         NmSettingIpMethod::Disabled
     };
-
     let mut nm_setting = nm_conn.ipv4.as_ref().cloned().unwrap_or_default();
     nm_setting.method = Some(method);
     nm_setting.addresses = addresses;
-    if let Some(routes) = routes {
-        nm_setting.routes = gen_nm_ip_routes(routes, false)?;
+    if iface_ip.enabled && iface_ip.dhcp {
+        nm_setting.dhcp_timeout = Some(i32::MAX);
+        nm_setting.dhcp_client_id = Some("mac".to_string());
+        apply_dhcp_opts(
+            &mut nm_setting,
+            iface_ip.auto_dns,
+            iface_ip.auto_gateway,
+            iface_ip.auto_routes,
+            iface_ip.auto_table_id,
+        );
+        // No use case indicate we should support static routes with DHCP
+        // enabled.
+        nm_setting.routes = Vec::new();
+    }
+    if iface_ip.enabled && !iface_ip.dhcp {
+        if let Some(routes) = routes {
+            nm_setting.routes = gen_nm_ip_routes(routes, false)?;
+        }
     }
     if let Some(rules) = rules {
         nm_setting.route_rules = gen_nm_ip_rules(rules, false)?;
@@ -83,8 +102,27 @@ fn gen_nm_ipv6_setting(
     let mut nm_setting = nm_conn.ipv6.as_ref().cloned().unwrap_or_default();
     nm_setting.method = Some(method);
     nm_setting.addresses = addresses;
-    if let Some(routes) = routes {
-        nm_setting.routes = gen_nm_ip_routes(routes, true)?;
+    if iface_ip.enabled && (iface_ip.dhcp || iface_ip.autoconf) {
+        nm_setting.dhcp_timeout = Some(i32::MAX);
+        nm_setting.ra_timeout = Some(i32::MAX);
+        nm_setting.addr_gen_mode = Some(NM_CONFIG_ADDR_GEN_MODE_EUI64);
+        nm_setting.dhcp_duid = Some("ll".to_string());
+        nm_setting.dhcp_iaid = Some("mac".to_string());
+        apply_dhcp_opts(
+            &mut nm_setting,
+            iface_ip.auto_dns,
+            iface_ip.auto_gateway,
+            iface_ip.auto_routes,
+            iface_ip.auto_table_id,
+        );
+        // No use case indicate we should support static routes with DHCP
+        // enabled.
+        nm_setting.routes = Vec::new();
+    }
+    if iface_ip.enabled && !iface_ip.dhcp && !iface_ip.autoconf {
+        if let Some(routes) = routes {
+            nm_setting.routes = gen_nm_ip_routes(routes, true)?;
+        }
     }
     if let Some(rules) = rules {
         nm_setting.route_rules = gen_nm_ip_rules(rules, true)?;
@@ -142,10 +180,24 @@ pub(crate) fn nm_ip_setting_to_nmstate4(
                 (true, false)
             }
         };
+        let (auto_dns, auto_gateway, auto_routes, auto_table_id) =
+            parse_dhcp_opts(nm_ip_setting);
         InterfaceIpv4 {
             enabled,
             dhcp,
-            prop_list: vec!["enabled", "dhcp", "dns"],
+            auto_dns,
+            auto_routes,
+            auto_gateway,
+            auto_table_id,
+            prop_list: vec![
+                "enabled",
+                "dhcp",
+                "dns",
+                "auto_dns",
+                "auto_routes",
+                "auto_gateway",
+                "auto_table_id",
+            ],
             dns: Some(nm_dns_to_nmstate(nm_ip_setting)),
             ..Default::default()
         }
@@ -167,15 +219,67 @@ pub(crate) fn nm_ip_setting_to_nmstate6(
             NmSettingIpMethod::Dhcp => (true, true, false),
             NmSettingIpMethod::Ignore => (true, false, false),
         };
+        let (auto_dns, auto_gateway, auto_routes, auto_table_id) =
+            parse_dhcp_opts(nm_ip_setting);
         InterfaceIpv6 {
             enabled,
             dhcp,
             autoconf,
-            prop_list: vec!["enabled", "dhcp", "autoconf", "dns"],
+            auto_dns,
+            auto_routes,
+            auto_gateway,
+            auto_table_id,
+            prop_list: vec![
+                "enabled",
+                "dhcp",
+                "autoconf",
+                "dns",
+                "auto_dns",
+                "auto_routes",
+                "auto_gateway",
+                "auto_table_id",
+            ],
             dns: Some(nm_dns_to_nmstate(nm_ip_setting)),
             ..Default::default()
         }
     } else {
         InterfaceIpv6::default()
     }
+}
+
+// return (auto_dns, auto_gateway, auto_routes, auto_table_id)
+fn parse_dhcp_opts(
+    nm_setting: &NmSettingIp,
+) -> (Option<bool>, Option<bool>, Option<bool>, Option<u32>) {
+    (
+        Some(nm_setting.ignore_auto_dns.map(flip_bool).unwrap_or(true)),
+        Some(nm_setting.never_default.map(flip_bool).unwrap_or(true)),
+        Some(nm_setting.ignore_auto_routes.map(flip_bool).unwrap_or(true)),
+        Some(nm_setting.route_table.unwrap_or_default()),
+    )
+}
+
+fn apply_dhcp_opts(
+    nm_setting: &mut NmSettingIp,
+    auto_dns: Option<bool>,
+    auto_gateway: Option<bool>,
+    auto_routes: Option<bool>,
+    auto_table_id: Option<u32>,
+) {
+    if let Some(v) = auto_dns {
+        nm_setting.ignore_auto_dns = Some(flip_bool(v));
+    }
+    if let Some(v) = auto_gateway {
+        nm_setting.never_default = Some(flip_bool(v));
+    }
+    if let Some(v) = auto_routes {
+        nm_setting.ignore_auto_routes = Some(flip_bool(v));
+    }
+    if let Some(v) = auto_table_id {
+        nm_setting.route_table = Some(v);
+    }
+}
+
+fn flip_bool(v: bool) -> bool {
+    v.bitxor(true)
 }

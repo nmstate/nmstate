@@ -252,7 +252,7 @@ pub(crate) fn reselect_dns_ifaces(
     (
         find_ifaces_in_desire(false, &desired.interfaces)
             .or_else(|| {
-                find_ifaces_with_static_gateways(
+                find_valid_ifaces_for_dns(
                     false,
                     &desired.interfaces,
                     &current.interfaces,
@@ -261,7 +261,7 @@ pub(crate) fn reselect_dns_ifaces(
             .unwrap_or_default(),
         find_ifaces_in_desire(true, &desired.interfaces)
             .or_else(|| {
-                find_ifaces_with_static_gateways(
+                find_valid_ifaces_for_dns(
                     true,
                     &desired.interfaces,
                     &current.interfaces,
@@ -272,18 +272,18 @@ pub(crate) fn reselect_dns_ifaces(
 }
 
 // Return None if specified interface has IP configuration as None.
-// TODO: support auto_dns: false
 fn is_iface_valid_for_dns(is_ipv6: bool, iface: &Interface) -> Option<bool> {
     if is_ipv6 {
         iface.base_iface().ipv6.as_ref().map(|ip_conf| {
-            ip_conf.enabled && !ip_conf.dhcp && !ip_conf.autoconf
+            ip_conf.enabled
+                && ((!ip_conf.dhcp && !ip_conf.autoconf)
+                    || (ip_conf.auto_dns == Some(false)))
         })
     } else {
-        iface
-            .base_iface()
-            .ipv4
-            .as_ref()
-            .map(|ip_conf| ip_conf.enabled && !ip_conf.dhcp)
+        iface.base_iface().ipv4.as_ref().map(|ip_conf| {
+            ip_conf.enabled
+                && (!ip_conf.dhcp || ip_conf.auto_dns == Some(false))
+        })
     }
 }
 
@@ -332,7 +332,7 @@ fn find_ifaces_in_desire(
     None
 }
 
-fn find_ifaces_with_static_gateways(
+fn find_valid_ifaces_for_dns(
     is_ipv6: bool,
     desired: &Interfaces,
     current: &Interfaces,

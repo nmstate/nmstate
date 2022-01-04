@@ -125,6 +125,13 @@ impl BaseInterface {
     }
 
     pub(crate) fn pre_verify_cleanup(&mut self) {
+        // * If cannot have IP, set ip: none
+        if !self.can_have_ip() {
+            self.ipv4 = None;
+            self.ipv6 = None;
+            self.prop_list.retain(|p| p != &"ipv4" && p != &"ipv6");
+        }
+
         if let Some(ref mut ipv4) = self.ipv4 {
             ipv4.pre_verify_cleanup();
         }

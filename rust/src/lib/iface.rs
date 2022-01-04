@@ -464,14 +464,26 @@ impl Interface {
 
     pub(crate) fn verify(&self, current: &Self) -> Result<(), NmstateError> {
         let mut self_clone = self.clone();
-        self_clone.pre_verify_cleanup();
-        let self_value = serde_json::to_value(&self_clone)?;
-
         let mut current_clone = current.clone();
+        // In order to allow desire interface to determine whether it can
+        // hold IP or not, we copy controller information from current to desire
+        // Use case: User desire ipv4 enabled: false on a bridge port, but
+        // current show ipv4 as None.
+        if current_clone.base_iface().controller.is_some()
+            && self_clone.base_iface().controller.is_none()
+        {
+            self_clone.base_iface_mut().controller =
+                current_clone.base_iface().controller.clone();
+            self_clone.base_iface_mut().controller_type =
+                current_clone.base_iface().controller_type.clone();
+        }
+        self_clone.pre_verify_cleanup();
         current_clone.pre_verify_cleanup();
         if self_clone.iface_type() == InterfaceType::Unknown {
             current_clone.base_iface_mut().iface_type = InterfaceType::Unknown;
         }
+
+        let self_value = serde_json::to_value(&self_clone)?;
         let current_value = serde_json::to_value(&current_clone)?;
 
         if let Some((reference, desire, current)) = get_json_value_difference(
