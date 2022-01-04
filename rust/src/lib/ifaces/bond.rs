@@ -166,6 +166,14 @@ impl BondConfig {
                 ));
             }
         }
+
+        if self.mode.is_none() {
+            return Err(NmstateError::new(
+                ErrorKind::InvalidArgument,
+                "Bond mode is mandatory".to_string(),
+            ));
+        }
+
         Ok(())
     }
 
@@ -535,6 +543,7 @@ impl BondOptions {
     ) -> Result<(), NmstateError> {
         self.fix_mac_restricted_mode(mode, base)?;
         self.validate_ad_actor_system_mac_address()?;
+        self.validate_miimon_and_arp_interval()?;
         Ok(())
     }
 
@@ -564,6 +573,20 @@ impl BondOptions {
                         ErrorKind::InvalidArgument,
                             "The ad_actor_system bond option cannot be an IANA multicast address(prefix with 01:00:5E)".to_string()
                     ));
+            }
+        }
+        Ok(())
+    }
+
+    fn validate_miimon_and_arp_interval(&self) -> Result<(), NmstateError> {
+        if let Some(miimon) = &self.miimon {
+            if let Some(arp_interval) = &self.arp_interval {
+                if miimon > &0 && arp_interval > &0 {
+                    return Err(NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                            "The ad_actor_system bond option cannot be an IANA multicast address(prefix with 01:00:5E)".to_string()
+                    ));
+                }
             }
         }
         Ok(())
