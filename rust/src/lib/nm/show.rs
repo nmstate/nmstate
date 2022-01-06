@@ -11,9 +11,9 @@ use crate::{
         create_index_for_nm_conns_by_ctrler_type,
         create_index_for_nm_conns_by_name_type, get_port_nm_conns,
         NM_SETTING_BOND_SETTING_NAME, NM_SETTING_BRIDGE_SETTING_NAME,
-        NM_SETTING_DUMMY_SETTING_NAME, NM_SETTING_OVS_BRIDGE_SETTING_NAME,
-        NM_SETTING_OVS_IFACE_SETTING_NAME, NM_SETTING_VETH_SETTING_NAME,
-        NM_SETTING_WIRED_SETTING_NAME,
+        NM_SETTING_DUMMY_SETTING_NAME, NM_SETTING_MACVLAN_SETTING_NAME,
+        NM_SETTING_OVS_BRIDGE_SETTING_NAME, NM_SETTING_OVS_IFACE_SETTING_NAME,
+        NM_SETTING_VETH_SETTING_NAME, NM_SETTING_WIRED_SETTING_NAME,
     },
     nm::dns::retrieve_dns_info,
     nm::error::nm_error_to_nmstate,
@@ -21,8 +21,8 @@ use crate::{
     nm::ovs::nm_ovs_bridge_conf_get,
     BaseInterface, BondInterface, DummyInterface, EthernetInterface, Interface,
     InterfaceState, InterfaceType, Interfaces, LinuxBridgeInterface,
-    NetworkState, NmstateError, OvsBridgeInterface, OvsInterface,
-    UnknownInterface,
+    MacVlanInterface, MacVtapInterface, NetworkState, NmstateError,
+    OvsBridgeInterface, OvsInterface, UnknownInterface,
 };
 
 pub(crate) fn nm_retrieve() -> Result<NetworkState, NmstateError> {
@@ -88,6 +88,16 @@ pub(crate) fn nm_retrieve() -> Result<NetworkState, NmstateError> {
                     }),
                     InterfaceType::Bond => Interface::Bond({
                         let mut iface = BondInterface::new();
+                        iface.base = base_iface;
+                        iface
+                    }),
+                    InterfaceType::MacVlan => Interface::MacVlan({
+                        let mut iface = MacVlanInterface::new();
+                        iface.base = base_iface;
+                        iface
+                    }),
+                    InterfaceType::MacVtap => Interface::MacVtap({
+                        let mut iface = MacVtapInterface::new();
                         iface.base = base_iface;
                         iface
                     }),
@@ -167,6 +177,13 @@ fn nm_dev_iface_type_to_nmstate(nm_dev: &NmDevice) -> InterfaceType {
         NM_SETTING_BRIDGE_SETTING_NAME => InterfaceType::LinuxBridge,
         NM_SETTING_OVS_BRIDGE_SETTING_NAME => InterfaceType::OvsBridge,
         NM_SETTING_OVS_IFACE_SETTING_NAME => InterfaceType::OvsInterface,
+        NM_SETTING_MACVLAN_SETTING_NAME => {
+            if nm_dev.is_mac_vtap {
+                InterfaceType::MacVtap
+            } else {
+                InterfaceType::MacVlan
+            }
+        }
         _ => InterfaceType::Other(nm_dev.iface_type.to_string()),
     }
 }
@@ -225,6 +242,16 @@ fn iface_get(
             }),
             InterfaceType::Dummy => Interface::Dummy({
                 let mut iface = DummyInterface::new();
+                iface.base = base_iface;
+                iface
+            }),
+            InterfaceType::MacVlan => Interface::MacVlan({
+                let mut iface = MacVlanInterface::new();
+                iface.base = base_iface;
+                iface
+            }),
+            InterfaceType::MacVtap => Interface::MacVtap({
+                let mut iface = MacVtapInterface::new();
                 iface.base = base_iface;
                 iface
             }),

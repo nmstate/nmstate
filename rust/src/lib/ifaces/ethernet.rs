@@ -44,8 +44,6 @@ impl EthernetInterface {
     }
 
     pub(crate) fn pre_verify_cleanup(&mut self) {
-        self.base.pre_verify_cleanup();
-
         if let Some(eth_conf) = self.ethernet.as_mut() {
             eth_conf.pre_verify_cleanup()
         }

@@ -39,7 +39,6 @@ impl BondInterface {
     }
 
     pub(crate) fn pre_verify_cleanup(&mut self) {
-        self.base.pre_verify_cleanup();
         self.drop_empty_arp_ip_target();
         self.sort_ports();
     }

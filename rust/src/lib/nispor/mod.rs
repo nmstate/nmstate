@@ -6,6 +6,7 @@ mod ethernet;
 mod ip;
 mod linux_bridge;
 mod linux_bridge_port_vlan;
+mod mac_vlan;
 mod route;
 mod route_rule;
 mod show;

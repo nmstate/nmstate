@@ -1,6 +1,8 @@
 use std::collections::{hash_map::Entry, HashMap};
 
-use nm_dbus::{NmApi, NmConnection, NmSettingConnection, NmSettingVlan};
+use nm_dbus::{
+    NmApi, NmConnection, NmSettingConnection, NmSettingMacVlan, NmSettingVlan,
+};
 
 use crate::{
     nm::bond::gen_nm_bond_setting,
@@ -24,6 +26,7 @@ pub(crate) const NM_SETTING_OVS_IFACE_SETTING_NAME: &str = "ovs-interface";
 pub(crate) const NM_SETTING_VETH_SETTING_NAME: &str = "veth";
 pub(crate) const NM_SETTING_BOND_SETTING_NAME: &str = "bond";
 pub(crate) const NM_SETTING_DUMMY_SETTING_NAME: &str = "dummy";
+pub(crate) const NM_SETTING_MACVLAN_SETTING_NAME: &str = "macvlan";
 
 pub(crate) fn nm_gen_conf(
     net_state: &NetworkState,
@@ -118,6 +121,14 @@ pub(crate) fn iface_to_nm_connections(
         Interface::Ethernet(eth_iface) => {
             gen_nm_sriov_setting(eth_iface, &mut nm_conn);
         }
+        Interface::MacVlan(iface) => {
+            nm_conn.mac_vlan =
+                iface.mac_vlan.as_ref().map(NmSettingMacVlan::from)
+        }
+        Interface::MacVtap(iface) => {
+            nm_conn.mac_vlan =
+                iface.mac_vtap.as_ref().map(NmSettingMacVlan::from)
+        }
         _ => (),
     };
 
@@ -147,6 +158,8 @@ pub(crate) fn iface_type_to_nm(
         InterfaceType::OvsInterface => Ok("ovs-interface".into()),
         InterfaceType::Vlan => Ok("vlan".to_string()),
         InterfaceType::Dummy => Ok("dummy".to_string()),
+        InterfaceType::MacVlan => Ok("macvlan".to_string()),
+        InterfaceType::MacVtap => Ok("macvlan".to_string()),
         InterfaceType::Other(s) => Ok(s.to_string()),
         _ => Err(NmstateError::new(
             ErrorKind::NotImplementedError,

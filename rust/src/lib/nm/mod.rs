@@ -8,6 +8,7 @@ mod device;
 mod dns;
 mod error;
 mod ip;
+mod mac_vlan;
 mod ovs;
 mod profile;
 mod route;
