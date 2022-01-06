@@ -4,7 +4,8 @@ use serde::{Deserialize, Deserializer, Serialize};
 use crate::{
     state::get_json_value_difference, BaseInterface, BondInterface,
     DummyInterface, ErrorKind, EthernetInterface, LinuxBridgeInterface,
-    NmstateError, OvsBridgeInterface, OvsInterface, VlanInterface,
+    MacVlanInterface, MacVtapInterface, NmstateError, OvsBridgeInterface,
+    OvsInterface, VlanInterface,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -152,6 +153,8 @@ pub enum Interface {
     OvsInterface(OvsInterface),
     Unknown(UnknownInterface),
     Vlan(VlanInterface),
+    MacVlan(MacVlanInterface),
+    MacVtap(MacVtapInterface),
 }
 
 impl<'de> Deserialize<'de> for Interface {
@@ -203,6 +206,16 @@ impl<'de> Deserialize<'de> for Interface {
                     .map_err(serde::de::Error::custom)?;
                 Ok(Interface::OvsBridge(inner))
             }
+            Some(InterfaceType::MacVlan) => {
+                let inner = MacVlanInterface::deserialize(v)
+                    .map_err(serde::de::Error::custom)?;
+                Ok(Interface::MacVlan(inner))
+            }
+            Some(InterfaceType::MacVtap) => {
+                let inner = MacVtapInterface::deserialize(v)
+                    .map_err(serde::de::Error::custom)?;
+                Ok(Interface::MacVtap(inner))
+            }
             Some(iface_type) => {
                 warn!("Unsupported interface type {}", iface_type);
                 let inner = UnknownInterface::deserialize(v)
@@ -220,16 +233,7 @@ impl<'de> Deserialize<'de> for Interface {
 
 impl Interface {
     pub fn name(&self) -> &str {
-        match self {
-            Self::LinuxBridge(iface) => iface.base.name.as_str(),
-            Self::Bond(iface) => iface.base.name.as_str(),
-            Self::Ethernet(iface) => iface.base.name.as_str(),
-            Self::Vlan(iface) => iface.base.name.as_str(),
-            Self::Dummy(iface) => iface.base.name.as_str(),
-            Self::OvsInterface(iface) => iface.base.name.as_str(),
-            Self::OvsBridge(iface) => iface.base.name.as_str(),
-            Self::Unknown(iface) => iface.base.name.as_str(),
-        }
+        self.base_iface().name.as_str()
     }
 
     pub(crate) fn is_userspace(&self) -> bool {
@@ -245,16 +249,7 @@ impl Interface {
     }
 
     pub fn iface_type(&self) -> InterfaceType {
-        match self {
-            Self::LinuxBridge(iface) => iface.base.iface_type.clone(),
-            Self::Bond(iface) => iface.base.iface_type.clone(),
-            Self::Ethernet(iface) => iface.base.iface_type.clone(),
-            Self::Vlan(iface) => iface.base.iface_type.clone(),
-            Self::Dummy(iface) => iface.base.iface_type.clone(),
-            Self::OvsInterface(iface) => iface.base.iface_type.clone(),
-            Self::OvsBridge(iface) => iface.base.iface_type.clone(),
-            Self::Unknown(iface) => iface.base.iface_type.clone(),
-        }
+        self.base_iface().iface_type.clone()
     }
 
     pub(crate) fn clone_name_type_only(&self) -> Self {
@@ -294,6 +289,16 @@ impl Interface {
                 new_iface.base = iface.base.clone_name_type_only();
                 Self::Bond(new_iface)
             }
+            Self::MacVlan(iface) => {
+                let mut new_iface = MacVlanInterface::new();
+                new_iface.base = iface.base.clone_name_type_only();
+                Self::MacVlan(new_iface)
+            }
+            Self::MacVtap(iface) => {
+                let mut new_iface = MacVtapInterface::new();
+                new_iface.base = iface.base.clone_name_type_only();
+                Self::MacVtap(new_iface)
+            }
             Self::Unknown(iface) => {
                 let mut new_iface = UnknownInterface::new();
                 new_iface.base = iface.base.clone_name_type_only();
@@ -332,6 +337,8 @@ impl Interface {
             Self::Dummy(iface) => &iface.base,
             Self::OvsBridge(iface) => &iface.base,
             Self::OvsInterface(iface) => &iface.base,
+            Self::MacVlan(iface) => &iface.base,
+            Self::MacVtap(iface) => &iface.base,
             Self::Unknown(iface) => &iface.base,
         }
     }
@@ -345,6 +352,8 @@ impl Interface {
             Self::Dummy(iface) => &mut iface.base,
             Self::OvsInterface(iface) => &mut iface.base,
             Self::OvsBridge(iface) => &mut iface.base,
+            Self::MacVlan(iface) => &mut iface.base,
+            Self::MacVtap(iface) => &mut iface.base,
             Self::Unknown(iface) => &mut iface.base,
         }
     }
@@ -425,11 +434,32 @@ impl Interface {
                     );
                 }
             }
+            Self::MacVlan(iface) => {
+                if let Self::MacVlan(other_iface) = other {
+                    iface.update_mac_vlan(other_iface);
+                } else {
+                    warn!(
+                        "Don't know how to update iface {:?} with {:?}",
+                        iface, other
+                    );
+                }
+            }
+            Self::MacVtap(iface) => {
+                if let Self::MacVtap(other_iface) = other {
+                    iface.update_mac_vtap(other_iface);
+                } else {
+                    warn!(
+                        "Don't know how to update iface {:?} with {:?}",
+                        iface, other
+                    );
+                }
+            }
             Self::Unknown(_) | Self::Dummy(_) | Self::OvsInterface(_) => (),
         }
     }
 
     pub(crate) fn pre_verify_cleanup(&mut self) {
+        self.base_iface_mut().pre_verify_cleanup();
         match self {
             Self::LinuxBridge(ref mut iface) => {
                 iface.pre_verify_cleanup();
@@ -440,21 +470,10 @@ impl Interface {
             Self::Ethernet(ref mut iface) => {
                 iface.pre_verify_cleanup();
             }
-            Self::Vlan(ref mut iface) => {
-                iface.pre_verify_cleanup();
-            }
-            Self::Unknown(ref mut iface) => {
-                iface.base.pre_verify_cleanup();
-            }
-            Self::Dummy(ref mut iface) => {
-                iface.base.pre_verify_cleanup();
-            }
-            Self::OvsInterface(ref mut iface) => {
-                iface.base.pre_verify_cleanup();
-            }
             Self::OvsBridge(ref mut iface) => {
                 iface.pre_verify_cleanup();
             }
+            _ => (),
         }
     }
 
@@ -535,12 +554,13 @@ impl Interface {
     }
 
     pub(crate) fn validate(&self) -> Result<(), NmstateError> {
-        if let Interface::LinuxBridge(iface) = self {
-            iface.validate()?;
-        } else if let Interface::Bond(iface) = self {
-            iface.validate()?;
+        match self {
+            Interface::LinuxBridge(iface) => iface.validate(),
+            Interface::Bond(iface) => iface.validate(),
+            Interface::MacVlan(iface) => iface.validate(),
+            Interface::MacVtap(iface) => iface.validate(),
+            _ => Ok(()),
         }
-        Ok(())
     }
 
     pub(crate) fn remove_port(&mut self, port_name: &str) {
@@ -555,6 +575,8 @@ impl Interface {
         match self {
             Interface::Vlan(vlan) => vlan.parent(),
             Interface::OvsInterface(ovs) => ovs.parent(),
+            Interface::MacVlan(vlan) => vlan.parent(),
+            Interface::MacVtap(vtap) => vtap.parent(),
             _ => None,
         }
     }

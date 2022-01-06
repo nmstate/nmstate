@@ -24,10 +24,12 @@ pub use crate::ifaces::{
     Interfaces, LinuxBridgeConfig, LinuxBridgeInterface,
     LinuxBridgeMulticastRouterType, LinuxBridgeOptions, LinuxBridgePortConfig,
     LinuxBridgePortTunkTag, LinuxBridgePortVlanConfig, LinuxBridgePortVlanMode,
-    LinuxBridgePortVlanRange, LinuxBridgeStpOptions, OvsBridgeBondConfig,
-    OvsBridgeBondMode, OvsBridgeBondPortConfig, OvsBridgeConfig,
-    OvsBridgeInterface, OvsBridgeOptions, OvsBridgePortConfig, OvsInterface,
-    SrIovConfig, SrIovVfConfig, VethConfig, VlanConfig, VlanInterface,
+    LinuxBridgePortVlanRange, LinuxBridgeStpOptions, MacVlanConfig,
+    MacVlanInterface, MacVlanMode, MacVtapConfig, MacVtapInterface,
+    MacVtapMode, OvsBridgeBondConfig, OvsBridgeBondMode,
+    OvsBridgeBondPortConfig, OvsBridgeConfig, OvsBridgeInterface,
+    OvsBridgeOptions, OvsBridgePortConfig, OvsInterface, SrIovConfig,
+    SrIovVfConfig, VethConfig, VlanConfig, VlanInterface,
 };
 pub use crate::ip::{InterfaceIpAddr, InterfaceIpv4, InterfaceIpv6};
 pub use crate::net_state::NetworkState;

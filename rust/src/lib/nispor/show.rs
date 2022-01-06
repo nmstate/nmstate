@@ -7,6 +7,7 @@ use crate::{
         error::np_error_to_nmstate,
         ethernet::np_ethernet_to_nmstate,
         linux_bridge::{append_bridge_port_config, np_bridge_to_nmstate},
+        mac_vlan::{np_mac_vlan_to_nmstate, np_mac_vtap_to_nmstate},
         route::get_routes,
         route_rule::get_route_rules,
         veth::np_veth_to_nmstate,
@@ -73,6 +74,12 @@ pub(crate) fn nispor_retrieve() -> Result<NetworkState, NmstateError> {
                 iface.base = base_iface;
                 iface
             }),
+            InterfaceType::MacVlan => {
+                Interface::MacVlan(np_mac_vlan_to_nmstate(np_iface, base_iface))
+            }
+            InterfaceType::MacVtap => {
+                Interface::MacVtap(np_mac_vtap_to_nmstate(np_iface, base_iface))
+            }
             _ => {
                 warn!(
                     "Got unsupported interface {} type {:?}",
