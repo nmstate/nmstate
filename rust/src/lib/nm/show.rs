@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 
 use log::{debug, warn};
-use nm_dbus::{NmActiveConnection, NmApi, NmConnection, NmDeviceState};
+use nm_dbus::{
+    NmActiveConnection, NmApi, NmConnection, NmDevice, NmDeviceState,
+};
 
 use crate::{
     nm::active_connection::create_index_for_nm_acs_by_name_type,
@@ -54,7 +56,7 @@ pub(crate) fn nm_retrieve() -> Result<NetworkState, NmstateError> {
     // Include disconnected interface as state:down
     // This is used for verify on `state: absent`
     for nm_dev in &nm_devs {
-        let iface_type = nm_iface_type_to_nmstate(&nm_dev.iface_type);
+        let iface_type = nm_dev_iface_type_to_nmstate(nm_dev);
         match nm_dev.state {
             NmDeviceState::Unmanaged => continue,
             NmDeviceState::Disconnected => {
@@ -137,6 +139,7 @@ pub(crate) fn nm_retrieve() -> Result<NetworkState, NmstateError> {
                 };
 
                 if let Some(iface) = iface_get(
+                    nm_dev,
                     nm_conn,
                     nm_saved_conn,
                     port_saved_nm_conns.as_ref().map(Vec::as_ref),
@@ -155,8 +158,8 @@ pub(crate) fn nm_retrieve() -> Result<NetworkState, NmstateError> {
     Ok(net_state)
 }
 
-fn nm_iface_type_to_nmstate(nm_iface_type: &str) -> InterfaceType {
-    match nm_iface_type {
+fn nm_dev_iface_type_to_nmstate(nm_dev: &NmDevice) -> InterfaceType {
+    match nm_dev.iface_type.as_str() {
         NM_SETTING_WIRED_SETTING_NAME => InterfaceType::Ethernet,
         NM_SETTING_VETH_SETTING_NAME => InterfaceType::Ethernet,
         NM_SETTING_BOND_SETTING_NAME => InterfaceType::Bond,
@@ -164,31 +167,28 @@ fn nm_iface_type_to_nmstate(nm_iface_type: &str) -> InterfaceType {
         NM_SETTING_BRIDGE_SETTING_NAME => InterfaceType::LinuxBridge,
         NM_SETTING_OVS_BRIDGE_SETTING_NAME => InterfaceType::OvsBridge,
         NM_SETTING_OVS_IFACE_SETTING_NAME => InterfaceType::OvsInterface,
-        _ => InterfaceType::Other(nm_iface_type.to_string()),
+        _ => InterfaceType::Other(nm_dev.iface_type.to_string()),
     }
 }
 
-fn nm_conn_to_base_iface(nm_conn: &NmConnection) -> Option<BaseInterface> {
+fn nm_conn_to_base_iface(
+    nm_dev: &NmDevice,
+    nm_conn: &NmConnection,
+) -> Option<BaseInterface> {
     if let Some(iface_name) = nm_conn.iface_name() {
-        if let Some(iface_type) = nm_conn.iface_type() {
-            let ipv4 = nm_conn.ipv4.as_ref().map(|nm_ipv4_setting| {
-                nm_ip_setting_to_nmstate4(nm_ipv4_setting)
-            });
-            let ipv6 = nm_conn.ipv6.as_ref().map(|nm_ipv6_setting| {
-                nm_ip_setting_to_nmstate6(nm_ipv6_setting)
-            });
+        let ipv4 = nm_conn.ipv4.as_ref().map(nm_ip_setting_to_nmstate4);
+        let ipv6 = nm_conn.ipv6.as_ref().map(nm_ip_setting_to_nmstate6);
 
-            let mut base_iface = BaseInterface::new();
-            base_iface.name = iface_name.to_string();
-            base_iface.prop_list =
-                vec!["name", "state", "iface_type", "ipv4", "ipv6"];
-            base_iface.state = InterfaceState::Up;
-            base_iface.iface_type = nm_iface_type_to_nmstate(iface_type);
-            base_iface.ipv4 = ipv4;
-            base_iface.ipv6 = ipv6;
-            base_iface.controller = nm_conn.controller().map(|c| c.to_string());
-            return Some(base_iface);
-        }
+        let mut base_iface = BaseInterface::new();
+        base_iface.name = iface_name.to_string();
+        base_iface.prop_list =
+            vec!["name", "state", "iface_type", "ipv4", "ipv6"];
+        base_iface.state = InterfaceState::Up;
+        base_iface.iface_type = nm_dev_iface_type_to_nmstate(nm_dev);
+        base_iface.ipv4 = ipv4;
+        base_iface.ipv6 = ipv6;
+        base_iface.controller = nm_conn.controller().map(|c| c.to_string());
+        return Some(base_iface);
     }
     None
 }
@@ -196,11 +196,12 @@ fn nm_conn_to_base_iface(nm_conn: &NmConnection) -> Option<BaseInterface> {
 // Applied connection does not hold OVS config, we need the NmConnection
 // used by `NmActiveConnection` also.
 fn iface_get(
+    nm_dev: &NmDevice,
     nm_conn: &NmConnection,
     nm_saved_conn: Option<&NmConnection>,
     port_saved_nm_conns: Option<&[&NmConnection]>,
 ) -> Option<Interface> {
-    if let Some(base_iface) = nm_conn_to_base_iface(nm_conn) {
+    if let Some(base_iface) = nm_conn_to_base_iface(nm_dev, nm_conn) {
         let iface = match &base_iface.iface_type {
             InterfaceType::LinuxBridge => Interface::LinuxBridge({
                 let mut iface = LinuxBridgeInterface::new();
