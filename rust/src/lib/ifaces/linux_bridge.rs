@@ -49,7 +49,6 @@ impl LinuxBridgeInterface {
     }
 
     pub(crate) fn pre_verify_cleanup(&mut self) {
-        self.base.pre_verify_cleanup();
         self.sort_ports();
         self.use_upper_case_of_mac_address();
         self.flatten_port_vlan_ranges();

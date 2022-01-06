@@ -181,6 +181,8 @@ function run_tests {
             tests/integration/static_ip_address_test.py \
             tests/integration/preserve_ip_config_test.py \
             tests/integration/dns_test.py \
+            tests/integration/mac_vlan_test.py \
+            tests/integration/mac_vtap_test.py \
             ${nmstate_pytest_extra_args}"
         exec_cmd "
           env  \

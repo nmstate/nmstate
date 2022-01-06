@@ -48,7 +48,6 @@ impl OvsBridgeInterface {
     }
 
     pub(crate) fn pre_verify_cleanup(&mut self) {
-        self.base.pre_verify_cleanup();
         self.sort_ports()
     }
 

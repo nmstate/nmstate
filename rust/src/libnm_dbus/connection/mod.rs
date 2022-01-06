@@ -21,6 +21,7 @@ mod bridge;
 mod conn;
 mod dns;
 mod ip;
+mod mac_vlan;
 mod ovs;
 mod route;
 mod route_rule;
@@ -34,9 +35,12 @@ pub use crate::connection::bridge::{
 };
 pub use crate::connection::conn::{NmConnection, NmSettingConnection};
 pub use crate::connection::ip::{NmSettingIp, NmSettingIpMethod};
+pub use crate::connection::mac_vlan::NmSettingMacVlan;
 pub use crate::connection::ovs::{
     NmSettingOvsBridge, NmSettingOvsIface, NmSettingOvsPort,
 };
+pub use crate::connection::route::NmIpRoute;
+pub use crate::connection::route_rule::NmIpRouteRule;
 pub use crate::connection::sriov::{
     NmSettingSriov, NmSettingSriovVf, NmSettingSriovVfVlan,
 };
@@ -46,7 +50,4 @@ pub use crate::connection::wired::NmSettingWired;
 pub(crate) use crate::connection::conn::{
     nm_con_get_from_obj_path, DbusDictionary, NmConnectionDbusValue,
 };
-pub use crate::connection::route::NmIpRoute;
-pub use crate::connection::route_rule::NmIpRouteRule;
-
 pub(crate) use crate::connection::macros::_from_map;
