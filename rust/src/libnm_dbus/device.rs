@@ -379,6 +379,7 @@ pub struct NmDevice {
     pub iface_type: String,
     pub state: NmDeviceState,
     pub state_reason: NmDeviceStateReason,
+    pub is_mac_vtap: bool,
     pub obj_path: String,
 }
 
@@ -481,18 +482,46 @@ fn nm_dev_state_reason_get(
     }
 }
 
+fn nm_dev_is_mac_vtap_get(
+    dbus_conn: &zbus::Connection,
+    obj_path: &str,
+) -> Result<bool, NmError> {
+    let dbus_iface = format!("{}.Macvlan", NM_DBUS_INTERFACE_DEV);
+    let proxy = zbus::Proxy::new(
+        dbus_conn,
+        NM_DBUS_INTERFACE_ROOT,
+        obj_path,
+        &dbus_iface,
+    )?;
+    match proxy.get_property::<bool>("Tab") {
+        Ok(v) => Ok(v),
+        Err(e) => Err(NmError::new(
+            ErrorKind::Bug,
+            format!(
+                "Failed to retrieve Macvlan.Tab(tap) of device {}: {}",
+                obj_path, e
+            ),
+        )),
+    }
+}
+
 pub(crate) fn nm_dev_from_obj_path(
     dbus_conn: &zbus::Connection,
     obj_path: &str,
 ) -> Result<NmDevice, NmError> {
     let (state, state_reason) = nm_dev_state_reason_get(dbus_conn, obj_path)?;
-    Ok(NmDevice {
+    let mut dev = NmDevice {
         name: nm_dev_name_get(dbus_conn, obj_path)?,
         iface_type: nm_dev_iface_type_get(dbus_conn, obj_path)?,
         state,
         state_reason,
         obj_path: obj_path.to_string(),
-    })
+        is_mac_vtap: false,
+    };
+    if dev.iface_type == "macvlan" {
+        dev.is_mac_vtap = nm_dev_is_mac_vtap_get(dbus_conn, obj_path)?;
+    }
+    Ok(dev)
 }
 
 pub(crate) fn nm_dev_delete(

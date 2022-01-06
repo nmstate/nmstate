@@ -39,10 +39,6 @@ impl VlanInterface {
             self.vlan = other.vlan.clone();
         }
     }
-
-    pub(crate) fn pre_verify_cleanup(&mut self) {
-        self.base.pre_verify_cleanup();
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
