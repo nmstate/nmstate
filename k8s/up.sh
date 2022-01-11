@@ -19,10 +19,10 @@ for node in $(./k8s/kubectl.sh get nodes --no-headers | awk '{print $1}'); do
         "sudo dnf copr enable nmstate/ovs-el8 -y && \
         sudo dnf upgrade -y --nobest && \
         sudo dnf install -y \
-            NetworkManager \
-            NetworkManager-ovs \
-            NetworkManager-team \
-            NetworkManager-config-server \
+            NetworkManager-1.34.0 \
+            NetworkManager-ovs-1.34.0 \
+            NetworkManager-team-1.34.0 \
+            NetworkManager-config-server-1.34.0 \
             openvswitch2.11 && \
         sudo systemctl enable openvswitch && \
         sudo sed -i -e 's/^#RateLimitInterval=.*/RateLimitInterval=0/' \
