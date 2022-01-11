@@ -28,24 +28,27 @@ from libnmstate.prettystate import format_desired_current_state_diff
 from libnmstate.schema import DNS
 from libnmstate.schema import Interface
 
+REMOVE_DNS_CONFIG = {
+    DNS.CONFIG: {
+        DNS.SERVER: [],
+        DNS.SEARCH: [],
+    }
+}
+
 
 class DnsState:
     PRIORITY_METADATA = "_priority"
 
     def __init__(self, des_dns_state, cur_dns_state):
         self._config_changed = False
-        if des_dns_state is None or des_dns_state.get(DNS.CONFIG) is None:
-            # Use current config if DNS.KEY not defined or DNS.CONFIG not
-            # defined.
-            self._dns_state = cur_dns_state or {}
-        else:
-            self._dns_state = des_dns_state
+        self._cur_dns_state = deepcopy(cur_dns_state) if cur_dns_state else {}
+        self._dns_state = merge_dns(des_dns_state, cur_dns_state or {})
+        if des_dns_state and des_dns_state.get(DNS.CONFIG):
             self._validate()
             if cur_dns_state:
                 self._config_changed = _is_dns_config_changed(
                     des_dns_state, cur_dns_state
                 )
-        self._cur_dns_state = deepcopy(cur_dns_state) if cur_dns_state else {}
         self._canonicalize_ip_address()
 
     def _canonicalize_ip_address(self):
@@ -268,3 +271,39 @@ def _is_mixed_dns_servers(servers):
             pattern += "4"
 
     return "464" in pattern or "646" in pattern
+
+
+def merge_dns(desire, current):
+    """
+    * When non-empty desire dns search, copy dns server from current when
+      undefined.
+    * When non-empty desire dns sever, copy dns search from current when
+      undefined.
+    """
+    if desire is None:
+        return deepcopy(current)
+
+    if desire.get(DNS.CONFIG) == {}:
+        return deepcopy(REMOVE_DNS_CONFIG)
+
+    des_servers = desire.get(DNS.CONFIG, {}).get(DNS.SERVER)
+    cur_servers = current.get(DNS.CONFIG, {}).get(DNS.SERVER)
+    des_searches = desire.get(DNS.CONFIG, {}).get(DNS.SEARCH)
+    cur_searches = current.get(DNS.CONFIG, {}).get(DNS.SEARCH)
+
+    if des_servers is None and des_searches is None:
+        # When desire not mentioned, use current config.
+        return deepcopy(current)
+
+    if des_servers is None:
+        des_servers = deepcopy(cur_servers) if cur_servers else []
+    if des_searches is None:
+        des_searches = deepcopy(cur_searches) if cur_searches else []
+
+    return {
+        DNS.RUNNING: deepcopy(current.get(DNS.RUNNING, {})),
+        DNS.CONFIG: {
+            DNS.SERVER: des_servers,
+            DNS.SEARCH: des_searches,
+        },
+    }
