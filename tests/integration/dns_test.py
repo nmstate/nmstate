@@ -36,6 +36,7 @@ IPV6_DNS_NAMESERVERS = ["2001:4860:4860::8888", "2606:4700:4700::1111"]
 IPV6_DNS_LONG_NAMESERVER = ["2000:0000:0000:0000:0000:0000:0000:0100"]
 EXTRA_IPV6_DNS_NAMESERVER = "2620:fe::9"
 EXAMPLE_SEARCHES = ["example.org", "example.com"]
+EXAMPLE_SEARCHES2 = ["example.info", "example.org"]
 
 parametrize_ip_ver = pytest.mark.parametrize(
     "dns_config",
@@ -173,10 +174,8 @@ def test_dns_edit_3_more_nameservers(dns_servers):
 @pytest.mark.tier1
 @pytest.mark.parametrize(
     "empty_dns_config",
-    [{DNS.SERVER: []}, {DNS.SEARCH: []}, {DNS.SERVER: [], DNS.SEARCH: []}, {}],
+    [{DNS.SERVER: [], DNS.SEARCH: []}, {}],
     ids=[
-        "empty_server",
-        "empty_search",
         "empty_server_and_search",
         "empty_dict",
     ],
@@ -391,3 +390,48 @@ def _gen_default_gateway_route():
             Route.NEXT_HOP_INTERFACE: "eth1",
         },
     ]
+
+
+@pytest.fixture
+def static_dns():
+    desired_state = {
+        Interface.KEY: _get_test_iface_states(),
+        Route.KEY: {Route.CONFIG: _gen_default_gateway_route()},
+        DNS.KEY: {
+            DNS.CONFIG: {
+                DNS.SERVER: [IPV6_DNS_NAMESERVERS[0], IPV4_DNS_NAMESERVERS[0]],
+                DNS.SEARCH: EXAMPLE_SEARCHES,
+            }
+        },
+    }
+    libnmstate.apply(desired_state)
+    yield
+
+
+@pytest.mark.tier1
+def test_change_dns_search_only(static_dns):
+    desired_state = {
+        DNS.KEY: {DNS.CONFIG: {DNS.SEARCH: EXAMPLE_SEARCHES2}},
+    }
+    libnmstate.apply(desired_state)
+    current_state = libnmstate.show()
+    assert current_state[DNS.KEY][DNS.CONFIG] == {
+        DNS.SERVER: [IPV6_DNS_NAMESERVERS[0], IPV4_DNS_NAMESERVERS[0]],
+        DNS.SEARCH: EXAMPLE_SEARCHES2,
+    }
+
+
+def test_change_dns_server_only(static_dns):
+    desired_state = {
+        DNS.KEY: {
+            DNS.CONFIG: {
+                DNS.SERVER: [IPV6_DNS_NAMESERVERS[1], IPV4_DNS_NAMESERVERS[1]]
+            }
+        },
+    }
+    libnmstate.apply(desired_state)
+    current_state = libnmstate.show()
+    assert current_state[DNS.KEY][DNS.CONFIG] == {
+        DNS.SERVER: [IPV6_DNS_NAMESERVERS[1], IPV4_DNS_NAMESERVERS[1]],
+        DNS.SEARCH: EXAMPLE_SEARCHES,
+    }

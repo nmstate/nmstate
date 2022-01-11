@@ -81,7 +81,7 @@ class TestDnsState:
         assert dns_state.current_config == DNS_CONFIG1
 
     def test_merge_by_discarding_current(self):
-        dns_state = DnsState({DNS.CONFIG: []}, {DNS.CONFIG: DNS_CONFIG1})
+        dns_state = DnsState({DNS.CONFIG: {}}, {DNS.CONFIG: DNS_CONFIG1})
 
         assert dns_state.config == {DNS.SERVER: [], DNS.SEARCH: []}
         assert dns_state.current_config == DNS_CONFIG1
@@ -370,3 +370,18 @@ class TestDnsState:
                 ]
             },
         )
+
+    def test_desire_search_only_will_merge_current(self):
+        des_config = {
+            DNS.CONFIG: {
+                DNS.SEARCH: DNS_SEARCHES_1,
+            }
+        }
+        cur_config = {
+            DNS.CONFIG: {
+                DNS.SERVER: [IPV4_DNS_SERVER1, IPV6_DNS_SERVER1],
+            }
+        }
+        dns_state = DnsState(des_config, cur_config)
+
+        assert dns_state.config == DNS_CONFIG1
