@@ -226,7 +226,7 @@ pub extern "C" fn nmstate_checkpoint_commit(
 
     // TODO: save log to the output pointer
 
-    if let Err(e) = nmstate::checkpoint_commit(checkpoint_str) {
+    if let Err(e) = nmstate::NetworkState::checkpoint_commit(checkpoint_str) {
         unsafe {
             *err_msg = CString::new(e.msg()).unwrap().into_raw();
             *err_kind =
@@ -283,7 +283,7 @@ pub extern "C" fn nmstate_checkpoint_rollback(
 
     // TODO: save log to the output pointer
 
-    if let Err(e) = nmstate::checkpoint_rollback(checkpoint_str) {
+    if let Err(e) = nmstate::NetworkState::checkpoint_rollback(checkpoint_str) {
         unsafe {
             *err_msg = CString::new(e.msg()).unwrap().into_raw();
             *err_kind =

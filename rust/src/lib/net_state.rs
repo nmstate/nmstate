@@ -542,6 +542,13 @@ impl NetworkState {
             }
         }
     }
+    pub fn checkpoint_rollback(checkpoint: &str) -> Result<(), NmstateError> {
+        nm_checkpoint_rollback(checkpoint)
+    }
+
+    pub fn checkpoint_commit(checkpoint: &str) -> Result<(), NmstateError> {
+        nm_checkpoint_destroy(checkpoint)
+    }
 }
 
 fn with_nm_checkpoint<T>(
