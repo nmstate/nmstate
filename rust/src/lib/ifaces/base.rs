@@ -148,6 +148,7 @@ impl BaseInterface {
     pub fn can_have_ip(&self) -> bool {
         self.controller == None
             || self.iface_type == InterfaceType::OvsInterface
+            || self.controller_type == Some(InterfaceType::Vrf)
     }
 
     pub(crate) fn is_up_priority_valid(&self) -> bool {

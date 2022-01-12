@@ -15,6 +15,7 @@ use crate::{
         get_exist_profile, save_nm_profiles, use_uuid_for_controller_reference,
     },
     nm::route::is_route_removed,
+    nm::vrf::is_vrf_table_id_changed,
     Interface, InterfaceType, NetworkState, NmstateError, OvsBridgeInterface,
     RouteEntry,
 };
@@ -281,8 +282,9 @@ fn delete_orphan_ports(
     Ok(())
 }
 
-// NM has problem on remove routes, we need to deactivate it first
+// * NM has problem on remove routes, we need to deactivate it first
 //  https://bugzilla.redhat.com/1837254
+// * NM cannot change VRF table ID, so we deactivate first
 fn gen_nm_conn_need_to_deactivate_first<'a>(
     nm_conns_to_activate: &[NmConnection],
     activated_nm_conns: &[&'a NmConnection],
@@ -299,7 +301,9 @@ fn gen_nm_conn_need_to_deactivate_first<'a>(
                     }
                 })
             {
-                if is_route_removed(nm_conn, activated_nm_con) {
+                if is_route_removed(nm_conn, activated_nm_con)
+                    || is_vrf_table_id_changed(nm_conn, activated_nm_con)
+                {
                     ret.push(activated_nm_con);
                 }
             }

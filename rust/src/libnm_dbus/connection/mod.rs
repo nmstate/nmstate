@@ -27,6 +27,7 @@ mod route;
 mod route_rule;
 mod sriov;
 mod vlan;
+mod vrf;
 mod wired;
 
 pub use crate::connection::bond::NmSettingBond;
@@ -45,6 +46,7 @@ pub use crate::connection::sriov::{
     NmSettingSriov, NmSettingSriovVf, NmSettingSriovVfVlan,
 };
 pub use crate::connection::vlan::{NmSettingVlan, NmVlanProtocol};
+pub use crate::connection::vrf::NmSettingVrf;
 pub use crate::connection::wired::NmSettingWired;
 
 pub(crate) use crate::connection::conn::{

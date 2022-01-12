@@ -44,6 +44,7 @@ from .device import DeviceDelete
 from .device import DeviceReapply
 from .device import get_nm_dev
 from .translator import Api2Nm
+from .vrf import is_vrf_table_id_changed
 
 
 IMPORT_NM_DEV_TIMEOUT = 5
@@ -197,6 +198,14 @@ class NmProfile:
             # This is a workaround for NM bug:
             # https://bugzilla.redhat.com/1837254
             # https://bugzilla.redhat.com/1962551
+            self._add_action(NmProfile.ACTION_DEACTIVATE_FIRST)
+
+        if (
+            self._iface.type == InterfaceType.VRF
+            and self._nm_dev
+            and is_vrf_table_id_changed(self._iface, self._nm_dev)
+        ):
+            # NM cannot change VRF table ID online
             self._add_action(NmProfile.ACTION_DEACTIVATE_FIRST)
 
         if self._iface.is_controller and self._iface.is_up:

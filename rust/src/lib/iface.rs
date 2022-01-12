@@ -5,7 +5,7 @@ use crate::{
     state::get_json_value_difference, BaseInterface, BondInterface,
     DummyInterface, ErrorKind, EthernetInterface, LinuxBridgeInterface,
     MacVlanInterface, MacVtapInterface, NmstateError, OvsBridgeInterface,
-    OvsInterface, VlanInterface,
+    OvsInterface, VlanInterface, VrfInterface,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -87,8 +87,8 @@ impl std::fmt::Display for InterfaceType {
 
 impl InterfaceType {
     const USERSPACE_IFACE_TYPES: [Self; 2] = [Self::OvsBridge, Self::Unknown];
-    const CONTROLLER_IFACES_TYPES: [Self; 3] =
-        [Self::Bond, Self::LinuxBridge, Self::OvsBridge];
+    const CONTROLLER_IFACES_TYPES: [Self; 4] =
+        [Self::Bond, Self::LinuxBridge, Self::OvsBridge, Self::Vrf];
 
     // Unknown and other interfaces are also considered as userspace
     pub(crate) fn is_userspace(&self) -> bool {
@@ -155,6 +155,7 @@ pub enum Interface {
     Vlan(VlanInterface),
     MacVlan(MacVlanInterface),
     MacVtap(MacVtapInterface),
+    Vrf(VrfInterface),
 }
 
 impl<'de> Deserialize<'de> for Interface {
@@ -215,6 +216,11 @@ impl<'de> Deserialize<'de> for Interface {
                 let inner = MacVtapInterface::deserialize(v)
                     .map_err(serde::de::Error::custom)?;
                 Ok(Interface::MacVtap(inner))
+            }
+            Some(InterfaceType::Vrf) => {
+                let inner = VrfInterface::deserialize(v)
+                    .map_err(serde::de::Error::custom)?;
+                Ok(Interface::Vrf(inner))
             }
             Some(iface_type) => {
                 warn!("Unsupported interface type {}", iface_type);
@@ -299,6 +305,11 @@ impl Interface {
                 new_iface.base = iface.base.clone_name_type_only();
                 Self::MacVtap(new_iface)
             }
+            Self::Vrf(iface) => {
+                let mut new_iface = VrfInterface::new();
+                new_iface.base = iface.base.clone_name_type_only();
+                Self::Vrf(new_iface)
+            }
             Self::Unknown(iface) => {
                 let mut new_iface = UnknownInterface::new();
                 new_iface.base = iface.base.clone_name_type_only();
@@ -339,6 +350,7 @@ impl Interface {
             Self::OvsInterface(iface) => &iface.base,
             Self::MacVlan(iface) => &iface.base,
             Self::MacVtap(iface) => &iface.base,
+            Self::Vrf(iface) => &iface.base,
             Self::Unknown(iface) => &iface.base,
         }
     }
@@ -354,6 +366,7 @@ impl Interface {
             Self::OvsBridge(iface) => &mut iface.base,
             Self::MacVlan(iface) => &mut iface.base,
             Self::MacVtap(iface) => &mut iface.base,
+            Self::Vrf(iface) => &mut iface.base,
             Self::Unknown(iface) => &mut iface.base,
         }
     }
@@ -365,6 +378,7 @@ impl Interface {
                 Self::LinuxBridge(_) => Some(Vec::new()),
                 Self::OvsBridge(_) => Some(Vec::new()),
                 Self::Bond(_) => Some(Vec::new()),
+                Self::Vrf(_) => Some(Vec::new()),
                 _ => None,
             }
         } else {
@@ -372,6 +386,7 @@ impl Interface {
                 Self::LinuxBridge(iface) => iface.ports(),
                 Self::OvsBridge(iface) => iface.ports(),
                 Self::Bond(iface) => iface.ports(),
+                Self::Vrf(iface) => iface.ports(),
                 _ => None,
             }
         }
@@ -454,6 +469,16 @@ impl Interface {
                     );
                 }
             }
+            Self::Vrf(iface) => {
+                if let Self::Vrf(other_iface) = other {
+                    iface.update_vrf(other_iface);
+                } else {
+                    warn!(
+                        "Don't know how to update iface {:?} with {:?}",
+                        iface, other
+                    );
+                }
+            }
             Self::Unknown(_) | Self::Dummy(_) | Self::OvsInterface(_) => (),
         }
     }
@@ -471,6 +496,9 @@ impl Interface {
                 iface.pre_verify_cleanup();
             }
             Self::OvsBridge(ref mut iface) => {
+                iface.pre_verify_cleanup();
+            }
+            Self::Vrf(ref mut iface) => {
                 iface.pre_verify_cleanup();
             }
             _ => (),
