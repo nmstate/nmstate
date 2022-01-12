@@ -287,3 +287,19 @@ def create_two_vlans_state():
             },
         ]
     }
+
+
+def test_preserve_existing_vlan_conf(eth1_up):
+    with vlan_interface(
+        VLAN_IFNAME, 101, eth1_up[Interface.KEY][0][Interface.NAME]
+    ) as desired_state:
+        libnmstate.apply(
+            {
+                Interface.KEY: [
+                    {
+                        Interface.NAME: VLAN_IFNAME,
+                    }
+                ]
+            }
+        )
+        assertlib.assert_state(desired_state)

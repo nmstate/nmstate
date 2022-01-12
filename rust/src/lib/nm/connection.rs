@@ -116,18 +116,22 @@ pub(crate) fn iface_to_nm_connections(
             gen_nm_ovs_iface_setting(&mut nm_conn);
         }
         Interface::Vlan(vlan_iface) => {
-            nm_conn.vlan = vlan_iface.vlan.as_ref().map(NmSettingVlan::from)
+            if let Some(conf) = vlan_iface.vlan.as_ref() {
+                nm_conn.vlan = Some(NmSettingVlan::from(conf))
+            }
         }
         Interface::Ethernet(eth_iface) => {
             gen_nm_sriov_setting(eth_iface, &mut nm_conn);
         }
         Interface::MacVlan(iface) => {
-            nm_conn.mac_vlan =
-                iface.mac_vlan.as_ref().map(NmSettingMacVlan::from)
+            if let Some(conf) = iface.mac_vlan.as_ref() {
+                nm_conn.mac_vlan = Some(NmSettingMacVlan::from(conf));
+            }
         }
         Interface::MacVtap(iface) => {
-            nm_conn.mac_vlan =
-                iface.mac_vtap.as_ref().map(NmSettingMacVlan::from)
+            if let Some(conf) = iface.mac_vtap.as_ref() {
+                nm_conn.mac_vlan = Some(NmSettingMacVlan::from(conf));
+            }
         }
         _ => (),
     };
