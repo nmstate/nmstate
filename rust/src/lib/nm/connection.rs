@@ -2,6 +2,7 @@ use std::collections::{hash_map::Entry, HashMap};
 
 use nm_dbus::{
     NmApi, NmConnection, NmSettingConnection, NmSettingMacVlan, NmSettingVlan,
+    NmSettingVrf,
 };
 
 use crate::{
@@ -27,6 +28,7 @@ pub(crate) const NM_SETTING_VETH_SETTING_NAME: &str = "veth";
 pub(crate) const NM_SETTING_BOND_SETTING_NAME: &str = "bond";
 pub(crate) const NM_SETTING_DUMMY_SETTING_NAME: &str = "dummy";
 pub(crate) const NM_SETTING_MACVLAN_SETTING_NAME: &str = "macvlan";
+pub(crate) const NM_SETTING_VRF_SETTING_NAME: &str = "vrf";
 
 pub(crate) fn nm_gen_conf(
     net_state: &NetworkState,
@@ -133,6 +135,11 @@ pub(crate) fn iface_to_nm_connections(
                 nm_conn.mac_vlan = Some(NmSettingMacVlan::from(conf));
             }
         }
+        Interface::Vrf(iface) => {
+            if let Some(vrf_conf) = iface.vrf.as_ref() {
+                nm_conn.vrf = Some(NmSettingVrf::from(vrf_conf));
+            }
+        }
         _ => (),
     };
 
@@ -164,6 +171,7 @@ pub(crate) fn iface_type_to_nm(
         InterfaceType::Dummy => Ok("dummy".to_string()),
         InterfaceType::MacVlan => Ok("macvlan".to_string()),
         InterfaceType::MacVtap => Ok("macvlan".to_string()),
+        InterfaceType::Vrf => Ok("vrf".to_string()),
         InterfaceType::Other(s) => Ok(s.to_string()),
         _ => Err(NmstateError::new(
             ErrorKind::NotImplementedError,

@@ -29,7 +29,8 @@ pub use crate::ifaces::{
     MacVtapMode, OvsBridgeBondConfig, OvsBridgeBondMode,
     OvsBridgeBondPortConfig, OvsBridgeConfig, OvsBridgeInterface,
     OvsBridgeOptions, OvsBridgePortConfig, OvsInterface, SrIovConfig,
-    SrIovVfConfig, VethConfig, VlanConfig, VlanInterface,
+    SrIovVfConfig, VethConfig, VlanConfig, VlanInterface, VrfConfig,
+    VrfInterface,
 };
 pub use crate::ip::{InterfaceIpAddr, InterfaceIpv4, InterfaceIpv6};
 pub use crate::net_state::NetworkState;

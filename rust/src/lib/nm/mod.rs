@@ -19,6 +19,7 @@ mod sriov;
 mod unit_tests;
 mod version;
 mod vlan;
+mod vrf;
 mod wired;
 
 pub(crate) use apply::nm_apply;

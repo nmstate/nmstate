@@ -23,7 +23,6 @@ import pytest
 
 import libnmstate
 
-from libnmstate.error import NmstateNotSupportedError
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
@@ -154,9 +153,8 @@ class TestVrf:
         iface_info = vrf0_with_port0
         iface_info[VRF.CONFIG_SUBTREE][VRF.ROUTE_TABLE_ID] += 1
         desired_state = {Interface.KEY: [iface_info]}
-        with pytest.raises(NmstateNotSupportedError):
-            libnmstate.apply(desired_state)
-            assertlib.assert_state_match(desired_state)
+        libnmstate.apply(desired_state)
+        assertlib.assert_state_match(desired_state)
 
     def test_create_with_empty_ports(self):
         desired_state = {

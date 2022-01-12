@@ -24,3 +24,7 @@ def create_vrf_setting(vrf_iface):
     vrf_setting = NM.SettingVrf.new()
     vrf_setting.props.table = vrf_iface.route_table_id
     return vrf_setting
+
+
+def is_vrf_table_id_changed(vrf_iface, nm_dev):
+    return vrf_iface.route_table_id != nm_dev.props.table
