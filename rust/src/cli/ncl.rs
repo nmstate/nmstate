@@ -4,10 +4,7 @@ use std::io::{self, Read};
 
 use env_logger::Builder;
 use log::LevelFilter;
-use nmstate::{
-    checkpoint_commit, checkpoint_rollback, DnsState, NetworkState, RouteRules,
-    Routes,
-};
+use nmstate::{DnsState, NetworkState, RouteRules, Routes};
 use serde::Serialize;
 use serde_yaml::{self, Value};
 
@@ -331,14 +328,14 @@ where
 }
 
 fn commit(checkpoint: &str) -> Result<String, CliError> {
-    match checkpoint_commit(checkpoint) {
+    match NetworkState::checkpoint_commit(checkpoint) {
         Ok(()) => Ok(checkpoint.to_string()),
         Err(e) => Err(CliError::from(e)),
     }
 }
 
 fn rollback(checkpoint: &str) -> Result<String, CliError> {
-    match checkpoint_rollback(checkpoint) {
+    match NetworkState::checkpoint_rollback(checkpoint) {
         Ok(()) => Ok(checkpoint.to_string()),
         Err(e) => Err(CliError::from(e)),
     }
