@@ -368,6 +368,7 @@ class OVSBridge(Bridge, OvsDB):
         MCAST_SNOOPING_ENABLED = "mcast-snooping-enable"
         RSTP = "rstp"
         STP = "stp"
+        DATAPATH = "datapath"
 
     class Port(Bridge.Port):
         LINK_AGGREGATION_SUBTREE = "link-aggregation"

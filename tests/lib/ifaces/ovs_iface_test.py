@@ -296,7 +296,7 @@ class TestOvsInternalIface:
             Interface.NAME: "ovs0",
             Interface.TYPE: InterfaceType.OVS_INTERFACE,
             OVSInterface.DPDK_CONFIG_SUBTREE: {
-            OVSInterface.Dpdk.DEVARGS: 23232
+                OVSInterface.Dpdk.DEVARGS: 23232
             },
         }
         iface = OvsInternalIface(iface_info)

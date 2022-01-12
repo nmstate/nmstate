@@ -75,6 +75,7 @@ class Bridge:
         ovs_db=None,
         patch_state=None,
         mtu=None,
+        dpdk_state=None,
     ):
         ifstate = {
             Interface.NAME: name,
@@ -92,6 +93,8 @@ class Bridge:
             ifstate[OVSInterface.OVS_DB_SUBTREE] = ovs_db
         if patch_state:
             ifstate[OVSInterface.PATCH_CONFIG_SUBTREE] = patch_state
+        if dpdk_state:
+            ifstate[OVSInterface.DPDK_CONFIG_SUBTREE] = dpdk_state
 
         self._add_port(name)
         self._ifaces.append(ifstate)

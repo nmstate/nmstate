@@ -1,0 +1,15 @@
+---
+interfaces:
+  - name: ovs-br0
+    type: ovs-bridge
+    state: up
+    bridge:
+      options:
+        datapath: netdev
+      port:
+        - name: ovs0
+  - name: ovs0
+    type: ovs-interface
+    state: up
+    dpdk:
+      devargs: "000:18:00.2"

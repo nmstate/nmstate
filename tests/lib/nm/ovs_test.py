@@ -56,6 +56,7 @@ def test_get_ovs_bridge_info_without_ports(NM_mock):
                 OVSBridge.Options.MCAST_SNOOPING_ENABLED: False,
                 OVSBridge.Options.RSTP: False,
                 OVSBridge.Options.STP: False,
+                OVSBridge.Options.DATAPATH: "",
             },
         }
     }
@@ -79,6 +80,7 @@ def test_get_ovs_bridge_info_without_interfaces(NM_mock):
                 OVSBridge.Options.MCAST_SNOOPING_ENABLED: False,
                 OVSBridge.Options.RSTP: False,
                 OVSBridge.Options.STP: False,
+                OVSBridge.Options.DATAPATH: "",
             },
         }
     }
@@ -160,3 +162,4 @@ def _mock_ovs_bridge_profile(bridge_device):
     bridge_setting.props.rstp_enable = False
     bridge_setting.props.fail_mode = None
     bridge_setting.props.mcast_snooping_enable = False
+    bridge_setting.props.datapath_type = ""
