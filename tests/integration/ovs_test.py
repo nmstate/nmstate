@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019-2020 Red Hat, Inc.
+# Copyright (c) 2019-2022 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -18,6 +18,7 @@
 #
 
 from contextlib import contextmanager
+import os
 import pytest
 
 import libnmstate
@@ -80,6 +81,10 @@ TEST_EXTERNAL_IDS_KEY = "ovn-bridge-mappings"
 TEST_EXTERNAL_IDS_VALUE = "provider:br-provider"
 TEST_OTHER_CONFIG_KEY = "stats-update-interval"
 TEST_OTHER_CONFIG_VALUE = "1000"
+
+
+def _test_pci_path():
+    return os.environ.get("TEST_PCI_PATH")
 
 
 @pytest.fixture
@@ -922,3 +927,43 @@ def test_add_route_rule_to_ovs_interface_dhcp_auto_route_table(
         route_rule.get(RouteRule.PRIORITY),
         route_rule.get(RouteRule.ROUTE_TABLE),
     )
+
+
+@pytest.mark.skipif(
+    not os.environ.get("TEST_PCI_PATH"),
+    reason="Need to define TEST_PCI_PATH for OVS DPDK tests.",
+)
+class TestOvsDpdk:
+    def test_create_ovs_dpdk_and_remove(self, setup_ovs_dpdk):
+        dpdk0_state = {OVSInterface.Dpdk.DEVARGS: _test_pci_path()}
+        bridge = Bridge(BRIDGE0)
+        bridge.add_internal_port(PORT1, dpdk_state=dpdk0_state)
+        desired_state = bridge.state
+        try:
+            libnmstate.apply(desired_state)
+            assertlib.assert_state_match(desired_state)
+        finally:
+            for iface in desired_state[Interface.KEY]:
+                iface[Interface.STATE] = InterfaceState.ABSENT
+            libnmstate.apply(desired_state)
+
+        assertlib.assert_absent(BRIDGE0)
+        assertlib.assert_absent(PORT1)
+
+    @pytest.mark.parametrize("datapaths", ("netdev", "system"))
+    def test_create_ovs_dpdk_with_datapath(self, setup_ovs_dpdk, datapaths):
+        dpdk0_state = {OVSInterface.Dpdk.DEVARGS: _test_pci_path()}
+        bridge = Bridge(BRIDGE0)
+        bridge.add_internal_port(PORT1, dpdk_state=dpdk0_state)
+        bridge.set_options({OVSBridge.Options.DATAPATH: datapaths})
+        desired_state = bridge.state
+        try:
+            libnmstate.apply(desired_state)
+            assertlib.assert_state_match(desired_state)
+        finally:
+            for iface in desired_state[Interface.KEY]:
+                iface[Interface.STATE] = InterfaceState.ABSENT
+            libnmstate.apply(desired_state)
+
+        assertlib.assert_absent(BRIDGE0)
+        assertlib.assert_absent(PORT1)
