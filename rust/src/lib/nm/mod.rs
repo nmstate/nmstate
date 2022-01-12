@@ -20,6 +20,7 @@ mod unit_tests;
 mod version;
 mod vlan;
 mod vrf;
+mod vxlan;
 mod wired;
 
 pub(crate) use apply::nm_apply;

@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use log::info;
-use nm_dbus::{NmApi, NmConnection, NmDeviceState};
+use nm_dbus::{NmApi, NmConnection};
 
 use crate::{
     nm::connection::{
@@ -15,7 +15,9 @@ use crate::{
         get_exist_profile, save_nm_profiles, use_uuid_for_controller_reference,
     },
     nm::route::is_route_removed,
+    nm::vlan::is_vlan_id_changed,
     nm::vrf::is_vrf_table_id_changed,
+    nm::vxlan::is_vxlan_id_changed,
     Interface, InterfaceType, NetworkState, NmstateError, OvsBridgeInterface,
     RouteEntry,
 };
@@ -232,17 +234,15 @@ fn delete_unmanged_virtual_interface_as_desired(
                 iface.name().to_string(),
                 iface.iface_type().to_string(),
             )) {
-                if nm_dev.state == NmDeviceState::Unmanaged {
-                    info!(
-                        "Deleting NM unmanaged interface {}/{}: {}",
-                        &iface.name(),
-                        &iface.iface_type(),
-                        &nm_dev.obj_path
-                    );
-                    nm_api
-                        .device_delete(&nm_dev.obj_path)
-                        .map_err(nm_error_to_nmstate)?;
-                }
+                info!(
+                    "Deleting NM unmanaged interface {}/{}: {}",
+                    &iface.name(),
+                    &iface.iface_type(),
+                    &nm_dev.obj_path
+                );
+                nm_api
+                    .device_delete(&nm_dev.obj_path)
+                    .map_err(nm_error_to_nmstate)?;
             }
         }
     }
@@ -303,6 +303,8 @@ fn gen_nm_conn_need_to_deactivate_first<'a>(
             {
                 if is_route_removed(nm_conn, activated_nm_con)
                     || is_vrf_table_id_changed(nm_conn, activated_nm_con)
+                    || is_vlan_id_changed(nm_conn, activated_nm_con)
+                    || is_vxlan_id_changed(nm_conn, activated_nm_con)
                 {
                     ret.push(activated_nm_con);
                 }
