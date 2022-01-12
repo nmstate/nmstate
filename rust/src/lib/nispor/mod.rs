@@ -13,6 +13,7 @@ mod show;
 mod veth;
 mod vlan;
 mod vrf;
+mod vxlan;
 
 pub(crate) use apply::nispor_apply;
 pub(crate) use show::nispor_retrieve;

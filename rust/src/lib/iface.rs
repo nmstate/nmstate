@@ -5,7 +5,7 @@ use crate::{
     state::get_json_value_difference, BaseInterface, BondInterface,
     DummyInterface, ErrorKind, EthernetInterface, LinuxBridgeInterface,
     MacVlanInterface, MacVtapInterface, NmstateError, OvsBridgeInterface,
-    OvsInterface, VlanInterface, VrfInterface,
+    OvsInterface, VlanInterface, VrfInterface, VxlanInterface,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -153,6 +153,7 @@ pub enum Interface {
     OvsInterface(OvsInterface),
     Unknown(UnknownInterface),
     Vlan(VlanInterface),
+    Vxlan(VxlanInterface),
     MacVlan(MacVlanInterface),
     MacVtap(MacVtapInterface),
     Vrf(VrfInterface),
@@ -191,6 +192,11 @@ impl<'de> Deserialize<'de> for Interface {
                 let inner = VlanInterface::deserialize(v)
                     .map_err(serde::de::Error::custom)?;
                 Ok(Interface::Vlan(inner))
+            }
+            Some(InterfaceType::Vxlan) => {
+                let inner = VxlanInterface::deserialize(v)
+                    .map_err(serde::de::Error::custom)?;
+                Ok(Interface::Vxlan(inner))
             }
             Some(InterfaceType::Dummy) => {
                 let inner = DummyInterface::deserialize(v)
@@ -275,6 +281,11 @@ impl Interface {
                 new_iface.base = iface.base.clone_name_type_only();
                 Self::Vlan(new_iface)
             }
+            Self::Vxlan(iface) => {
+                let mut new_iface = VxlanInterface::new();
+                new_iface.base = iface.base.clone_name_type_only();
+                Self::Vxlan(new_iface)
+            }
             Self::Dummy(iface) => {
                 let mut new_iface = DummyInterface::new();
                 new_iface.base = iface.base.clone_name_type_only();
@@ -345,6 +356,7 @@ impl Interface {
             Self::Bond(iface) => &iface.base,
             Self::Ethernet(iface) => &iface.base,
             Self::Vlan(iface) => &iface.base,
+            Self::Vxlan(iface) => &iface.base,
             Self::Dummy(iface) => &iface.base,
             Self::OvsBridge(iface) => &iface.base,
             Self::OvsInterface(iface) => &iface.base,
@@ -361,6 +373,7 @@ impl Interface {
             Self::Bond(iface) => &mut iface.base,
             Self::Ethernet(iface) => &mut iface.base,
             Self::Vlan(iface) => &mut iface.base,
+            Self::Vxlan(iface) => &mut iface.base,
             Self::Dummy(iface) => &mut iface.base,
             Self::OvsInterface(iface) => &mut iface.base,
             Self::OvsBridge(iface) => &mut iface.base,
@@ -432,6 +445,16 @@ impl Interface {
             Self::Vlan(iface) => {
                 if let Self::Vlan(other_iface) = other {
                     iface.update_vlan(other_iface);
+                } else {
+                    warn!(
+                        "Don't know how to update iface {:?} with {:?}",
+                        iface, other
+                    );
+                }
+            }
+            Self::Vxlan(iface) => {
+                if let Self::Vxlan(other_iface) = other {
+                    iface.update_vxlan(other_iface);
                 } else {
                     warn!(
                         "Don't know how to update iface {:?} with {:?}",
@@ -545,7 +568,9 @@ impl Interface {
                 serde_json::Value::Number(cur),
             ) = (desire, current)
             {
-                if desire.as_u64().unwrap_or(0) - cur.as_u64().unwrap_or(0) == 1
+                if desire.as_u64().unwrap_or(0) as i128
+                    - cur.as_u64().unwrap_or(0) as i128
+                    == 1
                     && LinuxBridgeInterface::is_interger_rounded_up(&reference)
                 {
                     let e = NmstateError::new(
@@ -602,6 +627,7 @@ impl Interface {
     pub(crate) fn parent(&self) -> Option<&str> {
         match self {
             Interface::Vlan(vlan) => vlan.parent(),
+            Interface::Vxlan(vxlan) => vxlan.parent(),
             Interface::OvsInterface(ovs) => ovs.parent(),
             Interface::MacVlan(vlan) => vlan.parent(),
             Interface::MacVtap(vtap) => vtap.parent(),
