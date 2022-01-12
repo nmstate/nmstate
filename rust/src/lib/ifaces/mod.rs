@@ -3,6 +3,7 @@ mod bond;
 mod dummy;
 mod ethernet;
 mod inter_ifaces;
+mod vrf;
 // The pub(crate) is only for unit test
 pub(crate) mod inter_ifaces_controller;
 mod linux_bridge;
@@ -38,3 +39,4 @@ pub use ovs::{
 };
 pub use sriov::{SrIovConfig, SrIovVfConfig};
 pub use vlan::{VlanConfig, VlanInterface};
+pub use vrf::{VrfConfig, VrfInterface};

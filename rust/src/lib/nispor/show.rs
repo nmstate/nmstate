@@ -12,6 +12,7 @@ use crate::{
         route_rule::get_route_rules,
         veth::np_veth_to_nmstate,
         vlan::np_vlan_to_nmstate,
+        vrf::np_vrf_to_nmstate,
     },
     DummyInterface, Interface, InterfaceType, NetworkState, NmstateError,
     OvsInterface, UnknownInterface,
@@ -79,6 +80,9 @@ pub(crate) fn nispor_retrieve() -> Result<NetworkState, NmstateError> {
             }
             InterfaceType::MacVtap => {
                 Interface::MacVtap(np_mac_vtap_to_nmstate(np_iface, base_iface))
+            }
+            InterfaceType::Vrf => {
+                Interface::Vrf(np_vrf_to_nmstate(np_iface, base_iface))
             }
             _ => {
                 warn!(

@@ -12,6 +12,7 @@ mod route_rule;
 mod show;
 mod veth;
 mod vlan;
+mod vrf;
 
 pub(crate) use apply::nispor_apply;
 pub(crate) use show::nispor_retrieve;

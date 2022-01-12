@@ -22,7 +22,6 @@ import logging
 from libnmstate.error import NmstateKernelIntegerRoundedError
 from libnmstate.error import NmstateValueError
 from libnmstate.error import NmstateVerificationError
-from libnmstate.error import NmstateNotSupportedError
 from libnmstate.prettystate import format_desired_current_state_diff
 from libnmstate.schema import BondMode
 from libnmstate.schema import Interface
@@ -273,7 +272,6 @@ class Ifaces:
         self._bring_port_up_if_not_in_desire()
         self._validate_ovs_patch_peers()
         self._remove_unknown_type_interfaces()
-        self._validate_vrf_table_id_changes()
         self._validate_veth_peers()
 
     def _bring_port_up_if_not_in_desire(self):
@@ -419,19 +417,6 @@ class Ifaces:
                 for port_name in iface.config_changed_port(cur_iface):
                     if port_name in self._kernel_ifaces:
                         self._kernel_ifaces[port_name].mark_as_changed()
-
-    def _validate_vrf_table_id_changes(self):
-        for iface in self._kernel_ifaces.values():
-            if iface.is_desired and iface.type == InterfaceType.VRF:
-                cur_iface = self._cur_kernel_ifaces.get(iface.name)
-                if (
-                    cur_iface
-                    and cur_iface.route_table_id != iface.route_table_id
-                ):
-                    raise NmstateNotSupportedError(
-                        "Changing route table ID of existing VRF Interface "
-                        "is not supported yet"
-                    )
 
     def _validate_veth_peers(self):
         for ifname, iface in self._kernel_ifaces.items():

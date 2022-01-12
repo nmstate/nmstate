@@ -29,6 +29,8 @@ from .base_iface import BaseIface
 
 
 class VrfIface(BaseIface):
+    TABLE_ID_CHANGED_METADATA = "_table_id_changed"
+
     def sort_port(self):
         if self.port:
             self.raw[VRF.CONFIG_SUBTREE][VRF.PORT_SUBTREE].sort()
