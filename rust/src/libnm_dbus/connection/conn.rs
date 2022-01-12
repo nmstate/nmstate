@@ -33,6 +33,7 @@ use crate::{
     connection::sriov::NmSettingSriov,
     connection::vlan::NmSettingVlan,
     connection::vrf::NmSettingVrf,
+    connection::vxlan::NmSettingVxlan,
     connection::wired::NmSettingWired,
     dbus::{NM_DBUS_INTERFACE_ROOT, NM_DBUS_INTERFACE_SETTING},
     keyfile::zvariant_value_to_keyfile,
@@ -65,6 +66,7 @@ pub struct NmConnection {
     pub ovs_iface: Option<NmSettingOvsIface>,
     pub wired: Option<NmSettingWired>,
     pub vlan: Option<NmSettingVlan>,
+    pub vxlan: Option<NmSettingVxlan>,
     pub mac_vlan: Option<NmSettingMacVlan>,
     pub sriov: Option<NmSettingSriov>,
     pub vrf: Option<NmSettingVrf>,
@@ -114,6 +116,7 @@ impl TryFrom<NmConnectionDbusOwnedValue> for NmConnection {
             )?,
             wired: _from_map!(v, "802-3-ethernet", NmSettingWired::try_from)?,
             vlan: _from_map!(v, "vlan", NmSettingVlan::try_from)?,
+            vxlan: _from_map!(v, "vxlan", NmSettingVxlan::try_from)?,
             sriov: _from_map!(v, "sriov", NmSettingSriov::try_from)?,
             mac_vlan: _from_map!(v, "macvlan", NmSettingMacVlan::try_from)?,
             vrf: _from_map!(v, "vrf", NmSettingVrf::try_from)?,
@@ -192,6 +195,9 @@ impl NmConnection {
         }
         if let Some(vlan) = &self.vlan {
             ret.insert("vlan", vlan.to_value()?);
+        }
+        if let Some(vxlan) = &self.vxlan {
+            ret.insert("vxlan", vxlan.to_value()?);
         }
         if let Some(sriov) = &self.sriov {
             ret.insert("sriov", sriov.to_value()?);

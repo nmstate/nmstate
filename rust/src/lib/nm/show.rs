@@ -13,7 +13,8 @@ use crate::{
         NM_SETTING_BOND_SETTING_NAME, NM_SETTING_BRIDGE_SETTING_NAME,
         NM_SETTING_DUMMY_SETTING_NAME, NM_SETTING_MACVLAN_SETTING_NAME,
         NM_SETTING_OVS_BRIDGE_SETTING_NAME, NM_SETTING_OVS_IFACE_SETTING_NAME,
-        NM_SETTING_VETH_SETTING_NAME, NM_SETTING_VRF_SETTING_NAME,
+        NM_SETTING_VETH_SETTING_NAME, NM_SETTING_VLAN_SETTING_NAME,
+        NM_SETTING_VRF_SETTING_NAME, NM_SETTING_VXLAN_SETTING_NAME,
         NM_SETTING_WIRED_SETTING_NAME,
     },
     nm::dns::retrieve_dns_info,
@@ -23,7 +24,8 @@ use crate::{
     BaseInterface, BondInterface, DummyInterface, EthernetInterface, Interface,
     InterfaceState, InterfaceType, Interfaces, LinuxBridgeInterface,
     MacVlanInterface, MacVtapInterface, NetworkState, NmstateError,
-    OvsBridgeInterface, OvsInterface, UnknownInterface, VrfInterface,
+    OvsBridgeInterface, OvsInterface, UnknownInterface, VlanInterface,
+    VrfInterface, VxlanInterface,
 };
 
 pub(crate) fn nm_retrieve() -> Result<NetworkState, NmstateError> {
@@ -89,6 +91,16 @@ pub(crate) fn nm_retrieve() -> Result<NetworkState, NmstateError> {
                     }),
                     InterfaceType::Bond => Interface::Bond({
                         let mut iface = BondInterface::new();
+                        iface.base = base_iface;
+                        iface
+                    }),
+                    InterfaceType::Vlan => Interface::Vlan({
+                        let mut iface = VlanInterface::new();
+                        iface.base = base_iface;
+                        iface
+                    }),
+                    InterfaceType::Vxlan => Interface::Vxlan({
+                        let mut iface = VxlanInterface::new();
                         iface.base = base_iface;
                         iface
                     }),
@@ -184,6 +196,8 @@ fn nm_dev_iface_type_to_nmstate(nm_dev: &NmDevice) -> InterfaceType {
         NM_SETTING_OVS_BRIDGE_SETTING_NAME => InterfaceType::OvsBridge,
         NM_SETTING_OVS_IFACE_SETTING_NAME => InterfaceType::OvsInterface,
         NM_SETTING_VRF_SETTING_NAME => InterfaceType::Vrf,
+        NM_SETTING_VLAN_SETTING_NAME => InterfaceType::Vlan,
+        NM_SETTING_VXLAN_SETTING_NAME => InterfaceType::Vxlan,
         NM_SETTING_MACVLAN_SETTING_NAME => {
             if nm_dev.is_mac_vtap {
                 InterfaceType::MacVtap
@@ -249,6 +263,16 @@ fn iface_get(
             }),
             InterfaceType::Dummy => Interface::Dummy({
                 let mut iface = DummyInterface::new();
+                iface.base = base_iface;
+                iface
+            }),
+            InterfaceType::Vlan => Interface::Vlan({
+                let mut iface = VlanInterface::new();
+                iface.base = base_iface;
+                iface
+            }),
+            InterfaceType::Vxlan => Interface::Vxlan({
+                let mut iface = VxlanInterface::new();
                 iface.base = base_iface;
                 iface
             }),
