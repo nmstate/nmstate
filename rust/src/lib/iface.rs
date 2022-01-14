@@ -86,7 +86,7 @@ impl std::fmt::Display for InterfaceType {
 }
 
 impl InterfaceType {
-    const USERSPACE_IFACE_TYPES: [Self; 2] = [Self::OvsBridge, Self::Unknown];
+    const USERSPACE_IFACE_TYPES: [Self; 1] = [Self::OvsBridge];
     const CONTROLLER_IFACES_TYPES: [Self; 4] =
         [Self::Bond, Self::LinuxBridge, Self::OvsBridge, Self::Vrf];
 

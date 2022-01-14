@@ -4,7 +4,7 @@ use std::io::{self, Read};
 
 use env_logger::Builder;
 use log::LevelFilter;
-use nmstate::{DnsState, NetworkState, RouteRules, Routes};
+use nmstate::{DnsState, NetworkState, OvsDbGlobalConfig, RouteRules, Routes};
 use serde::Serialize;
 use serde_yaml::{self, Value};
 
@@ -208,6 +208,8 @@ struct SortedNetworkState {
     rules: RouteRules,
     routes: Routes,
     interfaces: Vec<Value>,
+    #[serde(rename = "ovs-db")]
+    ovsdb: OvsDbGlobalConfig,
 }
 
 const IFACE_TOP_PRIORTIES: [&str; 2] = ["name", "type"];
@@ -250,6 +252,7 @@ fn sort_netstate(
             routes: net_state.routes,
             rules: net_state.rules,
             dns: net_state.dns,
+            ovsdb: net_state.ovsdb,
         });
     }
 
@@ -258,6 +261,7 @@ fn sort_netstate(
         routes: net_state.routes,
         rules: net_state.rules,
         dns: net_state.dns,
+        ovsdb: net_state.ovsdb,
     })
 }
 

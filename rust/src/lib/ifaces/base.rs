@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     ErrorKind, InterfaceIpv4, InterfaceIpv6, InterfaceState, InterfaceType,
-    NmstateError, RouteEntry, RouteRuleEntry,
+    NmstateError, OvsDbIfaceConfig, RouteEntry, RouteRuleEntry,
 };
 
 // TODO: Use prop_list to Serialize like InterfaceIpv4 did
@@ -33,6 +33,8 @@ pub struct BaseInterface {
     pub accept_all_mac_addresses: Option<bool>,
     #[serde(skip_serializing)]
     pub copy_mac_from: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none", rename = "ovs-db")]
+    pub ovsdb: Option<OvsDbIfaceConfig>,
     #[serde(skip)]
     pub controller_type: Option<InterfaceType>,
     // The interface lowest up_priority will be activated first.
@@ -74,6 +76,9 @@ impl BaseInterface {
         }
         if other.prop_list.contains(&"accept_all_mac_addresses") {
             self.accept_all_mac_addresses = other.accept_all_mac_addresses;
+        }
+        if other.prop_list.contains(&"ovsdb") {
+            self.ovsdb = other.ovsdb.clone();
         }
 
         if other.prop_list.contains(&"ipv4") {
