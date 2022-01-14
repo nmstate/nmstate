@@ -15,8 +15,9 @@ use crate::{
         nm_checkpoint_rollback, nm_checkpoint_timeout_extend, nm_gen_conf,
         nm_retrieve,
     },
+    ovsdb::{ovsdb_is_running, ovsdb_retrieve},
     DnsState, ErrorKind, Interface, InterfaceType, Interfaces, NmstateError,
-    RouteRules, Routes,
+    OvsDbGlobalConfig, RouteRules, Routes,
 };
 
 const DEFAULT_ROLLBACK_TIMEOUT: u32 = 60;
@@ -36,6 +37,8 @@ pub struct NetworkState {
     pub routes: Routes,
     #[serde(default)]
     pub interfaces: Interfaces,
+    #[serde(default, rename = "ovs-db")]
+    pub ovsdb: OvsDbGlobalConfig,
     #[serde(skip)]
     // Contain a list of struct member name which is defined explicitly in
     // desire state instead of generated.
@@ -80,6 +83,11 @@ impl<'de> Deserialize<'de> for NetworkState {
         if let Some(rule_value) = v.get("route-rules") {
             net_state.prop_list.push("rules");
             net_state.rules = RouteRules::deserialize(rule_value)
+                .map_err(serde::de::Error::custom)?;
+        }
+        if let Some(ovsdb_value) = v.get("ovs-db") {
+            net_state.prop_list.push("ovsdb");
+            net_state.ovsdb = OvsDbGlobalConfig::deserialize(ovsdb_value)
                 .map_err(serde::de::Error::custom)?;
         }
         Ok(net_state)
@@ -152,6 +160,14 @@ impl NetworkState {
             let nm_state = nm_retrieve()?;
             // TODO: Priority handling
             self.update_state(&nm_state);
+            if ovsdb_is_running() {
+                match ovsdb_retrieve() {
+                    Ok(ovsdb_state) => self.update_state(&ovsdb_state),
+                    Err(e) => {
+                        log::warn!("Failed to retrieve OVS DB state: {}", e);
+                    }
+                }
+            }
         }
         Ok(self)
     }
@@ -247,6 +263,9 @@ impl NetworkState {
         }
         if other.prop_list.contains(&"dns") {
             self.dns = other.dns.clone();
+        }
+        if other.prop_list.contains(&"ovsdb") {
+            self.ovsdb = other.ovsdb.clone();
         }
     }
 

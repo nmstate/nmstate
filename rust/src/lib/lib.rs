@@ -6,6 +6,8 @@ mod ip;
 mod net_state;
 mod nispor;
 mod nm;
+mod ovs;
+mod ovsdb;
 mod route;
 mod route_rule;
 mod state;
@@ -34,5 +36,6 @@ pub use crate::ifaces::{
 };
 pub use crate::ip::{InterfaceIpAddr, InterfaceIpv4, InterfaceIpv6};
 pub use crate::net_state::NetworkState;
+pub use crate::ovs::{OvsDbGlobalConfig, OvsDbIfaceConfig};
 pub use crate::route::{RouteEntry, RouteState, Routes};
 pub use crate::route_rule::{RouteRuleEntry, RouteRuleState, RouteRules};
