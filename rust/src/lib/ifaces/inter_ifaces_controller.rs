@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 use std::iter::FromIterator;
 
-use log::{debug, error, info};
+use log::{debug, info};
 
 use crate::{
     BaseInterface, ErrorKind, Interface, InterfaceIpv4, InterfaceIpv6,
@@ -253,9 +253,7 @@ pub(crate) fn set_ifaces_up_priority(ifaces: &mut Interfaces) -> bool {
                     ret = false;
                 }
             } else {
-                // There will be other validator check missing
-                // controller
-                error!("BUG: _set_up_priority() got port without controller");
+                // Interface has no controller defined in desire
                 continue;
             }
         } else {
@@ -368,4 +366,48 @@ fn is_port_overbook(
         port_to_ctrl.insert(port.to_string(), ctrl.to_string());
     }
     Ok(())
+}
+
+// If any interface has no controller change, copy it from current.
+// No controller change means all below:
+//  1. Current controller not mentioned in desired.
+//  2. This interface has no new controller in desired:
+pub(crate) fn preserve_ctrl_cfg_if_unchanged(
+    ifaces: &mut Interfaces,
+    cur_ifaces: &Interfaces,
+) {
+    let mut desired_ctrls = Vec::new();
+    for iface in ifaces
+        .kernel_ifaces
+        .values()
+        .chain(ifaces.user_ifaces.values())
+    {
+        if iface.is_controller() {
+            desired_ctrls
+                .push((iface.name().to_string(), iface.iface_type().clone()));
+        }
+    }
+
+    for (iface_name, iface) in ifaces.kernel_ifaces.iter_mut() {
+        if iface.base_iface().controller.is_some() {
+            // Iface already has controller information
+            continue;
+        }
+        let cur_iface = match cur_ifaces.kernel_ifaces.get(iface_name) {
+            Some(i) => i,
+            None => continue,
+        };
+        if let (Some(ctrl), Some(ctrl_type)) = (
+            cur_iface.base_iface().controller.as_ref(),
+            cur_iface.base_iface().controller_type.as_ref(),
+        ) {
+            // If current controller is mentioned in desired, means current
+            // interface is been detached.
+            if !desired_ctrls.contains(&(ctrl.to_string(), ctrl_type.clone())) {
+                iface.base_iface_mut().controller = Some(ctrl.to_string());
+                iface.base_iface_mut().controller_type =
+                    Some(ctrl_type.clone());
+            }
+        }
+    }
 }

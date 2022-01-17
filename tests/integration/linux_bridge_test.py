@@ -888,3 +888,22 @@ def test_linux_bridge_enable_and_disable_accept_all_mac_addresses(
     desired_state[Interface.KEY][0][Interface.ACCEPT_ALL_MAC_ADDRESSES] = False
     libnmstate.apply(desired_state)
     assertlib.assert_state_match(desired_state)
+
+
+def test_desire_port_only_should_preserve_ctrl_setting(bridge0_with_port0):
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: "eth1",
+                }
+            ]
+        }
+    )
+    state = show_only((TEST_BRIDGE0,))
+    ports = state[Interface.KEY][0][LinuxBridge.CONFIG_SUBTREE][
+        LinuxBridge.PORT_SUBTREE
+    ]
+
+    assert len(ports) == 1
+    assert ports[0][LinuxBridge.Port.NAME] == "eth1"

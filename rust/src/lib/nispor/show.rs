@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use log::{debug, warn};
 
 use crate::{
@@ -15,8 +17,8 @@ use crate::{
         vrf::np_vrf_to_nmstate,
         vxlan::np_vxlan_to_nmstate,
     },
-    DummyInterface, Interface, InterfaceType, NetworkState, NmstateError,
-    OvsInterface, UnknownInterface,
+    DummyInterface, Interface, InterfaceType, Interfaces, NetworkState,
+    NmstateError, OvsInterface, UnknownInterface,
 };
 
 pub(crate) fn nispor_retrieve() -> Result<NetworkState, NmstateError> {
@@ -103,8 +105,27 @@ pub(crate) fn nispor_retrieve() -> Result<NetworkState, NmstateError> {
         debug!("Got interface {:?}", iface);
         net_state.append_interface_data(iface);
     }
+    set_controller_type(&mut net_state.interfaces);
     net_state.routes = get_routes(&np_state.routes);
     net_state.rules = get_route_rules(&np_state.rules);
 
     Ok(net_state)
+}
+
+fn set_controller_type(ifaces: &mut Interfaces) {
+    let mut ctrl_to_type: HashMap<String, InterfaceType> = HashMap::new();
+    for iface in ifaces.to_vec() {
+        if iface.is_controller() {
+            ctrl_to_type
+                .insert(iface.name().to_string(), iface.iface_type().clone());
+        }
+    }
+    for iface in ifaces.kernel_ifaces.values_mut() {
+        if let Some(ctrl) = iface.base_iface().controller.as_ref() {
+            if let Some(ctrl_type) = ctrl_to_type.get(ctrl) {
+                iface.base_iface_mut().controller_type =
+                    Some(ctrl_type.clone());
+            }
+        }
+    }
 }

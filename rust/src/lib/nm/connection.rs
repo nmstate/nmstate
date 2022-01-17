@@ -175,6 +175,7 @@ pub(crate) fn iface_to_nm_connections(
         nm_conn.ovs_iface = None;
     }
 
+    println!("{:?}", nm_conn);
     ret.insert(0, nm_conn);
 
     Ok(ret)
