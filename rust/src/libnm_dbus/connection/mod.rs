@@ -40,7 +40,7 @@ pub use crate::connection::conn::{NmConnection, NmSettingConnection};
 pub use crate::connection::ip::{NmSettingIp, NmSettingIpMethod};
 pub use crate::connection::mac_vlan::NmSettingMacVlan;
 pub use crate::connection::ovs::{
-    NmSettingOvsBridge, NmSettingOvsIface, NmSettingOvsPort,
+    NmSettingOvsBridge, NmSettingOvsExtIds, NmSettingOvsIface, NmSettingOvsPort,
 };
 pub use crate::connection::route::NmIpRoute;
 pub use crate::connection::route_rule::NmIpRouteRule;

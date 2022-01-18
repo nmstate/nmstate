@@ -27,10 +27,10 @@ pub use crate::active_connection::NmActiveConnection;
 pub use crate::connection::{
     NmConnection, NmIpRoute, NmIpRouteRule, NmSettingBond, NmSettingBridge,
     NmSettingBridgeVlanRange, NmSettingConnection, NmSettingIp,
-    NmSettingIpMethod, NmSettingMacVlan, NmSettingOvsBridge, NmSettingOvsIface,
-    NmSettingOvsPort, NmSettingSriov, NmSettingSriovVf, NmSettingSriovVfVlan,
-    NmSettingVeth, NmSettingVlan, NmSettingVrf, NmSettingVxlan, NmSettingWired,
-    NmVlanProtocol,
+    NmSettingIpMethod, NmSettingMacVlan, NmSettingOvsBridge,
+    NmSettingOvsExtIds, NmSettingOvsIface, NmSettingOvsPort, NmSettingSriov,
+    NmSettingSriovVf, NmSettingSriovVfVlan, NmSettingVeth, NmSettingVlan,
+    NmSettingVrf, NmSettingVxlan, NmSettingWired, NmVlanProtocol,
 };
 pub use crate::device::{NmDevice, NmDeviceState, NmDeviceStateReason};
 pub use crate::dns::NmDnsEntry;

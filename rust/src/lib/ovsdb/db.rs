@@ -9,8 +9,10 @@ use crate::{
 };
 
 const OVS_DB_NAME: &str = "Open_vSwitch";
-const GLOBAL_CONFIG_TABLE: &str = "Open_vSwitch";
+pub(crate) const GLOBAL_CONFIG_TABLE: &str = "Open_vSwitch";
 const NM_RESERVED_EXTERNAL_ID: &str = "NM.connection.uuid";
+
+const DEFAULT_OVS_DB_SOCKET_PATH: &str = "/run/openvswitch/db.sock";
 
 #[derive(Debug)]
 pub(crate) struct OvsDbConnection {
@@ -66,9 +68,10 @@ impl OvsDbSelect {
 }
 
 impl OvsDbConnection {
-    pub(crate) fn new(socket_path: &str) -> Result<Self, NmstateError> {
+    // TODO: support environment variable OVS_DB_UNIX_SOCKET_PATH
+    pub(crate) fn new() -> Result<Self, NmstateError> {
         Ok(Self {
-            rpc: OvsDbJsonRpc::connect(socket_path)?,
+            rpc: OvsDbJsonRpc::connect(DEFAULT_OVS_DB_SOCKET_PATH)?,
         })
     }
 
@@ -201,6 +204,20 @@ impl OvsDbConnection {
             }
         }
     }
+    pub(crate) fn apply_global_conf(
+        &mut self,
+        ovs_conf: &OvsDbGlobalConfig,
+    ) -> Result<(), NmstateError> {
+        let update: OvsDbUpdate = ovs_conf.into();
+        self.rpc.exec(
+            "transact",
+            &Value::Array(vec![
+                Value::String(OVS_DB_NAME.to_string()),
+                update.to_value(),
+            ]),
+        )?;
+        Ok(())
+    }
 }
 
 #[derive(Debug, Default)]
@@ -248,4 +265,28 @@ pub(crate) fn parse_str_map(v: &[Value]) -> HashMap<String, String> {
         }
     }
     ret
+}
+
+#[derive(Debug, Clone, Default, PartialEq)]
+pub(crate) struct OvsDbUpdate {
+    pub(crate) table: String,
+    pub(crate) conditions: Vec<OvsDbCondition>,
+    pub(crate) row: HashMap<String, Value>,
+}
+
+impl OvsDbUpdate {
+    fn to_value(&self) -> Value {
+        let mut ret = Map::new();
+        ret.insert("op".to_string(), Value::String("update".to_string()));
+        ret.insert("table".to_string(), Value::String(self.table.clone()));
+        let condition_values: Vec<Value> =
+            self.conditions.iter().map(|c| c.to_value()).collect();
+        ret.insert("where".to_string(), Value::Array(condition_values));
+        let mut row_map = Map::new();
+        for (k, v) in self.row.iter() {
+            row_map.insert(k.to_string(), v.clone());
+        }
+        ret.insert("row".to_string(), Value::Object(row_map));
+        Value::Object(ret)
+    }
 }

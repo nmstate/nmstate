@@ -15,7 +15,7 @@ use crate::{
         nm_checkpoint_rollback, nm_checkpoint_timeout_extend, nm_gen_conf,
         nm_retrieve,
     },
-    ovsdb::{ovsdb_is_running, ovsdb_retrieve},
+    ovsdb::{ovsdb_apply, ovsdb_is_running, ovsdb_retrieve},
     DnsState, ErrorKind, Interface, InterfaceType, Interfaces, NmstateError,
     OvsDbGlobalConfig, RouteRules, Routes,
 };
@@ -37,7 +37,11 @@ pub struct NetworkState {
     pub routes: Routes,
     #[serde(default)]
     pub interfaces: Interfaces,
-    #[serde(default, rename = "ovs-db")]
+    #[serde(
+        default,
+        rename = "ovs-db",
+        skip_serializing_if = "OvsDbGlobalConfig::is_none"
+    )]
     pub ovsdb: OvsDbGlobalConfig,
     #[serde(skip)]
     // Contain a list of struct member name which is defined explicitly in
@@ -215,6 +219,9 @@ impl NetworkState {
                     self,
                     &checkpoint,
                 )?;
+                if ovsdb_is_running() {
+                    ovsdb_apply(&desire_state_to_apply, &cur_net_state)?;
+                }
                 nm_checkpoint_timeout_extend(
                     &checkpoint,
                     cmp::max(DEFAULT_ROLLBACK_TIMEOUT, self.timeout),
@@ -282,7 +289,8 @@ impl NetworkState {
         self.interfaces.verify(&current.interfaces)?;
         self.routes.verify(&current.routes)?;
         self.rules.verify(&current.rules)?;
-        self.dns.verify(&current.dns)
+        self.dns.verify(&current.dns)?;
+        self.ovsdb.verify(&current.ovsdb)
     }
 
     // Return three NetworkState:

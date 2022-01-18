@@ -56,7 +56,7 @@ pub(crate) fn get_json_value_difference<'a, 'b>(
                     ) {
                         return Some(difference);
                     }
-                } else {
+                } else if des_value != &Value::Null {
                     return Some((reference, des_value, &Value::Null));
                 }
             }
