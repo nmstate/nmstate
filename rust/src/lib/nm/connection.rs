@@ -11,7 +11,7 @@ use crate::{
     nm::ip::gen_nm_ip_setting,
     nm::ovs::{
         create_ovs_port_nm_conn, gen_nm_ovs_br_setting,
-        gen_nm_ovs_iface_setting,
+        gen_nm_ovs_ext_ids_setting, gen_nm_ovs_iface_setting,
     },
     nm::profile::get_exist_profile,
     nm::sriov::gen_nm_sriov_setting,
@@ -94,6 +94,7 @@ pub(crate) fn iface_to_nm_connections(
         &mut nm_conn,
     )?;
     gen_nm_wired_setting(iface, &mut nm_conn);
+    gen_nm_ovs_ext_ids_setting(iface, &mut nm_conn);
 
     match iface {
         Interface::OvsBridge(ovs_br_iface) => {
@@ -175,7 +176,6 @@ pub(crate) fn iface_to_nm_connections(
         nm_conn.ovs_iface = None;
     }
 
-    println!("{:?}", nm_conn);
     ret.insert(0, nm_conn);
 
     Ok(ret)

@@ -28,7 +28,8 @@ use crate::{
     connection::ip::NmSettingIp,
     connection::mac_vlan::NmSettingMacVlan,
     connection::ovs::{
-        NmSettingOvsBridge, NmSettingOvsIface, NmSettingOvsPort,
+        NmSettingOvsBridge, NmSettingOvsExtIds, NmSettingOvsIface,
+        NmSettingOvsPort,
     },
     connection::sriov::NmSettingSriov,
     connection::veth::NmSettingVeth,
@@ -65,6 +66,7 @@ pub struct NmConnection {
     pub ovs_bridge: Option<NmSettingOvsBridge>,
     pub ovs_port: Option<NmSettingOvsPort>,
     pub ovs_iface: Option<NmSettingOvsIface>,
+    pub ovs_ext_ids: Option<NmSettingOvsExtIds>,
     pub wired: Option<NmSettingWired>,
     pub vlan: Option<NmSettingVlan>,
     pub vxlan: Option<NmSettingVxlan>,
@@ -115,6 +117,11 @@ impl TryFrom<NmConnectionDbusOwnedValue> for NmConnection {
                 v,
                 "ovs-interface",
                 NmSettingOvsIface::try_from
+            )?,
+            ovs_ext_ids: _from_map!(
+                v,
+                "ovs-external-ids",
+                NmSettingOvsExtIds::try_from
             )?,
             wired: _from_map!(v, "802-3-ethernet", NmSettingWired::try_from)?,
             vlan: _from_map!(v, "vlan", NmSettingVlan::try_from)?,
@@ -192,6 +199,9 @@ impl NmConnection {
         }
         if let Some(ovs_iface_set) = &self.ovs_iface {
             ret.insert("ovs-interface", ovs_iface_set.to_value()?);
+        }
+        if let Some(ovs_ext_ids) = &self.ovs_ext_ids {
+            ret.insert("ovs-external-ids", ovs_ext_ids.to_value()?);
         }
         if let Some(wired_set) = &self.wired {
             ret.insert("802-3-ethernet", wired_set.to_value()?);

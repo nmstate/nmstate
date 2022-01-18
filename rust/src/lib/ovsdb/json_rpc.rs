@@ -30,6 +30,7 @@ struct OvsDbRpcError {
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq)]
 pub(crate) struct OvsDbRpcReply {
+    // The result might also contain a error.
     result: Value,
     error: Option<OvsDbRpcError>,
     id: u64,
@@ -61,7 +62,12 @@ impl OvsDbJsonRpc {
         self.socket
             .write_all(buffer.as_bytes())
             .map_err(parse_socket_io_error)?;
-        self.recv()
+        let reply = self.recv()?;
+        if method == "transact" {
+            check_transact_error(reply)
+        } else {
+            Ok(reply)
+        }
     }
 
     fn recv(&mut self) -> Result<Value, NmstateError> {
@@ -124,4 +130,32 @@ fn parse_socket_io_error(e: std::io::Error) -> NmstateError {
         ErrorKind::PluginFailure,
         format!("OVSDB Socket error: {}", e),
     )
+}
+
+fn check_transact_error(reply: Value) -> Result<Value, NmstateError> {
+    if let Some(trans_replies) = reply.as_array() {
+        for trans_reply in trans_replies {
+            if let Some(error_type) = trans_reply
+                .as_object()
+                .and_then(|r| r.get("error"))
+                .and_then(|e| e.as_str())
+            {
+                let error_detail = trans_reply
+                    .as_object()
+                    .and_then(|r| r.get("details"))
+                    .and_then(|d| d.as_str())
+                    .unwrap_or("");
+                let e = NmstateError::new(
+                    ErrorKind::PluginFailure,
+                    format!(
+                        "OVS DB JSON RPC error {}: {}",
+                        error_type, error_detail
+                    ),
+                );
+                log::error!("{}", e);
+                return Err(e);
+            }
+        }
+    }
+    Ok(reply)
 }

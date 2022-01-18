@@ -1,7 +1,9 @@
+use std::collections::HashMap;
 use std::convert::TryFrom;
+use std::iter::FromIterator;
 
 use log::warn;
-use nm_dbus::NmConnection;
+use nm_dbus::{NmConnection, NmSettingOvsExtIds};
 
 use crate::{
     nm::connection::gen_nm_conn_setting, BaseInterface, Interface,
@@ -237,4 +239,23 @@ pub(crate) fn gen_nm_ovs_iface_setting(nm_conn: &mut NmConnection) {
         nm_conn.ovs_iface.as_ref().cloned().unwrap_or_default();
     nm_ovs_iface_set.iface_type = Some("internal".to_string());
     nm_conn.ovs_iface = Some(nm_ovs_iface_set);
+}
+
+pub(crate) fn gen_nm_ovs_ext_ids_setting(
+    iface: &Interface,
+    nm_conn: &mut NmConnection,
+) {
+    if iface.iface_type() != InterfaceType::OvsBridge
+        && iface.base_iface().controller_type != Some(InterfaceType::OvsBridge)
+    {
+        nm_conn.ovs_ext_ids = None;
+    } else if let Some(conf) = iface.base_iface().ovsdb.as_ref() {
+        let mut nm_setting = NmSettingOvsExtIds::new();
+        nm_setting.data = Some(HashMap::from_iter(
+            conf.get_external_ids()
+                .iter()
+                .map(|(k, v)| (k.to_string(), v.to_string())),
+        ));
+        nm_conn.ovs_ext_ids = Some(nm_setting);
+    }
 }
