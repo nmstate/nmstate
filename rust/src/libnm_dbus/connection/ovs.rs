@@ -156,3 +156,47 @@ impl NmSettingOvsIface {
         Self::default()
     }
 }
+
+#[derive(Debug, Clone, PartialEq, Default, Deserialize)]
+#[serde(try_from = "DbusDictionary")]
+pub struct NmSettingOvsExtIds {
+    pub data: Option<HashMap<String, String>>,
+    _other: HashMap<String, zvariant::OwnedValue>,
+}
+
+impl TryFrom<DbusDictionary> for NmSettingOvsExtIds {
+    type Error = NmError;
+    fn try_from(mut v: DbusDictionary) -> Result<Self, Self::Error> {
+        Ok(Self {
+            data: _from_map!(v, "data", <HashMap<String, String>>::try_from)?,
+            _other: v,
+        })
+    }
+}
+
+impl NmSettingOvsExtIds {
+    pub(crate) fn to_value(
+        &self,
+    ) -> Result<HashMap<&str, zvariant::Value>, NmError> {
+        let mut ret = HashMap::new();
+        if let Some(v) = &self.data {
+            let mut dict_value = zvariant::Dict::new(
+                zvariant::Signature::from_str_unchecked("s"),
+                zvariant::Signature::from_str_unchecked("s"),
+            );
+            for (k, v) in v.iter() {
+                dict_value
+                    .append(zvariant::Value::new(k), zvariant::Value::new(v))?;
+            }
+            ret.insert("data", zvariant::Value::Dict(dict_value));
+        }
+        ret.extend(self._other.iter().map(|(key, value)| {
+            (key.as_str(), zvariant::Value::from(value.clone()))
+        }));
+        Ok(ret)
+    }
+
+    pub fn new() -> Self {
+        Self::default()
+    }
+}

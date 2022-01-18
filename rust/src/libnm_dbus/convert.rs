@@ -16,7 +16,7 @@ use std::convert::TryFrom;
 
 use log::error;
 
-use crate::error::NmError;
+use crate::NmError;
 
 pub(crate) fn own_value_to_bytes_array(
     value: zvariant::OwnedValue,
