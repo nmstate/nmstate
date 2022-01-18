@@ -17,7 +17,11 @@ BuildRequires:  python3-setuptools
 Requires:       python3-%{libname} = %{?epoch:%{epoch}:}%{version}-%{release}
 Requires:       %{name}-libs%{?_isa} = %{version}-%{release}
 BuildRequires:  systemd-rpm-macros
+%if 0%{?rhel}
 BuildRequires:  rust-toolset
+%else
+BuildRequires:  rust cargo
+%endif
 
 %description
 Nmstate is a library with an accompanying command line tool that manages host
