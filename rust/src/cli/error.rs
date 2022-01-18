@@ -41,3 +41,11 @@ impl From<clap::Error> for CliError {
         }
     }
 }
+
+impl From<serde_json::Error> for CliError {
+    fn from(e: serde_json::Error) -> Self {
+        Self {
+            msg: format!("serde_json::Error {}", e),
+        }
+    }
+}
