@@ -42,7 +42,13 @@ fn main() {
                         .short("k")
                         .long("kernel")
                         .takes_value(false)
-                        .help("Show kernel network state only"),
+                        .help("Show kernel network state only")
+                )
+                .arg(
+                    clap::Arg::with_name("JSON")
+                        .long("json")
+                        .takes_value(false)
+                        .help("Show state in json format"),
                 ),
         )
         .subcommand(
@@ -280,7 +286,13 @@ fn show(matches: &clap::ArgMatches) -> Result<String, CliError> {
                 new_net_state.append_interface_data(iface.clone())
             }
         }
-        serde_yaml::to_string(&new_net_state)?
+        if matches.is_present("JSON") {
+            serde_json::to_string_pretty(&new_net_state)?
+        } else {
+            serde_yaml::to_string(&new_net_state)?
+        }
+    } else if matches.is_present("JSON") {
+        serde_json::to_string_pretty(&sort_netstate(net_state)?)?
     } else {
         serde_yaml::to_string(&sort_netstate(net_state)?)?
     })
