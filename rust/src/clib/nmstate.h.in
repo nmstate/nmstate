@@ -253,6 +253,23 @@ void nmstate_err_kind_free(char *err_kind);
  */
 void nmstate_log_free(char *log);
 
+/**
+ * nmstate_checkpoint_free - free the checkpoint memory
+ *
+ * Version:
+ *      0.1
+ *
+ * Description:
+ *      Free the memory of checkpoint.
+ *
+ * @checkpoint:
+ *      Pointer of char array for checkpoint.
+ *
+ * Return:
+ *      void
+ */
+void nmstate_checkpoint_free(char *checkpoint);
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
