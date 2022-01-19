@@ -334,3 +334,13 @@ pub extern "C" fn nmstate_err_msg_free(err_msg: *mut c_char) {
         }
     }
 }
+
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
+#[no_mangle]
+pub extern "C" fn nmstate_checkpoint_free(checkpoint: *mut c_char) {
+    unsafe {
+        if !checkpoint.is_null() {
+            drop(CString::from_raw(checkpoint));
+        }
+    }
+}
