@@ -24,6 +24,7 @@ COPR_ARG=""
 
 if [ $OS_TYPE == "c8s" ];then
     CONTAINER_IMAGE="quay.io/nmstate/c8s-nmstate-dev"
+    COPR_ARG="--copr networkmanager/NetworkManager-1.32"
 elif [ $OS_TYPE == "ovs2_11" ];then
     CONTAINER_IMAGE="quay.io/nmstate/c8s-nmstate-dev"
     CUSTOMIZE_ARG='--customize=
