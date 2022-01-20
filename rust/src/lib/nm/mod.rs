@@ -18,6 +18,7 @@ mod sriov;
 #[cfg(test)]
 mod unit_tests;
 mod version;
+mod veth;
 mod vlan;
 mod vrf;
 mod vxlan;

@@ -29,7 +29,7 @@ pub use crate::connection::{
     NmSettingBridgeVlanRange, NmSettingConnection, NmSettingIp,
     NmSettingIpMethod, NmSettingMacVlan, NmSettingOvsBridge, NmSettingOvsIface,
     NmSettingOvsPort, NmSettingSriov, NmSettingSriovVf, NmSettingSriovVfVlan,
-    NmSettingVlan, NmSettingVrf, NmSettingVxlan, NmSettingWired,
+    NmSettingVeth, NmSettingVlan, NmSettingVrf, NmSettingVxlan, NmSettingWired,
     NmVlanProtocol,
 };
 pub use crate::device::{NmDevice, NmDeviceState, NmDeviceStateReason};

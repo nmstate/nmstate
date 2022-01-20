@@ -31,6 +31,7 @@ use crate::{
         NmSettingOvsBridge, NmSettingOvsIface, NmSettingOvsPort,
     },
     connection::sriov::NmSettingSriov,
+    connection::veth::NmSettingVeth,
     connection::vlan::NmSettingVlan,
     connection::vrf::NmSettingVrf,
     connection::vxlan::NmSettingVxlan,
@@ -70,6 +71,7 @@ pub struct NmConnection {
     pub mac_vlan: Option<NmSettingMacVlan>,
     pub sriov: Option<NmSettingSriov>,
     pub vrf: Option<NmSettingVrf>,
+    pub veth: Option<NmSettingVeth>,
     #[serde(skip)]
     pub(crate) obj_path: String,
     _other: HashMap<String, HashMap<String, zvariant::OwnedValue>>,
@@ -120,6 +122,7 @@ impl TryFrom<NmConnectionDbusOwnedValue> for NmConnection {
             sriov: _from_map!(v, "sriov", NmSettingSriov::try_from)?,
             mac_vlan: _from_map!(v, "macvlan", NmSettingMacVlan::try_from)?,
             vrf: _from_map!(v, "vrf", NmSettingVrf::try_from)?,
+            veth: _from_map!(v, "veth", NmSettingVeth::try_from)?,
             _other: v,
             ..Default::default()
         })
@@ -207,6 +210,9 @@ impl NmConnection {
         }
         if let Some(vrf) = &self.vrf {
             ret.insert("vrf", vrf.to_value()?);
+        }
+        if let Some(veth) = &self.veth {
+            ret.insert("veth", veth.to_value()?);
         }
         for (key, setting_value) in &self._other {
             let mut other_setting_value: HashMap<&str, zvariant::Value> =

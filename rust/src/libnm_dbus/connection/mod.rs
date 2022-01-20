@@ -26,6 +26,7 @@ mod ovs;
 mod route;
 mod route_rule;
 mod sriov;
+mod veth;
 mod vlan;
 mod vrf;
 mod vxlan;
@@ -46,6 +47,7 @@ pub use crate::connection::route_rule::NmIpRouteRule;
 pub use crate::connection::sriov::{
     NmSettingSriov, NmSettingSriovVf, NmSettingSriovVfVlan,
 };
+pub use crate::connection::veth::NmSettingVeth;
 pub use crate::connection::vlan::{NmSettingVlan, NmVlanProtocol};
 pub use crate::connection::vrf::NmSettingVrf;
 pub use crate::connection::vxlan::NmSettingVxlan;
