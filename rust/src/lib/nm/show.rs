@@ -359,7 +359,15 @@ fn get_nm_ac<'a>(
     name: &'a str,
     nm_iface_type: &'a str,
 ) -> Option<&'a NmActiveConnection> {
-    nm_acs_name_type_index.get(&(name, nm_iface_type)).copied()
+    nm_acs_name_type_index
+        .get(&(
+            name,
+            match nm_iface_type {
+                NM_SETTING_VETH_SETTING_NAME => NM_SETTING_WIRED_SETTING_NAME,
+                t => t,
+            },
+        ))
+        .copied()
 }
 
 fn set_ovs_iface_controller_info(ifaces: &mut Interfaces) {

@@ -143,6 +143,10 @@ impl BaseInterface {
         if let Some(ref mut ipv6) = self.ipv6 {
             ipv6.pre_verify_cleanup()
         }
+        // Change all veth interface to ethernet for simpler verification
+        if self.iface_type == InterfaceType::Veth {
+            self.iface_type = InterfaceType::Ethernet;
+        }
     }
 
     pub fn can_have_ip(&self) -> bool {

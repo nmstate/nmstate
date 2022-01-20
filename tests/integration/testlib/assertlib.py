@@ -57,6 +57,8 @@ def assert_state_match(desired_state_data):
     desired_state, current_state = _prepare_state_for_verify(
         desired_state_data
     )
+    print(desired_state.state)
+    print(current_state.state)
     assert desired_state.match(current_state)
 
 
@@ -102,6 +104,9 @@ def _prepare_state_for_verify(desired_state_data):
     _remove_linux_bridge_read_only_options(full_desired_state)
     _cannonicalize_infiniband_pkey(current_state)
     _cannonicalize_infiniband_pkey(full_desired_state)
+    # Nmstate always show veth as ethernet to simplify the verification.
+    _use_ethernet_type_for_veth(full_desired_state)
+    _use_ethernet_type_for_veth(current_state)
 
     return full_desired_state, current_state
 
@@ -211,3 +216,9 @@ def _cannonicalize_infiniband_pkey(state):
                 ib_config[InfiniBand.PKEY] = int(original_pkey, 16)
             else:
                 ib_config[InfiniBand.PKEY] = int(original_pkey, 10)
+
+
+def _use_ethernet_type_for_veth(state):
+    for iface_state in state.state[Interface.KEY]:
+        if iface_state[Interface.TYPE] == InterfaceType.VETH:
+            iface_state[Interface.TYPE] = InterfaceType.ETHERNET

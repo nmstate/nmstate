@@ -529,7 +529,13 @@ impl Interface {
     }
 
     pub(crate) fn pre_edit_cleanup(&mut self) -> Result<(), NmstateError> {
-        self.base_iface_mut().pre_edit_cleanup()
+        self.base_iface_mut().pre_edit_cleanup()?;
+        if let Interface::Ethernet(iface) = self {
+            if iface.veth.is_some() {
+                iface.base.iface_type = InterfaceType::Veth;
+            }
+        }
+        Ok(())
     }
 
     pub(crate) fn verify(&self, current: &Self) -> Result<(), NmstateError> {

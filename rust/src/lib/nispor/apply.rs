@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use log::warn;
 
 use crate::{
@@ -6,16 +8,22 @@ use crate::{
         veth::nms_veth_conf_to_np,
         vlan::nms_vlan_conf_to_np,
     },
-    ErrorKind, Interface, InterfaceType, NetworkState, NmstateError,
+    ErrorKind, Interface, InterfaceType, Interfaces, NetworkState,
+    NmstateError,
 };
 
 pub(crate) fn nispor_apply(
     add_net_state: &NetworkState,
     chg_net_state: &NetworkState,
     del_net_state: &NetworkState,
-    _full_net_state: &NetworkState,
+    cur_net_state: &NetworkState,
 ) -> Result<(), NmstateError> {
-    apply_single_state(del_net_state)?;
+    let mut del_net_state = del_net_state.clone();
+    only_delete_one_end_of_veth_peer(
+        &mut del_net_state.interfaces,
+        &cur_net_state.interfaces,
+    );
+    apply_single_state(&del_net_state)?;
     apply_single_state(add_net_state)?;
     apply_single_state(chg_net_state)?;
     Ok(())
@@ -39,6 +47,7 @@ fn net_state_to_nispor(
             }
             np_ifaces.push(nmstate_iface_to_np(iface, np_iface_type)?);
         } else if iface.is_absent() {
+            println!("del {:?} {:?}", iface.name(), iface.iface_type());
             np_ifaces.push(nispor::IfaceConf {
                 name: iface.name().to_string(),
                 iface_type: Some(nmstate_iface_type_to_np(&iface.iface_type())),
@@ -105,5 +114,45 @@ fn apply_single_state(net_state: &NetworkState) -> Result<(), NmstateError> {
         ));
     } else {
         Ok(())
+    }
+}
+
+// Deleting one end of veth peer is enough, remove other end from desire state
+// TODO: Fix nispor to ignore ENODEV(19) error when deleting interface which is
+// already gone.
+fn only_delete_one_end_of_veth_peer(
+    desired: &mut Interfaces,
+    current: &Interfaces,
+) {
+    let mut veth_pairs: HashMap<String, String> = HashMap::new();
+    for iface in current.kernel_ifaces.values() {
+        if let Interface::Ethernet(eth_iface) = iface {
+            if let Some(peer_name) = eth_iface
+                .veth
+                .as_ref()
+                .map(|veth_conf| veth_conf.peer.as_str())
+            {
+                veth_pairs
+                    .insert(iface.name().to_string(), peer_name.to_string());
+            }
+        }
+    }
+
+    let mut veth_to_ignore = Vec::new();
+    for iface in desired.kernel_ifaces.values().filter(|i| i.is_absent()) {
+        if let Some(veth_peer) = veth_pairs.get(iface.name()) {
+            if let Some(veth_peer_iface) = desired.kernel_ifaces.get(veth_peer)
+            {
+                if iface.name() < veth_peer.as_str()
+                    && veth_peer_iface.is_absent()
+                {
+                    veth_to_ignore.push(veth_peer);
+                }
+            }
+        }
+    }
+
+    for iface_name in veth_to_ignore {
+        desired.kernel_ifaces.remove(iface_name);
     }
 }
