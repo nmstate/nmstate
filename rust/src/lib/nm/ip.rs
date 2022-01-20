@@ -53,6 +53,9 @@ fn gen_nm_ipv4_setting(
     if iface_ip.enabled && !iface_ip.dhcp {
         if let Some(routes) = routes {
             nm_setting.routes = gen_nm_ip_routes(routes, false)?;
+            // We use above routes property for gateway also, in order
+            // to support multiple gateways.
+            nm_setting.gateway = None;
         }
     }
     if let Some(rules) = rules {
