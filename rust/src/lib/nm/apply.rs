@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use log::info;
-use nm_dbus::{NmApi, NmConnection};
+use nm_dbus::{NmApi, NmConnection, NmDeviceState};
 
 use crate::{
     nm::connection::{
@@ -234,15 +234,21 @@ fn delete_unmanged_virtual_interface_as_desired(
                 iface.name().to_string(),
                 iface.iface_type().to_string(),
             )) {
-                info!(
-                    "Deleting NM unmanaged interface {}/{}: {}",
-                    &iface.name(),
-                    &iface.iface_type(),
-                    &nm_dev.obj_path
-                );
-                nm_api
-                    .device_delete(&nm_dev.obj_path)
-                    .map_err(nm_error_to_nmstate)?;
+                if nm_dev.state == NmDeviceState::Disconnected
+                    || nm_dev.state == NmDeviceState::Unmanaged
+                {
+                    info!(
+                        "Deleting NM unmanaged interface {}/{}: {}",
+                        &iface.name(),
+                        &iface.iface_type(),
+                        &nm_dev.obj_path
+                    );
+                    // There might be an race with on-going profile/connection
+                    // deletion
+                    if let Err(e) = nm_api.device_delete(&nm_dev.obj_path) {
+                        log::info!("Failed to delete interface {:?}", e);
+                    }
+                }
             }
         }
     }
