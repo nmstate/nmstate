@@ -85,7 +85,7 @@ pub(crate) fn handle_changed_ports(
                     if cur_iface.base_iface().controller != ctrl_name
                         || cur_iface.base_iface().controller_type != ctrl_type
                     {
-                        let mut iface = cur_iface.clone();
+                        let mut iface = cur_iface.clone_name_type_only();
                         // Some interface cannot live without controller
                         if iface.need_controller() && ctrl_name.is_none() {
                             iface.base_iface_mut().state =

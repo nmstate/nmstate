@@ -1,8 +1,8 @@
 use std::collections::{hash_map::Entry, HashMap};
 
 use nm_dbus::{
-    NmApi, NmConnection, NmSettingConnection, NmSettingMacVlan, NmSettingVlan,
-    NmSettingVrf, NmSettingVxlan,
+    NmApi, NmConnection, NmSettingConnection, NmSettingMacVlan, NmSettingVeth,
+    NmSettingVlan, NmSettingVrf, NmSettingVxlan,
 };
 
 use crate::{
@@ -15,6 +15,7 @@ use crate::{
     },
     nm::profile::get_exist_profile,
     nm::sriov::gen_nm_sriov_setting,
+    nm::veth::create_veth_peer_profile_if_not_found,
     nm::wired::gen_nm_wired_setting,
     ErrorKind, Interface, InterfaceType, NetworkState, NmstateError,
 };
@@ -47,7 +48,9 @@ pub(crate) fn nm_gen_conf(
             }
         }
 
-        for nm_conn in iface_to_nm_connections(iface, ctrl_iface, &[], &[])? {
+        for nm_conn in
+            iface_to_nm_connections(iface, ctrl_iface, &[], &[], false)?
+        {
             ret.push(match nm_conn.to_keyfile() {
                 Ok(s) => s,
                 Err(e) => {
@@ -70,6 +73,7 @@ pub(crate) fn iface_to_nm_connections(
     ctrl_iface: Option<&Interface>,
     exist_nm_conns: &[NmConnection],
     nm_ac_uuids: &[&str],
+    veth_peer_exist_in_desire: bool,
 ) -> Result<Vec<NmConnection>, NmstateError> {
     let mut ret: Vec<NmConnection> = Vec::new();
     let base_iface = iface.base_iface();
@@ -130,6 +134,17 @@ pub(crate) fn iface_to_nm_connections(
             }
         }
         Interface::Ethernet(eth_iface) => {
+            if let Some(veth_conf) = eth_iface.veth.as_ref() {
+                nm_conn.veth = Some(NmSettingVeth::from(veth_conf));
+                if !veth_peer_exist_in_desire {
+                    // Create NM connect for veth peer so that
+                    // veth could be in up state
+                    ret.push(create_veth_peer_profile_if_not_found(
+                        veth_conf.peer.as_str(),
+                        exist_nm_conns,
+                    )?);
+                }
+            }
             gen_nm_sriov_setting(eth_iface, &mut nm_conn);
         }
         Interface::MacVlan(iface) => {
@@ -180,6 +195,7 @@ pub(crate) fn iface_type_to_nm(
         InterfaceType::MacVlan => Ok("macvlan".to_string()),
         InterfaceType::MacVtap => Ok("macvlan".to_string()),
         InterfaceType::Vrf => Ok("vrf".to_string()),
+        InterfaceType::Veth => Ok("veth".to_string()),
         InterfaceType::Other(s) => Ok(s.to_string()),
         _ => Err(NmstateError::new(
             ErrorKind::NotImplementedError,
@@ -312,8 +328,14 @@ pub(crate) fn gen_nm_conn_setting(
 
         new_nm_conn_set.id = Some(conn_name);
         new_nm_conn_set.uuid = Some(NmApi::uuid_gen());
-        new_nm_conn_set.iface_type =
-            Some(iface_type_to_nm(&iface.iface_type())?);
+        if new_nm_conn_set.iface_type.is_none() {
+            // The `get_exist_profile()` already confirmed the existing
+            // profile has correct `iface_type`. We should not override it.
+            // The use case is, existing connection is veth, but user desire
+            // ethernet interface, we should use existing interface type.
+            new_nm_conn_set.iface_type =
+                Some(iface_type_to_nm(&iface.iface_type())?);
+        }
         new_nm_conn_set
     };
 

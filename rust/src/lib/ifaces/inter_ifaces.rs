@@ -6,6 +6,7 @@ use serde::{
 };
 
 use crate::{
+    ifaces::ethernet::handle_veth_peer_changes,
     ifaces::inter_ifaces_controller::{
         check_overbook_ports, find_unknown_type_port, handle_changed_ports,
         set_ifaces_up_priority,
@@ -43,7 +44,16 @@ impl<'de> Deserialize<'de> for Interfaces {
         let mut ret = Self::new();
         let ifaces =
             <Vec<Interface> as Deserialize>::deserialize(deserializer)?;
-        for iface in ifaces {
+        for mut iface in ifaces {
+            // Unless user place veth configure in ethernet interface,
+            // it means user just applying the return of NetworkState.retrieve().
+            // If user would like to change veth configuration, it should use
+            // veth interface type.
+            if iface.iface_type() == InterfaceType::Ethernet {
+                if let Interface::Ethernet(ref mut eth_iface) = iface {
+                    eth_iface.veth_sanitize();
+                }
+            }
             ret.push(iface)
         }
         Ok(ret)
@@ -277,6 +287,12 @@ impl Interfaces {
         // be done by top level code.
         include_current_ip_address_if_dhcp_on_to_off(&mut chg_ifaces, current);
         mark_orphan_interface_as_absent(&mut del_ifaces, &chg_ifaces, current);
+        handle_veth_peer_changes(
+            &add_ifaces,
+            &mut chg_ifaces,
+            &mut del_ifaces,
+            current,
+        )?;
 
         Ok((add_ifaces, chg_ifaces, del_ifaces))
     }
@@ -488,9 +504,15 @@ fn gen_ifaces_to_del(
     let mut del_ifaces = Vec::new();
     let cur_ifaces = cur_ifaces.to_vec();
     for cur_iface in cur_ifaces {
+        // Internally we use ethernet type for veth, hence we should
+        // change desire before searching.
+        let del_iface_type = match del_iface.iface_type() {
+            InterfaceType::Veth => InterfaceType::Ethernet,
+            t => t,
+        };
         if cur_iface.name() == del_iface.name()
-            && (del_iface.iface_type() == InterfaceType::Unknown
-                || del_iface.iface_type() == cur_iface.iface_type())
+            && (del_iface_type == InterfaceType::Unknown
+                || del_iface_type == cur_iface.iface_type())
         {
             let mut tmp_iface = del_iface.clone();
             tmp_iface.base_iface_mut().iface_type = cur_iface.iface_type();

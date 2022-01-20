@@ -15,6 +15,7 @@ use crate::{
         get_exist_profile, save_nm_profiles, use_uuid_for_controller_reference,
     },
     nm::route::is_route_removed,
+    nm::veth::{is_veth_peer_changed, is_veth_peer_in_desire},
     nm::vlan::is_vlan_id_changed,
     nm::vrf::is_vrf_table_id_changed,
     nm::vxlan::is_vxlan_id_changed,
@@ -165,6 +166,7 @@ fn apply_single_state(
                 ctrl_iface,
                 &exist_nm_conns,
                 &nm_ac_uuids,
+                is_veth_peer_in_desire(iface, ifaces.as_slice()),
             )? {
                 nm_conns_to_activate.push(nm_conn);
             }
@@ -311,6 +313,7 @@ fn gen_nm_conn_need_to_deactivate_first<'a>(
                     || is_vrf_table_id_changed(nm_conn, activated_nm_con)
                     || is_vlan_id_changed(nm_conn, activated_nm_con)
                     || is_vxlan_id_changed(nm_conn, activated_nm_con)
+                    || is_veth_peer_changed(nm_conn, activated_nm_con)
                 {
                     ret.push(activated_nm_con);
                 }

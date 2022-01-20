@@ -5,9 +5,13 @@ use nm_dbus::{NmApi, NmConnection};
 
 use crate::{
     nm::checkpoint::nm_checkpoint_timeout_extend,
-    nm::connection::iface_type_to_nm, nm::error::nm_error_to_nmstate,
-    nm::ovs::get_ovs_port_name, ErrorKind, Interface, InterfaceType,
-    NmstateError,
+    nm::connection::{
+        iface_type_to_nm, NM_SETTING_VETH_SETTING_NAME,
+        NM_SETTING_WIRED_SETTING_NAME,
+    },
+    nm::error::nm_error_to_nmstate,
+    nm::ovs::get_ovs_port_name,
+    ErrorKind, Interface, InterfaceType, NmstateError,
 };
 
 // We only adjust timeout for every 20 profile additions.
@@ -26,12 +30,17 @@ pub(crate) fn get_exist_profile<'a>(
     let mut found_nm_conns: Vec<&NmConnection> = Vec::new();
     for exist_nm_conn in exist_nm_conns {
         let nm_iface_type = if let Ok(t) = iface_type_to_nm(iface_type) {
+            // The iface_type will never be veth as top level code
+            // `pre_edit_clean()` has confirmed so.
             t
         } else {
             continue;
         };
         if exist_nm_conn.iface_name() == Some(iface_name)
-            && exist_nm_conn.iface_type() == Some(&nm_iface_type)
+            && (exist_nm_conn.iface_type() == Some(&nm_iface_type)
+                || (nm_iface_type == NM_SETTING_WIRED_SETTING_NAME
+                    && exist_nm_conn.iface_type()
+                        == Some(NM_SETTING_VETH_SETTING_NAME)))
         {
             if let Some(uuid) = exist_nm_conn.uuid() {
                 // Prefer activated connection
