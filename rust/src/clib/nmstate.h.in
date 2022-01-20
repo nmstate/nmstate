@@ -150,7 +150,7 @@ int nmstate_net_state_apply(uint32_t flags, const char *state, uint32_t rollback
  *          * NMSTATE_FAIL
  *              On failure.
  */
-void nmstate_checkpoint_commit(const char *checkpoint, char **log, char **err_kind, 
+int nmstate_checkpoint_commit(const char *checkpoint, char **log, char **err_kind,
                           char **err_msg);
 
 /**
@@ -182,7 +182,7 @@ void nmstate_checkpoint_commit(const char *checkpoint, char **log, char **err_ki
  *          * NMSTATE_FAIL
  *              On failure.
  */
-void nmstate_checkpoint_rollback(const char *checkpoint, char **log, char **err_kind, 
+int nmstate_checkpoint_rollback(const char *checkpoint, char **log, char **err_kind,
                                  char **err_msg);
 
 /**
