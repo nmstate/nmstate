@@ -271,9 +271,9 @@ impl RouteEntry {
     }
 
     // Return tuple of (no_absent, is_ipv4, table_id, next_hop_iface,
-    // destination, next_hop_addr)
+    // destination, next_hop_addr, metric)
     // The metric difference is ignored
-    fn sort_key(&self) -> (bool, bool, u32, &str, &str, &str) {
+    fn sort_key(&self) -> (bool, bool, u32, &str, &str, &str, i64) {
         (
             !matches!(self.state, Some(RouteState::Absent)),
             !self
@@ -285,6 +285,7 @@ impl RouteEntry {
             self.next_hop_iface.as_deref().unwrap_or(""),
             self.destination.as_deref().unwrap_or(""),
             self.next_hop_addr.as_deref().unwrap_or(""),
+            self.metric.unwrap_or(RouteEntry::USE_DEFAULT_METRIC),
         )
     }
 }
