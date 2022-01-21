@@ -904,3 +904,11 @@ def _check_ip_rules(rules):
             rule.get(RouteRule.PRIORITY),
             rule.get(RouteRule.ROUTE_TABLE),
         )
+
+
+def test_route_change_metric(eth1_static_gateway_dns):
+    ipv4_route = _get_ipv4_gateways()[0]
+    ipv4_route[Route.METRIC] += 1
+    ipv6_route = _get_ipv6_gateways()[0]
+    ipv6_route[Route.METRIC] += 2
+    libnmstate.apply({Route.KEY: {Route.CONFIG: [ipv6_route, ipv4_route]}})
