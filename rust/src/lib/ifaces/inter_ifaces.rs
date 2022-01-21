@@ -414,11 +414,6 @@ impl Interfaces {
                 if let Some(cur_iface) =
                     current.kernel_ifaces.get(src_iface_name)
                 {
-                    println!(
-                        "per {:?} mac {:?}",
-                        cur_iface.base_iface().permanent_mac_address,
-                        cur_iface.base_iface().mac_address
-                    );
                     if !is_opt_str_empty(
                         &cur_iface.base_iface().permanent_mac_address,
                     ) {
