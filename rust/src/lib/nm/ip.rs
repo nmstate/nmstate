@@ -12,11 +12,23 @@ use nm_dbus::{NmConnection, NmSettingIp, NmSettingIpMethod};
 const NM_CONFIG_ADDR_GEN_MODE_EUI64: i32 = 0;
 
 fn gen_nm_ipv4_setting(
-    iface_ip: &InterfaceIpv4,
+    iface_ip: Option<&InterfaceIpv4>,
     routes: Option<&[RouteEntry]>,
     rules: Option<&[RouteRuleEntry]>,
     nm_conn: &mut NmConnection,
 ) -> Result<(), NmstateError> {
+    let iface_ip = match iface_ip {
+        None => {
+            if nm_conn.ipv4.is_none() {
+                let mut nm_setting = NmSettingIp::default();
+                nm_setting.method = Some(NmSettingIpMethod::Disabled);
+                nm_conn.ipv4 = Some(nm_setting);
+            }
+            return Ok(());
+        }
+        Some(i) => i,
+    };
+
     let mut addresses: Vec<String> = Vec::new();
     let method = if iface_ip.enabled {
         if iface_ip.dhcp {
@@ -69,11 +81,22 @@ fn gen_nm_ipv4_setting(
 }
 
 fn gen_nm_ipv6_setting(
-    iface_ip: &InterfaceIpv6,
+    iface_ip: Option<&InterfaceIpv6>,
     routes: Option<&[RouteEntry]>,
     rules: Option<&[RouteRuleEntry]>,
     nm_conn: &mut NmConnection,
 ) -> Result<(), NmstateError> {
+    let iface_ip = match iface_ip {
+        None => {
+            if nm_conn.ipv6.is_none() {
+                let mut nm_setting = NmSettingIp::default();
+                nm_setting.method = Some(NmSettingIpMethod::Disabled);
+                nm_conn.ipv6 = Some(nm_setting);
+            }
+            return Ok(());
+        }
+        Some(i) => i,
+    };
     let mut addresses: Vec<String> = Vec::new();
     let method = if iface_ip.enabled {
         match (iface_ip.dhcp, iface_ip.autoconf) {
@@ -145,22 +168,8 @@ pub(crate) fn gen_nm_ip_setting(
 ) -> Result<(), NmstateError> {
     let base_iface = iface.base_iface();
     if base_iface.can_have_ip() {
-        let ipv4_conf = if let Some(ipv4_conf) = &base_iface.ipv4 {
-            ipv4_conf.clone()
-        } else {
-            let mut ipv4_conf = InterfaceIpv4::new();
-            ipv4_conf.enabled = false;
-            ipv4_conf
-        };
-        let ipv6_conf = if let Some(ipv6_conf) = &base_iface.ipv6 {
-            ipv6_conf.clone()
-        } else {
-            let mut ipv6_conf = InterfaceIpv6::new();
-            ipv6_conf.enabled = false;
-            ipv6_conf
-        };
-        gen_nm_ipv4_setting(&ipv4_conf, routes, rules, nm_conn)?;
-        gen_nm_ipv6_setting(&ipv6_conf, routes, rules, nm_conn)?;
+        gen_nm_ipv4_setting(base_iface.ipv4.as_ref(), routes, rules, nm_conn)?;
+        gen_nm_ipv6_setting(base_iface.ipv6.as_ref(), routes, rules, nm_conn)?;
     } else {
         nm_conn.ipv4 = None;
         nm_conn.ipv6 = None;

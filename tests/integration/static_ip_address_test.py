@@ -98,6 +98,40 @@ def setup_eth1_ipv6(eth1_up):
 
 
 @pytest.fixture
+def setup_eth1_static_ip(eth1_up):
+    desired_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: "eth1",
+                Interface.TYPE: InterfaceType.ETHERNET,
+                Interface.STATE: InterfaceState.UP,
+                Interface.IPV4: {
+                    InterfaceIPv4.ENABLED: True,
+                    InterfaceIPv4.ADDRESS: [
+                        {
+                            InterfaceIPv4.ADDRESS_IP: IPV4_ADDRESS1,
+                            InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+                        }
+                    ],
+                },
+                Interface.IPV6: {
+                    InterfaceIPv6.ENABLED: True,
+                    InterfaceIPv6.ADDRESS: [
+                        {
+                            InterfaceIPv6.ADDRESS_IP: IPV6_ADDRESS1,
+                            InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
+                        }
+                    ],
+                },
+            }
+        ]
+    }
+    libnmstate.apply(desired_state)
+
+    return desired_state
+
+
+@pytest.fixture
 def setup_eth1_ipv6_disable(eth1_up):
     desired_state = {
         Interface.KEY: [
@@ -675,3 +709,18 @@ def test_ignore_invalid_ip_on_absent_interface(eth1_up):
             ]
         }
     )
+
+
+@pytest.mark.tier1
+def test_preserve_ip_conf_if_not_mentioned(setup_eth1_static_ip):
+    desired_state = setup_eth1_static_ip
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: "eth1",
+                }
+            ]
+        }
+    )
+    assertlib.assert_state_match(desired_state)
