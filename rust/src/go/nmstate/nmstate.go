@@ -12,9 +12,9 @@ import (
 )
 
 type Nmstate struct {
-	timeout	    uint
-	logsWriter  io.Writer
-	flags	    byte
+	timeout    uint
+	logsWriter io.Writer
+	flags      byte
 }
 
 const (
@@ -87,12 +87,11 @@ func (n *Nmstate) RetrieveNetState() (string, error) {
 		C.nmstate_err_kind_free(err_kind)
 		C.nmstate_log_free(log)
 	}()
-	_, err := io.WriteString(n.logsWriter, C.GoString(log))
-	if err != nil {
-		return "", fmt.Errorf("failed writting logs: %v", err)
-	}
 	if rc != 0 {
 		return "", fmt.Errorf("failed retrieving nmstate net state with rc: %d, err_msg: %s, err_kind: %s", rc, C.GoString(err_msg), C.GoString(err_kind))
+	}
+	if err := n.writeLog(log); err != nil {
+		return "", fmt.Errorf("failed when retrieving state: %v", err)
 	}
 	return C.GoString(state), nil
 }
@@ -115,12 +114,11 @@ func (n *Nmstate) ApplyNetState(state string) (string, error) {
 		C.nmstate_err_kind_free(err_kind)
 		C.nmstate_log_free(log)
 	}()
-	_, err := io.WriteString(n.logsWriter, C.GoString(log))
-	if err != nil {
-		return "", fmt.Errorf("failed writting logs: %v", err)
-	}
 	if rc != 0 {
 		return "", fmt.Errorf("failed applying nmstate net state %s with rc: %d, err_msg: %s, err_kind: %s", state, rc, C.GoString(err_msg), C.GoString(err_kind))
+	}
+	if err := n.writeLog(log); err != nil {
+		return "", fmt.Errorf("failed when applying state: %v", err)
 	}
 	return state, nil
 }
@@ -130,7 +128,7 @@ func (n *Nmstate) ApplyNetState(state string) (string, error) {
 func (n *Nmstate) CommitCheckpoint(checkpoint string) (string, error) {
 	var (
 		c_checkpoint *C.char
-		log	     *C.char
+		log          *C.char
 		err_kind     *C.char
 		err_msg      *C.char
 	)
@@ -143,12 +141,11 @@ func (n *Nmstate) CommitCheckpoint(checkpoint string) (string, error) {
 		C.nmstate_err_kind_free(err_kind)
 		C.nmstate_log_free(log)
 	}()
-	_, err := io.WriteString(n.logsWriter, C.GoString(log))
-	if err != nil {
-		return "", fmt.Errorf("failed writting logs: %v", err)
-	}
 	if rc != 0 {
 		return "", fmt.Errorf("failed commiting checkpoint %s with rc: %d, err_msg: %s, err_kind: %s", checkpoint, rc, C.GoString(err_msg), C.GoString(err_kind))
+	}
+	if err := n.writeLog(log); err != nil {
+		return "", fmt.Errorf("failed when commiting: %v", err)
 	}
 	return checkpoint, nil
 }
@@ -158,7 +155,7 @@ func (n *Nmstate) CommitCheckpoint(checkpoint string) (string, error) {
 func (n *Nmstate) RollbackCheckpoint(checkpoint string) (string, error) {
 	var (
 		c_checkpoint *C.char
-		log	     *C.char
+		log          *C.char
 		err_kind     *C.char
 		err_msg      *C.char
 	)
@@ -171,12 +168,22 @@ func (n *Nmstate) RollbackCheckpoint(checkpoint string) (string, error) {
 		C.nmstate_err_kind_free(err_kind)
 		C.nmstate_log_free(log)
 	}()
-	_, err := io.WriteString(n.logsWriter, C.GoString(log))
-	if err != nil {
-		return "", fmt.Errorf("failed writting logs: %v", err)
-	}
 	if rc != 0 {
 		return "", fmt.Errorf("failed when doing rollback checkpoint %s with rc: %d, err_msg: %s, err_kind: %s", checkpoint, rc, C.GoString(err_msg), C.GoString(err_kind))
 	}
+	if err := n.writeLog(log); err != nil {
+		return "", fmt.Errorf("failed when doing rollback: %v", err)
+	}
 	return checkpoint, nil
+}
+
+func (n *Nmstate) writeLog(log *C.char) error {
+	if n.logsWriter == nil {
+		return nil
+	}
+	_, err := io.WriteString(n.logsWriter, C.GoString(log))
+	if err != nil {
+		return fmt.Errorf("failed writting logs: %v", err)
+	}
+	return nil
 }
