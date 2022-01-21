@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 use std::iter::FromIterator;
 
-use log::{debug, error, info};
+use log::{debug, info};
 
 use crate::{
     BaseInterface, ErrorKind, Interface, InterfaceIpv4, InterfaceIpv6,
@@ -82,32 +82,27 @@ pub(crate) fn handle_changed_ports(
                 if let Some(cur_iface) =
                     cur_ifaces.kernel_ifaces.get(&iface_name)
                 {
-                    if cur_iface.base_iface().controller != ctrl_name
-                        || cur_iface.base_iface().controller_type != ctrl_type
-                    {
-                        let mut iface = cur_iface.clone_name_type_only();
-                        // Some interface cannot live without controller
-                        if iface.need_controller() && ctrl_name.is_none() {
-                            iface.base_iface_mut().state =
-                                InterfaceState::Absent;
-                        } else {
-                            iface.base_iface_mut().state = InterfaceState::Up;
-                        }
-                        iface.base_iface_mut().controller = ctrl_name;
-                        iface.base_iface_mut().controller_type = ctrl_type;
-                        if !iface.base_iface().can_have_ip() {
-                            iface.base_iface_mut().ipv4 =
-                                Some(InterfaceIpv4::new());
-                            iface.base_iface_mut().ipv6 =
-                                Some(InterfaceIpv6::new());
-                        }
-                        info!(
-                            "Include interface {} to edit as its \
-                            controller required so",
-                            iface_name
-                        );
-                        ifaces.push(iface);
+                    let mut iface = cur_iface.clone_name_type_only();
+                    // Some interface cannot live without controller
+                    if iface.need_controller() && ctrl_name.is_none() {
+                        iface.base_iface_mut().state = InterfaceState::Absent;
+                    } else {
+                        iface.base_iface_mut().state = InterfaceState::Up;
                     }
+                    iface.base_iface_mut().controller = ctrl_name;
+                    iface.base_iface_mut().controller_type = ctrl_type;
+                    if !iface.base_iface().can_have_ip() {
+                        iface.base_iface_mut().ipv4 =
+                            Some(InterfaceIpv4::new());
+                        iface.base_iface_mut().ipv6 =
+                            Some(InterfaceIpv6::new());
+                    }
+                    info!(
+                        "Include interface {} to edit as its \
+                            controller required so",
+                        iface_name
+                    );
+                    ifaces.push(iface);
                 } else {
                     // Do not raise error if detach port
                     if let Some(ctrl_name) = ctrl_name {
@@ -255,8 +250,9 @@ pub(crate) fn set_ifaces_up_priority(ifaces: &mut Interfaces) -> bool {
             } else {
                 // There will be other validator check missing
                 // controller
-                error!("BUG: _set_up_priority() got port without controller");
-                continue;
+                log::error!(
+                    "BUG: _set_up_priority() got port without controller"
+                );
             }
         } else {
             continue;
@@ -368,4 +364,48 @@ fn is_port_overbook(
         port_to_ctrl.insert(port.to_string(), ctrl.to_string());
     }
     Ok(())
+}
+
+// If any interface has no controller change, copy it from current.
+// No controller change means all below:
+//  1. Current controller not mentioned in desired.
+//  2. This interface has no new controller in desired:
+pub(crate) fn preserve_ctrl_cfg_if_unchanged(
+    ifaces: &mut Interfaces,
+    cur_ifaces: &Interfaces,
+) {
+    let mut desired_ctrls = Vec::new();
+    for iface in ifaces
+        .kernel_ifaces
+        .values()
+        .chain(ifaces.user_ifaces.values())
+    {
+        if iface.is_controller() {
+            desired_ctrls
+                .push((iface.name().to_string(), iface.iface_type().clone()));
+        }
+    }
+
+    for (iface_name, iface) in ifaces.kernel_ifaces.iter_mut() {
+        if iface.base_iface().controller.is_some() {
+            // Iface already has controller information
+            continue;
+        }
+        let cur_iface = match cur_ifaces.kernel_ifaces.get(iface_name) {
+            Some(i) => i,
+            None => continue,
+        };
+        if let (Some(ctrl), Some(ctrl_type)) = (
+            cur_iface.base_iface().controller.as_ref(),
+            cur_iface.base_iface().controller_type.as_ref(),
+        ) {
+            // If current controller is mentioned in desired, means current
+            // interface is been detached.
+            if !desired_ctrls.contains(&(ctrl.to_string(), ctrl_type.clone())) {
+                iface.base_iface_mut().controller = Some(ctrl.to_string());
+                iface.base_iface_mut().controller_type =
+                    Some(ctrl_type.clone());
+            }
+        }
+    }
 }

@@ -9,7 +9,7 @@ use crate::{
     ifaces::ethernet::handle_veth_peer_changes,
     ifaces::inter_ifaces_controller::{
         check_overbook_ports, find_unknown_type_port, handle_changed_ports,
-        set_ifaces_up_priority,
+        preserve_ctrl_cfg_if_unchanged, set_ifaces_up_priority,
     },
     ip::include_current_ip_address_if_dhcp_on_to_off,
     ErrorKind, Interface, InterfaceState, InterfaceType, NmstateError,
@@ -243,6 +243,7 @@ impl Interfaces {
 
         self.apply_copy_mac_from(current)?;
         handle_changed_ports(self, current)?;
+        preserve_ctrl_cfg_if_unchanged(self, current);
         self.set_up_priority()?;
         check_overbook_ports(self, current)?;
 
