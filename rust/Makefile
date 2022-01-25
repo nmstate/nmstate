@@ -16,6 +16,7 @@ SOCKET_FILE=/run/nmstate/nmstate.so
 SOCKET_DIR=$(dir $(SOCKET_FILE))
 SOCKET_ADDR=unix:$(SOCKET_FILE)
 PREFIX ?= /usr/local
+GO_MODULE_SRC ?= src/go/nmstate
 
 CPU_BITS = $(shell getconf LONG_BIT)
 ifeq ($(CPU_BITS), 32)
@@ -49,6 +50,8 @@ debug: $(CLI_EXEC_DEBUG)
 $(CLI_EXEC_DEBUG):
 	cargo build --all
 
+# Always invoke cargo build for release
+.PHONY: $(CLI_EXEC_RELEASE) $(CLIB_SO_DEV_RELEASE)
 $(CLI_EXEC_RELEASE) $(CLIB_SO_DEV_RELEASE):
 	cargo build --all --release
 
