@@ -2,7 +2,6 @@ package nmstate
 
 import (
 	"os"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -33,8 +32,7 @@ func TestRetrieveNetStateKernelOnly(t *testing.T) {
 }
 
 func TestApplyNetState(t *testing.T) {
-	nmstateLog := strings.Builder{}
-	nms := New(WithLogsWritter(&nmstateLog))
+	nms := New()
 	netState, err := nms.ApplyNetState(`{
 "interfaces": [{
   "name": "dummy1",
@@ -44,5 +42,20 @@ func TestApplyNetState(t *testing.T) {
 `)
 	assert.NoError(t, err, "must succeed calling retrieve_net_state c binding")
 	assert.NotEmpty(t, netState, "net state should not be empty")
-	assert.NotEmpty(t, nmstateLog.String(), "should dump info logs")
+}
+
+func TestApplyNetStateWithCommit(t *testing.T) {
+	nms := New(WithNoCommit())
+	netState, err := nms.ApplyNetState(`{
+"interfaces": [{
+  "name": "dummy1",
+  "state": "up",
+  "type": "dummy"
+}]}
+`)
+	assert.NoError(t, err, "must succeed calling retrieve_net_state c binding")
+	assert.NotEmpty(t, netState, "net state should not be empty")
+
+	_, err = nms.CommitCheckpoint("")
+	assert.NoError(t, err, "must succeed commiting last active checkpoint")
 }
