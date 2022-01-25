@@ -18,7 +18,7 @@ type Nmstate struct {
 }
 
 const (
-	kernelOnly = 1 << iota
+	kernelOnly = 2 << iota
 	noVerify
 	includeStatusData
 	includeSecrets
@@ -26,7 +26,11 @@ const (
 )
 
 func New(options ...func(*Nmstate)) *Nmstate {
-	return &Nmstate{}
+	nms := &Nmstate{}
+	for _, option := range options {
+		option(nms)
+	}
+	return nms
 }
 
 func WithTimeout(timeout time.Duration) func(*Nmstate) {
