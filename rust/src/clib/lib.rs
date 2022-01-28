@@ -305,6 +305,31 @@ pub extern "C" fn nmstate_checkpoint_rollback(
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 #[no_mangle]
+pub extern "C" fn nmstate_nm_version(
+    version_cstring: *mut *mut c_char,
+    err_kind: *mut *mut c_char,
+    err_msg: *mut *mut c_char,
+) -> c_int {
+    match nmstate::NetworkState::nm_version() {
+        Ok(version) => {
+            unsafe {
+                *version_cstring = CString::new(version).unwrap().into_raw();
+            }
+            NMSTATE_PASS
+        }
+        Err(e) => {
+            unsafe {
+                *err_msg = CString::new(e.msg()).unwrap().into_raw();
+                *err_kind =
+                    CString::new(format!("{}", &e.kind())).unwrap().into_raw();
+            }
+            NMSTATE_FAIL
+        }
+    }
+}
+
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
+#[no_mangle]
 pub extern "C" fn nmstate_cstring_free(cstring: *mut c_char) {
     unsafe {
         if !cstring.is_null() {

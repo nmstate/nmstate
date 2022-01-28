@@ -13,7 +13,7 @@ use crate::{
     nm::{
         nm_apply, nm_checkpoint_create, nm_checkpoint_destroy,
         nm_checkpoint_rollback, nm_checkpoint_timeout_extend, nm_gen_conf,
-        nm_retrieve,
+        nm_retrieve, version,
     },
     ovsdb::{ovsdb_apply, ovsdb_is_running, ovsdb_retrieve},
     DnsState, ErrorKind, Interface, InterfaceType, Interfaces, NmstateError,
@@ -650,6 +650,10 @@ impl NetworkState {
 
     pub fn checkpoint_commit(checkpoint: &str) -> Result<(), NmstateError> {
         nm_checkpoint_destroy(checkpoint)
+    }
+
+    pub fn nm_version() -> Result<String, NmstateError> {
+        version::nm_version()
     }
 }
 

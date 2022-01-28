@@ -17,6 +17,10 @@ type Nmstate struct {
 	flags      byte
 }
 
+type Version struct {
+	NetworkManager string
+}
+
 const (
 	kernelOnly = 2 << iota
 	noVerify
@@ -193,6 +197,24 @@ func (n *Nmstate) RollbackCheckpoint(checkpoint string) (string, error) {
 		return "", fmt.Errorf("failed when doing rollback: %v", err)
 	}
 	return checkpoint, nil
+}
+
+func (n *Nmstate) Version() (Version, error) {
+	var (
+		nm_version *C.char
+		err_kind   *C.char
+		err_msg    *C.char
+	)
+	rc := C.nmstate_nm_version(&nm_version, &err_kind, &err_msg)
+	defer func() {
+		C.nmstate_cstring_free(nm_version)
+		C.nmstate_cstring_free(err_msg)
+		C.nmstate_cstring_free(err_kind)
+	}()
+	if rc != 0 {
+		return Version{}, fmt.Errorf("failed retrieving NetworkManager versionwith rc: %d, err_msg: %s, err_kind: %s", rc, C.GoString(err_msg), C.GoString(err_kind))
+	}
+	return Version{NetworkManager: C.GoString(nm_version)}, nil
 }
 
 func (n *Nmstate) writeLog(log *C.char) error {

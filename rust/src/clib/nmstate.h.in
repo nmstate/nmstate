@@ -185,6 +185,51 @@ int nmstate_checkpoint_commit(const char *checkpoint, char **log, char **err_kin
  */
 int nmstate_checkpoint_rollback(const char *checkpoint, char **log, char **err_kind,
                                  char **err_msg);
+/**
+ * nmstate_nm_version - Retrieve NetworkManager version from dbus
+ *
+ * Version:
+ *      0.1
+ *
+ * Description:
+ *      Retrieve NetworkManager version from dbus.
+ *
+ * @version:
+ *      Output pointer of char array for version reported from 
+ *      NetworkManager dbus.
+ *      The memory should be freed by nmstate_cstring_free().
+ * @err_kind:
+ *      Output pointer of char array for error kind.
+ *      The memory should be freed by nmstate_cstring_free().
+ * @err_msg:
+ *      Output pointer of char array for error message.
+ *      The memory should be freed by nmstate_cstring_free().
+ *
+ * Return:
+ *      Error code:
+ *          * NMSTATE_PASS
+ *              On success.
+ *          * NMSTATE_FAIL
+ *              On failure.
+ */
+int nmstate_nm_version(char **version, char **err_kind, char **err_msg);
+                               
+/**
+ * nmstate_cstring_free - free the c string
+ *
+ * Version:
+ *      0.1
+ *
+ * Description:
+ *      Free the memory of the c string
+ *
+ * @state:
+ *      Pointer of char array for c string.
+ *
+ * Return:
+ *      void
+ */
+void nmstate_cstring_free(char *state);
 
 /**
  * nmstate_generate_configurations - Generate network configurations

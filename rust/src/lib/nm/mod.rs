@@ -22,12 +22,13 @@ mod sriov;
 #[cfg(test)]
 mod unit_tests;
 mod user;
-mod version;
 mod veth;
 mod vlan;
 mod vrf;
 mod vxlan;
 mod wired;
+
+pub mod version;
 
 pub(crate) use apply::nm_apply;
 pub(crate) use checkpoint::{

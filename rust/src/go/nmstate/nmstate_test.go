@@ -59,3 +59,10 @@ func TestApplyNetStateWithCommit(t *testing.T) {
 	_, err = nms.CommitCheckpoint("")
 	assert.NoError(t, err, "must succeed commiting last active checkpoint")
 }
+
+func TestVersion(t *testing.T) {
+	nms := New()
+	version, err := nms.Version()
+	assert.NoError(t, err, "must succeed retrieving version")
+	assert.NotEmpty(t, version.NetworkManager, "NetworkManager version should not be empty")
+}
