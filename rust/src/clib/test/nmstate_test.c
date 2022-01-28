@@ -21,9 +21,9 @@ int main(void) {
 		rc = EXIT_FAILURE;
 	}
 
-	nmstate_net_state_free(state);
-	nmstate_err_kind_free(err_kind);
-	nmstate_err_msg_free(err_msg);
-	nmstate_log_free(log);
+	nmstate_cstring_free(state);
+	nmstate_cstring_free(err_kind);
+	nmstate_cstring_free(err_msg);
+	nmstate_cstring_free(log);
 	exit(rc);
 }

@@ -186,92 +186,20 @@ int nmstate_checkpoint_rollback(const char *checkpoint, char **log, char **err_k
                                  char **err_msg);
 
 /**
- * nmstate_net_state_free - free the network state memory
+ * nmstate_cstring_free - free the memory of C string
  *
  * Version:
  *      0.1
  *
  * Description:
- *      Free the memory of network state.
+ *      Free the memory of C string.
  *
- * @state:
- *      Pointer of char array for network state in json format.
- *
- * Return:
- *      void
- */
-void nmstate_net_state_free(char *state);
-
-/**
- * nmstate_err_msg_free - free the error message memory
- *
- * Version:
- *      0.1
- *
- * Description:
- *      Free the memory of error message.
- *
- * @state:
- *      Pointer of char array for error message.
+ * @cstring:
+ *      Pointer of char array for string
  *
  * Return:
  *      void
  */
-void nmstate_err_msg_free(char *err_msg);
+void nmstate_cstring_free(char *cstring);
 
-/**
- * nmstate_err_kind_free - free the error kind memory
- *
- * Version:
- *      0.1
- *
- * Description:
- *      Free the memory of error kind memory.
- *
- * @state:
- *      Pointer of char array for error kind.
- *
- * Return:
- *      void
- */
-void nmstate_err_kind_free(char *err_kind);
-
-/**
- * nmstate_log_free - free the log memory
- *
- * Version:
- *      0.1
- *
- * Description:
- *      Free the memory of log.
- *
- * @state:
- *      Pointer of char array for log.
- *
- * Return:
- *      void
- */
-void nmstate_log_free(char *log);
-
-/**
- * nmstate_checkpoint_free - free the checkpoint memory
- *
- * Version:
- *      0.1
- *
- * Description:
- *      Free the memory of checkpoint.
- *
- * @checkpoint:
- *      Pointer of char array for checkpoint.
- *
- * Return:
- *      void
- */
-void nmstate_checkpoint_free(char *checkpoint);
-
-#ifdef __cplusplus
-} /* extern "C" */
-#endif
-
-#endif /* End of _LIBNMSTATE_H_ */
+#endif // _LIBNMSTATE_H_

@@ -36,14 +36,8 @@ lib.nmstate_net_state_retrieve.argtypes = (
     POINTER(c_char_p),
 )
 
-lib.nmstate_err_kind_free.restype = None
-lib.nmstate_err_kind_free.argtypes = (c_char_p,)
-lib.nmstate_err_msg_free.restype = None
-lib.nmstate_err_msg_free.argtypes = (c_char_p,)
-lib.nmstate_log_free.restype = None
-lib.nmstate_log_free.argtypes = (c_char_p,)
-lib.nmstate_net_state_free.restype = None
-lib.nmstate_net_state_free.argtypes = (c_char_p,)
+lib.nmstate_cstring_free.restype = None
+lib.nmstate_cstring_free.argtypes = (c_char_p,)
 
 NMSTATE_FLAG_NONE = 0
 NMSTATE_FLAG_KERNEL_ONLY = 1 << 1
@@ -80,10 +74,10 @@ def retrieve_net_state_json(
     state = c_state.value
     err_msg = c_err_msg.value
     err_kind = c_err_kind.value
-    lib.nmstate_log_free(c_log)
-    lib.nmstate_net_state_free(c_state)
-    lib.nmstate_err_kind_free(c_err_kind)
-    lib.nmstate_err_msg_free(c_err_msg)
+    lib.nmstate_cstring_free(c_log)
+    lib.nmstate_cstring_free(c_state)
+    lib.nmstate_cstring_free(c_err_kind)
+    lib.nmstate_cstring_free(c_err_msg)
     if rc != NMSTATE_PASS:
         raise NmstateError(f"{err_kind}: {err_msg}")
     return state.decode("utf-8")
@@ -121,9 +115,9 @@ def apply_net_state(
     )
     err_msg = c_err_msg.value
     err_kind = c_err_kind.value
-    lib.nmstate_log_free(c_log)
-    lib.nmstate_err_kind_free(c_err_kind)
-    lib.nmstate_err_msg_free(c_err_msg)
+    lib.nmstate_cstring_free(c_log)
+    lib.nmstate_cstring_free(c_err_kind)
+    lib.nmstate_cstring_free(c_err_msg)
     if rc != NMSTATE_PASS:
         raise map_error(err_kind, err_msg)
 
@@ -143,9 +137,9 @@ def commit_checkpoint(checkpoint):
 
     err_msg = c_err_msg.value
     err_kind = c_err_kind.value
-    lib.nmstate_log_free(c_log)
-    lib.nmstate_err_kind_free(c_err_kind)
-    lib.nmstate_err_msg_free(c_err_msg)
+    lib.nmstate_cstring_free(c_log)
+    lib.nmstate_cstring_free(c_err_kind)
+    lib.nmstate_cstring_free(c_err_msg)
     if rc != NMSTATE_PASS:
         raise map_error(err_kind, err_msg)
 
@@ -165,9 +159,9 @@ def rollback_checkpoint(checkpoint):
 
     err_msg = c_err_msg.value
     err_kind = c_err_kind.value
-    lib.nmstate_log_free(c_log)
-    lib.nmstate_err_kind_free(c_err_kind)
-    lib.nmstate_err_msg_free(c_err_msg)
+    lib.nmstate_cstring_free(c_log)
+    lib.nmstate_cstring_free(c_err_kind)
+    lib.nmstate_cstring_free(c_err_msg)
     if rc != NMSTATE_PASS:
         raise map_error(err_kind, err_msg)
 

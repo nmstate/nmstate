@@ -82,10 +82,10 @@ func (n *Nmstate) RetrieveNetState() (string, error) {
 	)
 	rc := C.nmstate_net_state_retrieve(C.uint(n.flags), &state, &log, &err_kind, &err_msg)
 	defer func() {
-		C.nmstate_net_state_free(state)
-		C.nmstate_err_msg_free(err_msg)
-		C.nmstate_err_kind_free(err_kind)
-		C.nmstate_log_free(log)
+		C.nmstate_cstring_free(state)
+		C.nmstate_cstring_free(err_msg)
+		C.nmstate_cstring_free(err_kind)
+		C.nmstate_cstring_free(log)
 	}()
 	if rc != 0 {
 		return "", fmt.Errorf("failed retrieving nmstate net state with rc: %d, err_msg: %s, err_kind: %s", rc, C.GoString(err_msg), C.GoString(err_kind))
@@ -109,10 +109,10 @@ func (n *Nmstate) ApplyNetState(state string) (string, error) {
 	rc := C.nmstate_net_state_apply(C.uint(n.flags), c_state, C.uint(n.timeout), &log, &err_kind, &err_msg)
 
 	defer func() {
-		C.nmstate_net_state_free(c_state)
-		C.nmstate_err_msg_free(err_msg)
-		C.nmstate_err_kind_free(err_kind)
-		C.nmstate_log_free(log)
+		C.nmstate_cstring_free(c_state)
+		C.nmstate_cstring_free(err_msg)
+		C.nmstate_cstring_free(err_kind)
+		C.nmstate_cstring_free(log)
 	}()
 	if rc != 0 {
 		return "", fmt.Errorf("failed applying nmstate net state %s with rc: %d, err_msg: %s, err_kind: %s", state, rc, C.GoString(err_msg), C.GoString(err_kind))
@@ -136,10 +136,10 @@ func (n *Nmstate) CommitCheckpoint(checkpoint string) (string, error) {
 	rc := C.nmstate_checkpoint_commit(c_checkpoint, &log, &err_kind, &err_msg)
 
 	defer func() {
-		C.nmstate_checkpoint_free(c_checkpoint)
-		C.nmstate_err_msg_free(err_msg)
-		C.nmstate_err_kind_free(err_kind)
-		C.nmstate_log_free(log)
+		C.nmstate_cstring_free(c_checkpoint)
+		C.nmstate_cstring_free(err_msg)
+		C.nmstate_cstring_free(err_kind)
+		C.nmstate_cstring_free(log)
 	}()
 	if rc != 0 {
 		return "", fmt.Errorf("failed commiting checkpoint %s with rc: %d, err_msg: %s, err_kind: %s", checkpoint, rc, C.GoString(err_msg), C.GoString(err_kind))
@@ -163,10 +163,10 @@ func (n *Nmstate) RollbackCheckpoint(checkpoint string) (string, error) {
 	rc := C.nmstate_checkpoint_rollback(c_checkpoint, &log, &err_kind, &err_msg)
 
 	defer func() {
-		C.nmstate_checkpoint_free(c_checkpoint)
-		C.nmstate_err_msg_free(err_msg)
-		C.nmstate_err_kind_free(err_kind)
-		C.nmstate_log_free(log)
+		C.nmstate_cstring_free(c_checkpoint)
+		C.nmstate_cstring_free(err_msg)
+		C.nmstate_cstring_free(err_kind)
+		C.nmstate_cstring_free(log)
 	}()
 	if rc != 0 {
 		return "", fmt.Errorf("failed when doing rollback checkpoint %s with rc: %d, err_msg: %s, err_kind: %s", checkpoint, rc, C.GoString(err_msg), C.GoString(err_kind))
