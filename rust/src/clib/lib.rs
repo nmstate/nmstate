@@ -297,50 +297,10 @@ pub extern "C" fn nmstate_checkpoint_rollback(
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 #[no_mangle]
-pub extern "C" fn nmstate_net_state_free(state: *mut c_char) {
+pub extern "C" fn nmstate_cstring_free(cstring: *mut c_char) {
     unsafe {
-        if !state.is_null() {
-            drop(CString::from_raw(state));
-        }
-    }
-}
-
-#[allow(clippy::not_unsafe_ptr_arg_deref)]
-#[no_mangle]
-pub extern "C" fn nmstate_log_free(log: *mut c_char) {
-    unsafe {
-        if !log.is_null() {
-            drop(CString::from_raw(log));
-        }
-    }
-}
-
-#[allow(clippy::not_unsafe_ptr_arg_deref)]
-#[no_mangle]
-pub extern "C" fn nmstate_err_kind_free(err_kind: *mut c_char) {
-    unsafe {
-        if !err_kind.is_null() {
-            drop(CString::from_raw(err_kind));
-        }
-    }
-}
-
-#[allow(clippy::not_unsafe_ptr_arg_deref)]
-#[no_mangle]
-pub extern "C" fn nmstate_err_msg_free(err_msg: *mut c_char) {
-    unsafe {
-        if !err_msg.is_null() {
-            drop(CString::from_raw(err_msg));
-        }
-    }
-}
-
-#[allow(clippy::not_unsafe_ptr_arg_deref)]
-#[no_mangle]
-pub extern "C" fn nmstate_checkpoint_free(checkpoint: *mut c_char) {
-    unsafe {
-        if !checkpoint.is_null() {
-            drop(CString::from_raw(checkpoint));
+        if !cstring.is_null() {
+            drop(CString::from_raw(cstring));
         }
     }
 }
