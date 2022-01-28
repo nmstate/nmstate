@@ -65,4 +65,5 @@ func TestVersion(t *testing.T) {
 	version, err := nms.Version()
 	assert.NoError(t, err, "must succeed retrieving version")
 	assert.NotEmpty(t, version.NetworkManager, "NetworkManager version should not be empty")
+	assert.NotEmpty(t, version.Nmstate, "nmstate version should not be empty")
 }

@@ -213,7 +213,24 @@ int nmstate_checkpoint_rollback(const char *checkpoint, char **log, char **err_k
  *              On failure.
  */
 int nmstate_nm_version(char **version, char **err_kind, char **err_msg);
-                               
+
+/**
+ * nmstate_version - Retrieve NMState version from rust cargo pkg at clib
+ *
+ * Version:
+ *      0.1
+ *
+ * Description:
+ *      Retrieve NMState version from rust cargo pkg at clib
+ *
+ * @version:
+ *      Output pointer of char array for nmstate clib pkg version reported from 
+ *      cargo, if there is no version or compiled without cargo it returns 
+ *      unknown.
+ *      The memory should be freed by nmstate_cstring_free().
+ */
+void nmstate_version(char **version);
+
 /**
  * nmstate_cstring_free - free the c string
  *

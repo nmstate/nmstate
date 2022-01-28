@@ -26,6 +26,8 @@ const NMSTATE_FLAG_RUNNING_CONFIG_ONLY: u32 = 1 << 7;
 const NMSTATE_PASS: c_int = 0;
 const NMSTATE_FAIL: c_int = 1;
 
+const VERSION: Option<&str> = option_env!("CARGO_PKG_VERSION");
+
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 #[no_mangle]
 pub extern "C" fn nmstate_net_state_retrieve(
@@ -325,6 +327,15 @@ pub extern "C" fn nmstate_nm_version(
             }
             NMSTATE_FAIL
         }
+    }
+}
+
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
+#[no_mangle]
+pub extern "C" fn nmstate_version(version_cstring: *mut *mut c_char) {
+    let version = VERSION.unwrap_or("unknown");
+    unsafe {
+        *version_cstring = CString::new(version).unwrap().into_raw();
     }
 }
 

@@ -19,6 +19,7 @@ type Nmstate struct {
 
 type Version struct {
 	NetworkManager string
+	Nmstate        string
 }
 
 const (
@@ -201,9 +202,10 @@ func (n *Nmstate) RollbackCheckpoint(checkpoint string) (string, error) {
 
 func (n *Nmstate) Version() (Version, error) {
 	var (
-		nm_version *C.char
-		err_kind   *C.char
-		err_msg    *C.char
+		nmstate_version *C.char
+		nm_version      *C.char
+		err_kind        *C.char
+		err_msg         *C.char
 	)
 	rc := C.nmstate_nm_version(&nm_version, &err_kind, &err_msg)
 	defer func() {
@@ -214,7 +216,13 @@ func (n *Nmstate) Version() (Version, error) {
 	if rc != 0 {
 		return Version{}, fmt.Errorf("failed retrieving NetworkManager versionwith rc: %d, err_msg: %s, err_kind: %s", rc, C.GoString(err_msg), C.GoString(err_kind))
 	}
-	return Version{NetworkManager: C.GoString(nm_version)}, nil
+
+	C.nmstate_version(&nmstate_version)
+
+	return Version{
+		NetworkManager: C.GoString(nm_version),
+		Nmstate:        C.GoString(nmstate_version),
+	}, nil
 }
 
 func (n *Nmstate) writeLog(log *C.char) error {
