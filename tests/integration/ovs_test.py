@@ -403,6 +403,7 @@ def test_ovsdb_set_external_ids_for_ovs_system_interface(bridge_with_ports):
         Interface.KEY: [
             {
                 Interface.NAME: system_port_name,
+                Interface.TYPE: InterfaceType.ETHERNET,
                 OvsDB.OVS_DB_SUBTREE: {OvsDB.EXTERNAL_IDS: {"foo": 1000}},
             }
         ]
