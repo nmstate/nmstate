@@ -198,7 +198,8 @@ function run_tests {
             test_create_and_remove_ovs_bridge_options_specified or \
             test_create_and_remove_ovs_bridge_with_a_system_port or \
             test_create_and_remove_ovs_bridge_with_internal_port_static_ip_and_mac or \
-            ovsdb' \
+            ovsdb and \
+            not test_ovsdb_set_external_ids_for_ovs_system_interface' \
             ${nmstate_pytest_extra_args}"
         exec_cmd "
           env  \
