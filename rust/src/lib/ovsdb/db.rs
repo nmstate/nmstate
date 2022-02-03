@@ -87,7 +87,7 @@ impl OvsDbConnection {
         }
     }
 
-    fn _get_ovs_ifaec(
+    fn _get_ovs_iface(
         &mut self,
         table_name: &str,
     ) -> Result<Vec<OvsDbIface>, NmstateError> {
@@ -145,13 +145,13 @@ impl OvsDbConnection {
     pub(crate) fn get_ovs_ifaces(
         &mut self,
     ) -> Result<Vec<OvsDbIface>, NmstateError> {
-        self._get_ovs_ifaec("Interface")
+        self._get_ovs_iface("Interface")
     }
 
     pub(crate) fn get_ovs_bridges(
         &mut self,
     ) -> Result<Vec<OvsDbIface>, NmstateError> {
-        self._get_ovs_ifaec("Bridge")
+        self._get_ovs_iface("Bridge")
     }
 
     pub(crate) fn get_ovsdb_global_conf(
