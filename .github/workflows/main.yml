@@ -9,24 +9,18 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         include:
-          - job_type: "el8-nm_stable-format"
-          - job_type: "el8-nm_stable-lint"
-          - job_type: "el8-nm_stable-unit_py36"
-          - job_type: "el8-nm_stable-integ_tier1"
-          - job_type: "el8-nm_stable-integ_tier2"
-          - job_type: "el8-nm_stable-integ_slow"
-          - job_type: "el8-nm_master-integ_tier1"
-          - job_type: "el8-nm_master-integ_tier2"
-          - job_type: "el8-nm_master-integ_slow"
-          - job_type: "stream-nm_master-integ_tier1"
-          - job_type: "stream-nm_master-integ_slow"
+          - job_type: "c8s-nm_stable-format"
+          - job_type: "c8s-nm_stable-lint"
+          - job_type: "c8s-nm_stable-unit_py36"
+          - job_type: "c8s-nm_stable-integ_tier1"
+          - job_type: "c8s-nm_stable-integ_tier2"
+          - job_type: "c8s-nm_stable-integ_slow"
           - job_type: "ovs2_11-nm_stable-integ_tier1"
-          - job_type: "vdsm_el8-nm_master-vdsm"
 
     steps:
       - uses: actions/checkout@v2
@@ -34,10 +28,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt install git gnupg2 openssh-client python-tox xz-utils
-
-      - name: Start docker service
-        run: sudo service docker start
+          sudo apt install git gnupg2 openssh-client xz-utils podman
 
       - name: Enable openvswitch kernel module
         run: sudo modprobe openvswitch

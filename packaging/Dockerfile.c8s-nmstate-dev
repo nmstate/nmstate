@@ -1,7 +1,12 @@
-FROM docker.io/library/centos:8
+FROM quay.io/centos/centos:stream8
 
-RUN dnf install -y centos-release-stream && \
-    dnf update -y && \
+RUN echo "2022-02-09" > /build_time
+
+RUN sed -i -e 's/^#RateLimitInterval=.*/RateLimitInterval=0/' \
+    -e 's/^#RateLimitBurst=.*/RateLimitBurst=0/' \
+    /etc/systemd/journald.conf
+
+RUN dnf update -y && \
     dnf -y install dnf-plugins-core epel-release && \
     dnf config-manager --set-enabled powertools && \
     dnf copr enable nmstate/ovs-el8 -y && \
@@ -42,15 +47,12 @@ RUN dnf install -y centos-release-stream && \
     alternatives --set python /usr/bin/python3 && \
     ln -s /usr/bin/pytest-3 /usr/bin/pytest && \
     dnf clean all && \
-    systemctl enable openvswitch && \
-    sed -i -e 's/^#RateLimitInterval=.*/RateLimitInterval=0/' \
-    -e 's/^#RateLimitBurst=.*/RateLimitBurst=0/' \
-    /etc/systemd/journald.conf
-
-RUN rpm --verifydb
+    systemctl enable openvswitch
 
 COPY network_manager_enable_trace.conf \
      /etc/NetworkManager/conf.d/97-trace-logging.conf
+
+RUN systemctl enable dbus systemd-udevd NetworkManager
 
 VOLUME [ "/sys/fs/cgroup" ]
 
