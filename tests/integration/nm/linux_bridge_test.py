@@ -99,7 +99,7 @@ def test_add_new_port_to_bridge_with_unmanged_port(
         )
 
         # dummy1 should still be the bridge port
-        output = exec_cmd(f"npc {DUMMY1}".split(), check=True)[1]
+        output = exec_cmd(f"npc iface {DUMMY1}".split(), check=True)[1]
         assert f"controller: {BRIDGE0}" in output
 
 

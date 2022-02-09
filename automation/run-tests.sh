@@ -18,8 +18,8 @@ TEST_TYPE_INTEG_TIER2="integ_tier2"
 TEST_TYPE_INTEG_SLOW="integ_slow"
 
 FEDORA_IMAGE_DEV="docker.io/nmstate/fedora-nmstate-dev"
-CENTOS_IMAGE_DEV="docker.io/nmstate/centos8-nmstate-dev"
-CENTOS_STREAM_IMAGE_DEV="docker.io/nmstate/centos-stream-nmstate-dev"
+CENTOS_IMAGE_DEV="quay.io/nmstate/c8s-nmstate-dev"
+CENTOS_STREAM_IMAGE_DEV="quay.io/nmstate/c8s-nmstate-dev"
 
 CREATED_INTERFACES=""
 INTERFACES="eth1 eth2"
@@ -94,7 +94,7 @@ function run_tests {
 
     if [ $TEST_TYPE == $TEST_TYPE_ALL ] || \
        [ $TEST_TYPE == $TEST_TYPE_UNIT_PY36 ];then
-        if [[ $CONTAINER_IMAGE == *"centos"* ]]; then
+        if [[ $CONTAINER_IMAGE == $CENTOS_STREAM_IMAGE_DEV ]]; then
             # Due to https://github.com/pypa/virtualenv/issues/1009
             # Instruct virtualenv not to upgrade to the latest versions of pip,
             # setuptools, wheel and etc
@@ -266,6 +266,12 @@ function upgrade_nm_from_copr {
     clean_dnf_cache
     exec_cmd "command -v dnf && plugin='dnf-command(copr)' || plugin='yum-plugin-copr'; yum install --assumeyes \$plugin;"
     exec_cmd "yum copr enable --assumeyes ${copr_repo}"
+    if [ $CONTAINER_IMAGE == $CENTOS_STREAM_IMAGE_DEV ];then
+        # centos-stream NetworkManager package is providing the alpha builds.
+        # Sometimes it could be greater than the one packaged on Copr.
+        exec_cmd "dnf remove --assumeyes --noautoremove NetworkManager"
+        exec_cmd "dnf install --assumeyes NetworkManager NetworkManager-team NetworkManager-ovs --disablerepo '*' --enablerepo '${copr_repo_id}'"
+    fi
     # Update only from Copr to limit the changes in the environment
     exec_cmd "yum update --assumeyes --disablerepo '*' --enablerepo '${copr_repo_id}'"
     exec_cmd "systemctl restart NetworkManager"
