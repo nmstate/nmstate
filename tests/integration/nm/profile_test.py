@@ -99,8 +99,6 @@ NMCLI_CON_UP_TEST_PROFILE_CMD = [
 
 NM_PROFILE_DIRECTORY = "/etc/NetworkManager/system-connections/"
 
-ETH_PROFILE_DIRECTORY = "/etc/sysconfig/network-scripts/"
-
 MEMORY_ONLY_PROFILE_DIRECTORY = "/run/NetworkManager/system-connections/"
 
 MAC0 = "02:FF:FF:FF:FF:00"
@@ -129,10 +127,7 @@ def test_delete_existing_interface_inactive_profiles(eth1_up):
     with create_inactive_profile(eth1_up[Interface.KEY][0][Interface.NAME]):
         eth1_up[Interface.KEY][0][Interface.MTU] = 2000
         libnmstate.apply(eth1_up)
-        profile_exists = _profile_exists(
-            ETH_PROFILE_DIRECTORY + "ifcfg-testProfile"
-        )
-        assert not profile_exists
+        assert not _nm_connection_exists("testProfile")
 
 
 def test_rename_existing_interface_active_profile(eth1_up):
@@ -142,7 +137,7 @@ def test_rename_existing_interface_active_profile(eth1_up):
     ):
         eth1_up[Interface.KEY][0][Interface.MTU] = 2000
         libnmstate.apply(eth1_up)
-        assert _profile_exists(ETH_PROFILE_DIRECTORY + "ifcfg-testProfile")
+        assert _nm_connection_exists("testProfile")
 
 
 @contextmanager
@@ -198,10 +193,7 @@ def cloned_active_profile(con_name, source):
     cmdlib.exec_cmd(["nmcli", "con", "clone", "id", source, con_name])
     cmdlib.exec_cmd(_nmcli_delete_connection(source))
     cmdlib.exec_cmd(NMCLI_CON_UP_TEST_PROFILE_CMD)
-    profile_exists = _profile_exists(
-        ETH_PROFILE_DIRECTORY + f"ifcfg-{con_name}"
-    )
-    assert profile_exists
+    assert _nm_connection_exists(con_name)
     try:
         yield
     finally:
@@ -212,10 +204,7 @@ def cloned_active_profile(con_name, source):
 def create_inactive_profile(con_name):
     cmdlib.exec_cmd(_nmcli_deactivate_connection(con_name))
     cmdlib.exec_cmd(NMCLI_CON_ADD_ETH_CMD)
-    profile_exists = _profile_exists(
-        ETH_PROFILE_DIRECTORY + "ifcfg-testProfile"
-    )
-    assert profile_exists
+    assert _nm_connection_exists("testProfile")
     try:
         yield
     finally:
@@ -376,6 +365,13 @@ def _nmcli_delete_connection(con_name):
 
 def _profile_exists(profile_name):
     return os.path.isfile(profile_name)
+
+
+def _nm_connection_exists(conn_name):
+    rc, _, _ = cmdlib.exec_cmd(
+        f"nmcli -g connection.id c show {conn_name}".split()
+    )
+    return rc == 0
 
 
 @pytest.fixture

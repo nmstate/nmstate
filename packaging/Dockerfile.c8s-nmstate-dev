@@ -52,6 +52,8 @@ RUN dnf update -y && \
 
 COPY network_manager_enable_trace.conf \
      /etc/NetworkManager/conf.d/97-trace-logging.conf
+COPY network_manager_keyfile.conf \
+     /etc/NetworkManager/conf.d/96-keyfile.conf
 
 RUN systemctl enable dbus systemd-udevd NetworkManager
 
