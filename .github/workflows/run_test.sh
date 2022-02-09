@@ -22,16 +22,13 @@ TEST_ARG="--test-type $TEST_TYPE"
 CUSTOMIZE_ARG=""
 COPR_ARG=""
 
-if [ $OS_TYPE == "el8" ];then
-    CONTAINER_IMAGE="docker.io/nmstate/centos8-nmstate-dev"
-    CUSTOMIZE_ARG='--customize=
-        dnf install -y python3-varlink libvarlink-util python3-jsonschema;'
-elif [ $OS_TYPE == "stream" ];then
-    CONTAINER_IMAGE="docker.io/nmstate/centos-stream-nmstate-dev"
+if [ $OS_TYPE == "c8s" ];then
+    CONTAINER_IMAGE="quay.io/nmstate/c8s-nmstate-dev"
+    COPR_ARG="--copr networkmanager/NetworkManager-1.32"
     CUSTOMIZE_ARG='--customize=
         dnf install -y python3-varlink libvarlink-util python3-jsonschema;'
 elif [ $OS_TYPE == "ovs2_11" ];then
-    CONTAINER_IMAGE="docker.io/nmstate/centos8-nmstate-dev"
+    CONTAINER_IMAGE="quay.io/nmstate/c8s-nmstate-dev"
     CUSTOMIZE_ARG='--customize=
         dnf install -y python3-varlink libvarlink-util python3-jsonschema;
         dnf remove -y openvswitch2.11 python3-openvswitch2.11;
@@ -56,7 +53,7 @@ mkdir $TEST_ARTIFACTS_DIR || exit 1
 
 sudo env \
     CONTAINER_IMAGE="$CONTAINER_IMAGE" \
-    CONTAINER_CMD="docker" \
+    CONTAINER_CMD="podman" \
     CI="true" \
     BRANCH_NAME="$GITHUB_BASE_REF" \
     CODECOV_TOKEN="$CODECOV_TOKEN" \
