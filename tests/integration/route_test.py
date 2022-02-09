@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019-2021 Red Hat, Inc.
+# Copyright (c) 2019-2022 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -42,12 +42,16 @@ IPV4_ROUTE_TABLE_ID1 = 50
 IPV4_ROUTE_TABLE_ID2 = 51
 IPV4_EMPTY_ADDRESS = "0.0.0.0"
 IPV4_DEFAULT_GATEWAY = "0.0.0.0/0"
+IPV4_TEST_NET1 = "203.0.113.0/24"
 
 IPV6_ADDRESS1 = "2001:db8:1::1"
+IPV6_ADDRESS2 = "2001:db8:1::2"
+IPV6_ADDRESS3 = "2001:db8:1::3"
 IPV6_EMPTY_ADDRESS = "::"
 IPV6_DEFAULT_GATEWAY = "::/0"
 IPV6_ROUTE_TABLE_ID1 = 50
 IPV6_ROUTE_TABLE_ID2 = 51
+IPV6_TEST_NET1 = "2001:db8:e::/64"
 
 IPV4_DNS_NAMESERVER = "8.8.8.8"
 IPV6_DNS_NAMESERVER = "2001:4860:4860::8888"
@@ -904,3 +908,71 @@ def _check_ip_rules(rules):
             rule.get(RouteRule.PRIORITY),
             rule.get(RouteRule.ROUTE_TABLE),
         )
+
+
+@pytest.fixture
+def eth1_with_multipath_route(eth1_up):
+    libnmstate.apply(
+        {
+            Interface.KEY: [ETH1_INTERFACE_STATE],
+        }
+    )
+    cmdlib.exec_cmd(
+        f"ip route add {IPV4_TEST_NET1} metric 500 "
+        f"nexthop via {IPV4_ADDRESS2} dev eth1 onlink "
+        f"nexthop via {IPV4_ADDRESS3} dev eth1 onlink".split(),
+        check=True,
+    )
+    cmdlib.exec_cmd(
+        f"ip -6 route add {IPV6_TEST_NET1} metric 501 "
+        f"nexthop via {IPV6_ADDRESS2} dev eth1 onlink "
+        f"nexthop via {IPV6_ADDRESS3} dev eth1 onlink".split(),
+        check=True,
+    )
+    yield
+    cmdlib.exec_cmd(
+        f"ip route del {IPV4_TEST_NET1} metric 500 "
+        f"nexthop via {IPV4_ADDRESS2} dev eth1 onlink "
+        f"nexthop via {IPV4_ADDRESS3} dev eth1 onlink".split()
+    )
+    cmdlib.exec_cmd(
+        f"ip -6 route del {IPV6_TEST_NET1} metric 501 "
+        f"nexthop via {IPV6_ADDRESS2} dev eth1 onlink "
+        f"nexthop via {IPV6_ADDRESS3} dev eth1 onlink".split()
+    )
+
+
+def test_support_query_multipath_route(eth1_with_multipath_route):
+    cur_state = libnmstate.show()
+    expected_routes = [
+        {
+            Route.DESTINATION: IPV4_TEST_NET1,
+            Route.METRIC: 500,
+            Route.NEXT_HOP_ADDRESS: IPV4_ADDRESS2,
+            Route.NEXT_HOP_INTERFACE: "eth1",
+            Route.TABLE_ID: 254,
+        },
+        {
+            Route.DESTINATION: IPV4_TEST_NET1,
+            Route.METRIC: 500,
+            Route.NEXT_HOP_ADDRESS: IPV4_ADDRESS3,
+            Route.NEXT_HOP_INTERFACE: "eth1",
+            Route.TABLE_ID: 254,
+        },
+        {
+            Route.DESTINATION: IPV6_TEST_NET1,
+            Route.METRIC: 501,
+            Route.NEXT_HOP_ADDRESS: IPV6_ADDRESS2,
+            Route.NEXT_HOP_INTERFACE: "eth1",
+            Route.TABLE_ID: 254,
+        },
+        {
+            Route.DESTINATION: IPV6_TEST_NET1,
+            Route.METRIC: 501,
+            Route.NEXT_HOP_ADDRESS: IPV6_ADDRESS3,
+            Route.NEXT_HOP_INTERFACE: "eth1",
+            Route.TABLE_ID: 254,
+        },
+    ]
+    cur_state = libnmstate.show()
+    _assert_routes(expected_routes, cur_state)
