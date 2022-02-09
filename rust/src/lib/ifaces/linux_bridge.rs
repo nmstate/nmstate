@@ -203,7 +203,7 @@ impl LinuxBridgeInterface {
 
         for (port_name, port_conf) in des_ports_index.iter() {
             if let Some(cur_port_conf) = cur_ports_index.get(port_name) {
-                if port_conf != cur_port_conf {
+                if port_conf.is_changed(cur_port_conf) {
                     ret.push(port_name);
                 }
             }
@@ -264,6 +264,22 @@ pub struct LinuxBridgePortConfig {
 impl LinuxBridgePortConfig {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    fn is_changed(&self, current: &Self) -> bool {
+        (self.stp_hairpin_mode.is_some()
+            && self.stp_hairpin_mode != current.stp_hairpin_mode)
+            || (self.stp_path_cost.is_some()
+                && self.stp_path_cost != current.stp_path_cost)
+            || (self.stp_priority.is_some()
+                && self.stp_priority != current.stp_priority)
+            || match (self.vlan.as_ref(), current.vlan.as_ref()) {
+                (Some(des_vlan_conf), Some(cur_vlan_conf)) => {
+                    des_vlan_conf.is_changed(cur_vlan_conf)
+                }
+                (Some(_), None) => true,
+                _ => false,
+            }
     }
 }
 
@@ -506,6 +522,15 @@ impl LinuxBridgePortVlanConfig {
                 }
             })
         }
+    }
+
+    pub(crate) fn is_changed(&self, current: &Self) -> bool {
+        (self.enable_native.is_some()
+            && self.enable_native != current.enable_native)
+            || (self.mode.is_some() && self.mode != current.mode)
+            || (self.tag.is_some() && self.tag != current.tag)
+            || (self.trunk_tags.is_some()
+                && self.trunk_tags != current.trunk_tags)
     }
 }
 
