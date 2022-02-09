@@ -333,8 +333,8 @@ impl Interfaces {
         cur_ifaces: &Self,
     ) -> Result<(), NmstateError> {
         let mut resolved_ifaces: Vec<Interface> = Vec::new();
-        for ((iface_name, iface_type), iface) in self.user_ifaces.iter() {
-            if iface_type != &InterfaceType::Unknown {
+        for (iface_name, iface) in self.kernel_ifaces.iter() {
+            if iface.iface_type() != InterfaceType::Unknown {
                 continue;
             }
 
