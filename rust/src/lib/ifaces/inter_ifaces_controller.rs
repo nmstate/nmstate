@@ -82,32 +82,27 @@ pub(crate) fn handle_changed_ports(
                 if let Some(cur_iface) =
                     cur_ifaces.kernel_ifaces.get(&iface_name)
                 {
-                    if cur_iface.base_iface().controller != ctrl_name
-                        || cur_iface.base_iface().controller_type != ctrl_type
-                    {
-                        let mut iface = cur_iface.clone_name_type_only();
-                        // Some interface cannot live without controller
-                        if iface.need_controller() && ctrl_name.is_none() {
-                            iface.base_iface_mut().state =
-                                InterfaceState::Absent;
-                        } else {
-                            iface.base_iface_mut().state = InterfaceState::Up;
-                        }
-                        iface.base_iface_mut().controller = ctrl_name;
-                        iface.base_iface_mut().controller_type = ctrl_type;
-                        if !iface.base_iface().can_have_ip() {
-                            iface.base_iface_mut().ipv4 =
-                                Some(InterfaceIpv4::new());
-                            iface.base_iface_mut().ipv6 =
-                                Some(InterfaceIpv6::new());
-                        }
-                        info!(
-                            "Include interface {} to edit as its \
-                            controller required so",
-                            iface_name
-                        );
-                        ifaces.push(iface);
+                    let mut iface = cur_iface.clone_name_type_only();
+                    // Some interface cannot live without controller
+                    if iface.need_controller() && ctrl_name.is_none() {
+                        iface.base_iface_mut().state = InterfaceState::Absent;
+                    } else {
+                        iface.base_iface_mut().state = InterfaceState::Up;
                     }
+                    iface.base_iface_mut().controller = ctrl_name;
+                    iface.base_iface_mut().controller_type = ctrl_type;
+                    if !iface.base_iface().can_have_ip() {
+                        iface.base_iface_mut().ipv4 =
+                            Some(InterfaceIpv4::new());
+                        iface.base_iface_mut().ipv6 =
+                            Some(InterfaceIpv6::new());
+                    }
+                    info!(
+                        "Include interface {} to edit as its \
+                            controller required so",
+                        iface_name
+                    );
+                    ifaces.push(iface);
                 } else {
                     // Do not raise error if detach port
                     if let Some(ctrl_name) = ctrl_name {
