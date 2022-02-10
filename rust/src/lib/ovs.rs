@@ -5,6 +5,7 @@ use serde::{Deserialize, Deserializer, Serialize};
 use crate::{state::get_json_value_difference, ErrorKind, NmstateError};
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize)]
+#[non_exhaustive]
 pub struct OvsDbGlobalConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     // When the value been set as None, specified key will be removed instead
@@ -107,6 +108,7 @@ impl<'de> Deserialize<'de> for OvsDbGlobalConfig {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize)]
+#[non_exhaustive]
 pub struct OvsDbIfaceConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub external_ids: Option<HashMap<String, Option<String>>>,

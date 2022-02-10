@@ -5,6 +5,7 @@ use crate::{ErrorKind, Interface, InterfaceType, Interfaces, NmstateError};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "kebab-case")]
+#[non_exhaustive]
 pub struct SrIovConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub total_vfs: Option<u32>,
@@ -110,6 +111,7 @@ impl SrIovConfig {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "kebab-case")]
+#[non_exhaustive]
 pub struct SrIovVfConfig {
     pub id: u32,
     #[serde(skip)]

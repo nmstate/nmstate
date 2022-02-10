@@ -10,6 +10,7 @@ use crate::{
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
+#[non_exhaustive]
 pub enum InterfaceType {
     Bond,
     LinuxBridge,
@@ -106,6 +107,7 @@ impl InterfaceType {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
+#[non_exhaustive]
 pub enum InterfaceState {
     Up,
     Down,
@@ -131,6 +133,7 @@ impl From<&str> for InterfaceState {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[non_exhaustive]
 pub struct UnknownInterface {
     #[serde(flatten)]
     pub base: BaseInterface,
@@ -144,6 +147,7 @@ impl UnknownInterface {
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "kebab-case", untagged)]
+#[non_exhaustive]
 pub enum Interface {
     Bond(BondInterface),
     Dummy(DummyInterface),

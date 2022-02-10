@@ -28,6 +28,7 @@ use crate::{
 
 #[derive(Debug, Clone, PartialEq, Default, Deserialize)]
 #[serde(try_from = "DbusDictionary")]
+#[non_exhaustive]
 pub struct NmSettingBridge {
     pub ageing_time: Option<u32>,
     pub forward_delay: Option<u32>,
@@ -293,6 +294,7 @@ impl NmSettingBridge {
 
 #[derive(Debug, Clone, PartialEq, Default, Deserialize)]
 #[serde(try_from = "DbusDictionary")]
+#[non_exhaustive]
 pub struct NmSettingBridgeVlanRange {
     pub vid_start: u16,
     pub vid_end: u16,
@@ -348,6 +350,7 @@ impl NmSettingBridgeVlanRange {
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
+#[non_exhaustive]
 pub struct NmSettingBridgePort {
     pub hairpin_mode: Option<bool>,
     pub path_cost: Option<u32>,

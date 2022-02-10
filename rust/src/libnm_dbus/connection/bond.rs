@@ -7,6 +7,7 @@ use crate::{connection::DbusDictionary, NmError};
 
 #[derive(Debug, Clone, PartialEq, Default, Deserialize)]
 #[serde(try_from = "DbusDictionary")]
+#[non_exhaustive]
 pub struct NmSettingBond {
     pub mode: String,
     pub options: HashMap<String, String>,
