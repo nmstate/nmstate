@@ -1,4 +1,18 @@
 # Changelog
+## [1.2.1] - 2021-02-10
+### New features
+ - Add support to multipath routes. (0eb2c33)
+ - Add support to ovsdb query and changes in nmstate-rust implementation. (8172369)
+ - Add support to veth interfaces in nmstate-rust implementation. (39c605e)
+ - Add support to VXLAN and VRF in nmstate-rust implementation. (f963eae, 544ba15)
+ - Introduce commit and rollback in nmstatectl-rust. (ed6eeb1)
+ - Allow changing DNS search and server only. (932e3a9)
+ - Add support to OVS-DPDK. (8f8743d, 7ff801a)
+ - Add support of SR-IOV VLAN and QOS. (36dd02a)
+
+### Bug fixes
+ - Report boot protocol routes in the route state. (b881999)
+
 ## [1.2.0] - 2021-12-15
 ### New features
 
