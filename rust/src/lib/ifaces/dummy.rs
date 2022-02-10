@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use crate::{BaseInterface, InterfaceType};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct DummyInterface {
     #[serde(flatten)]
     pub base: BaseInterface,

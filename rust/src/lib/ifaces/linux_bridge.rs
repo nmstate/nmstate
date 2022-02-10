@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use crate::{BaseInterface, ErrorKind, InterfaceType, NmstateError};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct LinuxBridgeInterface {
     #[serde(flatten)]
     pub base: BaseInterface,
@@ -226,6 +227,7 @@ impl LinuxBridgeInterface {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "kebab-case")]
+#[non_exhaustive]
 pub struct LinuxBridgeConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub options: Option<LinuxBridgeOptions>,
@@ -249,6 +251,7 @@ impl LinuxBridgeConfig {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "kebab-case")]
+#[non_exhaustive]
 pub struct LinuxBridgePortConfig {
     pub name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -285,6 +288,7 @@ impl LinuxBridgePortConfig {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "kebab-case")]
+#[non_exhaustive]
 pub struct LinuxBridgeOptions {
     // `gc_timer` is runtime status, not allowing for changing
     #[serde(skip_serializing_if = "Option::is_none", skip_deserializing)]
@@ -349,6 +353,7 @@ impl LinuxBridgeOptions {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "kebab-case")]
+#[non_exhaustive]
 pub struct LinuxBridgeStpOptions {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub enabled: Option<bool>,
@@ -443,6 +448,7 @@ impl LinuxBridgeConfig {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
+#[non_exhaustive]
 pub enum LinuxBridgeMulticastRouterType {
     Auto,
     Disabled,
@@ -471,6 +477,7 @@ impl std::fmt::Display for LinuxBridgeMulticastRouterType {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "kebab-case")]
+#[non_exhaustive]
 pub struct LinuxBridgePortVlanConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub enable_native: Option<bool>,
@@ -536,6 +543,7 @@ impl LinuxBridgePortVlanConfig {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
+#[non_exhaustive]
 pub enum LinuxBridgePortVlanMode {
     Trunk,
     Access,
@@ -549,6 +557,7 @@ impl Default for LinuxBridgePortVlanMode {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
+#[non_exhaustive]
 pub enum LinuxBridgePortTunkTag {
     Id(u16),
     IdRange(LinuxBridgePortVlanRange),
@@ -564,6 +573,7 @@ impl LinuxBridgePortTunkTag {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[non_exhaustive]
 pub struct LinuxBridgePortVlanRange {
     pub max: u16,
     pub min: u16,

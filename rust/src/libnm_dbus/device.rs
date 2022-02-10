@@ -53,6 +53,7 @@ const NM_DEVICE_STATE_DEACTIVATING: u32 = 110;
 const NM_DEVICE_STATE_FAILED: u32 = 120;
 
 #[derive(Debug, Clone, PartialEq)]
+#[non_exhaustive]
 pub enum NmDeviceState {
     Unknown,
     Unmanaged,
@@ -169,6 +170,7 @@ const NM_DEVICE_STATE_REASON_SRIOV_CONFIGURATION_FAILED: u32 = 66;
 const NM_DEVICE_STATE_REASON_PEER_NOT_FOUND: u32 = 67;
 
 #[derive(Debug, Clone, PartialEq)]
+#[non_exhaustive]
 pub enum NmDeviceStateReason {
     Null,
     Unknown,

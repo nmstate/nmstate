@@ -27,6 +27,7 @@ use crate::{
 
 #[derive(Debug, Clone, PartialEq, Default, Deserialize)]
 #[serde(try_from = "DbusDictionary")]
+#[non_exhaustive]
 pub struct NmSettingWired {
     pub cloned_mac_address: Option<String>,
     pub mtu: Option<u32>,

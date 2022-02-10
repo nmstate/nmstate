@@ -8,6 +8,7 @@ use crate::{connection::DbusDictionary, ErrorKind, NmError};
 
 #[derive(Debug, Clone, PartialEq, Default, Deserialize)]
 #[serde(try_from = "DbusDictionary")]
+#[non_exhaustive]
 pub struct NmSettingVlan {
     pub parent: Option<String>,
     pub id: Option<u32>,
@@ -51,6 +52,7 @@ const NM_VLAN_PROTOCOL_802_1Q: &str = "802.1Q";
 const NM_VLAN_PROTOCOL_802_1AD: &str = "802.1AD";
 
 #[derive(Debug, Clone, Copy, PartialEq)]
+#[non_exhaustive]
 pub enum NmVlanProtocol {
     Dot1Q,
     Dot1Ad,

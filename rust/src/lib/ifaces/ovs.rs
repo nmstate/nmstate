@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::{BaseInterface, ErrorKind, InterfaceType, NmstateError};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct OvsBridgeInterface {
     #[serde(flatten)]
     pub base: BaseInterface,
@@ -83,6 +84,7 @@ impl OvsBridgeInterface {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "kebab-case")]
+#[non_exhaustive]
 pub struct OvsBridgeConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub options: Option<OvsBridgeOptions>,
@@ -104,6 +106,7 @@ impl OvsBridgeConfig {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "kebab-case")]
+#[non_exhaustive]
 pub struct OvsBridgeOptions {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub stp: Option<bool>,
@@ -123,6 +126,7 @@ impl OvsBridgeOptions {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "kebab-case")]
+#[non_exhaustive]
 pub struct OvsBridgePortConfig {
     pub name: String,
     #[serde(
@@ -139,6 +143,7 @@ impl OvsBridgePortConfig {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct OvsInterface {
     #[serde(flatten)]
     pub base: BaseInterface,
@@ -164,6 +169,7 @@ impl OvsInterface {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "kebab-case")]
+#[non_exhaustive]
 pub struct OvsBridgeBondConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub mode: Option<OvsBridgeBondMode>,
@@ -198,6 +204,7 @@ impl OvsBridgeBondConfig {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "kebab-case")]
+#[non_exhaustive]
 pub struct OvsBridgeBondPortConfig {
     pub name: String,
 }
@@ -210,6 +217,7 @@ impl OvsBridgeBondPortConfig {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
+#[non_exhaustive]
 pub enum OvsBridgeBondMode {
     ActiveBackup,
     BalanceSlb,

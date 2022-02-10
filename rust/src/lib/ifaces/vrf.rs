@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use crate::{BaseInterface, InterfaceType};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct VrfInterface {
     #[serde(flatten)]
     pub base: BaseInterface,
@@ -52,6 +53,7 @@ impl VrfInterface {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[non_exhaustive]
 pub struct VrfConfig {
     pub port: Option<Vec<String>>,
     #[serde(rename = "route-table-id")]

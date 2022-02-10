@@ -1,4 +1,5 @@
 #[derive(Debug, Clone, Copy, PartialEq)]
+#[non_exhaustive]
 pub enum ErrorKind {
     InvalidArgument,
     PluginFailure,
@@ -21,6 +22,7 @@ impl std::fmt::Display for NmstateError {
 }
 
 #[derive(Debug)]
+#[non_exhaustive]
 pub struct NmstateError {
     kind: ErrorKind,
     msg: String,
