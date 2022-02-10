@@ -21,6 +21,7 @@ use crate::{connection::DbusDictionary, error::NmError};
 
 #[derive(Debug, Clone, PartialEq, Default, Deserialize)]
 #[serde(try_from = "DbusDictionary")]
+#[non_exhaustive]
 pub struct NmIpRoute {
     pub dest: Option<String>,
     pub prefix: Option<u32>,

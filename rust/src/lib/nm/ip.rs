@@ -230,6 +230,10 @@ pub(crate) fn nm_ip_setting_to_nmstate6(
             NmSettingIpMethod::Auto => (true, true, true),
             NmSettingIpMethod::Dhcp => (true, true, false),
             NmSettingIpMethod::Ignore => (true, false, false),
+            _ => {
+                log::warn!("Unknown NM IP method {:?}", nm_ip_method);
+                (false, false, false)
+            }
         };
         let (auto_dns, auto_gateway, auto_routes, auto_table_id) =
             parse_dhcp_opts(nm_ip_setting);

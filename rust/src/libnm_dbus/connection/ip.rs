@@ -37,6 +37,7 @@ use crate::{
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(try_from = "zvariant::OwnedValue")]
+#[non_exhaustive]
 pub enum NmSettingIpMethod {
     Auto,
     Disabled,
@@ -93,6 +94,7 @@ impl TryFrom<zvariant::OwnedValue> for NmSettingIpMethod {
 
 #[derive(Debug, Clone, PartialEq, Default, Deserialize)]
 #[serde(try_from = "DbusDictionary")]
+#[non_exhaustive]
 pub struct NmSettingIp {
     pub method: Option<NmSettingIpMethod>,
     pub addresses: Vec<String>,

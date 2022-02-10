@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use crate::{ip::is_ipv6_addr, ErrorKind, NmstateError};
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct Routes {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub running: Option<Vec<RouteEntry>>,
@@ -193,6 +194,7 @@ impl Routes {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
+#[non_exhaustive]
 pub enum RouteState {
     Absent,
 }
@@ -205,6 +207,7 @@ impl Default for RouteState {
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
+#[non_exhaustive]
 pub struct RouteEntry {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub state: Option<RouteState>,

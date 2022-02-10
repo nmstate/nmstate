@@ -27,6 +27,7 @@ use crate::{
 
 #[derive(Debug, Clone, PartialEq, Default, Deserialize)]
 #[serde(try_from = "DbusDictionary")]
+#[non_exhaustive]
 pub struct NmSettingSriov {
     pub autoprobe_drivers: Option<bool>,
     pub total_vfs: Option<u32>,
@@ -94,6 +95,7 @@ impl NmSettingSriov {
 
 #[derive(Debug, Clone, PartialEq, Default, Deserialize)]
 #[serde(try_from = "DbusDictionary")]
+#[non_exhaustive]
 pub struct NmSettingSriovVf {
     pub index: Option<u32>,
     pub mac: Option<String>,
@@ -193,6 +195,7 @@ impl NmSettingSriovVf {
 
 #[derive(Debug, Clone, PartialEq, Default, Deserialize)]
 #[serde(try_from = "DbusDictionary")]
+#[non_exhaustive]
 pub struct NmSettingSriovVfVlan {
     pub id: u32,
     pub qos: u32,

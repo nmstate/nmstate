@@ -22,6 +22,7 @@ use crate::{connection::DbusDictionary, error::NmError};
 
 #[derive(Debug, Clone, PartialEq, Default, Deserialize)]
 #[serde(try_from = "DbusDictionary")]
+#[non_exhaustive]
 pub struct NmSettingOvsBridge {
     pub stp: Option<bool>,
     pub mcast_snooping_enable: Option<bool>,
@@ -77,6 +78,7 @@ impl NmSettingOvsBridge {
 
 #[derive(Debug, Clone, PartialEq, Default, Deserialize)]
 #[serde(try_from = "DbusDictionary")]
+#[non_exhaustive]
 pub struct NmSettingOvsPort {
     pub mode: Option<String>,
     pub up_delay: Option<u32>,
@@ -123,6 +125,7 @@ impl NmSettingOvsPort {
 
 #[derive(Debug, Clone, PartialEq, Default, Deserialize)]
 #[serde(try_from = "DbusDictionary")]
+#[non_exhaustive]
 pub struct NmSettingOvsIface {
     pub iface_type: Option<String>,
     _other: HashMap<String, zvariant::OwnedValue>,
@@ -159,6 +162,7 @@ impl NmSettingOvsIface {
 
 #[derive(Debug, Clone, PartialEq, Default, Deserialize)]
 #[serde(try_from = "DbusDictionary")]
+#[non_exhaustive]
 pub struct NmSettingOvsExtIds {
     pub data: Option<HashMap<String, String>>,
     _other: HashMap<String, zvariant::OwnedValue>,

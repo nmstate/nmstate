@@ -7,6 +7,7 @@ use crate::{connection::DbusDictionary, NmError};
 
 #[derive(Debug, Clone, PartialEq, Default, Deserialize)]
 #[serde(try_from = "DbusDictionary")]
+#[non_exhaustive]
 pub struct NmSettingVrf {
     pub table: Option<u32>,
     _other: HashMap<String, zvariant::OwnedValue>,

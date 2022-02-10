@@ -8,6 +8,7 @@ use serde::{ser::SerializeStruct, Deserialize, Serialize, Serializer};
 use crate::{DnsClientState, ErrorKind, Interfaces, NmstateError};
 
 #[derive(Debug, Clone, PartialEq, Default)]
+#[non_exhaustive]
 pub struct InterfaceIpv4 {
     pub enabled: bool,
     pub prop_list: Vec<&'static str>,
@@ -344,6 +345,7 @@ impl InterfaceIpv4 {
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
+#[non_exhaustive]
 pub struct InterfaceIpv6 {
     pub enabled: bool,
     pub prop_list: Vec<&'static str>,
@@ -721,6 +723,7 @@ impl InterfaceIpv6 {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "kebab-case")]
+#[non_exhaustive]
 pub struct InterfaceIpAddr {
     pub ip: String,
     pub prefix_length: u8,
