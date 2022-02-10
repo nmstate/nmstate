@@ -56,6 +56,7 @@ pub(crate) type NmConnectionDbusValue<'a> =
 
 #[derive(Debug, Clone, PartialEq, Default, Deserialize)]
 #[serde(try_from = "NmConnectionDbusOwnedValue")]
+#[non_exhaustive]
 pub struct NmConnection {
     pub connection: Option<NmSettingConnection>,
     pub bond: Option<NmSettingBond>,
@@ -250,6 +251,7 @@ impl NmConnection {
 
 #[derive(Debug, Clone, PartialEq, Default, Deserialize)]
 #[serde(try_from = "DbusDictionary")]
+#[non_exhaustive]
 pub struct NmSettingConnection {
     pub id: Option<String>,
     pub uuid: Option<String>,

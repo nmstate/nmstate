@@ -6,6 +6,7 @@ use crate::{
 };
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct EthernetInterface {
     #[serde(flatten)]
     pub base: BaseInterface,
@@ -93,6 +94,7 @@ impl EthernetInterface {
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
+#[non_exhaustive]
 pub enum EthernetDuplex {
     Full,
     Half,
@@ -113,6 +115,7 @@ impl std::fmt::Display for EthernetDuplex {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "kebab-case")]
+#[non_exhaustive]
 pub struct EthernetConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sr_iov: Option<SrIovConfig>,
@@ -154,6 +157,7 @@ impl EthernetConfig {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[non_exhaustive]
 pub struct VethConfig {
     pub peer: String,
 }

@@ -3,6 +3,7 @@ use serde::{de::Error, Deserialize, Deserializer, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[serde(rename_all = "kebab-case")]
+#[non_exhaustive]
 pub struct BondInterface {
     #[serde(flatten)]
     pub base: BaseInterface,
@@ -92,6 +93,7 @@ impl BondInterface {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[non_exhaustive]
 pub enum BondMode {
     #[serde(rename = "balance-rr")]
     RoundRobin,
@@ -137,6 +139,7 @@ impl std::fmt::Display for BondMode {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "kebab-case")]
+#[non_exhaustive]
 pub struct BondConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub mode: Option<BondMode>,
@@ -187,6 +190,7 @@ impl BondConfig {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename_all = "kebab-case")]
+#[non_exhaustive]
 pub enum BondAdSelect {
     #[serde(alias = "0")]
     Stable,
@@ -208,6 +212,7 @@ impl BondAdSelect {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename_all = "kebab-case")]
+#[non_exhaustive]
 pub enum BondLacpRate {
     #[serde(alias = "0")]
     Slow,
@@ -226,6 +231,7 @@ impl BondLacpRate {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename_all = "kebab-case")]
+#[non_exhaustive]
 pub enum BondAllPortsActive {
     #[serde(alias = "0")]
     Dropped,
@@ -244,6 +250,7 @@ impl BondAllPortsActive {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename_all = "kebab-case")]
+#[non_exhaustive]
 pub enum BondArpAllTargets {
     #[serde(alias = "0")]
     Any,
@@ -274,6 +281,7 @@ const BOND_ARP_FILTER_BACKUP: u32 = BOND_ARP_VALIDATE_BACKUP | BOND_ARP_FILTER;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename_all = "kebab-case")]
+#[non_exhaustive]
 pub enum BondArpValidate {
     None,
     Active,
@@ -302,6 +310,7 @@ impl BondArpValidate {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename_all = "kebab-case")]
+#[non_exhaustive]
 pub enum BondFailOverMac {
     #[serde(alias = "0")]
     None,
@@ -323,6 +332,7 @@ impl BondFailOverMac {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename_all = "kebab-case")]
+#[non_exhaustive]
 pub enum BondPrimaryReselect {
     #[serde(alias = "0")]
     Always,
@@ -343,6 +353,7 @@ impl BondPrimaryReselect {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[non_exhaustive]
 pub enum BondXmitHashPolicy {
     #[serde(rename = "layer2")]
     #[serde(alias = "0")]
@@ -378,6 +389,7 @@ impl BondXmitHashPolicy {
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone, PartialEq)]
+#[non_exhaustive]
 pub struct BondOptions {
     #[serde(
         skip_serializing_if = "Option::is_none",

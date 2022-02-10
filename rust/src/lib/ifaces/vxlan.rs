@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use crate::{BaseInterface, InterfaceType};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct VxlanInterface {
     #[serde(flatten)]
     pub base: BaseInterface,
@@ -43,6 +44,7 @@ impl VxlanInterface {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "kebab-case")]
+#[non_exhaustive]
 pub struct VxlanConfig {
     pub base_iface: String,
     pub id: u32,
