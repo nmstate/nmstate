@@ -49,6 +49,13 @@ fn main() {
                         .long("json")
                         .takes_value(false)
                         .help("Show state in json format"),
+                )
+                .arg(
+                    clap::Arg::with_name("RUNNING_CONFIG_ONLY")
+                        .short("r")
+                        .long("running-config")
+                        .takes_value(false)
+                        .help("Show running configuration only"),
                 ),
         )
         .subcommand(
@@ -276,6 +283,9 @@ fn show(matches: &clap::ArgMatches) -> Result<String, CliError> {
     let mut net_state = NetworkState::new();
     if matches.is_present("KERNEL") {
         net_state.set_kernel_only(true);
+    }
+    if matches.is_present("RUNNING_CONFIG_ONLY") {
+        net_state.set_running_config_only(true);
     }
     net_state.retrieve()?;
     Ok(if let Some(ifname) = matches.value_of("IFNAME") {
