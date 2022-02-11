@@ -27,3 +27,12 @@ def show(
             include_secrets=include_secrets,
         )
     )
+
+
+def show_running_config(include_secrets=False):
+    return json.loads(
+        retrieve_net_state_json(
+            include_secrets=include_secrets,
+            running_config_only=True,
+        )
+    )

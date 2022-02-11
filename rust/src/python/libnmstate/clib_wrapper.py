@@ -46,11 +46,15 @@ NMSTATE_FLAG_INCLUDE_STATUS_DATA = 1 << 3
 NMSTATE_FLAG_INCLUDE_SECRETS = 1 << 4
 NMSTATE_FLAG_NO_COMMIT = 1 << 5
 # NMSTATE_FLAG_MEMORY_ONLY = 1 << 6
+NMSTATE_FLAG_RUNNING_CONFIG_ONLY = 1 << 7
 NMSTATE_PASS = 0
 
 
 def retrieve_net_state_json(
-    kernel_only=False, include_status_data=False, include_secrets=False
+    kernel_only=False,
+    include_status_data=False,
+    include_secrets=False,
+    running_config_only=False,
 ):
     c_err_msg = c_char_p()
     c_err_kind = c_char_p()
@@ -63,6 +67,8 @@ def retrieve_net_state_json(
         flags |= NMSTATE_FLAG_INCLUDE_STATUS_DATA
     if include_secrets:
         flags |= NMSTATE_FLAG_INCLUDE_SECRETS
+    if running_config_only:
+        flags |= NMSTATE_FLAG_RUNNING_CONFIG_ONLY
 
     rc = lib.nmstate_net_state_retrieve(
         flags,

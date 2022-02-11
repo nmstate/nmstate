@@ -164,7 +164,10 @@ function run_tests {
     if [ $TEST_TYPE == $TEST_TYPE_ALL ] || \
        [ $TEST_TYPE == $TEST_TYPE_INTEG_RUST ];then
         exec_cmd "cd $CONTAINER_WORKSPACE"
+        exec_cmd "cp /usr/bin/nmstatectl-rust /tmp"
         exec_cmd "dnf remove python3-libnmstate -y"
+        exec_cmd "mv /tmp/nmstatectl-rust /usr/bin/nmstatectl"
+        exec_cmd "chmod +x /usr/bin/nmstatectl"
         exec_cmd "
           env  \
           PYTHONPATH=$CONTAINER_WORKSPACE/rust/src/python \
@@ -177,6 +180,7 @@ function run_tests {
             tests/integration/mac_vtap_test.py \
             tests/integration/vxlan_test.py \
             tests/integration/veth_test.py \
+            tests/integration/dynamic_ip_test.py \
             ${nmstate_pytest_extra_args}"
         exec_cmd "
           env  \
@@ -272,8 +276,8 @@ function run_tests {
           PYTHONPATH=$CONTAINER_WORKSPACE/rust/src/python \
           pytest \
             $PYTEST_OPTIONS \
-            tests/integration/dynamic_ip_test.py \
-            -k 'not test_show_running_config_does_not_include_auto_config' \
+            tests/integration/nmstatectl_test.py \
+            -k 'running_config' \
             ${nmstate_pytest_extra_args}"
     fi
 }

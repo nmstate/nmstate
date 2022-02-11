@@ -42,13 +42,14 @@ impl From<(&nispor::IfaceState, &[nispor::IfaceFlags])> for InterfaceState {
 
 pub(crate) fn np_iface_to_base_iface(
     np_iface: &nispor::Iface,
+    running_config_only: bool,
 ) -> BaseInterface {
     let base_iface = BaseInterface {
         name: np_iface.name.to_string(),
         state: (&np_iface.state, np_iface.flags.as_slice()).into(),
         iface_type: np_iface_type_to_nmstate(&np_iface.iface_type),
-        ipv4: np_ipv4_to_nmstate(np_iface),
-        ipv6: np_ipv6_to_nmstate(np_iface),
+        ipv4: np_ipv4_to_nmstate(np_iface, running_config_only),
+        ipv6: np_ipv6_to_nmstate(np_iface, running_config_only),
         mac_address: Some(np_iface.mac_address.to_uppercase()),
         permanent_mac_address: get_permanent_mac_address(np_iface),
         controller: np_iface.controller.as_ref().map(|c| c.to_string()),
