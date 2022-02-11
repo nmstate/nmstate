@@ -21,7 +21,9 @@ use crate::{
     NmstateError, OvsInterface, UnknownInterface,
 };
 
-pub(crate) fn nispor_retrieve() -> Result<NetworkState, NmstateError> {
+pub(crate) fn nispor_retrieve(
+    running_config_only: bool,
+) -> Result<NetworkState, NmstateError> {
     let mut net_state = NetworkState::new();
     net_state.prop_list.push("interfaces");
     net_state.prop_list.push("routes");
@@ -29,7 +31,8 @@ pub(crate) fn nispor_retrieve() -> Result<NetworkState, NmstateError> {
     let np_state = nispor::NetState::retrieve().map_err(np_error_to_nmstate)?;
 
     for (_, np_iface) in np_state.ifaces.iter() {
-        let mut base_iface = np_iface_to_base_iface(np_iface);
+        let mut base_iface =
+            np_iface_to_base_iface(np_iface, running_config_only);
         // The `ovs-system` is reserved for OVS kernel datapath
         if np_iface.name == "ovs-system" {
             continue;
@@ -106,7 +109,7 @@ pub(crate) fn nispor_retrieve() -> Result<NetworkState, NmstateError> {
         net_state.append_interface_data(iface);
     }
     set_controller_type(&mut net_state.interfaces);
-    net_state.routes = get_routes(&np_state.routes);
+    net_state.routes = get_routes(&np_state.routes, running_config_only);
     net_state.rules = get_route_rules(&np_state.rules);
 
     Ok(net_state)

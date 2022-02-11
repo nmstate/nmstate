@@ -2,6 +2,7 @@ use crate::{InterfaceIpAddr, InterfaceIpv4, InterfaceIpv6};
 
 pub(crate) fn np_ipv4_to_nmstate(
     np_iface: &nispor::Iface,
+    running_config_only: bool,
 ) -> Option<InterfaceIpv4> {
     if let Some(np_ip) = &np_iface.ipv4 {
         let mut ip = InterfaceIpv4::default();
@@ -14,6 +15,9 @@ pub(crate) fn np_ipv4_to_nmstate(
             if np_addr.valid_lft != "forever" {
                 ip.dhcp = true;
                 ip.prop_list.push("dhcp");
+                if running_config_only {
+                    continue;
+                }
             }
             ip.addresses.push(InterfaceIpAddr {
                 ip: np_addr.address.clone(),
@@ -37,6 +41,7 @@ pub(crate) fn np_ipv4_to_nmstate(
 
 pub(crate) fn np_ipv6_to_nmstate(
     np_iface: &nispor::Iface,
+    running_config_only: bool,
 ) -> Option<InterfaceIpv6> {
     if let Some(np_ip) = &np_iface.ipv6 {
         let mut ip = InterfaceIpv6::default();
@@ -49,6 +54,9 @@ pub(crate) fn np_ipv6_to_nmstate(
             if np_addr.valid_lft != "forever" {
                 ip.autoconf = true;
                 ip.prop_list.push("autoconf");
+                if running_config_only {
+                    continue;
+                }
             }
             ip.addresses.push(InterfaceIpAddr {
                 ip: np_addr.address.clone(),

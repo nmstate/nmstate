@@ -14,25 +14,29 @@ const IPV6_DEFAULT_GATEWAY: &str = "::/0";
 const IPV4_EMPTY_NEXT_HOP_ADDRESS: &str = "0.0.0.0";
 const IPV6_EMPTY_NEXT_HOP_ADDRESS: &str = "::";
 
-pub(crate) fn get_routes(np_routes: &[nispor::Route]) -> Routes {
+pub(crate) fn get_routes(
+    np_routes: &[nispor::Route],
+    running_config_only: bool,
+) -> Routes {
     let mut ret = Routes::new();
 
-    let mut running_routes = Vec::new();
-    for np_route in np_routes.iter().filter(|np_route| {
-        SUPPORTED_ROUTE_SCOPE.contains(&np_route.scope)
-            && np_route.table != LOCAL_ROUTE_TABLE
-            && np_route.oif.as_ref() != Some(&"lo".to_string())
-    }) {
-        if is_multipath(np_route) {
-            for flat_np_route in flat_multipath_route(np_route) {
-                running_routes.push(np_route_to_nmstate(&flat_np_route));
+    if !running_config_only {
+        let mut running_routes = Vec::new();
+        for np_route in np_routes.iter().filter(|np_route| {
+            SUPPORTED_ROUTE_SCOPE.contains(&np_route.scope)
+                && np_route.table != LOCAL_ROUTE_TABLE
+                && np_route.oif.as_ref() != Some(&"lo".to_string())
+        }) {
+            if is_multipath(np_route) {
+                for flat_np_route in flat_multipath_route(np_route) {
+                    running_routes.push(np_route_to_nmstate(&flat_np_route));
+                }
+            } else if np_route.oif.is_some() {
+                running_routes.push(np_route_to_nmstate(np_route));
             }
-        } else if np_route.oif.is_some() {
-            running_routes.push(np_route_to_nmstate(np_route));
         }
+        ret.running = Some(running_routes);
     }
-
-    ret.running = Some(running_routes);
 
     let mut config_routes = Vec::new();
     for np_route in np_routes.iter().filter(|np_route| {

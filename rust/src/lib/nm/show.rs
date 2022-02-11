@@ -28,7 +28,9 @@ use crate::{
     VrfInterface, VxlanInterface,
 };
 
-pub(crate) fn nm_retrieve() -> Result<NetworkState, NmstateError> {
+pub(crate) fn nm_retrieve(
+    running_config_only: bool,
+) -> Result<NetworkState, NmstateError> {
     let mut net_state = NetworkState::new();
     net_state.prop_list = vec!["interfaces", "dns"];
     let nm_api = NmApi::new().map_err(nm_error_to_nmstate)?;
@@ -180,6 +182,9 @@ pub(crate) fn nm_retrieve() -> Result<NetworkState, NmstateError> {
     }
 
     net_state.dns = retrieve_dns_info(&nm_api, &net_state.interfaces)?;
+    if running_config_only {
+        net_state.dns.running = None;
+    }
 
     set_ovs_iface_controller_info(&mut net_state.interfaces);
 

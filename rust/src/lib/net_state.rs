@@ -61,6 +61,8 @@ pub struct NetworkState {
     include_secrets: bool,
     #[serde(skip)]
     include_status_data: bool,
+    #[serde(skip)]
+    running_config_only: bool,
 }
 
 impl<'de> Deserialize<'de> for NetworkState {
@@ -130,6 +132,16 @@ impl NetworkState {
         self
     }
 
+    // Query activated/running network configuration excluding:
+    // * IP address retrieved by DHCP or IPv6 auto configuration.
+    // * DNS client resolver retrieved by DHCP or IPv6 auto configuration.
+    // * Routes retrieved by DHCPv4 or IPv6 router advertisement.
+    // * LLDP neighbor information.
+    pub fn set_running_config_only(&mut self, value: bool) -> &mut Self {
+        self.running_config_only = value;
+        self
+    }
+
     pub fn new() -> Self {
         Default::default()
     }
@@ -151,7 +163,7 @@ impl NetworkState {
     }
 
     pub fn retrieve(&mut self) -> Result<&mut Self, NmstateError> {
-        let state = nispor_retrieve()?;
+        let state = nispor_retrieve(self.running_config_only)?;
         if state.prop_list.contains(&"interfaces") {
             self.interfaces = state.interfaces;
         }
@@ -162,7 +174,7 @@ impl NetworkState {
             self.rules = state.rules;
         }
         if !self.kernel_only {
-            let nm_state = nm_retrieve()?;
+            let nm_state = nm_retrieve(self.running_config_only)?;
             // TODO: Priority handling
             self.update_state(&nm_state);
             if ovsdb_is_running() {
