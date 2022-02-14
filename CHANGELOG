@@ -1,4 +1,11 @@
 # Changelog
+## [2.0.0] - 2022-02-14
+### Breaking changes
+ - Drop team support. (601ca60)
+ - Drop jsonschema support. (2599d3a)
+ - Drop varlink support. (ce1a4b8)
+ - Drop `slave` support. (ebc8082)
+
 ## [1.2.1] - 2021-02-10
 ### New features
  - Add support to multipath routes. (0eb2c33)
