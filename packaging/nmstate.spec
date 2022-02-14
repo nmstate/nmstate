@@ -34,8 +34,6 @@ Summary:        C binding of nmstate
 # Use Recommends for NetworkManager because only access to NM DBus is required,
 # but NM could be running on a different host
 Recommends:     NetworkManager
-# Avoid automatically generated profiles
-Recommends:     NetworkManager-config-server
 
 %description libs
 C binding of nmstate.
@@ -54,8 +52,6 @@ Requires:       NetworkManager-libnm >= 1:1.26.0
 # Use Recommends for NetworkManager because only access to NM DBus is required,
 # but NM could be running on a different host
 Recommends:     NetworkManager
-# Avoid automatically generated profiles
-Recommends:     NetworkManager-config-server
 Recommends:     (nmstate-plugin-ovsdb if openvswitch)
 # Use Suggests for NetworkManager-ovs and NetworkManager-team since it is only
 # required for OVS and team support
