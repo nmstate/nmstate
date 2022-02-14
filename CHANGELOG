@@ -1,4 +1,52 @@
 # Changelog
+## [1.2.1] - 2021-02-10
+### New features
+ - Add support to multipath routes. (0eb2c33)
+ - Add support to ovsdb query and changes in nmstate-rust implementation. (8172369)
+ - Add support to veth interfaces in nmstate-rust implementation. (39c605e)
+ - Add support to VXLAN and VRF in nmstate-rust implementation. (f963eae, 544ba15)
+ - Introduce commit and rollback in nmstatectl-rust. (ed6eeb1)
+ - Allow changing DNS search and server only. (932e3a9)
+ - Add support to OVS-DPDK. (8f8743d, 7ff801a)
+ - Add support of SR-IOV VLAN and QOS. (36dd02a)
+
+### Bug fixes
+ - Report boot protocol routes in the route state. (b881999)
+
+## [1.2.0] - 2021-12-15
+### New features
+ - Introduce experimental support for a rust rewrite. This includes support for
+   linux-bridge, ovs, vlan, ethernet, dummy and veth interfaces.
+ - Add support of copy-mac-from to OVS bridges. (238f48f)
+
+### Bug fixes
+ - Fix verification error when modifying SR-IOV VFs number. (3693aa6)
+ - Fix error message when no suitable interface can be found for name servers. (de01481)
+ - Fix verification error due to NM.connection.uuid ovsdb entry. (5954f91)
+ - Fix error when setting IPv6 canonical addresses for DNS nameservers. (a0906ee)
+ - Fix verification error on IPv4/IPv6 route empty next-hop-address. (33e7272)
+ - Preserve existing ethtool configuration when not specified in desired state. (b1cb57d)
+
+## [1.1.0] - 2021-07-15
+### New features
+ - Support `accept-all-mac-addresses` property. (2df9c6a)
+ - Support ethtool pause, feature, ring and coalesce options. (4e118b1, 258a280, 1ea97bf, b65ab5a)
+ - Introduce `include_secrets` on libnmstate and `--show-secrets` in nmstatectl. (a310862)
+ - Introduce `nmstate-autoconf` cli tool. (a463a3c)
+
+### Bug fixes
+ - Fix error when configuring DNS without desired interfaces. (08d3874)
+ - Fix wrong warning about mismatching MAC address in bond options. (3463c8e)
+ - Fix failure when modifying VLAN/VXLAN ID. (a673459)
+ - Fix failure when removing route from different table than default. (73f5230)
+ - Fix bond `tlb_dynamic_lb` option. (8915f5c)
+ - Fix bond preserving `all_slaves_active` option. (94c036b)
+ - Fix bond validation error when `fail_over_mac` is enabled. (404294a)
+ - Use permanent MAC address for `Interface.COPY_MAC_FROM`. (e873491)
+ - Fix error when creating SR-IOV VFs with the `bnxt_en` driver. (ea9c6d2)
+ - Fix modifying OVS interface using the same name as OVS bridge. (84b2e90)
+ - Fix adding a route rule for a OVS interface. (76db7c2)
+
 ## [1.0.2] - 2021-02-18
 ### New features
  - Support multiconnect profiles. (2c60c834)
