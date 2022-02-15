@@ -2,7 +2,7 @@ import setuptools
 
 setuptools.setup(
     name="libnmstate",
-    version="2.0.0",
+    version="2.0.1",
     author="Gris Ge",
     author_email="fge@redhat.com",
     description="Python binding of nmstate",
