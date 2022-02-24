@@ -97,11 +97,9 @@ function copy_workspace_container {
 
 function create_container {
   mkdir -p $EXPORT_DIR
-  ci_env=`bash <(curl -s https://codecov.io/env)`
   # The podman support wildcard when passing enviroments, but docker does not.
-  CONTAINER_ID="$(${CONTAINER_CMD} run $ci_env --privileged -d \
+  CONTAINER_ID="$(${CONTAINER_CMD} run --privileged -d \
       -e CI \
-      -e COVERALLS_REPO_TOKEN \
       -e SHIPPABLE \
       -v /sys/fs/cgroup:/sys/fs/cgroup:ro \
       -v $PROJECT_PATH:$CONTAINER_WORKSPACE \
