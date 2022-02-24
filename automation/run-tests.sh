@@ -29,10 +29,6 @@ PYTEST_OPTIONS="--verbose --verbose \
         --log-date-format='%Y-%m-%d %H:%M:%S' \
         --log-format='%(asctime)s %(filename)s:%(lineno)d %(levelname)s %(message)s' \
         --durations=5 \
-        --cov /usr/lib/python*/site-packages/libnmstate \
-        --cov /usr/lib/python*/site-packages/nmstatectl \
-        --cov-report=term \
-        --cov-report=xml \
         --log-file=pytest-run.log"
 
 NMSTATE_TEMPDIR=$(mktemp -d /tmp/nmstate-test-XXXX)
@@ -126,7 +122,6 @@ function run_tests {
             pytest \
             $PYTEST_OPTIONS \
             --junitxml=junit.integ.xml \
-            --cov-report=html:htmlcov-integ \
             tests/integration \
             ${nmstate_pytest_extra_args}"
     fi
@@ -136,7 +131,6 @@ function run_tests {
         exec_cmd "
           pytest \
             $PYTEST_OPTIONS \
-            --cov-report=html:htmlcov-integ_tier1 \
             --junitxml=junit.integ_tier1.xml \
             -m tier1 \
             tests/integration \
@@ -148,7 +142,6 @@ function run_tests {
         exec_cmd "
           pytest \
             $PYTEST_OPTIONS \
-            --cov-report=html:htmlcov-integ_tier2 \
             --junitxml=junit.integ_tier2.xml \
             -m tier2 \
             tests/integration \
@@ -161,7 +154,6 @@ function run_tests {
         exec_cmd "
           pytest \
             $PYTEST_OPTIONS \
-            --cov-report=html:htmlcov-integ_slow \
             --junitxml=junit.integ_slow.xml \
             -m slow --runslow \
             tests/integration \
@@ -217,19 +209,6 @@ function check_services {
         systemctl restart NetworkManager
         while ! systemctl is-active NetworkManager; do sleep 1; done
     '
-}
-
-function upload_coverage {
-    if [[ "$CI" == "true" ]] ;then
-        container_exec "
-            cd $CONTAINER_WORKSPACE &&
-            COVERALLS_PARALLEL=true COVERALLS_SERVICE_NAME=travis-ci coveralls
-        " || true
-        container_exec "
-            cd $CONTAINER_WORKSPACE &&
-            bash <(curl -s https://codecov.io/bash)
-        " || true
-    fi
 }
 
 function check_iface_exist {
@@ -418,4 +397,3 @@ fi
 
 install_nmstate
 run_tests
-upload_coverage

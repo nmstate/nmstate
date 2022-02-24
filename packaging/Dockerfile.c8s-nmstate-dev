@@ -30,10 +30,8 @@ RUN dnf update -y && \
                    iproute \
                    rpm-build \
                    python3-pytest \
-                   python3-pytest-cov \
                    python3-virtualenv \
                    python3-tox \
-                   python3-coveralls \
                    python3-requests \
                    python3-docopt \
                    python3-nispor \
