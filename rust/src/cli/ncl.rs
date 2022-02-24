@@ -346,6 +346,15 @@ where
     net_state.set_commit(!no_commit);
     net_state.set_timeout(timeout);
     net_state.set_memory_only(matches.is_present("MEMORY_ONLY"));
+
+    ctrlc::set_handler(|| {
+        if let Err(e) = rollback("") {
+            println!("Failed to rollback: {}", e);
+        }
+        std::process::exit(1);
+    })
+    .expect("Error setting Ctrl-C handler");
+
     net_state.apply()?;
     if !matches.is_present("SHOW_SECRETS") {
         net_state.hide_secrets();
