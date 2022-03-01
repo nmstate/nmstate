@@ -26,6 +26,28 @@ from libnmstate.nm.checkpoint import get_checkpoints
 from libnmstate.error import NmstateConflictError
 from libnmstate.error import NmstateLibnmError
 from libnmstate.error import NmstateValueError
+from libnmstate.nm.plugin import NetworkManagerPlugin
+from libnmstate.nm.context import NmContext
+
+
+@pytest.fixture(scope="function")
+def nm_plugin():
+    plugin = NetworkManagerPlugin()
+    yield plugin
+    if plugin.checkpoint:
+        # Ignore failures as the checkpoint might already expired
+        try:
+            plugin.rollback_checkpoint()
+        except Exception:
+            pass
+    plugin.unload()
+
+
+@pytest.fixture(scope="function")
+def nm_context():
+    ctx = NmContext()
+    yield ctx
+    ctx.clean_up()
 
 
 def test_creating_one_checkpoint(nm_context):

@@ -8,6 +8,7 @@ use nm_dbus::{
 use crate::{
     nm::bond::gen_nm_bond_setting,
     nm::bridge::{gen_nm_br_port_setting, gen_nm_br_setting},
+    nm::ieee8021x::gen_nm_802_1x_setting,
     nm::ip::gen_nm_ip_setting,
     nm::ovs::{
         create_ovs_port_nm_conn, gen_nm_ovs_br_setting,
@@ -95,6 +96,7 @@ pub(crate) fn iface_to_nm_connections(
     )?;
     gen_nm_wired_setting(iface, &mut nm_conn);
     gen_nm_ovs_ext_ids_setting(iface, &mut nm_conn);
+    gen_nm_802_1x_setting(iface, &mut nm_conn);
 
     match iface {
         Interface::OvsBridge(ovs_br_iface) => {

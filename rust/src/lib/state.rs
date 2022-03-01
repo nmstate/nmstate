@@ -1,5 +1,7 @@
 use serde_json::Value;
 
+use crate::NetworkState;
+
 pub(crate) fn get_json_value_difference<'a, 'b>(
     reference: String,
     desire: &'a Value,
@@ -22,7 +24,11 @@ pub(crate) fn get_json_value_difference<'a, 'b>(
         }
         (Value::String(des), Value::String(cur)) => {
             if des != cur {
-                Some((reference, desire, current))
+                if des == NetworkState::PASSWORD_HID_BY_NMSTATE {
+                    None
+                } else {
+                    Some((reference, desire, current))
+                }
             } else {
                 None
             }

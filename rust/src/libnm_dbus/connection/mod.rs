@@ -20,6 +20,7 @@ mod bond;
 mod bridge;
 mod conn;
 mod dns;
+mod ieee8021x;
 mod ip;
 mod mac_vlan;
 mod ovs;
@@ -37,6 +38,7 @@ pub use crate::connection::bridge::{
     NmSettingBridge, NmSettingBridgePort, NmSettingBridgeVlanRange,
 };
 pub use crate::connection::conn::{NmConnection, NmSettingConnection};
+pub use crate::connection::ieee8021x::NmSetting8021X;
 pub use crate::connection::ip::{NmSettingIp, NmSettingIpMethod};
 pub use crate::connection::mac_vlan::NmSettingMacVlan;
 pub use crate::connection::ovs::{
