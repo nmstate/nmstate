@@ -291,6 +291,14 @@ function run_tests {
             tests/integration/nmstatectl_test.py \
             -k 'running_config' \
             ${nmstate_pytest_extra_args}"
+        exec_cmd "
+          env  \
+          PYTHONPATH=$CONTAINER_WORKSPACE/rust/src/python \
+          pytest \
+            $PYTEST_OPTIONS \
+            tests/integration/interface_common_test.py \
+            -k 'test_iface_description_removal' \
+            ${nmstate_pytest_extra_args}"
     fi
 }
 

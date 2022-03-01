@@ -33,6 +33,7 @@ use crate::{
         NmSettingOvsPort,
     },
     connection::sriov::NmSettingSriov,
+    connection::user::NmSettingUser,
     connection::veth::NmSettingVeth,
     connection::vlan::NmSettingVlan,
     connection::vrf::NmSettingVrf,
@@ -77,6 +78,7 @@ pub struct NmConnection {
     pub vrf: Option<NmSettingVrf>,
     pub veth: Option<NmSettingVeth>,
     pub ieee8021x: Option<NmSetting8021X>,
+    pub user: Option<NmSettingUser>,
     #[serde(skip)]
     pub(crate) obj_path: String,
     _other: HashMap<String, HashMap<String, zvariant::OwnedValue>>,
@@ -134,6 +136,7 @@ impl TryFrom<NmConnectionDbusOwnedValue> for NmConnection {
             vrf: _from_map!(v, "vrf", NmSettingVrf::try_from)?,
             veth: _from_map!(v, "veth", NmSettingVeth::try_from)?,
             ieee8021x: _from_map!(v, "802-1x", NmSetting8021X::try_from)?,
+            user: _from_map!(v, "user", NmSettingUser::try_from)?,
             _other: v,
             ..Default::default()
         })
@@ -230,6 +233,9 @@ impl NmConnection {
         }
         if let Some(v) = &self.ieee8021x {
             ret.insert("802-1x", v.to_value()?);
+        }
+        if let Some(v) = &self.user {
+            ret.insert("user", v.to_value()?);
         }
         for (key, setting_value) in &self._other {
             let mut other_setting_value: HashMap<&str, zvariant::Value> =
