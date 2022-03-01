@@ -16,6 +16,7 @@ RUN dnf update -y && \
     dnf copr enable nmstate/nispor -y && \
     dnf -y install --setopt=install_weak_deps=False \
                    make \
+                   go \
                    rust-toolset \
                    NetworkManager \
                    NetworkManager-ovs \
