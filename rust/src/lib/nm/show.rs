@@ -22,6 +22,7 @@ use crate::{
     nm::ieee8021x::nm_802_1x_to_nmstate,
     nm::ip::{nm_ip_setting_to_nmstate4, nm_ip_setting_to_nmstate6},
     nm::ovs::nm_ovs_bridge_conf_get,
+    nm::user::get_description,
     BaseInterface, BondInterface, DummyInterface, EthernetInterface, Interface,
     InterfaceState, InterfaceType, Interfaces, LinuxBridgeInterface,
     MacVlanInterface, MacVtapInterface, NetworkState, NmstateError,
@@ -226,13 +227,21 @@ fn nm_conn_to_base_iface(
 
         let mut base_iface = BaseInterface::new();
         base_iface.name = iface_name.to_string();
-        base_iface.prop_list =
-            vec!["name", "state", "iface_type", "ipv4", "ipv6", "ieee8021x"];
+        base_iface.prop_list = vec![
+            "name",
+            "state",
+            "iface_type",
+            "ipv4",
+            "ipv6",
+            "ieee8021x",
+            "description",
+        ];
         base_iface.state = InterfaceState::Up;
         base_iface.iface_type = nm_dev_iface_type_to_nmstate(nm_dev);
         base_iface.ipv4 = ipv4;
         base_iface.ipv6 = ipv6;
         base_iface.controller = nm_conn.controller().map(|c| c.to_string());
+        base_iface.description = get_description(nm_conn);
         if let Some(nm_saved_conn) = nm_saved_conn {
             // 802.1x password is only available in saved connection
             base_iface.ieee8021x =

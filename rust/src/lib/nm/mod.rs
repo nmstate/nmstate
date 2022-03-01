@@ -18,6 +18,7 @@ mod show;
 mod sriov;
 #[cfg(test)]
 mod unit_tests;
+mod user;
 mod version;
 mod veth;
 mod vlan;

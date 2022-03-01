@@ -12,6 +12,8 @@ use crate::{
 #[non_exhaustive]
 pub struct BaseInterface {
     pub name: String,
+    #[serde(skip_serializing_if = "is_option_string_empty")]
+    pub description: Option<String>,
     #[serde(skip)]
     pub prop_list: Vec<&'static str>,
     #[serde(rename = "type", default = "default_iface_type")]
@@ -59,7 +61,9 @@ impl BaseInterface {
         if other.prop_list.contains(&"name") {
             self.name = other.name.clone();
         }
-
+        if other.prop_list.contains(&"description") {
+            self.description = other.description.clone();
+        }
         if other.prop_list.contains(&"iface_type")
             && other.iface_type != InterfaceType::Unknown
         {
@@ -217,4 +221,12 @@ fn default_state() -> InterfaceState {
 
 fn default_iface_type() -> InterfaceType {
     InterfaceType::Unknown
+}
+
+fn is_option_string_empty(data: &Option<String>) -> bool {
+    if let Some(s) = data {
+        s.is_empty()
+    } else {
+        false
+    }
 }
