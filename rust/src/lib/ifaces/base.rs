@@ -2,8 +2,8 @@ use log::error;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    ErrorKind, InterfaceIpv4, InterfaceIpv6, InterfaceState, InterfaceType,
-    NmstateError, OvsDbIfaceConfig, RouteEntry, RouteRuleEntry,
+    ErrorKind, Ieee8021XConfig, InterfaceIpv4, InterfaceIpv6, InterfaceState,
+    InterfaceType, NmstateError, OvsDbIfaceConfig, RouteEntry, RouteRuleEntry,
 };
 
 // TODO: Use prop_list to Serialize like InterfaceIpv4 did
@@ -36,6 +36,8 @@ pub struct BaseInterface {
     pub copy_mac_from: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none", rename = "ovs-db")]
     pub ovsdb: Option<OvsDbIfaceConfig>,
+    #[serde(skip_serializing_if = "Option::is_none", rename = "802.1x")]
+    pub ieee8021x: Option<Ieee8021XConfig>,
     #[serde(skip)]
     pub controller_type: Option<InterfaceType>,
     // The interface lowest up_priority will be activated first.
@@ -80,6 +82,9 @@ impl BaseInterface {
         }
         if other.prop_list.contains(&"ovsdb") {
             self.ovsdb = other.ovsdb.clone();
+        }
+        if other.prop_list.contains(&"ieee8021x") {
+            self.ieee8021x = other.ieee8021x.clone();
         }
 
         if other.prop_list.contains(&"ipv4") {
@@ -196,6 +201,12 @@ impl BaseInterface {
         }
         if self.ipv6.is_none() {
             self.ipv6 = current.ipv6.clone();
+        }
+    }
+
+    pub(crate) fn hide_secrets(&mut self) {
+        if let Some(conf) = self.ieee8021x.as_mut() {
+            conf.hide_secrets();
         }
     }
 }

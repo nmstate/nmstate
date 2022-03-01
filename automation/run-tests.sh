@@ -192,6 +192,7 @@ function run_tests {
             tests/integration/vxlan_test.py \
             tests/integration/veth_test.py \
             tests/integration/dynamic_ip_test.py \
+            tests/integration/nm/ieee802_1x_test.py \
             ${nmstate_pytest_extra_args}"
         exec_cmd "
           env  \

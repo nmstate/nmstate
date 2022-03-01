@@ -7,6 +7,7 @@ mod connection;
 mod device;
 mod dns;
 mod error;
+mod ieee8021x;
 mod ip;
 mod mac_vlan;
 mod ovs;

@@ -25,6 +25,7 @@ use zvariant::Type;
 use crate::{
     connection::bond::NmSettingBond,
     connection::bridge::{NmSettingBridge, NmSettingBridgePort},
+    connection::ieee8021x::NmSetting8021X,
     connection::ip::NmSettingIp,
     connection::mac_vlan::NmSettingMacVlan,
     connection::ovs::{
@@ -75,6 +76,7 @@ pub struct NmConnection {
     pub sriov: Option<NmSettingSriov>,
     pub vrf: Option<NmSettingVrf>,
     pub veth: Option<NmSettingVeth>,
+    pub ieee8021x: Option<NmSetting8021X>,
     #[serde(skip)]
     pub(crate) obj_path: String,
     _other: HashMap<String, HashMap<String, zvariant::OwnedValue>>,
@@ -131,6 +133,7 @@ impl TryFrom<NmConnectionDbusOwnedValue> for NmConnection {
             mac_vlan: _from_map!(v, "macvlan", NmSettingMacVlan::try_from)?,
             vrf: _from_map!(v, "vrf", NmSettingVrf::try_from)?,
             veth: _from_map!(v, "veth", NmSettingVeth::try_from)?,
+            ieee8021x: _from_map!(v, "802-1x", NmSetting8021X::try_from)?,
             _other: v,
             ..Default::default()
         })
@@ -224,6 +227,9 @@ impl NmConnection {
         }
         if let Some(veth) = &self.veth {
             ret.insert("veth", veth.to_value()?);
+        }
+        if let Some(v) = &self.ieee8021x {
+            ret.insert("802-1x", v.to_value()?);
         }
         for (key, setting_value) in &self._other {
             let mut other_setting_value: HashMap<&str, zvariant::Value> =
@@ -360,5 +366,14 @@ pub(crate) fn nm_con_get_from_obj_path(
     )?;
     let mut nm_conn = proxy.call::<(), NmConnection>("GetSettings", &())?;
     nm_conn.obj_path = con_obj_path.to_string();
+    if let Some(ieee_8021x_conf) = nm_conn.ieee8021x.as_mut() {
+        if let Ok(nm_secrets) = proxy
+            .call::<&str, NmConnectionDbusOwnedValue>("GetSecrets", &"802-1x")
+        {
+            if let Some(nm_secret) = nm_secrets.get("802-1x") {
+                ieee_8021x_conf.fill_secrets(nm_secret);
+            }
+        }
+    }
     Ok(nm_conn)
 }

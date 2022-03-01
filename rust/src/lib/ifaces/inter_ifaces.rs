@@ -456,6 +456,12 @@ impl Interfaces {
         }
         Ok(())
     }
+
+    pub(crate) fn hide_secrets(&mut self) {
+        for iface in self.kernel_ifaces.values_mut() {
+            iface.base_iface_mut().hide_secrets();
+        }
+    }
 }
 
 fn verify_desire_absent_but_found_in_current(
