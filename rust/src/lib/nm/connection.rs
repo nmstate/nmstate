@@ -16,6 +16,7 @@ use crate::{
     },
     nm::profile::get_exist_profile,
     nm::sriov::gen_nm_sriov_setting,
+    nm::user::gen_nm_user_setting,
     nm::veth::create_veth_peer_profile_if_not_found,
     nm::wired::gen_nm_wired_setting,
     ErrorKind, Interface, InterfaceType, NetworkState, NmstateError,
@@ -97,6 +98,7 @@ pub(crate) fn iface_to_nm_connections(
     gen_nm_wired_setting(iface, &mut nm_conn);
     gen_nm_ovs_ext_ids_setting(iface, &mut nm_conn);
     gen_nm_802_1x_setting(iface, &mut nm_conn);
+    gen_nm_user_setting(iface, &mut nm_conn);
 
     match iface {
         Interface::OvsBridge(ovs_br_iface) => {
