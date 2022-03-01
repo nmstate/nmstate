@@ -12,6 +12,7 @@ TEST_TYPE_FORMAT="format"
 TEST_TYPE_LINT="lint"
 TEST_TYPE_UNIT_PY36="unit_py36"
 TEST_TYPE_UNIT_PY38="unit_py38"
+TEST_TYPE_RUST_GO="rust_go"
 TEST_TYPE_INTEG="integ"
 TEST_TYPE_INTEG_TIER1="integ_tier1"
 TEST_TYPE_INTEG_TIER2="integ_tier2"
@@ -113,6 +114,16 @@ function run_tests {
                  "support yet"
         else
             exec_cmd "tox -e py38"
+        fi
+    fi
+
+    if [ $TEST_TYPE == $TEST_TYPE_ALL ] || \
+       [ $TEST_TYPE == $TEST_TYPE_RUST_GO ];then
+        if [[ $CONTAINER_IMAGE == *"centos"* ]]; then
+            echo "Running rust go binding test in $CONTAINER_IMAGE container is not " \
+                 "support yet"
+        else
+            exec_cmd "make -C rust/src/go/nmstate check"
         fi
     fi
 
@@ -462,6 +473,7 @@ while true; do
         echo "     * $TEST_TYPE_INTEG_RUST"
         echo "     * $TEST_TYPE_UNIT_PY36"
         echo "     * $TEST_TYPE_UNIT_PY38"
+        echo "     * $TEST_TYPE_RUST_GO"
         echo -n "--customize allows to specify a command to customize the "
         echo "container before running the tests"
         exit
