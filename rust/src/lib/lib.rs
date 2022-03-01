@@ -1,5 +1,6 @@
 mod dns;
 mod error;
+mod ieee8021x;
 mod iface;
 mod ifaces;
 mod ip;
@@ -15,6 +16,7 @@ mod unit_tests;
 
 pub use crate::dns::{DnsClientState, DnsState};
 pub use crate::error::{ErrorKind, NmstateError};
+pub use crate::ieee8021x::Ieee8021XConfig;
 pub use crate::iface::{
     Interface, InterfaceState, InterfaceType, UnknownInterface,
 };

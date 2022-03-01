@@ -56,7 +56,14 @@ fn main() {
                         .long("running-config")
                         .takes_value(false)
                         .help("Show running configuration only"),
-                ),
+                )
+                .arg(
+                    clap::Arg::with_name("SHOW_SECRETS")
+                        .short("s")
+                        .long("show-secrets")
+                        .takes_value(false)
+                        .help("Show secrets(hide by default)"),
+                )
         )
         .subcommand(
             clap::SubCommand::with_name(SUB_CMD_APPLY)
@@ -100,7 +107,14 @@ fn main() {
                       .help(
                         "Timeout in seconds before reverting uncommited changes."
                       ),
-                ),
+                )
+                .arg(
+                    clap::Arg::with_name("SHOW_SECRETS")
+                        .short("s")
+                        .long("show-secrets")
+                        .takes_value(false)
+                        .help("Show secrets(hide by default)"),
+                )
         )
         .subcommand(
             clap::SubCommand::with_name(SUB_CMD_GEN_CONF)
@@ -158,22 +172,10 @@ fn main() {
     } else if let Some(matches) = matches.subcommand_matches(SUB_CMD_SHOW) {
         print_result_and_exit(show(matches));
     } else if let Some(matches) = matches.subcommand_matches(SUB_CMD_APPLY) {
-        let is_kernel = matches.is_present("KERNEL");
-        let no_verify = matches.is_present("NO_VERIFY");
-        let no_commit = matches.is_present("NO_COMMIT");
-        let mut timeout: u32 = 0;
-        match clap::value_t!(matches.value_of("TIMEOUT"), u32) {
-            Ok(t) => timeout = t,
-            Err(e) => print_error_and_exit(CliError::from(e)),
-        }
         if let Some(file_path) = matches.value_of("STATE_FILE") {
-            print_result_and_exit(apply_from_file(
-                file_path, is_kernel, no_verify, no_commit, timeout,
-            ));
+            print_result_and_exit(apply_from_file(file_path, matches));
         } else {
-            print_result_and_exit(apply_from_stdin(
-                is_kernel, no_verify, no_commit, timeout,
-            ));
+            print_result_and_exit(apply_from_stdin(matches));
         }
     } else if let Some(matches) = matches.subcommand_matches(SUB_CMD_COMMIT) {
         if let Some(checkpoint) = matches.value_of("CHECKPOINT") {
@@ -287,6 +289,7 @@ fn show(matches: &clap::ArgMatches) -> Result<String, CliError> {
     if matches.is_present("RUNNING_CONFIG_ONLY") {
         net_state.set_running_config_only(true);
     }
+    net_state.set_include_secrets(matches.is_present("SHOW_SECRETS"));
     net_state.retrieve()?;
     Ok(if let Some(ifname) = matches.value_of("IFNAME") {
         let mut new_net_state = NetworkState::new();
@@ -308,47 +311,38 @@ fn show(matches: &clap::ArgMatches) -> Result<String, CliError> {
     })
 }
 
-fn apply_from_stdin(
-    kernel_only: bool,
-    no_verify: bool,
-    no_commit: bool,
-    timeout: u32,
-) -> Result<String, CliError> {
-    apply(io::stdin(), kernel_only, no_verify, no_commit, timeout)
+fn apply_from_stdin(matches: &clap::ArgMatches) -> Result<String, CliError> {
+    apply(io::stdin(), matches)
 }
 
 fn apply_from_file(
     file_path: &str,
-    kernel_only: bool,
-    no_verify: bool,
-    no_commit: bool,
-    timeout: u32,
+    matches: &clap::ArgMatches,
 ) -> Result<String, CliError> {
-    apply(
-        std::fs::File::open(file_path)?,
-        kernel_only,
-        no_verify,
-        no_commit,
-        timeout,
-    )
+    apply(std::fs::File::open(file_path)?, matches)
 }
 
-fn apply<R>(
-    reader: R,
-    kernel_only: bool,
-    no_verify: bool,
-    no_commit: bool,
-    timeout: u32,
-) -> Result<String, CliError>
+fn apply<R>(reader: R, matches: &clap::ArgMatches) -> Result<String, CliError>
 where
     R: Read,
 {
+    let kernel_only = matches.is_present("KERNEL");
+    let no_verify = matches.is_present("NO_VERIFY");
+    let no_commit = matches.is_present("NO_COMMIT");
+    let mut timeout: u32 = 0;
+    match clap::value_t!(matches.value_of("TIMEOUT"), u32) {
+        Ok(t) => timeout = t,
+        Err(e) => print_error_and_exit(CliError::from(e)),
+    }
     let mut net_state: NetworkState = serde_yaml::from_reader(reader)?;
     net_state.set_kernel_only(kernel_only);
     net_state.set_verify_change(!no_verify);
     net_state.set_commit(!no_commit);
     net_state.set_timeout(timeout);
     net_state.apply()?;
+    if !matches.is_present("SHOW_SECRETS") {
+        net_state.hide_secrets();
+    }
     let sorted_net_state = sort_netstate(net_state)?;
     Ok(serde_yaml::to_string(&sorted_net_state)?)
 }

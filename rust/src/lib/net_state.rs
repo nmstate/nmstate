@@ -102,6 +102,9 @@ impl<'de> Deserialize<'de> for NetworkState {
 }
 
 impl NetworkState {
+    pub(crate) const PASSWORD_HID_BY_NMSTATE: &'static str =
+        "<_password_hid_by_nmstate>";
+
     pub fn set_kernel_only(&mut self, value: bool) -> &mut Self {
         self.kernel_only = value;
         self
@@ -186,7 +189,14 @@ impl NetworkState {
                 }
             }
         }
+        if !self.include_secrets {
+            self.hide_secrets();
+        }
         Ok(self)
+    }
+
+    pub fn hide_secrets(&mut self) {
+        self.interfaces.hide_secrets();
     }
 
     pub fn apply(&self) -> Result<(), NmstateError> {
@@ -194,6 +204,7 @@ impl NetworkState {
         let mut desire_state_to_apply = self.clone();
         let mut cur_net_state = NetworkState::new();
         cur_net_state.set_kernel_only(self.kernel_only);
+        cur_net_state.set_include_secrets(true);
         cur_net_state.retrieve()?;
 
         desire_state_to_verify
@@ -245,6 +256,7 @@ impl NetworkState {
                         retry_count,
                         || {
                             let mut new_cur_net_state = cur_net_state.clone();
+                            new_cur_net_state.set_include_secrets(true);
                             new_cur_net_state.retrieve()?;
                             desire_state_to_verify.verify(&new_cur_net_state)
                         },

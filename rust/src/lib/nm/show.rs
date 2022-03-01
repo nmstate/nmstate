@@ -19,6 +19,7 @@ use crate::{
     },
     nm::dns::retrieve_dns_info,
     nm::error::nm_error_to_nmstate,
+    nm::ieee8021x::nm_802_1x_to_nmstate,
     nm::ip::{nm_ip_setting_to_nmstate4, nm_ip_setting_to_nmstate6},
     nm::ovs::nm_ovs_bridge_conf_get,
     BaseInterface, BondInterface, DummyInterface, EthernetInterface, Interface,
@@ -217,6 +218,7 @@ fn nm_dev_iface_type_to_nmstate(nm_dev: &NmDevice) -> InterfaceType {
 fn nm_conn_to_base_iface(
     nm_dev: &NmDevice,
     nm_conn: &NmConnection,
+    nm_saved_conn: Option<&NmConnection>,
 ) -> Option<BaseInterface> {
     if let Some(iface_name) = nm_conn.iface_name() {
         let ipv4 = nm_conn.ipv4.as_ref().map(nm_ip_setting_to_nmstate4);
@@ -225,12 +227,17 @@ fn nm_conn_to_base_iface(
         let mut base_iface = BaseInterface::new();
         base_iface.name = iface_name.to_string();
         base_iface.prop_list =
-            vec!["name", "state", "iface_type", "ipv4", "ipv6"];
+            vec!["name", "state", "iface_type", "ipv4", "ipv6", "ieee8021x"];
         base_iface.state = InterfaceState::Up;
         base_iface.iface_type = nm_dev_iface_type_to_nmstate(nm_dev);
         base_iface.ipv4 = ipv4;
         base_iface.ipv6 = ipv6;
         base_iface.controller = nm_conn.controller().map(|c| c.to_string());
+        if let Some(nm_saved_conn) = nm_saved_conn {
+            // 802.1x password is only available in saved connection
+            base_iface.ieee8021x =
+                nm_saved_conn.ieee8021x.as_ref().map(nm_802_1x_to_nmstate);
+        }
         return Some(base_iface);
     }
     None
@@ -244,7 +251,9 @@ fn iface_get(
     nm_saved_conn: Option<&NmConnection>,
     port_saved_nm_conns: Option<&[&NmConnection]>,
 ) -> Option<Interface> {
-    if let Some(base_iface) = nm_conn_to_base_iface(nm_dev, nm_conn) {
+    if let Some(base_iface) =
+        nm_conn_to_base_iface(nm_dev, nm_conn, nm_saved_conn)
+    {
         let iface = match &base_iface.iface_type {
             InterfaceType::LinuxBridge => Interface::LinuxBridge({
                 let mut iface = LinuxBridgeInterface::new();
