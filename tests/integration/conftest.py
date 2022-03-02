@@ -18,6 +18,7 @@
 #
 
 import logging
+import os
 import subprocess
 import warnings
 
@@ -73,6 +74,7 @@ def _mark_tier2_tests(items):
 def test_env_setup():
     _logging_setup()
     old_state = libnmstate.show()
+    old_state = _remove_interfaces_from_env(old_state)
     _remove_dns_route_route_rule()
     _ethx_init()
     yield
@@ -107,6 +109,26 @@ def _ethx_init():
     ifacelib.ifaces_init("eth1", "eth2")
 
 
+def _remove_interfaces_from_env(state):
+    """
+    Remove references from interfaces passed to environment variable
+    NMSTATE_TEST_IGNORE_IFACE.
+    """
+    ignore_iface = os.getenv("NMSTATE_TEST_IGNORE_IFACE")
+    if ignore_iface is None:
+        return state
+
+    state["interfaces"] = [
+        i for i in state["interfaces"] if ignore_iface not in i["name"]
+    ]
+    state["routes"]["config"] = [
+        r
+        for r in state["routes"]["config"]
+        if ignore_iface not in r["next-hop-interface"]
+    ]
+    return state
+
+
 @pytest.fixture(scope="function")
 def eth1_up():
     with ifacelib.iface_up("eth1") as ifstate:
@@ -125,6 +147,7 @@ port1_up = eth2_up
 
 def _diff_initial_state(old_state):
     new_state = libnmstate.show()
+    new_state = _remove_interfaces_from_env(new_state)
 
     if old_state != new_state:
         warnings.warn(
