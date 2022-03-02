@@ -71,6 +71,8 @@ spec:
         value: "${SHIPPABLE}"
       - name: RUN_K8S
         value: "true"
+      - name: NMSTATE_TEST_IGNORE_IFACE
+        value: "cali"
       volumeMounts:
       - name: dbus-socket
         mountPath: /run/dbus/system_bus_socket
