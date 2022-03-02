@@ -7,3 +7,4 @@ include doc/nmstatectl.8.in
 include doc/nmstate-autoconf.8.in
 recursive-include examples *.yml
 exclude packaging/nmstate.spec
+recursive-exclude rust/target *
