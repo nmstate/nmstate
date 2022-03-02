@@ -6,6 +6,9 @@ RUN sed -i -e 's/^#RateLimitInterval=.*/RateLimitInterval=0/' \
     -e 's/^#RateLimitBurst=.*/RateLimitBurst=0/' \
     /etc/systemd/journald.conf
 
+RUN echo net.ipv6.conf.all.disable_ipv6=0 > /etc/sysctl.d/00-enable-ipv6.conf && \
+    echo kernel.core_pattern=/exported-artifacts/core.%h.%e.%t > /etc/sysctl.d/01-export-kernel-cores.conf
+
 RUN dnf update -y && \
     dnf -y install dnf-plugins-core epel-release && \
     dnf config-manager --set-enabled powertools && \
