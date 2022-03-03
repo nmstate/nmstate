@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use log::{debug, warn};
 use nm_dbus::{
     NmActiveConnection, NmApi, NmConnection, NmDevice, NmDeviceState,
+    NmLldpNeighbor,
 };
 
 use crate::{
@@ -21,6 +22,7 @@ use crate::{
     nm::error::nm_error_to_nmstate,
     nm::ieee8021x::nm_802_1x_to_nmstate,
     nm::ip::{nm_ip_setting_to_nmstate4, nm_ip_setting_to_nmstate6},
+    nm::lldp::{get_lldp, is_lldp_enabled},
     nm::ovs::nm_ovs_bridge_conf_get,
     nm::user::get_description,
     BaseInterface, BondInterface, DummyInterface, EthernetInterface, Interface,
@@ -40,6 +42,7 @@ pub(crate) fn nm_retrieve(
         .applied_connections_get()
         .map_err(nm_error_to_nmstate)?;
     let nm_devs = nm_api.devices_get().map_err(nm_error_to_nmstate)?;
+
     let nm_saved_conns =
         nm_api.connections_get().map_err(nm_error_to_nmstate)?;
     let nm_acs = nm_api
@@ -170,11 +173,25 @@ pub(crate) fn nm_retrieve(
                     None
                 };
 
+                let lldp_neighbors = if is_lldp_enabled(nm_conn) {
+                    if running_config_only {
+                        Some(Vec::new())
+                    } else {
+                        Some(
+                            nm_api
+                                .device_lldp_neighbor_get(&nm_dev.obj_path)
+                                .map_err(nm_error_to_nmstate)?,
+                        )
+                    }
+                } else {
+                    None
+                };
                 if let Some(iface) = iface_get(
                     nm_dev,
                     nm_conn,
                     nm_saved_conn,
                     port_saved_nm_conns.as_ref().map(Vec::as_ref),
+                    lldp_neighbors,
                 ) {
                     debug!("Found interface {:?}", iface);
                     net_state.append_interface_data(iface);
@@ -220,6 +237,7 @@ fn nm_conn_to_base_iface(
     nm_dev: &NmDevice,
     nm_conn: &NmConnection,
     nm_saved_conn: Option<&NmConnection>,
+    lldp_neighbors: Option<Vec<NmLldpNeighbor>>,
 ) -> Option<BaseInterface> {
     if let Some(iface_name) = nm_conn.iface_name() {
         let ipv4 = nm_conn.ipv4.as_ref().map(nm_ip_setting_to_nmstate4);
@@ -235,6 +253,7 @@ fn nm_conn_to_base_iface(
             "ipv6",
             "ieee8021x",
             "description",
+            "lldp",
         ];
         base_iface.state = InterfaceState::Up;
         base_iface.iface_type = nm_dev_iface_type_to_nmstate(nm_dev);
@@ -242,6 +261,8 @@ fn nm_conn_to_base_iface(
         base_iface.ipv6 = ipv6;
         base_iface.controller = nm_conn.controller().map(|c| c.to_string());
         base_iface.description = get_description(nm_conn);
+        base_iface.lldp =
+            Some(lldp_neighbors.map(get_lldp).unwrap_or_default());
         if let Some(nm_saved_conn) = nm_saved_conn {
             // 802.1x password is only available in saved connection
             base_iface.ieee8021x =
@@ -259,9 +280,10 @@ fn iface_get(
     nm_conn: &NmConnection,
     nm_saved_conn: Option<&NmConnection>,
     port_saved_nm_conns: Option<&[&NmConnection]>,
+    lldp_neighbors: Option<Vec<NmLldpNeighbor>>,
 ) -> Option<Interface> {
     if let Some(base_iface) =
-        nm_conn_to_base_iface(nm_dev, nm_conn, nm_saved_conn)
+        nm_conn_to_base_iface(nm_dev, nm_conn, nm_saved_conn, lldp_neighbors)
     {
         let iface = match &base_iface.iface_type {
             InterfaceType::LinuxBridge => Interface::LinuxBridge({

@@ -21,6 +21,7 @@ mod device;
 mod dns;
 mod error;
 mod keyfile;
+mod lldp;
 mod nm_api;
 
 pub use crate::active_connection::NmActiveConnection;
@@ -36,4 +37,9 @@ pub use crate::connection::{
 pub use crate::device::{NmDevice, NmDeviceState, NmDeviceStateReason};
 pub use crate::dns::NmDnsEntry;
 pub use crate::error::{ErrorKind, NmError};
+pub use crate::lldp::{
+    NmLldpNeighbor, NmLldpNeighbor8021Ppvid, NmLldpNeighbor8021Vlan,
+    NmLldpNeighbor8023MacPhyConf, NmLldpNeighbor8023PowerViaMdi,
+    NmLldpNeighborMgmtAddr,
+};
 pub use crate::nm_api::NmApi;
