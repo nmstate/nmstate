@@ -4,6 +4,7 @@ mod ieee8021x;
 mod iface;
 mod ifaces;
 mod ip;
+mod lldp;
 mod net_state;
 mod nispor;
 mod nm;
@@ -37,6 +38,13 @@ pub use crate::ifaces::{
     VrfInterface, VxlanConfig, VxlanInterface,
 };
 pub use crate::ip::{InterfaceIpAddr, InterfaceIpv4, InterfaceIpv6};
+pub use crate::lldp::{
+    LldpAddressFamily, LldpChassisId, LldpChassisIdType, LldpConfig,
+    LldpMacPhyConf, LldpMaxFrameSize, LldpMgmtAddr, LldpMgmtAddrs,
+    LldpNeighborTlv, LldpPortId, LldpPortIdType, LldpPpvids,
+    LldpSystemCapabilities, LldpSystemCapability, LldpSystemDescription,
+    LldpSystemName, LldpVlan, LldpVlans,
+};
 pub use crate::net_state::NetworkState;
 pub use crate::ovs::{OvsDbGlobalConfig, OvsDbIfaceConfig};
 pub use crate::route::{RouteEntry, RouteState, Routes};

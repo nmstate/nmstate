@@ -3,7 +3,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     ErrorKind, Ieee8021XConfig, InterfaceIpv4, InterfaceIpv6, InterfaceState,
-    InterfaceType, NmstateError, OvsDbIfaceConfig, RouteEntry, RouteRuleEntry,
+    InterfaceType, LldpConfig, NmstateError, OvsDbIfaceConfig, RouteEntry,
+    RouteRuleEntry,
 };
 
 // TODO: Use prop_list to Serialize like InterfaceIpv4 did
@@ -40,6 +41,8 @@ pub struct BaseInterface {
     pub ovsdb: Option<OvsDbIfaceConfig>,
     #[serde(skip_serializing_if = "Option::is_none", rename = "802.1x")]
     pub ieee8021x: Option<Ieee8021XConfig>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub lldp: Option<LldpConfig>,
     #[serde(skip)]
     pub controller_type: Option<InterfaceType>,
     // The interface lowest up_priority will be activated first.
@@ -89,6 +92,9 @@ impl BaseInterface {
         }
         if other.prop_list.contains(&"ieee8021x") {
             self.ieee8021x = other.ieee8021x.clone();
+        }
+        if other.prop_list.contains(&"lldp") {
+            self.lldp = other.lldp.clone();
         }
 
         if other.prop_list.contains(&"ipv4") {
@@ -161,6 +167,10 @@ impl BaseInterface {
         // Change all veth interface to ethernet for simpler verification
         if self.iface_type == InterfaceType::Veth {
             self.iface_type = InterfaceType::Ethernet;
+        }
+
+        if let Some(lldp_conf) = self.lldp.as_mut() {
+            lldp_conf.pre_verify_cleanup();
         }
     }
 

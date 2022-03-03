@@ -1,7 +1,11 @@
+use std::convert::TryFrom;
+
 use log::warn;
 
 use crate::{
+    connection::DbusDictionary,
     dbus::{NM_DBUS_INTERFACE_DEV, NM_DBUS_INTERFACE_ROOT},
+    lldp::NmLldpNeighbor,
     ErrorKind, NmError,
 };
 
@@ -541,6 +545,34 @@ pub(crate) fn nm_dev_delete(
         Err(e) => Err(NmError::new(
             ErrorKind::Bug,
             format!("Failed to delete device {}: {}", obj_path, e),
+        )),
+    }
+}
+
+pub(crate) fn nm_dev_get_llpd(
+    dbus_conn: &zbus::Connection,
+    obj_path: &str,
+) -> Result<Vec<NmLldpNeighbor>, NmError> {
+    let proxy = zbus::Proxy::new(
+        dbus_conn,
+        NM_DBUS_INTERFACE_ROOT,
+        obj_path,
+        NM_DBUS_INTERFACE_DEV,
+    )?;
+    match proxy.get_property::<Vec<DbusDictionary>>("LldpNeighbors") {
+        Ok(v) => {
+            let mut ret = Vec::new();
+            for value in v {
+                ret.push(NmLldpNeighbor::try_from(value)?);
+            }
+            Ok(ret)
+        }
+        Err(e) => Err(NmError::new(
+            ErrorKind::Bug,
+            format!(
+                "Failed to retrieve LLDP neighbors of device {}: {}",
+                obj_path, e
+            ),
         )),
     }
 }
