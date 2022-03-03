@@ -9,6 +9,7 @@ mod dns;
 mod error;
 mod ieee8021x;
 mod ip;
+mod lldp;
 mod mac_vlan;
 mod ovs;
 mod profile;
