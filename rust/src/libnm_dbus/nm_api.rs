@@ -155,14 +155,19 @@ impl<'a> NmApi<'a> {
     pub fn connection_add(
         &self,
         nm_conn: &NmConnection,
+        memory_only: bool,
     ) -> Result<(), NmError> {
         debug!("connection_add: {:?}", nm_conn);
         if let Some(uuid) = nm_conn.uuid() {
             if let Ok(con_obj_path) = self.dbus.get_connection_by_uuid(uuid) {
-                return self.dbus.connection_update(&con_obj_path, nm_conn);
+                return self.dbus.connection_update(
+                    &con_obj_path,
+                    nm_conn,
+                    memory_only,
+                );
             }
         };
-        self.dbus.connection_add(nm_conn)?;
+        self.dbus.connection_add(nm_conn, memory_only)?;
         Ok(())
     }
 

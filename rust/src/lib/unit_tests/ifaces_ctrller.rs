@@ -14,8 +14,9 @@ fn test_ifaces_up_order_no_ctrler_reserse_order() {
     ifaces.push(new_eth_iface("eth2"));
     ifaces.push(new_eth_iface("eth1"));
 
-    let (add_ifaces, _, _) =
-        ifaces.gen_state_for_apply(&Interfaces::new()).unwrap();
+    let (add_ifaces, _, _) = ifaces
+        .gen_state_for_apply(&Interfaces::new(), false)
+        .unwrap();
 
     assert_eq!(ifaces.kernel_ifaces["eth1"].base_iface().up_priority, 0);
     assert_eq!(ifaces.kernel_ifaces["eth2"].base_iface().up_priority, 0);
@@ -39,8 +40,9 @@ fn test_ifaces_up_order_nested_4_depth_worst_case() {
     ifaces.push(br1);
     ifaces.push(br0);
 
-    let (add_ifaces, _, _) =
-        ifaces.gen_state_for_apply(&Interfaces::new()).unwrap();
+    let (add_ifaces, _, _) = ifaces
+        .gen_state_for_apply(&Interfaces::new(), false)
+        .unwrap();
 
     assert_eq!(ifaces.kernel_ifaces["br0"].base_iface().up_priority, 0);
     assert_eq!(ifaces.kernel_ifaces["br1"].base_iface().up_priority, 1);
@@ -79,7 +81,7 @@ fn test_ifaces_up_order_nested_5_depth_worst_case() {
     ifaces.push(br0);
     ifaces.push(br4);
 
-    let result = ifaces.gen_state_for_apply(&Interfaces::new());
+    let result = ifaces.gen_state_for_apply(&Interfaces::new(), false);
     assert!(result.is_err());
 
     if let Err(e) = result {
@@ -106,8 +108,9 @@ fn test_ifaces_up_order_nested_5_depth_good_case() {
     ifaces.push(p2);
     ifaces.push(p1);
 
-    let (add_ifaces, _, _) =
-        ifaces.gen_state_for_apply(&Interfaces::new()).unwrap();
+    let (add_ifaces, _, _) = ifaces
+        .gen_state_for_apply(&Interfaces::new(), false)
+        .unwrap();
 
     assert_eq!(ifaces.kernel_ifaces["br4"].base_iface().up_priority, 0);
     assert_eq!(ifaces.kernel_ifaces["br0"].base_iface().up_priority, 1);
@@ -133,8 +136,9 @@ fn test_auto_include_ovs_interface() {
     let mut ifaces = Interfaces::new();
     ifaces.push(new_ovs_br_iface("br0", &vec!["p1", "p2"]));
 
-    let (add_ifaces, _, _) =
-        ifaces.gen_state_for_apply(&Interfaces::new()).unwrap();
+    let (add_ifaces, _, _) = ifaces
+        .gen_state_for_apply(&Interfaces::new(), false)
+        .unwrap();
 
     println!("{:?}", ifaces);
 
@@ -193,7 +197,8 @@ fn test_auto_absent_ovs_interface() {
     let mut ifaces = Interfaces::new();
     ifaces.push(Interface::OvsBridge(absent_br0));
 
-    let (_, _, del_ifaces) = ifaces.gen_state_for_apply(&cur_ifaces).unwrap();
+    let (_, _, del_ifaces) =
+        ifaces.gen_state_for_apply(&cur_ifaces, false).unwrap();
 
     println!("{:?}", ifaces);
 

@@ -20,8 +20,7 @@ const NMSTATE_FLAG_NO_VERIFY: u32 = 1 << 2;
 const NMSTATE_FLAG_INCLUDE_STATUS_DATA: u32 = 1 << 3;
 const NMSTATE_FLAG_INCLUDE_SECRETS: u32 = 1 << 4;
 const NMSTATE_FLAG_NO_COMMIT: u32 = 1 << 5;
-// TODO
-// const NMSTATE_FLAG_MEMORY_ONLY: u32 = 1 << 6;
+const NMSTATE_FLAG_MEMORY_ONLY: u32 = 1 << 6;
 const NMSTATE_FLAG_RUNNING_CONFIG_ONLY: u32 = 1 << 7;
 
 const NMSTATE_PASS: c_int = 0;
@@ -168,6 +167,10 @@ pub extern "C" fn nmstate_net_state_apply(
 
     if (flags & NMSTATE_FLAG_NO_COMMIT) > 0 {
         net_state.set_commit(false);
+    }
+
+    if (flags & NMSTATE_FLAG_MEMORY_ONLY) > 0 {
+        net_state.set_memory_only(true);
     }
 
     net_state.set_timeout(rollback_timeout);
