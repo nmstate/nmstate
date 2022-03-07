@@ -18,7 +18,8 @@ fn test_resolve_unknown_type_absent_eth() {
     ifaces.push(absent_iface);
 
     ifaces.resolve_unknown_ifaces(&cur_ifaces).unwrap();
-    let (_, _, del_ifaces) = ifaces.gen_state_for_apply(&cur_ifaces).unwrap();
+    let (_, _, del_ifaces) =
+        ifaces.gen_state_for_apply(&cur_ifaces, false).unwrap();
 
     let del_ifaces = del_ifaces.to_vec();
 
@@ -40,7 +41,8 @@ fn test_resolve_unknown_type_absent_multiple() {
     let mut ifaces = Interfaces::new();
     ifaces.push(absent_iface);
 
-    let (_, _, del_ifaces) = ifaces.gen_state_for_apply(&cur_ifaces).unwrap();
+    let (_, _, del_ifaces) =
+        ifaces.gen_state_for_apply(&cur_ifaces, false).unwrap();
 
     let del_ifaces = del_ifaces.to_vec();
 
@@ -63,7 +65,8 @@ fn test_mark_orphan_vlan_as_absent() {
     eth0.base_iface_mut().state = InterfaceState::Absent;
     desired.push(eth0);
 
-    let (_, _, del_ifaces) = desired.gen_state_for_apply(&current).unwrap();
+    let (_, _, del_ifaces) =
+        desired.gen_state_for_apply(&current, false).unwrap();
     assert_eq!(del_ifaces.to_vec().len(), 2);
     assert!(del_ifaces.kernel_ifaces["eth0"].is_absent());
     assert!(del_ifaces.kernel_ifaces["eth0.10"].is_absent());
@@ -83,7 +86,7 @@ fn test_check_orphan_vlan_change_parent() {
     desired.push(new_eth_iface("eth1"));
 
     let (_, chg_ifaces, del_ifaces) =
-        desired.gen_state_for_apply(&current).unwrap();
+        desired.gen_state_for_apply(&current, false).unwrap();
     assert_eq!(del_ifaces.to_vec().len(), 1);
     assert!(del_ifaces.kernel_ifaces["eth0"].is_absent());
     assert!(!chg_ifaces.kernel_ifaces["eth0.10"].is_absent());

@@ -63,6 +63,8 @@ pub struct NetworkState {
     include_status_data: bool,
     #[serde(skip)]
     running_config_only: bool,
+    #[serde(skip)]
+    memory_only: bool,
 }
 
 impl<'de> Deserialize<'de> for NetworkState {
@@ -142,6 +144,11 @@ impl NetworkState {
     // * LLDP neighbor information.
     pub fn set_running_config_only(&mut self, value: bool) -> &mut Self {
         self.running_config_only = value;
+        self
+    }
+
+    pub fn set_memory_only(&mut self, value: bool) -> &mut Self {
+        self.memory_only = value;
         self
     }
 
@@ -242,6 +249,7 @@ impl NetworkState {
                     &cur_net_state,
                     self,
                     &checkpoint,
+                    self.memory_only,
                 )?;
                 if ovsdb_is_running() {
                     ovsdb_apply(&desire_state_to_apply, &cur_net_state)?;
@@ -338,8 +346,8 @@ impl NetworkState {
 
         let mut ifaces = self.interfaces.clone();
 
-        let (add_ifaces, chg_ifaces, del_ifaces) =
-            ifaces.gen_state_for_apply(&current.interfaces)?;
+        let (add_ifaces, chg_ifaces, del_ifaces) = ifaces
+            .gen_state_for_apply(&current.interfaces, self.memory_only)?;
 
         add_net_state.interfaces = add_ifaces;
         chg_net_state.interfaces = chg_ifaces;
