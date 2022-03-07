@@ -45,7 +45,7 @@ NMSTATE_FLAG_NO_VERIFY = 1 << 2
 NMSTATE_FLAG_INCLUDE_STATUS_DATA = 1 << 3
 NMSTATE_FLAG_INCLUDE_SECRETS = 1 << 4
 NMSTATE_FLAG_NO_COMMIT = 1 << 5
-# NMSTATE_FLAG_MEMORY_ONLY = 1 << 6
+NMSTATE_FLAG_MEMORY_ONLY = 1 << 6
 NMSTATE_FLAG_RUNNING_CONFIG_ONLY = 1 << 7
 NMSTATE_PASS = 0
 
@@ -110,6 +110,9 @@ def apply_net_state(
 
     if not commit:
         flags |= NMSTATE_FLAG_NO_COMMIT
+
+    if not save_to_disk:
+        flags |= NMSTATE_FLAG_MEMORY_ONLY
 
     rc = lib.nmstate_net_state_apply(
         flags,

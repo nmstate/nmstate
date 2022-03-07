@@ -210,6 +210,7 @@ function run_tests {
             test_create_and_remove_ovs_bridge_options_specified or \
             test_create_and_remove_ovs_bridge_with_a_system_port or \
             test_create_and_remove_ovs_bridge_with_internal_port_static_ip_and_mac or \
+            test_create_memory_only_ovs_bridge or \
             ovsdb' \
             ${nmstate_pytest_extra_args}"
         exec_cmd "
@@ -302,6 +303,13 @@ function run_tests {
             $PYTEST_OPTIONS \
             tests/integration/interface_common_test.py \
             -k 'test_iface_description_removal' \
+            ${nmstate_pytest_extra_args}"
+        exec_cmd "
+          env  \
+          PYTHONPATH=$CONTAINER_WORKSPACE/rust/src/python \
+          pytest \
+            $PYTEST_OPTIONS \
+            tests/integration/nm/profile_test.py -k memory_only \
             ${nmstate_pytest_extra_args}"
     fi
 }

@@ -115,6 +115,12 @@ fn main() {
                         .takes_value(false)
                         .help("Show secrets(hide by default)"),
                 )
+                .arg(
+                    clap::Arg::with_name("MEMORY_ONLY")
+                        .long("memory-only")
+                        .takes_value(false)
+                        .help("Do not make the state persistent"),
+                )
         )
         .subcommand(
             clap::SubCommand::with_name(SUB_CMD_GEN_CONF)
@@ -339,6 +345,7 @@ where
     net_state.set_verify_change(!no_verify);
     net_state.set_commit(!no_commit);
     net_state.set_timeout(timeout);
+    net_state.set_memory_only(matches.is_present("MEMORY_ONLY"));
     net_state.apply()?;
     if !matches.is_present("SHOW_SECRETS") {
         net_state.hide_secrets();

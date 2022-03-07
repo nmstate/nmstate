@@ -103,6 +103,7 @@ pub(crate) fn save_nm_profiles(
     nm_api: &nm_dbus::NmApi,
     nm_conns: &[NmConnection],
     checkpoint: &str,
+    memory_only: bool,
 ) -> Result<(), NmstateError> {
     for (index, nm_conn) in nm_conns.iter().enumerate() {
         // Only extend the timeout every
@@ -117,7 +118,7 @@ pub(crate) fn save_nm_profiles(
         }
         info!("Creating/Modifying connection {:?}", nm_conn);
         nm_api
-            .connection_add(nm_conn)
+            .connection_add(nm_conn, memory_only)
             .map_err(nm_error_to_nmstate)?;
     }
     Ok(())
