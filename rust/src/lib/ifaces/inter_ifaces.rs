@@ -47,9 +47,10 @@ impl<'de> Deserialize<'de> for Interfaces {
             <Vec<Interface> as Deserialize>::deserialize(deserializer)?;
         for mut iface in ifaces {
             // Unless user place veth configure in ethernet interface,
-            // it means user just applying the return of NetworkState.retrieve().
-            // If user would like to change veth configuration, it should use
-            // veth interface type.
+            // it means user just applying the return of
+            // NetworkState.retrieve(). If user would like to change
+            // veth configuration, it should use veth interface
+            // type.
             if iface.iface_type() == InterfaceType::Ethernet {
                 if let Interface::Ethernet(ref mut eth_iface) = iface {
                     eth_iface.veth_sanitize();
@@ -237,6 +238,7 @@ impl Interfaces {
     pub(crate) fn gen_state_for_apply(
         &mut self,
         current: &Self,
+        memory_only: bool,
     ) -> Result<(Self, Self, Self), NmstateError> {
         let mut add_ifaces = Self::new();
         let mut chg_ifaces = Self::new();
@@ -295,6 +297,24 @@ impl Interfaces {
             &mut del_ifaces,
             current,
         )?;
+
+        if memory_only {
+            // In memory_only mode, absent interface equal to down
+            // action.
+            for iface in del_ifaces.to_vec() {
+                let mut chg_iface = iface.clone();
+                chg_iface.base_iface_mut().state = InterfaceState::Down;
+                log::info!(
+                    "In memory only mode, state absent is treated \
+                    as state down for interface: {}/{:?}",
+                    iface.name(),
+                    iface.iface_type()
+                );
+                chg_ifaces.push(chg_iface);
+            }
+            del_ifaces.kernel_ifaces = Default::default();
+            del_ifaces.user_ifaces = Default::default();
+        }
 
         Ok((add_ifaces, chg_ifaces, del_ifaces))
     }

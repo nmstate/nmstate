@@ -30,16 +30,20 @@ pub(crate) fn nm_apply(
     cur_net_state: &NetworkState,
     des_net_state: &NetworkState,
     checkpoint: &str,
+    memory_only: bool,
 ) -> Result<(), NmstateError> {
     let nm_api = NmApi::new().map_err(nm_error_to_nmstate)?;
 
-    delete_net_state(&nm_api, del_net_state)?;
+    if !memory_only {
+        delete_net_state(&nm_api, del_net_state)?;
+    }
     apply_single_state(
         &nm_api,
         add_net_state,
         cur_net_state,
         des_net_state,
         checkpoint,
+        memory_only,
     )?;
     apply_single_state(
         &nm_api,
@@ -47,6 +51,7 @@ pub(crate) fn nm_apply(
         cur_net_state,
         des_net_state,
         checkpoint,
+        memory_only,
     )?;
 
     Ok(())
@@ -118,6 +123,7 @@ fn apply_single_state(
     cur_net_state: &NetworkState,
     des_net_state: &NetworkState,
     checkpoint: &str,
+    memory_only: bool,
 ) -> Result<(), NmstateError> {
     let mut nm_conns_to_activate: Vec<NmConnection> = Vec::new();
 
@@ -208,8 +214,15 @@ fn apply_single_state(
         nm_conns_to_deactivate_first.as_slice(),
         checkpoint,
     )?;
-    save_nm_profiles(nm_api, nm_conns_to_activate.as_slice(), checkpoint)?;
-    delete_exist_profiles(nm_api, &exist_nm_conns, &nm_conns_to_activate)?;
+    save_nm_profiles(
+        nm_api,
+        nm_conns_to_activate.as_slice(),
+        checkpoint,
+        memory_only,
+    )?;
+    if !memory_only {
+        delete_exist_profiles(nm_api, &exist_nm_conns, &nm_conns_to_activate)?;
+    }
 
     activate_nm_profiles(nm_api, nm_conns_to_activate.as_slice(), checkpoint)?;
     deactivate_nm_profiles(

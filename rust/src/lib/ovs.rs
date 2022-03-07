@@ -10,7 +10,8 @@ pub struct OvsDbGlobalConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     // When the value been set as None, specified key will be removed instead
     // of merging.
-    // To remove all settings of external_ids or other_config, use empty HashMap
+    // To remove all settings of external_ids or other_config, use empty
+    // HashMap
     pub external_ids: Option<HashMap<String, Option<String>>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub other_config: Option<HashMap<String, Option<String>>>,

@@ -47,9 +47,11 @@ pub(crate) const NM_DBUS_INTERFACE_DEV: &str =
 const NM_DBUS_INTERFACE_DEVICE: &str = "org.freedesktop.NetworkManager.Device";
 
 const NM_SETTINGS_CREATE2_FLAGS_TO_DISK: u32 = 1;
+const NM_SETTINGS_CREATE2_FLAGS_IN_MEMORY: u32 = 2;
 const NM_SETTINGS_CREATE2_FLAGS_BLOCK_AUTOCONNECT: u32 = 32;
 
 const NM_SETTINGS_UPDATE2_FLAGS_TO_DISK: u32 = 1;
+const NM_SETTINGS_UPDATE2_FLAGS_IN_MEMORY: u32 = 2;
 const NM_SETTINGS_UPDATE2_FLAGS_BLOCK_AUTOCONNECT: u32 = 32;
 
 pub(crate) struct NmDbus<'a> {
@@ -195,14 +197,17 @@ impl<'a> NmDbus<'a> {
     pub(crate) fn connection_add(
         &self,
         nm_conn: &NmConnection,
+        memory_only: bool,
     ) -> Result<(), NmError> {
         let value = nm_conn.to_value()?;
-        self.setting_proxy.add_connection2(
-            value,
-            NM_SETTINGS_CREATE2_FLAGS_TO_DISK
-                + NM_SETTINGS_CREATE2_FLAGS_BLOCK_AUTOCONNECT,
-            HashMap::new(),
-        )?;
+        let flags = NM_SETTINGS_CREATE2_FLAGS_BLOCK_AUTOCONNECT
+            + if memory_only {
+                NM_SETTINGS_CREATE2_FLAGS_IN_MEMORY
+            } else {
+                NM_SETTINGS_CREATE2_FLAGS_TO_DISK
+            };
+        self.setting_proxy
+            .add_connection2(value, flags, HashMap::new())?;
         Ok(())
     }
 
@@ -224,6 +229,7 @@ impl<'a> NmDbus<'a> {
         &self,
         con_obj_path: &str,
         nm_conn: &NmConnection,
+        memory_only: bool,
     ) -> Result<(), NmError> {
         let value = nm_conn.to_value()?;
         let proxy = zbus::Proxy::new(
@@ -232,6 +238,12 @@ impl<'a> NmDbus<'a> {
             con_obj_path,
             NM_DBUS_INTERFACE_SETTING,
         )?;
+        let flags = NM_SETTINGS_UPDATE2_FLAGS_BLOCK_AUTOCONNECT
+            + if memory_only {
+                NM_SETTINGS_UPDATE2_FLAGS_IN_MEMORY
+            } else {
+                NM_SETTINGS_UPDATE2_FLAGS_TO_DISK
+            };
         proxy.call::<(
                 NmConnectionDbusValue,
                 u32,
@@ -240,8 +252,7 @@ impl<'a> NmDbus<'a> {
                 "Update2",
                 &(
                     value,
-                    NM_SETTINGS_UPDATE2_FLAGS_BLOCK_AUTOCONNECT
-                        + NM_SETTINGS_UPDATE2_FLAGS_TO_DISK,
+                    flags,
                     HashMap::new()
                 ),
             )?;
