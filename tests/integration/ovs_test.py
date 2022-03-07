@@ -250,6 +250,11 @@ def test_nm_ovs_plugin_missing():
             )
 
 
+@pytest.mark.xfail(
+    nm_major_minor_version() >= 1.37,
+    reason="https://bugzilla.redhat.com/2052441",
+    strict=True,
+)
 def test_ovs_service_missing_with_system_port_only(eth1_up):
     bridge = Bridge(BRIDGE1)
     bridge.add_system_port(ETH1)
