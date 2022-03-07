@@ -15,7 +15,8 @@ int main(void) {
 
 	if (nmstate_net_state_retrieve(flag, &state, &log, &err_kind, &err_msg)
 	    == NMSTATE_PASS) {
-		printf("%s\n", state);
+		printf("state->%s\n", state);
+		printf("log->%s\n", log);
 	} else {
 		printf("%s: %s\n", err_kind, err_msg);
 		rc = EXIT_FAILURE;

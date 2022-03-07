@@ -12,7 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+mod logger;
+
+use crate::logger::MemoryLogger;
 use libc::{c_char, c_int};
+use once_cell::sync::OnceCell;
 use std::ffi::{CStr, CString};
 
 const NMSTATE_FLAG_KERNEL_ONLY: u32 = 1 << 1;
@@ -64,12 +68,15 @@ pub extern "C" fn nmstate_net_state_retrieve(
         net_state.set_running_config_only(true);
     }
 
-    // TODO: save log to the output pointer
+    let logger = get_or_init_logger();
 
     match net_state.retrieve() {
         Ok(s) => match serde_json::to_string(&s) {
             Ok(state_str) => unsafe {
                 *state = CString::new(state_str).unwrap().into_raw();
+                *log =
+                    CString::new(logger.read().to_string()).unwrap().into_raw();
+
                 NMSTATE_PASS
             },
             Err(e) => unsafe {
@@ -157,6 +164,7 @@ pub extern "C" fn nmstate_net_state_apply(
                 return NMSTATE_FAIL;
             }
         };
+
     if (flags & NMSTATE_FLAG_KERNEL_ONLY) > 0 {
         net_state.set_kernel_only(true);
     }
@@ -175,7 +183,7 @@ pub extern "C" fn nmstate_net_state_apply(
 
     net_state.set_timeout(rollback_timeout);
 
-    // TODO: save log to the output pointer
+    let logger = get_or_init_logger();
 
     if let Err(e) = net_state.apply() {
         unsafe {
@@ -185,6 +193,9 @@ pub extern "C" fn nmstate_net_state_apply(
         }
         NMSTATE_FAIL
     } else {
+        unsafe {
+            *log = CString::new(logger.read().to_string()).unwrap().into_raw();
+        }
         NMSTATE_PASS
     }
 }
@@ -232,7 +243,7 @@ pub extern "C" fn nmstate_checkpoint_commit(
         }
     }
 
-    // TODO: save log to the output pointer
+    let logger = get_or_init_logger();
 
     if let Err(e) = nmstate::NetworkState::checkpoint_commit(checkpoint_str) {
         unsafe {
@@ -242,6 +253,9 @@ pub extern "C" fn nmstate_checkpoint_commit(
         }
         NMSTATE_FAIL
     } else {
+        unsafe {
+            *log = CString::new(logger.read().to_string()).unwrap().into_raw();
+        }
         NMSTATE_PASS
     }
 }
@@ -289,7 +303,7 @@ pub extern "C" fn nmstate_checkpoint_rollback(
         }
     }
 
-    // TODO: save log to the output pointer
+    let logger = get_or_init_logger();
 
     if let Err(e) = nmstate::NetworkState::checkpoint_rollback(checkpoint_str) {
         unsafe {
@@ -299,6 +313,9 @@ pub extern "C" fn nmstate_checkpoint_rollback(
         }
         NMSTATE_FAIL
     } else {
+        unsafe {
+            *log = CString::new(logger.read().to_string()).unwrap().into_raw();
+        }
         NMSTATE_PASS
     }
 }
@@ -311,4 +328,9 @@ pub extern "C" fn nmstate_cstring_free(cstring: *mut c_char) {
             drop(CString::from_raw(cstring));
         }
     }
+}
+
+fn get_or_init_logger() -> &'static MemoryLogger {
+    static INSTANCE: OnceCell<&MemoryLogger> = OnceCell::new();
+    INSTANCE.get_or_init(|| MemoryLogger::setup(log::Level::Debug).unwrap())
 }

@@ -37,7 +37,7 @@ check: nmstate_test
 	LD_LIBRARY_PATH=$(TMPDIR) \
 		valgrind --trace-children=yes --leak-check=full \
 		--error-exitcode=1 \
-		./nmstate_test 1>/dev/null
+		./nmstate_test
 	rm -rf $(TMPDIR)
 
 clean:
