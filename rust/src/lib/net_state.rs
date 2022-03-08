@@ -313,7 +313,11 @@ impl NetworkState {
         &self,
     ) -> Result<HashMap<String, Vec<String>>, NmstateError> {
         let mut ret = HashMap::new();
-        let (add_net_state, _, _) = self.gen_state_for_apply(&Self::new())?;
+        let mut self_clone = self.clone();
+        self_clone.interfaces.set_unknown_iface_to_eth();
+        self_clone.interfaces.set_missing_port_to_eth();
+        let (add_net_state, _, _) =
+            self_clone.gen_state_for_apply(&Self::new())?;
         ret.insert("NetworkManager".to_string(), nm_gen_conf(&add_net_state)?);
         Ok(ret)
     }
