@@ -189,18 +189,26 @@ pub(crate) fn iface_type_to_nm(
     iface_type: &InterfaceType,
 ) -> Result<String, NmstateError> {
     match iface_type {
-        InterfaceType::LinuxBridge => Ok("bridge".into()),
-        InterfaceType::Bond => Ok("bond".into()),
-        InterfaceType::Ethernet => Ok("802-3-ethernet".into()),
-        InterfaceType::OvsBridge => Ok("ovs-bridge".into()),
-        InterfaceType::OvsInterface => Ok("ovs-interface".into()),
-        InterfaceType::Vlan => Ok("vlan".to_string()),
-        InterfaceType::Vxlan => Ok("vxlan".to_string()),
-        InterfaceType::Dummy => Ok("dummy".to_string()),
-        InterfaceType::MacVlan => Ok("macvlan".to_string()),
-        InterfaceType::MacVtap => Ok("macvlan".to_string()),
-        InterfaceType::Vrf => Ok("vrf".to_string()),
-        InterfaceType::Veth => Ok("veth".to_string()),
+        InterfaceType::LinuxBridge => Ok(NM_SETTING_BRIDGE_SETTING_NAME.into()),
+        InterfaceType::Bond => Ok(NM_SETTING_BOND_SETTING_NAME.into()),
+        InterfaceType::Ethernet => Ok(NM_SETTING_WIRED_SETTING_NAME.into()),
+        InterfaceType::OvsBridge => {
+            Ok(NM_SETTING_OVS_BRIDGE_SETTING_NAME.into())
+        }
+        InterfaceType::OvsInterface => {
+            Ok(NM_SETTING_OVS_IFACE_SETTING_NAME.into())
+        }
+        InterfaceType::Vlan => Ok(NM_SETTING_VLAN_SETTING_NAME.to_string()),
+        InterfaceType::Vxlan => Ok(NM_SETTING_VXLAN_SETTING_NAME.to_string()),
+        InterfaceType::Dummy => Ok(NM_SETTING_DUMMY_SETTING_NAME.to_string()),
+        InterfaceType::MacVlan => {
+            Ok(NM_SETTING_MACVLAN_SETTING_NAME.to_string())
+        }
+        InterfaceType::MacVtap => {
+            Ok(NM_SETTING_MACVLAN_SETTING_NAME.to_string())
+        }
+        InterfaceType::Vrf => Ok(NM_SETTING_VRF_SETTING_NAME.to_string()),
+        InterfaceType::Veth => Ok(NM_SETTING_VETH_SETTING_NAME.to_string()),
         InterfaceType::Other(s) => Ok(s.to_string()),
         _ => Err(NmstateError::new(
             ErrorKind::NotImplementedError,

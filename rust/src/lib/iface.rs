@@ -1,5 +1,5 @@
 use log::{error, warn};
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::{
     state::get_json_value_difference, BaseInterface, BondInterface,
@@ -8,8 +8,7 @@ use crate::{
     OvsInterface, VlanInterface, VrfInterface, VxlanInterface,
 };
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 pub enum InterfaceType {
     Bond,
@@ -44,8 +43,8 @@ impl From<&str> for InterfaceType {
             "dummy" => InterfaceType::Dummy,
             "ethernet" => InterfaceType::Ethernet,
             "loopback" => InterfaceType::Loopback,
-            "macvlan" => InterfaceType::MacVlan,
-            "macvtap" => InterfaceType::MacVtap,
+            "mac-vlan" => InterfaceType::MacVlan,
+            "mac-vtap" => InterfaceType::MacVtap,
             "ovs-bridge" => InterfaceType::OvsBridge,
             "ovs-interface" => InterfaceType::OvsInterface,
             "tun" => InterfaceType::Tun,
@@ -70,8 +69,8 @@ impl std::fmt::Display for InterfaceType {
                 InterfaceType::Dummy => "dummy",
                 InterfaceType::Ethernet => "ethernet",
                 InterfaceType::Loopback => "loopback",
-                InterfaceType::MacVlan => "macvlan",
-                InterfaceType::MacVtap => "macvtap",
+                InterfaceType::MacVlan => "mac-vlan",
+                InterfaceType::MacVtap => "mac-vtap",
                 InterfaceType::OvsBridge => "ovs-bridge",
                 InterfaceType::OvsInterface => "ovs-interface",
                 InterfaceType::Tun => "tun",
@@ -83,6 +82,28 @@ impl std::fmt::Display for InterfaceType {
                 InterfaceType::Other(ref s) => s,
             }
         )
+    }
+}
+
+impl Serialize for InterfaceType {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(format!("{}", self).as_str())
+    }
+}
+
+impl<'de> Deserialize<'de> for InterfaceType {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let v = serde_json::Value::deserialize(deserializer)?;
+        match v.as_str() {
+            Some(s) => Ok(InterfaceType::from(s)),
+            None => Ok(InterfaceType::Unknown),
+        }
     }
 }
 
