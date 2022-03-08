@@ -23,6 +23,8 @@ const (
 	includeStatusData
 	includeSecrets
 	noCommit
+	memoryOnly
+	runningConfigOnly
 )
 
 func New(options ...func(*Nmstate)) *Nmstate {
@@ -72,6 +74,18 @@ func WithIncludeSecrets() func(*Nmstate) {
 func WithNoCommit() func(*Nmstate) {
 	return func(n *Nmstate) {
 		n.flags = n.flags | noCommit
+	}
+}
+
+func WithMemoryOnly() func(*Nmstate) {
+	return func(n *Nmstate) {
+		n.flags = n.flags | memoryOnly
+	}
+}
+
+func WithRunningConfigOnly() func(*Nmstate) {
+	return func(n *Nmstate) {
+		n.flags = n.flags | runningConfigOnly
 	}
 }
 
