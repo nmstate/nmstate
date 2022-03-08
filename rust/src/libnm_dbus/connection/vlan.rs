@@ -27,6 +27,16 @@ impl TryFrom<DbusDictionary> for NmSettingVlan {
 }
 
 impl NmSettingVlan {
+    pub(crate) fn to_keyfile(
+        &self,
+    ) -> Result<HashMap<String, zvariant::Value>, NmError> {
+        let mut ret = HashMap::new();
+        for (k, v) in self.to_value()?.drain() {
+            ret.insert(k.to_string(), v);
+        }
+        Ok(ret)
+    }
+
     pub(crate) fn to_value(
         &self,
     ) -> Result<HashMap<&str, zvariant::Value>, NmError> {
