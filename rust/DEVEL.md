@@ -24,3 +24,11 @@
  * Grouping activation.
  * Skip activation of certain interface if state match.
  * Destroy or rollback checkpoint
+
+## Bump version
+
+```bash
+sed -i -e 's/1.3.0/1.3.1/' \
+    Makefile.inc src/lib/Cargo.toml src/python/setup.py .cargo/config.toml \
+    src/python/libnmstate/__init__.py
+```
