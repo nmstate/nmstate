@@ -10,6 +10,7 @@ use crate::{
     ifaces::inter_ifaces_controller::{
         check_overbook_ports, find_unknown_type_port, handle_changed_ports,
         preserve_ctrl_cfg_if_unchanged, set_ifaces_up_priority,
+        set_missing_port_to_eth,
     },
     ip::include_current_ip_address_if_dhcp_on_to_off,
     ErrorKind, Interface, InterfaceState, InterfaceType, NmstateError,
@@ -347,6 +348,22 @@ impl Interfaces {
                 false
             }
         })
+    }
+
+    pub(crate) fn set_unknown_iface_to_eth(&mut self) {
+        for iface in self.kernel_ifaces.values_mut() {
+            if iface.iface_type() == InterfaceType::Unknown {
+                log::warn!(
+                    "Setting unknown type interface {} to ethernet",
+                    iface.name()
+                );
+                iface.base_iface_mut().iface_type = InterfaceType::Ethernet;
+            }
+        }
+    }
+
+    pub(crate) fn set_missing_port_to_eth(&mut self) {
+        set_missing_port_to_eth(self);
     }
 
     pub(crate) fn resolve_unknown_ifaces(
