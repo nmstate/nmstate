@@ -4,8 +4,9 @@ use std::iter::FromIterator;
 use log::{debug, info};
 
 use crate::{
-    BaseInterface, ErrorKind, Interface, InterfaceIpv4, InterfaceIpv6,
-    InterfaceState, InterfaceType, Interfaces, NmstateError, OvsInterface,
+    BaseInterface, ErrorKind, EthernetInterface, Interface, InterfaceIpv4,
+    InterfaceIpv6, InterfaceState, InterfaceType, Interfaces, NmstateError,
+    OvsInterface,
 };
 
 pub(crate) fn handle_changed_ports(
@@ -404,5 +405,30 @@ pub(crate) fn preserve_ctrl_cfg_if_unchanged(
                     Some(ctrl_type.clone());
             }
         }
+    }
+}
+
+pub(crate) fn set_missing_port_to_eth(ifaces: &mut Interfaces) {
+    let mut iface_names_to_add = Vec::new();
+    for iface in ifaces
+        .kernel_ifaces
+        .values()
+        .chain(ifaces.user_ifaces.values())
+    {
+        if let Some(ports) = iface.ports() {
+            for port in ports {
+                if !ifaces.kernel_ifaces.contains_key(port) {
+                    iface_names_to_add.push(port.to_string());
+                }
+            }
+        }
+    }
+    for iface_name in iface_names_to_add {
+        let mut iface = EthernetInterface::default();
+        iface.base.name = iface_name.clone();
+        log::warn!("Assuming undefined port {} as ethernet", iface_name);
+        ifaces
+            .kernel_ifaces
+            .insert(iface_name, Interface::Ethernet(iface));
     }
 }

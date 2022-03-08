@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::convert::TryFrom;
 
 use serde::Deserialize;
+use zvariant::Value;
 
 use crate::{connection::DbusDictionary, NmError};
 
@@ -37,9 +38,18 @@ impl NmSettingBond {
         Self::default()
     }
 
-    pub(crate) fn to_value(
+    pub(crate) fn to_keyfile(
         &self,
-    ) -> Result<HashMap<&str, zvariant::Value>, NmError> {
+    ) -> Result<HashMap<String, zvariant::Value>, NmError> {
+        let mut ret = HashMap::new();
+        ret.insert("mode".to_string(), Value::new(self.mode.as_str()));
+        for (key, value) in self.options.iter() {
+            ret.insert(key.to_string(), Value::new(value));
+        }
+        Ok(ret)
+    }
+
+    pub(crate) fn to_value(&self) -> Result<HashMap<&str, Value>, NmError> {
         let mut merged_opts = self.options.clone();
         let mut ret = HashMap::new();
 
@@ -61,7 +71,7 @@ impl NmSettingBond {
         }
 
         if !merged_opts.is_empty() {
-            ret.insert("options", zvariant::Value::from(merged_opts.clone()));
+            ret.insert("options", Value::from(merged_opts.clone()));
         }
         Ok(ret)
     }

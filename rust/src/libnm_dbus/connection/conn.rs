@@ -40,7 +40,7 @@ use crate::{
     connection::vxlan::NmSettingVxlan,
     connection::wired::NmSettingWired,
     dbus::{NM_DBUS_INTERFACE_ROOT, NM_DBUS_INTERFACE_SETTING},
-    keyfile::zvariant_value_to_keyfile,
+    keyfile::keyfile_sections_to_string,
     NmError,
 };
 
@@ -165,17 +165,64 @@ impl NmConnection {
     }
 
     pub fn to_keyfile(&self) -> Result<String, NmError> {
-        let mut nm_conn_dbus_value = self.to_value()?;
-
-        // section name `802-3-ethernet` should renamed to `ethernet`
-        if let Some(wire_setting) = nm_conn_dbus_value.remove("802-3-ethernet")
-        {
-            nm_conn_dbus_value.insert("ethernet", wire_setting);
+        let mut sections: Vec<(&str, HashMap<String, zvariant::Value>)> =
+            Vec::new();
+        if let Some(con_set) = &self.connection {
+            sections.push(("connection", con_set.to_keyfile()?));
+        }
+        if let Some(bond_set) = &self.bond {
+            sections.push(("bond", bond_set.to_keyfile()?));
+        }
+        if let Some(br_set) = &self.bridge {
+            sections.push(("bridge", br_set.to_keyfile()?));
+        }
+        if let Some(br_port_set) = &self.bridge_port {
+            sections.push(("bridge-port", br_port_set.to_keyfile()?));
+        }
+        if let Some(ipv4_set) = &self.ipv4 {
+            sections.push(("ipv4", ipv4_set.to_keyfile()?));
+        }
+        if let Some(ipv6_set) = &self.ipv6 {
+            sections.push(("ipv6", ipv6_set.to_keyfile()?));
+        }
+        if let Some(ovs_bridge_set) = &self.ovs_bridge {
+            sections.push(("ovs-bridge", ovs_bridge_set.to_keyfile()?));
+        }
+        if let Some(ovs_port_set) = &self.ovs_port {
+            sections.push(("ovs-port", ovs_port_set.to_keyfile()?));
+        }
+        if let Some(ovs_iface_set) = &self.ovs_iface {
+            sections.push(("ovs-interface", ovs_iface_set.to_keyfile()?));
+        }
+        if let Some(wired_set) = &self.wired {
+            sections.push(("ethernet", wired_set.to_keyfile()?));
+        }
+        if let Some(vlan) = &self.vlan {
+            sections.push(("vlan", vlan.to_keyfile()?));
+        }
+        if let Some(vxlan) = &self.vxlan {
+            sections.push(("vxlan", vxlan.to_keyfile()?));
+        }
+        if let Some(sriov) = &self.sriov {
+            sections.push(("sriov", sriov.to_keyfile()?));
+        }
+        if let Some(mac_vlan) = &self.mac_vlan {
+            sections.push(("macvlan", mac_vlan.to_keyfile()?));
+        }
+        if let Some(vrf) = &self.vrf {
+            sections.push(("vrf", vrf.to_keyfile()?));
+        }
+        if let Some(veth) = &self.veth {
+            sections.push(("veth", veth.to_keyfile()?));
+        }
+        if let Some(user) = &self.user {
+            sections.push(("user", user.to_keyfile()?));
+        }
+        if let Some(ieee8021x) = &self.ieee8021x {
+            sections.push(("802-1x", ieee8021x.to_keyfile()?));
         }
 
-        let nm_conn_value = zvariant::Dict::from(nm_conn_dbus_value);
-
-        zvariant_value_to_keyfile(&zvariant::Value::Dict(nm_conn_value), "")
+        keyfile_sections_to_string(&sections)
     }
 
     pub(crate) fn to_value(&self) -> Result<NmConnectionDbusValue, NmError> {
@@ -312,6 +359,16 @@ impl NmSettingConnection {
             // For autoconnect, None means true
             None => Some(true),
         }
+    }
+
+    pub(crate) fn to_keyfile(
+        &self,
+    ) -> Result<HashMap<String, zvariant::Value>, NmError> {
+        let mut ret = HashMap::new();
+        for (k, v) in self.to_value()?.drain() {
+            ret.insert(k.to_string(), v);
+        }
+        Ok(ret)
     }
 
     pub(crate) fn to_value(

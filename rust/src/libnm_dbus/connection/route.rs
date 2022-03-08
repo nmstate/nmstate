@@ -13,11 +13,14 @@
 // limitations under the License.
 //
 
+use std::collections::HashMap;
 use std::convert::TryFrom;
 
 use serde::Deserialize;
 
 use crate::{connection::DbusDictionary, error::NmError};
+
+const DEFAULT_ROUTE_TABLE: u32 = 254;
 
 #[derive(Debug, Clone, PartialEq, Default, Deserialize)]
 #[serde(try_from = "DbusDictionary")]
@@ -49,6 +52,27 @@ impl TryFrom<DbusDictionary> for NmIpRoute {
 impl NmIpRoute {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub(crate) fn to_keyfile(&self) -> HashMap<String, String> {
+        let mut ret = HashMap::new();
+        if let (Some(dest), Some(prefix)) =
+            (self.dest.as_ref(), self.prefix.as_ref())
+        {
+            let dest = format!("{}/{}", dest, prefix);
+            let rt_line = match (self.next_hop.as_ref(), self.metric.as_ref()) {
+                (Some(n), Some(m)) => vec![dest, n.to_string(), m.to_string()],
+                (Some(n), None) => vec![dest, n.to_string()],
+                (None, Some(m)) => vec![dest, "".to_string(), m.to_string()],
+                (None, None) => vec![dest],
+            };
+            ret.insert("".to_string(), rt_line.join(","));
+            ret.insert(
+                "options".to_string(),
+                format!("table={}", self.table.unwrap_or(DEFAULT_ROUTE_TABLE)),
+            );
+        }
+        ret
     }
 
     pub(crate) fn to_value(&self) -> Result<zvariant::Value, NmError> {
