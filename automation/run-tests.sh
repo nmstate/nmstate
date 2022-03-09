@@ -198,6 +198,7 @@ function run_tests {
             tests/integration/dynamic_ip_test.py \
             tests/integration/nm/ieee802_1x_test.py \
             tests/integration/lldp_test.py \
+            tests/integration/bond_test.py \
             ${nmstate_pytest_extra_args}"
         exec_cmd "
           env  \
@@ -274,20 +275,6 @@ function run_tests {
             $PYTEST_OPTIONS \
             tests/integration/route_test.py \
             -k 'not test_route_rule_add_with_auto_route_table_id ' \
-            ${nmstate_pytest_extra_args}"
-        exec_cmd "
-          env  \
-          PYTHONPATH=$CONTAINER_WORKSPACE/rust/src/python \
-          pytest \
-            $PYTEST_OPTIONS \
-            tests/integration/bond_test.py \
-            -k '\
-            not test_preserve_bond_after_bridge_removal and \
-            not test_bond_mac_restriction_without_mac_in_desire and \
-            not test_bond_mac_restriction_with_mac_in_desire and \
-            not test_bond_mac_restriction_in_desire_mac_in_current and \
-            not test_remove_mode4_bond_and_create_mode5_with_the_same_port and \
-            not test_bond_mac_restriction_in_current_mac_in_desire' \
             ${nmstate_pytest_extra_args}"
         exec_cmd "
           env  \
