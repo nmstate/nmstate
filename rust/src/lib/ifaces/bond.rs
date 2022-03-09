@@ -1,4 +1,4 @@
-use crate::{BaseInterface, ErrorKind, InterfaceType, NmstateError};
+use crate::{BaseInterface, ErrorKind, Interface, InterfaceType, NmstateError};
 use serde::{de::Error, Deserialize, Deserializer, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -39,6 +39,10 @@ impl BondInterface {
             .map(|ports| ports.as_slice().iter().map(|p| p.as_str()).collect())
     }
 
+    fn mode(&self) -> Option<BondMode> {
+        self.bond.as_ref().and_then(|bond_conf| bond_conf.mode)
+    }
+
     pub(crate) fn pre_verify_cleanup(&mut self) {
         self.drop_empty_arp_ip_target();
         self.sort_ports();
@@ -46,6 +50,31 @@ impl BondInterface {
 
     pub fn new() -> Self {
         Self::default()
+    }
+
+    fn is_mac_restricted_mode(&self) -> bool {
+        self.bond
+            .as_ref()
+            .and_then(|bond_conf| {
+                if self.mode() == Some(BondMode::ActiveBackup) {
+                    bond_conf.options.as_ref()
+                } else {
+                    None
+                }
+            })
+            .and_then(|bond_opts| bond_opts.fail_over_mac)
+            == Some(BondFailOverMac::Active)
+    }
+
+    fn is_not_mac_restricted_mode_explicitly(&self) -> bool {
+        (self.mode().is_some() && self.mode() != Some(BondMode::ActiveBackup))
+            || ![None, Some(BondFailOverMac::Active)].contains(
+                &self
+                    .bond
+                    .as_ref()
+                    .and_then(|bond_conf| bond_conf.options.as_ref())
+                    .and_then(|bond_opts| bond_opts.fail_over_mac),
+            )
     }
 
     fn sort_ports(&mut self) {
@@ -68,10 +97,15 @@ impl BondInterface {
         }
     }
 
-    pub(crate) fn validate(&self) -> Result<(), NmstateError> {
+    pub(crate) fn validate(
+        &self,
+        current: Option<&Interface>,
+    ) -> Result<(), NmstateError> {
         self.base.validate()?;
+        self.validate_new_iface_with_no_mode(current)?;
+        self.validate_mac_restricted_mode(current)?;
         if let Some(bond_conf) = &self.bond {
-            bond_conf.validate(&self.base)?;
+            bond_conf.validate()?;
         }
         Ok(())
     }
@@ -90,9 +124,58 @@ impl BondInterface {
                 .map(|ports| ports.remove(index));
         }
     }
+
+    fn validate_new_iface_with_no_mode(
+        &self,
+        current: Option<&Interface>,
+    ) -> Result<(), NmstateError> {
+        if current.is_none() && self.mode().is_none() {
+            let e = NmstateError::new(
+                ErrorKind::InvalidArgument,
+                format!(
+                    "Bond mode is mandatory for new bond interface: {}",
+                    &self.base.name
+                ),
+            );
+            log::error!("{}", e);
+            return Err(e);
+        }
+        Ok(())
+    }
+
+    // Fail on
+    // * Desire mac restricted mode with mac defined
+    // * Desire mac address with current interface in mac restricted mode with
+    //   desired not changing mac restricted mode
+    fn validate_mac_restricted_mode(
+        &self,
+        current: Option<&Interface>,
+    ) -> Result<(), NmstateError> {
+        let e = NmstateError::new(
+            ErrorKind::InvalidArgument,
+            "MAC address cannot be specified in bond interface along with \
+            fail_over_mac active on active backup mode"
+                .to_string(),
+        );
+        if self.is_mac_restricted_mode() && self.base.mac_address.is_some() {
+            log::error!("{}", e);
+            return Err(e);
+        }
+
+        if let Some(Interface::Bond(current)) = current {
+            if current.is_mac_restricted_mode()
+                && self.base.mac_address.is_some()
+                && !self.is_not_mac_restricted_mode_explicitly()
+            {
+                log::error!("{}", e);
+                return Err(e);
+            }
+        }
+        Ok(())
+    }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Copy)]
 #[non_exhaustive]
 pub enum BondMode {
     #[serde(rename = "balance-rr")]
@@ -154,34 +237,16 @@ impl BondConfig {
         Self::default()
     }
 
-    pub(crate) fn validate(
-        &self,
-        base: &BaseInterface,
-    ) -> Result<(), NmstateError> {
+    pub(crate) fn validate(&self) -> Result<(), NmstateError> {
         if let Some(opts) = &self.options {
-            if let Some(mode) = &self.mode {
-                opts.validate(mode, base)?;
-            } else {
-                return Err(NmstateError::new(
-                    ErrorKind::InvalidArgument,
-                    "Bond mode is mandatory".to_string(),
-                ));
-            }
+            opts.validate()?;
         }
-
-        if self.mode.is_none() {
-            return Err(NmstateError::new(
-                ErrorKind::InvalidArgument,
-                "Bond mode is mandatory".to_string(),
-            ));
-        }
-
         Ok(())
     }
 
     pub(crate) fn update(&mut self, other: Option<&BondConfig>) {
         if let Some(other) = other {
-            self.mode = other.mode.clone();
+            self.mode = other.mode;
             self.options = other.options.clone();
             self.port = other.port.clone();
         }
@@ -308,7 +373,7 @@ impl BondArpValidate {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Copy)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum BondFailOverMac {
@@ -547,57 +612,40 @@ impl BondOptions {
         Self::default()
     }
 
-    pub(crate) fn validate(
-        &self,
-        mode: &BondMode,
-        base: &BaseInterface,
-    ) -> Result<(), NmstateError> {
-        self.fix_mac_restricted_mode(mode, base)?;
+    pub(crate) fn validate(&self) -> Result<(), NmstateError> {
         self.validate_ad_actor_system_mac_address()?;
         self.validate_miimon_and_arp_interval()?;
-        Ok(())
-    }
-
-    fn fix_mac_restricted_mode(
-        &self,
-        mode: &BondMode,
-        base: &BaseInterface,
-    ) -> Result<(), NmstateError> {
-        if let Some(fail_over_mac) = &self.fail_over_mac {
-            if *mode == BondMode::ActiveBackup
-                && *fail_over_mac == BondFailOverMac::Active
-                && base.mac_address.is_some()
-            {
-                return Err(NmstateError::new(
-                        ErrorKind::InvalidArgument,
-                            "MAC address cannot be specified in bond interface along with fail_over_mac active on active backup mode".to_string()
-                    ));
-            }
-        }
         Ok(())
     }
 
     fn validate_ad_actor_system_mac_address(&self) -> Result<(), NmstateError> {
         if let Some(ad_actor_system) = &self.ad_actor_system {
             if ad_actor_system.to_uppercase().starts_with("01:00:5E") {
-                return Err(NmstateError::new(
-                        ErrorKind::InvalidArgument,
-                            "The ad_actor_system bond option cannot be an IANA multicast address(prefix with 01:00:5E)".to_string()
-                    ));
+                let e = NmstateError::new(
+                    ErrorKind::InvalidArgument,
+                    "The ad_actor_system bond option cannot be an IANA \
+                    multicast address(prefix with 01:00:5E)"
+                        .to_string(),
+                );
+                log::error!("{}", e);
+                return Err(e);
             }
         }
         Ok(())
     }
 
     fn validate_miimon_and_arp_interval(&self) -> Result<(), NmstateError> {
-        if let Some(miimon) = &self.miimon {
-            if let Some(arp_interval) = &self.arp_interval {
-                if miimon > &0 && arp_interval > &0 {
-                    return Err(NmstateError::new(
-                        ErrorKind::InvalidArgument,
-                            "Bond miimon and arp interval are not compatible options.".to_string()
-                    ));
-                }
+        if let (Some(miimon), Some(arp_interval)) =
+            (self.miimon, self.arp_interval)
+        {
+            if miimon > 0 && arp_interval > 0 {
+                let e = NmstateError::new(
+                    ErrorKind::InvalidArgument,
+                    "Bond miimon and arp interval are not compatible options."
+                        .to_string(),
+                );
+                log::error!("{}", e);
+                return Err(e);
             }
         }
         Ok(())
