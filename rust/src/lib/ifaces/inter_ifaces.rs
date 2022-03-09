@@ -258,7 +258,9 @@ impl Interfaces {
                 }
             } else {
                 if iface.is_up() {
-                    iface.validate()?;
+                    iface.validate(
+                        current.get_iface(iface.name(), iface.iface_type()),
+                    )?;
                 }
                 match current.kernel_ifaces.get(iface.name()) {
                     Some(cur_iface) => {
