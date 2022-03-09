@@ -1,4 +1,6 @@
 #[cfg(test)]
+mod bond;
+#[cfg(test)]
 mod ifaces;
 #[cfg(test)]
 mod ifaces_ctrller;

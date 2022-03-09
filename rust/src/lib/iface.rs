@@ -637,10 +637,13 @@ impl Interface {
         }
     }
 
-    pub(crate) fn validate(&self) -> Result<(), NmstateError> {
+    pub(crate) fn validate(
+        &self,
+        current: Option<&Self>,
+    ) -> Result<(), NmstateError> {
         match self {
             Interface::LinuxBridge(iface) => iface.validate(),
-            Interface::Bond(iface) => iface.validate(),
+            Interface::Bond(iface) => iface.validate(current),
             Interface::MacVlan(iface) => iface.validate(),
             Interface::MacVtap(iface) => iface.validate(),
             _ => Ok(()),
