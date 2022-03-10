@@ -621,10 +621,6 @@ impl Interface {
                 }
             }
 
-            if reference.contains("link-aggregation.options") {
-                return Ok(());
-            }
-
             Err(NmstateError::new(
                 ErrorKind::VerificationError,
                 format!(
