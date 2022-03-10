@@ -204,6 +204,7 @@ pub enum BondMode {
     TLB,
     #[serde(rename = "balance-alb")]
     ALB,
+    #[serde(rename = "unknown")]
     Unknown,
 }
 
@@ -265,7 +266,7 @@ impl BondConfig {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Copy)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum BondAdSelect {
@@ -277,13 +278,27 @@ pub enum BondAdSelect {
     Count,
 }
 
-impl BondAdSelect {
-    pub fn to_u8(&self) -> u8 {
-        match self {
-            Self::Stable => 0,
-            Self::Bandwidth => 1,
-            Self::Count => 2,
+impl From<BondAdSelect> for u8 {
+    fn from(v: BondAdSelect) -> u8 {
+        match v {
+            BondAdSelect::Stable => 0,
+            BondAdSelect::Bandwidth => 1,
+            BondAdSelect::Count => 2,
         }
+    }
+}
+
+impl std::fmt::Display for BondAdSelect {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Self::Stable => "stable",
+                Self::Bandwidth => "bandwidth",
+                Self::Count => "count",
+            }
+        )
     }
 }
 
@@ -297,16 +312,20 @@ pub enum BondLacpRate {
     Fast,
 }
 
-impl BondLacpRate {
-    pub fn to_u8(&self) -> u8 {
-        match self {
-            Self::Slow => 0,
-            Self::Fast => 1,
-        }
+impl std::fmt::Display for BondLacpRate {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Self::Slow => "slow",
+                Self::Fast => "fast",
+            }
+        )
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Copy)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum BondAllPortsActive {
@@ -316,11 +335,24 @@ pub enum BondAllPortsActive {
     Delivered,
 }
 
-impl BondAllPortsActive {
-    pub fn to_u8(&self) -> u8 {
-        match self {
-            Self::Dropped => 0,
-            Self::Delivered => 1,
+impl std::fmt::Display for BondAllPortsActive {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Self::Dropped => "dropped",
+                Self::Delivered => "delivered",
+            }
+        )
+    }
+}
+
+impl From<BondAllPortsActive> for u8 {
+    fn from(v: BondAllPortsActive) -> u8 {
+        match v {
+            BondAllPortsActive::Dropped => 0,
+            BondAllPortsActive::Delivered => 1,
         }
     }
 }
@@ -335,26 +367,18 @@ pub enum BondArpAllTargets {
     All,
 }
 
-impl BondArpAllTargets {
-    pub fn to_u32(&self) -> u32 {
-        match self {
-            Self::Any => 0,
-            Self::All => 1,
-        }
+impl std::fmt::Display for BondArpAllTargets {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Self::Any => "any",
+                Self::All => "all",
+            }
+        )
     }
 }
-
-const BOND_STATE_ACTIVE: u8 = 0;
-const BOND_STATE_BACKUP: u8 = 1;
-
-const BOND_ARP_VALIDATE_NONE: u32 = 0;
-const BOND_ARP_VALIDATE_ACTIVE: u32 = 1 << BOND_STATE_ACTIVE as u32;
-const BOND_ARP_VALIDATE_BACKUP: u32 = 1 << BOND_STATE_BACKUP as u32;
-const BOND_ARP_VALIDATE_ALL: u32 =
-    BOND_ARP_VALIDATE_ACTIVE | BOND_ARP_VALIDATE_BACKUP;
-const BOND_ARP_FILTER: u32 = BOND_ARP_VALIDATE_ALL + 1;
-const BOND_ARP_FILTER_ACTIVE: u32 = BOND_ARP_VALIDATE_ACTIVE | BOND_ARP_FILTER;
-const BOND_ARP_FILTER_BACKUP: u32 = BOND_ARP_VALIDATE_BACKUP | BOND_ARP_FILTER;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename_all = "kebab-case")]
@@ -371,17 +395,21 @@ pub enum BondArpValidate {
     FilterBackup,
 }
 
-impl BondArpValidate {
-    pub fn to_u32(&self) -> u32 {
-        match self {
-            Self::None => BOND_ARP_VALIDATE_NONE,
-            Self::Active => BOND_ARP_VALIDATE_ACTIVE,
-            Self::Backup => BOND_ARP_VALIDATE_BACKUP,
-            Self::All => BOND_ARP_VALIDATE_ALL,
-            Self::Filter => BOND_ARP_FILTER,
-            Self::FilterActive => BOND_ARP_FILTER_ACTIVE,
-            Self::FilterBackup => BOND_ARP_FILTER_BACKUP,
-        }
+impl std::fmt::Display for BondArpValidate {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Self::None => "none",
+                Self::Active => "active",
+                Self::Backup => "backup",
+                Self::All => "all",
+                Self::Filter => "filter",
+                Self::FilterActive => "filter_active",
+                Self::FilterBackup => "filter_backup",
+            }
+        )
     }
 }
 
@@ -397,13 +425,17 @@ pub enum BondFailOverMac {
     Follow,
 }
 
-impl BondFailOverMac {
-    pub fn to_u8(&self) -> u8 {
-        match self {
-            Self::None => 0,
-            Self::Active => 1,
-            Self::Follow => 2,
-        }
+impl std::fmt::Display for BondFailOverMac {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Self::None => "none",
+                Self::Active => "active",
+                Self::Follow => "follow ",
+            }
+        )
     }
 }
 
@@ -419,13 +451,17 @@ pub enum BondPrimaryReselect {
     Failure,
 }
 
-impl BondPrimaryReselect {
-    pub fn to_u8(&self) -> u8 {
-        match self {
-            Self::Always => 0,
-            Self::Better => 1,
-            Self::Failure => 2,
-        }
+impl std::fmt::Display for BondPrimaryReselect {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Self::Always => "always",
+                Self::Better => "better",
+                Self::Failure => "failure",
+            }
+        )
     }
 }
 
@@ -462,6 +498,23 @@ impl BondXmitHashPolicy {
             Self::Encap34 => 4,
             Self::VlanSrcMac => 5,
         }
+    }
+}
+
+impl std::fmt::Display for BondXmitHashPolicy {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Self::Layer2 => "layer2",
+                Self::Layer34 => "layer3+4",
+                Self::Layer23 => "layer2+3",
+                Self::Encap23 => "encap2+3",
+                Self::Encap34 => "encap3+4",
+                Self::VlanSrcMac => "vlan+srcmac",
+            }
+        )
     }
 }
 
