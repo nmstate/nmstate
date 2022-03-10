@@ -53,7 +53,7 @@ fn apply_bond_options(
     if let Some(v) = bond_opts.ad_select.as_ref() {
         nm_bond_set
             .options
-            .insert("ad_select".to_string(), v.to_u8().to_string());
+            .insert("ad_select".to_string(), v.to_string());
     }
     if let Some(v) = bond_opts.ad_user_port_key.as_ref() {
         nm_bond_set
@@ -63,12 +63,12 @@ fn apply_bond_options(
     if let Some(v) = bond_opts.all_slaves_active.as_ref() {
         nm_bond_set
             .options
-            .insert("all_slaves_active".to_string(), v.to_u8().to_string());
+            .insert("all_slaves_active".to_string(), u8::from(*v).to_string());
     }
     if let Some(v) = bond_opts.arp_all_targets.as_ref() {
         nm_bond_set
             .options
-            .insert("arp_all_targets".to_string(), v.to_u32().to_string());
+            .insert("arp_all_targets".to_string(), v.to_string());
     }
     if let Some(v) = bond_opts.arp_interval.as_ref() {
         nm_bond_set
@@ -83,7 +83,7 @@ fn apply_bond_options(
     if let Some(v) = bond_opts.arp_validate.as_ref() {
         nm_bond_set
             .options
-            .insert("arp_validate".to_string(), v.to_u32().to_string());
+            .insert("arp_validate".to_string(), v.to_string());
     }
     if let Some(v) = bond_opts.downdelay.as_ref() {
         nm_bond_set
@@ -93,12 +93,12 @@ fn apply_bond_options(
     if let Some(v) = bond_opts.fail_over_mac.as_ref() {
         nm_bond_set
             .options
-            .insert("fail_over_mac".to_string(), v.to_u8().to_string());
+            .insert("fail_over_mac".to_string(), v.to_string());
     }
     if let Some(v) = bond_opts.lacp_rate.as_ref() {
         nm_bond_set
             .options
-            .insert("lacp_rate".to_string(), v.to_u8().to_string());
+            .insert("lacp_rate".to_string(), v.to_string());
     }
     if let Some(v) = bond_opts.lp_interval.as_ref() {
         nm_bond_set
@@ -136,7 +136,7 @@ fn apply_bond_options(
     if let Some(v) = bond_opts.primary_reselect.as_ref() {
         nm_bond_set
             .options
-            .insert("primary_reselect".to_string(), v.to_u8().to_string());
+            .insert("primary_reselect".to_string(), v.to_string());
     }
     if let Some(v) = bond_opts.resend_igmp.as_ref() {
         nm_bond_set
@@ -163,7 +163,7 @@ fn apply_bond_options(
     if let Some(v) = bond_opts.xmit_hash_policy.as_ref() {
         nm_bond_set
             .options
-            .insert("xmit_hash_policy".to_string(), v.to_u8().to_string());
+            .insert("xmit_hash_policy".to_string(), v.to_string());
     }
 
     // Remove all empty string option
