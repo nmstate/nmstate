@@ -383,6 +383,9 @@ pub(crate) fn gen_nm_conn_setting(
             };
         }
     }
+    if let Some(lldp_conf) = iface.base_iface().lldp.as_ref() {
+        nm_conn_set.lldp = Some(lldp_conf.enabled);
+    }
     nm_conn.connection = Some(nm_conn_set);
     Ok(())
 }

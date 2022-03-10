@@ -320,6 +320,7 @@ pub struct NmSettingConnection {
     pub controller_type: Option<String>,
     pub autoconnect: Option<bool>,
     pub autoconnect_ports: Option<bool>,
+    pub lldp: Option<bool>,
     _other: HashMap<String, zvariant::OwnedValue>,
 }
 
@@ -338,6 +339,7 @@ impl TryFrom<DbusDictionary> for NmSettingConnection {
             autoconnect_ports: NmSettingConnection::i32_to_autoconnect_ports(
                 _from_map!(v, "autoconnect-slaves", i32::try_from)?,
             ),
+            lldp: _from_map!(v, "lldp", i32::try_from)?.map(|i| i == 1),
             _other: v,
         })
     }
@@ -392,6 +394,9 @@ impl NmSettingConnection {
         }
         if let Some(v) = &self.controller_type {
             ret.insert("slave-type", zvariant::Value::new(v.as_str()));
+        }
+        if let Some(v) = &self.lldp {
+            ret.insert("lldp", zvariant::Value::new(v));
         }
 
         ret.insert(

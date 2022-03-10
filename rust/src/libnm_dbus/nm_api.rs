@@ -24,11 +24,12 @@ use crate::{
     connection::{nm_con_get_from_obj_path, NmConnection},
     dbus::NmDbus,
     device::{
-        nm_dev_delete, nm_dev_from_obj_path, NmDevice, NmDeviceState,
-        NmDeviceStateReason,
+        nm_dev_delete, nm_dev_from_obj_path, nm_dev_get_llpd, NmDevice,
+        NmDeviceState, NmDeviceStateReason,
     },
     dns::NmDnsEntry,
     error::{ErrorKind, NmError},
+    lldp::NmLldpNeighbor,
 };
 
 pub struct NmApi<'a> {
@@ -261,6 +262,13 @@ impl<'a> NmApi<'a> {
 
     pub fn device_delete(&self, nm_dev_obj_path: &str) -> Result<(), NmError> {
         nm_dev_delete(&self.dbus.connection, nm_dev_obj_path)
+    }
+
+    pub fn device_lldp_neighbor_get(
+        &self,
+        nm_dev_obj_path: &str,
+    ) -> Result<Vec<NmLldpNeighbor>, NmError> {
+        nm_dev_get_llpd(&self.dbus.connection, nm_dev_obj_path)
     }
 
     // If any device is with NewActivation or IpConfig state,
