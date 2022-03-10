@@ -173,6 +173,18 @@ impl BondInterface {
         }
         Ok(())
     }
+
+    pub(crate) fn is_options_reset(&self) -> bool {
+        if let Some(bond_opts) = self
+            .bond
+            .as_ref()
+            .and_then(|bond_conf| bond_conf.options.as_ref())
+        {
+            bond_opts == &BondOptions::default()
+        } else {
+            false
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Copy)]

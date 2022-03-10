@@ -85,7 +85,6 @@ pub(crate) fn iface_to_nm_connections(
         &base_iface.iface_type,
         nm_ac_uuids,
     );
-
     let mut nm_conn = exist_nm_conn.cloned().unwrap_or_default();
 
     gen_nm_conn_setting(iface, &mut nm_conn)?;

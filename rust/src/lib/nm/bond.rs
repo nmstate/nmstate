@@ -1,6 +1,8 @@
+use std::collections::HashMap;
+
 use nm_dbus::{NmConnection, NmSettingBond};
 
-use crate::{BondConfig, BondInterface, BondMode, BondOptions};
+use crate::{BondConfig, BondInterface, BondOptions};
 
 pub(crate) fn gen_nm_bond_setting(
     bond_iface: &BondInterface,
@@ -9,34 +11,29 @@ pub(crate) fn gen_nm_bond_setting(
     let mut nm_bond_setting =
         nm_conn.bond.as_ref().cloned().unwrap_or_default();
 
+    if bond_iface.is_options_reset() {
+        nm_bond_setting.options.retain(|k, _| k == "mode");
+    }
+
     if let Some(bond_conf) = bond_iface.bond.as_ref() {
-        apply_bond_config(&mut nm_bond_setting, bond_conf);
+        apply_bond_mode(&mut nm_bond_setting, bond_conf);
         if let Some(bond_opts) = bond_conf.options.as_ref() {
-            nm_bond_setting.options.clear();
             apply_bond_options(&mut nm_bond_setting, bond_opts);
-            if nm_bond_setting.options.is_empty() {
-                nm_bond_setting.clear_existing_opts();
-            }
         }
     }
 
     nm_conn.bond = Some(nm_bond_setting);
 }
 
-fn apply_bond_config(nm_bond_set: &mut NmSettingBond, bond_conf: &BondConfig) {
-    if let Some(mode) = &bond_conf.mode {
-        if bond_mode_changed(nm_bond_set, mode) {
-            nm_bond_set.clear_existing_opts();
+fn apply_bond_mode(nm_bond_set: &mut NmSettingBond, bond_conf: &BondConfig) {
+    if let Some(mode) = bond_conf.mode {
+        if Some(&mode.to_string()) != nm_bond_set.options.get("mode") {
+            nm_bond_set.options = HashMap::new();
         }
-        nm_bond_set.mode = mode.to_string();
+        nm_bond_set
+            .options
+            .insert("mode".to_string(), mode.to_string());
     }
-}
-
-fn bond_mode_changed(nm_bond_set: &mut NmSettingBond, mode: &BondMode) -> bool {
-    if let Some(current_mode) = nm_bond_set.get_current_mode() {
-        return !current_mode.eq(&mode.to_string());
-    }
-    false
 }
 
 fn apply_bond_options(
@@ -168,4 +165,7 @@ fn apply_bond_options(
             .options
             .insert("xmit_hash_policy".to_string(), v.to_u8().to_string());
     }
+
+    // Remove all empty string option
+    nm_bond_set.options.retain(|_, v| !v.is_empty());
 }
