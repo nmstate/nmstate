@@ -90,9 +90,6 @@ This package contains the nmstate plugin for OVS database manipulation.
 
 %build
 %py3_build
-pushd rust
-make
-popd
 
 %install
 %py3_install
