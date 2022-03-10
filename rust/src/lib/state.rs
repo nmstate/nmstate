@@ -2,7 +2,7 @@ use serde_json::Value;
 
 use crate::NetworkState;
 
-pub(crate) fn get_json_value_difference<'a, 'b>(
+fn _get_json_value_difference<'a, 'b>(
     reference: String,
     desire: &'a Value,
     current: &'b Value,
@@ -70,5 +70,39 @@ pub(crate) fn get_json_value_difference<'a, 'b>(
         }
         (Value::Null, _) => None,
         (_, _) => Some((reference, desire, current)),
+    }
+}
+
+pub(crate) fn get_json_value_difference<'a, 'b>(
+    reference: String,
+    desire: &'a Value,
+    current: &'b Value,
+) -> Option<(String, &'a Value, &'b Value)> {
+    if let Some((reference, desire, current)) =
+        _get_json_value_difference(reference, desire, current)
+    {
+        if should_ignore(reference.as_str(), desire, current) {
+            None
+        } else {
+            Some((reference, desire, current))
+        }
+    } else {
+        None
+    }
+}
+
+fn should_ignore(reference: &str, desire: &Value, current: &Value) -> bool {
+    if reference.contains("interface.link-aggregation.options") {
+        // Per oVirt request, bond option difference should not
+        // fail verification.
+        log::warn!(
+            "Bond option miss-match: {} desire '{}', current '{}'",
+            reference,
+            desire,
+            current
+        );
+        true
+    } else {
+        false
     }
 }
