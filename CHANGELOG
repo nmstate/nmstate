@@ -1,4 +1,12 @@
 # Changelog
+## [2.1.0]
+### New features
+ - Add support to LLDP in nmstate-rust implementation. (d07c215)
+ - Add support to memory only apply in nmstate-rust implementation. (66e3147)
+ - Add support to interface description in nmstate-rust implementation. (aa6990d)
+ - Add support to IEEE 802.1X authentication in nmstate-rust implementation. (2efed41)
+ - Add support to show running config only in nmstate-rust implementation. (8ed5100)
+
 ## [2.0.0] - 2022-02-14
 ### Breaking changes
  - Drop team support. (601ca60)
