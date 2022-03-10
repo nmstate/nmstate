@@ -165,11 +165,7 @@ impl LinuxBridgeInterface {
     pub(crate) fn vlan_filtering_is_enabled(&self) -> bool {
         self.bridge
             .as_ref()
-            .and_then(|br_conf| br_conf.port.as_ref())
-            .map(|port_confs| {
-                port_confs.iter().any(|port_conf| port_conf.vlan.is_some())
-            })
-            .unwrap_or(false)
+            .map_or(false, LinuxBridgeConfig::vlan_filtering_is_enabled)
     }
 
     // Port name list change is not this function's responsibility, top level
@@ -247,6 +243,13 @@ impl LinuxBridgeConfig {
             .transpose()?;
         Ok(())
     }
+
+    pub(crate) fn vlan_filtering_is_enabled(&self) -> bool {
+        self.port.as_ref().map_or(false, |p| {
+            p.iter()
+                .any(LinuxBridgePortConfig::vlan_filtering_is_enabled)
+        })
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
@@ -283,6 +286,12 @@ impl LinuxBridgePortConfig {
                 (Some(_), None) => true,
                 _ => false,
             }
+    }
+
+    fn vlan_filtering_is_enabled(&self) -> bool {
+        self.vlan
+            .as_ref()
+            .map_or(false, |v| *v != LinuxBridgePortVlanConfig::default())
     }
 }
 
