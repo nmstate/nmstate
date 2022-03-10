@@ -42,6 +42,8 @@ extern "C" {
 #define NMSTATE_FLAG_INCLUDE_STATUS_DATA    1 << 3
 #define NMSTATE_FLAG_INCLUDE_SECRETS        1 << 4
 #define NMSTATE_FLAG_NO_COMMIT              1 << 5
+#define NMSTATE_FLAG_MEMORY_ONLY            1 << 6
+#define NMSTATE_FLAG_RUNNING_CONFIG_ONLY    1 << 7
 
 /**
  * nmstate_net_state_retrieve - Retrieve network state
