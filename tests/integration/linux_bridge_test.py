@@ -147,6 +147,18 @@ def bond0(port0_up):
         yield bond0
 
 
+def _vlan_filtering_enabled(bridge_name):
+    _, npc_output, _ = exec_cmd(
+        cmd=(
+            "npc",
+            "iface",
+            bridge_name,
+        ),
+        check=True,
+    )
+    return "vlan_filtering: true" in npc_output
+
+
 def test_create_and_remove_linux_bridge_with_min_desired_state():
     bridge_name = TEST_BRIDGE0
     with linux_bridge(bridge_name, bridge_subtree_state=None) as desired_state:
@@ -461,6 +473,7 @@ class TestVlanFiltering:
         bridge_state[LinuxBridge.PORT_SUBTREE][0].update(trunk_port_state)
         with linux_bridge(TEST_BRIDGE0, bridge_state) as desired_state:
             assertlib.assert_state_match(desired_state)
+            assert _vlan_filtering_enabled(TEST_BRIDGE0)
 
     @pytest.mark.parametrize(
         "is_native_vlan", [True, False], ids=["native", "not-native"]
@@ -482,6 +495,7 @@ class TestVlanFiltering:
         bridge_state[LinuxBridge.PORT_SUBTREE][0].update(trunk_port_state)
         with linux_bridge(TEST_BRIDGE0, bridge_state) as desired_state:
             assertlib.assert_state_match(desired_state)
+            assert _vlan_filtering_enabled(TEST_BRIDGE0)
 
     def test_access_port_config(self, port0_up):
         access_port_state = generate_vlan_filtering_config(
@@ -492,6 +506,7 @@ class TestVlanFiltering:
         bridge_state[LinuxBridge.PORT_SUBTREE][0].update(access_port_state)
         with linux_bridge(TEST_BRIDGE0, bridge_state) as desired_state:
             assertlib.assert_state_match(desired_state)
+            assert _vlan_filtering_enabled(TEST_BRIDGE0)
 
     def test_update_trunk_port_to_access_port(
         self, bridge_with_trunk_port_and_native_config, port0_up
@@ -506,6 +521,7 @@ class TestVlanFiltering:
         bridge_state[LinuxBridge.PORT_SUBTREE][0].update(new_port_state)
         with linux_bridge(TEST_BRIDGE0, bridge_state) as desired_state:
             assertlib.assert_state_match(desired_state)
+            assert _vlan_filtering_enabled(TEST_BRIDGE0)
 
     def test_update_trunk_port_tag_ids(
         self, bridge_with_trunk_port_and_native_config, port0_up
@@ -520,6 +536,7 @@ class TestVlanFiltering:
         bridge_state[LinuxBridge.PORT_SUBTREE][0].update(new_port_state)
         with linux_bridge(TEST_BRIDGE0, bridge_state) as desired_state:
             assertlib.assert_state_match(desired_state)
+            assert _vlan_filtering_enabled(TEST_BRIDGE0)
 
     def test_update_access_port_tag_id(
         self, bridge_with_access_port_config, port0_up
@@ -534,6 +551,7 @@ class TestVlanFiltering:
         bridge_state[LinuxBridge.PORT_SUBTREE][0].update(new_port_state)
         with linux_bridge(TEST_BRIDGE0, bridge_state) as desired_state:
             assertlib.assert_state_match(desired_state)
+            assert _vlan_filtering_enabled(TEST_BRIDGE0)
 
     def test_activate_vlan_filtering_on_bridge(
         self, bridge0_with_port0, port0_up
@@ -548,6 +566,7 @@ class TestVlanFiltering:
         bridge_state[LinuxBridge.PORT_SUBTREE][0].update(new_port_state)
         with linux_bridge(TEST_BRIDGE0, bridge_state) as desired_state:
             assertlib.assert_state_match(desired_state)
+            assert _vlan_filtering_enabled(TEST_BRIDGE0)
 
     def test_disable_vlan_filtering_on_bridge(
         self,
@@ -564,6 +583,7 @@ class TestVlanFiltering:
             TEST_BRIDGE0, bridge_config_subtree
         ) as desired_state:
             assertlib.assert_state_match(desired_state)
+            assert not _vlan_filtering_enabled(TEST_BRIDGE0)
 
     def test_pretty_state_port_name_first(
         self, bridge_with_trunk_port_and_native_config
