@@ -200,6 +200,7 @@ function run_tests {
             tests/integration/lldp_test.py \
             tests/integration/bond_test.py \
             tests/integration/ethtool_test.py \
+            tests/integration/linux_bridge_test.py \
             ${nmstate_pytest_extra_args}"
         exec_cmd "
           env  \
@@ -249,16 +250,6 @@ function run_tests {
             test_rollback_for_vlans or \
             test_set_vlan_iface_down or \
             test_add_new_base_iface_with_vlan' \
-            ${nmstate_pytest_extra_args}"
-        exec_cmd "
-          env  \
-          PYTHONPATH=$CONTAINER_WORKSPACE/rust/src/python \
-          pytest \
-            $PYTEST_OPTIONS \
-            tests/integration/linux_bridge_test.py \
-            -k '\
-            not test_linux_bridge_over_bond_over_port_in_one_transaction and \
-            not test_explicitly_ignore_a_bridge_port' \
             ${nmstate_pytest_extra_args}"
         exec_cmd "
           env  \

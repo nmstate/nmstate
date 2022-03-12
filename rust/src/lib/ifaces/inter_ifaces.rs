@@ -1,4 +1,5 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use std::iter::FromIterator;
 
 use log::{debug, error, info};
 use serde::{
@@ -133,6 +134,24 @@ impl Interfaces {
         }
     }
 
+    pub(crate) fn ignored_kernel_iface_names(&self) -> Vec<String> {
+        let mut ret = Vec::new();
+        for iface in self.kernel_ifaces.values().filter(|i| i.is_ignore()) {
+            ret.push(iface.name().to_string());
+        }
+        ret
+    }
+
+    pub(crate) fn ignored_user_iface_name_types(
+        &self,
+    ) -> Vec<(String, InterfaceType)> {
+        let mut ret = Vec::new();
+        for iface in self.user_ifaces.values().filter(|i| i.is_ignore()) {
+            ret.push((iface.name().to_string(), iface.iface_type()));
+        }
+        ret
+    }
+
     pub fn push(&mut self, iface: Interface) {
         self.insert_order
             .push((iface.name().to_string(), iface.iface_type()));
@@ -170,10 +189,23 @@ impl Interfaces {
     }
 
     pub(crate) fn verify(&self, cur_ifaces: &Self) -> Result<(), NmstateError> {
+        let mut self_clone = self.clone();
+        let ignored_kernel_ifaces = self_clone.ignored_kernel_iface_names();
+
+        let ignored_user_ifaces = self_clone.ignored_user_iface_name_types();
+
+        self_clone.remove_ignored_ifaces(
+            &ignored_kernel_ifaces,
+            &ignored_user_ifaces,
+        );
         let mut cur_clone = cur_ifaces.clone();
+        cur_clone.remove_ignored_ifaces(
+            &ignored_kernel_ifaces,
+            &ignored_user_ifaces,
+        );
         cur_clone.remove_unknown_type_port();
 
-        for iface in self.to_vec() {
+        for iface in self_clone.to_vec() {
             if iface.is_absent() || (iface.is_virtual() && iface.is_down()) {
                 if let Some(cur_iface) =
                     cur_clone.get_iface(iface.name(), iface.iface_type())
@@ -232,6 +264,37 @@ impl Interfaces {
                 }
             } else if let Some(iface) = self.kernel_ifaces.get_mut(&ctrl_name) {
                 iface.remove_port(&port_name)
+            }
+        }
+    }
+
+    pub(crate) fn remove_ignored_ifaces(
+        &mut self,
+        kernel_iface_names: &[String],
+        user_ifaces: &[(String, InterfaceType)],
+    ) {
+        self.kernel_ifaces
+            .retain(|iface_name, _| !kernel_iface_names.contains(iface_name));
+
+        self.user_ifaces.retain(|(iface_name, iface_type), _| {
+            !user_ifaces.contains(&(iface_name.to_string(), iface_type.clone()))
+        });
+
+        let kernel_iface_names = HashSet::from_iter(
+            kernel_iface_names.iter().map(|i| i.to_string()),
+        );
+
+        for iface in self
+            .kernel_ifaces
+            .values_mut()
+            .chain(self.user_ifaces.values_mut())
+        {
+            if let Some(ports) = iface.ports() {
+                let ports: HashSet<String> =
+                    HashSet::from_iter(ports.iter().map(|p| p.to_string()));
+                for ignore_port in kernel_iface_names.intersection(&ports) {
+                    iface.remove_port(ignore_port);
+                }
             }
         }
     }
@@ -374,7 +437,8 @@ impl Interfaces {
     ) -> Result<(), NmstateError> {
         let mut resolved_ifaces: Vec<Interface> = Vec::new();
         for (iface_name, iface) in self.kernel_ifaces.iter() {
-            if iface.iface_type() != InterfaceType::Unknown {
+            if iface.iface_type() != InterfaceType::Unknown || iface.is_ignore()
+            {
                 continue;
             }
 

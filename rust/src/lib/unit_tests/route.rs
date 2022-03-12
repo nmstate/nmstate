@@ -161,7 +161,7 @@ fn test_verify_desire_route_not_found() {
     cur_route_entries.pop();
     cur_routes.config = Some(cur_route_entries);
 
-    let result = des_routes.verify(&cur_routes);
+    let result = des_routes.verify(&cur_routes, &[]);
     assert!(result.is_err());
     assert_eq!(result.err().unwrap().kind(), ErrorKind::VerificationError);
 }
@@ -178,7 +178,7 @@ fn test_verify_absent_route_still_found() {
     absent_route_entries.push(absent_route);
     absent_routes.config = Some(absent_route_entries);
 
-    let result = absent_routes.verify(&cur_routes);
+    let result = absent_routes.verify(&cur_routes, &[]);
     assert!(result.is_err());
     assert_eq!(result.err().unwrap().kind(), ErrorKind::VerificationError);
 }
@@ -196,7 +196,7 @@ fn test_verify_current_has_more_routes() {
 
     let des_routes = gen_test_routes_conf();
 
-    des_routes.verify(&cur_routes).unwrap();
+    des_routes.verify(&cur_routes, &[]).unwrap();
 }
 
 fn gen_test_routes_conf() -> Routes {
@@ -224,4 +224,66 @@ fn gen_route_entry(
     ret.next_hop_addr = Some(next_hop_addr.to_string());
     ret.metric = Some(TEST_ROUTE_METRIC);
     ret
+}
+
+#[test]
+fn test_route_ignore_iface() {
+    let mut routes: Routes = serde_yaml::from_str(
+        r#"
+config:
+- destination: 0.0.0.0/0
+  next-hop-address: 192.0.2.1
+  next-hop-interface: eth1
+- destination: ::/0
+  next-hop-address: 2001:db8:1::2
+  next-hop-interface: eth1
+- destination: 0.0.0.0/0
+  next-hop-address: 192.0.2.1
+  next-hop-interface: eth2
+- destination: ::/0
+  next-hop-address: 2001:db8:1::2
+  next-hop-interface: eth2
+"#,
+    )
+    .unwrap();
+    routes.remove_ignored_iface_routes(&vec!["eth1".to_string()]);
+
+    let config_routes = routes.config.unwrap();
+
+    assert_eq!(config_routes.len(), 2);
+    assert_eq!(config_routes[0].next_hop_iface, Some("eth2".to_string()));
+    assert_eq!(config_routes[1].next_hop_iface, Some("eth2".to_string()));
+}
+
+#[test]
+fn test_route_verify_ignore_iface() {
+    let desire: Routes = serde_yaml::from_str(
+        r#"
+config:
+- destination: 0.0.0.0/0
+  state: absent
+- destination: ::/0
+  state: absent
+"#,
+    )
+    .unwrap();
+    let current: Routes = serde_yaml::from_str(
+        r#"
+config:
+- destination: 0.0.0.0/0
+  next-hop-address: 192.0.2.1
+  next-hop-interface: eth1
+- destination: ::/0
+  next-hop-address: 2001:db8:1::2
+  next-hop-interface: eth1
+"#,
+    )
+    .unwrap();
+    desire.verify(&current, &["eth1".to_string()]).unwrap();
+
+    let result = desire.verify(&current, &[]);
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::VerificationError);
+    }
 }
