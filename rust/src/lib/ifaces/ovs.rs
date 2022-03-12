@@ -80,6 +80,18 @@ impl OvsBridgeInterface {
         }
         ret
     }
+
+    // Only support remove non-bonding port or the bond itself as bond require
+    // two ports, removal any of them will trigger error.
+    pub(crate) fn remove_port(&mut self, port_name: &str) {
+        if let Some(br_ports) = self
+            .bridge
+            .as_mut()
+            .and_then(|br_conf| br_conf.ports.as_mut())
+        {
+            br_ports.retain(|p| p.name.as_str() != port_name)
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]

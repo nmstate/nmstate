@@ -46,7 +46,11 @@ impl Routes {
     // * desired absent route is removed unless another matching route been
     //   added.
     // * desired static route exists.
-    pub fn verify(&self, current: &Self) -> Result<(), NmstateError> {
+    pub(crate) fn verify(
+        &self,
+        current: &Self,
+        ignored_ifaces: &[String],
+    ) -> Result<(), NmstateError> {
         if let Some(config_routes) = self.config.as_ref() {
             let cur_config_routes = match current.config.as_ref() {
                 Some(c) => c.to_vec(),
@@ -78,7 +82,14 @@ impl Routes {
                 }
 
                 if let Some(cur_route) =
-                    cur_config_routes.iter().find(|r| absent_route.is_match(r))
+                    cur_config_routes.iter().find(|r|
+                        if let Some(iface) = r.next_hop_iface.as_ref() {
+                            !ignored_ifaces.contains(
+                                iface
+                            )
+                        } else {
+                            true
+                        } && absent_route.is_match(r))
                 {
                     let e = NmstateError::new(
                         ErrorKind::VerificationError,
@@ -189,6 +200,21 @@ impl Routes {
         }
 
         ret
+    }
+
+    pub(crate) fn remove_ignored_iface_routes(
+        &mut self,
+        iface_names: &[String],
+    ) {
+        if let Some(config_routes) = self.config.as_mut() {
+            config_routes.retain(|r| {
+                if let Some(i) = r.next_hop_iface.as_ref() {
+                    !iface_names.contains(i)
+                } else {
+                    true
+                }
+            })
+        }
     }
 }
 
