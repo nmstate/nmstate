@@ -214,6 +214,30 @@ impl NetworkState {
         cur_net_state.set_include_secrets(true);
         cur_net_state.retrieve()?;
 
+        let ignored_kernel_ifaces = desire_state_to_apply
+            .interfaces
+            .ignored_kernel_iface_names();
+
+        let ignored_user_ifaces = desire_state_to_apply
+            .interfaces
+            .ignored_user_iface_name_types();
+
+        desire_state_to_apply.interfaces.remove_ignored_ifaces(
+            &ignored_kernel_ifaces,
+            &ignored_user_ifaces,
+        );
+        cur_net_state.interfaces.remove_ignored_ifaces(
+            &ignored_kernel_ifaces,
+            &ignored_user_ifaces,
+        );
+
+        desire_state_to_apply
+            .routes
+            .remove_ignored_iface_routes(ignored_kernel_ifaces.as_slice());
+        cur_net_state
+            .routes
+            .remove_ignored_iface_routes(ignored_kernel_ifaces.as_slice());
+
         desire_state_to_verify
             .interfaces
             .resolve_unknown_ifaces(&cur_net_state.interfaces)?;
@@ -324,7 +348,10 @@ impl NetworkState {
 
     fn verify(&self, current: &Self) -> Result<(), NmstateError> {
         self.interfaces.verify(&current.interfaces)?;
-        self.routes.verify(&current.routes)?;
+        self.routes.verify(
+            &current.routes,
+            &self.interfaces.ignored_kernel_iface_names(),
+        )?;
         self.rules.verify(&current.rules)?;
         self.dns.verify(&current.dns)?;
         self.ovsdb.verify(&current.ovsdb)

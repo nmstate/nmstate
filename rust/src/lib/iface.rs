@@ -134,6 +134,7 @@ pub enum InterfaceState {
     Down,
     Absent,
     Unknown,
+    Ignore,
 }
 
 impl Default for InterfaceState {
@@ -148,6 +149,7 @@ impl From<&str> for InterfaceState {
             "up" => Self::Up,
             "down" => Self::Down,
             "absent" => Self::Absent,
+            "ignore" => Self::Ignore,
             _ => Self::Unknown,
         }
     }
@@ -364,6 +366,10 @@ impl Interface {
 
     pub fn is_down(&self) -> bool {
         self.base_iface().state == InterfaceState::Down
+    }
+
+    pub fn is_ignore(&self) -> bool {
+        self.base_iface().state == InterfaceState::Ignore
     }
 
     pub fn is_virtual(&self) -> bool {
@@ -648,6 +654,8 @@ impl Interface {
 
     pub(crate) fn remove_port(&mut self, port_name: &str) {
         if let Interface::LinuxBridge(br_iface) = self {
+            br_iface.remove_port(port_name);
+        } else if let Interface::OvsBridge(br_iface) = self {
             br_iface.remove_port(port_name);
         } else if let Interface::Bond(iface) = self {
             iface.remove_port(port_name);
