@@ -48,18 +48,19 @@ fn net_state_to_nispor(
             np_ifaces.push(nmstate_iface_to_np(iface, np_iface_type)?);
         } else if iface.is_absent() {
             println!("del {:?} {:?}", iface.name(), iface.iface_type());
-            np_ifaces.push(nispor::IfaceConf {
-                name: iface.name().to_string(),
-                iface_type: Some(nmstate_iface_type_to_np(&iface.iface_type())),
-                state: nispor::IfaceState::Absent,
-                ..Default::default()
-            });
+            let mut iface_conf = nispor::IfaceConf::default();
+            iface_conf.name = iface.name().to_string();
+            iface_conf.iface_type =
+                Some(nmstate_iface_type_to_np(&iface.iface_type()));
+            iface_conf.state = nispor::IfaceState::Absent;
+            np_ifaces.push(iface_conf);
         }
     }
 
-    Ok(nispor::NetConf {
-        ifaces: Some(np_ifaces),
-    })
+    let mut net_conf = nispor::NetConf::default();
+    net_conf.ifaces = Some(np_ifaces);
+
+    Ok(net_conf)
 }
 
 fn nmstate_iface_type_to_np(
@@ -79,12 +80,10 @@ fn nmstate_iface_to_np(
     nms_iface: &Interface,
     np_iface_type: nispor::IfaceType,
 ) -> Result<nispor::IfaceConf, NmstateError> {
-    let mut np_iface = nispor::IfaceConf {
-        name: nms_iface.name().to_string(),
-        iface_type: Some(np_iface_type),
-        state: nispor::IfaceState::Up,
-        ..Default::default()
-    };
+    let mut np_iface = nispor::IfaceConf::default();
+    np_iface.name = nms_iface.name().to_string();
+    np_iface.iface_type = Some(np_iface_type);
+    np_iface.state = nispor::IfaceState::Up;
     let base_iface = &nms_iface.base_iface();
     if let Some(ctrl_name) = &base_iface.controller {
         np_iface.controller = Some(ctrl_name.to_string())
