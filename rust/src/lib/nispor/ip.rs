@@ -76,9 +76,11 @@ pub(crate) fn nmstate_ipv4_to_np(
     let mut np_ip_conf = nispor::IpConf::default();
     if let Some(nms_ipv4) = nms_ipv4 {
         for nms_addr in &nms_ipv4.addresses {
-            np_ip_conf.addresses.push(nispor::IpAddrConf {
-                address: nms_addr.ip.to_string(),
-                prefix_len: nms_addr.prefix_length as u8,
+            np_ip_conf.addresses.push({
+                let mut ip_conf = nispor::IpAddrConf::default();
+                ip_conf.address = nms_addr.ip.to_string();
+                ip_conf.prefix_len = nms_addr.prefix_length as u8;
+                ip_conf
             });
         }
     }
@@ -91,9 +93,11 @@ pub(crate) fn nmstate_ipv6_to_np(
     let mut np_ip_conf = nispor::IpConf::default();
     if let Some(nms_ipv6) = nms_ipv6 {
         for nms_addr in &nms_ipv6.addresses {
-            np_ip_conf.addresses.push(nispor::IpAddrConf {
-                address: nms_addr.ip.to_string(),
-                prefix_len: nms_addr.prefix_length as u8,
+            np_ip_conf.addresses.push({
+                let mut ip_conf = nispor::IpAddrConf::default();
+                ip_conf.address = nms_addr.ip.to_string();
+                ip_conf.prefix_len = nms_addr.prefix_length as u8;
+                ip_conf
             });
         }
     }
