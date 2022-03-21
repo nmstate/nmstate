@@ -18,8 +18,10 @@ pub(crate) fn np_vlan_to_nmstate(
 pub(crate) fn nms_vlan_conf_to_np(
     nms_vlan_conf: Option<&VlanConfig>,
 ) -> Option<nispor::VlanConf> {
-    nms_vlan_conf.map(|nms_vlan_conf| nispor::VlanConf {
-        vlan_id: nms_vlan_conf.id,
-        base_iface: nms_vlan_conf.base_iface.clone(),
+    nms_vlan_conf.map(|nms_vlan_conf| {
+        let mut np_vlan_conf = nispor::VlanConf::default();
+        np_vlan_conf.vlan_id = nms_vlan_conf.id;
+        np_vlan_conf.base_iface = nms_vlan_conf.base_iface.clone();
+        np_vlan_conf
     })
 }
