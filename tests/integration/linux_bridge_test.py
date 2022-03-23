@@ -581,7 +581,7 @@ class TestVlanFiltering:
         with linux_bridge(
             TEST_BRIDGE0, bridge_config_subtree
         ) as desired_state:
-            assertlib.assert_state_match(desired_state)
+            assertlib.assert_state(desired_state)
             assert not _vlan_filtering_enabled(TEST_BRIDGE0)
 
     def test_pretty_state_port_name_first(
