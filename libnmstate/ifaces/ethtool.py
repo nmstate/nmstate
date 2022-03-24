@@ -20,6 +20,7 @@
 from copy import deepcopy
 import logging
 
+from libnmstate.error import NmstateValueError
 from libnmstate.schema import Ethtool
 
 
@@ -93,6 +94,17 @@ class IfaceEthtool:
             info[Ethtool.Coalesce.CONFIG_SUBTREE] = self.coalesce.to_dict()
         return info
 
+    def pre_edit_validation_and_cleanup(self):
+        self._validate_ethtool_supported_features()
+
+    def _validate_ethtool_supported_features(self):
+        if self.feature:
+            for feature_name, value in self.feature.items():
+                if feature_name not in self.feature._SUPPORTED_FEATURES:
+                    raise NmstateValueError(
+                        f"The feature {feature_name} is not supported."
+                    )
+
 
 class IfaceEthtoolPause:
     def __init__(self, pause_info):
@@ -152,6 +164,18 @@ class IfaceEthtoolFeature:
         "ntuple-filters": "rx-ntuple-filter",
         "rxhash": "rx-hashing",
         "receive-hashing": "rx-hashing",
+    }
+    _SUPPORTED_FEATURES = {
+        "rx-checksum",
+        "tx-scatter-gather",
+        "tx-tcp-segmentation",
+        "tx-gro",
+        "tx-generic-segmentation",
+        "rx-hashing",
+        "rx-lro",
+        "rx-ntuple-filter",
+        "rx-vlan-hw-parse",
+        "tx-vlan-hw-insert",
     }
 
     def __init__(self, feature_info):

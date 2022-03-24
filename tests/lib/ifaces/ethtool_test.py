@@ -137,3 +137,25 @@ class TestIfaceEthtool:
         des_iface = BaseIface(des_info)
         cur_iface = BaseIface(cur_info)
         assert des_iface.state_for_verify() == cur_iface.state_for_verify()
+
+    def test_valid_ethtool(self):
+        iface_info = gen_foo_iface_info()
+        iface_info[Ethtool.CONFIG_SUBTREE] = {
+            Ethtool.Pause.CONFIG_SUBTREE: {
+                Ethtool.Pause.AUTO_NEGOTIATION: False,
+                Ethtool.Pause.TX: True,
+                Ethtool.Pause.RX: True,
+            }
+        }
+        iface = BaseIface(iface_info)
+        iface.mark_as_desired()
+        iface.pre_edit_validation_and_cleanup()
+
+    def test_valid_ethtool_feature(self):
+        iface_info = gen_foo_iface_info()
+        iface_info[Ethtool.CONFIG_SUBTREE] = {
+            Ethtool.Feature.CONFIG_SUBTREE: {"rx": False}
+        }
+        iface = BaseIface(iface_info)
+        iface.mark_as_desired()
+        iface.pre_edit_validation_and_cleanup()
