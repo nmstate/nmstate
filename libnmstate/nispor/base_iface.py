@@ -208,6 +208,18 @@ class EthtoolInfo:
         Ethtool.Coalesce.TX_USECS_IRQ: "tx_usecs_irq",
         Ethtool.Coalesce.TX_USECS_LOW: "tx_usecs_low",
     }
+    _NISPOR_ETHTOOL_FEATURE_SUPPORTED = [
+        "rx-checksum",
+        "tx-scatter-gather",
+        "tx-tcp-segmentation",
+        "tx-gro",
+        "tx-generic-segmentation",
+        "rx-hashing",
+        "rx-lro",
+        "rx-ntuple-filter",
+        "rx-vlan-hw-parse",
+        "tx-vlan-hw-insert",
+    ]
 
     def __init__(self, np_ethtool):
         self._np_ethtool = np_ethtool
@@ -223,7 +235,11 @@ class EthtoolInfo:
             }
         np_features = self._np_ethtool.features
         if np_features:
-            info[Ethtool.Feature.CONFIG_SUBTREE] = np_features.changeable
+            features = {}
+            for (key, value) in np_features.changeable.items():
+                if key in self._NISPOR_ETHTOOL_FEATURE_SUPPORTED:
+                    features[key] = value
+            info[Ethtool.Feature.CONFIG_SUBTREE] = features
 
         np_ring = self._np_ethtool.ring
         if np_ring:

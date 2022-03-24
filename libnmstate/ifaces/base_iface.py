@@ -301,10 +301,10 @@ class BaseIface:
                 ip_state.remove_link_local_address()
                 self._info[family] = ip_state.to_dict()
                 if self.ethtool:
-                    self.ethtool.pre_edit_validation_and_cleanup()
                     self.ethtool.canonicalize(
                         self._origin_info.get(Ethtool.CONFIG_SUBTREE, {})
                     )
+                    self.ethtool.pre_edit_validation_and_cleanup()
                     self._info[Ethtool.CONFIG_SUBTREE] = self.ethtool.to_dict()
 
             if self.is_absent and not self._save_to_disk:
