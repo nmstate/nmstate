@@ -170,7 +170,7 @@ class TestIfaceEthtool:
     def test_valid_ethtool_feature(self):
         iface_info = gen_foo_iface_info()
         iface_info[Ethtool.CONFIG_SUBTREE] = {
-            Ethtool.Feature.CONFIG_SUBTREE: {"rx-all": False}
+            Ethtool.Feature.CONFIG_SUBTREE: {"rx": False}
         }
         iface = BaseIface(iface_info)
         iface.mark_as_desired()
