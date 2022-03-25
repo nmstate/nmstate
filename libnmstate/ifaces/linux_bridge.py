@@ -192,14 +192,37 @@ class LinuxBridgeIface(BridgeIface):
     def gen_metadata(self, ifaces):
         super().gen_metadata(ifaces)
         if not self.is_absent:
+            original_ports_config = self.original_desire_dict.get(
+                LinuxBridge.CONFIG_SUBTREE, {}
+            ).get(LinuxBridge.PORT_SUBTREE, [])
             for port_config in self.port_configs:
                 port_iface = ifaces.all_kernel_ifaces.get(
                     port_config[LinuxBridge.Port.NAME]
                 )
                 if port_iface:
+                    original_port = self._get_port_config(
+                        original_ports_config, port_iface.name
+                    )
+                    if (
+                        original_port
+                        and original_port.get(
+                            LinuxBridge.Port.VLAN_SUBTREE, None
+                        )
+                        == {}
+                    ):
+                        port_config[
+                            LinuxBridge.Port.VLAN_SUBTREE
+                        ] = original_port.get(LinuxBridge.Port.VLAN_SUBTREE)
                     port_iface.update(
                         {BridgeIface.BRPORT_OPTIONS_METADATA: port_config}
                     )
+
+    def _get_port_config(self, ports, port_name):
+        for port_config in ports:
+            if port_config[LinuxBridge.Port.NAME] == port_name:
+                return port_config
+
+        return None
 
     def remove_port(self, port_name):
         if self._bridge_config:
