@@ -22,6 +22,7 @@ mod conn;
 mod dns;
 mod ethtool;
 mod ieee8021x;
+mod infiniband;
 mod ip;
 mod mac_vlan;
 mod ovs;
@@ -42,6 +43,7 @@ pub use crate::connection::bridge::{
 pub use crate::connection::conn::{NmConnection, NmSettingConnection};
 pub use crate::connection::ethtool::NmSettingEthtool;
 pub use crate::connection::ieee8021x::NmSetting8021X;
+pub use crate::connection::infiniband::NmSettingInfiniBand;
 pub use crate::connection::ip::{NmSettingIp, NmSettingIpMethod};
 pub use crate::connection::mac_vlan::NmSettingMacVlan;
 pub use crate::connection::ovs::{

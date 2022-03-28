@@ -39,7 +39,7 @@ impl BondInterface {
             .map(|ports| ports.as_slice().iter().map(|p| p.as_str()).collect())
     }
 
-    fn mode(&self) -> Option<BondMode> {
+    pub(crate) fn mode(&self) -> Option<BondMode> {
         self.bond.as_ref().and_then(|bond_conf| bond_conf.mode)
     }
 
