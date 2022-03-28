@@ -10,6 +10,7 @@ use crate::{
     nm::bridge::{gen_nm_br_port_setting, gen_nm_br_setting},
     nm::ethtool::gen_ethtool_setting,
     nm::ieee8021x::gen_nm_802_1x_setting,
+    nm::infiniband::gen_nm_ib_setting,
     nm::ip::gen_nm_ip_setting,
     nm::ovs::{
         create_ovs_port_nm_conn, gen_nm_ovs_br_setting,
@@ -35,6 +36,7 @@ pub(crate) const NM_SETTING_MACVLAN_SETTING_NAME: &str = "macvlan";
 pub(crate) const NM_SETTING_VRF_SETTING_NAME: &str = "vrf";
 pub(crate) const NM_SETTING_VLAN_SETTING_NAME: &str = "vlan";
 pub(crate) const NM_SETTING_VXLAN_SETTING_NAME: &str = "vxlan";
+pub(crate) const NM_SETTING_INFINIBAND_SETTING_NAME: &str = "infiniband";
 
 pub(crate) const NM_SETTING_CONTROLLERS: [&str; 5] = [
     NM_SETTING_BOND_SETTING_NAME,
@@ -103,7 +105,10 @@ pub(crate) fn iface_to_nm_connections(
         iface.base_iface().rules.as_deref(),
         &mut nm_conn,
     )?;
-    gen_nm_wired_setting(iface, &mut nm_conn);
+    // InfiniBand over IP can not have layer 2 configuration.
+    if iface.iface_type() != InterfaceType::InfiniBand {
+        gen_nm_wired_setting(iface, &mut nm_conn);
+    }
     gen_nm_ovs_ext_ids_setting(iface, &mut nm_conn);
     gen_nm_802_1x_setting(iface, &mut nm_conn);
     gen_nm_user_setting(iface, &mut nm_conn);
@@ -176,6 +181,9 @@ pub(crate) fn iface_to_nm_connections(
                 nm_conn.vrf = Some(NmSettingVrf::from(vrf_conf));
             }
         }
+        Interface::InfiniBand(iface) => {
+            gen_nm_ib_setting(iface, &mut nm_conn);
+        }
         _ => (),
     };
 
@@ -218,6 +226,9 @@ pub(crate) fn iface_type_to_nm(
         }
         InterfaceType::Vrf => Ok(NM_SETTING_VRF_SETTING_NAME.to_string()),
         InterfaceType::Veth => Ok(NM_SETTING_VETH_SETTING_NAME.to_string()),
+        InterfaceType::InfiniBand => {
+            Ok(NM_SETTING_INFINIBAND_SETTING_NAME.to_string())
+        }
         InterfaceType::Other(s) => Ok(s.to_string()),
         _ => Err(NmstateError::new(
             ErrorKind::NotImplementedError,

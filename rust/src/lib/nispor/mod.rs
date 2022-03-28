@@ -4,6 +4,7 @@ mod bond;
 mod error;
 mod ethernet;
 mod ethtool;
+mod infiniband;
 mod ip;
 mod linux_bridge;
 mod linux_bridge_port_vlan;

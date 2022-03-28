@@ -13,7 +13,7 @@ use crate::{
 #[non_exhaustive]
 pub struct BaseInterface {
     pub name: String,
-    #[serde(skip_serializing_if = "is_option_string_empty")]
+    #[serde(skip_serializing_if = "crate::serializer::is_option_string_empty")]
     pub description: Option<String>,
     #[serde(skip)]
     pub prop_list: Vec<&'static str>,
@@ -236,12 +236,4 @@ fn default_state() -> InterfaceState {
 
 fn default_iface_type() -> InterfaceType {
     InterfaceType::Unknown
-}
-
-fn is_option_string_empty(data: &Option<String>) -> bool {
-    if let Some(s) = data {
-        s.is_empty()
-    } else {
-        false
-    }
 }

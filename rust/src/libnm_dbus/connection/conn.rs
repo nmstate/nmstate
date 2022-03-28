@@ -27,6 +27,7 @@ use crate::{
     connection::bridge::{NmSettingBridge, NmSettingBridgePort},
     connection::ethtool::NmSettingEthtool,
     connection::ieee8021x::NmSetting8021X,
+    connection::infiniband::NmSettingInfiniBand,
     connection::ip::NmSettingIp,
     connection::mac_vlan::NmSettingMacVlan,
     connection::ovs::{
@@ -81,6 +82,7 @@ pub struct NmConnection {
     pub ieee8021x: Option<NmSetting8021X>,
     pub user: Option<NmSettingUser>,
     pub ethtool: Option<NmSettingEthtool>,
+    pub infiniband: Option<NmSettingInfiniBand>,
     #[serde(skip)]
     pub(crate) obj_path: String,
     _other: HashMap<String, HashMap<String, zvariant::OwnedValue>>,
@@ -140,6 +142,11 @@ impl TryFrom<NmConnectionDbusOwnedValue> for NmConnection {
             ieee8021x: _from_map!(v, "802-1x", NmSetting8021X::try_from)?,
             user: _from_map!(v, "user", NmSettingUser::try_from)?,
             ethtool: _from_map!(v, "ethtool", NmSettingEthtool::try_from)?,
+            infiniband: _from_map!(
+                v,
+                "infiniband",
+                NmSettingInfiniBand::try_from
+            )?,
             _other: v,
             ..Default::default()
         })
@@ -227,6 +234,9 @@ impl NmConnection {
         if let Some(ethtool) = &self.ethtool {
             sections.push(("ethtool", ethtool.to_keyfile()?));
         }
+        if let Some(ib) = &self.infiniband {
+            sections.push(("infiniband", ib.to_keyfile()?));
+        }
 
         keyfile_sections_to_string(&sections)
     }
@@ -292,6 +302,9 @@ impl NmConnection {
         }
         if let Some(v) = &self.ethtool {
             ret.insert("ethtool", v.to_value()?);
+        }
+        if let Some(v) = &self.infiniband {
+            ret.insert("infiniband", v.to_value()?);
         }
         for (key, setting_value) in &self._other {
             let mut other_setting_value: HashMap<&str, zvariant::Value> =
