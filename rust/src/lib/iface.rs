@@ -3,9 +3,10 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::{
     state::get_json_value_difference, BaseInterface, BondInterface,
-    DummyInterface, ErrorKind, EthernetInterface, LinuxBridgeInterface,
-    MacVlanInterface, MacVtapInterface, NmstateError, OvsBridgeInterface,
-    OvsInterface, VlanInterface, VrfInterface, VxlanInterface,
+    DummyInterface, ErrorKind, EthernetInterface, InfiniBandInterface,
+    LinuxBridgeInterface, MacVlanInterface, MacVtapInterface, NmstateError,
+    OvsBridgeInterface, OvsInterface, VlanInterface, VrfInterface,
+    VxlanInterface,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -25,6 +26,7 @@ pub enum InterfaceType {
     Vlan,
     Vrf,
     Vxlan,
+    InfiniBand,
     Unknown,
     Other(String),
 }
@@ -52,6 +54,7 @@ impl From<&str> for InterfaceType {
             "vlan" => InterfaceType::Vlan,
             "vrf" => InterfaceType::Vrf,
             "vxlan" => InterfaceType::Vxlan,
+            "infiniband" => InterfaceType::InfiniBand,
             "unknown" => InterfaceType::Unknown,
             _ => InterfaceType::Other(s.to_string()),
         }
@@ -78,6 +81,7 @@ impl std::fmt::Display for InterfaceType {
                 InterfaceType::Vlan => "vlan",
                 InterfaceType::Vrf => "vrf",
                 InterfaceType::Vxlan => "vxlan",
+                InterfaceType::InfiniBand => "infiniband",
                 InterfaceType::Unknown => "unknown",
                 InterfaceType::Other(ref s) => s,
             }
@@ -184,6 +188,7 @@ pub enum Interface {
     MacVlan(MacVlanInterface),
     MacVtap(MacVtapInterface),
     Vrf(VrfInterface),
+    InfiniBand(InfiniBandInterface),
 }
 
 impl<'de> Deserialize<'de> for Interface {
@@ -254,6 +259,11 @@ impl<'de> Deserialize<'de> for Interface {
                 let inner = VrfInterface::deserialize(v)
                     .map_err(serde::de::Error::custom)?;
                 Ok(Interface::Vrf(inner))
+            }
+            Some(InterfaceType::InfiniBand) => {
+                let inner = InfiniBandInterface::deserialize(v)
+                    .map_err(serde::de::Error::custom)?;
+                Ok(Interface::InfiniBand(inner))
             }
             Some(iface_type) => {
                 warn!("Unsupported interface type {}", iface_type);
@@ -348,6 +358,13 @@ impl Interface {
                 new_iface.base = iface.base.clone_name_type_only();
                 Self::Vrf(new_iface)
             }
+            Self::InfiniBand(iface) => {
+                let new_iface = InfiniBandInterface {
+                    base: iface.base.clone_name_type_only(),
+                    ..Default::default()
+                };
+                Self::InfiniBand(new_iface)
+            }
             Self::Unknown(iface) => {
                 let mut new_iface = UnknownInterface::new();
                 new_iface.base = iface.base.clone_name_type_only();
@@ -373,7 +390,10 @@ impl Interface {
     }
 
     pub fn is_virtual(&self) -> bool {
-        !matches!(self, Self::Ethernet(_) | Self::Unknown(_))
+        !matches!(
+            self,
+            Self::Ethernet(_) | Self::Unknown(_) | Self::InfiniBand(_)
+        )
     }
 
     // OVS Interface should be deleted along with its controller
@@ -394,6 +414,7 @@ impl Interface {
             Self::MacVlan(iface) => &iface.base,
             Self::MacVtap(iface) => &iface.base,
             Self::Vrf(iface) => &iface.base,
+            Self::InfiniBand(iface) => &iface.base,
             Self::Unknown(iface) => &iface.base,
         }
     }
@@ -411,6 +432,7 @@ impl Interface {
             Self::MacVlan(iface) => &mut iface.base,
             Self::MacVtap(iface) => &mut iface.base,
             Self::Vrf(iface) => &mut iface.base,
+            Self::InfiniBand(iface) => &mut iface.base,
             Self::Unknown(iface) => &mut iface.base,
         }
     }
@@ -526,6 +548,16 @@ impl Interface {
             Self::Vrf(iface) => {
                 if let Self::Vrf(other_iface) = other {
                     iface.update_vrf(other_iface);
+                } else {
+                    warn!(
+                        "Don't know how to update iface {:?} with {:?}",
+                        iface, other
+                    );
+                }
+            }
+            Self::InfiniBand(iface) => {
+                if let Self::InfiniBand(other_iface) = other {
+                    iface.update_ib(other_iface);
                 } else {
                     warn!(
                         "Don't know how to update iface {:?} with {:?}",
@@ -669,6 +701,7 @@ impl Interface {
             Interface::OvsInterface(ovs) => ovs.parent(),
             Interface::MacVlan(vlan) => vlan.parent(),
             Interface::MacVtap(vtap) => vtap.parent(),
+            Interface::InfiniBand(ib) => ib.parent(),
             _ => None,
         }
     }

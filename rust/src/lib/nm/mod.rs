@@ -9,6 +9,7 @@ mod dns;
 mod error;
 mod ethtool;
 mod ieee8021x;
+mod infiniband;
 mod ip;
 mod lldp;
 mod mac_vlan;

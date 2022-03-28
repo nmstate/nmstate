@@ -4,9 +4,9 @@ use std::iter::FromIterator;
 use log::{debug, info};
 
 use crate::{
-    BaseInterface, ErrorKind, EthernetInterface, Interface, InterfaceIpv4,
-    InterfaceIpv6, InterfaceState, InterfaceType, Interfaces, NmstateError,
-    OvsInterface,
+    BaseInterface, BondMode, ErrorKind, EthernetInterface, Interface,
+    InterfaceIpv4, InterfaceIpv6, InterfaceState, InterfaceType, Interfaces,
+    NmstateError, OvsInterface,
 };
 
 pub(crate) fn handle_changed_ports(
@@ -431,4 +431,53 @@ pub(crate) fn set_missing_port_to_eth(ifaces: &mut Interfaces) {
             .kernel_ifaces
             .insert(iface_name, Interface::Ethernet(iface));
     }
+}
+
+// Infiniband over IP can only be port of active_backup bond as it is a layer 3
+// interface like tun.
+pub(crate) fn check_infiniband_as_ports(
+    desired: &Interfaces,
+    current: &Interfaces,
+) -> Result<(), NmstateError> {
+    let ib_iface_names: HashSet<&str> = desired
+        .kernel_ifaces
+        .values()
+        .chain(current.kernel_ifaces.values())
+        .filter(|iface| iface.iface_type() == InterfaceType::InfiniBand)
+        .map(|iface| iface.name())
+        .collect();
+
+    for iface in desired.kernel_ifaces.values().filter(|i| i.is_controller()) {
+        if let Some(ports) = iface.ports() {
+            let ports = HashSet::from_iter(ports.iter().cloned());
+            if !ib_iface_names.is_disjoint(&ports) {
+                if let Interface::Bond(iface) = iface {
+                    let bond_mode = iface.mode().or_else(|| {
+                        if let Some(Interface::Bond(cur_iface)) =
+                            current.kernel_ifaces.get(iface.base.name.as_str())
+                        {
+                            cur_iface.mode()
+                        } else {
+                            None
+                        }
+                    });
+                    if bond_mode == Some(BondMode::ActiveBackup) {
+                        continue;
+                    }
+                }
+                let e = NmstateError::new(
+                    ErrorKind::InvalidArgument,
+                    format!(
+                        "Infiniband interface {:?} cannot use as \
+                        port of {}. Only active-backup bond allowed.",
+                        ib_iface_names.intersection(&ports),
+                        iface.name()
+                    ),
+                );
+                log::error!("{}", e);
+                return Err(e);
+            }
+        }
+    }
+    Ok(())
 }

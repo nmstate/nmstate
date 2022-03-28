@@ -12,11 +12,11 @@ use crate::{
         create_index_for_nm_conns_by_ctrler_type,
         create_index_for_nm_conns_by_name_type, get_port_nm_conns,
         NM_SETTING_BOND_SETTING_NAME, NM_SETTING_BRIDGE_SETTING_NAME,
-        NM_SETTING_DUMMY_SETTING_NAME, NM_SETTING_MACVLAN_SETTING_NAME,
-        NM_SETTING_OVS_BRIDGE_SETTING_NAME, NM_SETTING_OVS_IFACE_SETTING_NAME,
-        NM_SETTING_VETH_SETTING_NAME, NM_SETTING_VLAN_SETTING_NAME,
-        NM_SETTING_VRF_SETTING_NAME, NM_SETTING_VXLAN_SETTING_NAME,
-        NM_SETTING_WIRED_SETTING_NAME,
+        NM_SETTING_DUMMY_SETTING_NAME, NM_SETTING_INFINIBAND_SETTING_NAME,
+        NM_SETTING_MACVLAN_SETTING_NAME, NM_SETTING_OVS_BRIDGE_SETTING_NAME,
+        NM_SETTING_OVS_IFACE_SETTING_NAME, NM_SETTING_VETH_SETTING_NAME,
+        NM_SETTING_VLAN_SETTING_NAME, NM_SETTING_VRF_SETTING_NAME,
+        NM_SETTING_VXLAN_SETTING_NAME, NM_SETTING_WIRED_SETTING_NAME,
     },
     nm::dns::retrieve_dns_info,
     nm::error::nm_error_to_nmstate,
@@ -25,11 +25,11 @@ use crate::{
     nm::lldp::{get_lldp, is_lldp_enabled},
     nm::ovs::nm_ovs_bridge_conf_get,
     nm::user::get_description,
-    BaseInterface, BondInterface, DummyInterface, EthernetInterface, Interface,
-    InterfaceState, InterfaceType, Interfaces, LinuxBridgeInterface,
-    MacVlanInterface, MacVtapInterface, NetworkState, NmstateError,
-    OvsBridgeInterface, OvsInterface, UnknownInterface, VlanInterface,
-    VrfInterface, VxlanInterface,
+    BaseInterface, BondInterface, DummyInterface, EthernetInterface,
+    InfiniBandInterface, Interface, InterfaceState, InterfaceType, Interfaces,
+    LinuxBridgeInterface, MacVlanInterface, MacVtapInterface, NetworkState,
+    NmstateError, OvsBridgeInterface, OvsInterface, UnknownInterface,
+    VlanInterface, VrfInterface, VxlanInterface,
 };
 
 pub(crate) fn nm_retrieve(
@@ -126,6 +126,12 @@ pub(crate) fn nm_retrieve(
                         iface.base = base_iface;
                         iface
                     }),
+                    InterfaceType::InfiniBand => Interface::InfiniBand({
+                        InfiniBandInterface {
+                            base: base_iface,
+                            ..Default::default()
+                        }
+                    }),
                     _ => Interface::Unknown({
                         let mut iface = UnknownInterface::new();
                         iface.base = base_iface;
@@ -143,12 +149,13 @@ pub(crate) fn nm_retrieve(
                 ) {
                     c
                 } else {
-                    warn!(
-                        "Failed to find applied NmConnection for interface \
-                        {} {}",
-                        nm_dev.name, nm_dev.iface_type
-                    );
-
+                    if nm_dev.state == NmDeviceState::Activated {
+                        warn!(
+                            "Failed to find applied NmConnection for \
+                            interface {} {}",
+                            nm_dev.name, nm_dev.iface_type
+                        );
+                    }
                     continue;
                 };
                 let nm_ac = get_nm_ac(
@@ -229,6 +236,7 @@ fn nm_dev_iface_type_to_nmstate(nm_dev: &NmDevice) -> InterfaceType {
                 InterfaceType::MacVlan
             }
         }
+        NM_SETTING_INFINIBAND_SETTING_NAME => InterfaceType::InfiniBand,
         _ => InterfaceType::Other(nm_dev.iface_type.to_string()),
     }
 }

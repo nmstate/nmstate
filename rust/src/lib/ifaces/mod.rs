@@ -7,6 +7,7 @@ mod inter_ifaces;
 mod vrf;
 mod vxlan;
 // The pub(crate) is only for unit test
+mod infiniband;
 pub(crate) mod inter_ifaces_controller;
 mod linux_bridge;
 mod mac_vlan;
@@ -29,6 +30,7 @@ pub use ethtool::{
     EthtoolCoalesceConfig, EthtoolConfig, EthtoolFeatureConfig,
     EthtoolPauseConfig, EthtoolRingConfig,
 };
+pub use infiniband::{InfiniBandConfig, InfiniBandInterface, InfiniBandMode};
 pub use inter_ifaces::*;
 pub use linux_bridge::{
     LinuxBridgeConfig, LinuxBridgeInterface, LinuxBridgeMulticastRouterType,

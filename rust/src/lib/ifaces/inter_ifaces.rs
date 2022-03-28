@@ -9,7 +9,8 @@ use serde::{
 use crate::{
     ifaces::ethernet::handle_veth_peer_changes,
     ifaces::inter_ifaces_controller::{
-        check_overbook_ports, find_unknown_type_port, handle_changed_ports,
+        check_infiniband_as_ports, check_overbook_ports,
+        find_unknown_type_port, handle_changed_ports,
         preserve_ctrl_cfg_if_unchanged, set_ifaces_up_priority,
         set_missing_port_to_eth,
     },
@@ -313,6 +314,7 @@ impl Interfaces {
         preserve_ctrl_cfg_if_unchanged(self, current);
         self.set_up_priority()?;
         check_overbook_ports(self, current)?;
+        check_infiniband_as_ports(self, current)?;
 
         for iface in self.to_vec() {
             if iface.is_absent() {
