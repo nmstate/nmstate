@@ -1,3 +1,4 @@
+mod deserializer;
 mod dns;
 mod error;
 mod ieee8021x;
@@ -12,6 +13,7 @@ mod ovs;
 mod ovsdb;
 mod route;
 mod route_rule;
+mod serializer;
 mod state;
 mod unit_tests;
 
@@ -27,7 +29,8 @@ pub use crate::ifaces::{
     BondMode, BondOptions, BondPrimaryReselect, BondXmitHashPolicy,
     DummyInterface, EthernetConfig, EthernetDuplex, EthernetInterface,
     EthtoolCoalesceConfig, EthtoolConfig, EthtoolFeatureConfig,
-    EthtoolPauseConfig, EthtoolRingConfig, Interfaces, LinuxBridgeConfig,
+    EthtoolPauseConfig, EthtoolRingConfig, InfiniBandConfig,
+    InfiniBandInterface, InfiniBandMode, Interfaces, LinuxBridgeConfig,
     LinuxBridgeInterface, LinuxBridgeMulticastRouterType, LinuxBridgeOptions,
     LinuxBridgePortConfig, LinuxBridgePortTunkTag, LinuxBridgePortVlanConfig,
     LinuxBridgePortVlanMode, LinuxBridgePortVlanRange, LinuxBridgeStpOptions,

@@ -8,6 +8,7 @@ use crate::{
         bond::np_bond_to_nmstate,
         error::np_error_to_nmstate,
         ethernet::np_ethernet_to_nmstate,
+        infiniband::np_ib_to_nmstate,
         linux_bridge::{append_bridge_port_config, np_bridge_to_nmstate},
         mac_vlan::{np_mac_vlan_to_nmstate, np_mac_vtap_to_nmstate},
         route::get_routes,
@@ -92,6 +93,18 @@ pub(crate) fn nispor_retrieve(
             }
             InterfaceType::Vrf => {
                 Interface::Vrf(np_vrf_to_nmstate(np_iface, base_iface))
+            }
+            InterfaceType::InfiniBand => {
+                // We don't support HFI interface which contains PKEY but no
+                // parent.
+                if base_iface.name.starts_with("hfi1") {
+                    log::info!(
+                        "Ignoring unsupported HFI interface {}",
+                        base_iface.name
+                    );
+                    continue;
+                }
+                Interface::InfiniBand(np_ib_to_nmstate(np_iface, base_iface))
             }
             _ => {
                 warn!(

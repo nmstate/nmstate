@@ -7,6 +7,8 @@ mod ifaces;
 #[cfg(test)]
 mod ifaces_ctrller;
 #[cfg(test)]
+mod infiniband;
+#[cfg(test)]
 mod ovs;
 #[cfg(test)]
 mod route;
