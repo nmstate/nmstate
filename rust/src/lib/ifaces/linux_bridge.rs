@@ -291,7 +291,7 @@ impl LinuxBridgePortConfig {
     fn vlan_filtering_is_enabled(&self) -> bool {
         self.vlan
             .as_ref()
-            .map_or(false, |v| *v != LinuxBridgePortVlanConfig::default())
+            .map_or(true, |v| *v != LinuxBridgePortVlanConfig::default())
     }
 }
 

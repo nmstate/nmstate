@@ -584,6 +584,20 @@ class TestVlanFiltering:
             assertlib.assert_state(desired_state)
             assert not _vlan_filtering_enabled(TEST_BRIDGE0)
 
+    def test_keep_vlan_filtering_on_bridge_when_not_set(
+        self,
+        bridge_with_trunk_port_and_native_config,
+    ):
+        bridge_state = bridge_with_trunk_port_and_native_config[Interface.KEY][
+            0
+        ]
+        bridge_config_subtree = bridge_state[LinuxBridge.CONFIG_SUBTREE]
+        bridge_ports = bridge_config_subtree[LinuxBridge.PORT_SUBTREE]
+        bridge_ports[0].pop(LinuxBridge.Port.VLAN_SUBTREE, {})
+
+        with linux_bridge(TEST_BRIDGE0, bridge_config_subtree):
+            assert _vlan_filtering_enabled(TEST_BRIDGE0)
+
     def test_pretty_state_port_name_first(
         self, bridge_with_trunk_port_and_native_config
     ):
