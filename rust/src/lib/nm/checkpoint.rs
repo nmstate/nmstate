@@ -3,12 +3,14 @@ use nm_dbus::NmApi;
 
 use crate::{nm::error::nm_error_to_nmstate, NmstateError};
 
-// Wait maximum 30 seconds for rollback
-const CHECKPOINT_ROLLBACK_TIMEOUT: u32 = 30;
+// Wait maximum 60 seconds for rollback
+pub(crate) const CHECKPOINT_ROLLBACK_TIMEOUT: u32 = 60;
 
 pub(crate) fn nm_checkpoint_create() -> Result<String, NmstateError> {
     let nm_api = NmApi::new().map_err(nm_error_to_nmstate)?;
-    nm_api.checkpoint_create().map_err(nm_error_to_nmstate)
+    nm_api
+        .checkpoint_create(CHECKPOINT_ROLLBACK_TIMEOUT)
+        .map_err(nm_error_to_nmstate)
 }
 
 pub(crate) fn nm_checkpoint_rollback(

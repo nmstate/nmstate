@@ -125,6 +125,9 @@ fn apply_single_state(
     checkpoint: &str,
     memory_only: bool,
 ) -> Result<(), NmstateError> {
+    if net_state.interfaces.to_vec().is_empty() {
+        return Ok(());
+    }
     let mut nm_conns_to_activate: Vec<NmConnection> = Vec::new();
 
     let exist_nm_conns =
@@ -224,7 +227,12 @@ fn apply_single_state(
         delete_exist_profiles(nm_api, &exist_nm_conns, &nm_conns_to_activate)?;
     }
 
-    activate_nm_profiles(nm_api, nm_conns_to_activate.as_slice(), checkpoint)?;
+    activate_nm_profiles(
+        nm_api,
+        nm_conns_to_activate.as_slice(),
+        nm_ac_uuids.as_slice(),
+        checkpoint,
+    )?;
     deactivate_nm_profiles(
         nm_api,
         nm_conns_to_deactivate.as_slice(),

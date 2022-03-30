@@ -31,8 +31,6 @@ const NM_CHECKPOINT_CREATE_FLAG_DISCONNECT_NEW_DEVICES: u32 = 0x04;
 pub(crate) const NM_TERNARY_TRUE: i32 = 1;
 pub(crate) const NM_TERNARY_FALSE: i32 = 0;
 
-const CHECKPOINT_TMO: u32 = 30;
-
 const OBJ_PATH_NULL_STR: &str = "/";
 
 pub(crate) const NM_DBUS_INTERFACE_ROOT: &str =
@@ -80,10 +78,13 @@ impl<'a> NmDbus<'a> {
         Ok(self.proxy.version()?)
     }
 
-    pub(crate) fn checkpoint_create(&self) -> Result<String, NmError> {
+    pub(crate) fn checkpoint_create(
+        &self,
+        timeout: u32,
+    ) -> Result<String, NmError> {
         match self.proxy.checkpoint_create(
             &[],
-            CHECKPOINT_TMO,
+            timeout,
             NM_CHECKPOINT_CREATE_FLAG_DELETE_NEW_CONNECTIONS
                 | NM_CHECKPOINT_CREATE_FLAG_DISCONNECT_NEW_DEVICES,
         ) {

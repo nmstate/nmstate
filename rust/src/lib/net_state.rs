@@ -25,6 +25,7 @@ const VERIFY_RETRY_INTERVAL_MILLISECONDS: u64 = 1000;
 const VERIFY_RETRY_COUNT: usize = 5;
 const VERIFY_RETRY_COUNT_SRIOV: usize = 60;
 const VERIFY_RETRY_COUNT_KERNEL_MODE: usize = 5;
+const MAX_SUPPORTED_INTERFACES: usize = 1000;
 
 #[derive(Clone, Debug, Serialize, Default, PartialEq)]
 #[serde(deny_unknown_fields)]
@@ -213,6 +214,16 @@ impl NetworkState {
         cur_net_state.set_kernel_only(self.kernel_only);
         cur_net_state.set_include_secrets(true);
         cur_net_state.retrieve()?;
+
+        if desire_state_to_apply.interfaces.to_vec().len()
+            >= MAX_SUPPORTED_INTERFACES
+        {
+            log::warn!(
+                "Interfaces count exceeds the support limit {} in \
+                desired state",
+                MAX_SUPPORTED_INTERFACES,
+            );
+        }
 
         let ignored_kernel_ifaces = desire_state_to_apply
             .interfaces
