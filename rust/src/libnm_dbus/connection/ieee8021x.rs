@@ -98,7 +98,6 @@ impl NmSetting8021X {
             );
         }
         if let Some(v) = &self.ca_cert {
-            println!("HAHA {:?}", Self::glib_bytes_to_file_path(v));
             ret.insert(
                 "ca-cert".to_string(),
                 if let Ok(path) = Self::glib_bytes_to_file_path(v) {

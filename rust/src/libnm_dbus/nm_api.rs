@@ -50,9 +50,9 @@ impl<'a> NmApi<'a> {
         self.dbus.version()
     }
 
-    pub fn checkpoint_create(&self) -> Result<String, NmError> {
+    pub fn checkpoint_create(&self, timeout: u32) -> Result<String, NmError> {
         debug!("checkpoint_create");
-        let cp = self.dbus.checkpoint_create()?;
+        let cp = self.dbus.checkpoint_create(timeout)?;
         debug!("checkpoint created: {}", &cp);
         Ok(cp)
     }
@@ -340,7 +340,7 @@ where
             if cur_count == count - 1 {
                 return Err(e);
             } else {
-                eprintln!("Retrying on NM dbus failure: {}", e);
+                log::info!("Retrying on NM dbus failure: {}", e);
                 std::thread::sleep(std::time::Duration::from_millis(
                     interval_ms,
                 ));
