@@ -36,6 +36,14 @@ pub(crate) const NM_SETTING_VRF_SETTING_NAME: &str = "vrf";
 pub(crate) const NM_SETTING_VLAN_SETTING_NAME: &str = "vlan";
 pub(crate) const NM_SETTING_VXLAN_SETTING_NAME: &str = "vxlan";
 
+pub(crate) const NM_SETTING_CONTROLLERS: [&str; 5] = [
+    NM_SETTING_BOND_SETTING_NAME,
+    NM_SETTING_BRIDGE_SETTING_NAME,
+    NM_SETTING_OVS_BRIDGE_SETTING_NAME,
+    NM_SETTING_OVS_PORT_SETTING_NAME,
+    NM_SETTING_VRF_SETTING_NAME,
+];
+
 pub(crate) fn nm_gen_conf(
     net_state: &NetworkState,
 ) -> Result<Vec<String>, NmstateError> {

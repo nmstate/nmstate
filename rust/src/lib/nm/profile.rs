@@ -1,24 +1,20 @@
 use std::collections::{hash_map::Entry, HashMap};
+use std::time::Instant;
 
-use log::{error, info};
 use nm_dbus::{NmApi, NmConnection};
 
 use crate::{
-    nm::checkpoint::nm_checkpoint_timeout_extend,
+    nm::checkpoint::{
+        nm_checkpoint_timeout_extend, CHECKPOINT_ROLLBACK_TIMEOUT,
+    },
     nm::connection::{
-        iface_type_to_nm, NM_SETTING_VETH_SETTING_NAME,
+        iface_type_to_nm, NM_SETTING_CONTROLLERS, NM_SETTING_VETH_SETTING_NAME,
         NM_SETTING_WIRED_SETTING_NAME,
     },
     nm::error::nm_error_to_nmstate,
     nm::ovs::get_ovs_port_name,
     ErrorKind, Interface, InterfaceType, NmstateError,
 };
-
-// We only adjust timeout for every 20 profile additions.
-const TIMEOUT_ADJUST_PROFILE_GROUP_SIZE: usize = 20;
-const TIMEOUT_SECONDS_FOR_PROFILE_ADDTION: u32 = 60;
-const TIMEOUT_SECONDS_FOR_PROFILE_ACTIVATION: u32 = 60;
-const TIMEOUT_SECONDS_FOR_PROFILE_DEACTIVATION: u32 = 60;
 
 // Found existing profile, prefer the activated one
 pub(crate) fn get_exist_profile<'a>(
@@ -90,7 +86,7 @@ pub(crate) fn delete_exist_profiles(
         if !excluded_uuids.contains(&uuid)
             && changed_iface_name_types.contains(&(iface_name, nm_iface_type))
         {
-            info!("Deleting existing connection {:?}", exist_nm_conn);
+            log::info!("Deleting existing connection {:?}", exist_nm_conn);
             nm_api
                 .connection_delete(uuid)
                 .map_err(nm_error_to_nmstate)?;
@@ -105,18 +101,10 @@ pub(crate) fn save_nm_profiles(
     checkpoint: &str,
     memory_only: bool,
 ) -> Result<(), NmstateError> {
-    for (index, nm_conn) in nm_conns.iter().enumerate() {
-        // Only extend the timeout every
-        // TIMEOUT_ADJUST_PROFILE_ADDTION_GROUP_SIZE profile addition.
-        if index % TIMEOUT_ADJUST_PROFILE_GROUP_SIZE
-            == TIMEOUT_ADJUST_PROFILE_GROUP_SIZE - 1
-        {
-            nm_checkpoint_timeout_extend(
-                checkpoint,
-                TIMEOUT_SECONDS_FOR_PROFILE_ADDTION,
-            )?;
-        }
-        info!("Creating/Modifying connection {:?}", nm_conn);
+    let mut now = Instant::now();
+    for nm_conn in nm_conns {
+        extend_timeout_if_required(&mut now, checkpoint)?;
+        log::info!("Creating/Modifying connection {:?}", nm_conn);
         nm_api
             .connection_add(nm_conn, memory_only)
             .map_err(nm_error_to_nmstate)?;
@@ -127,25 +115,96 @@ pub(crate) fn save_nm_profiles(
 pub(crate) fn activate_nm_profiles(
     nm_api: &nm_dbus::NmApi,
     nm_conns: &[NmConnection],
+    nm_ac_uuids: &[&str],
     checkpoint: &str,
 ) -> Result<(), NmstateError> {
-    for nm_conn in nm_conns {
-        nm_checkpoint_timeout_extend(
-            checkpoint,
-            TIMEOUT_SECONDS_FOR_PROFILE_ACTIVATION,
-        )?;
+    let mut now = Instant::now();
+    let mut new_controllers: Vec<&str> = Vec::new();
+    for nm_conn in nm_conns.iter().filter(|c| {
+        c.iface_type().map(|t| NM_SETTING_CONTROLLERS.contains(&t))
+            == Some(true)
+    }) {
+        extend_timeout_if_required(&mut now, checkpoint)?;
         if let Some(uuid) = nm_conn.uuid() {
-            info!(
+            log::info!(
                 "Activating connection {}: {}/{}",
                 uuid,
                 nm_conn.iface_name().unwrap_or(""),
                 nm_conn.iface_type().unwrap_or("")
             );
-            if let Err(e) = nm_api.connection_reapply(nm_conn) {
-                info!(
+            if nm_ac_uuids.contains(&uuid) {
+                if let Err(e) = nm_api.connection_reapply(nm_conn) {
+                    log::info!(
                     "Reapply operation failed trying activation, reason: {}, \
                     retry on normal activation",
                     e
+                );
+                    nm_api
+                        .connection_activate(uuid)
+                        .map_err(nm_error_to_nmstate)?;
+                }
+            } else {
+                new_controllers.push(uuid);
+                nm_api
+                    .connection_activate(uuid)
+                    .map_err(nm_error_to_nmstate)?;
+            }
+        }
+    }
+    for nm_conn in nm_conns.iter().filter(|c| {
+        c.iface_type().map(|t| NM_SETTING_CONTROLLERS.contains(&t))
+            != Some(true)
+    }) {
+        extend_timeout_if_required(&mut now, checkpoint)?;
+
+        if let Some(uuid) = nm_conn.uuid() {
+            if nm_ac_uuids.contains(&uuid) {
+                log::info!(
+                    "Reapplying connection {}: {}/{}",
+                    uuid,
+                    nm_conn.iface_name().unwrap_or(""),
+                    nm_conn.iface_type().unwrap_or("")
+                );
+                if let Err(e) = nm_api.connection_reapply(nm_conn) {
+                    log::info!(
+                    "Reapply operation failed trying activation, reason: {}, \
+                    retry on normal activation",
+                    e
+                );
+                    log::info!(
+                        "Activating connection {}: {}/{}",
+                        uuid,
+                        nm_conn.iface_name().unwrap_or(""),
+                        nm_conn.iface_type().unwrap_or("")
+                    );
+                    nm_api
+                        .connection_activate(uuid)
+                        .map_err(nm_error_to_nmstate)?;
+                }
+            } else {
+                if let Some(ctrller) = nm_conn.controller() {
+                    if nm_conn.iface_type() != Some("ovs-interface") {
+                        // OVS port does not do auto port activation.
+                        if new_controllers.contains(&ctrller)
+                            && nm_conn.controller_type() != Some("ovs-port")
+                        {
+                            log::info!(
+                                "Skip connection activation as its \
+                                controller already activated its ports: \
+                                {}: {}/{}",
+                                uuid,
+                                nm_conn.iface_name().unwrap_or(""),
+                                nm_conn.iface_type().unwrap_or("")
+                            );
+                            continue;
+                        }
+                    }
+                }
+                log::info!(
+                    "Activating connection {}: {}/{}",
+                    uuid,
+                    nm_conn.iface_name().unwrap_or(""),
+                    nm_conn.iface_type().unwrap_or("")
                 );
                 nm_api
                     .connection_activate(uuid)
@@ -161,15 +220,11 @@ pub(crate) fn deactivate_nm_profiles(
     nm_conns: &[&NmConnection],
     checkpoint: &str,
 ) -> Result<(), NmstateError> {
-    for (index, nm_conn) in nm_conns.iter().enumerate() {
-        if (index + 1) % TIMEOUT_ADJUST_PROFILE_GROUP_SIZE == 0 {
-            nm_checkpoint_timeout_extend(
-                checkpoint,
-                TIMEOUT_SECONDS_FOR_PROFILE_DEACTIVATION,
-            )?;
-        }
+    let mut now = Instant::now();
+    for nm_conn in nm_conns {
+        extend_timeout_if_required(&mut now, checkpoint)?;
         if let Some(uuid) = nm_conn.uuid() {
-            info!(
+            log::info!(
                 "Deactivating connection {}: {}/{}",
                 uuid,
                 nm_conn.iface_name().unwrap_or(""),
@@ -272,7 +327,7 @@ pub(crate) fn use_uuid_for_controller_reference(
                                 nm_conn
                             ),
                         );
-                        error!("{}", e);
+                        log::error!("{}", e);
                         return Err(e);
                     }
                 }
@@ -285,7 +340,7 @@ pub(crate) fn use_uuid_for_controller_reference(
                         nm_conn
                     ),
                 );
-                error!("{}", e);
+                log::error!("{}", e);
                 return Err(e);
             }
         }
@@ -303,7 +358,7 @@ pub(crate) fn use_uuid_for_controller_reference(
                     ctrl_name, ctrl_type
                 ),
             );
-            error!("{}", e);
+            log::error!("{}", e);
             return Err(e);
         }
     }
@@ -311,6 +366,19 @@ pub(crate) fn use_uuid_for_controller_reference(
         if let Some(ref mut nm_conn_set) = &mut nm_conn.connection {
             nm_conn_set.controller = Some(uuid.to_string());
         }
+    }
+    Ok(())
+}
+
+fn extend_timeout_if_required(
+    now: &mut Instant,
+    checkpoint: &str,
+) -> Result<(), NmstateError> {
+    // Only extend the timeout when only half of it elapsed
+    if now.elapsed().as_secs() >= CHECKPOINT_ROLLBACK_TIMEOUT as u64 / 2 {
+        log::debug!("Extending checkpoint timeout");
+        nm_checkpoint_timeout_extend(checkpoint, CHECKPOINT_ROLLBACK_TIMEOUT)?;
+        *now = Instant::now();
     }
     Ok(())
 }
