@@ -468,6 +468,34 @@ def test_disable_ipv4_with_routes_in_current(eth1_up):
 
 
 @pytest.mark.tier1
+def test_disable_ipv4_and_remove_wildcard_route(eth1_up):
+    libnmstate.apply(
+        {
+            Interface.KEY: [ETH1_INTERFACE_STATE],
+            Route.KEY: {Route.CONFIG: _get_ipv4_test_routes()},
+        }
+    )
+
+    eth1_state = copy.deepcopy(ETH1_INTERFACE_STATE)
+    eth1_state[Interface.IPV4] = {InterfaceIPv4.ENABLED: False}
+
+    absent_route = {
+        Route.STATE: Route.STATE_ABSENT,
+        Route.NEXT_HOP_INTERFACE: "eth1",
+    }
+
+    libnmstate.apply(
+        {
+            Interface.KEY: [eth1_state],
+            Route.KEY: {Route.CONFIG: [absent_route]},
+        }
+    )
+
+    cur_state = libnmstate.show()
+    _assert_routes([], cur_state)
+
+
+@pytest.mark.tier1
 @parametrize_ip_ver_routes
 def test_iface_down_with_routes_in_current(eth1_up, get_routes_func):
     libnmstate.apply(
