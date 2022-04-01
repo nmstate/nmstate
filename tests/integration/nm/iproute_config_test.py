@@ -58,6 +58,10 @@ def bond99_with_dummy_port_by_iproute():
     cmdlib.exec_cmd(f"ip link del {BOND99}".split())
 
 
+@pytest.mark.xfail(
+    reason="https://bugzilla.redhat.com/2070855",
+    strict=False,
+)
 def test_external_managed_subordnates(bond99_with_dummy_port_by_iproute):
     libnmstate.apply(
         {
