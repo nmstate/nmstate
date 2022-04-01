@@ -70,6 +70,10 @@ fn gen_nm_ipv4_setting(
             nm_setting.gateway = None;
         }
     }
+    if !iface_ip.enabled {
+        // Clean up static routes if ip is disabled
+        nm_setting.routes = Vec::new();
+    }
     if let Some(rules) = rules {
         nm_setting.route_rules = gen_nm_ip_rules(rules, false)?;
     }
