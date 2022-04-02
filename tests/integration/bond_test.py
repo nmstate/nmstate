@@ -242,7 +242,7 @@ def test_rollback_for_bond(eth1_up, eth2_up):
 
     desired_state[Interface.KEY][0]["invalid_key"] = "foo"
 
-    with pytest.raises(NmstateVerificationError):
+    with pytest.raises((NmstateVerificationError, NmstateValueError)):
         libnmstate.apply(desired_state)
 
     time.sleep(5)
