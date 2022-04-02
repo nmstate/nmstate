@@ -66,7 +66,13 @@ impl MacVlanInterface {
 pub struct MacVlanConfig {
     pub base_iface: String,
     pub mode: MacVlanMode,
-    #[serde(skip_serializing_if = "Option::is_none", rename = "promiscuous")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "promiscuous",
+        alias = "accept-all-mac",
+        default,
+        deserialize_with = "crate::deserializer::option_bool_or_string"
+    )]
     pub accept_all_mac: Option<bool>,
 }
 

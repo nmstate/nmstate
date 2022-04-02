@@ -287,3 +287,16 @@ config:
         assert_eq!(e.kind(), ErrorKind::VerificationError);
     }
 }
+
+#[test]
+fn test_route_stringlized_attributes() {
+    let route: RouteEntry = serde_yaml::from_str(
+        r#"
+metric: "500"
+table-id: "129"
+"#,
+    )
+    .unwrap();
+    assert_eq!(route.table_id, Some(129));
+    assert_eq!(route.metric, Some(500));
+}

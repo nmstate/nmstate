@@ -1,5 +1,5 @@
 use crate::{BaseInterface, ErrorKind, Interface, InterfaceType, NmstateError};
-use serde::{de::Error, Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[serde(rename_all = "kebab-case")]
@@ -384,14 +384,19 @@ impl std::fmt::Display for BondArpAllTargets {
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum BondArpValidate {
+    #[serde(alias = "0")]
     None,
+    #[serde(alias = "1")]
     Active,
+    #[serde(alias = "2")]
     Backup,
+    #[serde(alias = "3")]
     All,
+    #[serde(alias = "4")]
     Filter,
-    #[serde(rename = "filter_active")]
+    #[serde(rename = "filter_active", alias = "5")]
     FilterActive,
-    #[serde(rename = "filter_backup")]
+    #[serde(rename = "filter_backup", alias = "6")]
     FilterBackup,
 }
 
@@ -524,8 +529,8 @@ impl std::fmt::Display for BondXmitHashPolicy {
 pub struct BondOptions {
     #[serde(
         skip_serializing_if = "Option::is_none",
-        deserialize_with = "json_to_u16",
-        default
+        default,
+        deserialize_with = "crate::deserializer::option_u16_or_string"
     )]
     pub ad_actor_sys_prio: Option<u16>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -534,8 +539,8 @@ pub struct BondOptions {
     pub ad_select: Option<BondAdSelect>,
     #[serde(
         skip_serializing_if = "Option::is_none",
-        deserialize_with = "json_to_u16",
-        default
+        default,
+        deserialize_with = "crate::deserializer::option_u16_or_string"
     )]
     pub ad_user_port_key: Option<u16>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -544,8 +549,8 @@ pub struct BondOptions {
     pub arp_all_targets: Option<BondArpAllTargets>,
     #[serde(
         skip_serializing_if = "Option::is_none",
-        deserialize_with = "json_to_u32",
-        default
+        default,
+        deserialize_with = "crate::deserializer::option_u32_or_string"
     )]
     pub arp_interval: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -554,8 +559,8 @@ pub struct BondOptions {
     pub arp_validate: Option<BondArpValidate>,
     #[serde(
         skip_serializing_if = "Option::is_none",
-        deserialize_with = "json_to_u32",
-        default
+        default,
+        deserialize_with = "crate::deserializer::option_u32_or_string"
     )]
     pub downdelay: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -564,38 +569,38 @@ pub struct BondOptions {
     pub lacp_rate: Option<BondLacpRate>,
     #[serde(
         skip_serializing_if = "Option::is_none",
-        deserialize_with = "json_to_u32",
-        default
+        default,
+        deserialize_with = "crate::deserializer::option_u32_or_string"
     )]
     pub lp_interval: Option<u32>,
     #[serde(
         skip_serializing_if = "Option::is_none",
-        deserialize_with = "json_to_u32",
-        default
+        default,
+        deserialize_with = "crate::deserializer::option_u32_or_string"
     )]
     pub miimon: Option<u32>,
     #[serde(
         skip_serializing_if = "Option::is_none",
-        deserialize_with = "json_to_u32",
-        default
+        default,
+        deserialize_with = "crate::deserializer::option_u32_or_string"
     )]
     pub min_links: Option<u32>,
     #[serde(
         skip_serializing_if = "Option::is_none",
-        deserialize_with = "json_to_u8",
-        default
+        default,
+        deserialize_with = "crate::deserializer::option_u8_or_string"
     )]
     pub num_grat_arp: Option<u8>,
     #[serde(
         skip_serializing_if = "Option::is_none",
-        deserialize_with = "json_to_u8",
-        default
+        default,
+        deserialize_with = "crate::deserializer::option_u8_or_string"
     )]
     pub num_unsol_na: Option<u8>,
     #[serde(
         skip_serializing_if = "Option::is_none",
-        deserialize_with = "json_to_u32",
-        default
+        default,
+        deserialize_with = "crate::deserializer::option_u32_or_string"
     )]
     pub packets_per_slave: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -604,73 +609,30 @@ pub struct BondOptions {
     pub primary_reselect: Option<BondPrimaryReselect>,
     #[serde(
         skip_serializing_if = "Option::is_none",
-        deserialize_with = "json_to_u32",
-        default
+        default,
+        deserialize_with = "crate::deserializer::option_u32_or_string"
     )]
     pub resend_igmp: Option<u32>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_bool_or_string"
+    )]
     pub tlb_dynamic_lb: Option<bool>,
     #[serde(
         skip_serializing_if = "Option::is_none",
-        deserialize_with = "json_to_u32",
-        default
+        default,
+        deserialize_with = "crate::deserializer::option_u32_or_string"
     )]
     pub updelay: Option<u32>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_bool_or_string"
+    )]
     pub use_carrier: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub xmit_hash_policy: Option<BondXmitHashPolicy>,
-}
-
-fn json_to_u32<'de, D>(deserializer: D) -> Result<Option<u32>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let json_value: serde_json::Value = Deserialize::deserialize(deserializer)?;
-    let u32_value: u32 = match json_value.as_u64() {
-        None => {
-            if let Some(str_value) = json_value.as_str() {
-                if str_value.chars().all(char::is_numeric) {
-                    str_value.parse::<u32>().map_err(D::Error::custom)?
-                } else {
-                    return Err(NmstateError::new(
-                            ErrorKind::InvalidArgument,
-                            format!("Property value: {} is not valid, only numeric values are allowed.", str_value)))
-                    .map_err(D::Error::custom);
-                }
-            } else {
-                return Err(NmstateError::new(
-                        ErrorKind::InvalidArgument,
-                        format!("Property value: {} is not valid, only numeric values are allowed.", json_value)))
-                .map_err(D::Error::custom);
-            }
-        }
-        Some(u64_value) => u64_value as u32,
-    };
-
-    Ok(Some(u32_value))
-}
-
-fn json_to_u16<'de, D>(deserializer: D) -> Result<Option<u16>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    if let Some(u32_value) = json_to_u32(deserializer)? {
-        Ok(Some(u32_value as u16))
-    } else {
-        Ok(None)
-    }
-}
-
-fn json_to_u8<'de, D>(deserializer: D) -> Result<Option<u8>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    if let Some(u32_value) = json_to_u32(deserializer)? {
-        Ok(Some(u32_value as u8))
-    } else {
-        Ok(None)
-    }
 }
 
 impl BondOptions {

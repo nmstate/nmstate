@@ -124,11 +124,23 @@ impl OvsBridgeConfig {
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
 pub struct OvsBridgeOptions {
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_bool_or_string"
+    )]
     pub stp: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_bool_or_string"
+    )]
     pub rstp: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_bool_or_string"
+    )]
     pub mcast_snooping_enable: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub fail_mode: Option<String>,
@@ -191,9 +203,17 @@ pub struct OvsBridgeBondConfig {
     pub mode: Option<OvsBridgeBondMode>,
     #[serde(skip_serializing_if = "Option::is_none", rename = "port")]
     pub ports: Option<Vec<OvsBridgeBondPortConfig>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_u32_or_string"
+    )]
     pub bond_downdelay: Option<u32>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_u32_or_string"
+    )]
     pub bond_updelay: Option<u32>,
 }
 
