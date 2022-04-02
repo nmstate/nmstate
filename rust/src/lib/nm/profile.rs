@@ -135,10 +135,10 @@ pub(crate) fn activate_nm_profiles(
             if nm_ac_uuids.contains(&uuid) {
                 if let Err(e) = nm_api.connection_reapply(nm_conn) {
                     log::info!(
-                    "Reapply operation failed trying activation, reason: {}, \
-                    retry on normal activation",
-                    e
-                );
+                        "Reapply operation failed trying activation, \
+                        reason: {}, retry on normal activation",
+                        e
+                    );
                     nm_api
                         .connection_activate(uuid)
                         .map_err(nm_error_to_nmstate)?;
@@ -167,10 +167,10 @@ pub(crate) fn activate_nm_profiles(
                 );
                 if let Err(e) = nm_api.connection_reapply(nm_conn) {
                     log::info!(
-                    "Reapply operation failed trying activation, reason: {}, \
-                    retry on normal activation",
-                    e
-                );
+                        "Reapply operation failed trying activation, \
+                        reason: {}, retry on normal activation",
+                        e
+                    );
                     log::info!(
                         "Activating connection {}: {}/{}",
                         uuid,

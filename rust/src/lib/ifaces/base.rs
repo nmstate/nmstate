@@ -154,10 +154,10 @@ impl BaseInterface {
         }
 
         if let Some(ref mut ipv4) = self.ipv4 {
-            ipv4.pre_edit_cleanup()?
+            ipv4.pre_edit_cleanup();
         }
         if let Some(ref mut ipv6) = self.ipv6 {
-            ipv6.pre_edit_cleanup()?
+            ipv6.pre_edit_cleanup();
         }
         Ok(())
     }

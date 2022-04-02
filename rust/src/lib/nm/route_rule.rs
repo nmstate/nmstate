@@ -25,7 +25,7 @@ pub(crate) fn gen_nm_ip_rules(
                 (true, true) | (false, false) => {
                     let ip_addr = InterfaceIpAddr::try_from(addr)?;
                     nm_rule.from_len = Some(ip_addr.prefix_length);
-                    nm_rule.from = Some(ip_addr.ip);
+                    nm_rule.from = Some(ip_addr.ip.to_string());
                 }
                 _ => continue,
             }
@@ -35,7 +35,7 @@ pub(crate) fn gen_nm_ip_rules(
                 (true, true) | (false, false) => {
                     let ip_addr = InterfaceIpAddr::try_from(addr)?;
                     nm_rule.to_len = Some(ip_addr.prefix_length);
-                    nm_rule.to = Some(ip_addr.ip);
+                    nm_rule.to = Some(ip_addr.ip.to_string());
                 }
                 _ => continue,
             }

@@ -17,7 +17,7 @@ pub(crate) fn gen_nm_ip_routes(
             }
             let ip_addr = InterfaceIpAddr::try_from(v)?;
             nm_route.prefix = Some(ip_addr.prefix_length as u32);
-            nm_route.dest = Some(ip_addr.ip);
+            nm_route.dest = Some(ip_addr.ip.to_string());
         }
         nm_route.metric = match route.metric {
             Some(RouteEntry::USE_DEFAULT_METRIC) => None,
