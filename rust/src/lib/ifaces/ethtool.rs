@@ -61,6 +61,7 @@ pub struct EthtoolFeatureConfig {
     #[serde(
         skip_serializing_if = "Option::is_none",
         alias = "rx",
+        alias = "rx-checksumming",
         default,
         deserialize_with = "crate::deserializer::option_bool_or_string"
     )]
