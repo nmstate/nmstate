@@ -453,7 +453,12 @@ def test_disable_static_ipv6_and_rollback(setup_eth1_ipv6):
         ]
     }
 
-    with pytest.raises(libnmstate.error.NmstateVerificationError):
+    with pytest.raises(
+        (
+            libnmstate.error.NmstateVerificationError,
+            libnmstate.error.NmstateValueError,
+        )
+    ):
         libnmstate.apply(desired_state)
 
     assertlib.assert_state(setup_eth1_ipv6)
@@ -480,7 +485,12 @@ def test_enable_ipv6_and_rollback_to_disable_ipv6(setup_eth1_ipv6_disable):
         ]
     }
 
-    with pytest.raises(libnmstate.error.NmstateVerificationError):
+    with pytest.raises(
+        (
+            libnmstate.error.NmstateVerificationError,
+            libnmstate.error.NmstateValueError,
+        )
+    ):
         libnmstate.apply(desired_state)
 
     assertlib.assert_state(setup_eth1_ipv6_disable)

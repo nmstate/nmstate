@@ -201,9 +201,18 @@ pub struct RouteRuleEntry {
     pub ip_from: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ip_to: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_i64_or_string"
+    )]
     pub priority: Option<i64>,
-    #[serde(skip_serializing_if = "Option::is_none", rename = "route-table")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "route-table",
+        default,
+        deserialize_with = "crate::deserializer::option_u32_or_string"
+    )]
     pub table_id: Option<u32>,
 }
 

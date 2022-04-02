@@ -1,4 +1,4 @@
-use crate::{InterfaceType, Interfaces};
+use crate::{InterfaceType, Interfaces, OvsBridgeInterface};
 
 #[test]
 fn test_ovs_bridge_ignore_port() {
@@ -107,4 +107,36 @@ fn test_ovs_bridge_verify_ignore_port() {
     .unwrap();
 
     ifaces.verify(&cur_ifaces).unwrap();
+}
+
+#[test]
+fn test_ovs_bridge_stringlized_attributes() {
+    let iface: OvsBridgeInterface = serde_yaml::from_str(
+        r#"---
+name: br1
+type: ovs-bridge
+state: up
+bridge:
+  options:
+    stp: "true"
+    rstp: "false"
+    mcast-snooping-enable: "false"
+  port:
+  - name: bond1
+    link-aggregation:
+      bond-downdelay: "100"
+      bond-updelay: "101"
+"#,
+    )
+    .unwrap();
+
+    let br_conf = iface.bridge.unwrap();
+    let opts = br_conf.options.as_ref().unwrap();
+    let port_conf = &br_conf.ports.as_ref().unwrap()[0];
+    let bond_conf = port_conf.bond.as_ref().unwrap();
+    assert_eq!(opts.stp, Some(true));
+    assert_eq!(opts.rstp, Some(false));
+    assert_eq!(opts.mcast_snooping_enable, Some(false));
+    assert_eq!(bond_conf.bond_downdelay, Some(100));
+    assert_eq!(bond_conf.bond_updelay, Some(101));
 }
