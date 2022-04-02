@@ -31,10 +31,11 @@ fn gen_nm_ipv4_setting(
 
     let mut addresses: Vec<String> = Vec::new();
     let method = if iface_ip.enabled {
-        if iface_ip.dhcp {
+        if iface_ip.dhcp == Some(true) {
             NmSettingIpMethod::Auto
-        } else if !iface_ip.addresses.is_empty() {
-            for ip_addr in &iface_ip.addresses {
+        } else if !iface_ip.addresses.as_deref().unwrap_or_default().is_empty()
+        {
+            for ip_addr in iface_ip.addresses.as_deref().unwrap_or_default() {
                 addresses
                     .push(format!("{}/{}", ip_addr.ip, ip_addr.prefix_length));
             }
@@ -48,7 +49,7 @@ fn gen_nm_ipv4_setting(
     let mut nm_setting = nm_conn.ipv4.as_ref().cloned().unwrap_or_default();
     nm_setting.method = Some(method);
     nm_setting.addresses = addresses;
-    if iface_ip.enabled && iface_ip.dhcp {
+    if iface_ip.is_auto() {
         nm_setting.dhcp_timeout = Some(i32::MAX);
         nm_setting.dhcp_client_id = Some("mac".to_string());
         apply_dhcp_opts(
@@ -62,7 +63,7 @@ fn gen_nm_ipv4_setting(
         // enabled.
         nm_setting.routes = Vec::new();
     }
-    if iface_ip.enabled && !iface_ip.dhcp {
+    if !iface_ip.is_auto() {
         if let Some(routes) = routes {
             nm_setting.routes = gen_nm_ip_routes(routes, false)?;
             // We use above routes property for gateway also, in order
@@ -99,7 +100,10 @@ fn gen_nm_ipv6_setting(
     };
     let mut addresses: Vec<String> = Vec::new();
     let method = if iface_ip.enabled {
-        match (iface_ip.dhcp, iface_ip.autoconf) {
+        match (
+            iface_ip.dhcp.unwrap_or_default(),
+            iface_ip.autoconf.unwrap_or_default(),
+        ) {
             (true, true) => NmSettingIpMethod::Auto,
             (true, false) => NmSettingIpMethod::Dhcp,
             (false, true) => {
@@ -109,8 +113,11 @@ fn gen_nm_ipv6_setting(
                 ))
             }
             (false, false) => {
-                if !iface_ip.addresses.is_empty() {
-                    for ip_addr in &iface_ip.addresses {
+                if !iface_ip.addresses.as_deref().unwrap_or_default().is_empty()
+                {
+                    for ip_addr in
+                        iface_ip.addresses.as_deref().unwrap_or_default()
+                    {
                         addresses.push(format!(
                             "{}/{}",
                             ip_addr.ip, ip_addr.prefix_length
@@ -128,7 +135,7 @@ fn gen_nm_ipv6_setting(
     let mut nm_setting = nm_conn.ipv6.as_ref().cloned().unwrap_or_default();
     nm_setting.method = Some(method);
     nm_setting.addresses = addresses;
-    if iface_ip.enabled && (iface_ip.dhcp || iface_ip.autoconf) {
+    if iface_ip.is_auto() {
         nm_setting.dhcp_timeout = Some(i32::MAX);
         nm_setting.ra_timeout = Some(i32::MAX);
         nm_setting.addr_gen_mode = Some(NM_CONFIG_ADDR_GEN_MODE_EUI64);
@@ -145,7 +152,7 @@ fn gen_nm_ipv6_setting(
         // enabled.
         nm_setting.routes = Vec::new();
     }
-    if iface_ip.enabled && !iface_ip.dhcp && !iface_ip.autoconf {
+    if !iface_ip.is_auto() {
         if let Some(routes) = routes {
             nm_setting.routes = gen_nm_ip_routes(routes, true)?;
         }
@@ -182,14 +189,14 @@ pub(crate) fn nm_ip_setting_to_nmstate4(
 ) -> InterfaceIpv4 {
     if let Some(nm_ip_method) = &nm_ip_setting.method {
         let (enabled, dhcp) = match nm_ip_method {
-            NmSettingIpMethod::Disabled => (false, false),
+            NmSettingIpMethod::Disabled => (false, Some(false)),
             NmSettingIpMethod::LinkLocal
             | NmSettingIpMethod::Manual
-            | NmSettingIpMethod::Shared => (true, false),
-            NmSettingIpMethod::Auto => (true, true),
+            | NmSettingIpMethod::Shared => (true, Some(false)),
+            NmSettingIpMethod::Auto => (true, Some(true)),
             _ => {
                 log::warn!("Unexpected NM IP method {:?}", nm_ip_method);
-                (true, false)
+                (true, None)
             }
         };
         let (auto_dns, auto_gateway, auto_routes, auto_table_id) =
@@ -223,16 +230,16 @@ pub(crate) fn nm_ip_setting_to_nmstate6(
 ) -> InterfaceIpv6 {
     if let Some(nm_ip_method) = &nm_ip_setting.method {
         let (enabled, dhcp, autoconf) = match nm_ip_method {
-            NmSettingIpMethod::Disabled => (false, false, false),
+            NmSettingIpMethod::Disabled => (false, Some(false), Some(false)),
             NmSettingIpMethod::LinkLocal
             | NmSettingIpMethod::Manual
-            | NmSettingIpMethod::Shared => (true, false, false),
-            NmSettingIpMethod::Auto => (true, true, true),
-            NmSettingIpMethod::Dhcp => (true, true, false),
-            NmSettingIpMethod::Ignore => (true, false, false),
+            | NmSettingIpMethod::Shared => (true, Some(false), Some(false)),
+            NmSettingIpMethod::Auto => (true, Some(true), Some(true)),
+            NmSettingIpMethod::Dhcp => (true, Some(true), Some(false)),
+            NmSettingIpMethod::Ignore => (true, Some(false), Some(false)),
             _ => {
                 log::warn!("Unknown NM IP method {:?}", nm_ip_method);
-                (false, false, false)
+                (false, None, None)
             }
         };
         let (auto_dns, auto_gateway, auto_routes, auto_table_id) =
