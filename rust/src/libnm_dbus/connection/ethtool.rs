@@ -39,6 +39,7 @@ pub struct NmSettingEthtool {
     pub feature_tso: Option<bool>,
     pub feature_gro: Option<bool>,
     pub feature_gso: Option<bool>,
+    pub feature_highdma: Option<bool>,
     pub feature_rxhash: Option<bool>,
     pub feature_lro: Option<bool>,
     pub feature_ntuple: Option<bool>,
@@ -178,6 +179,7 @@ impl TryFrom<DbusDictionary> for NmSettingEthtool {
             feature_ntuple: _from_map!(v, "feature-ntuple", bool::try_from)?,
             feature_rxvlan: _from_map!(v, "feature-rxvlan", bool::try_from)?,
             feature_txvlan: _from_map!(v, "feature-txvlan", bool::try_from)?,
+            feature_highdma: _from_map!(v, "feature-highdma", bool::try_from)?,
             ring_rx: _from_map!(v, "ring-rx", u32::try_from)?,
             ring_rx_jumbo: _from_map!(v, "ring-rx-jumbo", u32::try_from)?,
             ring_rx_mini: _from_map!(v, "ring-rx-mini", u32::try_from)?,
@@ -306,6 +308,9 @@ impl NmSettingEthtool {
         }
         if let Some(v) = &self.feature_txvlan {
             ret.insert("feature-txvlan", zvariant::Value::new(v));
+        }
+        if let Some(v) = &self.feature_highdma {
+            ret.insert("feature-highdma", zvariant::Value::new(v));
         }
         if let Some(v) = &self.ring_rx {
             ret.insert("ring-rx", zvariant::Value::new(v));
