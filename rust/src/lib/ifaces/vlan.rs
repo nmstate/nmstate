@@ -47,6 +47,7 @@ impl VlanInterface {
 #[non_exhaustive]
 pub struct VlanConfig {
     pub base_iface: String,
+    #[serde(deserialize_with = "crate::deserializer::u16_or_string")]
     pub id: u16,
 }
 

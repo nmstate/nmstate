@@ -54,6 +54,7 @@ const LLDP_SYS_CAP_TWO_PORT_MAC_RELAY: u16 = 11;
 #[non_exhaustive]
 #[serde(deny_unknown_fields)]
 pub struct LldpConfig {
+    #[serde(deserialize_with = "crate::deserializer::bool_or_string")]
     pub enabled: bool,
     #[serde(skip_deserializing, skip_serializing_if = "Vec::is_empty")]
     pub neighbors: Vec<Vec<LldpNeighborTlv>>,

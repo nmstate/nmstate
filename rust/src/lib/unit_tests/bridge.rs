@@ -1,4 +1,7 @@
-use crate::Interfaces;
+use crate::{
+    Interfaces, LinuxBridgeInterface, LinuxBridgePortTunkTag,
+    LinuxBridgePortVlanRange,
+};
 
 #[test]
 fn test_linux_bridge_ignore_port() {
@@ -98,4 +101,97 @@ fn test_linux_bridge_verify_ignore_port() {
     .unwrap();
 
     ifaces.verify(&cur_ifaces).unwrap();
+}
+
+#[test]
+fn test_linux_bridge_stringlized_attributes() {
+    let iface: LinuxBridgeInterface = serde_yaml::from_str(
+        r#"---
+name: br0
+type: linux-bridge
+state: up
+bridge:
+  options:
+    group-forward-mask: "300"
+    group-fwd-mask: "301"
+    hash-max: "302"
+    mac-ageing-time: "303"
+    multicast-last-member-count: "304"
+    multicast-last-member-interval: "305"
+    multicast-membership-interval: "306"
+    multicast-querier: "1"
+    multicast-querier-interval: "307"
+    multicast-query-interval: "308"
+    multicast-query-response-interval: "309"
+    multicast-query-use-ifaddr: "yes"
+    multicast-snooping: "no"
+    multicast-startup-query-count: "310"
+    multicast-startup-query-interval: "311"
+    stp:
+      enabled: "false"
+      forward-delay: "16"
+      hello-time: "2"
+      max-age: "20"
+      priority: "32768"
+  port:
+  - name: eth1
+    stp-hairpin-mode: "false"
+    stp-path-cost: "100"
+    stp-priority: "101"
+    vlan:
+      enable-native: "true"
+      tag: "102"
+      trunk-tags:
+      - id: "103"
+      - id-range:
+          max: "1024"
+          min: "105"
+"#,
+    )
+    .unwrap();
+
+    let br_conf = iface.bridge.unwrap();
+    let port_conf = &br_conf.port.as_ref().unwrap()[0];
+    let vlan_conf = port_conf.vlan.as_ref().unwrap();
+    let opts = br_conf.options.as_ref().unwrap();
+    let stp_opts = opts.stp.as_ref().unwrap();
+
+    assert_eq!(port_conf.stp_hairpin_mode, Some(false));
+    assert_eq!(port_conf.stp_path_cost, Some(100));
+    assert_eq!(port_conf.stp_priority, Some(101));
+    assert_eq!(vlan_conf.enable_native, Some(true));
+    assert_eq!(vlan_conf.tag, Some(102));
+    assert_eq!(
+        &vlan_conf.trunk_tags.as_ref().unwrap()[0],
+        &LinuxBridgePortTunkTag::Id(103)
+    );
+    assert_eq!(
+        &vlan_conf.trunk_tags.as_ref().unwrap()[1],
+        &LinuxBridgePortTunkTag::IdRange(LinuxBridgePortVlanRange {
+            max: 1024,
+            min: 105
+        })
+    );
+
+    assert_eq!(stp_opts.enabled, Some(false));
+    assert_eq!(stp_opts.forward_delay, Some(16));
+    assert_eq!(stp_opts.hello_time, Some(2));
+    assert_eq!(stp_opts.max_age, Some(20));
+    assert_eq!(stp_opts.priority, Some(32768));
+
+    assert_eq!(opts.group_forward_mask, Some(300));
+    assert_eq!(opts.group_fwd_mask, Some(301));
+    assert_eq!(opts.hash_max, Some(302));
+    assert_eq!(opts.mac_ageing_time, Some(303));
+    assert_eq!(opts.multicast_last_member_count, Some(304));
+    assert_eq!(opts.multicast_last_member_interval, Some(305));
+    assert_eq!(opts.multicast_membership_interval, Some(306));
+    assert_eq!(opts.multicast_querier, Some(true));
+    assert_eq!(opts.multicast_querier_interval, Some(307));
+    assert_eq!(opts.multicast_query_interval, Some(308));
+    assert_eq!(opts.multicast_query_response_interval, Some(309));
+    assert_eq!(opts.multicast_query_use_ifaddr, Some(true));
+    assert_eq!(opts.multicast_snooping, Some(false));
+    assert_eq!(opts.multicast_startup_query_count, Some(310));
+    assert_eq!(opts.multicast_startup_query_interval, Some(311));
 }
