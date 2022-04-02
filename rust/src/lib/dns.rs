@@ -280,13 +280,12 @@ fn is_iface_valid_for_dns(is_ipv6: bool, iface: &Interface) -> Option<bool> {
     if is_ipv6 {
         iface.base_iface().ipv6.as_ref().map(|ip_conf| {
             ip_conf.enabled
-                && ((!ip_conf.dhcp && !ip_conf.autoconf)
-                    || (ip_conf.auto_dns == Some(false)))
+                && (!ip_conf.is_auto() || (ip_conf.auto_dns == Some(false)))
         })
     } else {
         iface.base_iface().ipv4.as_ref().map(|ip_conf| {
             ip_conf.enabled
-                && (!ip_conf.dhcp || ip_conf.auto_dns == Some(false))
+                && (!ip_conf.is_auto() || ip_conf.auto_dns == Some(false))
         })
     }
 }
