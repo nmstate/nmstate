@@ -127,6 +127,12 @@ pub struct EthtoolFeatureConfig {
         deserialize_with = "crate::deserializer::option_bool_or_string"
     )]
     pub tx_generic_segmentation: Option<bool>,
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_bool_or_string"
+    )]
+    pub highdma: Option<bool>,
 }
 
 impl EthtoolFeatureConfig {
