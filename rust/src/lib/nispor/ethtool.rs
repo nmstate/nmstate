@@ -59,6 +59,9 @@ fn gen_ethtool_config(ethtool_info: &nispor::EthtoolInfo) -> EthtoolConfig {
         {
             feature_config.tx_tcp_segmentation = Some(*tx_tcp_segmentation);
         }
+        if let Some(highdma) = changeable.get("highdma") {
+            feature_config.highdma = Some(*highdma);
+        }
         ret.feature = Some(feature_config);
     }
     if let Some(coalesce) = &ethtool_info.coalesce {
