@@ -15,6 +15,8 @@ mod ifaces_ctrller;
 #[cfg(test)]
 mod infiniband;
 #[cfg(test)]
+mod ip;
+#[cfg(test)]
 mod lldp;
 #[cfg(test)]
 mod mac_vlan;

@@ -4,6 +4,19 @@ use std::str::FromStr;
 
 use serde::{de, de::Visitor, Deserializer};
 
+pub(crate) fn u8_or_string<'de, D>(deserializer: D) -> Result<u8, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    option_u8_or_string(deserializer).and_then(|i| {
+        if let Some(i) = i {
+            Ok(i)
+        } else {
+            Err(de::Error::custom("Required filed undefined"))
+        }
+    })
+}
+
 pub(crate) fn u16_or_string<'de, D>(deserializer: D) -> Result<u16, D::Error>
 where
     D: Deserializer<'de>,
