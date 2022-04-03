@@ -23,6 +23,7 @@ from .error import (
     NmstatePluginError,
     NmstateNotImplementedError,
     NmstateKernelIntegerRoundedError,
+    NmstateNotSupportedError,
 )
 
 lib = cdll.LoadLibrary("libnmstate.so.2")
@@ -214,5 +215,7 @@ def map_error(err_kind, err_msg):
         return NmstateNotImplementedError(err_msg)
     elif err_kind == "KernelIntegerRoundedError":
         return NmstateKernelIntegerRoundedError(err_msg)
+    elif err_kind == "NotSupportedError":
+        return NmstateNotSupportedError(err_msg);
     else:
         return NmstateError(f"{err_kind}: {err_msg}")

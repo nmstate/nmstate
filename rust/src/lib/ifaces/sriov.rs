@@ -166,3 +166,32 @@ impl SrIovVfConfig {
         Self::default()
     }
 }
+
+pub(crate) fn check_sriov_capability(
+    ifaces: &Interfaces,
+) -> Result<(), NmstateError> {
+    for iface in ifaces.kernel_ifaces.values() {
+        if let Interface::Ethernet(eth_iface) = iface {
+            if eth_iface.sriov_is_enabled() && !is_sriov_supported(iface.name())
+            {
+                let e = NmstateError::new(
+                    ErrorKind::NotSupportedError,
+                    format!(
+                        "SR-IOV is not supported by interface {}",
+                        iface.name()
+                    ),
+                );
+                log::error!("{}", e);
+                return Err(e);
+            }
+        }
+    }
+    Ok(())
+}
+
+// Checking existence of file:
+//      /sys/class/net/<iface_name>/device/sriov_numvfs
+fn is_sriov_supported(iface_name: &str) -> bool {
+    let path = format!("/sys/class/net/{}/device/sriov_numvfs", iface_name);
+    std::path::Path::new(&path).exists()
+}
