@@ -1,4 +1,4 @@
-# Copyright 2021 Red Hat
+# Copyright 2021-2022 Red Hat
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -173,6 +173,30 @@ def rollback_checkpoint(checkpoint):
     lib.nmstate_cstring_free(c_err_msg)
     if rc != NMSTATE_PASS:
         raise map_error(err_kind, err_msg)
+
+
+def gen_conf(state):
+    c_err_msg = c_char_p()
+    c_err_kind = c_char_p()
+    c_state = c_char_p(json.dumps(state).encode("utf-8"))
+    c_configs = c_char_p()
+    c_log = c_char_p()
+    rc = lib.nmstate_generate_configurations(
+        c_state,
+        byref(c_configs),
+        byref(c_log),
+        byref(c_err_kind),
+        byref(c_err_msg),
+    )
+    configs = c_configs.value
+    err_msg = c_err_msg.value
+    err_kind = c_err_kind.value
+    lib.nmstate_cstring_free(c_log)
+    lib.nmstate_cstring_free(c_err_kind)
+    lib.nmstate_cstring_free(c_err_msg)
+    if rc != NMSTATE_PASS:
+        raise map_error(err_kind, err_msg)
+    return configs.decode("utf-8")
 
 
 def map_error(err_kind, err_msg):
