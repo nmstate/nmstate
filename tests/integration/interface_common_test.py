@@ -22,6 +22,7 @@ import time
 import pytest
 
 import libnmstate
+from libnmstate.error import NmstateValueError
 from libnmstate.error import NmstateVerificationError
 
 from .testlib import assertlib
@@ -94,7 +95,7 @@ def test_take_over_virtual_interface_and_rollback(ip_link_dummy):
         assertlib.assert_state_match(dummy_desired_state)
 
         dummy_desired_state[Interface.KEY][0]["invalid_key"] = "foo"
-        with pytest.raises(NmstateVerificationError):
+        with pytest.raises((NmstateVerificationError, NmstateValueError)):
             libnmstate.apply(dummy_desired_state)
 
         time.sleep(5)
