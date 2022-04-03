@@ -24,6 +24,7 @@ def apply(
     verify_change=True,
     save_to_disk=True,
     commit=True,
+    rollback_timeout=60,
 ):
     return apply_net_state(
         desired_state,
@@ -31,6 +32,7 @@ def apply(
         verify_change=verify_change,
         save_to_disk=save_to_disk,
         commit=commit,
+        rollback_timeout=rollback_timeout,
     )
 
 
