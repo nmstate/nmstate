@@ -14,6 +14,7 @@ use crate::{
         preserve_ctrl_cfg_if_unchanged, set_ifaces_up_priority,
         set_missing_port_to_eth,
     },
+    ifaces::sriov::check_sriov_capability,
     ip::include_current_ip_address_if_dhcp_on_to_off,
     ErrorKind, Interface, InterfaceState, InterfaceType, NmstateError,
 };
@@ -315,6 +316,9 @@ impl Interfaces {
         self.set_up_priority()?;
         check_overbook_ports(self, current)?;
         check_infiniband_as_ports(self, current)?;
+        if !current.kernel_ifaces.is_empty() {
+            check_sriov_capability(self)?;
+        }
 
         for iface in self.to_vec() {
             if iface.is_absent() {
