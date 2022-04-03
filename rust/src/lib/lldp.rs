@@ -52,6 +52,7 @@ const LLDP_SYS_CAP_TWO_PORT_MAC_RELAY: u16 = 11;
 
 #[derive(Debug, Clone, PartialEq, Default, Deserialize, Serialize)]
 #[non_exhaustive]
+#[serde(deny_unknown_fields)]
 pub struct LldpConfig {
     pub enabled: bool,
     #[serde(skip_deserializing, skip_serializing_if = "Vec::is_empty")]

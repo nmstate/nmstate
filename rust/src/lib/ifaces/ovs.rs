@@ -95,7 +95,7 @@ impl OvsBridgeInterface {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
 pub struct OvsBridgeConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -117,7 +117,7 @@ impl OvsBridgeConfig {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
 pub struct OvsBridgeOptions {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -137,7 +137,7 @@ impl OvsBridgeOptions {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
 pub struct OvsBridgePortConfig {
     pub name: String,

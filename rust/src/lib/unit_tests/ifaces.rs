@@ -3,7 +3,7 @@ use crate::{
         new_eth_iface, new_ovs_br_iface, new_ovs_iface, new_unknown_iface,
         new_vlan_iface,
     },
-    InterfaceState, InterfaceType, Interfaces,
+    BondMode, Interface, InterfaceState, InterfaceType, Interfaces,
 };
 
 #[test]
@@ -90,4 +90,54 @@ fn test_check_orphan_vlan_change_parent() {
     assert_eq!(del_ifaces.to_vec().len(), 1);
     assert!(del_ifaces.kernel_ifaces["eth0"].is_absent());
     assert!(!chg_ifaces.kernel_ifaces["eth0.10"].is_absent());
+}
+
+#[test]
+fn test_ifaces_deny_unknonw_attribute() {
+    let result = serde_yaml::from_str::<Interfaces>(
+        r#"---
+- name: eth1
+  type: ethernet
+  state: up
+  foo: bar
+"#,
+    );
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert!(e.to_string().contains("unknown field"));
+        assert!(e.to_string().contains("foo"));
+    }
+}
+
+#[test]
+fn test_ifaces_resolve_unknown_bond_iface() {
+    let current = serde_yaml::from_str::<Interfaces>(
+        r#"---
+- name: bond99
+  type: bond
+  state: up
+"#,
+    )
+    .unwrap();
+    let mut desired = serde_yaml::from_str::<Interfaces>(
+        r#"---
+- name: bond99
+  link-aggregation:
+    mode: balance-rr
+"#,
+    )
+    .unwrap();
+    desired.resolve_unknown_ifaces(&current).unwrap();
+
+    if let Interface::Bond(iface) = &desired.kernel_ifaces["bond99"] {
+        assert_eq!(
+            iface.bond.as_ref().unwrap().mode,
+            Some(BondMode::RoundRobin)
+        );
+    } else {
+        panic!(
+            "Should be resolved to bond interface, but got {:?}",
+            desired
+        );
+    }
 }

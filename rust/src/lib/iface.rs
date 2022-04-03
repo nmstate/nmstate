@@ -159,16 +159,41 @@ impl From<&str> for InterfaceState {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Serialize, Default)]
 #[non_exhaustive]
 pub struct UnknownInterface {
-    #[serde(flatten)]
+    #[serde(skip)]
     pub base: BaseInterface,
+    #[serde(flatten)]
+    other: serde_json::Value,
 }
 
 impl UnknownInterface {
     pub fn new() -> Self {
         Self::default()
+    }
+}
+
+impl<'de> Deserialize<'de> for UnknownInterface {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let mut ret = UnknownInterface::default();
+        let v = serde_json::Value::deserialize(deserializer)?;
+        let mut base_value = serde_json::map::Map::new();
+        if let Some(n) = v.get("name") {
+            base_value.insert("name".to_string(), n.clone());
+        }
+        if let Some(s) = v.get("state") {
+            base_value.insert("state".to_string(), s.clone());
+        }
+        ret.base = BaseInterface::deserialize(
+            serde_json::value::Value::Object(base_value),
+        )
+        .map_err(serde::de::Error::custom)?;
+        ret.other = v;
+        Ok(ret)
     }
 }
 

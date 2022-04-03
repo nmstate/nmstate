@@ -44,7 +44,10 @@ impl NmstateError {
 
 impl From<serde_json::Error> for NmstateError {
     fn from(e: serde_json::Error) -> Self {
-        NmstateError::new(ErrorKind::Bug, format!("serde_json::Error: {}", e))
+        NmstateError::new(
+            ErrorKind::InvalidArgument,
+            format!("Invalid propriety: {}", e),
+        )
     }
 }
 
