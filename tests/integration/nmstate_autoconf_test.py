@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2021 Red Hat, Inc.
+# Copyright (c) 2021-2022 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -78,6 +78,12 @@ def lldpifaces_env():
         _iface_cleanup(BOND50)
 
 
+@pytest.mark.xfail(
+    hasattr(libnmstate, "BASE_ON_RUST"),
+    raises=FileNotFoundError,
+    reason="Nmstate rust has no support of LLDP autoconf yet",
+    strict=True,
+)
 def test_autoconf_prodnet_and_mgmtnet(lldpifaces_env):
     with lldp_enabled(LLDP_BASIC_STATE):
         _send_lldp_packet(LLDPTEST1_PEER, "lldp_prodnet.pcap")
@@ -96,6 +102,12 @@ def test_autoconf_prodnet_and_mgmtnet(lldpifaces_env):
         assert LLDPTEST3 == vlan_mgmt[VLAN.CONFIG_SUBTREE][VLAN.BASE_IFACE]
 
 
+@pytest.mark.xfail(
+    hasattr(libnmstate, "BASE_ON_RUST"),
+    raises=FileNotFoundError,
+    reason="Nmstate rust has no support of LLDP autoconf yet",
+    strict=True,
+)
 def test_autoconf_all_prodnet(lldpifaces_env):
     with lldp_enabled(LLDP_BASIC_STATE):
         _send_lldp_packet(LLDPTEST1_PEER, "lldp_prodnet.pcap")
