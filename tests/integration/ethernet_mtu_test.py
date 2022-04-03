@@ -96,9 +96,7 @@ def test_decrease_to_zero_iface_mtu():
 
     with pytest.raises(NmstateVerificationError) as err:
         libnmstate.apply(desired_state)
-    assert "-mtu: 0" in err.value.args[0]
-    # FIXME: Drop the sleep when the waiting logic is implemented.
-    time.sleep(2)
+    assert "mtu" in err.value.args[0]
     assertlib.assert_state(origin_desired_state)
 
 
