@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Eq, PartialEq, Clone, Default)]
 #[non_exhaustive]
+#[serde(deny_unknown_fields)]
 pub struct EthtoolConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub pause: Option<EthtoolPauseConfig>,
@@ -23,6 +24,7 @@ impl EthtoolConfig {
     Serialize, Deserialize, Debug, Eq, PartialEq, Clone, Default, Copy,
 )]
 #[non_exhaustive]
+#[serde(deny_unknown_fields)]
 pub struct EthtoolPauseConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub rx: Option<bool>,
@@ -82,7 +84,7 @@ impl EthtoolFeatureConfig {
 #[derive(
     Serialize, Deserialize, Debug, Eq, PartialEq, Clone, Default, Copy,
 )]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
 pub struct EthtoolCoalesceConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -138,7 +140,7 @@ impl EthtoolCoalesceConfig {
 }
 
 #[derive(Serialize, Deserialize, Debug, Eq, PartialEq, Clone, Default)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
 pub struct EthtoolRingConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
