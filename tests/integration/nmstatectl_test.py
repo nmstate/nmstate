@@ -99,6 +99,7 @@ def test_missing_operation():
 
     assert rc != cmdlib.RC_SUCCESS, cmdlib.format_exec_cmd_result(ret)
     assert (
+        # Python CLI
         "nmstatectl: error: invalid choice: 'no-such-oper'" in err
         or "'no-such-oper' which wasn't expected" in err
     )
@@ -123,15 +124,15 @@ def test_show_command_with_yaml_format():
     state_match(LOOPBACK_CONFIG, current_state)
 
 
-def test_show_command_json_only_lo():
-    ret = cmdlib.exec_cmd(SHOW_CMD + ["--json", "lo"])
+def test_show_command_json_only(eth1_up):
+    ret = cmdlib.exec_cmd(SHOW_CMD + ["--json", "eth1"])
     rc, out, err = ret
 
     assert rc == cmdlib.RC_SUCCESS, cmdlib.format_exec_cmd_result(ret)
 
     state = json.loads(out)
     assert len(state[Constants.INTERFACES]) == 1
-    assert state[Constants.INTERFACES][0]["name"] == "lo"
+    assert state[Constants.INTERFACES][0]["name"] == "eth1"
 
 
 def test_show_command_only_non_existing():
