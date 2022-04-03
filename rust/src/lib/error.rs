@@ -6,6 +6,7 @@ pub enum ErrorKind {
     Bug,
     VerificationError,
     NotImplementedError,
+    NotSupportedError,
     KernelIntegerRoundedError,
 }
 
