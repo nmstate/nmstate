@@ -454,22 +454,28 @@ impl Interfaces {
                     }
                 }
             } else {
-                let mut found_iface = Vec::new();
+                let mut founds = Vec::new();
                 for cur_iface in cur_ifaces.to_vec() {
                     if cur_iface.name() == iface_name {
-                        let mut new_iface = iface.clone();
-                        new_iface.base_iface_mut().iface_type =
-                            cur_iface.iface_type().clone();
-                        found_iface.push(new_iface);
+                        let mut new_iface_value = serde_json::to_value(iface)?;
+                        if let Some(obj) = new_iface_value.as_object_mut() {
+                            obj.insert(
+                                "type".to_string(),
+                                serde_json::Value::String(
+                                    cur_iface.iface_type().to_string(),
+                                ),
+                            );
+                        }
+                        founds.push(new_iface_value);
                     }
                 }
-                match found_iface.len() {
+                match founds.len() {
                     0 => {
                         let e = NmstateError::new(
                             ErrorKind::InvalidArgument,
                             format!(
                                 "Failed to find unknown type interface {} \
-                            in current state",
+                                in current state",
                                 iface_name
                             ),
                         );
@@ -477,10 +483,7 @@ impl Interfaces {
                         return Err(e);
                     }
                     1 => {
-                        let new_iface = Interface::deserialize(
-                            serde_json::to_value(&found_iface[0])?,
-                        )?;
-
+                        let new_iface = Interface::deserialize(&founds[0])?;
                         resolved_ifaces.push(new_iface);
                     }
                     _ => {
@@ -489,7 +492,7 @@ impl Interfaces {
                             format!(
                                 "Found 2+ interface matching desired unknown \
                             type interface {}: {:?}",
-                                iface_name, &found_iface
+                                iface_name, &founds
                             ),
                         );
                         error!("{}", e);

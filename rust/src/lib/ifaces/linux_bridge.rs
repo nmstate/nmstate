@@ -55,10 +55,20 @@ impl LinuxBridgeInterface {
         self.flatten_port_vlan_ranges();
         self.sort_port_vlans();
         self.treat_none_vlan_as_empty_dict();
+        self.remove_runtime_only_timers();
     }
 
     pub fn new() -> Self {
         Self::default()
+    }
+
+    fn remove_runtime_only_timers(&mut self) {
+        if let Some(ref mut br_conf) = self.bridge {
+            if let Some(ref mut opts) = &mut br_conf.options {
+                opts.gc_timer = None;
+                opts.hello_timer = None;
+            }
+        }
     }
 
     fn sort_ports(&mut self) {
@@ -222,7 +232,7 @@ impl LinuxBridgeInterface {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
 pub struct LinuxBridgeConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -253,7 +263,7 @@ impl LinuxBridgeConfig {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
 pub struct LinuxBridgePortConfig {
     pub name: String,
@@ -296,11 +306,10 @@ impl LinuxBridgePortConfig {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
 pub struct LinuxBridgeOptions {
-    // `gc_timer` is runtime status, not allowing for changing
-    #[serde(skip_serializing_if = "Option::is_none", skip_deserializing)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub gc_timer: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub group_addr: Option<String>,
@@ -313,8 +322,7 @@ pub struct LinuxBridgeOptions {
     pub group_fwd_mask: Option<u16>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub hash_max: Option<u32>,
-    // `hello_timer` is runtime status, not allowing for changing
-    #[serde(skip_serializing_if = "Option::is_none", skip_deserializing)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub hello_timer: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub mac_ageing_time: Option<u32>,
@@ -361,7 +369,7 @@ impl LinuxBridgeOptions {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
 pub struct LinuxBridgeStpOptions {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -485,7 +493,7 @@ impl std::fmt::Display for LinuxBridgeMulticastRouterType {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
 pub struct LinuxBridgePortVlanConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -583,6 +591,7 @@ impl LinuxBridgePortTunkTag {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 #[non_exhaustive]
+#[serde(deny_unknown_fields)]
 pub struct LinuxBridgePortVlanRange {
     pub max: u16,
     pub min: u16,

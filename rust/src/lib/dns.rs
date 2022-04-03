@@ -11,6 +11,7 @@ const DEFAULT_DNS_PRIORITY: i32 = 40;
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[non_exhaustive]
+#[serde(deny_unknown_fields)]
 pub struct DnsState {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub running: Option<DnsClientState>,
@@ -135,6 +136,7 @@ impl DnsState {
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[non_exhaustive]
+#[serde(deny_unknown_fields)]
 pub struct DnsClientState {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub server: Option<Vec<String>>,
