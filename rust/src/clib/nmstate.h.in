@@ -102,7 +102,6 @@ int nmstate_net_state_retrieve(uint32_t flags, char **state, char **log,
  *              Do not commit new state after verification
  * @state:
  *      Pointer of char array for network state in json format.
- *      The memory should be freed by nmstate_net_state_free().
  * @log:
  *      Output pointer of char array for logging.
  *      The memory should be freed by nmstate_log_free().
@@ -186,6 +185,44 @@ int nmstate_checkpoint_commit(const char *checkpoint, char **log, char **err_kin
  */
 int nmstate_checkpoint_rollback(const char *checkpoint, char **log, char **err_kind,
                                  char **err_msg);
+
+/**
+ * nmstate_generate_configurations - Generate network configurations
+ *
+ * Version:
+ *      0.1
+ *
+ * Description:
+ *      Generate offline configrations of each backends base on specified
+ *      network state. The returned configs is json string for
+ *      HashMap/Dictionary with backend name as key, and array of string
+ *      as value.
+ *
+ * @state:
+ *      Pointer of char array for network state in json format.
+ * @configs:
+ *      Output pointer of char array for network configures in json format.
+ *      The memory should be freed by nmstate_net_state_free().
+ * @log:
+ *      Output pointer of char array for logging.
+ *      The memory should be freed by nmstate_log_free().
+ * @err_kind:
+ *      Output pointer of char array for error kind.
+ *      The memory should be freed by nmstate_err_kind_free().
+ * @err_msg:
+ *      Output pointer of char array for error message.
+ *      The memory should be freed by nmstate_err_msg_free().
+ *
+ * Return:
+ *      Error code:
+ *          * NMSTATE_PASS
+ *              On success.
+ *          * NMSTATE_FAIL
+ *              On failure.
+ */
+int nmstate_generate_configurations(const char *state, char **configs,
+                                    char **log, char **err_kind,
+                                    char **err_msg);
 
 /**
  * nmstate_cstring_free - free the memory of C string
