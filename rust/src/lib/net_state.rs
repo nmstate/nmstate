@@ -57,7 +57,7 @@ pub struct NetworkState {
     #[serde(skip)]
     no_commit: bool,
     #[serde(skip)]
-    timeout: u32,
+    timeout: Option<u32>,
     #[serde(skip)]
     include_secrets: bool,
     #[serde(skip)]
@@ -124,7 +124,7 @@ impl NetworkState {
     }
 
     pub fn set_timeout(&mut self, value: u32) -> &mut Self {
-        self.timeout = value;
+        self.timeout = Some(value);
         self
     }
 
@@ -271,7 +271,9 @@ impl NetworkState {
                     VERIFY_RETRY_COUNT
                 };
 
-            let checkpoint = nm_checkpoint_create()?;
+            let checkpoint = nm_checkpoint_create(
+                self.timeout.unwrap_or(DEFAULT_ROLLBACK_TIMEOUT),
+            )?;
             info!("Created checkpoint {}", &checkpoint);
 
             with_nm_checkpoint(&checkpoint, self.no_commit, || {
@@ -291,7 +293,10 @@ impl NetworkState {
                 }
                 nm_checkpoint_timeout_extend(
                     &checkpoint,
-                    cmp::max(DEFAULT_ROLLBACK_TIMEOUT, self.timeout),
+                    cmp::min(
+                        DEFAULT_ROLLBACK_TIMEOUT,
+                        self.timeout.unwrap_or(DEFAULT_ROLLBACK_TIMEOUT),
+                    ),
                 )?;
                 if !self.no_verify {
                     with_retry(
