@@ -234,7 +234,7 @@ impl std::fmt::Display for BondMode {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
 pub struct BondConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -520,6 +520,7 @@ impl std::fmt::Display for BondXmitHashPolicy {
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone, PartialEq)]
 #[non_exhaustive]
+#[serde(deny_unknown_fields)]
 pub struct BondOptions {
     #[serde(
         skip_serializing_if = "Option::is_none",

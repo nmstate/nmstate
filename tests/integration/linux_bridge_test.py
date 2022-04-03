@@ -395,7 +395,7 @@ def test_rollback_for_linux_bridge():
     original_state = libnmstate.show()
     bridge_name = TEST_BRIDGE0
     bridge_state = _create_bridge_subtree_config(())
-    with pytest.raises(NmstateVerificationError):
+    with pytest.raises((NmstateVerificationError, NmstateValueError)):
         with linux_bridge(bridge_name, bridge_state) as desired_state:
             desired_state[Interface.KEY][0]["invalid_key"] = "foo"
             libnmstate.apply(desired_state)
