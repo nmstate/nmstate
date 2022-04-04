@@ -3,14 +3,14 @@ use std::convert::TryFrom;
 use std::iter::FromIterator;
 
 use log::warn;
-use nm_dbus::{NmConnection, NmSettingOvsExtIds};
+use nm_dbus::{NmConnection, NmSettingOvsExtIds, NmSettingOvsPatch};
 
 use crate::{
     nm::connection::gen_nm_conn_setting, BaseInterface, BridgePortVlanConfig,
     BridgePortVlanMode, Interface, InterfaceType, NmstateError,
     OvsBridgeBondConfig, OvsBridgeBondMode, OvsBridgeBondPortConfig,
     OvsBridgeConfig, OvsBridgeInterface, OvsBridgeOptions, OvsBridgePortConfig,
-    UnknownInterface,
+    OvsInterface, OvsPatchConfig, UnknownInterface,
 };
 
 pub(crate) fn nm_ovs_bridge_conf_get(
@@ -247,10 +247,24 @@ pub(crate) fn gen_nm_ovs_br_setting(
     nm_conn.ovs_bridge = Some(nm_ovs_br_set);
 }
 
-pub(crate) fn gen_nm_ovs_iface_setting(nm_conn: &mut NmConnection) {
+pub(crate) fn gen_nm_ovs_iface_setting(
+    iface: &OvsInterface,
+    nm_conn: &mut NmConnection,
+) {
     let mut nm_ovs_iface_set =
         nm_conn.ovs_iface.as_ref().cloned().unwrap_or_default();
-    nm_ovs_iface_set.iface_type = Some("internal".to_string());
+    if let Some(peer) = iface
+        .patch
+        .as_ref()
+        .map(|patch_conf| patch_conf.peer.as_str())
+    {
+        nm_ovs_iface_set.iface_type = Some("patch".to_string());
+        let mut nm_ovs_patch = NmSettingOvsPatch::default();
+        nm_ovs_patch.peer = Some(peer.to_string());
+        nm_conn.ovs_patch = Some(nm_ovs_patch);
+    } else {
+        nm_ovs_iface_set.iface_type = Some("internal".to_string());
+    }
     nm_conn.ovs_iface = Some(nm_ovs_iface_set);
 }
 
@@ -298,6 +312,19 @@ fn get_vlan_info(nm_conn: &NmConnection) -> Option<BridgePortVlanConfig> {
                     }
                 }),
                 ..Default::default()
+            });
+        }
+    }
+    None
+}
+
+pub(crate) fn get_ovs_patch_config(
+    nm_conn: &NmConnection,
+) -> Option<OvsPatchConfig> {
+    if let Some(nm_ovs_patch_set) = nm_conn.ovs_patch.as_ref() {
+        if let Some(peer) = nm_ovs_patch_set.peer.as_deref() {
+            return Some(OvsPatchConfig {
+                peer: peer.to_string(),
             });
         }
     }
