@@ -37,9 +37,9 @@ pub use crate::ifaces::{
     MacVlanConfig, MacVlanInterface, MacVlanMode, MacVtapConfig,
     MacVtapInterface, MacVtapMode, OvsBridgeBondConfig, OvsBridgeBondMode,
     OvsBridgeBondPortConfig, OvsBridgeConfig, OvsBridgeInterface,
-    OvsBridgeOptions, OvsBridgePortConfig, OvsInterface, SrIovConfig,
-    SrIovVfConfig, VethConfig, VlanConfig, VlanInterface, VrfConfig,
-    VrfInterface, VxlanConfig, VxlanInterface,
+    OvsBridgeOptions, OvsBridgePortConfig, OvsInterface, OvsPatchConfig,
+    SrIovConfig, SrIovVfConfig, VethConfig, VlanConfig, VlanInterface,
+    VrfConfig, VrfInterface, VxlanConfig, VxlanInterface,
 };
 pub use crate::ip::{InterfaceIpAddr, InterfaceIpv4, InterfaceIpv6};
 pub use crate::lldp::{

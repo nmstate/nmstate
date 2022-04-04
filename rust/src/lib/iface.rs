@@ -643,6 +643,9 @@ impl Interface {
                 iface.base.iface_type = InterfaceType::Veth;
             }
         }
+        if let Interface::OvsInterface(iface) = self {
+            iface.pre_edit_cleanup()?;
+        }
         Ok(())
     }
 

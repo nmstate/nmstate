@@ -222,6 +222,7 @@ function run_tests {
             $PYTEST_OPTIONS \
             tests/integration/ovs_test.py \
             -k '\
+            TestOvsPatch or \
             test_ovs_vlan_access_tag or \
             test_create_and_remove_ovs_bridge_with_min_desired_state or \
             test_create_and_save_ovs_bridge_then_remove_and_apply_again or \

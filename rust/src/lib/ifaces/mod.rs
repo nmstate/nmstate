@@ -46,7 +46,7 @@ pub use mac_vtap::{MacVtapConfig, MacVtapInterface, MacVtapMode};
 pub use ovs::{
     OvsBridgeBondConfig, OvsBridgeBondMode, OvsBridgeBondPortConfig,
     OvsBridgeConfig, OvsBridgeInterface, OvsBridgeOptions, OvsBridgePortConfig,
-    OvsInterface,
+    OvsInterface, OvsPatchConfig,
 };
 pub use sriov::{SrIovConfig, SrIovVfConfig};
 pub use vlan::{VlanConfig, VlanInterface};
