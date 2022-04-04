@@ -179,13 +179,15 @@ impl OvsBridgePortConfig {
 pub struct OvsInterface {
     #[serde(flatten)]
     pub base: BaseInterface,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub patch: Option<OvsPatchConfig>,
 }
 
 impl Default for OvsInterface {
     fn default() -> Self {
         let mut base = BaseInterface::new();
         base.iface_type = InterfaceType::OvsInterface;
-        Self { base }
+        Self { base, patch: None }
     }
 }
 
@@ -196,6 +198,39 @@ impl OvsInterface {
 
     pub(crate) fn parent(&self) -> Option<&str> {
         self.base.controller.as_deref()
+    }
+
+    // OVS patch interface cannot have MTU or IP configuration
+    pub(crate) fn pre_edit_cleanup(&self) -> Result<(), NmstateError> {
+        if self.patch.is_some() {
+            if self.base.mtu.is_some() {
+                let e = NmstateError::new(
+                    ErrorKind::InvalidArgument,
+                    format!(
+                        "OVS patch interface is not allowed to hold MTU \
+                        configuration, interface name {}",
+                        self.base.name.as_str()
+                    ),
+                );
+                log::error!("{}", e);
+                return Err(e);
+            }
+            if self.base.ipv4.as_ref().map(|c| c.enabled) == Some(true)
+                || self.base.ipv6.as_ref().map(|c| c.enabled) == Some(true)
+            {
+                let e = NmstateError::new(
+                    ErrorKind::InvalidArgument,
+                    format!(
+                        "OVS patch interface is not allowed to hold IP \
+                        configuration, interface name {}",
+                        self.base.name.as_str()
+                    ),
+                );
+                log::error!("{}", e);
+                return Err(e);
+            }
+        }
+        Ok(())
     }
 }
 
@@ -300,4 +335,11 @@ impl std::fmt::Display for OvsBridgeBondMode {
             }
         )
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[serde(deny_unknown_fields)]
+#[non_exhaustive]
+pub struct OvsPatchConfig {
+    pub peer: String,
 }
