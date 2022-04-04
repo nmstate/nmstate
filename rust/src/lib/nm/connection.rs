@@ -138,9 +138,8 @@ pub(crate) fn iface_to_nm_connections(
         Interface::Bond(bond_iface) => {
             gen_nm_bond_setting(bond_iface, &mut nm_conn);
         }
-        Interface::OvsInterface(_) => {
-            // TODO Support OVS Patch interface
-            gen_nm_ovs_iface_setting(&mut nm_conn);
+        Interface::OvsInterface(iface) => {
+            gen_nm_ovs_iface_setting(iface, &mut nm_conn);
         }
         Interface::Vlan(vlan_iface) => {
             if let Some(conf) = vlan_iface.vlan.as_ref() {

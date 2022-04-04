@@ -47,7 +47,8 @@ pub use crate::connection::infiniband::NmSettingInfiniBand;
 pub use crate::connection::ip::{NmSettingIp, NmSettingIpMethod};
 pub use crate::connection::mac_vlan::NmSettingMacVlan;
 pub use crate::connection::ovs::{
-    NmSettingOvsBridge, NmSettingOvsExtIds, NmSettingOvsIface, NmSettingOvsPort,
+    NmSettingOvsBridge, NmSettingOvsExtIds, NmSettingOvsIface,
+    NmSettingOvsPatch, NmSettingOvsPort,
 };
 pub use crate::connection::route::NmIpRoute;
 pub use crate::connection::route_rule::NmIpRouteRule;

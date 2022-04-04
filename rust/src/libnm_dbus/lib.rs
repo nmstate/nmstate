@@ -30,9 +30,10 @@ pub use crate::connection::{
     NmSettingBridge, NmSettingBridgeVlanRange, NmSettingConnection,
     NmSettingEthtool, NmSettingInfiniBand, NmSettingIp, NmSettingIpMethod,
     NmSettingMacVlan, NmSettingOvsBridge, NmSettingOvsExtIds,
-    NmSettingOvsIface, NmSettingOvsPort, NmSettingSriov, NmSettingSriovVf,
-    NmSettingSriovVfVlan, NmSettingUser, NmSettingVeth, NmSettingVlan,
-    NmSettingVrf, NmSettingVxlan, NmSettingWired, NmVlanProtocol,
+    NmSettingOvsIface, NmSettingOvsPatch, NmSettingOvsPort, NmSettingSriov,
+    NmSettingSriovVf, NmSettingSriovVfVlan, NmSettingUser, NmSettingVeth,
+    NmSettingVlan, NmSettingVrf, NmSettingVxlan, NmSettingWired,
+    NmVlanProtocol,
 };
 pub use crate::device::{NmDevice, NmDeviceState, NmDeviceStateReason};
 pub use crate::dns::NmDnsEntry;
