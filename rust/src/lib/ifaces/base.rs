@@ -9,7 +9,7 @@ use crate::{
 
 // TODO: Use prop_list to Serialize like InterfaceIpv4 did
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
 pub struct BaseInterface {
     pub name: String,
@@ -25,7 +25,11 @@ pub struct BaseInterface {
     pub mac_address: Option<String>,
     #[serde(skip)]
     pub permanent_mac_address: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_u64_or_string"
+    )]
     pub mtu: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ipv4: Option<InterfaceIpv4>,
@@ -33,7 +37,11 @@ pub struct BaseInterface {
     pub ipv6: Option<InterfaceIpv6>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub controller: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_bool_or_string"
+    )]
     pub accept_all_mac_addresses: Option<bool>,
     #[serde(skip_serializing)]
     pub copy_mac_from: Option<String>,
@@ -146,10 +154,10 @@ impl BaseInterface {
         }
 
         if let Some(ref mut ipv4) = self.ipv4 {
-            ipv4.pre_edit_cleanup()?
+            ipv4.pre_edit_cleanup();
         }
         if let Some(ref mut ipv6) = self.ipv6 {
-            ipv6.pre_edit_cleanup()?
+            ipv6.pre_edit_cleanup();
         }
         Ok(())
     }

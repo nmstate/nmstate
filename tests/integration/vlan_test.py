@@ -23,6 +23,7 @@ import time
 import pytest
 
 import libnmstate
+from libnmstate.error import NmstateValueError
 from libnmstate.error import NmstateVerificationError
 from libnmstate.schema import VLAN
 from libnmstate.schema import Interface
@@ -138,7 +139,7 @@ def test_rollback_for_vlans(eth1_up):
     desired_state = create_two_vlans_state()
 
     desired_state[Interface.KEY][1]["invalid_key"] = "foo"
-    with pytest.raises(NmstateVerificationError):
+    with pytest.raises((NmstateVerificationError, NmstateValueError)):
         libnmstate.apply(desired_state)
 
     time.sleep(5)  # Give some time for NetworkManager to rollback

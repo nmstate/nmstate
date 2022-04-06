@@ -52,6 +52,7 @@ fn apply_feature_options(
     nm_ethtool_set.feature_sg = feature_conf.tx_scatter_gather;
     nm_ethtool_set.feature_tso = feature_conf.tx_tcp_segmentation;
     nm_ethtool_set.feature_tso = feature_conf.tx_generic_segmentation;
+    nm_ethtool_set.feature_highdma = feature_conf.highdma
 }
 
 fn apply_coalesce_options(

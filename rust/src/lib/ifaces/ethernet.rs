@@ -114,17 +114,23 @@ impl std::fmt::Display for EthernetDuplex {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
 pub struct EthernetConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sr_iov: Option<SrIovConfig>,
     #[serde(
         skip_serializing_if = "Option::is_none",
-        rename = "auto-negotiation"
+        rename = "auto-negotiation",
+        default,
+        deserialize_with = "crate::deserializer::option_bool_or_string"
     )]
     pub auto_neg: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_u32_or_string"
+    )]
     pub speed: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub duplex: Option<EthernetDuplex>,

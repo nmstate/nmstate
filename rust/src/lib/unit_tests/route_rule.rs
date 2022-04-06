@@ -156,3 +156,16 @@ fn gen_rule_entry(
         priority: Some(priority),
     }
 }
+
+#[test]
+fn test_route_rule_stringlized_attributes() {
+    let rule: RouteRuleEntry = serde_yaml::from_str(
+        r#"
+priority: "500"
+route-table: "129"
+"#,
+    )
+    .unwrap();
+    assert_eq!(rule.table_id, Some(129));
+    assert_eq!(rule.priority, Some(500));
+}

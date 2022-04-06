@@ -55,10 +55,20 @@ impl LinuxBridgeInterface {
         self.flatten_port_vlan_ranges();
         self.sort_port_vlans();
         self.treat_none_vlan_as_empty_dict();
+        self.remove_runtime_only_timers();
     }
 
     pub fn new() -> Self {
         Self::default()
+    }
+
+    fn remove_runtime_only_timers(&mut self) {
+        if let Some(ref mut br_conf) = self.bridge {
+            if let Some(ref mut opts) = &mut br_conf.options {
+                opts.gc_timer = None;
+                opts.hello_timer = None;
+            }
+        }
     }
 
     fn sort_ports(&mut self) {
@@ -222,7 +232,7 @@ impl LinuxBridgeInterface {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
 pub struct LinuxBridgeConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -253,17 +263,28 @@ impl LinuxBridgeConfig {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
 pub struct LinuxBridgePortConfig {
     pub name: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_bool_or_string"
+    )]
     pub stp_hairpin_mode: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_u32_or_string"
+    )]
     pub stp_path_cost: Option<u32>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_u16_or_string"
+    )]
     pub stp_priority: Option<u16>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub vlan: Option<LinuxBridgePortVlanConfig>,
 }
 
@@ -296,51 +317,109 @@ impl LinuxBridgePortConfig {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
 pub struct LinuxBridgeOptions {
-    // `gc_timer` is runtime status, not allowing for changing
-    #[serde(skip_serializing_if = "Option::is_none", skip_deserializing)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub gc_timer: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub group_addr: Option<String>,
     // The group_forward_mask is the same with group_fwd_mask. The former is
     // used by NetworkManager, the later is used by sysfs. Nmstate support
     // both.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_u16_or_string"
+    )]
     pub group_forward_mask: Option<u16>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_u16_or_string"
+    )]
     pub group_fwd_mask: Option<u16>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_u32_or_string"
+    )]
     pub hash_max: Option<u32>,
-    // `hello_timer` is runtime status, not allowing for changing
-    #[serde(skip_serializing_if = "Option::is_none", skip_deserializing)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub hello_timer: Option<u64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_u32_or_string"
+    )]
     pub mac_ageing_time: Option<u32>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_u32_or_string"
+    )]
     pub multicast_last_member_count: Option<u32>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_u64_or_string"
+    )]
     pub multicast_last_member_interval: Option<u64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_u64_or_string"
+    )]
     pub multicast_membership_interval: Option<u64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_bool_or_string"
+    )]
     pub multicast_querier: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_u64_or_string"
+    )]
     pub multicast_querier_interval: Option<u64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_u64_or_string"
+    )]
     pub multicast_query_interval: Option<u64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_u64_or_string"
+    )]
     pub multicast_query_response_interval: Option<u64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_bool_or_string"
+    )]
     pub multicast_query_use_ifaddr: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub multicast_router: Option<LinuxBridgeMulticastRouterType>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_bool_or_string"
+    )]
     pub multicast_snooping: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_u32_or_string"
+    )]
     pub multicast_startup_query_count: Option<u32>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_u64_or_string"
+    )]
     pub multicast_startup_query_interval: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub stp: Option<LinuxBridgeStpOptions>,
@@ -361,18 +440,38 @@ impl LinuxBridgeOptions {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
 pub struct LinuxBridgeStpOptions {
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_bool_or_string"
+    )]
     pub enabled: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_u8_or_string"
+    )]
     pub forward_delay: Option<u8>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_u8_or_string"
+    )]
     pub hello_time: Option<u8>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_u8_or_string"
+    )]
     pub max_age: Option<u8>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_u16_or_string"
+    )]
     pub priority: Option<u16>,
 }
 
@@ -485,14 +584,22 @@ impl std::fmt::Display for LinuxBridgeMulticastRouterType {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
 pub struct LinuxBridgePortVlanConfig {
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_bool_or_string"
+    )]
     pub enable_native: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub mode: Option<LinuxBridgePortVlanMode>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_u16_or_string"
+    )]
     pub tag: Option<u16>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub trunk_tags: Option<Vec<LinuxBridgePortTunkTag>>,
@@ -568,6 +675,7 @@ impl Default for LinuxBridgePortVlanMode {
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum LinuxBridgePortTunkTag {
+    #[serde(deserialize_with = "crate::deserializer::u16_or_string")]
     Id(u16),
     IdRange(LinuxBridgePortVlanRange),
 }
@@ -583,7 +691,10 @@ impl LinuxBridgePortTunkTag {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 #[non_exhaustive]
+#[serde(deny_unknown_fields)]
 pub struct LinuxBridgePortVlanRange {
+    #[serde(deserialize_with = "crate::deserializer::u16_or_string")]
     pub max: u16,
+    #[serde(deserialize_with = "crate::deserializer::u16_or_string")]
     pub min: u16,
 }

@@ -11,6 +11,7 @@ const DEFAULT_DNS_PRIORITY: i32 = 40;
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[non_exhaustive]
+#[serde(deny_unknown_fields)]
 pub struct DnsState {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub running: Option<DnsClientState>,
@@ -135,6 +136,7 @@ impl DnsState {
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[non_exhaustive]
+#[serde(deny_unknown_fields)]
 pub struct DnsClientState {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub server: Option<Vec<String>>,
@@ -278,13 +280,12 @@ fn is_iface_valid_for_dns(is_ipv6: bool, iface: &Interface) -> Option<bool> {
     if is_ipv6 {
         iface.base_iface().ipv6.as_ref().map(|ip_conf| {
             ip_conf.enabled
-                && ((!ip_conf.dhcp && !ip_conf.autoconf)
-                    || (ip_conf.auto_dns == Some(false)))
+                && (!ip_conf.is_auto() || (ip_conf.auto_dns == Some(false)))
         })
     } else {
         iface.base_iface().ipv4.as_ref().map(|ip_conf| {
             ip_conf.enabled
-                && (!ip_conf.dhcp || ip_conf.auto_dns == Some(false))
+                && (!ip_conf.is_auto() || ip_conf.auto_dns == Some(false))
         })
     }
 }

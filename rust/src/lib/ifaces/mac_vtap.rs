@@ -61,12 +61,18 @@ impl MacVtapInterface {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
 pub struct MacVtapConfig {
     pub base_iface: String,
     pub mode: MacVtapMode,
-    #[serde(skip_serializing_if = "Option::is_none", rename = "promiscuous")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "promiscuous",
+        alias = "accept-all-mac",
+        default,
+        deserialize_with = "crate::deserializer::option_bool_or_string"
+    )]
     pub accept_all_mac: Option<bool>,
 }
 

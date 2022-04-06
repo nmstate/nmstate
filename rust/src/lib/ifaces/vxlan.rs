@@ -43,14 +43,18 @@ impl VxlanInterface {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
 pub struct VxlanConfig {
     pub base_iface: String,
+    #[serde(deserialize_with = "crate::deserializer::u32_or_string")]
     pub id: u32,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub remote: Option<std::net::IpAddr>,
-    #[serde(rename = "destination-port")]
+    #[serde(
+        rename = "destination-port",
+        deserialize_with = "crate::deserializer::option_u16_or_string"
+    )]
     pub dst_port: Option<u16>,
 }
 

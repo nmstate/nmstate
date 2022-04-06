@@ -54,9 +54,13 @@ impl VrfInterface {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 #[non_exhaustive]
+#[serde(deny_unknown_fields)]
 pub struct VrfConfig {
     pub port: Option<Vec<String>>,
-    #[serde(rename = "route-table-id")]
+    #[serde(
+        rename = "route-table-id",
+        deserialize_with = "crate::deserializer::u32_or_string"
+    )]
     pub table_id: u32,
 }
 

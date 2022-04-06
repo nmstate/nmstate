@@ -62,7 +62,7 @@ impl std::fmt::Display for InfiniBandMode {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
 pub struct InfiniBandConfig {
     pub mode: InfiniBandMode,
