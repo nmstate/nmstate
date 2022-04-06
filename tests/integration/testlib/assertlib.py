@@ -17,6 +17,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 import copy
+import time
 
 from operator import itemgetter
 
@@ -31,6 +32,8 @@ from libnmstate.schema import LinuxBridge as LB
 from libnmstate.schema import OvsDB
 
 from . import statelib
+
+RETRY_COUNT = 5
 
 
 def assert_state(desired_state_data):
@@ -54,11 +57,20 @@ def assert_state_match(desired_state_data):
     Given a state, assert it against the current state by treating missing
     value in desired_state as match.
     """
+    for i in range(0, RETRY_COUNT):
+        desired_state, current_state = _prepare_state_for_verify(
+            desired_state_data
+        )
+        if not desired_state.match(current_state):
+            print(
+                "desired miss match with current, retrying:",
+                desired_state.state,
+                current_state.state,
+            )
+            time.sleep(0.5)
     desired_state, current_state = _prepare_state_for_verify(
         desired_state_data
     )
-    print(desired_state.state)
-    print(current_state.state)
     assert desired_state.match(current_state)
 
 
