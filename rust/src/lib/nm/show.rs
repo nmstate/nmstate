@@ -23,7 +23,9 @@ use crate::{
     nm::ieee8021x::nm_802_1x_to_nmstate,
     nm::ip::{nm_ip_setting_to_nmstate4, nm_ip_setting_to_nmstate6},
     nm::lldp::{get_lldp, is_lldp_enabled},
-    nm::ovs::{get_ovs_patch_config, nm_ovs_bridge_conf_get},
+    nm::ovs::{
+        get_ovs_dpdk_config, get_ovs_patch_config, nm_ovs_bridge_conf_get,
+    },
     nm::user::get_description,
     BaseInterface, BondInterface, DummyInterface, EthernetInterface,
     InfiniBandInterface, Interface, InterfaceState, InterfaceType, Interfaces,
@@ -313,6 +315,7 @@ fn iface_get(
                 let mut iface = OvsInterface::new();
                 iface.base = base_iface;
                 iface.patch = get_ovs_patch_config(nm_conn);
+                iface.dpdk = get_ovs_dpdk_config(nm_conn);
                 iface
             }),
             InterfaceType::Dummy => Interface::Dummy({
