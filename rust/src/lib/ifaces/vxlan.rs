@@ -53,6 +53,7 @@ pub struct VxlanConfig {
     pub remote: Option<std::net::IpAddr>,
     #[serde(
         rename = "destination-port",
+        default,
         deserialize_with = "crate::deserializer::option_u16_or_string"
     )]
     pub dst_port: Option<u16>,
