@@ -230,6 +230,11 @@ fn main() {
     } else if let Some(matches) = matches.subcommand_matches(SUB_CMD_SHOW) {
         print_result_and_exit(show(matches), EXIT_FAILURE);
     } else if let Some(matches) = matches.subcommand_matches(SUB_CMD_APPLY) {
+        let argv: Vec<String> = std::env::args().collect();
+        if argv.get(1) == Some(&"set".to_string()) {
+            eprintln!("Using 'set' is deprecated, use 'apply' instead.");
+        }
+
         if let Some(file_path) = matches.value_of("STATE_FILE") {
             print_result_and_exit(
                 apply_from_file(file_path, matches),
