@@ -492,3 +492,52 @@ pub(crate) fn check_infiniband_as_ports(
     }
     Ok(())
 }
+
+// OVS Interface should have its controller found in current
+// or new interface list.
+pub(crate) fn validate_new_ovs_iface_has_controller(
+    new_ifaces: &Interfaces,
+    current: &Interfaces,
+) -> Result<(), NmstateError> {
+    for iface in new_ifaces
+        .kernel_ifaces
+        .values()
+        .filter(|i| i.iface_type() == InterfaceType::OvsInterface)
+    {
+        match iface.base_iface().controller.as_deref() {
+            Some(ctrl) => {
+                if new_ifaces
+                    .get_iface(ctrl, InterfaceType::OvsBridge)
+                    .or_else(|| {
+                        current.get_iface(ctrl, InterfaceType::OvsBridge)
+                    })
+                    .is_none()
+                {
+                    let e = NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        format!(
+                            "The controller {} for OVS interface {} does not \
+                        exists in current status or desire status",
+                            ctrl,
+                            iface.name()
+                        ),
+                    );
+                    log::error!("{}", e);
+                    return Err(e);
+                }
+            }
+            None => {
+                let e = NmstateError::new(
+                    ErrorKind::InvalidArgument,
+                    format!(
+                        "OVS interface {} does not its OVS bridge defined",
+                        iface.name()
+                    ),
+                );
+                log::error!("{}", e);
+                return Err(e);
+            }
+        }
+    }
+    Ok(())
+}

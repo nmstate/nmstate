@@ -12,7 +12,7 @@ use crate::{
         check_infiniband_as_ports, check_overbook_ports,
         find_unknown_type_port, handle_changed_ports,
         preserve_ctrl_cfg_if_unchanged, set_ifaces_up_priority,
-        set_missing_port_to_eth,
+        set_missing_port_to_eth, validate_new_ovs_iface_has_controller,
     },
     ifaces::sriov::check_sriov_capability,
     ip::include_current_ip_address_if_dhcp_on_to_off,
@@ -369,6 +369,7 @@ impl Interfaces {
             &mut del_ifaces,
             current,
         )?;
+        validate_new_ovs_iface_has_controller(&add_ifaces, current)?;
 
         if memory_only {
             // In memory_only mode, absent interface equal to down
