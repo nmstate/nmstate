@@ -111,6 +111,15 @@ fn get_ovs_port_config_for_bond(
             None
         }
     });
+    if ovs_bond_conf.mode.is_none()
+        && nm_port_set.lacp.as_deref() == Some("active")
+    {
+        ovs_bond_conf.mode = Some(OvsBridgeBondMode::Lacp);
+    }
+
+    if ovs_bond_conf.mode.is_none() {
+        ovs_bond_conf.mode = Some(OvsBridgeBondMode::ActiveBackup);
+    }
 
     ovs_bond_conf.bond_downdelay = nm_port_set.down_delay;
     ovs_bond_conf.bond_updelay = nm_port_set.up_delay;
@@ -190,7 +199,20 @@ pub(crate) fn create_ovs_port_nm_conn(
         nm_conn.ovs_port.as_ref().cloned().unwrap_or_default();
     if let Some(bond_conf) = &port_conf.bond {
         if let Some(bond_mode) = &bond_conf.mode {
-            nm_ovs_port_set.mode = Some(format!("{}", bond_mode));
+            match bond_mode {
+                OvsBridgeBondMode::Lacp => {
+                    nm_ovs_port_set.lacp = Some("active".into());
+                }
+                OvsBridgeBondMode::ActiveBackup
+                | OvsBridgeBondMode::BalanceSlb => {
+                    nm_ovs_port_set.lacp = Some("off".into());
+                    nm_ovs_port_set.mode = Some(bond_mode.to_string());
+                }
+                OvsBridgeBondMode::BalanceTcp => {
+                    nm_ovs_port_set.lacp = Some("active".into());
+                    nm_ovs_port_set.mode = Some(bond_mode.to_string());
+                }
+            };
         }
 
         if let Some(bond_downdelay) = bond_conf.bond_downdelay {
