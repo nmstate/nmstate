@@ -1,12 +1,12 @@
 use crate::{
-    LinuxBridgePortTunkTag, LinuxBridgePortVlanConfig, LinuxBridgePortVlanMode,
-    LinuxBridgePortVlanRange,
+    BridgePortTunkTag, BridgePortVlanConfig, BridgePortVlanMode,
+    BridgePortVlanRange,
 };
 
 pub(crate) fn parse_port_vlan_conf(
     np_vlan_entries: &[nispor::BridgeVlanEntry],
-) -> Option<LinuxBridgePortVlanConfig> {
-    let mut ret = LinuxBridgePortVlanConfig::new();
+) -> Option<BridgePortVlanConfig> {
+    let mut ret = BridgePortVlanConfig::new();
     let mut is_native = false;
     let mut trunk_tags = Vec::new();
     let is_access_port = is_access_port(np_vlan_entries);
@@ -22,23 +22,21 @@ pub(crate) fn parse_port_vlan_conf(
             ret.tag = Some(vlan_max);
             is_native = true;
         } else if vlan_min == vlan_max {
-            trunk_tags.push(LinuxBridgePortTunkTag::Id(vlan_min));
+            trunk_tags.push(BridgePortTunkTag::Id(vlan_min));
         } else {
-            trunk_tags.push(LinuxBridgePortTunkTag::IdRange(
-                LinuxBridgePortVlanRange {
-                    max: vlan_max,
-                    min: vlan_min,
-                },
-            ));
+            trunk_tags.push(BridgePortTunkTag::IdRange(BridgePortVlanRange {
+                max: vlan_max,
+                min: vlan_min,
+            }));
         }
     }
     if trunk_tags.is_empty() {
-        ret.mode = Some(LinuxBridgePortVlanMode::Access);
+        ret.mode = Some(BridgePortVlanMode::Access);
     } else {
-        ret.mode = Some(LinuxBridgePortVlanMode::Trunk);
+        ret.mode = Some(BridgePortVlanMode::Trunk);
         ret.enable_native = Some(is_native);
     }
-    if ret.mode == Some(LinuxBridgePortVlanMode::Access)
+    if ret.mode == Some(BridgePortVlanMode::Access)
         && trunk_tags.is_empty()
         && ret.tag.is_none()
     {
