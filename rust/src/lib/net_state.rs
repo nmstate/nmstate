@@ -617,7 +617,27 @@ impl NetworkState {
                 }
             }
         }
-        // TODO: search interface with auto-route-table-id
+        // We need to differentiate IPv4 and IPv6 auto route table ID when
+        // user case shows up. Currently, we just assume user does not
+        // mix up the table number for IPv4 and IPv6 between interfaces.
+        for iface in self.interfaces.kernel_ifaces.values() {
+            if iface
+                .base_iface()
+                .ipv6
+                .as_ref()
+                .and_then(|c| c.auto_table_id)
+                .or_else(|| {
+                    iface
+                        .base_iface()
+                        .ipv4
+                        .as_ref()
+                        .and_then(|c| c.auto_table_id)
+                })
+                == Some(table_id)
+            {
+                return Some(iface.name().to_string());
+            }
+        }
         None
     }
 
