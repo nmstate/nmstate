@@ -142,6 +142,8 @@ pub struct OvsBridgeOptions {
     pub mcast_snooping_enable: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub fail_mode: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub datapath: Option<String>,
 }
 
 impl OvsBridgeOptions {
@@ -177,13 +179,19 @@ pub struct OvsInterface {
     pub base: BaseInterface,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub patch: Option<OvsPatchConfig>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dpdk: Option<OvsDpdkConfig>,
 }
 
 impl Default for OvsInterface {
     fn default() -> Self {
         let mut base = BaseInterface::new();
         base.iface_type = InterfaceType::OvsInterface;
-        Self { base, patch: None }
+        Self {
+            base,
+            patch: None,
+            dpdk: None,
+        }
     }
 }
 
@@ -338,4 +346,11 @@ impl std::fmt::Display for OvsBridgeBondMode {
 #[non_exhaustive]
 pub struct OvsPatchConfig {
     pub peer: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[serde(deny_unknown_fields)]
+#[non_exhaustive]
+pub struct OvsDpdkConfig {
+    pub devargs: String,
 }

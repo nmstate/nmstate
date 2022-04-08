@@ -3,14 +3,16 @@ use std::convert::TryFrom;
 use std::iter::FromIterator;
 
 use log::warn;
-use nm_dbus::{NmConnection, NmSettingOvsExtIds, NmSettingOvsPatch};
+use nm_dbus::{
+    NmConnection, NmSettingOvsDpdk, NmSettingOvsExtIds, NmSettingOvsPatch,
+};
 
 use crate::{
     nm::connection::gen_nm_conn_setting, BaseInterface, BridgePortVlanConfig,
     BridgePortVlanMode, Interface, InterfaceType, NmstateError,
     OvsBridgeBondConfig, OvsBridgeBondMode, OvsBridgeBondPortConfig,
     OvsBridgeConfig, OvsBridgeInterface, OvsBridgeOptions, OvsBridgePortConfig,
-    OvsInterface, OvsPatchConfig, UnknownInterface,
+    OvsDpdkConfig, OvsInterface, OvsPatchConfig, UnknownInterface,
 };
 
 pub(crate) fn nm_ovs_bridge_conf_get(
@@ -36,6 +38,10 @@ pub(crate) fn nm_ovs_bridge_conf_get(
                 None => Some(false),
             };
         br_opts.fail_mode = match nm_ovs_setting.fail_mode.as_ref() {
+            Some(m) => Some(m.to_string()),
+            None => Some("".to_string()),
+        };
+        br_opts.datapath = match nm_ovs_setting.datapath_type.as_ref() {
             Some(m) => Some(m.to_string()),
             None => Some("".to_string()),
         };
@@ -242,6 +248,11 @@ pub(crate) fn gen_nm_ovs_br_setting(
                     nm_ovs_br_set.fail_mode = Some(fail_mode.to_string());
                 }
             }
+            if let Some(dp_type) = &br_opts.datapath {
+                if !dp_type.is_empty() {
+                    nm_ovs_br_set.datapath_type = Some(dp_type.to_string());
+                }
+            }
         }
     }
     nm_conn.ovs_bridge = Some(nm_ovs_br_set);
@@ -262,6 +273,13 @@ pub(crate) fn gen_nm_ovs_iface_setting(
         let mut nm_ovs_patch = NmSettingOvsPatch::default();
         nm_ovs_patch.peer = Some(peer.to_string());
         nm_conn.ovs_patch = Some(nm_ovs_patch);
+    } else if let Some(dpdk_devargs) =
+        iface.dpdk.as_ref().map(|c| c.devargs.as_str())
+    {
+        nm_ovs_iface_set.iface_type = Some("dpdk".to_string());
+        let mut nm_ovs_dpdk = NmSettingOvsDpdk::default();
+        nm_ovs_dpdk.devargs = Some(dpdk_devargs.to_string());
+        nm_conn.ovs_dpdk = Some(nm_ovs_dpdk);
     } else {
         nm_ovs_iface_set.iface_type = Some("internal".to_string());
     }
@@ -325,6 +343,19 @@ pub(crate) fn get_ovs_patch_config(
         if let Some(peer) = nm_ovs_patch_set.peer.as_deref() {
             return Some(OvsPatchConfig {
                 peer: peer.to_string(),
+            });
+        }
+    }
+    None
+}
+
+pub(crate) fn get_ovs_dpdk_config(
+    nm_conn: &NmConnection,
+) -> Option<OvsDpdkConfig> {
+    if let Some(nm_ovs_dpdk_set) = nm_conn.ovs_dpdk.as_ref() {
+        if let Some(devargs) = nm_ovs_dpdk_set.devargs.as_deref() {
+            return Some(OvsDpdkConfig {
+                devargs: devargs.to_string(),
             });
         }
     }

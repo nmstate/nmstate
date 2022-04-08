@@ -28,6 +28,7 @@ pub struct NmSettingOvsBridge {
     pub mcast_snooping_enable: Option<bool>,
     pub rstp: Option<bool>,
     pub fail_mode: Option<String>,
+    pub datapath_type: Option<String>,
     _other: HashMap<String, zvariant::OwnedValue>,
 }
 
@@ -43,6 +44,7 @@ impl TryFrom<DbusDictionary> for NmSettingOvsBridge {
             )?,
             rstp: _from_map!(v, "rstp-enable", bool::try_from)?,
             fail_mode: _from_map!(v, "fail-mode", String::try_from)?,
+            datapath_type: _from_map!(v, "datapath-type", String::try_from)?,
             _other: v,
         })
     }
@@ -74,6 +76,9 @@ impl NmSettingOvsBridge {
         }
         if let Some(v) = &self.fail_mode {
             ret.insert("fail-mode", zvariant::Value::new(v));
+        }
+        if let Some(v) = &self.datapath_type {
+            ret.insert("datapath-type", zvariant::Value::new(v));
         }
         ret.extend(self._other.iter().map(|(key, value)| {
             (key.as_str(), zvariant::Value::from(value.clone()))
@@ -280,6 +285,53 @@ impl NmSettingOvsPatch {
         let mut ret = HashMap::new();
         if let Some(v) = &self.peer {
             ret.insert("peer", zvariant::Value::new(v));
+        }
+        ret.extend(self._other.iter().map(|(key, value)| {
+            (key.as_str(), zvariant::Value::from(value.clone()))
+        }));
+        Ok(ret)
+    }
+
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Default, Deserialize)]
+#[serde(try_from = "DbusDictionary")]
+#[non_exhaustive]
+pub struct NmSettingOvsDpdk {
+    pub devargs: Option<String>,
+    _other: HashMap<String, zvariant::OwnedValue>,
+}
+
+impl TryFrom<DbusDictionary> for NmSettingOvsDpdk {
+    type Error = NmError;
+    fn try_from(mut v: DbusDictionary) -> Result<Self, Self::Error> {
+        Ok(Self {
+            devargs: _from_map!(v, "devargs", String::try_from)?,
+            _other: v,
+        })
+    }
+}
+
+impl NmSettingOvsDpdk {
+    pub(crate) fn to_keyfile(
+        &self,
+    ) -> Result<HashMap<String, zvariant::Value>, NmError> {
+        let mut ret = HashMap::new();
+        for (k, v) in self.to_value()?.drain() {
+            ret.insert(k.to_string(), v);
+        }
+        Ok(ret)
+    }
+
+    pub(crate) fn to_value(
+        &self,
+    ) -> Result<HashMap<&str, zvariant::Value>, NmError> {
+        let mut ret = HashMap::new();
+        if let Some(v) = &self.devargs {
+            ret.insert("devargs", zvariant::Value::new(v));
         }
         ret.extend(self._other.iter().map(|(key, value)| {
             (key.as_str(), zvariant::Value::from(value.clone()))
