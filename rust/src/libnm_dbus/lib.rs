@@ -29,7 +29,7 @@ pub use crate::connection::{
     NmConnection, NmIpRoute, NmIpRouteRule, NmSetting8021X, NmSettingBond,
     NmSettingBridge, NmSettingBridgeVlanRange, NmSettingConnection,
     NmSettingEthtool, NmSettingInfiniBand, NmSettingIp, NmSettingIpMethod,
-    NmSettingMacVlan, NmSettingOvsBridge, NmSettingOvsExtIds,
+    NmSettingMacVlan, NmSettingOvsBridge, NmSettingOvsDpdk, NmSettingOvsExtIds,
     NmSettingOvsIface, NmSettingOvsPatch, NmSettingOvsPort, NmSettingSriov,
     NmSettingSriovVf, NmSettingSriovVfVlan, NmSettingUser, NmSettingVeth,
     NmSettingVlan, NmSettingVrf, NmSettingVxlan, NmSettingWired,
