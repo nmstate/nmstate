@@ -31,10 +31,10 @@ libnmstate.so: $(DEBUG_NMSTATE_SO_FILE)
 	ln -sfv $(CLIB_SO_FULL) $(TMPDIR)/$(CLIB_SO_DEV)
 
 nmstate_test: nmstate_test.c nmstate.h libnmstate.so
-	$(CC) $(CFLAGS) $(LDFLAGS) -o nmstate_test nmstate_test.c $(LIBS)
+	NMSTATE_LOG=debug $(CC) $(CFLAGS) $(LDFLAGS) -o nmstate_test nmstate_test.c $(LIBS)
 
 check: nmstate_test
-	LD_LIBRARY_PATH=$(TMPDIR) \
+	NMSTATE_LOG=debug LD_LIBRARY_PATH=$(TMPDIR) \
 		valgrind --trace-children=yes --leak-check=full \
 		--error-exitcode=1 \
 		./nmstate_test

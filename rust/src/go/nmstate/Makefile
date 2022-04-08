@@ -39,7 +39,7 @@ check: $(TMPDIR)/$(CLIB_SO_FULL) $(TMPDIR)/$(CLIB_HEADER)
 	CGO_CFLAGS="-I$(TMPDIR)" \
 	CGO_LDFLAGS="-L$(TMPDIR)" \
 	go test -c $(WHAT)
-	$(SUDO) ./nmstate.test -test.v
+	NMSTTATE_LOG=debug $(SUDO) ./nmstate.test -test.v
 	rm -rf $(TMPDIR)
 clean:
 	go clean;

@@ -332,5 +332,5 @@ pub extern "C" fn nmstate_cstring_free(cstring: *mut c_char) {
 
 fn get_or_init_logger() -> &'static MemoryLogger {
     static INSTANCE: OnceCell<&MemoryLogger> = OnceCell::new();
-    INSTANCE.get_or_init(|| MemoryLogger::setup(log::Level::Debug).unwrap())
+    INSTANCE.get_or_init(|| MemoryLogger::setup().unwrap())
 }

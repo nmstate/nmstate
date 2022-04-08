@@ -4,11 +4,15 @@ use std::{
     sync::{Mutex, MutexGuard},
 };
 
-use log::{Level, Log, Metadata, Record, SetLoggerError};
+use env_logger::filter::{Builder, Filter};
+
+use log::{Log, Metadata, Record, SetLoggerError};
+
+const FILTER_ENV: &str = "NMSTATE_LOG";
 
 #[derive(Debug)]
 struct Logger {
-    level: Level,
+    inner: Filter,
     buffer: Mutex<String>,
 }
 
@@ -20,7 +24,7 @@ impl Logger {
 
 impl Log for Logger {
     fn enabled(&self, metadata: &Metadata) -> bool {
-        metadata.level() <= self.level
+        self.inner.enabled(metadata)
     }
 
     fn log(&self, record: &Record) {
@@ -77,16 +81,15 @@ impl MemoryLogger {
     /// ```
     ///
     /// Returns the installed MemoryLogger instance.
-    pub fn setup(level: Level) -> Result<&'static Self, SetLoggerError> {
+    pub fn setup() -> Result<&'static Self, SetLoggerError> {
+        let mut builder = Builder::from_env(FILTER_ENV);
         let logger = Box::leak(Box::new(Self(Logger {
-            level,
-
+            inner: builder.build(),
             buffer: Mutex::new(String::new()),
         })));
 
+        log::set_max_level(logger.0.inner.filter());
         log::set_logger(&logger.0)?;
-
-        log::set_max_level(level.to_level_filter());
 
         Ok(logger)
     }
