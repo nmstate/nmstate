@@ -214,6 +214,7 @@ function run_tests {
             tests/integration/bond_test.py \
             tests/integration/ethtool_test.py \
             tests/integration/linux_bridge_test.py \
+            tests/integration/nmstatectl_edit_test.py \
             ${nmstate_pytest_extra_args}"
         exec_cmd "
           env  \

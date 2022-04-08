@@ -26,13 +26,13 @@ from .testlib import cmdlib
 RC_SUCCESS = 0
 
 
-def test_edit_abort():
+def test_edit_cancel(eth1_up):
     runenv = dict(os.environ)
     env = {"EDITOR": "false"}
 
     runenv.update(env)
 
-    cmds = ["nmstatectl", "edit", "lo"]
+    cmds = ["nmstatectl", "edit", "eth1"]
     ret = cmdlib.exec_cmd(cmds, env=runenv)
     rc, out, err = ret
 
