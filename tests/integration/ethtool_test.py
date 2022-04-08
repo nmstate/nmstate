@@ -74,7 +74,9 @@ def _ip_iface_rename(src_name, dst_name):
 
 
 @pytest.mark.skipif(
-    nm_major_minor_version() < 1.31 or os.environ.get("CI") == "true",
+    nm_major_minor_version() < 1.31
+    or os.environ.get("CI") == "true"
+    or not is_fedora(),
     reason=(
         "Ethtool pause test need NetworkManager 1.31+ and netdevsim kernel "
         "module"
