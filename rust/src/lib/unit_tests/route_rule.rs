@@ -1,6 +1,6 @@
 use crate::{
-    unit_tests::testlib::new_eth_iface, Interfaces, NetworkState, RouteEntry,
-    RouteRuleEntry, RouteRules, Routes,
+    unit_tests::testlib::new_eth_iface, InterfaceType, Interfaces,
+    NetworkState, RouteEntry, RouteRuleEntry, RouteRules, Routes,
 };
 
 const TEST_NIC: &str = "eth1";
@@ -168,4 +168,67 @@ route-table: "129"
     .unwrap();
     assert_eq!(rule.table_id, Some(129));
     assert_eq!(rule.priority, Some(500));
+}
+
+#[test]
+fn test_route_rule_use_auto_route_table_id() {
+    let current: NetworkState = serde_yaml::from_str(
+        r#"
+---
+interfaces:
+  - name: br0
+    type: ovs-interface
+    state: up
+    ipv4:
+      enabled: true
+      dhcp: true
+      auto-dns: false
+      auto-routes: true
+      auto-gateway: true
+      auto-route-table-id: 500
+    ipv6:
+      enabled: false
+  - name: br0
+    type: ovs-bridge
+    state: up
+    bridge:
+      port:
+        - name: br0
+"#,
+    )
+    .unwrap();
+
+    let desire: NetworkState = serde_yaml::from_str(
+        r#"
+---
+route-rules:
+  config:
+    - route-table: 500
+      priority: 3200
+      ip-to: 192.0.3.0/24
+    - route-table: 500
+      priority: 3200
+      ip-from: 192.0.3.0/24
+"#,
+    )
+    .unwrap();
+
+    let expected_rules: Vec<RouteRuleEntry> = serde_yaml::from_str(
+        r#"
+- route-table: 500
+  priority: 3200
+  ip-to: 192.0.3.0/24
+- route-table: 500
+  priority: 3200
+  ip-from: 192.0.3.0/24
+"#,
+    )
+    .unwrap();
+
+    let (_, chg_net_state, _) = desire.gen_state_for_apply(&current).unwrap();
+
+    let ovs_iface = &chg_net_state.interfaces.kernel_ifaces["br0"];
+
+    assert_eq!(ovs_iface.iface_type(), InterfaceType::OvsInterface);
+    assert_eq!(ovs_iface.base_iface().rules, Some(expected_rules));
 }
