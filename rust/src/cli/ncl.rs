@@ -1,6 +1,8 @@
 mod error;
 
-use std::io::{self, Read};
+use std::fs::File;
+use std::io::{self, stdin, stdout, Read, Write};
+use std::process::{Command, Stdio};
 
 use env_logger::Builder;
 use log::LevelFilter;
@@ -15,6 +17,10 @@ const SUB_CMD_SHOW: &str = "show";
 const SUB_CMD_APPLY: &str = "apply";
 const SUB_CMD_COMMIT: &str = "commit";
 const SUB_CMD_ROLLBACK: &str = "rollback";
+const SUB_CMD_EDIT: &str = "edit";
+
+const EX_DATAERR: i32 = 65;
+const EXIT_FAILURE: i32 = 1;
 
 fn main() {
     let matches = clap::App::new("nmstatectl")
@@ -152,6 +158,46 @@ fn main() {
                         .help("checkpoint to rollback"),
                 ),
         )
+        .subcommand(
+            clap::SubCommand::with_name(SUB_CMD_EDIT)
+                .about("Edit network state in EDITOR")
+                .arg(
+                    clap::Arg::with_name("IFNAME")
+                        .required(false)
+                        .index(1)
+                        .help("Interface to rollback"),
+                )
+                .arg(
+                    clap::Arg::with_name("NO_VERIFY")
+                        .long("no-verify")
+                        .takes_value(false)
+                        .help(
+                            "Do not verify that the state was completely set \
+                            and disable rollback to previous state.",
+                        ),
+                )
+                .arg(
+                    clap::Arg::with_name("KERNEL")
+                        .short("k")
+                        .long("kernel")
+                        .takes_value(false)
+                        .help("Apply network state to kernel only"),
+                )
+                .arg(
+                    clap::Arg::with_name("NO_COMMIT")
+                      .long("no-commit")
+                      .takes_value(false)
+                      .help(
+                        "Do not commit new state after verification"
+                      ),
+                )
+                .arg(
+                    clap::Arg::with_name("MEMORY_ONLY")
+                        .long("memory-only")
+                        .takes_value(false)
+                        .help("Do not make the state persistent"),
+                )
+        )
         .get_matches();
     let (log_module_filters, log_level) =
         match matches.occurrences_of("verbose") {
@@ -173,42 +219,47 @@ fn main() {
 
     if let Some(matches) = matches.subcommand_matches(SUB_CMD_GEN_CONF) {
         if let Some(file_path) = matches.value_of("STATE_FILE") {
-            print_result_and_exit(gen_conf(file_path));
+            print_result_and_exit(gen_conf(file_path), EX_DATAERR);
         }
     } else if let Some(matches) = matches.subcommand_matches(SUB_CMD_SHOW) {
-        print_result_and_exit(show(matches));
+        print_result_and_exit(show(matches), EXIT_FAILURE);
     } else if let Some(matches) = matches.subcommand_matches(SUB_CMD_APPLY) {
         if let Some(file_path) = matches.value_of("STATE_FILE") {
-            print_result_and_exit(apply_from_file(file_path, matches));
+            print_result_and_exit(
+                apply_from_file(file_path, matches),
+                EX_DATAERR,
+            );
         } else {
-            print_result_and_exit(apply_from_stdin(matches));
+            print_result_and_exit(apply_from_stdin(matches), EX_DATAERR);
         }
     } else if let Some(matches) = matches.subcommand_matches(SUB_CMD_COMMIT) {
         if let Some(checkpoint) = matches.value_of("CHECKPOINT") {
-            print_result_and_exit(commit(checkpoint));
+            print_result_and_exit(commit(checkpoint), EXIT_FAILURE);
         } else {
-            print_result_and_exit(commit(""))
+            print_result_and_exit(commit(""), EXIT_FAILURE)
         }
     } else if let Some(matches) = matches.subcommand_matches(SUB_CMD_ROLLBACK) {
         if let Some(checkpoint) = matches.value_of("CHECKPOINT") {
-            print_result_and_exit(rollback(checkpoint));
+            print_result_and_exit(rollback(checkpoint), EXIT_FAILURE);
         } else {
-            print_result_and_exit(rollback(""))
+            print_result_and_exit(rollback(""), EXIT_FAILURE)
         }
+    } else if let Some(matches) = matches.subcommand_matches(SUB_CMD_EDIT) {
+        print_result_and_exit(state_edit(matches), EX_DATAERR);
     }
 }
 
 // Use T instead of String where T has Serialize
-fn print_result_and_exit(result: Result<String, CliError>) {
+fn print_result_and_exit(result: Result<String, CliError>, errno: i32) {
     match result {
         Ok(s) => print_string_and_exit(s),
-        Err(e) => print_error_and_exit(e),
+        Err(e) => print_error_and_exit(e, errno),
     }
 }
 
-fn print_error_and_exit(e: CliError) {
+fn print_error_and_exit(e: CliError, errno: i32) {
     eprintln!("{}", e);
-    std::process::exit(1);
+    std::process::exit(errno);
 }
 
 fn print_string_and_exit(s: String) {
@@ -338,7 +389,7 @@ where
     let mut timeout: u32 = 0;
     match clap::value_t!(matches.value_of("TIMEOUT"), u32) {
         Ok(t) => timeout = t,
-        Err(e) => print_error_and_exit(CliError::from(e)),
+        Err(e) => print_error_and_exit(CliError::from(e), EX_DATAERR),
     }
     let mut net_state: NetworkState = serde_yaml::from_reader(reader)?;
     net_state.set_kernel_only(kernel_only);
@@ -374,5 +425,126 @@ fn rollback(checkpoint: &str) -> Result<String, CliError> {
     match NetworkState::checkpoint_rollback(checkpoint) {
         Ok(()) => Ok(checkpoint.to_string()),
         Err(e) => Err(CliError::from(e)),
+    }
+}
+
+fn state_edit(matches: &clap::ArgMatches) -> Result<String, CliError> {
+    let mut cur_state = NetworkState::new();
+    if matches.is_present("KERNEL") {
+        cur_state.set_kernel_only(true);
+    }
+    cur_state.set_running_config_only(true);
+    cur_state.retrieve()?;
+    let net_state = if let Some(ifname) = matches.value_of("IFNAME") {
+        let mut net_state = NetworkState::new();
+        for iface in cur_state
+            .interfaces
+            .to_vec()
+            .iter()
+            .filter(|i| i.name() == ifname)
+        {
+            net_state.append_interface_data((*iface).clone());
+        }
+        if net_state.interfaces.to_vec().is_empty() {
+            return Err(CliError {
+                msg: format!("Interface {} not found", ifname),
+            });
+        }
+        net_state
+    } else {
+        cur_state
+    };
+    let tmp_file_path = gen_tmp_file_path();
+    write_state_to_file(&tmp_file_path, &net_state)?;
+    let mut desire_state = run_editor(&tmp_file_path)?;
+    del_file(&tmp_file_path);
+    desire_state.set_kernel_only(matches.is_present("KERNEL"));
+    desire_state.set_verify_change(!matches.is_present("NO_VERIFY"));
+    desire_state.set_commit(!matches.is_present("NO_COMMIT"));
+    desire_state.set_memory_only(matches.is_present("MEMORY_ONLY"));
+    desire_state.apply()?;
+    Ok(serde_yaml::to_string(&desire_state)?)
+}
+
+fn gen_tmp_file_path() -> String {
+    format!(
+        "{}/nmstate-{}.yml",
+        std::env::temp_dir().display(),
+        uuid::Uuid::new_v4()
+    )
+}
+
+fn del_file(file_path: &str) {
+    if let Err(e) = std::fs::remove_file(file_path) {
+        eprintln!("Failed to delete file {}: {}", file_path, e);
+    }
+}
+
+fn write_state_to_file(
+    file_path: &str,
+    net_state: &NetworkState,
+) -> Result<(), CliError> {
+    let mut fd = File::create(file_path)?;
+    fd.write_all(serde_yaml::to_string(net_state)?.as_bytes())?;
+    Ok(())
+}
+
+fn run_editor(tmp_file_path: &str) -> Result<NetworkState, CliError> {
+    let editor = match std::env::var("EDITOR") {
+        Ok(e) => e,
+        Err(_) => "vi".to_string(),
+    };
+    loop {
+        let mut child = Command::new(&editor)
+            .arg(tmp_file_path)
+            .stdin(Stdio::inherit())
+            .stderr(Stdio::inherit())
+            .stdout(Stdio::inherit())
+            .spawn()?;
+        if !child
+            .wait()
+            .map_err(|e| CliError {
+                msg: format!("Editor '{}' failed with {}", editor, e),
+            })?
+            .success()
+        {
+            return Err(CliError {
+                msg: format!("Editor '{}' failed", editor),
+            });
+        }
+        let fd = std::fs::File::open(tmp_file_path)?;
+        match serde_yaml::from_reader(fd) {
+            Ok(n) => return Ok(n),
+            Err(e) => {
+                if !ask_for_retry() {
+                    return Err(CliError {
+                        msg: format!("{}", e),
+                    });
+                } else {
+                    eprintln!("{}", e);
+                    continue;
+                }
+            }
+        }
+    }
+}
+
+fn ask_for_retry() -> bool {
+    loop {
+        println!(
+            "Try again? [y,n]:\n\
+            y - yes, start editor again\n\
+            n - no, throw away my changes\n\
+            > "
+        );
+        stdout().lock().flush().ok();
+        let mut retry = String::new();
+        stdin().read_line(&mut retry).expect("Failed to read line");
+        retry.make_ascii_lowercase();
+        match retry.trim() {
+            "y" | "yes" => return true,
+            "n" | "no" => return false,
+            _ => println!("Invalid reply, please try y or n"),
+        }
     }
 }
