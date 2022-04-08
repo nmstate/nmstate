@@ -9,8 +9,8 @@ use crate::{
         nm_checkpoint_timeout_extend, CHECKPOINT_ROLLBACK_TIMEOUT,
     },
     nm::connection::{
-        iface_type_to_nm, NM_SETTING_CONTROLLERS, NM_SETTING_VETH_SETTING_NAME,
-        NM_SETTING_WIRED_SETTING_NAME,
+        iface_type_to_nm, NM_SETTING_CONTROLLERS, NM_SETTING_USER_SPACES,
+        NM_SETTING_VETH_SETTING_NAME, NM_SETTING_WIRED_SETTING_NAME,
     },
     nm::error::nm_error_to_nmstate,
     nm::ovs::get_ovs_port_name,
@@ -387,4 +387,57 @@ fn extend_timeout_if_required(
         *now = Instant::now();
     }
     Ok(())
+}
+
+pub(crate) fn use_uuid_for_parent_reference(
+    nm_conns: &mut [NmConnection],
+    des_kernel_ifaces: &HashMap<String, Interface>,
+    exist_nm_conns: &[NmConnection],
+) {
+    // Pending changes: "child_iface_name: parent_nm_uuid"
+    let mut pending_changes: HashMap<String, String> = HashMap::new();
+
+    for iface in des_kernel_ifaces.values() {
+        if let Some(parent) = iface.parent() {
+            if let Some(parent_uuid) =
+                search_uuid_of_kernel_nm_conns(nm_conns, parent).or_else(|| {
+                    search_uuid_of_kernel_nm_conns(exist_nm_conns, parent)
+                })
+            {
+                pending_changes
+                    .insert(iface.name().to_string(), parent_uuid.to_string());
+            }
+        }
+    }
+
+    for nm_conn in nm_conns {
+        if let (Some(iface_name), Some(nm_iface_type)) =
+            (nm_conn.iface_name(), nm_conn.iface_type())
+        {
+            if !NM_SETTING_USER_SPACES.contains(&nm_iface_type) {
+                if let Some(parent_uuid) = pending_changes.get(iface_name) {
+                    println!("HAHA {} {:?}", iface_name, parent_uuid);
+                    nm_conn.set_parent(parent_uuid);
+                }
+            }
+        }
+    }
+}
+
+fn search_uuid_of_kernel_nm_conns(
+    nm_conns: &[NmConnection],
+    iface_name: &str,
+) -> Option<String> {
+    for nm_conn in nm_conns {
+        if let (Some(cur_iface_name), Some(nm_iface_type), Some(uuid)) =
+            (nm_conn.iface_name(), nm_conn.iface_type(), nm_conn.uuid())
+        {
+            if cur_iface_name == iface_name
+                && !NM_SETTING_USER_SPACES.contains(&nm_iface_type)
+            {
+                return Some(uuid.to_string());
+            }
+        }
+    }
+    None
 }

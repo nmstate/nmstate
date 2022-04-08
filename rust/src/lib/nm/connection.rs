@@ -46,6 +46,11 @@ pub(crate) const NM_SETTING_CONTROLLERS: [&str; 5] = [
     NM_SETTING_VRF_SETTING_NAME,
 ];
 
+pub(crate) const NM_SETTING_USER_SPACES: [&str; 2] = [
+    NM_SETTING_OVS_BRIDGE_SETTING_NAME,
+    NM_SETTING_OVS_PORT_SETTING_NAME,
+];
+
 pub(crate) fn nm_gen_conf(
     net_state: &NetworkState,
 ) -> Result<Vec<String>, NmstateError> {

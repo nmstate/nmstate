@@ -336,6 +336,21 @@ impl NmConnection {
         Ok(ret)
     }
 
+    pub fn set_parent(&mut self, parent: &str) {
+        if let Some(setting) = self.vlan.as_mut() {
+            setting.parent = Some(parent.to_string());
+        }
+        if let Some(setting) = self.vxlan.as_mut() {
+            setting.parent = Some(parent.to_string());
+        }
+        if let Some(setting) = self.infiniband.as_mut() {
+            setting.parent = Some(parent.to_string());
+        }
+        if let Some(setting) = self.mac_vlan.as_mut() {
+            setting.parent = Some(parent.to_string());
+        }
+    }
+
     pub fn uuid(&self) -> Option<&str> {
         if let Some(nm_conn_set) = &self.connection {
             if let Some(ref uuid) = nm_conn_set.uuid {
