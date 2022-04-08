@@ -6,10 +6,11 @@ use log::warn;
 use nm_dbus::{NmConnection, NmSettingOvsExtIds};
 
 use crate::{
-    nm::connection::gen_nm_conn_setting, BaseInterface, Interface,
-    InterfaceType, NmstateError, OvsBridgeBondConfig, OvsBridgeBondMode,
-    OvsBridgeBondPortConfig, OvsBridgeConfig, OvsBridgeInterface,
-    OvsBridgeOptions, OvsBridgePortConfig, UnknownInterface,
+    nm::connection::gen_nm_conn_setting, BaseInterface, BridgePortVlanConfig,
+    BridgePortVlanMode, Interface, InterfaceType, NmstateError,
+    OvsBridgeBondConfig, OvsBridgeBondMode, OvsBridgeBondPortConfig,
+    OvsBridgeConfig, OvsBridgeInterface, OvsBridgeOptions, OvsBridgePortConfig,
+    UnknownInterface,
 };
 
 pub(crate) fn nm_ovs_bridge_conf_get(
@@ -64,9 +65,10 @@ fn nm_ovs_bridge_conf_port_get(
                     }
                 }
                 1 => {
-                    if let Some(p) =
-                        get_ovs_port_config_for_iface(nm_ovs_iface_conns[0])
-                    {
+                    if let Some(p) = get_ovs_port_config_for_iface(
+                        nm_conn,
+                        nm_ovs_iface_conns[0],
+                    ) {
                         ret.push(p);
                     }
                 }
@@ -118,16 +120,19 @@ fn get_ovs_port_config_for_bond(
 
     ovs_bond_conf.ports = Some(ovs_iface_confs);
     port_conf.bond = Some(ovs_bond_conf);
+    port_conf.vlan = get_vlan_info(nm_ovs_port_conn);
 
     Some(port_conf)
 }
 
 fn get_ovs_port_config_for_iface(
-    nm_conn: &NmConnection,
+    nm_port_conn: &NmConnection,
+    nm_iface_conn: &NmConnection,
 ) -> Option<OvsBridgePortConfig> {
-    if let Some(name) = nm_conn.iface_name() {
+    if let Some(name) = nm_iface_conn.iface_name() {
         let mut port_conf = OvsBridgePortConfig::new();
         port_conf.name = name.to_string();
+        port_conf.vlan = get_vlan_info(nm_port_conn);
         Some(port_conf)
     } else {
         None
@@ -188,6 +193,14 @@ pub(crate) fn create_ovs_port_nm_conn(
 
         if let Some(bond_updelay) = bond_conf.bond_updelay {
             nm_ovs_port_set.up_delay = Some(bond_updelay);
+        }
+    }
+    if let Some(vlan_conf) = port_conf.vlan.as_ref() {
+        if let Some(tag) = vlan_conf.tag {
+            nm_ovs_port_set.tag = Some(tag.into());
+        }
+        if let Some(vlan_mode) = vlan_conf.mode {
+            nm_ovs_port_set.vlan_mode = Some(vlan_mode.to_string());
         }
     }
     nm_conn.ovs_port = Some(nm_ovs_port_set);
@@ -258,4 +271,35 @@ pub(crate) fn gen_nm_ovs_ext_ids_setting(
         ));
         nm_conn.ovs_ext_ids = Some(nm_setting);
     }
+}
+
+fn get_vlan_info(nm_conn: &NmConnection) -> Option<BridgePortVlanConfig> {
+    if let Some(port_conf) = nm_conn.ovs_port.as_ref() {
+        if let (Some(tag), Some(mode)) =
+            (port_conf.tag, port_conf.vlan_mode.as_deref())
+        {
+            return Some(BridgePortVlanConfig {
+                mode: Some(match mode {
+                    "access" => BridgePortVlanMode::Access,
+                    "trunk" => BridgePortVlanMode::Trunk,
+                    _ => {
+                        log::warn!("Unsupported OVS port VLAN mode {}", mode);
+                        return None;
+                    }
+                }),
+                tag: Some(match u16::try_from(tag) {
+                    Ok(t) => t,
+                    Err(_) => {
+                        log::warn!(
+                            "OVS port VLAN tag exceeded max u16 {}",
+                            tag
+                        );
+                        return None;
+                    }
+                }),
+                ..Default::default()
+            });
+        }
+    }
+    None
 }

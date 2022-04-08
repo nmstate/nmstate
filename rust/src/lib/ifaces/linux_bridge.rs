@@ -1,9 +1,10 @@
 use std::collections::HashMap;
 
-use log::{error, warn};
 use serde::{Deserialize, Serialize};
 
-use crate::{BaseInterface, ErrorKind, InterfaceType, NmstateError};
+use crate::{
+    BaseInterface, BridgePortVlanConfig, ErrorKind, InterfaceType, NmstateError,
+};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[non_exhaustive]
@@ -100,7 +101,7 @@ impl LinuxBridgeInterface {
                 port_conf
                     .vlan
                     .as_mut()
-                    .map(LinuxBridgePortVlanConfig::flatten_vlan_ranges);
+                    .map(BridgePortVlanConfig::flatten_vlan_ranges);
             }
         }
     }
@@ -115,7 +116,7 @@ impl LinuxBridgeInterface {
                 port_conf
                     .vlan
                     .as_mut()
-                    .map(LinuxBridgePortVlanConfig::sort_trunk_tags);
+                    .map(BridgePortVlanConfig::sort_trunk_tags);
             }
         }
     }
@@ -128,7 +129,7 @@ impl LinuxBridgeInterface {
         {
             for port_conf in port_confs {
                 if port_conf.vlan.is_none() {
-                    port_conf.vlan = Some(LinuxBridgePortVlanConfig::new());
+                    port_conf.vlan = Some(BridgePortVlanConfig::new());
                 }
             }
         }
@@ -285,7 +286,8 @@ pub struct LinuxBridgePortConfig {
         deserialize_with = "crate::deserializer::option_u16_or_string"
     )]
     pub stp_priority: Option<u16>,
-    pub vlan: Option<LinuxBridgePortVlanConfig>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub vlan: Option<BridgePortVlanConfig>,
 }
 
 impl LinuxBridgePortConfig {
@@ -312,7 +314,7 @@ impl LinuxBridgePortConfig {
     fn vlan_filtering_is_enabled(&self) -> bool {
         self.vlan
             .as_ref()
-            .map_or(true, |v| *v != LinuxBridgePortVlanConfig::default())
+            .map_or(true, |v| *v != BridgePortVlanConfig::default())
     }
 }
 
@@ -502,7 +504,7 @@ impl LinuxBridgeStpOptions {
                         Self::HELLO_TIME_MAX
                     ),
                 );
-                error!("{}", e);
+                log::error!("{}", e);
                 return Err(e);
             }
         }
@@ -519,7 +521,7 @@ impl LinuxBridgeStpOptions {
                         Self::MAX_AGE_MAX
                     ),
                 );
-                error!("{}", e);
+                log::error!("{}", e);
                 return Err(e);
             }
         }
@@ -537,7 +539,7 @@ impl LinuxBridgeStpOptions {
                         Self::FORWARD_DELAY_MAX
                     ),
                 );
-                error!("{}", e);
+                log::error!("{}", e);
                 return Err(e);
             }
         }
@@ -581,120 +583,4 @@ impl std::fmt::Display for LinuxBridgeMulticastRouterType {
             }
         )
     }
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
-#[serde(rename_all = "kebab-case", deny_unknown_fields)]
-#[non_exhaustive]
-pub struct LinuxBridgePortVlanConfig {
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        default,
-        deserialize_with = "crate::deserializer::option_bool_or_string"
-    )]
-    pub enable_native: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub mode: Option<LinuxBridgePortVlanMode>,
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        default,
-        deserialize_with = "crate::deserializer::option_u16_or_string"
-    )]
-    pub tag: Option<u16>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub trunk_tags: Option<Vec<LinuxBridgePortTunkTag>>,
-}
-
-impl LinuxBridgePortVlanConfig {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    pub(crate) fn flatten_vlan_ranges(&mut self) {
-        if let Some(trunk_tags) = &self.trunk_tags {
-            let mut new_trunk_tags = Vec::new();
-            for trunk_tag in trunk_tags {
-                match trunk_tag {
-                    LinuxBridgePortTunkTag::Id(_) => {
-                        new_trunk_tags.push(trunk_tag.clone())
-                    }
-                    LinuxBridgePortTunkTag::IdRange(range) => {
-                        for i in range.min..range.max + 1 {
-                            new_trunk_tags.push(LinuxBridgePortTunkTag::Id(i));
-                        }
-                    }
-                };
-            }
-            self.trunk_tags = Some(new_trunk_tags);
-        }
-    }
-
-    pub(crate) fn sort_trunk_tags(&mut self) {
-        if let Some(trunk_tags) = self.trunk_tags.as_mut() {
-            trunk_tags.sort_unstable_by(|tag_a, tag_b| match (tag_a, tag_b) {
-                (
-                    LinuxBridgePortTunkTag::Id(a),
-                    LinuxBridgePortTunkTag::Id(b),
-                ) => a.cmp(b),
-                _ => {
-                    warn!(
-                        "Please call flatten_vlan_ranges() \
-                            before sort_port_vlans()"
-                    );
-                    std::cmp::Ordering::Equal
-                }
-            })
-        }
-    }
-
-    pub(crate) fn is_changed(&self, current: &Self) -> bool {
-        (self.enable_native.is_some()
-            && self.enable_native != current.enable_native)
-            || (self.mode.is_some() && self.mode != current.mode)
-            || (self.tag.is_some() && self.tag != current.tag)
-            || (self.trunk_tags.is_some()
-                && self.trunk_tags != current.trunk_tags)
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
-#[non_exhaustive]
-pub enum LinuxBridgePortVlanMode {
-    Trunk,
-    Access,
-}
-
-impl Default for LinuxBridgePortVlanMode {
-    fn default() -> Self {
-        Self::Access
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
-#[non_exhaustive]
-pub enum LinuxBridgePortTunkTag {
-    #[serde(deserialize_with = "crate::deserializer::u16_or_string")]
-    Id(u16),
-    IdRange(LinuxBridgePortVlanRange),
-}
-
-impl LinuxBridgePortTunkTag {
-    pub fn get_vlan_tag_range(&self) -> (u16, u16) {
-        match self {
-            Self::Id(min) => (*min, *min),
-            Self::IdRange(range) => (range.min, range.max),
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
-#[non_exhaustive]
-#[serde(deny_unknown_fields)]
-pub struct LinuxBridgePortVlanRange {
-    #[serde(deserialize_with = "crate::deserializer::u16_or_string")]
-    pub max: u16,
-    #[serde(deserialize_with = "crate::deserializer::u16_or_string")]
-    pub min: u16,
 }

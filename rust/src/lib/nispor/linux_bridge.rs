@@ -53,6 +53,7 @@ pub(crate) fn append_bridge_port_config(
                 .and_then(|br_info| br_info.vlan_filtering)
                 == Some(true)
             {
+                println!("HAHA {:?}", np_port_info.vlans);
                 port_conf.vlan = np_port_info
                     .vlans
                     .as_ref()
