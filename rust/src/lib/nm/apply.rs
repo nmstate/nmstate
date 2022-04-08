@@ -13,6 +13,7 @@ use crate::{
     nm::profile::{
         activate_nm_profiles, deactivate_nm_profiles, delete_exist_profiles,
         get_exist_profile, save_nm_profiles, use_uuid_for_controller_reference,
+        use_uuid_for_parent_reference,
     },
     nm::route::is_route_removed,
     nm::veth::{is_veth_peer_changed, is_veth_peer_in_desire},
@@ -207,6 +208,11 @@ fn apply_single_state(
         &cur_net_state.interfaces.user_ifaces,
         &exist_nm_conns,
     )?;
+    use_uuid_for_parent_reference(
+        &mut nm_conns_to_activate,
+        &des_net_state.interfaces.kernel_ifaces,
+        &exist_nm_conns,
+    );
 
     let nm_conns_to_deactivate_first = gen_nm_conn_need_to_deactivate_first(
         nm_conns_to_activate.as_slice(),
