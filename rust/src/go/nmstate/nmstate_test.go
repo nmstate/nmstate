@@ -1,38 +1,33 @@
 package nmstate
 
 import (
-	"os"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestRetrieveNetState(t *testing.T) {
-	f, err := os.Create("file.txt")
-	if err != nil {
-		panic(err)
-	}
-	defer f.Close()
-	nms := New(WithLogsWritter(f))
+	log := &strings.Builder{}
+	nms := New(WithLogsWritter(log))
 	netState, err := nms.RetrieveNetState()
 	assert.NoError(t, err, "must succeed calling retrieve_net_state c binding")
 	assert.NotEmpty(t, netState, "net state should not be empty")
+	assert.NotEmpty(t, log.String(), "log should not be empty")
 }
 
 func TestRetrieveNetStateKernelOnly(t *testing.T) {
-	f, err := os.Create("file.txt")
-	if err != nil {
-		panic(err)
-	}
-	defer f.Close()
-	nms := New(WithLogsWritter(f), WithKernelOnly())
+	log := &strings.Builder{}
+	nms := New(WithLogsWritter(log), WithKernelOnly())
 	netState, err := nms.RetrieveNetState()
 	assert.NoError(t, err, "must succeed calling retrieve_net_state c binding")
 	assert.NotEmpty(t, netState, "net state should not be empty")
+	assert.NotEmpty(t, log.String(), "log should not be empty")
 }
 
 func TestApplyNetState(t *testing.T) {
-	nms := New()
+	log := &strings.Builder{}
+	nms := New(WithLogsWritter(log))
 	netState, err := nms.ApplyNetState(`{
 "interfaces": [{
   "name": "dummy1",
@@ -42,9 +37,11 @@ func TestApplyNetState(t *testing.T) {
 `)
 	assert.NoError(t, err, "must succeed calling retrieve_net_state c binding")
 	assert.NotEmpty(t, netState, "net state should not be empty")
+	assert.NotEmpty(t, log.String(), "log should not be empty")
 }
 
 func TestApplyNetStateWithCommit(t *testing.T) {
+	log := &strings.Builder{}
 	nms := New(WithNoCommit())
 	netState, err := nms.ApplyNetState(`{
 "interfaces": [{
@@ -58,4 +55,5 @@ func TestApplyNetStateWithCommit(t *testing.T) {
 
 	_, err = nms.CommitCheckpoint("")
 	assert.NoError(t, err, "must succeed commiting last active checkpoint")
+	assert.NotEmpty(t, log.String(), "log should not be empty")
 }

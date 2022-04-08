@@ -38,7 +38,8 @@ check: $(TMPDIR)/$(CLIB_SO_FULL) $(TMPDIR)/$(CLIB_HEADER)
 	LD_LIBRARY_PATH=$(TMPDIR) \
 	CGO_CFLAGS="-I$(TMPDIR)" \
 	CGO_LDFLAGS="-L$(TMPDIR)" \
-	go test $(WHAT)
+	go test -c $(WHAT)
+	$(SUDO) ./nmstate.test
 	rm -rf $(TMPDIR)
 clean:
 	go clean;

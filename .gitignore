@@ -30,3 +30,5 @@ rust/src/clib/test/nmstate_test
 rust/src/clib/test/vgcore*
 
 *.swp
+
+rust/src/go/nmstate/nmstate.test
