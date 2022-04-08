@@ -81,6 +81,7 @@ fn main() {
                 .arg(
                     clap::Arg::with_name("STATE_FILE")
                         .required(false)
+                        .multiple(true)
                         .index(1)
                         .help("Network state file"),
                 )
@@ -235,9 +236,10 @@ fn main() {
             eprintln!("Using 'set' is deprecated, use 'apply' instead.");
         }
 
-        if let Some(file_path) = matches.value_of("STATE_FILE") {
+        if let Some(file_paths) = matches.values_of("STATE_FILE") {
+            let file_paths: Vec<&str> = file_paths.collect();
             print_result_and_exit(
-                apply_from_file(file_path, matches),
+                apply_from_files(&file_paths, matches),
                 EX_DATAERR,
             );
         } else {
@@ -386,14 +388,21 @@ fn show(matches: &clap::ArgMatches) -> Result<String, CliError> {
 }
 
 fn apply_from_stdin(matches: &clap::ArgMatches) -> Result<String, CliError> {
+    set_ctrl_c_action();
     apply(io::stdin(), matches)
 }
 
-fn apply_from_file(
-    file_path: &str,
+fn apply_from_files(
+    file_paths: &[&str],
     matches: &clap::ArgMatches,
 ) -> Result<String, CliError> {
-    apply(std::fs::File::open(file_path)?, matches)
+    set_ctrl_c_action();
+
+    let mut ret = String::new();
+    for file_path in file_paths {
+        ret += &apply(std::fs::File::open(file_path)?, matches)?;
+    }
+    Ok(ret)
 }
 
 fn apply<R>(reader: R, matches: &clap::ArgMatches) -> Result<String, CliError>
@@ -414,14 +423,6 @@ where
     net_state.set_commit(!no_commit);
     net_state.set_timeout(timeout);
     net_state.set_memory_only(matches.is_present("MEMORY_ONLY"));
-
-    ctrlc::set_handler(|| {
-        if let Err(e) = rollback("") {
-            println!("Failed to rollback: {}", e);
-        }
-        std::process::exit(1);
-    })
-    .expect("Error setting Ctrl-C handler");
 
     net_state.apply()?;
     if !matches.is_present("SHOW_SECRETS") {
@@ -564,4 +565,14 @@ fn ask_for_retry() -> bool {
             _ => println!("Invalid reply, please try y or n"),
         }
     }
+}
+
+fn set_ctrl_c_action() {
+    ctrlc::set_handler(|| {
+        if let Err(e) = rollback("") {
+            println!("Failed to rollback: {}", e);
+        }
+        std::process::exit(1);
+    })
+    .expect("Error setting Ctrl-C handler");
 }
