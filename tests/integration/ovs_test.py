@@ -263,6 +263,9 @@ def test_ovs_service_missing_with_system_port_only(eth1_up):
                 pass
 
 
+@pytest.mark.xfail(
+    reason="The design of rust code cannot detect this mis-configure"
+)
 def test_ovs_service_missing_with_internal_port_only():
     bridge = Bridge(BRIDGE1)
     bridge.add_internal_port(PORT1)
