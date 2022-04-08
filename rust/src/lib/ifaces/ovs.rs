@@ -2,7 +2,9 @@ use std::convert::TryFrom;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{BaseInterface, ErrorKind, InterfaceType, NmstateError};
+use crate::{
+    BaseInterface, BridgePortVlanConfig, ErrorKind, InterfaceType, NmstateError,
+};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[non_exhaustive]
@@ -162,6 +164,8 @@ pub struct OvsBridgePortConfig {
         rename = "link-aggregation"
     )]
     pub bond: Option<OvsBridgeBondConfig>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub vlan: Option<BridgePortVlanConfig>,
 }
 
 impl OvsBridgePortConfig {

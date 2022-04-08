@@ -1,8 +1,8 @@
 use nm_dbus::{NmConnection, NmSettingBridge, NmSettingBridgeVlanRange};
 
 use crate::{
-    LinuxBridgeInterface, LinuxBridgeOptions, LinuxBridgePortTunkTag,
-    LinuxBridgePortVlanConfig, LinuxBridgePortVlanMode, LinuxBridgeStpOptions,
+    BridgePortTunkTag, BridgePortVlanConfig, BridgePortVlanMode,
+    LinuxBridgeInterface, LinuxBridgeOptions, LinuxBridgeStpOptions,
 };
 
 pub(crate) fn gen_nm_br_setting(
@@ -140,11 +140,11 @@ pub(crate) fn gen_nm_br_port_setting(
 }
 
 fn nmstate_port_vlans_to_nm_vlan_range(
-    port_vlan_conf: &LinuxBridgePortVlanConfig,
+    port_vlan_conf: &BridgePortVlanConfig,
 ) -> Vec<NmSettingBridgeVlanRange> {
     let mut ret = Vec::new();
     match port_vlan_conf.mode {
-        Some(LinuxBridgePortVlanMode::Trunk) => {
+        Some(BridgePortVlanMode::Trunk) => {
             if let Some(trunk_tags) = &port_vlan_conf.trunk_tags {
                 for trunk_tag in trunk_tags.as_slice() {
                     ret.push(trunk_tag_to_nm_vlan_range(trunk_tag));
@@ -154,7 +154,7 @@ fn nmstate_port_vlans_to_nm_vlan_range(
                 ret.push(access_tag_to_nm_vlan_range(t))
             }
         }
-        Some(LinuxBridgePortVlanMode::Access) => {
+        Some(BridgePortVlanMode::Access) => {
             if let Some(t) = port_vlan_conf.tag {
                 ret.push(access_tag_to_nm_vlan_range(t))
             };
@@ -166,7 +166,7 @@ fn nmstate_port_vlans_to_nm_vlan_range(
 }
 
 fn trunk_tag_to_nm_vlan_range(
-    trunk_tag: &LinuxBridgePortTunkTag,
+    trunk_tag: &BridgePortTunkTag,
 ) -> NmSettingBridgeVlanRange {
     let mut ret = NmSettingBridgeVlanRange::new();
     let (vid_min, vid_max) = trunk_tag.get_vlan_tag_range();

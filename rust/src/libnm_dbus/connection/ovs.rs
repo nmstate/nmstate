@@ -93,6 +93,8 @@ pub struct NmSettingOvsPort {
     pub mode: Option<String>,
     pub up_delay: Option<u32>,
     pub down_delay: Option<u32>,
+    pub tag: Option<u32>,
+    pub vlan_mode: Option<String>,
     _other: HashMap<String, zvariant::OwnedValue>,
 }
 
@@ -103,6 +105,8 @@ impl TryFrom<DbusDictionary> for NmSettingOvsPort {
             mode: _from_map!(v, "bond-mode", String::try_from)?,
             up_delay: _from_map!(v, "bond-updelay", u32::try_from)?,
             down_delay: _from_map!(v, "bond-downdelay", u32::try_from)?,
+            tag: _from_map!(v, "tag", u32::try_from)?,
+            vlan_mode: _from_map!(v, "vlan-mode", String::try_from)?,
             _other: v,
         })
     }
@@ -135,6 +139,12 @@ impl NmSettingOvsPort {
         }
         if let Some(v) = self.down_delay {
             ret.insert("bond-downdelay", zvariant::Value::new(v));
+        }
+        if let Some(v) = self.tag {
+            ret.insert("tag", zvariant::Value::new(v));
+        }
+        if let Some(v) = self.vlan_mode.as_ref() {
+            ret.insert("vlan-mode", zvariant::Value::new(v));
         }
         ret.extend(self._other.iter().map(|(key, value)| {
             (key.as_str(), zvariant::Value::from(value.clone()))

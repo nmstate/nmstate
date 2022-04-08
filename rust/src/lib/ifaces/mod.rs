@@ -1,5 +1,6 @@
 mod base;
 mod bond;
+mod bridge_vlan;
 mod dummy;
 mod ethernet;
 mod ethtool;
@@ -22,6 +23,10 @@ pub use bond::{
     BondConfig, BondFailOverMac, BondInterface, BondLacpRate, BondMode,
     BondOptions, BondPrimaryReselect, BondXmitHashPolicy,
 };
+pub use bridge_vlan::{
+    BridgePortTunkTag, BridgePortVlanConfig, BridgePortVlanMode,
+    BridgePortVlanRange,
+};
 pub use dummy::DummyInterface;
 pub use ethernet::{
     EthernetConfig, EthernetDuplex, EthernetInterface, VethConfig,
@@ -34,9 +39,7 @@ pub use infiniband::{InfiniBandConfig, InfiniBandInterface, InfiniBandMode};
 pub use inter_ifaces::*;
 pub use linux_bridge::{
     LinuxBridgeConfig, LinuxBridgeInterface, LinuxBridgeMulticastRouterType,
-    LinuxBridgeOptions, LinuxBridgePortConfig, LinuxBridgePortTunkTag,
-    LinuxBridgePortVlanConfig, LinuxBridgePortVlanMode,
-    LinuxBridgePortVlanRange, LinuxBridgeStpOptions,
+    LinuxBridgeOptions, LinuxBridgePortConfig, LinuxBridgeStpOptions,
 };
 pub use mac_vlan::{MacVlanConfig, MacVlanInterface, MacVlanMode};
 pub use mac_vtap::{MacVtapConfig, MacVtapInterface, MacVtapMode};

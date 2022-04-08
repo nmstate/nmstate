@@ -1,6 +1,5 @@
 use crate::{
-    Interfaces, LinuxBridgeInterface, LinuxBridgePortTunkTag,
-    LinuxBridgePortVlanRange,
+    BridgePortTunkTag, BridgePortVlanRange, Interfaces, LinuxBridgeInterface,
 };
 
 #[test]
@@ -163,11 +162,11 @@ bridge:
     assert_eq!(vlan_conf.tag, Some(102));
     assert_eq!(
         &vlan_conf.trunk_tags.as_ref().unwrap()[0],
-        &LinuxBridgePortTunkTag::Id(103)
+        &BridgePortTunkTag::Id(103)
     );
     assert_eq!(
         &vlan_conf.trunk_tags.as_ref().unwrap()[1],
-        &LinuxBridgePortTunkTag::IdRange(LinuxBridgePortVlanRange {
+        &BridgePortTunkTag::IdRange(BridgePortVlanRange {
             max: 1024,
             min: 105
         })
