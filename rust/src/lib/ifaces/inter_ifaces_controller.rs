@@ -71,7 +71,9 @@ pub(crate) fn handle_changed_ports(
         match ifaces.kernel_ifaces.get_mut(&iface_name) {
             Some(iface) => {
                 // Some interface cannot live without controller
-                if iface.need_controller() && ctrl_name.is_none() {
+                if iface.need_controller()
+                    && (ctrl_name.as_ref().map(|n| n.is_empty()) != Some(false))
+                {
                     iface.base_iface_mut().state = InterfaceState::Absent;
                 } else {
                     iface.base_iface_mut().controller = ctrl_name;
@@ -85,7 +87,10 @@ pub(crate) fn handle_changed_ports(
                 {
                     let mut iface = cur_iface.clone_name_type_only();
                     // Some interface cannot live without controller
-                    if iface.need_controller() && ctrl_name.is_none() {
+                    if iface.need_controller()
+                        && (ctrl_name.as_ref().map(|n| n.is_empty())
+                            != Some(false))
+                    {
                         iface.base_iface_mut().state = InterfaceState::Absent;
                     } else {
                         iface.base_iface_mut().state = InterfaceState::Up;
@@ -100,33 +105,36 @@ pub(crate) fn handle_changed_ports(
                     }
                     info!(
                         "Include interface {} to edit as its \
-                            controller required so",
+                        controller required so",
                         iface_name
                     );
                     ifaces.push(iface);
                 } else {
                     // Do not raise error if detach port
                     if let Some(ctrl_name) = ctrl_name {
-                        // OVS internal interface could be created without
-                        // been defined in desire or current state
-                        if let Some(InterfaceType::OvsBridge) = ctrl_type {
-                            ifaces.push(gen_ovs_interface(
-                                &iface_name,
-                                &ctrl_name,
-                            ));
-                            info!(
-                                "Include OVS internal interface {} to edit \
-                                as its controller required so",
-                                iface_name
-                            );
-                        } else {
-                            return Err(NmstateError::new(
-                                ErrorKind::InvalidArgument,
-                                format!(
-                                    "Interface {} is holding unknown port {}",
-                                    ctrl_name, iface_name
-                                ),
-                            ));
+                        if !ctrl_name.is_empty() {
+                            // OVS internal interface could be created without
+                            // been defined in desire or current state
+                            if let Some(InterfaceType::OvsBridge) = ctrl_type {
+                                ifaces.push(gen_ovs_interface(
+                                    &iface_name,
+                                    &ctrl_name,
+                                ));
+                                info!(
+                                    "Include OVS internal interface {} to \
+                                    edit as its controller required so",
+                                    iface_name
+                                );
+                            } else {
+                                return Err(NmstateError::new(
+                                    ErrorKind::InvalidArgument,
+                                    format!(
+                                        "Interface {} is holding unknown \
+                                        port {}",
+                                        ctrl_name, iface_name
+                                    ),
+                                ));
+                            }
                         }
                     }
                 }
@@ -189,7 +197,7 @@ fn handle_changed_ports_of_iface(
         // pending action for this port, we don't override it.
         pending_changes
             .entry(port_name.to_string())
-            .or_insert_with(|| (None, None));
+            .or_insert_with(|| (Some("".into()), None));
     }
 
     // Set controller property if port in desire
@@ -222,6 +230,9 @@ pub(crate) fn set_ifaces_up_priority(ifaces: &mut Interfaces) -> bool {
             continue;
         }
         if let Some(ref ctrl_name) = iface.base_iface().controller {
+            if ctrl_name.is_empty() {
+                continue;
+            }
             let ctrl_iface = ifaces.get_iface(
                 ctrl_name,
                 iface

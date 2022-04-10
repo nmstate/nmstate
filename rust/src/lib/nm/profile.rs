@@ -1,4 +1,5 @@
 use std::collections::{hash_map::Entry, HashMap};
+use std::str::FromStr;
 use std::time::Instant;
 
 use nm_dbus::{NmApi, NmConnection};
@@ -301,6 +302,11 @@ pub(crate) fn use_uuid_for_controller_reference(
         } else {
             continue;
         };
+
+        // Skip if its controller is already a UUID
+        if uuid::Uuid::from_str(ctrl_name.as_str()).is_ok() {
+            continue;
+        }
 
         if ctrl_type == "ovs-port" {
             if let Some(Interface::OvsBridge(ovs_br_iface)) =
