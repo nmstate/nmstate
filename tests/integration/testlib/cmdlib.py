@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2020 Red Hat, Inc.
+# Copyright (c) 2018-2022 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -22,7 +22,6 @@ import re
 import subprocess
 
 RC_SUCCESS = 0
-RC_FAIL2 = 2
 
 
 def exec_cmd(cmd, env=None, stdin=None, check=False):
