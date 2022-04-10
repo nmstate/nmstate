@@ -97,8 +97,11 @@ def test_missing_operation():
     ret = cmdlib.exec_cmd(cmds)
     rc, out, err = ret
 
-    assert rc == cmdlib.RC_FAIL2, cmdlib.format_exec_cmd_result(ret)
-    assert "nmstatectl: error: invalid choice: 'no-such-oper'" in err
+    assert rc != cmdlib.RC_SUCCESS, cmdlib.format_exec_cmd_result(ret)
+    assert (
+        "nmstatectl: error: invalid choice: 'no-such-oper'" in err
+        or "'no-such-oper' which wasn't expected" in err
+    )
 
 
 def test_show_command_with_json():
