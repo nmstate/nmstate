@@ -192,7 +192,7 @@ pub(crate) fn iface_to_nm_connections(
 
     // When detaching a OVS system interface from OVS bridge, we should remove
     // its NmSettingOvsIface setting
-    if base_iface.controller.is_none() {
+    if base_iface.controller.as_deref() == Some("") {
         nm_conn.ovs_iface = None;
     }
 
@@ -379,8 +379,6 @@ pub(crate) fn gen_nm_conn_setting(
         None
     };
 
-    nm_conn_set.controller = None;
-    nm_conn_set.controller_type = None;
     let nm_ctrl_type = iface
         .base_iface()
         .controller_type
@@ -390,7 +388,10 @@ pub(crate) fn gen_nm_conn_setting(
     let nm_ctrl_type = nm_ctrl_type.as_deref();
     let ctrl_name = iface.base_iface().controller.as_deref();
     if let Some(ctrl_name) = ctrl_name {
-        if let Some(nm_ctrl_type) = nm_ctrl_type {
+        if ctrl_name.is_empty() {
+            nm_conn_set.controller = None;
+            nm_conn_set.controller_type = None;
+        } else if let Some(nm_ctrl_type) = nm_ctrl_type {
             nm_conn_set.controller = Some(ctrl_name.to_string());
             nm_conn_set.controller_type = if nm_ctrl_type == "ovs-bridge"
                 && iface.iface_type()
