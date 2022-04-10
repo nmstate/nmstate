@@ -101,6 +101,11 @@ pub(crate) fn iface_to_nm_connections(
         &base_iface.iface_type,
         nm_ac_uuids,
     );
+    if iface.is_up_exist_config() {
+        if let Some(nm_conn) = exist_nm_conn {
+            return Ok(vec![nm_conn.clone()]);
+        }
+    }
     let mut nm_conn = exist_nm_conn.cloned().unwrap_or_default();
 
     gen_nm_conn_setting(iface, &mut nm_conn)?;
@@ -351,15 +356,15 @@ pub(crate) fn gen_nm_conn_setting(
         let mut new_nm_conn_set = NmSettingConnection::new();
         let conn_name = match iface.iface_type() {
             InterfaceType::OvsBridge => {
-                format!("ovs-br-{}", iface.name())
+                format!("{}-br", iface.name())
             }
             InterfaceType::Other(ref other_type)
                 if other_type == "ovs-port" =>
             {
-                format!("ovs-port-{}", iface.name())
+                format!("{}-port", iface.name())
             }
             InterfaceType::OvsInterface => {
-                format!("ovs-iface-{}", iface.name())
+                format!("{}-if", iface.name())
             }
             _ => iface.name().to_string(),
         };

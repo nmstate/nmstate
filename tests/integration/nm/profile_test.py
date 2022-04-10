@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019-2021 Red Hat, Inc.
+# Copyright (c) 2019-2022 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -18,12 +18,10 @@
 #
 
 from contextlib import contextmanager
-import os
 
 import pytest
 
 import libnmstate
-from libnmstate.error import NmstateValueError
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
@@ -35,7 +33,6 @@ from libnmstate.schema import Route
 from ..testlib import assertlib
 from ..testlib import cmdlib
 from ..testlib import statelib
-from ..testlib.env import is_k8s
 from ..testlib.ovslib import Bridge as OvsBridge
 
 
@@ -47,6 +44,7 @@ IPV4_ADDRESS1 = "192.0.2.251"
 IPV4_ADDRESS2 = "192.0.2.252"
 IPV6_ADDRESS1 = "2001:db8:1::1"
 
+TEST_PROFILE_NAME = "testProfile"
 
 NMCLI_CON_ADD_DUMMY_CMD = [
     "nmcli",
@@ -55,7 +53,7 @@ NMCLI_CON_ADD_DUMMY_CMD = [
     "type",
     "dummy",
     "con-name",
-    "testProfile",
+    TEST_PROFILE_NAME,
     "connection.autoconnect",
     "no",
     "ifname",
@@ -69,7 +67,7 @@ NMCLI_CON_ADD_AUTOCONNECT_DUMMY_CMD = [
     "type",
     "dummy",
     "con-name",
-    "testProfile",
+    TEST_PROFILE_NAME,
     "connection.autoconnect",
     "yes",
     "ifname",
@@ -83,7 +81,7 @@ NMCLI_CON_ADD_ETH_CMD = [
     "type",
     "ethernet",
     "con-name",
-    "testProfile",
+    TEST_PROFILE_NAME,
     "connection.autoconnect",
     "no",
     "ifname",
@@ -94,7 +92,7 @@ NMCLI_CON_UP_TEST_PROFILE_CMD = [
     "nmcli",
     "con",
     "up",
-    "testProfile",
+    TEST_PROFILE_NAME,
 ]
 
 NM_PROFILE_DIRECTORY = "/etc/NetworkManager/system-connections/"
@@ -105,39 +103,21 @@ MAC0 = "02:FF:FF:FF:FF:00"
 
 
 @pytest.mark.tier1
-def test_delete_new_interface_inactive_profiles(dummy_inactive_profile):
-    with dummy_interface(dummy_inactive_profile):
-        profile_exists = _profile_exists(
-            NM_PROFILE_DIRECTORY + "testProfile.nmconnection"
-        )
-        assert not profile_exists
+def test_delete_inactive_profile():
+    with dummy_interface(DUMMY0_IFNAME):
+        _create_inactive_profile()
+        libnmstate.apply({Interface.KEY: [{Interface.NAME: DUMMY0_IFNAME}]})
+        assert not _nm_connection_exists(TEST_PROFILE_NAME)
 
 
-@pytest.mark.tier1
-@pytest.mark.xfail(
-    is_k8s(),
-    reason=(
-        "Requires adjusts for k8s. Ref:"
-        "https://github.com/nmstate/nmstate/issues/1579"
-    ),
-    raises=AssertionError,
-    strict=False,
-)
-def test_delete_existing_interface_inactive_profiles(eth1_up):
-    with create_inactive_profile(eth1_up[Interface.KEY][0][Interface.NAME]):
-        eth1_up[Interface.KEY][0][Interface.MTU] = 2000
-        libnmstate.apply(eth1_up)
-        assert not _nm_connection_exists("testProfile")
-
-
-def test_rename_existing_interface_active_profile(eth1_up):
-    cloned_profile_name = "testProfile"
-    with cloned_active_profile(
+def test_preserve_activated_profile_name(eth1_up):
+    cloned_profile_name = TEST_PROFILE_NAME
+    with cloned_active_profile_and_del_source(
         cloned_profile_name, eth1_up[Interface.KEY][0][Interface.NAME]
     ):
         eth1_up[Interface.KEY][0][Interface.MTU] = 2000
         libnmstate.apply(eth1_up)
-        assert _nm_connection_exists("testProfile")
+        assert _nm_connection_exists(TEST_PROFILE_NAME)
 
 
 @contextmanager
@@ -162,34 +142,27 @@ def dummy_interface(ifname, save_to_disk=True):
         libnmstate.apply(desired_state)
 
 
-@pytest.fixture
-def dummy_inactive_profile():
+def _create_inactive_profile():
     cmdlib.exec_cmd(NMCLI_CON_ADD_DUMMY_CMD)
-    profile_exists = _profile_exists(
-        NM_PROFILE_DIRECTORY + "testProfile.nmconnection"
-    )
-    assert profile_exists
+    assert _nm_connection_exists(TEST_PROFILE_NAME)
     try:
         yield DUMMY0_IFNAME
     finally:
-        cmdlib.exec_cmd(_nmcli_delete_connection("testProfile"))
+        cmdlib.exec_cmd(_nmcli_delete_connection(TEST_PROFILE_NAME))
 
 
 @pytest.fixture
 def dummy_active_profile():
     cmdlib.exec_cmd(NMCLI_CON_ADD_AUTOCONNECT_DUMMY_CMD)
-    profile_exists = _profile_exists(
-        NM_PROFILE_DIRECTORY + "testProfile.nmconnection"
-    )
-    assert profile_exists
+    assert _nm_connection_exists(TEST_PROFILE_NAME)
     try:
         yield DUMMY0_IFNAME
     finally:
-        cmdlib.exec_cmd(_nmcli_delete_connection("testProfile"))
+        cmdlib.exec_cmd(_nmcli_delete_connection(TEST_PROFILE_NAME))
 
 
 @contextmanager
-def cloned_active_profile(con_name, source):
+def cloned_active_profile_and_del_source(con_name, source):
     cmdlib.exec_cmd(["nmcli", "con", "clone", "id", source, con_name])
     cmdlib.exec_cmd(_nmcli_delete_connection(source))
     cmdlib.exec_cmd(NMCLI_CON_UP_TEST_PROFILE_CMD)
@@ -204,11 +177,11 @@ def cloned_active_profile(con_name, source):
 def create_inactive_profile(con_name):
     cmdlib.exec_cmd(_nmcli_deactivate_connection(con_name))
     cmdlib.exec_cmd(NMCLI_CON_ADD_ETH_CMD)
-    assert _nm_connection_exists("testProfile")
+    assert _nm_connection_exists(TEST_PROFILE_NAME)
     try:
         yield
     finally:
-        cmdlib.exec_cmd(_nmcli_delete_connection("testProfile"))
+        cmdlib.exec_cmd(_nmcli_delete_connection(TEST_PROFILE_NAME))
 
 
 def test_state_down_preserving_config():
@@ -316,33 +289,20 @@ def test_state_absent_can_remove_down_profiles(dummy0_with_down_profile):
 
 def test_create_memory_only_profile_new_interface():
     with dummy_interface(DUMMY0_IFNAME, save_to_disk=False):
-        assert not _profile_exists(
-            NM_PROFILE_DIRECTORY + "dummy0.nmconnection"
-        )
-        assert _profile_exists(
-            MEMORY_ONLY_PROFILE_DIRECTORY + "dummy0.nmconnection"
-        )
-
-    assert not _profile_exists(
-        MEMORY_ONLY_PROFILE_DIRECTORY + "dummy0.nmconnection"
-    )
+        assert _nm_connection_exists(DUMMY0_IFNAME)
+        assert _nm_connection_is_memory_only(DUMMY0_IFNAME)
 
 
 def test_create_memory_only_profile_edit_interface():
     with dummy_interface(DUMMY0_IFNAME) as dstate:
-        assert not _profile_exists(
-            MEMORY_ONLY_PROFILE_DIRECTORY + "dummy0.nmconnection"
-        )
+        assert _nm_connection_exists(DUMMY0_IFNAME)
+        assert not _nm_connection_is_memory_only(DUMMY0_IFNAME)
         dstate[Interface.KEY][0][Interface.MTU] = 2000
         libnmstate.apply(dstate, save_to_disk=False)
-        assert _profile_exists(NM_PROFILE_DIRECTORY + "dummy0.nmconnection")
-        assert _profile_exists(
-            MEMORY_ONLY_PROFILE_DIRECTORY + "dummy0.nmconnection"
-        )
+        assert _nm_connection_exists(DUMMY0_IFNAME)
+        assert _nm_connection_is_memory_only(DUMMY0_IFNAME)
 
-    assert not _profile_exists(
-        MEMORY_ONLY_PROFILE_DIRECTORY + "dummy0.nmconnection"
-    )
+    assert not _nm_connection_exists(DUMMY0_IFNAME)
 
 
 def test_memory_only_profile_absent_interface():
@@ -350,7 +310,7 @@ def test_memory_only_profile_absent_interface():
         dstate[Interface.KEY][0][Interface.STATE] = InterfaceState.ABSENT
         libnmstate.apply(dstate, save_to_disk=False)
         assertlib.assert_absent(DUMMY0_IFNAME)
-        assert _profile_exists(NM_PROFILE_DIRECTORY + "dummy0.nmconnection")
+        assert _nm_connection_exists(DUMMY0_IFNAME)
 
     assertlib.assert_absent(DUMMY0_IFNAME)
 
@@ -363,15 +323,20 @@ def _nmcli_delete_connection(con_name):
     return ["nmcli", "con", "delete", con_name]
 
 
-def _profile_exists(profile_name):
-    return os.path.isfile(profile_name)
-
-
 def _nm_connection_exists(conn_name):
     rc, _, _ = cmdlib.exec_cmd(
         f"nmcli -g connection.id c show {conn_name}".split()
     )
     return rc == 0
+
+
+def _nm_connection_is_memory_only(conn_name):
+    rc, output, _ = cmdlib.exec_cmd(f"nmcli -g FILENAME,NAME c show".split())
+    if rc == 0:
+        for line in output.split("\n"):
+            if line.endswith(f":{conn_name}"):
+                return line.startswith("/run/")
+    return False
 
 
 @pytest.fixture
@@ -434,20 +399,12 @@ def test_linux_bridge_with_port_holding_two_profiles(eth1_with_two_profiles):
         )
 
 
-@pytest.mark.tier1
-@pytest.mark.xfail(
-    is_k8s(),
-    reason=(
-        "Requires adjusts for k8s. Ref:"
-        "https://github.com/nmstate/nmstate/issues/1579"
-    ),
-    raises=NmstateValueError,
-    strict=False,
-)
 def test_converting_memory_only_profile_to_persistent():
     with dummy_interface(DUMMY0_IFNAME, save_to_disk=False) as dstate:
+        assert _nm_connection_is_memory_only(DUMMY0_IFNAME)
         libnmstate.apply(dstate, save_to_disk=True)
-        assert _profile_exists(NM_PROFILE_DIRECTORY + "dummy0.nmconnection")
+        assert _nm_connection_exists(DUMMY0_IFNAME)
+        assert not _nm_connection_is_memory_only(DUMMY0_IFNAME)
 
     assertlib.assert_absent(DUMMY0_IFNAME)
 
@@ -463,7 +420,7 @@ def ovs_bridge_with_internal_port():
 def test_ovs_profile_been_delete_by_state_absent(
     ovs_bridge_with_internal_port,
 ):
-    assert _profile_exists(NM_PROFILE_DIRECTORY + "ovs0-if.nmconnection")
+    assert _nm_connection_exists("ovs0-if")
     libnmstate.apply(
         {
             Interface.KEY: [
@@ -474,7 +431,7 @@ def test_ovs_profile_been_delete_by_state_absent(
             ]
         }
     )
-    assert not _profile_exists(NM_PROFILE_DIRECTORY + "ovs0-if.nmconnection")
+    assert not _nm_connection_exists("ovs0-if")
 
 
 @pytest.fixture
