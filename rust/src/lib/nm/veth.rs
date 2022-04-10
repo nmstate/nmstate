@@ -1,7 +1,11 @@
 use nm_dbus::{NmConnection, NmSettingVeth};
 
 use crate::{
-    nm::connection::gen_nm_conn_setting, nm::ip::gen_nm_ip_setting,
+    nm::connection::{
+        gen_nm_conn_setting, NM_SETTING_VETH_SETTING_NAME,
+        NM_SETTING_WIRED_SETTING_NAME,
+    },
+    nm::ip::gen_nm_ip_setting,
     BaseInterface, EthernetInterface, Interface, InterfaceIpv4, InterfaceIpv6,
     InterfaceState, InterfaceType, NmstateError, VethConfig,
 };
@@ -29,12 +33,14 @@ pub(crate) fn is_veth_peer_changed(
 
 pub(crate) fn create_veth_peer_profile_if_not_found(
     peer_name: &str,
+    end_name: &str,
     exist_nm_conns: &[NmConnection],
 ) -> Result<NmConnection, NmstateError> {
     for nm_conn in exist_nm_conns {
         if let Some(iface_type) = nm_conn.iface_type() {
             if nm_conn.iface_name() == Some(peer_name)
-                && ["veth", "ethernet"].contains(&iface_type)
+                && [NM_SETTING_WIRED_SETTING_NAME, NM_SETTING_VETH_SETTING_NAME]
+                    .contains(&iface_type)
             {
                 return Ok(nm_conn.clone());
             }
@@ -44,7 +50,7 @@ pub(crate) fn create_veth_peer_profile_if_not_found(
     let mut eth_iface = EthernetInterface::new();
     eth_iface.base = BaseInterface {
         name: peer_name.to_string(),
-        iface_type: InterfaceType::Ethernet,
+        iface_type: InterfaceType::Veth,
         state: InterfaceState::Up,
         ipv4: Some(InterfaceIpv4::new()),
         ipv6: Some(InterfaceIpv6::new()),
@@ -54,6 +60,9 @@ pub(crate) fn create_veth_peer_profile_if_not_found(
     let mut nm_conn = NmConnection::new();
     gen_nm_conn_setting(&iface, &mut nm_conn)?;
     gen_nm_ip_setting(&iface, None, None, &mut nm_conn)?;
+    nm_conn.veth = Some(NmSettingVeth::from(&VethConfig {
+        peer: end_name.to_string(),
+    }));
     Ok(nm_conn)
 }
 
