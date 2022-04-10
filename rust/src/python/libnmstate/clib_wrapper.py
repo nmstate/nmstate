@@ -16,14 +16,15 @@ from ctypes import c_int, c_char_p, c_uint32, POINTER, byref, cdll
 import json
 
 from .error import (
+    NmstateDependencyError,
     NmstateError,
-    NmstateVerificationError,
-    NmstateValueError,
     NmstateInternalError,
-    NmstatePluginError,
-    NmstateNotImplementedError,
     NmstateKernelIntegerRoundedError,
+    NmstateNotImplementedError,
     NmstateNotSupportedError,
+    NmstatePluginError,
+    NmstateValueError,
+    NmstateVerificationError,
 )
 
 lib = cdll.LoadLibrary("libnmstate.so.2")
@@ -216,6 +217,8 @@ def map_error(err_kind, err_msg):
     elif err_kind == "KernelIntegerRoundedError":
         return NmstateKernelIntegerRoundedError(err_msg)
     elif err_kind == "NotSupportedError":
-        return NmstateNotSupportedError(err_msg);
+        return NmstateNotSupportedError(err_msg)
+    elif err_kind == "DependencyError":
+        return NmstateDependencyError(err_msg)
     else:
         return NmstateError(f"{err_kind}: {err_msg}")

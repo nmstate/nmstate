@@ -19,6 +19,7 @@
 
 from contextlib import contextmanager
 from subprocess import CalledProcessError
+from time import sleep
 
 from . import cmdlib
 
@@ -55,9 +56,18 @@ def mount_devnull_to_path(lib_path):
 
 @contextmanager
 def nm_service_restart():
+    # If we restart too often, systemd will not start NetworkManager due to
+    # 'start-limit-hit'. Resetting failure count will helps here.
+    cmdlib.exec_cmd(
+        "systemctl reset-failed NetworkManager.service".split(), check=False
+    )
     systemctl_restart_nm_cmd = ("systemctl", "restart", "NetworkManager")
     cmdlib.exec_cmd(systemctl_restart_nm_cmd, check=True)
+    # Wait 2 seconds for NetworkManager to start.
+    sleep(2)
     try:
         yield
     finally:
         cmdlib.exec_cmd(systemctl_restart_nm_cmd, check=True)
+        # Wait 2 seconds for NetworkManager to start.
+        sleep(2)
