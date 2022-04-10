@@ -24,6 +24,9 @@ use crate::{
     RouteEntry,
 };
 
+const ACTIVATION_RETRY_COUNT: usize = 5;
+const ACTIVATION_RETRY_INTERVAL: u64 = 1;
+
 pub(crate) fn nm_apply(
     add_net_state: &NetworkState,
     chg_net_state: &NetworkState,
@@ -246,12 +249,27 @@ fn apply_single_state(
         delete_exist_profiles(nm_api, &exist_nm_conns, &nm_conns_to_activate)?;
     }
 
-    activate_nm_profiles(
-        nm_api,
-        nm_conns_to_activate.as_slice(),
-        nm_ac_uuids.as_slice(),
-        checkpoint,
-    )?;
+    for i in 0..ACTIVATION_RETRY_COUNT {
+        match activate_nm_profiles(
+            nm_api,
+            nm_conns_to_activate.as_slice(),
+            nm_ac_uuids.as_slice(),
+            checkpoint,
+        ) {
+            Ok(()) => break,
+            Err(e) => {
+                if i == ACTIVATION_RETRY_COUNT - 1 {
+                    return Err(e);
+                } else {
+                    log::warn!("Activation failure: {}, retrying", e);
+                    std::thread::sleep(std::time::Duration::from_secs(
+                        ACTIVATION_RETRY_INTERVAL,
+                    ));
+                }
+            }
+        }
+    }
+
     deactivate_nm_profiles(
         nm_api,
         nm_conns_to_deactivate.as_slice(),
