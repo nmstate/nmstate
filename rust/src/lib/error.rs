@@ -8,6 +8,7 @@ pub enum ErrorKind {
     NotImplementedError,
     NotSupportedError,
     KernelIntegerRoundedError,
+    DependencyError,
 }
 
 impl std::fmt::Display for ErrorKind {

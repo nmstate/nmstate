@@ -340,6 +340,10 @@ where
             if cur_count == count - 1 {
                 return Err(e);
             } else {
+                if let Some(zbus::Error::MethodError(..)) = e.dbus_error {
+                    log::error!("{}", e);
+                    return Err(e);
+                }
                 log::info!("Retrying on NM dbus failure: {}", e);
                 std::thread::sleep(std::time::Duration::from_millis(
                     interval_ms,
