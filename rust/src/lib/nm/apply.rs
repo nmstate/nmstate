@@ -62,7 +62,6 @@ fn delete_net_state(
     nm_api: &NmApi,
     net_state: &NetworkState,
 ) -> Result<(), NmstateError> {
-    // TODO: Should we remove inactive connections also?
     let all_nm_conns = nm_api.connections_get().map_err(nm_error_to_nmstate)?;
 
     let nm_conns_name_type_index =
@@ -73,16 +72,30 @@ fn delete_net_state(
         if !iface.is_absent() {
             continue;
         }
-        let nm_iface_type = iface_type_to_nm(&iface.iface_type())?;
+        // If interface type not mentioned, we delete all profile with interface
+        // name
+        let nm_conns_to_delete: Option<Vec<&NmConnection>> =
+            if iface.iface_type() == InterfaceType::Unknown {
+                Some(
+                    all_nm_conns
+                        .as_slice()
+                        .iter()
+                        .filter(|c| c.iface_name() == Some(iface.name()))
+                        .collect(),
+                )
+            } else {
+                let nm_iface_type = iface_type_to_nm(&iface.iface_type())?;
+                nm_conns_name_type_index
+                    .get(&(iface.name(), &nm_iface_type))
+                    .cloned()
+            };
         // Delete all existing connections for this interface
-        if let Some(nm_conns) =
-            nm_conns_name_type_index.get(&(iface.name(), &nm_iface_type))
-        {
+        if let Some(nm_conns) = nm_conns_to_delete {
             for nm_conn in nm_conns {
                 if let Some(uuid) = nm_conn.uuid() {
                     info!(
                         "Deleting NM connection for absent interface \
-                            {}/{}: {}",
+                        {}/{}: {}",
                         &iface.name(),
                         &iface.iface_type(),
                         uuid

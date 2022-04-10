@@ -434,6 +434,35 @@ impl Interface {
         self.base_iface().state == InterfaceState::Ignore
     }
 
+    // Whether desire state only has `name, type, state`.
+    pub(crate) fn is_up_exist_config(&self) -> bool {
+        self.is_up()
+            && match serde_json::to_value(self) {
+                Ok(v) => {
+                    if let Some(obj) = v.as_object() {
+                        // The name, type and state are always been serialized
+                        obj.len() == 3
+                    } else {
+                        log::error!(
+                            "BUG: is_up_exist_connection() got \
+                            unexpected(not object) serde_json::to_value() \
+                            return {}",
+                            v
+                        );
+                        false
+                    }
+                }
+                Err(e) => {
+                    log::error!(
+                        "BUG: is_up_exist_connection() got unexpected \
+                    serde_json::to_value() failure {}",
+                        e
+                    );
+                    false
+                }
+            }
+    }
+
     pub fn is_virtual(&self) -> bool {
         !matches!(
             self,
