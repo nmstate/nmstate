@@ -586,7 +586,7 @@ fn verify_desire_absent_but_found_in_current(
         let e = NmstateError::new(
             ErrorKind::VerificationError,
             format!(
-                "Absent interface {}/{} still found as {:?}",
+                "Absent/Down interface {}/{} still found as {:?}",
                 des_iface.name(),
                 des_iface.iface_type(),
                 cur_iface
@@ -639,6 +639,13 @@ fn gen_ifaces_to_del(
             );
             del_ifaces.push(tmp_iface);
         }
+    }
+    if del_ifaces.is_empty() {
+        info!(
+            "Interface {} does not exists, requesting configuration purge",
+            del_iface.name()
+        );
+        del_ifaces.push(del_iface.clone());
     }
     del_ifaces
 }
