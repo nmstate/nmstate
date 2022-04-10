@@ -12,19 +12,22 @@ use serde_yaml::{self, Value};
 
 use crate::error::CliError;
 
+const APP_NAME: &str = "nmstatectl";
+
 const SUB_CMD_GEN_CONF: &str = "gc";
 const SUB_CMD_SHOW: &str = "show";
 const SUB_CMD_APPLY: &str = "apply";
 const SUB_CMD_COMMIT: &str = "commit";
 const SUB_CMD_ROLLBACK: &str = "rollback";
 const SUB_CMD_EDIT: &str = "edit";
+const SUB_CMD_VERSION: &str = "version";
 
 const EX_DATAERR: i32 = 65;
 const EXIT_FAILURE: i32 = 1;
 
 fn main() {
-    let matches = clap::App::new("nmstatectl")
-        .version("1.0")
+    let matches = clap::App::new(APP_NAME)
+        .version(clap::crate_version!())
         .author("Gris Ge <fge@redhat.com>")
         .about("Command line of nmstate")
         .setting(clap::AppSettings::SubcommandRequired)
@@ -198,7 +201,10 @@ fn main() {
                         .help("Do not make the state persistent"),
                 )
         )
-        .get_matches();
+        .subcommand(
+            clap::SubCommand::with_name(SUB_CMD_VERSION)
+            .about("Show version")
+       ).get_matches();
     let (log_module_filters, log_level) =
         match matches.occurrences_of("verbose") {
             0 => (vec!["nmstate", "nm_dbus"], LevelFilter::Warn),
@@ -246,6 +252,12 @@ fn main() {
         }
     } else if let Some(matches) = matches.subcommand_matches(SUB_CMD_EDIT) {
         print_result_and_exit(state_edit(matches), EX_DATAERR);
+    } else if matches.subcommand_matches(SUB_CMD_VERSION).is_some() {
+        print_string_and_exit(format!(
+            "{} {}",
+            APP_NAME,
+            clap::crate_version!()
+        ));
     }
 }
 

@@ -266,14 +266,14 @@ def test_version_argument():
     ret = cmdlib.exec_cmd(("nmstatectl", "--version"))
     rc, out, _ = ret
     assert rc == cmdlib.RC_SUCCESS, cmdlib.format_exec_cmd_result(ret)
-    assert out.rstrip() == __version__
+    assert __version__ in out
 
 
 def test_version_command():
     ret = cmdlib.exec_cmd(("nmstatectl", "version"))
     rc, out, _ = ret
     assert rc == cmdlib.RC_SUCCESS, cmdlib.format_exec_cmd_result(ret)
-    assert out.rstrip() == __version__
+    assert __version__ in out
 
 
 def assert_command(cmd, expected_rc=cmdlib.RC_SUCCESS):
