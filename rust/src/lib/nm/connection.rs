@@ -164,6 +164,7 @@ pub(crate) fn iface_to_nm_connections(
                     // veth could be in up state
                     ret.push(create_veth_peer_profile_if_not_found(
                         veth_conf.peer.as_str(),
+                        eth_iface.base.name.as_str(),
                         exist_nm_conns,
                     )?);
                 }
