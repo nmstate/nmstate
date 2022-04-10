@@ -36,6 +36,7 @@ pub struct BaseInterface {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ipv6: Option<InterfaceIpv6>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    // None here mean no change, empty string mean detach from controller.
     pub controller: Option<String>,
     #[serde(
         skip_serializing_if = "Option::is_none",
@@ -187,14 +188,22 @@ impl BaseInterface {
         }
     }
 
+    fn has_controller(&self) -> bool {
+        if let Some(ctrl) = self.controller.as_deref() {
+            !ctrl.is_empty()
+        } else {
+            false
+        }
+    }
+
     pub fn can_have_ip(&self) -> bool {
-        self.controller == None
+        (!self.has_controller())
             || self.iface_type == InterfaceType::OvsInterface
             || self.controller_type == Some(InterfaceType::Vrf)
     }
 
     pub(crate) fn is_up_priority_valid(&self) -> bool {
-        if self.controller.is_some() {
+        if self.has_controller() {
             self.up_priority != 0
         } else {
             true
