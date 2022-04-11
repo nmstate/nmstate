@@ -35,9 +35,14 @@ eval "$(./packaging/get_version.sh)"
 
 TAR_FILE="${TMP_DIR}/nmstate-${VERSION}.tar"
 (
-    "${python}" setup.py sdist --format tar --dist-dir $TMP_DIR
 
     ./packaging/make_spec.sh > "${SPEC_FILE}"
+    cp doc/nmstatectl.8.in doc/nmstatectl.8
+    sed -i -e "s/@DATE@/$(date +'%B %d, %Y')/" ./doc/nmstatectl.8
+    sed -i -e "s/@VERSION@/${VERSION}/" ./doc/nmstatectl.8
+    git archive --prefix=nmstate-${VERSION}/ HEAD --format=tar \
+        --add-file=doc/nmstatectl.8 --output=${TAR_FILE}
+    tar --delete nmstate-${VERSION}/packaging/nmstate.spec --file=$TAR_FILE
     tar --append --file=$TAR_FILE $SPEC_FILE
     gzip "${TAR_FILE}"
 

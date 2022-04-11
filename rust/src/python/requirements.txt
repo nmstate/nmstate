@@ -5,7 +5,5 @@
 #packageC>=3.0.0
 #packageD!=0.13.0,<0.14,>=0.12.0
 
-PyGObject
 PyYAML
 setuptools
-nispor>=1.2.1
