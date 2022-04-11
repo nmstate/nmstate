@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::time::Instant;
 
 use log::info;
 use nm_dbus::{NmApi, NmConnection};
@@ -12,8 +13,8 @@ use crate::{
     nm::error::nm_error_to_nmstate,
     nm::profile::{
         activate_nm_profiles, deactivate_nm_profiles, delete_exist_profiles,
-        get_exist_profile, save_nm_profiles, use_uuid_for_controller_reference,
-        use_uuid_for_parent_reference,
+        extend_timeout_if_required, get_exist_profile, save_nm_profiles,
+        use_uuid_for_controller_reference, use_uuid_for_parent_reference,
     },
     nm::route::is_route_removed,
     nm::veth::{is_veth_peer_changed, is_veth_peer_in_desire},
@@ -39,7 +40,7 @@ pub(crate) fn nm_apply(
     let nm_api = NmApi::new().map_err(nm_error_to_nmstate)?;
 
     if !memory_only {
-        delete_net_state(&nm_api, del_net_state)?;
+        delete_net_state(&nm_api, del_net_state, checkpoint)?;
     }
     apply_single_state(
         &nm_api,
@@ -64,6 +65,7 @@ pub(crate) fn nm_apply(
 fn delete_net_state(
     nm_api: &NmApi,
     net_state: &NetworkState,
+    checkpoint: &str,
 ) -> Result<(), NmstateError> {
     let all_nm_conns = nm_api.connections_get().map_err(nm_error_to_nmstate)?;
 
@@ -123,14 +125,16 @@ fn delete_net_state(
         }
     }
 
+    let mut now = Instant::now();
     for uuid in &uuids_to_delete {
+        extend_timeout_if_required(&mut now, checkpoint)?;
         nm_api
             .connection_delete(uuid)
             .map_err(nm_error_to_nmstate)?;
     }
 
-    delete_orphan_ports(nm_api, &uuids_to_delete)?;
-    delete_remain_virtual_interface_as_desired(nm_api, net_state)?;
+    delete_orphan_ports(nm_api, &uuids_to_delete, checkpoint)?;
+    delete_remain_virtual_interface_as_desired(nm_api, net_state, checkpoint)?;
     Ok(())
 }
 
@@ -246,7 +250,12 @@ fn apply_single_state(
         memory_only,
     )?;
     if !memory_only {
-        delete_exist_profiles(nm_api, &exist_nm_conns, &nm_conns_to_activate)?;
+        delete_exist_profiles(
+            nm_api,
+            &exist_nm_conns,
+            &nm_conns_to_activate,
+            checkpoint,
+        )?;
     }
 
     for i in 0..ACTIVATION_RETRY_COUNT {
@@ -281,9 +290,11 @@ fn apply_single_state(
 fn delete_remain_virtual_interface_as_desired(
     nm_api: &NmApi,
     net_state: &NetworkState,
+    checkpoint: &str,
 ) -> Result<(), NmstateError> {
     let nm_devs = nm_api.devices_get().map_err(nm_error_to_nmstate)?;
     let nm_devs_indexed = create_index_for_nm_devs(&nm_devs);
+    let mut now = Instant::now();
     // Interfaces created by non-NM tools will not be deleted by connection
     // deletion, remove manually.
     for iface in &(net_state.interfaces.to_vec()) {
@@ -303,6 +314,7 @@ fn delete_remain_virtual_interface_as_desired(
                 );
                 // There might be an race with on-going profile/connection
                 // deletion, verification will raise error for it later.
+                extend_timeout_if_required(&mut now, checkpoint)?;
                 if let Err(e) = nm_api.device_delete(&nm_dev.obj_path) {
                     log::debug!("Failed to delete interface {:?}", e);
                 }
@@ -316,6 +328,7 @@ fn delete_remain_virtual_interface_as_desired(
 fn delete_orphan_ports(
     nm_api: &NmApi,
     uuids_deleted: &HashSet<&str>,
+    checkpoint: &str,
 ) -> Result<(), NmstateError> {
     let mut uuids_to_delete = Vec::new();
     let all_nm_conns = nm_api.connections_get().map_err(nm_error_to_nmstate)?;
@@ -337,7 +350,9 @@ fn delete_orphan_ports(
             }
         }
     }
+    let mut now = Instant::now();
     for uuid in &uuids_to_delete {
+        extend_timeout_if_required(&mut now, checkpoint)?;
         nm_api
             .connection_delete(uuid)
             .map_err(nm_error_to_nmstate)?;

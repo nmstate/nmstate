@@ -55,7 +55,9 @@ pub(crate) fn delete_exist_profiles(
     nm_api: &NmApi,
     exist_nm_conns: &[NmConnection],
     nm_conns: &[NmConnection],
+    checkpoint: &str,
 ) -> Result<(), NmstateError> {
+    let mut now = Instant::now();
     let mut excluded_uuids: Vec<&str> = Vec::new();
     let mut changed_iface_name_types: Vec<(&str, &str)> = Vec::new();
     for nm_conn in nm_conns {
@@ -87,6 +89,7 @@ pub(crate) fn delete_exist_profiles(
         if !excluded_uuids.contains(&uuid)
             && changed_iface_name_types.contains(&(iface_name, nm_iface_type))
         {
+            extend_timeout_if_required(&mut now, checkpoint)?;
             log::info!("Deleting existing connection {:?}", exist_nm_conn);
             nm_api
                 .connection_delete(uuid)
@@ -376,7 +379,7 @@ pub(crate) fn use_uuid_for_controller_reference(
     Ok(())
 }
 
-fn extend_timeout_if_required(
+pub(crate) fn extend_timeout_if_required(
     now: &mut Instant,
     checkpoint: &str,
 ) -> Result<(), NmstateError> {
@@ -416,7 +419,6 @@ pub(crate) fn use_uuid_for_parent_reference(
         {
             if !NM_SETTING_USER_SPACES.contains(&nm_iface_type) {
                 if let Some(parent_uuid) = pending_changes.get(iface_name) {
-                    println!("HAHA {} {:?}", iface_name, parent_uuid);
                     nm_conn.set_parent(parent_uuid);
                 }
             }
