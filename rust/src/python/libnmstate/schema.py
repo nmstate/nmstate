@@ -253,6 +253,8 @@ class Ethernet:
             TRUST = "trust"
             MIN_TX_RATE = "min-tx-rate"
             MAX_TX_RATE = "max-tx-rate"
+            VLAN_ID = "vlan-id"
+            QOS = "qos"
 
 
 class Veth:
@@ -291,9 +293,13 @@ class OvsDB:
 class OVSInterface(OvsDB):
     TYPE = InterfaceType.OVS_INTERFACE
     PATCH_CONFIG_SUBTREE = "patch"
+    DPDK_CONFIG_SUBTREE = "dpdk"
 
     class Patch:
         PEER = "peer"
+
+    class Dpdk:
+        DEVARGS = "devargs"
 
 
 class OVSBridge(Bridge, OvsDB):
@@ -304,6 +310,7 @@ class OVSBridge(Bridge, OvsDB):
         MCAST_SNOOPING_ENABLED = "mcast-snooping-enable"
         RSTP = "rstp"
         STP = "stp"
+        DATAPATH = "datapath"
 
     class Port(Bridge.Port):
         LINK_AGGREGATION_SUBTREE = "link-aggregation"
