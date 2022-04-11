@@ -3,15 +3,14 @@ specfile_path: nmstate.spec
 upstream_package_name: nmstate
 upstream_project_url: http://nmstate.io
 srpm_build_deps:
-  - python3-pip
-  - python3-setuptools_scm
+  - git
 actions:
-  post-upstream-clone: "bash -c './packaging/make_spec.sh > nmstate.spec'"
+  post-upstream-clone:
+    - "bash -c 'rpm2cpio `./packaging/make_srpm.sh`|cpio -idmv'"
   create-archive:
-    - "python3 setup.py sdist --dist-dir ."
-    - "sh -c 'echo nmstate-$(python3 setup.py --version).tar.gz'"
+    - "bash -c 'echo nmstate-$(cat VERSION).tar.gz'"
   get-current-version:
-    - "python3 setup.py --version"
+    - "cat VERSION"
 jobs:
   - job: copr_build
     trigger: pull_request

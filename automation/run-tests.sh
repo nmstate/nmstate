@@ -10,15 +10,11 @@ CONTAINER_WORKSPACE="/workspace/nmstate"
 TEST_TYPE_ALL="all"
 TEST_TYPE_FORMAT="format"
 TEST_TYPE_LINT="lint"
-TEST_TYPE_UNIT_PY36="unit_py36"
-TEST_TYPE_UNIT_PY38="unit_py38"
 TEST_TYPE_RUST_GO="rust_go"
 TEST_TYPE_INTEG="integ"
 TEST_TYPE_INTEG_TIER1="integ_tier1"
 TEST_TYPE_INTEG_TIER2="integ_tier2"
 TEST_TYPE_INTEG_SLOW="integ_slow"
-TEST_TYPE_INTEG_RUST="integ_rust"
-TEST_TYPE_INTEG_RUST_SLOW="integ_rust_slow"
 
 FEDORA_IMAGE_DEV="docker.io/nmstate/fedora-nmstate-dev"
 CENTOS_IMAGE_DEV="quay.io/nmstate/c8s-nmstate-dev"
@@ -100,29 +96,6 @@ function run_tests {
     fi
 
     if [ $TEST_TYPE == $TEST_TYPE_ALL ] || \
-       [ $TEST_TYPE == $TEST_TYPE_UNIT_PY36 ];then
-        if [[ $CONTAINER_IMAGE == $CENTOS_STREAM_IMAGE_DEV ]]; then
-            # Due to https://github.com/pypa/virtualenv/issues/1009
-            # Instruct virtualenv not to upgrade to the latest versions of pip,
-            # setuptools, wheel and etc
-            exec_cmd 'env VIRTUALENV_NO_DOWNLOAD=1 \
-                            tox --sitepackages -e py36'
-        else
-            exec_cmd "tox -e py36"
-        fi
-    fi
-
-    if [ $TEST_TYPE == $TEST_TYPE_ALL ] || \
-       [ $TEST_TYPE == $TEST_TYPE_UNIT_PY38 ];then
-        if [[ $CONTAINER_IMAGE == *"centos"* ]]; then
-            echo "Running unit test in $CONTAINER_IMAGE container is not " \
-                 "support yet"
-        else
-            exec_cmd "tox -e py38"
-        fi
-    fi
-
-    if [ $TEST_TYPE == $TEST_TYPE_ALL ] || \
        [ $TEST_TYPE == $TEST_TYPE_RUST_GO ];then
         if [[ $CONTAINER_IMAGE == *"centos"* ]]; then
             echo "Running rust go binding test in $CONTAINER_IMAGE container is not " \
@@ -174,32 +147,6 @@ function run_tests {
             --junitxml=junit.integ_slow.xml \
             -m slow --runslow \
             tests/integration \
-            ${nmstate_pytest_extra_args}"
-    fi
-
-    if [ $TEST_TYPE == $TEST_TYPE_ALL ] || \
-       [ $TEST_TYPE == $TEST_TYPE_INTEG_RUST_SLOW ];then
-        exec_cmd "cd $CONTAINER_WORKSPACE"
-        exec_cmd "
-          pytest \
-            $PYTEST_OPTIONS \
-            -m slow --runslow \
-            tests/integration/timeout_test.py  \
-            tests/integration/dynamic_ip_test.py \
-            ${nmstate_pytest_extra_args}"
-    fi
-
-    if [ $TEST_TYPE == $TEST_TYPE_ALL ] || \
-       [ $TEST_TYPE == $TEST_TYPE_INTEG_RUST ];then
-        exec_cmd "cd $CONTAINER_WORKSPACE"
-        exec_cmd "cp /usr/bin/nmstatectl-rust /tmp"
-        exec_cmd "dnf remove python3-libnmstate -y"
-        exec_cmd "mv /tmp/nmstatectl-rust /usr/bin/nmstatectl"
-        exec_cmd "chmod +x /usr/bin/nmstatectl"
-        exec_cmd "
-          env  \
-          PYTHONPATH=$CONTAINER_WORKSPACE/rust/src/python \
-          pytest $PYTEST_OPTIONS tests/integration \
             ${nmstate_pytest_extra_args}"
     fi
 }
@@ -387,8 +334,6 @@ while true; do
         echo "     * $TEST_TYPE_INTEG_TIER1"
         echo "     * $TEST_TYPE_INTEG_TIER2"
         echo "     * $TEST_TYPE_INTEG_SLOW"
-        echo "     * $TEST_TYPE_INTEG_RUST"
-        echo "     * $TEST_TYPE_INTEG_RUST_SLOW"
         echo "     * $TEST_TYPE_UNIT_PY36"
         echo "     * $TEST_TYPE_UNIT_PY38"
         echo "     * $TEST_TYPE_RUST_GO"
