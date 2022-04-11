@@ -9,12 +9,13 @@ from .prettystate import PrettyState
 
 __all__ = [
     "NmstateError",
+    "PrettyState",
     "apply",
-    "rollback",
     "commit",
+    "generate_configurations",
+    "rollback",
     "show",
     "show_running_config",
-    "PrettyState",
 ]
 
 __version__ = "2.1.0"
