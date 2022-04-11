@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use log::info;
-use nm_dbus::{NmApi, NmConnection, NmDeviceState};
+use nm_dbus::{NmApi, NmConnection};
 
 use crate::{
     nm::connection::{
@@ -130,7 +130,7 @@ fn delete_net_state(
     }
 
     delete_orphan_ports(nm_api, &uuids_to_delete)?;
-    delete_unmanged_virtual_interface_as_desired(nm_api, net_state)?;
+    delete_remain_virtual_interface_as_desired(nm_api, net_state)?;
     Ok(())
 }
 
@@ -278,13 +278,14 @@ fn apply_single_state(
     Ok(())
 }
 
-fn delete_unmanged_virtual_interface_as_desired(
+fn delete_remain_virtual_interface_as_desired(
     nm_api: &NmApi,
     net_state: &NetworkState,
 ) -> Result<(), NmstateError> {
     let nm_devs = nm_api.devices_get().map_err(nm_error_to_nmstate)?;
     let nm_devs_indexed = create_index_for_nm_devs(&nm_devs);
-    // Delete unmanaged software(virtual) interface
+    // Interfaces created by non-NM tools will not be deleted by connection
+    // deletion, remove manually.
     for iface in &(net_state.interfaces.to_vec()) {
         if !iface.is_absent() {
             continue;
@@ -294,20 +295,16 @@ fn delete_unmanged_virtual_interface_as_desired(
                 iface.name().to_string(),
                 iface.iface_type().to_string(),
             )) {
-                if nm_dev.state == NmDeviceState::Disconnected
-                    || nm_dev.state == NmDeviceState::Unmanaged
-                {
-                    info!(
-                        "Deleting NM unmanaged interface {}/{}: {}",
-                        &iface.name(),
-                        &iface.iface_type(),
-                        &nm_dev.obj_path
-                    );
-                    // There might be an race with on-going profile/connection
-                    // deletion
-                    if let Err(e) = nm_api.device_delete(&nm_dev.obj_path) {
-                        log::info!("Failed to delete interface {:?}", e);
-                    }
+                info!(
+                    "Deleting interface {}/{}: {}",
+                    &iface.name(),
+                    &iface.iface_type(),
+                    &nm_dev.obj_path
+                );
+                // There might be an race with on-going profile/connection
+                // deletion, verification will raise error for it later.
+                if let Err(e) = nm_api.device_delete(&nm_dev.obj_path) {
+                    log::debug!("Failed to delete interface {:?}", e);
                 }
             }
         }
