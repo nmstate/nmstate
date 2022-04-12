@@ -1,4 +1,4 @@
-use nm_dbus::NmConnection;
+use crate::nm::nm_dbus::NmConnection;
 
 use crate::InfiniBandInterface;
 

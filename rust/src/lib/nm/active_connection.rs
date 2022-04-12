@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use nm_dbus::NmActiveConnection;
+use crate::nm::nm_dbus::NmActiveConnection;
 
 use crate::nm::connection::{
     NM_SETTING_VETH_SETTING_NAME, NM_SETTING_WIRED_SETTING_NAME,

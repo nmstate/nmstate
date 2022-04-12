@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use nm_dbus::{NmConnection, NmSettingBond};
+use crate::nm::nm_dbus::{NmConnection, NmSettingBond};
 
 use crate::{BondConfig, BondInterface, BondOptions};
 

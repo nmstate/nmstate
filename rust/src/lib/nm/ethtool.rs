@@ -1,8 +1,8 @@
+use crate::nm::nm_dbus::{NmConnection, NmSettingEthtool};
 use crate::{
     EthtoolCoalesceConfig, EthtoolFeatureConfig, EthtoolPauseConfig,
     EthtoolRingConfig, Interface,
 };
-use nm_dbus::{NmConnection, NmSettingEthtool};
 
 pub(crate) fn gen_ethtool_setting(
     iface: &Interface,

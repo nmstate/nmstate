@@ -1,6 +1,6 @@
 use std::convert::TryFrom;
 
-use nm_dbus::NmIpRouteRule;
+use crate::nm::nm_dbus::NmIpRouteRule;
 
 use crate::{ip::is_ipv6_addr, InterfaceIpAddr, NmstateError, RouteRuleEntry};
 
@@ -14,7 +14,7 @@ pub(crate) fn gen_nm_ip_rules(
 ) -> Result<Vec<NmIpRouteRule>, NmstateError> {
     let mut ret = Vec::new();
     for rule in rules {
-        let mut nm_rule = NmIpRouteRule::new();
+        let mut nm_rule = NmIpRouteRule::default();
         nm_rule.family = Some(if is_ipv6 {
             libc::AF_INET6
         } else {

@@ -1,5 +1,5 @@
+use crate::nm::nm_dbus::NmApi;
 use log::warn;
-use nm_dbus::NmApi;
 
 use crate::{nm::error::nm_error_to_nmstate, NmstateError};
 

@@ -1,9 +1,9 @@
+use crate::nm::nm_dbus::{NmConnection, NmSettingConnection};
 use crate::{
     nm::profile::use_uuid_for_controller_reference, Interface, InterfaceType,
     OvsBridgeBondConfig, OvsBridgeBondPortConfig, OvsBridgeConfig,
     OvsBridgeInterface, OvsBridgePortConfig,
 };
-use nm_dbus::{NmConnection, NmSettingConnection};
 use std::collections::HashMap;
 const UUID1: &str = "8aca0200-accc-4d13-a62f-3c89a6da53c5";
 const UUID2: &str = "1c646761-efcc-4d33-a0d9-cb3c1c2d3309";
@@ -13,8 +13,8 @@ const UUID4: &str = "3c80d8de-a6d7-47da-b0b3-47d2b1052fe5";
 #[test]
 fn test_use_uuid_for_controller_reference_with_ovs_bond() {
     let mut nm_conns: Vec<NmConnection> = Vec::new();
-    let mut nm_conn = NmConnection::new();
-    let mut nm_conn_set = NmSettingConnection::new();
+    let mut nm_conn = NmConnection::default();
+    let mut nm_conn_set = NmSettingConnection::default();
     nm_conn_set.id = Some("ovs-br-br0".to_string());
     nm_conn_set.uuid = Some(UUID1.to_string());
     nm_conn_set.iface_type = Some("ovs-bridge".to_string());
@@ -22,8 +22,8 @@ fn test_use_uuid_for_controller_reference_with_ovs_bond() {
     nm_conn.connection = Some(nm_conn_set);
     nm_conns.push(nm_conn);
 
-    let mut nm_conn = NmConnection::new();
-    let mut nm_conn_set = NmSettingConnection::new();
+    let mut nm_conn = NmConnection::default();
+    let mut nm_conn_set = NmSettingConnection::default();
     nm_conn_set.id = Some("ovs-port-bond1".to_string());
     nm_conn_set.uuid = Some(UUID2.to_string());
     nm_conn_set.iface_type = Some("ovs-port".to_string());
@@ -33,8 +33,8 @@ fn test_use_uuid_for_controller_reference_with_ovs_bond() {
     nm_conn.connection = Some(nm_conn_set);
     nm_conns.push(nm_conn);
 
-    let mut nm_conn = NmConnection::new();
-    let mut nm_conn_set = NmSettingConnection::new();
+    let mut nm_conn = NmConnection::default();
+    let mut nm_conn_set = NmSettingConnection::default();
     nm_conn_set.id = Some("ovs-iface-p1".to_string());
     nm_conn_set.uuid = Some(UUID3.to_string());
     nm_conn_set.iface_type = Some("ovs-interface".to_string());
@@ -44,8 +44,8 @@ fn test_use_uuid_for_controller_reference_with_ovs_bond() {
     nm_conn.connection = Some(nm_conn_set);
     nm_conns.push(nm_conn);
 
-    let mut nm_conn = NmConnection::new();
-    let mut nm_conn_set = NmSettingConnection::new();
+    let mut nm_conn = NmConnection::default();
+    let mut nm_conn_set = NmSettingConnection::default();
     nm_conn_set.id = Some("ovs-iface-p2".to_string());
     nm_conn_set.uuid = Some(UUID4.to_string());
     nm_conn_set.iface_type = Some("ovs-interface".to_string());

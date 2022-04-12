@@ -1,6 +1,6 @@
 use std::convert::TryFrom;
 
-use nm_dbus::{NmConnection, NmIpRoute};
+use crate::nm::nm_dbus::{NmConnection, NmIpRoute};
 
 use crate::{ip::is_ipv6_addr, InterfaceIpAddr, NmstateError, RouteEntry};
 
@@ -10,7 +10,7 @@ pub(crate) fn gen_nm_ip_routes(
 ) -> Result<Vec<NmIpRoute>, NmstateError> {
     let mut ret = Vec::new();
     for route in routes {
-        let mut nm_route = NmIpRoute::new();
+        let mut nm_route = NmIpRoute::default();
         if let Some(v) = route.destination.as_deref() {
             if (is_ipv6 && !is_ipv6_addr(v)) || (!is_ipv6 && is_ipv6_addr(v)) {
                 continue;
