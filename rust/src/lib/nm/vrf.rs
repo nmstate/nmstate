@@ -1,10 +1,10 @@
-use nm_dbus::{NmConnection, NmSettingVrf};
+use crate::nm::nm_dbus::{NmConnection, NmSettingVrf};
 
 use crate::VrfConfig;
 
 impl From<&VrfConfig> for NmSettingVrf {
     fn from(config: &VrfConfig) -> Self {
-        let mut settings = NmSettingVrf::new();
+        let mut settings = NmSettingVrf::default();
         settings.table = Some(config.table_id);
         settings
     }

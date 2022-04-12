@@ -1,4 +1,6 @@
-use nm_dbus::{NmConnection, NmSettingBridge, NmSettingBridgeVlanRange};
+use crate::nm::nm_dbus::{
+    NmConnection, NmSettingBridge, NmSettingBridgeVlanRange,
+};
 
 use crate::{
     BridgePortTunkTag, BridgePortVlanConfig, BridgePortVlanMode,
@@ -168,7 +170,7 @@ fn nmstate_port_vlans_to_nm_vlan_range(
 fn trunk_tag_to_nm_vlan_range(
     trunk_tag: &BridgePortTunkTag,
 ) -> NmSettingBridgeVlanRange {
-    let mut ret = NmSettingBridgeVlanRange::new();
+    let mut ret = NmSettingBridgeVlanRange::default();
     let (vid_min, vid_max) = trunk_tag.get_vlan_tag_range();
     ret.vid_start = vid_min;
     ret.vid_end = vid_max;
@@ -178,7 +180,7 @@ fn trunk_tag_to_nm_vlan_range(
 }
 
 fn access_tag_to_nm_vlan_range(tag: u16) -> NmSettingBridgeVlanRange {
-    let mut ret = NmSettingBridgeVlanRange::new();
+    let mut ret = NmSettingBridgeVlanRange::default();
     ret.vid_start = tag;
     ret.vid_end = tag;
     ret.pvid = true;

@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 
-use log::{debug, warn};
-use nm_dbus::{
+use crate::nm::nm_dbus::{
     NmActiveConnection, NmApi, NmConnection, NmDevice, NmDeviceState,
     NmLldpNeighbor,
 };
+use log::{debug, warn};
 
 use crate::{
     nm::active_connection::create_index_for_nm_acs_by_name_type,

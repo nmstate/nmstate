@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use nm_dbus::NmDevice;
+use crate::nm::nm_dbus::NmDevice;
 
 pub(crate) fn create_index_for_nm_devs(
     nm_devs: &[NmDevice],

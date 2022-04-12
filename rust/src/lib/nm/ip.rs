@@ -1,5 +1,6 @@
 use std::ops::BitXor;
 
+use crate::nm::nm_dbus::{NmConnection, NmSettingIp, NmSettingIpMethod};
 use crate::{
     nm::dns::{apply_nm_dns_setting, nm_dns_to_nmstate},
     nm::route::gen_nm_ip_routes,
@@ -7,7 +8,6 @@ use crate::{
     ErrorKind, Interface, InterfaceIpv4, InterfaceIpv6, NmstateError,
     RouteEntry, RouteRuleEntry,
 };
-use nm_dbus::{NmConnection, NmSettingIp, NmSettingIpMethod};
 
 const NM_CONFIG_ADDR_GEN_MODE_EUI64: i32 = 0;
 
@@ -241,10 +241,6 @@ pub(crate) fn nm_ip_setting_to_nmstate6(
             NmSettingIpMethod::Auto => (true, Some(true), Some(true)),
             NmSettingIpMethod::Dhcp => (true, Some(true), Some(false)),
             NmSettingIpMethod::Ignore => (true, Some(false), Some(false)),
-            _ => {
-                log::warn!("Unknown NM IP method {:?}", nm_ip_method);
-                (false, None, None)
-            }
         };
         let (auto_dns, auto_gateway, auto_routes, auto_table_id) =
             parse_dhcp_opts(nm_ip_setting);

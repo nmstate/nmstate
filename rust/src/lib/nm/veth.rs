@@ -1,4 +1,4 @@
-use nm_dbus::{NmConnection, NmSettingVeth};
+use crate::nm::nm_dbus::{NmConnection, NmSettingVeth};
 
 use crate::{
     nm::connection::{
@@ -12,7 +12,7 @@ use crate::{
 
 impl From<&VethConfig> for NmSettingVeth {
     fn from(config: &VethConfig) -> Self {
-        let mut settings = NmSettingVeth::new();
+        let mut settings = NmSettingVeth::default();
         settings.peer = Some(config.peer.to_string());
         settings
     }
@@ -57,7 +57,7 @@ pub(crate) fn create_veth_peer_profile_if_not_found(
         ..Default::default()
     };
     let iface = Interface::Ethernet(eth_iface);
-    let mut nm_conn = NmConnection::new();
+    let mut nm_conn = NmConnection::default();
     gen_nm_conn_setting(&iface, &mut nm_conn)?;
     gen_nm_ip_setting(&iface, None, None, &mut nm_conn)?;
     nm_conn.veth = Some(NmSettingVeth::from(&VethConfig {

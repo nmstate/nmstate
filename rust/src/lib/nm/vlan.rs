@@ -1,10 +1,10 @@
-use nm_dbus::{NmConnection, NmSettingVlan};
+use crate::nm::nm_dbus::{NmConnection, NmSettingVlan};
 
 use crate::VlanConfig;
 
 impl From<&VlanConfig> for NmSettingVlan {
     fn from(config: &VlanConfig) -> Self {
-        let mut settings = NmSettingVlan::new();
+        let mut settings = NmSettingVlan::default();
         settings.id = Some(config.id.into());
         settings.parent = Some(config.base_iface.clone());
         settings
