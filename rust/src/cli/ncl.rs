@@ -1,3 +1,4 @@
+mod autoconf;
 mod error;
 
 use std::fs::File;
@@ -21,11 +22,22 @@ const SUB_CMD_COMMIT: &str = "commit";
 const SUB_CMD_ROLLBACK: &str = "rollback";
 const SUB_CMD_EDIT: &str = "edit";
 const SUB_CMD_VERSION: &str = "version";
+const SUB_CMD_AUTOCONF: &str = "autoconf";
 
 const EX_DATAERR: i32 = 65;
 const EXIT_FAILURE: i32 = 1;
 
 fn main() {
+    let argv: Vec<String> = std::env::args().collect();
+    if argv[0].ends_with("-autoconf") {
+        autoconf::autoconf(argv.as_slice());
+        return;
+    }
+    if argv.get(1) == Some(&"autoconf".to_string()) {
+        autoconf::autoconf(&argv[1..]);
+        return;
+    }
+
     let matches = clap::App::new(APP_NAME)
         .version(clap::crate_version!())
         .author("Gris Ge <fge@redhat.com>")
@@ -37,6 +49,12 @@ fn main() {
                 .multiple(true)
                 .help("Set verbose level")
                 .global(true),
+        )
+        .subcommand(
+            clap::SubCommand::with_name(SUB_CMD_AUTOCONF)
+                .about(
+                    "Automatically configure network base on LLDP \
+                    information(experimental)")
         )
         .subcommand(
             clap::SubCommand::with_name(SUB_CMD_SHOW)
@@ -231,7 +249,6 @@ fn main() {
     } else if let Some(matches) = matches.subcommand_matches(SUB_CMD_SHOW) {
         print_result_and_exit(show(matches), EXIT_FAILURE);
     } else if let Some(matches) = matches.subcommand_matches(SUB_CMD_APPLY) {
-        let argv: Vec<String> = std::env::args().collect();
         if argv.get(1) == Some(&"set".to_string()) {
             eprintln!("Using 'set' is deprecated, use 'apply' instead.");
         }

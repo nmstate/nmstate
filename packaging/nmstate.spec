@@ -82,16 +82,22 @@ pushd rust
 env SKIP_PYTHON_INSTALL=1 PREFIX=%{_prefix} LIBDIR=%{_libdir} %make_install
 popd
 ln -s nmstatectl-rust %{buildroot}/%{_bindir}/nmstatectl
+ln -s nmstatectl-rust %{buildroot}/%{_bindir}/nmstate-autoconf
 install -D --mode 644 nmstatectl.8 \
     %{buildroot}/%{_mandir}/man8/nmstatectl.8
+install -D --mode 644 nmstate-autoconf.8 \
+    %{buildroot}/%{_mandir}/man8/nmstate-autoconf.8
 gzip %{buildroot}/%{_mandir}/man8/nmstatectl.8
+gzip %{buildroot}/%{_mandir}/man8/nmstate-autoconf.8
 
 %files
 %doc README.md
 %doc examples/
 %{_mandir}/man8/nmstatectl.8*
+%{_mandir}/man8/nmstate-autoconf.8*
 %{_bindir}/nmstatectl
 %{_bindir}/nmstatectl-rust
+%{_bindir}/nmstate-autoconf
 
 %files libs
 %{_libdir}/libnmstate.so.*

@@ -102,7 +102,7 @@ impl Interfaces {
         ifaces
     }
 
-    pub(crate) fn get_iface<'a, 'b>(
+    pub fn get_iface<'a, 'b>(
         &'a self,
         iface_name: &'b str,
         iface_type: InterfaceType,
