@@ -1,4 +1,4 @@
-use nm_dbus::{NmApi, NmSettingIp};
+use crate::nm::nm_dbus::{NmApi, NmSettingIp};
 
 use crate::{
     nm::error::nm_error_to_nmstate, DnsClientState, DnsState, Interfaces,

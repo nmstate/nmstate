@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use nm_dbus::{NmConnection, NmSettingUser};
+use crate::nm::nm_dbus::{NmConnection, NmSettingUser};
 
 use crate::Interface;
 

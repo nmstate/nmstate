@@ -1,4 +1,4 @@
-use nm_dbus::NmConnection;
+use crate::nm::nm_dbus::NmConnection;
 
 use crate::{
     nm::version::nm_supports_accept_all_mac_addresses_mode, Interface,
