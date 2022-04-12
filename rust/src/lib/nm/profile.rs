@@ -2,7 +2,7 @@ use std::collections::{hash_map::Entry, HashMap};
 use std::str::FromStr;
 use std::time::Instant;
 
-use nm_dbus::{NmApi, NmConnection};
+use super::nm_dbus::{NmApi, NmConnection};
 
 use crate::{
     nm::checkpoint::{
@@ -100,7 +100,7 @@ pub(crate) fn delete_exist_profiles(
 }
 
 pub(crate) fn save_nm_profiles(
-    nm_api: &nm_dbus::NmApi,
+    nm_api: &NmApi,
     nm_conns: &[NmConnection],
     checkpoint: &str,
     memory_only: bool,
@@ -117,7 +117,7 @@ pub(crate) fn save_nm_profiles(
 }
 
 pub(crate) fn activate_nm_profiles(
-    nm_api: &nm_dbus::NmApi,
+    nm_api: &NmApi,
     nm_conns: &[NmConnection],
     nm_ac_uuids: &[&str],
     checkpoint: &str,
@@ -220,7 +220,7 @@ pub(crate) fn activate_nm_profiles(
 }
 
 pub(crate) fn deactivate_nm_profiles(
-    nm_api: &nm_dbus::NmApi,
+    nm_api: &NmApi,
     nm_conns: &[&NmConnection],
     checkpoint: &str,
 ) -> Result<(), NmstateError> {

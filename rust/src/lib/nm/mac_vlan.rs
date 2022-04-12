@@ -1,10 +1,10 @@
-use nm_dbus::NmSettingMacVlan;
+use crate::nm::nm_dbus::NmSettingMacVlan;
 
 use crate::{MacVlanConfig, MacVtapConfig};
 
 impl From<&MacVlanConfig> for NmSettingMacVlan {
     fn from(config: &MacVlanConfig) -> Self {
-        let mut settings = NmSettingMacVlan::new();
+        let mut settings = NmSettingMacVlan::default();
         settings.mode = Some(config.mode.into());
         settings.parent = Some(config.base_iface.clone());
         settings.tap = Some(false);
@@ -17,7 +17,7 @@ impl From<&MacVlanConfig> for NmSettingMacVlan {
 
 impl From<&MacVtapConfig> for NmSettingMacVlan {
     fn from(config: &MacVtapConfig) -> Self {
-        let mut settings = NmSettingMacVlan::new();
+        let mut settings = NmSettingMacVlan::default();
         settings.mode = Some(config.mode.into());
         settings.parent = Some(config.base_iface.clone());
         settings.tap = Some(true);

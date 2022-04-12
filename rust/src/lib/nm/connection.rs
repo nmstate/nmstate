@@ -1,6 +1,6 @@
 use std::collections::{hash_map::Entry, HashMap};
 
-use nm_dbus::{
+use crate::nm::nm_dbus::{
     NmApi, NmConnection, NmSettingConnection, NmSettingMacVlan, NmSettingVeth,
     NmSettingVlan, NmSettingVrf, NmSettingVxlan,
 };
@@ -353,7 +353,7 @@ pub(crate) fn gen_nm_conn_setting(
     let mut nm_conn_set = if let Some(cur_nm_conn_set) = &nm_conn.connection {
         cur_nm_conn_set.clone()
     } else {
-        let mut new_nm_conn_set = NmSettingConnection::new();
+        let mut new_nm_conn_set = NmSettingConnection::default();
         let conn_name = match iface.iface_type() {
             InterfaceType::OvsBridge => {
                 format!("{}-br", iface.name())

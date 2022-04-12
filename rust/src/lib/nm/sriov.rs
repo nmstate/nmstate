@@ -1,5 +1,7 @@
+use crate::nm::nm_dbus::{
+    NmConnection, NmSettingSriovVf, NmSettingSriovVfVlan,
+};
 use crate::{EthernetInterface, SrIovVfConfig};
-use nm_dbus::{NmConnection, NmSettingSriovVf, NmSettingSriovVfVlan};
 
 pub(crate) fn gen_nm_sriov_setting(
     iface: &EthernetInterface,
@@ -35,7 +37,7 @@ pub(crate) fn gen_nm_sriov_setting(
 fn gen_nm_vfs(vfs: &[SrIovVfConfig]) -> Vec<NmSettingSriovVf> {
     let mut ret: Vec<NmSettingSriovVf> = Vec::new();
     for vf in vfs {
-        let mut nm_vf = NmSettingSriovVf::new();
+        let mut nm_vf = NmSettingSriovVf::default();
         nm_vf.index = Some(vf.id);
         if let Some(v) = &vf.mac_address {
             nm_vf.mac = Some(v.to_string());
@@ -53,7 +55,7 @@ fn gen_nm_vfs(vfs: &[SrIovVfConfig]) -> Vec<NmSettingSriovVf> {
             nm_vf.max_tx_rate = Some(v);
         }
         if let Some(v) = vf.vlan_id {
-            let mut nm_vf_vlan = NmSettingSriovVfVlan::new();
+            let mut nm_vf_vlan = NmSettingSriovVfVlan::default();
             nm_vf_vlan.id = v;
             nm_vf_vlan.qos = vf.qos.unwrap_or_default();
             nm_vf.vlans = Some(vec![nm_vf_vlan]);

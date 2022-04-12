@@ -1,5 +1,5 @@
+use crate::nm::nm_dbus::NmApi;
 use crate::{nm::error::nm_error_to_nmstate, NmstateError};
-use nm_dbus::NmApi;
 
 pub(crate) fn nm_version() -> Result<String, NmstateError> {
     let nm_api = NmApi::new().map_err(nm_error_to_nmstate)?;

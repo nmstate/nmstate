@@ -2,10 +2,10 @@ use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::iter::FromIterator;
 
-use log::warn;
-use nm_dbus::{
+use crate::nm::nm_dbus::{
     NmConnection, NmSettingOvsDpdk, NmSettingOvsExtIds, NmSettingOvsPatch,
 };
+use log::warn;
 
 use crate::{
     nm::connection::gen_nm_conn_setting, BaseInterface, BridgePortVlanConfig,
@@ -317,7 +317,7 @@ pub(crate) fn gen_nm_ovs_ext_ids_setting(
     {
         nm_conn.ovs_ext_ids = None;
     } else if let Some(conf) = iface.base_iface().ovsdb.as_ref() {
-        let mut nm_setting = NmSettingOvsExtIds::new();
+        let mut nm_setting = NmSettingOvsExtIds::default();
         nm_setting.data = Some(HashMap::from_iter(
             conf.get_external_ids()
                 .iter()

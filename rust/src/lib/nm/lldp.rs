@@ -1,6 +1,8 @@
 use std::convert::TryFrom;
 
-use nm_dbus::{NmConnection, NmLldpNeighbor, NmLldpNeighbor8021Vlan};
+use crate::nm::nm_dbus::{
+    NmConnection, NmLldpNeighbor, NmLldpNeighbor8021Vlan,
+};
 
 use crate::{
     LldpAddressFamily, LldpChassisId, LldpConfig, LldpMacPhyConf,

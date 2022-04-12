@@ -1,4 +1,4 @@
-use nm_dbus::NmError;
+use crate::nm::nm_dbus::NmError;
 
 use crate::{ErrorKind, NmstateError};
 

@@ -1,4 +1,4 @@
-use nm_dbus::{NmConnection, NmSetting8021X};
+use crate::nm::nm_dbus::{NmConnection, NmSetting8021X};
 
 use crate::{Ieee8021XConfig, Interface, NetworkState};
 

@@ -1,8 +1,8 @@
 use std::collections::HashSet;
 use std::time::Instant;
 
+use crate::nm::nm_dbus::{NmApi, NmConnection};
 use log::info;
-use nm_dbus::{NmApi, NmConnection};
 
 use crate::{
     nm::connection::{
