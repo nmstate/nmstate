@@ -14,14 +14,14 @@ const EXIT_FAILURE: i32 = 1;
 const BOND_PREFIX: &str = "bond";
 
 pub(crate) fn autoconf(argv: &[String]) {
-    let matches = clap::App::new(APP_NAME)
+    let matches = clap::Command::new(APP_NAME)
         .version(clap::crate_version!())
         .author("Gris Ge <fge@redhat.com>")
         .about("Network Auto-Configure using LLDP information")
         .arg(
-            clap::Arg::with_name("DRY_RUN")
+            clap::Arg::new("DRY_RUN")
                 .long("dry-run")
-                .short("d")
+                .short('d')
                 .takes_value(false)
                 .help(
                     "Generate the network state that is going to be \
@@ -29,7 +29,7 @@ pub(crate) fn autoconf(argv: &[String]) {
                 ),
         )
         .arg(
-            clap::Arg::with_name("ONLY")
+            clap::Arg::new("ONLY")
                 .index(1)
                 .help("Use only the specified NICs (comma-separated)"),
         )
