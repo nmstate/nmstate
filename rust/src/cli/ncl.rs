@@ -30,11 +30,11 @@ fn main() {
         .version(clap::crate_version!())
         .author("Gris Ge <fge@redhat.com>")
         .about("Command line of nmstate")
-        .setting(clap::AppSettings::SubcommandRequired)
+        .subcommand_required(true)
         .arg(
-            clap::Arg::with_name("verbose")
-                .short("v")
-                .multiple(true)
+            clap::Arg::new("verbose")
+                .short('v')
+                .multiple_occurrences(true)
                 .help("Set verbose level")
                 .global(true),
         )
@@ -42,51 +42,51 @@ fn main() {
             clap::SubCommand::with_name(SUB_CMD_SHOW)
                 .about("Show network state")
                 .arg(
-                    clap::Arg::with_name("IFNAME")
+                    clap::Arg::new("IFNAME")
                         .index(1)
                         .help("Show specific interface only"),
                 )
                 .arg(
-                    clap::Arg::with_name("KERNEL")
-                        .short("k")
+                    clap::Arg::new("KERNEL")
+                        .short('k')
                         .long("kernel")
                         .takes_value(false)
                         .help("Show kernel network state only")
                 )
                 .arg(
-                    clap::Arg::with_name("JSON")
+                    clap::Arg::new("JSON")
                         .long("json")
                         .takes_value(false)
                         .help("Show state in json format"),
                 )
                 .arg(
-                    clap::Arg::with_name("RUNNING_CONFIG_ONLY")
-                        .short("r")
+                    clap::Arg::new("RUNNING_CONFIG_ONLY")
+                        .short('r')
                         .long("running-config")
                         .takes_value(false)
                         .help("Show running configuration only"),
                 )
                 .arg(
-                    clap::Arg::with_name("SHOW_SECRETS")
-                        .short("s")
+                    clap::Arg::new("SHOW_SECRETS")
+                        .short('s')
                         .long("show-secrets")
                         .takes_value(false)
                         .help("Show secrets(hide by default)"),
                 )
         )
         .subcommand(
-            clap::SubCommand::with_name(SUB_CMD_APPLY)
+            clap::Command::new(SUB_CMD_APPLY)
                 .about("Apply network state")
                 .alias("set")
                 .arg(
-                    clap::Arg::with_name("STATE_FILE")
+                    clap::Arg::new("STATE_FILE")
                         .required(false)
-                        .multiple(true)
+                        .multiple_occurrences(true)
                         .index(1)
                         .help("Network state file"),
                 )
                 .arg(
-                    clap::Arg::with_name("NO_VERIFY")
+                    clap::Arg::new("NO_VERIFY")
                         .long("no-verify")
                         .takes_value(false)
                         .help(
@@ -95,14 +95,14 @@ fn main() {
                         ),
                 )
                 .arg(
-                    clap::Arg::with_name("KERNEL")
-                        .short("k")
+                    clap::Arg::new("KERNEL")
+                        .short('k')
                         .long("kernel")
                         .takes_value(false)
                         .help("Apply network state to kernel only"),
                 )
                 .arg(
-                    clap::Arg::with_name("NO_COMMIT")
+                    clap::Arg::new("NO_COMMIT")
                       .long("no-commit")
                       .takes_value(false)
                       .help(
@@ -110,7 +110,7 @@ fn main() {
                       ),
                 )
                 .arg(
-                    clap::Arg::with_name("TIMEOUT")
+                    clap::Arg::new("TIMEOUT")
                       .long("timeout")
                       .takes_value(true)
                       .default_value("60")
@@ -119,60 +119,60 @@ fn main() {
                       ),
                 )
                 .arg(
-                    clap::Arg::with_name("SHOW_SECRETS")
-                        .short("s")
+                    clap::Arg::new("SHOW_SECRETS")
+                        .short('s')
                         .long("show-secrets")
                         .takes_value(false)
                         .help("Show secrets(hide by default)"),
                 )
                 .arg(
-                    clap::Arg::with_name("MEMORY_ONLY")
+                    clap::Arg::new("MEMORY_ONLY")
                         .long("memory-only")
                         .takes_value(false)
                         .help("Do not make the state persistent"),
                 )
         )
         .subcommand(
-            clap::SubCommand::with_name(SUB_CMD_GEN_CONF)
+            clap::Command::new(SUB_CMD_GEN_CONF)
                 .about("Generate network configuration for specified state")
                 .arg(
-                    clap::Arg::with_name("STATE_FILE")
+                    clap::Arg::new("STATE_FILE")
                         .required(true)
                         .index(1)
                         .help("Network state file"),
                 ),
         )
         .subcommand(
-            clap::SubCommand::with_name(SUB_CMD_COMMIT)
+            clap::Command::new(SUB_CMD_COMMIT)
                 .about("Commit a change")
                 .arg(
-                    clap::Arg::with_name("CHECKPOINT")
+                    clap::Arg::new("CHECKPOINT")
                         .required(false)
                         .index(1)
                         .help("checkpoint to commit"),
                 ),
         )
         .subcommand(
-            clap::SubCommand::with_name(SUB_CMD_ROLLBACK)
+            clap::Command::new(SUB_CMD_ROLLBACK)
                 .about("Commit a change")
                 .arg(
-                    clap::Arg::with_name("CHECKPOINT")
+                    clap::Arg::new("CHECKPOINT")
                         .required(false)
                         .index(1)
                         .help("checkpoint to rollback"),
                 ),
         )
         .subcommand(
-            clap::SubCommand::with_name(SUB_CMD_EDIT)
+            clap::Command::new(SUB_CMD_EDIT)
                 .about("Edit network state in EDITOR")
                 .arg(
-                    clap::Arg::with_name("IFNAME")
+                    clap::Arg::new("IFNAME")
                         .required(false)
                         .index(1)
                         .help("Interface to rollback"),
                 )
                 .arg(
-                    clap::Arg::with_name("NO_VERIFY")
+                    clap::Arg::new("NO_VERIFY")
                         .long("no-verify")
                         .takes_value(false)
                         .help(
@@ -181,14 +181,14 @@ fn main() {
                         ),
                 )
                 .arg(
-                    clap::Arg::with_name("KERNEL")
-                        .short("k")
+                    clap::Arg::new("KERNEL")
+                        .short('k')
                         .long("kernel")
                         .takes_value(false)
                         .help("Apply network state to kernel only"),
                 )
                 .arg(
-                    clap::Arg::with_name("NO_COMMIT")
+                    clap::Arg::new("NO_COMMIT")
                       .long("no-commit")
                       .takes_value(false)
                       .help(
@@ -196,14 +196,14 @@ fn main() {
                       ),
                 )
                 .arg(
-                    clap::Arg::with_name("MEMORY_ONLY")
+                    clap::Arg::new("MEMORY_ONLY")
                         .long("memory-only")
                         .takes_value(false)
                         .help("Do not make the state persistent"),
                 )
         )
         .subcommand(
-            clap::SubCommand::with_name(SUB_CMD_VERSION)
+            clap::Command::new(SUB_CMD_VERSION)
             .about("Show version")
        ).get_matches();
     let (log_module_filters, log_level) =
@@ -412,11 +412,14 @@ where
     let kernel_only = matches.is_present("KERNEL");
     let no_verify = matches.is_present("NO_VERIFY");
     let no_commit = matches.is_present("NO_COMMIT");
-    let mut timeout: u32 = 0;
-    match clap::value_t!(matches.value_of("TIMEOUT"), u32) {
-        Ok(t) => timeout = t,
-        Err(e) => print_error_and_exit(CliError::from(e), EX_DATAERR),
-    }
+    let timeout: u32 = match matches.value_of_t("TIMEOUT") {
+        Ok(t) => t,
+        Err(e) => {
+            print_error_and_exit(CliError::from(e), EX_DATAERR);
+            // never reach here
+            0
+        }
+    };
     let mut net_state: NetworkState = serde_yaml::from_reader(reader)?;
     net_state.set_kernel_only(kernel_only);
     net_state.set_verify_change(!no_verify);
