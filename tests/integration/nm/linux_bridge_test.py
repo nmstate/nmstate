@@ -33,10 +33,14 @@ from ..testlib.bondlib import bond_interface
 from ..testlib.bridgelib import linux_bridge
 from ..testlib.cmdlib import exec_cmd
 from ..testlib.dummy import nm_unmanaged_dummy
+from ..testlib.statelib import show_only
 
 
 BRIDGE0 = "brtest0"
+DUMMY0 = "dummy0"
 DUMMY1 = "dummy1"
+
+VETH0 = "vethtest0"
 
 
 @pytest.fixture
@@ -147,3 +151,59 @@ def test_linux_bridge_over_vlan_of_bond_with_multiple_profile(
 
         libnmstate.apply(state)
         assertlib.assert_state_match(state)
+
+
+@pytest.fixture
+def unmanged_veth0():
+    veth_iface = VETH0
+    exec_cmd(
+        f"ip link add {veth_iface} type veth peer {veth_iface}.ep".split(),
+        check=False,
+    )
+    exec_cmd(f"ip link set {veth_iface}.ep up".split(), check=True)
+    yield
+    exec_cmd(f"ip link del {veth_iface}".split())
+    exec_cmd(f"nmcli c del {veth_iface}".split())
+
+
+@pytest.fixture
+def bridge_with_unmanaged_port(eth1_up, unmanged_veth0):
+    with linux_bridge(
+        BRIDGE0,
+        bridge_subtree_state={
+            LB.OPTIONS_SUBTREE: {LB.STP_SUBTREE: {LB.STP.ENABLED: False}},
+            LB.PORT_SUBTREE: [{LB.Port.NAME: "eth1"}],
+        },
+    ):
+        exec_cmd(f"ip link set {VETH0} master {BRIDGE0}".split(), check=True)
+        yield
+
+
+@pytest.mark.tier1
+@pytest.mark.xfail(
+    raises=AssertionError,
+    reason="https://bugzilla.redhat.com/2076131",
+    strict=True,
+)
+def test_linux_bridge_does_not_lose_unmanaged_port_on_rollback(
+    bridge_with_unmanaged_port,
+):
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: BRIDGE0,
+                    Interface.STATE: InterfaceState.UP,
+                    Interface.TYPE: InterfaceType.LINUX_BRIDGE,
+                    Interface.MTU: 1450,
+                },
+            ]
+        },
+        commit=False,
+    )
+    libnmstate.rollback()
+    current_state = show_only((BRIDGE0,))
+    bridge_state = current_state[Interface.KEY][0][LB.CONFIG_SUBTREE]
+    port_names = [port[LB.Port.NAME] for port in bridge_state[LB.PORT_SUBTREE]]
+    assert "eth1" in port_names
+    assert VETH0 in port_names
