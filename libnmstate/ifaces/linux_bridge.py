@@ -124,7 +124,7 @@ class LinuxBridgeIface(BridgeIface):
     def gen_metadata(self, ifaces):
         super().gen_metadata(ifaces)
         if not self.is_absent:
-            original_ports_config = self.original_desire_dict.get(
+            original_ports_config = self.original_dict.get(
                 LinuxBridge.CONFIG_SUBTREE, {}
             ).get(LinuxBridge.PORT_SUBTREE, [])
             for port_config in self.port_configs:
