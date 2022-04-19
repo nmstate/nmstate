@@ -312,6 +312,7 @@ while true; do
         RUN_BAREMETAL="true"
         ;;
     --k8s)
+        CONTAINER_IMAGE=$CENTOS_STREAM_IMAGE_DEV
         RUN_K8S="true"
         ;;
     --use-installed-nmstate)
