@@ -162,10 +162,8 @@ impl From<&str> for InterfaceState {
 #[derive(Debug, Clone, PartialEq, Serialize, Default)]
 #[non_exhaustive]
 pub struct UnknownInterface {
-    #[serde(skip)]
-    pub base: BaseInterface,
     #[serde(flatten)]
-    other: serde_json::Value,
+    pub base: BaseInterface,
 }
 
 impl UnknownInterface {
@@ -192,7 +190,6 @@ impl<'de> Deserialize<'de> for UnknownInterface {
             serde_json::value::Value::Object(base_value),
         )
         .map_err(serde::de::Error::custom)?;
-        ret.other = v;
         Ok(ret)
     }
 }
