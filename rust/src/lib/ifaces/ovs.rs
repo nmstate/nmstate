@@ -32,10 +32,11 @@ impl OvsBridgeInterface {
         }
     }
 
+    // Return None when desire state does not mention ports
     pub(crate) fn ports(&self) -> Option<Vec<&str>> {
-        let mut port_names = Vec::new();
         if let Some(br_conf) = &self.bridge {
             if let Some(port_confs) = &br_conf.ports {
+                let mut port_names = Vec::new();
                 for port_conf in port_confs {
                     if let Some(bond_conf) = &port_conf.bond {
                         for port_name in bond_conf.ports() {
@@ -45,9 +46,10 @@ impl OvsBridgeInterface {
                         port_names.push(port_conf.name.as_str());
                     }
                 }
+                return Some(port_names);
             }
         }
-        Some(port_names)
+        None
     }
 
     pub(crate) fn pre_verify_cleanup(&mut self) {

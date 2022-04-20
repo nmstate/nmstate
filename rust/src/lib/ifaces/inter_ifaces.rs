@@ -136,20 +136,20 @@ impl Interfaces {
         }
     }
 
-    pub(crate) fn ignored_kernel_iface_names(&self) -> Vec<String> {
-        let mut ret = Vec::new();
+    fn ignored_kernel_iface_names(&self) -> HashSet<String> {
+        let mut ret = HashSet::new();
         for iface in self.kernel_ifaces.values().filter(|i| i.is_ignore()) {
-            ret.push(iface.name().to_string());
+            ret.insert(iface.name().to_string());
         }
         ret
     }
 
-    pub(crate) fn ignored_user_iface_name_types(
+    fn ignored_user_iface_name_types(
         &self,
-    ) -> Vec<(String, InterfaceType)> {
-        let mut ret = Vec::new();
+    ) -> HashSet<(String, InterfaceType)> {
+        let mut ret = HashSet::new();
         for iface in self.user_ifaces.values().filter(|i| i.is_ignore()) {
-            ret.push((iface.name().to_string(), iface.iface_type()));
+            ret.insert((iface.name().to_string(), iface.iface_type()));
         }
         ret
     }
@@ -192,9 +192,8 @@ impl Interfaces {
 
     pub(crate) fn verify(&self, cur_ifaces: &Self) -> Result<(), NmstateError> {
         let mut self_clone = self.clone();
-        let ignored_kernel_ifaces = self_clone.ignored_kernel_iface_names();
-
-        let ignored_user_ifaces = self_clone.ignored_user_iface_name_types();
+        let (ignored_kernel_ifaces, ignored_user_ifaces) =
+            get_ignored_ifaces(self, cur_ifaces);
 
         self_clone.remove_ignored_ifaces(
             &ignored_kernel_ifaces,
@@ -686,4 +685,61 @@ fn mark_orphan_interface_as_absent(
             }
         }
     }
+}
+
+// Special cases:
+//  * Inherit the ignore state from current if desire not mentioned in interface
+//    section and port section
+pub(crate) fn get_ignored_ifaces(
+    desired: &Interfaces,
+    current: &Interfaces,
+) -> (Vec<String>, Vec<(String, InterfaceType)>) {
+    let mut ignored_kernel_ifaces = desired.ignored_kernel_iface_names();
+    let mut ignored_user_ifaces = desired.ignored_user_iface_name_types();
+    let desired_kernel_ifaces: HashSet<String> = desired
+        .kernel_ifaces
+        .values()
+        .filter(|i| !i.is_ignore())
+        .map(|i| i.name().to_string())
+        .collect();
+    let desired_user_ifaces: HashSet<(String, InterfaceType)> = desired
+        .user_ifaces
+        .values()
+        .filter(|i| !i.is_ignore())
+        .map(|i| (i.name().to_string(), i.iface_type()))
+        .collect();
+
+    let mut desired_ports: HashSet<String> = HashSet::new();
+    for desire_iface in desired
+        .kernel_ifaces
+        .values()
+        .chain(desired.user_ifaces.values())
+        .filter(|i| !i.is_ignore() && i.is_controller())
+    {
+        if let Some(ports) = desire_iface.ports() {
+            desired_ports.extend(ports.iter().map(|p| p.to_string()));
+        }
+    }
+
+    for iface_name in current.ignored_kernel_iface_names().drain() {
+        if !desired_kernel_ifaces.contains(&iface_name)
+            && !desired_ports.contains(&iface_name)
+        {
+            ignored_kernel_ifaces.insert(iface_name);
+        }
+    }
+    for (iface_name, iface_type) in
+        current.ignored_user_iface_name_types().drain()
+    {
+        if !desired_user_ifaces
+            .contains(&(iface_name.clone(), iface_type.clone()))
+        {
+            ignored_user_ifaces.insert((iface_name, iface_type));
+        }
+    }
+
+    let k_ifaces: Vec<String> = ignored_kernel_ifaces.drain().collect();
+    let u_ifaces: Vec<(String, InterfaceType)> =
+        ignored_user_ifaces.drain().collect();
+    (k_ifaces, u_ifaces)
 }

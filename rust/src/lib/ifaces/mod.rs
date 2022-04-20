@@ -4,7 +4,7 @@ mod bridge_vlan;
 mod dummy;
 mod ethernet;
 mod ethtool;
-mod inter_ifaces;
+pub(crate) mod inter_ifaces;
 mod vrf;
 mod vxlan;
 // The pub(crate) is only for unit test

@@ -16,7 +16,6 @@ fn np_iface_type_to_nmstate(
         nispor::IfaceType::MacVlan => InterfaceType::MacVlan,
         nispor::IfaceType::MacVtap => InterfaceType::MacVtap,
         nispor::IfaceType::OpenvSwitch => InterfaceType::OvsInterface,
-        nispor::IfaceType::Tun => InterfaceType::Tun,
         nispor::IfaceType::Veth => InterfaceType::Veth,
         nispor::IfaceType::Vlan => InterfaceType::Vlan,
         nispor::IfaceType::Vrf => InterfaceType::Vrf,
@@ -46,7 +45,7 @@ pub(crate) fn np_iface_to_base_iface(
     np_iface: &nispor::Iface,
     running_config_only: bool,
 ) -> BaseInterface {
-    let base_iface = BaseInterface {
+    let mut base_iface = BaseInterface {
         name: np_iface.name.to_string(),
         state: (&np_iface.state, np_iface.flags.as_slice()).into(),
         iface_type: np_iface_type_to_nmstate(&np_iface.iface_type),
@@ -83,6 +82,15 @@ pub(crate) fn np_iface_to_base_iface(
         ],
         ..Default::default()
     };
+    if let InterfaceType::Other(t) = &base_iface.iface_type {
+        log::info!(
+            "Got unsupported interface type {}: {}, ignoring",
+            t,
+            &base_iface.name
+        );
+        base_iface.state = InterfaceState::Ignore;
+    }
+
     base_iface
 }
 
