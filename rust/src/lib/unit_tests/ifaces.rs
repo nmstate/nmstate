@@ -1,4 +1,5 @@
 use crate::{
+    ifaces::get_ignored_ifaces,
     unit_tests::testlib::{
         new_eth_iface, new_ovs_br_iface, new_ovs_iface, new_unknown_iface,
         new_vlan_iface,
@@ -140,4 +141,103 @@ fn test_ifaces_resolve_unknown_bond_iface() {
             desired
         );
     }
+}
+
+#[test]
+fn test_ifaces_ignore_iface_in_desire() {
+    let current = serde_yaml::from_str::<Interfaces>(
+        r#"---
+- name: eth1
+  type: ethernet
+  state: up
+- name: br0
+  type: ovs-bridge
+  state: up
+"#,
+    )
+    .unwrap();
+    let desired = serde_yaml::from_str::<Interfaces>(
+        r#"---
+- name: eth1
+  type: ethernet
+  state: ignore
+- name: br0
+  type: ovs-bridge
+  state: ignore
+"#,
+    )
+    .unwrap();
+    let (kernel_ifaces, user_ifaces) = get_ignored_ifaces(&desired, &current);
+
+    assert_eq!(kernel_ifaces, vec!["eth1".to_string()]);
+    assert_eq!(
+        user_ifaces,
+        vec![("br0".to_string(), InterfaceType::OvsBridge)]
+    );
+}
+
+#[test]
+fn test_ifaces_ignore_iface_in_current() {
+    let current = serde_yaml::from_str::<Interfaces>(
+        r#"---
+- name: eth1
+  type: ethernet
+  state: ignore
+- name: br0
+  type: ovs-bridge
+  state: up
+"#,
+    )
+    .unwrap();
+    let desired = serde_yaml::from_str::<Interfaces>(
+        r#"---
+- name: br0
+  type: ovs-bridge
+  state: ignore
+"#,
+    )
+    .unwrap();
+    let (kernel_ifaces, user_ifaces) = get_ignored_ifaces(&desired, &current);
+
+    assert_eq!(kernel_ifaces, vec!["eth1".to_string()]);
+    assert_eq!(
+        user_ifaces,
+        vec![("br0".to_string(), InterfaceType::OvsBridge)]
+    );
+}
+
+#[test]
+fn test_ifaces_ignore_iface_in_current_but_desired() {
+    let current = serde_yaml::from_str::<Interfaces>(
+        r#"---
+- name: eth1
+  type: ethernet
+  state: ignore
+- name: br0
+  type: ovs-bridge
+  state: up
+"#,
+    )
+    .unwrap();
+    let desired = serde_yaml::from_str::<Interfaces>(
+        r#"---
+- name: eth1
+  type: ethernet
+  state: down
+- name: eth2
+  type: ethernet
+  state: ignore
+- name: br0
+  type: ovs-bridge
+  state: ignore
+"#,
+    )
+    .unwrap();
+    let (kernel_ifaces, user_ifaces) = get_ignored_ifaces(&desired, &current);
+
+    assert_eq!(kernel_ifaces, vec!["eth2".to_string()]);
+    assert_eq!(
+        user_ifaces,
+        vec![("br0".to_string(), InterfaceType::OvsBridge)]
+    );
 }

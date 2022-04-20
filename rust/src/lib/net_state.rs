@@ -9,6 +9,7 @@ use crate::{
         get_cur_dns_ifaces, is_dns_changed, purge_dns_config,
         reselect_dns_ifaces,
     },
+    ifaces::get_ignored_ifaces,
     nispor::{nispor_apply, nispor_retrieve},
     nm::{
         nm_apply, nm_checkpoint_create, nm_checkpoint_destroy,
@@ -225,13 +226,19 @@ impl NetworkState {
             );
         }
 
-        let ignored_kernel_ifaces = desire_state_to_apply
-            .interfaces
-            .ignored_kernel_iface_names();
+        let (ignored_kernel_ifaces, ignored_user_ifaces) =
+            get_ignored_ifaces(&self.interfaces, &cur_net_state.interfaces);
 
-        let ignored_user_ifaces = desire_state_to_apply
-            .interfaces
-            .ignored_user_iface_name_types();
+        for iface_name in &ignored_kernel_ifaces {
+            log::info!("Ignoring kernel interface {}", iface_name)
+        }
+        for (iface_name, iface_type) in &ignored_user_ifaces {
+            log::info!(
+                "Ignoring user space interface {} with type {}",
+                iface_name,
+                iface_type
+            )
+        }
 
         desire_state_to_apply.interfaces.remove_ignored_ifaces(
             &ignored_kernel_ifaces,
@@ -364,10 +371,10 @@ impl NetworkState {
 
     fn verify(&self, current: &Self) -> Result<(), NmstateError> {
         self.interfaces.verify(&current.interfaces)?;
-        self.routes.verify(
-            &current.routes,
-            &self.interfaces.ignored_kernel_iface_names(),
-        )?;
+        let (ignored_kernel_ifaces, _) =
+            get_ignored_ifaces(&self.interfaces, &current.interfaces);
+        self.routes
+            .verify(&current.routes, &ignored_kernel_ifaces)?;
         self.rules.verify(&current.rules)?;
         self.dns.verify(&current.dns)?;
         self.ovsdb.verify(&current.ovsdb)

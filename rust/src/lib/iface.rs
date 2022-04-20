@@ -21,7 +21,6 @@ pub enum InterfaceType {
     MacVtap,
     OvsBridge,
     OvsInterface,
-    Tun,
     Veth,
     Vlan,
     Vrf,
@@ -49,7 +48,6 @@ impl From<&str> for InterfaceType {
             "mac-vtap" => InterfaceType::MacVtap,
             "ovs-bridge" => InterfaceType::OvsBridge,
             "ovs-interface" => InterfaceType::OvsInterface,
-            "tun" => InterfaceType::Tun,
             "veth" => InterfaceType::Veth,
             "vlan" => InterfaceType::Vlan,
             "vrf" => InterfaceType::Vrf,
@@ -76,7 +74,6 @@ impl std::fmt::Display for InterfaceType {
                 InterfaceType::MacVtap => "mac-vtap",
                 InterfaceType::OvsBridge => "ovs-bridge",
                 InterfaceType::OvsInterface => "ovs-interface",
-                InterfaceType::Tun => "tun",
                 InterfaceType::Veth => "veth",
                 InterfaceType::Vlan => "vlan",
                 InterfaceType::Vrf => "vrf",
@@ -162,7 +159,7 @@ impl From<&str> for InterfaceState {
 #[derive(Debug, Clone, PartialEq, Serialize, Default)]
 #[non_exhaustive]
 pub struct UnknownInterface {
-    #[serde(skip)]
+    #[serde(skip_deserializing, flatten)]
     pub base: BaseInterface,
     #[serde(flatten)]
     other: serde_json::Value,
@@ -511,7 +508,7 @@ impl Interface {
         }
     }
 
-    // Return None if its is not controller
+    // Return None if its is not controller or not mentioned port section
     pub fn ports(&self) -> Option<Vec<&str>> {
         if self.is_absent() {
             match self {

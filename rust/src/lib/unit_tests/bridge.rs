@@ -1,5 +1,6 @@
 use crate::{
-    BridgePortTunkTag, BridgePortVlanRange, Interfaces, LinuxBridgeInterface,
+    ifaces::get_ignored_ifaces, BridgePortTunkTag, BridgePortVlanRange,
+    InterfaceType, Interfaces, LinuxBridgeInterface,
 };
 
 #[test]
@@ -39,11 +40,10 @@ fn test_linux_bridge_ignore_port() {
     )
     .unwrap();
 
-    let ignored_kernel_ifaces = ifaces.ignored_kernel_iface_names();
+    let (ignored_kernel_ifaces, ignored_user_ifaces) =
+        get_ignored_ifaces(&ifaces, &cur_ifaces);
 
     assert_eq!(ignored_kernel_ifaces, vec!["eth1".to_string()]);
-
-    let ignored_user_ifaces = ifaces.ignored_user_iface_name_types();
     assert!(ignored_user_ifaces.is_empty());
 
     ifaces.remove_ignored_ifaces(&ignored_kernel_ifaces, &ignored_user_ifaces);
@@ -193,4 +193,61 @@ bridge:
     assert_eq!(opts.multicast_snooping, Some(false));
     assert_eq!(opts.multicast_startup_query_count, Some(310));
     assert_eq!(opts.multicast_startup_query_interval, Some(311));
+}
+
+#[test]
+fn test_linux_bridge_partial_ignored() {
+    let mut current = serde_yaml::from_str::<Interfaces>(
+        r#"---
+- name: eth1
+  type: ethernet
+  state: ignore
+- name: eth2
+  type: ethernet
+  state: ignore
+- name: br0
+  type: linux-bridge
+  state: ignore
+  bridge:
+    port:
+    - name: eth1
+    - name: eth2
+"#,
+    )
+    .unwrap();
+    let mut desired = serde_yaml::from_str::<Interfaces>(
+        r#"---
+- name: br0
+  type: linux-bridge
+  state: up
+- name: eth1
+  type: ethernet
+  state: up
+"#,
+    )
+    .unwrap();
+    let (kernel_ifaces, user_ifaces) = get_ignored_ifaces(&desired, &current);
+
+    assert_eq!(kernel_ifaces, vec!["eth2".to_string()]);
+    assert_eq!(user_ifaces, vec![]);
+
+    current.remove_ignored_ifaces(&kernel_ifaces, &user_ifaces);
+    desired.remove_ignored_ifaces(&kernel_ifaces, &user_ifaces);
+
+    let (add_ifaces, chg_ifaces, del_ifaces) =
+        desired.gen_state_for_apply(&current, false).unwrap();
+
+    assert!(add_ifaces.kernel_ifaces.is_empty());
+    assert!(del_ifaces.kernel_ifaces.is_empty());
+    assert_eq!(
+        chg_ifaces.kernel_ifaces["eth1"].base_iface().controller,
+        Some("br0".to_string())
+    );
+    assert_eq!(
+        chg_ifaces.kernel_ifaces["eth1"]
+            .base_iface()
+            .controller_type,
+        Some(InterfaceType::LinuxBridge)
+    );
+    assert!(chg_ifaces.kernel_ifaces.contains_key("br0"));
 }
