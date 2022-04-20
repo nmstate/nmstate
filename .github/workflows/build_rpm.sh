@@ -7,9 +7,9 @@ CONTAINER_OUTPUT_DIR="$CONTAINER_WORKSPACE/rpms"
 
 CONTAINER_IMG="quay.io/nmstate/c8s-nmstate-build"
 
-mkdir $OUTPUT_DIR || true
-
 podman run -v $PROJECT_PATH:$CONTAINER_WORKSPACE:rw \
-    -v $OUTPUT_DIR:$CONTAINER_OUTPUT_DIR:rw \
-    $CONTAINER_IMG /bin/bash -c "cd $CONTAINER_OUTPUT_DIR && \
-    $CONTAINER_WORKSPACE/packaging/make_rpm.sh"
+    $CONTAINER_IMG /bin/bash -c \
+    "cd $CONTAINER_WORKSPACE && SKIP_VENDOR_CREATION=1 make rpm"
+
+mkdir $OUTPUT_DIR || true
+mv -v *.rpm $OUTPUT_DIR/

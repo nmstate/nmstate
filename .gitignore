@@ -28,5 +28,13 @@ rust/Cargo.lock
 rust/target
 rust/src/clib/test/nmstate_test
 rust/src/clib/test/vgcore*
+rust/src/clib/nmstate.h
 
 *.swp
+
+packaging/nmstate.spec
+doc/nmstatectl.8
+doc/nmstate-autoconf.8
+
+nmstate-*.tar.gz
+nmstate-*.tar.gz.asc
