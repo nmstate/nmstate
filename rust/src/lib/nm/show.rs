@@ -12,11 +12,12 @@ use crate::{
         create_index_for_nm_conns_by_ctrler_type,
         create_index_for_nm_conns_by_name_type, get_port_nm_conns,
         NM_SETTING_BOND_SETTING_NAME, NM_SETTING_BRIDGE_SETTING_NAME,
-        NM_SETTING_DUMMY_SETTING_NAME, NM_SETTING_INFINIBAND_SETTING_NAME,
-        NM_SETTING_MACVLAN_SETTING_NAME, NM_SETTING_OVS_BRIDGE_SETTING_NAME,
-        NM_SETTING_OVS_IFACE_SETTING_NAME, NM_SETTING_VETH_SETTING_NAME,
-        NM_SETTING_VLAN_SETTING_NAME, NM_SETTING_VRF_SETTING_NAME,
-        NM_SETTING_VXLAN_SETTING_NAME, NM_SETTING_WIRED_SETTING_NAME,
+        NM_SETTING_CONTROLLERS, NM_SETTING_DUMMY_SETTING_NAME,
+        NM_SETTING_INFINIBAND_SETTING_NAME, NM_SETTING_MACVLAN_SETTING_NAME,
+        NM_SETTING_OVS_BRIDGE_SETTING_NAME, NM_SETTING_OVS_IFACE_SETTING_NAME,
+        NM_SETTING_VETH_SETTING_NAME, NM_SETTING_VLAN_SETTING_NAME,
+        NM_SETTING_VRF_SETTING_NAME, NM_SETTING_VXLAN_SETTING_NAME,
+        NM_SETTING_WIRED_SETTING_NAME,
     },
     nm::dns::retrieve_dns_info,
     nm::error::nm_error_to_nmstate,
@@ -68,80 +69,15 @@ pub(crate) fn nm_retrieve(
     // Include disconnected interface as state:down
     // This is used for verify on `state: absent`
     for nm_dev in &nm_devs {
-        let iface_type = nm_dev_iface_type_to_nmstate(nm_dev);
         match nm_dev.state {
-            NmDeviceState::Unmanaged => continue,
-            NmDeviceState::Disconnected => {
-                let mut base_iface = BaseInterface::new();
-                base_iface.name = nm_dev.name.clone();
-                base_iface.prop_list = vec!["name", "iface_type", "state"];
-                base_iface.state = InterfaceState::Down;
-                base_iface.iface_type = iface_type;
-                let iface = match &base_iface.iface_type {
-                    InterfaceType::Ethernet => Interface::Ethernet({
-                        let mut iface = EthernetInterface::new();
-                        iface.base = base_iface;
+            NmDeviceState::Unmanaged | NmDeviceState::Disconnected => {
+                if let Some(iface) = nm_dev_to_nm_iface(nm_dev) {
+                    debug!(
+                        "Found unmanaged or disconnected interface {:?}",
                         iface
-                    }),
-                    InterfaceType::Dummy => Interface::Dummy({
-                        let mut iface = DummyInterface::new();
-                        iface.base = base_iface;
-                        iface
-                    }),
-                    InterfaceType::LinuxBridge => Interface::LinuxBridge({
-                        let mut iface = LinuxBridgeInterface::new();
-                        iface.base = base_iface;
-                        iface
-                    }),
-                    InterfaceType::OvsInterface => Interface::OvsInterface({
-                        let mut iface = OvsInterface::new();
-                        iface.base = base_iface;
-                        iface
-                    }),
-                    InterfaceType::Bond => Interface::Bond({
-                        let mut iface = BondInterface::new();
-                        iface.base = base_iface;
-                        iface
-                    }),
-                    InterfaceType::Vlan => Interface::Vlan({
-                        let mut iface = VlanInterface::new();
-                        iface.base = base_iface;
-                        iface
-                    }),
-                    InterfaceType::Vxlan => Interface::Vxlan({
-                        let mut iface = VxlanInterface::new();
-                        iface.base = base_iface;
-                        iface
-                    }),
-                    InterfaceType::MacVlan => Interface::MacVlan({
-                        let mut iface = MacVlanInterface::new();
-                        iface.base = base_iface;
-                        iface
-                    }),
-                    InterfaceType::MacVtap => Interface::MacVtap({
-                        let mut iface = MacVtapInterface::new();
-                        iface.base = base_iface;
-                        iface
-                    }),
-                    InterfaceType::Vrf => Interface::Vrf({
-                        let mut iface = VrfInterface::new();
-                        iface.base = base_iface;
-                        iface
-                    }),
-                    InterfaceType::InfiniBand => Interface::InfiniBand({
-                        InfiniBandInterface {
-                            base: base_iface,
-                            ..Default::default()
-                        }
-                    }),
-                    _ => Interface::Unknown({
-                        let mut iface = UnknownInterface::new();
-                        iface.base = base_iface;
-                        iface
-                    }),
-                };
-                debug!("Found disconnected interface {:?}", iface);
-                net_state.append_interface_data(iface);
+                    );
+                    net_state.append_interface_data(iface);
+                }
             }
             _ => {
                 let nm_conn = if let Some(c) = get_first_nm_conn(
@@ -173,7 +109,9 @@ pub(crate) fn nm_retrieve(
                 } else {
                     None
                 };
-                let port_saved_nm_conns = if iface_type.is_controller() {
+                let port_saved_nm_conns = if NM_SETTING_CONTROLLERS
+                    .contains(&nm_dev.iface_type.as_str())
+                {
                     Some(get_port_nm_conns(
                         nm_conn,
                         &nm_saved_conns_ctrler_type_index,
@@ -447,4 +385,98 @@ fn set_ovs_iface_controller_info(ifaces: &mut Interfaces) {
                 Some(InterfaceType::OvsBridge);
         }
     }
+}
+
+fn nm_dev_to_nm_iface(nm_dev: &NmDevice) -> Option<Interface> {
+    let mut base_iface = BaseInterface::new();
+    if nm_dev.name.is_empty() {
+        return None;
+    } else {
+        base_iface.name = nm_dev.name.clone();
+    }
+    base_iface.prop_list = vec!["name", "iface_type", "state"];
+    match nm_dev.state {
+        NmDeviceState::Unmanaged => {
+            if !nm_dev.real {
+                return None;
+            } else {
+                base_iface.state = InterfaceState::Ignore;
+            }
+        }
+        NmDeviceState::Disconnected => base_iface.state = InterfaceState::Down,
+        _ => base_iface.state = InterfaceState::Up,
+    }
+    base_iface.iface_type = nm_dev_iface_type_to_nmstate(nm_dev);
+    Some(match &base_iface.iface_type {
+        InterfaceType::Ethernet => Interface::Ethernet({
+            let mut iface = EthernetInterface::new();
+            iface.base = base_iface;
+            iface
+        }),
+        InterfaceType::Dummy => Interface::Dummy({
+            let mut iface = DummyInterface::new();
+            iface.base = base_iface;
+            iface
+        }),
+        InterfaceType::LinuxBridge => Interface::LinuxBridge({
+            let mut iface = LinuxBridgeInterface::new();
+            iface.base = base_iface;
+            iface
+        }),
+        InterfaceType::OvsInterface => Interface::OvsInterface({
+            let mut iface = OvsInterface::new();
+            iface.base = base_iface;
+            iface
+        }),
+        InterfaceType::Bond => Interface::Bond({
+            let mut iface = BondInterface::new();
+            iface.base = base_iface;
+            iface
+        }),
+        InterfaceType::Vlan => Interface::Vlan({
+            let mut iface = VlanInterface::new();
+            iface.base = base_iface;
+            iface
+        }),
+        InterfaceType::Vxlan => Interface::Vxlan({
+            let mut iface = VxlanInterface::new();
+            iface.base = base_iface;
+            iface
+        }),
+        InterfaceType::MacVlan => Interface::MacVlan({
+            let mut iface = MacVlanInterface::new();
+            iface.base = base_iface;
+            iface
+        }),
+        InterfaceType::MacVtap => Interface::MacVtap({
+            let mut iface = MacVtapInterface::new();
+            iface.base = base_iface;
+            iface
+        }),
+        InterfaceType::Vrf => Interface::Vrf({
+            let mut iface = VrfInterface::new();
+            iface.base = base_iface;
+            iface
+        }),
+        InterfaceType::InfiniBand => Interface::InfiniBand({
+            InfiniBandInterface {
+                base: base_iface,
+                ..Default::default()
+            }
+        }),
+        _ => Interface::Unknown({
+            log::info!(
+                "Got unsupported interface type {}: {}, ignoring",
+                base_iface.iface_type,
+                base_iface.name
+            );
+            let mut iface = UnknownInterface::new();
+            if base_iface.name == "lo" {
+                base_iface.iface_type = InterfaceType::Loopback;
+            }
+            base_iface.state = InterfaceState::Ignore;
+            iface.base = base_iface;
+            iface
+        }),
+    })
 }

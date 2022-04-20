@@ -1,7 +1,5 @@
 use std::collections::HashMap;
 
-use log::{debug, warn};
-
 use crate::{
     nispor::{
         base_iface::np_iface_to_base_iface,
@@ -71,10 +69,6 @@ pub(crate) fn nispor_retrieve(
             InterfaceType::Vxlan => {
                 Interface::Vxlan(np_vxlan_to_nmstate(np_iface, base_iface))
             }
-            InterfaceType::Loopback | InterfaceType::Tun => {
-                // Nmstate has no plan on supporting loopback/tun interface
-                continue;
-            }
             InterfaceType::Dummy => Interface::Dummy({
                 let mut iface = DummyInterface::new();
                 iface.base = base_iface;
@@ -107,9 +101,10 @@ pub(crate) fn nispor_retrieve(
                 Interface::InfiniBand(np_ib_to_nmstate(np_iface, base_iface))
             }
             _ => {
-                warn!(
+                log::info!(
                     "Got unsupported interface {} type {:?}",
-                    np_iface.name, np_iface.iface_type
+                    np_iface.name,
+                    np_iface.iface_type
                 );
                 Interface::Unknown({
                     let mut iface = UnknownInterface::new();
@@ -118,7 +113,7 @@ pub(crate) fn nispor_retrieve(
                 })
             }
         };
-        debug!("Got interface {:?}", iface);
+        log::debug!("Got interface {:?}", iface);
         net_state.append_interface_data(iface);
     }
     set_controller_type(&mut net_state.interfaces);

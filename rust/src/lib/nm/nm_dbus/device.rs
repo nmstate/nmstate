@@ -387,6 +387,7 @@ pub struct NmDevice {
     pub state_reason: NmDeviceStateReason,
     pub is_mac_vtap: bool,
     pub obj_path: String,
+    pub real: bool,
 }
 
 fn nm_dev_name_get(
@@ -511,10 +512,30 @@ fn nm_dev_is_mac_vtap_get(
     }
 }
 
+fn nm_dev_real_get(
+    dbus_conn: &zbus::Connection,
+    obj_path: &str,
+) -> Result<bool, NmError> {
+    let proxy = zbus::Proxy::new(
+        dbus_conn,
+        NM_DBUS_INTERFACE_ROOT,
+        obj_path,
+        NM_DBUS_INTERFACE_DEV,
+    )?;
+    match proxy.get_property::<bool>("Real") {
+        Ok(r) => Ok(r),
+        Err(e) => Err(NmError::new(
+            ErrorKind::Bug,
+            format!("Failed to retrieve real of device {}: {}", obj_path, e),
+        )),
+    }
+}
+
 pub(crate) fn nm_dev_from_obj_path(
     dbus_conn: &zbus::Connection,
     obj_path: &str,
 ) -> Result<NmDevice, NmError> {
+    let real = nm_dev_real_get(dbus_conn, obj_path)?;
     let (state, state_reason) = nm_dev_state_reason_get(dbus_conn, obj_path)?;
     let mut dev = NmDevice {
         name: nm_dev_name_get(dbus_conn, obj_path)?,
@@ -523,6 +544,7 @@ pub(crate) fn nm_dev_from_obj_path(
         state_reason,
         obj_path: obj_path.to_string(),
         is_mac_vtap: false,
+        real,
     };
     if dev.iface_type == "macvlan" {
         dev.is_mac_vtap = nm_dev_is_mac_vtap_get(dbus_conn, obj_path)?;
