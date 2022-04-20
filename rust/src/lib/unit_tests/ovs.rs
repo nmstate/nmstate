@@ -1,4 +1,6 @@
-use crate::{InterfaceType, Interfaces, OvsBridgeInterface};
+use crate::{
+    ifaces::get_ignored_ifaces, InterfaceType, Interfaces, OvsBridgeInterface,
+};
 
 #[test]
 fn test_ovs_bridge_ignore_port() {
@@ -38,11 +40,10 @@ fn test_ovs_bridge_ignore_port() {
     )
     .unwrap();
 
-    let ignored_kernel_ifaces = ifaces.ignored_kernel_iface_names();
+    let (ignored_kernel_ifaces, ignored_user_ifaces) =
+        get_ignored_ifaces(&ifaces, &cur_ifaces);
 
     assert_eq!(ignored_kernel_ifaces, vec!["eth1".to_string()]);
-
-    let ignored_user_ifaces = ifaces.ignored_user_iface_name_types();
     assert!(ignored_user_ifaces.is_empty());
 
     ifaces.remove_ignored_ifaces(&ignored_kernel_ifaces, &ignored_user_ifaces);
