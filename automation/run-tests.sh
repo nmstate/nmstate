@@ -77,9 +77,8 @@ function install_nmstate {
         if [ -n "$COMPILED_RPMS_DIR" ];then
             exec_cmd "rpm -ivh ${COMPILED_RPMS_DIR}/*.rpm || exit 1"
         else
-            exec_cmd '
-                rpm -ivh `./packaging/make_rpm.sh|tail -1 || exit 1`
-            '
+            exec_cmd "make rpm"
+            exec_cmd "rpm -ivh *.rpm"
         fi
     fi
 }
@@ -101,7 +100,7 @@ function run_tests {
             echo "Running rust go binding test in $CONTAINER_IMAGE container is not " \
                  "support yet"
         else
-            exec_cmd "make -C rust/src/go/nmstate check"
+            exec_cmd "make go_check"
         fi
     fi
 

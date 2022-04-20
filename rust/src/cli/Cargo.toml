@@ -5,7 +5,7 @@ authors = ["Gris Ge <fge@redhat.com>"]
 edition = "2018"
 
 [[bin]]
-name = "nmstatectl-rust"
+name = "nmstatectl"
 path = "ncl.rs"
 
 [dependencies]
