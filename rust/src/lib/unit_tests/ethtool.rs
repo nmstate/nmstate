@@ -61,21 +61,21 @@ ethtool:
     .unwrap();
 
     let ethtool_conf = iface.base.ethtool.unwrap();
-    let feature = ethtool_conf.feature.as_ref().unwrap();
+    let features = ethtool_conf.feature.as_ref().unwrap();
     let pause = ethtool_conf.pause.as_ref().unwrap();
     let coalesce = ethtool_conf.coalesce.as_ref().unwrap();
     let ring = ethtool_conf.ring.as_ref().unwrap();
 
-    assert_eq!(feature.rx_checksum, Some(true));
-    assert_eq!(feature.rx_gro, Some(true));
-    assert_eq!(feature.rx_lro, Some(true));
-    assert_eq!(feature.rx_vlan_hw_parse, Some(true));
-    assert_eq!(feature.tx_vlan_hw_insert, Some(true));
-    assert_eq!(feature.rx_ntuple_filter, Some(true));
-    assert_eq!(feature.rx_hashing, Some(true));
-    assert_eq!(feature.tx_scatter_gather, Some(true));
-    assert_eq!(feature.tx_tcp_segmentation, Some(true));
-    assert_eq!(feature.tx_generic_segmentation, Some(true));
+    assert_eq!(features.get("rx-checksum"), Some(&true));
+    assert_eq!(features.get("rx-gro"), Some(&true));
+    assert_eq!(features.get("rx-lro"), Some(&true));
+    assert_eq!(features.get("rx-vlan-hw-parse"), Some(&true));
+    assert_eq!(features.get("tx-vlan-hw-insert"), Some(&true));
+    assert_eq!(features.get("rx-ntuple-filter"), Some(&true));
+    assert_eq!(features.get("rx-hashing"), Some(&true));
+    assert_eq!(features.get("tx-scatter-gather"), Some(&true));
+    assert_eq!(features.get("tx-tcp-segmentation"), Some(&true));
+    assert_eq!(features.get("tx-generic-segmentation"), Some(&true));
     assert_eq!(pause.tx, Some(false));
     assert_eq!(pause.rx, Some(false));
     assert_eq!(pause.autoneg, Some(false));
