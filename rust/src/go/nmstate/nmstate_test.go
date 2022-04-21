@@ -59,3 +59,16 @@ func TestApplyNetStateWithCommit(t *testing.T) {
 	_, err = nms.CommitCheckpoint("")
 	assert.NoError(t, err, "must succeed commiting last active checkpoint")
 }
+
+func TestGenerateConfiguration(t *testing.T) {
+	nms := New()
+	config, err := nms.GenerateConfiguration(`{
+"interfaces": [{
+  "name": "dummy1",
+  "state": "up",
+  "type": "dummy"
+}]}
+`)
+	assert.NoError(t, err, "must succeed calling nmstate_generate_configurations c binding")
+	assert.NotEmpty(t, config, "config should not be empty")
+}
