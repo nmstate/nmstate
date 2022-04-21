@@ -1,6 +1,7 @@
 use crate::{
     ifaces::get_ignored_ifaces, BridgePortTunkTag, BridgePortVlanRange,
     InterfaceType, Interfaces, LinuxBridgeInterface,
+    LinuxBridgeMulticastRouterType,
 };
 
 #[test]
@@ -250,4 +251,30 @@ fn test_linux_bridge_partial_ignored() {
         Some(InterfaceType::LinuxBridge)
     );
     assert!(chg_ifaces.kernel_ifaces.contains_key("br0"));
+}
+
+#[test]
+fn test_linux_bridge_interger_multicast_router() {
+    let iface: LinuxBridgeInterface = serde_yaml::from_str(
+        r#"---
+name: br0
+type: linux-bridge
+state: up
+bridge:
+  options:
+    multicast-router: 0
+"#,
+    )
+    .unwrap();
+
+    assert_eq!(
+        iface
+            .bridge
+            .unwrap()
+            .options
+            .as_ref()
+            .unwrap()
+            .multicast_router,
+        Some(LinuxBridgeMulticastRouterType::Disabled)
+    );
 }
