@@ -29,6 +29,7 @@ rust/target
 rust/src/clib/test/nmstate_test
 rust/src/clib/test/vgcore*
 rust/src/clib/nmstate.h
+rust/vendor/
 
 *.swp
 
