@@ -2,7 +2,7 @@ use std::collections::{hash_map::Entry, HashMap};
 
 use crate::nm::nm_dbus::{
     NmApi, NmConnection, NmSettingConnection, NmSettingMacVlan, NmSettingVeth,
-    NmSettingVlan, NmSettingVrf, NmSettingVxlan,
+    NmSettingVlan, NmSettingVrf, NmSettingVxlan, NmSettingsConnectionFlag,
 };
 
 use crate::{
@@ -66,9 +66,14 @@ pub(crate) fn nm_gen_conf(
             }
         }
 
-        for nm_conn in
-            iface_to_nm_connections(iface, ctrl_iface, &[], &[], false)?
-        {
+        for nm_conn in iface_to_nm_connections(
+            iface,
+            ctrl_iface,
+            &[],
+            &[],
+            false,
+            &NetworkState::new(),
+        )? {
             ret.push(match nm_conn.to_keyfile() {
                 Ok(s) => s,
                 Err(e) => {
@@ -92,6 +97,7 @@ pub(crate) fn iface_to_nm_connections(
     exist_nm_conns: &[NmConnection],
     nm_ac_uuids: &[&str],
     veth_peer_exist_in_desire: bool,
+    cur_net_state: &NetworkState,
 ) -> Result<Vec<NmConnection>, NmstateError> {
     let mut ret: Vec<NmConnection> = Vec::new();
     let base_iface = iface.base_iface();
@@ -103,6 +109,25 @@ pub(crate) fn iface_to_nm_connections(
     );
     if iface.is_up_exist_config() {
         if let Some(nm_conn) = exist_nm_conn {
+            if !iface.is_userspace()
+                && nm_conn.flags.contains(&NmSettingsConnectionFlag::External)
+            {
+                // User want to convert current state to persistent
+                // But NetworkManager does not include routes for external
+                // managed interfaces.
+                if let Some(cur_iface) =
+                    cur_net_state.get_kernel_iface_with_route(iface.name())
+                {
+                    return iface_to_nm_connections(
+                        &cur_iface,
+                        ctrl_iface,
+                        exist_nm_conns,
+                        nm_ac_uuids,
+                        veth_peer_exist_in_desire,
+                        cur_net_state,
+                    );
+                }
+            }
             return Ok(vec![nm_conn.clone()]);
         }
     }

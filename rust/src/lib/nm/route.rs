@@ -20,9 +20,9 @@ pub(crate) fn gen_nm_ip_routes(
             nm_route.dest = Some(ip_addr.ip.to_string());
         }
         nm_route.metric = match route.metric {
-            Some(RouteEntry::USE_DEFAULT_METRIC) => None,
+            Some(RouteEntry::USE_DEFAULT_METRIC) => Some(0),
             Some(i) => Some(i as u32),
-            None => None,
+            None => Some(0),
         };
         nm_route.table = match route.table_id {
             Some(RouteEntry::USE_DEFAULT_ROUTE_TABLE) => None,

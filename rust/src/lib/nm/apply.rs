@@ -197,6 +197,7 @@ fn apply_single_state(
                 &exist_nm_conns,
                 &nm_ac_uuids,
                 is_veth_peer_in_desire(iface, ifaces.as_slice()),
+                cur_net_state,
             )? {
                 nm_conns_to_activate.push(nm_conn);
             }
