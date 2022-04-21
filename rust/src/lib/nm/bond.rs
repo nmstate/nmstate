@@ -4,6 +4,8 @@ use crate::nm::nm_dbus::{NmConnection, NmSettingBond};
 
 use crate::{BondConfig, BondInterface, BondOptions};
 
+const AD_ACTOR_SYSTEM_USE_BOND_MAC: &str = "00:00:00:00:00:00";
+
 pub(crate) fn gen_nm_bond_setting(
     bond_iface: &BondInterface,
     nm_conn: &mut NmConnection,
@@ -46,9 +48,11 @@ fn apply_bond_options(
             .insert("ad_actor_sys_prio".to_string(), v.to_string());
     }
     if let Some(v) = bond_opts.ad_actor_system.as_ref() {
-        nm_bond_set
-            .options
-            .insert("ad_actor_system".to_string(), v.to_string());
+        if v != AD_ACTOR_SYSTEM_USE_BOND_MAC {
+            nm_bond_set
+                .options
+                .insert("ad_actor_system".to_string(), v.to_string());
+        }
     }
     if let Some(v) = bond_opts.ad_select.as_ref() {
         nm_bond_set
