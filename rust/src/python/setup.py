@@ -13,7 +13,7 @@ def requirements():
 
 setuptools.setup(
     name="nmstate",
-    version="2.1.0",
+    version="2.1.1",
     author="Gris Ge",
     author_email="fge@redhat.com",
     description="Python binding of nmstate",
