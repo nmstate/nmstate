@@ -186,6 +186,9 @@ impl BaseInterface {
             self.iface_type = InterfaceType::Ethernet;
         }
 
+        if let Some(mac_address) = &self.mac_address {
+            self.mac_address = Some(mac_address.to_uppercase());
+        }
         if let Some(lldp_conf) = self.lldp.as_mut() {
             lldp_conf.pre_verify_cleanup();
         }
