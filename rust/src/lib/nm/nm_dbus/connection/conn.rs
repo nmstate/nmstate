@@ -58,6 +58,31 @@ pub(crate) type DbusDictionary = HashMap<String, zvariant::OwnedValue>;
 pub(crate) type NmConnectionDbusValue<'a> =
     HashMap<&'a str, HashMap<&'a str, zvariant::Value<'a>>>;
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum NmSettingsConnectionFlag {
+    Unsaved = 1,
+    NmGenerated = 2,
+    Volatile = 4,
+    External = 8,
+}
+
+fn from_u32_to_vec_nm_conn_flags(i: u32) -> Vec<NmSettingsConnectionFlag> {
+    let mut ret = Vec::new();
+    if i & NmSettingsConnectionFlag::Unsaved as u32 > 0 {
+        ret.push(NmSettingsConnectionFlag::Unsaved);
+    }
+    if i & NmSettingsConnectionFlag::NmGenerated as u32 > 0 {
+        ret.push(NmSettingsConnectionFlag::NmGenerated);
+    }
+    if i & NmSettingsConnectionFlag::Volatile as u32 > 0 {
+        ret.push(NmSettingsConnectionFlag::Volatile);
+    }
+    if i & NmSettingsConnectionFlag::External as u32 > 0 {
+        ret.push(NmSettingsConnectionFlag::External);
+    }
+    ret
+}
+
 #[derive(Debug, Clone, PartialEq, Default, Deserialize)]
 #[serde(try_from = "NmConnectionDbusOwnedValue")]
 #[non_exhaustive]
@@ -87,6 +112,8 @@ pub struct NmConnection {
     pub infiniband: Option<NmSettingInfiniBand>,
     #[serde(skip)]
     pub(crate) obj_path: String,
+    #[serde(skip)]
+    pub(crate) flags: Vec<NmSettingsConnectionFlag>,
     _other: HashMap<String, HashMap<String, zvariant::OwnedValue>>,
 }
 
@@ -487,6 +514,9 @@ pub(crate) fn nm_con_get_from_obj_path(
                 ieee_8021x_conf.fill_secrets(nm_secret);
             }
         }
+    }
+    if let Ok(flags) = proxy.get_property::<u32>("Flags") {
+        nm_conn.flags = from_u32_to_vec_nm_conn_flags(flags);
     }
     Ok(nm_conn)
 }

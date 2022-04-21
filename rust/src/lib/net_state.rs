@@ -687,6 +687,20 @@ impl NetworkState {
     pub fn checkpoint_commit(checkpoint: &str) -> Result<(), NmstateError> {
         nm_checkpoint_destroy(checkpoint)
     }
+
+    pub(crate) fn get_kernel_iface_with_route(
+        &self,
+        iface_name: &str,
+    ) -> Option<Interface> {
+        if let Some(iface) = self.interfaces.kernel_ifaces.get(iface_name) {
+            let mut ret = iface.clone();
+            ret.base_iface_mut().routes =
+                self.routes.get_config_routes_of_iface(iface_name);
+            Some(ret)
+        } else {
+            None
+        }
+    }
 }
 
 fn with_nm_checkpoint<T>(
