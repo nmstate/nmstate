@@ -33,7 +33,7 @@ pub use self::connection::{
     NmSettingOvsIface, NmSettingOvsPatch, NmSettingOvsPort, NmSettingSriov,
     NmSettingSriovVf, NmSettingSriovVfVlan, NmSettingUser, NmSettingVeth,
     NmSettingVlan, NmSettingVrf, NmSettingVxlan, NmSettingWired,
-    NmVlanProtocol,
+    NmSettingsConnectionFlag, NmVlanProtocol,
 };
 pub use self::device::{NmDevice, NmDeviceState, NmDeviceStateReason};
 pub use self::dns::NmDnsEntry;
