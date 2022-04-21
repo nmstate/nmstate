@@ -205,3 +205,32 @@ func (n *Nmstate) writeLog(log *C.char) error {
 	}
 	return nil
 }
+
+// GenerateConfiguration generates the configuration for the state provided.
+// This function returns the configuration files for the state provided.
+func (n *Nmstate) GenerateConfiguration(state string) (string, error) {
+	var (
+		c_state  *C.char
+		config   *C.char
+		log      *C.char
+		err_kind *C.char
+		err_msg  *C.char
+	)
+	c_state = C.CString(state)
+	rc := C.nmstate_generate_configurations(c_state, &config, &log, &err_kind, &err_msg)
+
+	defer func() {
+		C.nmstate_cstring_free(c_state)
+		C.nmstate_cstring_free(config)
+		C.nmstate_cstring_free(err_msg)
+		C.nmstate_cstring_free(err_kind)
+		C.nmstate_cstring_free(log)
+	}()
+	if rc != 0 {
+		return "", fmt.Errorf("failed when generating the configuration %s with rc: %d, err_msg: %s, err_kind: %s", state, rc, C.GoString(err_msg), C.GoString(err_kind))
+	}
+	if err := n.writeLog(log); err != nil {
+		return "", fmt.Errorf("failed when generating the configuration: %v", err)
+	}
+	return C.GoString(config), nil
+}
