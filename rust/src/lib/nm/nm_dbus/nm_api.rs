@@ -100,13 +100,13 @@ impl<'a> NmApi<'a> {
 
     pub fn connection_deactivate(&self, uuid: &str) -> Result<(), NmError> {
         debug!("connection_deactivate: {}", uuid);
-        let nm_ac = get_nm_ac_obj_path_by_uuid(&self.dbus, uuid)?;
-
-        if !nm_ac.is_empty() {
-            self.dbus.connection_deactivate(&nm_ac)
-        } else {
-            Ok(())
+        // Race: ActiveConnection might be deleted
+        if let Ok(nm_ac) = get_nm_ac_obj_path_by_uuid(&self.dbus, uuid) {
+            if !nm_ac.is_empty() {
+                self.dbus.connection_deactivate(&nm_ac)?;
+            }
         }
+        Ok(())
     }
 
     pub fn connections_get(&self) -> Result<Vec<NmConnection>, NmError> {
