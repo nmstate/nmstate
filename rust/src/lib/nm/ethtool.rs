@@ -1,13 +1,28 @@
+use std::collections::HashMap;
+
 use crate::nm::nm_dbus::{NmConnection, NmSettingEthtool};
 use crate::{
-    EthtoolCoalesceConfig, EthtoolFeatureConfig, EthtoolPauseConfig,
-    EthtoolRingConfig, Interface,
+    ErrorKind, EthtoolCoalesceConfig, EthtoolFeatureConfig, EthtoolPauseConfig,
+    EthtoolRingConfig, Interface, NmstateError,
 };
+
+const KERNEL_ETHTOOL_FEATURE_2_NM: [(&str, &str); 10] = [
+    ("rx-checksum", "feature-rx"),
+    ("tx-scatter-gather", "feature-sg"),
+    ("tx-tcp-segmentation", "feature-tso"),
+    ("rx-gro", "feature-gro"),
+    ("tx-generic-segmentation", "feature-gso"),
+    ("rx-hashing", "feature-rxhash"),
+    ("rx-lro", "feature-lro"),
+    ("rx-ntuple-filter", "feature-ntuple"),
+    ("rx-vlan-hw-parse", "feature-rxvlan"),
+    ("tx-vlan-hw-insert", "feature-txvlan"),
+];
 
 pub(crate) fn gen_ethtool_setting(
     iface: &Interface,
     nm_conn: &mut NmConnection,
-) {
+) -> Result<(), NmstateError> {
     if let Some(ethtool_iface) = iface.base_iface().ethtool.as_ref() {
         let mut nm_ethtool_set =
             nm_conn.ethtool.as_ref().cloned().unwrap_or_default();
@@ -16,7 +31,7 @@ pub(crate) fn gen_ethtool_setting(
             apply_pause_options(&mut nm_ethtool_set, pause_conf);
         }
         if let Some(feature_conf) = ethtool_iface.feature.as_ref() {
-            apply_feature_options(&mut nm_ethtool_set, feature_conf);
+            apply_feature_options(&mut nm_ethtool_set, feature_conf)?;
         }
         if let Some(coalesce_conf) = ethtool_iface.coalesce.as_ref() {
             apply_coalesce_options(&mut nm_ethtool_set, coalesce_conf);
@@ -24,9 +39,9 @@ pub(crate) fn gen_ethtool_setting(
         if let Some(ring_conf) = ethtool_iface.ring.as_ref() {
             apply_ring_options(&mut nm_ethtool_set, ring_conf);
         }
-
         nm_conn.ethtool = Some(nm_ethtool_set);
     }
+    Ok(())
 }
 
 fn apply_pause_options(
@@ -41,18 +56,27 @@ fn apply_pause_options(
 fn apply_feature_options(
     nm_ethtool_set: &mut NmSettingEthtool,
     feature_conf: &EthtoolFeatureConfig,
-) {
-    nm_ethtool_set.feature_rx = feature_conf.rx_checksum;
-    nm_ethtool_set.feature_gro = feature_conf.rx_gro;
-    nm_ethtool_set.feature_lro = feature_conf.rx_lro;
-    nm_ethtool_set.feature_rxvlan = feature_conf.rx_vlan_hw_parse;
-    nm_ethtool_set.feature_txvlan = feature_conf.tx_vlan_hw_insert;
-    nm_ethtool_set.feature_ntuple = feature_conf.rx_ntuple_filter;
-    nm_ethtool_set.feature_rxhash = feature_conf.rx_hashing;
-    nm_ethtool_set.feature_sg = feature_conf.tx_scatter_gather;
-    nm_ethtool_set.feature_tso = feature_conf.tx_tcp_segmentation;
-    nm_ethtool_set.feature_tso = feature_conf.tx_generic_segmentation;
-    nm_ethtool_set.feature_highdma = feature_conf.highdma
+) -> Result<(), NmstateError> {
+    let mut kernel_2_nm = HashMap::new();
+    for (k, v) in KERNEL_ETHTOOL_FEATURE_2_NM {
+        kernel_2_nm.insert(k, v);
+    }
+    let mut nm_features = HashMap::new();
+    for (k, v) in feature_conf {
+        if let Some(nm_feature_name) = kernel_2_nm.get(k.as_str()) {
+            nm_features.insert(nm_feature_name.to_string(), *v);
+        } else {
+            nm_features.insert(format!("feature-{}", k), *v);
+        }
+    }
+    nm_ethtool_set.features = Some(nm_features);
+    if let Err(e) = nm_ethtool_set.validate() {
+        return Err(NmstateError::new(
+            ErrorKind::InvalidArgument,
+            e.to_string(),
+        ));
+    }
+    Ok(())
 }
 
 fn apply_coalesce_options(

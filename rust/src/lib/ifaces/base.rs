@@ -160,6 +160,9 @@ impl BaseInterface {
         if let Some(ref mut ipv6) = self.ipv6 {
             ipv6.pre_edit_cleanup();
         }
+        if let Some(ref mut ethtool_conf) = self.ethtool {
+            ethtool_conf.pre_edit_cleanup();
+        }
         Ok(())
     }
 
@@ -185,6 +188,9 @@ impl BaseInterface {
 
         if let Some(lldp_conf) = self.lldp.as_mut() {
             lldp_conf.pre_verify_cleanup();
+        }
+        if let Some(ethtool_conf) = self.ethtool.as_mut() {
+            ethtool_conf.pre_verify_cleanup();
         }
     }
 

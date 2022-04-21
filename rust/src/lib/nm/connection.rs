@@ -147,7 +147,7 @@ pub(crate) fn iface_to_nm_connections(
     gen_nm_ovs_ext_ids_setting(iface, &mut nm_conn);
     gen_nm_802_1x_setting(iface, &mut nm_conn);
     gen_nm_user_setting(iface, &mut nm_conn);
-    gen_ethtool_setting(iface, &mut nm_conn);
+    gen_ethtool_setting(iface, &mut nm_conn)?;
 
     match iface {
         Interface::OvsBridge(ovs_br_iface) => {

@@ -3,7 +3,68 @@ use std::convert::TryFrom;
 
 use serde::Deserialize;
 
-use super::super::{connection::DbusDictionary, NmError};
+use super::super::{connection::DbusDictionary, ErrorKind, NmError};
+
+const VALID_FEATURES: [&str; 58] = [
+    "feature-esp-hw-offload",
+    "feature-esp-tx-csum-hw-offload",
+    "feature-fcoe-mtu",
+    "feature-gro",
+    "feature-gso",
+    "feature-highdma",
+    "feature-hw-tc-offload",
+    "feature-l2-fwd-offload",
+    "feature-loopback",
+    "feature-lro",
+    "feature-macsec-hw-offload",
+    "feature-ntuple",
+    "feature-rx",
+    "feature-rxhash",
+    "feature-rxvlan",
+    "feature-rx-all",
+    "feature-rx-fcs",
+    "feature-rx-gro-hw",
+    "feature-rx-gro-list",
+    "feature-rx-udp-gro-forwarding",
+    "feature-rx-udp_tunnel-port-offload",
+    "feature-rx-vlan-filter",
+    "feature-rx-vlan-stag-filter",
+    "feature-rx-vlan-stag-hw-parse",
+    "feature-sg",
+    "feature-tls-hw-record",
+    "feature-tls-hw-rx-offload",
+    "feature-tls-hw-tx-offload",
+    "feature-tso",
+    "feature-tx",
+    "feature-txvlan",
+    "feature-tx-checksum-fcoe-crc",
+    "feature-tx-checksum-ipv4",
+    "feature-tx-checksum-ipv6",
+    "feature-tx-checksum-ip-generic",
+    "feature-tx-checksum-sctp",
+    "feature-tx-esp-segmentation",
+    "feature-tx-fcoe-segmentation",
+    "feature-tx-gre-csum-segmentation",
+    "feature-tx-gre-segmentation",
+    "feature-tx-gso-list",
+    "feature-tx-gso-partial",
+    "feature-tx-gso-robust",
+    "feature-tx-ipxip4-segmentation",
+    "feature-tx-ipxip6-segmentation",
+    "feature-tx-nocache-copy",
+    "feature-tx-scatter-gather",
+    "feature-tx-scatter-gather-fraglist",
+    "feature-tx-sctp-segmentation",
+    "feature-tx-tcp6-segmentation",
+    "feature-tx-tcp-ecn-segmentation",
+    "feature-tx-tcp-mangleid-segmentation",
+    "feature-tx-tcp-segmentation",
+    "feature-tx-tunnel-remcsum-segmentation",
+    "feature-tx-udp-segmentation",
+    "feature-tx-udp_tnl-csum-segmentation",
+    "feature-tx-udp_tnl-segmentation",
+    "feature-tx-vlan-stag-hw-insert",
+];
 
 #[derive(Debug, Clone, PartialEq, Default, Deserialize)]
 #[serde(try_from = "DbusDictionary")]
@@ -34,17 +95,7 @@ pub struct NmSettingEthtool {
     pub coalesce_tx_usecs_high: Option<u32>,
     pub coalesce_tx_usecs_low: Option<u32>,
     pub coalesce_tx_usecs_irq: Option<u32>,
-    pub feature_rx: Option<bool>,
-    pub feature_sg: Option<bool>,
-    pub feature_tso: Option<bool>,
-    pub feature_gro: Option<bool>,
-    pub feature_gso: Option<bool>,
-    pub feature_highdma: Option<bool>,
-    pub feature_rxhash: Option<bool>,
-    pub feature_lro: Option<bool>,
-    pub feature_ntuple: Option<bool>,
-    pub feature_rxvlan: Option<bool>,
-    pub feature_txvlan: Option<bool>,
+    pub features: Option<HashMap<String, bool>>,
     pub ring_rx: Option<u32>,
     pub ring_rx_jumbo: Option<u32>,
     pub ring_rx_mini: Option<u32>,
@@ -55,6 +106,19 @@ pub struct NmSettingEthtool {
 impl TryFrom<DbusDictionary> for NmSettingEthtool {
     type Error = NmError;
     fn try_from(mut v: DbusDictionary) -> Result<Self, Self::Error> {
+        let mut features: HashMap<String, bool> = HashMap::new();
+        let feature_keys: Vec<String> = v
+            .keys()
+            .filter(|k| k.starts_with("feature-"))
+            .cloned()
+            .collect();
+        for k in feature_keys {
+            if let Some(feature_value) = v.remove(&k) {
+                let value = bool::try_from(feature_value)?;
+                features.insert(k, value);
+            }
+        }
+
         Ok(Self {
             pause_rx: _from_map!(v, "pause-rx", bool::try_from)?,
             pause_tx: _from_map!(v, "pause-tx", bool::try_from)?,
@@ -169,17 +233,7 @@ impl TryFrom<DbusDictionary> for NmSettingEthtool {
                 "coalesce-stats-block-usecs",
                 u32::try_from
             )?,
-            feature_rx: _from_map!(v, "feature-rx", bool::try_from)?,
-            feature_sg: _from_map!(v, "feature-sg", bool::try_from)?,
-            feature_tso: _from_map!(v, "feature-tso", bool::try_from)?,
-            feature_gro: _from_map!(v, "feature-gro", bool::try_from)?,
-            feature_gso: _from_map!(v, "feature-gso", bool::try_from)?,
-            feature_rxhash: _from_map!(v, "feature-rxhash", bool::try_from)?,
-            feature_lro: _from_map!(v, "feature-lro", bool::try_from)?,
-            feature_ntuple: _from_map!(v, "feature-ntuple", bool::try_from)?,
-            feature_rxvlan: _from_map!(v, "feature-rxvlan", bool::try_from)?,
-            feature_txvlan: _from_map!(v, "feature-txvlan", bool::try_from)?,
-            feature_highdma: _from_map!(v, "feature-highdma", bool::try_from)?,
+            features: Some(features),
             ring_rx: _from_map!(v, "ring-rx", u32::try_from)?,
             ring_rx_jumbo: _from_map!(v, "ring-rx-jumbo", u32::try_from)?,
             ring_rx_mini: _from_map!(v, "ring-rx-mini", u32::try_from)?,
@@ -190,6 +244,20 @@ impl TryFrom<DbusDictionary> for NmSettingEthtool {
 }
 
 impl NmSettingEthtool {
+    pub fn validate(&self) -> Result<(), NmError> {
+        if let Some(features) = self.features.as_ref() {
+            for k in features.keys() {
+                if !VALID_FEATURES.contains(&k.as_str()) {
+                    return Err(NmError::new(
+                        ErrorKind::InvalidArgument,
+                        format!("Unsupported ethtool feature {}", k),
+                    ));
+                }
+            }
+        }
+        Ok(())
+    }
+
     pub(crate) fn to_keyfile(
         &self,
     ) -> Result<HashMap<String, zvariant::Value>, NmError> {
@@ -275,38 +343,10 @@ impl NmSettingEthtool {
         if let Some(v) = &self.coalesce_tx_usecs_irq {
             ret.insert("coalesce-tx-usecs-irq", zvariant::Value::new(v));
         }
-        if let Some(v) = &self.feature_rx {
-            ret.insert("feature-rx", zvariant::Value::new(v));
-        }
-        if let Some(v) = &self.feature_sg {
-            ret.insert("feature-sg", zvariant::Value::new(v));
-        }
-        if let Some(v) = &self.feature_tso {
-            ret.insert("feature-tso", zvariant::Value::new(v));
-        }
-        if let Some(v) = &self.feature_gro {
-            ret.insert("feature-gro", zvariant::Value::new(v));
-        }
-        if let Some(v) = &self.feature_gso {
-            ret.insert("feature-gso", zvariant::Value::new(v));
-        }
-        if let Some(v) = &self.feature_rxhash {
-            ret.insert("feature-rxhash", zvariant::Value::new(v));
-        }
-        if let Some(v) = &self.feature_lro {
-            ret.insert("feature-lro", zvariant::Value::new(v));
-        }
-        if let Some(v) = &self.feature_ntuple {
-            ret.insert("feature-ntuple", zvariant::Value::new(v));
-        }
-        if let Some(v) = &self.feature_rxvlan {
-            ret.insert("feature-rxvlan", zvariant::Value::new(v));
-        }
-        if let Some(v) = &self.feature_txvlan {
-            ret.insert("feature-txvlan", zvariant::Value::new(v));
-        }
-        if let Some(v) = &self.feature_highdma {
-            ret.insert("feature-highdma", zvariant::Value::new(v));
+        if let Some(features) = &self.features {
+            for (k, v) in features {
+                ret.insert(k, zvariant::Value::new(v));
+            }
         }
         if let Some(v) = &self.ring_rx {
             ret.insert("ring-rx", zvariant::Value::new(v));
