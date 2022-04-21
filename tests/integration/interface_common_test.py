@@ -82,6 +82,26 @@ def test_iface_description_removal(eth1_up):
     assert Interface.DESCRIPTION not in current_state[Interface.KEY][0]
 
 
+def test_iface_mac_address_lowercase(eth1_up):
+    desired_state = eth1_up
+    desired_state[Interface.KEY][0][Interface.MAC] = "d4:ee:07:25:42:5a"
+    libnmstate.apply(desired_state)
+    current_state = statelib.show_only(("eth1",))
+    assert (
+        current_state[Interface.KEY][0][Interface.MAC] == "D4:EE:07:25:42:5A"
+    )
+
+
+def test_iface_mac_address_mixedcase(eth1_up):
+    desired_state = eth1_up
+    desired_state[Interface.KEY][0][Interface.MAC] = "d4:EE:07:25:42:5a"
+    libnmstate.apply(desired_state)
+    current_state = statelib.show_only(("eth1",))
+    assert (
+        current_state[Interface.KEY][0][Interface.MAC] == "D4:EE:07:25:42:5A"
+    )
+
+
 def test_take_over_virtual_interface_then_remove(ip_link_dummy):
     with dummy_interface(DUMMY_INTERFACE) as dummy_desired_state:
         assertlib.assert_state_match(dummy_desired_state)
