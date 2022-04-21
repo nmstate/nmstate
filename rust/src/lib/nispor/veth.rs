@@ -4,8 +4,17 @@ pub(crate) fn np_veth_to_nmstate(
     np_iface: &nispor::Iface,
     base_iface: BaseInterface,
 ) -> EthernetInterface {
-    let veth_conf = np_iface.veth.as_ref().map(|np_veth_info| VethConfig {
-        peer: np_veth_info.peer.clone(),
+    let veth_conf = np_iface.veth.as_ref().and_then(|np_veth_info| {
+        if np_veth_info.peer.as_str().parse::<u32>().is_ok() {
+            // If veth peer is interface index, it means its veth peer is in
+            // another network namespace, we should treat this interface
+            // as ethernet
+            None
+        } else {
+            Some(VethConfig {
+                peer: np_veth_info.peer.clone(),
+            })
+        }
     });
 
     EthernetInterface {
