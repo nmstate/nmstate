@@ -1,4 +1,31 @@
-use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::marker::PhantomData;
+
+use serde::{
+    de, de::MapAccess, de::Visitor, Deserialize, Deserializer, Serialize,
+};
+
+const ETHTOOL_FEATURE_CLI_ALIAS: [(&str, &str); 17] = [
+    ("rx", "rx-checksum"),
+    ("rx-checksumming", "rx-checksum"),
+    ("ufo", "tx-udp-fragmentation"),
+    ("gso", "tx-generic-segmentation"),
+    ("generic-segmentation-offload", "tx-generic-segmentation"),
+    ("gro", "rx-gro"),
+    ("generic-receive-offload", "rx-gro"),
+    ("lro", "rx-lro"),
+    ("large-receive-offload", "rx-lro"),
+    ("rxvlan", "rx-vlan-hw-parse"),
+    ("rx-vlan-offload", "rx-vlan-hw-parse"),
+    ("txvlan", "tx-vlan-hw-insert"),
+    ("tx-vlan-offload", "tx-vlan-hw-insert"),
+    ("ntuple", "rx-ntuple-filter"),
+    ("ntuple-filters", "rx-ntuple-filter"),
+    ("rxhash", "rx-hashing"),
+    ("receive-hashing", "rx-hashing"),
+];
+
+pub type EthtoolFeatureConfig = HashMap<String, bool>;
 
 #[derive(Serialize, Deserialize, Debug, Eq, PartialEq, Clone, Default)]
 #[non_exhaustive]
@@ -6,7 +33,11 @@ use serde::{Deserialize, Serialize};
 pub struct EthtoolConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub pause: Option<EthtoolPauseConfig>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "parse_ethtool_feature"
+    )]
     pub feature: Option<EthtoolFeatureConfig>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub coalesce: Option<EthtoolCoalesceConfig>,
@@ -17,6 +48,21 @@ pub struct EthtoolConfig {
 impl EthtoolConfig {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub(crate) fn pre_edit_cleanup(&mut self) {
+        self.pre_verify_cleanup();
+    }
+
+    // There are some alias on ethtool features.
+    pub(crate) fn pre_verify_cleanup(&mut self) {
+        if let Some(features) = self.feature.as_mut() {
+            for (cli_alias, kernel_name) in ETHTOOL_FEATURE_CLI_ALIAS {
+                if let Some(v) = features.remove(cli_alias) {
+                    features.insert(kernel_name.to_string(), v);
+                }
+            }
+        }
     }
 }
 
@@ -47,96 +93,6 @@ pub struct EthtoolPauseConfig {
 }
 
 impl EthtoolPauseConfig {
-    pub fn new() -> Self {
-        Self::default()
-    }
-}
-
-#[derive(
-    Serialize, Deserialize, Debug, Eq, PartialEq, Clone, Default, Copy,
-)]
-#[serde(rename_all = "kebab-case", deny_unknown_fields)]
-#[non_exhaustive]
-pub struct EthtoolFeatureConfig {
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        alias = "rx",
-        alias = "rx-checksumming",
-        default,
-        deserialize_with = "crate::deserializer::option_bool_or_string"
-    )]
-    pub rx_checksum: Option<bool>,
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        alias = "gro",
-        default,
-        deserialize_with = "crate::deserializer::option_bool_or_string"
-    )]
-    pub rx_gro: Option<bool>,
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        alias = "lro",
-        default,
-        deserialize_with = "crate::deserializer::option_bool_or_string"
-    )]
-    pub rx_lro: Option<bool>,
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        alias = "rxvlan",
-        default,
-        deserialize_with = "crate::deserializer::option_bool_or_string"
-    )]
-    pub rx_vlan_hw_parse: Option<bool>,
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        alias = "txvlan",
-        default,
-        deserialize_with = "crate::deserializer::option_bool_or_string"
-    )]
-    pub tx_vlan_hw_insert: Option<bool>,
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        alias = "ntuple",
-        alias = "ntuple-filters",
-        default,
-        deserialize_with = "crate::deserializer::option_bool_or_string"
-    )]
-    pub rx_ntuple_filter: Option<bool>,
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        alias = "rxhash",
-        default,
-        deserialize_with = "crate::deserializer::option_bool_or_string"
-    )]
-    pub rx_hashing: Option<bool>,
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        default,
-        deserialize_with = "crate::deserializer::option_bool_or_string"
-    )]
-    pub tx_scatter_gather: Option<bool>,
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        default,
-        deserialize_with = "crate::deserializer::option_bool_or_string"
-    )]
-    pub tx_tcp_segmentation: Option<bool>,
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        alias = "generic-segmentation-offload",
-        default,
-        deserialize_with = "crate::deserializer::option_bool_or_string"
-    )]
-    pub tx_generic_segmentation: Option<bool>,
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        default,
-        deserialize_with = "crate::deserializer::option_bool_or_string"
-    )]
-    pub highdma: Option<bool>,
-}
-
-impl EthtoolFeatureConfig {
     pub fn new() -> Self {
         Self::default()
     }
@@ -346,4 +302,66 @@ impl EthtoolRingConfig {
     pub fn new() -> Self {
         Self::default()
     }
+}
+
+fn parse_ethtool_feature<'de, D>(
+    deserializer: D,
+) -> Result<Option<EthtoolFeatureConfig>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    struct FeatureVisitor(PhantomData<fn() -> Option<EthtoolFeatureConfig>>);
+
+    impl<'de> Visitor<'de> for FeatureVisitor {
+        type Value = Option<EthtoolFeatureConfig>;
+
+        fn expecting(
+            &self,
+            formatter: &mut std::fmt::Formatter,
+        ) -> std::fmt::Result {
+            formatter.write_str("Need to hash map of String:bool")
+        }
+
+        fn visit_map<M>(
+            self,
+            mut access: M,
+        ) -> Result<Option<EthtoolFeatureConfig>, M::Error>
+        where
+            M: MapAccess<'de>,
+        {
+            let mut ret =
+                HashMap::with_capacity(access.size_hint().unwrap_or(0));
+
+            while let Some((key, value)) =
+                access.next_entry::<String, serde_json::Value>()?
+            {
+                match value {
+                    serde_json::Value::Bool(b) => {
+                        ret.insert(key, b);
+                    }
+                    serde_json::Value::String(b)
+                        if b.to_lowercase().as_str() == "false"
+                            || b.as_str() == "0" =>
+                    {
+                        ret.insert(key, false);
+                    }
+                    serde_json::Value::String(b)
+                        if b.to_lowercase().as_str() == "true"
+                            || b.as_str() == "1" =>
+                    {
+                        ret.insert(key, true);
+                    }
+                    _ => {
+                        return Err(de::Error::custom(
+                            "Invalid feature value, should be boolean",
+                        ));
+                    }
+                }
+            }
+
+            Ok(Some(ret))
+        }
+    }
+
+    deserializer.deserialize_any(FeatureVisitor(PhantomData))
 }
