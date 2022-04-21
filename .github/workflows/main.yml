@@ -102,11 +102,8 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Install extra kernel module for vrf
-        run: sudo apt-get -y install linux-modules-extra-azure
-
-      - name: Enable extra kernel modules
-        run: sudo modprobe openvswitch vrf
+      - name: Enable openvswitch kernel module
+        run: sudo modprobe openvswitch
 
       - name: Download compiled rpm
         uses: actions/download-artifact@v3
