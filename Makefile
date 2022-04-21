@@ -209,7 +209,7 @@ install: $(CLI_EXEC_RELEASE) manpage clib
 	ln -sfv $(CLIB_SO_FULL) $(DESTDIR)$(LIBDIR)/$(CLIB_SO_MAN)
 	ln -sfv $(CLIB_SO_FULL) $(DESTDIR)$(LIBDIR)/$(CLIB_SO_DEV)
 	if [ $(SKIP_PYTHON_INSTALL) != 1 ];then \
-		cd rust/python; python3 setup.py install; \
+		cd rust/src/python; python3 setup.py install; \
 	fi
 	install -p -v -D -m644 $(CLIB_HEADER) \
 		$(DESTDIR)$(INCLUDE_DIR)/$(shell basename $(CLIB_HEADER))
