@@ -429,10 +429,19 @@ fn set_iface_dns_conf(
 pub(crate) fn purge_dns_config(
     is_ipv6: bool,
     ifaces: &[String],
+    desired_net_state: &NetworkState,
     chg_net_state: &mut NetworkState,
     current: &NetworkState,
 ) {
     for iface_name in ifaces {
+        if desired_net_state.interfaces.kernel_ifaces.iter().any(
+            |(cur_iface_name, iface)| {
+                cur_iface_name == iface_name && iface.is_absent()
+            },
+        ) {
+            continue;
+        }
+
         if let Some(iface) =
             chg_net_state.interfaces.kernel_ifaces.get_mut(iface_name)
         {

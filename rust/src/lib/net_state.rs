@@ -577,12 +577,14 @@ impl NetworkState {
                     purge_dns_config(
                         false,
                         cur_v4_ifaces.as_slice(),
+                        self,
                         chg_net_state,
                         current,
                     );
                     purge_dns_config(
                         true,
                         cur_v6_ifaces.as_slice(),
+                        self,
                         chg_net_state,
                         current,
                     );
@@ -590,12 +592,14 @@ impl NetworkState {
                     purge_dns_config(
                         false,
                         &cur_v4_ifaces,
+                        self,
                         chg_net_state,
                         current,
                     );
                     purge_dns_config(
                         true,
                         &cur_v6_ifaces,
+                        self,
                         chg_net_state,
                         current,
                     );
