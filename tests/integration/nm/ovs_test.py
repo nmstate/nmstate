@@ -25,15 +25,12 @@ from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import OVSBridge
-from libnmstate.schema import OvsDB
 from libnmstate.schema import VLAN
 
 from ..testlib import assertlib
 from ..testlib import cmdlib
 from ..testlib import statelib
-from ..testlib.env import nm_major_minor_version
 from ..testlib.ovslib import Bridge
-from ..testlib.plugin import tmp_plugin_dir
 from ..testlib.retry import retry_till_true_or_timeout
 
 
@@ -227,102 +224,6 @@ def _get_parent_uuid_of_interface(iface_name):
         f"nmcli -g connection.master connection show {iface_name}".split(" "),
         check=True,
     )[1].strip()
-
-
-@pytest.fixture
-def disable_ovsdb_plugin():
-    with tmp_plugin_dir():
-        yield
-
-
-@pytest.mark.skipif(
-    nm_major_minor_version() <= 1.28,
-    reason="OVS external ID is not supported by NetworkManager 1.28-.",
-)
-class TestNmOvsExternalIds:
-    def test_create_ovs_bridge_with_external_ids(self, disable_ovsdb_plugin):
-        bridge = Bridge(BRIDGE0)
-        bridge.set_ovs_db({OvsDB.EXTERNAL_IDS: OVSDB_EXT_IDS_CONF1})
-        bridge.add_internal_port(
-            IFACE0,
-            ipv4_state={InterfaceIPv4.ENABLED: False},
-            ovs_db={OvsDB.EXTERNAL_IDS: OVSDB_EXT_IDS_CONF2},
-        )
-        with bridge.create() as state:
-            assertlib.assert_state_match(state)
-            new_state = statelib.show_only((BRIDGE0, IFACE0))
-            assert (
-                new_state[Interface.KEY][0][OvsDB.OVS_DB_SUBTREE][
-                    OvsDB.EXTERNAL_IDS
-                ]
-                == OVSDB_EXT_IDS_CONF1_STR
-            )
-            assert (
-                new_state[Interface.KEY][1][OvsDB.OVS_DB_SUBTREE][
-                    OvsDB.EXTERNAL_IDS
-                ]
-                == OVSDB_EXT_IDS_CONF2_STR
-            )
-
-    def test_modify_ovs_bridge_external_ids(self, disable_ovsdb_plugin):
-        bridge = Bridge(BRIDGE0)
-        bridge.set_ovs_db({OvsDB.EXTERNAL_IDS: OVSDB_EXT_IDS_CONF1})
-        bridge.add_internal_port(
-            IFACE0,
-            ipv4_state={InterfaceIPv4.ENABLED: False},
-            ovs_db={OvsDB.EXTERNAL_IDS: OVSDB_EXT_IDS_CONF2},
-        )
-        with bridge.create():
-            changed_bridge = Bridge(BRIDGE0)
-            changed_bridge.set_ovs_db(
-                {OvsDB.EXTERNAL_IDS: OVSDB_EXT_IDS_CONF2}
-            )
-            changed_bridge.add_internal_port(
-                IFACE0,
-                ipv4_state={InterfaceIPv4.ENABLED: False},
-                ovs_db={OvsDB.EXTERNAL_IDS: OVSDB_EXT_IDS_CONF1},
-            )
-            changed_bridge.apply()
-            assertlib.assert_state_match(changed_bridge.state)
-            new_state = statelib.show_only((BRIDGE0, IFACE0))
-            assert (
-                new_state[Interface.KEY][0][OvsDB.OVS_DB_SUBTREE][
-                    OvsDB.EXTERNAL_IDS
-                ]
-                == OVSDB_EXT_IDS_CONF2_STR
-            )
-            assert (
-                new_state[Interface.KEY][1][OvsDB.OVS_DB_SUBTREE][
-                    OvsDB.EXTERNAL_IDS
-                ]
-                == OVSDB_EXT_IDS_CONF1_STR
-            )
-
-    def test_ovs_bridge_remoev_external_ids(self, disable_ovsdb_plugin):
-        bridge = Bridge(BRIDGE0)
-        bridge.set_ovs_db({OvsDB.EXTERNAL_IDS: OVSDB_EXT_IDS_CONF1})
-        bridge.add_internal_port(
-            IFACE0,
-            ipv4_state={InterfaceIPv4.ENABLED: False},
-            ovs_db={OvsDB.EXTERNAL_IDS: OVSDB_EXT_IDS_CONF2},
-        )
-        with bridge.create():
-            changed_bridge = Bridge(BRIDGE0)
-            changed_bridge.set_ovs_db({OvsDB.EXTERNAL_IDS: {}})
-            changed_bridge.add_internal_port(
-                IFACE0,
-                ipv4_state={InterfaceIPv4.ENABLED: False},
-                ovs_db={OvsDB.EXTERNAL_IDS: {}},
-            )
-            changed_bridge.apply()
-            assertlib.assert_state_match(changed_bridge.state)
-            new_state = statelib.show_only((BRIDGE0, IFACE0))
-            assert not new_state[Interface.KEY][0][OvsDB.OVS_DB_SUBTREE][
-                OvsDB.EXTERNAL_IDS
-            ]
-            assert not new_state[Interface.KEY][1][OvsDB.OVS_DB_SUBTREE][
-                OvsDB.EXTERNAL_IDS
-            ]
 
 
 def _nmcli_ovs_bridge_with_ipv4_dns():
