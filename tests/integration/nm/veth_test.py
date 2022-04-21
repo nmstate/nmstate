@@ -36,11 +36,6 @@ VETH1PEER = "veth1peer"
     nm_major_minor_version() <= 1.28,
     reason="Modifying veth interfaces is not supported on NetworkManager.",
 )
-@pytest.mark.xfail(
-    reason="https://bugzilla.redhat.com/1943525",
-    strict=True,
-    raises=AssertionError,
-)
 def test_remove_peer_connection():
     with veth_interface(VETH1, VETH1PEER) as desired_state:
         desired_state[Interface.KEY][0][
