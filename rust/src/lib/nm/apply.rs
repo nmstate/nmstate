@@ -107,8 +107,9 @@ fn delete_net_state(
                     );
                     uuids_to_delete.insert(uuid);
                 }
-                // Delete OVS port profile along with OVS Interface
-                if iface.iface_type() == InterfaceType::OvsInterface {
+                // Delete OVS port profile along with OVS system and internal
+                // Interface
+                if nm_conn.controller_type() == Some("ovs-port") {
                     // TODO: handle pre-exist OVS config using name instead of
                     // UUID for controller
                     if let Some(uuid) = nm_conn.controller() {
