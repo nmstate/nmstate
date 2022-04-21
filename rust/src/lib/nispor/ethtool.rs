@@ -1,16 +1,11 @@
 use crate::{
-    EthtoolCoalesceConfig, EthtoolConfig, EthtoolFeatureConfig,
-    EthtoolPauseConfig, EthtoolRingConfig,
+    EthtoolCoalesceConfig, EthtoolConfig, EthtoolPauseConfig, EthtoolRingConfig,
 };
 
 pub(crate) fn np_ethtool_to_nmstate(
     np_iface: &nispor::Iface,
 ) -> Option<EthtoolConfig> {
-    if let Some(ethtool_info) = &np_iface.ethtool {
-        return Some(gen_ethtool_config(ethtool_info));
-    }
-
-    None
+    np_iface.ethtool.as_ref().map(gen_ethtool_config)
 }
 
 fn gen_ethtool_config(ethtool_info: &nispor::EthtoolInfo) -> EthtoolConfig {
@@ -23,46 +18,7 @@ fn gen_ethtool_config(ethtool_info: &nispor::EthtoolInfo) -> EthtoolConfig {
         ret.pause = Some(pause_config);
     }
     if let Some(feature) = &ethtool_info.features {
-        let mut feature_config = EthtoolFeatureConfig::new();
-        let changeable = &feature.changeable;
-        if let Some(rx_checksum) = changeable.get("rx-checksum") {
-            feature_config.rx_checksum = Some(*rx_checksum);
-        }
-        if let Some(tx_generic_segmentation) =
-            changeable.get("tx-generic-segmentation")
-        {
-            feature_config.tx_generic_segmentation =
-                Some(*tx_generic_segmentation);
-        }
-        if let Some(rx_gro) = changeable.get("rx-gro") {
-            feature_config.rx_gro = Some(*rx_gro);
-        }
-        if let Some(rx_lro) = changeable.get("rx-lro") {
-            feature_config.rx_lro = Some(*rx_lro);
-        }
-        if let Some(rx_vlan_hw_parse) = changeable.get("rx-vlan-hw-parse") {
-            feature_config.rx_vlan_hw_parse = Some(*rx_vlan_hw_parse);
-        }
-        if let Some(tx_vlan_hw_insert) = changeable.get("tx-vlan-hw-insert") {
-            feature_config.tx_vlan_hw_insert = Some(*tx_vlan_hw_insert);
-        }
-        if let Some(rx_ntuple_filter) = changeable.get("rx-ntuple-filter") {
-            feature_config.rx_ntuple_filter = Some(*rx_ntuple_filter);
-        }
-        if let Some(rx_hashing) = changeable.get("rx-hashing") {
-            feature_config.rx_hashing = Some(*rx_hashing);
-        }
-        if let Some(tx_scatter_gather) = changeable.get("tx-scatter-gather") {
-            feature_config.tx_scatter_gather = Some(*tx_scatter_gather);
-        }
-        if let Some(tx_tcp_segmentation) = changeable.get("tx-tcp-segmentation")
-        {
-            feature_config.tx_tcp_segmentation = Some(*tx_tcp_segmentation);
-        }
-        if let Some(highdma) = changeable.get("highdma") {
-            feature_config.highdma = Some(*highdma);
-        }
-        ret.feature = Some(feature_config);
+        ret.feature = Some(feature.changeable.clone());
     }
     if let Some(coalesce) = &ethtool_info.coalesce {
         let mut coalesce_config = EthtoolCoalesceConfig::new();
