@@ -28,7 +28,7 @@ from ..testlib.bondlib import bond_interface
 BOND0 = "bondtest0"
 
 
-def test_bond_all_zero_ad_actor_system_been_ignored():
+def test_bond_all_zero_ad_actor_system():
     extra_iface_state = {
         Bond.CONFIG_SUBTREE: {
             Bond.MODE: BondMode.LACP,
@@ -41,6 +41,6 @@ def test_bond_all_zero_ad_actor_system_been_ignored():
         _, output, _ = cmdlib.exec_cmd(
             f"nmcli --fields bond.options c show {BOND0}".split(), check=True
         )
-        assert "ad_actor_system" not in output
+        assert "ad_actor_system" in output
 
     assertlib.assert_absent(BOND0)
