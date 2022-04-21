@@ -1,6 +1,9 @@
 use std::collections::HashMap;
+use std::convert::TryFrom;
+use std::marker::PhantomData;
+use std::str::FromStr;
 
-use serde::{Deserialize, Serialize};
+use serde::{de, de::Visitor, Deserialize, Deserializer, Serialize};
 
 use crate::{
     BaseInterface, BridgePortVlanConfig, ErrorKind, InterfaceType, NmstateError,
@@ -403,7 +406,11 @@ pub struct LinuxBridgeOptions {
         deserialize_with = "crate::deserializer::option_bool_or_string"
     )]
     pub multicast_query_use_ifaddr: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "de_multicast_router"
+    )]
     pub multicast_router: Option<LinuxBridgeMulticastRouterType>,
     #[serde(
         skip_serializing_if = "Option::is_none",
@@ -556,18 +563,56 @@ impl LinuxBridgeConfig {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum LinuxBridgeMulticastRouterType {
-    Auto,
-    Disabled,
-    Enabled,
+    Auto = 1,
+    Disabled = 0,
+    Enabled = 2,
 }
 
 impl Default for LinuxBridgeMulticastRouterType {
     fn default() -> Self {
         Self::Auto
+    }
+}
+
+impl FromStr for LinuxBridgeMulticastRouterType {
+    type Err = NmstateError;
+    fn from_str(s: &str) -> Result<Self, NmstateError> {
+        match s.to_lowercase().as_str() {
+            "auto" => Ok(Self::Auto),
+            "disabled" => Ok(Self::Disabled),
+            "enabled" => Ok(Self::Enabled),
+            _ => Err(NmstateError::new(
+                ErrorKind::InvalidArgument,
+                format!(
+                    "Invalid linux bridge multicast_router type {}, \
+                    expecting 0|1|2 or auto|disabled|enabled",
+                    s
+                ),
+            )),
+        }
+    }
+}
+
+impl TryFrom<u64> for LinuxBridgeMulticastRouterType {
+    type Error = NmstateError;
+    fn try_from(value: u64) -> Result<Self, NmstateError> {
+        match value {
+            x if x == Self::Auto as u64 => Ok(Self::Auto),
+            x if x == Self::Disabled as u64 => Ok(Self::Disabled),
+            x if x == Self::Enabled as u64 => Ok(Self::Enabled),
+            _ => Err(NmstateError::new(
+                ErrorKind::InvalidArgument,
+                format!(
+                    "Invalid linux bridge multicast_router type {}, \
+                    expecting 0|1|2 or auto|disabled|enabled",
+                    value
+                ),
+            )),
+        }
     }
 }
 
@@ -583,4 +628,52 @@ impl std::fmt::Display for LinuxBridgeMulticastRouterType {
             }
         )
     }
+}
+
+pub(crate) fn de_multicast_router<'de, D>(
+    deserializer: D,
+) -> Result<Option<LinuxBridgeMulticastRouterType>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    struct IntegerOrString(
+        PhantomData<fn() -> Option<LinuxBridgeMulticastRouterType>>,
+    );
+
+    impl<'de> Visitor<'de> for IntegerOrString {
+        type Value = Option<LinuxBridgeMulticastRouterType>;
+
+        fn expecting(
+            &self,
+            formatter: &mut std::fmt::Formatter,
+        ) -> std::fmt::Result {
+            formatter.write_str("integer 0|1|2 or string auto|disabled|enabled")
+        }
+
+        fn visit_str<E>(
+            self,
+            value: &str,
+        ) -> Result<Option<LinuxBridgeMulticastRouterType>, E>
+        where
+            E: de::Error,
+        {
+            FromStr::from_str(value)
+                .map_err(de::Error::custom)
+                .map(Some)
+        }
+
+        fn visit_u64<E>(
+            self,
+            value: u64,
+        ) -> Result<Option<LinuxBridgeMulticastRouterType>, E>
+        where
+            E: de::Error,
+        {
+            LinuxBridgeMulticastRouterType::try_from(value)
+                .map_err(de::Error::custom)
+                .map(Some)
+        }
+    }
+
+    deserializer.deserialize_any(IntegerOrString(PhantomData))
 }
