@@ -17,6 +17,8 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
+import os
+
 import pytest
 
 import libnmstate
@@ -139,6 +141,10 @@ def vrf1_with_unmanaged_port(unmanaged_port_up):
         )
 
 
+@pytest.mark.skipif(
+    os.environ.get("CI") == "true",
+    reason=("CI does not have vrf enabled"),
+)
 class TestVrf:
     def test_create_and_remove(self, vrf0_with_port0):
         pass
