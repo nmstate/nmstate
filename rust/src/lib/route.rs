@@ -217,6 +217,18 @@ impl Routes {
             })
         }
     }
+
+    pub(crate) fn get_config_routes_of_iface(
+        &self,
+        iface_name: &str,
+    ) -> Option<Vec<RouteEntry>> {
+        self.config.as_ref().map(|rts| {
+            rts.iter()
+                .filter(|r| r.next_hop_iface.as_deref() == Some(iface_name))
+                .cloned()
+                .collect()
+        })
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

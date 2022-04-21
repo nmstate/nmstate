@@ -40,7 +40,9 @@ pub use self::bond::NmSettingBond;
 pub use self::bridge::{
     NmSettingBridge, NmSettingBridgePort, NmSettingBridgeVlanRange,
 };
-pub use self::conn::{NmConnection, NmSettingConnection};
+pub use self::conn::{
+    NmConnection, NmSettingConnection, NmSettingsConnectionFlag,
+};
 pub use self::ethtool::NmSettingEthtool;
 pub use self::ieee8021x::NmSetting8021X;
 pub use self::infiniband::NmSettingInfiniBand;
