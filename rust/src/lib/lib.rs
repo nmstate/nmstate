@@ -11,6 +11,7 @@ mod nispor;
 mod nm;
 mod ovs;
 mod ovsdb;
+mod plugin;
 mod route;
 mod route_rule;
 mod serializer;

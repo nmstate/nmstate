@@ -701,6 +701,9 @@ impl NetworkState {
             None
         }
     }
+    pub fn list_plugins() -> Result<Vec<crate::plugin::Plugin>, NmstateError> {
+        crate::plugin::list_plugins()
+    }
 }
 
 fn with_nm_checkpoint<T>(

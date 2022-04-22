@@ -23,7 +23,7 @@ mod sriov;
 #[cfg(test)]
 mod unit_tests;
 mod user;
-mod version;
+pub mod version;
 mod veth;
 mod vlan;
 mod vrf;
