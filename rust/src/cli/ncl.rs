@@ -23,6 +23,7 @@ const SUB_CMD_ROLLBACK: &str = "rollback";
 const SUB_CMD_EDIT: &str = "edit";
 const SUB_CMD_VERSION: &str = "version";
 const SUB_CMD_AUTOCONF: &str = "autoconf";
+const SUB_CMD_PLUGINS: &str = "plugins";
 
 const EX_DATAERR: i32 = 65;
 const EXIT_FAILURE: i32 = 1;
@@ -55,6 +56,16 @@ fn main() {
                 .about(
                     "Automatically configure network base on LLDP \
                     information(experimental)")
+        )
+        .subcommand(
+            clap::Command::new(SUB_CMD_PLUGINS)
+                .about("Show included plugins with their version")
+                .arg(
+                    clap::Arg::new("JSON")
+                        .long("json")
+                        .takes_value(false)
+                        .help("Show plugins in json format"),
+                )
         )
         .subcommand(
             clap::Command::new(SUB_CMD_SHOW)
@@ -282,6 +293,8 @@ fn main() {
             APP_NAME,
             clap::crate_version!()
         ));
+    } else if let Some(matches) = matches.subcommand_matches(SUB_CMD_PLUGINS) {
+        print_result_and_exit(list_plugins(matches), EXIT_FAILURE);
     }
 }
 
@@ -595,4 +608,13 @@ fn set_ctrl_c_action() {
         std::process::exit(1);
     })
     .expect("Error setting Ctrl-C handler");
+}
+
+fn list_plugins(matches: &clap::ArgMatches) -> Result<String, CliError> {
+    let plugins = NetworkState::list_plugins().unwrap();
+    Ok(if matches.is_present("JSON") {
+        serde_json::to_string_pretty(&plugins)?
+    } else {
+        serde_yaml::to_string(&plugins)?
+    })
 }

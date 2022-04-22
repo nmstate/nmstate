@@ -1,5 +1,8 @@
 use crate::{nm::version, NmstateError};
 
+use serde::Serialize;
+
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize)]
 pub struct Plugin {
     name: String,
     version: String,
