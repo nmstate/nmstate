@@ -28,6 +28,9 @@ CLI_MANPAGE2=doc/nmstate-autoconf.8
 SPEC_FILE=packaging/nmstate.spec
 RPM_DATA=$(shell date +"%a %b %d %Y")
 
+#outdir is used by COPR as well: https://docs.pagure.org/copr.copr/user_documentation.html
+outdir ?= $(ROOT_DIR)
+
 CPU_BITS = $(shell getconf LONG_BIT)
 ifeq ($(CPU_BITS), 32)
     LIBDIR ?= $(PREFIX)/lib
@@ -138,7 +141,7 @@ release: dist
 
 .PHONY: srpm
 srpm: dist
-	rpmbuild --define "_srcrpmdir $(ROOT_DIR)/" -ts $(TARBALL)
+	rpmbuild --define "_srcrpmdir $(outdir)/" -ts $(TARBALL)
 	rm -f $(TARBALL)
 	rm -f $(VENDOR_TARBALL)
 

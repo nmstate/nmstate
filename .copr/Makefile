@@ -4,6 +4,6 @@ SRPM_DEPENDENCIES=python$(python_major_version)-setuptools git
 srpm:
 	rpm -q --whatprovides $(SRPM_DEPENDENCIES) || \
 		dnf -y install $(SRPM_DEPENDENCIES)
-	env SKIP_VENDOR_CREATION=1 \
+	env SKIP_VENDOR_CREATION=1 outdir=$(outdir) \
 		make srpm -C \
 		$(dir $(realpath $(firstword $(MAKEFILE_LIST))))../
