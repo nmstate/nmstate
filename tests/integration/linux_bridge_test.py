@@ -941,3 +941,35 @@ def test_desire_port_only_should_preserve_ctrl_setting(bridge0_with_port0):
 
     assert len(ports) == 1
     assert ports[0][LinuxBridge.Port.NAME] == "eth1"
+
+
+@pytest.mark.tier1
+@pytest.mark.parametrize(
+    "mcast_router_value",
+    [
+        0,
+        2,
+        1,
+        "disabled",
+        "enabled",
+        "auto",
+    ],
+    ids=[
+        "disabled_integer",
+        "enabled_integer",
+        "auto_integer",
+        "disabled",
+        "enabled",
+        "auto",
+    ],
+)
+def test_linux_bridge_multicast_router(bridge0_with_port0, mcast_router_value):
+    iface_state = {
+        Interface.NAME: TEST_BRIDGE0,
+        LinuxBridge.CONFIG_SUBTREE: {
+            LinuxBridge.OPTIONS_SUBTREE: {
+                LinuxBridge.Options.MULTICAST_ROUTER: mcast_router_value,
+            }
+        },
+    }
+    libnmstate.apply({Interface.KEY: [iface_state]})
