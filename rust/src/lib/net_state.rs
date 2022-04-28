@@ -1,4 +1,3 @@
-use std::cmp;
 use std::collections::HashMap;
 
 use log::{debug, info, warn};
@@ -278,9 +277,8 @@ impl NetworkState {
                     VERIFY_RETRY_COUNT
                 };
 
-            let checkpoint = nm_checkpoint_create(
-                self.timeout.unwrap_or(DEFAULT_ROLLBACK_TIMEOUT),
-            )?;
+            let timeout = self.timeout.unwrap_or(DEFAULT_ROLLBACK_TIMEOUT);
+            let checkpoint = nm_checkpoint_create(timeout)?;
             info!("Created checkpoint {}", &checkpoint);
 
             with_nm_checkpoint(&checkpoint, self.no_commit, || {
@@ -298,13 +296,7 @@ impl NetworkState {
                 if ovsdb_is_running() {
                     ovsdb_apply(&desire_state_to_apply, &cur_net_state)?;
                 }
-                nm_checkpoint_timeout_extend(
-                    &checkpoint,
-                    cmp::min(
-                        DEFAULT_ROLLBACK_TIMEOUT,
-                        self.timeout.unwrap_or(DEFAULT_ROLLBACK_TIMEOUT),
-                    ),
-                )?;
+                nm_checkpoint_timeout_extend(&checkpoint, timeout)?;
                 if !self.no_verify {
                     with_retry(
                         VERIFY_RETRY_INTERVAL_MILLISECONDS,
