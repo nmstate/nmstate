@@ -16,9 +16,9 @@ BuildRequires:  python3-setuptools
 BuildRequires:  python3-devel
 Requires:       %{name}-libs%{?_isa} = %{version}-%{release}
 %if 0%{?rhel}
-BuildRequires:  rust-toolset
+BuildRequires:  rust-toolset golang
 %else
-BuildRequires:  rust cargo
+BuildRequires:  rust cargo golang
 %endif
 
 %description
@@ -69,6 +69,9 @@ This package contains the Python 3 library for Nmstate.
 %setup -q
 
 %build
+pushd nmpolicy-0.2.1
+go build -o ../nmpolicyctl ./cmd/...
+popd 
 pushd rust/src/python
 %py3_build
 popd
@@ -80,6 +83,8 @@ popd
 
 env SKIP_PYTHON_INSTALL=1 PREFIX=%{_prefix} LIBDIR=%{_libdir} %make_install
 
+install -p -v -D -m755 nmpolicyctl %{buildroot}/%{_bindir}
+
 %files
 %doc README.md
 %doc examples/
@@ -87,6 +92,7 @@ env SKIP_PYTHON_INSTALL=1 PREFIX=%{_prefix} LIBDIR=%{_libdir} %make_install
 %{_mandir}/man8/nmstate-autoconf.8*
 %{_bindir}/nmstatectl
 %{_bindir}/nmstate-autoconf
+%{_bindir}/nmpolicyctl
 
 %files libs
 %{_libdir}/libnmstate.so.*

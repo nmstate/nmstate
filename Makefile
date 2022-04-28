@@ -113,6 +113,9 @@ dist: manpage $(SPEC_FILE) $(CLIB_HEADER)
 	cp $(CLI_MANPAGE2) $(TMPDIR)/nmstate-$(VERSION)/doc/
 	cp $(SPEC_FILE) $(TMPDIR)/nmstate-$(VERSION)/packaging/
 	cp $(CLIB_HEADER) $(TMPDIR)/nmstate-$(VERSION)/rust/src/clib/
+	curl -L https://github.com/nmstate/nmpolicy/archive/refs/tags/v0.2.1.tar.gz -o $(TMPDIR)/nmpolicy-v0.2.1.tar.gz
+	tar -xvzf $(TMPDIR)/nmpolicy-v0.2.1.tar.gz -C $(TMPDIR)
+	rm -r $(TMPDIR)/nmpolicy-v0.2.1.tar.gz
 	cd $(TMPDIR) && tar cfz $(TARBALL) nmstate-$(VERSION)/
 	mv $(TMPDIR)/$(TARBALL) ./
 	if [ $(SKIP_VENDOR_CREATION) == 0 ];then \
