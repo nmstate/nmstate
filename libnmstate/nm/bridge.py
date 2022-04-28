@@ -17,6 +17,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
+from libnmstate.error import NmstateNotImplementedError
 from libnmstate.schema import LinuxBridge as LB
 
 from .bridge_port_vlan import nmstate_port_vlan_to_nm
@@ -40,6 +41,12 @@ NM_BRIDGE_OPTIONS_MAP = {
     OPT.MULTICAST_QUERY_RESPONSE_INTERVAL: "multicast_query_response_interval",
     OPT.MULTICAST_STARTUP_QUERY_COUNT: "multicast_startup_query_count",
     OPT.MULTICAST_STARTUP_QUERY_INTERVAL: "multicast_startup_query_interval",
+}
+
+NM_BRIDGE_MCAST_ROUTER_VALUE_MAP = {
+    0: "disabled",
+    1: "auto",
+    2: "enabled",
 }
 
 
@@ -80,6 +87,8 @@ def _set_bridge_properties(bridge_setting, options):
             bridge_setting.props.multicast_snooping = val
         elif key == LB.STP_SUBTREE:
             _set_bridge_stp_properties(bridge_setting, val)
+        elif key == LB.Options.MULTICAST_ROUTER:
+            _set_bridge_mcast_router(bridge_setting, val)
         elif key in NM_BRIDGE_OPTIONS_MAP:
             nm_prop_name = NM_BRIDGE_OPTIONS_MAP[key]
             # NM is using the sysfs name
@@ -138,3 +147,14 @@ def create_port_setting(options, base_con_profile):
 
 def get_port(nm_device):
     return nm_device.get_slaves()
+
+
+def _set_bridge_mcast_router(bridge_setting, nmstate_value):
+    nm_value = NM_BRIDGE_MCAST_ROUTER_VALUE_MAP.get(nmstate_value)
+    if nm_value:
+        bridge_setting.props.multicast_router = nm_value
+    else:
+        raise NmstateNotImplementedError(
+            f"Unsupported value {nmstate_value} for "
+            "multicast_router bridge option"
+        )
