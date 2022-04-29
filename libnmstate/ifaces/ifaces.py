@@ -159,7 +159,8 @@ class Ifaces:
             self._apply_copy_mac_from()
             self.gen_metadata()
             for iface in self.all_ifaces():
-                iface.pre_edit_validation_and_cleanup()
+                if iface.is_desired and iface.is_up:
+                    iface.pre_edit_validation_and_cleanup()
 
             self._pre_edit_validation_and_cleanup()
 
@@ -293,7 +294,11 @@ class Ifaces:
         When OVS patch peer does not exist or is down, raise an error.
         """
         for iface in self._kernel_ifaces.values():
-            if iface.type == InterfaceType.OVS_INTERFACE and iface.is_up:
+            if (
+                iface.type == InterfaceType.OVS_INTERFACE
+                and iface.is_up
+                and iface.is_desired
+            ):
                 if iface.peer:
                     peer_iface = self._kernel_ifaces.get(iface.peer)
                     if not peer_iface or not peer_iface.is_up:
@@ -315,9 +320,9 @@ class Ifaces:
         Validate that vlan is not being created over infiniband interface
         """
         for iface in self._kernel_ifaces.values():
-
             if (
                 iface.type in [InterfaceType.VLAN, InterfaceType.VXLAN]
+                and iface.is_desired
                 and iface.is_up
             ):
                 if (
@@ -338,9 +343,9 @@ class Ifaces:
         If base MTU is not present, set same as vlan MTU
         """
         for iface in self._kernel_ifaces.values():
-
             if (
                 iface.type in [InterfaceType.VLAN, InterfaceType.VXLAN]
+                and iface.is_desired
                 and iface.is_up
                 and iface.mtu
             ):
@@ -423,6 +428,7 @@ class Ifaces:
         for ifname, iface in self._kernel_ifaces.items():
             if (
                 iface.type == InterfaceType.VETH
+                and iface.is_desired
                 and iface.is_up
                 and not iface.peer
             ):
