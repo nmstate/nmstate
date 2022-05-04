@@ -130,6 +130,7 @@ class InterfaceIP:
     AUTO_GATEWAY = "auto-gateway"
     AUTO_ROUTES = "auto-routes"
     AUTO_ROUTE_TABLE_ID = "auto-route-table-id"
+    MAY_FAIL = "may-fail"
 
 
 class InterfaceIPv4(InterfaceIP):

@@ -110,6 +110,7 @@ pub struct NmSettingIp {
     pub dhcp_client_id: Option<String>,
     pub dhcp_timeout: Option<i32>,
     pub gateway: Option<String>,
+    pub may_fail: Option<bool>,
     // IPv6 only
     pub ra_timeout: Option<i32>,
     // IPv6 only
@@ -142,6 +143,7 @@ impl TryFrom<DbusDictionary> for NmSettingIp {
                 "ignore-auto-routes",
                 bool::try_from
             )?,
+            may_fail: _from_map!(v, "may-fail", bool::try_from)?,
             dhcp_client_id: _from_map!(v, "dhcp-client-id", String::try_from)?,
             dhcp_timeout: _from_map!(v, "dhcp-timeout", i32::try_from)?,
             ra_timeout: _from_map!(v, "ra-timeout", i32::try_from)?,
@@ -260,6 +262,9 @@ impl NmSettingIp {
         }
         if let Some(v) = self.never_default {
             ret.insert("never-default", zvariant::Value::new(v));
+        }
+        if let Some(v) = self.may_fail {
+            ret.insert("may-fail", zvariant::Value::new(v));
         }
         if let Some(v) = &self.dhcp_client_id {
             ret.insert("dhcp-client-id", zvariant::Value::new(v));

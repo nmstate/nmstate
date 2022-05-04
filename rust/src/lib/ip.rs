@@ -50,6 +50,13 @@ pub struct InterfaceIpv4 {
         deserialize_with = "crate::deserializer::option_u32_or_string"
     )]
     pub auto_table_id: Option<u32>,
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "may-fail",
+        default,
+        deserialize_with = "crate::deserializer::option_bool_or_string"
+    )]
+    pub may_fail: Option<bool>,
 }
 
 impl InterfaceIpv4 {
@@ -212,6 +219,13 @@ pub struct InterfaceIpv6 {
         deserialize_with = "crate::deserializer::option_u32_or_string"
     )]
     pub auto_table_id: Option<u32>,
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "may-fail",
+        default,
+        deserialize_with = "crate::deserializer::option_bool_or_string"
+    )]
+    pub may_fail: Option<bool>,
 }
 
 impl InterfaceIpv6 {

@@ -207,6 +207,25 @@ def test_ipv4_dhcp(dhcpcli_up):
     assert _poll(_has_ipv4_classless_route)
 
 
+@pytest.mark.tier1
+def test_ipv4_dhcp_with_may_fail_no(dhcpcli_up):
+    desired_state = dhcpcli_up
+    dhcp_cli_desired_state = desired_state[Interface.KEY][0]
+    dhcp_cli_desired_state[Interface.STATE] = InterfaceState.UP
+    dhcp_cli_desired_state[Interface.IPV4] = _create_ipv4_state(
+        enabled=True,
+        dhcp=True,
+        may_fail=False,
+    )
+
+    libnmstate.apply(desired_state)
+    assertlib.assert_state(desired_state)
+
+    assert _poll(_has_ipv4_dhcp_nameserver)
+    assert _poll(_has_ipv4_dhcp_gateway)
+    assert _poll(_has_ipv4_classless_route)
+
+
 def test_ipv6_dhcp_only(dhcpcli_up):
     desired_state = dhcpcli_up
     dhcp_cli_desired_state = desired_state[Interface.KEY][0]
@@ -226,6 +245,25 @@ def test_ipv6_dhcp_only(dhcpcli_up):
 
 
 @pytest.mark.tier1
+def test_ipv6_dhcp_autoconf_and_may_fail_no(dhcpcli_up):
+    desired_state = dhcpcli_up
+    dhcp_cli_desired_state = desired_state[Interface.KEY][0]
+    dhcp_cli_desired_state[Interface.STATE] = InterfaceState.UP
+    dhcp_cli_desired_state[Interface.IPV6] = _create_ipv6_state(
+        enabled=True,
+        dhcp=True,
+        autoconf=True,
+        may_fail=False,
+    )
+
+    libnmstate.apply(desired_state)
+
+    assertlib.assert_state(desired_state)
+    assert _poll(_has_ipv6_auto_gateway)
+    assert _poll(_has_ipv6_auto_extra_route)
+    assert _poll(_has_ipv6_auto_nameserver)
+
+
 def test_ipv6_dhcp_and_autoconf(dhcpcli_up):
     desired_state = dhcpcli_up
     dhcp_cli_desired_state = desired_state[Interface.KEY][0]
@@ -805,6 +843,7 @@ def _create_ipv4_state(
     auto_dns=True,
     auto_gateway=True,
     auto_routes=True,
+    may_fail=True,
     table_id=0,
 ):
     state = {
@@ -813,6 +852,7 @@ def _create_ipv4_state(
         InterfaceIPv4.AUTO_DNS: auto_dns,
         InterfaceIPv4.AUTO_GATEWAY: auto_gateway,
         InterfaceIPv4.AUTO_ROUTES: auto_routes,
+        InterfaceIPv4.MAY_FAIL: may_fail,
     }
     if dhcp:
         state[InterfaceIPv4.AUTO_ROUTE_TABLE_ID] = table_id
@@ -827,6 +867,7 @@ def _create_ipv6_state(
     auto_dns=True,
     auto_gateway=True,
     auto_routes=True,
+    may_fail=True,
     table_id=0,
 ):
     state = {
@@ -836,6 +877,7 @@ def _create_ipv6_state(
         InterfaceIPv6.AUTO_DNS: auto_dns,
         InterfaceIPv6.AUTO_GATEWAY: auto_gateway,
         InterfaceIPv6.AUTO_ROUTES: auto_routes,
+        InterfaceIPv6.MAY_FAIL: may_fail,
     }
 
     if dhcp or autoconf:

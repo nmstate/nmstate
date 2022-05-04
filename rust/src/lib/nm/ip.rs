@@ -49,6 +49,7 @@ fn gen_nm_ipv4_setting(
     let mut nm_setting = nm_conn.ipv4.as_ref().cloned().unwrap_or_default();
     nm_setting.method = Some(method);
     nm_setting.addresses = addresses;
+    nm_setting.may_fail = iface_ip.may_fail;
     if iface_ip.is_auto() {
         nm_setting.dhcp_timeout = Some(i32::MAX);
         nm_setting.dhcp_client_id = Some("mac".to_string());
@@ -139,6 +140,7 @@ fn gen_nm_ipv6_setting(
     let mut nm_setting = nm_conn.ipv6.as_ref().cloned().unwrap_or_default();
     nm_setting.method = Some(method);
     nm_setting.addresses = addresses;
+    nm_setting.may_fail = iface_ip.may_fail;
     if iface_ip.is_auto() {
         nm_setting.dhcp_timeout = Some(i32::MAX);
         nm_setting.ra_timeout = Some(i32::MAX);
