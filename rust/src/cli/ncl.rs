@@ -295,7 +295,9 @@ fn gen_conf(file_path: &str) -> Result<String, CliError> {
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
 struct SortedNetworkState {
+    #[serde(rename = "dns-resolver", default)]
     dns: DnsState,
+    #[serde(rename = "route-rules", default)]
     rules: RouteRules,
     routes: Routes,
     interfaces: Vec<Value>,
