@@ -17,6 +17,8 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
+import json
+
 import pytest
 
 import libnmstate
@@ -29,6 +31,7 @@ from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import Route
 
+from .testlib import cmdlib
 
 IPV4_DNS_NAMESERVERS = ["8.8.8.8", "1.1.1.1"]
 EXTRA_IPV4_DNS_NAMESERVER = "9.9.9.9"
@@ -405,7 +408,7 @@ def static_dns():
         },
     }
     libnmstate.apply(desired_state)
-    yield
+    yield desired_state
 
 
 @pytest.mark.tier1
@@ -435,3 +438,12 @@ def test_change_dns_server_only(static_dns):
         DNS.SERVER: [IPV6_DNS_NAMESERVERS[1], IPV4_DNS_NAMESERVERS[1]],
         DNS.SEARCH: EXAMPLE_SEARCHES,
     }
+
+
+def test_nmstatectl_show_dns(static_dns):
+    rc, out, err = cmdlib.exec_cmd("nmstatectl show --json".split())
+    assert rc == 0
+    current_state = json.loads(out)
+    assert (
+        current_state[DNS.KEY][DNS.CONFIG] == static_dns[DNS.KEY][DNS.CONFIG]
+    )
