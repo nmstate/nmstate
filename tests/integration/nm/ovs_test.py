@@ -396,3 +396,54 @@ def test_remove_ovs_bridge_and_modify_ports(bridge_with_ports):
             ]
         }
         libnmstate.apply(absent_state)
+
+
+@pytest.mark.tier1
+def test_remove_ovs_bridge_clean_up_system_port_also(bridge_with_ports):
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: BRIDGE0,
+                    Interface.STATE: InterfaceState.ABSENT,
+                }
+            ]
+        }
+    )
+
+    _, output, _ = cmdlib.exec_cmd(
+        "nmcli -g connection.master c show eth1".split()
+    )
+    assert not output.strip()
+
+
+@pytest.fixture
+def bridge_with_eth1_and_same_name_iface(eth1_up):
+    bridge = Bridge(BRIDGE0)
+    bridge.add_system_port(ETH1)
+    bridge.add_internal_port(
+        BRIDGE0, ipv4_state={InterfaceIPv4.ENABLED: False}
+    )
+    with bridge.create():
+        yield bridge
+
+
+@pytest.mark.tier1
+def test_remove_same_name_ovs_bridge_clean_up_system_port_also(
+    bridge_with_eth1_and_same_name_iface,
+):
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: BRIDGE0,
+                    Interface.STATE: InterfaceState.ABSENT,
+                }
+            ]
+        }
+    )
+
+    _, output, _ = cmdlib.exec_cmd(
+        "nmcli -g connection.master c show eth1".split()
+    )
+    assert not output.strip()

@@ -176,18 +176,12 @@ fn handle_changed_ports_of_iface(
         Some(p) => HashSet::from_iter(p.iter().cloned()),
         None => return Ok(()),
     };
-    let current_port_names =
-        match cur_ifaces.kernel_ifaces.get(iface.name()).or_else(|| {
-            cur_ifaces
-                .user_ifaces
-                .get(&(iface.name().to_string(), iface.iface_type()))
-        }) {
-            Some(cur_iface) => match cur_iface.ports() {
-                Some(p) => HashSet::from_iter(p.iter().cloned()),
-                None => HashSet::new(),
-            },
-            None => HashSet::new(),
-        };
+
+    let current_port_names = cur_ifaces
+        .get_iface(iface.name(), iface.iface_type())
+        .and_then(|cur_iface| cur_iface.ports())
+        .map(|ports| HashSet::<&str>::from_iter(ports.iter().cloned()))
+        .unwrap_or_default();
 
     // Attaching new port to controller
     for port_name in desire_port_names.difference(&current_port_names) {
