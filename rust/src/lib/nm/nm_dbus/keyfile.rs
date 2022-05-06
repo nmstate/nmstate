@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fmt::Write;
 
 use log::error;
 
@@ -11,7 +12,7 @@ pub(crate) fn keyfile_sections_to_string(
 ) -> Result<String, NmError> {
     let mut ret = String::new();
     for (section_name, data) in sections {
-        ret += &format!("[{}]\n", section_name);
+        let _ = writeln!(ret, "[{}]", section_name);
         // Sort the keys
         let mut keys: Vec<&String> = data.keys().collect();
         keys.sort_unstable();
@@ -19,7 +20,7 @@ pub(crate) fn keyfile_sections_to_string(
             if let Some(v) = data.get(key) {
                 let v = zvariant_value_to_string(v)?;
                 if !v.is_empty() {
-                    ret += &format!("{}={}\n", key, v);
+                    let _ = writeln!(ret, "{}={}", key, v);
                 }
             }
         }
