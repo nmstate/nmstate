@@ -1,4 +1,5 @@
 use std::convert::TryFrom;
+use std::fmt::Write;
 
 use crate::nm::nm_dbus::{
     NmConnection, NmLldpNeighbor, NmLldpNeighbor8021Vlan,
@@ -85,7 +86,7 @@ impl From<&[NmLldpNeighbor8021Vlan]> for LldpVlans {
 fn u8_addr_to_mac_string(data: &[u8]) -> String {
     let mut addr = String::new();
     for (i, &val) in data.iter().enumerate() {
-        addr.push_str(&format!("{:02X}", val));
+        let _ = write!(addr, "{:02X}", val);
         if i != data.len() - 1 {
             addr.push(':');
         }
