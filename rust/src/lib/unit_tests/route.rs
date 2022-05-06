@@ -246,7 +246,7 @@ config:
 "#,
     )
     .unwrap();
-    routes.remove_ignored_iface_routes(&vec!["eth1".to_string()]);
+    routes.remove_ignored_iface_routes(&["eth1".to_string()]);
 
     let config_routes = routes.config.unwrap();
 
