@@ -101,12 +101,14 @@ impl<'a> NmApi<'a> {
     pub fn connection_deactivate(&self, uuid: &str) -> Result<(), NmError> {
         debug!("connection_deactivate: {}", uuid);
         // Race: ActiveConnection might be deleted
-        if let Ok(nm_ac) = get_nm_ac_obj_path_by_uuid(&self.dbus, uuid) {
-            if !nm_ac.is_empty() {
-                self.dbus.connection_deactivate(&nm_ac)?;
+        with_retry(RETRY_INTERVAL_MILLISECOND, RETRY_COUNT, || {
+            if let Ok(nm_ac) = get_nm_ac_obj_path_by_uuid(&self.dbus, uuid) {
+                if !nm_ac.is_empty() {
+                    self.dbus.connection_deactivate(&nm_ac)?;
+                }
             }
-        }
-        Ok(())
+            Ok(())
+        })
     }
 
     pub fn connections_get(&self) -> Result<Vec<NmConnection>, NmError> {
@@ -168,12 +170,18 @@ impl<'a> NmApi<'a> {
 
     pub fn connection_delete(&self, uuid: &str) -> Result<(), NmError> {
         debug!("connection_delete: {}", uuid);
-        if let Ok(con_obj_path) = self.dbus.get_connection_by_uuid(uuid) {
-            debug!("Found nm_connection {} for UUID {}", con_obj_path, uuid);
-            self.dbus.connection_delete(&con_obj_path)
-        } else {
+        with_retry(RETRY_INTERVAL_MILLISECOND, RETRY_COUNT, || {
+            if let Ok(con_obj_path) = self.dbus.get_connection_by_uuid(uuid) {
+                debug!(
+                    "Found nm_connection {} for UUID {}",
+                    con_obj_path, uuid
+                );
+                if !con_obj_path.is_empty() {
+                    self.dbus.connection_delete(&con_obj_path)?;
+                }
+            }
             Ok(())
-        }
+        })
     }
 
     pub fn connection_reapply(
