@@ -83,7 +83,7 @@ fn test_use_uuid_for_controller_reference_with_ovs_bond() {
         &mut nm_conns,
         &user_ifaces,
         &HashMap::new(),
-        &vec![],
+        &[],
     )
     .unwrap();
 

@@ -15,6 +15,7 @@
 
 use std::collections::HashMap;
 use std::convert::TryFrom;
+use std::fmt::Write;
 
 use serde::Deserialize;
 
@@ -149,26 +150,26 @@ impl NmSettingSriovVf {
     pub(crate) fn to_keyfile(&self) -> String {
         let mut ret = String::new();
         if let Some(v) = self.mac.as_ref() {
-            ret += &format!("mac={} ", v);
+            let _ = write!(ret, "mac={} ", v);
         }
         if let Some(v) = self.spoof_check {
-            ret += &format!("spoof-check={} ", v);
+            let _ = write!(ret, "spoof-check={} ", v);
         }
         if let Some(v) = self.trust {
-            ret += &format!("trust={} ", v);
+            let _ = write!(ret, "trust={} ", v);
         }
         if let Some(v) = self.min_tx_rate {
-            ret += &format!("min-tx-rate={} ", v);
+            let _ = write!(ret, "min-tx-rate={} ", v);
         }
         if let Some(v) = self.max_tx_rate {
-            ret += &format!("max-tx-rate={} ", v);
+            let _ = write!(ret, "max-tx-rate={} ", v);
         }
         if let Some(vlans) = self.vlans.as_ref() {
             let mut vlans_str = Vec::new();
             for vlan in vlans {
                 vlans_str.push(vlan.to_keyfile());
             }
-            ret += &format!("vlans={}", vlans_str.join(";"));
+            let _ = write!(ret, "vlans={}", vlans_str.join(";"));
         }
         if ret.ends_with(' ') {
             ret.pop();
