@@ -963,3 +963,15 @@ def test_linux_bridge_multicast_router(bridge0_with_port0, mcast_router_value):
         },
     }
     libnmstate.apply({Interface.KEY: [iface_state]})
+
+
+@pytest.mark.tier1
+def test_linux_bridge_show_port_ip_as_disabled(bridge0_with_port0):
+    state = show_only(("eth1",))
+
+    assert state[Interface.KEY][0][Interface.IPV4] == {
+        InterfaceIPv4.ENABLED: False
+    }
+    assert state[Interface.KEY][0][Interface.IPV6] == {
+        InterfaceIPv6.ENABLED: False
+    }
