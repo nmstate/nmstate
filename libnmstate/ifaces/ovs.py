@@ -237,6 +237,14 @@ class OvsInternalIface(BaseIface):
         )
 
     @property
+    def rx_queue(self):
+        return (
+            self.dpdk_config.get(OVSInterface.Dpdk.RX_QUEUE)
+            if self.dpdk_config
+            else None
+        )
+
+    @property
     def peer(self):
         return (
             self.patch_config.get(OVSInterface.Patch.PEER)
