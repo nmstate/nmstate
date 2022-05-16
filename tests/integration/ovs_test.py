@@ -939,7 +939,7 @@ def test_add_route_rule_to_ovs_interface_dhcp_auto_route_table(
     reason="Need to define TEST_PCI_PATH for OVS DPDK tests.",
 )
 class TestOvsDpdk:
-    def test_create_ovs_dpdk_and_remove(self, setup_ovs_dpdk):
+    def test_create_ovs_dpdk_and_remove(self):
         dpdk0_state = {OVSInterface.Dpdk.DEVARGS: _test_pci_path()}
         bridge = Bridge(BRIDGE0)
         bridge.add_internal_port(PORT1, dpdk_state=dpdk0_state)
@@ -956,11 +956,30 @@ class TestOvsDpdk:
         assertlib.assert_absent(PORT1)
 
     @pytest.mark.parametrize("datapaths", ("netdev", "system"))
-    def test_create_ovs_dpdk_with_datapath(self, setup_ovs_dpdk, datapaths):
+    def test_create_ovs_dpdk_with_datapath(self, datapaths):
         dpdk0_state = {OVSInterface.Dpdk.DEVARGS: _test_pci_path()}
         bridge = Bridge(BRIDGE0)
         bridge.add_internal_port(PORT1, dpdk_state=dpdk0_state)
         bridge.set_options({OVSBridge.Options.DATAPATH: datapaths})
+        desired_state = bridge.state
+        try:
+            libnmstate.apply(desired_state)
+            assertlib.assert_state_match(desired_state)
+        finally:
+            for iface in desired_state[Interface.KEY]:
+                iface[Interface.STATE] = InterfaceState.ABSENT
+            libnmstate.apply(desired_state)
+
+        assertlib.assert_absent(BRIDGE0)
+        assertlib.assert_absent(PORT1)
+
+    def test_create_ovs_dpdk_with_rx_queue(self):
+        dpdk0_state = {
+            OVSInterface.Dpdk.DEVARGS: _test_pci_path(),
+            OVSInterface.Dpdk.RX_QUEUE: 10,
+        }
+        bridge = Bridge(BRIDGE0)
+        bridge.add_internal_port(PORT1, dpdk_state=dpdk0_state)
         desired_state = bridge.state
         try:
             libnmstate.apply(desired_state)
