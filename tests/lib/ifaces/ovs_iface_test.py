@@ -267,6 +267,18 @@ class TestOvsInternalIface:
 
         assert iface.devargs == "000:18:00.2"
 
+    def test_rx_queue(self):
+        iface_info = {
+            Interface.NAME: "ovs0",
+            Interface.TYPE: InterfaceType.OVS_INTERFACE,
+            OVSInterface.DPDK_CONFIG_SUBTREE: {
+                OVSInterface.Dpdk.RX_QUEUE: 1000
+            },
+        }
+        iface = OvsInternalIface(iface_info)
+
+        assert iface.rx_queue == 1000
+
     def test_dpdk_config(self):
         iface_info = {
             Interface.NAME: "ovs0",
@@ -291,12 +303,12 @@ class TestOvsInternalIface:
 
         iface.pre_edit_validation_and_cleanup()
 
-    def test_invalid_ovs_interface_with_devargs(self):
+    def test_valid_ovs_interface_with_rx_queue(self):
         iface_info = {
             Interface.NAME: "ovs0",
             Interface.TYPE: InterfaceType.OVS_INTERFACE,
             OVSInterface.DPDK_CONFIG_SUBTREE: {
-                OVSInterface.Dpdk.DEVARGS: 23232
+                OVSInterface.Dpdk.RX_QUEUE: 1000
             },
         }
         iface = OvsInternalIface(iface_info)

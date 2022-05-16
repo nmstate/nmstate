@@ -358,6 +358,7 @@ class OVSInterface(OvsDB):
 
     class Dpdk:
         DEVARGS = "devargs"
+        RX_QUEUE = "rx-queue"
 
 
 class OVSBridge(Bridge, OvsDB):

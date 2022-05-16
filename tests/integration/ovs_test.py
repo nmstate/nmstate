@@ -971,28 +971,21 @@ class TestOvsDpdk:
         assertlib.assert_absent(BRIDGE0)
         assertlib.assert_absent(PORT1)
 
+    def test_create_ovs_dpdk_with_rx_queue(self, setup_ovs_dpdk):
+        dpdk0_state = {
+            OVSInterface.Dpdk.DEVARGS: _test_pci_path(),
+            OVSInterface.Dpdk.RX_QUEUE: 1000,
+        }
+        bridge = Bridge(BRIDGE0)
+        bridge.add_internal_port(PORT1, dpdk_state=dpdk0_state)
+        desired_state = bridge.state
+        try:
+            libnmstate.apply(desired_state)
+            assertlib.assert_state_match(desired_state)
+        finally:
+            for iface in desired_state[Interface.KEY]:
+                iface[Interface.STATE] = InterfaceState.ABSENT
+            libnmstate.apply(desired_state)
 
-@pytest.fixture
-def unmanged_ovs_vxlan():
-    cmdlib.exec_cmd("ovs-vsctl add-br br0_with_vxlan".split(), check=True)
-    cmdlib.exec_cmd(
-        "ovs-vsctl add-port br0_with_vxlan vx_node1 -- "
-        "set interface vx_node1 type=vxlan options:remote_ip=192.168.122.174 "
-        "options:dst_port=8472".split(),
-        check=True,
-    )
-    cmdlib.exec_cmd(
-        "nmcli d set vxlan_sys_8472 managed false".split(), check=True
-    )
-    try:
-        yield
-    finally:
-        cmdlib.exec_cmd("ovs-vsctl del-br br0_with_vxlan".split())
-
-
-@pytest.mark.tier1
-def test_ovs_vxlan_in_current_not_impact_others(unmanged_ovs_vxlan):
-    with Bridge(BRIDGE1).create() as state:
-        assertlib.assert_state_match(state)
-
-    assertlib.assert_absent(BRIDGE1)
+        assertlib.assert_absent(BRIDGE0)
+        assertlib.assert_absent(PORT1)
