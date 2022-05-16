@@ -149,6 +149,7 @@ def create_patch_setting(patch_state):
 def create_dpdk_setting(dpdk_state):
     dpdk_setting = NM.SettingOvsDpdk.new()
     dpdk_setting.props.devargs = dpdk_state[OVSInterface.Dpdk.DEVARGS]
+    dpdk_setting.props.n_rxq = dpdk_state[OVSInterface.Dpdk.RX_QUEUE]
 
     return dpdk_setting
 
@@ -215,6 +216,7 @@ def get_interface_info(act_con):
         if dpdk_setting:
             info[OVSInterface.DPDK_CONFIG_SUBTREE] = {
                 OVSInterface.Dpdk.DEVARGS: dpdk_setting.props.devargs,
+                OVSInterface.Dpdk.RX_QUEUE: dpdk_setting.props.n_rxq,
             }
 
     return info

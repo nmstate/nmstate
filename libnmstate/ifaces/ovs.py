@@ -280,6 +280,14 @@ class OvsInternalIface(BaseIface):
         )
 
     @property
+    def rx_queue(self):
+        return (
+            self.dpdk_config.get(OVSInterface.Dpdk.RX_QUEUE)
+            if self.dpdk_config
+            else None
+        )
+
+    @property
     def peer(self):
         return (
             self.patch_config.get(OVSInterface.Patch.PEER)
@@ -293,8 +301,13 @@ class OvsInternalIface(BaseIface):
             OVSInterface.Patch.PEER,
         )
         validate_string(
-            self.patch_config.get(OVSInterface.Dpdk.DEVARGS),
+            self.dpdk_config.get(OVSInterface.Dpdk.DEVARGS),
             OVSInterface.Dpdk.DEVARGS,
+        )
+        validate_integer(
+            self.dpdk_config.get(OVSInterface.Dpdk.RX_QUEUE),
+            OVSInterface.Dpdk.RX_QUEUE,
+            minimum=0,
         )
         super().pre_edit_validation_and_cleanup()
         self._validate_ovs_mtu_mac_confliction()
