@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::convert::TryFrom;
+use std::fmt::Write;
 
 use log::error;
 
@@ -63,23 +64,27 @@ pub(crate) fn zvariant_value_to_keyfile(
 
                 if let Some(section_value) = data.get(&key) {
                     if key == "mac-address" {
-                        ret += &format!(
-                            "mac-address={}\n",
+                        writeln!(
+                            ret,
+                            "mac-address={}",
                             mac_address_value_to_string(section_value)
-                        );
+                        )
+                        .unwrap_or_default();
                     } else if key == "type" && section_name == "connection" {
                         let iface_type = zvariant_value_to_keyfile(
                             section_value,
                             section_name,
                         )?;
-                        ret += &format!(
-                            "type={}\n",
+                        writeln!(
+                            ret,
+                            "type={}",
                             if iface_type == "802-3-ethernet" {
                                 "ethernet".to_string()
                             } else {
                                 iface_type
                             }
-                        );
+                        )
+                        .unwrap_or_default();
                     } else if key == "address-data" {
                         ret += &ip_address_value_to_string(section_value);
                     } else if let zvariant::Value::Dict(_) = section_value {
@@ -94,20 +99,23 @@ pub(crate) fn zvariant_value_to_keyfile(
                         } else {
                             format!("{}-{}", section_name, key)
                         };
-                        ret += &format!("\n[{}]\n", sub_section_name);
+                        writeln!(ret, "\n[{}]", sub_section_name)
+                            .unwrap_or_default();
                         ret += &zvariant_value_to_keyfile(
                             section_value,
                             &sub_section_name,
                         )?;
                     } else {
-                        ret += &format!(
-                            "{}={}\n",
+                        writeln!(
+                            ret,
+                            "{}={}",
                             key,
                             zvariant_value_to_keyfile(
                                 section_value,
                                 section_name
                             )?
-                        );
+                        )
+                        .unwrap_or_default();
                     }
                 }
             }
@@ -174,8 +182,8 @@ fn ip_address_value_to_string(value: &zvariant::Value) -> String {
             };
             if let Ok(address) = address {
                 if let Ok(prefix) = prefix {
-                    ret +=
-                        &format!("address{}={}/{}\n", index, address, prefix);
+                    writeln!(ret, "address{}={}/{}", index, address, prefix)
+                        .unwrap_or_default();
                     index += 1;
                 }
             }
