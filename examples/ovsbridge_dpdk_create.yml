@@ -14,6 +14,3 @@ interfaces:
     dpdk:
       devargs: "000:18:00.2"
       rx-queue: 10
-ovs-db:
-  other_config:
-    dpdk-init: "true"
