@@ -287,6 +287,7 @@ impl NmSettingOvsPatch {
 #[non_exhaustive]
 pub struct NmSettingOvsDpdk {
     pub devargs: Option<String>,
+    pub n_rxq: Option<u32>,
     _other: HashMap<String, zvariant::OwnedValue>,
 }
 
@@ -295,6 +296,7 @@ impl TryFrom<DbusDictionary> for NmSettingOvsDpdk {
     fn try_from(mut v: DbusDictionary) -> Result<Self, Self::Error> {
         Ok(Self {
             devargs: _from_map!(v, "devargs", String::try_from)?,
+            n_rxq: _from_map!(v, "n-rxq", u32::try_from)?,
             _other: v,
         })
     }
@@ -317,6 +319,9 @@ impl NmSettingOvsDpdk {
         let mut ret = HashMap::new();
         if let Some(v) = &self.devargs {
             ret.insert("devargs", zvariant::Value::new(v));
+        }
+        if let Some(v) = &self.n_rxq {
+            ret.insert("n-rxq", zvariant::Value::new(v));
         }
         ret.extend(self._other.iter().map(|(key, value)| {
             (key.as_str(), zvariant::Value::from(value.clone()))

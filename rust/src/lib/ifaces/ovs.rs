@@ -355,8 +355,10 @@ pub struct OvsPatchConfig {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
-#[serde(deny_unknown_fields)]
+#[serde(deny_unknown_fields, rename_all = "kebab-case")]
 #[non_exhaustive]
 pub struct OvsDpdkConfig {
     pub devargs: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rx_queue: Option<u32>,
 }
