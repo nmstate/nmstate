@@ -295,13 +295,14 @@ pub(crate) fn gen_nm_ovs_iface_setting(
         let mut nm_ovs_patch = NmSettingOvsPatch::default();
         nm_ovs_patch.peer = Some(peer.to_string());
         nm_conn.ovs_patch = Some(nm_ovs_patch);
-    } else if let Some(dpdk_devargs) =
-        iface.dpdk.as_ref().map(|c| c.devargs.as_str())
-    {
-        nm_ovs_iface_set.iface_type = Some("dpdk".to_string());
-        let mut nm_ovs_dpdk = NmSettingOvsDpdk::default();
-        nm_ovs_dpdk.devargs = Some(dpdk_devargs.to_string());
-        nm_conn.ovs_dpdk = Some(nm_ovs_dpdk);
+    } else if let Some(dpdk_iface) = iface.dpdk.as_ref() {
+        if !dpdk_iface.devargs.is_empty() {
+            nm_ovs_iface_set.iface_type = Some("dpdk".to_string());
+            let mut nm_ovs_dpdk = NmSettingOvsDpdk::default();
+            nm_ovs_dpdk.devargs = Some(dpdk_iface.devargs.to_string());
+            nm_ovs_dpdk.n_rxq = dpdk_iface.rx_queue;
+            nm_conn.ovs_dpdk = Some(nm_ovs_dpdk);
+        }
     } else {
         nm_ovs_iface_set.iface_type = Some("internal".to_string());
     }
@@ -378,6 +379,7 @@ pub(crate) fn get_ovs_dpdk_config(
         if let Some(devargs) = nm_ovs_dpdk_set.devargs.as_deref() {
             return Some(OvsDpdkConfig {
                 devargs: devargs.to_string(),
+                rx_queue: nm_ovs_dpdk_set.n_rxq,
             });
         }
     }
