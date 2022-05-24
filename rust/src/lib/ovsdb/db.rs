@@ -19,14 +19,14 @@ pub(crate) struct OvsDbConnection {
     rpc: OvsDbJsonRpc,
 }
 
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub(crate) struct OvsDbSelect {
     table: String,
     conditions: Vec<OvsDbCondition>,
     columns: Option<Vec<&'static str>>,
 }
 
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub(crate) struct OvsDbCondition {
     column: String,
     function: String,
@@ -267,7 +267,7 @@ pub(crate) fn parse_str_map(v: &[Value]) -> HashMap<String, String> {
     ret
 }
 
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub(crate) struct OvsDbUpdate {
     pub(crate) table: String,
     pub(crate) conditions: Vec<OvsDbCondition>,

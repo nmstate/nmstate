@@ -25,14 +25,14 @@ ipv6:
     let ipv4_conf = iface.ipv4.unwrap();
     let ipv6_conf = iface.ipv6.unwrap();
 
-    assert_eq!(ipv4_conf.enabled, true);
+    assert!(ipv4_conf.enabled);
     assert_eq!(ipv4_conf.dhcp, Some(false));
     assert_eq!(
         ipv4_conf.addresses.as_deref().unwrap()[0].ip.to_string(),
         "192.168.1.1"
     );
     assert_eq!(ipv4_conf.addresses.as_deref().unwrap()[0].prefix_length, 24);
-    assert_eq!(ipv6_conf.enabled, true);
+    assert!(ipv6_conf.enabled);
     assert_eq!(
         ipv6_conf.addresses.as_deref().unwrap()[0].ip.to_string(),
         "2001:db8:85a3::8a2e:370:7331",

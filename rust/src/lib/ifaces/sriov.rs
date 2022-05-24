@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{ErrorKind, Interface, InterfaceType, Interfaces, NmstateError};
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
 pub struct SrIovConfig {
@@ -113,7 +113,7 @@ impl SrIovConfig {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
 pub struct SrIovVfConfig {

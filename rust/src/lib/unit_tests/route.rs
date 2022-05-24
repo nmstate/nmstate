@@ -207,10 +207,10 @@ fn gen_test_routes_conf() -> Routes {
 }
 
 fn gen_test_route_entries() -> Vec<RouteEntry> {
-    let mut routes = Vec::new();
-    routes.push(gen_route_entry(TEST_IPV6_NET1, TEST_NIC, TEST_IPV6_ADDR1));
-    routes.push(gen_route_entry(TEST_IPV4_NET1, TEST_NIC, TEST_IPV4_ADDR1));
-    routes
+    vec![
+        gen_route_entry(TEST_IPV6_NET1, TEST_NIC, TEST_IPV6_ADDR1),
+        gen_route_entry(TEST_IPV4_NET1, TEST_NIC, TEST_IPV4_ADDR1),
+    ]
 }
 
 fn gen_route_entry(

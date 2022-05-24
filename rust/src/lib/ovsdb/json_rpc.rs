@@ -15,20 +15,20 @@ pub(crate) struct OvsDbJsonRpc {
     transaction_id: u64,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq, Eq)]
 struct OvsDbRpcRequest {
     method: String,
     params: Value,
     id: u64,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq, Eq)]
 struct OvsDbRpcError {
     error: String,
     details: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq, Eq)]
 pub(crate) struct OvsDbRpcReply {
     // The result might also contain a error.
     result: Value,

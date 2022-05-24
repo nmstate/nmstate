@@ -310,7 +310,7 @@ fn gen_conf(file_path: &str) -> Result<String, CliError> {
     Ok(serde_yaml::to_string(&confs)?)
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 struct SortedNetworkState {
     #[serde(rename = "dns-resolver", default)]
     dns: DnsState,

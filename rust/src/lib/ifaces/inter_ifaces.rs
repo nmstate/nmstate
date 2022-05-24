@@ -31,7 +31,7 @@ const COPY_MAC_ALLOWED_IFACE_TYPES: [InterfaceType; 3] = [
     InterfaceType::OvsInterface,
 ];
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct Interfaces {
     pub(crate) kernel_ifaces: HashMap<String, Interface>,
