@@ -5,8 +5,8 @@ use crate::{
     nm::dns::{apply_nm_dns_setting, nm_dns_to_nmstate},
     nm::route::gen_nm_ip_routes,
     nm::route_rule::gen_nm_ip_rules,
-    Dhcpv6Duid, ErrorKind, Interface, InterfaceIpv4, InterfaceIpv6,
-    NmstateError, RouteEntry, RouteRuleEntry,
+    Dhcpv4ClientId, Dhcpv6Duid, ErrorKind, Interface, InterfaceIpv4,
+    InterfaceIpv6, NmstateError, RouteEntry, RouteRuleEntry,
 };
 
 const NM_CONFIG_ADDR_GEN_MODE_EUI64: i32 = 0;
@@ -51,7 +51,13 @@ fn gen_nm_ipv4_setting(
     nm_setting.addresses = addresses;
     if iface_ip.is_auto() {
         nm_setting.dhcp_timeout = Some(i32::MAX);
-        nm_setting.dhcp_client_id = Some("mac".to_string());
+        nm_setting.dhcp_client_id = Some(nmstate_dhcp_client_id_to_nm(
+            iface_ip
+                .dhcp_client_id
+                .as_ref()
+                .unwrap_or(&Dhcpv4ClientId::LinkLayerAddress),
+        ));
+
         apply_dhcp_opts(
             &mut nm_setting,
             iface_ip.auto_dns,
@@ -221,6 +227,7 @@ pub(crate) fn nm_ip_setting_to_nmstate4(
             prop_list: vec![
                 "enabled",
                 "dhcp",
+                "dhcp_client_id",
                 "dns",
                 "auto_dns",
                 "auto_routes",
@@ -228,6 +235,7 @@ pub(crate) fn nm_ip_setting_to_nmstate4(
                 "auto_table_id",
             ],
             dns: Some(nm_dns_to_nmstate(nm_ip_setting)),
+            dhcp_client_id: nm_dhcp_client_id_to_nmstate(nm_ip_setting),
             ..Default::default()
         }
     } else {
@@ -322,5 +330,24 @@ fn nm_dhcp_duid_to_nmstate(nm_setting: &NmSettingIp) -> Option<Dhcpv6Duid> {
         Some("uuid") => Some(Dhcpv6Duid::Uuid),
         Some(nm_duid) => Some(Dhcpv6Duid::Other(nm_duid.to_string())),
         None => None,
+    }
+}
+
+fn nm_dhcp_client_id_to_nmstate(
+    nm_setting: &NmSettingIp,
+) -> Option<Dhcpv4ClientId> {
+    match nm_setting.dhcp_client_id.as_deref() {
+        Some("mac") => Some(Dhcpv4ClientId::LinkLayerAddress),
+        Some("duid") => Some(Dhcpv4ClientId::IaidPlusDuid),
+        Some(nm_id) => Some(Dhcpv4ClientId::Other(nm_id.to_string())),
+        None => None,
+    }
+}
+
+fn nmstate_dhcp_client_id_to_nm(client_id: &Dhcpv4ClientId) -> String {
+    match client_id {
+        Dhcpv4ClientId::LinkLayerAddress => "mac".into(),
+        Dhcpv4ClientId::IaidPlusDuid => "duid".into(),
+        Dhcpv4ClientId::Other(s) => s.into(),
     }
 }
