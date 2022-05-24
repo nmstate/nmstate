@@ -108,7 +108,7 @@ impl TryFrom<DbusDictionary> for NmLldpNeighbor {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Default, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Default, Deserialize)]
 #[serde(try_from = "DbusDictionary")]
 pub struct NmLldpNeighbor8021Ppvid {
     pub ppvid: Option<u32>,
@@ -135,7 +135,7 @@ impl TryFrom<DbusDictionary> for NmLldpNeighbor8021Ppvid {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Default, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Default, Deserialize)]
 #[serde(try_from = "DbusDictionary")]
 pub struct NmLldpNeighbor8021Vlan {
     pub vid: Option<u32>,
@@ -162,7 +162,7 @@ impl TryFrom<DbusDictionary> for NmLldpNeighbor8021Vlan {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Default, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Default, Deserialize)]
 pub struct NmLldpNeighbor8023MacPhyConf {
     pub autoneg: Option<u32>,
     pub pmd_autoneg_cap: Option<u32>,
@@ -185,7 +185,7 @@ impl TryFrom<zvariant::OwnedValue> for NmLldpNeighbor8023MacPhyConf {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Default, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Default, Deserialize)]
 pub struct NmLldpNeighbor8023PowerViaMdi {
     pub mdi_power_support: Option<u32>,
     pub pse_power_pair: Option<u32>,
@@ -208,7 +208,7 @@ impl TryFrom<zvariant::OwnedValue> for NmLldpNeighbor8023PowerViaMdi {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Default, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Default, Deserialize)]
 #[serde(try_from = "DbusDictionary")]
 pub struct NmLldpNeighborMgmtAddr {
     pub address_subtype: Option<u32>,

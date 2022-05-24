@@ -1,13 +1,13 @@
 use crate::testlib::cmd::cmd_exec_check;
 use serde::Deserialize;
 
-#[derive(Deserialize, Debug, PartialEq, Clone)]
+#[derive(Deserialize, Debug, PartialEq, Eq, Clone)]
 struct IpAddrShowResult {
     ifname: String,
     addr_info: Vec<IpAddrShowResultAddrInfo>,
 }
 
-#[derive(Deserialize, Debug, PartialEq, Clone)]
+#[derive(Deserialize, Debug, PartialEq, Eq, Clone)]
 struct IpAddrShowResultAddrInfo {
     local: String,
     prefixlen: u32,

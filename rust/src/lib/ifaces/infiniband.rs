@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize, Serializer};
 
 use crate::{BaseInterface, InterfaceType};
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub struct InfiniBandInterface {
@@ -34,7 +34,7 @@ impl InfiniBandInterface {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Copy)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum InfiniBandMode {
@@ -61,7 +61,7 @@ impl std::fmt::Display for InfiniBandMode {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
 pub struct InfiniBandConfig {
