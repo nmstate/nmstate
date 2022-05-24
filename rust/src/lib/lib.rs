@@ -42,7 +42,7 @@ pub use crate::ifaces::{
     VlanInterface, VrfConfig, VrfInterface, VxlanConfig, VxlanInterface,
 };
 pub use crate::ip::{
-    Dhcpv6Duid, InterfaceIpAddr, InterfaceIpv4, InterfaceIpv6,
+    Dhcpv4ClientId, Dhcpv6Duid, InterfaceIpAddr, InterfaceIpv4, InterfaceIpv6,
 };
 pub use crate::lldp::{
     LldpAddressFamily, LldpChassisId, LldpChassisIdType, LldpConfig,
