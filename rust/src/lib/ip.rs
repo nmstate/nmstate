@@ -18,6 +18,11 @@ pub struct InterfaceIpv4 {
         deserialize_with = "crate::deserializer::option_bool_or_string"
     )]
     pub dhcp: Option<bool>,
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "dhcp-client-id"
+    )]
+    pub dhcp_client_id: Option<Dhcpv4ClientId>,
     #[serde(skip_serializing_if = "Option::is_none", rename = "address")]
     pub addresses: Option<Vec<InterfaceIpAddr>>,
     #[serde(skip)]
@@ -69,7 +74,9 @@ impl InterfaceIpv4 {
         if other.prop_list.contains(&"dhcp") {
             self.dhcp = other.dhcp;
         }
-
+        if other.prop_list.contains(&"dhcp_client_id") {
+            self.dhcp_client_id = other.dhcp_client_id.clone();
+        }
         if other.prop_list.contains(&"addresses") {
             self.addresses = other.addresses.clone();
         }
@@ -463,6 +470,43 @@ pub(crate) fn include_current_ip_address_if_dhcp_on_to_off(
                     }
                 }
             }
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
+#[serde(from = "String", into = "String")]
+pub enum Dhcpv4ClientId {
+    LinkLayerAddress,
+    // RFC 4361 type 255, 32 bits IAID followed by DUID.
+    IaidPlusDuid,
+    // hex string or backend specific client id type
+    Other(String),
+}
+
+impl std::fmt::Display for Dhcpv4ClientId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", String::from(self.clone()))
+    }
+}
+
+impl From<String> for Dhcpv4ClientId {
+    fn from(s: String) -> Self {
+        return match s.as_str() {
+            "ll" | "LL" => Self::LinkLayerAddress,
+            "iaid+duid" | "IAID+DUID" => Self::IaidPlusDuid,
+            _ => Self::Other(s),
+        };
+    }
+}
+
+impl From<Dhcpv4ClientId> for String {
+    fn from(v: Dhcpv4ClientId) -> Self {
+        match v {
+            Dhcpv4ClientId::LinkLayerAddress => "ll".to_string(),
+            Dhcpv4ClientId::IaidPlusDuid => "iaid+duid".to_string(),
+            Dhcpv4ClientId::Other(s) => s,
         }
     }
 }
