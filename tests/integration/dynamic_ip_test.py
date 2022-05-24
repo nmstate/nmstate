@@ -1288,3 +1288,25 @@ def test_dhcpv6_duid(dhcpcli_up_with_dynamic_ip, duid_type):
             ]
         }
     )
+
+
+@pytest.mark.parametrize(
+    "client_id_type",
+    ["ll", "iaid+duid", "0f:66:55:BC:73:4D"],
+    ids=["ll", "iaid+duid", "raw"],
+)
+def test_dhcpv4_client_id(dhcpcli_up_with_dynamic_ip, client_id_type):
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: DHCP_CLI_NIC,
+                    Interface.IPV4: {
+                        InterfaceIPv4.ENABLED: True,
+                        InterfaceIPv4.DHCP: True,
+                        InterfaceIPv4.DHCP_CLIENT_ID: client_id_type,
+                    },
+                }
+            ]
+        }
+    )
