@@ -50,7 +50,7 @@ const LLDP_SYS_CAP_CVLAN: u16 = 9;
 const LLDP_SYS_CAP_SVLAN: u16 = 10;
 const LLDP_SYS_CAP_TWO_PORT_MAC_RELAY: u16 = 11;
 
-#[derive(Debug, Clone, PartialEq, Default, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Default, Deserialize, Serialize)]
 #[non_exhaustive]
 #[serde(deny_unknown_fields)]
 pub struct LldpConfig {
@@ -66,7 +66,7 @@ impl LldpConfig {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(untagged)]
 #[non_exhaustive]
 pub enum LldpNeighborTlv {
@@ -82,7 +82,7 @@ pub enum LldpNeighborTlv {
     Ieee8023MaxFrameSize(LldpMaxFrameSize),
 }
 
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct LldpSystemName(pub String);
 
 impl Serialize for LldpSystemName {
@@ -98,7 +98,7 @@ impl Serialize for LldpSystemName {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct LldpSystemDescription(pub String);
 
 impl Serialize for LldpSystemDescription {
@@ -114,7 +114,7 @@ impl Serialize for LldpSystemDescription {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 #[non_exhaustive]
 pub struct LldpChassisId {
     pub id: String,
@@ -137,7 +137,7 @@ impl Serialize for LldpChassisId {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub enum LldpChassisIdType {
     Reserved,
     #[serde(rename = "Chassis component")]
@@ -194,7 +194,7 @@ impl Default for LldpChassisIdType {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 #[non_exhaustive]
 pub struct LldpSystemCapabilities(pub u16);
 
@@ -251,7 +251,7 @@ fn parse_sys_caps(caps: u16) -> Vec<LldpSystemCapability> {
     ret
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[non_exhaustive]
 pub enum LldpSystemCapability {
     Other,
@@ -280,7 +280,7 @@ impl Default for LldpSystemCapability {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 #[non_exhaustive]
 pub struct LldpPortId {
     pub id: String,
@@ -302,7 +302,7 @@ impl Serialize for LldpPortId {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub enum LldpPortIdType {
     Reserved,
     #[serde(rename = "Interface alias")]
@@ -357,7 +357,7 @@ impl From<u8> for LldpPortIdType {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 #[non_exhaustive]
 pub struct LldpVlans(pub Vec<LldpVlan>);
 
@@ -376,14 +376,14 @@ impl Serialize for LldpVlans {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Default)]
 #[non_exhaustive]
 pub struct LldpVlan {
     pub name: String,
     pub vid: u32,
 }
 
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 #[non_exhaustive]
 pub struct LldpMacPhyConf {
     pub autoneg: bool,
@@ -391,7 +391,7 @@ pub struct LldpMacPhyConf {
     pub pmd_autoneg_cap: u16,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[non_exhaustive]
 #[serde(rename_all = "kebab-case")]
 struct _LldpMacPhyConf {
@@ -430,7 +430,7 @@ impl Serialize for LldpMacPhyConf {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 #[non_exhaustive]
 pub struct LldpPpvids(pub Vec<u32>);
 impl Serialize for LldpPpvids {
@@ -449,7 +449,7 @@ impl Serialize for LldpPpvids {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 #[non_exhaustive]
 pub struct LldpMgmtAddrs(pub Vec<LldpMgmtAddr>);
 impl Serialize for LldpMgmtAddrs {
@@ -466,7 +466,7 @@ impl Serialize for LldpMgmtAddrs {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Default)]
 #[non_exhaustive]
 #[serde(rename_all = "kebab-case")]
 pub struct LldpMgmtAddr {
@@ -476,7 +476,7 @@ pub struct LldpMgmtAddr {
     pub interface_number_subtype: u32,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[non_exhaustive]
 pub enum LldpAddressFamily {
     Unknown,
@@ -509,7 +509,7 @@ impl From<u16> for LldpAddressFamily {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 #[non_exhaustive]
 pub struct LldpMaxFrameSize(pub u32);
 impl Serialize for LldpMaxFrameSize {

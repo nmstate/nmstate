@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{DnsClientState, ErrorKind, Interfaces, NmstateError};
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[non_exhaustive]
 pub struct InterfaceIpv4 {
     #[serde(default, deserialize_with = "crate::deserializer::bool_or_string")]
@@ -161,7 +161,7 @@ impl InterfaceIpv4 {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct InterfaceIpv6 {
     #[serde(default, deserialize_with = "crate::deserializer::bool_or_string")]
@@ -353,7 +353,7 @@ impl InterfaceIpv6 {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub struct InterfaceIpAddr {

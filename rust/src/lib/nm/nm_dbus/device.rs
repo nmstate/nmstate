@@ -56,7 +56,7 @@ const NM_DEVICE_STATE_ACTIVATED: u32 = 100;
 const NM_DEVICE_STATE_DEACTIVATING: u32 = 110;
 const NM_DEVICE_STATE_FAILED: u32 = 120;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum NmDeviceState {
     Unknown,
@@ -173,7 +173,7 @@ const NM_DEVICE_STATE_REASON_IP_METHOD_UNSUPPORTED: u32 = 65;
 const NM_DEVICE_STATE_REASON_SRIOV_CONFIGURATION_FAILED: u32 = 66;
 const NM_DEVICE_STATE_REASON_PEER_NOT_FOUND: u32 = 67;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum NmDeviceStateReason {
     Null,
@@ -379,7 +379,7 @@ impl From<u32> for NmDeviceStateReason {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct NmDevice {
     pub name: String,
     pub iface_type: String,
