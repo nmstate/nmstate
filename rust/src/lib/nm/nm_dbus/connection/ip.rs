@@ -35,7 +35,7 @@ use super::super::{
     error::{ErrorKind, NmError},
 };
 
-#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(try_from = "zvariant::OwnedValue")]
 #[non_exhaustive]
 pub enum NmSettingIpMethod {

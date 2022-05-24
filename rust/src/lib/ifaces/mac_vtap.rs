@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{BaseInterface, ErrorKind, InterfaceType, NmstateError};
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct MacVtapInterface {
     #[serde(flatten)]
@@ -60,7 +60,7 @@ impl MacVtapInterface {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
 pub struct MacVtapConfig {
@@ -86,7 +86,7 @@ impl MacVtapConfig {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum MacVtapMode {

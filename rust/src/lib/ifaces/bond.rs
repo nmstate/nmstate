@@ -1,7 +1,7 @@
 use crate::{BaseInterface, ErrorKind, Interface, InterfaceType, NmstateError};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub struct BondInterface {
@@ -187,7 +187,7 @@ impl BondInterface {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Copy)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy)]
 #[non_exhaustive]
 pub enum BondMode {
     #[serde(rename = "balance-rr")]
@@ -233,7 +233,7 @@ impl std::fmt::Display for BondMode {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
 pub struct BondConfig {
@@ -266,7 +266,7 @@ impl BondConfig {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Copy)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum BondAdSelect {
@@ -302,7 +302,7 @@ impl std::fmt::Display for BondAdSelect {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum BondLacpRate {
@@ -325,7 +325,7 @@ impl std::fmt::Display for BondLacpRate {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Copy)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum BondAllPortsActive {
@@ -357,7 +357,7 @@ impl From<BondAllPortsActive> for u8 {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum BondArpAllTargets {
@@ -380,7 +380,7 @@ impl std::fmt::Display for BondArpAllTargets {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum BondArpValidate {
@@ -418,7 +418,7 @@ impl std::fmt::Display for BondArpValidate {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Copy)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum BondFailOverMac {
@@ -444,7 +444,7 @@ impl std::fmt::Display for BondFailOverMac {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum BondPrimaryReselect {
@@ -470,7 +470,7 @@ impl std::fmt::Display for BondPrimaryReselect {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 #[non_exhaustive]
 pub enum BondXmitHashPolicy {
     #[serde(rename = "layer2")]
@@ -523,7 +523,7 @@ impl std::fmt::Display for BondXmitHashPolicy {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Default, Clone, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, Default, Clone, PartialEq, Eq)]
 #[non_exhaustive]
 #[serde(deny_unknown_fields)]
 pub struct BondOptions {
