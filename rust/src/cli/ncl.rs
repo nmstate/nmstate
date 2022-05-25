@@ -38,6 +38,12 @@ fn main() {
                 .help("Set verbose level")
                 .global(true),
         )
+        .arg(
+            clap::Arg::new("quiet")
+                .short('q')
+                .help("Disable logging")
+                .global(true),
+        )
         .subcommand(
             clap::SubCommand::with_name(SUB_CMD_SHOW)
                 .about("Show network state")
@@ -208,21 +214,22 @@ fn main() {
        ).get_matches();
     let (log_module_filters, log_level) =
         match matches.occurrences_of("verbose") {
-            0 => (vec!["nmstate", "nm_dbus"], LevelFilter::Warn),
-            1 => (vec!["nmstate", "nm_dbus"], LevelFilter::Info),
-            2 => (vec!["nmstate", "nm_dbus"], LevelFilter::Debug),
+            0 => (vec!["nmstate", "nm_dbus"], LevelFilter::Info),
+            1 => (vec!["nmstate", "nm_dbus"], LevelFilter::Debug),
             _ => (vec![""], LevelFilter::Debug),
         };
 
-    let mut log_builder = Builder::new();
-    for log_module_filter in log_module_filters {
-        if !log_module_filter.is_empty() {
-            log_builder.filter(Some(log_module_filter), log_level);
-        } else {
-            log_builder.filter(None, log_level);
+    if !matches.is_present("quiet") {
+        let mut log_builder = Builder::new();
+        for log_module_filter in log_module_filters {
+            if !log_module_filter.is_empty() {
+                log_builder.filter(Some(log_module_filter), log_level);
+            } else {
+                log_builder.filter(None, log_level);
+            }
         }
+        log_builder.init();
     }
-    log_builder.init();
 
     if let Some(matches) = matches.subcommand_matches(SUB_CMD_GEN_CONF) {
         if let Some(file_path) = matches.value_of("STATE_FILE") {
