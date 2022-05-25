@@ -16,14 +16,11 @@ fi
 
 for node in $(./k8s/kubectl.sh get nodes --no-headers | awk '{print $1}'); do
     ./k8s/ssh.sh $node -- \
-        "sudo dnf copr enable nmstate/ovs-el8 -y && \
-        sudo dnf upgrade -y --nobest && \
-        sudo dnf install -y \
+        "sudo dnf upgrade -y \
+            openvswitch \
             NetworkManager \
             NetworkManager-ovs \
-            NetworkManager-team \
-            NetworkManager-config-server \
-            openvswitch2.11 && \
+            NetworkManager-config-server && \
         sudo systemctl enable openvswitch && \
         sudo sed -i -e 's/^#RateLimitInterval=.*/RateLimitInterval=0/' \
             -e 's/^#RateLimitBurst=.*/RateLimitBurst=0/' \

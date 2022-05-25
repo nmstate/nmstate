@@ -1,5 +1,5 @@
 export KUBEVIRT_PROVIDER=${KUBEVIRT_PROVIDER:-'k8s-1.22'}
-export KUBEVIRTCI_TAG='2112230038-265e857'
+export KUBEVIRTCI_TAG='2205231118-f12b50e'
 
 KUBEVIRTCI_REPO='https://github.com/kubevirt/kubevirtci.git'
 KUBEVIRTCI_PATH="${PWD}/_kubevirtci"
