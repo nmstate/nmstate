@@ -1,3 +1,5 @@
+use std::error::Error;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum ErrorKind {
@@ -22,6 +24,8 @@ impl std::fmt::Display for NmstateError {
         write!(f, "{}: {}", self.kind, self.msg)
     }
 }
+
+impl Error for NmstateError {}
 
 #[derive(Debug)]
 #[non_exhaustive]
