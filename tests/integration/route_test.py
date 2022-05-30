@@ -1077,3 +1077,51 @@ def test_delete_both_route_and_interface(br_with_static_route):
         }
     )
     assertlib.assert_absent(TEST_BRIDGE0)
+
+
+@pytest.fixture
+def br_with_static_route_rule(br_with_static_route):
+    libnmstate.apply(
+        {
+            RouteRule.KEY: {
+                RouteRule.CONFIG: [
+                    {
+                        RouteRule.IP_FROM: "192.168.3.0/24",
+                        RouteRule.ROUTE_TABLE: IPV4_ROUTE_TABLE_ID1,
+                    },
+                    {
+                        RouteRule.IP_FROM: "2001:db8:f::",
+                        RouteRule.ROUTE_TABLE: IPV6_ROUTE_TABLE_ID1,
+                    },
+                ]
+            }
+        }
+    )
+    yield
+
+
+@pytest.mark.tier1
+def test_delete_both_route_rule_and_interface(br_with_static_route_rule):
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: TEST_BRIDGE0,
+                    Interface.STATE: InterfaceState.ABSENT,
+                }
+            ],
+            RouteRule.KEY: {
+                RouteRule.CONFIG: [
+                    {
+                        RouteRule.ROUTE_TABLE: IPV4_ROUTE_TABLE_ID1,
+                        RouteRule.STATE: Route.STATE_ABSENT,
+                    },
+                    {
+                        RouteRule.ROUTE_TABLE: IPV6_ROUTE_TABLE_ID1,
+                        RouteRule.STATE: Route.STATE_ABSENT,
+                    },
+                ]
+            },
+        }
+    )
+    assertlib.assert_absent(TEST_BRIDGE0)
