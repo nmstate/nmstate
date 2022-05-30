@@ -31,8 +31,10 @@ from libnmstate.schema import InterfaceType
 from libnmstate.schema import Route
 from libnmstate.schema import RouteRule
 
+from .testlib import assertlib
 from .testlib import cmdlib
 from .testlib import iprule
+from .testlib.bridgelib import linux_bridge
 
 IPV4_ADDRESS1 = "192.0.2.251"
 IPV4_ADDRESS2 = "192.0.2.252"
@@ -86,6 +88,8 @@ ETH1_INTERFACE_STATE = {
         InterfaceIPv6.ENABLED: True,
     },
 }
+
+TEST_BRIDGE0 = "linux-br0"
 
 
 @pytest.mark.tier1
@@ -1012,3 +1016,64 @@ def test_support_query_multipath_route(eth1_with_multipath_route):
     ]
     cur_state = libnmstate.show()
     _assert_routes(expected_routes, cur_state)
+
+
+@pytest.fixture
+def br_with_static_route():
+    with linux_bridge(
+        name=TEST_BRIDGE0,
+        bridge_subtree_state={},
+        extra_iface_state={
+            Interface.IPV4: {
+                InterfaceIPv4.ADDRESS: [
+                    {
+                        InterfaceIPv4.ADDRESS_IP: IPV4_ADDRESS1,
+                        InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+                    }
+                ],
+                InterfaceIPv4.DHCP: False,
+                InterfaceIPv4.ENABLED: True,
+            },
+            Interface.IPV6: {
+                InterfaceIPv6.ADDRESS: [
+                    {
+                        InterfaceIPv6.ADDRESS_IP: IPV6_ADDRESS1,
+                        InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
+                    }
+                ],
+                InterfaceIPv6.DHCP: False,
+                InterfaceIPv6.AUTOCONF: False,
+                InterfaceIPv6.ENABLED: True,
+            },
+        },
+        create=False,
+    ) as desired_state:
+        routes = _get_ipv4_test_routes() + _get_ipv6_test_routes()
+        for route in routes:
+            route[Route.NEXT_HOP_INTERFACE] = TEST_BRIDGE0
+        desired_state[Route.KEY] = {Route.CONFIG: routes}
+        libnmstate.apply(desired_state)
+        yield
+
+
+@pytest.mark.tier1
+def test_delete_both_route_and_interface(br_with_static_route):
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: TEST_BRIDGE0,
+                    Interface.STATE: InterfaceState.ABSENT,
+                }
+            ],
+            Route.KEY: {
+                Route.CONFIG: [
+                    {
+                        Route.NEXT_HOP_INTERFACE: TEST_BRIDGE0,
+                        Route.STATE: Route.STATE_ABSENT,
+                    }
+                ]
+            },
+        }
+    )
+    assertlib.assert_absent(TEST_BRIDGE0)
