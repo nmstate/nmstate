@@ -409,6 +409,7 @@ impl NetworkState {
         self.include_rule_changes(
             &mut add_net_state,
             &mut chg_net_state,
+            &del_net_state,
             current,
         )?;
 
@@ -488,6 +489,7 @@ impl NetworkState {
         &self,
         add_net_state: &mut Self,
         chg_net_state: &mut Self,
+        del_net_state: &Self,
         current: &Self,
     ) -> Result<(), NmstateError> {
         let mut changed_rules =
@@ -503,6 +505,15 @@ impl NetworkState {
             let cur_iface = current
                 .interfaces
                 .get_iface(&iface_name, InterfaceType::Unknown);
+            if del_net_state
+                .interfaces
+                .kernel_ifaces
+                .get(&iface_name)
+                .is_some()
+            {
+                // Ignore rules on absent interfaces.
+                continue;
+            }
             if let Some(iface) =
                 add_net_state.interfaces.kernel_ifaces.get_mut(&iface_name)
             {
