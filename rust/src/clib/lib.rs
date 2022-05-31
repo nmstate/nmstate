@@ -12,8 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use libc::{c_char, c_int};
+mod logger;
+
 use std::ffi::{CStr, CString};
+use std::time::SystemTime;
+
+use libc::{c_char, c_int};
+use nmstate::NmstateError;
+use once_cell::sync::OnceCell;
+
+use crate::logger::MemoryLogger;
 
 const NMSTATE_FLAG_KERNEL_ONLY: u32 = 1 << 1;
 const NMSTATE_FLAG_NO_VERIFY: u32 = 1 << 2;
@@ -25,6 +33,8 @@ const NMSTATE_FLAG_RUNNING_CONFIG_ONLY: u32 = 1 << 7;
 
 const NMSTATE_PASS: c_int = 0;
 const NMSTATE_FAIL: c_int = 1;
+
+static INSTANCE: OnceCell<MemoryLogger> = OnceCell::new();
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 #[no_mangle]
@@ -47,6 +57,20 @@ pub extern "C" fn nmstate_net_state_retrieve(
         *err_msg = std::ptr::null_mut();
     }
 
+    let logger = match init_logger() {
+        Ok(l) => l,
+        Err(e) => {
+            unsafe {
+                *err_msg =
+                    CString::new(format!("Failed to setup logger: {}", e))
+                        .unwrap()
+                        .into_raw();
+            }
+            return NMSTATE_FAIL;
+        }
+    };
+    let now = SystemTime::now();
+
     let mut net_state = nmstate::NetworkState::new();
     if (flags & NMSTATE_FLAG_KERNEL_ONLY) > 0 {
         net_state.set_kernel_only(true);
@@ -64,9 +88,12 @@ pub extern "C" fn nmstate_net_state_retrieve(
         net_state.set_running_config_only(true);
     }
 
-    // TODO: save log to the output pointer
+    let result = net_state.retrieve();
+    unsafe {
+        *log = CString::new(logger.drain(now)).unwrap().into_raw();
+    }
 
-    match net_state.retrieve() {
+    match result {
         Ok(s) => match serde_json::to_string(&s) {
             Ok(state_str) => unsafe {
                 *state = CString::new(state_str).unwrap().into_raw();
@@ -120,6 +147,20 @@ pub extern "C" fn nmstate_net_state_apply(
     if state.is_null() {
         return NMSTATE_PASS;
     }
+
+    let logger = match init_logger() {
+        Ok(l) => l,
+        Err(e) => {
+            unsafe {
+                *err_msg =
+                    CString::new(format!("Failed to setup logger: {}", e))
+                        .unwrap()
+                        .into_raw();
+            }
+            return NMSTATE_FAIL;
+        }
+    };
+    let now = SystemTime::now();
 
     let net_state_cstr = unsafe { CStr::from_ptr(state) };
 
@@ -175,9 +216,12 @@ pub extern "C" fn nmstate_net_state_apply(
 
     net_state.set_timeout(rollback_timeout);
 
-    // TODO: save log to the output pointer
+    let result = net_state.apply();
+    unsafe {
+        *log = CString::new(logger.drain(now)).unwrap().into_raw();
+    }
 
-    if let Err(e) = net_state.apply() {
+    if let Err(e) = result {
         unsafe {
             *err_msg = CString::new(e.msg()).unwrap().into_raw();
             *err_kind =
@@ -207,6 +251,20 @@ pub extern "C" fn nmstate_checkpoint_commit(
         *err_msg = std::ptr::null_mut();
     }
 
+    let logger = match init_logger() {
+        Ok(l) => l,
+        Err(e) => {
+            unsafe {
+                *err_msg =
+                    CString::new(format!("Failed to setup logger: {}", e))
+                        .unwrap()
+                        .into_raw();
+            }
+            return NMSTATE_FAIL;
+        }
+    };
+    let now = SystemTime::now();
+
     let mut checkpoint_str = "";
     if !checkpoint.is_null() {
         let checkpoint_cstr = unsafe { CStr::from_ptr(checkpoint) };
@@ -232,9 +290,12 @@ pub extern "C" fn nmstate_checkpoint_commit(
         }
     }
 
-    // TODO: save log to the output pointer
+    let result = nmstate::NetworkState::checkpoint_commit(checkpoint_str);
+    unsafe {
+        *log = CString::new(logger.drain(now)).unwrap().into_raw();
+    }
 
-    if let Err(e) = nmstate::NetworkState::checkpoint_commit(checkpoint_str) {
+    if let Err(e) = result {
         unsafe {
             *err_msg = CString::new(e.msg()).unwrap().into_raw();
             *err_kind =
@@ -264,6 +325,20 @@ pub extern "C" fn nmstate_checkpoint_rollback(
         *err_msg = std::ptr::null_mut();
     }
 
+    let logger = match init_logger() {
+        Ok(l) => l,
+        Err(e) => {
+            unsafe {
+                *err_msg =
+                    CString::new(format!("Failed to setup logger: {}", e))
+                        .unwrap()
+                        .into_raw();
+            }
+            return NMSTATE_FAIL;
+        }
+    };
+    let now = SystemTime::now();
+
     let mut checkpoint_str = "";
     if !checkpoint.is_null() {
         let checkpoint_cstr = unsafe { CStr::from_ptr(checkpoint) };
@@ -290,8 +365,12 @@ pub extern "C" fn nmstate_checkpoint_rollback(
     }
 
     // TODO: save log to the output pointer
+    let result = nmstate::NetworkState::checkpoint_rollback(checkpoint_str);
+    unsafe {
+        *log = CString::new(logger.drain(now)).unwrap().into_raw();
+    }
 
-    if let Err(e) = nmstate::NetworkState::checkpoint_rollback(checkpoint_str) {
+    if let Err(e) = result {
         unsafe {
             *err_msg = CString::new(e.msg()).unwrap().into_raw();
             *err_kind =
@@ -339,6 +418,20 @@ pub extern "C" fn nmstate_generate_configurations(
         return NMSTATE_PASS;
     }
 
+    let logger = match init_logger() {
+        Ok(l) => l,
+        Err(e) => {
+            unsafe {
+                *err_msg =
+                    CString::new(format!("Failed to setup logger: {}", e))
+                        .unwrap()
+                        .into_raw();
+            }
+            return NMSTATE_FAIL;
+        }
+    };
+    let now = SystemTime::now();
+
     let net_state_cstr = unsafe { CStr::from_ptr(state) };
 
     let net_state_str = match net_state_cstr.to_str() {
@@ -374,8 +467,11 @@ pub extern "C" fn nmstate_generate_configurations(
         }
     };
 
-    // TODO: save log to the output pointer
-    match net_state.gen_conf() {
+    let result = net_state.gen_conf();
+    unsafe {
+        *log = CString::new(logger.drain(now)).unwrap().into_raw();
+    }
+    match result {
         Ok(s) => match serde_json::to_string(&s) {
             Ok(cfgs) => unsafe {
                 *configs = CString::new(cfgs).unwrap().into_raw();
@@ -402,6 +498,40 @@ pub extern "C" fn nmstate_generate_configurations(
                     CString::new(format!("{}", &e.kind())).unwrap().into_raw();
             }
             NMSTATE_FAIL
+        }
+    }
+}
+
+fn init_logger() -> Result<&'static MemoryLogger, NmstateError> {
+    match INSTANCE.get() {
+        Some(l) => {
+            l.add_consumer();
+            Ok(l)
+        }
+        None => {
+            if INSTANCE.set(MemoryLogger::new()).is_err() {
+                return Err(NmstateError::new(
+                    nmstate::ErrorKind::Bug,
+                    "Failed to set once_sync for logger".to_string(),
+                ));
+            }
+            if let Some(l) = INSTANCE.get() {
+                if let Err(e) = log::set_logger(l) {
+                    Err(NmstateError::new(
+                        nmstate::ErrorKind::Bug,
+                        format!("Failed to log::set_logger: {}", e),
+                    ))
+                } else {
+                    l.add_consumer();
+                    log::set_max_level(log::LevelFilter::Debug);
+                    Ok(l)
+                }
+            } else {
+                Err(NmstateError::new(
+                    nmstate::ErrorKind::Bug,
+                    "Failed to get logger from once_sync".to_string(),
+                ))
+            }
         }
     }
 }
