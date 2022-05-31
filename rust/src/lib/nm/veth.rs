@@ -35,6 +35,7 @@ pub(crate) fn create_veth_peer_profile_if_not_found(
     peer_name: &str,
     end_name: &str,
     exist_nm_conns: &[NmConnection],
+    stable_uuid: bool,
 ) -> Result<NmConnection, NmstateError> {
     for nm_conn in exist_nm_conns {
         if let Some(iface_type) = nm_conn.iface_type() {
@@ -58,7 +59,7 @@ pub(crate) fn create_veth_peer_profile_if_not_found(
     };
     let iface = Interface::Ethernet(eth_iface);
     let mut nm_conn = NmConnection::default();
-    gen_nm_conn_setting(&iface, &mut nm_conn)?;
+    gen_nm_conn_setting(&iface, &mut nm_conn, stable_uuid)?;
     gen_nm_ip_setting(&iface, None, None, &mut nm_conn)?;
     nm_conn.veth = Some(NmSettingVeth::from(&VethConfig {
         peer: end_name.to_string(),
