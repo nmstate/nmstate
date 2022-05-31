@@ -53,6 +53,7 @@ pub(crate) const NM_SETTING_USER_SPACES: [&str; 2] = [
 
 pub(crate) fn nm_gen_conf(
     net_state: &NetworkState,
+    skip_uuid_gen: bool,
 ) -> Result<Vec<String>, NmstateError> {
     let mut ret = Vec::new();
     let ifaces = net_state.interfaces.to_vec();
@@ -72,6 +73,7 @@ pub(crate) fn nm_gen_conf(
             &[],
             &[],
             false,
+            skip_uuid_gen,
             &NetworkState::new(),
         )? {
             ret.push(match nm_conn.to_keyfile() {
@@ -97,6 +99,7 @@ pub(crate) fn iface_to_nm_connections(
     exist_nm_conns: &[NmConnection],
     nm_ac_uuids: &[&str],
     veth_peer_exist_in_desire: bool,
+    skip_uuid_gen: bool,
     cur_net_state: &NetworkState,
 ) -> Result<Vec<NmConnection>, NmstateError> {
     let mut ret: Vec<NmConnection> = Vec::new();
@@ -124,6 +127,7 @@ pub(crate) fn iface_to_nm_connections(
                         exist_nm_conns,
                         nm_ac_uuids,
                         veth_peer_exist_in_desire,
+                        skip_uuid_gen,
                         cur_net_state,
                     );
                 }
@@ -133,7 +137,7 @@ pub(crate) fn iface_to_nm_connections(
     }
     let mut nm_conn = exist_nm_conn.cloned().unwrap_or_default();
 
-    gen_nm_conn_setting(iface, &mut nm_conn)?;
+    gen_nm_conn_setting(iface, &mut nm_conn, skip_uuid_gen)?;
     gen_nm_ip_setting(
         iface,
         iface.base_iface().routes.as_deref(),
@@ -164,6 +168,7 @@ pub(crate) fn iface_to_nm_connections(
                     &ovs_br_iface.base.name,
                     ovs_port_conf,
                     exist_nm_ovs_port_conn,
+                    skip_uuid_gen,
                 )?)
             }
         }
@@ -196,6 +201,7 @@ pub(crate) fn iface_to_nm_connections(
                         veth_conf.peer.as_str(),
                         eth_iface.base.name.as_str(),
                         exist_nm_conns,
+                        skip_uuid_gen,
                     )?);
                 }
             }
@@ -374,6 +380,7 @@ pub(crate) fn get_port_nm_conns<'a>(
 pub(crate) fn gen_nm_conn_setting(
     iface: &Interface,
     nm_conn: &mut NmConnection,
+    skip_uuid_gen: bool,
 ) -> Result<(), NmstateError> {
     let mut nm_conn_set = if let Some(cur_nm_conn_set) = &nm_conn.connection {
         cur_nm_conn_set.clone()
@@ -395,7 +402,9 @@ pub(crate) fn gen_nm_conn_setting(
         };
 
         new_nm_conn_set.id = Some(conn_name);
-        new_nm_conn_set.uuid = Some(NmApi::uuid_gen());
+        if !skip_uuid_gen {
+            new_nm_conn_set.uuid = Some(NmApi::uuid_gen());
+        }
         if new_nm_conn_set.iface_type.is_none() {
             // The `get_exist_profile()` already confirmed the existing
             // profile has correct `iface_type`. We should not override it.

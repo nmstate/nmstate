@@ -154,6 +154,12 @@ fn main() {
             clap::Command::new(SUB_CMD_GEN_CONF)
                 .about("Generate network configuration for specified state")
                 .arg(
+                    clap::Arg::new("SKIP_UUID_GEN")
+                        .long("skip-uuid-gen")
+                        .takes_value(false)
+                        .help("Do not generate the UUID for the connection"),
+                )
+                .arg(
                     clap::Arg::new("STATE_FILE")
                         .required(true)
                         .index(1)
@@ -244,7 +250,10 @@ fn main() {
 
     if let Some(matches) = matches.subcommand_matches(SUB_CMD_GEN_CONF) {
         if let Some(file_path) = matches.value_of("STATE_FILE") {
-            print_result_and_exit(gen_conf(file_path), EX_DATAERR);
+            print_result_and_exit(
+                gen_conf(file_path, matches.is_present("SKIP_UUID_GEN")),
+                EX_DATAERR,
+            );
         }
     } else if let Some(matches) = matches.subcommand_matches(SUB_CMD_SHOW) {
         print_result_and_exit(show(matches), EXIT_FAILURE);
@@ -303,9 +312,10 @@ fn print_string_and_exit(s: String) {
     std::process::exit(0);
 }
 
-fn gen_conf(file_path: &str) -> Result<String, CliError> {
+fn gen_conf(file_path: &str, skip_uuid_gen: bool) -> Result<String, CliError> {
     let fd = std::fs::File::open(file_path)?;
-    let net_state: NetworkState = serde_yaml::from_reader(fd)?;
+    let mut net_state: NetworkState = serde_yaml::from_reader(fd)?;
+    net_state.set_skip_uuid_gen(skip_uuid_gen);
     let confs = net_state.gen_conf()?;
     Ok(serde_yaml::to_string(&confs)?)
 }

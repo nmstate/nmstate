@@ -184,6 +184,7 @@ pub(crate) fn create_ovs_port_nm_conn(
     br_name: &str,
     port_conf: &OvsBridgePortConfig,
     exist_nm_conn: Option<&NmConnection>,
+    skip_uuid_gen: bool,
 ) -> Result<NmConnection, NmstateError> {
     let mut nm_conn = exist_nm_conn.cloned().unwrap_or_default();
     let mut base_iface = BaseInterface::new();
@@ -193,7 +194,11 @@ pub(crate) fn create_ovs_port_nm_conn(
     base_iface.controller_type = Some(InterfaceType::OvsBridge);
     let mut iface = UnknownInterface::new();
     iface.base = base_iface;
-    gen_nm_conn_setting(&Interface::Unknown(iface), &mut nm_conn)?;
+    gen_nm_conn_setting(
+        &Interface::Unknown(iface),
+        &mut nm_conn,
+        skip_uuid_gen,
+    )?;
 
     let mut nm_ovs_port_set =
         nm_conn.ovs_port.as_ref().cloned().unwrap_or_default();

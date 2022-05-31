@@ -31,6 +31,7 @@ mod vxlan;
 mod wired;
 
 pub(crate) use apply::nm_apply;
+pub(crate) use apply::NetworkStates;
 pub(crate) use checkpoint::{
     nm_checkpoint_create, nm_checkpoint_destroy, nm_checkpoint_rollback,
     nm_checkpoint_timeout_extend,

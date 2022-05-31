@@ -28,35 +28,42 @@ use crate::{
 const ACTIVATION_RETRY_COUNT: usize = 5;
 const ACTIVATION_RETRY_INTERVAL: u64 = 1;
 
+pub struct NetworkStates<'a> {
+    pub add: &'a NetworkState,
+    pub chg: &'a NetworkState,
+    pub del: &'a NetworkState,
+    pub cur: &'a NetworkState,
+    pub des: &'a NetworkState,
+}
+
 pub(crate) fn nm_apply(
-    add_net_state: &NetworkState,
-    chg_net_state: &NetworkState,
-    del_net_state: &NetworkState,
-    cur_net_state: &NetworkState,
-    des_net_state: &NetworkState,
+    net_states: &NetworkStates,
     checkpoint: &str,
     memory_only: bool,
+    skip_uuid_gen: bool,
 ) -> Result<(), NmstateError> {
     let nm_api = NmApi::new().map_err(nm_error_to_nmstate)?;
 
     if !memory_only {
-        delete_net_state(&nm_api, del_net_state, checkpoint)?;
+        delete_net_state(&nm_api, net_states.del, checkpoint)?;
     }
     apply_single_state(
         &nm_api,
-        add_net_state,
-        cur_net_state,
-        des_net_state,
+        net_states.add,
+        net_states.cur,
+        net_states.des,
         checkpoint,
         memory_only,
+        skip_uuid_gen,
     )?;
     apply_single_state(
         &nm_api,
-        chg_net_state,
-        cur_net_state,
-        des_net_state,
+        net_states.chg,
+        net_states.cur,
+        net_states.des,
         checkpoint,
         memory_only,
+        skip_uuid_gen,
     )?;
 
     Ok(())
@@ -146,6 +153,7 @@ fn apply_single_state(
     des_net_state: &NetworkState,
     checkpoint: &str,
     memory_only: bool,
+    skip_uuid_gen: bool,
 ) -> Result<(), NmstateError> {
     if net_state.interfaces.to_vec().is_empty() {
         return Ok(());
@@ -198,6 +206,7 @@ fn apply_single_state(
                 &exist_nm_conns,
                 &nm_ac_uuids,
                 is_veth_peer_in_desire(iface, ifaces.as_slice()),
+                skip_uuid_gen,
                 cur_net_state,
             )? {
                 nm_conns_to_activate.push(nm_conn);

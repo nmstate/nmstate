@@ -13,7 +13,7 @@ use crate::{
     nm::{
         nm_apply, nm_checkpoint_create, nm_checkpoint_destroy,
         nm_checkpoint_rollback, nm_checkpoint_timeout_extend, nm_gen_conf,
-        nm_retrieve,
+        nm_retrieve, NetworkStates,
     },
     ovsdb::{ovsdb_apply, ovsdb_is_running, ovsdb_retrieve},
     DnsState, ErrorKind, Interface, InterfaceType, Interfaces, NmstateError,
@@ -66,6 +66,8 @@ pub struct NetworkState {
     running_config_only: bool,
     #[serde(skip)]
     memory_only: bool,
+    #[serde(skip)]
+    skip_uuid_gen: bool,
 }
 
 impl<'de> Deserialize<'de> for NetworkState {
@@ -150,6 +152,11 @@ impl NetworkState {
 
     pub fn set_memory_only(&mut self, value: bool) -> &mut Self {
         self.memory_only = value;
+        self
+    }
+
+    pub fn set_skip_uuid_gen(&mut self, value: bool) -> &mut Self {
+        self.skip_uuid_gen = value;
         self
     }
 
@@ -283,15 +290,18 @@ impl NetworkState {
 
             with_nm_checkpoint(&checkpoint, self.no_commit, || {
                 nm_apply(
-                    &add_net_state,
-                    &chg_net_state,
-                    &del_net_state,
-                    // TODO: Passing full(desire + current) network state
-                    // instead of current,
-                    &cur_net_state,
-                    self,
+                    &NetworkStates {
+                        add: &add_net_state,
+                        chg: &chg_net_state,
+                        del: &del_net_state,
+                        // TODO: Passing full(desire + current) network state
+                        // instead of current,
+                        cur: &cur_net_state,
+                        des: self,
+                    },
                     &checkpoint,
                     self.memory_only,
+                    self.skip_uuid_gen,
                 )?;
                 if ovsdb_is_running() {
                     ovsdb_apply(&desire_state_to_apply, &cur_net_state)?;
@@ -357,7 +367,10 @@ impl NetworkState {
         self_clone.interfaces.set_missing_port_to_eth();
         let (add_net_state, _, _) =
             self_clone.gen_state_for_apply(&Self::new())?;
-        ret.insert("NetworkManager".to_string(), nm_gen_conf(&add_net_state)?);
+        ret.insert(
+            "NetworkManager".to_string(),
+            nm_gen_conf(&add_net_state, self.skip_uuid_gen)?,
+        );
         Ok(ret)
     }
 
