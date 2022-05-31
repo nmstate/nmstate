@@ -14,6 +14,7 @@
 
 from ctypes import c_int, c_char_p, c_uint32, POINTER, byref, cdll
 import json
+import logging
 
 from .error import (
     NmstateDependencyError,
@@ -82,6 +83,7 @@ def retrieve_net_state_json(
     state = c_state.value
     err_msg = c_err_msg.value
     err_kind = c_err_kind.value
+    parse_log(c_log.value)
     lib.nmstate_cstring_free(c_log)
     lib.nmstate_cstring_free(c_state)
     lib.nmstate_cstring_free(c_err_kind)
@@ -126,6 +128,7 @@ def apply_net_state(
     )
     err_msg = c_err_msg.value
     err_kind = c_err_kind.value
+    parse_log(c_log.value)
     lib.nmstate_cstring_free(c_log)
     lib.nmstate_cstring_free(c_err_kind)
     lib.nmstate_cstring_free(c_err_msg)
@@ -148,6 +151,7 @@ def commit_checkpoint(checkpoint):
 
     err_msg = c_err_msg.value
     err_kind = c_err_kind.value
+    parse_log(c_log.value)
     lib.nmstate_cstring_free(c_log)
     lib.nmstate_cstring_free(c_err_kind)
     lib.nmstate_cstring_free(c_err_msg)
@@ -170,6 +174,7 @@ def rollback_checkpoint(checkpoint):
 
     err_msg = c_err_msg.value
     err_kind = c_err_kind.value
+    parse_log(c_log.value)
     lib.nmstate_cstring_free(c_log)
     lib.nmstate_cstring_free(c_err_kind)
     lib.nmstate_cstring_free(c_err_msg)
@@ -193,6 +198,7 @@ def gen_conf(state):
     configs = c_configs.value
     err_msg = c_err_msg.value
     err_kind = c_err_kind.value
+    parse_log(c_log.value)
     lib.nmstate_cstring_free(c_log)
     lib.nmstate_cstring_free(c_err_kind)
     lib.nmstate_cstring_free(c_err_msg)
@@ -222,3 +228,26 @@ def map_error(err_kind, err_msg):
         return NmstateDependencyError(err_msg)
     else:
         return NmstateError(f"{err_kind}: {err_msg}")
+
+
+def parse_log(logs):
+    if logs is None:
+        return
+
+    log_entries = []
+    try:
+        log_entries = json.loads(logs.decode("utf-8"))
+    except Exception:
+        pass
+    for log_entry in log_entries:
+        msg = f"{log_entry['time']}:{log_entry['file']}: {log_entry['msg']}"
+        level = log_entry["level"]
+
+        if level == "ERROR":
+            logging.error(msg)
+        elif level == "WARN":
+            logging.warning(msg)
+        elif level == "INFO":
+            logging.info(msg)
+        else:
+            logging.debug(msg)
