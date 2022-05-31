@@ -133,7 +133,13 @@ pub(crate) fn iface_to_nm_connections(
     }
     let mut nm_conn = exist_nm_conn.cloned().unwrap_or_default();
 
-    gen_nm_conn_setting(iface, &mut nm_conn)?;
+    // Use stable UUID if there is no existing NM connections where
+    // we don't have possible UUID overlap there.
+    // This enable us to generate the same output for `nm_gen_conf()`
+    // when the desire state is the same.
+    let stable_uuid = exist_nm_conns.is_empty();
+
+    gen_nm_conn_setting(iface, &mut nm_conn, stable_uuid)?;
     gen_nm_ip_setting(
         iface,
         iface.base_iface().routes.as_deref(),
@@ -164,6 +170,7 @@ pub(crate) fn iface_to_nm_connections(
                     &ovs_br_iface.base.name,
                     ovs_port_conf,
                     exist_nm_ovs_port_conn,
+                    stable_uuid,
                 )?)
             }
         }
@@ -196,6 +203,7 @@ pub(crate) fn iface_to_nm_connections(
                         veth_conf.peer.as_str(),
                         eth_iface.base.name.as_str(),
                         exist_nm_conns,
+                        stable_uuid,
                     )?);
                 }
             }
@@ -374,6 +382,7 @@ pub(crate) fn get_port_nm_conns<'a>(
 pub(crate) fn gen_nm_conn_setting(
     iface: &Interface,
     nm_conn: &mut NmConnection,
+    stable_uuid: bool,
 ) -> Result<(), NmstateError> {
     let mut nm_conn_set = if let Some(cur_nm_conn_set) = &nm_conn.connection {
         cur_nm_conn_set.clone()
@@ -395,7 +404,11 @@ pub(crate) fn gen_nm_conn_setting(
         };
 
         new_nm_conn_set.id = Some(conn_name);
-        new_nm_conn_set.uuid = Some(NmApi::uuid_gen());
+        new_nm_conn_set.uuid = Some(if stable_uuid {
+            uuid_from_name_and_type(iface.name(), &iface.iface_type())
+        } else {
+            NmApi::uuid_gen()
+        });
         if new_nm_conn_set.iface_type.is_none() {
             // The `get_exist_profile()` already confirmed the existing
             // profile has correct `iface_type`. We should not override it.
@@ -444,4 +457,16 @@ pub(crate) fn gen_nm_conn_setting(
     }
     nm_conn.connection = Some(nm_conn_set);
     Ok(())
+}
+
+fn uuid_from_name_and_type(
+    iface_name: &str,
+    iface_type: &InterfaceType,
+) -> String {
+    uuid::Uuid::new_v5(
+        &uuid::Uuid::NAMESPACE_URL,
+        format!("{}://{}", iface_type, iface_name).as_bytes(),
+    )
+    .to_hyphenated()
+    .to_string()
 }
