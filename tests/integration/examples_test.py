@@ -252,11 +252,16 @@ def test_add_veth_and_remove():
     nm_major_minor_version() <= 1.30,
     reason="Generating config is not supported on NetworkManager 1.30-",
 )
+@pytest.mark.tier1
 def test_gen_conf_for_examples():
     example_dir = find_examples_dir()
     with os.scandir(example_dir) as example_dir_fd:
         for example_file in example_dir_fd:
             if example_file.name.endswith(".yml"):
-                libnmstate.generate_configurations(
+                first_result = libnmstate.generate_configurations(
                     load_example(example_file.name)
                 )
+                second_result = libnmstate.generate_configurations(
+                    load_example(example_file.name)
+                )
+                assert first_result == second_result
