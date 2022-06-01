@@ -189,6 +189,8 @@ pub struct InterfaceIpv6 {
         deserialize_with = "crate::deserializer::option_bool_or_string"
     )]
     pub autoconf: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none", rename = "addr-gen-mode")]
+    pub addr_gen_mode: Option<Ipv6AddrGenMode>,
     #[serde(skip_serializing_if = "Option::is_none", rename = "address")]
     pub addresses: Option<Vec<InterfaceIpAddr>>,
     #[serde(skip)]
@@ -262,6 +264,9 @@ impl InterfaceIpv6 {
         if other.prop_list.contains(&"autoconf") {
             self.autoconf = other.autoconf;
         }
+        if other.prop_list.contains(&"addr_gen_mode") {
+            self.addr_gen_mode = other.addr_gen_mode.clone();
+        }
         if other.prop_list.contains(&"addresses") {
             self.addresses = other.addresses.clone();
         }
@@ -279,6 +284,9 @@ impl InterfaceIpv6 {
         }
         if other.prop_list.contains(&"dns") {
             self.dns = other.dns.clone();
+        }
+        if other.prop_list.contains(&"addr_gen_mode") {
+            self.addr_gen_mode = other.addr_gen_mode.clone();
         }
         for other_prop_name in &other.prop_list {
             if !self.prop_list.contains(other_prop_name) {
@@ -548,6 +556,36 @@ impl From<Dhcpv6Duid> for String {
             Dhcpv6Duid::LinkLayerAddress => "ll".to_string(),
             Dhcpv6Duid::Uuid => "uuid".to_string(),
             Dhcpv6Duid::Other(s) => s,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
+#[serde(from = "String", into = "String")]
+pub enum Ipv6AddrGenMode {
+    Eui64,
+    // RFC 7217
+    StablePrivacy,
+    Other(String),
+}
+
+impl From<String> for Ipv6AddrGenMode {
+    fn from(s: String) -> Self {
+        return match s.as_str() {
+            "eui64" | "EUI64" => Self::Eui64,
+            "stable-privacy" | "STABLE-PRIVACY" => Self::StablePrivacy,
+            _ => Self::Other(s),
+        };
+    }
+}
+
+impl From<Ipv6AddrGenMode> for String {
+    fn from(v: Ipv6AddrGenMode) -> Self {
+        match v {
+            Ipv6AddrGenMode::Eui64 => "eui64".to_string(),
+            Ipv6AddrGenMode::StablePrivacy => "stable-privacy".to_string(),
+            Ipv6AddrGenMode::Other(s) => s,
         }
     }
 }

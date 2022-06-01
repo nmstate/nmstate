@@ -1310,3 +1310,28 @@ def test_dhcpv4_client_id(dhcpcli_up_with_dynamic_ip, client_id_type):
             ]
         }
     )
+
+
+@pytest.mark.parametrize(
+    "addr_gen_mode",
+    [
+        InterfaceIPv6.ADDR_GEN_MODE_EUI64,
+        InterfaceIPv6.ADDR_GEN_MODE_STABLE_PRIVACY,
+    ],
+)
+def test_auto6_addr_gen_mode(dhcpcli_up_with_dynamic_ip, addr_gen_mode):
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: DHCP_CLI_NIC,
+                    Interface.IPV6: {
+                        InterfaceIPv6.ENABLED: True,
+                        InterfaceIPv6.DHCP: True,
+                        InterfaceIPv6.AUTOCONF: True,
+                        InterfaceIPv6.ADDR_GEN_MODE: addr_gen_mode,
+                    },
+                }
+            ]
+        }
+    )
