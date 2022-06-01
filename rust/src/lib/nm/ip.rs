@@ -5,8 +5,8 @@ use crate::{
     nm::dns::{apply_nm_dns_setting, nm_dns_to_nmstate},
     nm::route::gen_nm_ip_routes,
     nm::route_rule::gen_nm_ip_rules,
-    ErrorKind, Interface, InterfaceIpv4, InterfaceIpv6, NmstateError,
-    RouteEntry, RouteRuleEntry,
+    Dhcpv6Duid, ErrorKind, Interface, InterfaceIpv4, InterfaceIpv6,
+    NmstateError, RouteEntry, RouteRuleEntry,
 };
 
 const NM_CONFIG_ADDR_GEN_MODE_EUI64: i32 = 0;
@@ -143,7 +143,13 @@ fn gen_nm_ipv6_setting(
         nm_setting.dhcp_timeout = Some(i32::MAX);
         nm_setting.ra_timeout = Some(i32::MAX);
         nm_setting.addr_gen_mode = Some(NM_CONFIG_ADDR_GEN_MODE_EUI64);
-        nm_setting.dhcp_duid = Some("ll".to_string());
+        nm_setting.dhcp_duid = Some(
+            iface_ip
+                .dhcp_duid
+                .as_ref()
+                .unwrap_or(&Dhcpv6Duid::LinkLayerAddress)
+                .to_string(),
+        );
         nm_setting.dhcp_iaid = Some("mac".to_string());
         apply_dhcp_opts(
             &mut nm_setting,
@@ -261,8 +267,10 @@ pub(crate) fn nm_ip_setting_to_nmstate6(
                 "auto_routes",
                 "auto_gateway",
                 "auto_table_id",
+                "dhcp_duid",
             ],
             dns: Some(nm_dns_to_nmstate(nm_ip_setting)),
+            dhcp_duid: nm_dhcp_duid_to_nmstate(nm_ip_setting),
             ..Default::default()
         }
     } else {
@@ -305,4 +313,14 @@ fn apply_dhcp_opts(
 
 fn flip_bool(v: bool) -> bool {
     v.bitxor(true)
+}
+
+fn nm_dhcp_duid_to_nmstate(nm_setting: &NmSettingIp) -> Option<Dhcpv6Duid> {
+    match nm_setting.dhcp_duid.as_deref() {
+        Some("ll") => Some(Dhcpv6Duid::LinkLayerAddress),
+        Some("llt") => Some(Dhcpv6Duid::LinkLayerAddressPlusTime),
+        Some("uuid") => Some(Dhcpv6Duid::Uuid),
+        Some(nm_duid) => Some(Dhcpv6Duid::Other(nm_duid.to_string())),
+        None => None,
+    }
 }
