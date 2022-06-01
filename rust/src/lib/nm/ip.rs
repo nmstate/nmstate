@@ -6,10 +6,11 @@ use crate::{
     nm::route::gen_nm_ip_routes,
     nm::route_rule::gen_nm_ip_rules,
     Dhcpv4ClientId, Dhcpv6Duid, ErrorKind, Interface, InterfaceIpv4,
-    InterfaceIpv6, NmstateError, RouteEntry, RouteRuleEntry,
+    InterfaceIpv6, Ipv6AddrGenMode, NmstateError, RouteEntry, RouteRuleEntry,
 };
 
-const NM_CONFIG_ADDR_GEN_MODE_EUI64: i32 = 0;
+const ADDR_GEN_MODE_EUI64: i32 = 0;
+const ADDR_GEN_MODE_STABLE_PRIVACY: i32 = 1;
 
 fn gen_nm_ipv4_setting(
     iface_ip: Option<&InterfaceIpv4>,
@@ -145,10 +146,11 @@ fn gen_nm_ipv6_setting(
     let mut nm_setting = nm_conn.ipv6.as_ref().cloned().unwrap_or_default();
     nm_setting.method = Some(method);
     nm_setting.addresses = addresses;
+    nm_setting.addr_gen_mode =
+        Some(nmstate_addr_gen_mode_to_nm(iface_ip.addr_gen_mode.as_ref()));
     if iface_ip.is_auto() {
         nm_setting.dhcp_timeout = Some(i32::MAX);
         nm_setting.ra_timeout = Some(i32::MAX);
-        nm_setting.addr_gen_mode = Some(NM_CONFIG_ADDR_GEN_MODE_EUI64);
         nm_setting.dhcp_duid = Some(
             iface_ip
                 .dhcp_duid
@@ -276,9 +278,11 @@ pub(crate) fn nm_ip_setting_to_nmstate6(
                 "auto_gateway",
                 "auto_table_id",
                 "dhcp_duid",
+                "addr_gen_mode",
             ],
             dns: Some(nm_dns_to_nmstate(nm_ip_setting)),
             dhcp_duid: nm_dhcp_duid_to_nmstate(nm_ip_setting),
+            addr_gen_mode: nm_ipv6_addr_gen_mode_to_nmstate(nm_ip_setting),
             ..Default::default()
         }
     } else {
@@ -349,5 +353,29 @@ fn nmstate_dhcp_client_id_to_nm(client_id: &Dhcpv4ClientId) -> String {
         Dhcpv4ClientId::LinkLayerAddress => "mac".into(),
         Dhcpv4ClientId::IaidPlusDuid => "duid".into(),
         Dhcpv4ClientId::Other(s) => s.into(),
+    }
+}
+
+fn nm_ipv6_addr_gen_mode_to_nmstate(
+    nm_setting: &NmSettingIp,
+) -> Option<Ipv6AddrGenMode> {
+    match nm_setting.addr_gen_mode.as_ref() {
+        Some(&ADDR_GEN_MODE_EUI64) => Some(Ipv6AddrGenMode::Eui64),
+        Some(&ADDR_GEN_MODE_STABLE_PRIVACY) => {
+            Some(Ipv6AddrGenMode::StablePrivacy)
+        }
+        Some(s) => Some(Ipv6AddrGenMode::Other(format!("{}", s))),
+        // According to NM document, the None in dbus means stable privacy.
+        None => Some(Ipv6AddrGenMode::StablePrivacy),
+    }
+}
+
+fn nmstate_addr_gen_mode_to_nm(addr_gen_mode: Option<&Ipv6AddrGenMode>) -> i32 {
+    match addr_gen_mode {
+        Some(Ipv6AddrGenMode::StablePrivacy) => ADDR_GEN_MODE_STABLE_PRIVACY,
+        Some(Ipv6AddrGenMode::Eui64) | None => ADDR_GEN_MODE_EUI64,
+        Some(Ipv6AddrGenMode::Other(s)) => {
+            s.parse::<i32>().unwrap_or(ADDR_GEN_MODE_EUI64)
+        }
     }
 }
