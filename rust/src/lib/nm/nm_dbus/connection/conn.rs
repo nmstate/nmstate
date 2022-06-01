@@ -193,6 +193,10 @@ impl NmConnection {
         _connection_inner_string_member!(self, iface_type)
     }
 
+    pub fn id(&self) -> Option<&str> {
+        _connection_inner_string_member!(self, id)
+    }
+
     pub fn controller(&self) -> Option<&str> {
         _connection_inner_string_member!(self, controller)
     }
