@@ -138,6 +138,7 @@ class InterfaceIPv4(InterfaceIP):
 
 class InterfaceIPv6(InterfaceIP):
     AUTOCONF = "autoconf"
+    DHCP_DUID = "dhcp-duid"
 
 
 class Bond:
