@@ -1265,3 +1265,26 @@ def test_show_running_config_does_not_include_auto_config(
         for rt in running_config[RT.KEY][RT.CONFIG]
         if rt[RT.NEXT_HOP_INTERFACE] == DHCP_CLI_NIC
     )
+
+
+@pytest.mark.parametrize(
+    "duid_type",
+    ["llt", "ll", "0f:66:55:BC:73:4D"],
+    ids=["llt", "ll", "raw"],
+)
+def test_dhcpv6_duid(dhcpcli_up_with_dynamic_ip, duid_type):
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: DHCP_CLI_NIC,
+                    Interface.IPV6: {
+                        InterfaceIPv6.ENABLED: True,
+                        InterfaceIPv6.DHCP: True,
+                        InterfaceIPv6.AUTOCONF: True,
+                        InterfaceIPv6.DHCP_DUID: duid_type,
+                    },
+                }
+            ]
+        }
+    )

@@ -41,7 +41,9 @@ pub use crate::ifaces::{
     OvsPatchConfig, SrIovConfig, SrIovVfConfig, VethConfig, VlanConfig,
     VlanInterface, VrfConfig, VrfInterface, VxlanConfig, VxlanInterface,
 };
-pub use crate::ip::{InterfaceIpAddr, InterfaceIpv4, InterfaceIpv6};
+pub use crate::ip::{
+    Dhcpv6Duid, InterfaceIpAddr, InterfaceIpv4, InterfaceIpv6,
+};
 pub use crate::lldp::{
     LldpAddressFamily, LldpChassisId, LldpChassisIdType, LldpConfig,
     LldpMacPhyConf, LldpMaxFrameSize, LldpMgmtAddr, LldpMgmtAddrs,

@@ -174,6 +174,8 @@ pub struct InterfaceIpv6 {
         deserialize_with = "crate::deserializer::option_bool_or_string"
     )]
     pub dhcp: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none", rename = "dhcp-duid")]
+    pub dhcp_duid: Option<Dhcpv6Duid>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
@@ -246,6 +248,9 @@ impl InterfaceIpv6 {
         }
         if other.prop_list.contains(&"dhcp") {
             self.dhcp = other.dhcp;
+        }
+        if other.prop_list.contains(&"dhcp_duid") {
+            self.dhcp_duid = other.dhcp_duid.clone();
         }
         if other.prop_list.contains(&"autoconf") {
             self.autoconf = other.autoconf;
@@ -458,6 +463,47 @@ pub(crate) fn include_current_ip_address_if_dhcp_on_to_off(
                     }
                 }
             }
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
+#[serde(from = "String", into = "String")]
+pub enum Dhcpv6Duid {
+    LinkLayerAddressPlusTime,
+    EnterpriseNumber,
+    LinkLayerAddress,
+    Uuid,
+    Other(String),
+}
+
+impl std::fmt::Display for Dhcpv6Duid {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", String::from(self.clone()))
+    }
+}
+
+impl From<String> for Dhcpv6Duid {
+    fn from(s: String) -> Self {
+        return match s.as_str() {
+            "llt" | "LLT" => Self::LinkLayerAddressPlusTime,
+            "en" | "EN" => Self::EnterpriseNumber,
+            "ll" | "LL" => Self::LinkLayerAddress,
+            "uuid" | "UUID" => Self::Uuid,
+            _ => Self::Other(s),
+        };
+    }
+}
+
+impl From<Dhcpv6Duid> for String {
+    fn from(v: Dhcpv6Duid) -> Self {
+        match v {
+            Dhcpv6Duid::LinkLayerAddressPlusTime => "llt".to_string(),
+            Dhcpv6Duid::EnterpriseNumber => "en".to_string(),
+            Dhcpv6Duid::LinkLayerAddress => "ll".to_string(),
+            Dhcpv6Duid::Uuid => "uuid".to_string(),
+            Dhcpv6Duid::Other(s) => s,
         }
     }
 }
