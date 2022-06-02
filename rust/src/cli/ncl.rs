@@ -7,7 +7,10 @@ use std::process::{Command, Stdio};
 
 use env_logger::Builder;
 use log::LevelFilter;
-use nmstate::{DnsState, NetworkState, OvsDbGlobalConfig, RouteRules, Routes};
+use nmstate::{
+    DnsState, HostNameState, NetworkState, OvsDbGlobalConfig, RouteRules,
+    Routes,
+};
 use serde::Serialize;
 use serde_yaml::{self, Value};
 
@@ -319,6 +322,8 @@ fn gen_conf(file_path: &str) -> Result<String, CliError> {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 struct SortedNetworkState {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    hostname: Option<HostNameState>,
     #[serde(rename = "dns-resolver", default)]
     dns: DnsState,
     #[serde(rename = "route-rules", default)]
@@ -365,6 +370,7 @@ fn sort_netstate(
             }
         }
         return Ok(SortedNetworkState {
+            hostname: net_state.hostname,
             interfaces: new_ifaces,
             routes: net_state.routes,
             rules: net_state.rules,
@@ -374,6 +380,7 @@ fn sort_netstate(
     }
 
     Ok(SortedNetworkState {
+        hostname: net_state.hostname,
         interfaces: Vec::new(),
         routes: net_state.routes,
         rules: net_state.rules,
