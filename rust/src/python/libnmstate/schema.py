@@ -442,3 +442,9 @@ class Ethtool:
         TX_USECS_HIGH = "tx-usecs-high"
         TX_USECS_IRQ = "tx-usecs-irq"
         TX_USECS_LOW = "tx-usecs-low"
+
+
+class HostNameState:
+    KEY = "hostname"
+    CONFIG = "config"
+    RUNNING = "running"

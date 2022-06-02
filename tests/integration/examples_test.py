@@ -31,6 +31,7 @@ from libnmstate import netinfo
 from libnmstate.error import NmstateNotSupportedError
 from libnmstate.error import NmstateDependencyError
 from libnmstate.schema import DNS
+from libnmstate.schema import HostNameState
 
 from .testlib.env import is_k8s
 from .testlib.env import nm_major_minor_version
@@ -251,3 +252,15 @@ def test_gen_conf_for_examples():
                     load_example(example_file.name)
                 )
                 assert first_result == second_result
+
+
+@pytest.mark.skipif(
+    os.environ.get("CI") == "true",
+    reason="NM cannot change hostname in container",
+)
+def test_static_hostname_for_examples():
+    with example_state(
+        "static_hostname.yml", cleanup="dynamic_hostname.yml"
+    ) as desired_state:
+        cur_hostname = libnmstate.show()[HostNameState.KEY]
+        assert cur_hostname == desired_state[HostNameState.KEY]
