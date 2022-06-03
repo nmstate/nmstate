@@ -26,7 +26,7 @@ const EX_DATAERR: i32 = 65;
 const EXIT_FAILURE: i32 = 1;
 
 fn main() {
-    let matches = clap::App::new(APP_NAME)
+    let matches = clap::Command::new(APP_NAME)
         .version(clap::crate_version!())
         .author("Gris Ge <fge@redhat.com>")
         .about("Command line of nmstate")
@@ -45,7 +45,7 @@ fn main() {
                 .global(true),
         )
         .subcommand(
-            clap::SubCommand::with_name(SUB_CMD_SHOW)
+            clap::Command::new(SUB_CMD_SHOW)
                 .about("Show network state")
                 .arg(
                     clap::Arg::new("IFNAME")
