@@ -70,6 +70,9 @@ def create_setting(config, base_con_profile):
                 InterfaceIPv4.AUTO_ROUTE_TABLE_ID,
                 Route.USE_DEFAULT_ROUTE_TABLE,
             )
+            setting_ipv4.props.dhcp_client_id = config.get(
+                InterfaceIPv4.DHCP_CLIENT_ID, None
+            )
             # NetworkManager will remove the virtual interfaces like bridges
             # when the DHCP timeout expired, set it to the maximum value to
             # make this unlikely.
@@ -126,6 +129,8 @@ def get_info(active_connection, applied_config):
                 info[InterfaceIPv4.AUTO_GATEWAY] = not props.never_default
                 info[InterfaceIPv4.AUTO_DNS] = not props.ignore_auto_dns
                 info[InterfaceIPv4.AUTO_ROUTE_TABLE_ID] = props.route_table
+                if props.dhcp_client_id:
+                    info[InterfaceIPv4.DHCP_CLIENT_ID] = props.dhcp_client_id
 
     return info
 
