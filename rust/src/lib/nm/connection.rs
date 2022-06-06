@@ -53,8 +53,8 @@ pub(crate) const NM_SETTING_USER_SPACES: [&str; 2] = [
 
 pub(crate) fn nm_gen_conf(
     net_state: &NetworkState,
-) -> Result<Vec<String>, NmstateError> {
-    let mut ret = Vec::new();
+) -> Result<HashMap<String, String>, NmstateError> {
+    let mut ret = HashMap::new();
     if net_state
         .hostname
         .as_ref()
@@ -85,18 +85,21 @@ pub(crate) fn nm_gen_conf(
             false,
             &NetworkState::new(),
         )? {
-            ret.push(match nm_conn.to_keyfile() {
-                Ok(s) => s,
-                Err(e) => {
-                    return Err(NmstateError::new(
-                        ErrorKind::PluginFailure,
-                        format!(
+            ret.insert(
+                nm_conn.id().unwrap().to_string(),
+                match nm_conn.to_keyfile() {
+                    Ok(s) => s,
+                    Err(e) => {
+                        return Err(NmstateError::new(
+                            ErrorKind::PluginFailure,
+                            format!(
                         "Bug in NM plugin, failed to generate configure: {}",
                         e
                     ),
-                    ));
-                }
-            })
+                        ));
+                    }
+                },
+            );
         }
     }
     Ok(ret)
