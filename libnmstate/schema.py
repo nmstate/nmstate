@@ -150,7 +150,7 @@ class InterfaceIP:
 
 
 class InterfaceIPv4(InterfaceIP):
-    pass
+    DHCP_CLIENT_ID = "dhcp-client-id"
 
 
 class InterfaceIPv6(InterfaceIP):
