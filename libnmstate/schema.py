@@ -155,6 +155,7 @@ class InterfaceIPv4(InterfaceIP):
 
 class InterfaceIPv6(InterfaceIP):
     AUTOCONF = "autoconf"
+    DHCP_DUID = "dhcp-duid"
 
 
 OVS_BRIDGE = "OVSBridge.Port.LinkAggregation"
