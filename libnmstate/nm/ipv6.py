@@ -73,6 +73,11 @@ def get_info(active_connection, applied_config):
             info[InterfaceIPv6.AUTO_ROUTE_TABLE_ID] = props.route_table
             if props.dhcp_duid:
                 info[InterfaceIPv6.DHCP_DUID] = props.dhcp_duid
+            info[InterfaceIPv6.ADDR_GEN_MODE] = (
+                InterfaceIPv6.ADDR_GEN_MODE_STABLE_PRIVACY
+                if props.addr_gen_mode
+                else InterfaceIPv6.ADDR_GEN_MODE_EUI64
+            )
 
     return info
 
@@ -127,9 +132,16 @@ def create_setting(config, base_con_profile):
         setting_ip.props.ignore_auto_dns = not config.get(
             InterfaceIPv6.AUTO_DNS, True
         )
-        setting_ip.props.dhcp_duid = config.get(
-            InterfaceIPv6.DHCP_DUID, None
-        )
+        setting_ip.props.dhcp_duid = config.get(InterfaceIPv6.DHCP_DUID, None)
+        addr_gen_mode = config.get(InterfaceIPv6.ADDR_GEN_MODE, None)
+        if (
+            addr_gen_mode == InterfaceIPv6.ADDR_GEN_MODE_EUI64
+            or addr_gen_mode is None
+        ):
+            setting_ip.props.addr_gen_mode = 0
+        else:
+            setting_ip.props.addr_gen_mode = 1
+
         route_table = config.get(InterfaceIPv6.AUTO_ROUTE_TABLE_ID)
         if route_table:
             setting_ip.props.route_table = route_table

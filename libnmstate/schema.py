@@ -156,6 +156,9 @@ class InterfaceIPv4(InterfaceIP):
 class InterfaceIPv6(InterfaceIP):
     AUTOCONF = "autoconf"
     DHCP_DUID = "dhcp-duid"
+    ADDR_GEN_MODE = "addr-gen-mode"
+    ADDR_GEN_MODE_EUI64 = "eui64"
+    ADDR_GEN_MODE_STABLE_PRIVACY = "stable-privacy"
 
 
 OVS_BRIDGE = "OVSBridge.Port.LinkAggregation"
