@@ -1,4 +1,28 @@
 # Changelog
+
+## [2.1.1] - 2022-06-07
+### Breaking changes
+ - N/A
+
+### New features
+ - Add support of static hostname modification. (5accbd1f)
+ - Add support of logging in C and Python binding. (b1944e78)
+ - Add support of client ID in DHCPv4. (cda236c5)
+ - Add support of DUID in DHCPv6. (c75ccee3)
+ - Add support to rx-queue in OVS-DPDK. (437e4a98)
+ - Add generate configuration support to golang binding. (dc2f69d8)
+
+### Bug fixes
+ - Fix error when both autoneg true and rx/tx defined. (e3921405)
+ - Generate stable UUID for keyfile of NetworkManager. (fc6d45db)
+ - Fix error when deleting route rule on absent interface. (de16ec39)
+ - Fix error when deleting route on absent interface. (b034a5d1)
+ - Show IP as disable instead of hide for port. (2c1402b1)
+ - Fix racing probelm on connection deactivation and deletion. (e421421d)
+ - Wait on device deactivating on rollback. (b42dc8c5)
+ - Fix absent action of OVS bridge with the same name. (68a8c775)
+ - Normalize MAC address before verification. (9b30b28e)
+
 ## [2.1.0] - 2022-04-21
 ### Breaking changes
  - Switched to all rust based. We tried our best to avoid breakage of
