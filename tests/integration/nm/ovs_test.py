@@ -447,3 +447,13 @@ def test_remove_same_name_ovs_bridge_clean_up_system_port_also(
         "nmcli -g connection.master c show eth1".split()
     )
     assert not output.strip()
+
+
+@pytest.mark.tier1
+def test_purge_unmanged_ovs_bridge_in_show(ovs_unmanaged_bridge):
+    state = statelib.show_only((BRIDGE0,))
+    assert len(state[Interface.KEY]) == 1
+    assert state[Interface.KEY][0][Interface.NAME] == BRIDGE0
+    assert (
+        state[Interface.KEY][0][Interface.TYPE] == InterfaceType.OVS_INTERFACE
+    )
