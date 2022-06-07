@@ -8,7 +8,7 @@ use crate::{
         get_cur_dns_ifaces, is_dns_changed, purge_dns_config,
         reselect_dns_ifaces,
     },
-    ifaces::get_ignored_ifaces,
+    ifaces::{get_ignored_ifaces, purge_userspace_ignored_ifaces},
     nispor::{nispor_apply, nispor_retrieve, set_running_hostname},
     nm::{
         nm_apply, nm_checkpoint_create, nm_checkpoint_destroy,
@@ -212,6 +212,8 @@ impl NetworkState {
         if !self.include_secrets {
             self.hide_secrets();
         }
+        purge_userspace_ignored_ifaces(&mut self.interfaces);
+
         Ok(self)
     }
 

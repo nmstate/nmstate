@@ -428,6 +428,11 @@ fn nm_dev_to_nm_iface(nm_dev: &NmDevice) -> Option<Interface> {
             iface.base = base_iface;
             iface
         }),
+        InterfaceType::OvsBridge => Interface::OvsBridge({
+            let mut iface = OvsBridgeInterface::new();
+            iface.base = base_iface;
+            iface
+        }),
         InterfaceType::Bond => Interface::Bond({
             let mut iface = BondInterface::new();
             iface.base = base_iface;
