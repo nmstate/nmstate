@@ -164,7 +164,7 @@ fn gen_desire_state(
                 *vid,
                 &bond_iface_name,
             ));
-        } else if let Some(iface) = ifaces.get(0) {
+        } else if let Some(iface) = ifaces.first() {
             ret.append_interface_data(gen_vlan_iface(name, *vid, iface));
         }
     }
