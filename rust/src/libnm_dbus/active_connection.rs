@@ -4,7 +4,7 @@ use crate::{
     ErrorKind, NmError,
 };
 
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct NmActiveConnection {
     pub uuid: String,
     pub iface_type: String,
