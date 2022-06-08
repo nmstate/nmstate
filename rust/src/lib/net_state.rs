@@ -377,7 +377,7 @@ impl NetworkState {
 
     pub fn gen_conf(
         &self,
-    ) -> Result<HashMap<String, Vec<String>>, NmstateError> {
+    ) -> Result<HashMap<String, Vec<(String, String)>>, NmstateError> {
         let mut ret = HashMap::new();
         let mut self_clone = self.clone();
         self_clone.interfaces.set_unknown_iface_to_eth();
