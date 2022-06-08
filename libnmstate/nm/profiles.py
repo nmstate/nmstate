@@ -56,6 +56,7 @@ class NmProfiles:
                 profile.prepare_config(save_to_disk=False, gen_conf_mode=True)
                 all_profiles.append(profile)
 
+        _use_uuid_as_controller_and_parent(all_profiles)
         return [
             (profile.config_file_name, profile.to_key_file_string())
             for profile in all_profiles
