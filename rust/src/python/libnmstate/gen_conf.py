@@ -12,8 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
+
 from .clib_wrapper import gen_conf
 
 
 def generate_configurations(desired_state):
-    return gen_conf(desired_state)
+    return json.loads(gen_conf(desired_state))

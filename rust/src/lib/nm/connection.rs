@@ -53,8 +53,8 @@ pub(crate) const NM_SETTING_USER_SPACES: [&str; 2] = [
 
 pub(crate) fn nm_gen_conf(
     net_state: &NetworkState,
-) -> Result<Vec<String>, NmstateError> {
-    let mut ret = Vec::new();
+) -> Result<Vec<(String, String)>, NmstateError> {
+    let mut nm_conns = Vec::new();
     let ifaces = net_state.interfaces.to_vec();
     for iface in &ifaces {
         let mut ctrl_iface: Option<&Interface> = None;
@@ -74,18 +74,27 @@ pub(crate) fn nm_gen_conf(
             false,
             &NetworkState::new(),
         )? {
-            ret.push(match nm_conn.to_keyfile() {
-                Ok(s) => s,
-                Err(e) => {
-                    return Err(NmstateError::new(
-                        ErrorKind::PluginFailure,
-                        format!(
+            nm_conns.push(nm_conn);
+        }
+    }
+
+    let mut ret = Vec::new();
+    for nm_conn in nm_conns {
+        match nm_conn.to_keyfile() {
+            Ok(s) => {
+                if let Some(id) = nm_conn.id() {
+                    ret.push((format!("{}.nmconnection", id), s));
+                }
+            }
+            Err(e) => {
+                return Err(NmstateError::new(
+                    ErrorKind::PluginFailure,
+                    format!(
                         "Bug in NM plugin, failed to generate configure: {}",
                         e
                     ),
-                    ));
-                }
-            })
+                ));
+            }
         }
     }
     Ok(ret)
