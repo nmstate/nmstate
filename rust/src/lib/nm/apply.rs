@@ -21,8 +21,7 @@ use crate::{
     nm::vlan::is_vlan_id_changed,
     nm::vrf::is_vrf_table_id_changed,
     nm::vxlan::is_vxlan_id_changed,
-    Interface, InterfaceType, NetworkState, NmstateError, OvsBridgeInterface,
-    RouteEntry,
+    Interface, InterfaceType, NetworkState, NmstateError, RouteEntry,
 };
 
 const ACTIVATION_RETRY_COUNT: usize = 5;
@@ -229,13 +228,6 @@ fn apply_single_state(
             )
         })
         .collect::<Vec<_>>();
-
-    let mut ovs_br_ifaces: Vec<&OvsBridgeInterface> = Vec::new();
-    for iface in net_state.interfaces.user_ifaces.values() {
-        if let Interface::OvsBridge(ref br_iface) = iface {
-            ovs_br_ifaces.push(br_iface);
-        }
-    }
 
     use_uuid_for_controller_reference(
         &mut nm_conns_to_activate,
