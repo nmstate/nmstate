@@ -1,5 +1,15 @@
 # Changelog
-## [1.2.1] - 2021-02-10
+## [1.3.0] - 2022-06-08
+### New features
+ - Add suppport to rx-queue parameter. (ec256e9)
+ - Add support of client ID in DHCPv4. (89fd71e)
+ - Add support of DUID in DHCPv6. (14160e5)
+
+### Bug fixes
+ - Fix multicast-router option for linux bridge. (d68f046)
+ - Fix clear VLAN filtering when set empty. (4918a93)
+
+## [1.2.1] - 2022-02-10
 ### New features
  - Add support to multipath routes. (0eb2c33)
  - Add support to ovsdb query and changes in nmstate-rust implementation. (8172369)
