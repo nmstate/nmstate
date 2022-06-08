@@ -5,7 +5,7 @@ use serde::Deserialize;
 
 use crate::{connection::DbusDictionary, NmError};
 
-#[derive(Debug, Clone, PartialEq, Default, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Default, Deserialize)]
 #[serde(try_from = "DbusDictionary")]
 #[non_exhaustive]
 pub struct NmSettingBond {
