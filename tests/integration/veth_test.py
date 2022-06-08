@@ -26,6 +26,7 @@ from libnmstate.error import NmstateLibnmError
 from libnmstate.error import NmstateValueError
 from libnmstate.schema import Bridge
 from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import Veth
@@ -357,3 +358,50 @@ def veth_interface(ifname, peer):
             }
         )
         libnmstate.apply(d_state)
+
+
+def test_new_veth_with_ipv6_only():
+    desired_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: VETH1,
+                Interface.TYPE: InterfaceType.VETH,
+                Interface.STATE: InterfaceState.UP,
+                Veth.CONFIG_SUBTREE: {
+                    Veth.PEER: VETH1PEER,
+                },
+                Interface.IPV6: {
+                    InterfaceIPv6.ENABLED: True,
+                    InterfaceIPv6.DHCP: False,
+                    InterfaceIPv6.AUTOCONF: False,
+                    InterfaceIPv6.ADDRESS: [
+                        {
+                            InterfaceIPv6.ADDRESS_IP: "2001:db8:1::1",
+                            InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
+                        }
+                    ],
+                },
+            }
+        ]
+    }
+    try:
+        libnmstate.apply(desired_state)
+        assertlib.assert_state_match(desired_state)
+    finally:
+        libnmstate.apply(
+            {
+                Interface.KEY: [
+                    {
+                        Interface.NAME: VETH1,
+                        Interface.TYPE: InterfaceType.VETH,
+                        Interface.STATE: InterfaceState.ABSENT,
+                    },
+                    {
+                        Interface.NAME: VETH1PEER,
+                        Interface.TYPE: InterfaceType.VETH,
+                        Interface.STATE: InterfaceState.ABSENT,
+                    },
+                ]
+            },
+            verify_change=False,
+        )
