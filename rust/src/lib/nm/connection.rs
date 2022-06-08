@@ -4,7 +4,6 @@ use crate::nm::nm_dbus::{
     NmApi, NmConnection, NmSettingConnection, NmSettingMacVlan, NmSettingVeth,
     NmSettingVlan, NmSettingVrf, NmSettingVxlan, NmSettingsConnectionFlag,
 };
-
 use crate::{
     nm::bond::gen_nm_bond_setting,
     nm::bridge::{gen_nm_br_port_setting, gen_nm_br_setting},
@@ -16,7 +15,7 @@ use crate::{
         create_ovs_port_nm_conn, gen_nm_ovs_br_setting,
         gen_nm_ovs_ext_ids_setting, gen_nm_ovs_iface_setting,
     },
-    nm::profile::get_exist_profile,
+    nm::profile::{get_exist_profile, use_uuid_for_controller_reference},
     nm::sriov::gen_nm_sriov_setting,
     nm::user::gen_nm_user_setting,
     nm::veth::create_veth_peer_profile_if_not_found,
@@ -77,6 +76,13 @@ pub(crate) fn nm_gen_conf(
             nm_conns.push(nm_conn);
         }
     }
+
+    use_uuid_for_controller_reference(
+        &mut nm_conns,
+        &net_state.interfaces.user_ifaces,
+        &HashMap::new(),
+        &[],
+    )?;
 
     let mut ret = Vec::new();
     for nm_conn in nm_conns {
