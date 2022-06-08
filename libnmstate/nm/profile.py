@@ -64,7 +64,6 @@ class NmProfile:
     ACTION_NEW_OVS_IFACE = "new_ovs_iface"
     ACTION_NEW_OVS_PORT = "new_ovs_port"
     ACTION_NEW_VETH = "new_veth"
-    ACTION_NEW_VETH_PEER = "new_veth_peer"
     ACTION_NEW_VLAN = "new_vlan"
     ACTION_NEW_VXLAN = "new_vxlan"
     ACTION_OTHER_CONTROLLER = "other_controller"
@@ -83,7 +82,6 @@ class NmProfile:
         ACTION_NEW_OVS_PORT,
         ACTION_NEW_OVS_IFACE,
         ACTION_NEW_VETH,
-        ACTION_NEW_VETH_PEER,
         ACTION_MODIFIED_OVS_PORT,
         ACTION_MODIFIED_OVS_IFACE,
         ACTION_MODIFIED,
@@ -215,10 +213,7 @@ class NmProfile:
                 self._add_action(NmProfile.ACTION_TOP_CONTROLLER)
 
         if self._iface.is_up and self._needs_veth_activation():
-            if self._iface.is_peer:
-                self._add_action(NmProfile.ACTION_NEW_VETH_PEER)
-            else:
-                self._add_action(NmProfile.ACTION_NEW_VETH)
+            self._add_action(NmProfile.ACTION_NEW_VETH)
 
         if (
             self._iface.is_up
@@ -478,9 +473,6 @@ class NmProfile:
             and not self._deactivated
         ):
             self._deactivate()
-        elif action == NmProfile.ACTION_NEW_VETH_PEER:
-            self._import_current_device()
-            self._activate()
         elif action == NmProfile.ACTION_DELETE_PROFILE:
             self._delete_profile()
         elif action == NmProfile.ACTION_DELETE_DEVICE:
