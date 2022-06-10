@@ -27,3 +27,8 @@ zvariant = "2.10.0"
 
 [dev-dependencies]
 serde_yaml = "0.8"
+
+[features]
+online = []
+offline = []
+default = ["online"]

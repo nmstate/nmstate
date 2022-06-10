@@ -50,6 +50,7 @@ pub(crate) const NM_SETTING_USER_SPACES: [&str; 2] = [
     NM_SETTING_OVS_PORT_SETTING_NAME,
 ];
 
+#[cfg(feature = "offline")]
 pub(crate) fn nm_gen_conf(
     net_state: &NetworkState,
 ) -> Result<Vec<(String, String)>, NmstateError> {

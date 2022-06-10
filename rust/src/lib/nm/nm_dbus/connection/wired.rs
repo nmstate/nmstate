@@ -63,6 +63,7 @@ impl TryFrom<DbusDictionary> for NmSettingWired {
 }
 
 impl NmSettingWired {
+    #[cfg(feature = "offline")]
     pub(crate) fn to_keyfile(
         &self,
     ) -> Result<HashMap<String, zvariant::Value>, NmError> {

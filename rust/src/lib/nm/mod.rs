@@ -30,10 +30,14 @@ mod vrf;
 mod vxlan;
 mod wired;
 
+#[cfg(feature = "online")]
 pub(crate) use apply::nm_apply;
+#[cfg(feature = "online")]
 pub(crate) use checkpoint::{
     nm_checkpoint_create, nm_checkpoint_destroy, nm_checkpoint_rollback,
     nm_checkpoint_timeout_extend,
 };
+#[cfg(feature = "offline")]
 pub(crate) use connection::nm_gen_conf;
+#[cfg(feature = "online")]
 pub(crate) use show::nm_retrieve;

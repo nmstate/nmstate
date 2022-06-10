@@ -205,6 +205,7 @@ impl NmConnection {
         _connection_inner_string_member!(self, controller_type)
     }
 
+    #[cfg(feature = "offline")]
     pub fn to_keyfile(&self) -> Result<String, NmError> {
         let mut sections: Vec<(&str, HashMap<String, zvariant::Value>)> =
             Vec::new();

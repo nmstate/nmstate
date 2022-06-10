@@ -8,6 +8,10 @@ mod ifaces;
 mod ip;
 mod lldp;
 mod net_state;
+#[cfg(feature = "offline")]
+mod net_state_offline;
+#[cfg(feature = "online")]
+mod net_state_online;
 mod nispor;
 mod nm;
 mod ovs;
