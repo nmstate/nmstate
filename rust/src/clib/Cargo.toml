@@ -9,7 +9,7 @@ edition = "2018"
 [lib]
 name = "nmstate"
 path = "lib.rs"
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "staticlib"]
 
 [dependencies]
 nmstate = { path = "../lib" }
