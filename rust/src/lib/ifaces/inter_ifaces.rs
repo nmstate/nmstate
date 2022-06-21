@@ -743,3 +743,7 @@ pub(crate) fn get_ignored_ifaces(
         ignored_user_ifaces.drain().collect();
     (k_ifaces, u_ifaces)
 }
+
+pub(crate) fn purge_userspace_ignored_ifaces(state: &mut Interfaces) {
+    state.user_ifaces.retain(|_, iface| !iface.is_ignore())
+}
