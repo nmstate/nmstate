@@ -46,6 +46,14 @@ Requires:       %{name}-libs%{?_isa} = %{version}-%{release}
 %description devel
 Development files of nmstate C binding.
 
+%package static
+Summary:        Static development files for nmstate
+Group:          Development/Libraries
+Requires:       %{name}-devel%{?_isa} = %{version}-%{release}
+
+%description static
+Static C library bindings for nmstate.
+
 %package -n python3-%{libname}
 Summary:        nmstate Python 3 API library
 # Use Recommends for NetworkManager because only access to NM DBus is required,
@@ -95,6 +103,9 @@ env SKIP_PYTHON_INSTALL=1 PREFIX=%{_prefix} LIBDIR=%{_libdir} %make_install
 %{_libdir}/libnmstate.so
 %{_includedir}/nmstate.h
 %{_libdir}/pkgconfig/nmstate.pc
+
+%files static
+%{_libdir}/libnmstate.a
 
 %files -n python3-%{libname}
 %license LICENSE
