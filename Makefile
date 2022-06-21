@@ -8,6 +8,7 @@ TIMESTAMP=$(shell date +%Y%m%d)
 TARBALL=nmstate-$(VERSION)-alpha.$(TIMESTAMP).$(GIT_COMMIT).tar.gz
 VENDOR_TARBALL=nmstate-vendor-$(VERSION).$(TIMESTAMP).$(GIT_COMMIT).tar.xz
 CLIB_SO_DEV=libnmstate.so
+CLIB_A_DEV=libnmstate.a
 CLIB_SO_MAN=$(CLIB_SO_DEV).$(VERSION_MAJOR)
 CLIB_SO_FULL=$(CLIB_SO_DEV).$(VERSION)
 RUST_DEBUG_BIN_DIR=./target/debug
@@ -17,6 +18,7 @@ CLI_EXEC2=nmstate-autoconf
 CLIB_HEADER=rust/src/clib/nmstate.h
 CLIB_SO_DEV_RELEASE=rust/target/release/$(CLIB_SO_DEV)
 CLIB_SO_DEV_DEBUG=rust/target/debug/$(CLIB_SO_DEV)
+CLIB_A_DEV_RELEASE=rust/target/release/$(CLIB_A_DEV)
 CLIB_PKG_CONFIG=rust/src/clib/nmstate.pc
 PYTHON_MODULE_NAME=libnmstate
 PYTHON_MODULE_SRC=src/python/libnmstate
@@ -209,6 +211,8 @@ install: $(CLI_EXEC_RELEASE) manpage clib
 	ln -sfv $(CLI_EXEC) $(DESTDIR)$(PREFIX)/bin/$(CLI_EXEC2)
 	install -p -D -m755 $(CLIB_SO_DEV_RELEASE) \
 		$(DESTDIR)$(LIBDIR)/$(CLIB_SO_FULL)
+	install -p -D -m755 $(CLIB_A_DEV_RELEASE) \
+		$(DESTDIR)$(LIBDIR)/$(CLIB_A_DEV)
 	ln -sfv $(CLIB_SO_FULL) $(DESTDIR)$(LIBDIR)/$(CLIB_SO_MAN)
 	ln -sfv $(CLIB_SO_FULL) $(DESTDIR)$(LIBDIR)/$(CLIB_SO_DEV)
 	if [ $(SKIP_PYTHON_INSTALL) != 1 ];then \
@@ -232,6 +236,7 @@ uninstall:
 	- rm -fv $(DESTDIR)$(LIBDIR)/$(CLIB_SO_DEV)
 	- rm -fv $(DESTDIR)$(LIBDIR)/$(CLIB_SO_MAN)
 	- rm -fv $(DESTDIR)$(LIBDIR)/$(CLIB_SO_FULL)
+	- rm -fv $(DESTDIR)$(LIBDIR)/$(CLIB_A_DEV)
 	- rm -fv $(DESTDIR)$(INCLUDE_DIR)/$(shell basename $(CLIB_HEADER))
 	- rm -fv $(DESTDIR)$(INCLUDE_DIR)/$(shell basename $(CLIB_PKG_CONFIG))
 	- rm -fv $(DESTDIR)$(MAN_DIR)/man8/$(shell basename $(CLI_MANPAGE))
