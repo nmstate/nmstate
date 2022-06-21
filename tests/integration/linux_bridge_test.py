@@ -36,6 +36,7 @@ from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import LinuxBridge
+from libnmstate.schema import VLAN
 
 from .testlib import assertlib
 from .testlib.assertlib import assert_mac_address
@@ -985,3 +986,23 @@ def test_linux_bridge_show_port_ip_as_disabled(bridge0_with_port0):
     assert state[Interface.KEY][0][Interface.IPV6] == {
         InterfaceIPv6.ENABLED: False
     }
+
+
+@pytest.mark.tier1
+@pytest.mark.parametrize(
+    "vlan_protocol",
+    [
+        VLAN.PROTOCOL_802_1AD,
+        VLAN.PROTOCOL_802_1Q,
+    ],
+)
+def test_linux_bridge_set_vlan_protocol(bridge0_with_port0, vlan_protocol):
+    iface_state = {
+        Interface.NAME: TEST_BRIDGE0,
+        LinuxBridge.CONFIG_SUBTREE: {
+            LinuxBridge.OPTIONS_SUBTREE: {
+                LinuxBridge.Options.VLAN_PROTOCOL: vlan_protocol,
+            }
+        },
+    }
+    libnmstate.apply({Interface.KEY: [iface_state]})

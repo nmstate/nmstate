@@ -6,6 +6,7 @@ use crate::{
     nispor::linux_bridge_port_vlan::parse_port_vlan_conf, BaseInterface,
     LinuxBridgeConfig, LinuxBridgeInterface, LinuxBridgeMulticastRouterType,
     LinuxBridgeOptions, LinuxBridgePortConfig, LinuxBridgeStpOptions,
+    VlanProtocol,
 };
 
 pub(crate) fn np_bridge_to_nmstate(
@@ -118,6 +119,19 @@ fn np_bridge_options_to_nmstate(
             np_bridge.multicast_startup_query_count;
         options.multicast_startup_query_interval =
             np_bridge.multicast_startup_query_interval;
+        options.vlan_protocol =
+            np_bridge.vlan_protocol.as_ref().and_then(|v| match v {
+                nispor::BridgeVlanProtocol::Ieee8021Q => {
+                    Some(VlanProtocol::Ieee8021Q)
+                }
+                nispor::BridgeVlanProtocol::Ieee8021AD => {
+                    Some(VlanProtocol::Ieee8021Ad)
+                }
+                _ => {
+                    warn!("Unsupported linux bridge vlan protocol {:?}", v);
+                    None
+                }
+            });
     }
     options
 }

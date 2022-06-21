@@ -41,7 +41,8 @@ pub use crate::ifaces::{
     OvsBridgeBondPortConfig, OvsBridgeConfig, OvsBridgeInterface,
     OvsBridgeOptions, OvsBridgePortConfig, OvsDpdkConfig, OvsInterface,
     OvsPatchConfig, SrIovConfig, SrIovVfConfig, VethConfig, VlanConfig,
-    VlanInterface, VrfConfig, VrfInterface, VxlanConfig, VxlanInterface,
+    VlanInterface, VlanProtocol, VrfConfig, VrfInterface, VxlanConfig,
+    VxlanInterface,
 };
 pub use crate::ip::{
     Dhcpv4ClientId, Dhcpv6Duid, InterfaceIpAddr, InterfaceIpv4, InterfaceIpv6,
