@@ -11,6 +11,7 @@ use crate::{
     nm::ieee8021x::gen_nm_802_1x_setting,
     nm::infiniband::gen_nm_ib_setting,
     nm::ip::gen_nm_ip_setting,
+    nm::nm_specific::apply_backend_specific_config,
     nm::ovs::{
         create_ovs_port_nm_conn, gen_nm_ovs_br_setting,
         gen_nm_ovs_ext_ids_setting, gen_nm_ovs_iface_setting,
@@ -264,6 +265,10 @@ pub(crate) fn iface_to_nm_connections(
     // its NmSettingOvsIface setting
     if base_iface.controller.as_deref() == Some("") {
         nm_conn.ovs_iface = None;
+    }
+
+    if let Some(be_config) = iface.base_iface().backend_specific.as_ref() {
+        apply_backend_specific_config(be_config, &mut nm_conn);
     }
 
     ret.insert(0, nm_conn);

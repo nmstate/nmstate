@@ -22,6 +22,29 @@ fn _get_json_value_difference<'a, 'b>(
                 None
             }
         }
+        (Value::Number(des), Value::Bool(cur)) => {
+            if (des.as_u64() == Some(1) && *cur)
+                || (des.as_u64() == Some(0) && !(*cur))
+            {
+                None
+            } else {
+                Some((reference, desire, current))
+            }
+        }
+        (Value::String(des), Value::Bool(cur)) => {
+            if str_to_bool(des) == Some(*cur) {
+                None
+            } else {
+                Some((reference, desire, current))
+            }
+        }
+        (Value::String(des), Value::Number(cur)) => {
+            if &cur.to_string() == des {
+                None
+            } else {
+                Some((reference, desire, current))
+            }
+        }
         (Value::String(des), Value::String(cur)) => {
             if des != cur {
                 if des == NetworkState::PASSWORD_HID_BY_NMSTATE {
@@ -104,5 +127,13 @@ fn should_ignore(reference: &str, desire: &Value, current: &Value) -> bool {
         true
     } else {
         false
+    }
+}
+
+fn str_to_bool(v: &str) -> Option<bool> {
+    match v {
+        "True" | "yes" | "1" | "true" | "y" => Some(true),
+        "False" | "no" | "0" | "false" | "n" => Some(false),
+        _ => None,
     }
 }

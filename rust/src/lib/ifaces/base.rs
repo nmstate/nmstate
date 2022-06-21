@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use log::error;
 use serde::{Deserialize, Serialize};
 
@@ -66,6 +68,8 @@ pub struct BaseInterface {
     pub(crate) routes: Option<Vec<RouteEntry>>,
     #[serde(skip)]
     pub(crate) rules: Option<Vec<RouteRuleEntry>>,
+    #[serde(skip_serializing_if = "is_none_or_empty_hashmap")]
+    pub backend_specific: Option<HashMap<String, serde_json::Value>>,
     #[serde(flatten)]
     pub _other: serde_json::Map<String, serde_json::Value>,
 }
@@ -127,6 +131,17 @@ impl BaseInterface {
                     self_ipv6.update(other_ipv6);
                 } else {
                     self.ipv6 = other.ipv6.clone();
+                }
+            }
+        }
+        if other.prop_list.contains(&"backend_specific") {
+            if let Some(ref other_bs) = other.backend_specific {
+                if let Some(ref mut self_bs) = self.backend_specific {
+                    for (k, v) in other_bs {
+                        self_bs.insert(k.clone(), v.clone());
+                    }
+                } else {
+                    self.backend_specific = other.backend_specific.clone();
                 }
             }
         }
@@ -262,4 +277,14 @@ fn default_state() -> InterfaceState {
 
 fn default_iface_type() -> InterfaceType {
     InterfaceType::Unknown
+}
+
+fn is_none_or_empty_hashmap(
+    v: &Option<HashMap<String, serde_json::Value>>,
+) -> bool {
+    if let Some(v) = v {
+        v.is_empty()
+    } else {
+        true
+    }
 }

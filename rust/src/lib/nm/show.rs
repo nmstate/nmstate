@@ -24,6 +24,7 @@ use crate::{
     nm::ieee8021x::nm_802_1x_to_nmstate,
     nm::ip::{nm_ip_setting_to_nmstate4, nm_ip_setting_to_nmstate6},
     nm::lldp::{get_lldp, is_lldp_enabled},
+    nm::nm_specific::get_backend_specific_config,
     nm::ovs::{
         get_ovs_dpdk_config, get_ovs_patch_config, nm_ovs_bridge_conf_get,
     },
@@ -202,6 +203,7 @@ fn nm_conn_to_base_iface(
             "ieee8021x",
             "description",
             "lldp",
+            "backend_specific",
         ];
         base_iface.state = InterfaceState::Up;
         base_iface.iface_type = nm_dev_iface_type_to_nmstate(nm_dev);
@@ -209,6 +211,8 @@ fn nm_conn_to_base_iface(
         base_iface.ipv6 = ipv6;
         base_iface.controller = nm_conn.controller().map(|c| c.to_string());
         base_iface.description = get_description(nm_conn);
+        base_iface.backend_specific =
+            Some(get_backend_specific_config(nm_conn));
         base_iface.lldp =
             Some(lldp_neighbors.map(get_lldp).unwrap_or_default());
         if let Some(nm_saved_conn) = nm_saved_conn {
@@ -312,6 +316,7 @@ fn iface_get(
                 return None;
             }
         };
+
         debug!("Found interface {:?}", iface);
         Some(iface)
     } else {

@@ -14,6 +14,7 @@ mod ip;
 mod lldp;
 mod mac_vlan;
 mod nm_dbus;
+mod nm_specific;
 mod ovs;
 mod profile;
 mod route;

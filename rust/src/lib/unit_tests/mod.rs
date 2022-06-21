@@ -33,6 +33,8 @@ mod route_rule;
 #[cfg(test)]
 mod sriov;
 #[cfg(test)]
+mod state;
+#[cfg(test)]
 mod testlib;
 #[cfg(test)]
 mod vlan;
