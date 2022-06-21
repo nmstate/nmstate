@@ -59,3 +59,30 @@ impl VlanConfig {
         }
     }
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum VlanProtocol {
+    #[serde(rename = "802.1q")]
+    Ieee8021Q,
+    #[serde(rename = "802.1ad")]
+    Ieee8021Ad,
+}
+
+impl Default for VlanProtocol {
+    fn default() -> Self {
+        Self::Ieee8021Q
+    }
+}
+
+impl std::fmt::Display for VlanProtocol {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Self::Ieee8021Q => "802.1q",
+                Self::Ieee8021Ad => "802.1ad",
+            }
+        )
+    }
+}
