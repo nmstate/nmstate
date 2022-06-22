@@ -1,0 +1,4 @@
+---
+hostname:
+  running: "nmstate-test.example.org"
+  config: "nmstate-test.example.org"

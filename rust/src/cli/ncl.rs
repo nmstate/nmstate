@@ -7,7 +7,10 @@ use std::process::{Command, Stdio};
 
 use env_logger::Builder;
 use log::LevelFilter;
-use nmstate::{DnsState, NetworkState, OvsDbGlobalConfig, RouteRules, Routes};
+use nmstate::{
+    DnsState, HostNameState, NetworkState, OvsDbGlobalConfig, RouteRules,
+    Routes,
+};
 use serde::Serialize;
 use serde_yaml::{self, Value};
 
@@ -48,6 +51,12 @@ fn main() {
                 .short('v')
                 .multiple_occurrences(true)
                 .help("Set verbose level")
+                .global(true),
+        )
+        .arg(
+            clap::Arg::new("quiet")
+                .short('q')
+                .help("Disable logging")
                 .global(true),
         )
         .subcommand(
@@ -226,21 +235,22 @@ fn main() {
        ).get_matches();
     let (log_module_filters, log_level) =
         match matches.occurrences_of("verbose") {
-            0 => (vec!["nmstate", "nm_dbus"], LevelFilter::Warn),
-            1 => (vec!["nmstate", "nm_dbus"], LevelFilter::Info),
-            2 => (vec!["nmstate", "nm_dbus"], LevelFilter::Debug),
+            0 => (vec!["nmstate", "nm_dbus"], LevelFilter::Info),
+            1 => (vec!["nmstate", "nm_dbus"], LevelFilter::Debug),
             _ => (vec![""], LevelFilter::Debug),
         };
 
-    let mut log_builder = Builder::new();
-    for log_module_filter in log_module_filters {
-        if !log_module_filter.is_empty() {
-            log_builder.filter(Some(log_module_filter), log_level);
-        } else {
-            log_builder.filter(None, log_level);
+    if !matches.is_present("quiet") {
+        let mut log_builder = Builder::new();
+        for log_module_filter in log_module_filters {
+            if !log_module_filter.is_empty() {
+                log_builder.filter(Some(log_module_filter), log_level);
+            } else {
+                log_builder.filter(None, log_level);
+            }
         }
+        log_builder.init();
     }
-    log_builder.init();
 
     if let Some(matches) = matches.subcommand_matches(SUB_CMD_GEN_CONF) {
         if let Some(file_path) = matches.value_of("STATE_FILE") {
@@ -310,8 +320,10 @@ fn gen_conf(file_path: &str) -> Result<String, CliError> {
     Ok(serde_yaml::to_string(&confs)?)
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 struct SortedNetworkState {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    hostname: Option<HostNameState>,
     #[serde(rename = "dns-resolver", default)]
     dns: DnsState,
     #[serde(rename = "route-rules", default)]
@@ -358,6 +370,7 @@ fn sort_netstate(
             }
         }
         return Ok(SortedNetworkState {
+            hostname: net_state.hostname,
             interfaces: new_ifaces,
             routes: net_state.routes,
             rules: net_state.rules,
@@ -367,6 +380,7 @@ fn sort_netstate(
     }
 
     Ok(SortedNetworkState {
+        hostname: net_state.hostname,
         interfaces: Vec::new(),
         routes: net_state.routes,
         rules: net_state.rules,

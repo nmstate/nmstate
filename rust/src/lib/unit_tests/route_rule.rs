@@ -88,20 +88,20 @@ fn gen_test_routes_conf() -> Routes {
 }
 
 fn gen_test_route_entries() -> Vec<RouteEntry> {
-    let mut routes = Vec::new();
-    routes.push(gen_route_entry(
-        TEST_IPV6_NET1,
-        TEST_NIC,
-        TEST_IPV6_ADDR1,
-        TEST_TABLE_ID1,
-    ));
-    routes.push(gen_route_entry(
-        TEST_IPV4_NET1,
-        TEST_NIC,
-        TEST_IPV4_ADDR1,
-        TEST_TABLE_ID2,
-    ));
-    routes
+    vec![
+        gen_route_entry(
+            TEST_IPV6_NET1,
+            TEST_NIC,
+            TEST_IPV6_ADDR1,
+            TEST_TABLE_ID1,
+        ),
+        gen_route_entry(
+            TEST_IPV4_NET1,
+            TEST_NIC,
+            TEST_IPV4_ADDR1,
+            TEST_TABLE_ID2,
+        ),
+    ]
 }
 
 fn gen_route_entry(
@@ -126,20 +126,20 @@ fn gen_test_rules_conf() -> RouteRules {
 }
 
 fn gen_test_rule_entries() -> Vec<RouteRuleEntry> {
-    let mut rules = Vec::new();
-    rules.push(gen_rule_entry(
-        TEST_RULE_IPV6_FROM,
-        TEST_RULE_IPV6_TO,
-        TEST_RULE_PRIORITY1,
-        TEST_TABLE_ID1,
-    ));
-    rules.push(gen_rule_entry(
-        TEST_RULE_IPV4_FROM,
-        TEST_RULE_IPV4_TO,
-        TEST_RULE_PRIORITY2,
-        TEST_TABLE_ID2,
-    ));
-    rules
+    vec![
+        gen_rule_entry(
+            TEST_RULE_IPV6_FROM,
+            TEST_RULE_IPV6_TO,
+            TEST_RULE_PRIORITY1,
+            TEST_TABLE_ID1,
+        ),
+        gen_rule_entry(
+            TEST_RULE_IPV4_FROM,
+            TEST_RULE_IPV4_TO,
+            TEST_RULE_PRIORITY2,
+            TEST_TABLE_ID2,
+        ),
+    ]
 }
 
 fn gen_rule_entry(
@@ -231,4 +231,71 @@ route-rules:
 
     assert_eq!(ovs_iface.iface_type(), InterfaceType::OvsInterface);
     assert_eq!(ovs_iface.base_iface().rules, Some(expected_rules));
+}
+
+#[test]
+fn test_route_rule_ignore_absent_ifaces() {
+    let desired: NetworkState = serde_yaml::from_str(
+        r#"
+interfaces:
+- name: br0
+  state: absent
+  type: linux-bridge
+route-rules:
+  config:
+  - route-table: 200
+    state: absent
+"#,
+    )
+    .unwrap();
+
+    let current: NetworkState = serde_yaml::from_str(
+        r#"
+interfaces:
+- name: eth1
+  type: ethernet
+  state: up
+- name: br0
+  type: linux-bridge
+  state: up
+  ipv4:
+    address:
+    - ip: 192.0.2.251
+      prefix-length: 24
+    dhcp: false
+    enabled: true
+  bridge:
+    options:
+      stp:
+        enabled: false
+    port:
+    - name: eth1
+routes:
+  config:
+    - destination: 198.51.100.0/24
+      metric: 150
+      next-hop-address: 192.0.2.1
+      next-hop-interface: br0
+      table-id: 200
+route-rules:
+  config:
+    - ip-from: 192.51.100.2/32
+      route-table: 200
+"#,
+    )
+    .unwrap();
+
+    let (add_net_state, chg_net_state, del_net_state) =
+        desired.gen_state_for_apply(&current).unwrap();
+
+    println!("add_net_state {:?}", add_net_state);
+    println!("chg_net_state {:?}", chg_net_state);
+    println!("del_net_state {:?}", del_net_state);
+
+    assert!(add_net_state.interfaces.to_vec().is_empty());
+    assert!(chg_net_state.interfaces.to_vec().len() == 1);
+    assert!(chg_net_state.interfaces.kernel_ifaces["eth1"].is_up());
+
+    assert!(del_net_state.interfaces.to_vec().len() == 1);
+    assert!(del_net_state.interfaces.kernel_ifaces["br0"].is_absent());
 }

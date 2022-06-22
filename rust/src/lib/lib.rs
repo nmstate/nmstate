@@ -1,6 +1,7 @@
 mod deserializer;
 mod dns;
 mod error;
+mod hostname;
 mod ieee8021x;
 mod iface;
 mod ifaces;
@@ -19,6 +20,7 @@ mod unit_tests;
 
 pub use crate::dns::{DnsClientState, DnsState};
 pub use crate::error::{ErrorKind, NmstateError};
+pub use crate::hostname::HostNameState;
 pub use crate::ieee8021x::Ieee8021XConfig;
 pub use crate::iface::{
     Interface, InterfaceState, InterfaceType, UnknownInterface,
@@ -41,7 +43,10 @@ pub use crate::ifaces::{
     OvsPatchConfig, SrIovConfig, SrIovVfConfig, VethConfig, VlanConfig,
     VlanInterface, VrfConfig, VrfInterface, VxlanConfig, VxlanInterface,
 };
-pub use crate::ip::{InterfaceIpAddr, InterfaceIpv4, InterfaceIpv6};
+pub use crate::ip::{
+    Dhcpv4ClientId, Dhcpv6Duid, InterfaceIpAddr, InterfaceIpv4, InterfaceIpv6,
+    Ipv6AddrGenMode,
+};
 pub use crate::lldp::{
     LldpAddressFamily, LldpChassisId, LldpChassisIdType, LldpConfig,
     LldpMacPhyConf, LldpMaxFrameSize, LldpMgmtAddr, LldpMgmtAddrs,

@@ -31,7 +31,7 @@ const COPY_MAC_ALLOWED_IFACE_TYPES: [InterfaceType; 3] = [
     InterfaceType::OvsInterface,
 ];
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct Interfaces {
     pub(crate) kernel_ifaces: HashMap<String, Interface>,
@@ -742,4 +742,8 @@ pub(crate) fn get_ignored_ifaces(
     let u_ifaces: Vec<(String, InterfaceType)> =
         ignored_user_ifaces.drain().collect();
     (k_ifaces, u_ifaces)
+}
+
+pub(crate) fn purge_userspace_ignored_ifaces(state: &mut Interfaces) {
+    state.user_ifaces.retain(|_, iface| !iface.is_ignore())
 }

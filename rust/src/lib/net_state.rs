@@ -8,16 +8,16 @@ use crate::{
         get_cur_dns_ifaces, is_dns_changed, purge_dns_config,
         reselect_dns_ifaces,
     },
-    ifaces::get_ignored_ifaces,
-    nispor::{nispor_apply, nispor_retrieve},
+    ifaces::{get_ignored_ifaces, purge_userspace_ignored_ifaces},
+    nispor::{nispor_apply, nispor_retrieve, set_running_hostname},
     nm::{
         nm_apply, nm_checkpoint_create, nm_checkpoint_destroy,
         nm_checkpoint_rollback, nm_checkpoint_timeout_extend, nm_gen_conf,
         nm_retrieve,
     },
     ovsdb::{ovsdb_apply, ovsdb_is_running, ovsdb_retrieve},
-    DnsState, ErrorKind, Interface, InterfaceType, Interfaces, NmstateError,
-    OvsDbGlobalConfig, RouteRules, Routes,
+    DnsState, ErrorKind, HostNameState, Interface, InterfaceType, Interfaces,
+    NmstateError, OvsDbGlobalConfig, RouteRules, Routes,
 };
 
 const DEFAULT_ROLLBACK_TIMEOUT: u32 = 60;
@@ -27,10 +27,12 @@ const VERIFY_RETRY_COUNT_SRIOV: usize = 60;
 const VERIFY_RETRY_COUNT_KERNEL_MODE: usize = 5;
 const MAX_SUPPORTED_INTERFACES: usize = 1000;
 
-#[derive(Clone, Debug, Serialize, Default, PartialEq)]
+#[derive(Clone, Debug, Serialize, Default, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 #[non_exhaustive]
 pub struct NetworkState {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hostname: Option<HostNameState>,
     #[serde(rename = "dns-resolver", default)]
     pub dns: DnsState,
     #[serde(rename = "route-rules", default)]
@@ -99,6 +101,13 @@ impl<'de> Deserialize<'de> for NetworkState {
             net_state.prop_list.push("ovsdb");
             net_state.ovsdb = OvsDbGlobalConfig::deserialize(ovsdb_value)
                 .map_err(serde::de::Error::custom)?;
+        }
+        if let Some(hostname_value) = v.get("hostname") {
+            net_state.prop_list.push("hostname");
+            net_state.hostname = Some(
+                HostNameState::deserialize(hostname_value)
+                    .map_err(serde::de::Error::custom)?,
+            );
         }
         Ok(net_state)
     }
@@ -175,6 +184,9 @@ impl NetworkState {
 
     pub fn retrieve(&mut self) -> Result<&mut Self, NmstateError> {
         let state = nispor_retrieve(self.running_config_only)?;
+        if state.prop_list.contains(&"hostname") {
+            self.hostname = state.hostname;
+        }
         if state.prop_list.contains(&"interfaces") {
             self.interfaces = state.interfaces;
         }
@@ -200,6 +212,8 @@ impl NetworkState {
         if !self.include_secrets {
             self.hide_secrets();
         }
+        purge_userspace_ignored_ifaces(&mut self.interfaces);
+
         Ok(self)
     }
 
@@ -269,6 +283,12 @@ impl NetworkState {
         debug!("Changing net state {:?}", &chg_net_state);
         debug!("Deleting net state {:?}", &del_net_state);
 
+        if let Some(running_hostname) =
+            self.hostname.as_ref().and_then(|c| c.running.as_ref())
+        {
+            set_running_hostname(running_hostname)?;
+        }
+
         if !self.kernel_only {
             let retry_count =
                 if desire_state_to_apply.interfaces.has_sriov_enabled() {
@@ -337,6 +357,15 @@ impl NetworkState {
     }
 
     fn update_state(&mut self, other: &Self) {
+        if other.prop_list.contains(&"hostname") {
+            if let Some(h) = self.hostname.as_mut() {
+                if let Some(other_h) = other.hostname.as_ref() {
+                    h.update(other_h);
+                }
+            } else {
+                self.hostname = other.hostname.clone();
+            }
+        }
         if other.prop_list.contains(&"interfaces") {
             self.interfaces.update(&other.interfaces);
         }
@@ -350,7 +379,7 @@ impl NetworkState {
 
     pub fn gen_conf(
         &self,
-    ) -> Result<HashMap<String, Vec<String>>, NmstateError> {
+    ) -> Result<HashMap<String, Vec<(String, String)>>, NmstateError> {
         let mut ret = HashMap::new();
         let mut self_clone = self.clone();
         self_clone.interfaces.set_unknown_iface_to_eth();
@@ -362,6 +391,9 @@ impl NetworkState {
     }
 
     fn verify(&self, current: &Self) -> Result<(), NmstateError> {
+        if let Some(desired_hostname) = self.hostname.as_ref() {
+            desired_hostname.verify(current.hostname.as_ref())?;
+        }
         self.interfaces.verify(&current.interfaces)?;
         let (ignored_kernel_ifaces, _) =
             get_ignored_ifaces(&self.interfaces, &current.interfaces);
@@ -396,18 +428,21 @@ impl NetworkState {
             .gen_state_for_apply(&current.interfaces, self.memory_only)?;
 
         add_net_state.interfaces = add_ifaces;
+        add_net_state.hostname = self.hostname.clone();
         chg_net_state.interfaces = chg_ifaces;
         del_net_state.interfaces = del_ifaces;
 
         self.include_route_changes(
             &mut add_net_state,
             &mut chg_net_state,
+            &del_net_state,
             current,
         );
 
         self.include_rule_changes(
             &mut add_net_state,
             &mut chg_net_state,
+            &del_net_state,
             current,
         )?;
 
@@ -424,6 +459,7 @@ impl NetworkState {
         &self,
         add_net_state: &mut Self,
         chg_net_state: &mut Self,
+        del_net_state: &Self,
         current: &Self,
     ) {
         let mut changed_iface_routes =
@@ -433,6 +469,16 @@ impl NetworkState {
             let cur_iface = current
                 .interfaces
                 .get_iface(&iface_name, InterfaceType::Unknown);
+            if del_net_state
+                .interfaces
+                .kernel_ifaces
+                .get(&iface_name)
+                .is_some()
+            {
+                // Ignore routes on absent interfaces.
+                continue;
+            }
+
             if let Some(iface) =
                 add_net_state.interfaces.kernel_ifaces.get_mut(&iface_name)
             {
@@ -476,6 +522,7 @@ impl NetworkState {
         &self,
         add_net_state: &mut Self,
         chg_net_state: &mut Self,
+        del_net_state: &Self,
         current: &Self,
     ) -> Result<(), NmstateError> {
         let mut changed_rules =
@@ -491,6 +538,15 @@ impl NetworkState {
             let cur_iface = current
                 .interfaces
                 .get_iface(&iface_name, InterfaceType::Unknown);
+            if del_net_state
+                .interfaces
+                .kernel_ifaces
+                .get(&iface_name)
+                .is_some()
+            {
+                // Ignore rules on absent interfaces.
+                continue;
+            }
             if let Some(iface) =
                 add_net_state.interfaces.kernel_ifaces.get_mut(&iface_name)
             {

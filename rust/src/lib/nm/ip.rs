@@ -5,11 +5,12 @@ use crate::{
     nm::dns::{apply_nm_dns_setting, nm_dns_to_nmstate},
     nm::route::gen_nm_ip_routes,
     nm::route_rule::gen_nm_ip_rules,
-    ErrorKind, Interface, InterfaceIpv4, InterfaceIpv6, NmstateError,
-    RouteEntry, RouteRuleEntry,
+    Dhcpv4ClientId, Dhcpv6Duid, ErrorKind, Interface, InterfaceIpv4,
+    InterfaceIpv6, Ipv6AddrGenMode, NmstateError, RouteEntry, RouteRuleEntry,
 };
 
-const NM_CONFIG_ADDR_GEN_MODE_EUI64: i32 = 0;
+const ADDR_GEN_MODE_EUI64: i32 = 0;
+const ADDR_GEN_MODE_STABLE_PRIVACY: i32 = 1;
 
 fn gen_nm_ipv4_setting(
     iface_ip: Option<&InterfaceIpv4>,
@@ -51,7 +52,13 @@ fn gen_nm_ipv4_setting(
     nm_setting.addresses = addresses;
     if iface_ip.is_auto() {
         nm_setting.dhcp_timeout = Some(i32::MAX);
-        nm_setting.dhcp_client_id = Some("mac".to_string());
+        nm_setting.dhcp_client_id = Some(nmstate_dhcp_client_id_to_nm(
+            iface_ip
+                .dhcp_client_id
+                .as_ref()
+                .unwrap_or(&Dhcpv4ClientId::LinkLayerAddress),
+        ));
+
         apply_dhcp_opts(
             &mut nm_setting,
             iface_ip.auto_dns,
@@ -139,11 +146,18 @@ fn gen_nm_ipv6_setting(
     let mut nm_setting = nm_conn.ipv6.as_ref().cloned().unwrap_or_default();
     nm_setting.method = Some(method);
     nm_setting.addresses = addresses;
+    nm_setting.addr_gen_mode =
+        Some(nmstate_addr_gen_mode_to_nm(iface_ip.addr_gen_mode.as_ref()));
     if iface_ip.is_auto() {
         nm_setting.dhcp_timeout = Some(i32::MAX);
         nm_setting.ra_timeout = Some(i32::MAX);
-        nm_setting.addr_gen_mode = Some(NM_CONFIG_ADDR_GEN_MODE_EUI64);
-        nm_setting.dhcp_duid = Some("ll".to_string());
+        nm_setting.dhcp_duid = Some(
+            iface_ip
+                .dhcp_duid
+                .as_ref()
+                .unwrap_or(&Dhcpv6Duid::LinkLayerAddress)
+                .to_string(),
+        );
         nm_setting.dhcp_iaid = Some("mac".to_string());
         apply_dhcp_opts(
             &mut nm_setting,
@@ -215,6 +229,7 @@ pub(crate) fn nm_ip_setting_to_nmstate4(
             prop_list: vec![
                 "enabled",
                 "dhcp",
+                "dhcp_client_id",
                 "dns",
                 "auto_dns",
                 "auto_routes",
@@ -222,6 +237,7 @@ pub(crate) fn nm_ip_setting_to_nmstate4(
                 "auto_table_id",
             ],
             dns: Some(nm_dns_to_nmstate(nm_ip_setting)),
+            dhcp_client_id: nm_dhcp_client_id_to_nmstate(nm_ip_setting),
             ..Default::default()
         }
     } else {
@@ -261,8 +277,12 @@ pub(crate) fn nm_ip_setting_to_nmstate6(
                 "auto_routes",
                 "auto_gateway",
                 "auto_table_id",
+                "dhcp_duid",
+                "addr_gen_mode",
             ],
             dns: Some(nm_dns_to_nmstate(nm_ip_setting)),
+            dhcp_duid: nm_dhcp_duid_to_nmstate(nm_ip_setting),
+            addr_gen_mode: nm_ipv6_addr_gen_mode_to_nmstate(nm_ip_setting),
             ..Default::default()
         }
     } else {
@@ -305,4 +325,57 @@ fn apply_dhcp_opts(
 
 fn flip_bool(v: bool) -> bool {
     v.bitxor(true)
+}
+
+fn nm_dhcp_duid_to_nmstate(nm_setting: &NmSettingIp) -> Option<Dhcpv6Duid> {
+    match nm_setting.dhcp_duid.as_deref() {
+        Some("ll") => Some(Dhcpv6Duid::LinkLayerAddress),
+        Some("llt") => Some(Dhcpv6Duid::LinkLayerAddressPlusTime),
+        Some("uuid") => Some(Dhcpv6Duid::Uuid),
+        Some(nm_duid) => Some(Dhcpv6Duid::Other(nm_duid.to_string())),
+        None => None,
+    }
+}
+
+fn nm_dhcp_client_id_to_nmstate(
+    nm_setting: &NmSettingIp,
+) -> Option<Dhcpv4ClientId> {
+    match nm_setting.dhcp_client_id.as_deref() {
+        Some("mac") => Some(Dhcpv4ClientId::LinkLayerAddress),
+        Some("duid") => Some(Dhcpv4ClientId::IaidPlusDuid),
+        Some(nm_id) => Some(Dhcpv4ClientId::Other(nm_id.to_string())),
+        None => None,
+    }
+}
+
+fn nmstate_dhcp_client_id_to_nm(client_id: &Dhcpv4ClientId) -> String {
+    match client_id {
+        Dhcpv4ClientId::LinkLayerAddress => "mac".into(),
+        Dhcpv4ClientId::IaidPlusDuid => "duid".into(),
+        Dhcpv4ClientId::Other(s) => s.into(),
+    }
+}
+
+fn nm_ipv6_addr_gen_mode_to_nmstate(
+    nm_setting: &NmSettingIp,
+) -> Option<Ipv6AddrGenMode> {
+    match nm_setting.addr_gen_mode.as_ref() {
+        Some(&ADDR_GEN_MODE_EUI64) => Some(Ipv6AddrGenMode::Eui64),
+        Some(&ADDR_GEN_MODE_STABLE_PRIVACY) => {
+            Some(Ipv6AddrGenMode::StablePrivacy)
+        }
+        Some(s) => Some(Ipv6AddrGenMode::Other(format!("{}", s))),
+        // According to NM document, the None in dbus means stable privacy.
+        None => Some(Ipv6AddrGenMode::StablePrivacy),
+    }
+}
+
+fn nmstate_addr_gen_mode_to_nm(addr_gen_mode: Option<&Ipv6AddrGenMode>) -> i32 {
+    match addr_gen_mode {
+        Some(Ipv6AddrGenMode::StablePrivacy) => ADDR_GEN_MODE_STABLE_PRIVACY,
+        Some(Ipv6AddrGenMode::Eui64) | None => ADDR_GEN_MODE_EUI64,
+        Some(Ipv6AddrGenMode::Other(s)) => {
+            s.parse::<i32>().unwrap_or(ADDR_GEN_MODE_EUI64)
+        }
+    }
 }

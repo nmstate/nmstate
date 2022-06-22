@@ -58,7 +58,7 @@ pub(crate) type DbusDictionary = HashMap<String, zvariant::OwnedValue>;
 pub(crate) type NmConnectionDbusValue<'a> =
     HashMap<&'a str, HashMap<&'a str, zvariant::Value<'a>>>;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum NmSettingsConnectionFlag {
     Unsaved = 1,
     NmGenerated = 2,
@@ -191,6 +191,10 @@ impl NmConnection {
 
     pub fn iface_type(&self) -> Option<&str> {
         _connection_inner_string_member!(self, iface_type)
+    }
+
+    pub fn id(&self) -> Option<&str> {
+        _connection_inner_string_member!(self, id)
     }
 
     pub fn controller(&self) -> Option<&str> {

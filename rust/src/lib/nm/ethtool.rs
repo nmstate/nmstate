@@ -48,8 +48,10 @@ fn apply_pause_options(
     nm_ethtool_set: &mut NmSettingEthtool,
     pause_conf: &EthtoolPauseConfig,
 ) {
-    nm_ethtool_set.pause_rx = pause_conf.rx;
-    nm_ethtool_set.pause_tx = pause_conf.tx;
+    if pause_conf.autoneg == Some(false) {
+        nm_ethtool_set.pause_rx = pause_conf.rx;
+        nm_ethtool_set.pause_tx = pause_conf.tx;
+    }
     nm_ethtool_set.pause_autoneg = pause_conf.autoneg;
 }
 

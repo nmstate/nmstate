@@ -133,11 +133,15 @@ class InterfaceIP:
 
 
 class InterfaceIPv4(InterfaceIP):
-    pass
+    DHCP_CLIENT_ID = "dhcp-client-id"
 
 
 class InterfaceIPv6(InterfaceIP):
     AUTOCONF = "autoconf"
+    DHCP_DUID = "dhcp-duid"
+    ADDR_GEN_MODE = "addr-gen-mode"
+    ADDR_GEN_MODE_EUI64 = "eui64"
+    ADDR_GEN_MODE_STABLE_PRIVACY = "stable-privacy"
 
 
 class Bond:
@@ -438,3 +442,9 @@ class Ethtool:
         TX_USECS_HIGH = "tx-usecs-high"
         TX_USECS_IRQ = "tx-usecs-irq"
         TX_USECS_LOW = "tx-usecs-low"
+
+
+class HostNameState:
+    KEY = "hostname"
+    CONFIG = "config"
+    RUNNING = "running"

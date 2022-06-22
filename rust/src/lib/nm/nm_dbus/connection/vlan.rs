@@ -57,7 +57,7 @@ impl NmSettingVlan {
 const NM_VLAN_PROTOCOL_802_1Q: &str = "802.1Q";
 const NM_VLAN_PROTOCOL_802_1AD: &str = "802.1AD";
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum NmVlanProtocol {
     Dot1Q,

@@ -100,6 +100,32 @@ def test_ethtool_pause_on_netdevsim():
 
 
 @pytest.mark.skipif(
+    nm_major_minor_version() < 1.31
+    or os.environ.get("CI") == "true"
+    or not is_fedora(),
+    reason=(
+        "Ethtool pause test need NetworkManager 1.31+ and netdevsim kernel "
+        "module"
+    ),
+)
+def test_ethtool_pause_auto_on_netdevsim():
+    desire_iface_state = {
+        Interface.NAME: TEST_NETDEVSIM_NIC,
+        Ethtool.CONFIG_SUBTREE: {
+            Ethtool.Pause.CONFIG_SUBTREE: {
+                Ethtool.Pause.AUTO_NEGOTIATION: True,
+                Ethtool.Pause.RX: True,
+                Ethtool.Pause.TX: True,
+            }
+        },
+    }
+    with netdevsim_interface(TEST_NETDEVSIM_NIC):
+        libnmstate.apply({Interface.KEY: [desire_iface_state]})
+        assertlib.assert_state_match({Interface.KEY: [desire_iface_state]})
+    assertlib.assert_absent(TEST_NETDEVSIM_NIC)
+
+
+@pytest.mark.skipif(
     os.environ.get("CI") == "true",
     reason=("CI does not have ethtool kernel option enabled"),
 )

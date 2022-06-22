@@ -21,8 +21,7 @@ use crate::{
     nm::vlan::is_vlan_id_changed,
     nm::vrf::is_vrf_table_id_changed,
     nm::vxlan::is_vxlan_id_changed,
-    Interface, InterfaceType, NetworkState, NmstateError, OvsBridgeInterface,
-    RouteEntry,
+    Interface, InterfaceType, NetworkState, NmstateError, RouteEntry,
 };
 
 const ACTIVATION_RETRY_COUNT: usize = 5;
@@ -147,6 +146,19 @@ fn apply_single_state(
     checkpoint: &str,
     memory_only: bool,
 ) -> Result<(), NmstateError> {
+    if let Some(hostname) =
+        net_state.hostname.as_ref().and_then(|c| c.config.as_ref())
+    {
+        if memory_only {
+            log::warn!(
+                "Cannot change configure hostname in memory only mode, \
+                ignoring"
+            );
+        } else {
+            nm_api.hostname_set(hostname).map_err(nm_error_to_nmstate)?;
+        }
+    }
+
     if net_state.interfaces.to_vec().is_empty() {
         return Ok(());
     }
@@ -216,13 +228,6 @@ fn apply_single_state(
             )
         })
         .collect::<Vec<_>>();
-
-    let mut ovs_br_ifaces: Vec<&OvsBridgeInterface> = Vec::new();
-    for iface in net_state.interfaces.user_ifaces.values() {
-        if let Interface::OvsBridge(ref br_iface) = iface {
-            ovs_br_ifaces.push(br_iface);
-        }
-    }
 
     use_uuid_for_controller_reference(
         &mut nm_conns_to_activate,

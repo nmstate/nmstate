@@ -317,6 +317,22 @@ impl<'a> NmApi<'a> {
         }
         Ok(ret)
     }
+
+    pub fn hostname_set(&self, hostname: &str) -> Result<(), NmError> {
+        if hostname.is_empty() {
+            // Due to bug https://bugzilla.redhat.com/2090946
+            // NetworkManager daemon cannot remove static hostname, hence we
+            // just delete the /etc/hostname file
+            if std::path::Path::new("/etc/hostname").exists() {
+                if let Err(e) = std::fs::remove_file("/etc/hostname") {
+                    log::error!("Failed to remove static /etc/hostname: {}", e);
+                }
+            }
+            Ok(())
+        } else {
+            self.dbus.hostname_set(hostname)
+        }
+    }
 }
 
 fn get_nm_ac_obj_path_by_uuid(

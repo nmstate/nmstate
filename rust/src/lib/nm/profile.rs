@@ -90,7 +90,14 @@ pub(crate) fn delete_exist_profiles(
             && changed_iface_name_types.contains(&(iface_name, nm_iface_type))
         {
             extend_timeout_if_required(&mut now, checkpoint)?;
-            log::info!("Deleting existing connection {:?}", exist_nm_conn);
+            log::info!(
+                "Deleting existing connection \
+                UUID {:?}, id {:?} type {:?} name {:?}",
+                exist_nm_conn.uuid(),
+                exist_nm_conn.id(),
+                exist_nm_conn.iface_type(),
+                exist_nm_conn.iface_name(),
+            );
             nm_api
                 .connection_delete(uuid)
                 .map_err(nm_error_to_nmstate)?;
@@ -108,7 +115,14 @@ pub(crate) fn save_nm_profiles(
     let mut now = Instant::now();
     for nm_conn in nm_conns {
         extend_timeout_if_required(&mut now, checkpoint)?;
-        log::info!("Creating/Modifying connection {:?}", nm_conn);
+        log::info!(
+            "Creating/Modifying connection \
+            UUID {:?}, ID {:?}, type {:?} name {:?}",
+            nm_conn.uuid(),
+            nm_conn.id(),
+            nm_conn.iface_type(),
+            nm_conn.iface_name(),
+        );
         nm_api
             .connection_add(nm_conn, memory_only)
             .map_err(nm_error_to_nmstate)?;
