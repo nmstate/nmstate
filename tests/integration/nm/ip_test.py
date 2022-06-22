@@ -23,6 +23,7 @@ import libnmstate
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
+from libnmstate.schema import InterfaceType
 
 from ..testlib import cmdlib
 from ..testlib import assertlib
@@ -125,4 +126,78 @@ def test_preserve_static_routes_created_by_iproute(
     assert (
         cmdlib.exec_cmd("nmcli -g ipv6.routes c show eth1".split())[1].strip()
         == r"2001\:db8\:a\:\:/64 2001\:db8\:1\:\:2 1024 table=254"
+    )
+
+
+@pytest.fixture
+def eth1_up_with_nm_gateway(eth1_up):
+    desired_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: "eth1",
+                Interface.TYPE: InterfaceType.ETHERNET,
+                Interface.IPV4: {
+                    InterfaceIPv4.ENABLED: True,
+                    InterfaceIPv4.ADDRESS: [
+                        {
+                            InterfaceIPv4.ADDRESS_IP: IPV4_ADDRESS1,
+                            InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+                        }
+                    ],
+                },
+                Interface.IPV6: {
+                    InterfaceIPv6.ENABLED: True,
+                    InterfaceIPv6.ADDRESS: [
+                        {
+                            InterfaceIPv6.ADDRESS_IP: IPV6_ADDRESS1,
+                            InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
+                        }
+                    ],
+                },
+            }
+        ]
+    }
+    libnmstate.apply(desired_state)
+    cmdlib.exec_cmd(
+        f"nmcli c modify eth1 ipv4.gateway {IPV4_ADDRESS2}".split(),
+        check=True,
+    )
+    cmdlib.exec_cmd(
+        f"nmcli c modify eth1 ipv6.gateway {IPV6_ADDRESS2}".split(),
+        check=True,
+    )
+    cmdlib.exec_cmd(
+        "nmcli c up eth1".split(),
+        check=True,
+    )
+    yield
+
+
+def test_switch_static_gateway_to_dhcp(eth1_up_with_nm_gateway):
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: "eth1",
+                    Interface.IPV4: {
+                        InterfaceIPv4.ENABLED: True,
+                        InterfaceIPv4.DHCP: True,
+                    },
+                    Interface.IPV6: {
+                        InterfaceIPv6.ENABLED: True,
+                        InterfaceIPv6.DHCP: True,
+                        InterfaceIPv6.AUTOCONF: True,
+                    },
+                }
+            ],
+        }
+    )
+
+    assert (
+        cmdlib.exec_cmd("nmcli -g ipv4.gateway c show eth1".split())[1].strip()
+        == ""
+    )
+    assert (
+        cmdlib.exec_cmd("nmcli -g ipv6.gateway c show eth1".split())[1].strip()
+        == ""
     )

@@ -51,6 +51,7 @@ fn gen_nm_ipv4_setting(
     nm_setting.method = Some(method);
     nm_setting.addresses = addresses;
     if iface_ip.is_auto() {
+        nm_setting.gateway = None;
         nm_setting.dhcp_timeout = Some(i32::MAX);
         nm_setting.dhcp_client_id = Some(nmstate_dhcp_client_id_to_nm(
             iface_ip
@@ -149,6 +150,7 @@ fn gen_nm_ipv6_setting(
     nm_setting.addr_gen_mode =
         Some(nmstate_addr_gen_mode_to_nm(iface_ip.addr_gen_mode.as_ref()));
     if iface_ip.is_auto() {
+        nm_setting.gateway = None;
         nm_setting.dhcp_timeout = Some(i32::MAX);
         nm_setting.ra_timeout = Some(i32::MAX);
         nm_setting.dhcp_duid = Some(
