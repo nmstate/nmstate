@@ -15,6 +15,7 @@ RUST_DEBUG_BIN_DIR=./target/debug
 RUST_RELEASE_BIN_DIR=./target/release
 CLI_EXEC=nmstatectl
 CLI_EXEC2=nmstate-autoconf
+SYSTEMD_SERVICE_FILE=$(ROOT_DIR)/packaging/nmstate.service
 CLIB_HEADER=rust/src/clib/nmstate.h
 CLIB_SO_DEV_RELEASE=rust/target/release/$(CLIB_SO_DEV)
 CLIB_SO_DEV_DEBUG=rust/target/debug/$(CLIB_SO_DEV)
@@ -24,9 +25,11 @@ PYTHON_MODULE_NAME=libnmstate
 PYTHON_MODULE_SRC=src/python/libnmstate
 CLI_EXEC_RELEASE=rust/target/release/$(CLI_EXEC)
 PREFIX ?= /usr/local
+SYSTEMD_UNIT_DIR ?= $(PREFIX)/lib/systemd/system
 GO_MODULE_SRC ?= rust/src/go/nmstate
 CLI_MANPAGE=doc/nmstatectl.8
 CLI_MANPAGE2=doc/nmstate-autoconf.8
+SYSTEMD_UNIT_MANPAGE=doc/nmstate.service.8
 SPEC_FILE=packaging/nmstate.spec
 RPM_DATA=$(shell date +"%a %b %d %Y")
 
@@ -71,7 +74,14 @@ $(CLI_MANPAGE2): $(CLI_MANPAGE2).in
 	sed -i -e "s/@DATE@/$(shell date +'%B %d, %Y')/" $(CLI_MANPAGE2)
 	sed -i -e "s/@VERSION@/$(VERSION)/" $(CLI_MANPAGE2)
 
-manpage: $(CLI_MANPAGE) $(CLI_MANPAGE2)
+.PHONY: $(SYSTEMD_UNIT_MANPAGE)
+$(SYSTEMD_UNIT_MANPAGE): $(SYSTEMD_UNIT_MANPAGE).in
+	cp $(SYSTEMD_UNIT_MANPAGE).in $(SYSTEMD_UNIT_MANPAGE)
+	sed -i -e "s/@DATE@/$(shell date +'%B %d, %Y')/" $(SYSTEMD_UNIT_MANPAGE)
+	sed -i -e "s/@VERSION@/$(VERSION)/" $(SYSTEMD_UNIT_MANPAGE)
+
+
+manpage: $(CLI_MANPAGE) $(CLI_MANPAGE2) $(SYSTEMD_UNIT_MANPAGE)
 clib: $(CLIB_HEADER) $(CLIB_SO_DEV_RELEASE) $(CLIB_PKG_CONFIG)
 
 .PHONY: $(SPEC_FILE)
@@ -113,8 +123,10 @@ dist: manpage $(SPEC_FILE) $(CLIB_HEADER)
 		tar x -C $(TMPDIR)
 	cp $(CLI_MANPAGE) $(TMPDIR)/nmstate-$(VERSION)/doc/
 	cp $(CLI_MANPAGE2) $(TMPDIR)/nmstate-$(VERSION)/doc/
+	cp $(SYSTEMD_UNIT_MANPAGE) $(TMPDIR)/nmstate-$(VERSION)/doc/
 	cp $(SPEC_FILE) $(TMPDIR)/nmstate-$(VERSION)/packaging/
 	cp $(CLIB_HEADER) $(TMPDIR)/nmstate-$(VERSION)/rust/src/clib/
+	cp $(SYSTEMD_SERVICE_FILE) $(TMPDIR)/nmstate-$(VERSION)/
 	cd $(TMPDIR) && tar cfz $(TARBALL) nmstate-$(VERSION)/
 	mv $(TMPDIR)/$(TARBALL) ./
 	if [ $(SKIP_VENDOR_CREATION) == 0 ];then \
@@ -196,6 +208,7 @@ check: rust_check clib_check go_check
 clean:
 	rm -f $(CLI_MANPAGE)
 	rm -f $(CLI_MANPAGE2)
+	rm -f $(SYSTEMD_UNIT_MANPAGE)
 	rm -f $(SPEC_FILE)
 	rm -f $(TARBALL)
 	cd rust && cargo clean || true
@@ -228,6 +241,11 @@ install: $(CLI_EXEC_RELEASE) manpage clib
 	install -p -v -D -m644 $(CLI_MANPAGE2) \
 		$(DESTDIR)$(MAN_DIR)/man8/$(shell basename $(CLI_MANPAGE2))
 	gzip $(DESTDIR)$(MAN_DIR)/man8/$(shell basename $(CLI_MANPAGE2))
+	install -p -v -D -m644 $(SYSTEMD_UNIT_MANPAGE) \
+		$(DESTDIR)$(MAN_DIR)/man8/$(shell basename $(SYSTEMD_UNIT_MANPAGE))
+	gzip $(DESTDIR)$(MAN_DIR)/man8/$(shell basename $(SYSTEMD_UNIT_MANPAGE))
+	install -p -v -D -m644 $(SYSTEMD_SERVICE_FILE) \
+		$(DESTDIR)$(SYSTEMD_UNIT_DIR)/$(shell basename $(SYSTEMD_SERVICE_FILE))
 
 
 uninstall:
@@ -244,3 +262,4 @@ uninstall:
 	- if [ $(SKIP_PYTHON_INSTALL) != 1 ];then \
 		rm -rfv $(DESTDIR)$(PYTHON3_SITE_DIR)/$(PYTHON_MODULE_NAME); \
 	fi
+	- rm -fv $(DESTDIR)$(SYSTEMD_UNIT_DIR)/$(shell basename $(SYSTEMD_SERVICE_FILE))

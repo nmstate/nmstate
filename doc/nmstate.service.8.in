@@ -1,0 +1,20 @@
+.TH nmstate\&.service 8 "@DATE@" "@VERSION@" "nmstate.service man page"
+.SH "NAME"
+nmstate\&.service \- Apply /etc/nmstate network states
+.SH "SYNOPSIS"
+.PP
+nmstate\&.service
+.SH "DESCRIPTION"
+.PP
+nmstate\&.service invokes \fBnmstatectl service\fR command which
+apply all network state files ending with \fB.yml\fR in
+\fB/etc/nmstate\fR folder.
+The applied network state file will be renamed with postfix \fB.applied\fR
+to prevent repeated applied on next service start.
+.SH BUG REPORTS
+Report bugs on nmstate GitHub issues <https://github.com/nmstate/nmstate>.
+.SH COPYRIGHT
+License Apache 2.0 or any later version
+<https://www.apache.org/licenses/LICENSE-2.0.txt>
+.SH SEE ALSO
+.B nmstatectl\fP(8)
