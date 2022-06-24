@@ -1,5 +1,6 @@
 mod autoconf;
 mod error;
+mod service;
 
 use std::fs::File;
 use std::io::{self, stdin, stdout, Read, Write};
@@ -26,6 +27,7 @@ const SUB_CMD_ROLLBACK: &str = "rollback";
 const SUB_CMD_EDIT: &str = "edit";
 const SUB_CMD_VERSION: &str = "version";
 const SUB_CMD_AUTOCONF: &str = "autoconf";
+const SUB_CMD_SERVICE: &str = "service";
 
 const EX_DATAERR: i32 = 65;
 const EXIT_FAILURE: i32 = 1;
@@ -230,6 +232,19 @@ fn main() {
                 )
         )
         .subcommand(
+            clap::Command::new(SUB_CMD_SERVICE)
+                .about("Service mode: apply files from service folder")
+                .arg(
+                    clap::Arg::new(self::service::CONFIG_FOLDER_KEY)
+                        .long("config")
+                        .short('c')
+                        .required(false)
+                        .takes_value(true)
+                        .default_value(self::service::DEFAULT_SERVICE_FOLDER)
+                        .help("Folder hold network state files"),
+                ),
+        )
+        .subcommand(
             clap::Command::new(SUB_CMD_VERSION)
             .about("Show version")
        ).get_matches();
@@ -286,6 +301,11 @@ fn main() {
         }
     } else if let Some(matches) = matches.subcommand_matches(SUB_CMD_EDIT) {
         print_result_and_exit(state_edit(matches), EX_DATAERR);
+    } else if let Some(matches) = matches.subcommand_matches(SUB_CMD_SERVICE) {
+        print_result_and_exit(
+            self::service::ncl_service(matches),
+            EXIT_FAILURE,
+        );
     } else if matches.subcommand_matches(SUB_CMD_VERSION).is_some() {
         print_string_and_exit(format!(
             "{} {}",
