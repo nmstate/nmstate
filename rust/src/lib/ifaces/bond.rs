@@ -438,7 +438,7 @@ impl std::fmt::Display for BondFailOverMac {
             match self {
                 Self::None => "none",
                 Self::Active => "active",
-                Self::Follow => "follow ",
+                Self::Follow => "follow",
             }
         )
     }

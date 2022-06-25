@@ -580,6 +580,21 @@ def test_bond_mac_restriction_in_current_mac_in_desire(eth1_up, eth2_up):
 
 
 @pytest.mark.tier1
+def test_bond_fail_over_mac_follow(eth1_up, eth2_up):
+    with bond_interface(
+        name=BOND99,
+        port=[ETH1, ETH2],
+        extra_iface_state={
+            Bond.CONFIG_SUBTREE: {
+                Bond.MODE: BondMode.ACTIVE_BACKUP,
+                Bond.OPTIONS_SUBTREE: {"fail_over_mac": "follow"},
+            },
+        },
+    ) as state:
+        assertlib.assert_state_match(state)
+
+
+@pytest.mark.tier1
 def test_create_bond_with_mac(eth1_up, eth2_up):
     with bond_interface(
         name=BOND99,
