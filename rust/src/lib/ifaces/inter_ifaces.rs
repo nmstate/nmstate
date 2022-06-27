@@ -336,9 +336,11 @@ impl Interfaces {
                         chg_iface.set_iface_type(cur_iface.iface_type());
                         chg_iface.pre_edit_cleanup()?;
                         info!(
-                            "Changing interface {} with type {}",
+                            "Changing interface {} with type {}, \
+                            up priority {}",
                             chg_iface.name(),
-                            chg_iface.iface_type()
+                            chg_iface.iface_type(),
+                            chg_iface.base_iface().up_priority
                         );
                         chg_ifaces.push(chg_iface);
                     }
@@ -346,9 +348,11 @@ impl Interfaces {
                         let mut new_iface = iface.clone();
                         new_iface.pre_edit_cleanup()?;
                         info!(
-                            "Adding interface {} with type {}",
+                            "Adding interface {} with type {}, \
+                            up priority {}",
                             new_iface.name(),
-                            new_iface.iface_type()
+                            new_iface.iface_type(),
+                            new_iface.base_iface().up_priority
                         );
                         add_ifaces.push(new_iface);
                     }
