@@ -25,6 +25,7 @@ const VERIFY_RETRY_INTERVAL_MILLISECONDS: u64 = 1000;
 const VERIFY_RETRY_COUNT: usize = 5;
 const VERIFY_RETRY_COUNT_SRIOV: usize = 60;
 const VERIFY_RETRY_COUNT_KERNEL_MODE: usize = 5;
+const VERIFY_RETRY_NM: usize = 2;
 const MAX_SUPPORTED_INTERFACES: usize = 1000;
 
 #[derive(Clone, Debug, Serialize, Default, PartialEq, Eq)]
@@ -296,40 +297,56 @@ impl NetworkState {
             info!("Created checkpoint {}", &checkpoint);
 
             with_nm_checkpoint(&checkpoint, self.no_commit, || {
-                nm_apply(
-                    &add_net_state,
-                    &chg_net_state,
-                    &del_net_state,
-                    // TODO: Passing full(desire + current) network state
-                    // instead of current,
-                    &cur_net_state,
-                    self,
-                    &checkpoint,
-                    self.memory_only,
-                )?;
-                if ovsdb_is_running() {
-                    ovsdb_apply(&desire_state_to_apply, &cur_net_state)?;
-                }
-                if let Some(running_hostname) =
-                    self.hostname.as_ref().and_then(|c| c.running.as_ref())
-                {
-                    set_running_hostname(running_hostname)?;
-                }
-                nm_checkpoint_timeout_extend(&checkpoint, timeout)?;
-                if !self.no_verify {
-                    with_retry(
-                        VERIFY_RETRY_INTERVAL_MILLISECONDS,
-                        retry_count,
-                        || {
-                            let mut new_cur_net_state = cur_net_state.clone();
-                            new_cur_net_state.set_include_secrets(true);
-                            new_cur_net_state.retrieve()?;
-                            desire_state_to_verify.verify(&new_cur_net_state)
-                        },
-                    )
-                } else {
-                    Ok(())
-                }
+                // NM might have unknown race problem found by verify stage,
+                // we try to apply the state again if so.
+                with_retry(
+                    VERIFY_RETRY_INTERVAL_MILLISECONDS,
+                    VERIFY_RETRY_NM,
+                    || {
+                        nm_apply(
+                            &add_net_state,
+                            &chg_net_state,
+                            &del_net_state,
+                            // TODO: Passing full(desire + current) network
+                            // state instead of
+                            // current,
+                            &cur_net_state,
+                            self,
+                            &checkpoint,
+                            self.memory_only,
+                        )?;
+                        if ovsdb_is_running() {
+                            ovsdb_apply(
+                                &desire_state_to_apply,
+                                &cur_net_state,
+                            )?;
+                        }
+                        if let Some(running_hostname) = self
+                            .hostname
+                            .as_ref()
+                            .and_then(|c| c.running.as_ref())
+                        {
+                            set_running_hostname(running_hostname)?;
+                        }
+                        nm_checkpoint_timeout_extend(&checkpoint, timeout)?;
+                        if !self.no_verify {
+                            with_retry(
+                                VERIFY_RETRY_INTERVAL_MILLISECONDS,
+                                retry_count,
+                                || {
+                                    let mut new_cur_net_state =
+                                        cur_net_state.clone();
+                                    new_cur_net_state.set_include_secrets(true);
+                                    new_cur_net_state.retrieve()?;
+                                    desire_state_to_verify
+                                        .verify(&new_cur_net_state)
+                                },
+                            )
+                        } else {
+                            Ok(())
+                        }
+                    },
+                )
             })
         } else {
             // TODO: Need checkpoint for kernel only mode

@@ -20,6 +20,7 @@
 import os
 
 import pytest
+import yaml
 
 import libnmstate
 
@@ -45,6 +46,8 @@ TEST_ROUTE_TABLE_ID1 = 101
 IPV4_ADDRESS1 = "192.0.2.251"
 IPV6_ADDRESS1 = "2001:db8:1::1"
 TEST_MAC_ADDRESS = "00:00:5E:00:53:01"
+TEST_BOND0 = "test-bond0"
+TEST_BOND0_VLAN = "test-bond0.100"
 
 
 @pytest.fixture
@@ -280,3 +283,49 @@ class TestVrf:
                 ]
             }
         )
+
+    def test_new_vrf_over_new_bond_vlan(self):
+        desired = yaml.load(
+            """---
+interfaces:
+- name: test-bond0.100
+  type: vlan
+  vlan:
+    base-iface: test-bond0
+    id: 100
+- name: test-bond0
+  type: bond
+  link-aggregation:
+    mode: balance-rr
+- name: test-vrf0
+  type: vrf
+  state: up
+  vrf:
+    port:
+    - test-bond0
+    - test-bond0.100
+    route-table-id: 100""",
+            Loader=yaml.SafeLoader,
+        )
+        try:
+            libnmstate.apply(desired)
+            assertlib.assert_state_match(desired)
+        finally:
+            libnmstate.apply(
+                {
+                    Interface.KEY: [
+                        {
+                            Interface.NAME: TEST_VRF0,
+                            Interface.STATE: InterfaceState.ABSENT,
+                        },
+                        {
+                            Interface.NAME: TEST_BOND0,
+                            Interface.STATE: InterfaceState.ABSENT,
+                        },
+                        {
+                            Interface.NAME: TEST_BOND0_VLAN,
+                            Interface.STATE: InterfaceState.ABSENT,
+                        },
+                    ]
+                }
+            )
