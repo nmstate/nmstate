@@ -283,12 +283,6 @@ impl NetworkState {
         debug!("Changing net state {:?}", &chg_net_state);
         debug!("Deleting net state {:?}", &del_net_state);
 
-        if let Some(running_hostname) =
-            self.hostname.as_ref().and_then(|c| c.running.as_ref())
-        {
-            set_running_hostname(running_hostname)?;
-        }
-
         if !self.kernel_only {
             let retry_count =
                 if desire_state_to_apply.interfaces.has_sriov_enabled() {
@@ -316,6 +310,11 @@ impl NetworkState {
                 if ovsdb_is_running() {
                     ovsdb_apply(&desire_state_to_apply, &cur_net_state)?;
                 }
+                if let Some(running_hostname) =
+                    self.hostname.as_ref().and_then(|c| c.running.as_ref())
+                {
+                    set_running_hostname(running_hostname)?;
+                }
                 nm_checkpoint_timeout_extend(&checkpoint, timeout)?;
                 if !self.no_verify {
                     with_retry(
@@ -340,6 +339,11 @@ impl NetworkState {
                 &del_net_state,
                 &cur_net_state,
             )?;
+            if let Some(running_hostname) =
+                self.hostname.as_ref().and_then(|c| c.running.as_ref())
+            {
+                set_running_hostname(running_hostname)?;
+            }
             if !self.no_verify {
                 with_retry(
                     VERIFY_RETRY_INTERVAL_MILLISECONDS,

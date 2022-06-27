@@ -98,3 +98,24 @@ def test_hostname_set_in_memory_only(restore_hostname):
     )
     cur_host_name = cmdlib.exec_cmd(["hostname"], check=True)[1]
     assert cur_host_name.strip() == TEST_HOSTNAME2
+
+
+@pytest.mark.skipif(
+    os.environ.get("CI") == "true",
+    reason="NM cannot change hostname in container",
+)
+def test_hostname_set_different_running_and_config(restore_hostname):
+    libnmstate.apply(
+        {
+            HostNameState.KEY: {
+                HostNameState.RUNNING: TEST_HOSTNAME1,
+                HostNameState.CONFIG: TEST_HOSTNAME2,
+            }
+        },
+    )
+    cur_host_name = cmdlib.exec_cmd(["hostname"], check=True)[1]
+    assert cur_host_name.strip() == TEST_HOSTNAME1
+    assert (
+        cmdlib.exec_cmd(["cat", "/etc/hostname"], check=True)[1].strip()
+        == TEST_HOSTNAME2
+    )
