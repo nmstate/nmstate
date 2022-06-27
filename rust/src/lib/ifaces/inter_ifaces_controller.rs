@@ -246,6 +246,7 @@ fn include_ignored_iface_if_desired_in_port(
 }
 
 // TODO: user space interfaces
+// Return True if we have all up_priority fixed.
 pub(crate) fn set_ifaces_up_priority(ifaces: &mut Interfaces) -> bool {
     // Return true when all interface has correct priority.
     let mut ret = true;
@@ -300,12 +301,43 @@ pub(crate) fn set_ifaces_up_priority(ifaces: &mut Interfaces) -> bool {
             continue;
         }
     }
+
+    // If not remaining unknown up_priority, we set up the parent/child
+    // up_priority
+    if ret {
+        for (iface_name, iface_type) in &ifaces.insert_order {
+            let iface = match ifaces.get_iface(iface_name, iface_type.clone()) {
+                Some(i) => i,
+                None => continue,
+            };
+            if !iface.is_up() {
+                continue;
+            }
+            if let Some(parent) = iface.parent() {
+                if let Some(parent_priority) = pending_changes.get(parent) {
+                    pending_changes
+                        .insert(iface_name.to_string(), parent_priority + 1);
+                } else if let Some(parent_iface) =
+                    ifaces.kernel_ifaces.get(parent)
+                {
+                    if parent_iface.base_iface().is_up_priority_valid() {
+                        pending_changes.insert(
+                            iface_name.to_string(),
+                            parent_iface.base_iface().up_priority + 1,
+                        );
+                    }
+                }
+            }
+        }
+    }
+
     debug!("pending kernel up priority changes {:?}", pending_changes);
     for (iface_name, priority) in pending_changes.iter() {
         if let Some(iface) = ifaces.kernel_ifaces.get_mut(iface_name) {
             iface.base_iface_mut().up_priority = *priority;
         }
     }
+
     ret
 }
 
