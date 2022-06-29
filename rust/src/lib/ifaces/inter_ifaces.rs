@@ -330,7 +330,7 @@ impl Interfaces {
                         current.get_iface(iface.name(), iface.iface_type()),
                     )?;
                 }
-                match current.kernel_ifaces.get(iface.name()) {
+                match current.get_iface(iface.name(), iface.iface_type()) {
                     Some(cur_iface) => {
                         let mut chg_iface = iface.clone();
                         chg_iface.set_iface_type(cur_iface.iface_type());
@@ -451,7 +451,6 @@ impl Interfaces {
             {
                 continue;
             }
-
             if iface.is_absent() {
                 for cur_iface in cur_ifaces.to_vec() {
                     if cur_iface.name() == iface_name {
@@ -511,10 +510,7 @@ impl Interfaces {
         }
 
         for new_iface in resolved_ifaces {
-            self.user_ifaces.remove(&(
-                new_iface.name().to_string(),
-                InterfaceType::Unknown,
-            ));
+            self.kernel_ifaces.remove(new_iface.name());
             self.push(new_iface);
         }
         Ok(())
