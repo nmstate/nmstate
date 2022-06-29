@@ -21,7 +21,7 @@ import os
 import pytest
 
 import libnmstate
-from libnmstate.error import NmstateLibnmError
+from libnmstate.error import NmstateVerificationError
 from libnmstate.schema import Ieee8021X
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceState
@@ -114,7 +114,7 @@ def _stop_802_1x_authenticator():
         "Requires adjusts for k8s. Ref:"
         "https://github.com/nmstate/nmstate/issues/1579"
     ),
-    raises=NmstateLibnmError,
+    raises=NmstateVerificationError,
     strict=False,
 )
 def test_eth_with_802_1x(ieee_802_1x_env):
@@ -196,7 +196,7 @@ def ieee_1x_cli_up(ieee_802_1x_env):
         "Requires adjusts for k8s. Ref:"
         "https://github.com/nmstate/nmstate/issues/1579"
     ),
-    raises=NmstateLibnmError,
+    raises=NmstateVerificationError,
     strict=False,
 )
 def test_apply_ieee_802_1x_with_reserved_password(ieee_1x_cli_up):
