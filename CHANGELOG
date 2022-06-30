@@ -1,4 +1,17 @@
 # Changelog
+## [2.1.2] - 2022-06-30
+###
+ - N/A
+
+### New features
+ - Add support to VLAN protocol for linux bridges. (182e5f5)
+ - Add nmstate.service support. (5fa085a)
+
+### Bug fixes
+ - Fix OVS interfaces with the same name when using gen_conf. (156c11a)
+ - Fix bond fail_over_mac "follow" mode. (628aa72)
+ - Fix OVS interfaces activation race conditions. (fc1da22)
+ - Fix applying different running and config hostname. (5289661)
 
 ## [2.1.1] - 2022-06-07
 ### Breaking changes
