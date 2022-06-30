@@ -308,6 +308,7 @@ impl Interfaces {
         let mut add_ifaces = Self::new();
         let mut chg_ifaces = Self::new();
         let mut del_ifaces = Self::new();
+        let mut new_ovs_ifaces = Vec::new();
 
         self.apply_copy_mac_from(current)?;
         handle_changed_ports(self, current)?;
@@ -354,7 +355,31 @@ impl Interfaces {
                             new_iface.iface_type(),
                             new_iface.base_iface().up_priority
                         );
-                        add_ifaces.push(new_iface);
+                        // When adding new OVS interface requires changes to
+                        // existing OVS bridge, we should place this new OVS
+                        // interface along with its controller -- chg_ifaces.
+                        if new_iface.iface_type() == InterfaceType::OvsInterface
+                        {
+                            new_ovs_ifaces.push(new_iface.clone());
+                            if new_iface
+                                .base_iface()
+                                .controller
+                                .as_ref()
+                                .and_then(|br_name| {
+                                    current.get_iface(
+                                        br_name,
+                                        InterfaceType::OvsBridge,
+                                    )
+                                })
+                                .is_some()
+                            {
+                                chg_ifaces.push(new_iface);
+                            } else {
+                                add_ifaces.push(new_iface);
+                            }
+                        } else {
+                            add_ifaces.push(new_iface);
+                        }
                     }
                 }
             }
@@ -372,7 +397,7 @@ impl Interfaces {
             &mut del_ifaces,
             current,
         )?;
-        validate_new_ovs_iface_has_controller(&add_ifaces, current)?;
+        validate_new_ovs_iface_has_controller(&new_ovs_ifaces, self, current)?;
 
         if memory_only {
             // In memory_only mode, absent interface equal to down
