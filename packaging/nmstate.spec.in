@@ -87,7 +87,11 @@ pushd rust/src/python
 %py3_install
 popd
 
-env SKIP_PYTHON_INSTALL=1 PREFIX=%{_prefix} LIBDIR=%{_libdir} %make_install
+env SKIP_PYTHON_INSTALL=1 \
+    PREFIX=%{_prefix} \
+    LIBDIR=%{_libdir} \
+    SYSCONFDIR=%{_sysconfdir} \
+    %make_install
 
 %files
 %doc README.md
@@ -98,6 +102,8 @@ env SKIP_PYTHON_INSTALL=1 PREFIX=%{_prefix} LIBDIR=%{_libdir} %make_install
 %{_bindir}/nmstatectl
 %{_bindir}/nmstate-autoconf
 %{_unitdir}/nmstate.service
+%dir %{_sysconfdir}/%{name}
+%{_sysconfdir}/%{name}/README
 
 %files libs
 %{_libdir}/libnmstate.so.*
