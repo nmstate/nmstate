@@ -551,28 +551,31 @@ def test_ovsdb_global_config_untouched_if_not_defined(
     assert state_match(desired_ovs_config, current_ovs_config)
 
 
-class TestOvsPatch:
-    def test_create_and_remove_patch_port(self):
-        patch0_state = {OVSInterface.Patch.PEER: "patch1"}
-        patch1_state = {OVSInterface.Patch.PEER: "patch0"}
-        bridge = Bridge(BRIDGE0)
-        bridge.add_internal_port(PATCH0, patch_state=patch0_state)
-        desired_state = bridge.state
-        bridge = Bridge(BRIDGE1)
-        bridge.add_internal_port(PATCH1, patch_state=patch1_state)
-        desired_state[Interface.KEY].extend(bridge.state[Interface.KEY])
-        try:
-            libnmstate.apply(desired_state)
-            assertlib.assert_state_match(desired_state)
-        finally:
-            for iface in desired_state[Interface.KEY]:
-                iface[Interface.STATE] = InterfaceState.ABSENT
-            libnmstate.apply(desired_state)
+@pytest.fixture
+def ovs_bridge_with_patch_ports():
+    patch0_state = {OVSInterface.Patch.PEER: "patch1"}
+    patch1_state = {OVSInterface.Patch.PEER: "patch0"}
+    bridge = Bridge(BRIDGE0)
+    bridge.add_internal_port(PATCH0, patch_state=patch0_state)
+    desired_state = bridge.state
+    bridge = Bridge(BRIDGE1)
+    bridge.add_internal_port(PATCH1, patch_state=patch1_state)
+    desired_state[Interface.KEY].extend(bridge.state[Interface.KEY])
+    libnmstate.apply(desired_state)
+    assertlib.assert_state_match(desired_state)
+    yield
+    for iface in desired_state[Interface.KEY]:
+        iface[Interface.STATE] = InterfaceState.ABSENT
+    libnmstate.apply(desired_state)
+    assertlib.assert_absent(BRIDGE1)
+    assertlib.assert_absent(BRIDGE0)
+    assertlib.assert_absent(PATCH0)
+    assertlib.assert_absent(PATCH1)
 
-        assertlib.assert_absent(BRIDGE1)
-        assertlib.assert_absent(BRIDGE0)
-        assertlib.assert_absent(PATCH0)
-        assertlib.assert_absent(PATCH1)
+
+class TestOvsPatch:
+    def test_create_and_remove_patch_port(self, ovs_bridge_with_patch_ports):
+        pass
 
     def test_patch_interface_does_not_have_mtu(self):
         patch0_state = {OVSInterface.Patch.PEER: "patch1"}
@@ -651,6 +654,28 @@ class TestOvsPatch:
         assertlib.assert_absent(BRIDGE0)
         assertlib.assert_absent(PATCH0)
         assertlib.assert_absent(PATCH1)
+
+    def test_change_ovsdb_ext_id_of_ovs_path(
+        self, ovs_bridge_with_patch_ports
+    ):
+        libnmstate.apply(
+            {
+                Interface.KEY: [
+                    {
+                        Interface.NAME: PATCH0,
+                        OvsDB.KEY: {
+                            "foo": "abc",
+                        },
+                    },
+                    {
+                        Interface.NAME: PATCH1,
+                        OvsDB.KEY: {
+                            "foo": "abd",
+                        },
+                    },
+                ]
+            }
+        )
 
 
 @pytest.mark.tier1
