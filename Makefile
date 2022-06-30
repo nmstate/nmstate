@@ -25,11 +25,13 @@ PYTHON_MODULE_NAME=libnmstate
 PYTHON_MODULE_SRC=src/python/libnmstate
 CLI_EXEC_RELEASE=rust/target/release/$(CLI_EXEC)
 PREFIX ?= /usr/local
+SYSCONFDIR ?= $(PREFIX)/etc
 SYSTEMD_UNIT_DIR ?= $(PREFIX)/lib/systemd/system
 GO_MODULE_SRC ?= rust/src/go/nmstate
 CLI_MANPAGE=doc/nmstatectl.8
 CLI_MANPAGE2=doc/nmstate-autoconf.8
 SYSTEMD_UNIT_MANPAGE=doc/nmstate.service.8
+ETC_README=doc/nmstate.service.README
 SPEC_FILE=packaging/nmstate.spec
 RPM_DATA=$(shell date +"%a %b %d %Y")
 
@@ -124,6 +126,7 @@ dist: manpage $(SPEC_FILE) $(CLIB_HEADER)
 	cp $(CLI_MANPAGE) $(TMPDIR)/nmstate-$(VERSION)/doc/
 	cp $(CLI_MANPAGE2) $(TMPDIR)/nmstate-$(VERSION)/doc/
 	cp $(SYSTEMD_UNIT_MANPAGE) $(TMPDIR)/nmstate-$(VERSION)/doc/
+	cp $(ETC_README) $(TMPDIR)/nmstate-$(VERSION)/doc/
 	cp $(SPEC_FILE) $(TMPDIR)/nmstate-$(VERSION)/packaging/
 	cp $(CLIB_HEADER) $(TMPDIR)/nmstate-$(VERSION)/rust/src/clib/
 	cp $(SYSTEMD_SERVICE_FILE) $(TMPDIR)/nmstate-$(VERSION)/
@@ -246,6 +249,8 @@ install: $(CLI_EXEC_RELEASE) manpage clib
 	gzip $(DESTDIR)$(MAN_DIR)/man8/$(shell basename $(SYSTEMD_UNIT_MANPAGE))
 	install -p -v -D -m644 $(SYSTEMD_SERVICE_FILE) \
 		$(DESTDIR)$(SYSTEMD_UNIT_DIR)/$(shell basename $(SYSTEMD_SERVICE_FILE))
+	install -p -v -D -m644 $(ETC_README) \
+		$(DESTDIR)$(SYSCONFDIR)/nmstate/README
 
 
 uninstall:
@@ -263,3 +268,4 @@ uninstall:
 		rm -rfv $(DESTDIR)$(PYTHON3_SITE_DIR)/$(PYTHON_MODULE_NAME); \
 	fi
 	- rm -fv $(DESTDIR)$(SYSTEMD_UNIT_DIR)/$(shell basename $(SYSTEMD_SERVICE_FILE))
+	- rm -rf $(DESTDIR)$(SYSCONFDIR)/nmstate
