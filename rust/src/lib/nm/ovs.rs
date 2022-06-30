@@ -3,7 +3,8 @@ use std::convert::TryFrom;
 use std::iter::FromIterator;
 
 use crate::nm::nm_dbus::{
-    NmConnection, NmSettingOvsDpdk, NmSettingOvsExtIds, NmSettingOvsPatch,
+    NmConnection, NmSettingOvsDpdk, NmSettingOvsExtIds, NmSettingOvsIface,
+    NmSettingOvsPatch,
 };
 use log::warn;
 
@@ -285,29 +286,35 @@ pub(crate) fn gen_nm_ovs_iface_setting(
     iface: &OvsInterface,
     nm_conn: &mut NmConnection,
 ) {
-    let mut nm_ovs_iface_set =
-        nm_conn.ovs_iface.as_ref().cloned().unwrap_or_default();
     if let Some(peer) = iface
         .patch
         .as_ref()
         .map(|patch_conf| patch_conf.peer.as_str())
     {
+        let mut nm_ovs_iface_set =
+            nm_conn.ovs_iface.as_ref().cloned().unwrap_or_default();
         nm_ovs_iface_set.iface_type = Some("patch".to_string());
         let mut nm_ovs_patch = NmSettingOvsPatch::default();
         nm_ovs_patch.peer = Some(peer.to_string());
         nm_conn.ovs_patch = Some(nm_ovs_patch);
+        nm_conn.ovs_iface = Some(nm_ovs_iface_set);
     } else if let Some(dpdk_iface) = iface.dpdk.as_ref() {
         if !dpdk_iface.devargs.is_empty() {
+            let mut nm_ovs_iface_set =
+                nm_conn.ovs_iface.as_ref().cloned().unwrap_or_default();
             nm_ovs_iface_set.iface_type = Some("dpdk".to_string());
             let mut nm_ovs_dpdk = NmSettingOvsDpdk::default();
             nm_ovs_dpdk.devargs = Some(dpdk_iface.devargs.to_string());
             nm_ovs_dpdk.n_rxq = dpdk_iface.rx_queue;
             nm_conn.ovs_dpdk = Some(nm_ovs_dpdk);
+            nm_conn.ovs_iface = Some(nm_ovs_iface_set);
         }
-    } else {
-        nm_ovs_iface_set.iface_type = Some("internal".to_string());
     }
-    nm_conn.ovs_iface = Some(nm_ovs_iface_set);
+    if nm_conn.ovs_iface.is_none() {
+        let mut nm_set = NmSettingOvsIface::default();
+        nm_set.iface_type = Some("internal".to_string());
+        nm_conn.ovs_iface = Some(nm_set);
+    }
 }
 
 pub(crate) fn gen_nm_ovs_ext_ids_setting(
