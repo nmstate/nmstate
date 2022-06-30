@@ -1046,3 +1046,13 @@ def test_ovs_vxlan_in_current_not_impact_others(unmanged_ovs_vxlan):
         assertlib.assert_state_match(state)
 
     assertlib.assert_absent(BRIDGE1)
+
+
+def test_add_new_ovs_interface_to_existing(bridge_with_ports):
+    bridge = bridge_with_ports
+    bridge.add_internal_port(
+        PORT2,
+        ipv4_state={InterfaceIPv4.ENABLED: False},
+    )
+    bridge.apply()
+    assertlib.assert_state_match(bridge.state)
