@@ -52,9 +52,16 @@ impl Routes {
         current: &Self,
         ignored_ifaces: &[String],
     ) -> Result<(), NmstateError> {
-        if let Some(config_routes) = self.config.as_ref() {
+        if let Some(mut config_routes) = self.config.clone() {
+            config_routes.sort_unstable();
+            config_routes.dedup();
             let cur_config_routes = match current.config.as_ref() {
-                Some(c) => c.to_vec(),
+                Some(c) => {
+                    let mut routes = c.to_vec();
+                    routes.sort_unstable();
+                    routes.dedup();
+                    routes
+                }
                 None => Vec::new(),
             };
             for desire_route in config_routes.iter().filter(|r| !r.is_absent())
@@ -199,7 +206,6 @@ impl Routes {
             desire_routes.sort_unstable();
             desire_routes.dedup();
         }
-
         ret
     }
 
@@ -306,12 +312,6 @@ impl RouteEntry {
         {
             return false;
         }
-        if self.metric.is_some()
-            && self.metric != Some(RouteEntry::USE_DEFAULT_METRIC)
-            && self.metric != other.metric
-        {
-            return false;
-        }
         if self.table_id.is_some()
             && self.table_id != Some(RouteEntry::USE_DEFAULT_ROUTE_TABLE)
             && self.table_id != other.table_id
@@ -322,9 +322,8 @@ impl RouteEntry {
     }
 
     // Return tuple of (no_absent, is_ipv4, table_id, next_hop_iface,
-    // destination, next_hop_addr, metric)
-    // The metric difference is ignored
-    fn sort_key(&self) -> (bool, bool, u32, &str, &str, &str, i64) {
+    // destination, next_hop_addr)
+    fn sort_key(&self) -> (bool, bool, u32, &str, &str, &str) {
         (
             !matches!(self.state, Some(RouteState::Absent)),
             !self
@@ -336,7 +335,6 @@ impl RouteEntry {
             self.next_hop_iface.as_deref().unwrap_or(""),
             self.destination.as_deref().unwrap_or(""),
             self.next_hop_addr.as_deref().unwrap_or(""),
-            self.metric.unwrap_or(RouteEntry::USE_DEFAULT_METRIC),
         )
     }
 }
