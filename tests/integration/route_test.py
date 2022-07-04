@@ -1125,3 +1125,20 @@ def test_delete_both_route_rule_and_interface(br_with_static_route_rule):
         }
     )
     assertlib.assert_absent(TEST_BRIDGE0)
+
+
+def test_ignore_metric_difference(eth1_static_gateway_dns):
+    dup_routes = [_get_ipv4_test_routes()[0], _get_ipv6_test_routes()[0]]
+    dup_routes[0][Route.METRIC] += 1
+    dup_routes[1][Route.METRIC] += 1
+    libnmstate.apply({Route.KEY: {Route.CONFIG: dup_routes}})
+
+    cur_state = libnmstate.show()
+    # Ensure duplicate route(only metric difference) is removed
+    cur_routes = [
+        route
+        for route in cur_state[Route.KEY][Route.CONFIG]
+        if route[Route.DESTINATION] == dup_routes[0][Route.DESTINATION]
+        or route[Route.DESTINATION] == dup_routes[1][Route.DESTINATION]
+    ]
+    assert len(cur_routes) == 2
