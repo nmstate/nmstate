@@ -18,16 +18,27 @@ fn test_sort_uniqe_routes() {
     let mut test_routes = gen_test_route_entries();
     test_routes.reverse();
     test_routes.extend(gen_test_route_entries());
-    test_routes.push(gen_route_entry(
-        TEST_IPV6_NET1,
-        TEST_NIC,
-        TEST_IPV6_ADDR1,
-    ));
-    test_routes.push(gen_route_entry(
-        TEST_IPV4_NET1,
-        TEST_NIC,
-        TEST_IPV4_ADDR1,
-    ));
+    let cur_routes = Routes {
+        running: None,
+        config: Some(test_routes.clone()),
+    };
+
+    let mut dup_route_entry =
+        gen_route_entry(TEST_IPV4_NET1, TEST_NIC, TEST_IPV4_ADDR1);
+    dup_route_entry.metric = Some(TEST_ROUTE_METRIC + 1);
+    test_routes.push(dup_route_entry);
+
+    let mut dup_route_entry =
+        gen_route_entry(TEST_IPV6_NET1, TEST_NIC, TEST_IPV6_ADDR1);
+    dup_route_entry.metric = Some(TEST_ROUTE_METRIC + 1);
+    test_routes.push(dup_route_entry);
+
+    let des_routes = Routes {
+        running: None,
+        config: Some(test_routes.clone()),
+    };
+
+    des_routes.verify(&cur_routes, &[]).unwrap();
 
     test_routes.sort_unstable();
     test_routes.dedup();
