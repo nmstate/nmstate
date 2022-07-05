@@ -1187,3 +1187,46 @@ def test_create_bond_with_copy_mac_from_bond_port_perm_hwaddr(
         ):
             current_state = statelib.show_only((BOND99,))
             assert_mac_address(current_state, eth1_mac)
+
+
+def test_down_dettached_bond_port_preserve_config(bond99_with_2_port):
+    absent_bond_down_port_state = yaml.load(
+        """
+---
+interfaces:
+- name: bond99
+  type: bond
+  state: absent
+- name: eth1
+  state: down
+  ipv4:
+    enabled: true
+    dhcp: true
+- name: eth2
+  state: down""",
+        Loader=yaml.SafeLoader,
+    )
+    libnmstate.apply(absent_bond_down_port_state)
+
+    up_eth1_state = yaml.load(
+        """
+---
+interfaces:
+- name: eth1
+  state: up""",
+        Loader=yaml.SafeLoader,
+    )
+    libnmstate.apply(up_eth1_state)
+
+    expected_state = yaml.load(
+        """
+---
+interfaces:
+- name: eth1
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: true""",
+        Loader=yaml.SafeLoader,
+    )
+    assertlib.assert_state_match(expected_state)
