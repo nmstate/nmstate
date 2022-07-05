@@ -109,12 +109,9 @@ impl Interfaces {
     ) -> Option<&'a Interface> {
         if iface_type == InterfaceType::Unknown {
             self.kernel_ifaces.get(&iface_name.to_string()).or_else(|| {
-                for iface in self.user_ifaces.values() {
-                    if iface.name() == iface_name {
-                        return Some(iface);
-                    }
-                }
-                None
+                self.user_ifaces
+                    .values()
+                    .find(|&iface| iface.name() == iface_name)
             })
         } else if iface_type.is_userspace() {
             self.user_ifaces.get(&(iface_name.to_string(), iface_type))
