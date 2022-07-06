@@ -144,6 +144,22 @@ pub(crate) fn iface_to_nm_connections(
                 }
             }
             return Ok(vec![nm_conn.clone()]);
+        } else if !iface.is_userspace() {
+            if let Some(cur_iface) =
+                cur_net_state.get_kernel_iface_with_route(iface.name())
+            {
+                // User want to convert unmanaged interface to managed
+                if cur_iface.is_ignore() {
+                    return iface_to_nm_connections(
+                        &cur_iface,
+                        ctrl_iface,
+                        exist_nm_conns,
+                        nm_ac_uuids,
+                        veth_peer_exist_in_desire,
+                        cur_net_state,
+                    );
+                }
+            }
         }
     }
     let mut nm_conn = exist_nm_conn.cloned().unwrap_or_default();
