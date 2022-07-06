@@ -20,18 +20,26 @@
 import time
 
 import pytest
+import yaml
 
 import libnmstate
 from libnmstate.schema import Bond
 from libnmstate.schema import BondMode
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceState
+from libnmstate.schema import Route
 
 from ..testlib import cmdlib
+from ..testlib.dummy import nm_unmanaged_dummy
+from ..testlib.assertlib import assert_state_match
 
 BOND99 = "bond99"
 DUMMY1 = "dummy1"
 DUMMY2 = "dummy2"
+IPV4_ADDRESS1 = "192.0.2.251"
+IPV4_ADDRESS2 = "192.0.2.252"
+IPV6_ADDRESS1 = "2001:db8:1::1"
+IPV6_ADDRESS2 = "2001:db8:1::2"
 
 
 @pytest.fixture
@@ -78,3 +86,79 @@ def test_external_managed_subordnates(bond99_with_dummy_port_by_iproute):
             ]
         }
     )
+
+
+@pytest.fixture
+def unmanged_dummy1_with_static_ip():
+    with nm_unmanaged_dummy(DUMMY1):
+        cmdlib.exec_cmd(
+            f"ip addr add {IPV4_ADDRESS1}/24 dev {DUMMY1}".split(), check=True
+        )
+        cmdlib.exec_cmd(
+            f"ip addr add {IPV6_ADDRESS1}/64 dev {DUMMY1}".split(), check=True
+        )
+        cmdlib.exec_cmd(
+            f"ip -6 route add default via {IPV6_ADDRESS2}".split(), check=True
+        )
+        cmdlib.exec_cmd(
+            f"ip route add default via {IPV4_ADDRESS2}".split(), check=True
+        )
+        yield
+
+
+def test_convert_unmanged_interface_to_managed(unmanged_dummy1_with_static_ip):
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: DUMMY1,
+                    Interface.STATE: InterfaceState.UP,
+                }
+            ]
+        }
+    )
+
+    desired_state = yaml.load(
+        """
+---
+interfaces:
+- name: dummy1
+  state: up
+  mtu: 1500
+  ipv4:
+    address:
+    - ip: 192.0.2.251
+      prefix-length: 24
+    dhcp: false
+    enabled: true
+  ipv6:
+    address:
+      - ip: 2001:db8:1::1
+        prefix-length: 64
+    autoconf: false
+    dhcp: false
+    enabled: true""",
+        Loader=yaml.SafeLoader,
+    )
+
+    assert_state_match(desired_state)
+    # assert_state_match() only check Interface.KEY,
+    # so we verify route manually
+    cur_state = libnmstate.show()
+    gw4_found = False
+    gw6_found = False
+    for route in cur_state[Route.KEY][Route.CONFIG]:
+        if (
+            route[Route.DESTINATION] == "0.0.0.0/0"
+            and route[Route.NEXT_HOP_INTERFACE] == DUMMY1
+            and route[Route.NEXT_HOP_ADDRESS] == IPV4_ADDRESS2
+        ):
+            gw4_found = True
+        if (
+            route[Route.DESTINATION] == "::/0"
+            and route[Route.NEXT_HOP_INTERFACE] == DUMMY1
+            and route[Route.NEXT_HOP_ADDRESS] == IPV6_ADDRESS2
+        ):
+            gw6_found = True
+    assert gw4_found
+    assert gw6_found
