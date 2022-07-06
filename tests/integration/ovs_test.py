@@ -36,6 +36,7 @@ from libnmstate.schema import OvsDB
 from libnmstate.schema import RouteRule
 from libnmstate.schema import VLAN
 from libnmstate.schema import VXLAN
+from libnmstate.schema import Veth
 from libnmstate.error import NmstateDependencyError
 from libnmstate.error import NmstateNotSupportedError
 from libnmstate.error import NmstateValueError
@@ -60,6 +61,8 @@ PORT2 = "ovs2"
 PATCH0 = "patch0"
 PATCH1 = "patch1"
 VLAN_IFNAME = "eth101"
+VETH1 = "test-veth1"
+VETH1_PEER = "test-veth1-ep"
 
 MAC1 = "02:FF:FF:FF:FF:01"
 
@@ -1056,3 +1059,34 @@ def test_add_new_ovs_interface_to_existing(bridge_with_ports):
     )
     bridge.apply()
     assertlib.assert_state_match(bridge.state)
+
+
+@pytest.fixture
+def clean_new_veth():
+    yield
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {Interface.NAME: VETH1, Interface.STATE: InterfaceState.ABSENT}
+            ]
+        }
+    )
+
+
+def test_add_new_sys_veth_interface_to_existing_ovs_bridge(
+    bridge_with_ports, clean_new_veth
+):
+    bridge = bridge_with_ports
+    bridge.add_system_port(VETH1)
+    desired_state = bridge.state
+    desired_state[Interface.KEY].append(
+        {
+            Interface.NAME: VETH1,
+            Interface.TYPE: InterfaceType.VETH,
+            Veth.CONFIG_SUBTREE: {
+                Veth.PEER: VETH1_PEER,
+            },
+        }
+    )
+    libnmstate.apply(desired_state)
+    assertlib.assert_state_match(desired_state)

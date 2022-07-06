@@ -359,6 +359,8 @@ impl Interfaces {
                         // existing OVS bridge, we should place this new OVS
                         // interface along with its controller -- chg_ifaces.
                         if new_iface.iface_type() == InterfaceType::OvsInterface
+                            || new_iface.base_iface().controller_type
+                                == Some(InterfaceType::OvsBridge)
                         {
                             new_ovs_ifaces.push(new_iface.clone());
                             if new_iface
