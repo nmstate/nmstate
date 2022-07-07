@@ -56,6 +56,13 @@ pub(crate) fn nm_gen_conf(
     let mut nm_conns = Vec::new();
     let ifaces = net_state.interfaces.to_vec();
     for iface in &ifaces {
+        if !iface.is_up() {
+            log::warn!(
+                "ignoring iface {} because is down or absent",
+                iface.name(),
+            );
+            continue;
+        }
         let mut ctrl_iface: Option<&Interface> = None;
         if let Some(ctrl_iface_name) = &iface.base_iface().controller {
             if let Some(ctrl_type) = &iface.base_iface().controller_type {
