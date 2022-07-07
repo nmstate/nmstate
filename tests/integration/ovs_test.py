@@ -20,6 +20,7 @@
 from contextlib import contextmanager
 import os
 import pytest
+import yaml
 
 import libnmstate
 from libnmstate.prettystate import PrettyState
@@ -930,6 +931,58 @@ def test_add_route_rule_to_ovs_interface_dhcp_auto_route_table(
         route_rule.get(RouteRule.PRIORITY),
         route_rule.get(RouteRule.ROUTE_TABLE),
     )
+
+
+@pytest.fixture
+def cleanup_ovs_bridge_and_bond():
+    yield
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: BRIDGE0,
+                    Interface.STATE: InterfaceState.ABSENT,
+                },
+                {
+                    Interface.NAME: BOND1,
+                    Interface.STATE: InterfaceState.ABSENT,
+                },
+            ]
+        }
+    )
+
+
+@pytest.mark.tier1
+def test_attach_linux_bond_to_ovs_bridge(
+    cleanup_ovs_bridge_and_bond, eth1_up, eth2_up
+):
+    desired_state = yaml.load(
+        """---
+        interfaces:
+          - name: bond1
+            state: up
+            type: bond
+            link-aggregation:
+              mode: active-backup
+              options:
+                miimon: 140
+                primary: eth1
+              port:
+                - eth1
+                - eth2
+          - name: br0
+            type: ovs-bridge
+            state: up
+            bridge:
+              options:
+                stp: false
+              port:
+                - name: bond1
+            """,
+        Loader=yaml.SafeLoader,
+    )
+    libnmstate.apply(desired_state)
+    assertlib.assert_state_match(desired_state)
 
 
 @pytest.mark.skipif(

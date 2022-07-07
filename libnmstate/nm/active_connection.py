@@ -48,6 +48,13 @@ def is_activated(nm_ac, nm_dev):
     if state == NM.ActiveConnectionState.ACTIVATED:
         return True
     elif state == NM.ActiveConnectionState.ACTIVATING:
+        # OVS bridge and OVS port are not allowed to have IP, hence we wait it
+        # to reach ACTIVATED state.
+        if nm_dev.get_device_type() in (
+            NM.DeviceType.OVS_PORT,
+            NM.DeviceType.OVS_BRIDGE,
+        ):
+            return False
         ac_state_flags = nm_ac.get_state_flags()
         nm_flags = NM.ActivationStateFlags
         ip4_is_dynamic = is_ipv4_dynamic(nm_ac)
