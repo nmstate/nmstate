@@ -516,6 +516,6 @@ fn uuid_from_name_and_type(
         &uuid::Uuid::NAMESPACE_URL,
         format!("{}://{}", iface_type, iface_name).as_bytes(),
     )
-    .to_hyphenated()
+    .hyphenated()
     .to_string()
 }
