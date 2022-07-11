@@ -205,7 +205,7 @@ impl<'a> NmApi<'a> {
 
     pub fn uuid_gen() -> String {
         // Use Linux random number generator (RNG) to generate UUID
-        uuid::Uuid::new_v4().to_hyphenated().to_string()
+        uuid::Uuid::new_v4().hyphenated().to_string()
     }
 
     pub fn active_connections_get(
