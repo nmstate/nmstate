@@ -7,7 +7,7 @@ use crate::{
 };
 
 // TODO: Use prop_list to Serialize like InterfaceIpv4 did
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub struct BaseInterface {

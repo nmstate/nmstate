@@ -107,10 +107,10 @@ fn nmstate_iface_to_np(
 fn apply_single_state(net_state: &NetworkState) -> Result<(), NmstateError> {
     let np_net_conf = net_state_to_nispor(net_state)?;
     if let Err(e) = np_net_conf.apply() {
-        return Err(NmstateError::new(
+        Err(NmstateError::new(
             ErrorKind::PluginFailure,
             format!("Unknown error from nipsor plugin: {}, {}", e.kind, e.msg),
-        ));
+        ))
     } else {
         Ok(())
     }

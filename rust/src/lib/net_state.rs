@@ -26,7 +26,7 @@ const VERIFY_RETRY_COUNT: usize = 5;
 const VERIFY_RETRY_COUNT_SRIOV: usize = 60;
 const VERIFY_RETRY_COUNT_KERNEL_MODE: usize = 5;
 
-#[derive(Clone, Debug, Serialize, Default, PartialEq)]
+#[derive(Clone, Debug, Serialize, Default, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 #[non_exhaustive]
 pub struct NetworkState {

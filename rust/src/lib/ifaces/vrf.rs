@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{BaseInterface, InterfaceType};
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct VrfInterface {
     #[serde(flatten)]
@@ -52,7 +52,7 @@ impl VrfInterface {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[non_exhaustive]
 pub struct VrfConfig {
     pub port: Option<Vec<String>>,

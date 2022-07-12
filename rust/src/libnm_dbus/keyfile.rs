@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::convert::TryFrom;
+use std::fmt::Write;
 
 use log::error;
 
@@ -63,25 +64,34 @@ pub(crate) fn zvariant_value_to_keyfile(
 
                 if let Some(section_value) = data.get(&key) {
                     if key == "mac-address" {
-                        ret += &format!(
-                            "mac-address={}\n",
+                        writeln!(
+                            ret,
+                            "mac-address={}",
                             mac_address_value_to_string(section_value)
-                        );
+                        )
+                        .ok();
                     } else if key == "type" && section_name == "connection" {
                         let iface_type = zvariant_value_to_keyfile(
                             section_value,
                             section_name,
                         )?;
-                        ret += &format!(
-                            "type={}\n",
+                        writeln!(
+                            ret,
+                            "type={}",
                             if iface_type == "802-3-ethernet" {
                                 "ethernet".to_string()
                             } else {
                                 iface_type
                             }
-                        );
+                        )
+                        .ok();
                     } else if key == "address-data" {
-                        ret += &ip_address_value_to_string(section_value);
+                        write!(
+                            ret,
+                            "{}",
+                            &ip_address_value_to_string(section_value)
+                        )
+                        .ok();
                     } else if let zvariant::Value::Dict(_) = section_value {
                         let sub_section: HashMap<String, zvariant::Value> =
                             HashMap::try_from(section_value.clone())?;
@@ -94,20 +104,30 @@ pub(crate) fn zvariant_value_to_keyfile(
                         } else {
                             format!("{}-{}", section_name, key)
                         };
-                        ret += &format!("\n[{}]\n", sub_section_name);
-                        ret += &zvariant_value_to_keyfile(
-                            section_value,
-                            &sub_section_name,
-                        )?;
-                    } else {
-                        ret += &format!(
-                            "{}={}\n",
-                            key,
-                            zvariant_value_to_keyfile(
+                        write!(ret, "\n[{}]\n", sub_section_name).ok();
+                        write!(
+                            ret,
+                            "{}",
+                            &zvariant_value_to_keyfile(
                                 section_value,
-                                section_name
+                                &sub_section_name,
                             )?
-                        );
+                        )
+                        .ok();
+                    } else {
+                        write!(
+                            ret,
+                            "{}",
+                            &format!(
+                                "{}={}\n",
+                                key,
+                                zvariant_value_to_keyfile(
+                                    section_value,
+                                    section_name
+                                )?
+                            )
+                        )
+                        .ok();
                     }
                 }
             }
@@ -174,8 +194,8 @@ fn ip_address_value_to_string(value: &zvariant::Value) -> String {
             };
             if let Ok(address) = address {
                 if let Ok(prefix) = prefix {
-                    ret +=
-                        &format!("address{}={}/{}\n", index, address, prefix);
+                    writeln!(ret, "address{}={}/{}", index, address, prefix)
+                        .ok();
                     index += 1;
                 }
             }

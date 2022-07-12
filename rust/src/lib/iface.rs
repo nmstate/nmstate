@@ -105,7 +105,7 @@ impl InterfaceType {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum InterfaceState {
@@ -132,7 +132,7 @@ impl From<&str> for InterfaceState {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[non_exhaustive]
 pub struct UnknownInterface {
     #[serde(flatten)]
@@ -145,7 +145,7 @@ impl UnknownInterface {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "kebab-case", untagged)]
 #[non_exhaustive]
 pub enum Interface {
