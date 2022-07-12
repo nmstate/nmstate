@@ -233,6 +233,7 @@ function run_tests {
             $PYTEST_OPTIONS \
             tests/integration/linux_bridge_test.py \
             -k '\
+            not test_linux_bridge_multicast_router and \
             not test_linux_bridge_over_bond_over_port_in_one_transaction and \
             not test_explicitly_ignore_a_bridge_port' \
             ${nmstate_pytest_extra_args}"
