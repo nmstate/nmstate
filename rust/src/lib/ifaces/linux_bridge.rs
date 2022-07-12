@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{BaseInterface, ErrorKind, InterfaceType, NmstateError};
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct LinuxBridgeInterface {
     #[serde(flatten)]
@@ -221,7 +221,7 @@ impl LinuxBridgeInterface {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub struct LinuxBridgeConfig {
@@ -252,7 +252,7 @@ impl LinuxBridgeConfig {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub struct LinuxBridgePortConfig {
@@ -295,7 +295,7 @@ impl LinuxBridgePortConfig {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub struct LinuxBridgeOptions {
@@ -360,7 +360,7 @@ impl LinuxBridgeOptions {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub struct LinuxBridgeStpOptions {
@@ -455,7 +455,7 @@ impl LinuxBridgeConfig {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum LinuxBridgeMulticastRouterType {
@@ -484,7 +484,7 @@ impl std::fmt::Display for LinuxBridgeMulticastRouterType {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub struct LinuxBridgePortVlanConfig {
@@ -550,7 +550,7 @@ impl LinuxBridgePortVlanConfig {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum LinuxBridgePortVlanMode {
@@ -564,7 +564,7 @@ impl Default for LinuxBridgePortVlanMode {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum LinuxBridgePortTunkTag {
@@ -581,7 +581,7 @@ impl LinuxBridgePortTunkTag {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[non_exhaustive]
 pub struct LinuxBridgePortVlanRange {
     pub max: u16,

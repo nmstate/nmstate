@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{BaseInterface, ErrorKind, InterfaceType, NmstateError};
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct MacVlanInterface {
     #[serde(flatten)]
@@ -60,7 +60,7 @@ impl MacVlanInterface {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub struct MacVlanConfig {
@@ -80,7 +80,7 @@ impl MacVlanConfig {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum MacVlanMode {

@@ -6,7 +6,8 @@ pub(crate) fn nm_version() -> Result<String, NmstateError> {
     nm_api.version().map_err(nm_error_to_nmstate)
 }
 
-// This helper function will help us to avoid introducing new dependencies to the project.
+// This helper function will help us to avoid introducing new dependencies to
+// the project.
 pub(crate) fn nm_supports_accept_all_mac_addresses_mode(
 ) -> Result<bool, NmstateError> {
     let version = nm_version()?;

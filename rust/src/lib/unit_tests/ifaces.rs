@@ -31,7 +31,7 @@ fn test_resolve_unknown_type_absent_eth() {
 #[test]
 fn test_resolve_unknown_type_absent_multiple() {
     let mut cur_ifaces = Interfaces::new();
-    cur_ifaces.push(new_ovs_br_iface("br0", &vec!["p1", "p2"]));
+    cur_ifaces.push(new_ovs_br_iface("br0", &["p1", "p2"]));
     cur_ifaces.push(new_ovs_iface("br0", "br0"));
     cur_ifaces.push(new_ovs_iface("p1", "br0"));
 

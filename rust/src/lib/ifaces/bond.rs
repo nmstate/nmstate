@@ -1,7 +1,7 @@
 use crate::{BaseInterface, ErrorKind, InterfaceType, NmstateError};
 use serde::{de::Error, Deserialize, Deserializer, Serialize};
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub struct BondInterface {
@@ -92,7 +92,7 @@ impl BondInterface {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 #[non_exhaustive]
 pub enum BondMode {
     #[serde(rename = "balance-rr")]
@@ -137,7 +137,7 @@ impl std::fmt::Display for BondMode {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub struct BondConfig {
@@ -188,7 +188,7 @@ impl BondConfig {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum BondAdSelect {
@@ -210,7 +210,7 @@ impl BondAdSelect {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum BondLacpRate {
@@ -229,7 +229,7 @@ impl BondLacpRate {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum BondAllPortsActive {
@@ -248,7 +248,7 @@ impl BondAllPortsActive {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum BondArpAllTargets {
@@ -279,7 +279,7 @@ const BOND_ARP_FILTER: u32 = BOND_ARP_VALIDATE_ALL + 1;
 const BOND_ARP_FILTER_ACTIVE: u32 = BOND_ARP_VALIDATE_ACTIVE | BOND_ARP_FILTER;
 const BOND_ARP_FILTER_BACKUP: u32 = BOND_ARP_VALIDATE_BACKUP | BOND_ARP_FILTER;
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum BondArpValidate {
@@ -308,7 +308,7 @@ impl BondArpValidate {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum BondFailOverMac {
@@ -330,7 +330,7 @@ impl BondFailOverMac {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum BondPrimaryReselect {
@@ -352,7 +352,7 @@ impl BondPrimaryReselect {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 #[non_exhaustive]
 pub enum BondXmitHashPolicy {
     #[serde(rename = "layer2")]
@@ -388,7 +388,7 @@ impl BondXmitHashPolicy {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Default, Clone, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, Default, Clone, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct BondOptions {
     #[serde(

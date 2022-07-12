@@ -27,7 +27,7 @@ const COPY_MAC_ALLOWED_IFACE_TYPES: [InterfaceType; 3] = [
     InterfaceType::OvsInterface,
 ];
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct Interfaces {
     pub(crate) kernel_ifaces: HashMap<String, Interface>,
@@ -47,9 +47,10 @@ impl<'de> Deserialize<'de> for Interfaces {
             <Vec<Interface> as Deserialize>::deserialize(deserializer)?;
         for mut iface in ifaces {
             // Unless user place veth configure in ethernet interface,
-            // it means user just applying the return of NetworkState.retrieve().
-            // If user would like to change veth configuration, it should use
-            // veth interface type.
+            // it means user just applying the return of
+            // NetworkState.retrieve(). If user would like to change
+            // veth configuration, it should use veth interface
+            // type.
             if iface.iface_type() == InterfaceType::Ethernet {
                 if let Interface::Ethernet(ref mut eth_iface) = iface {
                     eth_iface.veth_sanitize();
@@ -104,12 +105,9 @@ impl Interfaces {
     ) -> Option<&'a Interface> {
         if iface_type == InterfaceType::Unknown {
             self.kernel_ifaces.get(&iface_name.to_string()).or_else(|| {
-                for iface in self.user_ifaces.values() {
-                    if iface.name() == iface_name {
-                        return Some(iface);
-                    }
-                }
-                None
+                self.user_ifaces
+                    .values()
+                    .find(|&iface| iface.name() == iface_name)
             })
         } else if iface_type.is_userspace() {
             self.user_ifaces.get(&(iface_name.to_string(), iface_type))
