@@ -33,6 +33,7 @@ class Interface:
     MTU = "mtu"
     COPY_MAC_FROM = "copy-mac-from"
     ACCEPT_ALL_MAC_ADDRESSES = "accept-all-mac-addresses"
+    WAIT_IP = "wait-ip"
 
 
 class Route:
