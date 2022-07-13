@@ -155,7 +155,6 @@ impl LinuxBridgeInterface {
     }
 
     pub(crate) fn validate(&self) -> Result<(), NmstateError> {
-        self.base.validate()?;
         self.bridge
             .as_ref()
             .map(LinuxBridgeConfig::validate)

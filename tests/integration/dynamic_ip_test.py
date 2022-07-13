@@ -1335,3 +1335,35 @@ def test_auto6_addr_gen_mode(dhcpcli_up_with_dynamic_ip, addr_gen_mode):
             ]
         }
     )
+
+
+@pytest.mark.tier1
+@pytest.mark.parametrize(
+    "wait_ip",
+    [
+        "any",
+        "ipv4",
+        "ipv6",
+        "ipv4+ipv6",
+    ],
+)
+def test_wait_ip(eth1_up, wait_ip):
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: "eth1",
+                    Interface.WAIT_IP: wait_ip,
+                    Interface.IPV4: {
+                        InterfaceIPv4.ENABLED: True,
+                        InterfaceIPv4.DHCP: True,
+                    },
+                    Interface.IPV6: {
+                        InterfaceIPv6.ENABLED: True,
+                        InterfaceIPv6.DHCP: True,
+                        InterfaceIPv6.AUTOCONF: True,
+                    },
+                }
+            ],
+        }
+    )
