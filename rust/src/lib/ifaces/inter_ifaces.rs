@@ -350,7 +350,33 @@ impl Interfaces {
                             new_iface.name(),
                             new_iface.iface_type()
                         );
-                        add_ifaces.push(new_iface);
+                        // When adding new OVS interface requires changes to
+                        // existing OVS bridge, we should place this new OVS
+                        // interface along with its controller -- chg_ifaces.
+                        if new_iface.iface_type() == InterfaceType::OvsInterface
+                            || new_iface.base_iface().controller_type
+                                == Some(InterfaceType::OvsBridge)
+                        {
+                            new_ovs_ifaces.push(new_iface.clone());
+                            if new_iface
+                                .base_iface()
+                                .controller
+                                .as_ref()
+                                .and_then(|br_name| {
+                                    current.get_iface(
+                                        br_name,
+                                        InterfaceType::OvsBridge,
+                                    )
+                                })
+                                .is_some()
+                            {
+                                chg_ifaces.push(new_iface);
+                            } else {
+                                add_ifaces.push(new_iface);
+                            }
+                        } else {
+                            add_ifaces.push(new_iface);
+                        }
                     }
                 }
             }

@@ -37,6 +37,7 @@ from libnmstate.schema import OvsDB
 from libnmstate.schema import RouteRule
 from libnmstate.schema import VLAN
 from libnmstate.schema import VXLAN
+from libnmstate.schema import Veth
 from libnmstate.error import NmstateDependencyError
 from libnmstate.error import NmstateNotSupportedError
 from libnmstate.error import NmstateValueError
@@ -61,6 +62,8 @@ PORT2 = "ovs2"
 PATCH0 = "patch0"
 PATCH1 = "patch1"
 VLAN_IFNAME = "eth101"
+VETH1 = "test-veth1"
+VETH1_PEER = "test-veth1-ep"
 
 MAC1 = "02:FF:FF:FF:FF:01"
 
@@ -1048,3 +1051,71 @@ class TestOvsDpdk:
 
         assertlib.assert_absent(BRIDGE0)
         assertlib.assert_absent(PORT1)
+
+
+@pytest.fixture
+def unmanged_ovs_vxlan():
+    cmdlib.exec_cmd("ovs-vsctl add-br br0_with_vxlan".split(), check=True)
+    cmdlib.exec_cmd(
+        "ovs-vsctl add-port br0_with_vxlan vx_node1 -- "
+        "set interface vx_node1 type=vxlan options:remote_ip=192.168.122.174 "
+        "options:dst_port=8472".split(),
+        check=True,
+    )
+    cmdlib.exec_cmd(
+        "nmcli d set vxlan_sys_8472 managed false".split(), check=True
+    )
+    try:
+        yield
+    finally:
+        cmdlib.exec_cmd("ovs-vsctl del-br br0_with_vxlan".split())
+
+
+@pytest.mark.tier1
+def test_ovs_vxlan_in_current_not_impact_others(unmanged_ovs_vxlan):
+    with Bridge(BRIDGE1).create() as state:
+        assertlib.assert_state_match(state)
+
+    assertlib.assert_absent(BRIDGE1)
+
+
+def test_add_new_ovs_interface_to_existing(bridge_with_ports):
+    bridge = bridge_with_ports
+    bridge.add_internal_port(
+        PORT2,
+        ipv4_state={InterfaceIPv4.ENABLED: False},
+    )
+    bridge.apply()
+    assertlib.assert_state_match(bridge.state)
+
+
+@pytest.fixture
+def clean_new_veth():
+    yield
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {Interface.NAME: VETH1, Interface.STATE: InterfaceState.ABSENT}
+            ]
+        }
+    )
+
+
+def test_add_new_sys_veth_interface_to_existing_ovs_bridge(
+    clean_new_veth,
+    bridge_with_ports,
+):
+    bridge = bridge_with_ports
+    bridge.add_system_port(VETH1)
+    desired_state = bridge.state
+    desired_state[Interface.KEY].append(
+        {
+            Interface.NAME: VETH1,
+            Interface.TYPE: InterfaceType.VETH,
+            Veth.CONFIG_SUBTREE: {
+                Veth.PEER: VETH1_PEER,
+            },
+        }
+    )
+    libnmstate.apply(desired_state)
+    assertlib.assert_state_match(desired_state)
