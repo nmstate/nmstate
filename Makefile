@@ -134,10 +134,8 @@ dist: manpage $(SPEC_FILE) $(CLIB_HEADER)
 	mv $(TMPDIR)/$(TARBALL) ./
 	if [ $(SKIP_VENDOR_CREATION) == 0 ];then \
 		cd rust; \
-		mkdir $(TMPDIR)/vendor; \
-		cargo vendor $(TMPDIR)/vendor; \
+		cargo vendor-filterer --platform x86_64-unknown-linux-gnu $(TMPDIR)/vendor; \
 		cd $(TMPDIR); \
-		find vendor/ -type f -name \*.a  -exec rm {} \; ; \
 		tar cfJ $(ROOT_DIR)/$(VENDOR_TARBALL) vendor ; \
 	fi
 	rm -rf $(TMPDIR)
