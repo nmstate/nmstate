@@ -1006,3 +1006,19 @@ def test_linux_bridge_set_vlan_protocol(bridge0_with_port0, vlan_protocol):
         },
     }
     libnmstate.apply({Interface.KEY: [iface_state]})
+
+
+def test_create_and_remove_linux_bridge_kernel_mode():
+    bridge_name = TEST_BRIDGE0
+    with linux_bridge(
+        bridge_name,
+        bridge_subtree_state=None,
+        kernel_mode=True,
+        create=False,
+    ) as desired_state:
+        desired_state[Interface.KEY][0].pop(Interface.IPV4)
+        desired_state[Interface.KEY][0].pop(Interface.IPV6)
+        libnmstate.apply(desired_state, kernel_only=True)
+        assertlib.assert_state(desired_state)
+
+    assertlib.assert_absent(bridge_name)

@@ -26,6 +26,7 @@ from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
+from libnmstate.schema import Veth
 
 from .testlib import assertlib
 from .testlib import cmdlib
@@ -734,3 +735,52 @@ def test_preserve_ip_conf_if_not_mentioned(setup_eth1_static_ip):
         }
     )
     assertlib.assert_state_match(desired_state)
+
+
+def test_static_ip_kernel_mode():
+    desired_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: "test-veth1",
+                Interface.TYPE: InterfaceType.VETH,
+                Interface.STATE: InterfaceState.UP,
+                Veth.CONFIG_SUBTREE: {
+                    Veth.PEER: "test-veth1.ep",
+                },
+                Interface.IPV4: {
+                    InterfaceIPv4.ENABLED: True,
+                    InterfaceIPv4.ADDRESS: [
+                        {
+                            InterfaceIPv4.ADDRESS_IP: IPV4_ADDRESS1,
+                            InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+                        }
+                    ],
+                },
+                Interface.IPV6: {
+                    InterfaceIPv6.ENABLED: True,
+                    InterfaceIPv6.ADDRESS: [
+                        {
+                            InterfaceIPv6.ADDRESS_IP: IPV6_ADDRESS1,
+                            InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
+                        }
+                    ],
+                },
+            }
+        ]
+    }
+    try:
+        libnmstate.apply(desired_state, kernel_only=True)
+        assertlib.assert_state_match(desired_state)
+    finally:
+        libnmstate.apply(
+            {
+                Interface.KEY: [
+                    {
+                        Interface.NAME: "test-veth1",
+                        Interface.TYPE: InterfaceType.VETH,
+                        Interface.STATE: InterfaceState.ABSENT,
+                    }
+                ]
+            },
+            kernel_only=True,
+        )

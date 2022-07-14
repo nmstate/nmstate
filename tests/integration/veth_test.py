@@ -109,6 +109,15 @@ def test_add_and_remove_veth():
     assertlib.assert_absent(VETH1PEER)
 
 
+@pytest.mark.tier1
+def test_add_and_remove_veth_kernel_mode():
+    with veth_interface(VETH1, VETH1PEER, kernel_mode=True) as desired_state:
+        assertlib.assert_state(desired_state)
+
+    assertlib.assert_absent(VETH1)
+    assertlib.assert_absent(VETH1PEER)
+
+
 @pytest.mark.skipif(
     nm_major_minor_version() <= 1.28,
     reason="Modifying veth interfaces is not supported on NetworkManager.",
@@ -332,7 +341,7 @@ def veth_interface_both_up(ifname, peer):
 
 
 @contextmanager
-def veth_interface(ifname, peer):
+def veth_interface(ifname, peer, kernel_mode=False):
     d_state = {
         Interface.KEY: [
             {
@@ -346,7 +355,7 @@ def veth_interface(ifname, peer):
         ]
     }
     try:
-        libnmstate.apply(d_state)
+        libnmstate.apply(d_state, kernel_only=kernel_mode)
         yield d_state
     finally:
         d_state[Interface.KEY][0][Interface.STATE] = InterfaceState.ABSENT
@@ -357,7 +366,7 @@ def veth_interface(ifname, peer):
                 Interface.STATE: InterfaceState.ABSENT,
             }
         )
-        libnmstate.apply(d_state)
+        libnmstate.apply(d_state, kernel_only=kernel_mode)
 
 
 def test_new_veth_with_ipv6_only():
