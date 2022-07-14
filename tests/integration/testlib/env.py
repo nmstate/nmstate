@@ -40,8 +40,8 @@ def nm_major_minor_version():
     return float(f"{NM.MAJOR_VERSION}.{NM.MINOR_VERSION}")
 
 
-def nm_minor_micro_version():
-    return float(f"{NM.MINOR_VERSION}.{NM.MICRO_VERSION}")
+def nm_minor_version():
+    return int(f"{NM.MINOR_VERSION}")
 
 
 def is_k8s():
