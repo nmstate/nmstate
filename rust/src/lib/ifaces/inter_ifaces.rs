@@ -215,10 +215,13 @@ impl Interfaces {
             } else if let Some(cur_iface) =
                 cur_clone.get_iface(iface.name(), iface.iface_type())
             {
-                iface.verify(cur_iface)?;
-                if let Interface::Ethernet(eth_iface) = iface {
-                    if eth_iface.sriov_is_enabled() {
-                        eth_iface.verify_sriov(cur_ifaces)?;
+                // Do not verify physical interface with state:down
+                if !iface.is_down() {
+                    iface.verify(cur_iface)?;
+                    if let Interface::Ethernet(eth_iface) = iface {
+                        if eth_iface.sriov_is_enabled() {
+                            eth_iface.verify_sriov(cur_ifaces)?;
+                        }
                     }
                 }
             } else {

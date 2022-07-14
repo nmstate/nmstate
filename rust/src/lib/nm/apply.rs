@@ -149,6 +149,7 @@ fn apply_single_state(
     if net_state.interfaces.to_vec().is_empty() {
         return Ok(());
     }
+    let mut nm_conns_to_update: Vec<NmConnection> = Vec::new();
     let mut nm_conns_to_activate: Vec<NmConnection> = Vec::new();
 
     let exist_nm_conns =
@@ -172,7 +173,7 @@ fn apply_single_state(
     let ifaces = net_state.interfaces.to_vec();
 
     for iface in ifaces.iter() {
-        if iface.iface_type() != InterfaceType::Unknown && iface.is_up() {
+        if iface.iface_type() != InterfaceType::Unknown && !iface.is_absent() {
             let mut ctrl_iface: Option<&Interface> = None;
             if let Some(ctrl_iface_name) = &iface.base_iface().controller {
                 if let Some(ctrl_type) = &iface.base_iface().controller_type {
@@ -199,7 +200,10 @@ fn apply_single_state(
                 is_veth_peer_in_desire(iface, ifaces.as_slice()),
                 cur_net_state,
             )? {
-                nm_conns_to_activate.push(nm_conn);
+                if iface.is_up() {
+                    nm_conns_to_activate.push(nm_conn.clone());
+                }
+                nm_conns_to_update.push(nm_conn);
             }
         }
     }
@@ -217,13 +221,13 @@ fn apply_single_state(
         .collect::<Vec<_>>();
 
     use_uuid_for_controller_reference(
-        &mut nm_conns_to_activate,
+        &mut nm_conns_to_update,
         &des_net_state.interfaces.user_ifaces,
         &cur_net_state.interfaces.user_ifaces,
         &exist_nm_conns,
     )?;
     use_uuid_for_parent_reference(
-        &mut nm_conns_to_activate,
+        &mut nm_conns_to_update,
         &des_net_state.interfaces.kernel_ifaces,
         &exist_nm_conns,
     );
@@ -239,7 +243,7 @@ fn apply_single_state(
     )?;
     save_nm_profiles(
         nm_api,
-        nm_conns_to_activate.as_slice(),
+        nm_conns_to_update.as_slice(),
         checkpoint,
         memory_only,
     )?;
