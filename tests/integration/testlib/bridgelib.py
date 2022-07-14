@@ -29,7 +29,11 @@ from libnmstate.schema import LinuxBridge
 
 @contextmanager
 def linux_bridge(
-    name, bridge_subtree_state, extra_iface_state=None, create=True
+    name,
+    bridge_subtree_state,
+    extra_iface_state=None,
+    create=True,
+    kernel_mode=False,
 ):
     desired_state = {
         Interface.KEY: [
@@ -49,7 +53,7 @@ def linux_bridge(
         desired_iface_state.update(extra_iface_state)
 
     if create:
-        libnmstate.apply(desired_state)
+        libnmstate.apply(desired_state, kernel_only=kernel_mode)
 
     try:
         yield desired_state
@@ -65,6 +69,7 @@ def linux_bridge(
                 ]
             },
             verify_change=False,
+            kernel_only=kernel_mode,
         )
 
 

@@ -54,7 +54,7 @@ jobs:
           override: true
 
     - name: Unit test
-      run: cd rust && cargo test -- --test-threads=1 --show-output
+      run: cd rust && cargo test -- --show-output
 
   rpm_build:
     runs-on: ubuntu-latest
