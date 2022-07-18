@@ -65,3 +65,12 @@ impl From<std::net::AddrParseError> for NmstateError {
         )
     }
 }
+
+impl From<ipnet::AddrParseError> for NmstateError {
+    fn from(e: ipnet::AddrParseError) -> Self {
+        NmstateError::new(
+            ErrorKind::InvalidArgument,
+            format!("Invalid IP network: {}", e),
+        )
+    }
+}
