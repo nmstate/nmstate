@@ -7,9 +7,9 @@ const TEST_NIC: &str = "eth1";
 const TEST_IPV4_NET1: &str = "192.0.2.0/24";
 const TEST_IPV4_ADDR1: &str = "198.51.100.1";
 const TEST_IPV6_NET1: &str = "2001:db8:1::/64";
-const TEST_IPV6_ADDR1: &str = "2001:db8:0::1";
+const TEST_IPV6_ADDR1: &str = "2001:db8:1::1";
 const TEST_IPV6_NET2: &str = "2001:db8:2::/64";
-const TEST_IPV6_ADDR2: &str = "2001:db8:0::2";
+const TEST_IPV6_ADDR2: &str = "2001:db8:2::2";
 
 const TEST_ROUTE_METRIC: i64 = 100;
 
@@ -373,4 +373,66 @@ routes:
 
     assert!(del_net_state.interfaces.to_vec().len() == 1);
     assert!(del_net_state.interfaces.kernel_ifaces["br0"].is_absent());
+}
+
+#[test]
+fn test_route_sanitize_ipv4() {
+    let mut route: RouteEntry = serde_yaml::from_str(
+        r#"
+destination: "192.0.2.1/24"
+"#,
+    )
+    .unwrap();
+    route.sanitize().unwrap();
+    assert_eq!(route.destination, Some("192.0.2.0/24".to_string()));
+}
+
+#[test]
+fn test_route_sanitize_ipv4_host() {
+    let mut route: RouteEntry = serde_yaml::from_str(
+        r#"
+destination: "192.0.2.1"
+"#,
+    )
+    .unwrap();
+    route.sanitize().unwrap();
+    assert_eq!(route.destination, Some("192.0.2.1/32".to_string()));
+}
+
+#[test]
+fn test_route_sanitize_ipv6() {
+    let mut route: RouteEntry = serde_yaml::from_str(
+        r#"
+destination: "2001:db8:1::1/64"
+"#,
+    )
+    .unwrap();
+    route.sanitize().unwrap();
+    assert_eq!(route.destination, Some("2001:db8:1::/64".to_string()));
+}
+
+#[test]
+fn test_route_sanitize_ipv6_host() {
+    let mut route: RouteEntry = serde_yaml::from_str(
+        r#"
+destination: "2001:db8:1::1"
+"#,
+    )
+    .unwrap();
+    route.sanitize().unwrap();
+    assert_eq!(route.destination, Some("2001:db8:1::1/128".to_string()));
+}
+
+#[test]
+fn test_route_sanitize_ipv6_host_not_compact() {
+    let mut route: RouteEntry = serde_yaml::from_str(
+        r#"
+destination: "2001:db8:1:0000:000::1"
+next-hop-address: "2001:db8:a:0000:000::1"
+"#,
+    )
+    .unwrap();
+    route.sanitize().unwrap();
+    assert_eq!(route.destination, Some("2001:db8:1::1/128".to_string()));
+    assert_eq!(route.next_hop_addr, Some("2001:db8:a::1".to_string()));
 }
