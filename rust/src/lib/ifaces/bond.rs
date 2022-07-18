@@ -189,19 +189,19 @@ impl BondInterface {
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy)]
 #[non_exhaustive]
 pub enum BondMode {
-    #[serde(rename = "balance-rr")]
+    #[serde(rename = "balance-rr", alias = "0")]
     RoundRobin,
-    #[serde(rename = "active-backup")]
+    #[serde(rename = "active-backup", alias = "1")]
     ActiveBackup,
-    #[serde(rename = "balance-xor")]
+    #[serde(rename = "balance-xor", alias = "2")]
     XOR,
-    #[serde(rename = "broadcast")]
+    #[serde(rename = "broadcast", alias = "3")]
     Broadcast,
-    #[serde(rename = "802.3ad")]
+    #[serde(rename = "802.3ad", alias = "4")]
     LACP,
-    #[serde(rename = "balance-tlb")]
+    #[serde(rename = "balance-tlb", alias = "5")]
     TLB,
-    #[serde(rename = "balance-alb")]
+    #[serde(rename = "balance-alb", alias = "6")]
     ALB,
     #[serde(rename = "unknown")]
     Unknown,

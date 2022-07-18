@@ -1,6 +1,7 @@
 use crate::{
     BondAdSelect, BondAllPortsActive, BondArpValidate, BondFailOverMac,
-    BondInterface, BondLacpRate, BondPrimaryReselect, ErrorKind, Interface,
+    BondInterface, BondLacpRate, BondMode, BondPrimaryReselect, ErrorKind,
+    Interface,
 };
 
 #[test]
@@ -250,4 +251,104 @@ link-aggregation:
     assert_eq!(bond_opts.tlb_dynamic_lb, Some(true));
     assert_eq!(bond_opts.updelay, Some(104));
     assert_eq!(bond_opts.use_carrier, Some(false));
+}
+
+#[test]
+fn test_integer_bond_mode() {
+    let ifaces: Vec<BondInterface> = serde_yaml::from_str(
+        r#"---
+- name: bond0
+  type: bond
+  state: up
+  link-aggregation:
+    mode: 0
+- name: bond00
+  type: bond
+  state: up
+  link-aggregation:
+    mode: "0"
+- name: bond1
+  type: bond
+  state: up
+  link-aggregation:
+    mode: 1
+- name: bond10
+  type: bond
+  state: up
+  link-aggregation:
+    mode: "1"
+- name: bond2
+  type: bond
+  state: up
+  link-aggregation:
+    mode: 2
+- name: bond20
+  type: bond
+  state: up
+  link-aggregation:
+    mode: "2"
+- name: bond3
+  type: bond
+  state: up
+  link-aggregation:
+    mode: 3
+- name: bond30
+  type: bond
+  state: up
+  link-aggregation:
+    mode: "3"
+- name: bond4
+  type: bond
+  state: up
+  link-aggregation:
+    mode: 4
+- name: bond40
+  type: bond
+  state: up
+  link-aggregation:
+    mode: "4"
+- name: bond5
+  type: bond
+  state: up
+  link-aggregation:
+    mode: 5
+- name: bond50
+  type: bond
+  state: up
+  link-aggregation:
+    mode: "5"
+- name: bond6
+  type: bond
+  state: up
+  link-aggregation:
+    mode: 6
+- name: bond60
+  type: bond
+  state: up
+  link-aggregation:
+    mode: "6"
+"#,
+    )
+    .unwrap();
+    for (i, expected_bond_mode) in [
+        BondMode::RoundRobin,
+        BondMode::ActiveBackup,
+        BondMode::XOR,
+        BondMode::Broadcast,
+        BondMode::LACP,
+        BondMode::TLB,
+        BondMode::ALB,
+    ]
+    .iter()
+    .enumerate()
+    {
+        assert_eq!(
+            expected_bond_mode,
+            &ifaces[i * 2].bond.as_ref().unwrap().mode.unwrap()
+        );
+        assert_eq!(
+            expected_bond_mode,
+            &ifaces[i * 2 + 1].bond.as_ref().unwrap().mode.unwrap()
+        );
+    }
 }
