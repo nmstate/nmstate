@@ -7,6 +7,9 @@ use crate::{
     BaseInterface, DnsClientState, ErrorKind, Interfaces, NmstateError,
 };
 
+const IPV4_ADDR_LEN: usize = 32;
+const IPV6_ADDR_LEN: usize = 128;
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[non_exhaustive]
 #[serde(deny_unknown_fields)]
@@ -876,4 +879,27 @@ fn get_ip_prop_list(
         ret.push("addr_gen_mode")
     }
     ret
+}
+
+pub(crate) fn sanitize_ip_network(
+    ip_net: &str,
+) -> Result<String, NmstateError> {
+    let new_ip_net: ipnet::IpNet = ip_addr_to_ip_network(ip_net).parse()?;
+    Ok(format!(
+        "{}/{}",
+        new_ip_net.network(),
+        new_ip_net.prefix_len()
+    ))
+}
+
+fn ip_addr_to_ip_network(ip_addr: &str) -> String {
+    if !ip_addr.contains('/') {
+        if is_ipv6_addr(ip_addr) {
+            format!("{}/{}", ip_addr, IPV6_ADDR_LEN)
+        } else {
+            format!("{}/{}", ip_addr, IPV4_ADDR_LEN)
+        }
+    } else {
+        ip_addr.to_string()
+    }
 }

@@ -458,7 +458,7 @@ impl NetworkState {
             &mut chg_net_state,
             &del_net_state,
             current,
-        );
+        )?;
 
         self.include_rule_changes(
             &mut add_net_state,
@@ -482,9 +482,9 @@ impl NetworkState {
         chg_net_state: &mut Self,
         del_net_state: &Self,
         current: &Self,
-    ) {
+    ) -> Result<(), NmstateError> {
         let mut changed_iface_routes =
-            self.routes.gen_changed_ifaces_and_routes(&current.routes);
+            self.routes.gen_changed_ifaces_and_routes(&current.routes)?;
 
         for (iface_name, routes) in changed_iface_routes.drain() {
             let cur_iface = current
@@ -537,6 +537,7 @@ impl NetworkState {
                 );
             }
         }
+        Ok(())
     }
 
     fn include_rule_changes(
