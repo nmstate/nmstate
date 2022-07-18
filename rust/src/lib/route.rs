@@ -3,7 +3,10 @@ use std::collections::{hash_map::Entry, HashMap, HashSet};
 use log::{debug, error};
 use serde::{Deserialize, Serialize};
 
-use crate::{ip::is_ipv6_addr, ErrorKind, NmstateError};
+use crate::{
+    ip::{is_ipv6_addr, sanitize_ip_network},
+    ErrorKind, NmstateError,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[non_exhaustive]
@@ -55,6 +58,9 @@ impl Routes {
         if let Some(mut config_routes) = self.config.clone() {
             config_routes.sort_unstable();
             config_routes.dedup();
+            for r in config_routes.iter_mut() {
+                r.sanitize().ok();
+            }
             let cur_config_routes = match current.config.as_ref() {
                 Some(c) => {
                     let mut routes = c.to_vec();
@@ -127,14 +133,19 @@ impl Routes {
     pub(crate) fn gen_changed_ifaces_and_routes(
         &self,
         current: &Self,
-    ) -> HashMap<String, Vec<RouteEntry>> {
+    ) -> Result<HashMap<String, Vec<RouteEntry>>, NmstateError> {
         let mut ret: HashMap<String, Vec<RouteEntry>> = HashMap::new();
+        let mut desired_routes = Vec::new();
+        if let Some(rts) = self.config.as_ref() {
+            for rt in rts {
+                let mut rt = rt.clone();
+                rt.sanitize()?;
+                desired_routes.push(rt);
+            }
+        }
+        let des_routes_index =
+            create_route_index_by_iface(desired_routes.as_slice());
         let cur_routes_index = current
-            .config
-            .as_ref()
-            .map(|c| create_route_index_by_iface(c.as_slice()))
-            .unwrap_or_default();
-        let des_routes_index = self
             .config
             .as_ref()
             .map(|c| create_route_index_by_iface(c.as_slice()))
@@ -206,7 +217,7 @@ impl Routes {
             desire_routes.sort_unstable();
             desire_routes.dedup();
         }
-        ret
+        Ok(ret)
     }
 
     pub(crate) fn remove_ignored_iface_routes(
@@ -336,6 +347,32 @@ impl RouteEntry {
             self.destination.as_deref().unwrap_or(""),
             self.next_hop_addr.as_deref().unwrap_or(""),
         )
+    }
+
+    pub(crate) fn sanitize(&mut self) -> Result<(), NmstateError> {
+        if let Some(dst) = self.destination.as_ref() {
+            let new_dst = sanitize_ip_network(dst)?;
+            if dst != &new_dst {
+                log::warn!(
+                    "Route destination {} sanitized to {}",
+                    dst,
+                    new_dst
+                );
+                self.destination = Some(new_dst);
+            }
+        }
+        if let Some(via) = self.next_hop_addr.as_ref() {
+            let new_via = format!("{}", via.parse::<std::net::IpAddr>()?);
+            if via != &new_via {
+                log::warn!(
+                    "Route next-hop-address {} sanitized to {}",
+                    via,
+                    new_via
+                );
+                self.next_hop_addr = Some(new_via);
+            }
+        }
+        Ok(())
     }
 }
 

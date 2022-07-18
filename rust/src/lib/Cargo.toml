@@ -15,6 +15,7 @@ edition = "2018"
 path = "lib.rs"
 
 [dependencies]
+ipnet = "2.5.0"
 libc = "0.2.106"
 log = "0.4.14"
 nispor = "1.2.7"

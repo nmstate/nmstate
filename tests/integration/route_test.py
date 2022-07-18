@@ -1149,7 +1149,7 @@ def test_delete_both_route_rule_and_interface(br_with_static_route_rule):
     assertlib.assert_absent(TEST_BRIDGE0)
 
 
-def test_ignore_metric_difference(eth1_static_gateway_dns):
+def test_ignore_route_metric_difference(eth1_static_gateway_dns):
     dup_routes = [_get_ipv4_test_routes()[0], _get_ipv6_test_routes()[0]]
     dup_routes[0][Route.METRIC] += 1
     dup_routes[1][Route.METRIC] += 1
@@ -1164,3 +1164,29 @@ def test_ignore_metric_difference(eth1_static_gateway_dns):
         or route[Route.DESTINATION] == dup_routes[1][Route.DESTINATION]
     ]
     assert len(cur_routes) == 2
+
+
+@pytest.fixture
+def eth1_static_ip(eth1_up):
+    libnmstate.apply(
+        {
+            Interface.KEY: [ETH1_INTERFACE_STATE],
+        }
+    )
+    yield
+
+
+def test_sanitize_route_destination(eth1_static_ip):
+    desired_routes = _get_ipv4_test_routes() + _get_ipv6_test_routes()
+    desired_routes[0][Route.DESTINATION] = "198.51.100.1/24"
+    desired_routes[1][Route.DESTINATION] = "203.0.113.1"
+    desired_routes[2][Route.DESTINATION] = "2001:db8:a::1/64"
+    desired_routes[3][Route.DESTINATION] = "2001:db8:b::0001"
+    libnmstate.apply({Route.KEY: {Route.CONFIG: desired_routes}})
+
+    expected_routes = _get_ipv4_test_routes() + _get_ipv6_test_routes()
+    expected_routes[1][Route.DESTINATION] = "203.0.113.1/32"
+    expected_routes[3][Route.DESTINATION] = "2001:db8:b::1/128"
+
+    cur_state = libnmstate.show()
+    _assert_routes(expected_routes, cur_state)
