@@ -11,10 +11,10 @@ const TEST_IPV6_ADDR1: &str = "2001:db8:0::1";
 const TEST_TABLE_ID1: u32 = 101;
 const TEST_TABLE_ID2: u32 = 102;
 
-const TEST_RULE_IPV6_FROM: &str = "2001:db8:1::2";
-const TEST_RULE_IPV4_FROM: &str = "192.0.2.1";
-const TEST_RULE_IPV6_TO: &str = "2001:db8:2::2";
-const TEST_RULE_IPV4_TO: &str = "198.51.100.1";
+const TEST_RULE_IPV6_FROM: &str = "2001:db8:1::2/128";
+const TEST_RULE_IPV4_FROM: &str = "192.0.2.1/32";
+const TEST_RULE_IPV6_TO: &str = "2001:db8:2::2/128";
+const TEST_RULE_IPV4_TO: &str = "198.51.100.1/32";
 const TEST_RULE_PRIORITY1: i64 = 201;
 const TEST_RULE_PRIORITY2: i64 = 202;
 
@@ -298,4 +298,84 @@ route-rules:
 
     assert!(del_net_state.interfaces.to_vec().len() == 1);
     assert!(del_net_state.interfaces.kernel_ifaces["br0"].is_absent());
+}
+
+#[test]
+fn test_route_rule_sanitize_ipv4_from_to() {
+    let mut rule: RouteRuleEntry = serde_yaml::from_str(
+        r#"
+ip-to: 192.0.3.1/24
+ip-from: 192.0.3.2/24
+"#,
+    )
+    .unwrap();
+
+    rule.sanitize().unwrap();
+
+    assert_eq!(rule.ip_to.unwrap(), "192.0.3.0/24");
+    assert_eq!(rule.ip_from.unwrap(), "192.0.3.0/24");
+}
+
+#[test]
+fn test_route_rule_sanitize_ipv6_from_to() {
+    let mut rule: RouteRuleEntry = serde_yaml::from_str(
+        r#"
+ip-to: 2001:db8:1::2/64
+ip-from: 2001:db8:2::ffff/64
+"#,
+    )
+    .unwrap();
+
+    rule.sanitize().unwrap();
+
+    assert_eq!(rule.ip_to.unwrap(), "2001:db8:1::/64");
+    assert_eq!(rule.ip_from.unwrap(), "2001:db8:2::/64");
+}
+
+#[test]
+fn test_route_rule_sanitize_ipv4_from_to_host() {
+    let mut rule: RouteRuleEntry = serde_yaml::from_str(
+        r#"
+ip-to: 192.0.3.1
+ip-from: 192.0.3.2
+"#,
+    )
+    .unwrap();
+
+    rule.sanitize().unwrap();
+
+    assert_eq!(rule.ip_to.unwrap(), "192.0.3.1/32");
+    assert_eq!(rule.ip_from.unwrap(), "192.0.3.2/32");
+}
+
+#[test]
+fn test_route_rule_sanitize_ipv6_from_to_host() {
+    let mut rule: RouteRuleEntry = serde_yaml::from_str(
+        r#"
+ip-to: 2001:db8:1::2
+ip-from: 2001:db8:2::ffff
+"#,
+    )
+    .unwrap();
+
+    rule.sanitize().unwrap();
+
+    assert_eq!(rule.ip_to.unwrap(), "2001:db8:1::2/128");
+    assert_eq!(rule.ip_from.unwrap(), "2001:db8:2::ffff/128");
+}
+
+#[test]
+fn test_route_rule_sanitize_none_compact_ipv6_from_to() {
+    let mut rule: RouteRuleEntry = serde_yaml::from_str(
+        r#"
+ip-to: 2001:db8:1:0000::2
+ip-from: 2001:db8:2:0000::ffff
+"#,
+    )
+    .unwrap();
+
+    rule.sanitize().unwrap();
+
+    assert_eq!(rule.ip_to.unwrap(), "2001:db8:1::2/128");
+    assert_eq!(rule.ip_from.unwrap(), "2001:db8:2::ffff/128");
 }
