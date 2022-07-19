@@ -146,6 +146,19 @@ fn apply_single_state(
     checkpoint: &str,
     memory_only: bool,
 ) -> Result<(), NmstateError> {
+    if let Some(hostname) =
+        net_state.hostname.as_ref().and_then(|c| c.config.as_ref())
+    {
+        if memory_only {
+            log::warn!(
+                "Cannot change configure hostname in memory only mode, \
+                ignoring"
+            );
+        } else {
+            nm_api.hostname_set(hostname).map_err(nm_error_to_nmstate)?;
+        }
+    }
+
     if net_state.interfaces.to_vec().is_empty() {
         return Ok(());
     }
