@@ -3,7 +3,10 @@ use std::convert::TryFrom;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{ip::is_ipv6_addr, ErrorKind, InterfaceIpAddr, NmstateError};
+use crate::{
+    ip::{is_ipv6_addr, sanitize_ip_network},
+    ErrorKind, InterfaceIpAddr, NmstateError,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[non_exhaustive]
@@ -33,6 +36,11 @@ impl RouteRules {
     // * desired static rule exists.
     pub fn verify(&self, current: &Self) -> Result<(), NmstateError> {
         if let Some(rules) = self.config.as_ref() {
+            let mut rules = rules.clone();
+            for rule in rules.iter_mut() {
+                rule.sanitize().ok();
+            }
+
             let empty_vec: Vec<RouteRuleEntry> = Vec::new();
             let cur_rules = match current.config.as_deref() {
                 Some(c) => c,
@@ -93,18 +101,20 @@ impl RouteRules {
     pub(crate) fn gen_rule_changed_table_ids(
         &self,
         current: &Self,
-    ) -> HashMap<u32, Vec<RouteRuleEntry>> {
+    ) -> Result<HashMap<u32, Vec<RouteRuleEntry>>, NmstateError> {
         let mut ret: HashMap<u32, Vec<RouteRuleEntry>> = HashMap::new();
         let cur_rules_index = current
             .config
             .as_ref()
             .map(|c| create_rule_index_by_table_id(c.as_slice()))
             .unwrap_or_default();
-        let des_rules_index = self
-            .config
-            .as_ref()
-            .map(|c| create_rule_index_by_table_id(c.as_slice()))
-            .unwrap_or_default();
+        let mut desired_rules =
+            self.config.as_ref().cloned().unwrap_or_default();
+        for rule in desired_rules.iter_mut() {
+            rule.sanitize()?;
+        }
+        let des_rules_index =
+            create_rule_index_by_table_id(desired_rules.as_slice());
 
         let mut table_ids_in_desire: HashSet<u32> =
             des_rules_index.keys().copied().collect();
@@ -173,7 +183,7 @@ impl RouteRules {
             desire_rules.dedup();
         }
 
-        ret
+        Ok(ret)
     }
 }
 
@@ -318,6 +328,24 @@ impl RouteRuleEntry {
             self.priority
                 .unwrap_or(RouteRuleEntry::USE_DEFAULT_PRIORITY),
         )
+    }
+
+    pub(crate) fn sanitize(&mut self) -> Result<(), NmstateError> {
+        if let Some(ip) = self.ip_from.as_ref() {
+            let new_ip = sanitize_ip_network(ip)?;
+            if ip != &new_ip {
+                log::warn!("Route rule ip-from {} sanitized to {}", ip, new_ip);
+                self.ip_from = Some(new_ip);
+            }
+        }
+        if let Some(ip) = self.ip_to.as_ref() {
+            let new_ip = sanitize_ip_network(ip)?;
+            if ip != &new_ip {
+                log::warn!("Route rule ip-to {} sanitized to {}", ip, new_ip);
+                self.ip_to = Some(new_ip);
+            }
+        }
+        Ok(())
     }
 }
 

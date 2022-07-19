@@ -1168,3 +1168,22 @@ def test_sanitize_route_destination(eth1_static_ip):
 
     cur_state = libnmstate.show()
     _assert_routes(expected_routes, cur_state)
+
+
+def test_sanitize_route_rule_from_to(route_rule_test_env):
+    state = route_rule_test_env
+    rules = [
+        {RouteRule.IP_FROM: "203.0.113.1", RouteRule.IP_TO: "192.0.2.4/24"},
+        {RouteRule.IP_FROM: "2001:db8::1", RouteRule.IP_TO: "2001:db8::f/64"},
+    ]
+    state[RouteRule.KEY] = {RouteRule.CONFIG: rules}
+    libnmstate.apply(state)
+
+    expected_rules = [
+        {RouteRule.IP_FROM: "203.0.113.1/32", RouteRule.IP_TO: "192.0.2.0/24"},
+        {
+            RouteRule.IP_FROM: "2001:db8::1/128",
+            RouteRule.IP_TO: "2001:db8::/64",
+        },
+    ]
+    _check_ip_rules(expected_rules)

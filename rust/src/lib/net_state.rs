@@ -548,7 +548,7 @@ impl NetworkState {
         current: &Self,
     ) -> Result<(), NmstateError> {
         let mut changed_rules =
-            self.rules.gen_rule_changed_table_ids(&current.rules);
+            self.rules.gen_rule_changed_table_ids(&current.rules)?;
 
         // Convert table id to interface name
         for (table_id, rules) in changed_rules.drain() {
