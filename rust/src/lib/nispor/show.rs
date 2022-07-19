@@ -6,6 +6,7 @@ use crate::{
         bond::np_bond_to_nmstate,
         error::np_error_to_nmstate,
         ethernet::np_ethernet_to_nmstate,
+        hostname::get_hostname_state,
         infiniband::np_ib_to_nmstate,
         linux_bridge::{append_bridge_port_config, np_bridge_to_nmstate},
         mac_vlan::{np_mac_vlan_to_nmstate, np_mac_vtap_to_nmstate},
@@ -23,10 +24,9 @@ use crate::{
 pub(crate) fn nispor_retrieve(
     running_config_only: bool,
 ) -> Result<NetworkState, NmstateError> {
-    let mut net_state = NetworkState::new();
-    net_state.prop_list.push("interfaces");
-    net_state.prop_list.push("routes");
-    net_state.prop_list.push("rules");
+    let mut net_state = NetworkState::default();
+    net_state.hostname = get_hostname_state();
+    net_state.prop_list = vec!["interfaces", "routes", "rules", "hostname"];
     let np_state = nispor::NetState::retrieve().map_err(np_error_to_nmstate)?;
 
     for (_, np_iface) in np_state.ifaces.iter() {

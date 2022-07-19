@@ -112,6 +112,9 @@ trait NetworkManagerSetting {
 
     /// GetAllDevices method
     fn get_all_devices(&self) -> zbus::Result<Vec<zvariant::OwnedObjectPath>>;
+
+    /// SaveHostname method
+    fn save_hostname(&self, hostname: &str) -> zbus::Result<()>;
 }
 
 #[dbus_proxy(

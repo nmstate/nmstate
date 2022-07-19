@@ -428,6 +428,11 @@ fn nm_dev_to_nm_iface(nm_dev: &NmDevice) -> Option<Interface> {
             iface.base = base_iface;
             iface
         }),
+        InterfaceType::OvsBridge => Interface::OvsBridge({
+            let mut iface = OvsBridgeInterface::new();
+            iface.base = base_iface;
+            iface
+        }),
         InterfaceType::Bond => Interface::Bond({
             let mut iface = BondInterface::new();
             iface.base = base_iface;
@@ -464,10 +469,19 @@ fn nm_dev_to_nm_iface(nm_dev: &NmDevice) -> Option<Interface> {
                 ..Default::default()
             }
         }),
-        _ => Interface::Unknown({
+        iface_type
+            if iface_type == &InterfaceType::Other("ovs-port".to_string()) =>
+        {
+            log::debug!(
+                "Skipping unmanaged/disconnected NM speicifc OVS-port {}",
+                base_iface.name
+            );
+            return None;
+        }
+        iface_type => Interface::Unknown({
             log::info!(
                 "Got unsupported interface type {}: {}, ignoring",
-                base_iface.iface_type,
+                iface_type,
                 base_iface.name
             );
             let mut iface = UnknownInterface::new();

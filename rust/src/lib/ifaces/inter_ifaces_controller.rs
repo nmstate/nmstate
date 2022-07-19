@@ -176,18 +176,12 @@ fn handle_changed_ports_of_iface(
         Some(p) => HashSet::from_iter(p.iter().cloned()),
         None => return Ok(()),
     };
-    let current_port_names =
-        match cur_ifaces.kernel_ifaces.get(iface.name()).or_else(|| {
-            cur_ifaces
-                .user_ifaces
-                .get(&(iface.name().to_string(), iface.iface_type()))
-        }) {
-            Some(cur_iface) => match cur_iface.ports() {
-                Some(p) => HashSet::from_iter(p.iter().cloned()),
-                None => HashSet::new(),
-            },
-            None => HashSet::new(),
-        };
+
+    let current_port_names = cur_ifaces
+        .get_iface(iface.name(), iface.iface_type())
+        .and_then(|cur_iface| cur_iface.ports())
+        .map(|ports| HashSet::<&str>::from_iter(ports.iter().cloned()))
+        .unwrap_or_default();
 
     // Attaching new port to controller
     for port_name in desire_port_names.difference(&current_port_names) {
@@ -252,6 +246,7 @@ fn include_ignored_iface_if_desired_in_port(
 }
 
 // TODO: user space interfaces
+// Return True if we have all up_priority fixed.
 pub(crate) fn set_ifaces_up_priority(ifaces: &mut Interfaces) -> bool {
     // Return true when all interface has correct priority.
     let mut ret = true;
@@ -306,12 +301,43 @@ pub(crate) fn set_ifaces_up_priority(ifaces: &mut Interfaces) -> bool {
             continue;
         }
     }
+
+    // If not remaining unknown up_priority, we set up the parent/child
+    // up_priority
+    if ret {
+        for (iface_name, iface_type) in &ifaces.insert_order {
+            let iface = match ifaces.get_iface(iface_name, iface_type.clone()) {
+                Some(i) => i,
+                None => continue,
+            };
+            if !iface.is_up() {
+                continue;
+            }
+            if let Some(parent) = iface.parent() {
+                if let Some(parent_priority) = pending_changes.get(parent) {
+                    pending_changes
+                        .insert(iface_name.to_string(), parent_priority + 1);
+                } else if let Some(parent_iface) =
+                    ifaces.kernel_ifaces.get(parent)
+                {
+                    if parent_iface.base_iface().is_up_priority_valid() {
+                        pending_changes.insert(
+                            iface_name.to_string(),
+                            parent_iface.base_iface().up_priority + 1,
+                        );
+                    }
+                }
+            }
+        }
+    }
+
     debug!("pending kernel up priority changes {:?}", pending_changes);
     for (iface_name, priority) in pending_changes.iter() {
         if let Some(iface) = ifaces.kernel_ifaces.get_mut(iface_name) {
             iface.base_iface_mut().up_priority = *priority;
         }
     }
+
     ret
 }
 
@@ -535,20 +561,16 @@ pub(crate) fn check_infiniband_as_ports(
     Ok(())
 }
 
-// OVS Interface should have its controller found in current
-// or new interface list.
+// New OVS Interface should have its controller found in desire or current
 pub(crate) fn validate_new_ovs_iface_has_controller(
-    new_ifaces: &Interfaces,
+    new_ovs_ifaces: &[Interface],
+    desired: &Interfaces,
     current: &Interfaces,
 ) -> Result<(), NmstateError> {
-    for iface in new_ifaces
-        .kernel_ifaces
-        .values()
-        .filter(|i| i.iface_type() == InterfaceType::OvsInterface)
-    {
+    for iface in new_ovs_ifaces {
         match iface.base_iface().controller.as_deref() {
             Some(ctrl) => {
-                if new_ifaces
+                if desired
                     .get_iface(ctrl, InterfaceType::OvsBridge)
                     .or_else(|| {
                         current.get_iface(ctrl, InterfaceType::OvsBridge)
@@ -559,7 +581,7 @@ pub(crate) fn validate_new_ovs_iface_has_controller(
                         ErrorKind::InvalidArgument,
                         format!(
                             "The controller {} for OVS interface {} does not \
-                        exists in current status or desire status",
+                            exists in current status or desire status",
                             ctrl,
                             iface.name()
                         ),

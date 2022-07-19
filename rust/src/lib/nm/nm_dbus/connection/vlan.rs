@@ -55,7 +55,7 @@ impl NmSettingVlan {
 }
 
 const NM_VLAN_PROTOCOL_802_1Q: &str = "802.1Q";
-const NM_VLAN_PROTOCOL_802_1AD: &str = "802.1AD";
+const NM_VLAN_PROTOCOL_802_1AD: &str = "802.1ad";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[non_exhaustive]
@@ -93,11 +93,15 @@ impl TryFrom<String> for NmVlanProtocol {
     }
 }
 
-impl NmVlanProtocol {
-    pub fn to_str(self) -> &'static str {
-        match self {
-            Self::Dot1Q => NM_VLAN_PROTOCOL_802_1Q,
-            Self::Dot1Ad => NM_VLAN_PROTOCOL_802_1AD,
-        }
+impl std::fmt::Display for NmVlanProtocol {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Self::Dot1Q => NM_VLAN_PROTOCOL_802_1Q,
+                Self::Dot1Ad => NM_VLAN_PROTOCOL_802_1AD,
+            }
+        )
     }
 }

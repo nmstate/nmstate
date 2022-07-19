@@ -4,6 +4,7 @@ mod bond;
 mod error;
 mod ethernet;
 mod ethtool;
+mod hostname;
 mod infiniband;
 mod ip;
 mod linux_bridge;
@@ -18,4 +19,5 @@ mod vrf;
 mod vxlan;
 
 pub(crate) use apply::nispor_apply;
+pub(crate) use hostname::set_running_hostname;
 pub(crate) use show::nispor_retrieve;

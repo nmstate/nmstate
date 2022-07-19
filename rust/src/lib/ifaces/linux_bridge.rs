@@ -6,7 +6,8 @@ use std::str::FromStr;
 use serde::{de, de::Visitor, Deserialize, Deserializer, Serialize};
 
 use crate::{
-    BaseInterface, BridgePortVlanConfig, ErrorKind, InterfaceType, NmstateError,
+    BaseInterface, BridgePortVlanConfig, ErrorKind, InterfaceType,
+    NmstateError, VlanProtocol,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -432,6 +433,8 @@ pub struct LinuxBridgeOptions {
     pub multicast_startup_query_interval: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub stp: Option<LinuxBridgeStpOptions>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub vlan_protocol: Option<VlanProtocol>,
 }
 
 impl LinuxBridgeOptions {

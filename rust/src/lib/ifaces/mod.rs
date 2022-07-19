@@ -36,6 +36,7 @@ pub use ethtool::{
     EthtoolPauseConfig, EthtoolRingConfig,
 };
 pub use infiniband::{InfiniBandConfig, InfiniBandInterface, InfiniBandMode};
+pub(crate) use inter_ifaces::purge_userspace_ignored_ifaces;
 pub use inter_ifaces::*;
 pub use linux_bridge::{
     LinuxBridgeConfig, LinuxBridgeInterface, LinuxBridgeMulticastRouterType,
@@ -49,6 +50,6 @@ pub use ovs::{
     OvsDpdkConfig, OvsInterface, OvsPatchConfig,
 };
 pub use sriov::{SrIovConfig, SrIovVfConfig};
-pub use vlan::{VlanConfig, VlanInterface};
+pub use vlan::{VlanConfig, VlanInterface, VlanProtocol};
 pub use vrf::{VrfConfig, VrfInterface};
 pub use vxlan::{VxlanConfig, VxlanInterface};

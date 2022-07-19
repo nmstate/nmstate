@@ -54,6 +54,17 @@ pub(crate) fn nm_gen_conf(
     net_state: &NetworkState,
 ) -> Result<Vec<(String, String)>, NmstateError> {
     let mut nm_conns = Vec::new();
+    if net_state
+        .hostname
+        .as_ref()
+        .and_then(|c| c.config.as_ref())
+        .is_some()
+    {
+        log::warn!(
+            "Cannot store hostname configuration to keyfile \
+            of NetworkManager, please edit /etc/hostname manually"
+        );
+    }
     let ifaces = net_state.interfaces.to_vec();
     for iface in &ifaces {
         if !iface.is_up() {

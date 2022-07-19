@@ -102,7 +102,7 @@ impl Interfaces {
         ifaces
     }
 
-    pub(crate) fn get_iface<'a, 'b>(
+    pub fn get_iface<'a, 'b>(
         &'a self,
         iface_name: &'b str,
         iface_type: InterfaceType,
@@ -308,6 +308,7 @@ impl Interfaces {
         let mut add_ifaces = Self::new();
         let mut chg_ifaces = Self::new();
         let mut del_ifaces = Self::new();
+        let mut new_ovs_ifaces = Vec::new();
 
         self.apply_copy_mac_from(current)?;
         handle_changed_ports(self, current)?;
@@ -330,15 +331,17 @@ impl Interfaces {
                         current.get_iface(iface.name(), iface.iface_type()),
                     )?;
                 }
-                match current.kernel_ifaces.get(iface.name()) {
+                match current.get_iface(iface.name(), iface.iface_type()) {
                     Some(cur_iface) => {
                         let mut chg_iface = iface.clone();
                         chg_iface.set_iface_type(cur_iface.iface_type());
                         chg_iface.pre_edit_cleanup()?;
                         info!(
-                            "Changing interface {} with type {}",
+                            "Changing interface {} with type {}, \
+                            up priority {}",
                             chg_iface.name(),
-                            chg_iface.iface_type()
+                            chg_iface.iface_type(),
+                            chg_iface.base_iface().up_priority
                         );
                         chg_ifaces.push(chg_iface);
                     }
@@ -346,9 +349,11 @@ impl Interfaces {
                         let mut new_iface = iface.clone();
                         new_iface.pre_edit_cleanup()?;
                         info!(
-                            "Adding interface {} with type {}",
+                            "Adding interface {} with type {}, \
+                            up priority {}",
                             new_iface.name(),
-                            new_iface.iface_type()
+                            new_iface.iface_type(),
+                            new_iface.base_iface().up_priority
                         );
                         // When adding new OVS interface requires changes to
                         // existing OVS bridge, we should place this new OVS
@@ -394,7 +399,7 @@ impl Interfaces {
             &mut del_ifaces,
             current,
         )?;
-        validate_new_ovs_iface_has_controller(&add_ifaces, current)?;
+        validate_new_ovs_iface_has_controller(&new_ovs_ifaces, self, current)?;
 
         if memory_only {
             // In memory_only mode, absent interface equal to down
@@ -473,7 +478,6 @@ impl Interfaces {
             {
                 continue;
             }
-
             if iface.is_absent() {
                 for cur_iface in cur_ifaces.to_vec() {
                     if cur_iface.name() == iface_name {
@@ -533,10 +537,7 @@ impl Interfaces {
         }
 
         for new_iface in resolved_ifaces {
-            self.user_ifaces.remove(&(
-                new_iface.name().to_string(),
-                InterfaceType::Unknown,
-            ));
+            self.kernel_ifaces.remove(new_iface.name());
             self.push(new_iface);
         }
         Ok(())
@@ -768,4 +769,8 @@ pub(crate) fn get_ignored_ifaces(
     let u_ifaces: Vec<(String, InterfaceType)> =
         ignored_user_ifaces.drain().collect();
     (k_ifaces, u_ifaces)
+}
+
+pub(crate) fn purge_userspace_ignored_ifaces(state: &mut Interfaces) {
+    state.user_ifaces.retain(|_, iface| !iface.is_ignore())
 }

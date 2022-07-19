@@ -214,6 +214,7 @@ class LinuxBridge(Bridge):
         MULTICAST_QUERY_RESPONSE_INTERVAL = "multicast-query-response-interval"
         MULTICAST_STARTUP_QUERY_COUNT = "multicast-startup-query-count"
         MULTICAST_STARTUP_QUERY_INTERVAL = "multicast-startup-query-interval"
+        VLAN_PROTOCOL = "vlan-protocol"
 
         # Read only properties begin
         HELLO_TIMER = "hello-timer"
@@ -274,6 +275,8 @@ class VLAN:
 
     ID = "id"
     BASE_IFACE = "base-iface"
+    PROTOCOL_802_1AD = "802.1ad"
+    PROTOCOL_802_1Q = "802.1q"
 
 
 class VXLAN:
@@ -442,3 +445,9 @@ class Ethtool:
         TX_USECS_HIGH = "tx-usecs-high"
         TX_USECS_IRQ = "tx-usecs-irq"
         TX_USECS_LOW = "tx-usecs-low"
+
+
+class HostNameState:
+    KEY = "hostname"
+    CONFIG = "config"
+    RUNNING = "running"

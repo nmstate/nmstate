@@ -370,6 +370,10 @@ impl<'a> NmDbus<'a> {
     ) -> Result<Vec<HashMap<String, zvariant::OwnedValue>>, NmError> {
         Ok(self.dns_proxy.configuration()?)
     }
+
+    pub(crate) fn hostname_set(&self, hostname: &str) -> Result<(), NmError> {
+        Ok(self.setting_proxy.save_hostname(hostname)?)
+    }
 }
 
 fn str_to_obj_path(obj_path: &str) -> Result<zvariant::ObjectPath, NmError> {

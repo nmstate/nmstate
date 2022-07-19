@@ -1,4 +1,6 @@
+mod autoconf;
 mod error;
+mod service;
 
 use std::fs::File;
 use std::io::{self, stdin, stdout, Read, Write};
@@ -6,7 +8,10 @@ use std::process::{Command, Stdio};
 
 use env_logger::Builder;
 use log::LevelFilter;
-use nmstate::{DnsState, NetworkState, OvsDbGlobalConfig, RouteRules, Routes};
+use nmstate::{
+    DnsState, HostNameState, NetworkState, OvsDbGlobalConfig, RouteRules,
+    Routes,
+};
 use serde::Serialize;
 use serde_yaml::{self, Value};
 
@@ -21,11 +26,23 @@ const SUB_CMD_COMMIT: &str = "commit";
 const SUB_CMD_ROLLBACK: &str = "rollback";
 const SUB_CMD_EDIT: &str = "edit";
 const SUB_CMD_VERSION: &str = "version";
+const SUB_CMD_AUTOCONF: &str = "autoconf";
+const SUB_CMD_SERVICE: &str = "service";
 
 const EX_DATAERR: i32 = 65;
 const EXIT_FAILURE: i32 = 1;
 
 fn main() {
+    let argv: Vec<String> = std::env::args().collect();
+    if argv[0].ends_with("-autoconf") {
+        autoconf::autoconf(argv.as_slice());
+        return;
+    }
+    if argv.get(1) == Some(&"autoconf".to_string()) {
+        autoconf::autoconf(&argv[1..]);
+        return;
+    }
+
     let matches = clap::Command::new(APP_NAME)
         .version(clap::crate_version!())
         .author("Gris Ge <fge@redhat.com>")
@@ -43,6 +60,12 @@ fn main() {
                 .short('q')
                 .help("Disable logging")
                 .global(true),
+        )
+        .subcommand(
+            clap::Command::new(SUB_CMD_AUTOCONF)
+                .about(
+                    "Automatically configure network base on LLDP \
+                    information(experimental)")
         )
         .subcommand(
             clap::Command::new(SUB_CMD_SHOW)
@@ -209,6 +232,19 @@ fn main() {
                 )
         )
         .subcommand(
+            clap::Command::new(SUB_CMD_SERVICE)
+                .about("Service mode: apply files from service folder")
+                .arg(
+                    clap::Arg::new(self::service::CONFIG_FOLDER_KEY)
+                        .long("config")
+                        .short('c')
+                        .required(false)
+                        .takes_value(true)
+                        .default_value(self::service::DEFAULT_SERVICE_FOLDER)
+                        .help("Folder hold network state files"),
+                ),
+        )
+        .subcommand(
             clap::Command::new(SUB_CMD_VERSION)
             .about("Show version")
        ).get_matches();
@@ -238,7 +274,6 @@ fn main() {
     } else if let Some(matches) = matches.subcommand_matches(SUB_CMD_SHOW) {
         print_result_and_exit(show(matches), EXIT_FAILURE);
     } else if let Some(matches) = matches.subcommand_matches(SUB_CMD_APPLY) {
-        let argv: Vec<String> = std::env::args().collect();
         if argv.get(1) == Some(&"set".to_string()) {
             eprintln!("Using 'set' is deprecated, use 'apply' instead.");
         }
@@ -266,6 +301,11 @@ fn main() {
         }
     } else if let Some(matches) = matches.subcommand_matches(SUB_CMD_EDIT) {
         print_result_and_exit(state_edit(matches), EX_DATAERR);
+    } else if let Some(matches) = matches.subcommand_matches(SUB_CMD_SERVICE) {
+        print_result_and_exit(
+            self::service::ncl_service(matches),
+            EXIT_FAILURE,
+        );
     } else if matches.subcommand_matches(SUB_CMD_VERSION).is_some() {
         print_string_and_exit(format!(
             "{} {}",
@@ -302,6 +342,8 @@ fn gen_conf(file_path: &str) -> Result<String, CliError> {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 struct SortedNetworkState {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    hostname: Option<HostNameState>,
     #[serde(rename = "dns-resolver", default)]
     dns: DnsState,
     #[serde(rename = "route-rules", default)]
@@ -348,6 +390,7 @@ fn sort_netstate(
             }
         }
         return Ok(SortedNetworkState {
+            hostname: net_state.hostname,
             interfaces: new_ifaces,
             routes: net_state.routes,
             rules: net_state.rules,
@@ -357,6 +400,7 @@ fn sort_netstate(
     }
 
     Ok(SortedNetworkState {
+        hostname: net_state.hostname,
         interfaces: Vec::new(),
         routes: net_state.routes,
         rules: net_state.rules,

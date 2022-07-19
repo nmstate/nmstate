@@ -39,3 +39,39 @@ fn test_sriov_vf_mac_mix_case() {
 
     des_ifaces.verify(&cur_ifaces).unwrap();
 }
+
+#[test]
+fn test_ignore_sriov_if_not_desired() {
+    let current = serde_yaml::from_str::<Interfaces>(
+        r#"---
+- name: eth1
+  type: ethernet
+  state: up
+  mtu: 1280
+  ethernet:
+    sr-iov:
+      total-vfs: 2
+      vfs:
+      - id: 0
+        mac-address: 02:54:00:17:12:ff
+        spoof-check: true
+        vlan-id: 102
+        qos: 5
+      - id: 1
+        vlan-id: 101
+        qos: 6
+"#,
+    )
+    .unwrap();
+    let desired = serde_yaml::from_str::<Interfaces>(
+        r#"---
+- name: eth1
+  type: ethernet
+  state: up
+  mtu: 1280
+"#,
+    )
+    .unwrap();
+
+    desired.verify(&current).unwrap();
+}

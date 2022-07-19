@@ -1,0 +1,9 @@
+# Requirements for Python package distribution (pip)
+# Use like this:
+#packageA
+#packageB!=4.4,>=4.0
+#packageC>=3.0.0
+#packageD!=0.13.0,<0.14,>=0.12.0
+
+PyYAML
+setuptools

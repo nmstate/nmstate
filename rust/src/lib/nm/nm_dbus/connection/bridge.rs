@@ -293,7 +293,7 @@ impl NmSettingBridge {
             ret.insert("vlan-filtering", zvariant::Value::new(v));
         }
         if let Some(v) = &self.vlan_protocol {
-            ret.insert("vlan-protocol", zvariant::Value::new(v.to_str()));
+            ret.insert("vlan-protocol", zvariant::Value::new(v.to_string()));
         }
         if let Some(v) = &self.vlan_stats_enabled {
             ret.insert("vlan-stats-enabled", zvariant::Value::new(v));

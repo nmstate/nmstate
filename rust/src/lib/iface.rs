@@ -113,7 +113,7 @@ impl InterfaceType {
     const CONTROLLER_IFACES_TYPES: [Self; 4] =
         [Self::Bond, Self::LinuxBridge, Self::OvsBridge, Self::Vrf];
 
-    // Unknown and other interfaces are also considered as userspace
+    // other interfaces are also considered as userspace
     pub(crate) fn is_userspace(&self) -> bool {
         self.is_other() || Self::USERSPACE_IFACE_TYPES.contains(self)
     }

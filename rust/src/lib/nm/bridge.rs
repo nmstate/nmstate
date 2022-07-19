@@ -1,10 +1,11 @@
 use crate::nm::nm_dbus::{
-    NmConnection, NmSettingBridge, NmSettingBridgeVlanRange,
+    NmConnection, NmSettingBridge, NmSettingBridgeVlanRange, NmVlanProtocol,
 };
 
 use crate::{
     BridgePortTunkTag, BridgePortVlanConfig, BridgePortVlanMode,
     LinuxBridgeInterface, LinuxBridgeOptions, LinuxBridgeStpOptions,
+    VlanProtocol,
 };
 
 pub(crate) fn gen_nm_br_setting(
@@ -81,6 +82,12 @@ fn apply_br_options(
     }
     if let Some(v) = br_opts.multicast_startup_query_interval.as_ref() {
         nm_br_set.multicast_startup_query_interval = Some(*v);
+    }
+    if let Some(v) = br_opts.vlan_protocol.as_ref() {
+        nm_br_set.vlan_protocol = match v {
+            VlanProtocol::Ieee8021Q => Some(NmVlanProtocol::Dot1Q),
+            VlanProtocol::Ieee8021Ad => Some(NmVlanProtocol::Dot1Ad),
+        }
     }
 
     if let Some(stp_opts) = br_opts.stp.as_ref() {
