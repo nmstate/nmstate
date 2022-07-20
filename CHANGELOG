@@ -1,4 +1,13 @@
 # Changelog
+## [1.3.1] - 2022-07-20
+### New features
+ - N/A
+
+### Bug fixes
+ - Fix race problem when attaching bond to OVS bridge. (0a58ac3f)
+ - Only verify SRIOV VF when desired. (34994c49)
+ - Refer to controller using UUID in GC mode. (f1d90064)
+
 ## [1.3.0] - 2022-06-08
 ### New features
  - Add suppport to rx-queue parameter. (ec256e9)
