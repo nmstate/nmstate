@@ -52,6 +52,7 @@ from .testlib.env import is_ubuntu_kernel
 from .testlib.env import nm_major_minor_version
 from .testlib.ifacelib import get_mac_address
 from .testlib.iproutelib import ip_monitor_assert_stable_link_up
+from .testlib.retry import retry_till_true_or_timeout
 from .testlib.statelib import show_only
 from .testlib.vlan import vlan_interface
 
@@ -61,6 +62,7 @@ TEST_TAP0 = "tap0"
 ETH1 = "eth1"
 # RFC 7042 reserved EUI-48 MAC range for document
 TEST_MAC_ADDRESS = "00:00:5E:00:53:01"
+VERIFY_RETRY_TMO = 5
 
 BRIDGE_OPTIONS_YAML = """
 options:
@@ -935,13 +937,17 @@ def test_desire_port_only_should_preserve_ctrl_setting(bridge0_with_port0):
             ]
         }
     )
-    state = show_only((TEST_BRIDGE0,))
-    ports = state[Interface.KEY][0][LinuxBridge.CONFIG_SUBTREE][
-        LinuxBridge.PORT_SUBTREE
-    ]
 
-    assert len(ports) == 1
-    assert ports[0][LinuxBridge.Port.NAME] == "eth1"
+    def _is_bridge_still_have_port():
+        state = show_only((TEST_BRIDGE0,))
+        ports = state[Interface.KEY][0][LinuxBridge.CONFIG_SUBTREE][
+            LinuxBridge.PORT_SUBTREE
+        ]
+        return len(ports) == 1 and ports[0][LinuxBridge.Port.NAME] == "eth1"
+
+    assert retry_till_true_or_timeout(
+        VERIFY_RETRY_TMO, _is_bridge_still_have_port
+    )
 
 
 @pytest.mark.tier1
