@@ -1,4 +1,7 @@
 # We are Nmstate!
+
+<img src="logo/fullcolor.png" alias="project logo" />
+
 A declarative network manager API for hosts.
 
 ![CI](https://github.com/nmstate/nmstate/workflows/CI/badge.svg?branch=base)
