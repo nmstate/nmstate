@@ -69,6 +69,17 @@ class RouteRuleEntry(StateEntry):
     def _keys(self):
         return (self.ip_from, self.ip_to, self.priority, self.route_table)
 
+    def match_with_priority(self, other):
+        self == other or (
+            self.priority == RouteRule.USE_DEFAULT_PRIORITY
+            and (self.ip_from, self.ip_to, self.route_table)
+            == (
+                other.ip_from,
+                other.ip_to,
+                other.route_table,
+            )
+        )
+
     @property
     def is_ipv6(self):
         if self.ip_from:
@@ -134,6 +145,12 @@ class RouteRuleState:
         for entry in _get_config(des_rule_state):
             rl = RouteRuleEntry(entry)
             if not rl.absent:
+                if any(
+                    exist_rule
+                    for exist_rule in self._rules[rl.route_table]
+                    if rl.match_with_priority(exist_rule)
+                ):
+                    continue
                 self._rules[rl.route_table].add(rl)
 
     def _apply_absent_rules(self, rl):
