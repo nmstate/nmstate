@@ -761,6 +761,28 @@ def test_route_rule_add_without_priority(route_rule_test_env):
     _check_ip_rules(rules)
 
 
+@pytest.mark.tier1
+def test_route_rule_add_without_priority_apply_twice(route_rule_test_env):
+    state = route_rule_test_env
+    rules = [
+        {
+            RouteRule.IP_FROM: "2001:db8:a::/64",
+            RouteRule.IP_TO: "2001:db8:f::/64",
+            RouteRule.ROUTE_TABLE: IPV6_ROUTE_TABLE_ID1,
+        },
+        {
+            RouteRule.IP_FROM: "203.0.113.0/24",
+            RouteRule.IP_TO: "192.0.2.0/24",
+            RouteRule.ROUTE_TABLE: IPV4_ROUTE_TABLE_ID1,
+        },
+    ]
+    state[RouteRule.KEY] = {RouteRule.CONFIG: rules}
+
+    libnmstate.apply(state)
+    libnmstate.apply(state)
+    _check_ip_rules(rules)
+
+
 def test_route_rule_add_without_route_table(route_rule_test_env):
     """
     When route table is not define in route rule, the main route table will
