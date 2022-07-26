@@ -421,13 +421,8 @@ fn show(matches: &clap::ArgMatches) -> Result<String, CliError> {
     net_state.set_include_secrets(matches.is_present("SHOW_SECRETS"));
     net_state.retrieve()?;
     Ok(if let Some(ifname) = matches.value_of("IFNAME") {
-        let mut new_net_state = NetworkState::new();
+        let mut new_net_state = filter_net_state_with_iface(&net_state, ifname);
         new_net_state.set_kernel_only(matches.is_present("KERNEL"));
-        for iface in net_state.interfaces.to_vec() {
-            if iface.name() == ifname {
-                new_net_state.append_interface_data(iface.clone())
-            }
-        }
         if matches.is_present("JSON") {
             serde_json::to_string_pretty(&new_net_state)?
         } else {
@@ -631,4 +626,59 @@ fn set_ctrl_c_action() {
         std::process::exit(1);
     })
     .expect("Error setting Ctrl-C handler");
+}
+
+fn filter_net_state_with_iface(
+    net_state: &NetworkState,
+    iface_name: &str,
+) -> NetworkState {
+    let mut ret = NetworkState::new();
+    for iface in net_state.interfaces.to_vec() {
+        if iface.name() == iface_name {
+            ret.append_interface_data(iface.clone())
+        }
+    }
+    if let Some(running_rts) = net_state.routes.running.as_ref() {
+        for rt in running_rts {
+            if rt.next_hop_iface.as_ref() == Some(&iface_name.to_string()) {
+                if let Some(rts) = ret.routes.running.as_mut() {
+                    rts.push(rt.clone());
+                } else {
+                    ret.routes.running = Some(vec![rt.clone()]);
+                }
+            }
+        }
+    }
+    let mut route_table_ids = Vec::new();
+
+    if let Some(config_rts) = net_state.routes.config.as_ref() {
+        for rt in config_rts {
+            if rt.next_hop_iface.as_ref() == Some(&iface_name.to_string()) {
+                if let Some(table_id) = rt.table_id {
+                    route_table_ids.push(table_id);
+                }
+                if let Some(rts) = ret.routes.config.as_mut() {
+                    rts.push(rt.clone());
+                } else {
+                    ret.routes.config = Some(vec![rt.clone()]);
+                }
+            }
+        }
+    }
+
+    if let Some(config_rules) = net_state.rules.config.as_ref() {
+        for rule in config_rules {
+            if let Some(table_id) = rule.table_id {
+                if route_table_ids.contains(&table_id) {
+                    if let Some(rules) = ret.rules.config.as_mut() {
+                        rules.push(rule.clone());
+                    } else {
+                        ret.rules.config = Some(vec![rule.clone()]);
+                    }
+                }
+            }
+        }
+    }
+
+    ret
 }
