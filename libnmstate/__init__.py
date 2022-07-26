@@ -26,6 +26,7 @@ from .netapplier import apply
 from .netapplier import commit
 from .netapplier import rollback
 from .netinfo import show
+from .state import state_match
 
 from .prettystate import PrettyState
 
@@ -39,6 +40,7 @@ __all__ = [
     "rollback",
     "error",
     "schema",
+    "state_match",
     "PrettyState",
 ]
 
