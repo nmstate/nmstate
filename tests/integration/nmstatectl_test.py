@@ -19,12 +19,17 @@
 
 import json
 import os
+import pytest
 import time
 import yaml
 
+import libnmstate
 from libnmstate import __version__
 from libnmstate.error import NmstateConflictError
 from libnmstate.schema import Constants
+from libnmstate.schema import Route
+from libnmstate.schema import RouteRule
+from libnmstate.schema import DNS
 
 from .testlib import assertlib
 from .testlib import cmdlib
@@ -282,3 +287,88 @@ def assert_command(cmd, expected_rc=cmdlib.RC_SUCCESS):
 
     assert returncode == expected_rc, cmdlib.format_exec_cmd_result(ret)
     return ret
+
+
+@pytest.fixture
+def eth1_with_static_route_and_rule(eth1_up):
+    desired_state = yaml.load(
+        """---
+        routes:
+          config:
+          - destination: 2001:db8:a::/64
+            metric: 108
+            next-hop-address: 2001:db8:1::2
+            next-hop-interface: eth1
+            table-id: 200
+          - destination: 192.168.2.0/24
+            metric: 108
+            next-hop-address: 192.168.1.3
+            next-hop-interface: eth1
+            table-id: 200
+        route-rules:
+          config:
+            - ip-from: 2001:db8:b::/64
+              priority: 30000
+              route-table: 200
+            - ip-from: 192.168.3.2/32
+              priority: 30001
+              route-table: 200
+        interfaces:
+          - name: eth1
+            type: ethernet
+            state: up
+            mtu: 1500
+            ipv4:
+              enabled: true
+              dhcp: false
+              address:
+              - ip: 192.168.1.1
+                prefix-length: 24
+            ipv6:
+              enabled: true
+              dhcp: false
+              autoconf: false
+              address:
+              - ip: 2001:db8:1::1
+                prefix-length: 64
+        """,
+        Loader=yaml.SafeLoader,
+    )
+    libnmstate.apply(desired_state)
+    yield desired_state
+    libnmstate.apply(
+        {
+            Route.KEY: {
+                Route.CONFIG: [
+                    {
+                        Route.NEXT_HOP_INTERFACE: "eth1",
+                        Route.STATE: Route.STATE_ABSENT,
+                    }
+                ]
+            },
+            RouteRule.KEY: {
+                RouteRule.CONFIG: [
+                    {
+                        RouteRule.STATE: RouteRule.STATE_ABSENT,
+                    }
+                ]
+            },
+            DNS.KEY: {DNS.CONFIG: {}},
+        },
+        verify_change=False,
+    )
+
+
+@pytest.mark.tier1
+def test_show_iface_include_route_and_rule(eth1_with_static_route_and_rule):
+    desired_state = eth1_with_static_route_and_rule
+    output = cmdlib.exec_cmd(SHOW_CMD + ["eth1"], check=True)[1]
+    new_state = yaml.load(output, Loader=yaml.SafeLoader)
+    assert (
+        desired_state[Route.KEY][Route.CONFIG]
+        == new_state[Route.KEY][Route.CONFIG]
+    )
+    assert (
+        desired_state[RouteRule.KEY][RouteRule.CONFIG]
+        == new_state[RouteRule.KEY][RouteRule.CONFIG]
+    )
