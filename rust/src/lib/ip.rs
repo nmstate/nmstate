@@ -1,7 +1,7 @@
 use std::net::IpAddr;
 use std::str::FromStr;
 
-use serde::{Deserialize, Serialize};
+use serde::{self, Deserialize, Deserializer, Serialize};
 
 use crate::{
     BaseInterface, DnsClientState, ErrorKind, Interfaces, NmstateError,
@@ -9,11 +9,14 @@ use crate::{
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[non_exhaustive]
-pub struct InterfaceIpv4 {
-    #[serde(default, deserialize_with = "crate::deserializer::bool_or_string")]
-    pub enabled: bool,
-    #[serde(skip)]
-    pub(crate) prop_list: Vec<&'static str>,
+#[serde(deny_unknown_fields)]
+struct InterfaceIp {
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_bool_or_string"
+    )]
+    pub enabled: Option<bool>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
@@ -22,13 +25,19 @@ pub struct InterfaceIpv4 {
     pub dhcp: Option<bool>,
     #[serde(
         skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_bool_or_string"
+    )]
+    pub autoconf: Option<bool>,
+    #[serde(
+        skip_serializing_if = "Option::is_none",
         rename = "dhcp-client-id"
     )]
     pub dhcp_client_id: Option<Dhcpv4ClientId>,
+    #[serde(skip_serializing_if = "Option::is_none", rename = "dhcp-duid")]
+    pub dhcp_duid: Option<Dhcpv6Duid>,
     #[serde(skip_serializing_if = "Option::is_none", rename = "address")]
     pub addresses: Option<Vec<InterfaceIpAddr>>,
-    #[serde(skip)]
-    pub(crate) dns: Option<DnsClientState>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         rename = "auto-dns",
@@ -56,6 +65,24 @@ pub struct InterfaceIpv4 {
         default,
         deserialize_with = "crate::deserializer::option_u32_or_string"
     )]
+    pub auto_table_id: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none", rename = "addr-gen-mode")]
+    pub addr_gen_mode: Option<Ipv6AddrGenMode>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Default)]
+#[serde(into = "InterfaceIp")]
+#[non_exhaustive]
+pub struct InterfaceIpv4 {
+    pub enabled: bool,
+    pub(crate) prop_list: Vec<&'static str>,
+    pub dhcp: Option<bool>,
+    pub dhcp_client_id: Option<Dhcpv4ClientId>,
+    pub addresses: Option<Vec<InterfaceIpAddr>>,
+    pub(crate) dns: Option<DnsClientState>,
+    pub auto_dns: Option<bool>,
+    pub auto_gateway: Option<bool>,
+    pub auto_routes: Option<bool>,
     pub auto_table_id: Option<u32>,
 }
 
@@ -170,60 +197,93 @@ impl InterfaceIpv4 {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+impl<'de> Deserialize<'de> for InterfaceIpv4 {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let v = serde_json::Value::deserialize(deserializer)?;
+
+        let prop_list = if let Some(v_map) = v.as_object() {
+            get_ip_prop_list(v_map)
+        } else {
+            Vec::new()
+        };
+        if prop_list.contains(&"autoconf") {
+            return Err(serde::de::Error::custom(
+                "autoconf is not allowed for IPv4",
+            ));
+        }
+        if prop_list.contains(&"dhcp_duid") {
+            return Err(serde::de::Error::custom(
+                "dhcp-duid is not allowed for IPv4",
+            ));
+        }
+
+        let ip: InterfaceIp = match serde_json::from_value(v) {
+            Ok(i) => i,
+            Err(e) => {
+                return Err(serde::de::Error::custom(format!("{}", e)));
+            }
+        };
+        let mut ret = Self::from(ip);
+        ret.prop_list = prop_list;
+        Ok(ret)
+    }
+}
+
+impl From<InterfaceIp> for InterfaceIpv4 {
+    fn from(ip: InterfaceIp) -> Self {
+        Self {
+            enabled: ip.enabled.unwrap_or_default(),
+            dhcp: ip.dhcp,
+            addresses: ip.addresses,
+            dhcp_client_id: ip.dhcp_client_id,
+            auto_dns: ip.auto_dns,
+            auto_routes: ip.auto_routes,
+            auto_gateway: ip.auto_gateway,
+            auto_table_id: ip.auto_table_id,
+            ..Default::default()
+        }
+    }
+}
+
+impl From<InterfaceIpv4> for InterfaceIp {
+    fn from(ip: InterfaceIpv4) -> Self {
+        let enabled = if ip.prop_list.contains(&"enabled") {
+            Some(ip.enabled)
+        } else {
+            None
+        };
+        Self {
+            enabled,
+            dhcp: ip.dhcp,
+            addresses: ip.addresses,
+            dhcp_client_id: ip.dhcp_client_id,
+            auto_dns: ip.auto_dns,
+            auto_routes: ip.auto_routes,
+            auto_gateway: ip.auto_gateway,
+            auto_table_id: ip.auto_table_id,
+            ..Default::default()
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize)]
 #[non_exhaustive]
+#[serde(into = "InterfaceIp")]
 pub struct InterfaceIpv6 {
-    #[serde(default, deserialize_with = "crate::deserializer::bool_or_string")]
     pub enabled: bool,
-    #[serde(skip)]
     pub(crate) prop_list: Vec<&'static str>,
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        default,
-        deserialize_with = "crate::deserializer::option_bool_or_string"
-    )]
     pub dhcp: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none", rename = "dhcp-duid")]
     pub dhcp_duid: Option<Dhcpv6Duid>,
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        default,
-        deserialize_with = "crate::deserializer::option_bool_or_string"
-    )]
     pub autoconf: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none", rename = "addr-gen-mode")]
     pub addr_gen_mode: Option<Ipv6AddrGenMode>,
-    #[serde(skip_serializing_if = "Option::is_none", rename = "address")]
     pub addresses: Option<Vec<InterfaceIpAddr>>,
-    #[serde(skip)]
     pub(crate) dns: Option<DnsClientState>,
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        default,
-        rename = "auto-dns",
-        deserialize_with = "crate::deserializer::option_bool_or_string"
-    )]
     pub auto_dns: Option<bool>,
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        default,
-        rename = "auto-gateway",
-        deserialize_with = "crate::deserializer::option_bool_or_string"
-    )]
     pub auto_gateway: Option<bool>,
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        rename = "auto-routes",
-        default,
-        deserialize_with = "crate::deserializer::option_bool_or_string"
-    )]
     pub auto_routes: Option<bool>,
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        rename = "auto-route-table-id",
-        default,
-        deserialize_with = "crate::deserializer::option_u32_or_string"
-    )]
     pub auto_table_id: Option<u32>,
 }
 
@@ -372,6 +432,76 @@ impl InterfaceIpv6 {
             }
         }
         self.cleanup();
+    }
+}
+
+impl<'de> Deserialize<'de> for InterfaceIpv6 {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let v = serde_json::Value::deserialize(deserializer)?;
+
+        let prop_list = if let Some(v_map) = v.as_object() {
+            get_ip_prop_list(v_map)
+        } else {
+            Vec::new()
+        };
+        if prop_list.contains(&"dhcp_client_id") {
+            return Err(serde::de::Error::custom(
+                "dhcp-client-id is not allowed for IPv6",
+            ));
+        }
+        let ip: InterfaceIp = match serde_json::from_value(v) {
+            Ok(i) => i,
+            Err(e) => {
+                return Err(serde::de::Error::custom(format!("{}", e)));
+            }
+        };
+        let mut ret = Self::from(ip);
+        ret.prop_list = prop_list;
+        Ok(ret)
+    }
+}
+
+impl From<InterfaceIp> for InterfaceIpv6 {
+    fn from(ip: InterfaceIp) -> Self {
+        Self {
+            enabled: ip.enabled.unwrap_or_default(),
+            dhcp: ip.dhcp,
+            autoconf: ip.autoconf,
+            addresses: ip.addresses,
+            dhcp_duid: ip.dhcp_duid,
+            auto_dns: ip.auto_dns,
+            auto_routes: ip.auto_routes,
+            auto_gateway: ip.auto_gateway,
+            auto_table_id: ip.auto_table_id,
+            addr_gen_mode: ip.addr_gen_mode,
+            ..Default::default()
+        }
+    }
+}
+
+impl From<InterfaceIpv6> for InterfaceIp {
+    fn from(ip: InterfaceIpv6) -> Self {
+        let enabled = if ip.prop_list.contains(&"enabled") {
+            Some(ip.enabled)
+        } else {
+            None
+        };
+        Self {
+            enabled,
+            dhcp: ip.dhcp,
+            autoconf: ip.autoconf,
+            addresses: ip.addresses,
+            dhcp_duid: ip.dhcp_duid,
+            auto_dns: ip.auto_dns,
+            auto_routes: ip.auto_routes,
+            auto_gateway: ip.auto_gateway,
+            auto_table_id: ip.auto_table_id,
+            addr_gen_mode: ip.addr_gen_mode,
+            ..Default::default()
+        }
     }
 }
 
@@ -666,4 +796,84 @@ pub(crate) fn validate_wait_ip(
         }
     }
     Ok(())
+}
+
+pub(crate) fn merge_ip_stack(
+    chg_net_state: &mut Interfaces,
+    current: &Interfaces,
+) {
+    for (iface_name, iface) in chg_net_state.kernel_ifaces.iter_mut() {
+        let cur_iface = if let Some(c) = current.kernel_ifaces.get(iface_name) {
+            c
+        } else {
+            continue;
+        };
+        if !iface.base_iface().can_have_ip() {
+            continue;
+        }
+        if let Some(cur_ip_conf) = cur_iface.base_iface().ipv4.as_ref() {
+            if let Some(ip_conf) = iface.base_iface_mut().ipv4.as_mut() {
+                if !ip_conf.prop_list.contains(&"enabled") {
+                    ip_conf.enabled = cur_ip_conf.enabled;
+                }
+                if ip_conf.dhcp.is_none() && ip_conf.enabled {
+                    ip_conf.dhcp = cur_ip_conf.dhcp;
+                }
+            }
+        }
+        if let Some(cur_ip_conf) = cur_iface.base_iface().ipv6.as_ref() {
+            if let Some(ip_conf) = iface.base_iface_mut().ipv6.as_mut() {
+                if !ip_conf.prop_list.contains(&"enabled") {
+                    ip_conf.enabled = cur_ip_conf.enabled;
+                }
+                if ip_conf.dhcp.is_none() && ip_conf.enabled {
+                    ip_conf.dhcp = cur_ip_conf.dhcp;
+                }
+                if ip_conf.autoconf.is_none() && ip_conf.enabled {
+                    ip_conf.autoconf = cur_ip_conf.autoconf;
+                }
+            }
+        }
+    }
+}
+
+fn get_ip_prop_list(
+    map: &serde_json::Map<String, serde_json::Value>,
+) -> Vec<&'static str> {
+    let mut ret = Vec::new();
+
+    if map.contains_key("enabled") {
+        ret.push("enabled")
+    }
+    if map.contains_key("dhcp") {
+        ret.push("dhcp")
+    }
+    if map.contains_key("autoconf") {
+        ret.push("autoconf")
+    }
+    if map.contains_key("dhcp-client-id") {
+        ret.push("dhcp_client_id")
+    }
+    if map.contains_key("dhcp-duid") {
+        ret.push("dhcp_duid")
+    }
+    if map.contains_key("address") {
+        ret.push("addresses")
+    }
+    if map.contains_key("auto-dns") {
+        ret.push("auto_dns")
+    }
+    if map.contains_key("auto-gateway") {
+        ret.push("auto_gateway")
+    }
+    if map.contains_key("auto-routes") {
+        ret.push("auto_routes")
+    }
+    if map.contains_key("auto-route-table-id") {
+        ret.push("auto_table_id")
+    }
+    if map.contains_key("addr-gen-mode") {
+        ret.push("addr_gen_mode")
+    }
+    ret
 }
