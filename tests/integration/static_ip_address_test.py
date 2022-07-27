@@ -734,3 +734,28 @@ def test_preserve_ip_conf_if_not_mentioned(setup_eth1_static_ip):
         }
     )
     assertlib.assert_state_match(desired_state)
+
+
+def test_merge_ip_enabled_property_from_current(setup_eth1_static_ip):
+    desired_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: "eth1",
+                Interface.IPV4: {
+                    InterfaceIPv4.DHCP: True,
+                },
+                Interface.IPV6: {
+                    InterfaceIPv6.DHCP: True,
+                    InterfaceIPv6.AUTOCONF: True,
+                },
+            }
+        ]
+    }
+    libnmstate.apply(desired_state)
+    desired_state[Interface.KEY][0][Interface.IPV4][
+        InterfaceIPv4.ENABLED
+    ] = True
+    desired_state[Interface.KEY][0][Interface.IPV6][
+        InterfaceIPv6.ENABLED
+    ] = True
+    assertlib.assert_state_match(desired_state)
