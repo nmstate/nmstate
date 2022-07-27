@@ -101,7 +101,6 @@ impl BondInterface {
         &self,
         current: Option<&Interface>,
     ) -> Result<(), NmstateError> {
-        self.base.validate()?;
         self.validate_new_iface_with_no_mode(current)?;
         self.validate_mac_restricted_mode(current)?;
         if let Some(bond_conf) = &self.bond {

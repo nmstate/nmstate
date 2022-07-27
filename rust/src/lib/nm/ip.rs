@@ -5,8 +5,9 @@ use crate::{
     nm::dns::{apply_nm_dns_setting, nm_dns_to_nmstate},
     nm::route::gen_nm_ip_routes,
     nm::route_rule::gen_nm_ip_rules,
-    Dhcpv4ClientId, Dhcpv6Duid, ErrorKind, Interface, InterfaceIpv4,
-    InterfaceIpv6, Ipv6AddrGenMode, NmstateError, RouteEntry, RouteRuleEntry,
+    BaseInterface, Dhcpv4ClientId, Dhcpv6Duid, ErrorKind, Interface,
+    InterfaceIpv4, InterfaceIpv6, Ipv6AddrGenMode, NmstateError, RouteEntry,
+    RouteRuleEntry, WaitIp,
 };
 
 const ADDR_GEN_MODE_EUI64: i32 = 0;
@@ -197,6 +198,7 @@ pub(crate) fn gen_nm_ip_setting(
     if base_iface.can_have_ip() {
         gen_nm_ipv4_setting(base_iface.ipv4.as_ref(), routes, rules, nm_conn)?;
         gen_nm_ipv6_setting(base_iface.ipv6.as_ref(), routes, rules, nm_conn)?;
+        apply_nmstate_wait_ip(base_iface, nm_conn);
     } else {
         nm_conn.ipv4 = None;
         nm_conn.ipv6 = None;
@@ -379,5 +381,78 @@ fn nmstate_addr_gen_mode_to_nm(addr_gen_mode: Option<&Ipv6AddrGenMode>) -> i32 {
         Some(Ipv6AddrGenMode::Other(s)) => {
             s.parse::<i32>().unwrap_or(ADDR_GEN_MODE_EUI64)
         }
+    }
+}
+
+pub(crate) fn query_nmstate_wait_ip(
+    ipv4_set: Option<&NmSettingIp>,
+    ipv6_set: Option<&NmSettingIp>,
+) -> Option<WaitIp> {
+    match (ipv4_set, ipv6_set) {
+        (Some(ipv4_set), Some(ipv6_set)) => {
+            match (ipv4_set.may_fail.as_ref(), ipv6_set.may_fail.as_ref()) {
+                (Some(true), Some(true))
+                | (Some(true), None)
+                | (None, Some(true))
+                | (None, None) => Some(WaitIp::Any),
+                (Some(true), Some(false)) | (None, Some(false)) => {
+                    Some(WaitIp::Ipv6)
+                }
+                (Some(false), Some(true)) | (Some(false), None) => {
+                    Some(WaitIp::Ipv4)
+                }
+                (Some(false), Some(false)) => Some(WaitIp::Ipv4AndIpv6),
+            }
+        }
+        (Some(ipv4_set), None) => match ipv4_set.may_fail.as_ref() {
+            Some(true) | None => Some(WaitIp::Any),
+            Some(false) => Some(WaitIp::Ipv4),
+        },
+        (None, Some(ipv6_set)) => match ipv6_set.may_fail.as_ref() {
+            Some(true) | None => Some(WaitIp::Any),
+            Some(false) => Some(WaitIp::Ipv6),
+        },
+        (None, None) => None,
+    }
+}
+
+fn apply_nmstate_wait_ip(
+    base_iface: &BaseInterface,
+    nm_conn: &mut NmConnection,
+) {
+    match base_iface.wait_ip {
+        Some(WaitIp::Any) => {
+            if let Some(nm_ip_set) = nm_conn.ipv4.as_mut() {
+                nm_ip_set.may_fail = Some(true);
+            }
+            if let Some(nm_ip_set) = nm_conn.ipv6.as_mut() {
+                nm_ip_set.may_fail = Some(true);
+            }
+        }
+        Some(WaitIp::Ipv4) => {
+            if let Some(nm_ip_set) = nm_conn.ipv4.as_mut() {
+                nm_ip_set.may_fail = Some(false);
+            }
+            if let Some(nm_ip_set) = nm_conn.ipv6.as_mut() {
+                nm_ip_set.may_fail = Some(true);
+            }
+        }
+        Some(WaitIp::Ipv6) => {
+            if let Some(nm_ip_set) = nm_conn.ipv4.as_mut() {
+                nm_ip_set.may_fail = Some(true);
+            }
+            if let Some(nm_ip_set) = nm_conn.ipv6.as_mut() {
+                nm_ip_set.may_fail = Some(false);
+            }
+        }
+        Some(WaitIp::Ipv4AndIpv6) => {
+            if let Some(nm_ip_set) = nm_conn.ipv4.as_mut() {
+                nm_ip_set.may_fail = Some(false);
+            }
+            if let Some(nm_ip_set) = nm_conn.ipv6.as_mut() {
+                nm_ip_set.may_fail = Some(false);
+            }
+        }
+        None => (),
     }
 }

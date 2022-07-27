@@ -22,7 +22,10 @@ use crate::{
     nm::dns::retrieve_dns_info,
     nm::error::nm_error_to_nmstate,
     nm::ieee8021x::nm_802_1x_to_nmstate,
-    nm::ip::{nm_ip_setting_to_nmstate4, nm_ip_setting_to_nmstate6},
+    nm::ip::{
+        nm_ip_setting_to_nmstate4, nm_ip_setting_to_nmstate6,
+        query_nmstate_wait_ip,
+    },
     nm::lldp::{get_lldp, is_lldp_enabled},
     nm::ovs::{
         get_ovs_dpdk_config, get_ovs_patch_config, nm_ovs_bridge_conf_get,
@@ -202,11 +205,14 @@ fn nm_conn_to_base_iface(
             "ieee8021x",
             "description",
             "lldp",
+            "wait_ip",
         ];
         base_iface.state = InterfaceState::Up;
         base_iface.iface_type = nm_dev_iface_type_to_nmstate(nm_dev);
         base_iface.ipv4 = ipv4;
         base_iface.ipv6 = ipv6;
+        base_iface.wait_ip =
+            query_nmstate_wait_ip(nm_conn.ipv4.as_ref(), nm_conn.ipv6.as_ref());
         base_iface.controller = nm_conn.controller().map(|c| c.to_string());
         base_iface.description = get_description(nm_conn);
         base_iface.lldp =
