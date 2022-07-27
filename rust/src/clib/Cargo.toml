@@ -1,7 +1,7 @@
 [package]
 name = "nmstate-clib"
 description = "Nmstate C binding"
-version = "2.1.3"
+version = "2.1.4"
 authors = ["Gris Ge <fge@redhat.com>"]
 license = "Apache-2.0"
 edition = "2018"
