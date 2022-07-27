@@ -101,6 +101,31 @@ def vrf1_with_port1(port1_up):
 
 
 @pytest.fixture
+def vrf1_with_eth1_and_eth2(eth1_up, eth2_up):
+    vrf_iface_info = {
+        Interface.NAME: TEST_VRF1,
+        Interface.TYPE: InterfaceType.VRF,
+        VRF.CONFIG_SUBTREE: {
+            VRF.PORT_SUBTREE: ["eth1", "eth2"],
+            VRF.ROUTE_TABLE_ID: TEST_ROUTE_TABLE_ID1,
+        },
+    }
+    libnmstate.apply({Interface.KEY: [vrf_iface_info]})
+    yield vrf_iface_info
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: TEST_VRF1,
+                    Interface.STATE: InterfaceState.ABSENT,
+                }
+            ]
+        }
+    )
+    assertlib.assert_absent(TEST_VRF1)
+
+
+@pytest.fixture
 def unmanaged_port_up():
     cmdlib.exec_cmd(
         f"ip link add {TEST_VRF_VETH0} type veth peer {TEST_VRF_VETH1}".split()
@@ -151,6 +176,14 @@ def vrf1_with_unmanaged_port(unmanaged_port_up):
 class TestVrf:
     def test_create_and_remove(self, vrf0_with_port0):
         pass
+
+    def test_sort_ports(self, vrf1_with_eth1_and_eth2):
+        iface_info = vrf1_with_eth1_and_eth2
+        iface_info[VRF.CONFIG_SUBTREE][VRF.PORT_SUBTREE].reverse()
+        desired_state = {Interface.KEY: [iface_info]}
+        libnmstate.apply(desired_state)
+        iface_info[VRF.CONFIG_SUBTREE][VRF.PORT_SUBTREE].sort()
+        assertlib.assert_state_match({Interface.KEY: [iface_info]})
 
     def test_change_route_table_id(self, vrf0_with_port0):
         iface_info = vrf0_with_port0

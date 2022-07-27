@@ -49,6 +49,9 @@ impl VrfInterface {
         if self.base.accept_all_mac_addresses == Some(false) {
             self.base.accept_all_mac_addresses = None;
         }
+        if let Some(ports) = self.vrf.as_mut().and_then(|c| c.port.as_mut()) {
+            ports.sort();
+        }
     }
 }
 
