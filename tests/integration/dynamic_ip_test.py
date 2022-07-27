@@ -1337,6 +1337,26 @@ def test_auto6_addr_gen_mode(dhcpcli_up_with_dynamic_ip, addr_gen_mode):
     )
 
 
+def test_hide_addr_gen_mode_if_ipv6_disabled(dhcpcli_up_with_dynamic_ip):
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: DHCP_CLI_NIC,
+                    Interface.IPV6: {
+                        InterfaceIPv6.ENABLED: False,
+                    },
+                }
+            ]
+        }
+    )
+    current_state = statelib.show_only((DHCP_CLI_NIC,))
+    assert (
+        InterfaceIPv6.ADDR_GEN_MODE
+        not in current_state[Interface.KEY][0][Interface.IPV6]
+    )
+
+
 @pytest.mark.tier1
 @pytest.mark.parametrize(
     "wait_ip",

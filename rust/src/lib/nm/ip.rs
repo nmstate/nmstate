@@ -12,6 +12,8 @@ use crate::{
 
 const ADDR_GEN_MODE_EUI64: i32 = 0;
 const ADDR_GEN_MODE_STABLE_PRIVACY: i32 = 1;
+const ADDR_GEN_MODE_STABLE_DEFAULT_OR_EUI64: i32 = 2;
+const ADDR_GEN_MODE_STABLE_DEFAULT: i32 = 3;
 
 fn gen_nm_ipv4_setting(
     iface_ip: Option<&InterfaceIpv4>,
@@ -286,7 +288,13 @@ pub(crate) fn nm_ip_setting_to_nmstate6(
             ],
             dns: Some(nm_dns_to_nmstate(nm_ip_setting)),
             dhcp_duid: nm_dhcp_duid_to_nmstate(nm_ip_setting),
-            addr_gen_mode: nm_ipv6_addr_gen_mode_to_nmstate(nm_ip_setting),
+            addr_gen_mode: {
+                if enabled {
+                    nm_ipv6_addr_gen_mode_to_nmstate(nm_ip_setting)
+                } else {
+                    None
+                }
+            },
             ..Default::default()
         }
     } else {
@@ -366,6 +374,12 @@ fn nm_ipv6_addr_gen_mode_to_nmstate(
     match nm_setting.addr_gen_mode.as_ref() {
         Some(&ADDR_GEN_MODE_EUI64) => Some(Ipv6AddrGenMode::Eui64),
         Some(&ADDR_GEN_MODE_STABLE_PRIVACY) => {
+            Some(Ipv6AddrGenMode::StablePrivacy)
+        }
+        Some(&ADDR_GEN_MODE_STABLE_DEFAULT_OR_EUI64) => {
+            Some(Ipv6AddrGenMode::Eui64)
+        }
+        Some(&ADDR_GEN_MODE_STABLE_DEFAULT) => {
             Some(Ipv6AddrGenMode::StablePrivacy)
         }
         Some(s) => Some(Ipv6AddrGenMode::Other(format!("{}", s))),
