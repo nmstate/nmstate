@@ -46,7 +46,7 @@ pub use crate::ifaces::{
 };
 pub use crate::ip::{
     Dhcpv4ClientId, Dhcpv6Duid, InterfaceIpAddr, InterfaceIpv4, InterfaceIpv6,
-    Ipv6AddrGenMode,
+    Ipv6AddrGenMode, WaitIp,
 };
 pub use crate::lldp::{
     LldpAddressFamily, LldpChassisId, LldpChassisIdType, LldpConfig,

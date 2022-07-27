@@ -3,7 +3,9 @@ use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{DnsClientState, ErrorKind, Interfaces, NmstateError};
+use crate::{
+    BaseInterface, DnsClientState, ErrorKind, Interfaces, NmstateError,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[non_exhaustive]
@@ -588,4 +590,80 @@ impl From<Ipv6AddrGenMode> for String {
             Ipv6AddrGenMode::Other(s) => s,
         }
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
+#[non_exhaustive]
+pub enum WaitIp {
+    /// The activation is considered done once IPv4 stack or IPv6 stack is
+    /// configure
+    Any,
+    /// The activation is considered done once IPv4 stack is configured.
+    Ipv4,
+    /// The activation is considered done once IPv6 stack is configured.
+    Ipv6,
+    /// The activation is considered done once both IPv4 and IPv6 stack are
+    /// configured.
+    #[serde(rename = "ipv4+ipv6")]
+    Ipv4AndIpv6,
+}
+
+impl std::fmt::Display for WaitIp {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Self::Any => "any",
+                Self::Ipv4 => "ipv4",
+                Self::Ipv6 => "ipv6",
+                Self::Ipv4AndIpv6 => "ipv4+ipv6",
+            }
+        )
+    }
+}
+
+pub(crate) fn validate_wait_ip(
+    base_iface: &BaseInterface,
+) -> Result<(), NmstateError> {
+    if let Some(wait_ip) = base_iface.wait_ip.as_ref() {
+        if (wait_ip == &WaitIp::Ipv4 || wait_ip == &WaitIp::Ipv4AndIpv6)
+            && !base_iface
+                .ipv4
+                .as_ref()
+                .map(|i| i.enabled)
+                .unwrap_or_default()
+        {
+            let e = NmstateError::new(
+                ErrorKind::InvalidArgument,
+                format!(
+                    "Cannot set 'wait-ip: {}' with IPv4 disabled. \
+                    Interface: {}({})",
+                    wait_ip, &base_iface.name, &base_iface.iface_type
+                ),
+            );
+            log::error!("{}", e);
+            return Err(e);
+        }
+        if (wait_ip == &WaitIp::Ipv6 || wait_ip == &WaitIp::Ipv4AndIpv6)
+            && !base_iface
+                .ipv6
+                .as_ref()
+                .map(|i| i.enabled)
+                .unwrap_or_default()
+        {
+            let e = NmstateError::new(
+                ErrorKind::InvalidArgument,
+                format!(
+                    "Cannot set 'wait-ip: {}' with IPv6 disabled. \
+                    Interface: {}({})",
+                    wait_ip, &base_iface.name, &base_iface.iface_type
+                ),
+            );
+            log::error!("{}", e);
+            return Err(e);
+        }
+    }
+    Ok(())
 }

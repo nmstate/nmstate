@@ -2,9 +2,9 @@ use log::error;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    ErrorKind, EthtoolConfig, Ieee8021XConfig, InterfaceIpv4, InterfaceIpv6,
-    InterfaceState, InterfaceType, LldpConfig, NmstateError, OvsDbIfaceConfig,
-    RouteEntry, RouteRuleEntry,
+    ip::validate_wait_ip, ErrorKind, EthtoolConfig, Ieee8021XConfig,
+    InterfaceIpv4, InterfaceIpv6, InterfaceState, InterfaceType, LldpConfig,
+    NmstateError, OvsDbIfaceConfig, RouteEntry, RouteRuleEntry, WaitIp,
 };
 
 // TODO: Use prop_list to Serialize like InterfaceIpv4 did
@@ -31,6 +31,8 @@ pub struct BaseInterface {
         deserialize_with = "crate::deserializer::option_u64_or_string"
     )]
     pub mtu: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub wait_ip: Option<WaitIp>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ipv4: Option<InterfaceIpv4>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -109,6 +111,9 @@ impl BaseInterface {
         }
         if other.prop_list.contains(&"ethtool") {
             self.ethtool = other.ethtool.clone();
+        }
+        if other.prop_list.contains(&"wait_ip") {
+            self.wait_ip = other.wait_ip;
         }
 
         if other.prop_list.contains(&"ipv4") {
@@ -226,9 +231,8 @@ impl BaseInterface {
         }
     }
 
-    // TODO: Validate IP, controller and etc
     pub(crate) fn validate(&self) -> Result<(), NmstateError> {
-        Ok(())
+        validate_wait_ip(self)
     }
 
     pub(crate) fn clone_name_type_only(&self) -> Self {
