@@ -1,6 +1,24 @@
 # Changelog
+## [2.1.3] - 2022-07-27
+### Breaking changes
+ - N/A
+
+### New features
+ - Add suppoprt to `wait_ip` property. (ed7ab24)
+ - Support integer bond mode. (5746b04)
+
+### Bug fixes
+ - Fix route entry error due to metric difference. (b55757d)
+ - Update NM connection for state `down`. (e342e47)
+ - Preserve current IP configuration from unmanaged interfaces. (c4d97f0)
+ - Fix gc showing configuration files for `down` interfaces. (81d8099)
+ - Fix several problem with the IP configuration. (8915d19)
+ - Include routes and route rules when showing an interface with cli. (da2aea5)
+ - Hide `addr-gen-mode` if IPv6 is disabled. (48d42aa)
+ - Fix VRF verification failure due to port order. (37b6489)
+
 ## [2.1.2] - 2022-06-30
-###
+### Breaking changes
  - N/A
 
 ### New features
