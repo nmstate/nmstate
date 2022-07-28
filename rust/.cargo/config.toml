@@ -1,2 +1,2 @@
 [build]
-rustflags = "-Clink-arg=-Wl,-soname=libnmstate.so.2.1.0"
+rustflags = "-Clink-arg=-Wl,-soname=libnmstate.so.2"
