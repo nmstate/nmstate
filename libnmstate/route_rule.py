@@ -70,7 +70,7 @@ class RouteRuleEntry(StateEntry):
         return (self.ip_from, self.ip_to, self.priority, self.route_table)
 
     def match_with_priority(self, other):
-        self == other or (
+        return self == other or (
             self.priority == RouteRule.USE_DEFAULT_PRIORITY
             and (self.ip_from, self.ip_to, self.route_table)
             == (
