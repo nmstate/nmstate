@@ -314,7 +314,8 @@ pub(crate) fn set_ifaces_up_priority(ifaces: &mut Interfaces) -> bool {
                 continue;
             }
             if let Some(parent) = iface.parent() {
-                if let Some(parent_priority) = pending_changes.get(parent) {
+                let parent_priority = pending_changes.get(parent).cloned();
+                if let Some(parent_priority) = parent_priority {
                     pending_changes
                         .insert(iface_name.to_string(), parent_priority + 1);
                 } else if let Some(parent_iface) =
