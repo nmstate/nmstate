@@ -93,7 +93,8 @@ def _remove_dns_route_route_rule():
                 Route.CONFIG: [{Route.STATE: Route.STATE_ABSENT}],
             },
             RouteRule.KEY: {RouteRule.CONFIG: []},
-        }
+        },
+        verify_change=False,
     )
 
 
