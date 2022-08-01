@@ -27,7 +27,6 @@ from .netinfo import show
 from .netinfo import show_running_config
 from .nmstate import generate_configurations
 from .prettystate import PrettyState
-from .state import state_match
 from .version import get_version as _get_version
 
 __all__ = [
@@ -40,7 +39,6 @@ __all__ = [
     "schema",
     "show",
     "show_running_config",
-    "state_match",
 ]
 
 __version__ = _get_version()
