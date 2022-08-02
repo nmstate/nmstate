@@ -1,6 +1,6 @@
 [package]
 name = "nmstate"
-version = "1.3.1"
+version = "1.3.2"
 authors = ["Gris Ge <fge@redhat.com>"]
 description = "Library for networking management in a declarative manner"
 license = "Apache-2.0"
