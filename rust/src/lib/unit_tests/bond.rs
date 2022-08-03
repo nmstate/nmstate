@@ -1,7 +1,7 @@
 use crate::{
-    BondAdSelect, BondAllPortsActive, BondArpValidate, BondFailOverMac,
-    BondInterface, BondLacpRate, BondMode, BondPrimaryReselect, ErrorKind,
-    Interface, Interfaces,
+    BondAdSelect, BondAllPortsActive, BondArpAllTargets, BondArpValidate,
+    BondFailOverMac, BondInterface, BondLacpRate, BondMode,
+    BondPrimaryReselect, BondXmitHashPolicy, ErrorKind, Interface, Interfaces,
 };
 
 #[test]
@@ -255,7 +255,7 @@ link-aggregation:
 
 #[test]
 fn test_integer_bond_mode() {
-    let ifaces: Vec<BondInterface> = serde_yaml::from_str(
+    let ifaces: Interfaces = serde_yaml::from_str(
         r#"---
 - name: bond0
   type: bond
@@ -330,6 +330,12 @@ fn test_integer_bond_mode() {
 "#,
     )
     .unwrap();
+    let mut bond_ifaces = Vec::new();
+    for iface in ifaces.to_vec() {
+        if let Interface::Bond(bond_iface) = iface {
+            bond_ifaces.push(bond_iface);
+        }
+    }
     for (i, expected_bond_mode) in [
         BondMode::RoundRobin,
         BondMode::ActiveBackup,
@@ -344,12 +350,66 @@ fn test_integer_bond_mode() {
     {
         assert_eq!(
             expected_bond_mode,
-            &ifaces[i * 2].bond.as_ref().unwrap().mode.unwrap()
+            &bond_ifaces[i * 2].bond.as_ref().unwrap().mode.unwrap()
         );
         assert_eq!(
             expected_bond_mode,
-            &ifaces[i * 2 + 1].bond.as_ref().unwrap().mode.unwrap()
+            &bond_ifaces[i * 2 + 1].bond.as_ref().unwrap().mode.unwrap()
         );
+    }
+}
+
+#[test]
+fn test_integer_bond_opts() {
+    let ifaces: Interfaces = serde_yaml::from_str(
+        r#"---
+- name: bond60
+  type: bond
+  state: up
+  link-aggregation:
+    mode: 6
+    options:
+      ad_select: 0
+      lacp_rate: 1
+      all_slaves_active: 1
+      arp_all_targets: 0
+      arp_validate: 6
+      fail_over_mac: 2
+      primary_reselect: 2
+      xmit_hash_policy: 5"#,
+    )
+    .unwrap();
+    if let Interface::Bond(bond_iface) = ifaces.to_vec()[0] {
+        let bond_opts = bond_iface
+            .bond
+            .as_ref()
+            .unwrap()
+            .options
+            .as_ref()
+            .unwrap()
+            .clone();
+        assert_eq!(bond_opts.ad_select.unwrap(), BondAdSelect::Stable);
+        assert_eq!(bond_opts.lacp_rate.unwrap(), BondLacpRate::Fast);
+        assert_eq!(
+            bond_opts.all_slaves_active.unwrap(),
+            BondAllPortsActive::Delivered
+        );
+        assert_eq!(bond_opts.arp_all_targets.unwrap(), BondArpAllTargets::Any);
+        assert_eq!(
+            bond_opts.arp_validate.unwrap(),
+            BondArpValidate::FilterBackup
+        );
+        assert_eq!(bond_opts.fail_over_mac.unwrap(), BondFailOverMac::Follow);
+        assert_eq!(
+            bond_opts.primary_reselect.unwrap(),
+            BondPrimaryReselect::Failure
+        );
+        assert_eq!(
+            bond_opts.xmit_hash_policy.unwrap(),
+            BondXmitHashPolicy::VlanSrcMac
+        );
+    } else {
+        panic!("Failed to find bond interface")
     }
 }
 
