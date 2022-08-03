@@ -1,6 +1,6 @@
 [package]
 name = "nmstatectl"
-version = "2.1.4"
+version = "2.2.0"
 authors = ["Gris Ge <fge@redhat.com>"]
 edition = "2018"
 
