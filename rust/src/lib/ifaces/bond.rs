@@ -1,5 +1,11 @@
-use crate::{BaseInterface, ErrorKind, Interface, InterfaceType, NmstateError};
+use std::convert::TryFrom;
+
 use serde::{Deserialize, Serialize};
+
+use crate::{
+    deserializer::NumberAsString, BaseInterface, ErrorKind, Interface,
+    InterfaceType, NmstateError,
+};
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
@@ -188,23 +194,43 @@ impl BondInterface {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy)]
 #[non_exhaustive]
+#[serde(try_from = "NumberAsString")]
 pub enum BondMode {
-    #[serde(rename = "balance-rr", alias = "0")]
+    #[serde(rename = "balance-rr")]
     RoundRobin,
-    #[serde(rename = "active-backup", alias = "1")]
+    #[serde(rename = "active-backup")]
     ActiveBackup,
-    #[serde(rename = "balance-xor", alias = "2")]
+    #[serde(rename = "balance-xor")]
     XOR,
-    #[serde(rename = "broadcast", alias = "3")]
+    #[serde(rename = "broadcast")]
     Broadcast,
-    #[serde(rename = "802.3ad", alias = "4")]
+    #[serde(rename = "802.3ad")]
     LACP,
-    #[serde(rename = "balance-tlb", alias = "5")]
+    #[serde(rename = "balance-tlb")]
     TLB,
-    #[serde(rename = "balance-alb", alias = "6")]
+    #[serde(rename = "balance-alb")]
     ALB,
     #[serde(rename = "unknown")]
     Unknown,
+}
+
+impl TryFrom<NumberAsString> for BondMode {
+    type Error = NmstateError;
+    fn try_from(s: NumberAsString) -> Result<Self, NmstateError> {
+        match s.as_str() {
+            "0" | "balance-rr" => Ok(Self::RoundRobin),
+            "1" | "active-backup" => Ok(Self::ActiveBackup),
+            "2" | "balance-xor" => Ok(Self::XOR),
+            "3" | "broadcast" => Ok(Self::Broadcast),
+            "4" | "802.3ad" => Ok(Self::LACP),
+            "5" | "balance-tlb" => Ok(Self::TLB),
+            "6" | "balance-alb" => Ok(Self::ALB),
+            v => Err(NmstateError::new(
+                ErrorKind::InvalidArgument,
+                format!("Invalid bond mode {}", v),
+            )),
+        }
+    }
 }
 
 impl Default for BondMode {
@@ -266,15 +292,31 @@ impl BondConfig {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy)]
-#[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
+#[serde(try_from = "NumberAsString")]
 pub enum BondAdSelect {
-    #[serde(alias = "0")]
     Stable,
-    #[serde(alias = "1")]
     Bandwidth,
-    #[serde(alias = "2")]
     Count,
+}
+
+impl TryFrom<NumberAsString> for BondAdSelect {
+    type Error = NmstateError;
+    fn try_from(s: NumberAsString) -> Result<Self, NmstateError> {
+        match s.as_str() {
+            "0" | "stable" => Ok(Self::Stable),
+            "1" | "bandwidth" => Ok(Self::Bandwidth),
+            "2" | "count" => Ok(Self::Count),
+            s => Err(NmstateError::new(
+                ErrorKind::InvalidArgument,
+                format!(
+                    "Invalid bond ad_select value: {}, should be \
+                    0, stable, 1, bandwidth, 2, or count",
+                    s
+                ),
+            )),
+        }
+    }
 }
 
 impl From<BondAdSelect> for u8 {
@@ -302,13 +344,29 @@ impl std::fmt::Display for BondAdSelect {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", try_from = "NumberAsString")]
 #[non_exhaustive]
 pub enum BondLacpRate {
-    #[serde(alias = "0")]
     Slow,
-    #[serde(alias = "1")]
     Fast,
+}
+
+impl TryFrom<NumberAsString> for BondLacpRate {
+    type Error = NmstateError;
+    fn try_from(s: NumberAsString) -> Result<Self, NmstateError> {
+        match s.as_str() {
+            "0" | "slow" => Ok(Self::Slow),
+            "1" | "fast" => Ok(Self::Fast),
+            v => Err(NmstateError::new(
+                ErrorKind::InvalidArgument,
+                format!(
+                    "Invalid bond lacp-rate {}, should be \
+                    0, slow, 1 or fast",
+                    v
+                ),
+            )),
+        }
+    }
 }
 
 impl std::fmt::Display for BondLacpRate {
@@ -325,13 +383,29 @@ impl std::fmt::Display for BondLacpRate {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", try_from = "NumberAsString")]
 #[non_exhaustive]
 pub enum BondAllPortsActive {
-    #[serde(alias = "0")]
     Dropped,
-    #[serde(alias = "1")]
     Delivered,
+}
+
+impl TryFrom<NumberAsString> for BondAllPortsActive {
+    type Error = NmstateError;
+    fn try_from(s: NumberAsString) -> Result<Self, NmstateError> {
+        match s.as_str() {
+            "0" | "dropped" => Ok(Self::Dropped),
+            "1" | "delivered" => Ok(Self::Delivered),
+            v => Err(NmstateError::new(
+                ErrorKind::InvalidArgument,
+                format!(
+                    "Invalid all_slaves_active value: {}, should be \
+                    0, dropped, 1 or delivered",
+                    v
+                ),
+            )),
+        }
+    }
 }
 
 impl std::fmt::Display for BondAllPortsActive {
@@ -357,13 +431,29 @@ impl From<BondAllPortsActive> for u8 {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", try_from = "NumberAsString")]
 #[non_exhaustive]
 pub enum BondArpAllTargets {
-    #[serde(alias = "0")]
     Any,
-    #[serde(alias = "1")]
     All,
+}
+
+impl TryFrom<NumberAsString> for BondArpAllTargets {
+    type Error = NmstateError;
+    fn try_from(s: NumberAsString) -> Result<Self, NmstateError> {
+        match s.as_str() {
+            "0" | "any" => Ok(Self::Any),
+            "1" | "all" => Ok(Self::All),
+            v => Err(NmstateError::new(
+                ErrorKind::InvalidArgument,
+                format!(
+                    "Invalid arp_all_targets value {}, should be \
+                    0, any, 1 or all",
+                    v
+                ),
+            )),
+        }
+    }
 }
 
 impl std::fmt::Display for BondArpAllTargets {
@@ -380,23 +470,40 @@ impl std::fmt::Display for BondArpAllTargets {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", try_from = "NumberAsString")]
 #[non_exhaustive]
 pub enum BondArpValidate {
-    #[serde(alias = "0")]
     None,
-    #[serde(alias = "1")]
     Active,
-    #[serde(alias = "2")]
     Backup,
-    #[serde(alias = "3")]
     All,
-    #[serde(alias = "4")]
     Filter,
-    #[serde(rename = "filter_active", alias = "5")]
     FilterActive,
-    #[serde(rename = "filter_backup", alias = "6")]
     FilterBackup,
+}
+
+impl TryFrom<NumberAsString> for BondArpValidate {
+    type Error = NmstateError;
+    fn try_from(s: NumberAsString) -> Result<Self, NmstateError> {
+        match s.as_str() {
+            "0" | "none" => Ok(Self::None),
+            "1" | "active" => Ok(Self::Active),
+            "2" | "backup" => Ok(Self::Backup),
+            "3" | "all" => Ok(Self::All),
+            "4" | "filter" => Ok(Self::Filter),
+            "5" | "filter_active" => Ok(Self::FilterActive),
+            "6" | "filter_backup" => Ok(Self::FilterBackup),
+            v => Err(NmstateError::new(
+                ErrorKind::InvalidArgument,
+                format!(
+                    "Invalid arp_validate value {}, should be \
+                    0, none, 1, active, 2, backup, 3, all, 4, filter, 5, \
+                    filter_active, 6 or filter_backup",
+                    v
+                ),
+            )),
+        }
+    }
 }
 
 impl std::fmt::Display for BondArpValidate {
@@ -418,15 +525,31 @@ impl std::fmt::Display for BondArpValidate {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", try_from = "NumberAsString")]
 #[non_exhaustive]
 pub enum BondFailOverMac {
-    #[serde(alias = "0")]
     None,
-    #[serde(alias = "1")]
     Active,
-    #[serde(alias = "2")]
     Follow,
+}
+
+impl TryFrom<NumberAsString> for BondFailOverMac {
+    type Error = NmstateError;
+    fn try_from(s: NumberAsString) -> Result<Self, NmstateError> {
+        match s.as_str() {
+            "0" | "none" => Ok(Self::None),
+            "1" | "active" => Ok(Self::Active),
+            "2" | "follow" => Ok(Self::Follow),
+            v => Err(NmstateError::new(
+                ErrorKind::InvalidArgument,
+                format!(
+                    "Invalid fail_over_mac value: {}, should be \
+                    0, none, 1, active, 2 or follow",
+                    v
+                ),
+            )),
+        }
+    }
 }
 
 impl std::fmt::Display for BondFailOverMac {
@@ -444,15 +567,31 @@ impl std::fmt::Display for BondFailOverMac {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", try_from = "NumberAsString")]
 #[non_exhaustive]
 pub enum BondPrimaryReselect {
-    #[serde(alias = "0")]
     Always,
-    #[serde(alias = "1")]
     Better,
-    #[serde(alias = "2")]
     Failure,
+}
+
+impl TryFrom<NumberAsString> for BondPrimaryReselect {
+    type Error = NmstateError;
+    fn try_from(s: NumberAsString) -> Result<Self, NmstateError> {
+        match s.as_str() {
+            "0" | "always" => Ok(Self::Always),
+            "1" | "better" => Ok(Self::Better),
+            "2" | "failure" => Ok(Self::Failure),
+            v => Err(NmstateError::new(
+                ErrorKind::InvalidArgument,
+                format!(
+                    "Invalid primary_reselect vlaue {}, should be \
+                    0, always, 1, better, 2 or failure",
+                    v
+                ),
+            )),
+        }
+    }
 }
 
 impl std::fmt::Display for BondPrimaryReselect {
@@ -470,26 +609,44 @@ impl std::fmt::Display for BondPrimaryReselect {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
+#[serde(try_from = "NumberAsString")]
 #[non_exhaustive]
 pub enum BondXmitHashPolicy {
     #[serde(rename = "layer2")]
-    #[serde(alias = "0")]
     Layer2,
     #[serde(rename = "layer3+4")]
-    #[serde(alias = "1")]
     Layer34,
     #[serde(rename = "layer2+3")]
-    #[serde(alias = "2")]
     Layer23,
     #[serde(rename = "encap2+3")]
-    #[serde(alias = "3")]
     Encap23,
     #[serde(rename = "encap3+4")]
-    #[serde(alias = "4")]
     Encap34,
     #[serde(rename = "vlan+srcmac")]
-    #[serde(alias = "5")]
     VlanSrcMac,
+}
+
+impl TryFrom<NumberAsString> for BondXmitHashPolicy {
+    type Error = NmstateError;
+    fn try_from(s: NumberAsString) -> Result<Self, NmstateError> {
+        match s.as_str() {
+            "0" | "layer2" => Ok(Self::Layer2),
+            "1" | "layer3+4" => Ok(Self::Layer34),
+            "2" | "layer2+3" => Ok(Self::Layer23),
+            "3" | "encap2+3" => Ok(Self::Encap23),
+            "4" | "encap3+4" => Ok(Self::Encap34),
+            "5" | "vlan+srcmac" => Ok(Self::VlanSrcMac),
+            v => Err(NmstateError::new(
+                ErrorKind::InvalidArgument,
+                format!(
+                    "Invalid xmit_hash_policy value {}, should be \
+                    0, layer2, 1, layer34, 2, layer23, 3, encap2+3, 4, \
+                    encap3+4, 5, vlan+srcmac",
+                    v
+                ),
+            )),
+        }
+    }
 }
 
 impl BondXmitHashPolicy {
