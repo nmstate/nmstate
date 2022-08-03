@@ -2,7 +2,9 @@ use std::convert::TryFrom;
 use std::marker::PhantomData;
 use std::str::FromStr;
 
-use serde::{de, de::Visitor, Deserializer};
+use serde::{de, de::Visitor, Deserialize, Deserializer};
+
+use crate::{ErrorKind, NmstateError};
 
 pub(crate) fn u8_or_string<'de, D>(deserializer: D) -> Result<u8, D::Error>
 where
@@ -255,4 +257,37 @@ where
     }
 
     deserializer.deserialize_any(IntegerOrString(PhantomData))
+}
+
+#[derive(Deserialize, Debug, PartialEq, Eq, Clone)]
+#[non_exhaustive]
+#[serde(try_from = "serde_json::Value")]
+pub(crate) struct NumberAsString {
+    value: String,
+}
+
+impl NumberAsString {
+    pub(crate) fn as_str(&self) -> &str {
+        self.value.as_str()
+    }
+}
+
+impl std::convert::TryFrom<serde_json::Value> for NumberAsString {
+    type Error = NmstateError;
+    fn try_from(s: serde_json::Value) -> Result<Self, NmstateError> {
+        match s {
+            serde_json::Value::Number(d) => Ok(Self {
+                value: format!("{}", d),
+            }),
+            serde_json::Value::String(s) => Ok(Self { value: s }),
+            _ => Err(NmstateError::new(
+                ErrorKind::InvalidArgument,
+                format!(
+                    "Invalid data type: {}, should be \
+                     integer or string",
+                    s
+                ),
+            )),
+        }
+    }
 }
