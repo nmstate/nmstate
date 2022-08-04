@@ -32,6 +32,10 @@ pub struct BaseInterface {
     )]
     pub mtu: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub min_mtu: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub max_mtu: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub wait_ip: Option<WaitIp>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ipv4: Option<InterfaceIpv4>,
@@ -91,6 +95,12 @@ impl BaseInterface {
         if other.prop_list.contains(&"mtu") {
             self.mtu = other.mtu;
         }
+        if other.prop_list.contains(&"min_mtu") {
+            self.min_mtu = other.min_mtu;
+        }
+        if other.prop_list.contains(&"max_mtu") {
+            self.max_mtu = other.max_mtu;
+        }
         if other.prop_list.contains(&"controller") {
             self.controller = other.controller.clone();
         }
@@ -143,6 +153,9 @@ impl BaseInterface {
     }
 
     pub(crate) fn pre_edit_cleanup(&mut self) -> Result<(), NmstateError> {
+        // Do not allow changing min_mtu and max_mtu
+        self.max_mtu = None;
+        self.min_mtu = None;
         if !self.can_have_ip()
             && (self.ipv4.as_ref().map(|ipv4| ipv4.enabled) == Some(true)
                 || self.ipv6.as_ref().map(|ipv6| ipv6.enabled) == Some(true))
@@ -172,6 +185,9 @@ impl BaseInterface {
     }
 
     pub(crate) fn pre_verify_cleanup(&mut self) {
+        // Ignore min_mtu and max_mtu as they are not changeable
+        self.min_mtu = None;
+        self.max_mtu = None;
         // * If cannot have IP, set ip: none
         if !self.can_have_ip() {
             self.ipv4 = None;
@@ -231,7 +247,40 @@ impl BaseInterface {
         }
     }
 
-    pub(crate) fn validate(&self) -> Result<(), NmstateError> {
+    fn validate_mtu(&self, current: Option<&Self>) -> Result<(), NmstateError> {
+        if let (Some(desire_mtu), Some(min_mtu), Some(max_mtu)) = (
+            self.mtu,
+            current.and_then(|c| c.min_mtu),
+            current.and_then(|c| c.max_mtu),
+        ) {
+            if desire_mtu > max_mtu {
+                return Err(NmstateError::new(
+                    ErrorKind::InvalidArgument,
+                    format!(
+                        "Desired MTU {} for interface {} \
+                        is bigger than maximum allowed MTU {}",
+                        desire_mtu, self.name, max_mtu
+                    ),
+                ));
+            } else if desire_mtu < min_mtu {
+                return Err(NmstateError::new(
+                    ErrorKind::InvalidArgument,
+                    format!(
+                        "Desired MTU {} for interface {} \
+                        is smaller than minimum allowed MTU {}",
+                        desire_mtu, self.name, min_mtu
+                    ),
+                ));
+            }
+        }
+        Ok(())
+    }
+
+    pub(crate) fn validate(
+        &self,
+        current: Option<&Self>,
+    ) -> Result<(), NmstateError> {
+        self.validate_mtu(current)?;
         validate_wait_ip(self)
     }
 

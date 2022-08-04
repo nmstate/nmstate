@@ -87,18 +87,6 @@ def test_increase_more_than_jambo_iface_mtu():
     assertlib.assert_state(desired_state)
 
 
-def test_decrease_to_zero_iface_mtu():
-    desired_state = statelib.show_only(("eth1",))
-    origin_desired_state = copy.deepcopy(desired_state)
-    eth1_desired_state = desired_state[Interface.KEY][0]
-    eth1_desired_state[Interface.MTU] = 0
-
-    with pytest.raises(NmstateVerificationError) as err:
-        libnmstate.apply(desired_state)
-    assert "mtu" in err.value.args[0]
-    assertlib.assert_state(origin_desired_state)
-
-
 def test_decrease_to_ipv6_min_ethernet_frame_size_iface_mtu(eth1_with_ipv6):
     desired_state = statelib.show_only(("eth1",))
     eth1_desired_state = desired_state[Interface.KEY][0]

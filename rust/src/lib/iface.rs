@@ -749,7 +749,8 @@ impl Interface {
         &self,
         current: Option<&Self>,
     ) -> Result<(), NmstateError> {
-        self.base_iface().validate()?;
+        self.base_iface()
+            .validate(current.map(|c| c.base_iface()))?;
         match self {
             Interface::LinuxBridge(iface) => iface.validate(),
             Interface::Bond(iface) => iface.validate(current),
