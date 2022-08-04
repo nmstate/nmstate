@@ -31,6 +31,8 @@ class Interface:
 
     MAC = "mac-address"
     MTU = "mtu"
+    MIN_MTU = "min-mtu"
+    MAX_MTU = "max-mtu"
     COPY_MAC_FROM = "copy-mac-from"
     ACCEPT_ALL_MAC_ADDRESSES = "accept-all-mac-addresses"
     WAIT_IP = "wait-ip"

@@ -59,6 +59,32 @@ pub(crate) fn np_iface_to_base_iface(
         } else {
             Some(0u64)
         },
+        min_mtu: if !running_config_only {
+            if let Some(mtu) = np_iface.min_mtu {
+                if mtu >= 0 {
+                    Some(mtu as u64)
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        } else {
+            None
+        },
+        max_mtu: if !running_config_only {
+            if let Some(mtu) = np_iface.max_mtu {
+                if mtu >= 0 {
+                    Some(mtu as u64)
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        } else {
+            None
+        },
         accept_all_mac_addresses: if np_iface
             .flags
             .contains(&nispor::IfaceFlags::Promisc)

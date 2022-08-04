@@ -414,3 +414,33 @@ def test_new_veth_with_ipv6_only():
             },
             verify_change=False,
         )
+
+
+def test_veth_invalid_mtu_smaller_than_min(eth1_up):
+    with pytest.raises(NmstateValueError):
+        libnmstate.apply(
+            {
+                Interface.KEY: [
+                    {
+                        Interface.NAME: "eth1",
+                        Interface.TYPE: InterfaceType.VETH,
+                        Interface.MTU: 32,
+                    },
+                ]
+            }
+        )
+
+
+def test_veth_invalid_mtu_bigger_than_max(eth1_up):
+    with pytest.raises(NmstateValueError):
+        libnmstate.apply(
+            {
+                Interface.KEY: [
+                    {
+                        Interface.NAME: "eth1",
+                        Interface.TYPE: InterfaceType.VETH,
+                        Interface.MTU: 1500000,
+                    },
+                ]
+            }
+        )
