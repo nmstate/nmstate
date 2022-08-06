@@ -724,7 +724,7 @@ fn mark_orphan_interface_as_absent(
 
 // Special cases:
 //  * Inherit the ignore state from current if desire not mentioned in interface
-//    section and port section
+//    section
 pub(crate) fn get_ignored_ifaces(
     desired: &Interfaces,
     current: &Interfaces,
@@ -744,22 +744,8 @@ pub(crate) fn get_ignored_ifaces(
         .map(|i| (i.name().to_string(), i.iface_type()))
         .collect();
 
-    let mut desired_ports: HashSet<String> = HashSet::new();
-    for desire_iface in desired
-        .kernel_ifaces
-        .values()
-        .chain(desired.user_ifaces.values())
-        .filter(|i| !i.is_ignore() && i.is_controller())
-    {
-        if let Some(ports) = desire_iface.ports() {
-            desired_ports.extend(ports.iter().map(|p| p.to_string()));
-        }
-    }
-
     for iface_name in current.ignored_kernel_iface_names().drain() {
-        if !desired_kernel_ifaces.contains(&iface_name)
-            && !desired_ports.contains(&iface_name)
-        {
+        if !desired_kernel_ifaces.contains(&iface_name) {
             ignored_kernel_ifaces.insert(iface_name);
         }
     }

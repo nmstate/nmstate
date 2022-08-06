@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2018-2020 Red Hat, Inc.
+# Copyright (c) 2018-2022 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -209,3 +209,37 @@ def test_linux_bridge_does_not_lose_unmanaged_port_on_rollback(
     port_names = [port[LB.Port.NAME] for port in bridge_state[LB.PORT_SUBTREE]]
     assert "eth1" in port_names
     assert VETH0 in port_names
+
+
+def test_ignore_interface_mentioned_in_port_list(
+    external_managed_bridge_with_unmanaged_ports, eth1_up
+):
+    desired_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: BRIDGE0,
+                Interface.STATE: InterfaceState.UP,
+                Interface.TYPE: InterfaceType.LINUX_BRIDGE,
+                LB.CONFIG_SUBTREE: {
+                    LB.PORT_SUBTREE: [
+                        {LB.Port.NAME: DUMMY0},
+                        {LB.Port.NAME: DUMMY1},
+                        {LB.Port.NAME: "eth1"},
+                    ],
+                },
+            },
+        ]
+    }
+    libnmstate.apply(desired_state)
+    assert (
+        "unmanaged"
+        in exec_cmd(
+            f"nmcli -g GENERAL.STATE d show {DUMMY0}".split(), check=True
+        )[1]
+    )
+    assert (
+        "unmanaged"
+        in exec_cmd(
+            f"nmcli -g GENERAL.STATE d show {DUMMY1}".split(), check=True
+        )[1]
+    )
