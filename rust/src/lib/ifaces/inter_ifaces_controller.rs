@@ -166,12 +166,6 @@ fn handle_changed_ports_of_iface(
         (Option<String>, Option<InterfaceType>),
     >,
 ) -> Result<(), NmstateError> {
-    include_ignored_iface_if_desired_in_port(
-        iface,
-        cur_ifaces,
-        pending_changes,
-    );
-
     let desire_port_names = match iface.ports() {
         Some(p) => HashSet::from_iter(p.iter().cloned()),
         None => return Ok(()),
@@ -211,38 +205,6 @@ fn handle_changed_ports_of_iface(
     }
 
     Ok(())
-}
-
-// When desire desire a port which is ignored in current, we should
-// include this port also even it is already assigned to desired controller,
-// so that it could change state from ignore to up.
-fn include_ignored_iface_if_desired_in_port(
-    des_iface: &Interface,
-    cur_ifaces: &Interfaces,
-    pending_changes: &mut HashMap<
-        String,
-        (Option<String>, Option<InterfaceType>),
-    >,
-) {
-    if let Some(ports) = des_iface.ports().or_else(|| {
-        cur_ifaces
-            .get_iface(des_iface.name(), des_iface.iface_type())
-            .and_then(|i| i.ports())
-    }) {
-        for port_name in ports {
-            if let Some(cur_iface) = cur_ifaces.kernel_ifaces.get(port_name) {
-                if cur_iface.is_ignore() {
-                    pending_changes.insert(
-                        port_name.to_string(),
-                        (
-                            Some(des_iface.name().to_string()),
-                            Some(des_iface.iface_type()),
-                        ),
-                    );
-                }
-            }
-        }
-    }
 }
 
 // TODO: user space interfaces
