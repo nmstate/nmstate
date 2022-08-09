@@ -168,12 +168,37 @@ fn handle_changed_ports_of_iface(
 ) -> Result<(), NmstateError> {
     let desire_port_names = match iface.ports() {
         Some(p) => HashSet::from_iter(p.iter().cloned()),
-        None => return Ok(()),
+        None => {
+            if let Some(cur_iface) =
+                cur_ifaces.get_iface(iface.name(), iface.iface_type())
+            {
+                if cur_iface.is_ignore() {
+                    // Desire state would like to convert from ignore and
+                    // preserving existing port lists
+                    match cur_iface.ports().map(|ports| {
+                        HashSet::<&str>::from_iter(ports.iter().cloned())
+                    }) {
+                        Some(p) => p,
+                        None => return Ok(()),
+                    }
+                } else {
+                    return Ok(());
+                }
+            } else {
+                return Ok(());
+            }
+        }
     };
 
     let current_port_names = cur_ifaces
         .get_iface(iface.name(), iface.iface_type())
-        .and_then(|cur_iface| cur_iface.ports())
+        .and_then(|cur_iface| {
+            if cur_iface.is_ignore() {
+                None
+            } else {
+                cur_iface.ports()
+            }
+        })
         .map(|ports| HashSet::<&str>::from_iter(ports.iter().cloned()))
         .unwrap_or_default();
 
