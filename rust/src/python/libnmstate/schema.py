@@ -151,6 +151,7 @@ class Bond:
 
     MODE = "mode"
     PORT = "port"
+    PORTS = "ports"
     OPTIONS_SUBTREE = "options"
 
 
@@ -168,6 +169,7 @@ class Bridge:
     CONFIG_SUBTREE = "bridge"
     OPTIONS_SUBTREE = "options"
     PORT_SUBTREE = "port"
+    PORTS_SUBTREE = "ports"
 
     class Port:
         NAME = "name"
