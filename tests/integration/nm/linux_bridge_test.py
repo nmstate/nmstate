@@ -300,3 +300,44 @@ def test_ignore_interface_mentioned_in_port_list(
             f"nmcli -g GENERAL.STATE d show {DUMMY1}".split(), check=True
         )[1]
     )
+
+
+def test_partially_consume_linux_bridge_port(
+    external_managed_bridge_with_unmanaged_ports,
+):
+    desired_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: BRIDGE0,
+                Interface.STATE: InterfaceState.UP,
+            },
+            {
+                Interface.NAME: DUMMY0,
+                Interface.STATE: InterfaceState.UP,
+            },
+        ]
+    }
+    libnmstate.apply(desired_state)
+
+    current_state = show_only((BRIDGE0,))
+    bridge_state = current_state[Interface.KEY][0][LB.CONFIG_SUBTREE]
+    port_names = [port[LB.Port.NAME] for port in bridge_state[LB.PORT_SUBTREE]]
+    assert port_names == [DUMMY0, DUMMY1]
+    assert (
+        "connected"
+        in exec_cmd(
+            f"nmcli -g GENERAL.STATE d show {BRIDGE0}".split(), check=True
+        )[1]
+    )
+    assert (
+        "connected"
+        in exec_cmd(
+            f"nmcli -g GENERAL.STATE d show {DUMMY0}".split(), check=True
+        )[1]
+    )
+    assert (
+        "unmanaged"
+        in exec_cmd(
+            f"nmcli -g GENERAL.STATE d show {DUMMY1}".split(), check=True
+        )[1]
+    )
