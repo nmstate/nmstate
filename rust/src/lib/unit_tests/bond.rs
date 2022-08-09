@@ -412,3 +412,21 @@ fn test_integer_bond_opts() {
         panic!("Failed to find bond interface")
     }
 }
+
+#[test]
+fn test_bond_ports() {
+    let ifaces: Interfaces = serde_yaml::from_str(
+        r#"---
+- name: bond99
+  type: bond
+  state: up
+  link-aggregation:
+    mode: balance-rr
+    ports:
+    - eth1
+    - eth2
+"#,
+    )
+    .unwrap();
+    assert_eq!(ifaces.to_vec()[0].ports(), Some(vec!["eth1", "eth2"]));
+}
