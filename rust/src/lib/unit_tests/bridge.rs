@@ -278,3 +278,20 @@ bridge:
         Some(LinuxBridgeMulticastRouterType::Disabled)
     );
 }
+
+#[test]
+fn test_linux_bridge_ports() {
+    let ifaces = serde_yaml::from_str::<Interfaces>(
+        r#"---
+- name: br0
+  type: linux-bridge
+  state: up
+  bridge:
+    ports:
+    - name: eth1
+    - name: eth2
+"#,
+    )
+    .unwrap();
+    assert_eq!(ifaces.to_vec()[0].ports(), Some(vec!["eth1", "eth2"]));
+}
