@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020 Red Hat, Inc.
+# Copyright (c) 2020-2022 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -28,6 +28,15 @@ from .base_iface import BaseIface
 
 class VrfIface(BaseIface):
     TABLE_ID_CHANGED_METADATA = "_table_id_changed"
+
+    def __init__(self, info, save_to_disk=True):
+        _rename_ports_to_port(info)
+        super().__init__(info, save_to_disk)
+
+    def state_for_verify(self):
+        state = super().state_for_verify()
+        _rename_ports_to_port(state)
+        return state
 
     def sort_port(self):
         if self.port:
@@ -90,3 +99,10 @@ class VrfIface(BaseIface):
             s for s in self.port if s != port_name
         ]
         self.sort_port()
+
+
+def _rename_ports_to_port(info):
+    if info.get(VRF.CONFIG_SUBTREE, {}).get(VRF.PORTS_SUBTREE):
+        info[VRF.CONFIG_SUBTREE][VRF.PORT_SUBTREE] = info[
+            VRF.CONFIG_SUBTREE
+        ].pop(VRF.PORTS_SUBTREE)

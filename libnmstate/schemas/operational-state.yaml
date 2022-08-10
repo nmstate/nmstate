@@ -285,6 +285,10 @@ definitions:
               type: array
               items:
                 type: string
+            ports:
+              type: array
+              items:
+                type: string
             options:
               type: object
   interface-linux-bridge:
@@ -315,6 +319,35 @@ definitions:
         bridge:
           type: object
           properties:
+            ports:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  stp-priority:
+                    type: integer
+                  stp-path-cost:
+                    type: integer
+                  stp-hairpin-mode:
+                    type: boolean
+                  vlan:
+                    type: object
+                    properties:
+                      mode:
+                        type: string
+                        enum:
+                          - trunk
+                          - access
+                      trunk-tags:
+                        type: array
+                        items:
+                          $ref: "#/definitions/bridge-port-vlan"
+                      tag:
+                        $ref: "#/definitions/types/bridge-vlan-tag"
+                      enable-native:
+                        type: boolean
             port:
               type: array
               items:
@@ -408,6 +441,55 @@ definitions:
         bridge:
           type: object
           properties:
+            ports:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  vlan:
+                    type: object
+                    properties:
+                      mode:
+                        type: string
+                        enum:
+                          - trunk
+                          - access
+                      trunk-tags:
+                        type: array
+                        items:
+                          $ref: "#/definitions/bridge-port-vlan"
+                      tag:
+                        $ref: "#/definitions/types/bridge-vlan-tag"
+                      enable-native:
+                        type: boolean
+                  link-aggregation:
+                    type: object
+                    properties:
+                      mode:
+                        type: string
+                      slaves:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            name:
+                              type: string
+                      ports:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            name:
+                              type: string
+                      port:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            name:
+                              type: string
             port:
               type: array
               items:
@@ -437,6 +519,13 @@ definitions:
                       mode:
                         type: string
                       slaves:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            name:
+                              type: string
+                      ports:
                         type: array
                         items:
                           type: object
@@ -754,6 +843,10 @@ definitions:
         vrf:
           type: object
           properties:
+            port:
+              type: array
+              items:
+                type: string
             ports:
               type: array
               items:

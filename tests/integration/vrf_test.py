@@ -313,3 +313,27 @@ class TestVrf:
                 ]
             }
         )
+
+    def test_vrf_using_ports_keyworks(self, eth1_up):
+        vrf_iface_info = {
+            Interface.NAME: TEST_VRF0,
+            Interface.TYPE: InterfaceType.VRF,
+            VRF.CONFIG_SUBTREE: {
+                VRF.PORTS_SUBTREE: [TEST_VRF_PORT0],
+                VRF.ROUTE_TABLE_ID: TEST_ROUTE_TABLE_ID0,
+            },
+        }
+        try:
+            libnmstate.apply({Interface.KEY: [vrf_iface_info]})
+        finally:
+            libnmstate.apply(
+                {
+                    Interface.KEY: [
+                        {
+                            Interface.NAME: TEST_VRF0,
+                            Interface.STATE: InterfaceState.ABSENT,
+                        }
+                    ]
+                }
+            )
+            assertlib.assert_absent(TEST_VRF0)

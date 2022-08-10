@@ -127,9 +127,10 @@ class Bridge:
                 port_option.update(new_option)
 
     @contextmanager
-    def create(self):
+    def create(self, apply=True):
         desired_state = self.state
-        libnmstate.apply(desired_state)
+        if apply:
+            libnmstate.apply(desired_state)
         try:
             yield desired_state
         finally:

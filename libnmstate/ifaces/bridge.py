@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020 Red Hat, Inc.
+# Copyright (c) 2020-2022 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -29,6 +29,15 @@ from .base_iface import BaseIface
 
 class BridgeIface(BaseIface):
     BRPORT_OPTIONS_METADATA = "_brport_options"
+
+    def __init__(self, info, save_to_disk=True):
+        _rename_ports_to_port(info)
+        super().__init__(info, save_to_disk)
+
+    def state_for_verify(self):
+        state = super().state_for_verify()
+        _rename_ports_to_port(state)
+        return state
 
     @property
     def is_controller(self):
@@ -105,3 +114,10 @@ class BridgeIface(BaseIface):
 
 def _index_port_configs(port_configs):
     return {port[Bridge.Port.NAME]: port for port in port_configs}
+
+
+def _rename_ports_to_port(info):
+    if info.get(Bridge.CONFIG_SUBTREE, {}).get(Bridge.PORTS_SUBTREE):
+        info[Bridge.CONFIG_SUBTREE][Bridge.PORT_SUBTREE] = info[
+            Bridge.CONFIG_SUBTREE
+        ].pop(Bridge.PORTS_SUBTREE)

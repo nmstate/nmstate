@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020 Red Hat, Inc.
+# Copyright (c) 2020-2022 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -43,6 +43,7 @@ class BondIface(BaseIface):
             self.raw[Bond.CONFIG_SUBTREE][Bond.PORT].sort()
 
     def __init__(self, info, save_to_disk=True):
+        _rename_ports_to_port(info)
         super().__init__(info, save_to_disk)
         self._normalize_options_values()
         self._fix_bond_option_arp_monitor()
@@ -187,6 +188,7 @@ class BondIface(BaseIface):
             _include_arp_ip_target_explictly_when_disable(
                 state[Bond.CONFIG_SUBTREE][Bond.OPTIONS_SUBTREE]
             )
+        _rename_ports_to_port(state)
         return state
 
     def remove_port(self, port_name):
@@ -323,3 +325,10 @@ def _include_arp_ip_target_explictly_when_disable(bond_options):
         and "arp_ip_target" not in bond_options
     ):
         bond_options["arp_ip_target"] = ""
+
+
+def _rename_ports_to_port(info):
+    if info.get(Bond.CONFIG_SUBTREE, {}).get(Bond.PORTS):
+        info[Bond.CONFIG_SUBTREE][Bond.PORT] = info[Bond.CONFIG_SUBTREE].pop(
+            Bond.PORTS
+        )

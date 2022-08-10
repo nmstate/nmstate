@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020 Red Hat, Inc.
+# Copyright (c) 2020-2022 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -22,6 +22,7 @@ from operator import itemgetter
 import warnings
 
 from libnmstate.error import NmstateValueError
+from libnmstate.schema import Bridge
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIP
 from libnmstate.schema import InterfaceType
@@ -39,6 +40,7 @@ DEPRECATED_SLAVES = "slaves"
 
 class OvsBridgeIface(BridgeIface):
     def __init__(self, info, save_to_disk):
+        _rename_ovs_bond_ports_to_port(info)
         super().__init__(info, save_to_disk)
         self._replace_deprecated_terms()
 
@@ -149,6 +151,11 @@ class OvsBridgeIface(BridgeIface):
             OVSBridge.PORT_SUBTREE
         ] = new_port_configs
         self.sort_port()
+
+    def state_for_verify(self):
+        state = super().state_for_verify()
+        _rename_ovs_bond_ports_to_port(state)
+        return state
 
     def _replace_deprecated_terms(self):
         port_info = self.raw.get(OVSBridge.CONFIG_SUBTREE, {}).get(
@@ -289,3 +296,15 @@ class OvsPortIface(BaseIface):
     @property
     def is_user_space_only(self):
         return True
+
+
+def _rename_ovs_bond_ports_to_port(info):
+    br_conf = info.get(Bridge.CONFIG_SUBTREE, {})
+    for port_conf in br_conf.get(
+        Bridge.PORTS_SUBTREE, br_conf.get(Bridge.PORT_SUBTREE, [])
+    ):
+        bond_cfg = port_conf.get(OVSBridge.Port.LINK_AGGREGATION_SUBTREE, {})
+        if bond_cfg.get(OVSBridge.Port.LinkAggregation.PORTS_SUBTREE):
+            bond_cfg[
+                OVSBridge.Port.LinkAggregation.PORT_SUBTREE
+            ] = bond_cfg.pop(OVSBridge.Port.LinkAggregation.PORTS_SUBTREE)
