@@ -104,7 +104,11 @@ impl OvsBridgeInterface {
 pub struct OvsBridgeConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub options: Option<OvsBridgeOptions>,
-    #[serde(skip_serializing_if = "Option::is_none", rename = "port")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "port",
+        alias = "ports"
+    )]
     pub ports: Option<Vec<OvsBridgePortConfig>>,
 }
 
@@ -246,7 +250,11 @@ impl OvsInterface {
 pub struct OvsBridgeBondConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub mode: Option<OvsBridgeBondMode>,
-    #[serde(skip_serializing_if = "Option::is_none", rename = "port")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "port",
+        alias = "ports"
+    )]
     pub ports: Option<Vec<OvsBridgeBondPortConfig>>,
     #[serde(
         skip_serializing_if = "Option::is_none",

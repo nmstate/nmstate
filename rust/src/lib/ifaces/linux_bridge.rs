@@ -241,7 +241,7 @@ impl LinuxBridgeInterface {
 pub struct LinuxBridgeConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub options: Option<LinuxBridgeOptions>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none", alias = "ports")]
     pub port: Option<Vec<LinuxBridgePortConfig>>,
 }
 

@@ -59,6 +59,7 @@ impl VrfInterface {
 #[non_exhaustive]
 #[serde(deny_unknown_fields)]
 pub struct VrfConfig {
+    #[serde(alias = "ports")]
     pub port: Option<Vec<String>>,
     #[serde(
         rename = "route-table-id",
