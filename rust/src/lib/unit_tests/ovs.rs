@@ -218,3 +218,29 @@ fn test_ovs_bridge_resolve_user_space_iface_type() {
     assert!(br_iface.is_absent());
     assert_eq!(desired.kernel_ifaces.get("ovs-br1"), None);
 }
+
+#[test]
+fn test_ovs_bridge_ports() {
+    let ifaces: Interfaces = serde_yaml::from_str(
+        r#"---
+- name: br0
+  type: ovs-bridge
+  state: up
+  bridge:
+    ports:
+    - name: eth1
+    - name: eth2
+    - name: bond1
+      link-aggregation:
+        mode: balance-slb
+        ports:
+          - name: eth3
+          - name: eth4
+"#,
+    )
+    .unwrap();
+    assert_eq!(
+        ifaces.to_vec()[0].ports(),
+        Some(vec!["eth1", "eth2", "eth3", "eth4"])
+    );
+}
