@@ -977,3 +977,17 @@ def test_linux_bridge_show_port_ip_as_disabled(bridge0_with_port0):
 
     assert not state[Interface.KEY][0][Interface.IPV4][InterfaceIPv4.ENABLED]
     assert not state[Interface.KEY][0][Interface.IPV6][InterfaceIPv6.ENABLED]
+
+
+def test_linux_bridge_using_ports_keyword(port0_up):
+    port_name = port0_up[Interface.KEY][0][Interface.NAME]
+    bridge_state = _create_bridge_subtree_config((port_name,))
+    # Disable STP to avoid topology changes and the consequence link change.
+    options_subtree = bridge_state[LinuxBridge.OPTIONS_SUBTREE]
+    options_subtree[LinuxBridge.STP_SUBTREE][LinuxBridge.STP.ENABLED] = False
+    with linux_bridge(TEST_BRIDGE0, bridge_state, create=False) as state:
+        bridge_conf = state[Interface.KEY][0][LinuxBridge.CONFIG_SUBTREE]
+        bridge_conf[LinuxBridge.PORTS_SUBTREE] = bridge_conf.pop(
+            LinuxBridge.PORT_SUBTREE
+        )
+        libnmstate.apply(state)

@@ -1119,3 +1119,50 @@ def test_add_new_sys_veth_interface_to_existing_ovs_bridge(
     )
     libnmstate.apply(desired_state)
     assertlib.assert_state_match(desired_state)
+
+
+def test_ovs_bridge_using_ports_keyword(port0_up):
+    system_port0_name = port0_up[Interface.KEY][0][Interface.NAME]
+
+    bridge = Bridge(BRIDGE1)
+    bridge.add_system_port(system_port0_name)
+    with bridge.create(apply=False) as state:
+        ovs_conf = state[Interface.KEY][0][OVSBridge.CONFIG_SUBTREE]
+        ovs_conf[OVSBridge.PORTS_SUBTREE] = ovs_conf.pop(
+            OVSBridge.PORT_SUBTREE
+        )
+        libnmstate.apply(state)
+
+
+def test_ovs_bridge_with_bond_using_ports_keyword(eth1_up, eth2_up):
+    desired_state = yaml.load(
+        """---
+        interfaces:
+        - name: br0
+          type: ovs-bridge
+          state: up
+          bridge:
+            ports:
+            - name: ovs0
+            - name: bond1
+              link-aggregation:
+                mode: balance-slb
+                ports:
+                  - name: eth2
+                  - name: eth1
+            """,
+        Loader=yaml.SafeLoader,
+    )
+    try:
+        libnmstate.apply(desired_state)
+    finally:
+        libnmstate.apply(
+            {
+                Interface.KEY: [
+                    {
+                        Interface.NAME: BRIDGE0,
+                        Interface.STATE: InterfaceState.ABSENT,
+                    },
+                ]
+            }
+        )
