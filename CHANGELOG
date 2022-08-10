@@ -1,4 +1,11 @@
 # Changelog
+## [1.3.3] - 2022-08-10
+### New features
+ - Add suppoprt to ports keyword for bond, bridge and VRF. (6d39fed9)
+
+### Bug fixes
+ - N/A
+
 ## [1.3.2] - 2022-08-02
 ### New features
  - N/A
