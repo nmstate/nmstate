@@ -20,6 +20,7 @@
 import logging
 import os
 import subprocess
+import tempfile
 import warnings
 
 import pytest
@@ -68,6 +69,20 @@ def _mark_tier2_tests(items):
     for item in items:
         if "tier1" not in item.keywords:
             item.add_marker(pytest.mark.tier2)
+
+
+@pytest.fixture(scope="session", autouse=True)
+def fix_ip_netns_issue(scope="session", autouse=True):
+    if os.getenv("CI"):
+        with tempfile.TemporaryDirectory() as tmpdirname:
+            subprocess.run(
+                f"mount -t sysfs --make-private {tmpdirname}".split(),
+                check=True,
+            )
+            yield
+            subprocess.run(f"umount {tmpdirname}".split())
+    else:
+        yield
 
 
 @pytest.fixture(scope="session", autouse=True)
