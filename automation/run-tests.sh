@@ -17,8 +17,8 @@ TEST_TYPE_INTEG_TIER2="integ_tier2"
 TEST_TYPE_INTEG_SLOW="integ_slow"
 
 FEDORA_IMAGE_DEV="docker.io/nmstate/fedora-nmstate-dev"
-CENTOS_IMAGE_DEV="quay.io/nmstate/c8s-nmstate-dev"
-CENTOS_STREAM_IMAGE_DEV="quay.io/nmstate/c8s-nmstate-dev"
+CENTOS_8_STREAM_IMAGE_DEV="quay.io/nmstate/c8s-nmstate-dev"
+CENTOS_9_STREAM_IMAGE_DEV="quay.io/nmstate/c9s-nmstate-dev"
 
 CREATED_INTERFACES=""
 INTERFACES="eth1 eth2"
@@ -235,7 +235,7 @@ function upgrade_nm_from_copr {
     clean_dnf_cache
     exec_cmd "command -v dnf && plugin='dnf-command(copr)' || plugin='yum-plugin-copr'; yum install --assumeyes \$plugin;"
     exec_cmd "yum copr enable --assumeyes ${copr_repo}"
-    if [ $CONTAINER_IMAGE == $CENTOS_STREAM_IMAGE_DEV ];then
+    if [ $CONTAINER_IMAGE == $CENTOS_8_STREAM_IMAGE_DEV ];then
 	# centos-stream NetworkManager package is providing the alpha builds.
 	# Sometimes it could be greater than the one packaged on Copr.
         exec_cmd "dnf remove --assumeyes --noautoremove NetworkManager"
@@ -255,7 +255,7 @@ function run_customize_command {
 
 options=$(getopt --options "" \
     --long "customize:,pytest-args:,help,debug-shell,test-type:,\
-    el8,centos-stream,copr:,artifacts-dir:,test-vdsm,machine,k8s,\
+    el8,el9,centos-stream,copr:,artifacts-dir:,test-vdsm,machine,k8s,\
     use-installed-nmstate,compiled-rpms-dir:" \
     -- "${@}")
 eval set -- "$options"
@@ -281,10 +281,13 @@ while true; do
         TEST_TYPE="$1"
         ;;
     --el8)
-        CONTAINER_IMAGE=$CENTOS_IMAGE_DEV
+        CONTAINER_IMAGE=$CENTOS_8_STREAM_IMAGE_DEV
+        ;;
+    --el9)
+        CONTAINER_IMAGE=$CENTOS_9_STREAM_IMAGE_DEV
         ;;
     --centos-stream)
-        CONTAINER_IMAGE=$CENTOS_STREAM_IMAGE_DEV
+        CONTAINER_IMAGE=$CENTOS_8_STREAM_IMAGE_DEV
         ;;
     --artifacts-dir)
         shift
