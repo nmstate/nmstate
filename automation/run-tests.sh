@@ -24,11 +24,12 @@ CREATED_INTERFACES=""
 INTERFACES="eth1 eth2"
 
 PYTEST_OPTIONS="--verbose --verbose \
-        --log-level=DEBUG \
+        --log-file-level=DEBUG \
+        --log-level=INFO \
         --log-date-format='%Y-%m-%d %H:%M:%S' \
         --log-format='%(asctime)s %(filename)s:%(lineno)d %(levelname)s %(message)s' \
         --durations=5 \
-        --log-file=pytest-run.log"
+        --log-file=$CONT_EXPORT_DIR/pytest-run.log"
 
 NMSTATE_TEMPDIR=$(mktemp -d /tmp/nmstate-test-XXXX)
 
