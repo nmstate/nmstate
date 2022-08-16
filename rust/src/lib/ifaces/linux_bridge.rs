@@ -307,7 +307,8 @@ impl LinuxBridgePortConfig {
                 && self.stp_priority != current.stp_priority)
             || match (self.vlan.as_ref(), current.vlan.as_ref()) {
                 (Some(des_vlan_conf), Some(cur_vlan_conf)) => {
-                    des_vlan_conf.is_changed(cur_vlan_conf)
+                    (des_vlan_conf.is_empty() && !cur_vlan_conf.is_empty())
+                        || des_vlan_conf.is_changed(cur_vlan_conf)
                 }
                 (Some(_), None) => true,
                 _ => false,
