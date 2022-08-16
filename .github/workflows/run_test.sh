@@ -66,7 +66,6 @@ env \
     GITHUB_SHA="$GITHUB_SHA"\
     GITHUB_RUN_ID="$GITHUB_RUN_ID"\
     $TEST_CMD \
-        --pytest-args='-x' \
         $TEST_ARG \
         --artifacts-dir $TEST_ARTIFACTS_DIR \
         --compiled-rpms-dir $RPM_DIR \
