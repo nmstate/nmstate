@@ -21,9 +21,13 @@ TEST_ARG="--test-type $TEST_TYPE"
 
 CUSTOMIZE_ARG=""
 COPR_ARG=""
+RPM_DIR="rpms/el8"
 
 if [ $OS_TYPE == "c8s" ];then
     CONTAINER_IMAGE="quay.io/nmstate/c8s-nmstate-dev"
+elif [ $OS_TYPE == "c9s" ];then
+    CONTAINER_IMAGE="quay.io/nmstate/c9s-nmstate-dev"
+    RPM_DIR="rpms/el9"
 elif [ $OS_TYPE == "ovs2_11" ];then
     CONTAINER_IMAGE="quay.io/nmstate/c8s-nmstate-dev"
     CUSTOMIZE_ARG='--customize=
@@ -47,7 +51,9 @@ fi
 
 mkdir $TEST_ARTIFACTS_DIR || exit 1
 
-sudo env \
+env \
+    # Workaround for https://github.com/actions/runner/issues/1994
+    XDG_RUNTIME_DIR="" \
     CONTAINER_IMAGE="$CONTAINER_IMAGE" \
     CONTAINER_CMD="podman" \
     CI="true" \
@@ -63,5 +69,5 @@ sudo env \
         --pytest-args='-x' \
         $TEST_ARG \
         --artifacts-dir $TEST_ARTIFACTS_DIR \
-        --compiled-rpms-dir rpms \
+        --compiled-rpms-dir $RPM_DIR \
         $COPR_ARG "$CUSTOMIZE_ARG"
