@@ -71,6 +71,13 @@ impl BridgePortVlanConfig {
             || (self.trunk_tags.is_some()
                 && self.trunk_tags != current.trunk_tags)
     }
+
+    pub(crate) fn is_empty(&self) -> bool {
+        self.enable_native.is_none()
+            && self.mode.is_none()
+            && self.tag.is_none()
+            && self.trunk_tags.is_none()
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

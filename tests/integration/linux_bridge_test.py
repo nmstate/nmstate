@@ -447,6 +447,24 @@ class TestVlanFiltering:
             yield state
 
     @pytest.fixture
+    def bridge_with_two_ports_vlan_filtering(self, eth1_up, eth2_up):
+        trunk_port_state = generate_vlan_filtering_config(
+            LinuxBridge.Port.Vlan.Mode.TRUNK,
+            native_vlan=True,
+            tag=TestVlanFiltering.ACCESS_TAG,
+            trunk_tags=generate_vlan_id_config(100, 101, 102),
+        )
+        access_port_state = generate_vlan_filtering_config(
+            LinuxBridge.Port.Vlan.Mode.ACCESS,
+            tag=TestVlanFiltering.ACCESS_TAG,
+        )
+        bridge_state = _create_bridge_subtree_config(("eth1", "eth2"))
+        bridge_state[LinuxBridge.PORT_SUBTREE][0].update(trunk_port_state)
+        bridge_state[LinuxBridge.PORT_SUBTREE][1].update(access_port_state)
+        with linux_bridge(TEST_BRIDGE0, bridge_state) as state:
+            yield state
+
+    @pytest.fixture
     def bridge_with_access_port_config(self, port0_up):
         access_port_state = generate_vlan_filtering_config(
             LinuxBridge.Port.Vlan.Mode.ACCESS,
@@ -586,6 +604,21 @@ class TestVlanFiltering:
         ) as desired_state:
             assertlib.assert_state(desired_state)
             assert not _vlan_filtering_enabled(TEST_BRIDGE0)
+
+    def test_partially_disable_vlan_filtering_on_bridge(
+        self,
+        bridge_with_two_ports_vlan_filtering,
+    ):
+        bridge_state = bridge_with_two_ports_vlan_filtering[Interface.KEY][0]
+        bridge_config_subtree = bridge_state[LinuxBridge.CONFIG_SUBTREE]
+        bridge_ports = bridge_config_subtree[LinuxBridge.PORT_SUBTREE]
+        bridge_ports[0].update({LinuxBridge.Port.VLAN_SUBTREE: {}})
+
+        with linux_bridge(
+            TEST_BRIDGE0, bridge_config_subtree
+        ) as desired_state:
+            assertlib.assert_state(desired_state)
+            assert _vlan_filtering_enabled(TEST_BRIDGE0)
 
     def test_keep_vlan_filtering_on_bridge_when_not_set(
         self,
