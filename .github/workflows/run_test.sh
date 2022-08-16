@@ -48,6 +48,8 @@ fi
 mkdir $TEST_ARTIFACTS_DIR || exit 1
 
 sudo env \
+    # Workaround for https://github.com/actions/runner/issues/1994
+    XDG_RUNTIME_DIR="" \
     CONTAINER_IMAGE="$CONTAINER_IMAGE" \
     CONTAINER_CMD="podman" \
     CI="true" \

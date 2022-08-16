@@ -1,6 +1,6 @@
 FROM quay.io/centos/centos:stream8
 
-RUN echo "2022-05-25" > /build_time
+RUN echo "2022-08-16" > /build_time
 
 RUN sed -i -e 's/^#RateLimitInterval=.*/RateLimitInterval=0/' \
     -e 's/^#RateLimitBurst=.*/RateLimitBurst=0/' \
