@@ -65,7 +65,7 @@ function install_nmstate {
         if [ -n "$COMPILED_RPMS_DIR" ];then
             exec_cmd "rpm -ivh ${COMPILED_RPMS_DIR}/*.rpm || exit 1"
         else
-            exec_cmd "make rpm"
+            exec_cmd "SKIP_VENDOR_CREATION=1 make rpm"
             exec_cmd "rpm -ivh *.rpm"
         fi
     fi
