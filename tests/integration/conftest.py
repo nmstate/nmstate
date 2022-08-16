@@ -21,7 +21,6 @@ import logging
 import os
 import subprocess
 import tempfile
-import warnings
 
 import pytest
 
@@ -94,7 +93,6 @@ def test_env_setup():
     _ethx_init()
     yield
     libnmstate.apply(old_state, verify_change=False)
-    _diff_initial_state(old_state)
 
 
 def _remove_dns_route_route_rule():
@@ -159,21 +157,6 @@ def eth2_up():
 
 port0_up = eth1_up
 port1_up = eth2_up
-
-
-def _diff_initial_state(old_state):
-    new_state = libnmstate.show()
-    new_state = _remove_interfaces_from_env(new_state)
-
-    if old_state != new_state:
-        warnings.warn(
-            "Network state after test run does not match network state "
-            "before test run:\n {}\n".format(
-                libnmstate.prettystate.format_desired_current_state_diff(
-                    old_state, new_state
-                )
-            )
-        )
 
 
 def pytest_report_header(config):
