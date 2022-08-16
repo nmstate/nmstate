@@ -85,6 +85,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Run tests
+        shell: bash
         run: sudo .github/workflows/run_test.sh ${{ matrix.job_type }}
 
   integ:
