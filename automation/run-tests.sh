@@ -59,19 +59,6 @@ function exec_cmd {
     fi
 }
 
-function dump_network_info {
-    exec_cmd '
-      nmcli dev; \
-      # Use empty PAGER variable to stop nmcli send output to less which hang \
-      # the CI. \
-      PAGER= nmcli con; \
-      ip addr; \
-      ip route; \
-      cat /etc/resolv.conf; \
-      head /proc/sys/net/ipv6/conf/*/disable_ipv6; \
-    '
-}
-
 function install_nmstate {
     if [ $INSTALL_NMSTATE == "true" ];then
         if [ -n "$COMPILED_RPMS_DIR" ];then
@@ -169,7 +156,6 @@ function write_separator {
 
 function run_exit {
     write_separator "TEARDOWN"
-    dump_network_info
     if [ -n "${RUN_BAREMETAL}" ]; then
         teardown_network_environment
     elif [ -n "${RUN_K8S}" ]; then
@@ -393,8 +379,6 @@ if [ -n "$RUN_BAREMETAL" ];then
 fi
 
 exec_cmd '(source /etc/os-release; echo $PRETTY_NAME); rpm -q NetworkManager'
-
-dump_network_info
 
 pyclean
 if [ -z "${RUN_BAREMETAL}" ] && [ -z "${RUN_K8S}" ];then
