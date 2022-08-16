@@ -33,8 +33,6 @@ PYTEST_OPTIONS="--verbose --verbose \
 
 NMSTATE_TEMPDIR=$(mktemp -d /tmp/nmstate-test-XXXX)
 
-VETH_PEER_NS="nmstate_test"
-
 : ${CONTAINER_CMD:=podman}
 : ${KUBECTL_CMD:=k8s/kubectl.sh}
 
@@ -193,7 +191,6 @@ function check_iface_exist {
 
 function prepare_network_environment {
     set +e
-    exec_cmd "ip netns add ${VETH_PEER_NS}"
     for device in $INTERFACES;
     do
         peer="${device}peer"
@@ -201,8 +198,7 @@ function prepare_network_environment {
         if [ $? -eq 1 ]; then
             CREATED_INTERFACES="${CREATED_INTERFACES} ${device}"
             exec_cmd "ip link add ${device} type veth peer name ${peer}"
-            exec_cmd "ip link set ${peer} netns ${VETH_PEER_NS}"
-            exec_cmd "ip netns exec ${VETH_PEER_NS} ip link set ${peer} up"
+            exec_cmd "ip link set ${peer} up"
             exec_cmd "ip link set ${device} up"
             exec_cmd "nmcli device set ${device} managed yes"
         fi
@@ -215,7 +211,6 @@ function teardown_network_environment {
     do
         exec_cmd "ip link del ${device}"
     done
-    exec_cmd "ip netns del ${VETH_PEER_NS}"
 }
 
 function clean_dnf_cache {
