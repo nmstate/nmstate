@@ -4,11 +4,36 @@ use super::{
     ErrorKind, NmError,
 };
 
+pub const NM_ACTIVATION_STATE_FLAG_EXTERNAL: u32 = 0x80;
+
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct NmActiveConnection {
     pub uuid: String,
     pub iface_type: String,
     pub iface_name: String,
+    pub state_flags: u32,
+}
+
+fn nm_ac_obj_path_state_flags_get(
+    dbus_conn: &zbus::Connection,
+    obj_path: &str,
+) -> Result<u32, NmError> {
+    let proxy = zbus::Proxy::new(
+        dbus_conn,
+        NM_DBUS_INTERFACE_ROOT,
+        obj_path,
+        NM_DBUS_INTERFACE_AC,
+    )?;
+    match proxy.get_property::<u32>("StateFlags") {
+        Ok(uuid) => Ok(uuid),
+        Err(e) => Err(NmError::new(
+            ErrorKind::Bug,
+            format!(
+                "Failed to retrieve StateFlags of active connection {}: {}",
+                obj_path, e
+            ),
+        )),
+    }
 }
 
 pub(crate) fn nm_ac_obj_path_uuid_get(
@@ -74,6 +99,7 @@ pub(crate) fn get_nm_ac_by_obj_path(
             uuid: nm_ac_obj_path_uuid_get(connection, obj_path)?,
             iface_name,
             iface_type,
+            state_flags: nm_ac_obj_path_state_flags_get(connection, obj_path)?,
         }))
     } else {
         Ok(None)

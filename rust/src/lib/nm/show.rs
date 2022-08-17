@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::nm::nm_dbus::{
     NmActiveConnection, NmApi, NmConnection, NmDevice, NmDeviceState,
-    NmLldpNeighbor,
+    NmLldpNeighbor, NM_ACTIVATION_STATE_FLAG_EXTERNAL,
 };
 use log::{debug, warn};
 
@@ -83,6 +83,24 @@ pub(crate) fn nm_retrieve(
                 }
             }
             _ => {
+                let nm_ac = get_nm_ac(
+                    &nm_acs_name_type_index,
+                    &nm_dev.name,
+                    &nm_dev.iface_type,
+                );
+                if let Some(state_flag) = nm_ac.map(|nm_ac| nm_ac.state_flags) {
+                    if (state_flag & NM_ACTIVATION_STATE_FLAG_EXTERNAL) > 0 {
+                        if let Some(iface) = nm_dev_to_nm_iface(nm_dev) {
+                            debug!(
+                                "Found external managed interface {:?}",
+                                iface
+                            );
+                            net_state.append_interface_data(iface);
+                        }
+                        continue;
+                    }
+                }
+
                 let nm_conn = if let Some(c) = get_first_nm_conn(
                     &nm_conns_name_type_index,
                     &nm_dev.name,
@@ -99,11 +117,6 @@ pub(crate) fn nm_retrieve(
                     }
                     continue;
                 };
-                let nm_ac = get_nm_ac(
-                    &nm_acs_name_type_index,
-                    &nm_dev.name,
-                    &nm_dev.iface_type,
-                );
 
                 // NM developer confirmed NmActiveConnection UUID is the
                 // UUID of NmConnection associated
