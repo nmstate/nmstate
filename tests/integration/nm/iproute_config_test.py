@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020 Red Hat, Inc.
+# Copyright (c) 2020-2022 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -26,12 +26,15 @@ import libnmstate
 from libnmstate.schema import Bond
 from libnmstate.schema import BondMode
 from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceIPv4
+from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import Route
 
 from ..testlib import cmdlib
 from ..testlib.dummy import nm_unmanaged_dummy
 from ..testlib.assertlib import assert_state_match
+from ..testlib.statelib import show_only
 
 BOND99 = "bond99"
 DUMMY1 = "dummy1"
@@ -166,3 +169,40 @@ interfaces:
             gw6_found = True
     assert gw4_found
     assert gw6_found
+
+
+@pytest.fixture
+def external_managed_veth1_with_static_ip():
+    cmdlib.exec_cmd(
+        "ip link add veth1 type veth peer veth1-ep".split(), check=True
+    )
+    cmdlib.exec_cmd("ip link set veth1-ep up".split(), check=True)
+    cmdlib.exec_cmd("ip link set veth1 up".split(), check=True)
+    cmdlib.exec_cmd("nmcli d set veth1 managed true".split(), check=True)
+    cmdlib.exec_cmd("ip addr add 192.0.2.2/24 dev veth1".split(), check=True)
+    cmdlib.exec_cmd(
+        "ip addr add 2001:db8:f::1/64 dev veth1".split(), check=True
+    )
+    yield
+    cmdlib.exec_cmd("ip link del veth1".split())
+
+
+def test_external_managed_veth_with_static_ip(
+    external_managed_veth1_with_static_ip,
+):
+    iface_state = show_only(("veth1",))[Interface.KEY][0]
+    ipv4_info = iface_state[Interface.IPV4]
+    ipv6_info = iface_state[Interface.IPV6]
+
+    assert ipv4_info[InterfaceIPv4.ENABLED]
+    assert ipv4_info[InterfaceIPv4.ADDRESS] == [
+        {
+            InterfaceIPv4.ADDRESS_IP: "192.0.2.2",
+            InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+        }
+    ]
+    assert ipv6_info[InterfaceIPv6.ENABLED]
+    assert {
+        InterfaceIPv6.ADDRESS_IP: "2001:db8:f::1",
+        InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
+    } in ipv6_info[InterfaceIPv6.ADDRESS]
