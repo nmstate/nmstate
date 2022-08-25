@@ -240,8 +240,18 @@ pub(crate) fn create_ovs_port_nm_conn(
 pub(crate) fn get_ovs_port_name(
     ovs_br_iface: &OvsBridgeInterface,
     ovs_iface_name: &str,
+    cur_ovs_br_iface: Option<&Interface>,
 ) -> Option<String> {
-    for port_conf in ovs_br_iface.port_confs() {
+    let port_confs = if ovs_br_iface.ports().is_none() {
+        if let Some(Interface::OvsBridge(cur_ovs_br_iface)) = cur_ovs_br_iface {
+            cur_ovs_br_iface.port_confs()
+        } else {
+            ovs_br_iface.port_confs()
+        }
+    } else {
+        ovs_br_iface.port_confs()
+    };
+    for port_conf in port_confs {
         if let Some(bond_conf) = &port_conf.bond {
             for bond_port_name in bond_conf.ports() {
                 if bond_port_name == ovs_iface_name {

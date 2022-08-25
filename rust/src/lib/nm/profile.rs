@@ -326,20 +326,19 @@ pub(crate) fn use_uuid_for_controller_reference(
         }
 
         if ctrl_type == "ovs-port" {
+            let cur_ovs_br_iface = cur_user_space_ifaces
+                .get(&(ctrl_name.to_string(), InterfaceType::OvsBridge));
             if let Some(Interface::OvsBridge(ovs_br_iface)) =
                 des_user_space_ifaces
                     .get(&(ctrl_name.to_string(), InterfaceType::OvsBridge))
-                    .or_else(|| {
-                        cur_user_space_ifaces.get(&(
-                            ctrl_name.to_string(),
-                            InterfaceType::OvsBridge,
-                        ))
-                    })
+                    .or(cur_ovs_br_iface)
             {
                 if let Some(iface_name) = nm_conn.iface_name() {
-                    if let Some(ovs_port_name) =
-                        get_ovs_port_name(ovs_br_iface, iface_name)
-                    {
+                    if let Some(ovs_port_name) = get_ovs_port_name(
+                        ovs_br_iface,
+                        iface_name,
+                        cur_ovs_br_iface,
+                    ) {
                         ctrl_name = ovs_port_name.to_string();
                     } else {
                         let e = NmstateError::new(

@@ -1209,3 +1209,25 @@ def test_ovsdb_global_remove_all_other_config(ovsdb_global_db):
     assert not current[OvsDB.OTHER_CONFIG]
     assert current[OvsDB.EXTERNAL_IDS]["opt1"] == "value1"
     assert current[OvsDB.EXTERNAL_IDS]["opt2"] == "value2"
+
+
+def test_change_ovs_intenral_iface_ext_id_with_br_port_not_mentioned(
+    bridge_with_ports,
+):
+    desired_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: BRIDGE1,
+                Interface.TYPE: InterfaceType.OVS_BRIDGE,
+            },
+            {
+                Interface.NAME: PORT1,
+                Interface.TYPE: InterfaceType.OVS_INTERFACE,
+                OvsDB.OVS_DB_SUBTREE: {
+                    OvsDB.EXTERNAL_IDS: {"foo": "abc", "bak": 1}
+                },
+            },
+        ]
+    }
+    libnmstate.apply(desired_state)
+    assertlib.assert_state_match(desired_state)
