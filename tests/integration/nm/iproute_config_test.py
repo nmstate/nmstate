@@ -103,7 +103,8 @@ def unmanged_dummy1_with_static_ip():
             check=True,
         )
         cmdlib.exec_cmd(
-            f"ip route add default via {IPV4_ADDRESS2} dev {DUMMY1}".split(),
+            f"ip route add default via {IPV4_ADDRESS2} dev {DUMMY1} "
+            "metric 101".split(),
             check=True,
         )
         yield
