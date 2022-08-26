@@ -98,10 +98,13 @@ def unmanged_dummy1_with_static_ip():
             f"ip addr add {IPV6_ADDRESS1}/64 dev {DUMMY1}".split(), check=True
         )
         cmdlib.exec_cmd(
-            f"ip -6 route add default via {IPV6_ADDRESS2}".split(), check=True
+            f"ip -6 route add default via {IPV6_ADDRESS2} "
+            f"dev {DUMMY1}".split(),
+            check=True,
         )
         cmdlib.exec_cmd(
-            f"ip route add default via {IPV4_ADDRESS2}".split(), check=True
+            f"ip route add default via {IPV4_ADDRESS2} dev {DUMMY1}".split(),
+            check=True,
         )
         yield
 
