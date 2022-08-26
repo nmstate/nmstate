@@ -337,7 +337,8 @@ fn gen_conf(file_path: &str) -> Result<String, CliError> {
     let fd = std::fs::File::open(file_path)?;
     let net_state: NetworkState = serde_yaml::from_reader(fd)?;
     let confs = net_state.gen_conf()?;
-    Ok(serde_yaml::to_string(&confs)?)
+    let escaped_string = serde_yaml::to_string(&confs)?;
+    Ok(escaped_string.replace("\\n", "\n\n"))
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
