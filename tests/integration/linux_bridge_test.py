@@ -58,7 +58,7 @@ from .testlib.vlan import vlan_interface
 
 
 TEST_BRIDGE0 = "linux-br0"
-TEST_TAP0 = "tap0"
+TEST_TAP0 = "test-tap0"
 ETH1 = "eth1"
 # RFC 7042 reserved EUI-48 MAC range for document
 TEST_MAC_ADDRESS = "00:00:5E:00:53:01"
