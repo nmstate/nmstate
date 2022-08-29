@@ -331,7 +331,7 @@ def _nm_connection_exists(conn_name):
 
 
 def _nm_connection_is_memory_only(conn_name):
-    rc, output, _ = cmdlib.exec_cmd(f"nmcli -g FILENAME,NAME c show".split())
+    rc, output, _ = cmdlib.exec_cmd("nmcli -g FILENAME,NAME c show".split())
     if rc == 0:
         for line in output.split("\n"):
             if line.endswith(f":{conn_name}"):
