@@ -133,7 +133,7 @@ jobs:
       - name: Run tests
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-        run: .github/workflows/run_test.sh ${{ matrix.job_type }}
+        run: sudo .github/workflows/run_test.sh ${{ matrix.job_type }}
 
       - name: Set artifacts permissions
         if: ${{ failure() }}
