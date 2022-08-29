@@ -1116,3 +1116,96 @@ def test_add_new_sys_veth_interface_to_existing_ovs_bridge(
     )
     libnmstate.apply(desired_state)
     assertlib.assert_state_match(desired_state)
+
+
+@pytest.fixture
+def ovsdb_global_db():
+    original = libnmstate.show()[OvsDB.KEY]
+    libnmstate.apply(
+        {
+            OvsDB.KEY: {
+                OvsDB.EXTERNAL_IDS: {
+                    "opt1": "value1",
+                    "opt2": "value2",
+                },
+                OvsDB.OTHER_CONFIG: {
+                    "flow-restore-wait": "true",
+                },
+            }
+        }
+    )
+    yield
+    libnmstate.apply({OvsDB.KEY: {}})
+    libnmstate.apply({OvsDB.KEY: original})
+
+
+def test_ovsdb_global_merged_desired_with_current(ovsdb_global_db):
+    desired_state = {
+        OvsDB.KEY: {
+            OvsDB.EXTERNAL_IDS: {
+                "opt1": None,
+                "opt2": "value2new",
+            },
+            OvsDB.OTHER_CONFIG: {
+                "flow-restore-wait": None,
+                "tc-policy": "skip_hw",
+            },
+        }
+    }
+    libnmstate.apply(desired_state)
+
+    current = libnmstate.show()[OvsDB.KEY]
+
+    assert "opt1" not in current[OvsDB.EXTERNAL_IDS]
+    assert current[OvsDB.EXTERNAL_IDS]["opt2"] == "value2new"
+    assert "flow-restore-wait" not in current[OvsDB.OTHER_CONFIG]
+    assert current[OvsDB.OTHER_CONFIG]["tc-policy"] == "skip_hw"
+
+
+def test_ovsdb_global_preserve_not_mentioned(ovsdb_global_db):
+    desired_state = {
+        OvsDB.KEY: {
+            OvsDB.OTHER_CONFIG: {
+                "flow-restore-wait": None,
+                "tc-policy": "skip_hw",
+            },
+        }
+    }
+    libnmstate.apply(desired_state)
+
+    current = libnmstate.show()[OvsDB.KEY]
+
+    assert current[OvsDB.EXTERNAL_IDS]["opt1"] == "value1"
+    assert current[OvsDB.EXTERNAL_IDS]["opt2"] == "value2"
+    assert "flow-restore-wait" not in current[OvsDB.OTHER_CONFIG]
+    assert current[OvsDB.OTHER_CONFIG]["tc-policy"] == "skip_hw"
+
+
+def test_ovsdb_global_remove_all(ovsdb_global_db):
+    desired_state = {OvsDB.KEY: {}}
+    libnmstate.apply(desired_state)
+
+    current = libnmstate.show()[OvsDB.KEY]
+
+    assert not current[OvsDB.EXTERNAL_IDS]
+
+
+def test_ovsdb_global_remove_all_external_ids(ovsdb_global_db):
+    desired_state = {OvsDB.KEY: {OvsDB.EXTERNAL_IDS: {}}}
+    libnmstate.apply(desired_state)
+
+    current = libnmstate.show()[OvsDB.KEY]
+
+    assert not current[OvsDB.EXTERNAL_IDS]
+    assert current[OvsDB.OTHER_CONFIG]["flow-restore-wait"] == "true"
+
+
+def test_ovsdb_global_remove_all_other_config(ovsdb_global_db):
+    desired_state = {OvsDB.KEY: {OvsDB.OTHER_CONFIG: {}}}
+    libnmstate.apply(desired_state)
+
+    current = libnmstate.show()[OvsDB.KEY]
+
+    assert not current[OvsDB.OTHER_CONFIG]
+    assert current[OvsDB.EXTERNAL_IDS]["opt1"] == "value1"
+    assert current[OvsDB.EXTERNAL_IDS]["opt2"] == "value2"

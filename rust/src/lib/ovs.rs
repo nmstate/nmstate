@@ -15,6 +15,8 @@ pub struct OvsDbGlobalConfig {
     pub external_ids: Option<HashMap<String, Option<String>>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub other_config: Option<HashMap<String, Option<String>>>,
+    #[serde(skip)]
+    pub(crate) prop_list: Vec<&'static str>,
 }
 
 impl OvsDbGlobalConfig {
@@ -69,17 +71,40 @@ impl OvsDbGlobalConfig {
         ret
     }
 
-    // Currently, we only support full editing on OVSDB.
-    //  * If OVSDB setting not mentioned, preserve old configure.
-    //  * If OVSDB is set, override.
+    // Partial editing for ovsdb:
+    //  * Merge desire with current and do overriding.
+    //  * Use `ovsdb: {}` to remove all settings.
+    //  * To remove a key from existing, use `foo: None`.
     pub(crate) fn merge(&mut self, current: &Self) {
-        if self.external_ids.is_some() || self.other_config.is_some() {
-            if self.external_ids.is_none() {
+        if self.prop_list.is_empty() {
+            // User want to remove all settings
+            self.external_ids = Some(HashMap::new());
+            self.other_config = Some(HashMap::new());
+            return;
+        }
+
+        if self.prop_list.contains(&"external_ids") {
+            if let Some(external_ids) = self.external_ids.as_mut() {
+                if !external_ids.is_empty() {
+                    merge_hashmap(external_ids, current.external_ids.as_ref());
+                }
+            } else {
                 self.external_ids = current.external_ids.clone();
             }
-            if self.other_config.is_none() {
+        } else {
+            self.external_ids = current.external_ids.clone();
+        }
+
+        if self.prop_list.contains(&"other_config") {
+            if let Some(other_config) = self.other_config.as_mut() {
+                if !other_config.is_empty() {
+                    merge_hashmap(other_config, current.other_config.as_ref());
+                }
+            } else {
                 self.other_config = current.other_config.clone();
             }
+        } else {
+            self.other_config = current.other_config.clone();
         }
     }
 }
@@ -93,9 +118,11 @@ impl<'de> Deserialize<'de> for OvsDbGlobalConfig {
         let v = serde_json::Value::deserialize(deserializer)?;
         if let Some(v) = v.as_object() {
             if let Some(v) = v.get("external_ids") {
+                ret.prop_list.push("external_ids");
                 ret.external_ids = Some(value_to_hash_map(v));
             }
             if let Some(v) = v.get("other_config") {
+                ret.prop_list.push("other_config");
                 ret.other_config = Some(value_to_hash_map(v));
             }
         } else {
@@ -177,4 +204,18 @@ fn value_to_hash_map(
         }
     }
     ret
+}
+
+fn merge_hashmap(
+    desired: &mut HashMap<String, Option<String>>,
+    current: Option<&HashMap<String, Option<String>>>,
+) {
+    if let Some(current) = current {
+        for (key, value) in current.iter() {
+            if !desired.contains_key(key) {
+                desired.insert(key.clone(), value.clone());
+            }
+        }
+    }
+    desired.retain(|_, v| !v.is_none());
 }

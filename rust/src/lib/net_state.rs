@@ -315,7 +315,9 @@ impl NetworkState {
                             &checkpoint,
                             self.memory_only,
                         )?;
-                        if ovsdb_is_running() {
+                        if desire_state_to_apply.prop_list.contains(&"ovsdb")
+                            && ovsdb_is_running()
+                        {
                             ovsdb_apply(
                                 &desire_state_to_apply,
                                 &cur_net_state,
