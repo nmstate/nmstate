@@ -27,6 +27,8 @@ mod mac_vtap;
 #[cfg(test)]
 mod ovs;
 #[cfg(test)]
+mod ovsdb;
+#[cfg(test)]
 mod route;
 #[cfg(test)]
 mod route_rule;
