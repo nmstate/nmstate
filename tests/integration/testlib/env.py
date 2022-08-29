@@ -25,7 +25,10 @@ gi.require_version("NM", "1.0")
 # It is required to state the NM version before importing it
 # But this break the flak8 rule: https://www.flake8rules.com/rules/E402.html
 # Use NOQA: E402 to suppress it.
+# pylint: disable=no-name-in-module
 from gi.repository import NM  # NOQA: E402
+
+# pylint: enable=no-name-in-module
 
 
 def is_fedora():

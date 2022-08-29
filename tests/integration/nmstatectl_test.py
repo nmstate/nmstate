@@ -125,7 +125,7 @@ def test_show_command_with_yaml_format():
     rc, out, err = ret
 
     assert rc == cmdlib.RC_SUCCESS, cmdlib.format_exec_cmd_result(ret)
-    current_state = yaml.load(out)
+    current_state = yaml.load(out, Loader=yaml.SafeLoader)
     state_match(LOOPBACK_CONFIG, current_state)
 
 
@@ -155,7 +155,7 @@ def test_show_command_with_long_running_config():
     rc, out, err = ret
 
     assert rc == cmdlib.RC_SUCCESS, cmdlib.format_exec_cmd_result(ret)
-    current_state = yaml.load(out)
+    current_state = yaml.load(out, Loader=yaml.SafeLoader)
     state_match(LOOPBACK_CONFIG, current_state)
 
 
@@ -164,7 +164,7 @@ def test_show_command_with_long_show_secrets():
     rc, out, err = ret
 
     assert rc == cmdlib.RC_SUCCESS, cmdlib.format_exec_cmd_result(ret)
-    current_state = yaml.load(out)
+    current_state = yaml.load(out, Loader=yaml.SafeLoader)
     state_match(LOOPBACK_CONFIG, current_state)
 
 
@@ -173,7 +173,7 @@ def test_show_command_with_short_running_config():
     rc, out, err = ret
 
     assert rc == cmdlib.RC_SUCCESS, cmdlib.format_exec_cmd_result(ret)
-    current_state = yaml.load(out)
+    current_state = yaml.load(out, Loader=yaml.SafeLoader)
     state_match(LOOPBACK_CONFIG, current_state)
 
 
@@ -182,7 +182,7 @@ def test_show_command_with_short_show_secrets():
     rc, out, err = ret
 
     assert rc == cmdlib.RC_SUCCESS, cmdlib.format_exec_cmd_result(ret)
-    current_state = yaml.load(out)
+    current_state = yaml.load(out, Loader=yaml.SafeLoader)
     state_match(LOOPBACK_CONFIG, current_state)
 
 
