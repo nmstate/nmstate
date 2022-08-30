@@ -46,10 +46,11 @@ from .testlib import assertlib
 from .testlib import cmdlib
 from .testlib import iprule
 from .testlib import statelib
+from .testlib.bondlib import bond_interface
 from .testlib.env import nm_major_minor_version
 from .testlib.nmplugin import disable_nm_plugin
-from .testlib.statelib import state_match
 from .testlib.ovslib import Bridge
+from .testlib.statelib import state_match
 from .testlib.vlan import vlan_interface
 
 
@@ -1231,3 +1232,20 @@ def test_change_ovs_intenral_iface_ext_id_with_br_port_not_mentioned(
     }
     libnmstate.apply(desired_state)
     assertlib.assert_state_match(desired_state)
+
+
+def test_move_ovs_system_interface_to_bond(bridge_with_ports):
+    with bond_interface(BOND1, ["eth1"], create=False) as desired_state:
+        desired_state[Interface.KEY].append(
+            {
+                Interface.NAME: BRIDGE1,
+                OVSBridge.CONFIG_SUBTREE: {
+                    OVSBridge.PORT_SUBTREE: [
+                        {
+                            OVSBridge.Port.NAME: PORT1,
+                        }
+                    ]
+                },
+            }
+        )
+        libnmstate.apply(desired_state)

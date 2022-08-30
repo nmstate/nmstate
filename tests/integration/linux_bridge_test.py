@@ -59,6 +59,7 @@ from .testlib.vlan import vlan_interface
 
 TEST_BRIDGE0 = "linux-br0"
 TEST_TAP0 = "test-tap0"
+TEST_BOND0 = "test-bond0"
 ETH1 = "eth1"
 # RFC 7042 reserved EUI-48 MAC range for document
 TEST_MAC_ADDRESS = "00:00:5E:00:53:01"
@@ -640,6 +641,18 @@ class TestVlanFiltering:
         current_state = show_only((TEST_BRIDGE0,))
         pretty_state = PrettyState(current_state)
         assert VLAN_FILTER_PORT_YAML in pretty_state.yaml
+
+    def test_move_bridge_port_to_bond(self, bridge_with_access_port_config):
+        with bond_interface(
+            TEST_BOND0, ["eth1"], create=False
+        ) as desired_state:
+            desired_state[Interface.KEY].append(
+                {
+                    Interface.NAME: TEST_BRIDGE0,
+                    LinuxBridge.CONFIG_SUBTREE: {LinuxBridge.PORT_SUBTREE: []},
+                }
+            )
+            libnmstate.apply(desired_state)
 
 
 @pytest.fixture
