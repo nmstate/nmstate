@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 // Copyright 2021 Red Hat, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -401,6 +402,7 @@ pub struct NmSettingConnection {
     pub autoconnect: Option<bool>,
     pub autoconnect_ports: Option<bool>,
     pub lldp: Option<bool>,
+    pub mptcp_flags: Option<u32>,
     _other: HashMap<String, zvariant::OwnedValue>,
 }
 
@@ -420,6 +422,7 @@ impl TryFrom<DbusDictionary> for NmSettingConnection {
                 _from_map!(v, "autoconnect-slaves", i32::try_from)?,
             ),
             lldp: _from_map!(v, "lldp", i32::try_from)?.map(|i| i == 1),
+            mptcp_flags: _from_map!(v, "mptcp-flags", u32::try_from)?,
             _other: v,
         })
     }
@@ -473,6 +476,9 @@ impl NmSettingConnection {
         }
         if let Some(v) = &self.lldp {
             ret.insert("lldp", zvariant::Value::new(v));
+        }
+        if let Some(v) = &self.mptcp_flags {
+            ret.insert("mptcp-flags", zvariant::Value::new(v));
         }
 
         ret.insert(

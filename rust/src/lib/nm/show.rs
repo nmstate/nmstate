@@ -27,6 +27,7 @@ use crate::{
         query_nmstate_wait_ip,
     },
     nm::lldp::{get_lldp, is_lldp_enabled},
+    nm::mptcp::is_mptcp_supported,
     nm::ovs::{
         get_ovs_dpdk_config, get_ovs_patch_config, nm_ovs_bridge_conf_get,
     },
@@ -68,6 +69,8 @@ pub(crate) fn nm_retrieve(
         create_index_for_nm_conns_by_ctrler_type(nm_saved_conns.as_slice());
     let nm_acs_name_type_index =
         create_index_for_nm_acs_by_name_type(nm_acs.as_slice());
+
+    let mptcp_supported = is_mptcp_supported(&nm_api);
 
     // Include disconnected interface as state:down
     // This is used for verify on `state: absent`
@@ -149,13 +152,21 @@ pub(crate) fn nm_retrieve(
                 } else {
                     None
                 };
-                if let Some(iface) = iface_get(
+                if let Some(mut iface) = iface_get(
                     nm_dev,
                     nm_conn,
                     nm_saved_conn,
                     port_saved_nm_conns.as_ref().map(Vec::as_ref),
                     lldp_neighbors,
                 ) {
+                    // Suppress mptcp only when MPTCP is not supported by
+                    // NetworkManager, so user will not get failure when they
+                    // apply the returned state.
+                    if !mptcp_supported {
+                        iface.base_iface_mut().prop_list.push("mptcp");
+                        iface.base_iface_mut().mptcp = None;
+                    }
+
                     debug!("Found interface {:?}", iface);
                     net_state.append_interface_data(iface);
                 }

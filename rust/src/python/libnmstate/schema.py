@@ -28,6 +28,7 @@ class Interface:
 
     IPV4 = "ipv4"
     IPV6 = "ipv6"
+    MPTCP = "mptcp"
 
     MAC = "mac-address"
     MTU = "mtu"
@@ -133,6 +134,7 @@ class InterfaceIP:
     AUTO_GATEWAY = "auto-gateway"
     AUTO_ROUTES = "auto-routes"
     AUTO_ROUTE_TABLE_ID = "auto-route-table-id"
+    MPTCP_FLAGS = "mptcp-flags"
 
 
 class InterfaceIPv4(InterfaceIP):
@@ -456,3 +458,11 @@ class HostNameState:
     KEY = "hostname"
     CONFIG = "config"
     RUNNING = "running"
+
+
+class Mptcp:
+    ADDRESS_FLAGS = "address-flags"
+    FLAG_SIGNAL = "signal"
+    FLAG_SUBFLOW = "subflow"
+    FLAG_BACKUP = "backup"
+    FLAG_FULLMESH = "fullmesh"

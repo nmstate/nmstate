@@ -2,7 +2,7 @@ use std::collections::{hash_map::Entry, HashMap};
 use std::str::FromStr;
 use std::time::Instant;
 
-use super::nm_dbus::{NmApi, NmConnection};
+use super::nm_dbus::{NmApi, NmConnection, NmSettingsConnectionFlag};
 
 use crate::{
     nm::checkpoint::{
@@ -86,6 +86,14 @@ pub(crate) fn delete_exist_profiles(
         } else {
             continue;
         };
+        // Volatile nm_conn will be automatically removed once deactivated.
+        // Hence no need to deactivate.
+        if exist_nm_conn
+            .flags
+            .contains(&NmSettingsConnectionFlag::Volatile)
+        {
+            continue;
+        }
         if !excluded_uuids.contains(&uuid)
             && changed_iface_name_types.contains(&(iface_name, nm_iface_type))
         {

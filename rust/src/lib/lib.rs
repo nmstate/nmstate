@@ -7,6 +7,7 @@ mod iface;
 mod ifaces;
 mod ip;
 mod lldp;
+mod mptcp;
 mod net_state;
 mod nispor;
 mod nm;
@@ -55,6 +56,7 @@ pub use crate::lldp::{
     LldpSystemCapabilities, LldpSystemCapability, LldpSystemDescription,
     LldpSystemName, LldpVlan, LldpVlans,
 };
+pub use crate::mptcp::{MptcpAddressFlag, MptcpConfig};
 pub use crate::net_state::NetworkState;
 pub use crate::ovs::{OvsDbGlobalConfig, OvsDbIfaceConfig};
 pub use crate::route::{RouteEntry, RouteState, Routes};

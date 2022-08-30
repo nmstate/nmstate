@@ -1,10 +1,11 @@
-use std::net::IpAddr;
+use std::net::{IpAddr, Ipv6Addr};
 use std::str::FromStr;
 
 use serde::{self, Deserialize, Deserializer, Serialize};
 
 use crate::{
-    BaseInterface, DnsClientState, ErrorKind, Interfaces, NmstateError,
+    BaseInterface, DnsClientState, ErrorKind, Interfaces, MptcpAddressFlag,
+    NmstateError,
 };
 
 const IPV4_ADDR_LEN: usize = 32;
@@ -373,10 +374,11 @@ impl InterfaceIpv6 {
         }
         if let Some(addrs) = self.addresses.as_mut() {
             addrs.retain(|addr| {
-                !is_ipv6_unicast_link_local(
-                    &addr.ip.to_string(),
-                    addr.prefix_length,
-                )
+                if let IpAddr::V6(ip_addr) = addr.ip {
+                    !is_ipv6_unicast_link_local(&ip_addr)
+                } else {
+                    false
+                }
             })
         };
         if let Some(addrs) = self.addresses.as_mut() {
@@ -400,18 +402,19 @@ impl InterfaceIpv6 {
     pub(crate) fn pre_edit_cleanup(&mut self) {
         if let Some(addrs) = self.addresses.as_mut() {
             addrs.retain(|addr| {
-                if is_ipv6_unicast_link_local(
-                    &addr.ip.to_string(),
-                    addr.prefix_length,
-                ) {
-                    log::warn!(
-                        "Ignoring IPv6 link local address {}/{}",
-                        &addr.ip,
-                        addr.prefix_length
-                    );
-                    false
+                if let IpAddr::V6(ip_addr) = addr.ip {
+                    if is_ipv6_unicast_link_local(&ip_addr) {
+                        log::warn!(
+                            "Ignoring IPv6 link local address {}/{}",
+                            &addr.ip,
+                            addr.prefix_length
+                        );
+                        false
+                    } else {
+                        true
+                    }
                 } else {
-                    true
+                    false
                 }
             })
         };
@@ -509,12 +512,14 @@ impl From<InterfaceIpv6> for InterfaceIp {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
 pub struct InterfaceIpAddr {
     pub ip: IpAddr,
     #[serde(deserialize_with = "crate::deserializer::u8_or_string")]
     pub prefix_length: u8,
+    #[serde(skip_serializing_if = "is_none_or_empty_mptcp_flags", default)]
+    pub mptcp_flags: Option<Vec<MptcpAddressFlag>>,
 }
 
 impl Default for InterfaceIpAddr {
@@ -522,6 +527,7 @@ impl Default for InterfaceIpAddr {
         Self {
             ip: IpAddr::V6(std::net::Ipv6Addr::new(0, 0, 0, 0, 0, 0, 0, 1)),
             prefix_length: 128,
+            mptcp_flags: None,
         }
     }
 }
@@ -530,14 +536,16 @@ pub(crate) fn is_ipv6_addr(addr: &str) -> bool {
     addr.contains(':')
 }
 
-// TODO: Rust offical has std::net::Ipv6Addr::is_unicast_link_local() in
-// experimental.
-fn is_ipv6_unicast_link_local(ip: &str, prefix: u8) -> bool {
-    // The unicast link local address range is fe80::/10.
-    is_ipv6_addr(ip)
-        && ip.len() >= 3
-        && ["fe8", "fe9", "fea", "feb"].contains(&&ip[..3])
-        && prefix >= 10
+// Copy from Rust official std::net::Ipv6Addr::is_unicast_link_local() which
+// is experimental.
+pub(crate) fn is_ipv6_unicast_link_local(ip: &Ipv6Addr) -> bool {
+    (ip.segments()[0] & 0xffc0) == 0xfe80
+}
+
+// Copy from Rust official std::net::Ipv6Addr::is_unicast_local() which
+// is experimental.
+pub(crate) fn is_ipv6_unicast_local(ip: &Ipv6Addr) -> bool {
+    (ip.segments()[0] & 0xfe00) == 0xfc00
 }
 
 impl std::convert::TryFrom<&str> for InterfaceIpAddr {
@@ -570,7 +578,11 @@ impl std::convert::TryFrom<&str> for InterfaceIpAddr {
                 e
             })?
         };
-        Ok(Self { ip, prefix_length })
+        Ok(Self {
+            ip,
+            prefix_length,
+            mptcp_flags: None,
+        })
     }
 }
 
@@ -901,5 +913,13 @@ fn ip_addr_to_ip_network(ip_addr: &str) -> String {
         }
     } else {
         ip_addr.to_string()
+    }
+}
+
+fn is_none_or_empty_mptcp_flags(v: &Option<Vec<MptcpAddressFlag>>) -> bool {
+    if let Some(v) = v {
+        v.is_empty()
+    } else {
+        true
     }
 }

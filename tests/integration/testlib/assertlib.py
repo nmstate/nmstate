@@ -63,9 +63,12 @@ def assert_state_match(desired_state_data):
         )
         if not desired_state.match(current_state):
             print(
-                "desired miss match with current, retrying:",
-                desired_state.state,
-                current_state.state,
+                "desired miss match with current, retrying, "
+                f"desire {desired_state.state}"
+            )
+            print(
+                "desired miss match with current, retrying, "
+                f"current {current_state.state}"
             )
             time.sleep(0.5)
     desired_state, current_state = _prepare_state_for_verify(

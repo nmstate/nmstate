@@ -13,6 +13,7 @@ mod infiniband;
 mod ip;
 mod lldp;
 mod mac_vlan;
+mod mptcp;
 mod nm_dbus;
 mod ovs;
 mod profile;

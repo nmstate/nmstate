@@ -11,6 +11,7 @@ use crate::{
     nm::ieee8021x::gen_nm_802_1x_setting,
     nm::infiniband::gen_nm_ib_setting,
     nm::ip::gen_nm_ip_setting,
+    nm::mptcp::apply_mptcp_conf,
     nm::ovs::{
         create_ovs_port_nm_conn, gen_nm_ovs_br_setting,
         gen_nm_ovs_ext_ids_setting, gen_nm_ovs_iface_setting,
@@ -181,6 +182,7 @@ pub(crate) fn iface_to_nm_connections(
         }
     }
     let mut nm_conn = exist_nm_conn.cloned().unwrap_or_default();
+    nm_conn.flags = Vec::new();
 
     // Use stable UUID if there is no existing NM connections where
     // we don't have possible UUID overlap there.
@@ -512,7 +514,12 @@ pub(crate) fn gen_nm_conn_setting(
     if let Some(lldp_conf) = iface.base_iface().lldp.as_ref() {
         nm_conn_set.lldp = Some(lldp_conf.enabled);
     }
+    if let Some(mptcp_conf) = iface.base_iface().mptcp.as_ref() {
+        apply_mptcp_conf(&mut nm_conn_set, mptcp_conf)?;
+    }
+
     nm_conn.connection = Some(nm_conn_set);
+
     Ok(())
 }
 
