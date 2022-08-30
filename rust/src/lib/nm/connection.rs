@@ -279,6 +279,14 @@ pub(crate) fn iface_to_nm_connections(
         _ => (),
     };
 
+    if nm_conn.controller_type() != Some(NM_SETTING_BRIDGE_SETTING_NAME) {
+        nm_conn.bridge_port = None;
+    }
+
+    if nm_conn.controller_type() != Some(NM_SETTING_OVS_PORT_SETTING_NAME) {
+        nm_conn.ovs_iface = None;
+    }
+
     if let Some(Interface::LinuxBridge(br_iface)) = ctrl_iface {
         gen_nm_br_port_setting(br_iface, &mut nm_conn);
     }
