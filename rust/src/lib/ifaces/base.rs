@@ -2,9 +2,11 @@ use log::error;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    ip::validate_wait_ip, ErrorKind, EthtoolConfig, Ieee8021XConfig,
-    InterfaceIpv4, InterfaceIpv6, InterfaceState, InterfaceType, LldpConfig,
-    NmstateError, OvsDbIfaceConfig, RouteEntry, RouteRuleEntry, WaitIp,
+    ip::validate_wait_ip,
+    mptcp::{mptcp_pre_edit_cleanup, mptcp_pre_verify_cleanup, validate_mptcp},
+    ErrorKind, EthtoolConfig, Ieee8021XConfig, InterfaceIpv4, InterfaceIpv6,
+    InterfaceState, InterfaceType, LldpConfig, MptcpConfig, NmstateError,
+    OvsDbIfaceConfig, RouteEntry, RouteRuleEntry, WaitIp,
 };
 
 // TODO: Use prop_list to Serialize like InterfaceIpv4 did
@@ -41,6 +43,8 @@ pub struct BaseInterface {
     pub ipv4: Option<InterfaceIpv4>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ipv6: Option<InterfaceIpv6>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mptcp: Option<MptcpConfig>,
     #[serde(skip_serializing_if = "Option::is_none")]
     // None here mean no change, empty string mean detach from controller.
     pub controller: Option<String>,
@@ -122,6 +126,9 @@ impl BaseInterface {
         if other.prop_list.contains(&"ethtool") {
             self.ethtool = other.ethtool.clone();
         }
+        if other.prop_list.contains(&"mptcp") {
+            self.mptcp = other.mptcp.clone();
+        }
         if other.prop_list.contains(&"wait_ip") {
             self.wait_ip = other.wait_ip;
         }
@@ -144,6 +151,9 @@ impl BaseInterface {
                     self.ipv6 = other.ipv6.clone();
                 }
             }
+        }
+        if other.prop_list.contains(&"mptcp") {
+            self.mptcp = other.mptcp.clone();
         }
         for other_prop_name in &other.prop_list {
             if !self.prop_list.contains(other_prop_name) {
@@ -181,6 +191,9 @@ impl BaseInterface {
         if let Some(ref mut ethtool_conf) = self.ethtool {
             ethtool_conf.pre_edit_cleanup();
         }
+
+        mptcp_pre_edit_cleanup(self);
+
         Ok(())
     }
 
@@ -216,6 +229,7 @@ impl BaseInterface {
         if let Some(ethtool_conf) = self.ethtool.as_mut() {
             ethtool_conf.pre_verify_cleanup();
         }
+        mptcp_pre_verify_cleanup(self);
     }
 
     fn has_controller(&self) -> bool {
@@ -281,6 +295,7 @@ impl BaseInterface {
         current: Option<&Self>,
     ) -> Result<(), NmstateError> {
         self.validate_mtu(current)?;
+        validate_mptcp(self)?;
         validate_wait_ip(self)
     }
 

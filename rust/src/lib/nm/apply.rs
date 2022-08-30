@@ -11,6 +11,9 @@ use crate::{
     },
     nm::device::create_index_for_nm_devs,
     nm::error::nm_error_to_nmstate,
+    nm::mptcp::{
+        is_mptcp_flags_changed, is_mptcp_supported, remove_nm_mptcp_set,
+    },
     nm::profile::{
         activate_nm_profiles, deactivate_nm_profiles, delete_exist_profiles,
         extend_timeout_if_required, get_exist_profile, save_nm_profiles,
@@ -183,6 +186,8 @@ fn apply_single_state(
         })
         .collect();
 
+    let mptcp_supported = is_mptcp_supported(nm_api);
+
     let ifaces = net_state.interfaces.to_vec();
 
     for iface in ifaces.iter() {
@@ -205,7 +210,7 @@ fn apply_single_state(
                     }
                 }
             }
-            for nm_conn in iface_to_nm_connections(
+            for mut nm_conn in iface_to_nm_connections(
                 iface,
                 ctrl_iface,
                 &exist_nm_conns,
@@ -213,6 +218,17 @@ fn apply_single_state(
                 is_veth_peer_in_desire(iface, ifaces.as_slice()),
                 cur_net_state,
             )? {
+                if let Some(mptcp_conf) = iface.base_iface().mptcp.as_ref() {
+                    if !mptcp_supported {
+                        log::warn!(
+                            "MPTCP not supported by NetworkManager, \
+                            Ignoring MPTCP config {:?}",
+                            mptcp_conf
+                        );
+                        remove_nm_mptcp_set(&mut nm_conn);
+                    }
+                }
+
                 if iface.is_up() {
                     nm_conns_to_activate.push(nm_conn.clone());
                 }
@@ -374,6 +390,9 @@ fn delete_orphan_ports(
 // * NM has problem on remove routes, we need to deactivate it first
 //  https://bugzilla.redhat.com/1837254
 // * NM cannot change VRF table ID, so we deactivate first
+// * VLAN ID changed.
+// * Veth peer changed.
+// * NM cannot reapply changes to MPTCP flags.
 fn gen_nm_conn_need_to_deactivate_first<'a>(
     nm_conns_to_activate: &[NmConnection],
     activated_nm_conns: &[&'a NmConnection],
@@ -395,6 +414,7 @@ fn gen_nm_conn_need_to_deactivate_first<'a>(
                     || is_vlan_id_changed(nm_conn, activated_nm_con)
                     || is_vxlan_id_changed(nm_conn, activated_nm_con)
                     || is_veth_peer_changed(nm_conn, activated_nm_con)
+                    || is_mptcp_flags_changed(nm_conn, activated_nm_con)
                 {
                     ret.push(activated_nm_con);
                 }

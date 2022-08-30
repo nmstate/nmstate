@@ -123,7 +123,7 @@ def test_dns_edit(eth1_up):
     with example_state(
         "dns_edit_eth1.yml", cleanup="dns_remove.yml"
     ) as desired_state:
-        assertlib.assert_state(desired_state)
+        assertlib.assert_state_match(desired_state)
 
     current_state = netinfo.show()
     assert current_state.get(DNS.KEY, {}).get(DNS.CONFIG, {}) == {}

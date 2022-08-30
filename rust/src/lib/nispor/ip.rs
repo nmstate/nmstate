@@ -1,6 +1,9 @@
 use std::str::FromStr;
 
-use crate::{InterfaceIpAddr, InterfaceIpv4, InterfaceIpv6};
+use crate::{
+    nispor::mptcp::get_mptcp_flags, InterfaceIpAddr, InterfaceIpv4,
+    InterfaceIpv6,
+};
 
 pub(crate) fn np_ipv4_to_nmstate(
     np_iface: &nispor::Iface,
@@ -28,6 +31,11 @@ pub(crate) fn np_ipv4_to_nmstate(
                 Ok(i) => addresses.push(InterfaceIpAddr {
                     ip: i,
                     prefix_length: np_addr.prefix_len,
+                    mptcp_flags: Some(get_mptcp_flags(
+                        np_iface,
+                        np_addr.address.as_str(),
+                    )),
+                    ..Default::default()
                 }),
                 Err(e) => {
                     log::warn!(
@@ -76,6 +84,11 @@ pub(crate) fn np_ipv6_to_nmstate(
                 Ok(i) => addresses.push(InterfaceIpAddr {
                     ip: i,
                     prefix_length: np_addr.prefix_len,
+                    mptcp_flags: Some(get_mptcp_flags(
+                        np_iface,
+                        np_addr.address.as_str(),
+                    )),
+                    ..Default::default()
                 }),
                 Err(e) => {
                     log::warn!(

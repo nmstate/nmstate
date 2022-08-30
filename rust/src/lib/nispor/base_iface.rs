@@ -1,6 +1,7 @@
 use crate::{
     nispor::ethtool::np_ethtool_to_nmstate,
     nispor::ip::{np_ipv4_to_nmstate, np_ipv6_to_nmstate},
+    nispor::mptcp::get_iface_mptcp_conf,
     BaseInterface, InterfaceState, InterfaceType,
 };
 
@@ -116,6 +117,8 @@ pub(crate) fn np_iface_to_base_iface(
         );
         base_iface.state = InterfaceState::Ignore;
     }
+
+    base_iface.mptcp = get_iface_mptcp_conf(&base_iface);
 
     base_iface
 }
