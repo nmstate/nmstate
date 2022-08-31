@@ -809,3 +809,24 @@ def test_merge_ip_enabled_property_from_current(setup_eth1_static_ip):
         InterfaceIPv6.ENABLED
     ] = True
     assertlib.assert_state_match(desired_state)
+
+
+@pytest.mark.tier1
+def test_apply_ip_enabled_but_empty(eth1_up):
+    desired_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: "eth1",
+                Interface.IPV6: {
+                    InterfaceIPv6.ENABLED: True,
+                    InterfaceIPv6.DHCP: False,
+                    InterfaceIPv6.AUTOCONF: False,
+                },
+            }
+        ]
+    }
+    libnmstate.apply(desired_state)
+    desired_state[Interface.KEY][0][Interface.IPV6][
+        InterfaceIPv6.ENABLED
+    ] = True
+    assertlib.assert_state_match(desired_state)
