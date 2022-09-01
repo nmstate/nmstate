@@ -275,6 +275,9 @@ impl NmConnection {
         if let Some(ib) = &self.infiniband {
             sections.push(("infiniband", ib.to_keyfile()?));
         }
+        if let Some(ovs_eids) = &self.ovs_ext_ids {
+            sections.push(("ovs-external-ids", ovs_eids.to_keyfile()?));
+        }
 
         keyfile_sections_to_string(&sections)
     }

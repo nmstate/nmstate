@@ -237,6 +237,18 @@ impl NmSettingOvsExtIds {
         }));
         Ok(ret)
     }
+
+    pub(crate) fn to_keyfile(
+        &self,
+    ) -> Result<HashMap<String, zvariant::Value>, NmError> {
+        let mut ret = HashMap::new();
+        if let Some(data) = self.data.as_ref() {
+            for (k, v) in data {
+                ret.insert(format!("data.{}", k), zvariant::Value::new(v));
+            }
+        }
+        Ok(ret)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Default, Deserialize)]
