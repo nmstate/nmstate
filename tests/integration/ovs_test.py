@@ -48,6 +48,7 @@ from .testlib import iprule
 from .testlib import statelib
 from .testlib.bondlib import bond_interface
 from .testlib.env import nm_major_minor_version
+from .testlib.genconf import gen_conf_apply
 from .testlib.nmplugin import disable_nm_plugin
 from .testlib.ovslib import Bridge
 from .testlib.statelib import state_match
@@ -1249,3 +1250,43 @@ def test_move_ovs_system_interface_to_bond(bridge_with_ports):
             }
         )
         libnmstate.apply(desired_state)
+
+
+def test_genconf_ovsdb_iface_external_ids(eth1_up):
+    desired_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: BRIDGE1,
+                Interface.TYPE: InterfaceType.OVS_BRIDGE,
+                OVSBridge.CONFIG_SUBTREE: {
+                    OVSBridge.PORT_SUBTREE: [
+                        {
+                            OVSBridge.Port.NAME: PORT1,
+                        },
+                        {
+                            OVSBridge.Port.NAME: "eth1",
+                        },
+                    ]
+                },
+                OvsDB.OVS_DB_SUBTREE: {
+                    OvsDB.EXTERNAL_IDS: {"foo": "abe", "bak": 3}
+                },
+            },
+            {
+                Interface.NAME: "eth1",
+                Interface.TYPE: InterfaceType.ETHERNET,
+                OvsDB.OVS_DB_SUBTREE: {
+                    OvsDB.EXTERNAL_IDS: {"foo": "abd", "bak": 2}
+                },
+            },
+            {
+                Interface.NAME: PORT1,
+                Interface.TYPE: InterfaceType.OVS_INTERFACE,
+                OvsDB.OVS_DB_SUBTREE: {
+                    OvsDB.EXTERNAL_IDS: {"foo": "abc", "bak": 1}
+                },
+            },
+        ]
+    }
+    with gen_conf_apply(desired_state):
+        assertlib.assert_state_match(desired_state)
