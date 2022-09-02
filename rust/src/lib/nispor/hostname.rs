@@ -76,7 +76,7 @@ pub(crate) fn set_running_hostname(hostname: &str) -> Result<(), NmstateError> {
     }
 
     let os_str = std::ffi::OsStr::new(hostname);
-    if nix::unistd::sethostname(&os_str).is_err() {
+    if nix::unistd::sethostname(os_str).is_err() {
         let e = NmstateError::new(
             ErrorKind::InvalidArgument,
             format!(
