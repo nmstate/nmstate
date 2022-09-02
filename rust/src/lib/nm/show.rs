@@ -223,7 +223,6 @@ fn nm_conn_to_base_iface(
         base_iface.prop_list = vec![
             "name",
             "state",
-            "iface_type",
             "ipv4",
             "ipv6",
             "ieee8021x",
@@ -233,6 +232,11 @@ fn nm_conn_to_base_iface(
         ];
         base_iface.state = InterfaceState::Up;
         base_iface.iface_type = nm_dev_iface_type_to_nmstate(nm_dev);
+        if base_iface.iface_type.is_userspace() {
+            // Only override iface type for user space. For other interface,
+            // we trust nispor to set the correct interface type.
+            base_iface.prop_list.push("iface_type");
+        }
         base_iface.ipv4 = ipv4;
         base_iface.ipv6 = ipv6;
         base_iface.wait_ip =
@@ -424,7 +428,7 @@ fn nm_dev_to_nm_iface(nm_dev: &NmDevice) -> Option<Interface> {
     } else {
         base_iface.name = nm_dev.name.clone();
     }
-    base_iface.prop_list = vec!["name", "iface_type", "state"];
+    base_iface.prop_list = vec!["name", "state"];
     match nm_dev.state {
         NmDeviceState::Unmanaged => {
             if !nm_dev.real {
@@ -437,7 +441,7 @@ fn nm_dev_to_nm_iface(nm_dev: &NmDevice) -> Option<Interface> {
         _ => base_iface.state = InterfaceState::Up,
     }
     base_iface.iface_type = nm_dev_iface_type_to_nmstate(nm_dev);
-    Some(match &base_iface.iface_type {
+    let mut iface = match &base_iface.iface_type {
         InterfaceType::Ethernet => Interface::Ethernet({
             let mut iface = EthernetInterface::new();
             iface.base = base_iface;
@@ -522,5 +526,11 @@ fn nm_dev_to_nm_iface(nm_dev: &NmDevice) -> Option<Interface> {
             iface.base = base_iface;
             iface
         }),
-    })
+    };
+    if iface.iface_type().is_userspace() {
+        // Only override iface type for user space. For other interface,
+        // we trust nispor to set the correct interface type.
+        iface.base_iface_mut().prop_list.push("iface_type");
+    }
+    Some(iface)
 }

@@ -353,6 +353,8 @@ impl Interface {
             Self::Ethernet(iface) => {
                 let mut new_iface = EthernetInterface::new();
                 new_iface.base = iface.base.clone_name_type_only();
+                // Do not use veth interface type when clone internally
+                new_iface.base.iface_type = InterfaceType::Ethernet;
                 Self::Ethernet(new_iface)
             }
             Self::Vlan(iface) => {
@@ -665,9 +667,7 @@ impl Interface {
     pub(crate) fn pre_edit_cleanup(&mut self) -> Result<(), NmstateError> {
         self.base_iface_mut().pre_edit_cleanup()?;
         if let Interface::Ethernet(iface) = self {
-            if iface.veth.is_some() {
-                iface.base.iface_type = InterfaceType::Veth;
-            }
+            iface.pre_edit_cleanup()?;
         }
         if let Interface::OvsInterface(iface) = self {
             iface.pre_edit_cleanup()?;

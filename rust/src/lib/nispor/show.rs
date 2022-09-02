@@ -30,8 +30,7 @@ pub(crate) fn nispor_retrieve(
     let np_state = nispor::NetState::retrieve().map_err(np_error_to_nmstate)?;
 
     for (_, np_iface) in np_state.ifaces.iter() {
-        let mut base_iface =
-            np_iface_to_base_iface(np_iface, running_config_only);
+        let base_iface = np_iface_to_base_iface(np_iface, running_config_only);
         // The `ovs-system` is reserved for OVS kernel datapath
         if np_iface.name == "ovs-system" {
             continue;
@@ -60,7 +59,6 @@ pub(crate) fn nispor_retrieve(
                 np_ethernet_to_nmstate(np_iface, base_iface),
             ),
             InterfaceType::Veth => {
-                base_iface.iface_type = InterfaceType::Ethernet;
                 Interface::Ethernet(np_veth_to_nmstate(np_iface, base_iface))
             }
             InterfaceType::Vlan => {

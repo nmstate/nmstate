@@ -1,4 +1,4 @@
-use crate::EthernetInterface;
+use crate::{ErrorKind, EthernetInterface, Interfaces};
 
 #[test]
 fn test_ethernet_stringlized_attributes() {
@@ -37,4 +37,42 @@ ethernet:
     assert_eq!(vf_conf.max_tx_rate, Some(101));
     assert_eq!(vf_conf.vlan_id, Some(102));
     assert_eq!(vf_conf.qos, Some(103));
+}
+
+#[test]
+fn test_veth_change_peer_away_from_ignored_peer() {
+    let desired: Interfaces = serde_yaml::from_str(
+        r#"---
+- name: veth1
+  type: veth
+  state: up
+  veth:
+    peer: newpeer
+"#,
+    )
+    .unwrap();
+    let current: Interfaces = serde_yaml::from_str(
+        r#"---
+- name: veth1
+  type: veth
+  state: up
+  veth:
+    peer: veth1peer
+
+- name: veth1peer
+  type: veth
+  state: ignore
+  veth:
+    peer: veth1
+"#,
+    )
+    .unwrap();
+
+    let ignored_kernel_ifaces = vec!["veth1peer".to_string()];
+
+    let result = desired.pre_ignore_check(&current, &ignored_kernel_ifaces);
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+    }
 }

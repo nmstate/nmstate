@@ -152,8 +152,15 @@ pub(crate) fn iface_to_nm_connections(
                 if let Some(cur_iface) =
                     cur_net_state.get_kernel_iface_with_route(iface.name())
                 {
+                    // Do no try to persistent veth config of current interface
+                    let mut iface = cur_iface;
+                    if let Interface::Ethernet(eth_iface) = &mut iface {
+                        eth_iface.veth = None;
+                        eth_iface.base.iface_type = InterfaceType::Ethernet;
+                    }
+
                     return iface_to_nm_connections(
-                        &cur_iface,
+                        &iface,
                         ctrl_iface,
                         exist_nm_conns,
                         nm_ac_uuids,
@@ -345,9 +352,28 @@ pub(crate) fn create_index_for_nm_conns_by_name_type(
     let mut ret: HashMap<(&str, &str), Vec<&NmConnection>> = HashMap::new();
     for nm_conn in nm_conns {
         if let Some(iface_name) = nm_conn.iface_name() {
-            if let Some(mut nm_iface_type) = nm_conn.iface_type() {
+            if let Some(nm_iface_type) = nm_conn.iface_type() {
                 if nm_iface_type == NM_SETTING_VETH_SETTING_NAME {
-                    nm_iface_type = NM_SETTING_WIRED_SETTING_NAME;
+                    match ret.entry((iface_name, NM_SETTING_WIRED_SETTING_NAME))
+                    {
+                        Entry::Occupied(o) => {
+                            o.into_mut().push(nm_conn);
+                        }
+                        Entry::Vacant(v) => {
+                            v.insert(vec![nm_conn]);
+                        }
+                    };
+                }
+                if nm_iface_type == NM_SETTING_WIRED_SETTING_NAME {
+                    match ret.entry((iface_name, NM_SETTING_VETH_SETTING_NAME))
+                    {
+                        Entry::Occupied(o) => {
+                            o.into_mut().push(nm_conn);
+                        }
+                        Entry::Vacant(v) => {
+                            v.insert(vec![nm_conn]);
+                        }
+                    };
                 }
                 match ret.entry((iface_name, nm_iface_type)) {
                     Entry::Occupied(o) => {
@@ -468,13 +494,13 @@ pub(crate) fn gen_nm_conn_setting(
         } else {
             NmApi::uuid_gen()
         });
-        if new_nm_conn_set.iface_type.is_none() {
-            // The `get_exist_profile()` already confirmed the existing
-            // profile has correct `iface_type`. We should not override it.
-            // The use case is, existing connection is veth, but user desire
-            // ethernet interface, we should use existing interface type.
-            new_nm_conn_set.iface_type =
-                Some(iface_type_to_nm(&iface.iface_type())?);
+        new_nm_conn_set.iface_type =
+            Some(iface_type_to_nm(&iface.iface_type())?);
+        if let Interface::Ethernet(eth_iface) = iface {
+            if eth_iface.veth.is_some() {
+                new_nm_conn_set.iface_type =
+                    Some(NM_SETTING_VETH_SETTING_NAME.to_string());
+            }
         }
         new_nm_conn_set
     };

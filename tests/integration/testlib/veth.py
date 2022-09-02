@@ -53,7 +53,7 @@ def remove_veth_pair(nic, peer_ns):
 
 
 @contextmanager
-def veth_interface(ifname, peer):
+def veth_interface(ifname, peer, kernel_mode=False):
     d_state = {
         Interface.KEY: [
             {
@@ -67,7 +67,7 @@ def veth_interface(ifname, peer):
         ]
     }
     try:
-        libnmstate.apply(d_state)
+        libnmstate.apply(d_state, kernel_only=kernel_mode)
         yield d_state
     finally:
         d_state[Interface.KEY][0][Interface.STATE] = InterfaceState.ABSENT
@@ -78,4 +78,4 @@ def veth_interface(ifname, peer):
                 Interface.STATE: InterfaceState.ABSENT,
             }
         )
-        libnmstate.apply(d_state)
+        libnmstate.apply(d_state, kernel_only=kernel_mode, verify_change=False)

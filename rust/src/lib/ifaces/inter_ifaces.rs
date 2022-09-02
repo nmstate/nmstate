@@ -47,20 +47,9 @@ impl<'de> Deserialize<'de> for Interfaces {
         D: Deserializer<'de>,
     {
         let mut ret = Self::new();
-        let ifaces =
-            <Vec<Interface> as Deserialize>::deserialize(deserializer)?;
-        for mut iface in ifaces {
-            // Unless user place veth configure in ethernet interface,
-            // it means user just applying the return of
-            // NetworkState.retrieve(). If user would like to change
-            // veth configuration, it should use veth interface
-            // type.
-            if iface.iface_type() == InterfaceType::Ethernet {
-                if let Interface::Ethernet(ref mut eth_iface) = iface {
-                    eth_iface.veth_sanitize();
-                }
-            }
-            ret.push(iface)
+        for iface in <Vec<Interface> as Deserialize>::deserialize(deserializer)?
+        {
+            ret.push(iface);
         }
         Ok(ret)
     }
@@ -300,7 +289,70 @@ impl Interfaces {
                     iface.remove_port(ignore_port);
                 }
             }
+            if iface.iface_type() == InterfaceType::Veth {
+                if let Interface::Ethernet(eth_iface) = iface {
+                    if let Some(veth_conf) = eth_iface.veth.as_ref() {
+                        if kernel_iface_names.contains(veth_conf.peer.as_str())
+                        {
+                            log::info!(
+                                "Veth interface {} is holding ignored peer {}",
+                                eth_iface.base.name,
+                                veth_conf.peer.as_str()
+                            );
+                            eth_iface.veth = None;
+                            eth_iface.base.iface_type = InterfaceType::Ethernet;
+                        }
+                    }
+                }
+            }
         }
+    }
+
+    // Not allowing changing veth peer away from ignored peer unless previous
+    // peer changed from ignore to managed
+    pub(crate) fn pre_ignore_check(
+        &self,
+        current: &Self,
+        ignored_kernel_iface_names: &[String],
+    ) -> Result<(), NmstateError> {
+        for iface in self
+            .kernel_ifaces
+            .values()
+            .filter(|i| i.iface_type() == InterfaceType::Veth)
+        {
+            if let (
+                Interface::Ethernet(des_iface),
+                Some(Interface::Ethernet(cur_iface)),
+            ) = (iface, current.get_iface(iface.name(), InterfaceType::Veth))
+            {
+                if let (Some(des_peer), Some(cur_peer)) = (
+                    des_iface.veth.as_ref().map(|v| v.peer.as_str()),
+                    cur_iface.veth.as_ref().map(|v| v.peer.as_str()),
+                ) {
+                    if des_peer != cur_peer
+                        && ignored_kernel_iface_names
+                            .contains(&cur_peer.to_string())
+                    {
+                        let e = NmstateError::new(
+                            ErrorKind::InvalidArgument,
+                            format!(
+                                "Veth interface {} is currently holding \
+                                peer {} which is marked as ignored. \
+                                Hence not allowing changing its peer \
+                                to {}. Please remove this veth pair \
+                                before changing veth peer",
+                                iface.name(),
+                                cur_peer,
+                                des_peer
+                            ),
+                        );
+                        log::error!("{}", e);
+                        return Err(e);
+                    }
+                }
+            }
+        }
+        Ok(())
     }
 
     pub(crate) fn gen_state_for_apply(
@@ -342,7 +394,9 @@ impl Interfaces {
                 match current.get_iface(iface.name(), iface.iface_type()) {
                     Some(cur_iface) => {
                         let mut chg_iface = iface.clone();
-                        chg_iface.set_iface_type(cur_iface.iface_type());
+                        if cur_iface.iface_type() == InterfaceType::Unknown {
+                            chg_iface.set_iface_type(cur_iface.iface_type());
+                        }
                         chg_iface.pre_edit_cleanup()?;
                         info!(
                             "Changing interface {} with type {}, \
@@ -654,15 +708,17 @@ fn gen_ifaces_to_del(
     let mut del_ifaces = Vec::new();
     let cur_ifaces = cur_ifaces.to_vec();
     for cur_iface in cur_ifaces {
-        // Internally we use ethernet type for veth, hence we should
-        // change desire before searching.
         let del_iface_type = match del_iface.iface_type() {
+            InterfaceType::Veth => InterfaceType::Ethernet,
+            t => t,
+        };
+        let cur_iface_type = match cur_iface.iface_type() {
             InterfaceType::Veth => InterfaceType::Ethernet,
             t => t,
         };
         if cur_iface.name() == del_iface.name()
             && (del_iface_type == InterfaceType::Unknown
-                || del_iface_type == cur_iface.iface_type())
+                || del_iface_type == cur_iface_type)
         {
             let mut tmp_iface = del_iface.clone();
             tmp_iface.base_iface_mut().iface_type = cur_iface.iface_type();
