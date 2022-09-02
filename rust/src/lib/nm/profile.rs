@@ -27,8 +27,6 @@ pub(crate) fn get_exist_profile<'a>(
     let mut found_nm_conns: Vec<&NmConnection> = Vec::new();
     for exist_nm_conn in exist_nm_conns {
         let nm_iface_type = if let Ok(t) = iface_type_to_nm(iface_type) {
-            // The iface_type will never be veth as top level code
-            // `pre_edit_clean()` has confirmed so.
             t
         } else {
             continue;

@@ -47,7 +47,6 @@ fn net_state_to_nispor(
             }
             np_ifaces.push(nmstate_iface_to_np(iface, np_iface_type)?);
         } else if iface.is_absent() {
-            println!("del {:?} {:?}", iface.name(), iface.iface_type());
             let mut iface_conf = nispor::IfaceConf::default();
             iface_conf.name = iface.name().to_string();
             iface_conf.iface_type =

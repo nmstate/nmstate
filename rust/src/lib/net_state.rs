@@ -254,6 +254,11 @@ impl NetworkState {
             )
         }
 
+        desire_state_to_apply.interfaces.pre_ignore_check(
+            &cur_net_state.interfaces,
+            &ignored_kernel_ifaces,
+        )?;
+
         desire_state_to_apply.interfaces.remove_ignored_ifaces(
             &ignored_kernel_ifaces,
             &ignored_user_ifaces,

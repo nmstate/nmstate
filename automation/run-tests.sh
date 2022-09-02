@@ -201,6 +201,7 @@ function prepare_network_environment {
             exec_cmd "ip link set ${peer} up"
             exec_cmd "ip link set ${device} up"
             exec_cmd "nmcli device set ${device} managed yes"
+            exec_cmd "nmcli device set ${peer} managed no"
         fi
     done
     set -e

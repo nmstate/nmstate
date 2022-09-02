@@ -45,11 +45,32 @@ impl EthernetInterface {
         }
     }
 
+    pub(crate) fn pre_edit_cleanup(&mut self) -> Result<(), NmstateError> {
+        if self.base.iface_type != InterfaceType::Veth && self.veth.is_some() {
+            let e = NmstateError::new(
+                ErrorKind::InvalidArgument,
+                format!(
+                    "Interface {} is holding veth configuration \
+                    with `type: ethernet`. Please change to `type: veth`",
+                    self.base.name.as_str()
+                ),
+            );
+            log::error!("{}", e);
+            Err(e)
+        } else {
+            Ok(())
+        }
+    }
+
     pub(crate) fn pre_verify_cleanup(&mut self) {
         if let Some(eth_conf) = self.ethernet.as_mut() {
             eth_conf.pre_verify_cleanup()
         }
-        self.base.iface_type = InterfaceType::Ethernet;
+        if self.base.iface_type == InterfaceType::Ethernet {
+            self.veth = None;
+        } else {
+            self.base.iface_type = InterfaceType::Ethernet;
+        }
     }
 
     pub fn new() -> Self {
@@ -75,20 +96,6 @@ impl EthernetInterface {
             }
         }
         Ok(())
-    }
-
-    // veth config is ignored unless iface type is veth
-    pub(crate) fn veth_sanitize(&mut self) {
-        if self.base.iface_type == InterfaceType::Ethernet
-            && self.veth.is_some()
-        {
-            log::warn!(
-                "Veth configuration is ignored, please set interface type \
-                    to InterfaceType::Veth (veth) to change veth \
-                    configuration"
-            );
-            self.veth = None;
-        }
     }
 }
 
@@ -221,6 +228,16 @@ pub(crate) fn handle_veth_peer_changes(
                     del_ifaces.push(new_absent_eth_iface(
                         cur_veth_conf.peer.as_str(),
                     ));
+                }
+            }
+        }
+    }
+
+    for iface in chg_ifaces.kernel_ifaces.values_mut() {
+        if iface.iface_type() == InterfaceType::Veth {
+            if let Interface::Ethernet(eth_iface) = iface {
+                if eth_iface.veth.is_none() {
+                    eth_iface.base.iface_type = InterfaceType::Ethernet;
                 }
             }
         }
