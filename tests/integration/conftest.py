@@ -78,7 +78,7 @@ def test_env_setup():
     _remove_dns_route_route_rule()
     _ethx_init()
     yield
-    libnmstate.apply(old_state, verify_change=False)
+    restore_old_state(old_state)
     _diff_initial_state(old_state)
 
 
@@ -190,3 +190,33 @@ def _get_osname():
             if line.startswith("PRETTY_NAME="):
                 return line.split("=", maxsplit=1)[1].strip().strip('"')
     return ""
+
+
+# Only restore the interface with IPv4/IPv6 gateway with IP/DNS config only
+# For test machine, it is expected to lose configurations
+def restore_old_state(old_state):
+    gw_routes = [
+        rt
+        for rt in old_state["routes"].get("config", [])
+        if rt["destination"] in ("0.0.0.0/0", "::/0")
+    ]
+    gw_ifaces = [rt["next-hop-interface"] for rt in gw_routes]
+    desire_state = {
+        "interfaces": [],
+        "routes": {"config": gw_routes},
+        "dns-resolver": old_state.get("dns-resolver", {}),
+    }
+    for iface_name in gw_ifaces:
+        for iface in old_state["interfaces"]:
+            if iface["name"] in gw_ifaces:
+                if iface["state"] == "up":
+                    desire_state["interfaces"].append(
+                        {
+                            "name": iface["name"],
+                            "type": iface["type"],
+                            "ipv4": iface["ipv4"],
+                            "ipv6": iface["ipv6"],
+                        }
+                    )
+    if len(desire_state["interfaces"]):
+        libnmstate.apply(desire_state, verify_change=False)
