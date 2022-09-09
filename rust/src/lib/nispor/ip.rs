@@ -23,7 +23,7 @@ pub(crate) fn np_ipv4_to_nmstate(
         Some(ip)
     } else {
         // IP might just disabled
-        if np_iface.controller == None {
+        if np_iface.controller.is_none() {
             Some(InterfaceIpv4 {
                 enabled: false,
                 prop_list: vec!["enabled"],
@@ -58,7 +58,7 @@ pub(crate) fn np_ipv6_to_nmstate(
         Some(ip)
     } else {
         // IP might just disabled
-        if np_iface.controller == None {
+        if np_iface.controller.is_none() {
             Some(InterfaceIpv6 {
                 enabled: false,
                 prop_list: vec!["enabled"],
