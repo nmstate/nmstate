@@ -24,6 +24,7 @@ import yaml
 
 import libnmstate
 
+from libnmstate.error import NmstateValueError
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
@@ -359,6 +360,35 @@ interfaces:
                             Interface.NAME: TEST_BOND0_VLAN,
                             Interface.STATE: InterfaceState.ABSENT,
                         },
+                    ]
+                }
+            )
+
+    def test_change_vrf_without_table_id(self, vrf0_with_port0):
+        libnmstate.apply(
+            {
+                Interface.KEY: [
+                    {
+                        Interface.NAME: TEST_VRF0,
+                        VRF.CONFIG_SUBTREE: {
+                            VRF.PORT_SUBTREE: [TEST_VRF_PORT0],
+                        },
+                    }
+                ]
+            }
+        )
+
+    def test_new_vrf_without_table_id(self):
+        with pytest.raises(NmstateValueError):
+            libnmstate.apply(
+                {
+                    Interface.KEY: [
+                        {
+                            Interface.NAME: TEST_VRF0,
+                            VRF.CONFIG_SUBTREE: {
+                                VRF.PORT_SUBTREE: [TEST_VRF_PORT0],
+                            },
+                        }
                     ]
                 }
             )

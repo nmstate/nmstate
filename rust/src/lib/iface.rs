@@ -642,7 +642,10 @@ impl Interface {
         }
     }
 
-    pub(crate) fn pre_verify_cleanup(&mut self) {
+    pub(crate) fn pre_verify_cleanup(
+        &mut self,
+        pre_apply_current: Option<&Self>,
+    ) {
         self.base_iface_mut().pre_verify_cleanup();
         match self {
             Self::LinuxBridge(ref mut iface) => {
@@ -658,13 +661,16 @@ impl Interface {
                 iface.pre_verify_cleanup();
             }
             Self::Vrf(ref mut iface) => {
-                iface.pre_verify_cleanup();
+                iface.pre_verify_cleanup(pre_apply_current);
             }
             _ => (),
         }
     }
 
-    pub(crate) fn pre_edit_cleanup(&mut self) -> Result<(), NmstateError> {
+    pub(crate) fn pre_edit_cleanup(
+        &mut self,
+        current: Option<&Self>,
+    ) -> Result<(), NmstateError> {
         self.base_iface_mut().pre_edit_cleanup()?;
         if let Interface::Ethernet(iface) = self {
             iface.pre_edit_cleanup()?;
@@ -672,10 +678,17 @@ impl Interface {
         if let Interface::OvsInterface(iface) = self {
             iface.pre_edit_cleanup()?;
         }
+        if let Interface::Vrf(iface) = self {
+            iface.pre_edit_cleanup(current)?;
+        }
         Ok(())
     }
 
-    pub(crate) fn verify(&self, current: &Self) -> Result<(), NmstateError> {
+    pub(crate) fn verify(
+        &self,
+        pre_apply_cur_iface: Option<&Self>,
+        current: &Self,
+    ) -> Result<(), NmstateError> {
         let mut self_clone = self.clone();
         let mut current_clone = current.clone();
         // In order to allow desire interface to determine whether it can
@@ -690,8 +703,8 @@ impl Interface {
             self_clone.base_iface_mut().controller_type =
                 current_clone.base_iface().controller_type.clone();
         }
-        self_clone.pre_verify_cleanup();
-        current_clone.pre_verify_cleanup();
+        current_clone.pre_verify_cleanup(None);
+        self_clone.pre_verify_cleanup(pre_apply_cur_iface);
         if self_clone.iface_type() == InterfaceType::Unknown {
             current_clone.base_iface_mut().iface_type = InterfaceType::Unknown;
         }
