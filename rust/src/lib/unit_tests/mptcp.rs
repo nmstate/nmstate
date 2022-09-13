@@ -84,6 +84,6 @@ ipv6:
     )
     .unwrap();
 
-    desire_iface.pre_edit_cleanup().unwrap();
+    desire_iface.pre_edit_cleanup(None).unwrap();
     assert_eq!(desire_iface, expected_iface);
 }

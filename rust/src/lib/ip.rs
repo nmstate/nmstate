@@ -4,8 +4,7 @@ use std::str::FromStr;
 use serde::{self, Deserialize, Deserializer, Serialize};
 
 use crate::{
-    BaseInterface, DnsClientState, ErrorKind, Interfaces, MptcpAddressFlag,
-    NmstateError,
+    BaseInterface, DnsClientState, ErrorKind, MptcpAddressFlag, NmstateError,
 };
 
 const IPV4_ADDR_LEN: usize = 32;
@@ -163,7 +162,12 @@ impl InterfaceIpv4 {
     // * Set auto_dns, auto_gateway and auto_routes to true if DHCP enabled and
     //   those options is None
     // * Remove static IP address when DHCP enabled.
-    pub(crate) fn pre_edit_cleanup(&mut self) {
+    // * When user is not mentioning `enabled` property of ipv4 stack in desire
+    //   state, nmstate should merge it from current.
+    pub(crate) fn pre_edit_cleanup(&mut self, current: Option<&Self>) {
+        if let Some(current) = current {
+            self.merge_ip(current);
+        }
         if self.is_auto() {
             if self.auto_dns.is_none() {
                 self.auto_dns = Some(true);
@@ -191,7 +195,13 @@ impl InterfaceIpv4 {
     // * Ignore DHCP options if DHCP disabled
     // * Ignore address if DHCP enabled
     // * Set DHCP as off if enabled and dhcp is None
-    pub(crate) fn pre_verify_cleanup(&mut self) {
+    pub(crate) fn pre_verify_cleanup(
+        &mut self,
+        pre_apply_current: Option<&Self>,
+    ) {
+        if let Some(current) = pre_apply_current {
+            self.merge_ip(current);
+        }
         self.cleanup();
         if self.dhcp == Some(true) {
             self.addresses = None;
@@ -203,6 +213,28 @@ impl InterfaceIpv4 {
         };
         if self.dhcp != Some(true) {
             self.dhcp = Some(false);
+        }
+    }
+
+    fn merge_ip(&mut self, current: &Self) {
+        if !self.prop_list.contains(&"enabled") {
+            self.enabled = current.enabled;
+        }
+        if self.dhcp.is_none() && self.enabled {
+            self.dhcp = current.dhcp;
+        }
+
+        // Normally, we expect backend to preserve configuration which not
+        // mentioned in desire, but when DHCP switch from ON to OFF, the design
+        // of nmstate is expecting dynamic IP address goes static. This should
+        // be done by top level code.
+        if current.is_auto()
+            && current.addresses.is_some()
+            && self.enabled
+            && !self.is_auto()
+            && self.addresses.is_none()
+        {
+            self.addresses = current.addresses.clone();
         }
     }
 }
@@ -379,7 +411,13 @@ impl InterfaceIpv6 {
     // * Ignore DHCP options if DHCP disabled
     // * Ignore IP address when DHCP/autoconf enabled.
     // * Set DHCP None to Some(false)
-    pub(crate) fn pre_verify_cleanup(&mut self) {
+    pub(crate) fn pre_verify_cleanup(
+        &mut self,
+        pre_apply_current: Option<&Self>,
+    ) {
+        if let Some(current) = pre_apply_current {
+            self.merge_ip(current);
+        }
         self.cleanup();
         if self.is_auto() {
             self.addresses = None;
@@ -411,7 +449,12 @@ impl InterfaceIpv6 {
     // * Set auto_dns, auto_gateway and auto_routes to true if DHCP/autoconf
     //   enabled and those options is None
     // * Remove static IP address when DHCP/autoconf enabled.
-    pub(crate) fn pre_edit_cleanup(&mut self) {
+    // * When user is not mentioning `enabled` property of ipv6 stack in desire
+    //   state, nmstate should merge it from current.
+    pub(crate) fn pre_edit_cleanup(&mut self, current: Option<&Self>) {
+        if let Some(current) = current {
+            self.merge_ip(current);
+        }
         if let Some(addrs) = self.addresses.as_mut() {
             addrs.retain(|addr| {
                 if let IpAddr::V6(ip_addr) = addr.ip {
@@ -450,6 +493,30 @@ impl InterfaceIpv6 {
             }
         }
         self.cleanup();
+    }
+
+    fn merge_ip(&mut self, current: &Self) {
+        if !self.prop_list.contains(&"enabled") {
+            self.enabled = current.enabled;
+        }
+        if self.dhcp.is_none() && self.enabled {
+            self.dhcp = current.dhcp;
+        }
+        if self.autoconf.is_none() && self.enabled {
+            self.autoconf = current.autoconf;
+        }
+        // Normally, we expect backend to preserve configuration which not
+        // mentioned in desire, but when DHCP switch from ON to OFF, the design
+        // of nmstate is expecting dynamic IP address goes static. This should
+        // be done by top level code.
+        if current.is_auto()
+            && current.addresses.is_some()
+            && self.enabled
+            && !self.is_auto()
+            && self.addresses.is_none()
+        {
+            self.addresses = current.addresses.clone();
+        }
     }
 }
 
@@ -601,43 +668,6 @@ impl std::convert::TryFrom<&str> for InterfaceIpAddr {
 impl std::convert::From<&InterfaceIpAddr> for String {
     fn from(v: &InterfaceIpAddr) -> String {
         format!("{}/{}", &v.ip, v.prefix_length)
-    }
-}
-
-pub(crate) fn include_current_ip_address_if_dhcp_on_to_off(
-    chg_net_state: &mut Interfaces,
-    current: &Interfaces,
-) {
-    for (iface_name, iface) in chg_net_state.kernel_ifaces.iter_mut() {
-        let cur_iface = if let Some(c) = current.kernel_ifaces.get(iface_name) {
-            c
-        } else {
-            continue;
-        };
-        if let Some(cur_ip_conf) = cur_iface.base_iface().ipv4.as_ref() {
-            if cur_ip_conf.is_auto() && cur_ip_conf.addresses.is_some() {
-                if let Some(ip_conf) = iface.base_iface_mut().ipv4.as_mut() {
-                    if ip_conf.enabled
-                        && !ip_conf.is_auto()
-                        && ip_conf.addresses.is_none()
-                    {
-                        ip_conf.addresses = cur_ip_conf.addresses.clone();
-                    }
-                }
-            }
-        }
-        if let Some(cur_ip_conf) = cur_iface.base_iface().ipv6.as_ref() {
-            if cur_ip_conf.is_auto() && cur_ip_conf.addresses.is_some() {
-                if let Some(ip_conf) = iface.base_iface_mut().ipv6.as_mut() {
-                    if ip_conf.enabled
-                        && !ip_conf.is_auto()
-                        && ip_conf.addresses.is_none()
-                    {
-                        ip_conf.addresses = cur_ip_conf.addresses.clone();
-                    }
-                }
-            }
-        }
     }
 }
 
@@ -823,45 +853,6 @@ pub(crate) fn validate_wait_ip(
         }
     }
     Ok(())
-}
-
-pub(crate) fn merge_ip_stack(
-    chg_net_state: &mut Interfaces,
-    current: &Interfaces,
-) {
-    for (iface_name, iface) in chg_net_state.kernel_ifaces.iter_mut() {
-        let cur_iface = if let Some(c) = current.kernel_ifaces.get(iface_name) {
-            c
-        } else {
-            continue;
-        };
-        if !iface.base_iface().can_have_ip() {
-            continue;
-        }
-        if let Some(cur_ip_conf) = cur_iface.base_iface().ipv4.as_ref() {
-            if let Some(ip_conf) = iface.base_iface_mut().ipv4.as_mut() {
-                if !ip_conf.prop_list.contains(&"enabled") {
-                    ip_conf.enabled = cur_ip_conf.enabled;
-                }
-                if ip_conf.dhcp.is_none() && ip_conf.enabled {
-                    ip_conf.dhcp = cur_ip_conf.dhcp;
-                }
-            }
-        }
-        if let Some(cur_ip_conf) = cur_iface.base_iface().ipv6.as_ref() {
-            if let Some(ip_conf) = iface.base_iface_mut().ipv6.as_mut() {
-                if !ip_conf.prop_list.contains(&"enabled") {
-                    ip_conf.enabled = cur_ip_conf.enabled;
-                }
-                if ip_conf.dhcp.is_none() && ip_conf.enabled {
-                    ip_conf.dhcp = cur_ip_conf.dhcp;
-                }
-                if ip_conf.autoconf.is_none() && ip_conf.enabled {
-                    ip_conf.autoconf = cur_ip_conf.autoconf;
-                }
-            }
-        }
-    }
 }
 
 fn get_ip_prop_list(
