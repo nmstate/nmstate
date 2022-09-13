@@ -646,7 +646,8 @@ impl Interface {
         &mut self,
         pre_apply_current: Option<&Self>,
     ) {
-        self.base_iface_mut().pre_verify_cleanup();
+        self.base_iface_mut()
+            .pre_verify_cleanup(pre_apply_current.map(|i| i.base_iface()));
         match self {
             Self::LinuxBridge(ref mut iface) => {
                 iface.pre_verify_cleanup();
@@ -671,7 +672,8 @@ impl Interface {
         &mut self,
         current: Option<&Self>,
     ) -> Result<(), NmstateError> {
-        self.base_iface_mut().pre_edit_cleanup()?;
+        self.base_iface_mut()
+            .pre_edit_cleanup(current.map(|i| i.base_iface()))?;
         if let Interface::Ethernet(iface) = self {
             iface.pre_edit_cleanup()?;
         }

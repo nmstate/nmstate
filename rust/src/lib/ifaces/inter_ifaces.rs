@@ -15,7 +15,6 @@ use crate::{
         set_missing_port_to_eth, validate_new_ovs_iface_has_controller,
     },
     ifaces::sriov::check_sriov_capability,
-    ip::{include_current_ip_address_if_dhcp_on_to_off, merge_ip_stack},
     ErrorKind, Interface, InterfaceState, InterfaceType, NmstateError,
 };
 
@@ -195,9 +194,6 @@ impl Interfaces {
             &ignored_user_ifaces,
         );
         cur_clone.remove_unknown_type_port();
-        // When user is not mentioning `enabled` property of ipv4/ipv6 stack
-        // in desire state, nmstate should merge it from current.
-        merge_ip_stack(&mut self_clone, &cur_clone);
 
         for iface in self_clone.to_vec() {
             if iface.is_absent() || (iface.is_virtual() && iface.is_down()) {
@@ -380,11 +376,6 @@ impl Interfaces {
         if !current.kernel_ifaces.is_empty() {
             check_sriov_capability(self)?;
         }
-        // When user is not mentioning `enabled` property of ipv4/ipv6 stack
-        // in desire state, nmstate should merge it from current.
-        // As this requires the extra checks before merging IP stack from
-        // current, this should be done at top level instead of plugin.
-        merge_ip_stack(self, current);
 
         for iface in self.to_vec() {
             if iface.is_absent() {
@@ -455,11 +446,6 @@ impl Interfaces {
             }
         }
 
-        // Normally, we expect backend to preserve configuration which not
-        // mentioned in desire, but when DHCP switch from ON to OFF, the design
-        // of nmstate is expecting dynamic IP address goes static. This should
-        // be done by top level code.
-        include_current_ip_address_if_dhcp_on_to_off(&mut chg_ifaces, current);
         mark_orphan_interface_as_absent(&mut del_ifaces, &chg_ifaces, current);
         handle_veth_peer_changes(
             &add_ifaces,
