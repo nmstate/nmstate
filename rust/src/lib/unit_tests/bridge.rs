@@ -100,7 +100,7 @@ fn test_linux_bridge_verify_ignore_port() {
     )
     .unwrap();
 
-    ifaces.verify(&cur_ifaces).unwrap();
+    ifaces.verify(&Interfaces::new(), &cur_ifaces).unwrap();
 }
 
 #[test]

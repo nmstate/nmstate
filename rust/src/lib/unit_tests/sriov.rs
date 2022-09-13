@@ -37,7 +37,7 @@ fn test_sriov_vf_mac_mix_case() {
     }
     des_ifaces.push(des_iface);
 
-    des_ifaces.verify(&cur_ifaces).unwrap();
+    des_ifaces.verify(&Interfaces::new(), &cur_ifaces).unwrap();
 }
 
 #[test]
@@ -73,5 +73,5 @@ fn test_ignore_sriov_if_not_desired() {
     )
     .unwrap();
 
-    desired.verify(&current).unwrap();
+    desired.verify(&Interfaces::new(), &current).unwrap();
 }

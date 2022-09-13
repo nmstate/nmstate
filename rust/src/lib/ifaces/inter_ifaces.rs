@@ -176,7 +176,11 @@ impl Interfaces {
         }
     }
 
-    pub(crate) fn verify(&self, cur_ifaces: &Self) -> Result<(), NmstateError> {
+    pub(crate) fn verify(
+        &self,
+        pre_apply_current: &Self,
+        cur_ifaces: &Self,
+    ) -> Result<(), NmstateError> {
         let mut self_clone = self.clone();
         let (ignored_kernel_ifaces, ignored_user_ifaces) =
             get_ignored_ifaces(self, cur_ifaces);
@@ -207,9 +211,11 @@ impl Interfaces {
             } else if let Some(cur_iface) =
                 cur_clone.get_iface(iface.name(), iface.iface_type())
             {
+                let pre_apply_cur_iface = pre_apply_current
+                    .get_iface(iface.name(), iface.iface_type());
                 // Do not verify physical interface with state:down
                 if !iface.is_down() {
-                    iface.verify(cur_iface)?;
+                    iface.verify(pre_apply_cur_iface, cur_iface)?;
                     if let Interface::Ethernet(eth_iface) = iface {
                         if eth_iface.sriov_is_enabled() {
                             eth_iface.verify_sriov(cur_ifaces)?;
@@ -397,7 +403,7 @@ impl Interfaces {
                         if cur_iface.iface_type() == InterfaceType::Unknown {
                             chg_iface.set_iface_type(cur_iface.iface_type());
                         }
-                        chg_iface.pre_edit_cleanup()?;
+                        chg_iface.pre_edit_cleanup(Some(cur_iface))?;
                         info!(
                             "Changing interface {} with type {}, \
                             up priority {}",
@@ -409,7 +415,7 @@ impl Interfaces {
                     }
                     None => {
                         let mut new_iface = iface.clone();
-                        new_iface.pre_edit_cleanup()?;
+                        new_iface.pre_edit_cleanup(None)?;
                         info!(
                             "Adding interface {} with type {}, \
                             up priority {}",

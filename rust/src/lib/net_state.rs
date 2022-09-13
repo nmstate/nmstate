@@ -345,8 +345,10 @@ impl NetworkState {
                                         cur_net_state.clone();
                                     new_cur_net_state.set_include_secrets(true);
                                     new_cur_net_state.retrieve()?;
-                                    desire_state_to_verify
-                                        .verify(&new_cur_net_state)
+                                    desire_state_to_verify.verify(
+                                        &cur_net_state,
+                                        &new_cur_net_state,
+                                    )
                                 },
                             )
                         } else {
@@ -375,7 +377,8 @@ impl NetworkState {
                     || {
                         let mut new_cur_net_state = cur_net_state.clone();
                         new_cur_net_state.retrieve()?;
-                        desire_state_to_verify.verify(&new_cur_net_state)
+                        desire_state_to_verify
+                            .verify(&cur_net_state, &new_cur_net_state)
                     },
                 )
             } else {
@@ -418,11 +421,16 @@ impl NetworkState {
         Ok(ret)
     }
 
-    fn verify(&self, current: &Self) -> Result<(), NmstateError> {
+    fn verify(
+        &self,
+        pre_apply_current: &Self,
+        current: &Self,
+    ) -> Result<(), NmstateError> {
         if let Some(desired_hostname) = self.hostname.as_ref() {
             desired_hostname.verify(current.hostname.as_ref())?;
         }
-        self.interfaces.verify(&current.interfaces)?;
+        self.interfaces
+            .verify(&pre_apply_current.interfaces, &current.interfaces)?;
         let (ignored_kernel_ifaces, _) =
             get_ignored_ifaces(&self.interfaces, &current.interfaces);
         self.routes
