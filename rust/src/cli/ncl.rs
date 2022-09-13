@@ -280,10 +280,14 @@ fn main() {
 
         if let Some(file_paths) = matches.values_of("STATE_FILE") {
             let file_paths: Vec<&str> = file_paths.collect();
-            print_result_and_exit(
-                apply_from_files(&file_paths, matches),
-                EX_DATAERR,
-            );
+            if file_paths.first() == Some(&"-") {
+                print_result_and_exit(apply_from_stdin(matches), EX_DATAERR);
+            } else {
+                print_result_and_exit(
+                    apply_from_files(&file_paths, matches),
+                    EX_DATAERR,
+                );
+            }
         } else {
             print_result_and_exit(apply_from_stdin(matches), EX_DATAERR);
         }
