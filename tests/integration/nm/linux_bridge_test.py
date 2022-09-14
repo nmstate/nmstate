@@ -209,3 +209,59 @@ def test_linux_bridge_does_not_lose_unmanaged_port_on_rollback(
     port_names = [port[LB.Port.NAME] for port in bridge_state[LB.PORT_SUBTREE]]
     assert "eth1" in port_names
     assert VETH0 in port_names
+
+
+@pytest.mark.tier1
+def test_linux_bridge_store_stp_setting_even_disabled(
+    eth1_up,
+):
+    with linux_bridge(
+        BRIDGE0,
+        bridge_subtree_state={
+            LB.PORT_SUBTREE: [
+                {
+                    LB.Port.NAME: "eth1",
+                }
+            ],
+            LB.OPTIONS_SUBTREE: {
+                LB.STP_SUBTREE: {
+                    LB.STP.ENABLED: False,
+                    LB.STP.FORWARD_DELAY: 16,
+                    LB.STP.HELLO_TIME: 2,
+                    LB.STP.MAX_AGE: 20,
+                    LB.STP.PRIORITY: 20480,
+                }
+            },
+        },
+    ) as state:
+        assertlib.assert_state_match(state)
+        assert (
+            exec_cmd(
+                f"nmcli -g bridge.stp c show {BRIDGE0}".split(),
+            )[1].strip()
+            == "no"
+        )
+        assert (
+            exec_cmd(
+                f"nmcli -g bridge.forward-delay c show {BRIDGE0}".split(),
+            )[1].strip()
+            == "16"
+        )
+        assert (
+            exec_cmd(
+                f"nmcli -g bridge.hello-time c show {BRIDGE0}".split(),
+            )[1].strip()
+            == "2"
+        )
+        assert (
+            exec_cmd(
+                f"nmcli -g bridge.max-age c show {BRIDGE0}".split(),
+            )[1].strip()
+            == "20"
+        )
+        assert (
+            exec_cmd(
+                f"nmcli -g bridge.priority c show {BRIDGE0}".split(),
+            )[1].strip()
+            == "20480"
+        )

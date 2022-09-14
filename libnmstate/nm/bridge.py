@@ -99,16 +99,15 @@ def _set_bridge_properties(bridge_setting, options):
 
 def _set_bridge_stp_properties(bridge_setting, bridge_stp):
     bridge_setting.props.stp = bridge_stp[LB.STP.ENABLED]
-    if bridge_stp[LB.STP.ENABLED] is True:
-        for stp_key, stp_val in bridge_stp.items():
-            if stp_key == LB.STP.PRIORITY:
-                bridge_setting.props.priority = stp_val
-            elif stp_key == LB.STP.FORWARD_DELAY:
-                bridge_setting.props.forward_delay = stp_val
-            elif stp_key == LB.STP.HELLO_TIME:
-                bridge_setting.props.hello_time = stp_val
-            elif stp_key == LB.STP.MAX_AGE:
-                bridge_setting.props.max_age = stp_val
+    for stp_key, stp_val in bridge_stp.items():
+        if stp_key == LB.STP.PRIORITY:
+            bridge_setting.props.priority = stp_val
+        elif stp_key == LB.STP.FORWARD_DELAY:
+            bridge_setting.props.forward_delay = stp_val
+        elif stp_key == LB.STP.HELLO_TIME:
+            bridge_setting.props.hello_time = stp_val
+        elif stp_key == LB.STP.MAX_AGE:
+            bridge_setting.props.max_age = stp_val
 
 
 def _is_vlan_filter_active(bridge_state):
