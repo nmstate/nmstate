@@ -23,13 +23,17 @@ import pytest
 
 from libnmstate.error import NmstateInternalError
 from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import InterfaceState
 
 from libnmstate.ifaces.base_iface import BaseIface
 from ..testlib.constants import MAC_ADDRESS1
 from ..testlib.constants import IPV6_LINK_LOCAL_ADDRESS1
+from ..testlib.constants import IPV4_ADDRESS3
+from ..testlib.constants import IPV4_ADDRESSES
 from ..testlib.constants import IPV6_ADDRESSES
+from ..testlib.constants import IPV6_ADDRESS3
 from ..testlib.ifacelib import gen_foo_iface_info
 
 
@@ -209,3 +213,97 @@ class TestBaseIface:
         iface = BaseIface(iface_info)
 
         assert iface.to_dict()["password"] != "foo"
+
+    def test_to_verify_allow_extra_ipv4(self):
+        des_iface_info = gen_foo_iface_info()
+        des_iface_info[Interface.IPV4] = {
+            InterfaceIPv4.ENABLED: True,
+            InterfaceIPv4.ADDRESS: IPV4_ADDRESSES,
+        }
+        des_iface = BaseIface(des_iface_info)
+
+        cur_iface_info = gen_foo_iface_info()
+        cur_iface_info[Interface.IPV4] = {
+            InterfaceIPv4.ENABLED: True,
+            InterfaceIPv4.ADDRESS: IPV4_ADDRESSES
+            + [
+                {
+                    InterfaceIPv4.ADDRESS_IP: IPV4_ADDRESS3,
+                    InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+                }
+            ],
+        }
+        cur_iface = BaseIface(cur_iface_info)
+
+        assert des_iface.match(cur_iface)
+
+    def test_to_verify_allow_extra_ipv6(self):
+        des_iface_info = gen_foo_iface_info()
+        des_iface_info[Interface.IPV6] = {
+            InterfaceIPv6.ENABLED: True,
+            InterfaceIPv6.ADDRESS: IPV6_ADDRESSES,
+        }
+        des_iface = BaseIface(des_iface_info)
+
+        cur_iface_info = gen_foo_iface_info()
+        cur_iface_info[Interface.IPV6] = {
+            InterfaceIPv6.ENABLED: True,
+            InterfaceIPv6.ADDRESS: IPV6_ADDRESSES
+            + [
+                {
+                    InterfaceIPv6.ADDRESS_IP: IPV6_ADDRESS3,
+                    InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
+                }
+            ],
+        }
+        cur_iface = BaseIface(cur_iface_info)
+
+        assert des_iface.match(cur_iface)
+
+    def test_to_verify_not_allow_extra_ipv4(self):
+        des_iface_info = gen_foo_iface_info()
+        des_iface_info[Interface.IPV4] = {
+            InterfaceIPv4.ENABLED: True,
+            InterfaceIPv4.ADDRESS: IPV4_ADDRESSES,
+            InterfaceIPv4.ALLOW_EXTRA_ADDRESS: False,
+        }
+        des_iface = BaseIface(des_iface_info)
+
+        cur_iface_info = gen_foo_iface_info()
+        cur_iface_info[Interface.IPV4] = {
+            InterfaceIPv4.ENABLED: True,
+            InterfaceIPv4.ADDRESS: IPV4_ADDRESSES
+            + [
+                {
+                    InterfaceIPv4.ADDRESS_IP: IPV4_ADDRESS3,
+                    InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+                }
+            ],
+        }
+        cur_iface = BaseIface(cur_iface_info)
+
+        assert not des_iface.match(cur_iface)
+
+    def test_to_verify_not_allow_extra_ipv6(self):
+        des_iface_info = gen_foo_iface_info()
+        des_iface_info[Interface.IPV6] = {
+            InterfaceIPv6.ENABLED: True,
+            InterfaceIPv6.ADDRESS: IPV6_ADDRESSES,
+            InterfaceIPv6.ALLOW_EXTRA_ADDRESS: False,
+        }
+        des_iface = BaseIface(des_iface_info)
+
+        cur_iface_info = gen_foo_iface_info()
+        cur_iface_info[Interface.IPV6] = {
+            InterfaceIPv6.ENABLED: True,
+            InterfaceIPv6.ADDRESS: IPV6_ADDRESSES
+            + [
+                {
+                    InterfaceIPv6.ADDRESS_IP: IPV6_ADDRESS3,
+                    InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
+                }
+            ],
+        }
+        cur_iface = BaseIface(cur_iface_info)
+
+        assert not des_iface.match(cur_iface)
