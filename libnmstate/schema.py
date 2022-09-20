@@ -142,6 +142,7 @@ class InterfaceIP:
     ADDRESS = "address"
     ADDRESS_IP = "ip"
     ADDRESS_PREFIX_LENGTH = "prefix-length"
+    ALLOW_EXTRA_ADDRESS = "allow-extra-address"
     DHCP = "dhcp"
     AUTO_DNS = "auto-dns"
     AUTO_GATEWAY = "auto-gateway"
