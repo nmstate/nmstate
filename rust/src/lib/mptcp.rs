@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+
 // The document string for MptcpAddressFlag is copy from manpage of
 // `IP-MPTCP(8)` which is licensed under GPLv2.0+
 
@@ -51,61 +52,8 @@ pub enum MptcpAddressFlag {
     Fullmesh,
 }
 
-impl std::convert::TryFrom<nispor::MptcpAddressFlag> for MptcpAddressFlag {
-    type Error = NmstateError;
-    fn try_from(value: nispor::MptcpAddressFlag) -> Result<Self, NmstateError> {
-        match value {
-            nispor::MptcpAddressFlag::Signal => Ok(MptcpAddressFlag::Signal),
-            nispor::MptcpAddressFlag::Subflow => Ok(MptcpAddressFlag::Subflow),
-            nispor::MptcpAddressFlag::Backup => Ok(MptcpAddressFlag::Backup),
-            nispor::MptcpAddressFlag::Fullmesh => {
-                Ok(MptcpAddressFlag::Fullmesh)
-            }
-            _ => Err(NmstateError::new(
-                ErrorKind::NotSupportedError,
-                format!(
-                    "MPTCP address flag {:?} is not supported by nmstate yet",
-                    value
-                ),
-            )),
-        }
-    }
-}
-
 pub(crate) fn mptcp_pre_edit_cleanup(iface: &mut BaseInterface) {
     remove_per_addr_mptcp_flags(iface);
-}
-
-pub(crate) fn mptcp_pre_verify_cleanup(iface: &mut BaseInterface) {
-    remove_per_addr_mptcp_flags(iface);
-    if let Some(addrs) =
-        iface.mptcp.as_mut().and_then(|m| m.address_flags.as_mut())
-    {
-        addrs.sort_unstable();
-    }
-}
-
-fn remove_per_addr_mptcp_flags(iface: &mut BaseInterface) {
-    let mut empty_ipv4_addrs = Vec::new();
-    let mut empty_ipv6_addrs = Vec::new();
-
-    for ip_addr in iface
-        .ipv4
-        .as_mut()
-        .and_then(|i| i.addresses.as_mut())
-        .unwrap_or(&mut empty_ipv4_addrs)
-        .iter_mut()
-        .chain(
-            iface
-                .ipv6
-                .as_mut()
-                .and_then(|i| i.addresses.as_mut())
-                .unwrap_or(&mut empty_ipv6_addrs)
-                .iter_mut(),
-        )
-    {
-        ip_addr.mptcp_flags = None;
-    }
 }
 
 pub(crate) fn validate_mptcp(
@@ -170,5 +118,28 @@ fn validate_iface_mptcp_and_addr_mptcp_flags(iface: &BaseInterface) {
                 );
             }
         }
+    }
+}
+
+pub(crate) fn remove_per_addr_mptcp_flags(iface: &mut BaseInterface) {
+    let mut empty_ipv4_addrs = Vec::new();
+    let mut empty_ipv6_addrs = Vec::new();
+
+    for ip_addr in iface
+        .ipv4
+        .as_mut()
+        .and_then(|i| i.addresses.as_mut())
+        .unwrap_or(&mut empty_ipv4_addrs)
+        .iter_mut()
+        .chain(
+            iface
+                .ipv6
+                .as_mut()
+                .and_then(|i| i.addresses.as_mut())
+                .unwrap_or(&mut empty_ipv6_addrs)
+                .iter_mut(),
+        )
+    {
+        ip_addr.mptcp_flags = None;
     }
 }

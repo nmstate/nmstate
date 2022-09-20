@@ -33,6 +33,20 @@ jobs:
       if: matrix.rust_version == 'nightly'
       run: cd rust && cargo clippy -- -D warnings
 
+    - name: Check clippy gen_conf
+      if: matrix.rust_version == 'nightly'
+      run: |
+        cd rust && cargo clippy \
+          --no-default-features --features gen_conf \
+          -- -D warnings
+
+    - name: Check clippy query_apply
+      if: matrix.rust_version == 'nightly'
+      run: |
+        cd rust && cargo clippy \
+          --no-default-features --features query_apply \
+          -- -D warnings
+
   rust_unit:
     strategy:
       fail-fast: true
@@ -76,12 +90,17 @@ jobs:
 
   py_lint:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - job_type: "c8s-nm_stable-format"
+          - job_type: "c8s-nm_stable-lint"
     steps:
       - uses: actions/checkout@v3
-      - name: Install tox, python3 and pytest
-        run: sudo apt-get install -y tox python3 python3-pytest
-      - name: Run test
-        run: tox
+      - name: Run tests
+        shell: bash
+        run: sudo .github/workflows/run_test.sh ${{ matrix.job_type }}
 
   integ:
     runs-on: ubuntu-latest
@@ -140,3 +159,28 @@ jobs:
           name: nmstate-test-artifact-${{ matrix.job_type }}
           path: test_artifacts/
           retention-days: 5
+
+  macos_gen_conf_build:
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - rust_version: "stable"
+          - rust_version: "nightly"
+
+    runs-on: macos-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Install Rust ${{ matrix.rust_version }}
+      uses: actions-rs/toolchain@v1
+      with:
+          toolchain: ${{ matrix.rust_version }}
+          override: true
+          components: rustfmt, clippy
+
+    - name: Build gen_conf
+      run: |
+        cd rust && cargo build --no-default-features \
+            --features gen_conf

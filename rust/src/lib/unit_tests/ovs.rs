@@ -1,7 +1,7 @@
 use crate::{
-    ifaces::get_ignored_ifaces,
-    ifaces::inter_ifaces_controller::handle_changed_ports, InterfaceType,
-    Interfaces, OvsBridgeInterface,
+    ifaces::inter_ifaces_controller::handle_changed_ports,
+    query_apply::get_ignored_ifaces, InterfaceType, Interfaces,
+    OvsBridgeInterface,
 };
 
 #[test]

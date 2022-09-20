@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use serde::{Deserialize, Serialize};
 
 use crate::{BaseInterface, InterfaceType};
@@ -31,15 +33,6 @@ impl VxlanInterface {
     pub(crate) fn parent(&self) -> Option<&str> {
         self.vxlan.as_ref().map(|cfg| cfg.base_iface.as_str())
     }
-
-    pub(crate) fn update_vxlan(&mut self, other: &VxlanInterface) {
-        // TODO: this should be done by Trait
-        if let Some(vxlan_conf) = &mut self.vxlan {
-            vxlan_conf.update(other.vxlan.as_ref());
-        } else {
-            self.vxlan = other.vxlan.clone();
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -57,15 +50,4 @@ pub struct VxlanConfig {
         deserialize_with = "crate::deserializer::option_u16_or_string"
     )]
     pub dst_port: Option<u16>,
-}
-
-impl VxlanConfig {
-    fn update(&mut self, other: Option<&Self>) {
-        if let Some(other) = other {
-            self.base_iface = other.base_iface.clone();
-            self.id = other.id;
-            self.remote = other.remote;
-            self.dst_port = other.dst_port;
-        }
-    }
 }

@@ -2,6 +2,7 @@ use std::error::Error;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[non_exhaustive]
+#[allow(dead_code)]
 pub enum ErrorKind {
     InvalidArgument,
     PluginFailure,

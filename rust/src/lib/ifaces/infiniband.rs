@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use serde::{Deserialize, Serialize, Serializer};
 
 use crate::{BaseInterface, InterfaceType};
@@ -23,14 +25,6 @@ impl Default for InfiniBandInterface {
 impl InfiniBandInterface {
     pub(crate) fn parent(&self) -> Option<&str> {
         self.ib.as_ref().and_then(|cfg| cfg.base_iface.as_deref())
-    }
-
-    pub(crate) fn update_ib(&mut self, other: &InfiniBandInterface) {
-        if let Some(ib_conf) = &mut self.ib {
-            ib_conf.update(other.ib.as_ref());
-        } else {
-            self.ib = other.ib.clone();
-        }
     }
 }
 
@@ -78,14 +72,6 @@ pub struct InfiniBandConfig {
 impl InfiniBandConfig {
     pub fn new() -> Self {
         Self::default()
-    }
-
-    pub(crate) fn update(&mut self, other: Option<&InfiniBandConfig>) {
-        if let Some(other) = other {
-            self.mode = other.mode;
-            self.pkey = other.pkey;
-            self.base_iface = other.base_iface.clone();
-        }
     }
 }
 

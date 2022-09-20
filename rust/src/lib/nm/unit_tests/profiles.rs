@@ -1,6 +1,6 @@
 use crate::nm::nm_dbus::{NmConnection, NmSettingConnection};
 use crate::{
-    nm::profile::use_uuid_for_controller_reference, Interface, InterfaceType,
+    nm::settings::use_uuid_for_controller_reference, Interface, InterfaceType,
     OvsBridgeBondConfig, OvsBridgeBondPortConfig, OvsBridgeConfig,
     OvsBridgeInterface, OvsBridgePortConfig,
 };

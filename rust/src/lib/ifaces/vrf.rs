@@ -35,15 +35,6 @@ impl VrfInterface {
             .map(|ports| ports.as_slice().iter().map(|p| p.as_str()).collect())
     }
 
-    pub(crate) fn update_vrf(&mut self, other: &VrfInterface) {
-        // TODO: this should be done by Trait
-        if let Some(vrf_conf) = &mut self.vrf {
-            vrf_conf.update(other.vrf.as_ref());
-        } else {
-            self.vrf = other.vrf.clone();
-        }
-    }
-
     // Merge table ID from current if desired table ID is 0
     pub(crate) fn pre_edit_cleanup(
         &mut self,
@@ -52,21 +43,7 @@ impl VrfInterface {
         self.merge_table_id(current)
     }
 
-    pub(crate) fn pre_verify_cleanup(
-        &mut self,
-        pre_apply_current: Option<&Interface>,
-    ) {
-        self.base.mac_address = None;
-        if self.base.accept_all_mac_addresses == Some(false) {
-            self.base.accept_all_mac_addresses = None;
-        }
-        if let Some(ports) = self.vrf.as_mut().and_then(|c| c.port.as_mut()) {
-            ports.sort();
-        }
-        self.merge_table_id(pre_apply_current).ok();
-    }
-
-    fn merge_table_id(
+    pub(crate) fn merge_table_id(
         &mut self,
         current: Option<&Interface>,
     ) -> Result<(), NmstateError> {
@@ -114,13 +91,4 @@ pub struct VrfConfig {
     /// Route table ID of this VRF interface.
     /// Use 0 to preserve current `table_id`.
     pub table_id: u32,
-}
-
-impl VrfConfig {
-    fn update(&mut self, other: Option<&Self>) {
-        if let Some(other) = other {
-            self.port = other.port.clone();
-            self.table_id = other.table_id;
-        }
-    }
 }

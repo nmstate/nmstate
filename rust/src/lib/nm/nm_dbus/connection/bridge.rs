@@ -23,7 +23,7 @@ use super::super::{
     convert::{
         mac_str_to_u8_array, own_value_to_bytes_array, u8_array_to_mac_string,
     },
-    NmError, NmVlanProtocol,
+    NmError, NmVlanProtocol, ToDbusValue,
 };
 
 #[derive(Debug, Clone, PartialEq, Default, Deserialize)]
@@ -170,36 +170,8 @@ impl TryFrom<DbusDictionary> for NmSettingBridge {
     }
 }
 
-impl NmSettingBridge {
-    pub(crate) fn to_keyfile(
-        &self,
-    ) -> Result<HashMap<String, zvariant::Value>, NmError> {
-        let mut ret = HashMap::new();
-
-        for (k, v) in self.to_value()?.drain() {
-            if k != "vlans" {
-                ret.insert(k.to_string(), v);
-            }
-        }
-        if let Some(vlans) = self.vlans.as_ref() {
-            let mut vlans_clone = vlans.clone();
-            vlans_clone.sort_unstable_by_key(|v| v.vid_start);
-            let mut vlans_str = Vec::new();
-            for vlan in vlans_clone {
-                vlans_str.push(vlan.to_keyfile());
-            }
-            ret.insert(
-                "vlans".to_string(),
-                zvariant::Value::new(vlans_str.join(",")),
-            );
-        }
-
-        Ok(ret)
-    }
-
-    pub(crate) fn to_value(
-        &self,
-    ) -> Result<HashMap<&str, zvariant::Value>, NmError> {
+impl ToDbusValue for NmSettingBridge {
+    fn to_value(&self) -> Result<HashMap<&str, zvariant::Value>, NmError> {
         let mut ret = HashMap::new();
         if let Some(v) = &self.stp {
             ret.insert("stp", zvariant::Value::new(v));
@@ -342,22 +314,7 @@ impl TryFrom<DbusDictionary> for NmSettingBridgeVlanRange {
 }
 
 impl NmSettingBridgeVlanRange {
-    pub(crate) fn to_keyfile(&self) -> String {
-        let mut ret = if self.vid_start == self.vid_end {
-            self.vid_start.to_string()
-        } else {
-            format!("{}-{}", self.vid_start, self.vid_end)
-        };
-        if self.pvid {
-            ret += " pvid"
-        }
-        if self.untagged {
-            ret += " untagged"
-        }
-        ret
-    }
-
-    pub fn to_value(&self) -> Result<zvariant::Value, NmError> {
+    fn to_value(&self) -> Result<zvariant::Value, NmError> {
         let mut ret = zvariant::Dict::new(
             zvariant::Signature::from_str_unchecked("s"),
             zvariant::Signature::from_str_unchecked("v"),
@@ -405,36 +362,8 @@ impl TryFrom<DbusDictionary> for NmSettingBridgePort {
     }
 }
 
-impl NmSettingBridgePort {
-    pub(crate) fn to_keyfile(
-        &self,
-    ) -> Result<HashMap<String, zvariant::Value>, NmError> {
-        let mut ret = HashMap::new();
-
-        for (k, v) in self.to_value()?.drain() {
-            if k != "vlans" {
-                ret.insert(k.to_string(), v);
-            }
-        }
-        if let Some(vlans) = self.vlans.as_ref() {
-            let mut vlans_clone = vlans.clone();
-            vlans_clone.sort_unstable_by_key(|v| v.vid_start);
-            let mut vlans_str = Vec::new();
-            for vlan in vlans_clone {
-                vlans_str.push(vlan.to_keyfile());
-            }
-            ret.insert(
-                "vlans".to_string(),
-                zvariant::Value::new(vlans_str.join(",")),
-            );
-        }
-
-        Ok(ret)
-    }
-
-    pub(crate) fn to_value(
-        &self,
-    ) -> Result<HashMap<&str, zvariant::Value>, NmError> {
+impl ToDbusValue for NmSettingBridgePort {
+    fn to_value(&self) -> Result<HashMap<&str, zvariant::Value>, NmError> {
         let mut ret = HashMap::new();
 
         self.hairpin_mode

@@ -1,8 +1,8 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use std::collections::HashMap;
 
 use serde::{Deserialize, Deserializer, Serialize};
-
-use crate::{state::get_json_value_difference, ErrorKind, NmstateError};
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize)]
 #[non_exhaustive]
@@ -22,90 +22,6 @@ pub struct OvsDbGlobalConfig {
 impl OvsDbGlobalConfig {
     pub fn is_none(&self) -> bool {
         self.external_ids.is_none() && self.other_config.is_none()
-    }
-
-    pub(crate) fn verify(&self, current: &Self) -> Result<(), NmstateError> {
-        let self_value = serde_json::to_value(self)?;
-        let current_value = serde_json::to_value(current)?;
-
-        if let Some((reference, desire, current)) = get_json_value_difference(
-            "ovsdb".to_string(),
-            &self_value,
-            &current_value,
-        ) {
-            let e = NmstateError::new(
-                ErrorKind::VerificationError,
-                format!(
-                    "Verification failure: {} desire '{}', current '{}'",
-                    reference, desire, current
-                ),
-            );
-            log::error!("{}", e);
-            Err(e)
-        } else {
-            Ok(())
-        }
-    }
-
-    pub(crate) fn get_external_ids(&self) -> HashMap<&str, &str> {
-        let mut ret = HashMap::new();
-        if let Some(eids) = self.external_ids.as_ref() {
-            for (k, v) in eids {
-                if let Some(v) = v {
-                    ret.insert(k.as_str(), v.as_str());
-                }
-            }
-        }
-        ret
-    }
-
-    pub(crate) fn get_other_config(&self) -> HashMap<&str, &str> {
-        let mut ret = HashMap::new();
-        if let Some(ocfg) = self.other_config.as_ref() {
-            for (k, v) in ocfg.iter() {
-                if let Some(v) = v {
-                    ret.insert(k.as_str(), v.as_str());
-                }
-            }
-        }
-        ret
-    }
-
-    // Partial editing for ovsdb:
-    //  * Merge desire with current and do overriding.
-    //  * Use `ovsdb: {}` to remove all settings.
-    //  * To remove a key from existing, use `foo: None`.
-    pub(crate) fn merge(&mut self, current: &Self) {
-        if self.prop_list.is_empty() {
-            // User want to remove all settings
-            self.external_ids = Some(HashMap::new());
-            self.other_config = Some(HashMap::new());
-            return;
-        }
-
-        if self.prop_list.contains(&"external_ids") {
-            if let Some(external_ids) = self.external_ids.as_mut() {
-                if !external_ids.is_empty() {
-                    merge_hashmap(external_ids, current.external_ids.as_ref());
-                }
-            } else {
-                self.external_ids = current.external_ids.clone();
-            }
-        } else {
-            self.external_ids = current.external_ids.clone();
-        }
-
-        if self.prop_list.contains(&"other_config") {
-            if let Some(other_config) = self.other_config.as_mut() {
-                if !other_config.is_empty() {
-                    merge_hashmap(other_config, current.other_config.as_ref());
-                }
-            } else {
-                self.other_config = current.other_config.clone();
-            }
-        } else {
-            self.other_config = current.other_config.clone();
-        }
     }
 }
 
@@ -204,18 +120,4 @@ fn value_to_hash_map(
         }
     }
     ret
-}
-
-fn merge_hashmap(
-    desired: &mut HashMap<String, Option<String>>,
-    current: Option<&HashMap<String, Option<String>>>,
-) {
-    if let Some(current) = current {
-        for (key, value) in current.iter() {
-            if !desired.contains_key(key) {
-                desired.insert(key.clone(), value.clone());
-            }
-        }
-    }
-    desired.retain(|_, v| !v.is_none());
 }

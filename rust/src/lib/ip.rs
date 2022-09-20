@@ -104,47 +104,9 @@ impl InterfaceIpv4 {
             && !self.addresses.as_deref().unwrap_or_default().is_empty()
     }
 
-    pub(crate) fn update(&mut self, other: &Self) {
-        if other.prop_list.contains(&"enabled") {
-            self.enabled = other.enabled;
-        }
-
-        if other.prop_list.contains(&"dhcp") {
-            self.dhcp = other.dhcp;
-        }
-        if other.prop_list.contains(&"dhcp_client_id") {
-            self.dhcp_client_id = other.dhcp_client_id.clone();
-        }
-        if other.prop_list.contains(&"addresses") {
-            self.addresses = other.addresses.clone();
-        }
-        if other.prop_list.contains(&"dns") {
-            self.dns = other.dns.clone();
-        }
-        if other.prop_list.contains(&"auto_dns") {
-            self.auto_dns = other.auto_dns;
-        }
-        if other.prop_list.contains(&"auto_gateway") {
-            self.auto_gateway = other.auto_gateway;
-        }
-        if other.prop_list.contains(&"auto_routes") {
-            self.auto_routes = other.auto_routes;
-        }
-        if other.prop_list.contains(&"auto_table_id") {
-            self.auto_table_id = other.auto_table_id;
-        }
-
-        for other_prop_name in &other.prop_list {
-            if !self.prop_list.contains(other_prop_name) {
-                self.prop_list.push(other_prop_name);
-            }
-        }
-        self.cleanup()
-    }
-
     // * Disable DHCP and remove address if enabled: false
     // * Set DHCP options to None if DHCP is false
-    fn cleanup(&mut self) {
+    pub(crate) fn cleanup(&mut self) {
         if !self.enabled {
             self.dhcp = None;
             self.addresses = None;
@@ -155,6 +117,28 @@ impl InterfaceIpv4 {
             self.auto_gateway = None;
             self.auto_routes = None;
             self.auto_table_id = None;
+        }
+    }
+
+    pub(crate) fn merge_ip(&mut self, current: &Self) {
+        if !self.prop_list.contains(&"enabled") {
+            self.enabled = current.enabled;
+        }
+        if self.dhcp.is_none() && self.enabled {
+            self.dhcp = current.dhcp;
+        }
+
+        // Normally, we expect backend to preserve configuration which not
+        // mentioned in desire, but when DHCP switch from ON to OFF, the design
+        // of nmstate is expecting dynamic IP address goes static. This should
+        // be done by top level code.
+        if current.is_auto()
+            && current.addresses.is_some()
+            && self.enabled
+            && !self.is_auto()
+            && self.addresses.is_none()
+        {
+            self.addresses = current.addresses.clone();
         }
     }
 
@@ -188,54 +172,6 @@ impl InterfaceIpv4 {
             }
         }
         self.cleanup();
-    }
-
-    // Clean up before verification
-    // * Sort IP address
-    // * Ignore DHCP options if DHCP disabled
-    // * Ignore address if DHCP enabled
-    // * Set DHCP as off if enabled and dhcp is None
-    pub(crate) fn pre_verify_cleanup(
-        &mut self,
-        pre_apply_current: Option<&Self>,
-    ) {
-        if let Some(current) = pre_apply_current {
-            self.merge_ip(current);
-        }
-        self.cleanup();
-        if self.dhcp == Some(true) {
-            self.addresses = None;
-        }
-        if let Some(addrs) = self.addresses.as_mut() {
-            addrs.sort_unstable_by(|a, b| {
-                (&a.ip, a.prefix_length).cmp(&(&b.ip, b.prefix_length))
-            })
-        };
-        if self.dhcp != Some(true) {
-            self.dhcp = Some(false);
-        }
-    }
-
-    fn merge_ip(&mut self, current: &Self) {
-        if !self.prop_list.contains(&"enabled") {
-            self.enabled = current.enabled;
-        }
-        if self.dhcp.is_none() && self.enabled {
-            self.dhcp = current.dhcp;
-        }
-
-        // Normally, we expect backend to preserve configuration which not
-        // mentioned in desire, but when DHCP switch from ON to OFF, the design
-        // of nmstate is expecting dynamic IP address goes static. This should
-        // be done by top level code.
-        if current.is_auto()
-            && current.addresses.is_some()
-            && self.enabled
-            && !self.is_auto()
-            && self.addresses.is_none()
-        {
-            self.addresses = current.addresses.clone();
-        }
     }
 }
 
@@ -346,7 +282,7 @@ impl InterfaceIpv6 {
 
     // * Disable DHCP and remove address if enabled: false
     // * Set DHCP options to None if DHCP is false
-    fn cleanup(&mut self) {
+    pub(crate) fn cleanup(&mut self) {
         if !self.enabled {
             self.dhcp = None;
             self.autoconf = None;
@@ -358,89 +294,6 @@ impl InterfaceIpv6 {
             self.auto_gateway = None;
             self.auto_routes = None;
             self.auto_table_id = None;
-        }
-    }
-
-    pub(crate) fn update(&mut self, other: &Self) {
-        if other.prop_list.contains(&"enabled") {
-            self.enabled = other.enabled;
-        }
-        if other.prop_list.contains(&"dhcp") {
-            self.dhcp = other.dhcp;
-        }
-        if other.prop_list.contains(&"dhcp_duid") {
-            self.dhcp_duid = other.dhcp_duid.clone();
-        }
-        if other.prop_list.contains(&"autoconf") {
-            self.autoconf = other.autoconf;
-        }
-        if other.prop_list.contains(&"addr_gen_mode") {
-            self.addr_gen_mode = other.addr_gen_mode.clone();
-        }
-        if other.prop_list.contains(&"addresses") {
-            self.addresses = other.addresses.clone();
-        }
-        if other.prop_list.contains(&"auto_dns") {
-            self.auto_dns = other.auto_dns;
-        }
-        if other.prop_list.contains(&"auto_gateway") {
-            self.auto_gateway = other.auto_gateway;
-        }
-        if other.prop_list.contains(&"auto_routes") {
-            self.auto_routes = other.auto_routes;
-        }
-        if other.prop_list.contains(&"auto_table_id") {
-            self.auto_table_id = other.auto_table_id;
-        }
-        if other.prop_list.contains(&"dns") {
-            self.dns = other.dns.clone();
-        }
-        if other.prop_list.contains(&"addr_gen_mode") {
-            self.addr_gen_mode = other.addr_gen_mode.clone();
-        }
-        for other_prop_name in &other.prop_list {
-            if !self.prop_list.contains(other_prop_name) {
-                self.prop_list.push(other_prop_name);
-            }
-        }
-        self.cleanup()
-    }
-
-    // Clean up before verification
-    // * Remove link-local address
-    // * Ignore DHCP options if DHCP disabled
-    // * Ignore IP address when DHCP/autoconf enabled.
-    // * Set DHCP None to Some(false)
-    pub(crate) fn pre_verify_cleanup(
-        &mut self,
-        pre_apply_current: Option<&Self>,
-    ) {
-        if let Some(current) = pre_apply_current {
-            self.merge_ip(current);
-        }
-        self.cleanup();
-        if self.is_auto() {
-            self.addresses = None;
-        }
-        if let Some(addrs) = self.addresses.as_mut() {
-            addrs.retain(|addr| {
-                if let IpAddr::V6(ip_addr) = addr.ip {
-                    !is_ipv6_unicast_link_local(&ip_addr)
-                } else {
-                    false
-                }
-            })
-        };
-        if let Some(addrs) = self.addresses.as_mut() {
-            addrs.sort_unstable_by(|a, b| {
-                (&a.ip, a.prefix_length).cmp(&(&b.ip, b.prefix_length))
-            })
-        };
-        if self.dhcp != Some(true) {
-            self.dhcp = Some(false);
-        }
-        if self.autoconf != Some(true) {
-            self.autoconf = Some(false);
         }
     }
 
@@ -495,7 +348,7 @@ impl InterfaceIpv6 {
         self.cleanup();
     }
 
-    fn merge_ip(&mut self, current: &Self) {
+    pub(crate) fn merge_ip(&mut self, current: &Self) {
         if !self.prop_list.contains(&"enabled") {
             self.enabled = current.enabled;
         }
@@ -619,12 +472,6 @@ pub(crate) fn is_ipv6_addr(addr: &str) -> bool {
 // is experimental.
 pub(crate) fn is_ipv6_unicast_link_local(ip: &Ipv6Addr) -> bool {
     (ip.segments()[0] & 0xffc0) == 0xfe80
-}
-
-// Copy from Rust official std::net::Ipv6Addr::is_unicast_local() which
-// is experimental.
-pub(crate) fn is_ipv6_unicast_local(ip: &Ipv6Addr) -> bool {
-    (ip.segments()[0] & 0xfe00) == 0xfc00
 }
 
 impl std::convert::TryFrom<&str> for InterfaceIpAddr {

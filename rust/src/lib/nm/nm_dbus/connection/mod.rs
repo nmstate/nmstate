@@ -62,7 +62,8 @@ pub use self::vrf::NmSettingVrf;
 pub use self::vxlan::NmSettingVxlan;
 pub use self::wired::NmSettingWired;
 
-pub(crate) use self::conn::{
-    nm_con_get_from_obj_path, DbusDictionary, NmConnectionDbusValue,
-};
+pub(crate) use self::conn::DbusDictionary;
+#[cfg(feature = "query_apply")]
+pub(crate) use self::conn::{nm_con_get_from_obj_path, NmConnectionDbusValue};
+#[cfg(feature = "query_apply")]
 pub(crate) use self::macros::_from_map;

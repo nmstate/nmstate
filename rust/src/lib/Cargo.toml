@@ -16,16 +16,20 @@ path = "lib.rs"
 
 [dependencies]
 ipnet = "2.5.0"
-libc = "0.2.106"
+libc = { version = "0.2.106", optional = true}
 log = "0.4.14"
-# nispor = "1.2.7"
-nispor = { git = "https://github.com/nispor/nispor" }
-nix = "0.24.1"
+nispor = { git = "https://github.com/nispor/nispor" , optional = true}
+nix = { version = "0.24.1", optional = true}
 serde = { version = "1.0.132", features = ["derive"] }
 serde_json = "1.0.68"
 uuid = { version = "1.1", features = ["v4", "v5"] }
-zbus = "1.9.2"
+zbus = { version ="1.9.2", optional = true}
 zvariant = "2.10.0"
 
 [dev-dependencies]
 serde_yaml = "0.8"
+
+[features]
+default = ["query_apply", "gen_conf"]
+query_apply = ["dep:nispor", "dep:nix", "dep:libc", "dep:zbus"]
+gen_conf = []

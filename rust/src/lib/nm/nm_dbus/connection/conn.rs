@@ -20,8 +20,7 @@ use std::convert::TryFrom;
 use log::warn;
 
 use serde::Deserialize;
-use zbus::export::zvariant::Signature;
-use zvariant::Type;
+use zvariant::{Signature, Type};
 
 use super::super::{
     connection::bond::NmSettingBond,
@@ -42,8 +41,7 @@ use super::super::{
     connection::vrf::NmSettingVrf,
     connection::vxlan::NmSettingVxlan,
     connection::wired::NmSettingWired,
-    dbus::{NM_DBUS_INTERFACE_ROOT, NM_DBUS_INTERFACE_SETTING},
-    keyfile::keyfile_sections_to_string,
+    convert::ToDbusValue,
     NmError,
 };
 
@@ -56,10 +54,12 @@ pub(crate) type NmConnectionDbusOwnedValue =
 
 pub(crate) type DbusDictionary = HashMap<String, zvariant::OwnedValue>;
 
+#[cfg(feature = "query_apply")]
 pub(crate) type NmConnectionDbusValue<'a> =
     HashMap<&'a str, HashMap<&'a str, zvariant::Value<'a>>>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[allow(dead_code)]
 pub enum NmSettingsConnectionFlag {
     Unsaved = 1,
     NmGenerated = 2,
@@ -67,6 +67,7 @@ pub enum NmSettingsConnectionFlag {
     External = 8,
 }
 
+#[cfg(feature = "query_apply")]
 fn from_u32_to_vec_nm_conn_flags(i: u32) -> Vec<NmSettingsConnectionFlag> {
     let mut ret = Vec::new();
     if i & NmSettingsConnectionFlag::Unsaved as u32 > 0 {
@@ -206,82 +207,7 @@ impl NmConnection {
         _connection_inner_string_member!(self, controller_type)
     }
 
-    pub fn to_keyfile(&self) -> Result<String, NmError> {
-        let mut sections: Vec<(&str, HashMap<String, zvariant::Value>)> =
-            Vec::new();
-        if let Some(con_set) = &self.connection {
-            sections.push(("connection", con_set.to_keyfile()?));
-        }
-        if let Some(bond_set) = &self.bond {
-            sections.push(("bond", bond_set.to_keyfile()?));
-        }
-        if let Some(br_set) = &self.bridge {
-            sections.push(("bridge", br_set.to_keyfile()?));
-        }
-        if let Some(br_port_set) = &self.bridge_port {
-            sections.push(("bridge-port", br_port_set.to_keyfile()?));
-        }
-        if let Some(ipv4_set) = &self.ipv4 {
-            sections.push(("ipv4", ipv4_set.to_keyfile()?));
-        }
-        if let Some(ipv6_set) = &self.ipv6 {
-            sections.push(("ipv6", ipv6_set.to_keyfile()?));
-        }
-        if let Some(ovs_bridge_set) = &self.ovs_bridge {
-            sections.push(("ovs-bridge", ovs_bridge_set.to_keyfile()?));
-        }
-        if let Some(ovs_port_set) = &self.ovs_port {
-            sections.push(("ovs-port", ovs_port_set.to_keyfile()?));
-        }
-        if let Some(ovs_iface_set) = &self.ovs_iface {
-            sections.push(("ovs-interface", ovs_iface_set.to_keyfile()?));
-        }
-        if let Some(ovs_patch_set) = &self.ovs_patch {
-            sections.push(("ovs-patch", ovs_patch_set.to_keyfile()?));
-        }
-        if let Some(ovs_dpdk_set) = &self.ovs_dpdk {
-            sections.push(("ovs-dpdk", ovs_dpdk_set.to_keyfile()?));
-        }
-        if let Some(wired_set) = &self.wired {
-            sections.push(("ethernet", wired_set.to_keyfile()?));
-        }
-        if let Some(vlan) = &self.vlan {
-            sections.push(("vlan", vlan.to_keyfile()?));
-        }
-        if let Some(vxlan) = &self.vxlan {
-            sections.push(("vxlan", vxlan.to_keyfile()?));
-        }
-        if let Some(sriov) = &self.sriov {
-            sections.push(("sriov", sriov.to_keyfile()?));
-        }
-        if let Some(mac_vlan) = &self.mac_vlan {
-            sections.push(("macvlan", mac_vlan.to_keyfile()?));
-        }
-        if let Some(vrf) = &self.vrf {
-            sections.push(("vrf", vrf.to_keyfile()?));
-        }
-        if let Some(veth) = &self.veth {
-            sections.push(("veth", veth.to_keyfile()?));
-        }
-        if let Some(user) = &self.user {
-            sections.push(("user", user.to_keyfile()?));
-        }
-        if let Some(ieee8021x) = &self.ieee8021x {
-            sections.push(("802-1x", ieee8021x.to_keyfile()?));
-        }
-        if let Some(ethtool) = &self.ethtool {
-            sections.push(("ethtool", ethtool.to_keyfile()?));
-        }
-        if let Some(ib) = &self.infiniband {
-            sections.push(("infiniband", ib.to_keyfile()?));
-        }
-        if let Some(ovs_eids) = &self.ovs_ext_ids {
-            sections.push(("ovs-external-ids", ovs_eids.to_keyfile()?));
-        }
-
-        keyfile_sections_to_string(&sections)
-    }
-
+    #[cfg(feature = "query_apply")]
     pub(crate) fn to_value(&self) -> Result<NmConnectionDbusValue, NmError> {
         let mut ret = HashMap::new();
         if let Some(con_set) = &self.connection {
@@ -431,33 +357,8 @@ impl TryFrom<DbusDictionary> for NmSettingConnection {
     }
 }
 
-impl NmSettingConnection {
-    fn i32_to_autoconnect_ports(val: Option<i32>) -> Option<bool> {
-        match val {
-            Some(NM_AUTOCONENCT_PORT_YES) => Some(true),
-            Some(NM_AUTOCONENCT_PORT_NO) => Some(false),
-            Some(v) => {
-                warn!("Unknown autoconnect-ports value {}", v);
-                None
-            }
-            // For autoconnect, None means true
-            None => Some(true),
-        }
-    }
-
-    pub(crate) fn to_keyfile(
-        &self,
-    ) -> Result<HashMap<String, zvariant::Value>, NmError> {
-        let mut ret = HashMap::new();
-        for (k, v) in self.to_value()?.drain() {
-            ret.insert(k.to_string(), v);
-        }
-        Ok(ret)
-    }
-
-    pub(crate) fn to_value(
-        &self,
-    ) -> Result<HashMap<&str, zvariant::Value>, NmError> {
+impl ToDbusValue for NmSettingConnection {
+    fn to_value(&self) -> Result<HashMap<&str, zvariant::Value>, NmError> {
         let mut ret = HashMap::new();
         if let Some(v) = &self.id {
             ret.insert("id", zvariant::Value::new(v.as_str()));
@@ -507,15 +408,31 @@ impl NmSettingConnection {
     }
 }
 
+impl NmSettingConnection {
+    fn i32_to_autoconnect_ports(val: Option<i32>) -> Option<bool> {
+        match val {
+            Some(NM_AUTOCONENCT_PORT_YES) => Some(true),
+            Some(NM_AUTOCONENCT_PORT_NO) => Some(false),
+            Some(v) => {
+                warn!("Unknown autoconnect-ports value {}", v);
+                None
+            }
+            // For autoconnect, None means true
+            None => Some(true),
+        }
+    }
+}
+
+#[cfg(feature = "query_apply")]
 pub(crate) fn nm_con_get_from_obj_path(
     dbus_con: &zbus::Connection,
     con_obj_path: &str,
 ) -> Result<NmConnection, NmError> {
     let proxy = zbus::Proxy::new(
         dbus_con,
-        NM_DBUS_INTERFACE_ROOT,
+        super::super::dbus::NM_DBUS_INTERFACE_ROOT,
         con_obj_path,
-        NM_DBUS_INTERFACE_SETTING,
+        super::super::dbus::NM_DBUS_INTERFACE_SETTING,
     )?;
     let mut nm_conn = proxy.call::<(), NmConnection>("GetSettings", &())?;
     nm_conn.obj_path = con_obj_path.to_string();

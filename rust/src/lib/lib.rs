@@ -1,6 +1,10 @@
+// SPDX-License-Identifier: Apache-2.0
+
 mod deserializer;
 mod dns;
 mod error;
+#[cfg(feature = "gen_conf")]
+mod gen_conf;
 mod hostname;
 mod ieee8021x;
 mod iface;
@@ -9,13 +13,18 @@ mod ip;
 mod lldp;
 mod mptcp;
 mod net_state;
+#[cfg(feature = "query_apply")]
 mod nispor;
 mod nm;
 mod ovs;
+#[cfg(feature = "query_apply")]
 mod ovsdb;
+#[cfg(feature = "query_apply")]
+mod query_apply;
 mod route;
 mod route_rule;
 mod serializer;
+#[cfg(feature = "query_apply")]
 mod state;
 mod unit_tests;
 

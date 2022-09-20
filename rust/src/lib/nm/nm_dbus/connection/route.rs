@@ -1,26 +1,10 @@
-// Copyright 2021 Red Hat, Inc.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
+// SPDX-License-Identifier: Apache-2.0
 
-use std::collections::HashMap;
 use std::convert::TryFrom;
 
 use serde::Deserialize;
 
-use super::super::{connection::DbusDictionary, error::NmError};
-
-const DEFAULT_ROUTE_TABLE: u32 = 254;
+use super::super::{connection::DbusDictionary, NmError};
 
 #[derive(Debug, Clone, PartialEq, Default, Deserialize)]
 #[serde(try_from = "DbusDictionary")]
@@ -49,28 +33,7 @@ impl TryFrom<DbusDictionary> for NmIpRoute {
 }
 
 impl NmIpRoute {
-    pub(crate) fn to_keyfile(&self) -> HashMap<String, String> {
-        let mut ret = HashMap::new();
-        if let (Some(dest), Some(prefix)) =
-            (self.dest.as_ref(), self.prefix.as_ref())
-        {
-            let dest = format!("{}/{}", dest, prefix);
-            let rt_line = match (self.next_hop.as_ref(), self.metric.as_ref()) {
-                (Some(n), Some(m)) => vec![dest, n.to_string(), m.to_string()],
-                (Some(n), None) => vec![dest, n.to_string()],
-                (None, Some(m)) => vec![dest, "".to_string(), m.to_string()],
-                (None, None) => vec![dest],
-            };
-            ret.insert("".to_string(), rt_line.join(","));
-            ret.insert(
-                "options".to_string(),
-                format!("table={}", self.table.unwrap_or(DEFAULT_ROUTE_TABLE)),
-            );
-        }
-        ret
-    }
-
-    pub(crate) fn to_value(&self) -> Result<zvariant::Value, NmError> {
+    fn to_value(&self) -> Result<zvariant::Value, NmError> {
         let mut ret = zvariant::Dict::new(
             zvariant::Signature::from_str_unchecked("s"),
             zvariant::Signature::from_str_unchecked("v"),

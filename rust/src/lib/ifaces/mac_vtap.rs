@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use serde::{Deserialize, Serialize};
 
 use crate::{BaseInterface, ErrorKind, InterfaceType, NmstateError};
@@ -28,7 +30,7 @@ impl MacVtapInterface {
         Self::default()
     }
 
-    pub(crate) fn validate(&self) -> Result<(), NmstateError> {
+    pub(crate) fn pre_edit_cleanup(&self) -> Result<(), NmstateError> {
         if let Some(conf) = &self.mac_vtap {
             if conf.accept_all_mac == Some(false)
                 && conf.mode != MacVtapMode::Passthru
@@ -49,15 +51,6 @@ impl MacVtapInterface {
     pub(crate) fn parent(&self) -> Option<&str> {
         self.mac_vtap.as_ref().map(|cfg| cfg.base_iface.as_str())
     }
-
-    pub(crate) fn update_mac_vtap(&mut self, other: &MacVtapInterface) {
-        // TODO: this should be done by Trait
-        if let Some(conf) = &mut self.mac_vtap {
-            conf.update(other.mac_vtap.as_ref());
-        } else {
-            self.mac_vtap = other.mac_vtap.clone();
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -74,16 +67,6 @@ pub struct MacVtapConfig {
         deserialize_with = "crate::deserializer::option_bool_or_string"
     )]
     pub accept_all_mac: Option<bool>,
-}
-
-impl MacVtapConfig {
-    fn update(&mut self, other: Option<&Self>) {
-        if let Some(other) = other {
-            self.base_iface = other.base_iface.clone();
-            self.mode = other.mode;
-            self.accept_all_mac = other.accept_all_mac;
-        }
-    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

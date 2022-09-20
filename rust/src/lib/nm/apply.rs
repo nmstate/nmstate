@@ -1,31 +1,31 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use std::collections::HashSet;
 use std::time::Instant;
 
 use crate::nm::nm_dbus::{NmApi, NmConnection};
-use log::info;
 
-use crate::{
-    nm::connection::{
-        create_index_for_nm_conns_by_name_type, iface_to_nm_connections,
-        iface_type_to_nm, NM_SETTING_OVS_PORT_SETTING_NAME,
+use super::{
+    device::create_index_for_nm_devs,
+    error::nm_error_to_nmstate,
+    profile::{
+        activate_nm_profiles, create_index_for_nm_conns_by_name_type,
+        deactivate_nm_profiles, delete_exist_profiles,
+        extend_timeout_if_required, save_nm_profiles,
     },
-    nm::device::create_index_for_nm_devs,
-    nm::error::nm_error_to_nmstate,
-    nm::mptcp::{
-        is_mptcp_flags_changed, is_mptcp_supported, remove_nm_mptcp_set,
+    query::{
+        is_mptcp_flags_changed, is_mptcp_supported, is_route_removed,
+        is_veth_peer_changed, is_veth_peer_in_desire, is_vlan_id_changed,
+        is_vrf_table_id_changed, is_vxlan_id_changed, remove_nm_mptcp_set,
     },
-    nm::profile::{
-        activate_nm_profiles, deactivate_nm_profiles, delete_exist_profiles,
-        extend_timeout_if_required, get_exist_profile, save_nm_profiles,
+    settings::{
+        get_exist_profile, iface_to_nm_connections, iface_type_to_nm,
         use_uuid_for_controller_reference, use_uuid_for_parent_reference,
+        NM_SETTING_OVS_PORT_SETTING_NAME,
     },
-    nm::route::is_route_removed,
-    nm::veth::{is_veth_peer_changed, is_veth_peer_in_desire},
-    nm::vlan::is_vlan_id_changed,
-    nm::vrf::is_vrf_table_id_changed,
-    nm::vxlan::is_vxlan_id_changed,
-    Interface, InterfaceType, NetworkState, NmstateError, RouteEntry,
 };
+
+use crate::{Interface, InterfaceType, NetworkState, NmstateError, RouteEntry};
 
 const ACTIVATION_RETRY_COUNT: usize = 5;
 const ACTIVATION_RETRY_INTERVAL: u64 = 1;
@@ -100,7 +100,7 @@ fn delete_net_state(
         if let Some(nm_conns) = nm_conns_to_delete {
             for nm_conn in nm_conns {
                 if let Some(uuid) = nm_conn.uuid() {
-                    info!(
+                    log::info!(
                         "Deleting NM connection for absent interface \
                         {}/{}: {}",
                         &iface.name(),
@@ -115,7 +115,7 @@ fn delete_net_state(
                     // TODO: handle pre-exist OVS config using name instead of
                     // UUID for controller
                     if let Some(uuid) = nm_conn.controller() {
-                        info!(
+                        log::info!(
                             "Deleting NM OVS port connection {} \
                              for absent OVS interface {}",
                             uuid,
@@ -333,7 +333,7 @@ fn delete_remain_virtual_interface_as_desired(
                 iface.name().to_string(),
                 iface.iface_type().to_string(),
             )) {
-                info!(
+                log::info!(
                     "Deleting interface {}/{}: {}",
                     &iface.name(),
                     &iface.iface_type(),
@@ -366,7 +366,7 @@ fn delete_orphan_ports(
         if let Some(ctrl_uuid) = nm_conn.controller() {
             if uuids_deleted.contains(ctrl_uuid) {
                 if let Some(uuid) = nm_conn.uuid() {
-                    info!(
+                    log::info!(
                         "Deleting NM orphan profile {}/{}: {}",
                         nm_conn.iface_name().unwrap_or(""),
                         nm_conn.iface_type().unwrap_or(""),
