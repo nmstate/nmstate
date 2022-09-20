@@ -4,7 +4,7 @@ use crate::{BaseInterface, ErrorKind};
 
 #[test]
 fn test_valid_mptcp_flags() {
-    let iface: BaseInterface = serde_yaml::from_str(
+    let mut iface: BaseInterface = serde_yaml::from_str(
         r#"---
 name: eth1
 type: ethernet
@@ -16,7 +16,7 @@ mptcp:
 "#,
     )
     .unwrap();
-    let result = iface.validate(Some(&BaseInterface::new()));
+    let result = iface.pre_edit_cleanup(Some(&BaseInterface::new()));
     assert!(result.is_err());
     if let Err(e) = result {
         assert_eq!(e.kind(), ErrorKind::InvalidArgument);
@@ -32,7 +32,6 @@ type: ethernet
 state: up
 mptcp:
   address-flags:
-  - signal
   - backup
   - fullmesh
 ipv4:
@@ -42,7 +41,6 @@ ipv4:
   - ip: "192.168.1.1"
     prefix-length: "24"
     mptcp-flags:
-    - signal
     - backup
     - fullmesh
 ipv6:
@@ -65,7 +63,6 @@ type: ethernet
 state: up
 mptcp:
   address-flags:
-  - signal
   - backup
   - fullmesh
 ipv4:

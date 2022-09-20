@@ -24,9 +24,11 @@ use crate::{
 pub(crate) fn nispor_retrieve(
     running_config_only: bool,
 ) -> Result<NetworkState, NmstateError> {
-    let mut net_state = NetworkState::default();
-    net_state.hostname = get_hostname_state();
-    net_state.prop_list = vec!["interfaces", "routes", "rules", "hostname"];
+    let mut net_state = NetworkState {
+        hostname: get_hostname_state(),
+        prop_list: vec!["interfaces", "routes", "rules", "hostname"],
+        ..Default::default()
+    };
     let np_state = nispor::NetState::retrieve().map_err(np_error_to_nmstate)?;
 
     for (_, np_iface) in np_state.ifaces.iter() {

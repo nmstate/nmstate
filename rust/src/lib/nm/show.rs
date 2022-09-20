@@ -1,37 +1,36 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use std::collections::HashMap;
 
 use crate::nm::nm_dbus::{
     NmActiveConnection, NmApi, NmConnection, NmDevice, NmDeviceState,
     NmLldpNeighbor, NM_ACTIVATION_STATE_FLAG_EXTERNAL,
 };
-use log::{debug, warn};
 
-use crate::{
-    nm::active_connection::create_index_for_nm_acs_by_name_type,
-    nm::connection::{
+use super::{
+    active_connection::create_index_for_nm_acs_by_name_type,
+    error::nm_error_to_nmstate,
+    profile::{
         create_index_for_nm_conns_by_ctrler_type,
         create_index_for_nm_conns_by_name_type, get_port_nm_conns,
-        NM_SETTING_BOND_SETTING_NAME, NM_SETTING_BRIDGE_SETTING_NAME,
-        NM_SETTING_CONTROLLERS, NM_SETTING_DUMMY_SETTING_NAME,
-        NM_SETTING_INFINIBAND_SETTING_NAME, NM_SETTING_MACVLAN_SETTING_NAME,
-        NM_SETTING_OVS_BRIDGE_SETTING_NAME, NM_SETTING_OVS_IFACE_SETTING_NAME,
-        NM_SETTING_VETH_SETTING_NAME, NM_SETTING_VLAN_SETTING_NAME,
-        NM_SETTING_VRF_SETTING_NAME, NM_SETTING_VXLAN_SETTING_NAME,
-        NM_SETTING_WIRED_SETTING_NAME,
+        NM_SETTING_CONTROLLERS,
     },
-    nm::dns::retrieve_dns_info,
-    nm::error::nm_error_to_nmstate,
-    nm::ieee8021x::nm_802_1x_to_nmstate,
-    nm::ip::{
+    query::{
+        get_description, get_lldp, get_ovs_dpdk_config, get_ovs_patch_config,
+        is_lldp_enabled, is_mptcp_supported, nm_802_1x_to_nmstate,
         nm_ip_setting_to_nmstate4, nm_ip_setting_to_nmstate6,
-        query_nmstate_wait_ip,
+        nm_ovs_bridge_conf_get, query_nmstate_wait_ip, retrieve_dns_info,
     },
-    nm::lldp::{get_lldp, is_lldp_enabled},
-    nm::mptcp::is_mptcp_supported,
-    nm::ovs::{
-        get_ovs_dpdk_config, get_ovs_patch_config, nm_ovs_bridge_conf_get,
+    settings::{
+        NM_SETTING_BOND_SETTING_NAME, NM_SETTING_BRIDGE_SETTING_NAME,
+        NM_SETTING_DUMMY_SETTING_NAME, NM_SETTING_INFINIBAND_SETTING_NAME,
+        NM_SETTING_MACVLAN_SETTING_NAME, NM_SETTING_OVS_BRIDGE_SETTING_NAME,
+        NM_SETTING_OVS_IFACE_SETTING_NAME, NM_SETTING_VETH_SETTING_NAME,
+        NM_SETTING_VLAN_SETTING_NAME, NM_SETTING_VRF_SETTING_NAME,
+        NM_SETTING_VXLAN_SETTING_NAME, NM_SETTING_WIRED_SETTING_NAME,
     },
-    nm::user::get_description,
+};
+use crate::{
     BaseInterface, BondInterface, DummyInterface, EthernetInterface,
     InfiniBandInterface, Interface, InterfaceState, InterfaceType, Interfaces,
     LinuxBridgeInterface, MacVlanInterface, MacVtapInterface, NetworkState,
@@ -78,7 +77,7 @@ pub(crate) fn nm_retrieve(
         match nm_dev.state {
             NmDeviceState::Unmanaged | NmDeviceState::Disconnected => {
                 if let Some(iface) = nm_dev_to_nm_iface(nm_dev) {
-                    debug!(
+                    log::debug!(
                         "Found unmanaged or disconnected interface {:?}",
                         iface
                     );
@@ -94,7 +93,7 @@ pub(crate) fn nm_retrieve(
                 if let Some(state_flag) = nm_ac.map(|nm_ac| nm_ac.state_flags) {
                     if (state_flag & NM_ACTIVATION_STATE_FLAG_EXTERNAL) > 0 {
                         if let Some(iface) = nm_dev_to_nm_iface(nm_dev) {
-                            debug!(
+                            log::debug!(
                                 "Found external managed interface {:?}",
                                 iface
                             );
@@ -112,10 +111,11 @@ pub(crate) fn nm_retrieve(
                     c
                 } else {
                     if nm_dev.state == NmDeviceState::Activated {
-                        warn!(
+                        log::warn!(
                             "Failed to find applied NmConnection for \
                             interface {} {}",
-                            nm_dev.name, nm_dev.iface_type
+                            nm_dev.name,
+                            nm_dev.iface_type
                         );
                     }
                     continue;
@@ -167,7 +167,7 @@ pub(crate) fn nm_retrieve(
                         iface.base_iface_mut().mptcp = None;
                     }
 
-                    debug!("Found interface {:?}", iface);
+                    log::debug!("Found interface {:?}", iface);
                     net_state.append_interface_data(iface);
                 }
             }
@@ -333,20 +333,21 @@ fn iface_get(
                     .ok();
                     Interface::OvsBridge(br_iface)
                 } else {
-                    warn!(
+                    log::warn!(
                         "Failed to get active connection of interface \
                         {} {}",
-                        base_iface.name, base_iface.iface_type
+                        base_iface.name,
+                        base_iface.iface_type
                     );
                     return None;
                 }
             }
             _ => {
-                debug!("Skip unsupported interface {:?}", base_iface);
+                log::debug!("Skip unsupported interface {:?}", base_iface);
                 return None;
             }
         };
-        debug!("Found interface {:?}", iface);
+        log::debug!("Found interface {:?}", iface);
         Some(iface)
     } else {
         // NmConnection has no interface name

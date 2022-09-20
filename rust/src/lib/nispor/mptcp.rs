@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use std::convert::TryFrom;
+use std::net::Ipv6Addr;
 
 use crate::{
-    ip::{is_ipv6_unicast_link_local, is_ipv6_unicast_local},
-    BaseInterface, MptcpAddressFlag, MptcpConfig,
+    ip::is_ipv6_unicast_link_local, BaseInterface, ErrorKind, MptcpAddressFlag,
+    MptcpConfig, NmstateError,
 };
 
 pub(crate) fn get_mptcp_flags(
@@ -90,4 +91,31 @@ pub(crate) fn get_iface_mptcp_conf(
     } else {
         None
     }
+}
+
+impl std::convert::TryFrom<nispor::MptcpAddressFlag> for MptcpAddressFlag {
+    type Error = NmstateError;
+    fn try_from(value: nispor::MptcpAddressFlag) -> Result<Self, NmstateError> {
+        match value {
+            nispor::MptcpAddressFlag::Signal => Ok(MptcpAddressFlag::Signal),
+            nispor::MptcpAddressFlag::Subflow => Ok(MptcpAddressFlag::Subflow),
+            nispor::MptcpAddressFlag::Backup => Ok(MptcpAddressFlag::Backup),
+            nispor::MptcpAddressFlag::Fullmesh => {
+                Ok(MptcpAddressFlag::Fullmesh)
+            }
+            _ => Err(NmstateError::new(
+                ErrorKind::NotSupportedError,
+                format!(
+                    "MPTCP address flag {:?} is not supported by nmstate yet",
+                    value
+                ),
+            )),
+        }
+    }
+}
+
+// Copy from Rust official std::net::Ipv6Addr::is_unicast_local() which
+// is experimental.
+fn is_ipv6_unicast_local(ip: &Ipv6Addr) -> bool {
+    (ip.segments()[0] & 0xfe00) == 0xfc00
 }

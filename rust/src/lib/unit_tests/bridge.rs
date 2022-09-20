@@ -1,5 +1,5 @@
 use crate::{
-    ifaces::get_ignored_ifaces, BridgePortTunkTag, BridgePortVlanRange,
+    query_apply::get_ignored_ifaces, BridgePortTunkTag, BridgePortVlanRange,
     InterfaceType, Interfaces, LinuxBridgeInterface,
     LinuxBridgeMulticastRouterType,
 };

@@ -28,7 +28,7 @@ impl MacVlanInterface {
         Self::default()
     }
 
-    pub(crate) fn validate(&self) -> Result<(), NmstateError> {
+    pub(crate) fn pre_edit_cleanup(&self) -> Result<(), NmstateError> {
         if let Some(conf) = &self.mac_vlan {
             if conf.accept_all_mac == Some(false)
                 && conf.mode != MacVlanMode::Passthru
@@ -49,15 +49,6 @@ impl MacVlanInterface {
     pub(crate) fn parent(&self) -> Option<&str> {
         self.mac_vlan.as_ref().map(|cfg| cfg.base_iface.as_str())
     }
-
-    pub(crate) fn update_mac_vlan(&mut self, other: &MacVlanInterface) {
-        // TODO: this should be done by Trait
-        if let Some(conf) = &mut self.mac_vlan {
-            conf.update(other.mac_vlan.as_ref());
-        } else {
-            self.mac_vlan = other.mac_vlan.clone();
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -74,16 +65,6 @@ pub struct MacVlanConfig {
         deserialize_with = "crate::deserializer::option_bool_or_string"
     )]
     pub accept_all_mac: Option<bool>,
-}
-
-impl MacVlanConfig {
-    fn update(&mut self, other: Option<&Self>) {
-        if let Some(other) = other {
-            self.base_iface = other.base_iface.clone();
-            self.mode = other.mode;
-            self.accept_all_mac = other.accept_all_mac;
-        }
-    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
-use crate::nm::nm_dbus::NmActiveConnection;
+use super::nm_dbus::NmActiveConnection;
 
-use crate::nm::connection::{
+use super::settings::{
     NM_SETTING_VETH_SETTING_NAME, NM_SETTING_WIRED_SETTING_NAME,
 };
 

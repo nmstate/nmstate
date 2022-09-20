@@ -3,7 +3,9 @@ use std::convert::TryFrom;
 
 use serde::Deserialize;
 
-use super::super::{connection::DbusDictionary, ErrorKind, NmError};
+use super::super::{
+    connection::DbusDictionary, ErrorKind, NmError, ToDbusValue,
+};
 
 const VALID_FEATURES: [&str; 58] = [
     "feature-esp-hw-offload",
@@ -257,22 +259,10 @@ impl NmSettingEthtool {
         }
         Ok(())
     }
+}
 
-    pub(crate) fn to_keyfile(
-        &self,
-    ) -> Result<HashMap<String, zvariant::Value>, NmError> {
-        let mut ret = HashMap::new();
-
-        for (k, v) in self.to_value()?.drain() {
-            ret.insert(k.to_string(), v);
-        }
-
-        Ok(ret)
-    }
-
-    pub(crate) fn to_value(
-        &self,
-    ) -> Result<HashMap<&str, zvariant::Value>, NmError> {
+impl ToDbusValue for NmSettingEthtool {
+    fn to_value(&self) -> Result<HashMap<&str, zvariant::Value>, NmError> {
         let mut ret = HashMap::new();
         if let Some(v) = &self.pause_rx {
             ret.insert("pause-rx", zvariant::Value::new(v));

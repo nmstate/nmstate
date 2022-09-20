@@ -1,17 +1,4 @@
-// Copyright 2021 Red Hat, Inc.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
+// SPDX-License-Identifier: Apache-2.0
 
 use std::collections::HashMap;
 use std::convert::TryFrom;
@@ -22,7 +9,7 @@ use super::super::{
     connection::DbusDictionary,
     convert::mac_str_to_u8_array,
     convert::{own_value_to_bytes_array, u8_array_to_mac_string},
-    error::NmError,
+    NmError, ToDbusValue,
 };
 
 #[derive(Debug, Clone, PartialEq, Default, Deserialize)]
@@ -62,28 +49,8 @@ impl TryFrom<DbusDictionary> for NmSettingWired {
     }
 }
 
-impl NmSettingWired {
-    pub(crate) fn to_keyfile(
-        &self,
-    ) -> Result<HashMap<String, zvariant::Value>, NmError> {
-        let mut ret = HashMap::new();
-        for (k, v) in self.to_value()?.drain() {
-            if k != "cloned-mac-address" {
-                ret.insert(k.to_string(), v);
-            }
-        }
-        if let Some(v) = &self.cloned_mac_address {
-            ret.insert(
-                "cloned-mac-address".to_string(),
-                zvariant::Value::new(v),
-            );
-        }
-        Ok(ret)
-    }
-
-    pub(crate) fn to_value(
-        &self,
-    ) -> Result<HashMap<&str, zvariant::Value>, NmError> {
+impl ToDbusValue for NmSettingWired {
+    fn to_value(&self) -> Result<HashMap<&str, zvariant::Value>, NmError> {
         let mut ret = HashMap::new();
         if let Some(v) = &self.cloned_mac_address {
             ret.insert(

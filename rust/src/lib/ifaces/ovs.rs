@@ -24,14 +24,6 @@ impl Default for OvsBridgeInterface {
 }
 
 impl OvsBridgeInterface {
-    pub(crate) fn update_ovs_bridge(&mut self, other: &OvsBridgeInterface) {
-        if let Some(br_conf) = &mut self.bridge {
-            br_conf.update(other.bridge.as_ref());
-        } else {
-            self.bridge = other.bridge.clone();
-        }
-    }
-
     // Return None when desire state does not mention ports
     pub(crate) fn ports(&self) -> Option<Vec<&str>> {
         if let Some(br_conf) = &self.bridge {
@@ -52,25 +44,8 @@ impl OvsBridgeInterface {
         None
     }
 
-    pub(crate) fn pre_verify_cleanup(&mut self) {
-        self.sort_ports()
-    }
-
     pub fn new() -> Self {
         Self::default()
-    }
-
-    fn sort_ports(&mut self) {
-        if let Some(ref mut br_conf) = self.bridge {
-            if let Some(ref mut port_confs) = &mut br_conf.ports {
-                port_confs.sort_unstable_by_key(|p| p.name.clone());
-                for port_conf in port_confs {
-                    if let Some(ref mut bond_conf) = port_conf.bond {
-                        bond_conf.sort_ports();
-                    }
-                }
-            }
-        }
     }
 
     pub(crate) fn port_confs(&self) -> Vec<&OvsBridgePortConfig> {
@@ -83,18 +58,6 @@ impl OvsBridgeInterface {
             }
         }
         ret
-    }
-
-    // Only support remove non-bonding port or the bond itself as bond require
-    // two ports, removal any of them will trigger error.
-    pub(crate) fn remove_port(&mut self, port_name: &str) {
-        if let Some(br_ports) = self
-            .bridge
-            .as_mut()
-            .and_then(|br_conf| br_conf.ports.as_mut())
-        {
-            br_ports.retain(|p| p.name.as_str() != port_name)
-        }
     }
 }
 
@@ -113,12 +76,6 @@ pub struct OvsBridgeConfig {
 }
 
 impl OvsBridgeConfig {
-    pub(crate) fn update(&mut self, other: Option<&OvsBridgeConfig>) {
-        if let Some(other) = other {
-            self.ports = other.ports.clone();
-        }
-    }
-
     pub fn new() -> Self {
         Self::default()
     }
@@ -283,11 +240,6 @@ impl OvsBridgeBondConfig {
             }
         }
         port_names
-    }
-    pub(crate) fn sort_ports(&mut self) {
-        if let Some(ref mut bond_ports) = self.ports {
-            bond_ports.sort_unstable_by_key(|p| p.name.clone())
-        }
     }
 }
 

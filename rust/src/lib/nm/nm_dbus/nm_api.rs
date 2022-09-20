@@ -1,16 +1,4 @@
-// Copyright 2021 Red Hat, Inc.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 use std::convert::TryFrom;
 use std::time::{Duration, Instant};
@@ -138,9 +126,13 @@ impl<'a> NmApi<'a> {
             .map(|nm_dev| self.dbus.nm_dev_applied_connection_get(nm_dev))
             // Ignore dbus errors
             .filter(|result| {
-                !matches!(result, Err(NmError {
-                    dbus_error, ..
-                    }) if dbus_error.is_some())
+                !matches!(
+                    result,
+                    Err(NmError {
+                        kind: ErrorKind::DbusConnectionError,
+                        ..
+                    })
+                )
             })
             .collect::<Result<Vec<_>, _>>()?;
         nm_conns
@@ -201,11 +193,6 @@ impl<'a> NmApi<'a> {
                 ),
             ))
         }
-    }
-
-    pub fn uuid_gen() -> String {
-        // Use Linux random number generator (RNG) to generate UUID
-        uuid::Uuid::new_v4().hyphenated().to_string()
     }
 
     pub fn active_connections_get(
@@ -359,10 +346,6 @@ where
             if cur_count == count - 1 {
                 return Err(e);
             } else {
-                if let Some(zbus::Error::MethodError(..)) = e.dbus_error {
-                    log::error!("{}", e);
-                    return Err(e);
-                }
                 log::info!("Retrying on NM dbus failure: {}", e);
                 std::thread::sleep(std::time::Duration::from_millis(
                     interval_ms,

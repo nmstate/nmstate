@@ -28,9 +28,6 @@ use super::{
 const NM_CHECKPOINT_CREATE_FLAG_DELETE_NEW_CONNECTIONS: u32 = 0x02;
 const NM_CHECKPOINT_CREATE_FLAG_DISCONNECT_NEW_DEVICES: u32 = 0x04;
 
-pub(crate) const NM_TERNARY_TRUE: i32 = 1;
-pub(crate) const NM_TERNARY_FALSE: i32 = 0;
-
 const OBJ_PATH_NULL_STR: &str = "/";
 
 pub(crate) const NM_DBUS_INTERFACE_ROOT: &str =

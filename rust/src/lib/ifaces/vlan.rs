@@ -31,15 +31,6 @@ impl VlanInterface {
     pub(crate) fn parent(&self) -> Option<&str> {
         self.vlan.as_ref().map(|cfg| cfg.base_iface.as_str())
     }
-
-    pub(crate) fn update_vlan(&mut self, other: &VlanInterface) {
-        // TODO: this should be done by Trait
-        if let Some(vlan_conf) = &mut self.vlan {
-            vlan_conf.update(other.vlan.as_ref());
-        } else {
-            self.vlan = other.vlan.clone();
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -49,15 +40,6 @@ pub struct VlanConfig {
     pub base_iface: String,
     #[serde(deserialize_with = "crate::deserializer::u16_or_string")]
     pub id: u16,
-}
-
-impl VlanConfig {
-    fn update(&mut self, other: Option<&Self>) {
-        if let Some(other) = other {
-            self.base_iface = other.base_iface.clone();
-            self.id = other.id;
-        }
-    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

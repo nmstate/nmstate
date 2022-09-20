@@ -1,19 +1,8 @@
-// Copyright 2021 Red Hat, Inc.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]
+#[allow(dead_code)]
 pub enum ErrorKind {
     DbusConnectionError,
     CheckpointConflict,
@@ -34,16 +23,11 @@ impl std::fmt::Display for ErrorKind {
 pub struct NmError {
     pub kind: ErrorKind,
     pub msg: String,
-    pub dbus_error: Option<zbus::Error>,
 }
 
 impl NmError {
     pub fn new(kind: ErrorKind, msg: String) -> Self {
-        Self {
-            kind,
-            msg,
-            dbus_error: None,
-        }
+        Self { kind, msg }
     }
 }
 
@@ -53,12 +37,12 @@ impl std::fmt::Display for NmError {
     }
 }
 
+#[cfg(feature = "query_apply")]
 impl From<zbus::Error> for NmError {
     fn from(e: zbus::Error) -> Self {
         Self {
             kind: ErrorKind::DbusConnectionError,
             msg: format!("{}", e),
-            dbus_error: Some(e),
         }
     }
 }
@@ -68,7 +52,6 @@ impl From<zvariant::Error> for NmError {
         Self {
             kind: ErrorKind::Bug,
             msg: format!("{}", e),
-            dbus_error: None,
         }
     }
 }
