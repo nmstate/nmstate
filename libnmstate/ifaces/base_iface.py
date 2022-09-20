@@ -403,6 +403,10 @@ class BaseIface:
     def match(self, other):
         self_state = self.state_for_verify()
         other_state = other.state_for_verify()
+        for family in (Interface.IPV4, Interface.IPV6):
+            apply_allow_extra_address(
+                self_state.get(family, {}), other_state.get(family, {})
+            )
         return state_match(self_state, other_state)
 
     def state_for_verify(self):
@@ -537,3 +541,19 @@ def _convert_ovs_external_ids_values_to_string(iface_info):
     )
     for key, value in external_ids.items():
         external_ids[key] = str(value)
+
+
+# When `ALLOW_EXTRA_ADDRESS:True`, we should remove extra IP address in
+# current.
+def apply_allow_extra_address(desire_ip_state, current_ip_state):
+    # By default, we allow extra IP found during verification stage in order
+    # to make the life of OpenshiftSDN easier for this corner case.
+    if desire_ip_state.get(InterfaceIP.ALLOW_EXTRA_ADDRESS, True):
+        desire_addresses = desire_ip_state.get(InterfaceIP.ADDRESS, [])
+        new_cur_addresses = [
+            addr
+            for addr in current_ip_state.get(InterfaceIP.ADDRESS, [])
+            if addr in desire_addresses
+        ]
+        current_ip_state[InterfaceIP.ADDRESS] = new_cur_addresses
+        desire_ip_state.pop(InterfaceIP.ALLOW_EXTRA_ADDRESS, None)
