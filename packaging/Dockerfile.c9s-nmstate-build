@@ -1,6 +1,6 @@
 FROM quay.io/centos/centos:stream9
 
-RUN echo "2022-07-29" > /build_time
+RUN echo "2022-09-22" > /build_time
 
 RUN dnf -y install --setopt=install_weak_deps=False \
        systemd git make rust-toolset rpm-build python3 python3-devel && \
