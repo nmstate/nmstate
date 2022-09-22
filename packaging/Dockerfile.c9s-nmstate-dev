@@ -1,6 +1,6 @@
 FROM quay.io/centos/centos:stream9
 
-RUN echo "2022-07-29" > /build_time
+RUN echo "2022-09-22" > /build_time
 
 RUN dnf update -y && \
     dnf -y install dnf-plugins-core epel-release \
