@@ -33,7 +33,7 @@ from libnmstate.schema import OvsDB
 
 from . import statelib
 
-RETRY_COUNT = 5
+RETRY_COUNT = 100
 
 
 def assert_state(desired_state_data):
@@ -61,7 +61,9 @@ def assert_state_match(desired_state_data):
         desired_state, current_state = _prepare_state_for_verify(
             desired_state_data
         )
-        if not desired_state.match(current_state):
+        if desired_state.match(current_state):
+            return
+        elif i == RETRY_COUNT - 1:
             print(
                 "desired miss match with current, retrying, "
                 f"desire {desired_state.state}"
@@ -70,11 +72,9 @@ def assert_state_match(desired_state_data):
                 "desired miss match with current, retrying, "
                 f"current {current_state.state}"
             )
+            assert desired_state.match(current_state)
+        else:
             time.sleep(0.5)
-    desired_state, current_state = _prepare_state_for_verify(
-        desired_state_data
-    )
-    assert desired_state.match(current_state)
 
 
 def assert_mac_address(state, expected_mac=None):
