@@ -50,6 +50,29 @@ impl BondInterface {
                 .map(|ports| ports.remove(index));
         }
     }
+
+    pub(crate) fn change_port_name(
+        &mut self,
+        origin_name: &str,
+        new_name: String,
+    ) {
+        if let Some(index) = self
+            .bond
+            .as_ref()
+            .and_then(|bond_conf| bond_conf.port.as_ref())
+            .and_then(|ports| {
+                ports.iter().position(|port_name| port_name == origin_name)
+            })
+        {
+            if let Some(ports) = self
+                .bond
+                .as_mut()
+                .and_then(|bond_conf| bond_conf.port.as_mut())
+            {
+                ports[index] = new_name;
+            }
+        }
+    }
 }
 
 impl BondConfig {
