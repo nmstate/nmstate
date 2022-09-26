@@ -509,3 +509,33 @@ class TestIfacesSriov:
         )
         assert absent_iface.is_desired
         assert absent_iface.is_absent
+
+    def test_ignore_sriov_vfs_if_not_desired(self):
+        pre_apply_cur_iface_infos = [
+            gen_foo_iface_info(InterfaceType.ETHERNET),
+            gen_foo_iface_info(InterfaceType.ETHERNET),
+            gen_foo_iface_info(InterfaceType.ETHERNET),
+            gen_foo_iface_info(InterfaceType.ETHERNET),
+        ]
+        pre_apply_cur_iface_infos[0][Interface.NAME] = FOO1_IFACE_NAME
+        pre_apply_cur_iface_infos[0][Ethernet.CONFIG_SUBTREE] = {
+            Ethernet.SRIOV_SUBTREE: {Ethernet.SRIOV.TOTAL_VFS: 3}
+        }
+        pre_apply_cur_iface_infos[1][Interface.NAME] = f"{FOO1_IFACE_NAME}v0"
+        pre_apply_cur_iface_infos[2][Interface.NAME] = f"{FOO1_IFACE_NAME}v1"
+        pre_apply_cur_iface_infos[3][Interface.NAME] = f"{FOO1_IFACE_NAME}v2"
+
+        des_iface_infos = [gen_foo_iface_info(InterfaceType.ETHERNET)]
+        des_iface_infos[0][Interface.NAME] = FOO1_IFACE_NAME
+
+        des_ifaces = Ifaces(des_iface_infos, pre_apply_cur_iface_infos)
+
+        cur_iface_infos = [
+            gen_foo_iface_info(InterfaceType.ETHERNET),
+        ]
+        cur_iface_infos[0][Interface.NAME] = FOO1_IFACE_NAME
+        cur_iface_infos[0][Ethernet.CONFIG_SUBTREE] = {
+            Ethernet.SRIOV_SUBTREE: {Ethernet.SRIOV.TOTAL_VFS: 0}
+        }
+
+        des_ifaces.verify(cur_iface_infos)
