@@ -183,12 +183,15 @@ impl NetworkState {
                         {
                             set_running_hostname(running_hostname)?;
                         }
-                        nm_checkpoint_timeout_extend(&checkpoint, timeout)?;
                         if !self.no_verify {
                             with_retry(
                                 VERIFY_RETRY_INTERVAL_MILLISECONDS,
                                 retry_count,
                                 || {
+                                    nm_checkpoint_timeout_extend(
+                                        &checkpoint,
+                                        timeout,
+                                    )?;
                                     let mut new_cur_net_state =
                                         cur_net_state.clone();
                                     new_cur_net_state.set_include_secrets(true);

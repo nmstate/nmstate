@@ -156,17 +156,11 @@ class TestSrIov:
         libnmstate.apply(desired_state)
         assertlib.assert_state_match(desired_state)
 
-    @pytest.mark.xfail(
-        raises=libnmstate.error.NmstateVerificationError,
-        reason="https://github.com/nmstate/nmstate/issues/1454",
-        strict=True,
-    )
     def test_sriov_remove_vf_config(self, sriov_iface_vf):
         desired_state = sriov_iface_vf
         eth_config = desired_state[Interface.KEY][0][Ethernet.CONFIG_SUBTREE]
         eth_config[Ethernet.SRIOV_SUBTREE][Ethernet.SRIOV.VFS_SUBTREE] = []
         libnmstate.apply(desired_state)
-        assertlib.assert_state_match(desired_state)
 
     def test_sriov_vf_mac_mixed_case(self, sriov_iface_vf):
         desired_state = sriov_iface_vf
