@@ -375,21 +375,8 @@ fn verify_desire_absent_but_found_in_current(
         );
         log::error!("{}", e);
         Err(e)
-    } else if cur_iface.is_up() {
-        // Real hardware should be marked as down by absent action
-        let e = NmstateError::new(
-            ErrorKind::VerificationError,
-            format!(
-                "Absent interface {}/{} still found as \
-                state up: {:?}",
-                des_iface.name(),
-                des_iface.iface_type(),
-                cur_iface
-            ),
-        );
-        log::error!("{}", e);
-        Err(e)
     } else {
+        // Hard to predict real hardware state due to backend variety.
         Ok(())
     }
 }
