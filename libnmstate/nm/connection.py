@@ -209,7 +209,7 @@ def create_new_nm_simple_conn(iface, nm_profile):
     if vxlan_setting:
         settings.append(vxlan_setting)
 
-    sriov_setting = create_sriov_setting(iface_info, nm_profile)
+    sriov_setting = create_sriov_setting(iface, nm_profile)
     if sriov_setting:
         settings.append(sriov_setting)
 
