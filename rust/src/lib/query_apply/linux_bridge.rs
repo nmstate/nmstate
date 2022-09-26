@@ -126,6 +126,25 @@ impl LinuxBridgeInterface {
         }
         false
     }
+
+    pub(crate) fn change_port_name(
+        &mut self,
+        origin_name: &str,
+        new_name: String,
+    ) {
+        if let Some(port_conf) = self
+            .bridge
+            .as_mut()
+            .and_then(|br_conf| br_conf.port.as_mut())
+            .and_then(|port_confs| {
+                port_confs
+                    .iter_mut()
+                    .find(|port_conf| port_conf.name == origin_name)
+            })
+        {
+            port_conf.name = new_name;
+        }
+    }
 }
 
 impl LinuxBridgeConfig {

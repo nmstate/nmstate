@@ -121,6 +121,7 @@ impl Interfaces {
             &ignored_user_ifaces,
         );
         cur_clone.remove_unknown_type_port();
+        self_clone.resolve_sriov_reference(pre_apply_current)?;
 
         for iface in self_clone.to_vec() {
             if iface.is_absent() || (iface.is_virtual() && iface.is_down()) {

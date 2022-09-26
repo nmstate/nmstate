@@ -236,4 +236,18 @@ impl Interface {
             Self::Unknown(_) | Self::Dummy(_) | Self::OvsInterface(_) => (),
         }
     }
+
+    pub(crate) fn change_port_name(
+        &mut self,
+        org_port_name: &str,
+        new_port_name: String,
+    ) {
+        if let Interface::LinuxBridge(iface) = self {
+            iface.change_port_name(org_port_name, new_port_name);
+        } else if let Interface::OvsBridge(iface) = self {
+            iface.change_port_name(org_port_name, new_port_name);
+        } else if let Interface::Bond(iface) = self {
+            iface.change_port_name(org_port_name, new_port_name);
+        }
+    }
 }

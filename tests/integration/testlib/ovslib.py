@@ -155,3 +155,25 @@ def _set_ifaces_state(ifaces, state):
     for iface in ifaces:
         iface[Interface.STATE] = state
     return ifaces
+
+
+@contextmanager
+def ovs_bridge(br_name, sys_port_names, internal_port_name):
+    bridge = Bridge(br_name)
+    bridge.add_internal_port(internal_port_name)
+    for sys_port_name in sys_port_names:
+        bridge.add_system_port(sys_port_name)
+    with bridge.create():
+        yield bridge.state
+
+
+@contextmanager
+# The bond_ports should be in the format of
+#   dict(bond_port_name, bond_sys_port_names)
+def ovs_bridge_bond(br_name, bond_ports, internal_port_name):
+    bridge = Bridge(br_name)
+    bridge.add_internal_port(internal_port_name)
+    for bond_port_name, bond_sys_port_names in bond_ports.items():
+        bridge.add_link_aggregation_port(bond_port_name, bond_sys_port_names)
+    with bridge.create():
+        yield bridge.state
