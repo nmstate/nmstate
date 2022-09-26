@@ -47,9 +47,9 @@ SRIOV_NMSTATE_TO_NM_MAP = {
 }
 
 
-def create_setting(iface_state, base_con_profile):
+def create_setting(iface, base_con_profile):
     sriov_setting = None
-    sriov_config = iface_state.get(Ethernet.CONFIG_SUBTREE, {}).get(
+    sriov_config = iface.original_dict.get(Ethernet.CONFIG_SUBTREE, {}).get(
         Ethernet.SRIOV_SUBTREE
     )
 

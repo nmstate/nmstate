@@ -24,9 +24,13 @@ import pytest
 import libnmstate
 from libnmstate.schema import Ethernet
 from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceState
 
 from ..testlib import cmdlib
+from ..testlib import statelib
+
+IPV4_ADDRESS1 = "192.0.2.251"
 
 
 def _test_nic_name():
@@ -90,3 +94,60 @@ def test_create_new_vfs_does_not_generate_a_profile(sriov_interface):
 
     assert f"{pf_name}v0" not in out
     assert f"{pf_name}v1" not in out
+
+
+@pytest.fixture
+def sriov_created_by_other_tool(disable_sriov):
+    pf_name = _test_nic_name()
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: pf_name,
+                    Interface.STATE: InterfaceState.ABSENT,
+                }
+            ]
+        }
+    )
+    cmdlib.exec_cmd(f"ip link set {pf_name} up".split(), check=True)
+    with open(f"/sys/class/net/{pf_name}/device/sriov_numvfs", "w") as fd:
+        fd.write("2\n")
+    yield
+
+
+@pytest.mark.tier1
+@pytest.mark.skipif(
+    not os.environ.get("TEST_REAL_NIC"),
+    reason="Need to define TEST_REAL_NIC for SR-IOV test",
+)
+def test_do_not_changed_sriov_if_not_mentioned(sriov_created_by_other_tool):
+    pf_name = _test_nic_name()
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: pf_name,
+                    Interface.STATE: InterfaceState.UP,
+                    Interface.IPV4: {
+                        InterfaceIPv4.ENABLED: True,
+                        InterfaceIPv4.ADDRESS: [
+                            {
+                                InterfaceIPv4.ADDRESS_IP: IPV4_ADDRESS1,
+                                InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+                            }
+                        ],
+                    },
+                }
+            ]
+        }
+    )
+    current_state = statelib.show_only((f"{pf_name}",))
+    assert (
+        current_state[Interface.KEY][0][Ethernet.CONFIG_SUBTREE][
+            Ethernet.SRIOV_SUBTREE
+        ][Ethernet.SRIOV.TOTAL_VFS]
+        == 2
+    )
+    assert not cmdlib.exec_cmd(f"nmcli -f sriov  c show {pf_name}".split())[
+        1
+    ].strip()
