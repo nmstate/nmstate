@@ -76,3 +76,25 @@ fn test_veth_change_peer_away_from_ignored_peer() {
         assert_eq!(e.kind(), ErrorKind::InvalidArgument);
     }
 }
+
+#[test]
+fn test_eth_verify_absent_ignore_current_up() {
+    let desired: Interfaces = serde_yaml::from_str(
+        r#"---
+- name: eth1
+  type: ethernet
+  state: absent
+"#,
+    )
+    .unwrap();
+    let current: Interfaces = serde_yaml::from_str(
+        r#"---
+- name: eth1
+  type: ethernet
+  state: up
+"#,
+    )
+    .unwrap();
+
+    desired.verify(&Interfaces::new(), &current).unwrap();
+}
