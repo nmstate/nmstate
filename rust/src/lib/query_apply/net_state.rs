@@ -126,6 +126,10 @@ impl NetworkState {
             .interfaces
             .resolve_unknown_ifaces(&cur_net_state.interfaces)?;
 
+        desire_state_to_apply
+            .interfaces
+            .resolve_sriov_reference(&cur_net_state.interfaces)?;
+
         let (add_net_state, chg_net_state, del_net_state) =
             desire_state_to_apply.gen_state_for_apply(&cur_net_state)?;
 
@@ -160,7 +164,7 @@ impl NetworkState {
                             // state instead of
                             // current,
                             &cur_net_state,
-                            self,
+                            &desire_state_to_apply,
                             &checkpoint,
                             self.memory_only,
                         )?;

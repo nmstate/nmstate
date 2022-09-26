@@ -153,6 +153,63 @@ impl OvsBridgeInterface {
             br_ports.retain(|p| p.name.as_str() != port_name)
         }
     }
+
+    pub(crate) fn change_port_name(
+        &mut self,
+        origin_name: &str,
+        new_name: String,
+    ) {
+        if let Some(index) = self
+            .bridge
+            .as_ref()
+            .and_then(|br_conf| br_conf.ports.as_ref())
+            .and_then(|ports| {
+                ports.iter().position(|port| port.name == origin_name)
+            })
+        {
+            if let Some(ports) = self
+                .bridge
+                .as_mut()
+                .and_then(|br_conf| br_conf.ports.as_mut())
+            {
+                ports[index].name = new_name;
+            }
+        } else if let Some(index) = self
+            .bridge
+            .as_ref()
+            .and_then(|br_conf| br_conf.ports.as_ref())
+            .and_then(|ports| {
+                ports.iter().position(|port_conf| {
+                    port_conf
+                        .bond
+                        .as_ref()
+                        .and_then(|bond_conf| bond_conf.ports.as_ref())
+                        .map(|bond_port_confs| {
+                            bond_port_confs
+                                .iter()
+                                .any(|bond_conf| bond_conf.name == origin_name)
+                        })
+                        .unwrap_or_default()
+                })
+            })
+        {
+            if let Some(bond_port_confs) = self
+                .bridge
+                .as_mut()
+                .and_then(|br_conf| br_conf.ports.as_mut())
+                .and_then(|ports| ports.get_mut(index))
+                .and_then(|port_conf| port_conf.bond.as_mut())
+                .and_then(|bond_conf| bond_conf.ports.as_mut())
+            {
+                for bond_port_conf in bond_port_confs {
+                    if bond_port_conf.name == origin_name {
+                        bond_port_conf.name = new_name;
+                        break;
+                    }
+                }
+            }
+        }
+    }
 }
 
 impl OvsBridgeBondConfig {
