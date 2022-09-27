@@ -25,7 +25,8 @@ COPR_ARG=""
 if [ $OS_TYPE == "c8s" ];then
     CONTAINER_IMAGE="quay.io/nmstate/c8s-nmstate-dev"
     CUSTOMIZE_ARG='--customize=
-        dnf install -y python3-varlink libvarlink-util python3-jsonschema;'
+        dnf install -y python3-varlink libvarlink-util python3-jsonschema \
+            python3-nispor python3-openvswitch2.11;'
 elif [ $OS_TYPE == "ovs2_11" ];then
     CONTAINER_IMAGE="quay.io/nmstate/c8s-nmstate-dev"
     CUSTOMIZE_ARG='--customize=
