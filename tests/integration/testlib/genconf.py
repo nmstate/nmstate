@@ -25,6 +25,7 @@ def gen_conf_apply(desire_state):
         for conn in conns:
             file_paths.append(save_nmconnection(conn[0], conn[1]))
         reload_nm_connection()
+        activate_all_nm_connections()
         yield
     finally:
         absent_state = {Interface.KEY: []}
@@ -55,3 +56,9 @@ def save_nmconnection(file_name, content):
 
 def reload_nm_connection():
     exec_cmd("nmcli c reload".split(), check=True)
+
+
+def activate_all_nm_connections():
+    con_ids = exec_cmd("nmcli -g UUID c".split(), check=True)[1].split("\n")
+    for con_id in con_ids:
+        exec_cmd(f"nmcli c up {con_id}".split(), check=False)
