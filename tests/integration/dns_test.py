@@ -32,6 +32,7 @@ from libnmstate.schema import InterfaceType
 from libnmstate.schema import Route
 
 from .testlib import cmdlib
+from .testlib.genconf import gen_conf_apply
 
 IPV4_DNS_NAMESERVERS = ["8.8.8.8", "1.1.1.1"]
 EXTRA_IPV4_DNS_NAMESERVER = "9.9.9.9"
@@ -447,3 +448,38 @@ def test_nmstatectl_show_dns(static_dns):
     assert (
         current_state[DNS.KEY][DNS.CONFIG] == static_dns[DNS.KEY][DNS.CONFIG]
     )
+
+
+@pytest.fixture
+def remove_eth1_eth2_conf(eth1_up, eth2_up):
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: "eth1",
+                    Interface.STATE: InterfaceState.ABSENT,
+                },
+                {
+                    Interface.NAME: "eth2",
+                    Interface.STATE: InterfaceState.ABSENT,
+                },
+            ]
+        }
+    )
+    yield
+
+
+@pytest.mark.tier1
+@parametrize_ip_ver
+def test_dns_edit_nameserver_with_static_gateway_genconf(
+    remove_eth1_eth2_conf, dns_config
+):
+    desired_state = {
+        Interface.KEY: _get_test_iface_states(),
+        Route.KEY: {Route.CONFIG: _gen_default_gateway_route()},
+        DNS.KEY: {DNS.CONFIG: dns_config},
+    }
+    print(desired_state)
+    with gen_conf_apply(desired_state):
+        current_state = libnmstate.show()
+        assert dns_config == current_state[DNS.KEY][DNS.CONFIG]
