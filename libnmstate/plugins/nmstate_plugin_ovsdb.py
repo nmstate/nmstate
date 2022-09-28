@@ -156,8 +156,16 @@ class NmstateOvsdbPlugin(NmstatePlugin):
         return NmstatePlugin.DEFAULT_PRIORITY + 1
 
     @property
+    def capabilities(self):
+        return [
+            NmstatePlugin.PLUGIN_CAPABILITY_OVSDB_GLOBAL,
+        ]
+
+    @property
     def plugin_capabilities(self):
-        return NmstatePlugin.PLUGIN_CAPABILITY_IFACE
+        return [
+            NmstatePlugin.PLUGIN_CAPABILITY_IFACE,
+        ]
 
     def get_interfaces(self):
         ifaces = []
