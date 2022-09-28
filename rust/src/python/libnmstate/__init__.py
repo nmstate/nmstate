@@ -15,3 +15,5 @@ __all__ = [
 ]
 
 __version__ = "1.2.2"
+
+BASE_ON_RUST = True

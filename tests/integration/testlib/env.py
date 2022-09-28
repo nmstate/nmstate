@@ -17,6 +17,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
+import libnmstate
 import os
 
 import gi
@@ -42,3 +43,9 @@ def nm_major_minor_version():
 
 def is_k8s():
     return os.getenv("RUN_K8S") == "true"
+
+
+def is_rust_nmstate():
+    return hasattr(libnmstate, "BASE_ON_RUST") and getattr(
+        libnmstate, "BASE_ON_RUST"
+    )

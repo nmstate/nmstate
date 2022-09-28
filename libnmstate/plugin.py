@@ -32,6 +32,7 @@ class NmstatePlugin(metaclass=ABCMeta):
     PLUGIN_CAPABILITY_ROUTE = "route"
     PLUGIN_CAPABILITY_ROUTE_RULE = "route_rule"
     PLUGIN_CAPABILITY_DNS = "dns"
+    PLUGIN_CAPABILITY_OVSDB_GLOBAL = "ovsdb_global"
 
     DEFAULT_PRIORITY = 10
 
