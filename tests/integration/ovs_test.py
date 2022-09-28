@@ -46,11 +46,13 @@ from .testlib import assertlib
 from .testlib import cmdlib
 from .testlib import iprule
 from .testlib import statelib
+from .testlib.env import is_rust_nmstate
 from .testlib.env import nm_major_minor_version
 from .testlib.nmplugin import disable_nm_plugin
 from .testlib.nmplugin import mount_devnull_to_path
-from .testlib.statelib import state_match
 from .testlib.ovslib import Bridge
+from .testlib.plugin import tmp_plugin_dir
+from .testlib.statelib import state_match
 from .testlib.vlan import vlan_interface
 
 
@@ -1166,3 +1168,19 @@ def test_ovs_bridge_with_bond_using_ports_keyword(eth1_up, eth2_up):
                 ]
             }
         )
+
+
+@pytest.mark.tier1
+@pytest.mark.skipif(
+    is_rust_nmstate(),
+    reason="Nmstate rust support ovsdb without external dependency",
+)
+def test_global_ovsdb_without_ovsdb_plugin():
+    with tmp_plugin_dir():
+        desired_ovs_config = {
+            OvsDB.EXTERNAL_IDS: {
+                TEST_EXTERNAL_IDS_KEY: TEST_EXTERNAL_IDS_VALUE
+            }
+        }
+        with pytest.raises(NmstateDependencyError):
+            libnmstate.apply({OvsDB.KEY: desired_ovs_config})

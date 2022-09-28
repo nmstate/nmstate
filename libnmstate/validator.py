@@ -23,6 +23,7 @@ import logging
 import jsonschema as js
 
 from libnmstate.schema import Interface
+from libnmstate.schema import OvsDB
 from libnmstate.schema import InterfaceType
 from libnmstate.error import NmstateDependencyError
 
@@ -43,6 +44,7 @@ def schema_validate(data, validation_schema=schema.ifaces_schema):
 
 def validate_capabilities(state, capabilities):
     validate_interface_capabilities(state.get(Interface.KEY, []), capabilities)
+    validate_ovsdb_global_cap(state.get(OvsDB.KEY, {}), capabilities)
 
 
 def validate_interface_capabilities(ifaces_state, capabilities):
@@ -77,4 +79,16 @@ def _validate_max_supported_intface_count(data):
         logging.warning(
             "Interfaces count exceeds the limit %s in desired state",
             MAX_SUPPORTED_INTERFACES,
+        )
+
+
+def validate_ovsdb_global_cap(ovsdb_global_conf, capabilities):
+    if (
+        ovsdb_global_conf
+        and NmstatePlugin.PLUGIN_CAPABILITY_OVSDB_GLOBAL not in capabilities
+    ):
+        raise NmstateDependencyError(
+            "Missing plugin for ovs-db global configuration, "
+            "please try to install 'nmstate-plugin-ovsdb' or other plugin "
+            "provides NmstatePlugin.PLUGIN_CAPABILITY_OVSDB_GLOBAL"
         )
