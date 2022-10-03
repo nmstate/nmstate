@@ -8,7 +8,9 @@ impl ToKeyfile for NmSettingIp {
     fn to_keyfile(&self) -> Result<HashMap<String, zvariant::Value>, NmError> {
         let mut ret = HashMap::new();
         for (k, v) in self.to_value()?.drain() {
-            if !vec!["address-data", "route-data", "dns"].contains(&k) {
+            if !vec!["address-data", "route-data", "dns", "routing-rules"]
+                .contains(&k)
+            {
                 ret.insert(k.to_string(), v);
             }
         }
@@ -24,6 +26,14 @@ impl ToKeyfile for NmSettingIp {
                     } else {
                         format!("route{}_{}", i, k)
                     },
+                    zvariant::Value::new(v),
+                );
+            }
+        }
+        for (i, rule) in self.route_rules.as_slice().iter().enumerate() {
+            for (_, v) in rule.to_keyfile().drain() {
+                ret.insert(
+                    format!("routing-rule{}", i),
                     zvariant::Value::new(v),
                 );
             }

@@ -26,8 +26,10 @@ import libnmstate
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import OVSBridge
+from libnmstate.schema import RouteRule
 
 from ..testlib.env import is_k8s
+from ..testlib import iprule
 from ..testlib.statelib import show_only
 from ..testlib.genconf import gen_conf_apply
 
@@ -76,6 +78,45 @@ interfaces:
 
     with gen_conf_apply(desired_state):
         retry_verify_ovs_ports("br0", sorted(["eth1", "br0"]))
+
+
+@pytest.mark.tier1
+def test_gen_conf_routes_rules():
+    desired_state = load_yaml(
+        """
+interfaces:
+- name: eth1
+  type: ethernet
+  state: up
+  ipv4:
+    address:
+      - ip: 192.0.2.251
+        prefix-length: 24
+    dhcp: false
+    enabled: true
+routes:
+  config:
+    - destination: 198.51.100.0/24
+      metric: 150
+      next-hop-address: 192.0.2.1
+      next-hop-interface: eth1
+      table-id: 254
+route-rules:
+  config:
+    - ip-to: 192.0.2.0/24
+      ip-from: 192.168.2.0/24
+      priority: 1
+      route-table: 254
+"""
+    )
+    with gen_conf_apply(desired_state):
+        rule = desired_state[RouteRule.KEY][RouteRule.CONFIG][0]
+        iprule.ip_rule_exist_in_os(
+            rule.get(RouteRule.IP_FROM),
+            rule.get(RouteRule.IP_TO),
+            rule.get(RouteRule.PRIORITY),
+            rule.get(RouteRule.ROUTE_TABLE),
+        )
 
 
 def load_yaml(content):
