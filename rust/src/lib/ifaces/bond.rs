@@ -237,6 +237,7 @@ impl BondConfig {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy)]
 #[non_exhaustive]
+#[serde(rename_all = "kebab-case")]
 #[serde(try_from = "NumberAsString")]
 pub enum BondAdSelect {
     Stable,
