@@ -18,7 +18,7 @@ path = "lib.rs"
 ipnet = "2.5.0"
 libc = { version = "0.2.106", optional = true}
 log = "0.4.14"
-nispor = { git = "https://github.com/nispor/nispor" , optional = true}
+nispor = { version = "1.2.8" , optional = true}
 nix = { version = "0.24.1", optional = true}
 serde = { version = "1.0.132", features = ["derive"] }
 serde_json = "1.0.68"
