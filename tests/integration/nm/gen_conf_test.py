@@ -17,7 +17,6 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
-import os
 import time
 
 import pytest
@@ -28,8 +27,8 @@ from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import OVSBridge
 
-from ..testlib.nmplugin import nm_service_restart
 from ..testlib.statelib import show_only
+from ..testlib.genconf import gen_conf_apply
 
 
 NM_CONFIG_FOLDER = "/etc/NetworkManager/system-connections"
@@ -72,22 +71,9 @@ interfaces:
   state: up
 """
     )
-    result = libnmstate.generate_configurations(desired_state)[
-        "NetworkManager"
-    ]
-    with nm_service_restart():
-        for file_name, file_content in result:
-            save_nm_config(file_name, file_content)
 
-    retry_verify_ovs_ports("br0", sorted(["eth1", "br0"]))
-
-
-def save_nm_config(file_name, file_content):
-    file_path = f"{NM_CONFIG_FOLDER}/{file_name}"
-    with open(file_path, "w") as fd:
-        fd.write(file_content)
-    os.chown(file_path, 0, 0)
-    os.chmod(file_path, 0o600)
+    with gen_conf_apply(desired_state):
+        retry_verify_ovs_ports("br0", sorted(["eth1", "br0"]))
 
 
 def load_yaml(content):
