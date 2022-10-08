@@ -27,6 +27,7 @@ from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import OVSBridge
 
+from ..testlib.env import is_k8s
 from ..testlib.statelib import show_only
 from ..testlib.genconf import gen_conf_apply
 
@@ -52,6 +53,7 @@ interfaces:
 
 
 @pytest.mark.tier1
+@pytest.mark.skipif(is_k8s(), reason="K8S does not support genconf")
 def test_gen_conf_ovs_same_name(eth1_up, cleanup_ovs_same_name):
     desired_state = load_yaml(
         """

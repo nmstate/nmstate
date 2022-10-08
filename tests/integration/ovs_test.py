@@ -47,6 +47,7 @@ from .testlib import cmdlib
 from .testlib import iprule
 from .testlib import statelib
 from .testlib.bondlib import bond_interface
+from .testlib.env import is_k8s
 from .testlib.env import nm_major_minor_version
 from .testlib.genconf import gen_conf_apply
 from .testlib.nmplugin import disable_nm_plugin
@@ -1252,6 +1253,7 @@ def test_move_ovs_system_interface_to_bond(bridge_with_ports):
         libnmstate.apply(desired_state)
 
 
+@pytest.mark.skipif(is_k8s(), reason="K8S does not support genconf")
 def test_genconf_ovsdb_iface_external_ids(eth1_up):
     desired_state = {
         Interface.KEY: [
