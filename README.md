@@ -20,11 +20,11 @@ Copr build status, all repos are built for Fedora Linux and RHEL/CentOS Stream/E
 Nmstate is a library with an accompanying command line tool that manages
 host networking settings in a declarative manner.
 The networking state is described by a pre-defined schema.
-Reporting of current state and changes to it (desired state) both conform to
+Reporting of the current state and changes to it (desired state) both conform to
 the schema.
 
 Nmstate is aimed to satisfy enterprise needs to manage host networking through
-a northbound declarative API and multi provider support on the southbound.
+a northbound declarative API and multi-provider support on the southbound.
 NetworkManager acts as the main (and currently the only) provider supported.
 
 ## State example:
@@ -84,7 +84,7 @@ eth0_mac = eth0_state['mac-address']
 nmstatectl show eth0
 ```
 
-Change to desired state (python/shell):
+Change to the desired state (python/shell):
 
 ```python
 import libnmstate
@@ -95,7 +95,7 @@ libnmstate.apply(state)
 ```
 
 ```shell
-# use yaml or json formats
+# use YAML or JSON formats
 nmstatectl set desired-state.yml
 nmstatectl set desired-state.json
 ```
@@ -113,7 +113,7 @@ libnmstate.apply(state)
 ```
 
 ```shell
-# open current state in a text editor, change and save to apply
+# open the current state in a text editor, change it and save to apply
 nmstatectl edit eth3
 ```
 
@@ -125,7 +125,7 @@ to <nmstate-devel-join@lists.fedorahosted.org> or visit the
 [mailing list page][mailing_list].
 
 Sprint tracking happens in 
-([Github projects](https://github.com/nmstate/nmstate/projects)).
+([GitHub projects](https://github.com/nmstate/nmstate/projects)).
 
 There is also `#nmstate` on
 [Libera IRC](https://libera.chat/).
@@ -139,7 +139,7 @@ these [instructions](CONTRIBUTING.md) to contribute.
 
 For Fedora 29+, `sudo dnf install nmstate`.
 
-For others distribution, please see the [install guide](https://nmstate.io/user/install.html).
+For other distribution, please see the [install guide](https://nmstate.io/user/install.html).
 
 ## Documentation
 
@@ -151,7 +151,7 @@ For others distribution, please see the [install guide](https://nmstate.io/user/
 
 ## Limitations
 
-* Maximum supported number of interfaces in a single desire state is 1000.
+* The maximum supported number of interfaces in a single desire state is 1000.
 
 ## Changelog
 
