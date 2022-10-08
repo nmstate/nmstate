@@ -150,13 +150,10 @@ class NmProfile:
         )
 
     def to_key_file_string(self):
-        nm_simple_conn = create_new_nm_simple_conn(
-            self._iface, nm_profile=None
-        )
-        nm_simple_conn.normalize()
+        self._nm_simple_conn.normalize()
         # pylint: disable=no-member
         key_file = NM.keyfile_write(
-            nm_simple_conn, NM.KeyfileHandlerFlags.NONE, None, None
+            self._nm_simple_conn, NM.KeyfileHandlerFlags.NONE, None, None
         )
         # pylint: enable=no-member
         return key_file.to_data()[0]
