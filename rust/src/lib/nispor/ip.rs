@@ -79,7 +79,7 @@ pub(crate) fn nmstate_ipv4_to_np(
             np_ip_conf.addresses.push({
                 let mut ip_conf = nispor::IpAddrConf::default();
                 ip_conf.address = nms_addr.ip.to_string();
-                ip_conf.prefix_len = nms_addr.prefix_length as u8;
+                ip_conf.prefix_len = nms_addr.prefix_length;
                 ip_conf
             });
         }
@@ -96,7 +96,7 @@ pub(crate) fn nmstate_ipv6_to_np(
             np_ip_conf.addresses.push({
                 let mut ip_conf = nispor::IpAddrConf::default();
                 ip_conf.address = nms_addr.ip.to_string();
-                ip_conf.prefix_len = nms_addr.prefix_length as u8;
+                ip_conf.prefix_len = nms_addr.prefix_length;
                 ip_conf
             });
         }
