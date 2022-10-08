@@ -34,6 +34,9 @@ impl InterfaceIpv4 {
         if other.prop_list.contains(&"auto_table_id") {
             self.auto_table_id = other.auto_table_id;
         }
+        if other.prop_list.contains(&"allow_extra_address") {
+            self.allow_extra_address = other.allow_extra_address;
+        }
 
         for other_prop_name in &other.prop_list {
             if !self.prop_list.contains(other_prop_name) {
@@ -48,12 +51,30 @@ impl InterfaceIpv4 {
     // * Ignore DHCP options if DHCP disabled
     // * Ignore address if DHCP enabled
     // * Set DHCP as off if enabled and dhcp is None
+    // * If `allow_extra_address: true`, remove current IP address if not found
+    //   in desired.
     pub(crate) fn pre_verify_cleanup(
         &mut self,
         pre_apply_current: Option<&Self>,
+        mut current: Option<&mut Self>,
     ) {
         if let Some(current) = pre_apply_current {
             self.merge_ip(current);
+        }
+        if let (Some(cur_ip_addrs), Some(des_ip_addrs)) = (
+            current.as_mut().and_then(|c| c.addresses.as_mut()),
+            self.addresses.as_ref(),
+        ) {
+            if self.allow_extra_address {
+                cur_ip_addrs.retain(|i| {
+                    // Cannot use `des_ip_addrs.contains(i)` here as
+                    // InterfaceIpAddr has `mptcp_flags` which should be ignored
+                    // here
+                    des_ip_addrs.iter().any(|des| {
+                        des.ip == i.ip && des.prefix_length == i.prefix_length
+                    })
+                })
+            }
         }
         self.cleanup();
         if self.dhcp == Some(true) {
@@ -121,13 +142,32 @@ impl InterfaceIpv6 {
     // * Ignore DHCP options if DHCP disabled
     // * Ignore IP address when DHCP/autoconf enabled.
     // * Set DHCP None to Some(false)
+    // * If `allow_extra_address: true`, remove current IP address if not found
+    //   in desired.
     pub(crate) fn pre_verify_cleanup(
         &mut self,
         pre_apply_current: Option<&Self>,
+        mut current: Option<&mut Self>,
     ) {
         if let Some(current) = pre_apply_current {
             self.merge_ip(current);
         }
+        if let (Some(cur_ip_addrs), Some(des_ip_addrs)) = (
+            current.as_mut().and_then(|c| c.addresses.as_mut()),
+            self.addresses.as_ref(),
+        ) {
+            if self.allow_extra_address {
+                cur_ip_addrs.retain(|i| {
+                    // Cannot use `des_ip_addrs.contains(i)` here as
+                    // InterfaceIpAddr has `mptcp_flags` which should be ignored
+                    // here
+                    des_ip_addrs.iter().any(|des| {
+                        des.ip == i.ip && des.prefix_length == i.prefix_length
+                    })
+                })
+            }
+        }
+
         self.cleanup();
         if self.is_auto() {
             self.addresses = None;

@@ -89,6 +89,7 @@ impl BaseInterface {
     pub(crate) fn pre_verify_cleanup(
         &mut self,
         pre_apply_current: Option<&Self>,
+        mut current: Option<&mut Self>,
     ) {
         // Ignore min_mtu and max_mtu as they are not changeable
         self.min_mtu = None;
@@ -103,12 +104,14 @@ impl BaseInterface {
         if let Some(ref mut ipv4) = self.ipv4 {
             ipv4.pre_verify_cleanup(
                 pre_apply_current.and_then(|i| i.ipv4.as_ref()),
+                current.as_mut().and_then(|i| i.ipv4.as_mut()),
             );
         }
 
         if let Some(ref mut ipv6) = self.ipv6 {
             ipv6.pre_verify_cleanup(
                 pre_apply_current.and_then(|i| i.ipv6.as_ref()),
+                current.as_mut().and_then(|i| i.ipv6.as_mut()),
             );
         }
         // Change all veth interface to ethernet for simpler verification

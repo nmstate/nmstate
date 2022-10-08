@@ -538,6 +538,7 @@ def test_ipv6_dhcp_switch_on_to_off(dhcpcli_up):
     dhcp_cli_desired_state[Interface.STATE] = InterfaceState.UP
     dhcp_cli_desired_state[Interface.IPV6] = _create_ipv6_state(enabled=True)
 
+    print(desired_state)
     libnmstate.apply(desired_state)
 
     assertlib.assert_state(desired_state)
