@@ -128,13 +128,15 @@ impl TryFrom<DbusDictionary> for NmSettingEthtool {
             coalesce_adaptive_rx: _from_map!(
                 v,
                 "coalesce-adaptive-rx",
-                bool::try_from
-            )?,
+                u32::try_from
+            )?
+            .map(|i| i > 0),
             coalesce_adaptive_tx: _from_map!(
                 v,
                 "coalesce-adaptive-tx",
-                bool::try_from
-            )?,
+                u32::try_from
+            )?
+            .map(|i| i > 0),
             coalesce_pkt_rate_high: _from_map!(
                 v,
                 "coalesce-pkt-rate-high",
@@ -274,10 +276,10 @@ impl ToDbusValue for NmSettingEthtool {
             ret.insert("pause-autoneg", zvariant::Value::new(v));
         }
         if let Some(v) = &self.coalesce_adaptive_rx {
-            ret.insert("coalesce-adaptive-rx", zvariant::Value::new(v));
+            ret.insert("coalesce-adaptive-rx", zvariant::Value::new(*v as u32));
         }
         if let Some(v) = &self.coalesce_adaptive_tx {
-            ret.insert("coalesce-adaptive-tx", zvariant::Value::new(v));
+            ret.insert("coalesce-adaptive-tx", zvariant::Value::new(*v as u32));
         }
         if let Some(v) = &self.coalesce_pkt_rate_high {
             ret.insert("coalesce-pkt-rate-high", zvariant::Value::new(v));
