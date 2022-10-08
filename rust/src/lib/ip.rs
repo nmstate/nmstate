@@ -71,9 +71,15 @@ struct InterfaceIp {
     pub auto_table_id: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none", rename = "addr-gen-mode")]
     pub addr_gen_mode: Option<Ipv6AddrGenMode>,
+    #[serde(
+        default = "default_allow_extra_address",
+        skip_serializing,
+        rename = "allow-extra-address"
+    )]
+    pub allow_extra_address: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(into = "InterfaceIp")]
 #[non_exhaustive]
 pub struct InterfaceIpv4 {
@@ -87,6 +93,25 @@ pub struct InterfaceIpv4 {
     pub auto_gateway: Option<bool>,
     pub auto_routes: Option<bool>,
     pub auto_table_id: Option<u32>,
+    pub allow_extra_address: bool,
+}
+
+impl Default for InterfaceIpv4 {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            prop_list: Vec::new(),
+            dhcp: None,
+            dhcp_client_id: None,
+            addresses: None,
+            dns: None,
+            auto_dns: None,
+            auto_gateway: None,
+            auto_routes: None,
+            auto_table_id: None,
+            allow_extra_address: default_allow_extra_address(),
+        }
+    }
 }
 
 impl InterfaceIpv4 {
@@ -221,6 +246,7 @@ impl From<InterfaceIp> for InterfaceIpv4 {
             auto_routes: ip.auto_routes,
             auto_gateway: ip.auto_gateway,
             auto_table_id: ip.auto_table_id,
+            allow_extra_address: ip.allow_extra_address,
             ..Default::default()
         }
     }
@@ -242,12 +268,13 @@ impl From<InterfaceIpv4> for InterfaceIp {
             auto_routes: ip.auto_routes,
             auto_gateway: ip.auto_gateway,
             auto_table_id: ip.auto_table_id,
+            allow_extra_address: ip.allow_extra_address,
             ..Default::default()
         }
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[non_exhaustive]
 #[serde(into = "InterfaceIp")]
 pub struct InterfaceIpv6 {
@@ -263,6 +290,27 @@ pub struct InterfaceIpv6 {
     pub auto_gateway: Option<bool>,
     pub auto_routes: Option<bool>,
     pub auto_table_id: Option<u32>,
+    pub allow_extra_address: bool,
+}
+
+impl Default for InterfaceIpv6 {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            prop_list: Vec::new(),
+            dhcp: None,
+            dhcp_duid: None,
+            autoconf: None,
+            addr_gen_mode: None,
+            addresses: None,
+            dns: None,
+            auto_dns: None,
+            auto_gateway: None,
+            auto_routes: None,
+            auto_table_id: None,
+            allow_extra_address: default_allow_extra_address(),
+        }
+    }
 }
 
 impl InterfaceIpv6 {
@@ -415,6 +463,7 @@ impl From<InterfaceIp> for InterfaceIpv6 {
             auto_gateway: ip.auto_gateway,
             auto_table_id: ip.auto_table_id,
             addr_gen_mode: ip.addr_gen_mode,
+            allow_extra_address: ip.allow_extra_address,
             ..Default::default()
         }
     }
@@ -438,6 +487,7 @@ impl From<InterfaceIpv6> for InterfaceIp {
             auto_gateway: ip.auto_gateway,
             auto_table_id: ip.auto_table_id,
             addr_gen_mode: ip.addr_gen_mode,
+            allow_extra_address: ip.allow_extra_address,
             ..Default::default()
         }
     }
@@ -772,4 +822,9 @@ fn is_none_or_empty_mptcp_flags(v: &Option<Vec<MptcpAddressFlag>>) -> bool {
     } else {
         true
     }
+}
+
+// Allow extra IP by default
+fn default_allow_extra_address() -> bool {
+    true
 }

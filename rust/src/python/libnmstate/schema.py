@@ -135,6 +135,7 @@ class InterfaceIP:
     AUTO_ROUTES = "auto-routes"
     AUTO_ROUTE_TABLE_ID = "auto-route-table-id"
     MPTCP_FLAGS = "mptcp-flags"
+    ALLOW_EXTRA_ADDRESS = "allow-extra-address"
 
 
 class InterfaceIPv4(InterfaceIP):

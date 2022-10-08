@@ -19,9 +19,12 @@ impl Interface {
     pub(crate) fn pre_verify_cleanup(
         &mut self,
         pre_apply_current: Option<&Self>,
+        current: Option<&mut Self>,
     ) {
-        self.base_iface_mut()
-            .pre_verify_cleanup(pre_apply_current.map(|i| i.base_iface()));
+        self.base_iface_mut().pre_verify_cleanup(
+            pre_apply_current.map(|i| i.base_iface()),
+            current.map(|c| c.base_iface_mut()),
+        );
         match self {
             Self::LinuxBridge(ref mut iface) => {
                 iface.pre_verify_cleanup();
@@ -61,8 +64,9 @@ impl Interface {
             self_clone.base_iface_mut().controller_type =
                 current_clone.base_iface().controller_type.clone();
         }
-        current_clone.pre_verify_cleanup(None);
-        self_clone.pre_verify_cleanup(pre_apply_cur_iface);
+        current_clone.pre_verify_cleanup(None, None);
+        self_clone
+            .pre_verify_cleanup(pre_apply_cur_iface, Some(&mut current_clone));
         if self_clone.iface_type() == InterfaceType::Unknown {
             current_clone.base_iface_mut().iface_type = InterfaceType::Unknown;
         }
