@@ -117,6 +117,7 @@ function k8s::pre_test_setup {
 
     ${KUBECTL_CMD} exec -n nmstate conformance -- rm -rf /workspace/
     ${KUBECTL_CMD} exec -n nmstate conformance -- mkdir -p /workspace/
+    ${KUBECTL_CMD} exec -n nmstate conformance -- mkdir -p /exported-artifacts/
     ${KUBECTL_CMD} cp -n nmstate $(pwd) conformance:/workspace/nmstate/
 
     k8s::kubectl_exec "echo '$CONT_EXPORT_DIR/core.%h.%e.%t' > \
