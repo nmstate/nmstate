@@ -27,6 +27,8 @@ mod mac_vtap;
 #[cfg(test)]
 mod mptcp;
 #[cfg(test)]
+mod net_state;
+#[cfg(test)]
 mod ovs;
 #[cfg(test)]
 mod ovsdb;
