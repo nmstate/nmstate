@@ -15,7 +15,6 @@ use crate::{
 };
 
 #[derive(Clone, Debug, Serialize, Default, PartialEq, Eq)]
-#[serde(deny_unknown_fields)]
 #[non_exhaustive]
 pub struct NetworkState {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -63,40 +62,56 @@ impl<'de> Deserialize<'de> for NetworkState {
         D: Deserializer<'de>,
     {
         let mut net_state = NetworkState::new();
-        let v = serde_json::Value::deserialize(deserializer)?;
-        if let Some(ifaces_value) = v.get("interfaces") {
+        let mut v = serde_json::Value::deserialize(deserializer)?;
+        let v = match v.as_object_mut() {
+            Some(v) => v,
+            None => {
+                return Err(serde::de::Error::custom(format!(
+                    "Expecting a HashMap/Object/Dictionary, but got {}",
+                    v
+                )));
+            }
+        };
+        if let Some(ifaces_value) = v.remove("interfaces") {
             net_state.prop_list.push("interfaces");
             net_state.interfaces = Interfaces::deserialize(ifaces_value)
                 .map_err(serde::de::Error::custom)?;
         }
-        if let Some(dns_value) = v.get("dns-resolver") {
+        if let Some(dns_value) = v.remove("dns-resolver") {
             net_state.prop_list.push("dns");
             net_state.dns = DnsState::deserialize(dns_value)
                 .map_err(serde::de::Error::custom)?;
         }
-        if let Some(route_value) = v.get("routes") {
+        if let Some(route_value) = v.remove("routes") {
             net_state.prop_list.push("routes");
             net_state.routes = Routes::deserialize(route_value)
                 .map_err(serde::de::Error::custom)?;
         }
-        if let Some(rule_value) = v.get("route-rules") {
+        if let Some(rule_value) = v.remove("route-rules") {
             net_state.prop_list.push("rules");
             net_state.rules = RouteRules::deserialize(rule_value)
                 .map_err(serde::de::Error::custom)?;
         }
-        if let Some(ovsdb_value) = v.get("ovs-db") {
+        if let Some(ovsdb_value) = v.remove("ovs-db") {
             net_state.prop_list.push("ovsdb");
             net_state.ovsdb = OvsDbGlobalConfig::deserialize(ovsdb_value)
                 .map_err(serde::de::Error::custom)?;
         }
-        if let Some(hostname_value) = v.get("hostname") {
+        if let Some(hostname_value) = v.remove("hostname") {
             net_state.prop_list.push("hostname");
             net_state.hostname = Some(
                 HostNameState::deserialize(hostname_value)
                     .map_err(serde::de::Error::custom)?,
             );
         }
-        Ok(net_state)
+        if !v.is_empty() {
+            Err(serde::de::Error::custom(format!(
+                "Unsupported keys found: {:?}",
+                v.keys().collect::<Vec<&String>>()
+            )))
+        } else {
+            Ok(net_state)
+        }
     }
 }
 
