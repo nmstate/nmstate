@@ -12,7 +12,7 @@ pub(crate) fn apply_from_stdin(
     matches: &clap::ArgMatches,
 ) -> Result<String, CliError> {
     set_ctrl_c_action();
-    apply(stdin(), matches)
+    apply(&mut stdin(), matches)
 }
 
 pub(crate) fn apply_from_files(
@@ -23,12 +23,15 @@ pub(crate) fn apply_from_files(
 
     let mut ret = String::new();
     for file_path in file_paths {
-        ret += &apply(std::fs::File::open(file_path)?, matches)?;
+        ret += &apply(&mut std::fs::File::open(file_path)?, matches)?;
     }
     Ok(ret)
 }
 
-fn apply<R>(reader: R, matches: &clap::ArgMatches) -> Result<String, CliError>
+fn apply<R>(
+    reader: &mut R,
+    matches: &clap::ArgMatches,
+) -> Result<String, CliError>
 where
     R: Read,
 {
@@ -44,7 +47,11 @@ where
             });
         }
     };
-    let mut net_state: NetworkState = serde_yaml::from_reader(reader)?;
+    let mut content = String::new();
+    // Replace non-breaking space '\u{A0}'  to normal space
+    reader.read_to_string(&mut content)?;
+    let content = content.replace('\u{A0}', " ");
+    let mut net_state: NetworkState = serde_yaml::from_str(&content)?;
     net_state.set_kernel_only(kernel_only);
     net_state.set_verify_change(!no_verify);
     net_state.set_commit(!no_commit);
