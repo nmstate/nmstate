@@ -159,10 +159,10 @@ impl From<&str> for InterfaceState {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Default)]
 #[non_exhaustive]
 pub struct UnknownInterface {
-    #[serde(skip_deserializing, flatten)]
+    #[serde(flatten)]
     pub base: BaseInterface,
     #[serde(flatten)]
-    other: serde_json::Value,
+    pub(crate) other: serde_json::Value,
 }
 
 impl UnknownInterface {
@@ -185,6 +185,8 @@ impl<'de> Deserialize<'de> for UnknownInterface {
         if let Some(s) = v.get("state") {
             base_value.insert("state".to_string(), s.clone());
         }
+        // The BaseInterface will only have name and state
+        // These two properties are also stored in `other` for serializing
         ret.base = BaseInterface::deserialize(
             serde_json::value::Value::Object(base_value),
         )
