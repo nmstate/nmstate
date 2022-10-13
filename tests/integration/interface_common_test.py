@@ -24,16 +24,16 @@ import pytest
 import libnmstate
 from libnmstate.error import NmstateValueError
 from libnmstate.error import NmstateVerificationError
-
-from .testlib import assertlib
-from .testlib import cmdlib
-from .testlib import statelib
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import InterfaceState
 
+from .testlib import assertlib
+from .testlib import cmdlib
+from .testlib import statelib
 from .testlib.env import nm_major_minor_version
+from .testlib.genconf import gen_conf_apply
 
 
 DUMMY_INTERFACE = "dummy_test"
@@ -140,3 +140,16 @@ def test_enable_and_disable_accept_all_mac_addresses(eth1_up):
     current_state = statelib.show_only(("eth1",))
     eth1_state = current_state[Interface.KEY][0]
     assert not eth1_state[Interface.ACCEPT_ALL_MAC_ADDRESSES]
+
+
+def test_gen_conf_iface_description(eth1_up):
+    desired_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: "eth1",
+                Interface.DESCRIPTION: "bar",
+            }
+        ]
+    }
+    with gen_conf_apply(desired_state):
+        assertlib.assert_state_match(desired_state)
