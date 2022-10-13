@@ -62,6 +62,9 @@ DNS_SEARCHES = ["example.org", "example.com"]
 IPV6_GATEWAY1 = "2001:db8:1::f"
 IPV6_GATEWAY2 = "2001:db8:1::e"
 
+BGP_ROUTE_DST_V4 = "203.0.113.0/25"
+BGP_ROUTE_DST_V6 = "2001:db8:b6::/64"
+
 ETH1_INTERFACE_STATE = {
     Interface.NAME: "eth1",
     Interface.STATE: InterfaceState.UP,
@@ -90,6 +93,7 @@ ETH1_INTERFACE_STATE = {
 }
 
 TEST_BRIDGE0 = "linux-br0"
+BGP_PROTOCOL_ID = "186"
 
 
 @pytest.mark.tier1
@@ -1209,3 +1213,25 @@ def test_sanitize_route_rule_from_to(route_rule_test_env):
         },
     ]
     _check_ip_rules(expected_rules)
+
+
+@pytest.fixture
+def static_route_with_additional_bgp_route(eth1_static_gateway_dns):
+    cmdlib.exec_cmd(
+        f"ip route add {BGP_ROUTE_DST_V4} "
+        f"dev eth1 proto {BGP_PROTOCOL_ID}".split(),
+        check=True,
+    )
+    cmdlib.exec_cmd(
+        f"ip route add {BGP_ROUTE_DST_V6} "
+        f"dev eth1 proto {BGP_PROTOCOL_ID}".split(),
+        check=True,
+    )
+    yield
+
+
+def test_do_not_show_bgp_route(static_route_with_additional_bgp_route):
+    routes = libnmstate.show()[Route.KEY][Route.RUNNING]
+    for route in routes:
+        assert route[Route.DESTINATION] != BGP_ROUTE_DST_V4
+        assert route[Route.DESTINATION] != BGP_ROUTE_DST_V6

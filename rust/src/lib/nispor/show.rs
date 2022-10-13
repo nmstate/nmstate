@@ -29,7 +29,12 @@ pub(crate) fn nispor_retrieve(
         prop_list: vec!["interfaces", "routes", "rules", "hostname"],
         ..Default::default()
     };
-    let np_state = nispor::NetState::retrieve().map_err(np_error_to_nmstate)?;
+    let mut filter = nispor::NetStateFilter::default();
+    // Do not query routes in order to prevent BGP routes consuming too much CPU
+    // time, we let `get_routes()` do the query by itself.
+    filter.route = None;
+    let np_state = nispor::NetState::retrieve_with_filter(&filter)
+        .map_err(np_error_to_nmstate)?;
 
     for (_, np_iface) in np_state.ifaces.iter() {
         let base_iface = np_iface_to_base_iface(np_iface, running_config_only);
@@ -117,7 +122,7 @@ pub(crate) fn nispor_retrieve(
         net_state.append_interface_data(iface);
     }
     set_controller_type(&mut net_state.interfaces);
-    net_state.routes = get_routes(&np_state.routes, running_config_only);
+    net_state.routes = get_routes(running_config_only);
     net_state.rules = get_route_rules(&np_state.rules);
 
     Ok(net_state)
