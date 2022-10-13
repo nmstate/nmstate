@@ -27,11 +27,8 @@ pub(crate) fn nm_gen_conf(
     }
     let ifaces = net_state.interfaces.to_vec();
     for iface in &ifaces {
-        if !iface.is_up() {
-            log::warn!(
-                "ignoring iface {} because is down or absent",
-                iface.name(),
-            );
+        if iface.is_absent() {
+            log::warn!("ignoring iface {} because is absent", iface.name(),);
             continue;
         }
         let mut ctrl_iface: Option<&Interface> = None;
@@ -43,7 +40,7 @@ pub(crate) fn nm_gen_conf(
             }
         }
 
-        for nm_conn in iface_to_nm_connections(
+        for mut nm_conn in iface_to_nm_connections(
             iface,
             ctrl_iface,
             &[],
@@ -51,6 +48,11 @@ pub(crate) fn nm_gen_conf(
             false,
             &NetworkState::new(),
         )? {
+            if iface.is_down() {
+                if let Some(nm_conn_set) = nm_conn.connection.as_mut() {
+                    nm_conn_set.autoconnect = Some(false);
+                }
+            }
             nm_conns.push(nm_conn);
         }
     }
