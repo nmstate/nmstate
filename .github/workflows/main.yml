@@ -13,7 +13,7 @@ jobs:
           - rust_version: "stable"
           - rust_version: "nightly"
 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
     - uses: actions/checkout@v3
@@ -56,7 +56,7 @@ jobs:
           - rust_version: "nightly"
           - rust_version: "beta"
 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
     - uses: actions/checkout@v3
@@ -71,7 +71,7 @@ jobs:
       run: cd rust && cargo test -- --show-output
 
   rpm_build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     strategy:
       fail-fast: true
       matrix:
@@ -89,7 +89,7 @@ jobs:
           retention-days: 5
 
   py_lint:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     strategy:
       fail-fast: true
       matrix:
@@ -103,7 +103,7 @@ jobs:
         run: sudo .github/workflows/run_test.sh ${{ matrix.job_type }}
 
   integ:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: [rust_lint, py_lint, rpm_build]
     strategy:
       fail-fast: false
