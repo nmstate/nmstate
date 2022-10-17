@@ -1,4 +1,8 @@
-use serde::{Deserialize, Serialize};
+// SPDX-License-Identifier: Apache-2.0
+
+use std::convert::TryFrom;
+
+use serde::{Deserialize, Deserializer, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
@@ -71,13 +75,58 @@ impl std::fmt::Display for BridgePortVlanMode {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum BridgePortTunkTag {
     #[serde(deserialize_with = "crate::deserializer::u16_or_string")]
     Id(u16),
     IdRange(BridgePortVlanRange),
+}
+
+impl<'de> Deserialize<'de> for BridgePortTunkTag {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let v = serde_json::Value::deserialize(deserializer)?;
+        if let Some(id) = v.get("id") {
+            if let Some(id) = id.as_str() {
+                Ok(Self::Id(id.parse::<u16>().map_err(|e| {
+                    serde::de::Error::custom(format!(
+                        "Failed to parse BridgePortTunkTag id \
+                        {} as u16: {}",
+                        id, e
+                    ))
+                })?))
+            } else if let Some(id) = id.as_u64() {
+                Ok(Self::Id(u16::try_from(id).map_err(|e| {
+                    serde::de::Error::custom(format!(
+                        "Failed to parse BridgePortTunkTag id \
+                        {} as u16: {}",
+                        id, e
+                    ))
+                })?))
+            } else {
+                Err(serde::de::Error::custom(format!(
+                    "The id of BridgePortTunkTag should be \
+                    unsigned 16 bits integer, but got {}",
+                    v
+                )))
+            }
+        } else if let Some(id_range) = v.get("id-range") {
+            Ok(Self::IdRange(
+                BridgePortVlanRange::deserialize(id_range)
+                    .map_err(serde::de::Error::custom)?,
+            ))
+        } else {
+            Err(serde::de::Error::custom(format!(
+                "BridgePortTunkTag only support 'id' or 'id-range', \
+                but got {}",
+                v
+            )))
+        }
+    }
 }
 
 impl BridgePortTunkTag {
