@@ -18,6 +18,6 @@ __all__ = [
     "show_running_config",
 ]
 
-__version__ = "2.2.0"
+__version__ = "2.2.1"
 
 BASE_ON_RUST = True
