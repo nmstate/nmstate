@@ -27,7 +27,7 @@ zbus = { version ="1.9.2", optional = true}
 zvariant = "2.10.0"
 
 [dev-dependencies]
-serde_yaml = "0.8"
+serde_yaml = "0.9"
 
 [features]
 default = ["query_apply", "gen_conf"]
