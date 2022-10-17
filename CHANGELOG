@@ -1,4 +1,54 @@
 # Changelog
+## [2.2.0] - 2022-10-17
+### Breaking changes
+ - Change of old behaviour: allow extra IP address found in verification stage.
+   (a4c76a69)
+
+### New features
+ - Support querying `min_mtu` and `max_mtu` of ethernet. (ae26ec3d)
+ - Support MPTCP. (d3c67303)
+ - Conditional compiling by cargo feature. (592d24d0)
+ - Support referring interface using SR-IOV PF name and VF ID. (13cec241)
+ - Support reverting SR-IOV VF settings. (d46ecb63)
+ - Filter BGP route at kernel side. (1e1dfea7)
+ - Treating state:down as autoconnect false. (b8532490)
+
+### Bug fixes
+ - Allow partial consuming port interface from ignore to up. (f5eb8e90)
+ - Mark linux bridge port as changed if desire `vlan: {}`. (28f7e918)
+ - Fix the handle of external managed interface. (5d23fa7b)
+ - Support partial editing on ovs-db global config. (b35b76ea)
+ - Better output by unescaping the `\n` for nmstatectl `gc` mode. (e92e0dce)
+ - Fix issue when OVS bridge port not mentioned. (9b85dd8e)
+ - Fix moving bridge port to bond. (d2c40c3a)
+ - Fix genconf mode for OVS `external_ids`. (8e723a15)
+ - Fix DNS store in `genconf` mode. (da3d2301)
+ - Show veth interface as `type: veth`. (e94a54fa)
+ - Merge table ID from current. (b6763fa2)
+ - Support `nmstatectl set -` for STDIN input. (586d404b)
+ - Do not verify absent real NIC. (afd380e1)
+ - Fix the bond `ad_select` option. (cd2c262e)
+ - Fix dbus value type of coalesce-adaptive RX/TX. (babbd2f7)
+ - Replace non-breaking space with normal space in nmstatectl. (f0c37d43)
+ - Deny unknown field in NetworkState deserlialization. (6bd90540)
+ - Support to route rules in gen_conf mode. (82307e69)
+ - Resolve the unknown interface to ethernet in gen_conf mode. (940e3eeb)
+ - Fix the support of description in gen_conf mode. (7b940909)
+
+## [2.1.4] - 2022-08-10
+### Breaking changes
+ - N/A
+
+### New features
+ - Add suppoprt to `ports` keyword for bond, bridge and VRF. (919b1166)
+
+### Bug fixes
+ - Fix compile warning on Rust 1.61. (d9fe1aea)
+ - Fix SONAME of c binding to `libnmstate.so.2`. (7fb28f46)
+ - Fix bond integer option. (3a1453c1)
+ - Ignored interface is still ignored even mentioned in port list.
+   (1299223f, 275d9a57)
+
 ## [2.1.3] - 2022-07-27
 ### Breaking changes
  - N/A
