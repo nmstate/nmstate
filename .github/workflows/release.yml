@@ -1,0 +1,67 @@
+name: Release
+
+on:
+  pull_request:
+   types: [opened, synchronize, reopened , labeled]
+
+jobs:
+  linux-x64:
+    if: contains(github.event.pull_request.labels.*.name, 'Release')
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install Rust Stable
+      run: rustup update
+
+    - name: Build release binrary
+      run: cd rust && cargo build --release
+
+    - uses: actions/upload-artifact@v3
+      with:
+        name: nmstatectl-linux-x64
+        path: rust/target/release/nmstatectl
+        retention-days: 30
+
+  macos-x64:
+    if: contains(github.event.pull_request.labels.*.name, 'Release')
+    runs-on: macos-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install Rust Stable
+      run: rustup update
+
+    - name: Build release
+      run: |
+        cd rust && cargo build --release \
+            --no-default-features --features gen_conf
+
+    - uses: actions/upload-artifact@v3
+      with:
+        name: nmstatectl-macos-x64
+        path: rust/target/release/nmstatectl
+        retention-days: 30
+
+  macos-aarch64:
+    if: contains(github.event.pull_request.labels.*.name, 'Release')
+    runs-on: macos-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install Rust Stable
+      run: rustup update && rustup target add aarch64-apple-darwin
+
+    - name: Build release
+      run: |
+        cd rust && cargo build --release --target=aarch64-apple-darwin \
+            --no-default-features --features gen_conf
+
+    - uses: actions/upload-artifact@v3
+      with:
+        name: nmstatectl-macos-aarch64
+        path: rust/target/aarch64-apple-darwin/release/nmstatectl
+        retention-days: 30
