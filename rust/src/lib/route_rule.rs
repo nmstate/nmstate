@@ -224,6 +224,20 @@ pub struct RouteRuleEntry {
         deserialize_with = "crate::deserializer::option_u32_or_string"
     )]
     pub table_id: Option<u32>,
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_u32_or_string",
+        serialize_with = "crate::serializer::option_u32_as_hex"
+    )]
+    pub fwmark: Option<u32>,
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_u32_or_string",
+        serialize_with = "crate::serializer::option_u32_as_hex"
+    )]
+    pub fwmask: Option<u32>,
 }
 
 impl RouteRuleEntry {
@@ -243,6 +257,17 @@ impl RouteRuleEntry {
                 format!(
                     "Neither ip-from or ip-to is defined in route rule {:?}",
                     self
+                ),
+            );
+            log::error!("{}", e);
+            return Err(e);
+        }
+
+        if self.fwmark.is_none() && self.fwmask.is_some() {
+            let e = NmstateError::new(
+                ErrorKind::InvalidArgument,
+                format!("fwmask is present but fwmark is not defined or is zero {:?}",
+                        self
                 ),
             );
             log::error!("{}", e);
@@ -300,12 +325,18 @@ impl RouteRuleEntry {
         {
             return false;
         }
+        if self.fwmark.is_some() && self.fwmark != other.fwmark {
+            return false;
+        }
+        if self.fwmask.is_some() && self.fwmask != other.fwmask {
+            return false;
+        }
         true
     }
 
     // Return tuple of (no_absent, is_ipv4, table_id, ip_from,
-    // ip_to, priority)
-    fn sort_key(&self) -> (bool, bool, u32, &str, &str, i64) {
+    // ip_to, priority, fwmark, fwmask)
+    fn sort_key(&self) -> (bool, bool, u32, &str, &str, i64, u32, u32) {
         (
             !matches!(self.state, Some(RouteRuleState::Absent)),
             {
@@ -327,6 +358,8 @@ impl RouteRuleEntry {
             self.ip_to.as_deref().unwrap_or(""),
             self.priority
                 .unwrap_or(RouteRuleEntry::USE_DEFAULT_PRIORITY),
+            self.fwmark.unwrap_or(0),
+            self.fwmask.unwrap_or(0),
         )
     }
 

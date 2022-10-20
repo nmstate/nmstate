@@ -22,6 +22,7 @@ import os
 import pytest
 
 from .testlib import assertlib
+from .testlib import iprule
 from .testlib.examplelib import example_state
 from .testlib.examplelib import find_examples_dir
 from .testlib.examplelib import load_example
@@ -32,6 +33,7 @@ from libnmstate.error import NmstateNotSupportedError
 from libnmstate.error import NmstateVerificationError
 from libnmstate.schema import DNS
 from libnmstate.schema import HostNameState
+from libnmstate.schema import RouteRule
 
 from .testlib.env import is_k8s
 from .testlib.env import nm_major_minor_version
@@ -140,6 +142,25 @@ def test_add_remove_routes(eth1_up):
         assertlib.assert_state(desired_state)
 
     assertlib.assert_no_config_route_to_iface("eth1")
+
+
+@pytest.mark.tier1
+def test_add_remove_route_rule(eth1_up):
+    """
+    Test adding a route rule and removing all route rules next hop to eth1.
+    """
+    with example_state(
+        "eth1_add_route_rule.yml", cleanup="eth1_del_all_route_rules.yml"
+    ) as desired_state:
+        rule = desired_state[RouteRule.KEY][RouteRule.CONFIG][0]
+        iprule.ip_rule_exist_in_os(
+            rule.get(RouteRule.IP_FROM),
+            rule.get(RouteRule.IP_TO),
+            rule.get(RouteRule.PRIORITY),
+            rule.get(RouteRule.ROUTE_TABLE),
+            rule.get(RouteRule.FWMARK),
+            rule.get(RouteRule.FWMASK),
+        )
 
 
 @pytest.mark.skipif(

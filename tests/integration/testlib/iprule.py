@@ -24,7 +24,7 @@ from libnmstate import iplib
 from . import cmdlib
 
 
-def ip_rule_exist_in_os(ip_from, ip_to, priority, table):
+def ip_rule_exist_in_os(ip_from, ip_to, priority, table, fwmark, fwmask):
     expected_rule = locals()
     logging.debug("Checking ip rule for {}".format(expected_rule))
     cmds = ["ip"]
@@ -64,6 +64,12 @@ def ip_rule_exist_in_os(ip_from, ip_to, priority, table):
             found = False
             continue
         if table is not None and rule["table"] != f"{table}":
+            found = False
+            continue
+        if fwmark is not None and rule["fwmark"] != hex(fwmark):
+            found = False
+            continue
+        if fwmask is not None and rule["fwmask"] != hex(fwmask):
             found = False
             continue
         if found:

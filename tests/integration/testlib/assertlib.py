@@ -139,6 +139,19 @@ def assert_no_config_route_to_iface(iface_name):
     )
 
 
+def assert_no_config_route_rule_to_iface(iface_name):
+    """
+    Asserts no config route next hop to specified interface.
+    """
+    current_state = libnmstate.show()
+
+    assert not any(
+        route
+        for route in current_state[Route.KEY][Route.CONFIG]
+        if route[Route.NEXT_HOP_INTERFACE] == iface_name
+    )
+
+
 def _fix_bond_state(current_state):
     """
     Allow current state include default value of "arp_ip_target"

@@ -38,6 +38,15 @@ impl NmIpRouteRule {
             }
             keys.push(table_str);
 
+            let fwmark_line = match (self.fw_mark, self.fw_mask) {
+                (Some(mark), Some(mask)) => format!("fwmark {}/{}", mark, mask),
+                (Some(mark), None) => format!("fwmark {}", mark),
+                _ => "".to_string(),
+            };
+            if !fwmark_line.is_empty() {
+                keys.push(fwmark_line);
+            }
+
             let rl_line = keys.join(" ");
             ret.insert("".to_string(), rl_line);
         }

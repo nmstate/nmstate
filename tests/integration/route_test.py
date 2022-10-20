@@ -958,6 +958,50 @@ def test_route_rule_clear_state_with_ipv6(route_rule_test_env):
     assert len(current_state[RouteRule.KEY][RouteRule.CONFIG]) == 0
 
 
+@pytest.mark.tier1
+def test_route_rule_fwmark_without_fwmask(route_rule_test_env):
+    state = route_rule_test_env
+    rules = [
+        {
+            RouteRule.IP_FROM: "2001:db8:f::/64",
+            RouteRule.FWMARK: 0x20,
+            RouteRule.ROUTE_TABLE: IPV6_ROUTE_TABLE_ID1,
+        },
+        {
+            RouteRule.IP_FROM: "192.0.2.0/24",
+            RouteRule.FWMARK: 0x20,
+            RouteRule.ROUTE_TABLE: IPV4_ROUTE_TABLE_ID1,
+        },
+    ]
+    state[RouteRule.KEY] = {RouteRule.CONFIG: rules}
+
+    libnmstate.apply(state)
+    _check_ip_rules(rules)
+
+
+@pytest.mark.tier1
+def test_route_rule_fwmark_with_fwmask(route_rule_test_env):
+    state = route_rule_test_env
+    rules = [
+        {
+            RouteRule.IP_FROM: "2001:db8:f::/64",
+            RouteRule.FWMARK: 0x20,
+            RouteRule.FWMASK: 0x10,
+            RouteRule.ROUTE_TABLE: IPV6_ROUTE_TABLE_ID1,
+        },
+        {
+            RouteRule.IP_FROM: "192.0.2.0/24",
+            RouteRule.FWMARK: 0x20,
+            RouteRule.FWMASK: 0x10,
+            RouteRule.ROUTE_TABLE: IPV4_ROUTE_TABLE_ID1,
+        },
+    ]
+    state[RouteRule.KEY] = {RouteRule.CONFIG: rules}
+
+    libnmstate.apply(state)
+    _check_ip_rules(rules)
+
+
 def _check_ip_rules(rules):
     for rule in rules:
         iprule.ip_rule_exist_in_os(
@@ -965,6 +1009,8 @@ def _check_ip_rules(rules):
             rule.get(RouteRule.IP_TO),
             rule.get(RouteRule.PRIORITY),
             rule.get(RouteRule.ROUTE_TABLE),
+            rule.get(RouteRule.FWMARK),
+            rule.get(RouteRule.FWMASK),
         )
 
 
