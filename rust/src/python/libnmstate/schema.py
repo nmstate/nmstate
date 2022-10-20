@@ -66,6 +66,8 @@ class RouteRule:
     USE_DEFAULT_ROUTE_TABLE = 0
     STATE = "state"
     STATE_ABSENT = "absent"
+    FWMARK = "fwmark"
+    FWMASK = "fwmask"
 
 
 class DNS:

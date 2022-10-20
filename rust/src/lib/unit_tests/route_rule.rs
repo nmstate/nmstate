@@ -17,6 +17,10 @@ const TEST_RULE_IPV6_TO: &str = "2001:db8:2::2/128";
 const TEST_RULE_IPV4_TO: &str = "198.51.100.1/32";
 const TEST_RULE_PRIORITY1: i64 = 201;
 const TEST_RULE_PRIORITY2: i64 = 202;
+const TEST_RULE_FWMARK1: u32 = 0x72;
+const TEST_RULE_FWMASK1: u32 = 0;
+const TEST_RULE_FWMARK2: u32 = 0x50;
+const TEST_RULE_FWMASK2: u32 = 0x10;
 
 const TEST_ROUTE_METRIC: i64 = 100;
 
@@ -132,12 +136,16 @@ fn gen_test_rule_entries() -> Vec<RouteRuleEntry> {
             TEST_RULE_IPV6_TO,
             TEST_RULE_PRIORITY1,
             TEST_TABLE_ID1,
+            TEST_RULE_FWMARK1,
+            TEST_RULE_FWMASK1,
         ),
         gen_rule_entry(
             TEST_RULE_IPV4_FROM,
             TEST_RULE_IPV4_TO,
             TEST_RULE_PRIORITY2,
             TEST_TABLE_ID2,
+            TEST_RULE_FWMARK2,
+            TEST_RULE_FWMASK2,
         ),
     ]
 }
@@ -147,6 +155,8 @@ fn gen_rule_entry(
     ip_to: &str,
     priority: i64,
     table_id: u32,
+    fwmark: u32,
+    fwmask: u32,
 ) -> RouteRuleEntry {
     RouteRuleEntry {
         state: None,
@@ -154,6 +164,8 @@ fn gen_rule_entry(
         ip_to: Some(ip_to.to_string()),
         table_id: Some(table_id),
         priority: Some(priority),
+        fwmark: Some(fwmark),
+        fwmask: Some(fwmask),
     }
 }
 

@@ -116,6 +116,8 @@ route-rules:
             rule.get(RouteRule.IP_TO),
             rule.get(RouteRule.PRIORITY),
             rule.get(RouteRule.ROUTE_TABLE),
+            rule.get(RouteRule.FWMARK),
+            rule.get(RouteRule.FWMASK),
         )
 
 

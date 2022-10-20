@@ -1,0 +1,8 @@
+---
+interfaces:
+  - name: eth1
+
+route-rules:
+  config:
+    - route-table: 254
+      state: absent

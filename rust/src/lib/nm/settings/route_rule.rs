@@ -54,6 +54,9 @@ pub(crate) fn gen_nm_ip_rules(
             Some(i) => Some(i),
         };
 
+        nm_rule.fw_mark = rule.fwmark;
+        nm_rule.fw_mask = rule.fwmask;
+
         ret.push(nm_rule);
     }
     Ok(ret)

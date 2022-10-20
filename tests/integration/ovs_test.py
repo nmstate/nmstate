@@ -937,6 +937,8 @@ def test_add_route_rule_to_ovs_interface_dhcp_auto_route_table(
         route_rule.get(RouteRule.IP_TO),
         route_rule.get(RouteRule.PRIORITY),
         route_rule.get(RouteRule.ROUTE_TABLE),
+        route_rule.get(RouteRule.FWMARK),
+        route_rule.get(RouteRule.FWMASK),
     )
 
 
