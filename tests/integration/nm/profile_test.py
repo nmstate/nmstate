@@ -33,6 +33,7 @@ from libnmstate.schema import Route
 from ..testlib import assertlib
 from ..testlib import cmdlib
 from ..testlib import statelib
+from ..testlib.genconf import gen_conf_apply
 from ..testlib.ovslib import Bridge as OvsBridge
 
 
@@ -581,3 +582,24 @@ def test_ovs_dup_name_different_conn_name(ovs_bridge_internal_dup_name):
 
     assert "br0-br" in out
     assert "br0-if" in out
+
+
+@pytest.mark.tier1
+def test_gen_conf_with_iface_state_down():
+    desired_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: "dummy1",
+                Interface.TYPE: InterfaceType.DUMMY,
+                Interface.STATE: InterfaceState.DOWN,
+            },
+        ]
+    }
+    with gen_conf_apply(desired_state):
+        assert (
+            cmdlib.exec_cmd(
+                "nmcli -g connection.autoconnect c show dummy1".split(),
+                check=True,
+            )[1].strip()
+            == "no"
+        )

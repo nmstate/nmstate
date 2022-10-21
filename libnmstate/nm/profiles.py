@@ -51,9 +51,11 @@ class NmProfiles:
         _append_nm_ovs_port_iface(net_state)
         all_profiles = []
         for iface in net_state.ifaces.all_ifaces():
-            if iface.is_up:
+            if iface.is_up or iface.is_down:
                 profile = NmProfile(self._ctx, iface)
                 profile.prepare_config(save_to_disk=False, gen_conf_mode=True)
+                if iface.is_down:
+                    profile.disable_autoconnect()
                 all_profiles.append(profile)
 
         _use_uuid_as_controller_and_parent(all_profiles)
