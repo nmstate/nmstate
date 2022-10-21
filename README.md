@@ -137,7 +137,7 @@ these [instructions](CONTRIBUTING.md) to contribute.
 
 ## Installation
 
-For Fedora 29+, `sudo dnf install nmstate`.
+For Fedora 29+, `sudo dnf install nmstate`. 
 
 For other distribution, please see the [install guide](https://nmstate.io/user/install.html).
 
