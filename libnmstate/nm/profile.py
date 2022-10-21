@@ -141,6 +141,11 @@ class NmProfile:
         else:
             return ""
 
+    def disable_autoconnect(self):
+        if self._nm_simple_conn:
+            nm_conn_setting = self._nm_simple_conn.get_setting_connection()
+            nm_conn_setting.props.autoconnect = False
+
     def update_controller(self, controller):
         nm_simple_conn_update_controller(self._nm_simple_conn, controller)
 
@@ -281,7 +286,9 @@ class NmProfile:
         )
 
     def prepare_config(self, save_to_disk, gen_conf_mode=False):
-        if self._iface.is_absent or self._iface.is_down:
+        if self._iface.is_absent or (
+            self._iface.is_down and not gen_conf_mode
+        ):
             return
 
         # Don't create new profile if original desire does not ask
