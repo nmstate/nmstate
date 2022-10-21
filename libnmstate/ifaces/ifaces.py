@@ -108,7 +108,7 @@ class Ifaces:
         if des_iface_infos:
             for iface_info in des_iface_infos:
                 iface = BaseIface(iface_info, save_to_disk)
-                if not iface.is_up and self._gen_conf_mode:
+                if not (iface.is_up or iface.is_down) and self._gen_conf_mode:
                     continue
                 if iface.type == InterfaceType.UNKNOWN:
                     cur_ifaces = self._get_cur_ifaces(iface.name)
