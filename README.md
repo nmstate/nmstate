@@ -124,9 +124,6 @@ discussions. To subscribe you can send an email with 'subscribe' in the subject
 to <nmstate-devel-join@lists.fedorahosted.org> or visit the
 [mailing list page][mailing_list].
 
-Sprint tracking happens in 
-([GitHub projects](https://github.com/nmstate/nmstate/projects)).
-
 There is also `#nmstate` on
 [Libera IRC](https://libera.chat/).
 
