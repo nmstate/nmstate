@@ -75,7 +75,7 @@ pub(crate) fn nm_gen_conf(
         match nm_conn.to_keyfile() {
             Ok(s) => {
                 if let Some(id) = nm_conn.id() {
-                    ret.push((format!("{}.nmconnection", id), s));
+                    ret.push((format!("{id}.nmconnection"), s));
                 }
             }
             Err(e) => {

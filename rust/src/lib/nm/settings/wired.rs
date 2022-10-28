@@ -39,7 +39,7 @@ pub(crate) fn gen_nm_wired_setting(
                         nm_wired_set.speed = Some(v);
                     }
                     if let Some(v) = eth_conf.duplex {
-                        nm_wired_set.duplex = Some(format!("{}", v));
+                        nm_wired_set.duplex = Some(format!("{v}"));
                     }
                 }
                 None => (),

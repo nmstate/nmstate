@@ -363,9 +363,9 @@ routes:
     let (add_net_state, chg_net_state, del_net_state) =
         desired.gen_state_for_apply(&current).unwrap();
 
-    println!("add_net_state {:?}", add_net_state);
-    println!("chg_net_state {:?}", chg_net_state);
-    println!("del_net_state {:?}", del_net_state);
+    println!("add_net_state {add_net_state:?}");
+    println!("chg_net_state {chg_net_state:?}");
+    println!("del_net_state {del_net_state:?}");
 
     assert!(add_net_state.interfaces.to_vec().is_empty());
     assert!(chg_net_state.interfaces.to_vec().len() == 1);

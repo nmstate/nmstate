@@ -70,7 +70,7 @@ fn filter_net_state(
             } else {
                 return Err(CliError {
                     code: crate::error::EX_DATAERR,
-                    error_msg: format!("Interface {} not found", filter),
+                    error_msg: format!("Interface {filter} not found"),
                 });
             }
         }
@@ -124,7 +124,7 @@ fn gen_desire_state(
     let mut ret = NetworkState::new();
     for ((vid, name), ifaces) in lldp_vlan_info.iter() {
         if ifaces.len() > 1 {
-            let bond_iface_name = format!("{}{}", BOND_PREFIX, vid);
+            let bond_iface_name = format!("{BOND_PREFIX}{vid}");
             ret.append_interface_data(gen_bond_iface(&bond_iface_name, ifaces));
             ret.append_interface_data(gen_vlan_iface(
                 name,

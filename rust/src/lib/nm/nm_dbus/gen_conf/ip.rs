@@ -15,16 +15,16 @@ impl ToKeyfile for NmSettingIp {
             }
         }
         for (i, addr) in self.addresses.as_slice().iter().enumerate() {
-            ret.insert(format!("address{}", i), zvariant::Value::new(addr));
+            ret.insert(format!("address{i}"), zvariant::Value::new(addr));
         }
 
         for (i, route) in self.routes.as_slice().iter().enumerate() {
             for (k, v) in route.to_keyfile().drain() {
                 ret.insert(
                     if k.is_empty() {
-                        format!("route{}", i)
+                        format!("route{i}")
                     } else {
-                        format!("route{}_{}", i, k)
+                        format!("route{i}_{k}")
                     },
                     zvariant::Value::new(v),
                 );
@@ -32,10 +32,7 @@ impl ToKeyfile for NmSettingIp {
         }
         for (i, rule) in self.route_rules.as_slice().iter().enumerate() {
             for (_, v) in rule.to_keyfile().drain() {
-                ret.insert(
-                    format!("routing-rule{}", i),
-                    zvariant::Value::new(v),
-                );
+                ret.insert(format!("routing-rule{i}"), zvariant::Value::new(v));
             }
         }
         if let Some(dns) = self.dns.as_ref() {

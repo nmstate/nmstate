@@ -102,17 +102,17 @@ fn value_to_hash_map(
             let v = match &v {
                 serde_json::Value::Number(i) => Some({
                     if let Some(i) = i.as_i64() {
-                        format!("{}", i)
+                        format!("{i}")
                     } else if let Some(i) = i.as_u64() {
-                        format!("{}", i)
+                        format!("{i}")
                     } else if let Some(i) = i.as_f64() {
-                        format!("{}", i)
+                        format!("{i}")
                     } else {
                         continue;
                     }
                 }),
                 serde_json::Value::String(s) => Some(s.to_string()),
-                serde_json::Value::Bool(b) => Some(format!("{}", b)),
+                serde_json::Value::Bool(b) => Some(format!("{b}")),
                 serde_json::Value::Null => None,
                 _ => continue,
             };

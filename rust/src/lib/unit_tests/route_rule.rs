@@ -59,7 +59,7 @@ fn test_add_rules_to_new_interface() {
     assert_eq!(add_ifaces[0].name(), TEST_NIC);
     let config_rules = add_ifaces[0].base_iface().rules.as_ref().unwrap();
 
-    println!("{:?}", config_rules);
+    println!("{config_rules:?}");
     assert_eq!(config_rules.len(), 2);
 
     assert_eq!(
@@ -300,9 +300,9 @@ route-rules:
     let (add_net_state, chg_net_state, del_net_state) =
         desired.gen_state_for_apply(&current).unwrap();
 
-    println!("add_net_state {:?}", add_net_state);
-    println!("chg_net_state {:?}", chg_net_state);
-    println!("del_net_state {:?}", del_net_state);
+    println!("add_net_state {add_net_state:?}");
+    println!("chg_net_state {chg_net_state:?}");
+    println!("del_net_state {del_net_state:?}");
 
     assert!(add_net_state.interfaces.to_vec().is_empty());
     assert!(chg_net_state.interfaces.to_vec().len() == 1);

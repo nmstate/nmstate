@@ -102,7 +102,7 @@ pub(crate) fn state_edit(
         if net_state.interfaces.to_vec().is_empty() {
             return Err(CliError {
                 code: crate::error::EX_DATAERR,
-                error_msg: format!("Interface {} not found", ifname),
+                error_msg: format!("Interface {ifname} not found"),
             });
         }
         net_state
@@ -131,7 +131,7 @@ fn gen_tmp_file_path() -> String {
 
 fn del_file(file_path: &str) {
     if let Err(e) = std::fs::remove_file(file_path) {
-        eprintln!("Failed to delete file {}: {}", file_path, e);
+        eprintln!("Failed to delete file {file_path}: {e}");
     }
 }
 
@@ -160,13 +160,13 @@ fn run_editor(tmp_file_path: &str) -> Result<NetworkState, CliError> {
             .wait()
             .map_err(|e| CliError {
                 code: crate::error::EX_DATAERR,
-                error_msg: format!("Editor '{}' failed with {}", editor, e),
+                error_msg: format!("Editor '{editor}' failed with {e}"),
             })?
             .success()
         {
             return Err(CliError {
                 code: crate::error::EX_DATAERR,
-                error_msg: format!("Editor '{}' failed", editor),
+                error_msg: format!("Editor '{editor}' failed"),
             });
         }
         let fd = std::fs::File::open(tmp_file_path)?;
@@ -176,10 +176,10 @@ fn run_editor(tmp_file_path: &str) -> Result<NetworkState, CliError> {
                 if !ask_for_retry() {
                     return Err(CliError {
                         code: crate::error::EX_DATAERR,
-                        error_msg: format!("{}", e),
+                        error_msg: format!("{e}"),
                     });
                 } else {
-                    eprintln!("{}", e);
+                    eprintln!("{e}");
                     continue;
                 }
             }
@@ -210,7 +210,7 @@ fn ask_for_retry() -> bool {
 fn set_ctrl_c_action() {
     ctrlc::set_handler(|| {
         if let Err(e) = rollback("") {
-            println!("Failed to rollback: {}", e);
+            println!("Failed to rollback: {e}");
         }
         std::process::exit(1);
     })

@@ -16,7 +16,7 @@ where
     S: Serializer,
 {
     if let Some(v) = data {
-        serializer.serialize_str(format!("{:#x?}", v).as_str())
+        serializer.serialize_str(format!("{v:#x?}").as_str())
     } else {
         serializer.serialize_none()
     }

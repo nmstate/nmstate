@@ -51,7 +51,7 @@ impl SrIovConfig {
                 _ => {
                     let e = NmstateError::new(
                         ErrorKind::VerificationError,
-                        format!("Failed to find PF interface {}", pf_name),
+                        format!("Failed to find PF interface {pf_name}"),
                     );
                     log::error!("{}", e);
                     return Err(e);
@@ -73,8 +73,8 @@ impl SrIovConfig {
                 let e = NmstateError::new(
                     ErrorKind::VerificationError,
                     format!(
-                        "Failed to find VF {} interface name of PF {}",
-                        vf.id, pf_name
+                        "Failed to find VF {} interface name of PF {pf_name}",
+                        vf.id
                     ),
                 );
                 log::error!("{}", e);
@@ -86,9 +86,9 @@ impl SrIovConfig {
                 let e = NmstateError::new(
                     ErrorKind::VerificationError,
                     format!(
-                        "Find VF {} interface name {} of PF {} \
+                        "Find VF {} interface name {} of PF {pf_name} \
                         is not exist yet",
-                        vf.id, &vf.iface_name, pf_name
+                        vf.id, &vf.iface_name
                     ),
                 );
                 log::error!("{}", e);

@@ -179,7 +179,7 @@ impl TryFrom<NumberAsString> for BondMode {
             "6" | "balance-alb" => Ok(Self::ALB),
             v => Err(NmstateError::new(
                 ErrorKind::InvalidArgument,
-                format!("Invalid bond mode {}", v),
+                format!("Invalid bond mode {v}"),
             )),
         }
     }

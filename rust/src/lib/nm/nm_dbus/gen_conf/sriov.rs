@@ -20,7 +20,7 @@ impl ToKeyfile for NmSettingSriov {
             for vf in vfs {
                 if let Some(i) = vf.index {
                     ret.insert(
-                        format!("vf.{}", i),
+                        format!("vf.{i}"),
                         zvariant::Value::new(vf.to_keyfile()),
                     );
                 }
@@ -34,19 +34,19 @@ impl NmSettingSriovVf {
     pub(crate) fn to_keyfile(&self) -> String {
         let mut ret = String::new();
         if let Some(v) = self.mac.as_ref() {
-            let _ = write!(ret, "mac={} ", v);
+            let _ = write!(ret, "mac={v} ");
         }
         if let Some(v) = self.spoof_check {
-            let _ = write!(ret, "spoof-check={} ", v);
+            let _ = write!(ret, "spoof-check={v} ");
         }
         if let Some(v) = self.trust {
-            let _ = write!(ret, "trust={} ", v);
+            let _ = write!(ret, "trust={v} ");
         }
         if let Some(v) = self.min_tx_rate {
-            let _ = write!(ret, "min-tx-rate={} ", v);
+            let _ = write!(ret, "min-tx-rate={v} ");
         }
         if let Some(v) = self.max_tx_rate {
-            let _ = write!(ret, "max-tx-rate={} ", v);
+            let _ = write!(ret, "max-tx-rate={v} ");
         }
         if let Some(vlans) = self.vlans.as_ref() {
             let mut vlans_str = Vec::new();

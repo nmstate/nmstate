@@ -279,7 +279,7 @@ impl std::convert::TryFrom<serde_json::Value> for NumberAsString {
     fn try_from(s: serde_json::Value) -> Result<Self, NmstateError> {
         match s {
             serde_json::Value::Number(d) => Ok(Self {
-                value: format!("{}", d),
+                value: format!("{d}"),
             }),
             serde_json::Value::String(s) => Ok(Self { value: s }),
             _ => Err(NmstateError::new(

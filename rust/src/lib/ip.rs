@@ -226,7 +226,7 @@ impl<'de> Deserialize<'de> for InterfaceIpv4 {
         let ip: InterfaceIp = match serde_json::from_value(v) {
             Ok(i) => i,
             Err(e) => {
-                return Err(serde::de::Error::custom(format!("{}", e)));
+                return Err(serde::de::Error::custom(format!("{e}")));
             }
         };
         let mut ret = Self::from(ip);
@@ -441,7 +441,7 @@ impl<'de> Deserialize<'de> for InterfaceIpv6 {
         let ip: InterfaceIp = match serde_json::from_value(v) {
             Ok(i) => i,
             Err(e) => {
-                return Err(serde::de::Error::custom(format!("{}", e)));
+                return Err(serde::de::Error::custom(format!("{e}")));
             }
         };
         let mut ret = Self::from(ip);
@@ -532,7 +532,7 @@ impl std::convert::TryFrom<&str> for InterfaceIpAddr {
         let ip = IpAddr::from_str(addr[0]).map_err(|e| {
             let e = NmstateError::new(
                 ErrorKind::InvalidArgument,
-                format!("Invalid IP address {}: {}", addr[0], e),
+                format!("Invalid IP address {}: {e}", addr[0]),
             );
             log::error!("{}", e);
             e
@@ -548,7 +548,7 @@ impl std::convert::TryFrom<&str> for InterfaceIpAddr {
             addr[1].parse::<u8>().map_err(|parse_error| {
                 let e = NmstateError::new(
                     ErrorKind::InvalidArgument,
-                    format!("Invalid IP address {}: {}", value, parse_error),
+                    format!("Invalid IP address {value}: {parse_error}"),
                 );
                 log::error!("{}", e);
                 e
@@ -807,9 +807,9 @@ pub(crate) fn sanitize_ip_network(
 fn ip_addr_to_ip_network(ip_addr: &str) -> String {
     if !ip_addr.contains('/') {
         if is_ipv6_addr(ip_addr) {
-            format!("{}/{}", ip_addr, IPV6_ADDR_LEN)
+            format!("{ip_addr}/{IPV6_ADDR_LEN}")
         } else {
-            format!("{}/{}", ip_addr, IPV4_ADDR_LEN)
+            format!("{ip_addr}/{IPV4_ADDR_LEN}")
         }
     } else {
         ip_addr.to_string()

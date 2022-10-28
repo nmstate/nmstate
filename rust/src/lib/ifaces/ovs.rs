@@ -282,7 +282,7 @@ impl TryFrom<&str> for OvsBridgeBondMode {
             "lacp" => Ok(Self::Lacp),
             _ => Err(NmstateError::new(
                 ErrorKind::InvalidArgument,
-                format!("Unsupported OVS Bond mode {}", value),
+                format!("Unsupported OVS Bond mode {value}"),
             )),
         }
     }

@@ -254,7 +254,7 @@ impl NmSettingEthtool {
                 if !VALID_FEATURES.contains(&k.as_str()) {
                     return Err(NmError::new(
                         ErrorKind::InvalidArgument,
-                        format!("Unsupported ethtool feature {}", k),
+                        format!("Unsupported ethtool feature {k}"),
                     ));
                 }
             }

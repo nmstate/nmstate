@@ -161,7 +161,7 @@ fn nm_ipv6_addr_gen_mode_to_nmstate(
         Some(&ADDR_GEN_MODE_STABLE_DEFAULT) => {
             Some(Ipv6AddrGenMode::StablePrivacy)
         }
-        Some(s) => Some(Ipv6AddrGenMode::Other(format!("{}", s))),
+        Some(s) => Some(Ipv6AddrGenMode::Other(format!("{s}"))),
         // According to NM document, the None in dbus means stable privacy.
         None => Some(Ipv6AddrGenMode::StablePrivacy),
     }

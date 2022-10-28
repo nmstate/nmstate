@@ -40,10 +40,9 @@ pub extern "C" fn nmstate_net_state_retrieve(
         Ok(l) => l,
         Err(e) => {
             unsafe {
-                *err_msg =
-                    CString::new(format!("Failed to setup logger: {}", e))
-                        .unwrap()
-                        .into_raw();
+                *err_msg = CString::new(format!("Failed to setup logger: {e}"))
+                    .unwrap()
+                    .into_raw();
             }
             return NMSTATE_FAIL;
         }

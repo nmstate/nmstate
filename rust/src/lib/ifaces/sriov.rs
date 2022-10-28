@@ -107,6 +107,6 @@ pub(crate) fn check_sriov_capability(
 // Checking existence of file:
 //      /sys/class/net/<iface_name>/device/sriov_numvfs
 fn is_sriov_supported(iface_name: &str) -> bool {
-    let path = format!("/sys/class/net/{}/device/sriov_numvfs", iface_name);
+    let path = format!("/sys/class/net/{iface_name}/device/sriov_numvfs");
     std::path::Path::new(&path).exists()
 }

@@ -86,7 +86,7 @@ impl NmSetting8021X {
     }
 
     pub fn file_path_to_glib_bytes(file_path: &str) -> Vec<u8> {
-        format!("{}{}\0", GLIB_FILE_PATH_PREFIX, file_path).into_bytes()
+        format!("{GLIB_FILE_PATH_PREFIX}{file_path}\0").into_bytes()
     }
 
     pub fn glib_bytes_to_file_path(value: &[u8]) -> Result<String, NmError> {
