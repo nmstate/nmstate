@@ -22,7 +22,7 @@ fn np_iface_type_to_nmstate(
         nispor::IfaceType::Vrf => InterfaceType::Vrf,
         nispor::IfaceType::Vxlan => InterfaceType::Vxlan,
         nispor::IfaceType::Ipoib => InterfaceType::InfiniBand,
-        _ => InterfaceType::Other(format!("{:?}", np_iface_type)),
+        _ => InterfaceType::Other(format!("{np_iface_type:?}")),
     }
 }
 

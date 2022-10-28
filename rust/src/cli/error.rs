@@ -40,7 +40,7 @@ impl From<std::io::Error> for CliError {
     fn from(e: std::io::Error) -> Self {
         Self {
             code: DEFAULT_ERROR_CODE,
-            error_msg: format!("std::io::Error: {}", e),
+            error_msg: format!("std::io::Error: {e}"),
         }
     }
 }
@@ -49,7 +49,7 @@ impl From<NmstateError> for CliError {
     fn from(e: NmstateError) -> Self {
         Self {
             code: DEFAULT_ERROR_CODE,
-            error_msg: format!("NmstateError: {}", e),
+            error_msg: format!("NmstateError: {e}"),
         }
     }
 }
@@ -58,7 +58,7 @@ impl From<serde_yaml::Error> for CliError {
     fn from(e: serde_yaml::Error) -> Self {
         Self {
             code: EX_DATAERR,
-            error_msg: format!("serde_yaml::Error: {}", e),
+            error_msg: format!("serde_yaml::Error: {e}"),
         }
     }
 }
@@ -67,7 +67,7 @@ impl From<clap::Error> for CliError {
     fn from(e: clap::Error) -> Self {
         Self {
             code: EX_USAGE,
-            error_msg: format!("clap::Error {}", e),
+            error_msg: format!("clap::Error {e}"),
         }
     }
 }
@@ -76,7 +76,7 @@ impl From<serde_json::Error> for CliError {
     fn from(e: serde_json::Error) -> Self {
         Self {
             code: EX_DATAERR,
-            error_msg: format!("serde_json::Error {}", e),
+            error_msg: format!("serde_json::Error {e}"),
         }
     }
 }

@@ -12,7 +12,7 @@ pub(crate) fn keyfile_sections_to_string(
 ) -> Result<String, NmError> {
     let mut ret = String::new();
     for (section_name, data) in sections {
-        let _ = writeln!(ret, "[{}]", section_name);
+        let _ = writeln!(ret, "[{section_name}]");
         // Sort the keys
         let mut keys: Vec<&String> = data.keys().collect();
         keys.sort_unstable();
@@ -20,7 +20,7 @@ pub(crate) fn keyfile_sections_to_string(
             if let Some(v) = data.get(key) {
                 let v = zvariant_value_to_string(v)?;
                 if !v.is_empty() {
-                    let _ = writeln!(ret, "{}={}", key, v);
+                    let _ = writeln!(ret, "{key}={v}");
                 }
             }
         }
@@ -41,17 +41,17 @@ fn zvariant_value_to_string(
         } else {
             "false".to_string()
         }),
-        zvariant::Value::I32(d) => Ok(format!("{}", d)),
-        zvariant::Value::U32(d) => Ok(format!("{}", d)),
-        zvariant::Value::U8(d) => Ok(format!("{}", d)),
-        zvariant::Value::U16(d) => Ok(format!("{}", d)),
-        zvariant::Value::I16(d) => Ok(format!("{}", d)),
-        zvariant::Value::U64(d) => Ok(format!("{}", d)),
-        zvariant::Value::I64(d) => Ok(format!("{}", d)),
+        zvariant::Value::I32(d) => Ok(format!("{d}")),
+        zvariant::Value::U32(d) => Ok(format!("{d}")),
+        zvariant::Value::U8(d) => Ok(format!("{d}")),
+        zvariant::Value::U16(d) => Ok(format!("{d}")),
+        zvariant::Value::I16(d) => Ok(format!("{d}")),
+        zvariant::Value::U64(d) => Ok(format!("{d}")),
+        zvariant::Value::I64(d) => Ok(format!("{d}")),
         zvariant::Value::Dict(d) => {
             let e = NmError::new(
                 ErrorKind::Bug,
-                format!("Cannot convert Dict {:?} to key file format", d),
+                format!("Cannot convert Dict {d:?} to key file format"),
             );
             log::error!("{}", e);
             Err(e)
@@ -69,7 +69,7 @@ fn zvariant_value_to_string(
         _ => {
             let e = NmError::new(
                 ErrorKind::Bug,
-                format!("BUG: Unknown value type in section {:?}", value),
+                format!("BUG: Unknown value type in section {value:?}"),
             );
             error!("{}", e);
             Err(e)

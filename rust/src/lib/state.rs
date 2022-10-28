@@ -41,7 +41,7 @@ fn _get_json_value_difference<'a, 'b>(
                     // The [] is safe as we already checked the length
                     let cur_element = &cur[index];
                     if let Some(difference) = get_json_value_difference(
-                        format!("{}[{}]", &reference, index),
+                        format!("{}[{index}]", &reference),
                         des_element,
                         cur_element,
                     ) {
@@ -53,7 +53,7 @@ fn _get_json_value_difference<'a, 'b>(
         }
         (Value::Object(des), Value::Object(cur)) => {
             for (key, des_value) in des.iter() {
-                let reference = format!("{}.{}", reference, key);
+                let reference = format!("{reference}.{key}");
                 if let Some(cur_value) = cur.get(key) {
                     if let Some(difference) = get_json_value_difference(
                         reference.clone(),

@@ -259,7 +259,7 @@ pub(crate) fn iface_type_to_nm(
         InterfaceType::Other(s) => Ok(s.to_string()),
         _ => Err(NmstateError::new(
             ErrorKind::NotImplementedError,
-            format!("Does not support iface type: {:?} yet", iface_type),
+            format!("Does not support iface type: {iface_type:?} yet"),
         )),
     }
 }
@@ -356,7 +356,7 @@ fn uuid_from_name_and_type(
 ) -> String {
     uuid::Uuid::new_v5(
         &uuid::Uuid::NAMESPACE_URL,
-        format!("{}://{}", iface_type, iface_name).as_bytes(),
+        format!("{iface_type}://{iface_name}").as_bytes(),
     )
     .hyphenated()
     .to_string()

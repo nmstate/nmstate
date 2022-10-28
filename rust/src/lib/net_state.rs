@@ -175,7 +175,7 @@ impl NetworkState {
             Ok(s) => Ok(s),
             Err(e) => Err(NmstateError::new(
                 ErrorKind::InvalidArgument,
-                format!("Invalid json string: {}", e),
+                format!("Invalid json string: {e}"),
             )),
         }
     }

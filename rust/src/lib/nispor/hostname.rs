@@ -69,7 +69,7 @@ pub(crate) fn set_running_hostname(hostname: &str) -> Result<(), NmstateError> {
     if hostname.len() >= HOST_NAME_MAX {
         let e = NmstateError::new(
             ErrorKind::InvalidArgument,
-            format!("hostname to long, should be less than {}", HOST_NAME_MAX),
+            format!("hostname to long, should be less than {HOST_NAME_MAX}"),
         );
         log::error!("{}", e);
         return Err(e);

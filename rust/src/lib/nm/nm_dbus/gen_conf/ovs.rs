@@ -18,7 +18,7 @@ impl ToKeyfile for NmSettingOvsExtIds {
         let mut ret = HashMap::new();
         if let Some(data) = self.data.as_ref() {
             for (k, v) in data {
-                ret.insert(format!("data.{}", k), zvariant::Value::new(v));
+                ret.insert(format!("data.{k}"), zvariant::Value::new(v));
             }
         }
         Ok(ret)

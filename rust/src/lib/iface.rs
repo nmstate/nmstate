@@ -91,7 +91,7 @@ impl Serialize for InterfaceType {
     where
         S: Serializer,
     {
-        serializer.serialize_str(format!("{}", self).as_str())
+        serializer.serialize_str(format!("{self}").as_str())
     }
 }
 

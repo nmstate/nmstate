@@ -152,7 +152,7 @@ impl<'a> NmDbus<'a> {
                     {
                         Err(NmError::new(
                             ErrorKind::NotFound,
-                            format!("Connection with UUID {} not found", uuid),
+                            format!("Connection with UUID {uuid} not found"),
                         ))
                     } else {
                         Err(e.into())
@@ -377,7 +377,7 @@ fn str_to_obj_path(obj_path: &str) -> Result<zvariant::ObjectPath, NmError> {
     zvariant::ObjectPath::try_from(obj_path).map_err(|e| {
         NmError::new(
             ErrorKind::InvalidArgument,
-            format!("Invalid object path: {}", e),
+            format!("Invalid object path: {e}"),
         )
     })
 }

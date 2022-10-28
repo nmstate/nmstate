@@ -12,7 +12,7 @@ impl NmIpRoute {
         if let (Some(dest), Some(prefix)) =
             (self.dest.as_ref(), self.prefix.as_ref())
         {
-            let dest = format!("{}/{}", dest, prefix);
+            let dest = format!("{dest}/{prefix}");
             let rt_line = match (self.next_hop.as_ref(), self.metric.as_ref()) {
                 (Some(n), Some(m)) => vec![dest, n.to_string(), m.to_string()],
                 (Some(n), None) => vec![dest, n.to_string()],

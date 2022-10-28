@@ -61,7 +61,7 @@ pub(crate) fn init_logger() -> Result<&'static MemoryLogger, NmstateError> {
                 if let Err(e) = log::set_logger(l) {
                     Err(NmstateError::new(
                         nmstate::ErrorKind::Bug,
-                        format!("Failed to log::set_logger: {}", e),
+                        format!("Failed to log::set_logger: {e}"),
                     ))
                 } else {
                     l.add_consumer();

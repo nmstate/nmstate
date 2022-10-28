@@ -68,7 +68,7 @@ fn apply_feature_options(
         if let Some(nm_feature_name) = kernel_2_nm.get(k.as_str()) {
             nm_features.insert(nm_feature_name.to_string(), *v);
         } else {
-            nm_features.insert(format!("feature-{}", k), *v);
+            nm_features.insert(format!("feature-{k}"), *v);
         }
     }
     nm_ethtool_set.features = Some(nm_features);

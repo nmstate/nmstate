@@ -80,7 +80,7 @@ where
     S: Serializer,
 {
     if let Some(v) = v {
-        s.serialize_str(&format!("{:#02x}", v))
+        s.serialize_str(&format!("{v:#02x}"))
     } else {
         s.serialize_none()
     }
