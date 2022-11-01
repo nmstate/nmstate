@@ -11,22 +11,53 @@ use crate::{
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[non_exhaustive]
+/// Interface type
 pub enum InterfaceType {
+    /// [Bond interface](https://www.kernel.org/doc/Documentation/networking/bonding.txt)
+    /// Deserialize and serialize from/to 'bond'
     Bond,
+    /// Bridge provided by Linux kernel.
+    /// Deserialize and serialize from/to 'linux-bridge'.
     LinuxBridge,
+    /// Dummy interface.
+    /// Deserialize and serialize from/to 'dummy'.
     Dummy,
+    /// Ethernet interface.
+    /// Deserialize and serialize from/to 'ethernet'.
     Ethernet,
+    /// Loopback interface.
+    /// Deserialize and serialize from/to 'loopback'.
     Loopback,
+    /// MAC VLAN interface.
+    /// Deserialize and serialize from/to 'mac-vlan'.
     MacVlan,
+    /// MAC VTAP interface.
+    /// Deserialize and serialize from/to 'mac-vtap'.
     MacVtap,
+    /// OpenvSwitch bridge.
+    /// Deserialize and serialize from/to 'ovs-bridge'.
     OvsBridge,
+    /// OpenvSwitch system interface.
+    /// Deserialize and serialize from/to 'ovs-interface'.
     OvsInterface,
+    /// Virtual ethernet provide by Linux kernel.
+    /// Deserialize and serialize from/to 'veth'.
     Veth,
+    /// VLAN interface.
+    /// Deserialize and serialize from/to 'vlan'.
     Vlan,
+    /// [Virtual Routing and Forwarding interface](https://www.kernel.org/doc/html/latest/networking/vrf.html)
+    /// Deserialize and serialize from/to 'vrf'.
     Vrf,
+    /// VxVLAN interface.
+    /// Deserialize and serialize from/to 'vxlan'.
     Vxlan,
+    /// [IP over InfiniBand interface](https://docs.kernel.org/infiniband/ipoib.html)
+    /// Deserialize and serialize from/to 'infiniband'.
     InfiniBand,
+    /// Unknown interface.
     Unknown,
+    /// Reserved for future use.
     Other(String),
 }
 
@@ -130,11 +161,25 @@ impl InterfaceType {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
+/// The state of interface
 pub enum InterfaceState {
+    /// Interface is up and running.
+    /// Deserialize and serialize from/to 'down'.
     Up,
+    /// For apply action, down means configuration still exist but
+    /// deactivate. The virtual interface will be removed and other interface
+    /// will be reverted to down state or up with IP disabled state.
+    /// Deserialize and serialize from/to 'down'.
     Down,
+    /// Only for apply action to remove configuration and deactivate the
+    /// interface.
     Absent,
+    /// Unknown state.
     Unknown,
+    /// Interface is not managed by backend. For apply action, interface marked
+    /// as ignore will not be changed and will not cause verification failure
+    /// neither.
+    /// Deserialize and serialize from/to 'ignore'.
     Ignore,
 }
 
@@ -158,6 +203,9 @@ impl From<&str> for InterfaceState {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Default)]
 #[non_exhaustive]
+/// Holder for interface with known interface type defined.
+/// During apply action, nmstate can resolve unknown interface to first
+/// found interface type.
 pub struct UnknownInterface {
     #[serde(flatten)]
     pub base: BaseInterface,
@@ -199,19 +247,33 @@ impl<'de> Deserialize<'de> for UnknownInterface {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "kebab-case", untagged)]
 #[non_exhaustive]
+/// Represent a kernel or user space network interface.
 pub enum Interface {
+    /// [Bond interface](https://www.kernel.org/doc/Documentation/networking/bonding.txt)
     Bond(BondInterface),
+    /// Dummy interface.
     Dummy(DummyInterface),
+    /// Ethernet interface or virtual ethernet(veth) of linux kernel
     Ethernet(EthernetInterface),
+    /// Bridge provided by Linux kernel.
     LinuxBridge(LinuxBridgeInterface),
+    /// OpenvSwitch bridge.
     OvsBridge(OvsBridgeInterface),
+    /// OpenvSwitch system interface.
     OvsInterface(OvsInterface),
+    /// Unknown interface.
     Unknown(UnknownInterface),
+    /// VLAN interface.
     Vlan(VlanInterface),
+    /// VxLAN interface.
     Vxlan(VxlanInterface),
+    /// MAC VLAN interface.
     MacVlan(MacVlanInterface),
+    /// MAC VTAP interface.
     MacVtap(MacVtapInterface),
+    /// [Virtual Routing and Forwarding interface](https://www.kernel.org/doc/html/latest/networking/vrf.html)
     Vrf(VrfInterface),
+    /// [IP over InfiniBand interface](https://docs.kernel.org/infiniband/ipoib.html)
     InfiniBand(InfiniBandInterface),
 }
 
@@ -325,6 +387,7 @@ impl<'de> Deserialize<'de> for Interface {
 }
 
 impl Interface {
+    /// The interface name.
     pub fn name(&self) -> &str {
         self.base_iface().name.as_str()
     }
@@ -341,6 +404,7 @@ impl Interface {
         self.base_iface_mut().iface_type = iface_type;
     }
 
+    /// The interface type
     pub fn iface_type(&self) -> InterfaceType {
         self.base_iface().iface_type.clone()
     }
@@ -419,18 +483,22 @@ impl Interface {
         }
     }
 
+    /// Whether interface is up, default to true.
     pub fn is_up(&self) -> bool {
         self.base_iface().state == InterfaceState::Up
     }
 
+    /// Whether interface is marked as absent.
     pub fn is_absent(&self) -> bool {
         self.base_iface().state == InterfaceState::Absent
     }
 
+    /// Whether interface is marked as down.
     pub fn is_down(&self) -> bool {
         self.base_iface().state == InterfaceState::Down
     }
 
+    /// Whether interface is marked as ignore.
     pub fn is_ignore(&self) -> bool {
         self.base_iface().state == InterfaceState::Ignore
     }
@@ -464,6 +532,8 @@ impl Interface {
             }
     }
 
+    /// Whether interface is virtual(no real hardware).
+    /// Unknown interface is considered as __not__ virtual interface.
     pub fn is_virtual(&self) -> bool {
         !matches!(
             self,
@@ -471,11 +541,14 @@ impl Interface {
         )
     }
 
-    // OVS Interface should be deleted along with its controller
+    /// Whether current interface only lives when its control exists.
+    /// For example, OpenvSwitch system interface can only exists when
+    /// its controller OpenvSwitch bridge exists.
     pub fn need_controller(&self) -> bool {
         matches!(self, Self::OvsInterface(_))
     }
 
+    /// Get reference of its [BaseInterface].
     pub fn base_iface(&self) -> &BaseInterface {
         match self {
             Self::LinuxBridge(iface) => &iface.base,
@@ -512,7 +585,8 @@ impl Interface {
         }
     }
 
-    // Return None if its is not controller or not mentioned port section
+    /// The name of ports.
+    /// Return None if its is not controller or not mentioned port section
     pub fn ports(&self) -> Option<Vec<&str>> {
         if self.is_absent() {
             match self {
