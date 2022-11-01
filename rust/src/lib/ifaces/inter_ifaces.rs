@@ -31,6 +31,12 @@ const COPY_MAC_ALLOWED_IFACE_TYPES: [InterfaceType; 3] = [
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 #[non_exhaustive]
+/// Represent a list of [Interface] with special [serde::Deserializer] and
+/// [serde::Serializer].
+/// When applying complex nested interface(e.g. bridge over bond over vlan of
+/// eth1), the supported maximum nest level is 4 like previous example.
+/// For 5+ nested level, you need to place controller interface before its
+/// ports.
 pub struct Interfaces {
     pub(crate) kernel_ifaces: HashMap<String, Interface>,
     pub(crate) user_ifaces: HashMap<(String, InterfaceType), Interface>,
@@ -69,10 +75,12 @@ impl Serialize for Interfaces {
 }
 
 impl Interfaces {
+    /// Create empty [Interfaces].
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Extract internal interfaces to `Vec()`.
     pub fn to_vec(&self) -> Vec<&Interface> {
         let mut ifaces = Vec::new();
         for iface in self.kernel_ifaces.values() {
@@ -89,6 +97,9 @@ impl Interfaces {
         ifaces
     }
 
+    /// Search interface base on interface name and interface type.
+    /// When using [InterfaceType::Unknown], we only search kernel
+    /// interface(which has presentation in kernel space).
     pub fn get_iface<'a, 'b>(
         &'a self,
         iface_name: &'b str,
@@ -107,6 +118,7 @@ impl Interfaces {
         }
     }
 
+    /// Append specified [Interface].
     pub fn push(&mut self, iface: Interface) {
         self.insert_order
             .push((iface.name().to_string(), iface.iface_type()));
@@ -232,6 +244,7 @@ impl Interfaces {
         Ok((add_ifaces, chg_ifaces, del_ifaces))
     }
 
+    /// TODO: this is internal function.
     pub fn set_up_priority(&mut self) -> Result<(), NmstateError> {
         for _ in 0..INTERFACES_SET_PRIORITY_MAX_RETRY {
             if set_ifaces_up_priority(self) {
