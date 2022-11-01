@@ -20,14 +20,22 @@ const VERIFY_RETRY_NM: usize = 2;
 const MAX_SUPPORTED_INTERFACES: usize = 1000;
 
 impl NetworkState {
+    /// Rollback a checkpoint.
+    /// Not available for `kernel only` mode.
+    /// Only available for feature `query_apply`.
     pub fn checkpoint_rollback(checkpoint: &str) -> Result<(), NmstateError> {
         nm_checkpoint_rollback(checkpoint)
     }
 
+    /// Commit a checkpoint.
+    /// Not available for `kernel only` mode.
+    /// Only available for feature `query_apply`.
     pub fn checkpoint_commit(checkpoint: &str) -> Result<(), NmstateError> {
         nm_checkpoint_destroy(checkpoint)
     }
 
+    /// Retrieve the `NetworkState`.
+    /// Only available for feature `query_apply`.
     pub fn retrieve(&mut self) -> Result<&mut Self, NmstateError> {
         let state = nispor_retrieve(self.running_config_only)?;
         if state.prop_list.contains(&"hostname") {
@@ -66,6 +74,8 @@ impl NetworkState {
         Ok(self)
     }
 
+    /// Apply the `NetworkState`.
+    /// Only available for feature `query_apply`.
     pub fn apply(&self) -> Result<(), NmstateError> {
         let mut desire_state_to_verify = self.clone();
         let mut desire_state_to_apply = self.clone();

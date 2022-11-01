@@ -10,6 +10,14 @@ use crate::{
 };
 
 impl NetworkState {
+    /// Generate offline network configurations.
+    /// Currently only support generate NetworkManager key file out of
+    /// NetworkState.
+    ///
+    /// The output is a [HashMap] with backend name as key and
+    /// `Vec<(config_file_name, config_content>)>` as value.
+    ///
+    /// The backend name for NetworkManager is `NetworkManager`.
     pub fn gen_conf(
         &self,
     ) -> Result<HashMap<String, Vec<(String, String)>>, NmstateError> {
