@@ -16,26 +16,95 @@ use crate::{
 
 #[derive(Clone, Debug, Serialize, Default, PartialEq, Eq)]
 #[non_exhaustive]
+/// The [NetworkState] represents the whole network state including both
+/// kernel status and configurations provides by backends(NetworkManager,
+/// OpenvSwitch databas, and etc).
+///
+/// Example yaml(many lines omitted) serialized NetworkState would be:
+///
+/// ```yaml
+/// hostname:
+///   running: host.example.org
+///   config: host.example.org
+/// dns-resolver:
+///   config:
+///     server:
+///     - 2001:db8:1::
+///     - 192.0.2.1
+///     search: []
+/// route-rules:
+///   config:
+///   - ip-from: 2001:db8:b::/64
+///     priority: 30000
+///     route-table: 200
+///   - ip-from: 192.0.2.2/32
+///     priority: 30000
+///     route-table: 200
+/// routes:
+///   config:
+///   - destination: 2001:db8:a::/64
+///     next-hop-interface: eth1
+///     next-hop-address: 2001:db8:1::2
+///     metric: 108
+///     table-id: 200
+///   - destination: 192.168.2.0/24
+///     next-hop-interface: eth1
+///     next-hop-address: 192.168.1.3
+///     metric: 108
+///     table-id: 200
+/// interfaces:
+/// - name: eth1
+///   type: ethernet
+///   state: up
+///   mac-address: 0E:F9:2B:28:42:D9
+///   mtu: 1500
+///   ipv4:
+///     enabled: true
+///     dhcp: false
+///     address:
+///     - ip: 192.168.1.3
+///       prefix-length: 24
+///   ipv6:
+///     enabled: true
+///     dhcp: false
+///     autoconf: false
+///     address:
+///     - ip: 2001:db8:1::1
+///       prefix-length: 64
+/// ovs-db:
+///   external_ids:
+///     hostname: host.example.org
+///     rundir: /var/run/openvswitch
+///     system-id: 176866c7-6dc8-400f-98ac-c658509ec09f
+///   other_config: {}
+/// ```
 pub struct NetworkState {
     #[serde(skip_serializing_if = "Option::is_none")]
+    /// Hostname of current host.
     pub hostname: Option<HostNameState>,
     #[serde(rename = "dns-resolver", default)]
+    /// DNS resolver status, deserialize and serialize from/to `dns-resolver`.
     pub dns: DnsState,
     #[serde(rename = "route-rules", default)]
+    /// Route rule, deserialize and serialize from/to `route-rules`.
     pub rules: RouteRules,
     #[serde(default)]
+    /// Route
     pub routes: Routes,
     #[serde(default)]
+    /// Network interfaces
     pub interfaces: Interfaces,
     #[serde(
         default,
         rename = "ovs-db",
         skip_serializing_if = "OvsDbGlobalConfig::is_none"
     )]
+    /// The global configurations of OpenvSwitach daemon
     pub ovsdb: OvsDbGlobalConfig,
     #[serde(skip)]
     // Contain a list of struct member name which is defined explicitly in
     // desire state instead of generated.
+    /// Only for internal use. TODO: should changed to pub(crate)
     pub prop_list: Vec<&'static str>,
     #[serde(skip)]
     // TODO: Hide user space only info when serialize
@@ -119,57 +188,81 @@ impl NetworkState {
     pub(crate) const PASSWORD_HID_BY_NMSTATE: &'static str =
         "<_password_hid_by_nmstate>";
 
+    /// Whether to perform kernel actions(also known as `kernel only` mode
+    /// through the document this project) only or not.
+    /// When set to false, nmstate will contact NetworkManager plugin for
+    /// querying/applying the network state.
+    /// Default is false.
     pub fn set_kernel_only(&mut self, value: bool) -> &mut Self {
         self.kernel_only = value;
         self
     }
 
+    /// By default(true), When nmstate applying the network state, after applied
+    /// the network state, nmstate will verify whether the outcome network
+    /// configuration matches with desired, if not, will rollback to state
+    /// before apply(only when [NetworkState::set_kernel_only()] set to false.
+    /// When set to false, no verification will be performed.
     pub fn set_verify_change(&mut self, value: bool) -> &mut Self {
         self.no_verify = !value;
         self
     }
 
+    /// Only available when [NetworkState::set_kernel_only()] set to false.
+    /// When set to false, the network configuration will not commit
+    /// persistently, and will rollback after timeout defined by
+    /// [NetworkState::set_timeout()].  Default to true for making the network
+    /// state persistent.
     pub fn set_commit(&mut self, value: bool) -> &mut Self {
         self.no_commit = !value;
         self
     }
 
+    /// Only available when [NetworkState::set_commit()] set to false.
+    /// The time to wait before rolling back the network state to the state
+    /// before [NetworkState::apply()` invoked.
     pub fn set_timeout(&mut self, value: u32) -> &mut Self {
         self.timeout = Some(value);
         self
     }
 
+    /// Whether to include secrets(like password) in [NetworkState::retrieve()]
+    /// Default is false.
     pub fn set_include_secrets(&mut self, value: bool) -> &mut Self {
         self.include_secrets = value;
         self
     }
 
+    /// Deprecated. No use at all.
     pub fn set_include_status_data(&mut self, value: bool) -> &mut Self {
         self.include_status_data = value;
         self
     }
 
-    // Query activated/running network configuration excluding:
-    // * IP address retrieved by DHCP or IPv6 auto configuration.
-    // * DNS client resolver retrieved by DHCP or IPv6 auto configuration.
-    // * Routes retrieved by DHCPv4 or IPv6 router advertisement.
-    // * LLDP neighbor information.
+    /// Query activated/running network configuration excluding:
+    /// * IP address retrieved by DHCP or IPv6 auto configuration.
+    /// * DNS client resolver retrieved by DHCP or IPv6 auto configuration.
+    /// * Routes retrieved by DHCPv4 or IPv6 router advertisement.
+    /// * LLDP neighbor information.
     pub fn set_running_config_only(&mut self, value: bool) -> &mut Self {
         self.running_config_only = value;
         self
     }
 
+    /// When set to true, the network state be applied and only stored in memory
+    /// which will be purged after system reboot.
     pub fn set_memory_only(&mut self, value: bool) -> &mut Self {
         self.memory_only = value;
         self
     }
 
+    /// Create empty [NetworkState]
     pub fn new() -> Self {
         Default::default()
     }
 
-    // We provide this instead asking use to do serde_json::from_str(), so that
-    // we could provide better error NmstateError instead of serde_json one.
+    /// Wrapping function of [serde_json::from_str()] with error mapped to
+    /// [NmstateError].
     pub fn new_from_json(net_state_json: &str) -> Result<Self, NmstateError> {
         match serde_json::from_str(net_state_json) {
             Ok(s) => Ok(s),
@@ -180,6 +273,7 @@ impl NetworkState {
         }
     }
 
+    /// Append [Interface] into [NetworkState]
     pub fn append_interface_data(&mut self, iface: Interface) {
         self.interfaces.push(iface);
     }
@@ -193,6 +287,7 @@ impl NetworkState {
         ))
     }
 
+    /// Replace secret string with `<_password_hid_by_nmstate>`
     pub fn hide_secrets(&mut self) {
         self.interfaces.hide_secrets();
     }
