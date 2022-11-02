@@ -1,7 +1,8 @@
 name: Release
 
 on:
-  tags: ["v[0-9]+.[0-9]+.[0-9]+*"]
+  push:
+    tags: ["v[0-9]+.[0-9]+.[0-9]+*"]
 
 jobs:
   linux-x64:
