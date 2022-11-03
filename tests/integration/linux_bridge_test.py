@@ -1074,3 +1074,10 @@ def test_create_and_remove_linux_bridge_kernel_mode():
         assertlib.assert_state(desired_state)
 
     assertlib.assert_absent(bridge_name)
+
+
+def test_delete_bridge_created_by_iproute():
+    exec_cmd(f"ip link add {TEST_BRIDGE0} type bridge".split(), check=True)
+    with linux_bridge(TEST_BRIDGE0, bridge_subtree_state=None):
+        pass
+    assertlib.assert_absent(TEST_BRIDGE0)
