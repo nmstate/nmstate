@@ -82,17 +82,63 @@ struct InterfaceIp {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(into = "InterfaceIp")]
 #[non_exhaustive]
+/// IPv4 configuration of interface.
+/// Example YAML output of interface holding static IPv4:
+/// ```yaml
+/// ---
+/// interfaces:
+/// - name: eth1
+///   state: up
+///   mtu: 1500
+///   ipv4:
+///     address:
+///     - ip: 192.0.2.252
+///       prefix-length: 24
+///     - ip: 192.0.2.251
+///       prefix-length: 24
+///     dhcp: false
+///     enabled: true
+/// ```
 pub struct InterfaceIpv4 {
+    /// Whether IPv4 stack is enabled. When set to false, all IPv4 address will
+    /// be removed from this interface.
     pub enabled: bool,
     pub(crate) prop_list: Vec<&'static str>,
+    /// Whether DHCPv4 is enabled.
     pub dhcp: Option<bool>,
+    /// DHCPv4 client ID.
+    /// Serialize and deserialize to/from `dhcp-client-id`.
     pub dhcp_client_id: Option<Dhcpv4ClientId>,
+    /// IPv4 addresses. Will be ignored when applying with
+    /// DHCP enabled.
+    /// When applying with `None`, current IP address will be preserved.
+    /// When applying with `Some(Vec::new())`, all IP address will be removed.
+    /// The IP addresses will apply to kernel with the same order specified
+    /// which result the IP addresses after first one holding the `secondary`
+    /// flag.
     pub addresses: Option<Vec<InterfaceIpAddr>>,
     pub(crate) dns: Option<DnsClientState>,
+    /// Whether to apply DNS resolver information retrieved from DHCP server.
+    /// Serialize and deserialize to/from `auto-dns`.
     pub auto_dns: Option<bool>,
+    /// Whether to set default gateway retrieved from DHCP server.
+    /// Serialize and deserialize to/from `auto-gateway`.
     pub auto_gateway: Option<bool>,
+    /// Whether to set routes(including default gateway) retrieved from DHCP
+    /// server.
+    /// Serialize and deserialize to/from `auto-routes`.
     pub auto_routes: Option<bool>,
+    /// The route table ID used to hold routes(including default gateway)
+    /// retrieved from DHCP server.
+    /// If not defined, the main(254) will be used.
+    /// Serialize and deserialize to/from `auto-table-id`.
     pub auto_table_id: Option<u32>,
+    /// By default(true), nmstate verification process allows extra IP address
+    /// found as long as desired IP address matched.
+    /// When set to false, the verification process of nmstate do exact equal
+    /// check on IP address.
+    /// Ignore when serializing.
+    /// Deserialize from `allow-extra-address`
     pub allow_extra_address: bool,
 }
 
@@ -115,6 +161,7 @@ impl Default for InterfaceIpv4 {
 }
 
 impl InterfaceIpv4 {
+    /// Create [InterfaceIpv4] with IP disabled.
     pub fn new() -> Self {
         Self::default()
     }
@@ -277,19 +324,72 @@ impl From<InterfaceIpv4> for InterfaceIp {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[non_exhaustive]
 #[serde(into = "InterfaceIp")]
+/// IPv6 configurations of interface.
+/// Example output of interface holding automatic IPv6 settings:
+/// ```yaml
+/// ---
+/// interfaces:
+/// - name: eth1
+///   state: up
+///   mtu: 1500
+///   ipv4:
+///     enabled: false
+///   ipv6:
+///     address:
+///       - ip: 2001:db8:2::1
+///         prefix-length: 64
+///       - ip: 2001:db8:1::1
+///         prefix-length: 64
+///       - ip: fe80::1ec1:cff:fe32:3bd3
+///         prefix-length: 64
+///     autoconf: true
+///     dhcp: true
+///     enabled: true
+/// ```
 pub struct InterfaceIpv6 {
+    /// Whether IPv6 stack is enable. When set to false, the IPv6 stack is
+    /// disabled with IPv6 link-local address purged also.
     pub enabled: bool,
     pub(crate) prop_list: Vec<&'static str>,
+    /// Whether DHCPv6 enabled.
     pub dhcp: Option<bool>,
+    /// DHCPv6 Unique Identifier
+    /// Serialize and deserialize to/from `dhcp-duid`.
     pub dhcp_duid: Option<Dhcpv6Duid>,
+    /// Whether autoconf via IPv6 router announcement enabled.
     pub autoconf: Option<bool>,
+    /// IPv6 address generation mode.
+    /// Serialize and deserialize to/from `addr-gen-mode`.
     pub addr_gen_mode: Option<Ipv6AddrGenMode>,
+    /// IPv6 addresses. Will be ignored when applying with
+    /// DHCPv6 or autoconf is enabled.
+    /// When applying with `None`, current IP address will be preserved.
+    /// When applying with `Some(Vec::new())`, all IP address will be removed.
+    /// The IP addresses will apply to kernel with the same order specified.
     pub addresses: Option<Vec<InterfaceIpAddr>>,
     pub(crate) dns: Option<DnsClientState>,
+    /// Whether to apply DNS resolver information retrieved from DHCPv6 or
+    /// autoconf.
+    /// Serialize and deserialize to/from `auto-dns`.
     pub auto_dns: Option<bool>,
+    /// Whether to set default gateway retrieved from autoconf.
+    /// Serialize and deserialize to/from `auto-gateway`.
     pub auto_gateway: Option<bool>,
+    /// Whether to set routes(including default gateway) retrieved from
+    /// autoconf.
+    /// Serialize and deserialize to/from `auto-routes`.
     pub auto_routes: Option<bool>,
+    /// The route table ID used to hold routes(including default gateway)
+    /// retrieved from autoconf.
+    /// If not defined, the main(254) will be used.
+    /// Serialize and deserialize to/from `auto-table-id`.
     pub auto_table_id: Option<u32>,
+    /// By default(true), nmstate verification process allows extra IP address
+    /// found as long as desired IP address matched.
+    /// When set to false, the verification process of nmstate do exact equal
+    /// check on IP address.
+    /// Ignored when serializing.
+    /// Deserialize from `allow-extra-address`.
     pub allow_extra_address: bool,
 }
 
@@ -314,6 +414,7 @@ impl Default for InterfaceIpv6 {
 }
 
 impl InterfaceIpv6 {
+    /// New [InterfaceIpv6] with IP disabled.
     pub fn new() -> Self {
         Self::default()
     }
@@ -497,10 +598,17 @@ impl From<InterfaceIpv6> for InterfaceIp {
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
 pub struct InterfaceIpAddr {
+    /// IP address.
     pub ip: IpAddr,
     #[serde(deserialize_with = "crate::deserializer::u8_or_string")]
+    /// Prefix length.
+    /// Serialize and deserialize to/from `prefix-length`.
     pub prefix_length: u8,
     #[serde(skip_serializing_if = "is_none_or_empty_mptcp_flags", default)]
+    /// MPTCP flag on this IP address.
+    /// Ignored when applying as nmstate does not support support IP address
+    /// specific MPTCP flags. You should apply MPTCP flags at interface level
+    /// via [BaseInterface.mptcp].
     pub mptcp_flags: Option<Vec<MptcpAddressFlag>>,
 }
 
@@ -571,11 +679,15 @@ impl std::convert::From<&InterfaceIpAddr> for String {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
 #[serde(from = "String", into = "String")]
+/// DHCPv4 client ID
 pub enum Dhcpv4ClientId {
+    /// Use link layer address as DHCPv4 client ID.
+    /// Serialize and deserialize to/from `ll`.
     LinkLayerAddress,
-    // RFC 4361 type 255, 32 bits IAID followed by DUID.
+    /// RFC 4361 type 255, 32 bits IAID followed by DUID.
+    /// Serialize and deserialize to/from `iaid+duid`.
     IaidPlusDuid,
-    // hex string or backend specific client id type
+    /// hex string or backend specific client id type
     Other(String),
 }
 
@@ -608,11 +720,21 @@ impl From<Dhcpv4ClientId> for String {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
 #[serde(from = "String", into = "String")]
+/// DHCPv6 Unique Identifier
 pub enum Dhcpv6Duid {
+    /// DUID Based on Link-Layer Address Plus Time
+    /// Serialize and deserialize to/from `llt`.
     LinkLayerAddressPlusTime,
+    /// DUID Assigned by Vendor Based on Enterprise Number
+    /// Serialize and deserialize to/from `en`.
     EnterpriseNumber,
+    /// DUID Assigned by Vendor Based on Enterprise Number
+    /// Serialize and deserialize to/from `ll`.
     LinkLayerAddress,
+    /// DUID Based on Universally Unique Identifier
+    /// Serialize and deserialize to/from `uuid`.
     Uuid,
+    /// Backend specific
     Other(String),
 }
 
@@ -649,10 +771,15 @@ impl From<Dhcpv6Duid> for String {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
 #[serde(from = "String", into = "String")]
+/// IPv6 address generation mode
 pub enum Ipv6AddrGenMode {
+    /// EUI-64 format defined by RFC 4862
+    /// Serialize and deserialize to/from `eui64`.
     Eui64,
-    // RFC 7217
+    /// Semantically Opaque Interface Identifiers defined by RFC 7217
+    /// Serialize and deserialize to/from `stable-privacy`.
     StablePrivacy,
+    /// Backend specific
     Other(String),
 }
 
@@ -679,16 +806,22 @@ impl From<Ipv6AddrGenMode> for String {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
+/// Which IP stack should network backend wait before considering the interface
+/// activation finished.
 pub enum WaitIp {
     /// The activation is considered done once IPv4 stack or IPv6 stack is
     /// configure
+    /// Serialize and deserialize to/from `any`.
     Any,
     /// The activation is considered done once IPv4 stack is configured.
+    /// Serialize and deserialize to/from `ipv4`.
     Ipv4,
     /// The activation is considered done once IPv6 stack is configured.
+    /// Serialize and deserialize to/from `ipv6`.
     Ipv6,
     /// The activation is considered done once both IPv4 and IPv6 stack are
     /// configured.
+    /// Serialize and deserialize to/from `ipv4+ipv6`.
     #[serde(rename = "ipv4+ipv6")]
     Ipv4AndIpv6,
 }
