@@ -331,7 +331,7 @@ fn delete_remain_virtual_interface_as_desired(
         if iface.is_virtual() {
             if let Some(nm_dev) = nm_devs_indexed.get(&(
                 iface.name().to_string(),
-                iface.iface_type().to_string(),
+                iface_type_to_nm(&iface.iface_type())?,
             )) {
                 log::info!(
                     "Deleting interface {}/{}: {}",
