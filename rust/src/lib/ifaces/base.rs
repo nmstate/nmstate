@@ -13,58 +13,102 @@ use crate::{
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
+/// Information shared among all interface types
 pub struct BaseInterface {
+    /// Interface name
     pub name: String,
     #[serde(skip_serializing_if = "crate::serializer::is_option_string_empty")]
+    /// Interface description stored in network backend. Not available for
+    /// kernel only mode.
     pub description: Option<String>,
     #[serde(skip)]
+    /// TODO: internal use only. Hide this.
     pub prop_list: Vec<&'static str>,
     #[serde(rename = "type", default = "default_iface_type")]
+    /// Interface type. Serialize and deserialize to/from `type`
     pub iface_type: InterfaceType,
     #[serde(default = "default_state")]
+    /// Interface state. Default to [InterfaceState::Up] when applying.
     pub state: InterfaceState,
     #[serde(skip_serializing_if = "Option::is_none")]
+    /// MAC address in the format: upper case hex string separated by `:` on
+    /// every two characters. Case insensitive when applying.
+    /// Serialize and deserialize to/from `mac-address`.
     pub mac_address: Option<String>,
     #[serde(skip)]
+    /// MAC address never change after reboots(normally stored in firmware of
+    /// network interface). Using the same format as `mac_address` property.
+    /// Ignored during apply.
+    /// TODO: expose it.
     pub permanent_mac_address: Option<String>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
         deserialize_with = "crate::deserializer::option_u64_or_string"
     )]
+    /// Maximum transmission unit.
     pub mtu: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    /// Minimum MTU allowed. Ignored during apply.
+    /// Serialize and deserialize to/from `min-mtu`.
     pub min_mtu: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    /// Maximum MTU allowed. Ignored during apply.
+    /// Serialize and deserialize to/from `max-mtu`.
     pub max_mtu: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    /// Whether system should wait certain IP stack before considering
+    /// network interface activated.
+    /// Serialize and deserialize to/from `wait-ip`.
     pub wait_ip: Option<WaitIp>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    /// IPv4 information.
+    /// Hided if interface is not allowed to hold IP information(e.g. port of
+    /// bond is not allowed to hold IP information).
     pub ipv4: Option<InterfaceIpv4>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    /// IPv4 information.
+    /// Hided if interface is not allowed to hold IP information(e.g. port of
+    /// bond is not allowed to hold IP information).
     pub ipv6: Option<InterfaceIpv6>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    /// Interface wide MPTCP flags.
+    /// Nmstate will apply these flags to all valid IP addresses(both static and
+    /// dynamic).
     pub mptcp: Option<MptcpConfig>,
     #[serde(skip_serializing_if = "Option::is_none")]
     // None here mean no change, empty string mean detach from controller.
+    /// TODO: Internal only. Hide it.
     pub controller: Option<String>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
         deserialize_with = "crate::deserializer::option_bool_or_string"
     )]
+    /// Whether kernel should skip check on package targeting MAC address and
+    /// accept all packages, also known as promiscuous mode.
+    /// Serialize and deserialize to/from `accpet-all-mac-addresses`.
     pub accept_all_mac_addresses: Option<bool>,
     #[serde(skip_serializing)]
+    /// Copy the MAC address from specified interface.
+    /// Ignored during serializing.
+    /// Deserialize from `copy-mac-from`.
     pub copy_mac_from: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none", rename = "ovs-db")]
+    /// Interface specific OpenvSwitch database configurations.
     pub ovsdb: Option<OvsDbIfaceConfig>,
     #[serde(skip_serializing_if = "Option::is_none", rename = "802.1x")]
+    /// IEEE 802.1X authentication configurations.
+    /// Serialize and deserialize to/from `802.1x`.
     pub ieee8021x: Option<Ieee8021XConfig>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    /// Link Layer Discovery Protocol configurations.
     pub lldp: Option<LldpConfig>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    /// Ethtool configurations
     pub ethtool: Option<EthtoolConfig>,
     #[serde(skip)]
+    /// TODO: internal use, hide it.
     pub controller_type: Option<InterfaceType>,
     // The interface lowest up_priority will be activated first.
     // The up_priority should be its controller's up_priority
@@ -131,6 +175,7 @@ impl BaseInterface {
         }
     }
 
+    /// Whether this interface can hold IP information or not.
     pub fn can_have_ip(&self) -> bool {
         (!self.has_controller())
             || self.iface_type == InterfaceType::OvsInterface
@@ -145,6 +190,7 @@ impl BaseInterface {
         }
     }
 
+    /// Create empty [BaseInterface] with state set to [InterfaceState::Up]
     pub fn new() -> Self {
         Self {
             state: InterfaceState::Up,
