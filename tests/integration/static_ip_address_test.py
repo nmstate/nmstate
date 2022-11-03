@@ -1,21 +1,4 @@
-#
-# Copyright (c) 2018-2019 Red Hat, Inc.
-#
-# This file is part of nmstate
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 2.1 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program. If not, see <https://www.gnu.org/licenses/>.
-#
+# SPDX-License-Identifier: LGPL-2.1-or-later
 
 import pytest
 
@@ -32,7 +15,9 @@ from .testlib import assertlib
 from .testlib import cmdlib
 from .testlib import statelib
 from .testlib.dummy import nm_unmanaged_dummy
+from .testlib.env import is_el8
 from .testlib.iproutelib import ip_monitor_assert_stable_link_up
+from .testlib.iproutelib import iproute_get_ip_addrs_with_order
 
 # TEST-NET addresses: https://tools.ietf.org/html/rfc5737#section-3
 IPV4_ADDRESS1 = "192.0.2.251"
@@ -809,3 +794,68 @@ def test_merge_ip_enabled_property_from_current(setup_eth1_static_ip):
         InterfaceIPv6.ENABLED
     ] = True
     assertlib.assert_state_match(desired_state)
+
+
+def test_preserve_ipv4_addresses_order(eth1_up):
+    desired_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: "eth1",
+                Interface.TYPE: InterfaceType.ETHERNET,
+                Interface.STATE: InterfaceState.UP,
+                Interface.IPV4: {
+                    InterfaceIPv4.ENABLED: True,
+                    InterfaceIPv4.ADDRESS: [
+                        {
+                            InterfaceIPv4.ADDRESS_IP: IPV4_ADDRESS2,
+                            InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+                        },
+                        {
+                            InterfaceIPv4.ADDRESS_IP: IPV4_ADDRESS1,
+                            InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+                        },
+                    ],
+                },
+            }
+        ]
+    }
+    libnmstate.apply(desired_state)
+    ip_addrs = iproute_get_ip_addrs_with_order(iface="eth1", is_ipv6=False)
+    assert ip_addrs[0] == IPV4_ADDRESS2
+    assert ip_addrs[1] == IPV4_ADDRESS1
+
+
+def test_preserve_ipv6_addresses_order(eth1_up):
+    desired_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: "eth1",
+                Interface.TYPE: InterfaceType.ETHERNET,
+                Interface.STATE: InterfaceState.UP,
+                Interface.IPV6: {
+                    InterfaceIPv6.ENABLED: True,
+                    InterfaceIPv6.ADDRESS: [
+                        {
+                            InterfaceIPv6.ADDRESS_IP: IPV6_ADDRESS2,
+                            InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
+                        },
+                        {
+                            InterfaceIPv6.ADDRESS_IP: IPV6_ADDRESS1,
+                            InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
+                        },
+                    ],
+                },
+            }
+        ]
+    }
+    libnmstate.apply(desired_state)
+    ip_addrs = iproute_get_ip_addrs_with_order(iface="eth1", is_ipv6=True)
+    if is_el8():
+        # RHEL/CentOS 8 has reverted IPv6 address in NetworkManager
+        # They will have downstream patch to fix nmstate. Upstream does not
+        # have such fix.
+        assert ip_addrs[1] == IPV6_ADDRESS2
+        assert ip_addrs[0] == IPV6_ADDRESS1
+    else:
+        assert ip_addrs[0] == IPV6_ADDRESS2
+        assert ip_addrs[1] == IPV6_ADDRESS1
