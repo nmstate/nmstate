@@ -123,7 +123,7 @@ pub(crate) fn nispor_retrieve(
     }
     set_controller_type(&mut net_state.interfaces);
     net_state.routes = get_routes(running_config_only);
-    net_state.rules = get_route_rules(&np_state.rules);
+    net_state.rules = get_route_rules(&np_state.rules, running_config_only);
 
     Ok(net_state)
 }
