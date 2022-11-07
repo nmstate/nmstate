@@ -4,7 +4,7 @@ use std::convert::TryFrom;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    ip::{is_ipv6_addr, sanitize_ip_network},
+    ip::{is_ipv6_addr, sanitize_ip_network, AddressFamily},
     ErrorKind, InterfaceIpAddr, NmstateError,
 };
 
@@ -222,8 +222,11 @@ impl Default for RouteRuleState {
 #[non_exhaustive]
 #[serde(deny_unknown_fields)]
 pub struct RouteRuleEntry {
+    /// Indicate the address family of the route rule.
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub family: Option<AddressFamily>,
     /// Indicate this is normal route rule or absent route rule.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub state: Option<RouteRuleState>,
     #[serde(skip_serializing_if = "Option::is_none")]
     /// Source prefix to match.
@@ -280,20 +283,50 @@ impl RouteRuleEntry {
         Self::default()
     }
 
-    // * Neither ip_from nor ip_to should be defined
     pub(crate) fn validate(&self) -> Result<(), NmstateError> {
-        if self.ip_from.is_none() && self.ip_to.is_none() {
+        if self.ip_from.is_none()
+            && self.ip_to.is_none()
+            && self.family.is_none()
+        {
             let e = NmstateError::new(
                 ErrorKind::InvalidArgument,
                 format!(
-                    "Neither ip-from or ip-to is defined in route rule {:?}",
+                    "Neither ip-from, ip-to nor family is defined {:?}",
                     self
                 ),
             );
             log::error!("{}", e);
             return Err(e);
+        } else if let Some(family) = self.family {
+            if let Some(ip_from) = self.ip_from.as_ref() {
+                if is_ipv6_addr(ip_from.as_str())
+                    != matches!(family, AddressFamily::IPv6)
+                {
+                    let e = NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        format!("The ip-from format mismatches with the family set {:?}",
+                                self
+                        ),
+                    );
+                    log::error!("{}", e);
+                    return Err(e);
+                }
+            }
+            if let Some(ip_to) = self.ip_to.as_ref() {
+                if is_ipv6_addr(ip_to.as_str())
+                    != matches!(family, AddressFamily::IPv6)
+                {
+                    let e = NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        format!("The ip-to format mismatches with the family set {:?}",
+                                self
+                        ),
+                    );
+                    log::error!("{}", e);
+                    return Err(e);
+                }
+            }
         }
-
         if self.fwmark.is_none() && self.fwmask.is_some() {
             let e = NmstateError::new(
                 ErrorKind::InvalidArgument,
@@ -375,9 +408,11 @@ impl RouteRuleEntry {
                     !is_ipv6_addr(ip_from.as_str())
                 } else if let Some(ip_to) = self.ip_to.as_ref() {
                     !is_ipv6_addr(ip_to.as_str())
+                } else if let Some(family) = self.family.as_ref() {
+                    *family == AddressFamily::IPv4
                 } else {
                     log::warn!(
-                        "Neither ip-from nor ip-to \
+                        "Neither ip-from, ip-to nor family \
                     is defined, treating it a IPv4 route rule"
                     );
                     true
@@ -397,6 +432,12 @@ impl RouteRuleEntry {
     pub(crate) fn sanitize(&mut self) -> Result<(), NmstateError> {
         if let Some(ip) = self.ip_from.as_ref() {
             let new_ip = sanitize_ip_network(ip)?;
+            if self.family.is_none() {
+                match is_ipv6_addr(new_ip.as_str()) {
+                    true => self.family = Some(AddressFamily::IPv6),
+                    false => self.family = Some(AddressFamily::IPv4),
+                };
+            }
             if ip != &new_ip {
                 log::warn!("Route rule ip-from {} sanitized to {}", ip, new_ip);
                 self.ip_from = Some(new_ip);
@@ -404,6 +445,12 @@ impl RouteRuleEntry {
         }
         if let Some(ip) = self.ip_to.as_ref() {
             let new_ip = sanitize_ip_network(ip)?;
+            if self.family.is_none() {
+                match is_ipv6_addr(new_ip.as_str()) {
+                    true => self.family = Some(AddressFamily::IPv6),
+                    false => self.family = Some(AddressFamily::IPv4),
+                };
+            }
             if ip != &new_ip {
                 log::warn!("Route rule ip-to {} sanitized to {}", ip, new_ip);
                 self.ip_to = Some(new_ip);

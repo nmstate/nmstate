@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use log::warn;
 use std::collections::HashMap;
 
 use super::super::NmIpRouteRule;
 
 const DEFAULT_ROUTE_TABLE: u32 = 254;
+const AF_INET: i32 = 2;
 
 impl NmIpRouteRule {
     pub(crate) fn to_keyfile(&self) -> HashMap<String, String> {
@@ -23,10 +25,25 @@ impl NmIpRouteRule {
                 keys.push(to_str);
             }
 
-            let from_str = match (self.from.as_ref(), self.from_len.as_ref()) {
-                (Some(f), Some(f_len)) => format!("from {f}/{f_len}"),
-                (Some(f), None) => format!("from {f}"),
-                _ => "".to_string(),
+            let mut from_str =
+                match (self.from.as_ref(), self.from_len.as_ref()) {
+                    (Some(f), Some(f_len)) => format!("from {f}/{f_len}"),
+                    (Some(f), None) => format!("from {f}"),
+                    _ => "".to_string(),
+                };
+            from_str = if self.from.is_none() && self.to.is_none() {
+                if let Some(family) = self.family {
+                    if family == AF_INET {
+                        "from 0.0.0.0/0".to_string()
+                    } else {
+                        "from ::/0".to_string()
+                    }
+                } else {
+                    warn!("Neither from, to or family specified on route rule. Assuming IPv4.");
+                    "from 0.0.0.0/0".to_string()
+                }
+            } else {
+                from_str
             };
             if !from_str.is_empty() {
                 keys.push(from_str);

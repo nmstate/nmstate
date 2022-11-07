@@ -73,8 +73,8 @@ pub struct BaseInterface {
     pub ipv6: Option<InterfaceIpv6>,
     #[serde(skip_serializing_if = "Option::is_none")]
     /// Interface wide MPTCP flags.
-    /// Nmstate will apply these flags to all valid IP addresses(both static and
-    /// dynamic).
+    /// Nmstate will apply these flags to all valid IP addresses(both static
+    /// and dynamic).
     pub mptcp: Option<MptcpConfig>,
     #[serde(skip_serializing_if = "Option::is_none")]
     // None here mean no change, empty string mean detach from controller.

@@ -4,7 +4,10 @@ use std::convert::TryFrom;
 
 use super::super::nm_dbus::NmIpRouteRule;
 
-use crate::{ip::is_ipv6_addr, InterfaceIpAddr, NmstateError, RouteRuleEntry};
+use crate::{
+    ip::is_ipv6_addr, ip::AddressFamily, InterfaceIpAddr, NmstateError,
+    RouteRuleEntry,
+};
 
 // NM require route rule priority been set explicitly, use 30,000 when
 // desire state instruct to use USE_DEFAULT_PRIORITY
@@ -13,14 +16,19 @@ const ROUTE_RULE_DEFAULT_PRIORIRY: u32 = 30000;
 const AF_INET6: i32 = 10;
 const AF_INET: i32 = 2;
 
-pub(crate) fn gen_nm_ip_rules(
-    rules: &[RouteRuleEntry],
+pub(crate) fn gen_nm_ip_rules<'a>(
+    rules: impl std::iter::Iterator<Item = &'a RouteRuleEntry>,
     is_ipv6: bool,
 ) -> Result<Vec<NmIpRouteRule>, NmstateError> {
     let mut ret = Vec::new();
     for rule in rules {
         let mut nm_rule = NmIpRouteRule::default();
         nm_rule.family = Some(if is_ipv6 { AF_INET6 } else { AF_INET });
+        if let Some(family) = rule.family {
+            if is_ipv6 != matches!(family, AddressFamily::IPv6) {
+                continue;
+            }
+        }
         if let Some(addr) = rule.ip_from.as_deref() {
             match (is_ipv6, is_ipv6_addr(addr)) {
                 (true, true) | (false, false) => {
