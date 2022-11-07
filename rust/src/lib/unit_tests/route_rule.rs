@@ -159,6 +159,7 @@ fn gen_rule_entry(
     fwmask: u32,
 ) -> RouteRuleEntry {
     RouteRuleEntry {
+        family: None,
         state: None,
         ip_from: Some(ip_from.to_string()),
         ip_to: Some(ip_to.to_string()),
@@ -390,4 +391,34 @@ ip-from: 2001:db8:2:0000::ffff
 
     assert_eq!(rule.ip_to.unwrap(), "2001:db8:1::2/128");
     assert_eq!(rule.ip_from.unwrap(), "2001:db8:2::ffff/128");
+}
+
+#[test]
+fn test_route_rule_validate_ipv6_family_ip_from() {
+    let rule: RouteRuleEntry = serde_yaml::from_str(
+        r#"
+ip-from: 2001:db8:b::/64
+priority: 30000
+route-table: 200
+family: ipv6
+"#,
+    )
+    .unwrap();
+
+    rule.validate().unwrap();
+}
+
+#[test]
+fn test_route_rule_validate_ipv4_family_ip_from() {
+    let rule: RouteRuleEntry = serde_yaml::from_str(
+        r#"
+ip-from: 192.168.2.0/24
+priority: 30000
+route-table: 200
+family: ipv4
+"#,
+    )
+    .unwrap();
+
+    rule.validate().unwrap();
 }

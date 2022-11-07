@@ -118,6 +118,7 @@ route-rules:
             rule.get(RouteRule.ROUTE_TABLE),
             rule.get(RouteRule.FWMARK),
             rule.get(RouteRule.FWMASK),
+            rule.get(RouteRule.FAMILY),
         )
 
 

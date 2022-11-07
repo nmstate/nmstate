@@ -68,6 +68,9 @@ class RouteRule:
     STATE_ABSENT = "absent"
     FWMARK = "fwmark"
     FWMASK = "fwmask"
+    FAMILY = "family"
+    FAMILY_IPV4 = "ipv4"
+    FAMILY_IPV6 = "ipv6"
 
 
 class DNS:

@@ -24,12 +24,16 @@ from libnmstate import iplib
 from . import cmdlib
 
 
-def ip_rule_exist_in_os(ip_from, ip_to, priority, table, fwmark, fwmask):
+def ip_rule_exist_in_os(
+    ip_from, ip_to, priority, table, fwmark, fwmask, family
+):
     expected_rule = locals()
     logging.debug("Checking ip rule for {}".format(expected_rule))
     cmds = ["ip"]
-    if (ip_from and iplib.is_ipv6_address(ip_from)) or (
-        ip_to and iplib.is_ipv6_address(ip_to)
+    if (
+        (ip_from and iplib.is_ipv6_address(ip_from))
+        or (ip_to and iplib.is_ipv6_address(ip_to))
+        or (family and family == "ipv6")
     ):
         cmds.append("-6")
     if ip_from and "/" not in ip_from:
