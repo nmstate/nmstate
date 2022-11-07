@@ -59,7 +59,7 @@ PYTHON3_SITE_DIR ?=$(shell \
 		 print(get_python_lib())")
 
 $(CLI_EXEC_RELEASE) $(CLIB_SO_DEV_RELEASE):
-	cd rust; cargo build --all --release
+	cd rust; cargo build --all --release -Z namespaced-features
 
 $(CLIB_SO_DEV_DEBUG):
 	cd rust; cargo build --all
