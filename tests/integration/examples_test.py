@@ -160,6 +160,7 @@ def test_add_remove_route_rule(eth1_up):
             rule.get(RouteRule.ROUTE_TABLE),
             rule.get(RouteRule.FWMARK),
             rule.get(RouteRule.FWMASK),
+            rule.get(RouteRule.FAMILY),
         )
 
 

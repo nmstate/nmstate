@@ -310,9 +310,11 @@ def eth1_with_static_route_and_rule(eth1_up):
             - ip-from: 2001:db8:b::/64
               priority: 30000
               route-table: 200
+              family: ipv6
             - ip-from: 192.168.3.2/32
               priority: 30001
               route-table: 200
+              family: ipv4
         interfaces:
           - name: eth1
             type: ethernet

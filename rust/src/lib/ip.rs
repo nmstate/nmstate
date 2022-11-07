@@ -964,7 +964,7 @@ fn default_allow_extra_address() -> bool {
     true
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy)]
 #[serde(rename_all = "lowercase")]
 #[non_exhaustive]
 pub enum AddressFamily {

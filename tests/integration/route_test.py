@@ -670,7 +670,7 @@ def route_rule_test_env(eth1_static_gateway_dns):
 
 
 @pytest.mark.tier1
-def test_route_rule_add_without_from_or_to(route_rule_test_env):
+def test_route_rule_add_without_from_or_to_or_family(route_rule_test_env):
     state = route_rule_test_env
     state[RouteRule.KEY] = {
         RouteRule.CONFIG: [
@@ -1002,6 +1002,67 @@ def test_route_rule_fwmark_with_fwmask(route_rule_test_env):
     _check_ip_rules(rules)
 
 
+@pytest.mark.tier1
+def test_route_rule_from_all_to_all(route_rule_test_env):
+    state = route_rule_test_env
+    rules = [
+        {
+            RouteRule.ROUTE_TABLE: IPV6_ROUTE_TABLE_ID1,
+            RouteRule.PRIORITY: 100,
+            RouteRule.FAMILY: RouteRule.FAMILY_IPV6,
+        },
+        {
+            RouteRule.ROUTE_TABLE: IPV4_ROUTE_TABLE_ID1,
+            RouteRule.PRIORITY: 100,
+            RouteRule.FAMILY: RouteRule.FAMILY_IPV4,
+        },
+    ]
+    state[RouteRule.KEY] = {RouteRule.CONFIG: rules}
+
+    libnmstate.apply(state)
+    _check_ip_rules(rules)
+
+
+@pytest.mark.tier1
+def test_route_rule_from_all_to_all_ipv4(route_rule_test_env):
+    state = route_rule_test_env
+    rules = [
+        {
+            RouteRule.ROUTE_TABLE: IPV4_ROUTE_TABLE_ID1,
+            RouteRule.PRIORITY: 100,
+            RouteRule.FAMILY: RouteRule.FAMILY_IPV4,
+        },
+    ]
+    state[RouteRule.KEY] = {RouteRule.CONFIG: rules}
+
+    libnmstate.apply(state)
+    _check_ip_rules(rules)
+
+    rules[0][RouteRule.FAMILY] = RouteRule.FAMILY_IPV6
+    with pytest.raises(AssertionError):
+        assert _check_ip_rules(rules)
+
+
+@pytest.mark.tier1
+def test_route_rule_from_all_to_all_ipv6(route_rule_test_env):
+    state = route_rule_test_env
+    rules = [
+        {
+            RouteRule.ROUTE_TABLE: IPV6_ROUTE_TABLE_ID1,
+            RouteRule.PRIORITY: 100,
+            RouteRule.FAMILY: RouteRule.FAMILY_IPV6,
+        },
+    ]
+    state[RouteRule.KEY] = {RouteRule.CONFIG: rules}
+
+    libnmstate.apply(state)
+    _check_ip_rules(rules)
+
+    rules[0][RouteRule.FAMILY] = RouteRule.FAMILY_IPV4
+    with pytest.raises(AssertionError):
+        assert _check_ip_rules(rules)
+
+
 def _check_ip_rules(rules):
     for rule in rules:
         iprule.ip_rule_exist_in_os(
@@ -1011,6 +1072,7 @@ def _check_ip_rules(rules):
             rule.get(RouteRule.ROUTE_TABLE),
             rule.get(RouteRule.FWMARK),
             rule.get(RouteRule.FWMASK),
+            rule.get(RouteRule.FAMILY),
         )
 
 
