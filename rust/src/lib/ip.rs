@@ -7,6 +7,8 @@ use crate::{
     BaseInterface, DnsClientState, ErrorKind, MptcpAddressFlag, NmstateError,
 };
 
+const AF_INET: u8 = 2;
+const AF_INET6: u8 = 10;
 const IPV4_ADDR_LEN: usize = 32;
 const IPV6_ADDR_LEN: usize = 128;
 
@@ -960,4 +962,29 @@ fn is_none_or_empty_mptcp_flags(v: &Option<Vec<MptcpAddressFlag>>) -> bool {
 // Allow extra IP by default
 fn default_allow_extra_address() -> bool {
     true
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
+#[serde(rename_all = "lowercase")]
+#[non_exhaustive]
+pub enum AddressFamily {
+    IPv4,
+    IPv6,
+    Unknown,
+}
+
+impl From<u8> for AddressFamily {
+    fn from(d: u8) -> Self {
+        match d {
+            AF_INET => AddressFamily::IPv4,
+            AF_INET6 => AddressFamily::IPv6,
+            _ => AddressFamily::Unknown,
+        }
+    }
+}
+
+impl Default for AddressFamily {
+    fn default() -> Self {
+        Self::IPv4
+    }
 }
