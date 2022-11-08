@@ -11,8 +11,23 @@ use crate::{
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[non_exhaustive]
 #[serde(deny_unknown_fields)]
+/// Routing rules
 pub struct RouteRules {
     #[serde(skip_serializing_if = "Option::is_none")]
+    /// When applying, `None` means preserve existing route rules.
+    /// Nmstate is using partial editing for route rule, which means
+    /// desired route rules only append to existing instead of overriding.
+    /// To delete any route rule, please set [crate::RouteRuleEntry.state] to
+    /// [RouteRuleState::Absent]. Any property set to None in absent route rule
+    /// means wildcard. For example, this [crate::NetworkState] will delete all
+    /// route rule looking up route table 500:
+    /// ```yml
+    /// ---
+    /// route-rules:
+    ///   config:
+    ///     - state: absent
+    ///       route-table: 500
+    /// ```
     pub config: Option<Vec<RouteRuleEntry>>,
 }
 
@@ -34,6 +49,7 @@ impl RouteRules {
     // * desired absent route rule is removed unless another matching rule been
     //   added.
     // * desired static rule exists.
+    /// TODO: Hide it, internal use only
     pub fn verify(&self, current: &Self) -> Result<(), NmstateError> {
         if let Some(rules) = self.config.as_ref() {
             let mut rules = rules.clone();
@@ -191,6 +207,7 @@ impl RouteRules {
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum RouteRuleState {
+    /// Used for delete route rule
     Absent,
 }
 
@@ -206,16 +223,23 @@ impl Default for RouteRuleState {
 #[serde(deny_unknown_fields)]
 pub struct RouteRuleEntry {
     #[serde(skip_serializing_if = "Option::is_none")]
+    /// Indicate this is normal route rule or absent route rule.
     pub state: Option<RouteRuleState>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    /// Source prefix to match.
+    /// Serialize and deserialize to/from `ip-from`.
     pub ip_from: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    /// Destination prefix to match.
+    /// Serialize and deserialize to/from `ip-to`.
     pub ip_to: Option<String>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
         deserialize_with = "crate::deserializer::option_i64_or_string"
     )]
+    /// Priority of this route rule.
+    /// Bigger number means lower priority.
     pub priority: Option<i64>,
     #[serde(
         skip_serializing_if = "Option::is_none",
@@ -223,6 +247,8 @@ pub struct RouteRuleEntry {
         default,
         deserialize_with = "crate::deserializer::option_u32_or_string"
     )]
+    /// The routing table ID to lookup if the rule selector matches.
+    /// Serialize and deserialize to/from `route-table`.
     pub table_id: Option<u32>,
     #[serde(
         skip_serializing_if = "Option::is_none",
@@ -230,6 +256,7 @@ pub struct RouteRuleEntry {
         deserialize_with = "crate::deserializer::option_u32_or_string",
         serialize_with = "crate::serializer::option_u32_as_hex"
     )]
+    /// Select the fwmark value to match
     pub fwmark: Option<u32>,
     #[serde(
         skip_serializing_if = "Option::is_none",
@@ -237,12 +264,16 @@ pub struct RouteRuleEntry {
         deserialize_with = "crate::deserializer::option_u32_or_string",
         serialize_with = "crate::serializer::option_u32_as_hex"
     )]
+    /// Select the fwmask value to match
     pub fwmask: Option<u32>,
 }
 
 impl RouteRuleEntry {
+    /// Let network backend choose the default priority.
     pub const USE_DEFAULT_PRIORITY: i64 = -1;
+    /// Use main route table 254.
     pub const USE_DEFAULT_ROUTE_TABLE: u32 = 0;
+    /// Default route table main(254).
     pub const DEFAULR_ROUTE_TABLE_ID: u32 = 254;
 
     pub fn new() -> Self {

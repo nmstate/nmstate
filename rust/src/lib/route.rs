@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use std::collections::{hash_map::Entry, HashMap, HashSet};
 
 use log::{debug, error};
@@ -11,10 +13,42 @@ use crate::{
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[non_exhaustive]
 #[serde(deny_unknown_fields)]
+/// IP routing status
 pub struct Routes {
     #[serde(skip_serializing_if = "Option::is_none")]
+    /// Running effected routes containing route from universe or link scope,
+    /// and only from these protocols:
+    ///  * boot (often used by `iproute` command)
+    ///  * static
+    ///  * ra
+    ///  * dhcp
+    ///  * mrouted
+    ///  * keepalived
+    ///  * babel
+    ///
+    /// Ignored when applying.
     pub running: Option<Vec<RouteEntry>>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    /// Static routes containing route from universe or link scope,
+    /// and only from these protocols:
+    ///  * boot (often used by `iproute` command)
+    ///  * static
+    ///
+    /// When applying, `None` means preserve current routes.
+    /// This property is not overriding but adding specified routes to
+    /// existing routes. To delete a route entry, please [RouteEntry.state] as
+    /// [RouteState::Absent]. Any property of absent [RouteEntry] set to
+    /// `None` means wildcard. For example, this [crate::NetworkState] could
+    /// remove all routes next hop to interface eth1(showing in yaml):
+    /// ```yaml
+    /// routes:
+    ///   config:
+    ///   - next-hop-interface: eth1
+    ///     state: absent
+    /// ```
+    ///
+    /// To change a route entry, you need to delete old one and add new one(can
+    /// be in single transaction).
     pub config: Option<Vec<RouteEntry>>,
 }
 
@@ -23,6 +57,7 @@ impl Routes {
         Self::default()
     }
 
+    /// TODO: hide it, internal only
     pub fn validate(&self) -> Result<(), NmstateError> {
         // All desire non-absent route should have next hop interface
         if let Some(config_routes) = self.config.as_ref() {
@@ -160,6 +195,7 @@ impl Routes {
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum RouteState {
+    /// Mark a route entry as absent to remove it.
     Absent,
 }
 
@@ -173,32 +209,43 @@ impl Default for RouteState {
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 #[serde(deny_unknown_fields)]
+/// Route entry
 pub struct RouteEntry {
     #[serde(skip_serializing_if = "Option::is_none")]
+    /// Only used for delete route when applying.
     pub state: Option<RouteState>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    /// Route destination address or network
     pub destination: Option<String>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         rename = "next-hop-interface"
     )]
+    /// Route next hop interface name.
+    /// Serialize and deserialize to/from `next-hop-interface`.
     pub next_hop_iface: Option<String>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         rename = "next-hop-address"
     )]
+    /// Route next hop IP address.
+    /// Serialize and deserialize to/from `next-hop-address`.
     pub next_hop_addr: Option<String>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
         deserialize_with = "crate::deserializer::option_i64_or_string"
     )]
+    /// Route metric. [RouteEntry::USE_DEFAULT_METRIC] for default
+    /// setting of network backend.
     pub metric: Option<i64>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
         deserialize_with = "crate::deserializer::option_u32_or_string"
     )]
+    /// Route table id. [RouteEntry::USE_DEFAULT_ROUTE_TABLE] for main
+    /// route table 254.
     pub table_id: Option<u32>,
 }
 
