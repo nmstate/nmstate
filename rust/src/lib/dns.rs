@@ -12,14 +12,42 @@ const DEFAULT_DNS_PRIORITY: i32 = 40;
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[non_exhaustive]
 #[serde(deny_unknown_fields)]
+/// DNS resolver state. Example partial yaml output of [NetworkState] with
+/// static DNS config:
+/// ```yaml
+/// ---
+/// dns-resolver:
+///   running:
+///      server:
+///      - 2001:db8:1::250
+///      - 192.0.2.250
+///      search:
+///      - example.org
+///      - example.net
+///   config:
+///      search:
+///      - example.org
+///      - example.net
+///      server:
+///      - 2001:db8:1::250
+///      - 192.0.2.250
+/// ```
 pub struct DnsState {
     #[serde(skip_serializing_if = "Option::is_none")]
+    /// The running effective state. The DNS server might be from DHCP(IPv6
+    /// autoconf) or manual setup.
+    /// Ignored when applying state.
     pub running: Option<DnsClientState>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    /// The static saved DNS resolver config.
+    /// When applying, if this not mentioned(None), current static DNS config
+    /// will be preserved as it was. If defined(Some), will override current
+    /// static DNS config.
     pub config: Option<DnsClientState>,
 }
 
 impl DnsState {
+    /// [DnsState] with empty static DNS resolver config.
     pub fn new() -> Self {
         Self::default()
     }
@@ -71,10 +99,15 @@ impl DnsState {
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[non_exhaustive]
 #[serde(deny_unknown_fields)]
+/// DNS Client state
 pub struct DnsClientState {
     #[serde(skip_serializing_if = "Option::is_none")]
+    /// Name server IP address list.
+    /// To remove all existing servers, please use `Some(Vec::new())`.
     pub server: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    /// Search list for host-name lookup.
+    /// To remove all existing search, please use `Some(Vec::new())`.
     pub search: Option<Vec<String>>,
     #[serde(skip)]
     // Lower is better
