@@ -825,6 +825,11 @@ def test_preserve_ipv4_addresses_order(eth1_up):
     assert ip_addrs[1] == IPV4_ADDRESS1
 
 
+@pytest.mark.skipif(
+    is_el8(),
+    reason="RHEL 8 hold different IPv6 address order in rpm between "
+    "downstream shipped and copr main branch built",
+)
 def test_preserve_ipv6_addresses_order(eth1_up):
     desired_state = {
         Interface.KEY: [
@@ -850,12 +855,5 @@ def test_preserve_ipv6_addresses_order(eth1_up):
     }
     libnmstate.apply(desired_state)
     ip_addrs = iproute_get_ip_addrs_with_order(iface="eth1", is_ipv6=True)
-    if is_el8():
-        # RHEL/CentOS 8 has reverted IPv6 address in NetworkManager
-        # They will have downstream patch to fix nmstate. Upstream does not
-        # have such fix.
-        assert ip_addrs[1] == IPV6_ADDRESS2
-        assert ip_addrs[0] == IPV6_ADDRESS1
-    else:
-        assert ip_addrs[0] == IPV6_ADDRESS2
-        assert ip_addrs[1] == IPV6_ADDRESS1
+    assert ip_addrs[0] == IPV6_ADDRESS2
+    assert ip_addrs[1] == IPV6_ADDRESS1
