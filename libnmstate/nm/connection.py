@@ -186,7 +186,7 @@ def create_new_nm_simple_conn(iface, nm_profile):
         settings.extend(create_ovs_interface_setting(patch_state, dpdk_state))
     elif iface.type == InterfaceType.INFINIBAND:
         ib_setting = create_infiniband_setting(
-            iface_info,
+            iface,
             nm_profile,
             iface.original_desire_dict,
         )
