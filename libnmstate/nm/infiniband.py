@@ -71,7 +71,9 @@ def _nm_ib_mode_to_nmstate(nm_ib_mode):
         return None
 
 
-def create_setting(iface_info, base_con_profile, original_iface_info):
+def create_setting(iface, base_con_profile, original_iface_info):
+    iface.pre_edit_validation_and_cleanup()
+    iface_info = iface.to_dict()
     ib_config = iface_info.get(InfiniBand.CONFIG_SUBTREE)
     if not ib_config:
         return None
