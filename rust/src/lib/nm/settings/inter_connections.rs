@@ -4,7 +4,8 @@ use std::collections::{hash_map::Entry, HashMap};
 use std::str::FromStr;
 
 use super::{
-    super::nm_dbus::NmConnection, connection::NM_SETTING_USER_SPACES,
+    super::nm_dbus::NmConnection,
+    connection::{NM_SETTING_INFINIBAND_SETTING_NAME, NM_SETTING_USER_SPACES},
     ovs::get_ovs_port_name,
 };
 
@@ -171,7 +172,10 @@ pub(crate) fn use_uuid_for_parent_reference(
         if let (Some(iface_name), Some(nm_iface_type)) =
             (nm_conn.iface_name(), nm_conn.iface_type())
         {
-            if !NM_SETTING_USER_SPACES.contains(&nm_iface_type) {
+            // InfiniBand parent does not support UUID reference
+            if !NM_SETTING_USER_SPACES.contains(&nm_iface_type)
+                && nm_iface_type != NM_SETTING_INFINIBAND_SETTING_NAME
+            {
                 if let Some(parent_uuid) = pending_changes.get(iface_name) {
                     nm_conn.set_parent(parent_uuid);
                 }
