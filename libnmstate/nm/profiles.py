@@ -392,6 +392,10 @@ def _use_uuid_as_controller_and_parent(nm_profiles):
         iface = nm_profile.iface
         if not iface.is_up:
             continue
+        # InfiniBand setting does not support UUID as parent
+        if iface.type == InterfaceType.INFINIBAND:
+            continue
+
         if (
             iface.controller
             and (iface.is_changed or iface.is_desired)
