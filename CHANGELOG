@@ -320,7 +320,7 @@
 ### Bug fixes
  - Wait until the rollback is completed.
  - Fix base interfaces removal, VLAN/VXLAN interfaces will be removed automatically.
- - Fix all slaves removal of a master interface.
+ - Fix all ports removal of a controller interface.
  - Interfaces state is not required when editting DNS/route/routerules.
  - Fix routes lose when editting DNS.
  - Interface is default to `state:up` when is not defined in desired state.
@@ -346,7 +346,7 @@
  - OVS: Raise an exception if the necessary services are not running.
  - Linux Bridge: Show unmanaged ports: https://bugzilla.redhat.com/1806452
  - Team: Fix verification error due to unsorted ports.
- - Raise an exception when IP configuration is enabled in slaves or ports.
+ - Raise an exception when IP configuration is enabled in ports.
  - Raise warning if interfaces exceeds 1000 in a single desired state.
  - Support route rule host without prefix length.
 
@@ -391,7 +391,7 @@
 
 ### Bug Fixes
  - Fix "AtributeError" when editing an existing OVS interface.
- - Do not remove slaves implicitly when removing the master interface.
+ - Do not remove ports implicitly when removing the controller interface.
  - Fix team interface port support.
  - Prevent virtual interface removal after DHCP or IPV6-RA timeout.
  - Get Linux Bonding options from kernel instead of reading the NetworkManager configuration.
@@ -496,9 +496,9 @@
  - Prioritize base iface activation before the vlan.
  - Ignore not active failure when deactivating.
  - Increase main loop timeout to support the linux bridge STP.
- - Detach slaves without deleting them.
- - Fix race problem on slave been deactivated by master.
- - Prioritize master interfaces activaction.
+ - Detach ports without deleting them.
+ - Fix race problem on port been deactivated by controller.
+ - Prioritize controller interfaces activaction.
  - Don't disable IPv6 on down interface.
  - Raise exception when the NM service is not running.
  - Introduce nmstatectl man page.
@@ -533,9 +533,9 @@
  - Fix random failure on showing interface as done when creating bond/linux
    bridge
  - Do refresh in libnm on each call of show().
- - Allow removing slaves from parents while keeping their interfaces up.
- - Do not remove slaves that are mentioned with state UP.
- - Support slaves swap between masters.
+ - Allow removing ports from parents while keeping their interfaces up.
+ - Do not remove ports that are mentioned with state UP.
+ - Support ports swap between controllers.
  - API: Expose IP constants through libnmstate.schema.
  - PY3: Fix deprecation of array.tostring().
  - Fix IPv4 enabled criteria: When DHCP is enabled, it implies IPv4 is enabled.
@@ -586,7 +586,7 @@
  - Unify the Nmstate exceptions to error.py.
  - verify: Sort bridge ports by name.
  - nm device: Delete connection profiles with no device.
- - nm ovs: Fix slave interface detection.
+ - nm ovs: Fix port interface detection.
  - nmclient: Explicitly create a new client object only in show.
  - apply: Remove unuseful leftover code.
  - Add option for ignoring auto DNS and routes.
