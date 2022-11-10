@@ -34,6 +34,17 @@ from libnmstate.schema import Bond
 from libnmstate.schema import LinuxBridge
 from libnmstate.schema import OVSBridge
 
+# Copy from 2.x branch schema as we do not support MPTCP in 1.x branch python
+# code.
+# These is required for running test with rust library.
+Interface.MPTCP = "mptcp"
+InterfaceIPv6.MPTCP_FLAGS = "mptcp-flags"
+InterfaceIPv4.MPTCP_FLAGS = "mptcp-flags"
+
+
+class Mptcp:
+    ADDRESS_FLAGS = "mptcp-flags"
+
 
 def show_only(ifnames, include_secrets=False):
     """
@@ -125,6 +136,8 @@ class State:
         self._normalize_linux_bridge_port_vlan()
         self._upper_linux_bridge_group_addr()
         self._sort_ovs_lag_ports()
+        self._sort_mptcp_flags()
+        self._remove_mptcp_flags_of_ip_addr()
 
     def match(self, other):
         return state_match(self.state, other.state)
@@ -277,6 +290,31 @@ class State:
                 ).get(OVSBridge.Port.LinkAggregation.PORT_SUBTREE, []).sort(
                     key=itemgetter(OVSBridge.Port.LinkAggregation.Port.NAME)
                 )
+
+    def _sort_mptcp_flags(self):
+        for iface_state in self._state[Interface.KEY]:
+            iface_state.get(Interface.MPTCP, {}).get(
+                Mptcp.ADDRESS_FLAGS, []
+            ).sort()
+            for addr in iface_state.get(Interface.IPV4, {}).get(
+                InterfaceIPv4.ADDRESS, []
+            ):
+                addr.get(InterfaceIPv4.MPTCP_FLAGS, []).sort()
+            for addr in iface_state.get(Interface.IPV6, {}).get(
+                InterfaceIPv6.ADDRESS, []
+            ):
+                addr.get(InterfaceIPv6.MPTCP_FLAGS, []).sort()
+
+    def _remove_mptcp_flags_of_ip_addr(self):
+        for iface_state in self._state[Interface.KEY]:
+            for addr in iface_state.get(Interface.IPV4, {}).get(
+                InterfaceIPv4.ADDRESS, []
+            ):
+                addr.pop(InterfaceIPv4.MPTCP_FLAGS, None)
+            for addr in iface_state.get(Interface.IPV6, {}).get(
+                InterfaceIPv6.ADDRESS, []
+            ):
+                addr.pop(InterfaceIPv6.MPTCP_FLAGS, None)
 
 
 def _lookup_iface_state_by_name(interfaces_state, ifname):
