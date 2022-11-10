@@ -124,9 +124,11 @@ class TestIPState:
     def test_sort_address(self, ip_ver):
         family, ip_info = ip_ver
         ip_state1 = IPState(family, ip_info)
+        ip_state1.sort_addresses()
         ip_info2 = deepcopy(ip_info)
         ip_info2[InterfaceIP.ADDRESS].reverse()
         ip_state2 = IPState(family, ip_info2)
+        ip_state2.sort_addresses()
         assert ip_state1.to_dict() == ip_state2.to_dict()
 
     def test_ipv6_non_abbreviated_address(self):
