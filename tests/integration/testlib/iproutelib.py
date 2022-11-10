@@ -19,9 +19,12 @@
 
 from contextlib import contextmanager
 from functools import wraps
+import json
 import subprocess
 import threading
 import time
+
+from .cmdlib import exec_cmd
 
 
 TIMEOUT = 10
@@ -102,3 +105,14 @@ def _thread(func, name, teardown_cb=lambda: None):
     finally:
         teardown_cb()
         t.join()
+
+
+def iproute_get_ip_addrs_with_order(iface, is_ipv6):
+    """
+    Return a list of ip address with the order reported by ip route
+    """
+    family = 6 if is_ipv6 else 4
+    output = json.loads(
+        exec_cmd(f"ip -d -j -{family} addr show dev {iface}".split())[1]
+    )
+    return [addr_info["local"] for addr_info in output[0]["addr_info"]]

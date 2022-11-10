@@ -44,7 +44,6 @@ class IPState:
         self._family = family
         self._info = info
         self._remove_stack_if_disabled()
-        self._sort_addresses()
         self._canonicalize_ip_addr()
         self._canonicalize_dynamic()
 
@@ -68,7 +67,7 @@ class IPState:
                 addr[InterfaceIP.ADDRESS_IP]
             )
 
-    def _sort_addresses(self):
+    def sort_addresses(self):
         self.addresses.sort(key=itemgetter(InterfaceIP.ADDRESS_IP))
 
     def _remove_stack_if_disabled(self):
@@ -393,6 +392,7 @@ class BaseIface:
         self.sort_port()
         for family in (Interface.IPV4, Interface.IPV6):
             ip_state = self.ip_state(family)
+            ip_state.sort_addresses()
             ip_state.remove_link_local_address()
             self._info[family] = ip_state.to_dict()
         state = self.to_dict()
