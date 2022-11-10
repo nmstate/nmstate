@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use std::convert::TryFrom;
 
 use serde::{Deserialize, Serialize};
@@ -76,8 +78,14 @@ impl BondInterface {
     ) -> Result<(), NmstateError> {
         self.validate_new_iface_with_no_mode(current)?;
         self.validate_mac_restricted_mode(current)?;
+        let current_bond_conf =
+            if let Some(Interface::Bond(cur_iface)) = current {
+                cur_iface.bond.as_ref()
+            } else {
+                None
+            };
         if let Some(bond_conf) = &self.bond {
-            bond_conf.pre_edit_cleanup()?;
+            bond_conf.pre_edit_cleanup(current_bond_conf)?;
         }
         Ok(())
     }
@@ -227,9 +235,24 @@ impl BondConfig {
         Self::default()
     }
 
-    pub(crate) fn pre_edit_cleanup(&self) -> Result<(), NmstateError> {
+    pub(crate) fn pre_edit_cleanup(
+        &self,
+        current: Option<&Self>,
+    ) -> Result<(), NmstateError> {
+        let mode = match self.mode.or_else(|| current.and_then(|c| c.mode)) {
+            Some(m) => m,
+            None => {
+                return Err(NmstateError::new(
+                    ErrorKind::InvalidArgument,
+                    "Bond mode not defined in desire or current".to_string(),
+                ));
+            }
+        };
         if let Some(opts) = &self.options {
-            opts.pre_edit_cleanup()?;
+            opts.pre_edit_cleanup(
+                current.and_then(|c| c.options.as_ref()),
+                mode,
+            )?;
         }
         Ok(())
     }
@@ -553,7 +576,7 @@ impl std::fmt::Display for BondPrimaryReselect {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy)]
 #[serde(try_from = "NumberAsString")]
 #[non_exhaustive]
 pub enum BondXmitHashPolicy {
@@ -734,6 +757,13 @@ pub struct BondOptions {
     pub use_carrier: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub xmit_hash_policy: Option<BondXmitHashPolicy>,
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_bool_or_string",
+        alias = "balance-slb"
+    )]
+    pub balance_slb: Option<bool>,
 }
 
 impl BondOptions {
@@ -741,9 +771,14 @@ impl BondOptions {
         Self::default()
     }
 
-    pub(crate) fn pre_edit_cleanup(&self) -> Result<(), NmstateError> {
+    pub(crate) fn pre_edit_cleanup(
+        &self,
+        current: Option<&Self>,
+        mode: BondMode,
+    ) -> Result<(), NmstateError> {
         self.validate_ad_actor_system_mac_address()?;
         self.validate_miimon_and_arp_interval()?;
+        self.validate_balance_slb(current, mode)?;
         Ok(())
     }
 
@@ -775,6 +810,33 @@ impl BondOptions {
                 );
                 log::error!("{}", e);
                 return Err(e);
+            }
+        }
+        Ok(())
+    }
+
+    fn validate_balance_slb(
+        &self,
+        current: Option<&Self>,
+        mode: BondMode,
+    ) -> Result<(), NmstateError> {
+        if self
+            .balance_slb
+            .or_else(|| current.and_then(|c| c.balance_slb))
+            == Some(true)
+        {
+            let xmit_hash_policy = self
+                .xmit_hash_policy
+                .or_else(|| current.and_then(|c| c.xmit_hash_policy));
+            if mode != BondMode::XOR
+                || xmit_hash_policy != Some(BondXmitHashPolicy::VlanSrcMac)
+            {
+                return Err(NmstateError::new(
+                    ErrorKind::InvalidArgument,
+                    "To enable balance-slb, bond mode should be \
+                    balance-xor and xmit_hash_policy: 'vlan+srcmac'"
+                        .to_string(),
+                ));
             }
         }
         Ok(())

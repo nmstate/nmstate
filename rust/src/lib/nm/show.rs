@@ -22,20 +22,22 @@ use super::{
         nm_ovs_bridge_conf_get, query_nmstate_wait_ip, retrieve_dns_info,
     },
     settings::{
-        NM_SETTING_BOND_SETTING_NAME, NM_SETTING_BRIDGE_SETTING_NAME,
-        NM_SETTING_DUMMY_SETTING_NAME, NM_SETTING_INFINIBAND_SETTING_NAME,
-        NM_SETTING_MACVLAN_SETTING_NAME, NM_SETTING_OVS_BRIDGE_SETTING_NAME,
-        NM_SETTING_OVS_IFACE_SETTING_NAME, NM_SETTING_VETH_SETTING_NAME,
-        NM_SETTING_VLAN_SETTING_NAME, NM_SETTING_VRF_SETTING_NAME,
-        NM_SETTING_VXLAN_SETTING_NAME, NM_SETTING_WIRED_SETTING_NAME,
+        get_bond_balance_slb, NM_SETTING_BOND_SETTING_NAME,
+        NM_SETTING_BRIDGE_SETTING_NAME, NM_SETTING_DUMMY_SETTING_NAME,
+        NM_SETTING_INFINIBAND_SETTING_NAME, NM_SETTING_MACVLAN_SETTING_NAME,
+        NM_SETTING_OVS_BRIDGE_SETTING_NAME, NM_SETTING_OVS_IFACE_SETTING_NAME,
+        NM_SETTING_VETH_SETTING_NAME, NM_SETTING_VLAN_SETTING_NAME,
+        NM_SETTING_VRF_SETTING_NAME, NM_SETTING_VXLAN_SETTING_NAME,
+        NM_SETTING_WIRED_SETTING_NAME,
     },
 };
 use crate::{
-    BaseInterface, BondInterface, DummyInterface, EthernetInterface,
-    InfiniBandInterface, Interface, InterfaceState, InterfaceType, Interfaces,
-    LinuxBridgeInterface, MacVlanInterface, MacVtapInterface, NetworkState,
-    NmstateError, OvsBridgeInterface, OvsInterface, UnknownInterface,
-    VlanInterface, VrfInterface, VxlanInterface,
+    BaseInterface, BondConfig, BondInterface, BondOptions, DummyInterface,
+    EthernetInterface, InfiniBandInterface, Interface, InterfaceState,
+    InterfaceType, Interfaces, LinuxBridgeInterface, MacVlanInterface,
+    MacVtapInterface, NetworkState, NmstateError, OvsBridgeInterface,
+    OvsInterface, UnknownInterface, VlanInterface, VrfInterface,
+    VxlanInterface,
 };
 
 pub(crate) fn nm_retrieve(
@@ -281,6 +283,14 @@ fn iface_get(
             InterfaceType::Bond => Interface::Bond({
                 let mut iface = BondInterface::new();
                 iface.base = base_iface;
+                let bond_config = BondConfig {
+                    options: Some(BondOptions {
+                        balance_slb: get_bond_balance_slb(nm_conn),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                };
+                iface.bond = Some(bond_config);
                 iface
             }),
             InterfaceType::OvsInterface => Interface::OvsInterface({
