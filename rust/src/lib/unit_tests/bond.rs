@@ -1,6 +1,8 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::{
     BondAdSelect, BondAllPortsActive, BondArpAllTargets, BondArpValidate,
-    BondFailOverMac, BondInterface, BondLacpRate, BondMode,
+    BondConfig, BondFailOverMac, BondInterface, BondLacpRate, BondMode,
     BondPrimaryReselect, BondXmitHashPolicy, ErrorKind, Interface, Interfaces,
 };
 
@@ -429,4 +431,98 @@ fn test_bond_ports() {
     )
     .unwrap();
     assert_eq!(ifaces.to_vec()[0].ports(), Some(vec!["eth1", "eth2"]));
+}
+
+#[test]
+fn test_balance_slb_invalid_mode_from_current() {
+    let desired: BondConfig = serde_yaml::from_str(
+        r#"---
+        options:
+          balance-slb: 1
+          xmit_hash_policy: vlan+srcmac
+        "#,
+    )
+    .unwrap();
+    let current: BondConfig = serde_yaml::from_str(
+        r#"---
+        mode: balance-rr
+        "#,
+    )
+    .unwrap();
+
+    let result = desired.pre_edit_cleanup(Some(&current));
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+    }
+}
+
+#[test]
+fn test_balance_slb_invalid_xmit_from_current() {
+    let desired: BondConfig = serde_yaml::from_str(
+        r#"---
+        mode: balance-xor
+        options:
+          balance-slb: 1
+        "#,
+    )
+    .unwrap();
+    let current: BondConfig = serde_yaml::from_str(
+        r#"---
+        options:
+          xmit_hash_policy: layer2
+        "#,
+    )
+    .unwrap();
+
+    let result = desired.pre_edit_cleanup(Some(&current));
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+    }
+}
+
+#[test]
+fn test_balance_slb_valid_override_current() {
+    let desired: BondConfig = serde_yaml::from_str(
+        r#"---
+        options:
+          balance-slb: 1
+          xmit_hash_policy: vlan+srcmac
+        "#,
+    )
+    .unwrap();
+    let current: BondConfig = serde_yaml::from_str(
+        r#"---
+        mode: balance-xor
+        options:
+          xmit_hash_policy: layer2
+        "#,
+    )
+    .unwrap();
+
+    desired.pre_edit_cleanup(Some(&current)).unwrap();
+}
+
+#[test]
+fn test_disable_balance_slb_valid_override_current() {
+    let desired: BondConfig = serde_yaml::from_str(
+        r#"---
+        options:
+          balance-slb: 0
+          xmit_hash_policy: layer2
+        "#,
+    )
+    .unwrap();
+    let current: BondConfig = serde_yaml::from_str(
+        r#"---
+        mode: balance-xor
+        options:
+          balance-slb: 1
+          xmit_hash_policy: vlan+srcmac
+        "#,
+    )
+    .unwrap();
+
+    desired.pre_edit_cleanup(Some(&current)).unwrap();
 }
