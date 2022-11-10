@@ -114,3 +114,23 @@ def test_veth_with_ignored_peer_changed_to_new_peer(veth1_with_ignored_peer):
     }
     with pytest.raises(NmstateValueError):
         libnmstate.apply(desired_state)
+
+
+def test_veth_rename_peer():
+    with veth_interface(VETH1, VETH1PEER) as desired_state:
+        desired_state[Interface.KEY][0][Veth.CONFIG_SUBTREE][
+            Veth.PEER
+        ] = "anotherpeer"
+        libnmstate.apply(desired_state)
+        assert (
+            "connected"
+            in cmdlib.exec_cmd(
+                f"nmcli -g GENERAL.STATE d show {VETH1}".split()
+            )[1]
+        )
+        assert (
+            "connected"
+            in cmdlib.exec_cmd(
+                "nmcli -g GENERAL.STATE d show anotherpeer".split()
+            )[1]
+        )
