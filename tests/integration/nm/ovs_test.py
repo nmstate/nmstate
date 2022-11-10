@@ -207,7 +207,7 @@ def _get_ovs_port_profile_uuid_of_ovs_interface(iface_name):
 
 def _get_uuid_of_ovs_interface(iface_name):
     conns = cmdlib.exec_cmd(
-        f"nmcli -g name,uuid,type connection show".split(" "),
+        "nmcli -g name,uuid,type connection show".split(" "),
         check=True,
     )[1].split("\n")
     ovs_iface_conns = [
