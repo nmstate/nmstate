@@ -38,4 +38,6 @@ pub(crate) use self::inter_connections::{
 };
 
 #[cfg(feature = "query_apply")]
+pub(crate) use self::bond::get_bond_balance_slb;
+#[cfg(feature = "query_apply")]
 pub(crate) use self::user::NMSTATE_DESCRIPTION;

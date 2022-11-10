@@ -1,21 +1,8 @@
-#
-# Copyright (c) 2019-2020 Red Hat, Inc.
-#
-# This file is part of nmstate
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 2.1 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program. If not, see <https://www.gnu.org/licenses/>.
-#
+# SPDX-License-Identifier: LGPL-2.1-or-later
+
+import os
+
+import pytest
 
 from libnmstate.schema import Bond
 from libnmstate.schema import BondMode
@@ -23,6 +10,7 @@ from libnmstate.schema import BondMode
 from ..testlib import assertlib
 from ..testlib import cmdlib
 from ..testlib.bondlib import bond_interface
+from ..testlib.env import nm_minor_version
 
 
 BOND0 = "bondtest0"
@@ -42,5 +30,44 @@ def test_bond_all_zero_ad_actor_system():
             f"nmcli --fields bond.options c show {BOND0}".split(), check=True
         )
         assert "ad_actor_system" in output
+
+    assertlib.assert_absent(BOND0)
+
+
+@pytest.mark.skipif(
+    nm_minor_version() <= 40 or os.environ.get("CI") == "true",
+    reason="Bond SLB is only supported by NM 1.41 with patched kernel",
+)
+def test_bond_balance_slb():
+    extra_iface_state = {
+        Bond.CONFIG_SUBTREE: {
+            Bond.MODE: BondMode.XOR,
+            Bond.OPTIONS_SUBTREE: {
+                "xmit_hash_policy": "vlan+srcmac",
+                "balance-slb": 1,
+            },
+        }
+    }
+    with bond_interface(
+        name=BOND0, port=[], extra_iface_state=extra_iface_state, create=True
+    ):
+        _, output, _ = cmdlib.exec_cmd(
+            f"nmcli --fields bond.options c show {BOND0}".split(), check=True
+        )
+        assert "balance-slb=1" in output
+        extra_iface_state[Bond.CONFIG_SUBTREE][Bond.OPTIONS_SUBTREE][
+            "balance-slb"
+        ] = False
+        with bond_interface(
+            name=BOND0,
+            port=[],
+            extra_iface_state=extra_iface_state,
+            create=True,
+        ):
+            _, output, _ = cmdlib.exec_cmd(
+                f"nmcli --fields bond.options c show {BOND0}".split(),
+                check=True,
+            )
+            assert "balance-slb=0" in output
 
     assertlib.assert_absent(BOND0)

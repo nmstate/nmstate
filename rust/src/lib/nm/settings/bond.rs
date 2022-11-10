@@ -1,8 +1,31 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use std::collections::HashMap;
 
 use crate::nm::nm_dbus::{NmConnection, NmSettingBond};
 
 use crate::{BondConfig, BondInterface, BondOptions};
+
+#[cfg(feature = "query_apply")]
+pub(crate) fn get_bond_balance_slb(nm_conn: &NmConnection) -> Option<bool> {
+    if let Some(nm_bond_setting) = nm_conn.bond.as_ref() {
+        match nm_bond_setting
+            .options
+            .get("balance-slb")
+            .map(|s| s.as_str())
+        {
+            Some("1") => Some(true),
+            Some("0") => Some(false),
+            Some(i) => {
+                log::warn!("Unknown value for bond balance-slb {}", i);
+                None
+            }
+            None => None,
+        }
+    } else {
+        None
+    }
+}
 
 pub(crate) fn gen_nm_bond_setting(
     bond_iface: &BondInterface,
@@ -164,6 +187,12 @@ fn apply_bond_options(
         nm_bond_set
             .options
             .insert("xmit_hash_policy".to_string(), v.to_string());
+    }
+    if let Some(v) = bond_opts.balance_slb.as_ref() {
+        nm_bond_set.options.insert(
+            "balance-slb".to_string(),
+            if *v { "1".to_string() } else { "0".to_string() },
+        );
     }
 
     // Remove all empty string option
