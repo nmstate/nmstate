@@ -293,7 +293,7 @@ class NetworkManagerPlugin(NmstatePlugin):
     def generate_configurations(self, net_state):
         if not hasattr(NM, "keyfile_write"):
             raise NmstateNotSupportedError(
-                f"Current NetworkManager version does not support generating "
+                "Current NetworkManager version does not support generating "
                 "configurations, please upgrade to 1.30 or later versoin."
             )
         return NmProfiles(None).generate_config_strings(net_state)
