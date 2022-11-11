@@ -17,6 +17,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 import copy
+import time
 
 from operator import itemgetter
 
@@ -32,6 +33,8 @@ from libnmstate.schema import OvsDB
 
 from . import statelib
 
+RETRY_COUNT = 100
+
 
 def assert_state(desired_state_data):
     """Given a state, assert it against the current state."""
@@ -43,7 +46,7 @@ def assert_state(desired_state_data):
 
 
 def assert_absent(*ifnames):
-    """ Assert that a interface is not present in the current state """
+    """Assert that a interface is not present in the current state"""
 
     current_state = statelib.show_only(ifnames)
     assert not current_state[Interface.KEY]
@@ -54,16 +57,28 @@ def assert_state_match(desired_state_data):
     Given a state, assert it against the current state by treating missing
     value in desired_state as match.
     """
-    desired_state, current_state = _prepare_state_for_verify(
-        desired_state_data
-    )
-    print(desired_state.state)
-    print(current_state.state)
-    assert desired_state.match(current_state)
+    for i in range(0, RETRY_COUNT):
+        desired_state, current_state = _prepare_state_for_verify(
+            desired_state_data
+        )
+        if desired_state.match(current_state):
+            return
+        elif i == RETRY_COUNT - 1:
+            print(
+                "desired miss match with current, retrying, "
+                f"desire {desired_state.state}"
+            )
+            print(
+                "desired miss match with current, retrying, "
+                f"current {current_state.state}"
+            )
+            assert desired_state.match(current_state)
+        else:
+            time.sleep(0.5)
 
 
 def assert_mac_address(state, expected_mac=None):
-    """ Asserts that all MAC addresses of ifaces in a state are the same """
+    """Asserts that all MAC addresses of ifaces in a state are the same"""
     macs = _iface_macs(state)
     if not expected_mac:
         expected_mac = next(macs)
