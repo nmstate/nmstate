@@ -2,6 +2,7 @@ use std::error::Error;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[non_exhaustive]
+#[allow(dead_code)]
 pub enum ErrorKind {
     InvalidArgument,
     PluginFailure,
@@ -15,7 +16,7 @@ pub enum ErrorKind {
 
 impl std::fmt::Display for ErrorKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
+        write!(f, "{self:?}")
     }
 }
 
@@ -52,7 +53,7 @@ impl From<serde_json::Error> for NmstateError {
     fn from(e: serde_json::Error) -> Self {
         NmstateError::new(
             ErrorKind::InvalidArgument,
-            format!("Invalid propriety: {}", e),
+            format!("Invalid propriety: {e}"),
         )
     }
 }
@@ -61,7 +62,7 @@ impl From<std::net::AddrParseError> for NmstateError {
     fn from(e: std::net::AddrParseError) -> Self {
         NmstateError::new(
             ErrorKind::InvalidArgument,
-            format!("Invalid IP address : {}", e),
+            format!("Invalid IP address : {e}"),
         )
     }
 }
@@ -70,7 +71,7 @@ impl From<ipnet::AddrParseError> for NmstateError {
     fn from(e: ipnet::AddrParseError) -> Self {
         NmstateError::new(
             ErrorKind::InvalidArgument,
-            format!("Invalid IP network: {}", e),
+            format!("Invalid IP network: {e}"),
         )
     }
 }

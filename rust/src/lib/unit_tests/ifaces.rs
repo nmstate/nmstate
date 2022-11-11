@@ -1,5 +1,5 @@
 use crate::{
-    ifaces::get_ignored_ifaces,
+    query_apply::get_ignored_ifaces,
     unit_tests::testlib::{
         new_eth_iface, new_ovs_br_iface, new_ovs_iface, new_unknown_iface,
         new_vlan_iface,

@@ -140,7 +140,7 @@ fn test_auto_include_ovs_interface() {
         .gen_state_for_apply(&Interfaces::new(), false)
         .unwrap();
 
-    println!("{:?}", ifaces);
+    println!("{ifaces:?}");
 
     assert_eq!(ifaces.kernel_ifaces["p1"].base_iface().up_priority, 1);
     assert_eq!(ifaces.kernel_ifaces["p1"].base_iface().name, "p1");
@@ -200,7 +200,7 @@ fn test_auto_absent_ovs_interface() {
     let (_, _, del_ifaces) =
         ifaces.gen_state_for_apply(&cur_ifaces, false).unwrap();
 
-    println!("{:?}", ifaces);
+    println!("{ifaces:?}");
 
     assert_eq!(ifaces.kernel_ifaces["p1"].base_iface().name, "p1");
     assert_eq!(

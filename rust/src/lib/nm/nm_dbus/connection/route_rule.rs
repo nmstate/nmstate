@@ -30,6 +30,8 @@ pub struct NmIpRouteRule {
     pub to: Option<String>,
     pub to_len: Option<u8>,
     pub table: Option<u32>,
+    pub fw_mark: Option<u32>,
+    pub fw_mask: Option<u32>,
     _other: DbusDictionary,
 }
 
@@ -44,6 +46,8 @@ impl TryFrom<DbusDictionary> for NmIpRouteRule {
             to: _from_map!(v, "to", String::try_from)?,
             to_len: _from_map!(v, "to-len", u8::try_from)?,
             table: _from_map!(v, "table", u32::try_from)?,
+            fw_mark: _from_map!(v, "fw_mark", u32::try_from)?,
+            fw_mask: _from_map!(v, "fw_mask", u32::try_from)?,
             _other: v,
         })
     }
@@ -94,6 +98,18 @@ impl NmIpRouteRule {
         if let Some(v) = &self.table {
             ret.append(
                 zvariant::Value::new("table"),
+                zvariant::Value::new(zvariant::Value::new(v)),
+            )?;
+        }
+        if let Some(v) = &self.fw_mark {
+            ret.append(
+                zvariant::Value::new("fwmark"),
+                zvariant::Value::new(zvariant::Value::new(v)),
+            )?;
+        }
+        if let Some(v) = &self.fw_mask {
+            ret.append(
+                zvariant::Value::new("fwmask"),
                 zvariant::Value::new(zvariant::Value::new(v)),
             )?;
         }

@@ -1,20 +1,113 @@
+// SPDX-License-Identifier: Apache-2.0
+
+#![doc(html_favicon_url = "https://nmstate.io/favicon.png")]
+#![doc(html_logo_url = "https://nmstate.io/favicon.png")]
+
+//! Declarative API for Host Network Management
+//! Nmstate is a library with an accompanying command line tool that manages
+//! host networking settings in a declarative manner. The networking state is
+//! described by a pre-defined schema. Reporting of current state and changes to
+//! it (desired state) both conform to the schema.
+//!
+//! Nmstate is aimed to satisfy enterprise needs to manage host networking
+//! through a northbound declarative API and multi provider support on the
+//! southbound. NetworkManager acts as the main provider supported to provide
+//! persistent network configuration after reboot. Kernel mode is also provided
+//! as tech-preview to apply network configurations without NetworkManager.
+//!
+//! The [NetworkState] and its subordinates are all implemented the serde
+//! `Deserialize` and  `Serialize`, instead of building up [NetworkState]
+//! manually, you may deserialize it from file(e.g. JSON, YAML and etc).
+//!
+//! ## Features
+//! The `nmstate` crate has these cargo features:
+//!  * `gen_conf` -- Generate offline network configures.
+//!  * `query_apply` -- Query and apply network state.
+//!
+//! By default, both features are enabled.
+//! The `gen_conf` feature is only supported on Linux platform.
+//! The `query_apply` feature is supported and tested on both Linux and MacOS.
+//!
+//! ## Examples
+//!
+//! To retrieve current network state:
+//!
+//! ```rust
+//! use nmstate::NetworkState;
+//!
+//! fn main() -> Result<(), Box<dyn std::error::Error>> {
+//!     let mut net_state = NetworkState::new();
+//!     // Use kernel mode
+//!     net_state.set_kernel_only(true);
+//!     net_state.retrieve()?;
+//!     println!("{}", serde_yaml::to_string(&net_state)?);
+//!     Ok(())
+//! }
+//! ```
+//!
+//! To apply network configuration(e.g. Assign static IP to eth1):
+//!
+//! ```no_run
+//! use nmstate::NetworkState;
+//!
+//! fn main() -> Result<(), Box<dyn std::error::Error>> {
+//!     let mut net_state: NetworkState = serde_yaml::from_str(
+//!         r#"---
+//!         interfaces:
+//!           - name: eth1
+//!             type: ethernet
+//!             state: up
+//!             mtu: 1500
+//!             ipv4:
+//!               address:
+//!               - ip: 192.0.2.252
+//!                 prefix-length: 24
+//!               - ip: 192.0.2.251
+//!                 prefix-length: 24
+//!               dhcp: false
+//!               enabled: true
+//!             ipv6:
+//!               address:
+//!                 - ip: 2001:db8:2::1
+//!                   prefix-length: 64
+//!                 - ip: 2001:db8:1::1
+//!                   prefix-length: 64
+//!               autoconf: false
+//!               dhcp: false
+//!               enabled: true
+//!         "#,
+//!     )?;
+//!     net_state.set_kernel_only(true);
+//!     net_state.apply()?;
+//!     Ok(())
+//! }
+//! ```
+
 mod deserializer;
 mod dns;
 mod error;
+#[cfg(feature = "gen_conf")]
+mod gen_conf;
 mod hostname;
 mod ieee8021x;
 mod iface;
 mod ifaces;
 mod ip;
 mod lldp;
+mod mptcp;
 mod net_state;
+#[cfg(feature = "query_apply")]
 mod nispor;
 mod nm;
 mod ovs;
+#[cfg(feature = "query_apply")]
 mod ovsdb;
+#[cfg(feature = "query_apply")]
+mod query_apply;
 mod route;
 mod route_rule;
 mod serializer;
+#[cfg(feature = "query_apply")]
 mod state;
 mod unit_tests;
 
@@ -55,6 +148,7 @@ pub use crate::lldp::{
     LldpSystemCapabilities, LldpSystemCapability, LldpSystemDescription,
     LldpSystemName, LldpVlan, LldpVlans,
 };
+pub use crate::mptcp::{MptcpAddressFlag, MptcpConfig};
 pub use crate::net_state::NetworkState;
 pub use crate::ovs::{OvsDbGlobalConfig, OvsDbIfaceConfig};
 pub use crate::route::{RouteEntry, RouteState, Routes};

@@ -23,6 +23,8 @@ pub(crate) fn get_route_rules(np_rules: &[nispor::RouteRule]) -> RouteRules {
         rule.ip_from = np_rule.src.clone();
         rule.table_id = np_rule.table;
         rule.priority = np_rule.priority.map(i64::from);
+        rule.fwmark = np_rule.fw_mark;
+        rule.fwmask = np_rule.fw_mask;
         rules.push(rule);
     }
     ret.config = Some(rules);

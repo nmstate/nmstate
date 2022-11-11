@@ -1,10 +1,10 @@
-use std::net::IpAddr;
+use std::net::{IpAddr, Ipv6Addr};
 use std::str::FromStr;
 
 use serde::{self, Deserialize, Deserializer, Serialize};
 
 use crate::{
-    BaseInterface, DnsClientState, ErrorKind, Interfaces, NmstateError,
+    BaseInterface, DnsClientState, ErrorKind, MptcpAddressFlag, NmstateError,
 };
 
 const IPV4_ADDR_LEN: usize = 32;
@@ -71,25 +71,97 @@ struct InterfaceIp {
     pub auto_table_id: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none", rename = "addr-gen-mode")]
     pub addr_gen_mode: Option<Ipv6AddrGenMode>,
+    #[serde(
+        default = "default_allow_extra_address",
+        skip_serializing,
+        rename = "allow-extra-address"
+    )]
+    pub allow_extra_address: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(into = "InterfaceIp")]
 #[non_exhaustive]
+/// IPv4 configuration of interface.
+/// Example YAML output of interface holding static IPv4:
+/// ```yaml
+/// ---
+/// interfaces:
+/// - name: eth1
+///   state: up
+///   mtu: 1500
+///   ipv4:
+///     address:
+///     - ip: 192.0.2.252
+///       prefix-length: 24
+///     - ip: 192.0.2.251
+///       prefix-length: 24
+///     dhcp: false
+///     enabled: true
+/// ```
 pub struct InterfaceIpv4 {
+    /// Whether IPv4 stack is enabled. When set to false, all IPv4 address will
+    /// be removed from this interface.
     pub enabled: bool,
     pub(crate) prop_list: Vec<&'static str>,
+    /// Whether DHCPv4 is enabled.
     pub dhcp: Option<bool>,
+    /// DHCPv4 client ID.
+    /// Serialize and deserialize to/from `dhcp-client-id`.
     pub dhcp_client_id: Option<Dhcpv4ClientId>,
+    /// IPv4 addresses. Will be ignored when applying with
+    /// DHCP enabled.
+    /// When applying with `None`, current IP address will be preserved.
+    /// When applying with `Some(Vec::new())`, all IP address will be removed.
+    /// The IP addresses will apply to kernel with the same order specified
+    /// which result the IP addresses after first one holding the `secondary`
+    /// flag.
     pub addresses: Option<Vec<InterfaceIpAddr>>,
     pub(crate) dns: Option<DnsClientState>,
+    /// Whether to apply DNS resolver information retrieved from DHCP server.
+    /// Serialize and deserialize to/from `auto-dns`.
     pub auto_dns: Option<bool>,
+    /// Whether to set default gateway retrieved from DHCP server.
+    /// Serialize and deserialize to/from `auto-gateway`.
     pub auto_gateway: Option<bool>,
+    /// Whether to set routes(including default gateway) retrieved from DHCP
+    /// server.
+    /// Serialize and deserialize to/from `auto-routes`.
     pub auto_routes: Option<bool>,
+    /// The route table ID used to hold routes(including default gateway)
+    /// retrieved from DHCP server.
+    /// If not defined, the main(254) will be used.
+    /// Serialize and deserialize to/from `auto-table-id`.
     pub auto_table_id: Option<u32>,
+    /// By default(true), nmstate verification process allows extra IP address
+    /// found as long as desired IP address matched.
+    /// When set to false, the verification process of nmstate do exact equal
+    /// check on IP address.
+    /// Ignore when serializing.
+    /// Deserialize from `allow-extra-address`
+    pub allow_extra_address: bool,
+}
+
+impl Default for InterfaceIpv4 {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            prop_list: Vec::new(),
+            dhcp: None,
+            dhcp_client_id: None,
+            addresses: None,
+            dns: None,
+            auto_dns: None,
+            auto_gateway: None,
+            auto_routes: None,
+            auto_table_id: None,
+            allow_extra_address: default_allow_extra_address(),
+        }
+    }
 }
 
 impl InterfaceIpv4 {
+    /// Create [InterfaceIpv4] with IP disabled.
     pub fn new() -> Self {
         Self::default()
     }
@@ -104,47 +176,9 @@ impl InterfaceIpv4 {
             && !self.addresses.as_deref().unwrap_or_default().is_empty()
     }
 
-    pub(crate) fn update(&mut self, other: &Self) {
-        if other.prop_list.contains(&"enabled") {
-            self.enabled = other.enabled;
-        }
-
-        if other.prop_list.contains(&"dhcp") {
-            self.dhcp = other.dhcp;
-        }
-        if other.prop_list.contains(&"dhcp_client_id") {
-            self.dhcp_client_id = other.dhcp_client_id.clone();
-        }
-        if other.prop_list.contains(&"addresses") {
-            self.addresses = other.addresses.clone();
-        }
-        if other.prop_list.contains(&"dns") {
-            self.dns = other.dns.clone();
-        }
-        if other.prop_list.contains(&"auto_dns") {
-            self.auto_dns = other.auto_dns;
-        }
-        if other.prop_list.contains(&"auto_gateway") {
-            self.auto_gateway = other.auto_gateway;
-        }
-        if other.prop_list.contains(&"auto_routes") {
-            self.auto_routes = other.auto_routes;
-        }
-        if other.prop_list.contains(&"auto_table_id") {
-            self.auto_table_id = other.auto_table_id;
-        }
-
-        for other_prop_name in &other.prop_list {
-            if !self.prop_list.contains(other_prop_name) {
-                self.prop_list.push(other_prop_name);
-            }
-        }
-        self.cleanup()
-    }
-
     // * Disable DHCP and remove address if enabled: false
     // * Set DHCP options to None if DHCP is false
-    fn cleanup(&mut self) {
+    pub(crate) fn cleanup(&mut self) {
         if !self.enabled {
             self.dhcp = None;
             self.addresses = None;
@@ -158,11 +192,38 @@ impl InterfaceIpv4 {
         }
     }
 
+    pub(crate) fn merge_ip(&mut self, current: &Self) {
+        if !self.prop_list.contains(&"enabled") {
+            self.enabled = current.enabled;
+        }
+        if self.dhcp.is_none() && self.enabled {
+            self.dhcp = current.dhcp;
+        }
+
+        // Normally, we expect backend to preserve configuration which not
+        // mentioned in desire, but when DHCP switch from ON to OFF, the design
+        // of nmstate is expecting dynamic IP address goes static. This should
+        // be done by top level code.
+        if current.is_auto()
+            && current.addresses.is_some()
+            && self.enabled
+            && !self.is_auto()
+            && self.addresses.is_none()
+        {
+            self.addresses = current.addresses.clone();
+        }
+    }
+
     // Clean up before sending to plugin for applying
     // * Set auto_dns, auto_gateway and auto_routes to true if DHCP enabled and
     //   those options is None
     // * Remove static IP address when DHCP enabled.
-    pub(crate) fn pre_edit_cleanup(&mut self) {
+    // * When user is not mentioning `enabled` property of ipv4 stack in desire
+    //   state, nmstate should merge it from current.
+    pub(crate) fn pre_edit_cleanup(&mut self, current: Option<&Self>) {
+        if let Some(current) = current {
+            self.merge_ip(current);
+        }
         if self.is_auto() {
             if self.auto_dns.is_none() {
                 self.auto_dns = Some(true);
@@ -183,26 +244,6 @@ impl InterfaceIpv4 {
             }
         }
         self.cleanup();
-    }
-
-    // Clean up before verification
-    // * Sort IP address
-    // * Ignore DHCP options if DHCP disabled
-    // * Ignore address if DHCP enabled
-    // * Set DHCP as off if enabled and dhcp is None
-    pub(crate) fn pre_verify_cleanup(&mut self) {
-        self.cleanup();
-        if self.dhcp == Some(true) {
-            self.addresses = None;
-        }
-        if let Some(addrs) = self.addresses.as_mut() {
-            addrs.sort_unstable_by(|a, b| {
-                (&a.ip, a.prefix_length).cmp(&(&b.ip, b.prefix_length))
-            })
-        };
-        if self.dhcp != Some(true) {
-            self.dhcp = Some(false);
-        }
     }
 }
 
@@ -232,7 +273,7 @@ impl<'de> Deserialize<'de> for InterfaceIpv4 {
         let ip: InterfaceIp = match serde_json::from_value(v) {
             Ok(i) => i,
             Err(e) => {
-                return Err(serde::de::Error::custom(format!("{}", e)));
+                return Err(serde::de::Error::custom(format!("{e}")));
             }
         };
         let mut ret = Self::from(ip);
@@ -252,6 +293,7 @@ impl From<InterfaceIp> for InterfaceIpv4 {
             auto_routes: ip.auto_routes,
             auto_gateway: ip.auto_gateway,
             auto_table_id: ip.auto_table_id,
+            allow_extra_address: ip.allow_extra_address,
             ..Default::default()
         }
     }
@@ -273,30 +315,106 @@ impl From<InterfaceIpv4> for InterfaceIp {
             auto_routes: ip.auto_routes,
             auto_gateway: ip.auto_gateway,
             auto_table_id: ip.auto_table_id,
+            allow_extra_address: ip.allow_extra_address,
             ..Default::default()
         }
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[non_exhaustive]
 #[serde(into = "InterfaceIp")]
+/// IPv6 configurations of interface.
+/// Example output of interface holding automatic IPv6 settings:
+/// ```yaml
+/// ---
+/// interfaces:
+/// - name: eth1
+///   state: up
+///   mtu: 1500
+///   ipv4:
+///     enabled: false
+///   ipv6:
+///     address:
+///       - ip: 2001:db8:2::1
+///         prefix-length: 64
+///       - ip: 2001:db8:1::1
+///         prefix-length: 64
+///       - ip: fe80::1ec1:cff:fe32:3bd3
+///         prefix-length: 64
+///     autoconf: true
+///     dhcp: true
+///     enabled: true
+/// ```
 pub struct InterfaceIpv6 {
+    /// Whether IPv6 stack is enable. When set to false, the IPv6 stack is
+    /// disabled with IPv6 link-local address purged also.
     pub enabled: bool,
     pub(crate) prop_list: Vec<&'static str>,
+    /// Whether DHCPv6 enabled.
     pub dhcp: Option<bool>,
+    /// DHCPv6 Unique Identifier
+    /// Serialize and deserialize to/from `dhcp-duid`.
     pub dhcp_duid: Option<Dhcpv6Duid>,
+    /// Whether autoconf via IPv6 router announcement enabled.
     pub autoconf: Option<bool>,
+    /// IPv6 address generation mode.
+    /// Serialize and deserialize to/from `addr-gen-mode`.
     pub addr_gen_mode: Option<Ipv6AddrGenMode>,
+    /// IPv6 addresses. Will be ignored when applying with
+    /// DHCPv6 or autoconf is enabled.
+    /// When applying with `None`, current IP address will be preserved.
+    /// When applying with `Some(Vec::new())`, all IP address will be removed.
+    /// The IP addresses will apply to kernel with the same order specified.
     pub addresses: Option<Vec<InterfaceIpAddr>>,
     pub(crate) dns: Option<DnsClientState>,
+    /// Whether to apply DNS resolver information retrieved from DHCPv6 or
+    /// autoconf.
+    /// Serialize and deserialize to/from `auto-dns`.
     pub auto_dns: Option<bool>,
+    /// Whether to set default gateway retrieved from autoconf.
+    /// Serialize and deserialize to/from `auto-gateway`.
     pub auto_gateway: Option<bool>,
+    /// Whether to set routes(including default gateway) retrieved from
+    /// autoconf.
+    /// Serialize and deserialize to/from `auto-routes`.
     pub auto_routes: Option<bool>,
+    /// The route table ID used to hold routes(including default gateway)
+    /// retrieved from autoconf.
+    /// If not defined, the main(254) will be used.
+    /// Serialize and deserialize to/from `auto-table-id`.
     pub auto_table_id: Option<u32>,
+    /// By default(true), nmstate verification process allows extra IP address
+    /// found as long as desired IP address matched.
+    /// When set to false, the verification process of nmstate do exact equal
+    /// check on IP address.
+    /// Ignored when serializing.
+    /// Deserialize from `allow-extra-address`.
+    pub allow_extra_address: bool,
+}
+
+impl Default for InterfaceIpv6 {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            prop_list: Vec::new(),
+            dhcp: None,
+            dhcp_duid: None,
+            autoconf: None,
+            addr_gen_mode: None,
+            addresses: None,
+            dns: None,
+            auto_dns: None,
+            auto_gateway: None,
+            auto_routes: None,
+            auto_table_id: None,
+            allow_extra_address: default_allow_extra_address(),
+        }
+    }
 }
 
 impl InterfaceIpv6 {
+    /// New [InterfaceIpv6] with IP disabled.
     pub fn new() -> Self {
         Self::default()
     }
@@ -313,7 +431,7 @@ impl InterfaceIpv6 {
 
     // * Disable DHCP and remove address if enabled: false
     // * Set DHCP options to None if DHCP is false
-    fn cleanup(&mut self) {
+    pub(crate) fn cleanup(&mut self) {
         if !self.enabled {
             self.dhcp = None;
             self.autoconf = None;
@@ -328,102 +446,32 @@ impl InterfaceIpv6 {
         }
     }
 
-    pub(crate) fn update(&mut self, other: &Self) {
-        if other.prop_list.contains(&"enabled") {
-            self.enabled = other.enabled;
-        }
-        if other.prop_list.contains(&"dhcp") {
-            self.dhcp = other.dhcp;
-        }
-        if other.prop_list.contains(&"dhcp_duid") {
-            self.dhcp_duid = other.dhcp_duid.clone();
-        }
-        if other.prop_list.contains(&"autoconf") {
-            self.autoconf = other.autoconf;
-        }
-        if other.prop_list.contains(&"addr_gen_mode") {
-            self.addr_gen_mode = other.addr_gen_mode.clone();
-        }
-        if other.prop_list.contains(&"addresses") {
-            self.addresses = other.addresses.clone();
-        }
-        if other.prop_list.contains(&"auto_dns") {
-            self.auto_dns = other.auto_dns;
-        }
-        if other.prop_list.contains(&"auto_gateway") {
-            self.auto_gateway = other.auto_gateway;
-        }
-        if other.prop_list.contains(&"auto_routes") {
-            self.auto_routes = other.auto_routes;
-        }
-        if other.prop_list.contains(&"auto_table_id") {
-            self.auto_table_id = other.auto_table_id;
-        }
-        if other.prop_list.contains(&"dns") {
-            self.dns = other.dns.clone();
-        }
-        if other.prop_list.contains(&"addr_gen_mode") {
-            self.addr_gen_mode = other.addr_gen_mode.clone();
-        }
-        for other_prop_name in &other.prop_list {
-            if !self.prop_list.contains(other_prop_name) {
-                self.prop_list.push(other_prop_name);
-            }
-        }
-        self.cleanup()
-    }
-
-    // Clean up before verification
-    // * Remove link-local address
-    // * Ignore DHCP options if DHCP disabled
-    // * Ignore IP address when DHCP/autoconf enabled.
-    // * Set DHCP None to Some(false)
-    pub(crate) fn pre_verify_cleanup(&mut self) {
-        self.cleanup();
-        if self.is_auto() {
-            self.addresses = None;
-        }
-        if let Some(addrs) = self.addresses.as_mut() {
-            addrs.retain(|addr| {
-                !is_ipv6_unicast_link_local(
-                    &addr.ip.to_string(),
-                    addr.prefix_length,
-                )
-            })
-        };
-        if let Some(addrs) = self.addresses.as_mut() {
-            addrs.sort_unstable_by(|a, b| {
-                (&a.ip, a.prefix_length).cmp(&(&b.ip, b.prefix_length))
-            })
-        };
-        if self.dhcp != Some(true) {
-            self.dhcp = Some(false);
-        }
-        if self.autoconf != Some(true) {
-            self.autoconf = Some(false);
-        }
-    }
-
     // Clean up before Apply
     // * Remove link-local address
     // * Set auto_dns, auto_gateway and auto_routes to true if DHCP/autoconf
     //   enabled and those options is None
     // * Remove static IP address when DHCP/autoconf enabled.
-    pub(crate) fn pre_edit_cleanup(&mut self) {
+    // * When user is not mentioning `enabled` property of ipv6 stack in desire
+    //   state, nmstate should merge it from current.
+    pub(crate) fn pre_edit_cleanup(&mut self, current: Option<&Self>) {
+        if let Some(current) = current {
+            self.merge_ip(current);
+        }
         if let Some(addrs) = self.addresses.as_mut() {
             addrs.retain(|addr| {
-                if is_ipv6_unicast_link_local(
-                    &addr.ip.to_string(),
-                    addr.prefix_length,
-                ) {
-                    log::warn!(
-                        "Ignoring IPv6 link local address {}/{}",
-                        &addr.ip,
-                        addr.prefix_length
-                    );
-                    false
+                if let IpAddr::V6(ip_addr) = addr.ip {
+                    if is_ipv6_unicast_link_local(&ip_addr) {
+                        log::warn!(
+                            "Ignoring IPv6 link local address {}/{}",
+                            &addr.ip,
+                            addr.prefix_length
+                        );
+                        false
+                    } else {
+                        true
+                    }
                 } else {
-                    true
+                    false
                 }
             })
         };
@@ -448,6 +496,30 @@ impl InterfaceIpv6 {
         }
         self.cleanup();
     }
+
+    pub(crate) fn merge_ip(&mut self, current: &Self) {
+        if !self.prop_list.contains(&"enabled") {
+            self.enabled = current.enabled;
+        }
+        if self.dhcp.is_none() && self.enabled {
+            self.dhcp = current.dhcp;
+        }
+        if self.autoconf.is_none() && self.enabled {
+            self.autoconf = current.autoconf;
+        }
+        // Normally, we expect backend to preserve configuration which not
+        // mentioned in desire, but when DHCP switch from ON to OFF, the design
+        // of nmstate is expecting dynamic IP address goes static. This should
+        // be done by top level code.
+        if current.is_auto()
+            && current.addresses.is_some()
+            && self.enabled
+            && !self.is_auto()
+            && self.addresses.is_none()
+        {
+            self.addresses = current.addresses.clone();
+        }
+    }
 }
 
 impl<'de> Deserialize<'de> for InterfaceIpv6 {
@@ -470,7 +542,7 @@ impl<'de> Deserialize<'de> for InterfaceIpv6 {
         let ip: InterfaceIp = match serde_json::from_value(v) {
             Ok(i) => i,
             Err(e) => {
-                return Err(serde::de::Error::custom(format!("{}", e)));
+                return Err(serde::de::Error::custom(format!("{e}")));
             }
         };
         let mut ret = Self::from(ip);
@@ -492,6 +564,7 @@ impl From<InterfaceIp> for InterfaceIpv6 {
             auto_gateway: ip.auto_gateway,
             auto_table_id: ip.auto_table_id,
             addr_gen_mode: ip.addr_gen_mode,
+            allow_extra_address: ip.allow_extra_address,
             ..Default::default()
         }
     }
@@ -515,18 +588,28 @@ impl From<InterfaceIpv6> for InterfaceIp {
             auto_gateway: ip.auto_gateway,
             auto_table_id: ip.auto_table_id,
             addr_gen_mode: ip.addr_gen_mode,
+            allow_extra_address: ip.allow_extra_address,
             ..Default::default()
         }
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
 pub struct InterfaceIpAddr {
+    /// IP address.
     pub ip: IpAddr,
     #[serde(deserialize_with = "crate::deserializer::u8_or_string")]
+    /// Prefix length.
+    /// Serialize and deserialize to/from `prefix-length`.
     pub prefix_length: u8,
+    #[serde(skip_serializing_if = "is_none_or_empty_mptcp_flags", default)]
+    /// MPTCP flag on this IP address.
+    /// Ignored when applying as nmstate does not support support IP address
+    /// specific MPTCP flags. You should apply MPTCP flags at interface level
+    /// via [BaseInterface.mptcp].
+    pub mptcp_flags: Option<Vec<MptcpAddressFlag>>,
 }
 
 impl Default for InterfaceIpAddr {
@@ -534,6 +617,7 @@ impl Default for InterfaceIpAddr {
         Self {
             ip: IpAddr::V6(std::net::Ipv6Addr::new(0, 0, 0, 0, 0, 0, 0, 1)),
             prefix_length: 128,
+            mptcp_flags: None,
         }
     }
 }
@@ -542,14 +626,10 @@ pub(crate) fn is_ipv6_addr(addr: &str) -> bool {
     addr.contains(':')
 }
 
-// TODO: Rust offical has std::net::Ipv6Addr::is_unicast_link_local() in
-// experimental.
-fn is_ipv6_unicast_link_local(ip: &str, prefix: u8) -> bool {
-    // The unicast link local address range is fe80::/10.
-    is_ipv6_addr(ip)
-        && ip.len() >= 3
-        && ["fe8", "fe9", "fea", "feb"].contains(&&ip[..3])
-        && prefix >= 10
+// Copy from Rust official std::net::Ipv6Addr::is_unicast_link_local() which
+// is experimental.
+pub(crate) fn is_ipv6_unicast_link_local(ip: &Ipv6Addr) -> bool {
+    (ip.segments()[0] & 0xffc0) == 0xfe80
 }
 
 impl std::convert::TryFrom<&str> for InterfaceIpAddr {
@@ -560,7 +640,7 @@ impl std::convert::TryFrom<&str> for InterfaceIpAddr {
         let ip = IpAddr::from_str(addr[0]).map_err(|e| {
             let e = NmstateError::new(
                 ErrorKind::InvalidArgument,
-                format!("Invalid IP address {}: {}", addr[0], e),
+                format!("Invalid IP address {}: {e}", addr[0]),
             );
             log::error!("{}", e);
             e
@@ -576,13 +656,17 @@ impl std::convert::TryFrom<&str> for InterfaceIpAddr {
             addr[1].parse::<u8>().map_err(|parse_error| {
                 let e = NmstateError::new(
                     ErrorKind::InvalidArgument,
-                    format!("Invalid IP address {}: {}", value, parse_error),
+                    format!("Invalid IP address {value}: {parse_error}"),
                 );
                 log::error!("{}", e);
                 e
             })?
         };
-        Ok(Self { ip, prefix_length })
+        Ok(Self {
+            ip,
+            prefix_length,
+            mptcp_flags: None,
+        })
     }
 }
 
@@ -592,51 +676,18 @@ impl std::convert::From<&InterfaceIpAddr> for String {
     }
 }
 
-pub(crate) fn include_current_ip_address_if_dhcp_on_to_off(
-    chg_net_state: &mut Interfaces,
-    current: &Interfaces,
-) {
-    for (iface_name, iface) in chg_net_state.kernel_ifaces.iter_mut() {
-        let cur_iface = if let Some(c) = current.kernel_ifaces.get(iface_name) {
-            c
-        } else {
-            continue;
-        };
-        if let Some(cur_ip_conf) = cur_iface.base_iface().ipv4.as_ref() {
-            if cur_ip_conf.is_auto() && cur_ip_conf.addresses.is_some() {
-                if let Some(ip_conf) = iface.base_iface_mut().ipv4.as_mut() {
-                    if ip_conf.enabled
-                        && !ip_conf.is_auto()
-                        && ip_conf.addresses.is_none()
-                    {
-                        ip_conf.addresses = cur_ip_conf.addresses.clone();
-                    }
-                }
-            }
-        }
-        if let Some(cur_ip_conf) = cur_iface.base_iface().ipv6.as_ref() {
-            if cur_ip_conf.is_auto() && cur_ip_conf.addresses.is_some() {
-                if let Some(ip_conf) = iface.base_iface_mut().ipv6.as_mut() {
-                    if ip_conf.enabled
-                        && !ip_conf.is_auto()
-                        && ip_conf.addresses.is_none()
-                    {
-                        ip_conf.addresses = cur_ip_conf.addresses.clone();
-                    }
-                }
-            }
-        }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
 #[serde(from = "String", into = "String")]
+/// DHCPv4 client ID
 pub enum Dhcpv4ClientId {
+    /// Use link layer address as DHCPv4 client ID.
+    /// Serialize and deserialize to/from `ll`.
     LinkLayerAddress,
-    // RFC 4361 type 255, 32 bits IAID followed by DUID.
+    /// RFC 4361 type 255, 32 bits IAID followed by DUID.
+    /// Serialize and deserialize to/from `iaid+duid`.
     IaidPlusDuid,
-    // hex string or backend specific client id type
+    /// hex string or backend specific client id type
     Other(String),
 }
 
@@ -669,11 +720,21 @@ impl From<Dhcpv4ClientId> for String {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
 #[serde(from = "String", into = "String")]
+/// DHCPv6 Unique Identifier
 pub enum Dhcpv6Duid {
+    /// DUID Based on Link-Layer Address Plus Time
+    /// Serialize and deserialize to/from `llt`.
     LinkLayerAddressPlusTime,
+    /// DUID Assigned by Vendor Based on Enterprise Number
+    /// Serialize and deserialize to/from `en`.
     EnterpriseNumber,
+    /// DUID Assigned by Vendor Based on Enterprise Number
+    /// Serialize and deserialize to/from `ll`.
     LinkLayerAddress,
+    /// DUID Based on Universally Unique Identifier
+    /// Serialize and deserialize to/from `uuid`.
     Uuid,
+    /// Backend specific
     Other(String),
 }
 
@@ -710,10 +771,15 @@ impl From<Dhcpv6Duid> for String {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
 #[serde(from = "String", into = "String")]
+/// IPv6 address generation mode
 pub enum Ipv6AddrGenMode {
+    /// EUI-64 format defined by RFC 4862
+    /// Serialize and deserialize to/from `eui64`.
     Eui64,
-    // RFC 7217
+    /// Semantically Opaque Interface Identifiers defined by RFC 7217
+    /// Serialize and deserialize to/from `stable-privacy`.
     StablePrivacy,
+    /// Backend specific
     Other(String),
 }
 
@@ -740,16 +806,22 @@ impl From<Ipv6AddrGenMode> for String {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
+/// Which IP stack should network backend wait before considering the interface
+/// activation finished.
 pub enum WaitIp {
     /// The activation is considered done once IPv4 stack or IPv6 stack is
     /// configure
+    /// Serialize and deserialize to/from `any`.
     Any,
     /// The activation is considered done once IPv4 stack is configured.
+    /// Serialize and deserialize to/from `ipv4`.
     Ipv4,
     /// The activation is considered done once IPv6 stack is configured.
+    /// Serialize and deserialize to/from `ipv6`.
     Ipv6,
     /// The activation is considered done once both IPv4 and IPv6 stack are
     /// configured.
+    /// Serialize and deserialize to/from `ipv4+ipv6`.
     #[serde(rename = "ipv4+ipv6")]
     Ipv4AndIpv6,
 }
@@ -813,45 +885,6 @@ pub(crate) fn validate_wait_ip(
     Ok(())
 }
 
-pub(crate) fn merge_ip_stack(
-    chg_net_state: &mut Interfaces,
-    current: &Interfaces,
-) {
-    for (iface_name, iface) in chg_net_state.kernel_ifaces.iter_mut() {
-        let cur_iface = if let Some(c) = current.kernel_ifaces.get(iface_name) {
-            c
-        } else {
-            continue;
-        };
-        if !iface.base_iface().can_have_ip() {
-            continue;
-        }
-        if let Some(cur_ip_conf) = cur_iface.base_iface().ipv4.as_ref() {
-            if let Some(ip_conf) = iface.base_iface_mut().ipv4.as_mut() {
-                if !ip_conf.prop_list.contains(&"enabled") {
-                    ip_conf.enabled = cur_ip_conf.enabled;
-                }
-                if ip_conf.dhcp.is_none() && ip_conf.enabled {
-                    ip_conf.dhcp = cur_ip_conf.dhcp;
-                }
-            }
-        }
-        if let Some(cur_ip_conf) = cur_iface.base_iface().ipv6.as_ref() {
-            if let Some(ip_conf) = iface.base_iface_mut().ipv6.as_mut() {
-                if !ip_conf.prop_list.contains(&"enabled") {
-                    ip_conf.enabled = cur_ip_conf.enabled;
-                }
-                if ip_conf.dhcp.is_none() && ip_conf.enabled {
-                    ip_conf.dhcp = cur_ip_conf.dhcp;
-                }
-                if ip_conf.autoconf.is_none() && ip_conf.enabled {
-                    ip_conf.autoconf = cur_ip_conf.autoconf;
-                }
-            }
-        }
-    }
-}
-
 fn get_ip_prop_list(
     map: &serde_json::Map<String, serde_json::Value>,
 ) -> Vec<&'static str> {
@@ -907,11 +940,24 @@ pub(crate) fn sanitize_ip_network(
 fn ip_addr_to_ip_network(ip_addr: &str) -> String {
     if !ip_addr.contains('/') {
         if is_ipv6_addr(ip_addr) {
-            format!("{}/{}", ip_addr, IPV6_ADDR_LEN)
+            format!("{ip_addr}/{IPV6_ADDR_LEN}")
         } else {
-            format!("{}/{}", ip_addr, IPV4_ADDR_LEN)
+            format!("{ip_addr}/{IPV4_ADDR_LEN}")
         }
     } else {
         ip_addr.to_string()
     }
+}
+
+fn is_none_or_empty_mptcp_flags(v: &Option<Vec<MptcpAddressFlag>>) -> bool {
+    if let Some(v) = v {
+        v.is_empty()
+    } else {
+        true
+    }
+}
+
+// Allow extra IP by default
+fn default_allow_extra_address() -> bool {
+    true
 }

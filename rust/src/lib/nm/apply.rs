@@ -1,28 +1,31 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use std::collections::HashSet;
 use std::time::Instant;
 
 use crate::nm::nm_dbus::{NmApi, NmConnection};
-use log::info;
 
-use crate::{
-    nm::connection::{
-        create_index_for_nm_conns_by_name_type, iface_to_nm_connections,
-        iface_type_to_nm, NM_SETTING_OVS_PORT_SETTING_NAME,
+use super::{
+    device::create_index_for_nm_devs,
+    error::nm_error_to_nmstate,
+    profile::{
+        activate_nm_profiles, create_index_for_nm_conns_by_name_type,
+        deactivate_nm_profiles, delete_exist_profiles,
+        extend_timeout_if_required, save_nm_profiles,
     },
-    nm::device::create_index_for_nm_devs,
-    nm::error::nm_error_to_nmstate,
-    nm::profile::{
-        activate_nm_profiles, deactivate_nm_profiles, delete_exist_profiles,
-        extend_timeout_if_required, get_exist_profile, save_nm_profiles,
+    query::{
+        is_mptcp_flags_changed, is_mptcp_supported, is_route_removed,
+        is_veth_peer_changed, is_veth_peer_in_desire, is_vlan_id_changed,
+        is_vrf_table_id_changed, is_vxlan_id_changed, remove_nm_mptcp_set,
+    },
+    settings::{
+        get_exist_profile, iface_to_nm_connections, iface_type_to_nm,
         use_uuid_for_controller_reference, use_uuid_for_parent_reference,
+        NM_SETTING_OVS_PORT_SETTING_NAME,
     },
-    nm::route::is_route_removed,
-    nm::veth::{is_veth_peer_changed, is_veth_peer_in_desire},
-    nm::vlan::is_vlan_id_changed,
-    nm::vrf::is_vrf_table_id_changed,
-    nm::vxlan::is_vxlan_id_changed,
-    Interface, InterfaceType, NetworkState, NmstateError, RouteEntry,
 };
+
+use crate::{Interface, InterfaceType, NetworkState, NmstateError, RouteEntry};
 
 const ACTIVATION_RETRY_COUNT: usize = 5;
 const ACTIVATION_RETRY_INTERVAL: u64 = 1;
@@ -97,7 +100,7 @@ fn delete_net_state(
         if let Some(nm_conns) = nm_conns_to_delete {
             for nm_conn in nm_conns {
                 if let Some(uuid) = nm_conn.uuid() {
-                    info!(
+                    log::info!(
                         "Deleting NM connection for absent interface \
                         {}/{}: {}",
                         &iface.name(),
@@ -112,7 +115,7 @@ fn delete_net_state(
                     // TODO: handle pre-exist OVS config using name instead of
                     // UUID for controller
                     if let Some(uuid) = nm_conn.controller() {
-                        info!(
+                        log::info!(
                             "Deleting NM OVS port connection {} \
                              for absent OVS interface {}",
                             uuid,
@@ -183,6 +186,8 @@ fn apply_single_state(
         })
         .collect();
 
+    let mptcp_supported = is_mptcp_supported(nm_api);
+
     let ifaces = net_state.interfaces.to_vec();
 
     for iface in ifaces.iter() {
@@ -205,7 +210,7 @@ fn apply_single_state(
                     }
                 }
             }
-            for nm_conn in iface_to_nm_connections(
+            for mut nm_conn in iface_to_nm_connections(
                 iface,
                 ctrl_iface,
                 &exist_nm_conns,
@@ -213,6 +218,17 @@ fn apply_single_state(
                 is_veth_peer_in_desire(iface, ifaces.as_slice()),
                 cur_net_state,
             )? {
+                if let Some(mptcp_conf) = iface.base_iface().mptcp.as_ref() {
+                    if !mptcp_supported {
+                        log::warn!(
+                            "MPTCP not supported by NetworkManager, \
+                            Ignoring MPTCP config {:?}",
+                            mptcp_conf
+                        );
+                        remove_nm_mptcp_set(&mut nm_conn);
+                    }
+                }
+
                 if iface.is_up() {
                     nm_conns_to_activate.push(nm_conn.clone());
                 }
@@ -315,9 +331,9 @@ fn delete_remain_virtual_interface_as_desired(
         if iface.is_virtual() {
             if let Some(nm_dev) = nm_devs_indexed.get(&(
                 iface.name().to_string(),
-                iface.iface_type().to_string(),
+                iface_type_to_nm(&iface.iface_type())?,
             )) {
-                info!(
+                log::info!(
                     "Deleting interface {}/{}: {}",
                     &iface.name(),
                     &iface.iface_type(),
@@ -350,7 +366,7 @@ fn delete_orphan_ports(
         if let Some(ctrl_uuid) = nm_conn.controller() {
             if uuids_deleted.contains(ctrl_uuid) {
                 if let Some(uuid) = nm_conn.uuid() {
-                    info!(
+                    log::info!(
                         "Deleting NM orphan profile {}/{}: {}",
                         nm_conn.iface_name().unwrap_or(""),
                         nm_conn.iface_type().unwrap_or(""),
@@ -374,6 +390,9 @@ fn delete_orphan_ports(
 // * NM has problem on remove routes, we need to deactivate it first
 //  https://bugzilla.redhat.com/1837254
 // * NM cannot change VRF table ID, so we deactivate first
+// * VLAN ID changed.
+// * Veth peer changed.
+// * NM cannot reapply changes to MPTCP flags.
 fn gen_nm_conn_need_to_deactivate_first<'a>(
     nm_conns_to_activate: &[NmConnection],
     activated_nm_conns: &[&'a NmConnection],
@@ -395,6 +414,7 @@ fn gen_nm_conn_need_to_deactivate_first<'a>(
                     || is_vlan_id_changed(nm_conn, activated_nm_con)
                     || is_vxlan_id_changed(nm_conn, activated_nm_con)
                     || is_veth_peer_changed(nm_conn, activated_nm_con)
+                    || is_mptcp_flags_changed(nm_conn, activated_nm_con)
                 {
                     ret.push(activated_nm_con);
                 }

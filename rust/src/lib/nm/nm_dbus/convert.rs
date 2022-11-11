@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::collections::HashMap;
 use std::convert::TryFrom;
 
 use log::error;
@@ -37,7 +38,7 @@ pub(crate) fn u8_array_to_mac_string(data: Vec<u8>) -> String {
     // TODO replace collect().join(":") with intersperse(":").collect() once it
     // is stabilized
     data.iter()
-        .map(|byte| format!("{:02X}", byte))
+        .map(|byte| format!("{byte:02X}"))
         .collect::<Vec<_>>()
         .join(":")
 }
@@ -57,4 +58,8 @@ pub(crate) fn mac_str_to_u8_array(mac: &str) -> Vec<u8> {
             Vec::new()
         }
     }
+}
+
+pub(crate) trait ToDbusValue {
+    fn to_value(&self) -> Result<HashMap<&str, zvariant::Value>, NmError>;
 }

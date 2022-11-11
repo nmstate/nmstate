@@ -18,7 +18,7 @@ link-aggregation:
 "#,
     )
     .unwrap();
-    iface.validate(None).unwrap();
+    iface.pre_edit_cleanup(None).unwrap();
 }
 
 #[test]
@@ -36,7 +36,7 @@ link-aggregation:
 "#,
     )
     .unwrap();
-    let result = iface.validate(None);
+    let result = iface.pre_edit_cleanup(None);
     assert!(result.is_err());
     if let Err(e) = result {
         assert_eq!(e.kind(), ErrorKind::InvalidArgument);
@@ -66,7 +66,7 @@ link-aggregation:
 "#,
     )
     .unwrap();
-    let result = iface.validate(Some(&current_iface));
+    let result = iface.pre_edit_cleanup(Some(&current_iface));
     assert!(result.is_err());
     if let Err(e) = result {
         assert_eq!(e.kind(), ErrorKind::InvalidArgument);
@@ -98,7 +98,7 @@ link-aggregation:
 "#,
     )
     .unwrap();
-    iface.validate(Some(&current_iface)).unwrap();
+    iface.pre_edit_cleanup(Some(&current_iface)).unwrap();
 }
 
 #[test]
@@ -128,7 +128,7 @@ link-aggregation:
 "#,
     )
     .unwrap();
-    iface.validate(Some(&current_iface)).unwrap();
+    iface.pre_edit_cleanup(Some(&current_iface)).unwrap();
 }
 
 #[test]
@@ -141,7 +141,7 @@ state: up
 "#,
     )
     .unwrap();
-    let result = iface.validate(None);
+    let result = iface.pre_edit_cleanup(None);
     assert!(result.is_err());
     if let Err(e) = result {
         assert_eq!(e.kind(), ErrorKind::InvalidArgument);
@@ -162,7 +162,7 @@ link-aggregation:
 "#,
     )
     .unwrap();
-    let result = iface.validate(None);
+    let result = iface.pre_edit_cleanup(None);
     assert!(result.is_err());
     if let Err(e) = result {
         assert_eq!(e.kind(), ErrorKind::InvalidArgument);
@@ -184,7 +184,7 @@ link-aggregation:
 "#,
     )
     .unwrap();
-    let result = iface.validate(None);
+    let result = iface.pre_edit_cleanup(None);
     assert!(result.is_err());
     if let Err(e) = result {
         assert_eq!(e.kind(), ErrorKind::InvalidArgument);

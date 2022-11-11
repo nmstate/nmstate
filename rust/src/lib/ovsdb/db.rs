@@ -231,7 +231,7 @@ impl TryFrom<&Value> for OvsDbIface {
     fn try_from(v: &Value) -> Result<OvsDbIface, Self::Error> {
         let e = NmstateError::new(
             ErrorKind::PluginFailure,
-            format!("Failed to parse OVS Interface info from : {:?}", v),
+            format!("Failed to parse OVS Interface info from : {v:?}"),
         );
         let mut ret = OvsDbIface::default();
         if let Value::Object(v) = v {

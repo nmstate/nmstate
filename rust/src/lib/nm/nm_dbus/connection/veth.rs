@@ -3,7 +3,7 @@ use std::convert::TryFrom;
 
 use serde::Deserialize;
 
-use super::super::{connection::DbusDictionary, NmError};
+use super::super::{connection::DbusDictionary, convert::ToDbusValue, NmError};
 
 #[derive(Debug, Clone, PartialEq, Default, Deserialize)]
 #[serde(try_from = "DbusDictionary")]
@@ -23,20 +23,8 @@ impl TryFrom<DbusDictionary> for NmSettingVeth {
     }
 }
 
-impl NmSettingVeth {
-    pub(crate) fn to_keyfile(
-        &self,
-    ) -> Result<HashMap<String, zvariant::Value>, NmError> {
-        let mut ret = HashMap::new();
-        for (k, v) in self.to_value()?.drain() {
-            ret.insert(k.to_string(), v);
-        }
-        Ok(ret)
-    }
-
-    pub(crate) fn to_value(
-        &self,
-    ) -> Result<HashMap<&str, zvariant::Value>, NmError> {
+impl ToDbusValue for NmSettingVeth {
+    fn to_value(&self) -> Result<HashMap<&str, zvariant::Value>, NmError> {
         let mut ret = HashMap::new();
         if let Some(v) = &self.peer {
             ret.insert("peer", zvariant::Value::new(v.clone()));

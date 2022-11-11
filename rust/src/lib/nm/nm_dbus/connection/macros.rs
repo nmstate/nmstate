@@ -20,4 +20,5 @@ macro_rules! _from_map {
     };
 }
 
+#[cfg(feature = "query_apply")]
 pub(crate) use _from_map;

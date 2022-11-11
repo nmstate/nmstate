@@ -3,7 +3,9 @@ use std::convert::TryFrom;
 
 use serde::Deserialize;
 
-use super::super::{connection::DbusDictionary, ErrorKind, NmError};
+use super::super::{
+    connection::DbusDictionary, ErrorKind, NmError, ToDbusValue,
+};
 
 const GLIB_FILE_PATH_PREFIX: &str = "file://";
 
@@ -35,10 +37,8 @@ impl TryFrom<DbusDictionary> for NmSetting8021X {
     }
 }
 
-impl NmSetting8021X {
-    pub(crate) fn to_value(
-        &self,
-    ) -> Result<HashMap<&str, zvariant::Value>, NmError> {
+impl ToDbusValue for NmSetting8021X {
+    fn to_value(&self) -> Result<HashMap<&str, zvariant::Value>, NmError> {
         let mut ret = HashMap::new();
         if let Some(v) = &self.identity {
             ret.insert("identity", zvariant::Value::new(v));
@@ -63,59 +63,10 @@ impl NmSetting8021X {
         }));
         Ok(ret)
     }
+}
 
-    pub(crate) fn to_keyfile(
-        &self,
-    ) -> Result<HashMap<String, zvariant::Value>, NmError> {
-        let mut ret = HashMap::new();
-        if let Some(v) = &self.identity {
-            ret.insert("identity".to_string(), zvariant::Value::new(v));
-        }
-        if let Some(v) = &self.private_key {
-            ret.insert(
-                "private-key".to_string(),
-                if let Ok(path) = Self::glib_bytes_to_file_path(v) {
-                    zvariant::Value::new(path)
-                } else {
-                    zvariant::Value::new(v)
-                },
-            );
-        }
-        if let Some(v) = &self.eap {
-            // Need NULL append at the end
-            let mut new_eaps = v.clone();
-            new_eaps.push("".to_string());
-            ret.insert("eap".to_string(), zvariant::Value::new(new_eaps));
-        }
-        if let Some(v) = &self.client_cert {
-            ret.insert(
-                "client-cert".to_string(),
-                if let Ok(path) = Self::glib_bytes_to_file_path(v) {
-                    zvariant::Value::new(path)
-                } else {
-                    zvariant::Value::new(v)
-                },
-            );
-        }
-        if let Some(v) = &self.ca_cert {
-            ret.insert(
-                "ca-cert".to_string(),
-                if let Ok(path) = Self::glib_bytes_to_file_path(v) {
-                    zvariant::Value::new(path)
-                } else {
-                    zvariant::Value::new(v)
-                },
-            );
-        }
-        if let Some(v) = &self.private_key_password {
-            ret.insert(
-                "private-key-password".to_string(),
-                zvariant::Value::new(v),
-            );
-        }
-        Ok(ret)
-    }
-
+impl NmSetting8021X {
+    #[cfg(feature = "query_apply")]
     pub(crate) fn fill_secrets(&mut self, secrets: &DbusDictionary) {
         if let Some(v) = secrets.get("private-key-password") {
             match String::try_from(v.clone()) {
@@ -135,7 +86,7 @@ impl NmSetting8021X {
     }
 
     pub fn file_path_to_glib_bytes(file_path: &str) -> Vec<u8> {
-        format!("{}{}\0", GLIB_FILE_PATH_PREFIX, file_path).into_bytes()
+        format!("{GLIB_FILE_PATH_PREFIX}{file_path}\0").into_bytes()
     }
 
     pub fn glib_bytes_to_file_path(value: &[u8]) -> Result<String, NmError> {

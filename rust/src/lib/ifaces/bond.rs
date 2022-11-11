@@ -29,14 +29,6 @@ impl Default for BondInterface {
 }
 
 impl BondInterface {
-    pub(crate) fn update_bond(&mut self, other: &BondInterface) {
-        if let Some(bond_conf) = &mut self.bond {
-            bond_conf.update(other.bond.as_ref());
-        } else {
-            self.bond = other.bond.clone();
-        }
-    }
-
     // Return None when desire state does not mention ports
     pub(crate) fn ports(&self) -> Option<Vec<&str>> {
         self.bond
@@ -47,11 +39,6 @@ impl BondInterface {
 
     pub(crate) fn mode(&self) -> Option<BondMode> {
         self.bond.as_ref().and_then(|bond_conf| bond_conf.mode)
-    }
-
-    pub(crate) fn pre_verify_cleanup(&mut self) {
-        self.drop_empty_arp_ip_target();
-        self.sort_ports();
     }
 
     pub fn new() -> Self {
@@ -83,51 +70,16 @@ impl BondInterface {
             )
     }
 
-    fn sort_ports(&mut self) {
-        if let Some(ref mut bond_conf) = self.bond {
-            if let Some(ref mut port_conf) = &mut bond_conf.port {
-                port_conf.sort_unstable_by_key(|p| p.clone())
-            }
-        }
-    }
-
-    fn drop_empty_arp_ip_target(&mut self) {
-        if let Some(ref mut bond_conf) = self.bond {
-            if let Some(ref mut bond_opts) = &mut bond_conf.options {
-                if let Some(ref mut arp_ip_target) = bond_opts.arp_ip_target {
-                    if arp_ip_target.is_empty() {
-                        bond_opts.arp_ip_target = None;
-                    }
-                }
-            }
-        }
-    }
-
-    pub(crate) fn validate(
+    pub(crate) fn pre_edit_cleanup(
         &self,
         current: Option<&Interface>,
     ) -> Result<(), NmstateError> {
         self.validate_new_iface_with_no_mode(current)?;
         self.validate_mac_restricted_mode(current)?;
         if let Some(bond_conf) = &self.bond {
-            bond_conf.validate()?;
+            bond_conf.pre_edit_cleanup()?;
         }
         Ok(())
-    }
-
-    pub(crate) fn remove_port(&mut self, port_to_remove: &str) {
-        if let Some(index) = self.bond.as_ref().and_then(|bond_conf| {
-            bond_conf.port.as_ref().and_then(|ports| {
-                ports
-                    .iter()
-                    .position(|port_name| port_name == port_to_remove)
-            })
-        }) {
-            self.bond
-                .as_mut()
-                .and_then(|bond_conf| bond_conf.port.as_mut())
-                .map(|ports| ports.remove(index));
-        }
     }
 
     fn validate_new_iface_with_no_mode(
@@ -227,7 +179,7 @@ impl TryFrom<NumberAsString> for BondMode {
             "6" | "balance-alb" => Ok(Self::ALB),
             v => Err(NmstateError::new(
                 ErrorKind::InvalidArgument,
-                format!("Invalid bond mode {}", v),
+                format!("Invalid bond mode {v}"),
             )),
         }
     }
@@ -275,24 +227,17 @@ impl BondConfig {
         Self::default()
     }
 
-    pub(crate) fn validate(&self) -> Result<(), NmstateError> {
+    pub(crate) fn pre_edit_cleanup(&self) -> Result<(), NmstateError> {
         if let Some(opts) = &self.options {
-            opts.validate()?;
+            opts.pre_edit_cleanup()?;
         }
         Ok(())
-    }
-
-    pub(crate) fn update(&mut self, other: Option<&BondConfig>) {
-        if let Some(other) = other {
-            self.mode = other.mode;
-            self.options = other.options.clone();
-            self.port = other.port.clone();
-        }
     }
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy)]
 #[non_exhaustive]
+#[serde(rename_all = "kebab-case")]
 #[serde(try_from = "NumberAsString")]
 pub enum BondAdSelect {
     Stable,
@@ -796,7 +741,7 @@ impl BondOptions {
         Self::default()
     }
 
-    pub(crate) fn validate(&self) -> Result<(), NmstateError> {
+    pub(crate) fn pre_edit_cleanup(&self) -> Result<(), NmstateError> {
         self.validate_ad_actor_system_mac_address()?;
         self.validate_miimon_and_arp_interval()?;
         Ok(())

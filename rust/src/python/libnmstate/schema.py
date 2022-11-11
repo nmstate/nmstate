@@ -28,9 +28,12 @@ class Interface:
 
     IPV4 = "ipv4"
     IPV6 = "ipv6"
+    MPTCP = "mptcp"
 
     MAC = "mac-address"
     MTU = "mtu"
+    MIN_MTU = "min-mtu"
+    MAX_MTU = "max-mtu"
     COPY_MAC_FROM = "copy-mac-from"
     ACCEPT_ALL_MAC_ADDRESSES = "accept-all-mac-addresses"
     WAIT_IP = "wait-ip"
@@ -63,6 +66,8 @@ class RouteRule:
     USE_DEFAULT_ROUTE_TABLE = 0
     STATE = "state"
     STATE_ABSENT = "absent"
+    FWMARK = "fwmark"
+    FWMASK = "fwmask"
 
 
 class DNS:
@@ -131,6 +136,8 @@ class InterfaceIP:
     AUTO_GATEWAY = "auto-gateway"
     AUTO_ROUTES = "auto-routes"
     AUTO_ROUTE_TABLE_ID = "auto-route-table-id"
+    MPTCP_FLAGS = "mptcp-flags"
+    ALLOW_EXTRA_ADDRESS = "allow-extra-address"
 
 
 class InterfaceIPv4(InterfaceIP):
@@ -454,3 +461,11 @@ class HostNameState:
     KEY = "hostname"
     CONFIG = "config"
     RUNNING = "running"
+
+
+class Mptcp:
+    ADDRESS_FLAGS = "address-flags"
+    FLAG_SIGNAL = "signal"
+    FLAG_SUBFLOW = "subflow"
+    FLAG_BACKUP = "backup"
+    FLAG_FULLMESH = "fullmesh"

@@ -4,9 +4,9 @@ use std::iter::FromIterator;
 use log::{debug, info};
 
 use crate::{
-    BaseInterface, BondMode, ErrorKind, EthernetInterface, Interface,
-    InterfaceIpv4, InterfaceIpv6, InterfaceState, InterfaceType, Interfaces,
-    NmstateError, OvsInterface,
+    BaseInterface, BondMode, ErrorKind, Interface, InterfaceIpv4,
+    InterfaceIpv6, InterfaceState, InterfaceType, Interfaces, NmstateError,
+    OvsInterface,
 };
 
 pub(crate) fn handle_changed_ports(
@@ -329,28 +329,6 @@ pub(crate) fn set_ifaces_up_priority(ifaces: &mut Interfaces) -> bool {
     ret
 }
 
-pub(crate) fn find_unknown_type_port<'a>(
-    iface: &'a Interface,
-    cur_ifaces: &Interfaces,
-) -> Vec<&'a str> {
-    let mut ret: Vec<&str> = Vec::new();
-    if let Some(port_names) = iface.ports() {
-        for port_name in port_names {
-            if let Some(port_iface) =
-                cur_ifaces.get_iface(port_name, InterfaceType::Unknown)
-            {
-                if port_iface.iface_type() == InterfaceType::Unknown {
-                    ret.push(port_name);
-                }
-            } else {
-                // Remove not found interface also
-                ret.push(port_name);
-            }
-        }
-    }
-    ret
-}
-
 pub(crate) fn check_overbook_ports(
     desired: &Interfaces,
     current: &Interfaces,
@@ -472,31 +450,6 @@ pub(crate) fn preserve_ctrl_cfg_if_unchanged(
                     Some(ctrl_type.clone());
             }
         }
-    }
-}
-
-pub(crate) fn set_missing_port_to_eth(ifaces: &mut Interfaces) {
-    let mut iface_names_to_add = Vec::new();
-    for iface in ifaces
-        .kernel_ifaces
-        .values()
-        .chain(ifaces.user_ifaces.values())
-    {
-        if let Some(ports) = iface.ports() {
-            for port in ports {
-                if !ifaces.kernel_ifaces.contains_key(port) {
-                    iface_names_to_add.push(port.to_string());
-                }
-            }
-        }
-    }
-    for iface_name in iface_names_to_add {
-        let mut iface = EthernetInterface::default();
-        iface.base.name = iface_name.clone();
-        log::warn!("Assuming undefined port {} as ethernet", iface_name);
-        ifaces
-            .kernel_ifaces
-            .insert(iface_name, Interface::Ethernet(iface));
     }
 }
 

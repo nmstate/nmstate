@@ -1,24 +1,11 @@
-// Copyright 2021 Red Hat, Inc.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
+// SPDX-License-Identifier: Apache-2.0
 
 use std::collections::HashMap;
 use std::convert::TryFrom;
 
 use serde::Deserialize;
 
-use super::super::{connection::DbusDictionary, error::NmError};
+use super::super::{connection::DbusDictionary, NmError, ToDbusValue};
 
 #[derive(Debug, Clone, PartialEq, Default, Deserialize)]
 #[serde(try_from = "DbusDictionary")]
@@ -50,20 +37,8 @@ impl TryFrom<DbusDictionary> for NmSettingOvsBridge {
     }
 }
 
-impl NmSettingOvsBridge {
-    pub(crate) fn to_keyfile(
-        &self,
-    ) -> Result<HashMap<String, zvariant::Value>, NmError> {
-        let mut ret = HashMap::new();
-        for (k, v) in self.to_value()?.drain() {
-            ret.insert(k.to_string(), v);
-        }
-        Ok(ret)
-    }
-
-    pub(crate) fn to_value(
-        &self,
-    ) -> Result<HashMap<&str, zvariant::Value>, NmError> {
+impl ToDbusValue for NmSettingOvsBridge {
+    fn to_value(&self) -> Result<HashMap<&str, zvariant::Value>, NmError> {
         let mut ret = HashMap::new();
         if let Some(v) = self.stp {
             ret.insert("stp-enable", zvariant::Value::new(v));
@@ -115,20 +90,8 @@ impl TryFrom<DbusDictionary> for NmSettingOvsPort {
     }
 }
 
-impl NmSettingOvsPort {
-    pub(crate) fn to_keyfile(
-        &self,
-    ) -> Result<HashMap<String, zvariant::Value>, NmError> {
-        let mut ret = HashMap::new();
-        for (k, v) in self.to_value()?.drain() {
-            ret.insert(k.to_string(), v);
-        }
-        Ok(ret)
-    }
-
-    pub(crate) fn to_value(
-        &self,
-    ) -> Result<HashMap<&str, zvariant::Value>, NmError> {
+impl ToDbusValue for NmSettingOvsPort {
+    fn to_value(&self) -> Result<HashMap<&str, zvariant::Value>, NmError> {
         let mut ret = HashMap::new();
         if let Some(v) = &self.mode {
             ret.insert("bond-mode", zvariant::Value::new(v));
@@ -173,20 +136,8 @@ impl TryFrom<DbusDictionary> for NmSettingOvsIface {
     }
 }
 
-impl NmSettingOvsIface {
-    pub(crate) fn to_keyfile(
-        &self,
-    ) -> Result<HashMap<String, zvariant::Value>, NmError> {
-        let mut ret = HashMap::new();
-        for (k, v) in self.to_value()?.drain() {
-            ret.insert(k.to_string(), v);
-        }
-        Ok(ret)
-    }
-
-    pub(crate) fn to_value(
-        &self,
-    ) -> Result<HashMap<&str, zvariant::Value>, NmError> {
+impl ToDbusValue for NmSettingOvsIface {
+    fn to_value(&self) -> Result<HashMap<&str, zvariant::Value>, NmError> {
         let mut ret = HashMap::new();
         if let Some(v) = &self.iface_type {
             ret.insert("type", zvariant::Value::new(v));
@@ -216,10 +167,8 @@ impl TryFrom<DbusDictionary> for NmSettingOvsExtIds {
     }
 }
 
-impl NmSettingOvsExtIds {
-    pub(crate) fn to_value(
-        &self,
-    ) -> Result<HashMap<&str, zvariant::Value>, NmError> {
+impl ToDbusValue for NmSettingOvsExtIds {
+    fn to_value(&self) -> Result<HashMap<&str, zvariant::Value>, NmError> {
         let mut ret = HashMap::new();
         if let Some(v) = &self.data {
             let mut dict_value = zvariant::Dict::new(
@@ -257,20 +206,8 @@ impl TryFrom<DbusDictionary> for NmSettingOvsPatch {
     }
 }
 
-impl NmSettingOvsPatch {
-    pub(crate) fn to_keyfile(
-        &self,
-    ) -> Result<HashMap<String, zvariant::Value>, NmError> {
-        let mut ret = HashMap::new();
-        for (k, v) in self.to_value()?.drain() {
-            ret.insert(k.to_string(), v);
-        }
-        Ok(ret)
-    }
-
-    pub(crate) fn to_value(
-        &self,
-    ) -> Result<HashMap<&str, zvariant::Value>, NmError> {
+impl ToDbusValue for NmSettingOvsPatch {
+    fn to_value(&self) -> Result<HashMap<&str, zvariant::Value>, NmError> {
         let mut ret = HashMap::new();
         if let Some(v) = &self.peer {
             ret.insert("peer", zvariant::Value::new(v));
@@ -302,20 +239,8 @@ impl TryFrom<DbusDictionary> for NmSettingOvsDpdk {
     }
 }
 
-impl NmSettingOvsDpdk {
-    pub(crate) fn to_keyfile(
-        &self,
-    ) -> Result<HashMap<String, zvariant::Value>, NmError> {
-        let mut ret = HashMap::new();
-        for (k, v) in self.to_value()?.drain() {
-            ret.insert(k.to_string(), v);
-        }
-        Ok(ret)
-    }
-
-    pub(crate) fn to_value(
-        &self,
-    ) -> Result<HashMap<&str, zvariant::Value>, NmError> {
+impl ToDbusValue for NmSettingOvsDpdk {
+    fn to_value(&self) -> Result<HashMap<&str, zvariant::Value>, NmError> {
         let mut ret = HashMap::new();
         if let Some(v) = &self.devargs {
             ret.insert("devargs", zvariant::Value::new(v));

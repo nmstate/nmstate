@@ -10,10 +10,9 @@ use nmstate::{
 };
 
 const APP_NAME: &str = "nmstatectl-autoconf";
-const EXIT_FAILURE: i32 = 1;
 const BOND_PREFIX: &str = "bond";
 
-pub(crate) fn autoconf(argv: &[String]) {
+pub(crate) fn autoconf(argv: &[String]) -> Result<String, CliError> {
     let matches = clap::Command::new(APP_NAME)
         .version(clap::crate_version!())
         .author("Gris Ge <fge@redhat.com>")
@@ -42,33 +41,18 @@ pub(crate) fn autoconf(argv: &[String]) {
     log_builder.init();
 
     let mut cur_state = NetworkState::new();
-    if let Err(e) = cur_state.retrieve() {
-        print_error_and_exit(e.into(), EXIT_FAILURE);
-    }
-    if let Err(e) = filter_net_state(&mut cur_state, matches.value_of("ONLY")) {
-        print_error_and_exit(e, EXIT_FAILURE);
-    }
+    cur_state.retrieve()?;
+    filter_net_state(&mut cur_state, matches.value_of("ONLY"))?;
 
     let vlan_to_iface = get_lldp_vlans(&cur_state);
 
     let desire_state = gen_desire_state(&vlan_to_iface);
 
-    if matches.is_present("DRY_RUN") {
-        print_result_and_exit(
-            serde_yaml::to_string(&desire_state).map_err(|e| e.into()),
-            EXIT_FAILURE,
-        );
-    } else {
+    if !matches.is_present("DRY_RUN") {
         eprintln!("This is a experimental function!");
-        if let Err(e) = desire_state.apply() {
-            print_error_and_exit(e.into(), EXIT_FAILURE);
-        } else {
-            print_result_and_exit(
-                serde_yaml::to_string(&desire_state).map_err(|e| e.into()),
-                EXIT_FAILURE,
-            );
-        }
+        desire_state.apply()?;
     }
+    Ok(serde_yaml::to_string(&desire_state)?)
 }
 
 fn filter_net_state(
@@ -85,31 +69,14 @@ fn filter_net_state(
                 new_ifaces.push(iface.clone());
             } else {
                 return Err(CliError {
-                    msg: format!("Interface {} not found", filter),
+                    code: crate::error::EX_DATAERR,
+                    error_msg: format!("Interface {filter} not found"),
                 });
             }
         }
         net_state.interfaces = new_ifaces;
     }
     Ok(())
-}
-
-// Use T instead of String where T has Serialize
-fn print_result_and_exit(result: Result<String, CliError>, errno: i32) {
-    match result {
-        Ok(s) => print_string_and_exit(s),
-        Err(e) => print_error_and_exit(e, errno),
-    }
-}
-
-fn print_error_and_exit(e: CliError, errno: i32) {
-    eprintln!("{}", e);
-    std::process::exit(errno);
-}
-
-fn print_string_and_exit(s: String) {
-    println!("{}", s);
-    std::process::exit(0);
 }
 
 // Return HashMap:
@@ -157,7 +124,7 @@ fn gen_desire_state(
     let mut ret = NetworkState::new();
     for ((vid, name), ifaces) in lldp_vlan_info.iter() {
         if ifaces.len() > 1 {
-            let bond_iface_name = format!("{}{}", BOND_PREFIX, vid);
+            let bond_iface_name = format!("{BOND_PREFIX}{vid}");
             ret.append_interface_data(gen_bond_iface(&bond_iface_name, ifaces));
             ret.append_interface_data(gen_vlan_iface(
                 name,

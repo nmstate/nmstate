@@ -1,5 +1,5 @@
 use crate::{
-    ifaces::get_ignored_ifaces, BridgePortTunkTag, BridgePortVlanRange,
+    query_apply::get_ignored_ifaces, BridgePortTunkTag, BridgePortVlanRange,
     InterfaceType, Interfaces, LinuxBridgeInterface,
     LinuxBridgeMulticastRouterType,
 };
@@ -100,7 +100,7 @@ fn test_linux_bridge_verify_ignore_port() {
     )
     .unwrap();
 
-    ifaces.verify(&cur_ifaces).unwrap();
+    ifaces.verify(&Interfaces::new(), &cur_ifaces).unwrap();
 }
 
 #[test]
@@ -294,4 +294,43 @@ fn test_linux_bridge_ports() {
     )
     .unwrap();
     assert_eq!(ifaces.to_vec()[0].ports(), Some(vec!["eth1", "eth2"]));
+}
+
+#[test]
+fn test_linux_bridge_partially_disable_vlan_filtering() {
+    let current = serde_yaml::from_str::<LinuxBridgeInterface>(
+        r#"---
+name: br0
+type: linux-bridge
+state: up
+bridge:
+  port:
+    - name: eth1
+      vlan:
+        mode: access
+        trunk-tags: []
+        tag: 305
+    - name: eth2
+      vlan:
+        mode: trunk
+        trunk-tags:
+        - id: 500
+"#,
+    )
+    .unwrap();
+    let desired = serde_yaml::from_str::<LinuxBridgeInterface>(
+        r#"---
+name: br0
+type: linux-bridge
+state: up
+bridge:
+  port:
+    - name: eth1
+      vlan: {}
+    - name: eth2
+"#,
+    )
+    .unwrap();
+
+    assert_eq!(desired.get_config_changed_ports(&current), vec!["eth1"])
 }

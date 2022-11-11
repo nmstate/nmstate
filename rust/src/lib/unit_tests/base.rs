@@ -23,6 +23,6 @@ mac-address: "d4:ee:07:25:42:5a"
 "#,
     )
     .unwrap();
-    iface.pre_verify_cleanup();
+    iface.pre_verify_cleanup(None, None);
     assert_eq!(iface.mac_address, Some(String::from("D4:EE:07:25:42:5A")));
 }

@@ -3,7 +3,9 @@ use std::convert::TryFrom;
 
 use serde::Deserialize;
 
-use super::super::{connection::DbusDictionary, ErrorKind, NmError};
+use super::super::{
+    connection::DbusDictionary, ErrorKind, NmError, ToDbusValue,
+};
 
 const VALID_FEATURES: [&str; 58] = [
     "feature-esp-hw-offload",
@@ -126,13 +128,15 @@ impl TryFrom<DbusDictionary> for NmSettingEthtool {
             coalesce_adaptive_rx: _from_map!(
                 v,
                 "coalesce-adaptive-rx",
-                bool::try_from
-            )?,
+                u32::try_from
+            )?
+            .map(|i| i > 0),
             coalesce_adaptive_tx: _from_map!(
                 v,
                 "coalesce-adaptive-tx",
-                bool::try_from
-            )?,
+                u32::try_from
+            )?
+            .map(|i| i > 0),
             coalesce_pkt_rate_high: _from_map!(
                 v,
                 "coalesce-pkt-rate-high",
@@ -250,29 +254,17 @@ impl NmSettingEthtool {
                 if !VALID_FEATURES.contains(&k.as_str()) {
                     return Err(NmError::new(
                         ErrorKind::InvalidArgument,
-                        format!("Unsupported ethtool feature {}", k),
+                        format!("Unsupported ethtool feature {k}"),
                     ));
                 }
             }
         }
         Ok(())
     }
+}
 
-    pub(crate) fn to_keyfile(
-        &self,
-    ) -> Result<HashMap<String, zvariant::Value>, NmError> {
-        let mut ret = HashMap::new();
-
-        for (k, v) in self.to_value()?.drain() {
-            ret.insert(k.to_string(), v);
-        }
-
-        Ok(ret)
-    }
-
-    pub(crate) fn to_value(
-        &self,
-    ) -> Result<HashMap<&str, zvariant::Value>, NmError> {
+impl ToDbusValue for NmSettingEthtool {
+    fn to_value(&self) -> Result<HashMap<&str, zvariant::Value>, NmError> {
         let mut ret = HashMap::new();
         if let Some(v) = &self.pause_rx {
             ret.insert("pause-rx", zvariant::Value::new(v));
@@ -284,10 +276,10 @@ impl NmSettingEthtool {
             ret.insert("pause-autoneg", zvariant::Value::new(v));
         }
         if let Some(v) = &self.coalesce_adaptive_rx {
-            ret.insert("coalesce-adaptive-rx", zvariant::Value::new(v));
+            ret.insert("coalesce-adaptive-rx", zvariant::Value::new(*v as u32));
         }
         if let Some(v) = &self.coalesce_adaptive_tx {
-            ret.insert("coalesce-adaptive-tx", zvariant::Value::new(v));
+            ret.insert("coalesce-adaptive-tx", zvariant::Value::new(*v as u32));
         }
         if let Some(v) = &self.coalesce_pkt_rate_high {
             ret.insert("coalesce-pkt-rate-high", zvariant::Value::new(v));
