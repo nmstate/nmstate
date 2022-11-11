@@ -28,9 +28,6 @@ use super::{
 const NM_CHECKPOINT_CREATE_FLAG_DELETE_NEW_CONNECTIONS: u32 = 0x02;
 const NM_CHECKPOINT_CREATE_FLAG_DISCONNECT_NEW_DEVICES: u32 = 0x04;
 
-pub(crate) const NM_TERNARY_TRUE: i32 = 1;
-pub(crate) const NM_TERNARY_FALSE: i32 = 0;
-
 const OBJ_PATH_NULL_STR: &str = "/";
 
 pub(crate) const NM_DBUS_INTERFACE_ROOT: &str =
@@ -155,7 +152,7 @@ impl<'a> NmDbus<'a> {
                     {
                         Err(NmError::new(
                             ErrorKind::NotFound,
-                            format!("Connection with UUID {} not found", uuid),
+                            format!("Connection with UUID {uuid} not found"),
                         ))
                     } else {
                         Err(e.into())
@@ -380,7 +377,7 @@ fn str_to_obj_path(obj_path: &str) -> Result<zvariant::ObjectPath, NmError> {
     zvariant::ObjectPath::try_from(obj_path).map_err(|e| {
         NmError::new(
             ErrorKind::InvalidArgument,
-            format!("Invalid object path: {}", e),
+            format!("Invalid object path: {e}"),
         )
     })
 }

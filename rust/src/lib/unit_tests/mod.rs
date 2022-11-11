@@ -25,7 +25,13 @@ mod mac_vlan;
 #[cfg(test)]
 mod mac_vtap;
 #[cfg(test)]
+mod mptcp;
+#[cfg(test)]
+mod net_state;
+#[cfg(test)]
 mod ovs;
+#[cfg(test)]
+mod ovsdb;
 #[cfg(test)]
 mod route;
 #[cfg(test)]

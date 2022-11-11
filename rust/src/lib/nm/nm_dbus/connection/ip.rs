@@ -1,17 +1,4 @@
-// Copyright 2021 Red Hat, Inc.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
+// SPDX-License-Identifier: Apache-2.0
 
 use std::collections::HashMap;
 use std::convert::TryFrom;
@@ -23,7 +10,7 @@ use serde::Deserialize;
 use super::super::{
     connection::dns::{
         nm_ip_dns_search_to_value, nm_ip_dns_to_value, parse_nm_dns,
-        parse_nm_dns_search,
+        parse_nm_dns_data, parse_nm_dns_search,
     },
     connection::route::{
         nm_ip_routes_to_value, parse_nm_ip_route_data, NmIpRoute,
@@ -32,7 +19,7 @@ use super::super::{
         nm_ip_rules_to_value, parse_nm_ip_rule_data, NmIpRouteRule,
     },
     connection::DbusDictionary,
-    error::{ErrorKind, NmError},
+    ErrorKind, NmError, ToDbusValue,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
@@ -86,7 +73,7 @@ impl TryFrom<zvariant::OwnedValue> for NmSettingIpMethod {
             "ignore" => Ok(Self::Ignore),
             _ => Err(NmError::new(
                 ErrorKind::InvalidArgument,
-                format!("Invalid IP method {}", str_value),
+                format!("Invalid IP method {str_value}"),
             )),
         }
     }
@@ -133,7 +120,6 @@ impl TryFrom<DbusDictionary> for NmSettingIp {
                 .unwrap_or_default(),
             route_rules: _from_map!(v, "routing-rules", parse_nm_ip_rule_data)?
                 .unwrap_or_default(),
-            dns: _from_map!(v, "dns", parse_nm_dns)?,
             dns_search: _from_map!(v, "dns-search", parse_nm_dns_search)?,
             dns_priority: _from_map!(v, "dns-priority", i32::try_from)?,
             ignore_auto_dns: _from_map!(v, "ignore-auto-dns", bool::try_from)?,
@@ -155,6 +141,14 @@ impl TryFrom<DbusDictionary> for NmSettingIp {
             ..Default::default()
         };
 
+        if v.contains_key("dns-data") {
+            setting.dns = _from_map!(v, "dns-data", parse_nm_dns_data)?;
+            // NM 1.41 deprecated `dns` property in the favor of `dns-data`
+            v.remove("dns");
+        } else {
+            setting.dns = _from_map!(v, "dns", parse_nm_dns)?;
+        }
+
         // NM deprecated `addresses` property in the favor of `addresss-data`
         v.remove("addresses");
         // NM deprecated `routes` property in the favor of `routes-data`
@@ -164,45 +158,11 @@ impl TryFrom<DbusDictionary> for NmSettingIp {
     }
 }
 
-impl NmSettingIp {
-    pub(crate) fn to_keyfile(
-        &self,
-    ) -> Result<HashMap<String, zvariant::Value>, NmError> {
-        let mut ret = HashMap::new();
-        for (k, v) in self.to_value()?.drain() {
-            if !vec!["address-data", "route-data", "dns"].contains(&k) {
-                ret.insert(k.to_string(), v);
-            }
-        }
-        for (i, addr) in self.addresses.as_slice().iter().enumerate() {
-            ret.insert(format!("address{}", i), zvariant::Value::new(addr));
-        }
-
-        for (i, route) in self.routes.as_slice().iter().enumerate() {
-            for (k, v) in route.to_keyfile().drain() {
-                ret.insert(
-                    if k.is_empty() {
-                        format!("route{}", i)
-                    } else {
-                        format!("route{}_{}", i, k)
-                    },
-                    zvariant::Value::new(v),
-                );
-            }
-        }
-        if let Some(dns) = self.dns.as_ref() {
-            ret.insert("dns".to_string(), zvariant::Value::new(dns));
-        }
-
-        Ok(ret)
-    }
-
-    pub(crate) fn to_value(
-        &self,
-    ) -> Result<HashMap<&str, zvariant::Value>, NmError> {
+impl ToDbusValue for NmSettingIp {
+    fn to_value(&self) -> Result<HashMap<&str, zvariant::Value>, NmError> {
         let mut ret = HashMap::new();
         if let Some(v) = &self.method {
-            ret.insert("method", zvariant::Value::new(format!("{}", v)));
+            ret.insert("method", zvariant::Value::new(format!("{v}")));
         }
         let mut addresss_data = zvariant::Array::new(
             zvariant::Signature::from_str_unchecked("a{sv}"),
@@ -212,15 +172,15 @@ impl NmSettingIp {
             if addr_str_split.len() != 2 {
                 return Err(NmError::new(
                     ErrorKind::InvalidArgument,
-                    format!("Invalid IP address {}", addr_str),
+                    format!("Invalid IP address {addr_str}"),
                 ));
             }
             let prefix = addr_str_split[1].parse::<u32>().map_err(|e| {
                 NmError::new(
                     ErrorKind::InvalidArgument,
                     format!(
-                        "Invalid IP address prefix {}: {}",
-                        addr_str_split[1], e
+                        "Invalid IP address prefix {}: {e}",
+                        addr_str_split[1]
                     ),
                 )
             })?;
@@ -245,6 +205,10 @@ impl NmSettingIp {
         ret.insert("routing-rules", nm_ip_rules_to_value(&self.route_rules)?);
         if let Some(dns_servers) = self.dns.as_ref() {
             if !dns_servers.is_empty() {
+                // We still use the `dns` instead of `dns-data` as the
+                // `dns-data` is only supported by NM 1.41+ which is not widely
+                // available yet. And we do not know the NM version yet in this
+                // function context.
                 ret.insert("dns", nm_ip_dns_to_value(dns_servers)?);
             }
         }
@@ -302,7 +266,7 @@ fn parse_nm_ip_address_data(
 ) -> Result<Vec<String>, NmError> {
     let mut addresses = Vec::new();
     for nm_addr in <Vec<zvariant::OwnedValue>>::try_from(value)? {
-        let nm_addr_display = format!("{:?}", nm_addr);
+        let nm_addr_display = format!("{nm_addr:?}");
         let mut nm_addr =
             match <HashMap<String, zvariant::OwnedValue>>::try_from(nm_addr) {
                 Ok(a) => a,
@@ -333,7 +297,7 @@ fn parse_nm_ip_address_data(
 
             continue;
         };
-        addresses.push(format!("{}/{}", address, prefix));
+        addresses.push(format!("{address}/{prefix}"));
     }
     Ok(addresses)
 }

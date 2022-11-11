@@ -29,27 +29,21 @@ impl Default for EthernetInterface {
 }
 
 impl EthernetInterface {
-    pub(crate) fn update_ethernet(&mut self, other: &EthernetInterface) {
-        if let Some(eth_conf) = &mut self.ethernet {
-            eth_conf.update(other.ethernet.as_ref())
+    pub(crate) fn pre_edit_cleanup(&mut self) -> Result<(), NmstateError> {
+        if self.base.iface_type != InterfaceType::Veth && self.veth.is_some() {
+            let e = NmstateError::new(
+                ErrorKind::InvalidArgument,
+                format!(
+                    "Interface {} is holding veth configuration \
+                    with `type: ethernet`. Please change to `type: veth`",
+                    self.base.name.as_str()
+                ),
+            );
+            log::error!("{}", e);
+            Err(e)
         } else {
-            self.ethernet = other.ethernet.clone()
+            Ok(())
         }
-    }
-
-    pub(crate) fn update_veth(&mut self, other: &EthernetInterface) {
-        if let Some(veth_conf) = &mut self.veth {
-            veth_conf.update(other.veth.as_ref());
-        } else {
-            self.veth = other.veth.clone();
-        }
-    }
-
-    pub(crate) fn pre_verify_cleanup(&mut self) {
-        if let Some(eth_conf) = self.ethernet.as_mut() {
-            eth_conf.pre_verify_cleanup()
-        }
-        self.base.iface_type = InterfaceType::Ethernet;
     }
 
     pub fn new() -> Self {
@@ -63,32 +57,6 @@ impl EthernetInterface {
                 eth_conf.sr_iov.as_ref().map(SrIovConfig::sriov_is_enabled)
             })
             .unwrap_or_default()
-    }
-
-    pub(crate) fn verify_sriov(
-        &self,
-        cur_ifaces: &Interfaces,
-    ) -> Result<(), NmstateError> {
-        if let Some(eth_conf) = &self.ethernet {
-            if let Some(sriov_conf) = &eth_conf.sr_iov {
-                sriov_conf.verify_sriov(self.base.name.as_str(), cur_ifaces)?;
-            }
-        }
-        Ok(())
-    }
-
-    // veth config is ignored unless iface type is veth
-    pub(crate) fn veth_sanitize(&mut self) {
-        if self.base.iface_type == InterfaceType::Ethernet
-            && self.veth.is_some()
-        {
-            log::warn!(
-                "Veth configuration is ignored, please set interface type \
-                    to InterfaceType::Veth (veth) to change veth \
-                    configuration"
-            );
-            self.veth = None;
-        }
     }
 }
 
@@ -140,40 +108,12 @@ impl EthernetConfig {
     pub fn new() -> Self {
         Self::default()
     }
-
-    pub(crate) fn update(&mut self, other: Option<&EthernetConfig>) {
-        if let Some(other) = other {
-            if let Some(sr_iov_conf) = &mut self.sr_iov {
-                sr_iov_conf.update(other.sr_iov.as_ref())
-            } else {
-                self.sr_iov = other.sr_iov.clone()
-            }
-        }
-    }
-
-    pub(crate) fn pre_verify_cleanup(&mut self) {
-        if self.auto_neg == Some(true) {
-            self.speed = None;
-            self.duplex = None;
-        }
-        if let Some(sriov_conf) = self.sr_iov.as_mut() {
-            sriov_conf.pre_verify_cleanup()
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[non_exhaustive]
 pub struct VethConfig {
     pub peer: String,
-}
-
-impl VethConfig {
-    fn update(&mut self, other: Option<&VethConfig>) {
-        if let Some(other) = other {
-            self.peer = other.peer.clone();
-        }
-    }
 }
 
 // Raise error if new veth interface has no peer defined.
@@ -221,6 +161,16 @@ pub(crate) fn handle_veth_peer_changes(
                     del_ifaces.push(new_absent_eth_iface(
                         cur_veth_conf.peer.as_str(),
                     ));
+                }
+            }
+        }
+    }
+
+    for iface in chg_ifaces.kernel_ifaces.values_mut() {
+        if iface.iface_type() == InterfaceType::Veth {
+            if let Interface::Ethernet(eth_iface) = iface {
+                if eth_iface.veth.is_none() {
+                    eth_iface.base.iface_type = InterfaceType::Ethernet;
                 }
             }
         }

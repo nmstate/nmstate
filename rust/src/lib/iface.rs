@@ -1,32 +1,63 @@
-use log::{error, warn};
+// SPDX-License-Identifier: Apache-2.0
+
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::{
-    state::get_json_value_difference, BaseInterface, BondInterface,
-    DummyInterface, ErrorKind, EthernetInterface, InfiniBandInterface,
-    LinuxBridgeInterface, MacVlanInterface, MacVtapInterface, NmstateError,
-    OvsBridgeInterface, OvsInterface, VlanInterface, VrfInterface,
-    VxlanInterface,
+    BaseInterface, BondInterface, DummyInterface, EthernetInterface,
+    InfiniBandInterface, LinuxBridgeInterface, MacVlanInterface,
+    MacVtapInterface, NmstateError, OvsBridgeInterface, OvsInterface,
+    VlanInterface, VrfInterface, VxlanInterface,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[non_exhaustive]
+/// Interface type
 pub enum InterfaceType {
+    /// [Bond interface](https://www.kernel.org/doc/Documentation/networking/bonding.txt)
+    /// Deserialize and serialize from/to 'bond'
     Bond,
+    /// Bridge provided by Linux kernel.
+    /// Deserialize and serialize from/to 'linux-bridge'.
     LinuxBridge,
+    /// Dummy interface.
+    /// Deserialize and serialize from/to 'dummy'.
     Dummy,
+    /// Ethernet interface.
+    /// Deserialize and serialize from/to 'ethernet'.
     Ethernet,
+    /// Loopback interface.
+    /// Deserialize and serialize from/to 'loopback'.
     Loopback,
+    /// MAC VLAN interface.
+    /// Deserialize and serialize from/to 'mac-vlan'.
     MacVlan,
+    /// MAC VTAP interface.
+    /// Deserialize and serialize from/to 'mac-vtap'.
     MacVtap,
+    /// OpenvSwitch bridge.
+    /// Deserialize and serialize from/to 'ovs-bridge'.
     OvsBridge,
+    /// OpenvSwitch system interface.
+    /// Deserialize and serialize from/to 'ovs-interface'.
     OvsInterface,
+    /// Virtual ethernet provide by Linux kernel.
+    /// Deserialize and serialize from/to 'veth'.
     Veth,
+    /// VLAN interface.
+    /// Deserialize and serialize from/to 'vlan'.
     Vlan,
+    /// [Virtual Routing and Forwarding interface](https://www.kernel.org/doc/html/latest/networking/vrf.html)
+    /// Deserialize and serialize from/to 'vrf'.
     Vrf,
+    /// VxVLAN interface.
+    /// Deserialize and serialize from/to 'vxlan'.
     Vxlan,
+    /// [IP over InfiniBand interface](https://docs.kernel.org/infiniband/ipoib.html)
+    /// Deserialize and serialize from/to 'infiniband'.
     InfiniBand,
+    /// Unknown interface.
     Unknown,
+    /// Reserved for future use.
     Other(String),
 }
 
@@ -91,7 +122,7 @@ impl Serialize for InterfaceType {
     where
         S: Serializer,
     {
-        serializer.serialize_str(format!("{}", self).as_str())
+        serializer.serialize_str(format!("{self}").as_str())
     }
 }
 
@@ -130,11 +161,25 @@ impl InterfaceType {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
+/// The state of interface
 pub enum InterfaceState {
+    /// Interface is up and running.
+    /// Deserialize and serialize from/to 'down'.
     Up,
+    /// For apply action, down means configuration still exist but
+    /// deactivate. The virtual interface will be removed and other interface
+    /// will be reverted to down state or up with IP disabled state.
+    /// Deserialize and serialize from/to 'down'.
     Down,
+    /// Only for apply action to remove configuration and deactivate the
+    /// interface.
     Absent,
+    /// Unknown state.
     Unknown,
+    /// Interface is not managed by backend. For apply action, interface marked
+    /// as ignore will not be changed and will not cause verification failure
+    /// neither.
+    /// Deserialize and serialize from/to 'ignore'.
     Ignore,
 }
 
@@ -158,11 +203,14 @@ impl From<&str> for InterfaceState {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Default)]
 #[non_exhaustive]
+/// Holder for interface with known interface type defined.
+/// During apply action, nmstate can resolve unknown interface to first
+/// found interface type.
 pub struct UnknownInterface {
-    #[serde(skip_deserializing, flatten)]
+    #[serde(flatten)]
     pub base: BaseInterface,
     #[serde(flatten)]
-    other: serde_json::Value,
+    pub(crate) other: serde_json::Value,
 }
 
 impl UnknownInterface {
@@ -185,6 +233,8 @@ impl<'de> Deserialize<'de> for UnknownInterface {
         if let Some(s) = v.get("state") {
             base_value.insert("state".to_string(), s.clone());
         }
+        // The BaseInterface will only have name and state
+        // These two properties are also stored in `other` for serializing
         ret.base = BaseInterface::deserialize(
             serde_json::value::Value::Object(base_value),
         )
@@ -197,19 +247,33 @@ impl<'de> Deserialize<'de> for UnknownInterface {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "kebab-case", untagged)]
 #[non_exhaustive]
+/// Represent a kernel or user space network interface.
 pub enum Interface {
+    /// [Bond interface](https://www.kernel.org/doc/Documentation/networking/bonding.txt)
     Bond(BondInterface),
+    /// Dummy interface.
     Dummy(DummyInterface),
+    /// Ethernet interface or virtual ethernet(veth) of linux kernel
     Ethernet(EthernetInterface),
+    /// Bridge provided by Linux kernel.
     LinuxBridge(LinuxBridgeInterface),
+    /// OpenvSwitch bridge.
     OvsBridge(OvsBridgeInterface),
+    /// OpenvSwitch system interface.
     OvsInterface(OvsInterface),
+    /// Unknown interface.
     Unknown(UnknownInterface),
+    /// VLAN interface.
     Vlan(VlanInterface),
+    /// VxLAN interface.
     Vxlan(VxlanInterface),
+    /// MAC VLAN interface.
     MacVlan(MacVlanInterface),
+    /// MAC VTAP interface.
     MacVtap(MacVtapInterface),
+    /// [Virtual Routing and Forwarding interface](https://www.kernel.org/doc/html/latest/networking/vrf.html)
     Vrf(VrfInterface),
+    /// [IP over InfiniBand interface](https://docs.kernel.org/infiniband/ipoib.html)
     InfiniBand(InfiniBandInterface),
 }
 
@@ -308,7 +372,7 @@ impl<'de> Deserialize<'de> for Interface {
                 Ok(Interface::InfiniBand(inner))
             }
             Some(iface_type) => {
-                warn!("Unsupported interface type {}", iface_type);
+                log::warn!("Unsupported interface type {}", iface_type);
                 let inner = UnknownInterface::deserialize(v)
                     .map_err(serde::de::Error::custom)?;
                 Ok(Interface::Unknown(inner))
@@ -323,6 +387,7 @@ impl<'de> Deserialize<'de> for Interface {
 }
 
 impl Interface {
+    /// The interface name.
     pub fn name(&self) -> &str {
         self.base_iface().name.as_str()
     }
@@ -339,6 +404,7 @@ impl Interface {
         self.base_iface_mut().iface_type = iface_type;
     }
 
+    /// The interface type
     pub fn iface_type(&self) -> InterfaceType {
         self.base_iface().iface_type.clone()
     }
@@ -353,6 +419,8 @@ impl Interface {
             Self::Ethernet(iface) => {
                 let mut new_iface = EthernetInterface::new();
                 new_iface.base = iface.base.clone_name_type_only();
+                // Do not use veth interface type when clone internally
+                new_iface.base.iface_type = InterfaceType::Ethernet;
                 Self::Ethernet(new_iface)
             }
             Self::Vlan(iface) => {
@@ -415,18 +483,22 @@ impl Interface {
         }
     }
 
+    /// Whether interface is up, default to true.
     pub fn is_up(&self) -> bool {
         self.base_iface().state == InterfaceState::Up
     }
 
+    /// Whether interface is marked as absent.
     pub fn is_absent(&self) -> bool {
         self.base_iface().state == InterfaceState::Absent
     }
 
+    /// Whether interface is marked as down.
     pub fn is_down(&self) -> bool {
         self.base_iface().state == InterfaceState::Down
     }
 
+    /// Whether interface is marked as ignore.
     pub fn is_ignore(&self) -> bool {
         self.base_iface().state == InterfaceState::Ignore
     }
@@ -460,6 +532,8 @@ impl Interface {
             }
     }
 
+    /// Whether interface is virtual(no real hardware).
+    /// Unknown interface is considered as __not__ virtual interface.
     pub fn is_virtual(&self) -> bool {
         !matches!(
             self,
@@ -467,11 +541,14 @@ impl Interface {
         )
     }
 
-    // OVS Interface should be deleted along with its controller
+    /// Whether current interface only lives when its control exists.
+    /// For example, OpenvSwitch system interface can only exists when
+    /// its controller OpenvSwitch bridge exists.
     pub fn need_controller(&self) -> bool {
         matches!(self, Self::OvsInterface(_))
     }
 
+    /// Get reference of its [BaseInterface].
     pub fn base_iface(&self) -> &BaseInterface {
         match self {
             Self::LinuxBridge(iface) => &iface.base,
@@ -508,7 +585,8 @@ impl Interface {
         }
     }
 
-    // Return None if its is not controller or not mentioned port section
+    /// The name of ports.
+    /// Return None if its is not controller or not mentioned port section
     pub fn ports(&self) -> Option<Vec<&str>> {
         if self.is_absent() {
             match self {
@@ -529,243 +607,21 @@ impl Interface {
         }
     }
 
-    pub fn update(&mut self, other: &Interface) {
-        self.base_iface_mut().update(other.base_iface());
-        if let Self::Unknown(_) = other {
-            return;
-        }
-        match self {
-            Self::LinuxBridge(iface) => {
-                if let Self::LinuxBridge(other_iface) = other {
-                    iface.update_bridge(other_iface);
-                } else {
-                    warn!(
-                        "Don't know how to update iface {:?} with {:?}",
-                        iface, other
-                    );
-                }
-            }
-            Self::Bond(iface) => {
-                if let Self::Bond(other_iface) = other {
-                    iface.update_bond(other_iface);
-                } else {
-                    warn!(
-                        "Don't know how to update iface {:?} with {:?}",
-                        iface, other
-                    );
-                }
-            }
-            Self::Ethernet(iface) => {
-                if let Self::Ethernet(other_iface) = other {
-                    iface.update_ethernet(other_iface);
-                    iface.update_veth(other_iface);
-                } else {
-                    warn!(
-                        "Don't know how to update iface {:?} with {:?}",
-                        iface, other
-                    );
-                }
-            }
-            Self::Vlan(iface) => {
-                if let Self::Vlan(other_iface) = other {
-                    iface.update_vlan(other_iface);
-                } else {
-                    warn!(
-                        "Don't know how to update iface {:?} with {:?}",
-                        iface, other
-                    );
-                }
-            }
-            Self::Vxlan(iface) => {
-                if let Self::Vxlan(other_iface) = other {
-                    iface.update_vxlan(other_iface);
-                } else {
-                    warn!(
-                        "Don't know how to update iface {:?} with {:?}",
-                        iface, other
-                    );
-                }
-            }
-            Self::OvsBridge(iface) => {
-                if let Self::OvsBridge(other_iface) = other {
-                    iface.update_ovs_bridge(other_iface);
-                } else {
-                    warn!(
-                        "Don't know how to update iface {:?} with {:?}",
-                        iface, other
-                    );
-                }
-            }
-            Self::MacVlan(iface) => {
-                if let Self::MacVlan(other_iface) = other {
-                    iface.update_mac_vlan(other_iface);
-                } else {
-                    warn!(
-                        "Don't know how to update iface {:?} with {:?}",
-                        iface, other
-                    );
-                }
-            }
-            Self::MacVtap(iface) => {
-                if let Self::MacVtap(other_iface) = other {
-                    iface.update_mac_vtap(other_iface);
-                } else {
-                    warn!(
-                        "Don't know how to update iface {:?} with {:?}",
-                        iface, other
-                    );
-                }
-            }
-            Self::Vrf(iface) => {
-                if let Self::Vrf(other_iface) = other {
-                    iface.update_vrf(other_iface);
-                } else {
-                    warn!(
-                        "Don't know how to update iface {:?} with {:?}",
-                        iface, other
-                    );
-                }
-            }
-            Self::InfiniBand(iface) => {
-                if let Self::InfiniBand(other_iface) = other {
-                    iface.update_ib(other_iface);
-                } else {
-                    warn!(
-                        "Don't know how to update iface {:?} with {:?}",
-                        iface, other
-                    );
-                }
-            }
-            Self::Unknown(_) | Self::Dummy(_) | Self::OvsInterface(_) => (),
-        }
-    }
-
-    pub(crate) fn pre_verify_cleanup(&mut self) {
-        self.base_iface_mut().pre_verify_cleanup();
-        match self {
-            Self::LinuxBridge(ref mut iface) => {
-                iface.pre_verify_cleanup();
-            }
-            Self::Bond(ref mut iface) => {
-                iface.pre_verify_cleanup();
-            }
-            Self::Ethernet(ref mut iface) => {
-                iface.pre_verify_cleanup();
-            }
-            Self::OvsBridge(ref mut iface) => {
-                iface.pre_verify_cleanup();
-            }
-            Self::Vrf(ref mut iface) => {
-                iface.pre_verify_cleanup();
-            }
-            _ => (),
-        }
-    }
-
-    pub(crate) fn pre_edit_cleanup(&mut self) -> Result<(), NmstateError> {
-        self.base_iface_mut().pre_edit_cleanup()?;
-        if let Interface::Ethernet(iface) = self {
-            if iface.veth.is_some() {
-                iface.base.iface_type = InterfaceType::Veth;
-            }
-        }
-        if let Interface::OvsInterface(iface) = self {
-            iface.pre_edit_cleanup()?;
-        }
-        Ok(())
-    }
-
-    pub(crate) fn verify(&self, current: &Self) -> Result<(), NmstateError> {
-        let mut self_clone = self.clone();
-        let mut current_clone = current.clone();
-        // In order to allow desire interface to determine whether it can
-        // hold IP or not, we copy controller information from current to desire
-        // Use case: User desire ipv4 enabled: false on a bridge port, but
-        // current show ipv4 as None.
-        if current_clone.base_iface().controller.is_some()
-            && self_clone.base_iface().controller.is_none()
-        {
-            self_clone.base_iface_mut().controller =
-                current_clone.base_iface().controller.clone();
-            self_clone.base_iface_mut().controller_type =
-                current_clone.base_iface().controller_type.clone();
-        }
-        self_clone.pre_verify_cleanup();
-        current_clone.pre_verify_cleanup();
-        if self_clone.iface_type() == InterfaceType::Unknown {
-            current_clone.base_iface_mut().iface_type = InterfaceType::Unknown;
-        }
-
-        let self_value = serde_json::to_value(&self_clone)?;
-        let current_value = serde_json::to_value(&current_clone)?;
-
-        if let Some((reference, desire, current)) = get_json_value_difference(
-            format!("{}.interface", self.name()),
-            &self_value,
-            &current_value,
-        ) {
-            // Linux Bridge on 250 kernel HZ and 100 user HZ system(e.g.
-            // Ubuntu) will have round up which lead to 1 difference.
-            if let (
-                serde_json::Value::Number(des),
-                serde_json::Value::Number(cur),
-            ) = (desire, current)
-            {
-                if desire.as_u64().unwrap_or(0) as i128
-                    - cur.as_u64().unwrap_or(0) as i128
-                    == 1
-                    && LinuxBridgeInterface::is_interger_rounded_up(&reference)
-                {
-                    let e = NmstateError::new(
-                        ErrorKind::KernelIntegerRoundedError,
-                        format!(
-                            "Linux kernel configured with 250 HZ \
-                                will round up/down the integer in linux \
-                                bridge {} option '{}' from {:?} to {:?}.",
-                            self.name(),
-                            reference,
-                            des,
-                            cur
-                        ),
-                    );
-                    error!("{}", e);
-                    return Err(e);
-                }
-            }
-
-            Err(NmstateError::new(
-                ErrorKind::VerificationError,
-                format!(
-                    "Verification failure: {} desire '{}', current '{}'",
-                    reference, desire, current
-                ),
-            ))
-        } else {
-            Ok(())
-        }
-    }
-
-    pub(crate) fn validate(
-        &self,
+    pub(crate) fn pre_edit_cleanup(
+        &mut self,
         current: Option<&Self>,
     ) -> Result<(), NmstateError> {
-        self.base_iface().validate()?;
+        self.base_iface_mut()
+            .pre_edit_cleanup(current.map(|i| i.base_iface()))?;
         match self {
-            Interface::LinuxBridge(iface) => iface.validate(),
-            Interface::Bond(iface) => iface.validate(current),
-            Interface::MacVlan(iface) => iface.validate(),
-            Interface::MacVtap(iface) => iface.validate(),
+            Interface::LinuxBridge(iface) => iface.pre_edit_cleanup(),
+            Interface::Ethernet(iface) => iface.pre_edit_cleanup(),
+            Interface::OvsInterface(iface) => iface.pre_edit_cleanup(),
+            Interface::Vrf(iface) => iface.pre_edit_cleanup(current),
+            Interface::Bond(iface) => iface.pre_edit_cleanup(current),
+            Interface::MacVlan(iface) => iface.pre_edit_cleanup(),
+            Interface::MacVtap(iface) => iface.pre_edit_cleanup(),
             _ => Ok(()),
-        }
-    }
-
-    pub(crate) fn remove_port(&mut self, port_name: &str) {
-        if let Interface::LinuxBridge(br_iface) = self {
-            br_iface.remove_port(port_name);
-        } else if let Interface::OvsBridge(br_iface) = self {
-            br_iface.remove_port(port_name);
-        } else if let Interface::Bond(iface) = self {
-            iface.remove_port(port_name);
         }
     }
 

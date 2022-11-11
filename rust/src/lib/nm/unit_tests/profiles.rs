@@ -1,6 +1,6 @@
 use crate::nm::nm_dbus::{NmConnection, NmSettingConnection};
 use crate::{
-    nm::profile::use_uuid_for_controller_reference, Interface, InterfaceType,
+    nm::settings::use_uuid_for_controller_reference, Interface, InterfaceType,
     OvsBridgeBondConfig, OvsBridgeBondPortConfig, OvsBridgeConfig,
     OvsBridgeInterface, OvsBridgePortConfig,
 };
@@ -87,15 +87,15 @@ fn test_use_uuid_for_controller_reference_with_ovs_bond() {
     )
     .unwrap();
 
-    println!("nm_conns {:?}", nm_conns);
+    println!("nm_conns {nm_conns:?}");
 
     let br0_nm_con_set = nm_conns[0].connection.as_ref().unwrap();
-    println!("br0 {:?}", br0_nm_con_set);
+    println!("br0 {br0_nm_con_set:?}");
     assert!(br0_nm_con_set.iface_name == Some("br0".to_string()));
     assert!(br0_nm_con_set.id == Some("ovs-br-br0".to_string()));
 
     let bond1_nm_con_set = nm_conns[1].connection.as_ref().unwrap();
-    println!("bond1 {:?}", bond1_nm_con_set);
+    println!("bond1 {bond1_nm_con_set:?}");
     assert!(bond1_nm_con_set.id == Some("ovs-port-bond1".to_string()));
     assert!(bond1_nm_con_set.iface_name == Some("bond1".to_string()));
     assert!(bond1_nm_con_set.iface_type == Some("ovs-port".to_string()));
@@ -103,7 +103,7 @@ fn test_use_uuid_for_controller_reference_with_ovs_bond() {
     assert!(bond1_nm_con_set.controller_type == Some("ovs-bridge".to_string()));
 
     let p1_nm_con_set = nm_conns[2].connection.as_ref().unwrap();
-    println!("p1 {:?}", p1_nm_con_set);
+    println!("p1 {p1_nm_con_set:?}");
     assert!(p1_nm_con_set.id == Some("ovs-iface-p1".to_string()));
     assert!(p1_nm_con_set.iface_name == Some("p1".to_string()));
     assert!(p1_nm_con_set.iface_type == Some("ovs-interface".to_string()));
@@ -111,7 +111,7 @@ fn test_use_uuid_for_controller_reference_with_ovs_bond() {
     assert!(p1_nm_con_set.controller_type == Some("ovs-port".to_string()));
 
     let p2_nm_con_set = nm_conns[3].connection.as_ref().unwrap();
-    println!("p2 {:?}", p2_nm_con_set);
+    println!("p2 {p2_nm_con_set:?}");
     assert!(p2_nm_con_set.id == Some("ovs-iface-p2".to_string()));
     assert!(p2_nm_con_set.iface_name == Some("p2".to_string()));
     assert!(p2_nm_con_set.iface_type == Some("ovs-interface".to_string()));

@@ -90,7 +90,9 @@ def retrieve_net_state_json(
     lib.nmstate_cstring_free(c_err_msg)
     if rc != NMSTATE_PASS:
         raise NmstateError(f"{err_kind}: {err_msg}")
+    # pylint: disable=no-member
     return state.decode("utf-8")
+    # pylint: enable=no-member
 
 
 def apply_net_state(
@@ -204,7 +206,9 @@ def gen_conf(state):
     lib.nmstate_cstring_free(c_err_msg)
     if rc != NMSTATE_PASS:
         raise map_error(err_kind, err_msg)
+    # pylint: disable=no-member
     return configs.decode("utf-8")
+    # pylint: enable=no-member
 
 
 def map_error(err_kind, err_msg):

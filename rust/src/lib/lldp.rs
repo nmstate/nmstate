@@ -60,12 +60,6 @@ pub struct LldpConfig {
     pub neighbors: Vec<Vec<LldpNeighborTlv>>,
 }
 
-impl LldpConfig {
-    pub(crate) fn pre_verify_cleanup(&mut self) {
-        self.neighbors = Vec::new();
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(untagged)]
 #[non_exhaustive]

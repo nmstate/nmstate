@@ -1,39 +1,37 @@
+// SPDX-License-Identifier: Apache-2.0
+
+#[cfg(feature = "query_apply")]
 mod active_connection;
+#[cfg(feature = "query_apply")]
 mod apply;
-mod bond;
-mod bridge;
+#[cfg(feature = "query_apply")]
 mod checkpoint;
-mod connection;
+#[cfg(feature = "query_apply")]
 mod device;
-mod dns;
+#[cfg(feature = "query_apply")]
 mod error;
-mod ethtool;
-mod ieee8021x;
-mod infiniband;
-mod ip;
-mod lldp;
-mod mac_vlan;
+#[cfg(feature = "gen_conf")]
+mod gen_conf;
 mod nm_dbus;
-mod ovs;
+#[cfg(feature = "query_apply")]
 mod profile;
-mod route;
-mod route_rule;
+#[cfg(feature = "query_apply")]
+mod query;
+mod settings;
+#[cfg(feature = "query_apply")]
 mod show;
-mod sriov;
 #[cfg(test)]
 mod unit_tests;
-mod user;
 mod version;
-mod veth;
-mod vlan;
-mod vrf;
-mod vxlan;
-mod wired;
 
+#[cfg(feature = "query_apply")]
 pub(crate) use apply::nm_apply;
+#[cfg(feature = "query_apply")]
 pub(crate) use checkpoint::{
     nm_checkpoint_create, nm_checkpoint_destroy, nm_checkpoint_rollback,
     nm_checkpoint_timeout_extend,
 };
-pub(crate) use connection::nm_gen_conf;
+#[cfg(feature = "gen_conf")]
+pub(crate) use gen_conf::nm_gen_conf;
+#[cfg(feature = "query_apply")]
 pub(crate) use show::nm_retrieve;

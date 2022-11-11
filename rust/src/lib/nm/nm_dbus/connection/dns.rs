@@ -1,17 +1,4 @@
-// Copyright 2021 Red Hat, Inc.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
+// SPDX-License-Identifier: Apache-2.0
 
 use std::convert::TryFrom;
 use std::net::{Ipv4Addr, Ipv6Addr};
@@ -34,7 +21,7 @@ pub(crate) fn parse_nm_dns(
                 Err(e) => {
                     let e = NmError::new(
                         ErrorKind::InvalidArgument,
-                        format!("Failed to convert to IP address: {}", e),
+                        format!("Failed to convert to IP address: {e}"),
                     );
                     log::error!("{}", e);
                     return Err(e);
@@ -52,7 +39,7 @@ pub(crate) fn parse_nm_dns(
                     } else {
                         let e = NmError::new(
                             ErrorKind::InvalidArgument,
-                            format!("Failed to convert {:?} to IP address", b),
+                            format!("Failed to convert {b:?} to IP address"),
                         );
                         log::error!("{}", e);
                         return Err(e);
@@ -61,7 +48,7 @@ pub(crate) fn parse_nm_dns(
                 Err(e) => {
                     let e = NmError::new(
                         ErrorKind::InvalidArgument,
-                        format!("Failed to convert to IP address: {}", e),
+                        format!("Failed to convert to IP address: {e}"),
                     );
                     log::error!("{}", e);
                     return Err(e);
@@ -84,13 +71,19 @@ pub(crate) fn parse_nm_dns(
     Ok(dns_srvs)
 }
 
+pub(crate) fn parse_nm_dns_data(
+    value: zvariant::OwnedValue,
+) -> Result<Vec<String>, NmError> {
+    Ok(Vec::<String>::try_from(value)?)
+}
+
 pub(crate) fn parse_nm_dns_search(
     value: zvariant::OwnedValue,
 ) -> Result<Vec<String>, NmError> {
     Vec::<String>::try_from(value).map_err(|e| {
         let e = NmError::new(
             ErrorKind::InvalidArgument,
-            format!("In valid DNS search: {}", e),
+            format!("In valid DNS search: {e}"),
         );
         log::error!("{}", e);
         e
@@ -122,7 +115,7 @@ pub(crate) fn nm_ip_dns_to_value(
             let ip_addr = Ipv6Addr::from_str(dns_srv).map_err(|e| {
                 let e = NmError::new(
                     ErrorKind::InvalidArgument,
-                    format!("Invalid IPv6 address: {}: {}", dns_srv, e),
+                    format!("Invalid IPv6 address: {dns_srv}: {e}"),
                 );
                 log::error!("{}", e);
                 e
@@ -134,7 +127,7 @@ pub(crate) fn nm_ip_dns_to_value(
             let ip_addr = Ipv4Addr::from_str(dns_srv).map_err(|e| {
                 let e = NmError::new(
                     ErrorKind::InvalidArgument,
-                    format!("Invalid IPv4 address: {}: {}", dns_srv, e),
+                    format!("Invalid IPv4 address: {dns_srv}: {e}"),
                 );
                 log::error!("{}", e);
                 e

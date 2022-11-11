@@ -1,7 +1,7 @@
 use crate::{
-    ifaces::get_ignored_ifaces,
-    ifaces::inter_ifaces_controller::handle_changed_ports, InterfaceType,
-    Interfaces, OvsBridgeInterface,
+    ifaces::inter_ifaces_controller::handle_changed_ports,
+    query_apply::get_ignored_ifaces, InterfaceType, Interfaces,
+    OvsBridgeInterface,
 };
 
 #[test]
@@ -109,7 +109,7 @@ fn test_ovs_bridge_verify_ignore_port() {
     )
     .unwrap();
 
-    ifaces.verify(&cur_ifaces).unwrap();
+    ifaces.verify(&Interfaces::new(), &cur_ifaces).unwrap();
 }
 
 #[test]

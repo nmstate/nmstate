@@ -5,9 +5,6 @@ use nmstate::NetworkState;
 
 use crate::error::CliError;
 
-pub(crate) const DEFAULT_SERVICE_FOLDER: &str = "/etc/nmstate";
-pub(crate) const CONFIG_FOLDER_KEY: &str = "CONFIG_FOLDER";
-
 const CONFIG_FILE_EXTENTION: &str = "yml";
 const RELOCATE_FILE_EXTENTION: &str = "applied";
 
@@ -15,8 +12,8 @@ pub(crate) fn ncl_service(
     matches: &clap::ArgMatches,
 ) -> Result<String, CliError> {
     let folder = matches
-        .value_of(CONFIG_FOLDER_KEY)
-        .unwrap_or(DEFAULT_SERVICE_FOLDER);
+        .value_of(crate::CONFIG_FOLDER_KEY)
+        .unwrap_or(crate::DEFAULT_SERVICE_FOLDER);
 
     let config_files = get_config_files(folder)?;
     if config_files.is_empty() {

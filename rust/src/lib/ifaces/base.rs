@@ -2,61 +2,113 @@ use log::error;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    ip::validate_wait_ip, ErrorKind, EthtoolConfig, Ieee8021XConfig,
-    InterfaceIpv4, InterfaceIpv6, InterfaceState, InterfaceType, LldpConfig,
-    NmstateError, OvsDbIfaceConfig, RouteEntry, RouteRuleEntry, WaitIp,
+    ip::validate_wait_ip,
+    mptcp::{mptcp_pre_edit_cleanup, validate_mptcp},
+    ErrorKind, EthtoolConfig, Ieee8021XConfig, InterfaceIpv4, InterfaceIpv6,
+    InterfaceState, InterfaceType, LldpConfig, MptcpConfig, NmstateError,
+    OvsDbIfaceConfig, RouteEntry, RouteRuleEntry, WaitIp,
 };
 
 // TODO: Use prop_list to Serialize like InterfaceIpv4 did
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
+/// Information shared among all interface types
 pub struct BaseInterface {
+    /// Interface name
     pub name: String,
     #[serde(skip_serializing_if = "crate::serializer::is_option_string_empty")]
+    /// Interface description stored in network backend. Not available for
+    /// kernel only mode.
     pub description: Option<String>,
     #[serde(skip)]
+    /// TODO: internal use only. Hide this.
     pub prop_list: Vec<&'static str>,
     #[serde(rename = "type", default = "default_iface_type")]
+    /// Interface type. Serialize and deserialize to/from `type`
     pub iface_type: InterfaceType,
     #[serde(default = "default_state")]
+    /// Interface state. Default to [InterfaceState::Up] when applying.
     pub state: InterfaceState,
     #[serde(skip_serializing_if = "Option::is_none")]
+    /// MAC address in the format: upper case hex string separated by `:` on
+    /// every two characters. Case insensitive when applying.
+    /// Serialize and deserialize to/from `mac-address`.
     pub mac_address: Option<String>,
     #[serde(skip)]
+    /// MAC address never change after reboots(normally stored in firmware of
+    /// network interface). Using the same format as `mac_address` property.
+    /// Ignored during apply.
+    /// TODO: expose it.
     pub permanent_mac_address: Option<String>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
         deserialize_with = "crate::deserializer::option_u64_or_string"
     )]
+    /// Maximum transmission unit.
     pub mtu: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    /// Minimum MTU allowed. Ignored during apply.
+    /// Serialize and deserialize to/from `min-mtu`.
+    pub min_mtu: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    /// Maximum MTU allowed. Ignored during apply.
+    /// Serialize and deserialize to/from `max-mtu`.
+    pub max_mtu: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    /// Whether system should wait certain IP stack before considering
+    /// network interface activated.
+    /// Serialize and deserialize to/from `wait-ip`.
     pub wait_ip: Option<WaitIp>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    /// IPv4 information.
+    /// Hided if interface is not allowed to hold IP information(e.g. port of
+    /// bond is not allowed to hold IP information).
     pub ipv4: Option<InterfaceIpv4>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    /// IPv4 information.
+    /// Hided if interface is not allowed to hold IP information(e.g. port of
+    /// bond is not allowed to hold IP information).
     pub ipv6: Option<InterfaceIpv6>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    /// Interface wide MPTCP flags.
+    /// Nmstate will apply these flags to all valid IP addresses(both static and
+    /// dynamic).
+    pub mptcp: Option<MptcpConfig>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     // None here mean no change, empty string mean detach from controller.
+    /// TODO: Internal only. Hide it.
     pub controller: Option<String>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
         deserialize_with = "crate::deserializer::option_bool_or_string"
     )]
+    /// Whether kernel should skip check on package targeting MAC address and
+    /// accept all packages, also known as promiscuous mode.
+    /// Serialize and deserialize to/from `accpet-all-mac-addresses`.
     pub accept_all_mac_addresses: Option<bool>,
     #[serde(skip_serializing)]
+    /// Copy the MAC address from specified interface.
+    /// Ignored during serializing.
+    /// Deserialize from `copy-mac-from`.
     pub copy_mac_from: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none", rename = "ovs-db")]
+    /// Interface specific OpenvSwitch database configurations.
     pub ovsdb: Option<OvsDbIfaceConfig>,
     #[serde(skip_serializing_if = "Option::is_none", rename = "802.1x")]
+    /// IEEE 802.1X authentication configurations.
+    /// Serialize and deserialize to/from `802.1x`.
     pub ieee8021x: Option<Ieee8021XConfig>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    /// Link Layer Discovery Protocol configurations.
     pub lldp: Option<LldpConfig>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    /// Ethtool configurations
     pub ethtool: Option<EthtoolConfig>,
     #[serde(skip)]
+    /// TODO: internal use, hide it.
     pub controller_type: Option<InterfaceType>,
     // The interface lowest up_priority will be activated first.
     // The up_priority should be its controller's up_priority
@@ -73,76 +125,17 @@ pub struct BaseInterface {
 }
 
 impl BaseInterface {
-    pub(crate) fn update(&mut self, other: &BaseInterface) {
-        if other.prop_list.contains(&"name") {
-            self.name = other.name.clone();
-        }
-        if other.prop_list.contains(&"description") {
-            self.description = other.description.clone();
-        }
-        if other.prop_list.contains(&"iface_type")
-            && other.iface_type != InterfaceType::Unknown
-        {
-            self.iface_type = other.iface_type.clone();
-        }
-        if other.prop_list.contains(&"state") {
-            self.state = other.state.clone();
-        }
-        if other.prop_list.contains(&"mtu") {
-            self.mtu = other.mtu;
-        }
-        if other.prop_list.contains(&"controller") {
-            self.controller = other.controller.clone();
-        }
-        if other.prop_list.contains(&"controller_type") {
-            self.controller_type = other.controller_type.clone();
-        }
-        if other.prop_list.contains(&"accept_all_mac_addresses") {
-            self.accept_all_mac_addresses = other.accept_all_mac_addresses;
-        }
-        if other.prop_list.contains(&"ovsdb") {
-            self.ovsdb = other.ovsdb.clone();
-        }
-        if other.prop_list.contains(&"ieee8021x") {
-            self.ieee8021x = other.ieee8021x.clone();
-        }
-        if other.prop_list.contains(&"lldp") {
-            self.lldp = other.lldp.clone();
-        }
-        if other.prop_list.contains(&"ethtool") {
-            self.ethtool = other.ethtool.clone();
-        }
-        if other.prop_list.contains(&"wait_ip") {
-            self.wait_ip = other.wait_ip;
-        }
+    pub(crate) fn pre_edit_cleanup(
+        &mut self,
+        current: Option<&Self>,
+    ) -> Result<(), NmstateError> {
+        self.validate_mtu(current)?;
+        validate_mptcp(self)?;
+        validate_wait_ip(self)?;
 
-        if other.prop_list.contains(&"ipv4") {
-            if let Some(ref other_ipv4) = other.ipv4 {
-                if let Some(ref mut self_ipv4) = self.ipv4 {
-                    self_ipv4.update(other_ipv4);
-                } else {
-                    self.ipv4 = other.ipv4.clone();
-                }
-            }
-        }
-
-        if other.prop_list.contains(&"ipv6") {
-            if let Some(ref other_ipv6) = other.ipv6 {
-                if let Some(ref mut self_ipv6) = self.ipv6 {
-                    self_ipv6.update(other_ipv6);
-                } else {
-                    self.ipv6 = other.ipv6.clone();
-                }
-            }
-        }
-        for other_prop_name in &other.prop_list {
-            if !self.prop_list.contains(other_prop_name) {
-                self.prop_list.push(other_prop_name)
-            }
-        }
-    }
-
-    pub(crate) fn pre_edit_cleanup(&mut self) -> Result<(), NmstateError> {
+        // Do not allow changing min_mtu and max_mtu
+        self.max_mtu = None;
+        self.min_mtu = None;
         if !self.can_have_ip()
             && (self.ipv4.as_ref().map(|ipv4| ipv4.enabled) == Some(true)
                 || self.ipv6.as_ref().map(|ipv6| ipv6.enabled) == Some(true))
@@ -160,46 +153,18 @@ impl BaseInterface {
         }
 
         if let Some(ref mut ipv4) = self.ipv4 {
-            ipv4.pre_edit_cleanup();
+            ipv4.pre_edit_cleanup(current.and_then(|i| i.ipv4.as_ref()));
         }
         if let Some(ref mut ipv6) = self.ipv6 {
-            ipv6.pre_edit_cleanup();
+            ipv6.pre_edit_cleanup(current.and_then(|i| i.ipv6.as_ref()));
         }
         if let Some(ref mut ethtool_conf) = self.ethtool {
             ethtool_conf.pre_edit_cleanup();
         }
+
+        mptcp_pre_edit_cleanup(self);
+
         Ok(())
-    }
-
-    pub(crate) fn pre_verify_cleanup(&mut self) {
-        // * If cannot have IP, set ip: none
-        if !self.can_have_ip() {
-            self.ipv4 = None;
-            self.ipv6 = None;
-            self.prop_list.retain(|p| p != &"ipv4" && p != &"ipv6");
-        }
-
-        if let Some(ref mut ipv4) = self.ipv4 {
-            ipv4.pre_verify_cleanup();
-        }
-
-        if let Some(ref mut ipv6) = self.ipv6 {
-            ipv6.pre_verify_cleanup()
-        }
-        // Change all veth interface to ethernet for simpler verification
-        if self.iface_type == InterfaceType::Veth {
-            self.iface_type = InterfaceType::Ethernet;
-        }
-
-        if let Some(mac_address) = &self.mac_address {
-            self.mac_address = Some(mac_address.to_uppercase());
-        }
-        if let Some(lldp_conf) = self.lldp.as_mut() {
-            lldp_conf.pre_verify_cleanup();
-        }
-        if let Some(ethtool_conf) = self.ethtool.as_mut() {
-            ethtool_conf.pre_verify_cleanup();
-        }
     }
 
     fn has_controller(&self) -> bool {
@@ -210,6 +175,7 @@ impl BaseInterface {
         }
     }
 
+    /// Whether this interface can hold IP information or not.
     pub fn can_have_ip(&self) -> bool {
         (!self.has_controller())
             || self.iface_type == InterfaceType::OvsInterface
@@ -224,6 +190,7 @@ impl BaseInterface {
         }
     }
 
+    /// Create empty [BaseInterface] with state set to [InterfaceState::Up]
     pub fn new() -> Self {
         Self {
             state: InterfaceState::Up,
@@ -231,8 +198,33 @@ impl BaseInterface {
         }
     }
 
-    pub(crate) fn validate(&self) -> Result<(), NmstateError> {
-        validate_wait_ip(self)
+    fn validate_mtu(&self, current: Option<&Self>) -> Result<(), NmstateError> {
+        if let (Some(desire_mtu), Some(min_mtu), Some(max_mtu)) = (
+            self.mtu,
+            current.and_then(|c| c.min_mtu),
+            current.and_then(|c| c.max_mtu),
+        ) {
+            if desire_mtu > max_mtu {
+                return Err(NmstateError::new(
+                    ErrorKind::InvalidArgument,
+                    format!(
+                        "Desired MTU {} for interface {} \
+                        is bigger than maximum allowed MTU {}",
+                        desire_mtu, self.name, max_mtu
+                    ),
+                ));
+            } else if desire_mtu < min_mtu {
+                return Err(NmstateError::new(
+                    ErrorKind::InvalidArgument,
+                    format!(
+                        "Desired MTU {} for interface {} \
+                        is smaller than minimum allowed MTU {}",
+                        desire_mtu, self.name, min_mtu
+                    ),
+                ));
+            }
+        }
+        Ok(())
     }
 
     pub(crate) fn clone_name_type_only(&self) -> Self {

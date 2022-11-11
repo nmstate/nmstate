@@ -1,4 +1,8 @@
-use serde::{Deserialize, Serialize};
+// SPDX-License-Identifier: Apache-2.0
+
+use std::convert::TryFrom;
+
+use serde::{Deserialize, Deserializer, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
@@ -27,42 +31,6 @@ impl BridgePortVlanConfig {
         Self::default()
     }
 
-    pub(crate) fn flatten_vlan_ranges(&mut self) {
-        if let Some(trunk_tags) = &self.trunk_tags {
-            let mut new_trunk_tags = Vec::new();
-            for trunk_tag in trunk_tags {
-                match trunk_tag {
-                    BridgePortTunkTag::Id(_) => {
-                        new_trunk_tags.push(trunk_tag.clone())
-                    }
-                    BridgePortTunkTag::IdRange(range) => {
-                        for i in range.min..range.max + 1 {
-                            new_trunk_tags.push(BridgePortTunkTag::Id(i));
-                        }
-                    }
-                };
-            }
-            self.trunk_tags = Some(new_trunk_tags);
-        }
-    }
-
-    pub(crate) fn sort_trunk_tags(&mut self) {
-        if let Some(trunk_tags) = self.trunk_tags.as_mut() {
-            trunk_tags.sort_unstable_by(|tag_a, tag_b| match (tag_a, tag_b) {
-                (BridgePortTunkTag::Id(a), BridgePortTunkTag::Id(b)) => {
-                    a.cmp(b)
-                }
-                _ => {
-                    log::warn!(
-                        "Please call flatten_vlan_ranges() \
-                        before sort_port_vlans()"
-                    );
-                    std::cmp::Ordering::Equal
-                }
-            })
-        }
-    }
-
     pub(crate) fn is_changed(&self, current: &Self) -> bool {
         (self.enable_native.is_some()
             && self.enable_native != current.enable_native)
@@ -70,6 +38,13 @@ impl BridgePortVlanConfig {
             || (self.tag.is_some() && self.tag != current.tag)
             || (self.trunk_tags.is_some()
                 && self.trunk_tags != current.trunk_tags)
+    }
+
+    pub(crate) fn is_empty(&self) -> bool {
+        self.enable_native.is_none()
+            && self.mode.is_none()
+            && self.tag.is_none()
+            && self.trunk_tags.is_none()
     }
 }
 
@@ -100,13 +75,58 @@ impl std::fmt::Display for BridgePortVlanMode {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum BridgePortTunkTag {
     #[serde(deserialize_with = "crate::deserializer::u16_or_string")]
     Id(u16),
     IdRange(BridgePortVlanRange),
+}
+
+impl<'de> Deserialize<'de> for BridgePortTunkTag {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let v = serde_json::Value::deserialize(deserializer)?;
+        if let Some(id) = v.get("id") {
+            if let Some(id) = id.as_str() {
+                Ok(Self::Id(id.parse::<u16>().map_err(|e| {
+                    serde::de::Error::custom(format!(
+                        "Failed to parse BridgePortTunkTag id \
+                        {} as u16: {}",
+                        id, e
+                    ))
+                })?))
+            } else if let Some(id) = id.as_u64() {
+                Ok(Self::Id(u16::try_from(id).map_err(|e| {
+                    serde::de::Error::custom(format!(
+                        "Failed to parse BridgePortTunkTag id \
+                        {} as u16: {}",
+                        id, e
+                    ))
+                })?))
+            } else {
+                Err(serde::de::Error::custom(format!(
+                    "The id of BridgePortTunkTag should be \
+                    unsigned 16 bits integer, but got {}",
+                    v
+                )))
+            }
+        } else if let Some(id_range) = v.get("id-range") {
+            Ok(Self::IdRange(
+                BridgePortVlanRange::deserialize(id_range)
+                    .map_err(serde::de::Error::custom)?,
+            ))
+        } else {
+            Err(serde::de::Error::custom(format!(
+                "BridgePortTunkTag only support 'id' or 'id-range', \
+                but got {}",
+                v
+            )))
+        }
+    }
 }
 
 impl BridgePortTunkTag {

@@ -5,6 +5,16 @@ use crate::{RouteEntry, Routes};
 const SUPPORTED_ROUTE_SCOPE: [nispor::RouteScope; 2] =
     [nispor::RouteScope::Universe, nispor::RouteScope::Link];
 
+const SUPPORTED_ROUTE_PROTOCOL: [nispor::RouteProtocol; 7] = [
+    nispor::RouteProtocol::Boot,
+    nispor::RouteProtocol::Static,
+    nispor::RouteProtocol::Ra,
+    nispor::RouteProtocol::Dhcp,
+    nispor::RouteProtocol::Mrouted,
+    nispor::RouteProtocol::KeepAlived,
+    nispor::RouteProtocol::Babel,
+];
+
 const SUPPORTED_STATIC_ROUTE_PROTOCOL: [nispor::RouteProtocol; 2] =
     [nispor::RouteProtocol::Boot, nispor::RouteProtocol::Static];
 
@@ -14,11 +24,36 @@ const IPV6_DEFAULT_GATEWAY: &str = "::/0";
 const IPV4_EMPTY_NEXT_HOP_ADDRESS: &str = "0.0.0.0";
 const IPV6_EMPTY_NEXT_HOP_ADDRESS: &str = "::";
 
-pub(crate) fn get_routes(
-    np_routes: &[nispor::Route],
-    running_config_only: bool,
-) -> Routes {
+pub(crate) fn get_routes(running_config_only: bool) -> Routes {
     let mut ret = Routes::new();
+    let mut np_routes: Vec<nispor::Route> = Vec::new();
+
+    let protocols = if running_config_only {
+        SUPPORTED_STATIC_ROUTE_PROTOCOL.as_slice()
+    } else {
+        SUPPORTED_ROUTE_PROTOCOL.as_slice()
+    };
+
+    for protocol in protocols {
+        let mut rt_filter = nispor::NetStateRouteFilter::default();
+        rt_filter.protocol = Some(*protocol);
+        let mut filter = nispor::NetStateFilter::minimum();
+        filter.route = Some(rt_filter);
+        match nispor::NetState::retrieve_with_filter(&filter) {
+            Ok(np_state) => {
+                for np_rt in np_state.routes {
+                    np_routes.push(np_rt);
+                }
+            }
+            Err(e) => {
+                log::warn!(
+                    "Failed to retrieve {:?} route via nispor: {}",
+                    protocol,
+                    e
+                );
+            }
+        }
+    }
 
     if !running_config_only {
         let mut running_routes = Vec::new();

@@ -3,18 +3,24 @@ name = "nmstatectl"
 version = "1.3.4"
 authors = ["Gris Ge <fge@redhat.com>"]
 edition = "2018"
+rust-version = "1.60"
 
 [[bin]]
 name = "nmstatectl-rust"
 path = "ncl.rs"
 
 [dependencies]
-nmstate = {path = "../lib"}
-serde_yaml = "0.8"
+nmstate = {path = "../lib", default-features = false}
+serde_yaml = "0.9"
 clap = { version = "3.1", features = ["cargo"] }
 serde = { version = "1.0", features = ["derive"] }
 env_logger = "0.9.0"
 log = "0.4.14"
 serde_json = "1.0.75"
-ctrlc = "3.2.1"
+ctrlc = { version = "3.2.1", optional = true }
 uuid = { version = "1.1", features = ["v4"] }
+
+[features]
+default = ["query_apply", "gen_conf"]
+query_apply = ["nmstate/query_apply", "dep:ctrlc"]
+gen_conf = ["nmstate/gen_conf"]

@@ -24,14 +24,20 @@ use crate::{
 pub(crate) fn nispor_retrieve(
     running_config_only: bool,
 ) -> Result<NetworkState, NmstateError> {
-    let mut net_state = NetworkState::default();
-    net_state.hostname = get_hostname_state();
-    net_state.prop_list = vec!["interfaces", "routes", "rules", "hostname"];
-    let np_state = nispor::NetState::retrieve().map_err(np_error_to_nmstate)?;
+    let mut net_state = NetworkState {
+        hostname: get_hostname_state(),
+        prop_list: vec!["interfaces", "routes", "rules", "hostname"],
+        ..Default::default()
+    };
+    let mut filter = nispor::NetStateFilter::default();
+    // Do not query routes in order to prevent BGP routes consuming too much CPU
+    // time, we let `get_routes()` do the query by itself.
+    filter.route = None;
+    let np_state = nispor::NetState::retrieve_with_filter(&filter)
+        .map_err(np_error_to_nmstate)?;
 
     for (_, np_iface) in np_state.ifaces.iter() {
-        let mut base_iface =
-            np_iface_to_base_iface(np_iface, running_config_only);
+        let base_iface = np_iface_to_base_iface(np_iface, running_config_only);
         // The `ovs-system` is reserved for OVS kernel datapath
         if np_iface.name == "ovs-system" {
             continue;
@@ -60,7 +66,6 @@ pub(crate) fn nispor_retrieve(
                 np_ethernet_to_nmstate(np_iface, base_iface),
             ),
             InterfaceType::Veth => {
-                base_iface.iface_type = InterfaceType::Ethernet;
                 Interface::Ethernet(np_veth_to_nmstate(np_iface, base_iface))
             }
             InterfaceType::Vlan => {
@@ -117,7 +122,7 @@ pub(crate) fn nispor_retrieve(
         net_state.append_interface_data(iface);
     }
     set_controller_type(&mut net_state.interfaces);
-    net_state.routes = get_routes(&np_state.routes, running_config_only);
+    net_state.routes = get_routes(running_config_only);
     net_state.rules = get_route_rules(&np_state.rules);
 
     Ok(net_state)
