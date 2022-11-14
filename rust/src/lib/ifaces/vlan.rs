@@ -4,6 +4,26 @@ use crate::{BaseInterface, InterfaceType};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
+/// Linux kernel VLAN interface. The example yaml output of
+/// [crate::NetworkState] with a VLAN interface would be:
+/// ```yaml
+/// interfaces:
+/// - name: eth1.101
+///   type: vlan
+///   state: up
+///   mac-address: BE:E8:17:8F:D2:70
+///   mtu: 1500
+///   max-mtu: 65535
+///   wait-ip: any
+///   ipv4:
+///     enabled: false
+///   ipv6:
+///     enabled: false
+///   accept-all-mac-addresses: false
+///   vlan:
+///     base-iface: eth1
+///     id: 101
+/// ```
 pub struct VlanInterface {
     #[serde(flatten)]
     pub base: BaseInterface,
@@ -45,8 +65,10 @@ pub struct VlanConfig {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum VlanProtocol {
     #[serde(rename = "802.1q")]
+    /// Deserialize and serialize from/to `802.1q`.
     Ieee8021Q,
     #[serde(rename = "802.1ad")]
+    /// Deserialize and serialize from/to `802.1ad`.
     Ieee8021Ad,
 }
 
