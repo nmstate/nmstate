@@ -14,6 +14,62 @@ use crate::{
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
+/// Bridge interface provided by linux kernel.
+/// When serializing or deserializing, the [BaseInterface] will
+/// be flatted and [LinuxBridgeConfig] stored as `bridge` section. The yaml
+/// output [crate::NetworkState] containing an example linux bridge interface:
+/// ```yml
+/// interfaces:
+/// - name: br0
+///   type: linux-bridge
+///   state: up
+///   mac-address: 9A:91:53:6C:67:DA
+///   mtu: 1500
+///   min-mtu: 68
+///   max-mtu: 65535
+///   wait-ip: any
+///   ipv4:
+///     enabled: false
+///   ipv6:
+///     enabled: false
+///   bridge:
+///     options:
+///       gc-timer: 29594
+///       group-addr: 01:80:C2:00:00:00
+///       group-forward-mask: 0
+///       group-fwd-mask: 0
+///       hash-max: 4096
+///       hello-timer: 46
+///       mac-ageing-time: 300
+///       multicast-last-member-count: 2
+///       multicast-last-member-interval: 100
+///       multicast-membership-interval: 26000
+///       multicast-querier: false
+///       multicast-querier-interval: 25500
+///       multicast-query-interval: 12500
+///       multicast-query-response-interval: 1000
+///       multicast-query-use-ifaddr: false
+///       multicast-router: auto
+///       multicast-snooping: true
+///       multicast-startup-query-count: 2
+///       multicast-startup-query-interval: 3125
+///       stp:
+///         enabled: true
+///         forward-delay: 15
+///         hello-time: 2
+///         max-age: 20
+///         priority: 32768
+///       vlan-protocol: 802.1q
+///     port:
+///     - name: eth1
+///       stp-hairpin-mode: false
+///       stp-path-cost: 100
+///       stp-priority: 32
+///     - name: eth2
+///       stp-hairpin-mode: false
+///       stp-path-cost: 100
+///       stp-priority: 32
+/// ```
 pub struct LinuxBridgeInterface {
     #[serde(flatten)]
     pub base: BaseInterface,
@@ -116,10 +172,15 @@ impl LinuxBridgeInterface {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
+/// Linux bridge specific configuration.
 pub struct LinuxBridgeConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
+    /// Linux bridge options. When applying, existing options will merged into
+    /// desired.
     pub options: Option<LinuxBridgeOptions>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "ports")]
+    /// Linux bridge ports. When applying, desired port list will __override__
+    /// current port list.
     pub port: Option<Vec<LinuxBridgePortConfig>>,
 }
 
@@ -148,26 +209,35 @@ impl LinuxBridgeConfig {
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
 pub struct LinuxBridgePortConfig {
+    /// The kernel interface name of this bridge port.
     pub name: String,
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
         deserialize_with = "crate::deserializer::option_bool_or_string"
     )]
+    /// Controls whether traffic may be send back out of the port on which it
+    /// was received.
     pub stp_hairpin_mode: Option<bool>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
         deserialize_with = "crate::deserializer::option_u32_or_string"
     )]
+    /// The STP path cost of the specified port.
     pub stp_path_cost: Option<u32>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
         deserialize_with = "crate::deserializer::option_u16_or_string"
     )]
+    /// The STP port priority. The priority value is an unsigned 8-bit quantity
+    /// (number between 0 and 255). This metric is used in the designated port
+    /// an droot port selec‐ tion algorithms.
     pub stp_priority: Option<u16>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    /// Linux bridge VLAN filtering configure. If not defined, current VLAN
+    /// filtering is preserved for the specified port.
     pub vlan: Option<BridgePortVlanConfig>,
 }
 
@@ -208,9 +278,6 @@ pub struct LinuxBridgeOptions {
     pub gc_timer: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub group_addr: Option<String>,
-    // The group_forward_mask is the same with group_fwd_mask. The former is
-    // used by NetworkManager, the later is used by sysfs. Nmstate support
-    // both.
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
@@ -222,6 +289,7 @@ pub struct LinuxBridgeOptions {
         default,
         deserialize_with = "crate::deserializer::option_u16_or_string"
     )]
+    /// Alias of [LinuxBridgeOptions.group_fwd_mask]
     pub group_fwd_mask: Option<u16>,
     #[serde(
         skip_serializing_if = "Option::is_none",
@@ -338,6 +406,7 @@ pub struct LinuxBridgeStpOptions {
         default,
         deserialize_with = "crate::deserializer::option_bool_or_string"
     )]
+    /// If disabled during applying, the remaining STP options will be discard.
     pub enabled: Option<bool>,
     #[serde(
         skip_serializing_if = "Option::is_none",
