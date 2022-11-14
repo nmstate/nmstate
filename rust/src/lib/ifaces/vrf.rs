@@ -4,6 +4,29 @@ use crate::{BaseInterface, ErrorKind, Interface, InterfaceType, NmstateError};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
+/// Linux kernel Virtual Routing and Forwarding(VRF) interface. The example
+/// yaml output of a [crate::NetworkState] with a VRF interface would be:
+/// ```yml
+/// interfaces:
+/// - name: vrf0
+///   type: vrf
+///   state: up
+///   mac-address: 42:6C:4A:0B:A3:C0
+///   mtu: 65575
+///   min-mtu: 1280
+///   max-mtu: 65575
+///   wait-ip: any
+///   ipv4:
+///     enabled: false
+///   ipv6:
+///     enabled: false
+///   accept-all-mac-addresses: false
+///   vrf:
+///     port:
+///     - eth1
+///     - eth2
+///     route-table-id: 100
+/// ```
 pub struct VrfInterface {
     #[serde(flatten)]
     pub base: BaseInterface,
@@ -82,6 +105,9 @@ impl VrfInterface {
 #[serde(deny_unknown_fields)]
 pub struct VrfConfig {
     #[serde(alias = "ports")]
+    /// Port list.
+    /// Deserialize and serialize from/to `port`.
+    /// Also deserialize from `ports`.
     pub port: Option<Vec<String>>,
     #[serde(
         rename = "route-table-id",
@@ -90,5 +116,6 @@ pub struct VrfConfig {
     )]
     /// Route table ID of this VRF interface.
     /// Use 0 to preserve current `table_id`.
+    /// Deserialize and serialize from/to `route-table-id`.
     pub table_id: u32,
 }
