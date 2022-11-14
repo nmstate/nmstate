@@ -7,12 +7,66 @@ use crate::{
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
+/// Ethernet(IEEE 802.3) interface.
+/// Besides [BaseInterface], optionally could hold [EthernetConfig] and/or
+/// [VethConfig].
+/// The yaml output of [crate::NetworkState] containing ethernet interface would
+/// be:
+/// ```yml
+/// interfaces:
+/// - name: ens3
+///   type: ethernet
+///   state: up
+///   mac-address: 00:11:22:33:44:FF
+///   mtu: 1500
+///   min-mtu: 68
+///   max-mtu: 65535
+///   wait-ip: ipv4
+///   ipv4:
+///     enabled: true
+///     dhcp: false
+///     address:
+///     - ip: 192.0.2.9
+///       prefix-length: 24
+///   ipv6:
+///     enabled: false
+///   mptcp:
+///     address-flags: []
+///   accept-all-mac-addresses: false
+///   lldp:
+///     enabled: false
+///   ethtool:
+///     feature:
+///       tx-tcp-ecn-segmentation: true
+///       tx-tcp-mangleid-segmentation: false
+///       tx-tcp6-segmentation: true
+///       tx-tcp-segmentation: true
+///       rx-gro-list: false
+///       rx-udp-gro-forwarding: false
+///       rx-gro-hw: true
+///       tx-checksum-ip-generic: true
+///       tx-generic-segmentation: true
+///       rx-gro: true
+///       tx-nocache-copy: false
+///     coalesce:
+///       rx-frames: 1
+///       tx-frames: 1
+///     ring:
+///       rx: 256
+///       rx-max: 256
+///       tx: 256
+///       tx-max: 256
+///   ethernet:
+///     auto-negotiation: false
+/// ```
 pub struct EthernetInterface {
     #[serde(flatten)]
     pub base: BaseInterface,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ethernet: Option<EthernetConfig>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    /// When applying, the [VethConfig] is only valid when
+    /// [BaseInterface.iface_type] is set to [InterfaceType::Veth] explicitly.
     pub veth: Option<VethConfig>,
 }
 
@@ -64,7 +118,9 @@ impl EthernetInterface {
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum EthernetDuplex {
+    /// Deserialize and serialize from/to `full`.
     Full,
+    /// Deserialize and serialize from/to `half`.
     Half,
 }
 
@@ -86,6 +142,8 @@ impl std::fmt::Display for EthernetDuplex {
 #[non_exhaustive]
 pub struct EthernetConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
+    /// Single Root I/O Virtualization(SRIOV) configuration.
+    /// Deserialize and serialize from/to `sr-iov`.
     pub sr_iov: Option<SrIovConfig>,
     #[serde(
         skip_serializing_if = "Option::is_none",
@@ -93,6 +151,7 @@ pub struct EthernetConfig {
         default,
         deserialize_with = "crate::deserializer::option_bool_or_string"
     )]
+    /// Deserialize and serialize from/to `auto-negotiation`.
     pub auto_neg: Option<bool>,
     #[serde(
         skip_serializing_if = "Option::is_none",
@@ -113,6 +172,7 @@ impl EthernetConfig {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[non_exhaustive]
 pub struct VethConfig {
+    /// The name of veth peer.
     pub peer: String,
 }
 
