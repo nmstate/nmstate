@@ -8,6 +8,8 @@ mod error;
 #[cfg(feature = "gen_conf")]
 mod gen_conf;
 #[cfg(feature = "query_apply")]
+mod policy;
+#[cfg(feature = "query_apply")]
 mod query;
 mod result;
 #[cfg(feature = "query_apply")]
@@ -24,6 +26,8 @@ use crate::apply::{
 use crate::autoconf::autoconf;
 #[cfg(feature = "gen_conf")]
 use crate::gen_conf::gen_conf;
+#[cfg(feature = "query_apply")]
+use crate::policy::policy;
 #[cfg(feature = "query_apply")]
 use crate::query::show;
 use crate::result::print_result_and_exit;
@@ -44,6 +48,7 @@ const SUB_CMD_EDIT: &str = "edit";
 const SUB_CMD_VERSION: &str = "version";
 const SUB_CMD_AUTOCONF: &str = "autoconf";
 const SUB_CMD_SERVICE: &str = "service";
+const SUB_CMD_POLICY: &str = "policy";
 
 fn main() {
     let argv: Vec<String> = std::env::args().collect();
@@ -116,7 +121,7 @@ fn main() {
         )
         .subcommand(
             clap::Command::new(SUB_CMD_APPLY)
-                .about("Apply network state")
+                .about("Apply network state or network policy")
                 .alias("set")
                 .arg(
                     clap::Arg::new("STATE_FILE")
@@ -256,6 +261,47 @@ fn main() {
                 ),
         )
         .subcommand(
+            clap::Command::new(SUB_CMD_POLICY)
+                .alias("p")
+                .about("Generate network state from policy")
+                .arg(
+                    clap::Arg::new("POLICY_FILE")
+                        .required(true)
+                        .index(1)
+                        .help("Policy file"),
+                )
+                .arg(
+                    clap::Arg::new("CURRENT_STATE")
+                        .short('c')
+                        .long("current")
+                        .takes_value(true)
+                        .help("Read current network state from file"),
+                )
+                .arg(
+                    clap::Arg::new("CAPTURED_STATES")
+                        .short('a')
+                        .long("captured")
+                        .takes_value(true)
+                        .help("Bypass the capture action by \
+                              reading captured network state from \
+                              specified file"),
+                )
+                .arg(
+                    clap::Arg::new("OUTPUT_CAPTURED")
+                        .short('o')
+                        .long("output-captured")
+                        .takes_value(true)
+                        .help("Store the captured network states to \
+                              specified file"),
+                )
+                .arg(
+                    clap::Arg::new("JSON")
+                        .long("json")
+                        .takes_value(false)
+                        .help("Show state in json format"),
+                )
+        )
+        .subcommand(
             clap::Command::new(SUB_CMD_VERSION)
             .about("Show version")
        ).get_matches();
@@ -315,6 +361,8 @@ fn main() {
         print_result_and_exit(state_edit(matches));
     } else if let Some(matches) = matches.subcommand_matches(SUB_CMD_SERVICE) {
         print_result_and_exit(ncl_service(matches));
+    } else if let Some(matches) = matches.subcommand_matches(SUB_CMD_POLICY) {
+        print_result_and_exit(policy(matches));
     } else if matches.subcommand_matches(SUB_CMD_VERSION).is_some() {
         print_result_and_exit(Ok(format!(
             "{} {}",
@@ -400,4 +448,13 @@ fn ncl_service(
         enabled during compiling"
             .into(),
     )
+}
+
+#[cfg(not(feature = "query_apply"))]
+fn policy(
+    _matches: &clap::ArgMatches,
+) -> Result<String, crate::error::CliError> {
+    Err("The policy sub-command require `query_apply` feature been \
+        enabled during compiling"
+        .into())
 }

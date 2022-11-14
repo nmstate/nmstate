@@ -1,0 +1,31 @@
+---
+interfaces:
+  - name: br1
+    description: Linux bridge with base interface as a port
+    type: linux-bridge
+    state: up
+    mac-address: 00:00:5E:00:00:01
+    ipv4:
+      address:
+        - ip: 10.244.0.1
+          prefix-length: 24
+        - ip: 169.254.1.0
+          prefix-length: 16
+      dhcp: false
+      enabled: true
+    bridge:
+      options:
+        stp:
+          enabled: false
+      port:
+        - name: eth1
+routes:
+  config:
+    - destination: 0.0.0.0/0
+      next-hop-address: 192.168.100.1
+      next-hop-interface: br1
+      table-id: 254
+    - destination: 1.1.1.0/24
+      next-hop-address: 192.168.100.1
+      next-hop-interface: br1
+      table-id: 254

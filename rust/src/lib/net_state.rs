@@ -185,6 +185,15 @@ impl<'de> Deserialize<'de> for NetworkState {
 }
 
 impl NetworkState {
+    pub fn is_empty(&self) -> bool {
+        self.hostname.is_none()
+            && self.dns.is_empty()
+            && self.rules.is_empty()
+            && self.routes.is_empty()
+            && self.interfaces.is_empty()
+            && self.ovsdb.is_none()
+    }
+
     pub(crate) const PASSWORD_HID_BY_NMSTATE: &'static str =
         "<_password_hid_by_nmstate>";
 
