@@ -12,13 +12,53 @@ use crate::{
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
+/// Bond interface. When serializing or deserializing, the [BaseInterface] will
+/// be flatted and [BondConfig] stored as `link-aggregation` section. The yaml
+/// output [crate::NetworkState] containing an example bond interface:
+/// ```yml
+/// interfaces:
+/// - name: bond99
+///   type: bond
+///   state: up
+///   mac-address: 1A:24:D5:CA:76:54
+///   mtu: 1500
+///   min-mtu: 68
+///   max-mtu: 65535
+///   wait-ip: any
+///   ipv4:
+///     enabled: false
+///   ipv6:
+///     enabled: false
+///   accept-all-mac-addresses: false
+///   link-aggregation:
+///     mode: balance-rr
+///     options:
+///       all_slaves_active: dropped
+///       arp_all_targets: any
+///       arp_interval: 0
+///       arp_validate: none
+///       downdelay: 0
+///       lp_interval: 1
+///       miimon: 100
+///       min_links: 0
+///       packets_per_slave: 1
+///       primary_reselect: always
+///       resend_igmp: 1
+///       updelay: 0
+///       use_carrier: true
+///     port:
+///     - eth1
+///     - eth2
+/// ```
 pub struct BondInterface {
     #[serde(flatten)]
+    /// Base interface. Flat during serializing.
     pub base: BaseInterface,
     #[serde(
         skip_serializing_if = "Option::is_none",
         rename = "link-aggregation"
     )]
+    /// Bond specific settings.
     pub bond: Option<BondConfig>,
 }
 
@@ -155,19 +195,34 @@ impl BondInterface {
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy)]
 #[non_exhaustive]
 #[serde(try_from = "NumberAsString")]
+/// Bond mode
 pub enum BondMode {
     #[serde(rename = "balance-rr")]
+    /// Deserialize and serialize from/to `balance-rr`.
+    /// You can use integer 0 for deserializing to this mode.
     RoundRobin,
     #[serde(rename = "active-backup")]
+    /// Deserialize and serialize from/to `active-backup`.
+    /// You can use integer 1 for deserializing to this mode.
     ActiveBackup,
     #[serde(rename = "balance-xor")]
+    /// Deserialize and serialize from/to `balance-xor`.
+    /// You can use integer 2 for deserializing to this mode.
     XOR,
     #[serde(rename = "broadcast")]
+    /// Deserialize and serialize from/to `broadcast`.
+    /// You can use integer 3 for deserializing to this mode.
     Broadcast,
     #[serde(rename = "802.3ad")]
+    /// Deserialize and serialize from/to `802.3ad`.
+    /// You can use integer 4 for deserializing to this mode.
     LACP,
     #[serde(rename = "balance-tlb")]
+    /// Deserialize and serialize from/to `balance-tlb`.
+    /// You can use integer 5 for deserializing to this mode.
     TLB,
+    /// Deserialize and serialize from/to `balance-alb`.
+    /// You can use integer 6 for deserializing to this mode.
     #[serde(rename = "balance-alb")]
     ALB,
     #[serde(rename = "unknown")]
@@ -223,10 +278,18 @@ impl std::fmt::Display for BondMode {
 #[non_exhaustive]
 pub struct BondConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
+    /// Mode is mandatory when create new bond interface.
     pub mode: Option<BondMode>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    /// When applying, if defined, it will override current port list.
+    /// The verification will not fail on bond options miss-match but an
+    /// warning message.
+    /// Please refer to [kernel documentation](https://www.kernel.org/doc/Documentation/networking/bonding.txt) for detail
     pub options: Option<BondOptions>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "ports")]
+    /// Deserialize and serialize from/to `port`.
+    /// You can also use `ports` for deserializing.
+    /// When applying, if defined, it will override current port list.
     pub port: Option<Vec<String>>,
 }
 
@@ -262,9 +325,13 @@ impl BondConfig {
 #[non_exhaustive]
 #[serde(rename_all = "kebab-case")]
 #[serde(try_from = "NumberAsString")]
+/// Specifies the 802.3ad aggregation selection logic to use.
 pub enum BondAdSelect {
+    /// Deserialize and serialize from/to `stable`.
     Stable,
+    /// Deserialize and serialize from/to `bandwidth`.
     Bandwidth,
+    /// Deserialize and serialize from/to `count`.
     Count,
 }
 
@@ -314,8 +381,16 @@ impl std::fmt::Display for BondAdSelect {
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 #[serde(rename_all = "kebab-case", try_from = "NumberAsString")]
 #[non_exhaustive]
+/// Option specifying the rate in which we'll ask our link partner to transmit
+/// LACPDU packets in 802.3ad mode
 pub enum BondLacpRate {
+    /// Request partner to transmit LACPDUs every 30 seconds.
+    /// Serialize to `slow`.
+    /// Deserialize from 0 or `slow`.
     Slow,
+    /// Request partner to transmit LACPDUs every 1 second
+    /// Serialize to `fast`.
+    /// Deserialize from 1 or `fast`.
     Fast,
 }
 
@@ -353,8 +428,17 @@ impl std::fmt::Display for BondLacpRate {
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy)]
 #[serde(rename_all = "kebab-case", try_from = "NumberAsString")]
 #[non_exhaustive]
+/// Equal to kernel `all_slaves_active` option.
+/// Specifies that duplicate frames (received on inactive ports) should be
+/// dropped (0) or delivered (1).
 pub enum BondAllPortsActive {
+    /// Drop the duplicate frames
+    /// Serialize to `dropped`.
+    /// Deserialize from 0 or `dropped`.
     Dropped,
+    /// Deliver the duplicate frames
+    /// Serialize to `delivered`.
+    /// Deserialize from 1 or `delivered`.
     Delivered,
 }
 
@@ -401,8 +485,15 @@ impl From<BondAllPortsActive> for u8 {
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 #[serde(rename_all = "kebab-case", try_from = "NumberAsString")]
 #[non_exhaustive]
+/// The `arp_all_targets` kernel bond option: Specifies the quantity of
+/// arp_ip_targets that must be reachable in order for the ARP monitor to
+/// consider a port as being up. This option affects only active-backup mode
+/// for ports with arp_validation enabled.
 pub enum BondArpAllTargets {
+    /// consider the port up only when any of the `arp_ip_targets` is reachable
     Any,
+    /// consider the port up only when all of the `arp_ip_targets` are
+    /// reachable
     All,
 }
 
@@ -438,15 +529,42 @@ impl std::fmt::Display for BondArpAllTargets {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
-#[serde(rename_all = "kebab-case", try_from = "NumberAsString")]
+#[serde(rename_all = "snake_case", try_from = "NumberAsString")]
 #[non_exhaustive]
+/// The `arp_validate` kernel bond option: Specifies whether or not ARP probes
+/// and replies should be validated in any mode that supports arp monitoring, or
+/// whether non-ARP traffic should be filtered (disregarded) for link monitoring
+/// purposes.
 pub enum BondArpValidate {
+    /// No validation or filtering is performed.
+    /// Serialize to `none`.
+    /// Deserialize from 0 or `none`.
     None,
+    /// Validation is performed only for the active port.
+    /// Serialize to `active`.
+    /// Deserialize from 1 or `active`.
     Active,
+    /// Validation is performed only for backup ports.
+    /// Serialize to `backup`.
+    /// Deserialize from 2 or `backup`.
     Backup,
+    /// Validation is performed for all ports.
+    /// Serialize to `all`.
+    /// Deserialize from 3 or `all`.
     All,
+    /// Filtering is applied to all ports. No validation is performed.
+    /// Serialize to `filter`.
+    /// Deserialize from 4 or `filter`.
     Filter,
+    /// Filtering is applied to all ports, validation is performed only for
+    /// the active port.
+    /// Serialize to `filter_active`.
+    /// Deserialize from 5 or `filter-active`.
     FilterActive,
+    /// Filtering is applied to all ports, validation is performed only for
+    /// backup port.
+    /// Serialize to `filter_backup`.
+    /// Deserialize from 6 or `filter_backup`.
     FilterBackup,
 }
 
@@ -495,9 +613,32 @@ impl std::fmt::Display for BondArpValidate {
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy)]
 #[serde(rename_all = "kebab-case", try_from = "NumberAsString")]
 #[non_exhaustive]
+/// The `fail_over_mac` kernel bond option: Specifies whether active-backup mode
+/// should set all ports to the same MAC address at port attachment (the
+/// traditional behavior), or, when enabled, perform special handling of the
+/// bond's MAC address in accordance with the selected policy.
 pub enum BondFailOverMac {
+    /// This setting disables fail_over_mac, and causes bonding to set all
+    /// ports of an active-backup bond to the same MAC address at attachment
+    /// time.
+    /// Serialize to `none`.
+    /// Deserialize from 0 or `none`.
     None,
+    /// The "active" fail_over_mac policy indicates that the MAC address of the
+    /// bond should always be the MAC address of the currently active port.
+    /// The MAC address of the ports is not changed; instead, the MAC address
+    /// of the bond changes during a failover.
+    /// Serialize to `active`.
+    /// Deserialize from 1 or `active`.
     Active,
+    /// The "follow" fail_over_mac policy causes the MAC address of the bond to
+    /// be selected normally (normally the MAC address of the first port added
+    /// to the bond). However, the second and subsequent ports are not set to
+    /// this MAC address while they are in a backup role; a port is programmed
+    /// with the bond's MAC address at failover time (and the formerly active
+    /// port receives the newly active port's MAC address).
+    /// Serialize to `follow`.
+    /// Deserialize from 2 or `follow`.
     Follow,
 }
 
@@ -537,9 +678,26 @@ impl std::fmt::Display for BondFailOverMac {
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 #[serde(rename_all = "kebab-case", try_from = "NumberAsString")]
 #[non_exhaustive]
+/// The `primary_reselect` kernel bond option: Specifies the reselection policy
+/// for the primary port. This affects how the primary port is chosen to
+/// become the active port when failure of the active port or recovery of the
+/// primary port occurs. This option is designed to prevent flip-flopping
+/// between the primary port and other ports.
 pub enum BondPrimaryReselect {
+    ///The primary port becomes the active port whenever it comes back up.
+    /// Serialize to `always`.
+    /// Deserialize from 0 or `always`.
     Always,
+    /// The primary port becomes the active port when it comes back up, if the
+    /// speed and duplex of the primary port is better than the speed and
+    /// duplex of the current active port.
+    /// Serialize to `better`.
+    /// Deserialize from 1 or `better`.
     Better,
+    /// The primary port becomes the active port only if the current active
+    /// port fails and the primary port is up.
+    /// Serialize to `failure`.
+    /// Deserialize from 2 or `failure`.
     Failure,
 }
 
@@ -579,18 +737,32 @@ impl std::fmt::Display for BondPrimaryReselect {
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy)]
 #[serde(try_from = "NumberAsString")]
 #[non_exhaustive]
+/// The `xmit_hash_policy` kernel bond option: Selects the transmit hash policy
+/// to use for port selection in balance-xor, 802.3ad, and tlb modes.
 pub enum BondXmitHashPolicy {
     #[serde(rename = "layer2")]
+    /// Serialize to `layer2`.
+    /// Deserialize from 0 or `layer2`.
     Layer2,
     #[serde(rename = "layer3+4")]
+    /// Serialize to `layer3+4`.
+    /// Deserialize from 1 or `layer3+4`.
     Layer34,
     #[serde(rename = "layer2+3")]
+    /// Serialize to `layer2+3`.
+    /// Deserialize from 2 or `layer2+3`.
     Layer23,
     #[serde(rename = "encap2+3")]
+    /// Serialize to `encap2+3`.
+    /// Deserialize from 3 or `encap2+3`.
     Encap23,
     #[serde(rename = "encap3+4")]
+    /// Serialize to `encap3+4`.
+    /// Deserialize from 4 or `encap3+4`.
     Encap34,
     #[serde(rename = "vlan+srcmac")]
+    /// Serialize to `vlan+srcmac`.
+    /// Deserialize from 5 or `vlan+srcmac`.
     VlanSrcMac,
 }
 
@@ -656,106 +828,296 @@ pub struct BondOptions {
         default,
         deserialize_with = "crate::deserializer::option_u16_or_string"
     )]
+    /// In an AD system, this specifies the system priority. The allowed range
+    /// is 1 - 65535.
     pub ad_actor_sys_prio: Option<u16>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    /// In an AD system, this specifies the mac-address for the actor in
+    /// protocol packet exchanges (LACPDUs). The value cannot be NULL or
+    /// multicast. It is preferred to have the local-admin bit set for this mac
+    /// but driver does not enforce it. If the value is not given then system
+    /// defaults to using the controller's mac address as actors' system
+    /// address.
     pub ad_actor_system: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    /// Specifies the 802.3ad aggregation selection logic to use. The
+    /// possible values and their effects are:
     pub ad_select: Option<BondAdSelect>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
         deserialize_with = "crate::deserializer::option_u16_or_string"
     )]
+    /// In an AD system, the port-key has three parts as shown below -
+    ///
+    /// ```text
+    /// Bits   Use
+    /// 00     Duplex
+    /// 01-05  Speed
+    /// 06-15  User-defined
+    /// ```
+    ///
+    /// This defines the upper 10 bits of the port key. The values can be from
+    /// 0
+    /// - 1023. If not given, the system defaults to 0.
+    ///
+    /// This parameter has effect only in 802.3ad mode.
     pub ad_user_port_key: Option<u16>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    /// Specifies that duplicate frames (received on inactive ports) should be
+    /// dropped (0) or delivered (1).
+    ///
+    /// Normally, bonding will drop duplicate frames (received on inactive
+    /// ports), which is desirable for most users. But there are some times it
+    /// is nice to allow duplicate frames to be delivered.
     pub all_slaves_active: Option<BondAllPortsActive>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    /// Specifies the quantity of arp_ip_targets that must be reachable in
+    /// order for the ARP monitor to consider a port as being up. This
+    /// option affects only active-backup mode for ports with
+    /// arp_validation enabled.
     pub arp_all_targets: Option<BondArpAllTargets>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
         deserialize_with = "crate::deserializer::option_u32_or_string"
     )]
+    /// Specifies the ARP link monitoring frequency in milliseconds.
+    ///
+    /// The ARP monitor works by periodically checking the port devices to
+    /// determine whether they have sent or received traffic recently (the
+    /// precise criteria depends upon the bonding mode, and the state of the
+    /// port). Regular traffic is generated via ARP probes issued for the
+    /// addresses specified by the arp_ip_target option.
+    ///
+    /// This behavior can be modified by the arp_validate option,
+    /// below.
+    ///
+    /// If ARP monitoring is used in an etherchannel compatible mode (modes 0
+    /// and 2), the switch should be configured in a mode that evenly
+    /// distributes packets across all links. If the switch is configured to
+    /// distribute the packets in an XOR fashion, all replies from the ARP
+    /// targets will be received on the same link which could cause the other
+    /// team members to fail. ARP monitoring should not be used in conjunction
+    /// with miimon. A value of 0 disables ARP monitoring. The default value
+    /// is 0.
     pub arp_interval: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
+
+    /// Specifies the IP addresses to use as ARP monitoring peers when
+    /// arp_interval is > 0. These are the targets of the ARP request sent to
+    /// determine the health of the link to the targets. Specify these values
+    /// in ddd.ddd.ddd.ddd format. Multiple IP addresses must be separated by a
+    /// comma. At least one IP address must be given for ARP monitoring to
+    /// function. The maximum number of targets that can be specified is 16.
+    /// The default value is no IP addresses.
     pub arp_ip_target: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    /// Specifies whether or not ARP probes and replies should be validated in
+    /// any mode that supports arp monitoring, or whether non-ARP traffic
+    /// should be filtered (disregarded) for link monitoring purposes.
     pub arp_validate: Option<BondArpValidate>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
         deserialize_with = "crate::deserializer::option_u32_or_string"
     )]
+    /// Specifies the time, in milliseconds, to wait before disabling a port
+    /// after a link failure has been detected. This option is only valid for
+    /// the miimon link monitor. The downdelay value should be a multiple of
+    /// the miimon value; if not, it will be rounded down to the nearest
+    /// multiple. The default value is 0.
     pub downdelay: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    /// Specifies whether active-backup mode should set all ports to the same
+    /// MAC address at enportment (the traditional behavior), or, when enabled,
+    /// perform special handling of the bond's MAC address in accordance with
+    /// the selected policy.
     pub fail_over_mac: Option<BondFailOverMac>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    /// Option specifying the rate in which we'll ask our link partner to
+    /// transmit LACPDU packets in 802.3ad mode.
     pub lacp_rate: Option<BondLacpRate>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
         deserialize_with = "crate::deserializer::option_u32_or_string"
     )]
+    /// Specifies the number of seconds between instances where the bonding
+    /// driver sends learning packets to each slaves peer switch.
+    ///
+    /// The valid range is 1 - 0x7fffffff; the default value is 1. This Option
+    /// has effect only in balance-tlb and balance-alb modes.
     pub lp_interval: Option<u32>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
         deserialize_with = "crate::deserializer::option_u32_or_string"
     )]
+    /// Specifies the MII link monitoring frequency in milliseconds.
+    /// This determines how often the link state of each port is
+    /// inspected for link failures. A value of zero disables MII
+    /// link monitoring. A value of 100 is a good starting point.
+    /// The use_carrier option, below, affects how the link state is
+    /// determined. See the High Availability section for additional
+    /// information. The default value is 0.
     pub miimon: Option<u32>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
         deserialize_with = "crate::deserializer::option_u32_or_string"
     )]
+    /// Specifies the minimum number of links that must be active before
+    /// asserting carrier. It is similar to the Cisco EtherChannel min-links
+    /// feature. This allows setting the minimum number of member ports that
+    /// must be up (link-up state) before marking the bond device as up
+    /// (carrier on). This is useful for situations where higher level services
+    /// such as clustering want to ensure a minimum number of low bandwidth
+    /// links are active before switchover. This option only affect 802.3ad
+    /// mode.
+    ///
+    /// The default value is 0. This will cause carrier to be asserted (for
+    /// 802.3ad mode) whenever there is an active aggregator, regardless of the
+    /// number of available links in that aggregator. Note that, because an
+    /// aggregator cannot be active without at least one available link,
+    /// setting this option to 0 or to 1 has the exact same effect.
     pub min_links: Option<u32>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
         deserialize_with = "crate::deserializer::option_u8_or_string"
     )]
+    /// Specify the number of peer notifications (gratuitous ARPs and
+    /// unsolicited IPv6 Neighbor Advertisements) to be issued after a
+    /// failover event. As soon as the link is up on the new port
+    /// (possibly immediately) a peer notification is sent on the
+    /// bonding device and each VLAN sub-device. This is repeated at
+    /// the rate specified by peer_notif_delay if the number is
+    /// greater than 1.
+    ///
+    /// The valid range is 0 - 255; the default value is 1. These options
+    /// affect only the active-backup mode. These options were added for
+    /// bonding versions 3.3.0 and 3.4.0 respectively.
+    ///
+    /// From Linux 3.0 and bonding version 3.7.1, these notifications are
+    /// generated by the ipv4 and ipv6 code and the numbers of repetitions
+    /// cannot be set independently.
     pub num_grat_arp: Option<u8>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
         deserialize_with = "crate::deserializer::option_u8_or_string"
     )]
+    /// Identical to [BondOptions.num_grat_arp]
     pub num_unsol_na: Option<u8>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
         deserialize_with = "crate::deserializer::option_u32_or_string"
     )]
+    /// Specify the number of packets to transmit through a port before moving
+    /// to the next one. When set to 0 then a port is chosen at random.
+    ///
+    /// The valid range is 0 - 65535; the default value is 1. This option has
+    /// effect only in balance-rr mode.
     pub packets_per_slave: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    /// A string (eth0, eth2, etc) specifying which slave is the primary
+    /// device. The specified device will always be the active slave while
+    /// it is available. Only when the primary is off-line will alternate
+    /// devices be used. This is useful when one slave is preferred over
+    /// another, e.g., when one slave has higher throughput than another.
+    ///
+    /// The primary option is only valid for active-backup(1), balance-tlb (5)
+    /// and balance-alb (6) mode.
     pub primary: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    /// Specifies the reselection policy for the primary port. This affects
+    /// how the primary port is chosen to become the active port when failure
+    /// of the active port or recovery of the primary port occurs. This
+    /// option is designed to prevent flip-flopping between the primary port
+    /// and other ports.
     pub primary_reselect: Option<BondPrimaryReselect>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
         deserialize_with = "crate::deserializer::option_u32_or_string"
     )]
+    /// Specifies the number of IGMP membership reports to be issued after
+    /// a failover event. One membership report is issued immediately after
+    /// the failover, subsequent packets are sent in each 200ms interval.
+    ///
+    /// The valid range is 0 - 255; the default value is 1. A value of 0
+    /// prevents the IGMP membership report from being issued in response
+    /// to the failover event.
+    ///
+    /// This option is useful for bonding modes balance-rr (0), active-backup
+    /// (1), balance-tlb (5) and balance-alb (6), in which a failover can
+    /// switch the IGMP traffic from one port to another. Therefore a
+    /// fresh IGMP report must be issued to cause the switch to forward the
+    /// incoming IGMP traffic over the newly selected port.
     pub resend_igmp: Option<u32>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
         deserialize_with = "crate::deserializer::option_bool_or_string"
     )]
+    /// Specifies if dynamic shuffling of flows is enabled in tlb mode. The
+    /// value has no effect on any other modes.
+    ///
+    /// The default behavior of tlb mode is to shuffle active flows across
+    /// ports based on the load in that interval. This gives nice lb
+    /// characteristics but can cause packet reordering. If re-ordering is a
+    /// concern use this variable to disable flow shuffling and rely on load
+    /// balancing provided solely by the hash distribution. xmit-hash-policy
+    /// can be used to select the appropriate hashing for the setup.
+    ///
+    /// The sysfs entry can be used to change the setting per bond device and
+    /// the initial value is derived from the module parameter. The sysfs entry
+    /// is allowed to be changed only if the bond device is down.
+    ///
+    /// The default value is "1" that enables flow shuffling while value "0"
+    /// disables it. This option was added in bonding driver 3.7.1
     pub tlb_dynamic_lb: Option<bool>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
         deserialize_with = "crate::deserializer::option_u32_or_string"
     )]
+    /// Specifies the time, in milliseconds, to wait before enabling a port
+    /// after a link recovery has been detected. This option is only valid for
+    /// the miimon link monitor. The updelay value should be a multiple of the
+    /// miimon value; if not, it will be rounded down to the nearest multiple.
+    /// The default value is 0.
     pub updelay: Option<u32>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
         deserialize_with = "crate::deserializer::option_bool_or_string"
     )]
+    /// Specifies whether or not miimon should use MII or ETHTOOL
+    /// ioctls vs. netif_carrier_ok() to determine the link
+    /// status. The MII or ETHTOOL ioctls are less efficient and
+    /// utilize a deprecated calling sequence within the kernel.  The
+    /// netif_carrier_ok() relies on the device driver to maintain its
+    /// state with netif_carrier_on/off; at this writing, most, but
+    /// not all, device drivers support this facility.
+    ///
+    /// If bonding insists that the link is up when it should not be,
+    /// it may be that your network device driver does not support
+    /// netif_carrier_on/off.  The default state for netif_carrier is
+    /// "carrier on," so if a driver does not support netif_carrier,
+    /// it will appear as if the link is always up.  In this case,
+    /// setting use_carrier to 0 will cause bonding to revert to the
+    /// MII / ETHTOOL ioctl method to determine the link state.
+    ///
+    /// A value of 1 enables the use of netif_carrier_ok(), a value of
+    /// 0 will use the deprecated MII / ETHTOOL ioctls.  The default
+    /// value is 1.
     pub use_carrier: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    /// Selects the transmit hash policy to use for slave selection in
+    /// balance-xor, 802.3ad, and tlb modes.
     pub xmit_hash_policy: Option<BondXmitHashPolicy>,
     #[serde(
         skip_serializing_if = "Option::is_none",
