@@ -7,6 +7,20 @@ use crate::{BaseInterface, InterfaceType};
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
+/// IP over InfiniBand interface. The example yaml output of a
+/// [crate::NetworkState] with an infiniband interface would be:
+/// ```yaml
+/// ---
+/// interfaces:
+///   - name: ib2.8001
+///     type: infiniband
+///     state: up
+///     mtu: 1280
+///     infiniband:
+///       pkey: "0x8001"
+///       mode: "connected"
+///       base-iface: "ib2"
+/// ```
 pub struct InfiniBandInterface {
     #[serde(flatten)]
     pub base: BaseInterface,
@@ -32,7 +46,9 @@ impl InfiniBandInterface {
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum InfiniBandMode {
+    /// Deserialize and serialize from/to `datagram`.
     Datagram,
+    /// Deserialize and serialize from/to `connected`.
     Connected,
 }
 
@@ -59,13 +75,19 @@ impl std::fmt::Display for InfiniBandMode {
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
 pub struct InfiniBandConfig {
+    /// Mode of InfiniBand interface.
     pub mode: InfiniBandMode,
     #[serde(skip_serializing_if = "crate::serializer::is_option_string_empty")]
+    /// For pkey sub-interface only. Empty for base interface.
     pub base_iface: Option<String>,
     #[serde(
         serialize_with = "show_as_hex",
         deserialize_with = "crate::deserializer::option_u16_or_string"
     )]
+    /// P-key of sub-interface.
+    /// Serialize in hex string format(lower case).
+    /// For base interface, it is set to None.
+    /// The `0xffff` value also indicate this is a InfiniBand base interface.
     pub pkey: Option<u16>,
 }
 
