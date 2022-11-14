@@ -7,14 +7,49 @@ use crate::{ErrorKind, Interface, Interfaces, NmstateError};
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
+/// Single Root I/O Virtualization(SRIOV) configuration. The example yaml output
+/// of [crate::NetworkState] with SR-IOV enabled ethernet interface would be:
+/// ```yml
+/// interfaces:
+/// - name: ens1f1
+///   type: ethernet
+///   state: up
+///   mac-address: 00:11:22:33:44:55
+///   mtu: 1500
+///   min-mtu: 68
+///   max-mtu: 9702
+///   ethernet:
+///     sr-iov:
+///       total-vfs: 2
+///       vfs:
+///       - id: 0
+///         mac-address: 00:11:22:33:00:ff
+///         spoof-check: true
+///         trust: false
+///         min-tx-rate: 0
+///         max-tx-rate: 0
+///         vlan-id: 0
+///         qos: 0
+///       - id: 1
+///         mac-address: 00:11:22:33:00:ef
+///         spoof-check: true
+///         trust: false
+///         min-tx-rate: 0
+///         max-tx-rate: 0
+///         vlan-id: 0
+///         qos: 0
+/// ```
 pub struct SrIovConfig {
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
         deserialize_with = "crate::deserializer::option_u32_or_string"
     )]
+    /// The number of VFs enabled on PF.
+    /// Deserialize and serialize from/to `total-vfs`.
     pub total_vfs: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    /// VF specific configurations.
     pub vfs: Option<Vec<SrIovVfConfig>>,
 }
 
@@ -37,12 +72,14 @@ pub struct SrIovVfConfig {
     #[serde(skip)]
     pub(crate) iface_name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
+    /// Deserialize and serialize from/to `mac-address`.
     pub mac_address: Option<String>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
         deserialize_with = "crate::deserializer::option_bool_or_string"
     )]
+    /// Deserialize and serialize from/to `spoof-check`.
     pub spoof_check: Option<bool>,
     #[serde(
         skip_serializing_if = "Option::is_none",
@@ -55,18 +92,21 @@ pub struct SrIovVfConfig {
         default,
         deserialize_with = "crate::deserializer::option_u32_or_string"
     )]
+    /// Deserialize and serialize from/to `min_tx_rate`.
     pub min_tx_rate: Option<u32>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
         deserialize_with = "crate::deserializer::option_u32_or_string"
     )]
+    /// Deserialize and serialize from/to `max-tx-rate`.
     pub max_tx_rate: Option<u32>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
         deserialize_with = "crate::deserializer::option_u32_or_string"
     )]
+    /// Deserialize and serialize from/to `vlan-id`.
     pub vlan_id: Option<u32>,
     #[serde(
         skip_serializing_if = "Option::is_none",
