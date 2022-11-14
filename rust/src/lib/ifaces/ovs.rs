@@ -8,6 +8,39 @@ use crate::{
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
+/// OpenvSwitch bridge interface. Example yaml output of [crate::NetworkState]
+/// with an OVS bridge:
+/// ```yaml
+/// ---
+/// interfaces:
+/// - name: br0
+///   type: ovs-interface
+///   state: up
+///   ipv4:
+///     address:
+///     - ip: 192.0.2.252
+///       prefix-length: 24
+///     - ip: 192.0.2.251
+///       prefix-length: 24
+///     dhcp: false
+///     enabled: true
+///   ipv6:
+///     address:
+///       - ip: 2001:db8:2::1
+///         prefix-length: 64
+///       - ip: 2001:db8:1::1
+///         prefix-length: 64
+///     autoconf: false
+///     dhcp: false
+///     enabled: true
+/// - name: br0
+///   type: ovs-bridge
+///   state: up
+///   bridge:
+///     port:
+///     - name: br0
+///     - name: eth1
+/// ```
 pub struct OvsBridgeInterface {
     #[serde(flatten)]
     pub base: BaseInterface,
@@ -72,6 +105,7 @@ pub struct OvsBridgeConfig {
         rename = "port",
         alias = "ports"
     )]
+    /// Serialize to 'port'. Deserialize from `port` or `ports`.
     pub ports: Option<Vec<OvsBridgePortConfig>>,
 }
 
@@ -102,10 +136,14 @@ pub struct OvsBridgeOptions {
         default,
         deserialize_with = "crate::deserializer::option_bool_or_string"
     )]
+    /// Deserialize and serialize from/to `mcast-snooping-enable`.
     pub mcast_snooping_enable: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    /// Deserialize and serialize from/to `fail-mode`.
     pub fail_mode: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    /// Set to `netdev` for DPDK.
+    /// Deserialize and serialize from/to `datapath`.
     pub datapath: Option<String>,
 }
 
@@ -137,6 +175,57 @@ impl OvsBridgePortConfig {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
+/// OpenvSwitch internal interface. Example yaml output of [crate::NetworkState]
+/// with an DPDK enabled OVS interface:
+/// ```yml
+/// ---
+/// interfaces:
+/// - name: ovs0
+///   type: ovs-interface
+///   state: up
+///   dpdk:
+///     devargs: "0000:af:00.1"
+///     rx-queue: 100
+/// - name: br0
+///   type: ovs-bridge
+///   state: up
+///   bridge:
+///     options:
+///       datapath: "netdev"
+///     port:
+///     - name: ovs0
+/// ovs-db:
+///   other_config:
+///     dpdk-init: "true"
+/// ```
+///
+/// The yaml example of OVS pathing:
+/// ```yml
+/// ---
+/// interfaces:
+/// - name: patch0
+///   type: ovs-interface
+///   state: up
+///   patch:
+///     peer: patch1
+/// - name: ovs-br0
+///   type: ovs-bridge
+///   state: up
+///   bridge:
+///     port:
+///     - name: patch0
+/// - name: patch1
+///   type: ovs-interface
+///   state: up
+///   patch:
+///     peer: patch0
+/// - name: ovs-br1
+///   type: ovs-bridge
+///   state: up
+///   bridge:
+///     port:
+///     - name: patch1
+/// ```
 pub struct OvsInterface {
     #[serde(flatten)]
     pub base: BaseInterface,
@@ -204,6 +293,30 @@ impl OvsInterface {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
+/// The example yaml output of OVS bond:
+/// ```yml
+/// ---
+/// interfaces:
+/// - name: eth1
+///   type: ethernet
+///   state: up
+/// - name: eth2
+///   type: ethernet
+///   state: up
+/// - name: br0
+///   type: ovs-bridge
+///   state: up
+///   bridge:
+///     port:
+///     - name: veth1
+///     - name: ovs0
+///     - name: bond1
+///       link-aggregation:
+///         mode: balance-slb
+///         port:
+///           - name: eth2
+///           - name: eth1
+/// ```
 pub struct OvsBridgeBondConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub mode: Option<OvsBridgeBondMode>,
@@ -212,18 +325,21 @@ pub struct OvsBridgeBondConfig {
         rename = "port",
         alias = "ports"
     )]
+    /// Serialize to 'port'. Deserialize from `port` or `ports`.
     pub ports: Option<Vec<OvsBridgeBondPortConfig>>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
         deserialize_with = "crate::deserializer::option_u32_or_string"
     )]
+    /// Deserialize and serialize from/to `bond-downdelay`.
     pub bond_downdelay: Option<u32>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
         deserialize_with = "crate::deserializer::option_u32_or_string"
     )]
+    /// Deserialize and serialize from/to `bond-updelay`.
     pub bond_updelay: Option<u32>,
 }
 
@@ -260,9 +376,13 @@ impl OvsBridgeBondPortConfig {
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum OvsBridgeBondMode {
+    /// Deserialize and serialize from/to `active-backup`.
     ActiveBackup,
+    /// Deserialize and serialize from/to `balance-slb`.
     BalanceSlb,
+    /// Deserialize and serialize from/to `balance-tcp`.
     BalanceTcp,
+    /// Deserialize and serialize from/to `lacp`.
     Lacp,
 }
 
@@ -316,5 +436,6 @@ pub struct OvsPatchConfig {
 pub struct OvsDpdkConfig {
     pub devargs: String,
     #[serde(skip_serializing_if = "Option::is_none")]
+    /// Deserialize and serialize from/to `rx-queue`.
     pub rx_queue: Option<u32>,
 }
