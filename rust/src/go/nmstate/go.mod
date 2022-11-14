@@ -1,4 +1,4 @@
-module github.com/nmstate/nmstate/rust/src/go/nmstate
+module github.com/nmstate/nmstate/rust/src/go/nmstate/v2
 
 go 1.16
 
