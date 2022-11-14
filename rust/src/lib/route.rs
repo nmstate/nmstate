@@ -58,6 +58,10 @@ impl Routes {
     }
 
     /// TODO: hide it, internal only
+    pub fn is_empty(&self) -> bool {
+        self.running.is_none() && self.config.is_none()
+    }
+
     pub fn validate(&self) -> Result<(), NmstateError> {
         // All desire non-absent route should have next hop interface
         if let Some(config_routes) = self.config.as_ref() {

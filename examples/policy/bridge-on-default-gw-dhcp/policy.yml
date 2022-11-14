@@ -1,0 +1,23 @@
+---
+capture:
+  default-gw: routes.running.destination=="0.0.0.0/0"
+  base-iface: >-
+    interfaces.name==capture.default-gw.routes.running.0.next-hop-interface
+desiredState:
+  interfaces:
+    - name: br1
+      description: >-
+        DHCP aware Linux bridge to connect a nic that is referenced by a
+        default gateway
+      type: linux-bridge
+      state: up
+      mac-address: "{{ capture.base-iface.interfaces.0.mac-address }}"
+      ipv4:
+        dhcp: true
+        enabled: true
+      bridge:
+        options:
+          stp:
+            enabled: false
+        port:
+          - name: "{{ capture.base-iface.interfaces.0.name }}"

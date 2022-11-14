@@ -8,6 +8,8 @@ mod checkpoint;
 mod gen_conf;
 mod logger;
 #[cfg(feature = "query_apply")]
+mod policy;
+#[cfg(feature = "query_apply")]
 mod query;
 
 use std::ffi::CString;
@@ -26,6 +28,8 @@ pub use crate::checkpoint::{
 };
 #[cfg(feature = "gen_conf")]
 pub use crate::gen_conf::nmstate_generate_configurations;
+#[cfg(feature = "query_apply")]
+pub use crate::policy::nmstate_net_state_from_policy;
 #[cfg(feature = "query_apply")]
 pub use crate::query::nmstate_net_state_retrieve;
 

@@ -1,0 +1,18 @@
+---
+capture:
+  eth1-iface: interfaces.name == "eth1"
+  eth1-routes: routes.running.next-hop-interface == "eth1"
+  dns: dns-resolver.running
+desiredState:
+  interfaces:
+    - name: eth1
+      type: ethernet
+      state: up
+      ipv4:
+        address: "{{ capture.eth1-iface.interfaces.0.ipv4.address }}"
+        dhcp: false
+        enabled: true
+  routes:
+    config: "{{ capture.eth1-routes.routes.running }}"
+  dns-resolver:
+    config: "{{ capture.dns.dns-resolver.running }}"

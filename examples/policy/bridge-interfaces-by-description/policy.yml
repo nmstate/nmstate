@@ -1,0 +1,20 @@
+---
+capture:
+  primary-nic: interfaces.description == "primary"
+  secondary-nic: interfaces.description == "secondary"
+desiredState:
+  interfaces:
+    - name: br1
+      type: linux-bridge
+      state: up
+      mac-address: "{{ capture.primary-nic.interfaces.0.mac-address }}"
+      ipv4:
+        dhcp: true
+        enabled: true
+      bridge:
+        options:
+          stp:
+            enabled: false
+        port:
+          - name: "{{ capture.primary-nic.interfaces.0.name }}"
+          - name: "{{ capture.secondary-nic.interfaces.0.name }}"

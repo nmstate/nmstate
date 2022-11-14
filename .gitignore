@@ -27,6 +27,7 @@ _kubevirtci
 rust/Cargo.lock
 rust/target
 rust/src/clib/test/nmstate_test
+rust/src/clib/test/nmpolicy_test
 rust/src/clib/test/vgcore*
 rust/src/clib/nmstate.h
 rust/vendor/

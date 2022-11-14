@@ -103,6 +103,8 @@ mod ovs;
 #[cfg(feature = "query_apply")]
 mod ovsdb;
 #[cfg(feature = "query_apply")]
+mod policy;
+#[cfg(feature = "query_apply")]
 mod query_apply;
 mod route;
 mod route_rule;
@@ -151,5 +153,9 @@ pub use crate::lldp::{
 pub use crate::mptcp::{MptcpAddressFlag, MptcpConfig};
 pub use crate::net_state::NetworkState;
 pub use crate::ovs::{OvsDbGlobalConfig, OvsDbIfaceConfig};
+#[cfg(feature = "query_apply")]
+pub use crate::policy::{
+    NetworkCaptureRules, NetworkPolicy, NetworkStateTemplate,
+};
 pub use crate::route::{RouteEntry, RouteState, Routes};
 pub use crate::route_rule::{RouteRuleEntry, RouteRuleState, RouteRules};

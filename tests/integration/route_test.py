@@ -229,7 +229,7 @@ def test_change_gateway(eth1_up):
     _assert_routes(routes, cur_state)
 
 
-def _assert_routes(routes, state):
+def _assert_routes(routes, state, nic="eth1"):
     """
     Assuming we are all operating eth1 routes
     """
@@ -242,7 +242,7 @@ def _assert_routes(routes, state):
     routes.sort(key=_route_sort_key)
     config_routes = []
     for config_route in state[Route.KEY][Route.CONFIG]:
-        if config_route[Route.NEXT_HOP_INTERFACE] == "eth1":
+        if config_route[Route.NEXT_HOP_INTERFACE] == nic:
             config_routes.append(config_route)
 
     # The kernel routes contains more route entries than desired config

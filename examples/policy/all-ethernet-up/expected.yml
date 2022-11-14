@@ -1,0 +1,16 @@
+---
+interfaces:
+  - accept-all-mac-addresses: false
+    lldp:
+      enabled: true
+    mac-address: 52:55:00:D1:55:01
+    name: eth0
+    state: up
+    type: ethernet
+  - accept-all-mac-addresses: false
+    lldp:
+      enabled: true
+    mac-address: 52:55:00:D1:57:03
+    name: eth4
+    state: up
+    type: ethernet

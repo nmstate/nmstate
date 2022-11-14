@@ -1,0 +1,18 @@
+---
+interfaces:
+  - name: br1
+    description: >-
+      DHCP aware Linux bridge to connect a nic that is
+      referenced by a default gateway
+    type: linux-bridge
+    state: up
+    mac-address: 00:00:5E:00:00:01
+    ipv4:
+      dhcp: true
+      enabled: true
+    bridge:
+      options:
+        stp:
+          enabled: false
+      port:
+        - name: eth1

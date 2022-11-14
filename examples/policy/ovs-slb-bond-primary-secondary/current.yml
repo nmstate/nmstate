@@ -1,0 +1,18 @@
+---
+interfaces:
+  - name: eth1
+    description: primary
+    type: ethernet
+    state: up
+    mac-address: 00:00:5E:00:00:01
+    ipv4:
+      dhcp: true
+      enabled: true
+  - name: eth2
+    description: secondary
+    type: ethernet
+    state: up
+    mac-address: 00:00:5E:00:00:02
+    ipv4:
+      dhcp: true
+      enabled: true

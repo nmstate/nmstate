@@ -80,6 +80,10 @@ impl Interfaces {
         Self::default()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.kernel_ifaces.is_empty() && self.user_ifaces.is_empty()
+    }
+
     /// Extract internal interfaces to `Vec()`.
     pub fn to_vec(&self) -> Vec<&Interface> {
         let mut ifaces = Vec::new();
