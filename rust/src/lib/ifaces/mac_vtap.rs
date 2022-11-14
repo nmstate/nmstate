@@ -6,10 +6,24 @@ use crate::{BaseInterface, ErrorKind, InterfaceType, NmstateError};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
+/// Linux kernel MAC VTAP interface. The example output of [crate::NetworkState]
+/// with a mac vtap interface would be:
+/// ```yml
+/// ---
+/// interfaces:
+///   - name: mac0
+///     type: mac-vtap
+///     state: up
+///     mac-vtap:
+///       base-iface: eth1
+///       mode: passthru
+///       promiscuous: true
+/// ```
 pub struct MacVtapInterface {
     #[serde(flatten)]
     pub base: BaseInterface,
     #[serde(skip_serializing_if = "Option::is_none", rename = "mac-vtap")]
+    /// Deserialize and serialize from/to `mac-vtap`.
     pub mac_vtap: Option<MacVtapConfig>,
 }
 
@@ -66,6 +80,8 @@ pub struct MacVtapConfig {
         default,
         deserialize_with = "crate::deserializer::option_bool_or_string"
     )]
+    /// Serialize to `promiscuous`.
+    /// Deserialize from `promiscuous` or `accept-all-mac`.
     pub accept_all_mac: Option<bool>,
 }
 
@@ -73,10 +89,15 @@ pub struct MacVtapConfig {
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum MacVtapMode {
+    /// Deserialize and serialize from/to `vepa`.
     Vepa,
+    /// Deserialize and serialize from/to `bridge`.
     Bridge,
+    /// Deserialize and serialize from/to `private`.
     Private,
+    /// Deserialize and serialize from/to `passthru`.
     Passthru,
+    /// Deserialize and serialize from/to `source`.
     Source,
     Unknown,
 }

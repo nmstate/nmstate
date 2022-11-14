@@ -1,13 +1,29 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use serde::{Deserialize, Serialize};
 
 use crate::{BaseInterface, ErrorKind, InterfaceType, NmstateError};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
+/// Linux kernel MAC VLAN interface. The example yaml output of
+/// [crate::NetworkState] with a mac vlan interface would be:
+/// ```yaml
+/// ---
+/// interfaces:
+///   - name: mac0
+///     type: mac-vlan
+///     state: up
+///     mac-vlan:
+///       base-iface: eth1
+///       mode: vepa
+///       promiscuous: true
+/// ```
 pub struct MacVlanInterface {
     #[serde(flatten)]
     pub base: BaseInterface,
     #[serde(skip_serializing_if = "Option::is_none", rename = "mac-vlan")]
+    /// Deserialize and serialize from/to `mac-vlan`.
     pub mac_vlan: Option<MacVlanConfig>,
 }
 
@@ -64,6 +80,8 @@ pub struct MacVlanConfig {
         default,
         deserialize_with = "crate::deserializer::option_bool_or_string"
     )]
+    /// Serialize to `promiscuous`.
+    /// Deserialize from `promiscuous` or `accept-all-mac`.
     pub accept_all_mac: Option<bool>,
 }
 
@@ -71,10 +89,15 @@ pub struct MacVlanConfig {
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum MacVlanMode {
+    /// Deserialize and serialize from/to `vepa`.
     Vepa,
+    /// Deserialize and serialize from/to `bridge`.
     Bridge,
+    /// Deserialize and serialize from/to `private`.
     Private,
+    /// Deserialize and serialize from/to `passthru`.
     Passthru,
+    /// Deserialize and serialize from/to `source`.
     Source,
     Unknown,
 }
