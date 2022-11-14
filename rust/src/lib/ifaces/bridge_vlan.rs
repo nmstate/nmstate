@@ -7,22 +7,29 @@ use serde::{Deserialize, Deserializer, Serialize};
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
+/// Bridge VLAN filtering configuration
 pub struct BridgePortVlanConfig {
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
         deserialize_with = "crate::deserializer::option_bool_or_string"
     )]
+    /// Enable native VLAN.
+    /// Deserialize and serialize from/to `enable-native`.
     pub enable_native: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    /// Bridge VLAN filtering mode
     pub mode: Option<BridgePortVlanMode>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
         deserialize_with = "crate::deserializer::option_u16_or_string"
     )]
+    /// VLAN Tag for native VLAN.
     pub tag: Option<u16>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    /// Trunk tags.
+    /// Deserialize and serialize from/to `trunk-tags`.
     pub trunk_tags: Option<Vec<BridgePortTunkTag>>,
 }
 
@@ -52,7 +59,9 @@ impl BridgePortVlanConfig {
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum BridgePortVlanMode {
+    /// Trunk mode
     Trunk,
+    /// Access mode
     Access,
 }
 
@@ -80,7 +89,9 @@ impl std::fmt::Display for BridgePortVlanMode {
 #[non_exhaustive]
 pub enum BridgePortTunkTag {
     #[serde(deserialize_with = "crate::deserializer::u16_or_string")]
+    /// Single VLAN trunk ID
     Id(u16),
+    /// VLAN trunk ID range
     IdRange(BridgePortVlanRange),
 }
 
@@ -143,7 +154,9 @@ impl BridgePortTunkTag {
 #[serde(deny_unknown_fields)]
 pub struct BridgePortVlanRange {
     #[serde(deserialize_with = "crate::deserializer::u16_or_string")]
+    /// Maximum VLAN ID(included).
     pub max: u16,
     #[serde(deserialize_with = "crate::deserializer::u16_or_string")]
+    /// Minimum VLAN ID(included).
     pub min: u16,
 }
