@@ -98,6 +98,7 @@ pub struct NmSettingIp {
     pub dhcp_timeout: Option<i32>,
     pub gateway: Option<String>,
     pub may_fail: Option<bool>,
+    pub route_metric: Option<i64>,
     // IPv6 only
     pub ra_timeout: Option<i32>,
     // IPv6 only
@@ -138,6 +139,7 @@ impl TryFrom<DbusDictionary> for NmSettingIp {
             route_table: _from_map!(v, "route-table", u32::try_from)?,
             gateway: _from_map!(v, "gateway", String::try_from)?,
             may_fail: _from_map!(v, "may-fail", bool::try_from)?,
+            route_metric: _from_map!(v, "route-metric", i64::try_from)?,
             ..Default::default()
         };
 
@@ -253,6 +255,9 @@ impl ToDbusValue for NmSettingIp {
         }
         if let Some(v) = &self.may_fail {
             ret.insert("may-fail", zvariant::Value::new(v));
+        }
+        if let Some(v) = &self.route_metric {
+            ret.insert("route-metric", zvariant::Value::new(v));
         }
         ret.extend(self._other.iter().map(|(key, value)| {
             (key.as_str(), zvariant::Value::from(value.clone()))
