@@ -1,21 +1,5 @@
-#
-# Copyright (c) 2018-2021 Red Hat, Inc.
-#
-# This file is part of nmstate
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 2.1 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program. If not, see <https://www.gnu.org/licenses/>.
-#
+# SPDX-License-Identifier: LGPL-2.1-or-later
+
 from contextlib import contextmanager
 from copy import deepcopy
 import logging
@@ -1355,3 +1339,39 @@ def test_hide_addr_gen_mode_if_ipv6_disabled(dhcpcli_up_with_dynamic_ip):
         InterfaceIPv6.ADDR_GEN_MODE
         not in current_state[Interface.KEY][0][Interface.IPV6]
     )
+
+
+def test_auto_route_metric(dhcpcli_up_with_dynamic_ip):
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: DHCP_CLI_NIC,
+                    Interface.IPV4: {
+                        InterfaceIPv4.ENABLED: True,
+                        InterfaceIPv4.DHCP: True,
+                        InterfaceIPv4.AUTO_ROUTE_METRIC: 901,
+                    },
+                    Interface.IPV6: {
+                        InterfaceIPv6.ENABLED: True,
+                        InterfaceIPv6.DHCP: True,
+                        InterfaceIPv6.AUTOCONF: True,
+                        InterfaceIPv6.AUTO_ROUTE_METRIC: 902,
+                    },
+                }
+            ],
+        }
+    )
+    _poll(_has_auto_route_with_desired_metric, family=4, metric=901)
+    _poll(_has_auto_route_with_desired_metric, family=6, metric=902)
+
+
+def _has_auto_route_with_desired_metric(family, metric):
+    output = cmdlib.exec_cmd(
+        f"ip -{family} -j route show proto dhcp".split(), check=True
+    )[1]
+    ip_routes = json.loads(output)
+    if ip_routes:
+        return ip_routes[0].get("metric") == 901
+    else:
+        return False
