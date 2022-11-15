@@ -37,6 +37,9 @@ impl InterfaceIpv4 {
         if other.prop_list.contains(&"allow_extra_address") {
             self.allow_extra_address = other.allow_extra_address;
         }
+        if other.prop_list.contains(&"auto_route_metric") {
+            self.auto_route_metric = other.auto_route_metric;
+        }
 
         for other_prop_name in &other.prop_list {
             if !self.prop_list.contains(other_prop_name) {
@@ -128,6 +131,9 @@ impl InterfaceIpv6 {
         }
         if other.prop_list.contains(&"addr_gen_mode") {
             self.addr_gen_mode = other.addr_gen_mode.clone();
+        }
+        if other.prop_list.contains(&"auto_route_metric") {
+            self.auto_route_metric = other.auto_route_metric;
         }
         for other_prop_name in &other.prop_list {
             if !self.prop_list.contains(other_prop_name) {

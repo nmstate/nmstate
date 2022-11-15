@@ -49,9 +49,11 @@ pub(crate) fn nm_ip_setting_to_nmstate4(
                 "auto_routes",
                 "auto_gateway",
                 "auto_table_id",
+                "auto_route_metric",
             ],
             dns: Some(nm_dns_to_nmstate(nm_ip_setting)),
             dhcp_client_id: nm_dhcp_client_id_to_nmstate(nm_ip_setting),
+            auto_route_metric: nm_ip_setting.route_metric.map(|i| i as u32),
             ..Default::default()
         }
     } else {
@@ -93,6 +95,7 @@ pub(crate) fn nm_ip_setting_to_nmstate6(
                 "auto_table_id",
                 "dhcp_duid",
                 "addr_gen_mode",
+                "auto_route_metric",
             ],
             dns: Some(nm_dns_to_nmstate(nm_ip_setting)),
             dhcp_duid: nm_dhcp_duid_to_nmstate(nm_ip_setting),
@@ -103,6 +106,7 @@ pub(crate) fn nm_ip_setting_to_nmstate6(
                     None
                 }
             },
+            auto_route_metric: nm_ip_setting.route_metric.map(|i| i as u32),
             ..Default::default()
         }
     } else {
