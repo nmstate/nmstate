@@ -77,6 +77,9 @@ def create_setting(config, base_con_profile):
             # when the DHCP timeout expired, set it to the maximum value to
             # make this unlikely.
             setting_ipv4.props.dhcp_timeout = INT32_MAX
+            route_metric = config.get(InterfaceIPv4.AUTO_ROUTE_METRIC)
+            if route_metric is not None:
+                setting_ipv4.props.route_metric = route_metric
         elif config.get(InterfaceIPv4.ADDRESS):
             setting_ipv4.props.method = NM.SETTING_IP4_CONFIG_METHOD_MANUAL
             _add_addresses(setting_ipv4, config[InterfaceIPv4.ADDRESS])
@@ -129,6 +132,8 @@ def get_info(active_connection, applied_config):
                 info[InterfaceIPv4.AUTO_GATEWAY] = not props.never_default
                 info[InterfaceIPv4.AUTO_DNS] = not props.ignore_auto_dns
                 info[InterfaceIPv4.AUTO_ROUTE_TABLE_ID] = props.route_table
+                if props.route_metric >= 0:
+                    info[InterfaceIPv4.AUTO_ROUTE_METRIC] = props.route_metric
                 if props.dhcp_client_id:
                     info[InterfaceIPv4.DHCP_CLIENT_ID] = props.dhcp_client_id
 

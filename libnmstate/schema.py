@@ -148,6 +148,7 @@ class InterfaceIP:
     AUTO_GATEWAY = "auto-gateway"
     AUTO_ROUTES = "auto-routes"
     AUTO_ROUTE_TABLE_ID = "auto-route-table-id"
+    AUTO_ROUTE_METRIC = "auto-route-metric"
 
 
 class InterfaceIPv4(InterfaceIP):

@@ -61,6 +61,7 @@ class IPState:
                 InterfaceIP.AUTO_ROUTES,
                 InterfaceIP.AUTO_GATEWAY,
                 InterfaceIP.AUTO_DNS,
+                InterfaceIP.AUTO_ROUTE_METRIC,
             ):
                 self._info.pop(dhcp_option, None)
 
