@@ -71,6 +71,13 @@ struct InterfaceIp {
         deserialize_with = "crate::deserializer::option_u32_or_string"
     )]
     pub auto_table_id: Option<u32>,
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "auto-route-metric",
+        default,
+        deserialize_with = "crate::deserializer::option_u32_or_string"
+    )]
+    pub auto_route_metric: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none", rename = "addr-gen-mode")]
     pub addr_gen_mode: Option<Ipv6AddrGenMode>,
     #[serde(
@@ -142,6 +149,10 @@ pub struct InterfaceIpv4 {
     /// Ignore when serializing.
     /// Deserialize from `allow-extra-address`
     pub allow_extra_address: bool,
+    /// Metric for routes retrieved from DHCP server.
+    /// Only available for DHCPv4 enabled interface.
+    /// Deserialize from `auto-route-metric`
+    pub auto_route_metric: Option<u32>,
 }
 
 impl Default for InterfaceIpv4 {
@@ -158,6 +169,7 @@ impl Default for InterfaceIpv4 {
             auto_routes: None,
             auto_table_id: None,
             allow_extra_address: default_allow_extra_address(),
+            auto_route_metric: None,
         }
     }
 }
@@ -191,6 +203,7 @@ impl InterfaceIpv4 {
             self.auto_gateway = None;
             self.auto_routes = None;
             self.auto_table_id = None;
+            self.auto_route_metric = None;
         }
     }
 
@@ -296,6 +309,7 @@ impl From<InterfaceIp> for InterfaceIpv4 {
             auto_gateway: ip.auto_gateway,
             auto_table_id: ip.auto_table_id,
             allow_extra_address: ip.allow_extra_address,
+            auto_route_metric: ip.auto_route_metric,
             ..Default::default()
         }
     }
@@ -318,6 +332,7 @@ impl From<InterfaceIpv4> for InterfaceIp {
             auto_gateway: ip.auto_gateway,
             auto_table_id: ip.auto_table_id,
             allow_extra_address: ip.allow_extra_address,
+            auto_route_metric: ip.auto_route_metric,
             ..Default::default()
         }
     }
@@ -393,6 +408,10 @@ pub struct InterfaceIpv6 {
     /// Ignored when serializing.
     /// Deserialize from `allow-extra-address`.
     pub allow_extra_address: bool,
+    /// Metric for routes retrieved from DHCP server.
+    /// Only available for autoconf enabled interface.
+    /// Deserialize from `auto-route-metric`.
+    pub auto_route_metric: Option<u32>,
 }
 
 impl Default for InterfaceIpv6 {
@@ -411,6 +430,7 @@ impl Default for InterfaceIpv6 {
             auto_routes: None,
             auto_table_id: None,
             allow_extra_address: default_allow_extra_address(),
+            auto_route_metric: None,
         }
     }
 }
@@ -445,6 +465,7 @@ impl InterfaceIpv6 {
             self.auto_gateway = None;
             self.auto_routes = None;
             self.auto_table_id = None;
+            self.auto_route_metric = None;
         }
     }
 
@@ -567,6 +588,7 @@ impl From<InterfaceIp> for InterfaceIpv6 {
             auto_table_id: ip.auto_table_id,
             addr_gen_mode: ip.addr_gen_mode,
             allow_extra_address: ip.allow_extra_address,
+            auto_route_metric: ip.auto_route_metric,
             ..Default::default()
         }
     }
@@ -591,6 +613,7 @@ impl From<InterfaceIpv6> for InterfaceIp {
             auto_table_id: ip.auto_table_id,
             addr_gen_mode: ip.addr_gen_mode,
             allow_extra_address: ip.allow_extra_address,
+            auto_route_metric: ip.auto_route_metric,
             ..Default::default()
         }
     }

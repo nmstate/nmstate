@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use std::ops::BitXor;
 
 use super::{
@@ -55,6 +57,7 @@ fn gen_nm_ipv4_setting<'a>(
     if iface_ip.is_auto() {
         nm_setting.gateway = None;
         nm_setting.dhcp_timeout = Some(i32::MAX);
+        nm_setting.route_metric = iface_ip.auto_route_metric.map(|i| i.into());
         nm_setting.dhcp_client_id = Some(nmstate_dhcp_client_id_to_nm(
             iface_ip
                 .dhcp_client_id
@@ -161,6 +164,7 @@ fn gen_nm_ipv6_setting<'a>(
                 .to_string(),
         );
         nm_setting.dhcp_iaid = Some("mac".to_string());
+        nm_setting.route_metric = iface_ip.auto_route_metric.map(|i| i.into());
         apply_dhcp_opts(
             &mut nm_setting,
             iface_ip.auto_dns,
