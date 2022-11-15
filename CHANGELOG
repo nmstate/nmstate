@@ -1,4 +1,20 @@
 # Changelog
+## [2.2.1] - 2022-10-17
+### Breaking changes
+ - Minimum supported rust version 1.60. (e997a2bb)
+
+### New features
+ - Support IP route rule fwmark and fwmask. (95f1c193)
+ - Support `dns-data` in NetworkManager 1.41+. (89d2fb0b)
+ - Support IP route rule `from all to all`. (c53dc568)
+ - Support bond `balance-slb` option. (16dadebe)
+ - Support custom metric for DHCPv4 and IPv6-RA routes. (288014f1)
+ - Introduce nmpolicy. (badcee4c)
+
+### Bug fixes
+ - Fix deleting interface created by iproute. (dcea700a)
+ - Fix infiniband parent UUID problem. (883f36fb)
+
 ## [2.2.0] - 2022-10-17
 ### Breaking changes
  - Change of old behaviour: allow extra IP address found in verification stage.
