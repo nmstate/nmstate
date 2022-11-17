@@ -27,7 +27,7 @@ from libnmstate.schema import Route
 from ..ifaces import BaseIface
 from .common import NM
 
-INT32_MAX = 2 ** 31 - 1
+INT32_MAX = 2**31 - 1
 
 
 def create_setting(config, base_con_profile):
