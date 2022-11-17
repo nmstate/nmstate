@@ -1,4 +1,4 @@
-# We are Nmstate!
+# Nmstate: A Declarative Network API
 
 <img src="logo/fullcolor.png" alias="project logo" />
 
