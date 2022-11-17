@@ -27,7 +27,7 @@ use super::{
 
 use crate::{Interface, InterfaceType, NetworkState, NmstateError, RouteEntry};
 
-const ACTIVATION_RETRY_COUNT: usize = 5;
+const ACTIVATION_RETRY_COUNT: usize = 1;
 const ACTIVATION_RETRY_INTERVAL: u64 = 1;
 
 pub(crate) fn nm_apply(

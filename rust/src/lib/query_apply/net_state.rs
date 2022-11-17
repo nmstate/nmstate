@@ -16,7 +16,7 @@ const VERIFY_RETRY_INTERVAL_MILLISECONDS: u64 = 1000;
 const VERIFY_RETRY_COUNT: usize = 5;
 const VERIFY_RETRY_COUNT_SRIOV: usize = 60;
 const VERIFY_RETRY_COUNT_KERNEL_MODE: usize = 5;
-const VERIFY_RETRY_NM: usize = 2;
+const VERIFY_RETRY_NM: usize = 1;
 const MAX_SUPPORTED_INTERFACES: usize = 1000;
 
 impl NetworkState {

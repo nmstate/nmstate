@@ -25,7 +25,7 @@ pub struct NmApi<'a> {
 }
 
 const RETRY_INTERVAL_MILLISECOND: u64 = 500;
-const RETRY_COUNT: usize = 60;
+const RETRY_COUNT: usize = 1;
 
 impl<'a> NmApi<'a> {
     pub fn new() -> Result<Self, NmError> {
