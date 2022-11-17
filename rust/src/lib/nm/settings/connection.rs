@@ -22,7 +22,10 @@ use super::{
     wired::gen_nm_wired_setting,
 };
 
-use crate::{ErrorKind, Interface, InterfaceType, NetworkState, NmstateError};
+use crate::{
+    ErrorKind, Interface, InterfaceType, NetworkState, NmstateError,
+    OvsBridgePortConfig,
+};
 
 pub(crate) const NM_SETTING_BRIDGE_SETTING_NAME: &str = "bridge";
 pub(crate) const NM_SETTING_WIRED_SETTING_NAME: &str = "802-3-ethernet";
@@ -222,6 +225,26 @@ pub(crate) fn iface_to_nm_connections(
     // its NmSettingOvsIface setting
     if base_iface.controller.as_deref() == Some("") {
         nm_conn.ovs_iface = None;
+    }
+
+    // When user attaching new system port(ethernet) to existing OVS bridge
+    // using `controller` property without OVS bridge mentioned in desire,
+    // we need to create OVS port by ourselves.
+    if iface.base_iface().controller_type.as_ref()
+        == Some(&InterfaceType::OvsBridge)
+        && ctrl_iface.is_none()
+    {
+        if let Some(ctrl_name) = iface.base_iface().controller.as_ref() {
+            ret.push(create_ovs_port_nm_conn(
+                ctrl_name,
+                &OvsBridgePortConfig {
+                    name: iface.name().to_string(),
+                    ..Default::default()
+                },
+                None,
+                stable_uuid,
+            )?)
+        }
     }
 
     ret.insert(0, nm_conn);

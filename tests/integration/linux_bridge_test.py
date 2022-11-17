@@ -1,21 +1,5 @@
-#
-# Copyright (c) 2019-2021 Red Hat, Inc.
-#
-# This file is part of nmstate
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 2.1 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program. If not, see <https://www.gnu.org/licenses/>.
-#
+# SPDX-License-Identifier: LGPL-2.1-or-later
+
 from contextlib import contextmanager
 from copy import deepcopy
 import os
@@ -1158,3 +1142,24 @@ def test_policy_create_bridge_by_description_of_port(
             ),
             verify_change=False,
         )
+
+
+def test_add_port_to_br_with_controller_property(bridge0_with_port0, eth2_up):
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: "eth2",
+                    Interface.STATE: InterfaceState.UP,
+                    Interface.CONTROLLER: TEST_BRIDGE0,
+                }
+            ]
+        }
+    )
+    current_state = show_only([TEST_BRIDGE0])
+    br_iface = current_state[Interface.KEY][0]
+    br_ports = br_iface[LinuxBridge.CONFIG_SUBTREE][LinuxBridge.PORT_SUBTREE]
+    assert br_iface[Interface.NAME] == TEST_BRIDGE0
+    assert len(br_ports) == 2
+    assert br_ports[0][LinuxBridge.Port.NAME] == "eth1"
+    assert br_ports[1][LinuxBridge.Port.NAME] == "eth2"

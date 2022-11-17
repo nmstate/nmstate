@@ -345,3 +345,128 @@ fn test_overbook_swap_port_of_bond() {
 
     assert!(check_overbook_ports(&desired, &current).is_ok());
 }
+
+#[test]
+fn test_iface_controller_conflict_with_bond_ports() {
+    let mut ifaces = Interfaces::new();
+    ifaces.push(new_eth_iface("eth0"));
+    ifaces.push(bond_with_ports("bond0", &["eth0"]));
+    ifaces.push(bond_with_ports("bond1", &["eth1"]));
+    let mut iface = new_eth_iface("eth1");
+    iface.base_iface_mut().controller = Some("bond0".to_string());
+    ifaces.push(iface);
+
+    let result = ifaces.gen_state_for_apply(&Interfaces::new(), false);
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+    }
+}
+
+#[test]
+fn test_iface_controller_conflict_with_br_ports() {
+    let mut ifaces = Interfaces::new();
+    ifaces.push(new_eth_iface("eth0"));
+    ifaces.push(bridge_with_ports("br0", &["eth0"]));
+    ifaces.push(bridge_with_ports("br1", &["eth1"]));
+    let mut iface = new_eth_iface("eth1");
+    iface.base_iface_mut().controller = Some("br0".to_string());
+    ifaces.push(iface);
+
+    let result = ifaces.gen_state_for_apply(&Interfaces::new(), false);
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+    }
+}
+
+#[test]
+fn test_iface_controller_prop_only_in_desire() {
+    let mut current = Interfaces::new();
+    current.push(new_eth_iface("eth0"));
+    current.push(new_eth_iface("eth1"));
+    current.push(bridge_with_ports("br0", &["eth0"]));
+    let mut desired = Interfaces::new();
+    let mut iface = new_eth_iface("eth1");
+    iface.base_iface_mut().controller = Some("br0".to_string());
+    desired.push(iface);
+
+    let (_, chg_ifaces, _) =
+        desired.gen_state_for_apply(&current, false).unwrap();
+
+    let ifaces = chg_ifaces.to_vec();
+
+    assert_eq!(ifaces.len(), 1);
+    assert_eq!(ifaces[0].name(), "eth1");
+    assert_eq!(
+        ifaces[0].base_iface().controller.as_ref(),
+        Some(&"br0".to_string())
+    );
+    assert_eq!(
+        ifaces[0].base_iface().controller_type.as_ref(),
+        Some(&InterfaceType::LinuxBridge)
+    );
+}
+
+#[test]
+fn test_iface_controller_prop_only_in_desire_dup_ovs_br() {
+    let mut current = Interfaces::new();
+    current.push(new_eth_iface("eth0"));
+    current.push(new_eth_iface("eth1"));
+    current.push(new_ovs_iface("br0", "br0"));
+    current.push(new_ovs_br_iface("br0", &["eth0", "eth1", "br0"]));
+    let mut desired = Interfaces::new();
+    let mut iface = new_eth_iface("eth1");
+    iface.base_iface_mut().controller = Some("br0".to_string());
+    desired.push(iface);
+
+    let (_, chg_ifaces, _) =
+        desired.gen_state_for_apply(&current, false).unwrap();
+
+    let ifaces = chg_ifaces.to_vec();
+
+    assert_eq!(ifaces.len(), 1);
+    assert_eq!(ifaces[0].name(), "eth1");
+    assert_eq!(
+        ifaces[0].base_iface().controller.as_ref(),
+        Some(&"br0".to_string())
+    );
+    assert_eq!(
+        ifaces[0].base_iface().controller_type.as_ref(),
+        Some(&InterfaceType::OvsBridge)
+    );
+}
+
+#[test]
+fn test_iface_controller_been_list_in_other_port_list() {
+    let mut current = Interfaces::new();
+    current.push(new_eth_iface("eth0"));
+    current.push(bond_with_ports("bond0", &["eth0"]));
+
+    let mut ifaces = Interfaces::new();
+    ifaces.push(bond_with_ports("bond1", &["eth1"]));
+    let mut iface = new_eth_iface("eth1");
+    iface.base_iface_mut().controller = Some("bond0".to_string());
+    ifaces.push(iface);
+
+    let result = ifaces.gen_state_for_apply(&current, false);
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+    }
+}
+
+#[test]
+fn test_iface_detach_controller_been_list_in_other_port_list() {
+    let mut ifaces = Interfaces::new();
+    ifaces.push(bond_with_ports("bond1", &["eth0"]));
+    let mut iface = new_eth_iface("eth0");
+    iface.base_iface_mut().controller = Some("".to_string());
+    ifaces.push(iface);
+
+    let result = ifaces.gen_state_for_apply(&Interfaces::new(), false);
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+    }
+}
