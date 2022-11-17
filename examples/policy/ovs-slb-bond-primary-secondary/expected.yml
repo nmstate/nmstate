@@ -1,0 +1,25 @@
+---
+interfaces:
+  - name: br1-iface
+    type: ovs-interface
+    state: up
+    mac-address: 00:00:5E:00:00:01
+    ipv4:
+      dhcp: true
+      enabled: true
+  - name: br1
+    type: ovs-bridge
+    state: up
+    bridge:
+      options:
+        stp: false
+        mcast-snooping-enable: false
+        rstp: false
+      port:
+        - name: bond0
+          link-aggregation:
+            mode: balance-slb
+            port:
+              - name: eth1
+              - name: eth2
+        - name: br1-iface

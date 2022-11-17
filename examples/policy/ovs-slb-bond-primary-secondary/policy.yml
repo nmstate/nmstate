@@ -1,0 +1,27 @@
+---
+capture:
+  primary-nic: interfaces.description == "primary"
+  secondary-nic: interfaces.description == "secondary"
+desiredState:
+  interfaces:
+    - name: br1-iface
+      type: ovs-interface
+      state: up
+      mac-address: "{{ capture.primary-nic.interfaces.0.mac-address }}"
+      ipv4: "{{ capture.primary-nic.interfaces.0.ipv4 }}"
+    - name: br1
+      type: ovs-bridge
+      state: up
+      bridge:
+        options:
+          stp: false
+          mcast-snooping-enable: false
+          rstp: false
+        port:
+          - name: bond0
+            link-aggregation:
+              mode: balance-slb
+              port:
+                - name: "{{ capture.primary-nic.interfaces.0.name }}"
+                - name: "{{ capture.secondary-nic.interfaces.0.name }}"
+          - name: br1-iface

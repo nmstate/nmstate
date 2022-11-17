@@ -1,0 +1,11 @@
+---
+interfaces:
+  - name: br1
+    type: linux-bridge
+    state: down
+  - name: br2
+    type: linux-bridge
+    state: down
+  - name: br3
+    type: linux-bridge
+    state: down

@@ -36,6 +36,10 @@ impl RouteRules {
         Self::default()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.config.is_none()
+    }
+
     // * Neither ip_from nor ip_to should be defined
     pub(crate) fn validate(&self) -> Result<(), NmstateError> {
         if let Some(rules) = self.config.as_ref() {

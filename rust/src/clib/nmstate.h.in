@@ -129,8 +129,8 @@ int nmstate_net_state_apply(uint32_t flags, const char *state, uint32_t rollback
  *      0.1
  *
  * Description:
- *      Destroy the checkpoint, if no checkpoint 
- *      is passed it will destroy last active checkpoint 
+ *      Destroy the checkpoint, if no checkpoint
+ *      is passed it will destroy last active checkpoint
  *
  * @checkpoint:
  *      Checkpoint to destroy or empty to select the last active one.
@@ -161,8 +161,8 @@ int nmstate_checkpoint_commit(const char *checkpoint, char **log, char **err_kin
  *      0.1
  *
  * Description:
- *      Rollack the checkpoint, if no checkpoint 
- *      is passed it will rollback last active checkpoint 
+ *      Rollack the checkpoint, if no checkpoint
+ *      is passed it will rollback last active checkpoint
  *
  * @checkpoint:
  *      Checkpoint to rollback or empty to select the last active one.
@@ -224,6 +224,45 @@ int nmstate_generate_configurations(const char *state, char **configs,
                                     char **log, char **err_kind,
                                     char **err_msg);
 
+/**
+ * nmstate_net_state_from_policy - Generate network state from policy
+ *
+ * Version:
+ *      2.2
+ *
+ * Description:
+ *      Generate new network state from policy again specifed state
+ *
+ * @policy:
+ *      Pointer of char array for network policy in json format.
+ * @current_state:
+ *      Pointer of char array for current network state.
+ * @state:
+ *      Output pointer of char array for network state in json format.
+ *      The memory should be freed by nmstate_net_state_free().
+ * @log:
+ *      Output pointer of char array for logging.
+ *      The memory should be freed by nmstate_log_free().
+ * @err_kind:
+ *      Output pointer of char array for error kind.
+ *      The memory should be freed by nmstate_err_kind_free().
+ * @err_msg:
+ *      Output pointer of char array for error message.
+ *      The memory should be freed by nmstate_err_msg_free().
+ *
+ * Return:
+ *      Error code:
+ *          * NMSTATE_PASS
+ *              On success.
+ *          * NMSTATE_FAIL
+ *              On failure.
+ */
+int nmstate_net_state_from_policy(const char *policy,
+                                  const char *current_state,
+                                  char **state,
+                                  char **log,
+                                  char **err_kind,
+                                  char **err_msg);
 /**
  * nmstate_cstring_free - free the memory of C string
  *

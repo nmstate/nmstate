@@ -1,0 +1,13 @@
+---
+interfaces:
+  - name: eth0
+    type: ethernet
+  - name: br1
+    type: linux-bridge
+    state: up
+  - name: br2
+    type: linux-bridge
+    state: up
+  - name: br3
+    type: linux-bridge
+    state: up

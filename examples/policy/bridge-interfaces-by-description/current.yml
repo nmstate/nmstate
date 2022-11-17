@@ -1,0 +1,12 @@
+---
+interfaces:
+  - name: eth0
+    description: primary
+    type: ethernet
+    state: up
+    mac-address: 00:00:5E:00:00:01
+  - name: eth1
+    description: secondary
+    type: ethernet
+    state: up
+    mac-address: 00:00:5E:00:00:02

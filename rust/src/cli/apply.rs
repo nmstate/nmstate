@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use std::convert::TryFrom;
 use std::fs::File;
 use std::io::{stdin, stdout, Read, Write};
 use std::process::{Command, Stdio};
 
-use nmstate::NetworkState;
+use nmstate::{NetworkPolicy, NetworkState};
 
 use crate::error::CliError;
 
@@ -51,7 +52,25 @@ where
     // Replace non-breaking space '\u{A0}'  to normal space
     reader.read_to_string(&mut content)?;
     let content = content.replace('\u{A0}', " ");
-    let mut net_state: NetworkState = serde_yaml::from_str(&content)?;
+
+    let mut net_state: NetworkState = match serde_yaml::from_str(&content) {
+        Ok(s) => s,
+        Err(_) => {
+            // Try NetworkPolicy
+            let net_policy: NetworkPolicy = match serde_yaml::from_str(&content)
+            {
+                Ok(p) => p,
+                Err(_) => {
+                    return Err(CliError::from(
+                        "Provide file is not valid NetworkState or \
+                            NetworkPolicy",
+                    ));
+                }
+            };
+            NetworkState::try_from(net_policy)?
+        }
+    };
+
     net_state.set_kernel_only(kernel_only);
     net_state.set_verify_change(!no_verify);
     net_state.set_commit(!no_commit);
