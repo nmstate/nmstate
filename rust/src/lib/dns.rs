@@ -52,6 +52,10 @@ impl DnsState {
         Self::default()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.running.is_none() && self.config.is_none()
+    }
+
     pub(crate) fn validate(&self) -> Result<(), NmstateError> {
         if let Some(dns_conf) = self.config.as_ref() {
             if let Some(config_srvs) = dns_conf.server.as_ref() {
@@ -117,6 +121,10 @@ pub struct DnsClientState {
 impl DnsClientState {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.server.is_none() && self.search.is_none()
     }
 
     // Whether user want to purge all DNS settings

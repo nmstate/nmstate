@@ -33,6 +33,8 @@ mod ovs;
 #[cfg(test)]
 mod ovsdb;
 #[cfg(test)]
+mod policy;
+#[cfg(test)]
 mod route;
 #[cfg(test)]
 mod route_rule;

@@ -211,6 +211,35 @@ def gen_conf(state):
     # pylint: enable=no-member
 
 
+def net_state_from_policy(policy, cur_state):
+    c_err_msg = c_char_p()
+    c_err_kind = c_char_p()
+    c_policy = c_char_p(json.dumps(policy).encode("utf-8"))
+    c_cur_state = c_char_p(json.dumps(cur_state).encode("utf-8"))
+    c_state = c_char_p()
+    c_log = c_char_p()
+    rc = lib.nmstate_net_state_from_policy(
+        c_policy,
+        c_cur_state,
+        byref(c_state),
+        byref(c_log),
+        byref(c_err_kind),
+        byref(c_err_msg),
+    )
+    state = c_state.value
+    err_msg = c_err_msg.value
+    err_kind = c_err_kind.value
+    parse_log(c_log.value)
+    lib.nmstate_cstring_free(c_log)
+    lib.nmstate_cstring_free(c_err_kind)
+    lib.nmstate_cstring_free(c_err_msg)
+    if rc != NMSTATE_PASS:
+        raise map_error(err_kind, err_msg)
+    # pylint: disable=no-member
+    return state.decode("utf-8")
+    # pylint: enable=no-member
+
+
 def map_error(err_kind, err_msg):
     err_msg = err_msg.decode("utf-8")
     err_kind = err_kind.decode("utf-8")
