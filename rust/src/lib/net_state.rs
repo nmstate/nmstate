@@ -8,7 +8,7 @@ use serde::{Deserialize, Deserializer, Serialize};
 use crate::{
     dns::{
         get_cur_dns_ifaces, is_dns_changed, purge_dns_config,
-        reselect_dns_ifaces,
+        reselect_dns_ifaces, validate_ipv6_link_local_address_dns_srv,
     },
     DnsState, ErrorKind, HostNameState, Interface, InterfaceType, Interfaces,
     NmstateError, OvsDbGlobalConfig, RouteRules, Routes,
@@ -530,6 +530,8 @@ impl NetworkState {
     ) -> Result<(), NmstateError> {
         let mut self_clone = self.clone();
         self_clone.dns.merge_current(&current.dns);
+
+        validate_ipv6_link_local_address_dns_srv(&self_clone, current)?;
 
         if is_dns_changed(&self_clone, current) {
             let (v4_iface_name, v6_iface_name) =

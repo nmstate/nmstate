@@ -51,7 +51,7 @@ pub(crate) fn nm_ip_setting_to_nmstate4(
                 "auto_table_id",
                 "auto_route_metric",
             ],
-            dns: Some(nm_dns_to_nmstate(nm_ip_setting)),
+            dns: Some(nm_dns_to_nmstate("", nm_ip_setting)),
             dhcp_client_id: nm_dhcp_client_id_to_nmstate(nm_ip_setting),
             auto_route_metric: nm_ip_setting.route_metric.map(|i| i as u32),
             ..Default::default()
@@ -62,6 +62,7 @@ pub(crate) fn nm_ip_setting_to_nmstate4(
 }
 
 pub(crate) fn nm_ip_setting_to_nmstate6(
+    iface_name: &str,
     nm_ip_setting: &NmSettingIp,
 ) -> InterfaceIpv6 {
     if let Some(nm_ip_method) = &nm_ip_setting.method {
@@ -97,7 +98,7 @@ pub(crate) fn nm_ip_setting_to_nmstate6(
                 "addr_gen_mode",
                 "auto_route_metric",
             ],
-            dns: Some(nm_dns_to_nmstate(nm_ip_setting)),
+            dns: Some(nm_dns_to_nmstate(iface_name, nm_ip_setting)),
             dhcp_duid: nm_dhcp_duid_to_nmstate(nm_ip_setting),
             addr_gen_mode: {
                 if enabled {

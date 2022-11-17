@@ -74,6 +74,7 @@ IPV4_DEFAULT_GATEWAY = "0.0.0.0/0"
 
 IPV4_DNS_NAMESERVER = "8.8.8.8"
 IPV6_DNS_NAMESERVER = "2001:4860:4860::8888"
+IPV6_DNS_NAMESERVER_LOCAL = f"fe80::deef:1%{DHCP_CLI_NIC}"
 EXAMPLE_SEARCHES = ["example.org", "example.com"]
 
 DNSMASQ_CONF_STR = """
@@ -1408,3 +1409,48 @@ def _has_auto_route_with_desired_metric(family, metric):
         return ip_routes[0].get("metric") == 901
     else:
         return False
+
+
+@pytest.mark.tier1
+def test_ipv6_link_local_dns_srv(dhcpcli_up_with_dynamic_ip):
+    libnmstate.apply(
+        {
+            DNS.KEY: {
+                DNS.CONFIG: {
+                    DNS.SERVER: [
+                        IPV6_DNS_NAMESERVER,
+                        IPV6_DNS_NAMESERVER_LOCAL,
+                    ],
+                },
+            },
+            Interface.KEY: [
+                {
+                    Interface.NAME: DHCP_CLI_NIC,
+                    Interface.IPV4: {
+                        InterfaceIPv4.ENABLED: True,
+                        InterfaceIPv4.DHCP: True,
+                        InterfaceIPv4.AUTO_DNS: False,
+                    },
+                    Interface.IPV6: {
+                        InterfaceIPv6.ENABLED: True,
+                        InterfaceIPv6.DHCP: True,
+                        InterfaceIPv6.AUTOCONF: True,
+                        InterfaceIPv6.AUTO_DNS: False,
+                    },
+                }
+            ],
+        }
+    )
+    assert _poll(_has_ipv4_dhcp_gateway)
+    assert _poll(_has_ipv6_auto_gateway)
+    assert _poll(_has_dhcpv4_addr)
+    assert _poll(_has_dhcpv6_addr)
+    new_state = libnmstate.show()
+    assert new_state[DNS.KEY][DNS.CONFIG][DNS.SERVER] == [
+        IPV6_DNS_NAMESERVER,
+        IPV6_DNS_NAMESERVER_LOCAL,
+    ]
+    assert new_state[DNS.KEY][DNS.RUNNING][DNS.SERVER] == [
+        IPV6_DNS_NAMESERVER,
+        IPV6_DNS_NAMESERVER_LOCAL,
+    ]

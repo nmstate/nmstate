@@ -21,7 +21,13 @@ impl DnsState {
                 let mut canonicalized_srvs = Vec::new();
                 for srv in srvs {
                     if is_ipv6_addr(srv) {
-                        if let Ok(ip_addr) = srv.parse::<Ipv6Addr>() {
+                        let splits: Vec<&str> = srv.split('%').collect();
+                        if splits.len() == 2 {
+                            if let Ok(ip_addr) = splits[0].parse::<Ipv6Addr>() {
+                                canonicalized_srvs
+                                    .push(format!("{}%{}", ip_addr, splits[1]));
+                            }
+                        } else if let Ok(ip_addr) = srv.parse::<Ipv6Addr>() {
                             canonicalized_srvs.push(ip_addr.to_string());
                         }
                     } else if let Ok(ip_addr) = srv.parse::<Ipv4Addr>() {
