@@ -1,21 +1,4 @@
-#
-# Copyright (c) 2019-2022 Red Hat, Inc.
-#
-# This file is part of nmstate
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 2.1 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program. If not, see <https://www.gnu.org/licenses/>.
-#
+# SPDX-License-Identifier: LGPL-2.1-or-later
 
 from contextlib import contextmanager
 import os
@@ -1295,3 +1278,35 @@ def test_genconf_ovsdb_iface_external_ids(eth1_up):
     }
     with gen_conf_apply(desired_state):
         assertlib.assert_state_match(desired_state)
+
+
+def test_add_port_to_ovs_br_with_controller_property(
+    ovs_bridge1_with_internal_port_same_name, eth2_up
+):
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: "eth2",
+                    Interface.STATE: InterfaceState.UP,
+                    Interface.CONTROLLER: BRIDGE1,
+                }
+            ]
+        }
+    )
+    current_state = libnmstate.show()
+    br_iface = None
+    # The show_only() does not works well with ovs same name topology, hence
+    # we use our own code.
+    for iface in current_state[Interface.KEY]:
+        if (
+            iface[Interface.NAME] == BRIDGE1
+            and iface[Interface.TYPE] == InterfaceType.OVS_BRIDGE
+        ):
+            br_iface = iface
+            break
+    br_ports = br_iface[OVSBridge.CONFIG_SUBTREE][OVSBridge.PORT_SUBTREE]
+    assert br_iface[Interface.NAME] == BRIDGE1
+    assert len(br_ports) == 2
+    assert br_ports[0][OVSBridge.Port.NAME] == BRIDGE1
+    assert br_ports[1][OVSBridge.Port.NAME] == "eth2"
