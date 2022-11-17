@@ -192,9 +192,9 @@ class LinuxBridgeIface(BridgeIface):
                 # There is no good way to detect kernel HZ in user space. Hence
                 # we check whether certain value is rounded.
                 if cur_value != value:
-                    if value >= 8 * (10 ** 6):
+                    if value >= 8 * (10**6):
                         if abs(value - cur_value) <= int(
-                            value / 8 * (10 ** 6)
+                            value / 8 * (10**6)
                         ):
                             return key, value, cur_value
                     else:

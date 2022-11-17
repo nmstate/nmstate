@@ -31,7 +31,7 @@ from ..ifaces import BaseIface
 from .common import NM
 
 IPV6_DEFAULT_ROUTE_METRIC = 1024
-INT32_MAX = 2 ** 31 - 1
+INT32_MAX = 2**31 - 1
 
 
 def get_info(active_connection, applied_config):

@@ -215,7 +215,7 @@ def test_apply_command_with_two_states():
 
 
 def test_manual_confirmation(eth1_up):
-    """ I can manually confirm a state. """
+    """I can manually confirm a state."""
 
     with example_state(CONFIRMATION_CLEAN, CONFIRMATION_CLEAN):
 
@@ -226,7 +226,7 @@ def test_manual_confirmation(eth1_up):
 
 
 def test_manual_rollback(eth1_up):
-    """ I can manually roll back a state. """
+    """I can manually roll back a state."""
 
     with example_state(CONFIRMATION_CLEAN, CONFIRMATION_CLEAN) as clean_state:
 
@@ -256,7 +256,7 @@ def test_dual_change(eth1_up):
 
 
 def test_automatic_rollback(eth1_up):
-    """ If I do not confirm the state, it is automatically rolled back. """
+    """If I do not confirm the state, it is automatically rolled back."""
 
     with example_state(CONFIRMATION_CLEAN, CONFIRMATION_CLEAN) as clean_state:
 

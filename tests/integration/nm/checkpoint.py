@@ -51,14 +51,14 @@ def nm_context():
 
 
 def test_creating_one_checkpoint(nm_context):
-    """ I can create a checkpoint """
+    """I can create a checkpoint"""
     checkpoint = CheckPoint.create(nm_context)
     assert checkpoint is not None
     checkpoint.destroy()
 
 
 def test_creating_two_checkpoints(nm_context):
-    """ I cannot create a checkpoint when a checkpoint already exists. """
+    """I cannot create a checkpoint when a checkpoint already exists."""
     checkpoint = CheckPoint.create(nm_context)
     with pytest.raises(NmstateConflictError):
         CheckPoint.create(nm_context)
@@ -67,7 +67,7 @@ def test_creating_two_checkpoints(nm_context):
 
 
 def test_checkpoint_timeout(nm_context):
-    """ I can create a checkpoint that is removed after one second. """
+    """I can create a checkpoint that is removed after one second."""
     checkpoint_a = CheckPoint.create(nm_context, timeout=1)
     time.sleep(1)
     checkpoint_b = CheckPoint.create(nm_context)
@@ -78,7 +78,7 @@ def test_checkpoint_timeout(nm_context):
 
 
 def test_getting_a_checkpoint(nm_context):
-    """ I can get a list of all checkpoints. """
+    """I can get a list of all checkpoints."""
 
     checkpoints = get_checkpoints(nm_context.client)
 
