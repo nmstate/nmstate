@@ -10,7 +10,7 @@ name = "nmstatectl"
 path = "ncl.rs"
 
 [dependencies]
-nmstate = {path = "../lib", default-features = false}
+nmstate = {path = "../lib", version = "2.2", default-features = false}
 serde_yaml = "0.9"
 clap = { version = "3.1", features = ["cargo"] }
 serde = { version = "1.0", features = ["derive"] }
