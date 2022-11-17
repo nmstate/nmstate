@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use std::str::FromStr;
+
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -228,42 +230,50 @@ pub(crate) fn reselect_dns_ifaces(
     desired: &NetworkState,
     current: &NetworkState,
 ) -> (String, String) {
-    (
-        find_ifaces_in_desire(false, &desired.interfaces)
-            .or_else(|| {
-                find_valid_ifaces_for_dns(
-                    false,
-                    &desired.interfaces,
-                    &current.interfaces,
-                )
-            })
-            .unwrap_or_default(),
-        find_ifaces_in_desire(true, &desired.interfaces)
-            .or_else(|| {
-                find_valid_ifaces_for_dns(
-                    true,
-                    &desired.interfaces,
-                    &current.interfaces,
-                )
-            })
-            .unwrap_or_default(),
+    let ipv4_iface = find_ifaces_in_desire(false, &desired.interfaces)
+        .or_else(|| {
+            find_valid_ifaces_for_dns(
+                false,
+                &desired.interfaces,
+                &current.interfaces,
+            )
+        })
+        .unwrap_or_default();
+
+    let ipv6_iface = extra_ipv6_link_local_iface_from_dns_srv(
+        desired
+            .dns
+            .config
+            .as_ref()
+            .and_then(|c| c.server.as_deref()),
     )
+    .or_else(|| find_ifaces_in_desire(true, &desired.interfaces))
+    .or_else(|| {
+        find_valid_ifaces_for_dns(
+            true,
+            &desired.interfaces,
+            &current.interfaces,
+        )
+    })
+    .unwrap_or_default();
+
+    (ipv4_iface, ipv6_iface)
 }
 
-// Return None if specified interface has IP configuration as None.
-fn is_iface_valid_for_dns(is_ipv6: bool, iface: &Interface) -> Option<bool> {
+// IP stack is merged with current at this point.
+fn is_iface_valid_for_dns(is_ipv6: bool, iface: &Interface) -> bool {
     if is_ipv6 {
         iface.base_iface().ipv6.as_ref().map(|ip_conf| {
             ip_conf.enabled
                 && (ip_conf.is_static()
                     || (ip_conf.is_auto() && ip_conf.auto_dns == Some(false)))
-        })
+        }) == Some(true)
     } else {
         iface.base_iface().ipv4.as_ref().map(|ip_conf| {
             ip_conf.enabled
                 && (ip_conf.is_static()
                     || (ip_conf.is_auto() && ip_conf.auto_dns == Some(false)))
-        })
+        }) == Some(true)
     }
 }
 
@@ -278,7 +288,7 @@ fn current_dns_ifaces_are_still_valid(
                 if let Some(des_iface) =
                     desired.interfaces.kernel_ifaces.get(iface_name)
                 {
-                    if is_iface_valid_for_dns(false, des_iface) == Some(false) {
+                    if !is_iface_valid_for_dns(false, des_iface) {
                         return false;
                     }
                 }
@@ -289,7 +299,7 @@ fn current_dns_ifaces_are_still_valid(
                 if let Some(des_iface) =
                     desired.interfaces.kernel_ifaces.get(iface_name)
                 {
-                    if is_iface_valid_for_dns(true, des_iface) == Some(false) {
+                    if !is_iface_valid_for_dns(true, des_iface) {
                         return false;
                     }
                 }
@@ -305,7 +315,7 @@ fn find_ifaces_in_desire(
     desired: &Interfaces,
 ) -> Option<String> {
     for (iface_name, iface) in desired.kernel_ifaces.iter() {
-        if is_iface_valid_for_dns(is_ipv6, iface) == Some(true) {
+        if is_iface_valid_for_dns(is_ipv6, iface) {
             return Some(iface_name.to_string());
         }
     }
@@ -322,10 +332,10 @@ fn find_valid_ifaces_for_dns(
         .iter()
         .chain(current.kernel_ifaces.iter())
     {
-        if is_iface_valid_for_dns(is_ipv6, iface) == Some(true) {
+        if is_iface_valid_for_dns(is_ipv6, iface) {
             let des_iface = desired.kernel_ifaces.get(iface_name);
             if let Some(des_iface) = des_iface {
-                if is_iface_valid_for_dns(is_ipv6, des_iface) != Some(false) {
+                if is_iface_valid_for_dns(is_ipv6, des_iface) {
                     return Some(iface_name.to_string());
                 }
             } else {
@@ -445,7 +455,9 @@ pub(crate) fn purge_dns_config(
     }
 }
 
-// Only preferred: true will save the searches
+// Argument `preferred`: true will save the searches
+// Assuming all IPv6 link local address is pointing to specified argument
+// `iface_name` iface.
 fn _save_dns_to_iface(
     is_ipv6: bool,
     iface_name: &str,
@@ -455,7 +467,13 @@ fn _save_dns_to_iface(
     current: &NetworkState,
     preferred: bool,
 ) -> Result<(), NmstateError> {
-    let (servers, searches) = dns_conf;
+    let (mut servers, searches) = dns_conf;
+    for srv in servers.as_mut_slice() {
+        if let Some((ip, _)) = parse_dns_ipv6_link_local_srv(srv)? {
+            srv.replace_range(.., ip.to_string().as_str());
+        }
+    }
+
     if iface_name.is_empty() {
         let e = NmstateError::new(
             ErrorKind::InvalidArgument,
@@ -537,4 +555,111 @@ fn _save_dns_to_iface(
     }
 
     Ok(())
+}
+
+// * Specified interface is valid for hold IPv6 DNS config.
+// * Cannot have more than one IPv6 link-local DNS interface.
+pub(crate) fn validate_ipv6_link_local_address_dns_srv(
+    desired: &NetworkState,
+    current: &NetworkState,
+) -> Result<(), NmstateError> {
+    let mut iface_names = Vec::new();
+    if let Some(srvs) =
+        desired.dns.config.as_ref().and_then(|c| c.server.as_ref())
+    {
+        for srv in srvs {
+            if let Some((_, iface_name)) = parse_dns_ipv6_link_local_srv(srv)? {
+                let iface = if let Some(iface) =
+                    desired.interfaces.kernel_ifaces.get(iface_name).or_else(
+                        || current.interfaces.kernel_ifaces.get(iface_name),
+                    ) {
+                    iface
+                } else {
+                    return Err(NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        format!(
+                            "Desired IPv6 link local DNS server {} is \
+                            pointing to interface {} which does not exist.",
+                            srv, iface_name
+                        ),
+                    ));
+                };
+                if is_iface_valid_for_dns(true, iface) {
+                    iface_names.push(iface.name());
+                } else {
+                    return Err(NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        format!(
+                            "Interface {} has IPv6 disabled, \
+                            hence cannot hold desired IPv6 link local \
+                            DNS server {}",
+                            iface_name, srv
+                        ),
+                    ));
+                }
+            }
+        }
+    }
+    if iface_names.len() >= 2 {
+        return Err(NmstateError::new(
+            ErrorKind::NotImplementedError,
+            format!(
+                "Only support IPv6 link local DNS name server(s) \
+                pointing to a single interface, but got '{}'",
+                iface_names.join(" ")
+            ),
+        ));
+    }
+
+    Ok(())
+}
+
+fn parse_dns_ipv6_link_local_srv(
+    srv: &str,
+) -> Result<Option<(std::net::Ipv6Addr, &str)>, NmstateError> {
+    if srv.contains('%') {
+        let splits: Vec<&str> = srv.split('%').collect();
+        if splits.len() == 2 {
+            match std::net::Ipv6Addr::from_str(splits[0]) {
+                Ok(ip) => return Ok(Some((ip, splits[1]))),
+                Err(_) => {
+                    return Err(NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        format!(
+                            "Invalid IPv6 address in {}, only IPv6 link local \
+                            address is allowed to have '%' character in DNS \
+                            name server, the correct format should be \
+                            'fe80::deef:1%eth1'",
+                            srv
+                        ),
+                    ));
+                }
+            }
+        } else {
+            return Err(NmstateError::new(
+                ErrorKind::InvalidArgument,
+                format!(
+                    "Invalid DNS server {}, the IPv6 \
+                        link local DNS server should be in the format like \
+                        'fe80::deef:1%eth1'",
+                    srv
+                ),
+            ));
+        }
+    }
+    Ok(None)
+}
+
+fn extra_ipv6_link_local_iface_from_dns_srv(
+    srvs: Option<&[String]>,
+) -> Option<String> {
+    if let Some(srvs) = srvs {
+        for srv in srvs {
+            let splits: Vec<&str> = srv.split('%').collect();
+            if splits.len() == 2 && !splits[1].is_empty() {
+                return Some(splits[1].to_string());
+            }
+        }
+    }
+    None
 }

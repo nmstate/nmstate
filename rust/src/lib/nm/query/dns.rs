@@ -1,15 +1,42 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use std::str::FromStr;
+
 use super::super::{
     error::nm_error_to_nmstate,
-    nm_dbus::{NmApi, NmSettingIp},
+    nm_dbus::{NmApi, NmDnsEntry, NmSettingIp},
 };
 
-use crate::{DnsClientState, DnsState, Interfaces, NmstateError};
+use crate::{
+    ip::is_ipv6_unicast_link_local, DnsClientState, DnsState, Interfaces,
+    NmstateError,
+};
 
-pub(crate) fn nm_dns_to_nmstate(nm_ip_setting: &NmSettingIp) -> DnsClientState {
+pub(crate) fn nm_dns_to_nmstate(
+    iface_name: &str,
+    nm_ip_setting: &NmSettingIp,
+) -> DnsClientState {
+    let mut servers = Vec::new();
+    if let Some(srvs) = nm_ip_setting.dns.as_ref() {
+        for srv in srvs {
+            if let Ok(ip) = std::net::Ipv6Addr::from_str(srv.as_str()) {
+                if is_ipv6_unicast_link_local(&ip) {
+                    servers.push(format!("{}%{}", srv, iface_name));
+                } else {
+                    servers.push(srv.to_string());
+                }
+            } else {
+                servers.push(srv.to_string());
+            }
+        }
+    }
+
     DnsClientState {
-        server: nm_ip_setting.dns.clone(),
+        server: if nm_ip_setting.dns.is_none() {
+            None
+        } else {
+            Some(servers)
+        },
         search: nm_ip_setting.dns_search.clone(),
         priority: nm_ip_setting.dns_priority,
     }
@@ -26,7 +53,7 @@ pub(crate) fn retrieve_dns_info(
     let mut running_srvs: Vec<String> = Vec::new();
     let mut running_schs: Vec<String> = Vec::new();
     for nm_dns_entry in nm_dns_entires {
-        running_srvs.extend_from_slice(nm_dns_entry.name_servers.as_slice());
+        running_srvs.extend(nm_dns_srvs_to_nmstate(&nm_dns_entry));
         running_schs.extend_from_slice(nm_dns_entry.domains.as_slice());
     }
 
@@ -75,4 +102,23 @@ pub(crate) fn retrieve_dns_info(
             ..Default::default()
         }),
     })
+}
+
+fn nm_dns_srvs_to_nmstate(nm_dns_entry: &NmDnsEntry) -> Vec<String> {
+    let mut srvs = Vec::new();
+    for srv in nm_dns_entry.name_servers.as_slice() {
+        if let Ok(ip) = std::net::Ipv6Addr::from_str(srv.as_str()) {
+            if is_ipv6_unicast_link_local(&ip)
+                && !nm_dns_entry.interface.is_empty()
+            {
+                srvs.push(format!("{}%{}", srv, nm_dns_entry.interface));
+                continue;
+            } else {
+                srvs.push(srv.to_string());
+            }
+        } else {
+            srvs.push(srv.to_string());
+        }
+    }
+    srvs
 }

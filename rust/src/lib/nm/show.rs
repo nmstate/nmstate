@@ -218,7 +218,10 @@ fn nm_conn_to_base_iface(
 ) -> Option<BaseInterface> {
     if let Some(iface_name) = nm_conn.iface_name() {
         let ipv4 = nm_conn.ipv4.as_ref().map(nm_ip_setting_to_nmstate4);
-        let ipv6 = nm_conn.ipv6.as_ref().map(nm_ip_setting_to_nmstate6);
+        let ipv6 = nm_conn
+            .ipv6
+            .as_ref()
+            .map(|nm_ip_set| nm_ip_setting_to_nmstate6(iface_name, nm_ip_set));
 
         let mut base_iface = BaseInterface::new();
         base_iface.name = iface_name.to_string();
