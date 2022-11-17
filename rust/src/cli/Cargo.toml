@@ -2,6 +2,13 @@
 name = "nmstatectl"
 version = "2.2.2"
 authors = ["Gris Ge <fge@redhat.com>"]
+description = "Command line tool for networking management in a declarative manner"
+license = "Apache-2.0"
+homepage = "https://nmstate.io"
+documentation = "https://nmstate.io"
+repository = "https://github.com/nmstate/nmstate"
+keywords = ["network", "linux"]
+categories = ["network-programming", "os::linux"]
 edition = "2018"
 rust-version = "1.60"
 
