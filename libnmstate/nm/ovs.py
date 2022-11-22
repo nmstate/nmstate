@@ -107,10 +107,10 @@ def create_port_setting(port_state):
             port_setting.props.bond_mode = mode
 
         down_delay = lag_state.get(OB.Port.LinkAggregation.Options.DOWN_DELAY)
-        if down_delay:
+        if down_delay is not None:
             port_setting.props.bond_downdelay = down_delay
         up_delay = lag_state.get(OB.Port.LinkAggregation.Options.UP_DELAY)
-        if up_delay:
+        if up_delay is not None:
             port_setting.props.bond_updelay = up_delay
 
     vlan_state = port_state.get(OB.Port.VLAN_SUBTREE, {})
@@ -261,10 +261,29 @@ def _get_lag_nmstate_port_info(nm_dev_ovs_port):
     mode = _get_lag_mode(nm_dev_ovs_port)
     if mode:
         lag[OVS_LAG.MODE] = mode
+    up_delay, down_delay = _get_lag_options(nm_dev_ovs_port)
+    if up_delay is not None:
+        lag[OVS_LAG.Options.UP_DELAY] = up_delay
+    if down_delay is not None:
+        lag[OVS_LAG.Options.DOWN_DELAY] = down_delay
     return {
         OB.Port.NAME: nm_dev_ovs_port.get_iface(),
         OB.Port.LINK_AGGREGATION_SUBTREE: lag,
     }
+
+
+def _get_lag_options(nm_dev_ovs_port):
+    """
+    Use applied profile to get ovs bond options
+    """
+    up_delay = None
+    down_delay = None
+    nm_setting = _get_nm_setting_ovs_port(nm_dev_ovs_port)
+    if nm_setting:
+        up_delay = nm_setting.props.bond_updelay
+        down_delay = nm_setting.props.bond_downdelay
+
+    return up_delay, down_delay
 
 
 def _get_lag_mode(nm_dev_ovs_port):
