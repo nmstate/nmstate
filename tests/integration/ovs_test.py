@@ -34,6 +34,7 @@ from .testlib.bondlib import bond_interface
 from .testlib.bridgelib import linux_bridge
 from .testlib.env import is_k8s
 from .testlib.env import nm_major_minor_version
+from .testlib.env import nm_minor_version
 from .testlib.genconf import gen_conf_apply
 from .testlib.nmplugin import disable_nm_plugin
 from .testlib.ovslib import Bridge
@@ -387,6 +388,82 @@ def test_ovs_vlan_access_tag():
 
     assertlib.assert_absent(BRIDGE1)
     assertlib.assert_absent(PORT1)
+
+
+@pytest.fixture
+def bridge_port_with_trunks():
+    bridge = Bridge(BRIDGE1)
+    bridge.add_internal_port(PORT1, ipv4_state={InterfaceIPv4.ENABLED: False})
+    bridge.set_port_option(
+        PORT1,
+        {
+            OVSBridge.Port.NAME: PORT1,
+            OVSBridge.Port.VLAN_SUBTREE: {
+                OVSBridge.Port.Vlan.MODE: OVSBridge.Port.Vlan.Mode.TRUNK,
+                OVSBridge.Port.Vlan.TAG: 0,
+                OVSBridge.Port.Vlan.TRUNK_TAGS: [
+                    {OVSBridge.Port.Vlan.TrunkTags.ID: 10},
+                    {OVSBridge.Port.Vlan.TrunkTags.ID: 20},
+                    {
+                        OVSBridge.Port.Vlan.TrunkTags.ID_RANGE: {
+                            OVSBridge.Port.Vlan.TrunkTags.MIN_RANGE: 30,
+                            OVSBridge.Port.Vlan.TrunkTags.MAX_RANGE: 40,
+                        }
+                    },
+                ],
+            },
+        },
+    )
+    with bridge.create() as state:
+        yield state
+    assertlib.assert_absent(BRIDGE1)
+    assertlib.assert_absent(PORT1)
+
+
+@pytest.mark.tier1
+@pytest.mark.skipif(
+    nm_minor_version() < 41,
+    reason="OVS VLAN trunks was not supported in NM",
+)
+def test_ovs_vlan_trunks(bridge_port_with_trunks):
+    assertlib.assert_state_match(bridge_port_with_trunks)
+
+
+@pytest.mark.tier1
+@pytest.mark.skipif(
+    nm_minor_version() < 41,
+    reason="OVS VLAN trunks was not supported in NM",
+)
+def test_remove_ovs_vlan_trunks(bridge_port_with_trunks):
+    br1_state = statelib.show_only((BRIDGE1,))[Interface.KEY][0]
+    port_state = br1_state[OVSBridge.CONFIG_SUBTREE][OVSBridge.PORT_SUBTREE][0]
+    trunks = port_state[OVSBridge.Port.VLAN_SUBTREE][
+        OVSBridge.Port.Vlan.TRUNK_TAGS
+    ]
+    assert len(trunks) == 3
+
+    bridge_config = bridge_port_with_trunks[Interface.KEY][0][
+        OVSBridge.CONFIG_SUBTREE
+    ]
+    port_config = bridge_config[OVSBridge.PORT_SUBTREE][0]
+    port_config.update(
+        {
+            OVSBridge.Port.VLAN_SUBTREE: {
+                OVSBridge.Port.Vlan.MODE: OVSBridge.Port.Vlan.Mode.TRUNK,
+                OVSBridge.Port.Vlan.TAG: 0,
+                OVSBridge.Port.Vlan.TRUNK_TAGS: [],
+            }
+        }
+    )
+    libnmstate.apply(bridge_port_with_trunks)
+    assertlib.assert_state(bridge_port_with_trunks)
+
+    br1_state = statelib.show_only((BRIDGE1,))[Interface.KEY][0]
+    port_state = br1_state[OVSBridge.CONFIG_SUBTREE][OVSBridge.PORT_SUBTREE][0]
+    trunks = port_state[OVSBridge.Port.VLAN_SUBTREE][
+        OVSBridge.Port.Vlan.TRUNK_TAGS
+    ]
+    assert len(trunks) == 0
 
 
 def test_add_invalid_port_ip_config(eth1_up):

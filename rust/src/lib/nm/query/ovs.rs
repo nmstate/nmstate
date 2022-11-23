@@ -3,15 +3,16 @@
 use std::convert::TryFrom;
 
 use super::super::{
-    nm_dbus::NmConnection,
+    nm_dbus::{NmConnection, NmRange},
     settings::{get_exist_profile, NM_SETTING_OVS_PORT_SETTING_NAME},
 };
 
 use crate::{
-    BridgePortVlanConfig, BridgePortVlanMode, Interface, InterfaceType,
-    Interfaces, NmstateError, OvsBridgeBondConfig, OvsBridgeBondMode,
-    OvsBridgeBondPortConfig, OvsBridgeConfig, OvsBridgeOptions,
-    OvsBridgePortConfig, OvsDpdkConfig, OvsPatchConfig,
+    BridgePortTunkTag, BridgePortVlanConfig, BridgePortVlanMode,
+    BridgePortVlanRange, Interface, InterfaceType, Interfaces, NmstateError,
+    OvsBridgeBondConfig, OvsBridgeBondMode, OvsBridgeBondPortConfig,
+    OvsBridgeConfig, OvsBridgeOptions, OvsBridgePortConfig, OvsDpdkConfig,
+    OvsPatchConfig,
 };
 
 pub(crate) fn nm_ovs_bridge_conf_get(
@@ -202,11 +203,32 @@ fn get_vlan_info(nm_conn: &NmConnection) -> Option<BridgePortVlanConfig> {
                         return None;
                     }
                 }),
+                trunk_tags: match port_conf.trunks.as_deref() {
+                    Some(trunks) => {
+                        let mut ret = Vec::new();
+                        for t in trunks {
+                            ret.push(nm_range_to_trunk_tag(t));
+                        }
+                        Some(ret)
+                    }
+                    _ => None,
+                },
                 ..Default::default()
             });
         }
     }
     None
+}
+
+fn nm_range_to_trunk_tag(range: &NmRange) -> BridgePortTunkTag {
+    if range.start == range.end {
+        BridgePortTunkTag::Id(range.start as u16)
+    } else {
+        BridgePortTunkTag::IdRange(BridgePortVlanRange {
+            min: range.start as u16,
+            max: range.end as u16,
+        })
+    }
 }
 
 pub(crate) fn get_ovs_patch_config(
