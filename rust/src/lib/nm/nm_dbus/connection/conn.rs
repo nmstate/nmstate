@@ -442,3 +442,41 @@ pub(crate) fn nm_con_get_from_obj_path(
     }
     Ok(nm_conn)
 }
+
+#[derive(Debug, Clone, PartialEq, Default, Deserialize)]
+#[serde(try_from = "DbusDictionary")]
+#[non_exhaustive]
+pub struct NmRange {
+    pub start: u64,
+    pub end: u64,
+    _other: DbusDictionary,
+}
+
+impl TryFrom<DbusDictionary> for NmRange {
+    type Error = NmError;
+    fn try_from(mut v: DbusDictionary) -> Result<Self, Self::Error> {
+        Ok(Self {
+            start: _from_map!(v, "start", u64::try_from)?.unwrap_or_default(),
+            end: _from_map!(v, "end", u64::try_from)?.unwrap_or_default(),
+            _other: v,
+        })
+    }
+}
+
+impl NmRange {
+    pub fn to_value(&self) -> Result<zvariant::Value, NmError> {
+        let mut ret = zvariant::Dict::new(
+            zvariant::Signature::from_str_unchecked("s"),
+            zvariant::Signature::from_str_unchecked("v"),
+        );
+        ret.append(
+            zvariant::Value::new("start"),
+            zvariant::Value::new(zvariant::Value::U64(self.start)),
+        )?;
+        ret.append(
+            zvariant::Value::new("end"),
+            zvariant::Value::new(zvariant::Value::U64(self.end)),
+        )?;
+        Ok(zvariant::Value::Dict(ret))
+    }
+}

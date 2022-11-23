@@ -4,15 +4,16 @@ use std::collections::HashMap;
 use std::iter::FromIterator;
 
 use super::super::nm_dbus::{
-    NmConnection, NmSettingOvsDpdk, NmSettingOvsExtIds, NmSettingOvsIface,
-    NmSettingOvsPatch,
+    NmConnection, NmRange, NmSettingOvsDpdk, NmSettingOvsExtIds,
+    NmSettingOvsIface, NmSettingOvsPatch,
 };
 
 use super::connection::gen_nm_conn_setting;
 
 use crate::{
-    BaseInterface, Interface, InterfaceType, NmstateError, OvsBridgeBondMode,
-    OvsBridgeInterface, OvsBridgePortConfig, OvsInterface, UnknownInterface,
+    BaseInterface, BridgePortTunkTag, Interface, InterfaceType, NmstateError,
+    OvsBridgeBondMode, OvsBridgeInterface, OvsBridgePortConfig, OvsInterface,
+    UnknownInterface,
 };
 
 pub(crate) fn create_ovs_port_nm_conn(
@@ -66,9 +67,25 @@ pub(crate) fn create_ovs_port_nm_conn(
         if let Some(vlan_mode) = vlan_conf.mode {
             nm_ovs_port_set.vlan_mode = Some(vlan_mode.to_string());
         }
+        if let Some(trunk_tags) = &vlan_conf.trunk_tags {
+            let mut ret = Vec::new();
+            for trunk_tag in trunk_tags.as_slice() {
+                ret.push(trunk_tag_to_nm_range(trunk_tag));
+            }
+            nm_ovs_port_set.trunks = Some(ret);
+        }
     }
+
     nm_conn.ovs_port = Some(nm_ovs_port_set);
     Ok(nm_conn)
+}
+
+fn trunk_tag_to_nm_range(trunk_tag: &BridgePortTunkTag) -> NmRange {
+    let mut ret = NmRange::default();
+    let (vid_min, vid_max) = trunk_tag.get_vlan_tag_range();
+    ret.start = vid_min.into();
+    ret.end = vid_max.into();
+    ret
 }
 
 pub(crate) fn get_ovs_port_name(
