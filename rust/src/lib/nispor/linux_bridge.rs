@@ -4,19 +4,19 @@ use log::warn;
 
 use crate::{
     nispor::linux_bridge_port_vlan::parse_port_vlan_conf, BaseInterface,
-    LinuxBridgeConfig, LinuxBridgeInterface, LinuxBridgeMulticastRouterType,
-    LinuxBridgeOptions, LinuxBridgePortConfig, LinuxBridgeStpOptions,
-    VlanProtocol,
+    ErrorKind, LinuxBridgeConfig, LinuxBridgeInterface,
+    LinuxBridgeMulticastRouterType, LinuxBridgeOptions, LinuxBridgePortConfig,
+    LinuxBridgeStpOptions, NmstateError, VlanProtocol,
 };
 
 pub(crate) fn np_bridge_to_nmstate(
     np_iface: &nispor::Iface,
     base_iface: BaseInterface,
-) -> LinuxBridgeInterface {
+) -> Result<LinuxBridgeInterface, NmstateError> {
     let mut br_iface = LinuxBridgeInterface::new();
     let mut br_conf = LinuxBridgeConfig::new();
     br_iface.base = base_iface;
-    br_conf.options = Some(np_bridge_options_to_nmstate(np_iface));
+    br_conf.options = Some(np_bridge_options_to_nmstate(np_iface)?);
     if let Some(np_bridge) = &np_iface.bridge {
         br_conf.port = Some(
             np_bridge
@@ -32,7 +32,7 @@ pub(crate) fn np_bridge_to_nmstate(
         );
     }
     br_iface.bridge = Some(br_conf);
-    br_iface
+    Ok(br_iface)
 }
 
 pub(crate) fn append_bridge_port_config(
@@ -70,10 +70,10 @@ pub(crate) fn append_bridge_port_config(
 
 fn np_bridge_options_to_nmstate(
     np_iface: &nispor::Iface,
-) -> LinuxBridgeOptions {
+) -> Result<LinuxBridgeOptions, NmstateError> {
     let mut options = LinuxBridgeOptions::default();
     if let Some(ref np_bridge) = &np_iface.bridge {
-        options.stp = Some(get_stp_options(np_bridge));
+        options.stp = Some(get_stp_options(np_bridge)?);
         options.gc_timer = np_bridge.gc_timer;
         options.group_addr = np_bridge
             .group_addr
@@ -83,7 +83,9 @@ fn np_bridge_options_to_nmstate(
         options.group_fwd_mask = np_bridge.group_fwd_mask;
         options.hash_max = np_bridge.multicast_hash_max;
         options.hello_timer = np_bridge.hello_timer;
-        options.mac_ageing_time = np_bridge.ageing_time.map(devide_by_user_hz);
+        if let Some(v) = np_bridge.ageing_time {
+            options.mac_ageing_time = Some(devide_by_user_hz(v)?)
+        }
         options.multicast_last_member_count =
             np_bridge.multicast_last_member_count;
         options.multicast_last_member_interval =
@@ -133,7 +135,7 @@ fn np_bridge_options_to_nmstate(
                 }
             });
     }
-    options
+    Ok(options)
 }
 
 // The kernel is multiplying these bridge properties by USER_HZ, we should
@@ -142,12 +144,25 @@ fn np_bridge_options_to_nmstate(
 //   * ageing_time
 //   * hello_time
 //   * max_age
-fn devide_by_user_hz(v: u32) -> u32 {
-    let user_hz = unsafe { libc::sysconf(libc::_SC_CLK_TCK) } as u32;
-    v / user_hz
+fn devide_by_user_hz(v: u32) -> Result<u32, NmstateError> {
+    let user_hz = match nix::unistd::sysconf(nix::unistd::SysconfVar::CLK_TCK) {
+        Ok(value) => value.unwrap_or_default() as u32,
+        Err(_) => {
+            let e = NmstateError::new(
+                ErrorKind::KernelIntegerRoundedError,
+                "Failed to get configurable system variable CLK_TCK"
+                    .to_string(),
+            );
+            log::error!("{}", e);
+            return Err(e);
+        }
+    };
+    Ok(v / user_hz)
 }
 
-fn get_stp_options(np_bridge: &nispor::BridgeInfo) -> LinuxBridgeStpOptions {
+fn get_stp_options(
+    np_bridge: &nispor::BridgeInfo,
+) -> Result<LinuxBridgeStpOptions, NmstateError> {
     let mut stp_opt = LinuxBridgeStpOptions::new();
     stp_opt.enabled = Some(
         [
@@ -156,18 +171,27 @@ fn get_stp_options(np_bridge: &nispor::BridgeInfo) -> LinuxBridgeStpOptions {
         ]
         .contains(&np_bridge.stp_state),
     );
-    stp_opt.forward_delay = np_bridge.forward_delay.map(|v| {
-        u8::try_from(devide_by_user_hz(v))
-            .unwrap_or(LinuxBridgeStpOptions::FORWARD_DELAY_MAX)
-    });
-    stp_opt.max_age = np_bridge.max_age.map(|v| {
-        u8::try_from(devide_by_user_hz(v))
-            .unwrap_or(LinuxBridgeStpOptions::MAX_AGE_MAX)
-    });
-    stp_opt.hello_time = np_bridge.hello_time.map(|v| {
-        u8::try_from(devide_by_user_hz(v))
-            .unwrap_or(LinuxBridgeStpOptions::HELLO_TIME_MAX)
-    });
+    if let Some(v) = np_bridge.forward_delay {
+        let divided_value = devide_by_user_hz(v)?;
+        stp_opt.forward_delay = Some(
+            u8::try_from(divided_value)
+                .unwrap_or(LinuxBridgeStpOptions::FORWARD_DELAY_MAX),
+        );
+    }
+    if let Some(v) = np_bridge.max_age {
+        let divided_value = devide_by_user_hz(v)?;
+        stp_opt.max_age = Some(
+            u8::try_from(divided_value)
+                .unwrap_or(LinuxBridgeStpOptions::MAX_AGE_MAX),
+        );
+    }
+    if let Some(v) = np_bridge.hello_time {
+        let divided_value = devide_by_user_hz(v)?;
+        stp_opt.hello_time = Some(
+            u8::try_from(divided_value)
+                .unwrap_or(LinuxBridgeStpOptions::HELLO_TIME_MAX),
+        );
+    }
     stp_opt.priority = np_bridge.priority;
-    stp_opt
+    Ok(stp_opt)
 }

@@ -45,7 +45,7 @@ pub(crate) fn nispor_retrieve(
 
         let iface = match &base_iface.iface_type {
             InterfaceType::LinuxBridge => {
-                let mut br_iface = np_bridge_to_nmstate(np_iface, base_iface);
+                let mut br_iface = np_bridge_to_nmstate(np_iface, base_iface)?;
                 let mut port_np_ifaces = Vec::new();
                 for port_name in br_iface.ports().unwrap_or_default() {
                     if let Some(p) = np_state.ifaces.get(port_name) {
