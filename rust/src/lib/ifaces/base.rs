@@ -156,7 +156,7 @@ impl BaseInterface {
     }
 
     pub fn can_have_ip(&self) -> bool {
-        self.controller == None
+        self.controller.is_none()
             || self.iface_type == InterfaceType::OvsInterface
             || self.controller_type == Some(InterfaceType::Vrf)
     }
