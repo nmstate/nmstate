@@ -297,6 +297,15 @@ class OvsPortIface(BaseIface):
     def is_user_space_only(self):
         return True
 
+    @property
+    def is_lag_port(self):
+        return (
+            self._info.get(OVSBridge.OPTIONS_SUBTREE, {}).get(
+                OVSBridge.Port.LINK_AGGREGATION_SUBTREE
+            )
+            is not None
+        )
+
 
 def _rename_ovs_bond_ports_to_port(info):
     br_conf = info.get(Bridge.CONFIG_SUBTREE, {})

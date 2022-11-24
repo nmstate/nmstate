@@ -134,7 +134,11 @@ def _append_nm_ovs_port_iface(net_state):
             iface.set_controller(
                 nm_ovs_port_iface.name, InterfaceType.OVS_PORT
             )
-            if iface.is_desired or iface.is_changed:
+            if (
+                iface.is_desired
+                or iface.is_changed
+                or nm_ovs_port_iface.is_lag_port
+            ):
                 nm_ovs_port_iface.mark_as_changed()
             nm_ovs_port_ifaces[nm_ovs_port_iface.name] = nm_ovs_port_iface
 
