@@ -311,6 +311,60 @@ class TestOvsLinkAggregation:
             libnmstate.apply(bridge.state)
             assertlib.assert_state_match(bridge.state)
 
+    @pytest.mark.tier1
+    def test_add_ovs_lag_with_updelay_and_downdelay(self, port0_up, port1_up):
+        port0_name = port0_up[Interface.KEY][0][Interface.NAME]
+        port1_name = port1_up[Interface.KEY][0][Interface.NAME]
+
+        bridge = Bridge(BRIDGE1)
+        bridge.add_link_aggregation_port(
+            BOND1,
+            (port0_name, port1_name),
+            mode="active-backup",
+            updelay=1000,
+            downdelay=1000,
+        )
+
+        with bridge.create() as state:
+            assertlib.assert_state_match(state)
+
+        assertlib.assert_absent(BRIDGE1)
+        assertlib.assert_absent(BOND1)
+
+    @pytest.mark.tier1
+    def test_modify_ovs_lag_with_updelay_and_downdelay(
+        self, port0_up, port1_up
+    ):
+        port0_name = port0_up[Interface.KEY][0][Interface.NAME]
+        port1_name = port1_up[Interface.KEY][0][Interface.NAME]
+
+        bridge = Bridge(BRIDGE1)
+        bridge.add_link_aggregation_port(
+            BOND1,
+            (port0_name, port1_name),
+            mode="active-backup",
+            updelay=1000,
+            downdelay=1000,
+        )
+
+        with bridge.create() as state:
+            assertlib.assert_state_match(state)
+            state[Interface.KEY][0][OVSBridge.CONFIG_SUBTREE][
+                OVSBridge.PORT_SUBTREE
+            ][0][OVSBridge.Port.LINK_AGGREGATION_SUBTREE][
+                OVSBridge.Port.LinkAggregation.Options.DOWN_DELAY
+            ] = 100
+            state[Interface.KEY][0][OVSBridge.CONFIG_SUBTREE][
+                OVSBridge.PORT_SUBTREE
+            ][0][OVSBridge.Port.LINK_AGGREGATION_SUBTREE][
+                OVSBridge.Port.LinkAggregation.Options.UP_DELAY
+            ] = 100
+            libnmstate.apply(state)
+            assertlib.assert_state_match(state)
+
+        assertlib.assert_absent(BRIDGE1)
+        assertlib.assert_absent(BOND1)
+
 
 @pytest.mark.tier1
 def test_ovs_vlan_access_tag():
