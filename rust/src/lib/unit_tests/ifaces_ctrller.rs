@@ -131,7 +131,7 @@ fn test_ifaces_up_order_nested_5_depth_good_case() {
 #[test]
 fn test_auto_include_ovs_interface() {
     let mut ifaces = Interfaces::new();
-    ifaces.push(new_ovs_br_iface("br0", &vec!["p1", "p2"]));
+    ifaces.push(new_ovs_br_iface("br0", &["p1", "p2"]));
 
     let (add_ifaces, _, _) =
         ifaces.gen_state_for_apply(&Interfaces::new()).unwrap();
@@ -183,7 +183,7 @@ fn test_auto_include_ovs_interface() {
 #[test]
 fn test_auto_absent_ovs_interface() {
     let mut cur_ifaces = Interfaces::new();
-    cur_ifaces.push(new_ovs_br_iface("br0", &vec!["p1", "p2"]));
+    cur_ifaces.push(new_ovs_br_iface("br0", &["p1", "p2"]));
     cur_ifaces.push(new_ovs_iface("p1", "br0"));
     cur_ifaces.push(new_ovs_iface("p2", "br0"));
 

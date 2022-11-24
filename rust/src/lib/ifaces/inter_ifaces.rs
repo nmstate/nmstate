@@ -47,9 +47,10 @@ impl<'de> Deserialize<'de> for Interfaces {
             <Vec<Interface> as Deserialize>::deserialize(deserializer)?;
         for mut iface in ifaces {
             // Unless user place veth configure in ethernet interface,
-            // it means user just applying the return of NetworkState.retrieve().
-            // If user would like to change veth configuration, it should use
-            // veth interface type.
+            // it means user just applying the return of
+            // NetworkState.retrieve(). If user would like to change
+            // veth configuration, it should use veth interface
+            // type.
             if iface.iface_type() == InterfaceType::Ethernet {
                 if let Interface::Ethernet(ref mut eth_iface) = iface {
                     eth_iface.veth_sanitize();
@@ -97,19 +98,16 @@ impl Interfaces {
         ifaces
     }
 
-    pub(crate) fn get_iface<'a, 'b>(
+    pub(crate) fn get_iface<'a>(
         &'a self,
-        iface_name: &'b str,
+        iface_name: &str,
         iface_type: InterfaceType,
     ) -> Option<&'a Interface> {
         if iface_type == InterfaceType::Unknown {
             self.kernel_ifaces.get(&iface_name.to_string()).or_else(|| {
-                for iface in self.user_ifaces.values() {
-                    if iface.name() == iface_name {
-                        return Some(iface);
-                    }
-                }
-                None
+                self.user_ifaces
+                    .values()
+                    .find(|&iface| iface.name() == iface_name)
             })
         } else if iface_type.is_userspace() {
             self.user_ifaces.get(&(iface_name.to_string(), iface_type))
@@ -118,9 +116,9 @@ impl Interfaces {
         }
     }
 
-    fn get_iface_mut<'a, 'b>(
+    fn get_iface_mut<'a>(
         &'a mut self,
-        iface_name: &'b str,
+        iface_name: &str,
         iface_type: InterfaceType,
     ) -> Option<&'a mut Interface> {
         if iface_type.is_userspace() {

@@ -1,6 +1,6 @@
-pub(crate) fn with_clean_up_afterwords<T, C>(test: T, cleanup: C) -> ()
+pub(crate) fn with_clean_up_afterwords<T, C>(test: T, cleanup: C)
 where
-    T: FnOnce() -> () + std::panic::UnwindSafe,
+    T: FnOnce() + std::panic::UnwindSafe,
     C: FnOnce(),
 {
     let result = std::panic::catch_unwind(|| {
