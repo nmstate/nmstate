@@ -345,3 +345,12 @@ class OvsPortIface(BaseIface):
     @property
     def is_user_space_only(self):
         return True
+
+    @property
+    def is_lag_port(self):
+        return (
+            self._info.get(OVSBridge.OPTIONS_SUBTREE, {}).get(
+                OVSBridge.Port.LINK_AGGREGATION_SUBTREE
+            )
+            is not None
+        )
