@@ -51,7 +51,9 @@ class Bridge:
     def add_system_port(self, name):
         self._add_port(name)
 
-    def add_link_aggregation_port(self, name, port, mode=None):
+    def add_link_aggregation_port(
+        self, name, port, mode=None, updelay=None, downdelay=None
+    ):
         self._add_port(name)
         port_cfg = self._get_port(name)
         port_cfg[OVSBridge.Port.LINK_AGGREGATION_SUBTREE] = {
@@ -61,9 +63,17 @@ class Bridge:
             ]
         }
         if mode:
-            port[OVSBridge.Port.LINK_AGGREGATION_SUBTREE][
+            port_cfg[OVSBridge.Port.LINK_AGGREGATION_SUBTREE][
                 OVSBridge.Port.LinkAggregation.MODE
             ] = mode
+        if updelay is not None:
+            port_cfg[OVSBridge.Port.LINK_AGGREGATION_SUBTREE][
+                OVSBridge.Port.LinkAggregation.Options.UP_DELAY
+            ] = updelay
+        if downdelay is not None:
+            port_cfg[OVSBridge.Port.LINK_AGGREGATION_SUBTREE][
+                OVSBridge.Port.LinkAggregation.Options.DOWN_DELAY
+            ] = downdelay
 
     def add_internal_port(
         self,
