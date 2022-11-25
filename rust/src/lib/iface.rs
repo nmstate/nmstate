@@ -567,7 +567,7 @@ impl Interface {
         }
     }
 
-    pub(crate) fn base_iface_mut(&mut self) -> &mut BaseInterface {
+    pub fn base_iface_mut(&mut self) -> &mut BaseInterface {
         match self {
             Self::LinuxBridge(iface) => &mut iface.base,
             Self::Bond(iface) => &mut iface.base,

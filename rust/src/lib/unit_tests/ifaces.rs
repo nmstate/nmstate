@@ -241,3 +241,42 @@ fn test_ifaces_ignore_iface_in_current_but_desired() {
         vec![("br0".to_string(), InterfaceType::OvsBridge)]
     );
 }
+
+#[test]
+fn test_ifaces_iter() {
+    let ifaces = serde_yaml::from_str::<Interfaces>(
+        r#"---
+- name: eth1
+  type: ethernet
+  state: ignore
+- name: br0
+  type: ovs-bridge
+  state: up
+"#,
+    )
+    .unwrap();
+    let ifaces_vec: Vec<&Interface> = ifaces.iter().collect();
+    assert_eq!(ifaces_vec.len(), 2);
+}
+
+#[test]
+fn test_ifaces_iter_mut() {
+    let mut ifaces = serde_yaml::from_str::<Interfaces>(
+        r#"---
+- name: eth1
+  type: ethernet
+  state: ignore
+- name: br0
+  type: ovs-bridge
+  state: up
+"#,
+    )
+    .unwrap();
+    for iface in ifaces.iter_mut() {
+        iface.base_iface_mut().mtu = Some(1280);
+    }
+    let ifaces_vec: Vec<&Interface> = ifaces.iter().collect();
+    assert_eq!(ifaces_vec.len(), 2);
+    assert_eq!(ifaces_vec[0].base_iface().mtu, Some(1280));
+    assert_eq!(ifaces_vec[1].base_iface().mtu, Some(1280));
+}
