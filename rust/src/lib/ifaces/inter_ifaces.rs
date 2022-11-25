@@ -328,6 +328,16 @@ impl Interfaces {
             iface.base_iface_mut().hide_secrets();
         }
     }
+
+    pub fn iter(&self) -> impl Iterator<Item = &Interface> {
+        self.user_ifaces.values().chain(self.kernel_ifaces.values())
+    }
+
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut Interface> {
+        self.user_ifaces
+            .values_mut()
+            .chain(self.kernel_ifaces.values_mut())
+    }
 }
 
 fn gen_ifaces_to_del(
