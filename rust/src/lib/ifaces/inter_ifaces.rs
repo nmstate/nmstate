@@ -102,9 +102,9 @@ impl Interfaces {
         ifaces
     }
 
-    pub fn get_iface<'a, 'b>(
+    pub fn get_iface<'a>(
         &'a self,
-        iface_name: &'b str,
+        iface_name: &str,
         iface_type: InterfaceType,
     ) -> Option<&'a Interface> {
         if iface_type == InterfaceType::Unknown {
@@ -120,9 +120,9 @@ impl Interfaces {
         }
     }
 
-    fn get_iface_mut<'a, 'b>(
+    fn get_iface_mut<'a>(
         &'a mut self,
-        iface_name: &'b str,
+        iface_name: &str,
         iface_type: InterfaceType,
     ) -> Option<&'a mut Interface> {
         if iface_type.is_userspace() {
