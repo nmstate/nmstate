@@ -238,9 +238,9 @@ impl Interfaces {
         }
     }
 
-    pub(crate) fn get_iface_mut<'a, 'b>(
+    pub(crate) fn get_iface_mut<'a>(
         &'a mut self,
-        iface_name: &'b str,
+        iface_name: &str,
         iface_type: InterfaceType,
     ) -> Option<&'a mut Interface> {
         if iface_type.is_userspace() {

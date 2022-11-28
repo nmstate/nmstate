@@ -104,9 +104,9 @@ impl Interfaces {
     /// Search interface base on interface name and interface type.
     /// When using [InterfaceType::Unknown], we only search kernel
     /// interface(which has presentation in kernel space).
-    pub fn get_iface<'a, 'b>(
+    pub fn get_iface<'a>(
         &'a self,
-        iface_name: &'b str,
+        iface_name: &str,
         iface_type: InterfaceType,
     ) -> Option<&'a Interface> {
         if iface_type == InterfaceType::Unknown {
