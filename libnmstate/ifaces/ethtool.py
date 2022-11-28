@@ -176,6 +176,7 @@ class IfaceEthtoolFeature:
         "rx-ntuple-filter",
         "rx-vlan-hw-parse",
         "tx-vlan-hw-insert",
+        "highdma",
     }
 
     def __init__(self, feature_info):
