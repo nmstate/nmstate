@@ -94,7 +94,7 @@ class _ConnectionSetting:
         self._setting = new
 
     def set_controller(self, controller, port_type):
-        if controller is not None:
+        if controller:
             self._setting.props.master = controller
             self._setting.props.slave_type = port_type
 

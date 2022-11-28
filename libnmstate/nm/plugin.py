@@ -49,6 +49,7 @@ from .ovs import get_interface_info as get_ovs_interface_info
 from .ovs import get_ovs_bridge_info
 from .ovs import get_ovsdb_external_ids
 from .ovs import has_ovs_capability
+from .ovs import set_ovs_iface_controller_info
 from .profiles import NmProfiles
 from .profiles import get_all_applied_configs
 from .team import get_info as get_team_info
@@ -191,6 +192,8 @@ class NetworkManagerPlugin(NmstatePlugin):
                 iface_info.update(get_ovsdb_external_ids(applied_config))
 
             info.append(iface_info)
+
+        set_ovs_iface_controller_info(info)
 
         info.sort(key=itemgetter("name"))
 

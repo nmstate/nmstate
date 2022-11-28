@@ -48,6 +48,7 @@ class Interface:
     MTU = "mtu"
     COPY_MAC_FROM = "copy-mac-from"
     ACCEPT_ALL_MAC_ADDRESSES = "accept-all-mac-addresses"
+    CONTROLLER = "controller"
 
 
 class Route:

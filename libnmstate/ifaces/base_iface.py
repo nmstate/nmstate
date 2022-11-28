@@ -124,7 +124,6 @@ class IPState:
 
 
 class BaseIface:
-    CONTROLLER_METADATA = "_controller"
     CONTROLLER_TYPE_METADATA = "_controller_type"
     DNS_METADATA = "_dns"
     ROUTES_METADATA = "_routes"
@@ -357,7 +356,7 @@ class BaseIface:
         return False
 
     def set_controller(self, controller_iface_name, controller_type):
-        self._info[BaseIface.CONTROLLER_METADATA] = controller_iface_name
+        self._info[Interface.CONTROLLER] = controller_iface_name
         self._info[BaseIface.CONTROLLER_TYPE_METADATA] = controller_type
         if (
             not self.can_have_ip_as_port
@@ -368,7 +367,7 @@ class BaseIface:
 
     @property
     def controller(self):
-        return self._info.get(BaseIface.CONTROLLER_METADATA)
+        return self._info.get(Interface.CONTROLLER)
 
     @property
     def controller_type(self):
@@ -379,7 +378,8 @@ class BaseIface:
             for port_name in self.port:
                 port_iface = ifaces.all_kernel_ifaces.get(port_name)
                 if port_iface:
-                    port_iface.set_controller(self.name, self.type)
+                    if port_iface.controller != "":
+                        port_iface.set_controller(self.name, self.type)
 
     def update(self, info):
         self._info.update(info)
@@ -445,6 +445,8 @@ class BaseIface:
             state[Interface.STATE] = InterfaceState.DOWN
         _convert_ovs_external_ids_values_to_string(state)
         state.pop(BaseIface.PERMANENT_MAC_ADDRESS_METADATA, None)
+        if self.controller == "":
+            state.pop(Interface.CONTROLLER, None)
 
         return state
 
