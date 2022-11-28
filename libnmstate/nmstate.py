@@ -73,6 +73,7 @@ def show_with_plugins(
     include_status_data=None,
     info_type=_INFO_TYPE_RUNNING,
     include_secrets=False,
+    include_controller_prop=True,
 ):
     for plugin in plugins:
         plugin.refresh_content()
@@ -81,7 +82,7 @@ def show_with_plugins(
         report["capabilities"] = plugins_capabilities(plugins)
 
     report[Interface.KEY] = _get_interface_info_from_plugins(
-        plugins, info_type
+        plugins, info_type, include_controller_prop=include_controller_prop
     )
 
     report[Route.KEY] = _get_routes_from_plugins(plugins, info_type)
@@ -103,6 +104,7 @@ def show_with_plugins(
 
     if not include_secrets:
         hide_the_secrets(report)
+
     return report
 
 
@@ -185,7 +187,9 @@ def _find_plugin_for_capability(plugins, capability):
     return chose_plugin
 
 
-def _get_interface_info_from_plugins(plugins, info_type):
+def _get_interface_info_from_plugins(
+    plugins, info_type, include_controller_prop=True
+):
     all_ifaces = {}
     IFACE_PRIORITY_METADATA = "_plugin_priority"
     IFACE_PLUGIN_SRC_METADATA = "_plugin_source"
@@ -287,6 +291,8 @@ def _get_interface_info_from_plugins(plugins, info_type):
     for iface in all_ifaces.values():
         iface.pop(IFACE_PRIORITY_METADATA)
         iface.pop(IFACE_PLUGIN_SRC_METADATA)
+        if not include_controller_prop:
+            iface.pop(Interface.CONTROLLER, None)
 
     return sorted(all_ifaces.values(), key=itemgetter(Interface.NAME))
 
@@ -404,6 +410,7 @@ def show_running_config_with_plugins(plugins, include_secrets):
         plugins,
         info_type=_INFO_TYPE_RUNNING_CONFIG,
         include_secrets=include_secrets,
+        include_controller_prop=False,
     )
 
 

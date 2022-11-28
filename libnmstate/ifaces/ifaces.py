@@ -157,6 +157,7 @@ class Ifaces:
             self._validate_infiniband_as_bridge_port()
             self._validate_infiniband_as_bond_port()
             self._apply_copy_mac_from()
+            self._validate_controller_and_port_list_conflict()
             self.gen_metadata()
             for iface in self.all_ifaces():
                 if iface.is_desired and iface.is_up:
@@ -275,6 +276,7 @@ class Ifaces:
         self._validate_ovs_patch_peers()
         self._remove_unknown_type_interfaces()
         self._validate_veth_peers()
+        self._resolve_controller_type()
 
     def _bring_port_up_if_not_in_desire(self):
         """
@@ -400,6 +402,72 @@ class Ifaces:
                             f"{iface.name} is in {iface.bond_mode} mode."
                         )
 
+    def _validate_controller_and_port_list_conflict(self):
+        """
+        Validate Check whether user defined both controller property and port
+        list of controller interface, examples of invalid desire state:
+            * eth1 has controller: br1, but br1 has no eth1 in port list
+            * eth2 has controller: br1, but br2 has eth2 in port list
+            * eth1 has controller: Some("") (detach), but br1 has eth1 in port
+              list
+        """
+        self._validate_controller_not_in_port_list()
+        self._validate_controller_in_other_port_list()
+
+    def _validate_controller_not_in_port_list(self):
+        for iface_name, iface in self._kernel_ifaces.items():
+            if (
+                not iface.is_up
+                or not iface.controller
+                or Interface.CONTROLLER not in iface.original_desire_dict
+            ):
+                continue
+            ctrl_iface = self._user_space_ifaces.get(
+                iface.controller, InterfaceType.OVS_BRIDGE
+            )
+            if not ctrl_iface:
+                ctrl_iface = self._kernel_ifaces.get(iface.controller)
+            if ctrl_iface:
+                if not ctrl_iface.is_desired:
+                    continue
+                if ctrl_iface.port and iface_name not in ctrl_iface.port:
+                    raise NmstateValueError(
+                        f"Interface {iface_name} desired controller "
+                        f"is {iface.controller}, but not listed in port "
+                        "list of controller interface"
+                    )
+
+    def _validate_controller_in_other_port_list(self):
+        port_to_ctrl = {}
+        for iface in self.all_ifaces():
+            if iface.is_controller and iface.is_desired and iface.is_up:
+                for port in iface.port:
+                    port_to_ctrl[port] = iface.name
+
+        for iface in self._kernel_ifaces.values():
+            if (
+                not iface.is_desired
+                or not iface.is_up
+                or iface.controller is None
+                or iface.name not in port_to_ctrl
+                or Interface.CONTROLLER not in iface.original_desire_dict
+            ):
+                continue
+            ctrl_name = port_to_ctrl.get(iface.name)
+            if ctrl_name != iface.controller:
+                if iface.controller:
+                    raise NmstateValueError(
+                        f"Interface {iface.name} has controller property set "
+                        f"to {iface.controller}, but been listed as "
+                        f"port of controller {ctrl_name} "
+                    )
+                else:
+                    raise NmstateValueError(
+                        f"Interface {iface.name} desired to detach controller "
+                        "via controller property set to '', but "
+                        f"still been listed as port of controller {ctrl_name}"
+                    )
+
     def _handle_controller_port_list_change(self):
         """
         * Mark port interface as changed if controller removed.
@@ -419,6 +487,10 @@ class Ifaces:
                 changed_port = (des_port | cur_port) - (des_port & cur_port)
                 for iface_name in changed_port:
                     self._kernel_ifaces[iface_name].mark_as_changed()
+                    if iface_name not in des_port:
+                        self._kernel_ifaces[iface_name].set_controller(
+                            None, None
+                        )
             if cur_iface:
                 for port_name in iface.config_changed_port(cur_iface):
                     if port_name in self._kernel_ifaces:
@@ -822,6 +894,24 @@ class Ifaces:
                 for port_name in iface.port:
                     if port_name in ignored_kernel_iface_names:
                         iface.remove_port(port_name)
+
+    def _resolve_controller_type(self):
+        for iface in self._kernel_ifaces.values():
+            if (
+                iface.is_up
+                and iface.is_desired
+                and Interface.CONTROLLER in iface.original_desire_dict
+                and iface.controller
+                and iface.controller_type is None
+            ):
+                ctrl_iface = self._cur_user_space_ifaces.get(
+                    iface.controller, InterfaceType.OVS_BRIDGE
+                )
+                if ctrl_iface is None:
+                    ctrl_iface = self._cur_kernel_ifaces.get(iface.controller)
+
+                if ctrl_iface:
+                    iface.set_controller(iface.controller, ctrl_iface.type)
 
 
 def _to_specific_iface_obj(info, save_to_disk):

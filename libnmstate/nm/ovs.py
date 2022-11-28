@@ -22,6 +22,7 @@ from operator import itemgetter
 
 from libnmstate.ifaces import ovs
 from libnmstate.ifaces.bridge import BridgeIface
+from libnmstate.ifaces.ovs import OvsBridgeIface
 from libnmstate.ifaces.ovs import OvsPortIface
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceType
@@ -33,7 +34,6 @@ from .common import NM
 
 
 CONTROLLER_TYPE_METADATA = "_controller_type"
-CONTROLLER_METADATA = "_controller"
 SETTING_OVS_EXTERNALIDS = "SettingOvsExternalIDs"
 SETTING_OVS_EXTERNAL_IDS_SETTING_NAME = "ovs-external-ids"
 
@@ -338,17 +338,24 @@ def create_iface_for_nm_ovs_port(iface):
     iface_name = iface.name
     iface_info = iface.to_dict()
     port_options = iface_info.get(BridgeIface.BRPORT_OPTIONS_METADATA)
-    if ovs.is_ovs_lag_port(port_options):
-        port_name = port_options[OB.Port.NAME]
+    if port_options:
+        if ovs.is_ovs_lag_port(port_options):
+            port_name = port_options[OB.Port.NAME]
+        else:
+            port_name = iface_name
     else:
+        # User is attaching system port to OVS bridge via `controller` property
+        # with OVS bridge not mentioned in desired state
         port_name = iface_name
+        port_options = {}
+
     return OvsPortIface(
         {
             Interface.NAME: port_name,
             Interface.TYPE: InterfaceType.OVS_PORT,
             Interface.STATE: iface.state,
             OB.OPTIONS_SUBTREE: port_options,
-            CONTROLLER_METADATA: iface_info[CONTROLLER_METADATA],
+            Interface.CONTROLLER: iface_info[Interface.CONTROLLER],
             CONTROLLER_TYPE_METADATA: iface_info[CONTROLLER_TYPE_METADATA],
         }
     )
@@ -356,3 +363,17 @@ def create_iface_for_nm_ovs_port(iface):
 
 def _is_nm_support_ovs_external_ids():
     return hasattr(NM, SETTING_OVS_EXTERNALIDS)
+
+
+def set_ovs_iface_controller_info(iface_infos):
+    pending_changes = {}
+    for iface_info in iface_infos:
+        if iface_info.get(Interface.TYPE) == InterfaceType.OVS_BRIDGE:
+            iface = OvsBridgeIface(info=iface_info, save_to_disk=True)
+            for port in iface.port:
+                pending_changes[port] = iface.name
+
+    for iface_info in iface_infos:
+        ctrl_name = pending_changes.get(iface_info[Interface.NAME])
+        if ctrl_name:
+            iface_info[Interface.CONTROLLER] = ctrl_name

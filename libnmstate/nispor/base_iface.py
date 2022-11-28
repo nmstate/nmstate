@@ -115,6 +115,8 @@ class NisporPluginBaseIface:
             if ethtool_info_dict:
                 iface_info[Ethtool.CONFIG_SUBTREE] = ethtool_info_dict
 
+        if self.np_iface.controller:
+            iface_info[Interface.CONTROLLER] = self.np_iface.controller
         return iface_info
 
 

@@ -119,7 +119,9 @@ def rollback(*, checkpoint=None):
 
 def _apply_ifaces_state(plugins, net_state, verify_change, save_to_disk):
     for plugin in plugins:
-        plugin.apply_changes(net_state, save_to_disk)
+        # Do not allow plugin to modify the net_state for future verification
+        tmp_net_state = copy.deepcopy(net_state)
+        plugin.apply_changes(tmp_net_state, save_to_disk)
 
     verified = False
     if verify_change:

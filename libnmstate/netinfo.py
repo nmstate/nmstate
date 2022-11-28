@@ -39,6 +39,7 @@ def show(*, include_status_data=False, include_secrets=False):
                 plugins,
                 include_status_data=include_status_data,
                 include_secrets=include_secrets,
+                include_controller_prop=False,
             )
         )
 
