@@ -219,6 +219,7 @@ class EthtoolInfo:
         "rx-ntuple-filter",
         "rx-vlan-hw-parse",
         "tx-vlan-hw-insert",
+        "highdma",
     ]
 
     def __init__(self, np_ethtool):
