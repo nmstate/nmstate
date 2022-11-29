@@ -129,5 +129,11 @@ impl BaseInterface {
             ethtool_conf.pre_verify_cleanup();
         }
         mptcp_pre_verify_cleanup(self);
+
+        // If desired controller is Some("") for detaching, we should remove
+        // it for verification
+        if self.controller.as_ref() == Some(&"".to_string()) {
+            self.controller = None;
+        }
     }
 }
