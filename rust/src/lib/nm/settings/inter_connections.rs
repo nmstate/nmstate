@@ -96,16 +96,10 @@ pub(crate) fn use_uuid_for_controller_reference(
                     ) {
                         ctrl_name = ovs_port_name.to_string();
                     } else {
-                        let e = NmstateError::new(
-                            ErrorKind::Bug,
-                            format!(
-                                "Failed to find OVS port name for \
-                                NmConnection {:?}",
-                                nm_conn
-                            ),
-                        );
-                        log::error!("{}", e);
-                        return Err(e);
+                        // User is attaching port to existing OVS bridge
+                        // using `controller` property without OVS bridge
+                        // interface mentioned in desire state
+                        ctrl_name = iface_name.to_string();
                     }
                 }
             } else {

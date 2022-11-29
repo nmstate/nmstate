@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use std::collections::{HashMap, HashSet};
 use std::iter::FromIterator;
 
@@ -141,6 +143,11 @@ pub(crate) fn handle_changed_ports(
             }
         }
     }
+    // When only port iface with `controller` peppery without its controller
+    // interface been mentioned in desired state, we need to resolve its
+    // controller type for backend to proceed.
+    resolve_port_iface_controller_type(ifaces, cur_ifaces)?;
+
     Ok(())
 }
 
@@ -545,4 +552,152 @@ pub(crate) fn validate_new_ovs_iface_has_controller(
         }
     }
     Ok(())
+}
+
+fn resolve_port_iface_controller_type(
+    ifaces: &mut Interfaces,
+    cur_ifaces: &Interfaces,
+) -> Result<(), NmstateError> {
+    // Port interface can only kernel interface
+    for iface in ifaces.kernel_ifaces.values_mut() {
+        if let (Some(ctrl_name), None) = (
+            iface.base_iface().controller.as_ref(),
+            iface.base_iface().controller_type.as_ref(),
+        ) {
+            if ctrl_name.is_empty() || !iface.is_up() {
+                continue;
+            }
+            // The `handle_changed_ports()` has already set controller type
+            // for ports has their controller mentioned in desire state.
+            // So here, port interface is referring controller in cur_ifaces
+            // state
+            match cur_ifaces
+                .user_ifaces
+                .get(&(ctrl_name.to_string(), InterfaceType::OvsBridge))
+                .or_else(|| cur_ifaces.kernel_ifaces.get(ctrl_name))
+            {
+                Some(ctrl_iface) => {
+                    log::debug!(
+                        "Setting controller type of interface {} to {}",
+                        iface.name(),
+                        ctrl_iface.name(),
+                    );
+                    iface.base_iface_mut().controller_type =
+                        Some(ctrl_iface.iface_type())
+                }
+                None => {
+                    return Err(NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        format!(
+                            "The controller {} of interface {} \
+                            does not exists",
+                            ctrl_name,
+                            iface.name()
+                        ),
+                    ));
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+impl Interfaces {
+    // Check whether user defined both controller property and port list of
+    // controller interface, examples of invalid desire state:
+    //  * eth1 has controller: br1, but br1 has no eth1 in port list
+    //  * eth2 has controller: br1, but br2 has eth2 in port list
+    //  * eth1 has controller: Some("") (detach), but br1 has eth1 in port list
+    pub(crate) fn validate_controller_and_port_list_confliction(
+        &self,
+    ) -> Result<(), NmstateError> {
+        self.valid_controller_not_in_port_list()?;
+        self.valid_controller_in_other_port_list()?;
+        Ok(())
+    }
+
+    fn valid_controller_not_in_port_list(&self) -> Result<(), NmstateError> {
+        for iface in self.kernel_ifaces.values() {
+            if !iface.is_up() {
+                continue;
+            }
+            if let Some(des_ctrl_name) = iface.base_iface().controller.as_ref()
+            {
+                if des_ctrl_name.is_empty() {
+                    continue;
+                } else if let Some(ports) = self
+                    .user_ifaces
+                    .get(&(des_ctrl_name.to_string(), InterfaceType::OvsBridge))
+                    .or_else(|| self.kernel_ifaces.get(des_ctrl_name))
+                    .and_then(|ctrl_iface| ctrl_iface.ports())
+                {
+                    if !ports.contains(&des_ctrl_name.as_str()) {
+                        return Err(NmstateError::new(
+                            ErrorKind::InvalidArgument,
+                            format!(
+                                "Interface {} has controller {} \
+                                but not listed in port list of controller \
+                                interface",
+                                iface.name(),
+                                des_ctrl_name,
+                            ),
+                        ));
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn valid_controller_in_other_port_list(&self) -> Result<(), NmstateError> {
+        let mut port_to_ctrl = HashMap::new();
+        for iface in self.to_vec() {
+            if !iface.is_up() {
+                continue;
+            }
+            if let Some(port_names) = iface.ports() {
+                for port_name in port_names {
+                    port_to_ctrl.insert(port_name, iface.name());
+                }
+            }
+        }
+        for iface in self.kernel_ifaces.values() {
+            if !iface.is_up() {
+                continue;
+            }
+            if let Some(des_ctrl_name) = iface.base_iface().controller.as_ref()
+            {
+                if let Some(ctrl_name) = port_to_ctrl.get(iface.name()) {
+                    if des_ctrl_name != ctrl_name {
+                        if des_ctrl_name.is_empty() {
+                            return Err(NmstateError::new(
+                                ErrorKind::InvalidArgument,
+                                format!(
+                                    "Interface {} desired to detach controller \
+                                    via controller property set to '', but \
+                                    still been listed as port of \
+                                    controller {} ",
+                                    iface.name(),
+                                    ctrl_name
+                                ),
+                            ));
+                        } else {
+                            return Err(NmstateError::new(
+                                ErrorKind::InvalidArgument,
+                                format!(
+                                    "Interface {} has controller property set \
+                                    to {}, but been listed as port of \
+                                    controller {} ",
+                                    iface.name(),
+                                    des_ctrl_name,
+                                    ctrl_name
+                                ),
+                            ));
+                        }
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
 }
