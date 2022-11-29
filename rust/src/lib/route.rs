@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use std::collections::{hash_map::Entry, HashMap, HashSet};
+use std::net::Ipv4Addr;
+use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};
 
@@ -73,6 +75,9 @@ impl Routes {
                             is not supported: {route:?}"
                         ),
                     ));
+                }
+                if let Some(dst) = route.destination.as_deref() {
+                    validate_route_dst(dst)?;
                 }
             }
         }
@@ -509,4 +514,52 @@ impl MergedRoutes {
     pub(crate) fn is_changed(&self) -> bool {
         !self.route_changed_ifaces.is_empty()
     }
+}
+
+// Validating if the route destination network is valid,
+// 0.0.0.0/8 and its subnet cannot be used as the route destination network
+fn validate_route_dst(dst: &str) -> Result<(), NmstateError> {
+    if !is_ipv6_addr(dst) {
+        let ip_net: Vec<&str> = dst.split('/').collect();
+        let ip_addr = Ipv4Addr::from_str(ip_net[0])?;
+        if ip_addr.octets()[0] == 0 {
+            if dst.contains('/') {
+                let prefix = match ip_net[1].parse::<i32>() {
+                    Ok(p) => p,
+                    Err(_) => {
+                        return Err(NmstateError::new(
+                            ErrorKind::InvalidArgument,
+                            format!(
+                                "The prefix of the route destination network \
+                                '{dst}' is invalid"
+                            ),
+                        ));
+                    }
+                };
+                if prefix >= 8 {
+                    let e = NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        "0.0.0.0/8 and its subnet cannot be used as \
+                        the route destination, please use the default \
+                        gateway 0.0.0.0/0 instead"
+                            .to_string(),
+                    );
+                    log::error!("{}", e);
+                    return Err(e);
+                }
+            } else {
+                let e = NmstateError::new(
+                    ErrorKind::InvalidArgument,
+                    "0.0.0.0/8 and its subnet cannot be used as \
+                    the route destination, please use the default \
+                    gateway 0.0.0.0/0 instead"
+                        .to_string(),
+                );
+                log::error!("{}", e);
+                return Err(e);
+            }
+        }
+        return Ok(());
+    }
+    Ok(())
 }

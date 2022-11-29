@@ -326,3 +326,85 @@ fn test_route_ipv4_ecmp_is_match() {
     .unwrap();
     assert!(absent_route.is_match(&route));
 }
+
+#[test]
+fn test_route_valid_default_gateway() {
+    let routes: Routes = serde_yaml::from_str(
+        r#"
+config:
+- destination: 0.0.0.0/0
+  next-hop-address: 192.0.2.1
+  next-hop-interface: eth1
+"#,
+    )
+    .unwrap();
+    routes.validate().unwrap();
+}
+
+#[test]
+fn test_route_invalid_destination() {
+    let routes1: Routes = serde_yaml::from_str(
+        r#"
+config:
+- destination: 0.0.0.0/8
+  next-hop-address: 192.0.2.1
+  next-hop-interface: eth1
+"#,
+    )
+    .unwrap();
+    let result = routes1.validate();
+    assert!(result.is_err());
+    assert_eq!(result.err().unwrap().kind(), ErrorKind::InvalidArgument);
+
+    let routes2: Routes = serde_yaml::from_str(
+        r#"
+config:
+- destination: 0.0.0.0/f
+  next-hop-address: 192.0.2.1
+  next-hop-interface: eth1
+"#,
+    )
+    .unwrap();
+    let result = routes2.validate();
+    assert!(result.is_err());
+    assert_eq!(result.err().unwrap().kind(), ErrorKind::InvalidArgument);
+
+    let routes3: Routes = serde_yaml::from_str(
+        r#"
+config:
+- destination: 0.0.0.0
+  next-hop-address: 192.0.2.1
+  next-hop-interface: eth1
+"#,
+    )
+    .unwrap();
+    let result = routes3.validate();
+    assert!(result.is_err());
+    assert_eq!(result.err().unwrap().kind(), ErrorKind::InvalidArgument);
+
+    let routes4: Routes = serde_yaml::from_str(
+        r#"
+config:
+- destination: 0.0.0.0.0/0
+  next-hop-address: 192.0.2.1
+  next-hop-interface: eth1
+"#,
+    )
+    .unwrap();
+    let result = routes4.validate();
+    assert!(result.is_err());
+    assert_eq!(result.err().unwrap().kind(), ErrorKind::InvalidArgument);
+
+    let routes5: Routes = serde_yaml::from_str(
+        r#"
+config:
+- destination: 0.0.0.0.0/7
+  next-hop-address: 192.0.2.1
+  next-hop-interface: eth1
+"#,
+    )
+    .unwrap();
+    let result = routes5.validate();
+    assert!(result.is_err());
+    assert_eq!(result.err().unwrap().kind(), ErrorKind::InvalidArgument);
+}
