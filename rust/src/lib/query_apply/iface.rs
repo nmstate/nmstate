@@ -255,3 +255,20 @@ impl Interface {
         }
     }
 }
+
+impl InterfaceType {
+    pub(crate) const SUPPORTED_LIST: [InterfaceType; 12] = [
+        InterfaceType::Bond,
+        InterfaceType::LinuxBridge,
+        InterfaceType::Dummy,
+        InterfaceType::Ethernet,
+        InterfaceType::Veth,
+        InterfaceType::MacVtap,
+        InterfaceType::MacVlan,
+        InterfaceType::OvsBridge,
+        InterfaceType::OvsInterface,
+        InterfaceType::Vlan,
+        InterfaceType::Vxlan,
+        InterfaceType::InfiniBand,
+    ];
+}

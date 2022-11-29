@@ -175,6 +175,20 @@ pub(crate) fn nm_retrieve(
             }
         }
     }
+    for iface in net_state
+        .interfaces
+        .kernel_ifaces
+        .values_mut()
+        .chain(net_state.interfaces.user_ifaces.values_mut())
+    {
+        // Do not touch interfaces nmstate does not support yet
+        if !InterfaceType::SUPPORTED_LIST.contains(&iface.iface_type()) {
+            if !iface.base_iface_mut().prop_list.contains(&"state") {
+                iface.base_iface_mut().prop_list.push("state");
+            }
+            iface.base_iface_mut().state = InterfaceState::Ignore;
+        }
+    }
 
     net_state.dns = retrieve_dns_info(&nm_api, &net_state.interfaces)?;
     if running_config_only {
