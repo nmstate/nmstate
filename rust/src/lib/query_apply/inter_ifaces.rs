@@ -335,6 +335,12 @@ impl Interfaces {
         }
         Ok(())
     }
+
+    pub(crate) fn hide_controller_prop(&mut self) {
+        for iface in self.kernel_ifaces.values_mut() {
+            iface.base_iface_mut().controller = None;
+        }
+    }
 }
 
 fn find_unknown_type_port<'a>(

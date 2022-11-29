@@ -37,6 +37,12 @@ impl NetworkState {
     /// Retrieve the `NetworkState`.
     /// Only available for feature `query_apply`.
     pub fn retrieve(&mut self) -> Result<&mut Self, NmstateError> {
+        self.retrieve_full()?;
+        self.interfaces.hide_controller_prop();
+        Ok(self)
+    }
+
+    pub(crate) fn retrieve_full(&mut self) -> Result<&mut Self, NmstateError> {
         let state = nispor_retrieve(self.running_config_only)?;
         if state.prop_list.contains(&"hostname") {
             self.hostname = state.hostname;
@@ -82,7 +88,7 @@ impl NetworkState {
         let mut cur_net_state = NetworkState::new();
         cur_net_state.set_kernel_only(self.kernel_only);
         cur_net_state.set_include_secrets(true);
-        cur_net_state.retrieve()?;
+        cur_net_state.retrieve_full()?;
 
         if desire_state_to_apply.interfaces.to_vec().len()
             >= MAX_SUPPORTED_INTERFACES
@@ -205,7 +211,7 @@ impl NetworkState {
                                     let mut new_cur_net_state =
                                         cur_net_state.clone();
                                     new_cur_net_state.set_include_secrets(true);
-                                    new_cur_net_state.retrieve()?;
+                                    new_cur_net_state.retrieve_full()?;
                                     desire_state_to_verify.verify(
                                         &cur_net_state,
                                         &new_cur_net_state,
@@ -237,7 +243,7 @@ impl NetworkState {
                     VERIFY_RETRY_COUNT_KERNEL_MODE,
                     || {
                         let mut new_cur_net_state = cur_net_state.clone();
-                        new_cur_net_state.retrieve()?;
+                        new_cur_net_state.retrieve_full()?;
                         desire_state_to_verify
                             .verify(&cur_net_state, &new_cur_net_state)
                     },

@@ -77,8 +77,11 @@ pub struct BaseInterface {
     /// and dynamic).
     pub mptcp: Option<MptcpConfig>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    // None here mean no change, empty string mean detach from controller.
-    /// TODO: Internal only. Hide it.
+    /// Controller of the specified interface.
+    /// Only valid for applying, `None` means no change, empty string means
+    /// detach from current controller, please be advise, an error will trigger
+    /// if this property conflict with ports list of bridge/bond/etc.
+    /// Been always set to `None` by [crate::NetworkState::retrieve()].
     pub controller: Option<String>,
     #[serde(
         skip_serializing_if = "Option::is_none",

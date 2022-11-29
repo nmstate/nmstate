@@ -145,6 +145,7 @@ impl Interfaces {
         let mut new_ovs_ifaces = Vec::new();
 
         self.apply_copy_mac_from(current)?;
+        self.validate_controller_and_port_list_confliction()?;
         handle_changed_ports(self, current)?;
         preserve_ctrl_cfg_if_unchanged(self, current);
         self.set_up_priority()?;
