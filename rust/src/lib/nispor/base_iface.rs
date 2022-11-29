@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::{
     nispor::ethtool::np_ethtool_to_nmstate,
     nispor::ip::{np_ipv4_to_nmstate, np_ipv6_to_nmstate},
@@ -109,10 +111,10 @@ pub(crate) fn np_iface_to_base_iface(
         ],
         ..Default::default()
     };
-    if let InterfaceType::Other(t) = &base_iface.iface_type {
+    if !InterfaceType::SUPPORTED_LIST.contains(&base_iface.iface_type) {
         log::info!(
             "Got unsupported interface type {}: {}, ignoring",
-            t,
+            &base_iface.iface_type,
             &base_iface.name
         );
         base_iface.state = InterfaceState::Ignore;
