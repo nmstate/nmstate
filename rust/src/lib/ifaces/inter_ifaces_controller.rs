@@ -435,10 +435,11 @@ pub(crate) fn preserve_ctrl_cfg_if_unchanged(
     }
 
     for (iface_name, iface) in ifaces.kernel_ifaces.iter_mut() {
-        if iface.base_iface().controller.is_some()
-            && iface.base_iface().controller_type.is_some()
+        if (iface.base_iface().controller.is_some()
+            && iface.base_iface().controller_type.is_some())
+            || iface.base_iface().controller.as_ref() == Some(&String::new())
         {
-            // Iface already has controller information
+            // Iface already has controller information or detaching
             continue;
         }
         let cur_iface = match cur_ifaces.kernel_ifaces.get(iface_name) {
