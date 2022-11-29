@@ -144,6 +144,7 @@ class DnsState:
         Find interface to store the DNS configurations in the order of:
             * Any interface with static gateway
             * Any interface configured as dynamic IP with 'auto-dns:False'
+        The loopback interface is ignored.
         Return tuple: (ipv4_iface, ipv6_iface)
         """
         ipv4_iface, ipv6_iface = self._find_ifaces_with_static_gateways(
@@ -168,6 +169,8 @@ class DnsState:
         ipv4_iface = None
         ipv6_iface = None
         for iface_name, route_set in route_state.config_iface_routes.items():
+            if iface_name == "lo":
+                continue
             for route in route_set:
                 if ipv4_iface and ipv6_iface:
                     return (ipv4_iface, ipv6_iface)
