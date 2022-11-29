@@ -16,14 +16,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
     - name: Install Rust ${{ matrix.rust_version }}
-      uses: actions-rs/toolchain@v1
-      with:
-          toolchain: ${{ matrix.rust_version }}
-          override: true
-          components: rustfmt, clippy
+      run: |
+        rustup override set ${{ matrix.rust_version }}
+        rustup update ${{ matrix.rust_version }}
+        rustup component add rustfmt clippy
+
 
     - name: Check fmt
       if: matrix.rust_version == 'stable'
@@ -45,13 +45,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
     - name: Install Rust ${{ matrix.rust_version }}
-      uses: actions-rs/toolchain@v1
-      with:
-          toolchain: ${{ matrix.rust_version }}
-          override: true
+      run: |
+        rustup override set ${{ matrix.rust_version }}
+        rustup update ${{ matrix.rust_version }}
 
     - name: Unit test
       run: cd rust && cargo test -- --test-threads=1 --show-output
