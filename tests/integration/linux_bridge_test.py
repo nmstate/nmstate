@@ -19,6 +19,7 @@ from libnmstate.schema import InterfaceIP
 from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import InterfaceState
+from libnmstate.schema import InterfaceType
 from libnmstate.schema import LinuxBridge
 from libnmstate.schema import VLAN
 
@@ -1163,3 +1164,107 @@ def test_add_port_to_br_with_controller_property(bridge0_with_port0, eth2_up):
     assert len(br_ports) == 2
     assert br_ports[0][LinuxBridge.Port.NAME] == "eth1"
     assert br_ports[1][LinuxBridge.Port.NAME] == "eth2"
+
+
+def test_hide_controller_in_show(bridge0_with_port0):
+    current_state = show_only(["eth1"])
+    assert current_state[Interface.KEY][0][Interface.NAME] == "eth1"
+    assert Interface.CONTROLLER not in current_state[Interface.KEY][0]
+
+
+def test_has_controller_prop_but_not_in_port_list():
+    with pytest.raises(NmstateValueError):
+        libnmstate.apply(
+            {
+                Interface.KEY: [
+                    {
+                        Interface.NAME: "eth2",
+                        Interface.STATE: InterfaceState.UP,
+                        Interface.CONTROLLER: TEST_BRIDGE0,
+                    },
+                    {
+                        Interface.NAME: TEST_BRIDGE0,
+                        Interface.TYPE: InterfaceType.LINUX_BRIDGE,
+                        Interface.STATE: InterfaceState.UP,
+                        LinuxBridge.CONFIG_SUBTREE: {
+                            LinuxBridge.PORT_SUBTREE: [
+                                {LinuxBridge.Port.NAME: "eth1"}
+                            ]
+                        },
+                    },
+                ]
+            }
+        )
+
+
+def test_has_controller_prop_but_in_other_port_list():
+    with pytest.raises(NmstateValueError):
+        libnmstate.apply(
+            {
+                Interface.KEY: [
+                    {
+                        Interface.NAME: "eth2",
+                        Interface.STATE: InterfaceState.UP,
+                        Interface.CONTROLLER: f"{TEST_BRIDGE0}1",
+                    },
+                    {
+                        Interface.NAME: TEST_BRIDGE0,
+                        Interface.TYPE: InterfaceType.LINUX_BRIDGE,
+                        Interface.STATE: InterfaceState.UP,
+                        LinuxBridge.CONFIG_SUBTREE: {
+                            LinuxBridge.PORT_SUBTREE: [
+                                {LinuxBridge.Port.NAME: "eth2"}
+                            ]
+                        },
+                    },
+                ]
+            }
+        )
+
+
+def test_controller_detach_but_in_port_list():
+    with pytest.raises(NmstateValueError):
+        libnmstate.apply(
+            {
+                Interface.KEY: [
+                    {
+                        Interface.NAME: "eth2",
+                        Interface.STATE: InterfaceState.UP,
+                        Interface.CONTROLLER: "",
+                    },
+                    {
+                        Interface.NAME: TEST_BRIDGE0,
+                        Interface.TYPE: InterfaceType.LINUX_BRIDGE,
+                        Interface.STATE: InterfaceState.UP,
+                        LinuxBridge.CONFIG_SUBTREE: {
+                            LinuxBridge.PORT_SUBTREE: [
+                                {LinuxBridge.Port.NAME: "eth2"}
+                            ]
+                        },
+                    },
+                ]
+            }
+        )
+
+
+def test_controller_detach_from_linux_bridge(bridge0_with_port0):
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: "eth1",
+                    Interface.STATE: InterfaceState.UP,
+                    Interface.CONTROLLER: "",
+                },
+            ]
+        }
+    )
+    state = show_only([TEST_BRIDGE0])
+    assert (
+        len(
+            state[Interface.KEY][0][LinuxBridge.CONFIG_SUBTREE][
+                LinuxBridge.PORT_SUBTREE
+            ]
+        )
+        == 0
+    )
