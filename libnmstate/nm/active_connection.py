@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019-2020 Red Hat, Inc.
+# Copyright (c) 2019-2022 Red Hat, Inc.
 #
 # This file is part of nmstate
 #
@@ -17,7 +17,6 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 
-import time
 import logging
 
 from libnmstate.error import NmstateLibnmError
@@ -105,6 +104,19 @@ class ProfileActivation:
         self._fallback_checker = None
         self._fallback_checker_counter = 0
 
+    def _retry_activate(self, _user_data):
+        specific_object = None
+        retried = True
+        self._ctx.client.activate_connection_async(
+            self._nm_profile,
+            self._nm_dev,
+            specific_object,
+            self._ctx.cancellable,
+            self._activate_profile_callback,
+            retried,
+        )
+        return GLib.SOURCE_REMOVE
+
     def run(self):
         specific_object = None
         self._action = (
@@ -112,7 +124,7 @@ class ProfileActivation:
             f"iface:{self._iface_name} type: {self._iface_type}"
         )
 
-        retry = True
+        retried = False
         self._ctx.register_async(self._action)
         self._ctx.client.activate_connection_async(
             self._nm_profile,
@@ -120,7 +132,7 @@ class ProfileActivation:
             specific_object,
             self._ctx.cancellable,
             self._activate_profile_callback,
-            retry,
+            retried,
         )
         self._fallback_checker = GLib.timeout_source_new(
             FALLBACK_CHECKER_INTERNAL * 1000
@@ -154,7 +166,7 @@ class ProfileActivation:
         activation._fallback_checker.attach(ctx.context)
         activation._wait_profile_activation()
 
-    def _activate_profile_callback(self, nm_client, result, retry):
+    def _activate_profile_callback(self, nm_client, result, retried):
         nm_ac = None
         if self._ctx.is_cancelled():
             self._activation_clean_up()
@@ -162,22 +174,16 @@ class ProfileActivation:
         try:
             nm_ac = nm_client.activate_connection_finish(result)
         except GLib.Error as e:
-            if retry:
-                retry = False
-                specific_object = None
+            if not retried:
                 logging.debug(
                     f"Action {self._action} failed, trying again in "
                     f"{ACTIVATION_RETRY_SLEEP} seconds."
                 )
-                time.sleep(ACTIVATION_RETRY_SLEEP)
-                self._ctx.client.activate_connection_async(
-                    self._nm_profile,
-                    self._nm_dev,
-                    specific_object,
-                    self._ctx.cancellable,
-                    self._activate_profile_callback,
-                    retry,
+                activation_retry_timer = GLib.timeout_source_new(
+                    ACTIVATION_RETRY_SLEEP * 1000
                 )
+                activation_retry_timer.set_callback(self._retry_activate, None)
+                activation_retry_timer.attach(self._ctx.context)
                 return
             elif e.matches(Gio.io_error_quark(), Gio.IOErrorEnum.TIMED_OUT):
                 logging.debug(
