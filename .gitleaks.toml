@@ -1,0 +1,6 @@
+[allowlist]
+  description = "Global Allowlist"
+  paths = [
+    # This ssh key is deactivated
+    'automation/upload_test_artifacts.key',
+  ]
