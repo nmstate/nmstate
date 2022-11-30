@@ -27,6 +27,9 @@ pub struct NmApi<'a> {
 const RETRY_INTERVAL_MILLISECOND: u64 = 500;
 const RETRY_COUNT: usize = 60;
 
+const LOOPBACK_NO_SUPPORT_ERR_MSG: &str = "org.freedesktop.NetworkManager.\
+                                           Settings.Connection.InvalidSetting: loopback: unknown setting name";
+
 impl<'a> NmApi<'a> {
     pub fn new() -> Result<Self, NmError> {
         Ok(Self {
@@ -156,8 +159,23 @@ impl<'a> NmApi<'a> {
                 );
             }
         };
-        self.dbus.connection_add(nm_conn, memory_only)?;
-        Ok(())
+        if let Err(e) = self.dbus.connection_add(nm_conn, memory_only) {
+            if e.kind == ErrorKind::DbusConnectionError
+                && e.msg.contains(LOOPBACK_NO_SUPPORT_ERR_MSG)
+            {
+                Err(NmError::new(
+                    ErrorKind::LoopbackIfaceNotSupported,
+                    "Loopback is not supported by running NetworkManager, \
+                    please upgrade to NetworkManager 1.41+ and \
+                    restart its daemon"
+                        .to_string(),
+                ))
+            } else {
+                Err(e)
+            }
+        } else {
+            Ok(())
+        }
     }
 
     pub fn connection_delete(&self, uuid: &str) -> Result<(), NmError> {

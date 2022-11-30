@@ -34,10 +34,10 @@ use super::{
 use crate::{
     BaseInterface, BondConfig, BondInterface, BondOptions, DummyInterface,
     EthernetInterface, InfiniBandInterface, Interface, InterfaceState,
-    InterfaceType, Interfaces, LinuxBridgeInterface, MacVlanInterface,
-    MacVtapInterface, NetworkState, NmstateError, OvsBridgeInterface,
-    OvsInterface, UnknownInterface, VlanInterface, VrfInterface,
-    VxlanInterface,
+    InterfaceType, Interfaces, LinuxBridgeInterface, LoopbackInterface,
+    MacVlanInterface, MacVtapInterface, NetworkState, NmstateError,
+    OvsBridgeInterface, OvsInterface, UnknownInterface, VlanInterface,
+    VrfInterface, VxlanInterface,
 };
 
 pub(crate) fn nm_retrieve(
@@ -522,6 +522,11 @@ fn nm_dev_to_nm_iface(nm_dev: &NmDevice) -> Option<Interface> {
         }),
         InterfaceType::Vrf => Interface::Vrf({
             let mut iface = VrfInterface::new();
+            iface.base = base_iface;
+            iface
+        }),
+        InterfaceType::Loopback => Interface::Loopback({
+            let mut iface = LoopbackInterface::new();
             iface.base = base_iface;
             iface
         }),

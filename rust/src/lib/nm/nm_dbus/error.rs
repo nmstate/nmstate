@@ -11,6 +11,7 @@ pub enum ErrorKind {
     IncompatibleReapply,
     Bug,
     Timeout,
+    LoopbackIfaceNotSupported,
 }
 
 impl std::fmt::Display for ErrorKind {

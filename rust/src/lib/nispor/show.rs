@@ -17,8 +17,8 @@ use crate::{
         vrf::np_vrf_to_nmstate,
         vxlan::np_vxlan_to_nmstate,
     },
-    DummyInterface, Interface, InterfaceType, Interfaces, NetworkState,
-    NmstateError, OvsInterface, UnknownInterface,
+    DummyInterface, Interface, InterfaceType, Interfaces, LoopbackInterface,
+    NetworkState, NmstateError, OvsInterface, UnknownInterface,
 };
 
 pub(crate) fn nispor_retrieve(
@@ -104,6 +104,9 @@ pub(crate) fn nispor_retrieve(
                     continue;
                 }
                 Interface::InfiniBand(np_ib_to_nmstate(np_iface, base_iface))
+            }
+            InterfaceType::Loopback => {
+                Interface::Loopback(LoopbackInterface { base: base_iface })
             }
             _ => {
                 log::info!(

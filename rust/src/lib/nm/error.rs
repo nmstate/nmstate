@@ -13,6 +13,10 @@ pub(crate) fn nm_error_to_nmstate(nm_error: NmError) -> NmstateError {
             OVS modification"
                 .to_string(),
         )
+    } else if nm_error.kind
+        == crate::nm::nm_dbus::ErrorKind::LoopbackIfaceNotSupported
+    {
+        NmstateError::new(ErrorKind::DependencyError, nm_error.to_string())
     } else {
         NmstateError::new(
             ErrorKind::Bug,

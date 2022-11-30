@@ -236,7 +236,10 @@ impl Interface {
                     );
                 }
             }
-            Self::Unknown(_) | Self::Dummy(_) | Self::OvsInterface(_) => (),
+            Self::Unknown(_)
+            | Self::Dummy(_)
+            | Self::OvsInterface(_)
+            | Self::Loopback(_) => (),
         }
     }
 
@@ -256,7 +259,7 @@ impl Interface {
 }
 
 impl InterfaceType {
-    pub(crate) const SUPPORTED_LIST: [InterfaceType; 12] = [
+    pub(crate) const SUPPORTED_LIST: [InterfaceType; 13] = [
         InterfaceType::Bond,
         InterfaceType::LinuxBridge,
         InterfaceType::Dummy,
@@ -269,5 +272,6 @@ impl InterfaceType {
         InterfaceType::Vlan,
         InterfaceType::Vxlan,
         InterfaceType::InfiniBand,
+        InterfaceType::Loopback,
     ];
 }

@@ -29,11 +29,11 @@ pub use self::connection::{
     NmConnection, NmIpRoute, NmIpRouteRule, NmSetting8021X, NmSettingBond,
     NmSettingBridge, NmSettingBridgePort, NmSettingBridgeVlanRange,
     NmSettingConnection, NmSettingEthtool, NmSettingInfiniBand, NmSettingIp,
-    NmSettingIpMethod, NmSettingMacVlan, NmSettingOvsBridge, NmSettingOvsDpdk,
-    NmSettingOvsExtIds, NmSettingOvsIface, NmSettingOvsPatch, NmSettingOvsPort,
-    NmSettingSriov, NmSettingSriovVf, NmSettingSriovVfVlan, NmSettingUser,
-    NmSettingVeth, NmSettingVlan, NmSettingVrf, NmSettingVxlan, NmSettingWired,
-    NmSettingsConnectionFlag, NmVlanProtocol,
+    NmSettingIpMethod, NmSettingLoopback, NmSettingMacVlan, NmSettingOvsBridge,
+    NmSettingOvsDpdk, NmSettingOvsExtIds, NmSettingOvsIface, NmSettingOvsPatch,
+    NmSettingOvsPort, NmSettingSriov, NmSettingSriovVf, NmSettingSriovVfVlan,
+    NmSettingUser, NmSettingVeth, NmSettingVlan, NmSettingVrf, NmSettingVxlan,
+    NmSettingWired, NmSettingsConnectionFlag, NmVlanProtocol,
 };
 #[cfg(feature = "query_apply")]
 pub use self::device::{NmDevice, NmDeviceState, NmDeviceStateReason};

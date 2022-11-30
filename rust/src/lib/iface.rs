@@ -4,9 +4,9 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::{
     BaseInterface, BondInterface, DummyInterface, EthernetInterface,
-    InfiniBandInterface, LinuxBridgeInterface, MacVlanInterface,
-    MacVtapInterface, NmstateError, OvsBridgeInterface, OvsInterface,
-    VlanInterface, VrfInterface, VxlanInterface,
+    InfiniBandInterface, LinuxBridgeInterface, LoopbackInterface,
+    MacVlanInterface, MacVtapInterface, NmstateError, OvsBridgeInterface,
+    OvsInterface, VlanInterface, VrfInterface, VxlanInterface,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -275,6 +275,8 @@ pub enum Interface {
     Vrf(VrfInterface),
     /// [IP over InfiniBand interface](https://docs.kernel.org/infiniband/ipoib.html)
     InfiniBand(InfiniBandInterface),
+    /// Linux loopback interface
+    Loopback(LoopbackInterface),
 }
 
 impl<'de> Deserialize<'de> for Interface {
@@ -370,6 +372,11 @@ impl<'de> Deserialize<'de> for Interface {
                 let inner = InfiniBandInterface::deserialize(v)
                     .map_err(serde::de::Error::custom)?;
                 Ok(Interface::InfiniBand(inner))
+            }
+            Some(InterfaceType::Loopback) => {
+                let inner = LoopbackInterface::deserialize(v)
+                    .map_err(serde::de::Error::custom)?;
+                Ok(Interface::Loopback(inner))
             }
             Some(iface_type) => {
                 log::warn!("Unsupported interface type {}", iface_type);
@@ -475,6 +482,11 @@ impl Interface {
                 };
                 Self::InfiniBand(new_iface)
             }
+            Self::Loopback(iface) => {
+                let mut new_iface = LoopbackInterface::new();
+                new_iface.base = iface.base.clone_name_type_only();
+                Self::Loopback(new_iface)
+            }
             Self::Unknown(iface) => {
                 let mut new_iface = UnknownInterface::new();
                 new_iface.base = iface.base.clone_name_type_only();
@@ -532,12 +544,17 @@ impl Interface {
             }
     }
 
-    /// Whether interface is virtual(no real hardware).
+    /// Whether interface is virtual(can delete from kernel).
+    /// Since loopback interface should not be deleted from system,
+    /// hence we consider loopback interface as __not__ virtual interface.
     /// Unknown interface is considered as __not__ virtual interface.
     pub fn is_virtual(&self) -> bool {
         !matches!(
             self,
-            Self::Ethernet(_) | Self::Unknown(_) | Self::InfiniBand(_)
+            Self::Ethernet(_)
+                | Self::Unknown(_)
+                | Self::InfiniBand(_)
+                | Self::Loopback(_)
         )
     }
 
@@ -563,6 +580,7 @@ impl Interface {
             Self::MacVtap(iface) => &iface.base,
             Self::Vrf(iface) => &iface.base,
             Self::InfiniBand(iface) => &iface.base,
+            Self::Loopback(iface) => &iface.base,
             Self::Unknown(iface) => &iface.base,
         }
     }
@@ -581,6 +599,7 @@ impl Interface {
             Self::MacVtap(iface) => &mut iface.base,
             Self::Vrf(iface) => &mut iface.base,
             Self::InfiniBand(iface) => &mut iface.base,
+            Self::Loopback(iface) => &mut iface.base,
             Self::Unknown(iface) => &mut iface.base,
         }
     }
@@ -621,6 +640,7 @@ impl Interface {
             Interface::Bond(iface) => iface.pre_edit_cleanup(current),
             Interface::MacVlan(iface) => iface.pre_edit_cleanup(),
             Interface::MacVtap(iface) => iface.pre_edit_cleanup(),
+            Interface::Loopback(iface) => iface.pre_edit_cleanup(),
             _ => Ok(()),
         }
     }
