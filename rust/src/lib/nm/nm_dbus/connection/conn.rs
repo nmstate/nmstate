@@ -1,18 +1,4 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright 2021 Red Hat, Inc.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
 
 use std::collections::HashMap;
 use std::convert::TryFrom;
@@ -29,6 +15,7 @@ use super::super::{
     connection::ieee8021x::NmSetting8021X,
     connection::infiniband::NmSettingInfiniBand,
     connection::ip::NmSettingIp,
+    connection::loopback::NmSettingLoopback,
     connection::mac_vlan::NmSettingMacVlan,
     connection::ovs::{
         NmSettingOvsBridge, NmSettingOvsDpdk, NmSettingOvsExtIds,
@@ -112,6 +99,7 @@ pub struct NmConnection {
     pub user: Option<NmSettingUser>,
     pub ethtool: Option<NmSettingEthtool>,
     pub infiniband: Option<NmSettingInfiniBand>,
+    pub loopback: Option<NmSettingLoopback>,
     #[serde(skip)]
     pub(crate) obj_path: String,
     #[serde(skip)]
@@ -180,6 +168,7 @@ impl TryFrom<NmConnectionDbusOwnedValue> for NmConnection {
                 "infiniband",
                 NmSettingInfiniBand::try_from
             )?,
+            loopback: _from_map!(v, "loopback", NmSettingLoopback::try_from)?,
             _other: v,
             ..Default::default()
         })
@@ -278,6 +267,9 @@ impl NmConnection {
         }
         if let Some(v) = &self.infiniband {
             ret.insert("infiniband", v.to_value()?);
+        }
+        if let Some(v) = &self.loopback {
+            ret.insert("loopback", v.to_value()?);
         }
         for (key, setting_value) in &self._other {
             let mut other_setting_value: HashMap<&str, zvariant::Value> =

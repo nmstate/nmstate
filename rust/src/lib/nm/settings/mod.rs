@@ -9,6 +9,7 @@ mod ieee8021x;
 mod infiniband;
 mod inter_connections;
 mod ip;
+mod loopback;
 mod mac_vlan;
 mod mptcp;
 mod ovs;

@@ -11,6 +11,7 @@ use super::{
     ieee8021x::gen_nm_802_1x_setting,
     infiniband::gen_nm_ib_setting,
     ip::gen_nm_ip_setting,
+    loopback::gen_nm_loopback_setting,
     mptcp::apply_mptcp_conf,
     ovs::{
         create_ovs_port_nm_conn, gen_nm_ovs_br_setting,
@@ -40,6 +41,7 @@ pub(crate) const NM_SETTING_VRF_SETTING_NAME: &str = "vrf";
 pub(crate) const NM_SETTING_VLAN_SETTING_NAME: &str = "vlan";
 pub(crate) const NM_SETTING_VXLAN_SETTING_NAME: &str = "vxlan";
 pub(crate) const NM_SETTING_INFINIBAND_SETTING_NAME: &str = "infiniband";
+const NM_SETTING_LOOPBACK_SETTING_NAME: &str = "loopback";
 
 pub(crate) const NM_SETTING_USER_SPACES: [&str; 2] = [
     NM_SETTING_OVS_BRIDGE_SETTING_NAME,
@@ -125,8 +127,10 @@ pub(crate) fn iface_to_nm_connections(
         iface.base_iface().rules.as_deref(),
         &mut nm_conn,
     )?;
-    // InfiniBand over IP can not have layer 2 configuration.
-    if iface.iface_type() != InterfaceType::InfiniBand {
+    // InfiniBand over IP and loopback can not have layer 2 configuration.
+    if iface.iface_type() != InterfaceType::InfiniBand
+        && iface.iface_type() != InterfaceType::Loopback
+    {
         gen_nm_wired_setting(iface, &mut nm_conn);
     }
     gen_nm_ovs_ext_ids_setting(iface, &mut nm_conn);
@@ -206,6 +210,9 @@ pub(crate) fn iface_to_nm_connections(
         Interface::InfiniBand(iface) => {
             gen_nm_ib_setting(iface, &mut nm_conn);
         }
+        Interface::Loopback(iface) => {
+            gen_nm_loopback_setting(iface, &mut nm_conn);
+        }
         _ => (),
     };
 
@@ -278,6 +285,9 @@ pub(crate) fn iface_type_to_nm(
         InterfaceType::Veth => Ok(NM_SETTING_VETH_SETTING_NAME.to_string()),
         InterfaceType::InfiniBand => {
             Ok(NM_SETTING_INFINIBAND_SETTING_NAME.to_string())
+        }
+        InterfaceType::Loopback => {
+            Ok(NM_SETTING_LOOPBACK_SETTING_NAME.to_string())
         }
         InterfaceType::Other(s) => Ok(s.to_string()),
         _ => Err(NmstateError::new(

@@ -99,6 +99,7 @@ class InterfaceType:
     INFINIBAND = "infiniband"
     VETH = "veth"
     OTHER = "other"
+    LOOPBACK = "loopback"
 
     VIRT_TYPES = (
         BOND,
