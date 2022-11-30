@@ -15,22 +15,52 @@ edition = "2018"
 [lib]
 path = "lib.rs"
 
-[dependencies]
-ipnet = "2.5.0"
-libc = { version = "0.2.106", optional = true}
-log = "0.4.14"
-nispor = { version = "1.2.8" , optional = true}
-nix = { version = "0.24.1", optional = true}
-serde = { version = "1.0.132", features = ["derive"] }
-serde_json = { version = "1.0.68", features = [ "preserve_order" ] }
-uuid = { version = "1.1", features = ["v4", "v5"] }
-zbus = { version ="1.9.2", optional = true}
-zvariant = "2.10.0"
+[dependencies.nispor]
+version = "1.2.8"
+optional = true
+
+[dependencies.ipnet]
+version = "2.5.0"
+default-features = false
+
+[dependencies.zvariant]
+version = "2.10.0"
+default-features = false
+
+[dependencies.uuid]
+version = "1.1"
+default-features = false
+features = ["v4", "v5"]
+
+[dependencies.log]
+version = "0.4.14"
+default-features = false
+
+[dependencies.zbus]
+version = "1.9.2"
+default-features = false
+optional = true
+
+[dependencies.serde_json]
+version = "1.0.68"
+default-features = false
+features = [ "preserve_order" ]
+
+[dependencies.serde]
+version = "1.0.132"
+default-features = false
+features = ["derive"]
+
+[dependencies.nix]
+version = "0.24.1"
+optional = true
+default-features = false
+features = ["feature", "hostname"]
 
 [dev-dependencies]
 serde_yaml = "0.9"
 
 [features]
 default = ["query_apply", "gen_conf"]
-query_apply = ["dep:nispor", "dep:nix", "dep:libc", "dep:zbus"]
+query_apply = ["dep:nispor", "dep:nix", "dep:zbus"]
 gen_conf = []
