@@ -106,39 +106,41 @@ class DeviceDelete:
         self._iface_name = iface_name
         self._iface_type = iface_type
         self._nm_dev = nm_dev
+        self._action = None
 
     def run(self):
-        action = f"Delete device: {self._iface_type} {self._iface_name}"
-        user_data = action
-        self._ctx.register_async(action)
+        self._action = f"Delete device: {self._iface_type} {self._iface_name}"
+        retried = False
+        self._ctx.register_async(self._action)
         self._nm_dev.delete_async(
-            self._ctx.cancellable, self._delete_device_callback, user_data
+            self._ctx.cancellable, self._delete_device_callback, retried
         )
 
-    def _delete_device_callback(self, nm_dev, result, user_data):
-        action = user_data
+    def _delete_device_callback(self, nm_dev, result, retried):
         if self._ctx.is_cancelled():
             return
-        error = None
         try:
             nm_dev.delete_finish(result)
+            self._ctx.finish_async(self._action)
         except Exception as e:
-            error = e
-
-        if not nm_dev.is_real():
-            logging.debug(
-                f"Interface is deleted and not real/exist anymore: "
-                f"iface={self._iface_name} type={self._iface_type}"
-            )
-            if error:
-                logging.debug(f"Ignored error: {error}")
-            self._ctx.finish_async(action)
-        else:
-            self._ctx.fail(
-                NmstateLibnmError(
-                    f"{action} failed: error={error or 'unknown'}"
+            if not nm_dev.is_real():
+                logging.debug(
+                    f"Interface is deleted and not real/exist anymore: "
+                    f"iface={self._iface_name} type={self._iface_type}"
                 )
-            )
+                logging.debug(f"Ignored error: {e}")
+                self._ctx.finish_async(self._action)
+            elif retried:
+                self._ctx.fail(
+                    NmstateLibnmError(f"{self._action} failed: error={e}")
+                )
+            else:
+                retried = True
+                self._nm_dev.delete_async(
+                    self._ctx.cancellable,
+                    self._delete_device_callback,
+                    retried,
+                )
 
 
 def list_devices(client):
