@@ -232,6 +232,40 @@ def veth1_with_ethtool_feature_highdma_false():
     )
 
 
+@pytest.fixture
+def veth1_with_ethtool_feature_highdma_true():
+    interface_name = "veth1"
+    peer_interface_name = f"{interface_name}.ep"
+    iface_state = {
+        Interface.NAME: interface_name,
+        Interface.TYPE: Veth.TYPE,
+        Interface.STATE: InterfaceState.UP,
+        Veth.CONFIG_SUBTREE: {Veth.PEER: peer_interface_name},
+        Ethtool.CONFIG_SUBTREE: {
+            Ethtool.Feature.CONFIG_SUBTREE: {
+                "highdma": True,
+            }
+        },
+    }
+    libnmstate.apply({Interface.KEY: [iface_state]})
+    yield iface_state
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: interface_name,
+                    Interface.STATE: InterfaceState.ABSENT,
+                },
+                {
+                    Interface.NAME: peer_interface_name,
+                    Interface.STATE: InterfaceState.ABSENT,
+                },
+            ],
+        },
+        verify_change=False,
+    )
+
+
 @pytest.mark.skipif(
     os.environ.get("CI") == "true",
     reason=("CI environment does not support ethtool via netlink yet"),
