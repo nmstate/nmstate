@@ -1,4 +1,4 @@
-CLIB_VERSION=1.3.4
+CLIB_VERSION=1.4.0
 CLIB_VERSION_MAJOR=$(shell echo $(CLIB_VERSION) | cut -f1 -d.)
 CLIB_VERSION_MINOR=$(shell echo $(CLIB_VERSION) | cut -f2 -d.)
 CLIB_VERSION_MICRO=$(shell echo $(CLIB_VERSION) | cut -f3 -d.)
