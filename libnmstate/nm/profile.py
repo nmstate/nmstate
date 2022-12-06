@@ -501,6 +501,7 @@ class NmProfile:
                 break
             else:
                 time.sleep(IMPORT_NM_DEV_RETRY_INTERNAL)
+                self._ctx.refresh()
 
     def import_current(self):
         self._nm_dev = get_nm_dev(
