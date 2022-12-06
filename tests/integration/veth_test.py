@@ -357,3 +357,33 @@ def veth_interface(ifname, peer):
             }
         )
         libnmstate.apply(d_state)
+
+
+@pytest.mark.slow
+def test_add_32_veth_in_single_transaction():
+    desired_state = {Interface.KEY: []}
+    for i in range(0, 33):
+        desired_state[Interface.KEY].append(
+            {
+                Interface.NAME: f"veth{i}",
+                Interface.TYPE: InterfaceType.VETH,
+                Interface.STATE: InterfaceState.UP,
+                Veth.CONFIG_SUBTREE: {
+                    Veth.PEER: f"veth{i}_peer",
+                },
+            }
+        )
+
+    try:
+        libnmstate.apply(desired_state)
+    finally:
+        desired_state = {Interface.KEY: []}
+        for i in range(0, 33):
+            desired_state[Interface.KEY].append(
+                {
+                    Interface.NAME: f"veth{i}",
+                    Interface.TYPE: InterfaceType.VETH,
+                    Interface.STATE: InterfaceState.ABSENT,
+                }
+            )
+        libnmstate.apply(desired_state, verify_change=False)
