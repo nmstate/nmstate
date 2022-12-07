@@ -20,7 +20,7 @@ fn test_policy_examples() {
     for entry in std::fs::read_dir(folded_path).unwrap() {
         let entry = entry.unwrap();
         let path = entry.path();
-        println!("Testing {:?}", path);
+        println!("Testing {path:?}");
         let current_state = load_state(&path.join(CURRENT_YAML_FILENAME));
         let mut policy = load_policy(&path.join(POLICY_YAML_FILENAME));
         let expected_state = load_state(&path.join(EXPECTED_YAML_FILENAME));
@@ -28,18 +28,18 @@ fn test_policy_examples() {
         policy.current = Some(current_state);
         let state = NetworkState::try_from(policy).unwrap();
         assert_eq!(state, expected_state);
-        println!("Pass    {:?}", path);
+        println!("Pass    {path:?}");
     }
 }
 
 fn load_policy(file_path: &Path) -> NetworkPolicy {
-    println!("Loading NetworkPolicy from {:?}", file_path);
+    println!("Loading NetworkPolicy from {file_path:?}");
     let fd = std::fs::File::open(file_path).unwrap();
     serde_yaml::from_reader(fd).unwrap()
 }
 
 fn load_state(file_path: &Path) -> NetworkState {
-    println!("Loading NetworkState from {:?}", file_path);
+    println!("Loading NetworkState from {file_path:?}");
     let fd = std::fs::File::open(file_path).unwrap();
     serde_yaml::from_reader(fd).unwrap()
 }

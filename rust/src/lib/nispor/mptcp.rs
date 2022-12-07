@@ -106,8 +106,7 @@ impl std::convert::TryFrom<nispor::MptcpAddressFlag> for MptcpAddressFlag {
             _ => Err(NmstateError::new(
                 ErrorKind::NotSupportedError,
                 format!(
-                    "MPTCP address flag {:?} is not supported by nmstate yet",
-                    value
+                    "MPTCP address flag {value:?} is not supported by nmstate yet"
                 ),
             )),
         }

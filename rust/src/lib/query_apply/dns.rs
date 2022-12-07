@@ -13,8 +13,7 @@ impl DnsState {
                     NmstateError::new(
                         ErrorKind::VerificationError,
                         format!(
-                            "Failed to apply DNS config: desire {:?} got {:?}",
-                            self, current
+                            "Failed to apply DNS config: desire {self:?} got {current:?}"
                         ),
                     )
                 })?;
@@ -48,8 +47,7 @@ impl DnsState {
                     NmstateError::new(
                         ErrorKind::VerificationError,
                         format!(
-                            "Failed to apply DNS config: desire {:?} got {:?}",
-                            self, current
+                            "Failed to apply DNS config: desire {self:?} got {current:?}"
                         ),
                     )
                 })?;
