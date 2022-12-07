@@ -28,8 +28,7 @@ impl Routes {
                         ErrorKind::NotImplementedError,
                         format!(
                             "Route with empty next hop interface \
-                        is not supported: {:?}",
-                            route
+                        is not supported: {route:?}"
                         ),
                     );
                     error!("{}", e);
@@ -58,8 +57,7 @@ impl Routes {
                     let e = NmstateError::new(
                         ErrorKind::VerificationError,
                         format!(
-                            "Desired route {:?} not found after apply",
-                            desire_route
+                            "Desired route {desire_route:?} not found after apply"
                         ),
                     );
                     error!("{}", e);
@@ -83,9 +81,8 @@ impl Routes {
                     let e = NmstateError::new(
                         ErrorKind::VerificationError,
                         format!(
-                            "Desired absent route {:?} still found \
-                            after apply: {:?}",
-                            absent_route, cur_route
+                            "Desired absent route {absent_route:?} still found \
+                            after apply: {cur_route:?}"
                         ),
                     );
                     error!("{}", e);

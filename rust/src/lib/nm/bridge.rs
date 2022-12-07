@@ -69,7 +69,7 @@ fn apply_br_options(
         nm_br_set.multicast_query_use_ifaddr = Some(*v);
     }
     if let Some(v) = br_opts.multicast_router.as_ref() {
-        nm_br_set.multicast_router = Some(format!("{}", v));
+        nm_br_set.multicast_router = Some(format!("{v}"));
     }
     if let Some(v) = br_opts.multicast_snooping.as_ref() {
         nm_br_set.multicast_snooping = Some(*v);

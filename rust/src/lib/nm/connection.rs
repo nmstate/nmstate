@@ -57,8 +57,7 @@ pub(crate) fn nm_gen_conf(
                     return Err(NmstateError::new(
                         ErrorKind::PluginFailure,
                         format!(
-                        "Bug in NM plugin, failed to generate configure: {}",
-                        e
+                        "Bug in NM plugin, failed to generate configure: {e}"
                     ),
                     ));
                 }
@@ -200,7 +199,7 @@ pub(crate) fn iface_type_to_nm(
         InterfaceType::Other(s) => Ok(s.to_string()),
         _ => Err(NmstateError::new(
             ErrorKind::NotImplementedError,
-            format!("Does not support iface type: {:?} yet", iface_type),
+            format!("Does not support iface type: {iface_type:?} yet"),
         )),
     }
 }

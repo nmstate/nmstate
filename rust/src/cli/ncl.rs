@@ -186,12 +186,12 @@ fn print_result_and_exit(result: Result<String, CliError>) {
 }
 
 fn print_error_and_exit(e: CliError) {
-    eprintln!("{}", e);
+    eprintln!("{e}");
     std::process::exit(1);
 }
 
 fn print_string_and_exit(s: String) {
-    println!("{}", s);
+    println!("{s}");
     std::process::exit(0);
 }
 

@@ -146,13 +146,12 @@ impl<'a> NmDbus<'a> {
                 if let zbus::Error::MethodError(ref error_type, ..) = e {
                     if error_type
                         == &format!(
-                            "{}.Settings.InvalidConnection",
-                            NM_DBUS_INTERFACE_ROOT,
+                            "{NM_DBUS_INTERFACE_ROOT}.Settings.InvalidConnection",
                         )
                     {
                         Err(NmError::new(
                             ErrorKind::NotFound,
-                            format!("Connection with UUID {} not found", uuid),
+                            format!("Connection with UUID {uuid} not found"),
                         ))
                     } else {
                         Err(e.into())
@@ -315,8 +314,7 @@ impl<'a> NmDbus<'a> {
                 {
                     if error_type
                         == &format!(
-                            "{}.Device.IncompatibleConnection",
-                            NM_DBUS_INTERFACE_ROOT
+                            "{NM_DBUS_INTERFACE_ROOT}.Device.IncompatibleConnection"
                         )
                     {
                         Err(NmError::new(
@@ -364,7 +362,7 @@ fn str_to_obj_path(obj_path: &str) -> Result<zvariant::ObjectPath, NmError> {
     zvariant::ObjectPath::try_from(obj_path).map_err(|e| {
         NmError::new(
             ErrorKind::InvalidArgument,
-            format!("Invalid object path: {}", e),
+            format!("Invalid object path: {e}"),
         )
     })
 }

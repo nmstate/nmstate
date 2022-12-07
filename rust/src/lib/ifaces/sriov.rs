@@ -61,7 +61,7 @@ impl SrIovConfig {
                 _ => {
                     let e = NmstateError::new(
                         ErrorKind::VerificationError,
-                        format!("Failed to find PF interface {}", pf_name),
+                        format!("Failed to find PF interface {pf_name}"),
                     );
                     error!("{}", e);
                     return Err(e);

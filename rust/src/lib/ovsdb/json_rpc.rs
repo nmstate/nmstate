@@ -40,7 +40,7 @@ impl OvsDbJsonRpc {
     pub(crate) fn connect(socket_path: &str) -> Result<Self, NmstateError> {
         Ok(Self {
             socket: UnixStream::connect(socket_path).map_err(|e| {
-                NmstateError::new(ErrorKind::Bug, format!("socket error {}", e))
+                NmstateError::new(ErrorKind::Bug, format!("socket error {e}"))
             })?,
             transaction_id: get_sec_since_epoch(),
         })
@@ -92,8 +92,7 @@ impl OvsDbJsonRpc {
             let e = NmstateError::new(
                 ErrorKind::PluginFailure,
                 format!(
-                    "Transaction ID mismatch for OVS DB JSON RPC: {:?}",
-                    reply
+                    "Transaction ID mismatch for OVS DB JSON RPC: {reply:?}"
                 ),
             );
             log::error!("{}", e);
@@ -101,7 +100,7 @@ impl OvsDbJsonRpc {
         } else if let Some(rpc_error) = reply.error {
             let e = NmstateError::new(
                 ErrorKind::PluginFailure,
-                format!("OVS DB JSON RPC error: {:?}", rpc_error),
+                format!("OVS DB JSON RPC error: {rpc_error:?}"),
             );
             log::error!("{}", e);
             Err(e)
@@ -121,14 +120,14 @@ fn get_sec_since_epoch() -> u64 {
 fn parse_str_parse_error(e: std::string::FromUtf8Error) -> NmstateError {
     NmstateError::new(
         ErrorKind::PluginFailure,
-        format!("Reply from OVSDB is not valid UTF-8 string: {}", e),
+        format!("Reply from OVSDB is not valid UTF-8 string: {e}"),
     )
 }
 
 fn parse_socket_io_error(e: std::io::Error) -> NmstateError {
     NmstateError::new(
         ErrorKind::PluginFailure,
-        format!("OVSDB Socket error: {}", e),
+        format!("OVSDB Socket error: {e}"),
     )
 }
 
@@ -148,8 +147,7 @@ fn check_transact_error(reply: Value) -> Result<Value, NmstateError> {
                 let e = NmstateError::new(
                     ErrorKind::PluginFailure,
                     format!(
-                        "OVS DB JSON RPC error {}: {}",
-                        error_type, error_detail
+                        "OVS DB JSON RPC error {error_type}: {error_detail}"
                     ),
                 );
                 log::error!("{}", e);

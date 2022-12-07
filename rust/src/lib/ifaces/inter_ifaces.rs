@@ -361,9 +361,8 @@ impl Interfaces {
                         let e = NmstateError::new(
                             ErrorKind::InvalidArgument,
                             format!(
-                                "Failed to find unknown type interface {} \
-                            in current state",
-                                iface_name
+                                "Failed to find unknown type interface {iface_name} \
+                            in current state"
                             ),
                         );
                         error!("{}", e);
@@ -435,9 +434,8 @@ impl Interfaces {
                         let e = NmstateError::new(
                             ErrorKind::InvalidArgument,
                             format!(
-                                "Failed to find mac address of interface {} \
-                                for copy-mac-from of iface {}",
-                                src_iface_name, iface_name
+                                "Failed to find mac address of interface {src_iface_name} \
+                                for copy-mac-from of iface {iface_name}"
                             ),
                         );
                         log::error!("{}", e);
@@ -447,9 +445,8 @@ impl Interfaces {
                     let e = NmstateError::new(
                         ErrorKind::InvalidArgument,
                         format!(
-                            "Failed to find interface {} for \
-                            copy-mac-from of iface {}",
-                            src_iface_name, iface_name
+                            "Failed to find interface {src_iface_name} for \
+                            copy-mac-from of iface {iface_name}"
                         ),
                     );
                     log::error!("{}", e);

@@ -400,8 +400,7 @@ fn nm_dev_name_get(
         Err(e) => Err(NmError::new(
             ErrorKind::Bug,
             format!(
-                "Failed to retrieve interface name of device {}: {}",
-                obj_path, e
+                "Failed to retrieve interface name of device {obj_path}: {e}"
             ),
         )),
     }
@@ -450,14 +449,11 @@ fn nm_dev_iface_type_get(
             NM_DEVICE_TYPE_WIREGUARD => "wireguard".to_string(),
             NM_DEVICE_TYPE_WIFI_P2P => "wifi-p2p".to_string(),
             NM_DEVICE_TYPE_VRF => "vrf".to_string(),
-            _ => format!("unknown({})", i),
+            _ => format!("unknown({i})"),
         }),
         Err(e) => Err(NmError::new(
             ErrorKind::Bug,
-            format!(
-                "Failed to retrieve device type of device {}: {}",
-                obj_path, e
-            ),
+            format!("Failed to retrieve device type of device {obj_path}: {e}"),
         )),
     }
 }
@@ -477,8 +473,7 @@ fn nm_dev_state_reason_get(
         Err(e) => Err(NmError::new(
             ErrorKind::Bug,
             format!(
-                "Failed to retrieve state reason of device {}: {}",
-                obj_path, e
+                "Failed to retrieve state reason of device {obj_path}: {e}"
             ),
         )),
     }
@@ -488,7 +483,7 @@ fn nm_dev_is_mac_vtap_get(
     dbus_conn: &zbus::Connection,
     obj_path: &str,
 ) -> Result<bool, NmError> {
-    let dbus_iface = format!("{}.Macvlan", NM_DBUS_INTERFACE_DEV);
+    let dbus_iface = format!("{NM_DBUS_INTERFACE_DEV}.Macvlan");
     let proxy = zbus::Proxy::new(
         dbus_conn,
         NM_DBUS_INTERFACE_ROOT,
@@ -500,8 +495,7 @@ fn nm_dev_is_mac_vtap_get(
         Err(e) => Err(NmError::new(
             ErrorKind::Bug,
             format!(
-                "Failed to retrieve Macvlan.Tab(tap) of device {}: {}",
-                obj_path, e
+                "Failed to retrieve Macvlan.Tab(tap) of device {obj_path}: {e}"
             ),
         )),
     }
@@ -540,7 +534,7 @@ pub(crate) fn nm_dev_delete(
         Ok(()) => Ok(()),
         Err(e) => Err(NmError::new(
             ErrorKind::Bug,
-            format!("Failed to delete device {}: {}", obj_path, e),
+            format!("Failed to delete device {obj_path}: {e}"),
         )),
     }
 }

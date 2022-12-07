@@ -22,8 +22,8 @@ pub(crate) fn assert_ip(iface_name: &str, ip_addrs: &[&str]) {
         cur_ip_addrs.push(format!("{}/{}", addr.local, addr.prefixlen));
     }
 
-    println!("Current IP addresses {:?}", cur_ip_addrs);
-    println!("Desired IP addresses {:?}", ip_addrs);
+    println!("Current IP addresses {cur_ip_addrs:?}");
+    println!("Desired IP addresses {ip_addrs:?}");
     for desire_ip_addr in ip_addrs {
         assert!(cur_ip_addrs.contains(&desire_ip_addr.to_string()));
     }

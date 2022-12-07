@@ -34,7 +34,7 @@ pub(crate) fn parse_nm_dns(
                 Err(e) => {
                     let e = NmError::new(
                         ErrorKind::InvalidArgument,
-                        format!("Failed to convert to IP address: {}", e),
+                        format!("Failed to convert to IP address: {e}"),
                     );
                     log::error!("{}", e);
                     return Err(e);
@@ -52,7 +52,7 @@ pub(crate) fn parse_nm_dns(
                     } else {
                         let e = NmError::new(
                             ErrorKind::InvalidArgument,
-                            format!("Failed to convert {:?} to IP address", b),
+                            format!("Failed to convert {b:?} to IP address"),
                         );
                         log::error!("{}", e);
                         return Err(e);
@@ -61,7 +61,7 @@ pub(crate) fn parse_nm_dns(
                 Err(e) => {
                     let e = NmError::new(
                         ErrorKind::InvalidArgument,
-                        format!("Failed to convert to IP address: {}", e),
+                        format!("Failed to convert to IP address: {e}"),
                     );
                     log::error!("{}", e);
                     return Err(e);
@@ -72,8 +72,7 @@ pub(crate) fn parse_nm_dns(
                     ErrorKind::InvalidArgument,
                     format!(
                         "Failed to convert to IP address: \
-                        invalid signature {:?}",
-                        s
+                        invalid signature {s:?}"
                     ),
                 );
                 log::error!("{}", e);
@@ -90,7 +89,7 @@ pub(crate) fn parse_nm_dns_search(
     Vec::<String>::try_from(value).map_err(|e| {
         let e = NmError::new(
             ErrorKind::InvalidArgument,
-            format!("In valid DNS search: {}", e),
+            format!("In valid DNS search: {e}"),
         );
         log::error!("{}", e);
         e
@@ -122,7 +121,7 @@ pub(crate) fn nm_ip_dns_to_value(
             let ip_addr = Ipv6Addr::from_str(dns_srv).map_err(|e| {
                 let e = NmError::new(
                     ErrorKind::InvalidArgument,
-                    format!("Invalid IPv6 address: {}: {}", dns_srv, e),
+                    format!("Invalid IPv6 address: {dns_srv}: {e}"),
                 );
                 log::error!("{}", e);
                 e
@@ -134,7 +133,7 @@ pub(crate) fn nm_ip_dns_to_value(
             let ip_addr = Ipv4Addr::from_str(dns_srv).map_err(|e| {
                 let e = NmError::new(
                     ErrorKind::InvalidArgument,
-                    format!("Invalid IPv4 address: {}: {}", dns_srv, e),
+                    format!("Invalid IPv4 address: {dns_srv}: {e}"),
                 );
                 log::error!("{}", e);
                 e

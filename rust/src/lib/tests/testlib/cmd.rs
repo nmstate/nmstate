@@ -1,6 +1,6 @@
 pub(crate) fn cmd_exec_check(cmds: &[&str]) -> String {
     let cmds = cmds.to_vec();
-    println!("Executing command {:?}", cmds);
+    println!("Executing command {cmds:?}");
     let run = std::process::Command::new(cmds[0])
         .args(&cmds[1..])
         .output()

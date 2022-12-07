@@ -141,7 +141,7 @@ impl NetworkState {
             Ok(s) => Ok(s),
             Err(e) => Err(NmstateError::new(
                 ErrorKind::InvalidArgument,
-                format!("Invalid json string: {}", e),
+                format!("Invalid json string: {e}"),
             )),
         }
     }
@@ -456,8 +456,7 @@ impl NetworkState {
                 let e = NmstateError::new(
                     ErrorKind::InvalidArgument,
                     format!(
-                    "Failed to find a interface for desired routes rules {:?} ",
-                    rules
+                    "Failed to find a interface for desired routes rules {rules:?} "
                 ),
                 );
                 log::error!("{}", e);
@@ -560,9 +559,8 @@ impl NetworkState {
                 let e = NmstateError::new(
                     ErrorKind::InvalidArgument,
                     format!(
-                        "Route table {} for route rule is not defined by \
-                        any routes",
-                        table_id
+                        "Route table {table_id} for route rule is not defined by \
+                        any routes"
                     ),
                 );
                 log::error!("{}", e);

@@ -607,8 +607,7 @@ impl Interface {
             Err(NmstateError::new(
                 ErrorKind::VerificationError,
                 format!(
-                    "Verification failure: {} desire '{}', current '{}'",
-                    reference, desire, current
+                    "Verification failure: {reference} desire '{desire}', current '{current}'"
                 ),
             ))
         } else {

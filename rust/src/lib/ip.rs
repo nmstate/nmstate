@@ -768,7 +768,7 @@ impl std::convert::TryFrom<&str> for InterfaceIpAddr {
             addr[1].parse::<u8>().map_err(|parse_error| {
                 let e = NmstateError::new(
                     ErrorKind::InvalidArgument,
-                    format!("Invalid IP address {}: {}", value, parse_error),
+                    format!("Invalid IP address {value}: {parse_error}"),
                 );
                 log::error!("{}", e);
                 e

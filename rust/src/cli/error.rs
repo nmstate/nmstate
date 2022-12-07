@@ -13,7 +13,7 @@ impl std::fmt::Display for CliError {
 impl From<std::io::Error> for CliError {
     fn from(e: std::io::Error) -> Self {
         Self {
-            msg: format!("std::io::Error: {}", e),
+            msg: format!("std::io::Error: {e}"),
         }
     }
 }
@@ -21,7 +21,7 @@ impl From<std::io::Error> for CliError {
 impl From<NmstateError> for CliError {
     fn from(e: NmstateError) -> Self {
         Self {
-            msg: format!("NmstateError: {}", e),
+            msg: format!("NmstateError: {e}"),
         }
     }
 }
@@ -29,7 +29,7 @@ impl From<NmstateError> for CliError {
 impl From<serde_yaml::Error> for CliError {
     fn from(e: serde_yaml::Error) -> Self {
         Self {
-            msg: format!("serde_yaml::Error: {}", e),
+            msg: format!("serde_yaml::Error: {e}"),
         }
     }
 }
@@ -37,7 +37,7 @@ impl From<serde_yaml::Error> for CliError {
 impl From<clap::Error> for CliError {
     fn from(e: clap::Error) -> Self {
         Self {
-            msg: format!("clap::Error {}", e),
+            msg: format!("clap::Error {e}"),
         }
     }
 }

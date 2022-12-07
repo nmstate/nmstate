@@ -504,13 +504,13 @@ where
                 } else {
                     return Err(NmstateError::new(
                             ErrorKind::InvalidArgument,
-                            format!("Property value: {} is not valid, only numeric values are allowed.", str_value)))
+                            format!("Property value: {str_value} is not valid, only numeric values are allowed.")))
                     .map_err(D::Error::custom);
                 }
             } else {
                 return Err(NmstateError::new(
                         ErrorKind::InvalidArgument,
-                        format!("Property value: {} is not valid, only numeric values are allowed.", json_value)))
+                        format!("Property value: {json_value} is not valid, only numeric values are allowed.")))
                 .map_err(D::Error::custom);
             }
         }

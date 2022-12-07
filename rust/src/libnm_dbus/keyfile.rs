@@ -16,13 +16,13 @@ pub(crate) fn zvariant_value_to_keyfile(
         } else {
             "false".to_string()
         }),
-        zvariant::Value::I32(d) => Ok(format!("{}", d)),
-        zvariant::Value::U32(d) => Ok(format!("{}", d)),
-        zvariant::Value::U8(d) => Ok(format!("{}", d)),
-        zvariant::Value::U16(d) => Ok(format!("{}", d)),
-        zvariant::Value::I16(d) => Ok(format!("{}", d)),
-        zvariant::Value::U64(d) => Ok(format!("{}", d)),
-        zvariant::Value::I64(d) => Ok(format!("{}", d)),
+        zvariant::Value::I32(d) => Ok(format!("{d}")),
+        zvariant::Value::U32(d) => Ok(format!("{d}")),
+        zvariant::Value::U8(d) => Ok(format!("{d}")),
+        zvariant::Value::U16(d) => Ok(format!("{d}")),
+        zvariant::Value::I16(d) => Ok(format!("{d}")),
+        zvariant::Value::U64(d) => Ok(format!("{d}")),
+        zvariant::Value::I64(d) => Ok(format!("{d}")),
         zvariant::Value::Dict(d) => {
             let data: HashMap<String, zvariant::Value> =
                 HashMap::try_from(d.clone())?;
@@ -97,9 +97,9 @@ pub(crate) fn zvariant_value_to_keyfile(
                         let sub_section_name = if section_name.is_empty() {
                             key.to_string()
                         } else {
-                            format!("{}-{}", section_name, key)
+                            format!("{section_name}-{key}")
                         };
-                        writeln!(ret, "\n[{}]", sub_section_name)
+                        writeln!(ret, "\n[{sub_section_name}]")
                             .unwrap_or_default();
                         ret += &zvariant_value_to_keyfile(
                             section_value,
@@ -135,8 +135,7 @@ pub(crate) fn zvariant_value_to_keyfile(
             let e = NmError::new(
                 ErrorKind::Bug,
                 format!(
-                    "BUG: Unknown value type in section {}: {:?}",
-                    section_name, value
+                    "BUG: Unknown value type in section {section_name}: {value:?}"
                 ),
             );
             error!("{}", e);
@@ -182,7 +181,7 @@ fn ip_address_value_to_string(value: &zvariant::Value) -> String {
             };
             if let Ok(address) = address {
                 if let Ok(prefix) = prefix {
-                    writeln!(ret, "address{}={}/{}", index, address, prefix)
+                    writeln!(ret, "address{index}={address}/{prefix}")
                         .unwrap_or_default();
                     index += 1;
                 }

@@ -26,7 +26,7 @@ pub enum ErrorKind {
 
 impl std::fmt::Display for ErrorKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
+        write!(f, "{self:?}")
     }
 }
 
@@ -57,7 +57,7 @@ impl From<zbus::Error> for NmError {
     fn from(e: zbus::Error) -> Self {
         Self {
             kind: ErrorKind::DbusConnectionError,
-            msg: format!("{}", e),
+            msg: format!("{e}"),
             dbus_error: Some(e),
         }
     }
@@ -67,7 +67,7 @@ impl From<zvariant::Error> for NmError {
     fn from(e: zvariant::Error) -> Self {
         Self {
             kind: ErrorKind::Bug,
-            msg: format!("{}", e),
+            msg: format!("{e}"),
             dbus_error: None,
         }
     }
@@ -75,6 +75,6 @@ impl From<zvariant::Error> for NmError {
 
 impl From<std::io::Error> for NmError {
     fn from(e: std::io::Error) -> Self {
-        Self::new(ErrorKind::Bug, format!("failed to write file: {}", e))
+        Self::new(ErrorKind::Bug, format!("failed to write file: {e}"))
     }
 }

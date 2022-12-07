@@ -47,7 +47,7 @@ pub(crate) fn get_json_value_difference<'a, 'b>(
         }
         (Value::Object(des), Value::Object(cur)) => {
             for (key, des_value) in des.iter() {
-                let reference = format!("{}.{}", reference, key);
+                let reference = format!("{reference}.{key}");
                 if let Some(cur_value) = cur.get(key) {
                     if let Some(difference) = get_json_value_difference(
                         reference.clone(),

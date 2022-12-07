@@ -69,12 +69,10 @@ pub extern "C" fn nmstate_net_state_retrieve(
                 NMSTATE_PASS
             },
             Err(e) => unsafe {
-                *err_msg = CString::new(format!(
-                    "serde_json::to_string failure: {}",
-                    e
-                ))
-                .unwrap()
-                .into_raw();
+                *err_msg =
+                    CString::new(format!("serde_json::to_string failure: {e}"))
+                        .unwrap()
+                        .into_raw();
                 *err_kind =
                     CString::new(format!("{}", nmstate::ErrorKind::Bug))
                         .unwrap()
@@ -124,8 +122,7 @@ pub extern "C" fn nmstate_net_state_apply(
         Err(e) => {
             unsafe {
                 *err_msg = CString::new(format!(
-                    "Error on converting C char to rust str: {}",
-                    e
+                    "Error on converting C char to rust str: {e}"
                 ))
                 .unwrap()
                 .into_raw();
@@ -207,8 +204,7 @@ pub extern "C" fn nmstate_checkpoint_commit(
             Err(e) => {
                 unsafe {
                     *err_msg = CString::new(format!(
-                        "Error on converting C char to rust str: {}",
-                        e
+                        "Error on converting C char to rust str: {e}"
                     ))
                     .unwrap()
                     .into_raw();
@@ -264,8 +260,7 @@ pub extern "C" fn nmstate_checkpoint_rollback(
             Err(e) => {
                 unsafe {
                     *err_msg = CString::new(format!(
-                        "Error on converting C char to rust str: {}",
-                        e
+                        "Error on converting C char to rust str: {e}"
                     ))
                     .unwrap()
                     .into_raw();

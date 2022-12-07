@@ -188,8 +188,7 @@ impl<'a> NmApi<'a> {
             Err(NmError::new(
                 ErrorKind::InvalidArgument,
                 format!(
-                    "Failed to extract interface name from connection {:?}",
-                    nm_conn
+                    "Failed to extract interface name from connection {nm_conn:?}"
                 ),
             ))
         }
@@ -327,7 +326,7 @@ where
             if cur_count == count - 1 {
                 return Err(e);
             } else {
-                eprintln!("Retrying on NM dbus failure: {}", e);
+                eprintln!("Retrying on NM dbus failure: {e}");
                 std::thread::sleep(std::time::Duration::from_millis(
                     interval_ms,
                 ));

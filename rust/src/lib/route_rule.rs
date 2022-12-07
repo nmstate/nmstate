@@ -42,8 +42,7 @@ impl RouteRules {
                     let e = NmstateError::new(
                         ErrorKind::VerificationError,
                         format!(
-                            "Desired route rule {:?} not found after apply",
-                            rule
+                            "Desired route rule {rule:?} not found after apply"
                         ),
                     );
                     log::error!("{}", e);
@@ -67,9 +66,8 @@ impl RouteRules {
                     let e = NmstateError::new(
                         ErrorKind::VerificationError,
                         format!(
-                            "Desired absent route rule {:?} still found \
-                            after apply: {:?}",
-                            absent_rule, cur_rule
+                            "Desired absent route rule {absent_rule:?} still found \
+                            after apply: {cur_rule:?}"
                         ),
                     );
                     log::error!("{}", e);
@@ -220,8 +218,7 @@ impl RouteRuleEntry {
             let e = NmstateError::new(
                 ErrorKind::InvalidArgument,
                 format!(
-                    "Neither ip-from or ip-to is defined in route rule {:?}",
-                    self
+                    "Neither ip-from or ip-to is defined in route rule {self:?}"
                 ),
             );
             log::error!("{}", e);

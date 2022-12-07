@@ -86,7 +86,7 @@ impl TryFrom<zvariant::OwnedValue> for NmSettingIpMethod {
             "ignore" => Ok(Self::Ignore),
             _ => Err(NmError::new(
                 ErrorKind::InvalidArgument,
-                format!("Invalid IP method {}", str_value),
+                format!("Invalid IP method {str_value}"),
             )),
         }
     }
@@ -171,7 +171,7 @@ impl NmSettingIp {
     ) -> Result<HashMap<&str, zvariant::Value>, NmError> {
         let mut ret = HashMap::new();
         if let Some(v) = &self.method {
-            ret.insert("method", zvariant::Value::new(format!("{}", v)));
+            ret.insert("method", zvariant::Value::new(format!("{v}")));
         }
         let mut addresss_data = zvariant::Array::new(
             zvariant::Signature::from_str_unchecked("a{sv}"),
@@ -181,7 +181,7 @@ impl NmSettingIp {
             if addr_str_split.len() != 2 {
                 return Err(NmError::new(
                     ErrorKind::InvalidArgument,
-                    format!("Invalid IP address {}", addr_str),
+                    format!("Invalid IP address {addr_str}"),
                 ));
             }
             let prefix = addr_str_split[1].parse::<u32>().map_err(|e| {
@@ -268,7 +268,7 @@ fn parse_nm_ip_address_data(
 ) -> Result<Vec<String>, NmError> {
     let mut addresses = Vec::new();
     for nm_addr in <Vec<zvariant::OwnedValue>>::try_from(value)? {
-        let nm_addr_display = format!("{:?}", nm_addr);
+        let nm_addr_display = format!("{nm_addr:?}");
         let mut nm_addr =
             match <HashMap<String, zvariant::OwnedValue>>::try_from(nm_addr) {
                 Ok(a) => a,
@@ -299,7 +299,7 @@ fn parse_nm_ip_address_data(
 
             continue;
         };
-        addresses.push(format!("{}/{}", address, prefix));
+        addresses.push(format!("{address}/{prefix}"));
     }
     Ok(addresses)
 }

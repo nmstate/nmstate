@@ -179,7 +179,7 @@ pub(crate) fn create_ovs_port_nm_conn(
         nm_conn.ovs_port.as_ref().cloned().unwrap_or_default();
     if let Some(bond_conf) = &port_conf.bond {
         if let Some(bond_mode) = &bond_conf.mode {
-            nm_ovs_port_set.mode = Some(format!("{}", bond_mode));
+            nm_ovs_port_set.mode = Some(format!("{bond_mode}"));
         }
 
         if let Some(bond_downdelay) = bond_conf.bond_downdelay {

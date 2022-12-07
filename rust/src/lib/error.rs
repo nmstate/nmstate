@@ -11,7 +11,7 @@ pub enum ErrorKind {
 
 impl std::fmt::Display for ErrorKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
+        write!(f, "{self:?}")
     }
 }
 
@@ -44,7 +44,7 @@ impl NmstateError {
 
 impl From<serde_json::Error> for NmstateError {
     fn from(e: serde_json::Error) -> Self {
-        NmstateError::new(ErrorKind::Bug, format!("serde_json::Error: {}", e))
+        NmstateError::new(ErrorKind::Bug, format!("serde_json::Error: {e}"))
     }
 }
 
@@ -52,7 +52,7 @@ impl From<std::net::AddrParseError> for NmstateError {
     fn from(e: std::net::AddrParseError) -> Self {
         NmstateError::new(
             ErrorKind::InvalidArgument,
-            format!("Invalid IP address : {}", e),
+            format!("Invalid IP address : {e}"),
         )
     }
 }

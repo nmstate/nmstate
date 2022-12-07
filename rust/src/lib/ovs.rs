@@ -34,8 +34,7 @@ impl OvsDbGlobalConfig {
             let e = NmstateError::new(
                 ErrorKind::VerificationError,
                 format!(
-                    "Verification failure: {} desire '{}', current '{}'",
-                    reference, desire, current
+                    "Verification failure: {reference} desire '{desire}', current '{current}'"
                 ),
             );
             log::error!("{}", e);
@@ -100,8 +99,7 @@ impl<'de> Deserialize<'de> for OvsDbGlobalConfig {
             }
         } else {
             return Err(serde::de::Error::custom(format!(
-                "Expecting dict/HashMap, but got {:?}",
-                v
+                "Expecting dict/HashMap, but got {v:?}"
             )));
         }
         Ok(ret)
@@ -142,8 +140,7 @@ impl<'de> Deserialize<'de> for OvsDbIfaceConfig {
             }
         } else {
             return Err(serde::de::Error::custom(format!(
-                "Expecting dict/HashMap, but got {:?}",
-                v
+                "Expecting dict/HashMap, but got {v:?}"
             )));
         }
         Ok(ret)
@@ -159,17 +156,17 @@ fn value_to_hash_map(
             let v = match &v {
                 serde_json::Value::Number(i) => Some({
                     if let Some(i) = i.as_i64() {
-                        format!("{}", i)
+                        format!("{i}")
                     } else if let Some(i) = i.as_u64() {
-                        format!("{}", i)
+                        format!("{i}")
                     } else if let Some(i) = i.as_f64() {
-                        format!("{}", i)
+                        format!("{i}")
                     } else {
                         continue;
                     }
                 }),
                 serde_json::Value::String(s) => Some(s.to_string()),
-                serde_json::Value::Bool(b) => Some(format!("{}", b)),
+                serde_json::Value::Bool(b) => Some(format!("{b}")),
                 serde_json::Value::Null => None,
                 _ => continue,
             };
