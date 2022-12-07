@@ -59,8 +59,7 @@ pub(crate) fn parse_nm_dns(
                     ErrorKind::InvalidArgument,
                     format!(
                         "Failed to convert to IP address: \
-                        invalid signature {:?}",
-                        s
+                        invalid signature {s:?}"
                     ),
                 );
                 log::error!("{}", e);

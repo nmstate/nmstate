@@ -45,7 +45,7 @@ impl NetworkStateTemplate {
             desire_state_value.drain(),
         ))
         .map_err(|e| {
-            NmstateError::new(ErrorKind::InvalidArgument, format!("{}", e))
+            NmstateError::new(ErrorKind::InvalidArgument, format!("{e}"))
         })
     }
 }
@@ -103,7 +103,7 @@ fn resolve_capture_data(
                             }
                         }
                     }
-                    write!(new_value, "{}", resolved).ok();
+                    write!(new_value, "{resolved}").ok();
                     if token_end_pos < tokens.len() - 1 {
                         println!("HAHA {:?}", &tokens);
                         for token in &tokens[token_end_pos + 1..] {

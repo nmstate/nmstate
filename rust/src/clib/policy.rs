@@ -40,10 +40,9 @@ pub extern "C" fn nmstate_net_state_from_policy(
         Ok(l) => l,
         Err(e) => {
             unsafe {
-                *err_msg =
-                    CString::new(format!("Failed to setup logger: {}", e))
-                        .unwrap()
-                        .into_raw();
+                *err_msg = CString::new(format!("Failed to setup logger: {e}"))
+                    .unwrap()
+                    .into_raw();
             }
             return NMSTATE_FAIL;
         }
@@ -93,12 +92,10 @@ pub extern "C" fn nmstate_net_state_from_policy(
                 NMSTATE_PASS
             },
             Err(e) => unsafe {
-                *err_msg = CString::new(format!(
-                    "serde_json::to_string failure: {}",
-                    e
-                ))
-                .unwrap()
-                .into_raw();
+                *err_msg =
+                    CString::new(format!("serde_json::to_string failure: {e}"))
+                        .unwrap()
+                        .into_raw();
                 *err_kind =
                     CString::new(format!("{}", nmstate::ErrorKind::Bug))
                         .unwrap()
@@ -132,8 +129,7 @@ where
         Err(e) => {
             unsafe {
                 *err_msg = CString::new(format!(
-                    "Error on converting C char to rust str: {}",
-                    e
+                    "Error on converting C char to rust str: {e}"
                 ))
                 .unwrap()
                 .into_raw();

@@ -148,7 +148,7 @@ fn get_leaf_array_value(
         Some(l) => l,
         None => {
             return Err(NmstateError::new_policy_error(
-                format!("Failed to find index {} from {}", index, item_name),
+                format!("Failed to find index {index} from {item_name}"),
                 line,
                 pos,
             ));
@@ -161,14 +161,11 @@ fn get_leaf_array_value(
             prop_path,
             leaf,
             line,
-            pos + format!("{}.", index).chars().count(),
+            pos + format!("{index}.").chars().count(),
         )
     } else {
         Err(NmstateError::new_policy_error(
-            format!(
-                "The {} index {} leaf data is not a object",
-                item_name, index
-            ),
+            format!("The {item_name} index {index} leaf data is not a object"),
             line,
             pos,
         ))
@@ -287,8 +284,7 @@ where
         let mut item_value = serde_json::to_value(item).map_err(|e| {
             NmstateError::new_policy_error(
                 format!(
-                    "Failed to convert {:?} item into serde_json value: {}",
-                    item, e
+                    "Failed to convert {item:?} item into serde_json value: {e}"
                 ),
                 line,
                 pos,
@@ -304,8 +300,7 @@ where
                     NmstateError::new(
                         ErrorKind::Bug,
                         format!(
-                            "Failed to deserialize {:?} into {}: {}",
-                            item_value, item_name, e
+                            "Failed to deserialize {item_value:?} into {item_name}: {e}"
                         ),
                     )
                 })?,

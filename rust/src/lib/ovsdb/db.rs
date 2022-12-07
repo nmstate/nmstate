@@ -119,9 +119,8 @@ impl OvsDbConnection {
                     let e = NmstateError::new(
                         ErrorKind::PluginFailure,
                         format!(
-                            "Invalid reply from OVSDB for querying {} \
-                            table: {:?}",
-                            table_name, reply
+                            "Invalid reply from OVSDB for querying {table_name} \
+                            table: {reply:?}"
                         ),
                     );
                     log::error!("{}", e);
@@ -132,8 +131,7 @@ impl OvsDbConnection {
                 let e = NmstateError::new(
                     ErrorKind::PluginFailure,
                     format!(
-                        "Invalid reply from OVSDB for querying {} table: {:?}",
-                        table_name, reply
+                        "Invalid reply from OVSDB for querying {table_name} table: {reply:?}"
                     ),
                 );
                 log::error!("{}", e);
@@ -183,8 +181,7 @@ impl OvsDbConnection {
                     let e = NmstateError::new(
                         ErrorKind::PluginFailure,
                         format!(
-                        "Invalid reply from OVSDB for querying {} table: {:?}",
-                        GLOBAL_CONFIG_TABLE, reply
+                        "Invalid reply from OVSDB for querying {GLOBAL_CONFIG_TABLE} table: {reply:?}"
                     ),
                     );
                     log::error!("{}", e);
@@ -195,8 +192,7 @@ impl OvsDbConnection {
                 let e = NmstateError::new(
                     ErrorKind::PluginFailure,
                     format!(
-                        "Invalid reply from OVSDB for querying {} table: {:?}",
-                        GLOBAL_CONFIG_TABLE, reply
+                        "Invalid reply from OVSDB for querying {GLOBAL_CONFIG_TABLE} table: {reply:?}"
                     ),
                 );
                 log::error!("{}", e);

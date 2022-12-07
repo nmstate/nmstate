@@ -71,8 +71,7 @@ impl Routes {
                         ErrorKind::NotImplementedError,
                         format!(
                             "Route with empty next hop interface \
-                        is not supported: {:?}",
-                            route
+                        is not supported: {route:?}"
                         ),
                     );
                     error!("{}", e);

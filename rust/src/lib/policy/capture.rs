@@ -43,8 +43,7 @@ impl<'de> Deserialize<'de> for NetworkCaptureRules {
                 ));
             } else {
                 return Err(serde::de::Error::custom(format!(
-                    "Expecting a string, but got {}",
-                    v
+                    "Expecting a string, but got {v}"
                 )));
             }
         }
@@ -159,7 +158,7 @@ impl NetworkCaptureCommand {
                 cap.clone()
             } else {
                 return Err(NmstateError::new_policy_error(
-                    format!("Capture {} not found", cap_name),
+                    format!("Capture {cap_name} not found"),
                     self.line.as_str(),
                     self.key_capture_pos,
                 ));
@@ -177,9 +176,8 @@ impl NetworkCaptureCommand {
                         NmstateError::new(
                             ErrorKind::Bug,
                             format!(
-                                "Failed to convert NetworkState {:?} \
-                                 to serde_json value: {}",
-                                input, e
+                                "Failed to convert NetworkState {input:?} \
+                                 to serde_json value: {e}"
                             ),
                         )
                     })?;
@@ -188,9 +186,8 @@ impl NetworkCaptureCommand {
                     NmstateError::new(
                         ErrorKind::Bug,
                         format!(
-                            "Failed to convert NetworkState {:?} \
-                             from serde_json value: {:?}",
-                            input_value, e
+                            "Failed to convert NetworkState {input_value:?} \
+                             from serde_json value: {e:?}"
                         ),
                     )
                 });
@@ -281,7 +278,7 @@ impl NetworkCaptureCommand {
             Some(v) => {
                 return Err(NmstateError::new(
                     ErrorKind::InvalidArgument,
-                    format!("Unsupported capture keyword '{}'", v),
+                    format!("Unsupported capture keyword '{v}'"),
                 ));
             }
             None => {
@@ -335,9 +332,8 @@ pub(crate) fn get_value(
                     NmstateError::new(
                         ErrorKind::Bug,
                         format!(
-                            "Failed to convert NetworkState {:?} \
-                            to serde_json value: {}",
-                            state, e
+                            "Failed to convert NetworkState {state:?} \
+                            to serde_json value: {e}"
                         ),
                     )
                 })?
@@ -349,8 +345,7 @@ pub(crate) fn get_value(
                 None => Err(NmstateError::new(
                     ErrorKind::Bug,
                     format!(
-                        "Failed to convert NetworkState {:?} to serde_json map",
-                        state,
+                        "Failed to convert NetworkState {state:?} to serde_json map",
                     ),
                 )),
             }
@@ -483,8 +478,7 @@ fn get_condition_value(
                             captured data, the correct format should be \
                             'interfaces.name == \
                             capture.default-gw.interfaces.0.name', \
-                            but got: {}",
-                            line
+                            but got: {line}"
                         ),
                     ));
                 }
@@ -504,8 +498,7 @@ fn get_condition_value(
             ErrorKind::InvalidArgument,
             format!(
                 "The equal action should end with single value or \
-                property path but got: {}",
-                line
+                property path but got: {line}"
             ),
         )),
     }
