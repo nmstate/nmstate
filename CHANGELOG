@@ -1,4 +1,20 @@
 # Changelog
+## [1.4.0] - 2022-12-07
+### New features
+ - Support changing metric of auto routes. (106bb7ea)
+ - gen_conf: Treating state:down as autoconnect false. (f656221d)
+ - Allows extra IP address found during verification stage. (2f245d53)
+
+### Bug fixes
+ - Fix activation retry. (2a98b06c)
+ - Fix NM profile import timeout. (774d3dd1)
+ - Fix ethtool highdma support. (90da0577)
+ - Fix DNS problem on NM 1.41+. (64d69428, 250f7189)
+ - Fix IP over Infiniband. (97cafa85, 94806f5f)
+ - Preserve IP address order. (2d0cfd5a)
+ - Raise proper exception when ovsdb plugin not installed. (dde362ae)
+ - Do not change SR-IOV config if not desired. (41449722)
+
 ## [1.3.3] - 2022-08-10
 ### New features
  - Add suppoprt to ports keyword for bond, bridge and VRF. (6d39fed9)
