@@ -58,8 +58,7 @@ pub extern "C" fn nmstate_net_state_apply(
         Err(e) => {
             unsafe {
                 *err_msg = CString::new(format!(
-                    "Error on converting C char to rust str: {}",
-                    e
+                    "Error on converting C char to rust str: {e}"
                 ))
                 .unwrap()
                 .into_raw();

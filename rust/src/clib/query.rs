@@ -78,12 +78,10 @@ pub extern "C" fn nmstate_net_state_retrieve(
                 NMSTATE_PASS
             },
             Err(e) => unsafe {
-                *err_msg = CString::new(format!(
-                    "serde_json::to_string failure: {}",
-                    e
-                ))
-                .unwrap()
-                .into_raw();
+                *err_msg =
+                    CString::new(format!("serde_json::to_string failure: {e}"))
+                        .unwrap()
+                        .into_raw();
                 *err_kind =
                     CString::new(format!("{}", nmstate::ErrorKind::Bug))
                         .unwrap()

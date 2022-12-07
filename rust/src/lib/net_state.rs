@@ -136,8 +136,7 @@ impl<'de> Deserialize<'de> for NetworkState {
             Some(v) => v,
             None => {
                 return Err(serde::de::Error::custom(format!(
-                    "Expecting a HashMap/Object/Dictionary, but got {}",
-                    v
+                    "Expecting a HashMap/Object/Dictionary, but got {v}"
                 )));
             }
         };
@@ -506,8 +505,7 @@ impl NetworkState {
                 let e = NmstateError::new(
                     ErrorKind::InvalidArgument,
                     format!(
-                    "Failed to find a interface for desired routes rules {:?} ",
-                    rules
+                    "Failed to find a interface for desired routes rules {rules:?} "
                 ),
                 );
                 log::error!("{}", e);
@@ -634,9 +632,8 @@ impl NetworkState {
                 let e = NmstateError::new(
                     ErrorKind::InvalidArgument,
                     format!(
-                        "Route table {} for route rule is not defined by \
-                        any routes",
-                        table_id
+                        "Route table {table_id} for route rule is not defined by \
+                        any routes"
                     ),
                 );
                 log::error!("{}", e);

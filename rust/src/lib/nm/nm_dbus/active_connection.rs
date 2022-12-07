@@ -29,8 +29,7 @@ fn nm_ac_obj_path_state_flags_get(
         Err(e) => Err(NmError::new(
             ErrorKind::Bug,
             format!(
-                "Failed to retrieve StateFlags of active connection {}: {}",
-                obj_path, e
+                "Failed to retrieve StateFlags of active connection {obj_path}: {e}"
             ),
         )),
     }
@@ -51,8 +50,7 @@ pub(crate) fn nm_ac_obj_path_uuid_get(
         Err(e) => Err(NmError::new(
             ErrorKind::Bug,
             format!(
-                "Failed to retrieve UUID of active connection {}: {}",
-                obj_path, e
+                "Failed to retrieve UUID of active connection {obj_path}: {e}"
             ),
         )),
     }

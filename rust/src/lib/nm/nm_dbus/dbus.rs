@@ -146,8 +146,7 @@ impl<'a> NmDbus<'a> {
                 if let zbus::Error::MethodError(ref error_type, ..) = e {
                     if error_type
                         == &format!(
-                            "{}.Settings.InvalidConnection",
-                            NM_DBUS_INTERFACE_ROOT,
+                            "{NM_DBUS_INTERFACE_ROOT}.Settings.InvalidConnection",
                         )
                     {
                         Err(NmError::new(
@@ -324,8 +323,7 @@ impl<'a> NmDbus<'a> {
                 {
                     if error_type
                         == &format!(
-                            "{}.Device.IncompatibleConnection",
-                            NM_DBUS_INTERFACE_ROOT
+                            "{NM_DBUS_INTERFACE_ROOT}.Device.IncompatibleConnection"
                         )
                     {
                         Err(NmError::new(

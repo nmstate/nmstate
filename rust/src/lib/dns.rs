@@ -461,8 +461,7 @@ fn _save_dns_to_iface(
             ErrorKind::InvalidArgument,
             format!(
                 "Failed to find suitable(IP enabled with DHCP off \
-                or auto-dns: false) interface for DNS server {:?}",
-                servers
+                or auto-dns: false) interface for DNS server {servers:?}"
             ),
         );
         log::error!("{}", e);
@@ -527,8 +526,7 @@ fn _save_dns_to_iface(
             let e = NmstateError::new(
                 ErrorKind::Bug,
                 format!(
-                    "Selected interface {} for dns, but not found it",
-                    iface_name
+                    "Selected interface {iface_name} for dns, but not found it"
                 ),
             );
             log::error!("{}", e);
