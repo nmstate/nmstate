@@ -194,6 +194,9 @@ def verify_sriov_vf(iface, cur_ifaces):
         and (iface.is_desired or iface.is_changed)
         and iface.type == InterfaceType.ETHERNET
         and iface.sriov_total_vfs > 0
+        and iface.original_desire_dict.get(Ethernet.CONFIG_SUBTREE, {}).get(
+            Ethernet.SRIOV_SUBTREE
+        )
     ):
         return
     cur_iface = cur_ifaces.get_iface(iface.name, iface.type)
