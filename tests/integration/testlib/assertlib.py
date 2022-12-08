@@ -47,9 +47,14 @@ def assert_state(desired_state_data):
 
 def assert_absent(*ifnames):
     """Assert that a interface is not present in the current state"""
-
-    current_state = statelib.show_only(ifnames)
-    assert not current_state[Interface.KEY]
+    for i in range(0, RETRY_COUNT):
+        current_state = statelib.show_only(ifnames)
+        if not current_state[Interface.KEY]:
+            return
+        elif i == RETRY_COUNT - 1:
+            assert not current_state[Interface.KEY]
+        else:
+            time.sleep(0.5)
 
 
 def assert_state_match(desired_state_data):
