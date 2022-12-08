@@ -405,8 +405,7 @@ fn nm_dev_name_get(
         Err(e) => Err(NmError::new(
             ErrorKind::Bug,
             format!(
-                "Failed to retrieve interface name of device {}: {}",
-                obj_path, e
+                "Failed to retrieve interface name of device {obj_path}: {e}"
             ),
         )),
     }
@@ -459,10 +458,7 @@ fn nm_dev_iface_type_get(
         }),
         Err(e) => Err(NmError::new(
             ErrorKind::Bug,
-            format!(
-                "Failed to retrieve device type of device {}: {}",
-                obj_path, e
-            ),
+            format!("Failed to retrieve device type of device {obj_path}: {e}"),
         )),
     }
 }
@@ -482,8 +478,7 @@ fn nm_dev_state_reason_get(
         Err(e) => Err(NmError::new(
             ErrorKind::Bug,
             format!(
-                "Failed to retrieve state reason of device {}: {}",
-                obj_path, e
+                "Failed to retrieve state reason of device {obj_path}: {e}"
             ),
         )),
     }
@@ -505,8 +500,7 @@ fn nm_dev_is_mac_vtap_get(
         Err(e) => Err(NmError::new(
             ErrorKind::Bug,
             format!(
-                "Failed to retrieve Macvlan.Tab(tap) of device {}: {}",
-                obj_path, e
+                "Failed to retrieve Macvlan.Tab(tap) of device {obj_path}: {e}"
             ),
         )),
     }
@@ -592,8 +586,7 @@ pub(crate) fn nm_dev_get_llpd(
         Err(e) => Err(NmError::new(
             ErrorKind::Bug,
             format!(
-                "Failed to retrieve LLDP neighbors of device {}: {}",
-                obj_path, e
+                "Failed to retrieve LLDP neighbors of device {obj_path}: {e}"
             ),
         )),
     }

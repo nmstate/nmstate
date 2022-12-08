@@ -188,8 +188,7 @@ impl<'a> NmApi<'a> {
             Err(NmError::new(
                 ErrorKind::InvalidArgument,
                 format!(
-                    "Failed to extract interface name from connection {:?}",
-                    nm_conn
+                    "Failed to extract interface name from connection {nm_conn:?}"
                 ),
             ))
         }

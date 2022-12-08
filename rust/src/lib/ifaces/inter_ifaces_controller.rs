@@ -131,9 +131,8 @@ pub(crate) fn handle_changed_ports(
                                 return Err(NmstateError::new(
                                     ErrorKind::InvalidArgument,
                                     format!(
-                                        "Interface {} is holding unknown \
-                                        port {}",
-                                        ctrl_name, iface_name
+                                        "Interface {ctrl_name} is holding unknown \
+                                        port {iface_name}"
                                     ),
                                 ));
                             }
@@ -401,8 +400,7 @@ fn is_port_overbook(
         let e = NmstateError::new(
             ErrorKind::InvalidArgument,
             format!(
-                "Port {} is overbooked by two controller: {}, {}",
-                port, ctrl, cur_ctrl
+                "Port {port} is overbooked by two controller: {ctrl}, {cur_ctrl}"
             ),
         );
         log::error!("{}", e);

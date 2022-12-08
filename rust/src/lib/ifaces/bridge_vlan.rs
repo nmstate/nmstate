@@ -106,23 +106,20 @@ impl<'de> Deserialize<'de> for BridgePortTunkTag {
                 Ok(Self::Id(id.parse::<u16>().map_err(|e| {
                     serde::de::Error::custom(format!(
                         "Failed to parse BridgePortTunkTag id \
-                        {} as u16: {}",
-                        id, e
+                        {id} as u16: {e}"
                     ))
                 })?))
             } else if let Some(id) = id.as_u64() {
                 Ok(Self::Id(u16::try_from(id).map_err(|e| {
                     serde::de::Error::custom(format!(
                         "Failed to parse BridgePortTunkTag id \
-                        {} as u16: {}",
-                        id, e
+                        {id} as u16: {e}"
                     ))
                 })?))
             } else {
                 Err(serde::de::Error::custom(format!(
                     "The id of BridgePortTunkTag should be \
-                    unsigned 16 bits integer, but got {}",
-                    v
+                    unsigned 16 bits integer, but got {v}"
                 )))
             }
         } else if let Some(id_range) = v.get("id-range") {
@@ -133,8 +130,7 @@ impl<'de> Deserialize<'de> for BridgePortTunkTag {
         } else {
             Err(serde::de::Error::custom(format!(
                 "BridgePortTunkTag only support 'id' or 'id-range', \
-                but got {}",
-                v
+                but got {v}"
             )))
         }
     }

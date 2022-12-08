@@ -43,8 +43,7 @@ impl<'de> Deserialize<'de> for OvsDbGlobalConfig {
             }
         } else {
             return Err(serde::de::Error::custom(format!(
-                "Expecting dict/HashMap, but got {:?}",
-                v
+                "Expecting dict/HashMap, but got {v:?}"
             )));
         }
         Ok(ret)
@@ -85,8 +84,7 @@ impl<'de> Deserialize<'de> for OvsDbIfaceConfig {
             }
         } else {
             return Err(serde::de::Error::custom(format!(
-                "Expecting dict/HashMap, but got {:?}",
-                v
+                "Expecting dict/HashMap, but got {v:?}"
             )));
         }
         Ok(ret)

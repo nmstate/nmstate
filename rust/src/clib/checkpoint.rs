@@ -46,8 +46,7 @@ pub extern "C" fn nmstate_checkpoint_commit(
             Err(e) => {
                 unsafe {
                     *err_msg = CString::new(format!(
-                        "Error on converting C char to rust str: {}",
-                        e
+                        "Error on converting C char to rust str: {e}"
                     ))
                     .unwrap()
                     .into_raw();
@@ -119,8 +118,7 @@ pub extern "C" fn nmstate_checkpoint_rollback(
             Err(e) => {
                 unsafe {
                     *err_msg = CString::new(format!(
-                        "Error on converting C char to rust str: {}",
-                        e
+                        "Error on converting C char to rust str: {e}"
                     ))
                     .unwrap()
                     .into_raw();
