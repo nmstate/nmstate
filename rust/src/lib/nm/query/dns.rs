@@ -21,7 +21,7 @@ pub(crate) fn nm_dns_to_nmstate(
         for srv in srvs {
             if let Ok(ip) = std::net::Ipv6Addr::from_str(srv.as_str()) {
                 if is_ipv6_unicast_link_local(&ip) {
-                    servers.push(format!("{}%{}", srv, iface_name));
+                    servers.push(format!("{srv}%{iface_name}"));
                 } else {
                     servers.push(srv.to_string());
                 }

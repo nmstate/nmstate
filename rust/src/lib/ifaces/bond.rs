@@ -345,9 +345,8 @@ impl TryFrom<NumberAsString> for BondAdSelect {
             s => Err(NmstateError::new(
                 ErrorKind::InvalidArgument,
                 format!(
-                    "Invalid bond ad_select value: {}, should be \
-                    0, stable, 1, bandwidth, 2, or count",
-                    s
+                    "Invalid bond ad_select value: {s}, should be \
+                    0, stable, 1, bandwidth, 2, or count"
                 ),
             )),
         }
@@ -403,9 +402,8 @@ impl TryFrom<NumberAsString> for BondLacpRate {
             v => Err(NmstateError::new(
                 ErrorKind::InvalidArgument,
                 format!(
-                    "Invalid bond lacp-rate {}, should be \
-                    0, slow, 1 or fast",
-                    v
+                    "Invalid bond lacp-rate {v}, should be \
+                    0, slow, 1 or fast"
                 ),
             )),
         }
@@ -451,9 +449,8 @@ impl TryFrom<NumberAsString> for BondAllPortsActive {
             v => Err(NmstateError::new(
                 ErrorKind::InvalidArgument,
                 format!(
-                    "Invalid all_slaves_active value: {}, should be \
-                    0, dropped, 1 or delivered",
-                    v
+                    "Invalid all_slaves_active value: {v}, should be \
+                    0, dropped, 1 or delivered"
                 ),
             )),
         }
@@ -506,9 +503,8 @@ impl TryFrom<NumberAsString> for BondArpAllTargets {
             v => Err(NmstateError::new(
                 ErrorKind::InvalidArgument,
                 format!(
-                    "Invalid arp_all_targets value {}, should be \
-                    0, any, 1 or all",
-                    v
+                    "Invalid arp_all_targets value {v}, should be \
+                    0, any, 1 or all"
                 ),
             )),
         }
@@ -582,10 +578,9 @@ impl TryFrom<NumberAsString> for BondArpValidate {
             v => Err(NmstateError::new(
                 ErrorKind::InvalidArgument,
                 format!(
-                    "Invalid arp_validate value {}, should be \
+                    "Invalid arp_validate value {v}, should be \
                     0, none, 1, active, 2, backup, 3, all, 4, filter, 5, \
-                    filter_active, 6 or filter_backup",
-                    v
+                    filter_active, 6 or filter_backup"
                 ),
             )),
         }
@@ -652,9 +647,8 @@ impl TryFrom<NumberAsString> for BondFailOverMac {
             v => Err(NmstateError::new(
                 ErrorKind::InvalidArgument,
                 format!(
-                    "Invalid fail_over_mac value: {}, should be \
-                    0, none, 1, active, 2 or follow",
-                    v
+                    "Invalid fail_over_mac value: {v}, should be \
+                    0, none, 1, active, 2 or follow"
                 ),
             )),
         }
@@ -711,9 +705,8 @@ impl TryFrom<NumberAsString> for BondPrimaryReselect {
             v => Err(NmstateError::new(
                 ErrorKind::InvalidArgument,
                 format!(
-                    "Invalid primary_reselect vlaue {}, should be \
-                    0, always, 1, better, 2 or failure",
-                    v
+                    "Invalid primary_reselect vlaue {v}, should be \
+                    0, always, 1, better, 2 or failure"
                 ),
             )),
         }
@@ -779,10 +772,9 @@ impl TryFrom<NumberAsString> for BondXmitHashPolicy {
             v => Err(NmstateError::new(
                 ErrorKind::InvalidArgument,
                 format!(
-                    "Invalid xmit_hash_policy value {}, should be \
+                    "Invalid xmit_hash_policy value {v}, should be \
                     0, layer2, 1, layer34, 2, layer23, 3, encap2+3, 4, \
-                    encap3+4, 5, vlan+srcmac",
-                    v
+                    encap3+4, 5, vlan+srcmac"
                 ),
             )),
         }

@@ -90,8 +90,7 @@ where
             Ok(n) => Ok(n),
             Err(json_error) => Err(format!(
                 "Failed to load from file, \
-                     tried both YAML and JSON format. Errors: {}, {}",
-                yaml_error, json_error
+                     tried both YAML and JSON format. Errors: {yaml_error}, {json_error}"
             )
             .into()),
         },
@@ -142,8 +141,7 @@ fn store_capture_states_from_file(
         .open(file_path)
         .map_err(|e| {
             CliError::from(format!(
-                "Failed to store captured states to file {}: {}",
-                file_path, e
+                "Failed to store captured states to file {file_path}: {e}"
             ))
         })?;
     fd.write_all(states_string.as_bytes())?;

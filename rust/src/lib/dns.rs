@@ -479,8 +479,7 @@ fn _save_dns_to_iface(
             ErrorKind::InvalidArgument,
             format!(
                 "Failed to find suitable(IP enabled with DHCP off \
-                or auto-dns: false) interface for DNS server {:?}",
-                servers
+                or auto-dns: false) interface for DNS server {servers:?}"
             ),
         );
         log::error!("{}", e);
@@ -545,8 +544,7 @@ fn _save_dns_to_iface(
             let e = NmstateError::new(
                 ErrorKind::Bug,
                 format!(
-                    "Selected interface {} for dns, but not found it",
-                    iface_name
+                    "Selected interface {iface_name} for dns, but not found it"
                 ),
             );
             log::error!("{}", e);
@@ -578,9 +576,8 @@ pub(crate) fn validate_ipv6_link_local_address_dns_srv(
                     return Err(NmstateError::new(
                         ErrorKind::InvalidArgument,
                         format!(
-                            "Desired IPv6 link local DNS server {} is \
-                            pointing to interface {} which does not exist.",
-                            srv, iface_name
+                            "Desired IPv6 link local DNS server {srv} is \
+                            pointing to interface {iface_name} which does not exist."
                         ),
                     ));
                 };
@@ -590,10 +587,9 @@ pub(crate) fn validate_ipv6_link_local_address_dns_srv(
                     return Err(NmstateError::new(
                         ErrorKind::InvalidArgument,
                         format!(
-                            "Interface {} has IPv6 disabled, \
+                            "Interface {iface_name} has IPv6 disabled, \
                             hence cannot hold desired IPv6 link local \
-                            DNS server {}",
-                            iface_name, srv
+                            DNS server {srv}"
                         ),
                     ));
                 }
@@ -626,11 +622,10 @@ fn parse_dns_ipv6_link_local_srv(
                     return Err(NmstateError::new(
                         ErrorKind::InvalidArgument,
                         format!(
-                            "Invalid IPv6 address in {}, only IPv6 link local \
+                            "Invalid IPv6 address in {srv}, only IPv6 link local \
                             address is allowed to have '%' character in DNS \
                             name server, the correct format should be \
-                            'fe80::deef:1%eth1'",
-                            srv
+                            'fe80::deef:1%eth1'"
                         ),
                     ));
                 }
@@ -639,10 +634,9 @@ fn parse_dns_ipv6_link_local_srv(
             return Err(NmstateError::new(
                 ErrorKind::InvalidArgument,
                 format!(
-                    "Invalid DNS server {}, the IPv6 \
+                    "Invalid DNS server {srv}, the IPv6 \
                         link local DNS server should be in the format like \
-                        'fe80::deef:1%eth1'",
-                    srv
+                        'fe80::deef:1%eth1'"
                 ),
             ));
         }

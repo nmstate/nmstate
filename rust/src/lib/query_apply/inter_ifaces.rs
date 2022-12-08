@@ -301,9 +301,8 @@ impl Interfaces {
                         let e = NmstateError::new(
                             ErrorKind::InvalidArgument,
                             format!(
-                                "Failed to find unknown type interface {} \
-                                in current state",
-                                iface_name
+                                "Failed to find unknown type interface {iface_name} \
+                                in current state"
                             ),
                         );
                         log::error!("{}", e);

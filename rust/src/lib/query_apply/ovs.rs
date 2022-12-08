@@ -21,8 +21,7 @@ impl OvsDbGlobalConfig {
             let e = NmstateError::new(
                 ErrorKind::VerificationError,
                 format!(
-                    "Verification failure: {} desire '{}', current '{}'",
-                    reference, desire, current
+                    "Verification failure: {reference} desire '{desire}', current '{current}'"
                 ),
             );
             log::error!("{}", e);

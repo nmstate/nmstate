@@ -180,7 +180,7 @@ fn test_policy_equal_got_2_values() {
     let result = NetworkCaptureCommand::parse(line);
     assert!(result.is_err());
     if let Err(e) = result {
-        println!("HAHA {}", e);
+        println!("HAHA {e}");
         assert_eq!(e.kind(), ErrorKind::PolicyError);
         assert_eq!(e.line(), line);
         assert_eq!(e.position(), "interface.name == \"e".len() - 1);
@@ -447,7 +447,7 @@ fn test_policy_ilegal_char() {
     let result = NetworkCaptureCommand::parse(line);
     assert!(result.is_err());
     if let Err(e) = result {
-        println!("HAHA {}", e);
+        println!("HAHA {e}");
         assert_eq!(e.kind(), ErrorKind::PolicyError);
         assert_eq!(e.line(), line);
         assert_eq!(e.position(), "capture.abc | interface.name==-".len() - 1);
