@@ -1446,25 +1446,13 @@ def test_ipv6_link_local_dns_srv(dhcpcli_up_with_dynamic_ip):
     assert _poll(_has_dhcpv4_addr)
     assert _poll(_has_dhcpv6_addr)
     new_state = libnmstate.show()
-    if is_k8s():
-        # K8S CI has an TUN interface configured as auto_dns: true,
-        # which is not configurable by nmstate, hence we only make sure
-        # the first two DNS server is what we desired
-        assert new_state[DNS.KEY][DNS.CONFIG][DNS.SERVER][:2] == [
-            IPV6_DNS_NAMESERVER,
-            IPV6_DNS_NAMESERVER_LOCAL,
-        ]
-        assert new_state[DNS.KEY][DNS.RUNNING][DNS.SERVER][:2] == [
-            IPV6_DNS_NAMESERVER,
-            IPV6_DNS_NAMESERVER_LOCAL,
-        ]
-
-    else:
-        assert new_state[DNS.KEY][DNS.CONFIG][DNS.SERVER] == [
-            IPV6_DNS_NAMESERVER,
-            IPV6_DNS_NAMESERVER_LOCAL,
-        ]
-        assert new_state[DNS.KEY][DNS.RUNNING][DNS.SERVER] == [
-            IPV6_DNS_NAMESERVER,
-            IPV6_DNS_NAMESERVER_LOCAL,
-        ]
+    # K8S and NM CI has an extra interface configured as auto_dns: true,
+    # which will append extra DNS entries to what we desired
+    assert new_state[DNS.KEY][DNS.CONFIG][DNS.SERVER][:2] == [
+        IPV6_DNS_NAMESERVER,
+        IPV6_DNS_NAMESERVER_LOCAL,
+    ]
+    assert new_state[DNS.KEY][DNS.RUNNING][DNS.SERVER][:2] == [
+        IPV6_DNS_NAMESERVER,
+        IPV6_DNS_NAMESERVER_LOCAL,
+    ]
