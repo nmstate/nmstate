@@ -242,6 +242,15 @@ function upgrade_nm_from_copr {
     exec_cmd "systemctl restart NetworkManager"
 }
 
+function upgrade_nm_from_rpm_dir {
+    local nm_rpm_dir=$1
+    mkdir $EXPORT_DIR/nm_rpms || true
+    find $nm_rpm_dir -name \*.rpm -exec cp -v {} "${EXPORT_DIR}/nm_rpms/" \;
+    exec_cmd "dnf remove --assumeyes --noautoremove NetworkManager"
+    exec_cmd "dnf install -y ${CONT_EXPORT_DIR}/nm_rpms/*.rpm"
+    exec_cmd "systemctl restart NetworkManager"
+}
+
 function run_customize_command {
     if [[ -n "$customize_cmd" ]];then
         clean_dnf_cache
@@ -252,7 +261,7 @@ function run_customize_command {
 options=$(getopt --options "" \
     --long "customize:,pytest-args:,help,debug-shell,test-type:,\
     el8,el9,centos-stream,copr:,artifacts-dir:,test-vdsm,machine,k8s,\
-    use-installed-nmstate,compiled-rpms-dir:" \
+    use-installed-nmstate,compiled-rpms-dir:,nm-rpm-dir:" \
     -- "${@}")
 eval set -- "$options"
 while true; do
@@ -264,6 +273,10 @@ while true; do
     --copr)
         shift
         copr_repo="$1"
+        ;;
+    --nm-rpm-dir)
+        shift
+        nm_rpm_dir="$1"
         ;;
     --customize)
         shift
@@ -362,6 +375,10 @@ fi
 
 if [[ -v copr_repo ]];then
     upgrade_nm_from_copr "${copr_repo}"
+fi
+
+if [[ -v nm_rpm_dir ]];then
+    upgrade_nm_from_rpm_dir "${nm_rpm_dir}"
 fi
 
 if [ -z "${RUN_K8S}" ]; then
