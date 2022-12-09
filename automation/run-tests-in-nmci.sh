@@ -14,7 +14,6 @@ while true; do
         use_el8="1"
         ;;
     --el9)
-        use_el9="1"
         ;;
     --copr)
         shift
@@ -45,7 +44,7 @@ done
 echo $NM_COPR
 echo $NM_RPM_DIR
 
-ARGS="--test-type integ_tier1 --el9"
+ARGS="--test-type integ_tier1"
 if [[ -v NM_COPR ]];then
     ARGS="$ARGS --copr $NM_COPR"
 fi
@@ -60,9 +59,7 @@ fi
 
 if [[ -v use_el8 ]];then
     ARGS="$ARGS --el8"
-fi
-
-if [[ -v use_el9 ]];then
+else
     ARGS="$ARGS --el9"
 fi
 
