@@ -181,9 +181,8 @@ fn get_nm_ovs_iface_conns<'a>(
 
 fn get_vlan_info(nm_conn: &NmConnection) -> Option<BridgePortVlanConfig> {
     if let Some(port_conf) = nm_conn.ovs_port.as_ref() {
-        if let (Some(tag), Some(mode)) =
-            (port_conf.tag, port_conf.vlan_mode.as_deref())
-        {
+        if let Some(mode) = port_conf.vlan_mode.as_deref() {
+            let tag = port_conf.tag.unwrap_or_default();
             return Some(BridgePortVlanConfig {
                 mode: Some(match mode {
                     "access" => BridgePortVlanMode::Access,

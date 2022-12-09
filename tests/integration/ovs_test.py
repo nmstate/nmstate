@@ -1383,3 +1383,23 @@ def test_move_ovs_sys_iface_to_linux_bridge(bridge_with_ports):
     }
     with linux_bridge("test-linux-br0", bridge_config) as state:
         assertlib.assert_state_match(state)
+
+
+def test_ovs_vlan_access_mode_with_tag_0():
+    bridge = Bridge(BRIDGE1)
+    bridge.add_internal_port(PORT1, ipv4_state={InterfaceIPv4.ENABLED: False})
+    bridge.set_port_option(
+        PORT1,
+        {
+            OVSBridge.Port.NAME: PORT1,
+            OVSBridge.Port.VLAN_SUBTREE: {
+                OVSBridge.Port.Vlan.MODE: OVSBridge.Port.Vlan.Mode.ACCESS,
+                OVSBridge.Port.Vlan.TAG: 0,
+            },
+        },
+    )
+    with bridge.create() as state:
+        assertlib.assert_state_match(state)
+
+    assertlib.assert_absent(BRIDGE1)
+    assertlib.assert_absent(PORT1)
