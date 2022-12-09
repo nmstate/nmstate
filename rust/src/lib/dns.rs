@@ -5,8 +5,8 @@ use std::str::FromStr;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    ip::is_ipv6_addr, ErrorKind, Interface, Interfaces, NetworkState,
-    NmstateError,
+    ip::is_ipv6_addr, ErrorKind, Interface, InterfaceType, Interfaces,
+    NetworkState, NmstateError,
 };
 
 const DEFAULT_DNS_PRIORITY: i32 = 40;
@@ -314,7 +314,12 @@ fn find_ifaces_in_desire(
     is_ipv6: bool,
     desired: &Interfaces,
 ) -> Option<String> {
-    for (iface_name, iface) in desired.kernel_ifaces.iter() {
+    // Do not use loopback interface for DNS
+    for (iface_name, iface) in desired
+        .kernel_ifaces
+        .iter()
+        .filter(|(_, i)| i.iface_type() != InterfaceType::Loopback)
+    {
         if is_iface_valid_for_dns(is_ipv6, iface) {
             return Some(iface_name.to_string());
         }
@@ -327,10 +332,12 @@ fn find_valid_ifaces_for_dns(
     desired: &Interfaces,
     current: &Interfaces,
 ) -> Option<String> {
+    // Do not use loopback interface for DNS
     for (iface_name, iface) in desired
         .kernel_ifaces
         .iter()
         .chain(current.kernel_ifaces.iter())
+        .filter(|(_, i)| i.iface_type() != InterfaceType::Loopback)
     {
         if is_iface_valid_for_dns(is_ipv6, iface) {
             let des_iface = desired.kernel_ifaces.get(iface_name);
