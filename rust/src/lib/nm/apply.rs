@@ -10,13 +10,14 @@ use super::{
     error::nm_error_to_nmstate,
     profile::{
         activate_nm_profiles, create_index_for_nm_conns_by_name_type,
-        deactivate_nm_profiles, delete_exist_profiles,
+        deactivate_nm_profiles, delete_exist_profiles, delete_profiles,
         extend_timeout_if_required, save_nm_profiles,
     },
     query::{
-        is_mptcp_flags_changed, is_mptcp_supported, is_route_removed,
-        is_veth_peer_changed, is_veth_peer_in_desire, is_vlan_id_changed,
-        is_vrf_table_id_changed, is_vxlan_id_changed, remove_nm_mptcp_set,
+        get_orphan_ovs_port_uuids, is_mptcp_flags_changed, is_mptcp_supported,
+        is_route_removed, is_veth_peer_changed, is_veth_peer_in_desire,
+        is_vlan_id_changed, is_vrf_table_id_changed, is_vxlan_id_changed,
+        remove_nm_mptcp_set,
     },
     settings::{
         get_exist_profile, iface_to_nm_connections, iface_type_to_nm,
@@ -261,6 +262,12 @@ fn apply_single_state(
         &exist_nm_conns,
     );
 
+    let ovs_port_nm_conn_uuids_to_delete = get_orphan_ovs_port_uuids(
+        &net_state.interfaces,
+        &cur_net_state.interfaces,
+        &exist_nm_conns,
+    );
+
     let nm_conns_to_deactivate_first = gen_nm_conn_need_to_deactivate_first(
         nm_conns_to_activate.as_slice(),
         activated_nm_conns.as_slice(),
@@ -283,6 +290,7 @@ fn apply_single_state(
             &nm_conns_to_activate,
             checkpoint,
         )?;
+        delete_profiles(nm_api, &ovs_port_nm_conn_uuids_to_delete, checkpoint)?;
     }
 
     for i in 0..ACTIVATION_RETRY_COUNT {

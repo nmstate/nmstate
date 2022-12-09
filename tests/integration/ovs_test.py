@@ -12,6 +12,7 @@ from libnmstate.schema import InterfaceIP
 from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
+from libnmstate.schema import LinuxBridge
 from libnmstate.schema import MacVlan
 from libnmstate.schema import MacVtap
 from libnmstate.schema import OVSBridge
@@ -30,6 +31,7 @@ from .testlib import cmdlib
 from .testlib import iprule
 from .testlib import statelib
 from .testlib.bondlib import bond_interface
+from .testlib.bridgelib import linux_bridge
 from .testlib.env import is_k8s
 from .testlib.env import nm_major_minor_version
 from .testlib.genconf import gen_conf_apply
@@ -1364,3 +1366,20 @@ def test_add_port_to_ovs_br_with_controller_property(
     assert len(br_ports) == 2
     assert br_ports[0][OVSBridge.Port.NAME] == BRIDGE1
     assert br_ports[1][OVSBridge.Port.NAME] == "eth2"
+
+
+def test_move_ovs_sys_iface_to_linux_bridge(bridge_with_ports):
+    bridge_config = {
+        LinuxBridge.OPTIONS_SUBTREE: {
+            LinuxBridge.STP_SUBTREE: {
+                LinuxBridge.STP.ENABLED: False,
+            },
+        },
+        LinuxBridge.PORT_SUBTREE: [
+            {
+                LinuxBridge.Port.NAME: "eth1",
+            }
+        ],
+    }
+    with linux_bridge("test-linux-br0", bridge_config) as state:
+        assertlib.assert_state_match(state)

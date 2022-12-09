@@ -31,9 +31,9 @@ pub(crate) fn delete_exist_profiles(
     nm_conns: &[NmConnection],
     checkpoint: &str,
 ) -> Result<(), NmstateError> {
-    let mut now = Instant::now();
     let mut excluded_uuids: Vec<&str> = Vec::new();
     let mut changed_iface_name_types: Vec<(&str, &str)> = Vec::new();
+    let mut uuids_to_delete = Vec::new();
     for nm_conn in nm_conns {
         if let Some(uuid) = nm_conn.uuid() {
             excluded_uuids.push(uuid);
@@ -71,21 +71,20 @@ pub(crate) fn delete_exist_profiles(
         if !excluded_uuids.contains(&uuid)
             && changed_iface_name_types.contains(&(iface_name, nm_iface_type))
         {
-            extend_timeout_if_required(&mut now, checkpoint)?;
-            log::info!(
-                "Deleting existing connection \
-                UUID {:?}, id {:?} type {:?} name {:?}",
-                exist_nm_conn.uuid(),
-                exist_nm_conn.id(),
-                exist_nm_conn.iface_type(),
-                exist_nm_conn.iface_name(),
-            );
-            nm_api
-                .connection_delete(uuid)
-                .map_err(nm_error_to_nmstate)?;
+            if let Some(uuid) = exist_nm_conn.uuid() {
+                uuids_to_delete.push(uuid);
+                log::info!(
+                    "Deleting existing connection \
+                UUID {}, id {:?} type {:?} name {:?}",
+                    uuid,
+                    exist_nm_conn.id(),
+                    exist_nm_conn.iface_type(),
+                    exist_nm_conn.iface_name(),
+                );
+            }
         }
     }
-    Ok(())
+    delete_profiles(nm_api, &uuids_to_delete, checkpoint)
 }
 
 pub(crate) fn save_nm_profiles(
@@ -367,4 +366,19 @@ pub(crate) fn get_port_nm_conns<'a>(
         }
     }
     ret
+}
+
+pub(crate) fn delete_profiles(
+    nm_api: &NmApi,
+    uuids: &[&str],
+    checkpoint: &str,
+) -> Result<(), NmstateError> {
+    let mut now = Instant::now();
+    for uuid in uuids {
+        extend_timeout_if_required(&mut now, checkpoint)?;
+        nm_api
+            .connection_delete(uuid)
+            .map_err(nm_error_to_nmstate)?;
+    }
+    Ok(())
 }
