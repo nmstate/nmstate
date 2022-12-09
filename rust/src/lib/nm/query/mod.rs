@@ -23,7 +23,8 @@ pub(crate) use self::mptcp::{
     is_mptcp_flags_changed, is_mptcp_supported, remove_nm_mptcp_set,
 };
 pub(crate) use self::ovs::{
-    get_ovs_dpdk_config, get_ovs_patch_config, nm_ovs_bridge_conf_get,
+    get_orphan_ovs_port_uuids, get_ovs_dpdk_config, get_ovs_patch_config,
+    nm_ovs_bridge_conf_get,
 };
 pub(crate) use self::route::is_route_removed;
 pub(crate) use self::user::get_description;

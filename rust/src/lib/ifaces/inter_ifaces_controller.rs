@@ -340,14 +340,12 @@ pub(crate) fn check_overbook_ports(
     current: &Interfaces,
 ) -> Result<(), NmstateError> {
     let mut port_to_ctrl: HashMap<String, String> = HashMap::new();
-    let mut checked_ctrls: HashSet<&str> = HashSet::new();
     for iface in desired
         .kernel_ifaces
         .values()
         .chain(desired.user_ifaces.values())
         .filter(|i| i.is_controller())
     {
-        checked_ctrls.insert(iface.name());
         let ports = match iface.ports() {
             Some(p) => p,
             None => {
@@ -367,24 +365,6 @@ pub(crate) fn check_overbook_ports(
 
         for port in ports {
             is_port_overbook(&mut port_to_ctrl, port, iface.name())?;
-        }
-    }
-
-    // Append controller interface only mentioned in current
-    // Use case: desire state would like eth1 assign to new bridge br1,
-    // but currently, eth1 is used by br0. In this case, we should fail as
-    // we cannot preserve unmentioned configuration.
-
-    for iface in current
-        .kernel_ifaces
-        .values()
-        .chain(current.user_ifaces.values())
-        .filter(|i| i.is_controller() && !checked_ctrls.contains(i.name()))
-    {
-        if let Some(ports) = iface.ports() {
-            for port in ports {
-                is_port_overbook(&mut port_to_ctrl, port, iface.name())?;
-            }
         }
     }
 

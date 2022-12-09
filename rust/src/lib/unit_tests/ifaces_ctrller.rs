@@ -303,9 +303,7 @@ fn test_overbook_port_used_in_current_bridge() {
     let mut desired = Interfaces::new();
     desired.push(bridge_with_ports("br1", &["eth0"]));
 
-    let result = check_overbook_ports(&desired, &current);
-    assert!(result.is_err());
-    assert_eq!(result.err().unwrap().kind(), ErrorKind::InvalidArgument);
+    check_overbook_ports(&desired, &current).unwrap();
 }
 
 #[test]
@@ -320,9 +318,7 @@ fn test_overbook_port_used_in_current_bond() {
     let mut desired = Interfaces::new();
     desired.push(bond_with_ports("bond1", &["eth0"]));
 
-    let result = check_overbook_ports(&desired, &current);
-    assert!(result.is_err());
-    assert_eq!(result.err().unwrap().kind(), ErrorKind::InvalidArgument);
+    check_overbook_ports(&desired, &current).unwrap();
 }
 
 #[test]
