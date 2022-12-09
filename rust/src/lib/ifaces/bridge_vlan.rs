@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use std::collections::HashMap;
 use std::convert::TryFrom;
 
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::{
+    ser::SerializeTuple, Deserialize, Deserializer, Serialize, Serializer,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
@@ -27,7 +30,10 @@ pub struct BridgePortVlanConfig {
     )]
     /// VLAN Tag for native VLAN.
     pub tag: Option<u16>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        serialize_with = "bridge_trunk_tags_serialize"
+    )]
     /// Trunk tags.
     /// Deserialize and serialize from/to `trunk-tags`.
     pub trunk_tags: Option<Vec<BridgePortTunkTag>>,
@@ -106,20 +112,23 @@ impl<'de> Deserialize<'de> for BridgePortTunkTag {
                 Ok(Self::Id(id.parse::<u16>().map_err(|e| {
                     serde::de::Error::custom(format!(
                         "Failed to parse BridgePortTunkTag id \
-                        {id} as u16: {e}"
+                        {} as u16: {}",
+                        id, e
                     ))
                 })?))
             } else if let Some(id) = id.as_u64() {
                 Ok(Self::Id(u16::try_from(id).map_err(|e| {
                     serde::de::Error::custom(format!(
                         "Failed to parse BridgePortTunkTag id \
-                        {id} as u16: {e}"
+                        {} as u16: {}",
+                        id, e
                     ))
                 })?))
             } else {
                 Err(serde::de::Error::custom(format!(
                     "The id of BridgePortTunkTag should be \
-                    unsigned 16 bits integer, but got {v}"
+                    unsigned 16 bits integer, but got {}",
+                    v
                 )))
             }
         } else if let Some(id_range) = v.get("id-range") {
@@ -130,9 +139,39 @@ impl<'de> Deserialize<'de> for BridgePortTunkTag {
         } else {
             Err(serde::de::Error::custom(format!(
                 "BridgePortTunkTag only support 'id' or 'id-range', \
-                but got {v}"
+                but got {}",
+                v
             )))
         }
+    }
+}
+
+fn bridge_trunk_tags_serialize<S>(
+    tags: &Option<Vec<BridgePortTunkTag>>,
+    serializer: S,
+) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    if let Some(tags) = tags {
+        let mut serial_list = serializer.serialize_tuple(tags.len())?;
+        for tag in tags {
+            match tag {
+                BridgePortTunkTag::Id(id) => {
+                    let mut map = HashMap::new();
+                    map.insert("id", id);
+                    serial_list.serialize_element(&map)?;
+                }
+                BridgePortTunkTag::IdRange(id_range) => {
+                    let mut map = HashMap::new();
+                    map.insert("id-range", id_range);
+                    serial_list.serialize_element(&map)?;
+                }
+            }
+        }
+        serial_list.end()
+    } else {
+        serializer.serialize_none()
     }
 }
 
@@ -150,9 +189,9 @@ impl BridgePortTunkTag {
 #[serde(deny_unknown_fields)]
 pub struct BridgePortVlanRange {
     #[serde(deserialize_with = "crate::deserializer::u16_or_string")]
-    /// Maximum VLAN ID(included).
-    pub max: u16,
-    #[serde(deserialize_with = "crate::deserializer::u16_or_string")]
     /// Minimum VLAN ID(included).
     pub min: u16,
+    #[serde(deserialize_with = "crate::deserializer::u16_or_string")]
+    /// Maximum VLAN ID(included).
+    pub max: u16,
 }

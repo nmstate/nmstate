@@ -334,3 +334,31 @@ bridge:
 
     assert_eq!(desired.get_config_changed_ports(&current), vec!["eth1"])
 }
+
+#[test]
+fn test_linux_bridge_vlan_trunk_tags_yaml_serilize() {
+    let yml_content = r#"name: br0
+type: linux-bridge
+state: up
+bridge:
+  port:
+  - name: eth1
+    vlan:
+      mode: access
+      tag: 305
+      trunk-tags:
+      - id: 101
+      - id-range:
+          min: 500
+          max: 599
+  - name: eth2
+    vlan:
+      mode: trunk
+      trunk-tags:
+      - id: 500
+"#;
+    let iface: LinuxBridgeInterface =
+        serde_yaml::from_str(yml_content).unwrap();
+
+    assert_eq!(serde_yaml::to_string(&iface).unwrap(), yml_content);
+}
