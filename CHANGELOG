@@ -1,4 +1,23 @@
 # Changelog
+## [2.2.2] - 2022-12-13
+### Breaking changes
+ - N/A
+
+### New features
+ - Support `iif` and `action` in IP route rule. (81c661c2)
+ - Support loopback interface. (82a78a33)
+ - Support of `controller` property for attaching and detaching ports.
+   (100cf325)
+ - Support IPv6 link local address as DNS nameserver. (e1cae112)
+
+### Bug fixes
+ - Fix error when desired no DNS changes. (c7d22d9f)
+ - Fix serialization of linux bridge VLAN trunk tags. (7a5d7639)
+ - Fix error when moving OVS system interface to linux bridge. (891ab964)
+ - Fix OVS VLAN with access mode with tag 0. (9f92170c)
+ - Fix DNS probelm when running on NetworkManager 1.41+. (fd697fce)
+ - Mark unsupported interface as ignored. (44199b3f)
+
 ## [2.2.1] - 2022-10-17
 ### Breaking changes
  - Minimum supported rust version 1.60. (e997a2bb)
