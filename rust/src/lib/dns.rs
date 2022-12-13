@@ -288,7 +288,9 @@ fn current_dns_ifaces_are_still_valid(
                 if let Some(des_iface) =
                     desired.interfaces.kernel_ifaces.get(iface_name)
                 {
-                    if !is_iface_valid_for_dns(false, des_iface) {
+                    if des_iface.base_iface().ipv4.is_some()
+                        && !is_iface_valid_for_dns(false, des_iface)
+                    {
                         return false;
                     }
                 }
@@ -299,7 +301,9 @@ fn current_dns_ifaces_are_still_valid(
                 if let Some(des_iface) =
                     desired.interfaces.kernel_ifaces.get(iface_name)
                 {
-                    if !is_iface_valid_for_dns(true, des_iface) {
+                    if des_iface.base_iface().ipv6.is_some()
+                        && !is_iface_valid_for_dns(true, des_iface)
+                    {
                         return false;
                     }
                 }
