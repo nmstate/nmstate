@@ -32,6 +32,8 @@ pub struct NmIpRouteRule {
     pub table: Option<u32>,
     pub fw_mark: Option<u32>,
     pub fw_mask: Option<u32>,
+    pub iifname: Option<String>,
+    pub action: Option<NmIpRouteRuleAction>,
     _other: DbusDictionary,
 }
 
@@ -48,6 +50,9 @@ impl TryFrom<DbusDictionary> for NmIpRouteRule {
             table: _from_map!(v, "table", u32::try_from)?,
             fw_mark: _from_map!(v, "fw_mark", u32::try_from)?,
             fw_mask: _from_map!(v, "fw_mask", u32::try_from)?,
+            iifname: _from_map!(v, "iifname", String::try_from)?,
+            action: _from_map!(v, "action", u8::try_from)?
+                .map(NmIpRouteRuleAction::from),
             _other: v,
         })
     }
@@ -113,6 +118,18 @@ impl NmIpRouteRule {
                 zvariant::Value::new(zvariant::Value::new(v)),
             )?;
         }
+        if let Some(v) = &self.iifname {
+            ret.append(
+                zvariant::Value::new("iifname"),
+                zvariant::Value::new(zvariant::Value::new(v)),
+            )?;
+        }
+        if let Some(v) = &self.action {
+            ret.append(
+                zvariant::Value::new("action"),
+                zvariant::Value::new(zvariant::Value::new(u8::from(*v))),
+            )?;
+        }
 
         for (key, value) in self._other.iter() {
             ret.append(
@@ -143,4 +160,42 @@ pub(crate) fn nm_ip_rules_to_value(
         rule_values.append(nm_rule.to_value()?)?;
     }
     Ok(zvariant::Value::Array(rule_values))
+}
+
+const RTN_BLACKHOLE: u8 = 6;
+const RTN_UNREACHABLE: u8 = 7;
+const RTN_PROHIBIT: u8 = 8;
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+#[non_exhaustive]
+pub enum NmIpRouteRuleAction {
+    Blackhole,
+    Unreachable,
+    Prohibit,
+    Other(u8),
+}
+
+impl From<u8> for NmIpRouteRuleAction {
+    fn from(v: u8) -> Self {
+        match v {
+            RTN_BLACKHOLE => Self::Blackhole,
+            RTN_UNREACHABLE => Self::Unreachable,
+            RTN_PROHIBIT => Self::Prohibit,
+            _ => {
+                log::warn!("Unsupported IP route rule action {}", v);
+                Self::Other(v)
+            }
+        }
+    }
+}
+
+impl From<NmIpRouteRuleAction> for u8 {
+    fn from(v: NmIpRouteRuleAction) -> Self {
+        match v {
+            NmIpRouteRuleAction::Blackhole => RTN_BLACKHOLE,
+            NmIpRouteRuleAction::Unreachable => RTN_UNREACHABLE,
+            NmIpRouteRuleAction::Prohibit => RTN_PROHIBIT,
+            NmIpRouteRuleAction::Other(d) => d,
+        }
+    }
 }

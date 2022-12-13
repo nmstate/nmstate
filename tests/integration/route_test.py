@@ -1073,6 +1073,8 @@ def _check_ip_rules(rules):
             rule.get(RouteRule.FWMARK),
             rule.get(RouteRule.FWMASK),
             rule.get(RouteRule.FAMILY),
+            rule.get(RouteRule.IIF),
+            rule.get(RouteRule.ACTION),
         )
 
 
@@ -1343,3 +1345,67 @@ def test_do_not_show_bgp_route(static_route_with_additional_bgp_route):
     for route in routes:
         assert route[Route.DESTINATION] != BGP_ROUTE_DST_V4
         assert route[Route.DESTINATION] != BGP_ROUTE_DST_V6
+
+
+@pytest.mark.tier1
+def test_route_rule_iif(route_rule_test_env):
+    desired_rules = [
+        {
+            RouteRule.IIF: "eth1",
+            RouteRule.ROUTE_TABLE: IPV4_ROUTE_TABLE_ID1,
+            RouteRule.IP_FROM: IPV4_TEST_NET1,
+        },
+        {
+            RouteRule.IIF: "eth1",
+            RouteRule.ROUTE_TABLE: IPV6_ROUTE_TABLE_ID1,
+            RouteRule.IP_FROM: IPV6_TEST_NET1,
+        },
+    ]
+
+    libnmstate.apply({RouteRule.KEY: {RouteRule.CONFIG: desired_rules}})
+    _check_ip_rules(desired_rules)
+
+
+@pytest.mark.tier1
+def test_route_rule_action(route_rule_test_env):
+    desired_rules = [
+        {
+            RouteRule.PRIORITY: 10000,
+            RouteRule.IIF: "eth1",
+            RouteRule.IP_FROM: "192.0.2.1/32",
+            RouteRule.ACTION: RouteRule.ACTION_BLACKHOLE,
+        },
+        {
+            RouteRule.PRIORITY: 10001,
+            RouteRule.IIF: "eth1",
+            RouteRule.IP_FROM: "192.0.2.2/32",
+            RouteRule.ACTION: RouteRule.ACTION_UNREACHABLE,
+        },
+        {
+            RouteRule.PRIORITY: 10002,
+            RouteRule.IIF: "eth1",
+            RouteRule.IP_FROM: "192.0.2.3/32",
+            RouteRule.ACTION: RouteRule.ACTION_PROHIBIT,
+        },
+        {
+            RouteRule.PRIORITY: 20000,
+            RouteRule.IIF: "eth1",
+            RouteRule.IP_FROM: "2001:db8:1::1/128",
+            RouteRule.ACTION: RouteRule.ACTION_BLACKHOLE,
+        },
+        {
+            RouteRule.PRIORITY: 20001,
+            RouteRule.IIF: "eth1",
+            RouteRule.IP_FROM: "2001:db8:1::2/128",
+            RouteRule.ACTION: RouteRule.ACTION_UNREACHABLE,
+        },
+        {
+            RouteRule.PRIORITY: 20002,
+            RouteRule.IIF: "eth1",
+            RouteRule.IP_FROM: "2001:db8:1::3/128",
+            RouteRule.ACTION: RouteRule.ACTION_PROHIBIT,
+        },
+    ]
+
+    libnmstate.apply({RouteRule.KEY: {RouteRule.CONFIG: desired_rules}})
+    _check_ip_rules(desired_rules)

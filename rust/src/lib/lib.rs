@@ -158,4 +158,6 @@ pub use crate::policy::{
     NetworkCaptureRules, NetworkPolicy, NetworkStateTemplate,
 };
 pub use crate::route::{RouteEntry, RouteState, Routes};
-pub use crate::route_rule::{RouteRuleEntry, RouteRuleState, RouteRules};
+pub use crate::route_rule::{
+    RouteRuleAction, RouteRuleEntry, RouteRuleState, RouteRules,
+};

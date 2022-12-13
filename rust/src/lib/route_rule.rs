@@ -271,6 +271,12 @@ pub struct RouteRuleEntry {
     )]
     /// Select the fwmask value to match
     pub fwmask: Option<u32>,
+    /// Actions for matching packages.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub action: Option<RouteRuleAction>,
+    /// Incoming interface.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub iif: Option<String>,
 }
 
 impl RouteRuleEntry {
@@ -329,7 +335,9 @@ impl RouteRuleEntry {
         if self.fwmark.is_none() && self.fwmask.is_some() {
             let e = NmstateError::new(
                 ErrorKind::InvalidArgument,
-                format!("fwmask is present but fwmark is not defined or is zero {self:?}"
+                format!(
+                    "fwmask is present but fwmark is \
+                    not defined or is zero {self:?}"
                 ),
             );
             log::error!("{}", e);
@@ -393,12 +401,15 @@ impl RouteRuleEntry {
         if self.fwmask.is_some() && self.fwmask != other.fwmask {
             return false;
         }
+        if self.action.is_some() && self.action != other.action {
+            return false;
+        }
         true
     }
 
     // Return tuple of (no_absent, is_ipv4, table_id, ip_from,
-    // ip_to, priority, fwmark, fwmask)
-    fn sort_key(&self) -> (bool, bool, u32, &str, &str, i64, u32, u32) {
+    // ip_to, priority, fwmark, fwmask, action)
+    fn sort_key(&self) -> (bool, bool, u32, &str, &str, i64, u32, u32, u8) {
         (
             !matches!(self.state, Some(RouteRuleState::Absent)),
             {
@@ -424,6 +435,7 @@ impl RouteRuleEntry {
                 .unwrap_or(RouteRuleEntry::USE_DEFAULT_PRIORITY),
             self.fwmark.unwrap_or(0),
             self.fwmask.unwrap_or(0),
+            self.action.map(u8::from).unwrap_or(0),
         )
     }
 
@@ -529,4 +541,42 @@ fn flat_absent_rule(
         }
     }
     ret
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+#[non_exhaustive]
+#[serde(deny_unknown_fields)]
+pub enum RouteRuleAction {
+    Blackhole,
+    Unreachable,
+    Prohibit,
+}
+
+impl std::fmt::Display for RouteRuleAction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Self::Blackhole => "blackhole",
+                Self::Unreachable => "unreachable",
+                Self::Prohibit => "prohibit",
+            }
+        )
+    }
+}
+
+const FR_ACT_BLACKHOLE: u8 = 6;
+const FR_ACT_UNREACHABLE: u8 = 7;
+const FR_ACT_PROHIBIT: u8 = 8;
+
+impl From<RouteRuleAction> for u8 {
+    fn from(v: RouteRuleAction) -> u8 {
+        match v {
+            RouteRuleAction::Blackhole => FR_ACT_BLACKHOLE,
+            RouteRuleAction::Unreachable => FR_ACT_UNREACHABLE,
+            RouteRuleAction::Prohibit => FR_ACT_PROHIBIT,
+        }
+    }
 }
