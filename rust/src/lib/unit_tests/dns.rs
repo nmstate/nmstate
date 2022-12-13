@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{ErrorKind, NetworkState};
+use crate::{DnsClientState, ErrorKind, NetworkState};
 
 #[test]
 fn test_dns_ignore_dns_purge_on_absent_iface() {
@@ -119,4 +119,95 @@ fn test_two_dns_ipv6_link_local_iface() {
     if let Err(e) = result {
         assert_eq!(e.kind(), ErrorKind::NotImplementedError);
     }
+}
+
+#[test]
+fn test_dns_iface_has_no_ip_stack_info() {
+    let desired: NetworkState = serde_yaml::from_str(
+        r#"---
+        interfaces:
+          - name: eth1
+        "#,
+    )
+    .unwrap();
+    let mut current: NetworkState = serde_yaml::from_str(
+        r#"---
+        dns-resolver:
+          config:
+            search:
+            - example.com
+            - example.org
+            server:
+            - 2001:db8:f::1
+            - 2001:db8:f::2
+            - 192.0.2.250
+        interfaces:
+          - name: eth1
+            type: ethernet
+            state: up
+            ipv4:
+              address:
+              - ip: 192.0.2.251
+                prefix-length: 24
+              dhcp: false
+              enabled: true
+            ipv6:
+              address:
+              - ip: 2001:db8:1::1
+                prefix-length: 64
+              dhcp: false
+              enabled: true
+              autoconf: false
+        routes:
+          config:
+          - destination: 0.0.0.0/0
+            next-hop-address: 192.0.2.1
+            next-hop-interface: eth1
+          - destination: ::/0
+            next-hop-address: 2001:db8:1::3
+            next-hop-interface: eth1
+        "#,
+    )
+    .unwrap();
+    if let Some(ip) = current
+        .interfaces
+        .kernel_ifaces
+        .get_mut("eth1")
+        .unwrap()
+        .base_iface_mut()
+        .ipv4
+        .as_mut()
+    {
+        ip.dns = Some({
+            DnsClientState {
+                server: Some(vec!["192.0.2.250".to_string()]),
+                priority: Some(100),
+                ..Default::default()
+            }
+        })
+    };
+    if let Some(ip) = current
+        .interfaces
+        .kernel_ifaces
+        .get_mut("eth1")
+        .unwrap()
+        .base_iface_mut()
+        .ipv6
+        .as_mut()
+    {
+        ip.dns = Some({
+            DnsClientState {
+                server: Some(vec![
+                    "2001:db8:f::1".to_string(),
+                    "2001:db8:f::2".to_string(),
+                ]),
+                search: Some(vec![
+                    "example.com".to_string(),
+                    "example.org".to_string(),
+                ]),
+                priority: Some(10),
+            }
+        })
+    };
+    desired.gen_state_for_apply(&current).unwrap();
 }
