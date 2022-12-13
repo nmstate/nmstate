@@ -55,7 +55,7 @@ pub use self::ovs::{
     NmSettingOvsIface, NmSettingOvsPatch, NmSettingOvsPort,
 };
 pub use self::route::NmIpRoute;
-pub use self::route_rule::NmIpRouteRule;
+pub use self::route_rule::{NmIpRouteRule, NmIpRouteRuleAction};
 pub use self::sriov::{NmSettingSriov, NmSettingSriovVf, NmSettingSriovVfVlan};
 pub use self::user::NmSettingUser;
 pub use self::veth::NmSettingVeth;

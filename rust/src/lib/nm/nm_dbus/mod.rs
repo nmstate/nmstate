@@ -26,14 +26,15 @@ pub use self::active_connection::{
     NmActiveConnection, NM_ACTIVATION_STATE_FLAG_EXTERNAL,
 };
 pub use self::connection::{
-    NmConnection, NmIpRoute, NmIpRouteRule, NmSetting8021X, NmSettingBond,
-    NmSettingBridge, NmSettingBridgePort, NmSettingBridgeVlanRange,
-    NmSettingConnection, NmSettingEthtool, NmSettingInfiniBand, NmSettingIp,
-    NmSettingIpMethod, NmSettingLoopback, NmSettingMacVlan, NmSettingOvsBridge,
-    NmSettingOvsDpdk, NmSettingOvsExtIds, NmSettingOvsIface, NmSettingOvsPatch,
-    NmSettingOvsPort, NmSettingSriov, NmSettingSriovVf, NmSettingSriovVfVlan,
-    NmSettingUser, NmSettingVeth, NmSettingVlan, NmSettingVrf, NmSettingVxlan,
-    NmSettingWired, NmSettingsConnectionFlag, NmVlanProtocol,
+    NmConnection, NmIpRoute, NmIpRouteRule, NmIpRouteRuleAction,
+    NmSetting8021X, NmSettingBond, NmSettingBridge, NmSettingBridgePort,
+    NmSettingBridgeVlanRange, NmSettingConnection, NmSettingEthtool,
+    NmSettingInfiniBand, NmSettingIp, NmSettingIpMethod, NmSettingLoopback,
+    NmSettingMacVlan, NmSettingOvsBridge, NmSettingOvsDpdk, NmSettingOvsExtIds,
+    NmSettingOvsIface, NmSettingOvsPatch, NmSettingOvsPort, NmSettingSriov,
+    NmSettingSriovVf, NmSettingSriovVfVlan, NmSettingUser, NmSettingVeth,
+    NmSettingVlan, NmSettingVrf, NmSettingVxlan, NmSettingWired,
+    NmSettingsConnectionFlag, NmVlanProtocol,
 };
 #[cfg(feature = "query_apply")]
 pub use self::device::{NmDevice, NmDeviceState, NmDeviceStateReason};

@@ -55,6 +55,11 @@ class RouteRule:
     FAMILY = "family"
     FAMILY_IPV4 = "ipv4"
     FAMILY_IPV6 = "ipv6"
+    IIF = "iif"
+    ACTION = "action"
+    ACTION_BLACKHOLE = "blackhole"
+    ACTION_UNREACHABLE = "unreachable"
+    ACTION_PROHIBIT = "prohibit"
 
 
 class DNS:

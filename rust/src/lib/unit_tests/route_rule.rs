@@ -167,6 +167,7 @@ fn gen_rule_entry(
         priority: Some(priority),
         fwmark: Some(fwmark),
         fwmask: Some(fwmask),
+        ..Default::default()
     }
 }
 
