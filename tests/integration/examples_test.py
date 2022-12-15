@@ -196,10 +196,6 @@ def test_add_ovs_patch_and_remove():
     assertlib.assert_absent("patch0")
 
 
-@pytest.mark.skipif(
-    os.environ.get("CI") == "true",
-    reason=("CI does not have vrf enabled"),
-)
 def test_add_remove_vrf(eth1_up):
     with example_state(
         "vrf0_with_eth1.yml", cleanup="vrf0_absent.yml"

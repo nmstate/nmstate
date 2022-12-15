@@ -141,6 +141,11 @@ jobs:
           name: rpms_el9
           path: rpms/el9
 
+      - name: Install extra kernel modules(e.g. vrf)
+        run: |
+          sudo apt-get update;
+          sudo apt-get -y install "linux-modules-extra-$(uname -r)"
+
       - name: Run tests
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
