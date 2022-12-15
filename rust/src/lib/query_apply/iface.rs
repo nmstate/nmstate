@@ -259,7 +259,7 @@ impl Interface {
 }
 
 impl InterfaceType {
-    pub(crate) const SUPPORTED_LIST: [InterfaceType; 13] = [
+    pub(crate) const SUPPORTED_LIST: [InterfaceType; 14] = [
         InterfaceType::Bond,
         InterfaceType::LinuxBridge,
         InterfaceType::Dummy,
@@ -273,5 +273,6 @@ impl InterfaceType {
         InterfaceType::Vxlan,
         InterfaceType::InfiniBand,
         InterfaceType::Loopback,
+        InterfaceType::Vrf,
     ];
 }
