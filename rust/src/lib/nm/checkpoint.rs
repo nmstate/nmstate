@@ -9,7 +9,7 @@ pub(crate) const CHECKPOINT_ROLLBACK_TIMEOUT: u32 = 60;
 pub(crate) fn nm_checkpoint_create(
     timeout: u32,
 ) -> Result<String, NmstateError> {
-    let nm_api = NmApi::new().map_err(nm_error_to_nmstate)?;
+    let mut nm_api = NmApi::new().map_err(nm_error_to_nmstate)?;
     nm_api
         .checkpoint_create(timeout)
         .map_err(nm_error_to_nmstate)
@@ -18,7 +18,7 @@ pub(crate) fn nm_checkpoint_create(
 pub(crate) fn nm_checkpoint_rollback(
     checkpoint: &str,
 ) -> Result<(), NmstateError> {
-    let nm_api = NmApi::new().map_err(nm_error_to_nmstate)?;
+    let mut nm_api = NmApi::new().map_err(nm_error_to_nmstate)?;
     nm_api
         .checkpoint_rollback(checkpoint)
         .map_err(nm_error_to_nmstate)?;
@@ -32,7 +32,7 @@ pub(crate) fn nm_checkpoint_rollback(
 pub(crate) fn nm_checkpoint_destroy(
     checkpoint: &str,
 ) -> Result<(), NmstateError> {
-    let nm_api = NmApi::new().map_err(nm_error_to_nmstate)?;
+    let mut nm_api = NmApi::new().map_err(nm_error_to_nmstate)?;
     nm_api
         .checkpoint_destroy(checkpoint)
         .map_err(nm_error_to_nmstate)

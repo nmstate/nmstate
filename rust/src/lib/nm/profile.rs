@@ -1,12 +1,10 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use std::collections::{hash_map::Entry, HashMap};
-use std::time::Instant;
 
 use super::nm_dbus::{NmApi, NmConnection, NmSettingsConnectionFlag};
 
 use crate::{
-    nm::checkpoint::{
-        nm_checkpoint_timeout_extend, CHECKPOINT_ROLLBACK_TIMEOUT,
-    },
     nm::error::nm_error_to_nmstate,
     nm::settings::{
         NM_SETTING_BOND_SETTING_NAME, NM_SETTING_BRIDGE_SETTING_NAME,
@@ -26,10 +24,9 @@ pub(crate) const NM_SETTING_CONTROLLERS: [&str; 5] = [
 ];
 
 pub(crate) fn delete_exist_profiles(
-    nm_api: &NmApi,
+    nm_api: &mut NmApi,
     exist_nm_conns: &[NmConnection],
     nm_conns: &[NmConnection],
-    checkpoint: &str,
 ) -> Result<(), NmstateError> {
     let mut excluded_uuids: Vec<&str> = Vec::new();
     let mut changed_iface_name_types: Vec<(&str, &str)> = Vec::new();
@@ -84,18 +81,15 @@ pub(crate) fn delete_exist_profiles(
             }
         }
     }
-    delete_profiles(nm_api, &uuids_to_delete, checkpoint)
+    delete_profiles(nm_api, &uuids_to_delete)
 }
 
 pub(crate) fn save_nm_profiles(
-    nm_api: &NmApi,
+    nm_api: &mut NmApi,
     nm_conns: &[NmConnection],
-    checkpoint: &str,
     memory_only: bool,
 ) -> Result<(), NmstateError> {
-    let mut now = Instant::now();
     for nm_conn in nm_conns {
-        extend_timeout_if_required(&mut now, checkpoint)?;
         if nm_conn.obj_path.is_empty() {
             log::info!(
                 "Creating connection UUID {:?}, ID {:?}, type {:?} name {:?}",
@@ -122,19 +116,16 @@ pub(crate) fn save_nm_profiles(
 
 // Return list of activation failed `NmConnection` which we can retry
 pub(crate) fn activate_nm_profiles<'a>(
-    nm_api: &NmApi,
+    nm_api: &mut NmApi,
     nm_conns: &[&'a NmConnection],
     nm_ac_uuids: &[&str],
-    checkpoint: &str,
 ) -> Result<Vec<(&'a NmConnection, NmstateError)>, NmstateError> {
-    let mut now = Instant::now();
     let mut new_controllers: Vec<&str> = Vec::new();
     let mut failed_nm_conns: Vec<(&NmConnection, NmstateError)> = Vec::new();
     for nm_conn in nm_conns.iter().filter(|c| {
         c.iface_type().map(|t| NM_SETTING_CONTROLLERS.contains(&t))
             == Some(true)
     }) {
-        extend_timeout_if_required(&mut now, checkpoint)?;
         if let Some(uuid) = nm_conn.uuid() {
             log::info!(
                 "Activating connection {}: {}/{}",
@@ -169,8 +160,6 @@ pub(crate) fn activate_nm_profiles<'a>(
         c.iface_type().map(|t| NM_SETTING_CONTROLLERS.contains(&t))
             != Some(true)
     }) {
-        extend_timeout_if_required(&mut now, checkpoint)?;
-
         if let Some(uuid) = nm_conn.uuid() {
             if nm_ac_uuids.contains(&uuid) {
                 log::info!(
@@ -228,13 +217,10 @@ pub(crate) fn activate_nm_profiles<'a>(
 }
 
 pub(crate) fn deactivate_nm_profiles(
-    nm_api: &NmApi,
+    nm_api: &mut NmApi,
     nm_conns: &[&NmConnection],
-    checkpoint: &str,
 ) -> Result<(), NmstateError> {
-    let mut now = Instant::now();
     for nm_conn in nm_conns {
-        extend_timeout_if_required(&mut now, checkpoint)?;
         if let Some(uuid) = nm_conn.uuid() {
             log::info!(
                 "Deactivating connection {}: {}/{}",
@@ -246,19 +232,6 @@ pub(crate) fn deactivate_nm_profiles(
                 .connection_deactivate(uuid)
                 .map_err(nm_error_to_nmstate)?;
         }
-    }
-    Ok(())
-}
-
-pub(crate) fn extend_timeout_if_required(
-    now: &mut Instant,
-    checkpoint: &str,
-) -> Result<(), NmstateError> {
-    // Only extend the timeout when only half of it elapsed
-    if now.elapsed().as_secs() >= CHECKPOINT_ROLLBACK_TIMEOUT as u64 / 2 {
-        log::debug!("Extending checkpoint timeout");
-        nm_checkpoint_timeout_extend(checkpoint, CHECKPOINT_ROLLBACK_TIMEOUT)?;
-        *now = Instant::now();
     }
     Ok(())
 }
@@ -382,13 +355,10 @@ pub(crate) fn get_port_nm_conns<'a>(
 }
 
 pub(crate) fn delete_profiles(
-    nm_api: &NmApi,
+    nm_api: &mut NmApi,
     uuids: &[&str],
-    checkpoint: &str,
 ) -> Result<(), NmstateError> {
-    let mut now = Instant::now();
     for uuid in uuids {
-        extend_timeout_if_required(&mut now, checkpoint)?;
         nm_api
             .connection_delete(uuid)
             .map_err(nm_error_to_nmstate)?;
@@ -397,7 +367,7 @@ pub(crate) fn delete_profiles(
 }
 
 fn reapply_or_activate(
-    nm_api: &NmApi,
+    nm_api: &mut NmApi,
     nm_conn: &NmConnection,
 ) -> Result<(), NmstateError> {
     if let Err(e) = nm_api.connection_reapply(nm_conn) {

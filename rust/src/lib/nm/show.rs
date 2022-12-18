@@ -45,7 +45,7 @@ pub(crate) fn nm_retrieve(
 ) -> Result<NetworkState, NmstateError> {
     let mut net_state = NetworkState::new();
     net_state.prop_list = vec!["interfaces", "dns"];
-    let nm_api = NmApi::new().map_err(nm_error_to_nmstate)?;
+    let mut nm_api = NmApi::new().map_err(nm_error_to_nmstate)?;
     let nm_conns = nm_api
         .applied_connections_get()
         .map_err(nm_error_to_nmstate)?;
@@ -190,7 +190,7 @@ pub(crate) fn nm_retrieve(
         }
     }
 
-    net_state.dns = retrieve_dns_info(&nm_api, &net_state.interfaces)?;
+    net_state.dns = retrieve_dns_info(&mut nm_api, &net_state.interfaces)?;
     if running_config_only {
         net_state.dns.running = None;
     }

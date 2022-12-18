@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use std::collections::HashSet;
-use std::time::Instant;
 
 use super::{
     device::create_index_for_nm_devs,
@@ -10,7 +9,7 @@ use super::{
     profile::{
         activate_nm_profiles, create_index_for_nm_conns_by_name_type,
         deactivate_nm_profiles, delete_exist_profiles, delete_profiles,
-        extend_timeout_if_required, save_nm_profiles,
+        save_nm_profiles,
     },
     query::{
         get_orphan_ovs_port_uuids, is_mptcp_flags_changed, is_mptcp_supported,
@@ -30,6 +29,10 @@ use crate::{Interface, InterfaceType, NetworkState, NmstateError, RouteEntry};
 const ACTIVATION_RETRY_COUNT: usize = 6;
 const ACTIVATION_RETRY_INTERVAL: u64 = 1;
 
+// There is plan to simply the `add_net_state`, `chg_net_state`, `del_net_state`
+// `cur_net_state`, `des_net_state` into single struct. Suppress the clippy
+// warning for now
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn nm_apply(
     add_net_state: &NetworkState,
     chg_net_state: &NetworkState,
@@ -37,27 +40,28 @@ pub(crate) fn nm_apply(
     cur_net_state: &NetworkState,
     des_net_state: &NetworkState,
     checkpoint: &str,
+    timeout: u32,
     memory_only: bool,
 ) -> Result<(), NmstateError> {
-    let nm_api = NmApi::new().map_err(nm_error_to_nmstate)?;
+    let mut nm_api = NmApi::new().map_err(nm_error_to_nmstate)?;
+    nm_api.set_checkpoint(checkpoint, timeout);
+    nm_api.set_checkpoint_auto_refresh(true);
 
     if !memory_only {
-        delete_net_state(&nm_api, del_net_state, checkpoint)?;
+        delete_net_state(&mut nm_api, del_net_state)?;
     }
     apply_single_state(
-        &nm_api,
+        &mut nm_api,
         add_net_state,
         cur_net_state,
         des_net_state,
-        checkpoint,
         memory_only,
     )?;
     apply_single_state(
-        &nm_api,
+        &mut nm_api,
         chg_net_state,
         cur_net_state,
         des_net_state,
-        checkpoint,
         memory_only,
     )?;
 
@@ -65,9 +69,8 @@ pub(crate) fn nm_apply(
 }
 
 fn delete_net_state(
-    nm_api: &NmApi,
+    nm_api: &mut NmApi,
     net_state: &NetworkState,
-    checkpoint: &str,
 ) -> Result<(), NmstateError> {
     let all_nm_conns = nm_api.connections_get().map_err(nm_error_to_nmstate)?;
 
@@ -128,28 +131,24 @@ fn delete_net_state(
         }
     }
 
-    let mut now = Instant::now();
     for uuid in &uuids_to_delete {
-        extend_timeout_if_required(&mut now, checkpoint)?;
         nm_api
             .connection_delete(uuid)
             .map_err(nm_error_to_nmstate)?;
     }
 
-    delete_orphan_ports(nm_api, &uuids_to_delete, checkpoint)?;
-    delete_remain_virtual_interface_as_desired(nm_api, net_state, checkpoint)?;
+    delete_orphan_ports(nm_api, &uuids_to_delete)?;
+    delete_remain_virtual_interface_as_desired(nm_api, net_state)?;
     Ok(())
 }
 
 fn apply_single_state(
-    nm_api: &NmApi,
+    nm_api: &mut NmApi,
     net_state: &NetworkState,
     cur_net_state: &NetworkState,
     des_net_state: &NetworkState,
-    checkpoint: &str,
     memory_only: bool,
 ) -> Result<(), NmstateError> {
-    let mut now = Instant::now();
     if let Some(hostname) =
         net_state.hostname.as_ref().and_then(|c| c.config.as_ref())
     {
@@ -171,11 +170,9 @@ fn apply_single_state(
 
     let exist_nm_conns =
         nm_api.connections_get().map_err(nm_error_to_nmstate)?;
-    extend_timeout_if_required(&mut now, checkpoint)?;
     let nm_acs = nm_api
         .active_connections_get()
         .map_err(nm_error_to_nmstate)?;
-    extend_timeout_if_required(&mut now, checkpoint)?;
     let nm_ac_uuids: Vec<&str> =
         nm_acs.iter().map(|nm_ac| &nm_ac.uuid as &str).collect();
     let activated_nm_conns: Vec<&NmConnection> = exist_nm_conns
@@ -274,33 +271,12 @@ fn apply_single_state(
         nm_conns_to_activate.as_slice(),
         activated_nm_conns.as_slice(),
     );
-    // Previous `NmApi` call might be time consuming on system with 1000+
-    // connections. Hence we do force checkpoint refresh here
-    extend_timeout_if_required(&mut now, checkpoint)?;
-
-    deactivate_nm_profiles(
-        nm_api,
-        nm_conns_to_deactivate_first.as_slice(),
-        checkpoint,
-    )?;
-    extend_timeout_if_required(&mut now, checkpoint)?;
-    save_nm_profiles(
-        nm_api,
-        nm_conns_to_update.as_slice(),
-        checkpoint,
-        memory_only,
-    )?;
-    extend_timeout_if_required(&mut now, checkpoint)?;
+    deactivate_nm_profiles(nm_api, nm_conns_to_deactivate_first.as_slice())?;
+    save_nm_profiles(nm_api, nm_conns_to_update.as_slice(), memory_only)?;
     if !memory_only {
-        delete_exist_profiles(
-            nm_api,
-            &exist_nm_conns,
-            &nm_conns_to_activate,
-            checkpoint,
-        )?;
-        delete_profiles(nm_api, &ovs_port_nm_conn_uuids_to_delete, checkpoint)?;
+        delete_exist_profiles(nm_api, &exist_nm_conns, &nm_conns_to_activate)?;
+        delete_profiles(nm_api, &ovs_port_nm_conn_uuids_to_delete)?;
     }
-    extend_timeout_if_required(&mut now, checkpoint)?;
 
     let mut nm_conns: Vec<&NmConnection> =
         nm_conns_to_activate.as_slice().iter().collect();
@@ -311,7 +287,6 @@ fn apply_single_state(
                 nm_api,
                 nm_conns.as_slice(),
                 nm_ac_uuids.as_slice(),
-                checkpoint,
             )?;
             if remain_nm_conns.is_empty() {
                 break;
@@ -327,7 +302,9 @@ fn apply_single_state(
             let wait_internal = ACTIVATION_RETRY_INTERVAL * (1 << i);
             log::info!("Will retry activation {wait_internal} seconds");
             for _ in 0..wait_internal {
-                extend_timeout_if_required(&mut now, checkpoint)?;
+                nm_api
+                    .extend_timeout_if_required()
+                    .map_err(nm_error_to_nmstate)?;
                 std::thread::sleep(std::time::Duration::from_secs(1));
             }
         } else {
@@ -335,23 +312,16 @@ fn apply_single_state(
         }
     }
 
-    deactivate_nm_profiles(
-        nm_api,
-        nm_conns_to_deactivate.as_slice(),
-        checkpoint,
-    )?;
-    extend_timeout_if_required(&mut now, checkpoint)?;
+    deactivate_nm_profiles(nm_api, nm_conns_to_deactivate.as_slice())?;
     Ok(())
 }
 
 fn delete_remain_virtual_interface_as_desired(
-    nm_api: &NmApi,
+    nm_api: &mut NmApi,
     net_state: &NetworkState,
-    checkpoint: &str,
 ) -> Result<(), NmstateError> {
     let nm_devs = nm_api.devices_get().map_err(nm_error_to_nmstate)?;
     let nm_devs_indexed = create_index_for_nm_devs(&nm_devs);
-    let mut now = Instant::now();
     // Interfaces created by non-NM tools will not be deleted by connection
     // deletion, remove manually.
     for iface in &(net_state.interfaces.to_vec()) {
@@ -371,7 +341,6 @@ fn delete_remain_virtual_interface_as_desired(
                 );
                 // There might be an race with on-going profile/connection
                 // deletion, verification will raise error for it later.
-                extend_timeout_if_required(&mut now, checkpoint)?;
                 if let Err(e) = nm_api.device_delete(&nm_dev.obj_path) {
                     log::debug!("Failed to delete interface {:?}", e);
                 }
@@ -383,9 +352,8 @@ fn delete_remain_virtual_interface_as_desired(
 
 // If any connection still referring to deleted UUID, we should delete it also
 fn delete_orphan_ports(
-    nm_api: &NmApi,
+    nm_api: &mut NmApi,
     uuids_deleted: &HashSet<&str>,
-    checkpoint: &str,
 ) -> Result<(), NmstateError> {
     let mut uuids_to_delete = Vec::new();
     let all_nm_conns = nm_api.connections_get().map_err(nm_error_to_nmstate)?;
@@ -407,9 +375,7 @@ fn delete_orphan_ports(
             }
         }
     }
-    let mut now = Instant::now();
     for uuid in &uuids_to_delete {
-        extend_timeout_if_required(&mut now, checkpoint)?;
         nm_api
             .connection_delete(uuid)
             .map_err(nm_error_to_nmstate)?;

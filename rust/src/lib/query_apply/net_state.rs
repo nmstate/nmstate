@@ -172,10 +172,7 @@ impl NetworkState {
                     VERIFY_RETRY_INTERVAL_MILLISECONDS,
                     VERIFY_RETRY_NM,
                     || {
-                        nm_checkpoint_timeout_extend(
-                            &checkpoint,
-                            timeout,
-                        )?;
+                        nm_checkpoint_timeout_extend(&checkpoint, timeout)?;
                         nm_apply(
                             &add_net_state,
                             &chg_net_state,
@@ -186,6 +183,7 @@ impl NetworkState {
                             &cur_net_state,
                             &desire_state_to_apply,
                             &checkpoint,
+                            timeout,
                             self.memory_only,
                         )?;
                         if desire_state_to_apply.prop_list.contains(&"ovsdb")

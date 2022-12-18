@@ -43,7 +43,7 @@ pub(crate) fn nm_dns_to_nmstate(
 }
 
 pub(crate) fn retrieve_dns_info(
-    nm_api: &NmApi,
+    nm_api: &mut NmApi,
     ifaces: &Interfaces,
 ) -> Result<DnsState, NmstateError> {
     let mut nm_dns_entires = nm_api
