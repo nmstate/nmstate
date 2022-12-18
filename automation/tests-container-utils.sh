@@ -100,5 +100,8 @@ function create_container {
       -v $PROJECT_PATH:$CONTAINER_WORKSPACE \
       -v $EXPORT_DIR:$CONT_EXPORT_DIR $CONTAINER_IMAGE)"
   [ -n "$debug_exit_shell" ] && trap open_shell EXIT || trap run_exit EXIT
-  sleep 1
+  until [ "`$CONTAINER_CMD inspect -f {{.State.Running}} $CONTAINER_ID`" \
+      == "true" ]; do
+      sleep 0.1;
+  done;
 }
