@@ -57,7 +57,7 @@ def assert_absent(*ifnames):
             time.sleep(0.5)
 
 
-def assert_state_match(desired_state_data):
+def assert_state_match(desired_state_data, no_retry=False):
     """
     Given a state, assert it against the current state by treating missing
     value in desired_state as match.
@@ -68,7 +68,7 @@ def assert_state_match(desired_state_data):
         )
         if desired_state.match(current_state):
             return
-        elif i == RETRY_COUNT - 1:
+        elif i == RETRY_COUNT - 1 or no_retry:
             print(
                 "desired miss match with current, retrying, "
                 f"desire {desired_state.state}"
