@@ -24,12 +24,6 @@ pub struct NmApi<'a> {
     pub(crate) dbus: NmDbus<'a>,
 }
 
-const RETRY_INTERVAL_MILLISECOND: u64 = 500;
-const RETRY_COUNT: usize = 60;
-
-const LOOPBACK_NO_SUPPORT_ERR_MSG: &str = "org.freedesktop.NetworkManager.\
-                                           Settings.Connection.InvalidSetting: loopback: unknown setting name";
-
 impl<'a> NmApi<'a> {
     pub fn new() -> Result<Self, NmError> {
         Ok(Self {
@@ -82,24 +76,18 @@ impl<'a> NmApi<'a> {
 
     pub fn connection_activate(&self, uuid: &str) -> Result<(), NmError> {
         debug!("connection_activate: {}", uuid);
-        // Race: Connection might just created
-        with_retry(RETRY_INTERVAL_MILLISECOND, RETRY_COUNT, || {
-            let nm_conn = self.dbus.get_connection_by_uuid(uuid)?;
-            self.dbus.connection_activate(&nm_conn)
-        })
+        let nm_conn = self.dbus.get_conn_obj_path_by_uuid(uuid)?;
+        self.dbus.connection_activate(&nm_conn)
     }
 
     pub fn connection_deactivate(&self, uuid: &str) -> Result<(), NmError> {
         debug!("connection_deactivate: {}", uuid);
-        // Race: ActiveConnection might be deleted
-        with_retry(RETRY_INTERVAL_MILLISECOND, RETRY_COUNT, || {
-            if let Ok(nm_ac) = get_nm_ac_obj_path_by_uuid(&self.dbus, uuid) {
-                if !nm_ac.is_empty() {
-                    self.dbus.connection_deactivate(&nm_ac)?;
-                }
+        if let Ok(nm_ac) = get_nm_ac_obj_path_by_uuid(&self.dbus, uuid) {
+            if !nm_ac.is_empty() {
+                self.dbus.connection_deactivate(&nm_ac)?;
             }
-            Ok(())
-        })
+        }
+        Ok(())
     }
 
     pub fn connections_get(&self) -> Result<Vec<NmConnection>, NmError> {
@@ -123,21 +111,20 @@ impl<'a> NmApi<'a> {
         &self,
     ) -> Result<Vec<NmConnection>, NmError> {
         debug!("applied_connections_get");
-        let nm_devs = self.dbus.nm_dev_obj_paths_get()?;
-        let nm_conns = nm_devs
-            .iter()
-            .map(|nm_dev| self.dbus.nm_dev_applied_connection_get(nm_dev))
-            // Ignore dbus errors
-            .filter(|result| {
-                !matches!(
-                    result,
-                    Err(NmError {
-                        kind: ErrorKind::DbusConnectionError,
-                        ..
-                    })
-                )
-            })
-            .collect::<Result<Vec<_>, _>>()?;
+        let nm_dev_obj_paths = self.dbus.nm_dev_obj_paths_get()?;
+        let mut nm_conns: Vec<NmConnection> = Vec::new();
+        for nm_dev_obj_path in nm_dev_obj_paths {
+            match self.dbus.nm_dev_applied_connection_get(&nm_dev_obj_path) {
+                Ok(nm_conn) => nm_conns.push(nm_conn),
+                Err(e) => {
+                    debug!(
+                        "Ignoring error when get applied connection for \
+                        dev {}: {}",
+                        nm_dev_obj_path, e
+                    );
+                }
+            }
+        }
         nm_conns
             .iter()
             .for_each(|conn| debug!("Get Applied connection {:?}", conn));
@@ -150,48 +137,26 @@ impl<'a> NmApi<'a> {
         memory_only: bool,
     ) -> Result<(), NmError> {
         debug!("connection_add: {:?}", nm_conn);
-        if let Some(uuid) = nm_conn.uuid() {
-            if let Ok(con_obj_path) = self.dbus.get_connection_by_uuid(uuid) {
-                return self.dbus.connection_update(
-                    &con_obj_path,
-                    nm_conn,
-                    memory_only,
-                );
-            }
-        };
-        if let Err(e) = self.dbus.connection_add(nm_conn, memory_only) {
-            if e.kind == ErrorKind::DbusConnectionError
-                && e.msg.contains(LOOPBACK_NO_SUPPORT_ERR_MSG)
-            {
-                Err(NmError::new(
-                    ErrorKind::LoopbackIfaceNotSupported,
-                    "Loopback is not supported by running NetworkManager, \
-                    please upgrade to NetworkManager 1.41+ and \
-                    restart its daemon"
-                        .to_string(),
-                ))
-            } else {
-                Err(e)
-            }
+        if !nm_conn.obj_path.is_empty() {
+            self.dbus.connection_update(
+                nm_conn.obj_path.as_str(),
+                nm_conn,
+                memory_only,
+            )
         } else {
-            Ok(())
+            self.dbus.connection_add(nm_conn, memory_only)
         }
     }
 
     pub fn connection_delete(&self, uuid: &str) -> Result<(), NmError> {
         debug!("connection_delete: {}", uuid);
-        with_retry(RETRY_INTERVAL_MILLISECOND, RETRY_COUNT, || {
-            if let Ok(con_obj_path) = self.dbus.get_connection_by_uuid(uuid) {
-                debug!(
-                    "Found nm_connection {} for UUID {}",
-                    con_obj_path, uuid
-                );
-                if !con_obj_path.is_empty() {
-                    self.dbus.connection_delete(&con_obj_path)?;
-                }
+        if let Ok(con_obj_path) = self.dbus.get_conn_obj_path_by_uuid(uuid) {
+            debug!("Found nm_connection {} for UUID {}", con_obj_path, uuid);
+            if !con_obj_path.is_empty() {
+                self.dbus.connection_delete(&con_obj_path)?;
             }
-            Ok(())
-        })
+        }
+        Ok(())
     }
 
     pub fn connection_reapply(
@@ -351,28 +316,4 @@ fn get_nm_ac_obj_path_by_uuid(
         }
     }
     Ok("".into())
-}
-
-fn with_retry<T>(interval_ms: u64, count: usize, func: T) -> Result<(), NmError>
-where
-    T: FnOnce() -> Result<(), NmError> + Copy,
-{
-    let mut cur_count = 0usize;
-    while cur_count < count {
-        if let Err(e) = func() {
-            if cur_count == count - 1 {
-                return Err(e);
-            } else {
-                log::info!("Retrying on NM dbus failure: {}", e);
-                std::thread::sleep(std::time::Duration::from_millis(
-                    interval_ms,
-                ));
-                cur_count += 1;
-                continue;
-            }
-        } else {
-            return Ok(());
-        }
-    }
-    Ok(())
 }

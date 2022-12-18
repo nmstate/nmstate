@@ -101,7 +101,7 @@ pub struct NmConnection {
     pub infiniband: Option<NmSettingInfiniBand>,
     pub loopback: Option<NmSettingLoopback>,
     #[serde(skip)]
-    pub(crate) obj_path: String,
+    pub obj_path: String,
     #[serde(skip)]
     pub(crate) flags: Vec<NmSettingsConnectionFlag>,
     _other: HashMap<String, HashMap<String, zvariant::OwnedValue>>,
