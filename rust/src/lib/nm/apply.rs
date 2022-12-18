@@ -3,11 +3,10 @@
 use std::collections::HashSet;
 use std::time::Instant;
 
-use crate::nm::nm_dbus::{NmApi, NmConnection};
-
 use super::{
     device::create_index_for_nm_devs,
     error::nm_error_to_nmstate,
+    nm_dbus::{NmApi, NmConnection},
     profile::{
         activate_nm_profiles, create_index_for_nm_conns_by_name_type,
         deactivate_nm_profiles, delete_exist_profiles, delete_profiles,
@@ -28,7 +27,7 @@ use super::{
 
 use crate::{Interface, InterfaceType, NetworkState, NmstateError, RouteEntry};
 
-const ACTIVATION_RETRY_COUNT: usize = 5;
+const ACTIVATION_RETRY_COUNT: usize = 6;
 const ACTIVATION_RETRY_INTERVAL: u64 = 1;
 
 pub(crate) fn nm_apply(
@@ -150,6 +149,7 @@ fn apply_single_state(
     checkpoint: &str,
     memory_only: bool,
 ) -> Result<(), NmstateError> {
+    let mut now = Instant::now();
     if let Some(hostname) =
         net_state.hostname.as_ref().and_then(|c| c.config.as_ref())
     {
@@ -171,9 +171,11 @@ fn apply_single_state(
 
     let exist_nm_conns =
         nm_api.connections_get().map_err(nm_error_to_nmstate)?;
+    extend_timeout_if_required(&mut now, checkpoint)?;
     let nm_acs = nm_api
         .active_connections_get()
         .map_err(nm_error_to_nmstate)?;
+    extend_timeout_if_required(&mut now, checkpoint)?;
     let nm_ac_uuids: Vec<&str> =
         nm_acs.iter().map(|nm_ac| &nm_ac.uuid as &str).collect();
     let activated_nm_conns: Vec<&NmConnection> = exist_nm_conns
@@ -272,17 +274,23 @@ fn apply_single_state(
         nm_conns_to_activate.as_slice(),
         activated_nm_conns.as_slice(),
     );
+    // Previous `NmApi` call might be time consuming on system with 1000+
+    // connections. Hence we do force checkpoint refresh here
+    extend_timeout_if_required(&mut now, checkpoint)?;
+
     deactivate_nm_profiles(
         nm_api,
         nm_conns_to_deactivate_first.as_slice(),
         checkpoint,
     )?;
+    extend_timeout_if_required(&mut now, checkpoint)?;
     save_nm_profiles(
         nm_api,
         nm_conns_to_update.as_slice(),
         checkpoint,
         memory_only,
     )?;
+    extend_timeout_if_required(&mut now, checkpoint)?;
     if !memory_only {
         delete_exist_profiles(
             nm_api,
@@ -292,25 +300,38 @@ fn apply_single_state(
         )?;
         delete_profiles(nm_api, &ovs_port_nm_conn_uuids_to_delete, checkpoint)?;
     }
+    extend_timeout_if_required(&mut now, checkpoint)?;
 
-    for i in 0..ACTIVATION_RETRY_COUNT {
-        match activate_nm_profiles(
-            nm_api,
-            nm_conns_to_activate.as_slice(),
-            nm_ac_uuids.as_slice(),
-            checkpoint,
-        ) {
-            Ok(()) => break,
-            Err(e) => {
-                if i == ACTIVATION_RETRY_COUNT - 1 {
-                    return Err(e);
-                } else {
-                    log::warn!("Activation failure: {}, retrying", e);
-                    std::thread::sleep(std::time::Duration::from_secs(
-                        ACTIVATION_RETRY_INTERVAL,
-                    ));
-                }
+    let mut nm_conns: Vec<&NmConnection> =
+        nm_conns_to_activate.as_slice().iter().collect();
+
+    for i in 1..ACTIVATION_RETRY_COUNT + 1 {
+        if !nm_conns.is_empty() {
+            let remain_nm_conns = activate_nm_profiles(
+                nm_api,
+                nm_conns.as_slice(),
+                nm_ac_uuids.as_slice(),
+                checkpoint,
+            )?;
+            if remain_nm_conns.is_empty() {
+                break;
             }
+            if i == ACTIVATION_RETRY_COUNT {
+                return Err(remain_nm_conns[0].1.clone());
+            }
+            nm_conns.clear();
+            for (remain_nm_conn, e) in remain_nm_conns {
+                log::info!("Got activation failure {e}");
+                nm_conns.push(remain_nm_conn);
+            }
+            let wait_internal = ACTIVATION_RETRY_INTERVAL * (1 << i);
+            log::info!("Will retry activation {wait_internal} seconds");
+            for _ in 0..wait_internal {
+                extend_timeout_if_required(&mut now, checkpoint)?;
+                std::thread::sleep(std::time::Duration::from_secs(1));
+            }
+        } else {
+            break;
         }
     }
 
@@ -319,6 +340,7 @@ fn apply_single_state(
         nm_conns_to_deactivate.as_slice(),
         checkpoint,
     )?;
+    extend_timeout_if_required(&mut now, checkpoint)?;
     Ok(())
 }
 

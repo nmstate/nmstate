@@ -13,6 +13,19 @@ pub enum ErrorKind {
     KernelIntegerRoundedError,
     DependencyError,
     PolicyError,
+    PermissionError,
+}
+
+#[cfg(feature = "query_apply")]
+impl ErrorKind {
+    pub(crate) fn can_retry(&self) -> bool {
+        matches!(
+            self,
+            ErrorKind::PluginFailure
+                | ErrorKind::Bug
+                | ErrorKind::VerificationError
+        )
+    }
 }
 
 impl Default for ErrorKind {
@@ -43,7 +56,7 @@ impl std::fmt::Display for NmstateError {
 
 impl Error for NmstateError {}
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct NmstateError {
     kind: ErrorKind,

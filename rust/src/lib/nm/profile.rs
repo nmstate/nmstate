@@ -96,14 +96,23 @@ pub(crate) fn save_nm_profiles(
     let mut now = Instant::now();
     for nm_conn in nm_conns {
         extend_timeout_if_required(&mut now, checkpoint)?;
-        log::info!(
-            "Creating/Modifying connection \
-            UUID {:?}, ID {:?}, type {:?} name {:?}",
-            nm_conn.uuid(),
-            nm_conn.id(),
-            nm_conn.iface_type(),
-            nm_conn.iface_name(),
-        );
+        if nm_conn.obj_path.is_empty() {
+            log::info!(
+                "Creating connection UUID {:?}, ID {:?}, type {:?} name {:?}",
+                nm_conn.uuid(),
+                nm_conn.id(),
+                nm_conn.iface_type(),
+                nm_conn.iface_name(),
+            );
+        } else {
+            log::info!(
+                "Modifying connection UUID {:?}, ID {:?}, type {:?} name {:?}",
+                nm_conn.uuid(),
+                nm_conn.id(),
+                nm_conn.iface_type(),
+                nm_conn.iface_name(),
+            );
+        }
         nm_api
             .connection_add(nm_conn, memory_only)
             .map_err(nm_error_to_nmstate)?;
@@ -111,14 +120,16 @@ pub(crate) fn save_nm_profiles(
     Ok(())
 }
 
-pub(crate) fn activate_nm_profiles(
+// Return list of activation failed `NmConnection` which we can retry
+pub(crate) fn activate_nm_profiles<'a>(
     nm_api: &NmApi,
-    nm_conns: &[NmConnection],
+    nm_conns: &[&'a NmConnection],
     nm_ac_uuids: &[&str],
     checkpoint: &str,
-) -> Result<(), NmstateError> {
+) -> Result<Vec<(&'a NmConnection, NmstateError)>, NmstateError> {
     let mut now = Instant::now();
     let mut new_controllers: Vec<&str> = Vec::new();
+    let mut failed_nm_conns: Vec<(&NmConnection, NmstateError)> = Vec::new();
     for nm_conn in nm_conns.iter().filter(|c| {
         c.iface_type().map(|t| NM_SETTING_CONTROLLERS.contains(&t))
             == Some(true)
@@ -132,21 +143,25 @@ pub(crate) fn activate_nm_profiles(
                 nm_conn.iface_type().unwrap_or("")
             );
             if nm_ac_uuids.contains(&uuid) {
-                if let Err(e) = nm_api.connection_reapply(nm_conn) {
-                    log::info!(
-                        "Reapply operation failed trying activation, \
-                        reason: {}, retry on normal activation",
-                        e
-                    );
-                    nm_api
-                        .connection_activate(uuid)
-                        .map_err(nm_error_to_nmstate)?;
+                if let Err(e) = reapply_or_activate(nm_api, nm_conn) {
+                    if e.kind().can_retry() {
+                        failed_nm_conns.push((nm_conn, e));
+                    } else {
+                        return Err(e);
+                    }
                 }
             } else {
                 new_controllers.push(uuid);
-                nm_api
+                if let Err(e) = nm_api
                     .connection_activate(uuid)
-                    .map_err(nm_error_to_nmstate)?;
+                    .map_err(nm_error_to_nmstate)
+                {
+                    if e.kind().can_retry() {
+                        failed_nm_conns.push((nm_conn, e));
+                    } else {
+                        return Err(e);
+                    }
+                }
             }
         }
     }
@@ -164,21 +179,12 @@ pub(crate) fn activate_nm_profiles(
                     nm_conn.iface_name().unwrap_or(""),
                     nm_conn.iface_type().unwrap_or("")
                 );
-                if let Err(e) = nm_api.connection_reapply(nm_conn) {
-                    log::info!(
-                        "Reapply operation failed trying activation, \
-                        reason: {}, retry on normal activation",
-                        e
-                    );
-                    log::info!(
-                        "Activating connection {}: {}/{}",
-                        uuid,
-                        nm_conn.iface_name().unwrap_or(""),
-                        nm_conn.iface_type().unwrap_or("")
-                    );
-                    nm_api
-                        .connection_activate(uuid)
-                        .map_err(nm_error_to_nmstate)?;
+                if let Err(e) = reapply_or_activate(nm_api, nm_conn) {
+                    if e.kind().can_retry() {
+                        failed_nm_conns.push((*nm_conn, e));
+                    } else {
+                        return Err(e);
+                    }
                 }
             } else {
                 if let Some(ctrller) = nm_conn.controller() {
@@ -205,13 +211,20 @@ pub(crate) fn activate_nm_profiles(
                     nm_conn.iface_name().unwrap_or(""),
                     nm_conn.iface_type().unwrap_or("")
                 );
-                nm_api
+                if let Err(e) = nm_api
                     .connection_activate(uuid)
-                    .map_err(nm_error_to_nmstate)?;
+                    .map_err(nm_error_to_nmstate)
+                {
+                    if e.kind().can_retry() {
+                        failed_nm_conns.push((nm_conn, e));
+                    } else {
+                        return Err(e);
+                    }
+                }
             }
         }
     }
-    Ok(())
+    Ok(failed_nm_conns)
 }
 
 pub(crate) fn deactivate_nm_profiles(
@@ -379,6 +392,25 @@ pub(crate) fn delete_profiles(
         nm_api
             .connection_delete(uuid)
             .map_err(nm_error_to_nmstate)?;
+    }
+    Ok(())
+}
+
+fn reapply_or_activate(
+    nm_api: &NmApi,
+    nm_conn: &NmConnection,
+) -> Result<(), NmstateError> {
+    if let Err(e) = nm_api.connection_reapply(nm_conn) {
+        if let Some(uuid) = nm_conn.uuid() {
+            log::debug!(
+                "Reapply operation failed trying activation, \
+                reason: {}, retry on normal activation",
+                e
+            );
+            nm_api
+                .connection_activate(uuid)
+                .map_err(nm_error_to_nmstate)?;
+        }
     }
     Ok(())
 }

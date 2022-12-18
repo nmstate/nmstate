@@ -172,6 +172,10 @@ impl NetworkState {
                     VERIFY_RETRY_INTERVAL_MILLISECONDS,
                     VERIFY_RETRY_NM,
                     || {
+                        nm_checkpoint_timeout_extend(
+                            &checkpoint,
+                            timeout,
+                        )?;
                         nm_apply(
                             &add_net_state,
                             &chg_net_state,
@@ -335,10 +339,10 @@ where
     let mut cur_count = 0usize;
     while cur_count < count {
         if let Err(e) = func() {
-            if cur_count == count - 1 {
+            if cur_count == count - 1 || !e.kind().can_retry() {
                 return Err(e);
             } else {
-                log::info!("Retrying on verification failure: {}", e);
+                log::info!("Retrying on: {}", e);
                 std::thread::sleep(std::time::Duration::from_millis(
                     interval_ms,
                 ));
