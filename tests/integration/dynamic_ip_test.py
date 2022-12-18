@@ -35,6 +35,7 @@ from .testlib.bridgelib import add_port_to_bridge
 from .testlib.bridgelib import create_bridge_subtree_state
 from .testlib.bridgelib import linux_bridge
 from .testlib.retry import retry_till_true_or_timeout
+from .testlib.retry import retry_till_false_or_timeout
 from .testlib.veth import create_veth_pair
 from .testlib.veth import remove_veth_pair
 
@@ -435,7 +436,7 @@ def test_ipv4_dhcp_off_and_option_on(dhcpcli_up):
     assert InterfaceIPv4.AUTO_ROUTES not in ipv4_current_state
     assert InterfaceIPv4.AUTO_DNS not in ipv4_current_state
     assert InterfaceIPv4.AUTO_GATEWAY not in ipv4_current_state
-    assert not _poll(_has_ipv4_dhcp_nameserver)
+    assert not _poll_till_not(_has_ipv4_dhcp_nameserver)
     assert not _has_ipv4_dhcp_gateway()
     assert not _has_ipv4_classless_route()
 
@@ -470,7 +471,7 @@ def test_ipv6_dhcp_off_and_option_on(dhcpcli_up):
     assert InterfaceIPv6.AUTO_ROUTES not in ipv6_current_state
     assert InterfaceIPv6.AUTO_DNS not in ipv6_current_state
     assert InterfaceIPv6.AUTO_GATEWAY not in ipv6_current_state
-    assert not _poll(_has_ipv6_auto_gateway)
+    assert not _poll_till_not(_has_ipv6_auto_gateway)
     assert not _has_ipv6_auto_extra_route()
     assert not _has_ipv6_auto_nameserver()
 
@@ -497,7 +498,7 @@ def test_ipv4_dhcp_switch_on_to_off(dhcpcli_up):
 
     libnmstate.apply(desired_state)
     assertlib.assert_state(desired_state)
-    assert not _poll(_has_ipv4_dhcp_nameserver)
+    assert not _poll_till_not(_has_ipv4_dhcp_nameserver)
     assert not _has_ipv4_dhcp_gateway()
     assert not _has_ipv4_classless_route()
 
@@ -527,7 +528,7 @@ def test_ipv6_dhcp_switch_on_to_off(dhcpcli_up):
     libnmstate.apply(desired_state)
 
     assertlib.assert_state(desired_state)
-    assert not _poll(_has_ipv6_auto_gateway)
+    assert not _poll_till_not(_has_ipv6_auto_gateway)
     assert not _has_ipv6_auto_extra_route()
     assert not _has_ipv6_auto_nameserver()
 
@@ -700,6 +701,10 @@ def _get_running_routes():
 
 def _poll(func, *args, **kwargs):
     return retry_till_true_or_timeout(DEFAULT_TIMEOUT, func, *args, **kwargs)
+
+
+def _poll_till_not(func, *args, **kwargs):
+    return retry_till_false_or_timeout(DEFAULT_TIMEOUT, func, *args, **kwargs)
 
 
 def _has_ipv6_auto_gateway(nic=DHCP_CLI_NIC):
