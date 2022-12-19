@@ -19,15 +19,14 @@ impl SrIovConfig {
         }
     }
 
-    // Convert VF MAC address to upper case
-    // Ignore 'vfs: []' which is just reverting all VF config to default.
-    pub(crate) fn pre_verify_cleanup(&mut self) {
+    // * Invoke `pre_edit_cleanup()`
+    // * Ignore 'vfs: []' which is just reverting all VF config to default.
+    pub(crate) fn pre_verify_cleanup(
+        &mut self,
+        pre_apply_current: Option<&Self>,
+    ) {
+        self.pre_edit_cleanup(pre_apply_current);
         if let Some(vfs) = self.vfs.as_mut() {
-            for vf in vfs.iter_mut() {
-                if let Some(address) = vf.mac_address.as_mut() {
-                    address.make_ascii_uppercase()
-                }
-            }
             if vfs.is_empty() {
                 self.vfs = None;
             }

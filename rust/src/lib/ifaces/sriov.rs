@@ -50,6 +50,9 @@ pub struct SrIovConfig {
     pub total_vfs: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     /// VF specific configurations.
+    /// * Setting to `Some(Vec::new())` will revert all VF configurations back
+    ///   to defaults.
+    /// * If not empty, missing [SrIovVfConfig] will use current configuration.
     pub vfs: Option<Vec<SrIovVfConfig>>,
 }
 
@@ -60,6 +63,46 @@ impl SrIovConfig {
 
     pub(crate) fn sriov_is_enabled(&self) -> bool {
         matches!(self.total_vfs, Some(i) if i > 0)
+    }
+
+    // * Convert VF MAC address to upper case
+    // * Sort by VF ID
+    // * Ignore 'vfs: []' which is just reverting all VF config to default.
+    // * Auto fill unmentioned VF ID
+    pub(crate) fn pre_edit_cleanup(&mut self, current: Option<&Self>) {
+        if let Some(vfs) = self.vfs.as_mut() {
+            for vf in vfs.iter_mut() {
+                if let Some(address) = vf.mac_address.as_mut() {
+                    address.make_ascii_uppercase()
+                }
+            }
+            vfs.sort_unstable_by(|a, b| a.id.cmp(&b.id));
+
+            if !vfs.is_empty() {
+                let total_vfs = self.total_vfs.unwrap_or(
+                    current.and_then(|c| c.total_vfs).unwrap_or(
+                        vfs.iter().map(|v| v.id).max().unwrap_or_default() + 1,
+                    ),
+                );
+                self.total_vfs = Some(total_vfs);
+                // Auto fill the missing
+                if total_vfs as usize != vfs.len() {
+                    let mut new_vf_confs: Vec<SrIovVfConfig> = (0..total_vfs)
+                        .map(|i| {
+                            let mut vf_conf = SrIovVfConfig::new();
+                            vf_conf.id = i;
+                            vf_conf
+                        })
+                        .collect();
+                    for vf in vfs {
+                        if new_vf_confs.len() > vf.id as usize {
+                            new_vf_confs[vf.id as usize] = vf.clone();
+                        }
+                    }
+                    self.vfs = Some(new_vf_confs);
+                }
+            }
+        }
     }
 }
 

@@ -32,9 +32,15 @@ impl Interface {
             Self::Bond(ref mut iface) => {
                 iface.pre_verify_cleanup();
             }
-            Self::Ethernet(ref mut iface) => {
-                iface.pre_verify_cleanup();
-            }
+            Self::Ethernet(ref mut iface) => iface.pre_verify_cleanup(
+                if let Some(Self::Ethernet(pre_apply_current)) =
+                    pre_apply_current
+                {
+                    Some(pre_apply_current)
+                } else {
+                    None
+                },
+            ),
             Self::OvsBridge(ref mut iface) => {
                 iface.pre_verify_cleanup();
             }

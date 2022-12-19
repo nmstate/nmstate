@@ -634,7 +634,13 @@ impl Interface {
             .pre_edit_cleanup(current.map(|i| i.base_iface()))?;
         match self {
             Interface::LinuxBridge(iface) => iface.pre_edit_cleanup(),
-            Interface::Ethernet(iface) => iface.pre_edit_cleanup(),
+            Interface::Ethernet(iface) => iface.pre_edit_cleanup(
+                if let Some(Interface::Ethernet(current)) = current {
+                    Some(current)
+                } else {
+                    None
+                },
+            ),
             Interface::OvsInterface(iface) => iface.pre_edit_cleanup(),
             Interface::Vrf(iface) => iface.pre_edit_cleanup(current),
             Interface::Bond(iface) => iface.pre_edit_cleanup(current),

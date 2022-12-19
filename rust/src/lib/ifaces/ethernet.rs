@@ -83,7 +83,10 @@ impl Default for EthernetInterface {
 }
 
 impl EthernetInterface {
-    pub(crate) fn pre_edit_cleanup(&mut self) -> Result<(), NmstateError> {
+    pub(crate) fn pre_edit_cleanup(
+        &mut self,
+        current: Option<&Self>,
+    ) -> Result<(), NmstateError> {
         if self.base.iface_type != InterfaceType::Veth && self.veth.is_some() {
             let e = NmstateError::new(
                 ErrorKind::InvalidArgument,
@@ -94,10 +97,13 @@ impl EthernetInterface {
                 ),
             );
             log::error!("{}", e);
-            Err(e)
-        } else {
-            Ok(())
+            return Err(e);
         }
+        if let Some(eth_conf) = self.ethernet.as_mut() {
+            eth_conf
+                .pre_edit_cleanup(current.and_then(|c| c.ethernet.as_ref()));
+        }
+        Ok(())
     }
 
     pub fn new() -> Self {
@@ -166,6 +172,13 @@ pub struct EthernetConfig {
 impl EthernetConfig {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub(crate) fn pre_edit_cleanup(&mut self, current: Option<&Self>) {
+        if let Some(sriov_conf) = self.sr_iov.as_mut() {
+            sriov_conf
+                .pre_edit_cleanup(current.and_then(|c| c.sr_iov.as_ref()));
+        }
     }
 }
 
