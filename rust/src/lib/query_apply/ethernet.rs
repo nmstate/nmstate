@@ -22,9 +22,14 @@ impl EthernetInterface {
         }
     }
 
-    pub(crate) fn pre_verify_cleanup(&mut self) {
+    pub(crate) fn pre_verify_cleanup(
+        &mut self,
+        pre_apply_current: Option<&Self>,
+    ) {
         if let Some(eth_conf) = self.ethernet.as_mut() {
-            eth_conf.pre_verify_cleanup()
+            eth_conf.pre_verify_cleanup(
+                pre_apply_current.and_then(|c| c.ethernet.as_ref()),
+            )
         }
         if self.base.iface_type == InterfaceType::Ethernet {
             self.veth = None;
@@ -57,13 +62,18 @@ impl EthernetConfig {
         }
     }
 
-    pub(crate) fn pre_verify_cleanup(&mut self) {
+    pub(crate) fn pre_verify_cleanup(
+        &mut self,
+        pre_apply_current: Option<&Self>,
+    ) {
         if self.auto_neg == Some(true) {
             self.speed = None;
             self.duplex = None;
         }
         if let Some(sriov_conf) = self.sr_iov.as_mut() {
-            sriov_conf.pre_verify_cleanup()
+            sriov_conf.pre_verify_cleanup(
+                pre_apply_current.and_then(|c| c.sr_iov.as_ref()),
+            )
         }
     }
 }

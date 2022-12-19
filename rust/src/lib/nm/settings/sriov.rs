@@ -28,16 +28,27 @@ pub(crate) fn gen_nm_sriov_setting(
     }
 
     if let Some(vfs) = &sriov_conf.vfs {
-        nm_sriov_set.vfs = Some(gen_nm_vfs(vfs));
+        nm_sriov_set.vfs = Some(gen_nm_vfs(
+            vfs,
+            nm_sriov_set.vfs.as_ref().cloned().unwrap_or_default(),
+        ));
     }
 
     nm_conn.sriov = Some(nm_sriov_set);
 }
 
-fn gen_nm_vfs(vfs: &[SrIovVfConfig]) -> Vec<NmSettingSriovVf> {
-    let mut ret: Vec<NmSettingSriovVf> = Vec::new();
-    for vf in vfs {
-        let mut nm_vf = NmSettingSriovVf::default();
+fn gen_nm_vfs(
+    vfs: &[SrIovVfConfig],
+    exist_nm_sriov_sets: Vec<NmSettingSriovVf>,
+) -> Vec<NmSettingSriovVf> {
+    let mut ret = Vec::with_capacity(vfs.len());
+    for (i, vf) in vfs.iter().enumerate() {
+        let mut nm_vf =
+            if let Some(exist_nm_sriov_set) = exist_nm_sriov_sets.get(i) {
+                exist_nm_sriov_set.clone()
+            } else {
+                NmSettingSriovVf::default()
+            };
         nm_vf.index = Some(vf.id);
         if let Some(v) = &vf.mac_address {
             nm_vf.mac = Some(v.to_string());

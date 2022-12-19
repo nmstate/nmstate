@@ -444,3 +444,81 @@ fn test_verify_sriov_port_name_ovs_bond() {
     );
     desired.verify(&pre_apply_current, &current).unwrap();
 }
+
+#[test]
+fn test_sriov_vf_auto_fill_vf_conf() {
+    let mut cur_ifaces = Interfaces::new();
+    let mut cur_iface = new_eth_iface("eth1");
+    if let Interface::Ethernet(ref mut eth_iface) = cur_iface {
+        let mut eth_conf = EthernetConfig::new();
+        let mut sriov_conf = SrIovConfig::new();
+        let mut vfs = Vec::new();
+        for i in 0..4 {
+            let mut vf_conf = SrIovVfConfig::new();
+            vf_conf.id = i;
+            if i == 2 {
+                vf_conf.trust = Some(true);
+            }
+            vfs.push(vf_conf);
+        }
+        sriov_conf.total_vfs = Some(4);
+        sriov_conf.vfs = Some(vfs);
+        eth_conf.sr_iov = Some(sriov_conf);
+        eth_iface.ethernet = Some(eth_conf);
+    } else {
+        panic!("Should be ethernet interface");
+    }
+    cur_ifaces.push(cur_iface);
+
+    let mut pre_apply_current = cur_ifaces.clone();
+    for iface in pre_apply_current.kernel_ifaces.values_mut() {
+        if let Interface::Ethernet(ref mut eth_iface) = iface {
+            if let Some(vfs) = eth_iface
+                .ethernet
+                .as_mut()
+                .and_then(|eth_conf| eth_conf.sr_iov.as_mut())
+                .and_then(|sr_iov_conf| sr_iov_conf.vfs.as_mut())
+            {
+                for vf in vfs {
+                    vf.trust = Some(false);
+                }
+            }
+        }
+    }
+
+    let mut des_ifaces = Interfaces::new();
+    let mut des_iface = new_eth_iface("eth1");
+    if let Interface::Ethernet(ref mut eth_iface) = des_iface {
+        let mut eth_conf = EthernetConfig::new();
+        let mut sriov_conf = SrIovConfig::new();
+        let mut vf_conf = SrIovVfConfig::new();
+        vf_conf.id = 2;
+        vf_conf.trust = Some(true);
+        sriov_conf.vfs = Some(vec![vf_conf]);
+        eth_conf.sr_iov = Some(sriov_conf);
+        eth_iface.ethernet = Some(eth_conf);
+    } else {
+        panic!("Should be ethernet interface");
+    }
+    des_ifaces.push(des_iface);
+
+    des_ifaces.verify(&pre_apply_current, &cur_ifaces).unwrap();
+
+    let (_, chg_ifaces, _) = des_ifaces
+        .gen_state_for_apply(&pre_apply_current, false)
+        .unwrap();
+    assert_eq!(
+        serde_yaml::to_string(
+            chg_ifaces
+                .get_iface("eth1", InterfaceType::Ethernet)
+                .unwrap()
+        )
+        .unwrap(),
+        serde_yaml::to_string(
+            cur_ifaces
+                .get_iface("eth1", InterfaceType::Ethernet)
+                .unwrap()
+        )
+        .unwrap()
+    );
+}

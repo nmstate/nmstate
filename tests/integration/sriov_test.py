@@ -402,3 +402,31 @@ class TestSrIov:
                 {OVSBridge.Port.NAME: TEST_OVS_IFACE},
             ]
             assertlib.assert_state_match(expected_state)
+
+    def test_sriov_partial_editing_vf(self, sriov_iface_vf):
+        expected_state = copy.deepcopy(sriov_iface_vf)
+        expected_state[Interface.KEY][0][Ethernet.CONFIG_SUBTREE][
+            Ethernet.SRIOV_SUBTREE
+        ][Ethernet.SRIOV.VFS_SUBTREE][1][Ethernet.SRIOV.VFS.TRUST] = True
+
+        iface_name = sriov_iface_vf[Interface.KEY][0][Interface.NAME]
+        eth_config = sriov_iface_vf[Interface.KEY][0][Ethernet.CONFIG_SUBTREE]
+        vf_conf = eth_config[Ethernet.SRIOV_SUBTREE][
+            Ethernet.SRIOV.VFS_SUBTREE
+        ][1]
+        vf_conf[Ethernet.SRIOV.VFS.TRUST] = True
+        desired_state = {
+            Interface.KEY: [
+                {
+                    Interface.NAME: iface_name,
+                    Ethernet.CONFIG_SUBTREE: {
+                        Ethernet.SRIOV_SUBTREE: {
+                            Ethernet.SRIOV.VFS_SUBTREE: [vf_conf]
+                        }
+                    },
+                }
+            ]
+        }
+        libnmstate.apply(desired_state)
+
+        assertlib.assert_state_match(expected_state)
