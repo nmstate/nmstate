@@ -25,7 +25,7 @@ a northbound declarative API and multi provider support on the southbound.
 NetworkManager acts as the main (and currently the only) provider supported.
 
 Nmstate provides:
- * Rust crate -- [nmstate][https://crates.io/crates/nmstate]
+ * Rust crate -- [nmstate](https://crates.io/crates/nmstate)
  * Command line tools -- `cargo install nmstatectl`
  * Python library -- `libnmstate`
  * Go binding
