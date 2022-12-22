@@ -239,7 +239,6 @@ function upgrade_nm_from_copr {
     fi
     # Update only from Copr to limit the changes in the environment
     exec_cmd "yum update --assumeyes --disablerepo '*' --enablerepo '${copr_repo_id}'"
-    exec_cmd "systemctl restart NetworkManager"
 }
 
 function upgrade_nm_from_rpm_dir {
@@ -248,7 +247,6 @@ function upgrade_nm_from_rpm_dir {
     find $nm_rpm_dir -name \*.rpm -exec cp -v {} "${EXPORT_DIR}/nm_rpms/" \;
     exec_cmd "dnf remove --assumeyes --noautoremove NetworkManager"
     exec_cmd "dnf install -y ${CONT_EXPORT_DIR}/nm_rpms/*.rpm"
-    exec_cmd "systemctl restart NetworkManager"
 }
 
 function run_customize_command {
