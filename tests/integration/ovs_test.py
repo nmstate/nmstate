@@ -38,6 +38,7 @@ from .testlib.env import nm_minor_version
 from .testlib.genconf import gen_conf_apply
 from .testlib.nmplugin import disable_nm_plugin
 from .testlib.ovslib import Bridge
+from .testlib.retry import retry_till_true_or_timeout
 from .testlib.statelib import state_match
 from .testlib.vlan import vlan_interface
 
@@ -73,6 +74,7 @@ TEST_EXTERNAL_IDS_KEY = "ovn-bridge-mappings"
 TEST_EXTERNAL_IDS_VALUE = "provider:br-provider"
 TEST_OTHER_CONFIG_KEY = "stats-update-interval"
 TEST_OTHER_CONFIG_VALUE = "1000"
+RETRY_TIMEOUT = 15
 
 
 def _test_pci_path():
@@ -1002,20 +1004,25 @@ def test_set_static_to_ovs_interface_with_the_same_name_bridge(
     }
     libnmstate.apply(desired_state)
 
-    state = statelib.show_only((BRIDGE1,))
-    assert len(state[Interface.KEY]) == 2
-    cur_iface_state = None
-    for iface in state[Interface.KEY]:
-        if iface[Interface.TYPE] == InterfaceType.OVS_INTERFACE:
-            cur_iface_state = iface
-            break
-    assert cur_iface_state
-    assert cur_iface_state[Interface.IPV4][InterfaceIPv4.ADDRESS] == [
-        {
-            InterfaceIPv4.ADDRESS_IP: "192.0.2.1",
-            InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
-        }
-    ]
+    def _ovs_iface_got_ip():
+        state = statelib.show_only((BRIDGE1,))
+        if len(state[Interface.KEY]) != 2:
+            return False
+        cur_iface_state = None
+        for iface in state[Interface.KEY]:
+            if iface[Interface.TYPE] == InterfaceType.OVS_INTERFACE:
+                cur_iface_state = iface
+                break
+        return cur_iface_state and cur_iface_state[Interface.IPV4][
+            InterfaceIPv4.ADDRESS
+        ] == [
+            {
+                InterfaceIPv4.ADDRESS_IP: "192.0.2.1",
+                InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+            }
+        ]
+
+    retry_till_true_or_timeout(RETRY_TIMEOUT, _ovs_iface_got_ip)
 
 
 @pytest.fixture
