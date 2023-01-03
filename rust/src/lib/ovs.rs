@@ -55,6 +55,8 @@ impl<'de> Deserialize<'de> for OvsDbGlobalConfig {
 pub struct OvsDbIfaceConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub external_ids: Option<HashMap<String, Option<String>>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub other_config: Option<HashMap<String, Option<String>>>,
 }
 
 impl OvsDbIfaceConfig {
@@ -81,6 +83,9 @@ impl<'de> Deserialize<'de> for OvsDbIfaceConfig {
         if let Some(v) = v.as_object() {
             if let Some(v) = v.get("external_ids") {
                 ret.external_ids = Some(value_to_hash_map(v));
+            }
+            if let Some(v) = v.get("other_config") {
+                ret.other_config = Some(value_to_hash_map(v));
             }
         } else {
             return Err(serde::de::Error::custom(format!(

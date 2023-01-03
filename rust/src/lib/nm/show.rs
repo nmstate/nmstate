@@ -10,16 +10,11 @@ use crate::nm::nm_dbus::{
 use super::{
     active_connection::create_index_for_nm_acs_by_name_type,
     error::nm_error_to_nmstate,
-    profile::{
-        create_index_for_nm_conns_by_ctrler_type,
-        create_index_for_nm_conns_by_name_type, get_port_nm_conns,
-        NM_SETTING_CONTROLLERS,
-    },
+    profile::create_index_for_nm_conns_by_name_type,
     query::{
-        get_description, get_lldp, get_ovs_dpdk_config, get_ovs_patch_config,
-        is_lldp_enabled, is_mptcp_supported, nm_802_1x_to_nmstate,
-        nm_ip_setting_to_nmstate4, nm_ip_setting_to_nmstate6,
-        nm_ovs_bridge_conf_get, query_nmstate_wait_ip, retrieve_dns_info,
+        get_description, get_lldp, is_lldp_enabled, is_mptcp_supported,
+        nm_802_1x_to_nmstate, nm_ip_setting_to_nmstate4,
+        nm_ip_setting_to_nmstate6, query_nmstate_wait_ip, retrieve_dns_info,
     },
     settings::{
         get_bond_balance_slb, NM_SETTING_BOND_SETTING_NAME,
@@ -66,8 +61,6 @@ pub(crate) fn nm_retrieve(
             nm_saved_conn_uuid_index.insert(uuid, nm_saved_conn);
         }
     }
-    let nm_saved_conns_ctrler_type_index =
-        create_index_for_nm_conns_by_ctrler_type(nm_saved_conns.as_slice());
     let nm_acs_name_type_index =
         create_index_for_nm_acs_by_name_type(nm_acs.as_slice());
 
@@ -130,16 +123,6 @@ pub(crate) fn nm_retrieve(
                 } else {
                     None
                 };
-                let port_saved_nm_conns = if NM_SETTING_CONTROLLERS
-                    .contains(&nm_dev.iface_type.as_str())
-                {
-                    Some(get_port_nm_conns(
-                        nm_conn,
-                        &nm_saved_conns_ctrler_type_index,
-                    ))
-                } else {
-                    None
-                };
 
                 let lldp_neighbors = if is_lldp_enabled(nm_conn) {
                     if running_config_only {
@@ -154,13 +137,9 @@ pub(crate) fn nm_retrieve(
                 } else {
                     None
                 };
-                if let Some(mut iface) = iface_get(
-                    nm_dev,
-                    nm_conn,
-                    nm_saved_conn,
-                    port_saved_nm_conns.as_ref().map(Vec::as_ref),
-                    lldp_neighbors,
-                ) {
+                if let Some(mut iface) =
+                    iface_get(nm_dev, nm_conn, nm_saved_conn, lldp_neighbors)
+                {
                     // Suppress mptcp only when MPTCP is not supported by
                     // NetworkManager, so user will not get failure when they
                     // apply the returned state.
@@ -280,7 +259,6 @@ fn iface_get(
     nm_dev: &NmDevice,
     nm_conn: &NmConnection,
     nm_saved_conn: Option<&NmConnection>,
-    port_saved_nm_conns: Option<&[&NmConnection]>,
     lldp_neighbors: Option<Vec<NmLldpNeighbor>>,
 ) -> Option<Interface> {
     if let Some(base_iface) =
@@ -313,8 +291,6 @@ fn iface_get(
             InterfaceType::OvsInterface => Interface::OvsInterface({
                 let mut iface = OvsInterface::new();
                 iface.base = base_iface;
-                iface.patch = get_ovs_patch_config(nm_conn);
-                iface.dpdk = get_ovs_dpdk_config(nm_conn);
                 iface
             }),
             InterfaceType::Dummy => Interface::Dummy({
@@ -348,26 +324,8 @@ fn iface_get(
                 iface
             }),
             InterfaceType::OvsBridge => {
-                // NetworkManager applied connection does not
-                // have ovs configure
-                if let Some(nm_saved_conn) = nm_saved_conn {
-                    let mut br_iface = OvsBridgeInterface::new();
-                    br_iface.base = base_iface;
-                    br_iface.bridge = nm_ovs_bridge_conf_get(
-                        nm_saved_conn,
-                        port_saved_nm_conns,
-                    )
-                    .ok();
-                    Interface::OvsBridge(br_iface)
-                } else {
-                    log::warn!(
-                        "Failed to get active connection of interface \
-                        {} {}",
-                        base_iface.name,
-                        base_iface.iface_type
-                    );
-                    return None;
-                }
+                // The ovsdb plugin is providing query support.
+                return None;
             }
             _ => {
                 log::debug!("Skip unsupported interface {:?}", base_iface);

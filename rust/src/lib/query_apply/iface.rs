@@ -242,10 +242,18 @@ impl Interface {
                     );
                 }
             }
-            Self::Unknown(_)
-            | Self::Dummy(_)
-            | Self::OvsInterface(_)
-            | Self::Loopback(_) => (),
+            Self::OvsInterface(iface) => {
+                if let Self::OvsInterface(other_iface) = other {
+                    iface.update_ovs_iface(other_iface);
+                } else {
+                    log::warn!(
+                        "Don't know how to update iface {:?} with {:?}",
+                        iface,
+                        other
+                    );
+                }
+            }
+            Self::Unknown(_) | Self::Dummy(_) | Self::Loopback(_) => (),
         }
     }
 

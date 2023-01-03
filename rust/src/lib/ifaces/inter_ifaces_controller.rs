@@ -6,9 +6,8 @@ use std::iter::FromIterator;
 use log::{debug, info};
 
 use crate::{
-    BaseInterface, BondMode, ErrorKind, Interface, InterfaceIpv4,
-    InterfaceIpv6, InterfaceState, InterfaceType, Interfaces, NmstateError,
-    OvsInterface,
+    BondMode, ErrorKind, Interface, InterfaceIpv4, InterfaceIpv6,
+    InterfaceState, InterfaceType, Interfaces, NmstateError, OvsInterface,
 };
 
 pub(crate) fn handle_changed_ports(
@@ -118,9 +117,11 @@ pub(crate) fn handle_changed_ports(
                             // OVS internal interface could be created without
                             // been defined in desire or current state
                             if let Some(InterfaceType::OvsBridge) = ctrl_type {
-                                ifaces.push(gen_ovs_interface(
-                                    &iface_name,
-                                    &ctrl_name,
+                                ifaces.push(Interface::OvsInterface(
+                                    OvsInterface::new_with_name_and_ctrl(
+                                        &iface_name,
+                                        &ctrl_name,
+                                    ),
                                 ));
                                 info!(
                                     "Include OVS internal interface {} to \
@@ -148,19 +149,6 @@ pub(crate) fn handle_changed_ports(
     resolve_port_iface_controller_type(ifaces, cur_ifaces)?;
 
     Ok(())
-}
-
-fn gen_ovs_interface(iface_name: &str, ctrl_name: &str) -> Interface {
-    let mut base_iface = BaseInterface::new();
-    base_iface.name = iface_name.to_string();
-    base_iface.iface_type = InterfaceType::OvsInterface;
-    base_iface.controller = Some(ctrl_name.to_string());
-    base_iface.controller_type = Some(InterfaceType::OvsBridge);
-    Interface::OvsInterface({
-        let mut iface = OvsInterface::new();
-        iface.base = base_iface;
-        iface
-    })
 }
 
 fn handle_changed_ports_of_iface(

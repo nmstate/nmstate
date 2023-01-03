@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+
+use std::collections::HashMap;
 use std::convert::TryFrom;
 
 use serde::{Deserialize, Serialize};
@@ -91,6 +94,43 @@ impl OvsBridgeInterface {
             }
         }
         ret
+    }
+
+    pub(crate) fn create_ovs_iface_is_empty_ports(
+        &mut self,
+        current: Option<&Self>,
+    ) -> Option<OvsInterface> {
+        if (current.is_none()
+            && self.ports().map(|p| p.is_empty()).unwrap_or(true))
+            || (current.is_some()
+                && self.ports().map(|p| p.is_empty()) == Some(true))
+        {
+            log::warn!(
+                "OVS bridge {} cannot exist with empty port list, adding a \
+                OVS internal interface with the same name",
+                self.base.name.as_str()
+            );
+            if let Some(br_conf) = self.bridge.as_mut() {
+                br_conf.ports = Some(vec![OvsBridgePortConfig {
+                    name: self.base.name.clone(),
+                    ..Default::default()
+                }])
+            } else {
+                self.bridge = Some(OvsBridgeConfig {
+                    ports: Some(vec![OvsBridgePortConfig {
+                        name: self.base.name.clone(),
+                        ..Default::default()
+                    }]),
+                    ..Default::default()
+                })
+            }
+            Some(OvsInterface::new_with_name_and_ctrl(
+                self.base.name.as_str(),
+                self.base.name.as_str(),
+            ))
+        } else {
+            None
+        }
     }
 }
 
@@ -252,6 +292,20 @@ impl OvsInterface {
         Self::default()
     }
 
+    pub(crate) fn new_with_name_and_ctrl(
+        iface_name: &str,
+        ctrl_name: &str,
+    ) -> Self {
+        let mut base_iface = BaseInterface::new();
+        base_iface.name = iface_name.to_string();
+        base_iface.iface_type = InterfaceType::OvsInterface;
+        base_iface.controller = Some(ctrl_name.to_string());
+        base_iface.controller_type = Some(InterfaceType::OvsBridge);
+        let mut iface = Self::new();
+        iface.base = base_iface;
+        iface
+    }
+
     pub(crate) fn parent(&self) -> Option<&str> {
         self.base.controller.as_deref()
     }
@@ -291,7 +345,6 @@ impl OvsInterface {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
-#[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 /// The example yaml output of OVS bond:
 /// ```yml
@@ -330,17 +383,24 @@ pub struct OvsBridgeBondConfig {
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
-        deserialize_with = "crate::deserializer::option_u32_or_string"
+        deserialize_with = "crate::deserializer::option_u32_or_string",
+        rename = "bond-downdelay"
     )]
     /// Deserialize and serialize from/to `bond-downdelay`.
     pub bond_downdelay: Option<u32>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
-        deserialize_with = "crate::deserializer::option_u32_or_string"
+        deserialize_with = "crate::deserializer::option_u32_or_string",
+        rename = "bond-updelay"
     )]
     /// Deserialize and serialize from/to `bond-updelay`.
     pub bond_updelay: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    /// OpenvSwitch specific `other_config` for OVS bond. Please refer to
+    /// manpage `ovs-vswitchd.conf.db(5)` for more detail.
+    /// Set to None for remove specific entry.
+    pub other_config: Option<HashMap<String, Option<String>>>,
 }
 
 impl OvsBridgeBondConfig {

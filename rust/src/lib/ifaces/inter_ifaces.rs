@@ -175,6 +175,24 @@ impl Interfaces {
                             chg_iface.iface_type(),
                             chg_iface.base_iface().up_priority
                         );
+                        // When removing all ports from OVS bridge, as OVS
+                        // bridge cannot exist with ports, we add a OVS internal
+                        // interface, here we append new OVS interface to
+                        // `chg_ifaces`
+                        if let (
+                            Interface::OvsBridge(br_iface),
+                            Interface::OvsBridge(cur_iface),
+                        ) = (&mut chg_iface, cur_iface)
+                        {
+                            if let Some(ovs_iface) = br_iface
+                                .create_ovs_iface_is_empty_ports(Some(
+                                    cur_iface,
+                                ))
+                            {
+                                chg_ifaces
+                                    .push(Interface::OvsInterface(ovs_iface));
+                            }
+                        }
                         chg_ifaces.push(chg_iface);
                     }
                     None => {
@@ -187,6 +205,19 @@ impl Interfaces {
                             new_iface.iface_type(),
                             new_iface.base_iface().up_priority
                         );
+                        // When adding OVS bridge with empty port list, as OVS
+                        // bridge cannot exist without ports, we add a OVS
+                        // internal interface, here we append new OVS interface
+                        // to `add_ifaces`
+                        if let Interface::OvsBridge(br_iface) = &mut new_iface {
+                            if let Some(ovs_iface) =
+                                br_iface.create_ovs_iface_is_empty_ports(None)
+                            {
+                                add_ifaces
+                                    .push(Interface::OvsInterface(ovs_iface));
+                            }
+                        }
+
                         // When adding new OVS interface requires changes to
                         // existing OVS bridge, we should place this new OVS
                         // interface along with its controller -- chg_ifaces.
