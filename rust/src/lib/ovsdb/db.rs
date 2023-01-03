@@ -87,16 +87,17 @@ impl OvsDbConnection {
         }
     }
 
-    fn _get_ovs_ifaec(
+    fn _get_ovs_entry(
         &mut self,
         table_name: &str,
-    ) -> Result<Vec<OvsDbIface>, NmstateError> {
+        columns: Vec<&'static str>,
+    ) -> Result<HashMap<String, OvsDbEntry>, NmstateError> {
         let select = OvsDbSelect {
             table: table_name.to_string(),
             conditions: vec![],
-            columns: Some(vec!["external_ids", "name"]),
+            columns: Some(columns),
         };
-        let mut ret: Vec<OvsDbIface> = Vec::new();
+        let mut ret: HashMap<String, OvsDbEntry> = HashMap::new();
         match self.rpc.exec(
             "transact",
             &Value::Array(vec![
@@ -105,22 +106,28 @@ impl OvsDbConnection {
             ]),
         )? {
             Value::Array(reply) => {
-                if let Some(ovsdb_ifaces) = reply
+                if let Some(entries) = reply
                     .get(0)
                     .and_then(|v| v.as_object())
                     .and_then(|v| v.get("rows"))
                     .and_then(|v| v.as_array())
                 {
-                    for ovsdb_iface in ovsdb_ifaces {
-                        ret.push(ovsdb_iface.try_into()?);
+                    for entry in entries {
+                        let ovsdb_entry: OvsDbEntry = entry.try_into()?;
+                        if !ovsdb_entry.uuid.is_empty() {
+                            ret.insert(
+                                ovsdb_entry.uuid.to_string(),
+                                ovsdb_entry,
+                            );
+                        }
                     }
                     Ok(ret)
                 } else {
                     let e = NmstateError::new(
                         ErrorKind::PluginFailure,
                         format!(
-                            "Invalid reply from OVSDB for querying {table_name} \
-                            table: {reply:?}"
+                            "Invalid reply from OVSDB for querying \
+                            {table_name} table: {reply:?}"
                         ),
                     );
                     log::error!("{}", e);
@@ -131,7 +138,8 @@ impl OvsDbConnection {
                 let e = NmstateError::new(
                     ErrorKind::PluginFailure,
                     format!(
-                        "Invalid reply from OVSDB for querying {table_name} table: {reply:?}"
+                        "Invalid reply from OVSDB for querying \
+                        {table_name} table: {reply:?}"
                     ),
                 );
                 log::error!("{}", e);
@@ -142,14 +150,61 @@ impl OvsDbConnection {
 
     pub(crate) fn get_ovs_ifaces(
         &mut self,
-    ) -> Result<Vec<OvsDbIface>, NmstateError> {
-        self._get_ovs_ifaec("Interface")
+    ) -> Result<HashMap<String, OvsDbEntry>, NmstateError> {
+        self._get_ovs_entry(
+            "Interface",
+            vec![
+                "external_ids",
+                "name",
+                "other_config",
+                "_uuid",
+                "type",
+                "mtu",
+                "options",
+            ],
+        )
+    }
+
+    pub(crate) fn get_ovs_ports(
+        &mut self,
+    ) -> Result<HashMap<String, OvsDbEntry>, NmstateError> {
+        self._get_ovs_entry(
+            "Port",
+            vec![
+                "external_ids",
+                "name",
+                "other_config",
+                "_uuid",
+                "interfaces",
+                "vlan_mode",
+                "tag",
+                "trunks",
+                "bond_mode",
+                "bond_updelay",
+                "bond_downdelay",
+                "lacp",
+            ],
+        )
     }
 
     pub(crate) fn get_ovs_bridges(
         &mut self,
-    ) -> Result<Vec<OvsDbIface>, NmstateError> {
-        self._get_ovs_ifaec("Bridge")
+    ) -> Result<HashMap<String, OvsDbEntry>, NmstateError> {
+        self._get_ovs_entry(
+            "Bridge",
+            vec![
+                "external_ids",
+                "name",
+                "other_config",
+                "_uuid",
+                "ports",
+                "stp_enable",
+                "rstp_enable",
+                "mcast_snooping_enable",
+                "fail_mode",
+                "datapath_type",
+            ],
+        )
     }
 
     pub(crate) fn get_ovsdb_global_conf(
@@ -181,8 +236,9 @@ impl OvsDbConnection {
                     let e = NmstateError::new(
                         ErrorKind::PluginFailure,
                         format!(
-                        "Invalid reply from OVSDB for querying {GLOBAL_CONFIG_TABLE} table: {reply:?}"
-                    ),
+                            "Invalid reply from OVSDB for querying \
+                            {GLOBAL_CONFIG_TABLE} table: {reply:?}"
+                        ),
                     );
                     log::error!("{}", e);
                     Err(e)
@@ -192,7 +248,8 @@ impl OvsDbConnection {
                 let e = NmstateError::new(
                     ErrorKind::PluginFailure,
                     format!(
-                        "Invalid reply from OVSDB for querying {GLOBAL_CONFIG_TABLE} table: {reply:?}"
+                        "Invalid reply from OVSDB for querying \
+                        {GLOBAL_CONFIG_TABLE} table: {reply:?}"
                     ),
                 );
                 log::error!("{}", e);
@@ -217,25 +274,52 @@ impl OvsDbConnection {
 }
 
 #[derive(Debug, Default)]
-pub(crate) struct OvsDbIface {
+pub(crate) struct OvsDbEntry {
+    pub(crate) uuid: String,
     pub(crate) name: String,
     pub(crate) external_ids: HashMap<String, String>,
+    pub(crate) other_config: HashMap<String, String>,
+    pub(crate) ports: Vec<String>,
+    pub(crate) iface_type: String,
+    pub(crate) options: HashMap<String, Value>,
 }
 
-impl TryFrom<&Value> for OvsDbIface {
+impl TryFrom<&Value> for OvsDbEntry {
     type Error = NmstateError;
-    fn try_from(v: &Value) -> Result<OvsDbIface, Self::Error> {
+    fn try_from(v: &Value) -> Result<OvsDbEntry, Self::Error> {
         let e = NmstateError::new(
             ErrorKind::PluginFailure,
-            format!("Failed to parse OVS Interface info from : {v:?}"),
+            format!("Failed to parse OVS Entry info from : {v:?}"),
         );
-        let mut ret = OvsDbIface::default();
-        if let Value::Object(v) = v {
-            if let (Some(Value::String(n)), Some(Value::Array(ids))) =
-                (v.get("name"), v.get("external_ids"))
-            {
-                ret.name = n.to_string();
-                ret.external_ids = parse_str_map(ids);
+        let v = v.clone();
+        let mut ret = OvsDbEntry::default();
+        if let Value::Object(mut v) = v {
+            if let Some(Value::String(n)) = v.remove("name") {
+                ret.name = n;
+                if let Some(Value::Array(uuid)) = v.remove("_uuid") {
+                    if let Some(Value::String(uuid)) = uuid.get(1) {
+                        ret.uuid = uuid.to_string();
+                    }
+                }
+                if let Some(Value::String(iface_type)) = v.remove("type") {
+                    ret.iface_type = iface_type;
+                }
+                if let Some(Value::Array(ids)) = v.remove("external_ids") {
+                    ret.external_ids = parse_str_map(&ids);
+                }
+                if let Some(Value::Array(cfgs)) = v.remove("other_config") {
+                    ret.other_config = parse_str_map(&cfgs);
+                }
+                if let Some(Value::Array(ports)) = v.remove("ports") {
+                    ret.ports = parse_uuid_array(&ports);
+                }
+                if let Some(Value::Array(ports)) = v.remove("interfaces") {
+                    ret.ports = parse_uuid_array(&ports);
+                }
+                for (key, value) in v.iter() {
+                    ret.options.insert(key.to_string(), value.clone());
+                }
+
                 return Ok(ret);
             }
         }
@@ -246,17 +330,64 @@ impl TryFrom<&Value> for OvsDbIface {
 
 pub(crate) fn parse_str_map(v: &[Value]) -> HashMap<String, String> {
     let mut ret = HashMap::new();
-    if let Some(ids) = v.get(1).and_then(|i| i.as_array()) {
-        for kv in ids {
-            if let Some(kv) = kv.as_array() {
-                if let (Some(Value::String(k)), Some(Value::String(v))) =
-                    (kv.get(0), kv.get(1))
-                {
-                    if k == NM_RESERVED_EXTERNAL_ID {
-                        continue;
+    if let Some(Value::String(value_type)) = v.get(0) {
+        match value_type.as_str() {
+            "map" => {
+                if let Some(ids) = v.get(1).and_then(|i| i.as_array()) {
+                    for kv in ids {
+                        if let Some(kv) = kv.as_array() {
+                            if let (
+                                Some(Value::String(k)),
+                                Some(Value::String(v)),
+                            ) = (kv.get(0), kv.get(1))
+                            {
+                                if k == NM_RESERVED_EXTERNAL_ID {
+                                    continue;
+                                }
+                                ret.insert(k.to_string(), v.to_string());
+                            }
+                        }
                     }
-                    ret.insert(k.to_string(), v.to_string());
                 }
+            }
+            t => {
+                log::warn!("Got unknown value type {t}: {v:?}");
+            }
+        }
+    }
+    ret
+}
+
+pub(crate) fn parse_uuid_array(v: &[Value]) -> Vec<String> {
+    let mut ret = Vec::new();
+    if let Some(Value::String(value_type)) = v.get(0) {
+        match value_type.as_str() {
+            "set" => {
+                if let Some(vs) = v.get(1).and_then(|i| i.as_array()) {
+                    for v in vs {
+                        if let Some(kv) = v.as_array() {
+                            if let (
+                                Some(Value::String(k)),
+                                Some(Value::String(v)),
+                            ) = (kv.get(0), kv.get(1))
+                            {
+                                if k != "uuid" {
+                                    continue;
+                                }
+                                ret.push(v.to_string());
+                            }
+                        }
+                    }
+                }
+            }
+            "uuid" => {
+                // Single item
+                if let Some(Value::String(v)) = v.get(1) {
+                    ret.push(v.to_string());
+                }
+            }
+            t => {
+                log::warn!("Got unknown value type {t}: {v:?}");
             }
         }
     }

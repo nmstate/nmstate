@@ -59,11 +59,14 @@ MAC1 = "02:FF:FF:FF:FF:01"
 ETH1 = "eth1"
 ETH2 = "eth2"
 
+EMPTY_MAP = "{}"
+
 OVS_BOND_YAML_STATE = f"""
     port:
     - name: {BOND1}
       link-aggregation:
         mode: active-backup
+        other_config: {EMPTY_MAP}
         port:
         - name: {ETH1}
         - name: {ETH2}
@@ -94,8 +97,11 @@ def bridge_with_ports(port0_up):
 
 @pytest.mark.tier1
 def test_create_and_remove_ovs_bridge_with_min_desired_state():
-    with Bridge(BRIDGE1).create() as state:
-        assertlib.assert_state_match(state)
+    with Bridge(BRIDGE1).create():
+        # assert_state_match does not works well when ovs bridge and ovs
+        # interface are using the same name.
+        cur_state = statelib.show_only((BRIDGE1,))
+        assert len(cur_state[Interface.KEY]) == 2
 
     assertlib.assert_absent(BRIDGE1)
 
@@ -110,6 +116,7 @@ def test_create_and_save_ovs_bridge_then_remove_and_apply_again():
 
     libnmstate.apply(desired_state)
     desired_state[Interface.KEY][0][Interface.STATE] = InterfaceState.ABSENT
+    desired_state[Interface.KEY][1][Interface.STATE] = InterfaceState.ABSENT
 
     libnmstate.apply(desired_state)
     assertlib.assert_absent(BRIDGE1)
@@ -126,6 +133,7 @@ def test_create_and_remove_ovs_bridge_options_specified():
         }
     )
 
+    bridge.add_internal_port(PORT1, ipv4_state={InterfaceIPv4.ENABLED: False})
     with bridge.create() as state:
         assertlib.assert_state_match(state)
 
@@ -299,7 +307,11 @@ class TestOvsLinkAggregation:
 
     def test_pretty_state_ovs_lag_name_first(self, eth1_up, eth2_up):
         bridge = Bridge(BRIDGE1)
-        bridge.add_link_aggregation_port(BOND1, (ETH1, ETH2))
+        bridge.add_link_aggregation_port(
+            BOND1,
+            (ETH1, ETH2),
+            mode=OVSBridge.Port.LinkAggregation.Mode.ACTIVE_BACKUP,
+        )
 
         with bridge.create():
             current_state = statelib.show_only((BRIDGE1,))
@@ -1200,7 +1212,9 @@ def unmanged_ovs_vxlan():
 
 @pytest.mark.tier1
 def test_ovs_vxlan_in_current_not_impact_others(unmanged_ovs_vxlan):
-    with Bridge(BRIDGE1).create() as state:
+    bridge = Bridge(BRIDGE1)
+    bridge.add_internal_port(PORT1, ipv4_state={InterfaceIPv4.ENABLED: False})
+    with bridge.create() as state:
         assertlib.assert_state_match(state)
 
     assertlib.assert_absent(BRIDGE1)

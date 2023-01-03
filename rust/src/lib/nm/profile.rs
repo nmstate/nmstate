@@ -236,33 +236,6 @@ pub(crate) fn deactivate_nm_profiles(
     Ok(())
 }
 
-pub(crate) fn create_index_for_nm_conns_by_ctrler_type(
-    nm_conns: &[NmConnection],
-) -> HashMap<(&str, &str), Vec<&NmConnection>> {
-    let mut ret: HashMap<(&str, &str), Vec<&NmConnection>> = HashMap::new();
-    for nm_conn in nm_conns {
-        let ctrl_name = if let Some(c) = nm_conn.controller() {
-            c
-        } else {
-            continue;
-        };
-        let nm_ctrl_type = if let Some(c) = nm_conn.controller_type() {
-            c
-        } else {
-            continue;
-        };
-        match ret.entry((ctrl_name, nm_ctrl_type)) {
-            Entry::Occupied(o) => {
-                o.into_mut().push(nm_conn);
-            }
-            Entry::Vacant(v) => {
-                v.insert(vec![nm_conn]);
-            }
-        };
-    }
-    ret
-}
-
 pub(crate) fn create_index_for_nm_conns_by_name_type(
     nm_conns: &[NmConnection],
 ) -> HashMap<(&str, &str), Vec<&NmConnection>> {
@@ -300,54 +273,6 @@ pub(crate) fn create_index_for_nm_conns_by_name_type(
                         v.insert(vec![nm_conn]);
                     }
                 };
-            }
-        }
-    }
-    ret
-}
-
-pub(crate) fn get_port_nm_conns<'a>(
-    nm_conn: &'a NmConnection,
-    nm_conns_ctrler_type_index: &HashMap<
-        (&'a str, &'a str),
-        Vec<&'a NmConnection>,
-    >,
-) -> Vec<&'a NmConnection> {
-    let mut ret: Vec<&NmConnection> = Vec::new();
-    if let Some(nm_iface_type) = nm_conn.iface_type() {
-        if let Some(uuid) = nm_conn.uuid() {
-            if let Some(port_nm_conns) =
-                nm_conns_ctrler_type_index.get(&(uuid, nm_iface_type))
-            {
-                for port_nm_conn in port_nm_conns {
-                    ret.push(port_nm_conn);
-                    if port_nm_conn.iface_type() == Some("ovs-port") {
-                        for ovs_iface_nm_conn in get_port_nm_conns(
-                            port_nm_conn,
-                            nm_conns_ctrler_type_index,
-                        ) {
-                            ret.push(ovs_iface_nm_conn)
-                        }
-                    }
-                }
-            }
-        }
-
-        if let Some(name) = nm_conn.iface_name() {
-            if let Some(port_nm_conns) =
-                nm_conns_ctrler_type_index.get(&(name, nm_iface_type))
-            {
-                for port_nm_conn in port_nm_conns {
-                    ret.push(port_nm_conn);
-                    if port_nm_conn.iface_type() == Some("ovs-port") {
-                        for ovs_iface_nm_conn in get_port_nm_conns(
-                            port_nm_conn,
-                            nm_conns_ctrler_type_index,
-                        ) {
-                            ret.push(ovs_iface_nm_conn)
-                        }
-                    }
-                }
             }
         }
     }

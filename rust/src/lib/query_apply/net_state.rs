@@ -56,18 +56,18 @@ impl NetworkState {
         if state.prop_list.contains(&"rules") {
             self.rules = state.rules;
         }
+        if ovsdb_is_running() {
+            match ovsdb_retrieve() {
+                Ok(ovsdb_state) => self.update_state(&ovsdb_state),
+                Err(e) => {
+                    log::warn!("Failed to retrieve OVS DB state: {}", e);
+                }
+            }
+        }
         if !self.kernel_only {
             let nm_state = nm_retrieve(self.running_config_only)?;
             // TODO: Priority handling
             self.update_state(&nm_state);
-            if ovsdb_is_running() {
-                match ovsdb_retrieve() {
-                    Ok(ovsdb_state) => self.update_state(&ovsdb_state),
-                    Err(e) => {
-                        log::warn!("Failed to retrieve OVS DB state: {}", e);
-                    }
-                }
-            }
         }
         if !self.include_secrets {
             self.hide_secrets();

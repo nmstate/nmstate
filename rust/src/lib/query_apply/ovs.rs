@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use crate::{
     state::get_json_value_difference, ErrorKind, NmstateError,
     OvsBridgeBondConfig, OvsBridgeConfig, OvsBridgeInterface,
-    OvsDbGlobalConfig,
+    OvsBridgePortConfig, OvsDbGlobalConfig, OvsInterface,
 };
 
 impl OvsDbGlobalConfig {
@@ -125,6 +125,17 @@ impl OvsBridgeInterface {
     }
 
     pub(crate) fn pre_verify_cleanup(&mut self) {
+        // User desired empty port list, but OVS bridge cannot exist without a
+        // port, as ovs-vsctl did, we create a internal interface with the same
+        // name as bridge
+        if self.ports().map(|p| p.is_empty()) == Some(true) {
+            if let Some(br_conf) = &mut self.bridge {
+                br_conf.ports = Some(vec![OvsBridgePortConfig {
+                    name: self.base.name.clone(),
+                    ..Default::default()
+                }])
+            }
+        }
         self.sort_ports()
     }
 
@@ -215,6 +226,17 @@ impl OvsBridgeBondConfig {
     pub(crate) fn sort_ports(&mut self) {
         if let Some(ref mut bond_ports) = self.ports {
             bond_ports.sort_unstable_by_key(|p| p.name.clone())
+        }
+    }
+}
+
+impl OvsInterface {
+    pub(crate) fn update_ovs_iface(&mut self, other: &Self) {
+        if other.patch.is_some() {
+            self.patch = other.patch.clone();
+        }
+        if other.dpdk.is_some() {
+            self.dpdk = other.dpdk.clone();
         }
     }
 }
