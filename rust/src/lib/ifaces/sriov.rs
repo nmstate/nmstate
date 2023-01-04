@@ -99,11 +99,11 @@ impl SrIovConfig {
             vfs.sort_unstable_by(|a, b| a.id.cmp(&b.id));
 
             if !vfs.is_empty() {
-                let total_vfs = self.total_vfs.unwrap_or(
+                let total_vfs = self.total_vfs.unwrap_or_else(|| {
                     current.and_then(|c| c.total_vfs).unwrap_or(
                         vfs.iter().map(|v| v.id).max().unwrap_or_default() + 1,
-                    ),
-                );
+                    )
+                });
                 self.total_vfs = Some(total_vfs);
                 // Auto fill the missing
                 if total_vfs as usize != vfs.len() {
