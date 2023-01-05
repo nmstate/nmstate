@@ -100,11 +100,103 @@ impl LinuxBridgeInterface {
         Self::default()
     }
 
-    pub(crate) fn pre_edit_cleanup(&self) -> Result<(), NmstateError> {
-        self.bridge
+    pub(crate) fn sanitize(&mut self) -> Result<(), NmstateError> {
+        self.sort_ports();
+        self.sanitize_stp_opts()?;
+        self.use_upper_case_of_mac_address();
+        self.flatten_port_vlan_ranges();
+        self.sort_port_vlans();
+        self.remove_runtime_only_timers();
+        Ok(())
+    }
+
+    pub(crate) fn sanitize_for_verify(&mut self) {
+        self.treat_none_vlan_as_empty_dict();
+    }
+
+    fn use_upper_case_of_mac_address(&mut self) {
+        if let Some(address) = self
+            .bridge
+            .as_mut()
+            .and_then(|br_conf| br_conf.options.as_mut())
+            .and_then(|br_opts| br_opts.group_addr.as_mut())
+        {
+            address.make_ascii_uppercase()
+        }
+    }
+
+    fn flatten_port_vlan_ranges(&mut self) {
+        if let Some(port_confs) = self
+            .bridge
+            .as_mut()
+            .and_then(|br_conf| br_conf.port.as_mut())
+        {
+            for port_conf in port_confs {
+                port_conf
+                    .vlan
+                    .as_mut()
+                    .map(BridgePortVlanConfig::flatten_vlan_ranges);
+            }
+        }
+    }
+
+    fn sort_port_vlans(&mut self) {
+        if let Some(port_confs) = self
+            .bridge
+            .as_mut()
+            .and_then(|br_conf| br_conf.port.as_mut())
+        {
+            for port_conf in port_confs {
+                port_conf
+                    .vlan
+                    .as_mut()
+                    .map(BridgePortVlanConfig::sort_trunk_tags);
+            }
+        }
+    }
+
+    // This is for verifying when user desire `vlan: {}` for resetting VLAN
+    // filtering, the new current state will show as `vlan: None`.
+    fn treat_none_vlan_as_empty_dict(&mut self) {
+        if let Some(port_confs) = self
+            .bridge
+            .as_mut()
+            .and_then(|br_conf| br_conf.port.as_mut())
+        {
+            for port_conf in port_confs {
+                if port_conf.vlan.is_none() {
+                    port_conf.vlan = Some(BridgePortVlanConfig::new());
+                }
+            }
+        }
+    }
+
+    fn sort_ports(&mut self) {
+        if let Some(ref mut br_conf) = self.bridge {
+            if let Some(ref mut port_confs) = &mut br_conf.port {
+                port_confs.sort_unstable_by_key(|p| p.name.clone())
+            }
+        }
+    }
+
+    fn remove_runtime_only_timers(&mut self) {
+        if let Some(ref mut br_conf) = self.bridge {
+            if let Some(ref mut opts) = &mut br_conf.options {
+                opts.gc_timer = None;
+                opts.hello_timer = None;
+            }
+        }
+    }
+
+    fn sanitize_stp_opts(&self) -> Result<(), NmstateError> {
+        if let Some(stp_opts) = self
+            .bridge
             .as_ref()
-            .map(LinuxBridgeConfig::pre_edit_cleanup)
-            .transpose()?;
+            .and_then(|b| b.options.as_ref())
+            .and_then(|o| o.stp.as_ref())
+        {
+            stp_opts.sanitize()?;
+        }
         Ok(())
     }
 
@@ -123,9 +215,18 @@ impl LinuxBridgeInterface {
     }
 
     pub(crate) fn vlan_filtering_is_enabled(&self) -> bool {
-        self.bridge
-            .as_ref()
-            .map_or(false, LinuxBridgeConfig::vlan_filtering_is_enabled)
+        if let Some(ports) = self.bridge.as_ref().and_then(|b| b.port.as_ref())
+        {
+            ports.as_slice().iter().any(|port_conf| {
+                if let Some(vlan_conf) = port_conf.vlan.as_ref() {
+                    vlan_conf != &BridgePortVlanConfig::default()
+                } else {
+                    false
+                }
+            })
+        } else {
+            false
+        }
     }
 
     // Port name list change is not this function's responsibility, top level
@@ -167,6 +268,69 @@ impl LinuxBridgeInterface {
         }
         ret
     }
+
+    pub(crate) fn remove_port(&mut self, port_name: &str) {
+        if let Some(index) = self.bridge.as_ref().and_then(|br_conf| {
+            br_conf.port.as_ref().and_then(|port_confs| {
+                port_confs
+                    .iter()
+                    .position(|port_conf| port_conf.name == port_name)
+            })
+        }) {
+            self.bridge
+                .as_mut()
+                .and_then(|br_conf| br_conf.port.as_mut())
+                .map(|port_confs| port_confs.remove(index));
+        }
+    }
+
+    pub(crate) fn change_port_name(
+        &mut self,
+        origin_name: &str,
+        new_name: String,
+    ) {
+        if let Some(port_conf) = self
+            .bridge
+            .as_mut()
+            .and_then(|br_conf| br_conf.port.as_mut())
+            .and_then(|port_confs| {
+                port_confs
+                    .iter_mut()
+                    .find(|port_conf| port_conf.name == origin_name)
+            })
+        {
+            port_conf.name = new_name;
+        }
+    }
+
+    // * Merge port vlan config if not desired
+    pub(crate) fn special_merge(&mut self, desired: &Self, current: &Self) {
+        let mut new_ports = Vec::new();
+        if let (Some(des_ports), Some(cur_ports)) = (
+            desired.bridge.as_ref().and_then(|b| b.port.as_ref()),
+            current.bridge.as_ref().and_then(|b| b.port.as_ref()),
+        ) {
+            for des_port_conf in des_ports {
+                let mut new_port = des_port_conf.clone();
+                if des_port_conf.vlan.is_none() {
+                    for cur_port_conf in cur_ports {
+                        if cur_port_conf.name.as_str()
+                            == des_port_conf.name.as_str()
+                        {
+                            new_port.vlan = cur_port_conf.vlan.clone();
+                            break;
+                        }
+                    }
+                }
+                new_ports.push(new_port);
+            }
+        }
+        if !new_ports.is_empty() {
+            if let Some(br_conf) = self.bridge.as_mut() {
+                br_conf.port = Some(new_ports);
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -187,21 +351,6 @@ pub struct LinuxBridgeConfig {
 impl LinuxBridgeConfig {
     pub fn new() -> Self {
         Self::default()
-    }
-
-    pub(crate) fn pre_edit_cleanup(&self) -> Result<(), NmstateError> {
-        self.options
-            .as_ref()
-            .map(LinuxBridgeOptions::pre_edit_cleanup)
-            .transpose()?;
-        Ok(())
-    }
-
-    pub(crate) fn vlan_filtering_is_enabled(&self) -> bool {
-        self.port.as_ref().map_or(false, |p| {
-            p.iter()
-                .any(LinuxBridgePortConfig::vlan_filtering_is_enabled)
-        })
     }
 }
 
@@ -261,12 +410,6 @@ impl LinuxBridgePortConfig {
                 (Some(_), None) => true,
                 _ => false,
             }
-    }
-
-    fn vlan_filtering_is_enabled(&self) -> bool {
-        self.vlan
-            .as_ref()
-            .map_or(true, |v| *v != BridgePortVlanConfig::default())
     }
 }
 
@@ -387,14 +530,6 @@ impl LinuxBridgeOptions {
     pub fn new() -> Self {
         Self::default()
     }
-
-    pub(crate) fn pre_edit_cleanup(&self) -> Result<(), NmstateError> {
-        self.stp
-            .as_ref()
-            .map(LinuxBridgeStpOptions::pre_edit_cleanup)
-            .transpose()?;
-        Ok(())
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -446,7 +581,7 @@ impl LinuxBridgeStpOptions {
         Self::default()
     }
 
-    pub(crate) fn pre_edit_cleanup(&self) -> Result<(), NmstateError> {
+    pub(crate) fn sanitize(&self) -> Result<(), NmstateError> {
         if let Some(hello_time) = self.hello_time {
             if !(Self::HELLO_TIME_MIN..=Self::HELLO_TIME_MAX)
                 .contains(&hello_time)

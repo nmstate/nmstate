@@ -7,8 +7,7 @@ use super::super::nm_dbus::{
     NmConnection, NmRange, NmSettingOvsDpdk, NmSettingOvsExtIds,
     NmSettingOvsIface, NmSettingOvsPatch,
 };
-
-use super::connection::gen_nm_conn_setting;
+use super::super::settings::connection::gen_nm_conn_setting;
 
 use crate::{
     BaseInterface, BridgePortTunkTag, Interface, InterfaceType, NmstateError,
@@ -91,17 +90,8 @@ fn trunk_tag_to_nm_range(trunk_tag: &BridgePortTunkTag) -> NmRange {
 pub(crate) fn get_ovs_port_name(
     ovs_br_iface: &OvsBridgeInterface,
     ovs_iface_name: &str,
-    cur_ovs_br_iface: Option<&Interface>,
 ) -> Option<String> {
-    let port_confs = if ovs_br_iface.ports().is_none() {
-        if let Some(Interface::OvsBridge(cur_ovs_br_iface)) = cur_ovs_br_iface {
-            cur_ovs_br_iface.port_confs()
-        } else {
-            ovs_br_iface.port_confs()
-        }
-    } else {
-        ovs_br_iface.port_confs()
-    };
+    let port_confs = ovs_br_iface.port_confs();
     for port_conf in port_confs {
         if let Some(bond_conf) = &port_conf.bond {
             for bond_port_name in bond_conf.ports() {

@@ -1,6 +1,11 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use serde::{Deserialize, Serialize};
 
-use crate::{BaseInterface, ErrorKind, Interface, InterfaceType, NmstateError};
+use crate::{
+    BaseInterface, ErrorKind, Interface, InterfaceType, MergedInterface,
+    NmstateError,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
@@ -58,12 +63,19 @@ impl VrfInterface {
             .map(|ports| ports.as_slice().iter().map(|p| p.as_str()).collect())
     }
 
-    // Merge table ID from current if desired table ID is 0
-    pub(crate) fn pre_edit_cleanup(
-        &mut self,
-        current: Option<&Interface>,
-    ) -> Result<(), NmstateError> {
-        self.merge_table_id(current)
+    pub(crate) fn sanitize(&mut self) -> Result<(), NmstateError> {
+        // Ignoring the changes of MAC address of VRF as it is a layer 3
+        // interface.
+        self.base.mac_address = None;
+        if self.base.accept_all_mac_addresses == Some(false) {
+            self.base.accept_all_mac_addresses = None;
+        }
+        // Sort ports
+        if let Some(ports) = self.vrf.as_mut().and_then(|c| c.port.as_mut()) {
+            ports.sort();
+        }
+
+        Ok(())
     }
 
     pub(crate) fn merge_table_id(
@@ -118,4 +130,19 @@ pub struct VrfConfig {
     /// Use 0 to preserve current `table_id`.
     /// Deserialize and serialize from/to `route-table-id`.
     pub table_id: u32,
+}
+
+impl MergedInterface {
+    // Merge table ID from current if desired table ID is 0
+    pub(crate) fn post_inter_ifaces_process_vrf(
+        &mut self,
+    ) -> Result<(), NmstateError> {
+        if let Some(Interface::Vrf(apply_iface)) = self.for_apply.as_mut() {
+            apply_iface.merge_table_id(self.current.as_ref())?;
+        }
+        if let Some(Interface::Vrf(verify_iface)) = self.for_verify.as_mut() {
+            verify_iface.merge_table_id(self.current.as_ref())?;
+        }
+        Ok(())
+    }
 }

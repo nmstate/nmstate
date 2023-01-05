@@ -1,11 +1,12 @@
-use std::collections::{hash_map::Entry, HashMap, HashSet};
+// SPDX-License-Identifier: Apache-2.0
+
 use std::convert::TryFrom;
 
 use serde::{Deserialize, Serialize};
 
 use crate::{
     ip::{is_ipv6_addr, sanitize_ip_network, AddressFamily},
-    ErrorKind, InterfaceIpAddr, NmstateError,
+    ErrorKind, InterfaceIpAddr, InterfaceType, NmstateError,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -38,170 +39,6 @@ impl RouteRules {
 
     pub fn is_empty(&self) -> bool {
         self.config.is_none()
-    }
-
-    // * Neither ip_from nor ip_to should be defined
-    pub(crate) fn validate(&self) -> Result<(), NmstateError> {
-        if let Some(rules) = self.config.as_ref() {
-            for rule in rules.iter().filter(|r| !r.is_absent()) {
-                rule.validate()?;
-            }
-        }
-        Ok(())
-    }
-
-    // * desired absent route rule is removed unless another matching rule been
-    //   added.
-    // * desired static rule exists.
-    /// TODO: Hide it, internal use only
-    pub fn verify(&self, current: &Self) -> Result<(), NmstateError> {
-        if let Some(rules) = self.config.as_ref() {
-            let mut rules = rules.clone();
-            for rule in rules.iter_mut() {
-                rule.sanitize().ok();
-            }
-
-            let empty_vec: Vec<RouteRuleEntry> = Vec::new();
-            let cur_rules = match current.config.as_deref() {
-                Some(c) => c,
-                None => empty_vec.as_slice(),
-            };
-            for rule in rules.iter().filter(|r| !r.is_absent()) {
-                if !cur_rules.iter().any(|r| rule.is_match(r)) {
-                    let e = NmstateError::new(
-                        ErrorKind::VerificationError,
-                        format!(
-                            "Desired route rule {rule:?} not found after apply"
-                        ),
-                    );
-                    log::error!("{}", e);
-                    return Err(e);
-                }
-            }
-
-            for absent_rule in rules.iter().filter(|r| r.is_absent()) {
-                // We ignore absent rule if user is replacing old rule
-                // with new one.
-                if rules
-                    .iter()
-                    .any(|r| (!r.is_absent()) && absent_rule.is_match(r))
-                {
-                    continue;
-                }
-
-                if let Some(cur_rule) =
-                    cur_rules.iter().find(|r| absent_rule.is_match(r))
-                {
-                    let e = NmstateError::new(
-                        ErrorKind::VerificationError,
-                        format!(
-                            "Desired absent route rule {absent_rule:?} still found \
-                            after apply: {cur_rule:?}"
-                        ),
-                    );
-                    log::error!("{}", e);
-                    return Err(e);
-                }
-            }
-        }
-        Ok(())
-    }
-
-    // RouteRuleEntry been added/removed for specific table id , all(including
-    // desire and current) its rules will be included in return hash.
-    // Steps:
-    //  1. Find out all table id with desired add rules.
-    //  2. Find out all table id impacted by desired absent rules.
-    //  3. Copy all rules from current which are to changed table id.
-    //  4. Remove rules base on absent.
-    //  5. Add rules in desire.
-    //  6. Sort and remove duplicate rule.
-    pub(crate) fn gen_rule_changed_table_ids(
-        &self,
-        current: &Self,
-    ) -> Result<HashMap<u32, Vec<RouteRuleEntry>>, NmstateError> {
-        let mut ret: HashMap<u32, Vec<RouteRuleEntry>> = HashMap::new();
-        let cur_rules_index = current
-            .config
-            .as_ref()
-            .map(|c| create_rule_index_by_table_id(c.as_slice()))
-            .unwrap_or_default();
-        let mut desired_rules =
-            self.config.as_ref().cloned().unwrap_or_default();
-        for rule in desired_rules.iter_mut() {
-            rule.sanitize()?;
-        }
-        let des_rules_index =
-            create_rule_index_by_table_id(desired_rules.as_slice());
-
-        let mut table_ids_in_desire: HashSet<u32> =
-            des_rules_index.keys().copied().collect();
-
-        // Convert the absent rule without table id to multiple
-        // rules with table_id define.
-        let absent_rules = flat_absent_rule(
-            self.config.as_deref().unwrap_or(&[]),
-            current.config.as_deref().unwrap_or(&[]),
-        );
-
-        // Include table id which will be impacted by absent rules
-        for absent_rule in &absent_rules {
-            if let Some(i) = absent_rule.table_id {
-                log::debug!(
-                    "Route table is impacted by absent rule {:?}",
-                    absent_rule
-                );
-                table_ids_in_desire.insert(i);
-            }
-        }
-
-        // Copy current rules of desired route table
-        for table_id in &table_ids_in_desire {
-            if let Some(cur_rules) = cur_rules_index.get(table_id) {
-                ret.insert(
-                    *table_id,
-                    cur_rules
-                        .as_slice()
-                        .iter()
-                        .map(|r| (*r).clone())
-                        .collect::<Vec<RouteRuleEntry>>(),
-                );
-            }
-        }
-
-        // Apply absent rules
-        for absent_rule in &absent_rules {
-            // All absent_rule should have table id here
-            if let Some(table_id) = absent_rule.table_id.as_ref() {
-                if let Some(rules) = ret.get_mut(table_id) {
-                    rules.retain(|r| !absent_rule.is_match(r));
-                }
-            }
-        }
-
-        // Append desire rules
-        for (table_id, desire_rules) in des_rules_index.iter() {
-            let new_rules = desire_rules
-                .iter()
-                .map(|r| (*r).clone())
-                .collect::<Vec<RouteRuleEntry>>();
-            match ret.entry(*table_id) {
-                Entry::Occupied(o) => {
-                    o.into_mut().extend(new_rules);
-                }
-                Entry::Vacant(v) => {
-                    v.insert(new_rules);
-                }
-            };
-        }
-
-        // Sort and remove the duplicated rules
-        for desire_rules in ret.values_mut() {
-            desire_rules.sort_unstable();
-            desire_rules.dedup();
-        }
-
-        Ok(ret)
     }
 }
 
@@ -291,7 +128,7 @@ impl RouteRuleEntry {
         Self::default()
     }
 
-    pub(crate) fn validate(&self) -> Result<(), NmstateError> {
+    fn validate_ip_from_to(&self) -> Result<(), NmstateError> {
         if self.ip_from.is_none()
             && self.ip_to.is_none()
             && self.family.is_none()
@@ -299,7 +136,7 @@ impl RouteRuleEntry {
             let e = NmstateError::new(
                 ErrorKind::InvalidArgument,
                 format!(
-                    "Neither ip-from, ip-to nor family is defined {self:?}"
+                    "Neither ip-from, ip-to nor family is defined '{self}'"
                 ),
             );
             log::error!("{}", e);
@@ -311,7 +148,9 @@ impl RouteRuleEntry {
                 {
                     let e = NmstateError::new(
                         ErrorKind::InvalidArgument,
-                        format!("The ip-from format mismatches with the family set {self:?}"
+                        format!(
+                            "The ip-from format mismatches with the \
+                            family set '{self}'"
                         ),
                     );
                     log::error!("{}", e);
@@ -324,7 +163,9 @@ impl RouteRuleEntry {
                 {
                     let e = NmstateError::new(
                         ErrorKind::InvalidArgument,
-                        format!("The ip-to format mismatches with the family set {self:?}"
+                        format!(
+                            "The ip-to format mismatches with the family \
+                            set {self}"
                         ),
                     );
                     log::error!("{}", e);
@@ -332,6 +173,10 @@ impl RouteRuleEntry {
                 }
             }
         }
+        Ok(())
+    }
+
+    fn validate_fwmark_and_fwmask(&self) -> Result<(), NmstateError> {
         if self.fwmark.is_none() && self.fwmask.is_some() {
             let e = NmstateError::new(
                 ErrorKind::InvalidArgument,
@@ -346,11 +191,19 @@ impl RouteRuleEntry {
         Ok(())
     }
 
-    fn is_absent(&self) -> bool {
+    pub(crate) fn is_absent(&self) -> bool {
         matches!(self.state, Some(RouteRuleState::Absent))
     }
 
-    fn is_match(&self, other: &Self) -> bool {
+    pub(crate) fn is_ipv6(&self) -> bool {
+        self.family.as_ref() == Some(&AddressFamily::IPv6)
+            || self.ip_from.as_ref().map(|i| is_ipv6_addr(i.as_str()))
+                == Some(true)
+            || self.ip_to.as_ref().map(|i| is_ipv6_addr(i.as_str()))
+                == Some(true)
+    }
+
+    pub(crate) fn is_match(&self, other: &Self) -> bool {
         if let Some(ip_from) = self.ip_from.as_deref() {
             let ip_from = if !ip_from.contains('/') {
                 match InterfaceIpAddr::try_from(ip_from) {
@@ -395,10 +248,17 @@ impl RouteRuleEntry {
         {
             return false;
         }
-        if self.fwmark.is_some() && self.fwmark != other.fwmark {
+        if self.fwmark.is_some()
+            && self.fwmark.unwrap_or(0) != other.fwmark.unwrap_or(0)
+        {
             return false;
         }
-        if self.fwmask.is_some() && self.fwmask != other.fwmask {
+        if self.fwmask.is_some()
+            && self.fwmask.unwrap_or(0) != other.fwmask.unwrap_or(0)
+        {
+            return false;
+        }
+        if self.iif.is_some() && self.iif != other.iif {
             return false;
         }
         if self.action.is_some() && self.action != other.action {
@@ -422,7 +282,7 @@ impl RouteRuleEntry {
                 } else {
                     log::warn!(
                         "Neither ip-from, ip-to nor family \
-                    is defined, treating it a IPv4 route rule"
+                        is defined, treating it a IPv4 route rule"
                     );
                     true
                 }
@@ -466,6 +326,9 @@ impl RouteRuleEntry {
                 self.ip_to = Some(new_ip);
             }
         }
+        self.validate_ip_from_to()?;
+        self.validate_fwmark_and_fwmask()?;
+
         Ok(())
     }
 }
@@ -494,53 +357,41 @@ impl PartialOrd for RouteRuleEntry {
     }
 }
 
-// Absent rule will be ignored
-fn create_rule_index_by_table_id(
-    rules: &[RouteRuleEntry],
-) -> HashMap<u32, Vec<&RouteRuleEntry>> {
-    let mut ret: HashMap<u32, Vec<&RouteRuleEntry>> = HashMap::new();
-    for rule in rules {
-        if rule.is_absent() {
-            continue;
+impl std::fmt::Display for RouteRuleEntry {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut props = Vec::new();
+        if self.is_absent() {
+            props.push("state: absent".to_string());
         }
-        let table_id = match rule.table_id {
-            Some(RouteRuleEntry::USE_DEFAULT_ROUTE_TABLE) | None => {
-                RouteRuleEntry::DEFAULR_ROUTE_TABLE_ID
-            }
-            Some(i) => i,
-        };
-        match ret.entry(table_id) {
-            Entry::Occupied(o) => {
-                o.into_mut().push(rule);
-            }
-            Entry::Vacant(v) => {
-                v.insert(vec![rule]);
-            }
-        };
-    }
-    ret
-}
-
-// All the rules sending to this function has no table id defined.
-fn flat_absent_rule(
-    desire_rules: &[RouteRuleEntry],
-    cur_rules: &[RouteRuleEntry],
-) -> Vec<RouteRuleEntry> {
-    let mut ret: Vec<RouteRuleEntry> = Vec::new();
-    for absent_rule in desire_rules.iter().filter(|r| r.is_absent()) {
-        if absent_rule.table_id.is_none() {
-            for cur_rule in cur_rules {
-                if absent_rule.is_match(cur_rule) {
-                    let mut new_absent_rule = absent_rule.clone();
-                    new_absent_rule.table_id = cur_rule.table_id;
-                    ret.push(new_absent_rule);
-                }
-            }
-        } else {
-            ret.push(absent_rule.clone());
+        if let Some(v) = self.family.as_ref() {
+            props.push(format!("family: {v}"));
         }
+        if let Some(v) = self.ip_from.as_ref() {
+            props.push(format!("ip-from: {v}"));
+        }
+        if let Some(v) = self.ip_to.as_ref() {
+            props.push(format!("ip-to: {v}"));
+        }
+        if let Some(v) = self.priority.as_ref() {
+            props.push(format!("priority: {v}"));
+        }
+        if let Some(v) = self.table_id.as_ref() {
+            props.push(format!("route-table: {v}"));
+        }
+        if let Some(v) = self.fwmask.as_ref() {
+            props.push(format!("fwmask: {v}"));
+        }
+        if let Some(v) = self.fwmark.as_ref() {
+            props.push(format!("fwmark: {v}"));
+        }
+        if let Some(v) = self.iif.as_ref() {
+            props.push(format!("iif: {v}"));
+        }
+        if let Some(v) = self.action.as_ref() {
+            props.push(format!("action: {v}"));
+        }
+        write!(f, "{}", props.join(" "))
     }
-    ret
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
@@ -578,5 +429,84 @@ impl From<RouteRuleAction> for u8 {
             RouteRuleAction::Unreachable => FR_ACT_UNREACHABLE,
             RouteRuleAction::Prohibit => FR_ACT_PROHIBIT,
         }
+    }
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub(crate) struct MergedRouteRules {
+    desired: RouteRules,
+    current: RouteRules,
+    // The `for_apply` will hold two type of route rule:
+    //  * Desired route rules
+    //  * Current route rules been marked as absent
+    pub(crate) for_apply: Vec<RouteRuleEntry>,
+}
+
+impl MergedRouteRules {
+    pub(crate) fn new(
+        desired: RouteRules,
+        current: RouteRules,
+    ) -> Result<Self, NmstateError> {
+        let mut merged: Vec<RouteRuleEntry> = Vec::new();
+
+        let mut des_absent_rules: Vec<&RouteRuleEntry> = Vec::new();
+        if let Some(rules) = desired.config.as_ref() {
+            for rule in rules.as_slice().iter().filter(|r| r.is_absent()) {
+                des_absent_rules.push(rule);
+            }
+        }
+
+        if let Some(cur_rules) = current.config.as_ref() {
+            for rule in cur_rules {
+                if des_absent_rules
+                    .as_slice()
+                    .iter()
+                    .any(|absent_rule| absent_rule.is_match(rule))
+                {
+                    let mut new_rule = rule.clone();
+                    new_rule.state = Some(RouteRuleState::Absent);
+                    new_rule.sanitize()?;
+                    merged.push(new_rule);
+                }
+            }
+        }
+
+        if let Some(rules) = desired.config.as_ref() {
+            for rule in rules.as_slice().iter().filter(|r| !r.is_absent()) {
+                let mut rule = rule.clone();
+                rule.sanitize()?;
+                merged.push(rule);
+            }
+        }
+        Ok(Self {
+            desired,
+            current,
+            for_apply: merged,
+        })
+    }
+
+    pub(crate) fn remove_rules_to_ignored_ifaces(
+        &mut self,
+        ignored_ifaces: &[(String, InterfaceType)],
+    ) {
+        let ignored_ifaces: Vec<&str> = ignored_ifaces
+            .iter()
+            .filter(|(_, t)| !t.is_userspace())
+            .map(|(n, _)| n.as_str())
+            .collect();
+
+        self.for_apply.retain(|rule| {
+            if let Some(iif) = rule.iif.as_ref() {
+                !ignored_ifaces.contains(&iif.as_str())
+            } else {
+                true
+            }
+        })
+    }
+
+    pub(crate) fn is_changed(&self) -> bool {
+        (!self.desired.is_empty())
+            && (self.for_apply
+                != self.current.config.clone().unwrap_or_default())
     }
 }

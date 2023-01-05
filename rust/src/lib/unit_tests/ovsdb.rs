@@ -1,4 +1,6 @@
-use crate::OvsDbGlobalConfig;
+// SPDX-License-Identifier: Apache-2.0
+
+use crate::{MergedOvsDbGlobalConfig, OvsDbGlobalConfig};
 
 fn get_current_ovsdb_config() -> OvsDbGlobalConfig {
     serde_yaml::from_str(
@@ -20,7 +22,7 @@ other_config:
 
 #[test]
 fn test_ovsdb_merge_with_override_and_delete() {
-    let mut desired: OvsDbGlobalConfig = serde_yaml::from_str(
+    let desired: OvsDbGlobalConfig = serde_yaml::from_str(
         r#"---
 external_ids:
   a: A
@@ -36,7 +38,9 @@ other_config:
 
     let current = get_current_ovsdb_config();
 
-    let mut expect: OvsDbGlobalConfig = serde_yaml::from_str(
+    let merged_ovsdb = MergedOvsDbGlobalConfig::new(desired, current);
+
+    let expect: OvsDbGlobalConfig = serde_yaml::from_str(
         r#"---
 external_ids:
   a: A
@@ -50,18 +54,22 @@ other_config:
     )
     .unwrap();
 
-    desired.merge(&current);
-    desired.prop_list = Vec::new();
-    expect.prop_list = Vec::new();
-    assert_eq!(desired, expect);
+    assert_eq!(
+        &merged_ovsdb.external_ids,
+        expect.external_ids.as_ref().unwrap()
+    );
+    assert_eq!(
+        &merged_ovsdb.other_config,
+        expect.other_config.as_ref().unwrap()
+    );
 }
 
 #[test]
 fn test_ovsdb_merge_delete_all() {
-    let mut desired: OvsDbGlobalConfig = serde_yaml::from_str("{}").unwrap();
+    let desired: OvsDbGlobalConfig = serde_yaml::from_str("{}").unwrap();
     let current = get_current_ovsdb_config();
 
-    let mut expect: OvsDbGlobalConfig = serde_yaml::from_str(
+    let expect: OvsDbGlobalConfig = serde_yaml::from_str(
         r#"---
 external_ids: {}
 other_config: {}
@@ -69,15 +77,21 @@ other_config: {}
     )
     .unwrap();
 
-    desired.merge(&current);
-    desired.prop_list = Vec::new();
-    expect.prop_list = Vec::new();
-    assert_eq!(desired, expect);
+    let merged_ovsdb = MergedOvsDbGlobalConfig::new(desired, current);
+
+    assert_eq!(
+        &merged_ovsdb.external_ids,
+        expect.external_ids.as_ref().unwrap()
+    );
+    assert_eq!(
+        &merged_ovsdb.other_config,
+        expect.other_config.as_ref().unwrap()
+    );
 }
 
 #[test]
 fn test_ovsdb_merge_delete_all_external_ids() {
-    let mut desired: OvsDbGlobalConfig = serde_yaml::from_str(
+    let desired: OvsDbGlobalConfig = serde_yaml::from_str(
         r#"---
 external_ids: {}
 "#,
@@ -85,7 +99,7 @@ external_ids: {}
     .unwrap();
     let current = get_current_ovsdb_config();
 
-    let mut expect: OvsDbGlobalConfig = serde_yaml::from_str(
+    let expect: OvsDbGlobalConfig = serde_yaml::from_str(
         r#"---
 external_ids: {}
 other_config:
@@ -97,16 +111,21 @@ other_config:
     )
     .unwrap();
 
-    desired.merge(&current);
-    desired.prop_list = Vec::new();
-    expect.prop_list = Vec::new();
+    let merged_ovsdb = MergedOvsDbGlobalConfig::new(desired, current);
 
-    assert_eq!(desired, expect);
+    assert_eq!(
+        &merged_ovsdb.external_ids,
+        expect.external_ids.as_ref().unwrap()
+    );
+    assert_eq!(
+        &merged_ovsdb.other_config,
+        expect.other_config.as_ref().unwrap()
+    );
 }
 
 #[test]
 fn test_ovsdb_merge_delete_all_other_config() {
-    let mut desired: OvsDbGlobalConfig = serde_yaml::from_str(
+    let desired: OvsDbGlobalConfig = serde_yaml::from_str(
         r#"---
 other_config: {}
 "#,
@@ -114,7 +133,7 @@ other_config: {}
     .unwrap();
     let current = get_current_ovsdb_config();
 
-    let mut expect: OvsDbGlobalConfig = serde_yaml::from_str(
+    let expect: OvsDbGlobalConfig = serde_yaml::from_str(
         r#"---
 external_ids:
   a: A0
@@ -126,8 +145,14 @@ other_config: {}
     )
     .unwrap();
 
-    desired.merge(&current);
-    desired.prop_list = Vec::new();
-    expect.prop_list = Vec::new();
-    assert_eq!(desired, expect);
+    let merged_ovsdb = MergedOvsDbGlobalConfig::new(desired, current);
+
+    assert_eq!(
+        &merged_ovsdb.external_ids,
+        expect.external_ids.as_ref().unwrap()
+    );
+    assert_eq!(
+        &merged_ovsdb.other_config,
+        expect.other_config.as_ref().unwrap()
+    );
 }

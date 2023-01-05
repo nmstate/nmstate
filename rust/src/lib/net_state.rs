@@ -6,12 +6,10 @@ use std::collections::HashMap;
 use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::{
-    dns::{
-        get_cur_dns_ifaces, is_dns_changed, purge_dns_config,
-        reselect_dns_ifaces, validate_ipv6_link_local_address_dns_srv,
-    },
-    DnsState, ErrorKind, HostNameState, Interface, InterfaceType, Interfaces,
-    NmstateError, OvsDbGlobalConfig, RouteRules, Routes,
+    DnsState, ErrorKind, HostNameState, Interface, Interfaces, MergedDnsState,
+    MergedHostNameState, MergedInterfaces, MergedOvsDbGlobalConfig,
+    MergedRouteRules, MergedRoutes, NmstateError, OvsDbGlobalConfig,
+    RouteRules, Routes,
 };
 
 #[derive(Clone, Debug, Serialize, Default, PartialEq, Eq)]
@@ -318,332 +316,6 @@ impl NetworkState {
         ))
     }
 
-    // Return three NetworkState:
-    //  * State for addition.
-    //  * State for change.
-    //  * State for deletion.
-    // This function is the entry point for decision making which
-    // expanding complex desire network layout to flat network layout.
-    pub(crate) fn gen_state_for_apply(
-        &self,
-        current: &Self,
-    ) -> Result<(Self, Self, Self), NmstateError> {
-        self.routes.validate()?;
-        self.rules.validate()?;
-        self.dns.validate()?;
-
-        let mut add_net_state = NetworkState::new();
-        let mut chg_net_state = NetworkState::new();
-        let mut del_net_state = NetworkState::new();
-
-        let mut ifaces = self.interfaces.clone();
-
-        let (add_ifaces, chg_ifaces, del_ifaces) = ifaces
-            .gen_state_for_apply(&current.interfaces, self.memory_only)?;
-
-        add_net_state.interfaces = add_ifaces;
-        add_net_state.hostname = self.hostname.clone();
-        chg_net_state.interfaces = chg_ifaces;
-        del_net_state.interfaces = del_ifaces;
-
-        self.include_route_changes(
-            &mut add_net_state,
-            &mut chg_net_state,
-            &del_net_state,
-            current,
-        )?;
-
-        self.include_rule_changes(
-            &mut add_net_state,
-            &mut chg_net_state,
-            &del_net_state,
-            current,
-        )?;
-
-        self.include_dns_changes(
-            &mut add_net_state,
-            &mut chg_net_state,
-            current,
-        )?;
-
-        Ok((add_net_state, chg_net_state, del_net_state))
-    }
-
-    fn include_route_changes(
-        &self,
-        add_net_state: &mut Self,
-        chg_net_state: &mut Self,
-        del_net_state: &Self,
-        current: &Self,
-    ) -> Result<(), NmstateError> {
-        let mut changed_iface_routes =
-            self.routes.gen_changed_ifaces_and_routes(&current.routes)?;
-
-        for (iface_name, routes) in changed_iface_routes.drain() {
-            let cur_iface = current
-                .interfaces
-                .get_iface(&iface_name, InterfaceType::Unknown);
-            if del_net_state
-                .interfaces
-                .kernel_ifaces
-                .get(&iface_name)
-                .is_some()
-            {
-                // Ignore routes on absent interfaces.
-                continue;
-            }
-
-            if let Some(iface) =
-                add_net_state.interfaces.kernel_ifaces.get_mut(&iface_name)
-            {
-                // Desire interface might not have IP information defined
-                // in that case, we copy from current
-                iface.base_iface_mut().routes = Some(routes);
-                if let Some(cur_iface) = cur_iface {
-                    iface
-                        .base_iface_mut()
-                        .copy_ip_config_if_none(cur_iface.base_iface());
-                }
-            } else if let Some(iface) =
-                chg_net_state.interfaces.kernel_ifaces.get_mut(&iface_name)
-            {
-                iface.base_iface_mut().routes = Some(routes);
-                if let Some(cur_iface) = cur_iface {
-                    iface
-                        .base_iface_mut()
-                        .copy_ip_config_if_none(cur_iface.base_iface());
-                }
-            } else if let Some(cur_iface) = cur_iface {
-                // Interface not mentioned in desire state but impacted by
-                // wildcard absent route
-                let mut new_iface = cur_iface.clone_name_type_only();
-                new_iface
-                    .base_iface_mut()
-                    .copy_ip_config_if_none(cur_iface.base_iface());
-                new_iface.base_iface_mut().routes = Some(routes);
-                chg_net_state.append_interface_data(new_iface);
-            } else {
-                log::warn!(
-                    "The next hop interface of desired routes {:?} \
-                    does not exist",
-                    routes
-                );
-            }
-        }
-        Ok(())
-    }
-
-    fn include_rule_changes(
-        &self,
-        add_net_state: &mut Self,
-        chg_net_state: &mut Self,
-        del_net_state: &Self,
-        current: &Self,
-    ) -> Result<(), NmstateError> {
-        let mut changed_rules =
-            self.rules.gen_rule_changed_table_ids(&current.rules)?;
-
-        // Convert table id to interface name
-        for (table_id, rules) in changed_rules.drain() {
-            // We does not differentiate the IPv4 and IPv6 route table ID.
-            // The verification process will find out the error.
-            // We did not head any use case been limited by this.
-            let iface_name =
-                self.get_iface_name_for_route_table(current, table_id)?;
-            let cur_iface = current
-                .interfaces
-                .get_iface(&iface_name, InterfaceType::Unknown);
-            if del_net_state
-                .interfaces
-                .kernel_ifaces
-                .get(&iface_name)
-                .is_some()
-            {
-                // Ignore rules on absent interfaces.
-                continue;
-            }
-            if let Some(iface) =
-                add_net_state.interfaces.kernel_ifaces.get_mut(&iface_name)
-            {
-                if let Some(ex_rules) = iface.base_iface_mut().rules.as_mut() {
-                    ex_rules.extend(rules);
-                    ex_rules.sort_unstable();
-                    ex_rules.dedup();
-                } else {
-                    iface.base_iface_mut().rules = Some(rules);
-                }
-                if let Some(cur_iface) = cur_iface {
-                    iface
-                        .base_iface_mut()
-                        .copy_ip_config_if_none(cur_iface.base_iface());
-                }
-            } else if let Some(iface) =
-                chg_net_state.interfaces.kernel_ifaces.get_mut(&iface_name)
-            {
-                if let Some(ex_rules) = iface.base_iface_mut().rules.as_mut() {
-                    ex_rules.extend(rules);
-                    ex_rules.sort_unstable();
-                    ex_rules.dedup();
-                } else {
-                    iface.base_iface_mut().rules = Some(rules);
-                }
-                if let Some(cur_iface) = cur_iface {
-                    iface
-                        .base_iface_mut()
-                        .copy_ip_config_if_none(cur_iface.base_iface());
-                }
-            } else if let Some(cur_iface) = cur_iface {
-                // Interface not mentioned in desire state but impacted by
-                // wildcard absent route rule
-                let mut new_iface = cur_iface.clone_name_type_only();
-                new_iface
-                    .base_iface_mut()
-                    .copy_ip_config_if_none(cur_iface.base_iface());
-                new_iface.base_iface_mut().rules = Some(rules);
-                chg_net_state.append_interface_data(new_iface);
-            } else {
-                let e = NmstateError::new(
-                    ErrorKind::InvalidArgument,
-                    format!(
-                    "Failed to find a interface for desired routes rules {rules:?} "
-                ),
-                );
-                log::error!("{}", e);
-                return Err(e);
-            }
-        }
-        Ok(())
-    }
-
-    // The whole design of this DNS setting is matching NetworkManager
-    // design where DNS information is saved into each interface.
-    // When different network control backend nmstate supported, we need to
-    // move these code to NetworkManager plugin. Currently, we keep it
-    // here for consistency with route/route rule.
-    fn include_dns_changes(
-        &self,
-        add_net_state: &mut Self,
-        chg_net_state: &mut Self,
-        current: &Self,
-    ) -> Result<(), NmstateError> {
-        let mut self_clone = self.clone();
-        self_clone.dns.merge_current(&current.dns);
-
-        validate_ipv6_link_local_address_dns_srv(&self_clone, current)?;
-
-        if is_dns_changed(&self_clone, current) {
-            let (v4_iface_name, v6_iface_name) =
-                reselect_dns_ifaces(&self_clone, current);
-            let (cur_v4_ifaces, cur_v6_ifaces) =
-                get_cur_dns_ifaces(&current.interfaces);
-            if let Some(dns_conf) = &self_clone.dns.config {
-                if dns_conf.is_purge() {
-                    purge_dns_config(
-                        false,
-                        cur_v4_ifaces.as_slice(),
-                        self,
-                        chg_net_state,
-                        current,
-                    );
-                    purge_dns_config(
-                        true,
-                        cur_v6_ifaces.as_slice(),
-                        self,
-                        chg_net_state,
-                        current,
-                    );
-                } else {
-                    purge_dns_config(
-                        false,
-                        &cur_v4_ifaces,
-                        self,
-                        chg_net_state,
-                        current,
-                    );
-                    purge_dns_config(
-                        true,
-                        &cur_v6_ifaces,
-                        self,
-                        chg_net_state,
-                        current,
-                    );
-                    dns_conf.save_dns_to_iface(
-                        &v4_iface_name,
-                        &v6_iface_name,
-                        add_net_state,
-                        chg_net_state,
-                        current,
-                    )?;
-                }
-            }
-        } else {
-            log::debug!("DNS configuration unchanged");
-        }
-        Ok(())
-    }
-
-    fn _get_iface_name_for_route_table(&self, table_id: u32) -> Option<String> {
-        if let Some(routes) = self.routes.config.as_ref() {
-            for route in routes {
-                if route.table_id == Some(table_id) {
-                    if let Some(iface_name) = route.next_hop_iface.as_ref() {
-                        return Some(iface_name.to_string());
-                    }
-                }
-            }
-        }
-        // We need to differentiate IPv4 and IPv6 auto route table ID when
-        // user case shows up. Currently, we just assume user does not
-        // mix up the table number for IPv4 and IPv6 between interfaces.
-        for iface in self.interfaces.kernel_ifaces.values() {
-            if iface
-                .base_iface()
-                .ipv6
-                .as_ref()
-                .and_then(|c| c.auto_table_id)
-                .or_else(|| {
-                    iface
-                        .base_iface()
-                        .ipv4
-                        .as_ref()
-                        .and_then(|c| c.auto_table_id)
-                })
-                == Some(table_id)
-            {
-                return Some(iface.name().to_string());
-            }
-        }
-        None
-    }
-
-    // * Find desired interface with static route to given table ID.
-    // * Find desired interface with dynamic route to given table ID.
-    // * Find current interface with static route to given table ID.
-    // * Find current interface with dynamic route to given table ID.
-    fn get_iface_name_for_route_table(
-        &self,
-        current: &Self,
-        table_id: u32,
-    ) -> Result<String, NmstateError> {
-        match self
-            ._get_iface_name_for_route_table(table_id)
-            .or_else(|| current._get_iface_name_for_route_table(table_id))
-        {
-            Some(iface_name) => Ok(iface_name),
-            None => {
-                let e = NmstateError::new(
-                    ErrorKind::InvalidArgument,
-                    format!(
-                        "Route table {table_id} for route rule is not defined by \
-                        any routes"
-                    ),
-                );
-                log::error!("{}", e);
-                Err(e)
-            }
-        }
-    }
-
     #[cfg(not(feature = "query_apply"))]
     pub fn checkpoint_rollback(_checkpoint: &str) -> Result<(), NmstateError> {
         Err(NmstateError::new(
@@ -663,18 +335,57 @@ impl NetworkState {
                 .into(),
         ))
     }
+}
 
-    pub(crate) fn get_kernel_iface_with_route(
-        &self,
-        iface_name: &str,
-    ) -> Option<Interface> {
-        if let Some(iface) = self.interfaces.kernel_ifaces.get(iface_name) {
-            let mut ret = iface.clone();
-            ret.base_iface_mut().routes =
-                self.routes.get_config_routes_of_iface(iface_name);
-            Some(ret)
-        } else {
-            None
-        }
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub(crate) struct MergedNetworkState {
+    pub(crate) hostname: MergedHostNameState,
+    pub(crate) dns: MergedDnsState,
+    pub(crate) interfaces: MergedInterfaces,
+    pub(crate) ovsdb: MergedOvsDbGlobalConfig,
+    pub(crate) routes: MergedRoutes,
+    pub(crate) rules: MergedRouteRules,
+    pub(crate) memory_only: bool,
+    pub(crate) prop_list: Vec<&'static str>,
+}
+
+impl MergedNetworkState {
+    pub(crate) fn new(
+        desired: NetworkState,
+        current: NetworkState,
+        gen_conf_mode: bool,
+        memory_only: bool,
+    ) -> Result<Self, NmstateError> {
+        let interfaces = MergedInterfaces::new(
+            desired.interfaces,
+            current.interfaces,
+            gen_conf_mode,
+            memory_only,
+        )?;
+        let ignored_ifaces = interfaces.ignored_ifaces.as_slice();
+
+        let mut routes =
+            MergedRoutes::new(desired.routes, current.routes, &interfaces)?;
+        routes.remove_routes_to_ignored_ifaces(ignored_ifaces);
+
+        let mut rules = MergedRouteRules::new(desired.rules, current.rules)?;
+        rules.remove_rules_to_ignored_ifaces(ignored_ifaces);
+
+        let hostname =
+            MergedHostNameState::new(desired.hostname, current.hostname);
+
+        let ret = Self {
+            interfaces,
+            routes,
+            rules,
+            dns: MergedDnsState::new(desired.dns, current.dns)?,
+            ovsdb: MergedOvsDbGlobalConfig::new(desired.ovsdb, current.ovsdb),
+            hostname,
+            memory_only,
+            prop_list: desired.prop_list,
+        };
+        ret.validate_ipv6_link_local_address_dns_srv()?;
+
+        Ok(ret)
     }
 }

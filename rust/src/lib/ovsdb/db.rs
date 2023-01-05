@@ -1,11 +1,15 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::convert::TryInto;
 
 use serde_json::{Map, Value};
 
+use super::json_rpc::OvsDbJsonRpc;
+
 use crate::{
-    ovsdb::json_rpc::OvsDbJsonRpc, ErrorKind, NmstateError, OvsDbGlobalConfig,
+    ErrorKind, MergedOvsDbGlobalConfig, NmstateError, OvsDbGlobalConfig,
 };
 
 const OVS_DB_NAME: &str = "Open_vSwitch";
@@ -259,7 +263,7 @@ impl OvsDbConnection {
     }
     pub(crate) fn apply_global_conf(
         &mut self,
-        ovs_conf: &OvsDbGlobalConfig,
+        ovs_conf: &MergedOvsDbGlobalConfig,
     ) -> Result<(), NmstateError> {
         let update: OvsDbUpdate = ovs_conf.into();
         self.rpc.exec(

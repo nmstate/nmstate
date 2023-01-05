@@ -1,12 +1,11 @@
-use log::error;
+// SPDX-License-Identifier: Apache-2.0
+
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    ip::validate_wait_ip,
-    mptcp::{mptcp_pre_edit_cleanup, validate_mptcp},
     ErrorKind, EthtoolConfig, Ieee8021XConfig, InterfaceIpv4, InterfaceIpv6,
-    InterfaceState, InterfaceType, LldpConfig, MptcpConfig, NmstateError,
-    OvsDbIfaceConfig, RouteEntry, RouteRuleEntry, WaitIp,
+    InterfaceState, InterfaceType, LldpConfig, MergedInterface, MptcpConfig,
+    NmstateError, OvsDbIfaceConfig, RouteEntry, WaitIp,
 };
 
 // TODO: Use prop_list to Serialize like InterfaceIpv4 did
@@ -39,7 +38,7 @@ pub struct BaseInterface {
     /// MAC address never change after reboots(normally stored in firmware of
     /// network interface). Using the same format as `mac_address` property.
     /// Ignored during apply.
-    /// TODO: expose it.
+    /// TODO: expose it and we do not special merge for this.
     pub permanent_mac_address: Option<String>,
     #[serde(
         skip_serializing_if = "Option::is_none",
@@ -121,53 +120,34 @@ pub struct BaseInterface {
     pub(crate) up_priority: u32,
     #[serde(skip)]
     pub(crate) routes: Option<Vec<RouteEntry>>,
-    #[serde(skip)]
-    pub(crate) rules: Option<Vec<RouteRuleEntry>>,
     #[serde(flatten)]
     pub _other: serde_json::Map<String, serde_json::Value>,
 }
 
 impl BaseInterface {
-    pub(crate) fn pre_edit_cleanup(
-        &mut self,
-        current: Option<&Self>,
-    ) -> Result<(), NmstateError> {
-        self.validate_mtu(current)?;
-        validate_mptcp(self)?;
-        validate_wait_ip(self)?;
-
-        // Do not allow changing min_mtu and max_mtu
-        self.max_mtu = None;
-        self.min_mtu = None;
-        if !self.can_have_ip()
-            && (self.ipv4.as_ref().map(|ipv4| ipv4.enabled) == Some(true)
-                || self.ipv6.as_ref().map(|ipv6| ipv6.enabled) == Some(true))
-        {
-            let e = NmstateError::new(
-                ErrorKind::InvalidArgument,
-                format!(
-                    "Interface {} cannot have IP enabled as it is \
-                    attached to a controller",
-                    self.name
-                ),
-            );
-            error!("{}", e);
-            return Err(e);
+    // Besides normal HashMap merging:
+    //  * the IP stacks need extra care
+    //  * `copy_mac_from` is skip_serializing
+    //  * `permanent_mac_address` is skip_serializing
+    pub(crate) fn special_merge(&mut self, desired: &Self, current: &Self) {
+        if let Some(ipv4) = self.ipv4.as_mut() {
+            if let (Some(d), Some(c)) =
+                (desired.ipv4.as_ref(), current.ipv4.as_ref())
+            {
+                ipv4.special_merge(d, c);
+            }
         }
-
-        if let Some(ref mut ipv4) = self.ipv4 {
-            ipv4.pre_edit_cleanup(current.and_then(|i| i.ipv4.as_ref()));
+        if let Some(ipv6) = self.ipv6.as_mut() {
+            if let (Some(d), Some(c)) =
+                (desired.ipv6.as_ref(), current.ipv6.as_ref())
+            {
+                ipv6.special_merge(d, c);
+            }
         }
-        if let Some(ref mut ipv6) = self.ipv6 {
-            ipv6.pre_edit_cleanup(current.and_then(|i| i.ipv6.as_ref()));
+        if self.permanent_mac_address.is_none() {
+            self.permanent_mac_address = current.permanent_mac_address.clone();
         }
-        if let Some(ref mut ethtool_conf) = self.ethtool {
-            ethtool_conf.pre_edit_cleanup();
-        }
-
-        mptcp_pre_edit_cleanup(self);
-
-        Ok(())
+        self.copy_mac_from = desired.copy_mac_from.clone();
     }
 
     fn has_controller(&self) -> bool {
@@ -201,35 +181,6 @@ impl BaseInterface {
         }
     }
 
-    fn validate_mtu(&self, current: Option<&Self>) -> Result<(), NmstateError> {
-        if let (Some(desire_mtu), Some(min_mtu), Some(max_mtu)) = (
-            self.mtu,
-            current.and_then(|c| c.min_mtu),
-            current.and_then(|c| c.max_mtu),
-        ) {
-            if desire_mtu > max_mtu {
-                return Err(NmstateError::new(
-                    ErrorKind::InvalidArgument,
-                    format!(
-                        "Desired MTU {} for interface {} \
-                        is bigger than maximum allowed MTU {}",
-                        desire_mtu, self.name, max_mtu
-                    ),
-                ));
-            } else if desire_mtu < min_mtu {
-                return Err(NmstateError::new(
-                    ErrorKind::InvalidArgument,
-                    format!(
-                        "Desired MTU {} for interface {} \
-                        is smaller than minimum allowed MTU {}",
-                        desire_mtu, self.name, min_mtu
-                    ),
-                ));
-            }
-        }
-        Ok(())
-    }
-
     pub(crate) fn clone_name_type_only(&self) -> Self {
         Self {
             name: self.name.clone(),
@@ -239,18 +190,58 @@ impl BaseInterface {
         }
     }
 
-    pub(crate) fn copy_ip_config_if_none(&mut self, current: &Self) {
-        if self.ipv4.is_none() {
-            self.ipv4 = current.ipv4.clone();
-        }
-        if self.ipv6.is_none() {
-            self.ipv6 = current.ipv6.clone();
-        }
-    }
-
     pub(crate) fn hide_secrets(&mut self) {
         if let Some(conf) = self.ieee8021x.as_mut() {
             conf.hide_secrets();
+        }
+    }
+
+    pub(crate) fn is_ipv4_enabled(&self) -> bool {
+        self.ipv4.as_ref().map(|i| i.enabled) == Some(true)
+    }
+
+    pub(crate) fn is_ipv6_enabled(&self) -> bool {
+        self.ipv6.as_ref().map(|i| i.enabled) == Some(true)
+    }
+
+    pub(crate) fn sanitize(&mut self) -> Result<(), NmstateError> {
+        if let Some(mac) = self.mac_address.as_mut() {
+            mac.make_ascii_uppercase();
+        }
+        // These are not for apply or verify
+        self.permanent_mac_address = None;
+        self.max_mtu = None;
+        self.min_mtu = None;
+        self.copy_mac_from = None;
+
+        if let Some(ipv4_conf) = self.ipv4.as_mut() {
+            ipv4_conf.sanitize()?;
+        }
+        if let Some(ipv6_conf) = self.ipv6.as_mut() {
+            ipv6_conf.sanitize()?;
+        }
+        if let Some(lldp_conf) = self.lldp.as_mut() {
+            lldp_conf.sanitize();
+        }
+
+        if !self.can_have_ip() {
+            self.wait_ip = None;
+        }
+        Ok(())
+    }
+
+    pub(crate) fn sanitize_for_verify(&mut self) {
+        if self.controller.as_deref() == Some("") {
+            self.controller = None;
+        }
+        if let Some(mptcp_conf) = self.mptcp.as_mut() {
+            mptcp_conf.sanitize_for_verify();
+        }
+        if let Some(ipv4_conf) = self.ipv4.as_mut() {
+            ipv4_conf.sanitize_for_verify();
+        }
+        if let Some(ipv6_conf) = self.ipv6.as_mut() {
+            ipv6_conf.sanitize_for_verify();
         }
     }
 }
@@ -261,4 +252,73 @@ fn default_state() -> InterfaceState {
 
 fn default_iface_type() -> InterfaceType {
     InterfaceType::Unknown
+}
+
+impl MergedInterface {
+    pub(crate) fn post_inter_ifaces_process_base_iface(
+        &mut self,
+    ) -> Result<(), NmstateError> {
+        self.post_inter_ifaces_process_ip()?;
+        self.post_inter_ifaces_process_mptcp()?;
+        self.post_inter_ifaces_process_ethtool();
+        self.validate_mtu()?;
+        self.validate_can_have_ip()?;
+        Ok(())
+    }
+
+    fn validate_mtu(&self) -> Result<(), NmstateError> {
+        if let (Some(desired), Some(current)) = (
+            self.desired.as_ref().map(|i| i.base_iface()),
+            self.current.as_ref().map(|i| i.base_iface()),
+        ) {
+            if let (Some(desire_mtu), Some(min_mtu), Some(max_mtu)) =
+                (desired.mtu, current.min_mtu, current.max_mtu)
+            {
+                if desire_mtu > max_mtu {
+                    return Err(NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        format!(
+                            "Desired MTU {} for interface {} \
+                            is bigger than maximum allowed MTU {}",
+                            desire_mtu, desired.name, max_mtu
+                        ),
+                    ));
+                } else if desire_mtu < min_mtu {
+                    return Err(NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        format!(
+                            "Desired MTU {} for interface {} \
+                            is smaller than minimum allowed MTU {}",
+                            desire_mtu, desired.name, min_mtu
+                        ),
+                    ));
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn validate_can_have_ip(&mut self) -> Result<(), NmstateError> {
+        if self.is_desired() {
+            if let Some(apply_iface) = self.for_apply.as_ref() {
+                let base_iface = apply_iface.base_iface();
+                if !base_iface.can_have_ip()
+                    && (base_iface.ipv4.as_ref().map(|ipv4| ipv4.enabled)
+                        == Some(true)
+                        || base_iface.ipv6.as_ref().map(|ipv6| ipv6.enabled)
+                            == Some(true))
+                {
+                    return Err(NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        format!(
+                            "Interface {} cannot have IP enabled as it is \
+                            attached to a controller where IP is not allowed",
+                            base_iface.name.as_str()
+                        ),
+                    ));
+                }
+            }
+        }
+        Ok(())
+    }
 }

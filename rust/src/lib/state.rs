@@ -1,7 +1,8 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use serde_json::Value;
 
-use crate::NetworkState;
-
+#[cfg(feature = "query_apply")]
 fn _get_json_value_difference<'a, 'b>(
     reference: String,
     desire: &'a Value,
@@ -24,7 +25,7 @@ fn _get_json_value_difference<'a, 'b>(
         }
         (Value::String(des), Value::String(cur)) => {
             if des != cur {
-                if des == NetworkState::PASSWORD_HID_BY_NMSTATE {
+                if des == crate::NetworkState::PASSWORD_HID_BY_NMSTATE {
                     None
                 } else {
                     Some((reference, desire, current))
@@ -73,6 +74,7 @@ fn _get_json_value_difference<'a, 'b>(
     }
 }
 
+#[cfg(feature = "query_apply")]
 pub(crate) fn get_json_value_difference<'a, 'b>(
     reference: String,
     desire: &'a Value,
@@ -91,6 +93,7 @@ pub(crate) fn get_json_value_difference<'a, 'b>(
     }
 }
 
+#[cfg(feature = "query_apply")]
 fn should_ignore(reference: &str, desire: &Value, current: &Value) -> bool {
     if reference.contains("interface.link-aggregation.options") {
         // Per oVirt request, bond option difference should not
@@ -104,5 +107,20 @@ fn should_ignore(reference: &str, desire: &Value, current: &Value) -> bool {
         true
     } else {
         false
+    }
+}
+
+// Whatever not defined in desired but defined in current will be copied
+pub(crate) fn merge_json_value(desired: &mut Value, current: &Value) {
+    if let (Some(desired), Some(current)) =
+        (desired.as_object_mut(), current.as_object())
+    {
+        for (cur_key, cur_value) in current.iter() {
+            if let Some(des_value) = desired.get_mut(cur_key) {
+                merge_json_value(des_value, cur_value);
+            } else {
+                desired.insert(cur_key.clone(), cur_value.clone());
+            }
+        }
     }
 }

@@ -8,18 +8,17 @@ use super::{
 };
 use crate::nm::nm_dbus::{NmConnection, NmSettingIp, NmSettingIpMethod};
 use crate::{
-    AddressFamily, BaseInterface, Dhcpv4ClientId, Dhcpv6Duid, ErrorKind,
-    Interface, InterfaceIpv4, InterfaceIpv6, Ipv6AddrGenMode, NmstateError,
-    RouteEntry, RouteRuleEntry, WaitIp,
+    BaseInterface, Dhcpv4ClientId, Dhcpv6Duid, ErrorKind, Interface,
+    InterfaceIpv4, InterfaceIpv6, Ipv6AddrGenMode, NmstateError, RouteEntry,
+    WaitIp,
 };
 
 const ADDR_GEN_MODE_EUI64: i32 = 0;
 const ADDR_GEN_MODE_STABLE_PRIVACY: i32 = 1;
 
-fn gen_nm_ipv4_setting<'a>(
+fn gen_nm_ipv4_setting(
     iface_ip: Option<&InterfaceIpv4>,
     routes: Option<&[RouteEntry]>,
-    rules: impl std::iter::Iterator<Item = &'a RouteRuleEntry>,
     nm_conn: &mut NmConnection,
 ) -> Result<(), NmstateError> {
     let iface_ip = match iface_ip {
@@ -88,7 +87,9 @@ fn gen_nm_ipv4_setting<'a>(
         // Clean up static routes if ip is disabled
         nm_setting.routes = Vec::new();
     }
-    nm_setting.route_rules = gen_nm_ip_rules(rules, false)?;
+    if let Some(rules) = iface_ip.rules.as_ref() {
+        nm_setting.route_rules = gen_nm_ip_rules(rules, false)?;
+    }
     if let Some(dns) = &iface_ip.dns {
         apply_nm_dns_setting(&mut nm_setting, dns);
     }
@@ -96,10 +97,9 @@ fn gen_nm_ipv4_setting<'a>(
     Ok(())
 }
 
-fn gen_nm_ipv6_setting<'a>(
+fn gen_nm_ipv6_setting(
     iface_ip: Option<&InterfaceIpv6>,
     routes: Option<&[RouteEntry]>,
-    rules: impl std::iter::Iterator<Item = &'a RouteRuleEntry>,
     nm_conn: &mut NmConnection,
 ) -> Result<(), NmstateError> {
     let iface_ip = match iface_ip {
@@ -181,7 +181,9 @@ fn gen_nm_ipv6_setting<'a>(
             nm_setting.routes = gen_nm_ip_routes(routes, true)?;
         }
     }
-    nm_setting.route_rules = gen_nm_ip_rules(rules, true)?;
+    if let Some(rules) = iface_ip.rules.as_ref() {
+        nm_setting.route_rules = gen_nm_ip_rules(rules, true)?;
+    }
     if let Some(dns) = &iface_ip.dns {
         apply_nm_dns_setting(&mut nm_setting, dns);
     }
@@ -192,29 +194,12 @@ fn gen_nm_ipv6_setting<'a>(
 pub(crate) fn gen_nm_ip_setting(
     iface: &Interface,
     routes: Option<&[RouteEntry]>,
-    rules: Option<&[RouteRuleEntry]>,
     nm_conn: &mut NmConnection,
 ) -> Result<(), NmstateError> {
     let base_iface = iface.base_iface();
     if base_iface.can_have_ip() {
-        gen_nm_ipv4_setting(
-            base_iface.ipv4.as_ref(),
-            routes,
-            rules
-                .unwrap_or_default()
-                .iter()
-                .filter(|r| r.family == Some(AddressFamily::IPv4)),
-            nm_conn,
-        )?;
-        gen_nm_ipv6_setting(
-            base_iface.ipv6.as_ref(),
-            routes,
-            rules
-                .unwrap_or_default()
-                .iter()
-                .filter(|r| r.family == Some(AddressFamily::IPv6)),
-            nm_conn,
-        )?;
+        gen_nm_ipv4_setting(base_iface.ipv4.as_ref(), routes, nm_conn)?;
+        gen_nm_ipv6_setting(base_iface.ipv6.as_ref(), routes, nm_conn)?;
         apply_nmstate_wait_ip(base_iface, nm_conn);
     } else {
         nm_conn.ipv4 = None;

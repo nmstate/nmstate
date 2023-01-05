@@ -9,12 +9,13 @@ use super::{
     ovs::get_ovs_port_name,
 };
 
-use crate::{ErrorKind, Interface, InterfaceType, NmstateError};
+use crate::{
+    ErrorKind, Interface, InterfaceType, MergedInterfaces, NmstateError,
+};
 
 pub(crate) fn use_uuid_for_controller_reference(
     nm_conns: &mut [NmConnection],
-    des_user_space_ifaces: &HashMap<(String, InterfaceType), Interface>,
-    cur_user_space_ifaces: &HashMap<(String, InterfaceType), Interface>,
+    merged_ifaces: &MergedInterfaces,
     exist_nm_conns: &[NmConnection],
 ) -> Result<(), NmstateError> {
     let mut name_type_2_uuid_index: HashMap<(String, String), String> =
@@ -81,25 +82,23 @@ pub(crate) fn use_uuid_for_controller_reference(
         }
 
         if ctrl_type == "ovs-port" {
-            let cur_ovs_br_iface = cur_user_space_ifaces
-                .get(&(ctrl_name.to_string(), InterfaceType::OvsBridge));
-            if let Some(Interface::OvsBridge(ovs_br_iface)) =
-                des_user_space_ifaces
-                    .get(&(ctrl_name.to_string(), InterfaceType::OvsBridge))
-                    .or(cur_ovs_br_iface)
+            if let Some(merged_iface) = merged_ifaces
+                .user_ifaces
+                .get(&(ctrl_name.to_string(), InterfaceType::OvsBridge))
             {
-                if let Some(iface_name) = nm_conn.iface_name() {
-                    if let Some(ovs_port_name) = get_ovs_port_name(
-                        ovs_br_iface,
-                        iface_name,
-                        cur_ovs_br_iface,
-                    ) {
-                        ctrl_name = ovs_port_name.to_string();
-                    } else {
-                        // User is attaching port to existing OVS bridge
-                        // using `controller` property without OVS bridge
-                        // interface mentioned in desire state
-                        ctrl_name = iface_name.to_string();
+                if let Interface::OvsBridge(ovs_br_iface) = &merged_iface.merged
+                {
+                    if let Some(iface_name) = nm_conn.iface_name() {
+                        if let Some(ovs_port_name) =
+                            get_ovs_port_name(ovs_br_iface, iface_name)
+                        {
+                            ctrl_name = ovs_port_name.to_string();
+                        } else {
+                            // User is attaching port to existing OVS bridge
+                            // using `controller` property without OVS bridge
+                            // interface mentioned in desire state
+                            ctrl_name = iface_name.to_string();
+                        }
                     }
                 }
             } else {
@@ -141,21 +140,28 @@ pub(crate) fn use_uuid_for_controller_reference(
 
 pub(crate) fn use_uuid_for_parent_reference(
     nm_conns: &mut [NmConnection],
-    des_kernel_ifaces: &HashMap<String, Interface>,
+    merged_ifaces: &MergedInterfaces,
     exist_nm_conns: &[NmConnection],
 ) {
     // Pending changes: "child_iface_name: parent_nm_uuid"
     let mut pending_changes: HashMap<String, String> = HashMap::new();
 
-    for iface in des_kernel_ifaces.values() {
-        if let Some(parent) = iface.parent() {
+    for iface in merged_ifaces
+        .kernel_ifaces
+        .values()
+        .filter(|i| i.is_changed())
+    {
+        if let Some(parent) = iface.for_apply.as_ref().and_then(|i| i.parent())
+        {
             if let Some(parent_uuid) =
                 search_uuid_of_kernel_nm_conns(nm_conns, parent).or_else(|| {
                     search_uuid_of_kernel_nm_conns(exist_nm_conns, parent)
                 })
             {
-                pending_changes
-                    .insert(iface.name().to_string(), parent_uuid.to_string());
+                pending_changes.insert(
+                    iface.merged.name().to_string(),
+                    parent_uuid.to_string(),
+                );
             }
         }
     }

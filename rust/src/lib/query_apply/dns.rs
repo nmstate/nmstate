@@ -1,76 +1,63 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::net::{Ipv4Addr, Ipv6Addr};
+use crate::{DnsState, ErrorKind, MergedDnsState, NmstateError};
 
-use crate::{ip::is_ipv6_addr, DnsState, ErrorKind, NmstateError};
+impl MergedDnsState {
+    pub(crate) fn verify(
+        &self,
+        current: &DnsState,
+    ) -> Result<(), NmstateError> {
+        if !self.is_changed() {
+            return Ok(());
+        }
+        let cur_srvs: Vec<String> = current
+            .config
+            .as_ref()
+            .and_then(|c| c.server.as_ref())
+            .cloned()
+            .unwrap_or_default();
+        let cur_schs: Vec<String> = current
+            .config
+            .as_ref()
+            .and_then(|c| c.search.as_ref())
+            .cloned()
+            .unwrap_or_default();
 
-impl DnsState {
-    pub(crate) fn verify(&self, current: &Self) -> Result<(), NmstateError> {
-        if let Some(conf) = self.config.as_ref() {
-            if let Some(srvs) = conf.server.as_ref() {
-                let cur_conf = current.config.as_ref().ok_or_else(|| {
-                    // Do not log verification error as we have fail-retry
-                    NmstateError::new(
-                        ErrorKind::VerificationError,
-                        format!(
-                            "Failed to apply DNS config: desire {self:?} got {current:?}"
-                        ),
-                    )
-                })?;
-                let mut canonicalized_srvs = Vec::new();
-                for srv in srvs {
-                    if is_ipv6_addr(srv) {
-                        let splits: Vec<&str> = srv.split('%').collect();
-                        if splits.len() == 2 {
-                            if let Ok(ip_addr) = splits[0].parse::<Ipv6Addr>() {
-                                canonicalized_srvs
-                                    .push(format!("{}%{}", ip_addr, splits[1]));
-                            }
-                        } else if let Ok(ip_addr) = srv.parse::<Ipv6Addr>() {
-                            canonicalized_srvs.push(ip_addr.to_string());
-                        }
-                    } else if let Ok(ip_addr) = srv.parse::<Ipv4Addr>() {
-                        canonicalized_srvs.push(ip_addr.to_string());
-                    }
-                }
+        let cur_conf = if let Some(c) = current.config.as_ref() {
+            c
+        } else {
+            return Err(NmstateError::new(
+                ErrorKind::VerificationError,
+                "Current DNS config is empty".to_string(),
+            ));
+        };
 
-                if cur_conf.server != Some(canonicalized_srvs)
-                    && !(cur_conf.server.is_none() && srvs.is_empty())
-                {
-                    return Err(NmstateError::new(
-                        ErrorKind::VerificationError,
-                        format!(
-                            "Failed to apply DNS config: desire name servers \
-                            {:?}, got {:?}",
-                            srvs,
-                            cur_conf.server.as_ref()
-                        ),
-                    ));
-                }
-            }
-            if let Some(schs) = conf.search.as_ref() {
-                let cur_conf = current.config.as_ref().ok_or_else(|| {
-                    NmstateError::new(
-                        ErrorKind::VerificationError,
-                        format!(
-                            "Failed to apply DNS config: desire {self:?} got {current:?}"
-                        ),
-                    )
-                })?;
-                if cur_conf.search != Some(schs.to_vec())
-                    && !(cur_conf.search.is_none() && schs.is_empty())
-                {
-                    return Err(NmstateError::new(
-                        ErrorKind::VerificationError,
-                        format!(
-                            "Failed to apply DNS config: desire searches \
-                            {:?}, got {:?}",
-                            schs,
-                            cur_conf.search.as_ref()
-                        ),
-                    ));
-                }
-            }
+        if cur_srvs != self.servers
+            && !(cur_conf.server.is_none() && self.servers.is_empty())
+        {
+            return Err(NmstateError::new(
+                ErrorKind::VerificationError,
+                format!(
+                    "Failed to apply DNS config: desire name servers '{}', \
+                    got '{}'",
+                    self.servers.as_slice().join(" "),
+                    cur_srvs.as_slice().join(" "),
+                ),
+            ));
+        }
+
+        if cur_schs != self.searches
+            && !(cur_conf.search.is_none() && self.searches.is_empty())
+        {
+            return Err(NmstateError::new(
+                ErrorKind::VerificationError,
+                format!(
+                    "Failed to apply DNS config: desire searches '{}',
+                    got '{}'",
+                    self.searches.as_slice().join(" "),
+                    cur_schs.as_slice().join(" "),
+                ),
+            ));
         }
         Ok(())
     }

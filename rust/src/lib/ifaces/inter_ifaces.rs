@@ -1,23 +1,18 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use std::iter::FromIterator;
 
 use serde::{
     ser::SerializeSeq, Deserialize, Deserializer, Serialize, Serializer,
 };
 
 use crate::{
-    ifaces::ethernet::handle_veth_peer_changes,
-    ifaces::inter_ifaces_controller::{
-        check_infiniband_as_ports, check_overbook_ports, handle_changed_ports,
-        preserve_ctrl_cfg_if_unchanged, set_ifaces_up_priority,
-        validate_new_ovs_iface_has_controller,
-    },
-    ifaces::sriov::check_sriov_capability,
-    ErrorKind, Interface, InterfaceState, InterfaceType, NmstateError,
+    ErrorKind, EthernetInterface, Interface, InterfaceState, InterfaceType,
+    MergedInterface, NmstateError,
 };
 
-// The max loop count for Interfaces.set_up_priority()
+// The max loop count for Interfaces.set_ifaces_up_priority()
 // This allows interface with 4 nested levels in any order.
 // To support more nested level, user could place top controller at the
 // beginning of desire state
@@ -122,6 +117,31 @@ impl Interfaces {
         }
     }
 
+    fn remove_iface(
+        &mut self,
+        iface_name: &str,
+        iface_type: InterfaceType,
+    ) -> Option<Interface> {
+        if iface_type == InterfaceType::Unknown {
+            self.kernel_ifaces
+                .remove(&iface_name.to_string())
+                .or_else(|| {
+                    if let Some((n, t)) =
+                        self.user_ifaces.keys().find(|(i, _)| i == iface_name)
+                    {
+                        self.user_ifaces.remove(&(n.to_string(), t.clone()))
+                    } else {
+                        None
+                    }
+                })
+        } else if iface_type.is_userspace() {
+            self.user_ifaces
+                .remove(&(iface_name.to_string(), iface_type))
+        } else {
+            self.kernel_ifaces.remove(&iface_name.to_string())
+        }
+    }
+
     /// Append specified [Interface].
     pub fn push(&mut self, iface: Interface) {
         self.insert_order
@@ -134,156 +154,528 @@ impl Interfaces {
         }
     }
 
-    pub(crate) fn gen_state_for_apply(
-        &mut self,
-        current: &Self,
-        memory_only: bool,
-    ) -> Result<(Self, Self, Self), NmstateError> {
-        let mut add_ifaces = Self::new();
-        let mut chg_ifaces = Self::new();
-        let mut del_ifaces = Self::new();
-        let mut new_ovs_ifaces = Vec::new();
-
-        self.apply_copy_mac_from(current)?;
-        self.validate_controller_and_port_list_confliction()?;
-        handle_changed_ports(self, current)?;
-        preserve_ctrl_cfg_if_unchanged(self, current);
-        self.set_up_priority()?;
-        check_overbook_ports(self, current)?;
-        check_infiniband_as_ports(self, current)?;
-        if !current.kernel_ifaces.is_empty() {
-            check_sriov_capability(self)?;
+    pub(crate) fn hide_secrets(&mut self) {
+        for iface in self.kernel_ifaces.values_mut() {
+            iface.base_iface_mut().hide_secrets();
         }
-
-        for iface in self.to_vec() {
-            if iface.is_absent() {
-                for del_iface in gen_ifaces_to_del(iface, current) {
-                    del_ifaces.push(del_iface);
-                }
-            } else {
-                match current.get_iface(iface.name(), iface.iface_type()) {
-                    Some(cur_iface) => {
-                        let mut chg_iface = iface.clone();
-                        if cur_iface.iface_type() == InterfaceType::Unknown {
-                            chg_iface.set_iface_type(cur_iface.iface_type());
-                        }
-                        chg_iface.pre_edit_cleanup(Some(cur_iface))?;
-                        log::info!(
-                            "Changing interface {} with type {}, \
-                            up priority {}",
-                            chg_iface.name(),
-                            chg_iface.iface_type(),
-                            chg_iface.base_iface().up_priority
-                        );
-                        // When removing all ports from OVS bridge, as OVS
-                        // bridge cannot exist with ports, we add a OVS internal
-                        // interface, here we append new OVS interface to
-                        // `chg_ifaces`
-                        if let (
-                            Interface::OvsBridge(br_iface),
-                            Interface::OvsBridge(cur_iface),
-                        ) = (&mut chg_iface, cur_iface)
-                        {
-                            if let Some(ovs_iface) = br_iface
-                                .create_ovs_iface_is_empty_ports(Some(
-                                    cur_iface,
-                                ))
-                            {
-                                chg_ifaces
-                                    .push(Interface::OvsInterface(ovs_iface));
-                            }
-                        }
-                        chg_ifaces.push(chg_iface);
-                    }
-                    None => {
-                        let mut new_iface = iface.clone();
-                        new_iface.pre_edit_cleanup(None)?;
-                        log::info!(
-                            "Adding interface {} with type {}, \
-                            up priority {}",
-                            new_iface.name(),
-                            new_iface.iface_type(),
-                            new_iface.base_iface().up_priority
-                        );
-                        // When adding OVS bridge with empty port list, as OVS
-                        // bridge cannot exist without ports, we add a OVS
-                        // internal interface, here we append new OVS interface
-                        // to `add_ifaces`
-                        if let Interface::OvsBridge(br_iface) = &mut new_iface {
-                            if let Some(ovs_iface) =
-                                br_iface.create_ovs_iface_is_empty_ports(None)
-                            {
-                                add_ifaces
-                                    .push(Interface::OvsInterface(ovs_iface));
-                            }
-                        }
-
-                        // When adding new OVS interface requires changes to
-                        // existing OVS bridge, we should place this new OVS
-                        // interface along with its controller -- chg_ifaces.
-                        if new_iface.iface_type() == InterfaceType::OvsInterface
-                            || new_iface.base_iface().controller_type
-                                == Some(InterfaceType::OvsBridge)
-                        {
-                            new_ovs_ifaces.push(new_iface.clone());
-                            if new_iface
-                                .base_iface()
-                                .controller
-                                .as_ref()
-                                .and_then(|br_name| {
-                                    current.get_iface(
-                                        br_name,
-                                        InterfaceType::OvsBridge,
-                                    )
-                                })
-                                .is_some()
-                            {
-                                chg_ifaces.push(new_iface);
-                            } else {
-                                add_ifaces.push(new_iface);
-                            }
-                        } else {
-                            add_ifaces.push(new_iface);
-                        }
-                    }
-                }
-            }
-        }
-
-        mark_orphan_interface_as_absent(&mut del_ifaces, &chg_ifaces, current);
-        handle_veth_peer_changes(
-            &add_ifaces,
-            &mut chg_ifaces,
-            &mut del_ifaces,
-            current,
-        )?;
-        validate_new_ovs_iface_has_controller(&new_ovs_ifaces, self, current)?;
-
-        if memory_only {
-            // In memory_only mode, absent interface equal to down
-            // action.
-            for iface in del_ifaces.to_vec() {
-                let mut chg_iface = iface.clone();
-                chg_iface.base_iface_mut().state = InterfaceState::Down;
-                log::info!(
-                    "In memory only mode, state absent is treated \
-                    as state down for interface: {}/{:?}",
-                    iface.name(),
-                    iface.iface_type()
-                );
-                chg_ifaces.push(chg_iface);
-            }
-            del_ifaces.kernel_ifaces = Default::default();
-            del_ifaces.user_ifaces = Default::default();
-        }
-
-        Ok((add_ifaces, chg_ifaces, del_ifaces))
     }
 
-    /// TODO: this is internal function.
-    pub fn set_up_priority(&mut self) -> Result<(), NmstateError> {
+    pub fn iter(&self) -> impl Iterator<Item = &Interface> {
+        self.user_ifaces.values().chain(self.kernel_ifaces.values())
+    }
+
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut Interface> {
+        self.user_ifaces
+            .values_mut()
+            .chain(self.kernel_ifaces.values_mut())
+    }
+
+    // Not allowing changing veth peer away from ignored peer unless previous
+    // peer changed from ignore to managed
+    pub(crate) fn pre_ignore_check(
+        &self,
+        current: &Self,
+        ignored_ifaces: &[(String, InterfaceType)],
+    ) -> Result<(), NmstateError> {
+        let ignored_veth_ifaces: Vec<&String> = ignored_ifaces
+            .iter()
+            .filter_map(|(n, t)| {
+                if t == &InterfaceType::Ethernet {
+                    Some(n)
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        for iface in self.kernel_ifaces.values().filter(|i| {
+            if let Interface::Ethernet(i) = i {
+                i.veth.is_some()
+            } else {
+                false
+            }
+        }) {
+            if let (
+                Interface::Ethernet(des_iface),
+                Some(Interface::Ethernet(cur_iface)),
+            ) = (iface, current.get_iface(iface.name(), InterfaceType::Veth))
+            {
+                if let (Some(des_peer), cur_peer) = (
+                    des_iface.veth.as_ref().map(|v| v.peer.as_str()),
+                    cur_iface.veth.as_ref().map(|v| v.peer.as_str()),
+                ) {
+                    let cur_peer = if let Some(c) = cur_peer {
+                        c
+                    } else {
+                        // The veth peer is in another namespace.
+                        let e = NmstateError::new(
+                            ErrorKind::InvalidArgument,
+                            format!(
+                                "Veth interface {} is currently holding \
+                                peer assigned to other namespace \
+                                Please remove this veth pair \
+                                before changing veth peer to {des_peer}",
+                                iface.name(),
+                            ),
+                        );
+                        log::error!("{}", e);
+                        return Err(e);
+                    };
+
+                    if des_peer != cur_peer
+                        && ignored_veth_ifaces.contains(&&cur_peer.to_string())
+                    {
+                        let e = NmstateError::new(
+                            ErrorKind::InvalidArgument,
+                            format!(
+                                "Veth interface {} is currently holding \
+                                peer {} which is marked as ignored. \
+                                Hence not allowing changing its peer \
+                                to {}. Please remove this veth pair \
+                                before changing veth peer",
+                                iface.name(),
+                                cur_peer,
+                                des_peer
+                            ),
+                        );
+                        log::error!("{}", e);
+                        return Err(e);
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn ignored_kernel_iface_names(&self) -> HashSet<String> {
+        let mut ret = HashSet::new();
+        for iface in self.kernel_ifaces.values().filter(|i| i.is_ignore()) {
+            ret.insert(iface.name().to_string());
+        }
+        ret
+    }
+
+    fn ignored_user_iface_name_types(
+        &self,
+    ) -> HashSet<(String, InterfaceType)> {
+        let mut ret = HashSet::new();
+        for iface in self.user_ifaces.values().filter(|i| i.is_ignore()) {
+            ret.insert((iface.name().to_string(), iface.iface_type()));
+        }
+        ret
+    }
+
+    pub(crate) fn unify_veth_and_eth(&mut self) {
+        for iface in self.kernel_ifaces.values_mut() {
+            if let Interface::Ethernet(iface) = iface {
+                iface.base.iface_type = InterfaceType::Ethernet;
+            }
+        }
+        for nt in self.insert_order.as_mut_slice() {
+            if nt.1 == InterfaceType::Veth {
+                nt.1 = InterfaceType::Ethernet;
+            }
+        }
+    }
+
+    pub(crate) fn remove_ignored_ifaces(
+        &mut self,
+        ignored_ifaces: &[(String, InterfaceType)],
+    ) {
+        for (iface_name, iface_type) in ignored_ifaces {
+            self.remove_iface(iface_name.as_str(), iface_type.clone());
+        }
+
+        let kernel_iface_names: HashSet<String> = HashSet::from_iter(
+            ignored_ifaces
+                .iter()
+                .filter(|(_, t)| !t.is_userspace())
+                .map(|(n, _)| n.to_string()),
+        );
+
+        // Remove ignored_iface from port list or veth peer also
+        for iface in self
+            .kernel_ifaces
+            .values_mut()
+            .chain(self.user_ifaces.values_mut())
+            .filter(|i| i.is_controller())
+        {
+            if let Some(ports) = iface.ports() {
+                let ports: HashSet<String> =
+                    HashSet::from_iter(ports.iter().map(|p| p.to_string()));
+                for ignore_port in kernel_iface_names.intersection(&ports) {
+                    iface.remove_port(ignore_port);
+                }
+            }
+            if iface.iface_type() == InterfaceType::Veth {
+                if let Interface::Ethernet(eth_iface) = iface {
+                    if let Some(veth_conf) = eth_iface.veth.as_ref() {
+                        if kernel_iface_names.contains(veth_conf.peer.as_str())
+                        {
+                            log::info!(
+                                "Veth interface {} is holding ignored peer {}",
+                                eth_iface.base.name,
+                                veth_conf.peer.as_str()
+                            );
+                            eth_iface.veth = None;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // In memory_only mode, absent interface equal to down
+    // action.
+    pub(crate) fn apply_memory_only_mode(&mut self) {
+        for iface in self.iter_mut().filter(|i| i.is_absent()) {
+            iface.base_iface_mut().state = InterfaceState::Down;
+        }
+    }
+
+    pub(crate) fn resolve_unknown_ifaces(
+        &mut self,
+        cur_ifaces: &Self,
+    ) -> Result<(), NmstateError> {
+        let mut resolved_ifaces: Vec<Interface> = Vec::new();
+        for (iface_name, iface) in self.kernel_ifaces.iter() {
+            if iface.iface_type() != InterfaceType::Unknown || iface.is_ignore()
+            {
+                continue;
+            }
+            if iface.is_absent() {
+                for cur_iface in cur_ifaces.to_vec() {
+                    if cur_iface.name() == iface_name {
+                        let mut new_iface = cur_iface.clone();
+                        new_iface.base_iface_mut().state =
+                            InterfaceState::Absent;
+                        resolved_ifaces.push(new_iface);
+                    }
+                }
+            } else {
+                let mut founds = Vec::new();
+                for cur_iface in cur_ifaces.to_vec() {
+                    if cur_iface.name() == iface_name {
+                        let mut new_iface_value = serde_json::to_value(iface)?;
+                        if let Some(obj) = new_iface_value.as_object_mut() {
+                            obj.insert(
+                                "type".to_string(),
+                                serde_json::Value::String(
+                                    cur_iface.iface_type().to_string(),
+                                ),
+                            );
+                        }
+                        founds.push(new_iface_value);
+                    }
+                }
+                match founds.len() {
+                    0 => {
+                        let e = NmstateError::new(
+                            ErrorKind::InvalidArgument,
+                            format!(
+                                "Failed to find unknown type interface {iface_name} \
+                                in current state"
+                            ),
+                        );
+                        log::error!("{}", e);
+                        return Err(e);
+                    }
+                    1 => {
+                        let new_iface = Interface::deserialize(&founds[0])?;
+                        resolved_ifaces.push(new_iface);
+                    }
+                    _ => {
+                        let e = NmstateError::new(
+                            ErrorKind::InvalidArgument,
+                            format!(
+                                "Found 2+ interface matching desired unknown \
+                            type interface {}: {:?}",
+                                iface_name, &founds
+                            ),
+                        );
+                        log::error!("{}", e);
+                        return Err(e);
+                    }
+                }
+            }
+        }
+
+        for new_iface in resolved_ifaces {
+            self.kernel_ifaces.remove(new_iface.name());
+            self.push(new_iface);
+        }
+        Ok(())
+    }
+
+    pub(crate) fn get_iface_mut<'a>(
+        &'a mut self,
+        iface_name: &str,
+        iface_type: InterfaceType,
+    ) -> Option<&'a mut Interface> {
+        if iface_type.is_userspace() {
+            self.user_ifaces
+                .get_mut(&(iface_name.to_string(), iface_type))
+        } else {
+            self.kernel_ifaces.get_mut(&iface_name.to_string())
+        }
+    }
+
+    pub(crate) fn set_missing_port_to_eth(&mut self) {
+        let mut iface_names_to_add = Vec::new();
+        for iface in
+            self.kernel_ifaces.values().chain(self.user_ifaces.values())
+        {
+            if let Some(ports) = iface.ports() {
+                for port in ports {
+                    if !self.kernel_ifaces.contains_key(port) {
+                        iface_names_to_add.push(port.to_string());
+                    }
+                }
+            }
+        }
+        for iface_name in iface_names_to_add {
+            let mut iface = EthernetInterface::default();
+            iface.base.name = iface_name.clone();
+            log::warn!("Assuming undefined port {} as ethernet", iface_name);
+            self.kernel_ifaces
+                .insert(iface_name, Interface::Ethernet(iface));
+        }
+    }
+
+    pub(crate) fn set_unknown_iface_to_eth(
+        &mut self,
+    ) -> Result<(), NmstateError> {
+        let mut new_ifaces = Vec::new();
+        for iface in self.kernel_ifaces.values_mut() {
+            if let Interface::Unknown(iface) = iface {
+                log::warn!(
+                    "Setting unknown type interface {} to ethernet",
+                    iface.base.name.as_str()
+                );
+                let iface_value = match serde_json::to_value(&iface) {
+                    Ok(mut v) => {
+                        if let Some(v) = v.as_object_mut() {
+                            v.insert(
+                                "type".to_string(),
+                                serde_json::Value::String(
+                                    "ethernet".to_string(),
+                                ),
+                            );
+                        }
+                        v
+                    }
+                    Err(e) => {
+                        return Err(NmstateError::new(
+                            ErrorKind::Bug,
+                            format!(
+                                "BUG: Failed to convert {iface:?} to serde_json \
+                                value: {e}"
+                            ),
+                        ));
+                    }
+                };
+                match EthernetInterface::deserialize(&iface_value) {
+                    Ok(i) => new_ifaces.push(i),
+                    Err(e) => {
+                        return Err(NmstateError::new(
+                            ErrorKind::InvalidArgument,
+                            format!(
+                                "Invalid property for ethernet interface: {e}"
+                            ),
+                        ));
+                    }
+                }
+            }
+        }
+        for iface in new_ifaces {
+            self.kernel_ifaces.insert(
+                iface.base.name.to_string(),
+                Interface::Ethernet(iface),
+            );
+        }
+        Ok(())
+    }
+}
+
+fn is_opt_str_empty(opt_string: &Option<String>) -> bool {
+    if let Some(s) = opt_string {
+        s.is_empty()
+    } else {
+        true
+    }
+}
+
+// When merging desire interface with current, we perform actions in the order
+// of:
+//  * Action might alter the results of follow-up actions:
+//    `MergedInterface.pre_inter_ifaces_process()` # For example, empty OVS
+//    bridge will get a auto created ovs internal # interface.
+//  * Actions required the knowledge of multiple interfaces:
+//    `MergedInterfaces.process()` # For example, mark changed port as changed
+//    and complex controller/port # validation
+//  * Actions required both the knowledge of desired and current of single
+//    interface: `MergedInterface.post_inter_ifaces_process()`. # Validations
+//    after controller/port information are ready.
+//  * Actions self-contained of each `Interface` -- `Interface.sanitize()`. #
+//    Self clean up.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub(crate) struct MergedInterfaces {
+    pub(crate) kernel_ifaces: HashMap<String, MergedInterface>,
+    pub(crate) user_ifaces: HashMap<(String, InterfaceType), MergedInterface>,
+    pub(crate) insert_order: Vec<(String, InterfaceType)>,
+    pub(crate) ignored_ifaces: Vec<(String, InterfaceType)>,
+    pub(crate) memory_only: bool,
+    pub(crate) gen_conf_mode: bool,
+}
+
+impl MergedInterfaces {
+    // The gen_conf mode will do extra stuff:
+    //  * Set unknown interface as ethernet instead of raising failure.
+    //  * Set unknown port as ethernet instead of raising failure.
+    pub(crate) fn new(
+        mut desired: Interfaces,
+        mut current: Interfaces,
+        gen_conf_mode: bool,
+        memory_only: bool,
+    ) -> Result<Self, NmstateError> {
+        let mut merged_kernel_ifaces: HashMap<String, MergedInterface> =
+            HashMap::new();
+        let mut merged_user_ifaces: HashMap<
+            (String, InterfaceType),
+            MergedInterface,
+        > = HashMap::new();
+
+        let ignored_ifaces = get_ignored_ifaces(&desired, &current);
+        desired.pre_ignore_check(&current, ignored_ifaces.as_slice())?;
+
+        if memory_only {
+            desired.apply_memory_only_mode();
+        }
+
+        desired.remove_ignored_ifaces(ignored_ifaces.as_slice());
+        current.remove_ignored_ifaces(ignored_ifaces.as_slice());
+
+        desired.unify_veth_and_eth();
+        current.unify_veth_and_eth();
+
+        if gen_conf_mode {
+            desired.set_unknown_iface_to_eth()?;
+            desired.set_missing_port_to_eth();
+        } else {
+            desired.resolve_unknown_ifaces(&current)?;
+        }
+
+        desired.resolve_sriov_reference(&current)?;
+
+        for (iface_name, des_iface) in desired
+            .kernel_ifaces
+            .drain()
+            .chain(desired.user_ifaces.drain().map(|((n, _), i)| (n, i)))
+        {
+            let merged_iface = MergedInterface::new(
+                Some(des_iface.clone()),
+                current.remove_iface(&iface_name, des_iface.iface_type()),
+            )?;
+            if merged_iface.merged.is_userspace() {
+                merged_user_ifaces.insert(
+                    (
+                        merged_iface.merged.name().to_string(),
+                        merged_iface.merged.iface_type(),
+                    ),
+                    merged_iface,
+                );
+            } else {
+                merged_kernel_ifaces.insert(
+                    merged_iface.merged.name().to_string(),
+                    merged_iface,
+                );
+            }
+        }
+
+        // Interfaces only exists in current
+        for cur_iface in current
+            .kernel_ifaces
+            .drain()
+            .chain(current.user_ifaces.drain().map(|((n, _), i)| (n, i)))
+            .map(|(_, i)| i)
+        {
+            let merged_iface = MergedInterface::new(None, Some(cur_iface))?;
+            if merged_iface.merged.is_userspace() {
+                merged_user_ifaces.insert(
+                    (
+                        merged_iface.merged.name().to_string(),
+                        merged_iface.merged.iface_type(),
+                    ),
+                    merged_iface,
+                );
+            } else {
+                merged_kernel_ifaces.insert(
+                    merged_iface.merged.name().to_string(),
+                    merged_iface,
+                );
+            }
+        }
+        let mut ret = Self {
+            kernel_ifaces: merged_kernel_ifaces,
+            user_ifaces: merged_user_ifaces,
+            insert_order: desired.insert_order,
+            ignored_ifaces,
+            memory_only,
+            gen_conf_mode,
+        };
+
+        ret.process()?;
+
+        Ok(ret)
+    }
+
+    pub(crate) fn get_iface<'a>(
+        &'a self,
+        iface_name: &str,
+        iface_type: InterfaceType,
+    ) -> Option<&'a MergedInterface> {
+        if iface_type == InterfaceType::Unknown {
+            self.kernel_ifaces.get(&iface_name.to_string()).or_else(|| {
+                self.user_ifaces
+                    .values()
+                    .find(|&iface| iface.merged.name() == iface_name)
+            })
+        } else if iface_type.is_userspace() {
+            self.user_ifaces.get(&(iface_name.to_string(), iface_type))
+        } else {
+            self.kernel_ifaces.get(&iface_name.to_string())
+        }
+    }
+
+    pub(crate) fn iter(&self) -> impl Iterator<Item = &MergedInterface> {
+        self.user_ifaces.values().chain(self.kernel_ifaces.values())
+    }
+
+    // Contains all the smart modifications, validations among interfaces
+    fn process(&mut self) -> Result<(), NmstateError> {
+        self.apply_copy_mac_from()?;
+        self.validate_controller_and_port_list_confliction()?;
+        self.handle_changed_ports()?;
+        self.resolve_port_iface_controller_type()?;
+        self._set_up_priority()?;
+        self.check_overbook_ports()?;
+        self.check_infiniband_as_ports()?;
+        self.mark_orphan_interface_as_absent()?;
+        self.process_veth_peer_changes()?;
+        for iface in self
+            .kernel_ifaces
+            .values_mut()
+            .chain(self.user_ifaces.values_mut())
+            .filter(|i| i.is_changed())
+        {
+            iface.post_inter_ifaces_process()?;
+        }
+        Ok(())
+    }
+
+    fn _set_up_priority(&mut self) -> Result<(), NmstateError> {
         for _ in 0..INTERFACES_SET_PRIORITY_MAX_RETRY {
-            if set_ifaces_up_priority(self) {
+            if self.set_ifaces_up_priority() {
                 return Ok(());
             }
         }
@@ -301,35 +693,51 @@ impl Interfaces {
         ))
     }
 
-    fn apply_copy_mac_from(
-        &mut self,
-        current: &Self,
-    ) -> Result<(), NmstateError> {
-        for (iface_name, iface) in self.kernel_ifaces.iter_mut() {
-            if !COPY_MAC_ALLOWED_IFACE_TYPES.contains(&iface.iface_type()) {
+    fn apply_copy_mac_from(&mut self) -> Result<(), NmstateError> {
+        let mut pending_changes: HashMap<String, String> = HashMap::new();
+        for (iface_name, merged_iface) in self.kernel_ifaces.iter() {
+            if !merged_iface.is_desired()
+                || !COPY_MAC_ALLOWED_IFACE_TYPES
+                    .contains(&merged_iface.merged.iface_type())
+            {
                 continue;
             }
-            if let Some(src_iface_name) = &iface.base_iface().copy_mac_from {
-                if let Some(cur_iface) =
-                    current.kernel_ifaces.get(src_iface_name)
+            if let Some(src_iface_name) =
+                &merged_iface.merged.base_iface().copy_mac_from
+            {
+                if let Some(src_iface) =
+                    self.kernel_ifaces.get(src_iface_name).map(|i| &i.merged)
                 {
                     if !is_opt_str_empty(
-                        &cur_iface.base_iface().permanent_mac_address,
+                        &src_iface.base_iface().permanent_mac_address,
                     ) {
-                        iface.base_iface_mut().mac_address = cur_iface
+                        if let Some(mac) = src_iface
                             .base_iface()
                             .permanent_mac_address
-                            .clone();
+                            .as_ref()
+                        {
+                            pending_changes.insert(
+                                iface_name.to_string(),
+                                mac.to_string(),
+                            );
+                        }
                     } else if !is_opt_str_empty(
-                        &cur_iface.base_iface().mac_address,
+                        &src_iface.base_iface().mac_address,
                     ) {
-                        iface.base_iface_mut().mac_address =
-                            cur_iface.base_iface().mac_address.clone();
+                        if let Some(mac) =
+                            src_iface.base_iface().mac_address.as_ref()
+                        {
+                            pending_changes.insert(
+                                iface_name.to_string(),
+                                mac.to_string(),
+                            );
+                        }
                     } else {
                         let e = NmstateError::new(
                             ErrorKind::InvalidArgument,
                             format!(
-                                "Failed to find mac address of interface {src_iface_name} \
+                                "Failed to find mac address of \
+                                interface {src_iface_name} \
                                 for copy-mac-from of iface {iface_name}"
                             ),
                         );
@@ -349,99 +757,106 @@ impl Interfaces {
                 }
             }
         }
+        for (iface_name, mac) in pending_changes.drain() {
+            if let Some(iface) = self.kernel_ifaces.get_mut(&iface_name) {
+                iface.set_copy_from_mac(mac);
+            }
+        }
         Ok(())
     }
 
-    pub(crate) fn hide_secrets(&mut self) {
-        for iface in self.kernel_ifaces.values_mut() {
-            iface.base_iface_mut().hide_secrets();
-        }
-    }
+    fn mark_orphan_interface_as_absent(&mut self) -> Result<(), NmstateError> {
+        let gone_ifaces: Vec<String> = self
+            .kernel_ifaces
+            .values()
+            .filter(|i| i.is_changed() && i.merged.is_absent())
+            .map(|i| i.merged.name().to_string())
+            .collect();
 
-    pub fn iter(&self) -> impl Iterator<Item = &Interface> {
-        self.user_ifaces.values().chain(self.kernel_ifaces.values())
-    }
-
-    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut Interface> {
-        self.user_ifaces
-            .values_mut()
-            .chain(self.kernel_ifaces.values_mut())
-    }
-}
-
-fn gen_ifaces_to_del(
-    del_iface: &Interface,
-    cur_ifaces: &Interfaces,
-) -> Vec<Interface> {
-    let mut del_ifaces = Vec::new();
-    let cur_ifaces = cur_ifaces.to_vec();
-    for cur_iface in cur_ifaces {
-        let del_iface_type = match del_iface.iface_type() {
-            InterfaceType::Veth => InterfaceType::Ethernet,
-            t => t,
-        };
-        let cur_iface_type = match cur_iface.iface_type() {
-            InterfaceType::Veth => InterfaceType::Ethernet,
-            t => t,
-        };
-        if cur_iface.name() == del_iface.name()
-            && (del_iface_type == InterfaceType::Unknown
-                || del_iface_type == cur_iface_type)
+        for iface in
+            self.kernel_ifaces.values_mut().filter(|i| i.merged.is_up())
         {
-            let mut tmp_iface = del_iface.clone();
-            tmp_iface.base_iface_mut().iface_type = cur_iface.iface_type();
-            log::info!(
-                "Deleting interface {}/{}",
-                tmp_iface.name(),
-                tmp_iface.iface_type()
-            );
-            del_ifaces.push(tmp_iface);
-        }
-    }
-    if del_ifaces.is_empty() {
-        log::info!(
-            "Interface {} does not exists, requesting configuration purge",
-            del_iface.name()
-        );
-        del_ifaces.push(del_iface.clone());
-    }
-    del_ifaces
-}
-
-fn is_opt_str_empty(opt_string: &Option<String>) -> bool {
-    if let Some(s) = opt_string {
-        s.is_empty()
-    } else {
-        true
-    }
-}
-
-fn mark_orphan_interface_as_absent(
-    del_ifaces: &mut Interfaces,
-    chg_ifaces: &Interfaces,
-    current: &Interfaces,
-) {
-    for cur_iface in current.kernel_ifaces.values() {
-        let parent = if let Some(chg_iface) =
-            chg_ifaces.kernel_ifaces.get(cur_iface.name())
-        {
-            chg_iface.parent()
-        } else {
-            cur_iface.parent()
-        };
-        if let Some(parent) = parent {
-            if del_ifaces.kernel_ifaces.get(parent).is_some()
-                && del_ifaces.kernel_ifaces.get(cur_iface.name()).is_none()
-            {
-                let mut new_iface = cur_iface.clone_name_type_only();
-                new_iface.base_iface_mut().state = InterfaceState::Absent;
-                log::info!(
-                    "Marking interface {} as absent as its parent {} is so",
-                    cur_iface.name(),
-                    parent
-                );
-                del_ifaces.push(new_iface);
+            if let Some(parent) = iface.merged.parent() {
+                if gone_ifaces.contains(&parent.to_string()) {
+                    if iface.is_desired() && iface.merged.is_up() {
+                        return Err(NmstateError::new(
+                            ErrorKind::InvalidArgument,
+                            format!(
+                                "Interface {} cannot be in up state \
+                                as its parent {parent} has been marked \
+                                as absent",
+                                iface.merged.name(),
+                            ),
+                        ));
+                    }
+                    log::info!(
+                        "Marking interface {} as absent as its \
+                        parent {} is so",
+                        iface.merged.name(),
+                        parent
+                    );
+                    iface.mark_as_absent();
+                }
             }
         }
+        Ok(())
     }
+}
+
+// Special cases:
+//  * Inherit the ignore state from current if desire not mentioned in interface
+//    section
+//  * Return Vec<> has all InterfaceType::Veth is converted to
+//    InterfaceType::Ethernet
+fn get_ignored_ifaces(
+    desired: &Interfaces,
+    current: &Interfaces,
+) -> Vec<(String, InterfaceType)> {
+    let mut ignored_kernel_ifaces = desired.ignored_kernel_iface_names();
+    let mut ignored_user_ifaces = desired.ignored_user_iface_name_types();
+    let desired_kernel_ifaces: HashSet<String> = desired
+        .kernel_ifaces
+        .values()
+        .filter(|i| !i.is_ignore())
+        .map(|i| i.name().to_string())
+        .collect();
+    let desired_user_ifaces: HashSet<(String, InterfaceType)> = desired
+        .user_ifaces
+        .values()
+        .filter(|i| !i.is_ignore())
+        .map(|i| (i.name().to_string(), i.iface_type()))
+        .collect();
+
+    for iface_name in current.ignored_kernel_iface_names().drain() {
+        if !desired_kernel_ifaces.contains(&iface_name) {
+            ignored_kernel_ifaces.insert(iface_name);
+        }
+    }
+    for (iface_name, iface_type) in
+        current.ignored_user_iface_name_types().drain()
+    {
+        if !desired_user_ifaces
+            .contains(&(iface_name.clone(), iface_type.clone()))
+        {
+            ignored_user_ifaces.insert((iface_name, iface_type));
+        }
+    }
+
+    let mut ignored_ifaces: Vec<(String, InterfaceType)> =
+        ignored_user_ifaces.drain().collect();
+
+    for iface_name in ignored_kernel_ifaces {
+        if let Some(iface) = desired
+            .get_iface(&iface_name, InterfaceType::Unknown)
+            .or_else(|| current.get_iface(&iface_name, InterfaceType::Unknown))
+        {
+            let iface_type = match iface.iface_type() {
+                InterfaceType::Veth => InterfaceType::Ethernet,
+                t => t,
+            };
+            ignored_ifaces.push((iface_name, iface_type));
+        }
+    }
+
+    ignored_ifaces
 }

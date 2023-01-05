@@ -1461,3 +1461,5 @@ def test_ipv6_link_local_dns_srv(dhcpcli_up_with_dynamic_ip):
         IPV6_DNS_NAMESERVER,
         IPV6_DNS_NAMESERVER_LOCAL,
     ]
+    # Remove DNS server before clean up
+    libnmstate.apply({DNS.KEY: {DNS.CONFIG: {}}})
