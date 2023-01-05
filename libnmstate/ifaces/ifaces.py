@@ -275,6 +275,12 @@ class Ifaces:
         self._validate_ovs_patch_peers()
         self._remove_unknown_type_interfaces()
         self._validate_veth_peers()
+        self._validate_port_ip()
+
+    def _validate_port_ip(self):
+        for iface in self.all_ifaces():
+            if iface.is_desired and iface.is_up:
+                iface.validate_port_ip()
 
     def _bring_port_up_if_not_in_desire(self):
         """
