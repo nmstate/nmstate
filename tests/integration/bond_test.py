@@ -1172,3 +1172,34 @@ def test_create_bond_with_copy_mac_from_bond_port_perm_hwaddr(
         ):
             current_state = statelib.show_only((BOND99,))
             assert_mac_address(current_state, eth1_mac)
+
+
+@pytest.mark.tier1
+def test_remove_bond_and_assign_ip_to_bond_port(bond99_with_2_port):
+    desired_state = yaml.load(
+        """---
+        interfaces:
+          - name: bond99
+            state: absent
+          - name: eth1
+            type: ethernet
+            state: up
+            mtu: 1500
+            ipv4:
+              enabled: true
+              dhcp: false
+              address:
+              - ip: 192.168.1.1
+                prefix-length: 24
+            ipv6:
+              enabled: true
+              dhcp: false
+              autoconf: false
+              address:
+              - ip: 2001:db8:1::1
+                prefix-length: 64
+        """,
+        Loader=yaml.SafeLoader,
+    )
+    libnmstate.apply(desired_state)
+    assertlib.assert_state_match(desired_state)
