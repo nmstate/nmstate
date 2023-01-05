@@ -253,7 +253,6 @@ class BaseIface:
                     self.ip_state(family).validate(
                         IPState(family, self._origin_info.get(family, {}))
                     )
-                self._validate_port_ip()
                 ip_state = self.ip_state(family)
                 ip_state.remove_link_local_address()
                 self._info[family] = ip_state.to_dict()
@@ -301,7 +300,7 @@ class BaseIface:
             if current_external_ids:
                 other._info[OvsDB.OVS_DB_SUBTREE].pop(OvsDB.EXTERNAL_IDS)
 
-    def _validate_port_ip(self):
+    def validate_port_ip(self):
         for family in (Interface.IPV4, Interface.IPV6):
             ip_state = IPState(family, self._origin_info.get(family, {}))
             if (
@@ -358,7 +357,8 @@ class BaseIface:
         self._info[BaseIface.CONTROLLER_METADATA] = controller_iface_name
         self._info[BaseIface.CONTROLLER_TYPE_METADATA] = controller_type
         if (
-            not self.can_have_ip_as_port
+            controller_iface_name
+            and not self.can_have_ip_as_port
             and controller_type != InterfaceType.VRF
         ):
             for family in (Interface.IPV4, Interface.IPV6):
