@@ -1,4 +1,6 @@
-use crate::{Interfaces, VlanInterface};
+// SPDX-License-Identifier: Apache-2.0
+
+use crate::{InterfaceType, Interfaces, MergedInterfaces, VlanInterface};
 
 #[test]
 fn test_vlan_stringlized_attributes() {
@@ -19,7 +21,7 @@ vlan:
 
 #[test]
 fn test_vlan_get_parent_up_priority_plus_one() {
-    let mut desired: Interfaces = serde_yaml::from_str(
+    let desired: Interfaces = serde_yaml::from_str(
         r#"---
 - name: bond0.100
   type: vlan
@@ -41,20 +43,30 @@ fn test_vlan_get_parent_up_priority_plus_one() {
     )
     .unwrap();
 
-    let (add_ifaces, _, _) = desired
-        .gen_state_for_apply(&Interfaces::new(), false)
+    let merged_ifaces =
+        MergedInterfaces::new(desired, Interfaces::new(), false, false)
+            .unwrap();
+
+    let vrf0_iface = merged_ifaces
+        .get_iface("vrf0", InterfaceType::Vrf)
+        .unwrap()
+        .for_apply
+        .as_ref()
+        .unwrap();
+    let bond0_iface = merged_ifaces
+        .get_iface("bond0", InterfaceType::Bond)
+        .unwrap()
+        .for_apply
+        .as_ref()
+        .unwrap();
+    let vlan_iface = merged_ifaces
+        .get_iface("bond0.100", InterfaceType::Vlan)
+        .unwrap()
+        .for_apply
+        .as_ref()
         .unwrap();
 
-    assert_eq!(desired.kernel_ifaces["vrf0"].base_iface().up_priority, 0);
-    assert_eq!(desired.kernel_ifaces["bond0"].base_iface().up_priority, 1);
-    assert_eq!(
-        desired.kernel_ifaces["bond0.100"].base_iface().up_priority,
-        2
-    );
-
-    let ordered_ifaces = add_ifaces.to_vec();
-
-    assert_eq!(ordered_ifaces[0].name(), "vrf0".to_string());
-    assert_eq!(ordered_ifaces[1].name(), "bond0".to_string());
-    assert_eq!(ordered_ifaces[2].name(), "bond0.100".to_string());
+    assert_eq!(vrf0_iface.base_iface().up_priority, 0);
+    assert_eq!(bond0_iface.base_iface().up_priority, 1);
+    assert_eq!(vlan_iface.base_iface().up_priority, 2);
 }

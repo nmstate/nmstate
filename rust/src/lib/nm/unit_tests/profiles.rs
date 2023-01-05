@@ -1,10 +1,12 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::nm::nm_dbus::{NmConnection, NmSettingConnection};
 use crate::{
     nm::settings::use_uuid_for_controller_reference, Interface, InterfaceType,
-    OvsBridgeBondConfig, OvsBridgeBondPortConfig, OvsBridgeConfig,
-    OvsBridgeInterface, OvsBridgePortConfig,
+    Interfaces, MergedInterfaces, OvsBridgeBondConfig, OvsBridgeBondPortConfig,
+    OvsBridgeConfig, OvsBridgeInterface, OvsBridgePortConfig,
 };
-use std::collections::HashMap;
+
 const UUID1: &str = "8aca0200-accc-4d13-a62f-3c89a6da53c5";
 const UUID2: &str = "1c646761-efcc-4d33-a0d9-cb3c1c2d3309";
 const UUID3: &str = "06935474-b8d3-4e7c-be52-48e2e6e6b3b9";
@@ -71,21 +73,14 @@ fn test_use_uuid_for_controller_reference_with_ovs_bond() {
     br_conf.ports = Some(vec![port_conf]);
     br0.bridge = Some(br_conf);
 
-    let mut user_ifaces: HashMap<(String, InterfaceType), Interface> =
-        HashMap::new();
+    let mut ifaces = Interfaces::new();
+    ifaces.push(Interface::OvsBridge(br0));
 
-    user_ifaces.insert(
-        ("br0".to_string(), InterfaceType::OvsBridge),
-        Interface::OvsBridge(br0),
-    );
+    let merged_ifaces =
+        MergedInterfaces::new(ifaces, Interfaces::new(), false, false).unwrap();
 
-    use_uuid_for_controller_reference(
-        &mut nm_conns,
-        &user_ifaces,
-        &HashMap::new(),
-        &[],
-    )
-    .unwrap();
+    use_uuid_for_controller_reference(&mut nm_conns, &merged_ifaces, &[])
+        .unwrap();
 
     println!("nm_conns {nm_conns:?}");
 

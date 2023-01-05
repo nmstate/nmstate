@@ -4,7 +4,7 @@ use serde_json::{Map, Value};
 
 use crate::{
     ovsdb::db::{parse_str_map, OvsDbUpdate, GLOBAL_CONFIG_TABLE},
-    OvsDbGlobalConfig,
+    MergedOvsDbGlobalConfig, OvsDbGlobalConfig,
 };
 
 impl From<&Map<std::string::String, Value>> for OvsDbGlobalConfig {
@@ -31,15 +31,17 @@ fn convert_map(
     ret
 }
 
-impl From<&OvsDbGlobalConfig> for OvsDbUpdate {
-    fn from(ovs_conf: &OvsDbGlobalConfig) -> Self {
+impl From<&MergedOvsDbGlobalConfig> for OvsDbUpdate {
+    fn from(ovs_conf: &MergedOvsDbGlobalConfig) -> Self {
         let mut row = HashMap::new();
         let mut value_array = Vec::new();
-        for (k, v) in ovs_conf.get_external_ids().iter() {
-            value_array.push(Value::Array(vec![
-                Value::String(k.to_string()),
-                Value::String(v.to_string()),
-            ]));
+        for (k, v) in ovs_conf.external_ids.iter() {
+            if let Some(v) = v {
+                value_array.push(Value::Array(vec![
+                    Value::String(k.to_string()),
+                    Value::String(v.to_string()),
+                ]));
+            }
         }
         row.insert(
             "external_ids".to_string(),
@@ -49,11 +51,13 @@ impl From<&OvsDbGlobalConfig> for OvsDbUpdate {
             ]),
         );
         let mut value_array = Vec::new();
-        for (k, v) in ovs_conf.get_other_config().iter() {
-            value_array.push(Value::Array(vec![
-                Value::String(k.to_string()),
-                Value::String(v.to_string()),
-            ]));
+        for (k, v) in ovs_conf.other_config.iter() {
+            if let Some(v) = v {
+                value_array.push(Value::Array(vec![
+                    Value::String(k.to_string()),
+                    Value::String(v.to_string()),
+                ]));
+            }
         }
         row.insert(
             "other_config".to_string(),

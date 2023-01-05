@@ -44,7 +44,7 @@ impl MacVlanInterface {
         Self::default()
     }
 
-    pub(crate) fn pre_edit_cleanup(&self) -> Result<(), NmstateError> {
+    pub(crate) fn sanitize(&self) -> Result<(), NmstateError> {
         if let Some(conf) = &self.mac_vlan {
             if conf.accept_all_mac == Some(false)
                 && conf.mode != MacVlanMode::Passthru

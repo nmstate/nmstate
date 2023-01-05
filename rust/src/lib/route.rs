@@ -2,12 +2,11 @@
 
 use std::collections::{hash_map::Entry, HashMap, HashSet};
 
-use log::{debug, error};
 use serde::{Deserialize, Serialize};
 
 use crate::{
     ip::{is_ipv6_addr, sanitize_ip_network},
-    ErrorKind, NmstateError,
+    ErrorKind, InterfaceType, MergedInterfaces, NmstateError,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -67,130 +66,17 @@ impl Routes {
         if let Some(config_routes) = self.config.as_ref() {
             for route in config_routes.iter().filter(|r| !r.is_absent()) {
                 if route.next_hop_iface.is_none() {
-                    let e = NmstateError::new(
+                    return Err(NmstateError::new(
                         ErrorKind::NotImplementedError,
                         format!(
                             "Route with empty next hop interface \
-                        is not supported: {route:?}"
+                            is not supported: {route:?}"
                         ),
-                    );
-                    error!("{}", e);
-                    return Err(e);
+                    ));
                 }
             }
         }
         Ok(())
-    }
-
-    // RouteEntry been added/removed from specific interface, all(including
-    // desire and current) its routes will be included in return hash.
-    // Steps:
-    //  1. Find out all interface with desired add routes.
-    //  2. Find out all interface impacted by desired absent routes.
-    //  3. Copy all routes from current which are to changed interface.
-    //  4. Remove routes base on absent.
-    //  5. Add routes in desire.
-    //  6. Sort and remove duplicate route.
-    pub(crate) fn gen_changed_ifaces_and_routes(
-        &self,
-        current: &Self,
-    ) -> Result<HashMap<String, Vec<RouteEntry>>, NmstateError> {
-        let mut ret: HashMap<String, Vec<RouteEntry>> = HashMap::new();
-        let mut desired_routes = Vec::new();
-        if let Some(rts) = self.config.as_ref() {
-            for rt in rts {
-                let mut rt = rt.clone();
-                rt.sanitize()?;
-                desired_routes.push(rt);
-            }
-        }
-        let des_routes_index =
-            create_route_index_by_iface(desired_routes.as_slice());
-        let cur_routes_index = current
-            .config
-            .as_ref()
-            .map(|c| create_route_index_by_iface(c.as_slice()))
-            .unwrap_or_default();
-
-        let mut iface_names_in_desire: HashSet<&str> =
-            des_routes_index.keys().copied().collect();
-
-        // Convert the absent route without iface to multiple routes with
-        // iface define.
-        let absent_routes = flat_absent_route(
-            self.config.as_deref().unwrap_or(&[]),
-            current.config.as_deref().unwrap_or(&[]),
-        );
-
-        // Include interface which will be impacted by absent routes
-        for absent_route in &absent_routes {
-            if let Some(i) = absent_route.next_hop_iface.as_ref() {
-                debug!(
-                    "Interface is impacted by absent route {:?}",
-                    absent_route
-                );
-                iface_names_in_desire.insert(i);
-            }
-        }
-
-        // Copy current routes next hop to changed interfaces
-        for iface_name in &iface_names_in_desire {
-            if let Some(cur_routes) = cur_routes_index.get(iface_name) {
-                ret.insert(
-                    iface_name.to_string(),
-                    cur_routes
-                        .as_slice()
-                        .iter()
-                        .map(|r| (*r).clone())
-                        .collect::<Vec<RouteEntry>>(),
-                );
-            }
-        }
-
-        // Apply absent routes
-        for absent_route in &absent_routes {
-            // All absent_route should have interface name here
-            if let Some(iface_name) = absent_route.next_hop_iface.as_ref() {
-                if let Some(routes) = ret.get_mut(iface_name) {
-                    routes.retain(|r| !absent_route.is_match(r));
-                }
-            }
-        }
-
-        // Append desire routes
-        for (iface_name, desire_routes) in des_routes_index.iter() {
-            let new_routes = desire_routes
-                .iter()
-                .map(|r| (*r).clone())
-                .collect::<Vec<RouteEntry>>();
-            match ret.entry(iface_name.to_string()) {
-                Entry::Occupied(o) => {
-                    o.into_mut().extend(new_routes);
-                }
-                Entry::Vacant(v) => {
-                    v.insert(new_routes);
-                }
-            };
-        }
-
-        // Sort and remove the duplicated routes
-        for desire_routes in ret.values_mut() {
-            desire_routes.sort_unstable();
-            desire_routes.dedup();
-        }
-        Ok(ret)
-    }
-
-    pub(crate) fn get_config_routes_of_iface(
-        &self,
-        iface_name: &str,
-    ) -> Option<Vec<RouteEntry>> {
-        self.config.as_ref().map(|rts| {
-            rts.iter()
-                .filter(|r| r.next_hop_iface.as_deref() == Some(iface_name))
-                .cloned()
-                .collect()
-        })
     }
 }
 
@@ -332,6 +218,11 @@ impl RouteEntry {
         }
         Ok(())
     }
+
+    pub(crate) fn is_ipv6(&self) -> bool {
+        self.destination.as_ref().map(|d| is_ipv6_addr(d.as_str()))
+            == Some(true)
+    }
 }
 
 // For Vec::dedup()
@@ -358,47 +249,222 @@ impl PartialOrd for RouteEntry {
     }
 }
 
-// Absent route will be ignored
-fn create_route_index_by_iface(
-    routes: &[RouteEntry],
-) -> HashMap<&str, Vec<&RouteEntry>> {
-    let mut ret: HashMap<&str, Vec<&RouteEntry>> = HashMap::new();
-    for route in routes {
-        if route.is_absent() {
-            continue;
+impl std::fmt::Display for RouteEntry {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut props = Vec::new();
+        if self.is_absent() {
+            props.push("state: absent".to_string());
         }
-        let next_hop_iface = route.next_hop_iface.as_deref().unwrap_or("");
-        match ret.entry(next_hop_iface) {
-            Entry::Occupied(o) => {
-                o.into_mut().push(route);
-            }
-            Entry::Vacant(v) => {
-                v.insert(vec![route]);
-            }
-        };
+        if let Some(v) = self.destination.as_ref() {
+            props.push(format!("destination: {v}"));
+        }
+        if let Some(v) = self.next_hop_iface.as_ref() {
+            props.push(format!("next-hop-interface: {v}"));
+        }
+        if let Some(v) = self.next_hop_addr.as_ref() {
+            props.push(format!("next-hop-address: {v}"));
+        }
+        if let Some(v) = self.metric.as_ref() {
+            props.push(format!("metric: {v}"));
+        }
+        if let Some(v) = self.table_id.as_ref() {
+            props.push(format!("table-id: {v}"));
+        }
+
+        write!(f, "{}", props.join(" "))
     }
-    ret
 }
 
-// All the routes sending to this function has no interface defined.
-fn flat_absent_route(
-    desire_routes: &[RouteEntry],
-    cur_routes: &[RouteEntry],
-) -> Vec<RouteEntry> {
-    let mut ret: Vec<RouteEntry> = Vec::new();
-    for absent_route in desire_routes.iter().filter(|r| r.is_absent()) {
-        if absent_route.next_hop_iface.is_none() {
-            for cur_route in cur_routes {
-                if absent_route.is_match(cur_route) {
-                    let mut new_absent_route = absent_route.clone();
-                    new_absent_route.next_hop_iface =
-                        cur_route.next_hop_iface.as_ref().cloned();
-                    ret.push(new_absent_route);
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub(crate) struct MergedRoutes {
+    pub(crate) indexed: HashMap<String, Vec<RouteEntry>>,
+    pub(crate) route_changed_ifaces: Vec<String>,
+    pub(crate) desired: Routes,
+    pub(crate) current: Routes,
+}
+
+impl MergedRoutes {
+    pub(crate) fn new(
+        desired: Routes,
+        current: Routes,
+        merged_ifaces: &MergedInterfaces,
+    ) -> Result<Self, NmstateError> {
+        let mut desired_routes = Vec::new();
+        if let Some(rts) = desired.config.as_ref() {
+            for rt in rts {
+                let mut rt = rt.clone();
+                rt.sanitize()?;
+                desired_routes.push(rt);
+            }
+        }
+
+        let mut changed_ifaces: HashSet<&str> = HashSet::new();
+
+        let ifaces_marked_as_absent: Vec<&str> = merged_ifaces
+            .kernel_ifaces
+            .values()
+            .filter(|i| i.merged.is_absent())
+            .map(|i| i.merged.name())
+            .collect();
+
+        let ifaces_with_ipv4_disabled: Vec<&str> = merged_ifaces
+            .kernel_ifaces
+            .values()
+            .filter(|i| !i.merged.base_iface().is_ipv4_enabled())
+            .map(|i| i.merged.name())
+            .collect();
+
+        let ifaces_with_ipv6_disabled: Vec<&str> = merged_ifaces
+            .kernel_ifaces
+            .values()
+            .filter(|i| !i.merged.base_iface().is_ipv6_enabled())
+            .map(|i| i.merged.name())
+            .collect();
+
+        // Interface has route added.
+        for rt in desired_routes
+            .as_slice()
+            .iter()
+            .filter(|rt| !rt.is_absent())
+        {
+            if let Some(via) = rt.next_hop_iface.as_ref() {
+                if ifaces_marked_as_absent.contains(&via.as_str()) {
+                    return Err(NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        format!(
+                            "The next hop interface of desired Route '{rt}' \
+                            has been marked as absent"
+                        ),
+                    ));
+                }
+                if rt.is_ipv6()
+                    && ifaces_with_ipv6_disabled.contains(&via.as_str())
+                {
+                    return Err(NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        format!(
+                            "The next hop interface of desired Route '{rt}' \
+                            has been marked as IPv6 disabled"
+                        ),
+                    ));
+                }
+                if (!rt.is_ipv6())
+                    && ifaces_with_ipv4_disabled.contains(&via.as_str())
+                {
+                    return Err(NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        format!(
+                            "The next hop interface of desired Route '{rt}' \
+                            has been marked as IPv4 disabled"
+                        ),
+                    ));
+                }
+                changed_ifaces.insert(via.as_str());
+            }
+        }
+
+        // Interface has route deleted.
+        for absent_rt in
+            desired_routes.as_slice().iter().filter(|rt| rt.is_absent())
+        {
+            if let Some(cur_rts) = current.config.as_ref() {
+                for rt in cur_rts {
+                    if absent_rt.is_match(rt) {
+                        if let Some(via) = rt.next_hop_iface.as_ref() {
+                            changed_ifaces.insert(via.as_str());
+                        }
+                    }
                 }
             }
-        } else {
-            ret.push(absent_route.clone());
         }
+
+        let mut flattend_routes: Vec<RouteEntry> = Vec::new();
+
+        if let Some(cur_rts) = current.config.as_ref() {
+            for rt in cur_rts {
+                if let Some(via) = rt.next_hop_iface.as_ref() {
+                    if !ifaces_marked_as_absent.contains(&via.as_str())
+                        && ((rt.is_ipv6()
+                            && !ifaces_with_ipv6_disabled
+                                .contains(&via.as_str()))
+                            || (!rt.is_ipv6()
+                                && !ifaces_with_ipv4_disabled
+                                    .contains(&via.as_str())))
+                    {
+                        if desired_routes
+                            .as_slice()
+                            .iter()
+                            .filter(|r| r.is_absent())
+                            .any(|absent_rt| absent_rt.is_match(rt))
+                        {
+                            continue;
+                        }
+
+                        flattend_routes.push(rt.clone());
+                    }
+                }
+            }
+        }
+
+        // Append desired routes
+        for rt in desired_routes
+            .as_slice()
+            .iter()
+            .filter(|rt| !rt.is_absent())
+        {
+            flattend_routes.push(rt.clone());
+        }
+
+        flattend_routes.sort_unstable();
+        flattend_routes.dedup();
+
+        let mut indexed: HashMap<String, Vec<RouteEntry>> = HashMap::new();
+
+        for rt in flattend_routes {
+            if let Some(via) = rt.next_hop_iface.as_ref() {
+                let rts: &mut Vec<RouteEntry> =
+                    match indexed.entry(via.to_string()) {
+                        Entry::Occupied(o) => o.into_mut(),
+                        Entry::Vacant(v) => v.insert(Vec::new()),
+                    };
+                rts.push(rt);
+            }
+        }
+
+        let route_changed_ifaces: Vec<String> =
+            changed_ifaces.iter().map(|i| i.to_string()).collect();
+
+        Ok(Self {
+            indexed,
+            desired,
+            current,
+            route_changed_ifaces,
+        })
     }
-    ret
+
+    pub(crate) fn remove_routes_to_ignored_ifaces(
+        &mut self,
+        ignored_ifaces: &[(String, InterfaceType)],
+    ) {
+        let ignored_ifaces: Vec<&str> = ignored_ifaces
+            .iter()
+            .filter_map(|(n, t)| {
+                if !t.is_userspace() {
+                    Some(n.as_str())
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        for iface in ignored_ifaces.as_slice() {
+            self.indexed.remove(&iface.to_string());
+        }
+        self.route_changed_ifaces
+            .retain(|n| !ignored_ifaces.contains(&n.as_str()));
+    }
+
+    pub(crate) fn is_changed(&self) -> bool {
+        !self.route_changed_ifaces.is_empty()
+    }
 }

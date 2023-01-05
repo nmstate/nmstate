@@ -1,9 +1,13 @@
+// SPDX-License-Identifier: Apache-2.0
+
+#[cfg(feature = "query_apply")]
 use super::{
     connection::nm_con_get_from_obj_path,
     dbus::{obj_path_to_string, NM_DBUS_INTERFACE_AC, NM_DBUS_INTERFACE_ROOT},
     ErrorKind, NmError,
 };
 
+#[cfg(feature = "query_apply")]
 pub const NM_ACTIVATION_STATE_FLAG_EXTERNAL: u32 = 0x80;
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -14,6 +18,7 @@ pub struct NmActiveConnection {
     pub state_flags: u32,
 }
 
+#[cfg(feature = "query_apply")]
 fn nm_ac_obj_path_state_flags_get(
     dbus_conn: &zbus::Connection,
     obj_path: &str,
@@ -35,6 +40,7 @@ fn nm_ac_obj_path_state_flags_get(
     }
 }
 
+#[cfg(feature = "query_apply")]
 pub(crate) fn nm_ac_obj_path_uuid_get(
     dbus_conn: &zbus::Connection,
     obj_path: &str,
@@ -56,6 +62,7 @@ pub(crate) fn nm_ac_obj_path_uuid_get(
     }
 }
 
+#[cfg(feature = "query_apply")]
 fn nm_ac_obj_path_nm_con_obj_path_get(
     dbus_conn: &zbus::Connection,
     obj_path: &str,
@@ -74,6 +81,7 @@ fn nm_ac_obj_path_nm_con_obj_path_get(
     }
 }
 
+#[cfg(feature = "query_apply")]
 pub(crate) fn get_nm_ac_by_obj_path(
     connection: &zbus::Connection,
     obj_path: &str,

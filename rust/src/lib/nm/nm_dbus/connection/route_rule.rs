@@ -48,8 +48,8 @@ impl TryFrom<DbusDictionary> for NmIpRouteRule {
             to: _from_map!(v, "to", String::try_from)?,
             to_len: _from_map!(v, "to-len", u8::try_from)?,
             table: _from_map!(v, "table", u32::try_from)?,
-            fw_mark: _from_map!(v, "fw_mark", u32::try_from)?,
-            fw_mask: _from_map!(v, "fw_mask", u32::try_from)?,
+            fw_mark: _from_map!(v, "fwmark", u32::try_from)?,
+            fw_mask: _from_map!(v, "fwmask", u32::try_from)?,
             iifname: _from_map!(v, "iifname", String::try_from)?,
             action: _from_map!(v, "action", u8::try_from)?
                 .map(NmIpRouteRuleAction::from),

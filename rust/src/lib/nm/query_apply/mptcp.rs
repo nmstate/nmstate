@@ -32,9 +32,3 @@ pub(crate) fn is_mptcp_supported(nm_api: &NmApi) -> bool {
         false
     }
 }
-
-pub(crate) fn remove_nm_mptcp_set(nm_conn: &mut NmConnection) {
-    if let Some(nm_conn_set) = nm_conn.connection.as_mut() {
-        nm_conn_set.mptcp_flags = None;
-    }
-}

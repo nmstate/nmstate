@@ -6,7 +6,8 @@ use std::convert::TryFrom;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    BaseInterface, BridgePortVlanConfig, ErrorKind, InterfaceType, NmstateError,
+    BaseInterface, BridgePortVlanConfig, ErrorKind, Interface, InterfaceType,
+    MergedInterface, NmstateError,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -96,40 +97,130 @@ impl OvsBridgeInterface {
         ret
     }
 
-    pub(crate) fn create_ovs_iface_is_empty_ports(
-        &mut self,
-        current: Option<&Self>,
-    ) -> Option<OvsInterface> {
-        if (current.is_none()
-            && self.ports().map(|p| p.is_empty()).unwrap_or(true))
-            || (current.is_some()
-                && self.ports().map(|p| p.is_empty()) == Some(true))
-        {
+    fn sort_ports(&mut self) {
+        if let Some(ref mut br_conf) = self.bridge {
+            if let Some(ref mut port_confs) = &mut br_conf.ports {
+                port_confs.sort_unstable_by_key(|p| p.name.clone());
+                for port_conf in port_confs {
+                    if let Some(ref mut bond_conf) = port_conf.bond {
+                        bond_conf.sort_ports();
+                    }
+                }
+            }
+        }
+    }
+
+    // * OVS Bridge cannot have MTU, IP
+    pub(crate) fn sanitize(&mut self) -> Result<(), NmstateError> {
+        if let Some(mtu) = self.base.mtu.as_ref() {
             log::warn!(
-                "OVS bridge {} cannot exist with empty port list, adding a \
-                OVS internal interface with the same name",
+                "OVS Bridge {} could not hold 'mtu:{mtu}' configuration as it \
+                only exists in OVS database, ignoring",
                 self.base.name.as_str()
             );
-            if let Some(br_conf) = self.bridge.as_mut() {
-                br_conf.ports = Some(vec![OvsBridgePortConfig {
-                    name: self.base.name.clone(),
-                    ..Default::default()
-                }])
-            } else {
-                self.bridge = Some(OvsBridgeConfig {
-                    ports: Some(vec![OvsBridgePortConfig {
-                        name: self.base.name.clone(),
-                        ..Default::default()
-                    }]),
-                    ..Default::default()
-                })
+        }
+        self.base.mtu = None;
+        self.base.ipv4 = None;
+        self.base.ipv6 = None;
+        self.sort_ports();
+        Ok(())
+    }
+
+    // Only support remove non-bonding port or the bond itself as bond require
+    // two ports, removal any of them will trigger error.
+    pub(crate) fn remove_port(&mut self, port_name: &str) {
+        if let Some(br_ports) = self
+            .bridge
+            .as_mut()
+            .and_then(|br_conf| br_conf.ports.as_mut())
+        {
+            br_ports.retain(|p| p.name.as_str() != port_name)
+        }
+    }
+
+    pub(crate) fn change_port_name(
+        &mut self,
+        origin_name: &str,
+        new_name: String,
+    ) {
+        if let Some(index) = self
+            .bridge
+            .as_ref()
+            .and_then(|br_conf| br_conf.ports.as_ref())
+            .and_then(|ports| {
+                ports.iter().position(|port| port.name == origin_name)
+            })
+        {
+            if let Some(ports) = self
+                .bridge
+                .as_mut()
+                .and_then(|br_conf| br_conf.ports.as_mut())
+            {
+                ports[index].name = new_name;
             }
-            Some(OvsInterface::new_with_name_and_ctrl(
-                self.base.name.as_str(),
-                self.base.name.as_str(),
-            ))
-        } else {
-            None
+        } else if let Some(index) = self
+            .bridge
+            .as_ref()
+            .and_then(|br_conf| br_conf.ports.as_ref())
+            .and_then(|ports| {
+                ports.iter().position(|port_conf| {
+                    port_conf
+                        .bond
+                        .as_ref()
+                        .and_then(|bond_conf| bond_conf.ports.as_ref())
+                        .map(|bond_port_confs| {
+                            bond_port_confs
+                                .iter()
+                                .any(|bond_conf| bond_conf.name == origin_name)
+                        })
+                        .unwrap_or_default()
+                })
+            })
+        {
+            if let Some(bond_port_confs) = self
+                .bridge
+                .as_mut()
+                .and_then(|br_conf| br_conf.ports.as_mut())
+                .and_then(|ports| ports.get_mut(index))
+                .and_then(|port_conf| port_conf.bond.as_mut())
+                .and_then(|bond_conf| bond_conf.ports.as_mut())
+            {
+                for bond_port_conf in bond_port_confs {
+                    if bond_port_conf.name == origin_name {
+                        bond_port_conf.name = new_name;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    // * Merge port vlan config if not desired
+    pub(crate) fn special_merge(&mut self, desired: &Self, current: &Self) {
+        let mut new_ports = Vec::new();
+        if let (Some(des_ports), Some(cur_ports)) = (
+            desired.bridge.as_ref().and_then(|b| b.ports.as_ref()),
+            current.bridge.as_ref().and_then(|b| b.ports.as_ref()),
+        ) {
+            for des_port_conf in des_ports {
+                let mut new_port = des_port_conf.clone();
+                if des_port_conf.vlan.is_none() {
+                    for cur_port_conf in cur_ports {
+                        if cur_port_conf.name.as_str()
+                            == des_port_conf.name.as_str()
+                        {
+                            new_port.vlan = cur_port_conf.vlan.clone();
+                            break;
+                        }
+                    }
+                }
+                new_ports.push(new_port);
+            }
+        }
+        if !new_ports.is_empty() {
+            if let Some(br_conf) = self.bridge.as_mut() {
+                br_conf.ports = Some(new_ports);
+            }
         }
     }
 }
@@ -311,7 +402,7 @@ impl OvsInterface {
     }
 
     // OVS patch interface cannot have MTU or IP configuration
-    pub(crate) fn pre_edit_cleanup(&self) -> Result<(), NmstateError> {
+    pub(crate) fn sanitize(&self) -> Result<(), NmstateError> {
         if self.patch.is_some() {
             if self.base.mtu.is_some() {
                 let e = NmstateError::new(
@@ -417,6 +508,12 @@ impl OvsBridgeBondConfig {
         }
         port_names
     }
+
+    pub(crate) fn sort_ports(&mut self) {
+        if let Some(ref mut bond_ports) = self.ports {
+            bond_ports.sort_unstable_by_key(|p| p.name.clone())
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -498,4 +595,73 @@ pub struct OvsDpdkConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     /// Deserialize and serialize from/to `rx-queue`.
     pub rx_queue: Option<u32>,
+}
+
+impl MergedInterface {
+    // Since OVS Bridge cannot live without port, when user desire empty
+    // OVS bridge, we add a OVS internal interface using the same name as the
+    // OVS bridge.
+    pub(crate) fn create_ovs_iface_for_empty_ports(&mut self) {
+        if self.is_desired()
+            && self.merged.iface_type() == InterfaceType::OvsBridge
+            && self.merged.ports().map(|p| p.is_empty()).unwrap_or(true)
+        {
+            log::warn!(
+                "OVS bridge {} cannot exist with empty port list, adding a \
+                OVS internal interface with the same name",
+                self.merged.name()
+            );
+            let iface_name = self.merged.name().to_string();
+
+            if let (
+                Some(Interface::OvsBridge(verify_iface)),
+                Some(Interface::OvsBridge(apply_iface)),
+                Interface::OvsBridge(merged_iface),
+                Some(Interface::OvsBridge(des_iface)),
+            ) = (
+                self.for_verify.as_mut(),
+                self.for_apply.as_mut(),
+                &mut self.merged,
+                &mut self.desired,
+            ) {
+                let port_confs = vec![OvsBridgePortConfig {
+                    name: iface_name,
+                    ..Default::default()
+                }];
+
+                if let Some(br_conf) = merged_iface.bridge.as_mut() {
+                    br_conf.ports = Some(port_confs.clone());
+                } else {
+                    merged_iface.bridge = Some(OvsBridgeConfig {
+                        ports: Some(port_confs.clone()),
+                        ..Default::default()
+                    })
+                }
+
+                if let Some(br_conf) = apply_iface.bridge.as_mut() {
+                    br_conf.ports = Some(port_confs.clone());
+                } else {
+                    apply_iface.bridge = Some(OvsBridgeConfig {
+                        ports: Some(port_confs.clone()),
+                        ..Default::default()
+                    })
+                }
+
+                if let Some(br_conf) = des_iface.bridge.as_mut() {
+                    br_conf.ports = Some(port_confs.clone());
+                } else {
+                    des_iface.bridge = Some(OvsBridgeConfig {
+                        ports: Some(port_confs.clone()),
+                        ..Default::default()
+                    })
+                }
+
+                if let Some(br_conf) = verify_iface.bridge.as_mut() {
+                    if br_conf.ports.is_some() {
+                        br_conf.ports = Some(port_confs);
+                    }
+                }
+            }
+        }
+    }
 }

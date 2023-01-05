@@ -81,6 +81,13 @@ where
     Ok(T::default())
 }
 
+impl LldpConfig {
+    pub(crate) fn sanitize(&mut self) {
+        // Remove since it is for query only
+        self.neighbors = Vec::new();
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(untagged)]
 #[non_exhaustive]

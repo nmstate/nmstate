@@ -2,13 +2,14 @@
 
 use crate::{
     BondAdSelect, BondAllPortsActive, BondArpAllTargets, BondArpValidate,
-    BondConfig, BondFailOverMac, BondInterface, BondLacpRate, BondMode,
+    BondFailOverMac, BondInterface, BondLacpRate, BondMode,
     BondPrimaryReselect, BondXmitHashPolicy, ErrorKind, Interface, Interfaces,
+    MergedInterface,
 };
 
 #[test]
 fn test_bond_validate_mac_restricted_with_mac_undefined() {
-    let iface: BondInterface = serde_yaml::from_str(
+    let iface: Interface = serde_yaml::from_str(
         r#"---
 name: bond99
 type: bond
@@ -20,12 +21,13 @@ link-aggregation:
 "#,
     )
     .unwrap();
-    iface.pre_edit_cleanup(None).unwrap();
+    let mut merged_iface = MergedInterface::new(Some(iface), None).unwrap();
+    merged_iface.post_inter_ifaces_process_bond().unwrap();
 }
 
 #[test]
 fn test_bond_validate_mac_restricted_with_mac_defined() {
-    let iface: BondInterface = serde_yaml::from_str(
+    let iface: Interface = serde_yaml::from_str(
         r#"---
 name: bond99
 type: bond
@@ -38,7 +40,8 @@ link-aggregation:
 "#,
     )
     .unwrap();
-    let result = iface.pre_edit_cleanup(None);
+    let mut merged_iface = MergedInterface::new(Some(iface), None).unwrap();
+    let result = merged_iface.post_inter_ifaces_process_bond();
     assert!(result.is_err());
     if let Err(e) = result {
         assert_eq!(e.kind(), ErrorKind::InvalidArgument);
@@ -47,7 +50,7 @@ link-aggregation:
 
 #[test]
 fn test_bond_validate_mac_restricted_with_mac_defined_for_exist_bond() {
-    let iface: BondInterface = serde_yaml::from_str(
+    let des_iface: Interface = serde_yaml::from_str(
         r#"---
 name: bond99
 type: bond
@@ -56,7 +59,7 @@ mac-address: 00:01:02:03:04:05
 "#,
     )
     .unwrap();
-    let current_iface: Interface = serde_yaml::from_str(
+    let cur_iface: Interface = serde_yaml::from_str(
         r#"---
 name: bond99
 type: bond
@@ -68,7 +71,9 @@ link-aggregation:
 "#,
     )
     .unwrap();
-    let result = iface.pre_edit_cleanup(Some(&current_iface));
+    let mut merged_iface =
+        MergedInterface::new(Some(des_iface), Some(cur_iface)).unwrap();
+    let result = merged_iface.post_inter_ifaces_process_bond();
     assert!(result.is_err());
     if let Err(e) = result {
         assert_eq!(e.kind(), ErrorKind::InvalidArgument);
@@ -77,7 +82,7 @@ link-aggregation:
 
 #[test]
 fn test_bond_validate_mac_restricted_with_mac_defined_changing_mode() {
-    let iface: BondInterface = serde_yaml::from_str(
+    let des_iface: Interface = serde_yaml::from_str(
         r#"---
 name: bond99
 type: bond
@@ -88,7 +93,7 @@ link-aggregation:
 "#,
     )
     .unwrap();
-    let current_iface: Interface = serde_yaml::from_str(
+    let cur_iface: Interface = serde_yaml::from_str(
         r#"---
 name: bond99
 type: bond
@@ -100,12 +105,14 @@ link-aggregation:
 "#,
     )
     .unwrap();
-    iface.pre_edit_cleanup(Some(&current_iface)).unwrap();
+    let mut merged_iface =
+        MergedInterface::new(Some(des_iface), Some(cur_iface)).unwrap();
+    merged_iface.post_inter_ifaces_process_bond().unwrap();
 }
 
 #[test]
 fn test_bond_validate_mac_restricted_with_mac_defined_changing_opt() {
-    let iface: BondInterface = serde_yaml::from_str(
+    let des_iface: Interface = serde_yaml::from_str(
         r#"---
 name: bond99
 type: bond
@@ -118,7 +125,7 @@ link-aggregation:
 "#,
     )
     .unwrap();
-    let current_iface: Interface = serde_yaml::from_str(
+    let cur_iface: Interface = serde_yaml::from_str(
         r#"---
 name: bond99
 type: bond
@@ -130,12 +137,14 @@ link-aggregation:
 "#,
     )
     .unwrap();
-    iface.pre_edit_cleanup(Some(&current_iface)).unwrap();
+    let mut merged_iface =
+        MergedInterface::new(Some(des_iface), Some(cur_iface)).unwrap();
+    merged_iface.post_inter_ifaces_process_bond().unwrap();
 }
 
 #[test]
 fn test_bond_validate_bond_mode_not_defined_for_new_iface() {
-    let iface: BondInterface = serde_yaml::from_str(
+    let des_iface: Interface = serde_yaml::from_str(
         r#"---
 name: bond99
 type: bond
@@ -143,7 +152,8 @@ state: up
 "#,
     )
     .unwrap();
-    let result = iface.pre_edit_cleanup(None);
+    let mut merged_iface = MergedInterface::new(Some(des_iface), None).unwrap();
+    let result = merged_iface.post_inter_ifaces_process_bond();
     assert!(result.is_err());
     if let Err(e) = result {
         assert_eq!(e.kind(), ErrorKind::InvalidArgument);
@@ -152,7 +162,7 @@ state: up
 
 #[test]
 fn test_bond_validate_ad_actor_system_mac_address() {
-    let iface: BondInterface = serde_yaml::from_str(
+    let des_iface: Interface = serde_yaml::from_str(
         r#"---
 name: bond99
 type: bond
@@ -164,7 +174,8 @@ link-aggregation:
 "#,
     )
     .unwrap();
-    let result = iface.pre_edit_cleanup(None);
+    let mut merged_iface = MergedInterface::new(Some(des_iface), None).unwrap();
+    let result = merged_iface.post_inter_ifaces_process_bond();
     assert!(result.is_err());
     if let Err(e) = result {
         assert_eq!(e.kind(), ErrorKind::InvalidArgument);
@@ -173,7 +184,7 @@ link-aggregation:
 
 #[test]
 fn test_bond_validate_miimon_and_arp_interval() {
-    let iface: BondInterface = serde_yaml::from_str(
+    let des_iface: Interface = serde_yaml::from_str(
         r#"---
 name: bond99
 type: bond
@@ -186,7 +197,8 @@ link-aggregation:
 "#,
     )
     .unwrap();
-    let result = iface.pre_edit_cleanup(None);
+    let mut merged_iface = MergedInterface::new(Some(des_iface), None).unwrap();
+    let result = merged_iface.post_inter_ifaces_process_bond();
     assert!(result.is_err());
     if let Err(e) = result {
         assert_eq!(e.kind(), ErrorKind::InvalidArgument);
@@ -419,15 +431,15 @@ fn test_integer_bond_opts() {
 fn test_bond_ports() {
     let ifaces: Interfaces = serde_yaml::from_str(
         r#"---
-- name: bond99
-  type: bond
-  state: up
-  link-aggregation:
-    mode: balance-rr
-    ports:
-    - eth1
-    - eth2
-"#,
+        - name: bond99
+          type: bond
+          state: up
+          link-aggregation:
+            mode: balance-rr
+            ports:
+            - eth1
+            - eth2
+        "#,
     )
     .unwrap();
     assert_eq!(ifaces.to_vec()[0].ports(), Some(vec!["eth1", "eth2"]));
@@ -435,22 +447,37 @@ fn test_bond_ports() {
 
 #[test]
 fn test_balance_slb_invalid_mode_from_current() {
-    let desired: BondConfig = serde_yaml::from_str(
+    let des_iface: Interface = serde_yaml::from_str(
         r#"---
-        options:
-          balance-slb: 1
-          xmit_hash_policy: vlan+srcmac
+        name: bond99
+        type: bond
+        state: up
+        link-aggregation:
+          ports:
+          - eth1
+          - eth2
+          options:
+            balance-slb: 1
+            xmit_hash_policy: vlan+srcmac
         "#,
     )
     .unwrap();
-    let current: BondConfig = serde_yaml::from_str(
+    let cur_iface: Interface = serde_yaml::from_str(
         r#"---
-        mode: balance-rr
+        name: bond99
+        type: bond
+        state: up
+        link-aggregation:
+          mode: balance-rr
+          ports:
+          - eth1
+          - eth2
         "#,
     )
     .unwrap();
-
-    let result = desired.pre_edit_cleanup(Some(&current));
+    let mut merged_iface =
+        MergedInterface::new(Some(des_iface), Some(cur_iface)).unwrap();
+    let result = merged_iface.post_inter_ifaces_process_bond();
     assert!(result.is_err());
     if let Err(e) = result {
         assert_eq!(e.kind(), ErrorKind::InvalidArgument);
@@ -459,23 +486,38 @@ fn test_balance_slb_invalid_mode_from_current() {
 
 #[test]
 fn test_balance_slb_invalid_xmit_from_current() {
-    let desired: BondConfig = serde_yaml::from_str(
+    let des_iface: Interface = serde_yaml::from_str(
         r#"---
-        mode: balance-xor
-        options:
-          balance-slb: 1
+        name: bond99
+        type: bond
+        state: up
+        link-aggregation:
+          ports:
+          - eth1
+          - eth2
+          options:
+            balance-slb: 1
         "#,
     )
     .unwrap();
-    let current: BondConfig = serde_yaml::from_str(
+    let cur_iface: Interface = serde_yaml::from_str(
         r#"---
-        options:
-          xmit_hash_policy: layer2
+        name: bond99
+        type: bond
+        state: up
+        link-aggregation:
+          mode: balance-xor
+          ports:
+          - eth1
+          - eth2
+          options:
+            xmit_hash_policy: layer2
         "#,
     )
     .unwrap();
-
-    let result = desired.pre_edit_cleanup(Some(&current));
+    let mut merged_iface =
+        MergedInterface::new(Some(des_iface), Some(cur_iface)).unwrap();
+    let result = merged_iface.post_inter_ifaces_process_bond();
     assert!(result.is_err());
     if let Err(e) = result {
         assert_eq!(e.kind(), ErrorKind::InvalidArgument);
@@ -484,45 +526,75 @@ fn test_balance_slb_invalid_xmit_from_current() {
 
 #[test]
 fn test_balance_slb_valid_override_current() {
-    let desired: BondConfig = serde_yaml::from_str(
+    let des_iface: Interface = serde_yaml::from_str(
         r#"---
-        options:
-          balance-slb: 1
-          xmit_hash_policy: vlan+srcmac
+        name: bond99
+        type: bond
+        state: up
+        link-aggregation:
+          ports:
+          - eth1
+          - eth2
+          options:
+            balance-slb: 1
+            xmit_hash_policy: vlan+srcmac
         "#,
     )
     .unwrap();
-    let current: BondConfig = serde_yaml::from_str(
+    let cur_iface: Interface = serde_yaml::from_str(
         r#"---
-        mode: balance-xor
-        options:
-          xmit_hash_policy: layer2
+        name: bond99
+        type: bond
+        state: up
+        link-aggregation:
+          mode: balance-xor
+          ports:
+          - eth1
+          - eth2
+          options:
+            xmit_hash_policy: layer2
         "#,
     )
     .unwrap();
-
-    desired.pre_edit_cleanup(Some(&current)).unwrap();
+    let mut merged_iface =
+        MergedInterface::new(Some(des_iface), Some(cur_iface)).unwrap();
+    merged_iface.post_inter_ifaces_process_bond().unwrap();
 }
 
 #[test]
 fn test_disable_balance_slb_valid_override_current() {
-    let desired: BondConfig = serde_yaml::from_str(
+    let des_iface: Interface = serde_yaml::from_str(
         r#"---
-        options:
-          balance-slb: 0
-          xmit_hash_policy: layer2
+        name: bond99
+        type: bond
+        state: up
+        link-aggregation:
+          ports:
+          - eth1
+          - eth2
+          options:
+            balance-slb: 0
+            xmit_hash_policy: layer2
         "#,
     )
     .unwrap();
-    let current: BondConfig = serde_yaml::from_str(
+    let cur_iface: Interface = serde_yaml::from_str(
         r#"---
-        mode: balance-xor
-        options:
-          balance-slb: 1
-          xmit_hash_policy: vlan+srcmac
+        name: bond99
+        type: bond
+        state: up
+        link-aggregation:
+          mode: balance-xor
+          ports:
+          - eth1
+          - eth2
+          options:
+            balance-slb: 1
+            xmit_hash_policy: vlan+srcmac
         "#,
     )
     .unwrap();
-
-    desired.pre_edit_cleanup(Some(&current)).unwrap();
+    let mut merged_iface =
+        MergedInterface::new(Some(des_iface), Some(cur_iface)).unwrap();
+    merged_iface.post_inter_ifaces_process_bond().unwrap();
 }

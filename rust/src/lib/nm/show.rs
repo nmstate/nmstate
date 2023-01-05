@@ -10,20 +10,20 @@ use crate::nm::nm_dbus::{
 use super::{
     active_connection::create_index_for_nm_acs_by_name_type,
     error::nm_error_to_nmstate,
-    profile::create_index_for_nm_conns_by_name_type,
-    query::{
-        get_description, get_lldp, is_lldp_enabled, is_mptcp_supported,
-        nm_802_1x_to_nmstate, nm_ip_setting_to_nmstate4,
-        nm_ip_setting_to_nmstate6, query_nmstate_wait_ip, retrieve_dns_info,
+    query_apply::{
+        create_index_for_nm_conns_by_name_type, get_description, get_lldp,
+        is_lldp_enabled, is_mptcp_supported, nm_802_1x_to_nmstate,
+        nm_ip_setting_to_nmstate4, nm_ip_setting_to_nmstate6,
+        query_nmstate_wait_ip, retrieve_dns_info,
     },
     settings::{
         get_bond_balance_slb, NM_SETTING_BOND_SETTING_NAME,
         NM_SETTING_BRIDGE_SETTING_NAME, NM_SETTING_DUMMY_SETTING_NAME,
-        NM_SETTING_INFINIBAND_SETTING_NAME, NM_SETTING_MACVLAN_SETTING_NAME,
-        NM_SETTING_OVS_BRIDGE_SETTING_NAME, NM_SETTING_OVS_IFACE_SETTING_NAME,
-        NM_SETTING_VETH_SETTING_NAME, NM_SETTING_VLAN_SETTING_NAME,
-        NM_SETTING_VRF_SETTING_NAME, NM_SETTING_VXLAN_SETTING_NAME,
-        NM_SETTING_WIRED_SETTING_NAME,
+        NM_SETTING_INFINIBAND_SETTING_NAME, NM_SETTING_LOOPBACK_SETTING_NAME,
+        NM_SETTING_MACVLAN_SETTING_NAME, NM_SETTING_OVS_BRIDGE_SETTING_NAME,
+        NM_SETTING_OVS_IFACE_SETTING_NAME, NM_SETTING_VETH_SETTING_NAME,
+        NM_SETTING_VLAN_SETTING_NAME, NM_SETTING_VRF_SETTING_NAME,
+        NM_SETTING_VXLAN_SETTING_NAME, NM_SETTING_WIRED_SETTING_NAME,
     },
 };
 use crate::{
@@ -198,6 +198,7 @@ fn nm_dev_iface_type_to_nmstate(nm_dev: &NmDevice) -> InterfaceType {
                 InterfaceType::MacVlan
             }
         }
+        NM_SETTING_LOOPBACK_SETTING_NAME => InterfaceType::Loopback,
         NM_SETTING_INFINIBAND_SETTING_NAME => InterfaceType::InfiniBand,
         _ => InterfaceType::Other(nm_dev.iface_type.to_string()),
     }
@@ -323,10 +324,11 @@ fn iface_get(
                 iface.base = base_iface;
                 iface
             }),
-            InterfaceType::OvsBridge => {
-                // The ovsdb plugin is providing query support.
-                return None;
-            }
+            InterfaceType::OvsBridge => Interface::OvsBridge({
+                let mut iface = OvsBridgeInterface::new();
+                iface.base = base_iface;
+                iface
+            }),
             _ => {
                 log::debug!("Skip unsupported interface {:?}", base_iface);
                 return None;
@@ -503,20 +505,26 @@ fn nm_dev_to_nm_iface(nm_dev: &NmDevice) -> Option<Interface> {
             );
             return None;
         }
-        iface_type => Interface::Unknown({
+        iface_type => {
             log::info!(
                 "Got unsupported interface type {}: {}, ignoring",
                 iface_type,
                 base_iface.name
             );
-            let mut iface = UnknownInterface::new();
-            if base_iface.name == "lo" {
-                base_iface.iface_type = InterfaceType::Loopback;
-            }
+            // On NM 1.42- , the loopback is holding "generic" nm interface
+            // type.
             base_iface.state = InterfaceState::Ignore;
-            iface.base = base_iface;
-            iface
-        }),
+            if base_iface.name == "lo" {
+                let mut iface = LoopbackInterface::new();
+                base_iface.iface_type = InterfaceType::Loopback;
+                iface.base = base_iface;
+                Interface::Loopback(iface)
+            } else {
+                let mut iface = UnknownInterface::new();
+                iface.base = base_iface;
+                Interface::Unknown(iface)
+            }
+        }
     };
     if iface.iface_type().is_userspace() {
         // Only override iface type for user space. For other interface,

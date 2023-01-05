@@ -1,8 +1,34 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{ErrorKind, NmstateError, Routes};
+use crate::{ErrorKind, MergedRoutes, NmstateError, RouteEntry, Routes};
 
-impl Routes {
+impl MergedRoutes {
+    fn routes_for_verify(&self) -> Vec<RouteEntry> {
+        let mut desired_routes = Vec::new();
+        if let Some(rts) = self.desired.config.as_ref() {
+            for rt in rts {
+                let mut rt = rt.clone();
+                rt.sanitize().ok();
+                desired_routes.push(rt);
+            }
+        }
+        desired_routes.sort_unstable();
+        desired_routes.dedup();
+
+        // Remove the absent route if matching normal route is also desired.
+        let mut new_desired_routes = Vec::new();
+
+        for rt in desired_routes.as_slice() {
+            if (!rt.is_absent())
+                || desired_routes.as_slice().iter().any(|r| rt.is_match(r))
+            {
+                new_desired_routes.push(rt.clone());
+            }
+        }
+
+        new_desired_routes
+    }
+
     // Kernel might append additional routes. For example, IPv6 default
     // gateway will generate /128 static direct route.
     // Hence, we only check:
@@ -11,85 +37,59 @@ impl Routes {
     // * desired static route exists.
     pub(crate) fn verify(
         &self,
-        current: &Self,
-        ignored_ifaces: &[String],
+        current: &Routes,
+        ignored_ifaces: &[&str],
     ) -> Result<(), NmstateError> {
-        if let Some(mut config_routes) = self.config.clone() {
-            config_routes.sort_unstable();
-            config_routes.dedup();
-            for r in config_routes.iter_mut() {
-                r.sanitize().ok();
-            }
-            let cur_config_routes = match current.config.as_ref() {
-                Some(c) => {
-                    let mut routes = c.to_vec();
-                    routes.sort_unstable();
-                    routes.dedup();
-                    routes
+        let mut cur_routes: Vec<&RouteEntry> = Vec::new();
+        if let Some(cur_rts) = current.config.as_ref() {
+            for cur_rt in cur_rts {
+                if let Some(via) = cur_rt.next_hop_iface.as_ref() {
+                    if ignored_ifaces.contains(&via.as_str()) {
+                        continue;
+                    }
                 }
-                None => Vec::new(),
-            };
-            for desire_route in config_routes.iter().filter(|r| !r.is_absent())
-            {
-                if !cur_config_routes.iter().any(|r| desire_route.is_match(r)) {
-                    let e = NmstateError::new(
-                        ErrorKind::VerificationError,
-                        format!(
-                            "Desired route {desire_route:?} not found after apply"
-                        ),
-                    );
-                    log::error!("{}", e);
-                    return Err(e);
-                }
+                cur_routes.push(cur_rt);
             }
+        }
+        cur_routes.dedup();
+        let routes_for_verify = self.routes_for_verify();
 
-            for absent_route in config_routes.iter().filter(|r| r.is_absent()) {
-                // We ignore absent route if user is replacing old route
-                // with new one.
-                if config_routes
+        for rt in routes_for_verify.as_slice() {
+            if rt.is_absent() {
+                // We do not valid absent route if desire has a match there.
+                // For example, user is changing a gateway.
+                if routes_for_verify
+                    .as_slice()
                     .iter()
-                    .any(|r| (!r.is_absent()) && absent_route.is_match(r))
+                    .any(|r| !r.is_absent() && rt.is_match(r))
                 {
                     continue;
                 }
-
-                if let Some(cur_route) =
-                    cur_config_routes.iter().find(|r|
-                        if let Some(iface) = r.next_hop_iface.as_ref() {
-                            !ignored_ifaces.contains(
-                                iface
-                            )
-                        } else {
-                            true
-                        } && absent_route.is_match(r))
+                if let Some(cur_rt) = cur_routes
+                    .as_slice()
+                    .iter()
+                    .find(|cur_rt| rt.is_match(cur_rt))
                 {
-                    let e = NmstateError::new(
+                    return Err(NmstateError::new(
                         ErrorKind::VerificationError,
                         format!(
-                            "Desired absent route {absent_route:?} still found \
-                            after apply: {cur_route:?}"
+                            "Desired absent route {rt} still found \
+                            after apply: {cur_rt}",
                         ),
-                    );
-                    log::error!("{}", e);
-                    return Err(e);
+                    ));
                 }
+            } else if !cur_routes
+                .as_slice()
+                .iter()
+                .any(|cur_rt| rt.is_match(cur_rt))
+            {
+                return Err(NmstateError::new(
+                    ErrorKind::VerificationError,
+                    format!("Desired route {rt} not found after apply"),
+                ));
             }
         }
-        Ok(())
-    }
 
-    pub(crate) fn remove_ignored_iface_routes(
-        &mut self,
-        iface_names: &[String],
-    ) {
-        if let Some(config_routes) = self.config.as_mut() {
-            config_routes.retain(|r| {
-                if let Some(i) = r.next_hop_iface.as_ref() {
-                    !iface_names.contains(i)
-                } else {
-                    true
-                }
-            })
-        }
+        Ok(())
     }
 }

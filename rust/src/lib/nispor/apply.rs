@@ -1,6 +1,4 @@
-use std::collections::HashMap;
-
-use log::warn;
+// SPDX-License-Identifier: Apache-2.0
 
 use crate::{
     nispor::{
@@ -8,58 +6,52 @@ use crate::{
         veth::nms_veth_conf_to_np,
         vlan::nms_vlan_conf_to_np,
     },
-    ErrorKind, Interface, InterfaceType, Interfaces, NetworkState,
-    NmstateError,
+    ErrorKind, Interface, InterfaceType, MergedInterface, MergedInterfaces,
+    MergedNetworkState, NmstateError,
 };
 
 pub(crate) fn nispor_apply(
-    add_net_state: &NetworkState,
-    chg_net_state: &NetworkState,
-    del_net_state: &NetworkState,
-    cur_net_state: &NetworkState,
+    merged_state: &MergedNetworkState,
 ) -> Result<(), NmstateError> {
-    let mut del_net_state = del_net_state.clone();
-    only_delete_one_end_of_veth_peer(
-        &mut del_net_state.interfaces,
-        &cur_net_state.interfaces,
-    );
-    apply_single_state(&del_net_state)?;
-    apply_single_state(add_net_state)?;
-    apply_single_state(chg_net_state)?;
-    Ok(())
-}
+    delete_ifaces(&merged_state.interfaces)?;
 
-fn net_state_to_nispor(
-    net_state: &NetworkState,
-) -> Result<nispor::NetConf, NmstateError> {
+    let mut ifaces: Vec<&MergedInterface> = merged_state
+        .interfaces
+        .iter()
+        .filter(|i| i.is_changed())
+        .collect();
+
+    ifaces.sort_unstable_by_key(|iface| iface.merged.name());
+    // Use sort_by_key() instead of unstable one, do we can alphabet
+    // activation order which is required to simulate the OS boot-up.
+    ifaces.sort_by_key(|iface| {
+        if let Some(i) = iface.for_apply.as_ref() {
+            i.base_iface().up_priority
+        } else {
+            u32::MAX
+        }
+    });
+
     let mut np_ifaces: Vec<nispor::IfaceConf> = Vec::new();
-
-    for iface in net_state.interfaces.to_vec() {
-        if iface.is_up() {
-            let np_iface_type = nmstate_iface_type_to_np(&iface.iface_type());
-            if np_iface_type == nispor::IfaceType::Unknown {
-                warn!(
-                    "Unknown interface type {} for interface {}",
-                    iface.iface_type(),
-                    iface.name()
-                );
-                continue;
-            }
-            np_ifaces.push(nmstate_iface_to_np(iface, np_iface_type)?);
-        } else if iface.is_absent() {
-            let mut iface_conf = nispor::IfaceConf::default();
-            iface_conf.name = iface.name().to_string();
-            iface_conf.iface_type =
-                Some(nmstate_iface_type_to_np(&iface.iface_type()));
-            iface_conf.state = nispor::IfaceState::Absent;
-            np_ifaces.push(iface_conf);
+    for merged_iface in ifaces.iter().filter(|i| {
+        i.merged.iface_type() != InterfaceType::Unknown && !i.merged.is_absent()
+    }) {
+        if let Some(iface) = merged_iface.for_apply.as_ref() {
+            np_ifaces.push(nmstate_iface_to_np(iface)?);
         }
     }
 
     let mut net_conf = nispor::NetConf::default();
     net_conf.ifaces = Some(np_ifaces);
 
-    Ok(net_conf)
+    if let Err(e) = net_conf.apply() {
+        Err(NmstateError::new(
+            ErrorKind::PluginFailure,
+            format!("Unknown error from nipsor plugin: {}, {}", e.kind, e.msg),
+        ))
+    } else {
+        Ok(())
+    }
 }
 
 fn nmstate_iface_type_to_np(
@@ -77,12 +69,26 @@ fn nmstate_iface_type_to_np(
 
 fn nmstate_iface_to_np(
     nms_iface: &Interface,
-    np_iface_type: nispor::IfaceType,
 ) -> Result<nispor::IfaceConf, NmstateError> {
     let mut np_iface = nispor::IfaceConf::default();
+
+    let mut np_iface_type = nmstate_iface_type_to_np(&nms_iface.iface_type());
+
+    if let Interface::Ethernet(iface) = nms_iface {
+        if iface.veth.is_some() {
+            np_iface_type = nispor::IfaceType::Veth;
+        }
+    }
+
     np_iface.name = nms_iface.name().to_string();
     np_iface.iface_type = Some(np_iface_type);
+    if nms_iface.is_absent() {
+        np_iface.state = nispor::IfaceState::Absent;
+        return Ok(np_iface);
+    }
+
     np_iface.state = nispor::IfaceState::Up;
+
     let base_iface = &nms_iface.base_iface();
     if let Some(ctrl_name) = &base_iface.controller {
         np_iface.controller = Some(ctrl_name.to_string())
@@ -103,54 +109,43 @@ fn nmstate_iface_to_np(
     Ok(np_iface)
 }
 
-fn apply_single_state(net_state: &NetworkState) -> Result<(), NmstateError> {
-    let np_net_conf = net_state_to_nispor(net_state)?;
-    if let Err(e) = np_net_conf.apply() {
+fn delete_ifaces(merged_ifaces: &MergedInterfaces) -> Result<(), NmstateError> {
+    let mut deleted_veths: Vec<&str> = Vec::new();
+    let mut np_ifaces: Vec<nispor::IfaceConf> = Vec::new();
+    for iface in merged_ifaces
+        .kernel_ifaces
+        .values()
+        .filter(|i| i.merged.is_absent())
+    {
+        // Deleting one end of veth peer is enough
+        if deleted_veths.contains(&iface.merged.name()) {
+            continue;
+        }
+
+        if let Some(Interface::Ethernet(eth_iface)) = &iface.current {
+            if let Some(peer_name) = eth_iface
+                .veth
+                .as_ref()
+                .map(|veth_conf| veth_conf.peer.as_str())
+            {
+                deleted_veths.push(eth_iface.base.name.as_str());
+                deleted_veths.push(peer_name);
+            }
+        }
+        if let Some(apply_iface) = iface.for_apply.as_ref() {
+            np_ifaces.push(nmstate_iface_to_np(apply_iface)?);
+        }
+    }
+
+    let mut net_conf = nispor::NetConf::default();
+    net_conf.ifaces = Some(np_ifaces);
+
+    if let Err(e) = net_conf.apply() {
         Err(NmstateError::new(
             ErrorKind::PluginFailure,
             format!("Unknown error from nipsor plugin: {}, {}", e.kind, e.msg),
         ))
     } else {
         Ok(())
-    }
-}
-
-// Deleting one end of veth peer is enough, remove other end from desire state
-// TODO: Fix nispor to ignore ENODEV(19) error when deleting interface which is
-// already gone.
-fn only_delete_one_end_of_veth_peer(
-    desired: &mut Interfaces,
-    current: &Interfaces,
-) {
-    let mut veth_pairs: HashMap<String, String> = HashMap::new();
-    for iface in current.kernel_ifaces.values() {
-        if let Interface::Ethernet(eth_iface) = iface {
-            if let Some(peer_name) = eth_iface
-                .veth
-                .as_ref()
-                .map(|veth_conf| veth_conf.peer.as_str())
-            {
-                veth_pairs
-                    .insert(iface.name().to_string(), peer_name.to_string());
-            }
-        }
-    }
-
-    let mut veth_to_ignore = Vec::new();
-    for iface in desired.kernel_ifaces.values().filter(|i| i.is_absent()) {
-        if let Some(veth_peer) = veth_pairs.get(iface.name()) {
-            if let Some(veth_peer_iface) = desired.kernel_ifaces.get(veth_peer)
-            {
-                if iface.name() < veth_peer.as_str()
-                    && veth_peer_iface.is_absent()
-                {
-                    veth_to_ignore.push(veth_peer);
-                }
-            }
-        }
-    }
-
-    for iface_name in veth_to_ignore {
-        desired.kernel_ifaces.remove(iface_name);
     }
 }

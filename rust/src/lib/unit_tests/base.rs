@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::BaseInterface;
 
 #[test]
@@ -23,6 +25,6 @@ mac-address: "d4:ee:07:25:42:5a"
 "#,
     )
     .unwrap();
-    iface.pre_verify_cleanup(None, None);
+    iface.sanitize().unwrap();
     assert_eq!(iface.mac_address, Some(String::from("D4:EE:07:25:42:5A")));
 }

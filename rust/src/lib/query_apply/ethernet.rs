@@ -1,11 +1,20 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    EthernetConfig, EthernetInterface, InterfaceType, Interfaces, NmstateError,
-    VethConfig,
+    ErrorKind, EthernetConfig, EthernetInterface, Interface, Interfaces,
+    NmstateError, SrIovConfig, VethConfig,
 };
 
 impl EthernetInterface {
+    pub(crate) fn sriov_is_enabled(&self) -> bool {
+        self.ethernet
+            .as_ref()
+            .and_then(|eth_conf| {
+                eth_conf.sr_iov.as_ref().map(SrIovConfig::sriov_is_enabled)
+            })
+            .unwrap_or_default()
+    }
+
     pub(crate) fn update_ethernet(&mut self, other: &EthernetInterface) {
         if let Some(eth_conf) = &mut self.ethernet {
             eth_conf.update(other.ethernet.as_ref())
@@ -19,22 +28,6 @@ impl EthernetInterface {
             veth_conf.update(other.veth.as_ref());
         } else {
             self.veth = other.veth.clone();
-        }
-    }
-
-    pub(crate) fn pre_verify_cleanup(
-        &mut self,
-        pre_apply_current: Option<&Self>,
-    ) {
-        if let Some(eth_conf) = self.ethernet.as_mut() {
-            eth_conf.pre_verify_cleanup(
-                pre_apply_current.and_then(|c| c.ethernet.as_ref()),
-            )
-        }
-        if self.base.iface_type == InterfaceType::Ethernet {
-            self.veth = None;
-        } else {
-            self.base.iface_type = InterfaceType::Ethernet;
         }
     }
 
@@ -61,21 +54,6 @@ impl EthernetConfig {
             }
         }
     }
-
-    pub(crate) fn pre_verify_cleanup(
-        &mut self,
-        pre_apply_current: Option<&Self>,
-    ) {
-        if self.auto_neg == Some(true) {
-            self.speed = None;
-            self.duplex = None;
-        }
-        if let Some(sriov_conf) = self.sr_iov.as_mut() {
-            sriov_conf.pre_verify_cleanup(
-                pre_apply_current.and_then(|c| c.sr_iov.as_ref()),
-            )
-        }
-    }
 }
 
 impl VethConfig {
@@ -83,5 +61,41 @@ impl VethConfig {
         if let Some(other) = other {
             self.peer = other.peer.clone();
         }
+    }
+}
+
+impl SrIovConfig {
+    pub(crate) fn sriov_is_enabled(&self) -> bool {
+        matches!(self.total_vfs, Some(i) if i > 0)
+    }
+}
+
+// Checking existence of file:
+//      /sys/class/net/<iface_name>/device/sriov_numvfs
+fn is_sriov_supported(iface_name: &str) -> bool {
+    let path = format!("/sys/class/net/{iface_name}/device/sriov_numvfs");
+    std::path::Path::new(&path).exists()
+}
+
+impl Interfaces {
+    pub(crate) fn check_sriov_capability(&self) -> Result<(), NmstateError> {
+        for iface in self.kernel_ifaces.values() {
+            if let Interface::Ethernet(eth_iface) = iface {
+                if eth_iface.sriov_is_enabled()
+                    && !is_sriov_supported(iface.name())
+                {
+                    let e = NmstateError::new(
+                        ErrorKind::NotSupportedError,
+                        format!(
+                            "SR-IOV is not supported by interface {}",
+                            iface.name()
+                        ),
+                    );
+                    log::error!("{}", e);
+                    return Err(e);
+                }
+            }
+        }
+        Ok(())
     }
 }

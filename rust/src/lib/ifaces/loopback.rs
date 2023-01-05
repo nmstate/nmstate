@@ -2,9 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    BaseInterface, ErrorKind, InterfaceState, InterfaceType, NmstateError,
-};
+use crate::{BaseInterface, ErrorKind, InterfaceType, NmstateError};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
@@ -54,14 +52,7 @@ impl LoopbackInterface {
         Self::default()
     }
 
-    pub(crate) fn pre_edit_cleanup(&self) -> Result<(), NmstateError> {
-        if self.base.state == InterfaceState::Absent {
-            return Err(NmstateError::new(
-                ErrorKind::InvalidArgument,
-                "Loopback interface cannot be removed by state: absent"
-                    .to_string(),
-            ));
-        }
+    pub(crate) fn sanitize(&self) -> Result<(), NmstateError> {
         if self.base.ipv4.as_ref().map(|i| i.enabled) == Some(false) {
             return Err(NmstateError::new(
                 ErrorKind::InvalidArgument,

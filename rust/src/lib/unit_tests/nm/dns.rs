@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{DnsClientState, ErrorKind, NetworkState};
+use crate::{
+    nm::dns::store_dns_config, DnsClientState, ErrorKind, InterfaceType,
+    MergedNetworkState, NetworkState,
+};
 
 #[test]
 fn test_dns_ignore_dns_purge_on_absent_iface() {
@@ -42,12 +45,20 @@ interfaces:
 "#,
     )
     .unwrap();
-    let (_, chg_state, del_state) =
-        desired.gen_state_for_apply(&current).unwrap();
 
-    assert!(chg_state.interfaces.to_vec().is_empty());
-    let iface = del_state.interfaces.to_vec()[0];
-    assert_eq!(iface.name(), "dummy0");
+    let mut merged_state =
+        MergedNetworkState::new(desired, current, false, false).unwrap();
+
+    store_dns_config(&mut merged_state).unwrap();
+
+    let iface = merged_state
+        .interfaces
+        .get_iface("dummy0", InterfaceType::Dummy)
+        .unwrap()
+        .for_apply
+        .as_ref()
+        .unwrap();
+
     assert!(iface.is_absent());
 }
 
@@ -73,7 +84,8 @@ fn test_dns_ipv6_link_local_iface_has_ipv6_disabled() {
         "#,
     )
     .unwrap();
-    let result = desired.gen_state_for_apply(&current);
+
+    let result = MergedNetworkState::new(desired, current, false, false);
     assert!(result.is_err());
     if let Err(e) = result {
         assert_eq!(e.kind(), ErrorKind::InvalidArgument);
@@ -114,7 +126,7 @@ fn test_two_dns_ipv6_link_local_iface() {
         "#,
     )
     .unwrap();
-    let result = desired.gen_state_for_apply(&current);
+    let result = MergedNetworkState::new(desired, current, false, false);
     assert!(result.is_err());
     if let Err(e) = result {
         assert_eq!(e.kind(), ErrorKind::NotImplementedError);
@@ -209,5 +221,8 @@ fn test_dns_iface_has_no_ip_stack_info() {
             }
         })
     };
-    desired.gen_state_for_apply(&current).unwrap();
+    let mut merged_state =
+        MergedNetworkState::new(desired, current, false, false).unwrap();
+
+    store_dns_config(&mut merged_state).unwrap();
 }

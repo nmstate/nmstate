@@ -5,7 +5,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::{BaseInterface, ErrorKind, NmstateError};
+use crate::{BaseInterface, ErrorKind, MergedInterface, NmstateError};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
@@ -15,6 +15,15 @@ pub struct MptcpConfig {
     /// Automatically assign MPTCP flags to all valid IP addresses of this
     /// interface including both static and dynamic ones.
     pub address_flags: Option<Vec<MptcpAddressFlag>>,
+}
+
+impl MptcpConfig {
+    pub(crate) fn sanitize_for_verify(&mut self) {
+        if let Some(flags) = self.address_flags.as_mut() {
+            flags.dedup();
+            flags.sort_unstable();
+        }
+    }
 }
 
 #[derive(
@@ -52,30 +61,31 @@ pub enum MptcpAddressFlag {
     Fullmesh,
 }
 
-pub(crate) fn mptcp_pre_edit_cleanup(iface: &mut BaseInterface) {
-    remove_per_addr_mptcp_flags(iface);
-}
-
-pub(crate) fn validate_mptcp(
-    iface: &BaseInterface,
-) -> Result<(), NmstateError> {
-    if let Some(iface_flags) =
-        iface.mptcp.as_ref().and_then(|m| m.address_flags.as_ref())
-    {
-        if iface_flags.contains(&MptcpAddressFlag::Signal)
-            && iface_flags.contains(&MptcpAddressFlag::Fullmesh)
-        {
-            let e = NmstateError::new(
-                ErrorKind::InvalidArgument,
-                "MPTCP flags mustn't have both signal and fullmesh".to_string(),
-            );
-            log::error!("{}", e);
-            return Err(e);
+impl MergedInterface {
+    pub(crate) fn post_inter_ifaces_process_mptcp(
+        &self,
+    ) -> Result<(), NmstateError> {
+        if let Some(iface) = self.for_apply.as_ref().map(|i| i.base_iface()) {
+            if let Some(iface_flags) =
+                iface.mptcp.as_ref().and_then(|m| m.address_flags.as_ref())
+            {
+                if iface_flags.contains(&MptcpAddressFlag::Signal)
+                    && iface_flags.contains(&MptcpAddressFlag::Fullmesh)
+                {
+                    let e = NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        "MPTCP flags mustn't have both signal and fullmesh"
+                            .to_string(),
+                    );
+                    log::error!("{}", e);
+                    return Err(e);
+                }
+            }
+            validate_iface_mptcp_and_addr_mptcp_flags(iface);
         }
-    }
-    validate_iface_mptcp_and_addr_mptcp_flags(iface);
 
-    Ok(())
+        Ok(())
+    }
 }
 
 fn validate_iface_mptcp_and_addr_mptcp_flags(iface: &BaseInterface) {
@@ -107,10 +117,10 @@ fn validate_iface_mptcp_and_addr_mptcp_flags(iface: &BaseInterface) {
             addr_flags.sort_unstable();
             if iface_flags != addr_flags {
                 log::warn!(
-                    "Nmstate does not support setting different MPTCP flags \
-                    within the interface. Ignoring MPTCP flags {:?} of IP \
-                    address {}/{} as it is different from interface level \
-                    MPTCP flags {:?}",
+                    "Nmstate does not support setting different \
+                    MPTCP flags within the interface. Ignoring MPTCP \
+                    flags {:?} of IP address {}/{} as it is different \
+                    from interface level MPTCP flags {:?}",
                     addr_flags,
                     ip_addr.ip,
                     ip_addr.prefix_length,
@@ -118,28 +128,5 @@ fn validate_iface_mptcp_and_addr_mptcp_flags(iface: &BaseInterface) {
                 );
             }
         }
-    }
-}
-
-pub(crate) fn remove_per_addr_mptcp_flags(iface: &mut BaseInterface) {
-    let mut empty_ipv4_addrs = Vec::new();
-    let mut empty_ipv6_addrs = Vec::new();
-
-    for ip_addr in iface
-        .ipv4
-        .as_mut()
-        .and_then(|i| i.addresses.as_mut())
-        .unwrap_or(&mut empty_ipv4_addrs)
-        .iter_mut()
-        .chain(
-            iface
-                .ipv6
-                .as_mut()
-                .and_then(|i| i.addresses.as_mut())
-                .unwrap_or(&mut empty_ipv6_addrs)
-                .iter_mut(),
-        )
-    {
-        ip_addr.mptcp_flags = None;
     }
 }

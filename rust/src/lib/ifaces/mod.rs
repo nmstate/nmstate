@@ -37,6 +37,7 @@ pub use ethtool::{
     EthtoolPauseConfig, EthtoolRingConfig,
 };
 pub use infiniband::{InfiniBandConfig, InfiniBandInterface, InfiniBandMode};
+pub(crate) use inter_ifaces::MergedInterfaces;
 pub use inter_ifaces::*;
 pub use linux_bridge::{
     LinuxBridgeConfig, LinuxBridgeInterface, LinuxBridgeMulticastRouterType,
