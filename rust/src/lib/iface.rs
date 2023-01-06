@@ -973,8 +973,14 @@ impl MergedInterface {
                 verify_iface.base_iface_mut().state = InterfaceState::Absent;
             }
         } else {
-            apply_iface.base_iface_mut().controller = Some(ctrl_name);
-            apply_iface.base_iface_mut().controller_type = ctrl_type;
+            apply_iface.base_iface_mut().controller = Some(ctrl_name.clone());
+            apply_iface.base_iface_mut().controller_type = ctrl_type.clone();
+            self.merged.base_iface_mut().controller = Some(ctrl_name);
+            self.merged.base_iface_mut().controller_type = ctrl_type;
+            if !self.merged.base_iface().can_have_ip() {
+                self.merged.base_iface_mut().ipv4 = None;
+                self.merged.base_iface_mut().ipv6 = None;
+            }
         }
         Ok(())
     }

@@ -11,7 +11,9 @@ const DEFAULT_DNS_PRIORITY: i32 = 40;
 pub(crate) fn store_dns_config(
     merged_state: &mut MergedNetworkState,
 ) -> Result<(), NmstateError> {
-    if merged_state.dns.is_changed() {
+    if merged_state.dns.is_changed()
+        || !cur_dns_ifaces_still_valid_for_dns(&merged_state.interfaces)
+    {
         let (cur_v4_ifaces, cur_v6_ifaces) =
             get_cur_dns_ifaces(&merged_state.interfaces);
         let (v4_iface_name, v6_iface_name) = reselect_dns_ifaces(
@@ -113,23 +115,30 @@ pub(crate) fn purge_dns_config(
         if let Some(iface) =
             merged_state.interfaces.kernel_ifaces.get_mut(iface_name)
         {
+            if iface.merged.is_absent() {
+                return;
+            }
             if !iface.is_changed() {
                 iface.mark_as_changed();
                 if let Some(apply_iface) = iface.for_apply.as_mut() {
-                    apply_iface.base_iface_mut().ipv4 =
-                        iface.merged.base_iface_mut().ipv4.clone();
-                    apply_iface.base_iface_mut().ipv6 =
-                        iface.merged.base_iface_mut().ipv6.clone();
+                    if apply_iface.base_iface().can_have_ip() {
+                        apply_iface.base_iface_mut().ipv4 =
+                            iface.merged.base_iface_mut().ipv4.clone();
+                        apply_iface.base_iface_mut().ipv6 =
+                            iface.merged.base_iface_mut().ipv6.clone();
+                    }
                 }
             }
             if let Some(apply_iface) = iface.for_apply.as_mut() {
-                set_iface_dns_conf(
-                    is_ipv6,
-                    apply_iface,
-                    Vec::new(),
-                    Vec::new(),
-                    None,
-                );
+                if apply_iface.base_iface().can_have_ip() {
+                    set_iface_dns_conf(
+                        is_ipv6,
+                        apply_iface,
+                        Vec::new(),
+                        Vec::new(),
+                        None,
+                    );
+                }
             }
         }
     }
@@ -263,13 +272,13 @@ fn set_iface_dns_conf(
     if is_ipv6 {
         if let Some(ip_conf) = iface.base_iface_mut().ipv6.as_mut() {
             ip_conf.dns = Some(dns_conf);
-        } else {
+        } else if !dns_conf.is_purge() {
             // Should never happen
             log::error!("BUG: The dns interface is hold None IP {:?}", iface);
         }
     } else if let Some(ip_conf) = iface.base_iface_mut().ipv4.as_mut() {
         ip_conf.dns = Some(dns_conf);
-    } else {
+    } else if !dns_conf.is_purge() {
         // Should never happen
         log::error!("BUG: The dns interface is hold None IP {:?}", iface);
     }
@@ -315,4 +324,25 @@ fn get_cur_dns_ifaces(
         }
     }
     (v4_ifaces, v6_ifaces)
+}
+
+fn cur_dns_ifaces_still_valid_for_dns(
+    merged_ifaces: &MergedInterfaces,
+) -> bool {
+    let (cur_v4_ifaces, cur_v6_ifaces) = get_cur_dns_ifaces(merged_ifaces);
+    for iface_name in &cur_v4_ifaces {
+        if let Some(iface) = merged_ifaces.kernel_ifaces.get(iface_name) {
+            if iface.is_changed() && !iface.is_iface_valid_for_dns(false) {
+                return false;
+            }
+        }
+    }
+    for iface_name in &cur_v6_ifaces {
+        if let Some(iface) = merged_ifaces.kernel_ifaces.get(iface_name) {
+            if iface.is_changed() && !iface.is_iface_valid_for_dns(true) {
+                return false;
+            }
+        }
+    }
+    true
 }
