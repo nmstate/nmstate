@@ -1501,3 +1501,53 @@ def test_ovs_vlan_access_mode_with_tag_0():
 
     assertlib.assert_absent(BRIDGE1)
     assertlib.assert_absent(PORT1)
+
+
+@pytest.fixture
+def cleanup_ovs_bridge():
+    yield
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: BRIDGE0,
+                    Interface.STATE: InterfaceState.ABSENT,
+                },
+            ]
+        }
+    )
+
+
+@pytest.mark.parametrize(
+    "bond_mode",
+    [
+        OVSBridge.Port.LinkAggregation.Mode.ACTIVE_BACKUP,
+        OVSBridge.Port.LinkAggregation.Mode.BALANCE_SLB,
+        OVSBridge.Port.LinkAggregation.Mode.BALANCE_TCP,
+        OVSBridge.Port.LinkAggregation.Mode.LACP,
+    ],
+    ids=["active-backup", "balance-slb", "balance-tcp", "lacp"],
+)
+def test_crate_ovs_bond(cleanup_ovs_bridge, eth1_up, eth2_up, bond_mode):
+    desired_state = yaml.load(
+        """---
+        interfaces:
+        - name: br0
+          type: ovs-bridge
+          state: up
+          bridge:
+            port:
+            - name: ovs0
+            - name: bond0
+              link-aggregation:
+                mode: {bond_mode}
+                port:
+                - name: eth1
+                - name: eth2
+            """.format(
+            bond_mode=bond_mode
+        ),
+        Loader=yaml.SafeLoader,
+    )
+    libnmstate.apply(desired_state)
+    assertlib.assert_state_match(desired_state)
