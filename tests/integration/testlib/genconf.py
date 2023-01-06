@@ -4,6 +4,7 @@ import os
 from contextlib import contextmanager
 
 import libnmstate
+from libnmstate.schema import DNS
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceState
 
@@ -28,7 +29,7 @@ def gen_conf_apply(desire_state):
         activate_all_nm_connections()
         yield
     finally:
-        absent_state = {Interface.KEY: []}
+        absent_state = {DNS.KEY: {DNS.CONFIG: {}}, Interface.KEY: []}
         for iface_name in iface_names:
             absent_state[Interface.KEY].append(
                 {

@@ -1,21 +1,4 @@
-#
-# Copyright (c) 2019-2021 Red Hat, Inc.
-#
-# This file is part of nmstate
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 2.1 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program. If not, see <https://www.gnu.org/licenses/>.
-#
+# SPDX-License-Identifier: LGPL-2.1-or-later
 
 import json
 
@@ -31,7 +14,9 @@ from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import Route
 
+from .testlib import assertlib
 from .testlib import cmdlib
+from .testlib.bondlib import bond_interface
 from .testlib.genconf import gen_conf_apply
 
 IPV4_DNS_NAMESERVERS = ["8.8.8.8", "1.1.1.1"]
@@ -41,6 +26,7 @@ IPV6_DNS_LONG_NAMESERVER = ["2000:0000:0000:0000:0000:0000:0000:0100"]
 EXTRA_IPV6_DNS_NAMESERVER = "2620:fe::9"
 EXAMPLE_SEARCHES = ["example.org", "example.com"]
 EXAMPLE_SEARCHES2 = ["example.info", "example.org"]
+TEST_BOND0 = "test-bond0"
 
 parametrize_ip_ver = pytest.mark.parametrize(
     "dns_config",
@@ -397,7 +383,7 @@ def _gen_default_gateway_route():
 
 
 @pytest.fixture
-def static_dns():
+def static_dns(eth1_up):
     desired_state = {
         Interface.KEY: _get_test_iface_states(),
         Route.KEY: {Route.CONFIG: _gen_default_gateway_route()},
@@ -410,6 +396,7 @@ def static_dns():
     }
     libnmstate.apply(desired_state)
     yield desired_state
+    libnmstate.apply({DNS.KEY: {DNS.CONFIG: {}}})
 
 
 @pytest.mark.tier1
@@ -461,3 +448,53 @@ def test_dns_edit_nameserver_with_static_gateway_genconf(dns_config):
     with gen_conf_apply(desired_state):
         current_state = libnmstate.show()
         assert dns_config == current_state[DNS.KEY][DNS.CONFIG]
+
+
+def test_move_dns_from_port_to_controller(static_dns, eth2_up):
+    with bond_interface(
+        name=TEST_BOND0, port=["eth1", "eth2"], create=False
+    ) as state:
+        state[Route.KEY] = static_dns[Route.KEY]
+        for route in state[Route.KEY][Route.CONFIG]:
+            route[Route.NEXT_HOP_INTERFACE] = TEST_BOND0
+
+        state[DNS.KEY] = static_dns[DNS.KEY]
+        state[Interface.KEY][0][Interface.IPV4] = static_dns[Interface.KEY][0][
+            Interface.IPV4
+        ]
+        state[Interface.KEY][0][Interface.IPV6] = static_dns[Interface.KEY][0][
+            Interface.IPV6
+        ]
+        libnmstate.apply(state)
+        current_state = libnmstate.show()
+
+        assertlib.assert_state_match(state)
+        assert state[DNS.KEY][DNS.CONFIG] == current_state[DNS.KEY][DNS.CONFIG]
+        # Remove DNS before deleting bond
+        libnmstate.apply({DNS.KEY: {DNS.CONFIG: {}}})
+
+
+def test_changed_dns_from_port_to_controller(static_dns, eth2_up):
+    with bond_interface(
+        name=TEST_BOND0, port=["eth1", "eth2"], create=False
+    ) as state:
+        state[Route.KEY] = static_dns[Route.KEY]
+        for route in state[Route.KEY][Route.CONFIG]:
+            route[Route.NEXT_HOP_INTERFACE] = TEST_BOND0
+
+        state[DNS.KEY] = static_dns[DNS.KEY]
+        state[DNS.KEY][DNS.CONFIG][DNS.SEARCH].reverse()
+        state[DNS.KEY][DNS.CONFIG][DNS.SERVER].reverse()
+        state[Interface.KEY][0][Interface.IPV4] = static_dns[Interface.KEY][0][
+            Interface.IPV4
+        ]
+        state[Interface.KEY][0][Interface.IPV6] = static_dns[Interface.KEY][0][
+            Interface.IPV6
+        ]
+        libnmstate.apply(state)
+        current_state = libnmstate.show()
+
+        assertlib.assert_state_match(state)
+        assert state[DNS.KEY][DNS.CONFIG] == current_state[DNS.KEY][DNS.CONFIG]
+        # Remove DNS before deleting bond
+        libnmstate.apply({DNS.KEY: {DNS.CONFIG: {}}})
