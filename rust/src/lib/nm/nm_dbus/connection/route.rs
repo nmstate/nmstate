@@ -15,18 +15,26 @@ pub struct NmIpRoute {
     pub next_hop: Option<String>,
     pub table: Option<u32>,
     pub metric: Option<u32>,
+    pub weight: Option<u32>,
     _other: DbusDictionary,
 }
 
 impl TryFrom<DbusDictionary> for NmIpRoute {
     type Error = NmError;
     fn try_from(mut v: DbusDictionary) -> Result<Self, Self::Error> {
+        let mut weight = _from_map!(v, "weight", u32::try_from)?;
+        if let Some(weight_num) = weight {
+            if weight_num == 0 {
+                weight = None;
+            }
+        }
         Ok(Self {
             dest: _from_map!(v, "dest", String::try_from)?,
             prefix: _from_map!(v, "prefix", u32::try_from)?,
             next_hop: _from_map!(v, "next-hop", String::try_from)?,
             table: _from_map!(v, "table", u32::try_from)?,
             metric: _from_map!(v, "metric", u32::try_from)?,
+            weight,
             _other: v,
         })
     }
@@ -65,6 +73,12 @@ impl NmIpRoute {
         if let Some(v) = &self.metric {
             ret.append(
                 zvariant::Value::new("metric"),
+                zvariant::Value::new(zvariant::Value::new(v)),
+            )?;
+        }
+        if let Some(v) = &self.weight {
+            ret.append(
+                zvariant::Value::new("weight"),
                 zvariant::Value::new(zvariant::Value::new(v)),
             )?;
         }

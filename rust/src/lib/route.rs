@@ -136,6 +136,15 @@ pub struct RouteEntry {
     /// Route table id. [RouteEntry::USE_DEFAULT_ROUTE_TABLE] for main
     /// route table 254.
     pub table_id: Option<u32>,
+
+    /// ECMP(Equal-Cost Multi-Path) route weight
+    /// The valid range of this property is 1-256.
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_u16_or_string"
+    )]
+    pub weight: Option<u16>,
 }
 
 impl RouteEntry {
@@ -174,12 +183,15 @@ impl RouteEntry {
         {
             return false;
         }
+        if self.weight.is_some() && self.weight != other.weight {
+            return false;
+        }
         true
     }
 
     // Return tuple of (no_absent, is_ipv4, table_id, next_hop_iface,
-    // destination, next_hop_addr)
-    fn sort_key(&self) -> (bool, bool, u32, &str, &str, &str) {
+    // destination, next_hop_addr, weight)
+    fn sort_key(&self) -> (bool, bool, u32, &str, &str, &str, u16) {
         (
             !matches!(self.state, Some(RouteState::Absent)),
             !self
@@ -191,6 +203,7 @@ impl RouteEntry {
             self.next_hop_iface.as_deref().unwrap_or(""),
             self.destination.as_deref().unwrap_or(""),
             self.next_hop_addr.as_deref().unwrap_or(""),
+            self.weight.unwrap_or_default(),
         )
     }
 
@@ -219,6 +232,26 @@ impl RouteEntry {
                     new_via
                 );
                 self.next_hop_addr = Some(new_via);
+            }
+        }
+        if let Some(weight) = self.weight {
+            if !(1..=256).contains(&weight) {
+                return Err(NmstateError::new(
+                    ErrorKind::InvalidArgument,
+                    format!(
+                        "Invalid ECMP route weight {weight}, \
+                        should be in the range of 1 to 256"
+                    ),
+                ));
+            }
+            if let Some(dst) = self.destination.as_deref() {
+                if is_ipv6_addr(dst) {
+                    return Err(NmstateError::new(
+                        ErrorKind::NotSupportedError,
+                        "IPv6 ECMP route with weight is not supported yet"
+                            .to_string(),
+                    ));
+                }
             }
         }
         Ok(())
@@ -274,6 +307,9 @@ impl std::fmt::Display for RouteEntry {
         }
         if let Some(v) = self.table_id.as_ref() {
             props.push(format!("table-id: {v}"));
+        }
+        if let Some(v) = self.weight {
+            props.push(format!("weight: {v}"));
         }
 
         write!(f, "{}", props.join(" "))
