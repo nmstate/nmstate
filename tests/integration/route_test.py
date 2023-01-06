@@ -235,8 +235,8 @@ def _assert_routes(routes, state, nic="eth1"):
     """
     routes = copy.deepcopy(routes)
     for route in routes:
-        if Route.METRIC not in route:
-            route[Route.METRIC] = Route.USE_DEFAULT_METRIC
+        # Ignore metric difference like nmstate production code
+        route.pop(Route.METRIC, None)
         if Route.TABLE_ID not in route:
             route[Route.TABLE_ID] = Route.USE_DEFAULT_ROUTE_TABLE
     routes.sort(key=_route_sort_key)
@@ -259,11 +259,8 @@ def _assert_routes(routes, state, nic="eth1"):
 def _assert_in_current_route(route, current_routes):
     route_in_current_routes = False
     for current_route in current_routes:
-        metric = route.get(Route.METRIC, Route.USE_DEFAULT_METRIC)
+        current_route.pop(Route.METRIC, None)
         table_id = route.get(Route.TABLE_ID, Route.USE_DEFAULT_ROUTE_TABLE)
-        if metric == Route.USE_DEFAULT_METRIC:
-            current_route = copy.deepcopy(current_route)
-            current_route[Route.METRIC] = Route.USE_DEFAULT_METRIC
         if table_id == Route.USE_DEFAULT_ROUTE_TABLE:
             current_route = copy.deepcopy(current_route)
             current_route[Route.TABLE_ID] = Route.USE_DEFAULT_ROUTE_TABLE
