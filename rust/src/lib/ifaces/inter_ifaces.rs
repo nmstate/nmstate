@@ -126,10 +126,13 @@ impl Interfaces {
             self.kernel_ifaces
                 .remove(&iface_name.to_string())
                 .or_else(|| {
-                    if let Some((n, t)) =
-                        self.user_ifaces.keys().find(|(i, _)| i == iface_name)
+                    if let Some((n, t)) = self
+                        .user_ifaces
+                        .keys()
+                        .cloned()
+                        .find(|(i, _)| i == iface_name)
                     {
-                        self.user_ifaces.remove(&(n.to_string(), t.clone()))
+                        self.user_ifaces.remove(&(n, t))
                     } else {
                         None
                     }

@@ -9,7 +9,7 @@ documentation = "https://nmstate.io"
 repository = "https://github.com/nmstate/nmstate"
 keywords = ["network", "linux"]
 categories = ["network-programming", "os::linux-apis"]
-rust-version = "1.60"
+rust-version = "1.58"
 edition = "2018"
 
 [lib]
@@ -62,5 +62,5 @@ serde_yaml = "0.9"
 
 [features]
 default = ["query_apply", "gen_conf"]
-query_apply = ["dep:nispor", "dep:nix", "dep:zbus"]
+query_apply = ["nispor", "nix", "zbus"]
 gen_conf = []
