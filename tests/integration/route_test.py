@@ -1,21 +1,5 @@
-#
-# Copyright (c) 2019-2022 Red Hat, Inc.
-#
-# This file is part of nmstate
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 2.1 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program. If not, see <https://www.gnu.org/licenses/>.
-#
+# SPDX-License-Identifier: LGPL-2.1-or-later
+
 import copy
 
 import pytest
@@ -35,6 +19,7 @@ from .testlib import assertlib
 from .testlib import cmdlib
 from .testlib import iprule
 from .testlib.bridgelib import linux_bridge
+from .testlib.env import nm_minor_version
 
 IPV4_ADDRESS1 = "192.0.2.251"
 IPV4_ADDRESS2 = "192.0.2.252"
@@ -1102,6 +1087,7 @@ def test_support_query_multipath_route(eth1_with_multipath_route):
             Route.NEXT_HOP_ADDRESS: IPV4_ADDRESS2,
             Route.NEXT_HOP_INTERFACE: "eth1",
             Route.TABLE_ID: 254,
+            Route.WEIGHT: 1,
         },
         {
             Route.DESTINATION: IPV4_TEST_NET1,
@@ -1109,6 +1095,7 @@ def test_support_query_multipath_route(eth1_with_multipath_route):
             Route.NEXT_HOP_ADDRESS: IPV4_ADDRESS3,
             Route.NEXT_HOP_INTERFACE: "eth1",
             Route.TABLE_ID: 254,
+            Route.WEIGHT: 1,
         },
         {
             Route.DESTINATION: IPV6_TEST_NET1,
@@ -1471,3 +1458,40 @@ def test_absent_route_with_empty_destination(static_eth1_with_routes):
         if rt[Route.NEXT_HOP_INTERFACE] == "eth1"
     ]
     assert len(cur_eth1_config_routes) == 0
+
+
+@pytest.mark.tier1
+@pytest.mark.skipif(
+    nm_minor_version() < 41, reason="ECMP route is only support on NM 1.41+"
+)
+def test_add_and_remove_ecmp_route(eth1_static_ip):
+    routes = [
+        {
+            Route.NEXT_HOP_INTERFACE: "eth1",
+            Route.DESTINATION: IPV4_DEFAULT_GATEWAY,
+            Route.NEXT_HOP_ADDRESS: IPV4_ADDRESS2,
+            Route.WEIGHT: 1,
+        },
+        {
+            Route.NEXT_HOP_INTERFACE: "eth1",
+            Route.DESTINATION: IPV4_DEFAULT_GATEWAY,
+            Route.NEXT_HOP_ADDRESS: IPV4_ADDRESS3,
+            Route.WEIGHT: 256,
+        },
+    ]
+    libnmstate.apply(
+        {
+            Route.KEY: {Route.CONFIG: routes},
+        }
+    )
+    cur_state = libnmstate.show()
+    _assert_routes(routes, cur_state)
+
+    for route in routes:
+        route[Route.STATE] = Route.STATE_ABSENT
+
+    libnmstate.apply(
+        {
+            Route.KEY: {Route.CONFIG: routes},
+        }
+    )

@@ -63,8 +63,8 @@ pub(crate) fn get_routes(running_config_only: bool) -> Routes {
                 && np_route.oif.as_ref() != Some(&"lo".to_string())
         }) {
             if is_multipath(np_route) {
-                for flat_np_route in flat_multipath_route(np_route) {
-                    running_routes.push(np_route_to_nmstate(&flat_np_route));
+                for route in flat_multipath_route(np_route) {
+                    running_routes.push(route);
                 }
             } else if np_route.oif.is_some() {
                 running_routes.push(np_route_to_nmstate(np_route));
@@ -81,8 +81,8 @@ pub(crate) fn get_routes(running_config_only: bool) -> Routes {
             && np_route.oif.as_ref() != Some(&"lo".to_string())
     }) {
         if is_multipath(np_route) {
-            for flat_np_route in flat_multipath_route(np_route) {
-                config_routes.push(np_route_to_nmstate(&flat_np_route));
+            for route in flat_multipath_route(np_route) {
+                config_routes.push(route);
             }
         } else if np_route.oif.is_some() {
             config_routes.push(np_route_to_nmstate(np_route));
@@ -152,14 +152,18 @@ fn is_multipath(np_route: &nispor::Route) -> bool {
         .unwrap_or_default()
 }
 
-fn flat_multipath_route(np_route: &nispor::Route) -> Vec<nispor::Route> {
-    let mut ret: Vec<nispor::Route> = Vec::new();
+fn flat_multipath_route(np_route: &nispor::Route) -> Vec<RouteEntry> {
+    let mut ret: Vec<RouteEntry> = Vec::new();
     if let Some(mpath_routes) = np_route.multipath.as_ref() {
         for mp_route in mpath_routes {
             let mut new_np_route = np_route.clone();
             new_np_route.via = Some(mp_route.via.to_string());
             new_np_route.oif = Some(mp_route.iface.to_string());
-            ret.push(new_np_route);
+            let mut route = np_route_to_nmstate(&new_np_route);
+            if np_route.address_family == nispor::AddressFamily::IPv4 {
+                route.weight = Some(mp_route.weight);
+            }
+            ret.push(route);
         }
     }
     ret

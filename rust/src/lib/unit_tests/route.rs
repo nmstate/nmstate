@@ -280,3 +280,49 @@ fn test_route_treat_empty_dst_as_none_for_matching() {
 
     assert!(absent_route.is_match(&route));
 }
+
+#[test]
+fn test_route_sanitize_ipv6_ecmp() {
+    let mut route: RouteEntry = serde_yaml::from_str(
+        r#"
+        destination: 2001:db:1::/64
+        metric: 150
+        next-hop-address: 2001:db8::2
+        next-hop-interface: eth1
+        weight: 2
+        table-id: 254
+        "#,
+    )
+    .unwrap();
+    let result = route.sanitize();
+    assert!(result.is_err());
+    assert_eq!(result.err().unwrap().kind(), ErrorKind::NotSupportedError);
+}
+
+#[test]
+fn test_route_ipv4_ecmp_is_match() {
+    let absent_route: RouteEntry = serde_yaml::from_str(
+        r#"
+        destination: 192.0.2.1
+        metric: 150
+        next-hop-address: 2001:db8::2
+        next-hop-interface: eth1
+        weight: 2
+        table-id: 254
+        state: absent
+        "#,
+    )
+    .unwrap();
+    let route: RouteEntry = serde_yaml::from_str(
+        r#"
+        destination: 192.0.2.1
+        metric: 150
+        next-hop-address: 2001:db8::2
+        next-hop-interface: eth1
+        weight: 2
+        table-id: 254
+        "#,
+    )
+    .unwrap();
+    assert!(absent_route.is_match(&route));
+}
