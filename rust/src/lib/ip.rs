@@ -246,6 +246,14 @@ impl InterfaceIpv4 {
     // * Set DHCP options to None if DHCP is false
     // * Remove mptcp_flags is they are for query only
     pub(crate) fn sanitize(&mut self) -> Result<(), NmstateError> {
+        // Empty address should equal to disabled IPv4 stack
+        if let Some(true) = self.addresses.as_ref().map(Vec::is_empty) {
+            if self.enabled {
+                log::info!("Empty IPv4 address is considered as IPv4 disabled");
+                self.enabled = false;
+            }
+        }
+
         if self.is_auto() {
             if self.auto_dns.is_none() {
                 self.auto_dns = Some(true);

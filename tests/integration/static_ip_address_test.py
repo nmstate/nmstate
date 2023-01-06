@@ -857,3 +857,30 @@ def test_preserve_ipv6_addresses_order(eth1_up):
     ip_addrs = iproute_get_ip_addrs_with_order(iface="eth1", is_ipv6=True)
     assert ip_addrs[0] == IPV6_ADDRESS2
     assert ip_addrs[1] == IPV6_ADDRESS1
+
+
+def test_remove_all_ip_address(setup_eth1_static_ip):
+    desired_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: "eth1",
+                Interface.TYPE: InterfaceType.ETHERNET,
+                Interface.STATE: InterfaceState.UP,
+                Interface.IPV4: {
+                    InterfaceIPv4.ENABLED: True,
+                    InterfaceIPv4.ADDRESS: [],
+                },
+                Interface.IPV6: {
+                    InterfaceIPv6.ENABLED: True,
+                    InterfaceIPv6.ADDRESS: [],
+                },
+            }
+        ]
+    }
+    libnmstate.apply(desired_state)
+    # Nmstate should auto convert empty IPv4 address to disabled IPv4.
+    desired_state[Interface.KEY][0][Interface.IPV4][
+        InterfaceIPv4.ENABLED
+    ] = False
+
+    assertlib.assert_state_match(desired_state)
