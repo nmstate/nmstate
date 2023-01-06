@@ -161,9 +161,11 @@ fn parse_ovs_bond_conf(
         }
     }
 
-    if let Some(Value::String(lacp)) = ovsdb_port.options.get("lacp") {
-        if lacp.as_str() == "active" {
-            bond_conf.mode = Some(OvsBridgeBondMode::Lacp);
+    if bond_conf.mode.is_none() {
+        if let Some(Value::String(lacp)) = ovsdb_port.options.get("lacp") {
+            if lacp.as_str() == "active" {
+                bond_conf.mode = Some(OvsBridgeBondMode::Lacp);
+            }
         }
     }
 
