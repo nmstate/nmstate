@@ -5,7 +5,7 @@ version = "2.2.2"
 authors = ["Gris Ge <fge@redhat.com>"]
 license = "Apache-2.0"
 edition = "2018"
-rust-version = "1.60"
+rust-version = "1.58"
 
 [lib]
 name = "nmstate"

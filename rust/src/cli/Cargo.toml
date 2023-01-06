@@ -10,7 +10,7 @@ repository = "https://github.com/nmstate/nmstate"
 keywords = ["network", "linux"]
 categories = ["network-programming", "os::linux"]
 edition = "2018"
-rust-version = "1.60"
+rust-version = "1.58"
 
 [[bin]]
 name = "nmstatectl"
@@ -30,5 +30,5 @@ chrono = "0.4"
 
 [features]
 default = ["query_apply", "gen_conf"]
-query_apply = ["nmstate/query_apply", "dep:ctrlc"]
+query_apply = ["nmstate/query_apply", "ctrlc"]
 gen_conf = ["nmstate/gen_conf"]
