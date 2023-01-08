@@ -175,78 +175,14 @@ impl Interfaces {
 
     // Not allowing changing veth peer away from ignored peer unless previous
     // peer changed from ignore to managed
+    // Not allowing creating veth without peer config
     pub(crate) fn pre_ignore_check(
         &self,
         current: &Self,
         ignored_ifaces: &[(String, InterfaceType)],
     ) -> Result<(), NmstateError> {
-        let ignored_veth_ifaces: Vec<&String> = ignored_ifaces
-            .iter()
-            .filter_map(|(n, t)| {
-                if t == &InterfaceType::Ethernet {
-                    Some(n)
-                } else {
-                    None
-                }
-            })
-            .collect();
-
-        for iface in self.kernel_ifaces.values().filter(|i| {
-            if let Interface::Ethernet(i) = i {
-                i.veth.is_some()
-            } else {
-                false
-            }
-        }) {
-            if let (
-                Interface::Ethernet(des_iface),
-                Some(Interface::Ethernet(cur_iface)),
-            ) = (iface, current.get_iface(iface.name(), InterfaceType::Veth))
-            {
-                if let (Some(des_peer), cur_peer) = (
-                    des_iface.veth.as_ref().map(|v| v.peer.as_str()),
-                    cur_iface.veth.as_ref().map(|v| v.peer.as_str()),
-                ) {
-                    let cur_peer = if let Some(c) = cur_peer {
-                        c
-                    } else {
-                        // The veth peer is in another namespace.
-                        let e = NmstateError::new(
-                            ErrorKind::InvalidArgument,
-                            format!(
-                                "Veth interface {} is currently holding \
-                                peer assigned to other namespace \
-                                Please remove this veth pair \
-                                before changing veth peer to {des_peer}",
-                                iface.name(),
-                            ),
-                        );
-                        log::error!("{}", e);
-                        return Err(e);
-                    };
-
-                    if des_peer != cur_peer
-                        && ignored_veth_ifaces.contains(&&cur_peer.to_string())
-                    {
-                        let e = NmstateError::new(
-                            ErrorKind::InvalidArgument,
-                            format!(
-                                "Veth interface {} is currently holding \
-                                peer {} which is marked as ignored. \
-                                Hence not allowing changing its peer \
-                                to {}. Please remove this veth pair \
-                                before changing veth peer",
-                                iface.name(),
-                                cur_peer,
-                                des_peer
-                            ),
-                        );
-                        log::error!("{}", e);
-                        return Err(e);
-                    }
-                }
-            }
-        }
+        self.validate_change_veth_ignored_peer(current, ignored_ifaces)?;
+        self.validate_new_veth_without_peer(current)?;
         Ok(())
     }
 

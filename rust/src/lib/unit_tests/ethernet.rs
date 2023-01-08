@@ -177,3 +177,24 @@ fn test_eth_change_veth_peer() {
 
     assert!(old_peer_iface.is_absent());
 }
+
+#[test]
+fn test_new_veth_without_peer_config() {
+    let des_ifaces: Interfaces = serde_yaml::from_str(
+        r#"---
+- name: veth1
+  type: veth
+  state: up
+"#,
+    )
+    .unwrap();
+
+    let result =
+        MergedInterfaces::new(des_ifaces, Interfaces::new(), false, false);
+
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+        assert!(e.msg().contains("Veth interface veth1 does not exist"));
+    }
+}
