@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 
 use serde::{
     ser::SerializeTuple, Deserialize, Deserializer, Serialize, Serializer,
 };
+
+use crate::{ErrorKind, NmstateError};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
@@ -95,6 +98,62 @@ impl BridgePortVlanConfig {
             self.trunk_tags = Some(new_trunk_tags);
         }
     }
+
+    pub(crate) fn sanitize(&self) -> Result<(), NmstateError> {
+        if self.mode == Some(BridgePortVlanMode::Trunk)
+            && self.tag.is_some()
+            && self.tag != Some(0)
+            && self.enable_native != Some(true)
+        {
+            return Err(NmstateError::new(
+                ErrorKind::InvalidArgument,
+                "Bridge VLAN filtering `tag` cannot be use \
+                in trunk mode without `enable-native`"
+                    .to_string(),
+            ));
+        }
+
+        if self.mode == Some(BridgePortVlanMode::Access)
+            && self.enable_native == Some(true)
+        {
+            return Err(NmstateError::new(
+                ErrorKind::InvalidArgument,
+                "Bridge VLAN filtering `enable-native: true` cannot be set \
+                in access mode"
+                    .to_string(),
+            ));
+        }
+
+        if self.mode == Some(BridgePortVlanMode::Access) {
+            if let Some(tags) = self.trunk_tags.as_ref() {
+                if !tags.is_empty() {
+                    return Err(NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        "Bridge VLAN filtering access mode cannot have \
+                        trunk-tags defined"
+                            .to_string(),
+                    ));
+                }
+            }
+        }
+
+        if self.mode == Some(BridgePortVlanMode::Trunk)
+            && self.trunk_tags.is_none()
+        {
+            return Err(NmstateError::new(
+                ErrorKind::InvalidArgument,
+                "Bridge VLAN filtering trunk mode cannot have \
+                empty trunk-tags"
+                    .to_string(),
+            ));
+        }
+
+        if let Some(tags) = self.trunk_tags.as_ref() {
+            validate_overlap_trunk_tags(tags)?;
+        }
+
+        Ok(())
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -135,6 +194,17 @@ pub enum BridgePortTunkTag {
     Id(u16),
     /// VLAN trunk ID range
     IdRange(BridgePortVlanRange),
+}
+
+impl std::fmt::Display for BridgePortTunkTag {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Id(d) => write!(f, "id={d}"),
+            Self::IdRange(range) => {
+                write!(f, "id-range=[{},{}]", range.min, range.max)
+            }
+        }
+    }
 }
 
 impl<'de> Deserialize<'de> for BridgePortTunkTag {
@@ -226,4 +296,50 @@ pub struct BridgePortVlanRange {
     #[serde(deserialize_with = "crate::deserializer::u16_or_string")]
     /// Maximum VLAN ID(included).
     pub max: u16,
+}
+
+fn validate_overlap_trunk_tags(
+    tags: &[BridgePortTunkTag],
+) -> Result<(), NmstateError> {
+    let mut found: HashMap<u16, &BridgePortTunkTag> = HashMap::new();
+    for tag in tags {
+        match tag {
+            BridgePortTunkTag::Id(d) => match found.entry(*d) {
+                Entry::Occupied(o) => {
+                    let existing_tag = o.get();
+                    return Err(NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        format!(
+                            "Bridge VLAN trunk tag {tag} is \
+                            overlapping with other tag {existing_tag}"
+                        ),
+                    ));
+                }
+                Entry::Vacant(v) => {
+                    v.insert(tag);
+                }
+            },
+
+            BridgePortTunkTag::IdRange(range) => {
+                for i in range.min..range.max + 1 {
+                    match found.entry(i) {
+                        Entry::Occupied(o) => {
+                            let existing_tag = o.get();
+                            return Err(NmstateError::new(
+                                ErrorKind::InvalidArgument,
+                                format!(
+                                    "Bridge VLAN trunk tag {tag} is \
+                                    overlapping with other tag {existing_tag}"
+                                ),
+                            ));
+                        }
+                        Entry::Vacant(v) => {
+                            v.insert(tag);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    Ok(())
 }

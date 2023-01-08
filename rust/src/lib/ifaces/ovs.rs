@@ -123,6 +123,18 @@ impl OvsBridgeInterface {
         self.base.ipv4 = None;
         self.base.ipv6 = None;
         self.sort_ports();
+
+        if let Some(port_confs) = self
+            .bridge
+            .as_ref()
+            .and_then(|br_conf| br_conf.ports.as_ref())
+        {
+            for port_conf in port_confs {
+                if let Some(vlan_conf) = port_conf.vlan.as_ref() {
+                    vlan_conf.sanitize()?;
+                }
+            }
+        }
         Ok(())
     }
 

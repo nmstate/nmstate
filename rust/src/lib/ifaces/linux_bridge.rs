@@ -107,6 +107,17 @@ impl LinuxBridgeInterface {
         self.flatten_port_vlan_ranges();
         self.sort_port_vlans();
         self.remove_runtime_only_timers();
+        if let Some(port_confs) = self
+            .bridge
+            .as_ref()
+            .and_then(|br_conf| br_conf.port.as_ref())
+        {
+            for port_conf in port_confs {
+                if let Some(vlan_conf) = port_conf.vlan.as_ref() {
+                    vlan_conf.sanitize()?;
+                }
+            }
+        }
         Ok(())
     }
 
