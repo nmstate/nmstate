@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    BridgePortTunkTag, BridgePortVlanRange, Interface, InterfaceType,
-    Interfaces, LinuxBridgeInterface, LinuxBridgeMulticastRouterType,
-    MergedInterface, MergedInterfaces,
+    BridgePortTunkTag, BridgePortVlanRange, ErrorKind, Interface,
+    InterfaceType, Interfaces, LinuxBridgeInterface,
+    LinuxBridgeMulticastRouterType, MergedInterface, MergedInterfaces,
 };
 
 #[test]
@@ -418,5 +418,220 @@ bridge:
         assert!(iface.vlan_filtering_is_enabled());
     } else {
         panic!("Expecting a LinuxBridge but got {:?}", merged_iface.merged);
+    }
+}
+
+#[test]
+fn test_bridge_vlan_filter_trunk_tag_without_enable_native() {
+    let mut desired: LinuxBridgeInterface = serde_yaml::from_str(
+        r#"
+        name: br0
+        type: linux-bridge
+        state: up
+        bridge:
+          options:
+            stp:
+              enabled: true
+          port:
+            - name: eth1
+              vlan:
+                mode: trunk
+                tag: 200
+                trunk-tags:
+                  - id-range:
+                      min: 600
+                      max: 900
+                  - id-range:
+                      max: 500
+                      min: 400
+        "#,
+    )
+    .unwrap();
+
+    let result = desired.sanitize();
+
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+    }
+}
+
+#[test]
+fn test_bridge_vlan_filter_trunk_tag_overlap_id_vs_range() {
+    let mut desired: LinuxBridgeInterface = serde_yaml::from_str(
+        r#"
+        name: br0
+        type: linux-bridge
+        state: up
+        bridge:
+          options:
+            stp:
+              enabled: true
+          port:
+            - name: eth1
+              vlan:
+                mode: trunk
+                trunk-tags:
+                  - id-range:
+                      min: 600
+                      max: 900
+                  - id: 600
+        "#,
+    )
+    .unwrap();
+
+    let result = desired.sanitize();
+
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+    }
+}
+
+#[test]
+fn test_bridge_vlan_filter_trunk_tag_overlap_range_vs_range() {
+    let mut desired: LinuxBridgeInterface = serde_yaml::from_str(
+        r#"
+        name: br0
+        type: linux-bridge
+        state: up
+        bridge:
+          options:
+            stp:
+              enabled: true
+          port:
+            - name: eth1
+              vlan:
+                mode: trunk
+                trunk-tags:
+                  - id-range:
+                      min: 600
+                      max: 900
+                  - id-range:
+                      min: 900
+                      max: 1000
+        "#,
+    )
+    .unwrap();
+
+    let result = desired.sanitize();
+
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+    }
+}
+
+#[test]
+fn test_bridge_vlan_filter_trunk_tag_overlap_id_vs_id() {
+    let mut desired: LinuxBridgeInterface = serde_yaml::from_str(
+        r#"
+        name: br0
+        type: linux-bridge
+        state: up
+        bridge:
+          options:
+            stp:
+              enabled: true
+          port:
+            - name: eth1
+              vlan:
+                mode: trunk
+                trunk-tags:
+                  - id: 100
+                  - id: 100
+        "#,
+    )
+    .unwrap();
+
+    let result = desired.sanitize();
+
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+    }
+}
+
+#[test]
+fn test_bridge_vlan_filter_enable_native_with_access_mode() {
+    let mut desired: LinuxBridgeInterface = serde_yaml::from_str(
+        r#"
+        name: br0
+        type: linux-bridge
+        state: up
+        bridge:
+          options:
+            stp:
+              enabled: true
+          port:
+            - name: eth1
+              vlan:
+                enable-native: true
+                mode: access
+        "#,
+    )
+    .unwrap();
+
+    let result = desired.sanitize();
+
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+    }
+}
+
+#[test]
+fn test_bridge_vlan_filter_trunk_tags_with_access_mode() {
+    let mut desired: LinuxBridgeInterface = serde_yaml::from_str(
+        r#"
+        name: br0
+        type: linux-bridge
+        state: up
+        bridge:
+          options:
+            stp:
+              enabled: true
+          port:
+            - name: eth1
+              vlan:
+                mode: access
+                trunk-tags:
+                  - id: 100
+        "#,
+    )
+    .unwrap();
+
+    let result = desired.sanitize();
+
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+    }
+}
+
+#[test]
+fn test_bridge_vlan_filter_no_trunk_tags_with_trunk_mode() {
+    let mut desired: LinuxBridgeInterface = serde_yaml::from_str(
+        r#"
+        name: br0
+        type: linux-bridge
+        state: up
+        bridge:
+          options:
+            stp:
+              enabled: true
+          port:
+            - name: eth1
+              vlan:
+                mode: trunk
+        "#,
+    )
+    .unwrap();
+
+    let result = desired.sanitize();
+
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
     }
 }
