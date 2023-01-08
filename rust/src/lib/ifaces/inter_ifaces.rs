@@ -484,6 +484,15 @@ impl MergedInterfaces {
             MergedInterface,
         > = HashMap::new();
 
+        if gen_conf_mode {
+            desired.set_unknown_iface_to_eth()?;
+            desired.set_missing_port_to_eth();
+        } else {
+            desired.resolve_unknown_ifaces(&current)?;
+        }
+
+        desired.auto_managed_controller_ports(&current);
+
         let ignored_ifaces = get_ignored_ifaces(&desired, &current);
         desired.pre_ignore_check(&current, ignored_ifaces.as_slice())?;
 
@@ -491,18 +500,15 @@ impl MergedInterfaces {
             desired.apply_memory_only_mode();
         }
 
+        for (iface_name, iface_type) in ignored_ifaces.as_slice() {
+            log::info!("Ignoring interface {} type {}", iface_name, iface_type);
+        }
+
         desired.remove_ignored_ifaces(ignored_ifaces.as_slice());
         current.remove_ignored_ifaces(ignored_ifaces.as_slice());
 
         desired.unify_veth_and_eth();
         current.unify_veth_and_eth();
-
-        if gen_conf_mode {
-            desired.set_unknown_iface_to_eth()?;
-            desired.set_missing_port_to_eth();
-        } else {
-            desired.resolve_unknown_ifaces(&current)?;
-        }
 
         desired.resolve_sriov_reference(&current)?;
 

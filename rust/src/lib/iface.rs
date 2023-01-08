@@ -184,6 +184,14 @@ pub enum InterfaceState {
     /// Interface is not managed by backend. For apply action, interface marked
     /// as ignore will not be changed and will not cause verification failure
     /// neither.
+    /// When desired controller listed currently ignored interfaces as its
+    /// port, nmstate will automatically convert these ignored interfaces from
+    /// 'state: ignore' to 'state: up' only when:
+    ///  1. This ignored port is not mentioned in desire state.
+    ///  2. This ignored port is listed as port of a desired controller.
+    ///  3. Controller interface is new or does not contain ignored interfaces
+    ///     currently.
+    ///
     /// Deserialize and serialize from/to 'ignore'.
     Ignore,
 }

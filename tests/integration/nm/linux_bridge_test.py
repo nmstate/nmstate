@@ -1,21 +1,4 @@
-#
-# Copyright (c) 2018-2022 Red Hat, Inc.
-#
-# This file is part of nmstate
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 2.1 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program. If not, see <https://www.gnu.org/licenses/>.
-#
+# SPDX-License-Identifier: LGPL-2.1-or-later
 
 import pytest
 from contextlib import contextmanager
@@ -403,3 +386,30 @@ def test_linux_bridge_store_stp_setting_even_disabled(
             )[1].strip()
             == "20480"
         )
+
+
+@pytest.fixture
+def unmangaed_dummy1_dummy2():
+    exec_cmd("ip link add dummy1 type dummy".split(), check=True)
+    exec_cmd("ip link add dummy2 type dummy".split(), check=True)
+    exec_cmd("ip link set dummy1 up".split(), check=True)
+    exec_cmd("ip link set dummy2 up".split(), check=True)
+    exec_cmd("nmcli dev set dummy1 managed false".split(), check=True)
+    exec_cmd("nmcli dev set dummy2 managed false".split(), check=True)
+    yield
+    exec_cmd("ip link del dummy1".split(), check=False)
+    exec_cmd("ip link del dummy2".split(), check=False)
+
+
+def test_auto_manage_linux_ignored_ports(unmangaed_dummy1_dummy2):
+    bridge_subtree_state = {
+        LB.PORT_SUBTREE: [
+            {LB.Port.NAME: "dummy1"},
+            {LB.Port.NAME: "dummy2"},
+        ],
+        LB.OPTIONS_SUBTREE: {LB.STP_SUBTREE: {LB.STP.ENABLED: False}},
+    }
+    with linux_bridge(
+        BRIDGE0, bridge_subtree_state=bridge_subtree_state
+    ) as state:
+        assertlib.assert_state_match(state)
