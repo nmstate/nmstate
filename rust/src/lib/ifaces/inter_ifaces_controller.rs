@@ -4,8 +4,8 @@ use std::collections::{HashMap, HashSet};
 use std::iter::FromIterator;
 
 use crate::{
-    BondMode, ErrorKind, Interface, InterfaceType, MergedInterface,
-    MergedInterfaces, NmstateError, OvsInterface,
+    BondMode, ErrorKind, Interface, InterfaceState, InterfaceType, Interfaces,
+    MergedInterface, MergedInterfaces, NmstateError, OvsInterface,
 };
 
 fn is_port_overbook(
@@ -485,5 +485,81 @@ impl MergedInterfaces {
             }
         }
         Ok(())
+    }
+}
+
+impl Interfaces {
+    // Automatically convert ignored interface to `state: up` when all below
+    // conditions met:
+    //  1. Not mentioned in desire state.
+    //  2. Been listed as port of a controller.
+    //  3. Controller interface is new or does not contains ignored interfaces.
+    pub(crate) fn auto_managed_controller_ports(&mut self, current: &Self) {
+        // Contains ignored kernel ifaces which is not mentioned in desire
+        // states
+        let mut not_desired_ignores: HashSet<&str> = HashSet::new();
+        let mut full_ignores: HashSet<&str> = HashSet::new();
+        for iface in current.kernel_ifaces.values().filter(|i| i.is_ignore()) {
+            match self.kernel_ifaces.get(iface.name()) {
+                Some(des_iface) => {
+                    if des_iface.is_ignore() {
+                        full_ignores.insert(iface.name());
+                    }
+                }
+                None => {
+                    not_desired_ignores.insert(iface.name());
+                    full_ignores.insert(iface.name());
+                }
+            }
+        }
+        for iface in self.kernel_ifaces.values().filter(|i| i.is_ignore()) {
+            full_ignores.insert(iface.name());
+        }
+
+        // Contains interface names need to be marked as `state: up` afterwards.
+        let mut pending_changes: Vec<String> = Vec::new();
+
+        for iface in self
+            .kernel_ifaces
+            .values()
+            .filter(|i| i.is_controller() && i.is_up())
+        {
+            let cur_iface = current.get_iface(iface.name(), iface.iface_type());
+            if let Some(port_names) = iface.ports() {
+                for port_name in port_names {
+                    if not_desired_ignores.contains(port_name) {
+                        // Only pre-exist controller holding __no__
+                        // ignored ports can fit our auto-fix case.
+                        // Or new interface.
+                        if cur_iface.and_then(|i| i.ports()).map(|cur_ports| {
+                            cur_ports
+                                .as_slice()
+                                .iter()
+                                .any(|cur_port| full_ignores.contains(cur_port))
+                        }) != Some(true)
+                        {
+                            log::info!(
+                                "Controller interface {}({}) contains \
+                                port {port_name} which is currently ignored, \
+                                marking this port as 'state: up'. ",
+                                iface.name(),
+                                iface.iface_type()
+                            );
+                            pending_changes.push(port_name.to_string());
+                        }
+                    }
+                }
+            }
+        }
+
+        for iface_name in pending_changes {
+            if let Some(cur_iface) =
+                current.kernel_ifaces.get(iface_name.as_str())
+            {
+                let mut iface = cur_iface.clone_name_type_only();
+                iface.base_iface_mut().state = InterfaceState::Up;
+                self.kernel_ifaces.insert(iface_name, iface);
+            }
+        }
     }
 }
