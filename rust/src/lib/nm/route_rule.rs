@@ -221,51 +221,73 @@ fn find_interface_for_rule<'a>(
         }
     }
 
-    if let Some(table_id) = rule.table_id.as_ref() {
-        // Try interface with desired routes first
-        for iface_name in merged_state.routes.route_changed_ifaces.as_slice() {
-            if iface_has_route_for_table_id(
-                iface_name,
-                merged_state,
-                rule.is_ipv6(),
-                *table_id,
-            ) {
-                return Ok(iface_name);
-            }
-        }
+    let table_id = rule.table_id.unwrap_or(DEFAULT_TABLE_ID);
 
-        // Try interfaces in desire state
-        for iface_name in merged_state
-            .interfaces
-            .kernel_ifaces
-            .iter()
-            .filter_map(|(n, i)| if i.is_changed() { Some(n) } else { None })
-        {
-            if iface_has_route_for_table_id(
-                iface_name,
-                merged_state,
-                rule.is_ipv6(),
-                *table_id,
-            ) {
-                return Ok(iface_name);
-            }
+    // Try interface with desired routes first
+    for iface_name in merged_state.routes.route_changed_ifaces.as_slice() {
+        if iface_has_route_for_table_id(
+            iface_name,
+            merged_state,
+            rule.is_ipv6(),
+            table_id,
+        ) {
+            return Ok(iface_name);
         }
+    }
 
-        // Try interfaces in current state
-        for iface_name in merged_state
-            .interfaces
-            .kernel_ifaces
-            .iter()
-            .filter_map(|(n, i)| if !i.is_changed() { Some(n) } else { None })
-        {
-            if iface_has_route_for_table_id(
-                iface_name,
-                merged_state,
-                rule.is_ipv6(),
-                *table_id,
-            ) {
-                return Ok(iface_name);
+    let mut des_iface_names: Vec<&str> = merged_state
+        .interfaces
+        .kernel_ifaces
+        .iter()
+        .filter_map(|(n, i)| {
+            if i.is_changed() {
+                Some(n.as_str())
+            } else {
+                None
             }
+        })
+        .collect();
+
+    // we should be persistent on choice, hence sort the iface names.
+    des_iface_names.sort_unstable();
+
+    // Try interfaces in desire state
+    for iface_name in des_iface_names {
+        if iface_has_route_for_table_id(
+            iface_name,
+            merged_state,
+            rule.is_ipv6(),
+            table_id,
+        ) {
+            return Ok(iface_name);
+        }
+    }
+
+    let mut cur_iface_names: Vec<&str> = merged_state
+        .interfaces
+        .kernel_ifaces
+        .iter()
+        .filter_map(|(n, i)| {
+            if !i.is_changed() {
+                Some(n.as_str())
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    // we should be persistent on choice, hence sort the iface names.
+    cur_iface_names.sort_unstable();
+
+    // Try interfaces in current state
+    for iface_name in cur_iface_names {
+        if iface_has_route_for_table_id(
+            iface_name,
+            merged_state,
+            rule.is_ipv6(),
+            table_id,
+        ) {
+            return Ok(iface_name);
         }
     }
 

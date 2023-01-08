@@ -235,3 +235,68 @@ route-rules:
         Some(expected_rules)
     );
 }
+
+#[test]
+fn test_route_rule_use_default_auto_route_table_id() {
+    let current: NetworkState = serde_yaml::from_str(
+        r#"
+---
+interfaces:
+  - name: eth1
+    type: ethernet
+    state: up
+    ipv4:
+      enabled: true
+      dhcp: true
+      auto-dns: true
+      auto-routes: true
+      auto-gateway: true
+    ipv6:
+      enabled: false
+"#,
+    )
+    .unwrap();
+
+    let desired: NetworkState = serde_yaml::from_str(
+        r#"
+---
+route-rules:
+  config:
+    - priority: 3200
+      ip-to: 192.0.3.0/24
+    - priority: 3200
+      ip-from: 192.0.3.0/24
+"#,
+    )
+    .unwrap();
+
+    let expected_rules: Vec<RouteRuleEntry> = serde_yaml::from_str(
+        r#"
+- route-table: 254
+  priority: 3200
+  ip-to: 192.0.3.0/24
+- route-table: 254
+  priority: 3200
+  ip-from: 192.0.3.0/24
+"#,
+    )
+    .unwrap();
+
+    let mut merged_state =
+        MergedNetworkState::new(desired, current, false, false).unwrap();
+
+    store_route_rule_config(&mut merged_state).unwrap();
+
+    let iface = merged_state
+        .interfaces
+        .get_iface("eth1", InterfaceType::Ethernet)
+        .unwrap()
+        .for_apply
+        .as_ref()
+        .unwrap();
+
+    assert_eq!(
+        iface.base_iface().ipv4.as_ref().unwrap().rules,
+        Some(expected_rules)
+    );
+}
