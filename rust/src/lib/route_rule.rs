@@ -329,6 +329,14 @@ impl RouteRuleEntry {
         self.validate_ip_from_to()?;
         self.validate_fwmark_and_fwmask()?;
 
+        if self.action.is_none() && self.table_id.is_none() {
+            log::info!(
+                "Route rule {self} has no action or route-table \
+                defined, using default route table 254"
+            );
+            self.table_id = Some(RouteRuleEntry::DEFAULR_ROUTE_TABLE_ID);
+        }
+
         Ok(())
     }
 }
