@@ -151,6 +151,52 @@ def vrf1_with_unmanaged_port(unmanaged_port_up):
         )
 
 
+@pytest.fixture
+def vrf_over_bond_vlan(eth1_up, eth2_up):
+    desired = yaml.load(
+        """---
+        interfaces:
+        - name: test-bond0.100
+          type: vlan
+          vlan:
+            base-iface: test-bond0
+            id: 100
+        - name: test-bond0
+          type: bond
+          link-aggregation:
+            mode: balance-rr
+        - name: test-vrf0
+          type: vrf
+          state: up
+          vrf:
+            port:
+            - test-bond0
+            - test-bond0.100
+            route-table-id: 100
+        """,
+        Loader=yaml.SafeLoader,
+    )
+    libnmstate.apply(desired)
+    yield desired
+    libnmstate.apply(
+        yaml.load(
+            """---
+            interfaces:
+            - name: test-bond0.100
+              type: vlan
+              state: absent
+            - name: test-bond0
+              type: bond
+              state: absent
+            - name: test-vrf0
+              type: vrf
+              state: absent
+            """,
+            Loader=yaml.SafeLoader,
+        )
+    )
+
+
 class TestVrf:
     def test_create_and_remove(self, vrf0_with_port0):
         pass
@@ -295,52 +341,6 @@ class TestVrf:
             }
         )
 
-    def test_new_vrf_over_new_bond_vlan(self):
-        desired = yaml.load(
-            """---
-interfaces:
-- name: test-bond0.100
-  type: vlan
-  vlan:
-    base-iface: test-bond0
-    id: 100
-- name: test-bond0
-  type: bond
-  link-aggregation:
-    mode: balance-rr
-- name: test-vrf0
-  type: vrf
-  state: up
-  vrf:
-    port:
-    - test-bond0
-    - test-bond0.100
-    route-table-id: 100""",
-            Loader=yaml.SafeLoader,
-        )
-        try:
-            libnmstate.apply(desired)
-            assertlib.assert_state_match(desired)
-        finally:
-            libnmstate.apply(
-                {
-                    Interface.KEY: [
-                        {
-                            Interface.NAME: TEST_VRF0,
-                            Interface.STATE: InterfaceState.ABSENT,
-                        },
-                        {
-                            Interface.NAME: TEST_BOND0,
-                            Interface.STATE: InterfaceState.ABSENT,
-                        },
-                        {
-                            Interface.NAME: TEST_BOND0_VLAN,
-                            Interface.STATE: InterfaceState.ABSENT,
-                        },
-                    ]
-                }
-            )
-
     def test_change_vrf_without_table_id(self, vrf0_with_port0):
         libnmstate.apply(
             {
@@ -369,3 +369,27 @@ interfaces:
                     ]
                 }
             )
+
+    def test_new_vrf_over_new_bond_vlan(self, vrf_over_bond_vlan):
+        assertlib.assert_state_match(vrf_over_bond_vlan)
+
+    def test_vrf_over_bond_vlan_got_auto_remove_by_parent(
+        self, vrf_over_bond_vlan
+    ):
+        libnmstate.apply(
+            {
+                Interface.KEY: [
+                    {
+                        Interface.NAME: TEST_VRF0,
+                        Interface.STATE: InterfaceState.ABSENT,
+                    },
+                    {
+                        Interface.NAME: TEST_BOND0,
+                        Interface.STATE: InterfaceState.ABSENT,
+                    },
+                ]
+            }
+        )
+        assertlib.assert_absent(TEST_VRF0)
+        assertlib.assert_absent(TEST_BOND0)
+        assertlib.assert_absent(TEST_BOND0_VLAN)
