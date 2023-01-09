@@ -1,4 +1,9 @@
-use serde::{ser::SerializeStruct, Deserialize, Serialize, Serializer};
+// SPDX-License-Identifier: Apache-2.0
+
+use serde::{
+    de::IgnoredAny, ser::SerializeStruct, Deserialize, Deserializer, Serialize,
+    Serializer,
+};
 
 const LLDP_CHASSIS_ID_TYPE: u8 = 1;
 const LLDP_PORT_TYPE: u8 = 2;
@@ -56,8 +61,31 @@ const LLDP_SYS_CAP_TWO_PORT_MAC_RELAY: u16 = 11;
 pub struct LldpConfig {
     #[serde(deserialize_with = "crate::deserializer::bool_or_string")]
     pub enabled: bool,
-    #[serde(skip_deserializing, skip_serializing_if = "Vec::is_empty")]
+    #[serde(
+        default,
+        deserialize_with = "skip",
+        skip_serializing_if = "Vec::is_empty"
+    )]
     pub neighbors: Vec<Vec<LldpNeighborTlv>>,
+}
+
+// The serde is treating skipped value as unknown field which trigger
+// `serde(deny_unknown_fields)`, so we manually skip this field.
+fn skip<'de, D, T>(deserializer: D) -> Result<T, D::Error>
+where
+    D: Deserializer<'de>,
+    T: Default,
+{
+    // Ignore the data in the input.
+    IgnoredAny::deserialize(deserializer)?;
+    Ok(T::default())
+}
+
+impl LldpConfig {
+    pub(crate) fn sanitize(&mut self) {
+        // Remove since it is for query only
+        self.neighbors = Vec::new();
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]

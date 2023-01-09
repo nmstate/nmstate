@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use std::collections::HashMap;
 
 use crate::{
@@ -17,8 +19,8 @@ use crate::{
         vrf::np_vrf_to_nmstate,
         vxlan::np_vxlan_to_nmstate,
     },
-    DummyInterface, Interface, InterfaceType, Interfaces, NetworkState,
-    NmstateError, OvsInterface, UnknownInterface,
+    DummyInterface, Interface, InterfaceType, Interfaces, LoopbackInterface,
+    NetworkState, NmstateError, OvsInterface, UnknownInterface,
 };
 
 pub(crate) fn nispor_retrieve(
@@ -45,7 +47,7 @@ pub(crate) fn nispor_retrieve(
 
         let iface = match &base_iface.iface_type {
             InterfaceType::LinuxBridge => {
-                let mut br_iface = np_bridge_to_nmstate(np_iface, base_iface);
+                let mut br_iface = np_bridge_to_nmstate(np_iface, base_iface)?;
                 let mut port_np_ifaces = Vec::new();
                 for port_name in br_iface.ports().unwrap_or_default() {
                     if let Some(p) = np_state.ifaces.get(port_name) {
@@ -104,6 +106,9 @@ pub(crate) fn nispor_retrieve(
                     continue;
                 }
                 Interface::InfiniBand(np_ib_to_nmstate(np_iface, base_iface))
+            }
+            InterfaceType::Loopback => {
+                Interface::Loopback(LoopbackInterface { base: base_iface })
             }
             _ => {
                 log::info!(

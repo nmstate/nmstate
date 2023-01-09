@@ -5,8 +5,6 @@ mod bond;
 #[cfg(test)]
 mod bridge;
 #[cfg(test)]
-mod dns;
-#[cfg(test)]
 mod ethernet;
 #[cfg(test)]
 mod ethtool;
@@ -28,6 +26,8 @@ mod mac_vtap;
 mod mptcp;
 #[cfg(test)]
 mod net_state;
+#[cfg(test)]
+mod nm;
 #[cfg(test)]
 mod ovs;
 #[cfg(test)]

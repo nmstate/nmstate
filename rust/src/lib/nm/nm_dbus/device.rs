@@ -41,6 +41,7 @@ const NM_DEVICE_TYPE_6LOWPAN: u32 = 28;
 const NM_DEVICE_TYPE_WIREGUARD: u32 = 29;
 const NM_DEVICE_TYPE_WIFI_P2P: u32 = 30;
 const NM_DEVICE_TYPE_VRF: u32 = 31;
+const NM_DEVICE_TYPE_LOOPBACK: u32 = 32;
 
 const NM_DEVICE_STATE_UNKNOWN: u32 = 0;
 const NM_DEVICE_STATE_UNMANAGED: u32 = 10;
@@ -454,6 +455,7 @@ fn nm_dev_iface_type_get(
             NM_DEVICE_TYPE_WIREGUARD => "wireguard".to_string(),
             NM_DEVICE_TYPE_WIFI_P2P => "wifi-p2p".to_string(),
             NM_DEVICE_TYPE_VRF => "vrf".to_string(),
+            NM_DEVICE_TYPE_LOOPBACK => "loopback".to_string(),
             _ => format!("unknown({i})"),
         }),
         Err(e) => Err(NmError::new(

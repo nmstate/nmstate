@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: LGPL-2.1-or-later
+
 from .clib_wrapper import NmstateError
 from .gen_conf import generate_configurations
 from .netapplier import apply
@@ -20,6 +22,6 @@ __all__ = [
     "show_running_config",
 ]
 
-__version__ = "1.4.0"
+__version__ = "1.4.1"
 
 BASE_ON_RUST = True

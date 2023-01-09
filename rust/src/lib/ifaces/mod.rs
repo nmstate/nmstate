@@ -5,6 +5,7 @@ mod dummy;
 mod ethernet;
 mod ethtool;
 pub(crate) mod inter_ifaces;
+mod loopback;
 mod vrf;
 mod vxlan;
 // The pub(crate) is only for unit test
@@ -36,11 +37,13 @@ pub use ethtool::{
     EthtoolPauseConfig, EthtoolRingConfig,
 };
 pub use infiniband::{InfiniBandConfig, InfiniBandInterface, InfiniBandMode};
+pub(crate) use inter_ifaces::MergedInterfaces;
 pub use inter_ifaces::*;
 pub use linux_bridge::{
     LinuxBridgeConfig, LinuxBridgeInterface, LinuxBridgeMulticastRouterType,
     LinuxBridgeOptions, LinuxBridgePortConfig, LinuxBridgeStpOptions,
 };
+pub use loopback::LoopbackInterface;
 pub use mac_vlan::{MacVlanConfig, MacVlanInterface, MacVlanMode};
 pub use mac_vtap::{MacVtapConfig, MacVtapInterface, MacVtapMode};
 pub use ovs::{

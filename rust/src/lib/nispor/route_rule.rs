@@ -1,6 +1,8 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use log::warn;
 
-use crate::{AddressFamily, RouteRuleEntry, RouteRules};
+use crate::{AddressFamily, RouteRuleAction, RouteRuleEntry, RouteRules};
 
 // Due to a bug in NetworkManager all route rules added using NetworkManager are
 // using RTM_PROTOCOL UnSpec. Therefore, we need to support it until it is
@@ -38,8 +40,21 @@ pub(crate) fn get_route_rules(
     for np_rule in np_rules {
         let mut rule = RouteRuleEntry::new();
         // We only support route rules with 'table' action
-        if np_rule.action != nispor::RuleAction::Table {
-            continue;
+        match np_rule.action {
+            nispor::RuleAction::Table => (),
+            nispor::RuleAction::Blackhole => {
+                rule.action = Some(RouteRuleAction::Blackhole)
+            }
+            nispor::RuleAction::Unreachable => {
+                rule.action = Some(RouteRuleAction::Unreachable)
+            }
+            nispor::RuleAction::Prohibit => {
+                rule.action = Some(RouteRuleAction::Prohibit)
+            }
+            _ => {
+                log::debug!("Got unsupported route rule {:?}", np_rule);
+                continue;
+            }
         }
         // Filter out the routes with protocols that we do not support
         if let Some(rule_protocol) = np_rule.protocol.as_ref() {
@@ -47,6 +62,7 @@ pub(crate) fn get_route_rules(
                 continue;
             }
         }
+        rule.iif = np_rule.iif.clone();
         rule.ip_to = np_rule.dst.clone();
         rule.ip_from = np_rule.src.clone();
         rule.table_id = np_rule.table;

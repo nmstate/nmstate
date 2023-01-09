@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
 
-#[cfg(feature = "query_apply")]
 mod active_connection;
 mod connection;
 mod convert;
@@ -21,25 +20,28 @@ mod nm_api;
 #[cfg(feature = "gen_conf")]
 mod gen_conf;
 
+pub use self::active_connection::NmActiveConnection;
 #[cfg(feature = "query_apply")]
-pub use self::active_connection::{
-    NmActiveConnection, NM_ACTIVATION_STATE_FLAG_EXTERNAL,
-};
+pub use self::active_connection::NM_ACTIVATION_STATE_FLAG_EXTERNAL;
 pub use self::connection::{
-    NmConnection, NmIpRoute, NmIpRouteRule, NmSetting8021X, NmSettingBond,
-    NmSettingBridge, NmSettingBridgePort, NmSettingBridgeVlanRange,
-    NmSettingConnection, NmSettingEthtool, NmSettingInfiniBand, NmSettingIp,
-    NmSettingIpMethod, NmSettingMacVlan, NmSettingOvsBridge, NmSettingOvsDpdk,
-    NmSettingOvsExtIds, NmSettingOvsIface, NmSettingOvsPatch, NmSettingOvsPort,
-    NmSettingSriov, NmSettingSriovVf, NmSettingSriovVfVlan, NmSettingUser,
-    NmSettingVeth, NmSettingVlan, NmSettingVrf, NmSettingVxlan, NmSettingWired,
+    NmConnection, NmIpRoute, NmIpRouteRule, NmIpRouteRuleAction, NmRange,
+    NmSetting8021X, NmSettingBond, NmSettingBridge, NmSettingBridgePort,
+    NmSettingBridgeVlanRange, NmSettingConnection, NmSettingEthtool,
+    NmSettingInfiniBand, NmSettingIp, NmSettingIpMethod, NmSettingLoopback,
+    NmSettingMacVlan, NmSettingOvsBridge, NmSettingOvsDpdk, NmSettingOvsExtIds,
+    NmSettingOvsIface, NmSettingOvsPatch, NmSettingOvsPort, NmSettingSriov,
+    NmSettingSriovVf, NmSettingSriovVfVlan, NmSettingUser, NmSettingVeth,
+    NmSettingVlan, NmSettingVrf, NmSettingVxlan, NmSettingWired,
     NmSettingsConnectionFlag, NmVlanProtocol,
 };
 #[cfg(feature = "query_apply")]
 pub use self::device::{NmDevice, NmDeviceState, NmDeviceStateReason};
 #[cfg(feature = "query_apply")]
 pub use self::dns::NmDnsEntry;
-pub use self::error::{ErrorKind, NmError};
+pub use self::error::{
+    ErrorKind, NmConnectionError, NmDeviceError, NmError, NmManagerError,
+    NmSettingError,
+};
 #[cfg(feature = "query_apply")]
 pub use self::lldp::{
     NmLldpNeighbor, NmLldpNeighbor8021Ppvid, NmLldpNeighbor8021Vlan,

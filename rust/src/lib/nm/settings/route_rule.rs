@@ -16,8 +16,8 @@ const ROUTE_RULE_DEFAULT_PRIORIRY: u32 = 30000;
 const AF_INET6: i32 = 10;
 const AF_INET: i32 = 2;
 
-pub(crate) fn gen_nm_ip_rules<'a>(
-    rules: impl std::iter::Iterator<Item = &'a RouteRuleEntry>,
+pub(crate) fn gen_nm_ip_rules(
+    rules: &[RouteRuleEntry],
     is_ipv6: bool,
 ) -> Result<Vec<NmIpRouteRule>, NmstateError> {
     let mut ret = Vec::new();
@@ -64,6 +64,12 @@ pub(crate) fn gen_nm_ip_rules<'a>(
 
         nm_rule.fw_mark = rule.fwmark;
         nm_rule.fw_mask = rule.fwmask;
+        if let Some(iif) = rule.iif.as_ref() {
+            nm_rule.iifname = Some(iif.to_string());
+        }
+        if let Some(action) = rule.action.as_ref() {
+            nm_rule.action = Some(u8::from(*action).into());
+        }
 
         ret.push(nm_rule);
     }

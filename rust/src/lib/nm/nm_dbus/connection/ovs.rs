@@ -5,7 +5,7 @@ use std::convert::TryFrom;
 
 use serde::Deserialize;
 
-use super::super::{connection::DbusDictionary, NmError, ToDbusValue};
+use super::super::{connection::DbusDictionary, NmError, NmRange, ToDbusValue};
 
 #[derive(Debug, Clone, PartialEq, Default, Deserialize)]
 #[serde(try_from = "DbusDictionary")]
@@ -71,6 +71,7 @@ pub struct NmSettingOvsPort {
     pub down_delay: Option<u32>,
     pub tag: Option<u32>,
     pub vlan_mode: Option<String>,
+    pub trunks: Option<Vec<NmRange>>,
     pub lacp: Option<String>,
     _other: HashMap<String, zvariant::OwnedValue>,
 }
@@ -85,9 +86,21 @@ impl TryFrom<DbusDictionary> for NmSettingOvsPort {
             tag: _from_map!(v, "tag", u32::try_from)?,
             vlan_mode: _from_map!(v, "vlan-mode", String::try_from)?,
             lacp: _from_map!(v, "lacp", String::try_from)?,
+            trunks: _from_map!(v, "trunks", own_value_to_trunks)?,
             _other: v,
         })
     }
+}
+
+fn own_value_to_trunks(
+    value: zvariant::OwnedValue,
+) -> Result<Vec<NmRange>, NmError> {
+    let mut ret = Vec::new();
+    let raw_ranges = Vec::<DbusDictionary>::try_from(value)?;
+    for raw_range in raw_ranges {
+        ret.push(NmRange::try_from(raw_range)?);
+    }
+    Ok(ret)
 }
 
 impl ToDbusValue for NmSettingOvsPort {
@@ -110,6 +123,15 @@ impl ToDbusValue for NmSettingOvsPort {
         }
         if let Some(v) = self.lacp.as_ref() {
             ret.insert("lacp", zvariant::Value::new(v));
+        }
+        if let Some(v) = self.trunks.as_ref() {
+            let mut trunk_values = zvariant::Array::new(
+                zvariant::Signature::from_str_unchecked("a{sv}"),
+            );
+            for range in v {
+                trunk_values.append(range.to_value()?)?;
+            }
+            ret.insert("trunks", zvariant::Value::Array(trunk_values));
         }
         ret.extend(self._other.iter().map(|(key, value)| {
             (key.as_str(), zvariant::Value::from(value.clone()))

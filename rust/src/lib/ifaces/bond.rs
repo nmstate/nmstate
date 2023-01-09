@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     deserializer::NumberAsString, BaseInterface, ErrorKind, Interface,
-    InterfaceType, NmstateError,
+    InterfaceState, InterfaceType, MergedInterface, NmstateError,
 };
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
@@ -71,6 +71,46 @@ impl Default for BondInterface {
 }
 
 impl BondInterface {
+    // * Do not merge bond options from current when bond mode is changing
+    pub(crate) fn special_merge(&mut self, desired: &Self, current: &Self) {
+        if let Some(bond_conf) = self.bond.as_mut() {
+            if let (Some(des_bond_conf), Some(cur_bond_conf)) =
+                (desired.bond.as_ref(), current.bond.as_ref())
+            {
+                if des_bond_conf.mode != cur_bond_conf.mode {
+                    bond_conf.options = des_bond_conf.options.clone();
+                }
+            }
+        }
+    }
+
+    fn drop_empty_arp_ip_target(&mut self) {
+        if let Some(ref mut bond_conf) = self.bond {
+            if let Some(ref mut bond_opts) = &mut bond_conf.options {
+                if let Some(ref mut arp_ip_target) = bond_opts.arp_ip_target {
+                    if arp_ip_target.is_empty() {
+                        bond_opts.arp_ip_target = None;
+                    }
+                }
+            }
+        }
+    }
+
+    fn sort_ports(&mut self) {
+        if let Some(ref mut bond_conf) = self.bond {
+            if let Some(ref mut port_conf) = &mut bond_conf.port {
+                port_conf.sort_unstable_by_key(|p| p.clone())
+            }
+        }
+    }
+
+    pub(crate) fn sanitize(&mut self) -> Result<(), NmstateError> {
+        self.sort_ports();
+        self.drop_empty_arp_ip_target();
+        self.make_ad_actor_system_mac_upper_case();
+        Ok(())
+    }
+
     // Return None when desire state does not mention ports
     pub(crate) fn ports(&self) -> Option<Vec<&str>> {
         self.bond
@@ -112,29 +152,14 @@ impl BondInterface {
             )
     }
 
-    pub(crate) fn pre_edit_cleanup(
-        &self,
-        current: Option<&Interface>,
-    ) -> Result<(), NmstateError> {
-        self.validate_new_iface_with_no_mode(current)?;
-        self.validate_mac_restricted_mode(current)?;
-        let current_bond_conf =
-            if let Some(Interface::Bond(cur_iface)) = current {
-                cur_iface.bond.as_ref()
-            } else {
-                None
-            };
-        if let Some(bond_conf) = &self.bond {
-            bond_conf.pre_edit_cleanup(current_bond_conf)?;
-        }
-        Ok(())
-    }
-
     fn validate_new_iface_with_no_mode(
         &self,
         current: Option<&Interface>,
     ) -> Result<(), NmstateError> {
-        if current.is_none() && self.mode().is_none() {
+        if self.base.state == InterfaceState::Up
+            && current.is_none()
+            && self.mode().is_none()
+        {
             let e = NmstateError::new(
                 ErrorKind::InvalidArgument,
                 format!(
@@ -188,6 +213,55 @@ impl BondInterface {
             bond_opts == &BondOptions::default()
         } else {
             false
+        }
+    }
+
+    fn make_ad_actor_system_mac_upper_case(&mut self) {
+        if let Some(mac) = self
+            .bond
+            .as_mut()
+            .and_then(|c| c.options.as_mut())
+            .and_then(|o| o.ad_actor_system.as_mut())
+        {
+            mac.make_ascii_uppercase();
+        }
+    }
+
+    pub(crate) fn remove_port(&mut self, port_to_remove: &str) {
+        if let Some(index) = self.bond.as_ref().and_then(|bond_conf| {
+            bond_conf.port.as_ref().and_then(|ports| {
+                ports
+                    .iter()
+                    .position(|port_name| port_name == port_to_remove)
+            })
+        }) {
+            self.bond
+                .as_mut()
+                .and_then(|bond_conf| bond_conf.port.as_mut())
+                .map(|ports| ports.remove(index));
+        }
+    }
+
+    pub(crate) fn change_port_name(
+        &mut self,
+        origin_name: &str,
+        new_name: String,
+    ) {
+        if let Some(index) = self
+            .bond
+            .as_ref()
+            .and_then(|bond_conf| bond_conf.port.as_ref())
+            .and_then(|ports| {
+                ports.iter().position(|port_name| port_name == origin_name)
+            })
+        {
+            if let Some(ports) = self
+                .bond
+                .as_mut()
+                .and_then(|bond_conf| bond_conf.port.as_mut())
+            {
+                ports[index] = new_name;
+            }
         }
     }
 }
@@ -296,28 +370,6 @@ pub struct BondConfig {
 impl BondConfig {
     pub fn new() -> Self {
         Self::default()
-    }
-
-    pub(crate) fn pre_edit_cleanup(
-        &self,
-        current: Option<&Self>,
-    ) -> Result<(), NmstateError> {
-        let mode = match self.mode.or_else(|| current.and_then(|c| c.mode)) {
-            Some(m) => m,
-            None => {
-                return Err(NmstateError::new(
-                    ErrorKind::InvalidArgument,
-                    "Bond mode not defined in desire or current".to_string(),
-                ));
-            }
-        };
-        if let Some(opts) = &self.options {
-            opts.pre_edit_cleanup(
-                current.and_then(|c| c.options.as_ref()),
-                mode,
-            )?;
-        }
-        Ok(())
     }
 }
 
@@ -1125,17 +1177,6 @@ impl BondOptions {
         Self::default()
     }
 
-    pub(crate) fn pre_edit_cleanup(
-        &self,
-        current: Option<&Self>,
-        mode: BondMode,
-    ) -> Result<(), NmstateError> {
-        self.validate_ad_actor_system_mac_address()?;
-        self.validate_miimon_and_arp_interval()?;
-        self.validate_balance_slb(current, mode)?;
-        Ok(())
-    }
-
     fn validate_ad_actor_system_mac_address(&self) -> Result<(), NmstateError> {
         if let Some(ad_actor_system) = &self.ad_actor_system {
             if ad_actor_system.to_uppercase().starts_with("01:00:5E") {
@@ -1191,6 +1232,45 @@ impl BondOptions {
                     balance-xor and xmit_hash_policy: 'vlan+srcmac'"
                         .to_string(),
                 ));
+            }
+        }
+        Ok(())
+    }
+}
+
+impl MergedInterface {
+    pub(crate) fn post_inter_ifaces_process_bond(
+        &mut self,
+    ) -> Result<(), NmstateError> {
+        if let Some(Interface::Bond(apply_iface)) = self.for_apply.as_ref() {
+            apply_iface
+                .validate_new_iface_with_no_mode(self.current.as_ref())?;
+            apply_iface.validate_mac_restricted_mode(self.current.as_ref())?;
+
+            if let Some(bond_opts) =
+                apply_iface.bond.as_ref().and_then(|b| b.options.as_ref())
+            {
+                bond_opts.validate_ad_actor_system_mac_address()?;
+                bond_opts.validate_miimon_and_arp_interval()?;
+
+                if let Interface::Bond(merged_iface) = &self.merged {
+                    if let Some(mode) =
+                        merged_iface.bond.as_ref().and_then(|b| b.mode)
+                    {
+                        let cur_bond_opts =
+                            if let Some(Interface::Bond(cur_iface)) =
+                                self.current.as_ref()
+                            {
+                                cur_iface
+                                    .bond
+                                    .as_ref()
+                                    .and_then(|b| b.options.as_ref())
+                            } else {
+                                None
+                            };
+                        bond_opts.validate_balance_slb(cur_bond_opts, mode)?
+                    }
+                }
             }
         }
         Ok(())

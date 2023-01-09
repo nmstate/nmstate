@@ -6,73 +6,12 @@ use crate::{
 };
 
 impl Interface {
-    pub(crate) fn remove_port(&mut self, port_name: &str) {
-        if let Interface::LinuxBridge(br_iface) = self {
-            br_iface.remove_port(port_name);
-        } else if let Interface::OvsBridge(br_iface) = self {
-            br_iface.remove_port(port_name);
-        } else if let Interface::Bond(iface) = self {
-            iface.remove_port(port_name);
-        }
-    }
+    pub(crate) fn verify(&self, current: &Self) -> Result<(), NmstateError> {
+        let mut current = current.clone();
+        self.process_allow_extra_address(&mut current);
 
-    pub(crate) fn pre_verify_cleanup(
-        &mut self,
-        pre_apply_current: Option<&Self>,
-        current: Option<&mut Self>,
-    ) {
-        self.base_iface_mut().pre_verify_cleanup(
-            pre_apply_current.map(|i| i.base_iface()),
-            current.map(|c| c.base_iface_mut()),
-        );
-        match self {
-            Self::LinuxBridge(ref mut iface) => {
-                iface.pre_verify_cleanup();
-            }
-            Self::Bond(ref mut iface) => {
-                iface.pre_verify_cleanup();
-            }
-            Self::Ethernet(ref mut iface) => {
-                iface.pre_verify_cleanup();
-            }
-            Self::OvsBridge(ref mut iface) => {
-                iface.pre_verify_cleanup();
-            }
-            Self::Vrf(ref mut iface) => {
-                iface.pre_verify_cleanup(pre_apply_current);
-            }
-            _ => (),
-        }
-    }
-
-    pub(crate) fn verify(
-        &self,
-        pre_apply_cur_iface: Option<&Self>,
-        current: &Self,
-    ) -> Result<(), NmstateError> {
-        let mut self_clone = self.clone();
-        let mut current_clone = current.clone();
-        // In order to allow desire interface to determine whether it can
-        // hold IP or not, we copy controller information from current to desire
-        // Use case: User desire ipv4 enabled: false on a bridge port, but
-        // current show ipv4 as None.
-        if current_clone.base_iface().controller.is_some()
-            && self_clone.base_iface().controller.is_none()
-        {
-            self_clone.base_iface_mut().controller =
-                current_clone.base_iface().controller.clone();
-            self_clone.base_iface_mut().controller_type =
-                current_clone.base_iface().controller_type.clone();
-        }
-        current_clone.pre_verify_cleanup(None, None);
-        self_clone
-            .pre_verify_cleanup(pre_apply_cur_iface, Some(&mut current_clone));
-        if self_clone.iface_type() == InterfaceType::Unknown {
-            current_clone.base_iface_mut().iface_type = InterfaceType::Unknown;
-        }
-
-        let self_value = serde_json::to_value(&self_clone)?;
-        let current_value = serde_json::to_value(&current_clone)?;
+        let self_value = serde_json::to_value(self)?;
+        let current_value = serde_json::to_value(&current)?;
 
         if let Some((reference, desire, current)) = get_json_value_difference(
             format!("{}.interface", self.name()),
@@ -111,7 +50,8 @@ impl Interface {
             Err(NmstateError::new(
                 ErrorKind::VerificationError,
                 format!(
-                    "Verification failure: {reference} desire '{desire}', current '{current}'"
+                    "Verification failure: {reference} desire '{desire}', \
+                    current '{current}'"
                 ),
             ))
         } else {
@@ -236,27 +176,24 @@ impl Interface {
                     );
                 }
             }
-            Self::Unknown(_) | Self::Dummy(_) | Self::OvsInterface(_) => (),
-        }
-    }
-
-    pub(crate) fn change_port_name(
-        &mut self,
-        org_port_name: &str,
-        new_port_name: String,
-    ) {
-        if let Interface::LinuxBridge(iface) = self {
-            iface.change_port_name(org_port_name, new_port_name);
-        } else if let Interface::OvsBridge(iface) = self {
-            iface.change_port_name(org_port_name, new_port_name);
-        } else if let Interface::Bond(iface) = self {
-            iface.change_port_name(org_port_name, new_port_name);
+            Self::OvsInterface(iface) => {
+                if let Self::OvsInterface(other_iface) = other {
+                    iface.update_ovs_iface(other_iface);
+                } else {
+                    log::warn!(
+                        "Don't know how to update iface {:?} with {:?}",
+                        iface,
+                        other
+                    );
+                }
+            }
+            Self::Unknown(_) | Self::Dummy(_) | Self::Loopback(_) => (),
         }
     }
 }
 
 impl InterfaceType {
-    pub(crate) const SUPPORTED_LIST: [InterfaceType; 12] = [
+    pub(crate) const SUPPORTED_LIST: [InterfaceType; 14] = [
         InterfaceType::Bond,
         InterfaceType::LinuxBridge,
         InterfaceType::Dummy,
@@ -269,5 +206,7 @@ impl InterfaceType {
         InterfaceType::Vlan,
         InterfaceType::Vxlan,
         InterfaceType::InfiniBand,
+        InterfaceType::Loopback,
+        InterfaceType::Vrf,
     ];
 }

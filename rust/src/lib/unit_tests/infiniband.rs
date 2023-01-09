@@ -1,8 +1,13 @@
-use crate::{ErrorKind, InfiniBandInterface, Interfaces};
+// SPDX-License-Identifier: Apache-2.0
+
+use crate::{
+    BondMode, ErrorKind, InfiniBandInterface, Interface, InterfaceType,
+    Interfaces, MergedInterfaces,
+};
 
 #[test]
 fn test_ib_autoremove_pkey_if_base_iface_removed() {
-    let mut desire: Interfaces = serde_yaml::from_str(
+    let desired: Interfaces = serde_yaml::from_str(
         r#"---
 - name: mlx5_ib2
   type: infiniband
@@ -28,11 +33,25 @@ fn test_ib_autoremove_pkey_if_base_iface_removed() {
 "#,
     )
     .unwrap();
-    let (_, _, del_ifaces) =
-        desire.gen_state_for_apply(&current, false).unwrap();
 
-    assert!(del_ifaces.kernel_ifaces["mlx5_ib2.8001"].is_absent());
-    assert!(del_ifaces.kernel_ifaces["mlx5_ib2"].is_absent());
+    let merged_ifaces =
+        MergedInterfaces::new(desired, current, false, false).unwrap();
+
+    let iface = merged_ifaces
+        .get_iface("mlx5_ib2", InterfaceType::InfiniBand)
+        .unwrap()
+        .for_apply
+        .as_ref()
+        .unwrap();
+    assert!(iface.is_absent());
+
+    let iface = merged_ifaces
+        .get_iface("mlx5_ib2.8001", InterfaceType::InfiniBand)
+        .unwrap()
+        .for_apply
+        .as_ref()
+        .unwrap();
+    assert!(iface.is_absent());
 }
 
 #[test]
@@ -88,7 +107,7 @@ infiniband:
 
 #[test]
 fn test_ib_port_of_bridge_in_desire() {
-    let desire: Interfaces = serde_yaml::from_str(
+    let desired: Interfaces = serde_yaml::from_str(
         r#"---
 - name: mlx5_ib2
   type: infiniband
@@ -106,10 +125,8 @@ fn test_ib_port_of_bridge_in_desire() {
     .unwrap();
 
     let result =
-        crate::ifaces::inter_ifaces_controller::check_infiniband_as_ports(
-            &desire,
-            &Interfaces::default(),
-        );
+        MergedInterfaces::new(desired, Interfaces::new(), false, false);
+
     assert!(result.is_err());
     if let Err(e) = result {
         assert_eq!(e.kind(), ErrorKind::InvalidArgument);
@@ -118,7 +135,7 @@ fn test_ib_port_of_bridge_in_desire() {
 
 #[test]
 fn test_ib_port_of_bridge_in_current() {
-    let desire: Interfaces = serde_yaml::from_str(
+    let desired: Interfaces = serde_yaml::from_str(
         r#"---
 - name: br0
   type: linux-bridge
@@ -141,10 +158,8 @@ fn test_ib_port_of_bridge_in_current() {
     )
     .unwrap();
 
-    let result =
-        crate::ifaces::inter_ifaces_controller::check_infiniband_as_ports(
-            &desire, &current,
-        );
+    let result = MergedInterfaces::new(desired, current, false, false);
+
     assert!(result.is_err());
     if let Err(e) = result {
         assert_eq!(e.kind(), ErrorKind::InvalidArgument);
@@ -153,7 +168,7 @@ fn test_ib_port_of_bridge_in_current() {
 
 #[test]
 fn test_ib_port_of_bond_mode_in_desire() {
-    let desire: Interfaces = serde_yaml::from_str(
+    let desired: Interfaces = serde_yaml::from_str(
         r#"---
 - name: bond0
   type: bond
@@ -178,10 +193,7 @@ fn test_ib_port_of_bond_mode_in_desire() {
     )
     .unwrap();
 
-    let result =
-        crate::ifaces::inter_ifaces_controller::check_infiniband_as_ports(
-            &desire, &current,
-        );
+    let result = MergedInterfaces::new(desired, current, false, false);
     assert!(result.is_err());
     if let Err(e) = result {
         assert_eq!(e.kind(), ErrorKind::InvalidArgument);
@@ -190,7 +202,7 @@ fn test_ib_port_of_bond_mode_in_desire() {
 
 #[test]
 fn test_ib_port_of_bond_mode_in_current() {
-    let desire: Interfaces = serde_yaml::from_str(
+    let desired: Interfaces = serde_yaml::from_str(
         r#"---
 - name: bond0
   type: bond
@@ -221,10 +233,7 @@ fn test_ib_port_of_bond_mode_in_current() {
     )
     .unwrap();
 
-    let result =
-        crate::ifaces::inter_ifaces_controller::check_infiniband_as_ports(
-            &desire, &current,
-        );
+    let result = MergedInterfaces::new(desired, current, false, false);
     assert!(result.is_err());
     if let Err(e) = result {
         assert_eq!(e.kind(), ErrorKind::InvalidArgument);
@@ -233,7 +242,7 @@ fn test_ib_port_of_bond_mode_in_current() {
 
 #[test]
 fn test_ib_port_of_active_backup_bond_mode_in_current() {
-    let desire: Interfaces = serde_yaml::from_str(
+    let desired: Interfaces = serde_yaml::from_str(
         r#"---
 - name: bond0
   type: bond
@@ -264,15 +273,12 @@ fn test_ib_port_of_active_backup_bond_mode_in_current() {
     )
     .unwrap();
 
-    crate::ifaces::inter_ifaces_controller::check_infiniband_as_ports(
-        &desire, &current,
-    )
-    .unwrap();
+    MergedInterfaces::new(desired, current, false, false).unwrap();
 }
 
 #[test]
 fn test_ib_port_of_active_backup_bond_mode_in_both() {
-    let desire: Interfaces = serde_yaml::from_str(
+    let desired: Interfaces = serde_yaml::from_str(
         r#"---
 - name: bond0
   type: bond
@@ -304,15 +310,29 @@ fn test_ib_port_of_active_backup_bond_mode_in_both() {
     )
     .unwrap();
 
-    crate::ifaces::inter_ifaces_controller::check_infiniband_as_ports(
-        &desire, &current,
-    )
-    .unwrap();
+    let merged_ifaces =
+        MergedInterfaces::new(desired, current, false, false).unwrap();
+
+    let iface = merged_ifaces
+        .get_iface("bond0", InterfaceType::Bond)
+        .unwrap()
+        .for_apply
+        .as_ref()
+        .unwrap();
+
+    if let Interface::Bond(iface) = iface {
+        assert_eq!(
+            iface.bond.as_ref().unwrap().mode.as_ref(),
+            Some(&BondMode::ActiveBackup)
+        );
+    } else {
+        panic!("Expecting a bond interface but got {:?}", iface);
+    }
 }
 
 #[test]
 fn test_ib_port_of_active_backup_bond_mode_in_desire() {
-    let desire: Interfaces = serde_yaml::from_str(
+    let desired: Interfaces = serde_yaml::from_str(
         r#"---
 - name: bond0
   type: bond
@@ -337,8 +357,20 @@ fn test_ib_port_of_active_backup_bond_mode_in_desire() {
     )
     .unwrap();
 
-    crate::ifaces::inter_ifaces_controller::check_infiniband_as_ports(
-        &desire, &current,
-    )
-    .unwrap();
+    let merged_ifaces =
+        MergedInterfaces::new(desired, current, false, false).unwrap();
+
+    let iface = merged_ifaces
+        .get_iface("mlx5_ib2", InterfaceType::InfiniBand)
+        .unwrap()
+        .for_apply
+        .as_ref()
+        .unwrap();
+
+    assert_eq!(iface.base_iface().controller.as_deref(), Some("bond0"));
+
+    assert_eq!(
+        iface.base_iface().controller_type.as_ref(),
+        Some(&InterfaceType::Bond)
+    );
 }

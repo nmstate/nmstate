@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    query_apply::mptcp::mptcp_pre_verify_cleanup, BaseInterface, InterfaceType,
-};
+use crate::{BaseInterface, InterfaceType};
 
 impl BaseInterface {
     pub(crate) fn update(&mut self, other: &BaseInterface) {
@@ -28,6 +26,12 @@ impl BaseInterface {
         }
         if other.prop_list.contains(&"max_mtu") {
             self.max_mtu = other.max_mtu;
+        }
+        if other.prop_list.contains(&"mac_address") {
+            self.mac_address = other.mac_address.clone();
+        }
+        if other.prop_list.contains(&"permanent_mac_address") {
+            self.permanent_mac_address = other.permanent_mac_address.clone();
         }
         if other.prop_list.contains(&"controller") {
             self.controller = other.controller.clone();
@@ -83,57 +87,6 @@ impl BaseInterface {
             if !self.prop_list.contains(other_prop_name) {
                 self.prop_list.push(other_prop_name)
             }
-        }
-    }
-
-    pub(crate) fn pre_verify_cleanup(
-        &mut self,
-        pre_apply_current: Option<&Self>,
-        mut current: Option<&mut Self>,
-    ) {
-        // Ignore min_mtu and max_mtu as they are not changeable
-        self.min_mtu = None;
-        self.max_mtu = None;
-        // * If cannot have IP, set ip: none
-        if !self.can_have_ip() {
-            self.ipv4 = None;
-            self.ipv6 = None;
-            self.prop_list.retain(|p| p != &"ipv4" && p != &"ipv6");
-        }
-
-        if let Some(ref mut ipv4) = self.ipv4 {
-            ipv4.pre_verify_cleanup(
-                pre_apply_current.and_then(|i| i.ipv4.as_ref()),
-                current.as_mut().and_then(|i| i.ipv4.as_mut()),
-            );
-        }
-
-        if let Some(ref mut ipv6) = self.ipv6 {
-            ipv6.pre_verify_cleanup(
-                pre_apply_current.and_then(|i| i.ipv6.as_ref()),
-                current.as_mut().and_then(|i| i.ipv6.as_mut()),
-            );
-        }
-        // Change all veth interface to ethernet for simpler verification
-        if self.iface_type == InterfaceType::Veth {
-            self.iface_type = InterfaceType::Ethernet;
-        }
-
-        if let Some(mac_address) = &self.mac_address {
-            self.mac_address = Some(mac_address.to_uppercase());
-        }
-        if let Some(lldp_conf) = self.lldp.as_mut() {
-            lldp_conf.pre_verify_cleanup();
-        }
-        if let Some(ethtool_conf) = self.ethtool.as_mut() {
-            ethtool_conf.pre_verify_cleanup();
-        }
-        mptcp_pre_verify_cleanup(self);
-
-        // If desired controller is Some("") for detaching, we should remove
-        // it for verification
-        if self.controller.as_ref() == Some(&"".to_string()) {
-            self.controller = None;
         }
     }
 }

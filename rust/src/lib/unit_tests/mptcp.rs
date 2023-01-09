@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{BaseInterface, ErrorKind};
+use crate::{BaseInterface, ErrorKind, Interface, MergedInterface};
 
 #[test]
 fn test_valid_mptcp_flags() {
-    let mut iface: BaseInterface = serde_yaml::from_str(
+    let des_iface: Interface = serde_yaml::from_str(
         r#"---
 name: eth1
 type: ethernet
@@ -16,7 +16,10 @@ mptcp:
 "#,
     )
     .unwrap();
-    let result = iface.pre_edit_cleanup(Some(&BaseInterface::new()));
+
+    let mut merged_iface = MergedInterface::new(Some(des_iface), None).unwrap();
+
+    let result = merged_iface.post_inter_ifaces_process();
     assert!(result.is_err());
     if let Err(e) = result {
         assert_eq!(e.kind(), ErrorKind::InvalidArgument);
@@ -24,8 +27,8 @@ mptcp:
 }
 
 #[test]
-fn test_mptcp_pre_edit_cleanup() {
-    let mut desire_iface: BaseInterface = serde_yaml::from_str(
+fn test_mptcp_sanitize_remove_per_addr_flag() {
+    let mut des_iface: BaseInterface = serde_yaml::from_str(
         r#"---
 name: eth1
 type: ethernet
@@ -81,6 +84,7 @@ ipv6:
     )
     .unwrap();
 
-    desire_iface.pre_edit_cleanup(None).unwrap();
-    assert_eq!(desire_iface, expected_iface);
+    des_iface.sanitize().unwrap();
+
+    assert_eq!(des_iface, expected_iface);
 }
