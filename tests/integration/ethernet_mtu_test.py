@@ -1,30 +1,13 @@
-#
-# Copyright (c) 2018-2019 Red Hat, Inc.
-#
-# This file is part of nmstate
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 2.1 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program. If not, see <https://www.gnu.org/licenses/>.
-#
+# SPDX-License-Identifier: LGPL-2.1-or-later
+
 import copy
-import time
 
 import pytest
 
 import libnmstate
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv6
-from libnmstate.error import NmstateVerificationError
+from libnmstate.error import NmstateValueError
 
 from .testlib import assertlib
 from .testlib import statelib
@@ -103,11 +86,8 @@ def test_decrease_to_lower_than_min_ipv6_iface_mtu(eth1_with_ipv6):
     eth1_desired_state = desired_state[Interface.KEY][0]
     eth1_desired_state[Interface.MTU] = 1279
 
-    with pytest.raises(NmstateVerificationError) as err:
+    with pytest.raises(NmstateValueError):
         libnmstate.apply(desired_state)
-    assert "1279" in err.value.args[0]
-    # FIXME: Drop the sleep when the waiting logic is implemented.
-    time.sleep(2)
     assertlib.assert_state(original_state)
 
 
