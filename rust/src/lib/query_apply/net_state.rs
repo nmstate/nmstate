@@ -7,8 +7,7 @@ use crate::{
         nm_checkpoint_rollback, nm_checkpoint_timeout_extend, nm_retrieve,
     },
     ovsdb::{ovsdb_apply, ovsdb_is_running, ovsdb_retrieve},
-    query_apply::get_ignored_ifaces,
-    NetworkState, NmstateError,
+    MergedNetworkState, NetworkState, NmstateError,
 };
 
 const DEFAULT_ROLLBACK_TIMEOUT: u32 = 60;
@@ -56,18 +55,18 @@ impl NetworkState {
         if state.prop_list.contains(&"rules") {
             self.rules = state.rules;
         }
+        if ovsdb_is_running() {
+            match ovsdb_retrieve() {
+                Ok(ovsdb_state) => self.update_state(&ovsdb_state),
+                Err(e) => {
+                    log::warn!("Failed to retrieve OVS DB state: {}", e);
+                }
+            }
+        }
         if !self.kernel_only {
             let nm_state = nm_retrieve(self.running_config_only)?;
             // TODO: Priority handling
             self.update_state(&nm_state);
-            if ovsdb_is_running() {
-                match ovsdb_retrieve() {
-                    Ok(ovsdb_state) => self.update_state(&ovsdb_state),
-                    Err(e) => {
-                        log::warn!("Failed to retrieve OVS DB state: {}", e);
-                    }
-                }
-            }
         }
         if !self.include_secrets {
             self.hide_secrets();
@@ -83,16 +82,22 @@ impl NetworkState {
     /// Apply the `NetworkState`.
     /// Only available for feature `query_apply`.
     pub fn apply(&self) -> Result<(), NmstateError> {
-        let mut desire_state_to_verify = self.clone();
-        let mut desire_state_to_apply = self.clone();
         let mut cur_net_state = NetworkState::new();
         cur_net_state.set_kernel_only(self.kernel_only);
         cur_net_state.set_include_secrets(true);
         cur_net_state.retrieve_full()?;
 
-        if desire_state_to_apply.interfaces.to_vec().len()
-            >= MAX_SUPPORTED_INTERFACES
-        {
+        let merged_state = MergedNetworkState::new(
+            self.clone(),
+            cur_net_state.clone(),
+            false,
+            self.memory_only,
+        )?;
+
+        let ifaces = merged_state.interfaces.state_for_apply();
+        ifaces.check_sriov_capability()?;
+
+        if ifaces.to_vec().len() >= MAX_SUPPORTED_INTERFACES {
             log::warn!(
                 "Interfaces count exceeds the support limit {} in \
                 desired state",
@@ -100,66 +105,12 @@ impl NetworkState {
             );
         }
 
-        let (ignored_kernel_ifaces, ignored_user_ifaces) =
-            get_ignored_ifaces(&self.interfaces, &cur_net_state.interfaces);
-
-        for iface_name in &ignored_kernel_ifaces {
-            log::info!("Ignoring kernel interface {}", iface_name)
-        }
-        for (iface_name, iface_type) in &ignored_user_ifaces {
-            log::info!(
-                "Ignoring user space interface {} with type {}",
-                iface_name,
-                iface_type
-            )
-        }
-
-        desire_state_to_apply.interfaces.pre_ignore_check(
-            &cur_net_state.interfaces,
-            &ignored_kernel_ifaces,
-        )?;
-
-        desire_state_to_apply.interfaces.remove_ignored_ifaces(
-            &ignored_kernel_ifaces,
-            &ignored_user_ifaces,
-        );
-        cur_net_state.interfaces.remove_ignored_ifaces(
-            &ignored_kernel_ifaces,
-            &ignored_user_ifaces,
-        );
-
-        desire_state_to_apply
-            .routes
-            .remove_ignored_iface_routes(ignored_kernel_ifaces.as_slice());
-        cur_net_state
-            .routes
-            .remove_ignored_iface_routes(ignored_kernel_ifaces.as_slice());
-
-        desire_state_to_verify
-            .interfaces
-            .resolve_unknown_ifaces(&cur_net_state.interfaces)?;
-        desire_state_to_apply
-            .interfaces
-            .resolve_unknown_ifaces(&cur_net_state.interfaces)?;
-
-        desire_state_to_apply
-            .interfaces
-            .resolve_sriov_reference(&cur_net_state.interfaces)?;
-
-        let (add_net_state, chg_net_state, del_net_state) =
-            desire_state_to_apply.gen_state_for_apply(&cur_net_state)?;
-
-        log::debug!("Adding net state {:?}", &add_net_state);
-        log::debug!("Changing net state {:?}", &chg_net_state);
-        log::debug!("Deleting net state {:?}", &del_net_state);
-
         if !self.kernel_only {
-            let retry_count =
-                if desire_state_to_apply.interfaces.has_sriov_enabled() {
-                    VERIFY_RETRY_COUNT_SRIOV
-                } else {
-                    VERIFY_RETRY_COUNT
-                };
+            let retry_count = if ifaces.has_sriov_enabled() {
+                VERIFY_RETRY_COUNT_SRIOV
+            } else {
+                VERIFY_RETRY_COUNT
+            };
 
             let timeout = self.timeout.unwrap_or(DEFAULT_ROLLBACK_TIMEOUT);
             let checkpoint = nm_checkpoint_create(timeout)?;
@@ -172,25 +123,12 @@ impl NetworkState {
                     VERIFY_RETRY_INTERVAL_MILLISECONDS,
                     VERIFY_RETRY_NM,
                     || {
-                        nm_apply(
-                            &add_net_state,
-                            &chg_net_state,
-                            &del_net_state,
-                            // TODO: Passing full(desire + current) network
-                            // state instead of
-                            // current,
-                            &cur_net_state,
-                            &desire_state_to_apply,
-                            &checkpoint,
-                            self.memory_only,
-                        )?;
-                        if desire_state_to_apply.prop_list.contains(&"ovsdb")
+                        nm_checkpoint_timeout_extend(&checkpoint, timeout)?;
+                        nm_apply(&merged_state, &checkpoint, timeout)?;
+                        if merged_state.is_global_ovsdb_changed()
                             && ovsdb_is_running()
                         {
-                            ovsdb_apply(
-                                &desire_state_to_apply,
-                                &cur_net_state,
-                            )?;
+                            ovsdb_apply(&merged_state)?;
                         }
                         if let Some(running_hostname) = self
                             .hostname
@@ -212,10 +150,7 @@ impl NetworkState {
                                         cur_net_state.clone();
                                     new_cur_net_state.set_include_secrets(true);
                                     new_cur_net_state.retrieve_full()?;
-                                    desire_state_to_verify.verify(
-                                        &cur_net_state,
-                                        &new_cur_net_state,
-                                    )
+                                    merged_state.verify(&new_cur_net_state)
                                 },
                             )
                         } else {
@@ -226,12 +161,7 @@ impl NetworkState {
             })
         } else {
             // TODO: Need checkpoint for kernel only mode
-            nispor_apply(
-                &add_net_state,
-                &chg_net_state,
-                &del_net_state,
-                &cur_net_state,
-            )?;
+            nispor_apply(&merged_state)?;
             if let Some(running_hostname) =
                 self.hostname.as_ref().and_then(|c| c.running.as_ref())
             {
@@ -244,33 +174,13 @@ impl NetworkState {
                     || {
                         let mut new_cur_net_state = cur_net_state.clone();
                         new_cur_net_state.retrieve_full()?;
-                        desire_state_to_verify
-                            .verify(&cur_net_state, &new_cur_net_state)
+                        merged_state.verify(&new_cur_net_state)
                     },
                 )
             } else {
                 Ok(())
             }
         }
-    }
-
-    fn verify(
-        &self,
-        pre_apply_current: &Self,
-        current: &Self,
-    ) -> Result<(), NmstateError> {
-        if let Some(desired_hostname) = self.hostname.as_ref() {
-            desired_hostname.verify(current.hostname.as_ref())?;
-        }
-        self.interfaces
-            .verify(&pre_apply_current.interfaces, &current.interfaces)?;
-        let (ignored_kernel_ifaces, _) =
-            get_ignored_ifaces(&self.interfaces, &current.interfaces);
-        self.routes
-            .verify(&current.routes, &ignored_kernel_ifaces)?;
-        self.rules.verify(&current.rules)?;
-        self.dns.verify(&current.dns)?;
-        self.ovsdb.verify(&current.ovsdb)
     }
 
     pub(crate) fn update_state(&mut self, other: &Self) {
@@ -335,10 +245,10 @@ where
     let mut cur_count = 0usize;
     while cur_count < count {
         if let Err(e) = func() {
-            if cur_count == count - 1 {
+            if cur_count == count - 1 || !e.kind().can_retry() {
                 return Err(e);
             } else {
-                log::info!("Retrying on verification failure: {}", e);
+                log::info!("Retrying on: {}", e);
                 std::thread::sleep(std::time::Duration::from_millis(
                     interval_ms,
                 ));
@@ -350,4 +260,26 @@ where
         }
     }
     Ok(())
+}
+
+impl MergedNetworkState {
+    fn verify(&self, current: &NetworkState) -> Result<(), NmstateError> {
+        self.hostname.verify(current.hostname.as_ref())?;
+        self.interfaces.verify(&current.interfaces)?;
+        let ignored_kernel_ifaces: Vec<&str> = self
+            .interfaces
+            .ignored_ifaces
+            .as_slice()
+            .iter()
+            .filter(|(_, t)| !t.is_userspace())
+            .map(|(n, _)| n.as_str())
+            .collect();
+        self.routes
+            .verify(&current.routes, ignored_kernel_ifaces.as_slice())?;
+        self.rules
+            .verify(&current.rules, ignored_kernel_ifaces.as_slice())?;
+        self.dns.verify(&current.dns)?;
+        self.ovsdb.verify(&current.ovsdb)?;
+        Ok(())
+    }
 }

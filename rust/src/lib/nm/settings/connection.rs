@@ -11,6 +11,7 @@ use super::{
     ieee8021x::gen_nm_802_1x_setting,
     infiniband::gen_nm_ib_setting,
     ip::gen_nm_ip_setting,
+    loopback::gen_nm_loopback_setting,
     mptcp::apply_mptcp_conf,
     ovs::{
         create_ovs_port_nm_conn, gen_nm_ovs_br_setting,
@@ -23,8 +24,8 @@ use super::{
 };
 
 use crate::{
-    ErrorKind, Interface, InterfaceType, NetworkState, NmstateError,
-    OvsBridgePortConfig,
+    ErrorKind, Interface, InterfaceType, MergedInterface, MergedNetworkState,
+    NmstateError, OvsBridgePortConfig,
 };
 
 pub(crate) const NM_SETTING_BRIDGE_SETTING_NAME: &str = "bridge";
@@ -40,6 +41,7 @@ pub(crate) const NM_SETTING_VRF_SETTING_NAME: &str = "vrf";
 pub(crate) const NM_SETTING_VLAN_SETTING_NAME: &str = "vlan";
 pub(crate) const NM_SETTING_VXLAN_SETTING_NAME: &str = "vxlan";
 pub(crate) const NM_SETTING_INFINIBAND_SETTING_NAME: &str = "infiniband";
+pub(crate) const NM_SETTING_LOOPBACK_SETTING_NAME: &str = "loopback";
 
 pub(crate) const NM_SETTING_USER_SPACES: [&str; 2] = [
     NM_SETTING_OVS_BRIDGE_SETTING_NAME,
@@ -47,14 +49,20 @@ pub(crate) const NM_SETTING_USER_SPACES: [&str; 2] = [
 ];
 
 pub(crate) fn iface_to_nm_connections(
-    iface: &Interface,
-    ctrl_iface: Option<&Interface>,
+    merged_iface: &MergedInterface,
+    merged_state: &MergedNetworkState,
     exist_nm_conns: &[NmConnection],
     nm_ac_uuids: &[&str],
-    veth_peer_exist_in_desire: bool,
-    cur_net_state: &NetworkState,
+    gen_conf_mode: bool,
 ) -> Result<Vec<NmConnection>, NmstateError> {
     let mut ret: Vec<NmConnection> = Vec::new();
+
+    let iface = if let Some(i) = merged_iface.for_apply.as_ref() {
+        i
+    } else {
+        return Ok(ret);
+    };
+
     let base_iface = iface.base_iface();
     let exist_nm_conn = get_exist_profile(
         exist_nm_conns,
@@ -70,40 +78,27 @@ pub(crate) fn iface_to_nm_connections(
                 // User want to convert current state to persistent
                 // But NetworkManager does not include routes for external
                 // managed interfaces.
-                if let Some(cur_iface) =
-                    cur_net_state.get_kernel_iface_with_route(iface.name())
-                {
-                    // Do no try to persistent veth config of current interface
-                    let mut iface = cur_iface;
-                    if let Interface::Ethernet(eth_iface) = &mut iface {
-                        eth_iface.veth = None;
-                        eth_iface.base.iface_type = InterfaceType::Ethernet;
-                    }
-
-                    return iface_to_nm_connections(
-                        &iface,
-                        ctrl_iface,
+                if let Some(cur_iface) = merged_iface.current.as_ref() {
+                    return persisten_iface_cur_conf(
+                        cur_iface,
+                        merged_state,
                         exist_nm_conns,
                         nm_ac_uuids,
-                        veth_peer_exist_in_desire,
-                        cur_net_state,
+                        gen_conf_mode,
                     );
                 }
             }
             return Ok(vec![nm_conn.clone()]);
         } else if !iface.is_userspace() {
-            if let Some(cur_iface) =
-                cur_net_state.get_kernel_iface_with_route(iface.name())
-            {
-                // User want to convert unmanaged interface to managed
+            // User want to convert unmanaged interface to managed
+            if let Some(cur_iface) = merged_iface.current.as_ref() {
                 if cur_iface.is_ignore() {
-                    return iface_to_nm_connections(
-                        &cur_iface,
-                        ctrl_iface,
+                    return persisten_iface_cur_conf(
+                        cur_iface,
+                        merged_state,
                         exist_nm_conns,
                         nm_ac_uuids,
-                        veth_peer_exist_in_desire,
-                        cur_net_state,
+                        gen_conf_mode,
                     );
                 }
             }
@@ -112,21 +107,21 @@ pub(crate) fn iface_to_nm_connections(
     let mut nm_conn = exist_nm_conn.cloned().unwrap_or_default();
     nm_conn.flags = Vec::new();
 
-    // Use stable UUID if there is no existing NM connections where
-    // we don't have possible UUID overlap there.
+    // Use stable UUID if in gen_conf mode.
     // This enable us to generate the same output for `nm_gen_conf()`
     // when the desire state is the same.
-    let stable_uuid = exist_nm_conns.is_empty();
+    let stable_uuid = gen_conf_mode;
 
     gen_nm_conn_setting(iface, &mut nm_conn, stable_uuid)?;
     gen_nm_ip_setting(
         iface,
         iface.base_iface().routes.as_deref(),
-        iface.base_iface().rules.as_deref(),
         &mut nm_conn,
     )?;
-    // InfiniBand over IP can not have layer 2 configuration.
-    if iface.iface_type() != InterfaceType::InfiniBand {
+    // InfiniBand over IP and loopback can not have layer 2 configuration.
+    if iface.iface_type() != InterfaceType::InfiniBand
+        && iface.iface_type() != InterfaceType::Loopback
+    {
         gen_nm_wired_setting(iface, &mut nm_conn);
     }
     gen_nm_ovs_ext_ids_setting(iface, &mut nm_conn);
@@ -153,8 +148,8 @@ pub(crate) fn iface_to_nm_connections(
                 )?)
             }
         }
-        Interface::LinuxBridge(br_iface) => {
-            gen_nm_br_setting(br_iface, &mut nm_conn);
+        Interface::LinuxBridge(_) => {
+            gen_nm_br_setting(merged_iface, &mut nm_conn);
         }
         Interface::Bond(bond_iface) => {
             gen_nm_bond_setting(bond_iface, &mut nm_conn);
@@ -175,9 +170,24 @@ pub(crate) fn iface_to_nm_connections(
         Interface::Ethernet(eth_iface) => {
             if let Some(veth_conf) = eth_iface.veth.as_ref() {
                 nm_conn.veth = Some(NmSettingVeth::from(veth_conf));
-                if !veth_peer_exist_in_desire {
+                if merged_state
+                    .interfaces
+                    .kernel_ifaces
+                    .get(veth_conf.peer.as_str())
+                    .and_then(|i| i.for_apply.as_ref())
+                    .is_none()
+                    && !merged_state.interfaces.ignored_ifaces.contains(&(
+                        veth_conf.peer.to_string(),
+                        InterfaceType::Ethernet,
+                    ))
+                {
                     // Create NM connect for veth peer so that
                     // veth could be in up state
+                    log::info!(
+                        "Creating veth peer profile {} for {}",
+                        veth_conf.peer.as_str(),
+                        eth_iface.base.name.as_str()
+                    );
                     ret.push(create_veth_peer_profile_if_not_found(
                         veth_conf.peer.as_str(),
                         eth_iface.base.name.as_str(),
@@ -206,6 +216,9 @@ pub(crate) fn iface_to_nm_connections(
         Interface::InfiniBand(iface) => {
             gen_nm_ib_setting(iface, &mut nm_conn);
         }
+        Interface::Loopback(iface) => {
+            gen_nm_loopback_setting(iface, &mut nm_conn);
+        }
         _ => (),
     };
 
@@ -217,34 +230,47 @@ pub(crate) fn iface_to_nm_connections(
         nm_conn.ovs_iface = None;
     }
 
-    if let Some(Interface::LinuxBridge(br_iface)) = ctrl_iface {
-        gen_nm_br_port_setting(br_iface, &mut nm_conn);
+    if let (Some(ctrl), Some(ctrl_type)) = (
+        base_iface.controller.as_ref(),
+        base_iface.controller_type.as_ref(),
+    ) {
+        if let Some(ctrl_iface) =
+            merged_state.interfaces.get_iface(ctrl, ctrl_type.clone())
+        {
+            match &ctrl_iface.merged {
+                Interface::LinuxBridge(br_iface) => {
+                    gen_nm_br_port_setting(br_iface, &mut nm_conn);
+                }
+                Interface::OvsBridge(_) => {
+                    // When user attaching new system port(ethernet) or new
+                    // internal interface to existing OVS bridge using
+                    // `controller` property without OVS bridge mentioned
+                    // in desire, we need to create OVS port by ourselves.
+                    if !ctrl_iface.is_changed()
+                        && (merged_iface.current.is_none()
+                            || merged_iface.merged.iface_type()
+                                != InterfaceType::OvsInterface)
+                    {
+                        ret.push(create_ovs_port_nm_conn(
+                            ctrl,
+                            &OvsBridgePortConfig {
+                                name: iface.name().to_string(),
+                                ..Default::default()
+                            },
+                            None,
+                            stable_uuid,
+                        )?);
+                    }
+                }
+                _ => (),
+            }
+        }
     }
 
     // When detaching a OVS system interface from OVS bridge, we should remove
     // its NmSettingOvsIface setting
     if base_iface.controller.as_deref() == Some("") {
         nm_conn.ovs_iface = None;
-    }
-
-    // When user attaching new system port(ethernet) to existing OVS bridge
-    // using `controller` property without OVS bridge mentioned in desire,
-    // we need to create OVS port by ourselves.
-    if iface.base_iface().controller_type.as_ref()
-        == Some(&InterfaceType::OvsBridge)
-        && ctrl_iface.is_none()
-    {
-        if let Some(ctrl_name) = iface.base_iface().controller.as_ref() {
-            ret.push(create_ovs_port_nm_conn(
-                ctrl_name,
-                &OvsBridgePortConfig {
-                    name: iface.name().to_string(),
-                    ..Default::default()
-                },
-                None,
-                stable_uuid,
-            )?)
-        }
     }
 
     ret.insert(0, nm_conn);
@@ -278,6 +304,9 @@ pub(crate) fn iface_type_to_nm(
         InterfaceType::Veth => Ok(NM_SETTING_VETH_SETTING_NAME.to_string()),
         InterfaceType::InfiniBand => {
             Ok(NM_SETTING_INFINIBAND_SETTING_NAME.to_string())
+        }
+        InterfaceType::Loopback => {
+            Ok(NM_SETTING_LOOPBACK_SETTING_NAME.to_string())
         }
         InterfaceType::Other(s) => Ok(s.to_string()),
         _ => Err(NmstateError::new(
@@ -415,4 +444,29 @@ pub(crate) fn get_exist_profile<'a>(
         }
     }
     found_nm_conns.pop()
+}
+
+fn persisten_iface_cur_conf(
+    cur_iface: &Interface,
+    merged_state: &MergedNetworkState,
+    exist_nm_conns: &[NmConnection],
+    nm_ac_uuids: &[&str],
+    gen_conf_mode: bool,
+) -> Result<Vec<NmConnection>, NmstateError> {
+    let mut iface = cur_iface.clone();
+    iface.base_iface_mut().routes =
+        merged_state.routes.indexed.get(iface.name()).cloned();
+    if let Interface::Ethernet(eth_iface) = &mut iface {
+        eth_iface.veth = None;
+        eth_iface.base.iface_type = InterfaceType::Ethernet;
+    }
+    let merged_iface = MergedInterface::new(Some(iface), None)?;
+
+    iface_to_nm_connections(
+        &merged_iface,
+        merged_state,
+        exist_nm_conns,
+        nm_ac_uuids,
+        gen_conf_mode,
+    )
 }

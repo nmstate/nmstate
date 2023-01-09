@@ -1,11 +1,11 @@
 [package]
 name = "nmstate-clib"
 description = "Nmstate C binding"
-version = "1.4.0"
+version = "1.4.1"
 authors = ["Gris Ge <fge@redhat.com>"]
 license = "Apache-2.0"
 edition = "2018"
-rust-version = "1.60"
+rust-version = "1.58"
 
 [lib]
 name = "nmstate"

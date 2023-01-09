@@ -1,12 +1,13 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::{
-    ifaces::inter_ifaces_controller::handle_changed_ports,
-    query_apply::get_ignored_ifaces, InterfaceType, Interfaces,
-    OvsBridgeInterface,
+    ErrorKind, Interface, InterfaceType, Interfaces, MergedInterface,
+    MergedInterfaces, OvsBridgeInterface,
 };
 
 #[test]
 fn test_ovs_bridge_ignore_port() {
-    let mut ifaces: Interfaces = serde_yaml::from_str(
+    let des_ifaces: Interfaces = serde_yaml::from_str(
         r#"---
 - name: eth1
   type: ethernet
@@ -23,7 +24,7 @@ fn test_ovs_bridge_ignore_port() {
 "#,
     )
     .unwrap();
-    let mut cur_ifaces: Interfaces = serde_yaml::from_str(
+    let cur_ifaces: Interfaces = serde_yaml::from_str(
         r#"---
 - name: eth1
   type: ethernet
@@ -42,39 +43,39 @@ fn test_ovs_bridge_ignore_port() {
     )
     .unwrap();
 
-    let (ignored_kernel_ifaces, ignored_user_ifaces) =
-        get_ignored_ifaces(&ifaces, &cur_ifaces);
+    let merged_ifaces =
+        MergedInterfaces::new(des_ifaces, cur_ifaces, false, false).unwrap();
 
-    assert_eq!(ignored_kernel_ifaces, vec!["eth1".to_string()]);
-    assert!(ignored_user_ifaces.is_empty());
-
-    ifaces.remove_ignored_ifaces(&ignored_kernel_ifaces, &ignored_user_ifaces);
-    cur_ifaces
-        .remove_ignored_ifaces(&ignored_kernel_ifaces, &ignored_user_ifaces);
-
-    let (add_ifaces, chg_ifaces, del_ifaces) =
-        ifaces.gen_state_for_apply(&cur_ifaces, false).unwrap();
-
-    assert!(!ifaces.kernel_ifaces.contains_key("eth1"));
-    assert!(!cur_ifaces.kernel_ifaces.contains_key("eth1"));
+    let mut ignored_ifaces = merged_ifaces.ignored_ifaces.clone();
+    ignored_ifaces.sort_unstable();
     assert_eq!(
-        ifaces.user_ifaces[&("br0".to_string(), InterfaceType::OvsBridge)]
-            .ports(),
-        Some(vec!["eth2"])
+        ignored_ifaces[0],
+        ("eth1".to_string(), InterfaceType::Ethernet)
     );
-    assert_eq!(
-        cur_ifaces.user_ifaces[&("br0".to_string(), InterfaceType::OvsBridge)]
-            .ports(),
-        Some(vec!["eth2"])
-    );
-    assert!(!add_ifaces.kernel_ifaces.contains_key("eth1"));
-    assert!(!chg_ifaces.kernel_ifaces.contains_key("eth1"));
-    assert!(!del_ifaces.kernel_ifaces.contains_key("eth1"));
+
+    let eth2_iface = merged_ifaces
+        .get_iface("eth2", InterfaceType::Ethernet)
+        .unwrap()
+        .for_apply
+        .as_ref()
+        .unwrap();
+    let br0_iface = merged_ifaces
+        .get_iface("br0", InterfaceType::OvsBridge)
+        .unwrap()
+        .for_apply
+        .as_ref()
+        .unwrap();
+
+    assert_eq!(br0_iface.ports(), Some(vec!["eth2"]));
+
+    // eth2 should hold no changes to controller
+    assert_eq!(eth2_iface.base_iface().controller, None);
+    assert_eq!(eth2_iface.base_iface().controller_type, None);
 }
 
 #[test]
 fn test_ovs_bridge_verify_ignore_port() {
-    let ifaces: Interfaces = serde_yaml::from_str(
+    let des_ifaces: Interfaces = serde_yaml::from_str(
         r#"---
 - name: eth1
   type: ethernet
@@ -109,7 +110,23 @@ fn test_ovs_bridge_verify_ignore_port() {
     )
     .unwrap();
 
-    ifaces.verify(&Interfaces::new(), &cur_ifaces).unwrap();
+    let pre_apply_cur_ifaces: Interfaces = serde_yaml::from_str(
+        r#"---
+- name: eth1
+  type: ethernet
+  state: up
+- name: eth2
+  type: ethernet
+  state: up
+"#,
+    )
+    .unwrap();
+
+    let merged_iface =
+        MergedInterfaces::new(des_ifaces, pre_apply_cur_ifaces, false, false)
+            .unwrap();
+
+    merged_iface.verify(&cur_ifaces).unwrap();
 }
 
 #[test]
@@ -163,7 +180,7 @@ fn test_ovs_bridge_same_name_absent() {
     )
     .unwrap();
 
-    let mut desired: Interfaces = serde_yaml::from_str(
+    let desired: Interfaces = serde_yaml::from_str(
         r#"---
 - name: br1
   type: ovs-bridge
@@ -172,18 +189,31 @@ fn test_ovs_bridge_same_name_absent() {
     )
     .unwrap();
 
-    handle_changed_ports(&mut desired, &current).unwrap();
+    let merged_ifaces =
+        MergedInterfaces::new(desired, current, false, false).unwrap();
 
-    let br_iface = desired.get_iface("br1", InterfaceType::OvsBridge).unwrap();
-    let ovs_iface = desired
-        .get_iface("br1", InterfaceType::OvsInterface)
+    let br1_iface = merged_ifaces
+        .get_iface("br1", InterfaceType::OvsBridge)
+        .unwrap()
+        .for_apply
+        .as_ref()
         .unwrap();
-    let eth_iface = desired.get_iface("eth1", InterfaceType::Ethernet).unwrap();
+    let br1_ovs_iface = merged_ifaces
+        .get_iface("br1", InterfaceType::OvsInterface)
+        .unwrap()
+        .for_apply
+        .as_ref()
+        .unwrap();
+    let eth1_iface = merged_ifaces
+        .get_iface("eth1", InterfaceType::Ethernet)
+        .unwrap()
+        .for_apply
+        .as_ref()
+        .unwrap();
 
-    assert!(br_iface.is_absent());
-    assert!(ovs_iface.is_absent());
-    assert!(!eth_iface.is_absent());
-    assert_eq!(eth_iface.base_iface().controller.as_deref(), Some(""));
+    assert!(br1_iface.is_absent());
+    assert!(br1_ovs_iface.is_absent());
+    assert_eq!(eth1_iface.base_iface().controller.as_deref(), Some(""));
 }
 
 #[test]
@@ -202,7 +232,7 @@ fn test_ovs_bridge_resolve_user_space_iface_type() {
     )
     .unwrap();
 
-    let mut desired: Interfaces = serde_yaml::from_str(
+    let desired: Interfaces = serde_yaml::from_str(
         r#"---
 - name: ovs-br1
   state: absent
@@ -210,13 +240,18 @@ fn test_ovs_bridge_resolve_user_space_iface_type() {
     )
     .unwrap();
 
-    desired.resolve_unknown_ifaces(&current).unwrap();
+    let merged_ifaces =
+        MergedInterfaces::new(desired, current, false, false).unwrap();
 
-    let br_iface = desired
+    let iface = merged_ifaces
         .get_iface("ovs-br1", InterfaceType::OvsBridge)
+        .unwrap()
+        .for_apply
+        .as_ref()
         .unwrap();
-    assert!(br_iface.is_absent());
-    assert_eq!(desired.kernel_ifaces.get("ovs-br1"), None);
+
+    assert!(iface.is_absent());
+    assert_eq!(iface.iface_type(), InterfaceType::OvsBridge);
 }
 
 #[test]
@@ -243,4 +278,255 @@ fn test_ovs_bridge_ports() {
         ifaces.to_vec()[0].ports(),
         Some(vec!["eth1", "eth2", "eth3", "eth4"])
     );
+}
+
+#[test]
+fn test_ovs_bridge_merge_port_vlan() {
+    let cur_iface: Interface = serde_yaml::from_str(
+        r#"---
+name: br0
+type: ovs-bridge
+state: up
+bridge:
+  port:
+  - name: eth1
+    vlan:
+      enable-native: "true"
+      tag: "102"
+      trunk-tags:
+      - id: "103"
+      - id-range:
+          max: "1024"
+          min: "105"
+  - name: eth2
+    vlan:
+      enable-native: "true"
+      tag: "202"
+      trunk-tags:
+      - id: "203"
+      - id-range:
+          max: "2024"
+          min: "1025"
+"#,
+    )
+    .unwrap();
+
+    let des_iface: Interface = serde_yaml::from_str(
+        r#"---
+name: br0
+type: ovs-bridge
+state: up
+bridge:
+  port:
+  - name: eth1
+  - name: eth2
+"#,
+    )
+    .unwrap();
+
+    let merged_iface =
+        MergedInterface::new(Some(des_iface), Some(cur_iface)).unwrap();
+
+    if let Interface::OvsBridge(iface) = &merged_iface.merged {
+        for port_conf in iface.bridge.as_ref().unwrap().ports.as_ref().unwrap()
+        {
+            assert!(port_conf.vlan.is_some());
+        }
+    } else {
+        panic!("Expecting a OvsBridge but got {:?}", merged_iface.merged);
+    }
+}
+
+#[test]
+fn test_ovs_bridge_vlan_filter_trunk_tag_without_enable_native() {
+    let mut desired: OvsBridgeInterface = serde_yaml::from_str(
+        r#"
+        name: br0
+        type: ovs-bridge
+        state: up
+        bridge:
+          port:
+            - name: eth1
+              vlan:
+                mode: trunk
+                tag: 200
+                trunk-tags:
+                  - id-range:
+                      min: 600
+                      max: 900
+                  - id-range:
+                      max: 500
+                      min: 400
+        "#,
+    )
+    .unwrap();
+
+    let result = desired.sanitize();
+
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+    }
+}
+
+#[test]
+fn test_ovs_bridge_vlan_filter_trunk_tag_overlap_id_vs_range() {
+    let mut desired: OvsBridgeInterface = serde_yaml::from_str(
+        r#"
+        name: br0
+        type: ovs-bridge
+        state: up
+        bridge:
+          port:
+            - name: eth1
+              vlan:
+                mode: trunk
+                trunk-tags:
+                  - id-range:
+                      min: 600
+                      max: 900
+                  - id: 600
+        "#,
+    )
+    .unwrap();
+
+    let result = desired.sanitize();
+
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+    }
+}
+
+#[test]
+fn test_ovs_bridge_vlan_filter_trunk_tag_overlap_range_vs_range() {
+    let mut desired: OvsBridgeInterface = serde_yaml::from_str(
+        r#"
+        name: br0
+        type: ovs-bridge
+        state: up
+        bridge:
+          port:
+            - name: eth1
+              vlan:
+                mode: trunk
+                trunk-tags:
+                  - id-range:
+                      min: 600
+                      max: 900
+                  - id-range:
+                      min: 900
+                      max: 1000
+        "#,
+    )
+    .unwrap();
+
+    let result = desired.sanitize();
+
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+    }
+}
+
+#[test]
+fn test_ovs_bridge_vlan_filter_trunk_tag_overlap_id_vs_id() {
+    let mut desired: OvsBridgeInterface = serde_yaml::from_str(
+        r#"
+        name: br0
+        type: ovs-bridge
+        state: up
+        bridge:
+          port:
+            - name: eth1
+              vlan:
+                mode: trunk
+                trunk-tags:
+                  - id: 100
+                  - id: 100
+        "#,
+    )
+    .unwrap();
+
+    let result = desired.sanitize();
+
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+    }
+}
+
+#[test]
+fn test_ovs_bridge_vlan_filter_enable_native_with_access_mode() {
+    let mut desired: OvsBridgeInterface = serde_yaml::from_str(
+        r#"
+        name: br0
+        type: ovs-bridge
+        state: up
+        bridge:
+          port:
+            - name: eth1
+              vlan:
+                enable-native: true
+                mode: access
+        "#,
+    )
+    .unwrap();
+
+    let result = desired.sanitize();
+
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+    }
+}
+
+#[test]
+fn test_ovs_bridge_vlan_filter_trunk_tags_with_access_mode() {
+    let mut desired: OvsBridgeInterface = serde_yaml::from_str(
+        r#"
+        name: br0
+        type: ovs-bridge
+        state: up
+        bridge:
+          port:
+            - name: eth1
+              vlan:
+                mode: access
+                trunk-tags:
+                  - id: 100
+        "#,
+    )
+    .unwrap();
+
+    let result = desired.sanitize();
+
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+    }
+}
+
+#[test]
+fn test_ovs_bridge_vlan_filter_no_trunk_tags_with_trunk_mode() {
+    let mut desired: OvsBridgeInterface = serde_yaml::from_str(
+        r#"
+        name: br0
+        type: ovs-bridge
+        state: up
+        bridge:
+          port:
+            - name: eth1
+              vlan:
+                mode: trunk
+        "#,
+    )
+    .unwrap();
+
+    let result = desired.sanitize();
+
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+    }
 }

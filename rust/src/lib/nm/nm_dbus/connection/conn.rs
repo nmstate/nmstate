@@ -1,18 +1,4 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright 2021 Red Hat, Inc.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
 
 use std::collections::HashMap;
 use std::convert::TryFrom;
@@ -29,6 +15,7 @@ use super::super::{
     connection::ieee8021x::NmSetting8021X,
     connection::infiniband::NmSettingInfiniBand,
     connection::ip::NmSettingIp,
+    connection::loopback::NmSettingLoopback,
     connection::mac_vlan::NmSettingMacVlan,
     connection::ovs::{
         NmSettingOvsBridge, NmSettingOvsDpdk, NmSettingOvsExtIds,
@@ -112,8 +99,9 @@ pub struct NmConnection {
     pub user: Option<NmSettingUser>,
     pub ethtool: Option<NmSettingEthtool>,
     pub infiniband: Option<NmSettingInfiniBand>,
+    pub loopback: Option<NmSettingLoopback>,
     #[serde(skip)]
-    pub(crate) obj_path: String,
+    pub obj_path: String,
     #[serde(skip)]
     pub(crate) flags: Vec<NmSettingsConnectionFlag>,
     _other: HashMap<String, HashMap<String, zvariant::OwnedValue>>,
@@ -180,6 +168,7 @@ impl TryFrom<NmConnectionDbusOwnedValue> for NmConnection {
                 "infiniband",
                 NmSettingInfiniBand::try_from
             )?,
+            loopback: _from_map!(v, "loopback", NmSettingLoopback::try_from)?,
             _other: v,
             ..Default::default()
         })
@@ -278,6 +267,9 @@ impl NmConnection {
         }
         if let Some(v) = &self.infiniband {
             ret.insert("infiniband", v.to_value()?);
+        }
+        if let Some(v) = &self.loopback {
+            ret.insert("loopback", v.to_value()?);
         }
         for (key, setting_value) in &self._other {
             let mut other_setting_value: HashMap<&str, zvariant::Value> =
@@ -449,4 +441,42 @@ pub(crate) fn nm_con_get_from_obj_path(
         nm_conn.flags = from_u32_to_vec_nm_conn_flags(flags);
     }
     Ok(nm_conn)
+}
+
+#[derive(Debug, Clone, PartialEq, Default, Deserialize)]
+#[serde(try_from = "DbusDictionary")]
+#[non_exhaustive]
+pub struct NmRange {
+    pub start: u64,
+    pub end: u64,
+    _other: DbusDictionary,
+}
+
+impl TryFrom<DbusDictionary> for NmRange {
+    type Error = NmError;
+    fn try_from(mut v: DbusDictionary) -> Result<Self, Self::Error> {
+        Ok(Self {
+            start: _from_map!(v, "start", u64::try_from)?.unwrap_or_default(),
+            end: _from_map!(v, "end", u64::try_from)?.unwrap_or_default(),
+            _other: v,
+        })
+    }
+}
+
+impl NmRange {
+    pub fn to_value(&self) -> Result<zvariant::Value, NmError> {
+        let mut ret = zvariant::Dict::new(
+            zvariant::Signature::from_str_unchecked("s"),
+            zvariant::Signature::from_str_unchecked("v"),
+        );
+        ret.append(
+            zvariant::Value::new("start"),
+            zvariant::Value::new(zvariant::Value::U64(self.start)),
+        )?;
+        ret.append(
+            zvariant::Value::new("end"),
+            zvariant::Value::new(zvariant::Value::U64(self.end)),
+        )?;
+        Ok(zvariant::Value::Dict(ret))
+    }
 }

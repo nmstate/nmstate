@@ -1,16 +1,23 @@
 [package]
 name = "nmstatectl"
-version = "1.4.0"
+version = "1.4.1"
 authors = ["Gris Ge <fge@redhat.com>"]
+description = "Command line tool for networking management in a declarative manner"
+license = "Apache-2.0"
+homepage = "https://nmstate.io"
+documentation = "https://nmstate.io"
+repository = "https://github.com/nmstate/nmstate"
+keywords = ["network", "linux"]
+categories = ["network-programming", "os::linux"]
 edition = "2018"
-rust-version = "1.60"
+rust-version = "1.58"
 
 [[bin]]
 name = "nmstatectl-rust"
 path = "ncl.rs"
 
 [dependencies]
-nmstate = {path = "../lib", default-features = false}
+nmstate = {path = "../lib", version = "1.4", default-features = false}
 serde_yaml = "0.9"
 clap = { version = "3.1", features = ["cargo"] }
 serde = { version = "1.0", features = ["derive"] }
@@ -23,5 +30,5 @@ chrono = "0.4"
 
 [features]
 default = ["query_apply", "gen_conf"]
-query_apply = ["nmstate/query_apply", "dep:ctrlc"]
+query_apply = ["nmstate/query_apply", "ctrlc"]
 gen_conf = ["nmstate/gen_conf"]

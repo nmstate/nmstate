@@ -104,6 +104,7 @@ pub(crate) fn np_iface_to_base_iface(
             "ipv4",
             "ipv6",
             "mac_address",
+            "permanent_mac_address",
             "controller",
             "mtu",
             "accept_all_mac_addresses",
@@ -133,7 +134,7 @@ fn get_permanent_mac_address(iface: &nispor::Iface) -> Option<String> {
             if bond_port_info.perm_hwaddr.is_empty() {
                 None
             } else {
-                Some(bond_port_info.perm_hwaddr.clone())
+                Some(bond_port_info.perm_hwaddr.as_str().to_uppercase())
             }
         } else {
             None

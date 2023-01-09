@@ -2,13 +2,15 @@
 
 use std::ops::BitXor;
 
-use super::super::nm_dbus::{NmSettingIp, NmSettingIpMethod};
+use super::super::nm_dbus::{
+    NmIpRouteRuleAction, NmSettingIp, NmSettingIpMethod,
+};
 
 use super::dns::nm_dns_to_nmstate;
 
 use crate::{
-    Dhcpv4ClientId, Dhcpv6Duid, InterfaceIpv4, InterfaceIpv6, Ipv6AddrGenMode,
-    WaitIp,
+    AddressFamily, Dhcpv4ClientId, Dhcpv6Duid, InterfaceIpv4, InterfaceIpv6,
+    Ipv6AddrGenMode, RouteRuleAction, RouteRuleEntry, WaitIp,
 };
 
 const ADDR_GEN_MODE_EUI64: i32 = 0;
@@ -50,8 +52,10 @@ pub(crate) fn nm_ip_setting_to_nmstate4(
                 "auto_gateway",
                 "auto_table_id",
                 "auto_route_metric",
+                "rules",
             ],
-            dns: Some(nm_dns_to_nmstate(nm_ip_setting)),
+            dns: Some(nm_dns_to_nmstate("", nm_ip_setting)),
+            rules: nm_rules_to_nmstate(false, nm_ip_setting),
             dhcp_client_id: nm_dhcp_client_id_to_nmstate(nm_ip_setting),
             auto_route_metric: nm_ip_setting.route_metric.map(|i| i as u32),
             ..Default::default()
@@ -62,6 +66,7 @@ pub(crate) fn nm_ip_setting_to_nmstate4(
 }
 
 pub(crate) fn nm_ip_setting_to_nmstate6(
+    iface_name: &str,
     nm_ip_setting: &NmSettingIp,
 ) -> InterfaceIpv6 {
     if let Some(nm_ip_method) = &nm_ip_setting.method {
@@ -89,6 +94,7 @@ pub(crate) fn nm_ip_setting_to_nmstate6(
                 "dhcp",
                 "autoconf",
                 "dns",
+                "rules",
                 "auto_dns",
                 "auto_routes",
                 "auto_gateway",
@@ -97,7 +103,8 @@ pub(crate) fn nm_ip_setting_to_nmstate6(
                 "addr_gen_mode",
                 "auto_route_metric",
             ],
-            dns: Some(nm_dns_to_nmstate(nm_ip_setting)),
+            dns: Some(nm_dns_to_nmstate(iface_name, nm_ip_setting)),
+            rules: nm_rules_to_nmstate(true, nm_ip_setting),
             dhcp_duid: nm_dhcp_duid_to_nmstate(nm_ip_setting),
             addr_gen_mode: {
                 if enabled {
@@ -118,12 +125,18 @@ pub(crate) fn nm_ip_setting_to_nmstate6(
 fn parse_dhcp_opts(
     nm_setting: &NmSettingIp,
 ) -> (Option<bool>, Option<bool>, Option<bool>, Option<u32>) {
-    (
-        Some(nm_setting.ignore_auto_dns.map(flip_bool).unwrap_or(true)),
-        Some(nm_setting.never_default.map(flip_bool).unwrap_or(true)),
-        Some(nm_setting.ignore_auto_routes.map(flip_bool).unwrap_or(true)),
-        Some(nm_setting.route_table.unwrap_or_default()),
-    )
+    if nm_setting.method == Some(NmSettingIpMethod::Auto)
+        || nm_setting.method == Some(NmSettingIpMethod::Dhcp)
+    {
+        (
+            Some(nm_setting.ignore_auto_dns.map(flip_bool).unwrap_or(true)),
+            Some(nm_setting.never_default.map(flip_bool).unwrap_or(true)),
+            Some(nm_setting.ignore_auto_routes.map(flip_bool).unwrap_or(true)),
+            Some(nm_setting.route_table.unwrap_or_default()),
+        )
+    } else {
+        (None, None, None, None)
+    }
 }
 
 fn flip_bool(v: bool) -> bool {
@@ -201,4 +214,59 @@ pub(crate) fn query_nmstate_wait_ip(
         },
         (None, None) => None,
     }
+}
+
+fn nm_rules_to_nmstate(
+    is_ipv6: bool,
+    ip_set: &NmSettingIp,
+) -> Option<Vec<RouteRuleEntry>> {
+    let mut ret = Vec::new();
+    for nm_rule in ip_set.route_rules.as_slice() {
+        let mut rule = RouteRuleEntry::new();
+        if is_ipv6 {
+            rule.family = Some(AddressFamily::IPv6);
+        } else {
+            rule.family = Some(AddressFamily::IPv4);
+        }
+        if let Some(v) = nm_rule.priority.as_ref() {
+            rule.priority = Some(*v as i64);
+        }
+        if let (Some(from), Some(from_len)) =
+            (nm_rule.from.as_ref(), nm_rule.from_len.as_ref())
+        {
+            rule.ip_from = Some(format!("{from}/{from_len}"));
+        }
+        if let (Some(to), Some(to_len)) =
+            (nm_rule.to.as_ref(), nm_rule.to_len.as_ref())
+        {
+            rule.ip_to = Some(format!("{to}/{to_len}"));
+        }
+        if let Some(v) = nm_rule.table.as_ref() {
+            rule.table_id = Some(*v);
+        }
+        if let Some(v) = nm_rule.fw_mark.as_ref() {
+            rule.fwmark = Some(*v);
+        }
+        if let Some(v) = nm_rule.fw_mask.as_ref() {
+            rule.fwmask = Some(*v);
+        }
+        if let Some(v) = nm_rule.iifname.as_ref() {
+            rule.iif = Some(v.to_string());
+        }
+        if let Some(v) = nm_rule.action.as_ref() {
+            rule.action = Some(match v {
+                NmIpRouteRuleAction::Blackhole => RouteRuleAction::Blackhole,
+                NmIpRouteRuleAction::Unreachable => {
+                    RouteRuleAction::Unreachable
+                }
+                NmIpRouteRuleAction::Prohibit => RouteRuleAction::Prohibit,
+                _ => {
+                    log::warn!("Unknown NM IP route rule action {:?}", v);
+                    continue;
+                }
+            });
+        }
+        ret.push(rule);
+    }
+    Some(ret)
 }

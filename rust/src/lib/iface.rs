@@ -1,15 +1,20 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use std::collections::HashSet;
+use std::iter::FromIterator;
+
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::{
-    BaseInterface, BondInterface, DummyInterface, EthernetInterface,
-    InfiniBandInterface, LinuxBridgeInterface, MacVlanInterface,
-    MacVtapInterface, NmstateError, OvsBridgeInterface, OvsInterface,
-    VlanInterface, VrfInterface, VxlanInterface,
+    BaseInterface, BondInterface, DummyInterface, ErrorKind, EthernetInterface,
+    InfiniBandInterface, LinuxBridgeInterface, LoopbackInterface,
+    MacVlanInterface, MacVtapInterface, NmstateError, OvsBridgeInterface,
+    OvsInterface, VlanInterface, VrfInterface, VxlanInterface,
 };
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+use crate::state::merge_json_value;
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[non_exhaustive]
 /// Interface type
 pub enum InterfaceType {
@@ -179,13 +184,21 @@ pub enum InterfaceState {
     /// Interface is not managed by backend. For apply action, interface marked
     /// as ignore will not be changed and will not cause verification failure
     /// neither.
+    /// When desired controller listed currently ignored interfaces as its
+    /// port, nmstate will automatically convert these ignored interfaces from
+    /// 'state: ignore' to 'state: up' only when:
+    ///  1. This ignored port is not mentioned in desire state.
+    ///  2. This ignored port is listed as port of a desired controller.
+    ///  3. Controller interface is new or does not contain ignored interfaces
+    ///     currently.
+    ///
     /// Deserialize and serialize from/to 'ignore'.
     Ignore,
 }
 
 impl Default for InterfaceState {
     fn default() -> Self {
-        Self::Unknown
+        Self::Up
     }
 }
 
@@ -275,6 +288,8 @@ pub enum Interface {
     Vrf(VrfInterface),
     /// [IP over InfiniBand interface](https://docs.kernel.org/infiniband/ipoib.html)
     InfiniBand(InfiniBandInterface),
+    /// Linux loopback interface
+    Loopback(LoopbackInterface),
 }
 
 impl<'de> Deserialize<'de> for Interface {
@@ -371,6 +386,11 @@ impl<'de> Deserialize<'de> for Interface {
                     .map_err(serde::de::Error::custom)?;
                 Ok(Interface::InfiniBand(inner))
             }
+            Some(InterfaceType::Loopback) => {
+                let inner = LoopbackInterface::deserialize(v)
+                    .map_err(serde::de::Error::custom)?;
+                Ok(Interface::Loopback(inner))
+            }
             Some(iface_type) => {
                 log::warn!("Unsupported interface type {}", iface_type);
                 let inner = UnknownInterface::deserialize(v)
@@ -398,10 +418,6 @@ impl Interface {
 
     pub(crate) fn is_controller(&self) -> bool {
         self.base_iface().iface_type.is_controller()
-    }
-
-    pub(crate) fn set_iface_type(&mut self, iface_type: InterfaceType) {
-        self.base_iface_mut().iface_type = iface_type;
     }
 
     /// The interface type
@@ -475,6 +491,11 @@ impl Interface {
                 };
                 Self::InfiniBand(new_iface)
             }
+            Self::Loopback(iface) => {
+                let mut new_iface = LoopbackInterface::new();
+                new_iface.base = iface.base.clone_name_type_only();
+                Self::Loopback(new_iface)
+            }
             Self::Unknown(iface) => {
                 let mut new_iface = UnknownInterface::new();
                 new_iface.base = iface.base.clone_name_type_only();
@@ -532,12 +553,17 @@ impl Interface {
             }
     }
 
-    /// Whether interface is virtual(no real hardware).
+    /// Whether interface is virtual(can delete from kernel).
+    /// Since loopback interface should not be deleted from system,
+    /// hence we consider loopback interface as __not__ virtual interface.
     /// Unknown interface is considered as __not__ virtual interface.
     pub fn is_virtual(&self) -> bool {
         !matches!(
             self,
-            Self::Ethernet(_) | Self::Unknown(_) | Self::InfiniBand(_)
+            Self::Ethernet(_)
+                | Self::Unknown(_)
+                | Self::InfiniBand(_)
+                | Self::Loopback(_)
         )
     }
 
@@ -563,11 +589,12 @@ impl Interface {
             Self::MacVtap(iface) => &iface.base,
             Self::Vrf(iface) => &iface.base,
             Self::InfiniBand(iface) => &iface.base,
+            Self::Loopback(iface) => &iface.base,
             Self::Unknown(iface) => &iface.base,
         }
     }
 
-    pub(crate) fn base_iface_mut(&mut self) -> &mut BaseInterface {
+    pub fn base_iface_mut(&mut self) -> &mut BaseInterface {
         match self {
             Self::LinuxBridge(iface) => &mut iface.base,
             Self::Bond(iface) => &mut iface.base,
@@ -581,6 +608,7 @@ impl Interface {
             Self::MacVtap(iface) => &mut iface.base,
             Self::Vrf(iface) => &mut iface.base,
             Self::InfiniBand(iface) => &mut iface.base,
+            Self::Loopback(iface) => &mut iface.base,
             Self::Unknown(iface) => &mut iface.base,
         }
     }
@@ -607,21 +635,31 @@ impl Interface {
         }
     }
 
-    pub(crate) fn pre_edit_cleanup(
-        &mut self,
-        current: Option<&Self>,
-    ) -> Result<(), NmstateError> {
-        self.base_iface_mut()
-            .pre_edit_cleanup(current.map(|i| i.base_iface()))?;
+    // This function will be invoked as final process of Interface for apply or
+    // verify.
+    // It is plugin's duty to clean up the state for querying before showing to
+    // user. Hence please do not use this function for querying.
+    pub(crate) fn sanitize(&mut self) -> Result<(), NmstateError> {
+        self.base_iface_mut().sanitize()?;
         match self {
-            Interface::LinuxBridge(iface) => iface.pre_edit_cleanup(),
-            Interface::Ethernet(iface) => iface.pre_edit_cleanup(),
-            Interface::OvsInterface(iface) => iface.pre_edit_cleanup(),
-            Interface::Vrf(iface) => iface.pre_edit_cleanup(current),
-            Interface::Bond(iface) => iface.pre_edit_cleanup(current),
-            Interface::MacVlan(iface) => iface.pre_edit_cleanup(),
-            Interface::MacVtap(iface) => iface.pre_edit_cleanup(),
-            _ => Ok(()),
+            Interface::Ethernet(iface) => iface.sanitize()?,
+            Interface::LinuxBridge(iface) => iface.sanitize()?,
+            Interface::OvsInterface(iface) => iface.sanitize()?,
+            Interface::OvsBridge(iface) => iface.sanitize()?,
+            Interface::Vrf(iface) => iface.sanitize()?,
+            Interface::Bond(iface) => iface.sanitize()?,
+            Interface::MacVlan(iface) => iface.sanitize()?,
+            Interface::MacVtap(iface) => iface.sanitize()?,
+            Interface::Loopback(iface) => iface.sanitize()?,
+            _ => (),
+        }
+        Ok(())
+    }
+
+    pub(crate) fn sanitize_for_verify(&mut self) {
+        self.base_iface_mut().sanitize_for_verify();
+        if let Interface::LinuxBridge(iface) = self {
+            iface.sanitize_for_verify()
         }
     }
 
@@ -636,6 +674,30 @@ impl Interface {
             _ => None,
         }
     }
+
+    pub(crate) fn remove_port(&mut self, port_name: &str) {
+        if let Interface::LinuxBridge(br_iface) = self {
+            br_iface.remove_port(port_name);
+        } else if let Interface::OvsBridge(br_iface) = self {
+            br_iface.remove_port(port_name);
+        } else if let Interface::Bond(iface) = self {
+            iface.remove_port(port_name);
+        }
+    }
+
+    pub(crate) fn change_port_name(
+        &mut self,
+        org_port_name: &str,
+        new_port_name: String,
+    ) {
+        if let Interface::LinuxBridge(iface) = self {
+            iface.change_port_name(org_port_name, new_port_name);
+        } else if let Interface::OvsBridge(iface) = self {
+            iface.change_port_name(org_port_name, new_port_name);
+        } else if let Interface::Bond(iface) = self {
+            iface.change_port_name(org_port_name, new_port_name);
+        }
+    }
 }
 
 // The default on enum is experimental, but clippy is suggestion we use
@@ -645,4 +707,320 @@ impl Default for Interface {
     fn default() -> Self {
         Interface::Unknown(UnknownInterface::default())
     }
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub(crate) struct MergedInterface {
+    pub(crate) for_verify: Option<Interface>,
+    pub(crate) for_apply: Option<Interface>,
+    pub(crate) merged: Interface,
+    pub(crate) desired: Option<Interface>,
+    pub(crate) current: Option<Interface>,
+}
+
+impl MergedInterface {
+    pub(crate) fn new(
+        desired: Option<Interface>,
+        current: Option<Interface>,
+    ) -> Result<Self, NmstateError> {
+        let mut ret = Self {
+            for_verify: desired.clone(),
+            for_apply: desired.clone(),
+            merged: {
+                match (desired.as_ref(), current.as_ref()) {
+                    (Some(d), Some(c)) => merge_desire_with_current(d, c)?,
+                    (Some(d), None) => d.clone(),
+                    (None, Some(c)) => c.clone(),
+                    (None, None) => {
+                        return Err(NmstateError::new(
+                            ErrorKind::Bug,
+                            "BUG: MergedInterface got both desired \
+                            and current set to None"
+                                .to_string(),
+                        ));
+                    }
+                }
+            },
+            desired,
+            current,
+        };
+        ret.pre_inter_ifaces_process();
+        Ok(ret)
+    }
+
+    pub(crate) fn is_desired(&self) -> bool {
+        self.desired.is_some()
+    }
+
+    // desired or invoked `mark_as_changed()`.
+    pub(crate) fn is_changed(&self) -> bool {
+        self.for_apply.is_some()
+    }
+
+    fn pre_inter_ifaces_process(&mut self) {
+        if self.merged.is_up() && self.is_desired() {
+            self.special_merge();
+            self.create_ovs_iface_for_empty_ports();
+        }
+    }
+
+    // This function is designed to hold smart changes or validations
+    // which only depend on desire and current status of single interface.
+    // This function will be invoked __after__ inter-ifaces process done.
+    pub(crate) fn post_inter_ifaces_process(
+        &mut self,
+    ) -> Result<(), NmstateError> {
+        self.preserve_current_controller_info();
+        self.post_inter_ifaces_process_base_iface()?;
+        self.post_inter_ifaces_process_sriov()?;
+        self.post_inter_ifaces_process_vrf()?;
+        self.post_inter_ifaces_process_bond()?;
+
+        if let Some(apply_iface) = self.for_apply.as_mut() {
+            apply_iface.sanitize()?;
+        }
+        if let Some(verify_iface) = self.for_verify.as_mut() {
+            verify_iface.sanitize().ok();
+            verify_iface.sanitize_for_verify();
+        }
+        Ok(())
+    }
+
+    // After HashMap based merging, extra task required for special use case
+    // like.
+    fn special_merge(&mut self) {
+        if let (Some(desired), Some(current)) =
+            (self.desired.as_ref(), self.current.as_ref())
+        {
+            self.merged
+                .base_iface_mut()
+                .special_merge(desired.base_iface(), current.base_iface());
+
+            if let Interface::Bond(bond_iface) = &mut self.merged {
+                if let (
+                    Interface::Bond(des_bond_iface),
+                    Interface::Bond(cur_bond_iface),
+                ) = (desired, current)
+                {
+                    bond_iface.special_merge(des_bond_iface, cur_bond_iface);
+                }
+            } else if let Interface::LinuxBridge(br_iface) = &mut self.merged {
+                if let (
+                    Interface::LinuxBridge(des_br_iface),
+                    Interface::LinuxBridge(cur_br_iface),
+                ) = (desired, current)
+                {
+                    br_iface.special_merge(des_br_iface, cur_br_iface);
+                }
+            } else if let Interface::OvsBridge(br_iface) = &mut self.merged {
+                if let (
+                    Interface::OvsBridge(des_br_iface),
+                    Interface::OvsBridge(cur_br_iface),
+                ) = (desired, current)
+                {
+                    br_iface.special_merge(des_br_iface, cur_br_iface);
+                }
+            }
+        }
+    }
+
+    pub(crate) fn set_copy_from_mac(&mut self, mac: String) {
+        if let Some(apply_iface) =
+            self.for_apply.as_mut().map(|i| i.base_iface_mut())
+        {
+            apply_iface.copy_mac_from = None;
+            apply_iface.mac_address = Some(mac.to_string());
+        }
+        if let Some(verify_iface) =
+            self.for_verify.as_mut().map(|i| i.base_iface_mut())
+        {
+            verify_iface.copy_mac_from = None;
+            verify_iface.mac_address = Some(mac);
+        }
+    }
+
+    // Return two list, first is changed port attached to specified interface,
+    // second is changed port detached from specified interface.
+    pub(crate) fn get_changed_ports(&self) -> Option<(Vec<&str>, Vec<&str>)> {
+        let desired_iface = self.desired.as_ref()?;
+
+        if desired_iface.is_absent() {
+            if let Some(ports) = self.current.as_ref().and_then(|c| c.ports()) {
+                return Some((Vec::new(), ports));
+            } else {
+                return None;
+            }
+        }
+
+        let desired_port_names = match desired_iface.ports() {
+            Some(p) => HashSet::from_iter(p.iter().cloned()),
+            None => {
+                // If current interface is in ignore state, even user did not
+                // defining ports in desire, we should preserving existing port
+                // lists
+                if let Some(cur_iface) = self.current.as_ref() {
+                    if cur_iface.is_ignore() {
+                        match cur_iface.ports().map(|ports| {
+                            HashSet::<&str>::from_iter(ports.iter().cloned())
+                        }) {
+                            Some(p) => p,
+                            None => return None,
+                        }
+                    } else {
+                        return None;
+                    }
+                } else {
+                    return None;
+                }
+            }
+        };
+
+        let current_port_names = self
+            .current
+            .as_ref()
+            .and_then(|cur_iface| {
+                if cur_iface.is_ignore() {
+                    None
+                } else {
+                    cur_iface.ports()
+                }
+            })
+            .map(|ports| HashSet::<&str>::from_iter(ports.iter().cloned()))
+            .unwrap_or_default();
+
+        let mut chg_attached_ports: Vec<&str> = desired_port_names
+            .difference(&current_port_names)
+            .cloned()
+            .collect();
+        let chg_detached_ports: Vec<&str> = current_port_names
+            .difference(&desired_port_names)
+            .cloned()
+            .collect();
+
+        // Linux Bridge might have changed configure its port configuration with
+        // port name list unchanged.
+        // In this case, we should ask LinuxBridgeInterface to generate a list
+        // of configure changed port.
+        if let (
+            Interface::LinuxBridge(des_br_iface),
+            Some(Interface::LinuxBridge(cur_br_iface)),
+        ) = (desired_iface, self.current.as_ref())
+        {
+            for port_name in des_br_iface.get_config_changed_ports(cur_br_iface)
+            {
+                if !chg_attached_ports.contains(&port_name) {
+                    chg_attached_ports.push(port_name);
+                }
+            }
+        }
+
+        Some((chg_attached_ports, chg_detached_ports))
+    }
+
+    // Store `Interface` with name and type into `for_apply`.
+    // Do nothing if specified interface is already desired.
+    pub(crate) fn mark_as_changed(&mut self) {
+        if self.desired.is_none() {
+            if let Some(cur_iface) = self.current.as_ref() {
+                let iface = cur_iface.clone_name_type_only();
+                self.for_apply = Some(iface);
+                self.preserve_current_controller_info();
+            }
+        }
+    }
+
+    pub(crate) fn mark_as_absent(&mut self) {
+        self.mark_as_changed();
+        self.merged.base_iface_mut().state = InterfaceState::Absent;
+        if let Some(apply_iface) = self.for_apply.as_mut() {
+            apply_iface.base_iface_mut().state = InterfaceState::Absent;
+        }
+    }
+
+    pub(crate) fn apply_ctrller_change(
+        &mut self,
+        ctrl_name: String,
+        ctrl_type: Option<InterfaceType>,
+    ) -> Result<(), NmstateError> {
+        if !self.is_desired() {
+            self.mark_as_changed();
+            log::info!(
+                "Include interface {} to edit as its controller required so",
+                self.merged.name()
+            );
+        }
+        let apply_iface = if let Some(i) = self.for_apply.as_mut() {
+            i
+        } else {
+            return Err(NmstateError::new(
+                ErrorKind::Bug,
+                format!(
+                    "Reached unreachable code: apply_ctrller_change() \
+                    self.for_apply still None: {self:?}"
+                ),
+            ));
+        };
+
+        // Some interface cannot live without controller
+        if self.merged.need_controller() && ctrl_name.is_empty() {
+            if let Some(org_ctrl) = self
+                .current
+                .as_ref()
+                .and_then(|c| c.base_iface().controller.as_ref())
+            {
+                log::info!(
+                    "Interface {} cannot live without controller, \
+                    marking as absent as it has been detached from its \
+                    original controller {org_ctrl}",
+                    self.merged.name(),
+                );
+            }
+            self.merged.base_iface_mut().state = InterfaceState::Absent;
+            apply_iface.base_iface_mut().state = InterfaceState::Absent;
+            if let Some(verify_iface) = self.for_verify.as_mut() {
+                verify_iface.base_iface_mut().state = InterfaceState::Absent;
+            }
+        } else {
+            apply_iface.base_iface_mut().controller = Some(ctrl_name.clone());
+            apply_iface.base_iface_mut().controller_type = ctrl_type.clone();
+            self.merged.base_iface_mut().controller = Some(ctrl_name);
+            self.merged.base_iface_mut().controller_type = ctrl_type;
+            if !self.merged.base_iface().can_have_ip() {
+                self.merged.base_iface_mut().ipv4 = None;
+                self.merged.base_iface_mut().ipv6 = None;
+            }
+        }
+        Ok(())
+    }
+
+    fn preserve_current_controller_info(&mut self) {
+        if let Some(apply_iface) = self.for_apply.as_mut() {
+            if apply_iface.base_iface().controller.is_none() {
+                if let Some(cur_iface) = self.current.as_ref() {
+                    if cur_iface.base_iface().controller.as_ref().is_some() {
+                        apply_iface.base_iface_mut().controller =
+                            cur_iface.base_iface().controller.clone();
+                        apply_iface.base_iface_mut().controller_type =
+                            cur_iface.base_iface().controller_type.clone();
+                    }
+                }
+            }
+        }
+    }
+}
+
+// This function is merging all properties without known their meanings.
+// When special merging required, please do that in `MergedInterface.process()`,
+// after merged using stored `desired` and `current`.
+fn merge_desire_with_current(
+    desired: &Interface,
+    current: &Interface,
+) -> Result<Interface, NmstateError> {
+    let mut desired_value = serde_json::to_value(desired)?;
+    let current_value = serde_json::to_value(current)?;
+    merge_json_value(&mut desired_value, &current_value);
+
+    let iface: Interface = serde_json::from_value(desired_value)?;
+
+    Ok(iface)
 }

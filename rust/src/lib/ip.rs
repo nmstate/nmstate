@@ -1,10 +1,13 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use std::net::{IpAddr, Ipv6Addr};
 use std::str::FromStr;
 
 use serde::{self, Deserialize, Deserializer, Serialize};
 
 use crate::{
-    BaseInterface, DnsClientState, ErrorKind, MptcpAddressFlag, NmstateError,
+    BaseInterface, DnsClientState, ErrorKind, MergedInterface,
+    MptcpAddressFlag, NmstateError, RouteRuleEntry,
 };
 
 const AF_INET: u8 = 2;
@@ -126,7 +129,6 @@ pub struct InterfaceIpv4 {
     /// which result the IP addresses after first one holding the `secondary`
     /// flag.
     pub addresses: Option<Vec<InterfaceIpAddr>>,
-    pub(crate) dns: Option<DnsClientState>,
     /// Whether to apply DNS resolver information retrieved from DHCP server.
     /// Serialize and deserialize to/from `auto-dns`.
     pub auto_dns: Option<bool>,
@@ -153,6 +155,9 @@ pub struct InterfaceIpv4 {
     /// Only available for DHCPv4 enabled interface.
     /// Deserialize from `auto-route-metric`
     pub auto_route_metric: Option<u32>,
+
+    pub(crate) dns: Option<DnsClientState>,
+    pub(crate) rules: Option<Vec<RouteRuleEntry>>,
 }
 
 impl Default for InterfaceIpv4 {
@@ -164,6 +169,7 @@ impl Default for InterfaceIpv4 {
             dhcp_client_id: None,
             addresses: None,
             dns: None,
+            rules: None,
             auto_dns: None,
             auto_gateway: None,
             auto_routes: None,
@@ -190,23 +196,6 @@ impl InterfaceIpv4 {
             && !self.addresses.as_deref().unwrap_or_default().is_empty()
     }
 
-    // * Disable DHCP and remove address if enabled: false
-    // * Set DHCP options to None if DHCP is false
-    pub(crate) fn cleanup(&mut self) {
-        if !self.enabled {
-            self.dhcp = None;
-            self.addresses = None;
-        }
-
-        if self.dhcp != Some(true) {
-            self.auto_dns = None;
-            self.auto_gateway = None;
-            self.auto_routes = None;
-            self.auto_table_id = None;
-            self.auto_route_metric = None;
-        }
-    }
-
     pub(crate) fn merge_ip(&mut self, current: &Self) {
         if !self.prop_list.contains(&"enabled") {
             self.enabled = current.enabled;
@@ -214,7 +203,6 @@ impl InterfaceIpv4 {
         if self.dhcp.is_none() && self.enabled {
             self.dhcp = current.dhcp;
         }
-
         // Normally, we expect backend to preserve configuration which not
         // mentioned in desire, but when DHCP switch from ON to OFF, the design
         // of nmstate is expecting dynamic IP address goes static. This should
@@ -229,16 +217,43 @@ impl InterfaceIpv4 {
         }
     }
 
-    // Clean up before sending to plugin for applying
+    pub(crate) fn special_merge(&mut self, desired: &Self, current: &Self) {
+        if !desired.prop_list.contains(&"enabled") {
+            self.enabled = current.enabled;
+        }
+        if desired.dhcp.is_none() && self.enabled {
+            self.dhcp = current.dhcp;
+        }
+
+        // Normally, we expect backend to preserve configuration which not
+        // mentioned in desire, but when DHCP switch from ON to OFF, the design
+        // of nmstate is expecting dynamic IP address goes static. This should
+        // be done by top level code.
+        if current.is_auto()
+            && current.addresses.is_some()
+            && self.enabled
+            && !self.is_auto()
+            && desired.addresses.is_none()
+        {
+            self.addresses = current.addresses.clone();
+        }
+    }
+
+    // * Remove link-local address
     // * Set auto_dns, auto_gateway and auto_routes to true if DHCP enabled and
     //   those options is None
-    // * Remove static IP address when DHCP enabled.
-    // * When user is not mentioning `enabled` property of ipv4 stack in desire
-    //   state, nmstate should merge it from current.
-    pub(crate) fn pre_edit_cleanup(&mut self, current: Option<&Self>) {
-        if let Some(current) = current {
-            self.merge_ip(current);
+    // * Disable DHCP and remove address if enabled: false
+    // * Set DHCP options to None if DHCP is false
+    // * Remove mptcp_flags is they are for query only
+    pub(crate) fn sanitize(&mut self) -> Result<(), NmstateError> {
+        // Empty address should equal to disabled IPv4 stack
+        if let Some(true) = self.addresses.as_ref().map(Vec::is_empty) {
+            if self.enabled {
+                log::info!("Empty IPv4 address is considered as IPv4 disabled");
+                self.enabled = false;
+            }
         }
+
         if self.is_auto() {
             if self.auto_dns.is_none() {
                 self.auto_dns = Some(true);
@@ -258,7 +273,33 @@ impl InterfaceIpv4 {
                 self.addresses = None;
             }
         }
-        self.cleanup();
+
+        if !self.enabled {
+            self.dhcp = None;
+            self.addresses = None;
+        }
+
+        if self.dhcp != Some(true) {
+            self.auto_dns = None;
+            self.auto_gateway = None;
+            self.auto_routes = None;
+            self.auto_table_id = None;
+            self.auto_route_metric = None;
+        }
+        if let Some(addrs) = self.addresses.as_mut() {
+            for addr in addrs.iter_mut() {
+                addr.mptcp_flags = None;
+            }
+        }
+        Ok(())
+    }
+
+    // Sort addresses and dedup
+    pub(crate) fn sanitize_for_verify(&mut self) {
+        if let Some(addrs) = self.addresses.as_mut() {
+            addrs.sort_unstable();
+            addrs.dedup();
+        }
     }
 }
 
@@ -384,7 +425,6 @@ pub struct InterfaceIpv6 {
     /// When applying with `Some(Vec::new())`, all IP address will be removed.
     /// The IP addresses will apply to kernel with the same order specified.
     pub addresses: Option<Vec<InterfaceIpAddr>>,
-    pub(crate) dns: Option<DnsClientState>,
     /// Whether to apply DNS resolver information retrieved from DHCPv6 or
     /// autoconf.
     /// Serialize and deserialize to/from `auto-dns`.
@@ -412,6 +452,9 @@ pub struct InterfaceIpv6 {
     /// Only available for autoconf enabled interface.
     /// Deserialize from `auto-route-metric`.
     pub auto_route_metric: Option<u32>,
+
+    pub(crate) dns: Option<DnsClientState>,
+    pub(crate) rules: Option<Vec<RouteRuleEntry>>,
 }
 
 impl Default for InterfaceIpv6 {
@@ -425,6 +468,7 @@ impl Default for InterfaceIpv6 {
             addr_gen_mode: None,
             addresses: None,
             dns: None,
+            rules: None,
             auto_dns: None,
             auto_gateway: None,
             auto_routes: None,
@@ -451,53 +495,12 @@ impl InterfaceIpv6 {
             && !self.addresses.as_deref().unwrap_or_default().is_empty()
     }
 
+    // * Set auto_dns, auto_gateway and auto_routes to true if DHCP enabled and
+    //   those options is None
     // * Disable DHCP and remove address if enabled: false
     // * Set DHCP options to None if DHCP is false
-    pub(crate) fn cleanup(&mut self) {
-        if !self.enabled {
-            self.dhcp = None;
-            self.autoconf = None;
-            self.addresses = None;
-        }
-
-        if !self.is_auto() {
-            self.auto_dns = None;
-            self.auto_gateway = None;
-            self.auto_routes = None;
-            self.auto_table_id = None;
-            self.auto_route_metric = None;
-        }
-    }
-
-    // Clean up before Apply
-    // * Remove link-local address
-    // * Set auto_dns, auto_gateway and auto_routes to true if DHCP/autoconf
-    //   enabled and those options is None
-    // * Remove static IP address when DHCP/autoconf enabled.
-    // * When user is not mentioning `enabled` property of ipv6 stack in desire
-    //   state, nmstate should merge it from current.
-    pub(crate) fn pre_edit_cleanup(&mut self, current: Option<&Self>) {
-        if let Some(current) = current {
-            self.merge_ip(current);
-        }
-        if let Some(addrs) = self.addresses.as_mut() {
-            addrs.retain(|addr| {
-                if let IpAddr::V6(ip_addr) = addr.ip {
-                    if is_ipv6_unicast_link_local(&ip_addr) {
-                        log::warn!(
-                            "Ignoring IPv6 link local address {}/{}",
-                            &addr.ip,
-                            addr.prefix_length
-                        );
-                        false
-                    } else {
-                        true
-                    }
-                } else {
-                    false
-                }
-            })
-        };
+    // * Remove `mptcp_flags` as they are for query only
+    pub(crate) fn sanitize(&mut self) -> Result<(), NmstateError> {
         if self.is_auto() {
             if self.auto_dns.is_none() {
                 self.auto_dns = Some(true);
@@ -517,7 +520,77 @@ impl InterfaceIpv6 {
                 self.addresses = None;
             }
         }
-        self.cleanup();
+
+        if let Some(addrs) = self.addresses.as_mut() {
+            addrs.retain(|addr| {
+                if let IpAddr::V6(ip_addr) = addr.ip {
+                    if is_ipv6_unicast_link_local(&ip_addr) {
+                        log::warn!(
+                            "Ignoring IPv6 link local address {}/{}",
+                            &addr.ip,
+                            addr.prefix_length
+                        );
+                        false
+                    } else {
+                        true
+                    }
+                } else {
+                    false
+                }
+            })
+        };
+
+        if !self.enabled {
+            self.dhcp = None;
+            self.autoconf = None;
+            self.addresses = None;
+        }
+
+        if !self.is_auto() {
+            self.auto_dns = None;
+            self.auto_gateway = None;
+            self.auto_routes = None;
+            self.auto_table_id = None;
+            self.auto_route_metric = None;
+        }
+        if let Some(addrs) = self.addresses.as_mut() {
+            for addr in addrs.iter_mut() {
+                addr.mptcp_flags = None;
+            }
+        }
+        Ok(())
+    }
+
+    // Sort addresses and dedup
+    pub(crate) fn sanitize_for_verify(&mut self) {
+        if let Some(addrs) = self.addresses.as_mut() {
+            addrs.sort_unstable();
+            addrs.dedup();
+        }
+    }
+
+    pub(crate) fn special_merge(&mut self, desired: &Self, current: &Self) {
+        if !desired.prop_list.contains(&"enabled") {
+            self.enabled = current.enabled;
+        }
+        if desired.dhcp.is_none() && self.enabled {
+            self.dhcp = current.dhcp;
+        }
+        if desired.autoconf.is_none() && self.enabled {
+            self.autoconf = current.autoconf;
+        }
+        // Normally, we expect backend to preserve configuration which not
+        // mentioned in desire, but when DHCP switch from ON to OFF, the design
+        // of nmstate is expecting dynamic IP address goes static. This should
+        // be done by top level code.
+        if current.is_auto()
+            && current.addresses.is_some()
+            && self.enabled
+            && !self.is_auto()
+            && desired.addresses.is_none()
+        {
+            self.addresses = current.addresses.clone();
+        }
     }
 
     pub(crate) fn merge_ip(&mut self, current: &Self) {
@@ -619,7 +692,9 @@ impl From<InterfaceIpv6> for InterfaceIp {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize,
+)]
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
 pub struct InterfaceIpAddr {
@@ -866,9 +941,7 @@ impl std::fmt::Display for WaitIp {
     }
 }
 
-pub(crate) fn validate_wait_ip(
-    base_iface: &BaseInterface,
-) -> Result<(), NmstateError> {
+fn validate_wait_ip(base_iface: &BaseInterface) -> Result<(), NmstateError> {
     if let Some(wait_ip) = base_iface.wait_ip.as_ref() {
         if (wait_ip == &WaitIp::Ipv4 || wait_ip == &WaitIp::Ipv4AndIpv6)
             && !base_iface
@@ -907,6 +980,7 @@ pub(crate) fn validate_wait_ip(
             return Err(e);
         }
     }
+
     Ok(())
 }
 
@@ -1009,5 +1083,60 @@ impl From<u8> for AddressFamily {
 impl Default for AddressFamily {
     fn default() -> Self {
         Self::IPv4
+    }
+}
+
+impl std::fmt::Display for AddressFamily {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Self::IPv4 => "ipv4",
+                Self::IPv6 => "ipv6",
+                Self::Unknown => "unknown",
+            }
+        )
+    }
+}
+
+impl MergedInterface {
+    // * Merge `enabled: true` from current if not mentioned in desired.
+    pub(crate) fn post_inter_ifaces_process_ip(
+        &mut self,
+    ) -> Result<(), NmstateError> {
+        if let (Some(current), Some(apply_iface), Some(verify_iface)) = (
+            self.current.as_ref().map(|i| i.base_iface()),
+            self.for_apply.as_mut().map(|i| i.base_iface_mut()),
+            self.for_verify.as_mut().map(|i| i.base_iface_mut()),
+        ) {
+            if let (Some(des_ipv4), Some(cur_ipv4)) =
+                (apply_iface.ipv4.as_mut(), current.ipv4.as_ref())
+            {
+                des_ipv4.merge_ip(cur_ipv4);
+            }
+            if let (Some(des_ipv6), Some(cur_ipv6)) =
+                (apply_iface.ipv6.as_mut(), current.ipv6.as_ref())
+            {
+                des_ipv6.merge_ip(cur_ipv6);
+            }
+            if let (Some(des_ipv4), Some(cur_ipv4)) =
+                (verify_iface.ipv4.as_mut(), current.ipv4.as_ref())
+            {
+                des_ipv4.merge_ip(cur_ipv4);
+            }
+            if let (Some(des_ipv6), Some(cur_ipv6)) =
+                (verify_iface.ipv6.as_mut(), current.ipv6.as_ref())
+            {
+                des_ipv6.merge_ip(cur_ipv6);
+            }
+            validate_wait_ip(apply_iface)?;
+            if !apply_iface.can_have_ip() {
+                apply_iface.wait_ip = None;
+                verify_iface.wait_ip = None;
+            }
+        }
+
+        Ok(())
     }
 }

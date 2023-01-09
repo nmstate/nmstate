@@ -1,10 +1,12 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::{
-    query_apply::get_ignored_ifaces,
     unit_tests::testlib::{
         new_eth_iface, new_ovs_br_iface, new_ovs_iface, new_unknown_iface,
         new_vlan_iface,
     },
     BondMode, Interface, InterfaceState, InterfaceType, Interfaces,
+    MergedInterfaces,
 };
 
 #[test]
@@ -18,41 +20,51 @@ fn test_resolve_unknown_type_absent_eth() {
     let mut ifaces = Interfaces::new();
     ifaces.push(absent_iface);
 
-    ifaces.resolve_unknown_ifaces(&cur_ifaces).unwrap();
-    let (_, _, del_ifaces) =
-        ifaces.gen_state_for_apply(&cur_ifaces, false).unwrap();
+    let merged_ifaces =
+        MergedInterfaces::new(ifaces, cur_ifaces, false, false).unwrap();
 
-    let del_ifaces = del_ifaces.to_vec();
+    let iface = merged_ifaces
+        .get_iface("eth1", InterfaceType::Ethernet)
+        .unwrap();
+    let apply_iface = iface.for_apply.as_ref().unwrap();
 
-    assert_eq!(del_ifaces[0].name(), "eth1");
-    assert_eq!(del_ifaces[0].iface_type(), InterfaceType::Ethernet);
-    assert!(del_ifaces[0].is_absent());
-    assert!(ifaces.user_ifaces.is_empty());
+    assert_eq!(apply_iface.iface_type(), InterfaceType::Ethernet);
+    assert!(apply_iface.is_absent());
 }
 
 #[test]
 fn test_resolve_unknown_type_absent_multiple() {
     let mut cur_ifaces = Interfaces::new();
-    cur_ifaces.push(new_ovs_br_iface("br0", &["p1", "p2"]));
+    cur_ifaces.push(new_ovs_br_iface("br0", &["br0", "p1", "p2"]));
     cur_ifaces.push(new_ovs_iface("br0", "br0"));
     cur_ifaces.push(new_ovs_iface("p1", "br0"));
+    cur_ifaces.push(new_ovs_iface("p2", "br0"));
 
     let mut absent_iface = new_unknown_iface("br0");
     absent_iface.base_iface_mut().state = InterfaceState::Absent;
     let mut ifaces = Interfaces::new();
     ifaces.push(absent_iface);
 
-    let (_, _, del_ifaces) =
-        ifaces.gen_state_for_apply(&cur_ifaces, false).unwrap();
+    let merged_ifaces =
+        MergedInterfaces::new(ifaces, cur_ifaces, false, false).unwrap();
 
-    let del_ifaces = del_ifaces.to_vec();
+    let iface = merged_ifaces
+        .get_iface("br0", InterfaceType::OvsBridge)
+        .unwrap()
+        .for_apply
+        .as_ref()
+        .unwrap();
 
-    assert_eq!(del_ifaces[0].name(), "br0");
-    assert_eq!(del_ifaces[0].iface_type(), InterfaceType::OvsInterface);
-    assert!(del_ifaces[0].is_absent());
-    assert_eq!(del_ifaces[1].name(), "br0");
-    assert_eq!(del_ifaces[1].iface_type(), InterfaceType::OvsBridge);
-    assert!(del_ifaces[1].is_absent());
+    assert!(iface.is_absent());
+
+    let iface = merged_ifaces
+        .get_iface("br0", InterfaceType::OvsInterface)
+        .unwrap()
+        .for_apply
+        .as_ref()
+        .unwrap();
+
+    assert!(iface.is_absent());
 }
 
 #[test]
@@ -66,11 +78,23 @@ fn test_mark_orphan_vlan_as_absent() {
     eth0.base_iface_mut().state = InterfaceState::Absent;
     desired.push(eth0);
 
-    let (_, _, del_ifaces) =
-        desired.gen_state_for_apply(&current, false).unwrap();
-    assert_eq!(del_ifaces.to_vec().len(), 2);
-    assert!(del_ifaces.kernel_ifaces["eth0"].is_absent());
-    assert!(del_ifaces.kernel_ifaces["eth0.10"].is_absent());
+    let merged_ifaces =
+        MergedInterfaces::new(desired, current, false, false).unwrap();
+
+    let iface = merged_ifaces
+        .get_iface("eth0", InterfaceType::Ethernet)
+        .unwrap()
+        .for_apply
+        .as_ref()
+        .unwrap();
+    assert!(iface.is_absent());
+    let iface = merged_ifaces
+        .get_iface("eth0.10", InterfaceType::Vlan)
+        .unwrap()
+        .for_apply
+        .as_ref()
+        .unwrap();
+    assert!(iface.is_absent());
 }
 
 #[test]
@@ -78,6 +102,7 @@ fn test_check_orphan_vlan_change_parent() {
     let mut current = Interfaces::new();
     current.push(new_eth_iface("eth0"));
     current.push(new_vlan_iface("eth0.10", "eth0", 10));
+    current.push(new_eth_iface("eth1"));
 
     let mut desired = Interfaces::new();
     let mut eth0 = new_eth_iface("eth0");
@@ -86,11 +111,29 @@ fn test_check_orphan_vlan_change_parent() {
     desired.push(new_vlan_iface("eth0.10", "eth1", 10));
     desired.push(new_eth_iface("eth1"));
 
-    let (_, chg_ifaces, del_ifaces) =
-        desired.gen_state_for_apply(&current, false).unwrap();
-    assert_eq!(del_ifaces.to_vec().len(), 1);
-    assert!(del_ifaces.kernel_ifaces["eth0"].is_absent());
-    assert!(!chg_ifaces.kernel_ifaces["eth0.10"].is_absent());
+    let merged_ifaces =
+        MergedInterfaces::new(desired, current, false, false).unwrap();
+    let iface = merged_ifaces
+        .get_iface("eth0", InterfaceType::Ethernet)
+        .unwrap()
+        .for_apply
+        .as_ref()
+        .unwrap();
+    assert!(iface.is_absent());
+    let iface = merged_ifaces
+        .get_iface("eth0.10", InterfaceType::Vlan)
+        .unwrap()
+        .for_apply
+        .as_ref()
+        .unwrap();
+    assert!(iface.is_up());
+    let iface = merged_ifaces
+        .get_iface("eth1", InterfaceType::Ethernet)
+        .unwrap()
+        .for_apply
+        .as_ref()
+        .unwrap();
+    assert!(iface.is_up());
 }
 
 #[test]
@@ -120,7 +163,7 @@ fn test_ifaces_resolve_unknown_bond_iface() {
 "#,
     )
     .unwrap();
-    let mut desired = serde_yaml::from_str::<Interfaces>(
+    let desired = serde_yaml::from_str::<Interfaces>(
         r#"---
 - name: bond99
   link-aggregation:
@@ -128,9 +171,17 @@ fn test_ifaces_resolve_unknown_bond_iface() {
 "#,
     )
     .unwrap();
-    desired.resolve_unknown_ifaces(&current).unwrap();
+    let merged_iface =
+        MergedInterfaces::new(desired.clone(), current, false, false).unwrap();
 
-    if let Interface::Bond(iface) = &desired.kernel_ifaces["bond99"] {
+    let iface = merged_iface
+        .get_iface("bond99", InterfaceType::Bond)
+        .unwrap()
+        .for_apply
+        .as_ref()
+        .unwrap();
+
+    if let Interface::Bond(iface) = iface {
         assert_eq!(
             iface.bond.as_ref().unwrap().mode,
             Some(BondMode::RoundRobin)
@@ -167,12 +218,20 @@ fn test_ifaces_ignore_iface_in_desire() {
 "#,
     )
     .unwrap();
-    let (kernel_ifaces, user_ifaces) = get_ignored_ifaces(&desired, &current);
 
-    assert_eq!(kernel_ifaces, vec!["eth1".to_string()]);
+    let merged_ifaces =
+        MergedInterfaces::new(desired, current, false, false).unwrap();
+
+    let mut ignored_ifaces = merged_ifaces.ignored_ifaces;
+    ignored_ifaces.sort_unstable();
+
     assert_eq!(
-        user_ifaces,
-        vec![("br0".to_string(), InterfaceType::OvsBridge)]
+        ignored_ifaces[0],
+        ("br0".to_string(), InterfaceType::OvsBridge)
+    );
+    assert_eq!(
+        ignored_ifaces[1],
+        ("eth1".to_string(), InterfaceType::Ethernet)
     );
 }
 
@@ -197,12 +256,19 @@ fn test_ifaces_ignore_iface_in_current() {
 "#,
     )
     .unwrap();
-    let (kernel_ifaces, user_ifaces) = get_ignored_ifaces(&desired, &current);
+    let merged_ifaces =
+        MergedInterfaces::new(desired, current, false, false).unwrap();
 
-    assert_eq!(kernel_ifaces, vec!["eth1".to_string()]);
+    let mut ignored_ifaces = merged_ifaces.ignored_ifaces;
+    ignored_ifaces.sort_unstable();
+
     assert_eq!(
-        user_ifaces,
-        vec![("br0".to_string(), InterfaceType::OvsBridge)]
+        ignored_ifaces[0],
+        ("br0".to_string(), InterfaceType::OvsBridge)
+    );
+    assert_eq!(
+        ignored_ifaces[1],
+        ("eth1".to_string(), InterfaceType::Ethernet)
     );
 }
 
@@ -213,6 +279,9 @@ fn test_ifaces_ignore_iface_in_current_but_desired() {
 - name: eth1
   type: ethernet
   state: ignore
+- name: eth2
+  type: ethernet
+  state: up
 - name: br0
   type: ovs-bridge
   state: up
@@ -233,11 +302,58 @@ fn test_ifaces_ignore_iface_in_current_but_desired() {
 "#,
     )
     .unwrap();
-    let (kernel_ifaces, user_ifaces) = get_ignored_ifaces(&desired, &current);
+    let merged_ifaces =
+        MergedInterfaces::new(desired, current, false, false).unwrap();
 
-    assert_eq!(kernel_ifaces, vec!["eth2".to_string()]);
+    let mut ignored_ifaces = merged_ifaces.ignored_ifaces;
+    ignored_ifaces.sort_unstable();
+
+    assert_eq!(ignored_ifaces.len(), 2);
     assert_eq!(
-        user_ifaces,
-        vec![("br0".to_string(), InterfaceType::OvsBridge)]
+        ignored_ifaces[0],
+        ("br0".to_string(), InterfaceType::OvsBridge)
     );
+    assert_eq!(
+        ignored_ifaces[1],
+        ("eth2".to_string(), InterfaceType::Ethernet)
+    );
+}
+
+#[test]
+fn test_ifaces_iter() {
+    let ifaces = serde_yaml::from_str::<Interfaces>(
+        r#"---
+- name: eth1
+  type: ethernet
+  state: ignore
+- name: br0
+  type: ovs-bridge
+  state: up
+"#,
+    )
+    .unwrap();
+    let ifaces_vec: Vec<&Interface> = ifaces.iter().collect();
+    assert_eq!(ifaces_vec.len(), 2);
+}
+
+#[test]
+fn test_ifaces_iter_mut() {
+    let mut ifaces = serde_yaml::from_str::<Interfaces>(
+        r#"---
+- name: eth1
+  type: ethernet
+  state: ignore
+- name: br0
+  type: ovs-bridge
+  state: up
+"#,
+    )
+    .unwrap();
+    for iface in ifaces.iter_mut() {
+        iface.base_iface_mut().mtu = Some(1280);
+    }
+    let ifaces_vec: Vec<&Interface> = ifaces.iter().collect();
+    assert_eq!(ifaces_vec.len(), 2);
+    assert_eq!(ifaces_vec[0].base_iface().mtu, Some(1280));
+    assert_eq!(ifaces_vec[1].base_iface().mtu, Some(1280));
 }

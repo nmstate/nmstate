@@ -1,71 +1,14 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::{
-    query_apply::get_ignored_ifaces, BridgePortTunkTag, BridgePortVlanRange,
+    BridgePortTunkTag, BridgePortVlanRange, ErrorKind, Interface,
     InterfaceType, Interfaces, LinuxBridgeInterface,
-    LinuxBridgeMulticastRouterType,
+    LinuxBridgeMulticastRouterType, MergedInterface, MergedInterfaces,
 };
 
 #[test]
 fn test_linux_bridge_ignore_port() {
-    let mut ifaces: Interfaces = serde_yaml::from_str(
-        r#"---
-- name: eth1
-  type: ethernet
-  state: ignore
-- name: eth2
-  type: ethernet
-- name: br0
-  type: linux-bridge
-  state: up
-  bridge:
-    port:
-    - name: eth2
-"#,
-    )
-    .unwrap();
-    let mut cur_ifaces: Interfaces = serde_yaml::from_str(
-        r#"---
-- name: eth1
-  type: ethernet
-  state: up
-- name: eth2
-  type: ethernet
-  state: up
-- name: br0
-  type: linux-bridge
-  state: up
-  bridge:
-    port:
-    - name: eth1
-    - name: eth2
-"#,
-    )
-    .unwrap();
-
-    let (ignored_kernel_ifaces, ignored_user_ifaces) =
-        get_ignored_ifaces(&ifaces, &cur_ifaces);
-
-    assert_eq!(ignored_kernel_ifaces, vec!["eth1".to_string()]);
-    assert!(ignored_user_ifaces.is_empty());
-
-    ifaces.remove_ignored_ifaces(&ignored_kernel_ifaces, &ignored_user_ifaces);
-    cur_ifaces
-        .remove_ignored_ifaces(&ignored_kernel_ifaces, &ignored_user_ifaces);
-
-    let (add_ifaces, chg_ifaces, del_ifaces) =
-        ifaces.gen_state_for_apply(&cur_ifaces, false).unwrap();
-
-    assert!(!ifaces.kernel_ifaces.contains_key("eth1"));
-    assert!(!cur_ifaces.kernel_ifaces.contains_key("eth1"));
-    assert_eq!(ifaces.kernel_ifaces["br0"].ports(), Some(vec!["eth2"]));
-    assert_eq!(cur_ifaces.kernel_ifaces["br0"].ports(), Some(vec!["eth2"]));
-    assert!(!add_ifaces.kernel_ifaces.contains_key("eth1"));
-    assert!(!chg_ifaces.kernel_ifaces.contains_key("eth1"));
-    assert!(!del_ifaces.kernel_ifaces.contains_key("eth1"));
-}
-
-#[test]
-fn test_linux_bridge_verify_ignore_port() {
-    let ifaces: Interfaces = serde_yaml::from_str(
+    let des_ifaces: Interfaces = serde_yaml::from_str(
         r#"---
 - name: eth1
   type: ethernet
@@ -100,7 +43,71 @@ fn test_linux_bridge_verify_ignore_port() {
     )
     .unwrap();
 
-    ifaces.verify(&Interfaces::new(), &cur_ifaces).unwrap();
+    let merged_ifaces =
+        MergedInterfaces::new(des_ifaces, cur_ifaces, false, false).unwrap();
+
+    let ignored_ifaces = merged_ifaces.ignored_ifaces.as_slice();
+
+    assert_eq!(
+        ignored_ifaces,
+        vec![("eth1".to_string(), InterfaceType::Ethernet)].as_slice()
+    );
+    let merged_iface = merged_ifaces
+        .get_iface("br0", InterfaceType::Ethernet)
+        .unwrap();
+
+    let des_iface = merged_iface.desired.as_ref().unwrap();
+    let cur_iface = merged_iface.current.as_ref().unwrap();
+
+    assert_eq!(des_iface.ports(), Some(vec!["eth2"]));
+    assert_eq!(cur_iface.ports(), Some(vec!["eth2"]));
+
+    assert!(merged_ifaces
+        .get_iface("eth1", InterfaceType::Ethernet)
+        .is_none());
+}
+
+#[test]
+fn test_linux_bridge_verify_ignore_port() {
+    let des_ifaces: Interfaces = serde_yaml::from_str(
+        r#"---
+- name: eth1
+  type: ethernet
+  state: ignore
+- name: eth2
+  type: ethernet
+- name: br0
+  type: linux-bridge
+  state: up
+  bridge:
+    port:
+    - name: eth2
+"#,
+    )
+    .unwrap();
+    let cur_ifaces: Interfaces = serde_yaml::from_str(
+        r#"---
+- name: eth1
+  type: ethernet
+  state: up
+- name: eth2
+  type: ethernet
+  state: up
+- name: br0
+  type: linux-bridge
+  state: up
+  bridge:
+    port:
+    - name: eth1
+    - name: eth2
+"#,
+    )
+    .unwrap();
+
+    let merged_ifaces =
+        MergedInterfaces::new(des_ifaces, cur_ifaces.clone(), false, false)
+            .unwrap();
+    merged_ifaces.verify(&cur_ifaces).unwrap();
 }
 
 #[test]
@@ -198,7 +205,7 @@ bridge:
 
 #[test]
 fn test_linux_bridge_partial_ignored() {
-    let mut current = serde_yaml::from_str::<Interfaces>(
+    let cur_ifaces = serde_yaml::from_str::<Interfaces>(
         r#"---
 - name: eth1
   type: ethernet
@@ -216,7 +223,7 @@ fn test_linux_bridge_partial_ignored() {
 "#,
     )
     .unwrap();
-    let mut desired = serde_yaml::from_str::<Interfaces>(
+    let des_ifaces = serde_yaml::from_str::<Interfaces>(
         r#"---
 - name: br0
   type: linux-bridge
@@ -227,30 +234,27 @@ fn test_linux_bridge_partial_ignored() {
 "#,
     )
     .unwrap();
-    let (kernel_ifaces, user_ifaces) = get_ignored_ifaces(&desired, &current);
+    let merged_ifaces =
+        MergedInterfaces::new(des_ifaces, cur_ifaces, false, false).unwrap();
 
-    assert_eq!(kernel_ifaces, vec!["eth2".to_string()]);
-    assert_eq!(user_ifaces, vec![]);
+    let ignored_ifaces = merged_ifaces.ignored_ifaces.as_slice();
 
-    current.remove_ignored_ifaces(&kernel_ifaces, &user_ifaces);
-    desired.remove_ignored_ifaces(&kernel_ifaces, &user_ifaces);
-
-    let (add_ifaces, chg_ifaces, del_ifaces) =
-        desired.gen_state_for_apply(&current, false).unwrap();
-
-    assert!(add_ifaces.kernel_ifaces.is_empty());
-    assert!(del_ifaces.kernel_ifaces.is_empty());
     assert_eq!(
-        chg_ifaces.kernel_ifaces["eth1"].base_iface().controller,
-        Some("br0".to_string())
+        ignored_ifaces,
+        vec![("eth2".to_string(), InterfaceType::Ethernet)].as_slice()
     );
+
+    let merged_iface = merged_ifaces
+        .get_iface("eth1", InterfaceType::Ethernet)
+        .unwrap();
+
+    let apply_iface = merged_iface.for_apply.as_ref().unwrap();
+
+    assert_eq!(apply_iface.base_iface().controller, Some("br0".to_string()));
     assert_eq!(
-        chg_ifaces.kernel_ifaces["eth1"]
-            .base_iface()
-            .controller_type,
+        apply_iface.base_iface().controller_type,
         Some(InterfaceType::LinuxBridge)
     );
-    assert!(chg_ifaces.kernel_ifaces.contains_key("br0"));
 }
 
 #[test]
@@ -333,4 +337,301 @@ bridge:
     .unwrap();
 
     assert_eq!(desired.get_config_changed_ports(&current), vec!["eth1"])
+}
+
+#[test]
+fn test_linux_bridge_vlan_trunk_tags_yaml_serilize() {
+    let yml_content = r#"name: br0
+type: linux-bridge
+state: up
+bridge:
+  port:
+  - name: eth1
+    vlan:
+      mode: access
+      tag: 305
+      trunk-tags:
+      - id: 101
+      - id-range:
+          min: 500
+          max: 599
+  - name: eth2
+    vlan:
+      mode: trunk
+      trunk-tags:
+      - id: 500
+"#;
+    let iface: LinuxBridgeInterface =
+        serde_yaml::from_str(yml_content).unwrap();
+
+    assert_eq!(serde_yaml::to_string(&iface).unwrap(), yml_content);
+}
+
+#[test]
+fn test_linux_bridge_merge_port_vlan() {
+    let cur_iface: Interface = serde_yaml::from_str(
+        r#"---
+name: br0
+type: linux-bridge
+state: up
+bridge:
+  port:
+  - name: eth1
+    vlan:
+      enable-native: "true"
+      tag: "102"
+      trunk-tags:
+      - id: "103"
+      - id-range:
+          max: "1024"
+          min: "105"
+  - name: eth2
+    vlan:
+      enable-native: "true"
+      tag: "202"
+      trunk-tags:
+      - id: "203"
+      - id-range:
+          max: "2024"
+          min: "1025"
+"#,
+    )
+    .unwrap();
+
+    let des_iface: Interface = serde_yaml::from_str(
+        r#"---
+name: br0
+type: linux-bridge
+state: up
+bridge:
+  port:
+  - name: eth1
+  - name: eth2
+"#,
+    )
+    .unwrap();
+
+    let merged_iface =
+        MergedInterface::new(Some(des_iface), Some(cur_iface)).unwrap();
+
+    if let Interface::LinuxBridge(iface) = &merged_iface.merged {
+        assert!(iface.vlan_filtering_is_enabled());
+    } else {
+        panic!("Expecting a LinuxBridge but got {:?}", merged_iface.merged);
+    }
+}
+
+#[test]
+fn test_bridge_vlan_filter_trunk_tag_without_enable_native() {
+    let mut desired: LinuxBridgeInterface = serde_yaml::from_str(
+        r#"
+        name: br0
+        type: linux-bridge
+        state: up
+        bridge:
+          options:
+            stp:
+              enabled: true
+          port:
+            - name: eth1
+              vlan:
+                mode: trunk
+                tag: 200
+                trunk-tags:
+                  - id-range:
+                      min: 600
+                      max: 900
+                  - id-range:
+                      max: 500
+                      min: 400
+        "#,
+    )
+    .unwrap();
+
+    let result = desired.sanitize();
+
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+    }
+}
+
+#[test]
+fn test_bridge_vlan_filter_trunk_tag_overlap_id_vs_range() {
+    let mut desired: LinuxBridgeInterface = serde_yaml::from_str(
+        r#"
+        name: br0
+        type: linux-bridge
+        state: up
+        bridge:
+          options:
+            stp:
+              enabled: true
+          port:
+            - name: eth1
+              vlan:
+                mode: trunk
+                trunk-tags:
+                  - id-range:
+                      min: 600
+                      max: 900
+                  - id: 600
+        "#,
+    )
+    .unwrap();
+
+    let result = desired.sanitize();
+
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+    }
+}
+
+#[test]
+fn test_bridge_vlan_filter_trunk_tag_overlap_range_vs_range() {
+    let mut desired: LinuxBridgeInterface = serde_yaml::from_str(
+        r#"
+        name: br0
+        type: linux-bridge
+        state: up
+        bridge:
+          options:
+            stp:
+              enabled: true
+          port:
+            - name: eth1
+              vlan:
+                mode: trunk
+                trunk-tags:
+                  - id-range:
+                      min: 600
+                      max: 900
+                  - id-range:
+                      min: 900
+                      max: 1000
+        "#,
+    )
+    .unwrap();
+
+    let result = desired.sanitize();
+
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+    }
+}
+
+#[test]
+fn test_bridge_vlan_filter_trunk_tag_overlap_id_vs_id() {
+    let mut desired: LinuxBridgeInterface = serde_yaml::from_str(
+        r#"
+        name: br0
+        type: linux-bridge
+        state: up
+        bridge:
+          options:
+            stp:
+              enabled: true
+          port:
+            - name: eth1
+              vlan:
+                mode: trunk
+                trunk-tags:
+                  - id: 100
+                  - id: 100
+        "#,
+    )
+    .unwrap();
+
+    let result = desired.sanitize();
+
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+    }
+}
+
+#[test]
+fn test_bridge_vlan_filter_enable_native_with_access_mode() {
+    let mut desired: LinuxBridgeInterface = serde_yaml::from_str(
+        r#"
+        name: br0
+        type: linux-bridge
+        state: up
+        bridge:
+          options:
+            stp:
+              enabled: true
+          port:
+            - name: eth1
+              vlan:
+                enable-native: true
+                mode: access
+        "#,
+    )
+    .unwrap();
+
+    let result = desired.sanitize();
+
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+    }
+}
+
+#[test]
+fn test_bridge_vlan_filter_trunk_tags_with_access_mode() {
+    let mut desired: LinuxBridgeInterface = serde_yaml::from_str(
+        r#"
+        name: br0
+        type: linux-bridge
+        state: up
+        bridge:
+          options:
+            stp:
+              enabled: true
+          port:
+            - name: eth1
+              vlan:
+                mode: access
+                trunk-tags:
+                  - id: 100
+        "#,
+    )
+    .unwrap();
+
+    let result = desired.sanitize();
+
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+    }
+}
+
+#[test]
+fn test_bridge_vlan_filter_no_trunk_tags_with_trunk_mode() {
+    let mut desired: LinuxBridgeInterface = serde_yaml::from_str(
+        r#"
+        name: br0
+        type: linux-bridge
+        state: up
+        bridge:
+          options:
+            stp:
+              enabled: true
+          port:
+            - name: eth1
+              vlan:
+                mode: trunk
+        "#,
+    )
+    .unwrap();
+
+    let result = desired.sanitize();
+
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+    }
 }

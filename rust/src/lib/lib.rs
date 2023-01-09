@@ -109,17 +109,20 @@ mod query_apply;
 mod route;
 mod route_rule;
 mod serializer;
-#[cfg(feature = "query_apply")]
 mod state;
 mod unit_tests;
 
+pub(crate) use crate::dns::MergedDnsState;
 pub use crate::dns::{DnsClientState, DnsState};
 pub use crate::error::{ErrorKind, NmstateError};
 pub use crate::hostname::HostNameState;
+pub(crate) use crate::hostname::MergedHostNameState;
 pub use crate::ieee8021x::Ieee8021XConfig;
+pub(crate) use crate::iface::MergedInterface;
 pub use crate::iface::{
     Interface, InterfaceState, InterfaceType, UnknownInterface,
 };
+pub(crate) use crate::ifaces::MergedInterfaces;
 pub use crate::ifaces::{
     BaseInterface, BondAdSelect, BondAllPortsActive, BondArpAllTargets,
     BondArpValidate, BondConfig, BondFailOverMac, BondInterface, BondLacpRate,
@@ -131,13 +134,13 @@ pub use crate::ifaces::{
     InfiniBandConfig, InfiniBandInterface, InfiniBandMode, Interfaces,
     LinuxBridgeConfig, LinuxBridgeInterface, LinuxBridgeMulticastRouterType,
     LinuxBridgeOptions, LinuxBridgePortConfig, LinuxBridgeStpOptions,
-    MacVlanConfig, MacVlanInterface, MacVlanMode, MacVtapConfig,
-    MacVtapInterface, MacVtapMode, OvsBridgeBondConfig, OvsBridgeBondMode,
-    OvsBridgeBondPortConfig, OvsBridgeConfig, OvsBridgeInterface,
-    OvsBridgeOptions, OvsBridgePortConfig, OvsDpdkConfig, OvsInterface,
-    OvsPatchConfig, SrIovConfig, SrIovVfConfig, VethConfig, VlanConfig,
-    VlanInterface, VlanProtocol, VrfConfig, VrfInterface, VxlanConfig,
-    VxlanInterface,
+    LoopbackInterface, MacVlanConfig, MacVlanInterface, MacVlanMode,
+    MacVtapConfig, MacVtapInterface, MacVtapMode, OvsBridgeBondConfig,
+    OvsBridgeBondMode, OvsBridgeBondPortConfig, OvsBridgeConfig,
+    OvsBridgeInterface, OvsBridgeOptions, OvsBridgePortConfig, OvsDpdkConfig,
+    OvsInterface, OvsPatchConfig, SrIovConfig, SrIovVfConfig, VethConfig,
+    VlanConfig, VlanInterface, VlanProtocol, VrfConfig, VrfInterface,
+    VxlanConfig, VxlanInterface,
 };
 pub use crate::ip::{
     AddressFamily, Dhcpv4ClientId, Dhcpv6Duid, InterfaceIpAddr, InterfaceIpv4,
@@ -151,11 +154,17 @@ pub use crate::lldp::{
     LldpSystemName, LldpVlan, LldpVlans,
 };
 pub use crate::mptcp::{MptcpAddressFlag, MptcpConfig};
+pub(crate) use crate::net_state::MergedNetworkState;
 pub use crate::net_state::NetworkState;
+pub(crate) use crate::ovs::MergedOvsDbGlobalConfig;
 pub use crate::ovs::{OvsDbGlobalConfig, OvsDbIfaceConfig};
 #[cfg(feature = "query_apply")]
 pub use crate::policy::{
     NetworkCaptureRules, NetworkPolicy, NetworkStateTemplate,
 };
+pub(crate) use crate::route::MergedRoutes;
 pub use crate::route::{RouteEntry, RouteState, Routes};
-pub use crate::route_rule::{RouteRuleEntry, RouteRuleState, RouteRules};
+pub(crate) use crate::route_rule::MergedRouteRules;
+pub use crate::route_rule::{
+    RouteRuleAction, RouteRuleEntry, RouteRuleState, RouteRules,
+};

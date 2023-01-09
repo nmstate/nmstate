@@ -1,11 +1,15 @@
-use crate::{ovsdb::db::OvsDbConnection, NetworkState, NmstateError};
+// SPDX-License-Identifier: Apache-2.0
+
+use crate::{ovsdb::db::OvsDbConnection, MergedNetworkState, NmstateError};
 
 pub(crate) fn ovsdb_apply(
-    desired: &NetworkState,
-    current: &NetworkState,
+    merged_state: &MergedNetworkState,
 ) -> Result<(), NmstateError> {
-    let mut cli = OvsDbConnection::new()?;
-    let mut desired = desired.ovsdb.clone();
-    desired.merge(&current.ovsdb);
-    cli.apply_global_conf(&desired)
+    if merged_state.is_global_ovsdb_changed() {
+        let mut cli = OvsDbConnection::new()?;
+        cli.apply_global_conf(&merged_state.ovsdb)
+    } else {
+        log::debug!("No OVSDB changes");
+        Ok(())
+    }
 }

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{Interface, VrfConfig, VrfInterface};
+use crate::{VrfConfig, VrfInterface};
 
 impl VrfInterface {
     pub(crate) fn update_vrf(&mut self, other: &VrfInterface) {
@@ -10,20 +10,6 @@ impl VrfInterface {
         } else {
             self.vrf = other.vrf.clone();
         }
-    }
-
-    pub(crate) fn pre_verify_cleanup(
-        &mut self,
-        pre_apply_current: Option<&Interface>,
-    ) {
-        self.base.mac_address = None;
-        if self.base.accept_all_mac_addresses == Some(false) {
-            self.base.accept_all_mac_addresses = None;
-        }
-        if let Some(ports) = self.vrf.as_mut().and_then(|c| c.port.as_mut()) {
-            ports.sort();
-        }
-        self.merge_table_id(pre_apply_current).ok();
     }
 }
 

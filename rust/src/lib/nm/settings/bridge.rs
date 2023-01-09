@@ -1,31 +1,39 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::nm::nm_dbus::{
     NmConnection, NmSettingBridge, NmSettingBridgeVlanRange, NmVlanProtocol,
 };
 
 use crate::{
-    BridgePortTunkTag, BridgePortVlanConfig, BridgePortVlanMode,
+    BridgePortTunkTag, BridgePortVlanConfig, BridgePortVlanMode, Interface,
     LinuxBridgeInterface, LinuxBridgeOptions, LinuxBridgeStpOptions,
-    VlanProtocol,
+    MergedInterface, VlanProtocol,
 };
 
 pub(crate) fn gen_nm_br_setting(
-    br_iface: &LinuxBridgeInterface,
+    merged_iface: &MergedInterface,
     nm_conn: &mut NmConnection,
 ) {
-    let mut nm_br_set = nm_conn.bridge.as_ref().cloned().unwrap_or_default();
+    if let (
+        Some(Interface::LinuxBridge(br_iface)),
+        Interface::LinuxBridge(merged_br_iface),
+    ) = (merged_iface.for_apply.as_ref(), &merged_iface.merged)
+    {
+        let mut nm_br_set =
+            nm_conn.bridge.as_ref().cloned().unwrap_or_default();
 
-    if let Some(br_conf) = br_iface.bridge.as_ref() {
-        if let Some(br_opts) = br_conf.options.as_ref() {
-            apply_br_options(&mut nm_br_set, br_opts)
-        }
+        if let Some(br_conf) = br_iface.bridge.as_ref() {
+            if let Some(br_opts) = br_conf.options.as_ref() {
+                apply_br_options(&mut nm_br_set, br_opts)
+            }
 
-        if br_conf.port.is_some() {
-            nm_br_set.vlan_filtering =
-                Some(br_iface.vlan_filtering_is_enabled());
+            if br_conf.port.is_some() {
+                nm_br_set.vlan_filtering =
+                    Some(merged_br_iface.vlan_filtering_is_enabled());
+            }
         }
+        nm_conn.bridge = Some(nm_br_set);
     }
-
-    nm_conn.bridge = Some(nm_br_set);
 }
 
 fn apply_br_options(

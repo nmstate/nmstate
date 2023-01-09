@@ -1,9 +1,13 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use std::collections::HashMap;
 use std::marker::PhantomData;
 
 use serde::{
     de, de::MapAccess, de::Visitor, Deserialize, Deserializer, Serialize,
 };
+
+use crate::MergedInterface;
 
 const ETHTOOL_FEATURE_CLI_ALIAS: [(&str, &str); 17] = [
     ("rx", "rx-checksum"),
@@ -85,12 +89,8 @@ impl EthtoolConfig {
         Self::default()
     }
 
-    pub(crate) fn pre_edit_cleanup(&mut self) {
-        self.pre_verify_cleanup();
-    }
-
     // There are some alias on ethtool features.
-    pub(crate) fn pre_verify_cleanup(&mut self) {
+    pub(crate) fn apply_feature_alias(&mut self) {
         if let Some(features) = self.feature.as_mut() {
             for (cli_alias, kernel_name) in ETHTOOL_FEATURE_CLI_ALIAS {
                 if let Some(v) = features.remove(cli_alias) {
@@ -427,4 +427,25 @@ where
     }
 
     deserializer.deserialize_any(FeatureVisitor(PhantomData))
+}
+
+impl MergedInterface {
+    pub(crate) fn post_inter_ifaces_process_ethtool(&mut self) {
+        if let Some(ethtool_conf) = self
+            .for_apply
+            .as_mut()
+            .map(|i| i.base_iface_mut())
+            .and_then(|b| b.ethtool.as_mut())
+        {
+            ethtool_conf.apply_feature_alias();
+        }
+        if let Some(ethtool_conf) = self
+            .for_verify
+            .as_mut()
+            .map(|i| i.base_iface_mut())
+            .and_then(|b| b.ethtool.as_mut())
+        {
+            ethtool_conf.apply_feature_alias();
+        }
+    }
 }

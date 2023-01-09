@@ -1,8 +1,10 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    BaseInterface, ErrorKind, Interface, InterfaceState, InterfaceType,
-    Interfaces, NmstateError, SrIovConfig,
+    BaseInterface, ErrorKind, Interface, InterfaceType, Interfaces,
+    MergedInterfaces, NmstateError, SrIovConfig,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -83,34 +85,21 @@ impl Default for EthernetInterface {
 }
 
 impl EthernetInterface {
-    pub(crate) fn pre_edit_cleanup(&mut self) -> Result<(), NmstateError> {
-        if self.base.iface_type != InterfaceType::Veth && self.veth.is_some() {
-            let e = NmstateError::new(
-                ErrorKind::InvalidArgument,
-                format!(
-                    "Interface {} is holding veth configuration \
-                    with `type: ethernet`. Please change to `type: veth`",
-                    self.base.name.as_str()
-                ),
-            );
-            log::error!("{}", e);
-            Err(e)
-        } else {
-            Ok(())
+    pub(crate) fn sanitize(&mut self) -> Result<(), NmstateError> {
+        // Always set interface type to ethernet for verifying and applying
+        self.base.iface_type = InterfaceType::Ethernet;
+
+        if let Some(sriov_conf) =
+            self.ethernet.as_mut().and_then(|e| e.sr_iov.as_mut())
+        {
+            sriov_conf.sanitize();
         }
+
+        Ok(())
     }
 
     pub fn new() -> Self {
         Self::default()
-    }
-
-    pub(crate) fn sriov_is_enabled(&self) -> bool {
-        self.ethernet
-            .as_ref()
-            .and_then(|eth_conf| {
-                eth_conf.sr_iov.as_ref().map(SrIovConfig::sriov_is_enabled)
-            })
-            .unwrap_or_default()
     }
 }
 
@@ -176,95 +165,194 @@ pub struct VethConfig {
     pub peer: String,
 }
 
-// Raise error if new veth interface has no peer defined.
-// Mark old veth peer as absent when veth changed its peer.
-// Mark veth peer as absent also when veth is marked as absent.
-pub(crate) fn handle_veth_peer_changes(
-    add_ifaces: &Interfaces,
-    chg_ifaces: &mut Interfaces,
-    del_ifaces: &mut Interfaces,
-    current: &Interfaces,
-) -> Result<(), NmstateError> {
-    for iface in add_ifaces
-        .kernel_ifaces
-        .values()
-        .filter(|i| i.iface_type() == InterfaceType::Veth)
-    {
-        if let Interface::Ethernet(eth_iface) = iface {
-            if eth_iface.veth.is_none() {
-                let e = NmstateError::new(
-                    ErrorKind::InvalidArgument,
-                    format!(
-                        "Veth interface {} does not exists, \
-                        peer name is required for creating it",
-                        iface.name()
-                    ),
-                );
-                log::error!("{}", e);
-                return Err(e);
+impl MergedInterfaces {
+    // Raise error if new veth interface has no peer defined.
+    // Mark old veth peer as absent when veth changed its peer.
+    // Mark veth peer as absent also when veth is marked as absent.
+    pub(crate) fn process_veth_peer_changes(
+        &mut self,
+    ) -> Result<(), NmstateError> {
+        let mut veth_peers: Vec<&str> = Vec::new();
+        for iface in self.iter().filter(|i| {
+            i.merged.iface_type() == InterfaceType::Ethernet && i.merged.is_up()
+        }) {
+            if let Interface::Ethernet(eth_iface) = &iface.merged {
+                if let Some(v) =
+                    eth_iface.veth.as_ref().map(|v| v.peer.as_str())
+                {
+                    veth_peers.push(v);
+                }
             }
         }
-    }
-    for (iface_name, iface) in chg_ifaces.kernel_ifaces.iter() {
-        if let Interface::Ethernet(eth_iface) = iface {
-            let cur_eth_iface = if let Some(Interface::Ethernet(i)) =
-                current.kernel_ifaces.get(iface_name)
-            {
-                i
-            } else {
-                continue;
-            };
-            if let (Some(veth_conf), Some(cur_veth_conf)) =
-                (eth_iface.veth.as_ref(), cur_eth_iface.veth.as_ref())
-            {
-                if veth_conf.peer != cur_veth_conf.peer {
-                    del_ifaces.push(new_absent_eth_iface(
-                        cur_veth_conf.peer.as_str(),
+        for iface in self.iter().filter(|i| {
+            i.merged.iface_type() == InterfaceType::Ethernet
+                && i.is_desired()
+                && i.current.is_none()
+                && i.merged.is_up()
+        }) {
+            if let Some(Interface::Ethernet(eth_iface)) = &iface.desired {
+                if eth_iface.veth.is_none()
+                    && !self.gen_conf_mode
+                    && !veth_peers.contains(&eth_iface.base.name.as_str())
+                {
+                    return Err(NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        format!(
+                            "Ethernet interface {} does not exists",
+                            eth_iface.base.name.as_str()
+                        ),
                     ));
                 }
             }
         }
-    }
 
-    for iface in chg_ifaces.kernel_ifaces.values_mut() {
-        if iface.iface_type() == InterfaceType::Veth {
-            if let Interface::Ethernet(eth_iface) = iface {
-                if eth_iface.veth.is_none() {
-                    eth_iface.base.iface_type = InterfaceType::Ethernet;
+        let mut pending_deletions: Vec<String> = Vec::new();
+
+        for iface in self.iter().filter(|i| {
+            i.merged.iface_type() == InterfaceType::Ethernet
+                && i.is_desired()
+                && i.merged.is_up()
+                && i.current.is_some()
+        }) {
+            if let (
+                Some(Interface::Ethernet(des_eth_iface)),
+                Some(Interface::Ethernet(cur_eth_iface)),
+            ) = (iface.desired.as_ref(), iface.current.as_ref())
+            {
+                if let (Some(veth_conf), Some(cur_veth_conf)) =
+                    (des_eth_iface.veth.as_ref(), cur_eth_iface.veth.as_ref())
+                {
+                    if veth_conf.peer != cur_veth_conf.peer {
+                        pending_deletions.push(cur_veth_conf.peer.to_string());
+                    }
                 }
             }
         }
-    }
 
-    let mut del_peers: Vec<&str> = Vec::new();
-    for iface in del_ifaces
-        .kernel_ifaces
-        .values()
-        .filter(|i| matches!(i, Interface::Ethernet(_)))
-    {
-        if let Some(Interface::Ethernet(cur_eth_iface)) =
-            current.kernel_ifaces.get(iface.name())
-        {
-            if let Some(veth_conf) = cur_eth_iface.veth.as_ref() {
-                del_peers.push(veth_conf.peer.as_str());
+        for iface in self.iter().filter(|i| {
+            i.merged.iface_type() == InterfaceType::Ethernet
+                && i.is_desired()
+                && i.merged.is_absent()
+                && i.current.is_some()
+        }) {
+            if let Some(Interface::Ethernet(cur_eth_iface)) =
+                iface.current.as_ref()
+            {
+                if let Some(veth_conf) = cur_eth_iface.veth.as_ref() {
+                    pending_deletions.push(veth_conf.peer.to_string());
+                }
             }
         }
-    }
-    for del_peer in del_peers {
-        if !del_ifaces.kernel_ifaces.contains_key(del_peer) {
-            del_ifaces.push(new_absent_eth_iface(del_peer));
+
+        for del_peer in pending_deletions {
+            if let Some(iface) = self.kernel_ifaces.get_mut(&del_peer) {
+                iface.mark_as_absent();
+            }
         }
+        Ok(())
     }
-    Ok(())
 }
 
-fn new_absent_eth_iface(name: &str) -> Interface {
-    let mut iface = EthernetInterface::new();
-    iface.base = BaseInterface {
-        name: name.to_string(),
-        iface_type: InterfaceType::Ethernet,
-        state: InterfaceState::Absent,
-        ..Default::default()
-    };
-    Interface::Ethernet(iface)
+impl Interfaces {
+    // Not allowing changing veth peer away from ignored peer unless previous
+    // peer changed from ignore to managed
+    pub(crate) fn validate_change_veth_ignored_peer(
+        &self,
+        current: &Self,
+        ignored_ifaces: &[(String, InterfaceType)],
+    ) -> Result<(), NmstateError> {
+        let ignored_veth_ifaces: Vec<&String> = ignored_ifaces
+            .iter()
+            .filter_map(|(n, t)| {
+                if t == &InterfaceType::Ethernet {
+                    Some(n)
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        for iface in self.kernel_ifaces.values().filter(|i| {
+            if let Interface::Ethernet(i) = i {
+                i.veth.is_some()
+            } else {
+                false
+            }
+        }) {
+            if let (
+                Interface::Ethernet(des_iface),
+                Some(Interface::Ethernet(cur_iface)),
+            ) = (iface, current.get_iface(iface.name(), InterfaceType::Veth))
+            {
+                if let (Some(des_peer), cur_peer) = (
+                    des_iface.veth.as_ref().map(|v| v.peer.as_str()),
+                    cur_iface.veth.as_ref().map(|v| v.peer.as_str()),
+                ) {
+                    let cur_peer = if let Some(c) = cur_peer {
+                        c
+                    } else {
+                        // The veth peer is in another namespace.
+                        let e = NmstateError::new(
+                            ErrorKind::InvalidArgument,
+                            format!(
+                                "Veth interface {} is currently holding \
+                                peer assigned to other namespace \
+                                Please remove this veth pair \
+                                before changing veth peer to {des_peer}",
+                                iface.name(),
+                            ),
+                        );
+                        log::error!("{}", e);
+                        return Err(e);
+                    };
+
+                    if des_peer != cur_peer
+                        && ignored_veth_ifaces.contains(&&cur_peer.to_string())
+                    {
+                        let e = NmstateError::new(
+                            ErrorKind::InvalidArgument,
+                            format!(
+                                "Veth interface {} is currently holding \
+                                peer {} which is marked as ignored. \
+                                Hence not allowing changing its peer \
+                                to {}. Please remove this veth pair \
+                                before changing veth peer",
+                                iface.name(),
+                                cur_peer,
+                                des_peer
+                            ),
+                        );
+                        log::error!("{}", e);
+                        return Err(e);
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
+    pub(crate) fn validate_new_veth_without_peer(
+        &self,
+        current: &Self,
+    ) -> Result<(), NmstateError> {
+        for iface in self.kernel_ifaces.values().filter(|i| {
+            i.is_up()
+                && i.iface_type() == InterfaceType::Veth
+                && current.kernel_ifaces.get(i.name()).is_none()
+        }) {
+            if let Interface::Ethernet(eth_iface) = iface {
+                if eth_iface.veth.is_none() {
+                    return Err(NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        format!(
+                            "Veth interface {} does not exist, \
+                            peer name is required for creating it",
+                            iface.name()
+                        ),
+                    ));
+                }
+            }
+        }
+        Ok(())
+    }
 }

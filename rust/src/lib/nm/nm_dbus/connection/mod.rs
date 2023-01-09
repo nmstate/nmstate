@@ -24,6 +24,7 @@ mod ethtool;
 mod ieee8021x;
 mod infiniband;
 mod ip;
+mod loopback;
 mod mac_vlan;
 mod ovs;
 mod route;
@@ -41,19 +42,20 @@ pub use self::bridge::{
     NmSettingBridge, NmSettingBridgePort, NmSettingBridgeVlanRange,
 };
 pub use self::conn::{
-    NmConnection, NmSettingConnection, NmSettingsConnectionFlag,
+    NmConnection, NmRange, NmSettingConnection, NmSettingsConnectionFlag,
 };
 pub use self::ethtool::NmSettingEthtool;
 pub use self::ieee8021x::NmSetting8021X;
 pub use self::infiniband::NmSettingInfiniBand;
 pub use self::ip::{NmSettingIp, NmSettingIpMethod};
+pub use self::loopback::NmSettingLoopback;
 pub use self::mac_vlan::NmSettingMacVlan;
 pub use self::ovs::{
     NmSettingOvsBridge, NmSettingOvsDpdk, NmSettingOvsExtIds,
     NmSettingOvsIface, NmSettingOvsPatch, NmSettingOvsPort,
 };
 pub use self::route::NmIpRoute;
-pub use self::route_rule::NmIpRouteRule;
+pub use self::route_rule::{NmIpRouteRule, NmIpRouteRuleAction};
 pub use self::sriov::{NmSettingSriov, NmSettingSriovVf, NmSettingSriovVfVlan};
 pub use self::user::NmSettingUser;
 pub use self::veth::NmSettingVeth;

@@ -136,7 +136,7 @@ impl<'a> NmDbus<'a> {
             .collect())
     }
 
-    pub(crate) fn get_connection_by_uuid(
+    pub(crate) fn get_conn_obj_path_by_uuid(
         &self,
         uuid: &str,
     ) -> Result<String, NmError> {

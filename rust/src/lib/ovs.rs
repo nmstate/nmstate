@@ -55,6 +55,8 @@ impl<'de> Deserialize<'de> for OvsDbGlobalConfig {
 pub struct OvsDbIfaceConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub external_ids: Option<HashMap<String, Option<String>>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub other_config: Option<HashMap<String, Option<String>>>,
 }
 
 impl OvsDbIfaceConfig {
@@ -81,6 +83,9 @@ impl<'de> Deserialize<'de> for OvsDbIfaceConfig {
         if let Some(v) = v.as_object() {
             if let Some(v) = v.get("external_ids") {
                 ret.external_ids = Some(value_to_hash_map(v));
+            }
+            if let Some(v) = v.get("other_config") {
+                ret.other_config = Some(value_to_hash_map(v));
             }
         } else {
             return Err(serde::de::Error::custom(format!(
@@ -118,4 +123,73 @@ fn value_to_hash_map(
         }
     }
     ret
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub(crate) struct MergedOvsDbGlobalConfig {
+    pub(crate) desired: OvsDbGlobalConfig,
+    pub(crate) current: OvsDbGlobalConfig,
+    pub(crate) external_ids: HashMap<String, Option<String>>,
+    pub(crate) other_config: HashMap<String, Option<String>>,
+}
+
+impl MergedOvsDbGlobalConfig {
+    // Partial editing for ovsdb:
+    //  * Merge desire with current and do overriding.
+    //  * Use `ovsdb: {}` to remove all settings.
+    //  * To remove a key from existing, use `foo: None`.
+    pub(crate) fn new(
+        desired: OvsDbGlobalConfig,
+        current: OvsDbGlobalConfig,
+    ) -> Self {
+        if desired.prop_list.is_empty() {
+            // User want to remove all settings
+            Self {
+                desired,
+                current,
+                external_ids: HashMap::new(),
+                other_config: HashMap::new(),
+            }
+        } else {
+            let mut external_ids =
+                current.external_ids.as_ref().cloned().unwrap_or_default();
+            let mut other_config =
+                current.other_config.as_ref().cloned().unwrap_or_default();
+
+            if let Some(ex_ids) = desired.external_ids.as_ref() {
+                if ex_ids.is_empty() {
+                    external_ids.clear();
+                } else {
+                    for (k, v) in ex_ids {
+                        if v.is_none() {
+                            external_ids.remove(k);
+                        } else {
+                            external_ids.insert(k.clone(), v.clone());
+                        }
+                    }
+                }
+            }
+
+            if let Some(cfgs) = desired.other_config.as_ref() {
+                if cfgs.is_empty() {
+                    other_config.clear();
+                } else {
+                    for (k, v) in cfgs {
+                        if v.is_none() {
+                            other_config.remove(k);
+                        } else {
+                            other_config.insert(k.clone(), v.clone());
+                        }
+                    }
+                }
+            }
+
+            Self {
+                desired,
+                current,
+                external_ids,
+                other_config,
+            }
+        }
+    }
 }

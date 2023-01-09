@@ -1,11 +1,16 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::{
     unit_tests::testlib::new_eth_iface, BridgePortVlanMode, ErrorKind,
-    EthernetConfig, Interface, InterfaceType, Interfaces, SrIovConfig,
-    SrIovVfConfig,
+    EthernetConfig, Interface, InterfaceType, Interfaces, MergedInterfaces,
+    SrIovConfig, SrIovVfConfig,
 };
 
 #[test]
 fn test_sriov_vf_mac_mix_case() {
+    let mut pre_apply_cur_ifaces = Interfaces::new();
+    pre_apply_cur_ifaces.push(new_eth_iface("eth1"));
+
     let mut cur_ifaces = Interfaces::new();
     let mut cur_iface = new_eth_iface("eth1");
     if let Interface::Ethernet(ref mut eth_iface) = cur_iface {
@@ -14,12 +19,15 @@ fn test_sriov_vf_mac_mix_case() {
         let mut vf_conf = SrIovVfConfig::new();
         vf_conf.id = 0;
         vf_conf.mac_address = Some("00:11:22:33:44:FF".into());
+        vf_conf.iface_name = "eth1v0".to_string();
         sriov_conf.vfs = Some(vec![vf_conf]);
+        sriov_conf.total_vfs = Some(1);
         eth_conf.sr_iov = Some(sriov_conf);
         eth_iface.ethernet = Some(eth_conf);
     } else {
         panic!("Should be ethernet interface");
     }
+    cur_ifaces.push(new_eth_iface("eth1v0"));
     cur_ifaces.push(cur_iface);
 
     let mut des_ifaces = Interfaces::new();
@@ -38,11 +46,17 @@ fn test_sriov_vf_mac_mix_case() {
     }
     des_ifaces.push(des_iface);
 
-    des_ifaces.verify(&Interfaces::new(), &cur_ifaces).unwrap();
+    let merged_ifaces =
+        MergedInterfaces::new(des_ifaces, pre_apply_cur_ifaces, false, false)
+            .unwrap();
+
+    merged_ifaces.verify(&cur_ifaces).unwrap();
 }
 
 #[test]
 fn test_ignore_sriov_if_not_desired() {
+    let mut pre_apply_cur_ifaces = Interfaces::new();
+    pre_apply_cur_ifaces.push(new_eth_iface("eth1"));
     let current = serde_yaml::from_str::<Interfaces>(
         r#"---
 - name: eth1
@@ -74,7 +88,11 @@ fn test_ignore_sriov_if_not_desired() {
     )
     .unwrap();
 
-    desired.verify(&Interfaces::new(), &current).unwrap();
+    let merged_ifaces =
+        MergedInterfaces::new(desired, pre_apply_cur_ifaces, false, false)
+            .unwrap();
+
+    merged_ifaces.verify(&current).unwrap();
 }
 
 fn gen_sriov_current_ifaces() -> Interfaces {
@@ -177,6 +195,28 @@ fn test_resolve_sriov_name_duplicate() {
 }
 
 #[test]
+fn test_failed_to_resolve_sriov_in_ovs_port_list() {
+    let current = gen_sriov_current_ifaces();
+    let mut desired = serde_yaml::from_str::<Interfaces>(
+        r#"---
+        - name: ovs-br0
+          type: ovs-bridge
+          state: up
+          bridge:
+            port:
+            - name: sriov:eth1:2
+            - name: sriov:eth1:1
+        "#,
+    )
+    .unwrap();
+    let result = desired.resolve_sriov_reference(&current);
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+    }
+}
+
+#[test]
 fn test_verify_sriov_name() {
     let current = gen_sriov_current_ifaces();
     let desired = serde_yaml::from_str::<Interfaces>(
@@ -187,7 +227,10 @@ fn test_verify_sriov_name() {
         "#,
     )
     .unwrap();
-    desired.verify(&current, &current).unwrap();
+    let merged_ifaces =
+        MergedInterfaces::new(desired, current.clone(), false, false).unwrap();
+
+    merged_ifaces.verify(&current).unwrap();
 }
 
 #[test]
@@ -335,8 +378,11 @@ fn test_verify_sriov_port_name_linux_bridge() {
         )
         .unwrap(),
     );
+    let merged_ifaces =
+        MergedInterfaces::new(desired, pre_apply_current, false, false)
+            .unwrap();
 
-    desired.verify(&pre_apply_current, &current).unwrap();
+    merged_ifaces.verify(&current).unwrap();
 }
 
 #[test]
@@ -370,7 +416,11 @@ fn test_verify_sriov_port_name_bond() {
         .unwrap(),
     );
 
-    desired.verify(&pre_apply_current, &current).unwrap();
+    let merged_ifaces =
+        MergedInterfaces::new(desired, pre_apply_current, false, false)
+            .unwrap();
+
+    merged_ifaces.verify(&current).unwrap();
 }
 
 #[test]
@@ -401,7 +451,11 @@ fn test_verify_sriov_port_name_ovs_bridge() {
         )
         .unwrap(),
     );
-    desired.verify(&pre_apply_current, &current).unwrap();
+    let merged_ifaces =
+        MergedInterfaces::new(desired, pre_apply_current, false, false)
+            .unwrap();
+
+    merged_ifaces.verify(&current).unwrap();
 }
 
 #[test]
@@ -418,8 +472,8 @@ fn test_verify_sriov_port_name_ovs_bond() {
               link-aggregation:
                 mode: balance-slb
                 port:
-                  - name: eth2
                   - name: sriov:eth1:1
+                  - name: sriov:eth1:0
         "#,
     )
     .unwrap();
@@ -436,11 +490,99 @@ fn test_verify_sriov_port_name_ovs_bond() {
                 link-aggregation:
                   mode: balance-slb
                   port:
+                    - name: eth1v0
                     - name: eth1v1
-                    - name: eth2
               "#,
         )
         .unwrap(),
     );
-    desired.verify(&pre_apply_current, &current).unwrap();
+    let merged_ifaces =
+        MergedInterfaces::new(desired, pre_apply_current, false, false)
+            .unwrap();
+
+    merged_ifaces.verify(&current).unwrap();
+}
+
+#[test]
+fn test_sriov_vf_auto_fill_vf_conf() {
+    let mut cur_ifaces = Interfaces::new();
+    let mut cur_iface = new_eth_iface("eth1");
+    if let Interface::Ethernet(ref mut eth_iface) = cur_iface {
+        let mut eth_conf = EthernetConfig::new();
+        let mut sriov_conf = SrIovConfig::new();
+        let mut vfs = Vec::new();
+        for i in 0..4 {
+            let mut vf_conf = SrIovVfConfig::new();
+            vf_conf.id = i;
+            if i == 2 {
+                vf_conf.trust = Some(true);
+            }
+            let vf_iface_name = format!("eth1v{i}");
+            cur_ifaces.push(new_eth_iface(vf_iface_name.as_str()));
+            vf_conf.iface_name = vf_iface_name;
+            vfs.push(vf_conf);
+        }
+        sriov_conf.total_vfs = Some(4);
+        sriov_conf.vfs = Some(vfs);
+        eth_conf.sr_iov = Some(sriov_conf);
+        eth_iface.ethernet = Some(eth_conf);
+    } else {
+        panic!("Should be ethernet interface");
+    }
+    cur_ifaces.push(cur_iface);
+
+    let mut pre_apply_current = cur_ifaces.clone();
+    for iface in pre_apply_current.kernel_ifaces.values_mut() {
+        if let Interface::Ethernet(ref mut eth_iface) = iface {
+            if let Some(vfs) = eth_iface
+                .ethernet
+                .as_mut()
+                .and_then(|eth_conf| eth_conf.sr_iov.as_mut())
+                .and_then(|sr_iov_conf| sr_iov_conf.vfs.as_mut())
+            {
+                for vf in vfs {
+                    vf.trust = Some(false);
+                }
+            }
+        }
+    }
+
+    let mut des_ifaces = Interfaces::new();
+    let mut des_iface = new_eth_iface("eth1");
+    if let Interface::Ethernet(ref mut eth_iface) = des_iface {
+        let mut eth_conf = EthernetConfig::new();
+        let mut sriov_conf = SrIovConfig::new();
+        let mut vf_conf = SrIovVfConfig::new();
+        vf_conf.id = 2;
+        vf_conf.trust = Some(true);
+        sriov_conf.vfs = Some(vec![vf_conf]);
+        eth_conf.sr_iov = Some(sriov_conf);
+        eth_iface.ethernet = Some(eth_conf);
+    } else {
+        panic!("Should be ethernet interface");
+    }
+    des_ifaces.push(des_iface);
+
+    let merged_ifaces =
+        MergedInterfaces::new(des_ifaces, pre_apply_current, false, false)
+            .unwrap();
+
+    merged_ifaces.verify(&cur_ifaces).unwrap();
+
+    let iface = merged_ifaces
+        .get_iface("eth1", InterfaceType::Ethernet)
+        .unwrap()
+        .for_apply
+        .as_ref()
+        .unwrap();
+
+    assert_eq!(
+        serde_yaml::to_string(iface).unwrap(),
+        serde_yaml::to_string(
+            cur_ifaces
+                .get_iface("eth1", InterfaceType::Ethernet)
+                .unwrap()
+        )
+        .unwrap()
+    );
 }

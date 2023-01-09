@@ -94,6 +94,11 @@ fn apply_bond_options(
             .insert("arp_all_targets".to_string(), v.to_string());
     }
     if let Some(v) = bond_opts.arp_interval.as_ref() {
+        if *v == 0 {
+            nm_bond_set
+                .options
+                .insert("arp_ip_target".to_string(), String::new());
+        }
         nm_bond_set
             .options
             .insert("arp_interval".to_string(), v.to_string());

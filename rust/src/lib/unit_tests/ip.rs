@@ -1,4 +1,15 @@
-use crate::{BaseInterface, ErrorKind, Interface, InterfaceState, Interfaces};
+// SPDX-License-Identifier: Apache-2.0
+
+use crate::{
+    unit_tests::testlib::new_eth_iface, BaseInterface, ErrorKind, Interface,
+    InterfaceState, Interfaces, MergedInterfaces,
+};
+
+fn gen_test_eth_ifaces() -> Interfaces {
+    let mut ifaces = Interfaces::new();
+    ifaces.push(new_eth_iface("eth1"));
+    ifaces
+}
 
 #[test]
 fn test_ip_stringlized_attributes() {
@@ -115,7 +126,11 @@ fn test_ip_allow_extra_address_by_default() {
     )
     .unwrap();
 
-    desired.verify(&Interfaces::new(), &current).unwrap();
+    let merged_ifaces =
+        MergedInterfaces::new(desired, gen_test_eth_ifaces(), false, false)
+            .unwrap();
+
+    merged_ifaces.verify(&current).unwrap();
 }
 
 #[test]
@@ -152,7 +167,11 @@ fn test_ipv4_not_allow_extra_address() {
     )
     .unwrap();
 
-    let result = desired.verify(&Interfaces::new(), &current);
+    let merged_ifaces =
+        MergedInterfaces::new(desired, gen_test_eth_ifaces(), false, false)
+            .unwrap();
+
+    let result = merged_ifaces.verify(&current);
     assert!(result.is_err());
     if let Err(e) = result {
         assert_eq!(e.kind(), ErrorKind::VerificationError);
@@ -193,9 +212,39 @@ fn test_ipv6_not_allow_extra_address() {
     )
     .unwrap();
 
-    let result = desired.verify(&Interfaces::new(), &current);
+    let merged_ifaces =
+        MergedInterfaces::new(desired, gen_test_eth_ifaces(), false, false)
+            .unwrap();
+
+    let result = merged_ifaces.verify(&current);
     assert!(result.is_err());
     if let Err(e) = result {
         assert_eq!(e.kind(), ErrorKind::VerificationError);
+    }
+}
+
+#[test]
+fn test_ipv6_mtu_lower_than_1280() {
+    let mut iface: BaseInterface = serde_yaml::from_str(
+        r#"---
+name: eth1
+type: ethernet
+state: up
+mtu: 1279
+ipv6:
+  enabled: "true"
+  dhcp: "false"
+  address:
+  - ip: "2001:0db8:85a3:0000:0000:8a2e:0370:7331"
+    prefix-length: "64"
+"#,
+    )
+    .unwrap();
+
+    let result = iface.sanitize();
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+        assert!(e.msg().contains("MTU should be >= 1280"));
     }
 }
