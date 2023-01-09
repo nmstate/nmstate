@@ -318,6 +318,16 @@ fn parse_ovs_iface_dpdk_conf(
                     conf.rx_queue = Some(i)
                 }
             }
+            if let Some(n_rxq_desc) = options.get("n_rxq_desc") {
+                if let Ok(i) = n_rxq_desc.parse::<u32>() {
+                    conf.n_rxq_desc = Some(i)
+                }
+            }
+            if let Some(n_txq_desc) = options.get("n_txq_desc") {
+                if let Ok(i) = n_txq_desc.parse::<u32>() {
+                    conf.n_txq_desc = Some(i)
+                }
+            }
             return Some(conf);
         }
     }

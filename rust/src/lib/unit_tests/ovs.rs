@@ -2,7 +2,7 @@
 
 use crate::{
     ErrorKind, Interface, InterfaceType, Interfaces, MergedInterface,
-    MergedInterfaces, OvsBridgeInterface,
+    MergedInterfaces, OvsBridgeInterface, OvsInterface,
 };
 
 #[test]
@@ -528,5 +528,51 @@ fn test_ovs_bridge_vlan_filter_no_trunk_tags_with_trunk_mode() {
     assert!(result.is_err());
     if let Err(e) = result {
         assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+    }
+}
+
+#[test]
+fn test_validate_dpdk_n_rxq_desc() {
+    let desired: OvsInterface = serde_yaml::from_str(
+        r#"
+        name: ovs0
+        type: ovs-interface
+        state: up
+        dpdk:
+          devargs: 0000:af:00.1
+          n_rxq_desc: 1025
+        "#,
+    )
+    .unwrap();
+
+    let result = desired.sanitize();
+
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+        assert!(e.msg().contains("OVS DPDK n_rxq_desc must power of 2"));
+    }
+}
+
+#[test]
+fn test_validate_dpdk_n_txq_desc() {
+    let desired: OvsInterface = serde_yaml::from_str(
+        r#"
+        name: ovs0
+        type: ovs-interface
+        state: up
+        dpdk:
+          devargs: 0000:af:00.1
+          n_txq_desc: 1025
+        "#,
+    )
+    .unwrap();
+
+    let result = desired.sanitize();
+
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+        assert!(e.msg().contains("OVS DPDK n_txq_desc must power of 2"));
     }
 }
