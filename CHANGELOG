@@ -1,4 +1,11 @@
 # Changelog
+## [1.4.1] - 2023-01-09
+### New features
+ - N/A
+
+### Bug fixes
+ - Fix regression when assigning IP to port of absent controller. (01831322)
+
 ## [1.4.0] - 2022-12-07
 ### New features
  - Support changing metric of auto routes. (106bb7ea)
