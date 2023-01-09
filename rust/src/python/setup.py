@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: LGPL-2.1-or-later
+
 import setuptools
 
 
@@ -13,7 +15,7 @@ def requirements():
 
 setuptools.setup(
     name="nmstate",
-    version="2.2.3",
+    version="2.2.4",
     author="Gris Ge",
     author_email="fge@redhat.com",
     description="Python binding of nmstate",
