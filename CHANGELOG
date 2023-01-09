@@ -1,4 +1,25 @@
 # Changelog
+## [2.2.3] - 2023-01-09
+### Breaking changes
+ - Minimum supported rust version changed from 1.60 to 1.58. (d2f669ed)
+
+### New features
+ - Support OVS VLAN filtering in trunk mode. (dce50734)
+ - Support parital modification of SR-IOV VF config. (92827cbb)
+ - Querying OVS database instead of NM daemon. (625fdb7a)
+
+### Bug fixes
+ - Fix regression on VRF interface. (3c88135d)
+ - Improve NM retry. (2a506379)
+ - Improve NM checkpoint refresh. (94c7341a)
+ - Fix LLDP error on `neighbors` property. (0a6fac0e)
+ - Improve state merging. (19133302)
+ - Fix error when moving dns from port to controller. (f619d8b4)
+ - Empty IPv4 address should be considered as disabled. (23535503)
+ - Auto manage ignored port in desired controller. (399c46b2)
+ - Fix error when searching default route table ID for route rule. (053db219)
+ - Raise proper error when desired IPv6 enabled with MTU < 1280. (76379ae9)
+
 ## [2.2.2] - 2022-12-13
 ### Breaking changes
  - N/A
