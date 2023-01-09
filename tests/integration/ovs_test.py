@@ -1190,6 +1190,27 @@ class TestOvsDpdk:
         assertlib.assert_absent(BRIDGE0)
         assertlib.assert_absent(PORT1)
 
+    def test_create_ovs_dpdk_queue_descriptor(self, datapaths):
+        dpdk0_state = {
+            OVSInterface.Dpdk.DEVARGS: _test_pci_path(),
+            OVSInterface.Dpdk.N_RXQ_DESC: 1024,
+            OVSInterface.Dpdk.N_TXQ_DESC: 2048,
+        }
+        bridge = Bridge(BRIDGE0)
+        bridge.add_internal_port(PORT1, dpdk_state=dpdk0_state)
+        bridge.set_options({OVSBridge.Options.DATAPATH: "netdev"})
+        desired_state = bridge.state
+        try:
+            libnmstate.apply(desired_state)
+            assertlib.assert_state_match(desired_state)
+        finally:
+            for iface in desired_state[Interface.KEY]:
+                iface[Interface.STATE] = InterfaceState.ABSENT
+            libnmstate.apply(desired_state)
+
+        assertlib.assert_absent(BRIDGE0)
+        assertlib.assert_absent(PORT1)
+
 
 @pytest.fixture
 def unmanged_ovs_vxlan():

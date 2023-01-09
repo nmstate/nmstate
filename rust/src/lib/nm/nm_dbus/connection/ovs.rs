@@ -286,6 +286,8 @@ impl ToDbusValue for NmSettingOvsPatch {
 pub struct NmSettingOvsDpdk {
     pub devargs: Option<String>,
     pub n_rxq: Option<u32>,
+    pub n_rxq_desc: Option<u32>,
+    pub n_txq_desc: Option<u32>,
     _other: HashMap<String, zvariant::OwnedValue>,
 }
 
@@ -295,6 +297,8 @@ impl TryFrom<DbusDictionary> for NmSettingOvsDpdk {
         Ok(Self {
             devargs: _from_map!(v, "devargs", String::try_from)?,
             n_rxq: _from_map!(v, "n-rxq", u32::try_from)?,
+            n_rxq_desc: _from_map!(v, "n-rxq-desc", u32::try_from)?,
+            n_txq_desc: _from_map!(v, "n-txq-desc", u32::try_from)?,
             _other: v,
         })
     }
@@ -308,6 +312,12 @@ impl ToDbusValue for NmSettingOvsDpdk {
         }
         if let Some(v) = &self.n_rxq {
             ret.insert("n-rxq", zvariant::Value::new(v));
+        }
+        if let Some(v) = &self.n_rxq_desc {
+            ret.insert("n-rxq-desc", zvariant::Value::new(v));
+        }
+        if let Some(v) = &self.n_txq_desc {
+            ret.insert("n-txq-desc", zvariant::Value::new(v));
         }
         ret.extend(self._other.iter().map(|(key, value)| {
             (key.as_str(), zvariant::Value::from(value.clone()))
