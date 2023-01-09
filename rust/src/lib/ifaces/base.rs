@@ -8,6 +8,8 @@ use crate::{
     NmstateError, OvsDbIfaceConfig, RouteEntry, WaitIp,
 };
 
+const MINIMUM_IPV6_MTU: u64 = 1280;
+
 // TODO: Use prop_list to Serialize like InterfaceIpv4 did
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
@@ -219,6 +221,21 @@ impl BaseInterface {
         }
         if let Some(ipv6_conf) = self.ipv6.as_mut() {
             ipv6_conf.sanitize()?;
+            if ipv6_conf.enabled {
+                if let Some(mtu) = self.mtu {
+                    if mtu < MINIMUM_IPV6_MTU {
+                        return Err(NmstateError::new(
+                            ErrorKind::InvalidArgument,
+                            format!(
+                                "MTU should be >= {MINIMUM_IPV6_MTU} \
+                                when IPv6 is enabled on interface {}, \
+                                but got mtu: {mtu}",
+                                self.name.as_str()
+                            ),
+                        ));
+                    }
+                }
+            }
         }
         if let Some(lldp_conf) = self.lldp.as_mut() {
             lldp_conf.sanitize();
