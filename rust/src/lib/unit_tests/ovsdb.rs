@@ -156,3 +156,14 @@ other_config: {}
         expect.other_config.as_ref().unwrap()
     );
 }
+
+#[test]
+fn test_ovsdb_verify_null_current() {
+    let desired: OvsDbGlobalConfig = serde_yaml::from_str("{}").unwrap();
+    let pre_apply_current = desired.clone();
+    let current = desired.clone();
+
+    let merged_ovsdb = MergedOvsDbGlobalConfig::new(desired, pre_apply_current);
+
+    merged_ovsdb.verify(&current).unwrap();
+}

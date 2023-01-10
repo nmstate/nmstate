@@ -39,6 +39,7 @@ from .testlib.genconf import gen_conf_apply
 from .testlib.nmplugin import disable_nm_plugin
 from .testlib.ovslib import Bridge
 from .testlib.retry import retry_till_true_or_timeout
+from .testlib.servicelib import disable_service
 from .testlib.statelib import state_match
 from .testlib.vlan import vlan_interface
 
@@ -1551,3 +1552,13 @@ def test_crate_ovs_bond(cleanup_ovs_bridge, eth1_up, eth2_up, bond_mode):
     )
     libnmstate.apply(desired_state)
     assertlib.assert_state_match(desired_state)
+
+
+@pytest.fixture
+def ovs_service_off():
+    with disable_service("openvswitch"):
+        yield
+
+
+def test_global_ovsdb_with_ovs_service_off(ovs_service_off):
+    libnmstate.apply({OvsDB.KEY: {}})

@@ -30,8 +30,17 @@ impl MergedOvsDbGlobalConfig {
             other_config: Some(other_config),
             prop_list: vec!["external_ids", "other_config"],
         };
+
         let desired_value = serde_json::to_value(&desired)?;
-        let current_value = serde_json::to_value(current)?;
+        let current_value = if current.is_none() {
+            serde_json::to_value(&OvsDbGlobalConfig {
+                external_ids: Some(HashMap::new()),
+                other_config: Some(HashMap::new()),
+                prop_list: Vec::new(),
+            })?
+        } else {
+            serde_json::to_value(current)?
+        };
 
         if let Some((reference, desire, current)) = get_json_value_difference(
             "ovsdb".to_string(),
