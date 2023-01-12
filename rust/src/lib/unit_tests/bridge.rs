@@ -635,3 +635,87 @@ fn test_bridge_vlan_filter_no_trunk_tags_with_trunk_mode() {
         assert_eq!(e.kind(), ErrorKind::InvalidArgument);
     }
 }
+
+#[test]
+fn test_bridge_validate_diff_group_forward_mask_and_group_fwd_mask() {
+    let mut desired: LinuxBridgeInterface = serde_yaml::from_str(
+        r#"
+        name: br0
+        type: linux-bridge
+        state: up
+        bridge:
+          options:
+            group-forward-mask: 1
+            group-fwd-mask: 2
+        "#,
+    )
+    .unwrap();
+    let result = desired.sanitize();
+
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+        assert!(e
+            .msg()
+            .contains("Linux bridge br0 has different group_forward_mask:"));
+    }
+}
+
+#[test]
+fn test_bridge_sanitize_group_forward_mask_and_group_fwd_mask() {
+    let mut desired_both: LinuxBridgeInterface = serde_yaml::from_str(
+        r#"
+        name: br0
+        type: linux-bridge
+        state: up
+        bridge:
+          options:
+            group-forward-mask: 1
+            group-fwd-mask: 1
+        "#,
+    )
+    .unwrap();
+    desired_both.sanitize().unwrap();
+
+    let mut desired_old: LinuxBridgeInterface = serde_yaml::from_str(
+        r#"
+        name: br0
+        type: linux-bridge
+        state: up
+        bridge:
+          options:
+            group-forward-mask: 1
+        "#,
+    )
+    .unwrap();
+    desired_old.sanitize().unwrap();
+
+    let mut desired_new: LinuxBridgeInterface = serde_yaml::from_str(
+        r#"
+        name: br0
+        type: linux-bridge
+        state: up
+        bridge:
+          options:
+            group-fwd-mask: 1
+        "#,
+    )
+    .unwrap();
+    desired_new.sanitize().unwrap();
+
+    let expected: LinuxBridgeInterface = serde_yaml::from_str(
+        r#"
+        name: br0
+        type: linux-bridge
+        state: up
+        bridge:
+          options:
+            group-fwd-mask: 1
+        "#,
+    )
+    .unwrap();
+
+    assert_eq!(desired_both, expected);
+    assert_eq!(desired_old, expected);
+    assert_eq!(desired_new, expected);
+}
