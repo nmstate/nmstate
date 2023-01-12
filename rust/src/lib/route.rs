@@ -152,6 +152,7 @@ impl RouteEntry {
 
     pub(crate) fn is_match(&self, other: &Self) -> bool {
         if self.destination.as_ref().is_some()
+            && self.destination.as_deref() != Some("")
             && self.destination != other.destination
         {
             return false;
@@ -195,14 +196,18 @@ impl RouteEntry {
 
     pub(crate) fn sanitize(&mut self) -> Result<(), NmstateError> {
         if let Some(dst) = self.destination.as_ref() {
-            let new_dst = sanitize_ip_network(dst)?;
-            if dst != &new_dst {
-                log::warn!(
-                    "Route destination {} sanitized to {}",
-                    dst,
-                    new_dst
-                );
-                self.destination = Some(new_dst);
+            if dst.is_empty() {
+                self.destination = None;
+            } else {
+                let new_dst = sanitize_ip_network(dst)?;
+                if dst != &new_dst {
+                    log::warn!(
+                        "Route destination {} sanitized to {}",
+                        dst,
+                        new_dst
+                    );
+                    self.destination = Some(new_dst);
+                }
             }
         }
         if let Some(via) = self.next_hop_addr.as_ref() {

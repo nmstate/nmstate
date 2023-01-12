@@ -97,14 +97,8 @@ BGP_PROTOCOL_ID = "186"
 
 
 @pytest.mark.tier1
-def test_add_static_routes(eth1_up):
+def test_add_static_routes(static_eth1_with_routes):
     routes = _get_ipv4_test_routes() + _get_ipv6_test_routes()
-    libnmstate.apply(
-        {
-            Interface.KEY: [ETH1_INTERFACE_STATE],
-            Route.KEY: {Route.CONFIG: routes},
-        }
-    )
     cur_state = libnmstate.show()
     _assert_routes(routes, cur_state)
 
@@ -719,25 +713,9 @@ def test_route_rule_add_to_only(route_rule_test_env):
 
 
 @pytest.mark.tier1
-def test_route_rule_add(route_rule_test_env):
-    state = route_rule_test_env
-    rules = [
-        {
-            RouteRule.IP_FROM: "2001:db8:a::/64",
-            RouteRule.IP_TO: "2001:db8:f::/64",
-            RouteRule.PRIORITY: 1000,
-            RouteRule.ROUTE_TABLE: IPV6_ROUTE_TABLE_ID1,
-        },
-        {
-            RouteRule.IP_FROM: "203.0.113.0/24",
-            RouteRule.IP_TO: "192.0.2.0/24",
-            RouteRule.PRIORITY: 1000,
-            RouteRule.ROUTE_TABLE: IPV4_ROUTE_TABLE_ID1,
-        },
-    ]
-    state[RouteRule.KEY] = {RouteRule.CONFIG: rules}
-
-    libnmstate.apply(state)
+def test_route_rule_add(static_eth1_with_route_rules):
+    state = static_eth1_with_route_rules
+    rules = state[RouteRule.KEY][RouteRule.CONFIG]
     _check_ip_rules(rules)
 
 
@@ -1406,3 +1384,90 @@ def test_route_rule_action(route_rule_test_env):
 
     libnmstate.apply({RouteRule.KEY: {RouteRule.CONFIG: desired_rules}})
     _check_ip_rules(desired_rules)
+
+
+@pytest.fixture
+def static_eth1_with_route_rules(route_rule_test_env):
+    state = route_rule_test_env
+    rules = [
+        {
+            RouteRule.IP_FROM: "2001:db8:a::/64",
+            RouteRule.IP_TO: "2001:db8:f::/64",
+            RouteRule.PRIORITY: 1000,
+            RouteRule.ROUTE_TABLE: IPV6_ROUTE_TABLE_ID1,
+        },
+        {
+            RouteRule.IP_FROM: "203.0.113.0/24",
+            RouteRule.IP_TO: "192.0.2.0/24",
+            RouteRule.PRIORITY: 1000,
+            RouteRule.ROUTE_TABLE: IPV4_ROUTE_TABLE_ID1,
+        },
+    ]
+    state[RouteRule.KEY] = {RouteRule.CONFIG: rules}
+
+    libnmstate.apply(state)
+    yield state
+
+
+def test_absent_route_rule_with_empty_ip_from_to(static_eth1_with_route_rules):
+    current_state = libnmstate.show()
+    assert len(current_state[RouteRule.KEY][RouteRule.CONFIG]) == 2
+
+    rules = [
+        {
+            RouteRule.STATE: RouteRule.STATE_ABSENT,
+            RouteRule.IP_FROM: "",
+            RouteRule.ROUTE_TABLE: IPV4_ROUTE_TABLE_ID1,
+        },
+        {
+            RouteRule.STATE: RouteRule.STATE_ABSENT,
+            RouteRule.IP_TO: "",
+            RouteRule.ROUTE_TABLE: IPV6_ROUTE_TABLE_ID1,
+        },
+    ]
+    state = {RouteRule.KEY: {RouteRule.CONFIG: rules}}
+    libnmstate.apply(state)
+    current_state = libnmstate.show()
+    assert len(current_state[RouteRule.KEY][RouteRule.CONFIG]) == 0
+
+
+@pytest.fixture
+def static_eth1_with_routes(eth1_up):
+    routes = _get_ipv4_test_routes() + _get_ipv6_test_routes()
+    state = {
+        Interface.KEY: [ETH1_INTERFACE_STATE],
+        Route.KEY: {Route.CONFIG: routes},
+    }
+    libnmstate.apply(state)
+    yield state
+
+
+def test_absent_route_with_empty_destination(static_eth1_with_routes):
+    current_state = libnmstate.show()
+    cur_eth1_config_routes = [
+        rt
+        for rt in current_state[Route.KEY][Route.CONFIG]
+        if rt[Route.NEXT_HOP_INTERFACE] == "eth1"
+    ]
+    assert len(cur_eth1_config_routes) != 0
+
+    libnmstate.apply(
+        {
+            Route.KEY: {
+                Route.CONFIG: [
+                    {
+                        Route.NEXT_HOP_INTERFACE: "eth1",
+                        Route.STATE: Route.STATE_ABSENT,
+                        Route.DESTINATION: "",
+                    },
+                ]
+            },
+        }
+    )
+    current_state = libnmstate.show()
+    cur_eth1_config_routes = [
+        rt
+        for rt in current_state[Route.KEY][Route.CONFIG]
+        if rt[Route.NEXT_HOP_INTERFACE] == "eth1"
+    ]
+    assert len(cur_eth1_config_routes) == 0
