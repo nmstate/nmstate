@@ -259,3 +259,24 @@ next-hop-address: "2001:db8:a:0000:000::1"
     assert_eq!(route.destination, Some("2001:db8:1::1/128".to_string()));
     assert_eq!(route.next_hop_addr, Some("2001:db8:a::1".to_string()));
 }
+
+#[test]
+fn test_route_treat_empty_dst_as_none_for_matching() {
+    let absent_route: RouteEntry = serde_yaml::from_str(
+        r#"
+        destination: ""
+        state: absent
+        "#,
+    )
+    .unwrap();
+    let route: RouteEntry = serde_yaml::from_str(
+        r#"
+        destination: ::/0
+        next-hop-address: 2001:db8:1::2
+        next-hop-interface: eth1
+        "#,
+    )
+    .unwrap();
+
+    assert!(absent_route.is_match(&route));
+}

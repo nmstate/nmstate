@@ -205,35 +205,39 @@ impl RouteRuleEntry {
 
     pub(crate) fn is_match(&self, other: &Self) -> bool {
         if let Some(ip_from) = self.ip_from.as_deref() {
-            let ip_from = if !ip_from.contains('/') {
-                match InterfaceIpAddr::try_from(ip_from) {
-                    Ok(ref i) => i.into(),
-                    Err(e) => {
-                        log::error!("{}", e);
-                        return false;
+            if !ip_from.is_empty() {
+                let ip_from = if !ip_from.contains('/') {
+                    match InterfaceIpAddr::try_from(ip_from) {
+                        Ok(ref i) => i.into(),
+                        Err(e) => {
+                            log::error!("{}", e);
+                            return false;
+                        }
                     }
+                } else {
+                    ip_from.to_string()
+                };
+                if other.ip_from != Some(ip_from) {
+                    return false;
                 }
-            } else {
-                ip_from.to_string()
-            };
-            if other.ip_from != Some(ip_from) {
-                return false;
             }
         }
         if let Some(ip_to) = self.ip_to.as_deref() {
-            let ip_to = if !ip_to.contains('/') {
-                match InterfaceIpAddr::try_from(ip_to) {
-                    Ok(ref i) => i.into(),
-                    Err(e) => {
-                        log::error!("{}", e);
-                        return false;
+            if !ip_to.is_empty() {
+                let ip_to = if !ip_to.contains('/') {
+                    match InterfaceIpAddr::try_from(ip_to) {
+                        Ok(ref i) => i.into(),
+                        Err(e) => {
+                            log::error!("{}", e);
+                            return false;
+                        }
                     }
+                } else {
+                    ip_to.to_string()
+                };
+                if other.ip_to != Some(ip_to) {
+                    return false;
                 }
-            } else {
-                ip_to.to_string()
-            };
-            if other.ip_to != Some(ip_to) {
-                return false;
             }
         }
         if self.priority.is_some()
@@ -301,29 +305,45 @@ impl RouteRuleEntry {
 
     pub(crate) fn sanitize(&mut self) -> Result<(), NmstateError> {
         if let Some(ip) = self.ip_from.as_ref() {
-            let new_ip = sanitize_ip_network(ip)?;
-            if self.family.is_none() {
-                match is_ipv6_addr(new_ip.as_str()) {
-                    true => self.family = Some(AddressFamily::IPv6),
-                    false => self.family = Some(AddressFamily::IPv4),
-                };
-            }
-            if ip != &new_ip {
-                log::warn!("Route rule ip-from {} sanitized to {}", ip, new_ip);
-                self.ip_from = Some(new_ip);
+            if ip.is_empty() {
+                self.ip_from = None;
+            } else {
+                let new_ip = sanitize_ip_network(ip)?;
+                if self.family.is_none() {
+                    match is_ipv6_addr(new_ip.as_str()) {
+                        true => self.family = Some(AddressFamily::IPv6),
+                        false => self.family = Some(AddressFamily::IPv4),
+                    };
+                }
+                if ip != &new_ip {
+                    log::warn!(
+                        "Route rule ip-from {} sanitized to {}",
+                        ip,
+                        new_ip
+                    );
+                    self.ip_from = Some(new_ip);
+                }
             }
         }
         if let Some(ip) = self.ip_to.as_ref() {
-            let new_ip = sanitize_ip_network(ip)?;
-            if self.family.is_none() {
-                match is_ipv6_addr(new_ip.as_str()) {
-                    true => self.family = Some(AddressFamily::IPv6),
-                    false => self.family = Some(AddressFamily::IPv4),
-                };
-            }
-            if ip != &new_ip {
-                log::warn!("Route rule ip-to {} sanitized to {}", ip, new_ip);
-                self.ip_to = Some(new_ip);
+            if ip.is_empty() {
+                self.ip_to = None;
+            } else {
+                let new_ip = sanitize_ip_network(ip)?;
+                if self.family.is_none() {
+                    match is_ipv6_addr(new_ip.as_str()) {
+                        true => self.family = Some(AddressFamily::IPv6),
+                        false => self.family = Some(AddressFamily::IPv4),
+                    };
+                }
+                if ip != &new_ip {
+                    log::warn!(
+                        "Route rule ip-to {} sanitized to {}",
+                        ip,
+                        new_ip
+                    );
+                    self.ip_to = Some(new_ip);
+                }
             }
         }
         self.validate_ip_from_to()?;

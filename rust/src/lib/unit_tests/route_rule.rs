@@ -135,3 +135,50 @@ family: ipv4
 
     rule.sanitize().unwrap();
 }
+
+#[test]
+fn test_route_rule_treat_empty_ip_from_as_none_for_matching() {
+    let absent_rule: RouteRuleEntry = serde_yaml::from_str(
+        r#"
+        ip-from: ""
+        state: absent
+        route-table: 200
+        "#,
+    )
+    .unwrap();
+
+    let rule: RouteRuleEntry = serde_yaml::from_str(
+        r#"
+        ip-from: 192.168.2.0/24
+        priority: 30000
+        route-table: 200
+        family: ipv4
+        "#,
+    )
+    .unwrap();
+
+    assert!(absent_rule.is_match(&rule));
+}
+#[test]
+fn test_route_rule_treat_empty_ip_to_as_none_for_matching() {
+    let absent_rule: RouteRuleEntry = serde_yaml::from_str(
+        r#"
+        ip-to: ""
+        state: absent
+        route-table: 200
+        "#,
+    )
+    .unwrap();
+
+    let rule: RouteRuleEntry = serde_yaml::from_str(
+        r#"
+        ip-to: 192.168.2.0/24
+        priority: 30000
+        route-table: 200
+        family: ipv4
+        "#,
+    )
+    .unwrap();
+
+    assert!(absent_rule.is_match(&rule));
+}
