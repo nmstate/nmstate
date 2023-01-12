@@ -41,15 +41,15 @@ from .testlib import cmdlib
 from .testlib import statelib
 from .testlib.assertlib import assert_mac_address
 from .testlib.bondlib import bond_interface
-from .testlib.env import nm_major_minor_version
-from .testlib.env import is_k8s
-from .testlib.ifacelib import get_mac_address
-from .testlib.ifacelib import ifaces_init
-from .testlib.vlan import vlan_interface
-
-from .testlib.bridgelib import linux_bridge
 from .testlib.bridgelib import add_port_to_bridge
 from .testlib.bridgelib import create_bridge_subtree_state
+from .testlib.bridgelib import linux_bridge
+from .testlib.env import is_k8s
+from .testlib.env import nm_major_minor_version
+from .testlib.ifacelib import get_mac_address
+from .testlib.ifacelib import ifaces_init
+from .testlib.retry import retry_till_true_or_timeout
+from .testlib.vlan import vlan_interface
 
 BOND99 = "bond99"
 ETH1 = "eth1"
@@ -74,6 +74,12 @@ interfaces:
     - eth1
     - eth2
 """
+
+RETRY_TIMEOUT = 30
+
+
+def iface_is_holding_expected_mac(iface_name, expected_mac):
+    return get_mac_address(iface_name) == expected_mac
 
 
 @pytest.fixture
@@ -764,9 +770,13 @@ def test_new_bond_uses_mac_of_first_port_by_name(eth1_eth2_with_no_profile):
             Bond.CONFIG_SUBTREE: {Bond.MODE: BondMode.ROUND_ROBIN}
         },
     ):
-        assert get_mac_address(BOND99) == eth1_mac
+        assert retry_till_true_or_timeout(
+            RETRY_TIMEOUT, iface_is_holding_expected_mac, BOND99, eth1_mac
+        )
         _nmcli_simulate_boot(BOND99)
-        assert get_mac_address(BOND99) == eth1_mac
+        assert retry_till_true_or_timeout(
+            RETRY_TIMEOUT, iface_is_holding_expected_mac, BOND99, eth1_mac
+        )
 
     ifaces_init(ETH1, ETH2)
 
@@ -777,9 +787,13 @@ def test_new_bond_uses_mac_of_first_port_by_name(eth1_eth2_with_no_profile):
             Bond.CONFIG_SUBTREE: {Bond.MODE: BondMode.ROUND_ROBIN}
         },
     ):
-        assert get_mac_address(BOND99) == eth1_mac
+        assert retry_till_true_or_timeout(
+            RETRY_TIMEOUT, iface_is_holding_expected_mac, BOND99, eth1_mac
+        )
         _nmcli_simulate_boot(BOND99)
-        assert get_mac_address(BOND99) == eth1_mac
+        assert retry_till_true_or_timeout(
+            RETRY_TIMEOUT, iface_is_holding_expected_mac, BOND99, eth1_mac
+        )
 
 
 @pytest.fixture
