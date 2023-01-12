@@ -10,6 +10,9 @@ impl MergedDnsState {
         if !self.is_changed() {
             return Ok(());
         }
+        let mut current = current.clone();
+        current.sanitize().ok();
+
         let cur_srvs: Vec<String> = current
             .config
             .as_ref()

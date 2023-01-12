@@ -56,6 +56,13 @@ impl DnsState {
     pub fn is_empty(&self) -> bool {
         self.running.is_none() && self.config.is_none()
     }
+
+    pub(crate) fn sanitize(&mut self) -> Result<(), NmstateError> {
+        if let Some(config) = self.config.as_mut() {
+            config.sanitize()?;
+        }
+        Ok(())
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -101,6 +108,41 @@ impl DnsClientState {
         self.server.as_ref().map(|s| s.len()).unwrap_or_default() == 0
             && self.search.as_ref().map(|s| s.len()).unwrap_or_default() == 0
     }
+
+    // sanitize the IP addresses.
+    pub(crate) fn sanitize(&mut self) -> Result<(), NmstateError> {
+        if let Some(srvs) = self.server.as_mut() {
+            let mut sanitized_srvs = Vec::new();
+            for srv in srvs {
+                if is_ipv6_addr(srv.as_str()) {
+                    let splits: Vec<&str> = srv.split('%').collect();
+                    if splits.len() == 2 {
+                        if let Ok(ip_addr) = splits[0].parse::<Ipv6Addr>() {
+                            sanitized_srvs
+                                .push(format!("{}%{}", ip_addr, splits[1]));
+                        }
+                    } else if let Ok(ip_addr) = srv.parse::<Ipv6Addr>() {
+                        sanitized_srvs.push(ip_addr.to_string());
+                    } else {
+                        return Err(NmstateError::new(
+                            ErrorKind::InvalidArgument,
+                            format!("Invalid DNS server string {srv}",),
+                        ));
+                    }
+                } else if let Ok(ip_addr) = srv.parse::<Ipv4Addr>() {
+                    sanitized_srvs.push(ip_addr.to_string());
+                } else {
+                    return Err(NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        format!("Invalid DNS server string {srv}",),
+                    ));
+                }
+            }
+            validate_dns_srvs(sanitized_srvs.as_slice())?;
+            self.server = Some(sanitized_srvs);
+        }
+        Ok(())
+    }
 }
 
 fn is_mixed_dns_servers(srvs: &[String]) -> bool {
@@ -124,9 +166,11 @@ pub(crate) struct MergedDnsState {
 
 impl MergedDnsState {
     pub(crate) fn new(
-        desired: DnsState,
-        current: DnsState,
+        mut desired: DnsState,
+        mut current: DnsState,
     ) -> Result<Self, NmstateError> {
+        desired.sanitize()?;
+        current.sanitize().ok();
         let mut servers = current
             .config
             .as_ref()
@@ -154,41 +198,10 @@ impl MergedDnsState {
             }
         }
 
-        // sanitize the IP addresses.
-        let mut sanitized_srvs = Vec::new();
-
-        for srv in servers {
-            if is_ipv6_addr(srv.as_str()) {
-                let splits: Vec<&str> = srv.split('%').collect();
-                if splits.len() == 2 {
-                    if let Ok(ip_addr) = splits[0].parse::<Ipv6Addr>() {
-                        sanitized_srvs
-                            .push(format!("{}%{}", ip_addr, splits[1]));
-                    }
-                } else if let Ok(ip_addr) = srv.parse::<Ipv6Addr>() {
-                    sanitized_srvs.push(ip_addr.to_string());
-                } else {
-                    return Err(NmstateError::new(
-                        ErrorKind::InvalidArgument,
-                        format!("Invalid DNS server string {srv}",),
-                    ));
-                }
-            } else if let Ok(ip_addr) = srv.parse::<Ipv4Addr>() {
-                sanitized_srvs.push(ip_addr.to_string());
-            } else {
-                return Err(NmstateError::new(
-                    ErrorKind::InvalidArgument,
-                    format!("Invalid DNS server string {srv}",),
-                ));
-            }
-        }
-
-        validate_dns_srvs(sanitized_srvs.as_slice())?;
-
         Ok(Self {
             desired,
             current,
-            servers: sanitized_srvs,
+            servers,
             searches,
         })
     }

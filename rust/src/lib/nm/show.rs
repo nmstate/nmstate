@@ -170,6 +170,7 @@ pub(crate) fn nm_retrieve(
     }
 
     net_state.dns = retrieve_dns_info(&mut nm_api, &net_state.interfaces)?;
+    net_state.dns.sanitize().ok();
     if running_config_only {
         net_state.dns.running = None;
     }
