@@ -101,6 +101,11 @@ impl LinuxBridgeInterface {
     }
 
     pub(crate) fn sanitize(&mut self) -> Result<(), NmstateError> {
+        if let Some(opts) =
+            self.bridge.as_mut().and_then(|b| b.options.as_mut())
+        {
+            opts.sanitize_group_fwd_mask(&self.base)?;
+        }
         self.sort_ports();
         self.sanitize_stp_opts()?;
         self.use_upper_case_of_mac_address();
@@ -437,13 +442,14 @@ pub struct LinuxBridgeOptions {
         default,
         deserialize_with = "crate::deserializer::option_u16_or_string"
     )]
+    /// Alias of [LinuxBridgeOptions.group_fwd_mask], not preferred, please
+    /// use [LinuxBridgeOptions.group_fwd_mask] instead.
     pub group_forward_mask: Option<u16>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
         deserialize_with = "crate::deserializer::option_u16_or_string"
     )]
-    /// Alias of [LinuxBridgeOptions.group_fwd_mask]
     pub group_fwd_mask: Option<u16>,
     #[serde(
         skip_serializing_if = "Option::is_none",
@@ -540,6 +546,41 @@ pub struct LinuxBridgeOptions {
 impl LinuxBridgeOptions {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub(crate) fn sanitize_group_fwd_mask(
+        &mut self,
+        base_iface: &BaseInterface,
+    ) -> Result<(), NmstateError> {
+        match (self.group_forward_mask, self.group_fwd_mask) {
+            (Some(v1), Some(v2)) => {
+                if v1 != v2 {
+                    return Err(NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        format!(
+                            "Linux bridge {} has different \
+                            group_forward_mask: {v1}, group_fwd_mask: {v2}, \
+                            these two property is the same, hence conflicting",
+                            base_iface.name.as_str()
+                        ),
+                    ));
+                } else {
+                    self.group_fwd_mask = Some(v1);
+                    self.group_forward_mask = None;
+                }
+            }
+            (Some(v), None) => {
+                self.group_fwd_mask = Some(v);
+                self.group_forward_mask = None;
+            }
+            (None, Some(v)) => {
+                self.group_fwd_mask = Some(v);
+                self.group_forward_mask = None;
+            }
+            _ => (),
+        }
+
+        Ok(())
     }
 }
 
