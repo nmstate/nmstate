@@ -1562,3 +1562,86 @@ def ovs_service_off():
 
 def test_global_ovsdb_with_ovs_service_off(ovs_service_off):
     libnmstate.apply({OvsDB.KEY: {}})
+
+
+@pytest.fixture
+def ovs_br_with_4_dummy_ports_ovs_bond():
+    desired_state = yaml.load(
+        """---
+        interfaces:
+        - name: br0
+          type: ovs-bridge
+          state: up
+          bridge:
+            port:
+            - name: ovs-bond0
+              link-aggregation:
+                mode: balance-slb
+                port:
+                - name: dummy4
+                - name: dummy1
+                - name: dummy3
+                - name: dummy2
+        - name: dummy1
+          type: dummy
+          state: up
+        - name: dummy2
+          type: dummy
+          state: up
+        - name: dummy3
+          type: dummy
+          state: up
+        - name: dummy4
+          type: dummy
+          state: up
+        """,
+        Loader=yaml.SafeLoader,
+    )
+    libnmstate.apply(desired_state)
+    yield
+    desired_state = yaml.load(
+        """---
+        interfaces:
+        - name: br0
+          type: ovs-bridge
+          state: absent
+        - name: dummy1
+          type: dummy
+          state: absent
+        - name: dummy2
+          type: dummy
+          state: absent
+        - name: dummy3
+          type: dummy
+          state: absent
+        - name: dummy4
+          type: dummy
+          state: absent
+        """,
+        Loader=yaml.SafeLoader,
+    )
+    libnmstate.apply(desired_state)
+
+
+def test_ovs_detach_2_ports_from_4_ports_ovs_bond(
+    ovs_br_with_4_dummy_ports_ovs_bond,
+):
+    desired_state = yaml.load(
+        """---
+        interfaces:
+        - name: br0
+          type: ovs-bridge
+          state: up
+          bridge:
+            port:
+            - name: ovs-bond0
+              link-aggregation:
+                mode: balance-slb
+                port:
+                - name: dummy2
+                - name: dummy4
+        """,
+        Loader=yaml.SafeLoader,
+    )
+    libnmstate.apply(desired_state)
+    assertlib.assert_state_match(desired_state)

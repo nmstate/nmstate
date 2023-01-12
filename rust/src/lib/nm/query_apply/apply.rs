@@ -119,6 +119,7 @@ pub(crate) fn nm_apply(
             &mut nm_api,
             &merged_state.interfaces,
             &exist_nm_conns,
+            &nm_conns_to_activate,
         )?;
     }
 

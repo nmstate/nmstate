@@ -14,6 +14,7 @@ pub(crate) fn delete_orphan_ovs_ports(
     nm_api: &mut NmApi,
     merged_ifaces: &MergedInterfaces,
     exist_nm_conns: &[NmConnection],
+    nm_conns_to_activate: &[NmConnection],
 ) -> Result<(), NmstateError> {
     let mut orphans: Vec<&str> = Vec::new();
     for iface in merged_ifaces
@@ -46,9 +47,19 @@ pub(crate) fn delete_orphan_ovs_ports(
                         .and_then(|c| c.controller.as_ref())
                     {
                         // We only touch port profiles created by nmstate which
-                        // is using UUID for parent
-                        // reference.
+                        // is using UUID for parent reference.
                         if uuid::Uuid::parse_str(parent).is_ok() {
+                            // The OVS bond might still have ports even
+                            // specified interface detached, this OVS bond will
+                            // be included in `nm_conns_to_activate()`, we just
+                            // do not remove connection pending for activation.
+                            if nm_conns_to_activate
+                                .iter()
+                                .any(|nm_conn| nm_conn.uuid() == Some(parent))
+                            {
+                                continue;
+                            }
+
                             log::info!(
                                 "Deleting orphan OVS port connection {parent} \
                                 as interface {}({}) detached from OVS bridge",
