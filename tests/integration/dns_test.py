@@ -3,6 +3,7 @@
 import json
 
 import pytest
+import yaml
 
 import libnmstate
 from libnmstate.error import NmstateNotImplementedError
@@ -498,3 +499,20 @@ def test_changed_dns_from_port_to_controller(static_dns, eth2_up):
         assert state[DNS.KEY][DNS.CONFIG] == current_state[DNS.KEY][DNS.CONFIG]
         # Remove DNS before deleting bond
         libnmstate.apply({DNS.KEY: {DNS.CONFIG: {}}})
+
+
+def test_uncompare_dns_servers(static_dns):
+    desired_state = yaml.load(
+        """---
+        dns-resolver:
+          config:
+            server:
+            - 2001:Db8:0:0:0:0:0:1
+            - ::fFfF:192.0.2.1
+        """,
+        Loader=yaml.SafeLoader,
+    )
+    libnmstate.apply(desired_state)
+    current_state = libnmstate.show()
+    assert "2001:db8::1" in current_state[DNS.KEY][DNS.CONFIG][DNS.SERVER]
+    assert "::ffff:192.0.2.1" in current_state[DNS.KEY][DNS.CONFIG][DNS.SERVER]
