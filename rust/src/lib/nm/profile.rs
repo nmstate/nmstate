@@ -60,14 +60,14 @@ pub(crate) fn perpare_nm_conns(
             &nm_ac_uuids,
             gen_conf_mode,
         )? {
-            if let Some(mptcp_conf) = iface.base_iface().mptcp.as_ref() {
-                if !mptcp_supported {
+            if !mptcp_supported {
+                remove_nm_mptcp_set(&mut nm_conn);
+                if let Some(mptcp_conf) = iface.base_iface().mptcp.as_ref() {
                     log::warn!(
                         "MPTCP not supported by NetworkManager, \
                         Ignoring MPTCP config {:?}",
                         mptcp_conf
                     );
-                    remove_nm_mptcp_set(&mut nm_conn);
                 }
             }
 

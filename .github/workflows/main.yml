@@ -123,7 +123,9 @@ jobs:
           - job_type: "c8s-nm_main-integ_tier2"
           - job_type: "c8s-nm_main-integ_slow"
           - job_type: "c8s-nm_main-rust_go"
-          - job_type: "ovs2_11-nm_stable-integ_tier1"
+          - job_type: "c9s-nm_1.36-integ_tier1"
+          - job_type: "c9s-nm_1.36-integ_tier2"
+          - job_type: "c9s-nm_1.36-integ_slow"
     steps:
       - uses: actions/checkout@v3
 

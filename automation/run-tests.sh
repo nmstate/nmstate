@@ -231,14 +231,11 @@ function upgrade_nm_from_copr {
     clean_dnf_cache
     exec_cmd "command -v dnf && plugin='dnf-command(copr)' || plugin='yum-plugin-copr'; yum install --assumeyes \$plugin;"
     exec_cmd "yum copr enable --assumeyes ${copr_repo}"
-    if [ $CONTAINER_IMAGE == $CENTOS_8_STREAM_IMAGE_DEV ];then
-	# centos-stream NetworkManager package is providing the alpha builds.
-	# Sometimes it could be greater than the one packaged on Copr.
-        exec_cmd "dnf remove --assumeyes --noautoremove NetworkManager"
-        exec_cmd "dnf install --assumeyes NetworkManager NetworkManager-team NetworkManager-ovs --disablerepo '*' --enablerepo '${copr_repo_id}'"
-    fi
-    # Update only from Copr to limit the changes in the environment
-    exec_cmd "yum update --assumeyes --disablerepo '*' --enablerepo '${copr_repo_id}'"
+    # centos-stream NetworkManager package is providing the alpha builds.
+    # Sometimes it could be greater than the one packaged on Copr.
+    exec_cmd "dnf remove --assumeyes --noautoremove NetworkManager"
+    exec_cmd "dnf install --assumeyes NetworkManager NetworkManager-ovs  \
+        --disablerepo '*' --enablerepo '${copr_repo_id}'"
 }
 
 function upgrade_nm_from_rpm_dir {
