@@ -15,47 +15,16 @@ edition = "2018"
 [lib]
 path = "lib.rs"
 
-[dependencies.nispor]
-version = "1.2.9"
-optional = true
-
-[dependencies.ipnet]
-version = "2.5.0"
-default-features = false
-
-[dependencies.zvariant]
-version = "2.10.0"
-default-features = false
-
-[dependencies.uuid]
-version = "1.1"
-default-features = false
-features = ["v4", "v5"]
-
-[dependencies.log]
-version = "0.4.14"
-default-features = false
-
-[dependencies.zbus]
-version = "1.9.2"
-default-features = false
-optional = true
-
-[dependencies.serde_json]
-version = "1.0.68"
-default-features = false
-features = [ "preserve_order" ]
-
-[dependencies.serde]
-version = "1.0.132"
-default-features = false
-features = ["derive"]
-
-[dependencies.nix]
-version = "0.24.1"
-optional = true
-default-features = false
-features = ["feature", "hostname"]
+[dependencies]
+nispor = { version = "1.2.9", optional = true }
+ipnet = { version = "2.5.0", default-features = false }
+zvariant = { version = "2.10.0", default-features = false }
+uuid = { version = "1.1", default-features = false, features = ["v4", "v5"] }
+log = { version = "0.4.14", default-features = false }
+zbus = { version = "1.9.2" , default-features = false, optional = true }
+serde_json = { version = "1.0.68", default-features = false, features = [ "preserve_order" ] }
+serde = { version = "1.0.132", default-features = false, features = ["derive"] }
+nix = { version = "0.24.1", optional = true, default-features = false, features = ["feature", "hostname"] }
 
 [dev-dependencies]
 serde_yaml = "0.9"
