@@ -19,7 +19,8 @@ use super::super::{
     connection::mac_vlan::NmSettingMacVlan,
     connection::ovs::{
         NmSettingOvsBridge, NmSettingOvsDpdk, NmSettingOvsExtIds,
-        NmSettingOvsIface, NmSettingOvsPatch, NmSettingOvsPort,
+        NmSettingOvsIface, NmSettingOvsOtherConfig, NmSettingOvsPatch,
+        NmSettingOvsPort,
     },
     connection::sriov::NmSettingSriov,
     connection::user::NmSettingUser,
@@ -86,6 +87,7 @@ pub struct NmConnection {
     pub ovs_port: Option<NmSettingOvsPort>,
     pub ovs_iface: Option<NmSettingOvsIface>,
     pub ovs_ext_ids: Option<NmSettingOvsExtIds>,
+    pub ovs_other_config: Option<NmSettingOvsOtherConfig>,
     pub ovs_patch: Option<NmSettingOvsPatch>,
     pub ovs_dpdk: Option<NmSettingOvsDpdk>,
     pub wired: Option<NmSettingWired>,
@@ -150,6 +152,11 @@ impl TryFrom<NmConnectionDbusOwnedValue> for NmConnection {
                 v,
                 "ovs-external-ids",
                 NmSettingOvsExtIds::try_from
+            )?,
+            ovs_other_config: _from_map!(
+                v,
+                "ovs-other-config",
+                NmSettingOvsOtherConfig::try_from
             )?,
             ovs_patch: _from_map!(v, "ovs-patch", NmSettingOvsPatch::try_from)?,
             ovs_dpdk: _from_map!(v, "ovs-dpdk", NmSettingOvsDpdk::try_from)?,
@@ -228,6 +235,9 @@ impl NmConnection {
         }
         if let Some(ovs_ext_ids) = &self.ovs_ext_ids {
             ret.insert("ovs-external-ids", ovs_ext_ids.to_value()?);
+        }
+        if let Some(ovs_other_config) = &self.ovs_other_config {
+            ret.insert("ovs-other-config", ovs_other_config.to_value()?);
         }
         if let Some(ovs_patch_set) = &self.ovs_patch {
             ret.insert("ovs-patch", ovs_patch_set.to_value()?);

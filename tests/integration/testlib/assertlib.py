@@ -29,6 +29,7 @@ from libnmstate.schema import InfiniBand
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import LinuxBridge as LB
+from libnmstate.schema import OVSBridge
 from libnmstate.schema import OvsDB
 
 from . import statelib
@@ -115,7 +116,7 @@ def _prepare_state_for_verify(desired_state_data):
     full_desired_state.remove_absent_entries()
     full_desired_state.normalize()
     _fix_bond_state(current_state)
-    _fix_ovsdb_external_ids(full_desired_state)
+    _sanitize_ovsdb(full_desired_state)
     _remove_iface_state_for_verify(full_desired_state)
     _remove_iface_state_for_verify(current_state)
     _expand_vlan_filter_range(current_state)
@@ -174,13 +175,34 @@ def _fix_bond_state(current_state):
                 bond_options["arp_ip_target"] = ""
 
 
-def _fix_ovsdb_external_ids(state):
+def _stringlize_ovsdb_conf(ovsdb_conf):
+    for prop_name in [OvsDB.EXTERNAL_IDS, OvsDB.OTHER_CONFIG]:
+        settings = ovsdb_conf.get(prop_name, {})
+        for key, value in settings.items():
+            settings[key] = str(value)
+
+
+def _sanitize_ovsdb(state):
     for iface_state in state.state[Interface.KEY]:
-        external_ids = iface_state.get(OvsDB.OVS_DB_SUBTREE, {}).get(
-            OvsDB.EXTERNAL_IDS, {}
-        )
-        for key, value in external_ids.items():
-            external_ids[key] = str(value)
+        ovsdb_conf = iface_state.get(OvsDB.OVS_DB_SUBTREE, {})
+        _stringlize_ovsdb_conf(ovsdb_conf)
+        if len(ovsdb_conf) == 0:
+            iface_state.pop(OvsDB.OVS_DB_SUBTREE, None)
+
+    # Convert OVS bond ovs-db value to string
+    for iface_state in state.state[Interface.KEY]:
+        for port_conf in iface_state.get(OVSBridge.CONFIG_SUBTREE, {}).get(
+            OVSBridge.PORT_SUBTREE, []
+        ):
+            bond_conf = port_conf.get(
+                OVSBridge.Port.LINK_AGGREGATION_SUBTREE, {}
+            )
+            ovsdb_conf = bond_conf.get(
+                OVSBridge.Port.LinkAggregation.OVS_DB_SUBTREE, {}
+            )
+            _stringlize_ovsdb_conf(ovsdb_conf)
+            if len(ovsdb_conf) == 0:
+                bond_conf.pop(OvsDB.OVS_DB_SUBTREE, None)
 
 
 def _remove_iface_state_for_verify(state):

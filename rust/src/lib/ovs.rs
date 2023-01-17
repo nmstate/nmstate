@@ -56,14 +56,37 @@ pub struct OvsDbIfaceConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub external_ids: Option<HashMap<String, Option<String>>>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    /// OpenvSwitch specific `other_config`. Please refer to
+    /// manpage `ovs-vswitchd.conf.db(5)` for more detail.
+    /// When setting to None, nmstate will try to preserve current
+    /// `other_config`, otherwise, nmstate will override all `other_config`
+    /// for specified interface.
     pub other_config: Option<HashMap<String, Option<String>>>,
 }
 
 impl OvsDbIfaceConfig {
+    pub(crate) fn empty() -> Self {
+        Self {
+            external_ids: Some(HashMap::new()),
+            other_config: Some(HashMap::new()),
+        }
+    }
     pub(crate) fn get_external_ids(&self) -> HashMap<&str, &str> {
         let mut ret = HashMap::new();
         if let Some(eids) = self.external_ids.as_ref() {
             for (k, v) in eids {
+                if let Some(v) = v {
+                    ret.insert(k.as_str(), v.as_str());
+                }
+            }
+        }
+        ret
+    }
+
+    pub(crate) fn get_other_config(&self) -> HashMap<&str, &str> {
+        let mut ret = HashMap::new();
+        if let Some(cfgs) = self.other_config.as_ref() {
+            for (k, v) in cfgs {
                 if let Some(v) = v {
                     ret.insert(k.as_str(), v.as_str());
                 }
