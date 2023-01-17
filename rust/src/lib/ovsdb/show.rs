@@ -180,6 +180,13 @@ fn parse_ovs_bond_conf(
                 if v == 0 { None } else { Some(v as u32) };
         }
     }
+    let external_ids = HashMap::from_iter(
+        ovsdb_port
+            .external_ids
+            .clone()
+            .drain()
+            .map(|(k, v)| (k, Some(v))),
+    );
 
     let other_config = HashMap::from_iter(
         ovsdb_port
@@ -188,7 +195,12 @@ fn parse_ovs_bond_conf(
             .drain()
             .map(|(k, v)| (k, Some(v))),
     );
-    bond_conf.other_config = Some(other_config);
+    if !external_ids.is_empty() || !other_config.is_empty() {
+        bond_conf.ovsdb = Some(OvsDbIfaceConfig {
+            external_ids: Some(external_ids),
+            other_config: Some(other_config),
+        });
+    }
 
     bond_conf.ports = Some(bond_port_confs);
     bond_conf
@@ -381,10 +393,12 @@ fn ovsdb_iface_to_nmstate(
             .drain()
             .map(|(k, v)| (k, Some(v))),
     );
-    iface.base_iface_mut().ovsdb = Some(OvsDbIfaceConfig {
-        external_ids: Some(external_ids),
-        other_config: Some(other_config),
-    });
+    if !external_ids.is_empty() || !other_config.is_empty() {
+        iface.base_iface_mut().ovsdb = Some(OvsDbIfaceConfig {
+            external_ids: Some(external_ids),
+            other_config: Some(other_config),
+        });
+    }
     Some(iface)
 }
 

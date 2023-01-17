@@ -260,6 +260,10 @@ impl BaseInterface {
         if let Some(ipv6_conf) = self.ipv6.as_mut() {
             ipv6_conf.sanitize_for_verify();
         }
+        // ovsdb None equal to empty
+        if self.ovsdb.is_none() {
+            self.ovsdb = Some(OvsDbIfaceConfig::empty());
+        }
     }
 }
 

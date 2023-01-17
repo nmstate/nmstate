@@ -67,7 +67,6 @@ OVS_BOND_YAML_STATE = f"""
     - name: {BOND1}
       link-aggregation:
         mode: active-backup
-        other_config: {EMPTY_MAP}
         port:
         - name: {ETH1}
         - name: {ETH2}
@@ -564,8 +563,7 @@ def test_ovsdb_remove_external_ids(ovs_bridge_with_custom_external_ids):
         }
     )
     iface_info = statelib.show_only((PORT1,))[Interface.KEY][0]
-    external_ids = iface_info[OvsDB.OVS_DB_SUBTREE][OvsDB.EXTERNAL_IDS]
-    assert len(external_ids) == 0
+    assert OvsDB.OVS_DB_SUBTREE not in iface_info
 
 
 def test_ovsdb_override_external_ids(ovs_bridge_with_custom_external_ids):
@@ -1640,6 +1638,165 @@ def test_ovs_detach_2_ports_from_4_ports_ovs_bond(
                 port:
                 - name: dummy2
                 - name: dummy4
+        """,
+        Loader=yaml.SafeLoader,
+    )
+    libnmstate.apply(desired_state)
+    assertlib.assert_state_match(desired_state)
+
+
+# OpenStack use case
+@pytest.mark.tier1
+@pytest.mark.skipif(
+    nm_minor_version() < 41,
+    reason="OVS interface level other_config is not supported in NM 1.40-",
+)
+def test_ovs_bond_other_config_and_remove(
+    cleanup_ovs_bridge, eth1_up, eth2_up
+):
+    desired_state = yaml.load(
+        """---
+        interfaces:
+        - name: br0
+          type: ovs-bridge
+          state: up
+          bridge:
+            port:
+            - name: ovs0
+            - name: bond0
+              link-aggregation:
+                mode: balance-slb
+                port:
+                - name: eth1
+                - name: eth2
+                ovs-db:
+                  external_ids:
+                    test_str: foo1
+                    test_num: 100
+                  other_config:
+                    bond-miimon-interval: 100
+        """,
+        Loader=yaml.SafeLoader,
+    )
+    libnmstate.apply(desired_state)
+    assertlib.assert_state_match(desired_state)
+
+    desired_state = yaml.load(
+        """---
+        interfaces:
+        - name: br0
+          type: ovs-bridge
+          state: up
+          bridge:
+            port:
+            - name: ovs0
+            - name: bond0
+              link-aggregation:
+                mode: balance-slb
+                port:
+                - name: eth1
+                - name: eth2
+                ovs-db: {}
+        """,
+        Loader=yaml.SafeLoader,
+    )
+    libnmstate.apply(desired_state)
+    assertlib.assert_state_match(desired_state)
+
+
+# OpenStack use case
+@pytest.mark.tier1
+@pytest.mark.skipif(
+    nm_minor_version() < 41,
+    reason="OVS interface level other_config is not supported in NM 1.40-",
+)
+def test_ovs_bridge_other_config_and_remove(
+    cleanup_ovs_bridge, eth1_up, eth2_up
+):
+    desired_state = yaml.load(
+        """---
+        interfaces:
+        - name: br0
+          type: ovs-bridge
+          state: up
+          ovs-db:
+            other_config:
+              in-band-queue: 12
+          bridge:
+            port:
+            - name: ovs0
+            - name: bond0
+              link-aggregation:
+                mode: balance-slb
+                port:
+                - name: eth1
+                - name: eth2
+        """,
+        Loader=yaml.SafeLoader,
+    )
+    libnmstate.apply(desired_state)
+    assertlib.assert_state_match(desired_state)
+    desired_state = yaml.load(
+        """---
+        interfaces:
+        - name: br0
+          type: ovs-bridge
+          state: up
+          ovs-db: {}
+          bridge:
+            port:
+            - name: ovs0
+            - name: bond0
+              link-aggregation:
+                mode: balance-slb
+                port:
+                - name: eth1
+                - name: eth2
+        """,
+        Loader=yaml.SafeLoader,
+    )
+    libnmstate.apply(desired_state)
+    assertlib.assert_state_match(desired_state)
+
+
+# OpenStack use case
+@pytest.mark.tier1
+@pytest.mark.skipif(
+    nm_minor_version() < 41,
+    reason="OVS interface level other_config is not supported in NM 1.40-",
+)
+def test_ovs_sys_iface_other_config_and_remove(
+    cleanup_ovs_bridge, eth1_up, eth2_up
+):
+    desired_state = yaml.load(
+        """---
+        interfaces:
+        - name: eth1
+          type: ethernet
+          state: up
+          ovs-db:
+            other_config:
+              emc-insert-inv-prob: 90
+        - name: br0
+          type: ovs-bridge
+          state: up
+          bridge:
+            port:
+            - name: ovs0
+            - name: eth1
+        """,
+        Loader=yaml.SafeLoader,
+    )
+    libnmstate.apply(desired_state)
+    assertlib.assert_state_match(desired_state)
+
+    desired_state = yaml.load(
+        """---
+        interfaces:
+        - name: eth1
+          type: ethernet
+          state: up
+          ovs-db: {}
         """,
         Loader=yaml.SafeLoader,
     )

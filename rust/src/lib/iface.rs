@@ -661,6 +661,9 @@ impl Interface {
         if let Interface::LinuxBridge(iface) = self {
             iface.sanitize_for_verify()
         }
+        if let Interface::OvsBridge(iface) = self {
+            iface.sanitize_for_verify()
+        }
     }
 
     pub(crate) fn parent(&self) -> Option<&str> {

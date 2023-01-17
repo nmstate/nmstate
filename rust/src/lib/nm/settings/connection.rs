@@ -14,8 +14,8 @@ use super::{
     loopback::gen_nm_loopback_setting,
     mptcp::apply_mptcp_conf,
     ovs::{
-        create_ovs_port_nm_conn, gen_nm_ovs_br_setting,
-        gen_nm_ovs_ext_ids_setting, gen_nm_ovs_iface_setting,
+        create_ovs_port_nm_conn, gen_nm_iface_ovs_db_setting,
+        gen_nm_ovs_br_setting, gen_nm_ovs_iface_setting,
     },
     sriov::gen_nm_sriov_setting,
     user::gen_nm_user_setting,
@@ -124,7 +124,7 @@ pub(crate) fn iface_to_nm_connections(
     {
         gen_nm_wired_setting(iface, &mut nm_conn);
     }
-    gen_nm_ovs_ext_ids_setting(iface, &mut nm_conn);
+    gen_nm_iface_ovs_db_setting(iface, &mut nm_conn);
     gen_nm_802_1x_setting(iface, &mut nm_conn);
     gen_nm_user_setting(iface, &mut nm_conn);
     gen_ethtool_setting(iface, &mut nm_conn)?;

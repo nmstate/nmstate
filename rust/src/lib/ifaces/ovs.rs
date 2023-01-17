@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::HashMap;
 use std::convert::TryFrom;
 
 use serde::{Deserialize, Serialize};
 
 use crate::{
     BaseInterface, BridgePortVlanConfig, ErrorKind, Interface, InterfaceType,
-    MergedInterface, NmstateError,
+    MergedInterface, NmstateError, OvsDbIfaceConfig,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -136,6 +135,20 @@ impl OvsBridgeInterface {
             }
         }
         Ok(())
+    }
+
+    pub(crate) fn sanitize_for_verify(&mut self) {
+        if let Some(port_confs) = self
+            .bridge
+            .as_mut()
+            .and_then(|br_conf| br_conf.ports.as_mut())
+        {
+            for port_conf in port_confs {
+                if let Some(bond_conf) = port_conf.bond.as_mut() {
+                    bond_conf.sanitize_for_verify();
+                }
+            }
+        }
     }
 
     // Only support remove non-bonding port or the bond itself as bond require
@@ -499,11 +512,13 @@ pub struct OvsBridgeBondConfig {
     )]
     /// Deserialize and serialize from/to `bond-updelay`.
     pub bond_updelay: Option<u32>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none", rename = "ovs-db")]
     /// OpenvSwitch specific `other_config` for OVS bond. Please refer to
     /// manpage `ovs-vswitchd.conf.db(5)` for more detail.
-    /// Set to None for remove specific entry.
-    pub other_config: Option<HashMap<String, Option<String>>>,
+    /// When setting to None, nmstate will try to preserve current
+    /// `other_config`, otherwise, nmstate will override all `other_config`
+    /// for specified OVS bond.
+    pub ovsdb: Option<OvsDbIfaceConfig>,
 }
 
 impl OvsBridgeBondConfig {
@@ -524,6 +539,13 @@ impl OvsBridgeBondConfig {
     pub(crate) fn sort_ports(&mut self) {
         if let Some(ref mut bond_ports) = self.ports {
             bond_ports.sort_unstable_by_key(|p| p.name.clone())
+        }
+    }
+
+    pub(crate) fn sanitize_for_verify(&mut self) {
+        // None ovsbd equal to empty
+        if self.ovsdb.is_none() {
+            self.ovsdb = Some(OvsDbIfaceConfig::empty());
         }
     }
 }
