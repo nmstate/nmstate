@@ -1,4 +1,22 @@
 # Changelog
+### [2.2.4] - 2023-01-18
+### Breaking changes
+- Support interface level `other_config`. (8ec213b8)
+
+The rust API changed: `OvsBridgeBondConfig.other_config: Option<HashMap>`
+changed to `OvsBridgeBondConfig.ovs_db: Option<OvsDbIfaceConfig>`.
+
+The YAML API changed: The `other_config` under OVS bond should be stored under
+`ovs-db` section.
+
+### Bug fixes
+- Fix support DNS uncompressed IPv6 server. (8fbb93a5)
+- Fix validation error on route rule when `ip-to` and `ip-from` is empty string. (c2e69269)
+- Fix `group-fwd-mask` conflict with `group-forward-mask` Linux bridge option. (e079f1d)
+- Fix partial detaching ports in OVS bond interfaces. (e2b3ea72)
+- Fix verification error when OVS daemon is off. (ae3f45a7)
+- Fix MPTCP error in older NetworkManager. (f38da12c)
+
 ## [2.2.3] - 2023-01-09
 ### Breaking changes
  - Minimum supported rust version changed from 1.60 to 1.58. (d2f669ed)
