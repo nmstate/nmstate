@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 mod apply;
-mod dns;
+pub(crate) mod dns;
 mod ieee8021x;
 mod ip;
 mod lldp;

@@ -11,10 +11,10 @@ use super::{
     active_connection::create_index_for_nm_acs_by_name_type,
     error::nm_error_to_nmstate,
     query_apply::{
-        create_index_for_nm_conns_by_name_type, get_description, get_lldp,
-        is_lldp_enabled, is_mptcp_supported, nm_802_1x_to_nmstate,
-        nm_ip_setting_to_nmstate4, nm_ip_setting_to_nmstate6,
-        query_nmstate_wait_ip, retrieve_dns_info,
+        create_index_for_nm_conns_by_name_type, dns::nm_global_dns_to_nmstate,
+        get_description, get_lldp, is_lldp_enabled, is_mptcp_supported,
+        nm_802_1x_to_nmstate, nm_ip_setting_to_nmstate4,
+        nm_ip_setting_to_nmstate6, query_nmstate_wait_ip, retrieve_dns_info,
     },
     settings::{
         get_bond_balance_slb, NM_SETTING_BOND_SETTING_NAME,
@@ -168,8 +168,19 @@ pub(crate) fn nm_retrieve(
             iface.base_iface_mut().state = InterfaceState::Ignore;
         }
     }
-
-    net_state.dns = retrieve_dns_info(&mut nm_api, &net_state.interfaces)?;
+    if let Ok(nm_global_dns_conf) = nm_api
+        .get_global_dns_configuration()
+        .map_err(nm_error_to_nmstate)
+    {
+        if nm_global_dns_conf.is_empty() {
+            net_state.dns =
+                retrieve_dns_info(&mut nm_api, &net_state.interfaces)?;
+        } else {
+            net_state.dns = nm_global_dns_to_nmstate(&nm_global_dns_conf);
+        }
+    } else {
+        net_state.dns = retrieve_dns_info(&mut nm_api, &net_state.interfaces)?;
+    }
     net_state.dns.sanitize().ok();
     if running_config_only {
         net_state.dns.running = None;
