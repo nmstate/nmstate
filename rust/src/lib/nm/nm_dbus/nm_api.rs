@@ -15,7 +15,7 @@ use super::{
         nm_dev_delete, nm_dev_from_obj_path, nm_dev_get_llpd, NmDevice,
         NmDeviceState, NmDeviceStateReason,
     },
-    dns::NmDnsEntry,
+    dns::{NmDnsEntry, NmGlobalDnsConfig},
     error::{ErrorKind, NmError},
     lldp::NmLldpNeighbor,
 };
@@ -371,6 +371,20 @@ impl<'a> NmApi<'a> {
             }
         }
         Ok(())
+    }
+
+    pub fn get_global_dns_configuration(
+        &self,
+    ) -> Result<NmGlobalDnsConfig, NmError> {
+        NmGlobalDnsConfig::try_from(self.dbus.global_dns_configuration()?)
+    }
+
+    pub fn set_global_dns_configuration(
+        &mut self,
+        config: &NmGlobalDnsConfig,
+    ) -> Result<(), NmError> {
+        self.extend_timeout_if_required()?;
+        self.dbus.set_global_dns_configuration(config.to_value()?)
     }
 }
 

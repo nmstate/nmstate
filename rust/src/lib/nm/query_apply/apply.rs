@@ -4,13 +4,14 @@ use std::collections::HashSet;
 
 use super::super::{
     device::create_index_for_nm_devs,
-    dns::store_dns_config,
+    dns::{cur_dns_ifaces_still_valid_for_dns, store_dns_config_to_iface},
     error::nm_error_to_nmstate,
     nm_dbus::{NmApi, NmConnection},
     profile::{perpare_nm_conns, PerparedNmConnections},
     query_apply::{
         activate_nm_profiles, create_index_for_nm_conns_by_name_type,
         deactivate_nm_profiles, delete_exist_profiles, delete_orphan_ovs_ports,
+        dns::{purge_global_dns_config, store_dns_config_via_global_api},
         is_mptcp_flags_changed, is_mptcp_supported, is_route_removed,
         is_veth_peer_changed, is_vlan_id_changed, is_vrf_table_id_changed,
         is_vxlan_id_changed, save_nm_profiles,
@@ -68,7 +69,26 @@ pub(crate) fn nm_apply(
 
     store_route_rule_config(&mut merged_state)?;
 
-    store_dns_config(&mut merged_state)?;
+    if merged_state.dns.is_changed()
+        || !cur_dns_ifaces_still_valid_for_dns(&merged_state.interfaces)
+    {
+        purge_global_dns_config(&mut nm_api)?;
+    }
+
+    if let Err(e) = store_dns_config_to_iface(&mut merged_state) {
+        log::warn!(
+            "Cannot store DNS to NetworkManager interface connection: {e}"
+        );
+        log::warn!(
+            "Storing DNS to NetworkManager via global dns API, \
+            this will cause _all__ interface level DNS settings been ignored"
+        );
+        store_dns_config_via_global_api(
+            &mut nm_api,
+            merged_state.dns.servers.as_slice(),
+            merged_state.dns.searches.as_slice(),
+        )?;
+    }
 
     let PerparedNmConnections {
         to_store: nm_conns_to_store,

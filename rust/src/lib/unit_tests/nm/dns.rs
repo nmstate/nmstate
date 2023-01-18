@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    nm::dns::store_dns_config, DnsClientState, ErrorKind, InterfaceType,
-    MergedNetworkState, NetworkState,
+    nm::dns::store_dns_config_to_iface, DnsClientState, ErrorKind,
+    InterfaceType, MergedNetworkState, NetworkState,
 };
 
 #[test]
@@ -49,7 +49,7 @@ interfaces:
     let mut merged_state =
         MergedNetworkState::new(desired, current, false, false).unwrap();
 
-    store_dns_config(&mut merged_state).unwrap();
+    store_dns_config_to_iface(&mut merged_state).unwrap();
 
     let iface = merged_state
         .interfaces
@@ -224,5 +224,5 @@ fn test_dns_iface_has_no_ip_stack_info() {
     let mut merged_state =
         MergedNetworkState::new(desired, current, false, false).unwrap();
 
-    store_dns_config(&mut merged_state).unwrap();
+    store_dns_config_to_iface(&mut merged_state).unwrap();
 }

@@ -8,12 +8,23 @@ use crate::{
 
 const DEFAULT_DNS_PRIORITY: i32 = 40;
 
-pub(crate) fn store_dns_config(
+pub(crate) fn store_dns_config_to_iface(
     merged_state: &mut MergedNetworkState,
 ) -> Result<(), NmstateError> {
     if merged_state.dns.is_changed()
         || !cur_dns_ifaces_still_valid_for_dns(&merged_state.interfaces)
     {
+        let srvs = merged_state.dns.servers.as_slice();
+
+        if srvs.len() > 2 && is_mixed_dns_servers(srvs) {
+            return Err(NmstateError::new(
+                ErrorKind::NotImplementedError,
+                "Placing IPv4/IPv6 nameserver in the middle of IPv6/IPv4 \
+                nameservers is not supported yet"
+                    .to_string(),
+            ));
+        }
+
         let (cur_v4_ifaces, cur_v6_ifaces) =
             get_cur_dns_ifaces(&merged_state.interfaces);
         let (v4_iface_name, v6_iface_name) = reselect_dns_ifaces(
@@ -202,15 +213,13 @@ fn _save_dns_to_iface(
     }
 
     if iface_name.is_empty() {
-        let e = NmstateError::new(
+        return Err(NmstateError::new(
             ErrorKind::InvalidArgument,
             format!(
                 "Failed to find suitable(IP enabled with DHCP off \
                 or auto-dns: false) interface for DNS server {servers:?}"
             ),
-        );
-        log::error!("{}", e);
-        return Err(e);
+        ));
     }
 
     if let Some(iface) =
@@ -326,7 +335,7 @@ fn get_cur_dns_ifaces(
     (v4_ifaces, v6_ifaces)
 }
 
-fn cur_dns_ifaces_still_valid_for_dns(
+pub(crate) fn cur_dns_ifaces_still_valid_for_dns(
     merged_ifaces: &MergedInterfaces,
 ) -> bool {
     let (cur_v4_ifaces, cur_v6_ifaces) = get_cur_dns_ifaces(merged_ifaces);
@@ -345,4 +354,15 @@ fn cur_dns_ifaces_still_valid_for_dns(
         }
     }
     true
+}
+
+fn is_mixed_dns_servers(srvs: &[String]) -> bool {
+    let mut pattern = String::new();
+    for srv in srvs {
+        let cur_char = if is_ipv6_addr(srv) { '6' } else { '4' };
+        if !pattern.ends_with(cur_char) {
+            pattern.push(cur_char);
+        }
+    }
+    pattern.contains("464") || pattern.contains("646")
 }

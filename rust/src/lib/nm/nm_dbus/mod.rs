@@ -37,7 +37,7 @@ pub use self::connection::{
 #[cfg(feature = "query_apply")]
 pub use self::device::{NmDevice, NmDeviceState, NmDeviceStateReason};
 #[cfg(feature = "query_apply")]
-pub use self::dns::NmDnsEntry;
+pub use self::dns::{NmDnsEntry, NmGlobalDnsConfig};
 pub use self::error::{
     ErrorKind, NmConnectionError, NmDeviceError, NmError, NmManagerError,
     NmSettingError,

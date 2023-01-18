@@ -138,22 +138,10 @@ impl DnsClientState {
                     ));
                 }
             }
-            validate_dns_srvs(sanitized_srvs.as_slice())?;
             self.server = Some(sanitized_srvs);
         }
         Ok(())
     }
-}
-
-fn is_mixed_dns_servers(srvs: &[String]) -> bool {
-    let mut pattern = String::new();
-    for srv in srvs {
-        let cur_char = if is_ipv6_addr(srv) { '6' } else { '4' };
-        if !pattern.ends_with(cur_char) {
-            pattern.push(cur_char);
-        }
-    }
-    pattern.contains("464") || pattern.contains("646")
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -222,20 +210,6 @@ impl MergedDnsState {
 
         self.servers != cur_servers || self.searches != cur_searches
     }
-}
-
-fn validate_dns_srvs(srvs: &[String]) -> Result<(), NmstateError> {
-    if srvs.len() > 2 && is_mixed_dns_servers(srvs) {
-        let e = NmstateError::new(
-            ErrorKind::NotImplementedError,
-            "Placing IPv4/IPv6 nameserver in the middle of IPv6/IPv4 \
-            nameservers is not supported yet"
-                .to_string(),
-        );
-        log::error!("{}", e);
-        return Err(e);
-    }
-    Ok(())
 }
 
 impl MergedNetworkState {

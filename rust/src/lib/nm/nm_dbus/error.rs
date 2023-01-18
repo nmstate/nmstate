@@ -289,6 +289,16 @@ impl From<zbus::Error> for NmError {
     }
 }
 
+#[cfg(feature = "query_apply")]
+impl From<zbus::fdo::Error> for NmError {
+    fn from(e: zbus::fdo::Error) -> Self {
+        Self {
+            kind: ErrorKind::Bug,
+            msg: format!("zbus fdo error {e}"),
+        }
+    }
+}
+
 impl From<zvariant::Error> for NmError {
     fn from(e: zvariant::Error) -> Self {
         Self {

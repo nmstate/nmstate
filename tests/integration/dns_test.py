@@ -6,7 +6,6 @@ import pytest
 import yaml
 
 import libnmstate
-from libnmstate.error import NmstateNotImplementedError
 from libnmstate.schema import DNS
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
@@ -105,34 +104,16 @@ def test_dns_edit_ipv6_nameserver_before_ipv4():
         (IPV6_DNS_NAMESERVERS + [EXTRA_IPV6_DNS_NAMESERVER]),
         (IPV4_DNS_NAMESERVERS + [EXTRA_IPV6_DNS_NAMESERVER]),
         (IPV6_DNS_NAMESERVERS + [EXTRA_IPV4_DNS_NAMESERVER]),
-        pytest.param(
-            (
-                [
-                    IPV4_DNS_NAMESERVERS[0],
-                    EXTRA_IPV6_DNS_NAMESERVER,
-                    IPV4_DNS_NAMESERVERS[1],
-                ]
-            ),
-            marks=pytest.mark.xfail(
-                reason="Not supported",
-                raises=NmstateNotImplementedError,
-                strict=True,
-            ),
-        ),
-        pytest.param(
-            (
-                [
-                    IPV6_DNS_NAMESERVERS[0],
-                    EXTRA_IPV4_DNS_NAMESERVER,
-                    IPV6_DNS_NAMESERVERS[1],
-                ]
-            ),
-            marks=pytest.mark.xfail(
-                reason="Not supported",
-                raises=NmstateNotImplementedError,
-                strict=True,
-            ),
-        ),
+        [
+            IPV4_DNS_NAMESERVERS[0],
+            EXTRA_IPV6_DNS_NAMESERVER,
+            IPV4_DNS_NAMESERVERS[1],
+        ],
+        [
+            IPV6_DNS_NAMESERVERS[0],
+            EXTRA_IPV4_DNS_NAMESERVER,
+            IPV6_DNS_NAMESERVERS[1],
+        ],
         (IPV4_DNS_NAMESERVERS + IPV6_DNS_NAMESERVERS),
         (IPV6_DNS_NAMESERVERS + IPV4_DNS_NAMESERVERS),
     ],
