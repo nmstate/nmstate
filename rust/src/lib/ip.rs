@@ -566,6 +566,9 @@ impl InterfaceIpv6 {
         if let Some(addrs) = self.addresses.as_mut() {
             addrs.sort_unstable();
             addrs.dedup();
+            if addrs.is_empty() {
+                self.addresses = None;
+            }
         }
     }
 
