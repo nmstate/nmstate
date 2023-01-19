@@ -123,7 +123,6 @@ pub(crate) fn nispor_retrieve(
                 })
             }
         };
-        log::debug!("Got interface {:?}", iface);
         net_state.append_interface_data(iface);
     }
     set_controller_type(&mut net_state.interfaces);

@@ -14,15 +14,9 @@ impl Interfaces {
                 .get_iface_mut(other_iface.name(), other_iface.iface_type())
             {
                 Some(self_iface) => {
-                    log::debug!(
-                        "Merging interface {:?} into {:?}",
-                        other_iface,
-                        self_iface
-                    );
                     self_iface.update(other_iface);
                 }
                 None => {
-                    log::debug!("Appending new interface {:?}", other_iface);
                     new_ifaces.push(other_iface);
                 }
             }

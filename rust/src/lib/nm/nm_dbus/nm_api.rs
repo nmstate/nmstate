@@ -137,7 +137,6 @@ impl<'a> NmApi<'a> {
                 &self.dbus.connection,
                 &nm_conn_obj_path,
             ) {
-                debug!("Got connection {:?}", c);
                 nm_conns.push(c);
             }
         }
@@ -164,9 +163,6 @@ impl<'a> NmApi<'a> {
                 }
             }
         }
-        nm_conns
-            .iter()
-            .for_each(|conn| debug!("Get Applied connection {:?}", conn));
         Ok(nm_conns)
     }
 

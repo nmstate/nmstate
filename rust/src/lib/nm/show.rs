@@ -73,8 +73,9 @@ pub(crate) fn nm_retrieve(
             NmDeviceState::Unmanaged | NmDeviceState::Disconnected => {
                 if let Some(iface) = nm_dev_to_nm_iface(nm_dev) {
                     log::debug!(
-                        "Found unmanaged or disconnected interface {:?}",
-                        iface
+                        "Found unmanaged or disconnected interface {}/{}",
+                        iface.name(),
+                        iface.iface_type()
                     );
                     net_state.append_interface_data(iface);
                 }
@@ -89,8 +90,9 @@ pub(crate) fn nm_retrieve(
                     if (state_flag & NM_ACTIVATION_STATE_FLAG_EXTERNAL) > 0 {
                         if let Some(iface) = nm_dev_to_nm_iface(nm_dev) {
                             log::debug!(
-                                "Found external managed interface {:?}",
-                                iface
+                                "Found external managed interface {}/{}",
+                                iface.name(),
+                                iface.iface_type()
                             );
                             net_state.append_interface_data(iface);
                         }
@@ -148,7 +150,11 @@ pub(crate) fn nm_retrieve(
                         iface.base_iface_mut().mptcp = None;
                     }
 
-                    log::debug!("Found interface {:?}", iface);
+                    log::debug!(
+                        "Found NM interface {}/{}",
+                        iface.name(),
+                        iface.iface_type()
+                    );
                     net_state.append_interface_data(iface);
                 }
             }
@@ -346,7 +352,6 @@ fn iface_get(
                 return None;
             }
         };
-        log::debug!("Found interface {:?}", iface);
         Some(iface)
     } else {
         // NmConnection has no interface name
