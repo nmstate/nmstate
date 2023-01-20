@@ -945,6 +945,26 @@ impl MergedInterface {
         ctrl_name: String,
         ctrl_type: Option<InterfaceType>,
     ) -> Result<(), NmstateError> {
+        if self.merged.need_controller() && ctrl_name.is_empty() {
+            if let Some(org_ctrl) = self
+                .current
+                .as_ref()
+                .and_then(|c| c.base_iface().controller.as_ref())
+            {
+                if Some(true) == self.for_apply.as_ref().map(|i| i.is_up()) {
+                    return Err(NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        format!(
+                            "Interface {} cannot live without controller, \
+                            but it is detached from original controller \
+                            {org_ctrl}, cannot apply desired `state:up`",
+                            self.merged.name()
+                        ),
+                    ));
+                }
+            }
+        }
+
         if !self.is_desired() {
             self.mark_as_changed();
             log::info!(

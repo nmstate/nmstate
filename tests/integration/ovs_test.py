@@ -1823,3 +1823,50 @@ def test_ovs_sys_iface_other_config_and_remove(
     )
     libnmstate.apply(desired_state)
     assertlib.assert_state_match(desired_state)
+
+
+@pytest.fixture
+def ovs_bridge_with_auto_create_internal_iface():
+    with Bridge(BRIDGE1).create():
+        yield
+
+
+def test_ovs_new_internal_iface_to_bridge_with_auto_create_iface(
+    ovs_bridge_with_auto_create_internal_iface,
+):
+    desired_state = yaml.load(
+        """---
+        interfaces:
+        - name: br1
+          type: ovs-bridge
+          state: up
+          bridge:
+            port:
+            - name: new_ovs0
+        """,
+        Loader=yaml.SafeLoader,
+    )
+    libnmstate.apply(desired_state)
+    assertlib.assert_state_match(desired_state)
+
+
+def test_ovs_replace_internal_iface_to_bridge_with_auto_create_iface(
+    ovs_bridge_with_auto_create_internal_iface,
+):
+    desired_state = yaml.load(
+        """---
+        interfaces:
+        - name: br1
+          type: ovs-interface
+          state: absent
+        - name: br1
+          type: ovs-bridge
+          state: up
+          bridge:
+            port:
+            - name: ovs0
+        """,
+        Loader=yaml.SafeLoader,
+    )
+    libnmstate.apply(desired_state)
+    assertlib.assert_state_match(desired_state)
