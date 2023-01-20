@@ -710,17 +710,29 @@ impl MergedInterfaces {
         Ok(())
     }
 
+    // Unlike orphan check in `apply_ctrller_change()`, this function is for
+    // orphan interface without controller.
     fn mark_orphan_interface_as_absent(&mut self) -> Result<(), NmstateError> {
         let gone_ifaces: Vec<String> = self
             .kernel_ifaces
             .values()
-            .filter(|i| i.is_changed() && i.merged.is_absent())
+            .filter(|i| {
+                // User can still have VLAN over ethernet even ethernet is
+                // marked as absent.
+                // For veth, it is hard for us to know whether absent action
+                // delete it not, hence treat it as ethernet.
+                i.is_changed()
+                    && i.merged.is_absent()
+                    && i.merged.iface_type() != InterfaceType::Ethernet
+            })
             .map(|i| i.merged.name().to_string())
             .collect();
 
-        for iface in
-            self.kernel_ifaces.values_mut().filter(|i| i.merged.is_up())
-        {
+        // OvsInterface is already checked by `apply_ctrller_change()`.
+        for iface in self.kernel_ifaces.values_mut().filter(|i| {
+            i.merged.is_up()
+                && i.merged.iface_type() != InterfaceType::OvsInterface
+        }) {
             if let Some(parent) = iface.merged.parent() {
                 if gone_ifaces.contains(&parent.to_string()) {
                     if iface.is_desired() && iface.merged.is_up() {

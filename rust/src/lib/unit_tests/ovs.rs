@@ -576,3 +576,68 @@ fn test_validate_dpdk_n_txq_desc() {
         assert!(e.msg().contains("OVS DPDK n_txq_desc must power of 2"));
     }
 }
+
+#[test]
+fn test_ovs_orphan_check_on_bridge_with_same_name_iface() {
+    let des_ifaces: Interfaces = serde_yaml::from_str(
+        r#"
+        - name: br0
+          type: ovs-bridge
+          state: up
+          bridge:
+            port:
+              - name: ovs0
+        "#,
+    )
+    .unwrap();
+
+    let cur_ifaces: Interfaces = serde_yaml::from_str(
+        r#"
+        - name: br0
+          type: ovs-interface
+        - name: br0
+          type: ovs-bridge
+          state: up
+          bridge:
+            port:
+              - name: br0
+        "#,
+    )
+    .unwrap();
+
+    MergedInterfaces::new(des_ifaces, cur_ifaces, false, false).unwrap();
+}
+
+#[test]
+fn test_ovs_mark_orphan_up_on_bridge_with_same_name_iface() {
+    let des_ifaces: Interfaces = serde_yaml::from_str(
+        r#"
+        - name: br0
+          type: ovs-interface
+          state: up
+        - name: br0
+          type: ovs-bridge
+          state: up
+          bridge:
+            port:
+              - name: ovs0
+        "#,
+    )
+    .unwrap();
+
+    let cur_ifaces: Interfaces = serde_yaml::from_str(
+        r#"
+        - name: br0
+          type: ovs-interface
+        - name: br0
+          type: ovs-bridge
+          state: up
+          bridge:
+            port:
+              - name: br0
+        "#,
+    )
+    .unwrap();
+
+    MergedInterfaces::new(des_ifaces, cur_ifaces, false, false).unwrap();
+}

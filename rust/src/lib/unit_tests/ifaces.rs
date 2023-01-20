@@ -68,7 +68,7 @@ fn test_resolve_unknown_type_absent_multiple() {
 }
 
 #[test]
-fn test_mark_orphan_vlan_as_absent() {
+fn test_vlan_over_ethernet_can_exist_after_ethernet_absent() {
     let mut current = Interfaces::new();
     current.push(new_eth_iface("eth0"));
     current.push(new_vlan_iface("eth0.10", "eth0", 10));
@@ -88,13 +88,11 @@ fn test_mark_orphan_vlan_as_absent() {
         .as_ref()
         .unwrap();
     assert!(iface.is_absent());
-    let iface = merged_ifaces
+    assert!(merged_ifaces
         .get_iface("eth0.10", InterfaceType::Vlan)
         .unwrap()
         .for_apply
-        .as_ref()
-        .unwrap();
-    assert!(iface.is_absent());
+        .is_none());
 }
 
 #[test]
