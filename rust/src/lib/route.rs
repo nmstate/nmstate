@@ -330,6 +330,7 @@ impl MergedRoutes {
         current: Routes,
         merged_ifaces: &MergedInterfaces,
     ) -> Result<Self, NmstateError> {
+        desired.validate()?;
         let mut desired_routes = Vec::new();
         if let Some(rts) = desired.config.as_ref() {
             for rt in rts {
