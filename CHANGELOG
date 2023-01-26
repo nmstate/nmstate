@@ -1,4 +1,16 @@
 # Changelog
+#### [2.2.5] - 2023-01-26
+### New features
+- Support ECMP IPv4 routes. (b1b275cd)
+- Support OVS DPDK `n_rxq_desc` and `n_txq_desc` options. (936ac46a)
+- Support arbitrary DNS configuration. (a9397549)
+
+### Bug fixes
+- Fix route destination address validation error. (012052c3)
+- Fix route next-hop-interface missing validation. (40970942)
+- Fix error when new DNS interface hold IPv6 link local address only. (4e21e359)
+- Fix error when adding an OVS internal interface to an empty OVS bridge. (d6cd548f)
+
 ### [2.2.4] - 2023-01-18
 ### Breaking changes
 - Support interface level `other_config`. (8ec213b8)
