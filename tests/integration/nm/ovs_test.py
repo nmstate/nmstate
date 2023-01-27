@@ -114,8 +114,14 @@ def test_create_vlan_over_existing_ovs_iface_with_use_same_name_as_bridge(
             }
         ]
     }
-    libnmstate.apply(desired_state)
-    assertlib.assert_state_match(desired_state)
+    try:
+        libnmstate.apply(desired_state)
+        assertlib.assert_state_match(desired_state)
+    finally:
+        desired_state[Interface.KEY][0][
+            Interface.STATE
+        ] = InterfaceState.ABSENT
+        libnmstate.apply(desired_state, verify_change=False)
 
 
 class _OvsProfileStillExists(Exception):
