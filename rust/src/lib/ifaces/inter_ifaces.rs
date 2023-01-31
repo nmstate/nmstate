@@ -285,7 +285,7 @@ impl Interfaces {
             if iface.is_absent() {
                 for cur_iface in cur_ifaces.to_vec() {
                     if cur_iface.name() == iface_name {
-                        let mut new_iface = cur_iface.clone();
+                        let mut new_iface = cur_iface.clone_name_type_only();
                         new_iface.base_iface_mut().state =
                             InterfaceState::Absent;
                         resolved_ifaces.push(new_iface);
