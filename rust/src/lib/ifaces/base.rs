@@ -320,7 +320,7 @@ impl MergedInterface {
     }
 
     fn validate_can_have_ip(&mut self) -> Result<(), NmstateError> {
-        if self.is_desired() {
+        if self.is_desired() && self.merged.is_up() {
             if let Some(apply_iface) = self.for_apply.as_ref() {
                 let base_iface = apply_iface.base_iface();
                 if !base_iface.can_have_ip()
