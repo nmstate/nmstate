@@ -32,6 +32,7 @@ from libnmstate.schema import Route
 from ..testlib import cmdlib
 from ..testlib.dummy import nm_unmanaged_dummy
 from ..testlib.assertlib import assert_state_match
+from ..testlib.assertlib import assert_absent
 
 BOND99 = "bond99"
 DUMMY1 = "dummy1"
@@ -162,3 +163,17 @@ interfaces:
             gw6_found = True
     assert gw4_found
     assert gw6_found
+
+
+def test_bring_unmanaged_iface_down(unmanged_dummy1_with_static_ip):
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: DUMMY1,
+                    Interface.STATE: InterfaceState.DOWN,
+                }
+            ]
+        }
+    )
+    assert_absent(DUMMY1)

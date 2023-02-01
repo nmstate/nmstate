@@ -191,8 +191,10 @@ class NmProfile:
         elif self._iface.is_down:
             if self._nm_ac:
                 self._add_action(NmProfile.ACTION_DEACTIVATE)
-            elif self._iface.is_virtual and self._nm_dev:
+            if self._iface.is_virtual and self._nm_dev:
                 self._add_action(NmProfile.ACTION_DELETE_DEVICE)
+            if self._nm_dev and not self._nm_dev.get_managed():
+                self._add_action(NmProfile.ACTION_DEACTIVATE)
 
         if self._iface.raw.get(ROUTE_REMOVED):
             # This is a workaround for NM bug:
@@ -282,7 +284,10 @@ class NmProfile:
 
     def prepare_config(self, save_to_disk, gen_conf_mode=False):
         if self._iface.is_absent or (
-            self._iface.is_down and not gen_conf_mode
+            self._iface.is_down
+            and not gen_conf_mode
+            and self._nm_dev
+            and self._nm_dev.get_managed()
         ):
             return
 
@@ -319,7 +324,9 @@ class NmProfile:
         self._gen_actions()
         if not self.has_pending_change:
             return
-        if self._iface.is_absent or self._iface.is_down:
+        if self._iface.is_absent or (
+            self._iface.is_down and self._nm_dev and self._nm_dev.get_managed()
+        ):
             return
         # Don't create new profile if original desire does not ask
         # anything besides state:up and not been marked as changed.
@@ -418,6 +425,9 @@ class NmProfile:
     def _deactivate(self):
         if self._deactivated:
             return
+        self._nm_ac = (
+            self._nm_dev.get_active_connection() if self._nm_dev else None
+        )
         if self._nm_ac:
             ActiveConnectionDeactivate(
                 self._ctx, self._iface.name, self._iface.type, self._nm_ac
