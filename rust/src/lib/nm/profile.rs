@@ -45,6 +45,21 @@ pub(crate) fn perpare_nm_conns(
         }
     });
 
+    let mut nm_conns_to_deactivate: Vec<NmConnection> = ifaces
+        .as_slice()
+        .iter()
+        .filter(|iface| iface.merged.is_down())
+        .filter_map(|iface| {
+            get_exist_profile(
+                exist_nm_conns,
+                &iface.merged.base_iface().name,
+                &iface.merged.base_iface().iface_type,
+                &nm_ac_uuids,
+            )
+        })
+        .cloned()
+        .collect();
+
     for merged_iface in ifaces.iter().filter(|i| {
         i.merged.iface_type() != InterfaceType::Unknown && !i.merged.is_absent()
     }) {
@@ -53,6 +68,7 @@ pub(crate) fn perpare_nm_conns(
         } else {
             continue;
         };
+
         for mut nm_conn in iface_to_nm_connections(
             merged_iface,
             merged_state,
@@ -74,6 +90,15 @@ pub(crate) fn perpare_nm_conns(
             if iface.is_up() {
                 nm_conns_to_activate.push(nm_conn.clone());
             }
+            // User try to bring a unmanaged interface down, we activate it and
+            // deactivate it again.
+            if iface.is_down()
+                && merged_iface.current.as_ref().map(|i| i.is_ignore())
+                    == Some(true)
+            {
+                nm_conns_to_activate.push(nm_conn.clone());
+                nm_conns_to_deactivate.push(nm_conn.clone());
+            }
             if iface.is_down() && gen_conf_mode {
                 if let Some(nm_conn_set) = nm_conn.connection.as_mut() {
                     nm_conn_set.autoconnect = Some(false);
@@ -82,19 +107,6 @@ pub(crate) fn perpare_nm_conns(
             nm_conns_to_update.push(nm_conn);
         }
     }
-    let nm_conns_to_deactivate: Vec<NmConnection> = ifaces
-        .into_iter()
-        .filter(|iface| iface.merged.is_down())
-        .filter_map(|iface| {
-            get_exist_profile(
-                exist_nm_conns,
-                &iface.merged.base_iface().name,
-                &iface.merged.base_iface().iface_type,
-                &nm_ac_uuids,
-            )
-        })
-        .cloned()
-        .collect();
 
     use_uuid_for_controller_reference(
         &mut nm_conns_to_update,

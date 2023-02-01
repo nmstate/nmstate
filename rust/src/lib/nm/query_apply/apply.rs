@@ -122,7 +122,6 @@ pub(crate) fn nm_apply(
         &mut nm_api,
         nm_conns_to_deactivate_first.as_slice(),
     )?;
-    deactivate_nm_profiles(&mut nm_api, nm_conns_to_deactivate.as_slice())?;
 
     save_nm_profiles(
         &mut nm_api,
@@ -148,6 +147,8 @@ pub(crate) fn nm_apply(
         nm_conns_to_activate.as_slice(),
         &nm_acs,
     )?;
+
+    deactivate_nm_profiles(&mut nm_api, nm_conns_to_deactivate.as_slice())?;
 
     Ok(())
 }
@@ -240,7 +241,9 @@ fn delete_remain_virtual_interface_as_desired(
         .interfaces
         .kernel_ifaces
         .values()
-        .filter(|i| i.is_changed() && i.merged.is_absent())
+        .filter(|i| {
+            i.is_changed() && (i.merged.is_absent() || i.merged.is_down())
+        })
         .map(|i| &i.merged)
     {
         if iface.is_virtual() {
