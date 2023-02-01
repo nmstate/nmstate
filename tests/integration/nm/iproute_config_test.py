@@ -33,6 +33,7 @@ from libnmstate.schema import Route
 
 from ..testlib import cmdlib
 from ..testlib.dummy import nm_unmanaged_dummy
+from ..testlib.assertlib import assert_absent
 from ..testlib.assertlib import assert_state_match
 from ..testlib.statelib import show_only
 
@@ -206,3 +207,31 @@ def test_external_managed_veth_with_static_ip(
         InterfaceIPv6.ADDRESS_IP: "2001:db8:f::1",
         InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
     } in ipv6_info[InterfaceIPv6.ADDRESS]
+
+
+def test_bring_unmanaged_iface_down(unmanged_dummy1_with_static_ip):
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: DUMMY1,
+                    Interface.STATE: InterfaceState.DOWN,
+                }
+            ]
+        }
+    )
+    assert_absent(DUMMY1)
+
+
+def test_mark_unmanaged_iface_absent(unmanged_dummy1_with_static_ip):
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: DUMMY1,
+                    Interface.STATE: InterfaceState.ABSENT,
+                }
+            ]
+        }
+    )
+    assert_absent(DUMMY1)
