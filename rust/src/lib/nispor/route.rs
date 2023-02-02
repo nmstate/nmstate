@@ -18,7 +18,6 @@ const SUPPORTED_ROUTE_PROTOCOL: [nispor::RouteProtocol; 7] = [
 const SUPPORTED_STATIC_ROUTE_PROTOCOL: [nispor::RouteProtocol; 2] =
     [nispor::RouteProtocol::Boot, nispor::RouteProtocol::Static];
 
-const LOCAL_ROUTE_TABLE: u32 = 255;
 const IPV4_DEFAULT_GATEWAY: &str = "0.0.0.0/0";
 const IPV6_DEFAULT_GATEWAY: &str = "::/0";
 const IPV4_EMPTY_NEXT_HOP_ADDRESS: &str = "0.0.0.0";
@@ -59,7 +58,6 @@ pub(crate) fn get_routes(running_config_only: bool) -> Routes {
         let mut running_routes = Vec::new();
         for np_route in np_routes.iter().filter(|np_route| {
             SUPPORTED_ROUTE_SCOPE.contains(&np_route.scope)
-                && np_route.table != LOCAL_ROUTE_TABLE
                 && np_route.oif.as_ref() != Some(&"lo".to_string())
         }) {
             if is_multipath(np_route) {
@@ -77,7 +75,6 @@ pub(crate) fn get_routes(running_config_only: bool) -> Routes {
     for np_route in np_routes.iter().filter(|np_route| {
         SUPPORTED_ROUTE_SCOPE.contains(&np_route.scope)
             && SUPPORTED_STATIC_ROUTE_PROTOCOL.contains(&np_route.protocol)
-            && np_route.table != LOCAL_ROUTE_TABLE
             && np_route.oif.as_ref() != Some(&"lo".to_string())
     }) {
         if is_multipath(np_route) {

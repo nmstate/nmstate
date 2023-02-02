@@ -1554,3 +1554,26 @@ def test_auto_choose_route_rule_priority(
     original_rules[0][RouteRule.PRIORITY] = 30000
     original_rules[1][RouteRule.PRIORITY] = 30001
     _check_ip_rules(original_rules)
+
+
+def test_add_routes_to_local_route_table_255(static_eth1_with_routes):
+    routes = [
+        {
+            Route.NEXT_HOP_INTERFACE: "eth1",
+            Route.DESTINATION: IPV4_TEST_NET1,
+            Route.NEXT_HOP_ADDRESS: IPV4_ADDRESS2,
+            Route.TABLE_ID: 255,
+        },
+        {
+            Route.NEXT_HOP_INTERFACE: "eth1",
+            Route.DESTINATION: IPV6_TEST_NET1,
+            Route.NEXT_HOP_ADDRESS: IPV6_ADDRESS2,
+            Route.TABLE_ID: 255,
+        },
+    ]
+
+    state = {Route.KEY: {Route.CONFIG: routes}}
+    libnmstate.apply(state)
+
+    cur_state = libnmstate.show()
+    _assert_routes(routes, cur_state)
