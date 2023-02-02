@@ -1504,3 +1504,56 @@ def test_add_and_remove_ecmp_route(eth1_static_ip):
             Route.KEY: {Route.CONFIG: routes},
         }
     )
+
+
+@pytest.fixture
+def static_eth1_with_default_priority_route_rules(route_rule_test_env):
+    state = route_rule_test_env
+    rules = [
+        {
+            RouteRule.IP_FROM: "2001:db8:a::/64",
+            RouteRule.IP_TO: "2001:db8:f::/64",
+            RouteRule.ROUTE_TABLE: IPV6_ROUTE_TABLE_ID1,
+        },
+        {
+            RouteRule.IP_FROM: "203.0.113.0/24",
+            RouteRule.IP_TO: "192.0.2.0/24",
+            RouteRule.ROUTE_TABLE: IPV4_ROUTE_TABLE_ID1,
+        },
+    ]
+    state[RouteRule.KEY] = {RouteRule.CONFIG: rules}
+
+    libnmstate.apply(state)
+    yield state
+
+
+def test_auto_choose_route_rule_priority(
+    static_eth1_with_default_priority_route_rules,
+):
+    current_state = libnmstate.show()
+    original_rules = current_state[RouteRule.KEY][RouteRule.CONFIG]
+    assert len(original_rules) == 2
+
+    rules = [
+        {
+            RouteRule.IP_FROM: "2001:db8:b::/64",
+            RouteRule.IP_TO: "2001:db8:e::/64",
+            RouteRule.ROUTE_TABLE: IPV6_ROUTE_TABLE_ID1,
+        },
+        {
+            RouteRule.IP_FROM: "203.0.113.2",
+            RouteRule.IP_TO: "192.0.2.2",
+            RouteRule.ROUTE_TABLE: IPV4_ROUTE_TABLE_ID1,
+        },
+    ]
+    state = {RouteRule.KEY: {RouteRule.CONFIG: rules}}
+
+    libnmstate.apply(state)
+    current_state = libnmstate.show()
+    assert len(current_state[RouteRule.KEY][RouteRule.CONFIG]) == 4
+    rules[0][RouteRule.PRIORITY] = 30002
+    rules[1][RouteRule.PRIORITY] = 30003
+    _check_ip_rules(rules)
+    original_rules[0][RouteRule.PRIORITY] = 30000
+    original_rules[1][RouteRule.PRIORITY] = 30001
+    _check_ip_rules(original_rules)

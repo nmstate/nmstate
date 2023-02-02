@@ -5,13 +5,9 @@ use std::convert::TryFrom;
 use super::super::nm_dbus::NmIpRouteRule;
 
 use crate::{
-    ip::is_ipv6_addr, ip::AddressFamily, InterfaceIpAddr, NmstateError,
-    RouteRuleEntry,
+    ip::is_ipv6_addr, ip::AddressFamily, ErrorKind, InterfaceIpAddr,
+    NmstateError, RouteRuleEntry,
 };
-
-// NM require route rule priority been set explicitly, use 30,000 when
-// desire state instruct to use USE_DEFAULT_PRIORITY
-const ROUTE_RULE_DEFAULT_PRIORIRY: u32 = 30000;
 
 const AF_INET6: i32 = 10;
 const AF_INET: i32 = 2;
@@ -51,7 +47,13 @@ pub(crate) fn gen_nm_ip_rules(
         }
         nm_rule.priority = match rule.priority {
             Some(RouteRuleEntry::USE_DEFAULT_PRIORITY) | None => {
-                Some(ROUTE_RULE_DEFAULT_PRIORIRY)
+                return Err(NmstateError::new(
+                    ErrorKind::Bug,
+                    format!(
+                        "NM route rule got None \
+                        or USE_DEFAULT_PRIORITY priority: {nm_rule:?}"
+                    ),
+                ));
             }
             Some(i) => Some(i as u32),
         };
