@@ -261,24 +261,21 @@ next-hop-address: "2001:db8:a:0000:000::1"
 }
 
 #[test]
-fn test_route_treat_empty_dst_as_none_for_matching() {
-    let absent_route: RouteEntry = serde_yaml::from_str(
+fn test_route_not_allowing_empty_dst() {
+    let desired: Routes = serde_yaml::from_str(
         r#"
-        destination: ""
-        state: absent
+        config:
+        - destination: ""
+          state: absent
         "#,
     )
     .unwrap();
-    let route: RouteEntry = serde_yaml::from_str(
-        r#"
-        destination: ::/0
-        next-hop-address: 2001:db8:1::2
-        next-hop-interface: eth1
-        "#,
-    )
-    .unwrap();
-
-    assert!(absent_route.is_match(&route));
+    let result = desired.validate();
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+        assert!(e.msg().contains("Invalid IP address"));
+    }
 }
 
 #[test]
@@ -407,4 +404,31 @@ config:
     let result = routes5.validate();
     assert!(result.is_err());
     assert_eq!(result.err().unwrap().kind(), ErrorKind::InvalidArgument);
+}
+
+#[test]
+fn test_route_matching_empty_via_with_none() {
+    let absent_route: RouteEntry = serde_yaml::from_str(
+        r#"
+        next-hop-address: ""
+        state: absent
+        "#,
+    )
+    .unwrap();
+    let not_match_route: RouteEntry = serde_yaml::from_str(
+        r#"
+        next-hop-address: 2001:db8::2
+        next-hop-interface: eth1
+        "#,
+    )
+    .unwrap();
+    let match_route: RouteEntry = serde_yaml::from_str(
+        r#"
+        destination: 192.0.2.1
+        next-hop-interface: eth1
+        "#,
+    )
+    .unwrap();
+    assert!(!absent_route.is_match(&not_match_route));
+    assert!(!absent_route.is_match(&match_route));
 }

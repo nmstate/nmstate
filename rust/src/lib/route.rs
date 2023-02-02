@@ -66,8 +66,8 @@ impl Routes {
     pub fn validate(&self) -> Result<(), NmstateError> {
         // All desire non-absent route should have next hop interface
         if let Some(config_routes) = self.config.as_ref() {
-            for route in config_routes.iter().filter(|r| !r.is_absent()) {
-                if route.next_hop_iface.is_none() {
+            for route in config_routes.iter() {
+                if !route.is_absent() && route.next_hop_iface.is_none() {
                     return Err(NmstateError::new(
                         ErrorKind::NotImplementedError,
                         format!(
@@ -110,6 +110,7 @@ pub struct RouteEntry {
     pub state: Option<RouteState>,
     #[serde(skip_serializing_if = "Option::is_none")]
     /// Route destination address or network
+    /// Mandatory for every non-absent routes.
     pub destination: Option<String>,
     #[serde(
         skip_serializing_if = "Option::is_none",
@@ -117,6 +118,7 @@ pub struct RouteEntry {
     )]
     /// Route next hop interface name.
     /// Serialize and deserialize to/from `next-hop-interface`.
+    /// Mandatory for every non-absent routes.
     pub next_hop_iface: Option<String>,
     #[serde(
         skip_serializing_if = "Option::is_none",
@@ -124,6 +126,8 @@ pub struct RouteEntry {
     )]
     /// Route next hop IP address.
     /// Serialize and deserialize to/from `next-hop-address`.
+    /// When setting this as empty string for absent route, it will only delete
+    /// routes __without__ `next-hop-address`.
     pub next_hop_addr: Option<String>,
     #[serde(
         skip_serializing_if = "Option::is_none",

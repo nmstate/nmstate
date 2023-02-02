@@ -137,7 +137,7 @@ family: ipv4
 }
 
 #[test]
-fn test_route_rule_treat_empty_ip_from_as_none_for_matching() {
+fn test_route_rule_matching_empty_ip_from_with_none() {
     let absent_rule: RouteRuleEntry = serde_yaml::from_str(
         r#"
         ip-from: ""
@@ -147,7 +147,7 @@ fn test_route_rule_treat_empty_ip_from_as_none_for_matching() {
     )
     .unwrap();
 
-    let rule: RouteRuleEntry = serde_yaml::from_str(
+    let not_match_rule: RouteRuleEntry = serde_yaml::from_str(
         r#"
         ip-from: 192.168.2.0/24
         priority: 30000
@@ -157,10 +157,21 @@ fn test_route_rule_treat_empty_ip_from_as_none_for_matching() {
     )
     .unwrap();
 
-    assert!(absent_rule.is_match(&rule));
+    let match_rule: RouteRuleEntry = serde_yaml::from_str(
+        r#"
+        priority: 30000
+        route-table: 200
+        family: ipv4
+        "#,
+    )
+    .unwrap();
+
+    assert!(!absent_rule.is_match(&not_match_rule));
+    assert!(absent_rule.is_match(&match_rule));
 }
+
 #[test]
-fn test_route_rule_treat_empty_ip_to_as_none_for_matching() {
+fn test_route_rule_matching_empty_ip_to_with_none() {
     let absent_rule: RouteRuleEntry = serde_yaml::from_str(
         r#"
         ip-to: ""
@@ -170,7 +181,7 @@ fn test_route_rule_treat_empty_ip_to_as_none_for_matching() {
     )
     .unwrap();
 
-    let rule: RouteRuleEntry = serde_yaml::from_str(
+    let not_match_rule: RouteRuleEntry = serde_yaml::from_str(
         r#"
         ip-to: 192.168.2.0/24
         priority: 30000
@@ -180,5 +191,15 @@ fn test_route_rule_treat_empty_ip_to_as_none_for_matching() {
     )
     .unwrap();
 
-    assert!(absent_rule.is_match(&rule));
+    let match_rule: RouteRuleEntry = serde_yaml::from_str(
+        r#"
+        priority: 30000
+        route-table: 200
+        family: ipv4
+        "#,
+    )
+    .unwrap();
+
+    assert!(!absent_rule.is_match(&not_match_rule));
+    assert!(absent_rule.is_match(&match_rule));
 }

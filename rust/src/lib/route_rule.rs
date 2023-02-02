@@ -70,10 +70,14 @@ pub struct RouteRuleEntry {
     #[serde(skip_serializing_if = "Option::is_none")]
     /// Source prefix to match.
     /// Serialize and deserialize to/from `ip-from`.
+    /// When setting to empty string in absent route rule, it will only delete
+    /// route rule __without__ `ip-from`.
     pub ip_from: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     /// Destination prefix to match.
     /// Serialize and deserialize to/from `ip-to`.
+    /// When setting to empty string in absent route rule, it will only delete
+    /// route rule __without__ `ip-to`.
     pub ip_to: Option<String>,
     #[serde(
         skip_serializing_if = "Option::is_none",
@@ -220,6 +224,12 @@ impl RouteRuleEntry {
                 if other.ip_from != Some(ip_from) {
                     return false;
                 }
+            } else if other.ip_from.as_deref().map(|s| s.is_empty())
+                == Some(false)
+            {
+                // Use desire 'ip_from: ""' means it should only match empty
+                // ip_from
+                return false;
             }
         }
         if let Some(ip_to) = self.ip_to.as_deref() {
@@ -238,6 +248,12 @@ impl RouteRuleEntry {
                 if other.ip_to != Some(ip_to) {
                     return false;
                 }
+            } else if other.ip_to.as_deref().map(|s| s.is_empty())
+                == Some(false)
+            {
+                // Use desire 'ip_to: ""' means it should only match empty
+                // ip_to
+                return false;
             }
         }
         if self.priority.is_some()

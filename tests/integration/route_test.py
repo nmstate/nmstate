@@ -1396,26 +1396,49 @@ def static_eth1_with_route_rules(route_rule_test_env):
     yield state
 
 
-def test_absent_route_rule_with_empty_ip_from_to(static_eth1_with_route_rules):
+@pytest.fixture
+def static_eth1_with_empty_ip_from_to_route_rules(
+    static_eth1_with_route_rules,
+):
+    rules = [
+        {
+            RouteRule.IP_FROM: "2001:db8:b::/64",
+            RouteRule.PRIORITY: 999,
+            RouteRule.ROUTE_TABLE: IPV6_ROUTE_TABLE_ID1,
+        },
+        {
+            RouteRule.IP_TO: "192.0.2.9",
+            RouteRule.PRIORITY: 999,
+            RouteRule.ROUTE_TABLE: IPV4_ROUTE_TABLE_ID1,
+        },
+    ]
+    state = {RouteRule.KEY: {RouteRule.CONFIG: rules}}
+    libnmstate.apply(state)
+    yield
+
+
+def test_absent_route_rule_with_empty_ip_from_to(
+    static_eth1_with_empty_ip_from_to_route_rules,
+):
     current_state = libnmstate.show()
-    assert len(current_state[RouteRule.KEY][RouteRule.CONFIG]) == 2
+    assert len(current_state[RouteRule.KEY][RouteRule.CONFIG]) == 4
 
     rules = [
         {
             RouteRule.STATE: RouteRule.STATE_ABSENT,
-            RouteRule.IP_FROM: "",
+            RouteRule.IP_TO: "",
             RouteRule.ROUTE_TABLE: IPV4_ROUTE_TABLE_ID1,
         },
         {
             RouteRule.STATE: RouteRule.STATE_ABSENT,
-            RouteRule.IP_TO: "",
+            RouteRule.IP_FROM: "",
             RouteRule.ROUTE_TABLE: IPV6_ROUTE_TABLE_ID1,
         },
     ]
     state = {RouteRule.KEY: {RouteRule.CONFIG: rules}}
     libnmstate.apply(state)
     current_state = libnmstate.show()
-    assert len(current_state[RouteRule.KEY][RouteRule.CONFIG]) == 0
+    assert len(current_state[RouteRule.KEY][RouteRule.CONFIG]) == 2
 
 
 @pytest.fixture
@@ -1429,35 +1452,21 @@ def static_eth1_with_routes(eth1_up):
     yield state
 
 
-def test_absent_route_with_empty_destination(static_eth1_with_routes):
-    current_state = libnmstate.show()
-    cur_eth1_config_routes = [
-        rt
-        for rt in current_state[Route.KEY][Route.CONFIG]
-        if rt[Route.NEXT_HOP_INTERFACE] == "eth1"
-    ]
-    assert len(cur_eth1_config_routes) != 0
-
-    libnmstate.apply(
-        {
-            Route.KEY: {
-                Route.CONFIG: [
-                    {
-                        Route.NEXT_HOP_INTERFACE: "eth1",
-                        Route.STATE: Route.STATE_ABSENT,
-                        Route.DESTINATION: "",
-                    },
-                ]
-            },
-        }
-    )
-    current_state = libnmstate.show()
-    cur_eth1_config_routes = [
-        rt
-        for rt in current_state[Route.KEY][Route.CONFIG]
-        if rt[Route.NEXT_HOP_INTERFACE] == "eth1"
-    ]
-    assert len(cur_eth1_config_routes) == 0
+def test_absent_route_with_invalid_empty_destination(static_eth1_with_routes):
+    with pytest.raises(NmstateValueError):
+        libnmstate.apply(
+            {
+                Route.KEY: {
+                    Route.CONFIG: [
+                        {
+                            Route.NEXT_HOP_INTERFACE: "eth1",
+                            Route.STATE: Route.STATE_ABSENT,
+                            Route.DESTINATION: "",
+                        },
+                    ]
+                },
+            }
+        )
 
 
 @pytest.mark.tier1
