@@ -9,6 +9,8 @@ use crate::{
     ErrorKind, InterfaceIpAddr, InterfaceType, NmstateError,
 };
 
+const ROUTE_RULE_DEFAULT_PRIORIRY: i64 = 30000;
+
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[non_exhaustive]
 #[serde(deny_unknown_fields)]
@@ -484,6 +486,9 @@ pub(crate) struct MergedRouteRules {
     //  * Desired route rules
     //  * Current route rules been marked as absent
     pub(crate) for_apply: Vec<RouteRuleEntry>,
+    // The `for_verify` hold the same data as `for_apply` except the
+    // auto set priority.
+    pub(crate) for_verify: Vec<RouteRuleEntry>,
 }
 
 impl MergedRouteRules {
@@ -491,7 +496,8 @@ impl MergedRouteRules {
         desired: RouteRules,
         current: RouteRules,
     ) -> Result<Self, NmstateError> {
-        let mut merged: Vec<RouteRuleEntry> = Vec::new();
+        let mut for_apply: Vec<RouteRuleEntry> = Vec::new();
+        let mut merged_rules: Vec<RouteRuleEntry> = Vec::new();
 
         let mut des_absent_rules: Vec<&RouteRuleEntry> = Vec::new();
         if let Some(rules) = desired.config.as_ref() {
@@ -510,7 +516,9 @@ impl MergedRouteRules {
                     let mut new_rule = rule.clone();
                     new_rule.state = Some(RouteRuleState::Absent);
                     new_rule.sanitize()?;
-                    merged.push(new_rule);
+                    for_apply.push(new_rule);
+                } else {
+                    merged_rules.push(rule.clone());
                 }
             }
         }
@@ -519,13 +527,20 @@ impl MergedRouteRules {
             for rule in rules.as_slice().iter().filter(|r| !r.is_absent()) {
                 let mut rule = rule.clone();
                 rule.sanitize()?;
-                merged.push(rule);
+                merged_rules.push(rule.clone());
+                for_apply.push(rule);
             }
         }
+
+        let for_verify = for_apply.clone();
+
+        set_auto_priority(for_apply.as_mut_slice(), merged_rules.as_slice());
+
         Ok(Self {
             desired,
             current,
-            for_apply: merged,
+            for_apply,
+            for_verify,
         })
     }
 
@@ -553,4 +568,31 @@ impl MergedRouteRules {
             && (self.for_apply
                 != self.current.config.clone().unwrap_or_default())
     }
+}
+
+fn set_auto_priority(
+    for_apply: &mut [RouteRuleEntry],
+    merged: &[RouteRuleEntry],
+) {
+    let mut max_priority = get_max_rule_priority(merged);
+    if max_priority < ROUTE_RULE_DEFAULT_PRIORIRY - 1 {
+        max_priority = ROUTE_RULE_DEFAULT_PRIORIRY - 1;
+    }
+
+    for rule in for_apply.iter_mut().filter(|r| {
+        !r.is_absent()
+            && (r.priority.is_none()
+                || r.priority == Some(RouteRuleEntry::USE_DEFAULT_PRIORITY))
+    }) {
+        max_priority += 1;
+        rule.priority = Some(max_priority);
+    }
+}
+
+fn get_max_rule_priority(rules: &[RouteRuleEntry]) -> i64 {
+    rules
+        .iter()
+        .map(|r| r.priority.unwrap_or_default())
+        .max()
+        .unwrap_or_default()
 }
