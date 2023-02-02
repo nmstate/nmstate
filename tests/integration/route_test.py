@@ -532,14 +532,8 @@ def eth1_static_gateway_dns(eth1_up):
     )
 
 
-@pytest.mark.tier1
-@pytest.mark.xfail(
-    raises=AssertionError,
-    reason="https://bugzilla.redhat.com/1748389",
-    strict=True,
-)
 def test_apply_empty_state_preserve_routes(eth1_static_gateway_dns):
-    state = eth1_static_gateway_dns
+    pre_apply_state = libnmstate.show()
 
     libnmstate.apply({Interface.KEY: []})
 
@@ -547,9 +541,12 @@ def test_apply_empty_state_preserve_routes(eth1_static_gateway_dns):
 
     assert (
         current_state[Route.KEY][Route.CONFIG]
-        == state[Route.KEY][Route.CONFIG]
+        == pre_apply_state[Route.KEY][Route.CONFIG]
     )
-    assert current_state[DNS.KEY][DNS.CONFIG] == state[DNS.KEY][DNS.CONFIG]
+    assert (
+        current_state[DNS.KEY][DNS.CONFIG]
+        == pre_apply_state[DNS.KEY][DNS.CONFIG]
+    )
 
 
 def _get_routes_from_iproute(family, table):
