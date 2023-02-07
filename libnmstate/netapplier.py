@@ -24,7 +24,7 @@ import time
 
 from libnmstate import validator
 from libnmstate.error import NmstateVerificationError
-from libnmstate.schema import InterfaceType
+from libnmstate.schema import Interface
 
 from .net_state import NetState
 from .nmstate import create_checkpoints
@@ -73,6 +73,7 @@ def apply(
 
     desired_state = copy.deepcopy(desired_state)
     remove_the_reserved_secrets(desired_state)
+
     with plugin_context() as plugins:
         validator.schema_validate(desired_state)
         current_state = show_with_plugins(
@@ -86,7 +87,32 @@ def apply(
             desired_state, ignored_ifnames, current_state, save_to_disk
         )
         checkpoints = create_checkpoints(plugins, rollback_timeout)
-        _apply_ifaces_state(plugins, net_state, verify_change, save_to_disk)
+        # Desire state could contains creating SR-IOV VF and referring this VF
+        # at the same time. This PF might also been referenced by other
+        # interface like bond/bridge/ovs, then we cannot simply move SR-IOV
+        # interface out. The correct way should be splitting network state into
+        # two parts:
+        #   1. State with SR-IOV PF settings only.
+        #   2. State without SR-IOV PF settings
+        sriov_ifaces = net_state.ifaces.isolate_sriov_conf_out()
+        if sriov_ifaces:
+            pf_net_state = NetState(
+                {Interface.KEY: sriov_ifaces},
+                ignored_ifnames,
+                current_state,
+                save_to_disk,
+            )
+            _apply_ifaces_state(
+                plugins,
+                pf_net_state,
+                verify_change,
+                save_to_disk,
+                has_sriov_pf=True,
+            )
+
+        _apply_ifaces_state(
+            plugins, net_state, verify_change, save_to_disk, has_sriov_pf=False
+        )
         if commit:
             destroy_checkpoints(plugins, checkpoints)
         else:
@@ -117,7 +143,9 @@ def rollback(*, checkpoint=None):
         rollback_checkpoints(plugins, checkpoint)
 
 
-def _apply_ifaces_state(plugins, net_state, verify_change, save_to_disk):
+def _apply_ifaces_state(
+    plugins, net_state, verify_change, save_to_disk, has_sriov_pf=False
+):
     for plugin in plugins:
         # Do not allow plugin to modify the net_state for future verification
         tmp_net_state = copy.deepcopy(net_state)
@@ -125,7 +153,7 @@ def _apply_ifaces_state(plugins, net_state, verify_change, save_to_disk):
 
     verified = False
     if verify_change:
-        if _net_state_contains_sriov_interface(net_state):
+        if has_sriov_pf:
             # If SR-IOV is present, the verification timeout is being increased
             # to avoid timeouts due to slow drivers like i40e.
             verify_retry = VERIFY_RETRY_COUNT_SRIOV
@@ -140,14 +168,6 @@ def _apply_ifaces_state(plugins, net_state, verify_change, save_to_disk):
                 time.sleep(VERIFY_RETRY_INTERNAL)
         if not verified:
             _verify_change(plugins, net_state)
-
-
-def _net_state_contains_sriov_interface(net_state):
-    for iface in net_state.ifaces.all_kernel_ifaces.values():
-        if iface.type == InterfaceType.ETHERNET and iface.is_sriov:
-            return True
-
-    return False
 
 
 def _verify_change(plugins, net_state):

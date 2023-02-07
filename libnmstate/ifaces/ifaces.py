@@ -24,6 +24,7 @@ from libnmstate.error import NmstateValueError
 from libnmstate.error import NmstateVerificationError
 from libnmstate.prettystate import format_desired_current_state_diff
 from libnmstate.schema import BondMode
+from libnmstate.schema import Ethernet
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import InterfaceState
@@ -164,6 +165,34 @@ class Ifaces:
                     iface.pre_edit_validation_and_cleanup()
 
             self._pre_edit_validation_and_cleanup()
+
+    # Return list of iface_info(dictionary) which SRIOV PF conf only.
+    # Also remove this SRIOV conf from self
+    def isolate_sriov_conf_out(self):
+        sriov_ifaces = []
+        for iface in self.all_kernel_ifaces.values():
+            if (
+                iface.is_desired
+                and iface.is_up
+                and iface.type == InterfaceType.ETHERNET
+            ):
+                sriov_conf = iface.original_desire_dict.get(
+                    Ethernet.CONFIG_SUBTREE, {}
+                ).get(Ethernet.SRIOV_SUBTREE, {})
+                if sriov_conf:
+                    iface.raw.pop(Ethernet.CONFIG_SUBTREE)
+                    eth_conf = iface.original_desire_dict.pop(
+                        Ethernet.CONFIG_SUBTREE
+                    )
+                    sriov_ifaces.append(
+                        {
+                            Interface.NAME: iface.name,
+                            Interface.TYPE: InterfaceType.ETHERNET,
+                            Interface.STATE: InterfaceState.UP,
+                            Ethernet.CONFIG_SUBTREE: eth_conf,
+                        }
+                    )
+        return sriov_ifaces
 
     @property
     def _ignored_ifaces(self):
