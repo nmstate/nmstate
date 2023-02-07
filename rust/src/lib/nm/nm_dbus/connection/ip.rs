@@ -107,6 +107,8 @@ pub struct NmSettingIp {
     pub dhcp_duid: Option<String>,
     // IPv6 only
     pub dhcp_iaid: Option<String>,
+    // IPv6 only
+    pub token: Option<String>,
     _other: HashMap<String, zvariant::OwnedValue>,
 }
 
@@ -140,6 +142,7 @@ impl TryFrom<DbusDictionary> for NmSettingIp {
             gateway: _from_map!(v, "gateway", String::try_from)?,
             may_fail: _from_map!(v, "may-fail", bool::try_from)?,
             route_metric: _from_map!(v, "route-metric", i64::try_from)?,
+            token: _from_map!(v, "token", String::try_from)?,
             ..Default::default()
         };
 
@@ -258,6 +261,9 @@ impl ToDbusValue for NmSettingIp {
         }
         if let Some(v) = &self.route_metric {
             ret.insert("route-metric", zvariant::Value::new(v));
+        }
+        if let Some(v) = &self.token {
+            ret.insert("token", zvariant::Value::new(v));
         }
         ret.extend(self._other.iter().map(|(key, value)| {
             (key.as_str(), zvariant::Value::from(value.clone()))

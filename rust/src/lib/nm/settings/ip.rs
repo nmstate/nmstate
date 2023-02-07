@@ -164,6 +164,13 @@ fn gen_nm_ipv6_setting(
                 .to_string(),
         );
         nm_setting.dhcp_iaid = Some("mac".to_string());
+        if let Some(token) = iface_ip.token.as_ref() {
+            if token.is_empty() || token == "::" {
+                nm_setting.token = None;
+            } else {
+                nm_setting.token = Some(token.to_string());
+            }
+        }
         nm_setting.route_metric = iface_ip.auto_route_metric.map(|i| i.into());
         apply_dhcp_opts(
             &mut nm_setting,
@@ -180,6 +187,7 @@ fn gen_nm_ipv6_setting(
         if let Some(routes) = routes {
             nm_setting.routes = gen_nm_ip_routes(routes, true)?;
         }
+        nm_setting.token = None;
     }
     if let Some(rules) = iface_ip.rules.as_ref() {
         nm_setting.route_rules = gen_nm_ip_rules(rules, true)?;

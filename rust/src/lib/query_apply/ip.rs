@@ -94,6 +94,9 @@ impl InterfaceIpv6 {
         if other.prop_list.contains(&"auto_route_metric") {
             self.auto_route_metric = other.auto_route_metric;
         }
+        if other.prop_list.contains(&"token") {
+            self.token = other.token.clone();
+        }
         for other_prop_name in &other.prop_list {
             if !self.prop_list.contains(other_prop_name) {
                 self.prop_list.push(other_prop_name);
