@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: LGPL-2.1-or-later
 
-import copy
+from copy import deepcopy
 import logging
 
 from libnmstate.error import NmstateKernelIntegerRoundedError
@@ -82,12 +82,14 @@ class Ifaces:
         self._cur_user_space_ifaces = _UserSpaceIfaces()
         if cur_iface_infos:
             for iface_info in cur_iface_infos:
-                cur_iface = _to_specific_iface_obj(iface_info, save_to_disk)
+                cur_iface = _to_specific_iface_obj(
+                    deepcopy(iface_info), save_to_disk
+                )
                 if cur_iface.is_user_space_only:
-                    self._user_space_ifaces.set(cur_iface)
+                    self._user_space_ifaces.set(deepcopy(cur_iface))
                     self._cur_user_space_ifaces.set(cur_iface)
                 else:
-                    self._kernel_ifaces[cur_iface.name] = cur_iface
+                    self._kernel_ifaces[cur_iface.name] = deepcopy(cur_iface)
                     self._cur_kernel_ifaces[cur_iface.name] = cur_iface
 
         if des_iface_infos:
@@ -206,7 +208,7 @@ class Ifaces:
                             Interface.NAME: iface.name,
                             Interface.TYPE: InterfaceType.ETHERNET,
                             Interface.STATE: InterfaceState.UP,
-                            Ethernet.CONFIG_SUBTREE: copy.deepcopy(eth_conf),
+                            Ethernet.CONFIG_SUBTREE: deepcopy(eth_conf),
                         }
                     )
         return sriov_ifaces
