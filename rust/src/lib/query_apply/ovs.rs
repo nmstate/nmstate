@@ -31,9 +31,9 @@ impl MergedOvsDbGlobalConfig {
             prop_list: vec!["external_ids", "other_config"],
         };
 
-        let desired_value = serde_json::to_value(&desired)?;
+        let desired_value = serde_json::to_value(desired)?;
         let current_value = if current.is_none() {
-            serde_json::to_value(&OvsDbGlobalConfig {
+            serde_json::to_value(OvsDbGlobalConfig {
                 external_ids: Some(HashMap::new()),
                 other_config: Some(HashMap::new()),
                 prop_list: Vec::new(),
