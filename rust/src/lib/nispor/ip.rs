@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use std::str::FromStr;
 
 use crate::{
@@ -71,6 +73,11 @@ pub(crate) fn np_ipv6_to_nmstate(
             return Some(ip);
         }
         ip.enabled = true;
+        if let Some(token) = np_ip.token.as_ref() {
+            ip.prop_list.push("token");
+            ip.token = Some(token.to_string());
+        }
+
         let mut addresses = Vec::new();
         for np_addr in &np_ip.addresses {
             if np_addr.valid_lft != "forever" {

@@ -145,6 +145,7 @@ class InterfaceIPv6(InterfaceIP):
     ADDR_GEN_MODE = "addr-gen-mode"
     ADDR_GEN_MODE_EUI64 = "eui64"
     ADDR_GEN_MODE_STABLE_PRIVACY = "stable-privacy"
+    TOKEN = "token"
 
 
 class Bond:

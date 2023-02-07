@@ -22,6 +22,7 @@ from libnmstate.schema import InterfaceState
 from libnmstate.schema import Route as RT
 
 from libnmstate.error import NmstateNotImplementedError
+from libnmstate.error import NmstateValueError
 from libnmstate.iplib import is_ipv6_link_local_addr
 
 from .testlib import assertlib
@@ -103,6 +104,10 @@ DNSMASQ_CONF_PATH = "/etc/dnsmasq.d/nmstate.conf"
 # Docker does not allow NetworkManager to edit /etc/resolv.conf.
 # Have to read NetworkManager internal resolv.conf
 RESOLV_CONF_PATH = "/var/run/NetworkManager/resolv.conf"
+
+TEST_IPV6_TOKEN = "::fac"
+TEST_IPV6_TOKEN_IPV4_COMPAT = "::0.0.15.172"
+TEST_IPV6_TOKEN2 = "::fad"
 
 parametrize_ip_ver = pytest.mark.parametrize(
     "ip_ver",
@@ -1463,3 +1468,179 @@ def test_ipv6_link_local_dns_srv(dhcpcli_up_with_dynamic_ip):
     ]
     # Remove DNS server before clean up
     libnmstate.apply({DNS.KEY: {DNS.CONFIG: {}}})
+
+
+def _has_ipv6_token_addr(token):
+    current_state = statelib.show_only((DHCP_CLI_NIC,))[Interface.KEY][0]
+    found = False
+    addrs = current_state[Interface.IPV6].get(InterfaceIPv6.ADDRESS, [])
+    logging.debug("Current IPv6 address of {}: {}".format(DHCP_CLI_NIC, addrs))
+    for addr in addrs:
+        if addr[InterfaceIPv6.ADDRESS_PREFIX_LENGTH] == 64 and addr[
+            InterfaceIPv6.ADDRESS_IP
+        ].endswith(token):
+            found = True
+            break
+    return found
+
+
+@pytest.fixture
+def dhcpcli_with_ipv6_token(dhcpcli_up):
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: DHCP_CLI_NIC,
+                    Interface.IPV4: {
+                        InterfaceIPv4.ENABLED: False,
+                    },
+                    Interface.IPV6: {
+                        InterfaceIPv6.ENABLED: True,
+                        InterfaceIPv6.DHCP: True,
+                        InterfaceIPv6.AUTOCONF: True,
+                        InterfaceIPv6.TOKEN: TEST_IPV6_TOKEN,
+                    },
+                }
+            ],
+        }
+    )
+    yield
+
+
+def test_set_ipv6_token(dhcpcli_with_ipv6_token):
+    assert _poll(_has_dhcpv6_addr)
+    assert _has_ipv6_token_addr(TEST_IPV6_TOKEN)
+
+
+def test_remove_ipv6_token_with_empty_str(dhcpcli_with_ipv6_token):
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: DHCP_CLI_NIC,
+                    Interface.IPV4: {
+                        InterfaceIPv4.ENABLED: False,
+                    },
+                    Interface.IPV6: {
+                        InterfaceIPv6.ENABLED: True,
+                        InterfaceIPv6.DHCP: True,
+                        InterfaceIPv6.AUTOCONF: True,
+                        InterfaceIPv6.TOKEN: "",
+                    },
+                }
+            ],
+        }
+    )
+    assert _poll(_has_dhcpv6_addr)
+    assert not _has_ipv6_token_addr(TEST_IPV6_TOKEN)
+
+
+def test_remove_ipv6_token_with_all_zero(dhcpcli_with_ipv6_token):
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: DHCP_CLI_NIC,
+                    Interface.IPV4: {
+                        InterfaceIPv4.ENABLED: False,
+                    },
+                    Interface.IPV6: {
+                        InterfaceIPv6.ENABLED: True,
+                        InterfaceIPv6.DHCP: True,
+                        InterfaceIPv6.AUTOCONF: True,
+                        InterfaceIPv6.TOKEN: "::",
+                    },
+                }
+            ],
+        }
+    )
+    assert _poll(_has_dhcpv6_addr)
+    assert not _has_ipv6_token_addr(TEST_IPV6_TOKEN)
+
+
+def test_set_ipv6_token_with_none_compact_format(dhcpcli_with_ipv6_token):
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: DHCP_CLI_NIC,
+                    Interface.IPV4: {
+                        InterfaceIPv4.ENABLED: False,
+                    },
+                    Interface.IPV6: {
+                        InterfaceIPv6.ENABLED: True,
+                        InterfaceIPv6.DHCP: True,
+                        InterfaceIPv6.AUTOCONF: True,
+                        InterfaceIPv6.TOKEN: TEST_IPV6_TOKEN_IPV4_COMPAT,
+                    },
+                }
+            ],
+        }
+    )
+    assert _poll(_has_dhcpv6_addr)
+    assert _has_ipv6_token_addr(TEST_IPV6_TOKEN)
+
+
+def test_change_ipv6_token(dhcpcli_with_ipv6_token):
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: DHCP_CLI_NIC,
+                    Interface.IPV4: {
+                        InterfaceIPv4.ENABLED: False,
+                    },
+                    Interface.IPV6: {
+                        InterfaceIPv6.ENABLED: True,
+                        InterfaceIPv6.DHCP: True,
+                        InterfaceIPv6.AUTOCONF: True,
+                        InterfaceIPv6.TOKEN: TEST_IPV6_TOKEN2,
+                    },
+                }
+            ],
+        }
+    )
+    assert _poll(_has_dhcpv6_addr)
+    assert _has_ipv6_token_addr(TEST_IPV6_TOKEN2)
+
+
+def test_ipv6_token_ignored_when_autoconf_off(dhcpcli_with_ipv6_token):
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: DHCP_CLI_NIC,
+                    Interface.IPV4: {
+                        InterfaceIPv4.ENABLED: False,
+                    },
+                    Interface.IPV6: {
+                        InterfaceIPv6.ENABLED: True,
+                        InterfaceIPv6.DHCP: False,
+                        InterfaceIPv6.AUTOCONF: False,
+                    },
+                }
+            ],
+        }
+    )
+
+
+def test_desired_ipv6_token_with_autoconf_off(dhcpcli_with_ipv6_token):
+    with pytest.raises(NmstateValueError):
+        libnmstate.apply(
+            {
+                Interface.KEY: [
+                    {
+                        Interface.NAME: DHCP_CLI_NIC,
+                        Interface.IPV4: {
+                            InterfaceIPv4.ENABLED: False,
+                        },
+                        Interface.IPV6: {
+                            InterfaceIPv6.ENABLED: True,
+                            InterfaceIPv6.DHCP: False,
+                            InterfaceIPv6.AUTOCONF: False,
+                            InterfaceIPv6.TOKEN: TEST_IPV6_TOKEN,
+                        },
+                    }
+                ],
+            }
+        )
