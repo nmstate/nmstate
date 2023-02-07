@@ -499,6 +499,30 @@ class TestIfaces:
             == MAC_ADDRESS1
         )
 
+    def test_cur_iface_intact(self):
+        cur_iface_infos = [gen_foo_iface_info(), gen_foo_iface_info()]
+        cur_iface_infos[0][Interface.NAME] = PORT1_IFACE_NAME
+        cur_iface_infos[1][Interface.NAME] = PORT2_IFACE_NAME
+        des_bridge_info = gen_bridge_iface_info()
+        des_bridge_info[Interface.NAME] = LINUX_BRIDGE_IFACE_NAME
+        des_iface_infos = [des_bridge_info]
+
+        ifaces = Ifaces(des_iface_infos, cur_iface_infos)
+        ifaces.gen_metadata()
+        cur_port1 = ifaces.get_cur_iface(
+            PORT1_IFACE_NAME, InterfaceType.ETHERNET
+        )
+        cur_port2 = ifaces.get_cur_iface(
+            PORT2_IFACE_NAME, InterfaceType.ETHERNET
+        )
+        des_port1 = ifaces.get_iface(PORT1_IFACE_NAME, InterfaceType.ETHERNET)
+        des_port2 = ifaces.get_iface(PORT2_IFACE_NAME, InterfaceType.ETHERNET)
+
+        assert cur_port1.controller is None
+        assert cur_port2.controller is None
+        assert des_port1.controller == LINUX_BRIDGE_IFACE_NAME
+        assert des_port2.controller == LINUX_BRIDGE_IFACE_NAME
+
 
 class TestIfacesSriov:
     def test_ignore_vf_when_pf_is_down(self):
