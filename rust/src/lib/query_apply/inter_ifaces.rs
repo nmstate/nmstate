@@ -57,16 +57,6 @@ impl Interfaces {
         }
     }
 
-    pub(crate) fn has_sriov_enabled(&self) -> bool {
-        self.kernel_ifaces.values().any(|i| {
-            if let Interface::Ethernet(eth_iface) = i {
-                eth_iface.sriov_is_enabled()
-            } else {
-                false
-            }
-        })
-    }
-
     pub(crate) fn hide_controller_prop(&mut self) {
         for iface in self.kernel_ifaces.values_mut() {
             iface.base_iface_mut().controller = None;

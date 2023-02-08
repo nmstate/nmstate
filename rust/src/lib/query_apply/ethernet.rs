@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    ErrorKind, EthernetConfig, EthernetInterface, Interface, Interfaces,
-    NmstateError, SrIovConfig, VethConfig,
+    ErrorKind, EthernetConfig, EthernetInterface, Interface, InterfaceType,
+    Interfaces, MergedInterface, MergedNetworkState, NmstateError, SrIovConfig,
+    VethConfig,
 };
 
 impl EthernetInterface {
@@ -97,5 +98,58 @@ impl Interfaces {
             }
         }
         Ok(())
+    }
+}
+
+impl MergedNetworkState {
+    // Return newly create MergedNetworkState containing only ethernet section
+    // of interface with SR-IOV PF changes.
+    // The self will have SR-IOV PF change removed.
+    pub(crate) fn isolate_sriov_conf_out(&mut self) -> Option<Self> {
+        let mut pf_ifaces: Vec<MergedInterface> = Vec::new();
+
+        for iface in self.interfaces.kernel_ifaces.values_mut().filter(|i| {
+            i.is_desired() && i.merged.iface_type() == InterfaceType::Ethernet
+        }) {
+            if let Some(Interface::Ethernet(apply_iface)) =
+                iface.for_apply.as_mut()
+            {
+                if let Some(true) =
+                    apply_iface.ethernet.as_ref().map(|e| e.sr_iov.is_some())
+                {
+                    if let Some(eth_conf) = apply_iface.ethernet.as_ref() {
+                        let new_iface = EthernetInterface {
+                            base: apply_iface.base.clone_name_type_only(),
+                            ethernet: Some(eth_conf.clone()),
+                            ..Default::default()
+                        };
+                        if let Ok(new_merged_iface) = MergedInterface::new(
+                            Some(Interface::Ethernet(new_iface)),
+                            iface.current.clone(),
+                        ) {
+                            pf_ifaces.push(new_merged_iface);
+                            apply_iface.ethernet = None;
+                        }
+                    }
+                }
+            }
+        }
+
+        if pf_ifaces.is_empty() {
+            None
+        } else {
+            let mut pf_state = MergedNetworkState::default();
+            for pf_iface in pf_ifaces {
+                pf_state.interfaces.insert_order.push((
+                    pf_iface.merged.name().to_string(),
+                    pf_iface.merged.iface_type(),
+                ));
+                pf_state
+                    .interfaces
+                    .kernel_ifaces
+                    .insert(pf_iface.merged.name().to_string(), pf_iface);
+            }
+            Some(pf_state)
+        }
     }
 }

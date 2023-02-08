@@ -87,7 +87,7 @@ impl NetworkState {
         cur_net_state.set_include_secrets(true);
         cur_net_state.retrieve_full()?;
 
-        let merged_state = MergedNetworkState::new(
+        let mut merged_state = MergedNetworkState::new(
             self.clone(),
             cur_net_state.clone(),
             false,
@@ -106,62 +106,57 @@ impl NetworkState {
         }
 
         if !self.kernel_only {
-            let retry_count = if ifaces.has_sriov_enabled() {
-                VERIFY_RETRY_COUNT_SRIOV
-            } else {
-                VERIFY_RETRY_COUNT
-            };
-
-            let timeout = self.timeout.unwrap_or(DEFAULT_ROLLBACK_TIMEOUT);
-            let checkpoint = nm_checkpoint_create(timeout)?;
-            log::info!("Created checkpoint {}", &checkpoint);
-
-            with_nm_checkpoint(&checkpoint, self.no_commit, || {
-                // NM might have unknown race problem found by verify stage,
-                // we try to apply the state again if so.
-                with_retry(
-                    VERIFY_RETRY_INTERVAL_MILLISECONDS,
-                    VERIFY_RETRY_NM,
-                    || {
-                        nm_checkpoint_timeout_extend(&checkpoint, timeout)?;
-                        nm_apply(&merged_state, &checkpoint, timeout)?;
-                        if merged_state.is_global_ovsdb_changed()
-                            && ovsdb_is_running()
-                        {
-                            ovsdb_apply(&merged_state)?;
-                        }
-                        if let Some(running_hostname) = self
-                            .hostname
-                            .as_ref()
-                            .and_then(|c| c.running.as_ref())
-                        {
-                            set_running_hostname(running_hostname)?;
-                        }
-                        if !self.no_verify {
-                            with_retry(
-                                VERIFY_RETRY_INTERVAL_MILLISECONDS,
-                                retry_count,
-                                || {
-                                    nm_checkpoint_timeout_extend(
-                                        &checkpoint,
-                                        timeout,
-                                    )?;
-                                    let mut new_cur_net_state =
-                                        cur_net_state.clone();
-                                    new_cur_net_state.set_include_secrets(true);
-                                    new_cur_net_state.retrieve_full()?;
-                                    merged_state.verify(&new_cur_net_state)
-                                },
-                            )
-                        } else {
-                            Ok(())
-                        }
-                    },
-                )
-            })
+            self.apply_with_nm_backend(&mut merged_state, &cur_net_state)
         } else {
             // TODO: Need checkpoint for kernel only mode
-            nispor_apply(&merged_state)?;
+            self.apply_without_nm_backend(&merged_state, &cur_net_state)
+        }
+    }
+
+    fn apply_with_nm_backend(
+        &self,
+        merged_state: &mut MergedNetworkState,
+        cur_net_state: &Self,
+    ) -> Result<(), NmstateError> {
+        let pf_merged_state = merged_state.isolate_sriov_conf_out();
+        let timeout = self.timeout.unwrap_or(DEFAULT_ROLLBACK_TIMEOUT);
+        let checkpoint = nm_checkpoint_create(timeout)?;
+        log::info!("Created checkpoint {}", &checkpoint);
+
+        with_nm_checkpoint(&checkpoint, self.no_commit, || {
+            if let Some(pf_merged_state) = pf_merged_state {
+                self.apply_with_nm_backend_and_under_checkpoint(
+                    &pf_merged_state,
+                    cur_net_state,
+                    &checkpoint,
+                    VERIFY_RETRY_COUNT_SRIOV,
+                )?
+            }
+            self.apply_with_nm_backend_and_under_checkpoint(
+                merged_state,
+                cur_net_state,
+                &checkpoint,
+                VERIFY_RETRY_COUNT,
+            )
+        })
+    }
+
+    fn apply_with_nm_backend_and_under_checkpoint(
+        &self,
+        merged_state: &MergedNetworkState,
+        cur_net_state: &Self,
+        checkpoint: &str,
+        retry_count: usize,
+    ) -> Result<(), NmstateError> {
+        let timeout = self.timeout.unwrap_or(DEFAULT_ROLLBACK_TIMEOUT);
+        // NM might have unknown race problem found by verify stage,
+        // we try to apply the state again if so.
+        with_retry(VERIFY_RETRY_INTERVAL_MILLISECONDS, VERIFY_RETRY_NM, || {
+            nm_checkpoint_timeout_extend(checkpoint, timeout)?;
+            nm_apply(merged_state, checkpoint, timeout)?;
+            if merged_state.is_global_ovsdb_changed() && ovsdb_is_running() {
+                ovsdb_apply(merged_state)?;
+            }
             if let Some(running_hostname) =
                 self.hostname.as_ref().and_then(|c| c.running.as_ref())
             {
@@ -170,9 +165,11 @@ impl NetworkState {
             if !self.no_verify {
                 with_retry(
                     VERIFY_RETRY_INTERVAL_MILLISECONDS,
-                    VERIFY_RETRY_COUNT_KERNEL_MODE,
+                    retry_count,
                     || {
+                        nm_checkpoint_timeout_extend(checkpoint, timeout)?;
                         let mut new_cur_net_state = cur_net_state.clone();
+                        new_cur_net_state.set_include_secrets(true);
                         new_cur_net_state.retrieve_full()?;
                         merged_state.verify(&new_cur_net_state)
                     },
@@ -180,6 +177,32 @@ impl NetworkState {
             } else {
                 Ok(())
             }
+        })
+    }
+
+    fn apply_without_nm_backend(
+        &self,
+        merged_state: &MergedNetworkState,
+        cur_net_state: &Self,
+    ) -> Result<(), NmstateError> {
+        nispor_apply(merged_state)?;
+        if let Some(running_hostname) =
+            self.hostname.as_ref().and_then(|c| c.running.as_ref())
+        {
+            set_running_hostname(running_hostname)?;
+        }
+        if !self.no_verify {
+            with_retry(
+                VERIFY_RETRY_INTERVAL_MILLISECONDS,
+                VERIFY_RETRY_COUNT_KERNEL_MODE,
+                || {
+                    let mut new_cur_net_state = cur_net_state.clone();
+                    new_cur_net_state.retrieve_full()?;
+                    merged_state.verify(&new_cur_net_state)
+                },
+            )
+        } else {
+            Ok(())
         }
     }
 

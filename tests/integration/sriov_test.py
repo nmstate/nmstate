@@ -9,6 +9,8 @@ import libnmstate
 from libnmstate.schema import Bond
 from libnmstate.schema import Ethernet
 from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceIPv4
+from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import LinuxBridge
@@ -430,3 +432,37 @@ class TestSrIov:
         libnmstate.apply(desired_state)
 
         assertlib.assert_state_match(expected_state)
+
+    def test_enable_sriov_and_use_future_vf(self, disable_sriov):
+        pf_name = _test_nic_name()
+        iface_infos = [
+            {
+                Interface.NAME: pf_name,
+                Interface.STATE: InterfaceState.UP,
+                Ethernet.CONFIG_SUBTREE: {
+                    Ethernet.SRIOV_SUBTREE: {Ethernet.SRIOV.TOTAL_VFS: 2},
+                },
+            },
+            {
+                Interface.NAME: f"sriov:{pf_name}:0",
+                Interface.STATE: InterfaceState.UP,
+                Interface.IPV4: {
+                    InterfaceIPv4.ENABLED: False,
+                },
+                Interface.IPV6: {
+                    InterfaceIPv6.ENABLED: False,
+                },
+            },
+            {
+                Interface.NAME: f"sriov:{pf_name}:1",
+                Interface.STATE: InterfaceState.UP,
+                Interface.IPV4: {
+                    InterfaceIPv4.ENABLED: False,
+                },
+                Interface.IPV6: {
+                    InterfaceIPv6.ENABLED: False,
+                },
+            },
+        ]
+        desired_state = {Interface.KEY: iface_infos}
+        libnmstate.apply(desired_state)
