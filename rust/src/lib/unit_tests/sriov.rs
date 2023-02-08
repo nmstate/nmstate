@@ -2,8 +2,9 @@
 
 use crate::{
     unit_tests::testlib::new_eth_iface, BridgePortVlanMode, ErrorKind,
-    EthernetConfig, Interface, InterfaceType, Interfaces, MergedInterfaces,
-    SrIovConfig, SrIovVfConfig,
+    EthernetConfig, EthernetDuplex, Interface, InterfaceType, Interfaces,
+    MergedInterfaces, MergedNetworkState, NetworkState, SrIovConfig,
+    SrIovVfConfig,
 };
 
 #[test]
@@ -585,4 +586,79 @@ fn test_sriov_vf_auto_fill_vf_conf() {
         )
         .unwrap()
     );
+}
+
+#[test]
+fn test_sriov_enable_and_use_in_single_yaml() {
+    let desired = serde_yaml::from_str::<NetworkState>(
+        r#"---
+        interfaces:
+        - name: eth1
+          type: ethernet
+          state: up
+          ethernet:
+            speed: 10000
+            duplex: full
+            auto-negotiation: false
+            sr-iov:
+              total-vfs: 2
+        - name: eth1v0
+          type: ethernet
+          state: up
+        - name: eth1v1
+          type: ethernet
+          state: up
+        "#,
+    )
+    .unwrap();
+
+    let current = serde_yaml::from_str::<NetworkState>(
+        r#"---
+        interfaces:
+        - name: eth1
+          type: ethernet
+          state: up
+          ethernet:
+            sr-iov:
+              total-vfs: 0
+        "#,
+    )
+    .unwrap();
+
+    let mut merged_state =
+        MergedNetworkState::new(desired, current, false, false).unwrap();
+
+    let pf_state = merged_state.isolate_sriov_conf_out().unwrap();
+
+    if let Interface::Ethernet(pf_iface) = pf_state
+        .interfaces
+        .kernel_ifaces
+        .get("eth1")
+        .unwrap()
+        .for_apply
+        .as_ref()
+        .unwrap()
+    {
+        let eth_conf = pf_iface.ethernet.as_ref().unwrap();
+        assert_eq!(eth_conf.auto_neg, Some(false));
+        assert_eq!(eth_conf.speed, Some(10000));
+        assert_eq!(eth_conf.duplex, Some(EthernetDuplex::Full));
+        let sr_iov_conf = eth_conf.sr_iov.as_ref().unwrap();
+        assert_eq!(sr_iov_conf.total_vfs, Some(2));
+    } else {
+        panic!("Expecting Ethernet interface, got {:?}", pf_state);
+    }
+    if let Interface::Ethernet(second_pf_iface) = merged_state
+        .interfaces
+        .kernel_ifaces
+        .get("eth1")
+        .unwrap()
+        .for_apply
+        .as_ref()
+        .unwrap()
+    {
+        assert!(second_pf_iface.ethernet.is_none())
+    } else {
+        panic!("Expecting Ethernet interface, got {:?}", pf_state);
+    }
 }
