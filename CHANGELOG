@@ -1,4 +1,15 @@
 # Changelog
+### [2.2.6] - 2023-02-09
+### New features
+- Support Tokenised IPv6 identifiers. (91f8e45c)
+- Support local(255) route table. (a2051822)
+- Support enabling SR-IOV and use future VF in single desire state. (20871bac)
+
+### Bug fixes
+- Fix error when removing a port with IP enabled. (23cf28d7)
+- Fix error when bringing down an unmanaged interface. (50148b63)
+- Treat empty string to match None in routes. (b52557b9)
+
 #### [2.2.5] - 2023-01-26
 ### New features
 - Support ECMP IPv4 routes. (b1b275cd)
