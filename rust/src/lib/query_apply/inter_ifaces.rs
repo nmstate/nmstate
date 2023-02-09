@@ -57,16 +57,6 @@ impl Interfaces {
         }
     }
 
-    pub(crate) fn has_sriov_enabled(&self) -> bool {
-        self.kernel_ifaces.values().any(|i| {
-            if let Interface::Ethernet(eth_iface) = i {
-                eth_iface.sriov_is_enabled()
-            } else {
-                false
-            }
-        })
-    }
-
     pub(crate) fn hide_controller_prop(&mut self) {
         for iface in self.kernel_ifaces.values_mut() {
             iface.base_iface_mut().controller = None;
@@ -120,21 +110,6 @@ fn verify_desire_absent_but_found_in_current(
 }
 
 impl MergedInterfaces {
-    pub(crate) fn state_for_apply(&self) -> Interfaces {
-        let mut ifaces = Interfaces::new();
-        for merged_iface in self
-            .kernel_ifaces
-            .values()
-            .chain(self.user_ifaces.values())
-            .filter(|i| i.is_changed())
-        {
-            if let Some(iface) = merged_iface.for_apply.as_ref() {
-                ifaces.push(iface.clone());
-            }
-        }
-        ifaces
-    }
-
     pub(crate) fn verify(
         &self,
         current: &Interfaces,

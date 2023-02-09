@@ -2,7 +2,7 @@
 
 use crate::{
     ErrorKind, EthernetConfig, EthernetInterface, Interface, Interfaces,
-    NmstateError, SrIovConfig, VethConfig,
+    NetworkState, NmstateError, SrIovConfig, VethConfig,
 };
 
 impl EthernetInterface {
@@ -97,5 +97,51 @@ impl Interfaces {
             }
         }
         Ok(())
+    }
+}
+
+impl NetworkState {
+    // Return newly create NetworkState containing only ethernet section of
+    // interface with SR-IOV PF changes. The self will have the SR-IOV PF change
+    // removed.
+    pub(crate) fn isolate_sriov_conf_out(&mut self) -> Option<Self> {
+        let mut pf_ifaces: Vec<Interface> = Vec::new();
+
+        for iface in
+            self.interfaces.kernel_ifaces.values_mut().filter_map(|i| {
+                if i.is_up() {
+                    if let Interface::Ethernet(iface) = i {
+                        Some(iface)
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            })
+        {
+            if let Some(true) =
+                iface.ethernet.as_ref().map(|e| e.sr_iov.is_some())
+            {
+                if let Some(eth_conf) = iface.ethernet.as_ref() {
+                    pf_ifaces.push(Interface::Ethernet(EthernetInterface {
+                        base: iface.base.clone_name_type_only(),
+                        ethernet: Some(eth_conf.clone()),
+                        ..Default::default()
+                    }));
+                    iface.ethernet = None;
+                }
+            }
+        }
+
+        if pf_ifaces.is_empty() {
+            None
+        } else {
+            let mut pf_state = NetworkState::default();
+            for pf_iface in pf_ifaces {
+                pf_state.interfaces.push(pf_iface);
+            }
+            Some(pf_state)
+        }
     }
 }
