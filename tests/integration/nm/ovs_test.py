@@ -463,3 +463,75 @@ def test_purge_unmanged_ovs_bridge_in_show(ovs_unmanaged_bridge):
     assert (
         state[Interface.KEY][0][Interface.TYPE] == InterfaceType.OVS_INTERFACE
     )
+
+
+def get_nm_conn_timestamp(conn_name):
+    output = cmdlib.exec_cmd(
+        f"nmcli -g connection.timestamp c show {conn_name}".split(), check=True
+    )[1]
+    return int(output)
+
+
+def get_nm_conn_uuid(conn_name):
+    output = cmdlib.exec_cmd(
+        f"nmcli -g connection.uuid c show {conn_name}".split(), check=True
+    )[1]
+    return output
+
+
+def test_do_not_touch_ovs_port_when_not_desired_system_iface(
+    bridge_with_ports,
+):
+    """
+    The modification like MTU of ovs system interface should not reactivate its
+    OVS port
+    """
+    old_timestamp = get_nm_conn_timestamp("eth1-port")
+    old_uuid = get_nm_conn_uuid("eth1-port")
+
+    desired_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: "eth1",
+                Interface.TYPE: InterfaceType.ETHERNET,
+                Interface.STATE: InterfaceState.UP,
+                Interface.MTU: 2000,
+            },
+        ]
+    }
+    libnmstate.apply(desired_state)
+
+    new_uuid = get_nm_conn_uuid("eth1-port")
+    new_timestamp = get_nm_conn_timestamp("eth1-port")
+
+    assert old_timestamp == new_timestamp
+    assert old_uuid == new_uuid
+
+
+def test_do_not_touch_ovs_port_when_not_desired_internal_iface(
+    bridge_with_ports,
+):
+    """
+    The modification like MTU of ovs internal interface should not reactivate
+    its OVS port
+    """
+    old_timestamp = get_nm_conn_timestamp(f"{IFACE0}-port")
+    old_uuid = get_nm_conn_uuid(f"{IFACE0}-port")
+
+    desired_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: IFACE0,
+                Interface.TYPE: InterfaceType.OVS_INTERFACE,
+                Interface.STATE: InterfaceState.UP,
+                Interface.MTU: 2000,
+            },
+        ]
+    }
+    libnmstate.apply(desired_state)
+
+    new_timestamp = get_nm_conn_timestamp(f"{IFACE0}-port")
+    new_uuid = get_nm_conn_uuid(f"{IFACE0}-port")
+
+    assert old_timestamp == new_timestamp
+    assert old_uuid == new_uuid
