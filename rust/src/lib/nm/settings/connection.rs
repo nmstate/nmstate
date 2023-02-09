@@ -15,7 +15,7 @@ use super::{
     mptcp::apply_mptcp_conf,
     ovs::{
         create_ovs_port_nm_conn, gen_nm_iface_ovs_db_setting,
-        gen_nm_ovs_br_setting, gen_nm_ovs_iface_setting,
+        gen_nm_ovs_br_setting, gen_nm_ovs_iface_setting, get_ovs_port_name,
     },
     sriov::gen_nm_sriov_setting,
     user::gen_nm_user_setting,
@@ -241,23 +241,41 @@ pub(crate) fn iface_to_nm_connections(
                 Interface::LinuxBridge(br_iface) => {
                     gen_nm_br_port_setting(br_iface, &mut nm_conn);
                 }
-                Interface::OvsBridge(_) => {
-                    // When user attaching new system port(ethernet) or new
-                    // internal interface to existing OVS bridge using
-                    // `controller` property without OVS bridge mentioned
-                    // in desire, we need to create OVS port by ourselves.
+                Interface::OvsBridge(ovs_br_iface) => {
+                    // When user attaching change controller property
+                    // on OVS system or internal interface, we should
+                    // modify it OVS port also.
                     if !ctrl_iface.is_changed()
-                        && (merged_iface.current.is_none()
-                            || merged_iface.merged.iface_type()
-                                != InterfaceType::OvsInterface)
+                        && merged_iface
+                            .for_apply
+                            .as_ref()
+                            .and_then(|i| i.base_iface().controller.as_ref())
+                            != merged_iface.current.as_ref().and_then(|i| {
+                                i.base_iface().controller.as_ref()
+                            })
                     {
+                        let exist_nm_ovs_port_conn = if let Some(
+                            ovs_port_name,
+                        ) = get_ovs_port_name(
+                            ovs_br_iface,
+                            base_iface.name.as_str(),
+                        ) {
+                            get_exist_profile(
+                                exist_nm_conns,
+                                &ovs_port_name,
+                                &InterfaceType::Other("ovs-port".to_string()),
+                                nm_ac_uuids,
+                            )
+                        } else {
+                            None
+                        };
                         ret.push(create_ovs_port_nm_conn(
                             ctrl,
                             &OvsBridgePortConfig {
                                 name: iface.name().to_string(),
                                 ..Default::default()
                             },
-                            None,
+                            exist_nm_ovs_port_conn,
                             stable_uuid,
                         )?);
                     }
