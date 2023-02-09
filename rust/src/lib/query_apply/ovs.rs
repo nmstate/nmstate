@@ -30,7 +30,7 @@ impl MergedOvsDbGlobalConfig {
             other_config: Some(other_config),
             prop_list: vec!["external_ids", "other_config"],
         };
-        let desired_value = serde_json::to_value(&desired)?;
+        let desired_value = serde_json::to_value(desired)?;
         let current_value = serde_json::to_value(current)?;
 
         if let Some((reference, desire, current)) = get_json_value_difference(
