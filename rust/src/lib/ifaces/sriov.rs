@@ -200,11 +200,7 @@ impl Interfaces {
         current: &Self,
     ) -> Result<(), NmstateError> {
         let mut changed_iface_names: Vec<String> = Vec::new();
-        for iface in self
-            .kernel_ifaces
-            .values_mut()
-            .filter(|i| i.iface_type() == InterfaceType::Ethernet)
-        {
+        for iface in self.kernel_ifaces.values_mut() {
             if let Some((pf_name, vf_id)) = parse_sriov_vf_naming(iface.name())?
             {
                 if let Some(vf_iface_name) =

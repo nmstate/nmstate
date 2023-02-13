@@ -17,13 +17,13 @@ from libnmstate.schema import LinuxBridge
 from libnmstate.schema import OVSBridge
 
 from .testlib import assertlib
-from .testlib import statelib
 from .testlib.bondlib import bond_interface
 from .testlib.bridgelib import add_port_to_bridge
 from .testlib.bridgelib import create_bridge_subtree_state
 from .testlib.bridgelib import linux_bridge
 from .testlib.ovslib import ovs_bridge
 from .testlib.ovslib import ovs_bridge_bond
+from .testlib.sriov import get_sriov_vf_names
 
 MAC1 = "00:11:22:33:44:55"
 MAC2 = "00:11:22:33:44:66"
@@ -189,10 +189,8 @@ class TestSrIov:
         try:
             libnmstate.apply(desired_state)
             assertlib.assert_state_match(desired_state)
-            current_state = statelib.show_only(
-                (f"{pf_name}v0", f"{pf_name}v1")
-            )
-            assert len(current_state[Interface.KEY]) == 2
+            vf_ifaces = get_sriov_vf_names(pf_name)
+            assert len(vf_ifaces) == 2
 
         finally:
             desired_state[Interface.KEY][0][
@@ -215,20 +213,16 @@ class TestSrIov:
         try:
             libnmstate.apply(desired_state)
             assertlib.assert_state_match(desired_state)
-            current_state = statelib.show_only(
-                (f"{pf_name}v0", f"{pf_name}v1")
-            )
-            assert len(current_state[Interface.KEY]) == 2
+            vf_ifaces = get_sriov_vf_names(pf_name)
+            assert len(vf_ifaces) == 2
 
             desired_state[Interface.KEY][0][Ethernet.CONFIG_SUBTREE][
                 Ethernet.SRIOV_SUBTREE
             ][Ethernet.SRIOV.TOTAL_VFS] = 1
             libnmstate.apply(desired_state)
             assertlib.assert_state_match(desired_state)
-            current_state = statelib.show_only(
-                (f"{pf_name}v0", f"{pf_name}v1")
-            )
-            assert len(current_state[Interface.KEY]) == 1
+            vf_ifaces = get_sriov_vf_names(pf_name)
+            assert len(vf_ifaces) == 1
 
         finally:
             desired_state[Interface.KEY][0][
@@ -438,6 +432,7 @@ class TestSrIov:
         iface_infos = [
             {
                 Interface.NAME: pf_name,
+                Interface.TYPE: InterfaceType.ETHERNET,
                 Interface.STATE: InterfaceState.UP,
                 Ethernet.CONFIG_SUBTREE: {
                     Ethernet.SRIOV_SUBTREE: {Ethernet.SRIOV.TOTAL_VFS: 2},

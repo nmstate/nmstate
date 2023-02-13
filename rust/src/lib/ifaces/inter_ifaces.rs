@@ -488,6 +488,7 @@ impl MergedInterfaces {
             desired.set_unknown_iface_to_eth()?;
             desired.set_missing_port_to_eth();
         } else {
+            desired.resolve_sriov_reference(&current)?;
             desired.resolve_unknown_ifaces(&current)?;
         }
 
@@ -509,8 +510,6 @@ impl MergedInterfaces {
 
         desired.unify_veth_and_eth();
         current.unify_veth_and_eth();
-
-        desired.resolve_sriov_reference(&current)?;
 
         for (iface_name, des_iface) in desired
             .kernel_ifaces

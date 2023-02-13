@@ -238,13 +238,13 @@ impl<'de> Deserialize<'de> for UnknownInterface {
         D: Deserializer<'de>,
     {
         let mut ret = UnknownInterface::default();
-        let v = serde_json::Value::deserialize(deserializer)?;
+        let mut v = serde_json::Map::deserialize(deserializer)?;
         let mut base_value = serde_json::map::Map::new();
-        if let Some(n) = v.get("name") {
-            base_value.insert("name".to_string(), n.clone());
+        if let Some(n) = v.remove("name") {
+            base_value.insert("name".to_string(), n);
         }
-        if let Some(s) = v.get("state") {
-            base_value.insert("state".to_string(), s.clone());
+        if let Some(s) = v.remove("state") {
+            base_value.insert("state".to_string(), s);
         }
         // The BaseInterface will only have name and state
         // These two properties are also stored in `other` for serializing
@@ -252,7 +252,7 @@ impl<'de> Deserialize<'de> for UnknownInterface {
             serde_json::value::Value::Object(base_value),
         )
         .map_err(serde::de::Error::custom)?;
-        ret.other = v;
+        ret.other = serde_json::Value::Object(v);
         Ok(ret)
     }
 }
