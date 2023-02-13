@@ -24,7 +24,7 @@ import time
 
 from libnmstate import validator
 from libnmstate.error import NmstateVerificationError
-from libnmstate.schema import InterfaceType
+from libnmstate.schema import Interface
 
 from .net_state import NetState
 from .nmstate import create_checkpoints
@@ -73,20 +73,56 @@ def apply(
 
     desired_state = copy.deepcopy(desired_state)
     remove_the_reserved_secrets(desired_state)
+
     with plugin_context() as plugins:
         validator.schema_validate(desired_state)
         current_state = show_with_plugins(
             plugins, include_status_data=True, include_secrets=True
         )
         validator.validate_capabilities(
-            desired_state, plugins_capabilities(plugins)
+            copy.deepcopy(desired_state), plugins_capabilities(plugins)
         )
         ignored_ifnames = _get_ignored_interface_names(plugins)
         net_state = NetState(
             desired_state, ignored_ifnames, current_state, save_to_disk
         )
         checkpoints = create_checkpoints(plugins, rollback_timeout)
-        _apply_ifaces_state(plugins, net_state, verify_change, save_to_disk)
+        # When we have VF count changes and missing eth, it might be user
+        # referring future VF in the same desire state, we just apply
+        # VF changes state only first.
+        if net_state.ifaces.has_vf_count_change_and_missing_eth():
+            sriov_ifaces = net_state.ifaces.get_sriov_pf_ifaces()
+            if sriov_ifaces:
+                pf_net_state = NetState(
+                    {Interface.KEY: sriov_ifaces},
+                    ignored_ifnames,
+                    current_state,
+                    save_to_disk,
+                )
+                _apply_ifaces_state(
+                    plugins,
+                    pf_net_state,
+                    verify_change,
+                    save_to_disk,
+                    has_sriov_pf=True,
+                )
+                # Refresh the current state
+                current_state = show_with_plugins(
+                    plugins, include_status_data=True, include_secrets=True
+                )
+                validator.validate_capabilities(
+                    desired_state, plugins_capabilities(plugins)
+                )
+                ignored_ifnames = _get_ignored_interface_names(plugins)
+                net_state = NetState(
+                    copy.deepcopy(desired_state),
+                    ignored_ifnames,
+                    current_state,
+                    save_to_disk,
+                )
+        _apply_ifaces_state(
+            plugins, net_state, verify_change, save_to_disk, has_sriov_pf=False
+        )
         if commit:
             destroy_checkpoints(plugins, checkpoints)
         else:
@@ -117,13 +153,15 @@ def rollback(*, checkpoint=None):
         rollback_checkpoints(plugins, checkpoint)
 
 
-def _apply_ifaces_state(plugins, net_state, verify_change, save_to_disk):
+def _apply_ifaces_state(
+    plugins, net_state, verify_change, save_to_disk, has_sriov_pf=False
+):
     for plugin in plugins:
         plugin.apply_changes(net_state, save_to_disk)
 
     verified = False
     if verify_change:
-        if _net_state_contains_sriov_interface(net_state):
+        if has_sriov_pf:
             # If SR-IOV is present, the verification timeout is being increased
             # to avoid timeouts due to slow drivers like i40e.
             verify_retry = VERIFY_RETRY_COUNT_SRIOV
@@ -138,14 +176,6 @@ def _apply_ifaces_state(plugins, net_state, verify_change, save_to_disk):
                 time.sleep(VERIFY_RETRY_INTERNAL)
         if not verified:
             _verify_change(plugins, net_state)
-
-
-def _net_state_contains_sriov_interface(net_state):
-    for iface in net_state.ifaces.all_kernel_ifaces.values():
-        if iface.type == InterfaceType.ETHERNET and iface.is_sriov:
-            return True
-
-    return False
 
 
 def _verify_change(plugins, net_state):
