@@ -1,22 +1,6 @@
-#
-# Copyright (c) 2020-2021 Red Hat, Inc.
-#
-# This file is part of nmstate
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 2.1 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program. If not, see <https://www.gnu.org/licenses/>.
-#
+# SPDX-License-Identifier: LGPL-2.1-or-later
 
+import copy
 import logging
 
 from libnmstate.error import NmstateKernelIntegerRoundedError
@@ -24,6 +8,7 @@ from libnmstate.error import NmstateValueError
 from libnmstate.error import NmstateVerificationError
 from libnmstate.prettystate import format_desired_current_state_diff
 from libnmstate.schema import BondMode
+from libnmstate.schema import Ethernet
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import InterfaceState
@@ -164,6 +149,67 @@ class Ifaces:
                     iface.pre_edit_validation_and_cleanup()
 
             self._pre_edit_validation_and_cleanup()
+
+    # Return True when SR-IOV `total-vfs` changed and having interface not
+    # exists in current.
+    def has_vf_count_change_and_missing_eth(self):
+        return self._has_vf_count_change() and self._has_missing_veth()
+
+    def _has_vf_count_change(self):
+        for iface in self.all_kernel_ifaces.values():
+            cur_iface = self._cur_kernel_ifaces.get(iface.name)
+            if (
+                cur_iface
+                and iface.is_desired
+                and iface.is_up
+                and iface.type == InterfaceType.ETHERNET
+            ):
+                des_vf_count = (
+                    iface.original_desire_dict.get(Ethernet.CONFIG_SUBTREE, {})
+                    .get(Ethernet.SRIOV_SUBTREE, {})
+                    .get(Ethernet.SRIOV.TOTAL_VFS, 0)
+                )
+                cur_vf_count = (
+                    cur_iface.raw.get(Ethernet.CONFIG_SUBTREE, {})
+                    .get(Ethernet.SRIOV_SUBTREE, {})
+                    .get(Ethernet.SRIOV.TOTAL_VFS, 0)
+                )
+                if des_vf_count != cur_vf_count:
+                    return True
+        return False
+
+    def _has_missing_veth(self):
+        for iface in self.all_kernel_ifaces.values():
+            cur_iface = self._cur_kernel_ifaces.get(iface.name)
+            if cur_iface is None and iface.type == InterfaceType.ETHERNET:
+                return True
+        return False
+
+    # Return list of cloned iface_info(dictionary) which SRIOV PF conf only.
+    def get_sriov_pf_ifaces(self):
+        sriov_ifaces = []
+        for iface in self.all_kernel_ifaces.values():
+            if (
+                iface.is_desired
+                and iface.is_up
+                and iface.type == InterfaceType.ETHERNET
+            ):
+                sriov_conf = iface.original_desire_dict.get(
+                    Ethernet.CONFIG_SUBTREE, {}
+                ).get(Ethernet.SRIOV_SUBTREE, {})
+                if sriov_conf:
+                    eth_conf = iface.original_desire_dict.get(
+                        Ethernet.CONFIG_SUBTREE
+                    )
+                    sriov_ifaces.append(
+                        {
+                            Interface.NAME: iface.name,
+                            Interface.TYPE: InterfaceType.ETHERNET,
+                            Interface.STATE: InterfaceState.UP,
+                            Ethernet.CONFIG_SUBTREE: copy.deepcopy(eth_conf),
+                        }
+                    )
+        return sriov_ifaces
 
     @property
     def _ignored_ifaces(self):
