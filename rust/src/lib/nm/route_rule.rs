@@ -6,6 +6,7 @@ use crate::{
 };
 
 const DEFAULT_TABLE_ID: u32 = 254; // main route table ID
+const LOOPBACK_IFACE_NAME: &str = "lo";
 
 // General work flow:
 //  * The `current` NetworkState returned by NM plugin has route rules
@@ -203,6 +204,7 @@ fn append_route_rule(
 // * If rule has `iif`, we use that
 // * If rule has table id, we find a interface configured for that route table
 // * fallback to first desired interface with ip stack enabled.
+// * fallback to use loop interface.
 fn find_interface_for_rule<'a>(
     merged_state: &'a MergedNetworkState,
     rule: &RouteRuleEntry,
@@ -313,10 +315,8 @@ fn find_interface_for_rule<'a>(
         }
     }
 
-    Err(NmstateError::new(
-        ErrorKind::InvalidArgument,
-        format!("Failed to find interface to store route rule {rule}"),
-    ))
+    log::info!("Using loopback interface to store route rule {rule}");
+    Ok(LOOPBACK_IFACE_NAME)
 }
 
 fn iface_has_route_for_table_id(
