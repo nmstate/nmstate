@@ -82,61 +82,82 @@ impl NetworkState {
     /// Apply the `NetworkState`.
     /// Only available for feature `query_apply`.
     pub fn apply(&self) -> Result<(), NmstateError> {
-        let mut cur_net_state = NetworkState::new();
-        cur_net_state.set_kernel_only(self.kernel_only);
-        cur_net_state.set_include_secrets(true);
-        cur_net_state.retrieve_full()?;
-
-        let mut merged_state = MergedNetworkState::new(
-            self.clone(),
-            cur_net_state.clone(),
-            false,
-            self.memory_only,
-        )?;
-
-        let ifaces = merged_state.interfaces.state_for_apply();
-        ifaces.check_sriov_capability()?;
-
-        if ifaces.to_vec().len() >= MAX_SUPPORTED_INTERFACES {
+        if self.interfaces.kernel_ifaces.len()
+            + self.interfaces.user_ifaces.len()
+            >= MAX_SUPPORTED_INTERFACES
+        {
             log::warn!(
                 "Interfaces count exceeds the support limit {} in \
                 desired state",
                 MAX_SUPPORTED_INTERFACES,
             );
         }
-
         if !self.kernel_only {
-            self.apply_with_nm_backend(&mut merged_state, &cur_net_state)
+            self.apply_with_nm_backend()
         } else {
             // TODO: Need checkpoint for kernel only mode
-            self.apply_without_nm_backend(&merged_state, &cur_net_state)
+            self.apply_without_nm_backend()
         }
     }
 
-    fn apply_with_nm_backend(
-        &self,
-        merged_state: &mut MergedNetworkState,
-        cur_net_state: &Self,
-    ) -> Result<(), NmstateError> {
-        let pf_merged_state = merged_state.isolate_sriov_conf_out();
+    fn apply_with_nm_backend(&self) -> Result<(), NmstateError> {
+        let mut cur_net_state = NetworkState::new();
+        cur_net_state.set_kernel_only(self.kernel_only);
+        cur_net_state.set_include_secrets(true);
+        cur_net_state.retrieve_full()?;
+
+        // At this point, the `unknown` interface type is not resolved yet,
+        // hence when user want `enable-and-use` single-transaction for SR-IOV,
+        // they need define the interface type. It is overkill to do resolve at
+        // this point for this corner use case.
+        let pf_state =
+            if self.has_vf_count_change_and_missing_eth(&cur_net_state) {
+                self.get_sriov_pf_conf_state()
+            } else {
+                None
+            };
+
         let timeout = self.timeout.unwrap_or(DEFAULT_ROLLBACK_TIMEOUT);
         let checkpoint = nm_checkpoint_create(timeout)?;
         log::info!("Created checkpoint {}", &checkpoint);
 
+        let verify_count = if pf_state.is_some() {
+            VERIFY_RETRY_COUNT_SRIOV
+        } else {
+            VERIFY_RETRY_COUNT
+        };
+
         with_nm_checkpoint(&checkpoint, self.no_commit, || {
-            if let Some(pf_merged_state) = pf_merged_state {
+            if let Some(pf_state) = pf_state {
+                pf_state.interfaces.check_sriov_capability()?;
+                let pf_merged_state = MergedNetworkState::new(
+                    pf_state,
+                    cur_net_state.clone(),
+                    false,
+                    self.memory_only,
+                )?;
                 self.apply_with_nm_backend_and_under_checkpoint(
                     &pf_merged_state,
-                    cur_net_state,
+                    &cur_net_state,
                     &checkpoint,
-                    VERIFY_RETRY_COUNT_SRIOV,
-                )?
+                    verify_count,
+                )?;
+                // Refresh current state
+                cur_net_state.retrieve_full()?;
             }
+
+            let merged_state = MergedNetworkState::new(
+                self.clone(),
+                cur_net_state.clone(),
+                false,
+                self.memory_only,
+            )?;
+
             self.apply_with_nm_backend_and_under_checkpoint(
-                merged_state,
-                cur_net_state,
+                &merged_state,
+                &cur_net_state,
                 &checkpoint,
-                VERIFY_RETRY_COUNT,
+                verify_count,
             )
         })
     }
@@ -180,12 +201,20 @@ impl NetworkState {
         })
     }
 
-    fn apply_without_nm_backend(
-        &self,
-        merged_state: &MergedNetworkState,
-        cur_net_state: &Self,
-    ) -> Result<(), NmstateError> {
-        nispor_apply(merged_state)?;
+    fn apply_without_nm_backend(&self) -> Result<(), NmstateError> {
+        let mut cur_net_state = NetworkState::new();
+        cur_net_state.set_kernel_only(self.kernel_only);
+        cur_net_state.set_include_secrets(true);
+        cur_net_state.retrieve_full()?;
+
+        let merged_state = MergedNetworkState::new(
+            self.clone(),
+            cur_net_state.clone(),
+            false,
+            self.memory_only,
+        )?;
+
+        nispor_apply(&merged_state)?;
         if let Some(running_hostname) =
             self.hostname.as_ref().and_then(|c| c.running.as_ref())
         {

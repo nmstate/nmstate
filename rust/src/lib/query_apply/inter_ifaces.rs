@@ -110,21 +110,6 @@ fn verify_desire_absent_but_found_in_current(
 }
 
 impl MergedInterfaces {
-    pub(crate) fn state_for_apply(&self) -> Interfaces {
-        let mut ifaces = Interfaces::new();
-        for merged_iface in self
-            .kernel_ifaces
-            .values()
-            .chain(self.user_ifaces.values())
-            .filter(|i| i.is_changed())
-        {
-            if let Some(iface) = merged_iface.for_apply.as_ref() {
-                ifaces.push(iface.clone());
-            }
-        }
-        ifaces
-    }
-
     pub(crate) fn verify(
         &self,
         current: &Interfaces,

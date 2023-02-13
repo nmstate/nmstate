@@ -3,8 +3,7 @@
 use crate::{
     unit_tests::testlib::new_eth_iface, BridgePortVlanMode, ErrorKind,
     EthernetConfig, EthernetDuplex, Interface, InterfaceType, Interfaces,
-    MergedInterfaces, MergedNetworkState, NetworkState, SrIovConfig,
-    SrIovVfConfig,
+    MergedInterfaces, NetworkState, SrIovConfig, SrIovVfConfig,
 };
 
 #[test]
@@ -612,32 +611,10 @@ fn test_sriov_enable_and_use_in_single_yaml() {
     )
     .unwrap();
 
-    let current = serde_yaml::from_str::<NetworkState>(
-        r#"---
-        interfaces:
-        - name: eth1
-          type: ethernet
-          state: up
-          ethernet:
-            sr-iov:
-              total-vfs: 0
-        "#,
-    )
-    .unwrap();
+    let pf_state = desired.get_sriov_pf_conf_state().unwrap();
 
-    let mut merged_state =
-        MergedNetworkState::new(desired, current, false, false).unwrap();
-
-    let pf_state = merged_state.isolate_sriov_conf_out().unwrap();
-
-    if let Interface::Ethernet(pf_iface) = pf_state
-        .interfaces
-        .kernel_ifaces
-        .get("eth1")
-        .unwrap()
-        .for_apply
-        .as_ref()
-        .unwrap()
+    if let Interface::Ethernet(pf_iface) =
+        pf_state.interfaces.kernel_ifaces.get("eth1").unwrap()
     {
         let eth_conf = pf_iface.ethernet.as_ref().unwrap();
         assert_eq!(eth_conf.auto_neg, Some(false));
@@ -648,17 +625,46 @@ fn test_sriov_enable_and_use_in_single_yaml() {
     } else {
         panic!("Expecting Ethernet interface, got {:?}", pf_state);
     }
-    if let Interface::Ethernet(second_pf_iface) = merged_state
-        .interfaces
-        .kernel_ifaces
-        .get("eth1")
-        .unwrap()
-        .for_apply
-        .as_ref()
-        .unwrap()
-    {
-        assert!(second_pf_iface.ethernet.is_none())
-    } else {
-        panic!("Expecting Ethernet interface, got {:?}", pf_state);
-    }
+}
+
+#[test]
+fn test_sriov_has_vf_count_change_and_missing_eth() {
+    let desired = serde_yaml::from_str::<NetworkState>(
+        r#"---
+        interfaces:
+        - name: eth1
+          type: ethernet
+          state: up
+          ethernet:
+            speed: 10000
+            duplex: full
+            auto-negotiation: false
+            sr-iov:
+              total-vfs: 2
+        - name: eth1v0
+          type: ethernet
+          state: up
+        - name: eth1v1
+          type: ethernet
+          state: up
+        "#,
+    )
+    .unwrap();
+    let current = serde_yaml::from_str::<NetworkState>(
+        r#"---
+        interfaces:
+        - name: eth1
+          type: ethernet
+          state: up
+          ethernet:
+            speed: 10000
+            duplex: full
+            auto-negotiation: false
+            sr-iov:
+              total-vfs: 0
+        "#,
+    )
+    .unwrap();
+
+    assert!(desired.has_vf_count_change_and_missing_eth(&current));
 }

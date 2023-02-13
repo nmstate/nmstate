@@ -438,6 +438,7 @@ class TestSrIov:
         iface_infos = [
             {
                 Interface.NAME: pf_name,
+                Interface.TYPE: InterfaceType.ETHERNET,
                 Interface.STATE: InterfaceState.UP,
                 Ethernet.CONFIG_SUBTREE: {
                     Ethernet.SRIOV_SUBTREE: {Ethernet.SRIOV.TOTAL_VFS: 2},
