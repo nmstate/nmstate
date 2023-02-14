@@ -1375,3 +1375,35 @@ def _has_auto_route_with_desired_metric(family, metric):
         return ip_routes[0].get("metric") == 901
     else:
         return False
+
+
+@pytest.mark.tier1
+@pytest.mark.parametrize(
+    "wait_ip",
+    [
+        Interface.WAIT_IP_ANY,
+        Interface.WAIT_IP_IPV4,
+        Interface.WAIT_IP_IPV6,
+        Interface.WAIT_IP_IPV4_AND_IPV6,
+    ],
+)
+def test_wait_ip(eth1_up, wait_ip):
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: "eth1",
+                    Interface.WAIT_IP: wait_ip,
+                    Interface.IPV4: {
+                        InterfaceIPv4.ENABLED: True,
+                        InterfaceIPv4.DHCP: True,
+                    },
+                    Interface.IPV6: {
+                        InterfaceIPv6.ENABLED: True,
+                        InterfaceIPv6.DHCP: True,
+                        InterfaceIPv6.AUTOCONF: True,
+                    },
+                }
+            ],
+        }
+    )

@@ -39,6 +39,7 @@ from .common import NM
 from .ethtool import create_ethtool_setting
 from .ieee_802_1x import create_802_1x_setting
 from .infiniband import create_setting as create_infiniband_setting
+from .ip import set_wait_ip
 from .ipv4 import create_setting as create_ipv4_setting
 from .ipv6 import create_setting as create_ipv6_setting
 from .lldp import apply_lldp_setting
@@ -106,10 +107,10 @@ class _ConnectionSetting:
 def create_new_nm_simple_conn(iface, nm_profile):
     nm_iface_type = Api2Nm.get_iface_type(iface.type)
     iface_info = iface.to_dict()
-    settings = [
-        create_ipv4_setting(iface_info.get(Interface.IPV4), nm_profile),
-        create_ipv6_setting(iface_info.get(Interface.IPV6), nm_profile),
-    ]
+    ipv4_set = create_ipv4_setting(iface_info.get(Interface.IPV4), nm_profile)
+    ipv6_set = create_ipv6_setting(iface_info.get(Interface.IPV6), nm_profile)
+    set_wait_ip(ipv4_set, ipv6_set, iface_info.get(Interface.WAIT_IP))
+    settings = [ipv4_set, ipv6_set]
     con_setting = _ConnectionSetting()
     if nm_profile and not is_multiconnect_profile(nm_profile):
         con_setting.import_by_profile(nm_profile, iface.is_controller)
