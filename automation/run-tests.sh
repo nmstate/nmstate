@@ -76,9 +76,13 @@ function dump_network_info {
 
 function install_nmstate {
     if [ $INSTALL_NMSTATE == "true" ];then
-        exec_cmd '
-          rpm -ivh `./packaging/make_rpm.sh|tail -1 || exit 1`
-        '
+        if [ -n "$COMPILED_RPMS_DIR" ];then
+            exec_cmd "rpm -ivh ${COMPILED_RPMS_DIR}/*.rpm || exit 1"
+        else
+            exec_cmd '
+                rpm -ivh `./packaging/make_rpm.sh|tail -1 || exit 1`
+            '
+        fi
     fi
 }
 
@@ -396,7 +400,9 @@ function run_customize_command {
 }
 
 options=$(getopt --options "" \
-    --long customize:,pytest-args:,help,debug-shell,test-type:,el8,centos-stream,copr:,artifacts-dir:,test-vdsm,machine,k8s,use-installed-nmstate\
+    --long "customize:,pytest-args:,help,debug-shell,test-type:,\
+    el8,centos-stream,copr:,artifacts-dir:,test-vdsm,machine,k8s,\
+    use-installed-nmstate,compiled-rpms-dir:" \
     -- "${@}")
 eval set -- "$options"
 while true; do
@@ -443,6 +449,10 @@ while true; do
     --use-installed-nmstate)
         INSTALL_NMSTATE="false"
         ;;
+    --compiled-rpms-dir)
+        shift
+        COMPILED_RPMS_DIR="$1"
+        ;;
     --help)
         set +x
         echo -n "$0 [--copr=...] [--customize=...] [--debug-shell] [--el8] "
@@ -475,8 +485,13 @@ done
 : ${CONTAINER_IMAGE:=$FEDORA_IMAGE_DEV}
 : ${INSTALL_NMSTATE:="true"}
 : ${INSTALL_DEPS:="false"}
+: ${COMPILED_RPMS_DIR:=""}
 
-modprobe_ovs
+if [ $TEST_TYPE != $TEST_TYPE_ALL ] && \
+   [ $TEST_TYPE != $TEST_TYPE_LINT ] && \
+   [ $TEST_TYPE != $TEST_TYPE_FORMAT ];then
+    modprobe_ovs
+fi
 
 if [ -n "${RUN_BAREMETAL}" ];then
     CONTAINER_WORKSPACE="."
@@ -499,7 +514,12 @@ fi
 if [ -z "${RUN_K8S}" ]; then
     check_services
 fi
-prepare_network_environment
+
+if [ $TEST_TYPE != $TEST_TYPE_ALL ] && \
+   [ $TEST_TYPE != $TEST_TYPE_LINT ] && \
+   [ $TEST_TYPE != $TEST_TYPE_FORMAT ];then
+    prepare_network_environment
+fi
 
 if [ -n "$RUN_BAREMETAL" ];then
     trap run_exit ERR EXIT
@@ -514,5 +534,9 @@ if [ -z "${RUN_BAREMETAL}" ] && [ -z "${RUN_K8S}" ];then
     copy_workspace_container
 fi
 
-install_nmstate
+if [ $TEST_TYPE != $TEST_TYPE_ALL ] && \
+   [ $TEST_TYPE != $TEST_TYPE_LINT ] && \
+   [ $TEST_TYPE != $TEST_TYPE_FORMAT ];then
+    install_nmstate
+fi
 run_tests
