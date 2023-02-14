@@ -107,8 +107,7 @@ pub(crate) fn use_uuid_for_controller_reference(
                     ErrorKind::Bug,
                     format!(
                         "Failed to find OVS Bridge interface for \
-                        NmConnection {:?}",
-                        nm_conn
+                        NmConnection {nm_conn:?}"
                     ),
                 );
                 log::error!("{}", e);
@@ -125,8 +124,7 @@ pub(crate) fn use_uuid_for_controller_reference(
                 ErrorKind::Bug,
                 format!(
                     "BUG: Failed to find UUID of controller connection: \
-                {}, {}",
-                    ctrl_name, ctrl_type
+                {ctrl_name}, {ctrl_type}"
                 ),
             );
             log::error!("{}", e);

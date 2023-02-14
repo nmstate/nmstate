@@ -529,9 +529,8 @@ impl FromStr for LinuxBridgeMulticastRouterType {
             _ => Err(NmstateError::new(
                 ErrorKind::InvalidArgument,
                 format!(
-                    "Invalid linux bridge multicast_router type {}, \
-                    expecting 0|1|2 or auto|disabled|enabled",
-                    s
+                    "Invalid linux bridge multicast_router type {s}, \
+                    expecting 0|1|2 or auto|disabled|enabled"
                 ),
             )),
         }
@@ -548,9 +547,8 @@ impl TryFrom<u64> for LinuxBridgeMulticastRouterType {
             _ => Err(NmstateError::new(
                 ErrorKind::InvalidArgument,
                 format!(
-                    "Invalid linux bridge multicast_router type {}, \
-                    expecting 0|1|2 or auto|disabled|enabled",
-                    value
+                    "Invalid linux bridge multicast_router type {value}, \
+                    expecting 0|1|2 or auto|disabled|enabled"
                 ),
             )),
         }

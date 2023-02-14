@@ -92,8 +92,7 @@ impl OvsDbJsonRpc {
             let e = NmstateError::new(
                 ErrorKind::PluginFailure,
                 format!(
-                    "Transaction ID mismatch for OVS DB JSON RPC: {:?}",
-                    reply
+                    "Transaction ID mismatch for OVS DB JSON RPC: {reply:?}"
                 ),
             );
             log::error!("{}", e);
@@ -148,8 +147,7 @@ fn check_transact_error(reply: Value) -> Result<Value, NmstateError> {
                 let e = NmstateError::new(
                     ErrorKind::PluginFailure,
                     format!(
-                        "OVS DB JSON RPC error {}: {}",
-                        error_type, error_detail
+                        "OVS DB JSON RPC error {error_type}: {error_detail}"
                     ),
                 );
                 log::error!("{}", e);

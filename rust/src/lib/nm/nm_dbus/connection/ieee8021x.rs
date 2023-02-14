@@ -97,8 +97,7 @@ impl NmSetting8021X {
                     ErrorKind::InvalidArgument,
                     format!(
                         "Failed to parse glib bytes to UTF-8 string: \
-                        {:?}: {:?}",
-                        value, e
+                        {value:?}: {e:?}"
                     ),
                 );
                 log::error!("{}", e);
@@ -112,8 +111,7 @@ impl NmSetting8021X {
             let e = NmError::new(
                 ErrorKind::InvalidArgument,
                 format!(
-                    "Specified glib bytes is started with {}: {:?}",
-                    GLIB_FILE_PATH_PREFIX, value
+                    "Specified glib bytes is started with {GLIB_FILE_PATH_PREFIX}: {value:?}"
                 ),
             );
             log::error!("{}", e);
