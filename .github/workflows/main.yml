@@ -14,18 +14,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - job_type: "c8s-nm_stable-format"
-          - job_type: "c8s-nm_stable-lint"
-          - job_type: "c8s-nm_stable-unit_py36"
-          - job_type: "c8s-nm_stable-integ_tier1"
-          - job_type: "c8s-nm_stable-integ_tier2"
-          - job_type: "c8s-nm_stable-integ_slow"
-          - job_type: "c8s-nm_stable-integ_rust"
-          - job_type: "c8s-nm_main-integ_tier1"
-          - job_type: "c8s-nm_main-integ_tier2"
-          - job_type: "c8s-nm_main-integ_slow"
-          - job_type: "ovs2_11-nm_stable-integ_tier1"
-          - job_type: "vdsm_el8-nm_main-vdsm"
+          - job_type: "c8s-nm_1_36-format"
+          - job_type: "c8s-nm_1_36-lint"
+          - job_type: "c8s-nm_1_36-unit_py36"
+          - job_type: "c8s-nm_1_36-integ_tier1"
+          - job_type: "c8s-nm_1_36-integ_tier2"
+          - job_type: "c8s-nm_1_36-integ_slow"
+          - job_type: "c8s-nm_1_36-integ_rust"
+          - job_type: "ovs2_11-nm_1_36-integ_tier1"
 
     steps:
       - uses: actions/checkout@v2
