@@ -68,4 +68,5 @@ sudo env \
         --pytest-args='-x' \
         $TEST_ARG \
         --artifacts-dir $TEST_ARTIFACTS_DIR \
+        --compiled-rpms-dir rpms \
         $COPR_ARG "$CUSTOMIZE_ARG"

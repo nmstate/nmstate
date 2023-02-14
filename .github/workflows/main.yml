@@ -1,4 +1,4 @@
-name: Python
+name: CI
 
 on:
   pull_request:
@@ -8,31 +8,73 @@ on:
       - base
 
 jobs:
-  build:
+  rpm_build:
     runs-on: ubuntu-latest
+    needs: [py_lint]
+    steps:
+      - uses: actions/checkout@v3
+      - name: build nmstate rpm
+        run: .github/workflows/build_rpm.sh
+      - uses: actions/upload-artifact@v3
+        with:
+          name: rpms
+          path: rpms/
+          retention-days: 5
+
+  py_lint:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - job_type: "c8s-nm_stable-format"
+          - job_type: "c8s-nm_stable-lint"
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Run tests
+        run: .github/workflows/run_test.sh ${{ matrix.job_type }}
+
+  py_unit:
+    runs-on: ubuntu-latest
+    needs: rpm_build
     strategy:
       fail-fast: false
       matrix:
         include:
-          - job_type: "c8s-nm_1_36-format"
-          - job_type: "c8s-nm_1_36-lint"
-          - job_type: "c8s-nm_1_36-unit_py36"
+          - job_type: "c8s-nm_stable-unit_py36"
+    steps:
+      - uses: actions/checkout@v3
+      - name: Download compiled rpm
+        uses: actions/download-artifact@v3
+        with:
+          name: rpms
+          path: rpms/
+      - name: Run tests
+        run: .github/workflows/run_test.sh ${{ matrix.job_type }}
+
+  integ:
+    runs-on: ubuntu-latest
+    needs: rpm_build
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
           - job_type: "c8s-nm_1_36-integ_tier1"
           - job_type: "c8s-nm_1_36-integ_tier2"
           - job_type: "c8s-nm_1_36-integ_slow"
-          - job_type: "c8s-nm_1_36-integ_rust"
           - job_type: "ovs2_11-nm_1_36-integ_tier1"
-
     steps:
-      - uses: actions/checkout@v2
-
-      - name: Install dependencies
-        run: |
-          sudo apt update
-          sudo apt install git gnupg2 openssh-client xz-utils podman
+      - uses: actions/checkout@v3
 
       - name: Enable openvswitch kernel module
         run: sudo modprobe openvswitch
+
+      - name: Download compiled rpm
+        uses: actions/download-artifact@v3
+        with:
+          name: rpms
+          path: rpms/
 
       - name: Run tests
         env:
@@ -43,7 +85,7 @@ jobs:
         if: ${{ failure() }}
         run: sudo chmod 777 test_artifacts/*
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         if: ${{ failure() }}
         with:
           name: nmstate-test-artifact-${{ matrix.job_type }}
