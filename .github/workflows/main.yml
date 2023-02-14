@@ -107,18 +107,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - job_type: "c8s-nm_stable-integ_tier1"
-          - job_type: "c8s-nm_stable-integ_tier2"
-          - job_type: "c8s-nm_stable-integ_slow"
-          - job_type: "c8s-nm_stable-integ_rust"
-          - job_type: "c8s-nm_stable-rust_go"
-          - job_type: "c8s-nm_main-integ_tier1"
-          - job_type: "c8s-nm_main-integ_tier2"
-          - job_type: "c8s-nm_main-integ_slow"
-          - job_type: "c8s-nm_main-integ_rust"
-          - job_type: "c8s-nm_main-integ_rust_slow"
-          - job_type: "c8s-nm_main-rust_go"
-          - job_type: "ovs2_11-nm_stable-integ_tier1"
+          - job_type: "c8s-nm_1_40-integ_tier1"
+          - job_type: "c8s-nm_1_40-integ_tier2"
+          - job_type: "c8s-nm_1_40-integ_slow"
+          - job_type: "c8s-nm_1_40-integ_rust"
+          - job_type: "c8s-nm_1_40-rust_go"
+          - job_type: "ovs2_11-nm_1_40-integ_tier1"
     steps:
       - uses: actions/checkout@v3
 

@@ -44,6 +44,8 @@ fi
 
 if [ $NM_TYPE == "nm_main" ];then
     COPR_ARG="--copr networkmanager/NetworkManager-main"
+elif [ $NM_TYPE == "nm_1_40" ];then
+    COPR_ARG="--copr networkmanager/NetworkManager-1.40"
 fi
 
 if [ $TEST_TYPE == "vdsm" ];then
