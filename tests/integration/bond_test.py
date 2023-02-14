@@ -41,15 +41,15 @@ from .testlib import cmdlib
 from .testlib import statelib
 from .testlib.assertlib import assert_mac_address
 from .testlib.bondlib import bond_interface
-from .testlib.env import nm_major_minor_version
-from .testlib.env import is_k8s
-from .testlib.ifacelib import get_mac_address
-from .testlib.ifacelib import ifaces_init
-from .testlib.vlan import vlan_interface
-
-from .testlib.bridgelib import linux_bridge
 from .testlib.bridgelib import add_port_to_bridge
 from .testlib.bridgelib import create_bridge_subtree_state
+from .testlib.bridgelib import linux_bridge
+from .testlib.env import is_k8s
+from .testlib.env import nm_major_minor_version
+from .testlib.ifacelib import get_mac_address
+from .testlib.ifacelib import ifaces_init
+from .testlib.retry import retry_till_true_or_timeout
+from .testlib.vlan import vlan_interface
 
 BOND99 = "bond99"
 ETH1 = "eth1"
@@ -1028,6 +1028,11 @@ def test_create_bond_with_copy_mac_from(eth1_up, eth2_up):
         assert_mac_address(current_state, eth2_mac)
 
 
+def _check_mac(iface_name, expected_mac):
+    current_state = statelib.show_only((iface_name,))
+    return current_state[Interface.KEY][0][Interface.MAC] == expected_mac
+
+
 @pytest.mark.xfail(
     nm_major_minor_version() < 1.30,
     reason=(
@@ -1044,10 +1049,12 @@ def test_replacing_port_set_mac_of_new_port_on_bond(bond99_with_eth2, eth1_up):
     bond_state[Bond.CONFIG_SUBTREE][Bond.PORT] = [eth1_name]
 
     libnmstate.apply(desired_state)
-    current_state = statelib.show_only((bond_state[Interface.NAME],))
-    assert (
-        eth1_up[Interface.KEY][0][Interface.MAC]
-        == current_state[Interface.KEY][0][Interface.MAC]
+    # It takes some time for NM to changing bond MAC after port attached.
+    assert retry_till_true_or_timeout(
+        10,  # timeout
+        _check_mac,
+        bond_state[Interface.NAME],
+        eth1_up[Interface.KEY][0][Interface.MAC],
     )
 
 
