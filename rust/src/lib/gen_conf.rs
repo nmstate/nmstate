@@ -79,9 +79,8 @@ impl Interfaces {
                         return Err(NmstateError::new(
                             ErrorKind::Bug,
                             format!(
-                                "BUG: Failed to convert {:?} to serde_json \
-                                value: {}",
-                                iface, e
+                                "BUG: Failed to convert {iface:?} to serde_json \
+                                value: {e}"
                             ),
                         ));
                     }
@@ -92,8 +91,7 @@ impl Interfaces {
                         return Err(NmstateError::new(
                             ErrorKind::InvalidArgument,
                             format!(
-                                "Invalid property for ethernet interface: {}",
-                                e
+                                "Invalid property for ethernet interface: {e}"
                             ),
                         ));
                     }

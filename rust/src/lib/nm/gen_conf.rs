@@ -82,8 +82,7 @@ pub(crate) fn nm_gen_conf(
                 return Err(NmstateError::new(
                     ErrorKind::PluginFailure,
                     format!(
-                        "Bug in NM plugin, failed to generate configure: {}",
-                        e
+                        "Bug in NM plugin, failed to generate configure: {e}"
                     ),
                 ));
             }

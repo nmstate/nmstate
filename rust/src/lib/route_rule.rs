@@ -71,8 +71,7 @@ impl RouteRules {
                     let e = NmstateError::new(
                         ErrorKind::VerificationError,
                         format!(
-                            "Desired route rule {:?} not found after apply",
-                            rule
+                            "Desired route rule {rule:?} not found after apply"
                         ),
                     );
                     log::error!("{}", e);
@@ -96,9 +95,8 @@ impl RouteRules {
                     let e = NmstateError::new(
                         ErrorKind::VerificationError,
                         format!(
-                            "Desired absent route rule {:?} still found \
-                            after apply: {:?}",
-                            absent_rule, cur_rule
+                            "Desired absent route rule {absent_rule:?} still found \
+                            after apply: {cur_rule:?}"
                         ),
                     );
                     log::error!("{}", e);
@@ -295,8 +293,7 @@ impl RouteRuleEntry {
             let e = NmstateError::new(
                 ErrorKind::InvalidArgument,
                 format!(
-                    "Neither ip-from, ip-to nor family is defined {:?}",
-                    self
+                    "Neither ip-from, ip-to nor family is defined {self:?}"
                 ),
             );
             log::error!("{}", e);
@@ -308,8 +305,7 @@ impl RouteRuleEntry {
                 {
                     let e = NmstateError::new(
                         ErrorKind::InvalidArgument,
-                        format!("The ip-from format mismatches with the family set {:?}",
-                                self
+                        format!("The ip-from format mismatches with the family set {self:?}"
                         ),
                     );
                     log::error!("{}", e);
@@ -322,8 +318,7 @@ impl RouteRuleEntry {
                 {
                     let e = NmstateError::new(
                         ErrorKind::InvalidArgument,
-                        format!("The ip-to format mismatches with the family set {:?}",
-                                self
+                        format!("The ip-to format mismatches with the family set {self:?}"
                         ),
                     );
                     log::error!("{}", e);
@@ -334,8 +329,7 @@ impl RouteRuleEntry {
         if self.fwmark.is_none() && self.fwmask.is_some() {
             let e = NmstateError::new(
                 ErrorKind::InvalidArgument,
-                format!("fwmask is present but fwmark is not defined or is zero {:?}",
-                        self
+                format!("fwmask is present but fwmark is not defined or is zero {self:?}"
                 ),
             );
             log::error!("{}", e);

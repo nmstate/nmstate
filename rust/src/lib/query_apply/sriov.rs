@@ -225,9 +225,8 @@ fn parse_sriov_vf_naming(
                     let e = NmstateError::new(
                         ErrorKind::InvalidArgument,
                         format!(
-                            "Invalid SR-IOV VF ID in {}, correct format \
-                            is 'sriov:<pf_name>:<vf_id>', error: {}",
-                            iface_name, e
+                            "Invalid SR-IOV VF ID in {iface_name}, correct format \
+                            is 'sriov:<pf_name>:<vf_id>', error: {e}"
                         ),
                     );
                     log::error!("{}", e);
@@ -238,9 +237,8 @@ fn parse_sriov_vf_naming(
             let e = NmstateError::new(
                 ErrorKind::InvalidArgument,
                 format!(
-                    "Invalid SR-IOV VF name {}, correct format is \
+                    "Invalid SR-IOV VF name {iface_name}, correct format is \
                     'sriov:<pf_name>:<vf_id>'",
-                    iface_name,
                 ),
             );
             log::error!("{}", e);
