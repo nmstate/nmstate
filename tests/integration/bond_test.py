@@ -1057,6 +1057,11 @@ def test_create_bond_with_copy_mac_from(eth1_up, eth2_up):
         assert_mac_address(current_state, eth2_mac)
 
 
+def _check_mac(iface_name, expected_mac):
+    current_state = statelib.show_only((iface_name,))
+    return current_state[Interface.KEY][0][Interface.MAC] == expected_mac
+
+
 @pytest.mark.xfail(
     nm_major_minor_version() < 1.30,
     reason=(
@@ -1073,10 +1078,12 @@ def test_replacing_port_set_mac_of_new_port_on_bond(bond99_with_eth2, eth1_up):
     bond_state[Bond.CONFIG_SUBTREE][Bond.PORT] = [eth1_name]
 
     libnmstate.apply(desired_state)
-    current_state = statelib.show_only((bond_state[Interface.NAME],))
-    assert (
-        eth1_up[Interface.KEY][0][Interface.MAC]
-        == current_state[Interface.KEY][0][Interface.MAC]
+    # It takes some time for NM to changing bond MAC after port attached.
+    assert retry_till_true_or_timeout(
+        10,  # timeout
+        _check_mac,
+        bond_state[Interface.NAME],
+        eth1_up[Interface.KEY][0][Interface.MAC],
     )
 
 
