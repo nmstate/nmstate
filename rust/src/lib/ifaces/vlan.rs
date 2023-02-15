@@ -60,6 +60,9 @@ pub struct VlanConfig {
     pub base_iface: String,
     #[serde(deserialize_with = "crate::deserializer::u16_or_string")]
     pub id: u16,
+    /// Could be `802.1q` or `802.1ad`. Default to `802.1q` if not defined.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub protocol: Option<VlanProtocol>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
