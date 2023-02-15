@@ -55,6 +55,4 @@ COPY network_manager_keyfile.conf \
 
 RUN systemctl enable dbus systemd-udevd NetworkManager
 
-VOLUME [ "/sys/fs/cgroup" ]
-
 CMD ["/usr/sbin/init"]

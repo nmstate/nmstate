@@ -30,6 +30,4 @@ RUN echo net.ipv6.conf.all.disable_ipv6=0 > \
 
 RUN systemctl enable systemd-udevd NetworkManager openvswitch
 
-#VOLUME [ "/sys/fs/cgroup" ]
-
 CMD ["/usr/sbin/init"]
