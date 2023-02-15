@@ -13,8 +13,8 @@ use super::super::{
         deactivate_nm_profiles, delete_exist_profiles, delete_orphan_ovs_ports,
         dns::{purge_global_dns_config, store_dns_config_via_global_api},
         is_mptcp_flags_changed, is_mptcp_supported, is_route_removed,
-        is_veth_peer_changed, is_vlan_id_changed, is_vrf_table_id_changed,
-        is_vxlan_id_changed, save_nm_profiles,
+        is_veth_peer_changed, is_vlan_changed, is_vrf_table_id_changed,
+        is_vxlan_changed, save_nm_profiles,
     },
     route::store_route_config,
     route_rule::store_route_rule_config,
@@ -304,7 +304,7 @@ fn delete_orphan_ports(
 // * NM has problem on remove routes, we need to deactivate it first
 //  https://bugzilla.redhat.com/1837254
 // * NM cannot change VRF table ID, so we deactivate first
-// * VLAN ID changed.
+// * VLAN config changed.
 // * Veth peer changed.
 // * NM cannot reapply changes to MPTCP flags.
 fn gen_nm_conn_need_to_deactivate_first(
@@ -325,8 +325,8 @@ fn gen_nm_conn_need_to_deactivate_first(
             {
                 if is_route_removed(nm_conn, activated_nm_con)
                     || is_vrf_table_id_changed(nm_conn, activated_nm_con)
-                    || is_vlan_id_changed(nm_conn, activated_nm_con)
-                    || is_vxlan_id_changed(nm_conn, activated_nm_con)
+                    || is_vlan_changed(nm_conn, activated_nm_con)
+                    || is_vxlan_changed(nm_conn, activated_nm_con)
                     || is_veth_peer_changed(nm_conn, activated_nm_con)
                     || is_mptcp_flags_changed(nm_conn, activated_nm_con)
                 {

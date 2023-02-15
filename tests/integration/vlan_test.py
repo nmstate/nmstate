@@ -1,21 +1,4 @@
-#
-# Copyright (c) 2018-2021 Red Hat, Inc.
-#
-# This file is part of nmstate
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 2.1 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program. If not, see <https://www.gnu.org/licenses/>.
-#
+# SPDX-License-Identifier: LGPL-2.1-or-later
 
 from contextlib import contextmanager
 import time
@@ -33,7 +16,7 @@ from libnmstate.schema import InterfaceType
 from .testlib import assertlib
 from .testlib import statelib
 from .testlib.assertlib import assert_mac_address
-from .testlib.env import nm_major_minor_version
+from .testlib.env import nm_minor_version
 from .testlib.vlan import vlan_interface
 
 VLAN_IFNAME = "eth1.101"
@@ -195,7 +178,7 @@ def test_add_new_base_iface_with_vlan():
 
 
 @pytest.mark.xfail(
-    nm_major_minor_version() < 1.31,
+    nm_minor_version() < 31,
     reason="Ref: https://bugzilla.redhat.com/1902976",
     raises=NmstateVerificationError,
     strict=True,
@@ -209,7 +192,7 @@ def test_add_vlan_with_mismatching_name_and_id(eth1_up):
 
 @pytest.mark.tier1
 @pytest.mark.xfail(
-    nm_major_minor_version() < 1.31,
+    nm_minor_version() < 31,
     reason="Ref: https://bugzilla.redhat.com/1907960",
     raises=NmstateVerificationError,
     strict=True,
@@ -228,7 +211,7 @@ def test_add_vlan_and_modify_vlan_id(eth1_up):
 
 @pytest.mark.tier1
 @pytest.mark.skipif(
-    nm_major_minor_version() < 1.31,
+    nm_minor_version() < 31,
     reason="Modifying accept-all-mac-addresses is not supported on NM.",
 )
 def test_vlan_enable_and_disable_accept_all_mac_addresses(eth1_up):
@@ -304,3 +287,66 @@ def test_preserve_existing_vlan_conf(eth1_up):
             }
         )
         assertlib.assert_state(desired_state)
+
+
+@pytest.mark.skipif(
+    nm_minor_version() < 41,
+    reason="Modifying VLAN protocol is not supported on NM 1.41-.",
+)
+def test_change_vlan_protocl(vlan_on_eth1):
+    dot1q_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: VLAN_IFNAME,
+                Interface.TYPE: InterfaceType.VLAN,
+                Interface.STATE: InterfaceState.UP,
+                VLAN.CONFIG_SUBTREE: {
+                    VLAN.ID: 102,
+                    VLAN.BASE_IFACE: "eth1",
+                    VLAN.PROTOCOL: "802.1q",
+                },
+            }
+        ]
+    }
+    qinq_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: VLAN_IFNAME,
+                Interface.TYPE: InterfaceType.VLAN,
+                Interface.STATE: InterfaceState.UP,
+                VLAN.CONFIG_SUBTREE: {
+                    VLAN.ID: 102,
+                    VLAN.BASE_IFACE: "eth1",
+                    VLAN.PROTOCOL: "802.1ad",
+                },
+            }
+        ]
+    }
+    libnmstate.apply(qinq_state)
+    assertlib.assert_state_match(qinq_state)
+
+    libnmstate.apply(dot1q_state)
+    assertlib.assert_state_match(dot1q_state)
+
+
+@pytest.mark.skipif(
+    nm_minor_version() < 41,
+    reason="Modifying VLAN protocol is not supported on NM 1.41-.",
+)
+def test_add_qinq_vlan(eth1_up):
+    qinq_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: VLAN_IFNAME,
+                Interface.TYPE: InterfaceType.VLAN,
+                Interface.STATE: InterfaceState.UP,
+                VLAN.CONFIG_SUBTREE: {
+                    VLAN.ID: 102,
+                    VLAN.BASE_IFACE: "eth1",
+                    VLAN.PROTOCOL: "802.1ad",
+                },
+            }
+        ]
+    }
+    libnmstate.apply(qinq_state)
+    assertlib.assert_state_match(qinq_state)

@@ -281,6 +281,7 @@ class VLAN:
 
     ID = "id"
     BASE_IFACE = "base-iface"
+    PROTOCOL = "protocol"
     PROTOCOL_802_1AD = "802.1ad"
     PROTOCOL_802_1Q = "802.1q"
 

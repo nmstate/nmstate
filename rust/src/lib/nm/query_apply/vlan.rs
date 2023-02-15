@@ -2,7 +2,7 @@
 
 use super::super::nm_dbus::NmConnection;
 
-pub(crate) fn is_vlan_id_changed(
+pub(crate) fn is_vlan_changed(
     new_nm_conn: &NmConnection,
     cur_nm_conn: &NmConnection,
 ) -> bool {
@@ -10,6 +10,7 @@ pub(crate) fn is_vlan_id_changed(
         (new_nm_conn.vlan.as_ref(), cur_nm_conn.vlan.as_ref())
     {
         new_vlan_conf.id != cur_vlan_conf.id
+            || new_vlan_conf.protocol != cur_vlan_conf.protocol
     } else {
         false
     }
