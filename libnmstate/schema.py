@@ -48,6 +48,11 @@ class Interface:
     MTU = "mtu"
     COPY_MAC_FROM = "copy-mac-from"
     ACCEPT_ALL_MAC_ADDRESSES = "accept-all-mac-addresses"
+    WAIT_IP = "wait-ip"
+    WAIT_IP_ANY = "any"
+    WAIT_IP_IPV4 = "ipv4"
+    WAIT_IP_IPV6 = "ipv6"
+    WAIT_IP_IPV4_AND_IPV6 = "ipv4+ipv6"
 
 
 class Route:

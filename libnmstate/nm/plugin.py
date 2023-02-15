@@ -1,21 +1,5 @@
-#
-# Copyright (c) 2020-2021 Red Hat, Inc.
-#
-# This file is part of nmstate
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 2.1 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program. If not, see <https://www.gnu.org/licenses/>.
-#
+# SPDX-License-Identifier: LGPL-2.1-or-later
+
 from distutils.version import StrictVersion
 import logging
 from operator import itemgetter
@@ -25,6 +9,8 @@ from libnmstate.error import NmstateNotSupportedError
 from libnmstate.error import NmstateValueError
 from libnmstate.schema import DNS
 from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceIPv4
+from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import LLDP
 from libnmstate.plugin import NmstatePlugin
@@ -41,6 +27,7 @@ from .device import list_devices
 from .dns import get_running as get_dns_running
 from .dns import get_running_config as get_dns_running_config
 from .infiniband import get_info as get_infiniband_info
+from .ip import get_wait_ip
 from .ipv4 import get_info as get_ipv4_info
 from .ipv6 import get_info as get_ipv6_info
 from .lldp import get_info as get_lldp_info
@@ -189,6 +176,12 @@ class NetworkManagerPlugin(NmstatePlugin):
 
             if applied_config:
                 iface_info.update(get_ovsdb_external_ids(applied_config))
+                if iface_info.get(Interface.IPV4, {}).get(
+                    InterfaceIPv4.ENABLED
+                ) or iface_info.get(Interface.IPV6, {}).get(
+                    InterfaceIPv6.ENABLED
+                ):
+                    iface_info[Interface.WAIT_IP] = get_wait_ip(applied_config)
 
             info.append(iface_info)
 
