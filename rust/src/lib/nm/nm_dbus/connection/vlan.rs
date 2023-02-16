@@ -14,6 +14,7 @@ use super::super::{
 pub struct NmSettingVlan {
     pub parent: Option<String>,
     pub id: Option<u32>,
+    pub protocol: Option<String>,
     _other: HashMap<String, zvariant::OwnedValue>,
 }
 
@@ -23,6 +24,7 @@ impl TryFrom<DbusDictionary> for NmSettingVlan {
         Ok(Self {
             parent: _from_map!(v, "parent", String::try_from)?,
             id: _from_map!(v, "id", u32::try_from)?,
+            protocol: _from_map!(v, "protocol", String::try_from)?,
             _other: v,
         })
     }
@@ -36,6 +38,9 @@ impl ToDbusValue for NmSettingVlan {
         }
         if let Some(id) = self.id {
             ret.insert("id", zvariant::Value::new(id));
+        }
+        if let Some(protocol) = self.protocol.as_ref() {
+            ret.insert("protocol", zvariant::Value::new(protocol));
         }
         ret.extend(self._other.iter().map(|(key, value)| {
             (key.as_str(), zvariant::Value::from(value.clone()))

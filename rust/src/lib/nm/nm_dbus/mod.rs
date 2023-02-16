@@ -29,15 +29,15 @@ pub use self::connection::{
     NmSettingBridgeVlanRange, NmSettingConnection, NmSettingEthtool,
     NmSettingInfiniBand, NmSettingIp, NmSettingIpMethod, NmSettingLoopback,
     NmSettingMacVlan, NmSettingOvsBridge, NmSettingOvsDpdk, NmSettingOvsExtIds,
-    NmSettingOvsIface, NmSettingOvsPatch, NmSettingOvsPort, NmSettingSriov,
-    NmSettingSriovVf, NmSettingSriovVfVlan, NmSettingUser, NmSettingVeth,
-    NmSettingVlan, NmSettingVrf, NmSettingVxlan, NmSettingWired,
-    NmSettingsConnectionFlag, NmVlanProtocol,
+    NmSettingOvsIface, NmSettingOvsOtherConfig, NmSettingOvsPatch,
+    NmSettingOvsPort, NmSettingSriov, NmSettingSriovVf, NmSettingSriovVfVlan,
+    NmSettingUser, NmSettingVeth, NmSettingVlan, NmSettingVrf, NmSettingVxlan,
+    NmSettingWired, NmSettingsConnectionFlag, NmVlanProtocol,
 };
 #[cfg(feature = "query_apply")]
 pub use self::device::{NmDevice, NmDeviceState, NmDeviceStateReason};
 #[cfg(feature = "query_apply")]
-pub use self::dns::NmDnsEntry;
+pub use self::dns::{NmDnsEntry, NmGlobalDnsConfig};
 pub use self::error::{
     ErrorKind, NmConnectionError, NmDeviceError, NmError, NmManagerError,
     NmSettingError,

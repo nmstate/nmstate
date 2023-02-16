@@ -63,9 +63,21 @@ impl VrfInterface {
             .map(|ports| ports.as_slice().iter().map(|p| p.as_str()).collect())
     }
 
-    pub(crate) fn sanitize(&mut self) -> Result<(), NmstateError> {
+    pub(crate) fn sanitize(
+        &mut self,
+        is_desired: bool,
+    ) -> Result<(), NmstateError> {
         // Ignoring the changes of MAC address of VRF as it is a layer 3
         // interface.
+        if is_desired {
+            if let Some(mac) = self.base.mac_address.as_ref() {
+                log::warn!(
+                    "Ignoring MAC address {mac} of VRF interface {} \
+                    as it is a layer 3(IP) interface",
+                    self.base.name.as_str()
+                );
+            }
+        }
         self.base.mac_address = None;
         if self.base.accept_all_mac_addresses == Some(false) {
             self.base.accept_all_mac_addresses = None;

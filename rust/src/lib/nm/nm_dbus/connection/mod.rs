@@ -52,7 +52,8 @@ pub use self::loopback::NmSettingLoopback;
 pub use self::mac_vlan::NmSettingMacVlan;
 pub use self::ovs::{
     NmSettingOvsBridge, NmSettingOvsDpdk, NmSettingOvsExtIds,
-    NmSettingOvsIface, NmSettingOvsPatch, NmSettingOvsPort,
+    NmSettingOvsIface, NmSettingOvsOtherConfig, NmSettingOvsPatch,
+    NmSettingOvsPort,
 };
 pub use self::route::NmIpRoute;
 pub use self::route_rule::{NmIpRouteRule, NmIpRouteRuleAction};

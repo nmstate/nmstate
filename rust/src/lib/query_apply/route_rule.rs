@@ -21,11 +21,11 @@ impl MergedRouteRules {
                 cur_rules.push(cur_rule);
             }
         }
-        for rule in self.for_apply.as_slice() {
+        for rule in self.for_verify.as_slice() {
             if rule.is_absent() {
                 // Ignore absent rule when desired matches
                 if self
-                    .for_apply
+                    .for_verify
                     .as_slice()
                     .iter()
                     .any(|r| !r.is_absent() && rule.is_match(r))

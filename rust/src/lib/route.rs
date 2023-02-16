@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use std::collections::{hash_map::Entry, HashMap, HashSet};
+use std::net::Ipv4Addr;
+use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};
 
@@ -64,8 +66,8 @@ impl Routes {
     pub fn validate(&self) -> Result<(), NmstateError> {
         // All desire non-absent route should have next hop interface
         if let Some(config_routes) = self.config.as_ref() {
-            for route in config_routes.iter().filter(|r| !r.is_absent()) {
-                if route.next_hop_iface.is_none() {
+            for route in config_routes.iter() {
+                if !route.is_absent() && route.next_hop_iface.is_none() {
                     return Err(NmstateError::new(
                         ErrorKind::NotImplementedError,
                         format!(
@@ -73,6 +75,9 @@ impl Routes {
                             is not supported: {route:?}"
                         ),
                     ));
+                }
+                if let Some(dst) = route.destination.as_deref() {
+                    validate_route_dst(dst)?;
                 }
             }
         }
@@ -105,6 +110,7 @@ pub struct RouteEntry {
     pub state: Option<RouteState>,
     #[serde(skip_serializing_if = "Option::is_none")]
     /// Route destination address or network
+    /// Mandatory for every non-absent routes.
     pub destination: Option<String>,
     #[serde(
         skip_serializing_if = "Option::is_none",
@@ -112,6 +118,7 @@ pub struct RouteEntry {
     )]
     /// Route next hop interface name.
     /// Serialize and deserialize to/from `next-hop-interface`.
+    /// Mandatory for every non-absent routes.
     pub next_hop_iface: Option<String>,
     #[serde(
         skip_serializing_if = "Option::is_none",
@@ -119,6 +126,8 @@ pub struct RouteEntry {
     )]
     /// Route next hop IP address.
     /// Serialize and deserialize to/from `next-hop-address`.
+    /// When setting this as empty string for absent route, it will only delete
+    /// routes __without__ `next-hop-address`.
     pub next_hop_addr: Option<String>,
     #[serde(
         skip_serializing_if = "Option::is_none",
@@ -136,6 +145,15 @@ pub struct RouteEntry {
     /// Route table id. [RouteEntry::USE_DEFAULT_ROUTE_TABLE] for main
     /// route table 254.
     pub table_id: Option<u32>,
+
+    /// ECMP(Equal-Cost Multi-Path) route weight
+    /// The valid range of this property is 1-256.
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_u16_or_string"
+    )]
+    pub weight: Option<u16>,
 }
 
 impl RouteEntry {
@@ -152,6 +170,7 @@ impl RouteEntry {
 
     pub(crate) fn is_match(&self, other: &Self) -> bool {
         if self.destination.as_ref().is_some()
+            && self.destination.as_deref() != Some("")
             && self.destination != other.destination
         {
             return false;
@@ -173,12 +192,15 @@ impl RouteEntry {
         {
             return false;
         }
+        if self.weight.is_some() && self.weight != other.weight {
+            return false;
+        }
         true
     }
 
     // Return tuple of (no_absent, is_ipv4, table_id, next_hop_iface,
-    // destination, next_hop_addr)
-    fn sort_key(&self) -> (bool, bool, u32, &str, &str, &str) {
+    // destination, next_hop_addr, weight)
+    fn sort_key(&self) -> (bool, bool, u32, &str, &str, &str, u16) {
         (
             !matches!(self.state, Some(RouteState::Absent)),
             !self
@@ -190,19 +212,24 @@ impl RouteEntry {
             self.next_hop_iface.as_deref().unwrap_or(""),
             self.destination.as_deref().unwrap_or(""),
             self.next_hop_addr.as_deref().unwrap_or(""),
+            self.weight.unwrap_or_default(),
         )
     }
 
     pub(crate) fn sanitize(&mut self) -> Result<(), NmstateError> {
         if let Some(dst) = self.destination.as_ref() {
-            let new_dst = sanitize_ip_network(dst)?;
-            if dst != &new_dst {
-                log::warn!(
-                    "Route destination {} sanitized to {}",
-                    dst,
-                    new_dst
-                );
-                self.destination = Some(new_dst);
+            if dst.is_empty() {
+                self.destination = None;
+            } else {
+                let new_dst = sanitize_ip_network(dst)?;
+                if dst != &new_dst {
+                    log::warn!(
+                        "Route destination {} sanitized to {}",
+                        dst,
+                        new_dst
+                    );
+                    self.destination = Some(new_dst);
+                }
             }
         }
         if let Some(via) = self.next_hop_addr.as_ref() {
@@ -214,6 +241,26 @@ impl RouteEntry {
                     new_via
                 );
                 self.next_hop_addr = Some(new_via);
+            }
+        }
+        if let Some(weight) = self.weight {
+            if !(1..=256).contains(&weight) {
+                return Err(NmstateError::new(
+                    ErrorKind::InvalidArgument,
+                    format!(
+                        "Invalid ECMP route weight {weight}, \
+                        should be in the range of 1 to 256"
+                    ),
+                ));
+            }
+            if let Some(dst) = self.destination.as_deref() {
+                if is_ipv6_addr(dst) {
+                    return Err(NmstateError::new(
+                        ErrorKind::NotSupportedError,
+                        "IPv6 ECMP route with weight is not supported yet"
+                            .to_string(),
+                    ));
+                }
             }
         }
         Ok(())
@@ -270,6 +317,9 @@ impl std::fmt::Display for RouteEntry {
         if let Some(v) = self.table_id.as_ref() {
             props.push(format!("table-id: {v}"));
         }
+        if let Some(v) = self.weight {
+            props.push(format!("weight: {v}"));
+        }
 
         write!(f, "{}", props.join(" "))
     }
@@ -289,6 +339,7 @@ impl MergedRoutes {
         current: Routes,
         merged_ifaces: &MergedInterfaces,
     ) -> Result<Self, NmstateError> {
+        desired.validate()?;
         let mut desired_routes = Vec::new();
         if let Some(rts) = desired.config.as_ref() {
             for rt in rts {
@@ -467,4 +518,52 @@ impl MergedRoutes {
     pub(crate) fn is_changed(&self) -> bool {
         !self.route_changed_ifaces.is_empty()
     }
+}
+
+// Validating if the route destination network is valid,
+// 0.0.0.0/8 and its subnet cannot be used as the route destination network
+fn validate_route_dst(dst: &str) -> Result<(), NmstateError> {
+    if !is_ipv6_addr(dst) {
+        let ip_net: Vec<&str> = dst.split('/').collect();
+        let ip_addr = Ipv4Addr::from_str(ip_net[0])?;
+        if ip_addr.octets()[0] == 0 {
+            if dst.contains('/') {
+                let prefix = match ip_net[1].parse::<i32>() {
+                    Ok(p) => p,
+                    Err(_) => {
+                        return Err(NmstateError::new(
+                            ErrorKind::InvalidArgument,
+                            format!(
+                                "The prefix of the route destination network \
+                                '{dst}' is invalid"
+                            ),
+                        ));
+                    }
+                };
+                if prefix >= 8 {
+                    let e = NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        "0.0.0.0/8 and its subnet cannot be used as \
+                        the route destination, please use the default \
+                        gateway 0.0.0.0/0 instead"
+                            .to_string(),
+                    );
+                    log::error!("{}", e);
+                    return Err(e);
+                }
+            } else {
+                let e = NmstateError::new(
+                    ErrorKind::InvalidArgument,
+                    "0.0.0.0/8 and its subnet cannot be used as \
+                    the route destination, please use the default \
+                    gateway 0.0.0.0/0 instead"
+                        .to_string(),
+                );
+                log::error!("{}", e);
+                return Err(e);
+            }
+        }
+        return Ok(());
+    }
+    Ok(())
 }

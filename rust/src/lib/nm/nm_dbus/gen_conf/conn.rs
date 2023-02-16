@@ -82,6 +82,9 @@ impl NmConnection {
         if let Some(ovs_eids) = &self.ovs_ext_ids {
             sections.push(("ovs-external-ids", ovs_eids.to_keyfile()?));
         }
+        if let Some(ovs_other_cfgs) = &self.ovs_other_config {
+            sections.push(("ovs-other-config", ovs_other_cfgs.to_keyfile()?));
+        }
 
         keyfile_sections_to_string(&sections)
     }

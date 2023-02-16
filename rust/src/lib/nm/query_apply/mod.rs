@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 mod apply;
-mod dns;
+pub(crate) mod dns;
 mod ieee8021x;
 mod ip;
 mod lldp;
@@ -31,6 +31,6 @@ pub(crate) use self::profile::{
 pub(crate) use self::route::is_route_removed;
 pub(crate) use self::user::get_description;
 pub(crate) use self::veth::is_veth_peer_changed;
-pub(crate) use self::vlan::is_vlan_id_changed;
+pub(crate) use self::vlan::is_vlan_changed;
 pub(crate) use self::vrf::is_vrf_table_id_changed;
-pub(crate) use self::vxlan::is_vxlan_id_changed;
+pub(crate) use self::vxlan::is_vxlan_changed;

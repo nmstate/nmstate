@@ -65,6 +65,7 @@ pub(crate) fn new_vlan_iface(name: &str, parent: &str, id: u16) -> Interface {
     iface.vlan = Some(VlanConfig {
         base_iface: parent.to_string(),
         id,
+        ..Default::default()
     });
     Interface::Vlan(iface)
 }

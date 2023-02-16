@@ -17,15 +17,6 @@ pub struct MptcpConfig {
     pub address_flags: Option<Vec<MptcpAddressFlag>>,
 }
 
-impl MptcpConfig {
-    pub(crate) fn sanitize_for_verify(&mut self) {
-        if let Some(flags) = self.address_flags.as_mut() {
-            flags.dedup();
-            flags.sort_unstable();
-        }
-    }
-}
-
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize,
 )]

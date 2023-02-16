@@ -69,7 +69,6 @@ impl SrIovConfig {
 
     // * Convert VF MAC address to upper case
     // * Sort by VF ID
-    // * Ignore 'vfs: []' which is just reverting all VF config to default.
     pub(crate) fn sanitize(&mut self) {
         if let Some(vfs) = self.vfs.as_mut() {
             for vf in vfs.iter_mut() {
@@ -78,10 +77,6 @@ impl SrIovConfig {
                 }
             }
             vfs.sort_unstable_by(|a, b| a.id.cmp(&b.id));
-            // Ignore `vfs: []` which is just revert all VF config to default.
-            if vfs.is_empty() {
-                self.vfs = None;
-            }
         }
     }
 
@@ -99,11 +94,11 @@ impl SrIovConfig {
             vfs.sort_unstable_by(|a, b| a.id.cmp(&b.id));
 
             if !vfs.is_empty() {
-                let total_vfs = self.total_vfs.unwrap_or(
+                let total_vfs = self.total_vfs.unwrap_or_else(|| {
                     current.and_then(|c| c.total_vfs).unwrap_or(
                         vfs.iter().map(|v| v.id).max().unwrap_or_default() + 1,
-                    ),
-                );
+                    )
+                });
                 self.total_vfs = Some(total_vfs);
                 // Auto fill the missing
                 if total_vfs as usize != vfs.len() {
@@ -200,11 +195,7 @@ impl Interfaces {
         current: &Self,
     ) -> Result<(), NmstateError> {
         let mut changed_iface_names: Vec<String> = Vec::new();
-        for iface in self
-            .kernel_ifaces
-            .values_mut()
-            .filter(|i| i.iface_type() == InterfaceType::Ethernet)
-        {
+        for iface in self.kernel_ifaces.values_mut() {
             if let Some((pf_name, vf_id)) = parse_sriov_vf_naming(iface.name())?
             {
                 if let Some(vf_iface_name) =

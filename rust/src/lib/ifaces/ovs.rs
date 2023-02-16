@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::HashMap;
 use std::convert::TryFrom;
 
 use serde::{Deserialize, Serialize};
 
 use crate::{
     BaseInterface, BridgePortVlanConfig, ErrorKind, Interface, InterfaceType,
-    MergedInterface, NmstateError,
+    MergedInterface, NmstateError, OvsDbIfaceConfig,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -111,13 +110,18 @@ impl OvsBridgeInterface {
     }
 
     // * OVS Bridge cannot have MTU, IP
-    pub(crate) fn sanitize(&mut self) -> Result<(), NmstateError> {
+    pub(crate) fn sanitize(
+        &mut self,
+        is_desired: bool,
+    ) -> Result<(), NmstateError> {
         if let Some(mtu) = self.base.mtu.as_ref() {
-            log::warn!(
-                "OVS Bridge {} could not hold 'mtu:{mtu}' configuration as it \
-                only exists in OVS database, ignoring",
-                self.base.name.as_str()
-            );
+            if is_desired {
+                log::warn!(
+                    "OVS Bridge {} could not hold 'mtu:{mtu}' configuration \
+                    as it only exists in OVS database, ignoring",
+                    self.base.name.as_str()
+                );
+            }
         }
         self.base.mtu = None;
         self.base.ipv4 = None;
@@ -131,7 +135,7 @@ impl OvsBridgeInterface {
         {
             for port_conf in port_confs {
                 if let Some(vlan_conf) = port_conf.vlan.as_ref() {
-                    vlan_conf.sanitize()?;
+                    vlan_conf.sanitize(is_desired)?;
                 }
             }
         }
@@ -414,8 +418,13 @@ impl OvsInterface {
     }
 
     // OVS patch interface cannot have MTU or IP configuration
-    pub(crate) fn sanitize(&self) -> Result<(), NmstateError> {
-        if self.patch.is_some() {
+    // OVS DPDK `n_rxq_desc` and `n_txq_desc` should be power of 2 within
+    // 1-4096.
+    pub(crate) fn sanitize(
+        &self,
+        is_desired: bool,
+    ) -> Result<(), NmstateError> {
+        if is_desired && self.patch.is_some() {
             if self.base.mtu.is_some() {
                 let e = NmstateError::new(
                     ErrorKind::InvalidArgument,
@@ -442,6 +451,9 @@ impl OvsInterface {
                 log::error!("{}", e);
                 return Err(e);
             }
+        }
+        if let Some(dpdk_conf) = self.dpdk.as_ref() {
+            dpdk_conf.sanitize(is_desired)?;
         }
         Ok(())
     }
@@ -499,11 +511,13 @@ pub struct OvsBridgeBondConfig {
     )]
     /// Deserialize and serialize from/to `bond-updelay`.
     pub bond_updelay: Option<u32>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none", rename = "ovs-db")]
     /// OpenvSwitch specific `other_config` for OVS bond. Please refer to
     /// manpage `ovs-vswitchd.conf.db(5)` for more detail.
-    /// Set to None for remove specific entry.
-    pub other_config: Option<HashMap<String, Option<String>>>,
+    /// When setting to None, nmstate will try to preserve current
+    /// `other_config`, otherwise, nmstate will override all `other_config`
+    /// for specified OVS bond.
+    pub ovsdb: Option<OvsDbIfaceConfig>,
 }
 
 impl OvsBridgeBondConfig {
@@ -600,13 +614,66 @@ pub struct OvsPatchConfig {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
-#[serde(deny_unknown_fields, rename_all = "kebab-case")]
+#[serde(deny_unknown_fields)]
 #[non_exhaustive]
 pub struct OvsDpdkConfig {
     pub devargs: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    /// Deserialize and serialize from/to `rx-queue`.
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        alias = "n_rxq",
+        rename = "rx-queue"
+    )]
+    /// Deserialize and serialize from/to `rx-queue`. You may also use
+    /// OVS terminology `n_rxq` for this property.
     pub rx_queue: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    /// Specifies  the  rx  queue  size (number rx descriptors) for dpdk ports.
+    /// Must be power of 2 in the range of 1 to 4096.
+    /// Setting to 0 means remove this setting from OVS database.
+    pub n_rxq_desc: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    /// Specifies  the  tx  queue  size (number tx descriptors) for dpdk ports.
+    /// Must be power of 2 in the range of 1 to 4096.
+    /// Setting to 0 means remove this setting from OVS database.
+    pub n_txq_desc: Option<u32>,
+}
+
+const POWER_2_BETWEEN_1_4096: [u32; 13] =
+    [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096];
+
+fn validate_dpdk_queue_desc(
+    n: u32,
+    prop_name: &str,
+) -> Result<(), NmstateError> {
+    if n != 0 && !POWER_2_BETWEEN_1_4096.contains(&n) {
+        Err(NmstateError::new(
+            ErrorKind::InvalidArgument,
+            format!(
+                "OVS DPDK {prop_name} must power of 2 within \
+                range of 1 to 4096. Setting to 0 if you want to remove \
+                this setting from OVS database. But got {n}"
+            ),
+        ))
+    } else {
+        Ok(())
+    }
+}
+
+impl OvsDpdkConfig {
+    pub(crate) fn sanitize(
+        &self,
+        is_desired: bool,
+    ) -> Result<(), NmstateError> {
+        if is_desired {
+            if let Some(n_rxq_desc) = self.n_rxq_desc {
+                validate_dpdk_queue_desc(n_rxq_desc, "n_rxq_desc")?;
+            }
+            if let Some(n_txq_desc) = self.n_txq_desc {
+                validate_dpdk_queue_desc(n_txq_desc, "n_txq_desc")?;
+            }
+        }
+        Ok(())
+    }
 }
 
 impl MergedInterface {

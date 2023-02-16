@@ -5,10 +5,7 @@ use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    ip::is_ipv6_addr, ErrorKind, MergedInterface, MergedNetworkState,
-    NmstateError,
-};
+use crate::{ip::is_ipv6_addr, ErrorKind, MergedNetworkState, NmstateError};
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[non_exhaustive]
@@ -56,6 +53,13 @@ impl DnsState {
     pub fn is_empty(&self) -> bool {
         self.running.is_none() && self.config.is_none()
     }
+
+    pub(crate) fn sanitize(&mut self) -> Result<(), NmstateError> {
+        if let Some(config) = self.config.as_mut() {
+            config.sanitize()?;
+        }
+        Ok(())
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -101,17 +105,40 @@ impl DnsClientState {
         self.server.as_ref().map(|s| s.len()).unwrap_or_default() == 0
             && self.search.as_ref().map(|s| s.len()).unwrap_or_default() == 0
     }
-}
 
-fn is_mixed_dns_servers(srvs: &[String]) -> bool {
-    let mut pattern = String::new();
-    for srv in srvs {
-        let cur_char = if is_ipv6_addr(srv) { '6' } else { '4' };
-        if !pattern.ends_with(cur_char) {
-            pattern.push(cur_char);
+    // sanitize the IP addresses.
+    pub(crate) fn sanitize(&mut self) -> Result<(), NmstateError> {
+        if let Some(srvs) = self.server.as_mut() {
+            let mut sanitized_srvs = Vec::new();
+            for srv in srvs {
+                if is_ipv6_addr(srv.as_str()) {
+                    let splits: Vec<&str> = srv.split('%').collect();
+                    if splits.len() == 2 {
+                        if let Ok(ip_addr) = splits[0].parse::<Ipv6Addr>() {
+                            sanitized_srvs
+                                .push(format!("{}%{}", ip_addr, splits[1]));
+                        }
+                    } else if let Ok(ip_addr) = srv.parse::<Ipv6Addr>() {
+                        sanitized_srvs.push(ip_addr.to_string());
+                    } else {
+                        return Err(NmstateError::new(
+                            ErrorKind::InvalidArgument,
+                            format!("Invalid DNS server string {srv}",),
+                        ));
+                    }
+                } else if let Ok(ip_addr) = srv.parse::<Ipv4Addr>() {
+                    sanitized_srvs.push(ip_addr.to_string());
+                } else {
+                    return Err(NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        format!("Invalid DNS server string {srv}",),
+                    ));
+                }
+            }
+            self.server = Some(sanitized_srvs);
         }
+        Ok(())
     }
-    pattern.contains("464") || pattern.contains("646")
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -124,9 +151,11 @@ pub(crate) struct MergedDnsState {
 
 impl MergedDnsState {
     pub(crate) fn new(
-        desired: DnsState,
-        current: DnsState,
+        mut desired: DnsState,
+        mut current: DnsState,
     ) -> Result<Self, NmstateError> {
+        desired.sanitize()?;
+        current.sanitize().ok();
         let mut servers = current
             .config
             .as_ref()
@@ -154,41 +183,10 @@ impl MergedDnsState {
             }
         }
 
-        // sanitize the IP addresses.
-        let mut sanitized_srvs = Vec::new();
-
-        for srv in servers {
-            if is_ipv6_addr(srv.as_str()) {
-                let splits: Vec<&str> = srv.split('%').collect();
-                if splits.len() == 2 {
-                    if let Ok(ip_addr) = splits[0].parse::<Ipv6Addr>() {
-                        sanitized_srvs
-                            .push(format!("{}%{}", ip_addr, splits[1]));
-                    }
-                } else if let Ok(ip_addr) = srv.parse::<Ipv6Addr>() {
-                    sanitized_srvs.push(ip_addr.to_string());
-                } else {
-                    return Err(NmstateError::new(
-                        ErrorKind::InvalidArgument,
-                        format!("Invalid DNS server string {srv}",),
-                    ));
-                }
-            } else if let Ok(ip_addr) = srv.parse::<Ipv4Addr>() {
-                sanitized_srvs.push(ip_addr.to_string());
-            } else {
-                return Err(NmstateError::new(
-                    ErrorKind::InvalidArgument,
-                    format!("Invalid DNS server string {srv}",),
-                ));
-            }
-        }
-
-        validate_dns_srvs(sanitized_srvs.as_slice())?;
-
         Ok(Self {
             desired,
             current,
-            servers: sanitized_srvs,
+            servers,
             searches,
         })
     }
@@ -209,20 +207,6 @@ impl MergedDnsState {
 
         self.servers != cur_servers || self.searches != cur_searches
     }
-}
-
-fn validate_dns_srvs(srvs: &[String]) -> Result<(), NmstateError> {
-    if srvs.len() > 2 && is_mixed_dns_servers(srvs) {
-        let e = NmstateError::new(
-            ErrorKind::NotImplementedError,
-            "Placing IPv4/IPv6 nameserver in the middle of IPv6/IPv4 \
-            nameservers is not supported yet"
-                .to_string(),
-        );
-        log::error!("{}", e);
-        return Err(e);
-    }
-    Ok(())
 }
 
 impl MergedNetworkState {
@@ -309,25 +293,4 @@ pub(crate) fn parse_dns_ipv6_link_local_srv(
         }
     }
     Ok(None)
-}
-
-impl MergedInterface {
-    // IP stack is merged with current at this point.
-    pub(crate) fn is_iface_valid_for_dns(&self, is_ipv6: bool) -> bool {
-        if is_ipv6 {
-            self.merged.base_iface().ipv6.as_ref().map(|ip_conf| {
-                ip_conf.enabled
-                    && (ip_conf.is_static()
-                        || (ip_conf.is_auto()
-                            && ip_conf.auto_dns == Some(false)))
-            }) == Some(true)
-        } else {
-            self.merged.base_iface().ipv4.as_ref().map(|ip_conf| {
-                ip_conf.enabled
-                    && (ip_conf.is_static()
-                        || (ip_conf.is_auto()
-                            && ip_conf.auto_dns == Some(false)))
-            }) == Some(true)
-        }
-    }
 }

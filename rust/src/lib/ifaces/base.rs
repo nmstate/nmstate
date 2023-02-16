@@ -206,7 +206,10 @@ impl BaseInterface {
         self.ipv6.as_ref().map(|i| i.enabled) == Some(true)
     }
 
-    pub(crate) fn sanitize(&mut self) -> Result<(), NmstateError> {
+    pub(crate) fn sanitize(
+        &mut self,
+        is_desired: bool,
+    ) -> Result<(), NmstateError> {
         if let Some(mac) = self.mac_address.as_mut() {
             mac.make_ascii_uppercase();
         }
@@ -217,10 +220,10 @@ impl BaseInterface {
         self.copy_mac_from = None;
 
         if let Some(ipv4_conf) = self.ipv4.as_mut() {
-            ipv4_conf.sanitize()?;
+            ipv4_conf.sanitize(is_desired)?;
         }
         if let Some(ipv6_conf) = self.ipv6.as_mut() {
-            ipv6_conf.sanitize()?;
+            ipv6_conf.sanitize(is_desired)?;
             if ipv6_conf.enabled {
                 if let Some(mtu) = self.mtu {
                     if mtu < MINIMUM_IPV6_MTU {
@@ -245,21 +248,6 @@ impl BaseInterface {
             self.wait_ip = None;
         }
         Ok(())
-    }
-
-    pub(crate) fn sanitize_for_verify(&mut self) {
-        if self.controller.as_deref() == Some("") {
-            self.controller = None;
-        }
-        if let Some(mptcp_conf) = self.mptcp.as_mut() {
-            mptcp_conf.sanitize_for_verify();
-        }
-        if let Some(ipv4_conf) = self.ipv4.as_mut() {
-            ipv4_conf.sanitize_for_verify();
-        }
-        if let Some(ipv6_conf) = self.ipv6.as_mut() {
-            ipv6_conf.sanitize_for_verify();
-        }
     }
 }
 
@@ -316,7 +304,7 @@ impl MergedInterface {
     }
 
     fn validate_can_have_ip(&mut self) -> Result<(), NmstateError> {
-        if self.is_desired() {
+        if self.is_desired() && self.merged.is_up() {
             if let Some(apply_iface) = self.for_apply.as_ref() {
                 let base_iface = apply_iface.base_iface();
                 if !base_iface.can_have_ip()

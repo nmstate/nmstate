@@ -166,7 +166,7 @@ const RTN_BLACKHOLE: u8 = 6;
 const RTN_UNREACHABLE: u8 = 7;
 const RTN_PROHIBIT: u8 = 8;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum NmIpRouteRuleAction {
     Blackhole,

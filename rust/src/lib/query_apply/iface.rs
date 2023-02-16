@@ -6,6 +6,25 @@ use crate::{
 };
 
 impl Interface {
+    // This function will clean up post-apply current state before verification
+    pub(crate) fn sanitize_current_for_verify(&mut self) {
+        self.base_iface_mut().sanitize_current_for_verify();
+        if let Interface::LinuxBridge(iface) = self {
+            iface.sanitize_current_for_verify()
+        }
+        if let Interface::OvsBridge(iface) = self {
+            iface.sanitize_current_for_verify()
+        }
+    }
+
+    // This function will clean up desired state before verification
+    pub(crate) fn sanitize_desired_for_verify(&mut self) {
+        self.base_iface_mut().sanitize_desired_for_verify();
+        if let Interface::Ethernet(iface) = self {
+            iface.sanitize_desired_for_verify();
+        }
+    }
+
     pub(crate) fn verify(&self, current: &Self) -> Result<(), NmstateError> {
         let mut current = current.clone();
         self.process_allow_extra_address(&mut current);

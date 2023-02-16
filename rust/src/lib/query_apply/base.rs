@@ -1,8 +1,39 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{BaseInterface, InterfaceType};
+use crate::{BaseInterface, InterfaceType, OvsDbIfaceConfig};
 
 impl BaseInterface {
+    pub(crate) fn sanitize_current_for_verify(&mut self) {
+        if self.controller.is_none() {
+            self.controller = Some(String::new());
+        }
+        if let Some(mptcp_conf) = self.mptcp.as_mut() {
+            mptcp_conf.sanitize_current_for_verify();
+        }
+        if let Some(ipv4_conf) = self.ipv4.as_mut() {
+            ipv4_conf.sanitize_current_for_verify();
+        }
+        if let Some(ipv6_conf) = self.ipv6.as_mut() {
+            ipv6_conf.sanitize_current_for_verify();
+        }
+        // ovsdb None equal to empty
+        if self.ovsdb.is_none() {
+            self.ovsdb = Some(OvsDbIfaceConfig::new_empty());
+        }
+    }
+
+    pub(crate) fn sanitize_desired_for_verify(&mut self) {
+        if let Some(ipv4_conf) = self.ipv4.as_mut() {
+            ipv4_conf.sanitize_desired_for_verify();
+        }
+        if let Some(ipv6_conf) = self.ipv6.as_mut() {
+            ipv6_conf.sanitize_desired_for_verify();
+        }
+        if let Some(mptcp_conf) = self.mptcp.as_mut() {
+            mptcp_conf.sanitize_desired_for_verify();
+        }
+    }
+
     pub(crate) fn update(&mut self, other: &BaseInterface) {
         if other.prop_list.contains(&"name") {
             self.name = other.name.clone();

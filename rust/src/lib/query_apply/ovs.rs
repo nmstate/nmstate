@@ -4,8 +4,9 @@ use std::collections::HashMap;
 
 use crate::{
     state::get_json_value_difference, ErrorKind, MergedNetworkState,
-    MergedOvsDbGlobalConfig, NmstateError, OvsBridgeConfig, OvsBridgeInterface,
-    OvsDbGlobalConfig, OvsInterface,
+    MergedOvsDbGlobalConfig, NmstateError, OvsBridgeBondConfig,
+    OvsBridgeConfig, OvsBridgeInterface, OvsDbGlobalConfig, OvsDbIfaceConfig,
+    OvsInterface,
 };
 
 impl MergedOvsDbGlobalConfig {
@@ -30,8 +31,17 @@ impl MergedOvsDbGlobalConfig {
             other_config: Some(other_config),
             prop_list: vec!["external_ids", "other_config"],
         };
+
         let desired_value = serde_json::to_value(desired)?;
-        let current_value = serde_json::to_value(current)?;
+        let current_value = if current.is_none() {
+            serde_json::to_value(OvsDbGlobalConfig {
+                external_ids: Some(HashMap::new()),
+                other_config: Some(HashMap::new()),
+                prop_list: Vec::new(),
+            })?
+        } else {
+            serde_json::to_value(current)?
+        };
 
         if let Some((reference, desire, current)) = get_json_value_difference(
             "ovsdb".to_string(),
@@ -60,6 +70,20 @@ impl OvsBridgeConfig {
 }
 
 impl OvsBridgeInterface {
+    pub(crate) fn sanitize_current_for_verify(&mut self) {
+        if let Some(port_confs) = self
+            .bridge
+            .as_mut()
+            .and_then(|br_conf| br_conf.ports.as_mut())
+        {
+            for port_conf in port_confs {
+                if let Some(bond_conf) = port_conf.bond.as_mut() {
+                    bond_conf.sanitize_current_for_verify();
+                }
+            }
+        }
+    }
+
     pub(crate) fn update_ovs_bridge(&mut self, other: &OvsBridgeInterface) {
         if let Some(br_conf) = &mut self.bridge {
             br_conf.update(other.bridge.as_ref());
@@ -109,6 +133,24 @@ impl MergedNetworkState {
             }
         } else {
             false
+        }
+    }
+}
+
+impl OvsDbIfaceConfig {
+    pub(crate) fn new_empty() -> Self {
+        Self {
+            external_ids: Some(HashMap::new()),
+            other_config: Some(HashMap::new()),
+        }
+    }
+}
+
+impl OvsBridgeBondConfig {
+    pub(crate) fn sanitize_current_for_verify(&mut self) {
+        // None ovsbd equal to empty
+        if self.ovsdb.is_none() {
+            self.ovsdb = Some(OvsDbIfaceConfig::new_empty());
         }
     }
 }

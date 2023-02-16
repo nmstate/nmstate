@@ -14,15 +14,9 @@ impl Interfaces {
                 .get_iface_mut(other_iface.name(), other_iface.iface_type())
             {
                 Some(self_iface) => {
-                    log::debug!(
-                        "Merging interface {:?} into {:?}",
-                        other_iface,
-                        self_iface
-                    );
                     self_iface.update(other_iface);
                 }
                 None => {
-                    log::debug!("Appending new interface {:?}", other_iface);
                     new_ifaces.push(other_iface);
                 }
             }
@@ -61,16 +55,6 @@ impl Interfaces {
                 iface.remove_port(&port_name)
             }
         }
-    }
-
-    pub(crate) fn has_sriov_enabled(&self) -> bool {
-        self.kernel_ifaces.values().any(|i| {
-            if let Interface::Ethernet(eth_iface) = i {
-                eth_iface.sriov_is_enabled()
-            } else {
-                false
-            }
-        })
     }
 
     pub(crate) fn hide_controller_prop(&mut self) {
@@ -126,21 +110,6 @@ fn verify_desire_absent_but_found_in_current(
 }
 
 impl MergedInterfaces {
-    pub(crate) fn state_for_apply(&self) -> Interfaces {
-        let mut ifaces = Interfaces::new();
-        for merged_iface in self
-            .kernel_ifaces
-            .values()
-            .chain(self.user_ifaces.values())
-            .filter(|i| i.is_changed())
-        {
-            if let Some(iface) = merged_iface.for_apply.as_ref() {
-                ifaces.push(iface.clone());
-            }
-        }
-        ifaces
-    }
-
     pub(crate) fn verify(
         &self,
         current: &Interfaces,
@@ -153,22 +122,24 @@ impl MergedInterfaces {
             .values_mut()
             .chain(current.user_ifaces.values_mut())
         {
-            iface.sanitize().ok();
-            iface.sanitize_for_verify();
+            iface.sanitize(false).ok();
+            iface.sanitize_current_for_verify();
         }
 
         for des_iface in self.iter().filter(|i| i.is_desired()) {
-            let iface = if let Some(i) = des_iface.for_verify.as_ref() {
-                i
+            let mut iface = if let Some(i) = des_iface.for_verify.as_ref() {
+                i.clone()
             } else {
                 continue;
             };
+            iface.sanitize(false).ok();
+            iface.sanitize_desired_for_verify();
             if iface.is_absent() || (iface.is_virtual() && iface.is_down()) {
                 if let Some(cur_iface) =
                     current.get_iface(iface.name(), iface.iface_type())
                 {
                     verify_desire_absent_but_found_in_current(
-                        iface, cur_iface,
+                        &iface, cur_iface,
                     )?;
                 }
             } else if let Some(cur_iface) =
