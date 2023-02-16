@@ -122,22 +122,24 @@ impl MergedInterfaces {
             .values_mut()
             .chain(current.user_ifaces.values_mut())
         {
-            iface.sanitize().ok();
-            iface.sanitize_for_verify();
+            iface.sanitize(false).ok();
+            iface.sanitize_current_for_verify();
         }
 
         for des_iface in self.iter().filter(|i| i.is_desired()) {
-            let iface = if let Some(i) = des_iface.for_verify.as_ref() {
-                i
+            let mut iface = if let Some(i) = des_iface.for_verify.as_ref() {
+                i.clone()
             } else {
                 continue;
             };
+            iface.sanitize(false).ok();
+            iface.sanitize_desired_for_verify();
             if iface.is_absent() || (iface.is_virtual() && iface.is_down()) {
                 if let Some(cur_iface) =
                     current.get_iface(iface.name(), iface.iface_type())
                 {
                     verify_desire_absent_but_found_in_current(
-                        iface, cur_iface,
+                        &iface, cur_iface,
                     )?;
                 }
             } else if let Some(cur_iface) =

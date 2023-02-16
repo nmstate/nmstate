@@ -129,7 +129,6 @@ impl NetworkState {
 
         with_nm_checkpoint(&checkpoint, self.no_commit, || {
             if let Some(pf_state) = pf_state {
-                pf_state.interfaces.check_sriov_capability()?;
                 let pf_merged_state = MergedNetworkState::new(
                     pf_state,
                     cur_net_state.clone(),
@@ -146,6 +145,7 @@ impl NetworkState {
                 cur_net_state.retrieve_full()?;
             }
 
+            self.interfaces.check_sriov_capability()?;
             let merged_state = MergedNetworkState::new(
                 self.clone(),
                 cur_net_state.clone(),

@@ -248,11 +248,18 @@ impl InterfaceIpv4 {
     // * Disable DHCP and remove address if enabled: false
     // * Set DHCP options to None if DHCP is false
     // * Remove mptcp_flags is they are for query only
-    pub(crate) fn sanitize(&mut self) -> Result<(), NmstateError> {
+    pub(crate) fn sanitize(
+        &mut self,
+        is_desired: bool,
+    ) -> Result<(), NmstateError> {
         // Empty address should equal to disabled IPv4 stack
         if let Some(true) = self.addresses.as_ref().map(Vec::is_empty) {
             if self.enabled {
-                log::info!("Empty IPv4 address is considered as IPv4 disabled");
+                if is_desired {
+                    log::info!(
+                        "Empty IPv4 address is considered as IPv4 disabled"
+                    );
+                }
                 self.enabled = false;
             }
         }
@@ -268,11 +275,13 @@ impl InterfaceIpv4 {
                 self.auto_gateway = Some(true);
             }
             if !self.addresses.as_deref().unwrap_or_default().is_empty() {
-                log::warn!(
-                    "Static addresses {:?} are ignored when dynamic \
+                if is_desired {
+                    log::warn!(
+                        "Static addresses {:?} are ignored when dynamic \
                     IP is enabled",
-                    self.addresses.as_deref().unwrap_or_default()
-                );
+                        self.addresses.as_deref().unwrap_or_default()
+                    );
+                }
                 self.addresses = None;
             }
         }
@@ -295,14 +304,6 @@ impl InterfaceIpv4 {
             }
         }
         Ok(())
-    }
-
-    // Sort addresses and dedup
-    pub(crate) fn sanitize_for_verify(&mut self) {
-        if let Some(addrs) = self.addresses.as_mut() {
-            addrs.sort_unstable();
-            addrs.dedup();
-        }
     }
 }
 
@@ -507,7 +508,10 @@ impl InterfaceIpv6 {
     // * Disable DHCP and remove address if enabled: false
     // * Set DHCP options to None if DHCP is false
     // * Remove `mptcp_flags` as they are for query only
-    pub(crate) fn sanitize(&mut self) -> Result<(), NmstateError> {
+    pub(crate) fn sanitize(
+        &mut self,
+        is_desired: bool,
+    ) -> Result<(), NmstateError> {
         if self.is_auto() {
             if self.auto_dns.is_none() {
                 self.auto_dns = Some(true);
@@ -519,11 +523,13 @@ impl InterfaceIpv6 {
                 self.auto_gateway = Some(true);
             }
             if !self.addresses.as_deref().unwrap_or_default().is_empty() {
-                log::warn!(
-                    "Static addresses {:?} are ignored when dynamic \
-                    IP is enabled",
-                    self.addresses.as_deref().unwrap_or_default()
-                );
+                if is_desired {
+                    log::warn!(
+                        "Static addresses {:?} are ignored when dynamic \
+                        IP is enabled",
+                        self.addresses.as_deref().unwrap_or_default()
+                    );
+                }
                 self.addresses = None;
             }
         }
@@ -532,11 +538,13 @@ impl InterfaceIpv6 {
             addrs.retain(|addr| {
                 if let IpAddr::V6(ip_addr) = addr.ip {
                     if is_ipv6_unicast_link_local(&ip_addr) {
-                        log::warn!(
-                            "Ignoring IPv6 link local address {}/{}",
-                            &addr.ip,
-                            addr.prefix_length
-                        );
+                        if is_desired {
+                            log::warn!(
+                                "Ignoring IPv6 link local address {}/{}",
+                                &addr.ip,
+                                addr.prefix_length
+                            );
+                        }
                         false
                     } else {
                         true
@@ -566,7 +574,8 @@ impl InterfaceIpv6 {
             }
         }
         if let Some(token) = self.token.as_mut() {
-            if self.autoconf == Some(false)
+            if is_desired
+                && self.autoconf == Some(false)
                 && !(token.is_empty() || token == "::")
             {
                 return Err(NmstateError::new(
@@ -582,22 +591,6 @@ impl InterfaceIpv6 {
             sanitize_ipv6_token_to_string(token)?;
         }
         Ok(())
-    }
-
-    // Sort addresses and dedup
-    pub(crate) fn sanitize_for_verify(&mut self) {
-        if let Some(addrs) = self.addresses.as_mut() {
-            addrs.sort_unstable();
-            addrs.dedup();
-            if addrs.is_empty() {
-                self.addresses = None;
-            }
-        }
-
-        // None IPv6 token should be treat as "::"
-        if self.token.is_none() {
-            self.token = Some("::".to_string());
-        }
     }
 
     pub(crate) fn special_merge(&mut self, desired: &Self, current: &Self) {

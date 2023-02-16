@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{LinuxBridgeConfig, LinuxBridgeInterface};
+use crate::{BridgePortVlanConfig, LinuxBridgeConfig, LinuxBridgeInterface};
 
 impl LinuxBridgeInterface {
     pub(crate) const INTEGER_ROUNDED_OPTIONS: [&'static str; 5] = [
@@ -10,6 +10,26 @@ impl LinuxBridgeInterface {
         "interface.bridge.options.multicast-query-response-interval",
         "interface.bridge.options.multicast-startup-query-interval",
     ];
+
+    pub(crate) fn sanitize_current_for_verify(&mut self) {
+        self.treat_none_vlan_as_empty_dict();
+    }
+
+    // This is for verifying when user desire `vlan: {}` for resetting VLAN
+    // filtering, the new current state will show as `vlan: None`.
+    fn treat_none_vlan_as_empty_dict(&mut self) {
+        if let Some(port_confs) = self
+            .bridge
+            .as_mut()
+            .and_then(|br_conf| br_conf.port.as_mut())
+        {
+            for port_conf in port_confs {
+                if port_conf.vlan.is_none() {
+                    port_conf.vlan = Some(BridgePortVlanConfig::new());
+                }
+            }
+        }
+    }
 
     pub(crate) fn update_bridge(&mut self, other: &LinuxBridgeInterface) {
         if let Some(br_conf) = &mut self.bridge {

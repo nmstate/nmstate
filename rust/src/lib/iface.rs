@@ -635,35 +635,31 @@ impl Interface {
         }
     }
 
-    // This function will be invoked as final process of Interface for apply or
-    // verify.
+    // This function is for pre-edit clean up and check on current, `for_apply`,
+    // `for_verify` states.
+    //
     // It is plugin's duty to clean up the state for querying before showing to
     // user. Hence please do not use this function for querying.
-    pub(crate) fn sanitize(&mut self) -> Result<(), NmstateError> {
-        self.base_iface_mut().sanitize()?;
+    // The `is_desired` is used to suppress error checking and logging on
+    // non-desired state.
+    pub(crate) fn sanitize(
+        &mut self,
+        is_desired: bool,
+    ) -> Result<(), NmstateError> {
+        self.base_iface_mut().sanitize(is_desired)?;
         match self {
             Interface::Ethernet(iface) => iface.sanitize()?,
-            Interface::LinuxBridge(iface) => iface.sanitize()?,
-            Interface::OvsInterface(iface) => iface.sanitize()?,
-            Interface::OvsBridge(iface) => iface.sanitize()?,
-            Interface::Vrf(iface) => iface.sanitize()?,
+            Interface::LinuxBridge(iface) => iface.sanitize(is_desired)?,
+            Interface::OvsInterface(iface) => iface.sanitize(is_desired)?,
+            Interface::OvsBridge(iface) => iface.sanitize(is_desired)?,
+            Interface::Vrf(iface) => iface.sanitize(is_desired)?,
             Interface::Bond(iface) => iface.sanitize()?,
-            Interface::MacVlan(iface) => iface.sanitize()?,
-            Interface::MacVtap(iface) => iface.sanitize()?,
-            Interface::Loopback(iface) => iface.sanitize()?,
+            Interface::MacVlan(iface) => iface.sanitize(is_desired)?,
+            Interface::MacVtap(iface) => iface.sanitize(is_desired)?,
+            Interface::Loopback(iface) => iface.sanitize(is_desired)?,
             _ => (),
         }
         Ok(())
-    }
-
-    pub(crate) fn sanitize_for_verify(&mut self) {
-        self.base_iface_mut().sanitize_for_verify();
-        if let Interface::LinuxBridge(iface) = self {
-            iface.sanitize_for_verify()
-        }
-        if let Interface::OvsBridge(iface) = self {
-            iface.sanitize_for_verify()
-        }
     }
 
     pub(crate) fn parent(&self) -> Option<&str> {
@@ -780,11 +776,7 @@ impl MergedInterface {
         self.post_inter_ifaces_process_bond()?;
 
         if let Some(apply_iface) = self.for_apply.as_mut() {
-            apply_iface.sanitize()?;
-        }
-        if let Some(verify_iface) = self.for_verify.as_mut() {
-            verify_iface.sanitize().ok();
-            verify_iface.sanitize_for_verify();
+            apply_iface.sanitize(true)?;
         }
         Ok(())
     }

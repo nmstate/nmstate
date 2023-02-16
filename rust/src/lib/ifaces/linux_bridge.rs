@@ -100,14 +100,19 @@ impl LinuxBridgeInterface {
         Self::default()
     }
 
-    pub(crate) fn sanitize(&mut self) -> Result<(), NmstateError> {
+    pub(crate) fn sanitize(
+        &mut self,
+        is_desired: bool,
+    ) -> Result<(), NmstateError> {
         if let Some(opts) =
             self.bridge.as_mut().and_then(|b| b.options.as_mut())
         {
             opts.sanitize_group_fwd_mask(&self.base)?;
         }
         self.sort_ports();
-        self.sanitize_stp_opts()?;
+        if is_desired {
+            self.sanitize_stp_opts()?;
+        }
         self.use_upper_case_of_mac_address();
         self.flatten_port_vlan_ranges();
         self.sort_port_vlans();
@@ -119,15 +124,11 @@ impl LinuxBridgeInterface {
         {
             for port_conf in port_confs {
                 if let Some(vlan_conf) = port_conf.vlan.as_ref() {
-                    vlan_conf.sanitize()?;
+                    vlan_conf.sanitize(is_desired)?;
                 }
             }
         }
         Ok(())
-    }
-
-    pub(crate) fn sanitize_for_verify(&mut self) {
-        self.treat_none_vlan_as_empty_dict();
     }
 
     fn use_upper_case_of_mac_address(&mut self) {
@@ -167,22 +168,6 @@ impl LinuxBridgeInterface {
                     .vlan
                     .as_mut()
                     .map(BridgePortVlanConfig::sort_trunk_tags);
-            }
-        }
-    }
-
-    // This is for verifying when user desire `vlan: {}` for resetting VLAN
-    // filtering, the new current state will show as `vlan: None`.
-    fn treat_none_vlan_as_empty_dict(&mut self) {
-        if let Some(port_confs) = self
-            .bridge
-            .as_mut()
-            .and_then(|br_conf| br_conf.port.as_mut())
-        {
-            for port_conf in port_confs {
-                if port_conf.vlan.is_none() {
-                    port_conf.vlan = Some(BridgePortVlanConfig::new());
-                }
             }
         }
     }

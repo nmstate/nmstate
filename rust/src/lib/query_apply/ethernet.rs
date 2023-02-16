@@ -6,6 +6,14 @@ use crate::{
 };
 
 impl EthernetInterface {
+    pub(crate) fn sanitize_desired_for_verify(&mut self) {
+        if let Some(sriov_conf) =
+            self.ethernet.as_mut().and_then(|e| e.sr_iov.as_mut())
+        {
+            sriov_conf.sanitize_desired_for_verify();
+        }
+    }
+
     pub(crate) fn sriov_is_enabled(&self) -> bool {
         self.ethernet
             .as_ref()
