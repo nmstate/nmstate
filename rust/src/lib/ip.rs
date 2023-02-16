@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use std::fmt::Write;
 use std::net::{IpAddr, Ipv6Addr};
 use std::str::FromStr;
 
@@ -89,6 +90,8 @@ struct InterfaceIp {
         rename = "allow-extra-address"
     )]
     pub allow_extra_address: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub token: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -245,11 +248,18 @@ impl InterfaceIpv4 {
     // * Disable DHCP and remove address if enabled: false
     // * Set DHCP options to None if DHCP is false
     // * Remove mptcp_flags is they are for query only
-    pub(crate) fn sanitize(&mut self) -> Result<(), NmstateError> {
+    pub(crate) fn sanitize(
+        &mut self,
+        is_desired: bool,
+    ) -> Result<(), NmstateError> {
         // Empty address should equal to disabled IPv4 stack
         if let Some(true) = self.addresses.as_ref().map(Vec::is_empty) {
             if self.enabled {
-                log::info!("Empty IPv4 address is considered as IPv4 disabled");
+                if is_desired {
+                    log::info!(
+                        "Empty IPv4 address is considered as IPv4 disabled"
+                    );
+                }
                 self.enabled = false;
             }
         }
@@ -265,11 +275,13 @@ impl InterfaceIpv4 {
                 self.auto_gateway = Some(true);
             }
             if !self.addresses.as_deref().unwrap_or_default().is_empty() {
-                log::warn!(
-                    "Static addresses {:?} are ignored when dynamic \
+                if is_desired {
+                    log::warn!(
+                        "Static addresses {:?} are ignored when dynamic \
                     IP is enabled",
-                    self.addresses.as_deref().unwrap_or_default()
-                );
+                        self.addresses.as_deref().unwrap_or_default()
+                    );
+                }
                 self.addresses = None;
             }
         }
@@ -292,14 +304,6 @@ impl InterfaceIpv4 {
             }
         }
         Ok(())
-    }
-
-    // Sort addresses and dedup
-    pub(crate) fn sanitize_for_verify(&mut self) {
-        if let Some(addrs) = self.addresses.as_mut() {
-            addrs.sort_unstable();
-            addrs.dedup();
-        }
     }
 }
 
@@ -452,6 +456,9 @@ pub struct InterfaceIpv6 {
     /// Only available for autoconf enabled interface.
     /// Deserialize from `auto-route-metric`.
     pub auto_route_metric: Option<u32>,
+    /// IETF draft(expired) Tokenised IPv6 Identifiers. Should be only
+    /// containing the tailing 64 bites for IPv6 address.
+    pub token: Option<String>,
 
     pub(crate) dns: Option<DnsClientState>,
     pub(crate) rules: Option<Vec<RouteRuleEntry>>,
@@ -475,6 +482,7 @@ impl Default for InterfaceIpv6 {
             auto_table_id: None,
             allow_extra_address: default_allow_extra_address(),
             auto_route_metric: None,
+            token: None,
         }
     }
 }
@@ -500,7 +508,10 @@ impl InterfaceIpv6 {
     // * Disable DHCP and remove address if enabled: false
     // * Set DHCP options to None if DHCP is false
     // * Remove `mptcp_flags` as they are for query only
-    pub(crate) fn sanitize(&mut self) -> Result<(), NmstateError> {
+    pub(crate) fn sanitize(
+        &mut self,
+        is_desired: bool,
+    ) -> Result<(), NmstateError> {
         if self.is_auto() {
             if self.auto_dns.is_none() {
                 self.auto_dns = Some(true);
@@ -512,11 +523,13 @@ impl InterfaceIpv6 {
                 self.auto_gateway = Some(true);
             }
             if !self.addresses.as_deref().unwrap_or_default().is_empty() {
-                log::warn!(
-                    "Static addresses {:?} are ignored when dynamic \
-                    IP is enabled",
-                    self.addresses.as_deref().unwrap_or_default()
-                );
+                if is_desired {
+                    log::warn!(
+                        "Static addresses {:?} are ignored when dynamic \
+                        IP is enabled",
+                        self.addresses.as_deref().unwrap_or_default()
+                    );
+                }
                 self.addresses = None;
             }
         }
@@ -525,11 +538,13 @@ impl InterfaceIpv6 {
             addrs.retain(|addr| {
                 if let IpAddr::V6(ip_addr) = addr.ip {
                     if is_ipv6_unicast_link_local(&ip_addr) {
-                        log::warn!(
-                            "Ignoring IPv6 link local address {}/{}",
-                            &addr.ip,
-                            addr.prefix_length
-                        );
+                        if is_desired {
+                            log::warn!(
+                                "Ignoring IPv6 link local address {}/{}",
+                                &addr.ip,
+                                addr.prefix_length
+                            );
+                        }
                         false
                     } else {
                         true
@@ -558,15 +573,24 @@ impl InterfaceIpv6 {
                 addr.mptcp_flags = None;
             }
         }
-        Ok(())
-    }
-
-    // Sort addresses and dedup
-    pub(crate) fn sanitize_for_verify(&mut self) {
-        if let Some(addrs) = self.addresses.as_mut() {
-            addrs.sort_unstable();
-            addrs.dedup();
+        if let Some(token) = self.token.as_mut() {
+            if is_desired
+                && self.autoconf == Some(false)
+                && !(token.is_empty() || token == "::")
+            {
+                return Err(NmstateError::new(
+                    ErrorKind::InvalidArgument,
+                    format!(
+                        "Desired IPv6 token '{token}' cannot \
+                        be applied with IPv6 autoconf disabled, \
+                        you may remove IPv6 token by setting as \
+                        empty string or `::`"
+                    ),
+                ));
+            }
+            sanitize_ipv6_token_to_string(token)?;
         }
+        Ok(())
     }
 
     pub(crate) fn special_merge(&mut self, desired: &Self, current: &Self) {
@@ -662,6 +686,7 @@ impl From<InterfaceIp> for InterfaceIpv6 {
             addr_gen_mode: ip.addr_gen_mode,
             allow_extra_address: ip.allow_extra_address,
             auto_route_metric: ip.auto_route_metric,
+            token: ip.token,
             ..Default::default()
         }
     }
@@ -687,6 +712,7 @@ impl From<InterfaceIpv6> for InterfaceIp {
             addr_gen_mode: ip.addr_gen_mode,
             allow_extra_address: ip.allow_extra_address,
             auto_route_metric: ip.auto_route_metric,
+            token: ip.token,
             ..Default::default()
         }
     }
@@ -1139,4 +1165,51 @@ impl MergedInterface {
 
         Ok(())
     }
+}
+
+// User might define IPv6 token in the format of `::0.0.250.193`, which should
+// be sanitize to `::fac1`.
+fn sanitize_ipv6_token_to_string(
+    token: &mut String,
+) -> Result<(), NmstateError> {
+    // Empty token means reverting to default "::"
+    if token.is_empty() {
+        write!(token, "::").ok();
+    } else {
+        match Ipv6Addr::from_str(token.as_str()) {
+            Ok(ip) => {
+                if ip.octets()[..8] != [0; 8] {
+                    return Err(NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        format!(
+                            "Desired IPv6 token should be lead \
+                            by 64 bits 0. But got {token}"
+                        ),
+                    ));
+                }
+                // The Ipv6Addr::to_string() will convert
+                //  ::fac1 to ::0.0.250.193
+                // Which is no ideal in this case
+                // To workaround that, we set leading 64 bits to '2001:db8::',
+                // and then trip it out from string.
+                let mut segments = ip.segments();
+                segments[0] = 0x2001;
+                segments[1] = 0xdb8;
+                let new_ip = Ipv6Addr::from(segments);
+                token.clear();
+                write!(token, "{}", &new_ip.to_string()["2001:db8".len()..])
+                    .ok();
+            }
+            Err(e) => {
+                return Err(NmstateError::new(
+                    ErrorKind::InvalidArgument,
+                    format!(
+                        "Desired IPv6 token '{token}' is not a \
+                        valid IPv6 address: {e}"
+                    ),
+                ));
+            }
+        }
+    }
+    Ok(())
 }

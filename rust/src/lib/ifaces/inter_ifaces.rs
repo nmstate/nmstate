@@ -285,7 +285,7 @@ impl Interfaces {
             if iface.is_absent() {
                 for cur_iface in cur_ifaces.to_vec() {
                     if cur_iface.name() == iface_name {
-                        let mut new_iface = cur_iface.clone();
+                        let mut new_iface = cur_iface.clone_name_type_only();
                         new_iface.base_iface_mut().state =
                             InterfaceState::Absent;
                         resolved_ifaces.push(new_iface);
@@ -488,6 +488,7 @@ impl MergedInterfaces {
             desired.set_unknown_iface_to_eth()?;
             desired.set_missing_port_to_eth();
         } else {
+            desired.resolve_sriov_reference(&current)?;
             desired.resolve_unknown_ifaces(&current)?;
         }
 
@@ -509,8 +510,6 @@ impl MergedInterfaces {
 
         desired.unify_veth_and_eth();
         current.unify_veth_and_eth();
-
-        desired.resolve_sriov_reference(&current)?;
 
         for (iface_name, des_iface) in desired
             .kernel_ifaces
@@ -710,17 +709,29 @@ impl MergedInterfaces {
         Ok(())
     }
 
+    // Unlike orphan check in `apply_ctrller_change()`, this function is for
+    // orphan interface without controller.
     fn mark_orphan_interface_as_absent(&mut self) -> Result<(), NmstateError> {
         let gone_ifaces: Vec<String> = self
             .kernel_ifaces
             .values()
-            .filter(|i| i.is_changed() && i.merged.is_absent())
+            .filter(|i| {
+                // User can still have VLAN over ethernet even ethernet is
+                // marked as absent.
+                // For veth, it is hard for us to know whether absent action
+                // delete it not, hence treat it as ethernet.
+                i.is_changed()
+                    && i.merged.is_absent()
+                    && i.merged.iface_type() != InterfaceType::Ethernet
+            })
             .map(|i| i.merged.name().to_string())
             .collect();
 
-        for iface in
-            self.kernel_ifaces.values_mut().filter(|i| i.merged.is_up())
-        {
+        // OvsInterface is already checked by `apply_ctrller_change()`.
+        for iface in self.kernel_ifaces.values_mut().filter(|i| {
+            i.merged.is_up()
+                && i.merged.iface_type() != InterfaceType::OvsInterface
+        }) {
             if let Some(parent) = iface.merged.parent() {
                 if gone_ifaces.contains(&parent.to_string()) {
                     if iface.is_desired() && iface.merged.is_up() {

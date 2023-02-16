@@ -238,13 +238,13 @@ impl<'de> Deserialize<'de> for UnknownInterface {
         D: Deserializer<'de>,
     {
         let mut ret = UnknownInterface::default();
-        let v = serde_json::Value::deserialize(deserializer)?;
+        let mut v = serde_json::Map::deserialize(deserializer)?;
         let mut base_value = serde_json::map::Map::new();
-        if let Some(n) = v.get("name") {
-            base_value.insert("name".to_string(), n.clone());
+        if let Some(n) = v.remove("name") {
+            base_value.insert("name".to_string(), n);
         }
-        if let Some(s) = v.get("state") {
-            base_value.insert("state".to_string(), s.clone());
+        if let Some(s) = v.remove("state") {
+            base_value.insert("state".to_string(), s);
         }
         // The BaseInterface will only have name and state
         // These two properties are also stored in `other` for serializing
@@ -252,7 +252,7 @@ impl<'de> Deserialize<'de> for UnknownInterface {
             serde_json::value::Value::Object(base_value),
         )
         .map_err(serde::de::Error::custom)?;
-        ret.other = v;
+        ret.other = serde_json::Value::Object(v);
         Ok(ret)
     }
 }
@@ -635,32 +635,31 @@ impl Interface {
         }
     }
 
-    // This function will be invoked as final process of Interface for apply or
-    // verify.
+    // This function is for pre-edit clean up and check on current, `for_apply`,
+    // `for_verify` states.
+    //
     // It is plugin's duty to clean up the state for querying before showing to
     // user. Hence please do not use this function for querying.
-    pub(crate) fn sanitize(&mut self) -> Result<(), NmstateError> {
-        self.base_iface_mut().sanitize()?;
+    // The `is_desired` is used to suppress error checking and logging on
+    // non-desired state.
+    pub(crate) fn sanitize(
+        &mut self,
+        is_desired: bool,
+    ) -> Result<(), NmstateError> {
+        self.base_iface_mut().sanitize(is_desired)?;
         match self {
             Interface::Ethernet(iface) => iface.sanitize()?,
-            Interface::LinuxBridge(iface) => iface.sanitize()?,
-            Interface::OvsInterface(iface) => iface.sanitize()?,
-            Interface::OvsBridge(iface) => iface.sanitize()?,
-            Interface::Vrf(iface) => iface.sanitize()?,
+            Interface::LinuxBridge(iface) => iface.sanitize(is_desired)?,
+            Interface::OvsInterface(iface) => iface.sanitize(is_desired)?,
+            Interface::OvsBridge(iface) => iface.sanitize(is_desired)?,
+            Interface::Vrf(iface) => iface.sanitize(is_desired)?,
             Interface::Bond(iface) => iface.sanitize()?,
-            Interface::MacVlan(iface) => iface.sanitize()?,
-            Interface::MacVtap(iface) => iface.sanitize()?,
-            Interface::Loopback(iface) => iface.sanitize()?,
+            Interface::MacVlan(iface) => iface.sanitize(is_desired)?,
+            Interface::MacVtap(iface) => iface.sanitize(is_desired)?,
+            Interface::Loopback(iface) => iface.sanitize(is_desired)?,
             _ => (),
         }
         Ok(())
-    }
-
-    pub(crate) fn sanitize_for_verify(&mut self) {
-        self.base_iface_mut().sanitize_for_verify();
-        if let Interface::LinuxBridge(iface) = self {
-            iface.sanitize_for_verify()
-        }
     }
 
     pub(crate) fn parent(&self) -> Option<&str> {
@@ -777,11 +776,7 @@ impl MergedInterface {
         self.post_inter_ifaces_process_bond()?;
 
         if let Some(apply_iface) = self.for_apply.as_mut() {
-            apply_iface.sanitize()?;
-        }
-        if let Some(verify_iface) = self.for_verify.as_mut() {
-            verify_iface.sanitize().ok();
-            verify_iface.sanitize_for_verify();
+            apply_iface.sanitize(true)?;
         }
         Ok(())
     }
@@ -942,6 +937,26 @@ impl MergedInterface {
         ctrl_name: String,
         ctrl_type: Option<InterfaceType>,
     ) -> Result<(), NmstateError> {
+        if self.merged.need_controller() && ctrl_name.is_empty() {
+            if let Some(org_ctrl) = self
+                .current
+                .as_ref()
+                .and_then(|c| c.base_iface().controller.as_ref())
+            {
+                if Some(true) == self.for_apply.as_ref().map(|i| i.is_up()) {
+                    return Err(NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        format!(
+                            "Interface {} cannot live without controller, \
+                            but it is detached from original controller \
+                            {org_ctrl}, cannot apply desired `state:up`",
+                            self.merged.name()
+                        ),
+                    ));
+                }
+            }
+        }
+
         if !self.is_desired() {
             self.mark_as_changed();
             log::info!(

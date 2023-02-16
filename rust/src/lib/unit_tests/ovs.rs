@@ -2,7 +2,7 @@
 
 use crate::{
     ErrorKind, Interface, InterfaceType, Interfaces, MergedInterface,
-    MergedInterfaces, OvsBridgeInterface,
+    MergedInterfaces, OvsBridgeInterface, OvsInterface,
 };
 
 #[test]
@@ -361,7 +361,7 @@ fn test_ovs_bridge_vlan_filter_trunk_tag_without_enable_native() {
     )
     .unwrap();
 
-    let result = desired.sanitize();
+    let result = desired.sanitize(true);
 
     assert!(result.is_err());
     if let Err(e) = result {
@@ -390,7 +390,7 @@ fn test_ovs_bridge_vlan_filter_trunk_tag_overlap_id_vs_range() {
     )
     .unwrap();
 
-    let result = desired.sanitize();
+    let result = desired.sanitize(true);
 
     assert!(result.is_err());
     if let Err(e) = result {
@@ -421,7 +421,7 @@ fn test_ovs_bridge_vlan_filter_trunk_tag_overlap_range_vs_range() {
     )
     .unwrap();
 
-    let result = desired.sanitize();
+    let result = desired.sanitize(true);
 
     assert!(result.is_err());
     if let Err(e) = result {
@@ -448,7 +448,7 @@ fn test_ovs_bridge_vlan_filter_trunk_tag_overlap_id_vs_id() {
     )
     .unwrap();
 
-    let result = desired.sanitize();
+    let result = desired.sanitize(true);
 
     assert!(result.is_err());
     if let Err(e) = result {
@@ -473,7 +473,7 @@ fn test_ovs_bridge_vlan_filter_enable_native_with_access_mode() {
     )
     .unwrap();
 
-    let result = desired.sanitize();
+    let result = desired.sanitize(true);
 
     assert!(result.is_err());
     if let Err(e) = result {
@@ -499,7 +499,7 @@ fn test_ovs_bridge_vlan_filter_trunk_tags_with_access_mode() {
     )
     .unwrap();
 
-    let result = desired.sanitize();
+    let result = desired.sanitize(true);
 
     assert!(result.is_err());
     if let Err(e) = result {
@@ -523,10 +523,121 @@ fn test_ovs_bridge_vlan_filter_no_trunk_tags_with_trunk_mode() {
     )
     .unwrap();
 
-    let result = desired.sanitize();
+    let result = desired.sanitize(true);
 
     assert!(result.is_err());
     if let Err(e) = result {
         assert_eq!(e.kind(), ErrorKind::InvalidArgument);
     }
+}
+
+#[test]
+fn test_validate_dpdk_n_rxq_desc() {
+    let desired: OvsInterface = serde_yaml::from_str(
+        r#"
+        name: ovs0
+        type: ovs-interface
+        state: up
+        dpdk:
+          devargs: 0000:af:00.1
+          n_rxq_desc: 1025
+        "#,
+    )
+    .unwrap();
+
+    let result = desired.sanitize(true);
+
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+        assert!(e.msg().contains("OVS DPDK n_rxq_desc must power of 2"));
+    }
+}
+
+#[test]
+fn test_validate_dpdk_n_txq_desc() {
+    let desired: OvsInterface = serde_yaml::from_str(
+        r#"
+        name: ovs0
+        type: ovs-interface
+        state: up
+        dpdk:
+          devargs: 0000:af:00.1
+          n_txq_desc: 1025
+        "#,
+    )
+    .unwrap();
+
+    let result = desired.sanitize(true);
+
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+        assert!(e.msg().contains("OVS DPDK n_txq_desc must power of 2"));
+    }
+}
+
+#[test]
+fn test_ovs_orphan_check_on_bridge_with_same_name_iface() {
+    let des_ifaces: Interfaces = serde_yaml::from_str(
+        r#"
+        - name: br0
+          type: ovs-bridge
+          state: up
+          bridge:
+            port:
+              - name: ovs0
+        "#,
+    )
+    .unwrap();
+
+    let cur_ifaces: Interfaces = serde_yaml::from_str(
+        r#"
+        - name: br0
+          type: ovs-interface
+        - name: br0
+          type: ovs-bridge
+          state: up
+          bridge:
+            port:
+              - name: br0
+        "#,
+    )
+    .unwrap();
+
+    MergedInterfaces::new(des_ifaces, cur_ifaces, false, false).unwrap();
+}
+
+#[test]
+fn test_ovs_mark_orphan_up_on_bridge_with_same_name_iface() {
+    let des_ifaces: Interfaces = serde_yaml::from_str(
+        r#"
+        - name: br0
+          type: ovs-interface
+          state: up
+        - name: br0
+          type: ovs-bridge
+          state: up
+          bridge:
+            port:
+              - name: ovs0
+        "#,
+    )
+    .unwrap();
+
+    let cur_ifaces: Interfaces = serde_yaml::from_str(
+        r#"
+        - name: br0
+          type: ovs-interface
+        - name: br0
+          type: ovs-bridge
+          state: up
+          bridge:
+            port:
+              - name: br0
+        "#,
+    )
+    .unwrap();
+
+    MergedInterfaces::new(des_ifaces, cur_ifaces, false, false).unwrap();
 }

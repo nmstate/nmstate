@@ -5,6 +5,8 @@ mod bond;
 #[cfg(test)]
 mod bridge;
 #[cfg(test)]
+mod dns;
+#[cfg(test)]
 mod ethernet;
 #[cfg(test)]
 mod ethtool;

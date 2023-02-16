@@ -2,7 +2,7 @@
 
 use super::super::nm_dbus::NmConnection;
 
-pub(crate) fn is_vxlan_id_changed(
+pub(crate) fn is_vxlan_changed(
     new_nm_conn: &NmConnection,
     cur_nm_conn: &NmConnection,
 ) -> bool {

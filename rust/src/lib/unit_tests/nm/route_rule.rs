@@ -300,3 +300,79 @@ route-rules:
         Some(expected_rules)
     );
 }
+
+#[test]
+fn test_route_rule_use_loopback() {
+    let current: NetworkState = serde_yaml::from_str(
+        r#"
+---
+interfaces:
+  - name: lo
+    type: loopback
+    state: up
+    mtu: 65536
+    ipv4:
+      enabled: true
+      address:
+      - ip: 127.0.0.1
+        prefix-length: 8
+    ipv6:
+      enabled: true
+      address:
+      - ip: ::1
+        prefix-length: 128
+"#,
+    )
+    .unwrap();
+
+    let desired: NetworkState = serde_yaml::from_str(
+        r#"---
+        route-rules:
+          config:
+            - priority: 3200
+              route-table: 255
+              family: ipv4
+            - priority: 3200
+              route-table: 255
+              family: ipv6"#,
+    )
+    .unwrap();
+
+    let expected_ipv4_rules: Vec<RouteRuleEntry> = serde_yaml::from_str(
+        r#"
+        - priority: 3200
+          route-table: 255
+          family: ipv4"#,
+    )
+    .unwrap();
+
+    let expected_ipv6_rules: Vec<RouteRuleEntry> = serde_yaml::from_str(
+        r#"
+        - priority: 3200
+          route-table: 255
+          family: ipv6"#,
+    )
+    .unwrap();
+
+    let mut merged_state =
+        MergedNetworkState::new(desired, current, false, false).unwrap();
+
+    store_route_rule_config(&mut merged_state).unwrap();
+
+    let iface = merged_state
+        .interfaces
+        .get_iface("lo", InterfaceType::Loopback)
+        .unwrap()
+        .for_apply
+        .as_ref()
+        .unwrap();
+
+    assert_eq!(
+        iface.base_iface().ipv4.as_ref().unwrap().rules,
+        Some(expected_ipv4_rules)
+    );
+    assert_eq!(
+        iface.base_iface().ipv6.as_ref().unwrap().rules,
+        Some(expected_ipv6_rules)
+    );
+}

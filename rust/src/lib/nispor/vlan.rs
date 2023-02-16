@@ -1,4 +1,6 @@
-use crate::{BaseInterface, VlanConfig, VlanInterface};
+// SPDX-License-Identifier: Apache-2.0
+
+use crate::{BaseInterface, VlanConfig, VlanInterface, VlanProtocol};
 
 pub(crate) fn np_vlan_to_nmstate(
     np_iface: &nispor::Iface,
@@ -7,6 +9,17 @@ pub(crate) fn np_vlan_to_nmstate(
     let vlan_conf = np_iface.vlan.as_ref().map(|np_vlan_info| VlanConfig {
         id: np_vlan_info.vlan_id,
         base_iface: np_vlan_info.base_iface.clone(),
+        protocol: match &np_vlan_info.protocol {
+            nispor::VlanProtocol::Ieee8021Q => Some(VlanProtocol::Ieee8021Q),
+            nispor::VlanProtocol::Ieee8021AD => Some(VlanProtocol::Ieee8021Ad),
+            p => {
+                log::warn!(
+                    "Got unknown VLAN protocol {p:?} on VLAN iface {}",
+                    np_iface.name.as_str()
+                );
+                None
+            }
+        },
     });
 
     VlanInterface {

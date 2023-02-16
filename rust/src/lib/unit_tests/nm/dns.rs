@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    nm::dns::store_dns_config, DnsClientState, ErrorKind, InterfaceType,
-    MergedNetworkState, NetworkState,
+    nm::dns::{reselect_dns_ifaces, store_dns_config_to_iface},
+    DnsClientState, ErrorKind, InterfaceType, MergedNetworkState, NetworkState,
 };
 
 #[test]
@@ -49,7 +49,7 @@ interfaces:
     let mut merged_state =
         MergedNetworkState::new(desired, current, false, false).unwrap();
 
-    store_dns_config(&mut merged_state).unwrap();
+    store_dns_config_to_iface(&mut merged_state).unwrap();
 
     let iface = merged_state
         .interfaces
@@ -224,5 +224,162 @@ fn test_dns_iface_has_no_ip_stack_info() {
     let mut merged_state =
         MergedNetworkState::new(desired, current, false, false).unwrap();
 
-    store_dns_config(&mut merged_state).unwrap();
+    store_dns_config_to_iface(&mut merged_state).unwrap();
+}
+
+#[test]
+fn test_dns_not_prefer_iface_ipv6_with_link_local_only_address() {
+    let desired: NetworkState = serde_yaml::from_str(
+        r#"---
+        dns-resolver:
+          config:
+            search:
+            - example.com
+            - example.org
+            server:
+            - 2001:4860:4860::8844
+            - 2001:4860:4860::8888"#,
+    )
+    .unwrap();
+    let current: NetworkState = serde_yaml::from_str(
+        r#"---
+        interfaces:
+          - name: dummy0
+            state: up
+            ipv6:
+              enabled: true
+              autoconf: false
+              dhcp: false
+              address:
+              - ip: fe80::db:1
+                prefix-length: 64
+          - name: dummy1
+            type: dummy
+            state: up
+            ipv6:
+              enabled: true
+              dhcp: true
+              autoconf: true
+              auto-dns: false"#,
+    )
+    .unwrap();
+
+    let merged_state =
+        MergedNetworkState::new(desired, current, false, false).unwrap();
+
+    let (v4_iface, v6_iface) = reselect_dns_ifaces(&merged_state, &[], &[]);
+
+    assert!(v4_iface.is_empty());
+    assert_eq!(v6_iface, "dummy1");
+}
+
+#[test]
+fn test_dns_prefer_desired_over_current() {
+    let desired: NetworkState = serde_yaml::from_str(
+        r#"---
+        dns-resolver:
+          config:
+            search:
+            - example.com
+            - example.org
+            server:
+            - 8.8.8.8
+            - 2001:4860:4860::8888
+        interfaces:
+          - name: dummy0
+            type: dummy
+            state: up
+            ipv4:
+              address:
+              - ip: 192.0.2.251
+                prefix-length: 24
+              dhcp: false
+              enabled: true
+            ipv6:
+              enabled: true
+              autoconf: false
+              dhcp: false
+              address:
+              - ip: fe80::db:1
+                prefix-length: 64"#,
+    )
+    .unwrap();
+    let current: NetworkState = serde_yaml::from_str(
+        r#"---
+        interfaces:
+          - name: dummy1
+            type: dummy
+            state: up
+            ipv4:
+              enabled: true
+              dhcp: true
+              auto-dns: false
+            ipv6:
+              enabled: true
+              dhcp: true
+              autoconf: true
+              auto-dns: false"#,
+    )
+    .unwrap();
+
+    let merged_state =
+        MergedNetworkState::new(desired, current, false, false).unwrap();
+
+    let (v4_iface, v6_iface) = reselect_dns_ifaces(&merged_state, &[], &[]);
+
+    assert_eq!(v4_iface, "dummy0");
+    assert_eq!(v6_iface, "dummy0");
+}
+
+#[test]
+fn test_copy_ip_stack_if_marked_for_dns() {
+    let desired: NetworkState = serde_yaml::from_str(
+        r#"---
+        dns-resolver:
+          config:
+            search:
+            - example.com
+            - example.org
+            server:
+            - 8.8.8.8
+            - 2001:4860:4860::8888
+        interfaces:
+          - name: dummy0
+            type: dummy
+            state: up"#,
+    )
+    .unwrap();
+    let current: NetworkState = serde_yaml::from_str(
+        r#"---
+        interfaces:
+          - name: dummy0
+            type: dummy
+            state: up
+            ipv4:
+              enabled: true
+              dhcp: true
+              auto-dns: false
+            ipv6:
+              enabled: true
+              dhcp: true
+              autoconf: true
+              auto-dns: false"#,
+    )
+    .unwrap();
+
+    let mut merged_state =
+        MergedNetworkState::new(desired, current, false, false).unwrap();
+
+    store_dns_config_to_iface(&mut merged_state).unwrap();
+
+    let iface = merged_state
+        .interfaces
+        .get_iface("dummy0", InterfaceType::Dummy)
+        .unwrap()
+        .for_apply
+        .as_ref()
+        .unwrap();
+
+    assert!(iface.base_iface().ipv6.is_some());
+    assert!(iface.base_iface().ipv4.is_some());
 }

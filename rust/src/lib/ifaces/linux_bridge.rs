@@ -100,9 +100,19 @@ impl LinuxBridgeInterface {
         Self::default()
     }
 
-    pub(crate) fn sanitize(&mut self) -> Result<(), NmstateError> {
+    pub(crate) fn sanitize(
+        &mut self,
+        is_desired: bool,
+    ) -> Result<(), NmstateError> {
+        if let Some(opts) =
+            self.bridge.as_mut().and_then(|b| b.options.as_mut())
+        {
+            opts.sanitize_group_fwd_mask(&self.base)?;
+        }
         self.sort_ports();
-        self.sanitize_stp_opts()?;
+        if is_desired {
+            self.sanitize_stp_opts()?;
+        }
         self.use_upper_case_of_mac_address();
         self.flatten_port_vlan_ranges();
         self.sort_port_vlans();
@@ -114,15 +124,11 @@ impl LinuxBridgeInterface {
         {
             for port_conf in port_confs {
                 if let Some(vlan_conf) = port_conf.vlan.as_ref() {
-                    vlan_conf.sanitize()?;
+                    vlan_conf.sanitize(is_desired)?;
                 }
             }
         }
         Ok(())
-    }
-
-    pub(crate) fn sanitize_for_verify(&mut self) {
-        self.treat_none_vlan_as_empty_dict();
     }
 
     fn use_upper_case_of_mac_address(&mut self) {
@@ -162,22 +168,6 @@ impl LinuxBridgeInterface {
                     .vlan
                     .as_mut()
                     .map(BridgePortVlanConfig::sort_trunk_tags);
-            }
-        }
-    }
-
-    // This is for verifying when user desire `vlan: {}` for resetting VLAN
-    // filtering, the new current state will show as `vlan: None`.
-    fn treat_none_vlan_as_empty_dict(&mut self) {
-        if let Some(port_confs) = self
-            .bridge
-            .as_mut()
-            .and_then(|br_conf| br_conf.port.as_mut())
-        {
-            for port_conf in port_confs {
-                if port_conf.vlan.is_none() {
-                    port_conf.vlan = Some(BridgePortVlanConfig::new());
-                }
             }
         }
     }
@@ -437,13 +427,14 @@ pub struct LinuxBridgeOptions {
         default,
         deserialize_with = "crate::deserializer::option_u16_or_string"
     )]
+    /// Alias of [LinuxBridgeOptions.group_fwd_mask], not preferred, please
+    /// use [LinuxBridgeOptions.group_fwd_mask] instead.
     pub group_forward_mask: Option<u16>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         default,
         deserialize_with = "crate::deserializer::option_u16_or_string"
     )]
-    /// Alias of [LinuxBridgeOptions.group_fwd_mask]
     pub group_fwd_mask: Option<u16>,
     #[serde(
         skip_serializing_if = "Option::is_none",
@@ -540,6 +531,41 @@ pub struct LinuxBridgeOptions {
 impl LinuxBridgeOptions {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub(crate) fn sanitize_group_fwd_mask(
+        &mut self,
+        base_iface: &BaseInterface,
+    ) -> Result<(), NmstateError> {
+        match (self.group_forward_mask, self.group_fwd_mask) {
+            (Some(v1), Some(v2)) => {
+                if v1 != v2 {
+                    return Err(NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        format!(
+                            "Linux bridge {} has different \
+                            group_forward_mask: {v1}, group_fwd_mask: {v2}, \
+                            these two property is the same, hence conflicting",
+                            base_iface.name.as_str()
+                        ),
+                    ));
+                } else {
+                    self.group_fwd_mask = Some(v1);
+                    self.group_forward_mask = None;
+                }
+            }
+            (Some(v), None) => {
+                self.group_fwd_mask = Some(v);
+                self.group_forward_mask = None;
+            }
+            (None, Some(v)) => {
+                self.group_fwd_mask = Some(v);
+                self.group_forward_mask = None;
+            }
+            _ => (),
+        }
+
+        Ok(())
     }
 }
 

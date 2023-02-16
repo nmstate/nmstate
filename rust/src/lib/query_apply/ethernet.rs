@@ -1,11 +1,19 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    ErrorKind, EthernetConfig, EthernetInterface, Interface, Interfaces,
-    NmstateError, SrIovConfig, VethConfig,
+    ErrorKind, EthernetConfig, EthernetInterface, Interface, InterfaceType,
+    Interfaces, NetworkState, NmstateError, SrIovConfig, VethConfig,
 };
 
 impl EthernetInterface {
+    pub(crate) fn sanitize_desired_for_verify(&mut self) {
+        if let Some(sriov_conf) =
+            self.ethernet.as_mut().and_then(|e| e.sr_iov.as_mut())
+        {
+            sriov_conf.sanitize_desired_for_verify();
+        }
+    }
+
     pub(crate) fn sriov_is_enabled(&self) -> bool {
         self.ethernet
             .as_ref()
@@ -97,5 +105,93 @@ impl Interfaces {
             }
         }
         Ok(())
+    }
+}
+
+impl NetworkState {
+    pub(crate) fn has_vf_count_change_and_missing_eth(
+        &self,
+        current: &Self,
+    ) -> bool {
+        self.has_vf_count_change(current) && self.has_missing_eth(current)
+    }
+
+    fn has_vf_count_change(&self, current: &Self) -> bool {
+        for iface in
+            self.interfaces.kernel_ifaces.values().filter(|i| i.is_up())
+        {
+            if let (
+                Interface::Ethernet(iface),
+                Some(Interface::Ethernet(cur_iface)),
+            ) = (iface, current.interfaces.kernel_ifaces.get(iface.name()))
+            {
+                let pf_count = iface
+                    .ethernet
+                    .as_ref()
+                    .and_then(|e| e.sr_iov.as_ref())
+                    .and_then(|s| s.total_vfs);
+                let cur_pf_count = cur_iface
+                    .ethernet
+                    .as_ref()
+                    .and_then(|e| e.sr_iov.as_ref())
+                    .and_then(|s| s.total_vfs);
+                if pf_count.is_some() && pf_count != cur_pf_count {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
+    fn has_missing_eth(&self, current: &Self) -> bool {
+        self.interfaces
+            .kernel_ifaces
+            .values()
+            .filter(|i| {
+                i.is_up()
+                    && (i.iface_type() == InterfaceType::Ethernet
+                        || i.iface_type() == InterfaceType::Unknown)
+            })
+            .any(|i| !current.interfaces.kernel_ifaces.contains_key(i.name()))
+    }
+
+    // Return newly create NetworkState containing only ethernet section of
+    // interface with SR-IOV PF changes.
+    pub(crate) fn get_sriov_pf_conf_state(&self) -> Option<Self> {
+        let mut pf_ifaces: Vec<Interface> = Vec::new();
+
+        for iface in self.interfaces.kernel_ifaces.values().filter_map(|i| {
+            if i.is_up() {
+                if let Interface::Ethernet(iface) = i {
+                    Some(iface)
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        }) {
+            if let Some(true) =
+                iface.ethernet.as_ref().map(|e| e.sr_iov.is_some())
+            {
+                if let Some(eth_conf) = iface.ethernet.as_ref() {
+                    pf_ifaces.push(Interface::Ethernet(EthernetInterface {
+                        base: iface.base.clone_name_type_only(),
+                        ethernet: Some(eth_conf.clone()),
+                        ..Default::default()
+                    }));
+                }
+            }
+        }
+
+        if pf_ifaces.is_empty() {
+            None
+        } else {
+            let mut pf_state = NetworkState::default();
+            for pf_iface in pf_ifaces {
+                pf_state.interfaces.push(pf_iface);
+            }
+            Some(pf_state)
+        }
     }
 }

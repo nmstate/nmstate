@@ -99,57 +99,61 @@ impl BridgePortVlanConfig {
         }
     }
 
-    pub(crate) fn sanitize(&self) -> Result<(), NmstateError> {
-        if self.mode == Some(BridgePortVlanMode::Trunk)
-            && self.tag.is_some()
-            && self.tag != Some(0)
-            && self.enable_native != Some(true)
-        {
-            return Err(NmstateError::new(
-                ErrorKind::InvalidArgument,
-                "Bridge VLAN filtering `tag` cannot be use \
-                in trunk mode without `enable-native`"
-                    .to_string(),
-            ));
-        }
+    pub(crate) fn sanitize(
+        &self,
+        is_desired: bool,
+    ) -> Result<(), NmstateError> {
+        if is_desired {
+            if self.mode == Some(BridgePortVlanMode::Trunk)
+                && self.tag.is_some()
+                && self.tag != Some(0)
+                && self.enable_native != Some(true)
+            {
+                return Err(NmstateError::new(
+                    ErrorKind::InvalidArgument,
+                    "Bridge VLAN filtering `tag` cannot be use \
+                    in trunk mode without `enable-native`"
+                        .to_string(),
+                ));
+            }
 
-        if self.mode == Some(BridgePortVlanMode::Access)
-            && self.enable_native == Some(true)
-        {
-            return Err(NmstateError::new(
-                ErrorKind::InvalidArgument,
-                "Bridge VLAN filtering `enable-native: true` cannot be set \
-                in access mode"
-                    .to_string(),
-            ));
-        }
+            if self.mode == Some(BridgePortVlanMode::Access)
+                && self.enable_native == Some(true)
+            {
+                return Err(NmstateError::new(
+                    ErrorKind::InvalidArgument,
+                    "Bridge VLAN filtering `enable-native: true` \
+                    cannot be set in access mode"
+                        .to_string(),
+                ));
+            }
 
-        if self.mode == Some(BridgePortVlanMode::Access) {
-            if let Some(tags) = self.trunk_tags.as_ref() {
-                if !tags.is_empty() {
-                    return Err(NmstateError::new(
-                        ErrorKind::InvalidArgument,
-                        "Bridge VLAN filtering access mode cannot have \
-                        trunk-tags defined"
-                            .to_string(),
-                    ));
+            if self.mode == Some(BridgePortVlanMode::Access) {
+                if let Some(tags) = self.trunk_tags.as_ref() {
+                    if !tags.is_empty() {
+                        return Err(NmstateError::new(
+                            ErrorKind::InvalidArgument,
+                            "Bridge VLAN filtering access mode cannot have \
+                            trunk-tags defined"
+                                .to_string(),
+                        ));
+                    }
                 }
             }
-        }
 
-        if self.mode == Some(BridgePortVlanMode::Trunk)
-            && self.trunk_tags.is_none()
-        {
-            return Err(NmstateError::new(
-                ErrorKind::InvalidArgument,
-                "Bridge VLAN filtering trunk mode cannot have \
+            if self.mode == Some(BridgePortVlanMode::Trunk)
+                && self.trunk_tags.is_none()
+            {
+                return Err(NmstateError::new(
+                    ErrorKind::InvalidArgument,
+                    "Bridge VLAN filtering trunk mode cannot have \
                 empty trunk-tags"
-                    .to_string(),
-            ));
-        }
-
-        if let Some(tags) = self.trunk_tags.as_ref() {
-            validate_overlap_trunk_tags(tags)?;
+                        .to_string(),
+                ));
+            }
+            if let Some(tags) = self.trunk_tags.as_ref() {
+                validate_overlap_trunk_tags(tags)?;
+            }
         }
 
         Ok(())

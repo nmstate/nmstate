@@ -44,19 +44,24 @@ impl MacVtapInterface {
         Self::default()
     }
 
-    pub(crate) fn sanitize(&self) -> Result<(), NmstateError> {
-        if let Some(conf) = &self.mac_vtap {
-            if conf.accept_all_mac == Some(false)
-                && conf.mode != MacVtapMode::Passthru
-            {
-                let e = NmstateError::new(
-                    ErrorKind::InvalidArgument,
-                    "Disable accept-all-mac-addresses(promiscuous) \
-                    is only allowed on passthru mode"
-                        .to_string(),
-                );
-                log::error!("{}", e);
-                return Err(e);
+    pub(crate) fn sanitize(
+        &self,
+        is_desired: bool,
+    ) -> Result<(), NmstateError> {
+        if is_desired {
+            if let Some(conf) = &self.mac_vtap {
+                if conf.accept_all_mac == Some(false)
+                    && conf.mode != MacVtapMode::Passthru
+                {
+                    let e = NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        "Disable accept-all-mac-addresses(promiscuous) \
+                        is only allowed on passthru mode"
+                            .to_string(),
+                    );
+                    log::error!("{}", e);
+                    return Err(e);
+                }
             }
         }
         Ok(())

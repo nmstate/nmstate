@@ -11,10 +11,10 @@ use super::{
     active_connection::create_index_for_nm_acs_by_name_type,
     error::nm_error_to_nmstate,
     query_apply::{
-        create_index_for_nm_conns_by_name_type, get_description, get_lldp,
-        is_lldp_enabled, is_mptcp_supported, nm_802_1x_to_nmstate,
-        nm_ip_setting_to_nmstate4, nm_ip_setting_to_nmstate6,
-        query_nmstate_wait_ip, retrieve_dns_info,
+        create_index_for_nm_conns_by_name_type, dns::nm_global_dns_to_nmstate,
+        get_description, get_lldp, is_lldp_enabled, is_mptcp_supported,
+        nm_802_1x_to_nmstate, nm_ip_setting_to_nmstate4,
+        nm_ip_setting_to_nmstate6, query_nmstate_wait_ip, retrieve_dns_info,
     },
     settings::{
         get_bond_balance_slb, NM_SETTING_BOND_SETTING_NAME,
@@ -73,8 +73,9 @@ pub(crate) fn nm_retrieve(
             NmDeviceState::Unmanaged | NmDeviceState::Disconnected => {
                 if let Some(iface) = nm_dev_to_nm_iface(nm_dev) {
                     log::debug!(
-                        "Found unmanaged or disconnected interface {:?}",
-                        iface
+                        "Found unmanaged or disconnected interface {}/{}",
+                        iface.name(),
+                        iface.iface_type()
                     );
                     net_state.append_interface_data(iface);
                 }
@@ -89,8 +90,9 @@ pub(crate) fn nm_retrieve(
                     if (state_flag & NM_ACTIVATION_STATE_FLAG_EXTERNAL) > 0 {
                         if let Some(iface) = nm_dev_to_nm_iface(nm_dev) {
                             log::debug!(
-                                "Found external managed interface {:?}",
-                                iface
+                                "Found external managed interface {}/{}",
+                                iface.name(),
+                                iface.iface_type()
                             );
                             net_state.append_interface_data(iface);
                         }
@@ -148,7 +150,11 @@ pub(crate) fn nm_retrieve(
                         iface.base_iface_mut().mptcp = None;
                     }
 
-                    log::debug!("Found interface {:?}", iface);
+                    log::debug!(
+                        "Found NM interface {}/{}",
+                        iface.name(),
+                        iface.iface_type()
+                    );
                     net_state.append_interface_data(iface);
                 }
             }
@@ -168,8 +174,20 @@ pub(crate) fn nm_retrieve(
             iface.base_iface_mut().state = InterfaceState::Ignore;
         }
     }
-
-    net_state.dns = retrieve_dns_info(&mut nm_api, &net_state.interfaces)?;
+    if let Ok(nm_global_dns_conf) = nm_api
+        .get_global_dns_configuration()
+        .map_err(nm_error_to_nmstate)
+    {
+        if nm_global_dns_conf.is_empty() {
+            net_state.dns =
+                retrieve_dns_info(&mut nm_api, &net_state.interfaces)?;
+        } else {
+            net_state.dns = nm_global_dns_to_nmstate(&nm_global_dns_conf);
+        }
+    } else {
+        net_state.dns = retrieve_dns_info(&mut nm_api, &net_state.interfaces)?;
+    }
+    net_state.dns.sanitize().ok();
     if running_config_only {
         net_state.dns.running = None;
     }
@@ -334,7 +352,6 @@ fn iface_get(
                 return None;
             }
         };
-        log::debug!("Found interface {:?}", iface);
         Some(iface)
     } else {
         // NmConnection has no interface name

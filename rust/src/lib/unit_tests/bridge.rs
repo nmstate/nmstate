@@ -448,7 +448,7 @@ fn test_bridge_vlan_filter_trunk_tag_without_enable_native() {
     )
     .unwrap();
 
-    let result = desired.sanitize();
+    let result = desired.sanitize(true);
 
     assert!(result.is_err());
     if let Err(e) = result {
@@ -480,7 +480,7 @@ fn test_bridge_vlan_filter_trunk_tag_overlap_id_vs_range() {
     )
     .unwrap();
 
-    let result = desired.sanitize();
+    let result = desired.sanitize(true);
 
     assert!(result.is_err());
     if let Err(e) = result {
@@ -514,7 +514,7 @@ fn test_bridge_vlan_filter_trunk_tag_overlap_range_vs_range() {
     )
     .unwrap();
 
-    let result = desired.sanitize();
+    let result = desired.sanitize(true);
 
     assert!(result.is_err());
     if let Err(e) = result {
@@ -544,7 +544,7 @@ fn test_bridge_vlan_filter_trunk_tag_overlap_id_vs_id() {
     )
     .unwrap();
 
-    let result = desired.sanitize();
+    let result = desired.sanitize(true);
 
     assert!(result.is_err());
     if let Err(e) = result {
@@ -572,7 +572,7 @@ fn test_bridge_vlan_filter_enable_native_with_access_mode() {
     )
     .unwrap();
 
-    let result = desired.sanitize();
+    let result = desired.sanitize(true);
 
     assert!(result.is_err());
     if let Err(e) = result {
@@ -601,7 +601,7 @@ fn test_bridge_vlan_filter_trunk_tags_with_access_mode() {
     )
     .unwrap();
 
-    let result = desired.sanitize();
+    let result = desired.sanitize(true);
 
     assert!(result.is_err());
     if let Err(e) = result {
@@ -628,10 +628,94 @@ fn test_bridge_vlan_filter_no_trunk_tags_with_trunk_mode() {
     )
     .unwrap();
 
-    let result = desired.sanitize();
+    let result = desired.sanitize(true);
 
     assert!(result.is_err());
     if let Err(e) = result {
         assert_eq!(e.kind(), ErrorKind::InvalidArgument);
     }
+}
+
+#[test]
+fn test_bridge_validate_diff_group_forward_mask_and_group_fwd_mask() {
+    let mut desired: LinuxBridgeInterface = serde_yaml::from_str(
+        r#"
+        name: br0
+        type: linux-bridge
+        state: up
+        bridge:
+          options:
+            group-forward-mask: 1
+            group-fwd-mask: 2
+        "#,
+    )
+    .unwrap();
+    let result = desired.sanitize(true);
+
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+        assert!(e
+            .msg()
+            .contains("Linux bridge br0 has different group_forward_mask:"));
+    }
+}
+
+#[test]
+fn test_bridge_sanitize_group_forward_mask_and_group_fwd_mask() {
+    let mut desired_both: LinuxBridgeInterface = serde_yaml::from_str(
+        r#"
+        name: br0
+        type: linux-bridge
+        state: up
+        bridge:
+          options:
+            group-forward-mask: 1
+            group-fwd-mask: 1
+        "#,
+    )
+    .unwrap();
+    desired_both.sanitize(true).unwrap();
+
+    let mut desired_old: LinuxBridgeInterface = serde_yaml::from_str(
+        r#"
+        name: br0
+        type: linux-bridge
+        state: up
+        bridge:
+          options:
+            group-forward-mask: 1
+        "#,
+    )
+    .unwrap();
+    desired_old.sanitize(true).unwrap();
+
+    let mut desired_new: LinuxBridgeInterface = serde_yaml::from_str(
+        r#"
+        name: br0
+        type: linux-bridge
+        state: up
+        bridge:
+          options:
+            group-fwd-mask: 1
+        "#,
+    )
+    .unwrap();
+    desired_new.sanitize(true).unwrap();
+
+    let expected: LinuxBridgeInterface = serde_yaml::from_str(
+        r#"
+        name: br0
+        type: linux-bridge
+        state: up
+        bridge:
+          options:
+            group-fwd-mask: 1
+        "#,
+    )
+    .unwrap();
+
+    assert_eq!(desired_both, expected);
+    assert_eq!(desired_old, expected);
+    assert_eq!(desired_new, expected);
 }

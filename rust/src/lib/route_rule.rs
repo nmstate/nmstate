@@ -9,6 +9,8 @@ use crate::{
     ErrorKind, InterfaceIpAddr, InterfaceType, NmstateError,
 };
 
+const ROUTE_RULE_DEFAULT_PRIORIRY: i64 = 30000;
+
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[non_exhaustive]
 #[serde(deny_unknown_fields)]
@@ -70,10 +72,14 @@ pub struct RouteRuleEntry {
     #[serde(skip_serializing_if = "Option::is_none")]
     /// Source prefix to match.
     /// Serialize and deserialize to/from `ip-from`.
+    /// When setting to empty string in absent route rule, it will only delete
+    /// route rule __without__ `ip-from`.
     pub ip_from: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     /// Destination prefix to match.
     /// Serialize and deserialize to/from `ip-to`.
+    /// When setting to empty string in absent route rule, it will only delete
+    /// route rule __without__ `ip-to`.
     pub ip_to: Option<String>,
     #[serde(
         skip_serializing_if = "Option::is_none",
@@ -205,34 +211,50 @@ impl RouteRuleEntry {
 
     pub(crate) fn is_match(&self, other: &Self) -> bool {
         if let Some(ip_from) = self.ip_from.as_deref() {
-            let ip_from = if !ip_from.contains('/') {
-                match InterfaceIpAddr::try_from(ip_from) {
-                    Ok(ref i) => i.into(),
-                    Err(e) => {
-                        log::error!("{}", e);
-                        return false;
+            if !ip_from.is_empty() {
+                let ip_from = if !ip_from.contains('/') {
+                    match InterfaceIpAddr::try_from(ip_from) {
+                        Ok(ref i) => i.into(),
+                        Err(e) => {
+                            log::error!("{}", e);
+                            return false;
+                        }
                     }
+                } else {
+                    ip_from.to_string()
+                };
+                if other.ip_from != Some(ip_from) {
+                    return false;
                 }
-            } else {
-                ip_from.to_string()
-            };
-            if other.ip_from != Some(ip_from) {
+            } else if other.ip_from.as_deref().map(|s| s.is_empty())
+                == Some(false)
+            {
+                // Use desire 'ip_from: ""' means it should only match empty
+                // ip_from
                 return false;
             }
         }
         if let Some(ip_to) = self.ip_to.as_deref() {
-            let ip_to = if !ip_to.contains('/') {
-                match InterfaceIpAddr::try_from(ip_to) {
-                    Ok(ref i) => i.into(),
-                    Err(e) => {
-                        log::error!("{}", e);
-                        return false;
+            if !ip_to.is_empty() {
+                let ip_to = if !ip_to.contains('/') {
+                    match InterfaceIpAddr::try_from(ip_to) {
+                        Ok(ref i) => i.into(),
+                        Err(e) => {
+                            log::error!("{}", e);
+                            return false;
+                        }
                     }
+                } else {
+                    ip_to.to_string()
+                };
+                if other.ip_to != Some(ip_to) {
+                    return false;
                 }
-            } else {
-                ip_to.to_string()
-            };
-            if other.ip_to != Some(ip_to) {
+            } else if other.ip_to.as_deref().map(|s| s.is_empty())
+                == Some(false)
+            {
+                // Use desire 'ip_to: ""' means it should only match empty
+                // ip_to
                 return false;
             }
         }
@@ -301,29 +323,45 @@ impl RouteRuleEntry {
 
     pub(crate) fn sanitize(&mut self) -> Result<(), NmstateError> {
         if let Some(ip) = self.ip_from.as_ref() {
-            let new_ip = sanitize_ip_network(ip)?;
-            if self.family.is_none() {
-                match is_ipv6_addr(new_ip.as_str()) {
-                    true => self.family = Some(AddressFamily::IPv6),
-                    false => self.family = Some(AddressFamily::IPv4),
-                };
-            }
-            if ip != &new_ip {
-                log::warn!("Route rule ip-from {} sanitized to {}", ip, new_ip);
-                self.ip_from = Some(new_ip);
+            if ip.is_empty() {
+                self.ip_from = None;
+            } else {
+                let new_ip = sanitize_ip_network(ip)?;
+                if self.family.is_none() {
+                    match is_ipv6_addr(new_ip.as_str()) {
+                        true => self.family = Some(AddressFamily::IPv6),
+                        false => self.family = Some(AddressFamily::IPv4),
+                    };
+                }
+                if ip != &new_ip {
+                    log::warn!(
+                        "Route rule ip-from {} sanitized to {}",
+                        ip,
+                        new_ip
+                    );
+                    self.ip_from = Some(new_ip);
+                }
             }
         }
         if let Some(ip) = self.ip_to.as_ref() {
-            let new_ip = sanitize_ip_network(ip)?;
-            if self.family.is_none() {
-                match is_ipv6_addr(new_ip.as_str()) {
-                    true => self.family = Some(AddressFamily::IPv6),
-                    false => self.family = Some(AddressFamily::IPv4),
-                };
-            }
-            if ip != &new_ip {
-                log::warn!("Route rule ip-to {} sanitized to {}", ip, new_ip);
-                self.ip_to = Some(new_ip);
+            if ip.is_empty() {
+                self.ip_to = None;
+            } else {
+                let new_ip = sanitize_ip_network(ip)?;
+                if self.family.is_none() {
+                    match is_ipv6_addr(new_ip.as_str()) {
+                        true => self.family = Some(AddressFamily::IPv6),
+                        false => self.family = Some(AddressFamily::IPv4),
+                    };
+                }
+                if ip != &new_ip {
+                    log::warn!(
+                        "Route rule ip-to {} sanitized to {}",
+                        ip,
+                        new_ip
+                    );
+                    self.ip_to = Some(new_ip);
+                }
             }
         }
         self.validate_ip_from_to()?;
@@ -448,6 +486,9 @@ pub(crate) struct MergedRouteRules {
     //  * Desired route rules
     //  * Current route rules been marked as absent
     pub(crate) for_apply: Vec<RouteRuleEntry>,
+    // The `for_verify` hold the same data as `for_apply` except the
+    // auto set priority.
+    pub(crate) for_verify: Vec<RouteRuleEntry>,
 }
 
 impl MergedRouteRules {
@@ -455,7 +496,8 @@ impl MergedRouteRules {
         desired: RouteRules,
         current: RouteRules,
     ) -> Result<Self, NmstateError> {
-        let mut merged: Vec<RouteRuleEntry> = Vec::new();
+        let mut for_apply: Vec<RouteRuleEntry> = Vec::new();
+        let mut merged_rules: Vec<RouteRuleEntry> = Vec::new();
 
         let mut des_absent_rules: Vec<&RouteRuleEntry> = Vec::new();
         if let Some(rules) = desired.config.as_ref() {
@@ -474,7 +516,9 @@ impl MergedRouteRules {
                     let mut new_rule = rule.clone();
                     new_rule.state = Some(RouteRuleState::Absent);
                     new_rule.sanitize()?;
-                    merged.push(new_rule);
+                    for_apply.push(new_rule);
+                } else {
+                    merged_rules.push(rule.clone());
                 }
             }
         }
@@ -483,13 +527,20 @@ impl MergedRouteRules {
             for rule in rules.as_slice().iter().filter(|r| !r.is_absent()) {
                 let mut rule = rule.clone();
                 rule.sanitize()?;
-                merged.push(rule);
+                merged_rules.push(rule.clone());
+                for_apply.push(rule);
             }
         }
+
+        let for_verify = for_apply.clone();
+
+        set_auto_priority(for_apply.as_mut_slice(), merged_rules.as_slice());
+
         Ok(Self {
             desired,
             current,
-            for_apply: merged,
+            for_apply,
+            for_verify,
         })
     }
 
@@ -517,4 +568,31 @@ impl MergedRouteRules {
             && (self.for_apply
                 != self.current.config.clone().unwrap_or_default())
     }
+}
+
+fn set_auto_priority(
+    for_apply: &mut [RouteRuleEntry],
+    merged: &[RouteRuleEntry],
+) {
+    let mut max_priority = get_max_rule_priority(merged);
+    if max_priority < ROUTE_RULE_DEFAULT_PRIORIRY - 1 {
+        max_priority = ROUTE_RULE_DEFAULT_PRIORIRY - 1;
+    }
+
+    for rule in for_apply.iter_mut().filter(|r| {
+        !r.is_absent()
+            && (r.priority.is_none()
+                || r.priority == Some(RouteRuleEntry::USE_DEFAULT_PRIORITY))
+    }) {
+        max_priority += 1;
+        rule.priority = Some(max_priority);
+    }
+}
+
+fn get_max_rule_priority(rules: &[RouteRuleEntry]) -> i64 {
+    rules
+        .iter()
+        .map(|r| r.priority.unwrap_or_default())
+        .max()
+        .unwrap_or_default()
 }

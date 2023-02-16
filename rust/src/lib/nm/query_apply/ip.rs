@@ -81,7 +81,7 @@ pub(crate) fn nm_ip_setting_to_nmstate6(
         };
         let (auto_dns, auto_gateway, auto_routes, auto_table_id) =
             parse_dhcp_opts(nm_ip_setting);
-        InterfaceIpv6 {
+        let mut ret = InterfaceIpv6 {
             enabled,
             dhcp,
             autoconf,
@@ -115,7 +115,16 @@ pub(crate) fn nm_ip_setting_to_nmstate6(
             },
             auto_route_metric: nm_ip_setting.route_metric.map(|i| i as u32),
             ..Default::default()
+        };
+        // NetworkManager only set IPv6 token to kernel when IPv6 autoconf
+        // done. But nmstate should not wait DHCP, hence instead of depending
+        // on nispor kernel IPv6 token, we set IPv6 token base on information
+        // provided by NM connection.
+        if let Some(token) = nm_ip_setting.token.as_ref() {
+            ret.prop_list.push("token");
+            ret.token = Some(token.to_string());
         }
+        ret
     } else {
         InterfaceIpv6::default()
     }

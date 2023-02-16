@@ -241,10 +241,42 @@ ipv6:
     )
     .unwrap();
 
-    let result = iface.sanitize();
+    let result = iface.sanitize(true);
     assert!(result.is_err());
     if let Err(e) = result {
         assert_eq!(e.kind(), ErrorKind::InvalidArgument);
         assert!(e.msg().contains("MTU should be >= 1280"));
     }
+}
+
+#[test]
+fn test_ipv6_verify_emtpy() {
+    let des_ifaces: Interfaces = serde_yaml::from_str(
+        r#"---
+            - name: eth1
+              type: ethernet
+              state: up
+              ipv6:
+                enabled: "true"
+                dhcp: "false"
+                address: []"#,
+    )
+    .unwrap();
+
+    let cur_ifaces: Interfaces = serde_yaml::from_str(
+        r#"---
+            - name: eth1
+              type: ethernet
+              state: up
+              ipv6:
+                enabled: "true"
+                dhcp: "false""#,
+    )
+    .unwrap();
+
+    let merged_ifaces =
+        MergedInterfaces::new(des_ifaces, gen_test_eth_ifaces(), false, false)
+            .unwrap();
+
+    merged_ifaces.verify(&cur_ifaces).unwrap();
 }

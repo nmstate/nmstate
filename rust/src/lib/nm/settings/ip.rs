@@ -54,7 +54,6 @@ fn gen_nm_ipv4_setting(
     nm_setting.method = Some(method);
     nm_setting.addresses = addresses;
     if iface_ip.is_auto() {
-        nm_setting.gateway = None;
         nm_setting.dhcp_timeout = Some(i32::MAX);
         nm_setting.route_metric = iface_ip.auto_route_metric.map(|i| i.into());
         nm_setting.dhcp_client_id = Some(nmstate_dhcp_client_id_to_nm(
@@ -75,15 +74,12 @@ fn gen_nm_ipv4_setting(
         // enabled.
         nm_setting.routes = Vec::new();
     }
-    if !iface_ip.is_auto() {
+    nm_setting.gateway = None;
+    if iface_ip.enabled {
         if let Some(routes) = routes {
             nm_setting.routes = gen_nm_ip_routes(routes, false)?;
-            // We use above routes property for gateway also, in order
-            // to support multiple gateways.
-            nm_setting.gateway = None;
         }
-    }
-    if !iface_ip.enabled {
+    } else {
         // Clean up static routes if ip is disabled
         nm_setting.routes = Vec::new();
     }
@@ -153,7 +149,6 @@ fn gen_nm_ipv6_setting(
     nm_setting.addr_gen_mode =
         Some(nmstate_addr_gen_mode_to_nm(iface_ip.addr_gen_mode.as_ref()));
     if iface_ip.is_auto() {
-        nm_setting.gateway = None;
         nm_setting.dhcp_timeout = Some(i32::MAX);
         nm_setting.ra_timeout = Some(i32::MAX);
         nm_setting.dhcp_duid = Some(
@@ -164,6 +159,13 @@ fn gen_nm_ipv6_setting(
                 .to_string(),
         );
         nm_setting.dhcp_iaid = Some("mac".to_string());
+        if let Some(token) = iface_ip.token.as_ref() {
+            if token.is_empty() || token == "::" {
+                nm_setting.token = None;
+            } else {
+                nm_setting.token = Some(token.to_string());
+            }
+        }
         nm_setting.route_metric = iface_ip.auto_route_metric.map(|i| i.into());
         apply_dhcp_opts(
             &mut nm_setting,
@@ -175,11 +177,17 @@ fn gen_nm_ipv6_setting(
         // No use case indicate we should support static routes with DHCP
         // enabled.
         nm_setting.routes = Vec::new();
+    } else {
+        nm_setting.token = None;
     }
-    if !iface_ip.is_auto() {
+    nm_setting.gateway = None;
+    if iface_ip.enabled {
         if let Some(routes) = routes {
             nm_setting.routes = gen_nm_ip_routes(routes, true)?;
         }
+    } else {
+        // Clean up static routes if ip is disabled
+        nm_setting.routes = Vec::new();
     }
     if let Some(rules) = iface_ip.rules.as_ref() {
         nm_setting.route_rules = gen_nm_ip_rules(rules, true)?;

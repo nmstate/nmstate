@@ -696,3 +696,46 @@ fn test_do_not_auto_manage_ports_if_current_has_ignore() {
 
     assert_eq!(br_iface.ports(), Some(vec![]));
 }
+
+#[test]
+fn test_absent_iface_holding_controller_and_ip() {
+    let des_ifaces: Interfaces = serde_yaml::from_str(
+        r#"---
+        - name: eth1
+          state: absent"#,
+    )
+    .unwrap();
+
+    // Kernel allows NIC hold IP even attached to bridge.
+    // When user is removing this interface, we should not care about whether it
+    // can hold IP or not.
+    let mut cur_ifaces: Interfaces = serde_yaml::from_str(
+        r#"---
+        - name: br0
+          type: linux-bridge
+          state: up
+          bridge:
+            port:
+            - name: eth1
+        - name: eth1
+          type: ethernet
+          state: up
+          ipv6:
+            enabled: true
+            autoconf: true
+            dhcp: true"#,
+    )
+    .unwrap();
+    if let Some(iface) = cur_ifaces.kernel_ifaces.get_mut("eth1") {
+        iface.base_iface_mut().controller = Some("br0".to_string());
+        iface.base_iface_mut().controller_type =
+            Some(InterfaceType::LinuxBridge);
+    }
+
+    let merged_ifaces =
+        MergedInterfaces::new(des_ifaces, cur_ifaces, false, false).unwrap();
+
+    let iface = merged_ifaces.kernel_ifaces.get("eth1").unwrap();
+
+    assert!(iface.for_apply.as_ref().unwrap().is_absent());
+}

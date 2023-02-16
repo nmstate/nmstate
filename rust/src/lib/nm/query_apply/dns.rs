@@ -4,7 +4,7 @@ use std::str::FromStr;
 
 use super::super::{
     error::nm_error_to_nmstate,
-    nm_dbus::{NmApi, NmDnsEntry, NmSettingIp},
+    nm_dbus::{NmApi, NmDnsEntry, NmGlobalDnsConfig, NmSettingIp},
 };
 
 use crate::{
@@ -121,4 +121,52 @@ fn nm_dns_srvs_to_nmstate(nm_dns_entry: &NmDnsEntry) -> Vec<String> {
         }
     }
     srvs
+}
+
+pub(crate) fn store_dns_config_via_global_api(
+    nm_api: &mut NmApi,
+    servers: &[String],
+    searches: &[String],
+) -> Result<(), NmstateError> {
+    let nm_config =
+        NmGlobalDnsConfig::new_wildcard(searches.to_vec(), servers.to_vec());
+    log::debug!("Applying NM global DNS config {:?}", nm_config);
+    nm_api
+        .set_global_dns_configuration(&nm_config)
+        .map_err(nm_error_to_nmstate)?;
+    Ok(())
+}
+
+pub(crate) fn purge_global_dns_config(
+    nm_api: &mut NmApi,
+) -> Result<(), NmstateError> {
+    let cur_dns = nm_api
+        .get_global_dns_configuration()
+        .map_err(nm_error_to_nmstate)?;
+    if !cur_dns.is_empty() {
+        log::debug!("Purging NM Global DNS config");
+        nm_api
+            .set_global_dns_configuration(&NmGlobalDnsConfig::default())
+            .map_err(nm_error_to_nmstate)?;
+    }
+    Ok(())
+}
+
+pub(crate) fn nm_global_dns_to_nmstate(
+    nm_global_dns_conf: &NmGlobalDnsConfig,
+) -> DnsState {
+    let mut config = DnsClientState::new();
+
+    config.search = Some(nm_global_dns_conf.searches.clone());
+    config.server =
+        if let Some(nm_domain_conf) = nm_global_dns_conf.domains.get("*") {
+            Some(nm_domain_conf.servers.clone())
+        } else {
+            Some(Vec::new())
+        };
+
+    DnsState {
+        running: Some(config.clone()),
+        config: Some(config),
+    }
 }

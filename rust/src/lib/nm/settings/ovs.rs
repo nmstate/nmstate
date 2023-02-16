@@ -5,14 +5,14 @@ use std::iter::FromIterator;
 
 use super::super::nm_dbus::{
     NmConnection, NmRange, NmSettingOvsDpdk, NmSettingOvsExtIds,
-    NmSettingOvsIface, NmSettingOvsPatch,
+    NmSettingOvsIface, NmSettingOvsOtherConfig, NmSettingOvsPatch,
 };
 use super::super::settings::connection::gen_nm_conn_setting;
 
 use crate::{
     BaseInterface, BridgePortTunkTag, Interface, InterfaceType, NmstateError,
-    OvsBridgeBondMode, OvsBridgeInterface, OvsBridgePortConfig, OvsInterface,
-    UnknownInterface,
+    OvsBridgeBondMode, OvsBridgeInterface, OvsBridgePortConfig,
+    OvsDbIfaceConfig, OvsInterface, UnknownInterface,
 };
 
 pub(crate) fn create_ovs_port_nm_conn(
@@ -57,6 +57,10 @@ pub(crate) fn create_ovs_port_nm_conn(
 
         if let Some(bond_updelay) = bond_conf.bond_updelay {
             nm_ovs_port_set.up_delay = Some(bond_updelay);
+        }
+
+        if let Some(ovsdb_conf) = bond_conf.ovsdb.as_ref() {
+            apply_iface_ovsdb_conf(ovsdb_conf, &mut nm_conn);
         }
     }
     if let Some(vlan_conf) = port_conf.vlan.as_ref() {
@@ -168,21 +172,42 @@ pub(crate) fn gen_nm_ovs_iface_setting(
     }
 }
 
-pub(crate) fn gen_nm_ovs_ext_ids_setting(
+fn apply_iface_ovsdb_conf(conf: &OvsDbIfaceConfig, nm_conn: &mut NmConnection) {
+    let external_ids = conf.get_external_ids();
+    let other_config = conf.get_other_config();
+
+    if !(external_ids.is_empty() && nm_conn.ovs_ext_ids.is_none()) {
+        let mut nm_setting = NmSettingOvsExtIds::default();
+        nm_setting.data = Some(HashMap::from_iter(
+            external_ids
+                .iter()
+                .map(|(k, v)| (k.to_string(), v.to_string())),
+        ));
+        nm_conn.ovs_ext_ids = Some(nm_setting);
+    }
+
+    // Do not create new setting for empty other_config unless pre-exist.
+    if !(other_config.is_empty() && nm_conn.ovs_other_config.is_none()) {
+        let mut nm_setting = NmSettingOvsOtherConfig::default();
+        nm_setting.data = Some(HashMap::from_iter(
+            other_config
+                .iter()
+                .map(|(k, v)| (k.to_string(), v.to_string())),
+        ));
+        nm_conn.ovs_other_config = Some(nm_setting);
+    }
+}
+
+pub(crate) fn gen_nm_iface_ovs_db_setting(
     iface: &Interface,
     nm_conn: &mut NmConnection,
 ) {
     if iface.iface_type() != InterfaceType::OvsBridge
         && iface.base_iface().controller_type != Some(InterfaceType::OvsBridge)
     {
+        nm_conn.ovs_other_config = None;
         nm_conn.ovs_ext_ids = None;
     } else if let Some(conf) = iface.base_iface().ovsdb.as_ref() {
-        let mut nm_setting = NmSettingOvsExtIds::default();
-        nm_setting.data = Some(HashMap::from_iter(
-            conf.get_external_ids()
-                .iter()
-                .map(|(k, v)| (k.to_string(), v.to_string())),
-        ));
-        nm_conn.ovs_ext_ids = Some(nm_setting);
+        apply_iface_ovsdb_conf(conf, nm_conn);
     }
 }

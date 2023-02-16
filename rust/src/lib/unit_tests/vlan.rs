@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{InterfaceType, Interfaces, MergedInterfaces, VlanInterface};
+use crate::{
+    ErrorKind, InterfaceType, Interfaces, MergedInterfaces, VlanInterface,
+};
 
 #[test]
 fn test_vlan_stringlized_attributes() {
@@ -69,4 +71,113 @@ fn test_vlan_get_parent_up_priority_plus_one() {
     assert_eq!(vrf0_iface.base_iface().up_priority, 0);
     assert_eq!(bond0_iface.base_iface().up_priority, 1);
     assert_eq!(vlan_iface.base_iface().up_priority, 2);
+}
+
+#[test]
+fn test_vlan_orphan_check_auto_absent() {
+    let current: Interfaces = serde_yaml::from_str(
+        r#"---
+        - name: bond0.100
+          type: vlan
+          vlan:
+            base-iface: bond0
+            id: 100
+        - name: bond0
+          type: bond
+          link-aggregation:
+            mode: balance-rr"#,
+    )
+    .unwrap();
+    let desired: Interfaces = serde_yaml::from_str(
+        r#"---
+        - name: bond0
+          type: bond
+          state: absent"#,
+    )
+    .unwrap();
+
+    let merged_ifaces =
+        MergedInterfaces::new(desired, current, false, false).unwrap();
+
+    let vlan_iface = merged_ifaces
+        .get_iface("bond0.100", InterfaceType::Vlan)
+        .unwrap()
+        .for_apply
+        .as_ref()
+        .unwrap();
+
+    assert!(vlan_iface.is_absent())
+}
+
+#[test]
+fn test_vlan_orphan_but_desired() {
+    let current: Interfaces = serde_yaml::from_str(
+        r#"---
+        - name: bond0.100
+          type: vlan
+          vlan:
+            base-iface: bond0
+            id: 100
+        - name: bond0
+          type: bond
+          link-aggregation:
+            mode: balance-rr"#,
+    )
+    .unwrap();
+    let desired: Interfaces = serde_yaml::from_str(
+        r#"---
+        - name: bond0.100
+        - name: bond0
+          type: bond
+          state: absent"#,
+    )
+    .unwrap();
+
+    let result = MergedInterfaces::new(desired, current, false, false);
+
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+        assert!(e.msg().contains(
+            "Interface bond0.100 cannot be in up state \
+            as its parent bond0 has been marked as absent"
+        ));
+    }
+}
+
+#[test]
+fn test_vlan_orphan_has_now_parent() {
+    let current: Interfaces = serde_yaml::from_str(
+        r#"---
+        - name: bond0.100
+          type: vlan
+          vlan:
+            base-iface: bond0
+            id: 100
+        - name: bond0
+          type: bond
+          link-aggregation:
+            mode: balance-rr"#,
+    )
+    .unwrap();
+    let desired: Interfaces = serde_yaml::from_str(
+        r#"---
+        - name: bond0.100
+          state: up
+          type: vlan
+          vlan:
+            base-iface: bond1
+            id: 100
+        - name: bond1
+          type: bond
+          state: up
+          link-aggregation:
+            mode: balance-rr
+        - name: bond0
+          type: bond
+          state: absent"#,
+    )
+    .unwrap();
+
+    MergedInterfaces::new(desired, current, false, false).unwrap();
 }

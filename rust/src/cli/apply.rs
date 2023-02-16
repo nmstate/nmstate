@@ -55,16 +55,23 @@ where
 
     let mut net_state: NetworkState = match serde_yaml::from_str(&content) {
         Ok(s) => s,
-        Err(_) => {
+        Err(state_error) => {
             // Try NetworkPolicy
             let net_policy: NetworkPolicy = match serde_yaml::from_str(&content)
             {
                 Ok(p) => p,
-                Err(_) => {
-                    return Err(CliError::from(
+                Err(policy_error) => {
+                    let e = if content.contains("desiredState")
+                        || content.contains("desired")
+                    {
+                        policy_error
+                    } else {
+                        state_error
+                    };
+                    return Err(CliError::from(format!(
                         "Provide file is not valid NetworkState or \
-                            NetworkPolicy",
-                    ));
+                        NetworkPolicy: {e}"
+                    )));
                 }
             };
             NetworkState::try_from(net_policy)?

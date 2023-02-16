@@ -2,28 +2,47 @@
 
 use crate::{dns::parse_dns_ipv6_link_local_srv, ip::is_ipv6_addr};
 use crate::{
-    DnsClientState, ErrorKind, Interface, InterfaceType, MergedInterfaces,
-    MergedNetworkState, NmstateError,
+    DnsClientState, ErrorKind, Interface, InterfaceType, MergedInterface,
+    MergedInterfaces, MergedNetworkState, NmstateError,
 };
 
 const DEFAULT_DNS_PRIORITY: i32 = 40;
 
-pub(crate) fn store_dns_config(
+pub(crate) fn store_dns_config_to_iface(
     merged_state: &mut MergedNetworkState,
 ) -> Result<(), NmstateError> {
     if merged_state.dns.is_changed()
         || !cur_dns_ifaces_still_valid_for_dns(&merged_state.interfaces)
     {
+        let srvs = merged_state.dns.servers.as_slice();
+
+        if srvs.len() > 2 && is_mixed_dns_servers(srvs) {
+            return Err(NmstateError::new(
+                ErrorKind::NotImplementedError,
+                "Placing IPv4/IPv6 nameserver in the middle of IPv6/IPv4 \
+                nameservers is not supported yet"
+                    .to_string(),
+            ));
+        }
+
         let (cur_v4_ifaces, cur_v6_ifaces) =
             get_cur_dns_ifaces(&merged_state.interfaces);
+        log::debug!(
+            "Current DNS interface is \
+            v4 {cur_v4_ifaces:?} v6 {cur_v6_ifaces:?}"
+        );
         let (v4_iface_name, v6_iface_name) = reselect_dns_ifaces(
             merged_state,
             cur_v4_ifaces.as_slice(),
             cur_v6_ifaces.as_slice(),
         );
+        log::debug!(
+            "Re-selected DNS interfaces are v4 {v4_iface_name:?}, \
+            v6 {v6_iface_name:?}"
+        );
 
-        purge_dns_config(false, cur_v4_ifaces.as_slice(), merged_state);
-        purge_dns_config(true, cur_v6_ifaces.as_slice(), merged_state);
+        purge_dns_config(false, cur_v4_ifaces.as_slice(), merged_state)?;
+        purge_dns_config(true, cur_v6_ifaces.as_slice(), merged_state)?;
         save_dns_to_iface(&v4_iface_name, &v6_iface_name, merged_state)?;
     }
     Ok(())
@@ -54,7 +73,11 @@ pub(crate) fn reselect_dns_ifaces(
     (ipv4_iface, ipv6_iface)
 }
 
-// Find interface with DHCP disabled and IP enabled from desired interfaces.
+// Find interface with DHCP disabled and IP enabled in the order of:
+//  * Use current DNS interface if it is still valid.
+//  * Use desire interface if it is preferred for DNS interface.
+//  * Use desire interface if it is valid for DNS interface.
+//  * Use current interface if it is valid for DNS interface.
 fn find_dns_iface(
     is_ipv6: bool,
     merged_ifaces: &MergedInterfaces,
@@ -70,24 +93,77 @@ fn find_dns_iface(
     }
 
     // Do not use loopback interface for DNS
-    for (iface_name, iface) in
-        merged_ifaces.kernel_ifaces.iter().filter(|(_, i)| {
-            i.merged.iface_type() != InterfaceType::Loopback && i.is_changed()
-        })
+    // Use insert order to produce consistent DNS interface choice
+    for iface_name in
+        merged_ifaces
+            .insert_order
+            .as_slice()
+            .iter()
+            .filter_map(|(n, t)| {
+                if !t.is_userspace() && t != &InterfaceType::Loopback {
+                    Some(n)
+                } else {
+                    None
+                }
+            })
     {
-        if iface.is_iface_valid_for_dns(is_ipv6) {
-            return Some(iface_name.to_string());
+        if let Some(iface) = merged_ifaces.kernel_ifaces.get(iface_name) {
+            if !iface.is_changed() {
+                continue;
+            }
+            if iface.is_iface_prefered_for_dns(is_ipv6) {
+                return Some(iface_name.to_string());
+            }
         }
     }
 
-    // Try again among undesired current interface
-    for (iface_name, iface) in merged_ifaces
-        .kernel_ifaces
-        .iter()
-        .filter(|(_, i)| i.merged.iface_type() != InterfaceType::Loopback)
+    // Do not use loopback interface for DNS
+    // Use insert order to produce consistent DNS interface choice
+    for iface_name in
+        merged_ifaces
+            .insert_order
+            .as_slice()
+            .iter()
+            .filter_map(|(n, t)| {
+                if !t.is_userspace() && t != &InterfaceType::Loopback {
+                    Some(n)
+                } else {
+                    None
+                }
+            })
     {
-        if iface.is_iface_valid_for_dns(is_ipv6) {
-            return Some(iface_name.to_string());
+        if let Some(iface) = merged_ifaces.kernel_ifaces.get(iface_name) {
+            if !iface.is_changed() {
+                continue;
+            }
+            if iface.is_iface_valid_for_dns(is_ipv6) {
+                return Some(iface_name.to_string());
+            }
+        }
+    }
+
+    let mut cur_iface_names: Vec<&str> = merged_ifaces
+        .kernel_ifaces
+        .values()
+        .filter_map(|i| {
+            if !i.is_changed()
+                && i.merged.iface_type() != InterfaceType::Loopback
+            {
+                Some(i.merged.name())
+            } else {
+                None
+            }
+        })
+        .collect();
+    // Sort the interface names to produce consistent choice.
+    cur_iface_names.sort_unstable();
+
+    // Try again among undesired current interface
+    for iface_name in cur_iface_names {
+        if let Some(iface) = merged_ifaces.kernel_ifaces.get(iface_name) {
+            if iface.is_iface_valid_for_dns(is_ipv6) {
+                return Some(iface_name.to_string());
+            }
         }
     }
 
@@ -100,6 +176,11 @@ fn extract_ipv6_link_local_iface_from_dns_srv(
     for srv in srvs {
         let splits: Vec<&str> = srv.split('%').collect();
         if splits.len() == 2 && !splits[1].is_empty() {
+            log::debug!(
+                "Extracted IPv6 link local DNS interface name \
+                {} from {srv}",
+                splits[1]
+            );
             return Some(splits[1].to_string());
         }
     }
@@ -110,13 +191,13 @@ pub(crate) fn purge_dns_config(
     is_ipv6: bool,
     ifaces: &[String],
     merged_state: &mut MergedNetworkState,
-) {
+) -> Result<(), NmstateError> {
     for iface_name in ifaces {
         if let Some(iface) =
             merged_state.interfaces.kernel_ifaces.get_mut(iface_name)
         {
             if iface.merged.is_absent() {
-                return;
+                continue;
             }
             if !iface.is_changed() {
                 iface.mark_as_changed();
@@ -137,11 +218,12 @@ pub(crate) fn purge_dns_config(
                         Vec::new(),
                         Vec::new(),
                         None,
-                    );
+                    )?;
                 }
             }
         }
     }
+    Ok(())
 }
 
 fn save_dns_to_iface(
@@ -202,15 +284,13 @@ fn _save_dns_to_iface(
     }
 
     if iface_name.is_empty() {
-        let e = NmstateError::new(
+        return Err(NmstateError::new(
             ErrorKind::InvalidArgument,
             format!(
                 "Failed to find suitable(IP enabled with DHCP off \
                 or auto-dns: false) interface for DNS server {servers:?}"
             ),
-        );
-        log::error!("{}", e);
-        return Err(e);
+        ));
     }
 
     if let Some(iface) =
@@ -218,11 +298,16 @@ fn _save_dns_to_iface(
     {
         if !iface.is_changed() {
             iface.mark_as_changed();
-            if let Some(apply_iface) = iface.for_apply.as_mut() {
+        }
+        if let Some(apply_iface) = iface.for_apply.as_mut() {
+            if is_ipv6 {
+                if apply_iface.base_iface().ipv6.is_none() {
+                    apply_iface.base_iface_mut().ipv6 =
+                        iface.merged.base_iface_mut().ipv6.clone();
+                }
+            } else if apply_iface.base_iface().ipv4.is_none() {
                 apply_iface.base_iface_mut().ipv4 =
                     iface.merged.base_iface_mut().ipv4.clone();
-                apply_iface.base_iface_mut().ipv6 =
-                    iface.merged.base_iface_mut().ipv6.clone();
             }
         }
         if let Some(apply_iface) = iface.for_apply.as_mut() {
@@ -233,7 +318,7 @@ fn _save_dns_to_iface(
                     servers,
                     merged_state.dns.searches.clone(),
                     Some(DEFAULT_DNS_PRIORITY),
-                );
+                )?;
             } else {
                 set_iface_dns_conf(
                     is_ipv6,
@@ -241,7 +326,7 @@ fn _save_dns_to_iface(
                     servers,
                     Vec::new(),
                     Some(DEFAULT_DNS_PRIORITY + 10),
-                );
+                )?;
             }
         }
     } else {
@@ -263,7 +348,7 @@ fn set_iface_dns_conf(
     servers: Vec<String>,
     searches: Vec<String>,
     priority: Option<i32>,
-) {
+) -> Result<(), NmstateError> {
     let dns_conf = DnsClientState {
         server: Some(servers),
         search: Some(searches),
@@ -273,15 +358,20 @@ fn set_iface_dns_conf(
         if let Some(ip_conf) = iface.base_iface_mut().ipv6.as_mut() {
             ip_conf.dns = Some(dns_conf);
         } else if !dns_conf.is_purge() {
-            // Should never happen
-            log::error!("BUG: The dns interface is hold None IP {:?}", iface);
+            return Err(NmstateError::new(
+                ErrorKind::Bug,
+                format!("BUG: The dns interface is hold None IP {iface:?}"),
+            ));
         }
     } else if let Some(ip_conf) = iface.base_iface_mut().ipv4.as_mut() {
         ip_conf.dns = Some(dns_conf);
     } else if !dns_conf.is_purge() {
-        // Should never happen
-        log::error!("BUG: The dns interface is hold None IP {:?}", iface);
+        return Err(NmstateError::new(
+            ErrorKind::Bug,
+            format!("BUG: The dns interface is hold None IP {iface:?}"),
+        ));
     }
+    Ok(())
 }
 
 fn get_cur_dns_ifaces(
@@ -326,7 +416,7 @@ fn get_cur_dns_ifaces(
     (v4_ifaces, v6_ifaces)
 }
 
-fn cur_dns_ifaces_still_valid_for_dns(
+pub(crate) fn cur_dns_ifaces_still_valid_for_dns(
     merged_ifaces: &MergedInterfaces,
 ) -> bool {
     let (cur_v4_ifaces, cur_v6_ifaces) = get_cur_dns_ifaces(merged_ifaces);
@@ -345,4 +435,67 @@ fn cur_dns_ifaces_still_valid_for_dns(
         }
     }
     true
+}
+
+fn is_mixed_dns_servers(srvs: &[String]) -> bool {
+    let mut pattern = String::new();
+    for srv in srvs {
+        let cur_char = if is_ipv6_addr(srv) { '6' } else { '4' };
+        if !pattern.ends_with(cur_char) {
+            pattern.push(cur_char);
+        }
+    }
+    pattern.contains("464") || pattern.contains("646")
+}
+
+impl MergedInterface {
+    // These are considered preferred DNS interface:
+    //  * Desire state has specified IP stack with static IP or auto with
+    //    `auto_dns: false`
+    //  * The IPv6 address is not empty
+    pub(crate) fn is_iface_prefered_for_dns(&self, is_ipv6: bool) -> bool {
+        if let Some(apply_iface) = self.for_apply.as_ref() {
+            if is_ipv6 {
+                apply_iface.base_iface().ipv6.as_ref().map(|ip_conf| {
+                    ip_conf.enabled
+                        && ((ip_conf.is_static()
+                            && ip_conf
+                                .addresses
+                                .as_ref()
+                                .map(|a| !a.is_empty())
+                                == Some(true))
+                            || (ip_conf.is_auto()
+                                && ip_conf.auto_dns == Some(false)))
+                }) == Some(true)
+            } else {
+                apply_iface.base_iface().ipv4.as_ref().map(|ip_conf| {
+                    ip_conf.enabled
+                        && (ip_conf.is_static()
+                            || (ip_conf.is_auto()
+                                && ip_conf.auto_dns == Some(false)))
+                }) == Some(true)
+            }
+        } else {
+            false
+        }
+    }
+
+    // IP stack is merged with current at this point.
+    pub(crate) fn is_iface_valid_for_dns(&self, is_ipv6: bool) -> bool {
+        if is_ipv6 {
+            self.merged.base_iface().ipv6.as_ref().map(|ip_conf| {
+                ip_conf.enabled
+                    && (ip_conf.is_static()
+                        || (ip_conf.is_auto()
+                            && ip_conf.auto_dns == Some(false)))
+            }) == Some(true)
+        } else {
+            self.merged.base_iface().ipv4.as_ref().map(|ip_conf| {
+                ip_conf.enabled
+                    && (ip_conf.is_static()
+                        || (ip_conf.is_auto()
+                            && ip_conf.auto_dns == Some(false)))
+            }) == Some(true)
+        }
+    }
 }
