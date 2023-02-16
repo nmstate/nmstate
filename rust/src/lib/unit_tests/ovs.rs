@@ -361,7 +361,7 @@ fn test_ovs_bridge_vlan_filter_trunk_tag_without_enable_native() {
     )
     .unwrap();
 
-    let result = desired.sanitize();
+    let result = desired.sanitize(true);
 
     assert!(result.is_err());
     if let Err(e) = result {
@@ -390,7 +390,7 @@ fn test_ovs_bridge_vlan_filter_trunk_tag_overlap_id_vs_range() {
     )
     .unwrap();
 
-    let result = desired.sanitize();
+    let result = desired.sanitize(true);
 
     assert!(result.is_err());
     if let Err(e) = result {
@@ -421,7 +421,7 @@ fn test_ovs_bridge_vlan_filter_trunk_tag_overlap_range_vs_range() {
     )
     .unwrap();
 
-    let result = desired.sanitize();
+    let result = desired.sanitize(true);
 
     assert!(result.is_err());
     if let Err(e) = result {
@@ -448,7 +448,7 @@ fn test_ovs_bridge_vlan_filter_trunk_tag_overlap_id_vs_id() {
     )
     .unwrap();
 
-    let result = desired.sanitize();
+    let result = desired.sanitize(true);
 
     assert!(result.is_err());
     if let Err(e) = result {
@@ -473,7 +473,7 @@ fn test_ovs_bridge_vlan_filter_enable_native_with_access_mode() {
     )
     .unwrap();
 
-    let result = desired.sanitize();
+    let result = desired.sanitize(true);
 
     assert!(result.is_err());
     if let Err(e) = result {
@@ -499,7 +499,7 @@ fn test_ovs_bridge_vlan_filter_trunk_tags_with_access_mode() {
     )
     .unwrap();
 
-    let result = desired.sanitize();
+    let result = desired.sanitize(true);
 
     assert!(result.is_err());
     if let Err(e) = result {
@@ -523,7 +523,7 @@ fn test_ovs_bridge_vlan_filter_no_trunk_tags_with_trunk_mode() {
     )
     .unwrap();
 
-    let result = desired.sanitize();
+    let result = desired.sanitize(true);
 
     assert!(result.is_err());
     if let Err(e) = result {
@@ -545,7 +545,7 @@ fn test_validate_dpdk_n_rxq_desc() {
     )
     .unwrap();
 
-    let result = desired.sanitize();
+    let result = desired.sanitize(true);
 
     assert!(result.is_err());
     if let Err(e) = result {
@@ -568,7 +568,7 @@ fn test_validate_dpdk_n_txq_desc() {
     )
     .unwrap();
 
-    let result = desired.sanitize();
+    let result = desired.sanitize(true);
 
     assert!(result.is_err());
     if let Err(e) = result {

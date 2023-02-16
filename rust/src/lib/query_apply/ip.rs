@@ -3,6 +3,21 @@
 use crate::{Interface, InterfaceIpv4, InterfaceIpv6};
 
 impl InterfaceIpv4 {
+    // Sort addresses and dedup
+    pub(crate) fn sanitize_current_for_verify(&mut self) {
+        if let Some(addrs) = self.addresses.as_mut() {
+            addrs.sort_unstable();
+            addrs.dedup();
+        }
+    }
+
+    // Sort addresses and dedup
+    pub(crate) fn sanitize_desired_for_verify(&mut self) {
+        if let Some(addrs) = self.addresses.as_mut() {
+            addrs.sort_unstable();
+            addrs.dedup();
+        }
+    }
     pub(crate) fn update(&mut self, other: &Self) {
         if other.prop_list.contains(&"enabled") {
             self.enabled = other.enabled;
@@ -51,6 +66,29 @@ impl InterfaceIpv4 {
 }
 
 impl InterfaceIpv6 {
+    // Sort addresses and dedup
+    pub(crate) fn sanitize_current_for_verify(&mut self) {
+        if let Some(addrs) = self.addresses.as_mut() {
+            addrs.sort_unstable();
+            addrs.dedup();
+        }
+
+        // None IPv6 token should be treat as "::"
+        if self.token.is_none() {
+            self.token = Some("::".to_string());
+        }
+    }
+
+    // Sort addresses and dedup
+    pub(crate) fn sanitize_desired_for_verify(&mut self) {
+        if let Some(addrs) = self.addresses.as_mut() {
+            addrs.sort_unstable();
+            addrs.dedup();
+            if addrs.is_empty() {
+                self.addresses = None;
+            }
+        }
+    }
     pub(crate) fn update(&mut self, other: &Self) {
         if other.prop_list.contains(&"enabled") {
             self.enabled = other.enabled;

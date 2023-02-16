@@ -110,13 +110,18 @@ impl OvsBridgeInterface {
     }
 
     // * OVS Bridge cannot have MTU, IP
-    pub(crate) fn sanitize(&mut self) -> Result<(), NmstateError> {
+    pub(crate) fn sanitize(
+        &mut self,
+        is_desired: bool,
+    ) -> Result<(), NmstateError> {
         if let Some(mtu) = self.base.mtu.as_ref() {
-            log::warn!(
-                "OVS Bridge {} could not hold 'mtu:{mtu}' configuration as it \
-                only exists in OVS database, ignoring",
-                self.base.name.as_str()
-            );
+            if is_desired {
+                log::warn!(
+                    "OVS Bridge {} could not hold 'mtu:{mtu}' configuration \
+                    as it only exists in OVS database, ignoring",
+                    self.base.name.as_str()
+                );
+            }
         }
         self.base.mtu = None;
         self.base.ipv4 = None;
@@ -130,25 +135,11 @@ impl OvsBridgeInterface {
         {
             for port_conf in port_confs {
                 if let Some(vlan_conf) = port_conf.vlan.as_ref() {
-                    vlan_conf.sanitize()?;
+                    vlan_conf.sanitize(is_desired)?;
                 }
             }
         }
         Ok(())
-    }
-
-    pub(crate) fn sanitize_for_verify(&mut self) {
-        if let Some(port_confs) = self
-            .bridge
-            .as_mut()
-            .and_then(|br_conf| br_conf.ports.as_mut())
-        {
-            for port_conf in port_confs {
-                if let Some(bond_conf) = port_conf.bond.as_mut() {
-                    bond_conf.sanitize_for_verify();
-                }
-            }
-        }
     }
 
     // Only support remove non-bonding port or the bond itself as bond require
@@ -429,8 +420,11 @@ impl OvsInterface {
     // OVS patch interface cannot have MTU or IP configuration
     // OVS DPDK `n_rxq_desc` and `n_txq_desc` should be power of 2 within
     // 1-4096.
-    pub(crate) fn sanitize(&self) -> Result<(), NmstateError> {
-        if self.patch.is_some() {
+    pub(crate) fn sanitize(
+        &self,
+        is_desired: bool,
+    ) -> Result<(), NmstateError> {
+        if is_desired && self.patch.is_some() {
             if self.base.mtu.is_some() {
                 let e = NmstateError::new(
                     ErrorKind::InvalidArgument,
@@ -459,7 +453,7 @@ impl OvsInterface {
             }
         }
         if let Some(dpdk_conf) = self.dpdk.as_ref() {
-            dpdk_conf.sanitize()?;
+            dpdk_conf.sanitize(is_desired)?;
         }
         Ok(())
     }
@@ -544,13 +538,6 @@ impl OvsBridgeBondConfig {
     pub(crate) fn sort_ports(&mut self) {
         if let Some(ref mut bond_ports) = self.ports {
             bond_ports.sort_unstable_by_key(|p| p.name.clone())
-        }
-    }
-
-    pub(crate) fn sanitize_for_verify(&mut self) {
-        // None ovsbd equal to empty
-        if self.ovsdb.is_none() {
-            self.ovsdb = Some(OvsDbIfaceConfig::empty());
         }
     }
 }
@@ -673,12 +660,17 @@ fn validate_dpdk_queue_desc(
 }
 
 impl OvsDpdkConfig {
-    pub(crate) fn sanitize(&self) -> Result<(), NmstateError> {
-        if let Some(n_rxq_desc) = self.n_rxq_desc {
-            validate_dpdk_queue_desc(n_rxq_desc, "n_rxq_desc")?;
-        }
-        if let Some(n_txq_desc) = self.n_txq_desc {
-            validate_dpdk_queue_desc(n_txq_desc, "n_txq_desc")?;
+    pub(crate) fn sanitize(
+        &self,
+        is_desired: bool,
+    ) -> Result<(), NmstateError> {
+        if is_desired {
+            if let Some(n_rxq_desc) = self.n_rxq_desc {
+                validate_dpdk_queue_desc(n_rxq_desc, "n_rxq_desc")?;
+            }
+            if let Some(n_txq_desc) = self.n_txq_desc {
+                validate_dpdk_queue_desc(n_txq_desc, "n_txq_desc")?;
+            }
         }
         Ok(())
     }

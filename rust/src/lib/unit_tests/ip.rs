@@ -241,7 +241,7 @@ ipv6:
     )
     .unwrap();
 
-    let result = iface.sanitize();
+    let result = iface.sanitize(true);
     assert!(result.is_err());
     if let Err(e) = result {
         assert_eq!(e.kind(), ErrorKind::InvalidArgument);

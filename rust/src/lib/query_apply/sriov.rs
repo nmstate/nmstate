@@ -5,6 +5,15 @@ use crate::{
 };
 
 impl SrIovConfig {
+    // * Set 'vfs: []' to None which is just reverting all VF config to default.
+    pub(crate) fn sanitize_desired_for_verify(&mut self) {
+        if let Some(vfs) = self.vfs.as_mut() {
+            if vfs.is_empty() {
+                self.vfs = None;
+            }
+        }
+    }
+
     pub(crate) fn update(&mut self, other: Option<&SrIovConfig>) {
         if let Some(other) = other {
             if let Some(total_vfs) = other.total_vfs {

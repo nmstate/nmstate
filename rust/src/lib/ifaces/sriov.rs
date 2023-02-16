@@ -69,7 +69,6 @@ impl SrIovConfig {
 
     // * Convert VF MAC address to upper case
     // * Sort by VF ID
-    // * Ignore 'vfs: []' which is just reverting all VF config to default.
     pub(crate) fn sanitize(&mut self) {
         if let Some(vfs) = self.vfs.as_mut() {
             for vf in vfs.iter_mut() {
@@ -78,10 +77,6 @@ impl SrIovConfig {
                 }
             }
             vfs.sort_unstable_by(|a, b| a.id.cmp(&b.id));
-            // Ignore `vfs: []` which is just revert all VF config to default.
-            if vfs.is_empty() {
-                self.vfs = None;
-            }
         }
     }
 

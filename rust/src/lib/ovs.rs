@@ -65,12 +65,6 @@ pub struct OvsDbIfaceConfig {
 }
 
 impl OvsDbIfaceConfig {
-    pub(crate) fn empty() -> Self {
-        Self {
-            external_ids: Some(HashMap::new()),
-            other_config: Some(HashMap::new()),
-        }
-    }
     pub(crate) fn get_external_ids(&self) -> HashMap<&str, &str> {
         let mut ret = HashMap::new();
         if let Some(eids) = self.external_ids.as_ref() {

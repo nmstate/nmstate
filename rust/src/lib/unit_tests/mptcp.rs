@@ -84,7 +84,7 @@ ipv6:
     )
     .unwrap();
 
-    des_iface.sanitize().unwrap();
+    des_iface.sanitize(true).unwrap();
 
     assert_eq!(des_iface, expected_iface);
 }

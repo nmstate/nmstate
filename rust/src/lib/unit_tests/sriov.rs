@@ -702,3 +702,90 @@ fn test_sriov_has_vf_count_change_and_missing_eth_pf_none() {
 
     assert!(desired.has_vf_count_change_and_missing_eth(&current));
 }
+
+#[test]
+fn test_sriov_vf_revert_to_default() {
+    let desired = serde_yaml::from_str::<Interfaces>(
+        r#"---
+        - name: eth1
+          type: ethernet
+          state: up
+          ethernet:
+            sr-iov:
+              total-vfs: 2
+              vfs: []
+        "#,
+    )
+    .unwrap();
+
+    let current = serde_yaml::from_str::<Interfaces>(
+        r#"---
+        - name: eth1
+          type: ethernet
+          state: up
+          ethernet:
+            sr-iov:
+              total-vfs: 2
+              vfs:
+                - id: 0
+                  mac-address: D4:eE:00:25:42:5a
+                  max-tx-rate: 1000
+                  min-tx-rate: 1
+                  spoof-check: true
+                  trust: true
+                - id: 1
+                  trust: true
+                  spoof-check: true
+                  min-tx-rate: 1
+                  max-tx-rate: 1000
+                  mac-address: d4:Ee:01:25:42:5A
+        "#,
+    )
+    .unwrap();
+
+    let mut merged_ifaces =
+        MergedInterfaces::new(desired, current, false, false).unwrap();
+
+    let iface = merged_ifaces
+        .kernel_ifaces
+        .get("eth1")
+        .unwrap()
+        .for_apply
+        .as_ref()
+        .unwrap();
+    if let Interface::Ethernet(iface) = iface {
+        assert_eq!(
+            iface
+                .ethernet
+                .as_ref()
+                .and_then(|e| e.sr_iov.as_ref())
+                .and_then(|s| s.vfs.as_ref()),
+            Some(&Vec::new())
+        );
+    } else {
+        panic!("Expecting a Ethernet interface, but got {:?}", iface);
+    }
+
+    let verify_iface = merged_ifaces
+        .kernel_ifaces
+        .get_mut("eth1")
+        .unwrap()
+        .for_verify
+        .as_mut()
+        .unwrap();
+
+    verify_iface.sanitize_desired_for_verify();
+
+    if let Interface::Ethernet(iface) = verify_iface {
+        assert_eq!(
+            iface
+                .ethernet
+                .as_ref()
+                .and_then(|e| e.sr_iov.as_ref())
+                .and_then(|s| s.vfs.as_ref()),
+            None
+        );
+    } else {
+        panic!("Expecting a Ethernet interface, but got {:?}", verify_iface);
+    }
+}
