@@ -1,4 +1,17 @@
 # Changelog
+## [1.4.2] - 2023-02-18
+
+### New features
+ - Introduce `Interface.WAIT_IP`. (b82f9fd0)
+
+### Bug fixes
+ - Fix regression when assigning IP to port of absent controller. (01831322)
+ - Retry on device deletion failure. (92cdd5d3)
+ - Do not touch ovs-port unless required. (f86a9372)
+ - Keep current interface state intact. (12fc0090)
+ - Support enable SRIOV and use VF in single desire state. (910b4360)
+ - Fix error when mark unmanaged interface as down. (51e7eda2)
+
 ## [1.4.1] - 2023-01-09
 ### New features
  - N/A
