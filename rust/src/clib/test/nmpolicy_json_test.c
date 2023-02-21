@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+
+#include <assert.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -90,6 +93,8 @@ int main(void) {
 		printf("%s: %s\n", err_kind, err_msg);
 		rc = EXIT_FAILURE;
 	}
+
+	assert(state[0] == '{');
 
 	nmstate_cstring_free(state);
 	nmstate_cstring_free(err_kind);
