@@ -67,6 +67,13 @@ pub extern "C" fn nmstate_net_state_from_policy(
         }
     };
 
+    let input_is_json =
+        if let Ok(policy_str) = unsafe { CStr::from_ptr(policy) }.to_str() {
+            serde_json::from_str::<serde_json::Value>(policy_str).is_ok()
+        } else {
+            false
+        };
+
     let mut policy = match deserilize_from_c_char::<NetworkPolicy>(
         policy, err_kind, err_msg,
     ) {
@@ -86,23 +93,37 @@ pub extern "C" fn nmstate_net_state_from_policy(
     }
 
     match result {
-        Ok(s) => match serde_json::to_string(&s) {
-            Ok(state_str) => unsafe {
-                *state = CString::new(state_str).unwrap().into_raw();
-                NMSTATE_PASS
-            },
-            Err(e) => unsafe {
-                *err_msg =
-                    CString::new(format!("serde_json::to_string failure: {e}"))
-                        .unwrap()
-                        .into_raw();
-                *err_kind =
-                    CString::new(format!("{}", nmstate::ErrorKind::Bug))
-                        .unwrap()
-                        .into_raw();
-                NMSTATE_FAIL
-            },
-        },
+        Ok(s) => {
+            let serialize = if input_is_json {
+                serde_json::to_string(&s).map_err(|e| {
+                    nmstate::NmstateError::new(
+                        nmstate::ErrorKind::Bug,
+                        format!("Failed to convert state {s:?} to JSON: {e}"),
+                    )
+                })
+            } else {
+                serde_yaml::to_string(&s).map_err(|e| {
+                    nmstate::NmstateError::new(
+                        nmstate::ErrorKind::Bug,
+                        format!("Failed to convert state {s:?} to YAML: {e}"),
+                    )
+                })
+            };
+
+            match serialize {
+                Ok(state_str) => unsafe {
+                    *state = CString::new(state_str).unwrap().into_raw();
+                    NMSTATE_PASS
+                },
+                Err(e) => unsafe {
+                    *err_msg =
+                        CString::new(e.msg().to_string()).unwrap().into_raw();
+                    *err_kind =
+                        CString::new(e.kind().to_string()).unwrap().into_raw();
+                    NMSTATE_FAIL
+                },
+            }
+        }
         Err(e) => {
             unsafe {
                 *err_msg = CString::new(e.msg()).unwrap().into_raw();
@@ -144,7 +165,7 @@ where
         }
     };
 
-    match serde_json::from_str(content_str) {
+    match serde_yaml::from_str(content_str) {
         Ok(n) => Some(n),
         Err(e) => {
             unsafe {
