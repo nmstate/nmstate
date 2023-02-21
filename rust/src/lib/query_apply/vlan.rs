@@ -18,6 +18,7 @@ impl VlanConfig {
         if let Some(other) = other {
             self.base_iface = other.base_iface.clone();
             self.id = other.id;
+            self.protocol = other.protocol;
         }
     }
 }
