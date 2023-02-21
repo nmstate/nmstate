@@ -26,6 +26,7 @@ from operator import attrgetter
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
+from libnmstate.schema import OvsDB
 
 from .common import NM
 from .device import is_externally_managed
@@ -125,16 +126,18 @@ def _append_nm_ovs_port_iface(net_state):
     subordinate of NM OVS port profile which is port of the OVS bridge
     profile.
     We need to create/delete this NM OVS port profile accordingly.
+    We skip this action if ovs interface is not changed.
     """
     nm_ovs_port_ifaces = {}
 
     for iface in net_state.ifaces.all_kernel_ifaces.values():
         if iface.controller_type == InterfaceType.OVS_BRIDGE:
+            has_ovs_change = _has_ovs_changes(iface, net_state)
             nm_ovs_port_iface = create_iface_for_nm_ovs_port(iface)
             iface.set_controller(
                 nm_ovs_port_iface.name, InterfaceType.OVS_PORT
             )
-            if iface.is_desired or iface.is_changed:
+            if (iface.is_desired or iface.is_changed) and has_ovs_change:
                 nm_ovs_port_iface.mark_as_changed()
             nm_ovs_port_ifaces[nm_ovs_port_iface.name] = nm_ovs_port_iface
 
@@ -440,3 +443,26 @@ def _nm_ovs_port_has_child_or_is_ignored(
             ):
                 return True
     return False
+
+
+def _has_ovs_changes(iface, net_state):
+    """
+    Return False only when below all matches:
+    * Desired interface is up
+    * Desire state did not mentioned its OVS bridge controller
+    * Interface has no ovs-db setting change in desire state
+    """
+    ctrl_iface = net_state.ifaces.get_iface(
+        iface.controller, InterfaceType.OVS_BRIDGE
+    )
+    if (
+        iface.is_desired
+        and iface.is_up
+        and ctrl_iface
+        and not ctrl_iface.is_desired
+        and not ctrl_iface.is_changed
+        and OvsDB.KEY not in iface.original_desire_dict
+    ):
+        return False
+
+    return True
