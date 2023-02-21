@@ -14,6 +14,7 @@ pub(crate) const NMSTATE_FLAG_INCLUDE_SECRETS: u32 = 1 << 4;
 pub(crate) const NMSTATE_FLAG_NO_COMMIT: u32 = 1 << 5;
 pub(crate) const NMSTATE_FLAG_MEMORY_ONLY: u32 = 1 << 6;
 pub(crate) const NMSTATE_FLAG_RUNNING_CONFIG_ONLY: u32 = 1 << 7;
+pub(crate) const NMSTATE_FLAG_YAML_OUTPUT: u32 = 1 << 8;
 
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 #[no_mangle]
@@ -72,23 +73,37 @@ pub extern "C" fn nmstate_net_state_retrieve(
     }
 
     match result {
-        Ok(s) => match serde_json::to_string(&s) {
-            Ok(state_str) => unsafe {
-                *state = CString::new(state_str).unwrap().into_raw();
-                NMSTATE_PASS
-            },
-            Err(e) => unsafe {
-                *err_msg =
-                    CString::new(format!("serde_json::to_string failure: {e}"))
-                        .unwrap()
-                        .into_raw();
-                *err_kind =
-                    CString::new(format!("{}", nmstate::ErrorKind::Bug))
-                        .unwrap()
-                        .into_raw();
-                NMSTATE_FAIL
-            },
-        },
+        Ok(s) => {
+            let serialize = if (flags & NMSTATE_FLAG_YAML_OUTPUT) > 0 {
+                serde_yaml::to_string(&s).map_err(|e| {
+                    nmstate::NmstateError::new(
+                        nmstate::ErrorKind::Bug,
+                        format!("Failed to convert state {s:?} to YAML: {e}"),
+                    )
+                })
+            } else {
+                serde_json::to_string(&s).map_err(|e| {
+                    nmstate::NmstateError::new(
+                        nmstate::ErrorKind::Bug,
+                        format!("Failed to convert state {s:?} to JSON: {e}"),
+                    )
+                })
+            };
+
+            match serialize {
+                Ok(state_str) => unsafe {
+                    *state = CString::new(state_str).unwrap().into_raw();
+                    NMSTATE_PASS
+                },
+                Err(e) => unsafe {
+                    *err_msg =
+                        CString::new(e.msg().to_string()).unwrap().into_raw();
+                    *err_kind =
+                        CString::new(e.kind().to_string()).unwrap().into_raw();
+                    NMSTATE_FAIL
+                },
+            }
+        }
         Err(e) => {
             unsafe {
                 *err_msg = CString::new(e.msg()).unwrap().into_raw();
