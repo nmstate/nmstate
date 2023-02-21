@@ -293,7 +293,7 @@ def test_preserve_existing_vlan_conf(eth1_up):
     nm_minor_version() < 41,
     reason="Modifying VLAN protocol is not supported on NM 1.41-.",
 )
-def test_change_vlan_protocl(vlan_on_eth1):
+def test_change_vlan_protocol(vlan_on_eth1):
     dot1q_state = {
         Interface.KEY: [
             {
