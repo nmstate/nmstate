@@ -1,19 +1,4 @@
-/*
- * Copyright 2021 Red Hat
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 
 #ifndef _LIBNMSTATE_H_
 #define _LIBNMSTATE_H_
@@ -44,6 +29,7 @@ extern "C" {
 #define NMSTATE_FLAG_NO_COMMIT              1 << 5
 #define NMSTATE_FLAG_MEMORY_ONLY            1 << 6
 #define NMSTATE_FLAG_RUNNING_CONFIG_ONLY    1 << 7
+#define NMSTATE_FLAG_YAML_OUTPUT            1 << 8
 
 /**
  * nmstate_net_state_retrieve - Retrieve network state
@@ -52,7 +38,7 @@ extern "C" {
  *      0.1
  *
  * Description:
- *      Retrieve network state in the format of JSON.
+ *      Retrieve network state in the format of JSON or YAML.
  *
  * @flags:
  *      Flags for special use cases:
@@ -60,6 +46,13 @@ extern "C" {
  *              No flag
  *          * NMSTATE_FLAG_KERNEL_ONLY
  *              Do not use external plugins, show kernel status only.
+ *          * NMSTATE_FLAG_INCLUDE_SECRETS
+ *              No not hide sercerts like password.
+ *          * NMSTATE_FLAG_RUNNING_CONFIG_ONLY
+ *              Only include running config excluding running status like auto
+ *              IP addresses and routes, LLDP neighbors.
+ *          * NMSTATE_FLAG_YAML_OUTPUT
+ *              Show the state in YAML format
  * @state:
  *      Output pointer of char array for network state in json format.
  *      The memory should be freed by nmstate_net_state_free().
@@ -90,7 +83,7 @@ int nmstate_net_state_retrieve(uint32_t flags, char **state, char **log,
  *      0.1
  *
  * Description:
- *      Apply network state in the format of JSON.
+ *      Apply network state in the format of JSON or YAML.
  *
  * @flags:
  *      Flags for special use cases:
@@ -98,8 +91,12 @@ int nmstate_net_state_retrieve(uint32_t flags, char **state, char **log,
  *              No flag
  *          * NMSTATE_FLAG_KERNEL_ONLY
  *              Do not use external plugins, apply to kernel only.
+ *          * NMSTATE_FLAG_NO_VERIFY
+ *              Do not verify state after applied
  *          * NMSTATE_FLAG_NO_COMMIT
  *              Do not commit new state after verification
+ *          * NMSTATE_FLAG_MEMORY_ONLY
+ *              No not store network state to persistent.
  * @state:
  *      Pointer of char array for network state in json format.
  * @log:
@@ -119,7 +116,8 @@ int nmstate_net_state_retrieve(uint32_t flags, char **state, char **log,
  *          * NMSTATE_FAIL
  *              On failure.
  */
-int nmstate_net_state_apply(uint32_t flags, const char *state, uint32_t rollback_timeout, char **log,
+int nmstate_net_state_apply(uint32_t flags, const char *state,
+                            uint32_t rollback_timeout, char **log,
                             char **err_kind, char **err_msg);
 
 /**
@@ -151,8 +149,8 @@ int nmstate_net_state_apply(uint32_t flags, const char *state, uint32_t rollback
  *          * NMSTATE_FAIL
  *              On failure.
  */
-int nmstate_checkpoint_commit(const char *checkpoint, char **log, char **err_kind,
-                          char **err_msg);
+int nmstate_checkpoint_commit(const char *checkpoint, char **log, 
+                              char **err_kind, char **err_msg);
 
 /**
  * nmstate_checkpoint_rollback - Rollback the checkpoint
@@ -183,8 +181,8 @@ int nmstate_checkpoint_commit(const char *checkpoint, char **log, char **err_kin
  *          * NMSTATE_FAIL
  *              On failure.
  */
-int nmstate_checkpoint_rollback(const char *checkpoint, char **log, char **err_kind,
-                                 char **err_msg);
+int nmstate_checkpoint_rollback(const char *checkpoint, char **log, 
+                                char **err_kind, char **err_msg);
 
 /**
  * nmstate_generate_configurations - Generate network configurations
@@ -199,9 +197,10 @@ int nmstate_checkpoint_rollback(const char *checkpoint, char **log, char **err_k
  *      as value.
  *
  * @state:
- *      Pointer of char array for network state in json format.
+ *      Pointer of char array for network state in JSON or YAML format.
  * @configs:
- *      Output pointer of char array for network configures in json format.
+ *      Output pointer of char array for network configures in JSON or
+ *      YAML(depend on which format you use in @state) format.
  *      The memory should be freed by nmstate_net_state_free().
  * @log:
  *      Output pointer of char array for logging.
@@ -231,14 +230,14 @@ int nmstate_generate_configurations(const char *state, char **configs,
  *      2.2
  *
  * Description:
- *      Generate new network state from policy again specifed state
+ *      Generate new network state from policy again specified state
  *
  * @policy:
- *      Pointer of char array for network policy in json format.
+ *      Pointer of char array for network policy in JSON/YAML format.
  * @current_state:
  *      Pointer of char array for current network state.
  * @state:
- *      Output pointer of char array for network state in json format.
+ *      Output pointer of char array for network state in JSON/YAML format.
  *      The memory should be freed by nmstate_net_state_free().
  * @log:
  *      Output pointer of char array for logging.

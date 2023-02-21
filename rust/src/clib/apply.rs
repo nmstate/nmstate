@@ -74,7 +74,7 @@ pub extern "C" fn nmstate_net_state_apply(
     };
 
     let mut net_state =
-        match nmstate::NetworkState::new_from_json(net_state_str) {
+        match nmstate::NetworkState::new_from_yaml(net_state_str) {
             Ok(n) => n,
             Err(e) => {
                 unsafe {
