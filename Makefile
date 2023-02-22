@@ -40,9 +40,17 @@ outdir ?= $(ROOT_DIR)
 
 CPU_BITS = $(shell getconf LONG_BIT)
 ifeq ($(CPU_BITS), 32)
-    LIBDIR ?= $(PREFIX)/lib
+    ifneq (,$(wildcard /etc/debian_version))
+        LIBDIR ?= $(PREFIX)/lib/i386-linux-gnu
+    else
+        LIBDIR ?= $(PREFIX)/lib
+    endif
 else
-    LIBDIR ?= $(PREFIX)/lib$(CPU_BITS)
+    ifneq (,$(wildcard /etc/debian_version))
+        LIBDIR ?= $(PREFIX)/lib/x86_64-linux-gnu
+    else
+        LIBDIR ?= $(PREFIX)/lib$(CPU_BITS)
+    endif
 endif
 
 INCLUDE_DIR ?= $(PREFIX)/include
