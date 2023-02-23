@@ -240,7 +240,7 @@ def create_new_nm_simple_conn(iface, nm_profile):
             InterfaceType.OVS_PORT,
         )
         or iface.type == InterfaceType.OVS_BRIDGE
-    ):
+    ) and OvsDB.OVS_DB_SUBTREE in iface.original_desire_dict:
         nm_setting = create_ovsdb_external_ids_setting(
             iface_info.get(OvsDB.OVS_DB_SUBTREE, {})
         )
