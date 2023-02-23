@@ -56,6 +56,7 @@ ROUTE_REMOVED = "_route_removed"
 class NmProfile:
     # For unmanged iface and desired to down
     ACTION_ACTIVATE_FIRST = "activate_first"
+    ACTION_SRIOV_PF = "activate_sriov_pf"
     ACTION_DEACTIVATE = "deactivate"
     ACTION_DEACTIVATE_FIRST = "deactivate_first"
     ACTION_DELETE_DEVICE = "delete_device"
@@ -77,6 +78,7 @@ class NmProfile:
         ACTION_ACTIVATE_FIRST,
         ACTION_DEACTIVATE_FIRST,
         ACTION_TOP_CONTROLLER,
+        ACTION_SRIOV_PF,
         ACTION_NEW_IFACES,
         ACTION_OTHER_CONTROLLER,
         ACTION_NEW_OVS_PORT,
@@ -181,6 +183,11 @@ class NmProfile:
                 else:
                     self._add_action(NmProfile.ACTION_NEW_IFACES)
             else:
+                if (
+                    self._nm_dev.props.capabilities
+                    & NM.DeviceCapabilities.SRIOV
+                ):
+                    self._add_action(NmProfile.ACTION_SRIOV_PF)
                 if self._iface.type == InterfaceType.OVS_PORT:
                     self._add_action(NmProfile.ACTION_MODIFIED_OVS_PORT)
                 if self._iface.type == InterfaceType.OVS_INTERFACE:
@@ -462,6 +469,7 @@ class NmProfile:
 
     def do_action(self, action):
         if action in (
+            NmProfile.ACTION_SRIOV_PF,
             NmProfile.ACTION_MODIFIED,
             NmProfile.ACTION_MODIFIED_OVS_PORT,
             NmProfile.ACTION_MODIFIED_OVS_IFACE,
@@ -559,8 +567,8 @@ class NmProfile:
                     or nm_profile.get_connection_type() == self._nm_iface_type
                 )
                 and (
-                    self._nm_profile is None
-                    or nm_profile.get_uuid() != self._nm_profile.get_uuid()
+                    self._nm_simple_conn is None
+                    or nm_profile.get_uuid() != self._nm_simple_conn.get_uuid()
                 )
             ):
                 ProfileDelete(
