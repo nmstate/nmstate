@@ -8,9 +8,9 @@ use super::{
 };
 use crate::nm::nm_dbus::{NmConnection, NmSettingIp, NmSettingIpMethod};
 use crate::{
-    BaseInterface, Dhcpv4ClientId, Dhcpv6Duid, ErrorKind, Interface,
-    InterfaceIpv4, InterfaceIpv6, Ipv6AddrGenMode, NmstateError, RouteEntry,
-    WaitIp,
+    ip::AddressFamily, BaseInterface, Dhcpv4ClientId, Dhcpv6Duid, ErrorKind,
+    Interface, InterfaceIpv4, InterfaceIpv6, Ipv6AddrGenMode, NmstateError,
+    RouteEntry, RouteRuleEntry, WaitIp,
 };
 
 const ADDR_GEN_MODE_EUI64: i32 = 0;
@@ -106,6 +106,26 @@ fn gen_nm_ipv4_setting(
     }
     if let Some(rules) = iface_ip.rules.as_ref() {
         nm_setting.route_rules = gen_nm_ip_rules(rules, false)?;
+    }
+    if let Some(setting) = nm_conn.connection.as_ref() {
+        if let Some(iface_name) = setting.iface_name.clone() {
+            if iface_name.eq(&"lo") {
+                if let Some(rules) = iface_ip.rules.as_ref() {
+                    nm_setting.replace_local_rule =
+                        Some(!rules_contains_local_rule(rules, false));
+                    if !rules_contains_local_rule(rules, false)
+                        && nm_setting.route_rules.is_empty()
+                    {
+                        log::warn!(
+                            "The default local (table-id: 255) IPv4 \
+                             route rule is being dropped and no extra \
+                             rule is added. This will potentially break \
+                             the connectivity."
+                        )
+                    }
+                }
+            }
+        }
     }
     if let Some(dns) = &iface_ip.dns {
         apply_nm_dns_setting(&mut nm_setting, dns);
@@ -221,6 +241,26 @@ fn gen_nm_ipv6_setting(
     if let Some(rules) = iface_ip.rules.as_ref() {
         nm_setting.route_rules = gen_nm_ip_rules(rules, true)?;
     }
+    if let Some(setting) = nm_conn.connection.as_ref() {
+        if let Some(iface_name) = setting.iface_name.clone() {
+            if iface_name.eq(&"lo") {
+                if let Some(rules) = iface_ip.rules.as_ref() {
+                    nm_setting.replace_local_rule =
+                        Some(!rules_contains_local_rule(rules, true));
+                    if !rules_contains_local_rule(rules, true)
+                        && nm_setting.route_rules.is_empty()
+                    {
+                        log::warn!(
+                            "The default local (table-id: 255) IPv6 \
+                             route rule is being dropped and no extra \
+                             rule is added. This will potentially break \
+                             the connectivity."
+                        )
+                    }
+                }
+            }
+        }
+    }
     if let Some(dns) = &iface_ip.dns {
         apply_nm_dns_setting(&mut nm_setting, dns);
     }
@@ -327,4 +367,19 @@ fn apply_nmstate_wait_ip(
         }
         None => (),
     }
+}
+
+fn rules_contains_local_rule(rules: &[RouteRuleEntry], is_ipv6: bool) -> bool {
+    for rule in rules {
+        if let Some(family) = rule.family {
+            if is_ipv6 != matches!(family, AddressFamily::IPv6) {
+                continue;
+            }
+        }
+        if rule.is_kernel_local_route_rule_priority_0() {
+            return true;
+        }
+    }
+
+    false
 }

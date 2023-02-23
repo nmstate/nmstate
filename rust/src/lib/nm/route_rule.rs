@@ -38,6 +38,14 @@ fn apply_absent_rule(
     merged_ifaces: &mut MergedInterfaces,
     absent_rule: &RouteRuleEntry,
 ) {
+    if absent_rule.is_kernel_local_route_rule_priority_0() {
+        if let Some(iface) =
+            merged_ifaces.kernel_ifaces.get_mut(LOOPBACK_IFACE_NAME)
+        {
+            iface.mark_as_changed();
+            return;
+        }
+    }
     for iface in merged_ifaces.kernel_ifaces.values_mut() {
         let cur_iface = if let Some(i) = iface.current.as_ref() {
             i
@@ -209,6 +217,10 @@ fn find_interface_for_rule<'a>(
     merged_state: &'a MergedNetworkState,
     rule: &RouteRuleEntry,
 ) -> Result<&'a str, NmstateError> {
+    if rule.is_kernel_local_route_rule_priority_0() {
+        // we always want to store local priority 0 rule in loopback
+        return Ok(LOOPBACK_IFACE_NAME);
+    }
     if let Some(iif) = rule.iif.as_ref() {
         if let Some(iface) = merged_state.interfaces.kernel_ifaces.get(iif) {
             return Ok(iface.merged.name());

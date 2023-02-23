@@ -22,6 +22,12 @@ use super::super::{
     ErrorKind, NmError, ToDbusValue,
 };
 
+use crate::nm::version::nm_supports_replace_local_rule;
+
+const NM_REPLACE_LOCAL_RULE_DEFAULT: i32 = -1;
+const NM_REPLACE_LOCAL_RULE_YES: i32 = 1;
+const NM_REPLACE_LOCAL_RULE_NO: i32 = 0;
+
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(try_from = "zvariant::OwnedValue")]
 #[non_exhaustive]
@@ -87,6 +93,7 @@ pub struct NmSettingIp {
     pub addresses: Vec<String>,
     pub routes: Vec<NmIpRoute>,
     pub route_rules: Vec<NmIpRouteRule>,
+    pub replace_local_rule: Option<bool>,
     pub dns_priority: Option<i32>,
     pub dns_search: Option<Vec<String>>,
     pub dns: Option<Vec<String>>,
@@ -126,6 +133,9 @@ impl TryFrom<DbusDictionary> for NmSettingIp {
                 .unwrap_or_default(),
             route_rules: _from_map!(v, "routing-rules", parse_nm_ip_rule_data)?
                 .unwrap_or_default(),
+            replace_local_rule: NmSettingIp::i32_to_replace_local_rule(
+                _from_map!(v, "replace-local-rule", i32::try_from)?,
+            ),
             dns_search: _from_map!(v, "dns-search", parse_nm_dns_search)?,
             dns_priority: _from_map!(v, "dns-priority", i32::try_from)?,
             ignore_auto_dns: _from_map!(v, "ignore-auto-dns", bool::try_from)?,
@@ -218,6 +228,22 @@ impl ToDbusValue for NmSettingIp {
         ret.insert("address-data", zvariant::Value::Array(addresss_data));
         ret.insert("route-data", nm_ip_routes_to_value(&self.routes)?);
         ret.insert("routing-rules", nm_ip_rules_to_value(&self.route_rules)?);
+
+        if nm_supports_replace_local_rule().unwrap_or_default() {
+            ret.insert(
+                "replace-local-rule",
+                match &self.replace_local_rule {
+                    Some(true) => {
+                        zvariant::Value::new(NM_REPLACE_LOCAL_RULE_YES)
+                    }
+                    Some(false) => {
+                        zvariant::Value::new(NM_REPLACE_LOCAL_RULE_NO)
+                    }
+                    None => zvariant::Value::new(NM_REPLACE_LOCAL_RULE_DEFAULT),
+                },
+            );
+        }
+
         if let Some(dns_servers) = self.dns.as_ref() {
             if !dns_servers.is_empty() {
                 // We still use the `dns` instead of `dns-data` as the
@@ -288,6 +314,21 @@ impl ToDbusValue for NmSettingIp {
             (key.as_str(), zvariant::Value::from(value.clone()))
         }));
         Ok(ret)
+    }
+}
+
+impl NmSettingIp {
+    fn i32_to_replace_local_rule(val: Option<i32>) -> Option<bool> {
+        match val {
+            Some(NM_REPLACE_LOCAL_RULE_YES) => Some(true),
+            Some(NM_REPLACE_LOCAL_RULE_NO) => Some(false),
+            Some(NM_REPLACE_LOCAL_RULE_DEFAULT) => None,
+            Some(v) => {
+                warn!("Unknown replace-local-rule value {}", v);
+                None
+            }
+            None => None,
+        }
     }
 }
 

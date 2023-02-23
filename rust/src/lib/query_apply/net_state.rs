@@ -106,13 +106,13 @@ impl NetworkState {
         let mut cur_net_state = NetworkState::new();
         cur_net_state.set_kernel_only(self.kernel_only);
         cur_net_state.set_include_secrets(true);
-        if let Err(e) = cur_net_state.retrieve() {
+        if let Err(e) = cur_net_state.retrieve_full() {
             if e.kind().can_retry() {
                 log::info!("Retrying on: {}", e);
                 std::thread::sleep(std::time::Duration::from_millis(
                     RETRY_NM_INTERVAL_MILLISECONDS,
                 ));
-                cur_net_state.retrieve()?;
+                cur_net_state.retrieve_full()?;
             } else {
                 return Err(e);
             }
@@ -168,7 +168,7 @@ impl NetworkState {
                     verify_count,
                 )?;
                 // Refresh current state
-                cur_net_state.retrieve()?;
+                cur_net_state.retrieve_full()?;
             }
 
             self.interfaces.check_sriov_capability()?;
@@ -217,7 +217,7 @@ impl NetworkState {
                         nm_checkpoint_timeout_extend(checkpoint, timeout)?;
                         let mut new_cur_net_state = cur_net_state.clone();
                         new_cur_net_state.set_include_secrets(true);
-                        new_cur_net_state.retrieve()?;
+                        new_cur_net_state.retrieve_full()?;
                         merged_state.verify(&new_cur_net_state)
                     },
                 )

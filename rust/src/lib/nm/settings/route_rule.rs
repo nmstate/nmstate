@@ -18,6 +18,11 @@ pub(crate) fn gen_nm_ip_rules(
 ) -> Result<Vec<NmIpRouteRule>, NmstateError> {
     let mut ret = Vec::new();
     for rule in rules {
+        if rule.table_id == Some(255) && rule.priority == Some(0) {
+            // we want to skip this rule as it use the special
+            // replace-local-rule setting
+            continue;
+        }
         let mut nm_rule = NmIpRouteRule::default();
         nm_rule.family = Some(if is_ipv6 { AF_INET6 } else { AF_INET });
         if let Some(family) = rule.family {

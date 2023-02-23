@@ -45,7 +45,7 @@ impl RouteRules {
 
     pub fn hide_default_local_rule(&mut self) {
         if let Some(config) = self.config.as_mut() {
-            config.retain(|r| r.table_id != Some(255) || r.priority != None);
+            config.retain(|r| r.table_id != Some(255) || r.priority.is_some());
         }
     }
 }
@@ -135,6 +135,8 @@ impl RouteRuleEntry {
     pub const USE_DEFAULT_ROUTE_TABLE: u32 = 0;
     /// Default route table main(254).
     pub const DEFAULR_ROUTE_TABLE_ID: u32 = 254;
+    /// Local route table (255)
+    pub const LOCAL_ROUTE_TABLE_ID: u32 = 255;
 
     pub fn new() -> Self {
         Self::default()
@@ -216,6 +218,18 @@ impl RouteRuleEntry {
     }
 
     pub(crate) fn is_match(&self, other: &Self) -> bool {
+        // For local route rule with priority 0 we force the user to specify it
+        // as absent explicitly. Otherwise, it won't match.
+        if (self.table_id.is_none()
+            || self.priority.is_none()
+            || self.family.is_none())
+            && (other.table_id == Some(255)
+                && other.priority.is_none()
+                && other.family.is_some())
+        {
+            return false;
+        }
+
         if let Some(ip_from) = self.ip_from.as_deref() {
             if !ip_from.is_empty() {
                 let ip_from = if !ip_from.contains('/') {
@@ -301,6 +315,19 @@ impl RouteRuleEntry {
             return false;
         }
         true
+    }
+
+    // Return true or false if the RouteEntry is the kernel local route rule
+    // priority 0.
+    pub(crate) fn is_kernel_local_route_rule_priority_0(&self) -> bool {
+        self.priority == Some(0)
+            && self.table_id == Some(Self::LOCAL_ROUTE_TABLE_ID)
+            && self.ip_from.is_none()
+            && self.ip_to.is_none()
+            && self.fwmark.is_none()
+            && self.fwmask.is_none()
+            && self.action.is_none()
+            && self.iif.is_none()
     }
 
     // Return tuple of (no_absent, is_ipv4, table_id, ip_from,

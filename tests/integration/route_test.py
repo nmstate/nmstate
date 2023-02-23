@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: LGPL-2.1-or-later
 
 import copy
+import yaml
 
 import pytest
 
@@ -1045,6 +1046,87 @@ def test_route_rule_add_and_remove_using_loopback():
         RouteRule.STATE
     ] = RouteRule.STATE_ABSENT
     libnmstate.apply(desired_state)
+
+
+@pytest.mark.tier1
+@pytest.mark.skipif(
+    nm_minor_version() < 43,
+    reason="replace-local-rule is only supported on NM 1.43+",
+)
+def test_drop_ipv4_local_route_rule_with_priority_0():
+    desired_state = {
+        RouteRule.KEY: {
+            RouteRule.CONFIG: [
+                {
+                    RouteRule.FAMILY: RouteRule.FAMILY_IPV4,
+                    RouteRule.PRIORITY: 0,
+                    RouteRule.ROUTE_TABLE: 255,
+                    RouteRule.STATE: RouteRule.STATE_ABSENT,
+                }
+            ]
+        }
+    }
+    libnmstate.apply(desired_state)
+
+    desired_state[RouteRule.KEY][RouteRule.CONFIG][0].pop(RouteRule.STATE)
+    libnmstate.apply(desired_state)
+    _check_ip_rules(desired_state[RouteRule.KEY][RouteRule.CONFIG])
+
+
+@pytest.mark.tier1
+@pytest.mark.skipif(
+    nm_minor_version() < 43,
+    reason="replace-local-rule is only supported on NM 1.43+",
+)
+def test_drop_ipv6_local_route_rule_with_priority_0():
+    desired_state = {
+        RouteRule.KEY: {
+            RouteRule.CONFIG: [
+                {
+                    RouteRule.FAMILY: RouteRule.FAMILY_IPV6,
+                    RouteRule.PRIORITY: 0,
+                    RouteRule.ROUTE_TABLE: 255,
+                    RouteRule.STATE: RouteRule.STATE_ABSENT,
+                }
+            ]
+        }
+    }
+    libnmstate.apply(desired_state)
+
+    desired_state[RouteRule.KEY][RouteRule.CONFIG][0].pop(RouteRule.STATE)
+    libnmstate.apply(desired_state)
+    _check_ip_rules(desired_state[RouteRule.KEY][RouteRule.CONFIG])
+
+
+@pytest.mark.tier1
+@pytest.mark.skipif(
+    nm_minor_version() < 43,
+    reason="replace-local-rule is only supported on NM 1.43+",
+)
+def test_replace_local_route_rule_with_custom_rule():
+    desired_state = yaml.load(
+        """---
+        route-rules:
+          config:
+            - route-table: 255
+              priority: 0
+              family: ipv4
+              state: absent
+            - route-table: 255
+              priority: 32765
+              family: ipv4
+        """,
+        Loader=yaml.SafeLoader,
+    )
+    try:
+        libnmstate.apply(desired_state)
+        _check_ip_rules(desired_state[RouteRule.KEY][RouteRule.CONFIG])
+    finally:
+        desired_state[RouteRule.KEY][RouteRule.CONFIG][0].pop(RouteRule.STATE)
+        desired_state[RouteRule.KEY][RouteRule.CONFIG][1][
+            RouteRule.STATE
+        ] = RouteRule.STATE_ABSENT
+        libnmstate.apply(desired_state)
 
 
 def _check_ip_rules(rules):
