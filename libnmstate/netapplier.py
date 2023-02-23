@@ -104,7 +104,7 @@ def apply(
                     pf_net_state,
                     verify_change,
                     save_to_disk,
-                    has_sriov_pf=True,
+                    VERIFY_RETRY_COUNT_SRIOV,
                 )
                 # Refresh the current state
                 current_state = show_with_plugins(
@@ -120,8 +120,16 @@ def apply(
                     current_state,
                     save_to_disk,
                 )
+
+        if net_state.ifaces.has_sriov_iface():
+            # If SR-IOV is present, the verification timeout is being increased
+            # to avoid timeouts due to slow drivers like i40e.
+            verify_retry = VERIFY_RETRY_COUNT_SRIOV
+        else:
+            verify_retry = VERIFY_RETRY_COUNT
+
         _apply_ifaces_state(
-            plugins, net_state, verify_change, save_to_disk, has_sriov_pf=False
+            plugins, net_state, verify_change, save_to_disk, verify_retry
         )
         if commit:
             destroy_checkpoints(plugins, checkpoints)
@@ -154,7 +162,7 @@ def rollback(*, checkpoint=None):
 
 
 def _apply_ifaces_state(
-    plugins, net_state, verify_change, save_to_disk, has_sriov_pf=False
+    plugins, net_state, verify_change, save_to_disk, verify_retry
 ):
     for plugin in plugins:
         # Do not allow plugin to modify the net_state for future verification
@@ -163,12 +171,6 @@ def _apply_ifaces_state(
 
     verified = False
     if verify_change:
-        if has_sriov_pf:
-            # If SR-IOV is present, the verification timeout is being increased
-            # to avoid timeouts due to slow drivers like i40e.
-            verify_retry = VERIFY_RETRY_COUNT_SRIOV
-        else:
-            verify_retry = VERIFY_RETRY_COUNT
         for _ in range(verify_retry):
             try:
                 _verify_change(plugins, net_state)
