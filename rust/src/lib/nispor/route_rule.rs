@@ -7,13 +7,14 @@ use crate::{AddressFamily, RouteRuleAction, RouteRuleEntry, RouteRules};
 // Due to a bug in NetworkManager all route rules added using NetworkManager are
 // using RTM_PROTOCOL UnSpec. Therefore, we need to support it until it is
 // fixed.
-const SUPPORTED_STATIC_ROUTE_PROTOCOL: [nispor::RouteProtocol; 3] = [
+const SUPPORTED_STATIC_ROUTE_PROTOCOL: [nispor::RouteProtocol; 4] = [
     nispor::RouteProtocol::Boot,
     nispor::RouteProtocol::Static,
+    nispor::RouteProtocol::Kernel,
     nispor::RouteProtocol::UnSpec,
 ];
 
-const SUPPORTED_ROUTE_PROTOCOL: [nispor::RouteProtocol; 8] = [
+const SUPPORTED_ROUTE_PROTOCOL: [nispor::RouteProtocol; 9] = [
     nispor::RouteProtocol::Boot,
     nispor::RouteProtocol::Static,
     nispor::RouteProtocol::Ra,
@@ -21,6 +22,7 @@ const SUPPORTED_ROUTE_PROTOCOL: [nispor::RouteProtocol; 8] = [
     nispor::RouteProtocol::Mrouted,
     nispor::RouteProtocol::KeepAlived,
     nispor::RouteProtocol::Babel,
+    nispor::RouteProtocol::Kernel,
     nispor::RouteProtocol::UnSpec,
 ];
 
@@ -59,6 +61,13 @@ pub(crate) fn get_route_rules(
         // Filter out the routes with protocols that we do not support
         if let Some(rule_protocol) = np_rule.protocol.as_ref() {
             if !protocols.contains(rule_protocol) {
+                continue;
+            }
+            // We only support modifying local rule from kernel, the others
+            // should be ignored.
+            if *rule_protocol == nispor::RouteProtocol::Kernel
+                && np_rule.table != Some(255)
+            {
                 continue;
             }
         }

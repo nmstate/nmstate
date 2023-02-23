@@ -42,6 +42,12 @@ impl RouteRules {
     pub fn is_empty(&self) -> bool {
         self.config.is_none()
     }
+
+    pub fn hide_default_local_rule(&mut self) {
+        if let Some(config) = self.config.as_mut() {
+            config.retain(|r| r.table_id != Some(255) || r.priority != None);
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

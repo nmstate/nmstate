@@ -38,6 +38,12 @@ impl NetworkState {
     /// Retrieve the `NetworkState`.
     /// Only available for feature `query_apply`.
     pub fn retrieve(&mut self) -> Result<&mut Self, NmstateError> {
+        self.retrieve_full()?;
+        self.rules.hide_default_local_rule();
+        Ok(self)
+    }
+
+    pub(crate) fn retrieve_full(&mut self) -> Result<&mut Self, NmstateError> {
         let state = nispor_retrieve(self.running_config_only)?;
         if state.prop_list.contains(&"hostname") {
             self.hostname = state.hostname;
