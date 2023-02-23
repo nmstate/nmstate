@@ -156,6 +156,23 @@ class Ifaces:
     def has_vf_count_change_and_missing_eth(self):
         return self._has_vf_count_change() and self._has_missing_veth()
 
+    def has_sriov_iface(self):
+        for iface in self.all_kernel_ifaces.values():
+            if (iface.is_desired or iface.is_changed) and iface.is_up:
+                cur_iface = self._cur_kernel_ifaces.get(iface.name)
+                if (
+                    cur_iface
+                    and cur_iface.raw.get(Ethernet.CONFIG_SUBTREE, {}).get(
+                        Ethernet.SRIOV_SUBTREE, {}
+                    )
+                ) or iface.original_desire_dict.get(
+                    Ethernet.CONFIG_SUBTREE, {}
+                ).get(
+                    Ethernet.SRIOV_SUBTREE, {}
+                ):
+                    return True
+        return False
+
     def _has_vf_count_change(self):
         for iface in self.all_kernel_ifaces.values():
             cur_iface = self._cur_kernel_ifaces.get(iface.name)
@@ -592,7 +609,6 @@ class Ifaces:
         return None
 
     def get_cur_iface(self, iface_name, iface_type):
-
         iface = self._cur_kernel_ifaces.get(iface_name)
         if iface and iface_type in (None, InterfaceType.UNKNOWN, iface.type):
             return iface
