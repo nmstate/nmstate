@@ -235,3 +235,43 @@ def test_mark_unmanaged_iface_absent(unmanged_dummy1_with_static_ip):
         }
     )
     assert_absent(DUMMY1)
+
+
+@pytest.fixture
+def external_managed_dummy1_with_autoconf():
+    cmdlib.exec_cmd(f"ip link add {DUMMY1} type dummy".split(), check=True)
+    cmdlib.exec_cmd(f"ip link set {DUMMY1} up".split(), check=True)
+    cmdlib.exec_cmd(
+        f"ip addr add {IPV6_ADDRESS1}/64 dev {DUMMY1} "
+        "valid_lft 2000 preferred_lft 1000".split(),
+        check=True,
+    )
+    yield
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: DUMMY1,
+                    Interface.STATE: InterfaceState.ABSENT,
+                }
+            ]
+        }
+    )
+    cmdlib.exec_cmd(f"ip link del {DUMMY1}".split(), check=False)
+
+
+# Make sure we are not impacted by undesired iface which is holding invalid
+# setting(here is DHCPv6 off with autoconf on)
+def test_external_managed_iface_with_autoconf_enabled(
+    eth1_up,
+    external_managed_dummy1_with_autoconf,
+):
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: "eth1",
+                }
+            ]
+        }
+    )
