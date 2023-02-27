@@ -24,6 +24,7 @@ from distutils.version import StrictVersion
 import logging
 import time
 
+from libnmstate.error import NmstateError
 from libnmstate.error import NmstateInternalError
 from libnmstate.error import NmstateLibnmError
 from libnmstate.error import NmstateNotSupportedError
@@ -321,9 +322,22 @@ class NmProfile:
         # TODO: Use applied config as base profile
         #       Or even better remove the base profile argument as top level
         #       of nmstate should provide full/merged configure.
-        self._nm_simple_conn = create_new_nm_simple_conn(
-            self._iface, self._nm_profile
-        )
+        if self._iface.is_changed or self._iface.is_desired:
+            self._nm_simple_conn = create_new_nm_simple_conn(
+                self._iface, self._nm_profile
+            )
+        elif self._nm_profile:
+            self._nm_simple_conn = NM.SimpleConnection.new_clone(
+                self._nm_profile
+            )
+        else:
+            try:
+                self._nm_simple_conn = create_new_nm_simple_conn(
+                    self._iface, self._nm_profile
+                )
+            # No error for undesired interface
+            except NmstateError:
+                pass
 
     def save_config(self, save_to_disk):
         self._check_sriov_support()
