@@ -1020,6 +1020,31 @@ def test_route_rule_from_all_to_all_ipv6(route_rule_test_env):
         assert _check_ip_rules(rules)
 
 
+@pytest.mark.tier1
+@pytest.mark.skipif(
+    nm_minor_version() < 42, reason="Loopback is only support on NM 1.42+"
+)
+def test_route_rule_add_and_remove_using_loopback():
+    desired_state = {
+        RouteRule.KEY: {
+            RouteRule.CONFIG: [
+                {
+                    RouteRule.IP_FROM: "192.0.2.0/24",
+                    RouteRule.ROUTE_TABLE: 200,
+                }
+            ]
+        }
+    }
+
+    libnmstate.apply(desired_state)
+    _check_ip_rules(desired_state[RouteRule.KEY][RouteRule.CONFIG])
+
+    desired_state[RouteRule.KEY][RouteRule.CONFIG][0][
+        RouteRule.STATE
+    ] = RouteRule.STATE_ABSENT
+    libnmstate.apply(desired_state)
+
+
 def _check_ip_rules(rules):
     for rule in rules:
         iprule.ip_rule_exist_in_os(
