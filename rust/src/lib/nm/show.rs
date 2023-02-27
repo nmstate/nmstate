@@ -347,6 +347,11 @@ fn iface_get(
                 iface.base = base_iface;
                 iface
             }),
+            InterfaceType::Loopback => Interface::Loopback({
+                let mut iface = LoopbackInterface::new();
+                iface.base = base_iface;
+                iface
+            }),
             _ => {
                 log::debug!("Skip unsupported interface {:?}", base_iface);
                 return None;
