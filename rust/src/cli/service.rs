@@ -1,9 +1,9 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 
-use nmstate::NetworkState;
-
-use crate::error::CliError;
+use crate::{apply::apply, error::CliError};
 
 const CONFIG_FILE_EXTENTION: &str = "yml";
 const RELOCATE_FILE_EXTENTION: &str = "applied";
@@ -25,8 +25,18 @@ pub(crate) fn ncl_service(
     }
 
     for file_path in config_files {
-        match apply_file(&file_path) {
-            Ok(()) => {
+        let mut fd = match std::fs::File::open(&file_path) {
+            Ok(fd) => fd,
+            Err(e) => {
+                log::error!(
+                    "Failed to read config file {}: {e}",
+                    file_path.display()
+                );
+                continue;
+            }
+        };
+        match apply(&mut fd, matches) {
+            Ok(_) => {
                 log::info!("Applied nmstate config: {}", file_path.display());
                 if let Err(e) = relocate_file(&file_path) {
                     log::error!(
@@ -72,12 +82,5 @@ fn relocate_file(file_path: &Path) -> Result<(), CliError> {
         file_path.display(),
         new_path.display()
     );
-    Ok(())
-}
-
-fn apply_file(file_path: &Path) -> Result<(), CliError> {
-    let fd = std::fs::File::open(file_path)?;
-    let net_state: NetworkState = serde_yaml::from_reader(fd)?;
-    net_state.apply()?;
     Ok(())
 }

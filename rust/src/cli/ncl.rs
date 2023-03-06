@@ -158,7 +158,6 @@ fn main() {
                     clap::Arg::new("TIMEOUT")
                       .long("timeout")
                       .takes_value(true)
-                      .default_value("60")
                       .help(
                         "Timeout in seconds before reverting uncommited changes."
                       ),
