@@ -4,10 +4,13 @@ use std::convert::TryFrom;
 use std::fs::File;
 use std::io::{stdin, stdout, Read, Write};
 use std::process::{Command, Stdio};
+use std::str::FromStr;
 
 use nmstate::{NetworkPolicy, NetworkState};
 
 use crate::error::CliError;
+
+const DEFAULT_TIMEOUT: u32 = 60;
 
 pub(crate) fn apply_from_stdin(
     matches: &clap::ArgMatches,
@@ -29,24 +32,37 @@ pub(crate) fn apply_from_files(
     Ok(ret)
 }
 
-fn apply<R>(
+pub(crate) fn apply<R>(
     reader: &mut R,
     matches: &clap::ArgMatches,
 ) -> Result<String, CliError>
 where
     R: Read,
 {
-    let kernel_only = matches.is_present("KERNEL");
-    let no_verify = matches.is_present("NO_VERIFY");
-    let no_commit = matches.is_present("NO_COMMIT");
-    let timeout: u32 = match matches.value_of_t("TIMEOUT") {
-        Ok(t) => t,
-        Err(e) => {
-            return Err(CliError {
-                code: crate::error::EX_DATAERR,
-                error_msg: e.to_string(),
-            });
+    let kernel_only = matches.try_contains_id("KERNEL").unwrap_or_default();
+    let no_verify = matches.try_contains_id("NO_VERIFY").unwrap_or_default();
+    let no_commit = matches.try_contains_id("NO_COMMIT").unwrap_or_default();
+    let timeout = if matches.try_contains_id("TIMEOUT").unwrap_or_default() {
+        match matches.try_get_one::<String>("TIMEOUT") {
+            Ok(Some(t)) => match u32::from_str(t) {
+                Ok(i) => i,
+                Err(e) => {
+                    return Err(CliError {
+                        code: crate::error::EX_DATAERR,
+                        error_msg: e.to_string(),
+                    });
+                }
+            },
+            Ok(None) => DEFAULT_TIMEOUT,
+            Err(e) => {
+                return Err(CliError {
+                    code: crate::error::EX_DATAERR,
+                    error_msg: e.to_string(),
+                });
+            }
         }
+    } else {
+        DEFAULT_TIMEOUT
     };
     let mut content = String::new();
     // Replace non-breaking space '\u{A0}'  to normal space
@@ -82,10 +98,12 @@ where
     net_state.set_verify_change(!no_verify);
     net_state.set_commit(!no_commit);
     net_state.set_timeout(timeout);
-    net_state.set_memory_only(matches.is_present("MEMORY_ONLY"));
+    net_state.set_memory_only(
+        matches.try_contains_id("MEMORY_ONLY").unwrap_or_default(),
+    );
 
     net_state.apply()?;
-    if !matches.is_present("SHOW_SECRETS") {
+    if !matches.try_contains_id("SHOW_SECRETS").unwrap_or_default() {
         net_state.hide_secrets();
     }
     let sorted_net_state = crate::query::sort_netstate(net_state)?;

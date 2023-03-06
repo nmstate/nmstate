@@ -1,21 +1,4 @@
-#
-# Copyright (c) 2022 Red Hat, Inc.
-#
-# This file is part of nmstate
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 2.1 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program. If not, see <https://www.gnu.org/licenses/>.
-#
+# SPDX-License-Identifier: LGPL-2.1-or-later
 
 import os
 
@@ -24,10 +7,14 @@ import pytest
 
 import libnmstate
 from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceType
 from libnmstate.schema import InterfaceState
 
 from .testlib.cmdlib import exec_cmd
+from .testlib.assertlib import assert_absent
 from .testlib.assertlib import assert_state_match
+from .testlib.statelib import show_only
+
 
 TEST_YAML1_CONTENT = """
 ---
@@ -66,11 +53,23 @@ interfaces:
     enabled: true
 """
 
+TEST_YAML3_CONTENT = """
+capture:
+  dummy_iface: interfaces.type == "dummy"
+desired:
+  interfaces:
+  - name: "{{ capture.dummy_iface.interfaces.0.name }}"
+    state: absent
+"""
+
 CONFIG_DIR = "/etc/nmstate"
 TEST_CONFIG1_FILE_PATH = f"{CONFIG_DIR}/01-nmstate-test.yml"
 TEST_CONFIG1_APPLIED_FILE_PATH = f"{CONFIG_DIR}/01-nmstate-test.applied"
 TEST_CONFIG2_FILE_PATH = f"{CONFIG_DIR}/02-nmstate-test.yml"
 TEST_CONFIG2_APPLIED_FILE_PATH = f"{CONFIG_DIR}/02-nmstate-test.applied"
+TEST_CONFIG3_FILE_PATH = f"{CONFIG_DIR}/03-nmstate-policy-test.yml"
+TEST_CONFIG3_APPLIED_FILE_PATH = f"{CONFIG_DIR}/03-nmstate-policy-test.applied"
+DUMMY1 = "dummy1"
 
 
 @pytest.fixture
@@ -115,3 +114,44 @@ def test_nmstate_service_apply(nmstate_etc_config):
     assert os.path.isfile(TEST_CONFIG1_APPLIED_FILE_PATH)
     assert not os.path.exists(TEST_CONFIG2_FILE_PATH)
     assert os.path.isfile(TEST_CONFIG2_APPLIED_FILE_PATH)
+
+
+@pytest.fixture
+def dummy1_up():
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: DUMMY1,
+                    Interface.STATE: InterfaceState.UP,
+                    Interface.TYPE: InterfaceType.DUMMY,
+                }
+            ]
+        }
+    )
+    yield
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: DUMMY1,
+                    Interface.STATE: InterfaceState.ABSENT,
+                }
+            ]
+        }
+    )
+
+
+def test_nmstate_service_apply_nmpolicy(dummy1_up):
+    with open(TEST_CONFIG3_FILE_PATH, "w") as fd:
+        fd.write(TEST_YAML3_CONTENT)
+
+    current_state = show_only((DUMMY1,))
+    assert current_state[Interface.KEY][0][Interface.NAME] == DUMMY1
+
+    try:
+        exec_cmd("systemctl start nmstate".split(), check=True)
+        assert_absent(DUMMY1)
+        assert os.path.isfile(TEST_CONFIG3_APPLIED_FILE_PATH)
+    finally:
+        os.remove(TEST_CONFIG3_APPLIED_FILE_PATH)
