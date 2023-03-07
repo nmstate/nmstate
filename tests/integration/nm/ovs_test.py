@@ -1,23 +1,8 @@
-#
-# Copyright (c) 2019-2021 Red Hat, Inc.
-#
-# This file is part of nmstate
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 2.1 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program. If not, see <https://www.gnu.org/licenses/>.
-#
+# SPDX-License-Identifier: LGPL-2.1-or-later
 
 import pytest
+
+import yaml
 
 import libnmstate
 from libnmstate.schema import Interface
@@ -535,3 +520,38 @@ def test_do_not_touch_ovs_port_when_not_desired_internal_iface(
 
     assert old_timestamp == new_timestamp
     assert old_uuid == new_uuid
+
+
+def test_gc_on_ovs_dpdk():
+    desired_state = yaml.load(
+        """---
+        interfaces:
+        - name: ovs0
+          type: ovs-interface
+          state: up
+          dpdk:
+            devargs: "0000:af:00.1"
+            n_rxq: 100
+            n_rxq_desc: 1024
+            n_txq_desc: 2048
+        - name: br0
+          type: ovs-bridge
+          state: up
+          bridge:
+            options:
+              datapath: "netdev"
+            port:
+            - name: ovs0
+        """,
+        Loader=yaml.SafeLoader,
+    )
+    confs = libnmstate.generate_configurations(desired_state)["NetworkManager"]
+    ovs_iface_conf = [conf for conf in confs if conf[0].startswith("ovs0-if")][
+        0
+    ][1]
+
+    assert "[ovs-dpdk]" in ovs_iface_conf
+    assert "n-rxq-desc=1024" in ovs_iface_conf
+    assert "n-txq-desc=2048" in ovs_iface_conf
+    assert "n-rxq=100" in ovs_iface_conf
+    assert "devargs=0000:af:00.1" in ovs_iface_conf
