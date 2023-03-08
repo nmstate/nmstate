@@ -24,6 +24,11 @@ pub(crate) fn ncl_service(
         );
     }
 
+    // Due to bug of NetworkManager, the `After=NetworkManager.service` in
+    // `nmstate.service` cannot guarantee the ready of NM dbus.
+    // We sleep for 2 seconds here to avoid meaningless retry.
+    std::thread::sleep(std::time::Duration::from_secs(2));
+
     for file_path in config_files {
         let mut fd = match std::fs::File::open(&file_path) {
             Ok(fd) => fd,

@@ -15,7 +15,9 @@ const VERIFY_RETRY_INTERVAL_MILLISECONDS: u64 = 1000;
 const VERIFY_RETRY_COUNT: usize = 5;
 const VERIFY_RETRY_COUNT_SRIOV: usize = 60;
 const VERIFY_RETRY_COUNT_KERNEL_MODE: usize = 5;
-const VERIFY_RETRY_NM: usize = 2;
+const RETRY_NM_COUNT: usize = 2;
+const RETRY_NM_INTERVAL_MILLISECONDS: u64 = 2000;
+
 const MAX_SUPPORTED_INTERFACES: usize = 1000;
 
 impl NetworkState {
@@ -104,7 +106,17 @@ impl NetworkState {
         let mut cur_net_state = NetworkState::new();
         cur_net_state.set_kernel_only(self.kernel_only);
         cur_net_state.set_include_secrets(true);
-        cur_net_state.retrieve_full()?;
+        if let Err(e) = cur_net_state.retrieve_full() {
+            if e.kind().can_retry() {
+                log::info!("Retrying on: {}", e);
+                std::thread::sleep(std::time::Duration::from_millis(
+                    RETRY_NM_INTERVAL_MILLISECONDS,
+                ));
+                cur_net_state.retrieve_full()?;
+            } else {
+                return Err(e);
+            }
+        }
 
         // At this point, the `unknown` interface type is not resolved yet,
         // hence when user want `enable-and-use` single-transaction for SR-IOV,
@@ -118,7 +130,21 @@ impl NetworkState {
             };
 
         let timeout = self.timeout.unwrap_or(DEFAULT_ROLLBACK_TIMEOUT);
-        let checkpoint = nm_checkpoint_create(timeout)?;
+        let checkpoint = match nm_checkpoint_create(timeout) {
+            Ok(c) => c,
+            Err(e) => {
+                if e.kind().can_retry() {
+                    log::info!("Retrying on: {}", e);
+                    std::thread::sleep(std::time::Duration::from_millis(
+                        RETRY_NM_INTERVAL_MILLISECONDS,
+                    ));
+                    nm_checkpoint_create(timeout)?
+                } else {
+                    return Err(e);
+                }
+            }
+        };
+
         log::info!("Created checkpoint {}", &checkpoint);
 
         let verify_count = if pf_state.is_some() {
@@ -172,7 +198,7 @@ impl NetworkState {
         let timeout = self.timeout.unwrap_or(DEFAULT_ROLLBACK_TIMEOUT);
         // NM might have unknown race problem found by verify stage,
         // we try to apply the state again if so.
-        with_retry(VERIFY_RETRY_INTERVAL_MILLISECONDS, VERIFY_RETRY_NM, || {
+        with_retry(RETRY_NM_INTERVAL_MILLISECONDS, RETRY_NM_COUNT, || {
             nm_checkpoint_timeout_extend(checkpoint, timeout)?;
             nm_apply(merged_state, checkpoint, timeout)?;
             if merged_state.is_global_ovsdb_changed() && ovsdb_is_running() {
