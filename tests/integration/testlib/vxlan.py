@@ -1,21 +1,4 @@
-#
-# Copyright (c) 2019 Red Hat, Inc.
-#
-# This file is part of nmstate
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 2.1 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program. If not, see <https://www.gnu.org/licenses/>.
-#
+# SPDX-License-Identifier: LGPL-2.1-or-later
 
 from contextlib import contextmanager
 
@@ -27,26 +10,45 @@ from libnmstate.schema import VXLAN
 
 
 class VxlanState:
-    def __init__(self, id, base_if, remote, destination_port=4789):
+    def __init__(
+        self,
+        id,
+        base_if=None,
+        local=None,
+        remote=None,
+        learning=True,
+        destination_port=4789,
+    ):
         self.name = f"{base_if}.{id}"
         self.id = id
         self.base_if = base_if
+        self.learning = learning
+        self.local = local
         self.remote = remote
         self.destination_port = destination_port
 
     @property
     def up(self):
-        return {
+        state = {
             Interface.NAME: self.name,
             Interface.TYPE: VXLAN.TYPE,
             Interface.STATE: InterfaceState.UP,
             VXLAN.CONFIG_SUBTREE: {
                 VXLAN.ID: self.id,
                 VXLAN.BASE_IFACE: self.base_if,
+                VXLAN.LEARNING: self.learning,
+                VXLAN.LOCAL: self.local,
                 VXLAN.REMOTE: self.remote,
                 VXLAN.DESTINATION_PORT: self.destination_port,
             },
         }
+        if state[VXLAN.CONFIG_SUBTREE][VXLAN.BASE_IFACE] is None:
+            del state[VXLAN.CONFIG_SUBTREE][VXLAN.BASE_IFACE]
+        if state[VXLAN.CONFIG_SUBTREE][VXLAN.LOCAL] is None:
+            del state[VXLAN.CONFIG_SUBTREE][VXLAN.LOCAL]
+        if state[VXLAN.CONFIG_SUBTREE][VXLAN.REMOTE] is None:
+            del state[VXLAN.CONFIG_SUBTREE][VXLAN.REMOTE]
+        return state
 
     @property
     def absent(self):

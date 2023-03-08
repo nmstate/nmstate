@@ -18,6 +18,8 @@ impl VxlanConfig {
         if let Some(other) = other {
             self.base_iface = other.base_iface.clone();
             self.id = other.id;
+            self.learning = other.learning;
+            self.local = other.local;
             self.remote = other.remote;
             self.dst_port = other.dst_port;
         }

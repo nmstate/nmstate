@@ -72,6 +72,28 @@ def test_add_and_remove_two_vxlans_on_same_iface(eth1_up):
 
 
 @pytest.mark.tier1
+def test_add_and_remove_vxlan_without_base_if():
+    with vxlan_interfaces(
+        VxlanState(id=VXLAN1_ID, remote="192.168.100.1"),
+    ) as desired_state:
+        assertlib.assert_state(desired_state)
+
+    vxlan1_ifname = desired_state[Interface.KEY][0][Interface.NAME]
+    assertlib.assert_absent(vxlan1_ifname)
+
+
+@pytest.mark.tier1
+def test_add_and_remove_vxlan_nolearning():
+    with vxlan_interfaces(
+        VxlanState(id=VXLAN1_ID, remote="192.168.100.1", learning=False),
+    ) as desired_state:
+        assertlib.assert_state(desired_state)
+
+    vxlan1_ifname = desired_state[Interface.KEY][0][Interface.NAME]
+    assertlib.assert_absent(vxlan1_ifname)
+
+
+@pytest.mark.tier1
 @pytest.mark.xfail(
     is_k8s(),
     reason=(
@@ -142,6 +164,17 @@ def test_show_vxlan_with_no_remote(eth1_up):
     finally:
         libnmstate.apply(vxlans_absent([vxlan]))
         assertlib.assert_absent(vxlan.name)
+
+
+@pytest.mark.tier1
+def test_add_and_remove_vxlan_with_no_remote():
+    with vxlan_interfaces(
+        VxlanState(id=VXLAN1_ID, local="192.168.100.1"),
+    ) as desired_state:
+        assertlib.assert_state(desired_state)
+
+    vxlan1_ifname = desired_state[Interface.KEY][0][Interface.NAME]
+    assertlib.assert_absent(vxlan1_ifname)
 
 
 @pytest.mark.tier1
