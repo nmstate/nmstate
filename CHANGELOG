@@ -1,47 +1,64 @@
 # Changelog
-## [2.2.7] - 2023-02-16
+## [2.2.8] - 2023-03-10
 ### Breaking changes
-- N/A
+ - N/A
 
 ### New features
-- Support static route with auto ip. (4fa5689a)
-- Support VLAN 802.1ad and 802.1q protocol. (9923657a)
-- Support enabling SR-IOV and use future VF in single desire state. (20871bac)
+ - Add VXLAN properties for EVPN use. (5a0ca407)
+ - Support policy file in service mode. (2dc296e2)
+ - clib: Introduce YAML support. (c40cbcb8)
 
 ### Bug fixes
-- Fix error when reverting SR-IOV VFs conf to default. (3bbb3c21)
-- Fix SR-IOV enabling and use in single desire state. (8f680180)
-- Use loopback interface as final fallback interface to store route rule. (fb7ace9d)
+ - Retry when NetworkManager starting up. (393828a6)
+ - Fix `n-rxq-desc` and `n-txq-desc` properties. (b234f9dd)
+ - Fix random failure when changing VLAN protocol. (b12effd5)
+ - Fix fetching loopback information from NM plugin. (d3864c19)
+ - Fix `make install` on Debian and Ubuntu. (4647cd11)
+ - Adjust `is_match` to consider family and priority 0. (811db479)
+
+## [2.2.7] - 2023-02-16
+### Breaking changes
+ - N/A
+
+### New features
+ - Support static route with auto ip. (4fa5689a)
+ - Support VLAN 802.1ad and 802.1q protocol. (9923657a)
+ - Support enabling SR-IOV and use future VF in single desire state. (20871bac)
+
+### Bug fixes
+ - Fix error when reverting SR-IOV VFs conf to default. (3bbb3c21)
+ - Fix SR-IOV enabling and use in single desire state. (8f680180)
+ - Use loopback interface as final fallback interface to store route rule. (fb7ace9d)
 
 ## [2.2.6] - 2023-02-09
 ### Breaking changes
-- N/A
+ - N/A
 
 ### New features
-- Support Tokenised IPv6 identifiers. (91f8e45c)
-- Support local(255) route table. (a2051822)
-- Support enabling SR-IOV and use future VF in single desire state. (20871bac)
+ - Support Tokenised IPv6 identifiers. (91f8e45c)
+ - Support local(255) route table. (a2051822)
+ - Support enabling SR-IOV and use future VF in single desire state. (20871bac)
 
 ### Bug fixes
-- Fix error when removing a port with IP enabled. (23cf28d7)
-- Fix error when bringing down an unmanaged interface. (50148b63)
-- Treat empty string to match None in routes. (b52557b9)
+ - Fix error when removing a port with IP enabled. (23cf28d7)
+ - Fix error when bringing down an unmanaged interface. (50148b63)
+ - Treat empty string to match None in routes. (b52557b9)
 
 ## [2.2.5] - 2023-01-26
 ### New features
-- Support ECMP IPv4 routes. (b1b275cd)
-- Support OVS DPDK `n_rxq_desc` and `n_txq_desc` options. (936ac46a)
-- Support arbitrary DNS configuration. (a9397549)
+ - Support ECMP IPv4 routes. (b1b275cd)
+ - Support OVS DPDK `n_rxq_desc` and `n_txq_desc` options. (936ac46a)
+ - Support arbitrary DNS configuration. (a9397549)
 
 ### Bug fixes
-- Fix route destination address validation error. (012052c3)
-- Fix route next-hop-interface missing validation. (40970942)
-- Fix error when new DNS interface hold IPv6 link local address only. (4e21e359)
-- Fix error when adding an OVS internal interface to an empty OVS bridge. (d6cd548f)
+ - Fix route destination address validation error. (012052c3)
+ - Fix route next-hop-interface missing validation. (40970942)
+ - Fix error when new DNS interface hold IPv6 link local address only. (4e21e359)
+ - Fix error when adding an OVS internal interface to an empty OVS bridge. (d6cd548f)
 
 ## [2.2.4] - 2023-01-18
 ### Breaking changes
-- Support interface level `other_config`. (8ec213b8)
+ - Support interface level `other_config`. (8ec213b8)
 
 The rust API changed: `OvsBridgeBondConfig.other_config: Option<HashMap>`
 changed to `OvsBridgeBondConfig.ovs_db: Option<OvsDbIfaceConfig>`.
@@ -50,12 +67,12 @@ The YAML API changed: The `other_config` under OVS bond should be stored under
 `ovs-db` section.
 
 ### Bug fixes
-- Fix support DNS uncompressed IPv6 server. (8fbb93a5)
-- Fix validation error on route rule when `ip-to` and `ip-from` is empty string. (c2e69269)
-- Fix `group-fwd-mask` conflict with `group-forward-mask` Linux bridge option. (e079f1d)
-- Fix partial detaching ports in OVS bond interfaces. (e2b3ea72)
-- Fix verification error when OVS daemon is off. (ae3f45a7)
-- Fix MPTCP error in older NetworkManager. (f38da12c)
+ - Fix support DNS uncompressed IPv6 server. (8fbb93a5)
+ - Fix validation error on route rule when `ip-to` and `ip-from` is empty string. (c2e69269)
+ - Fix `group-fwd-mask` conflict with `group-forward-mask` Linux bridge option. (e079f1d)
+ - Fix partial detaching ports in OVS bond interfaces. (e2b3ea72)
+ - Fix verification error when OVS daemon is off. (ae3f45a7)
+ - Fix MPTCP error in older NetworkManager. (f38da12c)
 
 ## [2.2.3] - 2023-01-09
 ### Breaking changes
