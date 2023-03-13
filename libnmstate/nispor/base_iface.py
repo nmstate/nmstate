@@ -1,24 +1,6 @@
-#
-# Copyright (c) 2020-2021 Red Hat, Inc.
-#
-# This file is part of nmstate
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 2.1 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program. If not, see <https://www.gnu.org/licenses/>.
-#
+# SPDX-License-Identifier: LGPL-2.1-or-later
 
 import logging
-from operator import attrgetter
 
 from libnmstate.ifaces import BaseIface
 from libnmstate.schema import Interface
@@ -124,9 +106,7 @@ class NisporPlugintIpState:
         self._np_ip_state = np_ip_state
         self._addresses = []
         if np_ip_state:
-            self._addresses = sorted(
-                np_ip_state.addresses, key=attrgetter("address")
-            )
+            self._addresses = np_ip_state.addresses
 
     @property
     def _is_ipv6(self):
