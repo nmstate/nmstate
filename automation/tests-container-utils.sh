@@ -76,6 +76,11 @@ function container_pre_test_setup {
 
     create_container
 
+    # Workaround for github CI problem on
+    #   fatal: detected dubious ownership in repository at '/workspace/nmstate'
+    container_exec "git config --global --add safe.directory \
+        $CONTAINER_WORKSPACE"
+
     container_exec "echo '$CONT_EXPORT_DIR/core.%h.%e.%t' > \
         /proc/sys/kernel/core_pattern"
     container_exec "ulimit -c unlimited"
