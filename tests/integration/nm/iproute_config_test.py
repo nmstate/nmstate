@@ -1,21 +1,4 @@
-#
-# Copyright (c) 2020 Red Hat, Inc.
-#
-# This file is part of nmstate
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 2.1 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program. If not, see <https://www.gnu.org/licenses/>.
-#
+# SPDX-License-Identifier: LGPL-2.1-or-later
 
 import time
 
@@ -26,6 +9,7 @@ import libnmstate
 from libnmstate.schema import Bond
 from libnmstate.schema import BondMode
 from libnmstate.schema import Interface
+from libnmstate.schema import InterfaceType
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import Route
 
@@ -33,6 +17,7 @@ from ..testlib import cmdlib
 from ..testlib.dummy import nm_unmanaged_dummy
 from ..testlib.assertlib import assert_state_match
 from ..testlib.assertlib import assert_absent
+from ..testlib.iproutelib import iproute_get_ip_addrs_with_order
 
 BOND99 = "bond99"
 DUMMY1 = "dummy1"
@@ -217,3 +202,48 @@ def test_external_managed_iface_with_autoconf_enabled(
             ]
         }
     )
+
+
+@pytest.fixture
+def external_managed_dummy1_with_ips():
+    cmdlib.exec_cmd(f"ip link add {DUMMY1} type dummy".split(), check=True)
+    cmdlib.exec_cmd(f"ip link set {DUMMY1} up".split(), check=True)
+    cmdlib.exec_cmd(
+        f"ip addr add {IPV4_ADDRESS2}/24 dev {DUMMY1}".split(),
+        check=True,
+    )
+    cmdlib.exec_cmd(
+        f"ip addr add {IPV4_ADDRESS1}/24 dev {DUMMY1}".split(),
+        check=True,
+    )
+    yield
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: DUMMY1,
+                    Interface.STATE: InterfaceState.ABSENT,
+                }
+            ]
+        }
+    )
+    cmdlib.exec_cmd(f"ip link del {DUMMY1}".split(), check=False)
+
+
+def test_perserve_ip_order_of_external_managed_nic(
+    external_managed_dummy1_with_ips,
+):
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: DUMMY1,
+                    Interface.TYPE: InterfaceType.DUMMY,
+                    Interface.STATE: InterfaceState.UP,
+                }
+            ]
+        }
+    )
+    ip_addrs = iproute_get_ip_addrs_with_order(iface=DUMMY1, is_ipv6=False)
+    assert ip_addrs[0] == IPV4_ADDRESS2
+    assert ip_addrs[1] == IPV4_ADDRESS1
