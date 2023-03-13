@@ -5,6 +5,7 @@ mod apply;
 #[cfg(feature = "query_apply")]
 mod autoconf;
 mod error;
+mod format;
 #[cfg(feature = "gen_conf")]
 mod gen_conf;
 #[cfg(feature = "query_apply")]
@@ -49,6 +50,7 @@ const SUB_CMD_VERSION: &str = "version";
 const SUB_CMD_AUTOCONF: &str = "autoconf";
 const SUB_CMD_SERVICE: &str = "service";
 const SUB_CMD_POLICY: &str = "policy";
+const SUB_CMD_FORMAT: &str = "format";
 
 fn main() {
     let argv: Vec<String> = std::env::args().collect();
@@ -301,6 +303,18 @@ fn main() {
                 )
         )
         .subcommand(
+            clap::Command::new(SUB_CMD_FORMAT)
+                .about("Format specified state and print out")
+                .alias("f")
+                .alias("fmt")
+                .arg(
+                    clap::Arg::new("STATE_FILE")
+                        .index(1)
+                        .default_value("-")
+                        .help("Network state file"),
+                ),
+        )
+        .subcommand(
             clap::Command::new(SUB_CMD_VERSION)
             .about("Show version")
        ).get_matches();
@@ -362,6 +376,11 @@ fn main() {
         print_result_and_exit(ncl_service(matches));
     } else if let Some(matches) = matches.subcommand_matches(SUB_CMD_POLICY) {
         print_result_and_exit(policy(matches));
+    } else if let Some(matches) = matches.subcommand_matches(SUB_CMD_FORMAT) {
+        // The default_value() has ensured the unwrap() will never fail
+        print_result_and_exit(format::format(
+            matches.value_of("STATE_FILE").unwrap(),
+        ));
     } else if matches.subcommand_matches(SUB_CMD_VERSION).is_some() {
         print_result_and_exit(Ok(format!(
             "{} {}",
