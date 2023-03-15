@@ -11,19 +11,15 @@ use super::{
     active_connection::create_index_for_nm_acs_by_name_type,
     error::nm_error_to_nmstate,
     query_apply::{
-        create_index_for_nm_conns_by_name_type, dns::nm_global_dns_to_nmstate,
+        create_index_for_nm_conns_by_name_type,
+        device::nm_dev_iface_type_to_nmstate, dns::nm_global_dns_to_nmstate,
         get_description, get_lldp, is_lldp_enabled, is_mptcp_supported,
         nm_802_1x_to_nmstate, nm_ip_setting_to_nmstate4,
         nm_ip_setting_to_nmstate6, query_nmstate_wait_ip, retrieve_dns_info,
     },
     settings::{
-        get_bond_balance_slb, NM_SETTING_BOND_SETTING_NAME,
-        NM_SETTING_BRIDGE_SETTING_NAME, NM_SETTING_DUMMY_SETTING_NAME,
-        NM_SETTING_INFINIBAND_SETTING_NAME, NM_SETTING_LOOPBACK_SETTING_NAME,
-        NM_SETTING_MACVLAN_SETTING_NAME, NM_SETTING_OVS_BRIDGE_SETTING_NAME,
-        NM_SETTING_OVS_IFACE_SETTING_NAME, NM_SETTING_VETH_SETTING_NAME,
-        NM_SETTING_VLAN_SETTING_NAME, NM_SETTING_VRF_SETTING_NAME,
-        NM_SETTING_VXLAN_SETTING_NAME, NM_SETTING_WIRED_SETTING_NAME,
+        get_bond_balance_slb, NM_SETTING_VETH_SETTING_NAME,
+        NM_SETTING_WIRED_SETTING_NAME,
     },
 };
 use crate::{
@@ -195,31 +191,6 @@ pub(crate) fn nm_retrieve(
     set_ovs_iface_controller_info(&mut net_state.interfaces);
 
     Ok(net_state)
-}
-
-fn nm_dev_iface_type_to_nmstate(nm_dev: &NmDevice) -> InterfaceType {
-    match nm_dev.iface_type.as_str() {
-        NM_SETTING_WIRED_SETTING_NAME => InterfaceType::Ethernet,
-        NM_SETTING_VETH_SETTING_NAME => InterfaceType::Ethernet,
-        NM_SETTING_BOND_SETTING_NAME => InterfaceType::Bond,
-        NM_SETTING_DUMMY_SETTING_NAME => InterfaceType::Dummy,
-        NM_SETTING_BRIDGE_SETTING_NAME => InterfaceType::LinuxBridge,
-        NM_SETTING_OVS_BRIDGE_SETTING_NAME => InterfaceType::OvsBridge,
-        NM_SETTING_OVS_IFACE_SETTING_NAME => InterfaceType::OvsInterface,
-        NM_SETTING_VRF_SETTING_NAME => InterfaceType::Vrf,
-        NM_SETTING_VLAN_SETTING_NAME => InterfaceType::Vlan,
-        NM_SETTING_VXLAN_SETTING_NAME => InterfaceType::Vxlan,
-        NM_SETTING_MACVLAN_SETTING_NAME => {
-            if nm_dev.is_mac_vtap {
-                InterfaceType::MacVtap
-            } else {
-                InterfaceType::MacVlan
-            }
-        }
-        NM_SETTING_LOOPBACK_SETTING_NAME => InterfaceType::Loopback,
-        NM_SETTING_INFINIBAND_SETTING_NAME => InterfaceType::InfiniBand,
-        _ => InterfaceType::Other(nm_dev.iface_type.to_string()),
-    }
 }
 
 fn nm_conn_to_base_iface(

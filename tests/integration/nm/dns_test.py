@@ -1,21 +1,4 @@
-#
-# Copyright (c) 2021 Red Hat, Inc.
-#
-# This file is part of nmstate
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 2.1 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program. If not, see <https://www.gnu.org/licenses/>.
-#
+# SPDX-License-Identifier: LGPL-2.1-or-later
 
 import pytest
 
@@ -32,6 +15,8 @@ from ..testlib import cmdlib
 
 DUMMY0 = "dummy0"
 ETH1 = "eth1"
+
+TEST_DNS_SRVS = ["192.0.2.2", "192.0.2.1"]
 
 
 @pytest.fixture
@@ -98,3 +83,59 @@ def test_set_auto_dns_with_unamanged_iface_with_static_gw(
             ],
         }
         libnmstate.apply(absent_state)
+
+
+@pytest.fixture
+def all_unmanaged_with_gw_on_eth1(unmanaged_eth1_with_static_gw):
+    changed_ifaces = []
+    output = cmdlib.exec_cmd("nmcli -t -f DEVICE,STATE d".split(), check=True)[
+        1
+    ]
+    for line in output.split("\n"):
+        splited = line.split(":")
+        if len(splited) == 2:
+            iface_name, state = splited
+            if state.startswith("connected"):
+                changed_ifaces.append(iface_name)
+                cmdlib.exec_cmd(
+                    f"nmcli d set {iface_name} managed false".split(),
+                    check=True,
+                )
+    yield
+    for iface_name in changed_ifaces:
+        cmdlib.exec_cmd(
+            f"nmcli d set {iface_name} managed true".split(), check=True
+        )
+
+
+def test_do_not_use_unmanaged_iface_for_dns(all_unmanaged_with_gw_on_eth1):
+    libnmstate.apply({DNS.KEY: {DNS.CONFIG: {DNS.SERVER: TEST_DNS_SRVS}}})
+
+    assert_global_dns(TEST_DNS_SRVS)
+
+
+@pytest.fixture
+def all_unmanaged_with_gw_on_eth1_as_ext_mgt(all_unmanaged_with_gw_on_eth1):
+    cmdlib.exec_cmd(
+        "nmcli d set eth1 managed true".split(),
+        check=True,
+    )
+    yield
+
+
+def test_do_not_use_external_managed_iface_for_dns(
+    all_unmanaged_with_gw_on_eth1_as_ext_mgt,
+):
+    libnmstate.apply({DNS.KEY: {DNS.CONFIG: {DNS.SERVER: TEST_DNS_SRVS}}})
+
+    assert_global_dns(TEST_DNS_SRVS)
+
+
+GLOBAL_DNS_CONF_FILE = "/var/lib/NetworkManager/NetworkManager-intern.conf"
+
+
+def assert_global_dns(servers):
+    with open(GLOBAL_DNS_CONF_FILE) as fd:
+        content = fd.read()
+        for server in servers:
+            assert server in content

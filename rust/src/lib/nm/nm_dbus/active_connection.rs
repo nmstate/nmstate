@@ -7,7 +7,6 @@ use super::{
     ErrorKind, NmError,
 };
 
-#[cfg(feature = "query_apply")]
 pub const NM_ACTIVATION_STATE_FLAG_EXTERNAL: u32 = 0x80;
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]

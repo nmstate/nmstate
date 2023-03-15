@@ -49,7 +49,7 @@ interfaces:
     let mut merged_state =
         MergedNetworkState::new(desired, current, false, false).unwrap();
 
-    store_dns_config_to_iface(&mut merged_state).unwrap();
+    store_dns_config_to_iface(&mut merged_state, &[], &[]).unwrap();
 
     let iface = merged_state
         .interfaces
@@ -224,7 +224,7 @@ fn test_dns_iface_has_no_ip_stack_info() {
     let mut merged_state =
         MergedNetworkState::new(desired, current, false, false).unwrap();
 
-    store_dns_config_to_iface(&mut merged_state).unwrap();
+    store_dns_config_to_iface(&mut merged_state, &[], &[]).unwrap();
 }
 
 #[test]
@@ -267,7 +267,8 @@ fn test_dns_not_prefer_iface_ipv6_with_link_local_only_address() {
     let merged_state =
         MergedNetworkState::new(desired, current, false, false).unwrap();
 
-    let (v4_iface, v6_iface) = reselect_dns_ifaces(&merged_state, &[], &[]);
+    let (v4_iface, v6_iface) =
+        reselect_dns_ifaces(&merged_state, &[], &[], &[], &[]);
 
     assert!(v4_iface.is_empty());
     assert_eq!(v6_iface, "dummy1");
@@ -325,7 +326,8 @@ fn test_dns_prefer_desired_over_current() {
     let merged_state =
         MergedNetworkState::new(desired, current, false, false).unwrap();
 
-    let (v4_iface, v6_iface) = reselect_dns_ifaces(&merged_state, &[], &[]);
+    let (v4_iface, v6_iface) =
+        reselect_dns_ifaces(&merged_state, &[], &[], &[], &[]);
 
     assert_eq!(v4_iface, "dummy0");
     assert_eq!(v6_iface, "dummy0");
@@ -370,7 +372,7 @@ fn test_copy_ip_stack_if_marked_for_dns() {
     let mut merged_state =
         MergedNetworkState::new(desired, current, false, false).unwrap();
 
-    store_dns_config_to_iface(&mut merged_state).unwrap();
+    store_dns_config_to_iface(&mut merged_state, &[], &[]).unwrap();
 
     let iface = merged_state
         .interfaces
