@@ -62,6 +62,7 @@ pub(crate) fn nm_apply(
     let nm_acs = nm_api
         .active_connections_get()
         .map_err(nm_error_to_nmstate)?;
+    let nm_devs = nm_api.devices_get().map_err(nm_error_to_nmstate)?;
 
     let mut merged_state = merged_state.clone();
 
@@ -75,13 +76,11 @@ pub(crate) fn nm_apply(
         purge_global_dns_config(&mut nm_api)?;
     }
 
-    if let Err(e) = store_dns_config_to_iface(&mut merged_state) {
+    if let Err(e) =
+        store_dns_config_to_iface(&mut merged_state, &nm_acs, &nm_devs)
+    {
         log::warn!(
             "Cannot store DNS to NetworkManager interface connection: {e}"
-        );
-        log::warn!(
-            "Storing DNS to NetworkManager via global dns API, \
-            this will cause _all__ interface level DNS settings been ignored"
         );
         store_dns_config_via_global_api(
             &mut nm_api,
