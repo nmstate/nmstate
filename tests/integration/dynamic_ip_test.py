@@ -1407,3 +1407,60 @@ def test_wait_ip(eth1_up, wait_ip):
             ],
         }
     )
+
+
+@pytest.fixture
+def static_dns_search_with_auto_dns_nameserver(dhcp_env):
+    libnmstate.apply(
+        {
+            DNS.KEY: {DNS.CONFIG: {DNS.SERVER: [], DNS.SEARCH: []}},
+            Interface.KEY: [
+                {
+                    Interface.NAME: DHCP_CLI_NIC,
+                    Interface.TYPE: InterfaceType.ETHERNET,
+                    Interface.IPV4: {
+                        InterfaceIPv4.DHCP: True,
+                        InterfaceIPv4.ENABLED: True,
+                    },
+                }
+            ],
+        }
+    )
+    cmdlib.exec_cmd(
+        f"nmcli c modify {DHCP_CLI_NIC} ipv4.dns-search example.com".split(),
+        check=True,
+    )
+    cmdlib.exec_cmd(f"nmcli c up {DHCP_CLI_NIC}".split(), check=True)
+    yield
+    cmdlib.exec_cmd(f"nmcli c del {DHCP_CLI_NIC}".split())
+
+
+# Even this test case is NM specific, but it require DHCP environment setup,
+# it is hard to place it in tests/integration/nm folder without dirty hacks,
+# hence place it here
+def test_prexist_static_dns_search_with_auto_dns_nameserver(
+    static_dns_search_with_auto_dns_nameserver,
+):
+    try:
+        libnmstate.apply(
+            {
+                Interface.KEY: [
+                    {
+                        Interface.NAME: "dummy0",
+                        Interface.TYPE: InterfaceType.DUMMY,
+                    }
+                ],
+            }
+        )
+    finally:
+        libnmstate.apply(
+            {
+                Interface.KEY: [
+                    {
+                        Interface.NAME: "dummy0",
+                        Interface.TYPE: InterfaceType.DUMMY,
+                        Interface.STATE: InterfaceState.ABSENT,
+                    }
+                ],
+            }
+        )
