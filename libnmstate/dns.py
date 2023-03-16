@@ -97,7 +97,7 @@ class DnsState:
         ipv4_iface, ipv6_iface = self._find_ifaces_for_name_servers(
             ifaces, route_state
         )
-        if ipv4_iface == ipv6_iface:
+        if ipv4_iface == ipv6_iface and ipv4_iface:
             iface_metadata = {
                 ipv4_iface: {
                     Interface.IPV4: {DNS.SERVER: [], DNS.SEARCH: []},
