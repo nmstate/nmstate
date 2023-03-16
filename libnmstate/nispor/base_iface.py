@@ -214,7 +214,7 @@ class EthtoolInfo:
         "rx-checksum",
         "tx-scatter-gather",
         "tx-tcp-segmentation",
-        "tx-gro",
+        "rx-gro",
         "tx-generic-segmentation",
         "rx-hashing",
         "rx-lro",
