@@ -38,12 +38,6 @@ impl NetworkState {
     /// Retrieve the `NetworkState`.
     /// Only available for feature `query_apply`.
     pub fn retrieve(&mut self) -> Result<&mut Self, NmstateError> {
-        self.retrieve_full()?;
-        self.interfaces.hide_controller_prop();
-        Ok(self)
-    }
-
-    pub(crate) fn retrieve_full(&mut self) -> Result<&mut Self, NmstateError> {
         let state = nispor_retrieve(self.running_config_only)?;
         if state.prop_list.contains(&"hostname") {
             self.hostname = state.hostname;
@@ -106,13 +100,13 @@ impl NetworkState {
         let mut cur_net_state = NetworkState::new();
         cur_net_state.set_kernel_only(self.kernel_only);
         cur_net_state.set_include_secrets(true);
-        if let Err(e) = cur_net_state.retrieve_full() {
+        if let Err(e) = cur_net_state.retrieve() {
             if e.kind().can_retry() {
                 log::info!("Retrying on: {}", e);
                 std::thread::sleep(std::time::Duration::from_millis(
                     RETRY_NM_INTERVAL_MILLISECONDS,
                 ));
-                cur_net_state.retrieve_full()?;
+                cur_net_state.retrieve()?;
             } else {
                 return Err(e);
             }
@@ -168,7 +162,7 @@ impl NetworkState {
                     verify_count,
                 )?;
                 // Refresh current state
-                cur_net_state.retrieve_full()?;
+                cur_net_state.retrieve()?;
             }
 
             self.interfaces.check_sriov_capability()?;
@@ -217,7 +211,7 @@ impl NetworkState {
                         nm_checkpoint_timeout_extend(checkpoint, timeout)?;
                         let mut new_cur_net_state = cur_net_state.clone();
                         new_cur_net_state.set_include_secrets(true);
-                        new_cur_net_state.retrieve_full()?;
+                        new_cur_net_state.retrieve()?;
                         merged_state.verify(&new_cur_net_state)
                     },
                 )
@@ -231,7 +225,7 @@ impl NetworkState {
         let mut cur_net_state = NetworkState::new();
         cur_net_state.set_kernel_only(self.kernel_only);
         cur_net_state.set_include_secrets(true);
-        cur_net_state.retrieve_full()?;
+        cur_net_state.retrieve()?;
 
         let merged_state = MergedNetworkState::new(
             self.clone(),
@@ -252,7 +246,7 @@ impl NetworkState {
                 VERIFY_RETRY_COUNT_KERNEL_MODE,
                 || {
                     let mut new_cur_net_state = cur_net_state.clone();
-                    new_cur_net_state.retrieve_full()?;
+                    new_cur_net_state.retrieve()?;
                     merged_state.verify(&new_cur_net_state)
                 },
             )

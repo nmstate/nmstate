@@ -1166,10 +1166,10 @@ def test_add_port_to_br_with_controller_property(bridge0_with_port0, eth2_up):
     assert br_ports[1][LinuxBridge.Port.NAME] == "eth2"
 
 
-def test_hide_controller_in_show(bridge0_with_port0):
+def test_controller_in_show(bridge0_with_port0):
     current_state = show_only(["eth1"])
     assert current_state[Interface.KEY][0][Interface.NAME] == "eth1"
-    assert Interface.CONTROLLER not in current_state[Interface.KEY][0]
+    assert Interface.CONTROLLER in current_state[Interface.KEY][0]
 
 
 def test_has_controller_prop_but_not_in_port_list():
