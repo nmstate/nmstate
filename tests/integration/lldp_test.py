@@ -335,7 +335,6 @@ def test_show_running_config_has_no_lldp_neighbor(lldptest_up):
             not in lldp_iface_config[LLDP.CONFIG_SUBTREE]
         )
 
-
 @contextmanager
 def lldp_enabled(ifstate):
     lldp_config = ifstate[Interface.KEY][0][LLDP.CONFIG_SUBTREE]

@@ -1268,3 +1268,119 @@ def test_controller_detach_from_linux_bridge(bridge0_with_port0):
         )
         == 0
     )
+
+@pytest.mark.tier1
+def test_modify_interfaces_not_belonging_to_linux_bridge(
+    eth1_eth2_up_with_description,
+):
+    policy = load_yaml(
+        """---
+        capture:
+          primary-nic: interfaces.description == "primary"
+          secondary-nic: interfaces.description == "secondary"
+        desiredState:
+          interfaces:
+            - name: linux-br0
+              type: linux-bridge
+              state: up
+              mac-address: "{{ capture.primary-nic.interfaces.0.mac-address }}"
+              ipv4:
+                dhcp: true
+                enabled: true
+              bridge:
+                options:
+                  stp:
+                    enabled: false
+                port:
+                  - name: "{{ capture.primary-nic.interfaces.0.name }}"
+                  - name: "{{ capture.secondary-nic.interfaces.0.name }}"
+        """
+    )
+    eth2_mac = get_mac_address("eth2")
+    cur_state = libnmstate.show()
+    desired_state = libnmstate.gen_net_state_from_policy(policy, cur_state)
+    print(desired_state)
+    try:
+        libnmstate.apply(desired_state)
+        current_state = show_only([TEST_BRIDGE0])
+        br_iface = current_state[Interface.KEY][0]
+        br_ports = br_iface[LinuxBridge.CONFIG_SUBTREE][
+            LinuxBridge.PORT_SUBTREE
+        ]
+        assert br_iface[Interface.NAME] == TEST_BRIDGE0
+        assert len(br_ports) == 2
+        assert br_ports[0][LinuxBridge.Port.NAME] == "eth1"
+        assert br_ports[1][LinuxBridge.Port.NAME] == "eth2"
+        assert get_mac_address(TEST_BRIDGE0) == eth2_mac
+    finally:
+        libnmstate.apply(
+            load_yaml(
+                """---
+                interfaces:
+                - name: linux-br0
+                  type: linux-bridge
+                  state: absent
+                """
+            ),
+            verify_change=False,
+        )
+
+def test_description_at_interfaces_not_owned_by_linux_bridge(
+    eth1_eth2_up_with_description,
+):
+    create_bridge_state = load_yaml(
+        """---
+        interfaces:
+        - name: eth1
+          description: ""
+        - name: eth2
+          description: ""
+        - name: linux-br0
+          type: linux-bridge
+          state: up
+          ipv4:
+            enable: false
+          bridge:
+            options:
+              stp:
+                enabled: false
+            port:
+              - name: eth1
+        """
+    )
+    change_description_policy = load_yaml(
+        """---
+        capture:
+          fee-nics: interfaces.controller != "linux-br0"
+          free-nics-with-description: captures.free-nics | interfaces.description := "I am free"
+        desiredState:
+          interfaces: "{{ captures.free-nics-with-description}}"
+        """
+    )
+    print(desired_state)
+    try:
+        libnmstate.apply(create_bridge_state)
+        cur_state = libnmstate.show()
+        desired_state = libnmstate.gen_net_state_from_policy(change_description_policy, cur_state)
+        libnmstate.apply(desired_state)
+        current_state = show_only(["eth1", "eth2"])
+        current_state_interfaces := current_state[Interface.KEY]
+        assert current_state_interfaces[0][Interface.NAME] == "eth1"
+        assert current_state_interfaces[0][Interface.DESCRIPTION] == ""
+        assert current_state_interfaces[1][Interface.NAME] == "eth2"
+        assert current_state_interfaces[1][Interface.DESCRIPTION] == "I am free"
+    finally:
+        libnmstate.apply(
+            load_yaml(
+                """---
+                interfaces:
+                - name: linux-br0
+                  type: linux-bridge
+                  state: absent
+                - name: eth2
+                  description: ""
+                """
+            ),
+            verify_change=False,
+        )
+
