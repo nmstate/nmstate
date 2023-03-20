@@ -3,7 +3,7 @@
 use std::collections::{hash_map::Entry, HashMap};
 
 use super::super::nm_dbus::{
-    NmActiveConnection, NmApi, NmConnection, NmSettingsConnectionFlag,
+    self, NmActiveConnection, NmApi, NmConnection, NmSettingsConnectionFlag,
 };
 use super::super::{
     error::nm_error_to_nmstate,
@@ -275,9 +275,15 @@ pub(crate) fn deactivate_nm_profiles(
                 nm_conn.iface_name().unwrap_or(""),
                 nm_conn.iface_type().unwrap_or("")
             );
-            nm_api
-                .connection_deactivate(uuid)
-                .map_err(nm_error_to_nmstate)?;
+            if let Err(e) = nm_api.connection_deactivate(uuid) {
+                if e.kind
+                    != nm_dbus::ErrorKind::Manager(
+                        nm_dbus::NmManagerError::ConnectionNotActive,
+                    )
+                {
+                    return Err(nm_error_to_nmstate(e));
+                }
+            }
         }
     }
     Ok(())
