@@ -141,11 +141,7 @@ pub(crate) fn nm_apply(
         )?;
     }
 
-    activate_nm_profiles(
-        &mut nm_api,
-        nm_conns_to_activate.as_slice(),
-        &nm_acs,
-    )?;
+    activate_nm_profiles(&mut nm_api, nm_conns_to_activate.as_slice())?;
 
     deactivate_nm_profiles(&mut nm_api, nm_conns_to_deactivate.as_slice())?;
 
