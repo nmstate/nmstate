@@ -7,6 +7,7 @@ Requires=NetworkManager.service
 [Service]
 Type=oneshot
 ExecStart=/usr/bin/nmstatectl service
+RemainAfterExit=yes
 
 [Install]
 WantedBy=multi-user.target
