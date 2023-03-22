@@ -10,4 +10,4 @@ ExecStart=/usr/bin/nmstatectl service
 RemainAfterExit=yes
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=NetworkManager.service
