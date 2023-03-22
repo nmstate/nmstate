@@ -15,13 +15,23 @@ pub(crate) fn ncl_service(
         .value_of(crate::CONFIG_FOLDER_KEY)
         .unwrap_or(crate::DEFAULT_SERVICE_FOLDER);
 
-    let config_files = get_config_files(folder)?;
+    let config_files = match get_config_files(folder) {
+        Ok(f) => f,
+        Err(e) => {
+            log::info!(
+                "Failed to read config folder {folder} due to \
+                error {e}, ignoring"
+            );
+            return Ok(String::new());
+        }
+    };
     if config_files.is_empty() {
         log::info!(
             "No nmstate config(end with .{}) found in config folder {}",
             CONFIG_FILE_EXTENTION,
             folder
         );
+        return Ok(String::new());
     }
 
     // Due to bug of NetworkManager, the `After=NetworkManager.service` in
