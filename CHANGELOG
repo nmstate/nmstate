@@ -6,8 +6,6 @@
 ### New features
  - cli: New subcommand `format`. (4f8c1af5)
  - Including `controller` property on query. (85b682e9)
- - Support policy file in service mode. (2dc296e2)
- - clib: Introduce YAML support. (c40cbcb8)
 
 ### Bug fixes
  - Do not use current interface which is unmanaged/external managed. (221521e2)
