@@ -1,4 +1,22 @@
 # Changelog
+## [2.2.9] - 2023-03-23
+### Breaking changes
+ - N/A
+
+### New features
+ - cli: New subcommand `format`. (4f8c1af5)
+ - Including `controller` property on query. (85b682e9)
+ - Support policy file in service mode. (2dc296e2)
+ - clib: Introduce YAML support. (c40cbcb8)
+
+### Bug fixes
+ - Do not use current interface which is unmanaged/external managed. (221521e2)
+ - Fix problem when consuming down interface in bridge/bond/etc. (1728ae21)
+ - cli: Ignore failure when reading /etc/nmstate folder. (2c03f3c1)
+ - nmstate.service: remain after exit. (beb2fee9)
+ - nmstate.service: Fix the dependency chain in systemd. (8bef2741, 9971c1ca)
+ - Fix problem when changing veth peer. (a6a32a3f)
+
 ## [2.2.8] - 2023-03-10
 ### Breaking changes
  - N/A
