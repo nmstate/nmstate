@@ -2,11 +2,13 @@
 Description=Apply nmstate on-disk state
 Documentation=man:nmstate.service(8) https://www.nmstate.io
 After=NetworkManager.service
+Before=network-online.target
 Requires=NetworkManager.service
 
 [Service]
 Type=oneshot
 ExecStart=/usr/bin/nmstatectl service
+RemainAfterExit=yes
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=NetworkManager.service

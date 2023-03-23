@@ -163,7 +163,7 @@ impl InterfaceType {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 /// The state of interface
@@ -936,6 +936,7 @@ impl MergedInterface {
         &mut self,
         ctrl_name: String,
         ctrl_type: Option<InterfaceType>,
+        ctrl_state: InterfaceState,
     ) -> Result<(), NmstateError> {
         if self.merged.need_controller() && ctrl_name.is_empty() {
             if let Some(org_ctrl) = self
@@ -959,6 +960,12 @@ impl MergedInterface {
 
         if !self.is_desired() {
             self.mark_as_changed();
+            if ctrl_state == InterfaceState::Up {
+                self.merged.base_iface_mut().state = InterfaceState::Up;
+                if let Some(apply_iface) = self.for_apply.as_mut() {
+                    apply_iface.base_iface_mut().state = InterfaceState::Up;
+                }
+            }
             log::info!(
                 "Include interface {} to edit as its controller required so",
                 self.merged.name()

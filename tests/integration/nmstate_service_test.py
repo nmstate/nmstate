@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: LGPL-2.1-or-later
 
 import os
+import shutil
 
 import yaml
 import pytest
@@ -105,7 +106,7 @@ def nmstate_etc_config():
 
 
 def test_nmstate_service_apply(nmstate_etc_config):
-    exec_cmd("systemctl start nmstate".split(), check=True)
+    exec_cmd("systemctl restart nmstate".split(), check=True)
 
     desire_state = yaml.load(TEST_YAML2_CONTENT, Loader=yaml.SafeLoader)
     assert_state_match(desire_state)
@@ -150,8 +151,15 @@ def test_nmstate_service_apply_nmpolicy(dummy1_up):
     assert current_state[Interface.KEY][0][Interface.NAME] == DUMMY1
 
     try:
-        exec_cmd("systemctl start nmstate".split(), check=True)
+        exec_cmd("systemctl restart nmstate".split(), check=True)
         assert_absent(DUMMY1)
         assert os.path.isfile(TEST_CONFIG3_APPLIED_FILE_PATH)
     finally:
         os.remove(TEST_CONFIG3_APPLIED_FILE_PATH)
+
+
+def test_nmstate_service_without_etc_folder():
+    if os.path.isdir(CONFIG_DIR):
+        shutil.rmtree(CONFIG_DIR, ignore_errors=True)
+
+    exec_cmd("nmstatectl service".split(), check=True)

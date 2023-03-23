@@ -413,3 +413,39 @@ def test_auto_manage_linux_ignored_ports(unmangaed_dummy1_dummy2):
         BRIDGE0, bridge_subtree_state=bridge_subtree_state
     ) as state:
         assertlib.assert_state_match(state)
+
+
+@pytest.fixture
+def br0_down(eth1_up):
+    with linux_bridge(
+        BRIDGE0,
+        bridge_subtree_state={
+            LB.PORT_SUBTREE: [
+                {
+                    LB.Port.NAME: "eth1",
+                }
+            ],
+            LB.OPTIONS_SUBTREE: {
+                LB.STP_SUBTREE: {
+                    LB.STP.ENABLED: False,
+                }
+            },
+        },
+    ) as state:
+        exec_cmd(f"nmcli c down {BRIDGE0}".split(), check=True)
+        yield state
+
+
+def test_activate_nmcli_down_linux_bridge(br0_down):
+    br0_up_state = br0_down
+    libnmstate.apply(br0_up_state)
+    assertlib.assert_state_match(br0_up_state)
+
+
+def test_create_down_linux_bridge(br0_down):
+    state = br0_down
+    state[Interface.KEY][0][Interface.STATE] = InterfaceState.DOWN
+    libnmstate.apply(state)
+    assertlib.assert_absent(BRIDGE0)
+    exec_cmd(f"nmcli c show {BRIDGE0}".split(), check=True)
+    exec_cmd("nmcli c show eth1".split(), check=True)
