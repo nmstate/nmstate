@@ -42,7 +42,7 @@ fi
 
 if [ $NM_TYPE == "nm_main" ];then
     COPR_ARG="--copr networkmanager/NetworkManager-main"
-elif [ $NM_TYPE == "nm_main" ];then
+elif [ $NM_TYPE == "nm_1_36" ];then
     COPR_ARG="--copr networkmanager/NetworkManager-1.36"
 fi
 
