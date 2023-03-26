@@ -1,24 +1,7 @@
-#
-# Copyright (c) 2020-2021 Red Hat, Inc.
-#
-# This file is part of nmstate
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 2.1 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program. If not, see <https://www.gnu.org/licenses/>.
-#
+# SPDX-License-Identifier: LGPL-2.1-or-later
 
 # This file is targeting:
-#   * Actions required the knownldege of multiple NmProfile
+#   * Actions required the knowledge of multiple NmProfile
 
 import logging
 from operator import attrgetter
@@ -35,6 +18,7 @@ from .device import get_iface_type
 from .device import get_nm_dev
 from .device import is_kernel_iface
 from .dns import get_dns_config_iface_names
+from .dns import apply_global_dns
 from .ipv4 import acs_and_ip_profiles as acs_and_ip4_profiles
 from .ipv6 import acs_and_ip_profiles as acs_and_ip6_profiles
 from .ovs import create_iface_for_nm_ovs_port
@@ -66,6 +50,14 @@ class NmProfiles:
         ]
 
     def apply_config(self, net_state, save_to_disk):
+        if net_state.dns.config_changed:
+            if net_state.use_global_dns:
+                apply_global_dns(
+                    net_state.dns.config_servers, net_state.dns.config_searches
+                )
+            else:
+                apply_global_dns([], [])
+
         self._prepare_state_for_profiles(net_state)
         # The activation order on bridge/bond ports determins their controler's
         # MAC address. The default NetworkManager is using alphabet order on

@@ -1,28 +1,10 @@
-#
-# Copyright (c) 2019-2021 Red Hat, Inc.
-#
-# This file is part of nmstate
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 2.1 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program. If not, see <https://www.gnu.org/licenses/>.
-#
+# SPDX-License-Identifier: LGPL-2.1-or-later
 
 import json
 
 import pytest
 
 import libnmstate
-from libnmstate.error import NmstateNotImplementedError
 from libnmstate.schema import DNS
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
@@ -118,33 +100,19 @@ def test_dns_edit_ipv6_nameserver_before_ipv4():
         (IPV6_DNS_NAMESERVERS + [EXTRA_IPV6_DNS_NAMESERVER]),
         (IPV4_DNS_NAMESERVERS + [EXTRA_IPV6_DNS_NAMESERVER]),
         (IPV6_DNS_NAMESERVERS + [EXTRA_IPV4_DNS_NAMESERVER]),
-        pytest.param(
-            (
-                [
-                    IPV4_DNS_NAMESERVERS[0],
-                    EXTRA_IPV6_DNS_NAMESERVER,
-                    IPV4_DNS_NAMESERVERS[1],
-                ]
-            ),
-            marks=pytest.mark.xfail(
-                reason="Not supported",
-                raises=NmstateNotImplementedError,
-                strict=True,
-            ),
+        (
+            [
+                IPV4_DNS_NAMESERVERS[0],
+                EXTRA_IPV6_DNS_NAMESERVER,
+                IPV4_DNS_NAMESERVERS[1],
+            ]
         ),
-        pytest.param(
-            (
-                [
-                    IPV6_DNS_NAMESERVERS[0],
-                    EXTRA_IPV4_DNS_NAMESERVER,
-                    IPV6_DNS_NAMESERVERS[1],
-                ]
-            ),
-            marks=pytest.mark.xfail(
-                reason="Not supported",
-                raises=NmstateNotImplementedError,
-                strict=True,
-            ),
+        (
+            [
+                IPV6_DNS_NAMESERVERS[0],
+                EXTRA_IPV4_DNS_NAMESERVER,
+                IPV6_DNS_NAMESERVERS[1],
+            ]
         ),
         (IPV4_DNS_NAMESERVERS + IPV6_DNS_NAMESERVERS),
         (IPV6_DNS_NAMESERVERS + IPV4_DNS_NAMESERVERS),

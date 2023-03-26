@@ -1,30 +1,17 @@
-#
-# Copyright (c) 2019-2020 Red Hat, Inc.
-#
-# This file is part of nmstate
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 2.1 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program. If not, see <https://www.gnu.org/licenses/>.
-#
+# SPDX-License-Identifier: LGPL-2.1-or-later
 
 from itertools import chain
 from operator import itemgetter
 
 from libnmstate import iplib
 from libnmstate.dns import DnsState
+from libnmstate.error import NmstateDependencyError
 from libnmstate.error import NmstateInternalError
 from libnmstate.schema import DNS
 from libnmstate.schema import Interface
+
+from .common import GLib
+from .common import Gio
 
 
 DNS_DEFAULT_PRIORITY_VPN = 50
@@ -38,6 +25,12 @@ IPV6_ADDRESS_LENGTH = 128
 
 
 def get_running(context):
+    global_dns = get_global_dns()
+    if global_dns:
+        return {
+            DNS.SERVER: global_dns[0],
+            DNS.SEARCH: global_dns[1],
+        }
     dns_state = {DNS.SERVER: [], DNS.SEARCH: []}
     for dns_conf in context.get_dns_configuration():
         iface_name = dns_conf.get_interface()
@@ -67,6 +60,12 @@ def get_running(context):
 
 
 def get_running_config(applied_configs):
+    global_dns = get_global_dns()
+    if global_dns:
+        return {
+            DNS.SERVER: global_dns[0],
+            DNS.SEARCH: global_dns[1],
+        }
     dns_conf = {DNS.SERVER: [], DNS.SEARCH: []}
     tmp_dns_confs = _get_dns_config(applied_configs, Interface.IPV6)
     tmp_dns_confs.extend(_get_dns_config(applied_configs, Interface.IPV4))
@@ -140,3 +139,124 @@ def get_dns_config_iface_names(acs_and_ipv4_profiles, acs_and_ipv6_profiles):
             except IndexError:
                 continue
     return iface_names
+
+
+def start_nm_dns_proxy():
+    bus = Gio.bus_get_sync(Gio.BusType.SYSTEM, None)
+
+    return Gio.DBusProxy.new_sync(
+        bus,
+        Gio.DBusProxyFlags.NONE,
+        None,
+        "org.freedesktop.NetworkManager",
+        "/org/freedesktop/NetworkManager",
+        "org.freedesktop.NetworkManager",
+        None,
+    )
+
+
+def apply_global_dns(servers, searches):
+    proxy = start_nm_dns_proxy()
+    if servers or searches:
+        servers_value = GLib.Variant(
+            "a{sv}",
+            {
+                "*": GLib.Variant(
+                    "a{sv}", {"servers": GLib.Variant("as", servers)}
+                )
+            },
+        )
+        searches_value = GLib.Variant("as", searches)
+        para = GLib.Variant(
+            "a{sv}", {"searches": searches_value, "domains": servers_value}
+        )
+    else:
+        # This is special value for removing global DNS settings
+        para = GLib.Variant("a{sv}", {})
+
+    use_default_timeout = -1
+    cancellable = None
+    try:
+        proxy.call_sync(
+            "org.freedesktop.DBus.Properties.Set",
+            GLib.Variant(
+                "(ssv)",
+                (
+                    "org.freedesktop.NetworkManager",
+                    "GlobalDnsConfiguration",
+                    para,
+                ),
+            ),
+            Gio.DBusCallFlags.NONE,
+            use_default_timeout,
+            cancellable,
+        )
+    except GLib.GError as e:
+        # pylint: disable=no-member
+        if (
+            "GDBus.Error:org.freedesktop.DBus.Error.ServiceUnknown"
+            in e.message
+        ):
+            raise NmstateDependencyError(
+                "NetworkManager daemon is not running which is required for "
+                "NetworkManager plugin"
+            )
+        else:
+            raise NmstateInternalError(
+                "Failed to apply global DNS config to "
+                f"NetworkManager : error={e}"
+            )
+        # pylint: enable=no-member
+
+
+def get_global_dns():
+    """
+    Return None if no global DNS
+    Return (servers, searches)
+    """
+    proxy = start_nm_dns_proxy()
+
+    use_default_timeout = -1
+    cancellable = None
+    try:
+        reply = proxy.call_sync(
+            "org.freedesktop.DBus.Properties.Get",
+            GLib.Variant(
+                "(ss)",
+                (
+                    "org.freedesktop.NetworkManager",
+                    "GlobalDnsConfiguration",
+                ),
+            ),
+            Gio.DBusCallFlags.NONE,
+            use_default_timeout,
+            cancellable,
+        ).unpack()
+    except GLib.GError as e:
+        # pylint: disable=no-member
+        if (
+            "GDBus.Error:org.freedesktop.DBus.Error.ServiceUnknown"
+            in e.message
+        ):
+            raise NmstateDependencyError(
+                "NetworkManager daemon is not running which is required for "
+                "NetworkManager plugin"
+            )
+        else:
+            raise NmstateInternalError(
+                "Failed to get global DNS config from "
+                f"NetworkManager : error={e}"
+            )
+        # pylint: enable=no-member
+
+    try:
+        reply = reply[0]
+    except IndexError:
+        return None
+
+    searches = reply.get("searches", [])
+    servers = reply.get("domains", {}).get("*", {}).get("servers", [])
+    if servers or searches:
+        return (servers, searches)
+    else:
+        return None

@@ -83,8 +83,14 @@ def apply(
             copy.deepcopy(desired_state), plugins_capabilities(plugins)
         )
         ignored_ifnames = _get_ignored_interface_names(plugins)
+        ignored_dns_ifaces = _get_ignored_dns_ifaces(plugins)
         net_state = NetState(
-            desired_state, ignored_ifnames, current_state, save_to_disk
+            desired_state,
+            ignored_ifnames=ignored_ifnames,
+            current_state=current_state,
+            save_to_disk=save_to_disk,
+            gen_conf_mode=False,
+            ignored_dns_ifaces=ignored_dns_ifaces,
         )
         checkpoints = create_checkpoints(plugins, rollback_timeout)
         # When we have VF count changes and missing eth, it might be user
@@ -98,6 +104,7 @@ def apply(
                     ignored_ifnames,
                     current_state,
                     save_to_disk,
+                    ignored_dns_ifaces=ignored_dns_ifaces,
                 )
                 _apply_ifaces_state(
                     plugins,
@@ -119,6 +126,7 @@ def apply(
                     ignored_ifnames,
                     current_state,
                     save_to_disk,
+                    ignored_dns_ifaces=ignored_dns_ifaces,
                 )
 
         if net_state.ifaces.has_sriov_iface():
@@ -193,6 +201,15 @@ def _get_ignored_interface_names(plugins):
     ifaces = set()
     for plugin in plugins:
         for iface_name in plugin.get_ignored_kernel_interface_names():
+            ifaces.add(iface_name)
+
+    return ifaces
+
+
+def _get_ignored_dns_ifaces(plugins):
+    ifaces = set()
+    for plugin in plugins:
+        for iface_name in plugin.get_ignored_iface_for_dns():
             ifaces.add(iface_name)
 
     return ifaces
