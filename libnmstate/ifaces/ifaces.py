@@ -734,8 +734,14 @@ class Ifaces:
                             )
                         )
 
-    def gen_dns_metadata(self, dns_state, route_state):
-        iface_metadata = dns_state.gen_metadata(self, route_state)
+    def gen_dns_metadata(
+        self, dns_state, route_state, ignored_dns_ifaces=None
+    ):
+        if ignored_dns_ifaces is None:
+            ignored_dns_ifaces = []
+        iface_metadata = dns_state.gen_metadata(
+            self, route_state, ignored_dns_ifaces
+        )
         for iface_name, dns_metadata in iface_metadata.items():
             self._kernel_ifaces[iface_name].store_dns_metadata(dns_metadata)
             if dns_state.config_changed:

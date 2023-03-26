@@ -1,25 +1,11 @@
-#
-# Copyright (c) 2020-2021 Red Hat, Inc.
-#
-# This file is part of nmstate
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 2.1 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program. If not, see <https://www.gnu.org/licenses/>.
-#
+# SPDX-License-Identifier: LGPL-2.1-or-later
 
 import copy
+import logging
 
+from libnmstate.error import NmstateValueError
 from libnmstate.error import NmstateVerificationError
+from libnmstate.error import NmstateNotImplementedError
 from libnmstate.prettystate import format_desired_current_state_diff
 from libnmstate.schema import DNS
 from libnmstate.schema import Interface
@@ -37,11 +23,13 @@ class NetState:
     def __init__(
         self,
         desire_state,
-        ignored_ifnames=[],
+        ignored_ifnames=None,
         current_state=None,
         save_to_disk=True,
         gen_conf_mode=False,
+        ignored_dns_ifaces=None,
     ):
+        self.use_global_dns = False
         if current_state is None:
             current_state = {}
         self._ifaces = Ifaces(
@@ -50,6 +38,10 @@ class NetState:
             save_to_disk,
             gen_conf_mode,
         )
+        if ignored_ifnames is None:
+            ignored_ifnames = []
+        if ignored_dns_ifaces is None:
+            ignored_dns_ifaces = []
         if not gen_conf_mode:
             self._mark_ignored_kernel_ifaces(ignored_ifnames)
         self._route = RouteState(
@@ -69,7 +61,39 @@ class NetState:
         self.desire_state = copy.deepcopy(desire_state)
         self.current_state = copy.deepcopy(current_state)
         if self.desire_state:
-            self._ifaces.gen_dns_metadata(self._dns, self._route)
+            if self._dns.is_46_mixed_dns_servers():
+                if gen_conf_mode:
+                    raise NmstateNotImplementedError(
+                        "Placing IPv4/IPv6 nameserver in the middle of "
+                        "IPv6/IPv4 nameservers is not supported yet"
+                    )
+                else:
+                    logging.warning(
+                        "Cannot stored IPv4 IPv6 mixed DNS server into "
+                        "interface profile, using global DNS"
+                    )
+                    logging.warning(
+                        "Storing DNS to NetworkManager via global dns API, "
+                        "this will cause __all__ interface level DNS settings "
+                        "been ignored"
+                    )
+                    self.use_global_dns = True
+            else:
+                try:
+                    self._ifaces.gen_dns_metadata(
+                        self._dns, self._route, ignored_dns_ifaces
+                    )
+                except NmstateValueError as e:
+                    if gen_conf_mode:
+                        raise e
+                    else:
+                        logging.warning(
+                            "Storing DNS to NetworkManager via global DNS "
+                            "API, this will cause __all__ interface level "
+                            "DNS settings been ignored"
+                        )
+                        self.use_global_dns = True
+
             self._ifaces.gen_route_metadata(self._route)
             self._ifaces.gen_route_rule_metadata(self._route_rule, self._route)
             # DND/Route/RouteRule might introduced new changed interface

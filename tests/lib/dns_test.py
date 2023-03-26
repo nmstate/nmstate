@@ -1,27 +1,9 @@
-#
-# Copyright (c) 2020 Red Hat, Inc.
-#
-# This file is part of nmstate
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 2.1 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program. If not, see <https://www.gnu.org/licenses/>.
-#
+# SPDX-License-Identifier: LGPL-2.1-or-later
 
 from copy import deepcopy
 
 import pytest
 
-from libnmstate.error import NmstateNotImplementedError
 from libnmstate.error import NmstateValueError
 from libnmstate.error import NmstateVerificationError
 from libnmstate.schema import DNS
@@ -219,22 +201,8 @@ class TestDnsState:
             ([IPV6_DNS_SERVER1, IPV6_DNS_SERVER2, IPV6_DNS_SERVER3]),
             ([IPV4_DNS_SERVER1, IPV4_DNS_SERVER2, IPV6_DNS_SERVER1]),
             ([IPV6_DNS_SERVER1, IPV6_DNS_SERVER2, IPV4_DNS_SERVER1]),
-            pytest.param(
-                ([IPV4_DNS_SERVER1, IPV6_DNS_SERVER1, IPV4_DNS_SERVER2]),
-                marks=pytest.mark.xfail(
-                    reason="Not supported",
-                    raises=NmstateNotImplementedError,
-                    strict=True,
-                ),
-            ),
-            pytest.param(
-                ([IPV6_DNS_SERVER1, IPV4_DNS_SERVER1, IPV6_DNS_SERVER2]),
-                marks=pytest.mark.xfail(
-                    reason="Not supported",
-                    raises=NmstateNotImplementedError,
-                    strict=True,
-                ),
-            ),
+            ([IPV4_DNS_SERVER1, IPV6_DNS_SERVER1, IPV4_DNS_SERVER2]),
+            ([IPV6_DNS_SERVER1, IPV4_DNS_SERVER1, IPV6_DNS_SERVER2]),
             (
                 [
                     IPV4_DNS_SERVER1,
