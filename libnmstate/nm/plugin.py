@@ -22,6 +22,7 @@ from .common import NM
 from .context import NmContext
 from .device import get_device_common_info
 from .device import get_iface_type
+from .device import is_externally_managed
 from .device import is_kernel_iface
 from .device import list_devices
 from .dns import get_running as get_dns_running
@@ -305,6 +306,19 @@ class NetworkManagerPlugin(NmstatePlugin):
                 and nm_dev.get_iface()
                 and not nm_dev.get_managed()
                 and is_kernel_iface(nm_dev)
+            ):
+                ignored_ifaces.add(nm_dev.get_iface())
+        return list(ignored_ifaces)
+
+    # Unmanaged and external managed interface are not suitable for storing DNS
+    def get_ignored_iface_for_dns(self):
+        ignored_ifaces = set()
+        for nm_dev in list_devices(self.client):
+            if (
+                nm_dev
+                and nm_dev.get_iface()
+                and is_kernel_iface(nm_dev)
+                and (not nm_dev.get_managed() or is_externally_managed(nm_dev))
             ):
                 ignored_ifaces.add(nm_dev.get_iface())
         return list(ignored_ifaces)
