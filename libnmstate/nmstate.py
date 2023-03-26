@@ -92,9 +92,12 @@ def show_with_plugins(
         plugins, NmstatePlugin.PLUGIN_CAPABILITY_DNS
     )
     if dns_plugin:
-        report[DNS.KEY] = dns_plugin.get_dns_client_config()
-        if info_type != _INFO_TYPE_RUNNING:
-            report[DNS.KEY].pop(DNS.RUNNING, None)
+        try:
+            report[DNS.KEY] = dns_plugin.get_dns_client_config()
+            if info_type != _INFO_TYPE_RUNNING:
+                report[DNS.KEY].pop(DNS.RUNNING, None)
+        except NmstateDependencyError:
+            pass
 
     for plugin in plugins:
         report.update(plugin.get_global_state())
