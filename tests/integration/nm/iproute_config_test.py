@@ -29,12 +29,14 @@ from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import InterfaceState
+from libnmstate.schema import InterfaceType
 from libnmstate.schema import Route
 
 from ..testlib import cmdlib
-from ..testlib.dummy import nm_unmanaged_dummy
 from ..testlib.assertlib import assert_absent
 from ..testlib.assertlib import assert_state_match
+from ..testlib.dummy import nm_unmanaged_dummy
+from ..testlib.iproutelib import iproute_get_ip_addrs_with_order
 from ..testlib.statelib import show_only
 
 BOND99 = "bond99"
@@ -275,3 +277,48 @@ def test_external_managed_iface_with_autoconf_enabled(
             ]
         }
     )
+
+
+@pytest.fixture
+def external_managed_dummy1_with_ips():
+    cmdlib.exec_cmd(f"ip link add {DUMMY1} type dummy".split(), check=True)
+    cmdlib.exec_cmd(f"ip link set {DUMMY1} up".split(), check=True)
+    cmdlib.exec_cmd(
+        f"ip addr add {IPV4_ADDRESS2}/24 dev {DUMMY1}".split(),
+        check=True,
+    )
+    cmdlib.exec_cmd(
+        f"ip addr add {IPV4_ADDRESS1}/24 dev {DUMMY1}".split(),
+        check=True,
+    )
+    yield
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: DUMMY1,
+                    Interface.STATE: InterfaceState.ABSENT,
+                }
+            ]
+        }
+    )
+    cmdlib.exec_cmd(f"ip link del {DUMMY1}".split(), check=False)
+
+
+def test_perserve_ip_order_of_external_managed_nic(
+    external_managed_dummy1_with_ips,
+):
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: DUMMY1,
+                    Interface.TYPE: InterfaceType.DUMMY,
+                    Interface.STATE: InterfaceState.UP,
+                }
+            ]
+        }
+    )
+    ip_addrs = iproute_get_ip_addrs_with_order(iface=DUMMY1, is_ipv6=False)
+    assert ip_addrs[0] == IPV4_ADDRESS2
+    assert ip_addrs[1] == IPV4_ADDRESS1
