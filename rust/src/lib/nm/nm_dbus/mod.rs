@@ -7,7 +7,6 @@ mod convert;
 mod dbus;
 #[cfg(feature = "query_apply")]
 mod dbus_proxy;
-#[cfg(feature = "query_apply")]
 mod device;
 #[cfg(feature = "query_apply")]
 mod dns;
@@ -19,10 +18,12 @@ mod nm_api;
 
 #[cfg(feature = "gen_conf")]
 mod gen_conf;
-
-pub use self::active_connection::NmActiveConnection;
 #[cfg(feature = "query_apply")]
-pub use self::active_connection::NM_ACTIVATION_STATE_FLAG_EXTERNAL;
+mod query_apply;
+
+pub use self::active_connection::{
+    NmActiveConnection, NM_ACTIVATION_STATE_FLAG_EXTERNAL,
+};
 pub use self::connection::{
     NmConnection, NmIpRoute, NmIpRouteRule, NmIpRouteRuleAction, NmRange,
     NmSetting8021X, NmSettingBond, NmSettingBridge, NmSettingBridgePort,
@@ -34,7 +35,6 @@ pub use self::connection::{
     NmSettingUser, NmSettingVeth, NmSettingVlan, NmSettingVrf, NmSettingVxlan,
     NmSettingWired, NmSettingsConnectionFlag, NmVlanProtocol,
 };
-#[cfg(feature = "query_apply")]
 pub use self::device::{NmDevice, NmDeviceState, NmDeviceStateReason};
 #[cfg(feature = "query_apply")]
 pub use self::dns::{NmDnsEntry, NmGlobalDnsConfig};

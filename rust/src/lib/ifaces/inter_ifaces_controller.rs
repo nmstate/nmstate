@@ -157,7 +157,7 @@ impl MergedInterfaces {
     pub(crate) fn handle_changed_ports(&mut self) -> Result<(), NmstateError> {
         let mut pending_changes: HashMap<
             String,
-            (String, Option<InterfaceType>),
+            (String, Option<InterfaceType>, InterfaceState),
         > = HashMap::new();
         for iface in self.iter() {
             if !iface.is_desired() || !iface.merged.is_controller() {
@@ -172,6 +172,7 @@ impl MergedInterfaces {
                         (
                             iface.merged.name().to_string(),
                             Some(iface.merged.iface_type()),
+                            iface.merged.base_iface().state,
                         ),
                     );
                 }
@@ -181,12 +182,20 @@ impl MergedInterfaces {
                     // port, we don't override it.
                     pending_changes
                         .entry(port_name.to_string())
-                        .or_insert_with(|| (String::new(), None));
+                        .or_insert_with(|| {
+                            (
+                                String::new(),
+                                None,
+                                iface.merged.base_iface().state,
+                            )
+                        });
                 }
             }
         }
 
-        for (iface_name, (ctrl_name, ctrl_type)) in pending_changes.drain() {
+        for (iface_name, (ctrl_name, ctrl_type, ctrl_state)) in
+            pending_changes.drain()
+        {
             if let Some(iface) = self.kernel_ifaces.get_mut(&iface_name) {
                 if !iface.is_changed() {
                     self.insert_order.push((
@@ -194,7 +203,7 @@ impl MergedInterfaces {
                         iface.merged.iface_type(),
                     ));
                 }
-                iface.apply_ctrller_change(ctrl_name, ctrl_type)?;
+                iface.apply_ctrller_change(ctrl_name, ctrl_type, ctrl_state)?;
             } else {
                 // OVS internal interface could be created by its controller OVS
                 // Bridge
@@ -240,8 +249,10 @@ impl MergedInterfaces {
     pub(crate) fn resolve_port_iface_controller_type(
         &mut self,
     ) -> Result<(), NmstateError> {
-        let mut pending_changes: HashMap<String, (String, InterfaceType)> =
-            HashMap::new();
+        let mut pending_changes: HashMap<
+            String,
+            (String, InterfaceType, InterfaceState),
+        > = HashMap::new();
         // Port interface can only kernel interface
         for iface in self
             .kernel_ifaces
@@ -278,6 +289,7 @@ impl MergedInterfaces {
                             (
                                 ctrl_name.to_string(),
                                 ctrl_iface.merged.iface_type(),
+                                ctrl_iface.merged.base_iface().state,
                             ),
                         );
                     }
@@ -295,9 +307,15 @@ impl MergedInterfaces {
                 }
             }
         }
-        for (iface_name, (ctrl_name, ctrl_type)) in pending_changes.drain() {
+        for (iface_name, (ctrl_name, ctrl_type, ctrl_state)) in
+            pending_changes.drain()
+        {
             if let Some(iface) = self.kernel_ifaces.get_mut(&iface_name) {
-                iface.apply_ctrller_change(ctrl_name, Some(ctrl_type))?;
+                iface.apply_ctrller_change(
+                    ctrl_name,
+                    Some(ctrl_type),
+                    ctrl_state,
+                )?;
             }
         }
         Ok(())

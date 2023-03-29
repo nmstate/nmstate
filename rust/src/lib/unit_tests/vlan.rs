@@ -2,6 +2,7 @@
 
 use crate::{
     ErrorKind, InterfaceType, Interfaces, MergedInterfaces, VlanInterface,
+    VlanProtocol,
 };
 
 #[test]
@@ -180,4 +181,35 @@ fn test_vlan_orphan_has_now_parent() {
     .unwrap();
 
     MergedInterfaces::new(desired, current, false, false).unwrap();
+}
+
+#[test]
+fn test_vlan_update() {
+    let mut iface1: VlanInterface = serde_yaml::from_str(
+        r#"---
+        name: bond0.100
+        type: vlan
+        vlan:
+          base-iface: bond0
+          id: 100"#,
+    )
+    .unwrap();
+
+    let iface2: VlanInterface = serde_yaml::from_str(
+        r#"---
+        name: bond0.100
+        type: vlan
+        vlan:
+          base-iface: bond0
+          id: 100
+          protocol: 802.1q"#,
+    )
+    .unwrap();
+
+    iface1.update_vlan(&iface2);
+
+    assert_eq!(
+        iface1.vlan.as_ref().unwrap().protocol,
+        Some(VlanProtocol::Ieee8021Q)
+    );
 }

@@ -35,6 +35,7 @@ class Route:
     NEXT_HOP_INTERFACE = "next-hop-interface"
     NEXT_HOP_ADDRESS = "next-hop-address"
     METRIC = "metric"
+    WEIGHT = "weight"
     USE_DEFAULT_METRIC = -1
     USE_DEFAULT_ROUTE_TABLE = 0
 
@@ -144,6 +145,7 @@ class InterfaceIPv6(InterfaceIP):
     ADDR_GEN_MODE = "addr-gen-mode"
     ADDR_GEN_MODE_EUI64 = "eui64"
     ADDR_GEN_MODE_STABLE_PRIVACY = "stable-privacy"
+    TOKEN = "token"
 
 
 class Bond:
@@ -279,6 +281,7 @@ class VLAN:
 
     ID = "id"
     BASE_IFACE = "base-iface"
+    PROTOCOL = "protocol"
     PROTOCOL_802_1AD = "802.1ad"
     PROTOCOL_802_1Q = "802.1q"
 
@@ -289,6 +292,8 @@ class VXLAN:
 
     ID = "id"
     BASE_IFACE = "base-iface"
+    LEARNING = "learning"
+    LOCAL = "local"
     REMOTE = "remote"
     DESTINATION_PORT = "destination-port"
 
@@ -312,6 +317,8 @@ class OVSInterface(OvsDB):
     class Dpdk:
         DEVARGS = "devargs"
         RX_QUEUE = "rx-queue"
+        N_RXQ_DESC = "n_rxq_desc"
+        N_TXQ_DESC = "n_txq_desc"
 
 
 class OVSBridge(Bridge, OvsDB):
@@ -330,6 +337,7 @@ class OVSBridge(Bridge, OvsDB):
         class LinkAggregation:
             MODE = "mode"
             PORT_SUBTREE = "port"
+            OVS_DB_SUBTREE = "ovs-db"
 
             class Port:
                 NAME = "name"

@@ -3,7 +3,7 @@
 use std::collections::{hash_map::Entry, HashMap};
 
 use super::super::nm_dbus::{
-    NmActiveConnection, NmApi, NmConnection, NmSettingsConnectionFlag,
+    self, NmApi, NmConnection, NmSettingsConnectionFlag,
 };
 use super::super::{
     error::nm_error_to_nmstate,
@@ -122,9 +122,11 @@ pub(crate) fn save_nm_profiles(
 pub(crate) fn activate_nm_profiles(
     nm_api: &mut NmApi,
     nm_conns: &[NmConnection],
-    nm_acs: &[NmActiveConnection],
 ) -> Result<(), NmstateError> {
     let mut nm_conns = nm_conns.to_vec();
+    let nm_acs = nm_api
+        .active_connections_get()
+        .map_err(nm_error_to_nmstate)?;
     let nm_ac_uuids: Vec<&str> =
         nm_acs.iter().map(|nm_ac| &nm_ac.uuid as &str).collect();
 
@@ -275,9 +277,15 @@ pub(crate) fn deactivate_nm_profiles(
                 nm_conn.iface_name().unwrap_or(""),
                 nm_conn.iface_type().unwrap_or("")
             );
-            nm_api
-                .connection_deactivate(uuid)
-                .map_err(nm_error_to_nmstate)?;
+            if let Err(e) = nm_api.connection_deactivate(uuid) {
+                if e.kind
+                    != nm_dbus::ErrorKind::Manager(
+                        nm_dbus::NmManagerError::ConnectionNotActive,
+                    )
+                {
+                    return Err(nm_error_to_nmstate(e));
+                }
+            }
         }
     }
     Ok(())

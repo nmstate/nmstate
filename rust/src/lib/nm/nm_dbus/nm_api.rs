@@ -11,13 +11,13 @@ use super::{
     },
     connection::{nm_con_get_from_obj_path, NmConnection},
     dbus::NmDbus,
-    device::{
-        nm_dev_delete, nm_dev_from_obj_path, nm_dev_get_llpd, NmDevice,
-        NmDeviceState, NmDeviceStateReason,
-    },
+    device::{NmDevice, NmDeviceState, NmDeviceStateReason},
     dns::{NmDnsEntry, NmGlobalDnsConfig},
     error::{ErrorKind, NmError},
     lldp::NmLldpNeighbor,
+    query_apply::device::{
+        nm_dev_delete, nm_dev_from_obj_path, nm_dev_get_llpd,
+    },
 };
 
 pub struct NmApi<'a> {
