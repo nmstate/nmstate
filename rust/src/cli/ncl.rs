@@ -9,6 +9,8 @@ mod format;
 #[cfg(feature = "gen_conf")]
 mod gen_conf;
 #[cfg(feature = "query_apply")]
+pub(crate) mod persist_nic;
+#[cfg(feature = "query_apply")]
 mod policy;
 #[cfg(feature = "query_apply")]
 mod query;
@@ -49,6 +51,7 @@ const SUB_CMD_EDIT: &str = "edit";
 const SUB_CMD_VERSION: &str = "version";
 const SUB_CMD_AUTOCONF: &str = "autoconf";
 const SUB_CMD_SERVICE: &str = "service";
+const SUB_CMD_PERSIST_NIC_NAMES: &str = "persist-nic-names";
 const SUB_CMD_POLICY: &str = "policy";
 const SUB_CMD_FORMAT: &str = "format";
 
@@ -61,7 +64,7 @@ fn main() {
         print_result_and_exit(autoconf(&argv[1..]));
     }
 
-    let matches = clap::Command::new(APP_NAME)
+    let mut app = clap::Command::new(APP_NAME)
         .version(clap::crate_version!())
         .author("Gris Ge <fge@redhat.com>")
         .about("Command line of nmstate")
@@ -317,7 +320,40 @@ fn main() {
         .subcommand(
             clap::Command::new(SUB_CMD_VERSION)
             .about("Show version")
-       ).get_matches();
+       );
+    if cfg!(feature = "query_apply") {
+        app = app.subcommand(
+        clap::Command::new(SUB_CMD_PERSIST_NIC_NAMES)
+            .about("Generate .link files which persist active network interfaces to their current names")
+            .arg(
+                clap::Arg::new("DRY_RUN")
+                    .long("dry-run")
+                    .takes_value(false)
+                    .help(
+                        "Only output changes that would be made",
+                    ),
+            )
+            .arg(
+                clap::Arg::new("INSPECT")
+                    .long("inspect")
+                    .takes_value(false)
+                    .help(
+                        "Print the state of any persisted nics",
+                    ),
+            )
+            .arg(
+                clap::Arg::new("ROOT")
+                    .long("root")
+                    .short('r')
+                    .required(false)
+                    .takes_value(true)
+                    .default_value("/")
+                    .help("Target root filesystem for writing state"),
+            )
+            // We don't want to expose this outside of OCP yet
+            .hide(true));
+    };
+    let matches = app.get_matches();
     let (log_module_filters, log_level) =
         match matches.occurrences_of("verbose") {
             0 => (vec!["nmstate", "nm_dbus"], LevelFilter::Info),
@@ -387,6 +423,26 @@ fn main() {
             APP_NAME,
             clap::crate_version!()
         )));
+    } else {
+        // Conditionally-built commands
+        #[cfg(feature = "query_apply")]
+        if let Some(matches) =
+            matches.subcommand_matches(SUB_CMD_PERSIST_NIC_NAMES)
+        {
+            let action =
+                if matches.try_contains_id("DRY_RUN").unwrap_or_default() {
+                    persist_nic::PersistAction::DryRun
+                } else if matches.try_contains_id("INSPECT").unwrap_or_default()
+                {
+                    persist_nic::PersistAction::Inspect
+                } else {
+                    persist_nic::PersistAction::Save
+                };
+            print_result_and_exit(crate::persist_nic::run_persist_immediately(
+                matches.value_of("ROOT").unwrap(),
+                action,
+            ));
+        }
     }
 }
 
