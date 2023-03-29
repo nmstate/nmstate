@@ -1,4 +1,19 @@
 # Changelog
+## [1.4.3] - 2023-03-29
+### Breaking changes
+ - N/A
+
+### New features
+ - Introduced YAML support into rust C binding. (c73bff8d)
+ - Support NetworkManager global DNS. (155a4cfe)
+
+### Bug fixes
+ - Fix SR-IOV problem. (4acfc16d)
+ - Ignore error when creating profile if not desired. (ab45fb81)
+ - Fix typo in supported ethtool features tx-gro -> rx-gro. (dd8fa7c7)
+ - Preserver IP when converting unmanaged interface to managed. (b4c30ab0)
+ - Fix error when server has static DNS search with auto DNS server. (647834df)
+
 ## [1.4.2] - 2023-02-18
 
 ### New features
