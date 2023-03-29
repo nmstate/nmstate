@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use std::ffi::OsStr;
-use std::io::{BufReader, Write};
+use std::io::BufReader;
 use std::path::{Path, PathBuf};
 
 use nmstate::{InterfaceType, NetworkState};
@@ -188,18 +188,12 @@ fn pin_iface_name_via_systemd_link(
     // 99-default.link
     let file_path = link_dir.join(format!("98-{iface_name}.link"));
 
-    let mut fd = std::fs::OpenOptions::new()
-        .write(true)
-        .truncate(true)
-        .create(true)
-        .open(&file_path)
-        .map_err(|e| {
-            CliError::from(format!(
-                "Failed to store captured states to file {}: {e}",
-                file_path.display()
-            ))
-        })?;
-    fd.write_all(content.as_bytes())?;
+    std::fs::write(&file_path, content.as_bytes()).map_err(|e| {
+        CliError::from(format!(
+            "Failed to store captured states to file {}: {e}",
+            file_path.display()
+        ))
+    })?;
     log::info!(
         "Systemd network link file created at {}",
         file_path.display()
