@@ -196,7 +196,7 @@ impl InterfaceIpv4 {
         self.enabled && self.dhcp == Some(true)
     }
 
-    pub(crate) fn is_static(&self) -> bool {
+    pub fn is_static(&self) -> bool {
         self.enabled
             && !self.is_auto()
             && !self.addresses.as_deref().unwrap_or_default().is_empty()
@@ -519,7 +519,7 @@ impl InterfaceIpv6 {
         self.enabled && (self.dhcp == Some(true) || self.autoconf == Some(true))
     }
 
-    pub(crate) fn is_static(&self) -> bool {
+    pub fn is_static(&self) -> bool {
         self.enabled
             && !self.is_auto()
             && !self.addresses.as_deref().unwrap_or_default().is_empty()

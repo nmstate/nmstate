@@ -89,7 +89,7 @@ fn get_config_files(folder: &str) -> Result<Vec<PathBuf>, CliError> {
 }
 
 // rename file by adding a suffix `.applied`.
-fn relocate_file(file_path: &Path) -> Result<(), CliError> {
+pub(crate) fn relocate_file(file_path: &Path) -> Result<(), CliError> {
     let new_path = file_path.with_extension(RELOCATE_FILE_EXTENTION);
     std::fs::rename(file_path, &new_path)?;
     log::info!(
