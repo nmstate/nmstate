@@ -140,26 +140,30 @@ fn pin_iface_name(cfg_dir: &Path) -> Result<(), CliError> {
             Some(c) => c,
             None => continue,
         };
+        // If a NIC with this name already exists in the old state, then we have
+        // nothing to do.
         if pin_state
             .interfaces
             .get_iface(cur_iface.name(), cur_iface.iface_type())
-            .is_none()
+            .is_some()
         {
-            for pin_iface in pin_state
-                .interfaces
-                .iter()
-                .filter(|i| i.iface_type() == InterfaceType::Ethernet)
+            continue;
+        }
+        // Look through the pin state for an ethernet device which matches this MAC address.
+        for pin_iface in pin_state
+            .interfaces
+            .iter()
+            .filter(|i| i.iface_type() == InterfaceType::Ethernet)
+        {
+            if pin_iface.base_iface().mac_address.as_ref() == Some(cur_mac)
+                && pin_iface.name() != cur_iface.name()
             {
-                if pin_iface.base_iface().mac_address.as_ref() == Some(cur_mac)
-                    && pin_iface.name() != cur_iface.name()
-                {
-                    log::info!(
-                        "Pining the interface with MAC {cur_mac} to \
+                log::info!(
+                    "Pining the interface with MAC {cur_mac} to \
                         interface name {}",
-                        pin_iface.name()
-                    );
-                    pin_iface_name_via_systemd_link(cur_mac, pin_iface.name())?;
-                }
+                    pin_iface.name()
+                );
+                pin_iface_name_via_systemd_link(cur_mac, pin_iface.name())?;
             }
         }
     }
