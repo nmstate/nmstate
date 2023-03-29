@@ -18,7 +18,6 @@ TEST_TYPE_INTEG_TIER2="integ_tier2"
 TEST_TYPE_INTEG_SLOW="integ_slow"
 TEST_TYPE_INTEG_RUST="integ_rust"
 
-FEDORA_IMAGE_DEV="docker.io/nmstate/fedora-nmstate-dev"
 CENTOS_IMAGE_DEV="quay.io/nmstate/c8s-nmstate-dev"
 CENTOS_STREAM_IMAGE_DEV="quay.io/nmstate/c8s-nmstate-dev"
 
@@ -399,6 +398,12 @@ function run_customize_command {
     fi
 }
 
+function install_deps {
+    exec_cmd "dnf install -y \
+        python3-varlink libvarlink-util python3-jsonschema \
+        python3-nispor python3dist\(ovs\);"
+}
+
 options=$(getopt --options "" \
     --long "customize:,pytest-args:,help,debug-shell,test-type:,\
     el8,centos-stream,copr:,artifacts-dir:,test-vdsm,machine,k8s,\
@@ -482,7 +487,7 @@ while true; do
 done
 
 : ${TEST_TYPE:=$TEST_TYPE_ALL}
-: ${CONTAINER_IMAGE:=$FEDORA_IMAGE_DEV}
+: ${CONTAINER_IMAGE:=$CENTOS_STREAM_IMAGE_DEV}
 : ${INSTALL_NMSTATE:="true"}
 : ${INSTALL_DEPS:="false"}
 : ${COMPILED_RPMS_DIR:=""}
@@ -523,6 +528,10 @@ fi
 
 if [ -n "$RUN_BAREMETAL" ];then
     trap run_exit ERR EXIT
+fi
+
+if [[ "$CI" != "true" ]];then
+    install_deps
 fi
 
 exec_cmd '(source /etc/os-release; echo $PRETTY_NAME); rpm -q NetworkManager'
