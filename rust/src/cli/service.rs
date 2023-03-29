@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use std::ffi::OsStr;
-use std::io::{Read, Write};
+use std::io::{BufReader, Write};
 use std::path::{Path, PathBuf};
 
 use nmstate::{InterfaceType, NetworkState};
@@ -122,10 +122,10 @@ fn relocate_file(file_path: &Path) -> Result<(), CliError> {
 /// If so, generate a systemd .link file to pin to the previous name.
 fn pin_iface_name(cfg_dir: &Path) -> Result<(), CliError> {
     let file_path = cfg_dir.join(PIN_STATE_FILENAME);
-    let mut fd = std::fs::File::open(&file_path)?;
-    let mut content = String::new();
-    fd.read_to_string(&mut content)?;
-    let pin_state: NetworkState = serde_yaml::from_str(&content)?;
+    let pin_state: NetworkState = {
+        let r = std::fs::File::open(&file_path).map(BufReader::new)?;
+        serde_yaml::from_reader(r)?
+    };
     let mut cur_state = NetworkState::new();
     cur_state.set_kernel_only(true);
     cur_state.set_running_config_only(true);
