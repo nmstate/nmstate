@@ -1,15 +1,25 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{dns::parse_dns_ipv6_link_local_srv, ip::is_ipv6_addr};
+use crate::{
+    dns::parse_dns_ipv6_link_local_srv, ip::is_ipv6_addr,
+    nm::settings::SUPPORTED_NM_KERNEL_IFACE_TYPES,
+};
 use crate::{
     DnsClientState, ErrorKind, Interface, InterfaceType, MergedInterface,
     MergedInterfaces, MergedNetworkState, NmstateError,
+};
+
+use super::nm_dbus::{
+    NmActiveConnection, NmDevice, NmDeviceState,
+    NM_ACTIVATION_STATE_FLAG_EXTERNAL,
 };
 
 const DEFAULT_DNS_PRIORITY: i32 = 40;
 
 pub(crate) fn store_dns_config_to_iface(
     merged_state: &mut MergedNetworkState,
+    nm_acs: &[NmActiveConnection],
+    nm_devs: &[NmDevice],
 ) -> Result<(), NmstateError> {
     if merged_state.dns.is_changed()
         || !cur_dns_ifaces_still_valid_for_dns(&merged_state.interfaces)
@@ -35,6 +45,8 @@ pub(crate) fn store_dns_config_to_iface(
             merged_state,
             cur_v4_ifaces.as_slice(),
             cur_v6_ifaces.as_slice(),
+            nm_acs,
+            nm_devs,
         );
         log::debug!(
             "Re-selected DNS interfaces are v4 {v4_iface_name:?}, \
@@ -54,20 +66,36 @@ pub(crate) fn store_dns_config_to_iface(
 //    in desire state
 //  * Interfaces in desired with manual IP stack enabled or `auto_dns: false`
 //  * Interfaces in current with manual IP stack enabled or `auto_dns: false`
+//    and current interface is not marked as external managed or unmanaged.
 //  * TODO: loopback interface
 pub(crate) fn reselect_dns_ifaces(
     merged_state: &MergedNetworkState,
     cur_v4_ifaces: &[String],
     cur_v6_ifaces: &[String],
+    nm_acs: &[NmActiveConnection],
+    nm_devs: &[NmDevice],
 ) -> (String, String) {
-    let ipv4_iface =
-        find_dns_iface(false, &merged_state.interfaces, cur_v4_ifaces)
-            .unwrap_or_default();
+    let ipv4_iface = find_dns_iface(
+        false,
+        &merged_state.interfaces,
+        cur_v4_ifaces,
+        nm_acs,
+        nm_devs,
+    )
+    .unwrap_or_default();
 
     let ipv6_iface = extract_ipv6_link_local_iface_from_dns_srv(
         merged_state.dns.servers.as_slice(),
     )
-    .or_else(|| find_dns_iface(true, &merged_state.interfaces, cur_v6_ifaces))
+    .or_else(|| {
+        find_dns_iface(
+            true,
+            &merged_state.interfaces,
+            cur_v6_ifaces,
+            nm_acs,
+            nm_devs,
+        )
+    })
     .unwrap_or_default();
 
     (ipv4_iface, ipv6_iface)
@@ -77,11 +105,14 @@ pub(crate) fn reselect_dns_ifaces(
 //  * Use current DNS interface if it is still valid.
 //  * Use desire interface if it is preferred for DNS interface.
 //  * Use desire interface if it is valid for DNS interface.
-//  * Use current interface if it is valid for DNS interface.
+//  * Use current interface if it is valid for DNS interface. Skip if NM marked
+//    it as unmanaged or external managed.
 fn find_dns_iface(
     is_ipv6: bool,
     merged_ifaces: &MergedInterfaces,
     cur_dns_ifaces: &[String],
+    nm_acs: &[NmActiveConnection],
+    nm_devs: &[NmDevice],
 ) -> Option<String> {
     // Try using current DNS interface if in desired list
     for iface_name in cur_dns_ifaces {
@@ -161,7 +192,10 @@ fn find_dns_iface(
     // Try again among undesired current interface
     for iface_name in cur_iface_names {
         if let Some(iface) = merged_ifaces.kernel_ifaces.get(iface_name) {
-            if iface.is_iface_valid_for_dns(is_ipv6) {
+            if iface.is_iface_valid_for_dns(is_ipv6)
+                && (!is_external_managed(iface_name, nm_acs))
+                && (!is_unmanaged(iface_name, nm_devs))
+            {
                 return Some(iface_name.to_string());
             }
         }
@@ -498,4 +532,33 @@ impl MergedInterface {
             }) == Some(true)
         }
     }
+}
+
+fn is_external_managed(
+    iface_name: &str,
+    nm_acs: &[NmActiveConnection],
+) -> bool {
+    for nm_ac in nm_acs {
+        if nm_ac.iface_name.as_str() == iface_name
+            && SUPPORTED_NM_KERNEL_IFACE_TYPES
+                .contains(&nm_ac.iface_type.as_str())
+            && nm_ac.state_flags & NM_ACTIVATION_STATE_FLAG_EXTERNAL > 0
+        {
+            return true;
+        }
+    }
+    false
+}
+
+fn is_unmanaged(iface_name: &str, nm_devs: &[NmDevice]) -> bool {
+    for nm_dev in nm_devs {
+        if nm_dev.name.as_str() == iface_name
+            && SUPPORTED_NM_KERNEL_IFACE_TYPES
+                .contains(&nm_dev.iface_type.as_str())
+            && nm_dev.state == NmDeviceState::Unmanaged
+        {
+            return true;
+        }
+    }
+    false
 }

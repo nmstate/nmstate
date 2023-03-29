@@ -128,6 +128,11 @@ pub(crate) fn store_dns_config_via_global_api(
     servers: &[String],
     searches: &[String],
 ) -> Result<(), NmstateError> {
+    log::warn!(
+        "Storing DNS to NetworkManager via global dns API, \
+        this will cause __all__ interface level DNS settings been ignored"
+    );
+
     let nm_config =
         NmGlobalDnsConfig::new_wildcard(searches.to_vec(), servers.to_vec());
     log::debug!("Applying NM global DNS config {:?}", nm_config);

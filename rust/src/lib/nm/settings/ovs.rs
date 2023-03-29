@@ -161,6 +161,8 @@ pub(crate) fn gen_nm_ovs_iface_setting(
             let mut nm_ovs_dpdk = NmSettingOvsDpdk::default();
             nm_ovs_dpdk.devargs = Some(dpdk_iface.devargs.to_string());
             nm_ovs_dpdk.n_rxq = dpdk_iface.rx_queue;
+            nm_ovs_dpdk.n_rxq_desc = dpdk_iface.n_rxq_desc;
+            nm_ovs_dpdk.n_txq_desc = dpdk_iface.n_txq_desc;
             nm_conn.ovs_dpdk = Some(nm_ovs_dpdk);
             nm_conn.ovs_iface = Some(nm_ovs_iface_set);
         }

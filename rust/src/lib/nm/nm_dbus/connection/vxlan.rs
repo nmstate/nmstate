@@ -11,6 +11,8 @@ use super::super::{connection::DbusDictionary, NmError, ToDbusValue};
 pub struct NmSettingVxlan {
     pub parent: Option<String>,
     pub id: Option<u32>,
+    pub learning: Option<bool>,
+    pub local: Option<String>,
     pub remote: Option<String>,
     pub dst_port: Option<u32>,
     _other: HashMap<String, zvariant::OwnedValue>,
@@ -22,6 +24,8 @@ impl TryFrom<DbusDictionary> for NmSettingVxlan {
         Ok(Self {
             parent: _from_map!(v, "parent", String::try_from)?,
             id: _from_map!(v, "id", u32::try_from)?,
+            learning: _from_map!(v, "learning", bool::try_from)?,
+            local: _from_map!(v, "local", String::try_from)?,
             remote: _from_map!(v, "remote", String::try_from)?,
             dst_port: _from_map!(v, "destination-port", u32::try_from)?,
             _other: v,
@@ -32,11 +36,19 @@ impl TryFrom<DbusDictionary> for NmSettingVxlan {
 impl ToDbusValue for NmSettingVxlan {
     fn to_value(&self) -> Result<HashMap<&str, zvariant::Value>, NmError> {
         let mut ret = HashMap::new();
-        if let Some(v) = &self.parent {
-            ret.insert("parent", zvariant::Value::new(v.clone()));
+        if let Some(v) = self.parent.as_deref() {
+            if !v.is_empty() {
+                ret.insert("parent", zvariant::Value::new(v));
+            }
         }
         if let Some(id) = self.id {
             ret.insert("id", zvariant::Value::new(id));
+        }
+        if let Some(v) = self.learning {
+            ret.insert("learning", zvariant::Value::new(v));
+        }
+        if let Some(v) = &self.local {
+            ret.insert("local", zvariant::Value::new(v));
         }
         if let Some(v) = &self.remote {
             ret.insert("remote", zvariant::Value::new(v));

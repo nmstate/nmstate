@@ -1,9 +1,9 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 
-use nmstate::NetworkState;
-
-use crate::error::CliError;
+use crate::{apply::apply, error::CliError};
 
 const CONFIG_FILE_EXTENTION: &str = "yml";
 const RELOCATE_FILE_EXTENTION: &str = "applied";
@@ -15,18 +15,43 @@ pub(crate) fn ncl_service(
         .value_of(crate::CONFIG_FOLDER_KEY)
         .unwrap_or(crate::DEFAULT_SERVICE_FOLDER);
 
-    let config_files = get_config_files(folder)?;
+    let config_files = match get_config_files(folder) {
+        Ok(f) => f,
+        Err(e) => {
+            log::info!(
+                "Failed to read config folder {folder} due to \
+                error {e}, ignoring"
+            );
+            return Ok(String::new());
+        }
+    };
     if config_files.is_empty() {
         log::info!(
             "No nmstate config(end with .{}) found in config folder {}",
             CONFIG_FILE_EXTENTION,
             folder
         );
+        return Ok(String::new());
     }
 
+    // Due to bug of NetworkManager, the `After=NetworkManager.service` in
+    // `nmstate.service` cannot guarantee the ready of NM dbus.
+    // We sleep for 2 seconds here to avoid meaningless retry.
+    std::thread::sleep(std::time::Duration::from_secs(2));
+
     for file_path in config_files {
-        match apply_file(&file_path) {
-            Ok(()) => {
+        let mut fd = match std::fs::File::open(&file_path) {
+            Ok(fd) => fd,
+            Err(e) => {
+                log::error!(
+                    "Failed to read config file {}: {e}",
+                    file_path.display()
+                );
+                continue;
+            }
+        };
+        match apply(&mut fd, matches) {
+            Ok(_) => {
                 log::info!("Applied nmstate config: {}", file_path.display());
                 if let Err(e) = relocate_file(&file_path) {
                     log::error!(
@@ -72,12 +97,5 @@ fn relocate_file(file_path: &Path) -> Result<(), CliError> {
         file_path.display(),
         new_path.display()
     );
-    Ok(())
-}
-
-fn apply_file(file_path: &Path) -> Result<(), CliError> {
-    let fd = std::fs::File::open(file_path)?;
-    let net_state: NetworkState = serde_yaml::from_reader(fd)?;
-    net_state.apply()?;
     Ok(())
 }

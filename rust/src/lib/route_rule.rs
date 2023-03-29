@@ -258,9 +258,17 @@ impl RouteRuleEntry {
                 return false;
             }
         }
+        if self.family.is_some()
+            && other.family.is_some()
+            && self.family != other.family
+        {
+            return false;
+        }
+
         if self.priority.is_some()
             && self.priority != Some(RouteRuleEntry::USE_DEFAULT_PRIORITY)
             && self.priority != other.priority
+            && !(self.priority == Some(0) && other.priority.is_none())
         {
             return false;
         }

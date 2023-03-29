@@ -47,7 +47,7 @@ impl BaseInterface {
             self.iface_type = other.iface_type.clone();
         }
         if other.prop_list.contains(&"state") {
-            self.state = other.state.clone();
+            self.state = other.state;
         }
         if other.prop_list.contains(&"mtu") {
             self.mtu = other.mtu;

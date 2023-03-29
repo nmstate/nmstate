@@ -2,7 +2,7 @@
 
 use super::super::nm_dbus::{
     NmConnection, NmSettingConnection, NmSettingMacVlan, NmSettingVeth,
-    NmSettingVlan, NmSettingVrf, NmSettingVxlan, NmSettingsConnectionFlag,
+    NmSettingVrf, NmSettingVxlan, NmSettingsConnectionFlag,
 };
 use super::{
     bond::gen_nm_bond_setting,
@@ -20,6 +20,7 @@ use super::{
     sriov::gen_nm_sriov_setting,
     user::gen_nm_user_setting,
     veth::create_veth_peer_profile_if_not_found,
+    vlan::gen_nm_vlan_setting,
     wired::gen_nm_wired_setting,
 };
 
@@ -46,6 +47,21 @@ pub(crate) const NM_SETTING_LOOPBACK_SETTING_NAME: &str = "loopback";
 pub(crate) const NM_SETTING_USER_SPACES: [&str; 2] = [
     NM_SETTING_OVS_BRIDGE_SETTING_NAME,
     NM_SETTING_OVS_PORT_SETTING_NAME,
+];
+
+pub(crate) const SUPPORTED_NM_KERNEL_IFACE_TYPES: [&str; 12] = [
+    NM_SETTING_WIRED_SETTING_NAME,
+    NM_SETTING_VETH_SETTING_NAME,
+    NM_SETTING_BOND_SETTING_NAME,
+    NM_SETTING_DUMMY_SETTING_NAME,
+    NM_SETTING_BRIDGE_SETTING_NAME,
+    NM_SETTING_OVS_IFACE_SETTING_NAME,
+    NM_SETTING_VRF_SETTING_NAME,
+    NM_SETTING_VLAN_SETTING_NAME,
+    NM_SETTING_VXLAN_SETTING_NAME,
+    NM_SETTING_MACVLAN_SETTING_NAME,
+    NM_SETTING_LOOPBACK_SETTING_NAME,
+    NM_SETTING_INFINIBAND_SETTING_NAME,
 ];
 
 pub(crate) fn iface_to_nm_connections(
@@ -158,9 +174,7 @@ pub(crate) fn iface_to_nm_connections(
             gen_nm_ovs_iface_setting(iface, &mut nm_conn);
         }
         Interface::Vlan(vlan_iface) => {
-            if let Some(conf) = vlan_iface.vlan.as_ref() {
-                nm_conn.vlan = Some(NmSettingVlan::from(conf))
-            }
+            gen_nm_vlan_setting(vlan_iface, &mut nm_conn);
         }
         Interface::Vxlan(vxlan_iface) => {
             if let Some(conf) = vxlan_iface.vxlan.as_ref() {
