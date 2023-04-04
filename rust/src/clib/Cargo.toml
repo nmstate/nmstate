@@ -11,6 +11,7 @@ rust-version = "1.58"
 name = "nmstate"
 path = "lib.rs"
 crate-type = ["cdylib", "staticlib"]
+doc = false
 
 [dependencies]
 nmstate = { path = "../lib", default-features = false }
