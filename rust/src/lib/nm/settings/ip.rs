@@ -39,10 +39,6 @@ fn gen_nm_ipv4_setting(
             NmSettingIpMethod::Auto
         } else if !iface_ip.addresses.as_deref().unwrap_or_default().is_empty()
         {
-            for ip_addr in iface_ip.addresses.as_deref().unwrap_or_default() {
-                addresses
-                    .push(format!("{}/{}", ip_addr.ip, ip_addr.prefix_length));
-            }
             NmSettingIpMethod::Manual
         } else {
             NmSettingIpMethod::Disabled
@@ -50,6 +46,11 @@ fn gen_nm_ipv4_setting(
     } else {
         NmSettingIpMethod::Disabled
     };
+    if let Some(addrs) = iface_ip.addresses.as_ref() {
+        for ip_addr in addrs {
+            addresses.push(format!("{}/{}", ip_addr.ip, ip_addr.prefix_length));
+        }
+    }
     let mut nm_setting = nm_conn.ipv4.as_ref().cloned().unwrap_or_default();
     nm_setting.method = Some(method);
     nm_setting.addresses = addresses;
@@ -126,14 +127,6 @@ fn gen_nm_ipv6_setting(
             (false, false) => {
                 if !iface_ip.addresses.as_deref().unwrap_or_default().is_empty()
                 {
-                    for ip_addr in
-                        iface_ip.addresses.as_deref().unwrap_or_default()
-                    {
-                        addresses.push(format!(
-                            "{}/{}",
-                            ip_addr.ip, ip_addr.prefix_length
-                        ));
-                    }
                     NmSettingIpMethod::Manual
                 } else {
                     NmSettingIpMethod::LinkLocal
@@ -143,6 +136,11 @@ fn gen_nm_ipv6_setting(
     } else {
         NmSettingIpMethod::Disabled
     };
+    if let Some(addrs) = iface_ip.addresses.as_deref() {
+        for ip_addr in addrs {
+            addresses.push(format!("{}/{}", ip_addr.ip, ip_addr.prefix_length));
+        }
+    }
     let mut nm_setting = nm_conn.ipv6.as_ref().cloned().unwrap_or_default();
     nm_setting.method = Some(method);
     nm_setting.addresses = addresses;

@@ -235,17 +235,19 @@ pub(crate) fn purge_dns_config(
             }
             if !iface.is_changed() {
                 iface.mark_as_changed();
-                if let Some(apply_iface) = iface.for_apply.as_mut() {
-                    if apply_iface.base_iface().can_have_ip() {
-                        apply_iface.base_iface_mut().ipv4 =
-                            iface.merged.base_iface_mut().ipv4.clone();
-                        apply_iface.base_iface_mut().ipv6 =
-                            iface.merged.base_iface_mut().ipv6.clone();
-                    }
-                }
             }
             if let Some(apply_iface) = iface.for_apply.as_mut() {
                 if apply_iface.base_iface().can_have_ip() {
+                    if is_ipv6 {
+                        if apply_iface.base_iface().ipv6.is_none() {
+                            apply_iface.base_iface_mut().ipv6 =
+                                iface.merged.base_iface_mut().ipv6.clone();
+                        }
+                    } else if apply_iface.base_iface().ipv4.is_none() {
+                        apply_iface.base_iface_mut().ipv4 =
+                            iface.merged.base_iface_mut().ipv4.clone();
+                    }
+
                     set_iface_dns_conf(
                         is_ipv6,
                         apply_iface,
