@@ -56,7 +56,11 @@ pub(crate) fn nm_ip_setting_to_nmstate4(
             ],
             dns: Some(nm_dns_to_nmstate("", nm_ip_setting)),
             rules: nm_rules_to_nmstate(false, nm_ip_setting),
-            dhcp_client_id: nm_dhcp_client_id_to_nmstate(nm_ip_setting),
+            dhcp_client_id: if enabled && dhcp == Some(true) {
+                nm_dhcp_client_id_to_nmstate(nm_ip_setting)
+            } else {
+                None
+            },
             auto_route_metric: nm_ip_setting.route_metric.map(|i| i as u32),
             ..Default::default()
         }
