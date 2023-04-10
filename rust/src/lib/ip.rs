@@ -15,6 +15,7 @@ const AF_INET: u8 = 2;
 const AF_INET6: u8 = 10;
 const IPV4_ADDR_LEN: usize = 32;
 const IPV6_ADDR_LEN: usize = 128;
+const FOREVER: &str = "forever";
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[non_exhaustive]
@@ -124,10 +125,12 @@ pub struct InterfaceIpv4 {
     /// DHCPv4 client ID.
     /// Serialize and deserialize to/from `dhcp-client-id`.
     pub dhcp_client_id: Option<Dhcpv4ClientId>,
-    /// IPv4 addresses. Will be ignored when applying with
-    /// DHCP enabled.
+    /// IPv4 addresses.
     /// When applying with `None`, current IP address will be preserved.
     /// When applying with `Some(Vec::new())`, all IP address will be removed.
+    /// When switch from DHCP on to off with `addresses` set to None or all
+    /// `addresses` are dynamic, nmstate will convert current dynamic IP
+    /// address to static.
     /// The IP addresses will apply to kernel with the same order specified
     /// which result the IP addresses after first one holding the `secondary`
     /// flag.
@@ -207,19 +210,26 @@ impl InterfaceIpv4 {
             self.dhcp = current.dhcp;
         }
         // Normally, we expect backend to preserve configuration which not
-        // mentioned in desire, but when DHCP switch from ON to OFF, the design
-        // of nmstate is expecting dynamic IP address goes static. This should
-        // be done by top level code.
+        // mentioned in desire or all auto ip address, but when DHCP switch from
+        // ON to OFF, the design of nmstate is expecting dynamic IP address goes
+        // static. This should be done by top level code.
         if current.is_auto()
             && current.addresses.is_some()
             && self.enabled
             && !self.is_auto()
-            && self.addresses.is_none()
+            && is_ip_addrs_none_or_all_auto(self.addresses.as_deref())
         {
             self.addresses = current.addresses.clone();
+            if let Some(addrs) = self.addresses.as_mut() {
+                addrs.as_mut_slice().iter_mut().for_each(|a| {
+                    a.valid_left = None;
+                    a.preferred_left = None;
+                });
+            }
         }
     }
 
+    // Special action for generating merged state from desired and current.
     pub(crate) fn special_merge(&mut self, desired: &Self, current: &Self) {
         if !desired.prop_list.contains(&"enabled") {
             self.enabled = current.enabled;
@@ -236,34 +246,24 @@ impl InterfaceIpv4 {
             && current.addresses.is_some()
             && self.enabled
             && !self.is_auto()
-            && desired.addresses.is_none()
+            && is_ip_addrs_none_or_all_auto(self.addresses.as_deref())
         {
             self.addresses = current.addresses.clone();
         }
+        self.sanitize(false).ok();
     }
 
     // * Remove link-local address
     // * Set auto_dns, auto_gateway and auto_routes to true if DHCP enabled and
     //   those options is None
     // * Disable DHCP and remove address if enabled: false
+    // * Remove auto IP address.
     // * Set DHCP options to None if DHCP is false
     // * Remove mptcp_flags is they are for query only
     pub(crate) fn sanitize(
         &mut self,
         is_desired: bool,
     ) -> Result<(), NmstateError> {
-        // Empty address should equal to disabled IPv4 stack
-        if let Some(true) = self.addresses.as_ref().map(Vec::is_empty) {
-            if self.enabled {
-                if is_desired {
-                    log::info!(
-                        "Empty IPv4 address is considered as IPv4 disabled"
-                    );
-                }
-                self.enabled = false;
-            }
-        }
-
         if self.is_auto() {
             if self.auto_dns.is_none() {
                 self.auto_dns = Some(true);
@@ -274,16 +274,38 @@ impl InterfaceIpv4 {
             if self.auto_gateway.is_none() {
                 self.auto_gateway = Some(true);
             }
-            if !self.addresses.as_deref().unwrap_or_default().is_empty() {
+            if let Some(addrs) = self.addresses.as_ref() {
                 if is_desired {
-                    log::warn!(
-                        "Static addresses {:?} are ignored when dynamic \
-                    IP is enabled",
-                        self.addresses.as_deref().unwrap_or_default()
-                    );
+                    for addr in addrs {
+                        log::info!(
+                            "Static addresses {} defined when dynamic \
+                            IP is enabled",
+                            addr
+                        );
+                    }
                 }
-                self.addresses = None;
             }
+        } else if self.addresses.as_ref().map_or(false, Vec::is_empty)
+            && self.enabled
+        {
+            // Empty address should equal to disabled IPv4 stack
+            if is_desired {
+                log::info!("Empty IPv4 address is considered as IPv4 disabled");
+            }
+            self.enabled = false;
+        }
+
+        if let Some(addrs) = self.addresses.as_mut() {
+            if is_desired {
+                for addr in addrs.as_slice().iter().filter(|a| a.is_auto()) {
+                    log::info!("Ignoring Auto IP address {}", addr);
+                }
+            }
+            addrs.retain(|a| !a.is_auto());
+            addrs.iter_mut().for_each(|a| {
+                a.valid_left = None;
+                a.preferred_left = None
+            });
         }
 
         if !self.enabled {
@@ -512,6 +534,19 @@ impl InterfaceIpv6 {
         &mut self,
         is_desired: bool,
     ) -> Result<(), NmstateError> {
+        if let Some(addrs) = self.addresses.as_mut() {
+            if is_desired {
+                for addr in addrs.as_slice().iter().filter(|a| a.is_auto()) {
+                    log::info!("Ignoring Auto IP address {}", addr);
+                }
+            }
+            addrs.retain(|a| !a.is_auto());
+            addrs.iter_mut().for_each(|a| {
+                a.valid_left = None;
+                a.preferred_left = None
+            });
+        }
+
         if self.is_auto() {
             if self.auto_dns.is_none() {
                 self.auto_dns = Some(true);
@@ -522,15 +557,16 @@ impl InterfaceIpv6 {
             if self.auto_gateway.is_none() {
                 self.auto_gateway = Some(true);
             }
-            if !self.addresses.as_deref().unwrap_or_default().is_empty() {
+            if let Some(addrs) = self.addresses.as_ref() {
                 if is_desired {
-                    log::warn!(
-                        "Static addresses {:?} are ignored when dynamic \
-                        IP is enabled",
-                        self.addresses.as_deref().unwrap_or_default()
-                    );
+                    for addr in addrs {
+                        log::info!(
+                            "Static addresses {} defined when dynamic \
+                            IP is enabled",
+                            addr
+                        );
+                    }
                 }
-                self.addresses = None;
             }
         }
 
@@ -593,6 +629,7 @@ impl InterfaceIpv6 {
         Ok(())
     }
 
+    // Special action for generating merged state from desired and current.
     pub(crate) fn special_merge(&mut self, desired: &Self, current: &Self) {
         if !desired.prop_list.contains(&"enabled") {
             self.enabled = current.enabled;
@@ -611,10 +648,11 @@ impl InterfaceIpv6 {
             && current.addresses.is_some()
             && self.enabled
             && !self.is_auto()
-            && desired.addresses.is_none()
+            && is_ip_addrs_none_or_all_auto(desired.addresses.as_deref())
         {
             self.addresses = current.addresses.clone();
         }
+        self.sanitize(false).ok();
     }
 
     pub(crate) fn merge_ip(&mut self, current: &Self) {
@@ -635,9 +673,15 @@ impl InterfaceIpv6 {
             && current.addresses.is_some()
             && self.enabled
             && !self.is_auto()
-            && self.addresses.is_none()
+            && is_ip_addrs_none_or_all_auto(self.addresses.as_deref())
         {
             self.addresses = current.addresses.clone();
+            if let Some(addrs) = self.addresses.as_mut() {
+                addrs.as_mut_slice().iter_mut().for_each(|a| {
+                    a.valid_left = None;
+                    a.preferred_left = None;
+                });
+            }
         }
     }
 }
@@ -736,6 +780,18 @@ pub struct InterfaceIpAddr {
     /// specific MPTCP flags. You should apply MPTCP flags at interface level
     /// via [BaseInterface.mptcp].
     pub mptcp_flags: Option<Vec<MptcpAddressFlag>>,
+    /// Remaining time for IP address been valid. The output format is
+    /// "32sec" or "forever".
+    /// This property is query only, it will be ignored when applying.
+    /// Serialize and deserialize to/from `valid-left`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub valid_left: Option<String>,
+    /// Remaining time for IP address been preferred. The output format is
+    /// "32sec" or "forever".
+    /// This property is query only, it will be ignored when applying.
+    /// Serialize and deserialize to/from `preferred-left`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub preferred_left: Option<String>,
 }
 
 impl Default for InterfaceIpAddr {
@@ -744,7 +800,32 @@ impl Default for InterfaceIpAddr {
             ip: IpAddr::V6(std::net::Ipv6Addr::new(0, 0, 0, 0, 0, 0, 0, 1)),
             prefix_length: 128,
             mptcp_flags: None,
+            valid_left: None,
+            preferred_left: None,
         }
+    }
+}
+
+impl std::fmt::Display for InterfaceIpAddr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if self.is_auto() {
+            write!(
+                f,
+                "{}/{} valid_left {} preferred_left {}",
+                self.ip,
+                self.prefix_length,
+                self.valid_left.as_deref().unwrap_or(FOREVER),
+                self.preferred_left.as_deref().unwrap_or(FOREVER)
+            )
+        } else {
+            write!(f, "{}/{}", self.ip, self.prefix_length)
+        }
+    }
+}
+
+impl InterfaceIpAddr {
+    pub(crate) fn is_auto(&self) -> bool {
+        self.valid_left.is_some() && self.valid_left.as_deref() != Some(FOREVER)
     }
 }
 
@@ -792,13 +873,9 @@ impl std::convert::TryFrom<&str> for InterfaceIpAddr {
             ip,
             prefix_length,
             mptcp_flags: None,
+            valid_left: None,
+            preferred_left: None,
         })
-    }
-}
-
-impl std::convert::From<&InterfaceIpAddr> for String {
-    fn from(v: &InterfaceIpAddr) -> String {
-        format!("{}/{}", &v.ip, v.prefix_length)
     }
 }
 
@@ -1212,4 +1289,16 @@ fn sanitize_ipv6_token_to_string(
         }
     }
     Ok(())
+}
+
+fn is_ip_addrs_none_or_all_auto(addrs: Option<&[InterfaceIpAddr]>) -> bool {
+    addrs.map_or(true, |addrs| {
+        addrs.iter().all(|a| {
+            if let IpAddr::V6(ip_addr) = a.ip {
+                is_ipv6_unicast_link_local(&ip_addr) || a.is_auto()
+            } else {
+                a.is_auto()
+            }
+        })
+    })
 }
