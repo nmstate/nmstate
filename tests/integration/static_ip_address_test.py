@@ -884,3 +884,27 @@ def test_remove_all_ip_address(setup_eth1_static_ip):
     ] = False
 
     assertlib.assert_state_match(desired_state)
+
+
+def test_ignore_dhcp_client_id_if_static(eth1_up):
+    desired_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: "eth1",
+                Interface.TYPE: InterfaceType.ETHERNET,
+                Interface.STATE: InterfaceState.UP,
+                Interface.IPV4: {
+                    InterfaceIPv4.ENABLED: True,
+                    InterfaceIPv4.DHCP: False,
+                    InterfaceIPv4.DHCP_CLIENT_ID: "ll",
+                    InterfaceIPv4.ADDRESS: [
+                        {
+                            InterfaceIPv4.ADDRESS_IP: IPV4_ADDRESS1,
+                            InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+                        },
+                    ],
+                },
+            }
+        ]
+    }
+    libnmstate.apply(desired_state)

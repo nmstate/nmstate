@@ -319,6 +319,13 @@ impl InterfaceIpv4 {
             self.auto_routes = None;
             self.auto_table_id = None;
             self.auto_route_metric = None;
+            if is_desired && self.dhcp_client_id.is_some() {
+                log::warn!(
+                    "Ignoring `dhcp-client-id` setting when DHCPv4 is \
+                    disabled"
+                );
+            }
+            self.dhcp_client_id = None;
         }
         if let Some(addrs) = self.addresses.as_mut() {
             for addr in addrs.iter_mut() {
