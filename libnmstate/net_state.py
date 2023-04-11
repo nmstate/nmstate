@@ -84,7 +84,7 @@ class NetState:
                         self._dns, self._route, ignored_dns_ifaces
                     )
                 except NmstateValueError as e:
-                    if gen_conf_mode:
+                    if gen_conf_mode or self._dns.is_search_only_config():
                         raise e
                     else:
                         logging.warning(
