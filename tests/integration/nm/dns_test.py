@@ -6,6 +6,7 @@ import libnmstate
 from libnmstate.schema import DNS
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
+from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
 
@@ -19,7 +20,7 @@ TEST_DNS_SRVS = ["192.0.2.2", "192.0.2.1"]
 
 
 @pytest.fixture
-def unmanaged_eth1_with_static_gw():
+def unmanaged_eth1_with_static_gw(eth1_up):
     try:
         cmdlib.exec_cmd(f"nmcli connection delete {ETH1}".split(), check=False)
         cmdlib.exec_cmd(f"nmcli dev set {ETH1} managed no".split(), check=True)
@@ -36,14 +37,14 @@ def unmanaged_eth1_with_static_gw():
     finally:
         cmdlib.exec_cmd(
             f"ip route del default via 192.0.2.1 dev {ETH1}".split(),
-            check=True,
+            check=False,
         )
 
         cmdlib.exec_cmd(
-            f"ip addr del 192.0.2.2/24 dev {ETH1}".split(), check=True
+            f"ip addr del 192.0.2.2/24 dev {ETH1}".split(), check=False
         )
         cmdlib.exec_cmd(
-            f"nmcli dev set {ETH1} managed yes".split(), check=True
+            f"nmcli dev set {ETH1} managed yes".split(), check=False
         )
 
 
@@ -138,3 +139,53 @@ def assert_global_dns(servers):
         content = fd.read()
         for server in servers:
             assert server in content
+
+
+@pytest.fixture
+def auto_eth1(eth1_up):
+    libnmstate.apply(
+        {
+            DNS.KEY: {DNS.CONFIG: {DNS.SERVER: [], DNS.SEARCH: []}},
+            Interface.KEY: [
+                {
+                    Interface.NAME: "eth1",
+                    Interface.TYPE: InterfaceType.ETHERNET,
+                    Interface.STATE: InterfaceState.UP,
+                    Interface.IPV4: {
+                        InterfaceIPv4.ENABLED: True,
+                        InterfaceIPv4.DHCP: True,
+                        InterfaceIPv4.AUTO_DNS: True,
+                        InterfaceIPv4.AUTO_ROUTES: True,
+                        InterfaceIPv4.AUTO_GATEWAY: True,
+                    },
+                    Interface.IPV6: {
+                        InterfaceIPv6.ENABLED: True,
+                        InterfaceIPv6.DHCP: True,
+                        InterfaceIPv6.AUTO_DNS: True,
+                        InterfaceIPv6.AUTO_ROUTES: True,
+                        InterfaceIPv6.AUTO_GATEWAY: True,
+                    },
+                }
+            ],
+        }
+    )
+    yield
+    libnmstate.apply(
+        {
+            DNS.KEY: {DNS.CONFIG: {DNS.SERVER: [], DNS.SEARCH: []}},
+        }
+    )
+
+
+def test_static_dns_search_with_auto_dns(auto_eth1):
+    libnmstate.apply(
+        {
+            DNS.KEY: {
+                DNS.CONFIG: {DNS.SEARCH: ["example.org", "example.net"]}
+            },
+        }
+    )
+    output = cmdlib.exec_cmd(
+        "nmcli -t -f ipv6.dns-search c show eth1".split(), check=True
+    )[1]
+    assert "ipv6.dns-search:example.org,example.net" in output
