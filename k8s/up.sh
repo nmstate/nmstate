@@ -16,21 +16,13 @@ fi
 
 for node in $(./k8s/kubectl.sh get nodes --no-headers | awk '{print $1}'); do
     ./k8s/ssh.sh $node -- \
-        "sudo dnf copr enable nmstate/ovs-el8 -y && \
-        sudo dnf upgrade -y --nobest && \
-        sudo dnf install -y \
-            NetworkManager-1.34.0 \
-            NetworkManager-ovs-1.34.0 \
-            NetworkManager-team-1.34.0 \
-            NetworkManager-config-server-1.34.0 \
-            openvswitch2.11 && \
+       "sudo dnf install -y NetworkManager-config-server && \
+        sudo dnf upgrade -y NetworkManager NetworkManager-config-server && \
+        sudo sudo nmcli general logging level TRACE domains ALL && \
         sudo systemctl enable openvswitch && \
         sudo sed -i -e 's/^#RateLimitInterval=.*/RateLimitInterval=0/' \
             -e 's/^#RateLimitBurst=.*/RateLimitBurst=0/' \
             /etc/systemd/journald.conf"
-    ./k8s/ssh.sh $node  -- "echo "[logging]" | sudo tee /etc/NetworkManager/conf.d/97-trace-logging.conf && \
-                            echo "level=TRACE" | sudo tee -a /etc/NetworkManager/conf.d/97-trace-logging.conf && \
-                            echo "domain=ALL" | sudo tee -a /etc/NetworkManager/conf.d/97-trace-logging.conf"
     ./k8s/ssh.sh $node -- sudo systemctl daemon-reload
     ./k8s/ssh.sh $node -- sudo systemctl restart NetworkManager
     ./k8s/ssh.sh $node -- sudo systemctl restart openvswitch
