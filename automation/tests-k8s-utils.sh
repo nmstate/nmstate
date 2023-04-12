@@ -61,7 +61,7 @@ spec:
       command: ["/bin/bash"]
       args:
       - "-c"
-      - "trap : TERM INT; sleep infinity & wait"
+      - "dnf install -y python3-varlink libvarlink-util python3-jsonschema python3-nispor && trap : TERM INT; sleep infinity & wait"
       env:
       - name: CI
         value: "${CI}"

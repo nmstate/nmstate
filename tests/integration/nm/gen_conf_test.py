@@ -18,6 +18,7 @@
 #
 
 import os
+import subprocess
 import time
 
 import pytest
@@ -28,6 +29,7 @@ from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import OVSBridge
 
+from ..testlib.env import is_k8s
 from ..testlib.nmplugin import nm_service_restart
 from ..testlib.statelib import show_only
 
@@ -53,6 +55,15 @@ interfaces:
 
 
 @pytest.mark.tier1
+@pytest.mark.xfail(
+    is_k8s(),
+    reason=(
+        "Requires adjusts for k8s. Ref:"
+        "https://github.com/nmstate/nmstate/issues/1579"
+    ),
+    raises=subprocess.CalledProcessError,
+    strict=False,
+)
 def test_gen_conf_ovs_same_name(eth1_up, cleanup_ovs_same_name):
     desired_state = load_yaml(
         """
