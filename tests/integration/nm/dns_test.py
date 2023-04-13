@@ -6,6 +6,7 @@ import libnmstate
 from libnmstate.schema import DNS
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
+from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import InterfaceState
 from libnmstate.schema import InterfaceType
 
@@ -139,3 +140,53 @@ def assert_global_dns(servers):
         content = fd.read()
         for server in servers:
             assert server in content
+
+
+@pytest.fixture
+def auto_eth1(eth1_up):
+    libnmstate.apply(
+        {
+            DNS.KEY: {DNS.CONFIG: {DNS.SERVER: [], DNS.SEARCH: []}},
+            Interface.KEY: [
+                {
+                    Interface.NAME: "eth1",
+                    Interface.TYPE: InterfaceType.ETHERNET,
+                    Interface.STATE: InterfaceState.UP,
+                    Interface.IPV4: {
+                        InterfaceIPv4.ENABLED: True,
+                        InterfaceIPv4.DHCP: True,
+                        InterfaceIPv4.AUTO_DNS: True,
+                        InterfaceIPv4.AUTO_ROUTES: True,
+                        InterfaceIPv4.AUTO_GATEWAY: True,
+                    },
+                    Interface.IPV6: {
+                        InterfaceIPv6.ENABLED: True,
+                        InterfaceIPv6.DHCP: True,
+                        InterfaceIPv6.AUTO_DNS: True,
+                        InterfaceIPv6.AUTO_ROUTES: True,
+                        InterfaceIPv6.AUTO_GATEWAY: True,
+                    },
+                }
+            ],
+        }
+    )
+    yield
+    libnmstate.apply(
+        {
+            DNS.KEY: {DNS.CONFIG: {DNS.SERVER: [], DNS.SEARCH: []}},
+        }
+    )
+
+
+def test_static_dns_search_with_auto_dns(auto_eth1):
+    libnmstate.apply(
+        {
+            DNS.KEY: {
+                DNS.CONFIG: {DNS.SEARCH: ["example.org", "example.net"]}
+            },
+        }
+    )
+    output = cmdlib.exec_cmd(
+        "nmcli -t -f ipv6.dns-search c show eth1".split(), check=True
+    )[1]
+    assert "ipv6.dns-search:example.org,example.net" in output
