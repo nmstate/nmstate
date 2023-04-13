@@ -323,35 +323,38 @@ fn main() {
        );
     if cfg!(feature = "query_apply") {
         app = app.subcommand(
-        clap::Command::new(SUB_CMD_PERSIST_NIC_NAMES)
-            .about("Generate .link files which persist active network interfaces to their current names")
-            .arg(
-                clap::Arg::new("DRY_RUN")
-                    .long("dry-run")
-                    .takes_value(false)
-                    .help(
-                        "Only output changes that would be made",
-                    ),
-            )
-            .arg(
-                clap::Arg::new("INSPECT")
-                    .long("inspect")
-                    .takes_value(false)
-                    .help(
-                        "Print the state of any persisted nics",
-                    ),
-            )
-            .arg(
-                clap::Arg::new("ROOT")
-                    .long("root")
-                    .short('r')
-                    .required(false)
-                    .takes_value(true)
-                    .default_value("/")
-                    .help("Target root filesystem for writing state"),
-            )
-            // We don't want to expose this outside of OCP yet
-            .hide(true));
+            clap::Command::new(SUB_CMD_PERSIST_NIC_NAMES)
+                .about(
+                    "Generate .link files which persist active network \
+                    interfaces to their current names",
+                )
+                .arg(
+                    clap::Arg::new("DRY_RUN")
+                        .long("dry-run")
+                        .takes_value(false)
+                        .help("Only output changes that would be made"),
+                )
+                .arg(
+                    clap::Arg::new("CLEAN_UP")
+                        .long("cleanup")
+                        .takes_value(false)
+                        .help(
+                            "Remove previously created .link files \
+                            which has no effect",
+                        ),
+                )
+                .arg(
+                    clap::Arg::new("ROOT")
+                        .long("root")
+                        .short('r')
+                        .required(false)
+                        .takes_value(true)
+                        .default_value("/")
+                        .help("Target root filesystem for writing state"),
+                )
+                // We don't want to expose this outside of OCP yet
+                .hide(true),
+        );
     };
     let matches = app.get_matches();
     let (log_module_filters, log_level) =
@@ -429,15 +432,20 @@ fn main() {
         if let Some(matches) =
             matches.subcommand_matches(SUB_CMD_PERSIST_NIC_NAMES)
         {
-            let action =
-                if matches.try_contains_id("DRY_RUN").unwrap_or_default() {
-                    persist_nic::PersistAction::DryRun
-                } else if matches.try_contains_id("INSPECT").unwrap_or_default()
-                {
-                    persist_nic::PersistAction::Inspect
+            let action = if matches
+                .try_contains_id("DRY_RUN")
+                .unwrap_or_default()
+            {
+                if matches.try_contains_id("CLEAN_UP").unwrap_or_default() {
+                    persist_nic::PersistAction::CleanUpDryRun
                 } else {
-                    persist_nic::PersistAction::Save
-                };
+                    persist_nic::PersistAction::DryRun
+                }
+            } else if matches.try_contains_id("CLEAN_UP").unwrap_or_default() {
+                persist_nic::PersistAction::CleanUp
+            } else {
+                persist_nic::PersistAction::Save
+            };
             print_result_and_exit(crate::persist_nic::run_persist_immediately(
                 matches.value_of("ROOT").unwrap(),
                 action,
