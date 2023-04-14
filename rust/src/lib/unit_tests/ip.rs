@@ -280,3 +280,53 @@ fn test_ipv6_verify_emtpy() {
 
     merged_ifaces.verify(&cur_ifaces).unwrap();
 }
+
+#[test]
+fn test_should_not_have_ipv6_in_ipv4_section() {
+    let des_ifaces: Interfaces = serde_yaml::from_str(
+        r#"---
+            - name: eth1
+              type: ethernet
+              state: up
+              ipv4:
+                enabled: "true"
+                dhcp: "false"
+                address:
+                  - ip: "2001:db8:2::1"
+                    prefix-length: 64"#,
+    )
+    .unwrap();
+
+    let result =
+        MergedInterfaces::new(des_ifaces, gen_test_eth_ifaces(), false, false);
+    assert!(result.is_err());
+
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+    }
+}
+
+#[test]
+fn test_should_not_have_ipv4_in_ipv6_section() {
+    let des_ifaces: Interfaces = serde_yaml::from_str(
+        r#"---
+            - name: eth1
+              type: ethernet
+              state: up
+              ipv6:
+                enabled: true
+                dhcp: false
+                address:
+                  - ip: 192.0.2.1
+                    prefix-length: 24"#,
+    )
+    .unwrap();
+
+    let result =
+        MergedInterfaces::new(des_ifaces, gen_test_eth_ifaces(), false, false);
+    assert!(result.is_err());
+
+    if let Err(e) = result {
+        assert_eq!(e.kind(), ErrorKind::InvalidArgument);
+    }
+}
