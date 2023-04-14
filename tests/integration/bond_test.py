@@ -169,7 +169,6 @@ def test_remove_bond_with_minimum_desired_state(eth1_up, eth2_up):
 
 def test_add_bond_without_port():
     with bond_interface(name=BOND99, port=[]) as state:
-
         assert state[Interface.KEY][0][Bond.CONFIG_SUBTREE][Bond.PORT] == []
 
 
@@ -844,7 +843,6 @@ def bond99_with_2_port_and_lacp_rate(eth1_up, eth2_up):
 def test_bond_switch_mode_with_conflict_option(
     bond99_with_2_port_and_lacp_rate,
 ):
-
     state = bond99_with_2_port_and_lacp_rate
     bond_config = state[Interface.KEY][0][Bond.CONFIG_SUBTREE]
     bond_config[Bond.MODE] = BondMode.ROUND_ROBIN
