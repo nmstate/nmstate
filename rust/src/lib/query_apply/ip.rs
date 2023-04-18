@@ -9,6 +9,9 @@ impl InterfaceIpv4 {
             addrs.sort_unstable();
             addrs.dedup();
         }
+        if self.dhcp_custom_hostname.is_none() {
+            self.dhcp_custom_hostname = Some(String::new());
+        }
     }
 
     // Sort addresses and dedup
@@ -56,6 +59,12 @@ impl InterfaceIpv4 {
         if other.prop_list.contains(&"auto_route_metric") {
             self.auto_route_metric = other.auto_route_metric;
         }
+        if other.prop_list.contains(&"dhcp_send_hostname") {
+            self.dhcp_send_hostname = other.dhcp_send_hostname;
+        }
+        if other.prop_list.contains(&"dhcp_custom_hostname") {
+            self.dhcp_custom_hostname = other.dhcp_custom_hostname.clone();
+        }
 
         for other_prop_name in &other.prop_list {
             if !self.prop_list.contains(other_prop_name) {
@@ -76,6 +85,9 @@ impl InterfaceIpv6 {
         // None IPv6 token should be treat as "::"
         if self.token.is_none() {
             self.token = Some("::".to_string());
+        }
+        if self.dhcp_custom_hostname.is_none() {
+            self.dhcp_custom_hostname = Some(String::new());
         }
     }
 
@@ -134,6 +146,12 @@ impl InterfaceIpv6 {
         }
         if other.prop_list.contains(&"token") {
             self.token = other.token.clone();
+        }
+        if other.prop_list.contains(&"dhcp_send_hostname") {
+            self.dhcp_send_hostname = other.dhcp_send_hostname;
+        }
+        if other.prop_list.contains(&"dhcp_custom_hostname") {
+            self.dhcp_custom_hostname = other.dhcp_custom_hostname.clone();
         }
         for other_prop_name in &other.prop_list {
             if !self.prop_list.contains(other_prop_name) {

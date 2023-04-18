@@ -33,6 +33,12 @@ pub(crate) fn nm_ip_setting_to_nmstate4(
                 (true, None)
             }
         };
+        let dhcp_send_hostname = if enabled && dhcp == Some(true) {
+            nm_ip_setting.dhcp_send_hostname.unwrap_or(true)
+        } else {
+            false
+        };
+
         let (auto_dns, auto_gateway, auto_routes, auto_table_id) =
             parse_dhcp_opts(nm_ip_setting);
         InterfaceIpv4 {
@@ -53,6 +59,8 @@ pub(crate) fn nm_ip_setting_to_nmstate4(
                 "auto_table_id",
                 "auto_route_metric",
                 "rules",
+                "dhcp_send_hostname",
+                "dhcp_custom_hostname",
             ],
             dns: Some(nm_dns_to_nmstate("", nm_ip_setting)),
             rules: nm_rules_to_nmstate(false, nm_ip_setting),
@@ -62,6 +70,23 @@ pub(crate) fn nm_ip_setting_to_nmstate4(
                 None
             },
             auto_route_metric: nm_ip_setting.route_metric.map(|i| i as u32),
+            dhcp_send_hostname: if enabled && dhcp == Some(true) {
+                Some(dhcp_send_hostname)
+            } else {
+                None
+            },
+            dhcp_custom_hostname: if enabled
+                && dhcp == Some(true)
+                && dhcp_send_hostname
+            {
+                nm_ip_setting
+                    .dhcp_fqdn
+                    .as_ref()
+                    .or(nm_ip_setting.dhcp_hostname.as_ref())
+                    .cloned()
+            } else {
+                None
+            },
             ..Default::default()
         }
     } else {
@@ -106,6 +131,8 @@ pub(crate) fn nm_ip_setting_to_nmstate6(
                 "dhcp_duid",
                 "addr_gen_mode",
                 "auto_route_metric",
+                "dhcp_send_hostname",
+                "dhcp_custom_hostname",
             ],
             dns: Some(nm_dns_to_nmstate(iface_name, nm_ip_setting)),
             rules: nm_rules_to_nmstate(true, nm_ip_setting),
@@ -118,6 +145,16 @@ pub(crate) fn nm_ip_setting_to_nmstate6(
                 }
             },
             auto_route_metric: nm_ip_setting.route_metric.map(|i| i as u32),
+            dhcp_send_hostname: if enabled && dhcp == Some(true) {
+                Some(nm_ip_setting.dhcp_send_hostname.unwrap_or(true))
+            } else {
+                None
+            },
+            dhcp_custom_hostname: if enabled && dhcp == Some(true) {
+                nm_ip_setting.dhcp_hostname.clone()
+            } else {
+                None
+            },
             ..Default::default()
         };
         // NetworkManager only set IPv6 token to kernel when IPv6 autoconf
