@@ -334,19 +334,11 @@ def test_change_vlan_protocol(vlan_on_eth1):
     reason="Modifying VLAN protocol is not supported on NM 1.41-.",
 )
 def test_add_qinq_vlan(eth1_up):
-    qinq_state = {
-        Interface.KEY: [
-            {
-                Interface.NAME: VLAN_IFNAME,
-                Interface.TYPE: InterfaceType.VLAN,
-                Interface.STATE: InterfaceState.UP,
-                VLAN.CONFIG_SUBTREE: {
-                    VLAN.ID: 102,
-                    VLAN.BASE_IFACE: "eth1",
-                    VLAN.PROTOCOL: "802.1ad",
-                },
-            }
-        ]
-    }
-    libnmstate.apply(qinq_state)
-    assertlib.assert_state_match(qinq_state)
+    with vlan_interface(
+        VLAN_IFNAME,
+        102,
+        "eth1",
+        protocol="802.1ad",
+    ) as desired_state:
+        assertlib.assert_state_match(desired_state)
+    assertlib.assert_absent(VLAN_IFNAME)

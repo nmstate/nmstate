@@ -27,7 +27,7 @@ from libnmstate.schema import VLAN
 
 
 @contextmanager
-def vlan_interface(ifname, vlan_id, base_iface):
+def vlan_interface(ifname, vlan_id, base_iface, protocol=None):
     desired_state = {
         Interface.KEY: [
             {
@@ -38,6 +38,10 @@ def vlan_interface(ifname, vlan_id, base_iface):
             }
         ]
     }
+    if protocol:
+        desired_state[Interface.KEY][0][VLAN.CONFIG_SUBTREE][
+            VLAN.PROTOCOL
+        ] = protocol
     libnmstate.apply(desired_state)
     try:
         yield desired_state
