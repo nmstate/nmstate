@@ -153,7 +153,26 @@ impl<'a> NmApi<'a> {
         for nm_dev_obj_path in nm_dev_obj_paths {
             self.extend_timeout_if_required()?;
             match self.dbus.nm_dev_applied_connection_get(&nm_dev_obj_path) {
-                Ok(nm_conn) => nm_conns.push(nm_conn),
+                Ok(mut nm_conn) => {
+                    // Fill the interface name from NmDevice if empty
+                    if nm_conn
+                        .connection
+                        .as_ref()
+                        .map(|c| c.iface_name.is_none())
+                        .unwrap_or_default()
+                    {
+                        if let (Ok(nm_dev), Some(nm_set)) = (
+                            nm_dev_from_obj_path(
+                                &self.dbus.connection,
+                                &nm_dev_obj_path,
+                            ),
+                            nm_conn.connection.as_mut(),
+                        ) {
+                            nm_set.iface_name = Some(nm_dev.name.clone());
+                        }
+                    }
+                    nm_conns.push(nm_conn)
+                }
                 Err(e) => {
                     debug!(
                         "Ignoring error when get applied connection for \

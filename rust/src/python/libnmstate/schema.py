@@ -21,6 +21,10 @@ class Interface:
     ACCEPT_ALL_MAC_ADDRESSES = "accept-all-mac-addresses"
     WAIT_IP = "wait-ip"
     CONTROLLER = "controller"
+    PROFILE_NAME = "profile-name"
+    IDENTIFIER = "identifier"
+    IDENTIFIER_NAME = "name"
+    IDENTIFIER_MAC = "mac-address"
 
 
 class Route:

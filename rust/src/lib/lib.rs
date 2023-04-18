@@ -120,7 +120,8 @@ pub(crate) use crate::hostname::MergedHostNameState;
 pub use crate::ieee8021x::Ieee8021XConfig;
 pub(crate) use crate::iface::MergedInterface;
 pub use crate::iface::{
-    Interface, InterfaceState, InterfaceType, UnknownInterface,
+    Interface, InterfaceIdentifier, InterfaceState, InterfaceType,
+    UnknownInterface,
 };
 pub(crate) use crate::ifaces::MergedInterfaces;
 pub use crate::ifaces::{

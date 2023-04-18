@@ -16,6 +16,7 @@ from .testlib import cmdlib
 from .testlib import statelib
 from .testlib.dummy import nm_unmanaged_dummy
 from .testlib.env import is_el8
+from .testlib.ifacelib import get_mac_address
 from .testlib.iproutelib import ip_monitor_assert_stable_link_up
 from .testlib.iproutelib import iproute_get_ip_addrs_with_order
 
@@ -908,3 +909,34 @@ def test_ignore_dhcp_client_id_if_static(eth1_up):
         ]
     }
     libnmstate.apply(desired_state)
+
+
+def test_mac_address_based_matching(eth1_up):
+    eth1_mac = get_mac_address("eth1")
+    desired_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: "test0",
+                Interface.TYPE: InterfaceType.ETHERNET,
+                Interface.STATE: InterfaceState.UP,
+                Interface.IDENTIFIER: Interface.IDENTIFIER_MAC,
+                Interface.MAC: eth1_mac,
+                Interface.IPV4: {
+                    InterfaceIPv4.ENABLED: True,
+                    InterfaceIPv4.DHCP: False,
+                    InterfaceIPv4.ADDRESS: [
+                        {
+                            InterfaceIPv4.ADDRESS_IP: IPV4_ADDRESS1,
+                            InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+                        },
+                    ],
+                },
+            }
+        ]
+    }
+    libnmstate.apply(desired_state)
+    expected_state = desired_state
+    expected_state[Interface.KEY][0][Interface.NAME] = "eth1"
+    expected_state[Interface.KEY][0][Interface.PROFILE_NAME] = "test0"
+
+    assertlib.assert_state(expected_state)

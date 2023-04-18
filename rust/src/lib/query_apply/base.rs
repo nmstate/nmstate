@@ -32,6 +32,11 @@ impl BaseInterface {
         if let Some(mptcp_conf) = self.mptcp.as_mut() {
             mptcp_conf.sanitize_desired_for_verify();
         }
+        // When `profile_name` is the same with iface name, it was hidden during
+        // query, we should ignore it during verify
+        if self.profile_name.as_deref() == Some(self.name.as_str()) {
+            self.profile_name = None;
+        }
     }
 
     pub(crate) fn update(&mut self, other: &BaseInterface) {
@@ -113,6 +118,12 @@ impl BaseInterface {
         }
         if other.prop_list.contains(&"mptcp") {
             self.mptcp = other.mptcp.clone();
+        }
+        if other.prop_list.contains(&"identifier") {
+            self.identifier = other.identifier;
+        }
+        if other.prop_list.contains(&"profile_name") {
+            self.profile_name = other.profile_name.clone();
         }
         for other_prop_name in &other.prop_list {
             if !self.prop_list.contains(other_prop_name) {
