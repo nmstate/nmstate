@@ -140,6 +140,8 @@ class InterfaceIP:
     AUTO_ROUTE_METRIC = "auto-route-metric"
     MPTCP_FLAGS = "mptcp-flags"
     ALLOW_EXTRA_ADDRESS = "allow-extra-address"
+    DHCP_SEND_HOSTNAME = "dhcp-send-hostname"
+    DHCP_CUSTOM_HOSTNAME = "dhcp-custom-hostname"
 
 
 class InterfaceIPv4(InterfaceIP):

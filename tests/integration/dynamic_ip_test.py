@@ -1792,3 +1792,113 @@ def test_switch_auto_to_static_with_dynamic_ips(dhcpcli_up):
     assert not _poll_till_not(_has_ipv6_auto_gateway)
     assert _poll(_has_dhcpv4_addr)
     assert _poll(_has_dhcpv6_addr)
+
+
+def test_set_dhcp_fqdn_and_remove(dhcpcli_up):
+    desired_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: DHCP_CLI_NIC,
+                Interface.IPV4: {
+                    InterfaceIPv4.ENABLED: True,
+                    InterfaceIPv4.DHCP: True,
+                    InterfaceIPv4.DHCP_SEND_HOSTNAME: True,
+                    InterfaceIPv4.DHCP_CUSTOM_HOSTNAME: "dhcpcli.example.net",
+                },
+                Interface.IPV6: {
+                    InterfaceIPv6.ENABLED: True,
+                    InterfaceIPv6.DHCP: True,
+                    InterfaceIPv6.AUTOCONF: True,
+                    InterfaceIPv6.DHCP_SEND_HOSTNAME: True,
+                    InterfaceIPv6.DHCP_CUSTOM_HOSTNAME: "dhcpcli.example.org",
+                },
+            }
+        ],
+    }
+    libnmstate.apply(desired_state)
+    assertlib.assert_state_match(desired_state)
+
+    desired_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: DHCP_CLI_NIC,
+                Interface.IPV4: {
+                    InterfaceIPv4.ENABLED: True,
+                    InterfaceIPv4.DHCP: True,
+                    InterfaceIPv4.DHCP_SEND_HOSTNAME: True,
+                    InterfaceIPv4.DHCP_CUSTOM_HOSTNAME: "",
+                },
+                Interface.IPV6: {
+                    InterfaceIPv6.ENABLED: True,
+                    InterfaceIPv6.DHCP: True,
+                    InterfaceIPv6.AUTOCONF: True,
+                    InterfaceIPv6.DHCP_SEND_HOSTNAME: True,
+                    InterfaceIPv6.DHCP_CUSTOM_HOSTNAME: "",
+                },
+            }
+        ],
+    }
+    libnmstate.apply(desired_state)
+    desired_state[Interface.KEY][0][Interface.IPV4].pop(
+        InterfaceIPv4.DHCP_CUSTOM_HOSTNAME
+    )
+    desired_state[Interface.KEY][0][Interface.IPV6].pop(
+        InterfaceIPv6.DHCP_CUSTOM_HOSTNAME
+    )
+    assertlib.assert_state_match(desired_state)
+
+
+def test_dhcp_hostname_with_send_host_off(dhcpcli_up):
+    desired_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: DHCP_CLI_NIC,
+                Interface.IPV4: {
+                    InterfaceIPv4.ENABLED: True,
+                    InterfaceIPv4.DHCP: True,
+                    InterfaceIPv4.DHCP_SEND_HOSTNAME: False,
+                    InterfaceIPv4.DHCP_CUSTOM_HOSTNAME: "dhcpcli.example.net",
+                },
+                Interface.IPV6: {
+                    InterfaceIPv6.ENABLED: True,
+                    InterfaceIPv6.DHCP: True,
+                    InterfaceIPv6.AUTOCONF: True,
+                    InterfaceIPv6.DHCP_SEND_HOSTNAME: False,
+                    InterfaceIPv6.DHCP_CUSTOM_HOSTNAME: "dhcpcli.example.org",
+                },
+            }
+        ],
+    }
+    libnmstate.apply(desired_state)
+    desired_state[Interface.KEY][0][Interface.IPV4].pop(
+        InterfaceIPv4.DHCP_CUSTOM_HOSTNAME
+    )
+    desired_state[Interface.KEY][0][Interface.IPV6].pop(
+        InterfaceIPv6.DHCP_CUSTOM_HOSTNAME
+    )
+    assertlib.assert_state_match(desired_state)
+
+
+def test_set_dhcp_host_name_and_remove(dhcpcli_up):
+    desired_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: DHCP_CLI_NIC,
+                Interface.IPV4: {
+                    InterfaceIPv4.ENABLED: True,
+                    InterfaceIPv4.DHCP: True,
+                    InterfaceIPv4.DHCP_SEND_HOSTNAME: True,
+                    InterfaceIPv4.DHCP_CUSTOM_HOSTNAME: "dhcpcli",
+                },
+                Interface.IPV6: {
+                    InterfaceIPv6.ENABLED: True,
+                    InterfaceIPv6.DHCP: True,
+                    InterfaceIPv6.AUTOCONF: True,
+                    InterfaceIPv6.DHCP_SEND_HOSTNAME: True,
+                    InterfaceIPv6.DHCP_CUSTOM_HOSTNAME: "dhcpcli6",
+                },
+            }
+        ],
+    }
+    libnmstate.apply(desired_state)
+    assertlib.assert_state_match(desired_state)
