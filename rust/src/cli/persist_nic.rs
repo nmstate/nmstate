@@ -163,6 +163,9 @@ pub(crate) fn clean_up(root: &str, dry_run: bool) -> Result<String, CliError> {
 
     if pinned_ifaces.is_empty() {
         log::info!("No persisted NICs found");
+        if !dry_run {
+            std::fs::remove_file(stamp_path)?;
+        }
         return Ok("".to_string());
     }
 
@@ -209,6 +212,9 @@ pub(crate) fn clean_up(root: &str, dry_run: bool) -> Result<String, CliError> {
                 file_path.display()
             );
         }
+    }
+    if !dry_run {
+        std::fs::remove_file(stamp_path)?;
     }
     Ok("".to_string())
 }
