@@ -62,11 +62,36 @@ def gen_foo_iface_info_static_ip(iface_type=InterfaceType.ETHERNET):
     return iface_info
 
 
+def gen_foo_iface_info_static_ip_only_ipv4(iface_type=InterfaceType.ETHERNET):
+    iface_info = gen_foo_iface_info(iface_type)
+    iface_info.update(
+        {
+            Interface.IPV4: {
+                InterfaceIPv4.ENABLED: True,
+                InterfaceIPv4.DHCP: False,
+                InterfaceIPv4.ADDRESS: deepcopy(IPV4_ADDRESSES),
+            },
+        }
+    )
+    return iface_info
+
+
 def gen_two_static_ip_ifaces(iface1_name, iface2_name):
     iface1_info = gen_foo_iface_info_static_ip()
     iface1_info[Interface.NAME] = iface1_name
     iface1_info[Interface.IPV4][InterfaceIPv4.ADDRESS].pop(1)
     iface1_info[Interface.IPV6][InterfaceIPv6.ADDRESS].pop(1)
+    iface2_info = gen_foo_iface_info_static_ip()
+    iface2_info[Interface.NAME] = iface2_name
+    iface2_info[Interface.IPV4][InterfaceIPv4.ADDRESS].pop(0)
+    iface2_info[Interface.IPV6][InterfaceIPv6.ADDRESS].pop(0)
+    return Ifaces([], [iface1_info, iface2_info])
+
+
+def gen_two_static_ip_ifaces_different(iface1_name, iface2_name):
+    iface1_info = gen_foo_iface_info_static_ip_only_ipv4()
+    iface1_info[Interface.NAME] = iface1_name
+    iface1_info[Interface.IPV4][InterfaceIPv4.ADDRESS].pop(1)
     iface2_info = gen_foo_iface_info_static_ip()
     iface2_info[Interface.NAME] = iface2_name
     iface2_info[Interface.IPV4][InterfaceIPv4.ADDRESS].pop(0)

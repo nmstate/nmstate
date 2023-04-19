@@ -196,11 +196,15 @@ class RouteRuleState:
             rules_ipfamily = {Interface.IPV4: set(), Interface.IPV6: set()}
             cur_rules_ipfamily = {Interface.IPV4: set(), Interface.IPV6: set()}
             for rule in self._cur_rules[route_table]:
-                cur_rules_ipfamily[Interface.IPV6].add(rule) if rule.is_ipv6 \
-                    else cur_rules_ipfamily[Interface.IPV4].add(rule)
+                cur_rules_ipfamily[Interface.IPV6].add(
+                    rule
+                ) if rule.is_ipv6 else cur_rules_ipfamily[Interface.IPV4].add(
+                    rule
+                )
             for rule in rules:
-                rules_ipfamily[Interface.IPV6].add(rule) if rule.is_ipv6 \
-                    else rules_ipfamily[Interface.IPV4].add(rule)
+                rules_ipfamily[Interface.IPV6].add(
+                    rule
+                ) if rule.is_ipv6 else rules_ipfamily[Interface.IPV4].add(rule)
             for ip_family in (Interface.IPV4, Interface.IPV6):
                 if len(rules_ipfamily[ip_family]) == 0:
                     continue
@@ -218,14 +222,15 @@ class RouteRuleState:
                     ] = True
                 for rule in rules_ipfamily[ip_family]:
                     route_rule_metadata[iface_name][ip_family].append(
-                        rule.to_dict())
+                        rule.to_dict()
+                    )
         return route_rule_metadata
 
     def _verify_ip4_ipv6_enabled(self, route, ifaces, ip_family):
         for iface in ifaces.values():
             iface_dict = iface.to_dict()
-            if iface_dict['name'] == route.next_hop_interface:
-                return iface_dict[ip_family]['enabled']
+            if iface_dict["name"] == route.next_hop_interface:
+                return iface_dict[ip_family]["enabled"]
 
     def _iface_for_route_table(
         self, route_state, route_table, ifaces, ip_family

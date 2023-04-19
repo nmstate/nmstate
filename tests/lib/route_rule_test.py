@@ -30,6 +30,7 @@ from libnmstate.route_rule import RouteRuleEntry
 from libnmstate.route_rule import RouteRuleState
 
 from .testlib.ifacelib import gen_two_static_ip_ifaces
+from .testlib.ifacelib import gen_two_static_ip_ifaces_different
 from .testlib.routelib import IPV4_ROUTE_IFACE_NAME
 from .testlib.routelib import IPV4_ROUTE_TABLE_ID
 from .testlib.routelib import IPV6_ROUTE_IFACE_NAME
@@ -198,6 +199,11 @@ class TestRouteRuleState:
             IPV4_ROUTE_IFACE_NAME, IPV6_ROUTE_IFACE_NAME
         )
 
+    def _gen_ifaces_no_ipv6_one_iface(self):
+        return gen_two_static_ip_ifaces_different(
+            IPV4_ROUTE_IFACE_NAME, IPV6_ROUTE_IFACE_NAME
+        )
+
     def _gen_route_state(self, ifaces):
         return RouteState(
             ifaces,
@@ -231,8 +237,54 @@ class TestRouteRuleState:
             }
         )
 
+    def test_verify_sort_rules_no_ipv6_in_one_iface(self):
+        ifaces = self._gen_ifaces_no_ipv6_one_iface()
+        state = RouteRuleState(
+            self._gen_route_state(ifaces),
+            {
+                RouteRule.CONFIG: [
+                    _gen_ipv4_route_rule().to_dict(),
+                    _gen_ipv6_route_rule().to_dict(),
+                ]
+            },
+            {},
+        )
+        state.verify(
+            {
+                RouteRule.CONFIG: [
+                    _gen_ipv6_route_rule().to_dict(),
+                    _gen_ipv4_route_rule().to_dict(),
+                ]
+            }
+        )
+
     def test_gen_metatada(self):
         ifaces = self._gen_ifaces()
+        route_state = self._gen_route_state(ifaces)
+        route_rule_state = RouteRuleState(
+            route_state,
+            {
+                RouteRule.CONFIG: [
+                    _gen_ipv4_route_rule().to_dict(),
+                    _gen_ipv6_route_rule().to_dict(),
+                ]
+            },
+            {},
+        )
+        ifaces.gen_route_rule_metadata(route_rule_state, route_state)
+
+        ipv4_iface = ifaces.all_kernel_ifaces[IPV4_ROUTE_IFACE_NAME]
+        ipv6_iface = ifaces.all_kernel_ifaces[IPV6_ROUTE_IFACE_NAME]
+
+        assert ipv4_iface.to_dict()[Interface.IPV4][
+            BaseIface.ROUTE_RULES_METADATA
+        ] == [_gen_ipv4_route_rule().to_dict()]
+        assert ipv6_iface.to_dict()[Interface.IPV6][
+            BaseIface.ROUTE_RULES_METADATA
+        ] == [_gen_ipv6_route_rule().to_dict()]
+
+    def test_gen_metatada_no_ipv6_one_iface(self):
+        ifaces = self._gen_ifaces_no_ipv6_one_iface()
         route_state = self._gen_route_state(ifaces)
         route_rule_state = RouteRuleState(
             route_state,
