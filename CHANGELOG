@@ -1,4 +1,14 @@
 # Changelog
+## [1.4.4] - 2023-04-20
+### Breaking changes
+ - N/A
+
+### New features
+ - Support static DNS search with auto DNS nameserver (179a2e2f)
+
+### Bug fixes
+ - Fix error when purging DNS (95cbfd79)
+
 ## [1.4.3] - 2023-03-29
 ### Breaking changes
  - N/A
