@@ -37,6 +37,16 @@ pub(crate) fn np_ipv4_to_nmstate(
                         np_iface,
                         np_addr.address.as_str(),
                     )),
+                    valid_left: if np_addr.valid_lft != "forever" {
+                        Some(np_addr.valid_lft.clone())
+                    } else {
+                        None
+                    },
+                    preferred_left: if np_addr.preferred_lft != "forever" {
+                        Some(np_addr.preferred_lft.clone())
+                    } else {
+                        None
+                    },
                     ..Default::default()
                 }),
                 Err(e) => {
@@ -95,6 +105,16 @@ pub(crate) fn np_ipv6_to_nmstate(
                         np_iface,
                         np_addr.address.as_str(),
                     )),
+                    valid_left: if np_addr.valid_lft != "forever" {
+                        Some(np_addr.valid_lft.clone())
+                    } else {
+                        None
+                    },
+                    preferred_left: if np_addr.preferred_lft != "forever" {
+                        Some(np_addr.preferred_lft.clone())
+                    } else {
+                        None
+                    },
                     ..Default::default()
                 }),
                 Err(e) => {

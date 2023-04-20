@@ -214,7 +214,7 @@ impl RouteRuleEntry {
             if !ip_from.is_empty() {
                 let ip_from = if !ip_from.contains('/') {
                     match InterfaceIpAddr::try_from(ip_from) {
-                        Ok(ref i) => i.into(),
+                        Ok(i) => i.to_string(),
                         Err(e) => {
                             log::error!("{}", e);
                             return false;
@@ -238,7 +238,7 @@ impl RouteRuleEntry {
             if !ip_to.is_empty() {
                 let ip_to = if !ip_to.contains('/') {
                     match InterfaceIpAddr::try_from(ip_to) {
-                        Ok(ref i) => i.into(),
+                        Ok(ref i) => i.to_string(),
                         Err(e) => {
                             log::error!("{}", e);
                             return false;

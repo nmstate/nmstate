@@ -24,11 +24,11 @@ use super::{
 };
 use crate::{
     BaseInterface, BondConfig, BondInterface, BondOptions, DummyInterface,
-    EthernetInterface, InfiniBandInterface, Interface, InterfaceState,
-    InterfaceType, Interfaces, LinuxBridgeInterface, LoopbackInterface,
-    MacVlanInterface, MacVtapInterface, NetworkState, NmstateError,
-    OvsBridgeInterface, OvsInterface, UnknownInterface, VlanInterface,
-    VrfInterface, VxlanInterface,
+    EthernetInterface, InfiniBandInterface, Interface, InterfaceIdentifier,
+    InterfaceState, InterfaceType, Interfaces, LinuxBridgeInterface,
+    LoopbackInterface, MacVlanInterface, MacVtapInterface, NetworkState,
+    NmstateError, OvsBridgeInterface, OvsInterface, UnknownInterface,
+    VlanInterface, VrfInterface, VxlanInterface,
 };
 
 pub(crate) fn nm_retrieve(
@@ -217,6 +217,8 @@ fn nm_conn_to_base_iface(
             "description",
             "lldp",
             "wait_ip",
+            "identifier",
+            "profile_name",
         ];
         base_iface.state = InterfaceState::Up;
         base_iface.iface_type = nm_dev_iface_type_to_nmstate(nm_dev);
@@ -231,6 +233,12 @@ fn nm_conn_to_base_iface(
             query_nmstate_wait_ip(nm_conn.ipv4.as_ref(), nm_conn.ipv6.as_ref());
         base_iface.controller = nm_conn.controller().map(|c| c.to_string());
         base_iface.description = get_description(nm_conn);
+        base_iface.identifier = get_identifier(nm_conn);
+        base_iface.profile_name = get_connection_name(nm_conn);
+        if base_iface.profile_name.as_ref() == Some(&base_iface.name) {
+            base_iface.profile_name = None;
+        }
+
         base_iface.lldp =
             Some(lldp_neighbors.map(get_lldp).unwrap_or_default());
         if let Some(nm_saved_conn) = nm_saved_conn {
@@ -525,4 +533,26 @@ fn nm_dev_to_nm_iface(nm_dev: &NmDevice) -> Option<Interface> {
         iface.base_iface_mut().prop_list.push("iface_type");
     }
     Some(iface)
+}
+
+fn get_identifier(nm_conn: &NmConnection) -> InterfaceIdentifier {
+    if let Some(nm_set) = nm_conn.wired.as_ref() {
+        if nm_set
+            .mac_address
+            .as_ref()
+            .map(|a| !a.is_empty())
+            .unwrap_or_default()
+        {
+            return InterfaceIdentifier::MacAddress;
+        }
+    }
+
+    InterfaceIdentifier::Name
+}
+
+fn get_connection_name(nm_conn: &NmConnection) -> Option<String> {
+    if let Some(nm_set) = nm_conn.connection.as_ref() {
+        return nm_set.id.clone();
+    }
+    None
 }

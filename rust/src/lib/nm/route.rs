@@ -22,10 +22,14 @@ pub(crate) fn store_route_config(
                     iface.mark_as_changed();
                 }
                 if let Some(apply_iface) = iface.for_apply.as_mut() {
-                    apply_iface.base_iface_mut().ipv4 =
-                        iface.merged.base_iface_mut().ipv4.clone();
-                    apply_iface.base_iface_mut().ipv6 =
-                        iface.merged.base_iface_mut().ipv6.clone();
+                    if apply_iface.base_iface_mut().ipv4.is_none() {
+                        apply_iface.base_iface_mut().ipv4 =
+                            iface.merged.base_iface_mut().ipv4.clone();
+                    }
+                    if apply_iface.base_iface_mut().ipv6.is_none() {
+                        apply_iface.base_iface_mut().ipv6 =
+                            iface.merged.base_iface_mut().ipv6.clone();
+                    }
                     apply_iface.base_iface_mut().routes = Some(rts.clone());
                 }
             }

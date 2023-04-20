@@ -9,12 +9,15 @@ impl ToKeyfile for NmSettingWired {
     fn to_keyfile(&self) -> Result<HashMap<String, zvariant::Value>, NmError> {
         let mut ret = HashMap::new();
         for (k, v) in self.to_value()?.drain() {
-            if k != "cloned-mac-address" {
+            if k != "cloned-mac-address" && k != "mac-address" {
                 ret.insert(k.to_string(), v);
             }
         }
         if let Some(v) = &self.cloned_mac_address {
             ret.insert("cloned-mac-address".to_string(), Value::new(v));
+        }
+        if let Some(v) = &self.mac_address {
+            ret.insert("mac-address".to_string(), Value::new(v));
         }
         Ok(ret)
     }

@@ -39,10 +39,6 @@ fn gen_nm_ipv4_setting(
             NmSettingIpMethod::Auto
         } else if !iface_ip.addresses.as_deref().unwrap_or_default().is_empty()
         {
-            for ip_addr in iface_ip.addresses.as_deref().unwrap_or_default() {
-                addresses
-                    .push(format!("{}/{}", ip_addr.ip, ip_addr.prefix_length));
-            }
             NmSettingIpMethod::Manual
         } else {
             NmSettingIpMethod::Disabled
@@ -50,6 +46,11 @@ fn gen_nm_ipv4_setting(
     } else {
         NmSettingIpMethod::Disabled
     };
+    if let Some(addrs) = iface_ip.addresses.as_ref() {
+        for ip_addr in addrs {
+            addresses.push(format!("{}/{}", ip_addr.ip, ip_addr.prefix_length));
+        }
+    }
     let mut nm_setting = nm_conn.ipv4.as_ref().cloned().unwrap_or_default();
     nm_setting.method = Some(method);
     nm_setting.addresses = addresses;
@@ -70,9 +71,29 @@ fn gen_nm_ipv4_setting(
             iface_ip.auto_routes,
             iface_ip.auto_table_id,
         );
-        // No use case indicate we should support static routes with DHCP
-        // enabled.
+        // Clean old routes
         nm_setting.routes = Vec::new();
+        if Some(false) == iface_ip.dhcp_send_hostname {
+            nm_setting.dhcp_send_hostname = Some(false);
+        } else {
+            nm_setting.dhcp_send_hostname = Some(true);
+            if let Some(v) = iface_ip.dhcp_custom_hostname.as_deref() {
+                if v.is_empty() {
+                    nm_setting.dhcp_fqdn = None;
+                    nm_setting.dhcp_hostname = None;
+                } else {
+                    // We are not verifying full spec of FQDN, just check
+                    // whether it has do it not.
+                    if v.contains('.') {
+                        nm_setting.dhcp_fqdn = Some(v.to_string());
+                        nm_setting.dhcp_hostname = None;
+                    } else {
+                        nm_setting.dhcp_hostname = Some(v.to_string());
+                        nm_setting.dhcp_fqdn = None;
+                    }
+                }
+            }
+        }
     }
     nm_setting.gateway = None;
     if iface_ip.enabled {
@@ -126,14 +147,6 @@ fn gen_nm_ipv6_setting(
             (false, false) => {
                 if !iface_ip.addresses.as_deref().unwrap_or_default().is_empty()
                 {
-                    for ip_addr in
-                        iface_ip.addresses.as_deref().unwrap_or_default()
-                    {
-                        addresses.push(format!(
-                            "{}/{}",
-                            ip_addr.ip, ip_addr.prefix_length
-                        ));
-                    }
                     NmSettingIpMethod::Manual
                 } else {
                     NmSettingIpMethod::LinkLocal
@@ -143,6 +156,11 @@ fn gen_nm_ipv6_setting(
     } else {
         NmSettingIpMethod::Disabled
     };
+    if let Some(addrs) = iface_ip.addresses.as_deref() {
+        for ip_addr in addrs {
+            addresses.push(format!("{}/{}", ip_addr.ip, ip_addr.prefix_length));
+        }
+    }
     let mut nm_setting = nm_conn.ipv6.as_ref().cloned().unwrap_or_default();
     nm_setting.method = Some(method);
     nm_setting.addresses = addresses;
@@ -174,9 +192,20 @@ fn gen_nm_ipv6_setting(
             iface_ip.auto_routes,
             iface_ip.auto_table_id,
         );
-        // No use case indicate we should support static routes with DHCP
-        // enabled.
+        // Clean old routes
         nm_setting.routes = Vec::new();
+        if Some(false) == iface_ip.dhcp_send_hostname {
+            nm_setting.dhcp_send_hostname = Some(false);
+        } else {
+            nm_setting.dhcp_send_hostname = Some(true);
+            if let Some(v) = iface_ip.dhcp_custom_hostname.as_deref() {
+                if v.is_empty() {
+                    nm_setting.dhcp_hostname = None;
+                } else {
+                    nm_setting.dhcp_hostname = Some(v.to_string());
+                }
+            }
+        }
     } else {
         nm_setting.token = None;
     }

@@ -25,8 +25,8 @@ use super::{
 };
 
 use crate::{
-    ErrorKind, Interface, InterfaceType, MergedInterface, MergedNetworkState,
-    NmstateError, OvsBridgePortConfig,
+    ErrorKind, Interface, InterfaceIdentifier, InterfaceType, MergedInterface,
+    MergedNetworkState, NmstateError, OvsBridgePortConfig,
 };
 
 pub(crate) const NM_SETTING_BRIDGE_SETTING_NAME: &str = "bridge";
@@ -80,12 +80,24 @@ pub(crate) fn iface_to_nm_connections(
     };
 
     let base_iface = iface.base_iface();
-    let exist_nm_conn = get_exist_profile(
-        exist_nm_conns,
-        &base_iface.name,
-        &base_iface.iface_type,
-        nm_ac_uuids,
-    );
+    let exist_nm_conn =
+        if base_iface.identifier == InterfaceIdentifier::MacAddress {
+            get_exist_profile_by_profile_name(
+                exist_nm_conns,
+                base_iface
+                    .profile_name
+                    .as_deref()
+                    .unwrap_or(base_iface.name.as_str()),
+                &base_iface.iface_type,
+            )
+        } else {
+            get_exist_profile(
+                exist_nm_conns,
+                &base_iface.name,
+                &base_iface.iface_type,
+                nm_ac_uuids,
+            )
+        };
     if iface.is_up_exist_config() {
         if let Some(nm_conn) = exist_nm_conn {
             if !iface.is_userspace()
@@ -357,20 +369,25 @@ pub(crate) fn gen_nm_conn_setting(
         cur_nm_conn_set.clone()
     } else {
         let mut new_nm_conn_set = NmSettingConnection::default();
-        let conn_name = match iface.iface_type() {
-            InterfaceType::OvsBridge => {
-                format!("{}-br", iface.name())
-            }
-            InterfaceType::Other(ref other_type)
-                if other_type == "ovs-port" =>
-            {
-                format!("{}-port", iface.name())
-            }
-            InterfaceType::OvsInterface => {
-                format!("{}-if", iface.name())
-            }
-            _ => iface.name().to_string(),
-        };
+        let conn_name =
+            if let Some(n) = iface.base_iface().profile_name.as_deref() {
+                n.to_string()
+            } else {
+                match iface.iface_type() {
+                    InterfaceType::OvsBridge => {
+                        format!("{}-br", iface.name())
+                    }
+                    InterfaceType::Other(ref other_type)
+                        if other_type == "ovs-port" =>
+                    {
+                        format!("{}-port", iface.name())
+                    }
+                    InterfaceType::OvsInterface => {
+                        format!("{}-if", iface.name())
+                    }
+                    _ => iface.name().to_string(),
+                }
+            };
 
         new_nm_conn_set.id = Some(conn_name);
         new_nm_conn_set.uuid = Some(if stable_uuid {
@@ -390,7 +407,11 @@ pub(crate) fn gen_nm_conn_setting(
         new_nm_conn_set
     };
 
-    nm_conn_set.iface_name = Some(iface.name().to_string());
+    if iface.base_iface().identifier == InterfaceIdentifier::Name {
+        nm_conn_set.iface_name = Some(iface.name().to_string());
+    } else {
+        nm_conn_set.iface_name = None;
+    }
     nm_conn_set.autoconnect = Some(true);
     nm_conn_set.autoconnect_ports = if iface.is_controller() {
         Some(true)
@@ -476,6 +497,26 @@ pub(crate) fn get_exist_profile<'a>(
         }
     }
     found_nm_conns.pop()
+}
+
+fn get_exist_profile_by_profile_name<'a>(
+    exist_nm_conns: &'a [NmConnection],
+    profile_name: &str,
+    iface_type: &InterfaceType,
+) -> Option<&'a NmConnection> {
+    for exist_nm_conn in exist_nm_conns {
+        let nm_iface_type = if let Ok(t) = iface_type_to_nm(iface_type) {
+            t
+        } else {
+            continue;
+        };
+        if exist_nm_conn.id() == Some(profile_name)
+            && exist_nm_conn.iface_type() == Some(&nm_iface_type)
+        {
+            return Some(exist_nm_conn);
+        }
+    }
+    None
 }
 
 fn persisten_iface_cur_conf(
