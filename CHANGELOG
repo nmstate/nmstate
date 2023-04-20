@@ -1,4 +1,20 @@
 # Changelog
+## [2.2.10] - 2023-04-20
+### Breaking changes
+ - N/A
+
+### New features
+ - Added CLI hiden `persist-nic-names` subcommand for OpenShift. (6f95011e,
+   03c7b03b, 5f4ede55)
+ - Support static IP address on with auto ip stack. (334fcf2e)
+ - Support static DNS search with auto DNS nameserver. (b222d5b1)
+ - Support matching interface with MAC address. (508bbe74)
+ - Support DHCP hostname/FQDN option. (ebe3fc86)
+
+### Bug fixes
+ - Ignore `dhcp-client-id` when DHCPv4 disabled. (16b42e0e)
+ - Validate IP address type matching with ip stack type. (5f1107fd)
+
 ## [2.2.9] - 2023-03-23
 ### Breaking changes
  - N/A
