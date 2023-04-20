@@ -189,3 +189,23 @@ def test_static_dns_search_with_auto_dns(auto_eth1):
         "nmcli -t -f ipv6.dns-search c show eth1".split(), check=True
     )[1]
     assert "ipv6.dns-search:example.org,example.net" in output
+
+
+def test_purge_global_dns():
+    desired_state = {
+        DNS.KEY: {
+            DNS.CONFIG: {
+                DNS.SERVER: ["8.8.8.8", "2001:4860:4860::8888", "1.1.1.1"],
+            }
+        },
+    }
+    libnmstate.apply(desired_state)
+    libnmstate.apply(
+        {
+            DNS.KEY: {DNS.CONFIG: {}},
+        }
+    )
+    with open(GLOBAL_DNS_CONF_FILE) as fd:
+        content = fd.read()
+        for srv in desired_state[DNS.KEY][DNS.CONFIG][DNS.SERVER]:
+            assert srv not in content
