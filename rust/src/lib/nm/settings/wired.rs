@@ -1,7 +1,10 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::nm::nm_dbus::NmConnection;
 
 use crate::{
     nm::version::nm_supports_accept_all_mac_addresses_mode, Interface,
+    InterfaceIdentifier,
 };
 
 pub(crate) fn gen_nm_wired_setting(
@@ -15,7 +18,11 @@ pub(crate) fn gen_nm_wired_setting(
     let base_iface = iface.base_iface();
 
     if let Some(mac) = &base_iface.mac_address {
-        nm_wired_set.cloned_mac_address = Some(mac.to_string());
+        if base_iface.identifier == InterfaceIdentifier::MacAddress {
+            nm_wired_set.mac_address = Some(mac.to_string());
+        } else {
+            nm_wired_set.cloned_mac_address = Some(mac.to_string());
+        }
         flag_need_wired = true;
     }
     if let Some(mtu) = &base_iface.mtu {

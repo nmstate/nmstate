@@ -3,9 +3,10 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    ErrorKind, EthtoolConfig, Ieee8021XConfig, InterfaceIpv4, InterfaceIpv6,
-    InterfaceState, InterfaceType, LldpConfig, MergedInterface, MptcpConfig,
-    NmstateError, OvsDbIfaceConfig, RouteEntry, WaitIp,
+    ErrorKind, EthtoolConfig, Ieee8021XConfig, InterfaceIdentifier,
+    InterfaceIpv4, InterfaceIpv6, InterfaceState, InterfaceType, LldpConfig,
+    MergedInterface, MptcpConfig, NmstateError, OvsDbIfaceConfig, RouteEntry,
+    WaitIp,
 };
 
 const MINIMUM_IPV6_MTU: u64 = 1280;
@@ -16,8 +17,11 @@ const MINIMUM_IPV6_MTU: u64 = 1280;
 #[non_exhaustive]
 /// Information shared among all interface types
 pub struct BaseInterface {
-    /// Interface name
+    /// Interface name, when applying with `InterfaceIdentifier::MacAddress`,
+    /// if `profile_name` not defined, this will be used as profile name.
     pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub profile_name: Option<String>,
     #[serde(skip_serializing_if = "crate::serializer::is_option_string_empty")]
     /// Interface description stored in network backend. Not available for
     /// kernel only mode.
@@ -31,7 +35,18 @@ pub struct BaseInterface {
     #[serde(default = "default_state")]
     /// Interface state. Default to [InterfaceState::Up] when applying.
     pub state: InterfaceState,
+    #[serde(default, skip_serializing_if = "InterfaceIdentifier::is_default")]
+    /// Define network backend matching method on choosing network interface.
+    /// Default to [InterfaceIdentifier::Name].
+    pub identifier: InterfaceIdentifier,
+    /// When applying with `[InterfaceIdentifier::MacAddress]`,
+    /// nmstate will store original desired interface name as `profile_name`
+    /// here and store the real interface name as `name` property.
     #[serde(skip_serializing_if = "Option::is_none")]
+    /// For [InterfaceIdentifier::Name] (default), this property will change
+    /// the interface MAC address to desired one when applying.
+    /// For [InterfaceIdentifier::MacAddress], this property will be used
+    /// for searching interface on desired MAC address when applying.
     /// MAC address in the format: upper case hex string separated by `:` on
     /// every two characters. Case insensitive when applying.
     /// Serialize and deserialize to/from `mac-address`.
