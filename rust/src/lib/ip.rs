@@ -93,6 +93,16 @@ struct InterfaceIp {
     pub allow_extra_address: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub token: Option<String>,
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "dhcp-send-hostname"
+    )]
+    pub dhcp_send_hostname: Option<bool>,
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "dhcp-custom-hostname"
+    )]
+    pub dhcp_custom_hostname: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -161,7 +171,22 @@ pub struct InterfaceIpv4 {
     /// Only available for DHCPv4 enabled interface.
     /// Deserialize from `auto-route-metric`
     pub auto_route_metric: Option<u32>,
-
+    /// Whether to include hostname in DHCP request.
+    /// If the hostname is FQDN, the `Fully Qualified Domain Name (FQDN)`
+    /// option(81) defined in RFC 4702 will be used.
+    /// If the hostname is not FQDN, the `Host Name` option(12) defined in RFC
+    /// 2132 will be used.
+    /// If not defined, set to True when DHCPv4 enabled.
+    /// Deserialize from `dhcp-send-hostname`
+    pub dhcp_send_hostname: Option<bool>,
+    /// Custom string to override hostname used for DHCP request.
+    /// If the hostname is FQDN, the `Fully Qualified Domain Name (FQDN)`
+    /// option(81) defined in RFC 4702 will be used.
+    /// If the hostname is not FQDN, the `Host Name` option(12) defined in RFC
+    /// 2132 will be used.
+    /// If not defined, current non-dynamic hostname will be used.
+    /// Deserialize from `dhcp-custom-hostname`
+    pub dhcp_custom_hostname: Option<String>,
     pub(crate) dns: Option<DnsClientState>,
     pub(crate) rules: Option<Vec<RouteRuleEntry>>,
 }
@@ -182,6 +207,8 @@ impl Default for InterfaceIpv4 {
             auto_table_id: None,
             allow_extra_address: default_allow_extra_address(),
             auto_route_metric: None,
+            dhcp_send_hostname: None,
+            dhcp_custom_hostname: None,
         }
     }
 }
@@ -337,6 +364,24 @@ impl InterfaceIpv4 {
                 );
             }
             self.dhcp_client_id = None;
+            self.dhcp_send_hostname = None;
+            self.dhcp_custom_hostname = None;
+        }
+        if self.dhcp_send_hostname == Some(false) {
+            if is_desired {
+                if let Some(custom_hostname) =
+                    self.dhcp_custom_hostname.as_deref()
+                {
+                    if !custom_hostname.is_empty() {
+                        log::warn!(
+                            "Ignoring `dhcp-custom-hostname: \
+                            {custom_hostname}` as `dhcp-send-hostname` is \
+                            disabled"
+                        );
+                    }
+                }
+            }
+            self.dhcp_custom_hostname = None;
         }
         if let Some(addrs) = self.addresses.as_mut() {
             for addr in addrs.iter_mut() {
@@ -395,6 +440,8 @@ impl From<InterfaceIp> for InterfaceIpv4 {
             auto_table_id: ip.auto_table_id,
             allow_extra_address: ip.allow_extra_address,
             auto_route_metric: ip.auto_route_metric,
+            dhcp_send_hostname: ip.dhcp_send_hostname,
+            dhcp_custom_hostname: ip.dhcp_custom_hostname,
             ..Default::default()
         }
     }
@@ -418,6 +465,8 @@ impl From<InterfaceIpv4> for InterfaceIp {
             auto_table_id: ip.auto_table_id,
             allow_extra_address: ip.allow_extra_address,
             auto_route_metric: ip.auto_route_metric,
+            dhcp_send_hostname: ip.dhcp_send_hostname,
+            dhcp_custom_hostname: ip.dhcp_custom_hostname,
             ..Default::default()
         }
     }
@@ -499,6 +548,16 @@ pub struct InterfaceIpv6 {
     /// IETF draft(expired) Tokenised IPv6 Identifiers. Should be only
     /// containing the tailing 64 bites for IPv6 address.
     pub token: Option<String>,
+    /// Whether to include hostname in DHCP request in
+    /// `Fully Qualified Domain Name (FQDN)` option(39) defined in RFC 4704.
+    /// If not defined, set to True when DHCPv6 enabled.
+    /// Deserialize from `dhcp-send-hostname`
+    pub dhcp_send_hostname: Option<bool>,
+    /// Custom string to override hostname used for DHCP request in
+    /// `Fully Qualified Domain Name (FQDN)` option(29) defined in RFC 4704.
+    /// If not defined, current non-dynamic hostname will be used.
+    /// Deserialize from `dhcp-custom-hostname`
+    pub dhcp_custom_hostname: Option<String>,
 
     pub(crate) dns: Option<DnsClientState>,
     pub(crate) rules: Option<Vec<RouteRuleEntry>>,
@@ -523,6 +582,8 @@ impl Default for InterfaceIpv6 {
             allow_extra_address: default_allow_extra_address(),
             auto_route_metric: None,
             token: None,
+            dhcp_send_hostname: None,
+            dhcp_custom_hostname: None,
         }
     }
 }
@@ -628,6 +689,8 @@ impl InterfaceIpv6 {
             self.auto_routes = None;
             self.auto_table_id = None;
             self.auto_route_metric = None;
+            self.dhcp_send_hostname = None;
+            self.dhcp_custom_hostname = None;
         }
         if let Some(addrs) = self.addresses.as_mut() {
             for addr in addrs.iter_mut() {
@@ -650,6 +713,22 @@ impl InterfaceIpv6 {
                 ));
             }
             sanitize_ipv6_token_to_string(token)?;
+        }
+        if self.dhcp_send_hostname == Some(false) {
+            if is_desired {
+                if let Some(custom_hostname) =
+                    self.dhcp_custom_hostname.as_deref()
+                {
+                    if !custom_hostname.is_empty() {
+                        log::warn!(
+                            "Ignoring `dhcp-custom-hostname: \
+                            {custom_hostname}` as `dhcp-send-hostname` is \
+                            disabled"
+                        );
+                    }
+                }
+            }
+            self.dhcp_custom_hostname = None;
         }
         Ok(())
     }
@@ -756,6 +835,8 @@ impl From<InterfaceIp> for InterfaceIpv6 {
             allow_extra_address: ip.allow_extra_address,
             auto_route_metric: ip.auto_route_metric,
             token: ip.token,
+            dhcp_send_hostname: ip.dhcp_send_hostname,
+            dhcp_custom_hostname: ip.dhcp_custom_hostname,
             ..Default::default()
         }
     }
@@ -782,6 +863,8 @@ impl From<InterfaceIpv6> for InterfaceIp {
             allow_extra_address: ip.allow_extra_address,
             auto_route_metric: ip.auto_route_metric,
             token: ip.token,
+            dhcp_send_hostname: ip.dhcp_send_hostname,
+            dhcp_custom_hostname: ip.dhcp_custom_hostname,
             ..Default::default()
         }
     }
@@ -1149,6 +1232,12 @@ fn get_ip_prop_list(
     }
     if map.contains_key("addr-gen-mode") {
         ret.push("addr_gen_mode")
+    }
+    if map.contains_key("dhcp-send-hostname") {
+        ret.push("dhcp_send_hostname")
+    }
+    if map.contains_key("dhcp-custom-hostname") {
+        ret.push("dhcp_custom_hostname")
     }
     ret
 }
