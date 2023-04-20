@@ -78,6 +78,7 @@ pub(crate) fn run_persist_immediately(
         return Ok("".to_string());
     }
 
+    let mut output_map: HashMap<String, String> = HashMap::new();
     let state = gather_state()?;
     let mut changed = false;
     for iface in state
@@ -102,6 +103,7 @@ pub(crate) fn run_persist_immediately(
         if !dry_run {
             changed |=
                 persist_iface_name_via_systemd_link(root, mac, iface.name())?;
+            output_map.insert(mac.to_string(), iface.name().to_string());
         }
     }
 
@@ -110,7 +112,7 @@ pub(crate) fn run_persist_immediately(
     }
 
     if !dry_run {
-        std::fs::write(stamp_path, b"")?;
+        std::fs::write(stamp_path, serde_json::to_string(&output_map)?)?;
     }
 
     Ok("".to_string())
