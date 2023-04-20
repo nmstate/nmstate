@@ -21,6 +21,10 @@ class Interface:
     ACCEPT_ALL_MAC_ADDRESSES = "accept-all-mac-addresses"
     WAIT_IP = "wait-ip"
     CONTROLLER = "controller"
+    PROFILE_NAME = "profile-name"
+    IDENTIFIER = "identifier"
+    IDENTIFIER_NAME = "name"
+    IDENTIFIER_MAC = "mac-address"
 
 
 class Route:
@@ -125,6 +129,9 @@ class InterfaceIP:
     ADDRESS = "address"
     ADDRESS_IP = "ip"
     ADDRESS_PREFIX_LENGTH = "prefix-length"
+    ADDRESS_VALID_LEFT = "valid-left"
+    ADDRESS_PREFERRED_LEFT = "preferred-left"
+    ADDRESS_LIFETIME_FOREVER = "forever"
     DHCP = "dhcp"
     AUTO_DNS = "auto-dns"
     AUTO_GATEWAY = "auto-gateway"
@@ -133,6 +140,8 @@ class InterfaceIP:
     AUTO_ROUTE_METRIC = "auto-route-metric"
     MPTCP_FLAGS = "mptcp-flags"
     ALLOW_EXTRA_ADDRESS = "allow-extra-address"
+    DHCP_SEND_HOSTNAME = "dhcp-send-hostname"
+    DHCP_CUSTOM_HOSTNAME = "dhcp-custom-hostname"
 
 
 class InterfaceIPv4(InterfaceIP):

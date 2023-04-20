@@ -235,17 +235,19 @@ pub(crate) fn purge_dns_config(
             }
             if !iface.is_changed() {
                 iface.mark_as_changed();
-                if let Some(apply_iface) = iface.for_apply.as_mut() {
-                    if apply_iface.base_iface().can_have_ip() {
-                        apply_iface.base_iface_mut().ipv4 =
-                            iface.merged.base_iface_mut().ipv4.clone();
-                        apply_iface.base_iface_mut().ipv6 =
-                            iface.merged.base_iface_mut().ipv6.clone();
-                    }
-                }
             }
             if let Some(apply_iface) = iface.for_apply.as_mut() {
                 if apply_iface.base_iface().can_have_ip() {
+                    if is_ipv6 {
+                        if apply_iface.base_iface().ipv6.is_none() {
+                            apply_iface.base_iface_mut().ipv6 =
+                                iface.merged.base_iface_mut().ipv6.clone();
+                        }
+                    } else if apply_iface.base_iface().ipv4.is_none() {
+                        apply_iface.base_iface_mut().ipv4 =
+                            iface.merged.base_iface_mut().ipv4.clone();
+                    }
+
                     set_iface_dns_conf(
                         is_ipv6,
                         apply_iface,
@@ -561,4 +563,344 @@ fn is_unmanaged(iface_name: &str, nm_devs: &[NmDevice]) -> bool {
         }
     }
     false
+}
+
+// Try to select a interface to store the DNS search only information in the
+// order of:
+// * Use current DNS interface if still desired and still valid
+// * Use auto interface from desired state
+// * Use auto interface from current state
+// * Use IP(prefer IPv6) enabled interface from desired state
+// * Use IP(prefer IPv6) enabled interface from current state
+// * Use current DNS interface if still valid
+pub(crate) fn store_dns_search_only_to_iface(
+    merged_state: &mut MergedNetworkState,
+    nm_acs: &[NmActiveConnection],
+    nm_devs: &[NmDevice],
+) -> Result<(), NmstateError> {
+    let (cur_v4_ifaces, cur_v6_ifaces) =
+        get_cur_dns_ifaces(&merged_state.interfaces);
+
+    // Use current DNS interface if they are desired
+    for iface_name in cur_v6_ifaces {
+        if let Some(iface) =
+            merged_state.interfaces.kernel_ifaces.get_mut(&iface_name)
+        {
+            if iface.is_iface_valid_for_dns(true) {
+                if let Some(apply_iface) = iface.for_apply.as_mut() {
+                    set_iface_dns_conf(
+                        true,
+                        apply_iface,
+                        Vec::new(),
+                        merged_state.dns.searches.clone(),
+                        Some(DEFAULT_DNS_PRIORITY),
+                    )?;
+                    return Ok(());
+                }
+            }
+        }
+    }
+
+    for iface_name in cur_v4_ifaces {
+        if let Some(iface) =
+            merged_state.interfaces.kernel_ifaces.get_mut(&iface_name)
+        {
+            if iface.is_iface_valid_for_dns(false) {
+                if let Some(apply_iface) = iface.for_apply.as_mut() {
+                    set_iface_dns_conf(
+                        false,
+                        apply_iface,
+                        Vec::new(),
+                        merged_state.dns.searches.clone(),
+                        Some(DEFAULT_DNS_PRIORITY),
+                    )?;
+                    return Ok(());
+                }
+            }
+        }
+    }
+
+    // Use auto interface
+    if store_dns_search_only_to_auto_iface(merged_state, nm_acs, nm_devs)
+        .is_ok()
+    {
+        return Ok(());
+    }
+
+    store_dns_search_only_to_ip_enabled_iface(merged_state, nm_acs, nm_devs)
+}
+
+fn set_iface_dns_search_only(
+    iface: &mut MergedInterface,
+    searches: Vec<String>,
+    is_ipv6: bool,
+) -> Result<(), NmstateError> {
+    if iface.for_apply.is_none() {
+        iface.mark_as_changed();
+    }
+    if let Some(apply_iface) = iface.for_apply.as_mut() {
+        if is_ipv6 {
+            if apply_iface.base_iface().ipv6.is_none() {
+                apply_iface.base_iface_mut().ipv6 =
+                    iface.merged.base_iface_mut().ipv6.clone();
+            }
+        } else if apply_iface.base_iface().ipv4.is_none() {
+            apply_iface.base_iface_mut().ipv4 =
+                iface.merged.base_iface_mut().ipv4.clone();
+        }
+        set_iface_dns_conf(
+            is_ipv6,
+            apply_iface,
+            Vec::new(),
+            searches,
+            Some(DEFAULT_DNS_PRIORITY),
+        )?;
+    }
+    Ok(())
+}
+
+fn store_dns_search_only_to_auto_iface(
+    merged_state: &mut MergedNetworkState,
+    nm_acs: &[NmActiveConnection],
+    nm_devs: &[NmDevice],
+) -> Result<(), NmstateError> {
+    // Use insert order to produce consistent DNS interface choice
+    for iface_name in merged_state
+        .interfaces
+        .insert_order
+        .as_slice()
+        .iter()
+        .filter_map(|(n, t)| {
+            if !t.is_userspace() && t != &InterfaceType::Loopback {
+                Some(n)
+            } else {
+                None
+            }
+        })
+    {
+        let iface =
+            match merged_state.interfaces.kernel_ifaces.get_mut(iface_name) {
+                Some(i) => i,
+                None => continue,
+            };
+        if iface
+            .merged
+            .base_iface()
+            .ipv6
+            .as_ref()
+            .map(|i| i.is_auto())
+            .unwrap_or_default()
+        {
+            return set_iface_dns_search_only(
+                iface,
+                merged_state.dns.searches.clone(),
+                true,
+            );
+        }
+        if iface
+            .merged
+            .base_iface()
+            .ipv4
+            .as_ref()
+            .map(|i| i.is_auto())
+            .unwrap_or_default()
+        {
+            return set_iface_dns_search_only(
+                iface,
+                merged_state.dns.searches.clone(),
+                false,
+            );
+        }
+    }
+
+    let mut cur_iface_names: Vec<String> = merged_state
+        .interfaces
+        .kernel_ifaces
+        .values()
+        .filter_map(|i| {
+            if !i.is_changed()
+                && i.merged.iface_type() != InterfaceType::Loopback
+            {
+                Some(i.merged.name().to_string())
+            } else {
+                None
+            }
+        })
+        .collect();
+    // Sort the interface names to produce consistent choice.
+    cur_iface_names.sort_unstable();
+
+    // * Use auto interface from current state
+    for iface_name in &cur_iface_names {
+        if is_external_managed(iface_name, nm_acs)
+            || is_unmanaged(iface_name, nm_devs)
+        {
+            continue;
+        }
+        let iface =
+            match merged_state.interfaces.kernel_ifaces.get_mut(iface_name) {
+                Some(i) => i,
+                None => continue,
+            };
+        if iface
+            .merged
+            .base_iface()
+            .ipv6
+            .as_ref()
+            .map(|i| i.is_auto())
+            .unwrap_or_default()
+        {
+            return set_iface_dns_search_only(
+                iface,
+                merged_state.dns.searches.clone(),
+                true,
+            );
+        }
+        if iface
+            .merged
+            .base_iface()
+            .ipv4
+            .as_ref()
+            .map(|i| i.is_auto())
+            .unwrap_or_default()
+        {
+            return set_iface_dns_search_only(
+                iface,
+                merged_state.dns.searches.clone(),
+                false,
+            );
+        }
+    }
+
+    Err(NmstateError::new(
+        ErrorKind::InvalidArgument,
+        format!(
+            "Failed to find suitable(Auto IP) interface for DNS searches \
+            '{}'",
+            merged_state.dns.searches.as_slice().join(" ")
+        ),
+    ))
+}
+
+fn store_dns_search_only_to_ip_enabled_iface(
+    merged_state: &mut MergedNetworkState,
+    nm_acs: &[NmActiveConnection],
+    nm_devs: &[NmDevice],
+) -> Result<(), NmstateError> {
+    // Use insert order to produce consistent DNS interface choice
+    for iface_name in merged_state
+        .interfaces
+        .insert_order
+        .as_slice()
+        .iter()
+        .filter_map(|(n, t)| {
+            if !t.is_userspace() && t != &InterfaceType::Loopback {
+                Some(n)
+            } else {
+                None
+            }
+        })
+    {
+        let iface =
+            match merged_state.interfaces.kernel_ifaces.get_mut(iface_name) {
+                Some(i) => i,
+                None => continue,
+            };
+        if iface
+            .merged
+            .base_iface()
+            .ipv6
+            .as_ref()
+            .map(|i| i.enabled)
+            .unwrap_or_default()
+        {
+            return set_iface_dns_search_only(
+                iface,
+                merged_state.dns.searches.clone(),
+                true,
+            );
+        }
+        if iface
+            .merged
+            .base_iface()
+            .ipv4
+            .as_ref()
+            .map(|i| i.enabled)
+            .unwrap_or_default()
+        {
+            return set_iface_dns_search_only(
+                iface,
+                merged_state.dns.searches.clone(),
+                false,
+            );
+        }
+    }
+
+    let mut cur_iface_names: Vec<String> = merged_state
+        .interfaces
+        .kernel_ifaces
+        .values()
+        .filter_map(|i| {
+            if !i.is_changed()
+                && i.merged.iface_type() != InterfaceType::Loopback
+            {
+                Some(i.merged.name().to_string())
+            } else {
+                None
+            }
+        })
+        .collect();
+    // Sort the interface names to produce consistent choice.
+    cur_iface_names.sort_unstable();
+
+    // * Use auto interface from current state
+    for iface_name in &cur_iface_names {
+        if is_external_managed(iface_name, nm_acs)
+            || is_unmanaged(iface_name, nm_devs)
+        {
+            continue;
+        }
+        let iface =
+            match merged_state.interfaces.kernel_ifaces.get_mut(iface_name) {
+                Some(i) => i,
+                None => continue,
+            };
+        if iface
+            .merged
+            .base_iface()
+            .ipv6
+            .as_ref()
+            .map(|i| i.enabled)
+            .unwrap_or_default()
+        {
+            return set_iface_dns_search_only(
+                iface,
+                merged_state.dns.searches.clone(),
+                true,
+            );
+        }
+        if iface
+            .merged
+            .base_iface()
+            .ipv4
+            .as_ref()
+            .map(|i| i.enabled)
+            .unwrap_or_default()
+        {
+            return set_iface_dns_search_only(
+                iface,
+                merged_state.dns.searches.clone(),
+                false,
+            );
+        }
+    }
+
+    Err(NmstateError::new(
+        ErrorKind::InvalidArgument,
+        format!(
+            "Failed to find suitable(IP enabled) interface for DNS searches \
+            '{}'",
+            merged_state.dns.searches.as_slice().join(" ")
+        ),
+    ))
 }

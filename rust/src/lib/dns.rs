@@ -207,6 +207,10 @@ impl MergedDnsState {
 
         self.servers != cur_servers || self.searches != cur_searches
     }
+
+    pub(crate) fn is_search_only(&self) -> bool {
+        self.servers.is_empty() && !self.searches.is_empty()
+    }
 }
 
 impl MergedNetworkState {

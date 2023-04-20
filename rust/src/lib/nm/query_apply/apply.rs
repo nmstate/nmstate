@@ -4,7 +4,10 @@ use std::collections::HashSet;
 
 use super::super::{
     device::create_index_for_nm_devs,
-    dns::{cur_dns_ifaces_still_valid_for_dns, store_dns_config_to_iface},
+    dns::{
+        cur_dns_ifaces_still_valid_for_dns, store_dns_config_to_iface,
+        store_dns_search_only_to_iface,
+    },
     error::nm_error_to_nmstate,
     nm_dbus::{NmApi, NmConnection},
     profile::{perpare_nm_conns, PerparedNmConnections},
@@ -21,7 +24,9 @@ use super::super::{
     settings::{iface_type_to_nm, NM_SETTING_OVS_PORT_SETTING_NAME},
 };
 
-use crate::{InterfaceType, MergedNetworkState, NmstateError};
+use crate::{
+    InterfaceIdentifier, InterfaceType, MergedNetworkState, NmstateError,
+};
 
 // There is plan to simply the `add_net_state`, `chg_net_state`, `del_net_state`
 // `cur_net_state`, `des_net_state` into single struct. Suppress the clippy
@@ -76,7 +81,12 @@ pub(crate) fn nm_apply(
         purge_global_dns_config(&mut nm_api)?;
     }
 
-    if let Err(e) =
+    if merged_state.dns.is_search_only() {
+        // When user desire static DNS search and dynamic DNS nameserver,
+        // we cannot use global DNS in this case because global DNS suppress
+        // DNS nameserver learn from DHCP/autoconf.
+        store_dns_search_only_to_iface(&mut merged_state, &nm_acs, &nm_devs)?;
+    } else if let Err(e) =
         store_dns_config_to_iface(&mut merged_state, &nm_acs, &nm_devs)
     {
         log::warn!(
@@ -158,33 +168,67 @@ fn delete_ifaces(
         create_index_for_nm_conns_by_name_type(&all_nm_conns);
     let mut uuids_to_delete: HashSet<&str> = HashSet::new();
 
-    for iface in merged_state
+    for merged_iface in merged_state
         .interfaces
         .iter()
         .filter(|i| i.is_changed() && i.merged.is_absent())
-        .map(|i| &i.merged)
     {
+        let iface = &merged_iface.merged;
         // If interface type not mentioned, we delete all profile with interface
         // name
-        let nm_conns_to_delete: Option<Vec<&NmConnection>> =
+        let mut nm_conns_to_delete: Vec<&NmConnection> =
             if iface.iface_type() == InterfaceType::Unknown {
-                Some(
-                    all_nm_conns
-                        .as_slice()
-                        .iter()
-                        .filter(|c| c.iface_name() == Some(iface.name()))
-                        .collect(),
-                )
+                all_nm_conns
+                    .as_slice()
+                    .iter()
+                    .filter(|c| c.iface_name() == Some(iface.name()))
+                    .collect()
             } else {
                 let nm_iface_type = iface_type_to_nm(&iface.iface_type())?;
                 nm_conns_name_type_index
                     .get(&(iface.name(), &nm_iface_type))
                     .cloned()
+                    .unwrap_or_default()
             };
+        // User might want to delete mac based interface using profile name
+        if let Some(cur_iface) = &merged_iface.current {
+            if cur_iface.base_iface().identifier
+                == InterfaceIdentifier::MacAddress
+                && cur_iface.base_iface().profile_name.as_deref()
+                    == Some(iface.name())
+            {
+                for nm_conn in &all_nm_conns {
+                    if nm_conn.id() == Some(iface.name()) {
+                        nm_conns_to_delete.push(nm_conn);
+                    }
+                }
+            }
+        }
+        // User might want to delete mac based interface using interface name
+        if let Some(cur_iface) = &merged_iface.current {
+            if cur_iface.base_iface().identifier
+                == InterfaceIdentifier::MacAddress
+                && cur_iface.base_iface().name.as_str() == iface.name()
+            {
+                if let Some(mac) = cur_iface.base_iface().mac_address.as_ref() {
+                    for nm_conn in &all_nm_conns {
+                        if nm_conn
+                            .wired
+                            .as_ref()
+                            .and_then(|w| w.mac_address.as_ref())
+                            .map(|s| s.to_uppercase())
+                            == Some(mac.to_uppercase())
+                        {
+                            nm_conns_to_delete.push(nm_conn);
+                        }
+                    }
+                }
+            }
+        }
         // Delete all existing connections for this interface
-        if let Some(nm_conns) = nm_conns_to_delete {
-            for nm_conn in nm_conns {
-                if let Some(uuid) = nm_conn.uuid() {
+        for nm_conn in nm_conns_to_delete {
+            if let Some(uuid) = nm_conn.uuid() {
+                if !uuids_to_delete.contains(uuid) {
                     log::info!(
                         "Deleting NM connection for absent interface \
                         {}/{}: {}",
@@ -194,12 +238,14 @@ fn delete_ifaces(
                     );
                     uuids_to_delete.insert(uuid);
                 }
-                // Delete OVS port profile along with OVS system and internal
-                // Interface
-                if nm_conn.controller_type() == Some("ovs-port") {
-                    // TODO: handle pre-exist OVS config using name instead of
-                    // UUID for controller
-                    if let Some(uuid) = nm_conn.controller() {
+            }
+            // Delete OVS port profile along with OVS system and internal
+            // Interface
+            if nm_conn.controller_type() == Some("ovs-port") {
+                // TODO: handle pre-exist OVS config using name instead of
+                // UUID for controller
+                if let Some(uuid) = nm_conn.controller() {
+                    if !uuids_to_delete.contains(uuid) {
                         log::info!(
                             "Deleting NM OVS port connection {} \
                              for absent OVS interface {}",

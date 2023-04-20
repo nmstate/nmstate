@@ -15,6 +15,7 @@ const AF_INET: u8 = 2;
 const AF_INET6: u8 = 10;
 const IPV4_ADDR_LEN: usize = 32;
 const IPV6_ADDR_LEN: usize = 128;
+const FOREVER: &str = "forever";
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[non_exhaustive]
@@ -92,6 +93,16 @@ struct InterfaceIp {
     pub allow_extra_address: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub token: Option<String>,
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "dhcp-send-hostname"
+    )]
+    pub dhcp_send_hostname: Option<bool>,
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "dhcp-custom-hostname"
+    )]
+    pub dhcp_custom_hostname: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -124,10 +135,12 @@ pub struct InterfaceIpv4 {
     /// DHCPv4 client ID.
     /// Serialize and deserialize to/from `dhcp-client-id`.
     pub dhcp_client_id: Option<Dhcpv4ClientId>,
-    /// IPv4 addresses. Will be ignored when applying with
-    /// DHCP enabled.
+    /// IPv4 addresses.
     /// When applying with `None`, current IP address will be preserved.
     /// When applying with `Some(Vec::new())`, all IP address will be removed.
+    /// When switch from DHCP on to off with `addresses` set to None or all
+    /// `addresses` are dynamic, nmstate will convert current dynamic IP
+    /// address to static.
     /// The IP addresses will apply to kernel with the same order specified
     /// which result the IP addresses after first one holding the `secondary`
     /// flag.
@@ -158,7 +171,22 @@ pub struct InterfaceIpv4 {
     /// Only available for DHCPv4 enabled interface.
     /// Deserialize from `auto-route-metric`
     pub auto_route_metric: Option<u32>,
-
+    /// Whether to include hostname in DHCP request.
+    /// If the hostname is FQDN, the `Fully Qualified Domain Name (FQDN)`
+    /// option(81) defined in RFC 4702 will be used.
+    /// If the hostname is not FQDN, the `Host Name` option(12) defined in RFC
+    /// 2132 will be used.
+    /// If not defined, set to True when DHCPv4 enabled.
+    /// Deserialize from `dhcp-send-hostname`
+    pub dhcp_send_hostname: Option<bool>,
+    /// Custom string to override hostname used for DHCP request.
+    /// If the hostname is FQDN, the `Fully Qualified Domain Name (FQDN)`
+    /// option(81) defined in RFC 4702 will be used.
+    /// If the hostname is not FQDN, the `Host Name` option(12) defined in RFC
+    /// 2132 will be used.
+    /// If not defined, current non-dynamic hostname will be used.
+    /// Deserialize from `dhcp-custom-hostname`
+    pub dhcp_custom_hostname: Option<String>,
     pub(crate) dns: Option<DnsClientState>,
     pub(crate) rules: Option<Vec<RouteRuleEntry>>,
 }
@@ -179,6 +207,8 @@ impl Default for InterfaceIpv4 {
             auto_table_id: None,
             allow_extra_address: default_allow_extra_address(),
             auto_route_metric: None,
+            dhcp_send_hostname: None,
+            dhcp_custom_hostname: None,
         }
     }
 }
@@ -193,7 +223,7 @@ impl InterfaceIpv4 {
         self.enabled && self.dhcp == Some(true)
     }
 
-    pub(crate) fn is_static(&self) -> bool {
+    pub fn is_static(&self) -> bool {
         self.enabled
             && !self.is_auto()
             && !self.addresses.as_deref().unwrap_or_default().is_empty()
@@ -207,19 +237,26 @@ impl InterfaceIpv4 {
             self.dhcp = current.dhcp;
         }
         // Normally, we expect backend to preserve configuration which not
-        // mentioned in desire, but when DHCP switch from ON to OFF, the design
-        // of nmstate is expecting dynamic IP address goes static. This should
-        // be done by top level code.
+        // mentioned in desire or all auto ip address, but when DHCP switch from
+        // ON to OFF, the design of nmstate is expecting dynamic IP address goes
+        // static. This should be done by top level code.
         if current.is_auto()
             && current.addresses.is_some()
             && self.enabled
             && !self.is_auto()
-            && self.addresses.is_none()
+            && is_ip_addrs_none_or_all_auto(self.addresses.as_deref())
         {
             self.addresses = current.addresses.clone();
+            if let Some(addrs) = self.addresses.as_mut() {
+                addrs.as_mut_slice().iter_mut().for_each(|a| {
+                    a.valid_left = None;
+                    a.preferred_left = None;
+                });
+            }
         }
     }
 
+    // Special action for generating merged state from desired and current.
     pub(crate) fn special_merge(&mut self, desired: &Self, current: &Self) {
         if !desired.prop_list.contains(&"enabled") {
             self.enabled = current.enabled;
@@ -236,34 +273,24 @@ impl InterfaceIpv4 {
             && current.addresses.is_some()
             && self.enabled
             && !self.is_auto()
-            && desired.addresses.is_none()
+            && is_ip_addrs_none_or_all_auto(self.addresses.as_deref())
         {
             self.addresses = current.addresses.clone();
         }
+        self.sanitize(false).ok();
     }
 
     // * Remove link-local address
     // * Set auto_dns, auto_gateway and auto_routes to true if DHCP enabled and
     //   those options is None
     // * Disable DHCP and remove address if enabled: false
+    // * Remove auto IP address.
     // * Set DHCP options to None if DHCP is false
     // * Remove mptcp_flags is they are for query only
     pub(crate) fn sanitize(
         &mut self,
         is_desired: bool,
     ) -> Result<(), NmstateError> {
-        // Empty address should equal to disabled IPv4 stack
-        if let Some(true) = self.addresses.as_ref().map(Vec::is_empty) {
-            if self.enabled {
-                if is_desired {
-                    log::info!(
-                        "Empty IPv4 address is considered as IPv4 disabled"
-                    );
-                }
-                self.enabled = false;
-            }
-        }
-
         if self.is_auto() {
             if self.auto_dns.is_none() {
                 self.auto_dns = Some(true);
@@ -274,16 +301,49 @@ impl InterfaceIpv4 {
             if self.auto_gateway.is_none() {
                 self.auto_gateway = Some(true);
             }
-            if !self.addresses.as_deref().unwrap_or_default().is_empty() {
+            if let Some(addrs) = self.addresses.as_ref() {
                 if is_desired {
-                    log::warn!(
-                        "Static addresses {:?} are ignored when dynamic \
-                    IP is enabled",
-                        self.addresses.as_deref().unwrap_or_default()
-                    );
+                    for addr in addrs {
+                        log::info!(
+                            "Static addresses {} defined when dynamic \
+                            IP is enabled",
+                            addr
+                        );
+                    }
                 }
-                self.addresses = None;
             }
+        } else if self.addresses.as_ref().map_or(false, Vec::is_empty)
+            && self.enabled
+        {
+            // Empty address should equal to disabled IPv4 stack
+            if is_desired {
+                log::info!("Empty IPv4 address is considered as IPv4 disabled");
+            }
+            self.enabled = false;
+        }
+
+        if let Some(addrs) = self.addresses.as_mut() {
+            if is_desired {
+                for addr in addrs.as_slice().iter().filter(|a| a.is_auto()) {
+                    log::info!("Ignoring Auto IP address {}", addr);
+                }
+                if let Some(addr) =
+                    addrs.as_slice().iter().find(|a| a.ip.is_ipv6())
+                {
+                    return Err(NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        format!(
+                            "Got IPv6 address {} in ipv4 config section",
+                            addr
+                        ),
+                    ));
+                }
+            }
+            addrs.retain(|a| !a.is_auto());
+            addrs.iter_mut().for_each(|a| {
+                a.valid_left = None;
+                a.preferred_left = None
+            });
         }
 
         if !self.enabled {
@@ -297,6 +357,31 @@ impl InterfaceIpv4 {
             self.auto_routes = None;
             self.auto_table_id = None;
             self.auto_route_metric = None;
+            if is_desired && self.dhcp_client_id.is_some() {
+                log::warn!(
+                    "Ignoring `dhcp-client-id` setting when DHCPv4 is \
+                    disabled"
+                );
+            }
+            self.dhcp_client_id = None;
+            self.dhcp_send_hostname = None;
+            self.dhcp_custom_hostname = None;
+        }
+        if self.dhcp_send_hostname == Some(false) {
+            if is_desired {
+                if let Some(custom_hostname) =
+                    self.dhcp_custom_hostname.as_deref()
+                {
+                    if !custom_hostname.is_empty() {
+                        log::warn!(
+                            "Ignoring `dhcp-custom-hostname: \
+                            {custom_hostname}` as `dhcp-send-hostname` is \
+                            disabled"
+                        );
+                    }
+                }
+            }
+            self.dhcp_custom_hostname = None;
         }
         if let Some(addrs) = self.addresses.as_mut() {
             for addr in addrs.iter_mut() {
@@ -355,6 +440,8 @@ impl From<InterfaceIp> for InterfaceIpv4 {
             auto_table_id: ip.auto_table_id,
             allow_extra_address: ip.allow_extra_address,
             auto_route_metric: ip.auto_route_metric,
+            dhcp_send_hostname: ip.dhcp_send_hostname,
+            dhcp_custom_hostname: ip.dhcp_custom_hostname,
             ..Default::default()
         }
     }
@@ -378,6 +465,8 @@ impl From<InterfaceIpv4> for InterfaceIp {
             auto_table_id: ip.auto_table_id,
             allow_extra_address: ip.allow_extra_address,
             auto_route_metric: ip.auto_route_metric,
+            dhcp_send_hostname: ip.dhcp_send_hostname,
+            dhcp_custom_hostname: ip.dhcp_custom_hostname,
             ..Default::default()
         }
     }
@@ -459,6 +548,16 @@ pub struct InterfaceIpv6 {
     /// IETF draft(expired) Tokenised IPv6 Identifiers. Should be only
     /// containing the tailing 64 bites for IPv6 address.
     pub token: Option<String>,
+    /// Whether to include hostname in DHCP request in
+    /// `Fully Qualified Domain Name (FQDN)` option(39) defined in RFC 4704.
+    /// If not defined, set to True when DHCPv6 enabled.
+    /// Deserialize from `dhcp-send-hostname`
+    pub dhcp_send_hostname: Option<bool>,
+    /// Custom string to override hostname used for DHCP request in
+    /// `Fully Qualified Domain Name (FQDN)` option(29) defined in RFC 4704.
+    /// If not defined, current non-dynamic hostname will be used.
+    /// Deserialize from `dhcp-custom-hostname`
+    pub dhcp_custom_hostname: Option<String>,
 
     pub(crate) dns: Option<DnsClientState>,
     pub(crate) rules: Option<Vec<RouteRuleEntry>>,
@@ -483,6 +582,8 @@ impl Default for InterfaceIpv6 {
             allow_extra_address: default_allow_extra_address(),
             auto_route_metric: None,
             token: None,
+            dhcp_send_hostname: None,
+            dhcp_custom_hostname: None,
         }
     }
 }
@@ -497,7 +598,7 @@ impl InterfaceIpv6 {
         self.enabled && (self.dhcp == Some(true) || self.autoconf == Some(true))
     }
 
-    pub(crate) fn is_static(&self) -> bool {
+    pub fn is_static(&self) -> bool {
         self.enabled
             && !self.is_auto()
             && !self.addresses.as_deref().unwrap_or_default().is_empty()
@@ -512,6 +613,26 @@ impl InterfaceIpv6 {
         &mut self,
         is_desired: bool,
     ) -> Result<(), NmstateError> {
+        if let Some(addrs) = self.addresses.as_mut() {
+            if is_desired {
+                for addr in addrs.as_slice().iter().filter(|a| a.is_auto()) {
+                    log::info!("Ignoring Auto IP address {}", addr);
+                }
+            }
+            if let Some(addr) = addrs.as_slice().iter().find(|a| a.ip.is_ipv4())
+            {
+                return Err(NmstateError::new(
+                    ErrorKind::InvalidArgument,
+                    format!("Got IPv4 address {} in ipv6 config section", addr),
+                ));
+            }
+            addrs.retain(|a| !a.is_auto());
+            addrs.iter_mut().for_each(|a| {
+                a.valid_left = None;
+                a.preferred_left = None
+            });
+        }
+
         if self.is_auto() {
             if self.auto_dns.is_none() {
                 self.auto_dns = Some(true);
@@ -522,15 +643,16 @@ impl InterfaceIpv6 {
             if self.auto_gateway.is_none() {
                 self.auto_gateway = Some(true);
             }
-            if !self.addresses.as_deref().unwrap_or_default().is_empty() {
+            if let Some(addrs) = self.addresses.as_ref() {
                 if is_desired {
-                    log::warn!(
-                        "Static addresses {:?} are ignored when dynamic \
-                        IP is enabled",
-                        self.addresses.as_deref().unwrap_or_default()
-                    );
+                    for addr in addrs {
+                        log::info!(
+                            "Static addresses {} defined when dynamic \
+                            IP is enabled",
+                            addr
+                        );
+                    }
                 }
-                self.addresses = None;
             }
         }
 
@@ -567,6 +689,8 @@ impl InterfaceIpv6 {
             self.auto_routes = None;
             self.auto_table_id = None;
             self.auto_route_metric = None;
+            self.dhcp_send_hostname = None;
+            self.dhcp_custom_hostname = None;
         }
         if let Some(addrs) = self.addresses.as_mut() {
             for addr in addrs.iter_mut() {
@@ -590,9 +714,26 @@ impl InterfaceIpv6 {
             }
             sanitize_ipv6_token_to_string(token)?;
         }
+        if self.dhcp_send_hostname == Some(false) {
+            if is_desired {
+                if let Some(custom_hostname) =
+                    self.dhcp_custom_hostname.as_deref()
+                {
+                    if !custom_hostname.is_empty() {
+                        log::warn!(
+                            "Ignoring `dhcp-custom-hostname: \
+                            {custom_hostname}` as `dhcp-send-hostname` is \
+                            disabled"
+                        );
+                    }
+                }
+            }
+            self.dhcp_custom_hostname = None;
+        }
         Ok(())
     }
 
+    // Special action for generating merged state from desired and current.
     pub(crate) fn special_merge(&mut self, desired: &Self, current: &Self) {
         if !desired.prop_list.contains(&"enabled") {
             self.enabled = current.enabled;
@@ -611,10 +752,11 @@ impl InterfaceIpv6 {
             && current.addresses.is_some()
             && self.enabled
             && !self.is_auto()
-            && desired.addresses.is_none()
+            && is_ip_addrs_none_or_all_auto(desired.addresses.as_deref())
         {
             self.addresses = current.addresses.clone();
         }
+        self.sanitize(false).ok();
     }
 
     pub(crate) fn merge_ip(&mut self, current: &Self) {
@@ -635,9 +777,15 @@ impl InterfaceIpv6 {
             && current.addresses.is_some()
             && self.enabled
             && !self.is_auto()
-            && self.addresses.is_none()
+            && is_ip_addrs_none_or_all_auto(self.addresses.as_deref())
         {
             self.addresses = current.addresses.clone();
+            if let Some(addrs) = self.addresses.as_mut() {
+                addrs.as_mut_slice().iter_mut().for_each(|a| {
+                    a.valid_left = None;
+                    a.preferred_left = None;
+                });
+            }
         }
     }
 }
@@ -687,6 +835,8 @@ impl From<InterfaceIp> for InterfaceIpv6 {
             allow_extra_address: ip.allow_extra_address,
             auto_route_metric: ip.auto_route_metric,
             token: ip.token,
+            dhcp_send_hostname: ip.dhcp_send_hostname,
+            dhcp_custom_hostname: ip.dhcp_custom_hostname,
             ..Default::default()
         }
     }
@@ -713,6 +863,8 @@ impl From<InterfaceIpv6> for InterfaceIp {
             allow_extra_address: ip.allow_extra_address,
             auto_route_metric: ip.auto_route_metric,
             token: ip.token,
+            dhcp_send_hostname: ip.dhcp_send_hostname,
+            dhcp_custom_hostname: ip.dhcp_custom_hostname,
             ..Default::default()
         }
     }
@@ -736,6 +888,18 @@ pub struct InterfaceIpAddr {
     /// specific MPTCP flags. You should apply MPTCP flags at interface level
     /// via [BaseInterface.mptcp].
     pub mptcp_flags: Option<Vec<MptcpAddressFlag>>,
+    /// Remaining time for IP address been valid. The output format is
+    /// "32sec" or "forever".
+    /// This property is query only, it will be ignored when applying.
+    /// Serialize and deserialize to/from `valid-left`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub valid_left: Option<String>,
+    /// Remaining time for IP address been preferred. The output format is
+    /// "32sec" or "forever".
+    /// This property is query only, it will be ignored when applying.
+    /// Serialize and deserialize to/from `preferred-left`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub preferred_left: Option<String>,
 }
 
 impl Default for InterfaceIpAddr {
@@ -744,7 +908,32 @@ impl Default for InterfaceIpAddr {
             ip: IpAddr::V6(std::net::Ipv6Addr::new(0, 0, 0, 0, 0, 0, 0, 1)),
             prefix_length: 128,
             mptcp_flags: None,
+            valid_left: None,
+            preferred_left: None,
         }
+    }
+}
+
+impl std::fmt::Display for InterfaceIpAddr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if self.is_auto() {
+            write!(
+                f,
+                "{}/{} valid_left {} preferred_left {}",
+                self.ip,
+                self.prefix_length,
+                self.valid_left.as_deref().unwrap_or(FOREVER),
+                self.preferred_left.as_deref().unwrap_or(FOREVER)
+            )
+        } else {
+            write!(f, "{}/{}", self.ip, self.prefix_length)
+        }
+    }
+}
+
+impl InterfaceIpAddr {
+    pub(crate) fn is_auto(&self) -> bool {
+        self.valid_left.is_some() && self.valid_left.as_deref() != Some(FOREVER)
     }
 }
 
@@ -792,13 +981,9 @@ impl std::convert::TryFrom<&str> for InterfaceIpAddr {
             ip,
             prefix_length,
             mptcp_flags: None,
+            valid_left: None,
+            preferred_left: None,
         })
-    }
-}
-
-impl std::convert::From<&InterfaceIpAddr> for String {
-    fn from(v: &InterfaceIpAddr) -> String {
-        format!("{}/{}", &v.ip, v.prefix_length)
     }
 }
 
@@ -1048,6 +1233,12 @@ fn get_ip_prop_list(
     if map.contains_key("addr-gen-mode") {
         ret.push("addr_gen_mode")
     }
+    if map.contains_key("dhcp-send-hostname") {
+        ret.push("dhcp_send_hostname")
+    }
+    if map.contains_key("dhcp-custom-hostname") {
+        ret.push("dhcp_custom_hostname")
+    }
     ret
 }
 
@@ -1212,4 +1403,16 @@ fn sanitize_ipv6_token_to_string(
         }
     }
     Ok(())
+}
+
+fn is_ip_addrs_none_or_all_auto(addrs: Option<&[InterfaceIpAddr]>) -> bool {
+    addrs.map_or(true, |addrs| {
+        addrs.iter().all(|a| {
+            if let IpAddr::V6(ip_addr) = a.ip {
+                is_ipv6_unicast_link_local(&ip_addr) || a.is_auto()
+            } else {
+                a.is_auto()
+            }
+        })
+    })
 }

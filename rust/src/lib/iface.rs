@@ -169,7 +169,7 @@ impl InterfaceType {
 /// The state of interface
 pub enum InterfaceState {
     /// Interface is up and running.
-    /// Deserialize and serialize from/to 'down'.
+    /// Deserialize and serialize from/to 'up'.
     Up,
     /// For apply action, down means configuration still exist but
     /// deactivate. The virtual interface will be removed and other interface
@@ -1045,4 +1045,41 @@ fn merge_desire_with_current(
     let iface: Interface = serde_json::from_value(desired_value)?;
 
     Ok(iface)
+}
+
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Hash,
+    PartialOrd,
+    Ord,
+    Serialize,
+    Deserialize,
+)]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
+#[non_exhaustive]
+/// Interface Identifier defines the method for network backend on matching
+/// network interface
+pub enum InterfaceIdentifier {
+    /// Use interface name to match the network interface, default value.
+    /// Deserialize and serialize from/to 'name'.
+    Name,
+    /// Use interface MAC address to match the network interface.
+    /// Deserialize and serialize from/to 'mac-address'.
+    MacAddress,
+}
+
+impl Default for InterfaceIdentifier {
+    fn default() -> Self {
+        Self::Name
+    }
+}
+
+impl InterfaceIdentifier {
+    pub fn is_default(&self) -> bool {
+        self == &InterfaceIdentifier::default()
+    }
 }

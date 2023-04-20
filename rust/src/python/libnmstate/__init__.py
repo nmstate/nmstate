@@ -1,5 +1,3 @@
-# SPDX-License-Identifier: LGPL-2.1-or-later
-
 from .clib_wrapper import NmstateError
 from .gen_conf import generate_configurations
 from .netapplier import apply
