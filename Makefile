@@ -142,7 +142,9 @@ dist: manpage $(SPEC_FILE) $(CLIB_HEADER)
 	mv $(TMPDIR)/$(TARBALL) ./
 	if [ $(SKIP_VENDOR_CREATION) == 0 ];then \
 		cd rust; \
-		cargo vendor-filterer --platform x86_64-unknown-linux-gnu $(TMPDIR)/vendor; \
+		cargo vendor-filterer \
+			--platform x86_64-unknown-linux-gnu \
+			--platform s390x-unknown-linux-gnu $(TMPDIR)/vendor; \
 		cd $(TMPDIR); \
 		tar cfJ $(ROOT_DIR)/$(VENDOR_TARBALL) vendor ; \
 	fi
