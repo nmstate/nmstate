@@ -55,7 +55,7 @@ impl MergedDnsState {
             return Err(NmstateError::new(
                 ErrorKind::VerificationError,
                 format!(
-                    "Failed to apply DNS config: desire searches '{}',
+                    "Failed to apply DNS config: desire searches '{}', \
                     got '{}'",
                     self.searches.as_slice().join(" "),
                     cur_schs.as_slice().join(" "),

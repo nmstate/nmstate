@@ -300,6 +300,17 @@ impl InterfaceIpv4 {
                 for addr in addrs.as_slice().iter().filter(|a| a.is_auto()) {
                     log::info!("Ignoring Auto IP address {}", addr);
                 }
+                if let Some(addr) =
+                    addrs.as_slice().iter().find(|a| a.ip.is_ipv6())
+                {
+                    return Err(NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        format!(
+                            "Got IPv6 address {} in ipv4 config section",
+                            addr
+                        ),
+                    ));
+                }
             }
             addrs.retain(|a| !a.is_auto());
             addrs.iter_mut().for_each(|a| {
@@ -546,6 +557,13 @@ impl InterfaceIpv6 {
                 for addr in addrs.as_slice().iter().filter(|a| a.is_auto()) {
                     log::info!("Ignoring Auto IP address {}", addr);
                 }
+            }
+            if let Some(addr) = addrs.as_slice().iter().find(|a| a.ip.is_ipv4())
+            {
+                return Err(NmstateError::new(
+                    ErrorKind::InvalidArgument,
+                    format!("Got IPv4 address {} in ipv6 config section", addr),
+                ));
             }
             addrs.retain(|a| !a.is_auto());
             addrs.iter_mut().for_each(|a| {
