@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 use std::io::Read;
 
 use crate::{ErrorKind, HostNameState, NmstateError};
@@ -5,17 +7,16 @@ use crate::{ErrorKind, HostNameState, NmstateError};
 const HOST_NAME_MAX: usize = 64;
 
 pub(crate) fn get_hostname_state() -> Option<HostNameState> {
-    let mut buffer = [0u8; HOST_NAME_MAX];
-    let running = match nix::unistd::gethostname(&mut buffer) {
-        Ok(hostname_cstr) => match hostname_cstr.to_str() {
-            Ok(h) => Some(h.to_string()),
-            Err(e) => {
-                log::error!("Failed to convert hostname to String: {}", e);
+    let running = match nix::unistd::gethostname() {
+        Ok(hostname_cstr) => match hostname_cstr.into_string() {
+            Ok(h) => Some(h),
+            Err(s) => {
+                log::error!("Failed to convert hostname to String: {:?}", s);
                 None
             }
         },
         Err(e) => {
-            log::error!("Failed to get hostname: {}", e);
+            log::error!("Failed to get hostname {}", e);
             None
         }
     };
