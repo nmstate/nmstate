@@ -1,6 +1,6 @@
 [package]
 name = "nmstate"
-version = "2.2.10"
+version = "2.2.11"
 authors = ["Gris Ge <fge@redhat.com>"]
 description = "Library for networking management in a declarative manner"
 license = "Apache-2.0"
@@ -55,7 +55,7 @@ default-features = false
 features = ["derive"]
 
 [dependencies.nix]
-version = "0.24.1"
+version = "0.26.2"
 optional = true
 default-features = false
 features = ["feature", "hostname"]
