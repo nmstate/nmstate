@@ -7,6 +7,8 @@
 //!
 //! The logic currently is:
 //!
+//!  - Do nothing if kernel argument contains `net.ifnames=0` which disabled the
+//!    predicable network interface name, hence not fit our use case here.
 //!  - Iterate over all active NICs
 //!  - Pin every ethernet interface to its MAC address (prefer permanent MAC
 //!    address)
@@ -69,6 +71,14 @@ pub(crate) fn run_persist_immediately(
         PersistAction::CleanUp => return clean_up(root, false),
         PersistAction::CleanUpDryRun => return clean_up(root, true),
     };
+
+    if is_prediable_ifname_disabled() {
+        log::info!(
+            "Systemd predicable network interface name is disabled \
+            by kernel argument `net.ifnames=0`, will do nothing"
+        );
+        return Ok("".to_string());
+    }
 
     let stamp_path = Path::new(root)
         .join(SYSTEMD_NETWORK_LINK_FOLDER)
@@ -315,5 +325,14 @@ fn is_nmstate_generated_systemd_link_file(file_path: &PathBuf) -> bool {
         .and_then(|mut fd| fd.read_exact(&mut buff))
         .ok()
         .map(|_| buff == PERSIST_GENERATED_BY.as_bytes())
+        .unwrap_or_default()
+}
+
+const KERNEL_CMDLINE_FILE: &str = "/proc/cmdline";
+
+fn is_prediable_ifname_disabled() -> bool {
+    std::fs::read(KERNEL_CMDLINE_FILE)
+        .map(|v| String::from_utf8(v).unwrap_or_default())
+        .map(|c| c.contains("net.ifnames=0"))
         .unwrap_or_default()
 }
