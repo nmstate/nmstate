@@ -68,8 +68,6 @@ interfaces:
 
 *Nmstate* [GitHub Issues pages][github_issue_url] for discussion.
 
-You may find us in `#nmstate` on [Libera IRC](https://libera.chat/) also.
-
 ## Contributing
 
 Yay! We are happy to accept new contributors to the Nmstate project. Please
