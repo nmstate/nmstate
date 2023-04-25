@@ -173,7 +173,6 @@ class DnsState:
                     },
                 },
             }
-        return {}
 
     def _find_ifaces_for_name_servers(
         self, ifaces, route_state, ignored_dns_ifaces
