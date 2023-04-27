@@ -6,9 +6,14 @@ package nmstate
 // #include <stdlib.h>
 import "C"
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"time"
+
+	"sigs.k8s.io/yaml"
+
+	nmstateapi "github.com/nmstate/nmstate/rust/src/go/api/v2"
 )
 
 type Nmstate struct {
@@ -114,6 +119,20 @@ func (n *Nmstate) RetrieveNetState() (string, error) {
 	return C.GoString(state), nil
 }
 
+// Retrieve the network state in as golang struct. This function returns the current
+// network state or an error.
+func (n *Nmstate) RetrieveStructuredNetState() (*nmstateapi.NetworkState, error) {
+	networkStateMarshaled, err := n.RetrieveNetState()
+	if err != nil {
+		return nil, err
+	}
+	networkState := &nmstateapi.NetworkState{}
+	if err := yaml.Unmarshal([]byte(networkStateMarshaled), networkState); err != nil {
+		return nil, err
+	}
+	return networkState, nil
+}
+
 // Apply the network state in json format. This function returns the applied
 // network state or an error.
 func (n *Nmstate) ApplyNetState(state string) (string, error) {
@@ -139,6 +158,24 @@ func (n *Nmstate) ApplyNetState(state string) (string, error) {
 		return "", fmt.Errorf("failed when applying state: %v", err)
 	}
 	return state, nil
+}
+
+// Apply the network state as golang struct . This function returns the applied
+// network state or an error.
+func (n *Nmstate) ApplyStructuredNetState(state *nmstateapi.NetworkState) (*nmstateapi.NetworkState, error) {
+	networkStateMarshaled, err := json.Marshal(state)
+	if err != nil {
+		return nil, err
+	}
+	appliedNetworkState, err := n.ApplyNetState(string(networkStateMarshaled))
+	if err != nil {
+		return nil, err
+	}
+	appliedNetworkStateUnmarshaled := &nmstateapi.NetworkState{}
+	if err := yaml.Unmarshal([]byte(appliedNetworkState), appliedNetworkStateUnmarshaled); err != nil {
+		return nil, err
+	}
+	return appliedNetworkStateUnmarshaled, err
 }
 
 // Commit the checkpoint path provided. This function returns the committed

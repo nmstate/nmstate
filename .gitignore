@@ -42,3 +42,5 @@ doc/nmstate-autoconf.8
 nmstate-*.tar.gz
 nmstate-*.tar.gz.asc
 /tags
+.states
+.k8s

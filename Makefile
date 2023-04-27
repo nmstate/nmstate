@@ -218,8 +218,14 @@ clib_check: $(CLIB_SO_DEV_DEBUG) $(CLIB_HEADER)
 		$(TMPDIR)/nmpolicy_yaml_test 1>/dev/null
 	rm -rf $(TMPDIR)
 
+.PHONY: go_generate
+go_generate:
+	cd rust/src/go/nmstate; go generate
+	cd rust/src/go/api/v2; go generate
+	cd rust/src/go/crd/v2; go generate
+
 .PHONY: go_check
-go_check: $(CLIB_SO_DEV_DEBUG) $(CLIB_HEADER)
+go_check: $(CLIB_SO_DEV_DEBUG) $(CLIB_HEADER) go_generate
 	$(eval TMPDIR := $(shell mktemp -d))
 	cp $(CLIB_SO_DEV_DEBUG) $(TMPDIR)/$(CLIB_SO_FULL)
 	ln -sfv $(CLIB_SO_FULL) $(TMPDIR)/$(CLIB_SO_MAN)
@@ -228,8 +234,10 @@ go_check: $(CLIB_SO_DEV_DEBUG) $(CLIB_HEADER)
 	cd rust/src/go/nmstate; LD_LIBRARY_PATH=$(TMPDIR) \
 		CGO_CFLAGS="-I$(TMPDIR)" \
 		CGO_LDFLAGS="-L$(TMPDIR)" \
-		go test $(WHAT)
+		go test -v $(WHAT)
 	rm -rf $(TMPDIR)
+	cd rust/src/go/api/v2 && go test -v -run TestUnmarshallingExamples
+	cd rust/src/go/crd/v2 && go test -v -run TestCRD/examples
 
 rust_check:
 	cd rust; cargo test -- --test-threads=1 --show-output;

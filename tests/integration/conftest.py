@@ -3,6 +3,11 @@
 import logging
 import os
 import subprocess
+import yaml
+import tempfile
+import shutil
+
+from pathlib import Path
 
 import pytest
 
@@ -14,6 +19,9 @@ from libnmstate.schema import RouteRule
 from .testlib import ifacelib
 from .testlib.veth import create_veth_pair
 from .testlib.veth import remove_veth_pair
+from .testlib.cmdlib import exec_cmd
+from .testlib.cmdlib import format_exec_cmd_result
+from .testlib.cmdlib import RC_SUCCESS
 
 
 REPORT_HEADER = """RPMs: {rpms}
@@ -22,6 +30,9 @@ nmstate: {nmstate_version}
 """
 
 ISOLATE_NAMESPACE = "nmstate_test_ep"
+LIBNMSTATE_APPLY = libnmstate.apply
+LIBNMSTATE_SHOW = libnmstate.show
+STATES_DUMP_DIR = "tests/integration/.states"
 
 
 def pytest_configure(config):
@@ -34,12 +45,23 @@ def pytest_addoption(parser):
     parser.addoption(
         "--runslow", action="store_true", default=False, help="run slow tests"
     )
+    parser.addoption(
+        "--go-checker",
+        action="store_true",
+        default=False,
+        help="check go api during tests",
+    )
 
 
 def pytest_collection_modifyitems(config, items):
     if not config.getoption("--runslow"):
         # --runslow is not in cli: skip slow tests
         _mark_skip_slow_tests(items)
+
+    if config.getoption("--go-checker"):
+        libnmstate.apply = _custom_apply_with_go_checker
+        libnmstate.show = _custom_show_with_go_checker
+
     _mark_tier2_tests(items)
 
 
@@ -197,3 +219,80 @@ def restore_old_state(old_state):
                     )
     if len(desire_state["interfaces"]):
         libnmstate.apply(desire_state, verify_change=False)
+
+
+def _dump_state_for_go_checker(
+    state,
+):
+    shutil.rmtree(STATES_DUMP_DIR, ignore_errors=True)
+    path = Path("tests/integration/.states")
+    path.mkdir(exist_ok=True)
+    test_name = (
+        os.environ.get("PYTEST_CURRENT_TEST").split(":")[-1].split(" ")[0]
+    )
+    state_file = tempfile.NamedTemporaryFile(
+        dir=path, prefix=test_name + "-", suffix=".yml", delete=False
+    )
+    with open(state_file.name, "a") as outfile:
+        yaml.dump(state, outfile)
+
+
+def _custom_apply_with_go_checker(
+    desired_state,
+    kernel_only=False,
+    verify_change=True,
+    save_to_disk=True,
+    commit=True,
+    rollback_timeout=60,
+):
+    return LIBNMSTATE_APPLY(
+        desired_state,
+        kernel_only=kernel_only,
+        verify_change=verify_change,
+        save_to_disk=save_to_disk,
+        commit=commit,
+        rollback_timeout=rollback_timeout,
+    )
+    _dump_state_for_go_checker(desired_state)
+
+
+def _custom_show_with_go_checker(
+    kernel_only=False, include_status_data=False, include_secrets=False
+):
+    current_state = LIBNMSTATE_SHOW(
+        kernel_only=kernel_only,
+        include_status_data=include_status_data,
+        include_secrets=include_secrets,
+    )
+    _dump_state_for_go_checker(current_state)
+    return current_state
+
+
+@pytest.fixture(scope="session", autouse=True)
+def check_go_api(pytestconfig):
+    if not pytestconfig.getoption("--go-checker"):
+        return
+    # First compile the tests so we don't need
+    # network connectivity at the end
+    check_go_test("-c", "rust/src/go/api/v2")
+    check_go_test("-c", "rust/src/go/crd/v2")
+
+    yield
+    if not pytestconfig.getoption("--go-checker"):
+        return
+
+    # Run the checks after all the tests suite has dump the states
+    check_go_test(
+        "-v -run TestUnmarshallingIntegrationTests", "rust/src/go/api/v2"
+    )
+    check_go_test("-v -run TestCRD/integration", "rust/src/go/crd/v2")
+
+
+def check_go_test(args, cwd):
+    ret = exec_cmd(
+        cmd=f"go test {args}".split(),
+        cwd=cwd,
+    )
+    rc, out, err = ret
+    logging.getLogger().info(out)
+    assert rc == RC_SUCCESS, format_exec_cmd_result(ret)
