@@ -32,7 +32,7 @@ CLI_EXEC_RELEASE=rust/target/release/$(CLI_EXEC)
 PREFIX ?= /usr/local
 SYSCONFDIR ?= $(PREFIX)/etc
 SYSTEMD_UNIT_DIR ?= $(PREFIX)/lib/systemd/system
-GO_MODULE_SRC ?= rust/src/go/nmstate
+GO_MODULE_SRC ?= rust/src/go/nmstate/v2
 CLI_MANPAGE=doc/nmstatectl.8
 CLI_MANPAGE2=doc/nmstate-autoconf.8
 SYSTEMD_UNIT_MANPAGE=doc/nmstate.service.8
@@ -217,18 +217,17 @@ clib_check: $(CLIB_SO_DEV_DEBUG) $(CLIB_HEADER)
 		$(TMPDIR)/nmpolicy_yaml_test 1>/dev/null
 	rm -rf $(TMPDIR)
 
+.PHONY: go_generate
+go_generate:
+	make -C rust/src/go/nmstate/v2 generate
+	make -C rust/src/go/api/v2 generate
+	make -C rust/src/go/crd/v2 generate
+
 .PHONY: go_check
-go_check: $(CLIB_SO_DEV_DEBUG) $(CLIB_HEADER)
-	$(eval TMPDIR := $(shell mktemp -d))
-	cp $(CLIB_SO_DEV_DEBUG) $(TMPDIR)/$(CLIB_SO_FULL)
-	ln -sfv $(CLIB_SO_FULL) $(TMPDIR)/$(CLIB_SO_MAN)
-	ln -sfv $(CLIB_SO_FULL) $(TMPDIR)/$(CLIB_SO_DEV)
-	cp $(CLIB_HEADER) $(TMPDIR)/$(shell basename $(CLIB_HEADER))
-	cd rust/src/go/nmstate; LD_LIBRARY_PATH=$(TMPDIR) \
-		CGO_CFLAGS="-I$(TMPDIR)" \
-		CGO_LDFLAGS="-L$(TMPDIR)" \
-		go test $(WHAT)
-	rm -rf $(TMPDIR)
+go_check: $(CLIB_SO_DEV_DEBUG) $(CLIB_HEADER) go_generate
+	make CLIB_SO_DEV_DEBUG=$(ROOT_DIR)/$(CLIB_SO_DEV_DEBUG) CLIB_HEADER=$(ROOT_DIR)/$(CLIB_HEADER) CLIB_SO_FULL=$(CLIB_SO_FULL) CLIB_SO_MAN=$(CLIB_SO_MAN) CLIB_SO_DEV=$(CLIB_SO_DEV) -C rust/src/go/nmstate/v2 lint check
+	make -C rust/src/go/api/v2 lint build-test check-examples
+	make -C rust/src/go/crd/v2 build-test check-examples
 
 rust_check:
 	cd rust; cargo test -- --test-threads=1 --show-output;

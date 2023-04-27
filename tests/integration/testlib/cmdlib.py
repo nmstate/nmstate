@@ -24,7 +24,7 @@ import subprocess
 RC_SUCCESS = 0
 
 
-def exec_cmd(cmd, env=None, stdin=None, check=False):
+def exec_cmd(cmd, env=None, stdin=None, check=False, cwd=None):
     """
     Execute cmd in an external process, collect its output and returncode
 
@@ -32,6 +32,7 @@ def exec_cmd(cmd, env=None, stdin=None, check=False):
     :param env: an optional dictionary to be placed as environment variables
                 of the external process. If None, the environment of the
                 calling process is used.
+    :param cwd: working directory to change to before running the command
     :returns: a 3-tuple of the process's
               (returncode, stdout content as unicode,
                stderr content as unicode.)
@@ -46,6 +47,7 @@ def exec_cmd(cmd, env=None, stdin=None, check=False):
         env=env,
         check=check,
         input=stdin,
+        cwd=cwd,
     )
 
     out = p.stdout

@@ -1,0 +1,2639 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.14.0
+  name: clusternetworkstate.nmstate.io
+spec:
+  group: nmstate.io
+  names:
+    kind: ClusterNetworkState
+    listKind: ClusterNetworkStateList
+    plural: clusternetworkstate
+    shortNames:
+    - cns
+    singular: clusternetworkstate
+  scope: Cluster
+  versions:
+  - name: v2
+    schema:
+      openAPIV3Schema:
+        description: ClusterNetworkState is the Schema for the nodenetworkconfigurationpolicies
+          API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            properties:
+              state:
+                description: "NetworkState  The [NetworkState] represents the whole
+                  network state including both\nkernel status and configurations provides
+                  by backends(NetworkManager,\nOpenvSwitch databas, and etc).\n\n\nExample
+                  yaml(many lines omitted) serialized NetworkState would be:\n\n\n```yaml\nhostname:\n\n\n\trunning:
+                  host.example.org\n\tconfig: host.example.org\n\n\ndns-resolver:\n\n\n\tconfig:\n\t
+                  \ server:\n\t  - 2001:db8:1::\n\t  - 192.0.2.1\n\t  search: []\n\n\nroute-rules:\n\n\n\tconfig:\n\t-
+                  ip-from: 2001:db8:b::/64\n\t  priority: 30000\n\t  route-table:
+                  200\n\t- ip-from: 192.0.2.2/32\n\t  priority: 30000\n\t  route-table:
+                  200\n\n\nroutes:\n\n\n\tconfig:\n\t- destination: 2001:db8:a::/64\n\t
+                  \ next-hop-interface: eth1\n\t  next-hop-address: 2001:db8:1::2\n\t
+                  \ metric: 108\n\t  table-id: 200\n\t- destination: 192.168.2.0/24\n\t
+                  \ next-hop-interface: eth1\n\t  next-hop-address: 192.168.1.3\n\t
+                  \ metric: 108\n\t  table-id: 200\n\n\ninterfaces:\n  - name: eth1\n
+                  \   type: ethernet\n    state: up\n    mac-address: 0E:F9:2B:28:42:D9\n
+                  \   mtu: 1500\n    ipv4:\n    enabled: true\n    dhcp: false\n    address:\n
+                  \ - ip: 192.168.1.3\n    prefix-length: 24\n    ipv6:\n    enabled:
+                  true\n    dhcp: false\n    autoconf: false\n    address:\n  - ip:
+                  2001:db8:1::1\n    prefix-length: 64\n\n\novs-db:\n\n\n\texternal_ids:\n\t
+                  \ hostname: host.example.org\n\t  rundir: /var/run/openvswitch\n\t
+                  \ system-id: 176866c7-6dc8-400f-98ac-c658509ec09f\n\tother_config:
+                  {}\n\n\n```"
+                properties:
+                  dns-resolver:
+                    description: DNS  DNS resolver status, deserialize and serialize
+                      from/to `dns-resolver`.
+                    properties:
+                      config:
+                        description: |-
+                          Config  The static saved DNS resolver config.
+                          When applying, if this not mentioned(None), current static DNS config
+                          will be preserved as it was. If defined(Some), will override current
+                          static DNS config.
+                        properties:
+                          options:
+                            description: |-
+                              Options  DNS option list.
+                              To remove all existing search, please use `Some(Vec::new())`.
+                              If undefined(set to `None`), will preserve current config.
+                            items:
+                              type: string
+                            type: array
+                          search:
+                            description: |-
+                              Search  Search list for host-name lookup.
+                              To remove all existing search, please use `Some(Vec::new())`.
+                              If undefined(set to `None`), will preserve current config.
+                            items:
+                              type: string
+                            type: array
+                          server:
+                            description: |-
+                              Server  Name server IP address list.
+                              To remove all existing servers, please use `Some(Vec::new())`.
+                              If undefined(set to `None`), will preserve current config.
+                            items:
+                              type: string
+                            type: array
+                        type: object
+                      running:
+                        description: |-
+                          Running  The running effective state. The DNS server might be from DHCP(IPv6
+                          autoconf) or manual setup.
+                          Ignored when applying state.
+                        properties:
+                          options:
+                            description: |-
+                              Options  DNS option list.
+                              To remove all existing search, please use `Some(Vec::new())`.
+                              If undefined(set to `None`), will preserve current config.
+                            items:
+                              type: string
+                            type: array
+                          search:
+                            description: |-
+                              Search  Search list for host-name lookup.
+                              To remove all existing search, please use `Some(Vec::new())`.
+                              If undefined(set to `None`), will preserve current config.
+                            items:
+                              type: string
+                            type: array
+                          server:
+                            description: |-
+                              Server  Name server IP address list.
+                              To remove all existing servers, please use `Some(Vec::new())`.
+                              If undefined(set to `None`), will preserve current config.
+                            items:
+                              type: string
+                            type: array
+                        type: object
+                    type: object
+                  hostname:
+                    description: Hostname  Hostname of current host.
+                    properties:
+                      config:
+                        type: string
+                      running:
+                        type: string
+                    type: object
+                  interfaces:
+                    description: Interfaces  Network interfaces
+                    items:
+                      description: Interface  Represent a kernel or user space network
+                        interface.
+                      properties:
+                        802.1x:
+                          description: |-
+                            Ieee8021X  IEEE 802.1X authentication configurations.
+                            Serialize and deserialize to/from `802.1x`.
+                          properties:
+                            ca-cert:
+                              description: CaCert  Deserialize and serialize from/to
+                                `ca-cert`.
+                              type: string
+                            client-cert:
+                              description: ClientCert  Deserialize and serialize from/to
+                                `client-cert`.
+                              type: string
+                            eap-methods:
+                              description: Eap  Deserialize and serialize from/to
+                                `eap-methods`.
+                              items:
+                                type: string
+                              type: array
+                            identity:
+                              type: string
+                            private-key:
+                              description: PrivateKey  Deserialize and serialize from/to
+                                `private-key`.
+                              type: string
+                            private-key-password:
+                              description: |-
+                                PrivateKeyPassword  Deserialize and serialize from/to `private-key-password`.
+                                Replaced to `<_password_hid_by_nmstate>` when querying.
+                              type: string
+                          type: object
+                        accept-all-mac-addresses:
+                          description: |-
+                            AcceptAllMacAddresses  Whether kernel should skip check on package targeting MAC address and
+                            accept all packages, also known as promiscuous mode.
+                            Serialize and deserialize to/from `accpet-all-mac-addresses`.
+                          type: boolean
+                        bridge:
+                          description: |-
+                            BridgeConfig Linux or OVS bridge configuration
+
+
+                            Linux bridge:   Bridge interface provided by linux kernel.
+                            When serializing or deserializing, the [BaseInterface] will
+                            be flatted and [LinuxBridgeConfig] stored as `bridge` section. The yaml
+                            output [crate::NetworkState] containing an example linux bridge interface:
+                            ```yml
+                            interfaces:
+                              - name: br0
+                                type: linux-bridge
+                                state: up
+                                mac-address: 9A:91:53:6C:67:DA
+                                mtu: 1500
+                                min-mtu: 68
+                                max-mtu: 65535
+                                wait-ip: any
+                                ipv4:
+                                enabled: false
+                                ipv6:
+                                enabled: false
+                                bridge:
+                                options:
+                                gc-timer: 29594
+                                group-addr: 01:80:C2:00:00:00
+                                group-forward-mask: 0
+                                group-fwd-mask: 0
+                                hash-max: 4096
+                                hello-timer: 46
+                                mac-ageing-time: 300
+                                multicast-last-member-count: 2
+                                multicast-last-member-interval: 100
+                                multicast-membership-interval: 26000
+                                multicast-querier: false
+                                multicast-querier-interval: 25500
+                                multicast-query-interval: 12500
+                                multicast-query-response-interval: 1000
+                                multicast-query-use-ifaddr: false
+                                multicast-router: auto
+                                multicast-snooping: true
+                                multicast-startup-query-count: 2
+                                multicast-startup-query-interval: 3125
+                                stp:
+                                enabled: true
+                                forward-delay: 15
+                                hello-time: 2
+                                max-age: 20
+                                priority: 32768
+                                vlan-protocol: 802.1q
+                                port:
+                              - name: eth1
+                                stp-hairpin-mode: false
+                                stp-path-cost: 100
+                                stp-priority: 32
+                              - name: eth2
+                                stp-hairpin-mode: false
+                                stp-path-cost: 100
+                                stp-priority: 32
+
+
+                            ```
+
+
+                            OVS bridge:   OpenvSwitch bridge interface. Example yaml output of [crate::NetworkState]
+                            with an OVS bridge:
+                            ```yaml
+                            ---
+                            interfaces:
+                              - name: br0
+                                type: ovs-interface
+                                state: up
+                                ipv4:
+                                address:
+                              - ip: 192.0.2.252
+                                prefix-length: 24
+                              - ip: 192.0.2.251
+                                prefix-length: 24
+                                dhcp: false
+                                enabled: true
+                                ipv6:
+                                address:
+                              - ip: 2001:db8:2::1
+                                prefix-length: 64
+                              - ip: 2001:db8:1::1
+                                prefix-length: 64
+                                autoconf: false
+                                dhcp: false
+                                enabled: true
+                              - name: br0
+                                type: ovs-bridge
+                                state: up
+                                bridge:
+                                port:
+                              - name: br0
+                              - name: eth1
+
+
+                            ```
+                          properties:
+                            allow-extra-patch-ports:
+                              description: |-
+                                AllowExtraPatchPorts  Only validate for applying, when set to `true`, extra OVS patch ports
+                                will not fail the verification. Default is false.
+                                This property will not be persisted, every time you modify
+                                ports of specified OVS bridge, you need to explicitly define this
+                                property if not using default value.
+                                Deserialize from `allow-extra-patch-ports`.
+                              type: boolean
+                            options:
+                              properties:
+                                datapath:
+                                  description: |-
+                                    Datapath  Set to `netdev` for DPDK.
+                                    Deserialize and serialize from/to `datapath`.
+                                  type: string
+                                fail-mode:
+                                  description: FailMode  Deserialize and serialize
+                                    from/to `fail-mode`.
+                                  type: string
+                                gc-timer:
+                                  format: int64
+                                  type: integer
+                                group-addr:
+                                  type: string
+                                group-forward-mask:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  description: |-
+                                    GroupForwardMask  Alias of [LinuxBridgeOptions.group_fwd_mask], not preferred, please
+                                    use [LinuxBridgeOptions.group_fwd_mask] instead.
+                                  x-kubernetes-int-or-string: true
+                                group-fwd-mask:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  x-kubernetes-int-or-string: true
+                                hash-max:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  x-kubernetes-int-or-string: true
+                                hello-timer:
+                                  format: int64
+                                  type: integer
+                                mac-ageing-time:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  x-kubernetes-int-or-string: true
+                                mcast-snooping-enable:
+                                  description: McastSnoopingEnable  Deserialize and
+                                    serialize from/to `mcast-snooping-enable`.
+                                  type: boolean
+                                multicast-last-member-count:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  x-kubernetes-int-or-string: true
+                                multicast-last-member-interval:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  x-kubernetes-int-or-string: true
+                                multicast-membership-interval:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  x-kubernetes-int-or-string: true
+                                multicast-querier:
+                                  type: boolean
+                                multicast-querier-interval:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  x-kubernetes-int-or-string: true
+                                multicast-query-interval:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  x-kubernetes-int-or-string: true
+                                multicast-query-response-interval:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  x-kubernetes-int-or-string: true
+                                multicast-query-use-ifaddr:
+                                  type: boolean
+                                multicast-router:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  enum:
+                                  - 1
+                                  - auto
+                                  - 0
+                                  - disabled
+                                  - 2
+                                  - enabled
+                                  x-kubernetes-int-or-string: true
+                                multicast-snooping:
+                                  type: boolean
+                                multicast-startup-query-count:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  x-kubernetes-int-or-string: true
+                                multicast-startup-query-interval:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  x-kubernetes-int-or-string: true
+                                rstp:
+                                  type: boolean
+                                stp:
+                                  properties:
+                                    enabled:
+                                      type: boolean
+                                    forward-delay:
+                                      anyOf:
+                                      - type: integer
+                                      - type: string
+                                      x-kubernetes-int-or-string: true
+                                    hello-time:
+                                      anyOf:
+                                      - type: integer
+                                      - type: string
+                                      x-kubernetes-int-or-string: true
+                                    max-age:
+                                      anyOf:
+                                      - type: integer
+                                      - type: string
+                                      x-kubernetes-int-or-string: true
+                                    priority:
+                                      anyOf:
+                                      - type: integer
+                                      - type: string
+                                      x-kubernetes-int-or-string: true
+                                  type: object
+                                vlan-default-pvid:
+                                  type: integer
+                                vlan-protocol:
+                                  enum:
+                                  - 802.1q
+                                  - 802.1ad
+                                  type: string
+                              type: object
+                            port:
+                              items:
+                                properties:
+                                  link-aggregation:
+                                    description: |-
+                                      OVSBridgeBondConfig  The example yaml output of OVS bond:
+                                      ```yml
+                                      ---
+                                      interfaces:
+                                        - name: eth1
+                                          type: ethernet
+                                          state: up
+                                        - name: eth2
+                                          type: ethernet
+                                          state: up
+                                        - name: br0
+                                          type: ovs-bridge
+                                          state: up
+                                          bridge:
+                                          port:
+                                        - name: veth1
+                                        - name: ovs0
+                                        - name: bond1
+                                          link-aggregation:
+                                          mode: balance-slb
+                                          port:
+                                        - name: eth2
+                                        - name: eth1
+
+
+                                      ```
+                                    properties:
+                                      bond-downdelay:
+                                        anyOf:
+                                        - type: integer
+                                        - type: string
+                                        description: BondDowndelay  Deserialize and
+                                          serialize from/to `bond-downdelay`.
+                                        x-kubernetes-int-or-string: true
+                                      bond-updelay:
+                                        anyOf:
+                                        - type: integer
+                                        - type: string
+                                        description: BondUpdelay  Deserialize and
+                                          serialize from/to `bond-updelay`.
+                                        x-kubernetes-int-or-string: true
+                                      mode:
+                                        enum:
+                                        - active-backup
+                                        - balance-slb
+                                        - balance-tcp
+                                        - lacp
+                                        type: string
+                                      ovs-db:
+                                        description: |-
+                                          Ovsdb  OpenvSwitch specific `other_config` for OVS bond. Please refer to
+                                          manpage `ovs-vswitchd.conf.db(5)` for more detail.
+                                          When setting to None, nmstate will try to preserve current
+                                          `other_config`, otherwise, nmstate will override all `other_config`
+                                          for specified OVS bond.
+                                        properties:
+                                          external_ids:
+                                            additionalProperties:
+                                              anyOf:
+                                              - type: integer
+                                              - type: string
+                                              x-kubernetes-int-or-string: true
+                                            type: object
+                                          other_config:
+                                            additionalProperties:
+                                              anyOf:
+                                              - type: integer
+                                              - type: string
+                                              x-kubernetes-int-or-string: true
+                                            description: |-
+                                              OtherConfig  OpenvSwitch specific `other_config`. Please refer to
+                                              manpage `ovs-vswitchd.conf.db(5)` for more detail.
+                                              When setting to None, nmstate will try to preserve current
+                                              `other_config`, otherwise, nmstate will override all `other_config`
+                                              for specified interface.
+                                            type: object
+                                        type: object
+                                      port:
+                                        description: Ports  Serialize to 'port'. Deserialize
+                                          from `port` or `ports`.
+                                        items:
+                                          properties:
+                                            name:
+                                              type: string
+                                          required:
+                                          - name
+                                          type: object
+                                        type: array
+                                    type: object
+                                  name:
+                                    type: string
+                                  stp-hairpin-mode:
+                                    description: |-
+                                      StpHairpinMode  Controls whether traffic may be send back out of the port on which it
+                                      was received.
+                                    type: boolean
+                                  stp-path-cost:
+                                    anyOf:
+                                    - type: integer
+                                    - type: string
+                                    description: StpPathCost  The STP path cost of
+                                      the specified port.
+                                    x-kubernetes-int-or-string: true
+                                  stp-priority:
+                                    anyOf:
+                                    - type: integer
+                                    - type: string
+                                    description: |-
+                                      StpPriority  The STP port priority. The priority value is an unsigned 8-bit quantity
+                                      (number between 0 and 255). This metric is used in the designated port
+                                      an droot port selec‐ tion algorithms.
+                                    x-kubernetes-int-or-string: true
+                                  vlan:
+                                    description: BridgePortVlanConfig  Bridge VLAN
+                                      filtering configuration
+                                    properties:
+                                      enable-native:
+                                        description: |-
+                                          EnableNative  Enable native VLAN.
+                                          Deserialize and serialize from/to `enable-native`.
+                                        type: boolean
+                                      mode:
+                                        description: Mode  Bridge VLAN filtering mode
+                                        enum:
+                                        - trunk
+                                        - access
+                                        type: string
+                                      tag:
+                                        anyOf:
+                                        - type: integer
+                                        - type: string
+                                        description: Tag  VLAN Tag for native VLAN.
+                                        x-kubernetes-int-or-string: true
+                                      trunk-tags:
+                                        description: |-
+                                          TrunkTags  Trunk tags.
+                                          Deserialize and serialize from/to `trunk-tags`.
+                                        items:
+                                          properties:
+                                            id:
+                                              description: ID  Single VLAN trunk ID
+                                              type: integer
+                                            id-range:
+                                              description: IDRange  VLAN trunk ID
+                                                range
+                                              properties:
+                                                max:
+                                                  description: Max  Maximum VLAN ID(included).
+                                                  type: integer
+                                                min:
+                                                  description: Min  Minimum VLAN ID(included).
+                                                  type: integer
+                                              required:
+                                              - max
+                                              - min
+                                              type: object
+                                          type: object
+                                        type: array
+                                    type: object
+                                required:
+                                - name
+                                type: object
+                              type: array
+                          type: object
+                        controller:
+                          description: |-
+                            Controller  Controller of the specified interface.
+                            Only valid for applying, `None` means no change, empty string means
+                            detach from current controller, please be advise, an error will trigger
+                            if this property conflict with ports list of bridge/bond/etc.
+                            Been always set to `None` by [crate::NetworkState::retrieve()].
+                          type: string
+                        copy-mac-from:
+                          description: |-
+                            CopyMacFrom  Copy the MAC address from specified interface.
+                            Ignored during serializing.
+                            Deserialize from `copy-mac-from`.
+                          type: string
+                        description:
+                          description: |-
+                            Description  Interface description stored in network backend. Not available for
+                            kernel only mode.
+                          type: string
+                        dispatch:
+                          description: Dispatch  Dispatch script configurations
+                          properties:
+                            post-activation:
+                              description: |-
+                                PostActivation  Dispatch bash script content to be invoked after interface activation
+                                finished by network backend. Nmstate will append additional lines
+                                to make sure this script is only invoked for specified interface when
+                                backend interface activation finished.
+                                Setting to empty string will remove the dispatch script
+                              type: string
+                            post-deactivation:
+                              description: |-
+                                PostDeactivation  Dispatch bash script content to be invoked after interface deactivation
+                                finished by network backend. Nmstate will append additional lines
+                                to make sure this script is only invoked for specified interface when
+                                backend interface deactivation finished.
+                                Setting to empty string will remove the dispatch script
+                              type: string
+                          type: object
+                        dpdk:
+                          properties:
+                            devargs:
+                              type: string
+                            n_rxq_desc:
+                              description: |-
+                                NRxqDesc  Specifies  the  rx  queue  size (number rx descriptors) for dpdk ports.
+                                Must be power of 2 in the range of 1 to 4096.
+                                Setting to 0 means remove this setting from OVS database.
+                              format: int32
+                              type: integer
+                            n_txq_desc:
+                              description: |-
+                                NTxqDesc  Specifies  the  tx  queue  size (number tx descriptors) for dpdk ports.
+                                Must be power of 2 in the range of 1 to 4096.
+                                Setting to 0 means remove this setting from OVS database.
+                              format: int32
+                              type: integer
+                            rx-queue:
+                              description: |-
+                                RxQueue  Deserialize and serialize from/to `rx-queue`. You may also use
+                                OVS terminology `n_rxq` for this property.
+                              format: int32
+                              type: integer
+                          required:
+                          - devargs
+                          type: object
+                        ethernet:
+                          properties:
+                            auto-negotiation:
+                              description: AutoNeg  Deserialize and serialize from/to
+                                `auto-negotiation`.
+                              type: boolean
+                            duplex:
+                              enum:
+                              - full
+                              - half
+                              type: string
+                            speed:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              x-kubernetes-int-or-string: true
+                            sr-iov:
+                              description: |-
+                                SrIov  Single Root I/O Virtualization(SRIOV) configuration.
+                                Deserialize and serialize from/to `sr-iov`.
+                              properties:
+                                total-vfs:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  description: |-
+                                    TotalVfs  The number of VFs enabled on PF.
+                                    Deserialize and serialize from/to `total-vfs`.
+                                  x-kubernetes-int-or-string: true
+                                vfs:
+                                  description: |-
+                                    Vfs  VF specific configurations.
+                                    * Setting to `Some(Vec::new())` will revert all VF configurations back
+                                      to defaults.
+                                    * If not empty, missing [SrIovVfConfig] will use current configuration.
+                                  items:
+                                    properties:
+                                      id:
+                                        format: int32
+                                        type: integer
+                                      iface-name:
+                                        description: |-
+                                          IfaceName  Interface name for this VF, only for querying, will be ignored
+                                          when applying network state.
+                                        type: string
+                                      mac-address:
+                                        description: MacAddress  Deserialize and serialize
+                                          from/to `mac-address`.
+                                        type: string
+                                      max-tx-rate:
+                                        anyOf:
+                                        - type: integer
+                                        - type: string
+                                        description: MaxTxRate  Deserialize and serialize
+                                          from/to `max-tx-rate`.
+                                        x-kubernetes-int-or-string: true
+                                      min-tx-rate:
+                                        anyOf:
+                                        - type: integer
+                                        - type: string
+                                        description: MinTxRate  Deserialize and serialize
+                                          from/to `min_tx_rate`.
+                                        x-kubernetes-int-or-string: true
+                                      qos:
+                                        anyOf:
+                                        - type: integer
+                                        - type: string
+                                        x-kubernetes-int-or-string: true
+                                      spoof-check:
+                                        description: SpoofCheck  Deserialize and serialize
+                                          from/to `spoof-check`.
+                                        type: boolean
+                                      trust:
+                                        type: boolean
+                                      vlan-id:
+                                        anyOf:
+                                        - type: integer
+                                        - type: string
+                                        description: VlanID  Deserialize and serialize
+                                          from/to `vlan-id`.
+                                        x-kubernetes-int-or-string: true
+                                      vlan-proto:
+                                        enum:
+                                        - 802.1q
+                                        - 802.1ad
+                                        type: string
+                                    required:
+                                    - id
+                                    type: object
+                                  type: array
+                              type: object
+                          type: object
+                        ethtool:
+                          description: Ethtool  Ethtool configurations
+                          properties:
+                            coalesce:
+                              description: Coalesce  The coalescing settings of the
+                                specified network device.
+                              properties:
+                                adaptive-rx:
+                                  description: AdaptiveRx  Deserialize and serialize
+                                    from/to `adaptive-rx`.
+                                  type: boolean
+                                adaptive-tx:
+                                  description: AdaptiveTx  Deserialize and serialize
+                                    from/to `adaptive-tx`.
+                                  type: boolean
+                                pkt-rate-high:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  description: PktRateHigh  Deserialize and serialize
+                                    from/to `pkt-rate-high`.
+                                  x-kubernetes-int-or-string: true
+                                pkt-rate-low:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  description: PktRateLow  Deserialize and serialize
+                                    from/to `pkt-rate-low`.
+                                  x-kubernetes-int-or-string: true
+                                rx-frames:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  description: RxFrames  Deserialize and serialize
+                                    from/to `rx-frames`.
+                                  x-kubernetes-int-or-string: true
+                                rx-frames-high:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  description: RxFramesHigh  Deserialize and serialize
+                                    from/to `rx-frames-high`.
+                                  x-kubernetes-int-or-string: true
+                                rx-frames-irq:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  description: RxFramesIrq  Deserialize and serialize
+                                    from/to `rx-frames-irq`.
+                                  x-kubernetes-int-or-string: true
+                                rx-frames-low:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  description: RxFramesLow  Deserialize and serialize
+                                    from/to `rx-frames-low`.
+                                  x-kubernetes-int-or-string: true
+                                rx-usecs:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  description: RxUsecs  Deserialize and serialize
+                                    from/to `rx-usecs`.
+                                  x-kubernetes-int-or-string: true
+                                rx-usecs-high:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  description: RxUsecsHigh  Deserialize and serialize
+                                    from/to `rx-usecs-high`.
+                                  x-kubernetes-int-or-string: true
+                                rx-usecs-irq:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  description: RxUsecsIrq  Deserialize and serialize
+                                    from/to `rx-usecs-irq`.
+                                  x-kubernetes-int-or-string: true
+                                rx-usecs-low:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  description: RxUsecsLow  Deserialize and serialize
+                                    from/to `rx-usecs-low`.
+                                  x-kubernetes-int-or-string: true
+                                sample-interval:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  description: SampleInterval  Deserialize and serialize
+                                    from/to `sample-interval`.
+                                  x-kubernetes-int-or-string: true
+                                stats-block-usecs:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  description: StatsBlockUsecs  Deserialize and serialize
+                                    from/to `stats-block-usecs`.
+                                  x-kubernetes-int-or-string: true
+                                tx-frames:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  description: TxFrames  Deserialize and serialize
+                                    from/to `tx-frames`.
+                                  x-kubernetes-int-or-string: true
+                                tx-frames-high:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  description: TxFramesHigh  Deserialize and serialize
+                                    from/to `tx-frames-high`.
+                                  x-kubernetes-int-or-string: true
+                                tx-frames-irq:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  description: TxFramesIrq  Deserialize and serialize
+                                    from/to `tx-frames-irq`.
+                                  x-kubernetes-int-or-string: true
+                                tx-frames-low:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  description: TxFramesLow  Deserialize and serialize
+                                    from/to `tx-frames-low`.
+                                  x-kubernetes-int-or-string: true
+                                tx-usecs:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  description: TxUsecs  Deserialize and serialize
+                                    from/to `tx-usecs`.
+                                  x-kubernetes-int-or-string: true
+                                tx-usecs-high:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  description: TxUsecsHigh  Deserialize and serialize
+                                    from/to `tx-usecs-high`.
+                                  x-kubernetes-int-or-string: true
+                                tx-usecs-irq:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  description: TxUsecsIrq  Deserialize and serialize
+                                    from/to `tx-usecs-irq`.
+                                  x-kubernetes-int-or-string: true
+                                tx-usecs-low:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  description: TxUsecsLow  Deserialize and serialize
+                                    from/to `tx-usecs-low`.
+                                  x-kubernetes-int-or-string: true
+                              type: object
+                            feature:
+                              additionalProperties:
+                                type: boolean
+                              description: |-
+                                Feature  The protocol offload and other features of specified network device.
+                                Only changeable features are included when querying.
+                              type: object
+                            pause:
+                              description: Pause  The pause parameters of the specified
+                                Ethernet device.
+                              properties:
+                                autoneg:
+                                  type: boolean
+                                rx:
+                                  type: boolean
+                                tx:
+                                  type: boolean
+                              type: object
+                            ring:
+                              description: Ring  The rx/tx ring parameters of the
+                                specified network device.
+                              properties:
+                                rx:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  x-kubernetes-int-or-string: true
+                                rx-jumbo:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  description: RxJumbo  Deserialize and serialize
+                                    from/to `rx-jumbo`.
+                                  x-kubernetes-int-or-string: true
+                                rx-jumbo-max:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  description: RxJumboMax  Deserialize and serialize
+                                    from/to `rx-jumbo-max`.
+                                  x-kubernetes-int-or-string: true
+                                rx-max:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  description: RxMax  Deserialize and serialize from/to
+                                    `rx-max`.
+                                  x-kubernetes-int-or-string: true
+                                rx-mini:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  description: RxMini  Deserialize and serialize from/to
+                                    `rx-mini`.
+                                  x-kubernetes-int-or-string: true
+                                rx-mini-max:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  description: RxMiniMax  Deserialize and serialize
+                                    from/to `rx-mini-max`.
+                                  x-kubernetes-int-or-string: true
+                                tx:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  x-kubernetes-int-or-string: true
+                                tx-max:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  description: TxMax  Deserialize and serialize from/to
+                                    `tx-max`.
+                                  x-kubernetes-int-or-string: true
+                              type: object
+                          type: object
+                        hsr:
+                          description: Hsr  Deserialize and serialize to `hsr`.
+                          properties:
+                            multicast-spec:
+                              description: MulticastSpec  The last byte of the supervision
+                                address.
+                              type: integer
+                            port1:
+                              description: Port1  The port1 interface name.
+                              type: string
+                            port2:
+                              description: Port2  The port2 interface name.
+                              type: string
+                            protocol:
+                              description: Protocol  Protocol to be used.
+                              enum:
+                              - hsr
+                              - prp
+                              type: string
+                            supervision-address:
+                              description: |-
+                                SupervisionAddress  The MAC address used for the supervision frames. This property is
+                                read-only.
+                              type: string
+                          required:
+                          - multicast-spec
+                          - port1
+                          - port2
+                          - protocol
+                          type: object
+                        identifier:
+                          description: |-
+                            Identifier  Define network backend matching method on choosing network interface.
+                            Default to [InterfaceIdentifier::Name].
+                          enum:
+                          - name
+                          - mac-address
+                          type: string
+                        infiniband:
+                          properties:
+                            base-iface:
+                              description: BaseIface  For pkey sub-interface only.
+                                Empty for base interface.
+                              type: string
+                            mode:
+                              description: Mode  Mode of InfiniBand interface.
+                              enum:
+                              - datagram
+                              - connected
+                              type: string
+                            pkey:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              description: |-
+                                Pkey  P-key of sub-interface.
+                                Serialize in hex string format(lower case).
+                                For base interface, it is set to None.
+                                The `0xffff` value also indicate this is a InfiniBand base interface.
+                              x-kubernetes-int-or-string: true
+                          required:
+                          - mode
+                          type: object
+                        ipv4:
+                          description: |-
+                            Ipv4  IPv4 information.
+                            Hided if interface is not allowed to hold IP information(e.g. port of
+                            bond is not allowed to hold IP information).
+                          properties:
+                            addr-gen-mode:
+                              description: Ipv6AddrGenMode  IPv6 address generation
+                                mode
+                              type: string
+                            address:
+                              items:
+                                properties:
+                                  ip:
+                                    description: IP  IP address.
+                                    type: string
+                                  mptcp-flags:
+                                    description: |-
+                                      MptcpFlags  MPTCP flag on this IP address.
+                                      Ignored when applying as nmstate does not support support IP address
+                                      specific MPTCP flags. You should apply MPTCP flags at interface level
+                                      via [BaseInterface.mptcp].
+                                    items:
+                                      enum:
+                                      - signal
+                                      - subflow
+                                      - backup
+                                      - fullmesh
+                                      type: string
+                                    type: array
+                                  preferred-life-time:
+                                    description: |-
+                                      PreferredLifeTime  Remaining time for IP address been preferred. The output format is
+                                      "32sec" or "forever".
+                                      This property is query only, it will be ignored when applying.
+                                      Serialize to `preferred-life-time`.
+                                      Deserialize from `preferred-life-time` or `preferred-left` or
+                                      `preferred-lft`.
+                                    type: string
+                                  prefix-length:
+                                    description: |-
+                                      PrefixLength  Prefix length.
+                                      Serialize and deserialize to/from `prefix-length`.
+                                    type: integer
+                                  valid-life-time:
+                                    description: |-
+                                      ValidLifeTime  Remaining time for IP address been valid. The output format is
+                                      "32sec" or "forever".
+                                      This property is query only, it will be ignored when applying.
+                                      Serialize to `valid-life-time`.
+                                      Deserialize from `valid-life-time` or `valid-left` or `valid-lft`.
+                                    type: string
+                                required:
+                                - ip
+                                - prefix-length
+                                type: object
+                              type: array
+                            allow-extra-address:
+                              type: boolean
+                            auto-dns:
+                              type: boolean
+                            auto-gateway:
+                              type: boolean
+                            auto-route-metric:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              x-kubernetes-int-or-string: true
+                            auto-route-table-id:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              x-kubernetes-int-or-string: true
+                            auto-routes:
+                              type: boolean
+                            autoconf:
+                              type: boolean
+                            dhcp:
+                              type: boolean
+                            dhcp-client-id:
+                              description: Dhcpv4ClientID  DHCPv4 client ID
+                              type: string
+                            dhcp-custom-hostname:
+                              type: string
+                            dhcp-duid:
+                              description: Dhcpv6Duid  DHCPv6 Unique Identifier
+                              type: string
+                            dhcp-send-hostname:
+                              type: boolean
+                            enabled:
+                              type: boolean
+                            token:
+                              type: string
+                          type: object
+                        ipv6:
+                          description: |-
+                            Ipv6  IPv4 information.
+                            Hided if interface is not allowed to hold IP information(e.g. port of
+                            bond is not allowed to hold IP information).
+                          properties:
+                            addr-gen-mode:
+                              description: Ipv6AddrGenMode  IPv6 address generation
+                                mode
+                              type: string
+                            address:
+                              items:
+                                properties:
+                                  ip:
+                                    description: IP  IP address.
+                                    type: string
+                                  mptcp-flags:
+                                    description: |-
+                                      MptcpFlags  MPTCP flag on this IP address.
+                                      Ignored when applying as nmstate does not support support IP address
+                                      specific MPTCP flags. You should apply MPTCP flags at interface level
+                                      via [BaseInterface.mptcp].
+                                    items:
+                                      enum:
+                                      - signal
+                                      - subflow
+                                      - backup
+                                      - fullmesh
+                                      type: string
+                                    type: array
+                                  preferred-life-time:
+                                    description: |-
+                                      PreferredLifeTime  Remaining time for IP address been preferred. The output format is
+                                      "32sec" or "forever".
+                                      This property is query only, it will be ignored when applying.
+                                      Serialize to `preferred-life-time`.
+                                      Deserialize from `preferred-life-time` or `preferred-left` or
+                                      `preferred-lft`.
+                                    type: string
+                                  prefix-length:
+                                    description: |-
+                                      PrefixLength  Prefix length.
+                                      Serialize and deserialize to/from `prefix-length`.
+                                    type: integer
+                                  valid-life-time:
+                                    description: |-
+                                      ValidLifeTime  Remaining time for IP address been valid. The output format is
+                                      "32sec" or "forever".
+                                      This property is query only, it will be ignored when applying.
+                                      Serialize to `valid-life-time`.
+                                      Deserialize from `valid-life-time` or `valid-left` or `valid-lft`.
+                                    type: string
+                                required:
+                                - ip
+                                - prefix-length
+                                type: object
+                              type: array
+                            allow-extra-address:
+                              type: boolean
+                            auto-dns:
+                              type: boolean
+                            auto-gateway:
+                              type: boolean
+                            auto-route-metric:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              x-kubernetes-int-or-string: true
+                            auto-route-table-id:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              x-kubernetes-int-or-string: true
+                            auto-routes:
+                              type: boolean
+                            autoconf:
+                              type: boolean
+                            dhcp:
+                              type: boolean
+                            dhcp-client-id:
+                              description: Dhcpv4ClientID  DHCPv4 client ID
+                              type: string
+                            dhcp-custom-hostname:
+                              type: string
+                            dhcp-duid:
+                              description: Dhcpv6Duid  DHCPv6 Unique Identifier
+                              type: string
+                            dhcp-send-hostname:
+                              type: boolean
+                            enabled:
+                              type: boolean
+                            token:
+                              type: string
+                          type: object
+                        libreswan:
+                          properties:
+                            authby:
+                              type: string
+                            clientaddrfamily:
+                              enum:
+                              - ipv4
+                              - ipv6
+                              type: string
+                            dpdaction:
+                              type: string
+                            dpddelay:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              x-kubernetes-int-or-string: true
+                            dpdtimeout:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              x-kubernetes-int-or-string: true
+                            esp:
+                              type: string
+                            hostaddrfamily:
+                              enum:
+                              - ipv4
+                              - ipv6
+                              type: string
+                            ike:
+                              type: string
+                            ikelifetime:
+                              type: string
+                            ikev2:
+                              type: string
+                            ipsec-interface:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              x-kubernetes-int-or-string: true
+                            left:
+                              type: string
+                            leftcert:
+                              type: string
+                            leftid:
+                              type: string
+                            leftmodecfgclient:
+                              type: boolean
+                            leftrsasigkey:
+                              type: string
+                            psk:
+                              description: Psk  PSK authentication, if not defined,
+                                will use X.509 PKI authentication
+                              type: string
+                            right:
+                              type: string
+                            rightid:
+                              type: string
+                            rightrsasigkey:
+                              type: string
+                            rightsubnet:
+                              type: string
+                            salifetime:
+                              type: string
+                            type:
+                              enum:
+                              - tunnel
+                              - transport
+                              type: string
+                          required:
+                          - right
+                          type: object
+                        link-aggregation:
+                          description: Bond  Bond specific settings.
+                          properties:
+                            mode:
+                              description: Mode  Mode is mandatory when create new
+                                bond interface.
+                              enum:
+                              - balance-rr
+                              - "0"
+                              - active-backup
+                              - "1"
+                              - balance-xor
+                              - "2"
+                              - broadcast
+                              - "3"
+                              - 802.3ad
+                              - "4"
+                              - balance-tlb
+                              - "5"
+                              - balance-alb
+                              - "6"
+                              - unknown
+                              type: string
+                            options:
+                              description: |-
+                                Options  When applying, if defined, it will override current port list.
+                                The verification will not fail on bond options miss-match but an
+                                warning message.
+                                Please refer to [kernel documentation](https://www.kernel.org/doc/Documentation/networking/bonding.txt) for detail
+                              properties:
+                                ad_actor_sys_prio:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  description: |-
+                                    AdActorSysPrio  In an AD system, this specifies the system priority. The allowed range
+                                    is 1 - 65535.
+                                  x-kubernetes-int-or-string: true
+                                ad_actor_system:
+                                  description: |-
+                                    AdActorSystem  In an AD system, this specifies the mac-address for the actor in
+                                    protocol packet exchanges (LACPDUs). The value cannot be NULL or
+                                    multicast. It is preferred to have the local-admin bit set for this mac
+                                    but driver does not enforce it. If the value is not given then system
+                                    defaults to using the controller's mac address as actors' system
+                                    address.
+                                  type: string
+                                ad_select:
+                                  description: |-
+                                    AdSelect  Specifies the 802.3ad aggregation selection logic to use. The
+                                    possible values and their effects are:
+                                  enum:
+                                  - stable
+                                  - "0"
+                                  - bandwidth
+                                  - "1"
+                                  - count
+                                  - "2"
+                                  type: string
+                                ad_user_port_key:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  description: |-
+                                    AdUserPortKey  In an AD system, the port-key has three parts as shown below -
+
+
+                                    ```text
+                                    Bits   Use
+                                    00     Duplex
+                                    01-05  Speed
+                                    06-15  User-defined
+                                    ```
+
+
+                                    This defines the upper 10 bits of the port key. The values can be from
+                                    0
+                                    - 1023. If not given, the system defaults to 0.
+
+
+                                    This parameter has effect only in 802.3ad mode.
+                                  x-kubernetes-int-or-string: true
+                                all_slaves_active:
+                                  description: |-
+                                    AllSlavesActive  Specifies that duplicate frames (received on inactive ports) should be
+                                    dropped (0) or delivered (1).
+
+
+                                    Normally, bonding will drop duplicate frames (received on inactive
+                                    ports), which is desirable for most users. But there are some times it
+                                    is nice to allow duplicate frames to be delivered.
+                                  enum:
+                                  - dropped
+                                  - "0"
+                                  - delivered
+                                  - "1"
+                                  type: string
+                                arp_all_targets:
+                                  description: |-
+                                    ArpAllTargets  Specifies the quantity of arp_ip_targets that must be reachable in
+                                    order for the ARP monitor to consider a port as being up. This
+                                    option affects only active-backup mode for ports with
+                                    arp_validation enabled.
+                                  enum:
+                                  - any
+                                  - "0"
+                                  - all
+                                  - "1"
+                                  type: string
+                                arp_interval:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  description: |-
+                                    ArpInterval  Specifies the ARP link monitoring frequency in milliseconds.
+
+
+                                    The ARP monitor works by periodically checking the port devices to
+                                    determine whether they have sent or received traffic recently (the
+                                    precise criteria depends upon the bonding mode, and the state of the
+                                    port). Regular traffic is generated via ARP probes issued for the
+                                    addresses specified by the arp_ip_target option.
+
+
+                                    This behavior can be modified by the arp_validate option,
+                                    below.
+
+
+                                    If ARP monitoring is used in an etherchannel compatible mode (modes 0
+                                    and 2), the switch should be configured in a mode that evenly
+                                    distributes packets across all links. If the switch is configured to
+                                    distribute the packets in an XOR fashion, all replies from the ARP
+                                    targets will be received on the same link which could cause the other
+                                    team members to fail. ARP monitoring should not be used in conjunction
+                                    with miimon. A value of 0 disables ARP monitoring. The default value
+                                    is 0.
+                                  x-kubernetes-int-or-string: true
+                                arp_ip_target:
+                                  description: |-
+                                    ArpIPTarget  Specifies the IP addresses to use as ARP monitoring peers when
+                                    arp_interval is > 0. These are the targets of the ARP request sent to
+                                    determine the health of the link to the targets. Specify these values
+                                    in ddd.ddd.ddd.ddd format. Multiple IP addresses must be separated by a
+                                    comma. At least one IP address must be given for ARP monitoring to
+                                    function. The maximum number of targets that can be specified is 16.
+                                    The default value is no IP addresses.
+                                  type: string
+                                arp_missed_max:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  x-kubernetes-int-or-string: true
+                                arp_validate:
+                                  description: |-
+                                    ArpValidate  Specifies whether or not ARP probes and replies should be validated in
+                                    any mode that supports arp monitoring, or whether non-ARP traffic
+                                    should be filtered (disregarded) for link monitoring purposes.
+                                  enum:
+                                  - none
+                                  - "0"
+                                  - active
+                                  - "1"
+                                  - backup
+                                  - "2"
+                                  - all
+                                  - "3"
+                                  - filter
+                                  - "4"
+                                  - filter_active
+                                  - "5"
+                                  - filter_backup
+                                  - "6"
+                                  type: string
+                                balance_slb:
+                                  type: boolean
+                                downdelay:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  description: |-
+                                    Downdelay  Specifies the time, in milliseconds, to wait before disabling a port
+                                    after a link failure has been detected. This option is only valid for
+                                    the miimon link monitor. The downdelay value should be a multiple of
+                                    the miimon value; if not, it will be rounded down to the nearest
+                                    multiple. The default value is 0.
+                                  x-kubernetes-int-or-string: true
+                                fail_over_mac:
+                                  description: |-
+                                    FailOverMac  Specifies whether active-backup mode should set all ports to the same
+                                    MAC address at enportment (the traditional behavior), or, when enabled,
+                                    perform special handling of the bond's MAC address in accordance with
+                                    the selected policy.
+                                  enum:
+                                  - none
+                                  - "0"
+                                  - active
+                                  - "1"
+                                  - follow
+                                  - "2"
+                                  type: string
+                                lacp_rate:
+                                  description: |-
+                                    LacpRate  Option specifying the rate in which we'll ask our link partner to
+                                    transmit LACPDU packets in 802.3ad mode.
+                                  enum:
+                                  - slow
+                                  - "0"
+                                  - fast
+                                  - "1"
+                                  type: string
+                                lp_interval:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  description: |-
+                                    LpInterval  Specifies the number of seconds between instances where the bonding
+                                    driver sends learning packets to each slaves peer switch.
+
+
+                                    The valid range is 1 - 0x7fffffff; the default value is 1. This Option
+                                    has effect only in balance-tlb and balance-alb modes.
+                                  x-kubernetes-int-or-string: true
+                                miimon:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  description: |-
+                                    Miimon  Specifies the MII link monitoring frequency in milliseconds.
+                                    This determines how often the link state of each port is
+                                    inspected for link failures. A value of zero disables MII
+                                    link monitoring. A value of 100 is a good starting point.
+                                    The use_carrier option, below, affects how the link state is
+                                    determined. See the High Availability section for additional
+                                    information. The default value is 0.
+                                  x-kubernetes-int-or-string: true
+                                min_links:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  description: |-
+                                    MinLinks  Specifies the minimum number of links that must be active before
+                                    asserting carrier. It is similar to the Cisco EtherChannel min-links
+                                    feature. This allows setting the minimum number of member ports that
+                                    must be up (link-up state) before marking the bond device as up
+                                    (carrier on). This is useful for situations where higher level services
+                                    such as clustering want to ensure a minimum number of low bandwidth
+                                    links are active before switchover. This option only affect 802.3ad
+                                    mode.
+
+
+                                    The default value is 0. This will cause carrier to be asserted (for
+                                    802.3ad mode) whenever there is an active aggregator, regardless of the
+                                    number of available links in that aggregator. Note that, because an
+                                    aggregator cannot be active without at least one available link,
+                                    setting this option to 0 or to 1 has the exact same effect.
+                                  x-kubernetes-int-or-string: true
+                                num_grat_arp:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  description: |-
+                                    NumGratArp  Specify the number of peer notifications (gratuitous ARPs and
+                                    unsolicited IPv6 Neighbor Advertisements) to be issued after a
+                                    failover event. As soon as the link is up on the new port
+                                    (possibly immediately) a peer notification is sent on the
+                                    bonding device and each VLAN sub-device. This is repeated at
+                                    the rate specified by peer_notif_delay if the number is
+                                    greater than 1.
+
+
+                                    The valid range is 0 - 255; the default value is 1. These options
+                                    affect only the active-backup mode. These options were added for
+                                    bonding versions 3.3.0 and 3.4.0 respectively.
+
+
+                                    From Linux 3.0 and bonding version 3.7.1, these notifications are
+                                    generated by the ipv4 and ipv6 code and the numbers of repetitions
+                                    cannot be set independently.
+                                  x-kubernetes-int-or-string: true
+                                num_unsol_na:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  description: NumUnsolNa  Identical to [BondOptions.num_grat_arp]
+                                  x-kubernetes-int-or-string: true
+                                packets_per_slave:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  description: |-
+                                    PacketsPerSlave  Specify the number of packets to transmit through a port before moving
+                                    to the next one. When set to 0 then a port is chosen at random.
+
+
+                                    The valid range is 0 - 65535; the default value is 1. This option has
+                                    effect only in balance-rr mode.
+                                  x-kubernetes-int-or-string: true
+                                primary:
+                                  description: |-
+                                    Primary  A string (eth0, eth2, etc) specifying which slave is the primary
+                                    device. The specified device will always be the active slave while
+                                    it is available. Only when the primary is off-line will alternate
+                                    devices be used. This is useful when one slave is preferred over
+                                    another, e.g., when one slave has higher throughput than another.
+
+
+                                    The primary option is only valid for active-backup(1), balance-tlb (5)
+                                    and balance-alb (6) mode.
+                                  type: string
+                                primary_reselect:
+                                  description: |-
+                                    PrimaryReselect  Specifies the reselection policy for the primary port. This affects
+                                    how the primary port is chosen to become the active port when failure
+                                    of the active port or recovery of the primary port occurs. This
+                                    option is designed to prevent flip-flopping between the primary port
+                                    and other ports.
+                                  enum:
+                                  - always
+                                  - "0"
+                                  - better
+                                  - "1"
+                                  - failure
+                                  - "2"
+                                  type: string
+                                resend_igmp:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  description: |-
+                                    ResendIgmp  Specifies the number of IGMP membership reports to be issued after
+                                    a failover event. One membership report is issued immediately after
+                                    the failover, subsequent packets are sent in each 200ms interval.
+
+
+                                    The valid range is 0 - 255; the default value is 1. A value of 0
+                                    prevents the IGMP membership report from being issued in response
+                                    to the failover event.
+
+
+                                    This option is useful for bonding modes balance-rr (0), active-backup
+                                    (1), balance-tlb (5) and balance-alb (6), in which a failover can
+                                    switch the IGMP traffic from one port to another. Therefore a
+                                    fresh IGMP report must be issued to cause the switch to forward the
+                                    incoming IGMP traffic over the newly selected port.
+                                  x-kubernetes-int-or-string: true
+                                tlb_dynamic_lb:
+                                  description: |-
+                                    TlbDynamicLb  Specifies if dynamic shuffling of flows is enabled in tlb mode. The
+                                    value has no effect on any other modes.
+
+
+                                    The default behavior of tlb mode is to shuffle active flows across
+                                    ports based on the load in that interval. This gives nice lb
+                                    characteristics but can cause packet reordering. If re-ordering is a
+                                    concern use this variable to disable flow shuffling and rely on load
+                                    balancing provided solely by the hash distribution. xmit-hash-policy
+                                    can be used to select the appropriate hashing for the setup.
+
+
+                                    The sysfs entry can be used to change the setting per bond device and
+                                    the initial value is derived from the module parameter. The sysfs entry
+                                    is allowed to be changed only if the bond device is down.
+
+
+                                    The default value is "1" that enables flow shuffling while value "0"
+                                    disables it. This option was added in bonding driver 3.7.1
+                                  type: boolean
+                                updelay:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  description: |-
+                                    Updelay  Specifies the time, in milliseconds, to wait before enabling a port
+                                    after a link recovery has been detected. This option is only valid for
+                                    the miimon link monitor. The updelay value should be a multiple of the
+                                    miimon value; if not, it will be rounded down to the nearest multiple.
+                                    The default value is 0.
+                                  x-kubernetes-int-or-string: true
+                                use_carrier:
+                                  description: |-
+                                    UseCarrier  Specifies whether or not miimon should use MII or ETHTOOL
+                                    ioctls vs. netif_carrier_ok() to determine the link
+                                    status. The MII or ETHTOOL ioctls are less efficient and
+                                    utilize a deprecated calling sequence within the kernel.  The
+                                    netif_carrier_ok() relies on the device driver to maintain its
+                                    state with netif_carrier_on/off; at this writing, most, but
+                                    not all, device drivers support this facility.
+
+
+                                    If bonding insists that the link is up when it should not be,
+                                    it may be that your network device driver does not support
+                                    netif_carrier_on/off.  The default state for netif_carrier is
+                                    "carrier on," so if a driver does not support netif_carrier,
+                                    it will appear as if the link is always up.  In this case,
+                                    setting use_carrier to 0 will cause bonding to revert to the
+                                    MII / ETHTOOL ioctl method to determine the link state.
+
+
+                                    A value of 1 enables the use of netif_carrier_ok(), a value of
+                                    0 will use the deprecated MII / ETHTOOL ioctls.  The default
+                                    value is 1.
+                                  type: boolean
+                                xmit_hash_policy:
+                                  description: |-
+                                    XmitHashPolicy  Selects the transmit hash policy to use for slave selection in
+                                    balance-xor, 802.3ad, and tlb modes.
+                                  enum:
+                                  - layer2
+                                  - "0"
+                                  - layer3+4
+                                  - "1"
+                                  - layer2+3
+                                  - "2"
+                                  - encap2+3
+                                  - "3"
+                                  - encap3+4
+                                  - "4"
+                                  - vlan+srcmac
+                                  - "5"
+                                  type: string
+                              type: object
+                            port:
+                              description: |-
+                                Port  Deserialize and serialize from/to `port`.
+                                You can also use `ports` or `slaves`(deprecated) for deserializing.
+                                When applying, if defined, it will override current port list.
+                              items:
+                                type: string
+                              type: array
+                            ports-config:
+                              description: |-
+                                PortsConfig  Deserialize and serialize from/to `ports-config`.
+                                When applying, if defined, it will override current ports
+                                configuration. Note that `port` is not required to set with
+                                `ports-config`. An error will be raised during apply when the port
+                                names specified in `port` and `ports-config` conflict with each
+                                other.
+                              items:
+                                properties:
+                                  name:
+                                    description: Name  name is mandatory when specifying
+                                      the ports configuration.
+                                    type: string
+                                  priority:
+                                    anyOf:
+                                    - type: integer
+                                    - type: string
+                                    description: |-
+                                      Priority  Deserialize and serialize from/to `priority`.
+                                      When applying, if defined, it will override the current bond port
+                                      priority. The verification will fail if bonding mode is not
+                                      active-backup(1) or balance-tlb (5) or balance-alb (6).
+                                    x-kubernetes-int-or-string: true
+                                  queue-id:
+                                    anyOf:
+                                    - type: integer
+                                    - type: string
+                                    description: QueueID  Deserialize and serialize
+                                      from/to `queue-id`.
+                                    x-kubernetes-int-or-string: true
+                                required:
+                                - name
+                                type: object
+                              type: array
+                          type: object
+                        lldp:
+                          description: Lldp  Link Layer Discovery Protocol configurations.
+                          properties:
+                            enabled:
+                              type: boolean
+                            neighbors:
+                              items:
+                                items:
+                                  properties:
+                                    _description:
+                                      type: string
+                                    chassis-id:
+                                      type: string
+                                    chassis-id-type:
+                                      enum:
+                                      - 0
+                                      - 1
+                                      - 2
+                                      - 3
+                                      - 4
+                                      - 5
+                                      - 6
+                                      - 7
+                                      type: integer
+                                    ieee-802-1-ppvids:
+                                      items:
+                                        format: int32
+                                        type: integer
+                                      type: array
+                                    ieee-802-1-vlans:
+                                      items:
+                                        properties:
+                                          name:
+                                            type: string
+                                          vid:
+                                            format: int32
+                                            type: integer
+                                        type: object
+                                      type: array
+                                    ieee-802-3-mac-phy-conf:
+                                      properties:
+                                        autoneg:
+                                          type: boolean
+                                        operational-mau-type:
+                                          type: integer
+                                        pmd-autoneg-cap:
+                                          type: integer
+                                      type: object
+                                    ieee-802-3-max-frame-size:
+                                      format: int32
+                                      type: integer
+                                    management-addresses:
+                                      items:
+                                        properties:
+                                          address:
+                                            type: string
+                                          address-subtype:
+                                            enum:
+                                            - Unknown
+                                            - IPv4
+                                            - IPv6
+                                            - MAC
+                                            type: string
+                                          interface-number:
+                                            format: int32
+                                            type: integer
+                                          interface-number-subtype:
+                                            format: int32
+                                            type: integer
+                                        type: object
+                                      type: array
+                                    oui:
+                                      allOf:
+                                      - enum:
+                                        - 00:80:c2
+                                        - 00:12:0f
+                                        - 00:80:c2
+                                        - 00:12:0f
+                                      - enum:
+                                        - 00:80:c2
+                                        - 00:12:0f
+                                        - 00:80:c2
+                                        - 00:12:0f
+                                      - enum:
+                                        - 00:80:c2
+                                        - 00:12:0f
+                                        - 00:80:c2
+                                        - 00:12:0f
+                                      - enum:
+                                        - 00:80:c2
+                                        - 00:12:0f
+                                        - 00:80:c2
+                                        - 00:12:0f
+                                      type: string
+                                    port-id:
+                                      type: string
+                                    port-id-type:
+                                      enum:
+                                      - 0
+                                      - 1
+                                      - 2
+                                      - 3
+                                      - 4
+                                      - 5
+                                      - 6
+                                      - 7
+                                      type: integer
+                                    subtype:
+                                      allOf:
+                                      - enum:
+                                        - 3
+                                        - 1
+                                        - 2
+                                        - 4
+                                      - enum:
+                                        - 3
+                                        - 1
+                                        - 2
+                                        - 4
+                                      - enum:
+                                        - 3
+                                        - 1
+                                        - 2
+                                        - 4
+                                      - enum:
+                                        - 3
+                                        - 1
+                                        - 2
+                                        - 4
+                                      type: integer
+                                    system-capabilities:
+                                      items:
+                                        type: string
+                                      type: array
+                                    system-description:
+                                      type: string
+                                    system-name:
+                                      type: string
+                                    type:
+                                      allOf:
+                                      - enum:
+                                        - 1
+                                        - 2
+                                        - 5
+                                        - 6
+                                        - 7
+                                        - 8
+                                        - 127
+                                      - enum:
+                                        - 1
+                                        - 2
+                                        - 5
+                                        - 6
+                                        - 7
+                                        - 8
+                                        - 127
+                                      - enum:
+                                        - 1
+                                        - 2
+                                        - 5
+                                        - 6
+                                        - 7
+                                        - 8
+                                        - 127
+                                      - enum:
+                                        - 1
+                                        - 2
+                                        - 5
+                                        - 6
+                                        - 7
+                                        - 8
+                                        - 127
+                                      - enum:
+                                        - 1
+                                        - 2
+                                        - 5
+                                        - 6
+                                        - 7
+                                        - 8
+                                        - 127
+                                      - enum:
+                                        - 1
+                                        - 2
+                                        - 5
+                                        - 6
+                                        - 7
+                                        - 8
+                                        - 127
+                                      - enum:
+                                        - 1
+                                        - 2
+                                        - 5
+                                        - 6
+                                        - 7
+                                        - 8
+                                        - 127
+                                      - enum:
+                                        - 1
+                                        - 2
+                                        - 5
+                                        - 6
+                                        - 7
+                                        - 8
+                                        - 127
+                                      - enum:
+                                        - 1
+                                        - 2
+                                        - 5
+                                        - 6
+                                        - 7
+                                        - 8
+                                        - 127
+                                      - enum:
+                                        - 1
+                                        - 2
+                                        - 5
+                                        - 6
+                                        - 7
+                                        - 8
+                                        - 127
+                                      type: integer
+                                  type: object
+                                type: array
+                              type: array
+                          required:
+                          - enabled
+                          type: object
+                        mac-address:
+                          description: |-
+                            MacAddress  When applying with `[InterfaceIdentifier::MacAddress]`,
+                            nmstate will store original desired interface name as `profile_name`
+                            here and store the real interface name as `name` property.
+                            For [InterfaceIdentifier::Name] (default), this property will change
+                            the interface MAC address to desired one when applying.
+                            For [InterfaceIdentifier::MacAddress], this property will be used
+                            for searching interface on desired MAC address when applying.
+                            MAC address in the format: upper case hex string separated by `:` on
+                            every two characters. Case insensitive when applying.
+                            Serialize and deserialize to/from `mac-address`.
+                          type: string
+                        mac-vlan:
+                          description: MacVlan  Deserialize and serialize from/to
+                            `mac-vlan`.
+                          properties:
+                            base-iface:
+                              type: string
+                            mode:
+                              enum:
+                              - vepa
+                              - bridge
+                              - private
+                              - passthru
+                              - source
+                              - unknown
+                              type: string
+                            promiscuous:
+                              description: |-
+                                AcceptAllMac  Serialize to `promiscuous`.
+                                Deserialize from `promiscuous` or `accept-all-mac`.
+                              type: boolean
+                          required:
+                          - base-iface
+                          - mode
+                          type: object
+                        mac-vtap:
+                          description: MacVtap  Deserialize and serialize from/to
+                            `mac-vtap`.
+                          properties:
+                            base-iface:
+                              type: string
+                            mode:
+                              enum:
+                              - vepa
+                              - bridge
+                              - private
+                              - passthru
+                              - source
+                              - unknown
+                              type: string
+                            promiscuous:
+                              description: |-
+                                AcceptAllMac  Serialize to `promiscuous`.
+                                Deserialize from `promiscuous` or `accept-all-mac`.
+                              type: boolean
+                          required:
+                          - base-iface
+                          - mode
+                          type: object
+                        macsec:
+                          description: Macsec  Deserialize and serialize to `macsec`.
+                          properties:
+                            base-iface:
+                              description: BaseIface  The parent interface used by
+                                the MACsec interface.
+                              type: string
+                            encrypt:
+                              description: Encrypt  Wether the transmitted traffic
+                                must be encrypted.
+                              type: boolean
+                            mka-cak:
+                              description: |-
+                                MkaCak  The pre-shared CAK (Connectivity Association Key) for MACsec Key
+                                Agreement. Must be a string of 32 hexadecimal characters.
+                              type: string
+                            mka-ckn:
+                              description: |-
+                                MkaCkn  The pre-shared CKN (Connectivity-association Key Name) for MACsec Key
+                                Agreement. Must be a string of hexadecimal characters with a even
+                                length between 2 and 64.
+                              type: string
+                            port:
+                              description: |-
+                                Port  The port component of the SCI (Secure Channel Identifier), between 1
+                                and 65534.
+                              format: int32
+                              type: integer
+                            send-sci:
+                              description: |-
+                                SendSci  Specifies whether the SCI (Secure Channel Identifier) is included in
+                                every packet.
+                              type: boolean
+                            validation:
+                              description: Validation  Specifies the validation mode
+                                for incoming frames.
+                              enum:
+                              - disabled
+                              - check
+                              - strict
+                              type: string
+                          required:
+                          - base-iface
+                          - encrypt
+                          - port
+                          - send-sci
+                          - validation
+                          type: object
+                        max-mtu:
+                          description: |-
+                            MaxMtu  Maximum MTU allowed. Ignored during apply.
+                            Serialize and deserialize to/from `max-mtu`.
+                          format: int64
+                          type: integer
+                        min-mtu:
+                          description: |-
+                            MinMtu  Minimum MTU allowed. Ignored during apply.
+                            Serialize and deserialize to/from `min-mtu`.
+                          format: int64
+                          type: integer
+                        mptcp:
+                          description: |-
+                            Mptcp  Interface wide MPTCP flags.
+                            Nmstate will apply these flags to all valid IP addresses(both static
+                            and dynamic).
+                          properties:
+                            address-flags:
+                              description: |-
+                                AddressFlags  Automatically assign MPTCP flags to all valid IP addresses of this
+                                interface including both static and dynamic ones.
+                              items:
+                                enum:
+                                - signal
+                                - subflow
+                                - backup
+                                - fullmesh
+                                type: string
+                              type: array
+                          type: object
+                        mtu:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          description: Mtu  Maximum transmission unit.
+                          x-kubernetes-int-or-string: true
+                        name:
+                          description: |-
+                            Name  Interface name, when applying with `InterfaceIdentifier::MacAddress`,
+                            if `profile_name` not defined, this will be used as profile name.
+                          type: string
+                        ovs-db:
+                          description: Ovsdb  Interface specific OpenvSwitch database
+                            configurations.
+                          properties:
+                            external_ids:
+                              additionalProperties:
+                                anyOf:
+                                - type: integer
+                                - type: string
+                                x-kubernetes-int-or-string: true
+                              type: object
+                            other_config:
+                              additionalProperties:
+                                anyOf:
+                                - type: integer
+                                - type: string
+                                x-kubernetes-int-or-string: true
+                              description: |-
+                                OtherConfig  OpenvSwitch specific `other_config`. Please refer to
+                                manpage `ovs-vswitchd.conf.db(5)` for more detail.
+                                When setting to None, nmstate will try to preserve current
+                                `other_config`, otherwise, nmstate will override all `other_config`
+                                for specified interface.
+                              type: object
+                          type: object
+                        patch:
+                          properties:
+                            peer:
+                              type: string
+                          type: object
+                        profile-name:
+                          type: string
+                        state:
+                          description: State  Interface state. Default to [InterfaceState::Up]
+                            when applying.
+                          enum:
+                          - up
+                          - down
+                          - absent
+                          - unknown
+                          - ignore
+                          type: string
+                        type:
+                          description: Type  Interface type. Serialize and deserialize
+                            to/from `type`
+                          enum:
+                          - bond
+                          - linux-bridge
+                          - dummy
+                          - ethernet
+                          - hsr
+                          - loopback
+                          - mac-vlan
+                          - mac-vtap
+                          - ovs-bridge
+                          - ovs-interface
+                          - veth
+                          - vlan
+                          - vrf
+                          - vxlan
+                          - infiniband
+                          - tun
+                          - macsec
+                          - ipsec
+                          - xfrm
+                          - unknown
+                          type: string
+                        veth:
+                          description: |-
+                            Veth  When applying, the [VethConfig] is only valid when
+                            [BaseInterface.iface_type] is set to [InterfaceType::Veth] explicitly.
+                          properties:
+                            peer:
+                              description: Peer  The name of veth peer.
+                              type: string
+                          type: object
+                        vlan:
+                          properties:
+                            base-iface:
+                              type: string
+                            id:
+                              type: integer
+                            loose-binding:
+                              description: LooseBinding  loose binding of the interface
+                                to its master device's operating state
+                              type: boolean
+                            protocol:
+                              description: Protocol  Could be `802.1q` or `802.1ad`.
+                                Default to `802.1q` if not defined.
+                              enum:
+                              - 802.1q
+                              - 802.1ad
+                              type: string
+                            registration-protocol:
+                              description: RegistrationProtocol  Could be `gvrp`,
+                                `mvrp` or `none`. Default to none if not defined.
+                              enum:
+                              - gvrp
+                              - mvrp
+                              - none
+                              type: string
+                            reorder-headers:
+                              description: ReorderHeaders  reordering of output packet
+                                headers
+                              type: boolean
+                          required:
+                          - base-iface
+                          - id
+                          type: object
+                        vrf:
+                          properties:
+                            port:
+                              description: |-
+                                Port  Port list.
+                                Deserialize and serialize from/to `port`.
+                                Also deserialize from `ports`.
+                              items:
+                                type: string
+                              type: array
+                            route-table-id:
+                              description: |-
+                                TableID  Route table ID of this VRF interface.
+                                Use 0 to preserve current `table_id`.
+                                Deserialize and serialize from/to `route-table-id`.
+                              format: int32
+                              type: integer
+                          required:
+                          - port
+                          type: object
+                        vxlan:
+                          properties:
+                            base-iface:
+                              type: string
+                            destination-port:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              description: DstPort  Deserialize and serialize from/to
+                                `destination-port`.
+                              x-kubernetes-int-or-string: true
+                            id:
+                              format: int32
+                              type: integer
+                            learning:
+                              type: boolean
+                            local:
+                              type: string
+                            remote:
+                              type: string
+                          required:
+                          - id
+                          type: object
+                        wait-ip:
+                          description: |-
+                            WaitIP  Whether system should wait certain IP stack before considering
+                            network interface activated.
+                            Serialize and deserialize to/from `wait-ip`.
+                          enum:
+                          - any
+                          - ipv4
+                          - ipv6
+                          - ipv4+ipv6
+                          type: string
+                      required:
+                      - name
+                      type: object
+                    type: array
+                  ovn:
+                    description: OVN  The OVN configuration in the system
+                    properties:
+                      bridge-mappings:
+                        items:
+                          properties:
+                            bridge:
+                              type: string
+                            localnet:
+                              type: string
+                            state:
+                              description: |-
+                                State  When set to `state: absent`, will delete the existing
+                                `localnet` mapping.
+                              enum:
+                              - present
+                              - absent
+                              type: string
+                          required:
+                          - localnet
+                          type: object
+                        type: array
+                    type: object
+                  ovs-db:
+                    description: Ovsdb  The global configurations of OpenvSwitach
+                      daemon
+                    properties:
+                      external_ids:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          x-kubernetes-int-or-string: true
+                        type: object
+                      other_config:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          x-kubernetes-int-or-string: true
+                        type: object
+                    type: object
+                  route-rules:
+                    description: Rules  Route rule, deserialize and serialize from/to
+                      `route-rules`.
+                    properties:
+                      config:
+                        description: |-
+                          Config  When applying, `None` means preserve existing route rules.
+                          Nmstate is using partial editing for route rule, which means
+                          desired route rules only append to existing instead of overriding.
+                          To delete any route rule, please set [crate::RouteRuleEntry.state] to
+                          [RouteRuleState::Absent]. Any property set to None in absent route rule
+                          means wildcard. For example, this [crate::NetworkState] will delete all
+                          route rule looking up route table 500:
+                          ```yml
+                          ---
+                          route-rules:
+                            config:
+                              - state: absent
+                                route-table: 500
+                          ```
+                        items:
+                          properties:
+                            action:
+                              description: Action  Actions for matching packages.
+                              enum:
+                              - blackhole
+                              - unreachable
+                              - prohibit
+                              type: string
+                            family:
+                              description: Family  Indicate the address family of
+                                the route rule.
+                              enum:
+                              - ipv4
+                              - ipv6
+                              - unknown
+                              type: string
+                            fwmark:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              description: Fwmark  Select the fwmark value to match
+                              x-kubernetes-int-or-string: true
+                            fwmask:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              description: Fwmask  Select the fwmask value to match
+                              x-kubernetes-int-or-string: true
+                            iif:
+                              description: Iif  Incoming interface.
+                              type: string
+                            ip-from:
+                              description: |-
+                                IPFrom  Source prefix to match.
+                                Serialize and deserialize to/from `ip-from`.
+                                When setting to empty string in absent route rule, it will only delete
+                                route rule __without__ `ip-from`.
+                              type: string
+                            ip-to:
+                              description: |-
+                                IPTo  Destination prefix to match.
+                                Serialize and deserialize to/from `ip-to`.
+                                When setting to empty string in absent route rule, it will only delete
+                                route rule __without__ `ip-to`.
+                              type: string
+                            priority:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              description: |-
+                                Priority  Priority of this route rule.
+                                Bigger number means lower priority.
+                              x-kubernetes-int-or-string: true
+                            route-table:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              description: |-
+                                TableID  The routing table ID to lookup if the rule selector matches.
+                                Serialize and deserialize to/from `route-table`.
+                              x-kubernetes-int-or-string: true
+                            state:
+                              description: State  Indicate this is normal route rule
+                                or absent route rule.
+                              enum:
+                              - absent
+                              type: string
+                            suppress-prefix-length:
+                              description: |-
+                                SuppressPrefixLength  Prefix length of suppressor.
+                                Can deserialize from `suppress-prefix-length` or
+                                `suppress_prefixlength`.
+                                Serialize into `suppress-prefix-length`.
+                              format: int32
+                              type: integer
+                          type: object
+                        type: array
+                    type: object
+                  routes:
+                    description: Routes  Route
+                    properties:
+                      config:
+                        description: |-
+                          Config  Static routes containing route from universe or link scope,
+                          and only from these protocols:
+                           * boot (often used by `iproute` command)
+                           * static
+
+
+                          When applying, `None` means preserve current routes.
+                          This property is not overriding but adding specified routes to
+                          existing routes. To delete a route entry, please [RouteEntry.state] as
+                          [RouteState::Absent]. Any property of absent [RouteEntry] set to
+                          `None` means wildcard. For example, this [crate::NetworkState] could
+                          remove all routes next hop to interface eth1(showing in yaml):
+                          ```yaml
+                          routes:
+                            config:
+                            - next-hop-interface: eth1
+                              state: absent
+                          ```
+
+
+                          To change a route entry, you need to delete old one and add new one(can
+                          be in single transaction).
+                        items:
+                          description: RouteEntry  Route entry
+                          properties:
+                            destination:
+                              description: |-
+                                Destination  Route destination address or network
+                                Mandatory for every non-absent routes.
+                              type: string
+                            metric:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              description: |-
+                                Metric  Route metric. [RouteEntry::USE_DEFAULT_METRIC] for default
+                                setting of network backend.
+                              x-kubernetes-int-or-string: true
+                            next-hop-address:
+                              description: |-
+                                NextHopAddr  Route next hop IP address.
+                                Serialize and deserialize to/from `next-hop-address`.
+                                When setting this as empty string for absent route, it will only delete
+                                routes __without__ `next-hop-address`.
+                              type: string
+                            next-hop-interface:
+                              description: |-
+                                NextHopIface  Route next hop interface name.
+                                Serialize and deserialize to/from `next-hop-interface`.
+                                Mandatory for every non-absent routes except for route with
+                                route type `Blackhole`, `Unreachable`, `Prohibit`.
+                              type: string
+                            route-type:
+                              description: |-
+                                RouteType  Route type
+                                Serialize and deserialize to/from `route-type`.
+                              enum:
+                              - blackhole
+                              - unreachable
+                              - prohibit
+                              type: string
+                            state:
+                              description: State  Only used for delete route when
+                                applying.
+                              enum:
+                              - absent
+                              type: string
+                            table-id:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              description: |-
+                                TableID  Route table id. [RouteEntry::USE_DEFAULT_ROUTE_TABLE] for main
+                                route table 254.
+                              x-kubernetes-int-or-string: true
+                            weight:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              description: |-
+                                Weight  ECMP(Equal-Cost Multi-Path) route weight
+                                The valid range of this property is 1-256.
+                              x-kubernetes-int-or-string: true
+                          type: object
+                        type: array
+                      running:
+                        description: |-
+                          Running  Running effected routes containing route from universe or link scope,
+                          and only from these protocols:
+                           * boot (often used by `iproute` command)
+                           * static
+                           * ra
+                           * dhcp
+                           * mrouted
+                           * keepalived
+                           * babel
+
+
+                          Ignored when applying.
+                        items:
+                          description: RouteEntry  Route entry
+                          properties:
+                            destination:
+                              description: |-
+                                Destination  Route destination address or network
+                                Mandatory for every non-absent routes.
+                              type: string
+                            metric:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              description: |-
+                                Metric  Route metric. [RouteEntry::USE_DEFAULT_METRIC] for default
+                                setting of network backend.
+                              x-kubernetes-int-or-string: true
+                            next-hop-address:
+                              description: |-
+                                NextHopAddr  Route next hop IP address.
+                                Serialize and deserialize to/from `next-hop-address`.
+                                When setting this as empty string for absent route, it will only delete
+                                routes __without__ `next-hop-address`.
+                              type: string
+                            next-hop-interface:
+                              description: |-
+                                NextHopIface  Route next hop interface name.
+                                Serialize and deserialize to/from `next-hop-interface`.
+                                Mandatory for every non-absent routes except for route with
+                                route type `Blackhole`, `Unreachable`, `Prohibit`.
+                              type: string
+                            route-type:
+                              description: |-
+                                RouteType  Route type
+                                Serialize and deserialize to/from `route-type`.
+                              enum:
+                              - blackhole
+                              - unreachable
+                              - prohibit
+                              type: string
+                            state:
+                              description: State  Only used for delete route when
+                                applying.
+                              enum:
+                              - absent
+                              type: string
+                            table-id:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              description: |-
+                                TableID  Route table id. [RouteEntry::USE_DEFAULT_ROUTE_TABLE] for main
+                                route table 254.
+                              x-kubernetes-int-or-string: true
+                            weight:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              description: |-
+                                Weight  ECMP(Equal-Cost Multi-Path) route weight
+                                The valid range of this property is 1-256.
+                              x-kubernetes-int-or-string: true
+                          type: object
+                        type: array
+                    type: object
+                type: object
+            type: object
+        type: object
+    served: true
+    storage: true
