@@ -77,6 +77,8 @@ function container_pre_test_setup {
     create_container
 
     container_exec "ulimit -c unlimited"
+    container_exec "git config --global --add safe.directory \
+        $CONTAINER_WORKSPACE"
 }
 
 function copy_workspace_container {
