@@ -12,6 +12,11 @@ impl InterfaceIpv4 {
         if self.dhcp_custom_hostname.is_none() {
             self.dhcp_custom_hostname = Some(String::new());
         }
+
+        // No IP address means empty.
+        if self.enabled && self.addresses.is_none() {
+            self.addresses = Some(Vec::new());
+        }
     }
 
     // Sort addresses and dedup
@@ -89,6 +94,11 @@ impl InterfaceIpv6 {
         if self.dhcp_custom_hostname.is_none() {
             self.dhcp_custom_hostname = Some(String::new());
         }
+
+        // No IP address means empty.
+        if self.enabled && self.addresses.is_none() {
+            self.addresses = Some(Vec::new());
+        }
     }
 
     // Sort addresses and dedup
@@ -96,9 +106,6 @@ impl InterfaceIpv6 {
         if let Some(addrs) = self.addresses.as_mut() {
             addrs.sort_unstable();
             addrs.dedup();
-            if addrs.is_empty() {
-                self.addresses = None;
-            }
         }
     }
     pub(crate) fn update(&mut self, other: &Self) {
