@@ -1902,3 +1902,32 @@ def test_set_dhcp_host_name_and_remove(dhcpcli_up):
     }
     libnmstate.apply(desired_state)
     assertlib.assert_state_match(desired_state)
+
+
+@pytest.mark.tier1
+def test_auto_ip_with_pre_exist_address_without_dhcp_srv(eth1_up):
+    ipv4_state = _create_ipv4_state(enabled=True, dhcp=True)
+    ipv4_state[InterfaceIPv4.ADDRESS] = [
+        create_ipv4_address_state(
+            IPV4_ADDRESS4, 24, valid_left="30sec", preferred_left="30sec"
+        ),
+    ]
+    ipv6_state = _create_ipv6_state(enabled=True, dhcp=True, autoconf=True)
+    ipv6_state[InterfaceIPv6.ADDRESS] = [
+        create_ipv6_address_state(
+            IPV6_ADDRESS4, 64, valid_left="30sec", preferred_left="30sec"
+        ),
+    ]
+
+    desired_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: "eth1",
+                Interface.STATE: InterfaceState.UP,
+                Interface.IPV4: ipv4_state,
+                Interface.IPV6: ipv6_state,
+            }
+        ]
+    }
+
+    libnmstate.apply(desired_state)
