@@ -40,6 +40,8 @@ IPV6_ROUTE_TABLE_ID1 = 50
 IPV6_ROUTE_TABLE_ID2 = 51
 IPV6_TEST_NET1 = "2001:db8:e::/64"
 
+TEST_ROUTE_TABLE_ID = 99
+
 IPV4_DNS_NAMESERVER = "8.8.8.8"
 IPV6_DNS_NAMESERVER = "2001:4860:4860::8888"
 DNS_SEARCHES = ["example.org", "example.com"]
@@ -250,20 +252,20 @@ def _assert_in_current_route(route, current_routes):
     assert route_in_current_routes
 
 
-def _get_ipv4_test_routes():
+def _get_ipv4_test_routes(nic="eth1"):
     return [
         {
             Route.DESTINATION: "198.51.100.0/24",
             Route.METRIC: 103,
             Route.NEXT_HOP_ADDRESS: "192.0.2.1",
-            Route.NEXT_HOP_INTERFACE: "eth1",
+            Route.NEXT_HOP_INTERFACE: nic,
             Route.TABLE_ID: IPV4_ROUTE_TABLE_ID1,
         },
         {
             Route.DESTINATION: "203.0.113.0/24",
             Route.METRIC: 103,
             Route.NEXT_HOP_ADDRESS: "192.0.2.1",
-            Route.NEXT_HOP_INTERFACE: "eth1",
+            Route.NEXT_HOP_INTERFACE: nic,
             Route.TABLE_ID: IPV4_ROUTE_TABLE_ID2,
         },
     ]
@@ -288,20 +290,20 @@ def _get_ipv4_gateways():
     ]
 
 
-def _get_ipv6_test_routes():
+def _get_ipv6_test_routes(nic="eth1"):
     return [
         {
             Route.DESTINATION: "2001:db8:a::/64",
             Route.METRIC: 103,
             Route.NEXT_HOP_ADDRESS: "2001:db8:1::a",
-            Route.NEXT_HOP_INTERFACE: "eth1",
+            Route.NEXT_HOP_INTERFACE: nic,
             Route.TABLE_ID: IPV6_ROUTE_TABLE_ID1,
         },
         {
             Route.DESTINATION: "2001:db8:b::/64",
             Route.METRIC: 103,
             Route.NEXT_HOP_ADDRESS: "2001:db8:1::b",
-            Route.NEXT_HOP_INTERFACE: "eth1",
+            Route.NEXT_HOP_INTERFACE: nic,
             Route.TABLE_ID: IPV6_ROUTE_TABLE_ID2,
         },
     ]
@@ -1602,3 +1604,41 @@ def test_add_routes_to_local_route_table_255(static_eth1_with_routes):
 
     cur_state = libnmstate.show()
     _assert_routes(routes, cur_state)
+
+
+@pytest.fixture
+def static_eth1_eth2_with_routes_on_same_table_id(eth1_up, eth2_up):
+    routes = _get_ipv4_test_routes("eth1") + _get_ipv6_test_routes("eth2")
+    for route in routes:
+        route[Route.TABLE_ID] = TEST_ROUTE_TABLE_ID
+    eth1_state = copy.deepcopy(ETH1_INTERFACE_STATE)
+    eth1_state.pop(Interface.IPV6)
+    eth2_state = copy.deepcopy(ETH1_INTERFACE_STATE)
+    eth2_state[Interface.NAME] = "eth2"
+    eth2_state.pop(Interface.IPV4)
+    state = {
+        Interface.KEY: [eth1_state, eth2_state],
+        Route.KEY: {Route.CONFIG: routes},
+    }
+    libnmstate.apply(state)
+    yield
+
+
+def test_add_route_rules_with_the_same_route_table_id_on_diff_ip_stack(
+    static_eth1_eth2_with_routes_on_same_table_id,
+):
+    desired_state = {
+        RouteRule.KEY: {
+            RouteRule.CONFIG: [
+                {
+                    RouteRule.IP_FROM: "2001:db8:f::/64",
+                    RouteRule.ROUTE_TABLE: TEST_ROUTE_TABLE_ID,
+                },
+                {
+                    RouteRule.IP_FROM: "192.0.2.0/24",
+                    RouteRule.ROUTE_TABLE: TEST_ROUTE_TABLE_ID,
+                },
+            ]
+        }
+    }
+    libnmstate.apply(desired_state)
