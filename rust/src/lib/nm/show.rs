@@ -15,7 +15,8 @@ use super::{
         device::nm_dev_iface_type_to_nmstate, dns::nm_global_dns_to_nmstate,
         get_description, get_lldp, is_lldp_enabled, is_mptcp_supported,
         nm_802_1x_to_nmstate, nm_ip_setting_to_nmstate4,
-        nm_ip_setting_to_nmstate6, query_nmstate_wait_ip, retrieve_dns_info,
+        nm_ip_setting_to_nmstate6, ovs::merge_ovs_netdev_tun_iface,
+        query_nmstate_wait_ip, retrieve_dns_info,
     },
     settings::{
         get_bond_balance_slb, NM_SETTING_VETH_SETTING_NAME,
@@ -190,10 +191,12 @@ pub(crate) fn nm_retrieve(
 
     set_ovs_iface_controller_info(&mut net_state.interfaces);
 
+    merge_ovs_netdev_tun_iface(&mut net_state, &nm_devs, &nm_conns);
+
     Ok(net_state)
 }
 
-fn nm_conn_to_base_iface(
+pub(crate) fn nm_conn_to_base_iface(
     nm_dev: &NmDevice,
     nm_conn: &NmConnection,
     nm_saved_conn: Option<&NmConnection>,

@@ -206,7 +206,7 @@ impl Interface {
                     );
                 }
             }
-            Self::Unknown(_) | Self::Dummy(_) | Self::Loopback(_) => (),
+            _ => (),
         }
     }
 }
