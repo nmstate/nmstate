@@ -7,7 +7,7 @@ mod ieee8021x;
 mod ip;
 mod lldp;
 mod mptcp;
-mod ovs;
+pub(crate) mod ovs;
 mod profile;
 mod route;
 mod user;

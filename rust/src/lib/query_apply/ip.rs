@@ -17,6 +17,11 @@ impl InterfaceIpv4 {
         if self.enabled && self.addresses.is_none() {
             self.addresses = Some(Vec::new());
         }
+
+        // No DHCP means off
+        if self.enabled && self.dhcp.is_none() {
+            self.dhcp = Some(false);
+        }
     }
 
     // Sort addresses and dedup
@@ -98,6 +103,16 @@ impl InterfaceIpv6 {
         // No IP address means empty.
         if self.enabled && self.addresses.is_none() {
             self.addresses = Some(Vec::new());
+        }
+
+        // No DHCP means off
+        if self.enabled && self.dhcp.is_none() {
+            self.dhcp = Some(false);
+        }
+
+        // No autoconf means off
+        if self.enabled && self.autoconf.is_none() {
+            self.autoconf = Some(false);
         }
     }
 

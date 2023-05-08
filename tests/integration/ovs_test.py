@@ -1870,3 +1870,34 @@ def test_ovs_replace_internal_iface_to_bridge_with_auto_create_iface(
     )
     libnmstate.apply(desired_state)
     assertlib.assert_state_match(desired_state)
+
+
+# OVS netdev datapath will use TUN interface for OVS internal interface
+@pytest.mark.tier1
+def test_netdev_data_path(eth1_up):
+    bridge = Bridge(BRIDGE1)
+    bridge.add_system_port("eth1")
+    bridge.set_options({OVSBridge.Options.DATAPATH: "netdev"})
+    bridge.add_internal_port(
+        PORT1,
+        ipv4_state={
+            InterfaceIPv4.ENABLED: True,
+            InterfaceIPv4.DHCP: False,
+            InterfaceIPv4.ADDRESS: [
+                {
+                    InterfaceIPv4.ADDRESS_IP: "192.0.2.1",
+                    InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+                }
+            ],
+        },
+    )
+    desired_state = bridge.state
+    try:
+        libnmstate.apply(desired_state)
+        assertlib.assert_state_match(desired_state)
+    finally:
+        for iface in desired_state[Interface.KEY]:
+            iface[Interface.STATE] = InterfaceState.ABSENT
+        libnmstate.apply(desired_state)
+    assertlib.assert_absent(BRIDGE0)
+    assertlib.assert_absent(PORT1)

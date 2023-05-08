@@ -39,12 +39,16 @@ pub(crate) fn nispor_retrieve(
         .map_err(np_error_to_nmstate)?;
 
     for (_, np_iface) in np_state.ifaces.iter() {
-        let base_iface = np_iface_to_base_iface(np_iface, running_config_only);
         // The `ovs-system` is reserved for OVS kernel datapath
         if np_iface.name == "ovs-system" {
             continue;
         }
+        // The `ovs-netdev` is reserved for OVS netdev datapath
+        if np_iface.name == "ovs-netdev" {
+            continue;
+        }
 
+        let base_iface = np_iface_to_base_iface(np_iface, running_config_only);
         let iface = match &base_iface.iface_type {
             InterfaceType::LinuxBridge => {
                 let mut br_iface = np_bridge_to_nmstate(np_iface, base_iface)?;

@@ -60,6 +60,9 @@ pub enum InterfaceType {
     /// [IP over InfiniBand interface](https://docs.kernel.org/infiniband/ipoib.html)
     /// Deserialize and serialize from/to 'infiniband'.
     InfiniBand,
+    /// TUN interface. Only used for query, will be ignored when applying.
+    /// Deserialize and serialize from/to 'tun'.
+    Tun,
     /// Unknown interface.
     Unknown,
     /// Reserved for future use.
@@ -89,6 +92,7 @@ impl From<&str> for InterfaceType {
             "vrf" => InterfaceType::Vrf,
             "vxlan" => InterfaceType::Vxlan,
             "infiniband" => InterfaceType::InfiniBand,
+            "tun" => InterfaceType::Tun,
             "unknown" => InterfaceType::Unknown,
             _ => InterfaceType::Other(s.to_string()),
         }
@@ -116,6 +120,7 @@ impl std::fmt::Display for InterfaceType {
                 InterfaceType::Vxlan => "vxlan",
                 InterfaceType::InfiniBand => "infiniband",
                 InterfaceType::Unknown => "unknown",
+                InterfaceType::Tun => "tun",
                 InterfaceType::Other(ref s) => s,
             }
         )

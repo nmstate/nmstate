@@ -7,22 +7,50 @@ use crate::{
 
 impl Interfaces {
     pub fn update(&mut self, other: &Self) {
-        let mut new_ifaces: Vec<&Interface> = Vec::new();
+        let mut new_ifaces: Vec<Interface> = Vec::new();
         let other_ifaces = other.to_vec();
-        for other_iface in &other_ifaces {
-            match self
-                .get_iface_mut(other_iface.name(), other_iface.iface_type())
-            {
+        for other_iface in other_ifaces {
+            let self_iface = if other_iface.is_userspace() {
+                self.get_iface_mut(other_iface.name(), other_iface.iface_type())
+            } else {
+                self.kernel_ifaces.get_mut(other_iface.name())
+            };
+            match self_iface {
                 Some(self_iface) => {
-                    self_iface.update(other_iface);
+                    // The OVS with netdev datapath will use `TUN` interface
+                    // as kernel representative
+                    if self_iface.iface_type() == InterfaceType::Tun
+                        && other_iface.iface_type()
+                            == InterfaceType::OvsInterface
+                    {
+                        if let Interface::OvsInterface(other_ovs_iface) =
+                            other_iface
+                        {
+                            let mut new_iface = other_ovs_iface.clone();
+                            new_iface.base = self_iface.base_iface().clone();
+                            new_iface.base.state = other_ovs_iface.base.state;
+                            new_iface.base.iface_type =
+                                InterfaceType::OvsInterface;
+                            new_iface.base.controller =
+                                other_ovs_iface.base.controller.clone();
+                            new_iface.base.controller_type =
+                                other_ovs_iface.base.controller_type.clone();
+                            let mut new_iface =
+                                Interface::OvsInterface(new_iface);
+                            new_iface.update(other_iface);
+                            new_ifaces.push(new_iface);
+                        }
+                    } else {
+                        self_iface.update(other_iface);
+                    }
                 }
                 None => {
-                    new_ifaces.push(other_iface);
+                    new_ifaces.push(other_iface.clone());
                 }
             }
         }
         for new_iface in new_ifaces {
-            self.push(new_iface.clone());
+            self.push(new_iface);
         }
     }
 
