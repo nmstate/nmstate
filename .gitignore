@@ -17,6 +17,7 @@ ChangeLog
 exported-artifacts
 *.rpm
 doc/nmstatectl.8
+doc/nmstate.service.8
 
 /ansible
 /.vagrant
