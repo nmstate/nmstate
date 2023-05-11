@@ -47,7 +47,7 @@ use crate::{
 pub struct OvsBridgeInterface {
     #[serde(flatten)]
     pub base: BaseInterface,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none", alias = "ovs-bridge")]
     pub bridge: Option<OvsBridgeConfig>,
 }
 
