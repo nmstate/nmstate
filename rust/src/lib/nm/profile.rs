@@ -6,7 +6,10 @@ use super::settings::{
     use_uuid_for_controller_reference, use_uuid_for_parent_reference,
 };
 
-use crate::{InterfaceType, MergedInterface, MergedNetworkState, NmstateError};
+use crate::{
+    InterfaceType, MergedInterface, MergedInterfaces, MergedNetworkState,
+    NmstateError,
+};
 
 #[allow(dead_code)]
 pub(crate) struct PerparedNmConnections {
@@ -87,7 +90,14 @@ pub(crate) fn perpare_nm_conns(
                 }
             }
 
-            if iface.is_up() {
+            if iface.is_up()
+                && !can_skip_activation(
+                    merged_iface,
+                    &merged_state.interfaces,
+                    &nm_conn,
+                    exist_nm_conns,
+                )
+            {
                 nm_conns_to_activate.push(nm_conn.clone());
             }
             // User try to bring a unmanaged interface down, we activate it and
@@ -125,4 +135,56 @@ pub(crate) fn perpare_nm_conns(
         to_activate: nm_conns_to_activate,
         to_deactivate: nm_conns_to_deactivate,
     })
+}
+
+// When a new virtual interface is desired, if its controller is also newly
+// created, in NetworkManager, there is no need to activate the subordinates.
+// For OVS stuff, always return false.
+fn can_skip_activation(
+    merged_iface: &MergedInterface,
+    merged_ifaces: &MergedInterfaces,
+    nm_conn: &NmConnection,
+    exist_nm_conns: &[NmConnection],
+) -> bool {
+    // Reapply of connection never reactivate its subordinates, hence we do not
+    // skip activation when modifying the connection.
+    if let Some(uuid) = nm_conn.uuid() {
+        if exist_nm_conns.iter().any(|c| c.uuid() == Some(uuid)) {
+            return false;
+        }
+    }
+
+    if merged_iface.current.is_none()
+        && merged_iface.for_apply.is_some()
+        && merged_iface.merged.is_up()
+        && merged_iface.merged.iface_type() != InterfaceType::OvsInterface
+    {
+        if let Some(desired_iface) = merged_iface.for_apply.as_ref() {
+            if let (Some(ctrl_iface), Some(ctrl_type)) = (
+                desired_iface.base_iface().controller.as_deref(),
+                desired_iface.base_iface().controller_type.as_ref(),
+            ) {
+                if ctrl_type == &InterfaceType::OvsBridge {
+                    return false;
+                }
+                if let Some(merged_ctrl_iface) =
+                    merged_ifaces.get_iface(ctrl_iface, ctrl_type.clone())
+                {
+                    if merged_ctrl_iface.current.is_none()
+                        && merged_ctrl_iface.for_apply.is_some()
+                        && merged_ctrl_iface.merged.is_up()
+                    {
+                        log::info!(
+                            "Skipping activation of {} as its controller {} \
+                            will automatically activate it",
+                            merged_iface.merged.name(),
+                            ctrl_iface
+                        );
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+    false
 }
