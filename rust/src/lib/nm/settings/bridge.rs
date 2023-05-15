@@ -97,6 +97,9 @@ fn apply_br_options(
             VlanProtocol::Ieee8021Ad => Some(NmVlanProtocol::Dot1Ad),
         }
     }
+    if let Some(v) = br_opts.vlan_default_pvid.as_ref() {
+        nm_br_set.vlan_default_pvid = Some((*v).into());
+    }
 
     if let Some(stp_opts) = br_opts.stp.as_ref() {
         apply_stp_setting(nm_br_set, stp_opts);
