@@ -5,6 +5,7 @@ use crate::{
 
 pub(crate) fn parse_port_vlan_conf(
     np_vlan_entries: &[nispor::BridgeVlanEntry],
+    default_pvid: Option<u16>,
 ) -> Option<BridgePortVlanConfig> {
     let mut ret = BridgePortVlanConfig::new();
     let mut is_native = false;
@@ -12,8 +13,12 @@ pub(crate) fn parse_port_vlan_conf(
     let is_access_port = is_access_port(np_vlan_entries);
 
     for np_vlan_entry in np_vlan_entries {
+        let mut def_pvid = 1;
+        if let Some(pvid) = default_pvid {
+            def_pvid = pvid;
+        }
         let (vlan_min, vlan_max) = get_vlan_tag_range(np_vlan_entry);
-        if vlan_min == 1 && vlan_max == 1 {
+        if vlan_min == def_pvid && vlan_max == def_pvid {
             continue;
         }
         if is_access_port {

@@ -230,6 +230,7 @@ class LinuxBridge(Bridge):
         MULTICAST_STARTUP_QUERY_COUNT = "multicast-startup-query-count"
         MULTICAST_STARTUP_QUERY_INTERVAL = "multicast-startup-query-interval"
         VLAN_PROTOCOL = "vlan-protocol"
+        VLAN_DEFAULT_PVID = "vlan-default-pvid"
 
         # Read only properties begin
         HELLO_TIMER = "hello-timer"

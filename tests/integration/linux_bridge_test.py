@@ -640,6 +640,20 @@ class TestVlanFiltering:
             )
             libnmstate.apply(desired_state)
 
+    def test_linux_bridge_option_vlan_default_pvid_on_trunk_mode(
+        self,
+        bridge_with_trunk_port_and_native_config,
+    ):
+        bridge_state = bridge_with_trunk_port_and_native_config[Interface.KEY][
+            0
+        ]
+        bridge_state[LinuxBridge.CONFIG_SUBTREE][LinuxBridge.OPTIONS_SUBTREE][
+            LinuxBridge.Options.VLAN_DEFAULT_PVID
+        ] = 5
+
+        libnmstate.apply({Interface.KEY: [bridge_state]})
+        assertlib.assert_state_match({Interface.KEY: [bridge_state]})
+
 
 @pytest.fixture
 def bridge_unmanaged_port():
@@ -734,6 +748,20 @@ def test_linux_bridge_option_integer_rounded_on_ubuntu_kernel(
     desired_state = {Interface.KEY: [iface_state]}
 
     with pytest.raises(NmstateKernelIntegerRoundedError):
+        libnmstate.apply(desired_state)
+
+
+def test_linux_bridge_option_vlan_default_pvid_no_filtering(
+    bridge0_with_port0,
+):
+    iface_state = bridge0_with_port0[Interface.KEY][0]
+    iface_state[LinuxBridge.CONFIG_SUBTREE][LinuxBridge.OPTIONS_SUBTREE][
+        LinuxBridge.Options.VLAN_DEFAULT_PVID
+    ] = 5
+
+    desired_state = {Interface.KEY: [iface_state]}
+
+    with pytest.raises(NmstateValueError):
         libnmstate.apply(desired_state)
 
 

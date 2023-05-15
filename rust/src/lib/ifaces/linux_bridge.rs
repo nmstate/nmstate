@@ -105,6 +105,14 @@ impl LinuxBridgeInterface {
         is_desired: bool,
     ) -> Result<(), NmstateError> {
         if let Some(opts) =
+            self.bridge.as_ref().and_then(|b| b.options.as_ref())
+        {
+            if is_desired {
+                opts.validate_vlan_default_pvid(self)?;
+            }
+        }
+
+        if let Some(opts) =
             self.bridge.as_mut().and_then(|b| b.options.as_mut())
         {
             opts.sanitize_group_fwd_mask(&self.base)?;
@@ -526,6 +534,8 @@ pub struct LinuxBridgeOptions {
     pub stp: Option<LinuxBridgeStpOptions>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub vlan_protocol: Option<VlanProtocol>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub vlan_default_pvid: Option<u16>,
 }
 
 impl LinuxBridgeOptions {
@@ -563,6 +573,26 @@ impl LinuxBridgeOptions {
                 self.group_forward_mask = None;
             }
             _ => (),
+        }
+
+        Ok(())
+    }
+
+    pub(crate) fn validate_vlan_default_pvid(
+        &self,
+        linux_bridge: &LinuxBridgeInterface,
+    ) -> Result<(), NmstateError> {
+        if let Some(pvid) = self.vlan_default_pvid {
+            if pvid != 1 && !linux_bridge.vlan_filtering_is_enabled() {
+                return Err(NmstateError::new(
+                    ErrorKind::InvalidArgument,
+                    format!(
+                        "Linux bridge {} has vlan-default-pvid different \
+                        than 1 but VLAN filtering is not enabled.",
+                        linux_bridge.base.name.as_str()
+                    ),
+                ));
+            }
         }
 
         Ok(())
