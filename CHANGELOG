@@ -1,4 +1,18 @@
 # Changelog
+## [2.2.11] - 2023-05-16
+### Breaking changes
+ - N/A
+
+### New features
+ - Support OVS DPDK `netdev` datapath. (ac8a4dee)
+
+### Bug fixes
+ - Skip connection activation if its controller will do. (7f93c374)
+ - Fix error when DHCP with auto IP address on STP enabled bridge. (8ea675b6)
+ - Fix error when running test locally. (21d63ed6)
+ - Do nothing for `persist-nic-names` when got `net.ifnames=0`. (c9fd1e80)
+ - Include cargo vendor files for s390 linux. (dc6a2149)
+
 ## [2.2.10] - 2023-04-20
 ### Breaking changes
  - N/A
