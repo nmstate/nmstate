@@ -321,7 +321,6 @@ impl<'a> NmApi<'a> {
             let nm_devs = self.devices_get()?;
             for nm_dev in &nm_devs {
                 if nm_dev.state_reason == NmDeviceStateReason::NewActivation
-                    || nm_dev.state == NmDeviceState::IpConfig
                     || nm_dev.state == NmDeviceState::Deactivating
                 {
                     waiting_nm_dev.push(nm_dev);
