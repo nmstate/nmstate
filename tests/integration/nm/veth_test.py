@@ -1,21 +1,4 @@
-#
-# Copyright (c) 2021 Red Hat, Inc.
-#
-# This file is part of nmstate
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 2.1 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program. If not, see <https://www.gnu.org/licenses/>.
-#
+# SPDX-License-Identifier: LGPL-2.1-or-later
 
 import pytest
 
@@ -64,9 +47,21 @@ def veth1_with_ignored_peer():
         f"nmcli d set {VETH1PEER} managed false".split(), check=True
     )
     yield
-    cmdlib.exec_cmd(f"nmcli c del {VETH1}".split())
-    cmdlib.exec_cmd(f"nmcli c del {VETH1PEER}".split())
     cmdlib.exec_cmd(f"ip link del {VETH1}".split())
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: VETH1,
+                    Interface.STATE: InterfaceState.ABSENT,
+                },
+                {
+                    Interface.NAME: VETH1PEER,
+                    Interface.STATE: InterfaceState.ABSENT,
+                },
+            ]
+        }
+    )
 
 
 @pytest.mark.skipif(

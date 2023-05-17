@@ -789,9 +789,18 @@ def bridge0_with_tap_port():
     exec_cmd(f"ip link set {TEST_BRIDGE0} up".split(), check=True)
     yield
     exec_cmd(f"ip link del {TEST_TAP0}".split())
-    exec_cmd(f"ip link del {TEST_BRIDGE0}".split())
     exec_cmd(f"nmcli c del {TEST_TAP0}".split())
-    exec_cmd(f"nmcli c del {TEST_BRIDGE0}".split())
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: TEST_BRIDGE0,
+                    Interface.TYPE: InterfaceType.LINUX_BRIDGE,
+                    Interface.STATE: InterfaceState.ABSENT,
+                }
+            ]
+        }
+    )
 
 
 def test_ignore_unmanged_tap_as_bridge_port(bridge0_with_tap_port, port0_up):

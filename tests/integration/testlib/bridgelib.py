@@ -68,7 +68,6 @@ def linux_bridge(
                     }
                 ]
             },
-            verify_change=False,
             kernel_only=kernel_mode,
         )
 

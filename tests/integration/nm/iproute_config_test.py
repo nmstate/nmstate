@@ -1,21 +1,4 @@
-#
-# Copyright (c) 2020-2022 Red Hat, Inc.
-#
-# This file is part of nmstate
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 2.1 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program. If not, see <https://www.gnu.org/licenses/>.
-#
+# SPDX-License-Identifier: LGPL-2.1-or-later
 
 import time
 
@@ -64,12 +47,24 @@ def bond99_with_dummy_port_by_iproute():
     cmdlib.exec_cmd(f"ip link set {BOND99} up".split(), check=True)
     time.sleep(1)  # Wait NM mark them as managed
     yield
-    cmdlib.exec_cmd(f"nmcli c del {BOND99}".split())
-    cmdlib.exec_cmd(f"nmcli c del {DUMMY1}".split())
-    cmdlib.exec_cmd(f"nmcli c del {DUMMY2}".split())
-    cmdlib.exec_cmd(f"ip link del {DUMMY1}".split())
-    cmdlib.exec_cmd(f"ip link del {DUMMY2}".split())
-    cmdlib.exec_cmd(f"ip link del {BOND99}".split())
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: BOND99,
+                    Interface.STATE: InterfaceState.ABSENT,
+                },
+                {
+                    Interface.NAME: DUMMY1,
+                    Interface.STATE: InterfaceState.ABSENT,
+                },
+                {
+                    Interface.NAME: DUMMY2,
+                    Interface.STATE: InterfaceState.ABSENT,
+                },
+            ]
+        }
+    )
 
 
 @pytest.mark.xfail(
@@ -188,6 +183,16 @@ def external_managed_veth1_with_static_ip():
     )
     yield
     cmdlib.exec_cmd("ip link del veth1".split())
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: "veth1",
+                    Interface.STATE: InterfaceState.ABSENT,
+                }
+            ]
+        }
+    )
 
 
 def test_external_managed_veth_with_static_ip(
@@ -259,7 +264,6 @@ def external_managed_dummy1_with_autoconf():
             ]
         }
     )
-    cmdlib.exec_cmd(f"ip link del {DUMMY1}".split(), check=False)
 
 
 # Make sure we are not impacted by undesired iface which is holding invalid
@@ -302,7 +306,6 @@ def external_managed_dummy1_with_ips():
             ]
         }
     )
-    cmdlib.exec_cmd(f"ip link del {DUMMY1}".split(), check=False)
 
 
 def test_perserve_ip_order_of_external_managed_nic(
