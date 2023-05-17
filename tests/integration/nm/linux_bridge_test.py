@@ -42,8 +42,22 @@ def external_managed_bridge_with_unmanaged_ports():
         with dummy_as_port(BRIDGE0, DUMMY0), dummy_as_port(BRIDGE0, DUMMY1):
             yield
     finally:
-        exec_cmd(f"ip link delete {BRIDGE0}".split())
-        exec_cmd(f"nmcli c del {BRIDGE0}".split())
+        # After `ip link del BRIDGE0` exist, the BRIDGE0 interface still
+        # exist for a very small time window which fail the next
+        # `ip link add BRIDGE0 type bridge` command as interface is still
+        # exists. We use libnmstate instead which verification stage will
+        # ensure interface been removed
+        libnmstate.apply(
+            {
+                Interface.KEY: [
+                    {
+                        Interface.NAME: BRIDGE0,
+                        Interface.TYPE: InterfaceType.LINUX_BRIDGE,
+                        Interface.STATE: InterfaceState.ABSENT,
+                    },
+                ]
+            }
+        )
 
 
 @pytest.mark.tier1
@@ -197,15 +211,25 @@ def test_linux_manage_bridge_keeps_unmanaged_port(
 
 @pytest.fixture
 def unmanged_veth0():
-    veth_iface = VETH0
     exec_cmd(
-        f"ip link add {veth_iface} type veth peer {veth_iface}.ep".split(),
+        f"ip link add {VETH0} type veth peer {VETH0}.ep".split(),
         check=False,
     )
-    exec_cmd(f"ip link set {veth_iface}.ep up".split(), check=True)
+    exec_cmd(f"ip link set {VETH0}.ep up".split(), check=True)
     yield
-    exec_cmd(f"ip link del {veth_iface}".split())
-    exec_cmd(f"nmcli c del {veth_iface}".split())
+    exec_cmd(f"ip link del {VETH0}".split())
+    exec_cmd(f"nmcli c del {VETH0}".split())
+    # Use nmstate to ensure veth0 is removed.
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: VETH0,
+                    Interface.STATE: InterfaceState.ABSENT,
+                },
+            ]
+        }
+    )
 
 
 @pytest.fixture
@@ -399,6 +423,21 @@ def unmangaed_dummy1_dummy2():
     yield
     exec_cmd("ip link del dummy1".split(), check=False)
     exec_cmd("ip link del dummy2".split(), check=False)
+    # Use nmstate to ensure dummy1 and dummy2 are removed.
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: "dummy1",
+                    Interface.STATE: InterfaceState.ABSENT,
+                },
+                {
+                    Interface.NAME: "dummy2",
+                    Interface.STATE: InterfaceState.ABSENT,
+                },
+            ]
+        }
+    )
 
 
 def test_auto_manage_linux_ignored_ports(unmangaed_dummy1_dummy2):

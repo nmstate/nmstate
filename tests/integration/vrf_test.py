@@ -114,10 +114,24 @@ def unmanaged_port_up():
     )
     cmdlib.exec_cmd(f"ip link set {TEST_VRF_VETH0} up".split())
     cmdlib.exec_cmd(f"ip link set {TEST_VRF_VETH1} up".split())
-    try:
-        yield TEST_VRF_VETH0
-    finally:
-        cmdlib.exec_cmd(f"ip link del {TEST_VRF_VETH0}".split())
+    yield TEST_VRF_VETH0
+    cmdlib.exec_cmd(f"ip link del {TEST_VRF_VETH0}".split())
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: TEST_VRF_VETH0,
+                    Interface.TYPE: InterfaceType.VETH,
+                    Interface.STATE: InterfaceState.ABSENT,
+                },
+                {
+                    Interface.NAME: TEST_VRF0,
+                    Interface.TYPE: InterfaceType.VRF,
+                    Interface.STATE: InterfaceState.ABSENT,
+                },
+            ]
+        }
+    )
 
 
 @pytest.fixture
