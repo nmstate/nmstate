@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    BridgePortTunkTag, BridgePortVlanRange, ErrorKind, Interface,
+    BridgePortTrunkTag, BridgePortVlanRange, ErrorKind, Interface,
     InterfaceType, Interfaces, LinuxBridgeInterface,
     LinuxBridgeMulticastRouterType, MergedInterface, MergedInterfaces,
 };
@@ -170,11 +170,11 @@ bridge:
     assert_eq!(vlan_conf.tag, Some(102));
     assert_eq!(
         &vlan_conf.trunk_tags.as_ref().unwrap()[0],
-        &BridgePortTunkTag::Id(103)
+        &BridgePortTrunkTag::Id(103)
     );
     assert_eq!(
         &vlan_conf.trunk_tags.as_ref().unwrap()[1],
-        &BridgePortTunkTag::IdRange(BridgePortVlanRange {
+        &BridgePortTrunkTag::IdRange(BridgePortVlanRange {
             max: 1024,
             min: 105
         })

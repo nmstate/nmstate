@@ -128,7 +128,7 @@ pub use crate::ifaces::{
     BaseInterface, BondAdSelect, BondAllPortsActive, BondArpAllTargets,
     BondArpValidate, BondConfig, BondFailOverMac, BondInterface, BondLacpRate,
     BondMode, BondOptions, BondPrimaryReselect, BondXmitHashPolicy,
-    BridgePortTunkTag, BridgePortVlanConfig, BridgePortVlanMode,
+    BridgePortTrunkTag, BridgePortVlanConfig, BridgePortVlanMode,
     BridgePortVlanRange, DummyInterface, EthernetConfig, EthernetDuplex,
     EthernetInterface, EthtoolCoalesceConfig, EthtoolConfig,
     EthtoolFeatureConfig, EthtoolPauseConfig, EthtoolRingConfig,
