@@ -63,7 +63,7 @@ pub(crate) fn append_bridge_port_config(
         port_confs.push(port_conf);
     }
 
-    if let Some(mut br_conf) = br_iface.bridge.as_mut() {
+    if let Some(br_conf) = br_iface.bridge.as_mut() {
         br_conf.port = Some(port_confs);
     }
 }
