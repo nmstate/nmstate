@@ -1,21 +1,4 @@
-#
-# Copyright (c) 2020 Red Hat, Inc.
-#
-# This file is part of nmstate
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 2.1 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program. If not, see <https://www.gnu.org/licenses/>.
-#
+# SPDX-License-Identifier: LGPL-2.1-or-later
 
 from collections import defaultdict
 import logging
@@ -146,13 +129,6 @@ class RouteEntry(StateEntry):
                 f"Route {self.to_dict()} next hop to down/absent interface"
             )
             return False
-        if iface.is_dynamic(
-            Interface.IPV6 if self.is_ipv6 else Interface.IPV4
-        ):
-            self._invalid_reason = (
-                f"Route {self.to_dict()} next hop to interface with dynamic IP"
-            )
-            return False
         if self.is_ipv6:
             if not iface.is_ipv6_enabled():
                 self._invalid_reason = (
@@ -194,7 +170,10 @@ class RouteState:
                 rt = RouteEntry(entry)
                 self._cur_routes[rt.next_hop_interface].add(rt)
                 if not ifaces or rt.is_valid(ifaces):
-                    self._routes[rt.next_hop_interface].add(rt)
+                    # When user converting static IP to auto IP, we should
+                    # not merge current static routes besides desired ones.
+                    if not iface_switch_from_static_to_auto_ip(ifaces, rt):
+                        self._routes[rt.next_hop_interface].add(rt)
                 else:
                     logging.debug(
                         f"The current route {entry} has been discarded due"
@@ -299,3 +278,24 @@ class RouteState:
                         {Route.KEY: {Route.CONFIG: cur_routes_info}},
                     )
                 )
+
+
+def iface_switch_from_static_to_auto_ip(ifaces, rt):
+    iface_name = rt.next_hop_interface
+    if not iface_name or not ifaces:
+        return False
+
+    if is_ipv6_address(rt.destination):
+        family = Interface.IPV6
+    else:
+        family = Interface.IPV4
+
+    cur_iface = ifaces.get_cur_iface(iface_name, None)
+    des_iface = ifaces.get_iface(iface_name, None)
+    if (
+        cur_iface
+        and des_iface
+        and not cur_iface.is_dynamic(family)
+        and des_iface.is_dynamic(family)
+    ):
+        return True
