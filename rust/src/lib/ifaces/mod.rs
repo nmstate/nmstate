@@ -25,7 +25,7 @@ pub use bond::{
     BondOptions, BondPrimaryReselect, BondXmitHashPolicy,
 };
 pub use bridge_vlan::{
-    BridgePortTunkTag, BridgePortVlanConfig, BridgePortVlanMode,
+    BridgePortTrunkTag, BridgePortVlanConfig, BridgePortVlanMode,
     BridgePortVlanRange,
 };
 pub use dummy::DummyInterface;

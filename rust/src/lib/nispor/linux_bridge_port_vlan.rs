@@ -1,5 +1,5 @@
 use crate::{
-    BridgePortTunkTag, BridgePortVlanConfig, BridgePortVlanMode,
+    BridgePortTrunkTag, BridgePortVlanConfig, BridgePortVlanMode,
     BridgePortVlanRange,
 };
 
@@ -22,9 +22,9 @@ pub(crate) fn parse_port_vlan_conf(
             ret.tag = Some(vlan_max);
             is_native = true;
         } else if vlan_min == vlan_max {
-            trunk_tags.push(BridgePortTunkTag::Id(vlan_min));
+            trunk_tags.push(BridgePortTrunkTag::Id(vlan_min));
         } else {
-            trunk_tags.push(BridgePortTunkTag::IdRange(BridgePortVlanRange {
+            trunk_tags.push(BridgePortTrunkTag::IdRange(BridgePortVlanRange {
                 max: vlan_max,
                 min: vlan_min,
             }));

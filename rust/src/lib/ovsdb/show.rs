@@ -6,7 +6,7 @@ use std::iter::FromIterator;
 use serde_json::Value;
 
 use crate::{
-    BridgePortTunkTag, BridgePortVlanConfig, BridgePortVlanMode,
+    BridgePortTrunkTag, BridgePortVlanConfig, BridgePortVlanMode,
     BridgePortVlanRange, Interface, InterfaceType, Interfaces, NetworkState,
     NmstateError, OvsBridgeBondConfig, OvsBridgeBondMode,
     OvsBridgeBondPortConfig, OvsBridgeConfig, OvsBridgeInterface,
@@ -241,7 +241,7 @@ fn parse_ovs_vlan_conf(
             {
                 if let Some(tag) = trunk_tag.as_u64() {
                     ret.trunk_tags =
-                        Some(vec![BridgePortTunkTag::Id(tag as u16)]);
+                        Some(vec![BridgePortTrunkTag::Id(tag as u16)]);
                 }
             }
         }
@@ -251,7 +251,7 @@ fn parse_ovs_vlan_conf(
     }
 }
 
-fn compress_vlan_trunk_tags(tags: &[Value]) -> Vec<BridgePortTunkTag> {
+fn compress_vlan_trunk_tags(tags: &[Value]) -> Vec<BridgePortTrunkTag> {
     let mut ranges: Vec<BridgePortVlanRange> = Vec::new();
     for tag in tags {
         if let Value::Number(tag) = tag {
@@ -282,9 +282,9 @@ fn compress_vlan_trunk_tags(tags: &[Value]) -> Vec<BridgePortTunkTag> {
     let mut ret = Vec::new();
     for range in ranges {
         if range.min == range.max {
-            ret.push(BridgePortTunkTag::Id(range.min))
+            ret.push(BridgePortTrunkTag::Id(range.min))
         } else {
-            ret.push(BridgePortTunkTag::IdRange(range))
+            ret.push(BridgePortTrunkTag::IdRange(range))
         }
     }
 

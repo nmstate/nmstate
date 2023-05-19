@@ -10,7 +10,7 @@ use super::super::nm_dbus::{
 use super::super::settings::connection::gen_nm_conn_setting;
 
 use crate::{
-    BaseInterface, BridgePortTunkTag, Interface, InterfaceType, NmstateError,
+    BaseInterface, BridgePortTrunkTag, Interface, InterfaceType, NmstateError,
     OvsBridgeBondMode, OvsBridgeInterface, OvsBridgePortConfig,
     OvsDbIfaceConfig, OvsInterface, UnknownInterface,
 };
@@ -83,7 +83,7 @@ pub(crate) fn create_ovs_port_nm_conn(
     Ok(nm_conn)
 }
 
-fn trunk_tag_to_nm_range(trunk_tag: &BridgePortTunkTag) -> NmRange {
+fn trunk_tag_to_nm_range(trunk_tag: &BridgePortTrunkTag) -> NmRange {
     let mut ret = NmRange::default();
     let (vid_min, vid_max) = trunk_tag.get_vlan_tag_range();
     ret.start = vid_min.into();
