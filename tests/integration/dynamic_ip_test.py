@@ -19,7 +19,7 @@ from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
 from libnmstate.schema import InterfaceType
 from libnmstate.schema import InterfaceState
-from libnmstate.schema import Route as RT
+from libnmstate.schema import Route
 
 from libnmstate.error import NmstateNotImplementedError
 from libnmstate.iplib import is_ipv6_link_local_addr
@@ -690,7 +690,7 @@ def _get_running_routes():
     return a list of running routes
     """
     running_routes = (
-        libnmstate.show().get(Constants.ROUTES, {}).get(RT.RUNNING, [])
+        libnmstate.show().get(Constants.ROUTES, {}).get(Route.RUNNING, [])
     )
     logging.debug("Current running routes: {}".format(running_routes))
     return running_routes
@@ -704,8 +704,8 @@ def _has_ipv6_auto_gateway(nic=DHCP_CLI_NIC):
     routes = _get_running_routes()
     for route in routes:
         if (
-            route[RT.DESTINATION] == IPV6_DEFAULT_GATEWAY
-            and route[RT.NEXT_HOP_INTERFACE] == nic
+            route[Route.DESTINATION] == IPV6_DEFAULT_GATEWAY
+            and route[Route.NEXT_HOP_INTERFACE] == nic
         ):
             return True
     return False
@@ -715,8 +715,8 @@ def _has_ipv6_auto_extra_route():
     routes = _get_running_routes()
     for route in routes:
         if (
-            route[RT.DESTINATION] == IPV6_CLASSLESS_ROUTE_DST_NET1
-            and route[RT.NEXT_HOP_INTERFACE] == DHCP_CLI_NIC
+            route[Route.DESTINATION] == IPV6_CLASSLESS_ROUTE_DST_NET1
+            and route[Route.NEXT_HOP_INTERFACE] == DHCP_CLI_NIC
         ):
             return True
     return False
@@ -734,8 +734,8 @@ def _has_ipv4_dhcp_gateway(nic=DHCP_CLI_NIC):
     routes = _get_running_routes()
     for route in routes:
         if (
-            route[RT.DESTINATION] == IPV4_DEFAULT_GATEWAY
-            and route[RT.NEXT_HOP_INTERFACE] == nic
+            route[Route.DESTINATION] == IPV4_DEFAULT_GATEWAY
+            and route[Route.NEXT_HOP_INTERFACE] == nic
         ):
             return True
     return False
@@ -745,9 +745,9 @@ def _has_ipv4_classless_route():
     routes = _get_running_routes()
     for route in routes:
         if (
-            route[RT.DESTINATION] == IPV4_CLASSLESS_ROUTE_DST_NET1
-            and route[RT.NEXT_HOP_ADDRESS] == IPV4_CLASSLESS_ROUTE_NEXT_HOP1
-            and route[RT.NEXT_HOP_INTERFACE] == DHCP_CLI_NIC
+            route[Route.DESTINATION] == IPV4_CLASSLESS_ROUTE_DST_NET1
+            and route[Route.NEXT_HOP_ADDRESS] == IPV4_CLASSLESS_ROUTE_NEXT_HOP1
+            and route[Route.NEXT_HOP_INTERFACE] == DHCP_CLI_NIC
         ):
             return True
     return False
@@ -1030,27 +1030,27 @@ def test_dummy_existance_after_ipv6_autoconf_timeout(dummy00):
 @pytest.fixture(scope="function")
 def dhcpcli_up_with_static_ip_and_route(dhcpcli_up_with_static_ip):
     desired_state = dhcpcli_up_with_static_ip
-    desired_state[RT.KEY] = {
-        RT.CONFIG: [
+    desired_state[Route.KEY] = {
+        Route.CONFIG: [
             {
-                RT.DESTINATION: IPV4_DEFAULT_GATEWAY,
-                RT.NEXT_HOP_ADDRESS: DHCP_SRV_IP4,
-                RT.NEXT_HOP_INTERFACE: DHCP_CLI_NIC,
+                Route.DESTINATION: IPV4_DEFAULT_GATEWAY,
+                Route.NEXT_HOP_ADDRESS: DHCP_SRV_IP4,
+                Route.NEXT_HOP_INTERFACE: DHCP_CLI_NIC,
             },
             {
-                RT.DESTINATION: IPV4_NETWORK1,
-                RT.NEXT_HOP_ADDRESS: DHCP_SRV_IP4,
-                RT.NEXT_HOP_INTERFACE: DHCP_CLI_NIC,
+                Route.DESTINATION: IPV4_NETWORK1,
+                Route.NEXT_HOP_ADDRESS: DHCP_SRV_IP4,
+                Route.NEXT_HOP_INTERFACE: DHCP_CLI_NIC,
             },
             {
-                RT.DESTINATION: IPV6_DEFAULT_GATEWAY,
-                RT.NEXT_HOP_ADDRESS: IPV6_ADDRESS3,
-                RT.NEXT_HOP_INTERFACE: DHCP_CLI_NIC,
+                Route.DESTINATION: IPV6_DEFAULT_GATEWAY,
+                Route.NEXT_HOP_ADDRESS: IPV6_ADDRESS3,
+                Route.NEXT_HOP_INTERFACE: DHCP_CLI_NIC,
             },
             {
-                RT.DESTINATION: IPV6_NETWORK1,
-                RT.NEXT_HOP_ADDRESS: IPV6_ADDRESS3,
-                RT.NEXT_HOP_INTERFACE: DHCP_CLI_NIC,
+                Route.DESTINATION: IPV6_NETWORK1,
+                Route.NEXT_HOP_ADDRESS: IPV6_ADDRESS3,
+                Route.NEXT_HOP_INTERFACE: DHCP_CLI_NIC,
             },
         ]
     }
@@ -1064,7 +1064,7 @@ def test_static_ip_with_routes_switch_back_to_dynamic(
     dhcpcli_up_with_static_ip_and_route,
 ):
     desired_state = dhcpcli_up_with_static_ip_and_route
-    desired_state.pop(RT.KEY)
+    desired_state.pop(Route.KEY)
     dhcp_cli_desired_state = desired_state[Interface.KEY][0]
     dhcp_cli_desired_state[Interface.STATE] = InterfaceState.UP
     dhcp_cli_desired_state[Interface.IPV4] = _create_ipv4_state(
@@ -1088,8 +1088,8 @@ def test_static_ip_with_routes_switch_back_to_dynamic(
 
     current_config_routes = [
         route
-        for route in libnmstate.show()[RT.KEY][RT.CONFIG]
-        if route[RT.NEXT_HOP_INTERFACE] == DHCP_CLI_NIC
+        for route in libnmstate.show()[Route.KEY][Route.CONFIG]
+        if route[Route.NEXT_HOP_INTERFACE] == DHCP_CLI_NIC
     ]
     assert not current_config_routes
 
@@ -1246,8 +1246,8 @@ def test_show_running_config_does_not_include_auto_config(
     assert DHCP_SRV_IP6 not in running_config[DNS.KEY][DNS.CONFIG]
     assert not any(
         rt
-        for rt in running_config[RT.KEY][RT.CONFIG]
-        if rt[RT.NEXT_HOP_INTERFACE] == DHCP_CLI_NIC
+        for rt in running_config[Route.KEY][Route.CONFIG]
+        if rt[Route.NEXT_HOP_INTERFACE] == DHCP_CLI_NIC
     )
 
 
@@ -1464,3 +1464,48 @@ def test_prexist_static_dns_search_with_auto_dns_nameserver(
                 ],
             }
         )
+
+
+@pytest.mark.tier1
+def test_auto_iface_with_static_routes(dhcp_env):
+    static_routes = [
+        {
+            Route.DESTINATION: IPV4_NETWORK1,
+            Route.NEXT_HOP_ADDRESS: DHCP_SRV_IP4,
+            Route.NEXT_HOP_INTERFACE: DHCP_CLI_NIC,
+        },
+        {
+            Route.DESTINATION: IPV6_NETWORK1,
+            Route.NEXT_HOP_ADDRESS: DHCP_SRV_IP6,
+            Route.NEXT_HOP_INTERFACE: DHCP_CLI_NIC,
+        },
+    ]
+    desired_state = {
+        Route.KEY: {
+            Route.CONFIG: static_routes,
+        },
+        Interface.KEY: [
+            {
+                Interface.NAME: DHCP_CLI_NIC,
+                Interface.STATE: InterfaceState.UP,
+                Interface.IPV4: _create_ipv4_state(enabled=True, dhcp=True),
+                Interface.IPV6: _create_ipv6_state(
+                    enabled=True, dhcp=True, autoconf=True
+                ),
+            }
+        ],
+    }
+    libnmstate.apply(desired_state)
+    current_config_routes = [
+        route
+        for route in libnmstate.show()[Route.KEY][Route.CONFIG]
+        if route[Route.NEXT_HOP_INTERFACE] == DHCP_CLI_NIC
+        and route[Route.DESTINATION] in (IPV4_NETWORK1, IPV6_NETWORK1)
+    ]
+    current_config_routes.sort(key=itemgetter(Route.DESTINATION))
+
+    assert len(current_config_routes) == 2
+    assert current_config_routes[0][Route.DESTINATION] == IPV6_NETWORK1
+    assert current_config_routes[0][Route.NEXT_HOP_ADDRESS] == DHCP_SRV_IP6
+    assert current_config_routes[1][Route.DESTINATION] == IPV4_NETWORK1
+    assert current_config_routes[1][Route.NEXT_HOP_ADDRESS] == DHCP_SRV_IP4
