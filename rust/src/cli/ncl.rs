@@ -344,6 +344,16 @@ fn main() {
                         ),
                 )
                 .arg(
+                    clap::Arg::new("KARGSFILE")
+                        .long("kargs-out")
+                        .takes_value(true)
+                        .help(
+                            "When pinning, write kargs to append; \
+                            when cleaning up, write kargs to delete \
+                            (space-separated)",
+                        ),
+                )
+                .arg(
                     clap::Arg::new("ROOT")
                         .long("root")
                         .short('r')
@@ -448,6 +458,7 @@ fn main() {
             };
             print_result_and_exit(crate::persist_nic::run_persist_immediately(
                 matches.value_of("ROOT").unwrap(),
+                matches.value_of("KARGSFILE"),
                 action,
             ));
         }

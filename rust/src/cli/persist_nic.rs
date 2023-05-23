@@ -63,13 +63,14 @@ fn gather_state() -> Result<NetworkState, CliError> {
 
 pub(crate) fn run_persist_immediately(
     root: &str,
+    kargsfile: Option<&str>,
     action: PersistAction,
 ) -> Result<String, CliError> {
     let dry_run = match action {
         PersistAction::Save => false,
         PersistAction::DryRun => true,
-        PersistAction::CleanUp => return clean_up(root, false),
-        PersistAction::CleanUpDryRun => return clean_up(root, true),
+        PersistAction::CleanUp => return clean_up(root, kargsfile, false),
+        PersistAction::CleanUpDryRun => return clean_up(root, kargsfile, true),
     };
 
     if is_prediable_ifname_disabled() {
@@ -88,6 +89,7 @@ pub(crate) fn run_persist_immediately(
         return Ok("".to_string());
     }
 
+    let mut kargs: Vec<String> = Vec::new();
     let state = gather_state()?;
     let mut changed = false;
     for iface in state
@@ -109,9 +111,13 @@ pub(crate) fn run_persist_immediately(
             "Would persist the interface {} with MAC {mac}",
             iface.name()
         );
+        let iface_name = iface.name();
+        let karg = format_ifname_karg(iface_name, mac);
+        log::info!("Would append kernel argument {karg}");
         if !dry_run {
             changed |=
-                persist_iface_name_via_systemd_link(root, mac, iface.name())?;
+                persist_iface_name_via_systemd_link(root, mac, iface_name)?;
+            kargs.push(karg);
         }
     }
 
@@ -121,6 +127,11 @@ pub(crate) fn run_persist_immediately(
 
     if !dry_run {
         std::fs::write(stamp_path, b"")?;
+        if !kargs.is_empty() {
+            if let Some(path) = kargsfile {
+                std::fs::write(path, kargs.join(" "))?;
+            }
+        }
     }
 
     Ok("".to_string())
@@ -139,7 +150,11 @@ fn extract_iface_names_from_link_file(file_name: &str) -> Option<String> {
         .map(ToOwned::to_owned)
 }
 
-pub(crate) fn clean_up(root: &str, dry_run: bool) -> Result<String, CliError> {
+pub(crate) fn clean_up(
+    root: &str,
+    kargsfile: Option<&str>,
+    dry_run: bool,
+) -> Result<String, CliError> {
     let netdir = Path::new(root).join(SYSTEMD_NETWORK_LINK_FOLDER);
 
     if !netdir.exists() {
@@ -179,6 +194,21 @@ pub(crate) fn clean_up(root: &str, dry_run: bool) -> Result<String, CliError> {
         return Ok("".to_string());
     }
 
+    let state = gather_state()?;
+    let macs: HashMap<&str, &str> = state
+        .interfaces
+        .iter()
+        .filter(|i| i.iface_type() == InterfaceType::Ethernet)
+        .filter_map(|i| {
+            i.base_iface()
+                .permanent_mac_address
+                .as_deref()
+                .or_else(|| i.base_iface().mac_address.as_deref())
+                .map(|m| (i.name(), m))
+        })
+        .collect();
+
+    let mut kargs: Vec<String> = Vec::new();
     for (iface_name, file_path) in pinned_ifaces {
         if !is_nmstate_generated_systemd_link_file(&file_path) {
             log::info!(
@@ -199,6 +229,19 @@ pub(crate) fn clean_up(root: &str, dry_run: bool) -> Result<String, CliError> {
                 }
             };
         if systemd_iface_name == iface_name {
+            if let Some(mac) = macs.get(iface_name.as_str()) {
+                let karg = format_ifname_karg(&iface_name, mac);
+                if dry_run {
+                    log::info!(
+                        "Will remove kernel arg {} if not in dry-run mode",
+                        karg
+                    );
+                } else {
+                    kargs.push(karg);
+                }
+            } else {
+                log::error!("Pinned iface {iface_name} has no MAC address");
+            }
             if dry_run {
                 log::info!(
                     "The generated {} file has no effect for \
@@ -225,8 +268,17 @@ pub(crate) fn clean_up(root: &str, dry_run: bool) -> Result<String, CliError> {
     }
     if !dry_run {
         std::fs::remove_file(stamp_path)?;
+        if !kargs.is_empty() {
+            if let Some(path) = kargsfile {
+                std::fs::write(path, kargs.join(" "))?;
+            }
+        }
     }
     Ok("".to_string())
+}
+
+fn format_ifname_karg(ifname: &str, mac: &str) -> String {
+    format!("ifname={ifname}:{mac}")
 }
 
 // With `NamePolicy=keep kernel database onboard slot path` in systemd configure
