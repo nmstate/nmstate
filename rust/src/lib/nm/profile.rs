@@ -122,12 +122,14 @@ pub(crate) fn perpare_nm_conns(
         &mut nm_conns_to_update,
         &merged_state.interfaces,
         exist_nm_conns,
+        nm_acs,
     )?;
 
     use_uuid_for_parent_reference(
         &mut nm_conns_to_update,
         &merged_state.interfaces,
         exist_nm_conns,
+        nm_acs,
     );
 
     Ok(PerparedNmConnections {

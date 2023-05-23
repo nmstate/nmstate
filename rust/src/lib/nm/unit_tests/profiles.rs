@@ -79,7 +79,7 @@ fn test_use_uuid_for_controller_reference_with_ovs_bond() {
     let merged_ifaces =
         MergedInterfaces::new(ifaces, Interfaces::new(), false, false).unwrap();
 
-    use_uuid_for_controller_reference(&mut nm_conns, &merged_ifaces, &[])
+    use_uuid_for_controller_reference(&mut nm_conns, &merged_ifaces, &[], &[])
         .unwrap();
 
     println!("nm_conns {nm_conns:?}");

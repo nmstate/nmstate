@@ -4,7 +4,7 @@ use std::collections::{hash_map::Entry, HashMap};
 use std::str::FromStr;
 
 use super::{
-    super::nm_dbus::NmConnection,
+    super::nm_dbus::{NmActiveConnection, NmConnection},
     connection::{NM_SETTING_INFINIBAND_SETTING_NAME, NM_SETTING_USER_SPACES},
     ovs::get_ovs_port_name,
 };
@@ -17,13 +17,12 @@ pub(crate) fn use_uuid_for_controller_reference(
     nm_conns: &mut [NmConnection],
     merged_ifaces: &MergedInterfaces,
     exist_nm_conns: &[NmConnection],
+    nm_acs: &[NmActiveConnection],
 ) -> Result<(), NmstateError> {
     let mut name_type_2_uuid_index: HashMap<(String, String), String> =
         HashMap::new();
 
-    // This block does not need nm_conn to be mutable, using iter_mut()
-    // just to suppress the rust clippy warning message
-    for nm_conn in nm_conns.iter_mut() {
+    for nm_conn in nm_conns.iter() {
         let iface_type = if let Some(i) = nm_conn.iface_type() {
             i
         } else {
@@ -39,6 +38,20 @@ pub(crate) fn use_uuid_for_controller_reference(
         }
     }
 
+    for nm_ac in nm_acs {
+        match name_type_2_uuid_index
+            .entry((nm_ac.iface_name.to_string(), nm_ac.iface_type.to_string()))
+        {
+            // Prefer newly created NmConnection
+            Entry::Occupied(_) => {
+                continue;
+            }
+            Entry::Vacant(v) => {
+                v.insert(nm_ac.uuid.to_string());
+            }
+        }
+    }
+
     for nm_conn in exist_nm_conns {
         let iface_type = if let Some(i) = nm_conn.iface_type() {
             i
@@ -50,7 +63,8 @@ pub(crate) fn use_uuid_for_controller_reference(
                 match name_type_2_uuid_index
                     .entry((iface_name.to_string(), iface_type.to_string()))
                 {
-                    // Prefer newly created NmConnection over existing one
+                    // Prefer newly created NmConnection or activated one over
+                    // existing one
                     Entry::Occupied(_) => {
                         continue;
                     }
@@ -142,6 +156,7 @@ pub(crate) fn use_uuid_for_parent_reference(
     nm_conns: &mut [NmConnection],
     merged_ifaces: &MergedInterfaces,
     exist_nm_conns: &[NmConnection],
+    nm_acs: &[NmActiveConnection],
 ) {
     // Pending changes: "child_iface_name: parent_nm_uuid"
     let mut pending_changes: HashMap<String, String> = HashMap::new();
@@ -154,9 +169,11 @@ pub(crate) fn use_uuid_for_parent_reference(
         if let Some(parent) = iface.for_apply.as_ref().and_then(|i| i.parent())
         {
             if let Some(parent_uuid) =
-                search_uuid_of_kernel_nm_conns(nm_conns, parent).or_else(|| {
-                    search_uuid_of_kernel_nm_conns(exist_nm_conns, parent)
-                })
+                search_uuid_of_kernel_nm_conns(nm_conns, parent)
+                    .or_else(|| search_uuid_of_kernel_nm_acs(nm_acs, parent))
+                    .or_else(|| {
+                        search_uuid_of_kernel_nm_conns(exist_nm_conns, parent)
+                    })
             {
                 pending_changes.insert(
                     iface.merged.name().to_string(),
@@ -195,6 +212,20 @@ fn search_uuid_of_kernel_nm_conns(
             {
                 return Some(uuid.to_string());
             }
+        }
+    }
+    None
+}
+
+fn search_uuid_of_kernel_nm_acs(
+    nm_acs: &[NmActiveConnection],
+    iface_name: &str,
+) -> Option<String> {
+    for nm_ac in nm_acs {
+        if !NM_SETTING_USER_SPACES.contains(&nm_ac.iface_type.as_str())
+            && nm_ac.iface_name.as_str() == iface_name
+        {
+            return Some(nm_ac.uuid.to_string());
         }
     }
     None
