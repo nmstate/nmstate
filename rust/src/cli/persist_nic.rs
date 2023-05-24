@@ -3,20 +3,21 @@
 //! # Handling writing .link files for NICs
 //!
 //! This module implements logic for generating systemd [`.link`] files
-//! based on active networking state.
+//! and kernel arguments based on active networking state.
 //!
 //! The logic currently is:
 //!
 //!  - Do nothing if kernel argument contains `net.ifnames=0` which disabled the
-//!    predicable network interface name, hence not fit our use case here.
+//!    predictable network interface name, hence not fit our use case here.
 //!  - Iterate over all active NICs
-//!  - Pin every ethernet interface to its MAC address (prefer permanent MAC
-//!    address)
+//!  - Pin every Ethernet interface to its MAC address (prefer permanent MAC
+//!    address) using link files and the [`ifname=`] kernel argument.
 //!  - After booting to new environment, use `udevadm test-builtin net_id` to
 //!    check whether pined interface name is different from systemd UDEV
 //!    Generated one. If still the same, remove the `.link` file.
 //!
 //! [`.link`]: https://www.freedesktop.org/software/systemd/man/systemd.link.html
+//! [`ifname=`]: https://www.man7.org/linux/man-pages/man7/dracut.cmdline.7.html
 use std::collections::HashMap;
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -73,9 +74,9 @@ pub(crate) fn run_persist_immediately(
         PersistAction::CleanUpDryRun => return clean_up(root, kargsfile, true),
     };
 
-    if is_prediable_ifname_disabled() {
+    if is_predictable_ifname_disabled() {
         log::info!(
-            "Systemd predicable network interface name is disabled \
+            "systemd predictable network interface name is disabled \
             by kernel argument `net.ifnames=0`, will do nothing"
         );
         return Ok("".to_string());
@@ -259,7 +260,7 @@ pub(crate) fn clean_up(
             }
         } else {
             log::info!(
-                "Systemd generate interface name \
+                "systemd generated interface name \
                 '{systemd_iface_name}' != pinned name '{iface_name}', \
                 will keep config file {}",
                 file_path.display()
@@ -283,7 +284,7 @@ fn format_ifname_karg(ifname: &str, mac: &str) -> String {
 
 // With `NamePolicy=keep kernel database onboard slot path` in systemd configure
 // in RHEL 8 and 9. Assuming `keep, kernel and database` all return NULL,
-// Systemd will use interface name in the order of:
+// systemd will use interface name in the order of:
 //  * `ID_NET_NAME_ONBOARD`
 //  * `ID_NET_NAME_SLOT`
 //  * `ID_NET_NAME_PATH`
@@ -364,7 +365,7 @@ fn persist_iface_name_via_systemd_link(
         ))
     })?;
     log::info!(
-        "Systemd network link file created at {}",
+        "systemd network link file created at {}",
         file_path.display()
     );
     Ok(true)
@@ -382,7 +383,7 @@ fn is_nmstate_generated_systemd_link_file(file_path: &PathBuf) -> bool {
 
 const KERNEL_CMDLINE_FILE: &str = "/proc/cmdline";
 
-fn is_prediable_ifname_disabled() -> bool {
+fn is_predictable_ifname_disabled() -> bool {
     std::fs::read(KERNEL_CMDLINE_FILE)
         .map(|v| String::from_utf8(v).unwrap_or_default())
         .map(|c| c.contains("net.ifnames=0"))
