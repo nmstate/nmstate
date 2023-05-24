@@ -108,16 +108,16 @@ pub(crate) fn run_persist_immediately(
             Some(m) => m,
             None => continue,
         };
-        log::info!(
-            "Would persist the interface {} with MAC {mac}",
-            iface.name()
-        );
         let iface_name = iface.name();
         let karg = format_ifname_karg(iface_name, mac);
-        log::info!("Would append kernel argument {karg}");
+        log::info!(
+            "Will persist the interface {iface_name} with MAC {mac} \
+            using link file and kernel argument {karg}"
+        );
         if !dry_run {
             changed |=
                 persist_iface_name_via_systemd_link(root, mac, iface_name)?;
+            log::info!("Kernel argument {karg} appended");
             kargs.push(karg);
         }
     }
@@ -230,33 +230,27 @@ pub(crate) fn clean_up(
                 }
             };
         if systemd_iface_name == iface_name {
-            if let Some(mac) = macs.get(iface_name.as_str()) {
-                let karg = format_ifname_karg(&iface_name, mac);
-                if dry_run {
-                    log::info!(
-                        "Will remove kernel arg {} if not in dry-run mode",
-                        karg
-                    );
-                } else {
-                    kargs.push(karg);
+            log::info!("Interface name {iface_name} is unchanged");
+            let mac = match macs.get(iface_name.as_str()) {
+                Some(mac) => mac,
+                None => {
+                    log::error!("Interface {iface_name} has no MAC address");
+                    continue;
                 }
-            } else {
-                log::error!("Pinned iface {iface_name} has no MAC address");
-            }
-            if dry_run {
+            };
+            let karg = format_ifname_karg(&iface_name, mac);
+            log::info!(
+                "Will remove generated file {} and kernel argument {karg}",
+                file_path.display()
+            );
+            if !dry_run {
+                std::fs::remove_file(&file_path)?;
                 log::info!(
-                    "The generated {} file has no effect for \
-                    interface {iface_name}, will remove if not \
-                    in dry-run mode",
+                    "Removed systemd network link file {}",
                     file_path.display()
                 );
-            } else {
-                log::info!(
-                    "The generated {} file has no effect for \
-                    interface {iface_name}, removing",
-                    file_path.display()
-                );
-                std::fs::remove_file(file_path)?;
+                log::info!("Kernel argument {karg} removed");
+                kargs.push(karg);
             }
         } else {
             log::info!(
