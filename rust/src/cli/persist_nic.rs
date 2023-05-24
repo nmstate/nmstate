@@ -378,8 +378,12 @@ fn is_nmstate_generated_systemd_link_file(file_path: &PathBuf) -> bool {
 const KERNEL_CMDLINE_FILE: &str = "/proc/cmdline";
 
 fn is_predictable_ifname_disabled() -> bool {
+    has_any_kargs(&["net.ifnames=0"])
+}
+
+fn has_any_kargs(kargs: &[&str]) -> bool {
     std::fs::read(KERNEL_CMDLINE_FILE)
         .map(|v| String::from_utf8(v).unwrap_or_default())
-        .map(|c| c.split(' ').any(|x| x == "net.ifnames=0"))
+        .map(|c| c.split(' ').any(|x| kargs.contains(&x)))
         .unwrap_or_default()
 }
