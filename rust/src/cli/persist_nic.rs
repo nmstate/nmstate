@@ -380,6 +380,6 @@ const KERNEL_CMDLINE_FILE: &str = "/proc/cmdline";
 fn is_predictable_ifname_disabled() -> bool {
     std::fs::read(KERNEL_CMDLINE_FILE)
         .map(|v| String::from_utf8(v).unwrap_or_default())
-        .map(|c| c.contains("net.ifnames=0"))
+        .map(|c| c.split(' ').any(|x| x == "net.ifnames=0"))
         .unwrap_or_default()
 }
