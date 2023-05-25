@@ -91,6 +91,11 @@ pub(crate) fn run_persist_immediately(
     }
 
     let mut kargs: Vec<String> = Vec::new();
+    let with_kargs = is_initrd_networking_enabled();
+    if with_kargs {
+        log::info!("Host uses initrd networking");
+    }
+
     let state = gather_state()?;
     let mut changed = false;
     for iface in state
@@ -110,15 +115,17 @@ pub(crate) fn run_persist_immediately(
         };
         let iface_name = iface.name();
         let karg = format_ifname_karg(iface_name, mac);
-        log::info!(
-            "Will persist the interface {iface_name} with MAC {mac} \
-            using link file and kernel argument {karg}"
-        );
+        log::info!("Will persist the interface {iface_name} with MAC {mac}");
+        if with_kargs {
+            log::info!("Will append kernel argument {karg}");
+        }
         if !dry_run {
             changed |=
                 persist_iface_name_via_systemd_link(root, mac, iface_name)?;
-            log::info!("Kernel argument {karg} appended");
-            kargs.push(karg);
+            if with_kargs {
+                log::info!("Kernel argument {karg} appended");
+                kargs.push(karg);
+            }
         }
     }
 
@@ -210,6 +217,11 @@ pub(crate) fn clean_up(
         .collect();
 
     let mut kargs: Vec<String> = Vec::new();
+    let with_kargs = is_initrd_networking_enabled();
+    if with_kargs {
+        log::info!("Host uses initrd networking");
+    }
+
     for (iface_name, file_path) in pinned_ifaces {
         if !is_nmstate_generated_systemd_link_file(&file_path) {
             log::info!(
@@ -239,18 +251,20 @@ pub(crate) fn clean_up(
                 }
             };
             let karg = format_ifname_karg(&iface_name, mac);
-            log::info!(
-                "Will remove generated file {} and kernel argument {karg}",
-                file_path.display()
-            );
+            log::info!("Will remove generated file {}", file_path.display());
+            if with_kargs {
+                log::info!("Will remove kernel argument {karg}");
+            }
             if !dry_run {
                 std::fs::remove_file(&file_path)?;
                 log::info!(
                     "Removed systemd network link file {}",
                     file_path.display()
                 );
-                log::info!("Kernel argument {karg} removed");
-                kargs.push(karg);
+                if with_kargs {
+                    log::info!("Kernel argument {karg} removed");
+                    kargs.push(karg);
+                }
             }
         } else {
             log::info!(
@@ -379,6 +393,10 @@ const KERNEL_CMDLINE_FILE: &str = "/proc/cmdline";
 
 fn is_predictable_ifname_disabled() -> bool {
     has_any_kargs(&["net.ifnames=0"])
+}
+
+fn is_initrd_networking_enabled() -> bool {
+    has_any_kargs(&["rd.neednet=1", "rd.neednet"])
 }
 
 fn has_any_kargs(kargs: &[&str]) -> bool {
