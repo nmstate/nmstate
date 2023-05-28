@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::ovn::OVN_BRIDGE_MAPPINGS;
 use crate::{
-    state::get_json_value_difference, ErrorKind, MergedNetworkState,
+    state::get_json_value_difference, ErrorKind, Interface, InterfaceState,
+    InterfaceType, Interfaces, MergedInterfaces, MergedNetworkState,
     MergedOvsDbGlobalConfig, NmstateError, OvsBridgeBondConfig,
     OvsBridgeConfig, OvsBridgeInterface, OvsDbGlobalConfig, OvsDbIfaceConfig,
     OvsInterface,
@@ -163,6 +164,63 @@ impl OvsBridgeBondConfig {
         // None ovsbd equal to empty
         if self.ovsdb.is_none() {
             self.ovsdb = Some(OvsDbIfaceConfig::new_empty());
+        }
+    }
+}
+impl MergedInterfaces {
+    // This function remove extra(undesired) ovs patch port from post-apply
+    // current, so it will not interfere with verification
+    pub(crate) fn process_allow_extra_ovs_patch_ports_for_verify(
+        &self,
+        current: &mut Interfaces,
+    ) {
+        let mut ovs_patch_port_names: HashSet<String> = HashSet::new();
+        for cur_iface in current.iter().filter_map(|i| {
+            if let Interface::OvsInterface(o) = i {
+                Some(o)
+            } else {
+                None
+            }
+        }) {
+            if cur_iface.is_ovs_patch_port() {
+                ovs_patch_port_names.insert(cur_iface.base.name.to_string());
+            }
+        }
+
+        for des_iface in self.iter().filter_map(|i| {
+            if let Some(Interface::OvsBridge(o)) = i.desired.as_ref() {
+                if o.bridge.as_ref().map(|c| c.allow_extra_patch_ports)
+                    == Some(true)
+                    && o.base.state == InterfaceState::Up
+                {
+                    Some(o)
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        }) {
+            if let Some(cur_iface) = current.get_iface_mut(
+                des_iface.base.name.as_str(),
+                InterfaceType::OvsBridge,
+            ) {
+                let mut ports_to_delete: HashSet<String> = HashSet::new();
+                if let (Some(des_ports), Some(cur_ports)) =
+                    (des_iface.ports(), cur_iface.ports())
+                {
+                    for cur_port_name in cur_ports {
+                        if ovs_patch_port_names.contains(cur_port_name)
+                            && !des_ports.contains(&cur_port_name)
+                        {
+                            ports_to_delete.insert(cur_port_name.to_string());
+                        }
+                    }
+                }
+                for port_name in ports_to_delete.iter() {
+                    cur_iface.remove_port(port_name);
+                }
+            }
         }
     }
 }

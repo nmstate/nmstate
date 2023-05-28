@@ -2098,3 +2098,18 @@ def test_netdev_data_path(eth1_up):
         libnmstate.apply(desired_state)
     assertlib.assert_absent(BRIDGE0)
     assertlib.assert_absent(PORT1)
+
+
+@pytest.mark.tier1
+def test_allow_extra_ovs_patch_ports(ovs_bridge_with_patch_ports):
+    bridge = Bridge(BRIDGE1)
+    bridge.add_system_port("eth1")
+    desired_state = bridge.state
+    desired_state[Interface.KEY][0][OVSBridge.CONFIG_SUBTREE][
+        OVSBridge.ALLOW_EXTRA_PATCH_PORTS
+    ] = True
+    libnmstate.apply(desired_state)
+
+    patch1_state = statelib.show_only((PATCH1,))
+
+    assert patch1_state[Interface.KEY][0][Interface.CONTROLLER] == BRIDGE1

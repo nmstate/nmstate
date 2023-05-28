@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use std::collections::HashSet;
 use std::convert::TryFrom;
 
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    BaseInterface, BridgePortVlanConfig, ErrorKind, Interface, InterfaceType,
-    MergedInterface, NmstateError, OvsDbIfaceConfig,
+    BaseInterface, BridgePortVlanConfig, ErrorKind, Interface, InterfaceState,
+    InterfaceType, MergedInterface, MergedInterfaces, NmstateError,
+    OvsDbIfaceConfig,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -96,7 +98,7 @@ impl OvsBridgeInterface {
         ret
     }
 
-    fn sort_ports(&mut self) {
+    pub(crate) fn sort_ports(&mut self) {
         if let Some(ref mut br_conf) = self.bridge {
             if let Some(ref mut port_confs) = &mut br_conf.ports {
                 port_confs.sort_unstable_by_key(|p| p.name.clone());
@@ -245,6 +247,14 @@ impl OvsBridgeInterface {
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[non_exhaustive]
 pub struct OvsBridgeConfig {
+    #[serde(skip_serializing, default)]
+    /// Only validate for applying, when set to `true`, extra OVS patch ports
+    /// will not fail the verification. Default is false.
+    /// This property will not be persisted, every time you modify
+    /// ports of specified OVS bridge, you need to explicitly define this
+    /// property if not using default value.
+    /// Deserialize from `allow-extra-patch-ports`.
+    pub allow_extra_patch_ports: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub options: Option<OvsBridgeOptions>,
     #[serde(
@@ -456,6 +466,10 @@ impl OvsInterface {
             dpdk_conf.sanitize(is_desired)?;
         }
         Ok(())
+    }
+
+    pub(crate) fn is_ovs_patch_port(&self) -> bool {
+        self.patch.is_some()
     }
 }
 
@@ -739,6 +753,55 @@ impl MergedInterface {
                     if br_conf.ports.is_some() {
                         br_conf.ports = Some(port_confs);
                     }
+                }
+            }
+        }
+    }
+}
+
+impl MergedInterfaces {
+    // This function remove extra(undesired) ovs patch port from pre-apply
+    // current, so it will not interfere with port change.
+    pub(crate) fn process_allow_extra_ovs_patch_ports_for_apply(&mut self) {
+        let mut ovs_patch_port_names: HashSet<String> = HashSet::new();
+        for cur_iface in self.iter().filter_map(|i| {
+            if let Some(Interface::OvsInterface(o)) = i.current.as_ref() {
+                Some(o)
+            } else {
+                None
+            }
+        }) {
+            if cur_iface.is_ovs_patch_port() {
+                ovs_patch_port_names.insert(cur_iface.base.name.to_string());
+            }
+        }
+
+        for merged_iface in self.iter_mut().filter(|i| {
+            if let Some(Interface::OvsBridge(o)) = i.desired.as_ref() {
+                o.base.state == InterfaceState::Up
+                    && o.bridge.as_ref().map(|c| c.allow_extra_patch_ports)
+                        == Some(true)
+            } else {
+                false
+            }
+        }) {
+            if let (Some(des_iface), Some(cur_iface)) =
+                (merged_iface.desired.as_ref(), merged_iface.current.as_mut())
+            {
+                let mut ports_to_delete: HashSet<String> = HashSet::new();
+                if let (Some(des_ports), Some(cur_ports)) =
+                    (des_iface.ports(), cur_iface.ports())
+                {
+                    for cur_port_name in cur_ports {
+                        if ovs_patch_port_names.contains(cur_port_name)
+                            && !des_ports.contains(&cur_port_name)
+                        {
+                            ports_to_delete.insert(cur_port_name.to_string());
+                        }
+                    }
+                }
+                for port_name in ports_to_delete.iter() {
+                    cur_iface.remove_port(port_name);
                 }
             }
         }

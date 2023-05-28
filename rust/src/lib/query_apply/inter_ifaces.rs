@@ -136,9 +136,12 @@ impl MergedInterfaces {
         &self,
         current: &Interfaces,
     ) -> Result<(), NmstateError> {
+        let mut merged = self.clone();
         let mut current = current.clone();
         current.remove_ignored_ifaces(self.ignored_ifaces.as_slice());
         current.remove_unknown_type_port();
+        merged.process_allow_extra_ovs_patch_ports_for_verify(&mut current);
+
         for iface in current
             .kernel_ifaces
             .values_mut()
@@ -148,20 +151,28 @@ impl MergedInterfaces {
             iface.sanitize_current_for_verify();
         }
 
-        for des_iface in self.iter().filter(|i| i.is_desired()) {
-            let mut iface = if let Some(i) = des_iface.for_verify.as_ref() {
-                i.clone()
+        for des_iface in merged.iter_mut().filter(|i| i.is_desired()) {
+            let iface = if let Some(i) = des_iface.for_verify.as_mut() {
+                i
             } else {
                 continue;
             };
             iface.sanitize(false).ok();
             iface.sanitize_desired_for_verify();
+        }
+
+        for des_iface in merged.iter().filter(|i| i.is_desired()) {
+            let iface = if let Some(i) = des_iface.for_verify.as_ref() {
+                i
+            } else {
+                continue;
+            };
             if iface.is_absent() || (iface.is_virtual() && iface.is_down()) {
                 if let Some(cur_iface) =
                     current.get_iface(iface.name(), iface.iface_type())
                 {
                     verify_desire_absent_but_found_in_current(
-                        &iface, cur_iface,
+                        iface, cur_iface,
                     )?;
                 }
             } else if let Some(cur_iface) =

@@ -348,6 +348,7 @@ class OVSInterface(OvsDB):
 
 class OVSBridge(Bridge, OvsDB):
     TYPE = "ovs-bridge"
+    ALLOW_EXTRA_PATCH_PORTS = "allow-extra-patch-ports"
 
     class Options:
         FAIL_MODE = "fail-mode"
