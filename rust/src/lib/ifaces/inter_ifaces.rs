@@ -731,8 +731,17 @@ impl MergedInterfaces {
         self.user_ifaces.values().chain(self.kernel_ifaces.values())
     }
 
+    pub(crate) fn iter_mut(
+        &mut self,
+    ) -> impl Iterator<Item = &mut MergedInterface> {
+        self.user_ifaces
+            .values_mut()
+            .chain(self.kernel_ifaces.values_mut())
+    }
+
     // Contains all the smart modifications, validations among interfaces
     fn process(&mut self) -> Result<(), NmstateError> {
+        self.process_allow_extra_ovs_patch_ports_for_apply();
         self.apply_copy_mac_from()?;
         self.validate_controller_and_port_list_confliction()?;
         self.handle_changed_ports()?;

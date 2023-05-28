@@ -641,3 +641,197 @@ fn test_ovs_mark_orphan_up_on_bridge_with_same_name_iface() {
 
     MergedInterfaces::new(des_ifaces, cur_ifaces, false, false).unwrap();
 }
+
+#[test]
+fn test_ignore_patch_ports_for_verify() {
+    let des_ifaces: Interfaces = serde_yaml::from_str(
+        r#"---
+- name: eth1
+  type: ethernet
+- name: eth2
+  type: ethernet
+- name: br0
+  type: ovs-bridge
+  state: up
+  bridge:
+    allow-extra-patch-ports: true
+    port:
+    - name: eth1
+- name: br1
+  type: ovs-bridge
+  state: up
+  bridge:
+    allow-extra-patch-ports: true
+    port:
+    - name: eth2
+"#,
+    )
+    .unwrap();
+    let pre_apply_cur_ifaces: Interfaces = serde_yaml::from_str(
+        r#"---
+- name: eth1
+  type: ethernet
+  state: up
+- name: eth2
+  type: ethernet
+  state: up
+- name: patch0
+  type: ovs-interface
+  state: up
+  controller: br0
+  lldp:
+    enabled: false
+  patch:
+    peer: patch1
+- name: patch1
+  type: ovs-interface
+  state: up
+  controller: br1
+  lldp:
+    enabled: false
+  patch:
+    peer: patch0
+- name: br0
+  type: ovs-bridge
+  state: up
+  bridge:
+    port:
+    - name: patch0
+- name: br1
+  type: ovs-bridge
+  state: up
+  bridge:
+    port:
+    - name: patch1
+"#,
+    )
+    .unwrap();
+
+    let cur_ifaces: Interfaces = serde_yaml::from_str(
+        r#"---
+- name: eth1
+  type: ethernet
+  state: up
+- name: eth2
+  type: ethernet
+  state: up
+- name: br0
+  type: ovs-bridge
+  state: up
+  bridge:
+    port:
+    - name: eth1
+    - name: patch0
+- name: patch0
+  type: ovs-interface
+  state: up
+  controller: br0
+  lldp:
+    enabled: false
+  patch:
+    peer: patch1
+- name: br1
+  type: ovs-bridge
+  state: up
+  bridge:
+    port:
+    - name: eth2
+    - name: patch1
+- name: patch1
+  type: ovs-interface
+  state: up
+  controller: br1
+  lldp:
+    enabled: false
+  patch:
+    peer: patch0
+"#,
+    )
+    .unwrap();
+
+    let merged_iface =
+        MergedInterfaces::new(des_ifaces, pre_apply_cur_ifaces, false, false)
+            .unwrap();
+
+    merged_iface.verify(&cur_ifaces).unwrap();
+}
+
+#[test]
+fn test_ignore_patch_ports_for_apply() {
+    let des_ifaces: Interfaces = serde_yaml::from_str(
+        r#"---
+- name: eth1
+  type: ethernet
+- name: eth2
+  type: ethernet
+- name: br0
+  type: ovs-bridge
+  state: up
+  bridge:
+    allow-extra-patch-ports: true
+    port:
+    - name: eth1
+- name: br1
+  type: ovs-bridge
+  state: up
+  bridge:
+    allow-extra-patch-ports: true
+    port:
+    - name: eth2
+"#,
+    )
+    .unwrap();
+    let pre_apply_cur_ifaces: Interfaces = serde_yaml::from_str(
+        r#"---
+- name: eth1
+  type: ethernet
+  state: up
+- name: eth2
+  type: ethernet
+  state: up
+- name: patch0
+  type: ovs-interface
+  state: up
+  controller: br0
+  lldp:
+    enabled: false
+  patch:
+    peer: patch1
+- name: patch1
+  type: ovs-interface
+  state: up
+  controller: br1
+  lldp:
+    enabled: false
+  patch:
+    peer: patch0
+- name: br0
+  type: ovs-bridge
+  state: up
+  bridge:
+    port:
+    - name: patch0
+- name: br1
+  type: ovs-bridge
+  state: up
+  bridge:
+    port:
+    - name: patch1
+"#,
+    )
+    .unwrap();
+
+    let merged_iface =
+        MergedInterfaces::new(des_ifaces, pre_apply_cur_ifaces, false, false)
+            .unwrap();
+
+    let patch0_iface = merged_iface
+        .get_iface("patch0", InterfaceType::OvsInterface)
+        .unwrap();
+    let patch1_iface = merged_iface
+        .get_iface("patch1", InterfaceType::OvsInterface)
+        .unwrap();
+
+    assert!(patch0_iface.for_apply.is_none());
+    assert!(patch1_iface.for_apply.is_none());
+}
