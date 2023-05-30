@@ -335,6 +335,12 @@ fn main() {
                         .help("Only output changes that would be made"),
                 )
                 .arg(
+                    clap::Arg::new("INSPECT")
+                        .long("inspect")
+                        .takes_value(false)
+                        .help("Output information about prior state, if any"),
+                )
+                .arg(
                     clap::Arg::new("CLEAN_UP")
                         .long("cleanup")
                         .takes_value(false)
@@ -442,24 +448,20 @@ fn main() {
         if let Some(matches) =
             matches.subcommand_matches(SUB_CMD_PERSIST_NIC_NAMES)
         {
-            let action = if matches
-                .try_contains_id("DRY_RUN")
-                .unwrap_or_default()
-            {
-                if matches.try_contains_id("CLEAN_UP").unwrap_or_default() {
-                    persist_nic::PersistAction::CleanUpDryRun
-                } else {
-                    persist_nic::PersistAction::DryRun
-                }
-            } else if matches.try_contains_id("CLEAN_UP").unwrap_or_default() {
+            // --inspect is now equivalent to --cleanup --dry-run and kept for backwards compatibility
+            // with the logic that originally landed in https://github.com/openshift/machine-config-operator/
+            let have_inspect = matches.contains_id("INSPECT");
+            let dry_run = matches.contains_id("DRY_RUN") || have_inspect;
+            let action = if matches.contains_id("CLEAN_UP") || have_inspect {
                 persist_nic::PersistAction::CleanUp
             } else {
                 persist_nic::PersistAction::Save
             };
-            print_result_and_exit(crate::persist_nic::run_persist_immediately(
+            print_result_and_exit(crate::persist_nic::entrypoint(
                 matches.value_of("ROOT").unwrap(),
                 matches.value_of("KARGSFILE"),
                 action,
+                dry_run,
             ));
         }
     }
