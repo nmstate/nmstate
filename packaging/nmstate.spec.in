@@ -15,7 +15,6 @@ Source0:        https://github.com/%{srcname}/%{srcname}/releases/download/v%{ve
 BuildRequires:  python3-setuptools
 BuildRequires:  python3-devel
 BuildRequires:  systemd
-Requires:       %{name}-libs%{?_isa} = %{version}-%{release}
 %if 0%{?rhel}
 BuildRequires:  rust-toolset
 %else
