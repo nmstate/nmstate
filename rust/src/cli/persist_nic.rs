@@ -46,12 +46,8 @@ const ID_NET_NAME_PATH: &str = "ID_NET_NAME_PATH";
 pub(crate) enum PersistAction {
     /// Persist NIC name state
     Save,
-    /// Print what we would do in Save mode
-    DryRun,
     /// Remove link files not required
     CleanUp,
-    /// Print what we would do in clean up mode
-    CleanUpDryRun,
 }
 
 fn gather_state() -> Result<NetworkState, CliError> {
@@ -62,18 +58,12 @@ fn gather_state() -> Result<NetworkState, CliError> {
     Ok(state)
 }
 
-pub(crate) fn run_persist_immediately(
+pub(crate) fn entrypoint(
     root: &str,
     kargsfile: Option<&str>,
     action: PersistAction,
+    dry_run: bool,
 ) -> Result<String, CliError> {
-    let dry_run = match action {
-        PersistAction::Save => false,
-        PersistAction::DryRun => true,
-        PersistAction::CleanUp => return clean_up(root, kargsfile, false),
-        PersistAction::CleanUpDryRun => return clean_up(root, kargsfile, true),
-    };
-
     if is_predictable_ifname_disabled() {
         log::info!(
             "systemd predictable network interface name is disabled \
@@ -82,6 +72,19 @@ pub(crate) fn run_persist_immediately(
         return Ok("".to_string());
     }
 
+    match action {
+        PersistAction::Save => {
+            run_persist_immediately(root, kargsfile, dry_run)
+        }
+        PersistAction::CleanUp => clean_up(root, kargsfile, dry_run),
+    }
+}
+
+fn run_persist_immediately(
+    root: &str,
+    kargsfile: Option<&str>,
+    dry_run: bool,
+) -> Result<String, CliError> {
     let stamp_path = Path::new(root)
         .join(SYSTEMD_NETWORK_LINK_FOLDER)
         .join(NMSTATE_PERSIST_STAMP);
@@ -113,6 +116,14 @@ pub(crate) fn run_persist_immediately(
             Some(m) => m,
             None => continue,
         };
+        let file_path = gen_link_file_path(root, iface.name());
+        if file_path.exists() {
+            log::info!(
+                "Network link file {} already exists",
+                file_path.display()
+            );
+            continue;
+        }
         let iface_name = iface.name();
         let karg = format_ifname_karg(iface_name, mac);
         log::info!("Will persist the interface {iface_name} with MAC {mac}");
@@ -120,13 +131,13 @@ pub(crate) fn run_persist_immediately(
             log::info!("Will append kernel argument {karg}");
         }
         if !dry_run {
-            changed |=
-                persist_iface_name_via_systemd_link(root, mac, iface_name)?;
+            persist_iface_name_via_systemd_link(root, mac, iface_name)?;
             if with_kargs {
                 log::info!("Kernel argument {karg} appended");
                 kargs.push(karg);
             }
         }
+        changed = true;
     }
 
     if !changed {
@@ -350,15 +361,10 @@ fn persist_iface_name_via_systemd_link(
     root: &str,
     mac: &str,
     iface_name: &str,
-) -> Result<bool, CliError> {
+) -> Result<(), CliError> {
     let link_dir = Path::new(root).join(SYSTEMD_NETWORK_LINK_FOLDER);
 
     let file_path = gen_link_file_path(root, iface_name);
-    if file_path.exists() {
-        log::info!("Network link file {} already exists", file_path.display());
-        return Ok(false);
-    }
-
     if !link_dir.exists() {
         std::fs::create_dir(&link_dir)?;
     }
@@ -376,7 +382,7 @@ fn persist_iface_name_via_systemd_link(
         "systemd network link file created at {}",
         file_path.display()
     );
-    Ok(true)
+    Ok(())
 }
 
 fn is_nmstate_generated_systemd_link_file(file_path: &PathBuf) -> bool {
