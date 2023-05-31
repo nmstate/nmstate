@@ -127,15 +127,12 @@ fn run_persist_immediately(
         let iface_name = iface.name();
         let karg = format_ifname_karg(iface_name, mac);
         log::info!("Will persist the interface {iface_name} with MAC {mac}");
-        if with_kargs {
-            log::info!("Will append kernel argument {karg}");
-        }
         if !dry_run {
             persist_iface_name_via_systemd_link(root, mac, iface_name)?;
-            if with_kargs {
-                log::info!("Kernel argument {karg} appended");
-                kargs.push(karg);
-            }
+        }
+        if with_kargs {
+            log::info!("Kernel argument added: {karg}");
+            kargs.push(karg);
         }
         changed = true;
     }
@@ -268,19 +265,17 @@ pub(crate) fn clean_up(
             };
             let karg = format_ifname_karg(&iface_name, mac);
             log::info!("Will remove generated file {}", file_path.display());
-            if with_kargs {
-                log::info!("Will remove kernel argument {karg}");
-            }
+
             if !dry_run {
                 std::fs::remove_file(&file_path)?;
                 log::info!(
                     "Removed systemd network link file {}",
                     file_path.display()
                 );
-                if with_kargs {
-                    log::info!("Kernel argument {karg} removed");
-                    kargs.push(karg);
-                }
+            }
+            if with_kargs {
+                log::info!("Kernel argument removed: {karg}");
+                kargs.push(karg);
             }
         } else {
             log::info!(
