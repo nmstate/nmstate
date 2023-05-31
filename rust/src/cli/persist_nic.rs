@@ -145,6 +145,11 @@ fn run_persist_immediately(
     }
 
     if !dry_run {
+        if let Some(parent) = stamp_path.parent() {
+            if !parent.exists() {
+                std::fs::create_dir(parent)?;
+            }
+        }
         std::fs::write(stamp_path, b"")?;
         if !kargs.is_empty() {
             if let Some(path) = kargsfile {
