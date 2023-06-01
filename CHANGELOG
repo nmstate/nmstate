@@ -1,4 +1,15 @@
 # Changelog
+## [2.2.12] - 2023-06-01
+### Breaking changes
+ - Rust API: BridgePortTunkTag renamed as BridgePortTrunkTag. (148ecd1)
+
+### New features
+ - Support `vlan-default-pvid` in bridge options. (e73b147)
+
+### Bug fixes
+ - Fix rollback blocked due to waiting for DHCP. (861110b)
+ - Fix creating a VLAN or bridge above an interface with multiple NM profiles. (a463a28)
+
 ## [2.2.11] - 2023-05-16
 ### Breaking changes
  - N/A
