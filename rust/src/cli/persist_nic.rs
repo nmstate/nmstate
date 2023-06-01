@@ -182,12 +182,12 @@ pub(crate) fn clean_up(
         log::info!("{} does not exist, no need to clean up", netdir.display());
     }
     let stamp_path = netdir.join(NMSTATE_PERSIST_STAMP);
-    if !stamp_path.exists() {
+    let cleanup_pending = stamp_path.exists();
+    if !cleanup_pending {
         log::info!(
-            "{} does not exist, no prior persisted state, no need to clean up",
+            "{} does not exist, no need to clean up",
             stamp_path.display()
         );
-        return Ok("".to_string());
     }
 
     let mut pinned_ifaces: HashMap<String, PathBuf> = HashMap::new();
@@ -212,6 +212,12 @@ pub(crate) fn clean_up(
         if !dry_run {
             std::fs::remove_file(stamp_path)?;
         }
+        return Ok("".to_string());
+    }
+
+    // If there wasn't a stamp file, at this point we've just printed out
+    // whether there were any persisted NICs found, and we're done.
+    if !cleanup_pending {
         return Ok("".to_string());
     }
 
