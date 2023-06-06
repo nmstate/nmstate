@@ -7,7 +7,7 @@ use crate::{
         nm_checkpoint_rollback, nm_checkpoint_timeout_extend, nm_retrieve,
     },
     ovsdb::{ovsdb_apply, ovsdb_is_running, ovsdb_retrieve},
-    MergedNetworkState, NetworkState, NmstateError,
+    ErrorKind, MergedNetworkState, NetworkState, NmstateError,
 };
 
 const DEFAULT_ROLLBACK_TIMEOUT: u32 = 60;
@@ -97,6 +97,7 @@ impl NetworkState {
     }
 
     fn apply_with_nm_backend(&self) -> Result<(), NmstateError> {
+        let mut merged_state = None;
         let mut cur_net_state = NetworkState::new();
         cur_net_state.set_kernel_only(self.kernel_only);
         cur_net_state.set_include_secrets(true);
@@ -122,6 +123,16 @@ impl NetworkState {
             } else {
                 None
             };
+
+        if pf_state.is_none() {
+            // Do early pre-apply validation before checkpoint.
+            merged_state = Some(MergedNetworkState::new(
+                self.clone(),
+                cur_net_state.clone(),
+                false,
+                self.memory_only,
+            )?);
+        }
 
         let mut timeout = self.timeout.unwrap_or(DEFAULT_ROLLBACK_TIMEOUT);
         let verify_count = if self.has_vf_count_change(&cur_net_state) {
@@ -167,15 +178,26 @@ impl NetworkState {
                 )?;
                 // Refresh current state
                 cur_net_state.retrieve()?;
+                merged_state = Some(MergedNetworkState::new(
+                    self.clone(),
+                    cur_net_state.clone(),
+                    false,
+                    self.memory_only,
+                )?);
             }
 
+            let merged_state = if let Some(merged_state) = merged_state {
+                merged_state
+            } else {
+                return Err(NmstateError::new(
+                    ErrorKind::Bug,
+                    "Got unexpected None for merged_state in \
+                    apply_with_nm_backend()"
+                        .into(),
+                ));
+            };
+
             self.interfaces.check_sriov_capability()?;
-            let merged_state = MergedNetworkState::new(
-                self.clone(),
-                cur_net_state.clone(),
-                false,
-                self.memory_only,
-            )?;
 
             self.apply_with_nm_backend_and_under_checkpoint(
                 &merged_state,
