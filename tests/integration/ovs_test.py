@@ -1874,6 +1874,10 @@ def test_ovs_replace_internal_iface_to_bridge_with_auto_create_iface(
 
 # OVS netdev datapath will use TUN interface for OVS internal interface
 @pytest.mark.tier1
+@pytest.mark.skipif(
+    nm_minor_version() < 38,
+    reason="OVS TUN interface was not supported in NM 1.38-",
+)
 def test_netdev_data_path(eth1_up):
     bridge = Bridge(BRIDGE1)
     bridge.add_system_port("eth1")
