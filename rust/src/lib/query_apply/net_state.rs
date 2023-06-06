@@ -135,7 +135,15 @@ impl NetworkState {
         }
 
         let mut timeout = self.timeout.unwrap_or(DEFAULT_ROLLBACK_TIMEOUT);
-        let verify_count = if self.has_vf_count_change(&cur_net_state) {
+        // We need to use merge state in case PF does not have
+        // interface type defined, we need merged_state to have `unknown` type
+        // resolved
+        let verify_count = if pf_state.is_some()
+            || merged_state
+                .as_ref()
+                .map(|s| s.interfaces.has_vf_count_change())
+                == Some(true)
+        {
             timeout = VERIFY_RETRY_COUNT_SRIOV as u32
                 * VERIFY_RETRY_INTERVAL_MILLISECONDS as u32
                 / 1000;
