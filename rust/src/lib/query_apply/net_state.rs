@@ -13,7 +13,7 @@ use crate::{
 const DEFAULT_ROLLBACK_TIMEOUT: u32 = 60;
 const VERIFY_RETRY_INTERVAL_MILLISECONDS: u64 = 1000;
 const VERIFY_RETRY_COUNT: usize = 5;
-const VERIFY_RETRY_COUNT_SRIOV: usize = 60;
+const VERIFY_RETRY_COUNT_SRIOV: usize = 300;
 const VERIFY_RETRY_COUNT_KERNEL_MODE: usize = 5;
 const RETRY_NM_COUNT: usize = 2;
 const RETRY_NM_INTERVAL_MILLISECONDS: u64 = 2000;
@@ -123,7 +123,16 @@ impl NetworkState {
                 None
             };
 
-        let timeout = self.timeout.unwrap_or(DEFAULT_ROLLBACK_TIMEOUT);
+        let mut timeout = self.timeout.unwrap_or(DEFAULT_ROLLBACK_TIMEOUT);
+        let verify_count = if self.has_vf_count_change(&cur_net_state) {
+            timeout = VERIFY_RETRY_COUNT_SRIOV as u32
+                * VERIFY_RETRY_INTERVAL_MILLISECONDS as u32
+                / 1000;
+            VERIFY_RETRY_COUNT_SRIOV
+        } else {
+            VERIFY_RETRY_COUNT
+        };
+
         let checkpoint = match nm_checkpoint_create(timeout) {
             Ok(c) => c,
             Err(e) => {
@@ -141,12 +150,6 @@ impl NetworkState {
 
         log::info!("Created checkpoint {}", &checkpoint);
 
-        let verify_count = if pf_state.is_some() {
-            VERIFY_RETRY_COUNT_SRIOV
-        } else {
-            VERIFY_RETRY_COUNT
-        };
-
         with_nm_checkpoint(&checkpoint, self.no_commit, || {
             if let Some(pf_state) = pf_state {
                 let pf_merged_state = MergedNetworkState::new(
@@ -160,6 +163,7 @@ impl NetworkState {
                     &cur_net_state,
                     &checkpoint,
                     verify_count,
+                    timeout,
                 )?;
                 // Refresh current state
                 cur_net_state.retrieve()?;
@@ -178,6 +182,7 @@ impl NetworkState {
                 &cur_net_state,
                 &checkpoint,
                 verify_count,
+                timeout,
             )
         })
     }
@@ -188,8 +193,8 @@ impl NetworkState {
         cur_net_state: &Self,
         checkpoint: &str,
         retry_count: usize,
+        timeout: u32,
     ) -> Result<(), NmstateError> {
-        let timeout = self.timeout.unwrap_or(DEFAULT_ROLLBACK_TIMEOUT);
         // NM might have unknown race problem found by verify stage,
         // we try to apply the state again if so.
         with_retry(RETRY_NM_INTERVAL_MILLISECONDS, RETRY_NM_COUNT, || {

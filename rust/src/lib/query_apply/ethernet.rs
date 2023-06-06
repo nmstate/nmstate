@@ -116,7 +116,7 @@ impl NetworkState {
         self.has_vf_count_change(current) && self.has_missing_eth(current)
     }
 
-    fn has_vf_count_change(&self, current: &Self) -> bool {
+    pub(crate) fn has_vf_count_change(&self, current: &Self) -> bool {
         for iface in
             self.interfaces.kernel_ifaces.values().filter(|i| i.is_up())
         {
