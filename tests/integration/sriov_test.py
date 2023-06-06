@@ -121,6 +121,31 @@ def sriov_iface_vf(disable_sriov):
     yield desired_state
 
 
+@pytest.fixture
+def sriov_with_62_vfs():
+    pf_name = _test_nic_name()
+    iface_info = {
+        Interface.NAME: pf_name,
+        Interface.STATE: InterfaceState.UP,
+        Ethernet.CONFIG_SUBTREE: {
+            Ethernet.SRIOV_SUBTREE: {Ethernet.SRIOV.TOTAL_VFS: 62},
+        },
+    }
+    desired_state = {Interface.KEY: [iface_info]}
+    libnmstate.apply(desired_state)
+    yield
+    libnmstate.apply(
+        {
+            Interface.KEY: [
+                {
+                    Interface.NAME: pf_name,
+                    Interface.STATE: InterfaceState.ABSENT,
+                }
+            ]
+        }
+    )
+
+
 @pytest.mark.skipif(
     not os.environ.get("TEST_REAL_NIC"),
     reason="Need to define TEST_REAL_NIC for SR-IOV test",
@@ -460,4 +485,19 @@ class TestSrIov:
             },
         ]
         desired_state = {Interface.KEY: iface_infos}
+        libnmstate.apply(desired_state)
+
+    # Changing VF from 62 to 63 require massive time as kernel require us
+    # to disable SRIOV before changing VF count, this test is focus on
+    # whether nmstate has enough verification retry.
+    def test_change_vf_from_62_to_63(self, sriov_with_62_vfs):
+        pf_name = _test_nic_name()
+        iface_info = {
+            Interface.NAME: pf_name,
+            Interface.STATE: InterfaceState.UP,
+            Ethernet.CONFIG_SUBTREE: {
+                Ethernet.SRIOV_SUBTREE: {Ethernet.SRIOV.TOTAL_VFS: 63},
+            },
+        }
+        desired_state = {Interface.KEY: [iface_info]}
         libnmstate.apply(desired_state)
