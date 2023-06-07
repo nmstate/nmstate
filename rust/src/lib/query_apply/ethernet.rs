@@ -2,7 +2,8 @@
 
 use crate::{
     ErrorKind, EthernetConfig, EthernetInterface, Interface, InterfaceType,
-    Interfaces, NetworkState, NmstateError, SrIovConfig, VethConfig,
+    Interfaces, MergedInterfaces, NetworkState, NmstateError, SrIovConfig,
+    VethConfig,
 };
 
 impl EthernetInterface {
@@ -49,6 +50,20 @@ impl EthernetInterface {
             }
         }
         Ok(())
+    }
+
+    pub(crate) fn is_vf_count_changed(&self, cur_iface: &Self) -> bool {
+        let pf_count = self
+            .ethernet
+            .as_ref()
+            .and_then(|e| e.sr_iov.as_ref())
+            .and_then(|s| s.total_vfs);
+        let cur_pf_count = cur_iface
+            .ethernet
+            .as_ref()
+            .and_then(|e| e.sr_iov.as_ref())
+            .and_then(|s| s.total_vfs);
+        pf_count.is_some() && pf_count != cur_pf_count
     }
 }
 
@@ -116,7 +131,7 @@ impl NetworkState {
         self.has_vf_count_change(current) && self.has_missing_eth(current)
     }
 
-    fn has_vf_count_change(&self, current: &Self) -> bool {
+    pub(crate) fn has_vf_count_change(&self, current: &Self) -> bool {
         for iface in
             self.interfaces.kernel_ifaces.values().filter(|i| i.is_up())
         {
@@ -125,17 +140,7 @@ impl NetworkState {
                 Some(Interface::Ethernet(cur_iface)),
             ) = (iface, current.interfaces.kernel_ifaces.get(iface.name()))
             {
-                let pf_count = iface
-                    .ethernet
-                    .as_ref()
-                    .and_then(|e| e.sr_iov.as_ref())
-                    .and_then(|s| s.total_vfs);
-                let cur_pf_count = cur_iface
-                    .ethernet
-                    .as_ref()
-                    .and_then(|e| e.sr_iov.as_ref())
-                    .and_then(|s| s.total_vfs);
-                if pf_count.is_some() && pf_count != cur_pf_count {
+                if iface.is_vf_count_changed(cur_iface) {
                     return true;
                 }
             }
@@ -193,5 +198,24 @@ impl NetworkState {
             }
             Some(pf_state)
         }
+    }
+}
+
+impl MergedInterfaces {
+    pub(crate) fn has_vf_count_change(&self) -> bool {
+        for iface in self.kernel_ifaces.values().filter(|i| {
+            i.is_desired() && i.merged.iface_type() == InterfaceType::Ethernet
+        }) {
+            if let (
+                Some(Interface::Ethernet(des_iface)),
+                Some(Interface::Ethernet(cur_iface)),
+            ) = (iface.for_apply.as_ref(), iface.current.as_ref())
+            {
+                if des_iface.is_vf_count_changed(cur_iface) {
+                    return true;
+                }
+            }
+        }
+        false
     }
 }

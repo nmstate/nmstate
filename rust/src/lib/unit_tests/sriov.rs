@@ -789,3 +789,34 @@ fn test_sriov_vf_revert_to_default() {
         panic!("Expecting a Ethernet interface, but got {:?}", verify_iface);
     }
 }
+
+#[test]
+fn test_has_vf_change_with_unknown_iface_type() {
+    let desired = serde_yaml::from_str::<Interfaces>(
+        r#"---
+        - name: eth1
+          state: up
+          ethernet:
+            sr-iov:
+              total-vfs: 2
+        "#,
+    )
+    .unwrap();
+
+    let current = serde_yaml::from_str::<Interfaces>(
+        r#"---
+        - name: eth1
+          type: ethernet
+          state: up
+          ethernet:
+            sr-iov:
+              total-vfs: 1
+        "#,
+    )
+    .unwrap();
+
+    let merged_ifaces =
+        MergedInterfaces::new(desired, current, false, false).unwrap();
+
+    assert!(merged_ifaces.has_vf_count_change());
+}
