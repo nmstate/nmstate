@@ -25,6 +25,7 @@ def retry_till_true_or_timeout(timeout, func, *args, **kwargs):
     while timeout > 0:
         if ret:
             break
+        print(f"Got False return from {func.__name__}: retrying")
         time.sleep(1)
         timeout -= 1
         ret = func(*args, **kwargs)
