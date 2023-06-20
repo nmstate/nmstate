@@ -183,6 +183,7 @@ fn np_bond_options_to_nmstate(np_iface: &nispor::Iface) -> BondOptions {
                     None
                 }
             });
+        options.arp_missed_max = np_bond.arp_missed_max;
     }
     options
 }
