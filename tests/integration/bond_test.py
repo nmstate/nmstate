@@ -1280,3 +1280,12 @@ def test_remove_bond_and_assign_ip_to_bond_port(bond99_with_2_port):
     )
     libnmstate.apply(desired_state)
     assertlib.assert_state_match(desired_state)
+
+
+def test_change_bond_option_arp_missed_max(bond99_with_2_port):
+    desired_state = statelib.show_only((BOND99,))
+    iface_state = desired_state[Interface.KEY][0]
+    bond_options = iface_state[Bond.CONFIG_SUBTREE][Bond.OPTIONS_SUBTREE]
+    bond_options["arp_missed_max"] = 200
+    libnmstate.apply(desired_state)
+    assertlib.assert_state_match(desired_state)
