@@ -199,6 +199,12 @@ fn apply_bond_options(
             if *v { "1".to_string() } else { "0".to_string() },
         );
     }
+    if let Some(v) = bond_opts.arp_missed_max.as_ref() {
+        let v_parsed: u8 = *v;
+        nm_bond_set
+            .options
+            .insert("arp_missed_max".to_string(), v_parsed.to_string());
+    }
 
     // Remove all empty string option
     nm_bond_set.options.retain(|_, v| !v.is_empty());

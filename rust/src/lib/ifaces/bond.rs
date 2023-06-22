@@ -1170,6 +1170,12 @@ pub struct BondOptions {
         alias = "balance-slb"
     )]
     pub balance_slb: Option<bool>,
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_u8_or_string"
+    )]
+    pub arp_missed_max: Option<u8>,
 }
 
 impl BondOptions {

@@ -1,21 +1,4 @@
-#
-# Copyright (c) 2018-2021 Red Hat, Inc.
-#
-# This file is part of nmstate
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 2.1 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program. If not, see <https://www.gnu.org/licenses/>.
-#
+# SPDX-License-Identifier: LGPL-2.1-or-later
 
 import os
 import time
@@ -1278,5 +1261,19 @@ def test_remove_bond_and_assign_ip_to_bond_port(bond99_with_2_port):
         """,
         Loader=yaml.SafeLoader,
     )
+    libnmstate.apply(desired_state)
+    assertlib.assert_state_match(desired_state)
+
+
+@pytest.mark.skipif(
+    os.environ.get("CI") == "true",
+    reason="bond arp_missed_max is not supported by "
+    "Github CI Ubuntu 5.15 kernel",
+)
+def test_change_bond_option_arp_missed_max(bond99_with_2_port):
+    desired_state = statelib.show_only((BOND99,))
+    iface_state = desired_state[Interface.KEY][0]
+    bond_options = iface_state[Bond.CONFIG_SUBTREE][Bond.OPTIONS_SUBTREE]
+    bond_options["arp_missed_max"] = 200
     libnmstate.apply(desired_state)
     assertlib.assert_state_match(desired_state)
