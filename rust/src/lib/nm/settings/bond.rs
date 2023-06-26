@@ -6,6 +6,8 @@ use crate::nm::nm_dbus::{NmConnection, NmSettingBond};
 
 use crate::{BondConfig, BondInterface, BondOptions};
 
+const DEFAULT_ARP_MISSED_MAX: u8 = 2;
+
 #[cfg(feature = "query_apply")]
 pub(crate) fn get_bond_balance_slb(nm_conn: &NmConnection) -> Option<bool> {
     if let Some(nm_bond_setting) = nm_conn.bond.as_ref() {
@@ -200,10 +202,16 @@ fn apply_bond_options(
         );
     }
     if let Some(v) = bond_opts.arp_missed_max.as_ref() {
-        let v_parsed: u8 = *v;
-        nm_bond_set
-            .options
-            .insert("arp_missed_max".to_string(), v_parsed.to_string());
+        // The `arp_missed_max` is only supported by NM 1.42+, when using
+        // default value, we do not set it in NM configure in case user are
+        // applying whatever they got from `NetworkState::retrieve()`.
+        if nm_bond_set.options.contains_key("arp_missed_max")
+            || *v != DEFAULT_ARP_MISSED_MAX
+        {
+            nm_bond_set
+                .options
+                .insert("arp_missed_max".to_string(), v.to_string());
+        }
     }
 
     // Remove all empty string option
