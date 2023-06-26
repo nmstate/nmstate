@@ -28,7 +28,7 @@ from .testlib.bridgelib import add_port_to_bridge
 from .testlib.bridgelib import create_bridge_subtree_state
 from .testlib.bridgelib import linux_bridge
 from .testlib.env import is_k8s
-from .testlib.env import nm_major_minor_version
+from .testlib.env import nm_minor_version
 from .testlib.ifacelib import get_mac_address
 from .testlib.ifacelib import ifaces_init
 from .testlib.retry import retry_till_true_or_timeout
@@ -1044,7 +1044,7 @@ def _check_mac(iface_name, expected_mac):
 
 
 @pytest.mark.xfail(
-    nm_major_minor_version() < 1.30,
+    nm_minor_version() < 30,
     reason=(
         "Before 1.30 the bond was keeping the mac"
         "RHBZ: https://bugzilla.redhat.com/1933292",
@@ -1070,7 +1070,7 @@ def test_replacing_port_set_mac_of_new_port_on_bond(bond99_with_eth2, eth1_up):
 
 @pytest.mark.tier1
 @pytest.mark.skipif(
-    nm_major_minor_version() < 1.31,
+    nm_minor_version() < 31,
     reason="Modifying accept-all-mac-addresses is not supported on NM.",
 )
 def test_bond_enable_and_disable_accept_all_mac_addresses(bond88_with_port):
@@ -1086,7 +1086,7 @@ def test_bond_enable_and_disable_accept_all_mac_addresses(bond88_with_port):
 
 @pytest.mark.tier1
 @pytest.mark.skipif(
-    nm_major_minor_version() < 1.31,
+    nm_minor_version() < 31,
     reason="https://bugzilla.redhat.com/1959934",
 )
 def test_bond_flip_tlb_dynamic_lbs(bond99_with_2_port):
@@ -1266,7 +1266,7 @@ def test_remove_bond_and_assign_ip_to_bond_port(bond99_with_2_port):
 
 
 @pytest.mark.skipif(
-    os.environ.get("CI") == "true",
+    os.environ.get("CI") == "true" or nm_minor_version() < 43,
     reason="bond arp_missed_max is not supported by "
     "Github CI Ubuntu 5.15 kernel",
 )
