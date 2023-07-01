@@ -1033,7 +1033,7 @@ def test_set_static_to_ovs_interface_with_the_same_name_bridge(
             }
         ]
 
-    retry_till_true_or_timeout(RETRY_TIMEOUT, _ovs_iface_got_ip)
+    assert retry_till_true_or_timeout(RETRY_TIMEOUT, _ovs_iface_got_ip)
 
 
 @pytest.fixture
