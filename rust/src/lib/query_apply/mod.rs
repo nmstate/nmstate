@@ -14,6 +14,7 @@ mod mac_vlan;
 mod mac_vtap;
 mod mptcp;
 mod net_state;
+pub(crate) mod ovn;
 mod ovs;
 mod route;
 mod route_rule;

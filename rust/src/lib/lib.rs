@@ -99,6 +99,7 @@ mod net_state;
 #[cfg(feature = "query_apply")]
 mod nispor;
 mod nm;
+mod ovn;
 mod ovs;
 #[cfg(feature = "query_apply")]
 mod ovsdb;
@@ -157,6 +158,8 @@ pub use crate::lldp::{
 pub use crate::mptcp::{MptcpAddressFlag, MptcpConfig};
 pub(crate) use crate::net_state::MergedNetworkState;
 pub use crate::net_state::NetworkState;
+#[cfg(feature = "query_apply")]
+pub use crate::ovn::OvnConfiguration;
 pub(crate) use crate::ovs::MergedOvsDbGlobalConfig;
 pub use crate::ovs::{OvsDbGlobalConfig, OvsDbIfaceConfig};
 #[cfg(feature = "query_apply")]

@@ -316,6 +316,21 @@ class OvsDB:
     OTHER_CONFIG = "other_config"
 
 
+class Ovn:
+    KEY = "ovn"
+    OVN_SUBTREE = "ovn"
+    BRIDGE_MAPPINGS = "bridge-mappings"
+
+    class BridgeMappings:
+        LOCALNET = "localnet"
+        BRIDGE = "bridge"
+        STATE = "state"
+
+    class BridgeMappingsState:
+        PRESENT = "present"
+        ABSENT = "absent"
+
+
 class OVSInterface(OvsDB):
     TYPE = InterfaceType.OVS_INTERFACE
     PATCH_CONFIG_SUBTREE = "patch"
