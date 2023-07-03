@@ -191,28 +191,75 @@ class RouteRuleState:
                 }
             }
         """
-        route_rule_metadata = {}
+        route_rule_metadata = defaultdict(
+            lambda: {Interface.IPV4: [], Interface.IPV6: []}
+        )
         for route_table, rules in self._rules.items():
-            iface_name = self._iface_for_route_table(
-                route_state, route_table, ifaces
-            )
+            rules_ipfamily = {Interface.IPV4: set(), Interface.IPV6: set()}
+            cur_rules_ipfamily = {Interface.IPV4: set(), Interface.IPV6: set()}
+            for rule in self._cur_rules[route_table]:
+                cur_rules_ipfamily[
+                    Interface.IPV6 if rule.is_ipv6 else Interface.IPV4
+                ].add(rule)
+            for rule in rules:
+                rules_ipfamily[
+                    Interface.IPV6 if rule.is_ipv6 else Interface.IPV4
+                ].add(rule)
+            if len(rules_ipfamily[Interface.IPV4]) != 0:
+                self._add_rule_to_matadata(
+                    route_state,
+                    ifaces,
+                    Interface.IPV4,
+                    route_table,
+                    cur_rules_ipfamily,
+                    rules_ipfamily,
+                    route_rule_metadata,
+                )
+            if len(rules_ipfamily[Interface.IPV6]) != 0:
+                self._add_rule_to_matadata(
+                    route_state,
+                    ifaces,
+                    Interface.IPV6,
+                    route_table,
+                    cur_rules_ipfamily,
+                    rules_ipfamily,
+                    route_rule_metadata,
+                )
+        return route_rule_metadata
+
+    def _add_rule_to_matadata(
+        self,
+        route_state,
+        ifaces,
+        ip_family,
+        route_table,
+        cur_rules_ipfamily,
+        rules_ipfamily,
+        route_rule_metadata,
+    ):
+        iface_name = self._iface_for_route_table(
+            route_state, route_table, ifaces, ip_family
+        )
+        if route_rule_metadata.get(iface_name) is None:
             route_rule_metadata[iface_name] = {
                 Interface.IPV4: [],
                 Interface.IPV6: [],
             }
-            if rules != self._cur_rules[route_table]:
-                route_rule_metadata[iface_name][
-                    BaseIface.RULE_CHANGED_METADATA
-                ] = True
-            for rule in rules:
-                family = Interface.IPV6 if rule.is_ipv6 else Interface.IPV4
-                route_rule_metadata[iface_name][family].append(rule.to_dict())
-        return route_rule_metadata
+        if rules_ipfamily[ip_family] != cur_rules_ipfamily[ip_family]:
+            route_rule_metadata[iface_name][
+                BaseIface.RULE_CHANGED_METADATA
+            ] = True
+        for rule in rules_ipfamily[ip_family]:
+            route_rule_metadata[iface_name][ip_family].append(rule.to_dict())
 
-    def _iface_for_route_table(self, route_state, route_table, ifaces):
+    def _iface_for_route_table(
+        self, route_state, route_table, ifaces, ip_family
+    ):
         for routes in route_state.config_iface_routes.values():
             for route in routes:
-                if route.table_id == route_table:
+                if route.table_id == route_table and ifaces.get(
+                    route.next_hop_interface, {}
+                ).to_dict().get(ip_family, {}).get(InterfaceIP.ENABLED):
                     return route.next_hop_interface
 
         for iface in ifaces.values():
