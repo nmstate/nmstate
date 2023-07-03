@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use nmstate::{
-    DnsState, HostNameState, NetworkState, OvsDbGlobalConfig, RouteRules,
-    Routes,
+    DnsState, HostNameState, NetworkState, OvnConfiguration, OvsDbGlobalConfig,
+    RouteRules, Routes,
 };
 use serde::Serialize;
 use serde_yaml::Value;
@@ -21,6 +21,8 @@ pub(crate) struct SortedNetworkState {
     interfaces: Vec<Value>,
     #[serde(rename = "ovs-db")]
     ovsdb: OvsDbGlobalConfig,
+    #[serde(rename = "ovn")]
+    ovn: OvnConfiguration,
 }
 
 const IFACE_TOP_PRIORTIES: [&str; 2] = ["name", "type"];
@@ -91,6 +93,7 @@ pub(crate) fn sort_netstate(
             rules: net_state.rules,
             dns: net_state.dns,
             ovsdb: net_state.ovsdb,
+            ovn: net_state.ovn,
         });
     }
 
@@ -101,6 +104,7 @@ pub(crate) fn sort_netstate(
         rules: net_state.rules,
         dns: net_state.dns,
         ovsdb: net_state.ovsdb,
+        ovn: net_state.ovn,
     })
 }
 

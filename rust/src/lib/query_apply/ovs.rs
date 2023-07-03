@@ -2,6 +2,7 @@
 
 use std::collections::HashMap;
 
+use crate::ovn::OVN_BRIDGE_MAPPINGS;
 use crate::{
     state::get_json_value_difference, ErrorKind, MergedNetworkState,
     MergedOvsDbGlobalConfig, NmstateError, OvsBridgeBondConfig,
@@ -18,6 +19,7 @@ impl MergedOvsDbGlobalConfig {
             .external_ids
             .iter()
             .filter(|(_, v)| !v.is_none())
+            .filter(|(k, _)| !k.as_str().eq(OVN_BRIDGE_MAPPINGS))
             .map(|(k, v)| (k.to_string(), v.clone()))
             .collect();
         let other_config: HashMap<String, Option<String>> = self
@@ -109,7 +111,8 @@ impl MergedNetworkState {
     // differentiate it with `ovsdb` not defined due to `serde(default)`.
     // Hence we need to check `MergedNetworkState.prop_list`.
     pub(crate) fn is_global_ovsdb_changed(&self) -> bool {
-        if self.prop_list.contains(&"ovsdb") {
+        if self.prop_list.contains(&"ovsdb") || self.prop_list.contains(&"ovn")
+        {
             if self.ovsdb.desired.is_none() {
                 true
             } else {
@@ -128,8 +131,17 @@ impl MergedNetworkState {
                     .cloned()
                     .unwrap_or_default();
 
+                let cur_bridge_mappings = self
+                    .ovn
+                    .current
+                    .bridge_mappings
+                    .as_ref()
+                    .cloned()
+                    .unwrap_or_default();
+
                 self.ovsdb.external_ids != cur_external_ids
                     || self.ovsdb.other_config != cur_other_config
+                    || self.ovn.bridge_mappings != cur_bridge_mappings
             }
         } else {
             false

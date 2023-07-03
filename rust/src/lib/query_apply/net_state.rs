@@ -6,8 +6,11 @@ use crate::{
         nm_apply, nm_checkpoint_create, nm_checkpoint_destroy,
         nm_checkpoint_rollback, nm_checkpoint_timeout_extend, nm_retrieve,
     },
+    ovn::OVN_BRIDGE_MAPPINGS,
     ovsdb::{ovsdb_apply, ovsdb_is_running, ovsdb_retrieve},
+    query_apply::ovn::string_to_ovn_bridge_mappings,
     ErrorKind, MergedNetworkState, NetworkState, NmstateError,
+    OvnConfiguration,
 };
 
 const DEFAULT_ROLLBACK_TIMEOUT: u32 = 60;
@@ -309,6 +312,41 @@ impl NetworkState {
         if other.prop_list.contains(&"ovsdb") {
             self.ovsdb = other.ovsdb.clone();
         }
+        if other.prop_list.contains(&"ovn") {
+            if let Some(external_ids) = other.ovsdb.clone().external_ids {
+                match external_ids.get(OVN_BRIDGE_MAPPINGS) {
+                    Some(current_mappings) if current_mappings.is_some() => {
+                        let mappings_string = current_mappings.clone().unwrap();
+                        match string_to_ovn_bridge_mappings(mappings_string) {
+                            Ok(updated_mappings) => {
+                                let mut updated_external_ids =
+                                    other.ovsdb.external_ids.clone();
+                                updated_external_ids
+                                    .as_mut()
+                                    .unwrap()
+                                    .remove(OVN_BRIDGE_MAPPINGS);
+
+                                let mut sorted_mappings =
+                                    updated_mappings.clone();
+                                sorted_mappings.sort_unstable_by(|v1, v2| {
+                                    v1.localnet.cmp(&v2.localnet)
+                                });
+                                let updated_ovsdb_conf = OvnConfiguration {
+                                    bridge_mappings: Some(sorted_mappings),
+                                };
+                                self.ovn = updated_ovsdb_conf;
+                                self.ovsdb.external_ids = updated_external_ids;
+                            }
+                            Err(e) => {
+                                log::warn!("failed to parse OvnBridgeMappings from the current configuration: {e}")
+                            }
+                        }
+                    }
+                    Some(_) => self.ovsdb = other.ovsdb.clone(),
+                    None => self.ovsdb = other.ovsdb.clone(),
+                }
+            }
+        }
     }
 }
 
@@ -387,6 +425,7 @@ impl MergedNetworkState {
             .verify(&current.rules, ignored_kernel_ifaces.as_slice())?;
         self.dns.verify(&current.dns)?;
         self.ovsdb.verify(&current.ovsdb)?;
+        self.ovn.verify(&current.ovn)?;
         Ok(())
     }
 }

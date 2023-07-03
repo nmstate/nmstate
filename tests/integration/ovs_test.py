@@ -18,6 +18,7 @@ from libnmstate.schema import MacVtap
 from libnmstate.schema import OVSBridge
 from libnmstate.schema import OVSInterface
 from libnmstate.schema import OvsDB
+from libnmstate.schema import Ovn
 from libnmstate.schema import RouteRule
 from libnmstate.schema import VLAN
 from libnmstate.schema import VXLAN
@@ -73,8 +74,14 @@ OVS_BOND_YAML_STATE = f"""
 """
 
 RC_SUCCESS = 0
-TEST_EXTERNAL_IDS_KEY = "ovn-bridge-mappings"
-TEST_EXTERNAL_IDS_VALUE = "provider:br-provider"
+TEST_OVN_MAPPINGS_BRIDGE = "br-provider"
+TEST_OVN_MAPPINGS_PHYSNET = "provider"
+TEST_EXTERNAL_IDS_KEY = "akey"
+TEST_EXTERNAL_IDS_VALUE = "aval"
+TEST_EXTERNAL_IDS_MAPPING_KEY = "ovn-bridge-mappings"
+TEST_EXTERNAL_IDS_MAPPING_VALUE = (
+    f"{TEST_OVN_MAPPINGS_PHYSNET}:{TEST_OVN_MAPPINGS_BRIDGE}"
+)
 TEST_OTHER_CONFIG_KEY = "stats-update-interval"
 TEST_OTHER_CONFIG_VALUE = "1000"
 RETRY_TIMEOUT = 15
@@ -636,6 +643,153 @@ def test_remove_all_ovsdb_global_config():
         OvsDB.EXTERNAL_IDS: {},
         OvsDB.OTHER_CONFIG: {},
     }
+
+
+def test_ovsdb_global_config_add_delete_mapping():
+    desired_ovs_config = {
+        Ovn.BRIDGE_MAPPINGS: [
+            {
+                Ovn.BridgeMappings.LOCALNET: "net1",
+                Ovn.BridgeMappings.BRIDGE: "br1",
+                Ovn.BridgeMappings.STATE: "present",
+            },
+        ]
+    }
+    libnmstate.apply({Ovn.KEY: desired_ovs_config})
+    current_ovs_config = libnmstate.show()[Ovn.KEY]
+
+    assert state_match(desired_ovs_config, current_ovs_config)
+
+    desired_ovs_config = {
+        Ovn.BRIDGE_MAPPINGS: [
+            {
+                Ovn.BridgeMappings.LOCALNET: "net1",
+                Ovn.BridgeMappings.BRIDGE: "br1",
+                Ovn.BridgeMappings.STATE: "absent",
+            },
+        ]
+    }
+    libnmstate.apply({Ovn.KEY: desired_ovs_config})
+    assert Ovn.OVN_SUBTREE not in libnmstate.show()
+
+
+@pytest.fixture
+def ovn_bridge_mapping_net1():
+    ovn_config = {
+        Ovn.BRIDGE_MAPPINGS: [
+            {
+                Ovn.BridgeMappings.LOCALNET: "net1",
+                Ovn.BridgeMappings.BRIDGE: "br1",
+                Ovn.BridgeMappings.STATE: "present",
+            },
+        ]
+    }
+    libnmstate.apply({Ovn.KEY: ovn_config})
+    yield ovn_config
+    libnmstate.apply(
+        {
+            Ovn.KEY: {
+                Ovn.BRIDGE_MAPPINGS: [
+                    {
+                        Ovn.BridgeMappings.LOCALNET: "net1",
+                        Ovn.BridgeMappings.STATE: "absent",
+                    },
+                ]
+            }
+        }
+    )
+
+
+@pytest.fixture
+def ovn_bridge_mapping_net2():
+    ovn_config = {
+        Ovn.BRIDGE_MAPPINGS: [
+            {
+                Ovn.BridgeMappings.LOCALNET: "net2",
+                Ovn.BridgeMappings.BRIDGE: "br2",
+                Ovn.BridgeMappings.STATE: "present",
+            },
+        ]
+    }
+    libnmstate.apply({Ovn.KEY: ovn_config})
+    yield ovn_config
+    libnmstate.apply(
+        {
+            Ovn.KEY: {
+                Ovn.BRIDGE_MAPPINGS: [
+                    {
+                        Ovn.BridgeMappings.LOCALNET: "net1",
+                        Ovn.BridgeMappings.STATE: "absent",
+                    },
+                ]
+            }
+        }
+    )
+
+
+def test_ovn_global_config_add_delete_single_mapping(ovn_bridge_mapping_net1):
+    desired_ovs_config = {
+        Ovn.BRIDGE_MAPPINGS: [
+            {
+                Ovn.BridgeMappings.LOCALNET: "net123",
+                Ovn.BridgeMappings.BRIDGE: "br321",
+                Ovn.BridgeMappings.STATE: "present",
+            },
+        ]
+    }
+    libnmstate.apply({Ovn.KEY: desired_ovs_config})
+    current_ovs_config = libnmstate.show()[Ovn.KEY]
+
+    desired_ovs_config[Ovn.BRIDGE_MAPPINGS] += ovn_bridge_mapping_net1[
+        Ovn.BRIDGE_MAPPINGS
+    ]
+    desired_ovs_config[Ovn.BRIDGE_MAPPINGS] = sorted(
+        desired_ovs_config[Ovn.BRIDGE_MAPPINGS],
+        key=lambda mapping: mapping[Ovn.BridgeMappings.LOCALNET],
+    )
+    assert state_match(
+        desired_ovs_config,
+        current_ovs_config,
+    )
+
+    desired_ovs_config = {
+        Ovn.BRIDGE_MAPPINGS: [
+            {
+                Ovn.BridgeMappings.LOCALNET: "net123",
+                Ovn.BridgeMappings.STATE: "absent",
+            },
+        ]
+    }
+    libnmstate.apply({Ovn.KEY: desired_ovs_config})
+    assert libnmstate.show()[Ovn.KEY] == ovn_bridge_mapping_net1
+
+
+def test_ovn_global_config_modify_and_delete_mappings(
+    ovn_bridge_mapping_net1, ovn_bridge_mapping_net2
+):
+    desired_ovs_config = {
+        Ovn.BRIDGE_MAPPINGS: [
+            {
+                Ovn.BridgeMappings.LOCALNET: "net1",
+                Ovn.BridgeMappings.BRIDGE: "br321",
+            },
+            {
+                Ovn.BridgeMappings.LOCALNET: "net2",
+                Ovn.BridgeMappings.STATE: "absent",
+            },
+        ]
+    }
+    libnmstate.apply({Ovn.KEY: desired_ovs_config})
+    current_ovs_config = libnmstate.show()[Ovn.KEY]
+    desired_ovs_config = {
+        Ovn.BRIDGE_MAPPINGS: [
+            {
+                Ovn.BridgeMappings.LOCALNET: "net1",
+                Ovn.BridgeMappings.BRIDGE: "br321",
+            },
+        ]
+    }
+    assert state_match(desired_ovs_config, current_ovs_config)
 
 
 @pytest.fixture

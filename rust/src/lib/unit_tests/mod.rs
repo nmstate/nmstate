@@ -31,6 +31,8 @@ mod net_state;
 #[cfg(test)]
 mod nm;
 #[cfg(test)]
+mod ovn;
+#[cfg(test)]
 mod ovs;
 #[cfg(test)]
 mod ovsdb;
