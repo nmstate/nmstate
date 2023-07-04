@@ -8,7 +8,7 @@ impl ToKeyfile for NmSettingIp {
     fn to_keyfile(&self) -> Result<HashMap<String, zvariant::Value>, NmError> {
         let mut ret = HashMap::new();
         for (k, v) in self.to_value()?.drain() {
-            if !vec!["address-data", "route-data", "dns", "routing-rules"]
+            if !["address-data", "route-data", "dns", "routing-rules"]
                 .contains(&k)
             {
                 ret.insert(k.to_string(), v);
