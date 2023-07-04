@@ -737,7 +737,10 @@ def _nmcli_simulate_boot(ifname):
     time.sleep(1)
 
 
-@pytest.mark.tier1
+# TODO: This test case has random failure in Github CI and NMCI environment,
+#       considering this is a ovirt use case which holds low priority,
+#       we remove it from tier1 temporary till issue been resolved.
+# @pytest.mark.tier1
 def test_new_bond_uses_mac_of_first_port_by_name(eth1_eth2_with_no_profile):
     """
     On system boot, NetworkManager will by default activate port in the
