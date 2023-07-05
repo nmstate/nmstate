@@ -802,6 +802,18 @@ def test_ovsdb_global_config_cannot_use_ovn_bridge_mappings_external_id():
         libnmstate.apply({OvsDB.KEY: desired_ovs_config})
 
 
+def test_ovsdb_global_config_clearing_ext_ids_preserves_existing_mappings(
+    ovn_bridge_mapping_net1,
+):
+    desired_ovs_config = {
+        OvsDB.EXTERNAL_IDS: {},
+    }
+    libnmstate.apply({OvsDB.KEY: desired_ovs_config})
+    current_ovs_config = libnmstate.show()[Ovn.KEY]
+
+    assert current_ovs_config == ovn_bridge_mapping_net1
+
+
 @pytest.fixture
 def ovsdb_global_config_external_ids():
     ovs_config = {

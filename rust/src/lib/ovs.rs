@@ -2,7 +2,9 @@
 
 use std::collections::HashMap;
 
-use crate::ovn::OVN_BRIDGE_MAPPINGS;
+use crate::ovn::{
+    ovn_bridge_mappings_to_string, OvnBridgeMapping, OVN_BRIDGE_MAPPINGS,
+};
 use crate::ErrorKind::InvalidArgument;
 use crate::NmstateError;
 use serde::{Deserialize, Deserializer, Serialize};
@@ -161,6 +163,7 @@ impl MergedOvsDbGlobalConfig {
     pub(crate) fn new(
         desired: OvsDbGlobalConfig,
         current: OvsDbGlobalConfig,
+        current_ovn_mappings: Option<Vec<OvnBridgeMapping>>,
     ) -> Result<Self, NmstateError> {
         if desired.prop_list.is_empty() {
             // User want to remove all settings
@@ -179,6 +182,17 @@ impl MergedOvsDbGlobalConfig {
             if let Some(ex_ids) = desired.external_ids.as_ref() {
                 if ex_ids.is_empty() {
                     external_ids.clear();
+                    if let Some(current_bridge_mappings) = current_ovn_mappings
+                    {
+                        if !current_bridge_mappings.is_empty() {
+                            external_ids.insert(
+                                OVN_BRIDGE_MAPPINGS.to_string(),
+                                Some(ovn_bridge_mappings_to_string(
+                                    current_bridge_mappings,
+                                )),
+                            );
+                        }
+                    };
                 } else {
                     if ex_ids.get(OVN_BRIDGE_MAPPINGS).is_some() {
                         const INVALID_EXTERNAL_IDS_KEY: &str = "Cannot use the `ovn-bridge-mappings`\
