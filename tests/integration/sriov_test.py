@@ -8,6 +8,7 @@ import pytest
 import libnmstate
 from libnmstate.schema import Bond
 from libnmstate.schema import Ethernet
+from libnmstate.schema import Ethtool
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
 from libnmstate.schema import InterfaceIPv6
@@ -24,6 +25,7 @@ from .testlib.bridgelib import linux_bridge
 from .testlib.ovslib import ovs_bridge
 from .testlib.ovslib import ovs_bridge_bond
 from .testlib.sriov import get_sriov_vf_names
+from .testlib.statelib import show_only
 
 MAC1 = "00:11:22:33:44:55"
 MAC2 = "00:11:22:33:44:66"
@@ -501,3 +503,24 @@ class TestSrIov:
         }
         desired_state = {Interface.KEY: [iface_info]}
         libnmstate.apply(desired_state)
+
+    def test_change_vf_parameters_only(self, sriov_with_62_vfs):
+        pf_name = _test_nic_name()
+        cur_iface = show_only((pf_name,))[Interface.KEY][0]
+        iface_infos = [
+            {
+                Interface.NAME: pf_name,
+                Interface.TYPE: InterfaceType.ETHERNET,
+                Interface.STATE: InterfaceState.UP,
+                Ethtool.CONFIG_SUBTREE: cur_iface[Ethtool.CONFIG_SUBTREE],
+                Ethernet.CONFIG_SUBTREE: {
+                    Ethernet.SRIOV_SUBTREE: {
+                        Ethernet.SRIOV.VFS_SUBTREE: [VF0_CONF, VF1_CONF],
+                    }
+                },
+            },
+        ]
+        desired_state = {Interface.KEY: iface_infos}
+        libnmstate.apply(desired_state)
+        vf_ifaces = get_sriov_vf_names(pf_name)
+        assert len(vf_ifaces) == 62

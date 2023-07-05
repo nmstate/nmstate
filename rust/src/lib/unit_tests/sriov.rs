@@ -628,7 +628,7 @@ fn test_sriov_enable_and_use_in_single_yaml() {
 }
 
 #[test]
-fn test_sriov_has_vf_count_change_and_missing_eth() {
+fn test_has_sriov_and_missing_eth() {
     let desired = serde_yaml::from_str::<NetworkState>(
         r#"---
         interfaces:
@@ -666,11 +666,11 @@ fn test_sriov_has_vf_count_change_and_missing_eth() {
     )
     .unwrap();
 
-    assert!(desired.has_vf_count_change_and_missing_eth(&current));
+    assert!(desired.has_sriov_and_missing_eth(&current));
 }
 
 #[test]
-fn test_sriov_has_vf_count_change_and_missing_eth_pf_none() {
+fn test_sriov_has_sriov_and_missing_eth_pf_none() {
     let desired = serde_yaml::from_str::<NetworkState>(
         r#"---
         interfaces:
@@ -700,7 +700,7 @@ fn test_sriov_has_vf_count_change_and_missing_eth_pf_none() {
     )
     .unwrap();
 
-    assert!(desired.has_vf_count_change_and_missing_eth(&current));
+    assert!(desired.has_sriov_and_missing_eth(&current));
 }
 
 #[test]
@@ -791,7 +791,7 @@ fn test_sriov_vf_revert_to_default() {
 }
 
 #[test]
-fn test_has_vf_change_with_unknown_iface_type() {
+fn test_has_sriov_with_unknown_iface_type() {
     let desired = serde_yaml::from_str::<Interfaces>(
         r#"---
         - name: eth1
@@ -818,5 +818,5 @@ fn test_has_vf_change_with_unknown_iface_type() {
     let merged_ifaces =
         MergedInterfaces::new(desired, current, false, false).unwrap();
 
-    assert!(merged_ifaces.has_vf_count_change());
+    assert!(merged_ifaces.has_sriov());
 }
