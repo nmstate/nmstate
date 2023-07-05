@@ -400,7 +400,7 @@ impl MergedNetworkState {
             MergedHostNameState::new(desired.hostname, current.hostname);
 
         let mut ovsdb =
-            MergedOvsDbGlobalConfig::new(desired.ovsdb, current.ovsdb);
+            MergedOvsDbGlobalConfig::new(desired.ovsdb, current.ovsdb)?;
         let ovn_config = MergedOvnConfiguration::new(desired.ovn, current.ovn);
         if let Some(updated_mapping_value) =
             ovn_config.clone().mappings_ext_id_value

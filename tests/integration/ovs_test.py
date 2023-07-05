@@ -792,6 +792,16 @@ def test_ovn_global_config_modify_and_delete_mappings(
     assert state_match(desired_ovs_config, current_ovs_config)
 
 
+def test_ovsdb_global_config_cannot_use_ovn_bridge_mappings_external_id():
+    desired_ovs_config = {
+        OvsDB.EXTERNAL_IDS: {
+            TEST_EXTERNAL_IDS_MAPPING_KEY: TEST_EXTERNAL_IDS_MAPPING_VALUE,
+        }
+    }
+    with pytest.raises(NmstateValueError):
+        libnmstate.apply({OvsDB.KEY: desired_ovs_config})
+
+
 @pytest.fixture
 def ovsdb_global_config_external_ids():
     ovs_config = {
