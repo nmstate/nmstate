@@ -120,12 +120,11 @@ impl NetworkState {
         // hence when user want `enable-and-use` single-transaction for SR-IOV,
         // they need define the interface type. It is overkill to do resolve at
         // this point for this corner use case.
-        let pf_state =
-            if self.has_vf_count_change_and_missing_eth(&cur_net_state) {
-                self.get_sriov_pf_conf_state()
-            } else {
-                None
-            };
+        let pf_state = if self.has_sriov_and_missing_eth(&cur_net_state) {
+            self.get_sriov_pf_conf_state()
+        } else {
+            None
+        };
 
         if pf_state.is_none() {
             // Do early pre-apply validation before checkpoint.
@@ -142,9 +141,7 @@ impl NetworkState {
         // interface type defined, we need merged_state to have `unknown` type
         // resolved
         let verify_count = if pf_state.is_some()
-            || merged_state
-                .as_ref()
-                .map(|s| s.interfaces.has_vf_count_change())
+            || merged_state.as_ref().map(|s| s.interfaces.has_sriov())
                 == Some(true)
         {
             timeout = VERIFY_RETRY_COUNT_SRIOV as u32
