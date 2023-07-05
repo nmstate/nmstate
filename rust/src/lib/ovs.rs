@@ -2,6 +2,9 @@
 
 use std::collections::HashMap;
 
+use crate::ovn::OVN_BRIDGE_MAPPINGS;
+use crate::ErrorKind::InvalidArgument;
+use crate::NmstateError;
 use serde::{Deserialize, Deserializer, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize)]
@@ -158,15 +161,15 @@ impl MergedOvsDbGlobalConfig {
     pub(crate) fn new(
         desired: OvsDbGlobalConfig,
         current: OvsDbGlobalConfig,
-    ) -> Self {
+    ) -> Result<Self, NmstateError> {
         if desired.prop_list.is_empty() {
             // User want to remove all settings
-            Self {
+            Ok(Self {
                 desired,
                 current,
                 external_ids: HashMap::new(),
                 other_config: HashMap::new(),
-            }
+            })
         } else {
             let mut external_ids =
                 current.external_ids.as_ref().cloned().unwrap_or_default();
@@ -177,6 +180,14 @@ impl MergedOvsDbGlobalConfig {
                 if ex_ids.is_empty() {
                     external_ids.clear();
                 } else {
+                    if ex_ids.get(OVN_BRIDGE_MAPPINGS).is_some() {
+                        const INVALID_EXTERNAL_IDS_KEY: &str = "Cannot use the `ovn-bridge-mappings`\
+                         external_ids key directly. Please use ovn.bridge-mappings API instead";
+                        return Err(NmstateError::new(
+                            InvalidArgument,
+                            INVALID_EXTERNAL_IDS_KEY.to_string(),
+                        ));
+                    }
                     for (k, v) in ex_ids {
                         if v.is_none() {
                             external_ids.remove(k);
@@ -201,12 +212,12 @@ impl MergedOvsDbGlobalConfig {
                 }
             }
 
-            Self {
+            Ok(Self {
                 desired,
                 current,
                 external_ids,
                 other_config,
-            }
+            })
         }
     }
 }
