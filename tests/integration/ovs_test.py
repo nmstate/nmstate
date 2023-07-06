@@ -814,6 +814,23 @@ def test_ovsdb_global_config_clearing_ext_ids_preserves_existing_mappings(
     assert current_ovs_config == ovn_bridge_mapping_net1
 
 
+def test_ovn_bridge_mappings_cannot_have_duplicate_localnet_keys():
+    desired_ovs_config = {
+        Ovn.BRIDGE_MAPPINGS: [
+            {
+                Ovn.BridgeMappings.LOCALNET: "net1",
+                Ovn.BridgeMappings.BRIDGE: "br321",
+            },
+            {
+                Ovn.BridgeMappings.LOCALNET: "net1",
+                Ovn.BridgeMappings.STATE: "absent",
+            },
+        ]
+    }
+    with pytest.raises(NmstateValueError):
+        libnmstate.apply({Ovn.KEY: desired_ovs_config})
+
+
 @pytest.fixture
 def ovsdb_global_config_external_ids():
     ovs_config = {
