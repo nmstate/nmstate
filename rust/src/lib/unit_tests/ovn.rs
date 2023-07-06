@@ -25,7 +25,7 @@ bridge-mappings: []
     )
     .unwrap();
 
-    let merged_ovsdb = MergedOvnConfiguration::new(desired, current);
+    let merged_ovsdb = MergedOvnConfiguration::new(desired, current).unwrap();
 
     let expect: OvnConfiguration = serde_yaml::from_str(
         r#"---
@@ -65,7 +65,7 @@ bridge-mappings:
     )
     .unwrap();
 
-    let merged_ovsdb = MergedOvnConfiguration::new(desired, current);
+    let merged_ovsdb = MergedOvnConfiguration::new(desired, current).unwrap();
 
     let expect: OvnConfiguration = serde_yaml::from_str(
         r#"---
@@ -78,6 +78,39 @@ bridge-mappings: []
         merged_ovsdb.bridge_mappings,
         expect.bridge_mappings.unwrap_or_default()
     );
+}
+
+#[test]
+fn test_ovn_duplicate_localnet_keys_are_forbidden_on_desired_state() {
+    let desired: OvnConfiguration = serde_yaml::from_str(
+        r#"---
+bridge-mappings:
+- localnet: net1
+  bridge: br1
+- localnet: net1
+  state: absent
+"#,
+    )
+    .unwrap();
+
+    let current: OvnConfiguration = serde_yaml::from_str(
+        r#"---
+bridge-mappings:
+- localnet: net1
+  state: present
+  bridge: br1
+"#,
+    )
+    .unwrap();
+
+    assert_eq!(
+        MergedOvnConfiguration::new(desired, current),
+        Err(NmstateError::new(
+            InvalidArgument,
+            "Duplicated `localnet` keys in the provided ovn.bridge-mappings"
+                .to_string()
+        ))
+    )
 }
 
 #[test]

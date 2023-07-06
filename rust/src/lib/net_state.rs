@@ -404,7 +404,7 @@ impl MergedNetworkState {
             current.ovsdb,
             current.ovn.clone().bridge_mappings,
         )?;
-        let ovn_config = MergedOvnConfiguration::new(desired.ovn, current.ovn);
+        let ovn_config = MergedOvnConfiguration::new(desired.ovn, current.ovn)?;
         if let Some(updated_mapping_value) =
             ovn_config.clone().mappings_ext_id_value
         {

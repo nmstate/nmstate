@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::ErrorKind::InvalidArgument;
+use crate::NmstateError;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt;
+use std::iter::FromIterator;
 use std::str::FromStr;
 
 pub const OVN_BRIDGE_MAPPINGS: &str = "ovn-bridge-mappings";
@@ -34,6 +37,25 @@ impl OvnConfiguration {
     pub fn is_none(&self) -> bool {
         self.bridge_mappings.is_none()
     }
+
+    pub fn sanitize(&self) -> Result<(), NmstateError> {
+        let desired_mappings: Vec<OvnBridgeMapping> =
+            self.clone().bridge_mappings.unwrap_or_default();
+        let localnet_keys: HashSet<String> = HashSet::from_iter(
+            desired_mappings
+                .iter()
+                .map(|mapping| mapping.clone().localnet),
+        );
+        if localnet_keys.len() != desired_mappings.len() {
+            const DUPLICATED_LOCALNET_KEYS: &str =
+                            "Duplicated `localnet` keys in the provided ovn.bridge-mappings";
+            return Err(NmstateError::new(
+                InvalidArgument,
+                DUPLICATED_LOCALNET_KEYS.to_string(),
+            ));
+        }
+        Ok(())
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -51,7 +73,9 @@ impl MergedOvnConfiguration {
     pub(crate) fn new(
         desired: OvnConfiguration,
         current: OvnConfiguration,
-    ) -> Self {
+    ) -> Result<Self, NmstateError> {
+        desired.sanitize()?;
+
         let current_mappings: Vec<OvnBridgeMapping> =
             current.bridge_mappings.clone().unwrap_or_default();
 
@@ -91,21 +115,21 @@ impl MergedOvnConfiguration {
                     )),
                 };
 
-            return Self {
+            return Ok(Self {
                 desired,
                 current,
                 bridge_mappings: ovn_bridge_mappings,
                 mappings_ext_id_value:
                     updated_ovn_bridge_mappings_ext_ids_value,
-            };
+            });
         }
 
-        Self {
+        Ok(Self {
             desired,
             current,
             bridge_mappings: ovn_bridge_mappings,
             mappings_ext_id_value: None,
-        }
+        })
     }
 }
 
