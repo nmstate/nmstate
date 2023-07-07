@@ -223,3 +223,41 @@ fn test_multiple_mappings_with_required_data() {
         "localnet1:br1,localnet2:br2"
     )
 }
+
+#[test]
+fn test_sanitize_mapping_add_without_bridge() {
+    let mapping = OvnBridgeMapping {
+        localnet: "localnet1".to_string(),
+        state: Default::default(),
+        bridge: None,
+    };
+    assert_eq!(
+        mapping.sanitize(),
+        Err(
+            NmstateError::new(
+                InvalidArgument,
+                "mapping for `localnet` key localnet1 missing the `bridge` attribute".to_string()
+            )
+        )
+    )
+}
+
+#[test]
+fn test_sanitize_correct_mapping_add() {
+    let mapping = OvnBridgeMapping {
+        localnet: "localnet1".to_string(),
+        state: Default::default(),
+        bridge: Some("bridge".to_string()),
+    };
+    assert_eq!(mapping.sanitize(), Ok(()))
+}
+
+#[test]
+fn test_sanitize_correct_mapping_remove() {
+    let mapping = OvnBridgeMapping {
+        localnet: "localnet1".to_string(),
+        state: Some(OvnBridgeMappingState::Absent),
+        bridge: None,
+    };
+    assert_eq!(mapping.sanitize(), Ok(()))
+}
