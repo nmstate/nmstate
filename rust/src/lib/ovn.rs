@@ -39,8 +39,16 @@ impl OvnConfiguration {
     }
 
     pub fn sanitize(&self) -> Result<(), NmstateError> {
-        let desired_mappings: Vec<OvnBridgeMapping> =
-            self.clone().bridge_mappings.unwrap_or_default();
+        let desired_mappings: &Vec<OvnBridgeMapping> =
+            &self.clone().bridge_mappings.unwrap_or_default();
+        Self::sanitize_unique_localnet_keys(desired_mappings)?;
+        Self::sanitize_mapping_attributes(desired_mappings)?;
+        Ok(())
+    }
+
+    fn sanitize_unique_localnet_keys(
+        desired_mappings: &Vec<OvnBridgeMapping>,
+    ) -> Result<(), NmstateError> {
         let localnet_keys: HashSet<String> = HashSet::from_iter(
             desired_mappings
                 .iter()
@@ -48,11 +56,20 @@ impl OvnConfiguration {
         );
         if localnet_keys.len() != desired_mappings.len() {
             const DUPLICATED_LOCALNET_KEYS: &str =
-                            "Duplicated `localnet` keys in the provided ovn.bridge-mappings";
+                "Duplicated `localnet` keys in the provided ovn.bridge-mappings";
             return Err(NmstateError::new(
                 InvalidArgument,
                 DUPLICATED_LOCALNET_KEYS.to_string(),
             ));
+        }
+        Ok(())
+    }
+
+    fn sanitize_mapping_attributes(
+        desired_mappings: &Vec<OvnBridgeMapping>,
+    ) -> Result<(), NmstateError> {
+        for mapping in desired_mappings {
+            mapping.sanitize()?;
         }
         Ok(())
     }
@@ -141,6 +158,22 @@ pub struct OvnBridgeMapping {
     pub state: Option<OvnBridgeMappingState>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub bridge: Option<String>,
+}
+
+impl OvnBridgeMapping {
+    pub fn sanitize(&self) -> Result<(), NmstateError> {
+        if self.state.unwrap_or_default() == OvnBridgeMappingState::Present
+            && self.bridge.is_none()
+        {
+            return Err(
+                NmstateError::new(
+                    InvalidArgument,
+                    format!(
+                        "mapping for `localnet` key {} missing the `bridge` attribute",
+                        self.localnet)));
+        }
+        Ok(())
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
