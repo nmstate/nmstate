@@ -1,4 +1,19 @@
 # Changelog
+## [2.2.13] - 2023-07-12
+### Breaking changes
+ - N/A
+
+### New features
+ - Support OVN mapping. (72b54fd9, 2efba01b, 6a87b702, 1a57b595, af2ffc39)
+ - Support bond `arp_missed_max` option. (aeae2f7d, bbe63918)
+
+### Bug fixes
+ - Fix SR-IOV retry. (407f68fc)
+ - Remove dependency on ipnet crate. (28e7d052)
+ - Handle unknown interface type for SRIOV. (8764f450)
+ - Perform pre-apply check before creating checkpoint. (c4b25a77)
+ - Fix regression on waiting SRIOV. (bbd091cc)
+
 ## [2.2.12] - 2023-06-01
 ### Breaking changes
  - Rust API: BridgePortTunkTag renamed as BridgePortTrunkTag. (148ecd1)
