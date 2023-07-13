@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: LGPL-2.1-or-later
 
+import json
 import os
 
 import pytest
@@ -164,18 +165,17 @@ def vlan_over_bond_with_port_down(eth1_up, eth2_up):
             )
             cmdlib.exec_cmd("ip link set eth1 down".split(), check=True)
             cmdlib.exec_cmd("ip link set eth2 down".split(), check=True)
-            assert retry_till_true_or_timeout(
-                RETRY_TIMEOUT, vlan_is_down_without_ip
-            )
+            assert retry_till_true_or_timeout(RETRY_TIMEOUT, vlan_is_down)
             yield
 
 
-def vlan_is_down_without_ip():
-    current_state = statelib.show_only((TEST_VLAN,))
-    iface_state = current_state[Interface.KEY][0]
+def vlan_is_down():
+    state = json.loads(
+        cmdlib.exec_cmd(f"ip -j link show {TEST_VLAN}".split())[1]
+    )[0]
     return (
-        iface_state[Interface.IPV4][InterfaceIPv4.ENABLED] is False
-        and iface_state[Interface.IPV6][InterfaceIPv6.ENABLED] is False
+        "NO-CARRIER" in state["flags"]
+        and state["operstate"] == "LOWERLAYERDOWN"
     )
 
 
