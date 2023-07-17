@@ -20,6 +20,7 @@ from .testlib import cmdlib
 from .testlib import iprule
 from .testlib.bridgelib import linux_bridge
 from .testlib.env import nm_minor_version
+from .testlib.route import assert_routes
 
 IPV4_ADDRESS1 = "192.0.2.251"
 IPV4_ADDRESS2 = "192.0.2.252"
@@ -87,7 +88,7 @@ BGP_PROTOCOL_ID = "186"
 def test_add_static_routes(static_eth1_with_routes):
     routes = _get_ipv4_test_routes() + _get_ipv6_test_routes()
     cur_state = libnmstate.show()
-    _assert_routes(routes, cur_state)
+    assert_routes(routes, cur_state)
 
 
 @pytest.mark.tier1
@@ -111,7 +112,7 @@ def test_add_static_route_without_next_hop_address(eth1_up):
         }
     )
     cur_state = libnmstate.show()
-    _assert_routes(routes, cur_state)
+    assert_routes(routes, cur_state)
 
 
 @pytest.mark.tier1
@@ -124,7 +125,7 @@ def test_add_gateway(eth1_up):
         }
     )
     cur_state = libnmstate.show()
-    _assert_routes(routes, cur_state)
+    assert_routes(routes, cur_state)
 
 
 def test_add_route_without_metric(eth1_up):
@@ -140,7 +141,7 @@ def test_add_route_without_metric(eth1_up):
     )
 
     cur_state = libnmstate.show()
-    _assert_routes(routes, cur_state)
+    assert_routes(routes, cur_state)
 
 
 def test_add_route_without_table_id(eth1_up):
@@ -156,7 +157,7 @@ def test_add_route_without_table_id(eth1_up):
     )
 
     cur_state = libnmstate.show()
-    _assert_routes(routes, cur_state)
+    assert_routes(routes, cur_state)
 
 
 def test_multiple_gateway(eth1_up):
@@ -207,49 +208,7 @@ def test_change_gateway(eth1_up):
     )
 
     cur_state = libnmstate.show()
-    _assert_routes(routes, cur_state)
-
-
-def _assert_routes(routes, state, nic="eth1"):
-    """
-    Assuming we are all operating eth1 routes
-    """
-    routes = copy.deepcopy(routes)
-    for route in routes:
-        # Ignore metric difference like nmstate production code
-        route.pop(Route.METRIC, None)
-        if Route.TABLE_ID not in route:
-            route[Route.TABLE_ID] = Route.USE_DEFAULT_ROUTE_TABLE
-    routes.sort(key=_route_sort_key)
-    config_routes = []
-    for config_route in state[Route.KEY][Route.CONFIG]:
-        if config_route[Route.NEXT_HOP_INTERFACE] == nic:
-            config_routes.append(config_route)
-
-    # The kernel routes contains more route entries than desired config
-    # The kernel routes also has different metric and table id for
-    # USE_DEFAULT_ROUTE_TABLE and USE_DEFAULT_METRIC
-    config_routes.sort(key=_route_sort_key)
-    for route in routes:
-        _assert_in_current_route(route, config_routes)
-    running_routes = state[Route.KEY][Route.RUNNING]
-    for route in routes:
-        _assert_in_current_route(route, running_routes)
-
-
-def _assert_in_current_route(route, current_routes):
-    route_in_current_routes = False
-    for current_route in current_routes:
-        current_route.pop(Route.METRIC, None)
-        table_id = route.get(Route.TABLE_ID, Route.USE_DEFAULT_ROUTE_TABLE)
-        if table_id == Route.USE_DEFAULT_ROUTE_TABLE:
-            current_route = copy.deepcopy(current_route)
-            current_route[Route.TABLE_ID] = Route.USE_DEFAULT_ROUTE_TABLE
-
-        if route == current_route:
-            route_in_current_routes = True
-            break
-    assert route_in_current_routes
+    assert_routes(routes, cur_state)
 
 
 def _get_ipv4_test_routes(nic="eth1"):
@@ -328,14 +287,6 @@ def _get_ipv6_gateways():
     ]
 
 
-def _route_sort_key(route):
-    return (
-        route.get(Route.TABLE_ID, Route.USE_DEFAULT_ROUTE_TABLE),
-        route.get(Route.NEXT_HOP_INTERFACE, ""),
-        route.get(Route.DESTINATION, ""),
-    )
-
-
 parametrize_ip_ver_routes = pytest.mark.parametrize(
     "get_routes_func",
     [(_get_ipv4_test_routes), (_get_ipv6_test_routes)],
@@ -354,7 +305,7 @@ def test_remove_specific_route(eth1_up, get_routes_func):
         }
     )
     cur_state = libnmstate.show()
-    _assert_routes(routes, cur_state)
+    assert_routes(routes, cur_state)
 
     absent_route = routes[0]
     absent_route[Route.STATE] = Route.STATE_ABSENT
@@ -368,7 +319,7 @@ def test_remove_specific_route(eth1_up, get_routes_func):
     expected_routes = routes[1:]
 
     cur_state = libnmstate.show()
-    _assert_routes(expected_routes, cur_state)
+    assert_routes(expected_routes, cur_state)
 
 
 @pytest.mark.tier1
@@ -382,7 +333,7 @@ def test_remove_wildcast_route_with_iface(eth1_up, get_routes_func):
         }
     )
     cur_state = libnmstate.show()
-    _assert_routes(routes, cur_state)
+    assert_routes(routes, cur_state)
 
     absent_route = {
         Route.STATE: Route.STATE_ABSENT,
@@ -398,7 +349,7 @@ def test_remove_wildcast_route_with_iface(eth1_up, get_routes_func):
     expected_routes = []
 
     cur_state = libnmstate.show()
-    _assert_routes(expected_routes, cur_state)
+    assert_routes(expected_routes, cur_state)
 
 
 @pytest.mark.tier1
@@ -412,7 +363,7 @@ def test_remove_wildcast_route_without_iface(eth1_up, get_routes_func):
         }
     )
     cur_state = libnmstate.show()
-    _assert_routes(routes, cur_state)
+    assert_routes(routes, cur_state)
 
     absent_routes = []
     for route in routes:
@@ -432,7 +383,7 @@ def test_remove_wildcast_route_without_iface(eth1_up, get_routes_func):
     expected_routes = []
 
     cur_state = libnmstate.show()
-    _assert_routes(expected_routes, cur_state)
+    assert_routes(expected_routes, cur_state)
 
 
 # TODO: Once we can disable IPv6, we should add an IPv6 test case here
@@ -450,7 +401,7 @@ def test_disable_ipv4_with_routes_in_current(eth1_up):
     libnmstate.apply({Interface.KEY: [eth1_state]})
 
     cur_state = libnmstate.show()
-    _assert_routes([], cur_state)
+    assert_routes([], cur_state)
 
 
 @pytest.mark.tier1
@@ -478,7 +429,7 @@ def test_disable_ipv4_and_remove_wildcard_route(eth1_up):
     )
 
     cur_state = libnmstate.show()
-    _assert_routes([], cur_state)
+    assert_routes([], cur_state)
 
 
 @pytest.mark.tier1
@@ -504,7 +455,7 @@ def test_iface_down_with_routes_in_current(eth1_up, get_routes_func):
     )
 
     cur_state = libnmstate.show()
-    _assert_routes([], cur_state)
+    assert_routes([], cur_state)
 
 
 @pytest.fixture(scope="function")
@@ -1137,7 +1088,7 @@ def test_support_query_multipath_route(eth1_with_multipath_route):
         },
     ]
     cur_state = libnmstate.show()
-    _assert_routes(expected_routes, cur_state)
+    assert_routes(expected_routes, cur_state)
 
 
 @pytest.fixture
@@ -1289,7 +1240,7 @@ def test_sanitize_route_destination(eth1_static_ip):
     expected_routes[3][Route.DESTINATION] = "2001:db8:b::1/128"
 
     cur_state = libnmstate.show()
-    _assert_routes(expected_routes, cur_state)
+    assert_routes(expected_routes, cur_state)
 
 
 def test_sanitize_route_rule_from_to(route_rule_test_env):
@@ -1518,7 +1469,7 @@ def test_add_and_remove_ecmp_route(eth1_static_ip):
         }
     )
     cur_state = libnmstate.show()
-    _assert_routes(routes, cur_state)
+    assert_routes(routes, cur_state)
 
     for route in routes:
         route[Route.STATE] = Route.STATE_ABSENT
@@ -1603,7 +1554,7 @@ def test_add_routes_to_local_route_table_255(static_eth1_with_routes):
     libnmstate.apply(state)
 
     cur_state = libnmstate.show()
-    _assert_routes(routes, cur_state)
+    assert_routes(routes, cur_state)
 
 
 @pytest.fixture

@@ -72,6 +72,7 @@ fn gen_nm_ipv4_setting(
             iface_ip.auto_table_id,
         );
         // Clean old routes
+        nm_setting.gateway = None;
         nm_setting.routes = Vec::new();
         if Some(false) == iface_ip.dhcp_send_hostname {
             nm_setting.dhcp_send_hostname = Some(false);
@@ -95,14 +96,15 @@ fn gen_nm_ipv4_setting(
             }
         }
     }
-    nm_setting.gateway = None;
     if iface_ip.enabled {
         if let Some(routes) = routes {
             nm_setting.routes = gen_nm_ip_routes(routes, false)?;
+            nm_setting.gateway = None;
         }
     } else {
         // Clean up static routes if ip is disabled
         nm_setting.routes = Vec::new();
+        nm_setting.gateway = None;
     }
     if let Some(rules) = iface_ip.rules.as_ref() {
         nm_setting.route_rules = gen_nm_ip_rules(rules, false)?;
@@ -193,6 +195,7 @@ fn gen_nm_ipv6_setting(
             iface_ip.auto_table_id,
         );
         // Clean old routes
+        nm_setting.gateway = None;
         nm_setting.routes = Vec::new();
         if Some(false) == iface_ip.dhcp_send_hostname {
             nm_setting.dhcp_send_hostname = Some(false);
@@ -209,14 +212,15 @@ fn gen_nm_ipv6_setting(
     } else {
         nm_setting.token = None;
     }
-    nm_setting.gateway = None;
     if iface_ip.enabled {
         if let Some(routes) = routes {
             nm_setting.routes = gen_nm_ip_routes(routes, true)?;
+            nm_setting.gateway = None;
         }
     } else {
         // Clean up static routes if ip is disabled
         nm_setting.routes = Vec::new();
+        nm_setting.gateway = None;
     }
     if let Some(rules) = iface_ip.rules.as_ref() {
         nm_setting.route_rules = gen_nm_ip_rules(rules, true)?;
