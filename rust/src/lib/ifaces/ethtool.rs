@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::HashMap;
+use std::collections::hash_map::Iter;
+use std::collections::{BTreeMap, HashMap};
 use std::marker::PhantomData;
 
 use serde::{
     de, de::MapAccess, de::Visitor, Deserialize, Deserializer, Serialize,
+    Serializer,
 };
 
 use crate::MergedInterface;
@@ -29,7 +31,57 @@ const ETHTOOL_FEATURE_CLI_ALIAS: [(&str, &str); 17] = [
     ("receive-hashing", "rx-hashing"),
 ];
 
-pub type EthtoolFeatureConfig = HashMap<String, bool>;
+#[derive(Deserialize, Debug, Eq, PartialEq, Clone, Default)]
+#[serde(from = "HashMap<String, bool>")]
+#[non_exhaustive]
+pub struct EthtoolFeatureConfig {
+    data: HashMap<String, bool>,
+}
+
+impl EthtoolFeatureConfig {
+    pub fn remove(&mut self, key: &str) -> Option<bool> {
+        self.data.remove(key)
+    }
+
+    pub fn insert(&mut self, key: String, value: bool) -> Option<bool> {
+        self.data.insert(key, value)
+    }
+
+    pub fn get(&self, key: &str) -> Option<&bool> {
+        self.data.get(key)
+    }
+}
+
+impl<'a> IntoIterator for &'a EthtoolFeatureConfig {
+    type Item = (&'a String, &'a bool);
+    type IntoIter = Iter<'a, String, bool>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.data.iter()
+    }
+}
+
+impl From<HashMap<String, bool>> for EthtoolFeatureConfig {
+    fn from(data: HashMap<String, bool>) -> Self {
+        Self { data }
+    }
+}
+
+impl From<EthtoolFeatureConfig> for HashMap<String, bool> {
+    fn from(c: EthtoolFeatureConfig) -> Self {
+        c.data
+    }
+}
+
+impl Serialize for EthtoolFeatureConfig {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let ordered: BTreeMap<_, _> = self.data.iter().collect();
+        ordered.serialize(serializer)
+    }
+}
 
 #[derive(Serialize, Deserialize, Debug, Eq, PartialEq, Clone, Default)]
 #[non_exhaustive]
@@ -422,7 +474,7 @@ where
                 }
             }
 
-            Ok(Some(ret))
+            Ok(Some(ret.into()))
         }
     }
 
