@@ -18,7 +18,7 @@ fn gen_ethtool_config(ethtool_info: &nispor::EthtoolInfo) -> EthtoolConfig {
         ret.pause = Some(pause_config);
     }
     if let Some(feature) = &ethtool_info.features {
-        ret.feature = Some(feature.changeable.clone());
+        ret.feature = Some(feature.changeable.clone().into());
     }
     if let Some(coalesce) = &ethtool_info.coalesce {
         let mut coalesce_config = EthtoolCoalesceConfig::new();

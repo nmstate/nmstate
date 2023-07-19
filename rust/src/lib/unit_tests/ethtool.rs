@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::EthernetInterface;
+use crate::{EthernetInterface, EthtoolFeatureConfig};
 
 #[test]
 fn test_ethtool_stringlized_attributes() {
@@ -112,4 +112,18 @@ ethtool:
     assert_eq!(ring.rx_mini_max, Some(205));
     assert_eq!(ring.tx, Some(206));
     assert_eq!(ring.tx_max, Some(207));
+}
+
+#[test]
+fn test_ethtool_sort_features_when_serialize() {
+    let features: EthtoolFeatureConfig = serde_yaml::from_str(
+        r#"---
+        b: true
+        a: true
+        c: true"#,
+    )
+    .unwrap();
+
+    let yml_out = serde_yaml::to_string(&features).unwrap();
+    assert_eq!(yml_out, "a: true\nb: true\nc: true\n");
 }
