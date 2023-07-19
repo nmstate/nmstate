@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use std::collections::HashMap;
+use std::fmt::Write;
 
 use super::super::NmIpRoute;
 
@@ -20,10 +21,12 @@ impl NmIpRoute {
                 (None, None) => vec![dest],
             };
             ret.insert("".to_string(), rt_line.join(","));
-            ret.insert(
-                "options".to_string(),
-                format!("table={}", self.table.unwrap_or(DEFAULT_ROUTE_TABLE)),
-            );
+            let mut opt_string =
+                format!("table={}", self.table.unwrap_or(DEFAULT_ROUTE_TABLE));
+            if let Some(weight) = self.weight {
+                write!(opt_string, ",weight={}", weight).ok();
+            }
+            ret.insert("options".to_string(), opt_string);
         }
         ret
     }
