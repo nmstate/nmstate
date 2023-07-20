@@ -35,7 +35,8 @@ RETRY_TIMEOUT = 10
 
 IGNORE_CARRIER_CFG_FILE = "/etc/NetworkManager/conf.d/ignore_carrier.conf"
 IGNORE_CARRIER_CFG_CONTENT = """
-[main]
+[device]
+match-device=interface-name:*
 ignore-carrier=no
 """
 
