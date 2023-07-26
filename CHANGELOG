@@ -1,4 +1,17 @@
 # Changelog
+## [2.2.14] - 2023-07-26
+### Breaking changes
+ - Changed `EthtoolFeatureConfig` from type alias of HashMap into
+   `struct` (37a100f5). No YAML/JSON API changes for this.
+
+### New features
+ - Support route rule option suppress-prefix-length. (b42197ae)
+ - New OVS `allow-extra-patch-ports` option. (769fe911)
+
+### Bug fixes
+ - Fix ECMP route in `gen_conf` mode. (fe6002aa)
+ - Preserve gateway when not desired. (2b766619)
+
 ## [2.2.13] - 2023-07-12
 ### Breaking changes
  - N/A
