@@ -1259,15 +1259,7 @@ def test_add_route_rule_to_ovs_interface_dhcp_auto_route_table(
     desired_state = {RouteRule.KEY: {RouteRule.CONFIG: [route_rule]}}
     libnmstate.apply(desired_state)
 
-    iprule.ip_rule_exist_in_os(
-        route_rule.get(RouteRule.IP_FROM),
-        route_rule.get(RouteRule.IP_TO),
-        route_rule.get(RouteRule.PRIORITY),
-        route_rule.get(RouteRule.ROUTE_TABLE),
-        route_rule.get(RouteRule.FWMARK),
-        route_rule.get(RouteRule.FWMASK),
-        route_rule.get(RouteRule.FAMILY),
-    )
+    iprule.ip_rule_exist_in_os(route_rule)
 
 
 @pytest.fixture

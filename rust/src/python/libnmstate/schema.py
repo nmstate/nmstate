@@ -65,6 +65,7 @@ class RouteRule:
     ACTION_BLACKHOLE = "blackhole"
     ACTION_UNREACHABLE = "unreachable"
     ACTION_PROHIBIT = "prohibit"
+    SUPPRESS_PREFIX_LENGTH = "suppress-prefix-length"
 
 
 class DNS:

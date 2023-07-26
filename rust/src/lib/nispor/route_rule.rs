@@ -69,6 +69,7 @@ pub(crate) fn get_route_rules(
         rule.priority = np_rule.priority.map(i64::from);
         rule.fwmark = np_rule.fw_mark;
         rule.fwmask = np_rule.fw_mask;
+        rule.suppress_prefix_length = np_rule.suppress_prefix_len;
         rule.family = match np_rule.address_family {
             nispor::AddressFamily::IPv4 => Some(AddressFamily::IPv4),
             nispor::AddressFamily::IPv6 => Some(AddressFamily::IPv6),

@@ -4,20 +4,22 @@ import json
 import logging
 
 from libnmstate import iplib
+from libnmstate.schema import RouteRule
 from . import cmdlib
 
 
-def ip_rule_exist_in_os(
-    ip_from,
-    ip_to,
-    priority,
-    table,
-    fwmark,
-    fwmask,
-    family,
-    iif=None,
-    action=None,
-):
+def ip_rule_exist_in_os(rule):
+    ip_from = rule.get(RouteRule.IP_FROM)
+    ip_to = rule.get(RouteRule.IP_TO)
+    priority = rule.get(RouteRule.PRIORITY)
+    table = rule.get(RouteRule.ROUTE_TABLE)
+    fwmark = rule.get(RouteRule.FWMARK)
+    fwmask = rule.get(RouteRule.FWMASK)
+    family = rule.get(RouteRule.FAMILY)
+    iif = rule.get(RouteRule.IIF)
+    action = rule.get(RouteRule.ACTION)
+    suppress_prefix_len = rule.get(RouteRule.SUPPRESS_PREFIX_LENGTH)
+
     expected_rule = locals()
     logging.debug("Checking ip rule for {}".format(expected_rule))
     cmds = ["ip"]
@@ -67,10 +69,16 @@ def ip_rule_exist_in_os(
         if fwmask is not None and rule["fwmask"] != hex(fwmask):
             found = False
             continue
-        if iif is not None and rule["iif"] != iif:
+        if iif is not None and rule.get("iif") != iif:
             found = False
             continue
         if action is not None and rule["action"] != action:
+            found = False
+            continue
+        if (
+            suppress_prefix_len is not None
+            and rule.get("suppress_prefixlen") != suppress_prefix_len
+        ):
             found = False
             continue
         if found:

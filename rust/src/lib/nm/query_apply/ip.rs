@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use std::convert::TryFrom;
 use std::ops::BitXor;
 
 use super::super::nm_dbus::{
@@ -302,6 +303,17 @@ fn nm_rules_to_nmstate(
         }
         if let Some(v) = nm_rule.iifname.as_ref() {
             rule.iif = Some(v.to_string());
+        }
+        if let Some(v) = nm_rule.suppress_prefixlength {
+            match u32::try_from(v) {
+                Ok(i) => rule.suppress_prefix_length = Some(i),
+                Err(e) => {
+                    log::warn!(
+                        "BUG: Failed to convert `suppress_prefixlength` \
+                        got from NM: {v} to u32: {e}"
+                    );
+                }
+            }
         }
         if let Some(v) = nm_rule.action.as_ref() {
             rule.action = Some(match v {
