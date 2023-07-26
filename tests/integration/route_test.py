@@ -84,6 +84,30 @@ TEST_BRIDGE0 = "linux-br0"
 BGP_PROTOCOL_ID = "186"
 
 
+@pytest.fixture(scope="function", autouse=True)
+def clean_up_route_rule():
+    yield
+    libnmstate.apply(
+        {
+            Route.KEY: {
+                Route.CONFIG: [
+                    {
+                        Route.STATE: Route.STATE_ABSENT,
+                    }
+                ]
+            },
+            RouteRule.KEY: {
+                RouteRule.CONFIG: [
+                    {
+                        RouteRule.STATE: RouteRule.STATE_ABSENT,
+                    }
+                ]
+            },
+            DNS.KEY: {DNS.CONFIG: {}},
+        },
+    )
+
+
 @pytest.mark.tier1
 def test_add_static_routes(static_eth1_with_routes):
     routes = _get_ipv4_test_routes() + _get_ipv6_test_routes()
@@ -571,28 +595,6 @@ def test_add_and_remove_ipv4_link_local_route(eth1_static_gateway_dns):
 @pytest.fixture(scope="function")
 def route_rule_test_env(eth1_static_gateway_dns):
     yield eth1_static_gateway_dns
-    libnmstate.apply(
-        {
-            Interface.KEY: [ETH1_INTERFACE_STATE],
-            Route.KEY: {
-                Route.CONFIG: [
-                    {
-                        Route.NEXT_HOP_INTERFACE: "eth1",
-                        Route.STATE: Route.STATE_ABSENT,
-                    }
-                ]
-            },
-            RouteRule.KEY: {
-                RouteRule.CONFIG: [
-                    {
-                        RouteRule.STATE: RouteRule.STATE_ABSENT,
-                    }
-                ]
-            },
-            DNS.KEY: {DNS.CONFIG: {}},
-        },
-        verify_change=False,
-    )
 
 
 @pytest.mark.tier1
@@ -745,7 +747,9 @@ def test_route_rule_add_from_to_single_host(route_rule_test_env):
     _check_ip_rules(rules)
 
 
-def test_route_rule_add_with_auto_route_table_id(eth1_up):
+def test_route_rule_add_with_auto_route_table_id(
+    eth1_up,
+):
     state = eth1_up
     rules = [
         {RouteRule.IP_FROM: "192.168.3.2/32", RouteRule.ROUTE_TABLE: 200},
@@ -1000,17 +1004,7 @@ def test_route_rule_add_and_remove_using_loopback():
 
 def _check_ip_rules(rules):
     for rule in rules:
-        iprule.ip_rule_exist_in_os(
-            rule.get(RouteRule.IP_FROM),
-            rule.get(RouteRule.IP_TO),
-            rule.get(RouteRule.PRIORITY),
-            rule.get(RouteRule.ROUTE_TABLE),
-            rule.get(RouteRule.FWMARK),
-            rule.get(RouteRule.FWMASK),
-            rule.get(RouteRule.FAMILY),
-            rule.get(RouteRule.IIF),
-            rule.get(RouteRule.ACTION),
-        )
+        iprule.ip_rule_exist_in_os(rule)
 
 
 def test_route_change_metric(eth1_static_gateway_dns):
@@ -1153,7 +1147,9 @@ def test_delete_both_route_and_interface(br_with_static_route):
 
 
 @pytest.fixture
-def br_with_static_route_rule(br_with_static_route):
+def br_with_static_route_rule(
+    br_with_static_route,
+):
     libnmstate.apply(
         {
             RouteRule.KEY: {
@@ -1558,7 +1554,10 @@ def test_add_routes_to_local_route_table_255(static_eth1_with_routes):
 
 
 @pytest.fixture
-def static_eth1_eth2_with_routes_on_same_table_id(eth1_up, eth2_up):
+def static_eth1_eth2_with_routes_on_same_table_id(
+    eth1_up,
+    eth2_up,
+):
     routes = _get_ipv4_test_routes("eth1") + _get_ipv6_test_routes("eth2")
     for route in routes:
         route[Route.TABLE_ID] = TEST_ROUTE_TABLE_ID
@@ -1593,3 +1592,24 @@ def test_add_route_rules_with_the_same_route_table_id_on_diff_ip_stack(
         }
     }
     libnmstate.apply(desired_state)
+
+
+def test_route_rule_suppress_prefix_length(route_rule_test_env):
+    desired_state = {
+        RouteRule.KEY: {
+            RouteRule.CONFIG: [
+                {
+                    RouteRule.IP_FROM: "2001:db8:f::/64",
+                    RouteRule.SUPPRESS_PREFIX_LENGTH: 1,
+                    RouteRule.ROUTE_TABLE: IPV6_ROUTE_TABLE_ID1,
+                },
+                {
+                    RouteRule.IP_FROM: "192.0.2.0/24",
+                    RouteRule.ROUTE_TABLE: IPV4_ROUTE_TABLE_ID1,
+                    RouteRule.SUPPRESS_PREFIX_LENGTH: 0,
+                },
+            ]
+        }
+    }
+    libnmstate.apply(desired_state)
+    _check_ip_rules(desired_state[RouteRule.KEY][RouteRule.CONFIG])

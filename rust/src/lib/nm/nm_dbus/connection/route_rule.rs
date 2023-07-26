@@ -34,6 +34,7 @@ pub struct NmIpRouteRule {
     pub fw_mask: Option<u32>,
     pub iifname: Option<String>,
     pub action: Option<NmIpRouteRuleAction>,
+    pub suppress_prefixlength: Option<i32>,
     _other: DbusDictionary,
 }
 
@@ -53,6 +54,11 @@ impl TryFrom<DbusDictionary> for NmIpRouteRule {
             iifname: _from_map!(v, "iifname", String::try_from)?,
             action: _from_map!(v, "action", u8::try_from)?
                 .map(NmIpRouteRuleAction::from),
+            suppress_prefixlength: _from_map!(
+                v,
+                "suppress-prefixlength",
+                i32::try_from
+            )?,
             _other: v,
         })
     }
@@ -128,6 +134,12 @@ impl NmIpRouteRule {
             ret.append(
                 zvariant::Value::new("action"),
                 zvariant::Value::new(zvariant::Value::new(u8::from(*v))),
+            )?;
+        }
+        if let Some(v) = &self.suppress_prefixlength {
+            ret.append(
+                zvariant::Value::new("suppress-prefixlength"),
+                zvariant::Value::new(zvariant::Value::new(v)),
             )?;
         }
 

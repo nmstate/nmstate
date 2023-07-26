@@ -120,6 +120,15 @@ pub struct RouteRuleEntry {
     /// Incoming interface.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub iif: Option<String>,
+    /// Prefix length of suppressor.
+    /// Can deserialize from `suppress-prefix-length` or
+    /// `suppress_prefixlength`.
+    /// Serialize into `suppress-prefix-length`.
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        alias = "suppress_prefixlength"
+    )]
+    pub suppress_prefix_length: Option<u32>,
 }
 
 impl RouteRuleEntry {
@@ -294,12 +303,19 @@ impl RouteRuleEntry {
         if self.action.is_some() && self.action != other.action {
             return false;
         }
+        if self.suppress_prefix_length.is_some()
+            && self.suppress_prefix_length != other.suppress_prefix_length
+        {
+            return false;
+        }
         true
     }
 
     // Return tuple of (no_absent, is_ipv4, table_id, ip_from,
-    // ip_to, priority, fwmark, fwmask, action)
-    fn sort_key(&self) -> (bool, bool, u32, &str, &str, i64, u32, u32, u8) {
+    // ip_to, priority, fwmark, fwmask, action, suppress_prefix_length)
+    fn sort_key(
+        &self,
+    ) -> (bool, bool, u32, &str, &str, i64, u32, u32, u8, u32) {
         (
             !matches!(self.state, Some(RouteRuleState::Absent)),
             {
@@ -326,6 +342,7 @@ impl RouteRuleEntry {
             self.fwmark.unwrap_or(0),
             self.fwmask.unwrap_or(0),
             self.action.map(u8::from).unwrap_or(0),
+            self.suppress_prefix_length.unwrap_or_default(),
         )
     }
 
@@ -443,6 +460,9 @@ impl std::fmt::Display for RouteRuleEntry {
         }
         if let Some(v) = self.action.as_ref() {
             props.push(format!("action: {v}"));
+        }
+        if let Some(v) = self.suppress_prefix_length.as_ref() {
+            props.push(format!("suppress-prefix-length: {v}"));
         }
         write!(f, "{}", props.join(" "))
     }

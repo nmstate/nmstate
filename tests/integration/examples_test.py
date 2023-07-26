@@ -152,16 +152,8 @@ def test_add_remove_route_rule(eth1_up):
     with example_state(
         "eth1_add_route_rule.yml", cleanup="eth1_del_all_route_rules.yml"
     ) as desired_state:
-        rule = desired_state[RouteRule.KEY][RouteRule.CONFIG][0]
-        iprule.ip_rule_exist_in_os(
-            rule.get(RouteRule.IP_FROM),
-            rule.get(RouteRule.IP_TO),
-            rule.get(RouteRule.PRIORITY),
-            rule.get(RouteRule.ROUTE_TABLE),
-            rule.get(RouteRule.FWMARK),
-            rule.get(RouteRule.FWMASK),
-            rule.get(RouteRule.FAMILY),
-        )
+        for rule in desired_state[RouteRule.KEY][RouteRule.CONFIG]:
+            iprule.ip_rule_exist_in_os(rule)
 
 
 @pytest.mark.skipif(

@@ -69,43 +69,51 @@ interfaces:
 @pytest.mark.tier1
 def test_gen_conf_routes_rules():
     desired_state = load_yaml(
+        """---
+        routes:
+          config:
+          - destination: 203.0.113.0/24
+            metric: 108
+            next-hop-address: 192.0.2.252
+            next-hop-interface: eth1
+            table-id: 200
+          - destination: 2001:db8:a::/64
+            metric: 108
+            next-hop-address: 2001:db8:1::2
+            next-hop-interface: eth1
+            table-id: 200
+        route-rules:
+          config:
+            - priority: 30001
+              ip-from: 192.0.2.0/24
+              suppress-prefix-length: 0
+              route-table: 200
+            - priority: 30002
+              ip-from: 2001:db8:b::/64
+              suppress-prefix-length: 1
+              route-table: 200
+        interfaces:
+          - name: eth1
+            type: ethernet
+            state: up
+            ipv4:
+              enabled: true
+              dhcp: false
+              address:
+              - ip: 192.0.2.251
+                prefix-length: 24
+            ipv6:
+              enabled: true
+              dhcp: false
+              autoconf: false
+              address:
+              - ip: 2001:db8:1::1
+                prefix-length: 64
         """
-interfaces:
-- name: eth1
-  type: ethernet
-  state: up
-  ipv4:
-    address:
-      - ip: 192.0.2.251
-        prefix-length: 24
-    dhcp: false
-    enabled: true
-routes:
-  config:
-    - destination: 198.51.100.0/24
-      metric: 150
-      next-hop-address: 192.0.2.1
-      next-hop-interface: eth1
-      table-id: 254
-route-rules:
-  config:
-    - ip-to: 192.0.2.0/24
-      ip-from: 192.168.2.0/24
-      priority: 1
-      route-table: 254
-"""
     )
     with gen_conf_apply(desired_state):
-        rule = desired_state[RouteRule.KEY][RouteRule.CONFIG][0]
-        iprule.ip_rule_exist_in_os(
-            rule.get(RouteRule.IP_FROM),
-            rule.get(RouteRule.IP_TO),
-            rule.get(RouteRule.PRIORITY),
-            rule.get(RouteRule.ROUTE_TABLE),
-            rule.get(RouteRule.FWMARK),
-            rule.get(RouteRule.FWMASK),
-            rule.get(RouteRule.FAMILY),
-        )
+        for rule in desired_state[RouteRule.KEY][RouteRule.CONFIG]:
+            iprule.ip_rule_exist_in_os(rule)
 
 
 def load_yaml(content):

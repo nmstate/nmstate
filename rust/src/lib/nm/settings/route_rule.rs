@@ -72,6 +72,18 @@ pub(crate) fn gen_nm_ip_rules(
         if let Some(action) = rule.action.as_ref() {
             nm_rule.action = Some(u8::from(*action).into());
         }
+        if let Some(v) = rule.suppress_prefix_length.as_ref() {
+            nm_rule.suppress_prefixlength =
+                Some(i32::try_from(*v).map_err(|e| {
+                    NmstateError::new(
+                        ErrorKind::NotSupportedError,
+                        format!(
+                            "Specified suppress-prefix-length {v} is \
+                            not supported by NetworkManager: {e}"
+                        ),
+                    )
+                })?);
+        }
 
         ret.push(nm_rule);
     }
