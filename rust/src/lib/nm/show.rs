@@ -12,11 +12,12 @@ use super::{
     error::nm_error_to_nmstate,
     query_apply::{
         create_index_for_nm_conns_by_name_type,
-        device::nm_dev_iface_type_to_nmstate, dns::nm_global_dns_to_nmstate,
-        get_description, get_lldp, is_lldp_enabled, is_mptcp_supported,
-        nm_802_1x_to_nmstate, nm_ip_setting_to_nmstate4,
-        nm_ip_setting_to_nmstate6, ovs::merge_ovs_netdev_tun_iface,
-        query_nmstate_wait_ip, retrieve_dns_info,
+        device::nm_dev_iface_type_to_nmstate, dispatch::get_dispatches,
+        dns::nm_global_dns_to_nmstate, get_description, get_lldp,
+        is_lldp_enabled, is_mptcp_supported, nm_802_1x_to_nmstate,
+        nm_ip_setting_to_nmstate4, nm_ip_setting_to_nmstate6,
+        ovs::merge_ovs_netdev_tun_iface, query_nmstate_wait_ip,
+        retrieve_dns_info,
     },
     settings::{
         get_bond_balance_slb, NM_SETTING_VETH_SETTING_NAME,
@@ -187,6 +188,15 @@ pub(crate) fn nm_retrieve(
     net_state.dns.sanitize().ok();
     if running_config_only {
         net_state.dns.running = None;
+    }
+
+    for (iface_name, conf) in get_dispatches().drain() {
+        if let Some(iface) =
+            net_state.interfaces.kernel_ifaces.get_mut(&iface_name)
+        {
+            iface.base_iface_mut().prop_list.push("dispatch");
+            iface.base_iface_mut().dispatch = Some(conf);
+        }
     }
 
     set_ovs_iface_controller_info(&mut net_state.interfaces);

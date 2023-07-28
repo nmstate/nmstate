@@ -14,6 +14,7 @@ use super::super::{
     query_apply::{
         activate_nm_profiles, create_index_for_nm_conns_by_name_type,
         deactivate_nm_profiles, delete_exist_profiles, delete_orphan_ovs_ports,
+        dispatch::apply_dispatch_script,
         dns::{purge_global_dns_config, store_dns_config_via_global_api},
         is_mptcp_flags_changed, is_mptcp_supported, is_route_removed,
         is_veth_peer_changed, is_vlan_changed, is_vrf_table_id_changed,
@@ -154,6 +155,8 @@ pub(crate) fn nm_apply(
     activate_nm_profiles(&mut nm_api, nm_conns_to_activate.as_slice())?;
 
     deactivate_nm_profiles(&mut nm_api, nm_conns_to_deactivate.as_slice())?;
+
+    apply_dispatch_script(&merged_state.interfaces)?;
 
     Ok(())
 }

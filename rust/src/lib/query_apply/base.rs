@@ -130,5 +130,8 @@ impl BaseInterface {
                 self.prop_list.push(other_prop_name)
             }
         }
+        if other.prop_list.contains(&"dispatch") {
+            self.dispatch = other.dispatch.clone();
+        }
     }
 }
