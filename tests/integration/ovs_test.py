@@ -843,6 +843,21 @@ def ovsdb_global_config_external_ids():
     )
 
 
+def test_mappings_update_does_not_clear_other_ext_ids(
+    ovsdb_global_config_external_ids,
+    ovn_bridge_mapping_net1,
+):
+    current_ovs_config = libnmstate.show()[OvsDB.KEY]
+    assert current_ovs_config.pop(OvsDB.OTHER_CONFIG) == {}
+    assert (
+        ovsdb_global_config_external_ids[OvsDB.EXTERNAL_IDS].items()
+        <= current_ovs_config[OvsDB.EXTERNAL_IDS].items()
+    )
+
+    current_ovn_config = libnmstate.show()[Ovn.KEY]
+    assert current_ovn_config == ovn_bridge_mapping_net1
+
+
 def test_ovsdb_global_config_untouched_if_not_defined(
     ovsdb_global_config_external_ids,
 ):
