@@ -194,6 +194,42 @@ def ovs_bridge1_with_internal_port_same_name():
 
 
 @pytest.mark.tier1
+def test_create_and_modify_ovs_bridge1_with_internal_port_same_name(
+    ovs_bridge1_with_internal_port_same_name,
+):
+    desired_state = {
+        Interface.KEY: [
+            {
+                Interface.NAME: BRIDGE1,
+                Interface.TYPE: InterfaceType.OVS_INTERFACE,
+                Interface.IPV4: {
+                    InterfaceIPv4.ENABLED: True,
+                    InterfaceIPv4.ADDRESS: [
+                        {
+                            InterfaceIPv4.ADDRESS_IP: "192.0.2.1",
+                            InterfaceIPv4.ADDRESS_PREFIX_LENGTH: 24,
+                        }
+                    ],
+                },
+            },
+            {
+                Interface.NAME: BRIDGE1,
+                Interface.TYPE: InterfaceType.OVS_BRIDGE,
+                Interface.STATE: InterfaceState.UP,
+                OVSBridge.CONFIG_SUBTREE: {
+                    OVSBridge.PORT_SUBTREE: [
+                        {
+                            OVSBridge.Port.NAME: BRIDGE1,
+                        },
+                    ]
+                },
+            },
+        ]
+    }
+    libnmstate.apply(desired_state)
+
+
+@pytest.mark.tier1
 def test_create_and_remove_ovs_bridge1_with_internal_port_same_name(
     ovs_bridge1_with_internal_port_same_name,
 ):
