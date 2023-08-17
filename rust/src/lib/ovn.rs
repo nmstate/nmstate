@@ -121,7 +121,7 @@ impl MergedOvnConfiguration {
                 .map(|(_, v)| v.clone())
                 .collect();
 
-        if desired.clone().bridge_mappings.unwrap_or(Vec::new())
+        if desired.clone().bridge_mappings.unwrap_or_default()
             != current_mappings
         {
             let updated_ovn_bridge_mappings_ext_ids_value: Option<String> =
