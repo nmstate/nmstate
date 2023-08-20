@@ -193,6 +193,7 @@ pub(crate) fn nm_dev_from_obj_path(
         obj_path: obj_path.to_string(),
         is_mac_vtap: false,
         real,
+        mac_address: nm_dev_get_mac_address(dbus_conn, obj_path)?,
     };
     if dev.iface_type == "macvlan" {
         dev.is_mac_vtap = nm_dev_is_mac_vtap_get(dbus_conn, obj_path)?;
@@ -242,6 +243,25 @@ pub(crate) fn nm_dev_get_llpd(
             format!(
                 "Failed to retrieve LLDP neighbors of device {obj_path}: {e}"
             ),
+        )),
+    }
+}
+
+fn nm_dev_get_mac_address(
+    dbus_conn: &zbus::Connection,
+    obj_path: &str,
+) -> Result<String, NmError> {
+    let proxy = zbus::Proxy::new(
+        dbus_conn,
+        NM_DBUS_INTERFACE_ROOT,
+        obj_path,
+        NM_DBUS_INTERFACE_DEV,
+    )?;
+    match proxy.get_property::<String>("HwAddress") {
+        Ok(v) => Ok(v),
+        Err(e) => Err(NmError::new(
+            ErrorKind::Bug,
+            format!("Failed to retrieve HwAddress of device {obj_path}: {e}"),
         )),
     }
 }

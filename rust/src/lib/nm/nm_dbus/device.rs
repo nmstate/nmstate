@@ -346,4 +346,5 @@ pub struct NmDevice {
     pub is_mac_vtap: bool,
     pub obj_path: String,
     pub real: bool,
+    pub mac_address: String,
 }

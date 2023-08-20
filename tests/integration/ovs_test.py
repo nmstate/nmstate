@@ -2156,3 +2156,25 @@ def test_allow_extra_ovs_patch_ports(ovs_bridge_with_patch_ports):
     patch1_state = statelib.show_only((PATCH1,))
 
     assert patch1_state[Interface.KEY][0][Interface.CONTROLLER] == BRIDGE1
+
+
+@pytest.fixture
+def ovs_bridge_with_geneve(bridge_with_ports):
+    cmdlib.exec_cmd(
+        "ovs-vsctl add-port br1 gen0 -- set interface gen0 type=geneve "
+        "options:remote_ip=192.0.2.1 options:key=123".split(),
+        check=True,
+    )
+    yield
+    cmdlib.exec_cmd(
+        "ovs-vsctl del-port br1 gen0".split(),
+        check=True,
+    )
+
+
+@pytest.mark.tier1
+def test_ignore_ovs_geneve_iface(ovs_bridge_with_geneve):
+    cur_state = statelib.show_only(("genev_sys_6081",))
+    assert (
+        cur_state[Interface.KEY][0][Interface.STATE] == InterfaceState.IGNORE
+    )
