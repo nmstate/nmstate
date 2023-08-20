@@ -70,6 +70,7 @@ impl NetworkState {
         if !self.include_secrets {
             self.hide_secrets();
         }
+
         // Purge user space ignored interfaces
         self.interfaces
             .user_ifaces

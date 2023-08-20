@@ -117,9 +117,13 @@ pub(crate) fn merge_ovs_netdev_tun_iface(
                 .iter()
                 .find(|c| c.iface_name() == Some(iface.name())),
         ) {
-            if let (Some(base_iface), Interface::OvsInterface(ovs_iface)) =
+            if let (Some(mut base_iface), Interface::OvsInterface(ovs_iface)) =
                 (nm_conn_to_base_iface(nm_dev, nm_conn, None, None), iface)
             {
+                base_iface.iface_type = InterfaceType::OvsInterface;
+                if !base_iface.prop_list.contains(&"iface_type") {
+                    base_iface.prop_list.push("iface_type");
+                }
                 ovs_iface.base = base_iface;
             }
         }

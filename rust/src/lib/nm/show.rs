@@ -19,8 +19,8 @@ use super::{
         query_nmstate_wait_ip, retrieve_dns_info,
     },
     settings::{
-        get_bond_balance_slb, NM_SETTING_VETH_SETTING_NAME,
-        NM_SETTING_WIRED_SETTING_NAME,
+        get_bond_balance_slb, NM_SETTING_OVS_IFACE_SETTING_NAME,
+        NM_SETTING_VETH_SETTING_NAME, NM_SETTING_WIRED_SETTING_NAME,
     },
 };
 use crate::{
@@ -66,6 +66,17 @@ pub(crate) fn nm_retrieve(
     // Include disconnected interface as state:down
     // This is used for verify on `state: absent`
     for nm_dev in &nm_devs {
+        // The OVS `netdev` datapath has both ovs-interface and
+        // tun interface, we only store ovs-interface here, then
+        // `merge_ovs_netdev_tun_iface()` afterwards
+        if nm_dev.iface_type == "tun"
+            && nm_devs.as_slice().iter().any(|n| {
+                n.name == nm_dev.name
+                    && n.iface_type == NM_SETTING_OVS_IFACE_SETTING_NAME
+            })
+        {
+            continue;
+        }
         match nm_dev.state {
             NmDeviceState::Unmanaged | NmDeviceState::Disconnected => {
                 if let Some(iface) = nm_dev_to_nm_iface(nm_dev) {
@@ -524,6 +535,13 @@ fn nm_dev_to_nm_iface(nm_dev: &NmDevice) -> Option<Interface> {
                 iface.base = base_iface;
                 Interface::Loopback(iface)
             } else {
+                // For unknown/unsupported interface,
+                // if it has MAC address, we treat it as UnknownInterface which
+                // is a kernel interface, otherwise use OtherInterface which is
+                // a user space interface.
+                if !nm_dev.mac_address.is_empty() {
+                    base_iface.iface_type = InterfaceType::Unknown;
+                }
                 let mut iface = UnknownInterface::new();
                 iface.base = base_iface;
                 Interface::Unknown(iface)
