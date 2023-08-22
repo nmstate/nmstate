@@ -173,6 +173,9 @@ impl<'de> Deserialize<'de> for NetworkState {
             net_state.prop_list.push("ovn");
             net_state.ovn = OvnConfiguration::deserialize(ovn_value)
                 .map_err(serde::de::Error::custom)?;
+            if net_state.ovn.bridge_mappings.as_ref().is_some() {
+                net_state.ovsdb.prop_list.push("mappings");
+            }
         }
         if let Some(hostname_value) = v.remove("hostname") {
             net_state.prop_list.push("hostname");
