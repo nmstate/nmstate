@@ -1,4 +1,15 @@
 # Changelog
+## [2.2.15] - 2023-08-23
+### Breaking changes
+ - N/A
+
+### New features
+ - N/A
+
+### Bug fixes
+ - OVN: mappings changes do not clear ext ids keys. (f0e5a8e6)
+ - Fix DNS changes with OVS geneve interface holding IP. (dffaa0b0)
+
 ## [2.2.14] - 2023-07-26
 ### Breaking changes
  - Changed `EthtoolFeatureConfig` from type alias of HashMap into
