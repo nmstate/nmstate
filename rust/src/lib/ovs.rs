@@ -36,15 +36,23 @@ impl<'de> Deserialize<'de> for OvsDbGlobalConfig {
         D: Deserializer<'de>,
     {
         let mut ret = Self::default();
-        let v = serde_json::Value::deserialize(deserializer)?;
-        if let Some(v) = v.as_object() {
-            if let Some(v) = v.get("external_ids") {
+        let mut v = serde_json::Value::deserialize(deserializer)?;
+        if let Some(v) = v.as_object_mut() {
+            if let Some(v) = v.remove("external_ids") {
                 ret.prop_list.push("external_ids");
-                ret.external_ids = Some(value_to_hash_map(v));
+                ret.external_ids = Some(value_to_hash_map(&v));
             }
-            if let Some(v) = v.get("other_config") {
+            if let Some(v) = v.remove("other_config") {
                 ret.prop_list.push("other_config");
-                ret.other_config = Some(value_to_hash_map(v));
+                ret.other_config = Some(value_to_hash_map(&v));
+            }
+            if !v.is_empty() {
+                let remain_keys: Vec<String> = v.keys().cloned().collect();
+                return Err(serde::de::Error::custom(format!(
+                    "Unsupported section names '{}', only supports \
+                    `external_ids` and `other_config`",
+                    remain_keys.join(", ")
+                )));
             }
         } else {
             return Err(serde::de::Error::custom(format!(
@@ -101,13 +109,21 @@ impl<'de> Deserialize<'de> for OvsDbIfaceConfig {
         D: Deserializer<'de>,
     {
         let mut ret = Self::default();
-        let v = serde_json::Value::deserialize(deserializer)?;
-        if let Some(v) = v.as_object() {
-            if let Some(v) = v.get("external_ids") {
-                ret.external_ids = Some(value_to_hash_map(v));
+        let mut v = serde_json::Value::deserialize(deserializer)?;
+        if let Some(v) = v.as_object_mut() {
+            if let Some(v) = v.remove("external_ids") {
+                ret.external_ids = Some(value_to_hash_map(&v));
             }
-            if let Some(v) = v.get("other_config") {
-                ret.other_config = Some(value_to_hash_map(v));
+            if let Some(v) = v.remove("other_config") {
+                ret.other_config = Some(value_to_hash_map(&v));
+            }
+            if !v.is_empty() {
+                let remain_keys: Vec<String> = v.keys().cloned().collect();
+                return Err(serde::de::Error::custom(format!(
+                    "Unsupported section names '{}', only supports \
+                    `external_ids` and `other_config`",
+                    remain_keys.join(", ")
+                )));
             }
         } else {
             return Err(serde::de::Error::custom(format!(
