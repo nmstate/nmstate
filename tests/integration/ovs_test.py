@@ -2182,3 +2182,32 @@ def test_ignore_ovs_geneve_iface(ovs_bridge_with_geneve):
     assert (
         cur_state[Interface.KEY][0][Interface.STATE] == InterfaceState.IGNORE
     )
+
+
+def test_raise_error_on_unknown_ovsdb_iface_section(bridge_with_ports):
+    with pytest.raises(NmstateValueError):
+        libnmstate.apply(
+            {
+                Interface.KEY: [
+                    {
+                        Interface.NAME: PORT1,
+                        OvsDB.KEY: {
+                            "foo": "abc",
+                            "bar": "abd",
+                        },
+                    },
+                ]
+            }
+        )
+
+
+def test_raise_error_on_unknown_ovsdb_global_section():
+    with pytest.raises(NmstateValueError):
+        libnmstate.apply(
+            {
+                OvsDB.KEY: {
+                    "foo": "abc",
+                    "bar": "abd",
+                },
+            }
+        )
