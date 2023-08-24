@@ -1017,13 +1017,17 @@ class TestOvsPatch:
                     {
                         Interface.NAME: PATCH0,
                         OvsDB.KEY: {
-                            "foo": "abc",
+                            OvsDB.EXTERNAL_IDS: {
+                                "foo": "abc",
+                            }
                         },
                     },
                     {
                         Interface.NAME: PATCH1,
                         OvsDB.KEY: {
-                            "foo": "abd",
+                            OvsDB.EXTERNAL_IDS: {
+                                "foo": "abd",
+                            }
                         },
                     },
                 ]
