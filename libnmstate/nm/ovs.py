@@ -375,5 +375,8 @@ def set_ovs_iface_controller_info(iface_infos):
 
     for iface_info in iface_infos:
         ctrl_name = pending_changes.get(iface_info[Interface.NAME])
-        if ctrl_name:
+        if ctrl_name and not (
+            ctrl_name == iface_info[Interface.NAME]
+            and iface_info[Interface.TYPE] == InterfaceType.OVS_BRIDGE
+        ):
             iface_info[Interface.CONTROLLER] = ctrl_name
