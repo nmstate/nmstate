@@ -198,6 +198,7 @@ def test_apply_command_with_two_states():
     assertlib.assert_absent("linux-br0")
 
 
+@pytest.mark.tier1
 def test_manual_confirmation(eth1_up):
     """I can manually confirm a state."""
 
@@ -208,6 +209,7 @@ def test_manual_confirmation(eth1_up):
         assertlib.assert_state(CONFIRMATION_TEST_STATE)
 
 
+@pytest.mark.tier1
 def test_manual_rollback(eth1_up):
     """I can manually roll back a state."""
 
