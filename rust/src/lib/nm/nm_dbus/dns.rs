@@ -54,7 +54,11 @@ impl NmGlobalDnsConfig {
             && self.domains.is_empty()
     }
 
-    pub fn new_wildcard(searches: Vec<String>, servers: Vec<String>) -> Self {
+    pub fn new_wildcard(
+        searches: Vec<String>,
+        servers: Vec<String>,
+        options: Vec<String>,
+    ) -> Self {
         let mut domains = HashMap::new();
         domains.insert(
             "*".to_string(),
@@ -66,7 +70,7 @@ impl NmGlobalDnsConfig {
         Self {
             searches,
             domains,
-            options: Vec::new(),
+            options,
         }
     }
 

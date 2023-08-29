@@ -62,6 +62,30 @@ impl MergedDnsState {
                 ),
             ));
         }
+        let mut des_opts = self.options.clone();
+        des_opts.sort_unstable();
+
+        let mut cur_opts: Vec<String> = current
+            .config
+            .as_ref()
+            .and_then(|c| c.options.as_ref())
+            .cloned()
+            .unwrap_or_default();
+
+        cur_opts.sort_unstable();
+
+        if des_opts != cur_opts {
+            return Err(NmstateError::new(
+                ErrorKind::VerificationError,
+                format!(
+                    "Failed to apply DNS config: desire options '{}', \
+                    got '{}'",
+                    des_opts.as_slice().join(" "),
+                    cur_opts.as_slice().join(" "),
+                ),
+            ));
+        }
+
         Ok(())
     }
 }

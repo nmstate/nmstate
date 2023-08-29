@@ -7,6 +7,27 @@ use serde::{Deserialize, Serialize};
 
 use crate::{ip::is_ipv6_addr, ErrorKind, MergedNetworkState, NmstateError};
 
+const SUPPORTED_DNS_OPTIONS: [&str; 18] = [
+    "attempts",
+    "debug",
+    "edns0",
+    "inet6",
+    "ip6-bytestring",
+    "ip6-dotint",
+    "ndots",
+    "no-aaaa",
+    "no-check-names",
+    "no-ip6-dotint",
+    "no-reload",
+    "no-tld-query",
+    "rotate",
+    "single-request",
+    "single-request-reopen",
+    "timeout",
+    "trust-ad",
+    "use-vc",
+];
+
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[non_exhaustive]
 #[serde(deny_unknown_fields)]
@@ -29,6 +50,9 @@ use crate::{ip::is_ipv6_addr, ErrorKind, MergedNetworkState, NmstateError};
 ///      server:
 ///      - 2001:db8:1::250
 ///      - 192.0.2.250
+///      options:
+///      - trust-ad
+///      - rotate
 /// ```
 pub struct DnsState {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -77,6 +101,11 @@ pub struct DnsClientState {
     /// To remove all existing search, please use `Some(Vec::new())`.
     /// If undefined(set to `None`), will preserve current config.
     pub search: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    /// DNS option list.
+    /// To remove all existing search, please use `Some(Vec::new())`.
+    /// If undefined(set to `None`), will preserve current config.
+    pub options: Option<Vec<String>>,
     #[serde(skip)]
     // Lower is better
     pub(crate) priority: Option<i32>,
@@ -88,22 +117,20 @@ impl DnsClientState {
     }
 
     pub fn is_empty(&self) -> bool {
-        self.server.is_none() && self.search.is_none()
+        self.server.is_none() && self.search.is_none() && self.options.is_none()
     }
 
     // Whether user want to purge all DNS settings
     pub(crate) fn is_purge(&self) -> bool {
-        match (&self.server, &self.search) {
-            (Some(srvs), Some(schs)) => srvs.is_empty() && schs.is_empty(),
-            (Some(srvs), None) => srvs.is_empty(),
-            (None, Some(schs)) => schs.is_empty(),
-            (None, None) => true,
-        }
+        self.server.as_deref().unwrap_or_default().is_empty()
+            && self.search.as_deref().unwrap_or_default().is_empty()
+            && self.options.as_deref().unwrap_or_default().is_empty()
     }
 
     pub(crate) fn is_null(&self) -> bool {
         self.server.as_ref().map(|s| s.len()).unwrap_or_default() == 0
             && self.search.as_ref().map(|s| s.len()).unwrap_or_default() == 0
+            && self.options.as_ref().map(|s| s.len()).unwrap_or_default() == 0
     }
 
     // sanitize the IP addresses.
@@ -137,6 +164,20 @@ impl DnsClientState {
             }
             self.server = Some(sanitized_srvs);
         }
+        if let Some(opts) = self.options.as_ref() {
+            for opt in opts {
+                if !SUPPORTED_DNS_OPTIONS.contains(&opt.as_str()) {
+                    return Err(NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        format!(
+                            "Unsupported DNS option {opt}, \
+                            only support: {}",
+                            SUPPORTED_DNS_OPTIONS.join(", ")
+                        ),
+                    ));
+                }
+            }
+        }
         Ok(())
     }
 }
@@ -147,6 +188,7 @@ pub(crate) struct MergedDnsState {
     current: DnsState,
     pub(crate) servers: Vec<String>,
     pub(crate) searches: Vec<String>,
+    pub(crate) options: Vec<String>,
 }
 
 impl MergedDnsState {
@@ -167,10 +209,17 @@ impl MergedDnsState {
             .and_then(|c| c.search.clone())
             .unwrap_or_default();
 
+        let mut options = current
+            .config
+            .as_ref()
+            .and_then(|c| c.options.clone())
+            .unwrap_or_default();
+
         if let Some(conf) = desired.config.as_ref() {
             if conf.is_purge() {
                 servers.clear();
                 searches.clear();
+                options.clear();
             } else {
                 if let Some(des_srvs) = conf.server.as_ref() {
                     servers.clear();
@@ -180,6 +229,10 @@ impl MergedDnsState {
                     searches.clear();
                     searches.extend_from_slice(des_schs);
                 }
+                if let Some(des_opts) = conf.options.as_ref() {
+                    options.clear();
+                    options.extend_from_slice(des_opts);
+                }
             }
         }
 
@@ -188,6 +241,7 @@ impl MergedDnsState {
             current,
             servers,
             searches,
+            options,
         })
     }
 
@@ -204,12 +258,21 @@ impl MergedDnsState {
             .as_ref()
             .and_then(|c| c.search.clone())
             .unwrap_or_default();
+        let cur_options = self
+            .current
+            .config
+            .as_ref()
+            .and_then(|c| c.options.clone())
+            .unwrap_or_default();
 
-        self.servers != cur_servers || self.searches != cur_searches
+        self.servers != cur_servers
+            || self.searches != cur_searches
+            || self.options != cur_options
     }
 
-    pub(crate) fn is_search_only(&self) -> bool {
-        self.servers.is_empty() && !self.searches.is_empty()
+    pub(crate) fn is_search_or_option_only(&self) -> bool {
+        self.servers.is_empty()
+            && (!self.searches.is_empty() || !self.options.is_empty())
     }
 }
 

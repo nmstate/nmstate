@@ -218,6 +218,7 @@ fn test_dns_iface_has_no_ip_stack_info() {
                     "example.org".to_string(),
                 ]),
                 priority: Some(10),
+                ..Default::default()
             }
         })
     };

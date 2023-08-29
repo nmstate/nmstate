@@ -3,7 +3,7 @@
 use crate::{ErrorKind, MergedNetworkState, NmstateError};
 
 use super::{
-    dns::{store_dns_config_to_iface, store_dns_search_only_to_iface},
+    dns::{store_dns_config_to_iface, store_dns_search_or_option_to_iface},
     profile::perpare_nm_conns,
     route::store_route_config,
     route_rule::store_route_rule_config,
@@ -28,8 +28,8 @@ pub(crate) fn nm_gen_conf(
     let mut merged_state = merged_state.clone();
     store_route_config(&mut merged_state)?;
     store_route_rule_config(&mut merged_state)?;
-    if merged_state.dns.is_search_only() {
-        store_dns_search_only_to_iface(&mut merged_state, &[], &[])?;
+    if merged_state.dns.is_search_or_option_only() {
+        store_dns_search_or_option_to_iface(&mut merged_state, &[], &[])?;
     } else {
         store_dns_config_to_iface(&mut merged_state, &[], &[])?;
     }

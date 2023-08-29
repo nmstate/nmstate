@@ -74,6 +74,7 @@ class DNS:
     CONFIG = "config"
     SERVER = "server"
     SEARCH = "search"
+    OPTIONS = "options"
 
 
 class Constants:

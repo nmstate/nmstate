@@ -253,6 +253,7 @@ pub(crate) fn purge_dns_config(
                         apply_iface,
                         Vec::new(),
                         Vec::new(),
+                        Vec::new(),
                         None,
                     )?;
                 }
@@ -353,6 +354,7 @@ fn _save_dns_to_iface(
                     apply_iface,
                     servers,
                     merged_state.dns.searches.clone(),
+                    merged_state.dns.options.clone(),
                     Some(DEFAULT_DNS_PRIORITY),
                 )?;
             } else {
@@ -360,6 +362,7 @@ fn _save_dns_to_iface(
                     is_ipv6,
                     apply_iface,
                     servers,
+                    Vec::new(),
                     Vec::new(),
                     Some(DEFAULT_DNS_PRIORITY + 10),
                 )?;
@@ -383,11 +386,13 @@ fn set_iface_dns_conf(
     iface: &mut Interface,
     servers: Vec<String>,
     searches: Vec<String>,
+    options: Vec<String>,
     priority: Option<i32>,
 ) -> Result<(), NmstateError> {
     let dns_conf = DnsClientState {
         server: Some(servers),
         search: Some(searches),
+        options: Some(options),
         priority,
     };
     if is_ipv6 {
@@ -565,15 +570,15 @@ fn is_unmanaged(iface_name: &str, nm_devs: &[NmDevice]) -> bool {
     false
 }
 
-// Try to select a interface to store the DNS search only information in the
-// order of:
+// Try to select a interface to store the DNS search or option only information
+// in the order of:
 // * Use current DNS interface if still desired and still valid
 // * Use auto interface from desired state
 // * Use auto interface from current state
 // * Use IP(prefer IPv6) enabled interface from desired state
 // * Use IP(prefer IPv6) enabled interface from current state
 // * Use current DNS interface if still valid
-pub(crate) fn store_dns_search_only_to_iface(
+pub(crate) fn store_dns_search_or_option_to_iface(
     merged_state: &mut MergedNetworkState,
     nm_acs: &[NmActiveConnection],
     nm_devs: &[NmDevice],
@@ -593,6 +598,7 @@ pub(crate) fn store_dns_search_only_to_iface(
                         apply_iface,
                         Vec::new(),
                         merged_state.dns.searches.clone(),
+                        merged_state.dns.options.clone(),
                         Some(DEFAULT_DNS_PRIORITY),
                     )?;
                     return Ok(());
@@ -612,6 +618,7 @@ pub(crate) fn store_dns_search_only_to_iface(
                         apply_iface,
                         Vec::new(),
                         merged_state.dns.searches.clone(),
+                        merged_state.dns.options.clone(),
                         Some(DEFAULT_DNS_PRIORITY),
                     )?;
                     return Ok(());
@@ -621,18 +628,23 @@ pub(crate) fn store_dns_search_only_to_iface(
     }
 
     // Use auto interface
-    if store_dns_search_only_to_auto_iface(merged_state, nm_acs, nm_devs)
+    if store_dns_search_or_options_to_auto_iface(merged_state, nm_acs, nm_devs)
         .is_ok()
     {
         return Ok(());
     }
 
-    store_dns_search_only_to_ip_enabled_iface(merged_state, nm_acs, nm_devs)
+    store_dns_search_or_options_to_ip_enabled_iface(
+        merged_state,
+        nm_acs,
+        nm_devs,
+    )
 }
 
-fn set_iface_dns_search_only(
+fn set_iface_dns_search_or_option(
     iface: &mut MergedInterface,
     searches: Vec<String>,
+    options: Vec<String>,
     is_ipv6: bool,
 ) -> Result<(), NmstateError> {
     if iface.for_apply.is_none() {
@@ -653,13 +665,14 @@ fn set_iface_dns_search_only(
             apply_iface,
             Vec::new(),
             searches,
+            options,
             Some(DEFAULT_DNS_PRIORITY),
         )?;
     }
     Ok(())
 }
 
-fn store_dns_search_only_to_auto_iface(
+fn store_dns_search_or_options_to_auto_iface(
     merged_state: &mut MergedNetworkState,
     nm_acs: &[NmActiveConnection],
     nm_devs: &[NmDevice],
@@ -691,9 +704,10 @@ fn store_dns_search_only_to_auto_iface(
             .map(|i| i.is_auto())
             .unwrap_or_default()
         {
-            return set_iface_dns_search_only(
+            return set_iface_dns_search_or_option(
                 iface,
                 merged_state.dns.searches.clone(),
+                merged_state.dns.options.clone(),
                 true,
             );
         }
@@ -705,9 +719,10 @@ fn store_dns_search_only_to_auto_iface(
             .map(|i| i.is_auto())
             .unwrap_or_default()
         {
-            return set_iface_dns_search_only(
+            return set_iface_dns_search_or_option(
                 iface,
                 merged_state.dns.searches.clone(),
+                merged_state.dns.options.clone(),
                 false,
             );
         }
@@ -750,9 +765,10 @@ fn store_dns_search_only_to_auto_iface(
             .map(|i| i.is_auto())
             .unwrap_or_default()
         {
-            return set_iface_dns_search_only(
+            return set_iface_dns_search_or_option(
                 iface,
                 merged_state.dns.searches.clone(),
+                merged_state.dns.options.clone(),
                 true,
             );
         }
@@ -764,9 +780,10 @@ fn store_dns_search_only_to_auto_iface(
             .map(|i| i.is_auto())
             .unwrap_or_default()
         {
-            return set_iface_dns_search_only(
+            return set_iface_dns_search_or_option(
                 iface,
                 merged_state.dns.searches.clone(),
+                merged_state.dns.options.clone(),
                 false,
             );
         }
@@ -775,14 +792,15 @@ fn store_dns_search_only_to_auto_iface(
     Err(NmstateError::new(
         ErrorKind::InvalidArgument,
         format!(
-            "Failed to find suitable(Auto IP) interface for DNS searches \
-            '{}'",
-            merged_state.dns.searches.as_slice().join(" ")
+            "Failed to find suitable(Auto IP) interface for DNS \
+            searches '{}' or options '{}'",
+            merged_state.dns.searches.as_slice().join(" "),
+            merged_state.dns.options.as_slice().join(" ")
         ),
     ))
 }
 
-fn store_dns_search_only_to_ip_enabled_iface(
+fn store_dns_search_or_options_to_ip_enabled_iface(
     merged_state: &mut MergedNetworkState,
     nm_acs: &[NmActiveConnection],
     nm_devs: &[NmDevice],
@@ -814,9 +832,10 @@ fn store_dns_search_only_to_ip_enabled_iface(
             .map(|i| i.enabled)
             .unwrap_or_default()
         {
-            return set_iface_dns_search_only(
+            return set_iface_dns_search_or_option(
                 iface,
                 merged_state.dns.searches.clone(),
+                merged_state.dns.options.clone(),
                 true,
             );
         }
@@ -828,9 +847,10 @@ fn store_dns_search_only_to_ip_enabled_iface(
             .map(|i| i.enabled)
             .unwrap_or_default()
         {
-            return set_iface_dns_search_only(
+            return set_iface_dns_search_or_option(
                 iface,
                 merged_state.dns.searches.clone(),
+                merged_state.dns.options.clone(),
                 false,
             );
         }
@@ -873,9 +893,10 @@ fn store_dns_search_only_to_ip_enabled_iface(
             .map(|i| i.enabled)
             .unwrap_or_default()
         {
-            return set_iface_dns_search_only(
+            return set_iface_dns_search_or_option(
                 iface,
                 merged_state.dns.searches.clone(),
+                merged_state.dns.options.clone(),
                 true,
             );
         }
@@ -887,9 +908,10 @@ fn store_dns_search_only_to_ip_enabled_iface(
             .map(|i| i.enabled)
             .unwrap_or_default()
         {
-            return set_iface_dns_search_only(
+            return set_iface_dns_search_or_option(
                 iface,
                 merged_state.dns.searches.clone(),
+                merged_state.dns.options.clone(),
                 false,
             );
         }

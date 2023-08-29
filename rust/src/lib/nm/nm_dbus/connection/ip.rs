@@ -9,8 +9,9 @@ use serde::Deserialize;
 
 use super::super::{
     connection::dns::{
-        nm_ip_dns_search_to_value, nm_ip_dns_to_value, parse_nm_dns,
-        parse_nm_dns_data, parse_nm_dns_search,
+        nm_ip_dns_options_to_value, nm_ip_dns_search_to_value,
+        nm_ip_dns_to_value, parse_nm_dns, parse_nm_dns_data,
+        parse_nm_dns_options, parse_nm_dns_search,
     },
     connection::route::{
         nm_ip_routes_to_value, parse_nm_ip_route_data, NmIpRoute,
@@ -90,6 +91,7 @@ pub struct NmSettingIp {
     pub dns_priority: Option<i32>,
     pub dns_search: Option<Vec<String>>,
     pub dns: Option<Vec<String>>,
+    pub dns_options: Option<Vec<String>>,
     pub ignore_auto_dns: Option<bool>,
     pub never_default: Option<bool>,
     pub ignore_auto_routes: Option<bool>,
@@ -128,6 +130,7 @@ impl TryFrom<DbusDictionary> for NmSettingIp {
                 .unwrap_or_default(),
             dns_search: _from_map!(v, "dns-search", parse_nm_dns_search)?,
             dns_priority: _from_map!(v, "dns-priority", i32::try_from)?,
+            dns_options: _from_map!(v, "dns-options", parse_nm_dns_options)?,
             ignore_auto_dns: _from_map!(v, "ignore-auto-dns", bool::try_from)?,
             never_default: _from_map!(v, "never-default", bool::try_from)?,
             ignore_auto_routes: _from_map!(
@@ -229,6 +232,9 @@ impl ToDbusValue for NmSettingIp {
         }
         if let Some(dns_searches) = self.dns_search.as_ref() {
             ret.insert("dns-search", nm_ip_dns_search_to_value(dns_searches)?);
+        }
+        if let Some(dns_options) = self.dns_options.as_ref() {
+            ret.insert("dns-options", nm_ip_dns_options_to_value(dns_options)?);
         }
         if let Some(dns_priority) = self.dns_priority {
             ret.insert("dns-priority", zvariant::Value::new(dns_priority));
