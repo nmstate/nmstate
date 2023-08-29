@@ -89,6 +89,19 @@ pub(crate) fn parse_nm_dns_search(
     })
 }
 
+pub(crate) fn parse_nm_dns_options(
+    value: zvariant::OwnedValue,
+) -> Result<Vec<String>, NmError> {
+    Vec::<String>::try_from(value).map_err(|e| {
+        let e = NmError::new(
+            ErrorKind::InvalidArgument,
+            format!("In valid DNS options: {e}"),
+        );
+        log::error!("{}", e);
+        e
+    })
+}
+
 pub(crate) fn nm_ip_dns_to_value(
     dns_srvs: &[String],
 ) -> Result<zvariant::Value, NmError> {
@@ -145,6 +158,17 @@ pub(crate) fn nm_ip_dns_search_to_value(
         zvariant::Array::new(zvariant::Signature::from_str_unchecked("s"));
     for search in dns_searches {
         values.append(zvariant::Value::new(search))?;
+    }
+    Ok(zvariant::Value::Array(values))
+}
+
+pub(crate) fn nm_ip_dns_options_to_value(
+    dns_options: &[String],
+) -> Result<zvariant::Value, NmError> {
+    let mut values =
+        zvariant::Array::new(zvariant::Signature::from_str_unchecked("s"));
+    for option in dns_options {
+        values.append(zvariant::Value::new(option))?;
     }
     Ok(zvariant::Value::Array(values))
 }

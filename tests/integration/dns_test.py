@@ -6,6 +6,7 @@ import pytest
 import yaml
 
 import libnmstate
+from libnmstate.error import NmstateValueError
 from libnmstate.schema import DNS
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
@@ -497,3 +498,45 @@ def test_uncompare_dns_servers(static_dns):
     current_state = libnmstate.show()
     assert "2001:db8::1" in current_state[DNS.KEY][DNS.CONFIG][DNS.SERVER]
     assert "::ffff:192.0.2.1" in current_state[DNS.KEY][DNS.CONFIG][DNS.SERVER]
+
+
+def test_set_and_remove_dns_options(static_dns):
+    old_state = static_dns
+    desired_state = yaml.load(
+        """---
+        dns-resolver:
+          config:
+            options:
+            - rotate
+            - debug
+        """,
+        Loader=yaml.SafeLoader,
+    )
+    libnmstate.apply(desired_state)
+    current_state = libnmstate.show()
+    assert "rotate" in current_state[DNS.KEY][DNS.CONFIG][DNS.OPTIONS]
+    assert "debug" in current_state[DNS.KEY][DNS.CONFIG][DNS.OPTIONS]
+    assert (
+        old_state[DNS.KEY][DNS.CONFIG][DNS.SERVER]
+        == current_state[DNS.KEY][DNS.CONFIG][DNS.SERVER]
+    )
+    assert (
+        old_state[DNS.KEY][DNS.CONFIG][DNS.SEARCH]
+        == current_state[DNS.KEY][DNS.CONFIG][DNS.SEARCH]
+    )
+
+
+def test_set_invalid_dns_options(static_dns):
+    desired_state = yaml.load(
+        """---
+        dns-resolver:
+          config:
+            options:
+            - rotate
+            - debug
+            - haha
+        """,
+        Loader=yaml.SafeLoader,
+    )
+    with pytest.raises(NmstateValueError):
+        libnmstate.apply(desired_state)

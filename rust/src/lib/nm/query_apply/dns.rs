@@ -38,6 +38,7 @@ pub(crate) fn nm_dns_to_nmstate(
             Some(servers)
         },
         search: nm_ip_setting.dns_search.clone(),
+        options: nm_ip_setting.dns_options.clone(),
         priority: nm_ip_setting.dns_priority,
     }
 }
@@ -82,10 +83,48 @@ pub(crate) fn retrieve_dns_info(
         }
     }
 
+    // The DNS options is not provided via `NmApi.get_dns_configuration()`,
+    // The data stored in active connections will not be refreshed after
+    // reapply.
+    // The data stored in applied connection will not do validation.
+    let mut dns_options: Vec<String> = Vec::new();
+
+    let nm_conns = nm_api
+        .applied_connections_get()
+        .map_err(nm_error_to_nmstate)?;
+    for nm_conn in &nm_conns {
+        if let Some(opts) =
+            nm_conn.ipv4.as_ref().and_then(|i| i.dns_options.as_deref())
+        {
+            for opt in opts {
+                if !dns_options.contains(opt) {
+                    dns_options.push(opt.clone());
+                }
+            }
+        }
+        if let Some(opts) =
+            nm_conn.ipv6.as_ref().and_then(|i| i.dns_options.as_deref())
+        {
+            for opt in opts {
+                if !dns_options.contains(opt) {
+                    dns_options.push(opt.clone());
+                }
+            }
+        }
+    }
+    // The order of DNS options does not matters, hence no need to sort the
+    // DNS option using DNS priority.
+    dns_options.sort_unstable();
+
     Ok(DnsState {
         running: Some(DnsClientState {
             server: Some(running_srvs),
             search: Some(running_schs),
+            options: if dns_options.is_empty() {
+                None
+            } else {
+                Some(dns_options.clone())
+            },
             ..Default::default()
         }),
         config: Some(DnsClientState {
@@ -98,6 +137,11 @@ pub(crate) fn retrieve_dns_info(
                 None
             } else {
                 Some(config_schs)
+            },
+            options: if dns_options.is_empty() {
+                None
+            } else {
+                Some(dns_options)
             },
             ..Default::default()
         }),
@@ -127,14 +171,18 @@ pub(crate) fn store_dns_config_via_global_api(
     nm_api: &mut NmApi,
     servers: &[String],
     searches: &[String],
+    options: &[String],
 ) -> Result<(), NmstateError> {
     log::warn!(
         "Storing DNS to NetworkManager via global dns API, \
         this will cause __all__ interface level DNS settings been ignored"
     );
 
-    let nm_config =
-        NmGlobalDnsConfig::new_wildcard(searches.to_vec(), servers.to_vec());
+    let nm_config = NmGlobalDnsConfig::new_wildcard(
+        searches.to_vec(),
+        servers.to_vec(),
+        options.to_vec(),
+    );
     log::debug!("Applying NM global DNS config {:?}", nm_config);
     nm_api
         .set_global_dns_configuration(&nm_config)
@@ -162,6 +210,11 @@ pub(crate) fn nm_global_dns_to_nmstate(
 ) -> DnsState {
     let mut config = DnsClientState::new();
 
+    config.options = if nm_global_dns_conf.options.is_empty() {
+        None
+    } else {
+        Some(nm_global_dns_conf.options.clone())
+    };
     config.search = Some(nm_global_dns_conf.searches.clone());
     config.server =
         if let Some(nm_domain_conf) = nm_global_dns_conf.domains.get("*") {
