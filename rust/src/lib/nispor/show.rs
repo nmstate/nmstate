@@ -12,6 +12,7 @@ use crate::{
         infiniband::np_ib_to_nmstate,
         linux_bridge::{append_bridge_port_config, np_bridge_to_nmstate},
         mac_vlan::{np_mac_vlan_to_nmstate, np_mac_vtap_to_nmstate},
+        macsec::np_macsec_to_nmstate,
         route::get_routes,
         route_rule::get_route_rules,
         veth::np_veth_to_nmstate,
@@ -113,6 +114,9 @@ pub(crate) fn nispor_retrieve(
             }
             InterfaceType::Loopback => {
                 Interface::Loopback(LoopbackInterface { base: base_iface })
+            }
+            InterfaceType::MacSec => {
+                Interface::MacSec(np_macsec_to_nmstate(np_iface, base_iface))
             }
             _ => {
                 log::info!(

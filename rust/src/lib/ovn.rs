@@ -13,8 +13,8 @@ pub const OVN_BRIDGE_MAPPINGS: &str = "ovn-bridge-mappings";
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[non_exhaustive]
 #[serde(deny_unknown_fields)]
-/// Global OVN bridge mapping configuration. Example yaml output of [crate::NetworkState]:
-/// ```yml
+/// Global OVN bridge mapping configuration. Example yaml output of
+/// [crate::NetworkState]: ```yml
 /// ---
 /// ovn:
 ///   bridge-mappings:

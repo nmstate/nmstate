@@ -10,6 +10,7 @@ mod ip;
 mod linux_bridge;
 mod linux_bridge_port_vlan;
 mod mac_vlan;
+mod macsec;
 mod mptcp;
 mod route;
 mod route_rule;

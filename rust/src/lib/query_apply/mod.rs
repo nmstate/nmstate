@@ -12,6 +12,7 @@ mod ip;
 mod linux_bridge;
 mod mac_vlan;
 mod mac_vtap;
+mod macsec;
 mod mptcp;
 mod net_state;
 pub(crate) mod ovn;

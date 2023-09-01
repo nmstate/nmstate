@@ -1,0 +1,5 @@
+---
+interfaces:
+  - name: macsec0
+    type: macsec
+    state: absent

@@ -14,6 +14,7 @@ pub(crate) mod inter_ifaces_controller;
 mod linux_bridge;
 mod mac_vlan;
 mod mac_vtap;
+mod macsec;
 mod ovs;
 mod sriov;
 mod vlan;
@@ -46,6 +47,7 @@ pub use linux_bridge::{
 pub use loopback::LoopbackInterface;
 pub use mac_vlan::{MacVlanConfig, MacVlanInterface, MacVlanMode};
 pub use mac_vtap::{MacVtapConfig, MacVtapInterface, MacVtapMode};
+pub use macsec::{MacSecConfig, MacSecInterface, MacSecValidate};
 pub use ovs::{
     OvsBridgeBondConfig, OvsBridgeBondMode, OvsBridgeBondPortConfig,
     OvsBridgeConfig, OvsBridgeInterface, OvsBridgeOptions, OvsBridgePortConfig,

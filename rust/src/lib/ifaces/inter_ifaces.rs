@@ -160,6 +160,11 @@ impl Interfaces {
     pub(crate) fn hide_secrets(&mut self) {
         for iface in self.kernel_ifaces.values_mut() {
             iface.base_iface_mut().hide_secrets();
+            if let Interface::MacSec(macsec_iface) = iface {
+                if let Some(macsec_conf) = macsec_iface.macsec.as_mut() {
+                    macsec_conf.hide_secrets();
+                }
+            }
         }
     }
 

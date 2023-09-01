@@ -206,13 +206,24 @@ impl Interface {
                     );
                 }
             }
+            Self::MacSec(iface) => {
+                if let Self::MacSec(other_iface) = other {
+                    iface.update_macsec(other_iface);
+                } else {
+                    log::warn!(
+                        "Don't know how to update iface {:?} with {:?}",
+                        iface,
+                        other
+                    );
+                }
+            }
             _ => (),
         }
     }
 }
 
 impl InterfaceType {
-    pub(crate) const SUPPORTED_LIST: [InterfaceType; 14] = [
+    pub(crate) const SUPPORTED_LIST: [InterfaceType; 15] = [
         InterfaceType::Bond,
         InterfaceType::LinuxBridge,
         InterfaceType::Dummy,
@@ -226,6 +237,7 @@ impl InterfaceType {
         InterfaceType::Vxlan,
         InterfaceType::InfiniBand,
         InterfaceType::Loopback,
+        InterfaceType::MacSec,
         InterfaceType::Vrf,
     ];
 }

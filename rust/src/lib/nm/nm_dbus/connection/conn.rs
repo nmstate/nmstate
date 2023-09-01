@@ -17,6 +17,7 @@ use super::super::{
     connection::ip::NmSettingIp,
     connection::loopback::NmSettingLoopback,
     connection::mac_vlan::NmSettingMacVlan,
+    connection::macsec::NmSettingMacSec,
     connection::ovs::{
         NmSettingOvsBridge, NmSettingOvsDpdk, NmSettingOvsExtIds,
         NmSettingOvsIface, NmSettingOvsOtherConfig, NmSettingOvsPatch,
@@ -102,6 +103,7 @@ pub struct NmConnection {
     pub ethtool: Option<NmSettingEthtool>,
     pub infiniband: Option<NmSettingInfiniBand>,
     pub loopback: Option<NmSettingLoopback>,
+    pub macsec: Option<NmSettingMacSec>,
     #[serde(skip)]
     pub obj_path: String,
     #[serde(skip)]
@@ -165,6 +167,7 @@ impl TryFrom<NmConnectionDbusOwnedValue> for NmConnection {
             vxlan: _from_map!(v, "vxlan", NmSettingVxlan::try_from)?,
             sriov: _from_map!(v, "sriov", NmSettingSriov::try_from)?,
             mac_vlan: _from_map!(v, "macvlan", NmSettingMacVlan::try_from)?,
+            macsec: _from_map!(v, "macsec", NmSettingMacSec::try_from)?,
             vrf: _from_map!(v, "vrf", NmSettingVrf::try_from)?,
             veth: _from_map!(v, "veth", NmSettingVeth::try_from)?,
             ieee8021x: _from_map!(v, "802-1x", NmSetting8021X::try_from)?,
@@ -260,6 +263,9 @@ impl NmConnection {
         if let Some(mac_vlan) = &self.mac_vlan {
             ret.insert("macvlan", mac_vlan.to_value()?);
         }
+        if let Some(macsec) = &self.macsec {
+            ret.insert("macsec", macsec.to_value()?);
+        }
         if let Some(vrf) = &self.vrf {
             ret.insert("vrf", vrf.to_value()?);
         }
@@ -306,6 +312,9 @@ impl NmConnection {
             setting.parent = Some(parent.to_string());
         }
         if let Some(setting) = self.mac_vlan.as_mut() {
+            setting.parent = Some(parent.to_string());
+        }
+        if let Some(setting) = self.macsec.as_mut() {
             setting.parent = Some(parent.to_string());
         }
     }
@@ -444,6 +453,15 @@ pub(crate) fn nm_con_get_from_obj_path(
         {
             if let Some(nm_secret) = nm_secrets.get("802-1x") {
                 ieee_8021x_conf.fill_secrets(nm_secret);
+            }
+        }
+    }
+    if let Some(macsec_conf) = nm_conn.macsec.as_mut() {
+        if let Ok(nm_secrets) = proxy
+            .call::<&str, NmConnectionDbusOwnedValue>("GetSecrets", &"macsec")
+        {
+            if let Some(nm_secret) = nm_secrets.get("macsec") {
+                macsec_conf.fill_secrets(nm_secret);
             }
         }
     }
