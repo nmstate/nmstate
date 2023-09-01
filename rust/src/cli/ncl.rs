@@ -448,8 +448,8 @@ fn main() {
         if let Some(matches) =
             matches.subcommand_matches(SUB_CMD_PERSIST_NIC_NAMES)
         {
-            // --inspect is now equivalent to --cleanup --dry-run and kept for backwards compatibility
-            // with the logic that originally landed in https://github.com/openshift/machine-config-operator/
+            // --inspect is now equivalent to --cleanup --dry-run and kept for
+            // backwards compatibility with the logic that originally landed in https://github.com/openshift/machine-config-operator/
             let have_inspect = matches.contains_id("INSPECT");
             let dry_run = matches.contains_id("DRY_RUN") || have_inspect;
             let action = if matches.contains_id("CLEAN_UP") || have_inspect {

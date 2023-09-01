@@ -12,6 +12,7 @@ use super::{
     infiniband::gen_nm_ib_setting,
     ip::gen_nm_ip_setting,
     loopback::gen_nm_loopback_setting,
+    macsec::gen_nm_macsec_setting,
     mptcp::apply_mptcp_conf,
     ovs::{
         create_ovs_port_nm_conn, gen_nm_iface_ovs_db_setting,
@@ -37,6 +38,7 @@ pub(crate) const NM_SETTING_OVS_IFACE_SETTING_NAME: &str = "ovs-interface";
 pub(crate) const NM_SETTING_VETH_SETTING_NAME: &str = "veth";
 pub(crate) const NM_SETTING_BOND_SETTING_NAME: &str = "bond";
 pub(crate) const NM_SETTING_DUMMY_SETTING_NAME: &str = "dummy";
+pub(crate) const NM_SETTING_MACSEC_SETTING_NAME: &str = "macsec";
 pub(crate) const NM_SETTING_MACVLAN_SETTING_NAME: &str = "macvlan";
 pub(crate) const NM_SETTING_VRF_SETTING_NAME: &str = "vrf";
 pub(crate) const NM_SETTING_VLAN_SETTING_NAME: &str = "vlan";
@@ -49,7 +51,7 @@ pub(crate) const NM_SETTING_USER_SPACES: [&str; 2] = [
     NM_SETTING_OVS_PORT_SETTING_NAME,
 ];
 
-pub(crate) const SUPPORTED_NM_KERNEL_IFACE_TYPES: [&str; 12] = [
+pub(crate) const SUPPORTED_NM_KERNEL_IFACE_TYPES: [&str; 13] = [
     NM_SETTING_WIRED_SETTING_NAME,
     NM_SETTING_VETH_SETTING_NAME,
     NM_SETTING_BOND_SETTING_NAME,
@@ -62,6 +64,7 @@ pub(crate) const SUPPORTED_NM_KERNEL_IFACE_TYPES: [&str; 12] = [
     NM_SETTING_MACVLAN_SETTING_NAME,
     NM_SETTING_LOOPBACK_SETTING_NAME,
     NM_SETTING_INFINIBAND_SETTING_NAME,
+    NM_SETTING_MACSEC_SETTING_NAME,
 ];
 
 pub(crate) fn iface_to_nm_connections(
@@ -242,6 +245,9 @@ pub(crate) fn iface_to_nm_connections(
         Interface::InfiniBand(iface) => {
             gen_nm_ib_setting(iface, &mut nm_conn);
         }
+        Interface::MacSec(iface) => {
+            gen_nm_macsec_setting(iface, &mut nm_conn);
+        }
         Interface::Loopback(iface) => {
             gen_nm_loopback_setting(iface, &mut nm_conn);
         }
@@ -352,6 +358,7 @@ pub(crate) fn iface_type_to_nm(
         InterfaceType::Loopback => {
             Ok(NM_SETTING_LOOPBACK_SETTING_NAME.to_string())
         }
+        InterfaceType::MacSec => Ok(NM_SETTING_MACSEC_SETTING_NAME.to_string()),
         InterfaceType::Other(s) => Ok(s.to_string()),
         _ => Err(NmstateError::new(
             ErrorKind::NotImplementedError,

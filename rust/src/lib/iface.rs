@@ -8,8 +8,9 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use crate::{
     BaseInterface, BondInterface, DummyInterface, ErrorKind, EthernetInterface,
     InfiniBandInterface, LinuxBridgeInterface, LoopbackInterface,
-    MacVlanInterface, MacVtapInterface, NmstateError, OvsBridgeInterface,
-    OvsInterface, VlanInterface, VrfInterface, VxlanInterface,
+    MacSecInterface, MacVlanInterface, MacVtapInterface, NmstateError,
+    OvsBridgeInterface, OvsInterface, VlanInterface, VrfInterface,
+    VxlanInterface,
 };
 
 use crate::state::merge_json_value;
@@ -63,6 +64,9 @@ pub enum InterfaceType {
     /// TUN interface. Only used for query, will be ignored when applying.
     /// Deserialize and serialize from/to 'tun'.
     Tun,
+    /// MACsec interface.
+    /// Deserialize and serialize from/to 'macsec'
+    MacSec,
     /// Unknown interface.
     Unknown,
     /// Reserved for future use.
@@ -93,6 +97,7 @@ impl From<&str> for InterfaceType {
             "vxlan" => InterfaceType::Vxlan,
             "infiniband" => InterfaceType::InfiniBand,
             "tun" => InterfaceType::Tun,
+            "macsec" => InterfaceType::MacSec,
             "unknown" => InterfaceType::Unknown,
             _ => InterfaceType::Other(s.to_string()),
         }
@@ -121,6 +126,7 @@ impl std::fmt::Display for InterfaceType {
                 InterfaceType::InfiniBand => "infiniband",
                 InterfaceType::Unknown => "unknown",
                 InterfaceType::Tun => "tun",
+                InterfaceType::MacSec => "macsec",
                 InterfaceType::Other(ref s) => s,
             }
         )
@@ -295,6 +301,8 @@ pub enum Interface {
     InfiniBand(InfiniBandInterface),
     /// Linux loopback interface
     Loopback(LoopbackInterface),
+    /// MACsec interface.
+    MacSec(MacSecInterface),
 }
 
 impl<'de> Deserialize<'de> for Interface {
@@ -395,6 +403,11 @@ impl<'de> Deserialize<'de> for Interface {
                 let inner = LoopbackInterface::deserialize(v)
                     .map_err(serde::de::Error::custom)?;
                 Ok(Interface::Loopback(inner))
+            }
+            Some(InterfaceType::MacSec) => {
+                let inner = MacSecInterface::deserialize(v)
+                    .map_err(serde::de::Error::custom)?;
+                Ok(Interface::MacSec(inner))
             }
             Some(iface_type) => {
                 log::warn!("Unsupported interface type {}", iface_type);
@@ -501,6 +514,11 @@ impl Interface {
                 new_iface.base = iface.base.clone_name_type_only();
                 Self::Loopback(new_iface)
             }
+            Self::MacSec(iface) => {
+                let mut new_iface = MacSecInterface::new();
+                new_iface.base = iface.base.clone_name_type_only();
+                Self::MacSec(new_iface)
+            }
             Self::Unknown(iface) => {
                 let mut new_iface = UnknownInterface::new();
                 new_iface.base = iface.base.clone_name_type_only();
@@ -595,6 +613,7 @@ impl Interface {
             Self::Vrf(iface) => &iface.base,
             Self::InfiniBand(iface) => &iface.base,
             Self::Loopback(iface) => &iface.base,
+            Self::MacSec(iface) => &iface.base,
             Self::Unknown(iface) => &iface.base,
         }
     }
@@ -614,6 +633,7 @@ impl Interface {
             Self::Vrf(iface) => &mut iface.base,
             Self::InfiniBand(iface) => &mut iface.base,
             Self::Loopback(iface) => &mut iface.base,
+            Self::MacSec(iface) => &mut iface.base,
             Self::Unknown(iface) => &mut iface.base,
         }
     }
@@ -662,6 +682,7 @@ impl Interface {
             Interface::MacVlan(iface) => iface.sanitize(is_desired)?,
             Interface::MacVtap(iface) => iface.sanitize(is_desired)?,
             Interface::Loopback(iface) => iface.sanitize(is_desired)?,
+            Interface::MacSec(iface) => iface.sanitize(is_desired)?,
             _ => (),
         }
         Ok(())
@@ -675,6 +696,7 @@ impl Interface {
             Interface::MacVlan(vlan) => vlan.parent(),
             Interface::MacVtap(vtap) => vtap.parent(),
             Interface::InfiniBand(ib) => ib.parent(),
+            Interface::MacSec(macsec) => macsec.parent(),
             _ => None,
         }
     }

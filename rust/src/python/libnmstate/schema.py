@@ -100,6 +100,7 @@ class InterfaceType:
     LINUX_BRIDGE = "linux-bridge"
     MAC_VLAN = "mac-vlan"
     MAC_VTAP = "mac-vtap"
+    MACSEC = "macsec"
     OVS_BRIDGE = "ovs-bridge"
     OVS_INTERFACE = "ovs-interface"
     OVS_PORT = "ovs-port"
@@ -116,6 +117,7 @@ class InterfaceType:
         BOND,
         DUMMY,
         LINUX_BRIDGE,
+        MACSEC,
         OVS_BRIDGE,
         OVS_PORT,
         OVS_INTERFACE,
@@ -429,6 +431,20 @@ class MacVlan:
 class MacVtap(MacVlan):
     TYPE = InterfaceType.MAC_VTAP
     CONFIG_SUBTREE = "mac-vtap"
+
+
+class MacSec:
+    CONFIG_SUBTREE = "macsec"
+    ENCRYPT = "encrypt"
+    PARENT = "parent"
+    MKA_CAK = "mka-cak"
+    MKA_CKN = "mka-ckn"
+    PORT = "port"
+    VALIDATION = "validation"
+    VALIDATION_DISABLED = "disabled"
+    VALIDATION_CHECK = "check"
+    VALIDATION_STRICT = "strict"
+    SEND_SCI = "send-sci"
 
 
 class Ieee8021X:

@@ -264,6 +264,16 @@ def test_gen_conf_for_examples():
                 assert first_result == second_result
 
 
+@pytest.mark.tier1
+def test_add_macsec_and_remove(eth1_up):
+    with example_state(
+        "macsec0_up.yml", cleanup="macsec0_absent.yml"
+    ) as desired_state:
+        assertlib.assert_state(desired_state)
+
+    assertlib.assert_absent("macsec0")
+
+
 @pytest.mark.skipif(
     os.environ.get("CI") == "true",
     reason="NM cannot change hostname in container",

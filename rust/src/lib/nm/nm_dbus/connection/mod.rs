@@ -26,6 +26,7 @@ mod infiniband;
 mod ip;
 mod loopback;
 mod mac_vlan;
+mod macsec;
 mod ovs;
 mod route;
 mod route_rule;
@@ -50,6 +51,7 @@ pub use self::infiniband::NmSettingInfiniBand;
 pub use self::ip::{NmSettingIp, NmSettingIpMethod};
 pub use self::loopback::NmSettingLoopback;
 pub use self::mac_vlan::NmSettingMacVlan;
+pub use self::macsec::NmSettingMacSec;
 pub use self::ovs::{
     NmSettingOvsBridge, NmSettingOvsDpdk, NmSettingOvsExtIds,
     NmSettingOvsIface, NmSettingOvsOtherConfig, NmSettingOvsPatch,
