@@ -33,6 +33,10 @@ Nmstate provides:
 
 More document could be found at [nmstate.io](https://nmstate.io)
 
+The codes of nmstate are licensed under [Apache 2.0][apache_2_0_license_url]
+except the test codes in `tests` folder are licensed under
+[LGPL 2.1+][lgpl_2_1_license_url]
+
 ## State example:
 
 Desired/Current state example (YAML):
@@ -93,3 +97,5 @@ Please refer to [CHANGELOG](CHANGELOG)
 
 [mailing_list]: https://lists.fedorahosted.org/admin/lists/nmstate-devel.lists.fedorahosted.org
 [github_issue_url]: https://github.com/nmstate/nmstate/issues
+[apache_2_0_license_url]: https://www.apache.org/licenses/LICENSE-2.0
+[lgpl_2_1_license_url]: https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html
