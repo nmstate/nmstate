@@ -324,8 +324,7 @@ impl NetworkState {
                                     .unwrap()
                                     .remove(OVN_BRIDGE_MAPPINGS);
 
-                                let mut sorted_mappings =
-                                    updated_mappings.clone();
+                                let mut sorted_mappings = updated_mappings;
                                 sorted_mappings.sort_unstable_by(|v1, v2| {
                                     v1.localnet.cmp(&v2.localnet)
                                 });
