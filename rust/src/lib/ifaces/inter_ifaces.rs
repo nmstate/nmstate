@@ -129,8 +129,8 @@ impl Interfaces {
                     if let Some((n, t)) = self
                         .user_ifaces
                         .keys()
+                        .find(|&(i, _)| i == iface_name)
                         .cloned()
-                        .find(|(i, _)| i == iface_name)
                     {
                         self.user_ifaces.remove(&(n, t))
                     } else {
