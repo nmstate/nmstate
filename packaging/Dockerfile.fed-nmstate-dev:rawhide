@@ -1,10 +1,9 @@
-FROM registry.fedoraproject.org/fedora:latest
+FROM registry.fedoraproject.org/fedora:rawhide
 
 RUN echo "2023-09-08" > /build_time
 
-RUN dnf update -y && \
-    dnf -y install --setopt=install_weak_deps=False \
-        systemd make go rust NetworkManager NetworkManager-ovs \
+RUN dnf -y install --setopt=install_weak_deps=False \
+        systemd make go rust cargo NetworkManager NetworkManager-ovs \
         NetworkManager-config-server openvswitch systemd-udev \
         python3-devel python3-pyyaml python3-setuptools dnsmasq git \
         iproute rpm-build python3-pytest python3-virtualenv python3-tox \

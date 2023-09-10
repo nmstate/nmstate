@@ -32,7 +32,6 @@ from .testlib.bridgelib import generate_vlan_id_config
 from .testlib.bridgelib import generate_vlan_id_range_config
 from .testlib.bridgelib import linux_bridge
 from .testlib.cmdlib import exec_cmd
-from .testlib.env import is_fedora
 from .testlib.env import is_ubuntu_kernel
 from .testlib.env import nm_major_minor_version
 from .testlib.ifacelib import get_mac_address
@@ -250,15 +249,6 @@ def test_add_port_to_existing_bridge(bridge0_with_port0, port1_up):
 
 
 @pytest.mark.tier1
-@pytest.mark.xfail(
-    is_fedora(),
-    reason=(
-        "On Fedora 31+, users need to explicitly configure the port MAC "
-        "due to changes to the default systemd config."
-    ),
-    raises=AssertionError,
-    strict=True,
-)
 def test_linux_bridge_uses_the_port_mac_implicitly(
     port0_up, bridge0_with_port0
 ):
