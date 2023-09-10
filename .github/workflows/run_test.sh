@@ -21,36 +21,26 @@ TEST_ARG="--test-type $TEST_TYPE"
 
 CUSTOMIZE_ARG=""
 COPR_ARG=""
-RPM_DIR="rpms/el8"
 
 if [ $OS_TYPE == "c8s" ];then
     CONTAINER_IMAGE="quay.io/nmstate/c8s-nmstate-dev"
+    TEST_ARG="$TEST_ARG --compiled-rpms-dir rpms/el8"
+elif [ $OS_TYPE == "fed" ];then
+    CONTAINER_IMAGE="quay.io/nmstate/fed-nmstate-dev:latest"
 elif [ $OS_TYPE == "c9s" ];then
     CONTAINER_IMAGE="quay.io/nmstate/c9s-nmstate-dev"
-    RPM_DIR="rpms/el9"
-elif [ $OS_TYPE == "ovs2_11" ];then
-    CONTAINER_IMAGE="quay.io/nmstate/c8s-nmstate-dev"
-    CUSTOMIZE_ARG='--customize=
-        dnf remove -y openvswitch2.11 python3-openvswitch2.11;
-        dnf install -y openvswitch2.13 python3-openvswitch2.13;
-        systemctl restart openvswitch'
-elif [ $OS_TYPE == "vdsm_el8" ]; then
-    CONTAINER_IMAGE="quay.io/ovirt/vdsm-network-tests-functional"
+    TEST_ARG="$TEST_ARG --compiled-rpms-dir rpms/el9"
 else
     echo "Invalid OS type ${OS_TYPE}"
     exit 1
 fi
 
 if [ $NM_TYPE == "nm_main" ];then
-    COPR_ARG="--copr networkmanager/NetworkManager-main"
+    TEST_ARG="$TEST_ARG --copr networkmanager/NetworkManager-main"
 fi
 
 if [ $NM_TYPE == "nm_1.42" ];then
-    COPR_ARG="--copr networkmanager/NetworkManager-1.42"
-fi
-
-if [ $TEST_TYPE == "vdsm" ];then
-    TEST_ARG="--test-vdsm"
+    TEST_ARG="$TEST_ARG --copr networkmanager/NetworkManager-1.42"
 fi
 
 mkdir $TEST_ARTIFACTS_DIR || exit 1
@@ -72,5 +62,4 @@ env \
     $TEST_CMD \
         $TEST_ARG \
         --artifacts-dir $TEST_ARTIFACTS_DIR \
-        --compiled-rpms-dir $RPM_DIR \
-        $COPR_ARG "$CUSTOMIZE_ARG"
+        "$CUSTOMIZE_ARG"

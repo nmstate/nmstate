@@ -16,7 +16,8 @@ TEST_TYPE_INTEG_TIER1="integ_tier1"
 TEST_TYPE_INTEG_TIER2="integ_tier2"
 TEST_TYPE_INTEG_SLOW="integ_slow"
 
-FEDORA_IMAGE_DEV="docker.io/nmstate/fedora-nmstate-dev"
+FEDORA_IMAGE_DEV="quay.io/nmstate/fed-nmstate-dev:latest"
+RAWHIDE_IMAGE_DEV="quay.io/nmstate/fed-nmstate-dev:rawhide"
 CENTOS_8_STREAM_IMAGE_DEV="quay.io/nmstate/c8s-nmstate-dev"
 CENTOS_9_STREAM_IMAGE_DEV="quay.io/nmstate/c9s-nmstate-dev"
 
@@ -255,7 +256,7 @@ function run_customize_command {
 
 options=$(getopt --options "" \
     --long "customize:,pytest-args:,help,debug-shell,test-type:,\
-    el8,el9,centos-stream,copr:,artifacts-dir:,test-vdsm,machine,k8s,\
+    el8,el9,fed,rawhide,copr:,artifacts-dir:,test-vdsm,machine,k8s,\
     use-installed-nmstate,compiled-rpms-dir:,nm-rpm-dir:" \
     -- "${@}")
 eval set -- "$options"
@@ -290,8 +291,11 @@ while true; do
     --el9)
         CONTAINER_IMAGE=$CENTOS_9_STREAM_IMAGE_DEV
         ;;
-    --centos-stream)
-        CONTAINER_IMAGE=$CENTOS_8_STREAM_IMAGE_DEV
+    --fed)
+        CONTAINER_IMAGE=$FEDORA_IMAGE_DEV
+        ;;
+    --rawhide)
+        CONTAINER_IMAGE=$RAWHIDE_IMAGE_DEV
         ;;
     --artifacts-dir)
         shift

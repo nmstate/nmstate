@@ -126,6 +126,7 @@ jobs:
           - job_type: "c9s-nm_1.42-integ_tier1"
           - job_type: "c9s-nm_1.42-integ_tier2"
           - job_type: "c9s-nm_1.42-integ_slow"
+          - job_type: "fed-nm_stable-integ_tier1"
     steps:
       - uses: actions/checkout@v3
 
