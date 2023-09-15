@@ -261,7 +261,6 @@ def test_add_ifaces_with_same_static_ipv4_address_in_one_transaction(
     assertlib.assert_state(desired_state)
 
 
-@pytest.mark.tier1
 def test_add_iface_with_same_static_ipv4_address_to_existing(
     setup_eth1_ipv4, eth2_up
 ):
