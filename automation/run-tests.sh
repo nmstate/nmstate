@@ -256,8 +256,8 @@ function run_customize_command {
 
 options=$(getopt --options "" \
     --long "customize:,pytest-args:,help,debug-shell,test-type:,\
-    el8,el9,fed,rawhide,copr:,artifacts-dir:,test-vdsm,machine,k8s,\
-    use-installed-nmstate,compiled-rpms-dir:,nm-rpm-dir:" \
+    el8,el9,centos-stream,fed,rawhide,copr:,artifacts-dir:,test-vdsm,\
+    machine,k8s,use-installed-nmstate,compiled-rpms-dir:,nm-rpm-dir:" \
     -- "${@}")
 eval set -- "$options"
 while true; do
@@ -287,6 +287,9 @@ while true; do
         ;;
     --el8)
         CONTAINER_IMAGE=$CENTOS_8_STREAM_IMAGE_DEV
+        ;;
+    --centos-stream)
+        CONTAINER_IMAGE=$CENTOS_9_STREAM_IMAGE_DEV
         ;;
     --el9)
         CONTAINER_IMAGE=$CENTOS_9_STREAM_IMAGE_DEV
