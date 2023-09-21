@@ -1,4 +1,16 @@
 # Changelog
+## [2.2.16] - 2023-09-21
+### Breaking changes
+ - N/A
+
+### New features
+ - Support to MACsec interface. (14d307f2)
+ - Support DNS options. (b77a1883)
+
+### Bug fixes
+ - Deny unknown field for global and iface ovsdb. (6baaa5ae)
+ - Fix nmstatectl `persist-nic-names` on bond port. (2a2e36c1)
+
 ## [2.2.15] - 2023-08-23
 ### Breaking changes
  - N/A
