@@ -127,7 +127,6 @@ pub struct BaseInterface {
     /// Ethtool configurations
     pub ethtool: Option<EthtoolConfig>,
     #[serde(skip)]
-    /// TODO: internal use, hide it.
     pub controller_type: Option<InterfaceType>,
     // The interface lowest up_priority will be activated first.
     // The up_priority should be its controller's up_priority

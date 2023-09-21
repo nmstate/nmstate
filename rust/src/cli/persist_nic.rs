@@ -22,7 +22,7 @@ use std::collections::HashMap;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 
-use nmstate::{InterfaceType, NetworkState};
+use nmstate::{Interface, InterfaceType, NetworkState};
 
 use crate::error::CliError;
 
@@ -106,16 +106,32 @@ fn run_persist_immediately(
         .iter()
         .filter(|i| i.iface_type() == InterfaceType::Ethernet)
     {
-        // Prefer permanent(often stored in firmware) MAC address
-        let mac = match iface
-            .base_iface()
-            .permanent_mac_address
-            .as_deref()
-            .or_else(|| iface.base_iface().mac_address.as_deref())
+        // The MAC address of bond port might has been altered when attaching
+        // to bond, we need special handling here
+        let mac = if iface.base_iface().controller_type
+            == Some(InterfaceType::Bond)
         {
-            Some(m) => m,
-            None => continue,
+            get_bond_port_mac(iface)
+        } else {
+            // Prefer permanent(often stored in firmware) MAC address
+            iface
+                .base_iface()
+                .permanent_mac_address
+                .clone()
+                .or_else(|| iface.base_iface().mac_address.clone())
         };
+        let mac = match mac {
+            Some(m) => m,
+            None => {
+                log::info!(
+                    "Skipping interface {} due to missing reliable MAC address",
+                    iface.name()
+                );
+
+                continue;
+            }
+        };
+
         let file_path = gen_link_file_path(root, iface.name());
         if file_path.exists() {
             log::info!(
@@ -125,10 +141,10 @@ fn run_persist_immediately(
             continue;
         }
         let iface_name = iface.name();
-        let karg = format_ifname_karg(iface_name, mac);
+        let karg = format_ifname_karg(iface_name, &mac);
         log::info!("Will persist the interface {iface_name} with MAC {mac}");
         if !dry_run {
-            persist_iface_name_via_systemd_link(root, mac, iface_name)?;
+            persist_iface_name_via_systemd_link(root, &mac, iface_name)?;
         }
         if with_kargs {
             log::info!("Kernel argument added: {karg}");
@@ -375,8 +391,13 @@ fn persist_iface_name_via_systemd_link(
         std::fs::create_dir(&link_dir)?;
     }
 
-    let content =
-        format!("{PERSIST_GENERATED_BY}\n[Match]\nMACAddress={mac}\n\n[Link]\nName={iface_name}\n");
+    let content = format!(
+        "{PERSIST_GENERATED_BY}\n\
+        [Match]\n\
+        MACAddress={mac}\n\n\
+        [Link]\n\
+        Name={iface_name}\n"
+    );
 
     std::fs::write(&file_path, content.as_bytes()).map_err(|e| {
         CliError::from(format!(
@@ -416,4 +437,49 @@ fn has_any_kargs(kargs: &[&str]) -> bool {
         .map(|v| String::from_utf8(v).unwrap_or_default())
         .map(|c| c.split(' ').any(|x| kargs.contains(&x)))
         .unwrap_or_default()
+}
+
+// Preference order on MAC address of bond port:
+// 1. Permanent MAC address
+// 2. MAC address stored in `IFLA_BOND_PORT_PERM_HWADDR`
+fn get_bond_port_mac(iface: &Interface) -> Option<String> {
+    if let Some(mac) = iface.base_iface().permanent_mac_address.as_deref() {
+        return Some(mac.to_string());
+    }
+
+    let mut filter = nispor::NetStateFilter::minimum();
+    let mut iface_filter = nispor::NetStateIfaceFilter::minimum();
+    iface_filter.iface_name = Some(iface.name().to_string());
+    filter.iface = Some(iface_filter);
+    match nispor::NetState::retrieve_with_filter(&filter) {
+        Ok(np_state) => {
+            if let Some(mac) = np_state
+                .ifaces
+                .get(iface.name())
+                .and_then(|i| i.bond_subordinate.as_ref())
+                .and_then(|b| {
+                    if b.perm_hwaddr.as_str().is_empty() {
+                        None
+                    } else {
+                        Some(b.perm_hwaddr.clone())
+                    }
+                })
+            {
+                log::info!(
+                    "Using MAC address stored in bond port: {mac} \
+                    for interface {}",
+                    iface.name()
+                );
+                return Some(mac);
+            }
+        }
+        Err(e) => {
+            log::error!(
+                "Failed to retrieve netlink state for bond port {}: {e}",
+                iface.name()
+            );
+        }
+    }
+
+    None
 }
