@@ -19,7 +19,7 @@ path = "lib.rs"
 serde_yaml = "0.9"
 
 [dependencies.nispor]
-version = "1.2.10"
+version = "1.2.14"
 optional = true
 
 [dependencies.zvariant]
