@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use crate::{
     nispor::{
         base_iface::np_iface_to_base_iface,
-        bond::np_bond_to_nmstate,
+        bond::{append_bond_port_config, np_bond_to_nmstate},
         error::np_error_to_nmstate,
         ethernet::np_ethernet_to_nmstate,
         hostname::get_hostname_state,
@@ -67,7 +67,15 @@ pub(crate) fn nispor_retrieve(
                 Interface::LinuxBridge(br_iface)
             }
             InterfaceType::Bond => {
-                Interface::Bond(np_bond_to_nmstate(np_iface, base_iface))
+                let mut bond_iface = np_bond_to_nmstate(np_iface, base_iface);
+                let mut port_np_ifaces = Vec::new();
+                for port_name in bond_iface.ports().unwrap_or_default() {
+                    if let Some(p) = np_state.ifaces.get(port_name) {
+                        port_np_ifaces.push(p)
+                    }
+                }
+                append_bond_port_config(&mut bond_iface, port_np_ifaces);
+                Interface::Bond(bond_iface)
             }
             InterfaceType::Ethernet => Interface::Ethernet(
                 np_ethernet_to_nmstate(np_iface, base_iface),

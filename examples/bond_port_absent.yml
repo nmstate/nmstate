@@ -1,0 +1,10 @@
+---
+interfaces:
+  - name: eth1
+    state: down
+  - name: eth2
+    type: ethernet
+    state: down
+  - name: bond0
+    type: bond
+    state: absent

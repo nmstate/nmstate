@@ -169,6 +169,12 @@ class Bond:
     PORT = "port"
     PORTS = "ports"
     OPTIONS_SUBTREE = "options"
+    PORTS_CONFIG_SUBTREE = "ports-config"
+
+    class PortsConfig:
+        NAME = "name"
+        PRIORITY = "priority"
+        QUEUE_ID = "queue-id"
 
 
 class BondMode:

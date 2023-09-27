@@ -4,9 +4,9 @@ use std::convert::TryInto;
 
 use crate::error::CliError;
 use nmstate::{
-    BaseInterface, BondConfig, BondInterface, BondMode, Interface,
-    InterfaceState, InterfaceType, Interfaces, LldpNeighborTlv, NetworkState,
-    VlanConfig, VlanInterface,
+    BaseInterface, BondConfig, BondInterface, BondMode, BondPortConfig,
+    Interface, InterfaceState, InterfaceType, Interfaces, LldpNeighborTlv,
+    NetworkState, VlanConfig, VlanInterface,
 };
 
 const APP_NAME: &str = "nmstatectl-autoconf";
@@ -146,6 +146,13 @@ fn gen_bond_iface(bond_name: &str, ifaces: &[&str]) -> Interface {
     let mut bond_conf = BondConfig::new();
     bond_conf.mode = Some(BondMode::RoundRobin);
     bond_conf.port = Some(ifaces.iter().map(|i| i.to_string()).collect());
+    let mut port_confs: Vec<BondPortConfig> = Vec::new();
+    for port_name in ifaces.iter().map(|i| i.to_string()) {
+        let mut port_conf = BondPortConfig::new();
+        port_conf.name = port_name;
+        port_confs.push(port_conf);
+    }
+    bond_conf.ports_config = Some(port_confs);
     let mut bond_iface = BondInterface::new();
     bond_iface.base = base_iface;
     bond_iface.bond = Some(bond_conf);

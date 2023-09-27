@@ -5,7 +5,7 @@ use super::super::nm_dbus::{
     NmSettingVrf, NmSettingVxlan, NmSettingsConnectionFlag,
 };
 use super::{
-    bond::gen_nm_bond_setting,
+    bond::{gen_nm_bond_port_setting, gen_nm_bond_setting},
     bridge::{gen_nm_br_port_setting, gen_nm_br_setting},
     ethtool::gen_ethtool_setting,
     ieee8021x::gen_nm_802_1x_setting,
@@ -254,6 +254,10 @@ pub(crate) fn iface_to_nm_connections(
         _ => (),
     };
 
+    if nm_conn.controller_type() != Some(NM_SETTING_BOND_SETTING_NAME) {
+        nm_conn.bond_port = None;
+    }
+
     if nm_conn.controller_type() != Some(NM_SETTING_BRIDGE_SETTING_NAME) {
         nm_conn.bridge_port = None;
     }
@@ -270,6 +274,9 @@ pub(crate) fn iface_to_nm_connections(
             merged_state.interfaces.get_iface(ctrl, ctrl_type.clone())
         {
             match &ctrl_iface.merged {
+                Interface::Bond(bond_iface) => {
+                    gen_nm_bond_port_setting(bond_iface, &mut nm_conn);
+                }
                 Interface::LinuxBridge(br_iface) => {
                     gen_nm_br_port_setting(br_iface, &mut nm_conn);
                 }

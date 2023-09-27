@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use std::collections::HashMap;
 use std::convert::TryFrom;
 
 use serde::{Deserialize, Serialize};
@@ -104,8 +105,17 @@ impl BondInterface {
         }
     }
 
+    fn sort_ports_config(&mut self) {
+        if let Some(ref mut bond_conf) = self.bond {
+            if let Some(ref mut port_conf) = &mut bond_conf.ports_config {
+                port_conf.sort_unstable_by_key(|p| p.name.clone())
+            }
+        }
+    }
+
     pub(crate) fn sanitize(&mut self) -> Result<(), NmstateError> {
         self.sort_ports();
+        self.sort_ports_config();
         self.drop_empty_arp_ip_target();
         self.make_ad_actor_system_mac_upper_case();
         Ok(())
@@ -113,10 +123,36 @@ impl BondInterface {
 
     // Return None when desire state does not mention ports
     pub(crate) fn ports(&self) -> Option<Vec<&str>> {
+        let config = self.bond.clone().unwrap_or_default();
+        if config.port.is_some() {
+            self.bond
+                .as_ref()
+                .and_then(|bond_conf| bond_conf.port.as_ref())
+                .map(|ports| {
+                    ports.as_slice().iter().map(|p| p.as_str()).collect()
+                })
+        } else {
+            self.bond
+                .as_ref()
+                .and_then(|bond_conf| bond_conf.ports_config.as_ref())
+                .map(|ports| {
+                    ports.as_slice().iter().map(|p| p.name.as_str()).collect()
+                })
+        }
+    }
+
+    pub(crate) fn get_port_conf(
+        &self,
+        port_name: &str,
+    ) -> Option<&BondPortConfig> {
         self.bond
             .as_ref()
-            .and_then(|bond_conf| bond_conf.port.as_ref())
-            .map(|ports| ports.as_slice().iter().map(|p| p.as_str()).collect())
+            .and_then(|bond_conf| bond_conf.ports_config.as_ref())
+            .and_then(|port_confs| {
+                port_confs
+                    .iter()
+                    .find(|port_conf| port_conf.name == port_name)
+            })
     }
 
     pub(crate) fn mode(&self) -> Option<BondMode> {
@@ -204,6 +240,45 @@ impl BondInterface {
         Ok(())
     }
 
+    fn validate_conflict_in_port_and_port_configs(
+        &self,
+    ) -> Result<(), NmstateError> {
+        let bond_config = self.bond.clone().unwrap_or_default();
+        if bond_config.port.is_some() && bond_config.ports_config.is_some() {
+            let mut port_list = bond_config.port.unwrap_or_default();
+            let mut port_config_list: Vec<String> = bond_config
+                .ports_config
+                .unwrap_or_default()
+                .into_iter()
+                .map(|p| p.name)
+                .collect();
+            port_list.sort_unstable();
+            port_config_list.sort_unstable();
+            let matching = port_list
+                .iter()
+                .zip(port_config_list.iter())
+                .filter(|&(port_name, port_config_name)| {
+                    port_name == port_config_name
+                })
+                .count();
+            if matching != port_list.len() || matching != port_config_list.len()
+            {
+                let e = NmstateError::new(
+                    ErrorKind::InvalidArgument,
+                    format!(
+                        "The port names specified in `port` conflict with \
+                        the port names specified in `ports-config` for \
+                        bond interface: {}",
+                        &self.base.name
+                    ),
+                );
+                log::error!("{}", e);
+                return Err(e);
+            }
+        }
+        Ok(())
+    }
+
     pub(crate) fn is_options_reset(&self) -> bool {
         if let Some(bond_opts) = self
             .bond
@@ -263,6 +338,42 @@ impl BondInterface {
                 ports[index] = new_name;
             }
         }
+    }
+
+    pub(crate) fn get_config_changed_ports(&self, current: &Self) -> Vec<&str> {
+        let mut ret: Vec<&str> = Vec::new();
+        let mut des_ports_index: HashMap<&str, &BondPortConfig> =
+            HashMap::new();
+        let mut cur_ports_index: HashMap<&str, &BondPortConfig> =
+            HashMap::new();
+        if let Some(port_confs) = self
+            .bond
+            .as_ref()
+            .and_then(|bond_conf| bond_conf.ports_config.as_ref())
+        {
+            for port_conf in port_confs {
+                des_ports_index.insert(port_conf.name.as_str(), port_conf);
+            }
+        }
+
+        if let Some(port_confs) = current
+            .bond
+            .as_ref()
+            .and_then(|bond_conf| bond_conf.ports_config.as_ref())
+        {
+            for port_conf in port_confs {
+                cur_ports_index.insert(port_conf.name.as_str(), port_conf);
+            }
+        }
+
+        for (port_name, port_conf) in des_ports_index.iter() {
+            if let Some(cur_port_conf) = cur_ports_index.get(port_name) {
+                if port_conf.is_changed(cur_port_conf) {
+                    ret.push(port_name);
+                }
+            }
+        }
+        ret
     }
 }
 
@@ -365,6 +476,13 @@ pub struct BondConfig {
     /// You can also use `ports` for deserializing.
     /// When applying, if defined, it will override current port list.
     pub port: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    /// Deserialize and serialize from/to `ports-config`.
+    /// When applying, if defined, it will override current ports configuration.
+    /// Note that `port` is not required to set with `ports-config`. An error
+    /// will be raised during apply when the port names specified in `port` and
+    /// `ports-config` conflict with each other.
+    pub ports_config: Option<Vec<BondPortConfig>>,
 }
 
 impl BondConfig {
@@ -1252,6 +1370,7 @@ impl MergedInterface {
             apply_iface
                 .validate_new_iface_with_no_mode(self.current.as_ref())?;
             apply_iface.validate_mac_restricted_mode(self.current.as_ref())?;
+            apply_iface.validate_conflict_in_port_and_port_configs()?;
 
             if let Some(bond_opts) =
                 apply_iface.bond.as_ref().and_then(|b| b.options.as_ref())
@@ -1280,5 +1399,53 @@ impl MergedInterface {
             }
         }
         Ok(())
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "kebab-case")]
+#[non_exhaustive]
+pub struct BondPortConfig {
+    /// name is mandatory when specifying the ports configuration.
+    pub name: String,
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_i32_or_string"
+    )]
+    /// Deserialize and serialize from/to `priority`.
+    /// When applying, if defined, it will override the current bond port
+    /// priority. The verification will fail if bonding mode is not
+    /// active-backup(1) or balance-tlb (5) or balance-alb (6).
+    pub priority: Option<i32>,
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        default,
+        deserialize_with = "crate::deserializer::option_u16_or_string"
+    )]
+    /// Deserialize and serialize from/to `queue-id`.
+    pub queue_id: Option<u16>,
+}
+
+impl std::fmt::Display for BondPortConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "BondPortConfig {{ name: {}, priority: {}, queue_id: {} }}",
+            self.name,
+            self.priority.unwrap_or_default(),
+            self.queue_id.unwrap_or_default()
+        )
+    }
+}
+
+impl BondPortConfig {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    fn is_changed(&self, current: &Self) -> bool {
+        (self.priority.is_some() && self.priority != current.priority)
+            || (self.queue_id.is_some() && self.queue_id != current.queue_id)
     }
 }

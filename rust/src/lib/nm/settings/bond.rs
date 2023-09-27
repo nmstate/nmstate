@@ -217,3 +217,28 @@ fn apply_bond_options(
     // Remove all empty string option
     nm_bond_set.options.retain(|_, v| !v.is_empty());
 }
+
+pub(crate) fn gen_nm_bond_port_setting(
+    bond_iface: &BondInterface,
+    nm_conn: &mut NmConnection,
+) {
+    let mut nm_set = nm_conn.bond_port.as_ref().cloned().unwrap_or_default();
+    let bond_port_conf = if let Some(i) = nm_conn
+        .iface_name()
+        .and_then(|iface_name| bond_iface.get_port_conf(iface_name))
+    {
+        i
+    } else {
+        return;
+    };
+
+    if let Some(v) = bond_port_conf.priority {
+        nm_set.priority = Some(v);
+    }
+
+    if let Some(v) = bond_port_conf.queue_id {
+        nm_set.queue_id = Some(v.into());
+    }
+
+    nm_conn.bond_port = Some(nm_set);
+}

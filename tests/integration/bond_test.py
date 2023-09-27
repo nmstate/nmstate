@@ -58,6 +58,22 @@ interfaces:
     - eth2
 """
 
+BOND99_PORT_YAML_BASE = """
+interfaces:
+- name: bond99
+  type: bond
+  state: up
+  link-aggregation:
+    mode: active-backup
+    ports-config:
+    - name: eth1
+      queue-id: 0
+      priority: -1
+    - name: eth2
+      queue-id: 1
+      priority: 2
+"""
+
 RETRY_TIMEOUT = 30
 
 
@@ -148,6 +164,49 @@ def test_remove_bond_with_minimum_desired_state(eth1_up, eth2_up):
     libnmstate.apply(remove_bond_state)
     state = statelib.show_only((bond_name,))
     assert not state[Interface.KEY]
+
+
+@pytest.mark.tier1
+def test_add_and_remove_bond_with_port_config(eth1_up, eth2_up):
+    state = yaml.load(BOND99_PORT_YAML_BASE, Loader=yaml.SafeLoader)
+    try:
+        libnmstate.apply(state)
+        assertlib.assert_state_match(state)
+    finally:
+        state[Interface.KEY][0][Interface.STATE] = InterfaceState.ABSENT
+        libnmstate.apply(state)
+
+
+@pytest.mark.tier1
+def test_add_bond_with_port_config_and_modify(eth1_up, eth2_up):
+    state = yaml.load(BOND99_PORT_YAML_BASE, Loader=yaml.SafeLoader)
+    try:
+        libnmstate.apply(state)
+        assertlib.assert_state_match(state)
+        bond_port_eth1 = {"name": "eth1", "priority": -1, "queue-id": 1}
+        bond_port_eth2 = {"name": "eth2", "priority": 9, "queue-id": 0}
+        state[Interface.KEY][0][Bond.CONFIG_SUBTREE][
+            Bond.PORTS_CONFIG_SUBTREE
+        ][0] = bond_port_eth1
+        state[Interface.KEY][0][Bond.CONFIG_SUBTREE][
+            Bond.PORTS_CONFIG_SUBTREE
+        ][1] = bond_port_eth2
+        libnmstate.apply(state)
+        assertlib.assert_state_match(state)
+    finally:
+        state[Interface.KEY][0][Interface.STATE] = InterfaceState.ABSENT
+        libnmstate.apply(state)
+
+
+@pytest.mark.tier1
+def test_conflict_port_name_between_port_and_ports_config(eth1_up, eth2_up):
+    state = yaml.load(BOND99_PORT_YAML_BASE, Loader=yaml.SafeLoader)
+    state[Interface.KEY][0][Bond.CONFIG_SUBTREE][Bond.PORT] = ["eth1"]
+    with pytest.raises(NmstateValueError):
+        libnmstate.apply(state)
+    state[Interface.KEY][0][Bond.CONFIG_SUBTREE][Bond.PORT] = ["eth1", "eth3"]
+    with pytest.raises(NmstateValueError):
+        libnmstate.apply(state)
 
 
 def test_add_bond_without_port():

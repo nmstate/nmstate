@@ -216,6 +216,24 @@ where
     deserializer.deserialize_any(IntegerOrString(PhantomData))
 }
 
+pub(crate) fn option_i32_or_string<'de, D>(
+    deserializer: D,
+) -> Result<Option<i32>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    option_i64_or_string(deserializer).and_then(|i| {
+        if let Some(i) = i {
+            match i32::try_from(i) {
+                Ok(i) => Ok(Some(i)),
+                Err(e) => Err(de::Error::custom(e)),
+            }
+        } else {
+            Ok(None)
+        }
+    })
+}
+
 pub(crate) fn option_i64_or_string<'de, D>(
     deserializer: D,
 ) -> Result<Option<i64>, D::Error>
