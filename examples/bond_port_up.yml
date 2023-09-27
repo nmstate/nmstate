@@ -1,0 +1,27 @@
+---
+# eth1 --+-- bond0
+# eth2 --'
+interfaces:
+  - name: bond0
+    type: bond
+    state: up
+    link-aggregation:
+      mode: active-backup
+      options:
+        miimon: 140
+      port:
+        - eth1
+        - eth2
+      ports-config:
+        - name: eth1
+          queue-id: 0
+          priority: -1
+        - name: eth2
+          queue-id: 1
+          priority: 2
+  - name: eth1
+    type: ethernet
+    state: up
+  - name: eth2
+    type: ethernet
+    state: up

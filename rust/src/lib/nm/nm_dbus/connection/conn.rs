@@ -9,7 +9,7 @@ use serde::Deserialize;
 use zvariant::{Signature, Type};
 
 use super::super::{
-    connection::bond::NmSettingBond,
+    connection::bond::{NmSettingBond, NmSettingBondPort},
     connection::bridge::{NmSettingBridge, NmSettingBridgePort},
     connection::ethtool::NmSettingEthtool,
     connection::ieee8021x::NmSetting8021X,
@@ -80,6 +80,7 @@ fn from_u32_to_vec_nm_conn_flags(i: u32) -> Vec<NmSettingsConnectionFlag> {
 pub struct NmConnection {
     pub connection: Option<NmSettingConnection>,
     pub bond: Option<NmSettingBond>,
+    pub bond_port: Option<NmSettingBondPort>,
     pub bridge: Option<NmSettingBridge>,
     pub bridge_port: Option<NmSettingBridgePort>,
     pub ipv4: Option<NmSettingIp>,
@@ -133,6 +134,7 @@ impl TryFrom<NmConnectionDbusOwnedValue> for NmConnection {
             ipv4: _from_map!(v, "ipv4", NmSettingIp::try_from)?,
             ipv6: _from_map!(v, "ipv6", NmSettingIp::try_from)?,
             bond: _from_map!(v, "bond", NmSettingBond::try_from)?,
+            bond_port: _from_map!(v, "bond-port", NmSettingBondPort::try_from)?,
             bridge: _from_map!(v, "bridge", NmSettingBridge::try_from)?,
             bridge_port: _from_map!(
                 v,
@@ -286,6 +288,9 @@ impl NmConnection {
         }
         if let Some(v) = &self.loopback {
             ret.insert("loopback", v.to_value()?);
+        }
+        if let Some(v) = &self.bond_port {
+            ret.insert("bond-port", v.to_value()?);
         }
         for (key, setting_value) in &self._other {
             let mut other_setting_value: HashMap<&str, zvariant::Value> =

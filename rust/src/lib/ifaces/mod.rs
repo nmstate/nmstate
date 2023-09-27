@@ -23,7 +23,7 @@ pub use base::*;
 pub use bond::{
     BondAdSelect, BondAllPortsActive, BondArpAllTargets, BondArpValidate,
     BondConfig, BondFailOverMac, BondInterface, BondLacpRate, BondMode,
-    BondOptions, BondPrimaryReselect, BondXmitHashPolicy,
+    BondOptions, BondPortConfig, BondPrimaryReselect, BondXmitHashPolicy,
 };
 pub use bridge_vlan::{
     BridgePortTrunkTag, BridgePortVlanConfig, BridgePortVlanMode,

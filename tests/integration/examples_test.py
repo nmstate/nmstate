@@ -274,6 +274,17 @@ def test_add_macsec_and_remove(eth1_up):
     assertlib.assert_absent("macsec0")
 
 
+@pytest.mark.tier1
+def test_bond_port(eth1_up, eth2_up):
+    with example_state(
+        "bond_port_up.yml",
+        cleanup="bond_port_absent.yml",
+    ) as desired_state:
+        assertlib.assert_state_match(desired_state)
+
+    assertlib.assert_absent("bond0")
+
+
 @pytest.mark.skipif(
     os.environ.get("CI") == "true",
     reason="NM cannot change hostname in container",

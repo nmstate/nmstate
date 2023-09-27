@@ -38,7 +38,7 @@ mod vrf;
 mod vxlan;
 mod wired;
 
-pub use self::bond::NmSettingBond;
+pub use self::bond::{NmSettingBond, NmSettingBondPort};
 pub use self::bridge::{
     NmSettingBridge, NmSettingBridgePort, NmSettingBridgeVlanRange,
 };

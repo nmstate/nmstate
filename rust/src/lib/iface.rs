@@ -935,6 +935,23 @@ impl MergedInterface {
                 }
             }
         }
+        // Bond might have changed its ports configuration with
+        // port name list unchanged.
+        // In this case, we should ask BondInterface to generate a new ports
+        // configuration list.
+        else if let (
+            Interface::Bond(des_bond_iface),
+            Some(Interface::Bond(cur_bond_iface)),
+        ) = (desired_iface, self.current.as_ref())
+        {
+            for port_name in
+                des_bond_iface.get_config_changed_ports(cur_bond_iface)
+            {
+                if !chg_attached_ports.contains(&port_name) {
+                    chg_attached_ports.push(port_name);
+                }
+            }
+        }
 
         Some((chg_attached_ports, chg_detached_ports))
     }

@@ -3,7 +3,8 @@ use log::warn;
 use crate::{
     BaseInterface, BondAdSelect, BondAllPortsActive, BondArpAllTargets,
     BondArpValidate, BondConfig, BondFailOverMac, BondInterface, BondLacpRate,
-    BondMode, BondOptions, BondPrimaryReselect, BondXmitHashPolicy,
+    BondMode, BondOptions, BondPortConfig, BondPrimaryReselect,
+    BondXmitHashPolicy,
 };
 
 pub(crate) fn np_bond_to_nmstate(
@@ -24,6 +25,18 @@ pub(crate) fn np_bond_to_nmstate(
                 .map(|iface_name| iface_name.to_string())
                 .collect(),
         );
+        bond_conf.ports_config = Some(
+            np_bond
+                .subordinates
+                .as_slice()
+                .iter()
+                .map(|iface_name| {
+                    let mut port_conf = BondPortConfig::new();
+                    port_conf.name = iface_name.to_string();
+                    port_conf
+                })
+                .collect(),
+        );
         bond_conf.mode = match np_bond.mode {
             nispor::BondMode::BalanceRoundRobin => Some(BondMode::RoundRobin),
             nispor::BondMode::ActiveBackup => Some(BondMode::ActiveBackup),
@@ -40,6 +53,26 @@ pub(crate) fn np_bond_to_nmstate(
     }
     bond_iface.bond = Some(bond_conf);
     bond_iface
+}
+
+pub(crate) fn append_bond_port_config(
+    bond_iface: &mut BondInterface,
+    port_np_ifaces: Vec<&nispor::Iface>,
+) {
+    let mut port_confs: Vec<BondPortConfig> = Vec::new();
+    for port_np_iface in port_np_ifaces {
+        let mut port_conf = BondPortConfig::new();
+        port_conf.name = port_np_iface.name.to_string();
+        if let Some(np_port_info) = &port_np_iface.bond_subordinate {
+            port_conf.priority = Some(np_port_info.prio);
+            port_conf.queue_id = Some(np_port_info.queue_id);
+        }
+        port_confs.push(port_conf);
+    }
+
+    if let Some(bond_conf) = bond_iface.bond.as_mut() {
+        bond_conf.ports_config = Some(port_confs);
+    }
 }
 
 fn np_bond_options_to_nmstate(np_iface: &nispor::Iface) -> BondOptions {

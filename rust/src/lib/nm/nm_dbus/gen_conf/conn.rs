@@ -19,6 +19,9 @@ impl NmConnection {
         if let Some(bond_set) = &self.bond {
             sections.push(("bond", bond_set.to_keyfile()?));
         }
+        if let Some(bond_port_set) = &self.bond_port {
+            sections.push(("bond-port", bond_port_set.to_keyfile()?));
+        }
         if let Some(br_set) = &self.bridge {
             sections.push(("bridge", br_set.to_keyfile()?));
         }
