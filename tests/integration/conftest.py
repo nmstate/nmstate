@@ -1,21 +1,4 @@
-#
-# Copyright (c) 2018-2020 Red Hat, Inc.
-#
-# This file is part of nmstate
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 2.1 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program. If not, see <https://www.gnu.org/licenses/>.
-#
+# SPDX-License-Identifier: LGPL-2.1-or-later
 
 import logging
 import os
@@ -30,12 +13,16 @@ from libnmstate.schema import Route
 from libnmstate.schema import RouteRule
 
 from .testlib import ifacelib
+from .testlib.veth import create_veth_pair
+from .testlib.veth import remove_veth_pair
 
 
 REPORT_HEADER = """RPMs: {rpms}
 OS: {osname}
 nmstate: {nmstate_version}
 """
+
+ISOLATE_NAMESPACE = "nmstate_test_ep"
 
 
 def pytest_configure(config):
@@ -70,8 +57,8 @@ def _mark_tier2_tests(items):
             item.add_marker(pytest.mark.tier2)
 
 
-@pytest.fixture(scope="session", autouse=True)
-def fix_ip_netns_issue(scope="session", autouse=True):
+@pytest.fixture(scope="session")
+def fix_ip_netns_issue():
     if os.getenv("CI"):
         with tempfile.TemporaryDirectory() as tmpdirname:
             subprocess.run(
@@ -85,13 +72,19 @@ def fix_ip_netns_issue(scope="session", autouse=True):
 
 
 @pytest.fixture(scope="session", autouse=True)
-def test_env_setup():
+def test_env_setup(fix_ip_netns_issue):
     _logging_setup()
     old_state = libnmstate.show()
     old_state = _remove_interfaces_from_env(old_state)
     _remove_dns_route_route_rule()
+    for nic_name in ["eth1", "eth2"]:
+        remove_veth_pair(nic_name, ISOLATE_NAMESPACE)
+    for nic_name in ["eth1", "eth2"]:
+        create_veth_pair(nic_name, f"{nic_name}.ep", ISOLATE_NAMESPACE)
     _ethx_init()
     yield
+    for nic_name in ["eth1", "eth2"]:
+        remove_veth_pair(nic_name, ISOLATE_NAMESPACE)
     restore_old_state(old_state)
 
 
@@ -144,13 +137,13 @@ def _remove_interfaces_from_env(state):
 
 
 @pytest.fixture(scope="function")
-def eth1_up():
+def eth1_up(test_env_setup):
     with ifacelib.iface_up("eth1") as ifstate:
         yield ifstate
 
 
 @pytest.fixture(scope="function")
-def eth2_up():
+def eth2_up(test_env_setup):
     with ifacelib.iface_up("eth2") as ifstate:
         yield ifstate
 

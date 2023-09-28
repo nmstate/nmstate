@@ -21,8 +21,6 @@ RAWHIDE_IMAGE_DEV="quay.io/nmstate/fed-nmstate-dev:rawhide"
 CENTOS_8_STREAM_IMAGE_DEV="quay.io/nmstate/c8s-nmstate-dev"
 CENTOS_9_STREAM_IMAGE_DEV="quay.io/nmstate/c9s-nmstate-dev"
 
-CREATED_INTERFACES=""
-INTERFACES="eth1 eth2"
 
 PYTEST_OPTIONS="--verbose --verbose \
         --log-file-level=DEBUG \
@@ -156,9 +154,7 @@ function write_separator {
 
 function run_exit {
     write_separator "TEARDOWN"
-    if [ -n "${RUN_BAREMETAL}" ]; then
-        teardown_network_environment
-    elif [ -n "${RUN_K8S}" ]; then
+    if [ -n "${RUN_K8S}" ]; then
         k8s::collect_artifacts
         k8s::cleanup
     else
@@ -184,35 +180,6 @@ function check_services {
         systemctl restart NetworkManager
         while ! systemctl is-active NetworkManager; do sleep 1; done
     '
-}
-
-function check_iface_exist {
-    exec_cmd "ip link | grep -q ' $1'"
-}
-
-function prepare_network_environment {
-    set +e
-    for device in $INTERFACES;
-    do
-        peer="${device}peer"
-        check_iface_exist $device
-        if [ $? -eq 1 ]; then
-            CREATED_INTERFACES="${CREATED_INTERFACES} ${device}"
-            exec_cmd "ip link add ${device} type veth peer name ${peer}"
-            exec_cmd "ip link set ${peer} up"
-            exec_cmd "ip link set ${device} up"
-            exec_cmd "nmcli device set ${device} managed yes"
-            exec_cmd "nmcli device set ${peer} managed no"
-        fi
-    done
-    set -e
-}
-
-function teardown_network_environment {
-    for device in $CREATED_INTERFACES;
-    do
-        exec_cmd "ip link del ${device}"
-    done
 }
 
 function clean_dnf_cache {
@@ -385,12 +352,6 @@ fi
 
 if [ -z "${RUN_K8S}" ]; then
     check_services
-fi
-
-if [ $TEST_TYPE != $TEST_TYPE_ALL ] && \
-   [ $TEST_TYPE != $TEST_TYPE_LINT ] && \
-   [ $TEST_TYPE != $TEST_TYPE_FORMAT ];then
-    prepare_network_environment
 fi
 
 if [ -n "$RUN_BAREMETAL" ];then
