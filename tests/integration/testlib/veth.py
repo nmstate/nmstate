@@ -20,7 +20,8 @@ def create_veth_pair(nic, nic_peer, peer_ns):
         f"ip link add {nic} type veth peer name {nic_peer}".split(),
         check=True,
     )
-    exec_cmd(f"ip netns add {peer_ns}".split(), check=True)
+    # namespace might already exist
+    exec_cmd(f"ip netns add {peer_ns}".split(), check=False)
     exec_cmd(f"ip link set {nic_peer} netns {peer_ns}".split(), check=True)
     exec_cmd(f"ip link set {nic} up".split(), check=True)
     exec_cmd(
