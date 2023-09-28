@@ -32,10 +32,10 @@ route-table: "129"
 #[test]
 fn test_route_rule_sanitize_ipv4_from_to() {
     let mut rule: RouteRuleEntry = serde_yaml::from_str(
-        r#"
+        r"
 ip-to: 192.0.3.1/24
 ip-from: 192.0.3.2/24
-"#,
+",
     )
     .unwrap();
 
@@ -48,10 +48,10 @@ ip-from: 192.0.3.2/24
 #[test]
 fn test_route_rule_sanitize_ipv6_from_to() {
     let mut rule: RouteRuleEntry = serde_yaml::from_str(
-        r#"
+        r"
 ip-to: 2001:db8:1::2/64
 ip-from: 2001:db8:2::ffff/64
-"#,
+",
     )
     .unwrap();
 
@@ -64,10 +64,10 @@ ip-from: 2001:db8:2::ffff/64
 #[test]
 fn test_route_rule_sanitize_ipv4_from_to_host() {
     let mut rule: RouteRuleEntry = serde_yaml::from_str(
-        r#"
+        r"
 ip-to: 192.0.3.1
 ip-from: 192.0.3.2
-"#,
+",
     )
     .unwrap();
 
@@ -80,10 +80,10 @@ ip-from: 192.0.3.2
 #[test]
 fn test_route_rule_sanitize_ipv6_from_to_host() {
     let mut rule: RouteRuleEntry = serde_yaml::from_str(
-        r#"
+        r"
 ip-to: 2001:db8:1::2
 ip-from: 2001:db8:2::ffff
-"#,
+",
     )
     .unwrap();
 
@@ -96,10 +96,10 @@ ip-from: 2001:db8:2::ffff
 #[test]
 fn test_route_rule_sanitize_none_compact_ipv6_from_to() {
     let mut rule: RouteRuleEntry = serde_yaml::from_str(
-        r#"
+        r"
 ip-to: 2001:db8:1:0000::2
 ip-from: 2001:db8:2:0000::ffff
-"#,
+",
     )
     .unwrap();
 
@@ -112,12 +112,12 @@ ip-from: 2001:db8:2:0000::ffff
 #[test]
 fn test_route_rule_sanitize_ipv6_family_ip_from() {
     let mut rule: RouteRuleEntry = serde_yaml::from_str(
-        r#"
+        r"
 ip-from: 2001:db8:b::/64
 priority: 30000
 route-table: 200
 family: ipv6
-"#,
+",
     )
     .unwrap();
 
@@ -127,12 +127,12 @@ family: ipv6
 #[test]
 fn test_route_rule_validate_ipv4_family_ip_from() {
     let mut rule: RouteRuleEntry = serde_yaml::from_str(
-        r#"
+        r"
 ip-from: 192.168.2.0/24
 priority: 30000
 route-table: 200
 family: ipv4
-"#,
+",
     )
     .unwrap();
 
@@ -151,21 +151,21 @@ fn test_route_rule_matching_empty_ip_from_with_none() {
     .unwrap();
 
     let not_match_rule: RouteRuleEntry = serde_yaml::from_str(
-        r#"
+        r"
         ip-from: 192.168.2.0/24
         priority: 30000
         route-table: 200
         family: ipv4
-        "#,
+        ",
     )
     .unwrap();
 
     let match_rule: RouteRuleEntry = serde_yaml::from_str(
-        r#"
+        r"
         priority: 30000
         route-table: 200
         family: ipv4
-        "#,
+        ",
     )
     .unwrap();
 
@@ -185,21 +185,21 @@ fn test_route_rule_matching_empty_ip_to_with_none() {
     .unwrap();
 
     let not_match_rule: RouteRuleEntry = serde_yaml::from_str(
-        r#"
+        r"
         ip-to: 192.168.2.0/24
         priority: 30000
         route-table: 200
         family: ipv4
-        "#,
+        ",
     )
     .unwrap();
 
     let match_rule: RouteRuleEntry = serde_yaml::from_str(
-        r#"
+        r"
         priority: 30000
         route-table: 200
         family: ipv4
-        "#,
+        ",
     )
     .unwrap();
 
@@ -210,7 +210,7 @@ fn test_route_rule_matching_empty_ip_to_with_none() {
 #[test]
 fn test_route_rule_auto_priority_increasing_from_desire() {
     let des_rules: RouteRules = serde_yaml::from_str(
-        r#"
+        r"
         config:
         - state: absent
           priority: 30001
@@ -226,12 +226,12 @@ fn test_route_rule_auto_priority_increasing_from_desire() {
           route-table: 200
           priority: 30001
           family: ipv4
-        "#,
+        ",
     )
     .unwrap();
 
     let cur_rules: RouteRules = serde_yaml::from_str(
-        r#"
+        r"
         config:
         - ip-to: 192.168.2.100
           priority: 100
@@ -245,7 +245,7 @@ fn test_route_rule_auto_priority_increasing_from_desire() {
           priority: 101
           route-table: 200
           family: ipv4
-        "#,
+        ",
     )
     .unwrap();
 
@@ -281,7 +281,7 @@ fn test_route_rule_auto_priority_increasing_from_desire() {
 #[test]
 fn test_route_rule_auto_priority_increasing_from_empty() {
     let des_rules: RouteRules = serde_yaml::from_str(
-        r#"
+        r"
         config:
         - ip-to: 192.168.2.30
           route-table: 200
@@ -292,7 +292,7 @@ fn test_route_rule_auto_priority_increasing_from_empty() {
         - ip-to: 192.168.2.32
           route-table: 200
           family: ipv4
-        "#,
+        ",
     )
     .unwrap();
 

@@ -113,7 +113,7 @@ fn test_verify_current_has_more_routes() {
 #[test]
 fn test_route_ignore_iface() {
     let routes: Routes = serde_yaml::from_str(
-        r#"
+        r"
 config:
 - destination: 0.0.0.0/0
   next-hop-address: 192.0.2.1
@@ -127,7 +127,7 @@ config:
 - destination: ::/0
   next-hop-address: 2001:db8:1::2
   next-hop-interface: eth2
-"#,
+",
     )
     .unwrap();
 
@@ -151,17 +151,17 @@ config:
 #[test]
 fn test_route_verify_ignore_iface() {
     let desire: Routes = serde_yaml::from_str(
-        r#"
+        r"
 config:
 - destination: 0.0.0.0/0
   state: absent
 - destination: ::/0
   state: absent
-"#,
+",
     )
     .unwrap();
     let current: Routes = serde_yaml::from_str(
-        r#"
+        r"
 config:
 - destination: 0.0.0.0/0
   next-hop-address: 192.0.2.1
@@ -169,7 +169,7 @@ config:
 - destination: ::/0
   next-hop-address: 2001:db8:1::2
   next-hop-interface: eth1
-"#,
+",
     )
     .unwrap();
 
@@ -281,14 +281,14 @@ fn test_route_not_allowing_empty_dst() {
 #[test]
 fn test_route_sanitize_ipv6_ecmp() {
     let mut route: RouteEntry = serde_yaml::from_str(
-        r#"
+        r"
         destination: 2001:db:1::/64
         metric: 150
         next-hop-address: 2001:db8::2
         next-hop-interface: eth1
         weight: 2
         table-id: 254
-        "#,
+        ",
     )
     .unwrap();
     let result = route.sanitize();
@@ -299,7 +299,7 @@ fn test_route_sanitize_ipv6_ecmp() {
 #[test]
 fn test_route_ipv4_ecmp_is_match() {
     let absent_route: RouteEntry = serde_yaml::from_str(
-        r#"
+        r"
         destination: 192.0.2.1
         metric: 150
         next-hop-address: 2001:db8::2
@@ -307,18 +307,18 @@ fn test_route_ipv4_ecmp_is_match() {
         weight: 2
         table-id: 254
         state: absent
-        "#,
+        ",
     )
     .unwrap();
     let route: RouteEntry = serde_yaml::from_str(
-        r#"
+        r"
         destination: 192.0.2.1
         metric: 150
         next-hop-address: 2001:db8::2
         next-hop-interface: eth1
         weight: 2
         table-id: 254
-        "#,
+        ",
     )
     .unwrap();
     assert!(absent_route.is_match(&route));
@@ -327,12 +327,12 @@ fn test_route_ipv4_ecmp_is_match() {
 #[test]
 fn test_route_valid_default_gateway() {
     let routes: Routes = serde_yaml::from_str(
-        r#"
+        r"
 config:
 - destination: 0.0.0.0/0
   next-hop-address: 192.0.2.1
   next-hop-interface: eth1
-"#,
+",
     )
     .unwrap();
     routes.validate().unwrap();
@@ -341,12 +341,12 @@ config:
 #[test]
 fn test_route_invalid_destination() {
     let routes1: Routes = serde_yaml::from_str(
-        r#"
+        r"
 config:
 - destination: 0.0.0.0/8
   next-hop-address: 192.0.2.1
   next-hop-interface: eth1
-"#,
+",
     )
     .unwrap();
     let result = routes1.validate();
@@ -354,12 +354,12 @@ config:
     assert_eq!(result.err().unwrap().kind(), ErrorKind::InvalidArgument);
 
     let routes2: Routes = serde_yaml::from_str(
-        r#"
+        r"
 config:
 - destination: 0.0.0.0/f
   next-hop-address: 192.0.2.1
   next-hop-interface: eth1
-"#,
+",
     )
     .unwrap();
     let result = routes2.validate();
@@ -367,12 +367,12 @@ config:
     assert_eq!(result.err().unwrap().kind(), ErrorKind::InvalidArgument);
 
     let routes3: Routes = serde_yaml::from_str(
-        r#"
+        r"
 config:
 - destination: 0.0.0.0
   next-hop-address: 192.0.2.1
   next-hop-interface: eth1
-"#,
+",
     )
     .unwrap();
     let result = routes3.validate();
@@ -380,12 +380,12 @@ config:
     assert_eq!(result.err().unwrap().kind(), ErrorKind::InvalidArgument);
 
     let routes4: Routes = serde_yaml::from_str(
-        r#"
+        r"
 config:
 - destination: 0.0.0.0.0/0
   next-hop-address: 192.0.2.1
   next-hop-interface: eth1
-"#,
+",
     )
     .unwrap();
     let result = routes4.validate();
@@ -393,12 +393,12 @@ config:
     assert_eq!(result.err().unwrap().kind(), ErrorKind::InvalidArgument);
 
     let routes5: Routes = serde_yaml::from_str(
-        r#"
+        r"
 config:
 - destination: 0.0.0.0.0/7
   next-hop-address: 192.0.2.1
   next-hop-interface: eth1
-"#,
+",
     )
     .unwrap();
     let result = routes5.validate();
@@ -416,17 +416,17 @@ fn test_route_matching_empty_via_with_none() {
     )
     .unwrap();
     let not_match_route: RouteEntry = serde_yaml::from_str(
-        r#"
+        r"
         next-hop-address: 2001:db8::2
         next-hop-interface: eth1
-        "#,
+        ",
     )
     .unwrap();
     let match_route: RouteEntry = serde_yaml::from_str(
-        r#"
+        r"
         destination: 192.0.2.1
         next-hop-interface: eth1
-        "#,
+        ",
     )
     .unwrap();
     assert!(!absent_route.is_match(&not_match_route));

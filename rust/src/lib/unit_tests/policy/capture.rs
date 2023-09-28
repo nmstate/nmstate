@@ -91,9 +91,9 @@ fn test_policy_capture_with_equal() {
 #[test]
 fn test_policy_capture_simple_store() {
     let cap_con = NetworkCaptureCommand::parse(
-        r#"
+        r"
         just store it
-        "#
+        "
         .trim(),
     )
     .unwrap();
@@ -149,7 +149,7 @@ fn test_policy_capture_retain_only() {
         NetworkCaptureCommand::parse(" dns-resolver.running").unwrap();
 
     let current: NetworkState = serde_yaml::from_str(
-        r#"---
+        r"---
         interfaces:
           - name: eth1
             type: ethernet
@@ -184,7 +184,7 @@ fn test_policy_capture_retain_only() {
             server:
             - 192.51.100.99
             - 2001:db8:1::99
-        "#,
+        ",
     )
     .unwrap();
 
@@ -217,7 +217,7 @@ fn test_policy_capture_route_rule() {
             .unwrap();
 
     let current: NetworkState = serde_yaml::from_str(
-        r#"---
+        r"---
         routes:
           config:
           - destination: 192.168.2.0/24
@@ -254,7 +254,7 @@ fn test_policy_capture_route_rule() {
               address:
               - ip: 2001:db8:1::1
                 prefix-length: 64
-        "#,
+        ",
     )
     .unwrap();
 

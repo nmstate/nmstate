@@ -5,7 +5,7 @@ use crate::{DnsState, MergedDnsState};
 #[test]
 fn test_dns_verify_uncompressed_srvs() {
     let current: DnsState = serde_yaml::from_str(
-        r#"---
+        r"---
         config:
           server:
           - '3000::'
@@ -21,12 +21,12 @@ fn test_dns_verify_uncompressed_srvs() {
           - ::ffff:192.0.2.1
           - ::ffff:192.0.2.2
           - 3::4
-        "#,
+        ",
     )
     .unwrap();
 
     let desired: DnsState = serde_yaml::from_str(
-        r#"---
+        r"---
         config:
           server:
           - 3000:0000:0000:0000:0000:0000:0000:0000
@@ -42,7 +42,7 @@ fn test_dns_verify_uncompressed_srvs() {
           - 0:0:0:0:0:FFFF:192.0.2.1
           - ::FFFF:192.0.2.2
           - 03:0000:000:00:0::4
-        "#,
+        ",
     )
     .unwrap();
 

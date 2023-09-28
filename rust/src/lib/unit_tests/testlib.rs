@@ -223,7 +223,7 @@ fn gen_rule_entry(
 
 pub(crate) fn new_test_nic_with_static_ip() -> Interface {
     serde_yaml::from_str(
-        r#"
+        r"
         name: eth1
         type: ethernet
         state: up
@@ -245,14 +245,14 @@ pub(crate) fn new_test_nic_with_static_ip() -> Interface {
           autoconf: false
           dhcp: false
           enabled: true
-        "#,
+        ",
     )
     .unwrap()
 }
 
 fn new_test_nic2_with_static_ip() -> Interface {
     serde_yaml::from_str(
-        r#"
+        r"
         name: eth2
         type: ethernet
         state: up
@@ -274,7 +274,7 @@ fn new_test_nic2_with_static_ip() -> Interface {
           autoconf: false
           dhcp: false
           enabled: true
-        "#,
+        ",
     )
     .unwrap()
 }

@@ -40,7 +40,7 @@ fn test_vrf_ports() {
 #[test]
 fn test_vrf_on_bond_vlan_got_auto_remove() {
     let cur_ifaces: Interfaces = serde_yaml::from_str(
-        r#"---
+        r"---
         - name: test-bond0.100
           type: vlan
           vlan:
@@ -58,19 +58,19 @@ fn test_vrf_on_bond_vlan_got_auto_remove() {
             - test-bond0
             - test-bond0.100
             route-table-id: 100
-        "#,
+        ",
     )
     .unwrap();
 
     let des_ifaces: Interfaces = serde_yaml::from_str(
-        r#"---
+        r"---
         - name: test-bond0
           type: bond
           state: absent
         - name: test-vrf0
           type: vrf
           state: absent
-        "#,
+        ",
     )
     .unwrap();
 

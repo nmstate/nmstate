@@ -375,9 +375,9 @@ fn test_policy_reference_capture_concatenate_with_prefix() {
     capture_results.insert(
         "void".to_string(),
         serde_yaml::from_str(
-            r#"
+            r"
             interfaces:
-              - name: eth1"#,
+              - name: eth1",
         )
         .unwrap(),
     );
@@ -399,9 +399,9 @@ fn test_policy_reference_capture_property_not_found() {
     capture_results.insert(
         "void".to_string(),
         serde_yaml::from_str(
-            r#"
+            r"
             interfaces:
-              - name: eth1"#,
+              - name: eth1",
         )
         .unwrap(),
     );
@@ -426,9 +426,9 @@ fn test_policy_reference_capture_property_not_array() {
     capture_results.insert(
         "void".to_string(),
         serde_yaml::from_str(
-            r#"
+            r"
             interfaces:
-              - name: eth1"#,
+              - name: eth1",
         )
         .unwrap(),
     );
