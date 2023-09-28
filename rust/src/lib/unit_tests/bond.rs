@@ -10,7 +10,7 @@ use crate::{
 #[test]
 fn test_bond_validate_mac_restricted_with_mac_undefined() {
     let iface: Interface = serde_yaml::from_str(
-        r#"---
+        r"---
 name: bond99
 type: bond
 state: up
@@ -18,7 +18,7 @@ link-aggregation:
   mode: active-backup
   options:
     fail_over_mac: active
-"#,
+",
     )
     .unwrap();
     let mut merged_iface = MergedInterface::new(Some(iface), None).unwrap();
@@ -28,7 +28,7 @@ link-aggregation:
 #[test]
 fn test_bond_validate_mac_restricted_with_mac_defined() {
     let iface: Interface = serde_yaml::from_str(
-        r#"---
+        r"---
 name: bond99
 type: bond
 state: up
@@ -37,7 +37,7 @@ link-aggregation:
   mode: active-backup
   options:
     fail_over_mac: active
-"#,
+",
     )
     .unwrap();
     let mut merged_iface = MergedInterface::new(Some(iface), None).unwrap();
@@ -51,16 +51,16 @@ link-aggregation:
 #[test]
 fn test_bond_validate_mac_restricted_with_mac_defined_for_exist_bond() {
     let des_iface: Interface = serde_yaml::from_str(
-        r#"---
+        r"---
 name: bond99
 type: bond
 state: up
 mac-address: 00:01:02:03:04:05
-"#,
+",
     )
     .unwrap();
     let cur_iface: Interface = serde_yaml::from_str(
-        r#"---
+        r"---
 name: bond99
 type: bond
 state: up
@@ -68,7 +68,7 @@ link-aggregation:
   mode: active-backup
   options:
     fail_over_mac: active
-"#,
+",
     )
     .unwrap();
     let mut merged_iface =
@@ -83,18 +83,18 @@ link-aggregation:
 #[test]
 fn test_bond_validate_mac_restricted_with_mac_defined_changing_mode() {
     let des_iface: Interface = serde_yaml::from_str(
-        r#"---
+        r"---
 name: bond99
 type: bond
 state: up
 mac-address: 00:01:02:03:04:05
 link-aggregation:
   mode: 802.3ad
-"#,
+",
     )
     .unwrap();
     let cur_iface: Interface = serde_yaml::from_str(
-        r#"---
+        r"---
 name: bond99
 type: bond
 state: up
@@ -102,7 +102,7 @@ link-aggregation:
   mode: active-backup
   options:
     fail_over_mac: active
-"#,
+",
     )
     .unwrap();
     let mut merged_iface =
@@ -113,7 +113,7 @@ link-aggregation:
 #[test]
 fn test_bond_validate_mac_restricted_with_mac_defined_changing_opt() {
     let des_iface: Interface = serde_yaml::from_str(
-        r#"---
+        r"---
 name: bond99
 type: bond
 state: up
@@ -122,11 +122,11 @@ link-aggregation:
   mode: active-backup
   options:
     fail_over_mac: follow
-"#,
+",
     )
     .unwrap();
     let cur_iface: Interface = serde_yaml::from_str(
-        r#"---
+        r"---
 name: bond99
 type: bond
 state: up
@@ -134,7 +134,7 @@ link-aggregation:
   mode: active-backup
   options:
     fail_over_mac: active
-"#,
+",
     )
     .unwrap();
     let mut merged_iface =
@@ -145,11 +145,11 @@ link-aggregation:
 #[test]
 fn test_bond_validate_bond_mode_not_defined_for_new_iface() {
     let des_iface: Interface = serde_yaml::from_str(
-        r#"---
+        r"---
 name: bond99
 type: bond
 state: up
-"#,
+",
     )
     .unwrap();
     let mut merged_iface = MergedInterface::new(Some(des_iface), None).unwrap();
@@ -185,7 +185,7 @@ link-aggregation:
 #[test]
 fn test_bond_validate_miimon_and_arp_interval() {
     let des_iface: Interface = serde_yaml::from_str(
-        r#"---
+        r"---
 name: bond99
 type: bond
 state: up
@@ -194,7 +194,7 @@ link-aggregation:
   options:
     miimon: 100
     arp_interval: 60
-"#,
+",
     )
     .unwrap();
     let mut merged_iface = MergedInterface::new(Some(des_iface), None).unwrap();
@@ -376,7 +376,7 @@ fn test_integer_bond_mode() {
 #[test]
 fn test_integer_bond_opts() {
     let ifaces: Interfaces = serde_yaml::from_str(
-        r#"---
+        r"---
 - name: bond60
   type: bond
   state: up
@@ -390,7 +390,7 @@ fn test_integer_bond_opts() {
       arp_validate: 6
       fail_over_mac: 2
       primary_reselect: 2
-      xmit_hash_policy: 5"#,
+      xmit_hash_policy: 5",
     )
     .unwrap();
     if let Interface::Bond(bond_iface) = ifaces.to_vec()[0] {
@@ -430,7 +430,7 @@ fn test_integer_bond_opts() {
 #[test]
 fn test_bond_ports() {
     let ifaces: Interfaces = serde_yaml::from_str(
-        r#"---
+        r"---
         - name: bond99
           type: bond
           state: up
@@ -439,7 +439,7 @@ fn test_bond_ports() {
             ports:
             - eth1
             - eth2
-        "#,
+        ",
     )
     .unwrap();
     assert_eq!(ifaces.to_vec()[0].ports(), Some(vec!["eth1", "eth2"]));
@@ -448,7 +448,7 @@ fn test_bond_ports() {
 #[test]
 fn test_balance_slb_invalid_mode_from_current() {
     let des_iface: Interface = serde_yaml::from_str(
-        r#"---
+        r"---
         name: bond99
         type: bond
         state: up
@@ -459,11 +459,11 @@ fn test_balance_slb_invalid_mode_from_current() {
           options:
             balance-slb: 1
             xmit_hash_policy: vlan+srcmac
-        "#,
+        ",
     )
     .unwrap();
     let cur_iface: Interface = serde_yaml::from_str(
-        r#"---
+        r"---
         name: bond99
         type: bond
         state: up
@@ -472,7 +472,7 @@ fn test_balance_slb_invalid_mode_from_current() {
           ports:
           - eth1
           - eth2
-        "#,
+        ",
     )
     .unwrap();
     let mut merged_iface =
@@ -487,7 +487,7 @@ fn test_balance_slb_invalid_mode_from_current() {
 #[test]
 fn test_balance_slb_invalid_xmit_from_current() {
     let des_iface: Interface = serde_yaml::from_str(
-        r#"---
+        r"---
         name: bond99
         type: bond
         state: up
@@ -497,11 +497,11 @@ fn test_balance_slb_invalid_xmit_from_current() {
           - eth2
           options:
             balance-slb: 1
-        "#,
+        ",
     )
     .unwrap();
     let cur_iface: Interface = serde_yaml::from_str(
-        r#"---
+        r"---
         name: bond99
         type: bond
         state: up
@@ -512,7 +512,7 @@ fn test_balance_slb_invalid_xmit_from_current() {
           - eth2
           options:
             xmit_hash_policy: layer2
-        "#,
+        ",
     )
     .unwrap();
     let mut merged_iface =
@@ -527,7 +527,7 @@ fn test_balance_slb_invalid_xmit_from_current() {
 #[test]
 fn test_balance_slb_valid_override_current() {
     let des_iface: Interface = serde_yaml::from_str(
-        r#"---
+        r"---
         name: bond99
         type: bond
         state: up
@@ -538,11 +538,11 @@ fn test_balance_slb_valid_override_current() {
           options:
             balance-slb: 1
             xmit_hash_policy: vlan+srcmac
-        "#,
+        ",
     )
     .unwrap();
     let cur_iface: Interface = serde_yaml::from_str(
-        r#"---
+        r"---
         name: bond99
         type: bond
         state: up
@@ -553,7 +553,7 @@ fn test_balance_slb_valid_override_current() {
           - eth2
           options:
             xmit_hash_policy: layer2
-        "#,
+        ",
     )
     .unwrap();
     let mut merged_iface =
@@ -564,7 +564,7 @@ fn test_balance_slb_valid_override_current() {
 #[test]
 fn test_disable_balance_slb_valid_override_current() {
     let des_iface: Interface = serde_yaml::from_str(
-        r#"---
+        r"---
         name: bond99
         type: bond
         state: up
@@ -575,11 +575,11 @@ fn test_disable_balance_slb_valid_override_current() {
           options:
             balance-slb: 0
             xmit_hash_policy: layer2
-        "#,
+        ",
     )
     .unwrap();
     let cur_iface: Interface = serde_yaml::from_str(
-        r#"---
+        r"---
         name: bond99
         type: bond
         state: up
@@ -591,7 +591,7 @@ fn test_disable_balance_slb_valid_override_current() {
           options:
             balance-slb: 1
             xmit_hash_policy: vlan+srcmac
-        "#,
+        ",
     )
     .unwrap();
     let mut merged_iface =

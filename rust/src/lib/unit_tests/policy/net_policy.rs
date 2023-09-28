@@ -29,7 +29,7 @@ desiredState:
     )
     .unwrap();
     let current: NetworkState = serde_yaml::from_str(
-        r#"---
+        r"---
         interfaces:
           - name: eth1
             type: ethernet
@@ -45,7 +45,7 @@ desiredState:
             next-hop-address: 192.0.2.1
             next-hop-interface: eth1
           config: []
-        "#,
+        ",
     )
     .unwrap();
 
@@ -97,7 +97,7 @@ desiredState:
     )
     .unwrap();
     let current: NetworkState = serde_yaml::from_str(
-        r#"---
+        r"---
         interfaces:
           - name: eth1
             type: ethernet
@@ -124,7 +124,7 @@ desiredState:
           - destination: 192.51.100.0/24
             next-hop-address: 192.0.2.1
             next-hop-interface: eth1
-        "#,
+        ",
     )
     .unwrap();
 
@@ -183,7 +183,7 @@ fn test_policy_convert_dhcp_to_static_with_dns() {
     )
     .unwrap();
     let current: NetworkState = serde_yaml::from_str(
-        r#"---
+        r"---
         interfaces:
           - name: eth1
             type: ethernet
@@ -218,7 +218,7 @@ fn test_policy_convert_dhcp_to_static_with_dns() {
             server:
             - 192.51.100.99
             - 2001:db8:1::99
-        "#,
+        ",
     )
     .unwrap();
 
@@ -273,24 +273,24 @@ fn test_policy_empty_policy() {
 #[test]
 fn test_policy_no_capture() {
     let policy: NetworkPolicy = serde_yaml::from_str(
-        r#"
+        r"
         desiredState:
           interfaces:
           - name: eth1
             type: ethernet
             state: up
-        "#,
+        ",
     )
     .unwrap();
 
     let state = NetworkState::try_from(policy).unwrap();
     let expected_state: NetworkState = serde_yaml::from_str(
-        r#"
+        r"
         interfaces:
           - name: eth1
             type: ethernet
             state: up
-        "#,
+        ",
     )
     .unwrap();
     assert_eq!(state, expected_state);

@@ -8,11 +8,11 @@ use crate::{
 #[test]
 fn test_ib_autoremove_pkey_if_base_iface_removed() {
     let desired: Interfaces = serde_yaml::from_str(
-        r#"---
+        r"---
 - name: mlx5_ib2
   type: infiniband
   state: absent
-"#,
+",
     )
     .unwrap();
     let current: Interfaces = serde_yaml::from_str(
@@ -136,13 +136,13 @@ fn test_ib_port_of_bridge_in_desire() {
 #[test]
 fn test_ib_port_of_bridge_in_current() {
     let desired: Interfaces = serde_yaml::from_str(
-        r#"---
+        r"---
 - name: br0
   type: linux-bridge
   bridge:
     port:
     - name: mlx5_ib2
-"#,
+",
     )
     .unwrap();
 
@@ -169,7 +169,7 @@ fn test_ib_port_of_bridge_in_current() {
 #[test]
 fn test_ib_port_of_bond_mode_in_desire() {
     let desired: Interfaces = serde_yaml::from_str(
-        r#"---
+        r"---
 - name: bond0
   type: bond
   state: up
@@ -177,7 +177,7 @@ fn test_ib_port_of_bond_mode_in_desire() {
     mode: balance-rr
     port:
     - mlx5_ib2
-"#,
+",
     )
     .unwrap();
 
@@ -203,14 +203,14 @@ fn test_ib_port_of_bond_mode_in_desire() {
 #[test]
 fn test_ib_port_of_bond_mode_in_current() {
     let desired: Interfaces = serde_yaml::from_str(
-        r#"---
+        r"---
 - name: bond0
   type: bond
   state: up
   link-aggregation:
     port:
     - mlx5_ib2
-"#,
+",
     )
     .unwrap();
 
@@ -243,14 +243,14 @@ fn test_ib_port_of_bond_mode_in_current() {
 #[test]
 fn test_ib_port_of_active_backup_bond_mode_in_current() {
     let desired: Interfaces = serde_yaml::from_str(
-        r#"---
+        r"---
 - name: bond0
   type: bond
   state: up
   link-aggregation:
     port:
     - mlx5_ib2
-"#,
+",
     )
     .unwrap();
 
@@ -279,7 +279,7 @@ fn test_ib_port_of_active_backup_bond_mode_in_current() {
 #[test]
 fn test_ib_port_of_active_backup_bond_mode_in_both() {
     let desired: Interfaces = serde_yaml::from_str(
-        r#"---
+        r"---
 - name: bond0
   type: bond
   state: up
@@ -287,7 +287,7 @@ fn test_ib_port_of_active_backup_bond_mode_in_both() {
     mode: active-backup
     port:
     - mlx5_ib2
-"#,
+",
     )
     .unwrap();
 
@@ -333,7 +333,7 @@ fn test_ib_port_of_active_backup_bond_mode_in_both() {
 #[test]
 fn test_ib_port_of_active_backup_bond_mode_in_desire() {
     let desired: Interfaces = serde_yaml::from_str(
-        r#"---
+        r"---
 - name: bond0
   type: bond
   state: up
@@ -341,7 +341,7 @@ fn test_ib_port_of_active_backup_bond_mode_in_desire() {
     mode: active-backup
     port:
     - mlx5_ib2
-"#,
+",
     )
     .unwrap();
 

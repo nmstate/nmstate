@@ -117,10 +117,10 @@ ethtool:
 #[test]
 fn test_ethtool_sort_features_when_serialize() {
     let features: EthtoolFeatureConfig = serde_yaml::from_str(
-        r#"---
+        r"---
         b: true
         a: true
-        c: true"#,
+        c: true",
     )
     .unwrap();
 

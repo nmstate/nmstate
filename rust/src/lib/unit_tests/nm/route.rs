@@ -146,7 +146,7 @@ fn test_absent_routes_with_iface_only() {
 #[test]
 fn test_route_ignore_absent_ifaces() {
     let desired: NetworkState = serde_yaml::from_str(
-        r#"
+        r"
 interfaces:
 - name: br0
   state: absent
@@ -155,12 +155,12 @@ routes:
   config:
   - next-hop-interface: br0
     state: absent
-"#,
+",
     )
     .unwrap();
 
     let current: NetworkState = serde_yaml::from_str(
-        r#"
+        r"
 interfaces:
 - name: eth1
   type: ethernet
@@ -187,7 +187,7 @@ routes:
       next-hop-address: 192.0.2.1
       next-hop-interface: br0
       table-id: 254
-"#,
+",
     )
     .unwrap();
 

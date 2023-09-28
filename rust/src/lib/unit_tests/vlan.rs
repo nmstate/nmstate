@@ -25,7 +25,7 @@ vlan:
 #[test]
 fn test_vlan_get_parent_up_priority_plus_one() {
     let desired: Interfaces = serde_yaml::from_str(
-        r#"---
+        r"---
 - name: bond0.100
   type: vlan
   vlan:
@@ -42,7 +42,7 @@ fn test_vlan_get_parent_up_priority_plus_one() {
     port:
     - bond0
     - bond0.100
-    route-table-id: 1000"#,
+    route-table-id: 1000",
     )
     .unwrap();
 
@@ -77,7 +77,7 @@ fn test_vlan_get_parent_up_priority_plus_one() {
 #[test]
 fn test_vlan_orphan_check_auto_absent() {
     let current: Interfaces = serde_yaml::from_str(
-        r#"---
+        r"---
         - name: bond0.100
           type: vlan
           vlan:
@@ -86,14 +86,14 @@ fn test_vlan_orphan_check_auto_absent() {
         - name: bond0
           type: bond
           link-aggregation:
-            mode: balance-rr"#,
+            mode: balance-rr",
     )
     .unwrap();
     let desired: Interfaces = serde_yaml::from_str(
-        r#"---
+        r"---
         - name: bond0
           type: bond
-          state: absent"#,
+          state: absent",
     )
     .unwrap();
 
@@ -113,7 +113,7 @@ fn test_vlan_orphan_check_auto_absent() {
 #[test]
 fn test_vlan_orphan_but_desired() {
     let current: Interfaces = serde_yaml::from_str(
-        r#"---
+        r"---
         - name: bond0.100
           type: vlan
           vlan:
@@ -122,15 +122,15 @@ fn test_vlan_orphan_but_desired() {
         - name: bond0
           type: bond
           link-aggregation:
-            mode: balance-rr"#,
+            mode: balance-rr",
     )
     .unwrap();
     let desired: Interfaces = serde_yaml::from_str(
-        r#"---
+        r"---
         - name: bond0.100
         - name: bond0
           type: bond
-          state: absent"#,
+          state: absent",
     )
     .unwrap();
 
@@ -149,7 +149,7 @@ fn test_vlan_orphan_but_desired() {
 #[test]
 fn test_vlan_orphan_has_now_parent() {
     let current: Interfaces = serde_yaml::from_str(
-        r#"---
+        r"---
         - name: bond0.100
           type: vlan
           vlan:
@@ -158,11 +158,11 @@ fn test_vlan_orphan_has_now_parent() {
         - name: bond0
           type: bond
           link-aggregation:
-            mode: balance-rr"#,
+            mode: balance-rr",
     )
     .unwrap();
     let desired: Interfaces = serde_yaml::from_str(
-        r#"---
+        r"---
         - name: bond0.100
           state: up
           type: vlan
@@ -176,7 +176,7 @@ fn test_vlan_orphan_has_now_parent() {
             mode: balance-rr
         - name: bond0
           type: bond
-          state: absent"#,
+          state: absent",
     )
     .unwrap();
 
@@ -186,23 +186,23 @@ fn test_vlan_orphan_has_now_parent() {
 #[test]
 fn test_vlan_update() {
     let mut iface1: VlanInterface = serde_yaml::from_str(
-        r#"---
+        r"---
         name: bond0.100
         type: vlan
         vlan:
           base-iface: bond0
-          id: 100"#,
+          id: 100",
     )
     .unwrap();
 
     let iface2: VlanInterface = serde_yaml::from_str(
-        r#"---
+        r"---
         name: bond0.100
         type: vlan
         vlan:
           base-iface: bond0
           id: 100
-          protocol: 802.1q"#,
+          protocol: 802.1q",
     )
     .unwrap();
 

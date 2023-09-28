@@ -4,7 +4,7 @@ use crate::{MergedOvsDbGlobalConfig, OvsDbGlobalConfig};
 
 fn get_current_ovsdb_config() -> OvsDbGlobalConfig {
     serde_yaml::from_str(
-        r#"---
+        r"---
 external_ids:
   a: A0
   b: B0
@@ -15,7 +15,7 @@ other_config:
   e: E0
   f: F0
   g: G0
-"#,
+",
     )
     .unwrap()
 }
@@ -23,7 +23,7 @@ other_config:
 #[test]
 fn test_ovsdb_merge_with_override_and_delete() {
     let desired: OvsDbGlobalConfig = serde_yaml::from_str(
-        r#"---
+        r"---
 external_ids:
   a: A
   b: B
@@ -32,7 +32,7 @@ other_config:
   d: null
   e: E
   f: F
-"#,
+",
     )
     .unwrap();
 
@@ -42,7 +42,7 @@ other_config:
         MergedOvsDbGlobalConfig::new(desired, current, None).unwrap();
 
     let expect: OvsDbGlobalConfig = serde_yaml::from_str(
-        r#"---
+        r"---
 external_ids:
   a: A
   b: B
@@ -51,7 +51,7 @@ other_config:
   e: E
   f: F
   g: G0
-"#,
+",
     )
     .unwrap();
 
@@ -71,10 +71,10 @@ fn test_ovsdb_merge_delete_all() {
     let current = get_current_ovsdb_config();
 
     let expect: OvsDbGlobalConfig = serde_yaml::from_str(
-        r#"---
+        r"---
 external_ids: {}
 other_config: {}
-"#,
+",
     )
     .unwrap();
 
@@ -94,22 +94,22 @@ other_config: {}
 #[test]
 fn test_ovsdb_merge_delete_all_external_ids() {
     let desired: OvsDbGlobalConfig = serde_yaml::from_str(
-        r#"---
+        r"---
 external_ids: {}
-"#,
+",
     )
     .unwrap();
     let current = get_current_ovsdb_config();
 
     let expect: OvsDbGlobalConfig = serde_yaml::from_str(
-        r#"---
+        r"---
 external_ids: {}
 other_config:
   d: D0
   e: E0
   f: F0
   g: G0
-"#,
+",
     )
     .unwrap();
 
@@ -129,22 +129,22 @@ other_config:
 #[test]
 fn test_ovsdb_merge_delete_all_other_config() {
     let desired: OvsDbGlobalConfig = serde_yaml::from_str(
-        r#"---
+        r"---
 other_config: {}
-"#,
+",
     )
     .unwrap();
     let current = get_current_ovsdb_config();
 
     let expect: OvsDbGlobalConfig = serde_yaml::from_str(
-        r#"---
+        r"---
 external_ids:
   a: A0
   b: B0
   c: C0
   h: H0
 other_config: {}
-"#,
+",
     )
     .unwrap();
 

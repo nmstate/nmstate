@@ -46,17 +46,17 @@ ethernet:
 #[test]
 fn test_veth_change_peer_away_from_ignored_peer() {
     let des_ifaces: Interfaces = serde_yaml::from_str(
-        r#"---
+        r"---
 - name: veth1
   type: veth
   state: up
   veth:
     peer: newpeer
-"#,
+",
     )
     .unwrap();
     let cur_ifaces: Interfaces = serde_yaml::from_str(
-        r#"---
+        r"---
 - name: veth1
   type: veth
   state: up
@@ -68,7 +68,7 @@ fn test_veth_change_peer_away_from_ignored_peer() {
   state: ignore
   veth:
     peer: veth1
-"#,
+",
     )
     .unwrap();
 
@@ -83,23 +83,23 @@ fn test_veth_change_peer_away_from_ignored_peer() {
 #[test]
 fn test_veth_change_peer_away_from_missing_peer() {
     let des_ifaces: Interfaces = serde_yaml::from_str(
-        r#"---
+        r"---
         - name: veth1
           type: veth
           state: up
           veth:
             peer: newpeer
-        "#,
+        ",
     )
     .unwrap();
     // The peer of veth1 does not exist in current state means the veth peer is
     // in another network namespace
     let cur_ifaces: Interfaces = serde_yaml::from_str(
-        r#"---
+        r"---
         - name: veth1
           type: veth
           state: up
-        "#,
+        ",
     )
     .unwrap();
 
@@ -114,19 +114,19 @@ fn test_veth_change_peer_away_from_missing_peer() {
 #[test]
 fn test_eth_verify_absent_ignore_current_up() {
     let des_ifaces: Interfaces = serde_yaml::from_str(
-        r#"---
+        r"---
 - name: eth1
   type: ethernet
   state: absent
-"#,
+",
     )
     .unwrap();
     let cur_ifaces: Interfaces = serde_yaml::from_str(
-        r#"---
+        r"---
 - name: eth1
   type: ethernet
   state: up
-"#,
+",
     )
     .unwrap();
     let merged_ifaces =
@@ -139,17 +139,17 @@ fn test_eth_verify_absent_ignore_current_up() {
 #[test]
 fn test_eth_change_veth_peer() {
     let des_ifaces: Interfaces = serde_yaml::from_str(
-        r#"---
+        r"---
 - name: veth1
   type: veth
   state: up
   veth:
     peer: newpeer
-"#,
+",
     )
     .unwrap();
     let cur_ifaces: Interfaces = serde_yaml::from_str(
-        r#"---
+        r"---
 - name: veth1
   type: veth
   state: up
@@ -161,7 +161,7 @@ fn test_eth_change_veth_peer() {
   state: up
   veth:
     peer: veth1
-"#,
+",
     )
     .unwrap();
 
@@ -181,11 +181,11 @@ fn test_eth_change_veth_peer() {
 #[test]
 fn test_new_veth_without_peer_config() {
     let des_ifaces: Interfaces = serde_yaml::from_str(
-        r#"---
+        r"---
 - name: veth1
   type: veth
   state: up
-"#,
+",
     )
     .unwrap();
 

@@ -589,7 +589,7 @@ fn test_iface_detach_controller_been_list_in_other_port_list() {
 #[test]
 fn test_auto_manage_ports() {
     let des_ifaces: Interfaces = serde_yaml::from_str(
-        r#"---
+        r"---
 - name: br0
   type: linux-bridge
   state: up
@@ -597,18 +597,18 @@ fn test_auto_manage_ports() {
     port:
     - name: eth1
     - name: eth2
-"#,
+",
     )
     .unwrap();
     let cur_ifaces: Interfaces = serde_yaml::from_str(
-        r#"---
+        r"---
 - name: eth1
   type: ethernet
   state: ignore
 - name: eth2
   type: ethernet
   state: ignore
-"#,
+",
     )
     .unwrap();
 
@@ -645,7 +645,7 @@ fn test_auto_manage_ports() {
 #[test]
 fn test_do_not_auto_manage_ports_if_current_has_ignore() {
     let des_ifaces: Interfaces = serde_yaml::from_str(
-        r#"---
+        r"---
 - name: br0
   type: linux-bridge
   state: up
@@ -653,11 +653,11 @@ fn test_do_not_auto_manage_ports_if_current_has_ignore() {
     port:
     - name: eth1
     - name: eth2
-"#,
+",
     )
     .unwrap();
     let cur_ifaces: Interfaces = serde_yaml::from_str(
-        r#"---
+        r"---
 - name: eth1
   type: ethernet
   state: ignore
@@ -673,7 +673,7 @@ fn test_do_not_auto_manage_ports_if_current_has_ignore() {
   bridge:
     port:
     - name: eth3
-"#,
+",
     )
     .unwrap();
 
@@ -700,9 +700,9 @@ fn test_do_not_auto_manage_ports_if_current_has_ignore() {
 #[test]
 fn test_absent_iface_holding_controller_and_ip() {
     let des_ifaces: Interfaces = serde_yaml::from_str(
-        r#"---
+        r"---
         - name: eth1
-          state: absent"#,
+          state: absent",
     )
     .unwrap();
 
@@ -710,7 +710,7 @@ fn test_absent_iface_holding_controller_and_ip() {
     // When user is removing this interface, we should not care about whether it
     // can hold IP or not.
     let mut cur_ifaces: Interfaces = serde_yaml::from_str(
-        r#"---
+        r"---
         - name: br0
           type: linux-bridge
           state: up
@@ -723,7 +723,7 @@ fn test_absent_iface_holding_controller_and_ip() {
           ipv6:
             enabled: true
             autoconf: true
-            dhcp: true"#,
+            dhcp: true",
     )
     .unwrap();
     if let Some(iface) = cur_ifaces.kernel_ifaces.get_mut("eth1") {

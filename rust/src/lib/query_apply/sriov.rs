@@ -60,7 +60,7 @@ impl SrIovConfig {
             return Ok(());
         };
         for vf in vfs {
-            if vf.iface_name.as_str().is_empty() {
+            if vf.iface_name.is_empty() {
                 let e = NmstateError::new(
                     ErrorKind::VerificationError,
                     format!(

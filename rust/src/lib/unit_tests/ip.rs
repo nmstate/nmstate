@@ -309,7 +309,7 @@ fn test_should_not_have_ipv6_in_ipv4_section() {
 #[test]
 fn test_should_not_have_ipv4_in_ipv6_section() {
     let des_ifaces: Interfaces = serde_yaml::from_str(
-        r#"---
+        r"---
             - name: eth1
               type: ethernet
               state: up
@@ -318,7 +318,7 @@ fn test_should_not_have_ipv4_in_ipv6_section() {
                 dhcp: false
                 address:
                   - ip: 192.0.2.1
-                    prefix-length: 24"#,
+                    prefix-length: 24",
     )
     .unwrap();
 

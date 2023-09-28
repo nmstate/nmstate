@@ -137,12 +137,12 @@ fn test_check_orphan_vlan_change_parent() {
 #[test]
 fn test_ifaces_deny_unknonw_attribute() {
     let result = serde_yaml::from_str::<Interfaces>(
-        r#"---
+        r"---
 - name: eth1
   type: ethernet
   state: up
   foo: bar
-"#,
+",
     );
     assert!(result.is_err());
     if let Err(e) = result {
@@ -154,19 +154,19 @@ fn test_ifaces_deny_unknonw_attribute() {
 #[test]
 fn test_ifaces_resolve_unknown_bond_iface() {
     let current = serde_yaml::from_str::<Interfaces>(
-        r#"---
+        r"---
 - name: bond99
   type: bond
   state: up
-"#,
+",
     )
     .unwrap();
     let desired = serde_yaml::from_str::<Interfaces>(
-        r#"---
+        r"---
 - name: bond99
   link-aggregation:
     mode: balance-rr
-"#,
+",
     )
     .unwrap();
     let merged_iface =
@@ -195,25 +195,25 @@ fn test_ifaces_resolve_unknown_bond_iface() {
 #[test]
 fn test_ifaces_ignore_iface_in_desire() {
     let current = serde_yaml::from_str::<Interfaces>(
-        r#"---
+        r"---
 - name: eth1
   type: ethernet
   state: up
 - name: br0
   type: ovs-bridge
   state: up
-"#,
+",
     )
     .unwrap();
     let desired = serde_yaml::from_str::<Interfaces>(
-        r#"---
+        r"---
 - name: eth1
   type: ethernet
   state: ignore
 - name: br0
   type: ovs-bridge
   state: ignore
-"#,
+",
     )
     .unwrap();
 
@@ -236,22 +236,22 @@ fn test_ifaces_ignore_iface_in_desire() {
 #[test]
 fn test_ifaces_ignore_iface_in_current() {
     let current = serde_yaml::from_str::<Interfaces>(
-        r#"---
+        r"---
 - name: eth1
   type: ethernet
   state: ignore
 - name: br0
   type: ovs-bridge
   state: up
-"#,
+",
     )
     .unwrap();
     let desired = serde_yaml::from_str::<Interfaces>(
-        r#"---
+        r"---
 - name: br0
   type: ovs-bridge
   state: ignore
-"#,
+",
     )
     .unwrap();
     let merged_ifaces =
@@ -273,7 +273,7 @@ fn test_ifaces_ignore_iface_in_current() {
 #[test]
 fn test_ifaces_ignore_iface_in_current_but_desired() {
     let current = serde_yaml::from_str::<Interfaces>(
-        r#"---
+        r"---
 - name: eth1
   type: ethernet
   state: ignore
@@ -283,11 +283,11 @@ fn test_ifaces_ignore_iface_in_current_but_desired() {
 - name: br0
   type: ovs-bridge
   state: up
-"#,
+",
     )
     .unwrap();
     let desired = serde_yaml::from_str::<Interfaces>(
-        r#"---
+        r"---
 - name: eth1
   type: ethernet
   state: down
@@ -297,7 +297,7 @@ fn test_ifaces_ignore_iface_in_current_but_desired() {
 - name: br0
   type: ovs-bridge
   state: ignore
-"#,
+",
     )
     .unwrap();
     let merged_ifaces =
@@ -320,14 +320,14 @@ fn test_ifaces_ignore_iface_in_current_but_desired() {
 #[test]
 fn test_ifaces_iter() {
     let ifaces = serde_yaml::from_str::<Interfaces>(
-        r#"---
+        r"---
 - name: eth1
   type: ethernet
   state: ignore
 - name: br0
   type: ovs-bridge
   state: up
-"#,
+",
     )
     .unwrap();
     let ifaces_vec: Vec<&Interface> = ifaces.iter().collect();
@@ -337,14 +337,14 @@ fn test_ifaces_iter() {
 #[test]
 fn test_ifaces_iter_mut() {
     let mut ifaces = serde_yaml::from_str::<Interfaces>(
-        r#"---
+        r"---
 - name: eth1
   type: ethernet
   state: ignore
 - name: br0
   type: ovs-bridge
   state: up
-"#,
+",
     )
     .unwrap();
     for iface in ifaces.iter_mut() {

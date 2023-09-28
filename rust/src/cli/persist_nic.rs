@@ -458,7 +458,7 @@ fn get_bond_port_mac(iface: &Interface) -> Option<String> {
                 .get(iface.name())
                 .and_then(|i| i.bond_subordinate.as_ref())
                 .and_then(|b| {
-                    if b.perm_hwaddr.as_str().is_empty() {
+                    if b.perm_hwaddr.is_empty() {
                         None
                     } else {
                         Some(b.perm_hwaddr.clone())

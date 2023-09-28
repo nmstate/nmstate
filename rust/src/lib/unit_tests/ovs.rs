@@ -8,7 +8,7 @@ use crate::{
 #[test]
 fn test_ovs_bridge_ignore_port() {
     let des_ifaces: Interfaces = serde_yaml::from_str(
-        r#"---
+        r"---
 - name: eth1
   type: ethernet
   state: ignore
@@ -21,11 +21,11 @@ fn test_ovs_bridge_ignore_port() {
   bridge:
     port:
     - name: eth2
-"#,
+",
     )
     .unwrap();
     let cur_ifaces: Interfaces = serde_yaml::from_str(
-        r#"---
+        r"---
 - name: eth1
   type: ethernet
   state: up
@@ -39,7 +39,7 @@ fn test_ovs_bridge_ignore_port() {
     port:
     - name: eth1
     - name: eth2
-"#,
+",
     )
     .unwrap();
 
@@ -76,7 +76,7 @@ fn test_ovs_bridge_ignore_port() {
 #[test]
 fn test_ovs_bridge_verify_ignore_port() {
     let des_ifaces: Interfaces = serde_yaml::from_str(
-        r#"---
+        r"---
 - name: eth1
   type: ethernet
   state: ignore
@@ -88,11 +88,11 @@ fn test_ovs_bridge_verify_ignore_port() {
   bridge:
     port:
     - name: eth2
-"#,
+",
     )
     .unwrap();
     let cur_ifaces: Interfaces = serde_yaml::from_str(
-        r#"---
+        r"---
 - name: eth1
   type: ethernet
   state: up
@@ -106,19 +106,19 @@ fn test_ovs_bridge_verify_ignore_port() {
     port:
     - name: eth1
     - name: eth2
-"#,
+",
     )
     .unwrap();
 
     let pre_apply_cur_ifaces: Interfaces = serde_yaml::from_str(
-        r#"---
+        r"---
 - name: eth1
   type: ethernet
   state: up
 - name: eth2
   type: ethernet
   state: up
-"#,
+",
     )
     .unwrap();
 
@@ -164,7 +164,7 @@ bridge:
 #[test]
 fn test_ovs_bridge_same_name_absent() {
     let current: Interfaces = serde_yaml::from_str(
-        r#"---
+        r"---
 - name: eth1
   type: ethernet
 - name: br1
@@ -176,16 +176,16 @@ fn test_ovs_bridge_same_name_absent() {
     port:
     - name: br1
     - name: eth1
-"#,
+",
     )
     .unwrap();
 
     let desired: Interfaces = serde_yaml::from_str(
-        r#"---
+        r"---
 - name: br1
   type: ovs-bridge
   state: absent
-"#,
+",
     )
     .unwrap();
 
@@ -219,7 +219,7 @@ fn test_ovs_bridge_same_name_absent() {
 #[test]
 fn test_ovs_bridge_resolve_user_space_iface_type() {
     let current: Interfaces = serde_yaml::from_str(
-        r#"---
+        r"---
 - name: br1
   type: ovs-interface
 - name: ovs-br1
@@ -228,15 +228,15 @@ fn test_ovs_bridge_resolve_user_space_iface_type() {
   bridge:
     port:
     - name: br1
-"#,
+",
     )
     .unwrap();
 
     let desired: Interfaces = serde_yaml::from_str(
-        r#"---
+        r"---
 - name: ovs-br1
   state: absent
-"#,
+",
     )
     .unwrap();
 
@@ -257,7 +257,7 @@ fn test_ovs_bridge_resolve_user_space_iface_type() {
 #[test]
 fn test_ovs_bridge_ports() {
     let ifaces: Interfaces = serde_yaml::from_str(
-        r#"---
+        r"---
 - name: br0
   type: ovs-bridge
   state: up
@@ -271,7 +271,7 @@ fn test_ovs_bridge_ports() {
         ports:
           - name: eth3
           - name: eth4
-"#,
+",
     )
     .unwrap();
     assert_eq!(
@@ -312,7 +312,7 @@ bridge:
     .unwrap();
 
     let des_iface: Interface = serde_yaml::from_str(
-        r#"---
+        r"---
 name: br0
 type: ovs-bridge
 state: up
@@ -320,7 +320,7 @@ bridge:
   port:
   - name: eth1
   - name: eth2
-"#,
+",
     )
     .unwrap();
 
@@ -340,7 +340,7 @@ bridge:
 #[test]
 fn test_ovs_bridge_vlan_filter_trunk_tag_without_enable_native() {
     let mut desired: OvsBridgeInterface = serde_yaml::from_str(
-        r#"
+        r"
         name: br0
         type: ovs-bridge
         state: up
@@ -357,7 +357,7 @@ fn test_ovs_bridge_vlan_filter_trunk_tag_without_enable_native() {
                   - id-range:
                       max: 500
                       min: 400
-        "#,
+        ",
     )
     .unwrap();
 
@@ -372,7 +372,7 @@ fn test_ovs_bridge_vlan_filter_trunk_tag_without_enable_native() {
 #[test]
 fn test_ovs_bridge_vlan_filter_trunk_tag_overlap_id_vs_range() {
     let mut desired: OvsBridgeInterface = serde_yaml::from_str(
-        r#"
+        r"
         name: br0
         type: ovs-bridge
         state: up
@@ -386,7 +386,7 @@ fn test_ovs_bridge_vlan_filter_trunk_tag_overlap_id_vs_range() {
                       min: 600
                       max: 900
                   - id: 600
-        "#,
+        ",
     )
     .unwrap();
 
@@ -401,7 +401,7 @@ fn test_ovs_bridge_vlan_filter_trunk_tag_overlap_id_vs_range() {
 #[test]
 fn test_ovs_bridge_vlan_filter_trunk_tag_overlap_range_vs_range() {
     let mut desired: OvsBridgeInterface = serde_yaml::from_str(
-        r#"
+        r"
         name: br0
         type: ovs-bridge
         state: up
@@ -417,7 +417,7 @@ fn test_ovs_bridge_vlan_filter_trunk_tag_overlap_range_vs_range() {
                   - id-range:
                       min: 900
                       max: 1000
-        "#,
+        ",
     )
     .unwrap();
 
@@ -432,7 +432,7 @@ fn test_ovs_bridge_vlan_filter_trunk_tag_overlap_range_vs_range() {
 #[test]
 fn test_ovs_bridge_vlan_filter_trunk_tag_overlap_id_vs_id() {
     let mut desired: OvsBridgeInterface = serde_yaml::from_str(
-        r#"
+        r"
         name: br0
         type: ovs-bridge
         state: up
@@ -444,7 +444,7 @@ fn test_ovs_bridge_vlan_filter_trunk_tag_overlap_id_vs_id() {
                 trunk-tags:
                   - id: 100
                   - id: 100
-        "#,
+        ",
     )
     .unwrap();
 
@@ -459,7 +459,7 @@ fn test_ovs_bridge_vlan_filter_trunk_tag_overlap_id_vs_id() {
 #[test]
 fn test_ovs_bridge_vlan_filter_enable_native_with_access_mode() {
     let mut desired: OvsBridgeInterface = serde_yaml::from_str(
-        r#"
+        r"
         name: br0
         type: ovs-bridge
         state: up
@@ -469,7 +469,7 @@ fn test_ovs_bridge_vlan_filter_enable_native_with_access_mode() {
               vlan:
                 enable-native: true
                 mode: access
-        "#,
+        ",
     )
     .unwrap();
 
@@ -484,7 +484,7 @@ fn test_ovs_bridge_vlan_filter_enable_native_with_access_mode() {
 #[test]
 fn test_ovs_bridge_vlan_filter_trunk_tags_with_access_mode() {
     let mut desired: OvsBridgeInterface = serde_yaml::from_str(
-        r#"
+        r"
         name: br0
         type: ovs-bridge
         state: up
@@ -495,7 +495,7 @@ fn test_ovs_bridge_vlan_filter_trunk_tags_with_access_mode() {
                 mode: access
                 trunk-tags:
                   - id: 100
-        "#,
+        ",
     )
     .unwrap();
 
@@ -510,7 +510,7 @@ fn test_ovs_bridge_vlan_filter_trunk_tags_with_access_mode() {
 #[test]
 fn test_ovs_bridge_vlan_filter_no_trunk_tags_with_trunk_mode() {
     let mut desired: OvsBridgeInterface = serde_yaml::from_str(
-        r#"
+        r"
         name: br0
         type: ovs-bridge
         state: up
@@ -519,7 +519,7 @@ fn test_ovs_bridge_vlan_filter_no_trunk_tags_with_trunk_mode() {
             - name: eth1
               vlan:
                 mode: trunk
-        "#,
+        ",
     )
     .unwrap();
 
@@ -534,14 +534,14 @@ fn test_ovs_bridge_vlan_filter_no_trunk_tags_with_trunk_mode() {
 #[test]
 fn test_validate_dpdk_n_rxq_desc() {
     let desired: OvsInterface = serde_yaml::from_str(
-        r#"
+        r"
         name: ovs0
         type: ovs-interface
         state: up
         dpdk:
           devargs: 0000:af:00.1
           n_rxq_desc: 1025
-        "#,
+        ",
     )
     .unwrap();
 
@@ -557,14 +557,14 @@ fn test_validate_dpdk_n_rxq_desc() {
 #[test]
 fn test_validate_dpdk_n_txq_desc() {
     let desired: OvsInterface = serde_yaml::from_str(
-        r#"
+        r"
         name: ovs0
         type: ovs-interface
         state: up
         dpdk:
           devargs: 0000:af:00.1
           n_txq_desc: 1025
-        "#,
+        ",
     )
     .unwrap();
 
@@ -580,19 +580,19 @@ fn test_validate_dpdk_n_txq_desc() {
 #[test]
 fn test_ovs_orphan_check_on_bridge_with_same_name_iface() {
     let des_ifaces: Interfaces = serde_yaml::from_str(
-        r#"
+        r"
         - name: br0
           type: ovs-bridge
           state: up
           bridge:
             port:
               - name: ovs0
-        "#,
+        ",
     )
     .unwrap();
 
     let cur_ifaces: Interfaces = serde_yaml::from_str(
-        r#"
+        r"
         - name: br0
           type: ovs-interface
         - name: br0
@@ -601,7 +601,7 @@ fn test_ovs_orphan_check_on_bridge_with_same_name_iface() {
           bridge:
             port:
               - name: br0
-        "#,
+        ",
     )
     .unwrap();
 
@@ -611,7 +611,7 @@ fn test_ovs_orphan_check_on_bridge_with_same_name_iface() {
 #[test]
 fn test_ovs_mark_orphan_up_on_bridge_with_same_name_iface() {
     let des_ifaces: Interfaces = serde_yaml::from_str(
-        r#"
+        r"
         - name: br0
           type: ovs-interface
           state: up
@@ -621,12 +621,12 @@ fn test_ovs_mark_orphan_up_on_bridge_with_same_name_iface() {
           bridge:
             port:
               - name: ovs0
-        "#,
+        ",
     )
     .unwrap();
 
     let cur_ifaces: Interfaces = serde_yaml::from_str(
-        r#"
+        r"
         - name: br0
           type: ovs-interface
         - name: br0
@@ -635,7 +635,7 @@ fn test_ovs_mark_orphan_up_on_bridge_with_same_name_iface() {
           bridge:
             port:
               - name: br0
-        "#,
+        ",
     )
     .unwrap();
 
@@ -645,7 +645,7 @@ fn test_ovs_mark_orphan_up_on_bridge_with_same_name_iface() {
 #[test]
 fn test_ignore_patch_ports_for_verify() {
     let des_ifaces: Interfaces = serde_yaml::from_str(
-        r#"---
+        r"---
 - name: eth1
   type: ethernet
 - name: eth2
@@ -664,11 +664,11 @@ fn test_ignore_patch_ports_for_verify() {
     allow-extra-patch-ports: true
     port:
     - name: eth2
-"#,
+",
     )
     .unwrap();
     let pre_apply_cur_ifaces: Interfaces = serde_yaml::from_str(
-        r#"---
+        r"---
 - name: eth1
   type: ethernet
   state: up
@@ -703,12 +703,12 @@ fn test_ignore_patch_ports_for_verify() {
   bridge:
     port:
     - name: patch1
-"#,
+",
     )
     .unwrap();
 
     let cur_ifaces: Interfaces = serde_yaml::from_str(
-        r#"---
+        r"---
 - name: eth1
   type: ethernet
   state: up
@@ -745,7 +745,7 @@ fn test_ignore_patch_ports_for_verify() {
     enabled: false
   patch:
     peer: patch0
-"#,
+",
     )
     .unwrap();
 
@@ -759,7 +759,7 @@ fn test_ignore_patch_ports_for_verify() {
 #[test]
 fn test_ignore_patch_ports_for_apply() {
     let des_ifaces: Interfaces = serde_yaml::from_str(
-        r#"---
+        r"---
 - name: eth1
   type: ethernet
 - name: eth2
@@ -778,11 +778,11 @@ fn test_ignore_patch_ports_for_apply() {
     allow-extra-patch-ports: true
     port:
     - name: eth2
-"#,
+",
     )
     .unwrap();
     let pre_apply_cur_ifaces: Interfaces = serde_yaml::from_str(
-        r#"---
+        r"---
 - name: eth1
   type: ethernet
   state: up
@@ -817,7 +817,7 @@ fn test_ignore_patch_ports_for_apply() {
   bridge:
     port:
     - name: patch1
-"#,
+",
     )
     .unwrap();
 

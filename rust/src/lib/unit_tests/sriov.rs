@@ -58,7 +58,7 @@ fn test_ignore_sriov_if_not_desired() {
     let mut pre_apply_cur_ifaces = Interfaces::new();
     pre_apply_cur_ifaces.push(new_eth_iface("eth1"));
     let current = serde_yaml::from_str::<Interfaces>(
-        r#"---
+        r"---
 - name: eth1
   type: ethernet
   state: up
@@ -75,16 +75,16 @@ fn test_ignore_sriov_if_not_desired() {
       - id: 1
         vlan-id: 101
         qos: 6
-"#,
+",
     )
     .unwrap();
     let desired = serde_yaml::from_str::<Interfaces>(
-        r#"---
+        r"---
 - name: eth1
   type: ethernet
   state: up
   mtu: 1280
-"#,
+",
     )
     .unwrap();
 
@@ -97,7 +97,7 @@ fn test_ignore_sriov_if_not_desired() {
 
 fn gen_sriov_current_ifaces() -> Interfaces {
     let mut current = serde_yaml::from_str::<Interfaces>(
-        r#"---
+        r"---
         - name: eth1
           type: ethernet
           state: up
@@ -113,7 +113,7 @@ fn gen_sriov_current_ifaces() -> Interfaces {
         - name: eth1v1
           type: ethernet
           state: up
-        "#,
+        ",
     )
     .unwrap();
     let iface = current.kernel_ifaces.get_mut("eth1").unwrap();
@@ -148,7 +148,7 @@ fn gen_sriov_current_ifaces() -> Interfaces {
 fn test_resolve_sriov_name() {
     let current = gen_sriov_current_ifaces();
     let mut desired = serde_yaml::from_str::<Interfaces>(
-        r#"---
+        r"---
         - name: sriov:eth1:0
           type: ethernet
           state: up
@@ -157,7 +157,7 @@ fn test_resolve_sriov_name() {
           type: ethernet
           state: up
           mtu: 1281
-        "#,
+        ",
     )
     .unwrap();
     desired.resolve_sriov_reference(&current).unwrap();
@@ -175,7 +175,7 @@ fn test_resolve_sriov_name() {
 fn test_resolve_sriov_name_duplicate() {
     let current = gen_sriov_current_ifaces();
     let mut desired = serde_yaml::from_str::<Interfaces>(
-        r#"---
+        r"---
         - name: sriov:eth1:0
           type: ethernet
           state: up
@@ -184,7 +184,7 @@ fn test_resolve_sriov_name_duplicate() {
           type: ethernet
           state: up
           mtu: 1281
-        "#,
+        ",
     )
     .unwrap();
     let result = desired.resolve_sriov_reference(&current);
@@ -198,7 +198,7 @@ fn test_resolve_sriov_name_duplicate() {
 fn test_failed_to_resolve_sriov_in_ovs_port_list() {
     let current = gen_sriov_current_ifaces();
     let mut desired = serde_yaml::from_str::<Interfaces>(
-        r#"---
+        r"---
         - name: ovs-br0
           type: ovs-bridge
           state: up
@@ -206,7 +206,7 @@ fn test_failed_to_resolve_sriov_in_ovs_port_list() {
             port:
             - name: sriov:eth1:2
             - name: sriov:eth1:1
-        "#,
+        ",
     )
     .unwrap();
     let result = desired.resolve_sriov_reference(&current);
@@ -220,11 +220,11 @@ fn test_failed_to_resolve_sriov_in_ovs_port_list() {
 fn test_verify_sriov_name() {
     let current = gen_sriov_current_ifaces();
     let desired = serde_yaml::from_str::<Interfaces>(
-        r#"---
+        r"---
         - name: sriov:eth1:0
           type: ethernet
           state: up
-        "#,
+        ",
     )
     .unwrap();
     let merged_ifaces =
@@ -237,7 +237,7 @@ fn test_verify_sriov_name() {
 fn test_resolve_sriov_port_name_linux_bridge() {
     let current = gen_sriov_current_ifaces();
     let mut desired = serde_yaml::from_str::<Interfaces>(
-        r#"---
+        r"---
         - name: br0
           type: linux-bridge
           state: up
@@ -247,7 +247,7 @@ fn test_resolve_sriov_port_name_linux_bridge() {
               vlan:
                 mode: access
                 tag: 305
-        "#,
+        ",
     )
     .unwrap();
     desired.resolve_sriov_reference(&current).unwrap();
@@ -273,7 +273,7 @@ fn test_resolve_sriov_port_name_linux_bridge() {
 fn test_resolve_sriov_port_name_bond() {
     let current = gen_sriov_current_ifaces();
     let mut desired = serde_yaml::from_str::<Interfaces>(
-        r#"---
+        r"---
         - name: bond0
           type: bond
           state: up
@@ -282,7 +282,7 @@ fn test_resolve_sriov_port_name_bond() {
             port:
             - sriov:eth1:1
             - sriov:eth1:0
-        "#,
+        ",
     )
     .unwrap();
     desired.resolve_sriov_reference(&current).unwrap();
@@ -296,7 +296,7 @@ fn test_resolve_sriov_port_name_bond() {
 fn test_resolve_sriov_port_name_ovs_bridge() {
     let current = gen_sriov_current_ifaces();
     let mut desired = serde_yaml::from_str::<Interfaces>(
-        r#"---
+        r"---
         - name: ovs-br0
           type: ovs-bridge
           state: up
@@ -304,7 +304,7 @@ fn test_resolve_sriov_port_name_ovs_bridge() {
             port:
             - name: sriov:eth1:0
             - name: sriov:eth1:1
-        "#,
+        ",
     )
     .unwrap();
     desired.resolve_sriov_reference(&current).unwrap();
@@ -320,7 +320,7 @@ fn test_resolve_sriov_port_name_ovs_bridge() {
 fn test_resolve_sriov_port_name_ovs_bond() {
     let current = gen_sriov_current_ifaces();
     let mut desired = serde_yaml::from_str::<Interfaces>(
-        r#"---
+        r"---
         - name: ovs-br0
           type: ovs-bridge
           state: up
@@ -332,7 +332,7 @@ fn test_resolve_sriov_port_name_ovs_bond() {
                 port:
                   - name: eth2
                   - name: sriov:eth1:1
-        "#,
+        ",
     )
     .unwrap();
     desired.resolve_sriov_reference(&current).unwrap();
@@ -348,7 +348,7 @@ fn test_resolve_sriov_port_name_ovs_bond() {
 fn test_verify_sriov_port_name_linux_bridge() {
     let pre_apply_current = gen_sriov_current_ifaces();
     let desired = serde_yaml::from_str::<Interfaces>(
-        r#"---
+        r"---
         - name: br0
           type: linux-bridge
           state: up
@@ -358,13 +358,13 @@ fn test_verify_sriov_port_name_linux_bridge() {
               vlan:
                 mode: access
                 tag: 305
-        "#,
+        ",
     )
     .unwrap();
     let mut current = gen_sriov_current_ifaces();
     current.push(
         serde_yaml::from_str::<Interface>(
-            r#"---
+            r"---
             name: br0
             type: linux-bridge
             state: up
@@ -374,7 +374,7 @@ fn test_verify_sriov_port_name_linux_bridge() {
                 vlan:
                   mode: access
                   tag: 305
-        "#,
+        ",
         )
         .unwrap(),
     );
@@ -389,7 +389,7 @@ fn test_verify_sriov_port_name_linux_bridge() {
 fn test_verify_sriov_port_name_bond() {
     let pre_apply_current = gen_sriov_current_ifaces();
     let desired = serde_yaml::from_str::<Interfaces>(
-        r#"---
+        r"---
         - name: bond0
           type: bond
           state: up
@@ -397,13 +397,13 @@ fn test_verify_sriov_port_name_bond() {
             mode: balance-rr
             port:
             - sriov:eth1:1
-        "#,
+        ",
     )
     .unwrap();
     let mut current = gen_sriov_current_ifaces();
     current.push(
         serde_yaml::from_str::<Interface>(
-            r#"---
+            r"---
             name: bond0
             type: bond
             state: up
@@ -411,7 +411,7 @@ fn test_verify_sriov_port_name_bond() {
               mode: balance-rr
               port:
               - eth1v1
-        "#,
+        ",
         )
         .unwrap(),
     );
@@ -427,27 +427,27 @@ fn test_verify_sriov_port_name_bond() {
 fn test_verify_sriov_port_name_ovs_bridge() {
     let pre_apply_current = gen_sriov_current_ifaces();
     let desired = serde_yaml::from_str::<Interfaces>(
-        r#"---
+        r"---
         - name: ovs-br0
           type: ovs-bridge
           state: up
           bridge:
             port:
             - name: sriov:eth1:1
-        "#,
+        ",
     )
     .unwrap();
     let mut current = gen_sriov_current_ifaces();
     current.push(
         serde_yaml::from_str::<Interface>(
-            r#"---
+            r"---
             name: ovs-br0
             type: ovs-bridge
             state: up
             bridge:
               port:
               - name: eth1v1
-            "#,
+            ",
         )
         .unwrap(),
     );
@@ -462,7 +462,7 @@ fn test_verify_sriov_port_name_ovs_bridge() {
 fn test_verify_sriov_port_name_ovs_bond() {
     let pre_apply_current = gen_sriov_current_ifaces();
     let desired = serde_yaml::from_str::<Interfaces>(
-        r#"---
+        r"---
         - name: ovs-br0
           type: ovs-bridge
           state: up
@@ -474,13 +474,13 @@ fn test_verify_sriov_port_name_ovs_bond() {
                 port:
                   - name: sriov:eth1:1
                   - name: sriov:eth1:0
-        "#,
+        ",
     )
     .unwrap();
     let mut current = gen_sriov_current_ifaces();
     current.push(
         serde_yaml::from_str::<Interface>(
-            r#"---
+            r"---
             name: ovs-br0
             type: ovs-bridge
             state: up
@@ -492,7 +492,7 @@ fn test_verify_sriov_port_name_ovs_bond() {
                   port:
                     - name: eth1v0
                     - name: eth1v1
-              "#,
+              ",
         )
         .unwrap(),
     );
@@ -590,7 +590,7 @@ fn test_sriov_vf_auto_fill_vf_conf() {
 #[test]
 fn test_sriov_enable_and_use_in_single_yaml() {
     let desired = serde_yaml::from_str::<NetworkState>(
-        r#"---
+        r"---
         interfaces:
         - name: eth1
           type: ethernet
@@ -607,7 +607,7 @@ fn test_sriov_enable_and_use_in_single_yaml() {
         - name: eth1v1
           type: ethernet
           state: up
-        "#,
+        ",
     )
     .unwrap();
 
@@ -630,7 +630,7 @@ fn test_sriov_enable_and_use_in_single_yaml() {
 #[test]
 fn test_has_sriov_and_missing_eth() {
     let desired = serde_yaml::from_str::<NetworkState>(
-        r#"---
+        r"---
         interfaces:
         - name: eth1
           type: ethernet
@@ -647,11 +647,11 @@ fn test_has_sriov_and_missing_eth() {
         - name: eth1v1
           type: ethernet
           state: up
-        "#,
+        ",
     )
     .unwrap();
     let current = serde_yaml::from_str::<NetworkState>(
-        r#"---
+        r"---
         interfaces:
         - name: eth1
           type: ethernet
@@ -662,7 +662,7 @@ fn test_has_sriov_and_missing_eth() {
             auto-negotiation: false
             sr-iov:
               total-vfs: 0
-        "#,
+        ",
     )
     .unwrap();
 
@@ -672,7 +672,7 @@ fn test_has_sriov_and_missing_eth() {
 #[test]
 fn test_sriov_has_sriov_and_missing_eth_pf_none() {
     let desired = serde_yaml::from_str::<NetworkState>(
-        r#"---
+        r"---
         interfaces:
         - name: eth1
           type: ethernet
@@ -687,16 +687,16 @@ fn test_sriov_has_sriov_and_missing_eth_pf_none() {
           state: up
         - name: eth1v1
           state: up
-        "#,
+        ",
     )
     .unwrap();
     let current = serde_yaml::from_str::<NetworkState>(
-        r#"---
+        r"---
         interfaces:
         - name: eth1
           type: ethernet
           state: up
-        "#,
+        ",
     )
     .unwrap();
 
@@ -706,7 +706,7 @@ fn test_sriov_has_sriov_and_missing_eth_pf_none() {
 #[test]
 fn test_sriov_vf_revert_to_default() {
     let desired = serde_yaml::from_str::<Interfaces>(
-        r#"---
+        r"---
         - name: eth1
           type: ethernet
           state: up
@@ -714,12 +714,12 @@ fn test_sriov_vf_revert_to_default() {
             sr-iov:
               total-vfs: 2
               vfs: []
-        "#,
+        ",
     )
     .unwrap();
 
     let current = serde_yaml::from_str::<Interfaces>(
-        r#"---
+        r"---
         - name: eth1
           type: ethernet
           state: up
@@ -739,7 +739,7 @@ fn test_sriov_vf_revert_to_default() {
                   min-tx-rate: 1
                   max-tx-rate: 1000
                   mac-address: d4:Ee:01:25:42:5A
-        "#,
+        ",
     )
     .unwrap();
 
@@ -793,25 +793,25 @@ fn test_sriov_vf_revert_to_default() {
 #[test]
 fn test_has_sriov_with_unknown_iface_type() {
     let desired = serde_yaml::from_str::<Interfaces>(
-        r#"---
+        r"---
         - name: eth1
           state: up
           ethernet:
             sr-iov:
               total-vfs: 2
-        "#,
+        ",
     )
     .unwrap();
 
     let current = serde_yaml::from_str::<Interfaces>(
-        r#"---
+        r"---
         - name: eth1
           type: ethernet
           state: up
           ethernet:
             sr-iov:
               total-vfs: 1
-        "#,
+        ",
     )
     .unwrap();
 

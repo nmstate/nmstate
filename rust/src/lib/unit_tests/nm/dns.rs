@@ -8,7 +8,7 @@ use crate::{
 #[test]
 fn test_dns_ignore_dns_purge_on_absent_iface() {
     let desired: NetworkState = serde_yaml::from_str(
-        r#"---
+        r"---
 dns-resolver:
   config:
     server: []
@@ -16,11 +16,11 @@ interfaces:
   - name: dummy0
     type: dummy
     state: absent
-"#,
+",
     )
     .unwrap();
     let current: NetworkState = serde_yaml::from_str(
-        r#"---
+        r"---
 dns-resolver:
   config:
     search:
@@ -42,7 +42,7 @@ interfaces:
       dhcp: true
       autoconf: true
       auto-dns: false
-"#,
+",
     )
     .unwrap();
 
@@ -65,23 +65,23 @@ interfaces:
 #[test]
 fn test_dns_ipv6_link_local_iface_has_ipv6_disabled() {
     let desired: NetworkState = serde_yaml::from_str(
-        r#"---
+        r"---
         dns-resolver:
           config:
             server:
             - fe80::deef:1%eth1
-        "#,
+        ",
     )
     .unwrap();
     let current: NetworkState = serde_yaml::from_str(
-        r#"---
+        r"---
         interfaces:
           - name: eth1
             type: ethernet
             state: up
             ipv6:
               enabled: false
-        "#,
+        ",
     )
     .unwrap();
 
@@ -95,17 +95,17 @@ fn test_dns_ipv6_link_local_iface_has_ipv6_disabled() {
 #[test]
 fn test_two_dns_ipv6_link_local_iface() {
     let desired: NetworkState = serde_yaml::from_str(
-        r#"---
+        r"---
         dns-resolver:
           config:
             server:
             - fe80::deef:1%eth1
             - fe80::deef:2%eth2
-        "#,
+        ",
     )
     .unwrap();
     let current: NetworkState = serde_yaml::from_str(
-        r#"---
+        r"---
         interfaces:
           - name: eth1
             type: ethernet
@@ -123,7 +123,7 @@ fn test_two_dns_ipv6_link_local_iface() {
               dhcp: true
               autoconf: true
               auto-dns: false
-        "#,
+        ",
     )
     .unwrap();
     let result = MergedNetworkState::new(desired, current, false, false);
@@ -136,14 +136,14 @@ fn test_two_dns_ipv6_link_local_iface() {
 #[test]
 fn test_dns_iface_has_no_ip_stack_info() {
     let desired: NetworkState = serde_yaml::from_str(
-        r#"---
+        r"---
         interfaces:
           - name: eth1
-        "#,
+        ",
     )
     .unwrap();
     let mut current: NetworkState = serde_yaml::from_str(
-        r#"---
+        r"---
         dns-resolver:
           config:
             search:
@@ -178,7 +178,7 @@ fn test_dns_iface_has_no_ip_stack_info() {
           - destination: ::/0
             next-hop-address: 2001:db8:1::3
             next-hop-interface: eth1
-        "#,
+        ",
     )
     .unwrap();
     if let Some(ip) = current
@@ -231,7 +231,7 @@ fn test_dns_iface_has_no_ip_stack_info() {
 #[test]
 fn test_dns_not_prefer_iface_ipv6_with_link_local_only_address() {
     let desired: NetworkState = serde_yaml::from_str(
-        r#"---
+        r"---
         dns-resolver:
           config:
             search:
@@ -239,11 +239,11 @@ fn test_dns_not_prefer_iface_ipv6_with_link_local_only_address() {
             - example.org
             server:
             - 2001:4860:4860::8844
-            - 2001:4860:4860::8888"#,
+            - 2001:4860:4860::8888",
     )
     .unwrap();
     let current: NetworkState = serde_yaml::from_str(
-        r#"---
+        r"---
         interfaces:
           - name: dummy0
             state: up
@@ -261,7 +261,7 @@ fn test_dns_not_prefer_iface_ipv6_with_link_local_only_address() {
               enabled: true
               dhcp: true
               autoconf: true
-              auto-dns: false"#,
+              auto-dns: false",
     )
     .unwrap();
 
@@ -278,7 +278,7 @@ fn test_dns_not_prefer_iface_ipv6_with_link_local_only_address() {
 #[test]
 fn test_dns_prefer_desired_over_current() {
     let desired: NetworkState = serde_yaml::from_str(
-        r#"---
+        r"---
         dns-resolver:
           config:
             search:
@@ -303,11 +303,11 @@ fn test_dns_prefer_desired_over_current() {
               dhcp: false
               address:
               - ip: fe80::db:1
-                prefix-length: 64"#,
+                prefix-length: 64",
     )
     .unwrap();
     let current: NetworkState = serde_yaml::from_str(
-        r#"---
+        r"---
         interfaces:
           - name: dummy1
             type: dummy
@@ -320,7 +320,7 @@ fn test_dns_prefer_desired_over_current() {
               enabled: true
               dhcp: true
               autoconf: true
-              auto-dns: false"#,
+              auto-dns: false",
     )
     .unwrap();
 
@@ -337,7 +337,7 @@ fn test_dns_prefer_desired_over_current() {
 #[test]
 fn test_copy_ip_stack_if_marked_for_dns() {
     let desired: NetworkState = serde_yaml::from_str(
-        r#"---
+        r"---
         dns-resolver:
           config:
             search:
@@ -349,11 +349,11 @@ fn test_copy_ip_stack_if_marked_for_dns() {
         interfaces:
           - name: dummy0
             type: dummy
-            state: up"#,
+            state: up",
     )
     .unwrap();
     let current: NetworkState = serde_yaml::from_str(
-        r#"---
+        r"---
         interfaces:
           - name: dummy0
             type: dummy
@@ -366,7 +366,7 @@ fn test_copy_ip_stack_if_marked_for_dns() {
               enabled: true
               dhcp: true
               autoconf: true
-              auto-dns: false"#,
+              auto-dns: false",
     )
     .unwrap();
 

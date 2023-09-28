@@ -5,9 +5,9 @@ use crate::NetworkState;
 #[test]
 fn test_invalid_top_key() {
     let result = serde_yaml::from_str::<NetworkState>(
-        r#"---
+        r"---
 invalid_key: abc
-"#,
+",
     );
 
     assert!(result.is_err());
@@ -16,9 +16,9 @@ invalid_key: abc
 #[test]
 fn test_invalid_top_type() {
     let result = serde_yaml::from_str::<NetworkState>(
-        r#"---
+        r"---
 - invalid_key: abc
-"#,
+",
     );
 
     assert!(result.is_err());
