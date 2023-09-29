@@ -48,6 +48,7 @@ class IPState:
         self._info = info
         self._remove_stack_if_disabled()
         self._canonicalize_ip_addr()
+        self._canonicalize_ip_prefix()
         self._canonicalize_dynamic()
 
     def _canonicalize_dynamic(self):
@@ -69,6 +70,12 @@ class IPState:
         for addr in self.addresses:
             addr[InterfaceIP.ADDRESS_IP] = canonicalize_ip_address(
                 addr[InterfaceIP.ADDRESS_IP]
+            )
+
+    def _canonicalize_ip_prefix(self):
+        for addr in self.addresses:
+            addr[InterfaceIP.ADDRESS_PREFIX_LENGTH] = int(
+                addr[InterfaceIP.ADDRESS_PREFIX_LENGTH]
             )
 
     def sort_addresses(self):
