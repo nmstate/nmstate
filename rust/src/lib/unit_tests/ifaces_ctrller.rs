@@ -739,3 +739,123 @@ fn test_absent_iface_holding_controller_and_ip() {
 
     assert!(iface.for_apply.as_ref().unwrap().is_absent());
 }
+
+#[test]
+fn test_gen_topoligies_bridge_over_vlan() {
+    let des_ifaces: Interfaces = serde_yaml::from_str(
+        r"---
+- name: br0
+  type: linux-bridge
+  state: up
+  bridge:
+    port:
+    - name: eth1.100
+    - name: eth2.100
+  ipv4:
+    address:
+    - ip: 192.0.2.252
+      prefix-length: 24
+    - ip: 192.0.2.251
+      prefix-length: 24
+    dhcp: false
+    enabled: true
+  ipv6:
+    autoconf: true
+    dhcp: true
+    enabled: true
+- name: eth1.100
+  type: vlan
+  vlan:
+    id: 100
+    base-iface: eth1
+- name: eth2.100
+  type: vlan
+  vlan:
+    id: 100
+    base-iface: eth2
+",
+    )
+    .unwrap();
+    let cur_ifaces: Interfaces = serde_yaml::from_str(
+        r"---
+- name: eth1
+  type: ethernet
+- name: eth2
+  type: ethernet
+",
+    )
+    .unwrap();
+
+    let merged_ifaces =
+        MergedInterfaces::new(des_ifaces, cur_ifaces, false, false).unwrap();
+
+    let top = merged_ifaces.gen_topoligies();
+
+    assert_eq!(
+        top,
+        vec![[
+            "static_ip4,auto_ip6".to_string(),
+            InterfaceType::LinuxBridge.to_string(),
+            InterfaceType::Vlan.to_string(),
+            InterfaceType::Ethernet.to_string()
+        ]
+        .join(" -> ")]
+    );
+}
+
+#[test]
+fn test_gen_topoligies_ovs_bridge() {
+    let des_ifaces: Interfaces = serde_yaml::from_str(
+        r"---
+- name: br0
+  type: ovs-interface
+  state: up
+  ipv4:
+    address:
+    - ip: 192.0.2.252
+      prefix-length: 24
+    - ip: 192.0.2.251
+      prefix-length: 24
+    dhcp: false
+    enabled: true
+  ipv6:
+    autoconf: true
+    dhcp: true
+    enabled: true
+- name: br0
+  type: ovs-bridge
+  state: up
+  bridge:
+    ports:
+    - name: br0
+    - name: eth1
+    - name: eth2
+",
+    )
+    .unwrap();
+    let cur_ifaces: Interfaces = serde_yaml::from_str(
+        r"---
+- name: eth1
+  type: ethernet
+- name: eth2
+  type: ethernet
+",
+    )
+    .unwrap();
+
+    let merged_ifaces =
+        MergedInterfaces::new(des_ifaces, cur_ifaces, false, false).unwrap();
+
+    let top = merged_ifaces.gen_topoligies();
+
+    assert_eq!(
+        top,
+        vec![[
+            "static_ip4,auto_ip6".to_string(),
+            InterfaceType::OvsInterface.to_string(),
+            InterfaceType::OvsBridge.to_string(),
+            InterfaceType::Ethernet.to_string()
+        ]
+        .join(" -> ")]
+    );
+}

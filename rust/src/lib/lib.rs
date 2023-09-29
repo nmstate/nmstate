@@ -115,6 +115,8 @@ mod route;
 mod route_rule;
 mod serializer;
 mod state;
+#[cfg(feature = "query_apply")]
+mod statistic;
 mod unit_tests;
 
 pub use crate::dispatch::DispatchConfig;
@@ -180,3 +182,5 @@ pub(crate) use crate::route_rule::MergedRouteRules;
 pub use crate::route_rule::{
     RouteRuleAction, RouteRuleEntry, RouteRuleState, RouteRules,
 };
+#[cfg(feature = "query_apply")]
+pub use crate::statistic::{NmstateFeature, NmstateStatistic};

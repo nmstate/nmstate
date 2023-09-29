@@ -20,6 +20,8 @@ mod result;
 #[cfg(feature = "query_apply")]
 mod service;
 mod state;
+#[cfg(feature = "query_apply")]
+mod statistic;
 
 use env_logger::Builder;
 use log::LevelFilter;
@@ -41,6 +43,8 @@ use crate::query::show;
 use crate::result::print_result_and_exit;
 #[cfg(feature = "query_apply")]
 use crate::service::ncl_service;
+#[cfg(feature = "query_apply")]
+use crate::statistic::statistic;
 
 pub(crate) const DEFAULT_SERVICE_FOLDER: &str = "/etc/nmstate";
 pub(crate) const CONFIG_FOLDER_KEY: &str = "CONFIG_FOLDER";
@@ -60,6 +64,7 @@ const SUB_CMD_PERSIST_NIC_NAMES: &str = "persist-nic-names";
 const SUB_CMD_POLICY: &str = "policy";
 const SUB_CMD_FORMAT: &str = "format";
 const SUB_CMD_GEN_REVERT: &str = "gr";
+const SUB_CMD_STATISTIC: &str = "statistic";
 
 fn main() {
     let argv: Vec<String> = std::env::args().collect();
@@ -347,6 +352,30 @@ fn main() {
                         .help("Show state in json format"),
                 )
         )
+   .subcommand(
+            clap::Command::new(SUB_CMD_STATISTIC)
+                .alias("st")
+                .about("Generate statistic of specified desire state")
+                .arg(
+                    clap::Arg::new("STATE_FILE")
+                        .required(true)
+                        .index(1)
+                        .help("Network state file"),
+                )
+                .arg(
+                    clap::Arg::new("CURRENT_STATE")
+                        .short('c')
+                        .long("current")
+                        .takes_value(true)
+                        .help("Read current network state from file"),
+                )
+                .arg(
+                    clap::Arg::new("JSON")
+                        .long("json")
+                        .takes_value(false)
+                        .help("Show statistic in json format"),
+                )
+        )
         .subcommand(
             clap::Command::new(SUB_CMD_VERSION)
             .about("Show version")
@@ -466,6 +495,9 @@ fn main() {
         print_result_and_exit(format::format(
             matches.value_of("STATE_FILE").unwrap(),
         ));
+    } else if let Some(matches) = matches.subcommand_matches(SUB_CMD_STATISTIC)
+    {
+        print_result_and_exit(statistic(matches));
     } else if matches.subcommand_matches(SUB_CMD_VERSION).is_some() {
         print_result_and_exit(Ok(format!(
             "{} {}",
@@ -594,4 +626,15 @@ fn policy(
     Err("The policy sub-command require `query_apply` feature been \
         enabled during compiling"
         .into())
+}
+
+#[cfg(not(feature = "query_apply"))]
+fn statistic(
+    _matches: &clap::ArgMatches,
+) -> Result<String, crate::error::CliError> {
+    Err(
+        "The statistic sub-command require `query-apply` feature been \
+        enabled during compiling"
+            .into(),
+    )
 }
