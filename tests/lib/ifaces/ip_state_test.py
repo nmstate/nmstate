@@ -28,6 +28,7 @@ from libnmstate.schema import InterfaceIPv6
 
 from libnmstate.ifaces.base_iface import IPState
 
+from ..testlib.constants import IPV4_ADDRESS1
 from ..testlib.constants import IPV4_ADDRESSES
 from ..testlib.constants import IPV6_ADDRESS1
 from ..testlib.constants import IPV6_ADDRESS1_FULL
@@ -140,6 +141,53 @@ class TestIPState:
                     {
                         InterfaceIPv6.ADDRESS_IP: IPV6_ADDRESS1_FULL,
                         InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
+                    }
+                ],
+            },
+        )
+
+        assert ip_state.to_dict() == {
+            InterfaceIPv6.ENABLED: True,
+            InterfaceIPv6.ADDRESS: [
+                {
+                    InterfaceIPv6.ADDRESS_IP: IPV6_ADDRESS1,
+                    InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 64,
+                }
+            ],
+        }
+
+    def test_treating_string_as_int_for_prefix_length(self):
+        ipv4_state = IPState(
+            Interface.IPV4,
+            {
+                InterfaceIPv4.ENABLED: True,
+                InterfaceIPv4.ADDRESS: [
+                    {
+                        InterfaceIPv4.ADDRESS_IP: IPV4_ADDRESS1,
+                        InterfaceIPv4.ADDRESS_PREFIX_LENGTH: "24",
+                    }
+                ],
+            },
+        )
+
+        assert ipv4_state.to_dict() == {
+            InterfaceIPv6.ENABLED: True,
+            InterfaceIPv6.ADDRESS: [
+                {
+                    InterfaceIPv6.ADDRESS_IP: IPV4_ADDRESS1,
+                    InterfaceIPv6.ADDRESS_PREFIX_LENGTH: 24,
+                }
+            ],
+        }
+
+        ip_state = IPState(
+            Interface.IPV6,
+            {
+                InterfaceIPv6.ENABLED: True,
+                InterfaceIPv6.ADDRESS: [
+                    {
+                        InterfaceIPv6.ADDRESS_IP: IPV6_ADDRESS1,
+                        InterfaceIPv6.ADDRESS_PREFIX_LENGTH: "64",
                     }
                 ],
             },

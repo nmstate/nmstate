@@ -615,7 +615,9 @@ definitions:
                   ip:
                     type: string
                   prefix-length:
-                    type: integer
+                    type:
+                      - integer
+                      - string
                   netmask:
                     type: string
             neighbor:
@@ -654,7 +656,9 @@ definitions:
                   ip:
                     type: string
                   prefix-length:
-                    type: integer
+                    type:
+                      - integer
+                      - string
             neighbor:
               type: array
               items:
