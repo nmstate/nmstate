@@ -27,7 +27,6 @@ def nm_unmanaged_dummy(name):
                         }
                     ]
                 },
-                verify_change=False,
             )
         except Exception:
             # dummy1 might not became managed by NM, hence removal might fail
