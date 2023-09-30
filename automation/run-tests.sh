@@ -182,21 +182,10 @@ function check_services {
     '
 }
 
-function clean_dnf_cache {
-    # Workaround for dnf failure:
-    # [Errno 2] No such file or directory: '/var/cache/dnf/metadata_lock.pid'
-    if [[ "$CI" == "true" ]];then
-        exec_cmd "rm -fv /var/cache/dnf/metadata_lock.pid"
-        exec_cmd "dnf clean all"
-        exec_cmd "dnf makecache || :"
-    fi
-}
-
 function upgrade_nm_from_copr {
     local copr_repo=$1
     # The repoid for a Copr repo is the name with the slash replaces by a colon
     local copr_repo_id="copr:copr.fedorainfracloud.org:${copr_repo/\//:}"
-    clean_dnf_cache
     exec_cmd "command -v dnf && plugin='dnf-command(copr)' || plugin='yum-plugin-copr'; yum install --assumeyes \$plugin;"
     exec_cmd "yum copr enable --assumeyes ${copr_repo}"
     # centos-stream NetworkManager package is providing the alpha builds.
@@ -216,7 +205,6 @@ function upgrade_nm_from_rpm_dir {
 
 function run_customize_command {
     if [[ -n "$customize_cmd" ]];then
-        clean_dnf_cache
         exec_cmd "${customize_cmd}"
     fi
 }
