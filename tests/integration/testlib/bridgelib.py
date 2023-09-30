@@ -64,7 +64,6 @@ def linux_bridge(
                     }
                 ]
             },
-            verify_change=False,
         )
 
 

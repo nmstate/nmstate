@@ -139,7 +139,7 @@ class Bridge:
                     self._ifaces, InterfaceState.ABSENT
                 )
             }
-            libnmstate.apply(desired_state, verify_change=False)
+            libnmstate.apply(desired_state)
 
     def apply(self):
         libnmstate.apply(self.state)

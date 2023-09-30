@@ -73,7 +73,7 @@ def vxlan_interfaces(*vxlans, create=True):
     try:
         yield setup_state
     finally:
-        libnmstate.apply(vxlans_absent(vxlans), verify_change=False)
+        libnmstate.apply(vxlans_absent(vxlans))
 
 
 def vxlans_up(vxlans):
