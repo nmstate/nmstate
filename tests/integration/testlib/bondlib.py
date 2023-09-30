@@ -64,5 +64,4 @@ def bond_interface(name, port, extra_iface_state=None, create=True):
                     }
                 ]
             },
-            verify_change=False,
         )
