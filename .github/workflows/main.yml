@@ -5,59 +5,9 @@ on:
    types: [opened, synchronize, reopened]
 
 jobs:
-  rust_lint:
-    strategy:
-      fail-fast: true
-      matrix:
-        include:
-          - rust_version: "stable"
-          - rust_version: "nightly"
-
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v3
-
-    - name: Install Rust ${{ matrix.rust_version }}
-      run: |
-        rustup override set ${{ matrix.rust_version }}
-        rustup update ${{ matrix.rust_version }}
-        rustup component add rustfmt clippy
-
-
-    - name: Check fmt
-      if: matrix.rust_version == 'stable'
-      run: cd rust && cargo fmt -- --check
-
-    - name: Check clippy
-      if: matrix.rust_version == 'nightly'
-      run: cd rust && cargo clippy -- -D warnings
-
-  rust_unit:
-    strategy:
-      fail-fast: true
-      matrix:
-        include:
-          - rust_version: "stable"
-          - rust_version: "nightly"
-          - rust_version: "beta"
-
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v3
-
-    - name: Install Rust ${{ matrix.rust_version }}
-      run: |
-        rustup override set ${{ matrix.rust_version }}
-        rustup update ${{ matrix.rust_version }}
-
-    - name: Unit test
-      run: cd rust && cargo test -- --test-threads=1 --show-output
-
   rpm_build:
     runs-on: ubuntu-latest
-    needs: [rust_lint, py_lint]
+    needs: [py_lint]
     steps:
       - uses: actions/checkout@v3
       - name: build nmstate rpm
@@ -110,15 +60,12 @@ jobs:
           - job_type: "c8s-nm_stable-integ_tier1"
           - job_type: "c8s-nm_stable-integ_tier2"
           - job_type: "c8s-nm_stable-integ_slow"
-          - job_type: "c8s-nm_stable-rust_go"
           - job_type: "c8s-nm_main-integ_tier1"
           - job_type: "c8s-nm_main-integ_tier2"
           - job_type: "c8s-nm_main-integ_slow"
-          - job_type: "c8s-nm_main-rust_go"
           - job_type: "c8s-nm_1_36-integ_tier1"
           - job_type: "c8s-nm_1_36-integ_tier2"
           - job_type: "c8s-nm_1_36-integ_slow"
-          - job_type: "c8s-nm_1_36-rust_go"
           - job_type: "ovs2_11-nm_stable-integ_tier1"
     steps:
       - uses: actions/checkout@v3
