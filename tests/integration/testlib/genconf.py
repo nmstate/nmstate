@@ -46,7 +46,7 @@ def gen_conf_apply(desire_state):
                     Interface.STATE: InterfaceState.ABSENT,
                 }
             )
-        libnmstate.apply(absent_state, verify_change=False)
+        libnmstate.apply(absent_state)
         for file_path in file_paths:
             try:
                 os.unlink(file_path)
