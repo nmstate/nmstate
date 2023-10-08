@@ -1,0 +1,9 @@
+---
+ovn:
+  bridge-mappings:
+    - localnet: red
+      state: absent
+    - localnet: blue
+      bridge: ovsbr2
+    - localnet: green
+      bridge: ovsbr3

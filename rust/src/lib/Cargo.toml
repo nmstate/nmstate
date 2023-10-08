@@ -60,6 +60,7 @@ features = ["feature", "hostname"]
 serde_yaml = "0.9"
 
 [features]
-default = ["query_apply", "gen_conf"]
+default = ["query_apply", "gen_conf", "gen_revert"]
 query_apply = ["nispor", "nix", "zbus"]
 gen_conf = []
+gen_revert = []

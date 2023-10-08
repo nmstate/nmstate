@@ -1,0 +1,53 @@
+route-rules:
+  config:
+  - family: ipv6
+    ip-from: 2001:db8:b::/64
+    priority: 30001
+    route-table: 201
+  - family: ipv4
+    ip-from: 198.51.100.0/24
+    priority: 30000
+    route-table: 200
+routes:
+  running:
+  - destination: 2001:db8:a::/64
+    next-hop-interface: eth1
+    next-hop-address: 2001:db8:1::2
+    metric: 108
+    table-id: 201
+  - destination: 198.51.100.0/24
+    next-hop-interface: eth1
+    next-hop-address: 192.0.2.3
+    metric: 108
+    table-id: 200
+  config:
+  - destination: 2001:db8:a::/64
+    next-hop-interface: eth1
+    next-hop-address: 2001:db8:1::2
+    metric: 108
+    table-id: 201
+  - destination: 198.51.100.0/24
+    next-hop-interface: eth1
+    next-hop-address: 192.0.2.3
+    metric: 108
+    table-id: 200
+interfaces:
+- name: eth1
+  type: veth
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: false
+    address:
+    - ip: 192.0.2.251
+      prefix-length: 24
+  ipv6:
+    enabled: true
+    dhcp: false
+    autoconf: false
+    address:
+    - ip: 2001:db8:1::1
+      prefix-length: 64
+    - ip: fe80::307f:71ff:fe50:d691
+      prefix-length: 64
+    addr-gen-mode: eui64

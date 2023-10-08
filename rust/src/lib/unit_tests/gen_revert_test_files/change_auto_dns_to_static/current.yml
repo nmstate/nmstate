@@ -1,0 +1,42 @@
+---
+dns-resolver:
+  running:
+    search:
+    - example.com
+    - example.org
+    server:
+    - 2001:4860:4860::8888
+    - 2001:4860:4860::8844
+    - 8.8.4.4
+    - 8.8.8.8
+  config: {}
+interfaces:
+  - name: eth1
+    type: ethernet
+    state: up
+    ipv4:
+      address:
+      - ip: 192.0.2.251
+        prefix-length: 24
+        valid-left: 300sec
+        preferred-left: 300sec
+      dhcp: true
+      enabled: true
+    ipv6:
+      address:
+      - ip: 2001:db8:1::1
+        prefix-length: 64
+        valid-left: 300sec
+        preferred-left: 300sec
+      dhcp: true
+      enabled: true
+      autoconf: true
+routes:
+  running:
+  - destination: 0.0.0.0/0
+    next-hop-address: 192.0.2.1
+    next-hop-interface: eth1
+  - destination: ::/0
+    next-hop-address: 2001:db8:1::3
+    next-hop-interface: eth1
+  config: []

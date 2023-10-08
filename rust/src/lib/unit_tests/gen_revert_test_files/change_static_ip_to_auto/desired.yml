@@ -1,0 +1,12 @@
+---
+interfaces:
+  - name: eth1
+    type: ethernet
+    state: up
+    ipv4:
+      dhcp: true
+      enabled: true
+    ipv6:
+      dhcp: true
+      enabled: true
+      autoconf: true

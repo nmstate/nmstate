@@ -8,6 +8,8 @@ mod error;
 mod format;
 #[cfg(feature = "gen_conf")]
 mod gen_conf;
+#[cfg(feature = "gen_revert")]
+mod gen_revert;
 #[cfg(feature = "query_apply")]
 pub(crate) mod persist_nic;
 #[cfg(feature = "query_apply")]
@@ -17,6 +19,7 @@ mod query;
 mod result;
 #[cfg(feature = "query_apply")]
 mod service;
+mod state;
 
 use env_logger::Builder;
 use log::LevelFilter;
@@ -29,6 +32,8 @@ use crate::apply::{
 use crate::autoconf::autoconf;
 #[cfg(feature = "gen_conf")]
 use crate::gen_conf::gen_conf;
+#[cfg(feature = "gen_revert")]
+use crate::gen_revert::gen_revert;
 #[cfg(feature = "query_apply")]
 use crate::policy::policy;
 #[cfg(feature = "query_apply")]
@@ -54,6 +59,7 @@ const SUB_CMD_SERVICE: &str = "service";
 const SUB_CMD_PERSIST_NIC_NAMES: &str = "persist-nic-names";
 const SUB_CMD_POLICY: &str = "policy";
 const SUB_CMD_FORMAT: &str = "format";
+const SUB_CMD_GEN_REVERT: &str = "gr";
 
 fn main() {
     let argv: Vec<String> = std::env::args().collect();
@@ -318,6 +324,30 @@ fn main() {
                 ),
         )
         .subcommand(
+            clap::Command::new(SUB_CMD_GEN_REVERT)
+                .alias("gr")
+                .about("Generate network state to revert the desire state")
+                .arg(
+                    clap::Arg::new("STATE_FILE")
+                        .required(true)
+                        .index(1)
+                        .help("Network state file"),
+                )
+                .arg(
+                    clap::Arg::new("CURRENT_STATE")
+                        .short('c')
+                        .long("current")
+                        .takes_value(true)
+                        .help("Read current network state from file"),
+                )
+                .arg(
+                    clap::Arg::new("JSON")
+                        .long("json")
+                        .takes_value(false)
+                        .help("Show state in json format"),
+                )
+        )
+        .subcommand(
             clap::Command::new(SUB_CMD_VERSION)
             .about("Show version")
        );
@@ -442,6 +472,9 @@ fn main() {
             APP_NAME,
             clap::crate_version!()
         )));
+    } else if let Some(matches) = matches.subcommand_matches(SUB_CMD_GEN_REVERT)
+    {
+        print_result_and_exit(gen_revert(matches));
     } else {
         // Conditionally-built commands
         #[cfg(feature = "query_apply")]
@@ -470,6 +503,15 @@ fn main() {
 #[cfg(not(feature = "gen_conf"))]
 fn gen_conf(_file_path: &str) -> Result<String, crate::error::CliError> {
     Err("The gc sub-command require `gen_conf` feature been \
+        enabled during compiling"
+        .into())
+}
+
+#[cfg(not(feature = "gen_revert"))]
+fn gen_revert(
+    _matches: &clap::ArgMatches,
+) -> Result<String, crate::error::CliError> {
+    Err("The gr sub-command require `gen_revert` feature been \
         enabled during compiling"
         .into())
 }

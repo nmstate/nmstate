@@ -1,0 +1,17 @@
+---
+route-rules:
+  config:
+  - ip-to: 2001:db8:b::/64
+    route-table: 201
+    state: absent
+  - ip-to: 198.51.100.0/24
+    route-table: 200
+    state: absent
+  - family: ipv6
+    ip-from: 2001:db8:b::/64
+    priority: 30001
+    route-table: 201
+  - family: ipv4
+    ip-from: 198.51.100.0/24
+    priority: 30000
+    route-table: 200

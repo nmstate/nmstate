@@ -1,0 +1,41 @@
+---
+interfaces:
+- name: br0
+  type: ovs-bridge
+  profile-name: br0-br
+  state: up
+  wait-ip: any
+  bridge:
+    port:
+    - name: eth1
+    - name: ovs0
+- name: eth1
+  type: ethernet
+  state: up
+  mtu: 1500
+  controller: br0
+- name: ovs0
+  type: ovs-interface
+  profile-name: ovs0-if
+  state: up
+  mtu: 1500
+  min-mtu: 68
+  max-mtu: 65535
+  wait-ip: any
+  ipv4:
+    enabled: false
+    dhcp: false
+  ipv6:
+    enabled: false
+    dhcp: false
+    autoconf: false
+  controller: br0
+  accept-all-mac-addresses: false
+  lldp:
+    enabled: false
+ovs-db:
+  external_ids:
+    foo: 'bar'
+    bar: 'foo'
+  other_config:
+    stats-update-interval: '1000'

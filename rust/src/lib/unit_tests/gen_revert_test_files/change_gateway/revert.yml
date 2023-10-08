@@ -1,0 +1,21 @@
+---
+routes:
+  config:
+  - destination: ::/0
+    next-hop-address: 2001:db8:1::3
+    next-hop-interface: eth1
+    metric: 103
+    state: absent
+  - destination: 0.0.0.0/0
+    next-hop-address: 192.0.2.2
+    next-hop-interface: eth1
+    metric: 102
+    state: absent
+  - destination: ::/0
+    next-hop-address: 2001:db8:1::2
+    next-hop-interface: eth1
+    metric: 102
+  - destination: 0.0.0.0/0
+    next-hop-address: 192.0.2.1
+    next-hop-interface: eth1
+    metric: 101

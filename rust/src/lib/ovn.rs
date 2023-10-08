@@ -290,7 +290,9 @@ impl std::fmt::Display for OvnBridgeMapping {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize,
+)]
 #[serde(rename_all = "lowercase", deny_unknown_fields)]
 #[non_exhaustive]
 pub enum OvnBridgeMappingState {

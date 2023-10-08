@@ -508,8 +508,8 @@ impl From<RouteRuleAction> for u8 {
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub(crate) struct MergedRouteRules {
-    desired: RouteRules,
-    current: RouteRules,
+    pub(crate) desired: RouteRules,
+    pub(crate) current: RouteRules,
     // The `for_apply` will hold two type of route rule:
     //  * Desired route rules
     //  * Current route rules been marked as absent

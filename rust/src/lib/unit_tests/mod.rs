@@ -11,6 +11,8 @@ mod ethernet;
 #[cfg(test)]
 mod ethtool;
 #[cfg(test)]
+mod gen_revert;
+#[cfg(test)]
 mod ifaces;
 #[cfg(test)]
 mod ifaces_ctrller;

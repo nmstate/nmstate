@@ -1,0 +1,11 @@
+---
+interfaces:
+  - name: vlan1
+    type: vlan
+    state: up
+    vlan:
+      id: 99
+      base-iface: eth1
+  - name: eth1
+    type: ethernet
+    state: up

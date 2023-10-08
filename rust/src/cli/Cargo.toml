@@ -30,6 +30,7 @@ chrono = "0.4"
 nispor = { version = "1.2", optional = true }
 
 [features]
-default = ["query_apply", "gen_conf"]
+default = ["query_apply", "gen_conf", "gen_revert"]
 query_apply = ["nmstate/query_apply", "ctrlc", "nispor"]
 gen_conf = ["nmstate/gen_conf"]
+gen_revert = ["nmstate/gen_revert"]

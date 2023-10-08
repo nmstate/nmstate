@@ -1,0 +1,12 @@
+---
+route-rules:
+  config:
+  - state: absent
+    route-table: 200
+  - state: absent
+    route-table: 201
+  - ip-to: 198.51.100.0/24
+    route-table: 200
+  - ip-to: 2001:db8:b::/64
+    route-table: 201
+

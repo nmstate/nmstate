@@ -1,0 +1,21 @@
+---
+interfaces:
+- name: br0
+  type: linux-bridge
+  state: absent
+- name: eth1
+  type: ethernet
+  state: up
+  ipv4:
+    address:
+    - ip: 192.0.2.251
+      prefix-length: 24
+    dhcp: false
+    enabled: true
+  ipv6:
+    enabled: true
+    autoconf: false
+    dhcp: false
+    address:
+      - ip: 2001:db8:1::1
+        prefix-length: 64
