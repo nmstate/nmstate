@@ -108,6 +108,8 @@ mod ovsdb;
 mod policy;
 #[cfg(feature = "query_apply")]
 mod query_apply;
+#[cfg(feature = "gen_revert")]
+mod revert;
 mod route;
 mod route_rule;
 mod serializer;

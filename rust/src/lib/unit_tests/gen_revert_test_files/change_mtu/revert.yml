@@ -1,0 +1,6 @@
+---
+interfaces:
+- name: eth1
+  type: ethernet
+  state: up
+  mtu: 1500

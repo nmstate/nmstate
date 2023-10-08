@@ -1,0 +1,4 @@
+---
+hostname:
+  running: test2.example.com
+  config: test2.example.com

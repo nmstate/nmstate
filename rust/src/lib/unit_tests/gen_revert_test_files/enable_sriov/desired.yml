@@ -1,0 +1,8 @@
+---
+interfaces:
+  - name: eth1
+    type: ethernet
+    state: up
+    ethernet:
+      sr-iov:
+        total-vfs: 2

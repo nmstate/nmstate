@@ -1,0 +1,28 @@
+---
+routes:
+  config:
+  - destination: 0.0.0.0/0
+    next-hop-address: 192.0.2.1
+    next-hop-interface: eth1
+    metric: 101
+  - destination: ::/0
+    next-hop-address: 2001:db8:1::2
+    next-hop-interface: eth1
+    metric: 102
+interfaces:
+  - name: eth1
+    type: ethernet
+    state: up
+    ipv4:
+      address:
+      - ip: 192.0.2.251
+        prefix-length: 24
+      dhcp: false
+      enabled: true
+    ipv6:
+      enabled: true
+      autoconf: false
+      dhcp: false
+      address:
+        - ip: 2001:db8:1::1
+          prefix-length: 64

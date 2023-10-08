@@ -1,0 +1,8 @@
+---
+ovs-db:
+  external_ids:
+    foo: 'bar'
+    bar: 'foo'
+    new: null
+  other_config:
+    stats-update-interval: '1000'

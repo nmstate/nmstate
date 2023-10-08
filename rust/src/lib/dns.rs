@@ -185,7 +185,7 @@ impl DnsClientState {
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub(crate) struct MergedDnsState {
     desired: DnsState,
-    current: DnsState,
+    pub(crate) current: DnsState,
     pub(crate) servers: Vec<String>,
     pub(crate) searches: Vec<String>,
     pub(crate) options: Vec<String>,

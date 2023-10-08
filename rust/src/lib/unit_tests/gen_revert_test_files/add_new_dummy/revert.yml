@@ -1,0 +1,5 @@
+---
+interfaces:
+- name: dummy1
+  type: dummy
+  state: absent

@@ -1,0 +1,35 @@
+---
+interfaces:
+  - name: eth1
+    type: ethernet
+    state: up
+    mtu: 1500
+    ipv4:
+      address:
+      - ip: 192.0.2.251
+        prefix-length: 24
+      dhcp: false
+      enabled: true
+    ipv6:
+      enabled: true
+      autoconf: false
+      dhcp: true
+      address:
+        - ip: 2001:db8:1::1
+          prefix-length: 64
+  - name: eth2
+    type: ethernet
+    state: up
+    ipv4:
+      address:
+      - ip: 192.0.2.252
+        prefix-length: 24
+      dhcp: false
+      enabled: true
+    ipv6:
+      enabled: true
+      autoconf: false
+      dhcp: true
+      address:
+        - ip: 2001:db8:2::1
+          prefix-length: 64
