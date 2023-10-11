@@ -338,6 +338,19 @@ impl InterfaceIpv4 {
                         ),
                     ));
                 }
+                if let Some(addr) = addrs
+                    .iter()
+                    .find(|a| a.prefix_length as usize > IPV4_ADDR_LEN)
+                {
+                    return Err(NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        format!(
+                            "Invalid IPv4 network prefix length '{}', \
+                            should be in the range of 0 to {IPV4_ADDR_LEN}",
+                            addr.prefix_length
+                        ),
+                    ));
+                }
             }
             addrs.retain(|a| !a.is_auto());
             addrs.iter_mut().for_each(|a| {
@@ -624,6 +637,19 @@ impl InterfaceIpv6 {
                         format!(
                             "Got IPv4 address {} in ipv6 config section",
                             addr
+                        ),
+                    ));
+                }
+                if let Some(addr) = addrs
+                    .iter()
+                    .find(|a| a.prefix_length as usize > IPV6_ADDR_LEN)
+                {
+                    return Err(NmstateError::new(
+                        ErrorKind::InvalidArgument,
+                        format!(
+                            "Invalid IPv6 network prefix length '{}', \
+                            should be in the range of 0 to {IPV6_ADDR_LEN}",
+                            addr.prefix_length
                         ),
                     ));
                 }

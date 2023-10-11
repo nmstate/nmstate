@@ -332,6 +332,52 @@ fn test_should_not_have_ipv4_in_ipv6_section() {
 }
 
 #[test]
+fn test_ipv4_verify_valid_prefix() {
+    let des_ifaces: Interfaces = serde_yaml::from_str(
+        r"---
+            - name: eth1
+              type: ethernet
+              state: up
+              ipv4:
+                enabled: true
+                dhcp: false
+                address:
+                  - ip: 192.0.2.1
+                    prefix-length: 33",
+    )
+    .unwrap();
+
+    let result =
+        MergedInterfaces::new(des_ifaces, gen_test_eth_ifaces(), false, false);
+
+    assert!(result.is_err());
+    assert_eq!(result.unwrap_err().kind(), ErrorKind::InvalidArgument);
+}
+
+#[test]
+fn test_ipv6_verify_valid_prefix() {
+    let des_ifaces: Interfaces = serde_yaml::from_str(
+        r#"---
+            - name: eth1
+              type: ethernet
+              state: up
+              ipv6:
+                enabled: true
+                dhcp: false
+                address:
+                  - ip: "2001:db8:2::1"
+                    prefix-length: 129"#,
+    )
+    .unwrap();
+
+    let result =
+        MergedInterfaces::new(des_ifaces, gen_test_eth_ifaces(), false, false);
+
+    assert!(result.is_err());
+    assert_eq!(result.unwrap_err().kind(), ErrorKind::InvalidArgument);
+}
+
+#[test]
 fn test_sanitize_ip_network_empty_str() {
     let result = sanitize_ip_network("");
     assert!(result.is_err());
