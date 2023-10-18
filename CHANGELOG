@@ -477,7 +477,7 @@ The YAML API changed: The `other_config` under OVS bond should be stored under
  - Change NetworkManager plugin as optional. (fc3b311)
  - Keep child interface when bond mode change. (4a7c174)
  - Don't reset bridge options for empty bridge options. (83fd948)
- - Sort routes base on metric and next_hop_address also. (da12b9b)
+ - Sort routes based on metric and next_hop_address also. (da12b9b)
  - Do clean up even checkpoint rollback/destroy failed. (cda87df)
  - The vlan and vxlan interface cannot have ip when subordinated. (ff3b731)
  - Fix None con_profile race condition on SR-IOV interface. (7584d46)

@@ -160,7 +160,7 @@ pub(crate) fn nm_ip_setting_to_nmstate6(
         };
         // NetworkManager only set IPv6 token to kernel when IPv6 autoconf
         // done. But nmstate should not wait DHCP, hence instead of depending
-        // on nispor kernel IPv6 token, we set IPv6 token base on information
+        // on nispor kernel IPv6 token, we set IPv6 token based on information
         // provided by NM connection.
         if let Some(token) = nm_ip_setting.token.as_ref() {
             ret.prop_list.push("token");

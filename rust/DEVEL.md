@@ -18,7 +18,7 @@
 
 ## NetworkManager plugin
  * Use DBUS interface via crate `libnm_dbus` for communication with NM daemon.
- * Update keyfile base on desire and current config.
+ * Update keyfile based on desire and current config.
  * Create check point
  * Instruct NM daemon to reload config.
  * Grouping activation.
