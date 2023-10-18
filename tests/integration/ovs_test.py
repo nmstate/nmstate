@@ -694,6 +694,7 @@ def test_ovsdb_global_config_add_delete_mapping():
     libnmstate.apply({Ovn.KEY: desired_ovs_config})
     current_ovs_config = libnmstate.show()[Ovn.KEY]
 
+    remove_ovn_state_present(desired_ovs_config)
     assert state_match(desired_ovs_config, current_ovs_config)
 
     desired_ovs_config = {
@@ -716,7 +717,6 @@ def ovn_bridge_mapping_net1():
             {
                 Ovn.BridgeMappings.LOCALNET: "net1",
                 Ovn.BridgeMappings.BRIDGE: "br1",
-                Ovn.BridgeMappings.STATE: "present",
             },
         ]
     }
@@ -783,6 +783,7 @@ def test_ovn_global_config_add_delete_single_mapping(ovn_bridge_mapping_net1):
         desired_ovs_config[Ovn.BRIDGE_MAPPINGS],
         key=lambda mapping: mapping[Ovn.BridgeMappings.LOCALNET],
     )
+    remove_ovn_state_present(desired_ovs_config)
     assert state_match(
         desired_ovs_config,
         current_ovs_config,
@@ -2211,3 +2212,8 @@ def test_raise_error_on_unknown_ovsdb_global_section():
                 },
             }
         )
+
+
+def remove_ovn_state_present(state):
+    for ovn_map in state.get(Ovn.BRIDGE_MAPPINGS, []):
+        ovn_map.pop(Ovn.BridgeMappings.STATE, None)

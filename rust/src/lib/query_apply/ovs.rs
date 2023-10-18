@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use std::collections::{HashMap, HashSet};
+use std::convert::TryInto;
 
-use crate::ovn::OVN_BRIDGE_MAPPINGS;
 use crate::{
     state::get_json_value_difference, ErrorKind, Interface, InterfaceState,
     InterfaceType, Interfaces, MergedInterfaces, MergedNetworkState,
-    MergedOvsDbGlobalConfig, NmstateError, OvsBridgeBondConfig,
+    MergedOvsDbGlobalConfig, NetworkState, NmstateError, OvsBridgeBondConfig,
     OvsBridgeConfig, OvsBridgeInterface, OvsDbGlobalConfig, OvsDbIfaceConfig,
     OvsInterface,
 };
@@ -16,19 +16,36 @@ impl MergedOvsDbGlobalConfig {
         &self,
         current: &OvsDbGlobalConfig,
     ) -> Result<(), NmstateError> {
+        let empty_map: HashMap<String, Option<String>> = HashMap::new();
         let external_ids: HashMap<String, Option<String>> = self
+            .desired
             .external_ids
+            .as_ref()
+            .unwrap_or(&empty_map)
             .iter()
-            .filter(|(_, v)| !v.is_none())
-            .filter(|(k, _)| !k.as_str().eq(OVN_BRIDGE_MAPPINGS))
-            .map(|(k, v)| (k.to_string(), v.clone()))
+            .filter_map(|(k, v)| {
+                if v.is_some() {
+                    Some((k.to_string(), v.clone()))
+                } else {
+                    None
+                }
+            })
             .collect();
         let other_config: HashMap<String, Option<String>> = self
+            .desired
             .other_config
+            .as_ref()
+            .unwrap_or(&empty_map)
             .iter()
-            .filter(|(_, v)| !v.is_none())
-            .map(|(k, v)| (k.to_string(), v.clone()))
+            .filter_map(|(k, v)| {
+                if v.is_some() {
+                    Some((k.to_string(), v.clone()))
+                } else {
+                    None
+                }
+            })
             .collect();
+
         let desired = OvsDbGlobalConfig {
             external_ids: Some(external_ids),
             other_config: Some(other_config),
@@ -114,36 +131,7 @@ impl MergedNetworkState {
     pub(crate) fn is_global_ovsdb_changed(&self) -> bool {
         if self.prop_list.contains(&"ovsdb") || self.prop_list.contains(&"ovn")
         {
-            if self.ovsdb.desired.is_none() {
-                true
-            } else {
-                let cur_external_ids = self
-                    .ovsdb
-                    .current
-                    .external_ids
-                    .as_ref()
-                    .cloned()
-                    .unwrap_or_default();
-                let cur_other_config = self
-                    .ovsdb
-                    .current
-                    .other_config
-                    .as_ref()
-                    .cloned()
-                    .unwrap_or_default();
-
-                let cur_bridge_mappings = self
-                    .ovn
-                    .current
-                    .bridge_mappings
-                    .as_ref()
-                    .cloned()
-                    .unwrap_or_default();
-
-                self.ovsdb.external_ids != cur_external_ids
-                    || self.ovsdb.other_config != cur_other_config
-                    || self.ovn.bridge_mappings != cur_bridge_mappings
-            }
+            self.ovsdb.is_changed
         } else {
             false
         }
@@ -222,5 +210,25 @@ impl MergedInterfaces {
                 }
             }
         }
+    }
+}
+
+impl NetworkState {
+    pub(crate) fn isolate_ovn(&mut self) -> Result<(), NmstateError> {
+        if let Some(ovn_maps_str) = self
+            .ovsdb
+            .external_ids
+            .as_mut()
+            .and_then(|eids| {
+                eids.remove(OvsDbGlobalConfig::OVN_BRIDGE_MAPPINGS_KEY)
+            })
+            .flatten()
+        {
+            if !self.prop_list.contains(&"ovn") {
+                self.prop_list.push("ovn");
+            }
+            self.ovn = ovn_maps_str.as_str().try_into()?;
+        }
+        Ok(())
     }
 }

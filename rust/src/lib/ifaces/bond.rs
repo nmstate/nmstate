@@ -478,10 +478,11 @@ pub struct BondConfig {
     pub port: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     /// Deserialize and serialize from/to `ports-config`.
-    /// When applying, if defined, it will override current ports configuration.
-    /// Note that `port` is not required to set with `ports-config`. An error
-    /// will be raised during apply when the port names specified in `port` and
-    /// `ports-config` conflict with each other.
+    /// When applying, if defined, it will override current ports
+    /// configuration. Note that `port` is not required to set with
+    /// `ports-config`. An error will be raised during apply when the port
+    /// names specified in `port` and `ports-config` conflict with each
+    /// other.
     pub ports_config: Option<Vec<BondPortConfig>>,
 }
 

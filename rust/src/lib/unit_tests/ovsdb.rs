@@ -39,7 +39,8 @@ other_config:
     let current = get_current_ovsdb_config();
 
     let merged_ovsdb =
-        MergedOvsDbGlobalConfig::new(desired, current, None).unwrap();
+        MergedOvsDbGlobalConfig::new(desired, current, &Default::default())
+            .unwrap();
 
     let expect: OvsDbGlobalConfig = serde_yaml::from_str(
         r"---
@@ -79,7 +80,8 @@ other_config: {}
     .unwrap();
 
     let merged_ovsdb =
-        MergedOvsDbGlobalConfig::new(desired, current, None).unwrap();
+        MergedOvsDbGlobalConfig::new(desired, current, &Default::default())
+            .unwrap();
 
     assert_eq!(
         &merged_ovsdb.external_ids,
@@ -114,7 +116,8 @@ other_config:
     .unwrap();
 
     let merged_ovsdb =
-        MergedOvsDbGlobalConfig::new(desired, current, None).unwrap();
+        MergedOvsDbGlobalConfig::new(desired, current, &Default::default())
+            .unwrap();
 
     assert_eq!(
         &merged_ovsdb.external_ids,
@@ -149,7 +152,8 @@ other_config: {}
     .unwrap();
 
     let merged_ovsdb =
-        MergedOvsDbGlobalConfig::new(desired, current, None).unwrap();
+        MergedOvsDbGlobalConfig::new(desired, current, &Default::default())
+            .unwrap();
 
     assert_eq!(
         &merged_ovsdb.external_ids,
@@ -167,8 +171,12 @@ fn test_ovsdb_verify_null_current() {
     let pre_apply_current = desired.clone();
     let current = desired.clone();
 
-    let merged_ovsdb =
-        MergedOvsDbGlobalConfig::new(desired, pre_apply_current, None).unwrap();
+    let merged_ovsdb = MergedOvsDbGlobalConfig::new(
+        desired,
+        pre_apply_current,
+        &Default::default(),
+    )
+    .unwrap();
 
     merged_ovsdb.verify(&current).unwrap();
 }

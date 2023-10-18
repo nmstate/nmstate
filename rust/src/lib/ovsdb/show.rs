@@ -28,7 +28,6 @@ pub(crate) fn ovsdb_retrieve() -> Result<NetworkState, NmstateError> {
     let mut ret = NetworkState::new();
     ret.prop_list.push("interfaces");
     ret.prop_list.push("ovsdb");
-    ret.prop_list.push("ovn");
     let mut cli = OvsDbConnection::new()?;
     let ovsdb_ifaces = cli.get_ovs_ifaces()?;
     let ovsdb_brs = cli.get_ovs_bridges()?;
