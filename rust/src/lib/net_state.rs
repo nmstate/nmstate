@@ -5,14 +5,11 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Deserializer, Serialize};
 
-use crate::ovn::{
-    MergedOvnConfiguration, OvnConfiguration, OVN_BRIDGE_MAPPINGS,
-};
 use crate::{
     DnsState, ErrorKind, HostNameState, Interface, Interfaces, MergedDnsState,
-    MergedHostNameState, MergedInterfaces, MergedOvsDbGlobalConfig,
-    MergedRouteRules, MergedRoutes, NmstateError, OvsDbGlobalConfig,
-    RouteRules, Routes,
+    MergedHostNameState, MergedInterfaces, MergedOvnConfiguration,
+    MergedOvsDbGlobalConfig, MergedRouteRules, MergedRoutes, NmstateError,
+    OvnConfiguration, OvsDbGlobalConfig, RouteRules, Routes,
 };
 
 #[derive(Clone, Debug, Serialize, Default, PartialEq, Eq)]
@@ -369,8 +366,8 @@ pub(crate) struct MergedNetworkState {
     pub(crate) hostname: MergedHostNameState,
     pub(crate) dns: MergedDnsState,
     pub(crate) interfaces: MergedInterfaces,
-    pub(crate) ovsdb: MergedOvsDbGlobalConfig,
     pub(crate) ovn: MergedOvnConfiguration,
+    pub(crate) ovsdb: MergedOvsDbGlobalConfig,
     pub(crate) routes: MergedRoutes,
     pub(crate) rules: MergedRouteRules,
     pub(crate) memory_only: bool,
@@ -402,32 +399,17 @@ impl MergedNetworkState {
         let hostname =
             MergedHostNameState::new(desired.hostname, current.hostname);
 
-        let mut ovsdb = MergedOvsDbGlobalConfig::new(
-            desired.ovsdb,
-            current.ovsdb,
-            current.ovn.clone().bridge_mappings,
-        )?;
-        let ovn_config = MergedOvnConfiguration::new(desired.ovn, current.ovn)?;
-        if let Some(updated_mapping_value) =
-            ovn_config.clone().mappings_ext_id_value
-        {
-            if updated_mapping_value.is_empty() {
-                ovsdb.external_ids.remove(OVN_BRIDGE_MAPPINGS);
-            } else {
-                ovsdb
-                    .external_ids
-                    .entry(OVN_BRIDGE_MAPPINGS.to_string())
-                    .and_modify(|m| *m = Some(updated_mapping_value.clone()))
-                    .or_insert(Some(updated_mapping_value.clone()));
-            }
-        }
+        let ovn = MergedOvnConfiguration::new(desired.ovn, current.ovn)?;
+
+        let ovsdb =
+            MergedOvsDbGlobalConfig::new(desired.ovsdb, current.ovsdb, &ovn)?;
         let ret = Self {
             interfaces,
             routes,
             rules,
             dns: MergedDnsState::new(desired.dns, current.dns)?,
+            ovn,
             ovsdb,
-            ovn: ovn_config,
             hostname,
             memory_only,
             prop_list: desired.prop_list,
