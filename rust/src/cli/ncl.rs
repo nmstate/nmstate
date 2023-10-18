@@ -85,8 +85,8 @@ fn main() {
         .subcommand(
             clap::Command::new(SUB_CMD_AUTOCONF)
                 .about(
-                    "Automatically configure network base on LLDP \
-                    information(experimental)")
+                    "Automatically configure network based on LLDP \
+                    information (experimental)")
         )
         .subcommand(
             clap::Command::new(SUB_CMD_SHOW)

@@ -191,7 +191,7 @@ int nmstate_checkpoint_rollback(const char *checkpoint, char **log,
  *      0.1
  *
  * Description:
- *      Generate offline configrations of each backends base on specified
+ *      Generate offline configrations of each backend based on specified
  *      network state. The returned configs is json string for
  *      HashMap/Dictionary with backend name as key, and array of string
  *      as value.
