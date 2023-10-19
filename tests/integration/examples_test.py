@@ -1,22 +1,5 @@
-#
-# Copyright (c) 2018-2021 Red Hat, Inc.
-#
-# This file is part of nmstate
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 2.1 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program. If not, see <https://www.gnu.org/licenses/>.
-#
-""" Test the nmstate example files """
+# SPDX-License-Identifier: LGPL-2.1-or-later
+
 import os
 
 import pytest
@@ -36,7 +19,7 @@ from libnmstate.schema import HostNameState
 from libnmstate.schema import RouteRule
 
 from .testlib.env import is_k8s
-from .testlib.env import nm_major_minor_version
+from .testlib.env import nm_minor_version
 
 
 @pytest.mark.tier1
@@ -232,7 +215,7 @@ def test_add_mac_vtap_and_remove():
 
 
 @pytest.mark.skipif(
-    nm_major_minor_version() <= 1.28,
+    nm_minor_version() < 28,
     reason="Modifying veth is not supported on lower NetworkManager versions.",
 )
 def test_add_veth_and_remove():
@@ -246,7 +229,7 @@ def test_add_veth_and_remove():
 
 
 @pytest.mark.skipif(
-    nm_major_minor_version() <= 1.30,
+    nm_minor_version() <= 30,
     reason="Generating config is not supported on NetworkManager 1.30-",
 )
 @pytest.mark.tier1
@@ -274,7 +257,10 @@ def test_add_macsec_and_remove(eth1_up):
     assertlib.assert_absent("macsec0")
 
 
-@pytest.mark.tier1
+@pytest.mark.skipif(
+    nm_minor_version() <= 44,
+    reason="Bond port config is not supported on NetworkManager 1.44-",
+)
 def test_bond_port(eth1_up, eth2_up):
     with example_state(
         "bond_port_up.yml",

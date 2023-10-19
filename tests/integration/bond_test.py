@@ -166,7 +166,10 @@ def test_remove_bond_with_minimum_desired_state(eth1_up, eth2_up):
     assert not state[Interface.KEY]
 
 
-@pytest.mark.tier1
+@pytest.mark.skipif(
+    nm_minor_version() <= 44,
+    reason="Bond port config is not supported on NetworkManager 1.44-",
+)
 def test_add_and_remove_bond_with_port_config(eth1_up, eth2_up):
     state = yaml.load(BOND99_PORT_YAML_BASE, Loader=yaml.SafeLoader)
     try:
@@ -177,7 +180,10 @@ def test_add_and_remove_bond_with_port_config(eth1_up, eth2_up):
         libnmstate.apply(state)
 
 
-@pytest.mark.tier1
+@pytest.mark.skipif(
+    nm_minor_version() <= 44,
+    reason="Bond port config is not supported on NetworkManager 1.44-",
+)
 def test_add_bond_with_port_config_and_modify(eth1_up, eth2_up):
     state = yaml.load(BOND99_PORT_YAML_BASE, Loader=yaml.SafeLoader)
     try:
@@ -198,7 +204,10 @@ def test_add_bond_with_port_config_and_modify(eth1_up, eth2_up):
         libnmstate.apply(state)
 
 
-@pytest.mark.tier1
+@pytest.mark.skipif(
+    nm_minor_version() <= 44,
+    reason="Bond port config is not supported on NetworkManager 1.44-",
+)
 def test_conflict_port_name_between_port_and_ports_config(eth1_up, eth2_up):
     state = yaml.load(BOND99_PORT_YAML_BASE, Loader=yaml.SafeLoader)
     state[Interface.KEY][0][Bond.CONFIG_SUBTREE][Bond.PORT] = ["eth1"]
