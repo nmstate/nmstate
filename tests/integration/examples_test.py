@@ -248,7 +248,7 @@ def test_gen_conf_for_examples():
 
 
 @pytest.mark.tier1
-def test_add_macsec_and_remove(eth1_up):
+def test_add_macsec_and_remove_example(eth1_up):
     with example_state(
         "macsec0_up.yml", cleanup="macsec0_absent.yml"
     ) as desired_state:

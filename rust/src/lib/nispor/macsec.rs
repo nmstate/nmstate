@@ -26,7 +26,7 @@ pub(crate) fn np_macsec_to_nmstate(
             port: np_macsec_info.port.into(),
             validation: np_macsec_info.validate.into(),
             send_sci: np_macsec_info.send_sci,
-            parent: np_macsec_info.base_iface.clone().unwrap_or_default(),
+            base_iface: np_macsec_info.base_iface.clone().unwrap_or_default(),
             mka_cak: None,
             mka_ckn: None,
         });
