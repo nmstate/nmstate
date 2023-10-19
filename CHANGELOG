@@ -1,4 +1,19 @@
 # Changelog
+## [2.2.17] - 2023-10-19
+### Breaking changes
+ - macsec: rename parent property to base-iface. (ccc6882b)
+
+### New features
+ - Support invoking dispatch script. (1bd1151d)
+ - Support generate new network state to revert. (ab18b302)
+ - Support for bond ports config. (4538b0a1)
+
+### Bug fixes
+ - ovn: Tidy up the ovs/ovn code. (c2d31e6a)
+ - ip: validate prefix_length. (107382a9)
+ - ip: don't check "ipv4 in ipv6" in sanitize without error checking.
+   (a579e041)
+
 ## [2.2.16] - 2023-09-21
 ### Breaking changes
  - N/A
