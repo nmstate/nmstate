@@ -15,8 +15,8 @@ CHANGLOG_FORMAT="
 ### Bug fixes"
 
 function cleanup {
-# rm -f $TMP_CHANGELOG_FILE
- true
+    rm -f $TMP_CHANGELOG_FILE
+    rm -f /tmp/nmstate*.tar.*
 }
 
 trap cleanup ERR EXIT
@@ -109,8 +109,8 @@ cargo publish
 
 cd $CODE_BASE_DIR
 RELEASE=1 make release
-mv nmstate-$CUR_VERSION.tar* nmstate-vendor-$CUR_VERSION.tar.xz /tmp/
-echo "Please upload nmstate tarballs in /tmp folder"
+mv -v nmstate-$CUR_VERSION.tar* nmstate-vendor-$CUR_VERSION.tar.xz /tmp/
+echo "Please upload these nmstate tarballs in /tmp folder"
 
 URL="${NEW_RELEASE_URL}?tag=v$CUR_VERSION"
 echo "${CHANGELOG_STR//=/#}"
