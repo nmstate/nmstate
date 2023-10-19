@@ -2,6 +2,7 @@
 
 mod apply;
 pub(crate) mod device;
+pub(crate) mod dispatch;
 pub(crate) mod dns;
 mod ieee8021x;
 mod ip;
