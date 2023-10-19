@@ -2,6 +2,7 @@
 
 mod base;
 mod bond;
+mod dispatch;
 mod dns;
 mod ethernet;
 mod hostname;

@@ -756,6 +756,7 @@ impl MergedInterfaces {
         self.check_infiniband_as_ports()?;
         self.mark_orphan_interface_as_absent()?;
         self.process_veth_peer_changes()?;
+        self.validate_dispatch_script_has_no_checkpoint()?;
         for iface in self
             .kernel_ifaces
             .values_mut()

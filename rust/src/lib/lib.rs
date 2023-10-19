@@ -84,6 +84,7 @@
 //! ```
 
 mod deserializer;
+mod dispatch;
 mod dns;
 mod error;
 #[cfg(feature = "gen_conf")]
@@ -116,6 +117,7 @@ mod serializer;
 mod state;
 mod unit_tests;
 
+pub use crate::dispatch::DispatchConfig;
 pub(crate) use crate::dns::MergedDnsState;
 pub use crate::dns::{DnsClientState, DnsState};
 pub use crate::error::{ErrorKind, NmstateError};

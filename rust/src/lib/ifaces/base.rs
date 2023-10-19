@@ -3,10 +3,10 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    ErrorKind, EthtoolConfig, Ieee8021XConfig, InterfaceIdentifier,
-    InterfaceIpv4, InterfaceIpv6, InterfaceState, InterfaceType, LldpConfig,
-    MergedInterface, MptcpConfig, NmstateError, OvsDbIfaceConfig, RouteEntry,
-    WaitIp,
+    DispatchConfig, ErrorKind, EthtoolConfig, Ieee8021XConfig,
+    InterfaceIdentifier, InterfaceIpv4, InterfaceIpv6, InterfaceState,
+    InterfaceType, LldpConfig, MergedInterface, MptcpConfig, NmstateError,
+    OvsDbIfaceConfig, RouteEntry, WaitIp,
 };
 
 const MINIMUM_IPV6_MTU: u64 = 1280;
@@ -126,6 +126,9 @@ pub struct BaseInterface {
     #[serde(skip_serializing_if = "Option::is_none")]
     /// Ethtool configurations
     pub ethtool: Option<EthtoolConfig>,
+    /// Dispatch script configurations
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dispatch: Option<DispatchConfig>,
     #[serde(skip)]
     pub controller_type: Option<InterfaceType>,
     // The interface lowest up_priority will be activated first.
@@ -261,6 +264,22 @@ impl BaseInterface {
         if !self.can_have_ip() {
             self.wait_ip = None;
         }
+
+        if is_desired
+            && self.iface_type.is_userspace()
+            && self.dispatch.is_some()
+        {
+            return Err(NmstateError::new(
+                ErrorKind::InvalidArgument,
+                format!(
+                    "User space interface {}/{} is not allow to hold \
+                    dispatch configurations",
+                    self.name.as_str(),
+                    self.iface_type,
+                ),
+            ));
+        }
+
         Ok(())
     }
 }

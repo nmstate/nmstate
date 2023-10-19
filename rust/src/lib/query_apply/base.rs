@@ -20,6 +20,13 @@ impl BaseInterface {
         if self.ovsdb.is_none() {
             self.ovsdb = Some(OvsDbIfaceConfig::new_empty());
         }
+        // dispatch script None equal to empty
+        if self.dispatch.is_none() {
+            self.dispatch = Some(Default::default());
+        }
+        if let Some(dispatch_conf) = self.dispatch.as_mut() {
+            dispatch_conf.sanitize_current_for_verify();
+        }
     }
 
     pub(crate) fn sanitize_desired_for_verify(&mut self) {
@@ -129,6 +136,9 @@ impl BaseInterface {
             if !self.prop_list.contains(other_prop_name) {
                 self.prop_list.push(other_prop_name)
             }
+        }
+        if other.prop_list.contains(&"dispatch") {
+            self.dispatch = other.dispatch.clone();
         }
     }
 }
