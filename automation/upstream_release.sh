@@ -129,7 +129,7 @@ sed -i -e "s/$CUR_VERSION/$NEXT_VERSION/" \
     VERSION \
     rust/src/cli/Cargo.toml \
     rust/src/clib/Cargo.toml \
-    rust/src/lib/Cargo.toml \ 
+    rust/src/lib/Cargo.toml \
     rust/src/python/setup.py \
     rust/src/python/libnmstate/__init__.py
 git commit -a --signoff -m "Bump version to $NEXT_VERSION"
