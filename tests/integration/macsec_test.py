@@ -26,7 +26,7 @@ def test_add_macsec_and_remove(eth1_up):
                 Interface.TYPE: InterfaceType.MACSEC,
                 Interface.STATE: InterfaceState.UP,
                 MacSec.CONFIG_SUBTREE: {
-                    MacSec.PARENT: ETH1,
+                    MacSec.BASE_IFACE: ETH1,
                     MacSec.ENCRYPT: True,
                     MacSec.MKA_CAK: MKA_CAK,
                     MacSec.MKA_CKN: MKA_CKN,
@@ -56,7 +56,7 @@ def test_add_macsec_and_modify(eth1_up):
                 Interface.TYPE: InterfaceType.MACSEC,
                 Interface.STATE: InterfaceState.UP,
                 MacSec.CONFIG_SUBTREE: {
-                    MacSec.PARENT: ETH1,
+                    MacSec.BASE_IFACE: ETH1,
                     MacSec.ENCRYPT: True,
                     MacSec.MKA_CAK: MKA_CAK,
                     MacSec.MKA_CKN: MKA_CKN,

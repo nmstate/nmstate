@@ -443,7 +443,7 @@ class MacVtap(MacVlan):
 class MacSec:
     CONFIG_SUBTREE = "macsec"
     ENCRYPT = "encrypt"
-    PARENT = "parent"
+    BASE_IFACE = "base-iface"
     MKA_CAK = "mka-cak"
     MKA_CKN = "mka-ckn"
     PORT = "port"

@@ -5,7 +5,7 @@ interfaces:
     state: up
     macsec:
       encrypt: true
-      parent: eth1
+      base-iface: eth1
       mka-cak: 50b71a8ef0bd5751ea76de6d6c98c03a
       mka-ckn: f2b4297d39da7330910a74abc0449feb45b5c0b9fc23df1430e1898fcf1c4550
       port: 0

@@ -9,7 +9,7 @@ pub(crate) fn gen_nm_macsec_setting(
     let mut nm_macsec_set =
         nm_conn.macsec.as_ref().cloned().unwrap_or_default();
     if let Some(macsec_conf) = iface.macsec.as_ref() {
-        nm_macsec_set.parent = Some(macsec_conf.parent.clone());
+        nm_macsec_set.parent = Some(macsec_conf.base_iface.clone());
         nm_macsec_set.encrypt = Some(macsec_conf.encrypt);
         nm_macsec_set.mka_cak = macsec_conf.mka_cak.clone();
         nm_macsec_set.mka_ckn = macsec_conf.mka_ckn.clone();

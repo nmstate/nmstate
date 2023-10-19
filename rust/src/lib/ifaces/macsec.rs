@@ -19,7 +19,7 @@ use crate::{
 ///     state: up
 ///     macsec:
 ///       encrypt: true
-///       parent: eth1
+///       base-iface: eth1
 ///       mka-cak: 50b71a8ef0bd5751ea76de6d6c98c03a
 ///       mka-ckn: f2b4297d39da7330910a74abc0449feb45b5c0b9fc23df1430e1898fcf1c4550
 ///       port: 0
@@ -93,7 +93,7 @@ impl MacSecInterface {
     }
 
     pub(crate) fn parent(&self) -> Option<&str> {
-        self.macsec.as_ref().map(|cfg| cfg.parent.as_str())
+        self.macsec.as_ref().map(|cfg| cfg.base_iface.as_str())
     }
 }
 
@@ -105,7 +105,7 @@ pub struct MacSecConfig {
     /// Wether the transmitted traffic must be encrypted.
     pub encrypt: bool,
     /// The parent interface used by the MACsec interface.
-    pub parent: String,
+    pub base_iface: String,
     /// The pre-shared CAK (Connectivity Association Key) for MACsec Key
     /// Agreement. Must be a string of 32 hexadecimal characters.
     #[serde(skip_serializing_if = "Option::is_none")]
