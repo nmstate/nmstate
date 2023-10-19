@@ -164,6 +164,9 @@ release: dist
 		gpg2 --armor --detach-sign $(TARBALL); \
 	fi
 
+upstream_release:
+	$(ROOT_DIR)/automation/upstream_release.sh
+
 .PHONY: srpm
 srpm: dist
 	rpmbuild --define "_srcrpmdir $(outdir)/" -ts $(TARBALL)
