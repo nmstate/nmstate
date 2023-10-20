@@ -3,7 +3,6 @@
 import logging
 import os
 import subprocess
-import tempfile
 
 import pytest
 
@@ -57,22 +56,8 @@ def _mark_tier2_tests(items):
             item.add_marker(pytest.mark.tier2)
 
 
-@pytest.fixture(scope="session")
-def fix_ip_netns_issue():
-    if os.getenv("CI"):
-        with tempfile.TemporaryDirectory() as tmpdirname:
-            subprocess.run(
-                f"mount -t sysfs --make-private {tmpdirname}".split(),
-                check=True,
-            )
-            yield
-            subprocess.run(f"umount {tmpdirname}".split())
-    else:
-        yield
-
-
 @pytest.fixture(scope="session", autouse=True)
-def test_env_setup(fix_ip_netns_issue):
+def test_env_setup():
     _logging_setup()
     old_state = libnmstate.show()
     old_state = _remove_interfaces_from_env(old_state)
