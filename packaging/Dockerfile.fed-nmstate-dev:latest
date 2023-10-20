@@ -9,7 +9,7 @@ RUN dnf update -y && \
         python3-devel python3-pyyaml python3-setuptools dnsmasq git \
         iproute rpm-build python3-pytest python3-virtualenv python3-tox \
         tcpreplay wpa_supplicant hostapd libndp procps-ng dpdk nispor \
-        python3-gobject-base && dnf clean all
+        patchelf rust-packaging python3-gobject-base && dnf clean all
 
 COPY network_manager_enable_trace.conf \
      /etc/NetworkManager/conf.d/97-trace-logging.conf

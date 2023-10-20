@@ -5,8 +5,13 @@ VERSION_MINOR=$(shell echo $(VERSION) | cut -f2 -d.)
 VERSION_MICRO=$(shell echo $(VERSION) | cut -f3 -d.)
 GIT_COMMIT=$(shell git rev-parse --short HEAD)
 TIMESTAMP=$(shell date +%Y%m%d)
-TARBALL=nmstate-$(VERSION)-alpha.$(TIMESTAMP).$(GIT_COMMIT).tar.gz
-VENDOR_TARBALL=nmstate-vendor-$(VERSION).$(TIMESTAMP).$(GIT_COMMIT).tar.xz
+ifeq ($(RELEASE), 1)
+    TARBALL=nmstate-$(VERSION).tar.gz
+    VENDOR_TARBALL=nmstate-vendor-$(VERSION).tar.xz
+else
+    TARBALL=nmstate-$(VERSION)-alpha.$(TIMESTAMP).$(GIT_COMMIT).tar.gz
+    VENDOR_TARBALL=nmstate-vendor-$(VERSION).$(TIMESTAMP).$(GIT_COMMIT).tar.xz
+endif
 CLIB_SO_DEV=libnmstate.so
 CLIB_A_DEV=libnmstate.a
 CLIB_SO_MAN=$(CLIB_SO_DEV).$(VERSION_MAJOR)
@@ -58,7 +63,6 @@ PKG_CONFIG_LIBDIR ?= $(LIBDIR)/pkgconfig
 MAN_DIR ?= $(PREFIX)/share/man
 
 SKIP_PYTHON_INSTALL ?=0
-SKIP_VENDOR_CREATION ?=0
 RELEASE ?=0
 
 PYTHON3_SITE_DIR ?=$(shell \
@@ -100,7 +104,9 @@ $(SPEC_FILE): $(SPEC_FILE).in
 	sed -i -e "s/@VERSION@/$(VERSION)/" $(SPEC_FILE)
 	if [ $(RELEASE) == 1 ];then \
 		sed -i -e "s/@RELEASE@/1/" $(SPEC_FILE); \
+		sed -i -e "s/@IS_SNAPSHOT@/0/" $(SPEC_FILE); \
 	else \
+		sed -i -e "s/@IS_SNAPSHOT@/1/" $(SPEC_FILE); \
 		sed -i -e "s/@RELEASE@/0.alpha.$(TIMESTAMP).$(GIT_COMMIT)/" \
 			$(SPEC_FILE);\
 		sed -i -e "s|^Source0:.\+|Source0: $(TARBALL)|" $(SPEC_FILE); \
@@ -140,7 +146,7 @@ dist: manpage $(SPEC_FILE) $(CLIB_HEADER)
 	cp $(SYSTEMD_SERVICE_FILE) $(TMPDIR)/nmstate-$(VERSION)/
 	cd $(TMPDIR) && tar cfz $(TARBALL) nmstate-$(VERSION)/
 	mv $(TMPDIR)/$(TARBALL) ./
-	if [ $(SKIP_VENDOR_CREATION) == 0 ];then \
+	if [ $(RELEASE) == 1 ];then \
 		cd rust; \
 		cargo vendor-filterer \
 			--platform x86_64-unknown-linux-gnu \
@@ -149,20 +155,13 @@ dist: manpage $(SPEC_FILE) $(CLIB_HEADER)
 		tar cfJ $(ROOT_DIR)/$(VENDOR_TARBALL) vendor ; \
 	fi
 	rm -rf $(TMPDIR)
+	if [ $(RELEASE) == 1 ];then \
+		gpg2 --armor --detach-sign $(TARBALL); \
+	fi
 	echo $(TARBALL)
 
 release: dist
-	$(eval NEW_TARBALL=nmstate-$(VERSION).tar.gz)
-	if [ $(RELEASE) == 1 ];then \
-		mv $(TARBALL) $(NEW_TARBALL); \
-		if [ $(SKIP_VENDOR_CREATION) == 0 ];then \
-			mv $(VENDOR_TARBALL) \
-			$(ROOT_DIR)/nmstate-vendor-$(VERSION).tar.xz; \
-		fi; \
-		gpg2 --armor --detach-sign $(NEW_TARBALL); \
-	else \
-		gpg2 --armor --detach-sign $(TARBALL); \
-	fi
+	gpg2 --armor --detach-sign $(TARBALL);
 
 upstream_release:
 	$(ROOT_DIR)/automation/upstream_release.sh

@@ -1,24 +1,55 @@
-# Tmp workaround for Empty %files file debugsourcefiles.list problem
-%global debug_package %{nil}
-
 %?python_enable_dependency_generator
+
 %define srcname nmstate
 %define libname libnmstate
+%define is_snapshot @IS_SNAPSHOT@
+
+%if %{is_snapshot}
+%global debug_package %{nil}
+%endif
 
 Name:           nmstate
 Version:        @VERSION@
 Release:        @RELEASE@%{?dist}
 Summary:        Declarative network manager API
-License:        LGPLv2+
+License:        Apache-2.0 AND LGPL-2.1-or-later
 URL:            https://github.com/%{srcname}/%{srcname}
-Source0:        https://github.com/%{srcname}/%{srcname}/releases/download/v%{version}/%{srcname}-%{version}.tar.gz
-BuildRequires:  python3-setuptools
+Source0:        %{url}/releases/download/v%{version}/%{srcname}-%{version}.tar.gz
+%if ! %{is_snapshot}
+Source1:        %{url}/releases/download/v%{version}/%{srcname}-%{version}.tar.gz.asc
+Source2:        https://nmstate.io/nmstate.gpg
+Source3:        %{url}/releases/download/v%{version}/%{srcname}-vendor-%{version}.tar.xz
+%endif
+%if 0%{?fedora}
+BuildRequires:  patchelf
+%endif
 BuildRequires:  python3-devel
-BuildRequires:  systemd
+BuildRequires:  python3-setuptools
+BuildRequires:  gnupg2
+BuildRequires:  systemd-rpm-macros
 %if 0%{?rhel}
 BuildRequires:  rust-toolset
 %else
-BuildRequires:  rust cargo
+BuildRequires:  rust-packaging
+%if ! %{is_snapshot}
+BuildRequires:  (crate(clap/cargo) >= 3.1 with crate(clap/cargo) < 4.0)
+BuildRequires:  (crate(clap/default) >= 3.1 with crate(clap/default) < 4.0)
+BuildRequires:  (crate(chrono/default) >= 0.4 with crate(chrono/default) < 0.5)
+BuildRequires:  (crate(ctrlc/default) >= 3.2 with crate(ctrlc/default) < 4.0)
+BuildRequires:  (crate(env_logger/default) >= 0.10 with crate(env_logger/default) < 0.11)
+BuildRequires:  (crate(libc/default) >= 0.2 with crate(libc/default) < 0.3)
+BuildRequires:  (crate(log/default) >= 0.4 with crate(log/default) < 0.5)
+BuildRequires:  (crate(nispor/default) >= 1.2.12 with crate(nispor/default) < 2.0)
+BuildRequires:  (crate(serde/default) >= 1.0 with crate(serde/default) < 2.0)
+BuildRequires:  (crate(serde/derive) >= 1.0 with crate(serde/derive) < 2.0)
+BuildRequires:  (crate(serde_json/default) >= 1.0 with crate(serde_json/default) < 2.0)
+BuildRequires:  (crate(serde_yaml/default) >= 0.9 with crate(serde_yaml/default) < 1.0)
+BuildRequires:  (crate(uuid/v4) >= 1.1 with crate(uuid/v4) < 2.0)
+BuildRequires:  (crate(uuid/v5) >= 1.1 with crate(uuid/v5) < 2.0)
+BuildRequires:  (crate(zbus/default) >= 1.9 with crate(zbus/default) < 2.0)
+BuildRequires:  (crate(zvariant/default) >= 2.10 with crate(zvariant/default) < 3.0)
+BuildRequires:  (crate(nix/default) >= 0.26 with crate(nix/default) < 0.27)
+%endif
 %endif
 
 %description
@@ -27,6 +58,7 @@ networking settings in a declarative manner and aimed to satisfy enterprise
 needs to manage host networking through a northbound declarative API and multi
 provider support on the southbound.
 
+
 %package libs
 Summary:        C binding of nmstate
 # Use Recommends for NetworkManager because only access to NM DBus is required,
@@ -34,6 +66,7 @@ Summary:        C binding of nmstate
 Recommends:     NetworkManager
 # Avoid automatically generated profiles
 Recommends:     NetworkManager-config-server
+License:        Apache-2.0
 
 %description libs
 C binding of nmstate.
@@ -42,6 +75,7 @@ C binding of nmstate.
 Summary:        Development files for nmstate
 Group:          Development/Libraries
 Requires:       %{name}-libs%{?_isa} = %{version}-%{release}
+License:        Apache-2.0
 
 %description devel
 Development files of nmstate C binding.
@@ -49,6 +83,7 @@ Development files of nmstate C binding.
 %package static
 Summary:        Static development files for nmstate
 Group:          Development/Libraries
+License:        Apache-2.0
 Requires:       %{name}-devel%{?_isa} = %{version}-%{release}
 
 %description static
@@ -61,43 +96,136 @@ Summary:        nmstate Python 3 API library
 Recommends:     NetworkManager
 # Avoid automatically generated profiles
 Recommends:     NetworkManager-config-server
-Recommends:     (nmstate-plugin-ovsdb if openvswitch)
-# Use Suggests for NetworkManager-ovs and NetworkManager-team since it is only
-# required for OVS and team support
-Suggests:       NetworkManager-ovs
-Suggests:       NetworkManager-team
-Requires:       %{name}-libs%{?_isa} = %{version}-%{release}
+Recommends:     (NetworkManager-ovs if openvswitch)
 Provides:       nmstate-plugin-ovsdb = %{version}-%{release}
+Requires:       %{name}-libs%{?_isa} = %{version}-%{release}
 Obsoletes:      nmstate-plugin-ovsdb < 2.0-1
+License:        Apache-2.0
 
 %description -n python3-%{libname}
 This package contains the Python 3 library for Nmstate.
 
+%if ! 0%{?rhel} && ! %{is_snapshot}
+%package -n rust-%{name}-devel
+Summary:        Rust crate of nmstate
+BuildArch:      noarch
+License:        Apache-2.0
+
+%description -n rust-%{name}-devel
+This package contains library source intended for building other packages
+which use "%{name}" crate.
+
+%package -n rust-%{name}+default-devel
+Summary:        Rust crate of nmstate with default feature
+BuildArch:      noarch
+License:        Apache-2.0
+
+%description -n rust-%{name}+default-devel
+This package contains library source intended for building other packages
+which use "%{name}" crate with default feature.
+
+%package -n rust-%{name}+gen_conf-devel
+Summary:        Rust crate of nmstate with default feature
+BuildArch:      noarch
+License:        Apache-2.0
+
+%description -n rust-%{name}+gen_conf-devel
+This package contains library source intended for building other packages
+which use "%{name}" crate with gen_conf feature.
+
+%package -n rust-%{name}+query_apply-devel
+Summary:        Rust crate of nmstate with default feature
+BuildArch:      noarch
+License:        Apache-2.0
+# https://bugzilla.redhat.com/show_bug.cgi?id=2161128
+Requires:  (crate(nispor/default) >= 1.2.12 with crate(nispor/default) < 2.0)
+Requires:  (crate(nix/default) >= 0.24 with crate(nix/default) < 0.25)
+Requires:  (crate(zbus/default) >= 1.9 with crate(zbus/default) < 2.0)
+
+%description -n rust-%{name}+query_apply-devel
+This package contains library source intended for building other packages
+which use "%{name}" crate with query_apply feature.
+%endif
+
 %prep
-%setup -q
+%autosetup -p1
+%if ! %{is_snapshot}
+gpg2 --import --import-options import-export,import-minimal \
+    %{SOURCE2} > ./gpgkey-mantainers.gpg
+gpgv2 --keyring ./gpgkey-mantainers.gpg %{SOURCE1} %{SOURCE0}
+%endif
+
+pushd rust
+
+%if 0%{?rhel}
+    %if ! %{is_snapshot}
+    # Source3 is vendored dependencies
+    %cargo_prep -V 3
+
+    # RHEL does not have patchelf, hence we need to solve the SONAME problem
+    # by ourselves: https://github.com/rust-lang/cargo/issues/5045
+
+    # The cargo_prep will create `.cargo/config` which take precedence over
+    # `.cargo/config.toml` shipped by upstream which fix the SONAME of cdylib.
+    # To workaround that, merge upstream rustflags into cargo_prep created one.
+    _FLAGS=`sed -ne 's/rustflags = "\(.\+\)"/\1/p' .cargo/config.toml`
+    sed -i -e "s/rustflags = \[\(.\+\), \]$/rustflags = [\1, \"$_FLAGS\"]/" \
+        .cargo/config
+    rm -f .cargo/config.toml
+    %endif
+%else
+    %cargo_prep
+    rm -f .cargo/config.toml
+    %if %{is_snapshot}
+    # Remove local `source.crates-io` to use internet for snaptshot build
+    sed -ne '/\[source.crates-io\]/q;p' .cargo/config > .cargo/config.new
+    mv .cargo/config.new .cargo/config
+    %endif
+%endif
+
+popd
 
 %build
+pushd rust
+%cargo_build
+popd
+
 pushd rust/src/python
 %py3_build
 popd
 
 %install
-pushd rust/src/python
-%py3_install
-popd
-
 env SKIP_PYTHON_INSTALL=1 \
     PREFIX=%{_prefix} \
     LIBDIR=%{_libdir} \
     SYSCONFDIR=%{_sysconfdir} \
     %make_install
 
+%if ! 0%{?rhel}
+patchelf --set-soname libnmstate.so.2 \
+    %{buildroot}/%{_libdir}/libnmstate.so.%{version}
+%endif
+
+pushd rust/src/python
+%py3_install
+popd
+
+%if ! 0%{?rhel} && ! %{is_snapshot}
+# cargo_install has problem on detecting library when running in workspace
+# due to bug https://pagure.io/fedora-rust/cargo2rpm/issue/5
+# Removing the workspace Cargo.toml will workaround this problem.
+rm rust/Cargo.toml
+pushd rust/src/lib
+%cargo_install
+popd
+%endif
+
 %files
 %doc README.md
 %doc examples/
-%{_mandir}/man8/nmstate.service.8*
 %{_mandir}/man8/nmstatectl.8*
 %{_mandir}/man8/nmstate-autoconf.8*
+%{_mandir}/man8/nmstate.service.8*
 %{_bindir}/nmstatectl
 %{_bindir}/nmstate-autoconf
 %{_unitdir}/nmstate.service
@@ -112,20 +240,33 @@ env SKIP_PYTHON_INSTALL=1 \
 %{_includedir}/nmstate.h
 %{_libdir}/pkgconfig/nmstate.pc
 
+%files -n python3-%{libname}
+%license LICENSE
+%{python3_sitelib}/%{libname}
+%{python3_sitelib}/%{srcname}-*.egg-info/
+
 %files static
 %{_libdir}/libnmstate.a
 
-%files -n python3-%{libname}
+%if ! 0%{?rhel} && ! %{is_snapshot}
+%files -n rust-%{name}-devel
 %license LICENSE
-%{python3_sitelib}/%{srcname}-*.egg-info/
-%{python3_sitelib}/%{libname}
+%{cargo_registry}/%{name}-%{version}/
 
-%post libs
-/sbin/ldconfig
+%files -n rust-%{name}+default-devel
+%ghost %{cargo_registry}/%{name}-%{version}/Cargo.toml
 
-%postun libs
-/sbin/ldconfig
+%files -n rust-%{name}+gen_conf-devel
+%ghost %{cargo_registry}/%{name}-%{version}/Cargo.toml
+
+%files -n rust-%{name}+query_apply-devel
+%ghost %{cargo_registry}/%{name}-%{version}/Cargo.toml
+%endif
 
 %changelog
+%if 0%{?rhel}
 @CHANGELOG@
-- snapshot build
+-- snapshot build
+%else
+%autochangelog
+%endif
