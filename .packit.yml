@@ -9,9 +9,14 @@ srpm_build_deps:
 actions:
   post-upstream-clone:
     - "make packaging/nmstate.spec"
+    - "sed -i -e '/^Source1/d' packaging/nmstate.spec"
+    - "sed -i -e '/^Source2/d' packaging/nmstate.spec"
+    - "sed -i -e '/^Source3/d' packaging/nmstate.spec"
     - "mv packaging/nmstate.spec ./"
+    # packit will try to download all SOURCES even those are not ignored by
+    # rpm condiction check, so we remove it extra sources for copr build
   create-archive:
-    - "env SKIP_VENDOR_CREATION=1 make dist"
+    - "make dist"
   get-current-version:
     - "cat VERSION"
 jobs:
@@ -19,7 +24,5 @@ jobs:
     trigger: pull_request
     metadata:
       targets:
-        - centos-stream-8-x86_64
         - centos-stream-9-x86_64
-        - epel-8-x86_64
         - epel-9-x86_64
