@@ -217,7 +217,7 @@ impl NetworkCaptureCommand {
                 ));
             };
 
-        match keys.get(0).map(String::as_str) {
+        match keys.first().map(String::as_str) {
             Some("routes") => {
                 ret.routes = match self.action {
                     NetworkCaptureAction::Equal => get_route_match(
@@ -363,7 +363,7 @@ fn get_input_capture_source(
     line: &str,
     pipe_token: &NetworkCaptureToken,
 ) -> Result<String, NmstateError> {
-    match tokens.get(0) {
+    match tokens.first() {
         Some(NetworkCaptureToken::Path(path, pos)) => {
             if path.len() != 2 || path[0] != "capture" {
                 Err(NmstateError::new_policy_error(
@@ -409,8 +409,8 @@ fn get_condition_key(
     action_token: &NetworkCaptureToken,
 ) -> Result<(NetworkCaptureToken, Option<(String, usize)>), NmstateError> {
     if tokens.len() == 1 {
-        if let Some(NetworkCaptureToken::Path(path, pos)) = tokens.get(0) {
-            if path.get(0) == Some(&"capture".to_string()) {
+        if let Some(NetworkCaptureToken::Path(path, pos)) = tokens.first() {
+            if path.first() == Some(&"capture".to_string()) {
                 if path.len() <= 2 {
                     return Err(NmstateError::new_policy_error(
                         "No property path after capture name".to_string(),
@@ -469,7 +469,7 @@ fn get_condition_value(
 
     match tokens[0] {
         NetworkCaptureToken::Path(ref path, pos) => {
-            Ok(if path.get(0) == Some(&"capture".to_string()) {
+            Ok(if path.first() == Some(&"capture".to_string()) {
                 if path.len() < 3 {
                     return Err(NmstateError::new(
                         ErrorKind::InvalidArgument,
@@ -566,7 +566,7 @@ fn process_tokens_without_pipe(
             ret.value_capture = Some(cap_name);
             ret.value_capture_pos = pos;
         }
-    } else if let Some(NetworkCaptureToken::Path(_, _)) = tokens.get(0) {
+    } else if let Some(NetworkCaptureToken::Path(_, _)) = tokens.first() {
         // User just want to remove all information except the defined one
         ret.action = NetworkCaptureAction::None;
         ret.key = tokens[0].clone()
