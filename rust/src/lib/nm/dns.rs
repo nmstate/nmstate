@@ -273,7 +273,7 @@ fn save_dns_to_iface(
     let prefer_ipv6_srv = merged_state
         .dns
         .servers
-        .get(0)
+        .first()
         .map(|s| is_ipv6_addr(s.as_str()))
         .unwrap_or_default();
     for srv in merged_state.dns.servers.as_slice() {

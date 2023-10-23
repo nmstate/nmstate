@@ -30,7 +30,7 @@ ethernet:
 
     let eth_conf = iface.ethernet.unwrap();
     let sriov_conf = eth_conf.sr_iov.as_ref().unwrap();
-    let vf_conf = sriov_conf.vfs.as_ref().unwrap().get(0).unwrap();
+    let vf_conf = sriov_conf.vfs.as_ref().unwrap().first().unwrap();
 
     assert_eq!(eth_conf.speed, Some(1000));
     assert_eq!(sriov_conf.total_vfs, Some(64));

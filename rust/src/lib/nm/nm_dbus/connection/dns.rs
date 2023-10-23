@@ -106,7 +106,7 @@ pub(crate) fn nm_ip_dns_to_value(
     dns_srvs: &[String],
 ) -> Result<zvariant::Value, NmError> {
     let mut is_ipv6 = false;
-    let mut dns_values = if let Some(dns_srv) = dns_srvs.get(0) {
+    let mut dns_values = if let Some(dns_srv) = dns_srvs.first() {
         if dns_srv.contains(':') {
             // is IPv6
             is_ipv6 = true;
