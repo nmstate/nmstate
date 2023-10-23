@@ -1,21 +1,4 @@
-#
-# Copyright (c) 2019-2021 Red Hat, Inc.
-#
-# This file is part of nmstate
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 2.1 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program. If not, see <https://www.gnu.org/licenses/>.
-#
+# SPDX-License-Identifier: LGPL-2.1-or-later
 
 import time
 
@@ -33,6 +16,7 @@ from .testlib.bondlib import bond_interface
 from .testlib.cmdlib import RC_SUCCESS
 from .testlib.cmdlib import exec_cmd
 from .testlib.cmdlib import format_exec_cmd_result
+from .testlib.env import is_fedora
 from .testlib.env import is_k8s
 from .testlib.env import nm_major_minor_version
 from .testlib.vxlan import VxlanState
@@ -45,6 +29,11 @@ VXLAN1_ID = 201
 VXLAN2_ID = 202
 
 
+@pytest.mark.skipif(
+    is_fedora(),
+    reason="Unknown bug of nmstate on Fedora "
+    "https://issues.redhat.com/browse/RHEL-5001",
+)
 def test_add_and_remove_vxlan(eth1_up):
     ifname = eth1_up[Interface.KEY][0][Interface.NAME]
     with vxlan_interfaces(
@@ -56,6 +45,11 @@ def test_add_and_remove_vxlan(eth1_up):
     assertlib.assert_absent(vxlan1_ifname)
 
 
+@pytest.mark.skipif(
+    is_fedora(),
+    reason="Unknown bug of nmstate on Fedora "
+    "https://issues.redhat.com/browse/RHEL-5001",
+)
 @pytest.mark.tier1
 def test_add_and_remove_two_vxlans_on_same_iface(eth1_up):
     ifname = eth1_up[Interface.KEY][0][Interface.NAME]
@@ -71,6 +65,11 @@ def test_add_and_remove_two_vxlans_on_same_iface(eth1_up):
     assertlib.assert_absent(vxlan_interfaces_name)
 
 
+@pytest.mark.skipif(
+    is_fedora(),
+    reason="Unknown bug of nmstate on Fedora "
+    "https://issues.redhat.com/browse/RHEL-5001",
+)
 @pytest.mark.tier1
 def test_add_and_remove_vxlan_without_base_if():
     with vxlan_interfaces(
@@ -82,6 +81,11 @@ def test_add_and_remove_vxlan_without_base_if():
     assertlib.assert_absent(vxlan1_ifname)
 
 
+@pytest.mark.skipif(
+    is_fedora(),
+    reason="Unknown bug of nmstate on Fedora "
+    "https://issues.redhat.com/browse/RHEL-5001",
+)
 @pytest.mark.tier1
 def test_add_and_remove_vxlan_nolearning():
     with vxlan_interfaces(
@@ -93,6 +97,11 @@ def test_add_and_remove_vxlan_nolearning():
     assertlib.assert_absent(vxlan1_ifname)
 
 
+@pytest.mark.skipif(
+    is_fedora(),
+    reason="Unknown bug of nmstate on Fedora "
+    "https://issues.redhat.com/browse/RHEL-5001",
+)
 @pytest.mark.tier1
 @pytest.mark.xfail(
     is_k8s(),
@@ -121,6 +130,11 @@ def test_rollback_for_vxlans(eth1_up):
     assert current_state == current_state_after_apply
 
 
+@pytest.mark.skipif(
+    is_fedora(),
+    reason="Unknown bug of nmstate on Fedora "
+    "https://issues.redhat.com/browse/RHEL-5001",
+)
 def test_set_vxlan_iface_down(eth1_up):
     ifname = eth1_up[Interface.KEY][0][Interface.NAME]
     vxlan = VxlanState(id=VXLAN1_ID, base_if=ifname, remote="192.168.100.1")
@@ -130,6 +144,11 @@ def test_set_vxlan_iface_down(eth1_up):
         assertlib.assert_absent(vxlan.name)
 
 
+@pytest.mark.skipif(
+    is_fedora(),
+    reason="Unknown bug of nmstate on Fedora "
+    "https://issues.redhat.com/browse/RHEL-5001",
+)
 def test_add_new_bond_iface_with_vxlan(eth1_up):
     eth_name = eth1_up[Interface.KEY][0][Interface.NAME]
     bond_name = "bond0"
@@ -148,6 +167,11 @@ def test_add_new_bond_iface_with_vxlan(eth1_up):
     assertlib.assert_absent(bond_name)
 
 
+@pytest.mark.skipif(
+    is_fedora(),
+    reason="Unknown bug of nmstate on Fedora "
+    "https://issues.redhat.com/browse/RHEL-5001",
+)
 def test_show_vxlan_with_no_remote(eth1_up):
     eth_name = eth1_up[Interface.KEY][0][Interface.NAME]
     vxlan = VxlanState(id=VXLAN1_ID, base_if=eth_name, remote="")
@@ -166,6 +190,11 @@ def test_show_vxlan_with_no_remote(eth1_up):
         assertlib.assert_absent(vxlan.name)
 
 
+@pytest.mark.skipif(
+    is_fedora(),
+    reason="Unknown bug of nmstate on Fedora "
+    "https://issues.redhat.com/browse/RHEL-5001",
+)
 @pytest.mark.tier1
 def test_add_and_remove_vxlan_with_no_remote():
     with vxlan_interfaces(
@@ -177,6 +206,11 @@ def test_add_and_remove_vxlan_with_no_remote():
     assertlib.assert_absent(vxlan1_ifname)
 
 
+@pytest.mark.skipif(
+    is_fedora(),
+    reason="Unknown bug of nmstate on Fedora "
+    "https://issues.redhat.com/browse/RHEL-5001",
+)
 @pytest.mark.tier1
 def test_add_vxlan_and_modify_vxlan_id(eth1_up):
     ifname = eth1_up[Interface.KEY][0][Interface.NAME]
@@ -192,6 +226,11 @@ def test_add_vxlan_and_modify_vxlan_id(eth1_up):
     assertlib.assert_absent(vxlan1_ifname)
 
 
+@pytest.mark.skipif(
+    is_fedora(),
+    reason="Unknown bug of nmstate on Fedora "
+    "https://issues.redhat.com/browse/RHEL-5001",
+)
 @pytest.mark.tier1
 @pytest.mark.skipif(
     nm_major_minor_version() < 1.31,
