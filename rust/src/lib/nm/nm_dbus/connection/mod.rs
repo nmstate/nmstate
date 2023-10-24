@@ -49,9 +49,9 @@ pub use self::ethtool::NmSettingEthtool;
 pub use self::ieee8021x::NmSetting8021X;
 pub use self::infiniband::NmSettingInfiniBand;
 pub use self::ip::{NmSettingIp, NmSettingIpMethod};
-pub use self::loopback::NmSettingLoopback;
+
 pub use self::mac_vlan::NmSettingMacVlan;
-pub use self::macsec::NmSettingMacSec;
+
 pub use self::ovs::{
     NmSettingOvsBridge, NmSettingOvsDpdk, NmSettingOvsExtIds,
     NmSettingOvsIface, NmSettingOvsOtherConfig, NmSettingOvsPatch,
