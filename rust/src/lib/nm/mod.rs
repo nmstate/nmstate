@@ -11,6 +11,7 @@ pub(crate) mod dns;
 mod error;
 #[cfg(feature = "gen_conf")]
 mod gen_conf;
+#[allow(unused_imports)]
 mod nm_dbus;
 mod profile;
 #[cfg(feature = "query_apply")]
