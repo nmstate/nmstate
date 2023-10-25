@@ -211,3 +211,14 @@ impl From<NmIpRouteRuleAction> for u8 {
         }
     }
 }
+
+impl std::fmt::Display for NmIpRouteRuleAction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            NmIpRouteRuleAction::Blackhole => write!(f, "blackhole"),
+            NmIpRouteRuleAction::Unreachable => write!(f, "unreachable"),
+            NmIpRouteRuleAction::Prohibit => write!(f, "prohibit"),
+            NmIpRouteRuleAction::Other(d) => write!(f, "{}", d),
+        }
+    }
+}

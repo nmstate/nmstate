@@ -20,6 +20,7 @@ from .testlib import cmdlib
 from .testlib import iprule
 from .testlib.bridgelib import linux_bridge
 from .testlib.env import nm_minor_version
+from .testlib.genconf import gen_conf_apply
 from .testlib.route import assert_routes
 
 IPV4_ADDRESS1 = "192.0.2.251"
@@ -1342,6 +1343,62 @@ def test_route_rule_action(route_rule_test_env):
 
     libnmstate.apply({RouteRule.KEY: {RouteRule.CONFIG: desired_rules}})
     _check_ip_rules(desired_rules)
+
+
+def test_gen_conf_route_rule(eth1_up):
+    desired_rules = [
+        {
+            RouteRule.PRIORITY: 10000,
+            RouteRule.IIF: "eth1",
+            RouteRule.IP_FROM: "192.0.2.1/32",
+            RouteRule.ACTION: RouteRule.ACTION_BLACKHOLE,
+        },
+        {
+            RouteRule.PRIORITY: 10001,
+            RouteRule.IIF: "eth1",
+            RouteRule.IP_FROM: "192.0.2.2/32",
+            RouteRule.ACTION: RouteRule.ACTION_UNREACHABLE,
+        },
+        {
+            RouteRule.PRIORITY: 10002,
+            RouteRule.IIF: "eth1",
+            RouteRule.IP_FROM: "192.0.2.3/32",
+            RouteRule.ACTION: RouteRule.ACTION_PROHIBIT,
+        },
+        {
+            RouteRule.PRIORITY: 20000,
+            RouteRule.IIF: "eth1",
+            RouteRule.IP_FROM: "2001:db8:1::1/128",
+            RouteRule.ACTION: RouteRule.ACTION_BLACKHOLE,
+        },
+        {
+            RouteRule.PRIORITY: 20001,
+            RouteRule.IIF: "eth1",
+            RouteRule.IP_FROM: "2001:db8:1::2/128",
+            RouteRule.ACTION: RouteRule.ACTION_UNREACHABLE,
+        },
+        {
+            RouteRule.PRIORITY: 20002,
+            RouteRule.IIF: "eth1",
+            RouteRule.IP_FROM: "2001:db8:1::3/128",
+            RouteRule.ACTION: RouteRule.ACTION_PROHIBIT,
+        },
+    ]
+
+    routes = (
+        [_get_ipv4_gateways()[0], _get_ipv6_gateways()[0]]
+        + _get_ipv4_test_routes()
+        + _get_ipv6_test_routes()
+    )
+
+    desired_state = {
+        Interface.KEY: [ETH1_INTERFACE_STATE],
+        Route.KEY: {Route.CONFIG: routes},
+        RouteRule.KEY: {RouteRule.CONFIG: copy.deepcopy(desired_rules)},
+    }
+
+    with gen_conf_apply(desired_state):
+        _check_ip_rules(desired_rules)
 
 
 @pytest.fixture
