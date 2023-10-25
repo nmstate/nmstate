@@ -48,9 +48,14 @@ impl NmIpRouteRule {
             if !from_str.is_empty() {
                 keys.push(from_str);
             }
-
+            if let Some(iif) = self.iifname.as_ref() {
+                keys.push(format!("iif {iif}"));
+            }
             if let Some(v) = self.suppress_prefixlength {
                 keys.push(format!("suppress_prefixlength {v}"));
+            }
+            if let Some(action) = self.action.as_ref() {
+                keys.push(format!("type {action}"));
             }
 
             let mut table_str = format!("table {DEFAULT_ROUTE_TABLE}");
