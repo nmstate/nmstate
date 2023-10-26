@@ -6,6 +6,9 @@ enable_net: true
 srpm_build_deps:
   - make
   - git
+notifications:
+  pull_request:
+    successful_build: true
 actions:
   post-upstream-clone:
     - "make packaging/nmstate.spec"
