@@ -14,9 +14,12 @@ from libnmstate.schema import InterfaceState
 from .testlib import assertlib
 from .testlib import statelib
 from .testlib.env import nm_minor_version
+from .testlib.retry import retry_till_true_or_timeout
 
 IPV4_ADDRESS1 = "192.0.2.251"
 IPV6_ADDRESS1 = "2001:db8:1::1"
+
+RETRY_TIMEOUT = 10
 
 
 @pytest.fixture
@@ -62,7 +65,7 @@ def test_loopback_not_supported_by_nm():
 class TestLoopback:
     def test_change_loopback_mtu_and_restore_back(self, loopback_cleanup):
         cur_state = statelib.show_only(("lo",))
-        old_mtu = cur_state[Interface.KEY][0][Interface.MTU]
+        origin_mtu = cur_state[Interface.KEY][0][Interface.MTU]
 
         desired_state = {
             Interface.KEY: [
@@ -85,9 +88,15 @@ class TestLoopback:
                 ]
             },
         )
-        state = statelib.show_only(("lo",))
-        new_mtu = state[Interface.KEY][0][Interface.MTU]
-        assert new_mtu == old_mtu
+
+        # NetworkManager might take time to reset MTU of lo after we deleted
+        # the profile of lo.
+        def check_mtu(expected_mtu):
+            state = statelib.show_only(("lo",))
+            cur_mtu = state[Interface.KEY][0][Interface.MTU]
+            return expected_mtu == cur_mtu
+
+        assert retry_till_true_or_timeout(RETRY_TIMEOUT, check_mtu, origin_mtu)
 
     def test_add_more_ip_to_loopback(self, loopback_cleanup):
         desired_state = {
