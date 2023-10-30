@@ -10,12 +10,35 @@ from libnmstate.prettystate import format_desired_current_state_diff
 from libnmstate.schema import DNS
 from libnmstate.schema import Interface
 
-REMOVE_DNS_CONFIG = {
-    DNS.CONFIG: {
-        DNS.SERVER: [],
-        DNS.SEARCH: [],
-    }
+EMPTY_DNS = {
+    DNS.SERVER: [],
+    DNS.SEARCH: [],
+    DNS.OPTIONS: [],
 }
+
+REMOVE_DNS_CONFIG = {DNS.CONFIG: EMPTY_DNS}
+
+
+SUPPORTED_DNS_OPTIONS = [
+    "attempts",
+    "debug",
+    "edns0",
+    "inet6",
+    "ip6-bytestring",
+    "ip6-dotint",
+    "ndots",
+    "no-aaaa",
+    "no-check-names",
+    "no-ip6-dotint",
+    "no-reload",
+    "no-tld-query",
+    "rotate",
+    "single-request",
+    "single-request-reopen",
+    "timeout",
+    "trust-ad",
+    "use-vc",
+]
 
 
 class DnsState:
@@ -27,7 +50,7 @@ class DnsState:
         self._dns_state = merge_dns(des_dns_state, cur_dns_state or {})
         if self._dns_state == REMOVE_DNS_CONFIG:
             self._config_changed = True
-        if des_dns_state and des_dns_state.get(DNS.CONFIG):
+        elif des_dns_state and des_dns_state.get(DNS.CONFIG):
             if cur_dns_state:
                 self._config_changed = _is_dns_config_changed(
                     des_dns_state, cur_dns_state
@@ -35,15 +58,26 @@ class DnsState:
             else:
                 self._config_changed = True
         self._canonicalize_ip_address()
+        self._canonicalize_dns_options()
 
-    def is_search_only_config(self):
-        return self.config_searches and not self.config_servers
+    def is_search_or_option_only(self):
+        return (
+            self.config_searches or self.config_options
+        ) and not self.config_servers
 
     def _canonicalize_ip_address(self):
         canonicalized_addrs = [
             canonicalize_ip_address(address) for address in self.config_servers
         ]
         self.config[DNS.SERVER] = canonicalized_addrs
+
+    def _canonicalize_dns_options(self):
+        for opt in self.config_options:
+            if opt not in SUPPORTED_DNS_OPTIONS:
+                raise NmstateValueError(
+                    f"Unsupported DNS option {opt}, only support: "
+                    f"{', '.join(SUPPORTED_DNS_OPTIONS)}",
+                )
 
     @property
     def current_config(self):
@@ -61,6 +95,10 @@ class DnsState:
     def config_searches(self):
         return _get_config_searches(self._dns_state)
 
+    @property
+    def config_options(self):
+        return _get_config_options(self._dns_state)
+
     def gen_metadata(self, ifaces, route_state, ignored_dns_ifaces):
         """
         Return DNS configure targeting to store as metadata of interface.
@@ -70,20 +108,26 @@ class DnsState:
                     Interface.IPV4: {
                         DNS.SERVER: dns_servers,
                         DNS.SEARCH: dns_searches,
+                        DNS.OPTIONS: dns_opts,
                     },
                     Interface.IPV6: {
                         DNS.SERVER: dns_servers,
                         DNS.SEARCH: dns_searches,
+                        DNS.OPTIONS: dns_opts,
                     },
                 }
             }
         """
         iface_metadata = {}
-        if not self.config_servers and not self.config_searches:
+        if (
+            not self.config_servers
+            and not self.config_searches
+            and not self.config_options
+        ):
             return iface_metadata
 
-        if self.is_search_only_config():
-            return self._gen_metadata_for_search_only(
+        if self.is_search_or_option_only():
+            return self._gen_metadata_for_search_or_opt_only(
                 ifaces, ignored_dns_ifaces
             )
 
@@ -93,18 +137,18 @@ class DnsState:
         if ipv4_iface == ipv6_iface and ipv4_iface:
             iface_metadata = {
                 ipv4_iface: {
-                    Interface.IPV4: {DNS.SERVER: [], DNS.SEARCH: []},
-                    Interface.IPV6: {DNS.SERVER: [], DNS.SEARCH: []},
+                    Interface.IPV4: deepcopy(EMPTY_DNS),
+                    Interface.IPV6: deepcopy(EMPTY_DNS),
                 },
             }
         else:
             if ipv4_iface:
                 iface_metadata[ipv4_iface] = {
-                    Interface.IPV4: {DNS.SERVER: [], DNS.SEARCH: []},
+                    Interface.IPV4: deepcopy(EMPTY_DNS)
                 }
             if ipv6_iface:
                 iface_metadata[ipv6_iface] = {
-                    Interface.IPV6: {DNS.SERVER: [], DNS.SEARCH: []},
+                    Interface.IPV6: deepcopy(EMPTY_DNS)
                 }
         index = 0
         searches_saved = False
@@ -128,12 +172,13 @@ class DnsState:
             iface_dns_metada.setdefault(DnsState.PRIORITY_METADATA, index)
             if not searches_saved:
                 iface_dns_metada[DNS.SEARCH] = self.config_searches
+                iface_dns_metada[DNS.OPTIONS] = self.config_options
             searches_saved = True
             index += 1
 
         return iface_metadata
 
-    def _gen_metadata_for_search_only(self, ifaces, ignored_dns_ifaces):
+    def _gen_metadata_for_search_or_opt_only(self, ifaces, ignored_dns_ifaces):
         """
         When user only desired a static DNS search domains, we find interface
         to store the DNS configurations in the order of:
@@ -163,6 +208,7 @@ class DnsState:
                     Interface.IPV6: {
                         DNS.SERVER: [],
                         DNS.SEARCH: self.config_searches,
+                        DNS.OPTIONS: self.config_options,
                     },
                 },
             }
@@ -172,6 +218,7 @@ class DnsState:
                     Interface.IPV4: {
                         DNS.SERVER: [],
                         DNS.SEARCH: self.config_searches,
+                        DNS.OPTIONS: self.config_options,
                     },
                 },
             }
@@ -382,10 +429,13 @@ class DnsState:
             des_dns_state=None,
             cur_dns_state=cur_dns_state,
         )
-        if self.config.get(DNS.SERVER, []) != cur_dns.config.get(
-            DNS.SERVER, []
-        ) or self.config.get(DNS.SEARCH, []) != cur_dns.config.get(
-            DNS.SEARCH, []
+        if (
+            self.config.get(DNS.SERVER, [])
+            != cur_dns.config.get(DNS.SERVER, [])
+            or self.config.get(DNS.SEARCH, [])
+            != cur_dns.config.get(DNS.SEARCH, [])
+            or self.config.get(DNS.OPTIONS, [])
+            != cur_dns.config.get(DNS.OPTIONS, [])
         ):
             raise NmstateVerificationError(
                 format_desired_current_state_diff(
@@ -406,11 +456,14 @@ class DnsState:
     def config_changed(self):
         return self._config_changed
 
+    def is_purge(self):
+        return self._dns_state == REMOVE_DNS_CONFIG
+
 
 def _get_config(state):
     conf = state.get(DNS.CONFIG, {})
     if not conf:
-        conf = {DNS.SERVER: [], DNS.SEARCH: []}
+        conf = deepcopy(EMPTY_DNS)
     return conf
 
 
@@ -422,11 +475,18 @@ def _get_config_searches(state):
     return _get_config(state).get(DNS.SEARCH, [])
 
 
+def _get_config_options(state):
+    return _get_config(state).get(DNS.OPTIONS, [])
+
+
 def _is_dns_config_changed(des_dns_state, cur_dns_state):
-    return _get_config_servers(des_dns_state) != _get_config_servers(
-        cur_dns_state
-    ) or _get_config_searches(des_dns_state) != _get_config_searches(
-        cur_dns_state
+    return (
+        _get_config_servers(des_dns_state)
+        != _get_config_servers(cur_dns_state)
+        or _get_config_searches(des_dns_state)
+        != _get_config_searches(cur_dns_state)
+        or _get_config_options(des_dns_state)
+        != _get_config_options(cur_dns_state)
     )
 
 
@@ -462,8 +522,10 @@ def merge_dns(desire, current):
     cur_servers = current.get(DNS.CONFIG, {}).get(DNS.SERVER)
     des_searches = desire.get(DNS.CONFIG, {}).get(DNS.SEARCH)
     cur_searches = current.get(DNS.CONFIG, {}).get(DNS.SEARCH)
+    des_options = desire.get(DNS.CONFIG, {}).get(DNS.OPTIONS)
+    cur_options = current.get(DNS.CONFIG, {}).get(DNS.OPTIONS)
 
-    if des_servers is None and des_searches is None:
+    if des_servers is None and des_searches is None and des_options is None:
         # When desire not mentioned, use current config.
         return deepcopy(current)
 
@@ -471,11 +533,14 @@ def merge_dns(desire, current):
         des_servers = deepcopy(cur_servers) if cur_servers else []
     if des_searches is None:
         des_searches = deepcopy(cur_searches) if cur_searches else []
+    if des_options is None:
+        des_options = deepcopy(cur_options) if cur_options else []
 
     return {
         DNS.RUNNING: deepcopy(current.get(DNS.RUNNING, {})),
         DNS.CONFIG: {
             DNS.SERVER: des_servers,
             DNS.SEARCH: des_searches,
+            DNS.OPTIONS: des_options,
         },
     }

@@ -952,6 +952,10 @@ definitions:
         type: array
         items:
           type: string
+      options:
+        type: array
+        items:
+          type: string
   bridge-port-vlan:
     type: object
     properties:

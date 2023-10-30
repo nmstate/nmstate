@@ -27,11 +27,15 @@ IPV6_ADDRESS_LENGTH = 128
 def get_running(context):
     global_dns = get_global_dns()
     if global_dns:
-        return {
+        ret = {
             DNS.SERVER: global_dns[0],
             DNS.SEARCH: global_dns[1],
+            DNS.OPTIONS: global_dns[2],
         }
-    dns_state = {DNS.SERVER: [], DNS.SEARCH: []}
+        if not ret[DNS.OPTIONS]:
+            ret.pop(DNS.OPTIONS)
+        return ret
+    dns_state = {DNS.SERVER: [], DNS.SEARCH: [], DNS.OPTIONS: []}
     for dns_conf in context.get_dns_configuration():
         iface_name = dns_conf.get_interface()
         for ns in dns_conf.get_nameservers():
@@ -54,19 +58,29 @@ def get_running(context):
             if dns_domain not in dns_state[DNS.SEARCH]
         ]
         dns_state[DNS.SEARCH].extend(dns_domains)
-    if not dns_state[DNS.SERVER] and not dns_state[DNS.SEARCH]:
+    if (
+        not dns_state[DNS.SERVER]
+        and not dns_state[DNS.SEARCH]
+        and not dns_state[DNS.OPTIONS]
+    ):
         dns_state = {}
+    elif not dns_state[DNS.OPTIONS]:
+        dns_state.pop(DNS.OPTIONS)
     return dns_state
 
 
 def get_running_config(applied_configs):
     global_dns = get_global_dns()
     if global_dns:
-        return {
+        ret = {
             DNS.SERVER: global_dns[0],
             DNS.SEARCH: global_dns[1],
+            DNS.OPTIONS: global_dns[2],
         }
-    dns_conf = {DNS.SERVER: [], DNS.SEARCH: []}
+        if not ret[DNS.OPTIONS]:
+            ret.pop(DNS.OPTIONS)
+        return ret
+    dns_conf = {DNS.SERVER: [], DNS.SEARCH: [], DNS.OPTIONS: []}
     tmp_dns_confs = _get_dns_config(applied_configs, Interface.IPV6)
     tmp_dns_confs.extend(_get_dns_config(applied_configs, Interface.IPV4))
     # NetworkManager sorts the DNS entries based on various criteria including
@@ -79,8 +93,15 @@ def get_running_config(applied_configs):
     for e in tmp_dns_confs:
         dns_conf[DNS.SERVER].extend(e["server"])
         dns_conf[DNS.SEARCH].extend(e["search"])
-    if not dns_conf[DNS.SERVER] and not dns_conf[DNS.SEARCH]:
+        dns_conf[DNS.OPTIONS].extend(e["options"])
+    if (
+        not dns_conf[DNS.SERVER]
+        and not dns_conf[DNS.SEARCH]
+        and not dns_conf[DNS.OPTIONS]
+    ):
         return {}
+    elif not dns_conf[DNS.OPTIONS]:
+        dns_conf.pop(DNS.OPTIONS)
     return dns_conf
 
 
@@ -93,7 +114,9 @@ def _get_dns_config(profiles, family):
             else profile.get_setting_ip6_config()
         )
         if not ip_profile or (
-            not ip_profile.props.dns and not ip_profile.props.dns_search
+            not ip_profile.props.dns
+            and not ip_profile.props.dns_search
+            and not ip_profile.props.dns_options
         ):
             continue
         priority = ip_profile.props.dns_priority
@@ -109,6 +132,7 @@ def _get_dns_config(profiles, family):
                 "server": ip_profile.props.dns,
                 "priority": priority,
                 "search": ip_profile.props.dns_search,
+                "options": ip_profile.props.dns_options,
             }
         )
     return dns_configs
@@ -122,6 +146,8 @@ def add_dns(setting_ip, dns_state):
         setting_ip.add_dns(server)
     for search in dns_state.get(DNS.SEARCH, []):
         setting_ip.add_dns_search(search)
+    for option in dns_state.get(DNS.OPTIONS, []):
+        setting_ip.add_dns_option(option)
 
 
 def get_dns_config_iface_names(acs_and_ipv4_profiles, acs_and_ipv6_profiles):
@@ -155,9 +181,9 @@ def start_nm_dns_proxy():
     )
 
 
-def apply_global_dns(servers, searches):
+def apply_global_dns(servers, searches, options):
     proxy = start_nm_dns_proxy()
-    if servers or searches:
+    if servers or searches or options:
         servers_value = GLib.Variant(
             "a{sv}",
             {
@@ -167,8 +193,14 @@ def apply_global_dns(servers, searches):
             },
         )
         searches_value = GLib.Variant("as", searches)
+        options_value = GLib.Variant("as", options)
         para = GLib.Variant(
-            "a{sv}", {"searches": searches_value, "domains": servers_value}
+            "a{sv}",
+            {
+                "searches": searches_value,
+                "domains": servers_value,
+                "options": options_value,
+            },
         )
     else:
         # This is special value for removing global DNS settings
@@ -212,7 +244,7 @@ def apply_global_dns(servers, searches):
 def get_global_dns():
     """
     Return None if no global DNS
-    Return (servers, searches)
+    Return (servers, searches, options)
     """
     proxy = start_nm_dns_proxy()
 
@@ -256,7 +288,8 @@ def get_global_dns():
 
     searches = reply.get("searches", [])
     servers = reply.get("domains", {}).get("*", {}).get("servers", [])
+    options = reply.get("options", [])
     if servers or searches:
-        return (servers, searches)
+        return (servers, searches, options)
     else:
         return None
