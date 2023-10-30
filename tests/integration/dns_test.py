@@ -3,8 +3,10 @@
 import json
 
 import pytest
+import yaml
 
 import libnmstate
+from libnmstate.error import NmstateValueError
 from libnmstate.schema import DNS
 from libnmstate.schema import Interface
 from libnmstate.schema import InterfaceIPv4
@@ -23,6 +25,7 @@ IPV6_DNS_LONG_NAMESERVER = ["2000:0000:0000:0000:0000:0000:0000:0100"]
 EXTRA_IPV6_DNS_NAMESERVER = "2620:fe::9"
 EXAMPLE_SEARCHES = ["example.org", "example.com"]
 EXAMPLE_SEARCHES2 = ["example.info", "example.org"]
+TEST_DNS_OPTIONS = ["debug", "rotate"]
 
 parametrize_ip_ver = pytest.mark.parametrize(
     "dns_config",
@@ -43,7 +46,9 @@ def dns_test_env(eth1_up, eth2_up):
     # failure when bring eth1/eth2 down.
     desired_state = {
         Interface.KEY: _get_test_iface_states(),
-        DNS.KEY: {DNS.CONFIG: {DNS.SERVER: [], DNS.SEARCH: []}},
+        DNS.KEY: {
+            DNS.CONFIG: {DNS.SERVER: [], DNS.SEARCH: [], DNS.OPTIONS: []}
+        },
     }
     libnmstate.apply(desired_state)
 
@@ -451,3 +456,45 @@ def test_dns_edit_nameserver_with_static_gateway_genconf(
     with gen_conf_apply(desired_state):
         current_state = libnmstate.show()
         assert dns_config == current_state[DNS.KEY][DNS.CONFIG]
+
+
+def test_set_and_remove_dns_options(static_dns):
+    old_state = static_dns
+    desired_state = yaml.load(
+        """---
+        dns-resolver:
+          config:
+            options:
+            - rotate
+            - debug
+        """,
+        Loader=yaml.SafeLoader,
+    )
+    libnmstate.apply(desired_state)
+    current_state = libnmstate.show()
+    assert "rotate" in current_state[DNS.KEY][DNS.CONFIG][DNS.OPTIONS]
+    assert "debug" in current_state[DNS.KEY][DNS.CONFIG][DNS.OPTIONS]
+    assert (
+        old_state[DNS.KEY][DNS.CONFIG][DNS.SERVER]
+        == current_state[DNS.KEY][DNS.CONFIG][DNS.SERVER]
+    )
+    assert (
+        old_state[DNS.KEY][DNS.CONFIG][DNS.SEARCH]
+        == current_state[DNS.KEY][DNS.CONFIG][DNS.SEARCH]
+    )
+
+
+def test_set_invalid_dns_options(static_dns):
+    desired_state = yaml.load(
+        """---
+        dns-resolver:
+          config:
+            options:
+            - rotate
+            - debug
+            - haha
+        """,
+        Loader=yaml.SafeLoader,
+    )
+    with pytest.raises(NmstateValueError):
+        libnmstate.apply(desired_state)

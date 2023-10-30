@@ -34,14 +34,19 @@ IPV6_DNS_SERVER3 = "2001:db8:a::3"
 DNS_SEARCHES_1 = ["example.com", "example.org"]
 DNS_SEARCHES_2 = ["example.info", "example.net"]
 
+DNS_OPTOINS1 = ["debug", "rotate"]
+DNS_OPTOINS2 = ["debug", "single-request"]
+
 DNS_CONFIG1 = {
     DNS.SERVER: [IPV4_DNS_SERVER1, IPV6_DNS_SERVER1],
     DNS.SEARCH: DNS_SEARCHES_1,
+    DNS.OPTIONS: DNS_OPTOINS1,
 }
 
 DNS_CONFIG2 = {
     DNS.SERVER: [IPV6_DNS_SERVER2, IPV4_DNS_SERVER2],
     DNS.SEARCH: DNS_SEARCHES_2,
+    DNS.OPTIONS: DNS_OPTOINS2,
 }
 
 
@@ -64,7 +69,11 @@ class TestDnsState:
     def test_merge_by_discarding_current(self):
         dns_state = DnsState({DNS.CONFIG: {}}, {DNS.CONFIG: DNS_CONFIG1})
 
-        assert dns_state.config == {DNS.SERVER: [], DNS.SEARCH: []}
+        assert dns_state.config == {
+            DNS.SERVER: [],
+            DNS.SEARCH: [],
+            DNS.OPTIONS: [],
+        }
         assert dns_state.current_config == DNS_CONFIG1
 
     def test_gen_metadadata_use_default_gateway_ipv4_server_prefered(self):
@@ -82,6 +91,7 @@ class TestDnsState:
             DnsState.PRIORITY_METADATA: 0,
             DNS.SERVER: [IPV4_DNS_SERVER1],
             DNS.SEARCH: DNS_SEARCHES_1,
+            DNS.OPTIONS: DNS_OPTOINS1,
         }
         assert ipv6_iface.to_dict()[Interface.IPV6][
             BaseIface.DNS_METADATA
@@ -89,6 +99,7 @@ class TestDnsState:
             DnsState.PRIORITY_METADATA: 1,
             DNS.SERVER: [IPV6_DNS_SERVER1],
             DNS.SEARCH: [],
+            DNS.OPTIONS: [],
         }
 
     def test_gen_metadadata_use_default_gateway_ipv6_server_prefered(self):
@@ -106,6 +117,7 @@ class TestDnsState:
             DnsState.PRIORITY_METADATA: 1,
             DNS.SERVER: [IPV4_DNS_SERVER2],
             DNS.SEARCH: [],
+            DNS.OPTIONS: [],
         }
         assert ipv6_iface.to_dict()[Interface.IPV6][
             BaseIface.DNS_METADATA
@@ -113,6 +125,7 @@ class TestDnsState:
             DnsState.PRIORITY_METADATA: 0,
             DNS.SERVER: [IPV6_DNS_SERVER2],
             DNS.SEARCH: DNS_SEARCHES_2,
+            DNS.OPTIONS: DNS_OPTOINS2,
         }
 
     def test_gen_metadata_use_dynamic_interface(self):
@@ -130,6 +143,7 @@ class TestDnsState:
             DnsState.PRIORITY_METADATA: 0,
             DNS.SERVER: [IPV4_DNS_SERVER1],
             DNS.SEARCH: DNS_SEARCHES_1,
+            DNS.OPTIONS: DNS_OPTOINS1,
         }
         assert ipv6_iface.to_dict()[Interface.IPV6][
             BaseIface.DNS_METADATA
@@ -137,6 +151,7 @@ class TestDnsState:
             DnsState.PRIORITY_METADATA: 1,
             DNS.SERVER: [IPV6_DNS_SERVER1],
             DNS.SEARCH: [],
+            DNS.OPTIONS: [],
         }
 
     def test_gen_metadata_with_auto_interface_only(self):
@@ -154,6 +169,7 @@ class TestDnsState:
             DnsState.PRIORITY_METADATA: 0,
             DNS.SERVER: [IPV4_DNS_SERVER1],
             DNS.SEARCH: DNS_SEARCHES_1,
+            DNS.OPTIONS: DNS_OPTOINS1,
         }
         assert ipv6_iface.to_dict()[Interface.IPV6][
             BaseIface.DNS_METADATA
@@ -161,6 +177,7 @@ class TestDnsState:
             DnsState.PRIORITY_METADATA: 1,
             DNS.SERVER: [IPV6_DNS_SERVER1],
             DNS.SEARCH: [],
+            DNS.OPTIONS: [],
         }
 
     @pytest.fixture
@@ -179,6 +196,7 @@ class TestDnsState:
             DnsState.PRIORITY_METADATA: 0,
             DNS.SERVER: [IPV4_DNS_SERVER1],
             DNS.SEARCH: DNS_SEARCHES_1,
+            DNS.OPTIONS: DNS_OPTOINS1,
         }
         assert ipv6_iface.to_dict()[Interface.IPV6][
             BaseIface.DNS_METADATA
@@ -186,6 +204,7 @@ class TestDnsState:
             DnsState.PRIORITY_METADATA: 1,
             DNS.SERVER: [IPV6_DNS_SERVER1],
             DNS.SEARCH: [],
+            DNS.OPTIONS: [],
         }
         yield ipv4_iface, ipv6_iface
 
@@ -207,6 +226,7 @@ class TestDnsState:
 
     def test_verify_not_match(self):
         dns_state = DnsState({DNS.CONFIG: DNS_CONFIG1}, {})
+        print("HAHA ", dns_state.config_changed)
         with pytest.raises(NmstateVerificationError):
             dns_state.verify({DNS.CONFIG: DNS_CONFIG2})
 
@@ -274,6 +294,7 @@ class TestDnsState:
             DnsState.PRIORITY_METADATA: 0,
             DNS.SERVER: dns_config[DNS.SERVER],
             DNS.SEARCH: DNS_SEARCHES_1,
+            DNS.OPTIONS: DNS_OPTOINS1,
         }
 
     def test_3_dns_ipv6_servers(self):
@@ -297,6 +318,7 @@ class TestDnsState:
             DnsState.PRIORITY_METADATA: 0,
             DNS.SERVER: dns_config[DNS.SERVER],
             DNS.SEARCH: DNS_SEARCHES_1,
+            DNS.OPTIONS: DNS_OPTOINS1,
         }
 
     def _gen_dynamic_ifaces_with_no_auto_dns(self):
@@ -364,6 +386,7 @@ class TestDnsState:
         cur_config = {
             DNS.CONFIG: {
                 DNS.SERVER: [IPV4_DNS_SERVER1, IPV6_DNS_SERVER1],
+                DNS.OPTIONS: DNS_OPTOINS1,
             }
         }
         dns_state = DnsState(des_config, cur_config)

@@ -209,3 +209,24 @@ def test_purge_global_dns():
         content = fd.read()
         for srv in desired_state[DNS.KEY][DNS.CONFIG][DNS.SERVER]:
             assert srv not in content
+
+
+def test_global_dns_with_dns_options():
+    try:
+        libnmstate.apply(
+            {
+                DNS.KEY: {
+                    DNS.CONFIG: {
+                        DNS.SERVER: ["8.8.8.8", "2620:fe::9", "1.1.1.1"],
+                        DNS.SEARCH: ["example.org", "example.net"],
+                        DNS.OPTIONS: ["rotate", "debug"],
+                    }
+                },
+            }
+        )
+    finally:
+        libnmstate.apply(
+            {
+                DNS.KEY: {DNS.CONFIG: {}},
+            }
+        )

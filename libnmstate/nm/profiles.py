@@ -53,10 +53,12 @@ class NmProfiles:
         if net_state.dns.config_changed:
             if net_state.use_global_dns:
                 apply_global_dns(
-                    net_state.dns.config_servers, net_state.dns.config_searches
+                    net_state.dns.config_servers,
+                    net_state.dns.config_searches,
+                    net_state.dns.config_options,
                 )
             else:
-                apply_global_dns([], [])
+                apply_global_dns([], [], [])
 
         self._prepare_state_for_profiles(net_state)
         # The activation order on bridge/bond ports determins their controler's

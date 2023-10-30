@@ -82,13 +82,16 @@ class NetState:
                     )
                     self.use_global_dns = True
             else:
-                if self._is_iface_dns_prefered():
+                if self.dns.is_purge() or self._is_iface_dns_prefered():
                     try:
                         self._ifaces.gen_dns_metadata(
                             self._dns, self._route, ignored_dns_ifaces
                         )
                     except NmstateValueError as e:
-                        if gen_conf_mode or self._dns.is_search_only_config():
+                        if (
+                            gen_conf_mode
+                            or self._dns.is_search_or_option_only()
+                        ):
                             raise e
                         else:
                             logging.warning(
@@ -147,7 +150,7 @@ class NetState:
     # Nmstate 1.4 does not support IPv6 link-local nameserver, hence not
     # special handling for it.
     def _is_iface_dns_prefered(self):
-        if self._dns.is_search_only_config():
+        if self._dns.is_search_or_option_only():
             return True
         for iface in self.desire_state.get(Interface.KEY, []):
             ipv4_info = iface.get(Interface.IPV4, {})
