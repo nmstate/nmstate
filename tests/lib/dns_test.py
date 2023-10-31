@@ -4,7 +4,6 @@ from copy import deepcopy
 
 import pytest
 
-from libnmstate.error import NmstateValueError
 from libnmstate.error import NmstateVerificationError
 from libnmstate.schema import DNS
 from libnmstate.schema import Interface
@@ -144,8 +143,25 @@ class TestDnsState:
         ifaces = self._gen_dynamic_ifaces()
         route_state = self._gen_empty_route_state()
         dns_state = DnsState({DNS.CONFIG: DNS_CONFIG1}, {})
-        with pytest.raises(NmstateValueError):
-            ifaces.gen_dns_metadata(dns_state, route_state)
+        ifaces.gen_dns_metadata(dns_state, route_state)
+        ipv4_iface = ifaces.all_kernel_ifaces[IPV4_ROUTE_IFACE_NAME]
+        ipv6_iface = ifaces.all_kernel_ifaces[IPV6_ROUTE_IFACE_NAME]
+
+        assert dns_state.config == DNS_CONFIG1
+        assert ipv4_iface.to_dict()[Interface.IPV4][
+            BaseIface.DNS_METADATA
+        ] == {
+            DnsState.PRIORITY_METADATA: 0,
+            DNS.SERVER: [IPV4_DNS_SERVER1],
+            DNS.SEARCH: DNS_SEARCHES_1,
+        }
+        assert ipv6_iface.to_dict()[Interface.IPV6][
+            BaseIface.DNS_METADATA
+        ] == {
+            DnsState.PRIORITY_METADATA: 1,
+            DNS.SERVER: [IPV6_DNS_SERVER1],
+            DNS.SEARCH: [],
+        }
 
     @pytest.fixture
     def with_dns_metadata(self):

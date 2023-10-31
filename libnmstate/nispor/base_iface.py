@@ -219,7 +219,7 @@ class EthtoolInfo:
         np_features = self._np_ethtool.features
         if np_features:
             features = {}
-            for (key, value) in np_features.changeable.items():
+            for key, value in np_features.changeable.items():
                 if key in self._NISPOR_ETHTOOL_FEATURE_SUPPORTED:
                     features[key] = value
             info[Ethtool.Feature.CONFIG_SUBTREE] = features
